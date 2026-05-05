@@ -4,6 +4,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/app_logger.dart';
+import '../utils/path_security_utils.dart';
 import 'large_file_manager.dart';
 
 /// 数据目录管理服务（桌面平台专用）
@@ -272,6 +273,14 @@ class DataDirectoryService {
             final file = File(filePath);
             final relativePath = path.relative(filePath, from: currentPath);
             final targetPath = path.join(newPath, relativePath);
+
+            // 路径遍历防护：使用 PathSecurityUtils 深度验证
+            try {
+              PathSecurityUtils.validateExtractionPath(targetPath, newPath);
+            } catch (e) {
+              logError('路径安全检查失败，跳过: $relativePath ($e)');
+              continue;
+            }
 
             onStatusUpdate?.call('正在复制: $relativePath');
 

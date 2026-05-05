@@ -1,77 +1,55 @@
-# SERVICES MODULE
+# SERVICES 模块
 
-## OVERVIEW
+业务逻辑服务层，全部继承 `ChangeNotifier`，通过 Provider 在 `main.dart` 注入。
 
-业务逻辑服务层 (78 files)，全部继承 `ChangeNotifier`，通过 Provider 注入。
+## 快速定位
 
-## STRUCTURE
+| 任务 | 关键文件 |
+|------|----------|
+| 笔记 CRUD | `database/database_quote_crud_mixin.dart` |
+| 查询/筛选/搜索 | `database/database_query_mixin.dart` + `_helpers_mixin.dart` |
+| 分页/收藏/回收站 | `database/database_pagination/favorite/trash_mixin.dart` |
+| AI 流式请求 | `ai_service.dart` → `utils/ai_request_helper.dart` |
+| AI 卡片生成 | `ai_card_generation_service.dart` |
+| 备份/恢复 | `backup_service.dart` + `database_backup_service.dart` |
+| 设备同步 | `note_sync_service.dart` + `localsend/` |
+| 智能推送 | `smart_push_service.dart` + `smart_push/` |
+| 日志 | `unified_log_service.dart` + `log_database_service.dart` |
+| 媒体管理 | `media_file/reference/cleanup_service.dart` |
+| Schema 迁移 | `database_schema_manager.dart` + `database_migration_mixin.dart` |
 
-```
-services/
-├── database_service.dart       # 核心数据库 (5820 lines)
-├── ai_service.dart             # AI 多 provider 架构
-├── settings_service.dart       # 应用设置
-├── backup_service.dart         # ZIP 备份
-├── note_sync_service.dart      # 设备同步
-├── localsend/                  # LocalSend 协议 → 见子目录 AGENTS.md
-├── unified_log_service.dart    # 日志系统
-├── location_service.dart       # 位置获取
-├── weather_service.dart        # 天气服务
-├── media_file_service.dart     # 媒体文件管理
-├── large_file_manager.dart     # 大文件流式处理
-├── intelligent_memory_manager.dart # 内存动态管理
-└── api_key_manager.dart        # API 密钥安全存储
-```
-
-## WHERE TO LOOK
-
-| Task | File | Notes |
-|------|------|-------|
-| CRUD 操作 | `database_service.dart` | 所有笔记/分类操作 |
-| AI 请求 | `ai_service.dart` | `_requestHelper.makeStreamRequestWithProvider` |
-| API 密钥 | `api_key_manager.dart` | flutter_secure_storage 加密 |
-| 流式 AI | `AIService` + `StreamingTextDialog` | 实时显示生成内容 |
-| 备份导出 | `backup_service.dart` | 媒体+元数据 ZIP |
-| 同步协议 | `note_sync_service.dart` + `localsend/` | LWW 合并策略 |
-
-## CONVENTIONS
-
-### Service 模式
+## 标准 Service 模式
 ```dart
 class XxxService extends ChangeNotifier {
+  // 服务层禁止 import flutter/widgets.dart，用 scheduler.dart
   Future<void> doSomething() async {
-    // 业务逻辑
-    notifyListeners(); // 必须调用！
+    _isLoading = true;
+    notifyListeners(); // 写操作后必须调用！
+    try {
+      // 业务逻辑
+      notifyListeners();
+    } catch (e, stack) {
+      logError('XxxService.doSomething', e, stack);
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 }
 ```
 
-### AI 架构链路
-```
-MultiAISettings → AIProviderSettings → AINetworkManager → APIKeyManager
-                                            ↓
-                              _requestHelper.makeStreamRequestWithProvider
-```
+## AI 架构链路
+`MultiAISettings → AIProviderSettings → AINetworkManager → APIKeyManager`
+新增 Provider：1. `getPresetProviders()` 添加预设 → 2. `buildHeaders()` + `adjustData()` → 3. `ai_settings_page.dart` 配置 UI
 
-### 新增 AI Provider
-1. 更新 `AIProviderSettings.getPresetProviders()`
-2. 实现 `buildHeaders()` + `adjustData()`
-3. 在 AI 设置页配置 UI
-
-### 错误处理
-- 异常先记录 `logError()`，再抛出
-- 网络错误使用 retry 逻辑 (`dio_network_utils.dart`)
-
-## ANTI-PATTERNS
-
+## 禁止事项
 | 禁止 | 替代方案 |
 |------|----------|
-| `File.writeAsString` 大文件 | `LargeFileManager.encodeJsonToFileStreaming` |
-| 硬编码 API 密钥 | `APIKeyManager` |
-| 同步阻塞文件 IO | `SafeCompute` isolate |
+| `File.writeAsString` 写大文件 | `LargeFileManager.encodeJsonToFileStreaming` |
+| 硬编码 API 密钥 | `APIKeyManager` + flutter_secure_storage |
 | 忽略 `notifyListeners()` | 每次写操作后调用 |
 
-## DEPRECATED
-
-- `AIService.generateDailyPrompt` → `streamGenerateDailyPrompt`
-- `NoteSyncService.receiveAndMerge` → 已废弃
+## 已删除 API
+- `AIService.generateDailyPrompt` → 已删除，改用 `streamGenerateDailyPrompt`
+- `NoteSyncService.receiveAndMerge` → 已删除

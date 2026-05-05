@@ -173,7 +173,9 @@ class MulticastDiagnosticTool {
     } finally {
       try {
         socket?.close();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[MulticastDiagnosticTool] socket close error: $e');
+      }
     }
   }
 
@@ -287,7 +289,9 @@ class MulticastDiagnosticTool {
       timeoutTimer?.cancel();
       try {
         socket?.close();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[MulticastDiagnosticTool] socket close error: $e');
+      }
     }
   }
 

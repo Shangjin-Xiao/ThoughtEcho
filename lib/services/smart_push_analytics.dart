@@ -35,12 +35,13 @@ class SmartPushAnalytics extends ChangeNotifier {
   // 内容类型成本
   static const Map<String, double> contentTypeCosts = {
     'yearAgoToday': 1.0, // 纪念日，高价值低成本
-    'sameTimeOfDay': 1.5,
     'sameLocation': 2.0,
-    'sameWeather': 2.0,
     'monthAgoToday': 2.5,
-    'randomMemory': 3.0,
-    'dailyQuote': 1.5,
+    'weekAgoToday': 2.0,
+    'sameWeather': 2.0,
+    'dailyQuote': 1.5, // 每日一言，低优先级但仍有价值
+    'sameTimeOfDay': 3.0, // 此时此刻，最低优先级兜底，成本较高
+    'pastNote': 2.0, // PushMode.both 随机历史笔记
   };
 
   SmartPushAnalytics({MMKVService? mmkvService})
@@ -65,8 +66,9 @@ class SmartPushAnalytics extends ChangeNotifier {
 
       await _saveAppOpenRecords(records);
       AppLogger.d('记录 App 打开时间: ${now.hour}:${now.minute}');
-    } catch (e) {
-      AppLogger.w('记录 App 打开时间失败', error: e);
+    } catch (e, stack) {
+      AppLogger.e('记录 App 打开时间失败',
+          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
     }
   }
 
@@ -97,7 +99,10 @@ class SmartPushAnalytics extends ChangeNotifier {
       try {
         final dt = DateTime.parse(record);
         hourCounts[dt.hour] = (hourCounts[dt.hour] ?? 0) + 1;
-      } catch (_) {}
+      } catch (e, stack) {
+        AppLogger.e('解析应用打开记录失败',
+            error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+      }
     }
 
     // 找到最大值用于归一化
@@ -203,7 +208,10 @@ class SmartPushAnalytics extends ChangeNotifier {
         if (dt.isAfter(recentCutoff)) {
           recentCounts[dt.hour] = (recentCounts[dt.hour] ?? 0) + 1;
         }
-      } catch (_) {}
+      } catch (e, stack) {
+        AppLogger.e('解析应用打开记录(时间衰减)失败',
+            error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+      }
     }
 
     final maxRecent = recentCounts.values.fold(1, max);
@@ -223,7 +231,9 @@ class SmartPushAnalytics extends ChangeNotifier {
       final List<dynamic> list =
           List<dynamic>.from((jsonStr.split(',').where((s) => s.isNotEmpty)));
       return list.cast<String>();
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.e('获取应用打开记录异常',
+          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
       return [];
     }
   }
@@ -302,7 +312,9 @@ class SmartPushAnalytics extends ChangeNotifier {
           dismissTime.add(Duration(hours: cooldownHoursAfterDismiss));
 
       return DateTime.now().isBefore(cooldownEnd);
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.e('解析忽略时间记录失败',
+          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
       return false;
     }
   }
@@ -327,7 +339,9 @@ class SmartPushAnalytics extends ChangeNotifier {
       }
 
       return budget;
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.e('解析每日疲劳预算失败',
+          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
       return dailyFatigueBudget;
     }
   }
@@ -345,7 +359,7 @@ class SmartPushAnalytics extends ChangeNotifier {
   ///
   /// 实现 ε-Greedy 策略的探索-利用平衡
   Future<String> selectContentType(List<String> availableTypes) async {
-    if (availableTypes.isEmpty) return 'randomMemory';
+    if (availableTypes.isEmpty) return 'dailyQuote';
     if (availableTypes.length == 1) return availableTypes.first;
 
     // ε-Greedy: 10% 概率探索（随机选择）
@@ -416,7 +430,9 @@ class SmartPushAnalytics extends ChangeNotifier {
         }
       }
       return scores;
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.e('解析内容得分配置失败',
+          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
       return {};
     }
   }
@@ -439,7 +455,9 @@ class SmartPushAnalytics extends ChangeNotifier {
         }
       }
       return metrics;
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.e('解析推送统计指标失败',
+          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
       return {};
     }
   }

@@ -12,10 +12,11 @@ import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/localsend/constants.dart';
 import 'package:thoughtecho/models/merge_report.dart';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import 'device_identity_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:http/http.dart' as http;
 
 /// 同步状态枚举
 enum SyncStatus {
@@ -328,7 +329,9 @@ class NoteSyncService extends ChangeNotifier {
         if (await backupFile.exists()) {
           size = await backupFile.length();
         }
-      } catch (_) {}
+      } catch (e) {
+        logDebug('[NoteSyncService] backup file size check failed: $e');
+      }
       if (size == 0) {
         // 等待短暂时间再尝试（应对文件系统写入延迟）
         await Future.delayed(const Duration(milliseconds: 300));
@@ -336,7 +339,9 @@ class NoteSyncService extends ChangeNotifier {
           if (await backupFile.exists()) {
             size = await backupFile.length();
           }
-        } catch (_) {}
+        } catch (e) {
+          logDebug('[NoteSyncService] backup file size retry failed: $e');
+        }
       }
       logInfo(
         'backup_zip_ready path=$backupPath size=$size',
@@ -547,42 +552,44 @@ class NoteSyncService extends ChangeNotifier {
   }
 
   Future<void> _preflightCheck(Device target) async {
-    final client = http.Client();
+    final dio = Dio(BaseOptions(
+      connectTimeout: const Duration(seconds: 3),
+      receiveTimeout: const Duration(seconds: 3),
+      validateStatus: (_) => true,
+    ));
     try {
       final infoUrlV2 =
           'http://${target.ip}:${target.port}/api/localsend/v2/info';
       final infoUrlV1 =
           'http://${target.ip}:${target.port}/api/localsend/v1/info';
-      http.Response resp;
+      int statusCode = 0;
       try {
-        resp = await client
-            .get(Uri.parse(infoUrlV2))
-            .timeout(const Duration(seconds: 3));
+        final resp = await dio.get(infoUrlV2);
+        statusCode = resp.statusCode ?? 0;
       } catch (_) {
-        resp = http.Response('', 404);
+        statusCode = 404;
       }
-      if (resp.statusCode == 404) {
+      if (statusCode == 404) {
         try {
-          resp = await client
-              .get(Uri.parse(infoUrlV1))
-              .timeout(const Duration(seconds: 3));
+          final resp = await dio.get(infoUrlV1);
+          statusCode = resp.statusCode ?? 0;
         } catch (_) {
           // ignore
         }
       }
-      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+      if (statusCode >= 200 && statusCode < 300) {
         AppLogger.d(
-          'Preflight OK: ${resp.statusCode}',
+          'Preflight OK: $statusCode',
           source: 'NoteSyncService',
         );
       } else {
         AppLogger.w(
-          'Preflight warn: ${resp.statusCode}',
+          'Preflight warn: $statusCode',
           source: 'NoteSyncService',
         );
       }
     } finally {
-      client.close();
+      dio.close();
     }
   }
 

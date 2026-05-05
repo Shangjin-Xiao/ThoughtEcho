@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../extensions/note_category_localization_extension.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/note_category.dart';
 import '../services/database_service.dart';
@@ -25,6 +27,7 @@ class TagSelectionSection extends StatefulWidget {
 
 class _TagSelectionSectionState extends State<TagSelectionSection> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   List<NoteCategory> _filteredTags = [];
   bool _isExpanded = false;
 
@@ -38,6 +41,7 @@ class _TagSelectionSectionState extends State<TagSelectionSection> {
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -59,9 +63,13 @@ class _TagSelectionSectionState extends State<TagSelectionSection> {
       if (query.isEmpty) {
         _filteredTags = widget.tags;
       } else {
+        final lowerQuery = query.toLowerCase();
+        final l10n = AppLocalizations.of(context);
         _filteredTags = widget.tags
             .where(
-              (tag) => tag.name.toLowerCase().contains(query.toLowerCase()),
+              (tag) => tag.localizedName(l10n).toLowerCase().contains(
+                    lowerQuery,
+                  ),
             )
             .toList();
       }
@@ -124,6 +132,7 @@ class _TagSelectionSectionState extends State<TagSelectionSection> {
         if (_isExpanded) // ✅ 只在展开时构建内容
           _TagSelectionContent(
             searchController: _searchController,
+            scrollController: _scrollController,
             filteredTags: _filteredTags,
             selectedTagIds: widget.selectedTagIds,
             onToggleTag: _toggleTag,
@@ -136,12 +145,14 @@ class _TagSelectionSectionState extends State<TagSelectionSection> {
 /// 标签选择内容 - 进一步拆分，使用const优化
 class _TagSelectionContent extends StatelessWidget {
   final TextEditingController searchController;
+  final ScrollController scrollController;
   final List<NoteCategory> filteredTags;
   final List<String> selectedTagIds;
   final void Function(String tagId, bool selected) onToggleTag;
 
   const _TagSelectionContent({
     required this.searchController,
+    required this.scrollController,
     required this.filteredTags,
     required this.selectedTagIds,
     required this.onToggleTag,
@@ -191,8 +202,10 @@ class _TagSelectionContent extends StatelessWidget {
             child: SizedBox(
               height: _computeTagListHeight(),
               child: Scrollbar(
+                controller: scrollController,
                 thumbVisibility: filteredTags.length > 6,
                 child: ListView.builder(
+                  controller: scrollController,
                   padding: EdgeInsets.zero,
                   physics: const ClampingScrollPhysics(),
                   cacheExtent: 100, // ✅ 移动端减少预渲染
@@ -231,10 +244,8 @@ class _TagListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final bool isEmoji = IconUtils.isEmoji(tag.iconName);
-    // 检查是否是隐藏标签
     final bool isHiddenTag = tag.id == DatabaseService.hiddenTagId;
-    // 隐藏标签使用国际化名称
-    final String displayName = isHiddenTag ? l10n.hiddenTag : tag.name;
+    final String displayName = tag.localizedName(l10n);
 
     final Widget leading = isEmoji
         ? Text(
@@ -316,11 +327,7 @@ class SelectedTagsDisplay extends StatelessWidget {
                 (t) => t.id == tagId,
                 orElse: () => NoteCategory(id: tagId, name: l10n.unknownTag),
               );
-              // 检查是否是隐藏标签
-              final bool isHiddenTag = tagId == DatabaseService.hiddenTagId;
-              // 隐藏标签使用国际化名称
-              final String displayName =
-                  isHiddenTag ? l10n.hiddenTag : tag.name;
+              final String displayName = tag.localizedName(l10n);
 
               return Chip(
                 label: IconUtils.isEmoji(tag.iconName)

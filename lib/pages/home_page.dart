@@ -11,6 +11,7 @@ import '../services/weather_service.dart';
 import '../services/ai_service.dart';
 import '../services/clipboard_service.dart';
 import '../services/connectivity_service.dart';
+import '../services/excerpt_intent_service.dart';
 import '../controllers/search_controller.dart'; // 导入搜索控制器
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
@@ -38,11 +39,19 @@ import 'package:path_provider/path_provider.dart';
 import '../services/svg_to_image_service.dart';
 import '../utils/feature_guide_helper.dart';
 import '../services/draft_service.dart';
+import '../widgets/anniversary_animation_overlay.dart';
+import '../utils/anniversary_display_utils.dart';
+import '../utils/draft_restore_utils.dart';
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
+  final String? initialHighlightedNoteId;
 
-  const HomePage({super.key, this.initialPage = 0});
+  const HomePage({
+    super.key,
+    this.initialPage = 0,
+    this.initialHighlightedNoteId,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -78,11 +87,19 @@ class _HomePageState extends State<HomePage>
   final GlobalKey _noteFavoriteGuideKey = GlobalKey();
   final GlobalKey _noteMoreGuideKey = GlobalKey(); // 功能引导：更多按钮 Key
   final GlobalKey _noteFoldGuideKey = GlobalKey();
+  final GlobalKey _settingsTabGuideKey = GlobalKey(); // 功能引导：设置标签 Key（用于回收站引导）
   final GlobalKey<SettingsPageState> _settingsPageKey =
       GlobalKey<SettingsPageState>();
   bool _homeGuidePending = false;
   bool _noteGuidePending = false;
   bool _settingsGuidePending = false;
+  bool _trashGuideScheduled = false;
+  String? _lastConsumedExcerptText;
+  bool _isHandlingExcerptIntent = false;
+  bool _hasConsumedInitialHighlightedNote = false;
+  bool _isConsumingInitialHighlightedNote = false;
+  int _initialHighlightRetryCount = 0;
+  static const int _maxInitialHighlightRetries = 8;
 
   // AI卡片生成服务
   AICardGenerationService? _aiCardService;
@@ -381,8 +398,18 @@ class _HomePageState extends State<HomePage>
             final updatedQuote = quote.copyWith(
               location: resolvedAddress,
             );
-            await dbService.updateQuote(updatedQuote);
-            updatedCount++;
+            final updateResult = await dbService.updateQuote(updatedQuote);
+            switch (updateResult) {
+              case QuoteUpdateResult.updated:
+                updatedCount++;
+                break;
+              case QuoteUpdateResult.notFound:
+                logWarning('回溯更新离线笔记位置时笔记不存在: ${quote.id}');
+                break;
+              case QuoteUpdateResult.skippedDeleted:
+                logWarning('回溯更新离线笔记位置时笔记已删除: ${quote.id}');
+                break;
+            }
           }
         }
 
@@ -412,6 +439,7 @@ class _HomePageState extends State<HomePage>
       if (widget.initialPage == 1) {
         // 记录页启动时，先加载标签（高优先级）
         await _loadTags();
+        _consumeInitialHighlightedNote();
       } else {
         // 其他页面启动时，使用预加载方式
         _preloadTags();
@@ -423,6 +451,7 @@ class _HomePageState extends State<HomePage>
       // 2. 如果没有恢复草稿，再检查剪贴板
       if (!draftRecovered) {
         _checkClipboard();
+        _consumePendingExcerptIntent();
       }
 
       // 如果不是记录页启动，确保标签也被加载
@@ -441,6 +470,9 @@ class _HomePageState extends State<HomePage>
         );
         _connectivityService!.addListener(_onConnectivityChanged);
       }
+
+      // 检查是否应该显示一周年庆典动画（在其他检查之后，优先级最低）
+      await _checkAndShowAnniversaryAnimation();
     });
 
     // 根据初始页面尝试触发对应的功能引导
@@ -489,9 +521,73 @@ class _HomePageState extends State<HomePage>
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
           _checkClipboard();
+          _consumePendingExcerptIntent();
         }
       });
     }
+  }
+
+  Future<void> _consumePendingExcerptIntent() async {
+    if (!mounted || _isHandlingExcerptIntent) {
+      return;
+    }
+
+    final settingsService = context.read<SettingsService>();
+    if (!settingsService.excerptIntentEnabled) {
+      return;
+    }
+
+    _isHandlingExcerptIntent = true;
+    try {
+      const excerptIntentService = ExcerptIntentService();
+      final excerptText =
+          await excerptIntentService.consumePendingExcerptText();
+      if (!mounted || excerptText == null) {
+        return;
+      }
+
+      if (_lastConsumedExcerptText == excerptText) {
+        return;
+      }
+
+      _lastConsumedExcerptText = excerptText;
+      _showAddQuoteDialog(prefilledContent: excerptText);
+    } catch (e) {
+      logError('消费外部摘录失败', error: e, source: 'HomePage');
+    } finally {
+      _isHandlingExcerptIntent = false;
+    }
+  }
+
+  // 检查是否应该显示一周年庆典动画（整个周期内只播放一次）
+  Future<void> _checkAndShowAnniversaryAnimation() async {
+    if (!mounted) return;
+    final settingsService = context.read<SettingsService>();
+    final settings = settingsService.appSettings;
+
+    final now = DateTime.now();
+    final shouldShow = AnniversaryDisplayUtils.shouldAutoShowAnimation(
+      now: now,
+      developerMode: settings.developerMode,
+      anniversaryShown: settings.anniversaryShown,
+      anniversaryAnimationEnabled: settings.anniversaryAnimationEnabled,
+    );
+    if (!shouldShow) {
+      return;
+    }
+
+    // 标记为已显示
+    await settingsService.setAnniversaryShown(true);
+
+    if (!mounted) return;
+
+    // 显示全屏覆盖动画
+    await showAnniversaryAnimationOverlay(context);
+  }
+
+  /// 开发者模式预览一周年动画
+  void _showAnniversaryPreview(BuildContext context) {
+    showAnniversaryAnimationOverlay(context);
   }
 
   // 检查是否有未保存的草稿
@@ -534,8 +630,6 @@ class _HomePageState extends State<HomePage>
       if (shouldRestore == true && mounted) {
         final draftId = draftData['id'] as String;
         final isNew = draftId.startsWith('new_');
-        final plainText = draftData['plainText'] as String? ?? '';
-        final deltaContent = draftData['deltaContent'] as String?;
 
         Quote? initialQuote;
         Quote? original;
@@ -546,21 +640,9 @@ class _HomePageState extends State<HomePage>
             final db = context.read<DatabaseService>();
             original = await db.getQuoteById(draftId);
             if (original != null) {
-              // 使用草稿内容覆盖原始笔记内容
-              initialQuote = original.copyWith(
-                content: plainText,
-                deltaContent: deltaContent,
-                sourceAuthor: draftData['author'] as String?,
-                sourceWork: draftData['work'] as String?,
-                tagIds: (draftData['tagIds'] as List?)
-                    ?.map((e) => e.toString())
-                    .toList(),
-                colorHex: draftData['colorHex'] as String?,
-                location: draftData['location'] as String?,
-                latitude: (draftData['latitude'] as num?)?.toDouble(),
-                longitude: (draftData['longitude'] as num?)?.toDouble(),
-                weather: draftData['weather'] as String?,
-                temperature: draftData['temperature'] as String?,
+              initialQuote = buildRestoredDraftQuote(
+                draftData: draftData,
+                original: original,
               );
             } else {
               logDebug('恢复草稿时发现原始笔记已删除，将作为新笔记处理');
@@ -570,24 +652,9 @@ class _HomePageState extends State<HomePage>
           }
         }
 
-        initialQuote ??= Quote(
-          id: (isNew || original == null) ? null : draftId,
-          content: plainText,
-          deltaContent: deltaContent,
-          date: DateTime.now().toIso8601String(),
-          sourceAuthor: draftData['author'] as String?,
-          sourceWork: draftData['work'] as String?,
-          tagIds: (draftData['tagIds'] as List?)
-                  ?.map((e) => e.toString())
-                  .toList() ??
-              [],
-          colorHex: draftData['colorHex'] as String?,
-          location: draftData['location'] as String?,
-          latitude: (draftData['latitude'] as num?)?.toDouble(),
-          longitude: (draftData['longitude'] as num?)?.toDouble(),
-          weather: draftData['weather'] as String?,
-          temperature: draftData['temperature'] as String?,
-          editSource: 'fullscreen',
+        initialQuote ??= buildRestoredDraftQuote(
+          draftData: draftData,
+          original: original,
         );
 
         // 导航到全屏编辑器
@@ -652,6 +719,7 @@ class _HomePageState extends State<HomePage>
     // 当切换到笔记列表页时，重新加载标签
     if (_currentIndex == 1) {
       _refreshTags();
+      _consumeInitialHighlightedNote();
     }
 
     _triggerGuideForCurrentIndex();
@@ -835,7 +903,73 @@ class _HomePageState extends State<HomePage>
       return;
     }
 
+    _consumeInitialHighlightedNote();
     _scheduleNoteGuideIfNeeded(delay: const Duration(milliseconds: 150));
+  }
+
+  void _consumeInitialHighlightedNote() {
+    if (!mounted ||
+        _hasConsumedInitialHighlightedNote ||
+        _isConsumingInitialHighlightedNote ||
+        _currentIndex != 1) {
+      return;
+    }
+
+    final noteId = widget.initialHighlightedNoteId;
+    if (noteId == null || noteId.isEmpty) {
+      return;
+    }
+
+    context.read<NoteSearchController>().clearSearch();
+
+    final noteListState = _noteListViewKey.currentState;
+    if (noteListState == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _consumeInitialHighlightedNote();
+      });
+      return;
+    }
+
+    _isConsumingInitialHighlightedNote = true;
+    unawaited(_attemptInitialHighlightedNote(noteListState, noteId));
+  }
+
+  Future<void> _attemptInitialHighlightedNote(
+    NoteListViewState noteListState,
+    String noteId,
+  ) async {
+    final success = await noteListState.scrollToQuoteById(noteId);
+    if (!mounted || widget.initialHighlightedNoteId != noteId) {
+      _isConsumingInitialHighlightedNote = false;
+      return;
+    }
+
+    if (success) {
+      _hasConsumedInitialHighlightedNote = true;
+      _initialHighlightRetryCount = 0;
+      _isConsumingInitialHighlightedNote = false;
+      return;
+    }
+
+    _isConsumingInitialHighlightedNote = false;
+    _initialHighlightRetryCount++;
+    if (_initialHighlightRetryCount >= _maxInitialHighlightRetries) {
+      logDebug(
+        '初始高亮笔记定位失败，已达到最大重试次数: $noteId',
+        source: 'HomePage',
+      );
+      return;
+    }
+
+    Future.delayed(const Duration(milliseconds: 250), () {
+      if (!mounted ||
+          _currentIndex != 1 ||
+          _hasConsumedInitialHighlightedNote) {
+        return;
+      }
+      _consumeInitialHighlightedNote();
+    });
   }
 
   void _scheduleSettingsGuideIfNeeded() {
@@ -866,6 +1000,30 @@ class _HomePageState extends State<HomePage>
         shouldShow: () => mounted && _currentIndex == 3,
       );
       _settingsGuidePending = false;
+    });
+  }
+
+  void _scheduleTrashLocationGuide() {
+    if (!mounted) return;
+    if (_trashGuideScheduled) return;
+    if (FeatureGuideHelper.hasShown(context, 'trash_location_guide')) {
+      return;
+    }
+
+    _trashGuideScheduled = true;
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      if (!mounted) {
+        _trashGuideScheduled = false;
+        return;
+      }
+      FeatureGuideHelper.show(
+        context: context,
+        guideId: 'trash_location_guide',
+        targetKey: _settingsTabGuideKey,
+        autoDismissDuration: const Duration(milliseconds: 3000),
+        shouldShow: () => mounted,
+      );
+      _trashGuideScheduled = false;
     });
   }
 
@@ -972,20 +1130,19 @@ class _HomePageState extends State<HomePage>
           );
           final isConnected = connectivityService.isConnected;
 
-          // 异步获取天气，不阻塞主流程
-          Future.microtask(() async {
-            try {
-              await weatherService.getWeatherData(
-                position.latitude,
-                position.longitude,
-                forceRefresh: isConnected,
-                timeout: const Duration(seconds: 10),
-              );
-              logDebug('天气数据更新完成: ${weatherService.currentWeather}');
-            } catch (e) {
-              logDebug('天气数据更新失败: $e');
-            }
-          });
+          // 异步获取天气，不阻塞主流程（使用事件队列调度，避免 microtask 抢占 UI）
+          unawaited(
+            weatherService
+                .getWeatherData(
+                  position.latitude,
+                  position.longitude,
+                  forceRefresh: isConnected,
+                  timeout: const Duration(seconds: 10),
+                )
+                .then((_) =>
+                    logDebug('天气数据更新完成: ${weatherService.currentWeather}'))
+                .catchError((e) => logDebug('天气数据更新失败: $e')),
+          );
         } else {
           logDebug('位置获取失败');
         }
@@ -1035,6 +1192,21 @@ class _HomePageState extends State<HomePage>
       }
     }
 
+    if (!mounted) return;
+
+    // 检查是否启用跳过非全屏编辑器
+    final settingsService = context.read<SettingsService>();
+    if (settingsService.skipNonFullscreenEditor) {
+      logDebug('跳过非全屏编辑器，直接打开全屏编辑器');
+      await _openFullscreenEditorDirectly(
+        prefilledContent: prefilledContent,
+        prefilledAuthor: prefilledAuthor,
+        prefilledWork: prefilledWork,
+        hitokotoData: hitokotoData,
+      );
+      return;
+    }
+
     logDebug('显示添加笔记对话框，可用标签数: ${_tags.length}');
 
     // 使用延迟显示，确保动画流畅
@@ -1062,6 +1234,84 @@ class _HomePageState extends State<HomePage>
         );
       }
     });
+  }
+
+  /// 直接打开全屏编辑器（跳过非全屏编辑器）
+  Future<void> _openFullscreenEditorDirectly({
+    String? prefilledContent,
+    String? prefilledAuthor,
+    String? prefilledWork,
+    dynamic hitokotoData,
+  }) async {
+    try {
+      final settingsService = context.read<SettingsService>();
+      String content = prefilledContent ?? '';
+      String? author = prefilledAuthor;
+      String? work = prefilledWork;
+
+      // 处理一言数据
+      final isHitokotoQuickAdd = hitokotoData is Map<String, dynamic>;
+      if (isHitokotoQuickAdd) {
+        content = hitokotoData['hitokoto'] ?? content;
+        author = hitokotoData['from_who'] ?? author;
+        work = hitokotoData['from'] ?? work;
+      }
+
+      final hasExplicitAuthorOrWork = author != null || work != null;
+
+      // 如果没有指定作者/出处，使用默认值
+      if (author == null &&
+          settingsService.defaultAuthor != null &&
+          settingsService.defaultAuthor!.isNotEmpty) {
+        author = settingsService.defaultAuthor;
+      }
+      if (work == null &&
+          settingsService.defaultSource != null &&
+          settingsService.defaultSource!.isNotEmpty) {
+        work = settingsService.defaultSource;
+      }
+
+      if (!mounted) return;
+
+      // 导航到全屏编辑器
+      // 全屏编辑器会处理自动位置/天气
+      // 如果我们传递了作者/出处，跳过编辑器内的默认元数据自动填充
+      final saved = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => NoteFullEditorPage(
+            initialContent: content,
+            initialQuote: null, // 新建笔记
+            allTags: _tags,
+            initialAuthor: author,
+            initialWork: work,
+            skipDefaultMetadataAutofill: hasExplicitAuthorOrWork,
+            isFromDailyQuote: isHitokotoQuickAdd, // 标记来自每日一言
+          ),
+        ),
+      );
+
+      // 如果保存成功，刷新列表
+      if (saved == true && mounted) {
+        logDebug('全屏编辑器保存成功返回，触发列表刷新');
+        _loadTags();
+        if (_noteListViewKey.currentState != null) {
+          _noteListViewKey.currentState!.resetAndLoad();
+        }
+      }
+    } catch (e) {
+      logError('打开全屏编辑器失败', error: e, source: 'HomePage');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text(AppLocalizations.of(context).openFullEditorFailedSimple),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 
   // FAB 短按处理
@@ -1127,34 +1377,86 @@ class _HomePageState extends State<HomePage>
 
   // 显示删除确认对话框
   void _showDeleteConfirmDialog(Quote quote) {
+    final pageContext = context;
+    final l10n = AppLocalizations.of(context);
+    final retentionDays = context.read<SettingsService>().trashRetentionDays;
+    final messenger = ScaffoldMessenger.of(pageContext);
+
     showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context).deleteNote),
-        content: Text(AppLocalizations.of(context).deleteNoteConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizations.of(context).cancel),
+      context: pageContext,
+      builder: (dialogContext) {
+        var isDeleting = false;
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
+            title: Text(l10n.moveNoteToTrashTitle),
+            content: Text(l10n.moveNoteToTrashConfirmation(retentionDays)),
+            actions: [
+              TextButton(
+                onPressed: isDeleting
+                    ? null
+                    : () {
+                        Navigator.pop(dialogContext);
+                      },
+                child: Text(l10n.cancel),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                onPressed: isDeleting
+                    ? null
+                    : () async {
+                        setDialogState(() {
+                          isDeleting = true;
+                        });
+                        final db = Provider.of<DatabaseService>(
+                          pageContext,
+                          listen: false,
+                        );
+                        try {
+                          await db.deleteQuote(quote.id!);
+                          if (!dialogContext.mounted || !pageContext.mounted) {
+                            return;
+                          }
+                          Navigator.pop(dialogContext);
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.noteMovedToTrash),
+                              duration: const Duration(seconds: 1),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          // 显示回收站位置引导（仅第一次删除笔记时）
+                          _scheduleTrashLocationGuide();
+                        } catch (e, stackTrace) {
+                          logError(
+                            '移动笔记到回收站失败: $e',
+                            error: e,
+                            stackTrace: stackTrace,
+                            source: 'HomePage',
+                          );
+                          if (!dialogContext.mounted || !pageContext.mounted) {
+                            return;
+                          }
+                          Navigator.pop(dialogContext);
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.deleteFailed(e.toString())),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      },
+                child: isDeleting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(l10n.delete),
+              ),
+            ],
           ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            onPressed: () {
-              final db = Provider.of<DatabaseService>(context, listen: false);
-              db.deleteQuote(quote.id!);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(AppLocalizations.of(context).noteDeleted),
-                  duration: const Duration(seconds: 1),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            child: Text(AppLocalizations.of(context).delete),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -1530,7 +1832,6 @@ class _HomePageState extends State<HomePage>
     final hasWeather = weatherService.currentWeather != null &&
         weatherService.currentWeather != 'error' &&
         weatherService.currentWeather != 'unknown';
-    final isCached = weatherService.state == WeatherServiceState.cached;
 
     String locationText;
     String weatherText;
@@ -1539,8 +1840,7 @@ class _HomePageState extends State<HomePage>
     // --- 构建天气文本的辅助函数 ---
     String buildWeatherText() {
       return '${WeatherService.getLocalizedWeatherDescription(l10n, weatherService.currentWeather!)}'
-          '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}'
-          '${isCached ? ' ${l10n.tileCachedSuffix}' : ''}';
+          '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}';
     }
 
     // --- 优先级链：位置显示 ---
@@ -1643,18 +1943,9 @@ class _HomePageState extends State<HomePage>
     final weatherService = Provider.of<WeatherService>(context);
     final locationService = Provider.of<LocationService>(context);
     final theme = Theme.of(context);
-    final aiService =
-        context.watch<AIService>(); // Watch AIService for key changes
-    final settingsService = context
-        .watch<SettingsService>(); // Watch SettingsService for settings changes
-
-    // 直接用context.watch<bool>()获取服务初始化状态
+    final l10n = AppLocalizations.of(context);
+    // 直接用context.watch<bool>()获取服务初始化状态（仅变化一次）
     final bool servicesInitialized = context.watch<bool>();
-
-    // Determine if AI is configured (including checking for valid API Key)
-    final bool isAiConfigured = aiService.hasValidApiKey() &&
-        settingsService.aiSettings.apiUrl.isNotEmpty &&
-        settingsService.aiSettings.model.isNotEmpty;
 
     // 修复：根据当前页面动态设置背景色，确保底部安全区域颜色正确
     // 记录页使用专属背景色，其他页面使用通用页面背景色
@@ -1733,6 +2024,20 @@ class _HomePageState extends State<HomePage>
                           ),
                         ),
 
+                      // 开发者模式下：一周年动画预览按钮
+                      Consumer<SettingsService>(
+                        builder: (context, settingsSvc, _) {
+                          if (!settingsSvc.appSettings.developerMode) {
+                            return const SizedBox.shrink();
+                          }
+                          return IconButton(
+                            icon: const Icon(Icons.cake_outlined),
+                            tooltip: l10n.developerAnniversaryPreview,
+                            onPressed: () => _showAnniversaryPreview(context),
+                          );
+                        },
+                      ),
+
                       // 显示位置和天气信息（支持多种状态）
                       _buildLocationWeatherDisplay(
                         context,
@@ -1784,151 +2089,169 @@ class _HomePageState extends State<HomePage>
                               ),
                             ),
                           ), // 每日提示部分 - 固定在底部，紧凑布局
-                          Container(
-                            width: double.infinity,
-                            margin: EdgeInsets.fromLTRB(
-                              screenWidth > 600
-                                  ? 16.0
-                                  : (isVerySmallScreen ? 8.0 : 12.0), // 动态调整边距
-                              isVerySmallScreen ? 2.0 : 4.0, // 极小屏幕减少上边距
-                              screenWidth > 600
-                                  ? 16.0
-                                  : (isVerySmallScreen ? 8.0 : 12.0), // 动态调整边距
-                              isVerySmallScreen ? 8.0 : 12.0, // 极小屏幕减少下边距
-                            ),
-                            padding: EdgeInsets.all(
-                              screenWidth > 600
-                                  ? 18.0
-                                  : (isVerySmallScreen
-                                      ? 10.0
-                                      : 14.0), // 动态调整内边距
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surface,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: AppTheme.defaultShadow,
-                              border: Border.all(
-                                color: theme.colorScheme.outline.withAlpha(30),
-                                width: 1,
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                          Consumer2<AIService, SettingsService>(
+                            builder: (context, aiSvc, settingsSvc, _) {
+                              final bool isAiConfigured = aiSvc
+                                      .hasValidApiKey() &&
+                                  settingsSvc.aiSettings.apiUrl.isNotEmpty &&
+                                  settingsSvc.aiSettings.model.isNotEmpty;
+                              return Container(
+                                width: double.infinity,
+                                margin: EdgeInsets.fromLTRB(
+                                  screenWidth > 600
+                                      ? 16.0
+                                      : (isVerySmallScreen
+                                          ? 8.0
+                                          : 12.0), // 动态调整边距
+                                  isVerySmallScreen ? 2.0 : 4.0, // 极小屏幕减少上边距
+                                  screenWidth > 600
+                                      ? 16.0
+                                      : (isVerySmallScreen
+                                          ? 8.0
+                                          : 12.0), // 动态调整边距
+                                  isVerySmallScreen ? 8.0 : 12.0, // 极小屏幕减少下边距
+                                ),
+                                padding: EdgeInsets.all(
+                                  screenWidth > 600
+                                      ? 18.0
+                                      : (isVerySmallScreen
+                                          ? 10.0
+                                          : 14.0), // 动态调整内边距
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: AppTheme.defaultShadow,
+                                  border: Border.all(
+                                    color:
+                                        theme.colorScheme.outline.withAlpha(30),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    Icon(
-                                      Icons.lightbulb_outline,
-                                      color: theme.colorScheme.primary,
-                                      size: screenWidth > 600
-                                          ? 22
-                                          : (isVerySmallScreen
-                                              ? 16
-                                              : 18), // 动态调整图标大小
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.lightbulb_outline,
+                                          color: theme.colorScheme.primary,
+                                          size: screenWidth > 600
+                                              ? 22
+                                              : (isVerySmallScreen
+                                                  ? 16
+                                                  : 18), // 动态调整图标大小
+                                        ),
+                                        SizedBox(
+                                          width: isVerySmallScreen ? 4 : 6,
+                                        ), // 动态调整间距
+                                        Text(
+                                          AppLocalizations.of(
+                                            context,
+                                          ).todayThoughts,
+                                          style: theme.textTheme.titleMedium
+                                              ?.copyWith(
+                                            color: theme.colorScheme.primary,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: screenWidth > 600
+                                                ? 16
+                                                : (isVerySmallScreen
+                                                    ? 13
+                                                    : 15), // 动态调整字体
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     SizedBox(
-                                      width: isVerySmallScreen ? 4 : 6,
+                                      height: isVerySmallScreen
+                                          ? 4
+                                          : (isSmallScreen ? 6 : 8),
                                     ), // 动态调整间距
-                                    Text(
-                                      AppLocalizations.of(
-                                        context,
-                                      ).todayThoughts,
-                                      style:
-                                          theme.textTheme.titleMedium?.copyWith(
-                                        color: theme.colorScheme.primary,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: screenWidth > 600
-                                            ? 16
-                                            : (isVerySmallScreen
-                                                ? 13
-                                                : 15), // 动态调整字体
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: isVerySmallScreen
-                                      ? 4
-                                      : (isSmallScreen ? 6 : 8),
-                                ), // 动态调整间距
-                                // 提示内容区域 - 更紧凑
-                                _isGeneratingDailyPrompt &&
-                                        _accumulatedPromptText.isEmpty
-                                    ? Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          SizedBox(
-                                            width: isVerySmallScreen
-                                                ? 16
-                                                : 18, // 动态调整加载指示器大小
-                                            height: isVerySmallScreen ? 16 : 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: theme.colorScheme.primary,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: isVerySmallScreen
-                                                ? 3
-                                                : (isSmallScreen ? 4 : 6),
-                                          ), // 动态调整间距
-                                          Text(
-                                            isAiConfigured
-                                                ? AppLocalizations.of(
-                                                    context,
-                                                  ).loadingTodayThoughts
-                                                : AppLocalizations.of(
-                                                    context,
-                                                  ).fetchingDefaultPrompt,
-                                            style: theme.textTheme.bodySmall
+                                    // 提示内容区域 - 更紧凑
+                                    _isGeneratingDailyPrompt &&
+                                            _accumulatedPromptText.isEmpty
+                                        ? Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              SizedBox(
+                                                width: isVerySmallScreen
+                                                    ? 16
+                                                    : 18, // 动态调整加载指示器大小
+                                                height:
+                                                    isVerySmallScreen ? 16 : 18,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  color:
+                                                      theme.colorScheme.primary,
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                height: isVerySmallScreen
+                                                    ? 3
+                                                    : (isSmallScreen ? 4 : 6),
+                                              ), // 动态调整间距
+                                              Text(
+                                                isAiConfigured
+                                                    ? AppLocalizations.of(
+                                                        context,
+                                                      ).loadingTodayThoughts
+                                                    : AppLocalizations.of(
+                                                        context,
+                                                      ).fetchingDefaultPrompt,
+                                                style: theme.textTheme.bodySmall
+                                                    ?.copyWith(
+                                                  color: theme
+                                                      .colorScheme.onSurface
+                                                      .withAlpha(160),
+                                                  fontSize: screenWidth > 600
+                                                      ? 13
+                                                      : (isVerySmallScreen
+                                                          ? 10
+                                                          : 12), // 动态调整字体
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ],
+                                          )
+                                        : Text(
+                                            _accumulatedPromptText.isNotEmpty
+                                                ? _accumulatedPromptText.trim()
+                                                : (isAiConfigured
+                                                    ? AppLocalizations.of(
+                                                        context,
+                                                      ).waitingForTodayThoughts
+                                                    : AppLocalizations.of(
+                                                        context,
+                                                      ).noTodayThoughts),
+                                            style: theme.textTheme.bodyMedium
                                                 ?.copyWith(
-                                              color: theme.colorScheme.onSurface
-                                                  .withAlpha(160),
+                                              height: 1.4,
                                               fontSize: screenWidth > 600
-                                                  ? 13
+                                                  ? 15
                                                   : (isVerySmallScreen
-                                                      ? 10
-                                                      : 12), // 动态调整字体
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ],
-                                      )
-                                    : Text(
-                                        _accumulatedPromptText.isNotEmpty
-                                            ? _accumulatedPromptText.trim()
-                                            : (isAiConfigured
-                                                ? AppLocalizations.of(
-                                                    context,
-                                                  ).waitingForTodayThoughts
-                                                : AppLocalizations.of(
-                                                    context,
-                                                  ).noTodayThoughts),
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                          height: 1.4,
-                                          fontSize: screenWidth > 600
-                                              ? 15
-                                              : (isVerySmallScreen
-                                                  ? 12
-                                                  : 14), // 动态调整字体
-                                          color:
-                                              _accumulatedPromptText.isNotEmpty
+                                                      ? 12
+                                                      : 14), // 动态调整字体
+                                              color: _accumulatedPromptText
+                                                      .isNotEmpty
                                                   ? theme.textTheme.bodyMedium
                                                       ?.color
                                                   : theme.colorScheme.onSurface
                                                       .withAlpha(120),
-                                        ),
-                                        textAlign: TextAlign.center,
-                                        maxLines: isVerySmallScreen
-                                            ? 2
-                                            : 3, // 极小屏幕最多2行
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                              ],
-                            ),
+                                            ),
+                                            textAlign: TextAlign.center,
+                                            maxLines: isVerySmallScreen
+                                                ? 2
+                                                : 3, // 极小屏幕最多2行
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -2042,6 +2365,7 @@ class _HomePageState extends State<HomePage>
                     label: AppLocalizations.of(context).navInsights,
                   ),
                   NavigationDestination(
+                    key: _settingsTabGuideKey, // 功能引导 key
                     icon: const Icon(Icons.settings_outlined),
                     selectedIcon: Icon(
                       Icons.settings,

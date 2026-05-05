@@ -31,10 +31,12 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  late final String _sanitizedHtmlContent;
 
   @override
   void initState() {
     super.initState();
+    _sanitizedHtmlContent = ContentSanitizer.injectCsp(widget.htmlContent);
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -266,7 +268,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
               ),
               child: SingleChildScrollView(
                 child: Text(
-                  _extractTextFromHtml(widget.htmlContent),
+                  _extractTextFromHtml(_sanitizedHtmlContent),
                   style: TextStyle(
                     fontSize: 14,
                     height: 1.6,
@@ -415,11 +417,11 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
 
     try {
       // 检查内容格式并处理
-      String contentToWrite = widget.htmlContent;
+      String contentToWrite = _sanitizedHtmlContent;
 
       // 如果不是HTML格式，包装成HTML
-      if (!widget.htmlContent.trim().toLowerCase().startsWith('<!doctype') &&
-          !widget.htmlContent.trim().toLowerCase().startsWith('<html')) {
+      if (!_sanitizedHtmlContent.trim().toLowerCase().startsWith('<!doctype') &&
+          !_sanitizedHtmlContent.trim().toLowerCase().startsWith('<html')) {
         contentToWrite = '''
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -471,15 +473,14 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
             <h1>${l10n.annualReportHtmlTitle(widget.year.toString())}</h1>
             <p>${l10n.generationTimeLabel(DateTime.now().toString().substring(0, 19))}</p>
         </div>
-        <div class="content ${widget.htmlContent.trim().startsWith('{') ? 'json-content' : ''}">${widget.htmlContent}</div>
+        <div class="content ${_sanitizedHtmlContent.trim().startsWith('{') ? 'json-content' : ''}">$_sanitizedHtmlContent</div>
     </div>
 </body>
 </html>
 ''';
       }
 
-      // 注入CSP头部（双重保障：针对AI生成的已有HTML结构的情况）
-      contentToWrite = ContentSanitizer.injectCsp(contentToWrite);
+      // Note: contentToWrite already has CSP - from either the wrapper template above or _sanitizedHtmlContent (which was sanitized in initState)
 
       // 方法1：尝试使用Data URI在浏览器中直接打开
       try {
@@ -642,7 +643,9 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
           try {
             server?.close(force: true);
             debugPrint('临时报告服务器已自动关闭');
-          } catch (_) {}
+          } catch (e) {
+            debugPrint('[AIAnnualReportWebView] server close error: $e');
+          }
         });
 
         return; // 成功打开，直接返回
@@ -651,7 +654,9 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
       debugPrint('HTTP服务器方式打开失败: $e');
       try {
         server?.close(force: true);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[AIAnnualReportWebView] server close error: $e');
+      }
       // 继续执行后续的Fallback逻辑
     }
 
@@ -894,9 +899,9 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
       );
 
       // 准备HTML内容
-      String contentToShare = widget.htmlContent;
-      if (!widget.htmlContent.trim().toLowerCase().startsWith('<!doctype') &&
-          !widget.htmlContent.trim().toLowerCase().startsWith('<html')) {
+      String contentToShare = _sanitizedHtmlContent;
+      if (!_sanitizedHtmlContent.trim().toLowerCase().startsWith('<!doctype') &&
+          !_sanitizedHtmlContent.trim().toLowerCase().startsWith('<html')) {
         contentToShare = '''
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -939,15 +944,14 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
             <h1>${l10n.annualReportHtmlTitle(widget.year.toString())}</h1>
             <p>${l10n.generationTimeLabel(DateTime.now().toString().substring(0, 19))}</p>
         </div>
-        <div class="content">${widget.htmlContent}</div>
+        <div class="content">$_sanitizedHtmlContent</div>
     </div>
 </body>
 </html>
 ''';
       }
 
-      // 注入CSP头部
-      contentToShare = ContentSanitizer.injectCsp(contentToShare);
+      // Note: contentToShare already has CSP - from either the wrapper template above or _sanitizedHtmlContent (which was sanitized in initState)
 
       await LargeFileManager.writeStringToFile(htmlFile, contentToShare);
 
@@ -1017,11 +1021,10 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
         final fileName = 'annual_report_${widget.year}_$timestamp.html';
         final reportFile = File('${reportsDir.path}/$fileName');
 
-        // 注入CSP头部
-        final secureContent = ContentSanitizer.injectCsp(widget.htmlContent);
-
+        // Note: _sanitizedHtmlContent already has CSP (sanitized in initState)
         // 保存文件
-        await LargeFileManager.writeStringToFile(reportFile, secureContent);
+        await LargeFileManager.writeStringToFile(
+            reportFile, _sanitizedHtmlContent);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1040,7 +1043,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
         }
       } catch (pathError) {
         // 如果路径操作失败，回退到剪贴板
-        await Clipboard.setData(ClipboardData(text: widget.htmlContent));
+        await Clipboard.setData(ClipboardData(text: _sanitizedHtmlContent));
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

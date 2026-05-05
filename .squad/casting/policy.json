@@ -1,0 +1,4 @@
+{
+  "universes": ["wall-e"],
+  "max_agents_per_universe": 25
+}

@@ -22,18 +22,8 @@ class WeatherService extends ChangeNotifier {
 
   final WeatherCacheManager _cacheManager = WeatherCacheManager();
   bool _isInitialized = false;
-  late final Future<void> _initFuture = _init();
+  Future<void>? _initFuture;
   final Map<String, Future<void>> _pendingWeatherRequests = {};
-
-  // 当前语言设置
-  String? _currentLocaleCode;
-
-  String? get currentLocaleCode => _currentLocaleCode;
-  set currentLocaleCode(String? code) {
-    if (_currentLocaleCode == code) return;
-    _currentLocaleCode = code;
-    notifyListeners();
-  }
 
   // Getters
   WeatherData? get currentWeatherData => _currentWeatherData;
@@ -50,24 +40,30 @@ class WeatherService extends ChangeNotifier {
   String? get weatherIcon => _currentWeatherData?.iconCode;
   double? get temperatureValue => _currentWeatherData?.temperature;
 
-  // 初始化服务
-  Future<void> _init() async {
+  /// 确保服务已初始化（失败后允许重试，与 LocationService 行为一致）
+  Future<void> _ensureInitialized() async {
+    if (_isInitialized) return;
+
+    _initFuture ??= _doInit();
     try {
-      await _cacheManager.initialize();
-      _isInitialized = true;
-      logDebug('天气服务初始化完成');
+      await _initFuture;
     } catch (e) {
-      logError('天气服务初始化失败: $e', error: e);
+      _initFuture = null;
+      _isInitialized = false;
       _lastError = '服务初始化失败: $e';
+      rethrow;
+    }
+
+    if (!_isInitialized) {
+      _initFuture = null;
+      throw Exception('Weather service initialization failed');
     }
   }
 
-  /// 确保服务已初始化
-  Future<void> _ensureInitialized() async {
-    await _initFuture;
-    if (!_isInitialized) {
-      throw Exception('Weather service initialization failed');
-    }
+  Future<void> _doInit() async {
+    await _cacheManager.initialize();
+    _isInitialized = true;
+    logDebug('天气服务初始化完成');
   }
 
   /// 获取天气数据的主要方法
@@ -310,23 +306,6 @@ class WeatherService extends ChangeNotifier {
     return WeatherCodeMapper.getIconCode(key);
   }
 
-  /// 检查天气 API 是否可达
-  /// 返回 true 表示 API 不可达，应使用本地缓存
-  @Deprecated('Unused method - consider removing')
-  Future<bool> shouldUseLocalWeather() async {
-    try {
-      // 使用天气API的健康检查端点，使用北京坐标避免海洋中心
-      final result = await NetworkService.instance.get(
-        'https://api.open-meteo.com/v1/forecast?latitude=39.9&longitude=116.4&current=temperature_2m',
-        timeoutSeconds: 5,
-      );
-      return result.statusCode != 200;
-    } catch (e) {
-      logDebug('网络连通性检查失败: $e');
-      return true; // 网络不可用，使用本地天气
-    }
-  }
-
   /// 获取缓存信息（用于调试）
   Future<Map<String, dynamic>?> getCacheInfo() async {
     try {
@@ -352,8 +331,9 @@ class WeatherService extends ChangeNotifier {
   /// 设置模拟天气数据（兼容性方法）
   void setMockWeatherData() {
     _currentWeatherData = WeatherData.error();
-    _setState(WeatherServiceState.error);
     _lastError = 'weather_fetch_failed';
+    _state = WeatherServiceState.error;
+    notifyListeners();
     logDebug('天气数据获取失败，显示错误状态');
   }
 
@@ -374,11 +354,6 @@ class WeatherService extends ChangeNotifier {
     'thunderstorm_heavy': '雷暴雨',
     'unknown': '未知',
   };
-
-  /// 兼容旧代码，避免在新代码中继续使用
-  @Deprecated(
-      'Use legacyWeatherKeyToLabel for migration, or getLocalizedWeatherLabel(context, key) for UI display')
-  static const weatherKeyToLabel = legacyWeatherKeyToLabel;
 
   /// 获取天气 key 的本地化标签（UI 显示专用）
   static String getLocalizedWeatherLabel(BuildContext context, String key) {
@@ -414,16 +389,6 @@ class WeatherService extends ChangeNotifier {
         return key;
     }
   }
-
-  /// 硬编码中文标签（仅用于数据库旧数据兼容），UI 显示应使用 [getLocalizedFilterCategoryLabel]
-  @Deprecated(
-      'Use getLocalizedFilterCategoryLabel(context, key) for UI display')
-  static const filterCategoryToLabel = {
-    'sunny': '晴',
-    'rainy': '雨',
-    'cloudy': '多云',
-    'snowy': '雪',
-  };
 
   // 简化分类到具体天气key的映射
   static const filterCategoryToKeys = {

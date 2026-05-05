@@ -5,6 +5,7 @@ import '../../gen_l10n/app_localizations.dart';
 import '../../models/onboarding_models.dart';
 import '../../config/onboarding_config.dart';
 import '../../services/location_service.dart';
+import '../../services/api_service.dart';
 
 /// 偏好设置页面组件
 class PreferencesPageView extends StatefulWidget {
@@ -26,7 +27,28 @@ class PreferencesPageView extends StatefulWidget {
 class _PreferencesPageViewState extends State<PreferencesPageView>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
-  late List<Animation<double>> _itemAnimations;
+  List<Animation<double>> _itemAnimations = const [];
+
+  List<OnboardingPreference<dynamic>> _buildDisplayPreferences() {
+    return OnboardingConfig.getPreferences(
+      context,
+    ).where((preference) => preference.key != 'dailyQuoteProvider').toList();
+  }
+
+  OnboardingPreference<String>? _dailyQuoteProviderPreference() {
+    final providerPreference = OnboardingConfig.getPreferences(
+      context,
+    ).where((preference) => preference.key == 'dailyQuoteProvider');
+    if (providerPreference.isEmpty) {
+      return null;
+    }
+
+    final firstPreference = providerPreference.first;
+    if (firstPreference is OnboardingPreference<String>) {
+      return firstPreference;
+    }
+    return null;
+  }
 
   @override
   void initState() {
@@ -36,12 +58,25 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
       vsync: this,
     );
 
-    // Fixed count of 3 preferences (location, hitokoto types, start page)
-    const preferencesCount = 3;
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (mounted) {
+        _animationController.forward();
+      }
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final preferencesCount = _buildDisplayPreferences().length;
+    if (_itemAnimations.length == preferencesCount) {
+      return;
+    }
+
     _itemAnimations = List.generate(preferencesCount, (index) {
-      // Calculate intervals that ensure end values don't exceed 1.0
       final startDelay = index * 0.1;
-      const animationDuration = 0.4; // Fixed duration for each animation
+      const animationDuration = 0.4;
       final endTime = (startDelay + animationDuration).clamp(0.0, 1.0);
 
       return Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -50,12 +85,6 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
           curve: Interval(startDelay, endTime, curve: Curves.easeOutCubic),
         ),
       );
-    });
-
-    Future.delayed(const Duration(milliseconds: 200), () {
-      if (mounted) {
-        _animationController.forward();
-      }
     });
   }
 
@@ -68,6 +97,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final displayPreferences = _buildDisplayPreferences();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
@@ -102,7 +132,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
           const SizedBox(height: 32),
 
           // 偏好设置列表（使用动态国际化版本）
-          ...OnboardingConfig.getPreferences(context).asMap().entries.map((
+          ...displayPreferences.asMap().entries.map((
             entry,
           ) {
             final index = entry.key;
@@ -210,9 +240,10 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
             if (!hasPermission) {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('位置权限被拒绝，无法启用位置服务'),
-                    duration: Duration(seconds: 2),
+                  SnackBar(
+                    content: Text(
+                        AppLocalizations.of(context).locationPermissionDenied),
+                    duration: const Duration(seconds: 2),
                   ),
                 );
               }
@@ -439,6 +470,26 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
         preference.defaultValue as String;
     final selectedValues = value.split(',').where((v) => v.isNotEmpty).toSet();
     final options = preference.options ?? [];
+    final providerPreference = preference.key == 'hitokotoTypes'
+        ? _dailyQuoteProviderPreference()
+        : null;
+    final selectedProvider = widget.state.getPreference<String>(
+          'dailyQuoteProvider',
+        ) ??
+        providerPreference?.defaultValue ??
+        ApiService.hitokotoProvider;
+    final showTypeSelection =
+        ApiService.supportsHitokotoTypeSelection(selectedProvider);
+
+    if (preference.key == 'hitokotoTypes' && !showTypeSelection) {
+      return Card(
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: _buildDailyQuoteProviderSelector(theme),
+        ),
+      );
+    }
 
     return Card(
       elevation: 2,
@@ -460,6 +511,11 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
+            if (preference.key == 'hitokotoTypes') ...[
+              const SizedBox(height: 16),
+              _buildDailyQuoteProviderSelector(theme),
+              const SizedBox(height: 4),
+            ],
             const SizedBox(height: 16),
 
             // 快速操作按钮
@@ -554,6 +610,64 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDailyQuoteProviderSelector(ThemeData theme) {
+    final providerPreference = _dailyQuoteProviderPreference();
+    if (providerPreference == null) {
+      return const SizedBox.shrink();
+    }
+    final options = providerPreference.options ?? [];
+    final value = widget.state.getPreference<String>('dailyQuoteProvider') ??
+        providerPreference.defaultValue;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            providerPreference.title,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            providerPreference.description,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(height: 8),
+          RadioGroup<String>(
+            groupValue: value,
+            onChanged: (newValue) {
+              if (newValue != null) {
+                widget.onPreferenceChanged('dailyQuoteProvider', newValue);
+              }
+            },
+            child: Column(
+              children: options.map((option) {
+                return RadioListTile<String>(
+                  value: option.value,
+                  title: Text(option.label),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  visualDensity: VisualDensity.compact,
+                  activeColor: theme.colorScheme.primary,
+                );
+              }).toList(),
+            ),
+          ),
+        ],
       ),
     );
   }

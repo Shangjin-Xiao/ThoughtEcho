@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:thoughtecho/utils/string_utils.dart';
 import 'package:thoughtecho/widgets/quill_enhanced_toolbar_unified.dart';
 
 void main() {
@@ -125,8 +126,11 @@ void main() {
 
       // 插入文本
       controller.document.insert(0, 'Test text');
-      // Fix: trim the text to remove any trailing newlines
-      expect(controller.document.toPlainText().trim(), equals('Test text'));
+      // trim the text to remove any trailing newlines
+      final text = StringUtils.removeObjectReplacementChar(
+        controller.document.toPlainText(),
+      ).trim();
+      expect(text, equals('Test text'));
 
       // 测试撤销/重做功能
       expect(controller.hasUndo, isTrue);
@@ -135,7 +139,10 @@ void main() {
 
       expect(controller.hasRedo, isTrue);
       controller.redo();
-      expect(controller.document.toPlainText().trim(), equals('Test text'));
+      final redoneText = StringUtils.removeObjectReplacementChar(
+        controller.document.toPlainText(),
+      ).trim();
+      expect(redoneText, equals('Test text'));
     });
   });
 

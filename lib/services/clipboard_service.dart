@@ -1,6 +1,7 @@
 // filepath: /workspaces/ThoughtEcho/lib/services/clipboard_service.dart
 // ignore_for_file: unused_field
 import '../constants/app_constants.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/note_category.dart';
@@ -10,6 +11,7 @@ import 'package:provider/provider.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 导入安全包装类
 import '../theme/app_theme.dart';
 import '../utils/app_logger.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class ClipboardService extends ChangeNotifier {
   static const String _keyEnableClipboardMonitoring =
@@ -94,9 +96,11 @@ class ClipboardService extends ChangeNotifier {
       }
 
       final content = data.text!;
-      logDebug(
-        '检测到新的剪贴板内容: ${content.length > 20 ? '${content.substring(0, 20)}...' : content} (已脱敏)',
-      );
+      if (kDebugMode) {
+        logDebug(
+          '检测到新的剪贴板内容: ${content.length > 20 ? '${content.substring(0, 20)}...' : content} (已脱敏)',
+        );
+      }
 
       // 内容过长或过短不处理
       if (content.length > 5000 || content.length < 5) {
@@ -114,7 +118,8 @@ class ClipboardService extends ChangeNotifier {
       String? matchedSubstring = extractedInfo['matched_substring']; // 获取匹配到的子串
 
       logDebug(
-          '从剪贴板提取信息 - 作者: $author, 出处: $source, 匹配子串长度: ${matchedSubstring?.length}');
+        '从剪贴板提取信息 - 作者: $author, 出处: $source, 匹配子串长度: ${matchedSubstring?.length}',
+      );
 
       // 如果提取到了元数据，从原始内容中移除匹配的子串
       final displayContent = (matchedSubstring != null)
@@ -133,6 +138,26 @@ class ClipboardService extends ChangeNotifier {
     }
   }
 
+  // Cache regexes for performance
+  static final RegExp _pattern1 = RegExp(
+    r'[-—–]+\s*([^《（\(]+?)?\s*[《（\(]([^》）\)]+?)[》）\)]\s*$',
+  );
+  static final RegExp _pattern2 = RegExp(
+    r'[《（\(]([^》）\)]+?)[》）\)]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$',
+  );
+  static final RegExp _pattern3 = RegExp(
+    r'["""](.+?)["""]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$',
+  );
+  static final RegExp _pattern4 = RegExp(
+    r'[-—–]+\s*([^，。,、\.\n《（\(]{2,20})\s*$',
+  );
+  static final RegExp _pattern4Source = RegExp(r'[《（\(]([^》）\)]+?)[》）\)]\s*$');
+  static final RegExp _pattern5 = RegExp(r'[《（\(]([^》）\)]+?)[》）\)]\s*$');
+  static final RegExp _pattern5Author = RegExp(
+    r'[-—–]+\s*([^，。,、\.\n《（\(]{2,20})\s*$',
+  );
+  static final RegExp _cleanPattern = RegExp(r'^[—–\-—\s]+|[—–\-—\s]+$');
+
   // 从文本中提取作者和出处信息（类似一言格式）
   // 返回包含 'author', 'source', 'matched_substring' 的 Map
   Map<String, String?> _extractAuthorAndSource(String content) {
@@ -143,16 +168,11 @@ class ClipboardService extends ChangeNotifier {
 
     // 定义清理函数，去除前后空格和特定标点
     String? clean(String? input) {
-      return input
-          ?.trim()
-          .replaceAll(RegExp(r'^[—–\-—\s]+|[—–\-—\s]+$'), '')
-          .trim();
+      return input?.trim().replaceAll(_cleanPattern, '').trim();
     }
 
     // 1. 匹配 ——作者《出处》 或 --作者《出处》 等
-    final m1 = RegExp(
-      r'[-—–]+\s*([^《（\(]+?)?\s*[《（\(]([^》）\)]+?)[》）\)]\s*$',
-    ).firstMatch(text);
+    final m1 = _pattern1.firstMatch(text);
     if (m1 != null) {
       author = clean(m1.group(1));
       source = clean(m1.group(2));
@@ -165,9 +185,7 @@ class ClipboardService extends ChangeNotifier {
     }
 
     // 2. 匹配 《出处》——作者 或 《出处》--作者 等
-    final m2 = RegExp(
-      r'[《（\(]([^》）\)]+?)[》）\)]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$',
-    ).firstMatch(text);
+    final m2 = _pattern2.firstMatch(text);
     if (m2 != null) {
       source = clean(m2.group(1));
       author = clean(m2.group(2));
@@ -180,9 +198,7 @@ class ClipboardService extends ChangeNotifier {
     }
 
     // 3. 匹配 "文"——作者 或 "文"--作者 等
-    final m3 = RegExp(
-      r'["""](.+?)["""]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$',
-    ).firstMatch(text);
+    final m3 = _pattern3.firstMatch(text);
     if (m3 != null) {
       // 这种情况通常只提取作者，引用的内容在前面
       author = clean(m3.group(2));
@@ -196,16 +212,14 @@ class ClipboardService extends ChangeNotifier {
     }
 
     // 4. 回退提取作者（匹配末尾的 ——作者 或 --作者）
-    final m4 = RegExp(r'[-—–]+\s*([^，。,、\.\n《（\(]{2,20})\s*$').firstMatch(text);
+    final m4 = _pattern4.firstMatch(text);
     if (m4 != null) {
       author = clean(m4.group(1));
       matchedSubstring = m4.group(0);
       // 尝试在此基础上再提取出处
       final remainingText =
           text.substring(0, text.length - matchedSubstring!.length).trim();
-      final m4Source = RegExp(
-        r'[《（\(]([^》）\)]+?)[》）\)]\s*$',
-      ).firstMatch(remainingText);
+      final m4Source = _pattern4Source.firstMatch(remainingText);
       if (m4Source != null) {
         source = clean(m4Source.group(1));
         // 更新匹配的子串以包含出处部分 (可能不精确，但尝试包含)
@@ -221,16 +235,14 @@ class ClipboardService extends ChangeNotifier {
     }
 
     // 5. 回退提取出处（匹配末尾的 《出处》 或 （出处））
-    final m5 = RegExp(r'[《（\(]([^》）\)]+?)[》）\)]\s*$').firstMatch(text);
+    final m5 = _pattern5.firstMatch(text);
     if (m5 != null) {
       source = clean(m5.group(1));
       matchedSubstring = m5.group(0);
       // 尝试在此基础上再提取作者
       final remainingText =
           text.substring(0, text.length - matchedSubstring!.length).trim();
-      final m5Author = RegExp(
-        r'[-—–]+\s*([^，。,、\.\n《（\(]{2,20})\s*$',
-      ).firstMatch(remainingText);
+      final m5Author = _pattern5Author.firstMatch(remainingText);
       if (m5Author != null) {
         author = clean(m5Author.group(1));
         // 更新匹配的子串以包含作者部分 (可能不精确，但尝试包含)
@@ -309,10 +321,10 @@ class ClipboardService extends ChangeNotifier {
                       size: 20,
                     ),
                     const SizedBox(width: 10),
-                    const Flexible(
+                    Flexible(
                       child: Text(
-                        '发现剪贴板内容，点击添加为笔记',
-                        style: TextStyle(
+                        AppLocalizations.of(context).clipboardFoundHint,
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
@@ -374,8 +386,8 @@ class ClipboardService extends ChangeNotifier {
             // 可以在这里添加保存后的回调
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('笔记已保存'),
+                SnackBar(
+                  content: Text(AppLocalizations.of(context).noteSaved),
                   duration: AppConstants.snackBarDurationImportant,
                 ),
               );
@@ -388,7 +400,8 @@ class ClipboardService extends ChangeNotifier {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('操作失败: $e'),
+            content:
+                Text('${AppLocalizations.of(context).operationFailed}: $e'),
             duration: AppConstants.snackBarDurationError,
           ),
         );

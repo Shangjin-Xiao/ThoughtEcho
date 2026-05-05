@@ -5,6 +5,7 @@ import 'package:logging/logging.dart' as logging;
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/services/log_database_service.dart';
 import 'package:thoughtecho/services/log_service.dart' as old_log;
+import 'package:thoughtecho/utils/global_exception_handler.dart';
 import 'package:flutter/widgets.dart';
 
 // 导入main.dart中的全局函数
@@ -214,6 +215,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
   // logging_flutter 的 logger
   late logging.Logger _logger;
   bool _loggerInitialized = false;
+  StreamSubscription<logging.LogRecord>? _rootLogSubscription;
 
   // 日志数据库服务
   final LogDatabaseService _logDb = LogDatabaseService();
@@ -288,7 +290,9 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     if (_initCompleter != null) {
       try {
         await _initCompleter!.future;
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[UnifiedLogService] init completer failed: $e');
+      }
       return;
     }
 
@@ -406,8 +410,10 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     _logger = logging.Logger('ThoughtEcho');
     _loggerInitialized = true;
 
+    await _rootLogSubscription?.cancel();
+
     // 添加控制台输出处理器
-    logging.Logger.root.onRecord.listen((record) {
+    _rootLogSubscription = logging.Logger.root.onRecord.listen((record) {
       // 防止递归：如果正在记录日志，跳过
       if (_isLogging) return;
 
@@ -494,7 +500,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
   void _updateLoggingFlutterLevel() {
     final loggingLevel = _mapUnifiedLevelToLogging(_currentLevel);
     _logger.level = loggingLevel;
-    // 注意：不要设置 root logger 的级别，因为我们已经启用了分层日志记录
+    logging.Logger.root.level = loggingLevel;
   }
 
   /// 从数据库加载最近的日志
@@ -552,7 +558,10 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       }
 
       // Windows平台限制批量保存的频率，避免过度写入
-      if (!kIsWeb && Platform.isWindows && _pendingLogs.length < 5) {
+      if (!kIsWeb &&
+          Platform.isWindows &&
+          _pendingLogs.length < 5 &&
+          !_pendingLogs.any(_isUrgentLog)) {
         return; // Windows平台等待更多日志再批量保存
       }
 
@@ -605,9 +614,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
     // 只有在启用持久化时，才添加到待处理队列准备写入数据库
     // 唯一的例外是：如果这是严重错误或警告，即使未开启持久化也记录，以便后续诊断问题
-    if (_isPersistenceEnabled ||
-        entry.level == UnifiedLogLevel.error ||
-        entry.level == UnifiedLogLevel.warning) {
+    if (_isPersistenceEnabled || _isUrgentLog(entry)) {
       _pendingLogs.add(entry);
     }
 
@@ -624,11 +631,14 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
     // 对错误级别的日志进行更积极的持久化，但仅当持久化启用时
     // 如果正在刷新，则跳过以避免递归
-    if (_isPersistenceEnabled &&
-        entry.level == UnifiedLogLevel.error &&
-        !_isFlushing) {
+    if (_isUrgentLog(entry) && !_isFlushing) {
       unawaited(flushLogs());
     }
+  }
+
+  bool _isUrgentLog(LogEntry entry) {
+    return entry.level == UnifiedLogLevel.error ||
+        entry.level == UnifiedLogLevel.warning;
   }
 
   /// 将待处理的日志保存到数据库
@@ -733,7 +743,6 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
         _notifyScheduled = false;
       });
     }
-    log(UnifiedLogLevel.info, '内存中的日志已清除', source: 'UnifiedLogService');
   }
 
   /// 清除所有存储的日志（包括数据库中的）
@@ -753,8 +762,6 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
         _notifyScheduled = false;
       });
     }
-
-    log(UnifiedLogLevel.info, '所有日志记录已清除', source: 'UnifiedLogService');
   }
 
   /// 查询日志（从数据库）
@@ -901,8 +908,11 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     _isDisposed = true;
     try {
       WidgetsBinding.instance.removeObserver(this);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[UnifiedLogService] dispose cleanup error: $e');
+    }
     _batchSaveTimer?.cancel();
+    unawaited(_rootLogSubscription?.cancel());
     // 虽然 dispose 不能等待，但仍尽量触发一次持久化
     unawaited(_savePendingLogsToDatabase());
     super.dispose();
@@ -1141,8 +1151,11 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
   /// 处理在日志服务初始化之前缓存的错误
   Future<void> _processDeferredErrors() async {
     try {
+      final errorsList = <Map<String, dynamic>>[];
+
       const Function getAndClearDeferredErrorsFunc = getAndClearDeferredErrors;
-      final errorsList = getAndClearDeferredErrorsFunc();
+      errorsList.addAll(getAndClearDeferredErrorsFunc());
+      errorsList.addAll(GlobalExceptionHandler.getDeferredErrors());
 
       if (errorsList.isNotEmpty) {
         for (final errorMap in errorsList) {
@@ -1156,6 +1169,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
             source: errorMap['source'] as String? ?? 'unknown',
           );
         }
+        GlobalExceptionHandler.clearDeferredErrors();
         _logger.info('处理了 ${errorsList.length} 条早期缓存错误');
       }
     } catch (e) {

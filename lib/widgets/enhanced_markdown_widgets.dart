@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../gen_l10n/app_localizations.dart';
 
 /// 增强的代码块组件，支持语法高亮和复制功能
 class CodeBlockWidget extends StatefulWidget {
@@ -111,8 +112,8 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
     // 显示提示
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('代码已复制到剪贴板'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).codeCopiedToClipboard),
           duration: Duration(seconds: 1),
         ),
       );

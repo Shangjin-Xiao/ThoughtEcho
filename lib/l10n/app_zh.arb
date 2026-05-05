@@ -134,6 +134,19 @@
   "settingsAboutSlogan": "你的专属灵感摘录本",
   "settingsViewSource": "查看项目源码 (GitHub)",
   "settingsVisitWebsite": "访问官网",
+  "settingsFeedback": "反馈建议",
+  "settingsContactDeveloper": "联系开发者",
+  "feedbackAndContact": "反馈与联系",
+  "feedbackAndContactDesc": "我们非常重视您的反馈！您可以通过以下方式联系我们：",
+  "feedbackGithubTitle": "在 GitHub 提交问题",
+  "feedbackGithubDesc": "提交 Bug 报告、功能建议或参与讨论",
+  "feedbackGithubRepoTitle": "查看项目源码",
+  "feedbackGithubRepoDesc": "查看源代码、给项目加星或提交 Pull Request",
+  "contactDeveloperSectionTitle": "联系开发者",
+  "feedbackEmailTitle": "发送邮件",
+  "feedbackEmailDesc": "shangjinyun@proton.me",
+  "feedbackDiscussionTitle": "加入社区讨论",
+  "feedbackDiscussionDesc": "提问、分享想法、和其他用户交流",
   "settingsViewLicenses": "查看许可证信息",
   "settingsCheckUpdate": "检查更新",
   "settingsCheckUpdateDesc": "检查是否有新版本可用",
@@ -362,6 +375,8 @@
   "deleteNote": "删除笔记",
   "deleteNoteConfirmation": "确定要删除这条笔记吗？此操作无法撤销。",
   "noteDeleted": "笔记已删除",
+  "noteNotFound": "笔记不存在",
+  "noteUpdateSkippedDeleted": "笔记已删除，更新已跳过",
   "favorited": "已珍藏 ({count})",
   "@favorited": {
     "placeholders": {
@@ -408,6 +423,7 @@
     }
   },
   "view": "查看",
+  "viewImage": "查看图片",
   "todayThoughts": "今日思考",
   "loadingTodayThoughts": "正在加载今日思考...",
   "fetchingDefaultPrompt": "正在获取默认提示...",
@@ -500,6 +516,7 @@
   "customColor": "自定义颜色",
   "select": "选择",
   "editMetadata": "编辑元数据",
+  "noLocationWeatherRecorded": "此笔记首次保存时未记录位置和天气信息",
   "done": "完成",
   "selectTags": "选择标签",
   "noMatchingTags": "没有找到匹配的标签",
@@ -581,12 +598,65 @@
   "hitokotoSettings": "每日一言设置",
   "hitokotoTypeSettings": "每日一言类型设置",
   "hitokotoTypeDesc": "您可以选择一个或多个\"每日一言\"类型，程序将从您选择的类型中随机抽取内容展示。不同类型代表不同的内容来源和风格。",
+  "dailyQuoteApiDesc": "选择用于首页每日文段的服务提供方。",
+  "dailyQuoteApiHitokoto": "一言 (Hitokoto)",
+  "dailyQuoteApiZenQuotes": "ZenQuotes",
+  "dailyQuoteApiApiNinjas": "API Ninjas",
+  "dailyQuoteApiMeigen": "名言教えるよ",
+  "dailyQuoteApiKoreanAdvice": "Korean Advice",
+  "dailyQuoteApiNinjasManageApiKey": "配置服务密钥",
+  "dailyQuoteApiNinjasApiKeyHint": "输入 API Ninjas 的 X-Api-Key",
+  "dailyQuoteApiNinjasApiKeyConfigured": "已配置服务密钥",
+  "dailyQuoteApiNinjasApiKeyMissing": "尚未配置服务密钥，无法请求该服务",
+  "dailyQuoteApiNinjasApiKeyInvalid": "服务密钥格式无效",
+  "dailyQuoteApiNinjasCategorySelection": "分类选择",
+  "dailyQuoteApiNinjasCategoryDesc": "支持搜索、多选与清空；如果一个也不选，则自动按全局随机处理。",
+  "dailyQuoteApiNinjasCategorySearchHint": "搜索分类",
+  "dailyQuoteApiNinjasNoCategoriesFound": "没有匹配的分类",
+  "dailyQuoteApiNinjasAllCategoriesUsed": "未限制分类，将从全部分类中随机抽取",
+  "dailyQuoteApiNinjasSelectedCount": "已选择 {count} 个分类",
+  "@dailyQuoteApiNinjasSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteApiNinjasCategoryWisdom": "智慧",
+  "dailyQuoteApiNinjasCategoryPhilosophy": "哲学",
+  "dailyQuoteApiNinjasCategoryLife": "人生",
+  "dailyQuoteApiNinjasCategoryTruth": "真理",
+  "dailyQuoteApiNinjasCategoryInspirational": "励志",
+  "dailyQuoteApiNinjasCategoryRelationships": "关系",
+  "dailyQuoteApiNinjasCategoryLove": "爱情",
+  "dailyQuoteApiNinjasCategoryFaith": "信念",
+  "dailyQuoteApiNinjasCategoryHumor": "幽默",
+  "dailyQuoteApiNinjasCategorySuccess": "成功",
+  "dailyQuoteApiNinjasCategoryCourage": "勇气",
+  "dailyQuoteApiNinjasCategoryHappiness": "幸福",
+  "dailyQuoteApiNinjasCategoryArt": "艺术",
+  "dailyQuoteApiNinjasCategoryWriting": "写作",
+  "dailyQuoteApiNinjasCategoryFear": "恐惧",
+  "dailyQuoteApiNinjasCategoryNature": "自然",
+  "dailyQuoteApiNinjasCategoryTime": "时间",
+  "dailyQuoteApiNinjasCategoryFreedom": "自由",
+  "dailyQuoteApiNinjasCategoryDeath": "死亡",
+  "dailyQuoteApiNinjasCategoryLeadership": "领导力",
   "selectAll": "全选",
   "clearAll": "清除全部",
   "typeSelection": "类型选择",
   "typeSelectionHint": "点击选择您喜欢的句子类型",
+  "dailyQuoteProviderNoTypeSelection": "当前来源不支持分类筛选。",
   "usageInstructions": "使用说明",
   "hitokotoServiceProvider": "一言服务由 Hitokoto 提供",
+  "dailyQuoteServiceProvider": "当前内容由 {provider} 提供",
+  "@dailyQuoteServiceProvider": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
   "hitokotoHelpItem1": "至少需要选择一种类型，程序会随机展示选中类型的内容",
   "hitokotoHelpItem2": "选择多种类型可以获得更丰富多样的内容体验",
   "hitokotoHelpItem3": "不同类型代表不同的内容风格和来源平台",
@@ -956,6 +1026,7 @@
   "hitokotoTypeI": "诗词",
   "hitokotoTypeJ": "网易云",
   "hitokotoTypeK": "哲学",
+  "hitokotoTypeJoke": "幽默",
   "noNetworkConnection": "无网络连接",
   "unknown": "未知",
   "defaultQuote1": "生活不止眼前的苟且，还有诗和远方。",
@@ -1381,6 +1452,7 @@
   "todayThoughtsUseAiDesc": "打开后将使用AI生成今日思考提示，关闭则使用本地生成",
   "apiUrlRequired": "API URL不能为空",
   "invalidUrl": "请输入有效的HTTP/HTTPS URL",
+  "fieldRequired": "此字段不能为空",
   "mediaManagementTitle": "媒体文件管理",
   "loadStatsError": "加载统计信息失败: {error}",
   "@loadStatsError": {
@@ -1399,16 +1471,6 @@
     }
   },
   "operationFailed": "{operation} 失败: {error}",
-  "@operationFailed": {
-    "placeholders": {
-      "operation": {
-        "type": "String"
-      },
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "@operationFailed": {
     "placeholders": {
       "operation": {
@@ -1875,8 +1937,6 @@
   "containsHtmlTagsLabel": "包含HTML标签：{status}",
   "first100CharsLabel": "前100字符：",
   "testFailedEmptyContent": "测试失败：AI返回了空内容",
-  "testFailedApiKey": "测试失败：请先在AI设置中配置有效的API Key",
-  "testFailedNetwork": "测试失败：网络连接异常",
   "formattedDate": "{month}月{day}日",
   "@formattedDate": {
     "placeholders": {
@@ -1948,7 +2008,6 @@
     }
   },
   "generatingAiReport": "正在生成AI年度报告...",
-  "testFailedEmptyContent": "测试失败：AI返回了空内容",
   "includeMediaFilesHint": "勾选后将备份图片、音频等媒体文件（文件更大但更完整）",
   "overwriteImport": "覆盖导入 (清空现有数据)",
   "overwriteImportDesc": "删除当前所有数据，以备份内容替换",
@@ -2397,8 +2456,8 @@
   "showFavoriteButtonDesc": "在笔记卡片上显示心形按钮",
   "prioritizeBoldContent": "优先显示加粗内容",
   "prioritizeBoldContentDesc": "折叠时优先显示加粗文字",
-  "useLocalNotesOnly": "仅使用本地笔记",
-  "useLocalNotesOnlyDesc": "关闭后，无网络时自动使用本地记录",
+  "useLocalNotesOnly": "仅展示本地记录",
+  "useLocalNotesOnlyDesc": "首页不再从网络获取新的每日一言",
   "aiSmartFeatures": "AI 智能功能",
   "aiGenerateDailyPrompt": "AI生成每日提示",
   "aiGenerateDailyPromptDesc": "主页每日提示使用AI生成",
@@ -2431,7 +2490,8 @@
   "syncIntegrationNote": "同步功能集成说明：",
   "serviceApiAcknowledgements": "服务与 API 鸣谢：",
   "weatherData": "天气数据",
-  "dailyQuoteApi": "每日一言 API",
+  "geocodingApi": "地理编码 API",
+  "dailyQuoteApi": "每日一言服务提供方",
   "viewFullDependencyList": "查看完整依赖列表",
   "thankOpenSourceContributors": "感谢所有开源项目与社区贡献者，正是这些工具和服务让本应用成为可能。具体许可证请以各项目仓库或包管理页面为准。",
   "lottieFilesCredits": "应用使用了来自 LottieFiles 的动画资源：",
@@ -2736,6 +2796,16 @@
   "dayPeriodMidnight": "深夜",
   "showExactTime": "显示精确时间",
   "showExactTimeDesc": "在笔记中显示时间（时:分）",
+  "showNoteEditTime": "显示笔记编辑时间",
+  "showNoteEditTimeDesc": "在笔记中显示最后编辑时间",
+  "editedAtLabel": "编辑于 {dateTime}",
+  "@editedAtLabel": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
   "guideHomepageDailyQuoteTitle": "每日一言小技巧",
   "guideHomepageDailyQuoteDesc": "单击可快速复制内容\n双击可快速添加到笔记",
   "guideNotePageFilterTitle": "筛选与排序",
@@ -2756,6 +2826,8 @@
   "guideSettingsStartupDesc": "可以设置应用启动时默认打开的页面",
   "guideSettingsThemeTitle": "主题设置",
   "guideSettingsThemeDesc": "这里可以自定义应用的主题颜色和外观",
+  "guideTrashLocationTitle": "回收站位置",
+  "guideTrashLocationDesc": "笔记已移到回收站\n可在「设置」中找到回收站并恢复",
   "apkDownloadTitle": "下载APK",
   "apkDownloading": "正在下载 ThoughtEcho {version}...",
   "@apkDownloading": {
@@ -2828,6 +2900,15 @@
   "mindMapAnalysis": "思维导图",
   "growthAnalysis": "成长分析",
   "aiAnalysis": "AI分析",
+  "deleteAiAnalysis": "删除AI分析",
+  "deleteAiAnalysisConfirm": "确定要删除此笔记的AI分析结果吗？此操作可在保存笔记前撤销。",
+  "aiAnalysisDeleted": "AI分析已删除",
+  "aiAnalysisSaved": "AI分析已保存",
+  "aiGenerating": "AI 正在生成...",
+  "complete": "完成",
+  "viewFull": "查看全文",
+  "copy": "复制",
+  "copiedToClipboard": "已复制到剪贴板",
   "selectReportTypePrompt": "请选择要生成的年度报告类型：",
   "aiSmartReport": "AI 智能报告",
   "aiSmartReportDesc": "基于AI分析生成的精美HTML报告，包含深度洞察和可视化图表",
@@ -2951,6 +3032,9 @@
   "outOfMemoryVideo": "内存不足，无法加载视频",
   "audioFileNotFound": "音频文件不存在",
   "clickToPlayVideo": "点击播放视频",
+  "motionPhoto": "实况",
+  "viewPhoto": "查看照片",
+  "motionPhotoPlayFailed": "无法播放这张动态照片",
   "loadingVideo": "正在加载视频...",
   "shareAudio": "分享音频",
   "fileInfo": "文件信息",
@@ -3077,15 +3161,23 @@
   "locationDisplayFormat": "{city}{suffix}",
   "@locationDisplayFormat": {
     "placeholders": {
-      "city": {"type": "String"},
-      "suffix": {"type": "String"}
+      "city": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
     }
   },
   "locationDisplayWithDistrict": "{city}·{district}",
   "@locationDisplayWithDistrict": {
     "placeholders": {
-      "city": {"type": "String"},
-      "district": {"type": "String"}
+      "city": {
+        "type": "String"
+      },
+      "district": {
+        "type": "String"
+      }
     }
   },
   "noLocationInfo": "无位置信息",
@@ -3180,21 +3272,16 @@
   "unsavedChangesDesc": "您有未保存的编辑内容，是否要放弃这些更改？",
   "continueEditing": "继续编辑",
   "discardChanges": "放弃更改",
-
+  "saveAndExit": "保存并退出",
   "localAiFeatures": "本地 AI 功能",
   "localAiFeaturesPreview": "预览版",
   "localAiFeaturesDesc": "使用设备端 AI 能力增强笔记体验",
-  "localAiFeaturesAdvanced": "本地 AI 高级功能",
-  "localAiFeaturesAdvancedDesc": "OCR、智能标签等高级 AI 功能",
-  "settingsAsrDesc": "下载模型并启用语音转文字功能",
   "enableLocalAi": "启用本地 AI",
   "enableLocalAiDesc": "开启后将启用设备端 AI 功能",
   "localAiPreviewNote": "此功能目前处于预览阶段，部分功能可能不稳定",
-
   "inputEnhancement": "输入增强",
   "searchAndDiscovery": "搜索与发现",
   "contentAnalysis": "内容分析",
-
   "speechToText": "语音转文字",
   "speechToTextDesc": "长按录音按钮，将语音实时转换为文字",
   "ocrRecognition": "OCR 文字识别",
@@ -3203,19 +3290,16 @@
   "aiCorrectionDesc": "智能修复语音和 OCR 识别中的错误",
   "sourceRecognition": "智能识别来源",
   "sourceRecognitionDesc": "自动提取文本中的作者和作品信息",
-
   "aiSearch": "AI 语义搜索",
   "aiSearchDesc": "使用 AI 理解搜索意图，找到语义相关的笔记",
   "relatedNotes": "相关笔记推荐",
   "relatedNotesDesc": "基于内容相似度推荐相关笔记",
-
   "smartTags": "智能标签推荐",
   "smartTagsDesc": "保存笔记时智能推荐合适的标签",
   "noteClassification": "笔记类型分类",
   "noteClassificationDesc": "自动识别笔记类型（感悟、摘录、日记等）",
   "emotionDetection": "情绪检测",
   "emotionDetectionDesc": "分析笔记内容的情感倾向",
-
   "swipeUpForOcr": "上划进入 OCR",
   "listening": "正在聆听...",
   "recording": "录音中",
@@ -3227,27 +3311,23 @@
   "correctionComplete": "纠错完成",
   "recognizing": "正在识别...",
   "recognitionComplete": "识别完成",
-
   "voiceInputTitle": "语音输入",
   "voiceResultTitle": "语音识别结果",
   "ocrCaptureTitle": "OCR 文字识别",
-  "ocrResultTitle": "识别结果",
+  "ocrResultTitle": "OCR 识别结果",
   "selectTextRegions": "选择要提取的文字区域",
   "takeAnotherPhoto": "再拍一张",
   "finishSelection": "完成选择",
   "noTextDetected": "未检测到文字",
   "tapToSelectRegion": "点击选择文字区域",
-
-  "aiSearchMode": "AI 搜索模式",
-  "normalSearchMode": "普通搜索模式",
+  "aiSearchMode": "AI 搜索",
+  "normalSearchMode": "普通搜索",
   "switchToAiSearch": "切换到 AI 语义搜索",
   "switchToNormalSearch": "切换到普通搜索",
-
   "recommendedTags": "推荐标签",
   "noteType": "笔记类型",
   "emotionAnalysis": "情感分析",
   "viewRelatedNotes": "查看相关笔记",
-
   "localAiNotEnabled": "本地 AI 功能未启用",
   "enableInSettings": "请在设置中启用",
   "featureNotAvailable": "功能暂不可用",
@@ -3282,7 +3362,6 @@
   "voiceRecordingHint": "松开结束，上滑进入 OCR",
   "voiceProcessing": "处理中...",
   "voiceTranscribing": "转写中...",
-  "voiceResultTitle": "语音识别结果",
   "voiceEditResult": "编辑识别结果",
   "voiceApplyCorrection": "AI 纠错",
   "voiceRecognizeSource": "识别来源",
@@ -3292,10 +3371,7 @@
   "ocrSelectRegion": "选择文字区域",
   "ocrSelectRegionHint": "点击要识别的文字区域",
   "ocrProcessing": "识别中...",
-  "ocrResultTitle": "OCR 识别结果",
   "ocrNoTextDetected": "未检测到文字",
-  "aiSearchMode": "AI 搜索",
-  "normalSearchMode": "普通搜索",
   "aiSearching": "AI 搜索中...",
   "aiCorrectionApplied": "已应用 AI 纠错",
   "aiSourceRecognized": "已识别来源",
@@ -3322,7 +3398,6 @@
   "biometricNotAvailable": "设备不支持生物识别验证",
   "biometricNotSetup": "请先在系统设置中设置指纹或面容识别",
   "privacyAndSecurity": "隐私与安全",
-
   "smartPushTitle": "智能推送",
   "smartPushTitlePreview": "智能推送 (Preview)",
   "smartPushDesc": "定时推送过去的笔记和每日一言",
@@ -3331,6 +3406,7 @@
   "smartPushContentType": "推送模式",
   "smartPushDailyQuote": "每日一言",
   "smartPushDailyQuoteDesc": "推送精选语录",
+  "smartPushDailyQuoteIndependentNote": "每日一言独立于智能推送，两者互不影响，可分别开启或关闭。",
   "smartPushPastNotes": "往日笔记",
   "smartPushPastNotesDesc": "推送历史笔记回顾",
   "smartPushModeSmart": "智能推送",
@@ -3417,8 +3493,7 @@
   "tileNoNetwork": "无网络",
   "tileLoading": "加载中...",
   "tileNoWeather": "无天气",
-  "tileCachedSuffix": "(缓存)",
-
+  "tileCachedSuffix": "缓存",
   "noteAutoFillSection": "笔记默认填充",
   "noteAutoFillSectionDesc": "新建笔记时自动填充作者、出处和标签",
   "defaultAuthor": "默认作者",
@@ -3444,7 +3519,8 @@
   "saveDefaultValue": "保存",
   "defaultValueSaved": "默认值已保存",
   "defaultValueCleared": "默认值已清除",
-
+  "excerptIntentEnabled": "摘录到心迹",
+  "excerptIntentEnabledDesc": "允许从浏览器或其他应用选中文本后直接跳转到心迹，并打开非全屏编辑器",
   "citySelectedWeatherUpdated": "已选择城市：{cityName}，天气已更新",
   "@citySelectedWeatherUpdated": {
     "placeholders": {
@@ -3483,7 +3559,102 @@
   "cannotGetCurrentLocation": "无法获取当前位置，请确保已授予位置权限",
   "cannotGetSelectedCityLocation": "无法获取选中城市的位置信息",
   "cityInfoIncomplete": "城市信息不完整",
-
+  "annualReportDemo": "年度报告演示",
+  "manualApiTest": "手动API测试",
+  "manualApiTestTitle": "手动API密钥测试",
+  "manualApiTestDesc": "直接输入API参数进行测试，绕过存储系统检查API密钥是否有效。",
+  "testResultLabel": "测试结果:",
+  "fillAllFieldsError": "错误: 请填写所有必填字段",
+  "testReportTitle": "=== 手动API密钥测试报告 ===",
+  "testParamsLabel": "测试参数:",
+  "keyFormatCheckLabel": "密钥格式检查:",
+  "sendRequestLabel": "发送请求:",
+  "responseResultLabel": "响应结果:",
+  "testApiKey": "测试API密钥",
+  "aiReturnedEmptyContent": "AI返回了空内容，请重试",
+  "chatWithAiAssistant": "与AI助手对话，深入探讨笔记内容",
+  "messageCopied": "消息已复制到剪贴板",
+  "anniversaryTitle": "心迹 · ThoughtEcho",
+  "anniversarySubtitle": "感恩有你，一路同行",
+  "anniversaryEnterApp": "进入应用",
+  "anniversaryBannerTitle": "心迹 ThoughtEcho 一周年",
+  "anniversaryBannerSubtitle": "感恩有你，一路同行 · 2025.3.23 - 2026.3.23",
+  "anniversaryBannerTap": "点击重温庆典动画",
+  "anniversaryReplayButton": "重播动画",
+  "developerAnniversarySection": "一周年庆典控制",
+  "developerAnniversaryEnabled": "启用一周年动画",
+  "developerAnniversaryEnabledDesc": "开关控制是否在启动时展示庆典动画",
+  "developerAnniversaryReset": "重置已显示标记",
+  "developerAnniversaryResetDesc": "重置后下次进入应用将再次播放动画",
+  "developerAnniversaryResetDone": "已重置，下次进入应用将播放动画",
+  "developerAnniversaryPreview": "立即预览动画",
+  "developerAnniversaryPreviewDesc": "点击立即播放一周年庆典动画",
+  "trash": "回收站",
+  "trashEmpty": "回收站为空",
+  "trashEmptyHint": "误删的内容会先暂存在这里，包含图片、音频和视频，也都可以一起恢复。",
+  "trashRetentionHint": "最近删除的记录和附件会在这里暂存，超过保留期后自动清理。",
+  "moveNoteToTrashTitle": "移至回收站",
+  "moveNoteToTrashConfirmation": "确定要将此笔记移至回收站？您可在 {days} 天内恢复它。",
+  "@moveNoteToTrashConfirmation": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRemainingDays": "剩余 {days} 天",
+  "@trashRemainingDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreNote": "恢复",
+  "permanentlyDelete": "永久删除",
+  "permanentlyDeleteConfirmation": "警告：此操作无法撤销，笔记将被永久删除且无法恢复。",
+  "emptyTrash": "清空回收站",
+  "emptyTrashConfirmation": "确定要清空整个回收站吗？所有笔记将被永久删除且无法恢复。",
+  "noteMovedToTrash": "笔记已移至回收站，可在回收站恢复",
+  "noteRestored": "笔记已恢复",
+  "trashEmptied": "回收站已清空",
+  "deletedAt": "删除于 {date}",
+  "@deletedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "trashCount": "回收站 ({count})",
+  "@trashCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRetentionPeriod": "回收站保留时间",
+  "trashRetentionOption7Days": "7 天",
+  "trashRetentionOption30Days": "30 天",
+  "trashRetentionOption90Days": "90 天",
+  "insertImage": "插入图片",
+  "insertVideo": "插入视频",
+  "insertAudio": "插入音频",
+  "mediaPlayerPlay": "播放",
+  "mediaPlayerPause": "暂停",
+  "clipboardFoundHint": "发现剪贴板内容，点击添加为笔记",
+  "operationFailedSimple": "操作失败",
+  "skipNonFullscreenEditor": "直接进入全屏编辑器",
+  "skipNonFullscreenEditorDesc": "点击添加笔记时跳过快速编辑，直接打开全屏富文本编辑器",
+  "offlineQuoteSourceTitle": "无网络时展示",
+  "offlineQuoteSourceDesc": "无网络或仅展示本地记录时，首页显示什么内容",
+  "offlineQuoteSourceTagOnly": "历史保存的每日一言",
+  "offlineQuoteSourceAll": "随机展示全部本地记录",
+  "noLocalSavedQuotes": "还没有历史保存的每日一言",
+  "localAiFeaturesAdvanced": "本地 AI 高级功能",
+  "localAiFeaturesAdvancedDesc": "OCR、智能标签等高级 AI 功能",
+  "settingsAsrDesc": "下载模型并启用语音转文字功能",
   "voiceInitializing": "正在初始化...",
   "voiceInitializingHint": "请稍候，正在准备语音识别",
   "voiceNoTextRecognized": "未识别到文字",
@@ -3499,12 +3670,24 @@
   "modelDownload": "下载模型",
   "modelDownloading": "下载中...",
   "modelDownloadProgress": "下载进度：{progress}%",
-  "@modelDownloadProgress": {"placeholders": {"progress": {"type": "int"}}},
+  "@modelDownloadProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
   "modelDownloadSource": "下载源",
   "modelDownloadSourceHint": "模型将从 HuggingFace/GitHub 下载",
   "modelDownloaded": "已下载",
   "modelDownloadedCount": "已下载 {count} 个模型",
-  "@modelDownloadedCount": {"placeholders": {"count": {"type": "int"}}},
+  "@modelDownloadedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "modelDelete": "删除模型",
   "modelDeleteConfirm": "确定要删除此模型吗？删除后需要重新下载。",
   "modelImport": "导入模型",

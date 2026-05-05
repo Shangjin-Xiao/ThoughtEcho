@@ -1,17 +1,17 @@
-# MODELS MODULE
+# MODELS 模块
 
-## OVERVIEW
-数据模型层，定义了应用中的核心数据结构、序列化逻辑以及状态对象。
+数据模型层（纯 Dart，**不依赖 Flutter 框架**）。
 
-## KEY MODELS
-- `Quote` (`quote_model.dart`): 核心笔记模型，包含 content (纯文本) 和 deltaContent (Quill JSON)。
-- `NoteCategory` / `NoteTag`: 笔记分类与标签。
-- `MultiAISettings` / `AIProviderSettings`: AI 服务商配置。
-- `ChatMessage` / `ChatSession`: AI 聊天记录模型。
-- `WeatherData`: 天气信息模型。
+## 必须实现的接口
+- `toMap()` / `fromMap()` — 数据库序列化
+- `copyWith()` — 不可变更新
+- 相等性基于业务 ID（`operator ==` + `hashCode`）
 
-## CONVENTIONS
-- **序列化**: 核心模型必须提供 `toMap()` 和 `fromMap()` 用于数据库存储。
-- **不可变性**: 建议使用 `copyWith` 模式来更新模型状态。
-- **数据库同步**: 模型变更时，务必同步更新 `DatabaseService` 的迁移逻辑并 bump 版本。
-- **UI 模型**: `onboarding_models.dart` 等专用于特定流程的模型应保持独立。
+## 关键约束
+- **Quote 双存储**：`content`（纯文本，搜索/摘要/AI）+ `deltaContent`（Quill Delta JSON，富文本渲染），保存时必须同步
+- **fromMap 容错**：可选字段用 `map['key'] as String? ?? ''`，禁止抛异常导致列表加载失败
+- **字段新增**→在 `database_migration_mixin.dart` 添加迁移 + 在 `database_schema_manager.dart` bump 版本号
+- **字段删除**→先全局搜索 UI 使用处，确认无依赖后再删
+- **禁止** `import 'package:flutter/...'` — 纯 Dart 层
+- **禁止** 模型持有 Service 引用 — 防循环依赖
+- **禁止** `toMap()` 序列化关联表字段（如 tagIds 通过独立关联表管理）

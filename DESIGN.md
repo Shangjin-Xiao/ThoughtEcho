@@ -506,3 +506,4 @@ lib/
 - AI功能: `AIService`
 - 位置与天气: `LocationService`, `WeatherService`
 - 系统交互: `ClipboardService`
+

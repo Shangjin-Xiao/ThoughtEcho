@@ -9,6 +9,7 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/large_file_manager.dart';
 import 'package:thoughtecho/utils/zip_stream_processor.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/path_security_utils.dart';
 import 'package:thoughtecho/utils/device_memory_manager.dart';
 import 'package:thoughtecho/models/merge_report.dart';
 import 'streaming_backup_processor.dart';
@@ -33,6 +34,10 @@ class BackupService {
 
   static const String _backupDataFile = 'backup_data.json';
   static const String _backupVersion = '1.2.0'; // 版本更新，因为数据结构变化
+  static const int stageCollectEnd = 15;
+  static const int stageNoteEnd = 35;
+  static const int stageMediaEnd = 60;
+  static const int stageZipEnd = 95;
 
   /// 导出所有应用数据（增强版，支持大文件安全处理）
   ///
@@ -108,7 +113,7 @@ class BackupService {
       );
 
       cancelToken?.throwIfCancelled();
-      onProgress?.call(35, 100); // 更新进度
+      onProgress?.call(stageNoteEnd, 100); // 更新进度
 
       // 2. 准备ZIP文件列表
       final filesToZip = <String, String>{};
@@ -123,7 +128,7 @@ class BackupService {
         onProgress: (current, total) {
           // 媒体文件收集进度占总进度的25% (35% - 60%)
           final mediaProgress = (current / 100 * 25).round();
-          onProgress?.call(35 + mediaProgress, 100);
+          onProgress?.call(stageNoteEnd + mediaProgress, 100);
         },
         onStatusUpdate: (status) {
           logDebug('媒体处理状态: $status');
@@ -139,7 +144,7 @@ class BackupService {
       );
 
       cancelToken?.throwIfCancelled();
-      onProgress?.call(60, 100); // 更新进度
+      onProgress?.call(stageMediaEnd, 100); // 更新进度
 
       // 4. 使用流式ZIP创建
       logDebug('开始创建ZIP文件，包含 ${filesToZip.length} 个文件...');
@@ -153,12 +158,12 @@ class BackupService {
         onProgress: (current, total) {
           // ZIP创建进度占总进度的35%
           final zipProgress = (current / total * 35).round();
-          onProgress?.call(60 + zipProgress, 100);
+          onProgress?.call(stageMediaEnd + zipProgress, 100);
         },
         cancelToken: cancelToken,
       );
 
-      onProgress?.call(95, 100); // 更新进度
+      onProgress?.call(stageZipEnd, 100); // 更新进度
       logDebug('数据导出成功，路径: $archivePath');
 
       // 让UI有机会更新
@@ -179,7 +184,9 @@ class BackupService {
         if (await archiveFile.exists()) {
           await archiveFile.delete();
         }
-      } catch (_) {}
+      } catch (e) {
+        logDebug('[BackupService] cleanup incomplete archive failed: $e');
+      }
 
       if (e is CancelledException) {
         logDebug('备份操作已取消');
@@ -194,7 +201,9 @@ class BackupService {
         if (jsonFile != null && await jsonFile.exists()) {
           await jsonFile.delete();
         }
-      } catch (_) {}
+      } catch (e) {
+        logDebug('[BackupService] cleanup temp JSON file failed: $e');
+      }
     }
   }
 
@@ -236,6 +245,7 @@ class BackupService {
       // 先获取总数用于进度计算
       final allQuotesCount = await _databaseService.getQuotesCount(
         excludeHiddenNotes: false,
+        includeDeleted: true,
       );
 
       while (true) {
@@ -245,6 +255,7 @@ class BackupService {
           offset: offset,
           limit: pageSize,
           excludeHiddenNotes: false, // 备份包含隐藏笔记
+          includeDeleted: true,
         );
 
         if (quotes.isEmpty) break;
@@ -300,7 +311,16 @@ class BackupService {
         await Future.delayed(const Duration(milliseconds: 1));
       }
 
-      sink.write(']},'); // 关闭 quotes 数组和 notes 对象
+      final tombstones = await _databaseService.getTombstonesForBackup();
+      sink.write('],');
+      sink.write('"tombstones":${jsonEncode(tombstones)}');
+
+      final trashSettings = {
+        'retention_days': _settingsService.trashRetentionDays,
+        'last_modified': _settingsService.trashRetentionLastModified,
+      };
+      sink.write(',"trash_settings":${jsonEncode(trashSettings)}');
+      sink.write('},');
 
       cancelToken?.throwIfCancelled();
       onProgress?.call(0.85);
@@ -448,9 +468,22 @@ class BackupService {
       cancelToken?.throwIfCancelled();
 
       // 恢复笔记数据
-      if (backupData.containsKey('notes')) {
+      Map<String, dynamic>? notesData;
+      final rawNotes = backupData['notes'];
+      if (rawNotes is Map && rawNotes.isNotEmpty) {
+        notesData = Map<String, dynamic>.from(rawNotes);
+      } else if (backupData['quotes'] is List ||
+          backupData['categories'] is List) {
+        notesData = <String, dynamic>{
+          'categories': backupData['categories'] ?? <dynamic>[],
+          'quotes': backupData['quotes'] ?? <dynamic>[],
+          if (backupData['tombstones'] is List)
+            'tombstones': backupData['tombstones'],
+        };
+      }
+
+      if (notesData != null) {
         logDebug('恢复笔记数据...');
-        var notesData = Map<String, dynamic>.from(backupData['notes']);
 
         // 检查是否包含媒体文件
         final hasMediaFiles = await _checkBackupHasMediaFiles(backupData);
@@ -837,6 +870,13 @@ class BackupService {
           // 将路径中的正斜杠转换为当前平台的路径分隔符
           final normalizedPath = originalPath.replaceAll('/', path.separator);
           final absolutePath = path.join(appPath, normalizedPath);
+          // 路径遍历防护：使用 PathSecurityUtils 深度验证
+          try {
+            PathSecurityUtils.validateExtractionPath(absolutePath, appPath);
+          } catch (e) {
+            logError('路径安全检查失败，拒绝还原: $originalPath ($e)');
+            return originalPath;
+          }
           logDebug('媒体路径还原: $originalPath -> $absolutePath');
           return absolutePath;
         }
@@ -953,11 +993,36 @@ class BackupService {
         }
       }
 
+      final notesData = backupData['notes'];
+      final rawTrashSettings = notesData is Map<String, dynamic>
+          ? notesData['trash_settings']
+          : null;
+      final incomingTrashSettings =
+          rawTrashSettings is Map<String, dynamic> ? rawTrashSettings : null;
+
       // 使用LWW策略合并数据
-      return await _databaseService.importDataWithLWWMerge(
+      final report = await _databaseService.importDataWithLWWMerge(
         backupData.containsKey('notes') ? backupData['notes'] : backupData,
         sourceDevice: sourceDevice,
       );
+
+      // 数据库合并成功后，尝试应用设置
+      // 设置应用失败不应阻止整体导入成功，仅记录警告
+      if (incomingTrashSettings != null) {
+        try {
+          await _settingsService
+              .applyIncomingTrashSettings(incomingTrashSettings);
+        } catch (settingsError, settingsStackTrace) {
+          logError(
+            '应用回收站设置失败（数据已成功导入）: $settingsError',
+            error: settingsError,
+            stackTrace: settingsStackTrace,
+            source: 'BackupService',
+          );
+          // 不添加错误到报告，因为核心数据已成功导入
+        }
+      }
+      return report;
     } catch (e) {
       logError('LWW导入过程出错: $e', error: e, source: 'BackupService');
       final report = MergeReport.start(sourceDevice: sourceDevice);

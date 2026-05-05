@@ -270,3 +270,21 @@ android/local.properties
 forge.yaml
 .claude-code-router/config.json
 _flutter/
+# Squad: ignore runtime state (logs, inbox, sessions)
+.squad/orchestration-log/
+.squad/log/
+.squad/decisions/inbox/
+.squad/sessions/
+# Squad: SubSquad activation file (local to this machine)
+.squad-workstream
+
+# AI assistant runtime files
+.claude/
+CLAUDE.md
+
+# Node/npm artifacts (Flutter project)
+package-lock.json
+node_modules/
+
+# New store/marketing assets (not yet in repo)
+assets/store/

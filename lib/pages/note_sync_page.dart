@@ -4,9 +4,8 @@ import 'dart:async';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
-// 网络测速入口已根据用户需求隐藏，相关 import 注释保留以便未来恢复
-// import 'package:thoughtecho/utils/sync_network_tester.dart';
 import 'package:thoughtecho/services/device_identity_manager.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 import '../gen_l10n/app_localizations.dart';
 
 class _AutoScrollText extends StatefulWidget {
@@ -209,8 +208,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           }
         });
       }
-    } catch (e) {
-      debugPrint('启动同步服务失败: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        '启动同步服务失败',
+        error: e,
+        stackTrace: stack,
+        source: 'NoteSyncPage',
+      );
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         setState(() {
@@ -325,13 +329,23 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
             debugPrint('使用context获取的引用停止同步服务...');
             await syncService.stopServer();
           }
-        } catch (e) {
-          debugPrint('通过context停止同步服务失败: $e');
+        } catch (e, stack) {
+          AppLogger.e(
+            '通过context停止同步服务失败',
+            error: e,
+            stackTrace: stack,
+            source: 'NoteSyncPage',
+          );
         }
       }
       debugPrint('同步服务已停止');
-    } catch (e) {
-      debugPrint('停止同步服务失败: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        '停止同步服务失败',
+        error: e,
+        stackTrace: stack,
+        source: 'NoteSyncPage',
+      );
     } finally {
       _syncService = null; // 清理引用
     }
@@ -353,8 +367,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       NoteSyncService? syncService;
       try {
         syncService = context.read<NoteSyncService>();
-      } catch (e) {
-        debugPrint('获取NoteSyncService失败: $e');
+      } catch (e, stack) {
+        AppLogger.e(
+          '获取NoteSyncService失败',
+          error: e,
+          stackTrace: stack,
+          source: 'NoteSyncPage',
+        );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -444,8 +463,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           }
         });
       });
-    } catch (e) {
-      debugPrint('设备发现失败: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        '设备发现失败',
+        error: e,
+        stackTrace: stack,
+        source: 'NoteSyncPage',
+      );
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -571,8 +595,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           duration: const Duration(seconds: 3),
         ),
       );
-    } catch (e) {
-      debugPrint('发送笔记失败: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        '发送笔记失败',
+        error: e,
+        stackTrace: stack,
+        source: 'NoteSyncPage',
+      );
       if (mounted) {
         messenger.showSnackBar(
           SnackBar(
@@ -592,12 +621,6 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     }
   }
 
-  /// 运行网络诊断
-  // 网络诊断功能已隐藏，如需恢复可将上面实现解注释
-  // 已隐藏，留空实现（保持接口，避免潜在外部调用报错）
-  // ignore: unused_element
-  Future<void> _runNetworkDiagnostics() async {}
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -614,7 +637,6 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         appBar: AppBar(
           title: Text(l10n.noteSync),
           actions: [
-            // 用户需求：隐藏网络测速/诊断入口
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: _isScanning ? null : _startDeviceDiscovery,
@@ -1294,7 +1316,11 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         final extra = parts.length > 4 ? parts[4] : '';
         final fromDisplay = from.isNotEmpty ? '（来自$from）' : '';
         return l10n.receivingProgressMessage(
-            fromDisplay, received, total, extra);
+          fromDisplay,
+          received,
+          total,
+          extra,
+        );
       }
     }
 
@@ -1360,7 +1386,14 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           ),
         );
       }
-    } catch (_) {}
+    } catch (e, stack) {
+      AppLogger.e(
+        'clipboard copy failed',
+        error: e,
+        stackTrace: stack,
+        source: 'NoteSyncPage',
+      );
+    }
   }
 
   /// 构建简短指纹徽章（显示后 6 位），便于区分同名设备

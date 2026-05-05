@@ -132,6 +132,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
               backgroundColor: Colors.transparent,
               leading: IconButton(
                 icon: const Icon(Icons.close),
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ),
@@ -230,6 +231,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                             Icons.clear,
                             color: theme.colorScheme.primary,
                           ),
+                          tooltip: l10n.clear,
                           onPressed: () {
                             setState(() {
                               _searchController.clear();

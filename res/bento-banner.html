@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1200, initial-scale=1.0">
+    <title>ThoughtEcho - Bento Design Banner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Noto+Sans+SC:wght@500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', '"Noto Sans SC"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            margin: 0; 
+            background-color: #f0f2f5; 
+            min-height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            overflow: hidden; 
+        }
+        
+        .bento-container {
+            width: 1200px;
+            height: 600px;
+            padding: 32px;
+            background: #F3F4F6;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 24px;
+            border-radius: 20px;
+        }
+
+        .bento-card {
+            background: #ffffff;
+            border-radius: 36px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.03), inset 0 0 0 1px rgba(0,0,0,0.02);
+            position: relative;
+            padding: 36px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .pattern-noise {
+            background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E');
+            opacity: 0.03;
+            mix-blend-mode: multiply;
+        }
+    </style>
+</head>
+<body>
+    <div class="bento-container relative shadow-[0_20px_80px_rgba(0,0,0,0.1)]">
+        
+        <!-- Box 1: Brand & Slogan (2x1) -->
+        <div class="bento-card col-span-2 row-span-1 flex flex-col justify-between p-8">
+            <div class="flex items-start w-full gap-4">
+                <div class="flex items-center gap-2.5 bg-gray-50 text-gray-400 w-max px-4 py-1.5 rounded-full border border-gray-100 shadow-sm">
+                    <span class="font-bold tracking-[0.1em] text-[13px] uppercase">AI-Powered Inspiration Notebook</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-6 mt-auto mb-2 relative">
+                <img src="icon.png" alt="Icon" class="w-[84px] h-[84px] rounded-[24px] shadow-[4px_10px_20px_rgba(0,0,0,0.08)] border border-gray-100/50 relative z-10">
+                <div class="flex flex-col gap-2 relative z-10">
+                    <h1 class="text-[44px] font-black text-gray-900 leading-[1] tracking-tight">ThoughtEcho 心迹</h1>
+                    <div class="flex flex-col gap-1 mt-1 max-w-[360px]">
+                        <p class="text-[18px] font-black text-gray-700 tracking-[0.01em] leading-none">
+                            你的专属灵感摘录本
+                        </p>
+                    </div>
+                    <div class="flex gap-2 items-center shrink-0 mt-2">
+                        <div class="text-[12px] font-bold text-gray-500 bg-gray-100 px-3 py-1 leading-none rounded-full border border-gray-200">Windows</div>
+                        <div class="text-[12px] font-bold text-gray-500 bg-gray-100 px-3 py-1 leading-none rounded-full border border-gray-200">Android</div>
+                        <div class="text-[12px] font-bold text-gray-500 bg-gray-100 px-3 py-1 leading-none rounded-full border border-gray-200">iOS</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Box 2: Home Page / Note List (1x2) -->
+        <div class="bento-card col-span-1 row-span-2 bg-[#F9FAFB] flex flex-col items-center px-6 pt-8 pb-0 overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-b from-blue-50/50 to-transparent"></div>
+            
+            <div class="relative z-10 text-center mb-6 w-full">
+                <h3 class="text-[26px] font-black text-gray-800 mb-1">随时捕获</h3>
+                <p class="text-[14px] text-blue-500/80 font-bold uppercase tracking-widest">Quick Capture</p>
+            </div>
+            
+            <div class="relative z-10 w-full flex-1 rounded-t-[36px] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.15)] bg-[#EEF4FF] border-[7px] border-b-0 border-white ring-1 ring-black/5 transform rotate-[-2deg] origin-bottom transition-transform duration-500 mt-2 flex items-start justify-center">
+                <img src="screenshot/home_page.jpg" class="w-auto h-full object-contain object-top">
+            </div>
+        </div>
+
+        <!-- Box 3: AI Capabilities (1x1) -->
+        <div class="bento-card col-span-1 row-span-1 bg-gray-900 border-none p-[30px] pr-0 pb-0 overflow-hidden flex flex-col">
+            <div class="absolute top-[-50%] right-[-50%] w-[150%] h-[150%] bg-gradient-to-bl from-purple-500/40 via-blue-500/10 to-transparent blur-[40px] rounded-full pointer-events-none z-0"></div>
+            <div class="absolute inset-0 pattern-noise z-0"></div>
+            
+            <div class="relative z-10 pr-[30px]">
+                <h3 class="text-[22px] font-black text-white tracking-wide mb-1 leading-none">AI 深度赋能</h3>
+                <p class="text-[13px] text-blue-200/70 font-bold leading-[1.6]">
+                    上下文问答与内容润色
+                </p>
+            </div>
+            
+            <div class="relative z-10 flex-1 mt-4 ml-[10px] rounded-tl-[16px] overflow-hidden shadow-2xl border-t-[4px] border-l-[4px] border-gray-700/50 transform rotate-[-4deg] translate-y-2">
+                <img src="screenshot/note_qa_chat_page.jpg" class="w-full h-[calc(100%+250px)] object-cover object-top opacity-95 -mt-[250px]">
+            </div>
+        </div>
+
+        <!-- Box 4: Editor (2x1) -->
+        <div class="bento-card col-span-2 row-span-1 bg-gradient-to-br from-[#F0f9FF] to-[#E0F2FE] p-0 flex overflow-hidden">
+            <div class="absolute inset-0 pointer-events-none opacity-[0.4]" style="background-image: radial-gradient(#93c5fd 2px, transparent 2px); background-size: 20px 20px;"></div>
+            
+            <div class="relative z-10 w-[50%] h-full flex flex-col justify-center px-8">
+                <div class="w-11 h-11 bg-blue-500 text-white rounded-[14px] flex items-center justify-center mb-4 shadow-[0_8px_16px_rgba(59,130,246,0.3)]">
+                    <svg class="w-5 h-5 transform -translate-x-[1px] translate-y-[1px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                </div>
+                <h3 class="text-[24px] font-black text-gray-900 mb-1 leading-tight">全功能富文本</h3>
+                <p class="text-[14px] text-blue-900/60 font-bold leading-relaxed">
+                    多媒体插入和<br>天气位置情景支持。
+                </p>
+            </div>
+            
+            <div class="relative z-10 w-[50%] h-full flex items-end justify-end overflow-visible">
+                <div class="w-[340px] h-[200px] shadow-[-10px_-10px_30px_rgba(0,0,0,0.1)] bg-white rounded-tl-[24px] overflow-hidden border-t-8 border-l-8 border-white transform translate-x-4 translate-y-6 rotate-[-4deg] transition-transform duration-500">
+                    <img src="screenshot/note_full_editor_page.jpg" class="w-full h-full object-cover object-top">
+                </div>
+            </div>
+        </div>
+
+        <!-- Box 5: Insights (1x1) -->
+        <div class="bento-card col-span-1 row-span-1 bg-orange-50/50 border border-orange-100/50 p-0 overflow-hidden flex flex-col">
+            <div class="relative z-10 p-[26px] pb-2">
+                <h3 class="text-[22px] font-black text-gray-900 mb-1">多维数据洞察</h3>
+                <p class="text-[13px] text-orange-600/70 font-bold leading-snug">
+                    全景回顾与周期分析报告
+                </p>
+            </div>
+            <div class="relative z-10 flex-1 mt-3 ml-[20px] rounded-tl-[16px] overflow-hidden shadow-xl border-t-[5px] border-l-[5px] border-white transform rotate-[-3deg] translate-y-1">
+                <img src="screenshot/period_report.jpg" class="w-full h-full object-cover object-center">
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

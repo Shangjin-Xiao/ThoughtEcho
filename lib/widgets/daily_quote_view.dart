@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import '../services/database_service.dart';
 import '../services/connectivity_service.dart';
+import '../services/smart_push_service.dart';
 import '../widgets/sliding_card.dart';
 import 'dart:async'; // Import async for StreamController and StreamSubscription
 import 'package:thoughtecho/utils/app_logger.dart';
@@ -28,11 +29,67 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
     'author': '',
     'type': 'a',
   };
+  SmartPushService? _smartPushService;
+  // 标记当前是否正在展示通知推送的每日一言，为 true 时不允许 API 结果覆盖
+  bool _isShowingNotificationQuote = false;
 
   @override
   void initState() {
     super.initState();
     _loadDailyQuote();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final nextSmartPushService = Provider.of<SmartPushService>(
+      context,
+      listen: false,
+    );
+    if (!identical(_smartPushService, nextSmartPushService)) {
+      _smartPushService?.removeListener(_onSmartPushServiceChanged);
+      _smartPushService = nextSmartPushService;
+      _smartPushService?.addListener(_onSmartPushServiceChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    _smartPushService?.removeListener(_onSmartPushServiceChanged);
+    super.dispose();
+  }
+
+  void _onSmartPushServiceChanged() {
+    final service = _smartPushService;
+    if (service == null) return;
+    unawaited(_applyPendingQuoteIfNeeded(service));
+  }
+
+  Map<String, dynamic> _convertSharedQuoteToDailyQuote(
+    Map<String, dynamic> quoteData,
+  ) {
+    return {
+      'content': quoteData['hitokoto'] ?? quoteData['content'] ?? '',
+      'source': quoteData['from'] ?? quoteData['source'] ?? '',
+      'author': quoteData['from_who'] ?? quoteData['author'] ?? '',
+      'type': quoteData['type'] ?? 'a',
+      'from_who': quoteData['from_who'] ?? quoteData['author'] ?? '',
+      'from': quoteData['from'] ?? quoteData['source'] ?? '',
+      'provider': quoteData['provider'] ?? '',
+    };
+  }
+
+  Future<bool> _applyPendingQuoteIfNeeded(SmartPushService service) async {
+    final pendingQuote = await service.consumePendingDailyQuoteForHomeDisplay();
+    if (!mounted || pendingQuote == null) {
+      return false;
+    }
+
+    setState(() {
+      dailyQuote = _convertSharedQuoteToDailyQuote(pendingQuote);
+      _isShowingNotificationQuote = true;
+    });
+    return true;
   }
 
   Future<void> _loadDailyQuote() async {
@@ -49,9 +106,16 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
         context,
         listen: false,
       );
+      final smartPushService = Provider.of<SmartPushService>(
+        context,
+        listen: false,
+      );
 
       final hitokotoType = settingsService.appSettings.hitokotoType;
+      final dailyQuoteProvider = settingsService.dailyQuoteProvider;
+      final apiNinjasCategories = settingsService.apiNinjasCategories;
       final useLocalOnly = settingsService.appSettings.useLocalQuotesOnly;
+      final offlineQuoteSource = settingsService.offlineQuoteSource;
       final isConnected = connectivityService.isConnected;
 
       setState(() {
@@ -79,18 +143,46 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
         }
       });
 
+      // 仅在“点击每日一言通知进入应用”时，首页消费并展示该条推送内容
+      if (await _applyPendingQuoteIfNeeded(smartPushService)) {
+        return;
+      }
+
+      // 冷启动场景：SmartPushService 可能尚未初始化完成（在 Future.microtask 中运行），
+      // 通知点击写入的 pending quote 还没有就绪。等待初始化后再检查一次。
+      if (!smartPushService.isInitialized) {
+        int waitCount = 0;
+        const maxWait = 30; // 30 * 100ms = 3s
+        while (
+            !smartPushService.isInitialized && waitCount < maxWait && mounted) {
+          await Future.delayed(const Duration(milliseconds: 100));
+          waitCount++;
+        }
+        if (mounted && await _applyPendingQuoteIfNeeded(smartPushService)) {
+          return;
+        }
+      }
+
+      if (!mounted) return;
       final l10n = AppLocalizations.of(context);
       final quote = await ApiService.getDailyQuote(
         l10n,
         hitokotoType,
         useLocalOnly: useLocalOnly,
+        offlineQuoteSource: offlineQuoteSource,
         databaseService: databaseService,
+        provider: dailyQuoteProvider,
+        apiNinjasCategories: apiNinjasCategories,
       );
 
       if (mounted) {
-        setState(() {
-          dailyQuote = quote;
-        });
+        // 若通知推送的每日一言已被展示（由 _onSmartPushServiceChanged 异步设置），
+        // 则跳过 API 结果，避免覆盖通知内容
+        if (!_isShowingNotificationQuote) {
+          setState(() {
+            dailyQuote = quote;
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -166,8 +258,9 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
     return result;
   }
 
-  // 公开刷新方法，供父组件调用
+  // 公开刷新方法，供父组件调用（手动刷新时清除通知标志）
   Future<void> refreshQuote() async {
+    _isShowingNotificationQuote = false;
     await _loadDailyQuote();
   }
 
@@ -245,7 +338,7 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
             ),
           );
         },
-        // 双击整个卡片区域快速添加到笔记
+        // 双击整个卡片区域快速保存到笔记
         onDoubleTap: () {
           widget.onAddQuote(
             dailyQuote['content'],

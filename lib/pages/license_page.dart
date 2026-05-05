@@ -307,6 +307,13 @@ class _LicensePageState extends State<LicensePage> {
         ),
         _buildAttributionRow(
           context: context,
+          title: l10n.geocodingApi,
+          name: 'OpenStreetMap Nominatim',
+          url: 'https://nominatim.openstreetmap.org/',
+          description: null,
+        ),
+        _buildAttributionRow(
+          context: context,
           title: l10n.dailyQuoteApi,
           name: 'Hitokoto (v1.hitokoto.cn)',
           url: 'https://hitokoto.cn/',
@@ -667,6 +674,7 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                     ? null
                     : IconButton(
                         icon: const Icon(Icons.clear),
+                        tooltip: l10n.clear,
                         onPressed: () => _searchController.clear(),
                       ),
                 border: OutlineInputBorder(

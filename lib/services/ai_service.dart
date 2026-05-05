@@ -9,6 +9,7 @@ import '../utils/ai_network_manager.dart';
 import '../utils/ai_prompt_manager.dart';
 import '../utils/ai_request_helper.dart';
 import '../utils/app_logger.dart';
+import '../utils/string_utils.dart';
 import '../gen_l10n/app_localizations.dart';
 
 // 定义流式响应的回调类型
@@ -207,8 +208,9 @@ class AIService extends ChangeNotifier {
         final multiSettings = _settingsService.multiAISettings;
         final currentProvider = multiSettings.currentProvider!;
 
-        // 直接使用Quote的content字段（纯文本内容）
-        final content = quote.content.trim();
+        // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
+        final content =
+            StringUtils.removeObjectReplacementChar(quote.content).trim();
 
         if (content.isEmpty) {
           throw Exception('没有可分析的文本内容');
@@ -226,9 +228,9 @@ class AIService extends ChangeNotifier {
       },
       context: '笔记分析',
     );
-  } // 流式笔记分析
+  } // 流式笔记分析（支持完整元数据）
 
-  Stream<String> streamSummarizeNote(Quote quote) {
+  Stream<String> streamSummarizeNote(Quote quote, {List<String>? tagNames}) {
     return _requestHelper.executeStreamOperation(
       operation: (controller) async {
         // 在异步操作中验证API Key
@@ -241,15 +243,26 @@ class AIService extends ChangeNotifier {
         final multiSettings = _settingsService.multiAISettings;
         final currentProvider = multiSettings.currentProvider!;
 
-        // 直接使用Quote的content字段（纯文本内容）
-        final content = quote.content.trim();
+        // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
+        final content =
+            StringUtils.removeObjectReplacementChar(quote.content).trim();
 
         if (content.isEmpty) {
           controller.addError(Exception('没有可分析的文本内容'));
           return;
         }
 
-        final userMessage = _promptManager.buildUserMessage(content);
+        // 传递完整的笔记元数据给 AI（包括标签）
+        final userMessage = _promptManager.buildAnalysisUserMessage(
+          content,
+          sourceAuthor: quote.sourceAuthor,
+          sourceWork: quote.sourceWork,
+          location: quote.location,
+          weather: quote.weather,
+          temperature: quote.temperature,
+          dayPeriod: quote.dayPeriod,
+          tagNames: tagNames,
+        );
         await _requestHelper.makeStreamRequestWithProvider(
           url: currentProvider.apiUrl,
           systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
@@ -584,8 +597,16 @@ class AIService extends ChangeNotifier {
     );
   }
 
-  // 分析文本来源
-  Future<String> analyzeSource(String content) async {
+  /// 分析文本来源
+  ///
+  /// [content] 要分析的文本内容
+  /// [existingAuthor] 用户已填写的作者（如有），AI 会验证是否正确
+  /// [existingWork] 用户已填写的出处（如有），AI 会验证是否正确
+  Future<String> analyzeSource(
+    String content, {
+    String? existingAuthor,
+    String? existingWork,
+  }) async {
     // 使用异步验证确保API Key有效性
     if (!await hasValidApiKeyAsync()) {
       throw Exception('请先在设置中配置 API Key');
@@ -598,6 +619,8 @@ class AIService extends ChangeNotifier {
 
         final userMessage = _promptManager.buildSourceAnalysisUserMessage(
           content,
+          existingAuthor: existingAuthor,
+          existingWork: existingWork,
         );
         final response = await _requestHelper.makeRequestWithProvider(
           url: currentProvider.apiUrl,
@@ -1125,8 +1148,9 @@ class AIService extends ChangeNotifier {
         await _validateSettings();
         final currentProvider = await _getCurrentProviderWithApiKey();
 
-        // 直接使用Quote的content字段（纯文本内容）
-        final content = quote.content.trim();
+        // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
+        final content =
+            StringUtils.removeObjectReplacementChar(quote.content).trim();
 
         if (content.isEmpty) {
           throw Exception('没有可分析的文本内容');
@@ -1151,7 +1175,7 @@ class AIService extends ChangeNotifier {
     );
   }
 
-  // 流式问答
+  // 流式问答（支持完整笔记元数据）
   Stream<String> streamAskQuestion(Quote quote, String question) {
     return _requestHelper.executeStreamOperation(
       operation: (controller) async {
@@ -1164,17 +1188,25 @@ class AIService extends ChangeNotifier {
         await _validateSettings();
         final currentProvider = await _getCurrentProviderWithApiKey();
 
-        // 直接使用Quote的content字段（纯文本内容）
-        final content = quote.content.trim();
+        // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
+        final content =
+            StringUtils.removeObjectReplacementChar(quote.content).trim();
 
         if (content.isEmpty) {
           controller.addError(Exception('没有可分析的文本内容'));
           return;
         }
 
+        // 传递完整的笔记元数据给 AI
         final userMessage = _promptManager.buildQAUserMessage(
           content,
           question,
+          sourceAuthor: quote.sourceAuthor,
+          sourceWork: quote.sourceWork,
+          location: quote.location,
+          weather: quote.weather,
+          temperature: quote.temperature,
+          dayPeriod: quote.dayPeriod,
         );
         await _requestHelper.makeStreamRequestWithProvider(
           url: currentProvider.apiUrl,
@@ -1282,8 +1314,9 @@ class AIService extends ChangeNotifier {
     try {
       final multiSettings = _settingsService.multiAISettings;
 
-      // 直接使用Quote的content字段（纯文本内容）
-      final content = quote.content.trim();
+      // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
+      final content =
+          StringUtils.removeObjectReplacementChar(quote.content).trim();
 
       if (content.isEmpty) {
         throw Exception('没有可分析的文本内容');

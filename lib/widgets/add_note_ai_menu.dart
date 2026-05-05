@@ -1,10 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert';
 import '../services/ai_service.dart';
 import '../models/quote_model.dart';
-import '../theme/app_theme.dart';
 import '../widgets/streaming_text_dialog.dart';
+import '../widgets/ai_options_menu.dart';
+import '../widgets/source_analysis_result_dialog.dart';
 import '../pages/note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
@@ -14,6 +15,7 @@ class AddNoteAIMenu extends StatefulWidget {
   final TextEditingController authorController;
   final TextEditingController workController;
   final Function(String) onAiAnalysisCompleted;
+  final List<String>? tagNames; // 标签名称列表（用于 AI 分析）
 
   const AddNoteAIMenu({
     super.key,
@@ -21,6 +23,7 @@ class AddNoteAIMenu extends StatefulWidget {
     required this.authorController,
     required this.workController,
     required this.onAiAnalysisCompleted,
+    this.tagNames,
   });
 
   @override
@@ -30,98 +33,14 @@ class AddNoteAIMenu extends StatefulWidget {
 class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
   // 显示AI选项菜单
   void _showAIOptions(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
-
-    showModalBottomSheet(
+    AiOptionsMenu.show(
       context: context,
-      backgroundColor: theme.brightness == Brightness.light
-          ? Colors.white
-          : theme.colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppTheme.dialogRadius),
-        ),
-      ),
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: SingleChildScrollView(
-            child: IntrinsicHeight(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.auto_awesome,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          l10n.aiAssistant,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Divider(height: 1, color: theme.colorScheme.outline),
-                  ListTile(
-                    leading: const Icon(Icons.text_fields),
-                    title: Text(l10n.smartAnalyzeSource),
-                    subtitle: Text(l10n.smartAnalyzeSourceDesc),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _analyzeSource();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.brush),
-                    title: Text(l10n.polishText),
-                    subtitle: Text(l10n.polishTextDesc),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _polishText();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.add_circle_outline),
-                    title: Text(l10n.continueWriting),
-                    subtitle: Text(l10n.continueWritingDesc),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _continueText();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.analytics),
-                    title: Text(l10n.deepAnalysis),
-                    subtitle: Text(l10n.deepAnalysisDesc),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _analyzeContent();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.chat),
-                    title: Text(l10n.askNote),
-                    subtitle: Text(l10n.askNoteDesc),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _askNoteQuestion();
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+      showAskNote: true,
+      onAnalyzeSource: _analyzeSource,
+      onPolishText: _polishText,
+      onContinueText: _continueText,
+      onAnalyzeContent: _analyzeContent,
+      onAskNote: _askNoteQuestion,
     );
   }
 
@@ -160,83 +79,34 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
         },
       );
 
-      // 调用AI分析来源
+      // 调用AI分析来源（传递已有的作者/出处供 AI 验证）
+      final existingAuthor = widget.authorController.text.trim();
+      final existingWork = widget.workController.text.trim();
       final result = await aiService.analyzeSource(
         widget.contentController.text,
+        existingAuthor: existingAuthor.isNotEmpty ? existingAuthor : null,
+        existingWork: existingWork.isNotEmpty ? existingWork : null,
       );
 
       // 确保组件仍然挂载在widget树上
       if (!mounted) return;
 
       // 关闭加载对话框
-      Navigator.of(context).pop(); // 解析JSON结果
-      try {
-        final Map<String, dynamic> sourceData =
-            result is Map<String, dynamic> ? result : jsonDecode(result);
+      Navigator.of(context).pop();
 
-        String? author = sourceData['author'] as String?;
-        String? work = sourceData['work'] as String?;
-        String confidence = sourceData['confidence'] as String? ?? l10n.unknown;
-        String explanation = sourceData['explanation'] as String? ?? '';
-
-        // 显示结果对话框
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder: (dialogContext) {
-              return AlertDialog(
-                title: Text(l10n.analysisResult),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(l10n.confidenceLevel(confidence)),
-                    if (explanation.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(explanation),
-                    ],
-                    const SizedBox(height: 8),
-                    if (author != null && author.isNotEmpty)
-                      Text(l10n.authorLabel(author)),
-                    if (work != null && work.isNotEmpty)
-                      Text(l10n.workLabel(work)),
-                  ],
-                ),
-                actions: [
-                  if ((author != null && author.isNotEmpty) ||
-                      (work != null && work.isNotEmpty))
-                    TextButton(
-                      child: Text(l10n.applyResult),
-                      onPressed: () {
-                        if (author != null && author.isNotEmpty) {
-                          widget.authorController.text = author;
-                        }
-                        if (work != null && work.isNotEmpty) {
-                          widget.workController.text = work;
-                        }
-                        Navigator.of(dialogContext).pop();
-                      },
-                    ),
-                  TextButton(
-                    child: Text(l10n.close),
-                    onPressed: () {
-                      Navigator.of(dialogContext).pop();
-                    },
-                  ),
-                ],
-              );
-            },
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.parseResultFailedWithError(e.toString())),
-              duration: AppConstants.snackBarDurationError,
-            ),
-          );
-        }
+      // 显示来源分析结果对话框
+      if (mounted) {
+        SourceAnalysisResultDialog.show(
+          context,
+          result,
+          authorController: widget.authorController,
+          workController: widget.workController,
+          onError: (error) {
+            _showErrorDialog(
+              l10n.parseResultFailedWithError(kDebugMode ? error : ''),
+            );
+          },
+        );
       }
     } catch (e) {
       // 确保组件仍然挂载在widget树上
@@ -246,11 +116,8 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
       Navigator.of(context).pop();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.analysisFailedWithError(e.toString())),
-            duration: AppConstants.snackBarDurationError,
-          ),
+        _showErrorDialog(
+          l10n.analysisFailedWithError(kDebugMode ? e.toString() : ''),
         );
       }
     }
@@ -286,8 +153,11 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
             applyButtonText: l10n.applyChanges,
             onApply: (polishedText) {
               widget.contentController.text = polishedText;
+              Navigator.of(dialogContext).pop();
             },
-            onCancel: () {},
+            onCancel: () {
+              Navigator.of(dialogContext).pop();
+            },
             isMarkdown: false,
           );
         },
@@ -340,8 +210,11 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
             applyButtonText: l10n.appendToNote,
             onApply: (continuedText) {
               widget.contentController.text += continuedText;
+              Navigator.of(dialogContext).pop();
             },
-            onCancel: () {},
+            onCancel: () {
+              Navigator.of(dialogContext).pop();
+            },
             isMarkdown: false,
           );
         },
@@ -393,12 +266,18 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
           );
           return StreamingTextDialog(
             title: l10n.noteAnalysis,
-            textStream: aiService.streamSummarizeNote(quote),
+            textStream: aiService.streamSummarizeNote(
+              quote,
+              tagNames: widget.tagNames,
+            ),
             applyButtonText: l10n.applyToNote,
             onApply: (analysisResult) {
               widget.onAiAnalysisCompleted(analysisResult);
+              Navigator.of(dialogContext).pop();
             },
-            onCancel: () {},
+            onCancel: () {
+              Navigator.of(dialogContext).pop();
+            },
             isMarkdown: true, // 分析结果通常是Markdown格式
           );
         },
@@ -455,6 +334,24 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
     // 导航到聊天页面
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => NoteQAChatPage(quote: tempQuote)),
+    );
+  }
+
+  /// 在 BottomSheet 上下文中用 AlertDialog 显示错误（避免 SnackBar 被遮挡）
+  void _showErrorDialog(String message) {
+    final l10n = AppLocalizations.of(context);
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.analysisResult),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.close),
+          ),
+        ],
+      ),
     );
   }
 

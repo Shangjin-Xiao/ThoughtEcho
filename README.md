@@ -1,30 +1,40 @@
 <div align="center">
-  <img src="res/icon.png" alt="心迹 Logo / ThoughtEcho Logo" width="120">
+  <a href="https://github.com/Shangjin-Xiao/ThoughtEcho">
+    <img src="res/bento-banner.png" alt="ThoughtEcho 心迹 - AI-Powered Inspiration Notebook" width="100%">
+  </a>
   
   # 心迹 (ThoughtEcho)
   
   <p>
+    <b>📝 你的专属灵感摘录本 / Your Personal AI-Powered Inspiration Notebook</b><br>
+    让我们一起随心记录，释放 AI 洞察的力量 ✨
+  </p>
+
+  <p>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">
+      <img src="https://img.shields.io/github/v/release/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=3cb371" alt="Latest Release">
+    </a>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases">
+      <img src="https://img.shields.io/github/downloads/Shangjin-Xiao/ThoughtEcho/total?style=flat-square&color=0078D7" alt="Total Downloads">
+    </a>
+    <a href="https://www.microsoft.com/store/apps/9NC7GDG6KFMC">
+      <img src="https://img.shields.io/badge/Microsoft-Store-0078D7?style=flat-square&logo=windows&logoColor=white" alt="Microsoft Store">
+    </a>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/stargazers">
+      <img src="https://img.shields.io/github/stars/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=FFD700" alt="Stars">
+    </a>
     <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/blob/main/LICENSE">
       <img src="https://img.shields.io/github/license/Shangjin-Xiao/ThoughtEcho?style=flat-square" alt="License: MIT">
     </a>
-    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">
-  <img src="https://img.shields.io/github/v/release/Shangjin-Xiao/ThoughtEcho?style=flat-square&label=latest" alt="Latest Release">
-    </a>
-    <!-- TODO: If CI is set up later, uncomment and potentially update the workflow filename -->
-    <!-- <img src="https://img.shields.io/github/workflow/status/Shangjin-Xiao/ThoughtEcho/CI?style=flat-square" alt="Build Status / 构建状态"> -->
-    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/stargazers">
-      <img src="https://img.shields.io/github/stars/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=yellow" alt="Stars">
-    </a>
-    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/network/members">
-      <img src="https://img.shields.io/github/forks/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=blue" alt="Forks">
-    </a>
   </p>
 
-  <h3>🌍 Now with full English and Japanese support!</h3>
-
+  <h3>📥 下载渠道 / Download</h3>
   <p>
-    <b>📝 你的专属灵感摘录本<br>
-    让我们一起随心记录，释放 AI 洞察的力量 ✨</b>
+    <a href="https://www.microsoft.com/store/apps/9NC7GDG6KFMC"><img src="https://get.microsoft.com/images/zh-cn%20dark.svg" width="160" alt="从 Microsoft Store 获取"></a>
+    &nbsp;&nbsp;&nbsp;
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases"><img src="https://img.shields.io/badge/GitHub_Releases-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Releases"></a>
+    &nbsp;&nbsp;&nbsp;
+    <a href="https://apkpure.com/p/com.shangjin.thoughtecho"><img src="https://img.shields.io/badge/APKPure-00A86B?style=for-the-badge&logo=android&logoColor=white" alt="APKPure"></a>
   </p>
 
   <p>
@@ -43,13 +53,29 @@
 
 <div id="-中文版本">
 
+## 🌟 为什么选择 ThoughtEcho？
+
+<div align="center">
+  <img src="res/readme-banner.png" alt="Your Personal AI-Powered Inspiration Notebook" width="100%">
+</div>
+
+**心迹是你的专属灵感摘录本**。它能帮你：
+
+- 📝 **随时随地捕获**：富文本、多媒体，甚至一句话的灵感碎片
+- ✨ **深度理解笔记**：通过 AI 问答与润色，让笔记产生更多价值
+- 📊 **发现思维脉络**：智能提取周期洞察与年度报告
+- 🔄 **无缝多端同步**：全平台覆盖，数据永远触手可及
+- 🔒 **保护个人隐私**：本地优先存储，你的数据只属于你
+
+<br>
+
 ## ✨ 当前功能
 
 <div align="center">
   <table>
     <tr>
       <td align="center" width="33%"><b>✍️ 富文本笔记</b><br>支持富文本、多媒体附件与双格式存储</td>
-      <td align="center" width="33%"><b>🤖 AI助手</b><br>笔记上下文问答、润色与每日灵感提示</td>
+      <td align="center" width="33%"><b>✨ AI助手</b><br>笔记上下文问答、润色与每日灵感提示</td>
       <td align="center" width="33%"><b>📊 洞察与报告</b><br>AI 周期洞察、年度报告与写作趋势分析</td>
     </tr>
     <tr>
@@ -64,12 +90,17 @@
     </tr>
     <tr>
       <td align="center"><b>⚡ 快速捕获</b><br>剪贴板检测、一言与每日灵感随手收集</td>
-      <td align="center" colspan="2"><b>📱 全平台支持</b><br>Windows、Android、iOS、Web 全覆盖</td>
+      <td align="center" colspan="2"><b>📱 全平台支持</b><br>Windows、Android、iOS 全覆盖</td>
     </tr>
   </table>
 </div>
 
 ## 📸 应用截图
+
+<div align="center">
+  <img src="res/thoughtecho banner.webp" alt="ThoughtEcho UI Showcase" width="100%">
+</div>
+<br>
 
 ### 核心功能
 | 主页 | 笔记列表 | 添加笔记 |
@@ -131,7 +162,7 @@
     </tr>
     <tr>
       <td align="center"><b>平台适配</b></td>
-      <td>Windows、Android、iOS、Web全平台支持</td>
+      <td>Windows、Android、iOS全平台支持（不支持 Web）</td>
     </tr>
   </table>
 </div>
@@ -204,7 +235,7 @@
         • 仿真3D笔记本界面<br>
         • 智能内容分类<br>
         • 地图选点添加位置<br><br>
-        <b>🤖 端侧AI能力</b><br>
+        <b>✨ 端侧AI能力</b><br>
         • 离线语音识别<br>
         • 本地OCR处理<br>
         • 端侧智能分析<br>
@@ -232,9 +263,16 @@
 
 ## 🙏 鸣谢
 
-感谢以下服务提供商的支持：
-- [一言（Hitokoto）](https://hitokoto.cn/) - 提供每日一言服务
+感谢以下开源项目与服务提供商的支持：
+- [Flutter](https://flutter.dev/) - UI 框架
+- [LocalSend](https://github.com/localsend/localsend) - 局域网同步协议集成
+- [一言（Hitokoto）](https://hitokoto.cn/) - 每日一言服务商之一（支持类型筛选）
+- [ZenQuotes](https://zenquotes.io/) - 每日一言英文服务商
+- [API Ninjas Quotes API](https://api-ninjas.com/api/quotes) - 每日一言分类服务商（支持分类筛选）
+- [名言教えるよ](https://meigen.doodlenote.net/) - 每日一言日文服务商
+- [Korean Advice](https://korean-advice-open-api.vercel.app/) - 每日一言韩文服务商
 - [Open-Meteo](https://open-meteo.com/) - 提供天气数据服务
+- [OpenStreetMap Nominatim](https://nominatim.openstreetmap.org/) - 提供地理编码服务
 
 </div>
 
@@ -279,13 +317,17 @@
 
 ## 🌟 Why ThoughtEcho?
 
-ThoughtEcho is more than just a note-taking app—it's your **personal AI-powered knowledge companion**. Whether you're a writer capturing fleeting ideas, a student organizing study notes, or a professional tracking insights, ThoughtEcho helps you:
+<div align="center">
+  <img src="res/readme-banner.png" alt="Your Personal AI-Powered Inspiration Notebook" width="100%">
+</div>
+
+**ThoughtEcho is your personal inspiration notebook.** It helps you:
 
 - 📝 **Capture** thoughts instantly with rich text, images, audio, and video
-- 🤖 **Understand** your notes deeper with AI-powered analysis and Q&A
+- ✨ **Understand** your notes deeper with AI-powered analysis and Q&A
 - 📊 **Discover** patterns in your thinking with intelligent insights and reports
 - 🔄 **Sync** seamlessly across all your devices
-- 🔒 **Own** your data with local-first storage and secure backups
+- 🔒 **Own** your data with local-first storage
 
 ## ✨ Current Features
 
@@ -293,7 +335,7 @@ ThoughtEcho is more than just a note-taking app—it's your **personal AI-powere
   <table>
     <tr>
       <td align="center" width="33%"><b>✍️ Rich Text Notes</b><br>Rich text, media attachments, dual-format storage</td>
-      <td align="center" width="33%"><b>🤖 AI Assistant</b><br>Context-aware Q&A, polishing, daily inspiration prompts</td>
+      <td align="center" width="33%"><b>✨ AI Assistant</b><br>Context-aware Q&A, polishing, daily inspiration prompts</td>
       <td align="center" width="33%"><b>📊 Insights & Reports</b><br>AI periodic insights, annual reports, writing trend analysis</td>
     </tr>
     <tr>
@@ -308,12 +350,17 @@ ThoughtEcho is more than just a note-taking app—it's your **personal AI-powere
     </tr>
     <tr>
       <td align="center"><b>⚡ Quick Capture</b><br>Clipboard watcher, Hitokoto quotes, daily prompts on tap</td>
-      <td align="center" colspan="2"><b>📱 All Platforms</b><br>Windows, Android, iOS, Web full coverage</td>
+      <td align="center" colspan="2"><b>📱 All Platforms</b><br>Windows, Android, iOS full coverage</td>
     </tr>
   </table>
 </div>
 
 ## 📸 Application Screenshots
+
+<div align="center">
+  <img src="res/thoughtecho banner.webp" alt="ThoughtEcho UI Showcase" width="100%">
+</div>
+<br>
 
 ### Core Features
 | Homepage | Note List | Add Note |
@@ -375,7 +422,7 @@ ThoughtEcho is more than just a note-taking app—it's your **personal AI-powere
     </tr>
     <tr>
       <td align="center"><b>Platform Support</b></td>
-      <td>Windows, Android, iOS, Web full platform support</td>
+      <td>Supports Windows, Android, and iOS (Web is not supported)</td>
     </tr>
   </table>
 </div>
@@ -479,8 +526,15 @@ This project is licensed under the [MIT License](LICENSE) - feel free to use, mo
 
 ## 🙏 Acknowledgments
 
-Thanks to the following service providers:
-- [Hitokoto](https://hitokoto.cn/) - Daily quote service
+Thanks to the following open-source projects and service providers:
+- [Flutter](https://flutter.dev/) - UI framework
+- [LocalSend](https://github.com/localsend/localsend) - Local network sync integration
+- [Hitokoto](https://hitokoto.cn/) - One of the daily quote providers (supports type filtering)
+- [ZenQuotes](https://zenquotes.io/) - English daily quote provider
+- [API Ninjas Quotes API](https://api-ninjas.com/api/quotes) - Category-based daily quote provider
+- [Meigen Oshieruyo](https://meigen.doodlenote.net/) - Japanese daily quote provider
+- [Korean Advice](https://korean-advice-open-api.vercel.app/) - Korean daily quote provider
 - [Open-Meteo](https://open-meteo.com/) - Weather data service
+- [OpenStreetMap Nominatim](https://nominatim.openstreetmap.org/) - Geocoding service
 
 </details>

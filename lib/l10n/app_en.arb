@@ -134,6 +134,19 @@
   "settingsAboutSlogan": "Your Personal Inspiration Notebook with AI Power",
   "settingsViewSource": "View Source Code (GitHub)",
   "settingsVisitWebsite": "Visit Website",
+  "settingsFeedback": "Feedback",
+  "settingsContactDeveloper": "Contact Developer",
+  "feedbackAndContact": "Feedback & Contact",
+  "feedbackAndContactDesc": "Your feedback matters! Reach us through the following channels:",
+  "feedbackGithubTitle": "Submit an Issue on GitHub",
+  "feedbackGithubDesc": "Report bugs, suggest features, or join discussions",
+  "feedbackGithubRepoTitle": "View Source Code",
+  "feedbackGithubRepoDesc": "Browse the code, star the project, or submit a Pull Request",
+  "contactDeveloperSectionTitle": "Contact Developer",
+  "feedbackEmailTitle": "Send Email",
+  "feedbackEmailDesc": "shangjinyun@proton.me",
+  "feedbackDiscussionTitle": "Join Community Discussions",
+  "feedbackDiscussionDesc": "Ask questions, share ideas, and connect with other users",
   "settingsViewLicenses": "View Licenses",
   "settingsCheckUpdate": "Check for Updates",
   "settingsCheckUpdateDesc": "Check if a new version is available",
@@ -362,6 +375,8 @@
   "deleteNote": "Delete Note",
   "deleteNoteConfirmation": "Are you sure you want to delete this note? This action cannot be undone.",
   "noteDeleted": "Note deleted",
+  "noteNotFound": "Note not found",
+  "noteUpdateSkippedDeleted": "Note has been deleted, update skipped",
   "favorited": "Favorited ({count})",
   "@favorited": {
     "placeholders": {
@@ -408,6 +423,7 @@
     }
   },
   "view": "View",
+  "viewImage": "View image",
   "todayThoughts": "Today's Thoughts",
   "loadingTodayThoughts": "Loading today's thoughts...",
   "fetchingDefaultPrompt": "Fetching default prompt...",
@@ -500,6 +516,7 @@
   "customColor": "Custom Color",
   "select": "Select",
   "editMetadata": "Edit Metadata",
+  "noLocationWeatherRecorded": "Location and weather were not recorded when this note was first saved",
   "done": "Done",
   "selectTags": "Select Tags",
   "noMatchingTags": "No matching tags found",
@@ -581,12 +598,65 @@
   "hitokotoSettings": "Daily Quote Settings",
   "hitokotoTypeSettings": "Daily Quote Type Settings",
   "hitokotoTypeDesc": "You can select one or more daily quote types. The app will randomly display content from your selected types. Different types represent different content sources and styles.",
+  "dailyQuoteApiDesc": "Choose the service provider used for the home page daily quote text.",
+  "dailyQuoteApiHitokoto": "Hitokoto",
+  "dailyQuoteApiZenQuotes": "ZenQuotes",
+  "dailyQuoteApiApiNinjas": "API Ninjas",
+  "dailyQuoteApiMeigen": "Meigen Oshieruyo",
+  "dailyQuoteApiKoreanAdvice": "Korean Advice",
+  "dailyQuoteApiNinjasManageApiKey": "Configure service key",
+  "dailyQuoteApiNinjasApiKeyHint": "Enter the API Ninjas X-Api-Key",
+  "dailyQuoteApiNinjasApiKeyConfigured": "Service key configured",
+  "dailyQuoteApiNinjasApiKeyMissing": "No service key configured yet",
+  "dailyQuoteApiNinjasApiKeyInvalid": "The service key format looks invalid",
+  "dailyQuoteApiNinjasCategorySelection": "Category selection",
+  "dailyQuoteApiNinjasCategoryDesc": "Search, select multiple categories, or clear them all. Leaving everything unchecked falls back to fully random quotes.",
+  "dailyQuoteApiNinjasCategorySearchHint": "Search categories",
+  "dailyQuoteApiNinjasNoCategoriesFound": "No matching categories",
+  "dailyQuoteApiNinjasAllCategoriesUsed": "No category filter applied; quotes will be drawn from the full pool",
+  "dailyQuoteApiNinjasSelectedCount": "{count} categories selected",
+  "@dailyQuoteApiNinjasSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteApiNinjasCategoryWisdom": "Wisdom",
+  "dailyQuoteApiNinjasCategoryPhilosophy": "Philosophy",
+  "dailyQuoteApiNinjasCategoryLife": "Life",
+  "dailyQuoteApiNinjasCategoryTruth": "Truth",
+  "dailyQuoteApiNinjasCategoryInspirational": "Inspirational",
+  "dailyQuoteApiNinjasCategoryRelationships": "Relationships",
+  "dailyQuoteApiNinjasCategoryLove": "Love",
+  "dailyQuoteApiNinjasCategoryFaith": "Faith",
+  "dailyQuoteApiNinjasCategoryHumor": "Humor",
+  "dailyQuoteApiNinjasCategorySuccess": "Success",
+  "dailyQuoteApiNinjasCategoryCourage": "Courage",
+  "dailyQuoteApiNinjasCategoryHappiness": "Happiness",
+  "dailyQuoteApiNinjasCategoryArt": "Art",
+  "dailyQuoteApiNinjasCategoryWriting": "Writing",
+  "dailyQuoteApiNinjasCategoryFear": "Fear",
+  "dailyQuoteApiNinjasCategoryNature": "Nature",
+  "dailyQuoteApiNinjasCategoryTime": "Time",
+  "dailyQuoteApiNinjasCategoryFreedom": "Freedom",
+  "dailyQuoteApiNinjasCategoryDeath": "Death",
+  "dailyQuoteApiNinjasCategoryLeadership": "Leadership",
   "selectAll": "Select All",
   "clearAll": "Clear All",
   "typeSelection": "Type Selection",
   "typeSelectionHint": "Tap to select your preferred quote types",
+  "dailyQuoteProviderNoTypeSelection": "This provider does not support category filtering.",
   "usageInstructions": "Instructions",
   "hitokotoServiceProvider": "Quote service provided by Hitokoto",
+  "dailyQuoteServiceProvider": "Current content provided by {provider}",
+  "@dailyQuoteServiceProvider": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
   "hitokotoHelpItem1": "At least one type must be selected. The app will randomly display content from selected types",
   "hitokotoHelpItem2": "Selecting multiple types provides a richer variety of content",
   "hitokotoHelpItem3": "Different types represent different content styles and sources",
@@ -956,6 +1026,7 @@
   "hitokotoTypeI": "Poetry",
   "hitokotoTypeJ": "Netease Cloud Music",
   "hitokotoTypeK": "Philosophy",
+  "hitokotoTypeJoke": "Humor",
   "noNetworkConnection": "No network connection",
   "unknown": "Unknown",
   "defaultQuote1": "Life is not only about the present, but also poetry and distance.",
@@ -1381,6 +1452,7 @@
   "todayThoughtsUseAiDesc": "When enabled, AI will be used to generate prompts for Today's Thoughts. If disabled, local generation will be used.",
   "apiUrlRequired": "API URL cannot be empty",
   "invalidUrl": "Please enter a valid HTTP/HTTPS URL",
+  "fieldRequired": "This field is required",
   "mediaManagementTitle": "Media File Management",
   "loadStatsError": "Failed to load statistics: {error}",
   "@loadStatsError": {
@@ -1399,16 +1471,6 @@
     }
   },
   "operationFailed": "{operation} failed: {error}",
-  "@operationFailed": {
-    "placeholders": {
-      "operation": {
-        "type": "String"
-      },
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "@operationFailed": {
     "placeholders": {
       "operation": {
@@ -2388,8 +2450,8 @@
   "showFavoriteButtonDesc": "Show heart button on note cards",
   "prioritizeBoldContent": "Prioritize Bold Content",
   "prioritizeBoldContentDesc": "Show bold text first when collapsed",
-  "useLocalNotesOnly": "Use Local Notes Only",
-  "useLocalNotesOnlyDesc": "When off, automatically use local records when offline",
+  "useLocalNotesOnly": "Only Show Local Records",
+  "useLocalNotesOnlyDesc": "Home will stop fetching new daily quotes from the network",
   "aiSmartFeatures": "AI Smart Features",
   "aiGenerateDailyPrompt": "AI Generated Daily Prompt",
   "aiGenerateDailyPromptDesc": "Use AI to generate home page daily prompts",
@@ -2422,7 +2484,8 @@
   "syncIntegrationNote": "Sync integration note:",
   "serviceApiAcknowledgements": "Services & API Acknowledgements:",
   "weatherData": "Weather Data",
-  "dailyQuoteApi": "Daily Quote API",
+  "geocodingApi": "Geocoding API",
+  "dailyQuoteApi": "Daily Quote Service Provider",
   "viewFullDependencyList": "View Full Dependency List",
   "thankOpenSourceContributors": "Thanks to all open source projects and community contributors. These tools and services make this app possible. Please refer to each project's repository or package management page for specific licenses.",
   "lottieFilesCredits": "This app uses animation resources from LottieFiles:",
@@ -2727,6 +2790,16 @@
   "dayPeriodMidnight": "Late Night",
   "showExactTime": "Show Exact Time",
   "showExactTimeDesc": "Display time (hour:minute) in notes",
+  "showNoteEditTime": "Show Note Edit Time",
+  "showNoteEditTimeDesc": "Display the last edited time in notes",
+  "editedAtLabel": "Edited at {dateTime}",
+  "@editedAtLabel": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
   "guideHomepageDailyQuoteTitle": "Daily Quote Tips",
   "guideHomepageDailyQuoteDesc": "Single tap to copy content\nDouble tap to quickly add to notes",
   "guideNotePageFilterTitle": "Filter & Sort",
@@ -2747,6 +2820,8 @@
   "guideSettingsStartupDesc": "Set the default page to open when launching the app",
   "guideSettingsThemeTitle": "Theme Settings",
   "guideSettingsThemeDesc": "Customize app theme colors and appearance here",
+  "guideTrashLocationTitle": "Trash Location",
+  "guideTrashLocationDesc": "Note moved to trash\nOpen Trash in Settings to restore it",
   "apkDownloadTitle": "Download APK",
   "apkDownloading": "Downloading ThoughtEcho {version}...",
   "@apkDownloading": {
@@ -2819,6 +2894,15 @@
   "mindMapAnalysis": "Mind Map",
   "growthAnalysis": "Growth Analysis",
   "aiAnalysis": "AI Analysis",
+  "deleteAiAnalysis": "Delete AI Analysis",
+  "deleteAiAnalysisConfirm": "Are you sure you want to delete the AI analysis result for this note? This can be undone before saving the note.",
+  "aiAnalysisDeleted": "AI analysis deleted",
+  "aiAnalysisSaved": "AI analysis saved",
+  "aiGenerating": "AI is generating...",
+  "complete": "Complete",
+  "viewFull": "View Full",
+  "copy": "Copy",
+  "copiedToClipboard": "Copied to clipboard",
   "selectReportTypePrompt": "Please select the type of annual report to generate:",
   "aiSmartReport": "AI Smart Report",
   "aiSmartReportDesc": "Beautiful HTML report generated based on AI analysis, including deep insights and visual charts",
@@ -2942,6 +3026,9 @@
   "outOfMemoryVideo": "Out of memory, cannot load video",
   "audioFileNotFound": "Audio file not found",
   "clickToPlayVideo": "Tap to play video",
+  "motionPhoto": "Live",
+  "viewPhoto": "View photo",
+  "motionPhotoPlayFailed": "Unable to play this motion photo",
   "loadingVideo": "Loading video...",
   "shareAudio": "Share Audio",
   "fileInfo": "File Info",
@@ -3068,15 +3155,23 @@
   "locationDisplayFormat": "{city}{suffix}",
   "@locationDisplayFormat": {
     "placeholders": {
-      "city": {"type": "String"},
-      "suffix": {"type": "String"}
+      "city": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
     }
   },
   "locationDisplayWithDistrict": "{city} · {district}",
   "@locationDisplayWithDistrict": {
     "placeholders": {
-      "city": {"type": "String"},
-      "district": {"type": "String"}
+      "city": {
+        "type": "String"
+      },
+      "district": {
+        "type": "String"
+      }
     }
   },
   "noLocationInfo": "No location info",
@@ -3123,9 +3218,9 @@
       }
     }
   },
-  "copyMessage": "Copy message",
-  "shareMessage": "Share message",
-  "shareFeatureInDevelopment": "Share feature in development",
+  "copyMessage": "Copy Message",
+  "shareMessage": "Share Message",
+  "shareFeatureInDevelopment": "Share feature is under development",
   "cancelImport": "Cancel import",
   "enterMediaUrl": "Enter {mediaType} URL",
   "@enterMediaUrl": {
@@ -3171,6 +3266,7 @@
   "unsavedChangesDesc": "You have unsaved edits. Do you want to discard these changes?",
   "continueEditing": "Continue Editing",
   "discardChanges": "Discard Changes",
+  "saveAndExit": "Save and Exit",
   "actionFavorite": "Favorite",
   "actionUnfavorite": "Unfavorite",
   "clearFavoriteTitle": "Clear Favorite",
@@ -3186,21 +3282,15 @@
   "clearFavoriteSuccess": "Favorite cleared",
   "clearFavoriteFailed": "Failed to clear favorite",
   "moreOptions": "More options",
-
   "localAiFeatures": "Local AI Features",
   "localAiFeaturesPreview": "Preview",
   "localAiFeaturesDesc": "Enhance your note-taking experience with on-device AI",
-  "localAiFeaturesAdvanced": "Advanced Local AI",
-  "localAiFeaturesAdvancedDesc": "OCR, smart tags, and other advanced AI features",
-  "settingsAsrDesc": "Download models and enable speech-to-text",
   "enableLocalAi": "Enable Local AI",
   "enableLocalAiDesc": "Turn on to enable on-device AI features",
   "localAiPreviewNote": "This feature is currently in preview. Some features may be unstable",
-
   "inputEnhancement": "Input Enhancement",
   "searchAndDiscovery": "Search & Discovery",
   "contentAnalysis": "Content Analysis",
-
   "speechToText": "Speech to Text",
   "speechToTextDesc": "Long press the record button to convert speech to text in real-time",
   "ocrRecognition": "OCR Recognition",
@@ -3209,19 +3299,16 @@
   "aiCorrectionDesc": "Intelligently fix recognition errors from speech and OCR",
   "sourceRecognition": "Source Recognition",
   "sourceRecognitionDesc": "Automatically extract author and work information from text",
-
   "aiSearch": "AI Semantic Search",
   "aiSearchDesc": "Use AI to understand search intent and find semantically related notes",
   "relatedNotes": "Related Notes",
   "relatedNotesDesc": "Recommend related notes based on content similarity",
-
   "smartTags": "Smart Tags",
   "smartTagsDesc": "Intelligently suggest tags when saving notes",
   "noteClassification": "Note Classification",
   "noteClassificationDesc": "Automatically identify note types (insights, excerpts, diary, etc.)",
   "emotionDetection": "Emotion Detection",
   "emotionDetectionDesc": "Analyze the emotional sentiment of note content",
-
   "swipeUpForOcr": "Swipe up for OCR",
   "listening": "Listening...",
   "recording": "Recording",
@@ -3233,27 +3320,23 @@
   "correctionComplete": "Correction complete",
   "recognizing": "Recognizing...",
   "recognitionComplete": "Recognition complete",
-
   "voiceInputTitle": "Voice Input",
   "voiceResultTitle": "Voice Recognition Result",
   "ocrCaptureTitle": "OCR Text Recognition",
-  "ocrResultTitle": "Recognition Result",
+  "ocrResultTitle": "OCR Recognition Result",
   "selectTextRegions": "Select text regions to extract",
   "takeAnotherPhoto": "Take Another Photo",
   "finishSelection": "Finish Selection",
   "noTextDetected": "No text detected",
   "tapToSelectRegion": "Tap to select text region",
-
-  "aiSearchMode": "AI Search Mode",
-  "normalSearchMode": "Normal Search Mode",
+  "aiSearchMode": "AI Search",
+  "normalSearchMode": "Normal Search",
   "switchToAiSearch": "Switch to AI semantic search",
   "switchToNormalSearch": "Switch to normal search",
-
   "recommendedTags": "Recommended Tags",
   "noteType": "Note Type",
   "emotionAnalysis": "Emotion Analysis",
   "viewRelatedNotes": "View Related Notes",
-
   "localAiNotEnabled": "Local AI features not enabled",
   "enableInSettings": "Please enable in settings",
   "featureNotAvailable": "Feature not available",
@@ -3288,7 +3371,6 @@
   "voiceRecordingHint": "Release to end, swipe up for OCR",
   "voiceProcessing": "Processing...",
   "voiceTranscribing": "Transcribing...",
-  "voiceResultTitle": "Voice Recognition Result",
   "voiceEditResult": "Edit Recognition Result",
   "voiceApplyCorrection": "AI Correction",
   "voiceRecognizeSource": "Recognize Source",
@@ -3298,10 +3380,7 @@
   "ocrSelectRegion": "Select Text Region",
   "ocrSelectRegionHint": "Tap the text region to recognize",
   "ocrProcessing": "Recognizing...",
-  "ocrResultTitle": "OCR Recognition Result",
   "ocrNoTextDetected": "No text detected",
-  "aiSearchMode": "AI Search",
-  "normalSearchMode": "Normal Search",
   "aiSearching": "AI Searching...",
   "aiCorrectionApplied": "AI correction applied",
   "aiSourceRecognized": "Source recognized",
@@ -3328,7 +3407,6 @@
   "biometricNotAvailable": "Biometric authentication is not available on this device",
   "biometricNotSetup": "Please set up fingerprint or face recognition in system settings first",
   "privacyAndSecurity": "Privacy & Security",
-
   "smartPushTitle": "Smart Push",
   "smartPushTitlePreview": "Smart Push (Preview)",
   "smartPushDesc": "Schedule push notifications for past notes and daily quotes",
@@ -3337,6 +3415,7 @@
   "smartPushContentType": "Push Mode",
   "smartPushDailyQuote": "Daily Quote",
   "smartPushDailyQuoteDesc": "Push curated quotes",
+  "smartPushDailyQuoteIndependentNote": "Daily Quote runs independently from Smart Push — each can be enabled or disabled separately.",
   "smartPushPastNotes": "Past Notes",
   "smartPushPastNotesDesc": "Push historical note reviews",
   "smartPushModeSmart": "Smart Push",
@@ -3408,8 +3487,7 @@
   "tileNoNetwork": "No Network",
   "tileLoading": "Loading...",
   "tileNoWeather": "No Weather",
-  "tileCachedSuffix": "(Cached)",
-
+  "tileCachedSuffix": "Cached",
   "noteAutoFillSection": "Note Auto-Fill",
   "noteAutoFillSectionDesc": "Auto-fill author, source, and tags when creating notes",
   "defaultAuthor": "Default Author",
@@ -3435,7 +3513,8 @@
   "saveDefaultValue": "Save",
   "defaultValueSaved": "Default value saved",
   "defaultValueCleared": "Default value cleared",
-
+  "excerptIntentEnabled": "Clip to ThoughtEcho",
+  "excerptIntentEnabledDesc": "Allow selected text from browsers or other apps to open ThoughtEcho directly in the non-fullscreen editor",
   "citySelectedWeatherUpdated": "Selected city: {cityName}, weather updated",
   "@citySelectedWeatherUpdated": {
     "placeholders": {
@@ -3474,7 +3553,108 @@
   "cannotGetCurrentLocation": "Cannot get current location, please ensure location permission is granted",
   "cannotGetSelectedCityLocation": "Cannot get selected city location",
   "cityInfoIncomplete": "City information is incomplete",
-
+  "contentLengthLabel": "Content length: {length}",
+  "htmlFormatLabel": "HTML format: {status}",
+  "jsonFormatLabel": "JSON format: {status}",
+  "containsHtmlTagsLabel": "Contains HTML tags: {status}",
+  "viewNoteInfo": "View note information",
+  "first100CharsLabel": "First 100 characters:",
+  "annualReportDemo": "Annual Report Demo",
+  "manualApiTest": "Manual API Test",
+  "manualApiTestTitle": "Manual API Key Test",
+  "manualApiTestDesc": "Directly input API parameters for testing, bypassing the storage system to check if the API key is valid.",
+  "testResultLabel": "Test Result:",
+  "fillAllFieldsError": "Error: Please fill in all required fields",
+  "testReportTitle": "=== Manual API Key Test Report ===",
+  "testParamsLabel": "Test Parameters:",
+  "keyFormatCheckLabel": "Key Format Check:",
+  "sendRequestLabel": "Send Request:",
+  "responseResultLabel": "Response Result:",
+  "testApiKey": "Test API Key",
+  "aiReturnedEmptyContent": "AI returned empty content, please try again",
+  "chatWithAiAssistant": "Chat with AI assistant to explore note content",
+  "messageCopied": "Message copied to clipboard",
+  "anniversaryTitle": "ThoughtEcho · 心迹",
+  "anniversarySubtitle": "Thank you for being with us",
+  "anniversaryEnterApp": "Enter App",
+  "anniversaryBannerTitle": "ThoughtEcho 1st Anniversary",
+  "anniversaryBannerSubtitle": "Thank you for every step of the journey · 2025.3.23 - 2026.3.23",
+  "anniversaryBannerTap": "Tap to replay the celebration",
+  "anniversaryReplayButton": "Replay",
+  "developerAnniversarySection": "Anniversary Celebration Controls",
+  "developerAnniversaryEnabled": "Enable Anniversary Animation",
+  "developerAnniversaryEnabledDesc": "Toggle whether the celebration animation shows on launch",
+  "developerAnniversaryReset": "Reset Shown Flag",
+  "developerAnniversaryResetDesc": "After reset, the animation will play again on next launch",
+  "developerAnniversaryResetDone": "Reset done, animation will play on next launch",
+  "developerAnniversaryPreview": "Preview Animation Now",
+  "developerAnniversaryPreviewDesc": "Tap to play the anniversary animation immediately",
+  "trash": "Trash",
+  "trashEmpty": "Trash is empty",
+  "trashEmptyHint": "Accidentally deleted notes stay here first, including photos, audio, and video, so you can restore them together.",
+  "trashRetentionHint": "Recently deleted notes and attachments stay here until the retention period ends, then they are cleaned up automatically.",
+  "moveNoteToTrashTitle": "Move Note to Trash",
+  "moveNoteToTrashConfirmation": "Move this note to trash? You can restore it within {days} days.",
+  "@moveNoteToTrashConfirmation": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRemainingDays": "{days, plural, =0{0 days remaining} one{1 day remaining} other{{days} days remaining}}",
+  "@trashRemainingDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreNote": "Restore",
+  "permanentlyDelete": "Delete Permanently",
+  "permanentlyDeleteConfirmation": "Warning: This cannot be undone. The note will be permanently deleted and cannot be recovered.",
+  "emptyTrash": "Empty Trash",
+  "emptyTrashConfirmation": "Permanently delete all notes in trash? This cannot be undone and cannot be recovered.",
+  "noteMovedToTrash": "Note moved to trash. You can restore it from Trash",
+  "noteRestored": "Note restored",
+  "trashEmptied": "Trash emptied",
+  "deletedAt": "Deleted on {date}",
+  "@deletedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "trashCount": "Trash ({count})",
+  "@trashCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRetentionPeriod": "Trash retention period",
+  "trashRetentionOption7Days": "7 days",
+  "trashRetentionOption30Days": "30 days",
+  "trashRetentionOption90Days": "90 days",
+  "insertImage": "Insert Image",
+  "insertVideo": "Insert Video",
+  "insertAudio": "Insert Audio",
+  "mediaPlayerPlay": "Play",
+  "mediaPlayerPause": "Pause",
+  "clipboardFoundHint": "Clipboard content found, tap to add as note",
+  "operationFailedSimple": "Operation failed",
+  "skipNonFullscreenEditor": "Open fullscreen editor directly",
+  "skipNonFullscreenEditorDesc": "Skip quick edit and open fullscreen rich text editor when adding notes",
+  "offlineQuoteSourceTitle": "When Offline, Show",
+  "offlineQuoteSourceDesc": "Choose what appears on the home page when offline or when local-only is enabled",
+  "offlineQuoteSourceTagOnly": "Previously saved daily quotes",
+  "offlineQuoteSourceAll": "Random local records",
+  "noLocalSavedQuotes": "No previously saved daily quotes yet",
+  "localAiFeaturesAdvanced": "Advanced Local AI",
+  "localAiFeaturesAdvancedDesc": "OCR, smart tags, and other advanced AI features",
+  "settingsAsrDesc": "Download models and enable speech-to-text",
   "voiceInitializing": "Initializing...",
   "voiceInitializingHint": "Please wait, preparing speech recognition",
   "voiceNoTextRecognized": "No text recognized",
@@ -3490,12 +3670,24 @@
   "modelDownload": "Download Model",
   "modelDownloading": "Downloading...",
   "modelDownloadProgress": "Download progress: {progress}%",
-  "@modelDownloadProgress": {"placeholders": {"progress": {"type": "int"}}},
+  "@modelDownloadProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
   "modelDownloadSource": "Download Source",
   "modelDownloadSourceHint": "Models will be downloaded from HuggingFace/GitHub",
   "modelDownloaded": "Downloaded",
   "modelDownloadedCount": "{count} models downloaded",
-  "@modelDownloadedCount": {"placeholders": {"count": {"type": "int"}}},
+  "@modelDownloadedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "modelDelete": "Delete Model",
   "modelDeleteConfirm": "Are you sure you want to delete this model? You will need to re-download it.",
   "modelImport": "Import Model",

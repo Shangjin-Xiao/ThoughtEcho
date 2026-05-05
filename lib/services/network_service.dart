@@ -113,7 +113,9 @@ class NetworkService {
       );
 
       return _convertDioResponseToHttpResponse(response);
-    } on DioException catch (e) {
+    } on DioException catch (e, stack) {
+      AppLogger.e('GET请求失败: $url',
+          error: e, stackTrace: stack, source: 'NetworkService');
       return HttpResponse(
         '{"error": "${e.message}"}',
         e.response?.statusCode ?? 500,
@@ -143,7 +145,9 @@ class NetworkService {
       );
 
       return _convertDioResponseToHttpResponse(response);
-    } on DioException catch (e) {
+    } on DioException catch (e, stack) {
+      AppLogger.e('POST请求失败: $url',
+          error: e, stackTrace: stack, source: 'NetworkService');
       return HttpResponse(
         '{"error": "${e.message}"}',
         e.response?.statusCode ?? 500,
@@ -178,8 +182,9 @@ class NetworkService {
       );
 
       return response;
-    } catch (e) {
-      logDebug('AI请求失败: $e');
+    } catch (e, stack) {
+      AppLogger.e('AI请求失败',
+          error: e, stackTrace: stack, source: 'NetworkService');
       rethrow;
     }
   }
@@ -219,8 +224,9 @@ class NetworkService {
         onComplete,
         onError,
       );
-    } catch (e) {
-      logDebug('AI流式请求失败: $e');
+    } catch (e, stack) {
+      AppLogger.e('AI流式请求失败',
+          error: e, stackTrace: stack, source: 'NetworkService');
       onError(Exception('AI流式请求失败: $e'));
     }
   }
@@ -376,15 +382,18 @@ class NetworkService {
                 onData(anthropicContent);
                 continue;
               }
-            } catch (e) {
-              logDebug('解析流式响应JSON错误: $e');
+            } catch (e, stack) {
+              AppLogger.e('解析流式响应JSON错误',
+                  error: e, stackTrace: stack, source: 'NetworkService');
             }
           }
         }
       }
 
       onComplete(buffer.toString());
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.e('流式响应处理错误',
+          error: e, stackTrace: stack, source: 'NetworkService');
       onError(Exception('流式响应处理错误: $e'));
     }
   }
@@ -425,7 +434,9 @@ class RetryInterceptor extends Interceptor {
         final response = await dio.fetch(err.requestOptions);
         handler.resolve(response);
         return;
-      } catch (e) {
+      } catch (e, stack) {
+        AppLogger.e('重试请求失败: ${err.requestOptions.uri}',
+            error: e, stackTrace: stack, source: 'NetworkService_Retry');
         // 继续到下一个重试或失败
       }
     }

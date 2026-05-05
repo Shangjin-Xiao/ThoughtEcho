@@ -1,10 +1,11 @@
-import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
 import '../services/ai_service.dart';
 import '../widgets/streaming_text_dialog.dart';
-import '../theme/app_theme.dart';
+import '../widgets/ai_options_menu.dart';
+import '../widgets/source_analysis_result_dialog.dart';
 import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
 
@@ -16,7 +17,7 @@ class AiDialogHelper {
   AiDialogHelper(this.context)
       : aiService = Provider.of<AIService>(context, listen: false);
 
-  // 显示AI选项菜单
+  // 显示AI选项菜单（使用统一组件）
   void showAiOptions({
     required VoidCallback onAnalyzeSource,
     required VoidCallback onPolishText,
@@ -24,98 +25,14 @@ class AiDialogHelper {
     required VoidCallback onAnalyzeContent,
     VoidCallback? onAskQuestion, // 添加问笔记回调
   }) {
-    final theme = Theme.of(context);
-
-    showModalBottomSheet(
+    AiOptionsMenu.show(
       context: context,
-      backgroundColor: theme.brightness == Brightness.light
-          ? Colors.white
-          : theme.colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppTheme.dialogRadius),
-        ),
-      ),
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: SingleChildScrollView(
-            child: IntrinsicHeight(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.auto_awesome,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          l10n.aiAssistant,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Divider(height: 1, color: theme.colorScheme.outline),
-                  ListTile(
-                    leading: const Icon(Icons.text_fields),
-                    title: Text(l10n.smartAnalyzeSource),
-                    subtitle: Text(l10n.smartAnalyzeSourceDesc),
-                    onTap: () {
-                      Navigator.pop(context);
-                      onAnalyzeSource();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.brush),
-                    title: Text(l10n.polishText),
-                    subtitle: Text(l10n.polishTextDesc),
-                    onTap: () {
-                      Navigator.pop(context);
-                      onPolishText();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.add_circle_outline),
-                    title: Text(l10n.continueWriting),
-                    subtitle: Text(l10n.continueWritingDesc),
-                    onTap: () {
-                      Navigator.pop(context);
-                      onContinueText();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.analytics),
-                    title: Text(l10n.deepAnalysis),
-                    subtitle: Text(l10n.deepAnalysisDesc),
-                    onTap: () {
-                      Navigator.pop(context);
-                      onAnalyzeContent();
-                    },
-                  ),
-                  if (onAskQuestion != null)
-                    ListTile(
-                      leading: const Icon(Icons.chat),
-                      title: Text(l10n.askNote),
-                      subtitle: Text(l10n.askNoteDesc),
-                      onTap: () {
-                        Navigator.pop(context);
-                        onAskQuestion();
-                      },
-                    ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+      showAskNote: onAskQuestion != null,
+      onAnalyzeSource: onAnalyzeSource,
+      onPolishText: onPolishText,
+      onContinueText: onContinueText,
+      onAnalyzeContent: onAnalyzeContent,
+      onAskNote: onAskQuestion,
     );
   }
 
@@ -133,15 +50,29 @@ class AiDialogHelper {
     _showLoadingDialog(l10n.analyzingSource);
 
     try {
-      final result = await aiService.analyzeSource(contentController.text);
+      // 传递已有的作者/出处供 AI 验证
+      final existingAuthor = authorController.text.trim();
+      final existingWork = workController.text.trim();
+      final result = await aiService.analyzeSource(
+        contentController.text,
+        existingAuthor: existingAuthor.isNotEmpty ? existingAuthor : null,
+        existingWork: existingWork.isNotEmpty ? existingWork : null,
+      );
       if (!context.mounted) return;
       Navigator.of(context).pop(); // Close loading dialog
 
-      _showSourceAnalysisResultDialog(result, authorController, workController);
+      SourceAnalysisResultDialog.show(
+        context,
+        result,
+        authorController: authorController,
+        workController: workController,
+        onError: (error) => _showSnackBar(l10n.parseResultFailed(error)),
+      );
     } catch (e) {
       if (!context.mounted) return;
       Navigator.of(context).pop();
-      _showSnackBar(l10n.analysisFailedWithError(e.toString()));
+      _showSnackBar(
+          l10n.analysisFailedWithError(kDebugMode ? e.toString() : ''));
     }
   }
 
@@ -163,6 +94,7 @@ class AiDialogHelper {
             applyButtonText: l10n.applyChanges,
             onApply: (polishedText) {
               contentController.text = polishedText;
+              Navigator.of(dialogContext).pop();
             },
             onCancel: () {
               Navigator.of(dialogContext).pop();
@@ -193,6 +125,7 @@ class AiDialogHelper {
             applyButtonText: l10n.appendToNote,
             onApply: (continuedText) {
               contentController.text += continuedText;
+              Navigator.of(dialogContext).pop();
             },
             onCancel: () {
               Navigator.of(dialogContext).pop();
@@ -209,6 +142,7 @@ class AiDialogHelper {
   Future<void> analyzeContent(
     Quote quote, {
     required Function(String) onFinish,
+    List<String>? tagNames,
   }) async {
     if (quote.content.isEmpty) {
       _showSnackBar(l10n.pleaseEnterContent);
@@ -222,9 +156,13 @@ class AiDialogHelper {
         builder: (dialogContext) {
           return StreamingTextDialog(
             title: l10n.noteAnalysis,
-            textStream: aiService.streamSummarizeNote(quote),
+            textStream:
+                aiService.streamSummarizeNote(quote, tagNames: tagNames),
             applyButtonText: l10n.applyToNote,
-            onApply: onFinish,
+            onApply: (result) {
+              onFinish(result);
+              Navigator.of(dialogContext).pop();
+            },
             onCancel: () {
               Navigator.of(dialogContext).pop();
             },
@@ -233,84 +171,8 @@ class AiDialogHelper {
         },
       );
     } catch (e) {
-      _showSnackBar(l10n.analysisFailedWithError(e.toString()));
-    }
-  }
-
-  void _showSourceAnalysisResultDialog(
-    String result,
-    TextEditingController authorController,
-    TextEditingController workController,
-  ) {
-    try {
-      final Map<String, dynamic> sourceData = json.decode(result);
-      String? author = sourceData['author'] as String?;
-      String? work = sourceData['work'] as String?;
-      String confidence = sourceData['confidence'] as String? ?? '低';
-      String explanation = sourceData['explanation'] as String? ?? '';
-
-      showDialog(
-        context: context,
-        builder: (dialogContext) {
-          return AlertDialog(
-            title: Text(l10n.analysisResultWithConfidence(confidence)),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (author != null && author.isNotEmpty) ...[
-                  Text(
-                    l10n.possibleAuthor,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(author),
-                  const SizedBox(height: 8),
-                ],
-                if (work != null && work.isNotEmpty) ...[
-                  Text(
-                    l10n.possibleWork,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(work),
-                  const SizedBox(height: 8),
-                ],
-                if (explanation.isNotEmpty) ...[
-                  Text(
-                    l10n.analysisExplanation,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(explanation, style: const TextStyle(fontSize: 13)),
-                ],
-                if ((author == null || author.isEmpty) &&
-                    (work == null || work.isEmpty))
-                  Text(l10n.noAuthorWorkIdentified),
-              ],
-            ),
-            actions: [
-              if ((author != null && author.isNotEmpty) ||
-                  (work != null && work.isNotEmpty))
-                TextButton(
-                  child: Text(l10n.applyAnalysisResult),
-                  onPressed: () {
-                    if (author != null && author.isNotEmpty) {
-                      authorController.text = author;
-                    }
-                    if (work != null && work.isNotEmpty) {
-                      workController.text = work;
-                    }
-                    Navigator.of(dialogContext).pop();
-                  },
-                ),
-              TextButton(
-                child: Text(l10n.close),
-                onPressed: () => Navigator.of(dialogContext).pop(),
-              ),
-            ],
-          );
-        },
-      );
-    } catch (e) {
-      _showSnackBar(l10n.parseResultFailed(e.toString()));
+      _showSnackBar(
+          l10n.analysisFailedWithError(kDebugMode ? e.toString() : ''));
     }
   }
 

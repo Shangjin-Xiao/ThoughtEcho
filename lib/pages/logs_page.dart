@@ -268,6 +268,8 @@ class _LogsPageState extends State<LogsPage> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.close),
+                          tooltip: MaterialLocalizations.of(context)
+                              .closeButtonTooltip,
                           onPressed: () => Navigator.of(context).pop(),
                         ),
                       ],
@@ -588,6 +590,7 @@ class _LogsPageState extends State<LogsPage> {
                   suffixIcon: _searchQuery != null && _searchQuery!.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear),
+                          tooltip: l10n.clear,
                           onPressed: () {
                             _searchDebounceTimer?.cancel();
                             _searchController.clear();
@@ -825,7 +828,6 @@ class _LogsPageState extends State<LogsPage> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    // 日志级别过滤
                     Text(
                       AppLocalizations.of(context).logFilterByLevel,
                       style: theme.textTheme.titleSmall,
@@ -837,7 +839,7 @@ class _LogsPageState extends State<LogsPage> {
                       children: UnifiedLogLevel.values
                           .where(
                             (level) => level != UnifiedLogLevel.none,
-                          ) // 排除"不记录"选项
+                          )
                           .map(
                             (level) => FilterChip(
                               label: Text(level.name.toUpperCase()),
@@ -860,10 +862,7 @@ class _LogsPageState extends State<LogsPage> {
                           )
                           .toList(),
                     ),
-
                     const SizedBox(height: 24),
-
-                    // 源过滤
                     Text(
                       AppLocalizations.of(context).logFilterBySource,
                       style: theme.textTheme.titleSmall,

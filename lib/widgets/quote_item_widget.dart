@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'package:provider/provider.dart';
+
+import '../extensions/note_category_localization_extension.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../theme/app_theme.dart';
@@ -9,8 +11,9 @@ import '../services/weather_service.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../utils/time_utils.dart';
-import '../utils/icon_utils.dart'; // 添加 IconUtils 导入
+import '../utils/icon_utils.dart';
 import '../gen_l10n/app_localizations.dart';
+import 'quote_card_helpers.dart';
 
 /// 优化：使用StatefulWidget以支持双击反馈动画，数据变化通过父组件管理
 class QuoteItemWidget extends StatefulWidget {
@@ -34,6 +37,12 @@ class QuoteItemWidget extends StatefulWidget {
 
   /// 当前筛选的标签ID列表，用于优先显示匹配的标签
   final List<String> selectedTagIds;
+  final bool isTrashMode;
+  final String? trashDeletedAtText;
+  final String? trashRemainingDaysText;
+  final VoidCallback? onRestore;
+  final VoidCallback? onPermanentlyDelete;
+  final bool trashActionsEnabled;
 
   const QuoteItemWidget({
     super.key,
@@ -53,6 +62,12 @@ class QuoteItemWidget extends StatefulWidget {
     this.foldToggleGuideKey,
     this.moreButtonGuideKey,
     this.selectedTagIds = const [],
+    this.isTrashMode = false,
+    this.trashDeletedAtText,
+    this.trashRemainingDaysText,
+    this.onRestore,
+    this.onPermanentlyDelete,
+    this.trashActionsEnabled = true,
   });
 
   @override
@@ -240,23 +255,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     final quote = widget.quote;
     final isExpanded = widget.isExpanded;
 
-    // Determine the background color of the card
-    // If the quote has a color, use it, otherwise use theme color
-    final Color cardColor = quote.colorHex != null && quote.colorHex!.isNotEmpty
-        ? Color(
-            int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000,
-          ) // Ensure alpha for hex string
-        : theme.colorScheme.surfaceContainerLowest;
-
-    // 修复深色模式下自定义颜色卡片的对比度问题
-    // 计算卡片背景的亮度，决定内容颜色
-    final bool isLightCard =
-        ThemeData.estimateBrightnessForColor(cardColor) == Brightness.light;
-    final Color baseContentColor = isLightCard ? Colors.black : Colors.white;
-
-    final Color primaryTextColor = baseContentColor.withValues(alpha: 0.9);
-    final Color secondaryTextColor = baseContentColor.withValues(alpha: 0.7);
-    final Color iconColor = baseContentColor.withValues(alpha: 0.65);
+    final colors = QuoteCardColors.fromHex(quote.colorHex, theme.colorScheme);
+    final Color cardColor = colors.cardColor;
+    final Color baseContentColor = colors.baseContentColor;
+    final Color primaryTextColor = colors.primaryTextColor;
+    final Color secondaryTextColor = colors.secondaryTextColor;
+    final Color iconColor = colors.iconColor;
 
     // Determine the text color based on the card color
 
@@ -265,18 +269,33 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     final showExactTime = context.select<SettingsService, bool>(
       (s) => s.showExactTime,
     );
+    final showNoteEditTime = context.select<SettingsService, bool>(
+      (s) => s.showNoteEditTime,
+    );
     final String formattedDate = TimeUtils.formatQuoteDateLocalized(
       context,
       quoteDate,
       dayPeriod: quote.dayPeriod,
       showExactTime: showExactTime,
     );
+    final DateTime? lastModified = quote.lastModified != null
+        ? DateTime.tryParse(quote.lastModified!)
+        : null;
+    final bool shouldShowEditedAt = showNoteEditTime &&
+        lastModified != null &&
+        !lastModified.isAtSameMomentAs(quoteDate);
+    final String? formattedEditedAt = shouldShowEditedAt
+        ? l10n.editedAtLabel(
+            TimeUtils.formatQuoteDateLocalized(
+              context,
+              lastModified,
+              showExactTime: showExactTime,
+            ),
+          )
+        : null;
 
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 6,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         boxShadow: isExpanded
@@ -304,16 +323,61 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // --- Trash Metadata Row ---
+            if (widget.isTrashMode)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.auto_delete_outlined,
+                      size: 16,
+                      color: theme.colorScheme.error,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      widget.trashRemainingDaysText ?? '',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      widget.trashDeletedAtText ?? '',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: secondaryTextColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // 头部日期显示
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 0, 4, 8), // 减少左右边距，调整上下边距
+              padding: EdgeInsets.fromLTRB(
+                4,
+                0,
+                4,
+                formattedEditedAt != null ? 2 : 8,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    formattedDate,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: secondaryTextColor,
+                  Expanded(
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          formattedDate,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: secondaryTextColor,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   if (quote.hasLocation || quote.weather != null)
@@ -364,6 +428,18 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                 ],
               ),
             ),
+            if (formattedEditedAt != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+                child: Text(
+                  formattedEditedAt,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: secondaryTextColor.withValues(alpha: 0.82),
+                    fontSize: 10,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
 
             // 笔记内容 - 支持双击展开/折叠
             GestureDetector(
@@ -428,68 +504,55 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                             sigmaX: 1.2,
                                             sigmaY: 1.2,
                                           ),
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              begin: Alignment.topCenter,
-                                              end: Alignment.bottomCenter,
-                                              colors: [
-                                                innerTheme.colorScheme.surface
-                                                    .withValues(
-                                                  alpha: 0.0,
-                                                ),
-                                                innerTheme.colorScheme.surface
-                                                    .withValues(
-                                                  alpha: 0.08,
-                                                ),
-                                                innerTheme.colorScheme.surface
-                                                    .withValues(
-                                                  alpha: 0.18,
-                                                ),
-                                              ],
-                                              stops: const [
-                                                0.0,
-                                                0.4,
-                                                1.0,
-                                              ],
-                                            ),
-                                          ),
-                                          alignment: Alignment.center,
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 2,
-                                            ),
                                             decoration: BoxDecoration(
-                                              color: innerTheme
-                                                  .colorScheme.surface
-                                                  .withValues(
-                                                alpha: 0.35,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                12,
+                                              gradient: LinearGradient(
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                                colors: [
+                                                  innerTheme.colorScheme.surface
+                                                      .withValues(alpha: 0.0),
+                                                  innerTheme.colorScheme.surface
+                                                      .withValues(alpha: 0.08),
+                                                  innerTheme.colorScheme.surface
+                                                      .withValues(alpha: 0.18),
+                                                ],
+                                                stops: const [0.0, 0.4, 1.0],
                                               ),
                                             ),
-                                            child: Text(
-                                              l10n.doubleTapToViewFull,
-                                              style: innerTheme
-                                                  .textTheme.bodySmall
-                                                  ?.copyWith(
+                                            alignment: Alignment.center,
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
                                                 color: innerTheme
-                                                    .colorScheme.onSurface
-                                                    .withValues(
-                                                  alpha: 0.65,
+                                                    .colorScheme.surface
+                                                    .withValues(alpha: 0.35),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: Text(
+                                                l10n.doubleTapToViewFull,
+                                                style: innerTheme
+                                                    .textTheme.bodySmall
+                                                    ?.copyWith(
+                                                  color: innerTheme
+                                                      .colorScheme.onSurface
+                                                      .withValues(
+                                                    alpha: 0.65,
+                                                  ),
+                                                  fontSize: 11,
+                                                  fontStyle: FontStyle.italic,
                                                 ),
-                                                fontSize: 11,
-                                                fontStyle: FontStyle.italic,
                                               ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  )
+                                    )
                                   : const SizedBox.shrink(),
                             ),
                           ),
@@ -641,9 +704,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                           alpha: 0.08,
                                                         ),
                                                   borderRadius:
-                                                      BorderRadius.circular(
-                                                    14,
-                                                  ),
+                                                      BorderRadius.circular(14),
                                                   border: Border.all(
                                                     color: isFilteredTag
                                                         ? baseContentColor
@@ -680,7 +741,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                           ),
                                                         ),
                                                         const SizedBox(
-                                                            width: 3),
+                                                          width: 3,
+                                                        ),
                                                       ] else ...[
                                                         Icon(
                                                           IconUtils.getIconData(
@@ -691,11 +753,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                               secondaryTextColor,
                                                         ),
                                                         const SizedBox(
-                                                            width: 3),
+                                                          width: 3,
+                                                        ),
                                                       ],
                                                     ],
                                                     Text(
-                                                      tag.name,
+                                                      tag.localizedName(l10n),
                                                       style: theme
                                                           .textTheme.bodySmall
                                                           ?.copyWith(
@@ -726,69 +789,98 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                     const Expanded(child: SizedBox.shrink()),
                   ],
 
+                  if (widget.isTrashMode) ...[
+                    TextButton(
+                      onPressed: widget.trashActionsEnabled
+                          ? widget.onPermanentlyDelete
+                          : null,
+                      style: TextButton.styleFrom(
+                        foregroundColor: theme.colorScheme.error,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      child: Text(l10n.permanentlyDelete),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.tonal(
+                      onPressed:
+                          widget.trashActionsEnabled ? widget.onRestore : null,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: theme.colorScheme.secondaryContainer,
+                        foregroundColor: theme.colorScheme.onSecondaryContainer,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      child: Text(l10n.restore),
+                    ),
+                  ],
+
                   // 心形按钮（如果启用）
-                  if (widget.onFavorite != null) ...[
+                  if (!widget.isTrashMode && widget.onFavorite != null) ...[
                     Tooltip(
                       message: l10n.actionFavorite,
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          key: widget.favoriteButtonGuideKey,
-                          onTap: widget.onFavorite,
-                          onLongPress: quote.favoriteCount > 0
-                              ? widget.onLongPressFavorite
-                              : null,
-                          borderRadius: BorderRadius.circular(20),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Stack(
-                              children: [
-                                Icon(
-                                  quote.favoriteCount > 0
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  size: 20,
-                                  color: quote.favoriteCount > 0
-                                      ? Colors.red.shade400
-                                      : iconColor,
-                                ),
-                                if (quote.favoriteCount > 0)
-                                  Positioned(
-                                    right: -2,
-                                    top: -2,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.red.shade600,
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: (quote.colorHex == null ||
-                                                  quote.colorHex!.isEmpty)
-                                              ? theme.colorScheme
-                                                  .surfaceContainerLowest
-                                              : cardColor,
-                                          width: 1.5,
+                      child: Semantics(
+                        button: true,
+                        label: l10n.actionFavorite,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            key: widget.favoriteButtonGuideKey,
+                            onTap: widget.onFavorite,
+                            onLongPress: quote.favoriteCount > 0
+                                ? widget.onLongPressFavorite
+                                : null,
+                            borderRadius: BorderRadius.circular(20),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Stack(
+                                children: [
+                                  Icon(
+                                    quote.favoriteCount > 0
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
+                                    size: 20,
+                                    color: quote.favoriteCount > 0
+                                        ? Colors.red.shade400
+                                        : iconColor,
+                                  ),
+                                  if (quote.favoriteCount > 0)
+                                    Positioned(
+                                      right: -2,
+                                      top: -2,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.shade600,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: (quote.colorHex == null ||
+                                                    quote.colorHex!.isEmpty)
+                                                ? theme.colorScheme
+                                                    .surfaceContainerLowest
+                                                : cardColor,
+                                            width: 1.5,
+                                          ),
                                         ),
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 16,
-                                        minHeight: 16,
-                                      ),
-                                      child: Text(
-                                        quote.favoriteCount > 99
-                                            ? '99+'
-                                            : '${quote.favoriteCount}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          height: 1.0,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 16,
+                                          minHeight: 16,
                                         ),
-                                        textAlign: TextAlign.center,
+                                        child: Text(
+                                          quote.favoriteCount > 99
+                                              ? '99+'
+                                              : '${quote.favoriteCount}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                            height: 1.0,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -798,77 +890,80 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                   ],
 
                   // 更多操作按钮
-                  PopupMenuButton<String>(
-                    tooltip: l10n.moreOptions,
-                    key: widget.moreButtonGuideKey, // 功能引导 key
-                    icon: Icon(Icons.more_vert, color: iconColor),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    onSelected: (value) {
-                      if (value == 'ask') {
-                        widget.onAskAI();
-                      } else if (value == 'edit') {
-                        widget.onEdit();
-                      } else if (value == 'generate_card') {
-                        widget.onGenerateCard?.call();
-                      } else if (value == 'delete') {
-                        widget.onDelete();
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem<String>(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit, color: theme.colorScheme.primary),
-                            const SizedBox(width: 8),
-                            Text(l10n.editNoteMenu),
-                          ],
-                        ),
+                  if (!widget.isTrashMode)
+                    PopupMenuButton<String>(
+                      tooltip: l10n.moreOptions,
+                      key: widget.moreButtonGuideKey, // 功能引导 key
+                      icon: Icon(Icons.more_vert, color: iconColor),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      PopupMenuItem<String>(
-                        value: 'ask',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.question_answer,
-                              color: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(l10n.askAIMenu),
-                          ],
-                        ),
-                      ),
-                      if (widget.onGenerateCard != null)
+                      onSelected: (value) {
+                        if (value == 'ask') {
+                          widget.onAskAI();
+                        } else if (value == 'edit') {
+                          widget.onEdit();
+                        } else if (value == 'generate_card') {
+                          widget.onGenerateCard?.call();
+                        } else if (value == 'delete') {
+                          widget.onDelete();
+                        }
+                      },
+                      itemBuilder: (context) => [
                         PopupMenuItem<String>(
-                          value: 'generate_card',
+                          value: 'edit',
                           child: Row(
                             children: [
-                              Icon(
-                                Icons.auto_awesome,
-                                color: theme.colorScheme.primary,
-                              ),
+                              Icon(Icons.edit,
+                                  color: theme.colorScheme.primary),
                               const SizedBox(width: 8),
-                              Text(l10n.generateCardShareMenu),
+                              Text(l10n.editNoteMenu),
                             ],
                           ),
                         ),
-                      PopupMenuItem<String>(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            const Icon(Icons.delete, color: Colors.red),
-                            const SizedBox(width: 8),
-                            Text(
-                              l10n.deleteNoteMenu,
-                              style: TextStyle(color: theme.colorScheme.error),
-                            ),
-                          ],
+                        PopupMenuItem<String>(
+                          value: 'ask',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.question_answer,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(l10n.askAIMenu),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                        if (widget.onGenerateCard != null)
+                          PopupMenuItem<String>(
+                            value: 'generate_card',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome,
+                                  color: theme.colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(l10n.generateCardShareMenu),
+                              ],
+                            ),
+                          ),
+                        PopupMenuItem<String>(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              const Icon(Icons.delete, color: Colors.red),
+                              const SizedBox(width: 8),
+                              Text(
+                                l10n.deleteNoteMenu,
+                                style:
+                                    TextStyle(color: theme.colorScheme.error),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
+import '../gen_l10n/app_localizations.dart';
 import 'unified_media_import_dialog.dart';
 
 /// 统一的增强工具栏组件
@@ -44,154 +45,197 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Row(
           children: [
-            // 第一组：历史操作
-            quill.QuillToolbarHistoryButton(
-              controller: widget.controller,
-              isUndo: true,
-              options: const quill.QuillToolbarHistoryButtonOptions(),
-            ),
-            quill.QuillToolbarHistoryButton(
-              controller: widget.controller,
-              isUndo: false,
-              options: const quill.QuillToolbarHistoryButtonOptions(),
-            ),
+            ..._buildHistoryGroup(),
             _buildDivider(),
-
-            // 第二组：基础格式
-            quill.QuillToolbarToggleStyleButton(
-              controller: widget.controller,
-              attribute: quill.Attribute.bold,
-              options: const quill.QuillToolbarToggleStyleButtonOptions(),
-            ),
-            quill.QuillToolbarToggleStyleButton(
-              controller: widget.controller,
-              attribute: quill.Attribute.italic,
-              options: const quill.QuillToolbarToggleStyleButtonOptions(),
-            ),
-            quill.QuillToolbarToggleStyleButton(
-              controller: widget.controller,
-              attribute: quill.Attribute.underline,
-              options: const quill.QuillToolbarToggleStyleButtonOptions(),
-            ),
-            quill.QuillToolbarToggleStyleButton(
-              controller: widget.controller,
-              attribute: quill.Attribute.strikeThrough,
-              options: const quill.QuillToolbarToggleStyleButtonOptions(),
-            ),
+            ..._buildBasicFormatGroup(),
             _buildDivider(),
-
-            // 第三组：标题
-            quill.QuillToolbarSelectHeaderStyleDropdownButton(
-              controller: widget.controller,
-              options: const quill
-                  .QuillToolbarSelectHeaderStyleDropdownButtonOptions(),
-            ),
+            ..._buildHeaderGroup(),
             _buildDivider(),
-
-            // 第四组：字体和大小
-            quill.QuillToolbarFontSizeButton(
-              controller: widget.controller,
-              options: const quill.QuillToolbarFontSizeButtonOptions(),
-            ),
-            quill.QuillToolbarFontFamilyButton(
-              controller: widget.controller,
-              options: const quill.QuillToolbarFontFamilyButtonOptions(),
-            ),
+            ..._buildFontGroup(),
             _buildDivider(),
-
-            // 第五组：颜色
-            quill.QuillToolbarColorButton(
-              controller: widget.controller,
-              isBackground: false,
-              options: const quill.QuillToolbarColorButtonOptions(),
-            ),
-            quill.QuillToolbarColorButton(
-              controller: widget.controller,
-              isBackground: true,
-              options: const quill.QuillToolbarColorButtonOptions(),
-            ),
+            ..._buildColorGroup(),
             _buildDivider(),
-
-            // 第六组：对齐
-            quill.QuillToolbarSelectAlignmentButton(
-              controller: widget.controller,
-            ),
+            ..._buildAlignmentGroup(),
             _buildDivider(),
-
-            // 第七组：列表
-            quill.QuillToolbarToggleStyleButton(
-              controller: widget.controller,
-              attribute: quill.Attribute.ol,
-              options: const quill.QuillToolbarToggleStyleButtonOptions(),
-            ),
-            quill.QuillToolbarToggleStyleButton(
-              controller: widget.controller,
-              attribute: quill.Attribute.ul,
-              options: const quill.QuillToolbarToggleStyleButtonOptions(),
-            ),
-            quill.QuillToolbarIndentButton(
-              controller: widget.controller,
-              isIncrease: false,
-              options: const quill.QuillToolbarIndentButtonOptions(),
-            ),
-            quill.QuillToolbarIndentButton(
-              controller: widget.controller,
-              isIncrease: true,
-              options: const quill.QuillToolbarIndentButtonOptions(),
-            ),
+            ..._buildListGroup(),
             _buildDivider(),
-
-            // 第八组：引用和代码
-            quill.QuillToolbarToggleStyleButton(
-              controller: widget.controller,
-              attribute: quill.Attribute.blockQuote,
-              options: const quill.QuillToolbarToggleStyleButtonOptions(),
-            ),
-            quill.QuillToolbarToggleStyleButton(
-              controller: widget.controller,
-              attribute: quill.Attribute.codeBlock,
-              options: const quill.QuillToolbarToggleStyleButtonOptions(),
-            ),
+            ..._buildQuoteAndCodeGroup(),
             _buildDivider(),
-
-            // 第九组：链接
-            quill.QuillToolbarLinkStyleButton(
-              controller: widget.controller,
-              options: const quill.QuillToolbarLinkStyleButtonOptions(),
-            ),
+            ..._buildLinkGroup(),
             _buildDivider(),
-
-            // 第十组：媒体插入 - 使用统一的媒体导入
-            _buildMediaButton(
-              icon: Icons.image,
-              tooltip: '插入图片',
-              onPressed: () => _showUnifiedMediaDialog('image'),
-            ),
-            _buildMediaButton(
-              icon: Icons.videocam,
-              tooltip: '插入视频',
-              onPressed: () => _showUnifiedMediaDialog('video'),
-            ),
-            _buildMediaButton(
-              icon: Icons.audiotrack,
-              tooltip: '插入音频',
-              onPressed: () => _showUnifiedMediaDialog('audio'),
-            ),
+            ..._buildMediaGroup(context),
             _buildDivider(),
-
-            // 第十一组：其他功能
-            quill.QuillToolbarClearFormatButton(
-              controller: widget.controller,
-              options: const quill.QuillToolbarClearFormatButtonOptions(),
-            ),
-            quill.QuillToolbarSearchButton(
-              controller: widget.controller,
-              options: const quill.QuillToolbarSearchButtonOptions(),
-            ),
+            ..._buildMiscGroup(),
           ],
         ),
       ),
     );
+  }
+
+  List<Widget> _buildHistoryGroup() {
+    return [
+      quill.QuillToolbarHistoryButton(
+        controller: widget.controller,
+        isUndo: true,
+        options: const quill.QuillToolbarHistoryButtonOptions(),
+      ),
+      quill.QuillToolbarHistoryButton(
+        controller: widget.controller,
+        isUndo: false,
+        options: const quill.QuillToolbarHistoryButtonOptions(),
+      ),
+    ];
+  }
+
+  List<Widget> _buildBasicFormatGroup() {
+    return [
+      quill.QuillToolbarToggleStyleButton(
+        controller: widget.controller,
+        attribute: quill.Attribute.bold,
+        options: const quill.QuillToolbarToggleStyleButtonOptions(),
+      ),
+      quill.QuillToolbarToggleStyleButton(
+        controller: widget.controller,
+        attribute: quill.Attribute.italic,
+        options: const quill.QuillToolbarToggleStyleButtonOptions(),
+      ),
+      quill.QuillToolbarToggleStyleButton(
+        controller: widget.controller,
+        attribute: quill.Attribute.underline,
+        options: const quill.QuillToolbarToggleStyleButtonOptions(),
+      ),
+      quill.QuillToolbarToggleStyleButton(
+        controller: widget.controller,
+        attribute: quill.Attribute.strikeThrough,
+        options: const quill.QuillToolbarToggleStyleButtonOptions(),
+      ),
+    ];
+  }
+
+  List<Widget> _buildHeaderGroup() {
+    return [
+      quill.QuillToolbarSelectHeaderStyleDropdownButton(
+        controller: widget.controller,
+        options:
+            const quill.QuillToolbarSelectHeaderStyleDropdownButtonOptions(),
+      ),
+    ];
+  }
+
+  List<Widget> _buildFontGroup() {
+    return [
+      quill.QuillToolbarFontSizeButton(
+        controller: widget.controller,
+        options: const quill.QuillToolbarFontSizeButtonOptions(),
+      ),
+      quill.QuillToolbarFontFamilyButton(
+        controller: widget.controller,
+        options: const quill.QuillToolbarFontFamilyButtonOptions(),
+      ),
+    ];
+  }
+
+  List<Widget> _buildColorGroup() {
+    return [
+      quill.QuillToolbarColorButton(
+        controller: widget.controller,
+        isBackground: false,
+        options: const quill.QuillToolbarColorButtonOptions(),
+      ),
+      quill.QuillToolbarColorButton(
+        controller: widget.controller,
+        isBackground: true,
+        options: const quill.QuillToolbarColorButtonOptions(),
+      ),
+    ];
+  }
+
+  List<Widget> _buildAlignmentGroup() {
+    return [
+      quill.QuillToolbarSelectAlignmentButton(controller: widget.controller),
+    ];
+  }
+
+  List<Widget> _buildListGroup() {
+    return [
+      quill.QuillToolbarToggleStyleButton(
+        controller: widget.controller,
+        attribute: quill.Attribute.ol,
+        options: const quill.QuillToolbarToggleStyleButtonOptions(),
+      ),
+      quill.QuillToolbarToggleStyleButton(
+        controller: widget.controller,
+        attribute: quill.Attribute.ul,
+        options: const quill.QuillToolbarToggleStyleButtonOptions(),
+      ),
+      quill.QuillToolbarIndentButton(
+        controller: widget.controller,
+        isIncrease: false,
+        options: const quill.QuillToolbarIndentButtonOptions(),
+      ),
+      quill.QuillToolbarIndentButton(
+        controller: widget.controller,
+        isIncrease: true,
+        options: const quill.QuillToolbarIndentButtonOptions(),
+      ),
+    ];
+  }
+
+  List<Widget> _buildQuoteAndCodeGroup() {
+    return [
+      quill.QuillToolbarToggleStyleButton(
+        controller: widget.controller,
+        attribute: quill.Attribute.blockQuote,
+        options: const quill.QuillToolbarToggleStyleButtonOptions(),
+      ),
+      quill.QuillToolbarToggleStyleButton(
+        controller: widget.controller,
+        attribute: quill.Attribute.codeBlock,
+        options: const quill.QuillToolbarToggleStyleButtonOptions(),
+      ),
+    ];
+  }
+
+  List<Widget> _buildLinkGroup() {
+    return [
+      quill.QuillToolbarLinkStyleButton(
+        controller: widget.controller,
+        options: const quill.QuillToolbarLinkStyleButtonOptions(),
+      ),
+    ];
+  }
+
+  List<Widget> _buildMediaGroup(BuildContext context) {
+    return [
+      _buildMediaButton(
+        icon: Icons.image,
+        tooltip: AppLocalizations.of(context).insertImage,
+        onPressed: () => _showUnifiedMediaDialog('image'),
+      ),
+      _buildMediaButton(
+        icon: Icons.videocam,
+        tooltip: AppLocalizations.of(context).insertVideo,
+        onPressed: () => _showUnifiedMediaDialog('video'),
+      ),
+      _buildMediaButton(
+        icon: Icons.audiotrack,
+        tooltip: AppLocalizations.of(context).insertAudio,
+        onPressed: () => _showUnifiedMediaDialog('audio'),
+      ),
+    ];
+  }
+
+  List<Widget> _buildMiscGroup() {
+    return [
+      quill.QuillToolbarClearFormatButton(
+        controller: widget.controller,
+        options: const quill.QuillToolbarClearFormatButtonOptions(),
+      ),
+      quill.QuillToolbarSearchButton(
+        controller: widget.controller,
+        options: const quill.QuillToolbarSearchButtonOptions(),
+      ),
+    ];
   }
 
   Widget _buildDivider() {
@@ -214,17 +258,26 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 1),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(4),
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(4),
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(4)),
-            child: Icon(icon, size: 18, color: theme.colorScheme.onSurface),
+      child: Tooltip(
+        message: tooltip,
+        child: Semantics(
+          button: true,
+          label: tooltip,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(4),
+            child: InkWell(
+              onTap: onPressed,
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Icon(icon, size: 18, color: theme.colorScheme.onSurface),
+              ),
+            ),
           ),
         ),
       ),
@@ -285,9 +338,15 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
     } catch (e) {
       debugPrint('插入媒体文件失败: $e');
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('插入${_getMediaTypeName(mediaType)}失败: $e'),
+            content: Text(
+              l10n.insertMediaFailed(
+                _getMediaTypeName(context, mediaType),
+                e.toString(),
+              ),
+            ),
             duration: const Duration(seconds: 3),
           ),
         );
@@ -295,16 +354,17 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
     }
   }
 
-  String _getMediaTypeName(String type) {
+  String _getMediaTypeName(BuildContext context, String type) {
+    final l10n = AppLocalizations.of(context);
     switch (type) {
       case 'image':
-        return '图片';
+        return l10n.mediaTypeImage;
       case 'video':
-        return '视频';
+        return l10n.mediaTypeVideo;
       case 'audio':
-        return '音频';
+        return l10n.mediaTypeAudio;
       default:
-        return '媒体';
+        return l10n.mediaTypeMedia;
     }
   }
 }

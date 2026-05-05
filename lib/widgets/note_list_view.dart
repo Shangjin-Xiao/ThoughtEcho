@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' show FrameTiming;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
+
+import '../extensions/note_category_localization_extension.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
@@ -22,7 +25,14 @@ import '../services/weather_service.dart'; // 导入天气服务
 import '../utils/time_utils.dart'; // 导入时间工具
 import '../controllers/search_controller.dart';
 import '../constants/app_constants.dart'; // 导入应用常量
+import '../utils/quill_editor_extensions.dart' show isListScrolling;
 import '../services/settings_service.dart'; // 导入设置服务
+import 'note_list/scroll_alignment.dart';
+
+part 'note_list/note_list_scroll.dart';
+part 'note_list/note_list_data_stream.dart';
+part 'note_list/note_list_items.dart';
+part 'note_list/note_list_filters.dart';
 
 class NoteListView extends StatefulWidget {
   final List<NoteCategory> tags;
@@ -87,7 +97,9 @@ class NoteListViewState extends State<NoteListView> {
   final Map<String, bool> _expandedItems = {};
   final Map<String, GlobalKey> _itemKeys = {}; // 保存每个笔记的GlobalKey
   final Map<String, ValueNotifier<bool>> _expansionNotifiers = {};
-  // 移除AnimatedList相关的Key，改用ListView.builder
+
+  /// 事件驱动：首批数据加载完成信号，替代忙等轮询
+  Completer<void>? _initialDataCompleter = Completer<void>();
 
   // AI搜索模式标志
   bool _isAISearchMode = false;
@@ -128,6 +140,16 @@ class NoteListViewState extends State<NoteListView> {
 
   bool _hasExpandableQuoteCached = false;
   bool _hasExpandableQuoteComputed = false;
+
+  // 添加滚动状态标志，防止在用户滑动时触发自动滚动
+  bool _isUserScrolling = false;
+  double _lastScrollOffset = 0;
+  static const double _scrollThreshold = 5.0; // 性能优化：5像素阈值
+
+  void _updateState(VoidCallback fn) {
+    if (!mounted) return;
+    setState(fn);
+  }
 
   /// 获取有效的标签列表：优先使用外部传入的，若为空则使用本地缓存
   List<NoteCategory> get _effectiveTags =>
@@ -245,228 +267,11 @@ class NoteListViewState extends State<NoteListView> {
     _isUserScrolling = true;
   }
 
-  void _startFirstOpenScrollPerfCapture() {
-    if (!_firstOpenScrollPerfEnabled ||
-        _firstOpenScrollPerfCaptured ||
-        _firstOpenScrollPerfRecording ||
-        !_initialDataLoaded) {
-      return;
-    }
-
-    _firstOpenScrollPerfRecording = true;
-    _firstOpenScrollFrameTimings.clear();
-    _firstOpenScrollUpdateMicros.clear();
-    _firstOpenScrollStopTimer?.cancel();
-    WidgetsBinding.instance.addTimingsCallback(_collectFrameTimings);
-    logDebug('首次滑动性能监测开始', source: 'NoteListView.Perf');
-  }
-
   void _collectFrameTimings(List<FrameTiming> timings) {
     if (!_firstOpenScrollPerfRecording) {
       return;
     }
     _firstOpenScrollFrameTimings.addAll(timings);
-  }
-
-  void _stopFirstOpenScrollPerfCapture() {
-    if (!_firstOpenScrollPerfRecording) {
-      return;
-    }
-
-    _firstOpenScrollStopTimer?.cancel();
-    _firstOpenScrollStopTimer = Timer(
-      const Duration(milliseconds: 180),
-      _finalizeFirstOpenScrollPerfCapture,
-    );
-  }
-
-  void _finalizeFirstOpenScrollPerfCapture() {
-    if (!_firstOpenScrollPerfRecording) {
-      return;
-    }
-
-    _firstOpenScrollPerfRecording = false;
-    _firstOpenScrollPerfCaptured = true;
-    WidgetsBinding.instance.removeTimingsCallback(_collectFrameTimings);
-
-    if (_firstOpenScrollFrameTimings.isNotEmpty) {
-      int jankyFrames = 0;
-      double worstFrameMs = 0;
-      int totalFrameMicros = 0;
-
-      for (final timing in _firstOpenScrollFrameTimings) {
-        final int totalMicros = timing.buildDuration.inMicroseconds +
-            timing.rasterDuration.inMicroseconds;
-        totalFrameMicros += totalMicros;
-
-        final frameMs = totalMicros / 1000.0;
-        if (frameMs > worstFrameMs) {
-          worstFrameMs = frameMs;
-        }
-
-        if (totalMicros > 16600) {
-          jankyFrames++;
-        }
-      }
-
-      final totalFrames = _firstOpenScrollFrameTimings.length;
-      final avgFrameMs = (totalFrameMicros / totalFrames) / 1000.0;
-
-      logDebug(
-        '首次滑动性能结果(FrameTiming): total=$totalFrames, jank=$jankyFrames, '
-        'avg=${avgFrameMs.toStringAsFixed(1)}ms, '
-        'worst=${worstFrameMs.toStringAsFixed(1)}ms',
-        source: 'NoteListView.Perf',
-      );
-    } else {
-      if (_firstOpenScrollUpdateMicros.length < 2) {
-        logDebug(
-          '首次滑动性能结果(滚动事件): 样本不足，updates=${_firstOpenScrollUpdateMicros.length}',
-          source: 'NoteListView.Perf',
-        );
-        return;
-      }
-
-      int jankyIntervals = 0;
-      int worstIntervalMicros = 0;
-      int totalIntervalMicros = 0;
-
-      for (int i = 1; i < _firstOpenScrollUpdateMicros.length; i++) {
-        final int interval = _firstOpenScrollUpdateMicros[i] -
-            _firstOpenScrollUpdateMicros[i - 1];
-        if (interval > worstIntervalMicros) {
-          worstIntervalMicros = interval;
-        }
-        totalIntervalMicros += interval;
-        if (interval > 20000) {
-          jankyIntervals++;
-        }
-      }
-
-      final int sampleCount = _firstOpenScrollUpdateMicros.length - 1;
-      final double avgIntervalMs = (totalIntervalMicros / sampleCount) / 1000.0;
-      final double worstIntervalMs = worstIntervalMicros / 1000.0;
-
-      logDebug(
-        '首次滑动性能结果(滚动事件回退): samples=$sampleCount, '
-        'jankIntervals=$jankyIntervals, '
-        'avgInterval=${avgIntervalMs.toStringAsFixed(1)}ms, '
-        'worstInterval=${worstIntervalMs.toStringAsFixed(1)}ms',
-        source: 'NoteListView.Perf',
-      );
-    }
-
-    if (!mounted) {
-      return;
-    }
-  }
-
-  void _scheduleExpandableQuoteCheck() {
-    _hasExpandableQuoteComputed = false;
-    _hasExpandableQuoteCached = false;
-
-    if (_quotes.isEmpty) {
-      return;
-    }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _hasExpandableQuoteComputed) {
-        return;
-      }
-
-      final bool hasExpandable = _quotes.take(80).any(
-            QuoteItemWidget.needsExpansionFor,
-          );
-
-      if (!mounted) {
-        return;
-      }
-
-      _hasExpandableQuoteComputed = true;
-      if (_hasExpandableQuoteCached != hasExpandable) {
-        setState(() {
-          _hasExpandableQuoteCached = hasExpandable;
-        });
-      } else {
-        _hasExpandableQuoteCached = hasExpandable;
-      }
-    });
-  }
-
-  /// 修复：检测并修复滚动范围异常
-  /// 当用户滚动到接近底部但列表提前终止时，尝试强制刷新
-  void _checkAndFixScrollExtentAnomaly() {
-    if (!mounted || !_scrollController.hasClients) return;
-    if (_isLoading || !_hasMore) return;
-
-    final position = _scrollController.position;
-    final maxExtent = position.maxScrollExtent;
-    final currentOffset = position.pixels;
-
-    // 如果用户滚动到了接近底部（最后 200 像素），但 _hasMore 为 true
-    // 且列表似乎没有更多内容可滚动，这可能是异常情况
-    if (maxExtent > 0 && currentOffset > maxExtent - 200) {
-      // 检查是否实际还有更多数据
-      final db = Provider.of<DatabaseService>(context, listen: false);
-      final dbHasMore = db.hasMoreQuotes;
-
-      if (dbHasMore && !_isLoading) {
-        // 数据库表示还有更多数据，但列表可能没有正确更新
-        _scrollExtentCheckCounter++;
-        logDebug(
-          '检测到可能的滚动范围异常 (第 $_scrollExtentCheckCounter 次): '
-          'maxExtent=$maxExtent, offset=$currentOffset, dbHasMore=$dbHasMore',
-          source: 'NoteListView',
-        );
-
-        if (_scrollExtentCheckCounter >= _maxScrollExtentChecks) {
-          // 多次检测到异常，尝试强制加载更多
-          logDebug('触发强制加载更多数据以修复滚动范围', source: 'NoteListView');
-          _scrollExtentCheckCounter = 0;
-          _forceLoadMore();
-        }
-      } else if (!dbHasMore && _hasMore) {
-        // 数据库表示没有更多数据，但本地状态不一致，同步状态
-        logDebug('同步 _hasMore 状态: 从 true 改为 false', source: 'NoteListView');
-        setState(() {
-          _hasMore = false;
-        });
-        _scrollExtentCheckCounter = 0;
-      }
-    } else {
-      // 不在底部区域，重置计数器
-      _scrollExtentCheckCounter = 0;
-    }
-  }
-
-  /// 修复：强制加载更多数据
-  Future<void> _forceLoadMore() async {
-    if (!mounted || _isLoading) return;
-
-    logDebug('强制加载更多数据开始', source: 'NoteListView');
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final db = Provider.of<DatabaseService>(context, listen: false);
-      await db.loadMoreQuotes();
-
-      if (mounted) {
-        setState(() {
-          _hasMore = db.hasMoreQuotes;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      logError('强制加载更多数据失败: $e', error: e, source: 'NoteListView');
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
   }
 
   /// 数据库服务变化监听器
@@ -503,179 +308,6 @@ class NoteListViewState extends State<NoteListView> {
     }
   }
 
-  /// 修复：将数据流初始化分离到独立方法
-  void _initializeDataStream() {
-    if (!mounted) return;
-
-    _quotesSub?.cancel();
-
-    final db = Provider.of<DatabaseService>(context, listen: false);
-
-    if (!db.isInitialized) {
-      logDebug('数据库未初始化，等待初始化完成后重新订阅');
-      db.addListener(_onDatabaseServiceChanged);
-      return;
-    }
-
-    bool isFirstLoad = !_initialDataLoaded;
-
-    _quotesSub = db
-        .watchQuotes(
-      tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
-      limit: _pageSize,
-      orderBy: widget.sortType == 'time'
-          ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
-          : widget.sortType == 'favorite'
-              ? 'favorite_count ${widget.sortAscending ? 'ASC' : 'DESC'}'
-              : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-      searchQuery: widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
-      selectedWeathers:
-          widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
-      selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
-          ? widget.selectedDayPeriods
-          : null,
-    )
-        .listen(
-      (list) {
-        if (mounted) {
-          // 修复：在首次加载期间保存滚动位置，避免数据刷新时滚动到顶部
-          double? savedScrollOffset;
-          if (isFirstLoad &&
-              _scrollController.hasClients &&
-              _quotes.isNotEmpty) {
-            savedScrollOffset = _scrollController.offset;
-            logDebug(
-              '首次加载期间保存滚动位置: $savedScrollOffset',
-              source: 'NoteListView',
-            );
-          }
-
-          setState(() {
-            if (isFirstLoad) {
-              _quotes.clear();
-            }
-            _quotes
-              ..clear()
-              ..addAll(
-                list,
-              ); // Simplified: always replace for consistency, but flag prevents extra sets
-            _hasMore = list.length >= _pageSize;
-            _isLoading = false;
-            _pruneExpansionControllers();
-          });
-          _scheduleExpandableQuoteCheck();
-
-          if (widget.onGuideTargetsReady != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              widget.onGuideTargetsReady!.call();
-            });
-          }
-
-          // 修复：在首次加载期间恢复滚动位置
-          if (savedScrollOffset != null &&
-              savedScrollOffset > 0 &&
-              !_isUserScrolling) {
-            final offset = savedScrollOffset; // 捕获非空值
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted &&
-                  _scrollController.hasClients &&
-                  offset <= _scrollController.position.maxScrollExtent) {
-                _scrollController.jumpTo(offset);
-                logDebug('首次加载期间恢复滚动位置: $offset', source: 'NoteListView');
-              }
-            });
-          }
-
-          if (isFirstLoad) {
-            _initialDataLoaded = true;
-            // 延迟启用自动滚动，避免冷启动时的滚动冲突
-            Future.delayed(const Duration(milliseconds: 1500), () {
-              if (mounted) {
-                _autoScrollEnabled = true;
-                _isInitializing = false;
-                logDebug('首次加载完成，启用自动滚动', source: 'NoteListView');
-              }
-            });
-            // 冷启动保护期：设置较长的保护期，避免首次进入时的滚动冲突
-            _lastUserScrollTime = DateTime.now();
-            // 预热 Document 缓存：在用户滚动前异步解析所有已加载笔记的富文本 JSON
-            QuoteContent.prewarmDocumentCache(list);
-            logDebug('首次数据加载完成', source: 'NoteListView');
-          }
-
-          // 修复：同步 _hasMore 状态与数据库服务状态
-          final dbService = Provider.of<DatabaseService>(
-            context,
-            listen: false,
-          );
-          if (_hasMore != dbService.hasMoreQuotes) {
-            logDebug(
-              '同步 _hasMore 状态: $_hasMore -> ${dbService.hasMoreQuotes}',
-              source: 'NoteListView',
-            );
-            _hasMore = dbService.hasMoreQuotes;
-          }
-          // 重置滚动范围检查计数器
-          _scrollExtentCheckCounter = 0;
-
-          // 通知搜索控制器数据加载完成
-          try {
-            final searchController = Provider.of<NoteSearchController>(
-              context,
-              listen: false,
-            );
-            searchController.setSearchState(false);
-          } catch (e) {
-            logDebug('更新搜索控制器状态失败: $e');
-          }
-
-          if (isFirstLoad) {
-            isFirstLoad = false;
-          }
-        }
-      },
-      onError: (error) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-
-          // 重置搜索控制器状态
-          try {
-            final searchController = Provider.of<NoteSearchController>(
-              context,
-              listen: false,
-            );
-            searchController.resetSearchState();
-          } catch (e) {
-            logDebug('重置搜索控制器状态失败: $e');
-          }
-
-          logError('加载笔记失败: $error', error: error, source: 'NoteListView');
-
-          // 显示错误提示
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                '加载失败: ${error.toString().contains('TimeoutException') ? '查询超时' : error.toString()}',
-              ),
-              duration: AppConstants.snackBarDurationImportant,
-              backgroundColor: Colors.red,
-              action: SnackBarAction(
-                label: '重试',
-                textColor: Colors.white,
-                onPressed: () => _updateStreamSubscription(),
-              ),
-            ),
-          );
-        }
-      },
-    );
-    // 注释掉重复的loadMore调用，因为watchQuotes已经会自动加载数据
-    // _loadMore(); // 这行导致双重加载和滚动位置混乱
-  }
-
   @override
   void didUpdateWidget(NoteListView oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -697,7 +329,7 @@ class NoteListViewState extends State<NoteListView> {
     // 优化：只有在筛选条件真正改变时才更新订阅
     final bool shouldUpdate = _shouldUpdateSubscription(oldWidget);
 
-    if (shouldUpdate && _initialDataLoaded && !_isInitializing) {
+    if (shouldUpdate && _initialDataLoaded) {
       // 如果是首次加载期间（初始数据还未加载完成），避免重置滚动位置
       if (!_initialDataLoaded) {
         logDebug('跳过更新订阅：首次数据加载中', source: 'NoteListView');
@@ -719,190 +351,8 @@ class NoteListViewState extends State<NoteListView> {
       // 更新流订阅，传入是否仅为排序变化
       _updateStreamSubscription(preserveScrollPosition: isOnlySortChange);
     } else if (shouldUpdate) {
-      logDebug('跳过更新：初始化中或数据未加载', source: 'NoteListView');
+      logDebug('跳过更新：数据尚未完成首次加载', source: 'NoteListView');
     }
-  }
-
-  /// 优化：判断是否需要更新订阅
-  bool _shouldUpdateSubscription(NoteListView oldWidget) {
-    return oldWidget.searchQuery != widget.searchQuery ||
-        !_areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) ||
-        oldWidget.sortType != widget.sortType ||
-        oldWidget.sortAscending != widget.sortAscending ||
-        !_areListsEqual(oldWidget.selectedWeathers, widget.selectedWeathers) ||
-        !_areListsEqual(
-          oldWidget.selectedDayPeriods,
-          widget.selectedDayPeriods,
-        );
-  }
-
-  // 辅助方法：比较两个列表是否相等（深比较）
-  bool _areListsEqual(List<dynamic> list1, List<dynamic> list2) {
-    if (list1.length != list2.length) return false;
-    // 确保顺序一致，如果需要忽略顺序，可以先排序再比较
-    for (int i = 0; i < list1.length; i++) {
-      if (list1[i] != list2[i]) return false;
-    }
-    return true;
-  }
-
-  // 修复：新增方法：更新数据库监听流（改进版本）
-  void _updateStreamSubscription({bool preserveScrollPosition = false}) {
-    if (!mounted) return; // 确保组件仍然挂载
-
-    logDebug(
-      '更新数据流订阅 (preserveScrollPosition: $preserveScrollPosition)',
-      source: 'NoteListView',
-    );
-
-    double? savedScrollOffset;
-    // 只有在需要保持滚动位置时才保存（仅排序变化时）
-    if (preserveScrollPosition &&
-        _scrollController.hasClients &&
-        _quotes.isNotEmpty) {
-      savedScrollOffset = _scrollController.offset;
-      logDebug('保存滚动位置: $savedScrollOffset', source: 'NoteListView');
-    } else if (!preserveScrollPosition) {
-      logDebug('筛选条件变化，不保存滚动位置，将重置到顶部', source: 'NoteListView');
-    }
-
-    // Set loading only if not first load
-    if (_initialDataLoaded) {
-      setState(() {
-        _isLoading = true;
-      });
-    }
-
-    _hasMore = true;
-
-    final db = Provider.of<DatabaseService>(context, listen: false);
-
-    _quotesSub?.cancel();
-
-    _quotesSub = db
-        .watchQuotes(
-      tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
-      limit: _pageSize,
-      orderBy: widget.sortType == 'time'
-          ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
-          : widget.sortType == 'favorite'
-              ? 'favorite_count ${widget.sortAscending ? 'ASC' : 'DESC'}'
-              : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-      searchQuery: widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
-      selectedWeathers:
-          widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
-      selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
-          ? widget.selectedDayPeriods
-          : null,
-    )
-        .listen(
-      (list) {
-        if (mounted) {
-          setState(() {
-            _quotes.clear();
-            _quotes.addAll(list);
-            _hasMore = list.length >= _pageSize;
-            _isLoading = false;
-            _pruneExpansionControllers();
-          });
-          _scheduleExpandableQuoteCheck();
-
-          // 预热新加载数据的 Document 缓存
-          QuoteContent.prewarmDocumentCache(list);
-
-          if (widget.onGuideTargetsReady != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              widget.onGuideTargetsReady!.call();
-            });
-          }
-
-          // Restore scroll position smoothly (only if preserveScrollPosition is true)
-          if (savedScrollOffset != null &&
-              _scrollController.hasClients &&
-              _initialDataLoaded) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (savedScrollOffset != null &&
-                  _scrollController.hasClients &&
-                  savedScrollOffset <=
-                      _scrollController.position.maxScrollExtent) {
-                _scrollController.animateTo(
-                  savedScrollOffset,
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOut,
-                );
-                logDebug(
-                  '平滑恢复滚动位置: $savedScrollOffset',
-                  source: 'NoteListView',
-                );
-              } else {
-                logDebug('滚动位置超出范围或条件不满足，保持当前位置', source: 'NoteListView');
-              }
-            });
-          }
-
-          // 修复：同步 _hasMore 状态与数据库服务状态
-          final dbServiceForSync = Provider.of<DatabaseService>(
-            context,
-            listen: false,
-          );
-          if (_hasMore != dbServiceForSync.hasMoreQuotes) {
-            logDebug(
-              '更新订阅后同步 _hasMore 状态: $_hasMore -> ${dbServiceForSync.hasMoreQuotes}',
-              source: 'NoteListView',
-            );
-            _hasMore = dbServiceForSync.hasMoreQuotes;
-          }
-          // 重置滚动范围检查计数器
-          _scrollExtentCheckCounter = 0;
-
-          // 通知搜索控制器数据加载完成
-          try {
-            final searchController = Provider.of<NoteSearchController>(
-              context,
-              listen: false,
-            );
-            searchController.setSearchState(false);
-          } catch (e) {
-            logDebug('更新搜索控制器状态失败: $e');
-          }
-
-          logDebug(
-            '数据流更新完成，加载了 ${list.length} 条记录',
-            source: 'NoteListView',
-          );
-        }
-      },
-      onError: (error) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false; // 出错时停止加载
-          });
-
-          // 重置搜索控制器状态
-          try {
-            final searchController = Provider.of<NoteSearchController>(
-              context,
-              listen: false,
-            );
-            searchController.resetSearchState();
-          } catch (e) {
-            logDebug('重置搜索控制器状态失败: $e');
-          }
-
-          logError('数据流加载失败: $error', error: error, source: 'NoteListView');
-
-          // 优化：更友好的错误提示
-          String errorMessage = '加载笔记失败';
-          if (error.toString().contains('TimeoutException')) {
-            errorMessage = '查询超时，请重试';
-          } else if (error.toString().contains('DatabaseException')) {
-            errorMessage = '数据库查询出错';
-          }
-          _showErrorSnackBar(errorMessage);
-        }
-      },
-    );
   }
 
   /// 优化：显示错误提示的统一方法
@@ -975,6 +425,11 @@ class NoteListViewState extends State<NoteListView> {
 
     // 清理初始化状态
     _isInitializing = false;
+    // 安全释放 Completer，避免 scrollToQuoteById 永久挂起
+    if (_initialDataCompleter != null && !_initialDataCompleter!.isCompleted) {
+      _initialDataCompleter!.complete();
+    }
+    _initialDataCompleter = null;
     super.dispose();
   }
 
@@ -982,6 +437,118 @@ class NoteListViewState extends State<NoteListView> {
     _quotes.clear();
     _hasMore = true;
     _loadMore();
+  }
+
+  Future<bool> scrollToQuoteById(String quoteId) async {
+    if (!mounted || quoteId.isEmpty) return false;
+
+    // ── 阶段 1: 事件驱动等待首批数据（取代忙等轮询）──
+    if (!_initialDataLoaded) {
+      final completer = _initialDataCompleter;
+      if (completer != null && !completer.isCompleted) {
+        try {
+          await completer.future.timeout(
+            const Duration(seconds: 5),
+          );
+        } on TimeoutException {
+          logDebug(
+            'scrollToQuoteById 放弃：首次数据加载超时',
+            source: 'NoteListView',
+          );
+          return false;
+        }
+      }
+      if (!mounted || !_initialDataLoaded) return false;
+    }
+
+    // ── 阶段 2: 在分页数据中查找目标笔记 ──
+    const maxAttempts = 20;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      final index = _quotes.indexWhere((quote) => quote.id == quoteId);
+      if (index >= 0) {
+        // 展开目标笔记
+        final notifier = _obtainExpansionNotifier(quoteId);
+        if (!notifier.value) {
+          notifier.value = true;
+          _expandedItems[quoteId] = true;
+        }
+
+        await Future.delayed(const Duration(milliseconds: 80));
+        if (!mounted) return false;
+
+        _autoScrollEnabled = true;
+        _isInitializing = false;
+        _isUserScrolling = false;
+        _lastUserScrollTime = null;
+
+        // ── 阶段 3: 动态估算偏移量触发 ListView 构建 ──
+        if (_scrollController.hasClients) {
+          final key = _itemKeys[quoteId];
+          if (key == null || key.currentContext == null) {
+            final estimatedHeight = _estimateItemHeight();
+            final estimatedOffset = index * estimatedHeight;
+            final maxOffset = _scrollController.position.maxScrollExtent;
+            _scrollController.jumpTo(estimatedOffset.clamp(0.0, maxOffset));
+          }
+        }
+
+        // ── 阶段 4: 指数退避等待 widget build + context 就绪 ──
+        const maxRenderWait = 8;
+        var renderDelay = 30; // ms, 指数增长
+        for (var renderWait = 0; renderWait < maxRenderWait; renderWait++) {
+          await Future.delayed(
+            Duration(milliseconds: renderDelay),
+          );
+          if (!mounted) return false;
+          // 让出一帧给框架完成 layout
+          await WidgetsBinding.instance.endOfFrame;
+          final key = _itemKeys[quoteId];
+          if (key != null && key.currentContext != null) {
+            _scrollToItem(quoteId, index, forceAlignToTop: true);
+            return true;
+          }
+          renderDelay = (renderDelay * 1.5).toInt().clamp(30, 200);
+        }
+
+        // 最终兜底尝试
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _scrollToItem(quoteId, index, forceAlignToTop: true);
+        });
+        return true;
+      }
+
+      // 目标不在已加载范围内，等待或加载更多
+      if (!_hasMore || _isLoading) {
+        await Future.delayed(const Duration(milliseconds: 200));
+      } else {
+        await _loadMore();
+      }
+    }
+
+    logDebug('未能在列表中定位笔记: $quoteId', source: 'NoteListView');
+    return false;
+  }
+
+  /// 动态估算列表项高度：从已渲染的 item 中采样。
+  /// 比硬编码 120.0 精确得多，分页/长内容场景偏差更小。
+  double _estimateItemHeight() {
+    const fallback = 120.0;
+    if (_itemKeys.isEmpty) return fallback;
+
+    double totalHeight = 0;
+    int measured = 0;
+    for (final key in _itemKeys.values) {
+      final ctx = key.currentContext;
+      if (ctx == null) continue;
+      final rb = ctx.findRenderObject();
+      if (rb is RenderBox && rb.hasSize) {
+        totalHeight += rb.size.height;
+        measured++;
+        if (measured >= 10) break; // 最多采样 10 个，够用了
+      }
+    }
+    return measured > 0 ? totalHeight / measured : fallback;
   }
 
   ValueNotifier<bool> _obtainExpansionNotifier(String quoteId) {
@@ -1006,1106 +573,6 @@ class NoteListViewState extends State<NoteListView> {
     }
   }
 
-  // 添加滚动状态标志，防止在用户滑动时触发自动滚动
-  bool _isUserScrolling = false;
-  double _lastScrollOffset = 0;
-  static const double _scrollThreshold = 5.0; // 性能优化：5像素阈值
-
-  /// 滚动到指定笔记的顶部 - 使用 ensureVisible 确保多展开笔记时定位准确
-  /// 注意：目前未被使用，因为折叠时的自动滚动被禁用以改善用户体验
-  /// 如果将来需要重新启用，可以取消注释相关调用代码
-  void _scrollToItem(String quoteId, int index) {
-    if (!mounted || !_scrollController.hasClients) return;
-    // 多重保护条件
-    if (_isInitializing) {
-      logDebug('跳过自动滚动：正在初始化', source: 'NoteListView');
-      return;
-    }
-    if (!_autoScrollEnabled) {
-      logDebug('跳过自动滚动（未启用 _autoScrollEnabled）', source: 'NoteListView');
-      return;
-    }
-    if (_isUserScrolling) {
-      logDebug('跳过自动滚动：用户正在滑动', source: 'NoteListView');
-      return;
-    }
-    if (_lastUserScrollTime != null &&
-        DateTime.now().difference(_lastUserScrollTime!) <
-            const Duration(milliseconds: 900)) {
-      logDebug('跳过自动滚动：用户刚刚滚动 (<900ms)', source: 'NoteListView');
-      return;
-    }
-    if (_isAutoScrolling) {
-      logDebug('跳过自动滚动：已有动画', source: 'NoteListView');
-      return;
-    }
-
-    try {
-      final key = _itemKeys[quoteId];
-      if (key == null || key.currentContext == null) {
-        logDebug('笔记Key或Context不存在，跳过滚动', source: 'NoteListView');
-        return;
-      }
-
-      final targetContext = key.currentContext;
-      if (targetContext == null) {
-        logDebug('笔记Context为空，无法滚动', source: 'NoteListView');
-        return;
-      }
-
-      final renderObject = targetContext.findRenderObject();
-      if (renderObject == null) {
-        logDebug('找不到RenderObject，跳过滚动', source: 'NoteListView');
-        return;
-      }
-
-      final viewport = RenderAbstractViewport.of(renderObject);
-
-      final reveal = viewport.getOffsetToReveal(renderObject, 0.0);
-      final targetOffset = reveal.offset;
-      final position = _scrollController.position;
-      final viewportExtent = position.viewportDimension;
-      final currentOffset = position.pixels;
-
-      if (viewportExtent > 0) {
-        final topVisible = targetOffset >= currentOffset &&
-            targetOffset < currentOffset + viewportExtent;
-        if (topVisible) {
-          logDebug('笔记顶部已在视口内，跳过自动滚动', source: 'NoteListView');
-          return;
-        }
-      }
-
-      final minExtent = position.minScrollExtent;
-      final maxExtent = position.maxScrollExtent;
-
-      double desiredOffset =
-          (targetOffset - 12.0).clamp(minExtent, maxExtent).toDouble();
-
-      if ((currentOffset - desiredOffset).abs() <= 4) {
-        logDebug('目标偏移量变化较小，跳过自动滚动', source: 'NoteListView');
-        return;
-      }
-
-      _isAutoScrolling = true;
-      logDebug(
-        '滚动到笔记: $quoteId (index: $index), target=${desiredOffset.toStringAsFixed(1)}',
-        source: 'NoteListView',
-      );
-
-      _scrollController
-          .animateTo(
-        desiredOffset,
-        duration: QuoteItemWidget.expandCollapseDuration,
-        curve: Curves.easeOutCubic,
-      )
-          .then((_) {
-        logDebug('滚动完成', source: 'NoteListView');
-      }).catchError((e) {
-        logDebug('滚动失败: $e', source: 'NoteListView');
-      }).whenComplete(() {
-        _isAutoScrolling = false;
-      });
-    } catch (e, st) {
-      logDebug('滚动失败: $e\n$st', source: 'NoteListView');
-      _isAutoScrolling = false;
-    }
-  }
-
-  Future<void> _loadMore() async {
-    // 防止重复加载
-    if (!_hasMore || _isLoading) {
-      logDebug(
-        '跳过加载更多：_hasMore=$_hasMore, _isLoading=$_isLoading',
-        source: 'NoteListView',
-      );
-      return;
-    }
-
-    // 修复：在加载前先同步一次状态，确保 _hasMore 是最新的
-    final db = Provider.of<DatabaseService>(context, listen: false);
-    if (!db.hasMoreQuotes) {
-      logDebug('数据库显示无更多数据，同步 _hasMore 为 false', source: 'NoteListView');
-      setState(() {
-        _hasMore = false;
-      });
-      return;
-    }
-
-    // 修复：立即设置加载状态，防止并发调用
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      logDebug('触发加载更多，当前有${_quotes.length}条数据', source: 'NoteListView');
-      await db.loadMoreQuotes();
-
-      // 强制检查状态更新
-      if (mounted) {
-        setState(() {
-          _hasMore = db.hasMoreQuotes;
-          _isLoading = false; // 加载完成后重置状态
-        });
-        // 注意：移除了 jumpTo 双跳 hack，该 hack 会导致偶发卡顿
-        // ListView.builder 会自动处理 itemCount 变化后的滚动范围更新
-      }
-    } catch (e) {
-      // 修复：出错时也要重置加载状态
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-      logError('加载更多数据失败: $e', error: e, source: 'NoteListView');
-      rethrow;
-    }
-  }
-
-  Widget _buildNoteList(DatabaseService db, ThemeData theme) {
-    final l10n = AppLocalizations.of(context);
-    // 为 AnimatedSwitcher 提供唯一 key，确保筛选变化时能触发动画
-    final listKey = ValueKey(
-      '${widget.selectedTagIds.join(',')}_${widget.selectedWeathers.join(',')}_${widget.selectedDayPeriods.join(',')}_${widget.searchQuery}',
-    );
-
-    // 修复：检查标签是否已加载（外部标签或本地缓存任一不为空即可）
-    final bool tagsLoaded =
-        widget.tags.isNotEmpty || _localTagsCache.isNotEmpty;
-
-    // 修复：等待服务初始化或标签未加载时显示加载动画，避免闪现"无笔记"或"未知标签"
-    if (_waitingForServices ||
-        (_isLoading && _quotes.isEmpty) ||
-        (!tagsLoaded && _quotes.isNotEmpty)) {
-      // 搜索时用专属动画
-      if (widget.searchQuery.isNotEmpty) {
-        return LayoutBuilder(
-          key: listKey,
-          builder: (context, constraints) {
-            final size = (constraints.maxHeight * 0.7).clamp(120.0, 400.0);
-            return Center(
-              child: EnhancedLottieAnimation(
-                type: LottieAnimationType.weatherSearchLoading,
-                width: size,
-                height: size,
-                semanticLabel: l10n.searchingLabel,
-              ),
-            );
-          },
-        );
-      }
-      return AppLoadingView(key: listKey);
-    }
-    if (_quotes.isEmpty && widget.searchQuery.isEmpty) {
-      return AppEmptyView(
-        key: listKey,
-        svgAsset: 'assets/empty/empty_state.svg',
-        text: l10n.noteListEmptyTitle,
-      );
-    }
-    if (_quotes.isEmpty && widget.searchQuery.isNotEmpty) {
-      return Center(
-        key: listKey,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final size = (constraints.maxHeight * 0.5).clamp(80.0, 220.0);
-                return EnhancedLottieAnimation(
-                  type: LottieAnimationType.notFound,
-                  width: size,
-                  height: size,
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            Text(
-              l10n.noteSearchEmptyTitle,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.noteSearchEmptySubtitle,
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ],
-        ),
-      );
-    }
-
-    var favoriteGuideAssigned = false;
-    var moreGuideAssigned = false;
-    var foldGuideAssigned = false;
-
-    // 优化：提前创建标签映射，避免在 item builder 中重复计算
-    // 将整体复杂度从 O(L * T) 优化为 O(L + T)，其中构建映射为 O(L)，每次查找为 O(1)
-    final tagMap = {for (var t in _effectiveTags) t.id: t};
-
-    return NotificationListener<ScrollNotification>(
-      key: listKey,
-      onNotification: (ScrollNotification notification) {
-        if (_firstOpenScrollPerfEnabled && !_firstOpenScrollPerfCaptured) {
-          if (notification is ScrollStartNotification &&
-              notification.dragDetails != null) {
-            _startFirstOpenScrollPerfCapture();
-          } else if (_firstOpenScrollPerfRecording &&
-              notification is ScrollUpdateNotification) {
-            _firstOpenScrollUpdateMicros
-                .add(DateTime.now().microsecondsSinceEpoch);
-          } else if (notification is ScrollEndNotification) {
-            _stopFirstOpenScrollPerfCapture();
-          }
-        }
-
-        // 预加载逻辑：热路径不做日志、不做分配
-        if (notification is ScrollUpdateNotification) {
-          final metrics = notification.metrics;
-          final threshold =
-              metrics.maxScrollExtent * AppConstants.scrollPreloadThreshold;
-          if (metrics.pixels > threshold &&
-              metrics.maxScrollExtent > 0 &&
-              !_isLoading &&
-              _hasMore) {
-            _loadMore();
-          }
-        }
-
-        // 滚动完全停止（含惯性）：重置用户滚动状态 + 延迟检查
-        if (notification is ScrollEndNotification) {
-          // 重置用户滚动状态，记录最后滚动时间用于 _scrollToItem 的 900ms 冷却
-          _isUserScrolling = false;
-          _lastUserScrollTime = DateTime.now();
-
-          final metrics = notification.metrics;
-          if (metrics.pixels >= metrics.maxScrollExtent - 100 &&
-              _hasMore &&
-              !_isLoading) {
-            _loadMore();
-          }
-
-          // 滚动范围异常检测：从 _onScroll 热路径移至此处，避免滚动期间做 Provider 查找
-          _checkAndFixScrollExtentAnomaly();
-        }
-        return false;
-      },
-      // 性能优化：BackdropGroup 让多个 BackdropFilter.grouped 共享采样
-      // 减少 GPU 重复帧缓冲读回，显著降低多模糊 item 同屏时的光栅开销
-      child: BackdropGroup(
-        child: ListView.builder(
-          controller: _scrollController, // 添加滚动控制器
-          physics: const AlwaysScrollableScrollPhysics(),
-          addAutomaticKeepAlives: true, // 保持默认：图片组件依赖 keepAlive 避免重加载闪烁
-          addRepaintBoundaries: true, // 性能优化：减少重绘范围
-          // 性能优化：惯性首帧移动距离远大于拖拽帧，需要更大缓存区预构建 item
-          // 避免 drag→ballistic 过渡时集中构建新 item 导致卡顿
-          cacheExtent: MediaQuery.sizeOf(context).height.clamp(400, 900),
-          itemCount: _quotes.length + (_hasMore ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index < _quotes.length) {
-              final quote = _quotes[index];
-              if (quote.id == null) {
-                logDebug('笔记缺少ID，跳过扩展状态管理', source: 'NoteListView');
-                return const SizedBox.shrink();
-              }
-
-              final quoteId = quote.id!;
-              final String itemKey = 'quote_${quoteId}_$index';
-              _itemKeys.putIfAbsent(
-                quoteId,
-                () => GlobalKey(debugLabel: itemKey),
-              );
-
-              final bool shouldCheckExpansionForGuide =
-                  !foldGuideAssigned && widget.foldToggleGuideKey != null;
-              final bool needsExpansion = shouldCheckExpansionForGuide
-                  ? QuoteItemWidget.needsExpansionFor(quote)
-                  : false;
-
-              final attachFavoriteGuideKey = !favoriteGuideAssigned &&
-                  widget.favoriteButtonGuideKey != null &&
-                  widget.onFavorite != null;
-              final attachMoreGuideKey =
-                  !moreGuideAssigned && widget.moreButtonGuideKey != null;
-              final attachFoldGuideKey = !foldGuideAssigned &&
-                  widget.foldToggleGuideKey != null &&
-                  needsExpansion;
-
-              if (attachFavoriteGuideKey) {
-                favoriteGuideAssigned = true;
-              }
-
-              if (attachMoreGuideKey) {
-                moreGuideAssigned = true;
-              }
-
-              if (attachFoldGuideKey) {
-                foldGuideAssigned = true;
-              }
-
-              final expansionNotifier = _obtainExpansionNotifier(quoteId);
-              _expandedItems.putIfAbsent(
-                  quoteId, () => expansionNotifier.value);
-
-              return KeyedSubtree(
-                key: _itemKeys[quoteId],
-                child: ValueListenableBuilder<bool>(
-                  valueListenable: expansionNotifier,
-                  builder: (context, isExpanded, child) => QuoteItemWidget(
-                    quote: quote,
-                    tagMap: tagMap,
-                    selectedTagIds: widget.selectedTagIds,
-                    isExpanded: isExpanded,
-                    onToggleExpanded: (expanded) {
-                      if (expansionNotifier.value != expanded) {
-                        expansionNotifier.value = expanded;
-                      }
-                      _expandedItems[quoteId] = expanded;
-
-                      final bool requiresAlignment =
-                          QuoteItemWidget.needsExpansionFor(quote);
-
-                      if (!expanded && requiresAlignment) {
-                        final waitDuration =
-                            QuoteItemWidget.expandCollapseDuration +
-                                const Duration(milliseconds: 80);
-                        Future.delayed(waitDuration, () {
-                          if (!mounted) return;
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (!mounted) return;
-                            _scrollToItem(quoteId, index);
-                          });
-                        });
-                      }
-                    },
-                    onEdit: () => widget.onEdit(quote),
-                    onDelete: () => widget.onDelete(quote),
-                    onAskAI: () => widget.onAskAI(quote),
-                    onGenerateCard: widget.onGenerateCard != null
-                        ? () => widget.onGenerateCard!(quote)
-                        : null,
-                    onFavorite: widget.onFavorite != null
-                        ? () => widget.onFavorite!(quote)
-                        : null,
-                    onLongPressFavorite: widget.onLongPressFavorite != null
-                        ? () => widget.onLongPressFavorite!(quote)
-                        : null,
-                    favoriteButtonGuideKey: attachFavoriteGuideKey
-                        ? widget.favoriteButtonGuideKey
-                        : null,
-                    moreButtonGuideKey:
-                        attachMoreGuideKey ? widget.moreButtonGuideKey : null,
-                    foldToggleGuideKey:
-                        attachFoldGuideKey ? widget.foldToggleGuideKey : null,
-                    // 不使用自定义 tagBuilder，让 QuoteItemWidget 使用内部的标签渲染逻辑
-                    // 这样可以支持筛选标签的优先显示和高亮效果
-                  ),
-                ),
-              );
-            }
-            // 底部加载指示器
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: AppLoadingView(size: 32),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  // 优化：搜索内容变化回调，添加防抖机制
-  void _onSearchChanged(String value) {
-    // 取消之前的防抖定时器
-    _searchDebounceTimer?.cancel();
-
-    // 性能优化：只在必要时调用 setState，避免不必要的重建
-    final shouldSetLoading = (value.isEmpty && widget.searchQuery.isNotEmpty) ||
-        (value.isNotEmpty && value.length >= AppConstants.minSearchLength);
-
-    if (shouldSetLoading && !_isLoading) {
-      setState(() {
-        _isLoading = true;
-      });
-      if (value.isEmpty) {
-        logDebug('搜索内容被清空，重置加载状态');
-      }
-    }
-
-    // 对于清空操作，立即执行
-    if (value.isEmpty) {
-      _performSearch(value);
-      return;
-    }
-
-    // 优化：只有当搜索内容长度>=2时才使用防抖延迟
-    if (value.length >= AppConstants.minSearchLength) {
-      _searchDebounceTimer = Timer(AppConstants.searchDebounceDelay, () {
-        if (mounted) {
-          _performSearch(value);
-        }
-      });
-    } else {
-      // 长度小于2时直接执行，不触发实际搜索
-      _performSearch(value);
-    }
-  }
-
-  /// 优化：执行搜索的统一方法
-  void _performSearch(String value) {
-    if (!mounted) return;
-
-    logDebug('执行搜索: "$value"', source: 'NoteListView');
-
-    // 如果是非空搜索且长度>=2，通知搜索控制器开始搜索
-    if (value.isNotEmpty && value.length >= AppConstants.minSearchLength) {
-      try {
-        final searchController = Provider.of<NoteSearchController>(
-          context,
-          listen: false,
-        );
-        searchController.setSearchState(true);
-      } catch (e) {
-        logDebug('设置搜索状态失败: $e');
-      }
-    }
-
-    // 直接调用父组件的搜索回调
-    widget.onSearchChanged(value);
-
-    // 优化：只有在实际搜索时才设置超时保护，使用常量配置的超时时间
-    if (value.isNotEmpty && value.length >= AppConstants.minSearchLength) {
-      Timer(AppConstants.searchTimeout, () {
-        if (mounted && _isLoading) {
-          setState(() {
-            _isLoading = false;
-          });
-          try {
-            final searchController = Provider.of<NoteSearchController>(
-              context,
-              listen: false,
-            );
-            searchController.resetSearchState();
-          } catch (e) {
-            logDebug('重置搜索状态失败: $e');
-          }
-          logDebug('搜索超时，已重置加载状态');
-
-          // 显示超时提示
-          if (mounted) {
-            final l10n = AppLocalizations.of(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(l10n.noteSearchTimeoutMessage),
-                duration: AppConstants.snackBarDurationImportant,
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: Colors.orange,
-                action: SnackBarAction(
-                  label: l10n.retry,
-                  textColor: Colors.white,
-                  onPressed: () => _performSearch(value),
-                ),
-              ),
-            );
-          }
-        }
-      });
-    }
-  }
-
   @override
-  Widget build(BuildContext context) {
-    final db = Provider.of<DatabaseService>(context);
-    final searchController = Provider.of<NoteSearchController>(context);
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
-    _firstOpenScrollPerfEnabled = context.select<SettingsService, bool>(
-      (s) => s.appSettings.developerMode && s.enableFirstOpenScrollPerfMonitor,
-    );
-
-    // 监听搜索控制器状态，如果搜索出错则重置本地加载状态
-    if (searchController.searchError != null && _isLoading) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-          searchController.resetSearchState();
-        }
-      });
-    }
-
-    // 响应式设计：根据屏幕宽度调整布局
-    final width = MediaQuery.of(context).size.width;
-    final isTablet = width > AppConstants.tabletMinWidth;
-    final maxWidth = isTablet ? AppConstants.tabletMaxContentWidth : width;
-    final horizontalPadding = isTablet ? 16.0 : 8.0;
-
-    // 布局构建
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // 主体内容 - 使用极浅主题色背景，适配深色模式
-        final backgroundColor = ColorUtils.getNoteListBackgroundColor(
-          theme.colorScheme.surface,
-          theme.brightness,
-        );
-
-        return Container(
-          color: backgroundColor,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxWidth),
-              child: Column(
-                children: [
-                  // 搜索框 - 现代圆角样式，筛选按钮内嵌到右侧
-                  Container(
-                    padding: EdgeInsets.fromLTRB(
-                      horizontalPadding,
-                      MediaQuery.of(context).padding.top + 8.0,
-                      horizontalPadding,
-                      0,
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      focusNode: _searchFocusNode,
-                      onChanged: _onSearchChanged,
-                      textInputAction: TextInputAction.search,
-                      decoration: InputDecoration(
-                        hintText: l10n.searchNotes,
-                        isDense: true,
-                        filled: true,
-                        fillColor: ColorUtils.getSearchBoxBackgroundColor(
-                          theme.colorScheme.surface,
-                          theme.brightness,
-                        ),
-                        prefixIcon: searchController.isSearching
-                            ? const Padding(
-                                padding: EdgeInsets.all(12.0),
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              )
-                            : const Icon(Icons.search),
-                        suffixIcon: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // AI搜索切换按钮
-                            Consumer<SettingsService>(
-                              builder: (context, settings, _) {
-                                final localAI = settings.localAISettings;
-                                // 只有启用了本地AI和AI搜索功能才显示
-                                if (localAI.enabled &&
-                                    localAI.aiSearchEnabled) {
-                                  return IconButton(
-                                    icon: Icon(
-                                      _isAISearchMode
-                                          ? Icons.auto_awesome
-                                          : Icons.search,
-                                      color: _isAISearchMode
-                                          ? theme.colorScheme.primary
-                                          : null,
-                                    ),
-                                    tooltip: _isAISearchMode
-                                        ? l10n.aiSearchMode
-                                        : l10n.normalSearchMode,
-                                    onPressed: () {
-                                      setState(() {
-                                        _isAISearchMode = !_isAISearchMode;
-                                      });
-                                      // 如果有搜索词，重新搜索
-                                      if (_searchController.text.isNotEmpty) {
-                                        _onSearchChanged(
-                                            _searchController.text);
-                                      }
-                                    },
-                                  );
-                                }
-                                return const SizedBox.shrink();
-                              },
-                            ),
-                            // 筛选按钮
-                            IconButton(
-                              key: widget.filterButtonKey, // 功能引导 key
-                              icon: const Icon(Icons.tune),
-                              tooltip: l10n.filterAndSortTooltip,
-                              onPressed: () {
-                                final settings =
-                                    context.read<SettingsService>();
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  backgroundColor: Theme.of(
-                                    context,
-                                  ).colorScheme.surfaceContainerLowest,
-                                  shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.vertical(
-                                      top: Radius.circular(16),
-                                    ),
-                                  ),
-                                  builder: (context) => NoteFilterSortSheet(
-                                    allTags: _effectiveTags,
-                                    selectedTagIds: widget.selectedTagIds,
-                                    sortType: widget.sortType,
-                                    sortAscending: widget.sortAscending,
-                                    selectedWeathers: widget.selectedWeathers,
-                                    selectedDayPeriods:
-                                        widget.selectedDayPeriods,
-                                    requireBiometricForHidden:
-                                        settings.requireBiometricForHidden,
-                                    onApply: (
-                                      tagIds,
-                                      sortType,
-                                      sortAscending,
-                                      selectedWeathers,
-                                      selectedDayPeriods,
-                                    ) {
-                                      widget.onTagSelectionChanged(tagIds);
-                                      widget.onSortChanged(
-                                        sortType,
-                                        sortAscending,
-                                      );
-                                      widget.onFilterChanged(
-                                        selectedWeathers,
-                                        selectedDayPeriods,
-                                      );
-                                      _updateStreamSubscription();
-                                    },
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 10,
-                          horizontal: 12,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: BorderSide(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.outline.withValues(alpha: 0.28),
-                            width: 1,
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: BorderSide(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.outline.withValues(alpha: 0.20),
-                            width: 1,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: BorderSide(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.primary.withValues(alpha: 0.65),
-                            width: 1.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // 筛选条件展示区域
-                  _buildFilterDisplay(theme, horizontalPadding),
-
-                  // 笔记列表 - 添加平滑过渡动画
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: horizontalPadding,
-                      ),
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 150),
-                        switchInCurve: Curves.easeOut,
-                        switchOutCurve: Curves.easeOut,
-                        transitionBuilder: (child, animation) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: child,
-                          );
-                        },
-                        child: _buildNoteList(db, theme),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  /// 构建现代化的筛选条件展示区域
-  Widget _buildFilterDisplay(ThemeData theme, double horizontalPadding) {
-    final hasFilters = widget.selectedTagIds.isNotEmpty ||
-        widget.selectedWeathers.isNotEmpty ||
-        widget.selectedDayPeriods.isNotEmpty;
-
-    // 使用 AnimatedSize 实现整个筛选区域的展开/收起动画
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      child: !hasFilters
-          ? const SizedBox.shrink()
-          : _buildFilterContent(theme, horizontalPadding),
-    );
-  }
-
-  /// 构建筛选条件的实际内容
-  Widget _buildFilterContent(ThemeData theme, double horizontalPadding) {
-    // 收集所有筛选chip
-    final List<Widget> allChips = [];
-
-    // 添加标签chip (带图标支持) - 添加进出场动画
-    if (widget.selectedTagIds.isNotEmpty) {
-      allChips.addAll(
-        widget.selectedTagIds.map((tagId) {
-          final tag = _effectiveTags.firstWhere(
-            (tag) => tag.id == tagId,
-            orElse: () => NoteCategory(id: tagId, name: '未知标签'),
-          );
-          return TweenAnimationBuilder<double>(
-            key: ValueKey('tag_$tagId'),
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-            tween: Tween(begin: 0.0, end: 1.0),
-            builder: (context, value, child) {
-              return Opacity(
-                opacity: value,
-                child: Transform.scale(
-                  scale: 0.8 + (0.2 * value),
-                  child: child,
-                ),
-              );
-            },
-            child: _buildModernFilterChip(
-              theme: theme,
-              label: tag.name,
-              icon: IconUtils.isEmoji(tag.iconName)
-                  ? IconUtils.getDisplayIcon(tag.iconName)
-                  : IconUtils.getIconData(tag.iconName),
-              isIconEmoji: IconUtils.isEmoji(tag.iconName),
-              color: theme.colorScheme.primary,
-              onDeleted: () {
-                final newSelectedTags = List<String>.from(widget.selectedTagIds)
-                  ..remove(tagId);
-                widget.onTagSelectionChanged(newSelectedTags);
-              },
-            ),
-          );
-        }),
-      );
-    }
-
-    // 添加天气chip（按大类显示）
-    if (widget.selectedWeathers.isNotEmpty) {
-      final Set<String> categorySet = {};
-      for (final key in widget.selectedWeathers) {
-        final cat = WeatherService.getFilterCategoryByWeatherKey(key);
-        if (cat != null) categorySet.add(cat);
-      }
-
-      allChips.addAll(
-        categorySet.map((cat) {
-          final label =
-              WeatherService.getLocalizedFilterCategoryLabel(context, cat);
-          final icon = WeatherService.getFilterCategoryIcon(cat);
-          return TweenAnimationBuilder<double>(
-            key: ValueKey('weather_cat_$cat'),
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-            tween: Tween(begin: 0.0, end: 1.0),
-            builder: (context, value, child) {
-              return Opacity(
-                opacity: value,
-                child: Transform.scale(
-                  scale: 0.8 + (0.2 * value),
-                  child: child,
-                ),
-              );
-            },
-            child: _buildModernFilterChip(
-              theme: theme,
-              label: label,
-              icon: icon,
-              color: theme.colorScheme.secondary,
-              onDeleted: () {
-                final keysToRemove =
-                    WeatherService.getWeatherKeysByFilterCategory(cat);
-                final newWeathers = List<String>.from(widget.selectedWeathers)
-                  ..removeWhere((w) => keysToRemove.contains(w));
-                widget.onFilterChanged(newWeathers, widget.selectedDayPeriods);
-                _updateStreamSubscription();
-              },
-            ),
-          );
-        }),
-      );
-
-      // 处理未归类的key
-      final Set<String> knownKeys = categorySet
-          .expand((cat) => WeatherService.getWeatherKeysByFilterCategory(cat))
-          .toSet();
-      final List<String> others =
-          widget.selectedWeathers.where((k) => !knownKeys.contains(k)).toList();
-      for (final k in others) {
-        final label = WeatherService.getLocalizedWeatherLabel(context, k);
-        allChips.add(
-          TweenAnimationBuilder<double>(
-            key: ValueKey('weather_$k'),
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-            tween: Tween(begin: 0.0, end: 1.0),
-            builder: (context, value, child) {
-              return Opacity(
-                opacity: value,
-                child: Transform.scale(
-                  scale: 0.8 + (0.2 * value),
-                  child: child,
-                ),
-              );
-            },
-            child: _buildModernFilterChip(
-              theme: theme,
-              label: label,
-              color: theme.colorScheme.secondary,
-              onDeleted: () {
-                final newWeathers = List<String>.from(widget.selectedWeathers)
-                  ..remove(k);
-                widget.onFilterChanged(newWeathers, widget.selectedDayPeriods);
-                _updateStreamSubscription();
-              },
-            ),
-          ),
-        );
-      }
-    }
-
-    // 添加时间段chip - 添加进出场动画
-    if (widget.selectedDayPeriods.isNotEmpty) {
-      allChips.addAll(
-        widget.selectedDayPeriods.map((periodKey) {
-          final periodLabel = TimeUtils.getLocalizedDayPeriodLabel(
-            context,
-            periodKey,
-          );
-          final periodIcon = TimeUtils.getDayPeriodIconByKey(periodKey);
-          return TweenAnimationBuilder<double>(
-            key: ValueKey('period_$periodKey'),
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-            tween: Tween(begin: 0.0, end: 1.0),
-            builder: (context, value, child) {
-              return Opacity(
-                opacity: value,
-                child: Transform.scale(
-                  scale: 0.8 + (0.2 * value),
-                  child: child,
-                ),
-              );
-            },
-            child: _buildModernFilterChip(
-              theme: theme,
-              label: periodLabel,
-              icon: periodIcon,
-              color: theme.colorScheme.tertiary,
-              onDeleted: () {
-                final newDayPeriods = List<String>.from(
-                  widget.selectedDayPeriods,
-                )..remove(periodKey);
-                widget.onFilterChanged(widget.selectedWeathers, newDayPeriods);
-                _updateStreamSubscription();
-              },
-            ),
-          );
-        }),
-      );
-    }
-
-    // 创建清除全部按钮
-    final clearAllButton = Container(
-      height: 32,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.error.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: theme.colorScheme.error.withValues(alpha: 0.2),
-          width: 1,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            widget.onTagSelectionChanged([]);
-            widget.onFilterChanged([], []);
-            _updateStreamSubscription();
-          },
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            height: 32,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Center(
-              child: Icon(
-                Icons.close,
-                size: 18,
-                color: theme.colorScheme.error,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    final width = MediaQuery.of(context).size.width;
-    final isTablet = width > AppConstants.tabletMinWidth;
-    final maxWidth = isTablet ? AppConstants.tabletMaxContentWidth : width;
-    // 为chip之间添加间距
-    List<Widget> spacedChips = [];
-    for (int i = 0; i < allChips.length; i++) {
-      spacedChips.add(allChips[i]);
-      if (i != allChips.length - 1) {
-        spacedChips.add(const SizedBox(width: 8));
-      }
-    }
-
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: maxWidth),
-      child: Container(
-        width: double.infinity,
-        margin: EdgeInsets.fromLTRB(
-          horizontalPadding,
-          6.0,
-          horizontalPadding,
-          0,
-        ),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: theme.colorScheme.outline.withValues(alpha: 0.12),
-            width: 1,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // 筛选图标 - 与芯片同高
-              Container(
-                height: 32,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.filter_alt_outlined,
-                    size: 18,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: spacedChips,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              clearAllButton,
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// 构建现代化的筛选条件芯片 (支持图标显示)
-  Widget _buildModernFilterChip({
-    required ThemeData theme,
-    required String label,
-    required Color color,
-    required VoidCallback onDeleted,
-    dynamic icon,
-    bool isIconEmoji = false,
-  }) {
-    return Container(
-      height: 32,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: EdgeInsets.only(left: 10, right: icon != null ? 4 : 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (icon != null) ...[
-                  if (isIconEmoji) ...[
-                    Text(icon as String, style: const TextStyle(fontSize: 15)),
-                  ] else ...[
-                    Icon(icon as IconData, size: 15, color: color),
-                  ],
-                  const SizedBox(width: 5),
-                ],
-                Text(
-                  label,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onDeleted,
-              borderRadius: const BorderRadius.only(
-                topRight: Radius.circular(10),
-                bottomRight: Radius.circular(10),
-              ),
-              child: Container(
-                height: 32,
-                padding: const EdgeInsets.symmetric(horizontal: 7),
-                child: Center(
-                  child: Icon(
-                    Icons.close,
-                    size: 15,
-                    color: color.withValues(alpha: 0.7),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => _buildNoteListView(context);
 }

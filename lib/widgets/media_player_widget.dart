@@ -40,17 +40,23 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
     for (final vc in _activeVideoControllers.toList()) {
       try {
         if (vc.value.isPlaying) futures.add(vc.pause());
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[MediaPlayerWidget] video pause error: $e');
+      }
     }
     for (final ap in _activeAudioPlayers.toList()) {
       try {
         futures.add(ap.pause());
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[MediaPlayerWidget] audio pause error: $e');
+      }
     }
     if (futures.isNotEmpty) {
       try {
         await Future.wait(futures);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[MediaPlayerWidget] pauseAll wait error: $e');
+      }
     }
   }
 
@@ -113,7 +119,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       int fileSize = 0;
       try {
         fileSize = await file.length();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[MediaPlayerWidget] get file size failed: $e');
+      }
 
       // 记录开始初始化大视频
       if (fileSize > 100 * 1024 * 1024) {
@@ -630,6 +638,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
               // 播放/暂停按钮
               IconButton(
                 onPressed: _toggleAudioPlayback,
+                tooltip: _isPlaying
+                    ? AppLocalizations.of(context).mediaPlayerPause
+                    : AppLocalizations.of(context).mediaPlayerPlay,
                 icon: Icon(
                   _isPlaying ? Icons.pause : Icons.play_arrow,
                   color: Theme.of(context).colorScheme.primary,

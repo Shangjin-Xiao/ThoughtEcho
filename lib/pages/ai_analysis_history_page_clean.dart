@@ -195,11 +195,15 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       }
 
       try {
-        for (final analysis in _analyses) {
-          if (analysis.id != null) {
-            await _aiAnalysisDatabaseService!.deleteAnalysis(analysis.id!);
+        await Future.wait(_analyses.map((analysis) async {
+          try {
+            if (analysis.id != null) {
+              await _aiAnalysisDatabaseService!.deleteAnalysis(analysis.id!);
+            }
+          } catch (itemErr) {
+            AppLogger.e('删除单个AI分析记录失败: ${analysis.id}', error: itemErr);
           }
-        }
+        }));
         _loadAnalyses();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -304,6 +308,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close_rounded),
+                    tooltip:
+                        MaterialLocalizations.of(context).closeButtonTooltip,
                     style: IconButton.styleFrom(
                       backgroundColor: Theme.of(context)
                           .colorScheme
@@ -1041,6 +1047,7 @@ $positiveQuotesText
                             _loadAnalyses();
                           },
                           icon: const Icon(Icons.clear),
+                          tooltip: AppLocalizations.of(context).clear,
                         )
                       : null,
                   border: OutlineInputBorder(

@@ -40,7 +40,8 @@ class WeatherSearchResult {
         return l10n.citySelectedWeatherUpdated(cityName ?? '');
       case WeatherSearchResultType.currentLocationSuccess:
         return l10n.currentLocationWeatherUpdated(
-            cityName ?? l10n.currentLocationLabel);
+          cityName ?? l10n.currentLocationLabel,
+        );
       case WeatherSearchResultType.weatherTimeout:
         return l10n.weatherTimeoutRetry;
       case WeatherSearchResultType.weatherFetchFailed:
@@ -75,13 +76,6 @@ class WeatherSearchController extends ChangeNotifier {
 
   /// 最近一次操作结果
   WeatherSearchResult? get lastResult => _lastResult;
-
-  /// 兼容性 getter（供现有 UI 代码过渡使用）
-  /// @deprecated 使用 lastResult 代替
-  String? get errorMessage => _lastResult != null && !_lastResult!.isSuccess
-      ? _lastResult!.errorDetail
-      : null;
-  String? get successMessage => null; // 已移至 lastResult
 
   /// 清除状态信息
   void clearMessages() {

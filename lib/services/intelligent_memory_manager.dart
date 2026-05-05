@@ -34,6 +34,9 @@ class IntelligentMemoryManager {
     }
 
     _isMonitoring = true;
+
+    // 修复：如果已有旧的 controller，先关闭再创建新的
+    await _pressureEventController?.close();
     _pressureEventController =
         StreamController<MemoryPressureEvent>.broadcast();
 

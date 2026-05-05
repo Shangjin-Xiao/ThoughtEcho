@@ -1,0 +1,34 @@
+<svg width="128" height="128" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="coverGradient" x1="16" y1="12" x2="76" y2="86" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#4B8DFF"/>
+        <stop offset="1" stop-color="#1954E6"/>
+      </linearGradient>
+      <linearGradient id="ribbonGradient" x1="32" y1="80" x2="32" y2="98" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#FF4D4D"/>
+        <stop offset="1" stop-color="#DE0000"/>
+      </linearGradient>
+      <filter id="ambientShadow" x="0" y="0" width="100" height="100" filterUnits="userSpaceOnUse">
+        <feDropShadow dx="2" dy="6" stdDeviation="6" flood-color="#0F2B73" flood-opacity="0.15"/>
+      </filter>
+      <filter id="numShadow" x="20" y="20" width="60" height="60" filterUnits="userSpaceOnUse">
+        <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.2"/>
+      </filter>
+    </defs>
+    <g filter="url(#ambientShadow)">
+      <rect x="20" y="16" width="58" height="74" rx="4" fill="#E2E8F0" />
+      <rect x="18" y="14" width="58" height="74" rx="4" fill="#F8FAFC" />
+      <line x1="74" y1="18" x2="74" y2="84" stroke="#E2E8F0" stroke-width="0.5"/>
+      <line x1="72" y1="16" x2="72" y2="86" stroke="#E2E8F0" stroke-width="0.5"/>
+      <path d="M 28 80 L 36 80 L 36 96 L 32 92 L 28 96 Z" fill="url(#ribbonGradient)"/>
+      <rect x="28" y="80" width="8" height="3" fill="#000000" fill-opacity="0.15" />
+      <rect x="16" y="12" width="60" height="74" rx="4" fill="url(#coverGradient)"/>
+      <rect x="16.5" y="12.5" width="59" height="73" rx="3.5" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="1"/>
+      <path d="M 16 16 A 4 4 0 0 1 20 12 L 26 12 L 26 86 L 20 86 A 4 4 0 0 1 16 82 Z" fill="#001144" fill-opacity="0.2"/>
+      <line x1="26" y1="12" x2="26" y2="86" stroke="#000000" stroke-opacity="0.15" stroke-width="0.5"/>
+      <line x1="26.5" y1="12" x2="26.5" y2="86" stroke="#FFFFFF" stroke-opacity="0.15" stroke-width="0.5"/>
+      <g filter="url(#numShadow)">
+        <path d="M 43 62 H 49 V 34 L 43 34 L 36 40.5 L 39.5 44 L 43 40.5 V 62 Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="1.5" stroke-linejoin="round"/>
+      </g>
+    </g>
+  </svg>

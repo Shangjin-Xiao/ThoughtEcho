@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../extensions/note_category_localization_extension.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/smart_push_settings.dart';
 import '../models/note_category.dart';
@@ -236,19 +238,18 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
           // 主开关卡片
           _buildMainSwitchCard(l10n, theme, colorScheme),
 
+          if (_settings.enabled || _settings.dailyQuotePushEnabled) ...[
+            const SizedBox(height: 16),
+
+            // 权限状态卡片（检测所有必需权限）
+            _buildPermissionStatusCard(l10n, theme, colorScheme),
+          ],
+
           if (_settings.enabled) ...[
             const SizedBox(height: 16),
 
             // 推送模式选择（只显示 智能/自定义 两个选项）
             _buildModeSelectionCard(l10n, theme, colorScheme),
-
-            const SizedBox(height: 16),
-
-            // 每日一言独立推送（始终显示，不依赖推送模式）
-            _buildDailyQuoteCard(l10n, theme, colorScheme),
-
-            // 权限状态卡片（检测所有必需权限）
-            _buildPermissionStatusCard(l10n, theme, colorScheme),
 
             // 自定义模式：显示完整高级选项
             if (_settings.pushMode == PushMode.custom) ...[
@@ -282,8 +283,21 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
 
             const SizedBox(height: 16),
 
+            // 每日一言独立推送（始终显示，独立于智能推送开关）
+            _buildDailyQuoteCard(l10n, theme, colorScheme),
+
+            const SizedBox(height: 16),
+
             // 说明卡片
             _buildNoticeCard(l10n, theme, colorScheme),
+          ],
+
+          // 当智能推送未启用时，每日一言卡片单独显示
+          if (!_settings.enabled) ...[
+            const SizedBox(height: 16),
+
+            // 每日一言独立推送（始终显示，独立于智能推送开关）
+            _buildDailyQuoteCard(l10n, theme, colorScheme),
           ],
 
           const SizedBox(height: 32),
@@ -781,6 +795,35 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                 );
               }).toList(),
             ),
+            if (_settings.frequency == PushFrequency.custom) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: List.generate(7, (index) {
+                  final weekday = index + 1;
+                  final isSelected =
+                      _settings.selectedWeekdays.contains(weekday);
+                  return FilterChip(
+                    label: Text(_getWeekdayLabel(l10n, weekday)),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      final weekdays =
+                          Set<int>.from(_settings.selectedWeekdays);
+                      if (selected) {
+                        weekdays.add(weekday);
+                      } else if (weekdays.length > 1) {
+                        weekdays.remove(weekday);
+                      }
+                      setState(() {
+                        _settings =
+                            _settings.copyWith(selectedWeekdays: weekdays);
+                      });
+                    },
+                  );
+                }),
+              ),
+            ],
           ],
         ),
       ),
@@ -963,7 +1006,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                               ? Text(tag.icon!,
                                   style: const TextStyle(fontSize: 14))
                               : null,
-                          label: Text(tag.name),
+                          label: Text(tag.localizedName(l10n)),
                           selected: isSelected,
                           onSelected: (selected) {
                             final tagIds =
@@ -1073,6 +1116,27 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
         return l10n.smartPushFrequencyWeekends;
       case PushFrequency.custom:
         return l10n.smartPushFrequencyCustom;
+    }
+  }
+
+  String _getWeekdayLabel(AppLocalizations l10n, int weekday) {
+    switch (weekday) {
+      case DateTime.monday:
+        return l10n.monday;
+      case DateTime.tuesday:
+        return l10n.tuesday;
+      case DateTime.wednesday:
+        return l10n.wednesday;
+      case DateTime.thursday:
+        return l10n.thursday;
+      case DateTime.friday:
+        return l10n.friday;
+      case DateTime.saturday:
+        return l10n.saturday;
+      case DateTime.sunday:
+        return l10n.sunday;
+      default:
+        return weekday.toString();
     }
   }
 
@@ -1248,6 +1312,13 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                 ),
               ),
             ],
+            const SizedBox(height: 12),
+            Text(
+              l10n.smartPushDailyQuoteIndependentNote,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
       ),

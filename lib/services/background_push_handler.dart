@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/widgets.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
@@ -7,6 +8,7 @@ import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/network_service.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/main.dart' show initializeDatabasePlatform;
 
 // WorkManager 任务名称常量
 const String kBackgroundPushTask = 'com.shangjin.thoughtecho.backgroundPush';
@@ -28,6 +30,11 @@ void callbackDispatcher() {
       // 3. 初始化基础服务
       final mmkvService = MMKVService();
       await mmkvService.init();
+
+      // 关键修复：后台 Isolate 必须先设置数据库路径
+      // main.dart 中的 setDatabasesPath() 设置仅在主 Isolate 中生效，
+      // 后台 Isolate 的 getDatabasesPath() 会返回系统默认路径，导致打开空数据库
+      await initializeDatabasePlatform();
 
       final databaseService = DatabaseService();
       await databaseService.init();
@@ -67,7 +74,7 @@ void callbackDispatcher() {
         case kPeriodicCheckTask:
           // 周期性检查逻辑
           AppLogger.i('执行周期性推送检查...');
-          await pushService.checkAndPush(isBackground: true, triggerKind: null);
+          await backgroundPeriodicCheck();
           break;
 
         default:
@@ -106,9 +113,24 @@ void backgroundPushCallback(int id) async {
     await mmkvService.init();
     AppLogger.d('MMKV 初始化完成');
 
+    // 关键修复：后台 Isolate 必须先设置数据库路径
+    // main.dart 中的 setDatabasesPath() 设置仅在主 Isolate 中生效，
+    // 后台 Isolate 的 getDatabasesPath() 会返回系统默认路径，导致打开空数据库
+    await initializeDatabasePlatform();
+    AppLogger.d('数据库平台初始化完成（路径已设置）');
+
     final databaseService = DatabaseService();
     await databaseService.init();
     AppLogger.d('数据库初始化完成');
+
+    // 诊断日志：验证后台数据库路径和笔记数量
+    try {
+      final dbPath = await getDatabasesPath();
+      final noteCount = await databaseService.getQuotesCount();
+      AppLogger.w('后台数据库诊断: 路径=$dbPath, 笔记数量=$noteCount');
+    } catch (e) {
+      AppLogger.w('后台数据库诊断失败: $e');
+    }
 
     // 初始化网络服务（后台获取一言需要）
     await NetworkService.instance.init();
@@ -160,7 +182,7 @@ void backgroundPushCallback(int id) async {
 /// 这是 Android 12+ 精确闹钟权限被拒绝时的备用方案
 /// 每15分钟检查一次是否有遗漏的推送
 @pragma('vm:entry-point')
-void backgroundPeriodicCheck() async {
+Future<void> backgroundPeriodicCheck() async {
   WidgetsFlutterBinding.ensureInitialized();
   DartPluginRegistrant.ensureInitialized();
 
@@ -170,6 +192,9 @@ void backgroundPeriodicCheck() async {
   try {
     final mmkvService = MMKVService();
     await mmkvService.init();
+
+    // 关键修复：后台 Isolate 必须先设置数据库路径
+    await initializeDatabasePlatform();
 
     final databaseService = DatabaseService();
     await databaseService.init();
@@ -203,22 +228,24 @@ void backgroundPeriodicCheck() async {
     // 检查常规推送时间（使用持久化的实际调度时间，兼容智能模式）
     bool pushedRegular = false;
     if (settings.enabled && settings.shouldPushToday()) {
-      final scheduledSlots = pushService.getScheduledTimesForToday();
-      final slotsToCheck = scheduledSlots.isNotEmpty
-          ? scheduledSlots
-          : settings.pushTimeSlots.where((s) => s.enabled).toList();
+      // 防重复：距上次推送不足 30 分钟则跳过
+      final lastPush = settings.lastPushTime;
+      if (lastPush != null && now.difference(lastPush).inMinutes < 30) {
+        AppLogger.d('周期性检查：距上次推送仅 ${now.difference(lastPush).inMinutes} 分钟，跳过');
+      } else {
+        final scheduledSlots = pushService.getScheduledTimesForToday();
+        final slotsToCheck = scheduledSlots.isNotEmpty
+            ? scheduledSlots
+            : settings.pushTimeSlots.where((s) => s.enabled).toList();
 
-      for (final slot in slotsToCheck) {
-        final slotTime =
-            DateTime(now.year, now.month, now.day, slot.hour, slot.minute);
-        final diff = now.difference(slotTime).inMinutes;
-
-        if (diff >= 0 && diff <= 10) {
-          AppLogger.i('周期性检查：匹配到推送时间 ${slot.hour}:${slot.minute}，触发推送');
-          await pushService.checkAndPush(
-              isBackground: true, triggerKind: 'smartPush');
-          pushedRegular = true;
-          break;
+        for (final slot in slotsToCheck) {
+          if (SmartPushService.isWithinPushWindow(now, slot)) {
+            AppLogger.i('周期性检查：匹配到推送时间 ${slot.hour}:${slot.minute}，触发推送');
+            await pushService.checkAndPush(
+                isBackground: true, triggerKind: 'smartPush');
+            pushedRegular = true;
+            break;
+          }
         }
       }
     }
@@ -226,11 +253,7 @@ void backgroundPeriodicCheck() async {
     // 检查每日一言推送
     if (settings.dailyQuotePushEnabled && !pushedRegular) {
       final dailySlot = settings.dailyQuotePushTime;
-      final dailyTime = DateTime(
-          now.year, now.month, now.day, dailySlot.hour, dailySlot.minute);
-      final dailyDiff = now.difference(dailyTime).inMinutes;
-
-      if (dailyDiff >= 0 && dailyDiff <= 10) {
+      if (SmartPushService.isWithinPushWindow(now, dailySlot)) {
         AppLogger.i('周期性检查：当前时间接近每日一言时间 ${dailySlot.formattedTime}，触发推送');
         await pushService.checkAndPush(
             isBackground: true, triggerKind: 'dailyQuote');

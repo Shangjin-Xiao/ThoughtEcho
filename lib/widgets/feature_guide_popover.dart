@@ -136,13 +136,17 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
       color: Colors.black.withValues(alpha: 0.3),
       child: GestureDetector(
         onTap: () => _handleDismiss(),
-        child: Center(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: _buildPopoverCard(
-              context,
-              PopoverArrowDirection.top,
-              arrowOffset: 110,
+        child: Semantics(
+          label: 'Dismiss',
+          button: true,
+          child: Center(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: _buildPopoverCard(
+                context,
+                PopoverArrowDirection.top,
+                arrowOffset: 110,
+              ),
             ),
           ),
         ),

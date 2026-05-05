@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 import '../utils/app_logger.dart';
@@ -259,7 +258,9 @@ class LargeVideoHandler {
           if (await tempFile.exists()) {
             await tempFile.delete();
           }
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('[LargeVideoHandler] temp file cleanup failed: $e');
+        }
 
         // 等待更长时间让系统回收内存
         await Future.delayed(Duration(seconds: retryCount * 2));
@@ -341,7 +342,10 @@ class LargeVideoHandler {
               if (await targetFile.exists()) {
                 await targetFile.delete();
               }
-            } catch (_) {}
+            } catch (e) {
+              debugPrint(
+                  '[LargeVideoHandler] cleanup incomplete file failed: $e');
+            }
             throw const CancelledException();
           }
 
@@ -408,7 +412,9 @@ class LargeVideoHandler {
         if (await targetFile.exists()) {
           await targetFile.delete();
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[LargeVideoHandler] cleanup incomplete file failed: $e');
+      }
       rethrow;
     }
   }

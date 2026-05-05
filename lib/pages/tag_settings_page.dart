@@ -6,6 +6,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../extensions/note_category_localization_extension.dart';
 import '../services/database_service.dart';
 import '../models/note_category.dart'; // 替换 import NoteTag 为 NoteCategory
 import '../utils/icon_utils.dart';
@@ -47,6 +49,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
         scrolledUnderElevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -154,6 +157,12 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                       Expanded(
                         child: TextField(
                           controller: _tagController,
+                          maxLength: 50,
+                          buildCounter: (context,
+                                  {required currentLength,
+                                  required isFocused,
+                                  maxLength}) =>
+                              null,
                           decoration: InputDecoration(
                             labelText: l10n.tagName,
                             hintText: l10n.tagNameHint,
@@ -182,6 +191,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                         ),
                         child: IconButton(
                           onPressed: () => _showIconSelector(context, l10n),
+                          tooltip: l10n.selectIcon,
                           icon: _selectedIconName != null
                               ? (IconUtils.isEmoji(_selectedIconName!)
                                   ? Text(
@@ -200,7 +210,6 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                   Icons.add_photo_alternate_outlined,
                                   color: colorScheme.onSurfaceVariant,
                                 ),
-                          tooltip: l10n.selectIcon,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -431,9 +440,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                           // 检查是否是隐藏标签
                           final bool isHiddenTag =
                               tag.id == DatabaseService.hiddenTagId;
-                          // 隐藏标签使用国际化名称
-                          final String displayName =
-                              isHiddenTag ? l10n.hiddenTag : tag.name;
+                          final String displayName = tag.localizedName(l10n);
                           final Widget? subtitleWidget = isHiddenTag
                               ? Text(
                                   l10n.hiddenTagUsageHint,
@@ -448,9 +455,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                       l10n.systemDefaultTag,
                                       style:
                                           theme.textTheme.bodySmall?.copyWith(
-                                        color: colorScheme.primary.withAlpha(
-                                          150,
-                                        ),
+                                        color:
+                                            colorScheme.primary.withAlpha(150),
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -548,6 +554,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                         Icons.delete_outline_rounded,
                                         color: colorScheme.error,
                                       ),
+                                      tooltip: l10n.delete,
                                       onPressed: () async {
                                         // 在异步操作前获取上下文的参数和服务
                                         final scaffoldMessenger =
@@ -581,7 +588,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                             ),
                                             content: Text(
                                               l10n.deleteTagDialogContent(
-                                                tag.name,
+                                                tag.localizedName(l10n),
                                               ),
                                             ),
                                             actions: [
@@ -703,6 +710,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
       if (!mounted) return;
       setState(() => _selectedIconName = iconName);
     }
+
     String searchQuery = '';
     Map<String, bool> expandedCategories = {
       l10n.emotion: true,
@@ -752,6 +760,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                       suffixIcon: emojiSearchController.text.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.clear),
+                              tooltip: l10n.clear,
                               onPressed: () {
                                 emojiSearchController.clear();
                                 dialogSetState(() => searchQuery = '');

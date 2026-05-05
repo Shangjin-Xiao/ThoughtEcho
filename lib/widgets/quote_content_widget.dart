@@ -45,34 +45,50 @@ class QuoteContent extends StatelessWidget {
   static const double _estimatedImageHeight = 200.0;
   static const double _estimatedVideoHeight = 240.0;
   static const double _estimatedAudioHeight = 140.0;
+  static const double _collapsedPreviewBudgetHeight =
+      collapsedContentMaxHeight + (_estimatedLineHeight * 2);
   static const Key collapsedWrapperKey = ValueKey(
     'quote_content.collapsed_wrapper',
   );
 
   static void resetCaches() {
     _QuoteDocumentCache.clear();
+    _QuoteHeightEstimateCache.clear();
     _QuoteContentControllerCache.clear();
   }
 
-  /// 预热 Document 缓存：在数据加载后、用户滚动前，分批异步预解析富文本 JSON
-  /// 使用 Timer.run 将每批任务推入 event queue，确保让出主线程给渲染帧
-  static void prewarmDocumentCache(List<Quote> quotes) {
+  /// 预热 Document 缓存：只预热首屏附近内容，且滚动中不抢占主线程。
+  static void prewarmDocumentCache(
+    List<Quote> quotes, {
+    int maxItems = 6,
+    Duration delay = const Duration(milliseconds: 500),
+  }) {
     final richQuotes = quotes
         .where(
           (q) => q.deltaContent != null && q.editSource == 'fullscreen',
         )
+        .take(maxItems)
         .toList();
     if (richQuotes.isEmpty) return;
 
-    const batchSize = 3;
+    const batchSize = 1;
     void processBatch(int startIndex) {
       if (startIndex >= richQuotes.length) return;
+      if (isListScrolling.value) {
+        Timer(
+          const Duration(milliseconds: 240),
+          () => processBatch(startIndex),
+        );
+        return;
+      }
+
       final end = (startIndex + batchSize).clamp(0, richQuotes.length);
       for (int i = startIndex; i < end; i++) {
         final deltaContent = richQuotes[i].deltaContent!;
         _QuoteDocumentCache.getOrCreate(
           deltaContent: deltaContent,
           prioritizeBold: false,
+          previewCollapsed: false,
           builder: () => _buildDocumentFromDelta(deltaContent),
         );
       }
@@ -81,7 +97,7 @@ class QuoteContent extends StatelessWidget {
       }
     }
 
-    Timer.run(() => processBatch(0));
+    Timer(delay, () => processBatch(0));
   }
 
   /// 静态版本的 Document 构建，供预热缓存使用
@@ -97,7 +113,9 @@ class QuoteContent extends StatelessWidget {
           return quill.Document.fromJson(ops);
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[QuoteContent] delta content parse failed: $e');
+    }
     return quill.Document()..insert(0, '');
   }
 
@@ -113,6 +131,7 @@ class QuoteContent extends StatelessWidget {
   @visibleForTesting
   static Map<String, dynamic> debugCacheStats() => {
         'document': _QuoteDocumentCache.stats,
+        'heightEstimate': _QuoteHeightEstimateCache.stats,
         'controller': _QuoteContentControllerCache.stats,
       };
 
@@ -200,7 +219,11 @@ class QuoteContent extends StatelessWidget {
   }
 
   static bool exceedsCollapsedHeight(Quote quote) {
-    return _estimateRenderedHeight(quote) > collapsedContentMaxHeight;
+    return _QuoteHeightEstimateCache.getOrCreate(
+          quote: quote,
+          builder: () => _estimateRenderedHeight(quote),
+        ) >
+        collapsedContentMaxHeight;
   }
 
   static double _estimateRenderedHeight(Quote quote) {
@@ -283,8 +306,7 @@ class QuoteContent extends StatelessWidget {
     return height;
   }
 
-  /// 创建优先显示加粗内容的 Document（保持原始嵌入，重新排序）。
-  quill.Document? _createBoldPriorityDocument(String deltaContent) {
+  List<Map<String, dynamic>>? _createBoldPriorityOps(String deltaContent) {
     try {
       final boldOps = _extractValidBoldOps(deltaContent);
       if (boldOps.isEmpty) {
@@ -313,16 +335,33 @@ class QuoteContent extends StatelessWidget {
         }
       }
 
-      return quill.Document.fromJson(orderedOps);
+      return orderedOps;
     } catch (_) {
       return null;
     }
   }
 
+  /// 创建优先显示加粗内容的 Document（保持原始嵌入，重新排序）。
+  quill.Document? _createBoldPriorityDocument(String deltaContent) {
+    final orderedOps = _createBoldPriorityOps(deltaContent);
+    return orderedOps == null ? null : quill.Document.fromJson(orderedOps);
+  }
+
   quill.Document _buildRichTextDocument(
     String deltaContent,
-    bool prioritizeBold,
-  ) {
+    bool prioritizeBold, {
+    bool previewCollapsed = false,
+  }) {
+    if (previewCollapsed) {
+      final previewDoc = _createCollapsedPreviewDocument(
+        deltaContent,
+        prioritizeBold,
+      );
+      if (previewDoc != null) {
+        return previewDoc;
+      }
+    }
+
     if (prioritizeBold) {
       final prioritizedDoc = _createBoldPriorityDocument(deltaContent);
       if (prioritizedDoc != null) {
@@ -331,6 +370,114 @@ class QuoteContent extends StatelessWidget {
     }
 
     return _documentFromDelta(deltaContent);
+  }
+
+  quill.Document? _createCollapsedPreviewDocument(
+    String deltaContent,
+    bool prioritizeBold,
+  ) {
+    final sourceOps = prioritizeBold
+        ? _createBoldPriorityOps(deltaContent) ?? _decodeDeltaOps(deltaContent)
+        : _decodeDeltaOps(deltaContent);
+    if (sourceOps == null || sourceOps.isEmpty) {
+      return null;
+    }
+
+    final previewOps = _takeCollapsedPreviewOps(sourceOps);
+    if (previewOps.isEmpty) {
+      return null;
+    }
+
+    final lastInsert = previewOps.last['insert'];
+    if (lastInsert is String && !lastInsert.endsWith('\n')) {
+      previewOps.add({'insert': '\n'});
+    }
+
+    return quill.Document.fromJson(previewOps);
+  }
+
+  List<Map<String, dynamic>>? _decodeDeltaOps(String deltaContent) {
+    try {
+      final decoded = jsonDecode(deltaContent);
+      final Object? rawOps;
+      if (decoded is List) {
+        rawOps = decoded;
+      } else if (decoded is Map && decoded.containsKey('ops')) {
+        rawOps = decoded['ops'];
+      } else {
+        return null;
+      }
+
+      if (rawOps is! List) {
+        return null;
+      }
+
+      return rawOps
+          .whereType<Map>()
+          .map((op) => Map<String, dynamic>.from(op))
+          .toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  List<Map<String, dynamic>> _takeCollapsedPreviewOps(
+    List<Map<String, dynamic>> ops,
+  ) {
+    final previewOps = <Map<String, dynamic>>[];
+    double estimatedHeight = 0;
+
+    for (final op in ops) {
+      final insert = op['insert'];
+      final remainingHeight = _collapsedPreviewBudgetHeight - estimatedHeight;
+      if (remainingHeight <= 0) {
+        break;
+      }
+
+      if (insert is String) {
+        final maxLines =
+            (remainingHeight / _estimatedLineHeight).ceil().clamp(1, 12);
+        final maxChars = maxLines * _averageCharsPerLine;
+
+        if (insert.length > maxChars) {
+          previewOps.add({
+            ...op,
+            'insert': insert.substring(0, maxChars),
+          });
+          break;
+        }
+
+        previewOps.add(op);
+        estimatedHeight += _estimatePlainTextHeight(insert);
+        if (estimatedHeight >= _collapsedPreviewBudgetHeight) {
+          break;
+        }
+        continue;
+      }
+
+      previewOps.add(op);
+      estimatedHeight += _estimateEmbedHeight(insert);
+      if (estimatedHeight >= _collapsedPreviewBudgetHeight) {
+        break;
+      }
+    }
+
+    return previewOps;
+  }
+
+  static double _estimateEmbedHeight(Object? insert) {
+    if (insert is Map) {
+      if (insert.containsKey('image')) {
+        return _estimatedImageHeight;
+      }
+      if (insert.containsKey('video')) {
+        return _estimatedVideoHeight;
+      }
+      if (insert.containsKey('audio')) {
+        return _estimatedAudioHeight;
+      }
+    }
+    return _estimatedLineHeight;
   }
 
   quill.Document _documentFromDelta(String deltaContent) {
@@ -361,6 +508,7 @@ class QuoteContent extends StatelessWidget {
 
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
       final bool usePrioritizedDoc = !showFullContent && prioritizeBoldContent;
+      final bool useCollapsedPreview = !showFullContent && needsExpansion;
       final String cacheQuoteId =
           quote.id ?? 'local_${quote.date}_${quote.content.hashCode}';
       final String contentVariant = _QuoteContentControllerCache.resolveVariant(
@@ -379,9 +527,11 @@ class QuoteContent extends StatelessWidget {
         documentBuilder: () => _QuoteDocumentCache.getOrCreate(
           deltaContent: quote.deltaContent!,
           prioritizeBold: usePrioritizedDoc,
+          previewCollapsed: useCollapsedPreview,
           builder: () => _buildRichTextDocument(
             quote.deltaContent!,
             usePrioritizedDoc,
+            previewCollapsed: useCollapsedPreview,
           ),
         ),
       );
@@ -466,6 +616,115 @@ class _CollapsedContentWrapper extends StatelessWidget {
   }
 }
 
+class _QuoteHeightEstimateCache {
+  static final LinkedHashMap<_HeightEstimateCacheKey, _HeightEstimateCacheEntry>
+      _cache =
+      LinkedHashMap<_HeightEstimateCacheKey, _HeightEstimateCacheEntry>();
+
+  static const int _maxCacheSize = 300;
+  static const int _pruneBatchSize = 50;
+
+  static int _hitCount = 0;
+  static int _missCount = 0;
+
+  static double getOrCreate({
+    required Quote quote,
+    required double Function() builder,
+  }) {
+    final key = _HeightEstimateCacheKey.fromQuote(quote);
+    final existing = _cache.remove(key);
+    if (existing != null) {
+      _hitCount++;
+      existing.touch();
+      _cache[key] = existing;
+      return existing.height;
+    }
+
+    _missCount++;
+    if (_cache.length >= _maxCacheSize) {
+      _pruneOldest();
+    }
+
+    final height = builder();
+    _cache[key] = _HeightEstimateCacheEntry(height: height);
+    return height;
+  }
+
+  static void clear() {
+    _cache.clear();
+    _hitCount = 0;
+    _missCount = 0;
+  }
+
+  static Map<String, dynamic> get stats {
+    final total = _hitCount + _missCount;
+    final double hitRate = total == 0 ? 0 : _hitCount / total;
+    return {
+      'cacheSize': _cache.length,
+      'maxSize': _maxCacheSize,
+      'hitCount': _hitCount,
+      'missCount': _missCount,
+      'hitRate': hitRate,
+    };
+  }
+
+  static void _pruneOldest() {
+    if (_cache.isEmpty) {
+      return;
+    }
+
+    final entries = _cache.entries.toList()
+      ..sort((a, b) => a.value.lastAccess.compareTo(b.value.lastAccess));
+
+    for (final entry in entries.take(_pruneBatchSize)) {
+      _cache.remove(entry.key);
+    }
+  }
+}
+
+class _HeightEstimateCacheKey {
+  const _HeightEstimateCacheKey({
+    required this.contentSignature,
+    required this.isRichText,
+  });
+
+  factory _HeightEstimateCacheKey.fromQuote(Quote quote) {
+    final richContent =
+        quote.deltaContent != null && quote.editSource == 'fullscreen';
+    final content = richContent ? quote.deltaContent! : quote.content;
+    return _HeightEstimateCacheKey(
+      contentSignature: Object.hash(content.hashCode, content.length),
+      isRichText: richContent,
+    );
+  }
+
+  final int contentSignature;
+  final bool isRichText;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is _HeightEstimateCacheKey &&
+        other.contentSignature == contentSignature &&
+        other.isRichText == isRichText;
+  }
+
+  @override
+  int get hashCode => Object.hash(contentSignature, isRichText);
+}
+
+class _HeightEstimateCacheEntry {
+  _HeightEstimateCacheEntry({required this.height})
+      : lastAccess = DateTime.now();
+
+  final double height;
+  DateTime lastAccess;
+
+  void touch() {
+    lastAccess = DateTime.now();
+  }
+}
+
 class _QuoteDocumentCache {
   static final LinkedHashMap<_DocumentCacheKey, _DocumentCacheEntry> _cache =
       LinkedHashMap<_DocumentCacheKey, _DocumentCacheEntry>();
@@ -478,11 +737,13 @@ class _QuoteDocumentCache {
   static quill.Document getOrCreate({
     required String deltaContent,
     required bool prioritizeBold,
+    required bool previewCollapsed,
     required quill.Document Function() builder,
   }) {
     final key = _DocumentCacheKey(
       deltaContent: deltaContent,
       prioritizeBold: prioritizeBold,
+      previewCollapsed: previewCollapsed,
     );
 
     final existing = _cache.remove(key);
@@ -545,21 +806,25 @@ class _DocumentCacheKey {
   const _DocumentCacheKey({
     required this.deltaContent,
     required this.prioritizeBold,
+    required this.previewCollapsed,
   });
 
   final String deltaContent;
   final bool prioritizeBold;
+  final bool previewCollapsed;
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is _DocumentCacheKey &&
         other.prioritizeBold == prioritizeBold &&
+        other.previewCollapsed == previewCollapsed &&
         other.deltaContent == deltaContent;
   }
 
   @override
-  int get hashCode => Object.hash(deltaContent, prioritizeBold);
+  int get hashCode =>
+      Object.hash(deltaContent, prioritizeBold, previewCollapsed);
 }
 
 class _DocumentCacheEntry {
@@ -769,12 +1034,18 @@ class _CachedControllerSet {
   void dispose() {
     try {
       quillController.dispose();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[_CachedControllerSet] quillController dispose error: $e');
+    }
     try {
       scrollController.dispose();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[_CachedControllerSet] scrollController dispose error: $e');
+    }
     try {
       focusNode.dispose();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[_CachedControllerSet] focusNode dispose error: $e');
+    }
   }
 }

@@ -1,8 +1,11 @@
 // ignore_for_file: deprecated_member_use_from_same_package
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'dart:async';
 import 'package:provider/provider.dart';
+
+import '../extensions/note_category_localization_extension.dart';
 import '../theme/app_theme.dart';
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
@@ -49,6 +52,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   bool _insightLoading = false;
   StreamSubscription<String>? _insightSub;
   bool _statsCalculated = false;
+  String? _lastLocaleCode;
 
   @override
   void initState() {
@@ -70,9 +74,12 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_statsCalculated) {
+
+    final currentLocaleCode = Localizations.localeOf(context).toLanguageTag();
+    if (!_statsCalculated || _lastLocaleCode != currentLocaleCode) {
       _calculateStats();
       _statsCalculated = true;
+      _lastLocaleCode = currentLocaleCode;
     }
   }
 
@@ -110,10 +117,12 @@ class _AnnualReportPageState extends State<AnnualReportPage>
 
   Future<AnnualStats> _resolveTagNames(AnnualStats stats) async {
     try {
+      final l10n = AppLocalizations.of(context);
       final databaseService = context.read<DatabaseService>();
       final allCategories = await databaseService.getCategories();
       final tagIdToName = {
-        for (var category in allCategories) category.id: category.name,
+        for (var category in allCategories)
+          category.id: category.localizedName(l10n),
       };
 
       final resolvedTopTags = stats.topTags.map((tagStat) {
@@ -394,6 +403,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     Icons.close,
                     color: isDark ? Colors.white : Colors.black54,
                   ),
+                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
                 ),
                 Text(
                   '${_currentPage + 1} / 7',
@@ -409,6 +419,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     Icons.share,
                     color: isDark ? Colors.white : Colors.black54,
                   ),
+                  tooltip: AppLocalizations.of(context).shareBtn,
                 ),
               ],
             ),
@@ -1455,9 +1466,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
     }
   }
 
-  void _shareReport() {
+  void _shareReport() async {
     final l10n = AppLocalizations.of(context);
-    // TODO: 实现分享功能
     HapticFeedback.mediumImpact();
 
     try {
@@ -1466,8 +1476,15 @@ class _AnnualReportPageState extends State<AnnualReportPage>
       final totalQuotes = widget.quotes.length;
       final shareText = l10n.shareAnnualReportContent(year, totalQuotes);
 
-      // 复制到剪贴板
-      Clipboard.setData(ClipboardData(text: shareText));
+      // 复制到剪贴板作为备选
+      await Clipboard.setData(ClipboardData(text: shareText));
+
+      if (!mounted) return;
+
+      // 使用 share_plus 分享
+      await SharePlus.instance.share(ShareParams(text: shareText));
+
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

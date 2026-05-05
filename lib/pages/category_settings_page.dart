@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../extensions/note_category_localization_extension.dart';
 import '../services/database_service.dart';
 import '../models/note_category.dart';
 import '../utils/icon_utils.dart';
@@ -319,6 +321,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: emojiSearchController.text.isNotEmpty
                           ? IconButton(
+                              tooltip: l10n.clear,
                               icon: const Icon(Icons.clear),
                               onPressed: () {
                                 emojiSearchController.clear();
@@ -593,6 +596,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                   Text(l10n.iconLabel),
                   IconButton(
                     icon: IconUtils.getCategoryIcon(selectedIcon),
+                    tooltip: l10n.iconLabel,
                     onPressed: () async {
                       final BuildContext currentContext = dialogContext;
                       if (!context.mounted) return;
@@ -650,8 +654,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
     final l10n = AppLocalizations.of(context);
     // 检查是否是隐藏标签
     final bool isHiddenTag = category.id == DatabaseService.hiddenTagId;
-    // 隐藏标签使用国际化名称
-    final String displayName = isHiddenTag ? l10n.hiddenTag : category.name;
+    final String displayName = category.localizedName(l10n);
 
     return InkWell(
       onTap: isHiddenTag ? null : () => _editCategory(context, category),
@@ -758,7 +761,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.confirmDelete),
-        content: Text(l10n.deleteTagConfirmation(category.name)),
+        content: Text(l10n.deleteTagConfirmation(category.localizedName(l10n))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -866,6 +869,7 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _emojiSearchController.text.isNotEmpty
                     ? IconButton(
+                        tooltip: l10n.clear,
                         icon: const Icon(Icons.clear),
                         onPressed: () {
                           _emojiSearchController.clear();

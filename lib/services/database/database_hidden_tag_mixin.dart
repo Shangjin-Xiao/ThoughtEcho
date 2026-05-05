@@ -1,0 +1,212 @@
+part of '../database_service.dart';
+
+/// Mixin providing hidden tag operations for DatabaseService.
+mixin _DatabaseHiddenTagMixin on _DatabaseServiceBase {
+  /// 获取或创建隐藏标签
+  /// 当启用隐藏笔记功能时，确保隐藏标签存在
+  /// 隐藏标签是系统标签，不可编辑或删除
+  @override
+  Future<NoteCategory?> getOrCreateHiddenTag() async {
+    try {
+      // 先尝试获取现有的隐藏标签
+      final categories = await getCategories();
+      final existingHiddenTag = categories.where(
+        (c) => c.id == _DatabaseServiceBase.hiddenTagId,
+      );
+      if (existingHiddenTag.isNotEmpty) {
+        // 检查并更新旧版隐藏标签（如果需要）
+        final existing = existingHiddenTag.first;
+        if (!existing.isDefault ||
+            existing.iconName != _DatabaseServiceBase.hiddenTagIconName) {
+          // 更新为新的系统标签格式
+          await _updateHiddenTagFormat();
+          // 返回更新后的标签
+          return NoteCategory(
+            id: _DatabaseServiceBase.hiddenTagId,
+            name: '隐藏',
+            isDefault: true,
+            iconName: _DatabaseServiceBase.hiddenTagIconName,
+          );
+        }
+        return existing;
+      }
+
+      // 如果不存在，创建隐藏标签（系统标签，使用锁图标）
+      if (kIsWeb) {
+        final hiddenTag = NoteCategory(
+          id: _DatabaseServiceBase.hiddenTagId,
+          name: '隐藏', // UI层会根据语言显示本地化名称
+          isDefault: true, // 系统标签，不可删除/编辑
+          iconName: _DatabaseServiceBase.hiddenTagIconName, // 使用 emoji 小锁
+        );
+        _categoryStore.add(hiddenTag);
+        _categoriesController.add(_categoryStore);
+        notifyListeners();
+        return hiddenTag;
+      }
+
+      final db = await safeDatabase;
+      final categoryMap = {
+        'id': _DatabaseServiceBase.hiddenTagId,
+        'name': '隐藏',
+        'is_default': 1, // 系统标签
+        'icon_name': _DatabaseServiceBase.hiddenTagIconName, // emoji 小锁
+        'last_modified': DateTime.now().toUtc().toIso8601String(),
+      };
+
+      await db.insert(
+        'categories',
+        categoryMap,
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+      await updateCategoriesStreamForParts();
+      notifyListeners();
+
+      return NoteCategory(
+        id: _DatabaseServiceBase.hiddenTagId,
+        name: '隐藏',
+        isDefault: true,
+        iconName: _DatabaseServiceBase.hiddenTagIconName,
+      );
+    } catch (e) {
+      logDebug('获取或创建隐藏标签错误: $e');
+      return null;
+    }
+  }
+
+  /// 更新旧版隐藏标签为新格式（系统标签+锁图标）
+  Future<void> _updateHiddenTagFormat() async {
+    try {
+      if (kIsWeb) {
+        final index = _categoryStore.indexWhere(
+          (c) => c.id == _DatabaseServiceBase.hiddenTagId,
+        );
+        if (index >= 0) {
+          _categoryStore[index] = NoteCategory(
+            id: _DatabaseServiceBase.hiddenTagId,
+            name: '隐藏',
+            isDefault: true,
+            iconName: _DatabaseServiceBase.hiddenTagIconName,
+          );
+          _categoriesController.add(_categoryStore);
+          notifyListeners();
+        }
+        return;
+      }
+
+      final db = await safeDatabase;
+      await db.update(
+        'categories',
+        {
+          'is_default': 1,
+          'icon_name': _DatabaseServiceBase.hiddenTagIconName,
+          'last_modified': DateTime.now().toUtc().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [_DatabaseServiceBase.hiddenTagId],
+      );
+      await updateCategoriesStreamForParts();
+      notifyListeners();
+    } catch (e) {
+      logDebug('更新隐藏标签格式错误: $e');
+    }
+  }
+
+  /// 检查标签是否是隐藏标签
+  @override
+  bool isHiddenTag(String tagId) {
+    return tagId == _DatabaseServiceBase.hiddenTagId;
+  }
+
+  /// 删除隐藏标签（当关闭隐藏笔记功能时）
+  @override
+  Future<void> removeHiddenTag() async {
+    try {
+      if (kIsWeb) {
+        _categoryStore
+            .removeWhere((c) => c.id == _DatabaseServiceBase.hiddenTagId);
+        _categoriesController.add(_categoryStore);
+        notifyListeners();
+        return;
+      }
+
+      final db = await safeDatabase;
+      // 先删除所有笔记与隐藏标签的关联
+      await db.delete(
+        'quote_tags',
+        where: 'tag_id = ?',
+        whereArgs: [_DatabaseServiceBase.hiddenTagId],
+      );
+      // 再删除隐藏标签本身
+      await db.delete(
+        'categories',
+        where: 'id = ?',
+        whereArgs: [_DatabaseServiceBase.hiddenTagId],
+      );
+      await updateCategoriesStreamForParts();
+      notifyListeners();
+    } catch (e) {
+      logDebug('删除隐藏标签错误: $e');
+    }
+  }
+
+  /// 检查笔记是否被隐藏（是否带有隐藏标签）
+  @override
+  Future<bool> isQuoteHidden(String quoteId) async {
+    try {
+      if (kIsWeb) {
+        final quote = _memoryStore.where((q) => q.id == quoteId);
+        if (quote.isNotEmpty) {
+          return quote.first.tagIds.contains(_DatabaseServiceBase.hiddenTagId);
+        }
+        return false;
+      }
+
+      final db = database;
+      final result = await db.query(
+        'quote_tags',
+        where: 'quote_id = ? AND tag_id = ?',
+        whereArgs: [quoteId, _DatabaseServiceBase.hiddenTagId],
+        limit: 1,
+      );
+      return result.isNotEmpty;
+    } catch (e) {
+      logDebug('检查笔记是否隐藏错误: $e');
+      return false;
+    }
+  }
+
+  /// 获取所有隐藏笔记的ID列表
+  @override
+  Future<List<String>> getHiddenQuoteIds() async {
+    try {
+      if (kIsWeb) {
+        return _memoryStore
+            .where(
+              (q) =>
+                  !q.isDeleted &&
+                  q.tagIds.contains(_DatabaseServiceBase.hiddenTagId),
+            )
+            .map((q) => q.id ?? '')
+            .where((id) => id.isNotEmpty)
+            .toList();
+      }
+
+      final db = database;
+      final result = await db.rawQuery(
+        '''
+        SELECT qt.quote_id
+        FROM quote_tags qt
+        INNER JOIN quotes q ON qt.quote_id = q.id
+        WHERE qt.tag_id = ?
+          AND (q.is_deleted = 0 OR q.is_deleted IS NULL)
+        ''',
+        [_DatabaseServiceBase.hiddenTagId],
+      );
+      return result.map((row) => row['quote_id'] as String).toList();
+    } catch (e) {
+      logDebug('获取隐藏笔记ID列表错误: $e');
+      return [];
+    }
+  }
+}

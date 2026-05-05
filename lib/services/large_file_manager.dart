@@ -377,7 +377,9 @@ class LargeFileManager {
               if (await targetFile.exists()) {
                 await targetFile.delete();
               }
-            } catch (_) {}
+            } catch (e) {
+              logDebug('[LargeFileManager] cleanup cancelled file failed: $e');
+            }
             throw const CancelledException();
           }
 
@@ -448,7 +450,9 @@ class LargeFileManager {
         if (await targetFile.exists()) {
           await targetFile.delete();
         }
-      } catch (_) {}
+      } catch (e) {
+        logDebug('[LargeFileManager] cleanup incomplete file failed: $e');
+      }
 
       if (e is CancelledException) {
         logDebug('文件复制已取消: $source -> $target');

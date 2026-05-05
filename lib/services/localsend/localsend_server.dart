@@ -134,25 +134,7 @@ class LocalSendServer {
         source: 'LocalSend',
       );
 
-      // Add CORS headers
-      request.response.headers.add('Access-Control-Allow-Origin', '*');
-      request.response.headers.add(
-        'Access-Control-Allow-Methods',
-        'GET, POST, PUT, DELETE, OPTIONS',
-      );
-      request.response.headers.add(
-        'Access-Control-Allow-Headers',
-        'Content-Type, Authorization',
-      );
       request.response.headers.add('Connection', 'keep-alive');
-
-      // Handle preflight requests
-      if (request.method == 'OPTIONS') {
-        request.response.statusCode = 200;
-        await request.response.close();
-        logDebug('req_options', source: 'LocalSend');
-        return;
-      }
 
       final path = request.uri.path;
       final query = request.uri.queryParameters;
@@ -211,7 +193,9 @@ class LocalSendServer {
           Map<String, dynamic> req = {};
           try {
             req = jsonDecode(bodyString) as Map<String, dynamic>;
-          } catch (_) {}
+          } catch (e) {
+            logDebug('[LocalSendServer] JSON decode failed: $e');
+          }
           final senderFp = req['fingerprint'] as String?;
           final senderAlias = req['alias'] as String? ?? '对方';
           bool approved = true;
@@ -220,10 +204,17 @@ class LocalSendServer {
             final tempId = 'intent_${DateTime.now().millisecondsSinceEpoch}';
             try {
               _onReceiveSessionCreated!(tempId, 0, senderAlias);
-            } catch (_) {}
+            } catch (e) {
+              logDebug(
+                '[LocalSendServer] onReceiveSessionCreated callback failed: $e',
+              );
+            }
             try {
               approved = await _onApprovalNeeded!(tempId, 0, senderAlias);
-            } catch (_) {
+            } catch (e) {
+              logDebug(
+                '[LocalSendServer] onApprovalNeeded callback failed: $e',
+              );
               approved = false;
             }
           }

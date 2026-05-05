@@ -139,6 +139,9 @@ class SmartPushSettings {
   /// 推送时间段列表
   final List<PushTimeSlot> pushTimeSlots;
 
+  /// 自定义频率允许推送的星期（1=Monday, 7=Sunday）
+  final Set<int> selectedWeekdays;
+
   /// 是否显示高级选项
   final bool showAdvancedOptions;
 
@@ -171,6 +174,7 @@ class SmartPushSettings {
     this.pushTimeSlots = const [
       PushTimeSlot(hour: 8, minute: 0, label: '早晨灵感'),
     ],
+    this.selectedWeekdays = const {1, 2, 3, 4, 5},
     this.showAdvancedOptions = false,
     this.dailyQuotePushEnabled = false,
     this.dailyQuotePushTime =
@@ -236,6 +240,11 @@ class SmartPushSettings {
               ?.map((e) => PushTimeSlot.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [const PushTimeSlot(hour: 8, minute: 0)],
+      selectedWeekdays: (json['selectedWeekdays'] as List<dynamic>?)
+              ?.map((e) => int.tryParse(e.toString()) ?? 1)
+              .where((weekday) => weekday >= 1 && weekday <= 7)
+              .toSet() ??
+          {1, 2, 3, 4, 5},
       showAdvancedOptions: json['showAdvancedOptions'] as bool? ?? false,
       dailyQuotePushEnabled: json['dailyQuotePushEnabled'] as bool? ?? false,
       dailyQuotePushTime: json['dailyQuotePushTime'] != null
@@ -261,6 +270,7 @@ class SmartPushSettings {
       'filterTagIds': filterTagIds,
       'filterWeatherTypes': filterWeatherTypes.map((e) => e.name).toList(),
       'pushTimeSlots': pushTimeSlots.map((e) => e.toJson()).toList(),
+      'selectedWeekdays': selectedWeekdays.toList()..sort(),
       'showAdvancedOptions': showAdvancedOptions,
       'dailyQuotePushEnabled': dailyQuotePushEnabled,
       'dailyQuotePushTime': dailyQuotePushTime.toJson(),
@@ -277,6 +287,7 @@ class SmartPushSettings {
     List<String>? filterTagIds,
     Set<WeatherFilterType>? filterWeatherTypes,
     List<PushTimeSlot>? pushTimeSlots,
+    Set<int>? selectedWeekdays,
     bool? showAdvancedOptions,
     bool? dailyQuotePushEnabled,
     PushTimeSlot? dailyQuotePushTime,
@@ -291,6 +302,7 @@ class SmartPushSettings {
       filterTagIds: filterTagIds ?? this.filterTagIds,
       filterWeatherTypes: filterWeatherTypes ?? this.filterWeatherTypes,
       pushTimeSlots: pushTimeSlots ?? this.pushTimeSlots,
+      selectedWeekdays: selectedWeekdays ?? this.selectedWeekdays,
       showAdvancedOptions: showAdvancedOptions ?? this.showAdvancedOptions,
       dailyQuotePushEnabled:
           dailyQuotePushEnabled ?? this.dailyQuotePushEnabled,
@@ -319,8 +331,12 @@ class SmartPushSettings {
 
   /// 检查今天是否应该推送（基于频率设置）
   bool shouldPushToday() {
-    final now = DateTime.now();
-    final weekday = now.weekday; // 1=Monday, 7=Sunday
+    return shouldPushOnDate(DateTime.now());
+  }
+
+  /// 检查指定日期是否应该推送（基于频率设置）
+  bool shouldPushOnDate(DateTime date) {
+    final weekday = date.weekday; // 1=Monday, 7=Sunday
 
     switch (frequency) {
       case PushFrequency.daily:
@@ -330,8 +346,22 @@ class SmartPushSettings {
       case PushFrequency.weekends:
         return weekday == 6 || weekday == 7;
       case PushFrequency.custom:
-        return true; // 自定义模式由时间槽控制
+        return selectedWeekdays.contains(weekday);
     }
+  }
+
+  /// 从指定日期开始，找到下一个允许推送的日期。
+  DateTime nextPushDateFrom(DateTime date) {
+    var candidate = DateTime(date.year, date.month, date.day);
+
+    for (int i = 0; i < 14; i++) {
+      if (shouldPushOnDate(candidate)) {
+        return candidate;
+      }
+      candidate = candidate.add(const Duration(days: 1));
+    }
+
+    return DateTime(date.year, date.month, date.day);
   }
 
   @override
@@ -346,6 +376,7 @@ class SmartPushSettings {
           filterTagIds == other.filterTagIds &&
           filterWeatherTypes == other.filterWeatherTypes &&
           pushTimeSlots == other.pushTimeSlots &&
+          selectedWeekdays == other.selectedWeekdays &&
           showAdvancedOptions == other.showAdvancedOptions &&
           dailyQuotePushEnabled == other.dailyQuotePushEnabled &&
           dailyQuotePushTime == other.dailyQuotePushTime;
@@ -359,6 +390,7 @@ class SmartPushSettings {
       filterTagIds.hashCode ^
       filterWeatherTypes.hashCode ^
       pushTimeSlots.hashCode ^
+      selectedWeekdays.hashCode ^
       showAdvancedOptions.hashCode ^
       dailyQuotePushEnabled.hashCode ^
       dailyQuotePushTime.hashCode;
@@ -367,11 +399,4 @@ class SmartPushSettings {
   String toString() {
     return 'SmartPushSettings(enabled: $enabled, mode: $pushMode, frequency: $frequency)';
   }
-}
-
-// 保留旧枚举以兼容现有代码（可在后续版本移除）
-@Deprecated('Use PushMode instead')
-enum PushContentType {
-  dailyQuote,
-  pastNotes,
 }

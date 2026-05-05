@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/settings_service.dart';
-import '../services/ai_service.dart';
 import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/multi_ai_settings.dart';
@@ -95,7 +94,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
       },
       {
         'name': l10n.openapiCompatible,
-        'apiUrl': 'http://your-openapi-server/v1/chat/completions',
+        'apiUrl': 'https://your-openapi-server/v1/chat/completions',
         'model': '',
       },
     ];
@@ -107,8 +106,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
     if (_currentProvider != null) {
       final apiKeyManager = APIKeyManager();
       logDebug('Loading API key for provider: ${_currentProvider!.id}');
-      final apiKey =
-          await apiKeyManager.getProviderApiKey(_currentProvider!.id);
+      final apiKey = await apiKeyManager.getProviderApiKey(
+        _currentProvider!.id,
+      );
       if (mounted) {
         setState(() {
           _apiKeyController.text = apiKey;
@@ -118,8 +118,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
   }
 
   void _loadMultiSettings() {
-    final settingsService =
-        Provider.of<SettingsService>(context, listen: false);
+    final settingsService = Provider.of<SettingsService>(
+      context,
+      listen: false,
+    );
     _multiSettings = settingsService.multiAISettings;
     _currentProvider = _multiSettings.currentProvider;
     _updateApiKeyStatus();
@@ -139,11 +141,13 @@ class _AISettingsPageState extends State<AISettingsPage> {
     final l10n = AppLocalizations.of(context);
     if (_currentProvider != null) {
       final apiKeyManager = APIKeyManager();
-      final hasValidKey =
-          await apiKeyManager.hasValidProviderApiKey(_currentProvider!.id);
+      final hasValidKey = await apiKeyManager.hasValidProviderApiKey(
+        _currentProvider!.id,
+      );
       if (hasValidKey) {
-        final secureApiKey =
-            await apiKeyManager.getProviderApiKey(_currentProvider!.id);
+        final secureApiKey = await apiKeyManager.getProviderApiKey(
+          _currentProvider!.id,
+        );
         _apiKeyStatus = l10n.apiKeyValid(secureApiKey.length);
       } else {
         _apiKeyStatus = l10n.apiKeyInvalid;
@@ -159,8 +163,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
     setState(() => _isCheckingApiKey = true);
 
     try {
-      final settingsService =
-          Provider.of<SettingsService>(context, listen: false);
+      final settingsService = Provider.of<SettingsService>(
+        context,
+        listen: false,
+      );
       final multiSettings = settingsService.multiAISettings;
       String statusMessage;
 
@@ -172,8 +178,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
           statusMessage = l10n.providerDisabled;
         } else {
           final apiKeyManager = APIKeyManager();
-          final hasValidKey =
-              await apiKeyManager.hasValidProviderApiKey(provider.id);
+          final hasValidKey = await apiKeyManager.hasValidProviderApiKey(
+            provider.id,
+          );
           statusMessage =
               hasValidKey ? l10n.apiKeyVerified : l10n.apiKeyInvalid;
         }
@@ -182,8 +189,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(l10n.apiKeyStatusCheck(statusMessage)),
-            duration: const Duration(seconds: 3)),
+          content: Text(l10n.apiKeyStatusCheck(statusMessage)),
+          duration: const Duration(seconds: 3),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -216,9 +224,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
           _loadApiKeyAsync();
 
           try {
-            _selectedPreset = _getAiPresets(l10n).firstWhere(
-              (p) => p['apiUrl'] == _apiUrlController.text,
-            )['name'];
+            _selectedPreset = _getAiPresets(
+              l10n,
+            ).firstWhere((p) => p['apiUrl'] == _apiUrlController.text)['name'];
           } catch (_) {
             _selectedPreset = null;
           }
@@ -233,17 +241,21 @@ class _AISettingsPageState extends State<AISettingsPage> {
         }
       });
     } catch (e) {
-      logError(l10n.loadAiSettingsError(e.toString()),
-          error: e, source: 'AISettingsPage._loadSettings');
+      logError(
+        l10n.loadAiSettingsError(e.toString()),
+        error: e,
+        source: 'AISettingsPage._loadSettings',
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.loadAiSettingsErrorUser),
           backgroundColor: Colors.red,
           action: SnackBarAction(
-              label: l10n.retry,
-              textColor: Colors.white,
-              onPressed: () => _loadSettings()),
+            label: l10n.retry,
+            textColor: Colors.white,
+            onPressed: () => _loadSettings(),
+          ),
         ),
       );
     }
@@ -254,13 +266,17 @@ class _AISettingsPageState extends State<AISettingsPage> {
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(l10n.fixFormErrors), backgroundColor: Colors.red),
+          content: Text(l10n.fixFormErrors),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
 
-    final settingsService =
-        Provider.of<SettingsService>(context, listen: false);
+    final settingsService = Provider.of<SettingsService>(
+      context,
+      listen: false,
+    );
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     int maxTokens = 32000;
 
@@ -274,15 +290,18 @@ class _AISettingsPageState extends State<AISettingsPage> {
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
         SnackBar(
-            content: Text(l10n.presetCreated), backgroundColor: Colors.green),
+          content: Text(l10n.presetCreated),
+          backgroundColor: Colors.green,
+        ),
       );
       FocusScope.of(context).unfocus();
     } catch (e) {
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
         SnackBar(
-            content: Text(l10n.saveSettingsError(e.toString())),
-            backgroundColor: Colors.red),
+          content: Text(l10n.saveSettingsError(e.toString())),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -301,7 +320,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
         providerName = l10n.customConfigHost(uri.host);
       } else {
         providerName = l10n.customConfigTimestamp(
-            DateTime.now().millisecondsSinceEpoch.toString());
+          DateTime.now().millisecondsSinceEpoch.toString(),
+        );
       }
     }
 
@@ -318,9 +338,13 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
     final apiKeyManager = APIKeyManager();
     await ApiKeyDebugger.debugApiKeySave(
-        newProvider.id, _apiKeyController.text);
+      newProvider.id,
+      _apiKeyController.text,
+    );
     await apiKeyManager.saveProviderApiKey(
-        newProvider.id, _apiKeyController.text);
+      newProvider.id,
+      _apiKeyController.text,
+    );
 
     final updatedProviders = [..._multiSettings.providers, newProvider];
     final updatedMultiSettings = _multiSettings.copyWith(
@@ -349,7 +373,18 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   Future<void> _testConnection() async {
     final l10n = AppLocalizations.of(context);
-    await _saveSettings();
+
+    // 如果已有当前 provider，直接测试它，不需要先保存/创建新的
+    // 如果没有当前 provider，提示用户先保存配置
+    if (_currentProvider == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.noAiProviderSelected),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     if (!mounted) return;
     final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -370,34 +405,35 @@ class _AISettingsPageState extends State<AISettingsPage> {
         ),
       );
 
-      if (_currentProvider != null) {
-        await _testProvider(_currentProvider!);
-      } else {
-        final aiService = Provider.of<AIService>(context, listen: false);
-        await aiService.testConnection();
-      }
+      await _testProvider(_currentProvider!);
 
       if (!mounted) return;
       navigator.pop();
       scaffoldMessenger.showSnackBar(
         SnackBar(
-            content: Text(l10n.connectionTestSuccess),
-            backgroundColor: Colors.green),
+          content: Text(l10n.connectionTestSuccess),
+          backgroundColor: Colors.green,
+        ),
       );
     } catch (e) {
       if (!mounted) return;
       navigator.pop();
       scaffoldMessenger.showSnackBar(
         SnackBar(
-            content: Text(l10n.connectionTestFailed(e.toString())),
-            backgroundColor: Colors.red),
+          content: Text(l10n.connectionTestFailed(e.toString())),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
 
   Future<void> _testProvider(AIProviderSettings provider) async {
     final l10n = AppLocalizations.of(context);
-    if (provider.apiKey.isEmpty) {
+
+    // 从安全存储加载 API Key，而不是检查 provider.apiKey（始终为空）
+    final apiKeyManager = APIKeyManager();
+    final hasValidKey = await apiKeyManager.hasValidProviderApiKey(provider.id);
+    if (!hasValidKey) {
       throw Exception(l10n.apiKeyRequired(provider.name));
     }
 
@@ -428,12 +464,17 @@ class _AISettingsPageState extends State<AISettingsPage> {
           setState(() => _testResults[provider.id] = l10n.responseFormatError);
         }
       } else {
-        setState(() => _testResults[provider.id] =
-            l10n.connectionFailed(response.statusCode ?? 0));
+        setState(
+          () => _testResults[provider.id] = l10n.connectionFailed(
+            response.statusCode ?? 0,
+          ),
+        );
       }
     } catch (e) {
-      setState(() =>
-          _testResults[provider.id] = l10n.connectionTestFailed(e.toString()));
+      setState(
+        () =>
+            _testResults[provider.id] = l10n.connectionTestFailed(e.toString()),
+      );
       rethrow;
     } finally {
       setState(() => _testingStatus[provider.id] = false);
@@ -447,35 +488,47 @@ class _AISettingsPageState extends State<AISettingsPage> {
       _currentProvider = provider;
     });
 
-    final settingsService =
-        Provider.of<SettingsService>(context, listen: false);
+    final settingsService = Provider.of<SettingsService>(
+      context,
+      listen: false,
+    );
     await settingsService.saveMultiAISettings(_multiSettings);
 
-    if (provider.apiKey.isNotEmpty) {
-      final apiKeyManager = APIKeyManager();
-      await apiKeyManager.saveProviderApiKey(provider.id, provider.apiKey);
-    }
+    // 从安全存储加载 API Key 填充输入框
+    final apiKeyManager = APIKeyManager();
+    final storedApiKey = await apiKeyManager.getProviderApiKey(provider.id);
 
+    if (!mounted) return;
     setState(() {
       _apiUrlController.text = provider.apiUrl;
-      _apiKeyController.text = provider.apiKey;
+      _apiKeyController.text = storedApiKey;
       _modelController.text = provider.model;
       _maxTokensController.text = provider.maxTokens.toString();
       _hostOverrideController.text = provider.hostOverride ?? '';
+
+      try {
+        _selectedPreset = _getAiPresets(
+          l10n,
+        ).firstWhere((p) => p['apiUrl'] == provider.apiUrl)['name'];
+      } catch (_) {
+        _selectedPreset = null;
+      }
     });
 
     await _updateApiKeyStatusAsync();
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.switchedTo(provider.name))),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.switchedTo(provider.name))));
   }
 
   Future<void> _renameProvider(AIProviderSettings provider) async {
     final l10n = AppLocalizations.of(context);
-    final settingsService =
-        Provider.of<SettingsService>(context, listen: false);
+    final settingsService = Provider.of<SettingsService>(
+      context,
+      listen: false,
+    );
     final nameController = TextEditingController(text: provider.name);
 
     final result = await showDialog<String>(
@@ -485,17 +538,20 @@ class _AISettingsPageState extends State<AISettingsPage> {
         content: TextField(
           controller: nameController,
           decoration: InputDecoration(
-              labelText: l10n.presetName, border: const OutlineInputBorder()),
+            labelText: l10n.presetName,
+            border: const OutlineInputBorder(),
+          ),
           autofocus: true,
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.cancel)),
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.cancel),
+          ),
           TextButton(
-              onPressed: () =>
-                  Navigator.pop(context, nameController.text.trim()),
-              child: Text(l10n.confirm)),
+            onPressed: () => Navigator.pop(context, nameController.text.trim()),
+            child: Text(l10n.confirm),
+          ),
         ],
       ),
     );
@@ -505,8 +561,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
         return p.id == provider.id ? p.copyWith(name: result) : p;
       }).toList();
 
-      final updatedMultiSettings =
-          _multiSettings.copyWith(providers: updatedProviders);
+      final updatedMultiSettings = _multiSettings.copyWith(
+        providers: updatedProviders,
+      );
       await settingsService.saveMultiAISettings(updatedMultiSettings);
 
       if (!mounted) return;
@@ -516,16 +573,19 @@ class _AISettingsPageState extends State<AISettingsPage> {
           _currentProvider = updatedMultiSettings.currentProvider;
         }
       });
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l10n.presetRenamed(result))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.presetRenamed(result))));
     }
     nameController.dispose();
   }
 
   Future<void> _deleteProvider(AIProviderSettings provider) async {
     final l10n = AppLocalizations.of(context);
-    final settingsService =
-        Provider.of<SettingsService>(context, listen: false);
+    final settingsService = Provider.of<SettingsService>(
+      context,
+      listen: false,
+    );
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -534,8 +594,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
         content: Text(l10n.deletePresetConfirm(provider.name)),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(l10n.cancel)),
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -546,6 +607,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
     );
 
     if (confirmed == true) {
+      // 同时删除安全存储中的 API Key
+      final apiKeyManager = APIKeyManager();
+      await apiKeyManager.removeProviderApiKey(provider.id);
+
       final updatedProviders =
           _multiSettings.providers.where((p) => p.id != provider.id).toList();
       String? newCurrentProviderId = _multiSettings.currentProviderId;
@@ -562,28 +627,39 @@ class _AISettingsPageState extends State<AISettingsPage> {
       await settingsService.saveMultiAISettings(updatedMultiSettings);
 
       if (!mounted) return;
-      setState(() {
-        _multiSettings = updatedMultiSettings;
-        _currentProvider = updatedMultiSettings.currentProvider;
 
-        if (provider.id == _currentProvider?.id || _currentProvider == null) {
-          if (_currentProvider != null) {
-            _apiUrlController.text = _currentProvider!.apiUrl;
-            _apiKeyController.text = _currentProvider!.apiKey;
-            _modelController.text = _currentProvider!.model;
-            _maxTokensController.text = _currentProvider!.maxTokens.toString();
-            _hostOverrideController.text = _currentProvider!.hostOverride ?? '';
-          } else {
-            _apiUrlController.clear();
-            _apiKeyController.clear();
-            _modelController.clear();
-            _maxTokensController.text = '32000';
-            _hostOverrideController.clear();
-          }
-        }
-      });
+      _multiSettings = updatedMultiSettings;
+      _currentProvider = updatedMultiSettings.currentProvider;
+
+      if (_currentProvider != null) {
+        // 从安全存储加载新当前 provider 的 API Key
+        final storedApiKey = await apiKeyManager.getProviderApiKey(
+          _currentProvider!.id,
+        );
+        if (!mounted) return;
+        setState(() {
+          _apiUrlController.text = _currentProvider!.apiUrl;
+          _apiKeyController.text = storedApiKey;
+          _modelController.text = _currentProvider!.model;
+          _maxTokensController.text = _currentProvider!.maxTokens.toString();
+          _hostOverrideController.text = _currentProvider!.hostOverride ?? '';
+        });
+      } else {
+        setState(() {
+          _apiUrlController.clear();
+          _apiKeyController.clear();
+          _modelController.clear();
+          _maxTokensController.text = '32000';
+          _hostOverrideController.clear();
+        });
+      }
+
+      await _updateApiKeyStatusAsync();
+
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.presetDeleted(provider.name))));
+        SnackBar(content: Text(l10n.presetDeleted(provider.name))),
+      );
     }
   }
 
@@ -614,16 +690,19 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 delegate: SliverChildListDelegate([
                   if (_currentProvider != null) ...[
                     _buildSectionTitle(
-                        context,
-                        l10n
-                            .currentProvider(_currentProvider!.name)
-                            .split(':')[0]),
+                      context,
+                      l10n
+                          .currentProvider(_currentProvider!.name)
+                          .split(':')[0],
+                    ),
                     const SizedBox(height: 8),
                     _buildActiveProviderCard(context),
                     const SizedBox(height: 24),
                   ],
-                  _buildSectionTitle(context,
-                      l10n.savedPresets(_multiSettings.providers.length)),
+                  _buildSectionTitle(
+                    context,
+                    l10n.savedPresets(_multiSettings.providers.length),
+                  ),
                   const SizedBox(height: 8),
                   _buildSavedProvidersList(context),
                   const SizedBox(height: 24),
@@ -631,8 +710,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
                   const SizedBox(height: 8),
                   _buildConfigForm(context),
                   const SizedBox(height: 24),
-                  _buildSectionTitle(context,
-                      l10n.aiEnhancedGeneration), // Use generic title for features
+                  _buildSectionTitle(
+                    context,
+                    l10n.aiEnhancedGeneration,
+                  ), // Use generic title for features
                   const SizedBox(height: 8),
                   _buildFeatureToggles(context),
                   const SizedBox(height: 32),
@@ -678,8 +759,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 Expanded(
                   child: Text(
                     _currentProvider!.name,
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 IconButton(
@@ -688,18 +770,25 @@ class _AISettingsPageState extends State<AISettingsPage> {
                       ? const SizedBox(
                           width: 16,
                           height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2))
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.refresh),
                   tooltip: l10n.checkApiKeyStatus,
                 ),
               ],
             ),
             const Divider(),
-            _buildInfoRow(context, Icons.link,
-                l10n.apiUrlLabel(_currentProvider!.apiUrl)),
+            _buildInfoRow(
+              context,
+              Icons.link,
+              l10n.apiUrlLabel(_currentProvider!.apiUrl),
+            ),
             const SizedBox(height: 4),
-            _buildInfoRow(context, Icons.psychology,
-                l10n.modelLabel(_currentProvider!.model)),
+            _buildInfoRow(
+              context,
+              Icons.psychology,
+              l10n.modelLabel(_currentProvider!.model),
+            ),
             const SizedBox(height: 4),
             _buildInfoRow(
               context,
@@ -716,18 +805,26 @@ class _AISettingsPageState extends State<AISettingsPage> {
     );
   }
 
-  Widget _buildInfoRow(BuildContext context, IconData icon, String text,
-      {Color? color}) {
+  Widget _buildInfoRow(
+    BuildContext context,
+    IconData icon,
+    String text, {
+    Color? color,
+  }) {
     return Row(
       children: [
-        Icon(icon,
-            size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        Icon(
+          icon,
+          size: 16,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             text,
-            style:
-                Theme.of(context).textTheme.bodyMedium?.copyWith(color: color),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: color),
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -781,13 +878,36 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 ),
                 if (isTesting)
                   const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2))
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 else
                   IconButton(
                     icon: const Icon(Icons.network_check, size: 20),
-                    onPressed: () => _testProvider(provider),
+                    onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      try {
+                        await _testProvider(provider);
+                        if (!mounted) return;
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.connectionTestSuccess),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } catch (e) {
+                        if (!mounted) return;
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              l10n.connectionTestFailed(e.toString()),
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
                     tooltip: l10n.testConnectionButton,
                   ),
               ],
@@ -826,8 +946,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 if (value == null) return;
                 setState(() {
                   _selectedPreset = value;
-                  final preset =
-                      _getAiPresets(l10n).firstWhere((p) => p['name'] == value);
+                  final preset = _getAiPresets(
+                    l10n,
+                  ).firstWhere((p) => p['name'] == value);
                   _apiUrlController.text = preset['apiUrl']!;
                   _modelController.text = preset['model']!;
                 });
@@ -865,11 +986,14 @@ class _AISettingsPageState extends State<AISettingsPage> {
                     border: const OutlineInputBorder(),
                     prefixIcon: const Icon(Icons.key),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscureApiKey
-                          ? Icons.visibility_off
-                          : Icons.visibility),
+                      icon: Icon(
+                        _obscureApiKey
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
                       onPressed: () =>
                           setState(() => _obscureApiKey = !_obscureApiKey),
+                      tooltip: _obscureApiKey ? l10n.show : l10n.hide,
                     ),
                   ),
                   obscureText: _obscureApiKey,
@@ -877,6 +1001,12 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _modelController,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return AppLocalizations.of(context).fieldRequired;
+                    }
+                    return null;
+                  },
                   decoration: InputDecoration(
                     labelText: l10n.modelNameField,
                     border: const OutlineInputBorder(),
@@ -892,8 +1022,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
         // Advanced (formerly Model & Advanced)
         Card(
           child: ExpansionTile(
-            title: Text(l10n
-                .hostOverrideField), // Using Host Override label as title or keep general "Advanced"
+            title: Text(
+              l10n.hostOverrideField,
+            ), // Using Host Override label as title or keep general "Advanced"
             leading: const Icon(Icons.settings),
             childrenPadding: const EdgeInsets.all(16),
             children: [

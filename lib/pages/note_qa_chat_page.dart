@@ -11,6 +11,7 @@ import '../gen_l10n/app_localizations.dart';
 import '../models/quote_model.dart';
 import '../services/ai_service.dart';
 import '../utils/app_logger.dart';
+import '../utils/string_utils.dart';
 
 /// 现代化的问笔记聊天界面页面
 class NoteQAChatPage extends StatefulWidget {
@@ -31,6 +32,7 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
   late AIService _aiService;
   StreamSubscription<String>? _streamSubscription;
   bool _isResponding = false;
+  String? _currentLoadingId;
 
   @override
   void didChangeDependencies() {
@@ -71,7 +73,8 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
   }
 
   String _getQuotePreview() {
-    final content = widget.quote.content;
+    final content =
+        StringUtils.removeObjectReplacementChar(widget.quote.content);
     if (content.length <= 100) {
       return content;
     }
@@ -98,11 +101,12 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
     setState(() {
       _isResponding = true;
     });
-    // 创建一个临时的加载消息
+    // 创建一个临时的加载消息，使用唯一 ID
+    _currentLoadingId = const Uuid().v4();
     final loadingMessage = TextMessage(
       authorId: _assistant.id,
       createdAt: DateTime.now(),
-      id: 'loading',
+      id: _currentLoadingId!,
       text: l10n.thinkingInProgress,
     );
     _chatController.insertMessage(loadingMessage);
@@ -119,13 +123,14 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
           setState(() {
             // 替换 loading 消息内容
             final messages = _chatController.messages;
-            final index = messages.indexWhere((msg) => msg.id == 'loading');
+            final index =
+                messages.indexWhere((msg) => msg.id == _currentLoadingId);
             if (index != -1) {
               final loadingMsg = messages[index];
               final updatedMsg = TextMessage(
                 authorId: _assistant.id,
                 createdAt: DateTime.now(),
-                id: 'loading',
+                id: _currentLoadingId!,
                 text: fullResponse,
               );
               _chatController.updateMessage(loadingMsg, updatedMsg);
@@ -136,13 +141,14 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
           // 完成回复，生成最终消息
           setState(() {
             final messages = _chatController.messages;
-            final index = messages.indexWhere((msg) => msg.id == 'loading');
+            final index =
+                messages.indexWhere((msg) => msg.id == _currentLoadingId);
             if (index != -1) {
               final loadingMsg = messages[index];
               final finalMsg = TextMessage(
                 authorId: _assistant.id,
                 createdAt: DateTime.now(),
-                id: 'loading',
+                id: const Uuid().v4(),
                 text: fullResponse.isNotEmpty
                     ? fullResponse
                     : l10n.aiMisunderstoodQuestion,
@@ -156,13 +162,14 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
           AppLogger.e('AI回答失败', error: error);
           setState(() {
             final messages = _chatController.messages;
-            final index = messages.indexWhere((msg) => msg.id == 'loading');
+            final index =
+                messages.indexWhere((msg) => msg.id == _currentLoadingId);
             if (index != -1) {
               final loadingMsg = messages[index];
               final errorMsg = TextMessage(
                 authorId: _assistant.id,
                 createdAt: DateTime.now(),
-                id: 'loading',
+                id: const Uuid().v4(),
                 text: l10n.aiResponseError(error.toString()),
               );
               _chatController.updateMessage(loadingMsg, errorMsg);
@@ -175,13 +182,13 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
       AppLogger.e('发送问题失败', error: e);
       setState(() {
         final messages = _chatController.messages;
-        final index = messages.indexWhere((msg) => msg.id == 'loading');
+        final index = messages.indexWhere((msg) => msg.id == _currentLoadingId);
         if (index != -1) {
           final loadingMsg = messages[index];
           final errorMsg = TextMessage(
             authorId: _assistant.id,
             createdAt: DateTime.now(),
-            id: 'loading',
+            id: const Uuid().v4(),
             text: l10n.aiResponseError(e.toString()),
           );
           _chatController.updateMessage(loadingMsg, errorMsg);
@@ -250,7 +257,7 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
                   style: Theme.of(context).textTheme.labelMedium),
               const SizedBox(height: 4),
               Text(
-                widget.quote.content,
+                StringUtils.removeObjectReplacementChar(widget.quote.content),
                 maxLines: 10,
                 overflow: TextOverflow.ellipsis,
               ),

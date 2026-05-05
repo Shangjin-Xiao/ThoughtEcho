@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ai_settings.dart';
@@ -7,10 +8,14 @@ import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
 import '../models/local_ai_settings.dart'; // 新增 LocalAISettings 导入
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
+import '../utils/lww_utils.dart';
 
 import '../services/mmkv_service.dart';
+import 'excerpt_intent_service.dart';
 
 class SettingsService extends ChangeNotifier {
+  static const ExcerptIntentService _excerptIntentService =
+      ExcerptIntentService();
   static const String _aiSettingsKey = 'ai_settings';
   static const String _multiAiSettingsKey = 'multi_ai_settings'; // 新增
   static const String _localAiSettingsKey = 'local_ai_settings'; // 新增本地AI设置
@@ -66,6 +71,112 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  int get trashRetentionDays => _appSettings.trashRetentionDays;
+  String? get trashRetentionLastModified =>
+      _appSettings.trashRetentionLastModified;
+
+  Future<void> setTrashRetentionDays(
+    int days, {
+    DateTime? modifiedAt,
+  }) async {
+    final normalizedDays = AppSettings.normalizeTrashRetentionDays(days);
+    final modified = (modifiedAt ?? DateTime.now()).toUtc().toIso8601String();
+    _appSettings = _appSettings.copyWith(
+      trashRetentionDays: normalizedDays,
+      trashRetentionLastModified: modified,
+    );
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  Future<bool> applyIncomingTrashSettings(
+    Map<String, dynamic>? incoming,
+  ) async {
+    if (incoming == null) {
+      return false;
+    }
+
+    if (!incoming.containsKey('retention_days')) {
+      return false;
+    }
+
+    final dynamic rawDays = incoming['retention_days'];
+    int? parsedDays;
+    if (rawDays is int) {
+      parsedDays = rawDays;
+    } else if (rawDays is num) {
+      if (rawDays != rawDays.toInt()) {
+        logWarning(
+          '忽略非整数的回收站保留期: $rawDays',
+          source: 'SettingsService',
+        );
+        return false;
+      }
+      parsedDays = rawDays.toInt();
+    } else if (rawDays is String) {
+      parsedDays = int.tryParse(rawDays);
+    }
+
+    if (parsedDays == null) {
+      return false;
+    }
+
+    if (!AppSettings.allowedTrashRetentionDays.contains(parsedDays)) {
+      logWarning(
+        '忽略非法的回收站保留期: $parsedDays',
+        source: 'SettingsService',
+      );
+      return false;
+    }
+
+    final incomingDays = AppSettings.normalizeTrashRetentionDays(parsedDays);
+    final incomingLastModified = incoming['last_modified']?.toString();
+    String? normalizedIncomingTimestamp;
+    if (incomingLastModified != null && incomingLastModified.isNotEmpty) {
+      if (!LWWUtils.isValidTimestamp(incomingLastModified)) {
+        logWarning(
+          '忽略无效的回收站保留期时间戳: $incomingLastModified',
+          source: 'SettingsService',
+        );
+        return false;
+      }
+      normalizedIncomingTimestamp =
+          LWWUtils.normalizeTimestamp(incomingLastModified);
+    } else {
+      // 输入无时间戳：只有本地也无时间戳时才接受（直接赋值），否则跳过
+      final localLastModified = _appSettings.trashRetentionLastModified;
+      final hasLocalTimestamp =
+          localLastModified != null && localLastModified.isNotEmpty;
+      if (hasLocalTimestamp) {
+        // 本地有时间戳，远端无时间戳 → 跳过导入
+        return false;
+      }
+      // 本地也无时间戳 → 直接接受输入值，不设置时间戳
+      _appSettings = _appSettings.copyWith(trashRetentionDays: incomingDays);
+      await _mmkv.setString(
+          _appSettingsKey, json.encode(_appSettings.toJson()));
+      notifyListeners();
+      return true;
+    }
+
+    final decision = LWWDecisionMaker.makeDecision(
+      localTimestamp: _appSettings.trashRetentionLastModified,
+      remoteTimestamp: normalizedIncomingTimestamp,
+    );
+
+    if (!decision.shouldUseRemote) {
+      return false;
+    }
+
+    _appSettings = _appSettings.copyWith(
+      trashRetentionDays: incomingDays,
+      trashRetentionLastModified: normalizedIncomingTimestamp,
+    );
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+    return true;
+  }
+
   // 折叠时优先显示加粗内容
   bool get prioritizeBoldContentInCollapse =>
       _appSettings.prioritizeBoldContentInCollapse;
@@ -89,6 +200,38 @@ class SettingsService extends ChangeNotifier {
   bool get useLocalQuotesOnly => _appSettings.useLocalQuotesOnly;
   Future<void> setUseLocalQuotesOnly(bool enabled) async {
     _appSettings = _appSettings.copyWith(useLocalQuotesOnly: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 每日一言 provider
+  String get dailyQuoteProvider => _appSettings.dailyQuoteProvider;
+  Future<void> setDailyQuoteProvider(String provider) async {
+    _appSettings = _appSettings.copyWith(dailyQuoteProvider: provider);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // API Ninjas 分类选择
+  List<String> get apiNinjasCategories => _appSettings.apiNinjasCategories;
+  Future<void> setApiNinjasCategories(List<String> categories) async {
+    _appSettings = _appSettings.copyWith(apiNinjasCategories: categories);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 是否显示笔记编辑时间
+  bool get showNoteEditTime => _appSettings.showNoteEditTime;
+  Future<void> setShowNoteEditTime(bool enabled) async {
+    _appSettings = _appSettings.copyWith(showNoteEditTime: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 无网/离线时的一言回退数据源
+  String get offlineQuoteSource => _appSettings.offlineQuoteSource;
+  Future<void> setOfflineQuoteSource(String source) async {
+    _appSettings = _appSettings.copyWith(offlineQuoteSource: source);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }
@@ -157,6 +300,15 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 是否启用从外部文本摘录到应用
+  bool get excerptIntentEnabled => _appSettings.excerptIntentEnabled;
+  Future<void> setExcerptIntentEnabled(bool enabled) async {
+    _appSettings = _appSettings.copyWith(excerptIntentEnabled: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    await _syncExcerptIntentEntryPoint();
+    notifyListeners();
+  }
+
   // 默认作者（自动填充）
   String? get defaultAuthor => _appSettings.defaultAuthor;
   Future<void> setDefaultAuthor(String? author) async {
@@ -185,6 +337,38 @@ class SettingsService extends ChangeNotifier {
   List<String> get defaultTagIds => _appSettings.defaultTagIds;
   Future<void> setDefaultTagIds(List<String> tagIds) async {
     _appSettings = _appSettings.copyWith(defaultTagIds: tagIds);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 一周年庆典动画是否已显示过
+  bool get anniversaryShown => _appSettings.anniversaryShown;
+  Future<void> setAnniversaryShown(bool shown) async {
+    _appSettings = _appSettings.copyWith(anniversaryShown: shown);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 一周年庆典动画是否启用（开发者模式控制）
+  bool get anniversaryAnimationEnabled =>
+      _appSettings.anniversaryAnimationEnabled;
+  Future<void> setAnniversaryAnimationEnabled(bool enabled) async {
+    _appSettings = _appSettings.copyWith(anniversaryAnimationEnabled: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  /// 重置一周年动画已显示标记（开发者模式使用）
+  Future<void> resetAnniversaryShown() async {
+    _appSettings = _appSettings.copyWith(anniversaryShown: false);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 跳过非全屏编辑器，直接进入全屏编辑器
+  bool get skipNonFullscreenEditor => _appSettings.skipNonFullscreenEditor;
+  Future<void> setSkipNonFullscreenEditor(bool enabled) async {
+    _appSettings = _appSettings.copyWith(skipNonFullscreenEditor: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }
@@ -262,8 +446,19 @@ class SettingsService extends ChangeNotifier {
     _loadThemeMode();
 
     await _secureLegacyApiKey();
+    await _syncExcerptIntentEntryPoint();
 
     notifyListeners();
+  }
+
+  Future<void> _syncExcerptIntentEntryPoint() async {
+    if (kIsWeb) {
+      return;
+    }
+
+    await _excerptIntentService.syncEntryPointEnabled(
+      _appSettings.excerptIntentEnabled,
+    );
   }
 
   // 加载AI设置（简化版，主要用于向后兼容）
@@ -325,6 +520,7 @@ class SettingsService extends ChangeNotifier {
     try {
       // 验证必要字段
       if (settings.hitokotoType.isEmpty) return false;
+      if (settings.dailyQuoteProvider.isEmpty) return false;
 
       // 验证默认起始页面值
       if (settings.defaultStartPage < 0 || settings.defaultStartPage > 2) {

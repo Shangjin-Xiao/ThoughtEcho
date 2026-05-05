@@ -1,5 +1,38 @@
 class AppSettings {
+  static const Set<int> allowedTrashRetentionDays = {7, 30, 90};
+  static const Set<String> _supportedDailyQuoteProviders = {
+    'hitokoto',
+    'zenquotes',
+    'api_ninjas',
+    'meigen',
+    'kadvice',
+  };
+  static const Set<String> _supportedApiNinjasCategories = {
+    'wisdom',
+    'philosophy',
+    'life',
+    'truth',
+    'inspirational',
+    'relationships',
+    'love',
+    'faith',
+    'humor',
+    'success',
+    'courage',
+    'happiness',
+    'art',
+    'writing',
+    'fear',
+    'nature',
+    'time',
+    'freedom',
+    'death',
+    'leadership',
+  };
+
   final String hitokotoType;
+  final String dailyQuoteProvider;
+  final List<String> apiNinjasCategories;
   final bool clipboardMonitoringEnabled; // 添加剪贴板监控设置
   final int defaultStartPage; // 添加默认启动页面设置，0=首页，1=记录页
   final bool hasCompletedOnboarding; // 添加是否完成引导页的标志
@@ -11,18 +44,28 @@ class AppSettings {
   final bool useLocalQuotesOnly; // 新增：仅使用本地笔记作为一言，不请求API
   final String? localeCode; // 新增：语言代码，null 表示跟随系统
   final bool showExactTime; // 新增：是否在笔记中显示精确时间（时:分）
+  final bool showNoteEditTime; // 新增：是否显示笔记编辑时间
   final bool enableHiddenNotes; // 新增：是否启用隐藏笔记功能
   final bool requireBiometricForHidden; // 新增：访问隐藏笔记是否需要生物识别验证
   final bool developerMode; // 新增：开发者模式
   final bool enableFirstOpenScrollPerfMonitor; // 新增：首次打开后首次滑动性能监测
   final bool autoAttachLocation; // 新增：添加笔记时自动勾选位置
   final bool autoAttachWeather; // 新增：添加笔记时自动勾选天气
+  final bool excerptIntentEnabled; // 新增：允许从外部文本摘录到应用
   final String? defaultAuthor; // 新增：默认作者（自动填充）
   final String? defaultSource; // 新增：默认出处（自动填充）
   final List<String> defaultTagIds; // 新增：默认标签 ID 列表（自动填充）
+  final bool anniversaryShown; // 一周年庆典动画是否已显示过
+  final bool anniversaryAnimationEnabled; // 一周年庆典动画是否启用（开发者模式控制）
+  final int trashRetentionDays; // 回收站保留天数（7/30/90）
+  final String? trashRetentionLastModified; // 回收站保留设置更新时间（UTC ISO）
+  final bool skipNonFullscreenEditor; // 新增：跳过非全屏编辑器，直接进入全屏编辑器
+  final String offlineQuoteSource;
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
+    this.dailyQuoteProvider = 'hitokoto',
+    this.apiNinjasCategories = const [],
     this.clipboardMonitoringEnabled = false, // 默认不启用剪贴板监控
     this.defaultStartPage = 0, // 默认启动显示首页
     this.hasCompletedOnboarding = false, // 默认未完成引导
@@ -34,20 +77,37 @@ class AppSettings {
     this.useLocalQuotesOnly = false, // 默认允许请求一言API
     this.localeCode, // 默认跟随系统
     this.showExactTime = false, // 默认不显示精确时间
+    this.showNoteEditTime = false, // 默认不显示笔记编辑时间
     this.enableHiddenNotes = false, // 默认不启用隐藏笔记功能
     this.requireBiometricForHidden = false, // 默认不需要生物识别验证
     this.developerMode = false, // 默认关闭开发者模式
     this.enableFirstOpenScrollPerfMonitor = false, // 默认关闭首次滑动性能监测
     this.autoAttachLocation = false, // 默认不自动勾选位置
     this.autoAttachWeather = false, // 默认不自动勾选天气
+    this.excerptIntentEnabled = true, // 默认启用外部摘录入口
     this.defaultAuthor, // 默认无自动填充作者
     this.defaultSource, // 默认无自动填充出处
     this.defaultTagIds = const [], // 默认无自动填充标签
-  });
+    this.anniversaryShown = false, // 默认未显示过
+    this.anniversaryAnimationEnabled = true, // 默认启用庆典动画
+    int? trashRetentionDays, // 回收站保留天数（7/30/90）
+    this.trashRetentionLastModified,
+    this.skipNonFullscreenEditor = false, // 默认不跳过非全屏编辑器
+    this.offlineQuoteSource = 'tagOnly', // 默认仅展示带每日一言标签的笔记
+  }) : trashRetentionDays = normalizeTrashRetentionDays(trashRetentionDays);
+
+  static int normalizeTrashRetentionDays(int? days) {
+    if (days == null) {
+      return 30;
+    }
+    return allowedTrashRetentionDays.contains(days) ? days : 30;
+  }
 
   Map<String, dynamic> toJson() {
     return {
       'hitokotoType': hitokotoType,
+      'dailyQuoteProvider': dailyQuoteProvider,
+      'apiNinjasCategories': apiNinjasCategories,
       'clipboardMonitoringEnabled': clipboardMonitoringEnabled,
       'defaultStartPage': defaultStartPage,
       'hasCompletedOnboarding': hasCompletedOnboarding,
@@ -59,21 +119,65 @@ class AppSettings {
       'useLocalQuotesOnly': useLocalQuotesOnly,
       'localeCode': localeCode,
       'showExactTime': showExactTime,
+      'showNoteEditTime': showNoteEditTime,
       'enableHiddenNotes': enableHiddenNotes,
       'requireBiometricForHidden': requireBiometricForHidden,
       'developerMode': developerMode,
       'enableFirstOpenScrollPerfMonitor': enableFirstOpenScrollPerfMonitor,
       'autoAttachLocation': autoAttachLocation,
       'autoAttachWeather': autoAttachWeather,
+      'excerptIntentEnabled': excerptIntentEnabled,
       'defaultAuthor': defaultAuthor,
       'defaultSource': defaultSource,
       'defaultTagIds': defaultTagIds,
+      'anniversaryShown': anniversaryShown,
+      'anniversaryAnimationEnabled': anniversaryAnimationEnabled,
+      'trashRetentionDays': trashRetentionDays,
+      'trashRetentionLastModified': trashRetentionLastModified,
+      'skipNonFullscreenEditor': skipNonFullscreenEditor,
+      'offlineQuoteSource': offlineQuoteSource,
     };
   }
 
+  static List<String> _readStringList(dynamic value) {
+    if (value is! List) {
+      return const [];
+    }
+
+    return value.whereType<String>().toList();
+  }
+
+  static String _readString(dynamic value, String fallback) {
+    return value is String ? value : fallback;
+  }
+
   factory AppSettings.fromJson(Map<String, dynamic> map) {
+    final dynamic rawRetentionDays = map['trashRetentionDays'];
+    int? parsedRetentionDays;
+    if (rawRetentionDays is int) {
+      parsedRetentionDays = rawRetentionDays;
+    } else if (rawRetentionDays is num) {
+      parsedRetentionDays = rawRetentionDays == rawRetentionDays.roundToDouble()
+          ? rawRetentionDays.toInt()
+          : null;
+    } else if (rawRetentionDays is String) {
+      parsedRetentionDays = int.tryParse(rawRetentionDays);
+    }
+
+    final normalizedProvider =
+        _readString(map['dailyQuoteProvider'], 'hitokoto');
+    final normalizedApiNinjasCategories = _readStringList(
+      map['apiNinjasCategories'],
+    ).where(_supportedApiNinjasCategories.contains).toList(growable: false);
+
     return AppSettings(
-      hitokotoType: map['hitokotoType'] ?? 'a,b,c,d,e,f,g,h,i,j,k',
+      hitokotoType: _readString(map['hitokotoType'], 'a,b,c,d,e,f,g,h,i,j,k'),
+      dailyQuoteProvider: _supportedDailyQuoteProviders.contains(
+        normalizedProvider,
+      )
+          ? normalizedProvider
+          : 'hitokoto',
+      apiNinjasCategories: normalizedApiNinjasCategories,
       clipboardMonitoringEnabled: map['clipboardMonitoringEnabled'] ?? false,
       defaultStartPage: map['defaultStartPage'] ?? 0,
       hasCompletedOnboarding: map['hasCompletedOnboarding'] ?? false,
@@ -86,6 +190,7 @@ class AppSettings {
       useLocalQuotesOnly: map['useLocalQuotesOnly'] ?? false,
       localeCode: map['localeCode'] as String?,
       showExactTime: map['showExactTime'] ?? false,
+      showNoteEditTime: map['showNoteEditTime'] ?? false,
       enableHiddenNotes: map['enableHiddenNotes'] ?? false,
       requireBiometricForHidden: map['requireBiometricForHidden'] ?? false,
       developerMode: map['developerMode'] ?? false,
@@ -93,15 +198,23 @@ class AppSettings {
           map['enableFirstOpenScrollPerfMonitor'] ?? false,
       autoAttachLocation: map['autoAttachLocation'] ?? false,
       autoAttachWeather: map['autoAttachWeather'] ?? false,
+      excerptIntentEnabled: map['excerptIntentEnabled'] ?? true,
       defaultAuthor: map['defaultAuthor'] as String?,
       defaultSource: map['defaultSource'] as String?,
-      defaultTagIds:
-          (map['defaultTagIds'] as List<dynamic>?)?.cast<String>() ?? const [],
+      defaultTagIds: _readStringList(map['defaultTagIds']),
+      anniversaryShown: map['anniversaryShown'] ?? false,
+      anniversaryAnimationEnabled: map['anniversaryAnimationEnabled'] ?? true,
+      trashRetentionDays: parsedRetentionDays,
+      trashRetentionLastModified: map['trashRetentionLastModified'] as String?,
+      skipNonFullscreenEditor: map['skipNonFullscreenEditor'] ?? false,
+      offlineQuoteSource: _readString(map['offlineQuoteSource'], 'tagOnly'),
     );
   }
 
   factory AppSettings.defaultSettings() => AppSettings(
         hitokotoType: 'a,b,c,d,e,f,g,h,i,j,k',
+        dailyQuoteProvider: 'hitokoto',
+        apiNinjasCategories: const [],
         clipboardMonitoringEnabled: false,
         defaultStartPage: 0,
         hasCompletedOnboarding: false,
@@ -113,20 +226,30 @@ class AppSettings {
         useLocalQuotesOnly: false,
         localeCode: null, // 默认跟随系统
         showExactTime: false, // 默认不显示精确时间
+        showNoteEditTime: false, // 默认不显示笔记编辑时间
         enableHiddenNotes: false, // 默认不启用隐藏笔记功能
         requireBiometricForHidden: false, // 默认不需要生物识别验证
         developerMode: false, // 默认关闭开发者模式
         enableFirstOpenScrollPerfMonitor: false,
         autoAttachLocation: false, // 默认不自动勾选位置
         autoAttachWeather: false, // 默认不自动勾选天气
+        excerptIntentEnabled: true,
         defaultAuthor: null,
         defaultSource: null,
         defaultTagIds: const [],
+        anniversaryShown: false,
+        anniversaryAnimationEnabled: true,
+        trashRetentionDays: 30,
+        trashRetentionLastModified: null,
+        skipNonFullscreenEditor: false, // 默认不跳过非全屏编辑器
+        offlineQuoteSource: 'tagOnly',
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
   AppSettings copyWith({
     String? hitokotoType,
+    String? dailyQuoteProvider,
+    List<String>? apiNinjasCategories,
     bool? clipboardMonitoringEnabled,
     int? defaultStartPage,
     bool? hasCompletedOnboarding,
@@ -139,20 +262,31 @@ class AppSettings {
     String? localeCode,
     bool clearLocale = false, // 新增：是否清除 localeCode（设置为跟随系统）
     bool? showExactTime,
+    bool? showNoteEditTime,
     bool? enableHiddenNotes,
     bool? requireBiometricForHidden,
     bool? developerMode,
     bool? enableFirstOpenScrollPerfMonitor,
     bool? autoAttachLocation,
     bool? autoAttachWeather,
+    bool? excerptIntentEnabled,
     String? defaultAuthor,
     bool clearDefaultAuthor = false,
     String? defaultSource,
     bool clearDefaultSource = false,
     List<String>? defaultTagIds,
+    bool? anniversaryShown,
+    bool? anniversaryAnimationEnabled,
+    int? trashRetentionDays,
+    String? trashRetentionLastModified,
+    bool clearTrashRetentionLastModified = false,
+    bool? skipNonFullscreenEditor,
+    String? offlineQuoteSource,
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
+      dailyQuoteProvider: dailyQuoteProvider ?? this.dailyQuoteProvider,
+      apiNinjasCategories: apiNinjasCategories ?? this.apiNinjasCategories,
       clipboardMonitoringEnabled:
           clipboardMonitoringEnabled ?? this.clipboardMonitoringEnabled,
       defaultStartPage: defaultStartPage ?? this.defaultStartPage,
@@ -168,6 +302,7 @@ class AppSettings {
       useLocalQuotesOnly: useLocalQuotesOnly ?? this.useLocalQuotesOnly,
       localeCode: clearLocale ? null : (localeCode ?? this.localeCode),
       showExactTime: showExactTime ?? this.showExactTime,
+      showNoteEditTime: showNoteEditTime ?? this.showNoteEditTime,
       enableHiddenNotes: enableHiddenNotes ?? this.enableHiddenNotes,
       requireBiometricForHidden:
           requireBiometricForHidden ?? this.requireBiometricForHidden,
@@ -176,11 +311,24 @@ class AppSettings {
           this.enableFirstOpenScrollPerfMonitor,
       autoAttachLocation: autoAttachLocation ?? this.autoAttachLocation,
       autoAttachWeather: autoAttachWeather ?? this.autoAttachWeather,
+      excerptIntentEnabled: excerptIntentEnabled ?? this.excerptIntentEnabled,
       defaultAuthor:
           clearDefaultAuthor ? null : (defaultAuthor ?? this.defaultAuthor),
       defaultSource:
           clearDefaultSource ? null : (defaultSource ?? this.defaultSource),
       defaultTagIds: defaultTagIds ?? this.defaultTagIds,
+      anniversaryShown: anniversaryShown ?? this.anniversaryShown,
+      anniversaryAnimationEnabled:
+          anniversaryAnimationEnabled ?? this.anniversaryAnimationEnabled,
+      trashRetentionDays: normalizeTrashRetentionDays(
+        trashRetentionDays ?? this.trashRetentionDays,
+      ),
+      trashRetentionLastModified: clearTrashRetentionLastModified
+          ? null
+          : (trashRetentionLastModified ?? this.trashRetentionLastModified),
+      skipNonFullscreenEditor:
+          skipNonFullscreenEditor ?? this.skipNonFullscreenEditor,
+      offlineQuoteSource: offlineQuoteSource ?? this.offlineQuoteSource,
     );
   }
 }

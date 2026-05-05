@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:thoughtecho/services/log_service.dart' as old_log;
 import 'package:thoughtecho/services/unified_log_service.dart';
 

@@ -86,13 +86,13 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    theme.colorScheme.primaryContainer.withOpacity(0.3),
-                    theme.colorScheme.secondaryContainer.withOpacity(0.3),
+                    theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                    theme.colorScheme.secondaryContainer.withValues(alpha: 0.3),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                 border: Border.all(
-                  color: theme.colorScheme.primary.withOpacity(0.2),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.2),
                   width: 1.5,
                 ),
               ),
@@ -104,7 +104,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withOpacity(0.1),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -142,7 +142,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                 side: BorderSide(
-                  color: theme.colorScheme.outline.withOpacity(0.2),
+                  color: theme.colorScheme.outline.withValues(alpha: 0.2),
                 ),
               ),
               child: Container(
@@ -152,7 +152,8 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            theme.colorScheme.primaryContainer.withOpacity(0.5),
+                            theme.colorScheme.primaryContainer
+                                .withValues(alpha: 0.5),
                             theme.colorScheme.surface,
                           ],
                         )
@@ -168,7 +169,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: localAISettings.enabled
-                          ? theme.colorScheme.primary.withOpacity(0.15)
+                          ? theme.colorScheme.primary.withValues(alpha: 0.15)
                           : theme.colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -447,7 +448,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: iconColor.withOpacity(0.15),
+                    color: iconColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -474,7 +475,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppTheme.cardRadius),
               side: BorderSide(
-                color: theme.colorScheme.outline.withOpacity(0.2),
+                color: theme.colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
             child: Column(
@@ -508,8 +509,9 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: value
-                  ? theme.colorScheme.primaryContainer.withOpacity(0.5)
-                  : theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
+                  : theme.colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -544,7 +546,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
             height: 1,
             indent: 72,
             endIndent: 16,
-            color: theme.colorScheme.outline.withOpacity(0.1),
+            color: theme.colorScheme.outline.withValues(alpha: 0.1),
           ),
       ],
     );

@@ -9,6 +9,7 @@ import '../models/generated_card.dart';
 import '../constants/ai_card_prompts.dart';
 import '../constants/card_templates.dart';
 import '../utils/app_logger.dart';
+import '../utils/string_utils.dart';
 import 'ai_service.dart';
 import 'settings_service.dart';
 import 'database_service.dart';
@@ -149,7 +150,7 @@ class AICardGenerationService {
       return GeneratedCard(
         id: const Uuid().v4(),
         noteId: note.id!,
-        originalContent: note.content,
+        originalContent: StringUtils.removeObjectReplacementChar(note.content),
         svgContent: cleanedSVG,
         type: CardType.knowledge,
         createdAt: DateTime.now(),
@@ -177,10 +178,11 @@ class AICardGenerationService {
     final cardType = _determineTemplateType(note,
         isRegeneration: isRegeneration, excludeType: excludeType);
     final languageCode = _currentLanguageCode;
+    final cleanContent = StringUtils.removeObjectReplacementChar(note.content);
     final fallbackSVG = CardTemplates.getTemplateByType(
       brandName: brandName,
       type: cardType,
-      content: note.content,
+      content: cleanContent,
       author: note.sourceAuthor,
       date: _formatDate(note.date, languageCode: languageCode),
       source: note.fullSource,
@@ -193,7 +195,7 @@ class AICardGenerationService {
     return GeneratedCard(
       id: const Uuid().v4(),
       noteId: note.id!,
-      originalContent: note.content,
+      originalContent: cleanContent,
       svgContent: fallbackSVG,
       type: cardType,
       createdAt: DateTime.now(),
@@ -836,6 +838,8 @@ class AICardGenerationService {
       {required String brandName,
       bool isRegeneration = false,
       String languageCode = 'zh'}) {
+    // 移除媒体占位符(U+FFFC)，避免发送给AI时产生干扰
+    final cleanContent = StringUtils.removeObjectReplacementChar(note.content);
     // 重新生成时完全随机，跳过内容匹配
     if (isRegeneration) {
       final random = DateTime.now().millisecondsSinceEpoch % 3;
@@ -843,7 +847,7 @@ class AICardGenerationService {
         case 0:
           return AICardPrompts.randomStylePosterPrompt(
             brandName: brandName,
-            content: note.content,
+            content: cleanContent,
             author: note.sourceAuthor,
             date: _formatDate(note.date, languageCode: languageCode),
             location: note.location,
@@ -855,7 +859,7 @@ class AICardGenerationService {
         case 1:
           return AICardPrompts.intelligentCardPrompt(
             brandName: brandName,
-            content: note.content,
+            content: cleanContent,
             author: note.sourceAuthor,
             date: _formatDate(note.date, languageCode: languageCode),
             location: note.location,
@@ -868,7 +872,7 @@ class AICardGenerationService {
         default:
           return AICardPrompts.contentAwareVisualPrompt(
             brandName: brandName,
-            content: note.content,
+            content: cleanContent,
             author: note.sourceAuthor,
             date: _formatDate(note.date, languageCode: languageCode),
             location: note.location,
@@ -881,7 +885,7 @@ class AICardGenerationService {
     }
 
     // 分析内容特征
-    final content = note.content.toLowerCase();
+    final content = cleanContent.toLowerCase();
     final hasAuthor =
         note.sourceAuthor != null && note.sourceAuthor!.isNotEmpty;
 
@@ -891,7 +895,7 @@ class AICardGenerationService {
         case 'creative':
           return AICardPrompts.randomStylePosterPrompt(
             brandName: brandName,
-            content: note.content,
+            content: cleanContent,
             author: note.sourceAuthor,
             date: _formatDate(note.date, languageCode: languageCode),
             location: note.location,
@@ -903,7 +907,7 @@ class AICardGenerationService {
         case 'intelligent':
           return AICardPrompts.intelligentCardPrompt(
             brandName: brandName,
-            content: note.content,
+            content: cleanContent,
             author: note.sourceAuthor,
             date: _formatDate(note.date, languageCode: languageCode),
             location: note.location,
@@ -915,7 +919,7 @@ class AICardGenerationService {
         case 'visual':
           return AICardPrompts.contentAwareVisualPrompt(
             brandName: brandName,
-            content: note.content,
+            content: cleanContent,
             author: note.sourceAuthor,
             date: _formatDate(note.date, languageCode: languageCode),
             location: note.location,
@@ -938,7 +942,7 @@ class AICardGenerationService {
       if (random < 30) {
         return AICardPrompts.intelligentCardPrompt(
           brandName: brandName,
-          content: note.content,
+          content: cleanContent,
           author: note.sourceAuthor,
           date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
@@ -950,7 +954,7 @@ class AICardGenerationService {
       } else {
         return AICardPrompts.randomStylePosterPrompt(
           brandName: brandName,
-          content: note.content,
+          content: cleanContent,
           author: note.sourceAuthor,
           date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
@@ -968,7 +972,7 @@ class AICardGenerationService {
       if (random < 40) {
         return AICardPrompts.contentAwareVisualPrompt(
           brandName: brandName,
-          content: note.content,
+          content: cleanContent,
           author: note.sourceAuthor,
           date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
@@ -980,7 +984,7 @@ class AICardGenerationService {
       } else if (random < 70) {
         return AICardPrompts.intelligentCardPrompt(
           brandName: brandName,
-          content: note.content,
+          content: cleanContent,
           author: note.sourceAuthor,
           date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
@@ -992,7 +996,7 @@ class AICardGenerationService {
       } else {
         return AICardPrompts.randomStylePosterPrompt(
           brandName: brandName,
-          content: note.content,
+          content: cleanContent,
           author: note.sourceAuthor,
           date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
@@ -1010,7 +1014,7 @@ class AICardGenerationService {
       if (random < 50) {
         return AICardPrompts.randomStylePosterPrompt(
           brandName: brandName,
-          content: note.content,
+          content: cleanContent,
           author: note.sourceAuthor,
           date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
@@ -1022,7 +1026,7 @@ class AICardGenerationService {
       } else {
         return AICardPrompts.contentAwareVisualPrompt(
           brandName: brandName,
-          content: note.content,
+          content: cleanContent,
           author: note.sourceAuthor,
           date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
@@ -1035,12 +1039,12 @@ class AICardGenerationService {
     }
 
     // 4. 根据内容长度和随机性选择
-    if (note.content.length > 100) {
+    if (cleanContent.length > 100) {
       // 长内容：40%随机海报，30%智能，30%视觉
       if (random < 40) {
         return AICardPrompts.randomStylePosterPrompt(
           brandName: brandName,
-          content: note.content,
+          content: cleanContent,
           author: note.sourceAuthor,
           date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
@@ -1052,7 +1056,7 @@ class AICardGenerationService {
       } else if (random < 70) {
         return AICardPrompts.intelligentCardPrompt(
           brandName: brandName,
-          content: note.content,
+          content: cleanContent,
           author: note.sourceAuthor,
           date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
@@ -1064,7 +1068,7 @@ class AICardGenerationService {
       } else {
         return AICardPrompts.contentAwareVisualPrompt(
           brandName: brandName,
-          content: note.content,
+          content: cleanContent,
           author: note.sourceAuthor,
           date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
@@ -1080,7 +1084,7 @@ class AICardGenerationService {
     if (random < 33) {
       return AICardPrompts.randomStylePosterPrompt(
         brandName: brandName,
-        content: note.content,
+        content: cleanContent,
         author: note.sourceAuthor,
         date: _formatDate(note.date, languageCode: languageCode),
         location: note.location,
@@ -1092,7 +1096,7 @@ class AICardGenerationService {
     } else if (random < 66) {
       return AICardPrompts.intelligentCardPrompt(
         brandName: brandName,
-        content: note.content,
+        content: cleanContent,
         author: note.sourceAuthor,
         date: _formatDate(note.date, languageCode: languageCode),
         location: note.location,
@@ -1104,7 +1108,7 @@ class AICardGenerationService {
     } else {
       return AICardPrompts.contentAwareVisualPrompt(
         brandName: brandName,
-        content: note.content,
+        content: cleanContent,
         author: note.sourceAuthor,
         date: _formatDate(note.date, languageCode: languageCode),
         location: note.location,

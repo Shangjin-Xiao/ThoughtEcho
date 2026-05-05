@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'dart:io';
+import 'package:thoughtecho/utils/platform_io_stub.dart'
+    if (dart.library.io) 'dart:io';
 
 // Flutter核心库
 import 'package:flutter/foundation.dart';
@@ -124,6 +125,15 @@ bool _isEmergencyMode = false;
 
 // 缓存早期捕获但无法立即记录的错误
 final List<Map<String, dynamic>> _deferredErrors = [];
+const int _maxDeferredErrors = 100; // 修复：设置最大容量防止无限增长
+
+/// 安全添加延迟错误（带容量限制）
+void _addDeferredError(Map<String, dynamic> error) {
+  if (_deferredErrors.length >= _maxDeferredErrors) {
+    _deferredErrors.removeAt(0);
+  }
+  _deferredErrors.add(error);
+}
 
 Future<void> main() async {
   // 立即设置日志级别为INFO，避免早期verbose日志输出
@@ -138,6 +148,11 @@ Future<void> main() async {
   await runZonedGuarded<Future<void>>(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+
+      if (kIsWeb) {
+        throw UnsupportedError(
+            'ThoughtEcho does not support the Web platform.');
+      }
 
       // 初始化后台任务组件
       if (!kIsWeb) {
@@ -155,7 +170,7 @@ Future<void> main() async {
       // 初始化日志系统
       AppLogger.initialize();
 
-      // 初始化全局异常处理器
+      // 初始化全局异常处理器（补充 isolate 捕获，并声明 platform channel 全局捕获限制）
       GlobalExceptionHandler.initialize();
 
       // 全局记录未捕获的异步错误 - 所有平台都启用，Windows平台简化处理
@@ -176,7 +191,7 @@ Future<void> main() async {
           );
           logError('堆栈: $stack', source: 'PlatformDispatcher');
         } // 捕获到错误后再记录到日志系统
-        _deferredErrors.add({
+        _addDeferredError({
           'message': '平台分发器错误',
           'error': error,
           'stackTrace':
@@ -217,7 +232,7 @@ Future<void> main() async {
             );
           } else {
             // 无法通过context获取LogService时，先保存到全局缓存
-            _deferredErrors.add({
+            _addDeferredError({
               'message': 'Flutter异常: ${details.exceptionAsString()}',
               'error': details.exception,
               'stackTrace': details.stack,
@@ -229,20 +244,17 @@ Future<void> main() async {
         }
       };
       try {
-        // 先初始化必要的平台特定的数据库配置
-        await initializeDatabasePlatform();
-
-        // 初始化轻量级且必须的服务
+        // 并行初始化无依赖关系的服务，加速启动
         final mmkvService = MMKVService();
-        await mmkvService.init();
-
-        // 初始化网络服务
-        await NetworkService.instance.init();
-
-        // 初始化设置服务
-        final settingsService = await SettingsService.create();
-        // 自动获取应用版本号
-        final packageInfo = await PackageInfo.fromPlatform();
+        late final SettingsService settingsService;
+        late final PackageInfo packageInfo;
+        await Future.wait([
+          initializeDatabasePlatform(),
+          mmkvService.init(),
+          NetworkService.instance.init(),
+          SettingsService.create().then((s) => settingsService = s),
+          PackageInfo.fromPlatform().then((p) => packageInfo = p),
+        ]);
         final String currentVersion = packageInfo.version;
         final String? lastVersion = settingsService.getAppVersion();
         final bool hasCompletedOnboarding =
@@ -325,7 +337,7 @@ Future<void> main() async {
                 value: mmkvService,
               ), // 使用 Provider.value 提供 MMKVService
               // 提供初始化状态的值
-              ChangeNotifierProvider<ValueNotifier<bool>>.value(
+              Provider<ValueNotifier<bool>>.value(
                 value: servicesInitialized,
               ),
               ValueListenableProvider<bool>.value(value: servicesInitialized),
@@ -378,8 +390,6 @@ Future<void> main() async {
             ],
             child: Builder(
               builder: (context) {
-                // 处理延迟的错误
-                GlobalExceptionHandler.processDeferredErrors();
                 return MyApp(
                   navigatorKey: navigatorKey,
                   isEmergencyMode: _isEmergencyMode,
@@ -403,7 +413,7 @@ Future<void> main() async {
             logDebug('开始预初始化位置服务...');
             // 设置语言代码，确保位置显示使用正确的语言
             locationService.currentLocaleCode = settingsService.localeCode;
-            weatherService.currentLocaleCode = settingsService.localeCode;
+            // weatherService 不需要 localeCode（天气 API 通过 l10n 本地化）
             await locationService.init();
             logDebug('位置服务预初始化完成');
 
@@ -616,9 +626,13 @@ Future<void> main() async {
                 );
                 // 延迟显示更新对话框，确保UI已完全初始化
                 Future.delayed(const Duration(seconds: 2), () {
-                  final context = navigatorKey.currentContext;
-                  if (context != null && context.mounted) {
-                    UpdateDialogHelper.showUpdateDialog(context, versionInfo);
+                  try {
+                    final context = navigatorKey.currentContext;
+                    if (context != null && context.mounted) {
+                      UpdateDialogHelper.showUpdateDialog(context, versionInfo);
+                    }
+                  } catch (e) {
+                    logWarning('显示更新对话框失败: $e', source: 'VersionCheck');
                   }
                 });
               },
@@ -635,13 +649,15 @@ Future<void> main() async {
             // 记录错误，不使用 BuildContext
             try {
               // 将错误信息添加到延迟处理队列
-              _deferredErrors.add({
+              _addDeferredError({
                 'message': '后台服务初始化失败',
                 'error': e,
                 'stackTrace': stackTrace,
                 'source': 'background_init',
               });
-            } catch (_) {}
+            } catch (e) {
+              debugPrint('[main] deferred error recording failed: $e');
+            }
           }
         });
       } catch (e, stackTrace) {
@@ -657,7 +673,11 @@ Future<void> main() async {
         _isEmergencyMode = true;
 
         runApp(
-          EmergencyApp(error: e.toString(), stackTrace: stackTrace.toString()),
+          EmergencyApp(
+            error:
+                kDebugMode ? e.toString() : 'Application initialization failed',
+            stackTrace: kDebugMode ? stackTrace.toString() : '',
+          ),
         );
       }
     },
@@ -673,13 +693,15 @@ Future<void> main() async {
       // 使用非 context 相关访问方式记录错误，避免 use_build_context_synchronously 警告
       try {
         // 将错误信息添加到延迟处理队列
-        _deferredErrors.add({
+        _addDeferredError({
           'message': '未捕获异常: $error',
           'error': error,
           'stackTrace': stackTrace,
           'source': 'runZonedGuarded',
         });
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[main] deferred error recording failed: $e');
+      }
     },
   );
 }
@@ -724,15 +746,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // 修复问题3：应用进入后台时清理缓存，释放内存
     if (state == AppLifecycleState.paused) {
       logDebug('应用进入后台，清理富文本缓存', source: 'AppLifecycle');
-      try {
-        // 使用 Future.microtask 避免在生命周期回调中执行耗时操作
-        Future.microtask(() {
+      // 使用 Future.microtask 避免在生命周期回调中执行耗时操作
+      Future.microtask(() {
+        try {
           QuoteContent.resetCaches();
           logDebug('富文本缓存已清理', source: 'AppLifecycle');
-        });
-      } catch (e) {
-        logError('清理缓存失败: $e', error: e, source: 'AppLifecycle');
-      }
+        } catch (e) {
+          logError('清理缓存失败: $e', error: e, source: 'AppLifecycle');
+        }
+      });
     }
   }
 
@@ -863,6 +885,7 @@ class EmergencyRecoveryPage extends StatelessWidget {
                     // 尝试重新初始化数据库
                     try {
                       final databaseService = DatabaseService();
+                      databaseService.reinitialize();
                       await databaseService.initializeNewDatabase();
 
                       if (!context.mounted) return;
@@ -925,10 +948,16 @@ class EmergencyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     return MaterialApp(
-      title: l10n.emergencyAppTitle,
+      title: 'ThoughtEcho Emergency',
       navigatorKey: navigatorKey, // 使用全局导航键
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
         return MediaQuery(
@@ -961,10 +990,26 @@ class EmergencyHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    // 防御性处理：国际化可能尚未初始化完成，使用 nullable 版本
+    final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations);
+    final emergencyModeTitle = l10n?.emergencyModeTitle ?? 'Emergency Mode';
+    final emergencyAppStartFailedTitle =
+        l10n?.emergencyAppStartFailedTitle ?? 'App Start Failed';
+    final emergencyAppStartFailedDesc = l10n?.emergencyAppStartFailedDesc ??
+        'The app failed to start properly. Please try the recovery options below.';
+    final emergencyErrorLabel = l10n?.emergencyErrorLabel ?? 'Error:';
+    final emergencyTechnicalDetails =
+        l10n?.emergencyTechnicalDetails ?? 'Technical Details';
+    final emergencyBackupAndRestoreButton =
+        l10n?.emergencyBackupAndRestoreButton ?? 'Backup & Restore';
+    final emergencyTryRestartAppButton =
+        l10n?.emergencyTryRestartAppButton ?? 'Try Restart';
+    final emergencyExitAppButton = l10n?.emergencyExitAppButton ?? 'Exit App';
+    final emergencyPersistentIssueHint = l10n?.emergencyPersistentIssueHint ??
+        'If the issue persists, please contact support.';
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.emergencyModeTitle),
+        title: Text(emergencyModeTitle),
         backgroundColor: Colors.red,
       ),
       body: SafeArea(
@@ -976,7 +1021,7 @@ class EmergencyHomePage extends StatelessWidget {
               const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
               Text(
-                l10n.emergencyAppStartFailedTitle,
+                emergencyAppStartFailedTitle,
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -985,7 +1030,7 @@ class EmergencyHomePage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                l10n.emergencyAppStartFailedDesc,
+                emergencyAppStartFailedDesc,
                 style: const TextStyle(fontSize: 16),
                 textAlign: TextAlign.center,
               ),
@@ -1000,7 +1045,7 @@ class EmergencyHomePage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      l10n.emergencyErrorLabel,
+                      emergencyErrorLabel,
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
@@ -1010,7 +1055,7 @@ class EmergencyHomePage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               ExpansionTile(
-                title: Text(l10n.emergencyTechnicalDetails),
+                title: Text(emergencyTechnicalDetails),
                 children: [
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -1040,7 +1085,7 @@ class EmergencyHomePage extends StatelessWidget {
                   );
                 },
                 icon: const Icon(Icons.backup),
-                label: Text(l10n.emergencyBackupAndRestoreButton),
+                label: Text(emergencyBackupAndRestoreButton),
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.orange,
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1053,7 +1098,7 @@ class EmergencyHomePage extends StatelessWidget {
                   restartApp();
                 },
                 icon: const Icon(Icons.refresh),
-                label: Text(l10n.emergencyTryRestartAppButton),
+                label: Text(emergencyTryRestartAppButton),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
@@ -1065,7 +1110,7 @@ class EmergencyHomePage extends StatelessWidget {
                   exit(0);
                 },
                 icon: const Icon(Icons.exit_to_app),
-                label: Text(l10n.emergencyExitAppButton),
+                label: Text(emergencyExitAppButton),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   foregroundColor: Colors.red,
@@ -1073,7 +1118,7 @@ class EmergencyHomePage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                l10n.emergencyPersistentIssueHint,
+                emergencyPersistentIssueHint,
                 style: const TextStyle(
                   fontSize: 14,
                   fontStyle: FontStyle.italic,
