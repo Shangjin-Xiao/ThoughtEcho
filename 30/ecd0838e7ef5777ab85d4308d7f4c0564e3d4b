@@ -1,0 +1,59 @@
+lib/pages/model_management_page.dart
+  171bf5e3099232b7 190-202,360-438,488-500,715,795-827,1137-1193,1315-1331,1333-1343,1380-1408
+lib/l10n/app_zh.arb
+  84660797c000a316 3734-3754
+lib/models/local_ai_model.dart
+  84660797c000a316 17,24-70,318-438,462-464,467-477,484-570
+pubspec.yaml
+  84660797c000a316 37
+lib/services/local_ai/speech_recognition_service.dart
+  5074527eb4dc2cb8 3-5,9,18,55-56,58-59,94-101,114-120,123-127,132-136,142-144,151,157-158,166-167,177,179-185,197-225,230-231,233-234,238,242,246-250,255-267,274-521,525-527,529-551,553-564,566,569-576,578,582,588-594,596,598,602,604-610,624-662,686,700,705-710,771-772,775,829,857,878,894-898,900-901,903-913,916-922,950,978-979,1029-1121,1211-1248,1250,1257,1261-1265,1271,1273-1283,1287-1292,1294-1302,1336,1338
+lib/l10n/app_en.arb
+  84660797c000a316 3734-3754
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "30ecd0838e7ef5777ab85d4308d7f4c0564e3d4b",
+  "prompts": {
+    "171bf5e3099232b7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_20a10f7f1ffeTKlQd6GSVFVanz",
+        "model": "opencode-go/deepseek-v4-flash"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 254,
+      "total_deletions": 6,
+      "accepted_lines": 253,
+      "overriden_lines": 0
+    },
+    "5074527eb4dc2cb8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_20a192b7dffeqUC6iZmUt49mDv",
+        "model": "opencode-go/deepseek-v4-flash"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 683,
+      "total_deletions": 183,
+      "accepted_lines": 669,
+      "overriden_lines": 0
+    },
+    "84660797c000a316": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_20a3c5584ffe4korPOE3eLsaoo",
+        "model": "opencode-go/glm-5.1"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 324,
+      "total_deletions": 5,
+      "accepted_lines": 313,
+      "overriden_lines": 0
+    }
+  }
+}
