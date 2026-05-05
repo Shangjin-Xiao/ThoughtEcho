@@ -235,6 +235,21 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     return WeatherService.getWeatherIconDataByKey(weatherKey);
   }
 
+  double _measureSingleLineTextWidth(
+    BuildContext context,
+    String text,
+    TextStyle style,
+  ) {
+    final textPainter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      maxLines: 1,
+      textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+
+    return textPainter.width;
+  }
+
   void _handleDoubleTap(bool isExpanded, Quote quote) {
     if (!_needsExpansion(quote)) {
       return;
@@ -293,6 +308,29 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             ),
           )
         : null;
+    final String? locationText = quote.hasLocation
+        ? ((quote.location != null &&
+                LocationService.formatLocationForDisplay(
+                  quote.location,
+                ).isNotEmpty)
+            ? LocationService.formatLocationForDisplay(quote.location)
+            : LocationService.formatCoordinates(
+                quote.latitude,
+                quote.longitude,
+              ))
+        : null;
+    final String? weatherText = quote.weather != null
+        ? '${WeatherService.getLocalizedWeatherDescription(l10n, quote.weather!)}${quote.temperature != null ? ' ${quote.temperature}' : ''}'
+        : null;
+    final TextStyle headerDateStyle = theme.textTheme.bodySmall?.copyWith(
+          color: secondaryTextColor,
+        ) ??
+        TextStyle(color: secondaryTextColor);
+    final TextStyle headerMetaStyle = theme.textTheme.bodySmall?.copyWith(
+          color: secondaryTextColor,
+          fontSize: 12,
+        ) ??
+        TextStyle(color: secondaryTextColor, fontSize: 12);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -361,71 +399,116 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                 4,
                 formattedEditedAt != null ? 2 : 8,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Wrap(
-                      spacing: 6,
-                      runSpacing: 2,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                          formattedDate,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: secondaryTextColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (quote.hasLocation || quote.weather != null)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (quote.hasLocation) ...[
-                          Icon(Icons.location_on, size: 14, color: iconColor),
-                          const SizedBox(width: 2),
-                          Text(
-                            // 优先显示文字位置，没有文字位置时显示坐标
-                            (quote.location != null &&
-                                    LocationService.formatLocationForDisplay(
-                                      quote.location,
-                                    ).isNotEmpty)
-                                ? LocationService.formatLocationForDisplay(
-                                    quote.location,
-                                  )
-                                : LocationService.formatCoordinates(
-                                    quote.latitude,
-                                    quote.longitude,
-                                  ),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: secondaryTextColor,
-                              fontSize: 12,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final bool hasLocationText = locationText != null;
+                  final bool hasWeatherText = weatherText != null;
+                  final bool hasMetaText = hasLocationText || hasWeatherText;
+                  final double dateWidth = _measureSingleLineTextWidth(
+                    context,
+                    formattedDate,
+                    headerDateStyle,
+                  );
+                  double metaWidth = 0;
+
+                  if (hasLocationText) {
+                    metaWidth += 14 + 2;
+                    metaWidth += _measureSingleLineTextWidth(
+                      context,
+                      locationText,
+                      headerMetaStyle,
+                    );
+                  }
+                  if (hasLocationText && hasWeatherText) {
+                    metaWidth += 8;
+                  }
+                  if (hasWeatherText) {
+                    metaWidth += 14 + 2;
+                    metaWidth += _measureSingleLineTextWidth(
+                      context,
+                      weatherText,
+                      headerMetaStyle,
+                    );
+                  }
+
+                  final double compactWidth =
+                      dateWidth + (hasMetaText ? 12 + metaWidth : 0);
+
+                  Widget buildDate() => Text(
+                        formattedDate,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: headerDateStyle,
+                      );
+
+                  Widget buildMeta() => Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (hasLocationText) ...[
+                            Icon(
+                              Icons.location_on,
+                              size: 14,
+                              color: iconColor,
                             ),
-                          ),
-                        ],
-                        if (quote.hasLocation && quote.weather != null)
-                          const SizedBox(width: 8),
-                        if (quote.weather != null) ...[
-                          Icon(
-                            _getWeatherIcon(quote.weather!),
-                            size: 14,
-                            color: iconColor,
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            '${WeatherService.getLocalizedWeatherDescription(AppLocalizations.of(context), quote.weather!)}${quote.temperature != null ? ' ${quote.temperature}' : ''}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: secondaryTextColor,
-                              fontSize: 12,
+                            const SizedBox(width: 2),
+                            Text(
+                              locationText,
+                              maxLines: 1,
+                              softWrap: false,
+                              style: headerMetaStyle,
                             ),
-                          ),
+                          ],
+                          if (hasLocationText && hasWeatherText)
+                            const SizedBox(width: 8),
+                          if (hasWeatherText) ...[
+                            Icon(
+                              _getWeatherIcon(quote.weather!),
+                              size: 14,
+                              color: iconColor,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              weatherText,
+                              maxLines: 1,
+                              softWrap: false,
+                              style: headerMetaStyle,
+                            ),
+                          ],
+                        ],
+                      );
+
+                  if (compactWidth <= constraints.maxWidth) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Flexible(child: buildDate()),
+                        if (hasMetaText) ...[
+                          const SizedBox(width: 12),
+                          buildMeta(),
                         ],
                       ],
+                    );
+                  }
+
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          buildDate(),
+                          if (hasMetaText) ...[
+                            const SizedBox(width: 12),
+                            buildMeta(),
+                          ],
+                        ],
+                      ),
                     ),
-                ],
+                  );
+                },
               ),
             ),
             if (formattedEditedAt != null)
