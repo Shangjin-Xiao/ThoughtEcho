@@ -118,15 +118,15 @@ class SpeechRecognitionService extends ChangeNotifier {
   AsrModelArchitecture? get currentArchitecture =>
       LocalAIModels.getAsrArchitecture(_selectedModelId);
 
-  /// 检查 ASR 模型是否可用
+  /// 检查 ASR 模型是否可用（当前选中模型或任意已下载的 ASR 模型）
   bool get isModelAvailable {
     // 优先检查当前选中的模型
     if (_modelManager.isModelDownloaded(_selectedModelId)) {
       return true;
     }
-    // 向后兼容：兜底检查 whisper 模型
-    return _modelManager.isModelDownloaded('whisper-tiny') ||
-        _modelManager.isModelDownloaded('whisper-base');
+    // 兜底：检查任意已下载的 ASR 模型
+    return LocalAIModels.byType(LocalAIModelType.asr)
+        .any((m) => _modelManager.isModelDownloaded(m.id));
   }
 
   /// 当前模型是否为流式模型
@@ -167,19 +167,29 @@ class SpeechRecognitionService extends ChangeNotifier {
 
   /// 准备 ASR 模型：解压（若需要）并初始化识别器。
   ///
+  /// [modelId] 指定要加载的模型 ID。若为 null，使用当前选中的模型。
   /// 该过程可能耗时较长，应由 UI 在用户显式触发后调用。
-  Future<void> prepareModel({String language = 'zh'}) async {
+  Future<void> prepareModel({String? modelId, String language = 'zh'}) async {
     // 确保模型管理器已初始化
     if (!_modelManager.isInitialized) {
       await _modelManager.initialize();
     }
 
-    // 如果选择的模型不可用则尝试回退
-    if (!isModelAvailable) {
-      if (_modelManager.isModelDownloaded('whisper-tiny')) {
-        _selectedModelId = 'whisper-tiny';
-      } else if (_modelManager.isModelDownloaded('whisper-base')) {
-        _selectedModelId = 'whisper-base';
+    // 如果指定了模型 ID，先切换到该模型
+    if (modelId != null && modelId != _selectedModelId) {
+      await switchModel(modelId);
+    }
+
+    // 如果选择的模型不可用则尝试回退到任意已下载的 ASR 模型
+    if (!_modelManager.isModelDownloaded(_selectedModelId)) {
+      final availableAsrModels = LocalAIModels.byType(LocalAIModelType.asr)
+          .where((m) => _modelManager.isModelDownloaded(m.id))
+          .toList();
+      if (availableAsrModels.isNotEmpty) {
+        _selectedModelId = availableAsrModels.first.id;
+        await _saveSelectedModelId();
+        logInfo('回退到可用 ASR 模型: $_selectedModelId',
+            source: 'SpeechRecognitionService');
       } else {
         throw Exception('asr_model_required');
       }

@@ -913,7 +913,8 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
         case LocalAIModelType.asr:
           await SpeechRecognitionService.instance
               .initialize(eagerLoadModel: false);
-          await SpeechRecognitionService.instance.prepareModel();
+          await SpeechRecognitionService.instance
+              .prepareModel(modelId: model.id);
           break;
         case LocalAIModelType.ocr:
           // await OCRService.instance.refreshModels();
