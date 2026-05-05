@@ -89,8 +89,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   // 标签搜索控制器
   final TextEditingController _tagSearchController = TextEditingController();
 
-  // 性能优化：延迟请求焦点，避免与 BottomSheet 动画竞争
+  // 性能优化：等 BottomSheet 入场动画进行到一定程度再请求焦点，避免首帧竞争导致卡顿
   final FocusNode _contentFocusNode = FocusNode();
+  Animation<double>? _routeAnimation;
+  bool _focusRequested = false;
 
   // 性能优化：缓存Provider引用，避免重复查找
   LocationService? _cachedLocationService;
@@ -300,6 +302,32 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     // 添加搜索防抖监听器
     _tagSearchController.addListener(_onSearchChanged);
 
+    // 性能优化：等 BottomSheet 入场动画进行到一定程度再请求焦点，避免首帧竞争导致卡顿
+    // 监听路由动画进度，动画进行到 70% 时开始弹键盘，让两个动画平滑重叠
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final route = ModalRoute.of(context);
+      if (route != null && route.animation != null) {
+        _routeAnimation = route.animation;
+        if (route.animation!.isCompleted) {
+          // 动画已完成（如无障碍关闭动画），直接请求焦点
+          _contentFocusNode.requestFocus();
+          _focusRequested = true;
+        } else if (route.animation!.value >= 0.7) {
+          // 动画已过 70%，直接请求焦点
+          _contentFocusNode.requestFocus();
+          _focusRequested = true;
+        } else {
+          // 监听动画进度，到 70% 时请求焦点
+          route.animation!.addListener(_onRouteAnimationProgress);
+        }
+      } else {
+        // 无法获取路由动画，直接请求焦点
+        _contentFocusNode.requestFocus();
+        _focusRequested = true;
+      }
+    });
+
     // 性能优化：延迟 Feature Guide 弹出，避免与键盘动画竞争
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -462,6 +490,22 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         ('add_note_tag_hidden', _tagGuideKey),
       ],
     );
+  }
+
+  /// BottomSheet 入场动画进度回调：动画进行到 70% 时请求焦点弹出键盘
+  /// 让键盘动画与 BottomSheet 尾段平滑重叠，避免两步式视觉断裂
+  void _onRouteAnimationProgress() {
+    if (_focusRequested) return;
+    final animation = _routeAnimation;
+    if (animation == null) {
+      _focusRequested = true;
+      return;
+    }
+    if (animation.value >= 0.7 || animation.isCompleted) {
+      _focusRequested = true;
+      animation.removeListener(_onRouteAnimationProgress);
+      _contentFocusNode.requestFocus();
+    }
   }
 
   // 搜索变化处理 - 使用防抖优化
@@ -1087,6 +1131,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   void dispose() {
     _searchDebounceTimer?.cancel();
     _dbChangeDebounceTimer?.cancel();
+    _routeAnimation?.removeListener(_onRouteAnimationProgress);
     _contentController.dispose();
     _authorController.dispose();
     _workController.dispose();
@@ -1646,7 +1691,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                       contentPadding: const EdgeInsets.fromLTRB(16, 16, 48, 16),
                     ),
                     maxLines: 3,
-                    autofocus: true, // 立即弹出键盘，其他重操作已延迟
+                    autofocus: false, // 延迟请求焦点，避免与 BottomSheet 动画竞争
                   ),
                   Positioned(
                     top: 0,
