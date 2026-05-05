@@ -14,11 +14,58 @@ enum LocalAIModelType {
   /// 嵌入模型 (Gecko)
   embedding,
 
-  /// 语音识别模型 (Whisper)
+  /// 语音识别模型 (Whisper/Paraformer/SenseVoice 等)
   asr,
 
   /// OCR 模型
   ocr,
+}
+
+/// ASR 模型架构枚举
+///
+/// 用于区分不同的语音识别模型类型，决定使用哪种 sherpa_onnx 配置类
+enum AsrModelArchitecture {
+  /// Whisper 离线模型 (OfflineWhisperModelConfig)
+  whisper,
+
+  /// Paraformer 离线模型 (OfflineParaformerModelConfig)
+  paraformer,
+
+  /// SenseVoice 离线模型 (OfflineSenseVoiceModelConfig)
+  senseVoice,
+
+  /// Zipformer2 CTC 流式模型 (OnlineZipformer2CtcModelConfig)
+  zipformer2Ctc,
+
+  /// Paraformer 流式模型 (OnlineParaformerModelConfig)
+  streamingParaformer,
+
+  /// Zipformer Transducer 流式模型 (OnlineTransducerModelConfig)
+  streamingZipformer,
+
+  /// Qwen3-ASR 离线模型 (OfflineQwen3AsrModelConfig)
+  qwen3Asr,
+
+  /// FunASR-Nano 离线模型 (OfflineFunAsrNanoModelConfig)
+  funAsrNano,
+}
+
+/// ASR 模型能力标志
+class AsrModelCapabilities {
+  /// 是否支持流式识别（实时边录边识别）
+  final bool isStreaming;
+
+  /// 是否支持离线识别（录完再识别）
+  final bool isOffline;
+
+  /// 支持的语言列表
+  final List<String> languages;
+
+  const AsrModelCapabilities({
+    required this.isStreaming,
+    required this.isOffline,
+    required this.languages,
+  });
 }
 
 /// 模型状态枚举
@@ -268,6 +315,127 @@ class LocalAIModels {
     isRequired: false,
   );
 
+  // ==================== ASR 轻量模型 ====================
+
+  /// Zipformer Small CTC 中文流式模型 - 最小流式模型
+  static const zipformerSmallCtcZh = LocalAIModelInfo(
+    id: 'zipformer-small-ctc-zh',
+    name: 'Zipformer Small CTC 中文 (流式)',
+    type: LocalAIModelType.asr,
+    description: '极轻量中文流式语音识别模型，仅25MB，RTF 0.038，适合实时语音输入场景。仅支持中文。',
+    sizeBytes: 21 * 1024 * 1024, // ~21MB (tar.bz2)
+    downloadUrl:
+        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-small-ctc-zh-int8-2025-04-01.tar.bz2',
+    fileName:
+        'sherpa-onnx-streaming-zipformer-small-ctc-zh-int8-2025-04-01.tar.bz2',
+    version: '1.0',
+    isRequired: false,
+  );
+
+  /// Paraformer Small 中文离线模型 - 轻量离线模型
+  static const paraformerZhSmall = LocalAIModelInfo(
+    id: 'paraformer-zh-small',
+    name: 'Paraformer Small 中文 (离线)',
+    type: LocalAIModelType.asr,
+    description: '轻量中文离线语音识别模型，仅79MB，支持中英双语及多种方言，CER约3-5%。',
+    sizeBytes: 76 * 1024 * 1024, // ~76MB (tar.bz2)
+    downloadUrl:
+        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-small-2024-03-09.tar.bz2',
+    fileName: 'sherpa-onnx-paraformer-zh-small-2024-03-09.tar.bz2',
+    version: '1.0',
+    isRequired: false,
+  );
+
+  // ==================== ASR 流式模型 ====================
+
+  /// Streaming Paraformer 中英双语流式模型
+  static const streamingParaformerZhEn = LocalAIModelInfo(
+    id: 'streaming-paraformer-zh-en',
+    name: 'Paraformer 流式中英 (流式)',
+    type: LocalAIModelType.asr,
+    description: '中英双语流式语音识别模型，支持实时边录边识别，RTF 0.15，含中英及多种方言。',
+    sizeBytes: 1023 * 1024 * 1024, // ~1GB (tar.bz2, 含fp32+int8)
+    downloadUrl:
+        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-paraformer-bilingual-zh-en.tar.bz2',
+    fileName: 'sherpa-onnx-streaming-paraformer-bilingual-zh-en.tar.bz2',
+    version: '1.0',
+    isRequired: false,
+  );
+
+  /// Streaming Zipformer 中文流式模型 (Transducer)
+  static const streamingZipformerZh = LocalAIModelInfo(
+    id: 'streaming-zipformer-zh',
+    name: 'Zipformer 中文 (流式)',
+    type: LocalAIModelType.asr,
+    description: '中文流式语音识别模型（Transducer架构），RTF 0.15，仅支持中文。',
+    sizeBytes: 130 * 1024 * 1024, // ~130MB (tar.bz2)
+    downloadUrl:
+        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-zh-int8-2025-06-30.tar.bz2',
+    fileName: 'sherpa-onnx-streaming-zipformer-zh-int8-2025-06-30.tar.bz2',
+    version: '1.0',
+    isRequired: false,
+  );
+
+  // ==================== ASR 高精度离线模型 ====================
+
+  /// SenseVoice 多语言离线模型
+  static const senseVoiceZhEnJaKoYue = LocalAIModelInfo(
+    id: 'sense-voice-zh-en-ja-ko-yue',
+    name: 'SenseVoice 多语言 (离线)',
+    type: LocalAIModelType.asr,
+    description: '多语言离线语音识别模型，支持中/英/日/韩/粤语，RTF 0.049，内置情感识别和音频事件检测。',
+    sizeBytes: 228 * 1024 * 1024, // ~228MB (int8 only tar.bz2)
+    downloadUrl:
+        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2',
+    fileName: 'sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2',
+    version: '1.0',
+    isRequired: false,
+  );
+
+  /// Paraformer 中文离线模型 (高精度)
+  static const paraformerZh = LocalAIModelInfo(
+    id: 'paraformer-zh',
+    name: 'Paraformer 中文高精度 (离线)',
+    type: LocalAIModelType.asr,
+    description: '中文离线语音识别高精度模型，CER 1.95%（AISHELL-1），支持中英双语及多种方言。',
+    sizeBytes: 973 * 1024 * 1024, // ~973MB (tar.bz2, 含fp32+int8)
+    downloadUrl:
+        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2',
+    fileName: 'sherpa-onnx-paraformer-zh-2024-03-09.tar.bz2',
+    version: '1.0',
+    isRequired: false,
+  );
+
+  // ==================== ASR 大模型 ====================
+
+  /// Qwen3-ASR 0.6B 离线模型
+  static const qwen3Asr = LocalAIModelInfo(
+    id: 'qwen3-asr-0.6b',
+    name: 'Qwen3-ASR 0.6B (离线)',
+    type: LocalAIModelType.asr,
+    description: '通义千问语音识别模型，支持30+语言（含20+中文方言），LLM架构，精度极高但体积大。',
+    sizeBytes: 939 * 1024 * 1024, // ~939MB (tar.bz2)
+    downloadUrl:
+        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2',
+    fileName: 'sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2',
+    version: '1.0',
+    isRequired: false,
+  );
+
+  /// FunASR-Nano 离线模型
+  static const funAsrNano = LocalAIModelInfo(
+    id: 'funasr-nano',
+    name: 'FunASR-Nano (离线)',
+    type: LocalAIModelType.asr,
+    description: 'FunASR Nano语音识别模型，支持7种中文方言+26种口音+日英，含歌词/说唱识别能力。体积大，推理较慢。',
+    sizeBytes: 948 * 1024 * 1024, // ~948MB (tar.bz2)
+    downloadUrl:
+        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-funasr-nano-int8-2025-12-30.tar.bz2',
+    fileName: 'sherpa-onnx-funasr-nano-int8-2025-12-30.tar.bz2',
+    version: '1.0',
+    isRequired: false,
+  );
+
   /// PaliGemma 视觉语言模型（推荐用于手写 OCR）
   /// 通过 flutter_gemma 管理和加载
   static const paliGemma3B = LocalAIModelInfo(
@@ -291,13 +459,113 @@ class LocalAIModels {
   static List<LocalAIModelInfo> get all => [
         gemma2b,
         gecko384,
+        // ASR 轻量模型
+        zipformerSmallCtcZh,
+        paraformerZhSmall,
         whisperTiny,
         whisperBase,
-        paliGemma3B, // flutter_gemma 支持
+        // ASR 流式模型
+        streamingParaformerZhEn,
+        streamingZipformerZh,
+        // ASR 高精度离线模型
+        senseVoiceZhEnJaKoYue,
+        paraformerZh,
+        // ASR 大模型
+        qwen3Asr,
+        funAsrNano,
+        // OCR 模型
+        paliGemma3B,
       ];
 
   /// 按类型获取模型
   static List<LocalAIModelInfo> byType(LocalAIModelType type) {
     return all.where((m) => m.type == type).toList();
+  }
+
+  /// ASR 模型 ID 到架构的映射
+  static const Map<String, AsrModelArchitecture> asrArchitectures = {
+    'whisper-tiny': AsrModelArchitecture.whisper,
+    'whisper-base': AsrModelArchitecture.whisper,
+    'zipformer-small-ctc-zh': AsrModelArchitecture.zipformer2Ctc,
+    'paraformer-zh-small': AsrModelArchitecture.paraformer,
+    'streaming-paraformer-zh-en': AsrModelArchitecture.streamingParaformer,
+    'streaming-zipformer-zh': AsrModelArchitecture.streamingZipformer,
+    'sense-voice-zh-en-ja-ko-yue': AsrModelArchitecture.senseVoice,
+    'paraformer-zh': AsrModelArchitecture.paraformer,
+    'qwen3-asr-0.6b': AsrModelArchitecture.qwen3Asr,
+    'funasr-nano': AsrModelArchitecture.funAsrNano,
+  };
+
+  /// 获取 ASR 模型的架构类型
+  static AsrModelArchitecture? getAsrArchitecture(String modelId) {
+    return asrArchitectures[modelId];
+  }
+
+  /// 判断 ASR 模型是否为流式模型
+  static bool isStreamingAsr(String modelId) {
+    final arch = getAsrArchitecture(modelId);
+    if (arch == null) return false;
+    return arch == AsrModelArchitecture.zipformer2Ctc ||
+        arch == AsrModelArchitecture.streamingParaformer ||
+        arch == AsrModelArchitecture.streamingZipformer;
+  }
+
+  /// ASR 模型能力映射
+  static const Map<String, AsrModelCapabilities> asrCapabilities = {
+    'whisper-tiny': AsrModelCapabilities(
+      isStreaming: false,
+      isOffline: true,
+      languages: ['zh', 'en', 'ja', 'ko', '多语言'],
+    ),
+    'whisper-base': AsrModelCapabilities(
+      isStreaming: false,
+      isOffline: true,
+      languages: ['zh', 'en', 'ja', 'ko', '多语言'],
+    ),
+    'zipformer-small-ctc-zh': AsrModelCapabilities(
+      isStreaming: true,
+      isOffline: false,
+      languages: ['zh'],
+    ),
+    'paraformer-zh-small': AsrModelCapabilities(
+      isStreaming: false,
+      isOffline: true,
+      languages: ['zh', 'en'],
+    ),
+    'streaming-paraformer-zh-en': AsrModelCapabilities(
+      isStreaming: true,
+      isOffline: false,
+      languages: ['zh', 'en'],
+    ),
+    'streaming-zipformer-zh': AsrModelCapabilities(
+      isStreaming: true,
+      isOffline: false,
+      languages: ['zh'],
+    ),
+    'sense-voice-zh-en-ja-ko-yue': AsrModelCapabilities(
+      isStreaming: false,
+      isOffline: true,
+      languages: ['zh', 'en', 'ja', 'ko', 'yue'],
+    ),
+    'paraformer-zh': AsrModelCapabilities(
+      isStreaming: false,
+      isOffline: true,
+      languages: ['zh', 'en'],
+    ),
+    'qwen3-asr-0.6b': AsrModelCapabilities(
+      isStreaming: false,
+      isOffline: true,
+      languages: ['zh', 'en', 'ja', 'ko', 'de', 'fr', 'es', '等30+语言'],
+    ),
+    'funasr-nano': AsrModelCapabilities(
+      isStreaming: false,
+      isOffline: true,
+      languages: ['zh', 'en', 'ja', '7种方言', '26种口音'],
+    ),
+  };
+
+  /// 获取 ASR 模型能力
+  static AsrModelCapabilities? getAsrCapabilities(String modelId) {
+    return asrCapabilities[modelId];
   }
 }

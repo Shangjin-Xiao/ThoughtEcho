@@ -3731,5 +3731,25 @@
   "modelTypeEmbedding": "Embedding Model",
   "modelTypeOCR": "Text Recognition",
   "modelImportOCR": "Select OCR model file",
-  "pleaseSwitchToOcrModel": "Please download OCR model first"
+  "pleaseSwitchToOcrModel": "Please download OCR model first",
+  "asrCategoryLightweight": "Lightweight",
+  "asrCategoryStreaming": "Streaming",
+  "asrCategoryHighAccuracy": "High-Accuracy Offline",
+  "asrCategoryLarge": "Large Models",
+  "asrSelectModel": "Select as Recognition Model",
+  "asrSelectModelHint": "Set as default speech recognition model",
+  "asrCurrentModel": "Current Recognition Model",
+  "asrSwitchModel": "Switch Recognition Model",
+  "asrSwitchModelSuccess": "Switched to {model}",
+  "@asrSwitchModelSuccess": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "modelStreaming": "Streaming",
+  "modelMultilingual": "Multilingual",
+  "modelDialectSupport": "Dialect Support",
+  "modelSmallest": "Smallest"
 }

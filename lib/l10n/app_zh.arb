@@ -3731,5 +3731,25 @@
   "modelTypeEmbedding": "嵌入模型",
   "modelTypeOCR": "文字识别",
   "modelImportOCR": "选择 OCR 模型文件",
-  "pleaseSwitchToOcrModel": "请先下载 OCR 模型"
+  "pleaseSwitchToOcrModel": "请先下载 OCR 模型",
+  "asrCategoryLightweight": "轻量模型",
+  "asrCategoryStreaming": "流式模型",
+  "asrCategoryHighAccuracy": "高精度离线模型",
+  "asrCategoryLarge": "大模型",
+  "asrSelectModel": "选择为识别模型",
+  "asrSelectModelHint": "设为语音识别默认模型",
+  "asrCurrentModel": "当前识别模型",
+  "asrSwitchModel": "切换识别模型",
+  "asrSwitchModelSuccess": "已切换为 {model}",
+  "@asrSwitchModelSuccess": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "modelStreaming": "流式",
+  "modelMultilingual": "多语言",
+  "modelDialectSupport": "方言支持",
+  "modelSmallest": "最小"
 }

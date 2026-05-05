@@ -187,10 +187,19 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
               // 按类型分组显示模型
               for (final entry in groupedModels.entries) ...[
                 _buildModelTypeHeader(context, l10n, theme, entry.key),
-                ...entry.value.asMap().entries.map(
-                      (e) => _buildModelCard(context, l10n, theme, e.value,
-                          animationIndex: e.key),
-                    ),
+                if (entry.key == LocalAIModelType.asr) ...[
+                  ..._buildAsrSubCategories(
+                    context,
+                    l10n,
+                    theme,
+                    entry.value,
+                  ),
+                ] else ...[
+                  ...entry.value.asMap().entries.map(
+                        (e) => _buildModelCard(context, l10n, theme, e.value,
+                            animationIndex: e.key),
+                      ),
+                ],
                 const SizedBox(height: 8),
               ],
 
@@ -348,6 +357,85 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     );
   }
 
+  /// 构建 ASR 子分类分组
+  List<Widget> _buildAsrSubCategories(
+    BuildContext context,
+    AppLocalizations l10n,
+    ThemeData theme,
+    List<LocalAIModelInfo> asrModels,
+  ) {
+    // 按子分类分组
+    final grouped = <AsrModelCategory, List<LocalAIModelInfo>>{};
+    for (final model in asrModels) {
+      final category = _getAsrModelCategory(model.id);
+      grouped.putIfAbsent(category, () => []).add(model);
+    }
+
+    // 预定义排序顺序
+    final categoryOrder = <AsrModelCategory>[
+      AsrModelCategory.lightweight,
+      AsrModelCategory.streaming,
+      AsrModelCategory.highAccuracy,
+      AsrModelCategory.large,
+    ];
+
+    final widgets = <Widget>[];
+    for (final category in categoryOrder) {
+      final models = grouped[category];
+      if (models == null || models.isEmpty) continue;
+      widgets.add(
+        _buildAsrSubCategoryHeader(context, l10n, theme, category),
+      );
+      for (var i = 0; i < models.length; i++) {
+        widgets.add(
+          _buildModelCard(context, l10n, theme, models[i], animationIndex: i),
+        );
+      }
+    }
+    return widgets;
+  }
+
+  /// 构建 ASR 子分类标题
+  Widget _buildAsrSubCategoryHeader(
+    BuildContext context,
+    AppLocalizations l10n,
+    ThemeData theme,
+    AsrModelCategory category,
+  ) {
+    final info = _getAsrCategoryInfo(l10n, category);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 12, 16, 4),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: info.color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(info.icon, size: 14, color: info.color),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            info.name,
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: info.color,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            info.subtitle,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildModelCard(
     BuildContext context,
     AppLocalizations l10n,
@@ -397,6 +485,19 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              // 当前选中的 ASR 模型指示
+                              if (model.type == LocalAIModelType.asr &&
+                                  model.id ==
+                                      SpeechRecognitionService
+                                          .instance.selectedModelId)
+                                const Padding(
+                                  padding: EdgeInsets.only(left: 4),
+                                  child: Icon(
+                                    Icons.check_circle,
+                                    size: 18,
+                                    color: Colors.green,
+                                  ),
+                                ),
                               // 推荐标签
                               ...tags.map((tag) => Padding(
                                     padding: const EdgeInsets.only(left: 6),
@@ -611,6 +712,7 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     final canPrepare = isManaged ||
         model.status == LocalAIModelStatus.downloaded ||
         model.status == LocalAIModelStatus.loaded;
+    final outerContext = context;
 
     showModalBottomSheet(
       context: context,
@@ -688,6 +790,39 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
                   onTap: () {
                     Navigator.pop(context);
                     _importModel(model);
+                  },
+                ),
+              // 选择为识别模型（仅 ASR 模型的已下载/加载状态）
+              if (model.type == LocalAIModelType.asr &&
+                  (model.status == LocalAIModelStatus.downloaded ||
+                      model.status == LocalAIModelStatus.loaded))
+                ListTile(
+                  leading: model.id ==
+                          SpeechRecognitionService.instance.selectedModelId
+                      ? Icon(Icons.radio_button_checked,
+                          color: theme.colorScheme.primary)
+                      : const Icon(Icons.check_circle_outline),
+                  title: Text(l10n.asrSelectModel),
+                  subtitle: Text(l10n.asrSelectModelHint),
+                  trailing: model.id ==
+                          SpeechRecognitionService.instance.selectedModelId
+                      ? Icon(Icons.check,
+                          size: 18, color: theme.colorScheme.primary)
+                      : null,
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await SpeechRecognitionService.instance
+                        .switchModel(model.id);
+                    if (outerContext.mounted) {
+                      ScaffoldMessenger.of(outerContext).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            l10n.asrSwitchModelSuccess(model.name),
+                          ),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
                   },
                 ),
               if (model.status == LocalAIModelStatus.downloaded ||
@@ -999,6 +1134,63 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     }
   }
 
+  /// 获取 ASR 模型子分类
+  AsrModelCategory _getAsrModelCategory(String modelId) {
+    switch (modelId) {
+      case 'whisper-tiny':
+      case 'whisper-base':
+      case 'zipformer-small-ctc-zh':
+      case 'paraformer-zh-small':
+        return AsrModelCategory.lightweight;
+      case 'streaming-paraformer-zh-en':
+      case 'streaming-zipformer-zh':
+        return AsrModelCategory.streaming;
+      case 'sense-voice-zh-en-ja-ko-yue':
+      case 'paraformer-zh':
+        return AsrModelCategory.highAccuracy;
+      case 'qwen3-asr-0.6b':
+      case 'funasr-nano':
+        return AsrModelCategory.large;
+      default:
+        return AsrModelCategory.lightweight;
+    }
+  }
+
+  /// 获取 ASR 子分类显示信息
+  _AsrCategoryInfo _getAsrCategoryInfo(
+      AppLocalizations l10n, AsrModelCategory category) {
+    switch (category) {
+      case AsrModelCategory.lightweight:
+        return _AsrCategoryInfo(
+          name: l10n.asrCategoryLightweight,
+          subtitle: l10n.modelLightweight,
+          icon: Icons.bolt,
+          color: Colors.teal,
+        );
+      case AsrModelCategory.streaming:
+        return _AsrCategoryInfo(
+          name: l10n.asrCategoryStreaming,
+          subtitle: l10n.modelStreaming,
+          icon: Icons.waves,
+          color: Colors.blue,
+        );
+      case AsrModelCategory.highAccuracy:
+        return _AsrCategoryInfo(
+          name: l10n.asrCategoryHighAccuracy,
+          subtitle: l10n.modelHighAccuracy,
+          icon: Icons.verified,
+          color: Colors.indigo,
+        );
+      case AsrModelCategory.large:
+        return _AsrCategoryInfo(
+          name: l10n.asrCategoryLarge,
+          subtitle: l10n.modelHighAccuracy,
+          icon: Icons.dns,
+          color: Colors.deepPurple,
+        );
+    }
+  }
+
   _StatusInfo _getStatusInfo(AppLocalizations l10n, LocalAIModelStatus status) {
     switch (status) {
       case LocalAIModelStatus.notDownloaded:
@@ -1120,7 +1312,35 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
             text: l10n.modelRecommended, color: Colors.amber.shade700));
         break;
       case 'whisper-base':
+        tags.add(_TagInfo(text: l10n.modelLightweight, color: Colors.teal));
+        break;
+      case 'zipformer-small-ctc-zh':
+        tags.add(_TagInfo(text: l10n.modelSmallest, color: Colors.teal));
+        tags.add(_TagInfo(text: l10n.modelStreaming, color: Colors.blue));
+        break;
+      case 'paraformer-zh-small':
+        tags.add(_TagInfo(text: l10n.modelLightweight, color: Colors.teal));
+        break;
+      case 'streaming-paraformer-zh-en':
+        tags.add(_TagInfo(text: l10n.modelStreaming, color: Colors.blue));
+        tags.add(_TagInfo(text: l10n.modelMultilingual, color: Colors.purple));
+        break;
+      case 'streaming-zipformer-zh':
+        tags.add(_TagInfo(text: l10n.modelStreaming, color: Colors.blue));
+        break;
+      case 'sense-voice-zh-en-ja-ko-yue':
         tags.add(_TagInfo(text: l10n.modelHighAccuracy, color: Colors.indigo));
+        tags.add(_TagInfo(text: l10n.modelMultilingual, color: Colors.purple));
+        break;
+      case 'paraformer-zh':
+        tags.add(_TagInfo(text: l10n.modelHighAccuracy, color: Colors.indigo));
+        break;
+      case 'qwen3-asr-0.6b':
+        tags.add(_TagInfo(text: l10n.modelMultilingual, color: Colors.purple));
+        break;
+      case 'funasr-nano':
+        tags.add(
+            _TagInfo(text: l10n.modelDialectSupport, color: Colors.orange));
         break;
       case 'gemma-2b':
         tags.add(_TagInfo(
@@ -1155,6 +1375,35 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
       ),
     );
   }
+}
+
+/// ASR 模型子分类枚举
+enum AsrModelCategory {
+  /// 轻量模型 (whisper-tiny, whisper-base, zipformer-small-ctc-zh, paraformer-zh-small)
+  lightweight,
+
+  /// 流式模型 (streaming-paraformer-zh-en, streaming-zipformer-zh)
+  streaming,
+
+  /// 高精度离线模型 (sense-voice-zh-en-ja-ko-yue, paraformer-zh)
+  highAccuracy,
+
+  /// 大模型 (qwen3-asr-0.6b, funasr-nano)
+  large,
+}
+
+class _AsrCategoryInfo {
+  final String name;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+
+  const _AsrCategoryInfo({
+    required this.name,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+  });
 }
 
 class _TagInfo {
