@@ -1,0 +1,23 @@
+lib/widgets/add_note_dialog.dart
+  e03933eb6bd50b9b 92,94-95,305-330,495-510,1134,1694
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "6a53f735faf3b376064a45c98163383cc16343f4",
+  "prompts": {
+    "e03933eb6bd50b9b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_20a60ac22ffe6LRV6jem959uKU",
+        "model": "opencode-go/glm-5.1"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 62,
+      "total_deletions": 17,
+      "accepted_lines": 47,
+      "overriden_lines": 0
+    }
+  }
+}
