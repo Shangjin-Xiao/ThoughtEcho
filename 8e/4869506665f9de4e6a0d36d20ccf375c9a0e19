@@ -1,0 +1,25 @@
+lib/services/local_ai/speech_recognition_service.dart
+  84660797c000a316 121,127-129,170,172,178-192
+lib/pages/model_management_page.dart
+  84660797c000a316 916-917
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "8e4869506665f9de4e6a0d36d20ccf375c9a0e19",
+  "prompts": {
+    "84660797c000a316": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_20a3c5584ffe4korPOE3eLsaoo",
+        "model": "opencode-go/glm-5.1"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 28,
+      "total_deletions": 17,
+      "accepted_lines": 23,
+      "overriden_lines": 0
+    }
+  }
+}
