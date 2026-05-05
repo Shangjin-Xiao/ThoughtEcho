@@ -1,0 +1,23 @@
+README.md
+  a0bca474db757dc7 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "353aeb88e8f6c6b3edfe4dafe951353c10a712b0",
+  "prompts": {
+    "a0bca474db757dc7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_20a184455ffe5vean9WDbfzy0l",
+        "model": "github-copilot/gemini-3.1-pro-preview"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 19,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
