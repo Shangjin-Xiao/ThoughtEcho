@@ -59,6 +59,89 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
+class HomeLocationWeatherDisplay extends StatelessWidget {
+  static const Key chipKey = ValueKey('home.location_weather_chip');
+
+  final String locationText;
+  final String weatherText;
+  final IconData weatherIcon;
+
+  const HomeLocationWeatherDisplay({
+    super.key,
+    required this.locationText,
+    required this.weatherText,
+    required this.weatherIcon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = theme.colorScheme.onPrimaryContainer;
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 8.0),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: FittedBox(
+          key: chipKey,
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerRight,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+              boxShadow: AppTheme.defaultShadow,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.location_on,
+                  size: 14,
+                  color: color,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  locationText,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: theme.textTheme.bodySmall?.copyWith(color: color),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '|',
+                  maxLines: 1,
+                  softWrap: false,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: color.withAlpha(128),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  weatherIcon,
+                  size: 18,
+                  color: color,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  weatherText,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _HomePageState extends State<HomePage>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   int _currentIndex = 0;
@@ -1909,7 +1992,6 @@ class _HomePageState extends State<HomePage>
     LocationService locationService,
     WeatherService weatherService,
   ) {
-    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final connectivityService = Provider.of<ConnectivityService>(context);
     final isConnected = connectivityService.isConnected;
@@ -1976,54 +2058,10 @@ class _HomePageState extends State<HomePage>
       weatherIcon = Icons.cloud_off;
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-          boxShadow: AppTheme.defaultShadow,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.location_on,
-              size: 14,
-              color: theme.colorScheme.onPrimaryContainer,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              locationText,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onPrimaryContainer,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '|',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onPrimaryContainer.withAlpha(128),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Icon(
-              weatherIcon,
-              size: 18,
-              color: theme.colorScheme.onPrimaryContainer,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              weatherText,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onPrimaryContainer,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return HomeLocationWeatherDisplay(
+      locationText: locationText,
+      weatherText: weatherText,
+      weatherIcon: weatherIcon,
     );
   }
 
@@ -2091,14 +2129,30 @@ class _HomePageState extends State<HomePage>
 
                         // 英文标题使用 FittedBox 自动缩放以完整显示，不显示省略号
                         // 中文标题本身很短，不需要特殊处理
+                        final Widget titleContent;
                         if (isEnglish) {
-                          return FittedBox(
+                          titleContent = FittedBox(
                             fit: BoxFit.scaleDown,
                             alignment: Alignment.centerLeft,
                             child: titleWidget,
                           );
+                        } else {
+                          titleContent = titleWidget;
                         }
-                        return titleWidget;
+
+                        return Row(
+                          children: [
+                            titleContent,
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildLocationWeatherDisplay(
+                                context,
+                                locationService,
+                                weatherService,
+                              ),
+                            ),
+                          ],
+                        );
                       },
                     ),
                     actions: [
@@ -2125,13 +2179,6 @@ class _HomePageState extends State<HomePage>
                             onPressed: () => _showAnniversaryPreview(context),
                           );
                         },
-                      ),
-
-                      // 显示位置和天气信息（支持多种状态）
-                      _buildLocationWeatherDisplay(
-                        context,
-                        locationService,
-                        weatherService,
                       ),
                     ],
                   )
