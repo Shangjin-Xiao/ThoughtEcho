@@ -4,6 +4,7 @@ import '../gen_l10n/app_localizations.dart';
 import '../models/local_ai_settings.dart';
 import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
+import 'model_management_page.dart';
 
 /// 本地 AI 功能设置页面
 ///
@@ -206,6 +207,63 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                     );
                   },
                 ),
+              ),
+            ),
+          ),
+
+          // 模型管理入口 - 对所有用户可见（用于ASR模型下载）
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                side: BorderSide(
+                  color: theme.colorScheme.outline.withOpacity(0.2),
+                ),
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.download_rounded,
+                    color: theme.colorScheme.primary,
+                    size: 28,
+                  ),
+                ),
+                title: Text(
+                  l10n.modelManagement,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    l10n.modelManagementDesc,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ModelManagementPage(),
+                    ),
+                  );
+                },
               ),
             ),
           ),
