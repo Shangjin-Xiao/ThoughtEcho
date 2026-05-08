@@ -68,7 +68,9 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
                     minHeight: 24,
                   ),
                   onPressed: _copyCode,
-                  tooltip: _isCopied ? '已复制' : '复制代码',
+                  tooltip: _isCopied
+                      ? AppLocalizations.of(context).copiedCode
+                      : AppLocalizations.of(context).copyCode,
                 ),
               ],
             ),
