@@ -455,46 +455,54 @@ class DatabaseBackupService {
           }
 
           if (!clearExisting && affectedQuoteIds.isNotEmpty) {
-            for (final quoteId in affectedQuoteIds) {
+            final quoteIdList = affectedQuoteIds.toList();
+            const int batchSize = 500;
+            final List<String> quotesToDelete = [];
+
+            for (int i = 0; i < quoteIdList.length; i += batchSize) {
+              final end = (i + batchSize < quoteIdList.length)
+                  ? i + batchSize
+                  : quoteIdList.length;
+              final batchIds = quoteIdList.sublist(i, end);
+              final placeholders = List.filled(batchIds.length, '?').join(',');
+
               final quoteRows = await txn.query(
                 'quotes',
                 columns: ['id', 'last_modified'],
-                where: 'id = ?',
-                whereArgs: [quoteId],
-                limit: 1,
+                where: 'id IN ($placeholders)',
+                whereArgs: batchIds,
               );
-              if (quoteRows.isEmpty) {
-                continue;
-              }
 
-              final localLastModified =
-                  quoteRows.first['last_modified']?.toString();
-              final localTombstone = await txn.query(
-                'quote_tombstones',
-                columns: ['deleted_at'],
-                where: 'quote_id = ?',
-                whereArgs: [quoteId],
-                limit: 1,
-              );
-              if (localTombstone.isEmpty) {
-                continue;
+              for (final row in quoteRows) {
+                final quoteId = row['id'] as String;
+                final localLastModified = row['last_modified']?.toString();
+                final tombstoneDeletedAt = localTombstoneMap[quoteId];
+
+                if (tombstoneDeletedAt == null || tombstoneDeletedAt.isEmpty) {
+                  continue;
+                }
+
+                if (localLastModified == null ||
+                    localLastModified.isEmpty ||
+                    _compareIsoTime(tombstoneDeletedAt, localLastModified) >=
+                        0) {
+                  quotesToDelete.add(quoteId);
+                }
               }
-              final tombstoneDeletedAt =
-                  localTombstone.first['deleted_at']?.toString();
-              if (localLastModified == null || localLastModified.isEmpty) {
+            }
+
+            if (quotesToDelete.isNotEmpty) {
+              for (int i = 0; i < quotesToDelete.length; i += batchSize) {
+                final end = (i + batchSize < quotesToDelete.length)
+                    ? i + batchSize
+                    : quotesToDelete.length;
+                final batchIds = quotesToDelete.sublist(i, end);
+                final placeholders =
+                    List.filled(batchIds.length, '?').join(',');
                 await txn.delete(
                   'quotes',
-                  where: 'id = ?',
-                  whereArgs: [quoteId],
-                );
-                continue;
-              }
-
-              if (_compareIsoTime(tombstoneDeletedAt, localLastModified) >= 0) {
-                await txn.delete(
-                  'quotes',
-                  where: 'id = ?',
-                  whereArgs: [quoteId],
+                  where: 'id IN ($placeholders)',
+                  whereArgs: batchIds,
                 );
               }
             }

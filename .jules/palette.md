@@ -16,3 +16,6 @@
 ## 2024-05-24 - Missing Tooltips on IconButtons
 **Learning:** Found multiple instances where `IconButton` widgets were missing `tooltip` properties. This affects accessibility for screen readers and tooltips on web/desktop.
 **Action:** Added semantic string tooltips or translated string references across the settings and subpages. The Python script was improved to find these, but `IconButton` wrappers can mask these errors from naive regex tools.
+## 2025-05-18 - [Localize code copy button]
+**Learning:** Hardcoded text like "复制代码" and "已复制" in `IconButton` tooltips inside `CodeBlockWidget` breaks accessibility for non-Chinese speakers using screen readers.
+**Action:** Always extract text to ARB localization files and use `AppLocalizations.of(context)` for tooltips, ensuring screen readers receive correctly localized labels for UI actions.
