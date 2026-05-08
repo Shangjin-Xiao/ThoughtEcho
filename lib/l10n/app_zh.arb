@@ -3652,4 +3652,6 @@
   "offlineQuoteSourceTagOnly": "历史保存的每日一言",
   "offlineQuoteSourceAll": "随机展示全部本地记录",
   "noLocalSavedQuotes": "还没有历史保存的每日一言"
-}
+,
+  "copyCode": "复制代码",
+  "copiedCode": "已复制"}
