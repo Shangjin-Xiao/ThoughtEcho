@@ -7,6 +7,7 @@ import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
   bool _prioritizeBold;
@@ -28,6 +29,10 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
 }
 
 void main() {
+  setUpAll(() {
+    VisibilityDetectorController.instance.updateInterval = Duration.zero;
+  });
+
   setUp(() {
     QuoteItemWidget.clearExpansionCache();
   });
@@ -94,6 +99,28 @@ void main() {
 
     expect(QuoteContent.exceedsCollapsedHeight(quote), isTrue);
     expect(QuoteItemWidget.needsExpansionFor(quote), isTrue);
+  });
+
+  testWidgets('折叠状态下仍保留富文本图片占位', (tester) async {
+    final delta = jsonEncode([
+      {'insert': '这是一段很长的图片前正文。' * 80},
+      {
+        'insert': {'image': 'https://example.com/folded-image.png'},
+      },
+      {'insert': '\n'},
+    ]);
+    final quote = Quote(
+      id: 'rich_text_then_image',
+      content: '长正文后带图片的笔记',
+      date: '2025-01-01T00:00:00.000Z',
+      editSource: 'fullscreen',
+      deltaContent: delta,
+    );
+
+    await tester.pumpWidget(buildTestApp(quote));
+    await tester.pump();
+
+    expect(find.byIcon(Icons.image_outlined), findsOneWidget);
   });
 
   test('纯文本与富文本高度判定保持一致', () {

@@ -45,8 +45,6 @@ class QuoteContent extends StatelessWidget {
   static const double _estimatedImageHeight = 200.0;
   static const double _estimatedVideoHeight = 240.0;
   static const double _estimatedAudioHeight = 140.0;
-  static const double _collapsedPreviewBudgetHeight =
-      collapsedContentMaxHeight + (_estimatedLineHeight * 2);
   static const Key collapsedWrapperKey = ValueKey(
     'quote_content.collapsed_wrapper',
   );
@@ -88,7 +86,6 @@ class QuoteContent extends StatelessWidget {
         _QuoteDocumentCache.getOrCreate(
           deltaContent: deltaContent,
           prioritizeBold: false,
-          previewCollapsed: false,
           builder: () => _buildDocumentFromDelta(deltaContent),
         );
       }
@@ -349,19 +346,8 @@ class QuoteContent extends StatelessWidget {
 
   quill.Document _buildRichTextDocument(
     String deltaContent,
-    bool prioritizeBold, {
-    bool previewCollapsed = false,
-  }) {
-    if (previewCollapsed) {
-      final previewDoc = _createCollapsedPreviewDocument(
-        deltaContent,
-        prioritizeBold,
-      );
-      if (previewDoc != null) {
-        return previewDoc;
-      }
-    }
-
+    bool prioritizeBold,
+  ) {
     if (prioritizeBold) {
       final prioritizedDoc = _createBoldPriorityDocument(deltaContent);
       if (prioritizedDoc != null) {
@@ -370,114 +356,6 @@ class QuoteContent extends StatelessWidget {
     }
 
     return _documentFromDelta(deltaContent);
-  }
-
-  quill.Document? _createCollapsedPreviewDocument(
-    String deltaContent,
-    bool prioritizeBold,
-  ) {
-    final sourceOps = prioritizeBold
-        ? _createBoldPriorityOps(deltaContent) ?? _decodeDeltaOps(deltaContent)
-        : _decodeDeltaOps(deltaContent);
-    if (sourceOps == null || sourceOps.isEmpty) {
-      return null;
-    }
-
-    final previewOps = _takeCollapsedPreviewOps(sourceOps);
-    if (previewOps.isEmpty) {
-      return null;
-    }
-
-    final lastInsert = previewOps.last['insert'];
-    if (lastInsert is String && !lastInsert.endsWith('\n')) {
-      previewOps.add({'insert': '\n'});
-    }
-
-    return quill.Document.fromJson(previewOps);
-  }
-
-  List<Map<String, dynamic>>? _decodeDeltaOps(String deltaContent) {
-    try {
-      final decoded = jsonDecode(deltaContent);
-      final Object? rawOps;
-      if (decoded is List) {
-        rawOps = decoded;
-      } else if (decoded is Map && decoded.containsKey('ops')) {
-        rawOps = decoded['ops'];
-      } else {
-        return null;
-      }
-
-      if (rawOps is! List) {
-        return null;
-      }
-
-      return rawOps
-          .whereType<Map>()
-          .map((op) => Map<String, dynamic>.from(op))
-          .toList();
-    } catch (_) {
-      return null;
-    }
-  }
-
-  List<Map<String, dynamic>> _takeCollapsedPreviewOps(
-    List<Map<String, dynamic>> ops,
-  ) {
-    final previewOps = <Map<String, dynamic>>[];
-    double estimatedHeight = 0;
-
-    for (final op in ops) {
-      final insert = op['insert'];
-      final remainingHeight = _collapsedPreviewBudgetHeight - estimatedHeight;
-      if (remainingHeight <= 0) {
-        break;
-      }
-
-      if (insert is String) {
-        final maxLines =
-            (remainingHeight / _estimatedLineHeight).ceil().clamp(1, 12);
-        final maxChars = maxLines * _averageCharsPerLine;
-
-        if (insert.length > maxChars) {
-          previewOps.add({
-            ...op,
-            'insert': insert.substring(0, maxChars),
-          });
-          break;
-        }
-
-        previewOps.add(op);
-        estimatedHeight += _estimatePlainTextHeight(insert);
-        if (estimatedHeight >= _collapsedPreviewBudgetHeight) {
-          break;
-        }
-        continue;
-      }
-
-      previewOps.add(op);
-      estimatedHeight += _estimateEmbedHeight(insert);
-      if (estimatedHeight >= _collapsedPreviewBudgetHeight) {
-        break;
-      }
-    }
-
-    return previewOps;
-  }
-
-  static double _estimateEmbedHeight(Object? insert) {
-    if (insert is Map) {
-      if (insert.containsKey('image')) {
-        return _estimatedImageHeight;
-      }
-      if (insert.containsKey('video')) {
-        return _estimatedVideoHeight;
-      }
-      if (insert.containsKey('audio')) {
-        return _estimatedAudioHeight;
-      }
-    }
-    return _estimatedLineHeight;
   }
 
   quill.Document _documentFromDelta(String deltaContent) {
@@ -508,7 +386,6 @@ class QuoteContent extends StatelessWidget {
 
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
       final bool usePrioritizedDoc = !showFullContent && prioritizeBoldContent;
-      final bool useCollapsedPreview = !showFullContent && needsExpansion;
       final String cacheQuoteId =
           quote.id ?? 'local_${quote.date}_${quote.content.hashCode}';
       final String contentVariant = _QuoteContentControllerCache.resolveVariant(
@@ -527,11 +404,9 @@ class QuoteContent extends StatelessWidget {
         documentBuilder: () => _QuoteDocumentCache.getOrCreate(
           deltaContent: quote.deltaContent!,
           prioritizeBold: usePrioritizedDoc,
-          previewCollapsed: useCollapsedPreview,
           builder: () => _buildRichTextDocument(
             quote.deltaContent!,
             usePrioritizedDoc,
-            previewCollapsed: useCollapsedPreview,
           ),
         ),
       );
@@ -737,13 +612,11 @@ class _QuoteDocumentCache {
   static quill.Document getOrCreate({
     required String deltaContent,
     required bool prioritizeBold,
-    required bool previewCollapsed,
     required quill.Document Function() builder,
   }) {
     final key = _DocumentCacheKey(
       deltaContent: deltaContent,
       prioritizeBold: prioritizeBold,
-      previewCollapsed: previewCollapsed,
     );
 
     final existing = _cache.remove(key);
@@ -806,25 +679,21 @@ class _DocumentCacheKey {
   const _DocumentCacheKey({
     required this.deltaContent,
     required this.prioritizeBold,
-    required this.previewCollapsed,
   });
 
   final String deltaContent;
   final bool prioritizeBold;
-  final bool previewCollapsed;
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is _DocumentCacheKey &&
         other.prioritizeBold == prioritizeBold &&
-        other.previewCollapsed == previewCollapsed &&
         other.deltaContent == deltaContent;
   }
 
   @override
-  int get hashCode =>
-      Object.hash(deltaContent, prioritizeBold, previewCollapsed);
+  int get hashCode => Object.hash(deltaContent, prioritizeBold);
 }
 
 class _DocumentCacheEntry {
