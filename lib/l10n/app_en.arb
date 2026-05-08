@@ -3652,4 +3652,6 @@
   "offlineQuoteSourceTagOnly": "Previously saved daily quotes",
   "offlineQuoteSourceAll": "Random local records",
   "noLocalSavedQuotes": "No previously saved daily quotes yet"
-}
+,
+  "copyCode": "Copy code",
+  "copiedCode": "Copied"}
