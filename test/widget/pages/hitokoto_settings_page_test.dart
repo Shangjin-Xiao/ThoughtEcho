@@ -23,10 +23,8 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
     this.onSetApiNinjasCategories,
   }) : _appSettings = appSettings ?? AppSettings();
 
-  @override
   AppSettings get appSettings => _appSettings;
 
-  @override
   String get dailyQuoteProvider => _appSettings.dailyQuoteProvider;
 
   @override
