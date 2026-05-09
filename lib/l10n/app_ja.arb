@@ -2769,7 +2769,7 @@
       }
     }
   },
-  "apkDownloadHint": "閉じないでください",
+  "apkDownloadHint": "アプリを終了しないでください。ダウンロード後、自動的にインストールが開始されます。",
   "apkDownloadStarted": "開始 {version}",
   "@apkDownloadStarted": {
     "placeholders": {

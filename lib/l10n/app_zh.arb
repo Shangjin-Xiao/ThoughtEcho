@@ -2846,7 +2846,7 @@
       }
     }
   },
-  "apkDownloadHint": "请勿关闭应用，下载完成后将自动开始安装",
+  "apkDownloadHint": "请勿退出程序，下载完成后将自动开始安装",
   "apkDownloadStarted": "开始下载 ThoughtEcho {version}",
   "@apkDownloadStarted": {
     "placeholders": {

@@ -2769,7 +2769,7 @@
       }
     }
   },
-  "apkDownloadHint": "앱을 닫지 마세요. 다운로드 후 설치가 자동으로 시작됩니다.",
+  "apkDownloadHint": "앱을 종료하지 마세요. 다운로드 후 설치가 자동으로 시작됩니다.",
   "apkDownloadStarted": "Started downloading ThoughtEcho {version}",
   "@apkDownloadStarted": {
     "placeholders": {

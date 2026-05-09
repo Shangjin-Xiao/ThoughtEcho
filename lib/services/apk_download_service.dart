@@ -8,6 +8,59 @@ import 'package:permission_handler/permission_handler.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../utils/app_logger.dart';
 
+/// 下载状态枚举
+enum DownloadStatus {
+  /// 空闲
+  idle,
+
+  /// 下载中
+  downloading,
+
+  /// 已完成
+  completed,
+
+  /// 已失败
+  failed,
+
+  /// 已取消
+  cancelled,
+}
+
+/// 下载进度数据类
+class DownloadProgress {
+  final DownloadStatus status;
+  final double progress; // 0.0 - 1.0
+  final int receivedBytes;
+  final int totalBytes; // -1 表示未知
+  final String? errorMessage;
+
+  const DownloadProgress({
+    this.status = DownloadStatus.idle,
+    this.progress = 0,
+    this.receivedBytes = 0,
+    this.totalBytes = 0,
+    this.errorMessage,
+  });
+
+  /// 格式化文件大小
+  static String formatBytes(int bytes) {
+    if (bytes < 0) return '--';
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  }
+
+  /// 获取已下载/总大小的文本
+  String get sizeText {
+    final received = formatBytes(receivedBytes);
+    final total = formatBytes(totalBytes);
+    return '$received / $total';
+  }
+}
+
 /// APK下载和安装服务
 class ApkDownloadService {
   static const String _notificationChannelId = 'apk_download_channel';
@@ -19,12 +72,18 @@ class ApkDownloadService {
   static FlutterLocalNotificationsPlugin? _notificationsPlugin;
   static int? _currentNotificationId;
 
+  /// 下载进度通知器
+  static ValueNotifier<DownloadProgress> progressNotifier =
+      ValueNotifier(const DownloadProgress());
+
+  /// 下载取消令牌
+  static CancelToken? _cancelToken;
+
   // 缓存的本地化字符串，用于通知（因为通知无法访问 BuildContext）
   static String? _cachedNotificationTitle;
   static String? _cachedDownloadStarted;
   static String? _cachedDownloadProgress;
   static String? _cachedDownloadComplete;
-  // Removed unused failed cache placeholder
 
   /// 获取Dio实例
   static Dio get dio {
@@ -199,43 +258,27 @@ class ApkDownloadService {
     }
   }
 
-  /// 显示下载对话框
+  /// 显示下载进度对话框
   static void _showDownloadDialog(
     BuildContext context,
     String apkUrl,
     String filePath,
     String version,
   ) {
-    final l10n = AppLocalizations.of(context);
+    // 重置进度和取消令牌
+    progressNotifier = ValueNotifier(const DownloadProgress());
+    _cancelToken = CancelToken();
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(l10n.apkDownloadTitle),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(l10n.apkDownloading(version)),
-              const SizedBox(height: 8),
-              Text(
-                l10n.apkDownloadHint,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                // 取消下载
-                dio.close(force: true);
-                Navigator.of(dialogContext).pop();
-              },
-              child: Text(l10n.cancel),
-            ),
-          ],
+        return _DownloadProgressDialog(
+          version: version,
+          onCancel: () {
+            _cancelToken?.cancel();
+            Navigator.of(dialogContext).pop();
+          },
         );
       },
     );
@@ -267,38 +310,83 @@ class ApkDownloadService {
       // 显示初始通知
       await _showDownloadNotification(_cachedDownloadStarted!, 0);
 
-      final response = await dio.download(
+      await dio.download(
         apkUrl,
         filePath,
+        cancelToken: _cancelToken,
         onReceiveProgress: (received, total) {
-          if (total != -1) {
-            final progress = (received / total * 100).round();
-            _cachedDownloadProgress = l10n.apkDownloadProgress(progress);
-            _showDownloadNotification(_cachedDownloadProgress!, progress);
+          if (total > 0) {
+            final progress = received / total;
+            progressNotifier.value = DownloadProgress(
+              status: DownloadStatus.downloading,
+              progress: progress,
+              receivedBytes: received,
+              totalBytes: total,
+            );
+            final progressPercent = (progress * 100).round();
+            _cachedDownloadProgress = l10n.apkDownloadProgress(progressPercent);
+            _showDownloadNotification(
+                _cachedDownloadProgress!, progressPercent);
+          } else {
+            // 未知总大小，仅更新已下载字节数
+            progressNotifier.value = DownloadProgress(
+              status: DownloadStatus.downloading,
+              progress: 0,
+              receivedBytes: received,
+              totalBytes: -1,
+            );
           }
         },
       );
 
-      if (response.statusCode == 200) {
-        // 下载完成
-        await _showDownloadNotification(_cachedDownloadComplete!, 100);
+      // 下载完成
+      progressNotifier.value = const DownloadProgress(
+        status: DownloadStatus.completed,
+        progress: 1.0,
+      );
+      await _showDownloadNotification(_cachedDownloadComplete!, 100);
 
-        // 关闭下载对话框
-        if (context.mounted) {
-          Navigator.of(context).pop();
-        }
+      // 关闭下载对话框
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
 
-        // 安装APK
+      // 安装APK
+      if (context.mounted) {
+        await _installApk(context, filePath);
+      }
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) {
+        // 用户取消下载，静默处理
+        logDebug('APK下载已取消');
+        return;
+      }
+      // 真正的下载错误
+      logError('下载过程出错: $e');
+      progressNotifier.value = DownloadProgress(
+        status: DownloadStatus.failed,
+        errorMessage: e.toString(),
+      );
+      if (context.mounted) {
+        final errorL10n = AppLocalizations.of(context);
+        await _showDownloadNotification(
+          errorL10n.apkDownloadFailed(e.toString()),
+          -1,
+        );
+        if (!context.mounted) return;
+        Navigator.of(context).pop(); // 关闭下载对话框
         if (context.mounted) {
-          await _installApk(context, filePath);
+          _showErrorDialog(context, errorL10n.apkDownloadFailed(e.toString()));
         }
       } else {
-        throw Exception('Download failed: ${response.statusCode}');
+        await _showDownloadNotification('Download failed: $e', -1);
       }
     } catch (e) {
       logError('下载过程出错: $e');
-
-      // 显示错误通知
+      progressNotifier.value = DownloadProgress(
+        status: DownloadStatus.failed,
+        errorMessage: e.toString(),
+      );
       if (context.mounted) {
         final errorL10n = AppLocalizations.of(context);
         await _showDownloadNotification(
@@ -492,5 +580,138 @@ class ApkDownloadService {
     _dio?.close();
     _dio = null;
     _notificationsPlugin = null;
+    progressNotifier.dispose();
+  }
+}
+
+/// 下载进度对话框 - Material 3 风格
+class _DownloadProgressDialog extends StatelessWidget {
+  final String version;
+  final VoidCallback onCancel;
+
+  const _DownloadProgressDialog({
+    required this.version,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return AlertDialog(
+      title: Row(
+        children: [
+          Icon(
+            Icons.system_update,
+            color: colorScheme.primary,
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Text(l10n.apkDownloadTitle)),
+        ],
+      ),
+      content: ValueListenableBuilder<DownloadProgress>(
+        valueListenable: ApkDownloadService.progressNotifier,
+        builder: (context, progress, _) {
+          final hasTotalSize = progress.totalBytes > 0;
+          final isIndeterminate = progress.status == DownloadStatus.idle ||
+              (!hasTotalSize && progress.status == DownloadStatus.downloading);
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 版本信息
+              Text(
+                l10n.apkDownloading(version),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // 进度条 - Material 3 风格
+              LinearProgressIndicator(
+                value: isIndeterminate ? null : progress.progress,
+                borderRadius: BorderRadius.circular(8),
+                backgroundColor: colorScheme.surfaceContainerHighest,
+                minHeight: 8,
+              ),
+              const SizedBox(height: 12),
+
+              // 进度百分比和文件大小
+              if (hasTotalSize) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      l10n.apkDownloadProgress(
+                        (progress.progress * 100).round(),
+                      ),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                    Text(
+                      progress.sizeText,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ] else if (progress.receivedBytes > 0) ...[
+                // 未知总大小时仅显示已下载大小
+                Text(
+                  DownloadProgress.formatBytes(progress.receivedBytes),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+
+              // 提示文字
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l10n.apkDownloadHint,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: onCancel,
+          child: Text(l10n.cancel),
+        ),
+      ],
+    );
   }
 }
