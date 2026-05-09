@@ -825,6 +825,15 @@
   "mediaFilesUsage": "媒体文件占用",
   "cacheUsage": "缓存占用",
   "notesDatabase": "笔记数据库",
+  "trashStorageUsageHint": "回收站中有 {count} 条笔记，仍会占用数据库和附件空间。",
+  "@trashStorageUsageHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewTrash": "查看回收站",
   "aiDatabase": "AI数据库",
   "logDatabase": "日志数据库",
   "images": "图片",

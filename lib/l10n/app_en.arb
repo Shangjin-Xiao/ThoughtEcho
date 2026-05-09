@@ -825,6 +825,15 @@
   "mediaFilesUsage": "Media Files Usage",
   "cacheUsage": "Cache Usage",
   "notesDatabase": "Notes Database",
+  "trashStorageUsageHint": "{count, plural, =1{Trash contains 1 note and still uses database and attachment space.} other{Trash contains {count} notes and still uses database and attachment space.}}",
+  "@trashStorageUsageHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewTrash": "View Trash",
   "aiDatabase": "AI Database",
   "logDatabase": "Log Database",
   "images": "Images",
