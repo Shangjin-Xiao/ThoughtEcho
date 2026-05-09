@@ -14,19 +14,14 @@ import 'package:thoughtecho/services/settings_service.dart';
 import '../../test_setup.dart';
 
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
-  @override
   bool get autoAttachLocation => false;
 
-  @override
   bool get autoAttachWeather => false;
 
-  @override
   String? get defaultAuthor => null;
 
-  @override
   String? get defaultSource => null;
 
-  @override
   List<String> get defaultTagIds => const [];
 
   @override
