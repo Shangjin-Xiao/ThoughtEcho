@@ -131,12 +131,20 @@ class NoteListViewState extends State<NoteListView> {
   bool _isInitializing = true; // 标记是否正在初始化，避免冷启动滚动冲突
 
   // 开发者模式：首次打开后首次手势滑动性能监测（非首帧）
+  bool _perfTimingsCallbackAttached = false;
   bool _firstOpenScrollPerfEnabled = false;
   bool _firstOpenScrollPerfRecording = false;
   bool _firstOpenScrollPerfCaptured = false;
   final List<FrameTiming> _firstOpenScrollFrameTimings = <FrameTiming>[];
   final List<int> _firstOpenScrollUpdateMicros = <int>[];
   Timer? _firstOpenScrollStopTimer;
+  bool _loadMorePerfRecording = false;
+  bool _loadMorePerfPendingFrameSettle = false;
+  int _loadMorePerfStartCount = 0;
+  int _loadMorePerfTriggerOffset = 0;
+  final Stopwatch _loadMorePerfStopwatch = Stopwatch();
+  final List<FrameTiming> _loadMorePerfFrameTimings = <FrameTiming>[];
+  Timer? _loadMorePerfStopTimer;
 
   bool _hasExpandableQuoteCached = false;
   bool _hasExpandableQuoteComputed = false;
@@ -268,10 +276,30 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   void _collectFrameTimings(List<FrameTiming> timings) {
-    if (!_firstOpenScrollPerfRecording) {
+    if (_firstOpenScrollPerfRecording) {
+      _firstOpenScrollFrameTimings.addAll(timings);
+    }
+    if (_loadMorePerfRecording) {
+      _loadMorePerfFrameTimings.addAll(timings);
+    }
+  }
+
+  void _ensurePerfTimingsCallback() {
+    if (_perfTimingsCallbackAttached) {
       return;
     }
-    _firstOpenScrollFrameTimings.addAll(timings);
+    WidgetsBinding.instance.addTimingsCallback(_collectFrameTimings);
+    _perfTimingsCallbackAttached = true;
+  }
+
+  void _releasePerfTimingsCallbackIfIdle() {
+    if (!_perfTimingsCallbackAttached ||
+        _firstOpenScrollPerfRecording ||
+        _loadMorePerfRecording) {
+      return;
+    }
+    WidgetsBinding.instance.removeTimingsCallback(_collectFrameTimings);
+    _perfTimingsCallbackAttached = false;
   }
 
   /// 数据库服务变化监听器
@@ -409,10 +437,13 @@ class NoteListViewState extends State<NoteListView> {
 
     _searchDebounceTimer?.cancel(); // 清理防抖定时器
     _firstOpenScrollStopTimer?.cancel();
+    _loadMorePerfStopTimer?.cancel();
 
-    if (_firstOpenScrollPerfRecording) {
+    if (_perfTimingsCallbackAttached) {
       WidgetsBinding.instance.removeTimingsCallback(_collectFrameTimings);
+      _perfTimingsCallbackAttached = false;
       _firstOpenScrollPerfRecording = false;
+      _loadMorePerfRecording = false;
     }
 
     for (final notifier in _expansionNotifiers.values) {
