@@ -1,0 +1,42 @@
+lib/pages/note_editor/editor_location_dialogs.dart
+  s_6adf86a5946ef7::t_c73bad287e3c2d 47-48
+lib/pages/ai_features_wrapper_page.dart
+  s_c55e08437d2b23::t_2e38a9b634c4d1 3,5,12
+lib/pages/note_editor/editor_metadata_location_section.dart
+  s_6adf86a5946ef7::t_2420bac1fb9d5b 57-65,67-106
+lib/pages/ai_report/report_overview.dart
+  s_3b2f92e0cf53d5::t_4b57930d394e79 472,477-483
+  s_3b2f92e0cf53d5::t_02acac755052b2 191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "16e2baeb3da97132545cba1a9195ba0437b8f473",
+  "prompts": {},
+  "sessions": {
+    "s_3b2f92e0cf53d5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f363624effeAG4h1CO92D5xHT",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_6adf86a5946ef7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f3635adbffenrYh9sIT52oP6d",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_c55e08437d2b23": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f422c43bffeW4X1kUXFkXzRwL",
+        "model": "glm-5.1"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
