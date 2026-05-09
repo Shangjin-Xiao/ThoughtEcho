@@ -764,6 +764,15 @@
   "mediaFilesUsage": "メディアファイル",
   "cacheUsage": "キャッシュ",
   "notesDatabase": "ノートDB",
+  "trashStorageUsageHint": "ゴミ箱に {count} 件のノートがあり、データベースと添付ファイルの容量を使用しています。",
+  "@trashStorageUsageHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewTrash": "ゴミ箱を表示",
   "aiDatabase": "AIDB",
   "logDatabase": "ログDB",
   "images": "画像",
