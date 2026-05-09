@@ -1,0 +1,19 @@
+lib/services/database_backup_service.dart
+  s_fd1d688d50632d::t_b0c20d989e1895 487-488,500-501
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "d76f7d7da84dbbe6bb274682670248e1ec298aae",
+  "prompts": {},
+  "sessions": {
+    "s_fd1d688d50632d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f4628b19ffeWA6mQCLpx9zqdC",
+        "model": "glm-5.1"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
