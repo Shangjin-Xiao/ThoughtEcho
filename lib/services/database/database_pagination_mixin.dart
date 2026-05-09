@@ -281,9 +281,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       // microtask 保证在调用方完成 .listen() 订阅后再发送，避免数据丢失。
       Future.microtask(() {
         if (_quotesController != null && !_quotesController!.isClosed) {
-          logDebug(
-            'watchQuotes 复用已有流，向新订阅者发送 ${_currentQuotes.length} 条缓存数据',
-          );
+          logDebug('watchQuotes 复用已有流，向新订阅者发送 ${_currentQuotes.length} 条缓存数据');
           _safeNotifyQuotesStream();
         }
       });
