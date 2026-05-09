@@ -103,22 +103,24 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
     // 时间段筛选
     if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-      final dayPeriodPlaceholders =
-          selectedDayPeriods.map((_) => '?').join(',');
+      final dayPeriodPlaceholders = selectedDayPeriods
+          .map((_) => '?')
+          .join(',');
       conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
       args.addAll(selectedDayPeriods);
     }
 
-    final whereClause =
-        conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+    final whereClause = conditions.isNotEmpty
+        ? 'WHERE ${conditions.join(' AND ')}'
+        : '';
 
     // ⚡ Bolt: 使用标量子查询替代 LEFT JOIN 和 GROUP BY，避免在 LIMIT 分页前全表聚合的性能瓶颈
 
     final sanitizedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
-    final query = '''
+    final query =
+        '''
       SELECT 
-        q.*,
-        (SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id) as tag_ids_joined
+        q.*
       FROM quotes q
       $whereClause
       ORDER BY $sanitizedOrderBy
@@ -128,26 +130,36 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     args.addAll([limit, offset]);
 
     final List<Map<String, dynamic>> maps = await db.rawQuery(query, args);
+
+    if (maps.isEmpty) return [];
+
+    final quoteIds = maps.map((m) => m['id'] as String).toList();
+    final placeholders = List.filled(quoteIds.length, '?').join(',');
+
+    final tagMaps = await db.rawQuery('''
+      SELECT quote_id, tag_id
+      FROM quote_tags
+      WHERE quote_id IN ($placeholders)
+      ''', quoteIds);
+
+    final tagsByQuoteId = <String, List<String>>{};
+    for (final tagMap in tagMaps) {
+      final quoteId = tagMap['quote_id'] as String;
+      final tagId = tagMap['tag_id'] as String;
+      tagsByQuoteId.putIfAbsent(quoteId, () => []).add(tagId);
+    }
+
     final quotes = <Quote>[];
 
     for (final map in maps) {
       try {
-        // 解析聚合的标签ID
-        final tagIdsJoined = map['tag_ids_joined'];
-        final tagIds = <String>{
-          if (tagIdsJoined != null && tagIdsJoined.toString().isNotEmpty)
-            ...tagIdsJoined
-                .toString()
-                .split(',')
-                .map((id) => id.trim())
-                .where((id) => id.isNotEmpty),
-        }.toList();
+        final quoteId = map['id'] as String;
+        final tagIds = tagsByQuoteId[quoteId] ?? [];
 
-        // 创建Quote对象（移除临时字段）
         final quoteData = Map<String, dynamic>.from(map);
-        quoteData.remove('tag_ids_joined');
+        quoteData['tag_ids'] = tagIds.join(',');
 
-        final quote = Quote.fromJson({...quoteData, 'tag_ids': tagIds});
+        final quote = Quote.fromJson(quoteData);
         quotes.add(quote);
       } catch (e) {
         logDebug('解析笔记数据失败: $e, 数据: $map');
@@ -211,12 +223,14 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
       if (!includeDeleted) {
         conditions.add('(q.is_deleted = 0 OR q.is_deleted IS NULL)');
       }
-      final where =
-          conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+      final where = conditions.isNotEmpty
+          ? 'WHERE ${conditions.join(' AND ')}'
+          : '';
 
       // 只取必要列，不取 delta_content/ai_analysis/summary/keywords
       final sanitizedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
-      final query = '''
+      final query =
+          '''
         SELECT q.id, q.content, q.date, q.source, q.source_author, q.source_work,
                q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
                q.weather, q.temperature, q.edit_source, q.day_period,
@@ -354,8 +368,9 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
       // 时间段筛选
       if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-        final dayPeriodPlaceholders =
-            selectedDayPeriods.map((_) => '?').join(',');
+        final dayPeriodPlaceholders = selectedDayPeriods
+            .map((_) => '?')
+            .join(',');
         conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
         args.addAll(selectedDayPeriods);
       }
@@ -374,15 +389,17 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
         finalArgs.insertAll(0, tagIds);
 
-        final whereClause =
-            conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+        final whereClause = conditions.isNotEmpty
+            ? 'WHERE ${conditions.join(' AND ')}'
+            : '';
 
         query =
             'SELECT COUNT(DISTINCT q.id) as count FROM quotes q$joins $whereClause';
       } else {
         // 没有标签筛选，使用简单的 COUNT
-        final whereClause =
-            conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+        final whereClause = conditions.isNotEmpty
+            ? 'WHERE ${conditions.join(' AND ')}'
+            : '';
         query = 'SELECT COUNT(*) as count FROM quotes q $whereClause';
       }
 

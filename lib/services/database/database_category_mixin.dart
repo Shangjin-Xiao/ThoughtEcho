@@ -108,8 +108,9 @@ mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
     String name, {
     String? excludeId,
   }) async {
-    final whereClause =
-        excludeId != null ? 'LOWER(name) = ? AND id != ?' : 'LOWER(name) = ?';
+    final whereClause = excludeId != null
+        ? 'LOWER(name) = ? AND id != ?'
+        : 'LOWER(name) = ?';
     final whereArgs = excludeId != null
         ? [name.toLowerCase(), excludeId]
         : [name.toLowerCase()];

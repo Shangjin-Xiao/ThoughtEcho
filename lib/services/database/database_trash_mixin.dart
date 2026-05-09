@@ -57,8 +57,11 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
         _webTombstones = <String, String>{};
       }
     } catch (e, stack) {
-      UnifiedLogService.instance
-          .error('初始化Web墓碑记录失败', error: e, stackTrace: stack);
+      UnifiedLogService.instance.error(
+        '初始化Web墓碑记录失败',
+        error: e,
+        stackTrace: stack,
+      );
       _webTombstones = <String, String>{};
     }
   }
@@ -71,18 +74,16 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       final prefs = await SharedPreferences.getInstance();
       final json = jsonEncode(
         _webTombstones!.entries
-            .map(
-              (entry) => {
-                'quote_id': entry.key,
-                'deleted_at': entry.value,
-              },
-            )
+            .map((entry) => {'quote_id': entry.key, 'deleted_at': entry.value})
             .toList(),
       );
       await prefs.setString(_webTombstonesKey, json);
     } catch (e, stack) {
-      UnifiedLogService.instance
-          .error('保存Web墓碑记录失败', error: e, stackTrace: stack);
+      UnifiedLogService.instance.error(
+        '保存Web墓碑记录失败',
+        error: e,
+        stackTrace: stack,
+      );
     }
   }
 
@@ -110,11 +111,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
     final sanitizedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
     final maps = await db.rawQuery(
       '''
-      SELECT q.*, (
-        SELECT GROUP_CONCAT(tag_id)
-        FROM quote_tags
-        WHERE quote_id = q.id
-      ) as tag_ids
+      SELECT q.*
       FROM quotes q
       WHERE q.is_deleted = 1
       ORDER BY $sanitizedOrderBy
@@ -122,7 +119,32 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       ''',
       [limit, offset],
     );
-    return maps.map((map) => Quote.fromJson(map)).toList();
+
+    if (maps.isEmpty) return [];
+
+    final quoteIds = maps.map((m) => m['id'] as String).toList();
+    final placeholders = List.filled(quoteIds.length, '?').join(',');
+
+    final tagMaps = await db.rawQuery('''
+      SELECT quote_id, tag_id
+      FROM quote_tags
+      WHERE quote_id IN ($placeholders)
+      ''', quoteIds);
+
+    final tagsByQuoteId = <String, List<String>>{};
+    for (final tagMap in tagMaps) {
+      final quoteId = tagMap['quote_id'] as String;
+      final tagId = tagMap['tag_id'] as String;
+      tagsByQuoteId.putIfAbsent(quoteId, () => []).add(tagId);
+    }
+
+    return maps.map((map) {
+      final quoteId = map['id'] as String;
+      final tags = tagsByQuoteId[quoteId] ?? [];
+      final mutableMap = Map<String, dynamic>.from(map);
+      mutableMap['tag_ids'] = tags.join(',');
+      return Quote.fromJson(mutableMap);
+    }).toList();
   }
 
   @override
@@ -403,18 +425,21 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
             try {
               final quote = Quote.fromJson(row);
               final extracted =
-                  await MediaReferenceService.extractMediaPathsFromQuote(
-                quote,
-              );
+                  await MediaReferenceService.extractMediaPathsFromQuote(quote);
               mediaCandidates.addAll(extracted);
             } catch (e, stack) {
-              UnifiedLogService.instance
-                  .error('提取已删除笔记媒体路径失败', error: e, stackTrace: stack);
+              UnifiedLogService.instance.error(
+                '提取已删除笔记媒体路径失败',
+                error: e,
+                stackTrace: stack,
+              );
             }
           }
 
-          final actualPlaceholders =
-              List.filled(batchDeletedIds.length, '?').join(',');
+          final actualPlaceholders = List.filled(
+            batchDeletedIds.length,
+            '?',
+          ).join(',');
           final refRows = await txn.query(
             'media_references',
             columns: ['file_path'],
@@ -429,15 +454,11 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
           }
 
           for (final id in batchDeletedIds) {
-            tombstoneBatch.insert(
-              'quote_tombstones',
-              {
-                'quote_id': id,
-                'deleted_at': now,
-                'device_id': null,
-              },
-              conflictAlgorithm: ConflictAlgorithm.replace,
-            );
+            tombstoneBatch.insert('quote_tombstones', {
+              'quote_id': id,
+              'deleted_at': now,
+              'device_id': null,
+            }, conflictAlgorithm: ConflictAlgorithm.replace);
           }
 
           await txn.rawDelete(
@@ -474,8 +495,11 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
             cachedAppPath: appPath,
           );
         } catch (e, stack) {
-          UnifiedLogService.instance
-              .error('清理孤儿媒体文件失败: $mediaPath', error: e, stackTrace: stack);
+          UnifiedLogService.instance.error(
+            '清理孤儿媒体文件失败: $mediaPath',
+            error: e,
+            stackTrace: stack,
+          );
         }
       }
 

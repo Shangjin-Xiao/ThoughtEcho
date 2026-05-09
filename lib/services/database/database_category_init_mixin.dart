@@ -8,8 +8,9 @@ mixin _DatabaseCategoryInitMixin on _DatabaseServiceBase {
     if (kIsWeb) {
       // Web 平台逻辑：检查内存中的 _categoryStore
       final defaultCategories = _getDefaultHitokotoCategories();
-      final existingNamesLower =
-          _categoryStore.map((c) => c.name.toLowerCase()).toSet();
+      final existingNamesLower = _categoryStore
+          .map((c) => c.name.toLowerCase())
+          .toSet();
       for (final category in defaultCategories) {
         if (!existingNamesLower.contains(category.name.toLowerCase())) {
           _categoryStore.add(category);
@@ -97,15 +98,12 @@ mixin _DatabaseCategoryInitMixin on _DatabaseServiceBase {
         if (idsToUpdate.containsKey(category.id)) {
           continue;
         }
-        batch.insert(
-            'categories',
-            {
-              'id': category.id,
-              'name': category.name,
-              'is_default': category.isDefault ? 1 : 0,
-              'icon_name': category.iconName,
-            },
-            conflictAlgorithm: ConflictAlgorithm.ignore);
+        batch.insert('categories', {
+          'id': category.id,
+          'name': category.name,
+          'is_default': category.isDefault ? 1 : 0,
+          'icon_name': category.iconName,
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
         logDebug('添加默认一言分类: ${category.name}');
       }
 

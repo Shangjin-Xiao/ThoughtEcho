@@ -178,22 +178,24 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         });
 
         // 异步执行查询
-        query().then((result) {
-          timeoutTimer?.cancel();
-          if (!completer.isCompleted) {
-            completer.complete(result);
-          }
-        }).catchError((error) {
-          timeoutTimer?.cancel();
-          if (!completer.isCompleted) {
-            logError(
-              '数据库查询失败: $error',
-              error: error,
-              source: 'DatabaseService',
-            );
-            completer.completeError(error);
-          }
-        });
+        query()
+            .then((result) {
+              timeoutTimer?.cancel();
+              if (!completer.isCompleted) {
+                completer.complete(result);
+              }
+            })
+            .catchError((error) {
+              timeoutTimer?.cancel();
+              if (!completer.isCompleted) {
+                logError(
+                  '数据库查询失败: $error',
+                  error: error,
+                  source: 'DatabaseService',
+                );
+                completer.completeError(error);
+              }
+            });
 
         final result = await completer.future;
         timeoutTimer.cancel();
@@ -295,8 +297,9 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
 
     // 时间段筛选
     if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-      final dayPeriodPlaceholders =
-          selectedDayPeriods.map((_) => '?').join(',');
+      final dayPeriodPlaceholders = selectedDayPeriods
+          .map((_) => '?')
+          .join(',');
       conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
       args.addAll(selectedDayPeriods);
     }
@@ -334,8 +337,9 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     joinClause = '';
     groupByClause = '';
 
-    final where =
-        conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+    final where = conditions.isNotEmpty
+        ? 'WHERE ${conditions.join(' AND ')}'
+        : '';
 
     final correctedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
 
@@ -343,13 +347,13 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     // 优化：指定查询列，排除大文本字段(ai_analysis, summary等)以提升列表加载性能
     // 注意：delta_content 必须保留！列表卡片通过 QuoteContent 组件渲染富文本（加粗、图片等）
     // 性能提升：(SELECT GROUP_CONCAT(tag_id) ...) 仅对 LIMIT 返回的数据执行
-    final query = '''
+    final query =
+        '''
       SELECT
         q.id, q.content, q.date, q.source, q.source_author, q.source_work,
         q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
         q.weather, q.temperature, q.edit_source, q.delta_content, q.day_period,
-        q.last_modified, q.favorite_count, q.is_deleted, q.deleted_at,
-        (SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id) as tag_ids
+        q.last_modified, q.favorite_count, q.is_deleted, q.deleted_at
       $fromClause
       $joinClause
       $where
@@ -380,8 +384,8 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
       final level = queryTime > 1000
           ? '🔴 严重慢查询'
           : queryTime > 500
-              ? '⚠️ 慢查询警告'
-              : 'ℹ️ 性能提示';
+          ? '⚠️ 慢查询警告'
+          : 'ℹ️ 性能提示';
       logDebug('$level: 查询耗时 ${queryTime}ms');
 
       if (queryTime > 500) {
@@ -406,7 +410,32 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     // 更新性能统计
     _updateQueryStats('getUserQuotes', queryTime);
 
-    return maps.map((m) => Quote.fromJson(m)).toList();
+    if (maps.isEmpty) return [];
+
+    // Fetch tags for the retrieved quotes
+    final quoteIds = maps.map((m) => m['id'] as String).toList();
+    final placeholders = List.filled(quoteIds.length, '?').join(',');
+
+    final tagMaps = await db.rawQuery('''
+      SELECT quote_id, tag_id
+      FROM quote_tags
+      WHERE quote_id IN ($placeholders)
+      ''', quoteIds);
+
+    final tagsByQuoteId = <String, List<String>>{};
+    for (final tagMap in tagMaps) {
+      final quoteId = tagMap['quote_id'] as String;
+      final tagId = tagMap['tag_id'] as String;
+      tagsByQuoteId.putIfAbsent(quoteId, () => []).add(tagId);
+    }
+
+    return maps.map((map) {
+      final quoteId = map['id'] as String;
+      final tags = tagsByQuoteId[quoteId] ?? [];
+      final mutableMap = Map<String, dynamic>.from(map);
+      mutableMap['tag_ids'] = tags.join(',');
+      return Quote.fromJson(mutableMap);
+    }).toList();
   }
 
   /// 修复：更新查询性能统计
