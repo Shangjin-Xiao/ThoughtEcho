@@ -454,11 +454,14 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
           }
 
           for (final id in batchDeletedIds) {
-            tombstoneBatch.insert('quote_tombstones', {
-              'quote_id': id,
-              'deleted_at': now,
-              'device_id': null,
-            }, conflictAlgorithm: ConflictAlgorithm.replace);
+            tombstoneBatch.insert(
+                'quote_tombstones',
+                {
+                  'quote_id': id,
+                  'deleted_at': now,
+                  'device_id': null,
+                },
+                conflictAlgorithm: ConflictAlgorithm.replace);
           }
 
           await txn.rawDelete(

@@ -23,9 +23,8 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       try {
         final db = await safeDatabase;
         final newQuoteId = quote.id ?? _uuid.v4();
-        final quoteWithId = quote.id == null
-            ? quote.copyWith(id: newQuoteId)
-            : quote;
+        final quoteWithId =
+            quote.id == null ? quote.copyWith(id: newQuoteId) : quote;
 
         await db.transaction((txn) async {
           final quoteMap = quoteWithId.toJson();
@@ -73,10 +72,13 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
             // ⚡ Bolt: 使用 batch 优化批量插入标签，解决 N+1 性能问题
             final batch = txn.batch();
             for (final tagId in quote.tagIds) {
-              batch.insert('quote_tags', {
-                'quote_id': newQuoteId,
-                'tag_id': tagId,
-              }, conflictAlgorithm: ConflictAlgorithm.ignore);
+              batch.insert(
+                  'quote_tags',
+                  {
+                    'quote_id': newQuoteId,
+                    'tag_id': tagId,
+                  },
+                  conflictAlgorithm: ConflictAlgorithm.ignore);
             }
             await batch.commit(noResult: true);
           }
@@ -187,13 +189,11 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         conditions.add('(q.is_deleted = 0 OR q.is_deleted IS NULL)');
       }
 
-      final whereClause = conditions.isNotEmpty
-          ? 'WHERE ${conditions.join(' AND ')}'
-          : '';
+      final whereClause =
+          conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
       // ⚡ Bolt: 使用标量子查询优化获取笔记及其关联的标签
-      final String query =
-          '''
+      final String query = '''
         SELECT q.*
         FROM quotes q
         $whereClause
@@ -319,7 +319,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     final where = includeDeleted
         ? 'content LIKE ? OR delta_content LIKE ?'
         : '(content LIKE ? OR delta_content LIKE ?) '
-              'AND (is_deleted = 0 OR is_deleted IS NULL)';
+            'AND (is_deleted = 0 OR is_deleted IS NULL)';
     final List<Map<String, dynamic>> results = await db.query(
       'quotes',
       where: where,
@@ -419,8 +419,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
               return;
             }
             final rawDeletedValue = existingRows.first['is_deleted'];
-            final isDeleted =
-                rawDeletedValue == true ||
+            final isDeleted = rawDeletedValue == true ||
                 rawDeletedValue == 1 ||
                 rawDeletedValue == '1';
             if (isDeleted) {
@@ -446,10 +445,13 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
             // ⚡ Bolt: 使用 batch 优化批量插入标签，解决 N+1 性能问题
             final batch = txn.batch();
             for (final tagId in quote.tagIds) {
-              batch.insert('quote_tags', {
-                'quote_id': quote.id!,
-                'tag_id': tagId,
-              }, conflictAlgorithm: ConflictAlgorithm.ignore);
+              batch.insert(
+                  'quote_tags',
+                  {
+                    'quote_id': quote.id!,
+                    'tag_id': tagId,
+                  },
+                  conflictAlgorithm: ConflictAlgorithm.ignore);
             }
             await batch.commit(noResult: true);
           }
@@ -482,9 +484,9 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
             // 使用增强版的 quickCheckAndDeleteIfOrphan（包含内容二次校验）
             final deleted =
                 await MediaReferenceService.quickCheckAndDeleteIfOrphan(
-                  absolutePath,
-                  cachedAppPath: appPath,
-                );
+              absolutePath,
+              cachedAppPath: appPath,
+            );
             if (deleted) {
               logDebug('已清理无引用媒体文件: $absolutePath');
             }
