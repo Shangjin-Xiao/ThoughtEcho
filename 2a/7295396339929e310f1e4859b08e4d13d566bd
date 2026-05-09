@@ -1,0 +1,30 @@
+lib/l10n/app_ja.arb
+  s_8557c5ee59dcbf::t_368af82af6ac61 2772
+lib/services/apk_download_service.dart
+  s_8557c5ee59dcbf::t_6ff13b52a5944f 11-14,16-17,19-20,22-23,25-63,75-81,261,268-271,276-281,313,316,318-326,330-337,342-347,349-352,354-377,379,382,386-389,583-618,620-715
+  s_8557c5ee59dcbf::t_3006e78b5a3178 15,18,21,24,327-329,619
+lib/l10n/app_en.arb
+  s_8557c5ee59dcbf::t_4dd0dbd259fdf6 2843
+lib/l10n/app_ko.arb
+  s_8557c5ee59dcbf::t_b93ba07cdd740d 2772
+lib/l10n/app_zh.arb
+  s_8557c5ee59dcbf::t_75fe451feff619 2849
+lib/l10n/app_fr.arb
+  s_8557c5ee59dcbf::t_60919439ed561b 2758
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "2a7295396339929e310f1e4859b08e4d13d566bd",
+  "prompts": {},
+  "sessions": {
+    "s_8557c5ee59dcbf": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f4463d79ffeTeWARWI9JZM8Fp",
+        "model": "glm-5.1"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
