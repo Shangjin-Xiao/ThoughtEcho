@@ -1,0 +1,24 @@
+lib/services/local_ai/speech_recognition_service.dart
+  s_9a1e5b779691c2::t_f482ada6f31b97 716
+  s_9a1e5b779691c2::t_8186cb591e0229 986
+  s_9a1e5b779691c2::t_5cabc321009ec2 1296
+  s_9a1e5b779691c2::t_25d76111561804 82-83,85-89
+  s_9a1e5b779691c2::t_e3005ed383b488 924-926,932
+  s_9a1e5b779691c2::t_763ef38b0da279 1109-1110,1112-1125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "f869e4cf2fd54ec5a0ff13e34c5fa5e77940f523",
+  "prompts": {},
+  "sessions": {
+    "s_9a1e5b779691c2": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f451e1c2ffe1dnjF0EyPhZdIt",
+        "model": "glm-5.1"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
