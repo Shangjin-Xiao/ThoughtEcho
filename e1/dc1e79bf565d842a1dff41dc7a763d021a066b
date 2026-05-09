@@ -1,0 +1,33 @@
+lib/pages/ai_assistant/ai_assistant_page_ui.dart
+  s_078b91b1d01dd5::t_b2611745a7c4d7 125,242,306,603
+  s_078b91b1d01dd5::t_4d2e4185347f01 67,72,235
+test/widget/pages/ai_assistant_page_test.dart
+  s_078b91b1d01dd5::t_7347bb2d3c044c 373,408,549,584-585,588,626,630-632,635
+  s_078b91b1d01dd5::t_bb1f32841c399d 512-513
+  s_078b91b1d01dd5::t_4d2e4185347f01 342,395,461
+  s_078b91b1d01dd5::t_46cfa93ba4876b 358,488,516
+lib/pages/ai_assistant/ai_assistant_page_workflow.dart
+  s_078b91b1d01dd5::t_5c2a67077ffc1b 34-35
+  s_078b91b1d01dd5::t_c5a93357d11ace 47,49,78-79
+  s_078b91b1d01dd5::t_4d2e4185347f01 328-329
+test/unit/models/ai_assistant_entry_test.dart
+  s_078b91b1d01dd5::t_6b3f77cb15e372 7,12,15,20
+lib/pages/ai_assistant/ai_assistant_page_session.dart
+  s_078b91b1d01dd5::t_22a5f91d3d60e8 68,131,133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "e1dc1e79bf565d842a1dff41dc7a763d021a066b",
+  "prompts": {},
+  "sessions": {
+    "s_078b91b1d01dd5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f2f76c23ffegyyxAZTiBRvPt4",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
