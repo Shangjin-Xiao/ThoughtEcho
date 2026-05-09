@@ -131,19 +131,25 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     if (maps.isEmpty) return [];
 
     final quoteIds = maps.map((m) => m['id'] as String).toList();
-    final placeholders = List.filled(quoteIds.length, '?').join(',');
-
-    final tagMaps = await db.rawQuery('''
-      SELECT quote_id, tag_id
-      FROM quote_tags
-      WHERE quote_id IN ($placeholders)
-      ''', quoteIds);
 
     final tagsByQuoteId = <String, List<String>>{};
-    for (final tagMap in tagMaps) {
-      final quoteId = tagMap['quote_id'] as String;
-      final tagId = tagMap['tag_id'] as String;
-      tagsByQuoteId.putIfAbsent(quoteId, () => []).add(tagId);
+
+    for (int i = 0; i < quoteIds.length; i += 900) {
+      final end = (i + 900 < quoteIds.length) ? i + 900 : quoteIds.length;
+      final batchIds = quoteIds.sublist(i, end);
+      final placeholders = List.filled(batchIds.length, '?').join(',');
+
+      final tagMaps = await db.rawQuery('''
+        SELECT quote_id, tag_id
+        FROM quote_tags
+        WHERE quote_id IN ($placeholders)
+        ''', batchIds);
+
+      for (final tagMap in tagMaps) {
+        final quoteId = tagMap['quote_id'] as String;
+        final tagId = tagMap['tag_id'] as String;
+        tagsByQuoteId.putIfAbsent(quoteId, () => []).add(tagId);
+      }
     }
 
     final quotes = <Quote>[];
