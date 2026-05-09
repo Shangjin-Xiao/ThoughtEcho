@@ -23,3 +23,6 @@
 ## 2026-05-01 - [SQLite Multi-Tag Filtering Optimization]
 **Learning:** In SQLite, when filtering records by multiple associated tags, using `EXISTS` subqueries combined with `GROUP BY` and `HAVING COUNT` forces a full-table aggregation before returning results. Similarly, counting records with multiple tags using `INNER JOIN` and `GROUP BY` + `HAVING COUNT` performs poorly.
 **Action:** For paginated list queries, replace the `GROUP BY` + `HAVING COUNT` with multiple `EXISTS` subqueries, which allows for fast point-lookups and early exits. For counting queries, replace it with multiple `INNER JOIN` clauses, which are more efficient for counting intersections.
+## 2026-05-08 - [SQLite GROUP_CONCAT Subquery Bottleneck]
+**Learning:** While using a scalar subquery (`(SELECT GROUP_CONCAT(...) ...`) prevents full-table aggregation before pagination compared to `LEFT JOIN`, executing this subquery per row still incurs an O(N) performance overhead and can cause SQLite query planner inefficiencies.
+**Action:** Remove `GROUP_CONCAT` scalar subqueries. Instead, fetch the primary rows (e.g., quotes), extract their IDs, and perform a single batched `IN (...)` lookup on the related table (e.g., `quote_tags`). Map the relationships in-memory via Dart. This is significantly faster.

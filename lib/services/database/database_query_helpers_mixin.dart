@@ -117,8 +117,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     final sanitizedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
     final query = '''
       SELECT 
-        q.*,
-        (SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id) as tag_ids_joined
+        q.*
       FROM quotes q
       $whereClause
       ORDER BY $sanitizedOrderBy
@@ -128,26 +127,42 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     args.addAll([limit, offset]);
 
     final List<Map<String, dynamic>> maps = await db.rawQuery(query, args);
+
+    if (maps.isEmpty) return [];
+
+    final quoteIds = maps.map((m) => m['id'] as String).toList();
+
+    final tagsByQuoteId = <String, List<String>>{};
+
+    for (int i = 0; i < quoteIds.length; i += 900) {
+      final end = (i + 900 < quoteIds.length) ? i + 900 : quoteIds.length;
+      final batchIds = quoteIds.sublist(i, end);
+      final placeholders = List.filled(batchIds.length, '?').join(',');
+
+      final tagMaps = await db.rawQuery('''
+        SELECT quote_id, tag_id
+        FROM quote_tags
+        WHERE quote_id IN ($placeholders)
+        ''', batchIds);
+
+      for (final tagMap in tagMaps) {
+        final quoteId = tagMap['quote_id'] as String;
+        final tagId = tagMap['tag_id'] as String;
+        tagsByQuoteId.putIfAbsent(quoteId, () => []).add(tagId);
+      }
+    }
+
     final quotes = <Quote>[];
 
     for (final map in maps) {
       try {
-        // 解析聚合的标签ID
-        final tagIdsJoined = map['tag_ids_joined'];
-        final tagIds = <String>{
-          if (tagIdsJoined != null && tagIdsJoined.toString().isNotEmpty)
-            ...tagIdsJoined
-                .toString()
-                .split(',')
-                .map((id) => id.trim())
-                .where((id) => id.isNotEmpty),
-        }.toList();
+        final quoteId = map['id'] as String;
+        final tagIds = tagsByQuoteId[quoteId] ?? [];
 
-        // 创建Quote对象（移除临时字段）
         final quoteData = Map<String, dynamic>.from(map);
-        quoteData.remove('tag_ids_joined');
+        quoteData['tag_ids'] = tagIds.join(',');
 
-        final quote = Quote.fromJson({...quoteData, 'tag_ids': tagIds});
+        final quote = Quote.fromJson(quoteData);
         quotes.add(quote);
       } catch (e) {
         logDebug('解析笔记数据失败: $e, 数据: $map');
