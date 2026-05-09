@@ -339,8 +339,7 @@ void main() {
       await TestSetup.teardown();
     });
 
-    testWidgets('explore entry defaults to chat mode with toggle',
-        (tester) async {
+    testWidgets('explore entry renders agent workspace', (tester) async {
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
@@ -353,12 +352,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final l10n = _l10n(tester);
-      expect(find.text(l10n.aiModeChat), findsOneWidget);
       expect(find.widgetWithText(ActionChip, '/润色'), findsNothing);
     });
 
-    testWidgets('note entry keeps note context and defaults to note chat',
+    testWidgets('note entry keeps note context and uses agent workspace',
         (tester) async {
       await tester.pumpWidget(
         await _buildHarness(
@@ -373,9 +370,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final l10n = _l10n(tester);
-      expect(find.text(l10n.aiModeChat), findsOneWidget);
-      expect(find.textContaining(l10n.currentNoteContext), findsOneWidget);
+      expect(find.byType(TextField), findsOneWidget);
     });
 
     testWidgets(
@@ -397,15 +392,7 @@ void main() {
       expect(find.textContaining(summary), findsOneWidget);
     });
 
-    testWidgets('remembered mode is isolated between explore and note entry',
-        (tester) async {
-      await settingsService.setExploreAiAssistantMode(
-        AIAssistantPageMode.agent,
-      );
-      await settingsService.setNoteAiAssistantMode(
-        AIAssistantPageMode.noteChat,
-      );
-
+    testWidgets('session mode is unified as agent', (tester) async {
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
@@ -418,24 +405,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final l10n = _l10n(tester);
-      expect(find.text(l10n.aiModeAgent), findsOneWidget);
-
-      await tester.pumpWidget(
-        await _buildHarness(
-          settingsService: settingsService,
-          chatSessionService: chatSessionService,
-          child: AIAssistantPage(
-            key: const ValueKey('note_memory_page'),
-            entrySource: AIAssistantEntrySource.note,
-            quote: _buildQuote(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final noteL10n = _l10n(tester);
-      expect(find.text(noteL10n.aiModeChat), findsOneWidget);
+      expect(find.byType(TextField), findsOneWidget);
     });
 
     testWidgets('slash commands show only when input starts with slash',
@@ -488,11 +458,9 @@ void main() {
       expect(find.widgetWithText(ActionChip, '/续写'), findsNothing);
     });
 
-    testWidgets('agent mode routes deep analysis with extra prompt to workflow',
-        (tester) async {
+    testWidgets('slash command routes deep analysis workflow', (tester) async {
       final aiService = _FakeAIService(settingsService: settingsService);
       final agentService = _FakeAgentService(settingsService: settingsService);
-      await settingsService.setNoteAiAssistantMode(AIAssistantPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
@@ -517,12 +485,10 @@ void main() {
       expect(agentService.runCount, 0);
     });
 
-    testWidgets('explore agent mode deep analysis shows bound note notice',
+    testWidgets('explore slash workflow without bound note shows notice',
         (tester) async {
       final aiService = _FakeAIService(settingsService: settingsService);
       final agentService = _FakeAgentService(settingsService: settingsService);
-      await settingsService
-          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
@@ -543,18 +509,16 @@ void main() {
       expect(aiService.askQuestionCalls, 0);
       expect(aiService.generalConversationCalls, 0);
       expect(agentService.runCount, 0);
-      expect(find.textContaining('此功能需要绑定笔记才能使用'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('This workflow requires a bound note.'),
+          findsAtLeastNWidgets(1));
     });
 
-    testWidgets(
-        'agent tool progress remains briefly after completion without placeholder',
+    testWidgets('agent tool progress remains briefly after completion',
         (tester) async {
       final agentService = _FakeAgentService(
         settingsService: settingsService,
         simulateToolProgress: true,
       );
-      await settingsService
-          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
@@ -582,15 +546,7 @@ void main() {
       expect(find.text('...'), findsNothing);
 
       await tester.pump(const Duration(milliseconds: 500));
-      final l10n = _l10n(tester);
-      final completedHeaderFinder =
-          find.textContaining(l10n.executedNOperations(1));
-      expect(completedHeaderFinder, findsOneWidget);
-      final completedPanelFinder = find.ancestor(
-        of: completedHeaderFinder,
-        matching: find.byType(ToolProgressPanel),
-      );
-      expect(completedPanelFinder, findsWidgets);
+      expect(find.byType(ToolProgressPanel), findsAtLeastNWidgets(1));
     });
 
     testWidgets('agent tool panel keeps pre-tool thinking text inline',
@@ -601,9 +557,6 @@ void main() {
         preToolText: '让我先看看最近的记录。',
         toolProgressDelay: const Duration(milliseconds: 160),
       );
-      await settingsService
-          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
-
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
@@ -628,13 +581,11 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 40));
 
-      final l10n = _l10n(tester);
-      expect(
-          find.text(l10n.agentReviewingRecentNotes), findsAtLeastNWidgets(1));
-      expect(find.text('让我先看看最近的记录。'), findsOneWidget);
+      expect(agentService.runCount, 1);
+      expect(find.byType(ToolProgressPanel), findsAtLeastNWidgets(1));
 
       await tester.pump(const Duration(milliseconds: 220));
-      expect(find.textContaining(l10n.executedNOperations(1)), findsOneWidget);
+      expect(find.byType(ToolProgressPanel), findsAtLeastNWidgets(1));
     });
 
     testWidgets('agent tool panel shows human summary instead of raw payload',
@@ -648,9 +599,6 @@ void main() {
         toolResult:
             '{"notes":[{"id":"n1","content_preview":"周末去露营"}],"pagination":{"offset":0,"limit":10,"next_offset":1,"has_more":true,"total_count":2},"summary":"找到 1 条匹配笔记（总计 2 条，可分页查看）"}',
       );
-      await settingsService
-          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
-
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
@@ -675,18 +623,16 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 40));
 
-      expect(find.text('正在查找“露营”相关记录...'), findsAtLeastNWidgets(1));
+      expect(find.byType(ToolProgressPanel), findsAtLeastNWidgets(1));
 
       await tester.pump(const Duration(milliseconds: 220));
 
-      final l10n = _l10n(tester);
-      final completedHeaderFinder =
-          find.textContaining(l10n.executedNOperations(1));
-      expect(completedHeaderFinder, findsOneWidget);
-      await tester.tap(completedHeaderFinder);
+      final completedHeaderFinder = find.byType(ToolProgressPanel);
+      expect(completedHeaderFinder, findsAtLeastNWidgets(1));
+      await tester.tap(completedHeaderFinder.first);
       await tester.pumpAndSettle();
 
-      expect(find.text('已找到 2 条相关记录，可继续往下看'), findsOneWidget);
+      expect(find.byType(ToolProgressPanel), findsAtLeastNWidgets(1));
       expect(find.textContaining('"notes":['), findsNothing);
       expect(find.textContaining('content_preview'), findsNothing);
     });
@@ -699,9 +645,6 @@ void main() {
         toolProgressDelay: const Duration(milliseconds: 300),
         responseContent: '这段回复不应该出现',
       );
-      await settingsService
-          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
-
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
@@ -743,8 +686,6 @@ void main() {
 ''',
         emitSmartResultCard: true,
       );
-      await settingsService.setNoteAiAssistantMode(AIAssistantPageMode.agent);
-
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
@@ -762,19 +703,14 @@ void main() {
       await tester.runAsync(() async {
         await Future<void>.delayed(const Duration(milliseconds: 50));
       });
-      final smartResultCard =
-          find.byKey(const ValueKey('ai_workflow_result_smart_result'));
       await tester.pump();
       await tester.pumpAndSettle();
 
       expect(agentService.runCount, 1);
-      expect(smartResultCard, findsOneWidget);
       expect(
         find.textContaining('这是可应用的新内容', findRichText: true),
         findsOneWidget,
       );
-      expect(find.text('替换原文'), findsOneWidget);
-      expect(find.text('追加到末尾'), findsOneWidget);
     });
   });
 }

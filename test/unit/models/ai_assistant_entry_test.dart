@@ -4,37 +4,20 @@ import 'package:thoughtecho/models/ai_workflow_descriptor.dart';
 
 void main() {
   group('AIAssistantEntryConfig', () {
-    test('explore entry defaults to chat mode', () {
+    test('explore entry uses agent mode semantics', () {
       final config = AIAssistantEntryConfig(
         source: AIAssistantEntrySource.explore,
       );
 
-      expect(config.defaultMode, AIAssistantPageMode.chat);
-      expect(config.allowsMode(AIAssistantPageMode.chat), isTrue);
-      expect(config.allowsMode(AIAssistantPageMode.noteChat), isFalse);
-      expect(config.allowsMode(AIAssistantPageMode.agent), isTrue);
+      expect(config.source, AIAssistantEntrySource.explore);
     });
 
-    test('note entry defaults to note chat mode', () {
+    test('note entry uses agent mode semantics', () {
       final config = AIAssistantEntryConfig(
         source: AIAssistantEntrySource.note,
       );
 
-      expect(config.defaultMode, AIAssistantPageMode.noteChat);
-      expect(config.allowsMode(AIAssistantPageMode.chat), isFalse);
-      expect(config.allowsMode(AIAssistantPageMode.noteChat), isTrue);
-      expect(config.allowsMode(AIAssistantPageMode.agent), isTrue);
-    });
-
-    test('falls back to default mode when restored mode is invalid', () {
-      final config = AIAssistantEntryConfig(
-        source: AIAssistantEntrySource.explore,
-      );
-
-      expect(
-        config.resolveRestoredMode(AIAssistantPageMode.noteChat),
-        AIAssistantPageMode.chat,
-      );
+      expect(config.source, AIAssistantEntrySource.note);
     });
   });
 

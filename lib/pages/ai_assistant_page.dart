@@ -87,7 +87,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   late AIService _aiService;
   late SettingsService _settingsService;
   bool _settingsReady = false;
-  late AIAssistantPageMode _currentMode;
   String _selectedInsightType = 'comprehensive';
   String _selectedInsightStyle = 'professional';
   bool _showSlashCommands = false; // Only show when user types /
@@ -226,8 +225,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     }
     return id;
   }
-
-  bool get _isAgentMode => _currentMode == AIAssistantPageMode.agent;
 
   /// 检查当前模型是否支持思考/推理模式
   bool get _currentModelSupportsThinking {

@@ -64,12 +64,12 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         actions: [
           IconButton(
             icon: const Icon(Icons.add_comment),
-            tooltip: l10n.newChat,
+            tooltip: 'New Agent',
             onPressed: _startNewChat,
           ),
           IconButton(
             icon: const Icon(Icons.history),
-            tooltip: l10n.chatHistory,
+            tooltip: 'History',
             onPressed: _isLoading ? null : _showSessionHistory,
           ),
         ],
@@ -122,7 +122,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              '${AppLocalizations.of(context).currentNoteContext}: ${_getQuotePreview()}',
+              'Current note context: ${_getQuotePreview()}',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -232,14 +232,14 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     : (meta['explanation'] as String? ?? ''),
                 authorLabel: '${l10n.possibleAuthor} ',
                 workLabel: '${l10n.possibleWork} ',
-                confidenceLabel: '${l10n.confidenceLabel} ',
+                confidenceLabel: 'Confidence: ',
               ),
             );
           case 'insight_config':
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: AIInsightWorkflowCard(
-                title: l10n.commandInsight,
+                title: 'Insights',
                 analysisTypes: _buildInsightTypeLabels(l10n),
                 analysisStyles: _buildInsightStyleLabels(l10n),
                 selectedType: _selectedInsightType,
@@ -303,7 +303,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     ),
                   ),
                   ToolProgressPanel(
-                    title: l10n.toolExecutionProgress,
+                    title: 'Tool execution progress',
                     items: progressItems,
                     inProgress: inProgress,
                     accentColor: theme.colorScheme.primary,
@@ -600,7 +600,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               controller: _textController,
               focusNode: _inputFocusNode,
               decoration: InputDecoration(
-                hintText: l10n.aiAssistantInputHint,
+                hintText: 'Ask the agent anything',
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -626,54 +626,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                       minimumSize: const Size(36, 36),
                     ),
                   ),
-                  // Mode toggle (direct tap)
-                  if (_entryConfig.allowsMode(AIAssistantPageMode.agent))
-                    GestureDetector(
-                      onTap: _isLoading
-                          ? null
-                          : () {
-                              final next = _isAgentMode
-                                  ? _entryConfig.defaultMode
-                                  : AIAssistantPageMode.agent;
-                              _setMode(next);
-                            },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _isAgentMode
-                              ? theme.colorScheme.primaryContainer
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _isAgentMode
-                                  ? Icons.smart_toy
-                                  : Icons.chat_outlined,
-                              size: 16,
-                              color: _isAgentMode
-                                  ? theme.colorScheme.onPrimaryContainer
-                                  : theme.colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _isAgentMode ? l10n.aiModeAgent : l10n.aiModeChat,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: _isAgentMode
-                                    ? theme.colorScheme.onPrimaryContainer
-                                    : theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   // Thinking toggle
                   if (_currentModelSupportsThinking)
                     IconButton(

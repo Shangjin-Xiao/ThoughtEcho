@@ -31,34 +31,8 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
       return;
     }
 
-    // 检测自然语言触发（Agent模式下）
-    if (_isAgentMode && descriptor == null) {
-      final workflows = _buildWorkflowDescriptors(l10n);
-      final triggeredId =
-          NaturalLanguageTriggerDetector.shouldAutoTrigger(trimmed, workflows);
-      if (triggeredId != null) {
-        final triggered = workflows.firstWhere(
-          (d) => d.id == triggeredId,
-          orElse: () => workflows.first,
-        );
-        logDebug('自然语言触发命令: ${triggered.command}');
-        // 可以选择自动触发或提示用户
-        // 这里我们可以添加用户提示或直接执行
-      }
-    }
-
-    if (_isAgentMode) {
-      _agentStatusDismissTimer?.cancel();
-      await _askAgent(trimmed);
-      return;
-    }
-
-    if (_currentMode == AIAssistantPageMode.noteChat) {
-      await _askBoundNote(trimmed);
-      return;
-    }
-
-    await _askGeneralChat(trimmed);
+    _agentStatusDismissTimer?.cancel();
+    await _askAgent(trimmed);
   }
 
   Future<void> _runExplicitWorkflow(
@@ -70,9 +44,9 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
     if (descriptor.requiresBoundNote && !_hasBoundNote) {
       _appendCardMessage(
         type: 'notice',
-        content: l10n.aiWorkflowNeedsBoundNote,
+        content: 'This workflow requires a bound note.',
         meta: <String, dynamic>{
-          'title': l10n.workflowUnavailable,
+          'title': 'Workflow unavailable',
           'icon': Icons.lock_outline.codePoint,
         },
       );
@@ -101,8 +75,8 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
         break;
       case AIWorkflowId.deepAnalysis:
         await _runMarkdownWorkflow(
-          title: l10n.commandDeepAnalysis,
-          loadingText: l10n.analyzingNote,
+          title: 'Deep Analysis',
+          loadingText: 'Analyzing note...',
           stream: _aiService.streamSummarizeNote(widget.quote!),
         );
         break;
@@ -351,187 +325,13 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
     }
 
     await _runMarkdownWorkflow(
-      title: l10n.commandInsight,
-      loadingText: l10n.generatingInsightsForPeriod(l10n.thisWeek),
+      title: 'Insights',
+      loadingText: 'Generating insights...',
       stream: _aiService.streamGenerateInsights(
         quotes,
         analysisType: _selectedInsightType,
         analysisStyle: _selectedInsightStyle,
       ),
-    );
-  }
-
-  Future<void> _askBoundNote(String text) async {
-    final l10n = AppLocalizations.of(context);
-    final aiMsgId = _uuid.v4();
-
-    // 初始化AI回复消息，状态为thinking
-    _appendMessage(
-      app_chat.ChatMessage(
-        id: aiMsgId,
-        content: l10n.thinkingInProgress,
-        isUser: false,
-        role: 'assistant',
-        timestamp: DateTime.now(),
-        isLoading: true,
-        state: MessageState.thinking,
-      ),
-    );
-
-    String fullResponse = '';
-    final thinkingParts = <String>[];
-    final history = _messages
-        .where((m) => m.includedInContext && m.id != aiMsgId && !m.isLoading)
-        .toList();
-
-    _streamSubscription?.cancel();
-
-    int uiChunkCount = 0;
-
-    // 使用流式订阅，支持实时更新
-    _streamSubscription = _aiService.streamAskQuestion(
-      widget.quote!,
-      text,
-      history: history,
-      enableThinking: _enableThinking,
-      onThinking: (thinkingChunk) {
-        thinkingParts.add(thinkingChunk);
-        _updateMessage(
-          aiMsgId,
-          fullResponse,
-          isLoading: true,
-          state: MessageState.thinking,
-          thinkingChunks: List<String>.from(thinkingParts),
-        );
-      },
-    ).listen(
-      (chunk) {
-        uiChunkCount++;
-        fullResponse += chunk;
-        _scheduleStreamUpdate(
-          aiMsgId,
-          fullResponse,
-          isLoading: true,
-          state: MessageState.responding,
-          thinkingChunks: thinkingParts.isNotEmpty
-              ? List<String>.from(thinkingParts)
-              : null,
-        );
-      },
-      onDone: () {
-        _cancelStreamUpdate();
-        logDebug('[UI] _askBoundNote 完成: $uiChunkCount 个 UI chunk');
-        final finalContent = fullResponse.isNotEmpty
-            ? fullResponse
-            : (thinkingParts.isNotEmpty
-                ? thinkingParts.join('')
-                : l10n.aiMisunderstoodQuestion);
-        _updateMessage(
-          aiMsgId,
-          finalContent,
-          isLoading: false,
-          state: MessageState.complete,
-          thinkingChunks: thinkingParts.isNotEmpty
-              ? List<String>.from(thinkingParts)
-              : null,
-        );
-      },
-      onError: (error) {
-        _cancelStreamUpdate();
-        _updateMessage(
-          aiMsgId,
-          l10n.aiResponseError(error.toString()),
-          isLoading: false,
-          state: MessageState.error,
-        );
-      },
-    );
-  }
-
-  Future<void> _askGeneralChat(String text) async {
-    final l10n = AppLocalizations.of(context);
-    final aiMsgId = _uuid.v4();
-
-    // 初始化AI回复消息，状态为thinking
-    _appendMessage(
-      app_chat.ChatMessage(
-        id: aiMsgId,
-        content: l10n.thinkingInProgress,
-        isUser: false,
-        role: 'assistant',
-        timestamp: DateTime.now(),
-        isLoading: true,
-        state: MessageState.thinking,
-      ),
-    );
-
-    String fullResponse = '';
-    final thinkingParts = <String>[];
-    final history = _messages
-        .where((m) => m.includedInContext && m.id != aiMsgId && !m.isLoading)
-        .toList();
-
-    _streamSubscription?.cancel();
-
-    int uiChunkCount = 0;
-
-    // 使用流式订阅，支持实时更新
-    _streamSubscription = _aiService.streamGeneralConversation(
-      text,
-      history: history,
-      systemContext: widget.exploreGuideSummary,
-      enableThinking: _enableThinking,
-      onThinking: (thinkingChunk) {
-        thinkingParts.add(thinkingChunk);
-        _updateMessage(
-          aiMsgId,
-          fullResponse,
-          isLoading: true,
-          state: MessageState.thinking,
-          thinkingChunks: List<String>.from(thinkingParts),
-        );
-      },
-    ).listen(
-      (chunk) {
-        uiChunkCount++;
-        fullResponse += chunk;
-        _scheduleStreamUpdate(
-          aiMsgId,
-          fullResponse,
-          isLoading: true,
-          state: MessageState.responding,
-          thinkingChunks: thinkingParts.isNotEmpty
-              ? List<String>.from(thinkingParts)
-              : null,
-        );
-      },
-      onDone: () {
-        _cancelStreamUpdate();
-        logDebug('[UI] _askGeneralChat 完成: $uiChunkCount 个 UI chunk');
-        final finalContent = fullResponse.isNotEmpty
-            ? fullResponse
-            : (thinkingParts.isNotEmpty
-                ? thinkingParts.join('')
-                : l10n.aiMisunderstoodQuestion);
-        _updateMessage(
-          aiMsgId,
-          finalContent,
-          isLoading: false,
-          state: MessageState.complete,
-          thinkingChunks: thinkingParts.isNotEmpty
-              ? List<String>.from(thinkingParts)
-              : null,
-        );
-      },
-      onError: (error) {
-        _cancelStreamUpdate();
-        _updateMessage(
-          aiMsgId,
-          l10n.aiResponseError(error.toString()),
-          isLoading: false,
-          state: MessageState.error,
-        );
-      },
     );
   }
 }

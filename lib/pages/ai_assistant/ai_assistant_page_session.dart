@@ -2,7 +2,6 @@ part of '../ai_assistant_page.dart';
 
 extension _AIAssistantPageSession on _AIAssistantPageState {
   void _initStateImpl() {
-    _currentMode = _entryConfig.defaultMode;
     _textController.addListener(_onTextChanged);
     _inputFocusNode.addListener(_onInputFocusChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _initServicesAndLoad());
@@ -59,15 +58,6 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
         _agentListenerAttached = true;
       }
       _settingsReady = true;
-      final restoredMode = _restoreModeFromSettings();
-      if (restoredMode != _currentMode && mounted) {
-        _setState(() {
-          _currentMode = restoredMode;
-        });
-      } else {
-        _currentMode = restoredMode;
-      }
-
       // 按 provider 配置初始化：优先使用用户开关，其次自动推断
       final currentProvider = _settingsService.multiAISettings.currentProvider;
       _enableThinking = currentProvider?.enableThinking ??
@@ -75,10 +65,7 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
 
       if (widget.session != null) {
         await _loadSession(widget.session!.id);
-      } else if (_hasBoundNote &&
-          !_isAgentMode &&
-          _boundNoteId != null &&
-          _entrySource == AIAssistantEntrySource.note) {
+      } else if (_hasBoundNote && _boundNoteId != null) {
         final session = await _chatSessionService.getLatestSessionForNote(
           _boundNoteId!,
         );
@@ -103,32 +90,6 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
       AppLogger.e('Failed to initialize AI Assistant Page services',
           error: e, stackTrace: stack);
     }
-  }
-
-  AIAssistantPageMode _restoreModeFromSettings() {
-    final restored = switch (_entrySource) {
-      AIAssistantEntrySource.explore => _settingsService.exploreAiAssistantMode,
-      AIAssistantEntrySource.note => _settingsService.noteAiAssistantMode,
-    };
-    return _entryConfig.resolveRestoredMode(restored);
-  }
-
-  Future<void> _persistMode(AIAssistantPageMode mode) async {
-    if (_entrySource == AIAssistantEntrySource.explore) {
-      await _settingsService.setExploreAiAssistantMode(mode);
-    } else {
-      await _settingsService.setNoteAiAssistantMode(mode);
-    }
-  }
-
-  Future<void> _setMode(AIAssistantPageMode mode) async {
-    if (!_entryConfig.allowsMode(mode) || _currentMode == mode) {
-      return;
-    }
-    _setState(() {
-      _currentMode = mode;
-    });
-    await _persistMode(mode);
   }
 
   Future<void> _setThinkingEnabled(bool enabled) async {
@@ -167,19 +128,11 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
 
   Future<void> _createNewSession() async {
     final session = await _chatSessionService.createSession(
-      sessionType: _sessionTypeForMode(_currentMode),
+      sessionType: 'agent',
       noteId: _boundNoteId,
-      title: _hasBoundNote ? _getQuotePreview() : 'AI Chat',
+      title: _hasBoundNote ? _getQuotePreview() : 'AI Agent',
     );
     _currentSessionId = session.id;
-  }
-
-  String _sessionTypeForMode(AIAssistantPageMode mode) {
-    return switch (mode) {
-      AIAssistantPageMode.chat => 'chat',
-      AIAssistantPageMode.noteChat => 'note',
-      AIAssistantPageMode.agent => 'agent',
-    };
   }
 
   /// 延迟创建会话，并异步生成 AI 标题
