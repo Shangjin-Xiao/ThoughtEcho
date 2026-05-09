@@ -105,6 +105,10 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             _isLoading = false;
             _pruneExpansionControllers();
           });
+          if (_loadMorePerfRecording &&
+              (_quotes.length > _loadMorePerfStartCount || !_hasMore)) {
+            _markLoadMorePerfDataArrived();
+          }
           _scheduleExpandableQuoteCheck();
 
           if (widget.onGuideTargetsReady != null) {
@@ -307,6 +311,10 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             _isLoading = false;
             _pruneExpansionControllers();
           });
+          if (_loadMorePerfRecording &&
+              (_quotes.length > _loadMorePerfStartCount || !_hasMore)) {
+            _markLoadMorePerfDataArrived();
+          }
           _scheduleExpandableQuoteCheck();
 
           if (widget.onGuideTargetsReady != null) {
