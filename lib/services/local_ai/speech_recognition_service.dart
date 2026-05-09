@@ -79,11 +79,14 @@ class SpeechRecognitionService extends ChangeNotifier {
   /// 是否正在做一次预览解码（避免重入）
   bool _partialDecodeInProgress = false;
 
-  /// 实时预览解码间隔（优化：增加到1500ms减少CPU负担和UI卡顿）
-  static const Duration _partialDecodeInterval = Duration(milliseconds: 1500);
+  /// 流式模型已完成段落的累积文本（端点检测后追加）
+  String _accumulatedTranscription = '';
 
-  /// 每次触发预览解码前至少新增的样本数（优化：增加到24000，约1.5秒）
-  static const int _minNewSamplesForPartialDecode = 24000; // ~1.5s @16k
+  /// 实时预览解码间隔
+  static const Duration _partialDecodeInterval = Duration(milliseconds: 400);
+
+  /// 每次触发预览解码前至少新增的样本数（约0.4秒@16kHz）
+  static const int _minNewSamplesForPartialDecode = 6400; // ~0.4s @16k
 
   /// 高核设备上的线程上限，避免占用过高导致 UI 抖动（优化：降低到4避免过多线程竞争）
   static const int _maxRecommendedThreads = 4;
@@ -710,6 +713,7 @@ class SpeechRecognitionService extends ChangeNotifier {
       _freeStream();
 
       _currentTranscription = '';
+      _accumulatedTranscription = '';
 
       if (_useStreamRecording && _recognizer != null) {
         // 根据模型类型创建对应的音频流
@@ -917,12 +921,15 @@ class SpeechRecognitionService extends ChangeNotifier {
 
       final result = recognizer.getResult(stream);
 
+      // 拼接已完成段落 + 最后一段文本
+      final fullText = _accumulatedTranscription + result.text;
+
       // 检查并重置端点
       if (recognizer.isEndpoint(stream)) {
         recognizer.reset(stream);
       }
 
-      return result.text;
+      return fullText;
     } else {
       final recognizer = _recognizer as sherpa.OfflineRecognizer;
       final stream = _asrStream as sherpa.OfflineStream;
@@ -976,6 +983,7 @@ class SpeechRecognitionService extends ChangeNotifier {
       _recordingTimer?.cancel();
       _status = RecordingStatus.idle;
       _currentTranscription = '';
+      _accumulatedTranscription = '';
       _useStreamRecording = false;
       notifyListeners();
 
@@ -1098,13 +1106,23 @@ class SpeechRecognitionService extends ChangeNotifier {
         final recognizer = _recognizer as sherpa.OnlineRecognizer;
         final stream = _asrStream as sherpa.OnlineStream;
 
-        // 流式模型需要先检查是否 ready
-        if (!recognizer.isReady(stream)) {
-          text = _currentTranscription;
-        } else {
+        // 流式模型：循环解码所有就绪的音频块
+        while (recognizer.isReady(stream)) {
           recognizer.decode(stream);
-          final result = recognizer.getResult(stream);
-          text = result.text;
+        }
+
+        // 获取当前段落的识别结果
+        final result = recognizer.getResult(stream);
+        final segmentText = result.text;
+
+        // 端点检测：如果检测到句子结束，累积已完成文本并重置
+        if (recognizer.isEndpoint(stream)) {
+          _accumulatedTranscription += segmentText;
+          recognizer.reset(stream);
+          text = _accumulatedTranscription;
+        } else {
+          // 拼接已完成段落 + 当前进行中的文本
+          text = _accumulatedTranscription + segmentText;
         }
       } else {
         final recognizer = _recognizer as sherpa.OfflineRecognizer;
@@ -1275,6 +1293,7 @@ class SpeechRecognitionService extends ChangeNotifier {
     _cleanupRecording();
     _status = RecordingStatus.idle;
     _currentTranscription = '';
+    _accumulatedTranscription = '';
     notifyListeners();
   }
 
