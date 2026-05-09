@@ -501,10 +501,8 @@ extension _NoteListScrollExtension on NoteListViewState {
       logDebug('触发加载更多，当前有${_quotes.length}条数据', source: 'NoteListView');
       await db.loadMoreQuotes();
       // 成功路径由 watchQuotes 的流回调统一更新 _quotes/_hasMore/_isLoading，
-      // 避免加载更多时在滚动中多触发一次整列表重建。
-      if (mounted) {
-        _isLoading = false;
-      }
+      // 避免在流事件送达前把 _isLoading 提前置回 false，导致滚动惯性期间
+      // 再次触发 loadMore，一次追加两页数据。
     } catch (e) {
       _cancelLoadMorePerfCapture('加载失败: $e');
       // 修复：出错时也要重置加载状态
