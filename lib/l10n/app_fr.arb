@@ -2755,7 +2755,7 @@
       }
     }
   },
-  "apkDownloadHint": "Veuillez ne pas fermer l'application. L'installation démarrera automatiquement après le téléchargement.",
+  "apkDownloadHint": "Veuillez ne pas quitter l'application. L'installation démarrera automatiquement après le téléchargement.",
   "apkDownloadStarted": "J'ai commencé à télécharger ThoughtEcho {version}",
   "@apkDownloadStarted": {
     "placeholders": {
