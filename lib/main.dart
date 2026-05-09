@@ -45,7 +45,6 @@ import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/utils/update_dialog_helper.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
-import 'package:thoughtecho/services/place_search_service.dart';
 import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/explore_notes_tool.dart';
@@ -322,8 +321,6 @@ Future<void> main() async {
         final featureGuideService = FeatureGuideService(SafeMMKV());
 
         final chatSessionService = ChatSessionService();
-        final placeSearchService = NominatimPlaceSearchService();
-
         // 创建智能推送服务实例
         final smartPushService = SmartPushService(
           databaseService: databaseService,
@@ -357,9 +354,6 @@ Future<void> main() async {
               ChangeNotifierProvider(create: (_) => featureGuideService),
               ChangeNotifierProvider(create: (_) => smartPushService),
               ChangeNotifierProvider(create: (_) => chatSessionService),
-              ChangeNotifierProvider<NominatimPlaceSearchService>(
-                create: (_) => placeSearchService,
-              ),
               ChangeNotifierProvider(create: (_) => NoteSearchController()),
               ChangeNotifierProxyProvider<SettingsService,
                   InsightHistoryService>(

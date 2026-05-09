@@ -44,8 +44,8 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
               ),
             );
       content = hasPoiName
-          ? '${l10n.poiNameLabel}: ${_poiName!.trim()}\n\n$locationInfoText\n\n${l10n.longPressForMapPicker}'
-          : '$locationInfoText\n\n${l10n.longPressForMapPicker}';
+          ? '${l10n.poiNameLabel}: ${_poiName!.trim()}\n\n$locationInfoText'
+          : locationInfoText;
       actions = [
         if (_showLocation)
           TextButton(

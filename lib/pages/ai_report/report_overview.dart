@@ -188,7 +188,7 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
           _buildInsightBulbBar(),
           const SizedBox(height: 20),
 
-          // ─── AI 对话 & 地图记忆入口 ───
+          // ─── AI 对话入口 ───
           _buildQuickEntries(),
           const SizedBox(height: 24),
 
@@ -469,40 +469,18 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
     );
   }
 
-  /// 构建 AI 对话 & 地图记忆快捷入口
+  /// 构建 AI 对话快捷入口
   Widget _buildQuickEntries() {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
-    return Row(
-      children: [
-        Expanded(
-          child: _buildEntryCard(
-            icon: Icons.smart_toy_outlined,
-            title: l10n.aiChat,
-            subtitle: l10n.chatWithAiAssistant,
-            color: theme.colorScheme.primaryContainer,
-            iconColor: theme.colorScheme.onPrimaryContainer,
-            onTap: () => _openAIAssistant(),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildEntryCard(
-            icon: Icons.map_outlined,
-            title: l10n.exploreMapMemory,
-            subtitle: l10n.exploreMapMemoryDesc,
-            color: theme.colorScheme.secondaryContainer,
-            iconColor: theme.colorScheme.onSecondaryContainer,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const MapMemoryPage(),
-              ),
-            ),
-          ),
-        ),
-      ],
+    return _buildEntryCard(
+      icon: Icons.smart_toy_outlined,
+      title: l10n.aiChat,
+      subtitle: l10n.chatWithAiAssistant,
+      color: theme.colorScheme.primaryContainer,
+      iconColor: theme.colorScheme.onPrimaryContainer,
+      onTap: () => _openAIAssistant(),
     );
   }
 

@@ -16,7 +16,6 @@ import '../utils/icon_utils.dart';
 import '../constants/app_constants.dart'; // 导入应用常量
 import '../gen_l10n/app_localizations.dart';
 import 'ai_assistant_page.dart';
-import 'map_memory_page.dart';
 
 part 'ai_report/report_data_loading.dart';
 part 'ai_report/report_time_selector.dart';
