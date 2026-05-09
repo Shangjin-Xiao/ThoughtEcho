@@ -484,7 +484,8 @@ class DatabaseBackupService {
 
                 if (localLastModified == null ||
                     localLastModified.isEmpty ||
-                    _compareIsoTime(tombstoneDeletedAt, localLastModified) >= 0) {
+                    _compareIsoTime(tombstoneDeletedAt, localLastModified) >=
+                        0) {
                   quotesToDelete.add(quoteId);
                 }
               }
@@ -496,7 +497,8 @@ class DatabaseBackupService {
                     ? i + batchSize
                     : quotesToDelete.length;
                 final batchIds = quotesToDelete.sublist(i, end);
-                final placeholders = List.filled(batchIds.length, '?').join(',');
+                final placeholders =
+                    List.filled(batchIds.length, '?').join(',');
                 await txn.delete(
                   'quotes',
                   where: 'id IN ($placeholders)',
