@@ -21,8 +21,13 @@ extension _NoteListScrollExtension on NoteListViewState {
     var rich = 0;
     var media = 0;
     var expandable = 0;
+    var expanded = 0;
 
     for (final quote in _quotes) {
+      final quoteId = quote.id;
+      if (quoteId != null && (_expandedItems[quoteId] ?? false)) {
+        expanded++;
+      }
       final deltaContent = quote.deltaContent;
       if (deltaContent != null && quote.editSource == 'fullscreen') {
         rich++;
@@ -38,7 +43,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     }
 
     return 'total=$total, rich=$rich, media=$media, expandable=$expandable, '
-        'expanded=${_expandedItems.length}';
+        'expanded=$expanded, tracked=${_expandedItems.length}';
   }
 
   void _logNoteListPerfSnapshot(String reason) {
