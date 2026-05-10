@@ -154,14 +154,29 @@ extension _NoteListScrollExtension on NoteListViewState {
 
     var jankyFrames = 0;
     var totalFrameMicros = 0;
+    var totalBuildMicros = 0;
+    var totalRasterMicros = 0;
     var worstFrameMs = 0.0;
+    var worstBuildMs = 0.0;
+    var worstRasterMs = 0.0;
     for (final timing in _scrollSessionFrameTimings) {
-      final totalMicros = timing.buildDuration.inMicroseconds +
-          timing.rasterDuration.inMicroseconds;
+      final buildMicros = timing.buildDuration.inMicroseconds;
+      final rasterMicros = timing.rasterDuration.inMicroseconds;
+      final totalMicros = buildMicros + rasterMicros;
       totalFrameMicros += totalMicros;
+      totalBuildMicros += buildMicros;
+      totalRasterMicros += rasterMicros;
       final frameMs = totalMicros / 1000.0;
+      final buildMs = buildMicros / 1000.0;
+      final rasterMs = rasterMicros / 1000.0;
       if (frameMs > worstFrameMs) {
         worstFrameMs = frameMs;
+      }
+      if (buildMs > worstBuildMs) {
+        worstBuildMs = buildMs;
+      }
+      if (rasterMs > worstRasterMs) {
+        worstRasterMs = rasterMs;
       }
       if (totalMicros > 16600) {
         jankyFrames++;
@@ -176,6 +191,10 @@ extension _NoteListScrollExtension on NoteListViewState {
     final frameSamples = _scrollSessionFrameTimings.length;
     final avgFrameMs =
         frameSamples == 0 ? 0.0 : (totalFrameMicros / frameSamples) / 1000.0;
+    final avgBuildMs =
+        frameSamples == 0 ? 0.0 : (totalBuildMicros / frameSamples) / 1000.0;
+    final avgRasterMs =
+        frameSamples == 0 ? 0.0 : (totalRasterMicros / frameSamples) / 1000.0;
 
     logDebug(
       '滚动会话结果: direction=$direction, '
@@ -185,7 +204,9 @@ extension _NoteListScrollExtension on NoteListViewState {
       'jankIntervals=$jankyIntervals, avgInterval=${avgIntervalMs.toStringAsFixed(1)}ms, '
       'worstInterval=${(worstIntervalMicros / 1000.0).toStringAsFixed(1)}ms, '
       'frames=$frameSamples, frameJank=$jankyFrames, '
-      'avgFrame=${avgFrameMs.toStringAsFixed(1)}ms, worstFrame=${worstFrameMs.toStringAsFixed(1)}ms',
+      'avgFrame=${avgFrameMs.toStringAsFixed(1)}ms, worstFrame=${worstFrameMs.toStringAsFixed(1)}ms, '
+      'avgBuild=${avgBuildMs.toStringAsFixed(1)}ms, worstBuild=${worstBuildMs.toStringAsFixed(1)}ms, '
+      'avgRaster=${avgRasterMs.toStringAsFixed(1)}ms, worstRaster=${worstRasterMs.toStringAsFixed(1)}ms',
       source: 'NoteListView.Perf',
     );
     _logNoteListPerfSnapshot('滚动会话缓存状态');
@@ -232,16 +253,31 @@ extension _NoteListScrollExtension on NoteListViewState {
     if (_firstOpenScrollFrameTimings.isNotEmpty) {
       int jankyFrames = 0;
       double worstFrameMs = 0;
+      double worstBuildMs = 0;
+      double worstRasterMs = 0;
       int totalFrameMicros = 0;
+      int totalBuildMicros = 0;
+      int totalRasterMicros = 0;
 
       for (final timing in _firstOpenScrollFrameTimings) {
-        final int totalMicros = timing.buildDuration.inMicroseconds +
-            timing.rasterDuration.inMicroseconds;
+        final int buildMicros = timing.buildDuration.inMicroseconds;
+        final int rasterMicros = timing.rasterDuration.inMicroseconds;
+        final int totalMicros = buildMicros + rasterMicros;
         totalFrameMicros += totalMicros;
+        totalBuildMicros += buildMicros;
+        totalRasterMicros += rasterMicros;
 
         final frameMs = totalMicros / 1000.0;
+        final buildMs = buildMicros / 1000.0;
+        final rasterMs = rasterMicros / 1000.0;
         if (frameMs > worstFrameMs) {
           worstFrameMs = frameMs;
+        }
+        if (buildMs > worstBuildMs) {
+          worstBuildMs = buildMs;
+        }
+        if (rasterMs > worstRasterMs) {
+          worstRasterMs = rasterMs;
         }
 
         if (totalMicros > 16600) {
@@ -251,11 +287,15 @@ extension _NoteListScrollExtension on NoteListViewState {
 
       final totalFrames = _firstOpenScrollFrameTimings.length;
       final avgFrameMs = (totalFrameMicros / totalFrames) / 1000.0;
+      final avgBuildMs = (totalBuildMicros / totalFrames) / 1000.0;
+      final avgRasterMs = (totalRasterMicros / totalFrames) / 1000.0;
 
       logDebug(
         '首次滑动性能结果(FrameTiming): total=$totalFrames, jank=$jankyFrames, '
         'avg=${avgFrameMs.toStringAsFixed(1)}ms, '
-        'worst=${worstFrameMs.toStringAsFixed(1)}ms',
+        'worst=${worstFrameMs.toStringAsFixed(1)}ms, '
+        'avgBuild=${avgBuildMs.toStringAsFixed(1)}ms, worstBuild=${worstBuildMs.toStringAsFixed(1)}ms, '
+        'avgRaster=${avgRasterMs.toStringAsFixed(1)}ms, worstRaster=${worstRasterMs.toStringAsFixed(1)}ms',
         source: 'NoteListView.Perf',
       );
     } else {
@@ -377,16 +417,31 @@ extension _NoteListScrollExtension on NoteListViewState {
 
     int jankyFrames = 0;
     double worstFrameMs = 0;
+    double worstBuildMs = 0;
+    double worstRasterMs = 0;
     int totalFrameMicros = 0;
+    int totalBuildMicros = 0;
+    int totalRasterMicros = 0;
 
     for (final timing in _loadMorePerfFrameTimings) {
-      final int totalMicros = timing.buildDuration.inMicroseconds +
-          timing.rasterDuration.inMicroseconds;
+      final int buildMicros = timing.buildDuration.inMicroseconds;
+      final int rasterMicros = timing.rasterDuration.inMicroseconds;
+      final int totalMicros = buildMicros + rasterMicros;
       totalFrameMicros += totalMicros;
+      totalBuildMicros += buildMicros;
+      totalRasterMicros += rasterMicros;
 
       final frameMs = totalMicros / 1000.0;
+      final buildMs = buildMicros / 1000.0;
+      final rasterMs = rasterMicros / 1000.0;
       if (frameMs > worstFrameMs) {
         worstFrameMs = frameMs;
+      }
+      if (buildMs > worstBuildMs) {
+        worstBuildMs = buildMs;
+      }
+      if (rasterMs > worstRasterMs) {
+        worstRasterMs = rasterMs;
       }
       if (totalMicros > 16600) {
         jankyFrames++;
@@ -396,13 +451,19 @@ extension _NoteListScrollExtension on NoteListViewState {
     final totalFrames = _loadMorePerfFrameTimings.length;
     final avgFrameMs =
         totalFrames == 0 ? 0.0 : (totalFrameMicros / totalFrames) / 1000.0;
+    final avgBuildMs =
+        totalFrames == 0 ? 0.0 : (totalBuildMicros / totalFrames) / 1000.0;
+    final avgRasterMs =
+        totalFrames == 0 ? 0.0 : (totalRasterMicros / totalFrames) / 1000.0;
 
     logDebug(
       '加载更多性能结果: start=$_loadMorePerfStartCount, '
       'current=${_quotes.length}, added=$addedCount, hasMore=$_hasMore, '
       'elapsed=${elapsedMs}ms, frames=$totalFrames, jank=$jankyFrames, '
       'avg=${avgFrameMs.toStringAsFixed(1)}ms, '
-      'worst=${worstFrameMs.toStringAsFixed(1)}ms',
+      'worst=${worstFrameMs.toStringAsFixed(1)}ms, '
+      'avgBuild=${avgBuildMs.toStringAsFixed(1)}ms, worstBuild=${worstBuildMs.toStringAsFixed(1)}ms, '
+      'avgRaster=${avgRasterMs.toStringAsFixed(1)}ms, worstRaster=${worstRasterMs.toStringAsFixed(1)}ms',
       source: 'NoteListView.Perf',
     );
     _logNoteListPerfSnapshot('加载更多缓存状态');
