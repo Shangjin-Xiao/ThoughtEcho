@@ -1,0 +1,29 @@
+lib/pages/ai_report/report_data_loading.dart
+  s_b17c298277ced8::t_9912726586513c 13-14
+lib/services/database/database_quote_crud_mixin.dart
+  s_b17c298277ced8::t_f41dd4101940b7 483-486,488-489,491-497
+lib/services/database_backup_service.dart
+  s_b17c298277ced8::t_9912726586513c 23-25
+lib/services/media_cleanup_service.dart
+  s_b17c298277ced8::t_6917c831c20291 244-245,257
+lib/pages/home_page.dart
+  s_b17c298277ced8::t_9912726586513c 473-475
+lib/services/streaming_backup_processor.dart
+  s_b17c298277ced8::t_9912726586513c 104-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "67e588eaf1263c73a91e1631d4cd7bea64cc38d2",
+  "prompts": {},
+  "sessions": {
+    "s_b17c298277ced8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f04e8df9ffehd6neBZbI6q6b5",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
