@@ -28,14 +28,15 @@ void main() {
       );
     });
 
-    test('shouldShowSettingsBanner allows developer preview before anniversary',
+    test(
+        'shouldShowSettingsBanner ignores developer preview before anniversary',
         () {
       expect(
         AnniversaryDisplayUtils.shouldShowSettingsBanner(
           now: DateTime(2026, 3, 1),
           developerMode: true,
         ),
-        isTrue,
+        isFalse,
       );
       expect(
         AnniversaryDisplayUtils.shouldShowSettingsBanner(
@@ -46,7 +47,8 @@ void main() {
       );
     });
 
-    test('shouldAutoShowAnimation allows developer preview outside date window',
+    test(
+        'shouldAutoShowAnimation ignores developer preview outside date window',
         () {
       expect(
         AnniversaryDisplayUtils.shouldAutoShowAnimation(
@@ -91,7 +93,7 @@ void main() {
           anniversaryShown: false,
           anniversaryAnimationEnabled: true,
         ),
-        isTrue,
+        isFalse,
       );
       expect(
         AnniversaryDisplayUtils.shouldAutoShowAnimation(

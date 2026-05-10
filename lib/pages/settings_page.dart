@@ -994,7 +994,9 @@ class SettingsPageState extends State<SettingsPage> {
 
           // --- 关于信息 Card 结束 ---
 
+          /*
           // --- 一周年开发者调试 Card (仅开发者模式可见) ---
+          // 一周年开发者模式控制已临时关闭，保留给两周年复用。
           Consumer<SettingsService>(
             builder: (context, settingsService, _) {
               if (!settingsService.appSettings.developerMode) {
@@ -1061,6 +1063,7 @@ class SettingsPageState extends State<SettingsPage> {
           ),
 
           // --- 一周年开发者调试 Card 结束 ---
+          */
           const SizedBox(height: 20), // 底部增加一些间距
         ],
       ),

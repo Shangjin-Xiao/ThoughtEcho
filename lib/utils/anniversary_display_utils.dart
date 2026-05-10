@@ -10,7 +10,8 @@ class AnniversaryDisplayUtils {
     required DateTime now,
     required bool developerMode,
   }) {
-    return developerMode || isAnniversarySeason(now);
+    // 一周年开发者模式预览入口已临时关闭，保留参数便于两周年复用。
+    return isAnniversarySeason(now);
   }
 
   static bool shouldAutoShowAnimation({
@@ -19,7 +20,8 @@ class AnniversaryDisplayUtils {
     required bool anniversaryShown,
     required bool anniversaryAnimationEnabled,
   }) {
-    return (developerMode || isAnniversarySeason(now)) &&
+    // 一周年开发者模式预览入口已临时关闭，保留参数便于两周年复用。
+    return isAnniversarySeason(now) &&
         !anniversaryShown &&
         anniversaryAnimationEnabled;
   }
