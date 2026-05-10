@@ -106,8 +106,19 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   bool _dialogPerfFocusLogged = false;
   bool _dialogPerfKeyboardStartLogged = false;
   double _dialogPerfLastKeyboardInset = 0;
+  double? _dialogPerfLastInsetBuildValue;
+  int _dialogPerfBuildCount = 0;
+  int _dialogPerfInsetBuildCount = 0;
+  int _dialogPerfInsetChangeCount = 0;
+  int _dialogPerfMetricsChangeCount = 0;
+  int? _dialogPerfFirstFrameMs;
+  int? _dialogPerfFocusRequestMs;
+  int? _dialogPerfFocusAcquiredMs;
+  int? _dialogPerfKeyboardStartMs;
+  int? _dialogPerfKeyboardSettledMs;
   final Stopwatch _dialogPerfStopwatch = Stopwatch();
   final List<FrameTiming> _dialogPerfFrameTimings = <FrameTiming>[];
+  final Map<String, int> _dialogPerfStateChanges = <String, int>{};
   Timer? _dialogPerfKeyboardSettleTimer;
   Timer? _dialogPerfFinalizeTimer;
 
@@ -249,6 +260,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
             if (autoLocation || autoWeather) {
               if (mounted) {
+                _recordDialogPerfStateChange('autoAttachPrefs');
                 setState(() {
                   if (autoLocation) {
                     _includeLocation = true;
@@ -271,6 +283,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                 } else if (autoWeather && !_includeLocation) {
                   // 位置获取失败，天气也无法获取，取消天气选中并提示
                   if (mounted) {
+                    _recordDialogPerfStateChange('autoWeatherDisabled');
                     setState(() {
                       _includeWeather = false;
                     });
@@ -383,6 +396,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       _isLoadingFullQuote = true;
       _fetchFullQuote().whenComplete(() {
         if (mounted) {
+          _recordDialogPerfStateChange('fullQuoteLoadingDone');
           setState(() {
             _isLoadingFullQuote = false;
           });
@@ -426,6 +440,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       final db = Provider.of<DatabaseService>(context, listen: false);
       final fullQuote = await db.getQuoteById(widget.initialQuote!.id!);
       if (fullQuote != null && mounted) {
+        _recordDialogPerfStateChange('fullQuoteLoaded');
         setState(() {
           _fullInitialQuote = fullQuote;
           // 如果列表页传递的对象缺少 AI 分析等大字段，这里补全
@@ -471,6 +486,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         }
 
         if (needsUpdate) {
+          _recordDialogPerfStateChange('databaseTagsUpdated');
           setState(() {
             _availableTags = updatedTags;
           });
@@ -519,6 +535,17 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     _dialogPerfEnabled = true;
     _dialogPerfRecording = true;
     _dialogPerfFrameTimings.clear();
+    _dialogPerfStateChanges.clear();
+    _dialogPerfBuildCount = 0;
+    _dialogPerfInsetBuildCount = 0;
+    _dialogPerfInsetChangeCount = 0;
+    _dialogPerfMetricsChangeCount = 0;
+    _dialogPerfFirstFrameMs = null;
+    _dialogPerfFocusRequestMs = null;
+    _dialogPerfFocusAcquiredMs = null;
+    _dialogPerfKeyboardStartMs = null;
+    _dialogPerfKeyboardSettledMs = null;
+    _dialogPerfLastInsetBuildValue = null;
     _dialogPerfStopwatch
       ..reset()
       ..start();
@@ -540,8 +567,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         return;
       }
       _dialogPerfFirstFrameLogged = true;
+      _dialogPerfFirstFrameMs = _dialogPerfStopwatch.elapsedMilliseconds;
       logDebug(
-        '首帧完成: elapsed=${_dialogPerfStopwatch.elapsedMilliseconds}ms',
+        '首帧完成: elapsed=${_dialogPerfFirstFrameMs}ms',
         source: 'AddNoteDialog.Perf',
       );
     });
@@ -560,10 +588,11 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
   void _requestContentFocus(String reason) {
     if (_dialogPerfEnabled) {
+      _dialogPerfFocusRequestMs ??= _dialogPerfStopwatch.elapsedMilliseconds;
       final routeValue = _routeAnimation?.value.toStringAsFixed(2) ?? 'none';
       logDebug(
         '请求内容焦点: reason=$reason, route=$routeValue, '
-        'elapsed=${_dialogPerfStopwatch.elapsedMilliseconds}ms',
+        'elapsed=${_dialogPerfFocusRequestMs}ms',
         source: 'AddNoteDialog.Perf',
       );
     }
@@ -578,10 +607,31 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     }
 
     _dialogPerfFocusLogged = true;
+    _dialogPerfFocusAcquiredMs = _dialogPerfStopwatch.elapsedMilliseconds;
     logDebug(
-      '内容输入框获得焦点: elapsed=${_dialogPerfStopwatch.elapsedMilliseconds}ms',
+      '内容输入框获得焦点: elapsed=${_dialogPerfFocusAcquiredMs}ms',
       source: 'AddNoteDialog.Perf',
     );
+  }
+
+  void _recordDialogPerfStateChange(String source) {
+    if (!_dialogPerfEnabled || !_dialogPerfRecording) {
+      return;
+    }
+    _dialogPerfStateChanges[source] =
+        (_dialogPerfStateChanges[source] ?? 0) + 1;
+  }
+
+  void _recordDialogPerfInsetBuild(double keyboardInset) {
+    if (!_dialogPerfEnabled || !_dialogPerfRecording) {
+      return;
+    }
+    _dialogPerfInsetBuildCount++;
+    final lastValue = _dialogPerfLastInsetBuildValue;
+    if (lastValue == null || (keyboardInset - lastValue).abs() >= 1) {
+      _dialogPerfInsetChangeCount++;
+      _dialogPerfLastInsetBuildValue = keyboardInset;
+    }
   }
 
   @override
@@ -590,6 +640,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     if (!_dialogPerfEnabled || !_dialogPerfRecording) {
       return;
     }
+
+    _dialogPerfMetricsChangeCount++;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_dialogPerfRecording) {
@@ -604,9 +656,10 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
       if (!_dialogPerfKeyboardStartLogged) {
         _dialogPerfKeyboardStartLogged = true;
+        _dialogPerfKeyboardStartMs = _dialogPerfStopwatch.elapsedMilliseconds;
         logDebug(
           '键盘 inset 开始变化: inset=${keyboardInset.round()}, '
-          'elapsed=${_dialogPerfStopwatch.elapsedMilliseconds}ms',
+          'elapsed=${_dialogPerfKeyboardStartMs}ms',
           source: 'AddNoteDialog.Perf',
         );
       }
@@ -618,9 +671,11 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           if (!_dialogPerfRecording) {
             return;
           }
+          _dialogPerfKeyboardSettledMs =
+              _dialogPerfStopwatch.elapsedMilliseconds;
           logDebug(
             '键盘 inset 稳定: inset=${_dialogPerfLastKeyboardInset.round()}, '
-            'elapsed=${_dialogPerfStopwatch.elapsedMilliseconds}ms',
+            'elapsed=${_dialogPerfKeyboardSettledMs}ms',
             source: 'AddNoteDialog.Perf',
           );
           _finalizeDialogPerfCapture('keyboardSettled');
@@ -641,26 +696,57 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     _detachDialogPerfHooks();
 
     int jankyFrames = 0;
+    int jankyFrames32 = 0;
+    int jankyFrames50 = 0;
     int totalFrameMicros = 0;
+    int totalBuildMicros = 0;
+    int totalRasterMicros = 0;
     double worstFrameMs = 0;
+    double worstBuildMs = 0;
+    double worstRasterMs = 0;
 
     for (final timing in _dialogPerfFrameTimings) {
-      final totalMicros = timing.buildDuration.inMicroseconds +
-          timing.rasterDuration.inMicroseconds;
+      final buildMicros = timing.buildDuration.inMicroseconds;
+      final rasterMicros = timing.rasterDuration.inMicroseconds;
+      final totalMicros = buildMicros + rasterMicros;
+      totalBuildMicros += buildMicros;
+      totalRasterMicros += rasterMicros;
       totalFrameMicros += totalMicros;
 
       final frameMs = totalMicros / 1000.0;
+      final buildMs = buildMicros / 1000.0;
+      final rasterMs = rasterMicros / 1000.0;
       if (frameMs > worstFrameMs) {
         worstFrameMs = frameMs;
       }
+      if (buildMs > worstBuildMs) {
+        worstBuildMs = buildMs;
+      }
+      if (rasterMs > worstRasterMs) {
+        worstRasterMs = rasterMs;
+      }
       if (totalMicros > 16600) {
         jankyFrames++;
+      }
+      if (totalMicros > 32000) {
+        jankyFrames32++;
+      }
+      if (totalMicros > 50000) {
+        jankyFrames50++;
       }
     }
 
     final totalFrames = _dialogPerfFrameTimings.length;
     final avgFrameMs =
         totalFrames == 0 ? 0.0 : (totalFrameMicros / totalFrames) / 1000.0;
+    final avgBuildMs =
+        totalFrames == 0 ? 0.0 : (totalBuildMicros / totalFrames) / 1000.0;
+    final avgRasterMs =
+        totalFrames == 0 ? 0.0 : (totalRasterMicros / totalFrames) / 1000.0;
+    final keyboardDurationMs = _dialogPerfKeyboardStartMs == null ||
+            _dialogPerfKeyboardSettledMs == null
+        ? null
+        : _dialogPerfKeyboardSettledMs! - _dialogPerfKeyboardStartMs!;
 
     logDebug(
       '打开性能结果: reason=$reason, '
@@ -670,6 +756,31 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       'worst=${worstFrameMs.toStringAsFixed(1)}ms, '
       'focus=$_dialogPerfFocusLogged, '
       'keyboardInset=${_dialogPerfLastKeyboardInset.round()}',
+      source: 'AddNoteDialog.Perf',
+    );
+
+    logDebug(
+      '打开性能明细: firstFrame=${_dialogPerfFirstFrameMs ?? -1}ms, '
+      'focusRequest=${_dialogPerfFocusRequestMs ?? -1}ms, '
+      'focus=${_dialogPerfFocusAcquiredMs ?? -1}ms, '
+      'keyboardStart=${_dialogPerfKeyboardStartMs ?? -1}ms, '
+      'keyboardSettled=${_dialogPerfKeyboardSettledMs ?? -1}ms, '
+      'keyboardDuration=${keyboardDurationMs ?? -1}ms, '
+      'widgetBuilds=$_dialogPerfBuildCount, '
+      'insetBuilds=$_dialogPerfInsetBuildCount, '
+      'insetChanges=$_dialogPerfInsetChangeCount, '
+      'metrics=$_dialogPerfMetricsChangeCount, '
+      'stateChanges=$_dialogPerfStateChanges',
+      source: 'AddNoteDialog.Perf',
+    );
+
+    logDebug(
+      '打开帧耗时明细: jank16=$jankyFrames, jank32=$jankyFrames32, '
+      'jank50=$jankyFrames50, '
+      'buildAvg=${avgBuildMs.toStringAsFixed(1)}ms, '
+      'buildWorst=${worstBuildMs.toStringAsFixed(1)}ms, '
+      'rasterAvg=${avgRasterMs.toStringAsFixed(1)}ms, '
+      'rasterWorst=${worstRasterMs.toStringAsFixed(1)}ms',
       source: 'AddNoteDialog.Perf',
     );
   }
@@ -699,6 +810,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       if (!permissionGranted) {
         if (mounted && context.mounted) {
           final l10n = AppLocalizations.of(context);
+          _recordDialogPerfStateChange('locationPermissionDenied');
           setState(() {
             _includeLocation = false;
           });
@@ -724,6 +836,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       final position = await locationService.getCurrentLocation();
       if (position != null && mounted) {
         final location = locationService.getFormattedLocation();
+        _recordDialogPerfStateChange('locationFetched');
         setState(() {
           _newLatitude = position.latitude;
           _newLongitude = position.longitude;
@@ -731,6 +844,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         });
       } else if (mounted) {
         // 获取位置失败，提示并还原开关状态
+        _recordDialogPerfStateChange('locationFetchEmpty');
         setState(() {
           _includeLocation = false;
         });
@@ -755,6 +869,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       logDebug('对话框获取位置失败: $e');
       if (mounted && context.mounted) {
         final l10n = AppLocalizations.of(context);
+        _recordDialogPerfStateChange('locationFetchError');
         setState(() {
           _includeLocation = false;
         });
@@ -795,6 +910,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       if (lat == null || lon == null) {
         // 没有坐标，无法获取天气
         if (mounted) {
+          _recordDialogPerfStateChange('weatherMissingCoordinates');
           setState(() {
             _includeWeather = false;
           });
@@ -823,6 +939,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
       if (!weatherService.hasData && mounted) {
         // 天气获取失败
+        _recordDialogPerfStateChange('weatherFetchEmpty');
         setState(() {
           _includeWeather = false;
         });
@@ -846,6 +963,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     } catch (e) {
       logDebug('对话框获取天气失败: $e');
       if (mounted) {
+        _recordDialogPerfStateChange('weatherFetchError');
         setState(() {
           _includeWeather = false;
         });
@@ -1771,6 +1889,10 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
   @override
   Widget build(BuildContext context) {
+    if (_dialogPerfRecording) {
+      _dialogPerfBuildCount++;
+    }
+
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
@@ -1799,6 +1921,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         // dialogResult == null: 继续编辑，不做任何操作
       },
       child: KeyboardInsetPadding(
+        onInsetBuild: _recordDialogPerfInsetBuild,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,

@@ -9,14 +9,18 @@ import '../utils/icon_utils.dart';
 /// 只让外层边距响应键盘 inset，避免键盘动画驱动整个弹窗内容重建。
 class KeyboardInsetPadding extends StatelessWidget {
   final Widget child;
+  final ValueChanged<double>? onInsetBuild;
 
-  const KeyboardInsetPadding({super.key, required this.child});
+  const KeyboardInsetPadding(
+      {super.key, required this.child, this.onInsetBuild});
 
   @override
   Widget build(BuildContext context) {
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    onInsetBuild?.call(keyboardInset);
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
+        bottom: keyboardInset,
         left: 16,
         right: 16,
         top: 16,
