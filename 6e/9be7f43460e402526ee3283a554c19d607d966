@@ -1,0 +1,23 @@
+test/unified_log_service_test.dart
+  s_1fdb5db93ad0ca::t_928a842d8ad1a8 3,30,106-108,110-112
+  s_1fdb5db93ad0ca::t_db07cdf86cabdb 9-29,109,113-117
+  s_1fdb5db93ad0ca::t_f72cc8e9fa36e7 92-105,118
+lib/services/log_database_service.dart
+  s_1fdb5db93ad0ca::t_38099879efae83 13-21,476
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "6e9be7f43460e402526ee3283a554c19d607d966",
+  "prompts": {},
+  "sessions": {
+    "s_1fdb5db93ad0ca": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1ee0090caffedZNHsWCBWQHKAy",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
