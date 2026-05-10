@@ -10,6 +10,15 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
+@visibleForTesting
+Future<void> configureLogDatabasePragmasForTest(Database db) =>
+    _configureLogDatabasePragmas(db);
+
+Future<void> _configureLogDatabasePragmas(Database db) async {
+  await db.rawQuery('PRAGMA journal_mode=WAL;');
+  await db.rawQuery('PRAGMA synchronous=NORMAL;');
+}
+
 // 日志条目模型
 class LogEntry {
   final String timestamp;
@@ -464,8 +473,7 @@ class NativeLogStorage implements LogStorage {
           onOpen: (db) async {
             // 启用WAL以提升可靠性（特别是Android）
             try {
-              await db.execute('PRAGMA journal_mode=WAL;');
-              await db.execute('PRAGMA synchronous=NORMAL;');
+              await _configureLogDatabasePragmas(db);
             } catch (e) {
               logDebug('[LogDatabaseService] PRAGMA setup failed: $e');
             }
