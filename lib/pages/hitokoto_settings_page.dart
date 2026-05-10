@@ -432,39 +432,35 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                           ),
                         ),
                         const SizedBox(height: 16),
-                        // TODO(tech-debt): groupValue and onChanged are deprecated in RadioListTile.
-                        // Use a RadioGroup ancestor to manage the value instead.
-                        RadioListTile<String>(
-                          title: Text(
-                            l10n.offlineQuoteSourceTagOnly,
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                          value: 'tagOnly',
+                        RadioGroup<String>(
                           groupValue: settings.offlineQuoteSource,
                           onChanged: (value) {
                             if (value != null) {
                               settings.setOfflineQuoteSource(value);
                             }
                           },
-                          contentPadding: EdgeInsets.zero,
-                          activeColor: colorScheme.primary,
-                        ),
-                        // TODO(tech-debt): groupValue and onChanged are deprecated in RadioListTile.
-                        // Use a RadioGroup ancestor to manage the value instead.
-                        RadioListTile<String>(
-                          title: Text(
-                            l10n.offlineQuoteSourceAll,
-                            style: theme.textTheme.bodyMedium,
+                          child: Column(
+                            children: [
+                              RadioListTile<String>(
+                                title: Text(
+                                  l10n.offlineQuoteSourceTagOnly,
+                                  style: theme.textTheme.bodyMedium,
+                                ),
+                                value: 'tagOnly',
+                                contentPadding: EdgeInsets.zero,
+                                activeColor: colorScheme.primary,
+                              ),
+                              RadioListTile<String>(
+                                title: Text(
+                                  l10n.offlineQuoteSourceAll,
+                                  style: theme.textTheme.bodyMedium,
+                                ),
+                                value: 'allNotes',
+                                contentPadding: EdgeInsets.zero,
+                                activeColor: colorScheme.primary,
+                              ),
+                            ],
                           ),
-                          value: 'allNotes',
-                          groupValue: settings.offlineQuoteSource,
-                          onChanged: (value) {
-                            if (value != null) {
-                              settings.setOfflineQuoteSource(value);
-                            }
-                          },
-                          contentPadding: EdgeInsets.zero,
-                          activeColor: colorScheme.primary,
                         ),
                       ],
                     ),

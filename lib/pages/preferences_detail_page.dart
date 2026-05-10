@@ -531,17 +531,8 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
             onTap: () => settings.setOfflineQuoteSource(value),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              // ignore: deprecated_member_use
               child: RadioListTile<String>(
                 value: value,
-                // ignore: deprecated_member_use
-                groupValue: settings.offlineQuoteSource,
-                // ignore: deprecated_member_use
-                onChanged: (selectedValue) {
-                  if (selectedValue != null) {
-                    settings.setOfflineQuoteSource(selectedValue);
-                  }
-                },
                 contentPadding: EdgeInsets.zero,
                 visualDensity: VisualDensity.compact,
                 activeColor: theme.colorScheme.primary,
@@ -620,13 +611,25 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  buildOption(
-                    title: l10n.offlineQuoteSourceTagOnly,
-                    value: 'tagOnly',
-                  ),
-                  buildOption(
-                    title: l10n.offlineQuoteSourceAll,
-                    value: 'allNotes',
+                  RadioGroup<String>(
+                    groupValue: settings.offlineQuoteSource,
+                    onChanged: (selectedValue) {
+                      if (selectedValue != null) {
+                        settings.setOfflineQuoteSource(selectedValue);
+                      }
+                    },
+                    child: Column(
+                      children: [
+                        buildOption(
+                          title: l10n.offlineQuoteSourceTagOnly,
+                          value: 'tagOnly',
+                        ),
+                        buildOption(
+                          title: l10n.offlineQuoteSourceAll,
+                          value: 'allNotes',
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

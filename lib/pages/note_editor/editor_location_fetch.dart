@@ -10,49 +10,47 @@ extension _NoteEditorLocationFetch on _NoteFullEditorPageState {
     final weatherService = Provider.of<WeatherService>(context, listen: false);
 
     // 检查并请求权限
-    if (!locationService.hasLocationPermission) {
-      bool permissionGranted =
-          await locationService.requestLocationPermission();
-      if (!permissionGranted) {
-        if (mounted) {
-          final l10n = AppLocalizations.of(context);
-          _updateState(() {
-            _showLocation = false;
-            _showWeather = false;
-          });
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(l10n.cannotGetLocationTitle),
-              content: Text(l10n.cannotGetLocationPermissionShort),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(l10n.iKnow),
-                ),
-              ],
-            ),
-          );
-        }
-        return;
+    if (!await LocationWeatherHelper.ensureLocationPermission(
+      locationService,
+    )) {
+      if (mounted) {
+        final l10n = AppLocalizations.of(context);
+        _updateState(() {
+          _showLocation = false;
+          _showWeather = false;
+        });
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.cannotGetLocationTitle),
+            content: Text(l10n.cannotGetLocationPermissionShort),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.iKnow),
+              ),
+            ],
+          ),
+        );
       }
+      return;
     }
 
-    final position = await locationService.getCurrentLocation();
-    if (position != null && mounted) {
-      final location = locationService.getFormattedLocation();
-
+    final snapshot = await LocationWeatherHelper.fetchLocation(
+      locationService,
+    );
+    if (snapshot != null && mounted) {
       _updateState(() {
-        _location = location.isNotEmpty ? location : null;
-        _latitude = position.latitude;
-        _longitude = position.longitude;
+        _location = snapshot.location.isNotEmpty ? snapshot.location : null;
+        _latitude = snapshot.position.latitude;
+        _longitude = snapshot.position.longitude;
       });
 
       // 获取天气
       try {
         await weatherService.getWeatherData(
-          position.latitude,
-          position.longitude,
+          snapshot.position.latitude,
+          snapshot.position.longitude,
         );
         if (mounted) {
           _updateState(() {
@@ -220,43 +218,41 @@ extension _NoteEditorLocationFetch on _NoteFullEditorPageState {
         Provider.of<LocationService>(context, listen: false);
 
     // 检查并请求权限
-    if (!locationService.hasLocationPermission) {
-      bool permissionGranted =
-          await locationService.requestLocationPermission();
-      if (!permissionGranted) {
-        if (mounted && context.mounted) {
-          final l10n = AppLocalizations.of(context);
-          onFail();
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(l10n.cannotGetLocationTitle),
-              content: Text(l10n.cannotGetLocationPermissionShort),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(l10n.iKnow),
-                ),
-              ],
-            ),
-          );
-        }
-        return (permissionDenied: true, position: null);
+    if (!await LocationWeatherHelper.ensureLocationPermission(
+      locationService,
+    )) {
+      if (mounted && context.mounted) {
+        final l10n = AppLocalizations.of(context);
+        onFail();
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.cannotGetLocationTitle),
+            content: Text(l10n.cannotGetLocationPermissionShort),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.iKnow),
+              ),
+            ],
+          ),
+        );
       }
+      return (permissionDenied: true, position: null);
     }
 
     try {
-      final position = await locationService.getCurrentLocation();
-      if (position != null && mounted) {
-        final location = locationService.getFormattedLocation();
-
+      final snapshot = await LocationWeatherHelper.fetchLocation(
+        locationService,
+      );
+      if (snapshot != null && mounted) {
         _updateState(() {
-          _location = location.isNotEmpty ? location : null;
-          _latitude = position.latitude;
-          _longitude = position.longitude;
+          _location = snapshot.location.isNotEmpty ? snapshot.location : null;
+          _latitude = snapshot.position.latitude;
+          _longitude = snapshot.position.longitude;
         });
 
-        return (permissionDenied: false, position: position);
+        return (permissionDenied: false, position: snapshot.position);
       }
 
       return (permissionDenied: false, position: null);

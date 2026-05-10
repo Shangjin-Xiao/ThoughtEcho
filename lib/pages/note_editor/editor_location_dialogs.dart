@@ -218,8 +218,6 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
     }
   }
 
-  // TODO(low): 位置/天气获取逻辑与 add_note_dialog.dart 大量重复（约 400 行），
-  // 可提取为 LocationWeatherHelper 共享。
   Future<void> _fetchLocationWeather() async {
     final locationService = Provider.of<LocationService>(
       context,
@@ -228,41 +226,39 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
     final weatherService = Provider.of<WeatherService>(context, listen: false);
 
     // 检查并请求权限
-    if (!locationService.hasLocationPermission) {
-      bool permissionGranted =
-          await locationService.requestLocationPermission();
-      if (!permissionGranted) {
-        if (mounted && context.mounted) {
-          final l10n = AppLocalizations.of(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.cannotGetLocationPermissionShort),
-              duration: AppConstants.snackBarDurationError,
-            ),
-          );
-        }
-        return;
+    if (!await LocationWeatherHelper.ensureLocationPermission(
+      locationService,
+    )) {
+      if (mounted && context.mounted) {
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.cannotGetLocationPermissionShort),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
       }
+      return;
     }
 
-    final position = await locationService.getCurrentLocation();
-    if (position != null && mounted) {
-      final location = locationService.getFormattedLocation();
-
+    final snapshot = await LocationWeatherHelper.fetchLocation(
+      locationService,
+    );
+    if (snapshot != null && mounted) {
       // 优化：将网络请求包装为 Future，避免阻塞主线程
       try {
         // 更新位置信息（包括经纬度）
         _updateState(() {
-          _location = location.isNotEmpty ? location : null;
-          _latitude = position.latitude;
-          _longitude = position.longitude;
+          _location = snapshot.location.isNotEmpty ? snapshot.location : null;
+          _latitude = snapshot.position.latitude;
+          _longitude = snapshot.position.longitude;
         });
 
         // 异步获取天气数据，不阻塞UI
         _fetchWeatherAsync(
           weatherService,
-          position.latitude,
-          position.longitude,
+          snapshot.position.latitude,
+          snapshot.position.longitude,
         );
       } catch (e) {
         logError('获取位置天气失败', error: e, source: 'NoteFullEditorPage');

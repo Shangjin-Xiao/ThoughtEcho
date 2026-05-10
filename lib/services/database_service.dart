@@ -15,6 +15,7 @@ import '../models/app_settings.dart';
 import 'package:uuid/uuid.dart';
 import '../utils/app_logger.dart';
 import '../utils/database_platform_init.dart';
+import '../utils/expiring_cache.dart';
 import 'large_file_manager.dart';
 import 'media_reference_service.dart';
 import 'mmkv_service.dart';
@@ -340,16 +341,15 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   bool _watchHasMore = true;
   String? _watchSearchQuery;
 
-  // TODO(low): 以下 5 个 Map 手动实现 LRU + 过期缓存，可提取为通用 LRU 缓存类简化维护。
-  /// 修复：优化查询缓存，实现更好的LRU机制
-  final Map<String, List<Quote>> _filterCache = {};
-  final Map<String, DateTime> _cacheTimestamps = {}; // 缓存时间戳
-  // _cacheAccessTimes and _maxCacheEntries removed: LRU eviction was never wired up
-  final Duration _cacheExpiration = const Duration(minutes: 5); // 调整缓存过期时间
+  /// 查询缓存，统一管理过期清理逻辑。
+  final ExpiringCache<String, List<Quote>> _filterCache = ExpiringCache(
+    expiration: const Duration(minutes: 5),
+  );
 
   // 优化：查询结果缓存
-  final Map<String, int> _countCache = {}; // 计数查询缓存
-  final Map<String, DateTime> _countCacheTimestamps = {};
+  final ExpiringCache<String, int> _countCache = ExpiringCache(
+    expiration: const Duration(minutes: 5),
+  );
 
   /// 修复：添加查询性能统计
 
@@ -829,9 +829,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
     // 清理缓存
     _filterCache.clear();
-    _cacheTimestamps.clear();
     _countCache.clear();
-    _countCacheTimestamps.clear();
 
     // 清理内存存储
     _memoryStore.clear();
