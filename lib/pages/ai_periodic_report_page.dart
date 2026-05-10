@@ -91,12 +91,26 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     setState(fn);
   }
 
+  DatabaseService? _databaseService;
+
+  void _onDatabaseChanged() {
+    if (mounted) {
+      _loadPeriodData();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_onTabChanged);
     _loadPeriodData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _databaseService = context.read<DatabaseService>();
+        _databaseService?.addListener(_onDatabaseChanged);
+      }
+    });
   }
 
   void _onTabChanged() {
@@ -125,6 +139,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   @override
   void dispose() {
+    _databaseService?.removeListener(_onDatabaseChanged);
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _insightSub?.cancel();
