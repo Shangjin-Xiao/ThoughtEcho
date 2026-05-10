@@ -757,6 +757,15 @@
   "mediaFilesUsage": "Utilisation des fichiers multimédias",
   "cacheUsage": "Utilisation du cache",
   "notesDatabase": "Base de données des notes",
+  "trashStorageUsageHint": "{count, plural, =1{La corbeille contient 1 note et utilise encore l'espace de la base de données et des pièces jointes.} other{La corbeille contient {count} notes et utilise encore l'espace de la base de données et des pièces jointes.}}",
+  "@trashStorageUsageHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewTrash": "Voir la corbeille",
   "aiDatabase": "Base de données IA",
   "logDatabase": "Base de données des journaux",
   "images": "Images",
@@ -2746,7 +2755,7 @@
       }
     }
   },
-  "apkDownloadHint": "Veuillez ne pas fermer l'application. L'installation démarrera automatiquement après le téléchargement.",
+  "apkDownloadHint": "Veuillez ne pas quitter l'application. L'installation démarrera automatiquement après le téléchargement.",
   "apkDownloadStarted": "J'ai commencé à télécharger ThoughtEcho {version}",
   "@apkDownloadStarted": {
     "placeholders": {

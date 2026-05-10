@@ -9,6 +9,7 @@ import 'unit/models/quote_model_test.dart' as quote_model_test;
 import 'unit/models/note_category_test.dart' as note_category_test;
 import 'unit/models/note_tag_test.dart' as note_tag_test;
 import 'unit/models/weather_data_test.dart' as weather_data_test;
+import 'unit/models/app_settings_test.dart' as app_settings_test;
 
 // Import service tests
 import 'unit/services/database_service_test.dart' as database_service_test;
@@ -24,15 +25,21 @@ import 'unit/services/ai_analysis_database_service_test.dart'
     as ai_analysis_service_test;
 import 'unit/services/database_health_security_test.dart'
     as database_health_security_test;
+import 'unit/services/database_multi_tag_filter_test.dart'
+    as database_multi_tag_filter_test;
 import 'unit/services/location_format_test.dart' as location_format_test;
 import 'unit/services/log_service_adapter_test.dart'
     as log_service_adapter_test;
+import 'unit/services/mdns_discovery_service_test.dart'
+    as mdns_discovery_service_test;
 import 'unit/services/smart_push_security_test.dart'
     as smart_push_security_test;
 import 'unit/services/openai_stream_service_test.dart'
     as openai_stream_service_test;
 import 'unit/services/ai_service_streaming_test.dart'
     as ai_service_streaming_test;
+import 'unit/services/error_recovery_manager_test.dart'
+    as error_recovery_manager_test;
 import 'storage_management_test.dart' as storage_management_test;
 import 'performance/day_period_patch_test.dart' as day_period_patch_test;
 
@@ -48,6 +55,8 @@ import 'unit/utils/quill_ai_apply_utils_test.dart' as quill_ai_apply_utils_test;
 import 'unit/utils/http_utils_test.dart' as http_utils_test;
 import 'unit/utils/memory_optimization_helper_test.dart'
     as memory_optimization_helper_test;
+import 'unit/utils/media_optimization_utils_test.dart'
+    as media_optimization_utils_test;
 import 'unit/utils/lww_decision_maker_test.dart' as lww_decision_maker_test;
 import 'unit/widgets/anniversary_animation_overlay_test.dart'
     as anniversary_animation_overlay_test;
@@ -69,6 +78,7 @@ void main() {
       note_category_test.main();
       note_tag_test.main();
       weather_data_test.main();
+      app_settings_test.main();
     });
 
     group('Service Tests', () {
@@ -82,10 +92,13 @@ void main() {
       clipboard_service_test.main();
       ai_analysis_service_test.main();
       database_health_security_test.main();
+      database_multi_tag_filter_test.main();
       log_service_adapter_test.main();
+      mdns_discovery_service_test.main();
       smart_push_security_test.main();
       openai_stream_service_test.main();
       ai_service_streaming_test.main();
+      error_recovery_manager_test.main();
       storage_management_test.main();
       day_period_patch_test.main();
     });
@@ -99,6 +112,7 @@ void main() {
       quill_ai_apply_utils_test.main();
       http_utils_test.main();
       memory_optimization_helper_test.main();
+      media_optimization_utils_test.main();
       lww_decision_maker_test.main();
       anniversary_animation_overlay_test.main();
       anniversary_notebook_icon_test.main();

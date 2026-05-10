@@ -123,8 +123,9 @@ mixin _DatabaseHiddenTagMixin on _DatabaseServiceBase {
   Future<void> removeHiddenTag() async {
     try {
       if (kIsWeb) {
-        _categoryStore
-            .removeWhere((c) => c.id == _DatabaseServiceBase.hiddenTagId);
+        _categoryStore.removeWhere(
+          (c) => c.id == _DatabaseServiceBase.hiddenTagId,
+        );
         _categoriesController.add(_categoryStore);
         notifyListeners();
         return;

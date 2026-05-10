@@ -69,14 +69,29 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage> {
     setState(fn);
   }
 
+  DatabaseService? _databaseService;
+
+  void _onDatabaseChanged() {
+    if (mounted) {
+      _loadPeriodData();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _loadPeriodData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _databaseService = context.read<DatabaseService>();
+        _databaseService?.addListener(_onDatabaseChanged);
+      }
+    });
   }
 
   @override
   void dispose() {
+    _databaseService?.removeListener(_onDatabaseChanged);
     _insightSub?.cancel();
     super.dispose();
   }

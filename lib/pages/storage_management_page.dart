@@ -9,6 +9,7 @@ import '../services/database_service.dart';
 import '../services/data_directory_service.dart';
 import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
+import 'trash_page.dart';
 
 /// 存储管理页面
 /// 展示应用存储占用详情，提供缓存清理和数据目录管理功能
@@ -26,6 +27,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   bool _isMigrating = false;
   String? _appDataPath;
   bool _isUsingCustomPath = false;
+  int _trashCount = 0;
 
   @override
   void initState() {
@@ -49,9 +51,18 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
 
     try {
       final stats = await StorageManagementService.getStorageStats();
+      var trashCount = 0;
+      if (mounted) {
+        final databaseService = Provider.of<DatabaseService>(
+          context,
+          listen: false,
+        );
+        trashCount = await databaseService.getDeletedQuotesCount();
+      }
       if (mounted) {
         setState(() {
           _stats = stats;
+          _trashCount = trashCount;
           _isLoading = false;
         });
       }
@@ -85,6 +96,15 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     } catch (e) {
       // 忽略错误
     }
+  }
+
+  /// 打开回收站，返回后刷新存储统计和回收站数量
+  Future<void> _openTrashPage() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const TrashPage()),
+    );
+    if (!mounted) return;
+    await _loadStorageStats();
   }
 
   /// 清理缓存
@@ -415,6 +435,10 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                 _buildSectionTitle(l10n.databaseUsage),
                 const SizedBox(height: 8),
                 _buildDatabaseStorageCard(colorScheme, l10n),
+                if (_trashCount > 0) ...[
+                  const SizedBox(height: 8),
+                  _buildTrashUsageHintCard(colorScheme, l10n),
+                ],
                 const SizedBox(height: 16),
 
                 // 媒体文件占用详情
@@ -625,6 +649,26 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
             color: Colors.orange,
           ),
         ],
+      ),
+    );
+  }
+
+  /// 构建回收站占用提示卡片
+  Widget _buildTrashUsageHintCard(
+    ColorScheme colorScheme,
+    AppLocalizations l10n,
+  ) {
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          Icons.delete_outline,
+          color: colorScheme.secondary,
+        ),
+        title: Text(l10n.trashStorageUsageHint(_trashCount)),
+        trailing: OutlinedButton(
+          onPressed: _openTrashPage,
+          child: Text(l10n.viewTrash),
+        ),
       ),
     );
   }

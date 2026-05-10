@@ -826,6 +826,15 @@
   "mediaFilesUsage": "Media Files Usage",
   "cacheUsage": "Cache Usage",
   "notesDatabase": "Notes Database",
+  "trashStorageUsageHint": "{count, plural, =1{Trash contains 1 note and still uses database and attachment space.} other{Trash contains {count} notes and still uses database and attachment space.}}",
+  "@trashStorageUsageHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewTrash": "View Trash",
   "aiDatabase": "AI Database",
   "logDatabase": "Log Database",
   "images": "Images",
@@ -2846,7 +2855,7 @@
       }
     }
   },
-  "apkDownloadHint": "Please do not close the app. Installation will start automatically after download.",
+  "apkDownloadHint": "Please do not exit the app. Installation will start automatically after download.",
   "apkDownloadStarted": "Started downloading ThoughtEcho {version}",
   "@apkDownloadStarted": {
     "placeholders": {
@@ -3853,5 +3862,7 @@
   "saveBeforeAiAssistant": "Please save your note before entering the AI assistant",
   "saveAndContinue": "Save & Continue",
   "toggleAddLocation": "Add location",
-  "toggleAddWeather": "Add weather"
+  "toggleAddWeather": "Add weather",
+  "copyCode": "Copy code",
+  "copiedCode": "Copied"
 }

@@ -375,19 +375,29 @@ class DatabaseHealthService {
           hasDeletedColumn ? 'AND (is_deleted = 0 OR is_deleted IS NULL)' : '';
 
       if (offlineQuoteSource == 'tagOnly') {
-        // 简化查询：直接用 tag_id 匹配，跳过 categories 表 JOIN
-        // 这样更快且避免了潜在的 categories 表数据不一致问题
+        // 修复：兼容用户自己创建的“每日一言”标签（ID 可能不是 default_hitokoto）
+        // 先收集所有名字为“每日一言”或固定 ID 的分类
+        final tagIdRows = await db.rawQuery(
+          "SELECT id FROM categories WHERE name = '每日一言' OR id = ?",
+          [dailyQuoteTagId],
+        );
+        final tagIds = tagIdRows.map((r) => r['id'] as String).toList();
+        if (tagIds.isEmpty) {
+          // 如果连分类都没有，fallback 到固定 ID（查询自然返回空）
+          tagIds.add(dailyQuoteTagId);
+        }
+        final placeholders = tagIds.map((_) => '?').join(',');
         results = await db.rawQuery(
           '''
           SELECT DISTINCT q.* FROM quotes q
           INNER JOIN quote_tags qt ON q.id = qt.quote_id
-          WHERE qt.tag_id = ?
+          WHERE qt.tag_id IN ($placeholders)
             AND length(q.content) <= $_maxOfflineQuoteLength
             $deletedFilter
           ORDER BY RANDOM()
           LIMIT 1
         ''',
-          [dailyQuoteTagId],
+          tagIds,
         );
       } else {
         // allNotes 模式：全局随机抽取
@@ -585,13 +595,19 @@ class DatabaseHealthService {
       List<Quote> candidates = [];
 
       if (offlineQuoteSource == 'tagOnly') {
+        // 修复：兼容用户自己创建的“每日一言”标签（ID 可能不是 default_hitokoto）
+        final hitokotoTagIds = categoryStore
+            .where((c) => c.name == '每日一言' || c.id == dailyQuoteTagId)
+            .map((c) => c.id)
+            .toSet();
         candidates = memoryStore
             .where(
               (quote) =>
                   isEligibleOfflineQuoteContent(
                     quote.content,
                     offlineQuoteSource: offlineQuoteSource,
-                    requiresHitokotoTag: quote.tagIds.contains(dailyQuoteTagId),
+                    requiresHitokotoTag:
+                        quote.tagIds.any(hitokotoTagIds.contains),
                   ) &&
                   !quote.isDeleted,
             )

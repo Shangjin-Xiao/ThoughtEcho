@@ -104,10 +104,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
 
   /// 根据ID获取单个笔记的完整信息
   @override
-  Future<Quote?> getQuoteById(
-    String id, {
-    bool includeDeleted = false,
-  }) async {
+  Future<Quote?> getQuoteById(String id, {bool includeDeleted = false}) async {
     if (kIsWeb) {
       try {
         return _memoryStore.firstWhere(
@@ -124,7 +121,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       // ⚡ Bolt: 使用标量子查询优化标签聚合查询，解决因 LEFT JOIN + GROUP BY 导致的性能问题
       final List<Map<String, dynamic>> maps = await db.rawQuery(
         '''
-        SELECT q.*, (SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id) as tag_ids
+        SELECT q.*
         FROM quotes q
         WHERE q.id = ?
           ${includeDeleted ? '' : 'AND (q.is_deleted = 0 OR q.is_deleted IS NULL)'}
@@ -136,7 +133,16 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         return null;
       }
 
-      return Quote.fromJson(maps.first);
+      final tagMaps = await db.rawQuery(
+        'SELECT tag_id FROM quote_tags WHERE quote_id = ?',
+        [id],
+      );
+      final tags = tagMaps.map((t) => t['tag_id'] as String).toList();
+
+      final mutableMap = Map<String, dynamic>.from(maps.first);
+      mutableMap['tag_ids'] = tags.join(',');
+
+      return Quote.fromJson(mutableMap);
     } catch (e) {
       logDebug('获取指定ID笔记失败: $e');
       return null;
@@ -188,15 +194,45 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
 
       // ⚡ Bolt: 使用标量子查询优化获取笔记及其关联的标签
       final String query = '''
-        SELECT q.*, (SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id) as tag_ids
+        SELECT q.*
         FROM quotes q
         $whereClause
       ''';
 
-      final List<Map<String, dynamic>> maps =
-          await db.rawQuery(query, args.whereType<Object>().toList());
+      final List<Map<String, dynamic>> maps = await db.rawQuery(
+        query,
+        args.whereType<Object>().toList(),
+      );
 
-      return maps.map((m) => Quote.fromJson(m)).toList();
+      if (maps.isEmpty) return [];
+
+      final tagsByQuoteId = <String, List<String>>{};
+
+      final quoteIds = maps.map((m) => m['id'] as String).toList();
+      for (int i = 0; i < quoteIds.length; i += 900) {
+        final end = (i + 900 < quoteIds.length) ? i + 900 : quoteIds.length;
+        final batchIds = quoteIds.sublist(i, end);
+        final placeholders = List.filled(batchIds.length, '?').join(',');
+
+        final tagMaps = await db.rawQuery(
+          'SELECT quote_id, tag_id FROM quote_tags WHERE quote_id IN ($placeholders)',
+          batchIds,
+        );
+
+        for (final tagMap in tagMaps) {
+          final quoteId = tagMap['quote_id'] as String;
+          final tagId = tagMap['tag_id'] as String;
+          tagsByQuoteId.putIfAbsent(quoteId, () => []).add(tagId);
+        }
+      }
+
+      return maps.map((map) {
+        final quoteId = map['id'] as String;
+        final tags = tagsByQuoteId[quoteId] ?? [];
+        final mutableMap = Map<String, dynamic>.from(map);
+        mutableMap['tag_ids'] = tags.join(',');
+        return Quote.fromJson(mutableMap);
+      }).toList();
     } catch (e) {
       logDebug('获取所有笔记失败: $e');
       return [];
@@ -255,8 +291,11 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
 
         logDebug('笔记已移入回收站，ID: $id');
       } catch (e, stack) {
-        UnifiedLogService.instance
-            .error('删除笔记时出错', error: e, stackTrace: stack);
+        UnifiedLogService.instance.error(
+          '删除笔记时出错',
+          error: e,
+          stackTrace: stack,
+        );
         rethrow;
       }
     });
@@ -314,10 +353,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         return QuoteUpdateResult.notFound;
       }
       if (_memoryStore[index].isDeleted) {
-        logWarning(
-          '忽略对已删除笔记的更新请求: ${quote.id}',
-          source: 'DatabaseService',
-        );
+        logWarning('忽略对已删除笔记的更新请求: ${quote.id}', source: 'DatabaseService');
         return QuoteUpdateResult.skippedDeleted;
       }
       _memoryStore[index] = quote;
@@ -480,8 +516,11 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         notifyListeners(); // 通知其他监听者
         return QuoteUpdateResult.updated;
       } catch (e, stack) {
-        UnifiedLogService.instance
-            .error('更新笔记时出错', error: e, stackTrace: stack);
+        UnifiedLogService.instance.error(
+          '更新笔记时出错',
+          error: e,
+          stackTrace: stack,
+        );
         rethrow; // 重新抛出异常，让调用者处理
       }
     });

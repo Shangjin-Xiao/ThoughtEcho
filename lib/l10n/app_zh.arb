@@ -826,6 +826,15 @@
   "mediaFilesUsage": "媒体文件占用",
   "cacheUsage": "缓存占用",
   "notesDatabase": "笔记数据库",
+  "trashStorageUsageHint": "回收站中有 {count} 条笔记，仍会占用数据库和附件空间。",
+  "@trashStorageUsageHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewTrash": "查看回收站",
   "aiDatabase": "AI数据库",
   "logDatabase": "日志数据库",
   "images": "图片",
@@ -2852,7 +2861,7 @@
       }
     }
   },
-  "apkDownloadHint": "请勿关闭应用，下载完成后将自动开始安装",
+  "apkDownloadHint": "请勿退出程序，下载完成后将自动开始安装",
   "apkDownloadStarted": "开始下载 ThoughtEcho {version}",
   "@apkDownloadStarted": {
     "placeholders": {
@@ -3853,5 +3862,7 @@
   "saveBeforeAiAssistant": "进入 AI 助手前需先保存当前笔记内容",
   "saveAndContinue": "保存并继续",
   "toggleAddLocation": "添加位置",
-  "toggleAddWeather": "添加天气"
+  "toggleAddWeather": "添加天气",
+  "copyCode": "复制代码",
+  "copiedCode": "已复制"
 }

@@ -111,6 +111,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
         title: Text(l10n.mediaManagementTitle),
         actions: [
           IconButton(
+            tooltip: l10n.refresh,
             icon: const Icon(Icons.refresh),
             onPressed: _isLoading ? null : _loadMediaStats,
           ),

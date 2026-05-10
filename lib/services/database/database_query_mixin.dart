@@ -353,19 +353,17 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         ''');
         args.add(tagIds.first);
       } else {
-        // 多标签查询：使用EXISTS确保所有标签都匹配
-        final tagPlaceholders = tagIds.map((_) => '?').join(',');
-        conditions.add('''
-          EXISTS (
-            SELECT 1 FROM quote_tags qt_filter
-            WHERE qt_filter.quote_id = q.id
-            AND qt_filter.tag_id IN ($tagPlaceholders)
-            GROUP BY qt_filter.quote_id
-            HAVING COUNT(DISTINCT qt_filter.tag_id) = ?
-          )
-        ''');
-        args.addAll(tagIds);
-        args.add(tagIds.length);
+        // 多标签查询：使用多个 EXISTS 子查询替代 GROUP BY + HAVING，利用索引实现快速点查和提前返回
+        for (final tagId in tagIds) {
+          conditions.add('''
+            EXISTS (
+              SELECT 1 FROM quote_tags qt_filter
+              WHERE qt_filter.quote_id = q.id
+              AND qt_filter.tag_id = ?
+            )
+          ''');
+          args.add(tagId);
+        }
       }
     }
 
@@ -388,8 +386,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         q.id, q.content, q.date, q.source, q.source_author, q.source_work,
         q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
         q.weather, q.temperature, q.edit_source, q.delta_content, q.day_period,
-        q.last_modified, q.favorite_count, q.is_deleted, q.deleted_at,
-        (SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id) as tag_ids
+        q.last_modified, q.favorite_count, q.is_deleted, q.deleted_at
       $fromClause
       $joinClause
       $where
@@ -446,7 +443,38 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     // 更新性能统计
     _updateQueryStats('getUserQuotes', queryTime);
 
-    return maps.map((m) => Quote.fromJson(m)).toList();
+    if (maps.isEmpty) return [];
+
+    // Fetch tags for the retrieved quotes
+    final quoteIds = maps.map((m) => m['id'] as String).toList();
+
+    final tagsByQuoteId = <String, List<String>>{};
+
+    for (int i = 0; i < quoteIds.length; i += 900) {
+      final end = (i + 900 < quoteIds.length) ? i + 900 : quoteIds.length;
+      final batchIds = quoteIds.sublist(i, end);
+      final placeholders = List.filled(batchIds.length, '?').join(',');
+
+      final tagMaps = await db.rawQuery('''
+        SELECT quote_id, tag_id
+        FROM quote_tags
+        WHERE quote_id IN ($placeholders)
+        ''', batchIds);
+
+      for (final tagMap in tagMaps) {
+        final quoteId = tagMap['quote_id'] as String;
+        final tagId = tagMap['tag_id'] as String;
+        tagsByQuoteId.putIfAbsent(quoteId, () => []).add(tagId);
+      }
+    }
+
+    return maps.map((map) {
+      final quoteId = map['id'] as String;
+      final tags = tagsByQuoteId[quoteId] ?? [];
+      final mutableMap = Map<String, dynamic>.from(map);
+      mutableMap['tag_ids'] = tags.join(',');
+      return Quote.fromJson(mutableMap);
+    }).toList();
   }
 
   /// 修复：更新查询性能统计

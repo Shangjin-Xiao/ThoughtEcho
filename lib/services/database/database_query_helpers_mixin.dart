@@ -117,8 +117,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     final sanitizedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
     final query = '''
       SELECT 
-        q.*,
-        (SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id) as tag_ids_joined
+        q.*
       FROM quotes q
       $whereClause
       ORDER BY $sanitizedOrderBy
@@ -128,26 +127,42 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     args.addAll([limit, offset]);
 
     final List<Map<String, dynamic>> maps = await db.rawQuery(query, args);
+
+    if (maps.isEmpty) return [];
+
+    final quoteIds = maps.map((m) => m['id'] as String).toList();
+
+    final tagsByQuoteId = <String, List<String>>{};
+
+    for (int i = 0; i < quoteIds.length; i += 900) {
+      final end = (i + 900 < quoteIds.length) ? i + 900 : quoteIds.length;
+      final batchIds = quoteIds.sublist(i, end);
+      final placeholders = List.filled(batchIds.length, '?').join(',');
+
+      final tagMaps = await db.rawQuery('''
+        SELECT quote_id, tag_id
+        FROM quote_tags
+        WHERE quote_id IN ($placeholders)
+        ''', batchIds);
+
+      for (final tagMap in tagMaps) {
+        final quoteId = tagMap['quote_id'] as String;
+        final tagId = tagMap['tag_id'] as String;
+        tagsByQuoteId.putIfAbsent(quoteId, () => []).add(tagId);
+      }
+    }
+
     final quotes = <Quote>[];
 
     for (final map in maps) {
       try {
-        // 解析聚合的标签ID
-        final tagIdsJoined = map['tag_ids_joined'];
-        final tagIds = <String>{
-          if (tagIdsJoined != null && tagIdsJoined.toString().isNotEmpty)
-            ...tagIdsJoined
-                .toString()
-                .split(',')
-                .map((id) => id.trim())
-                .where((id) => id.isNotEmpty),
-        }.toList();
+        final quoteId = map['id'] as String;
+        final tagIds = tagsByQuoteId[quoteId] ?? [];
 
-        // 创建Quote对象（移除临时字段）
         final quoteData = Map<String, dynamic>.from(map);
-        quoteData.remove('tag_ids_joined');
+        quoteData['tag_ids'] = tagIds.join(',');
 
-        final quote = Quote.fromJson({...quoteData, 'tag_ids': tagIds});
+        final quote = Quote.fromJson(quoteData);
         quotes.add(quote);
       } catch (e) {
         logDebug('解析笔记数据失败: $e, 数据: $map');
@@ -398,32 +413,21 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
       List<dynamic> finalArgs = List.from(args);
 
       if (tagIds != null && tagIds.isNotEmpty) {
-        // 使用 INNER JOIN 和 GROUP BY 来进行计数
-        final tagPlaceholders = tagIds.map((_) => '?').join(',');
+        // ⚡ Bolt: 使用多个 INNER JOIN 替代 GROUP BY + HAVING，避免全表聚合的性能瓶颈
+        String joins = '';
+        for (int i = 0; i < tagIds.length; i++) {
+          final alias = 'qt$i';
+          joins +=
+              ' INNER JOIN quote_tags $alias ON q.id = $alias.quote_id AND $alias.tag_id = ?';
+        }
 
-        String subQuery = '''
-          SELECT 1
-          FROM quotes q
-          INNER JOIN quote_tags qt ON q.id = qt.quote_id
-        ''';
-
-        conditions.add('qt.tag_id IN ($tagPlaceholders)');
-        finalArgs.addAll(tagIds);
+        finalArgs.insertAll(0, tagIds);
 
         final whereClause =
             conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
-        String havingClause = 'HAVING COUNT(DISTINCT qt.tag_id) = ?';
-        finalArgs.add(tagIds.length);
-
-        query = '''
-          SELECT COUNT(*) FROM (
-            $subQuery
-            $whereClause
-            GROUP BY q.id
-            $havingClause
-          )
-        ''';
+        query =
+            'SELECT COUNT(DISTINCT q.id) as count FROM quotes q$joins $whereClause';
       } else {
         // 没有标签筛选，使用简单的 COUNT
         final whereClause =
