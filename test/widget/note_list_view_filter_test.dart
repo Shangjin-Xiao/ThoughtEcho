@@ -129,6 +129,40 @@ void main() {
         await databaseService.disposeStream();
       },
     );
+
+    testWidgets(
+      'keeps load more gated while the appended page settles',
+      (tester) async {
+        final databaseService = _PagingFakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+          ),
+        );
+
+        await tester.pump();
+        databaseService.emitInitialPage();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        final listViewContext = tester.element(find.byType(ListView));
+        _dispatchPreloadScrollUpdate(listViewContext);
+        await tester.pump();
+        expect(databaseService.loadMoreCallCount, 1);
+
+        _dispatchPreloadScrollUpdate(listViewContext);
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(databaseService.loadMoreCallCount, 1);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+        await databaseService.disposeStream();
+      },
+    );
   });
 }
 
@@ -353,4 +387,53 @@ class _DelayedFakeDatabaseService extends _FakeDatabaseService {
   Future<void> disposeStream() async {
     await _controller.close();
   }
+}
+
+class _PagingFakeDatabaseService extends _DelayedFakeDatabaseService {
+  int loadMoreCallCount = 0;
+
+  @override
+  Future<void> loadMoreQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool? includeDeleted,
+  }) async {
+    loadMoreCallCount++;
+    _hasMoreQuotes = true;
+    _controller.add(_makeQuotes(40));
+  }
+
+  void emitInitialPage() {
+    _hasMoreQuotes = true;
+    _controller.add(_makeQuotes(20));
+  }
+}
+
+List<Quote> _makeQuotes(int count) {
+  return List<Quote>.generate(
+    count,
+    (index) => Quote(
+      id: 'quote-$index',
+      content: '分页测试笔记 $index\n${'较长内容 ' * 20}',
+      date: DateTime(2026, 5, 10, 8, index).toIso8601String(),
+    ),
+  );
+}
+
+void _dispatchPreloadScrollUpdate(BuildContext context) {
+  ScrollUpdateNotification(
+    metrics: FixedScrollMetrics(
+      minScrollExtent: 0,
+      maxScrollExtent: 1000,
+      pixels: 900,
+      viewportDimension: 600,
+      axisDirection: AxisDirection.down,
+      devicePixelRatio: 1,
+    ),
+    context: context,
+    scrollDelta: 10,
+  ).dispatch(context);
 }

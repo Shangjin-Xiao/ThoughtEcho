@@ -220,6 +220,29 @@ extension _NoteListScrollExtension on NoteListViewState {
     _releasePerfTimingsCallbackIfIdle();
   }
 
+  void _settleLoadMoreGateAfterPage() {
+    if (!_loadMoreAwaitingPage) {
+      return;
+    }
+
+    _loadMoreAwaitingPage = false;
+    _loadMoreSettleTimer?.cancel();
+    _loadMoreSettleTimer = Timer(const Duration(milliseconds: 320), () {
+      if (!mounted || !_isLoading) {
+        return;
+      }
+      _updateState(() {
+        _isLoading = false;
+      });
+    });
+  }
+
+  void _resetLoadMoreGate() {
+    _loadMoreAwaitingPage = false;
+    _loadMoreSettleTimer?.cancel();
+    _loadMoreSettleTimer = null;
+  }
+
   /// 修复：检测并修复滚动范围异常
   /// 当用户滚动到接近底部但列表提前终止时，尝试强制刷新
   void _checkAndFixScrollExtentAnomaly() {
@@ -495,6 +518,9 @@ extension _NoteListScrollExtension on NoteListViewState {
 
     // 仅作为并发保护；非首屏加载时 _isLoading 不改变可见 UI，避免多一次列表重建。
     _isLoading = true;
+    _loadMoreSettleTimer?.cancel();
+    _loadMoreAwaitingPage = true;
+    _loadMoreRequestStartCount = _quotes.length;
     _startLoadMorePerfCapture();
 
     try {
@@ -505,6 +531,7 @@ extension _NoteListScrollExtension on NoteListViewState {
       // 再次触发 loadMore，一次追加两页数据。
     } catch (e) {
       _cancelLoadMorePerfCapture('加载失败: $e');
+      _resetLoadMoreGate();
       // 修复：出错时也要重置加载状态
       if (mounted) {
         _updateState(() {

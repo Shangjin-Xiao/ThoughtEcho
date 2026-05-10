@@ -145,6 +145,9 @@ class NoteListViewState extends State<NoteListView> {
   final Stopwatch _loadMorePerfStopwatch = Stopwatch();
   final List<FrameTiming> _loadMorePerfFrameTimings = <FrameTiming>[];
   Timer? _loadMorePerfStopTimer;
+  bool _loadMoreAwaitingPage = false;
+  int _loadMoreRequestStartCount = 0;
+  Timer? _loadMoreSettleTimer;
 
   bool _hasExpandableQuoteCached = false;
   bool _hasExpandableQuoteComputed = false;
@@ -438,6 +441,7 @@ class NoteListViewState extends State<NoteListView> {
     _searchDebounceTimer?.cancel(); // 清理防抖定时器
     _firstOpenScrollStopTimer?.cancel();
     _loadMorePerfStopTimer?.cancel();
+    _loadMoreSettleTimer?.cancel();
 
     if (_perfTimingsCallbackAttached) {
       WidgetsBinding.instance.removeTimingsCallback(_collectFrameTimings);
