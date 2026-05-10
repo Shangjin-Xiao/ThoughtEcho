@@ -1,0 +1,43 @@
+lib/services/database_service.dart
+  s_160ab8255aa3d1::t_b5b7e04f147c6b 18,345-347,350-352
+  s_160ab8255aa3d1::t_9b2ab8ecab3ebb 344
+lib/widgets/add_note_dialog.dart
+  s_160ab8255aa3d1::t_b5b7e04f147c6b 27,806-808,833-836,839-840
+  s_160ab8255aa3d1::t_dd943d0bbad9ba 809-827,829,841-842
+lib/pages/note_full_editor_page.dart
+  s_160ab8255aa3d1::t_b5b7e04f147c6b 44
+lib/pages/hitokoto_settings_page.dart
+  s_160ab8255aa3d1::t_b5b7e04f147c6b 435,442-462
+lib/pages/note_editor/editor_location_dialogs.dart
+  s_160ab8255aa3d1::t_dd943d0bbad9ba 232-239,241
+  s_160ab8255aa3d1::t_b5b7e04f147c6b 229-231,244-247,252-254,260-261
+lib/utils/expiring_cache.dart
+  s_160ab8255aa3d1::t_b5b7e04f147c6b 1-45
+lib/utils/location_weather_helper.dart
+  s_160ab8255aa3d1::t_b5b7e04f147c6b 1-41
+lib/pages/preferences_detail_page.dart
+  s_160ab8255aa3d1::t_7b4b7f98ef9880 614-632
+test/unit/utils/expiring_cache_test.dart
+  s_160ab8255aa3d1::t_2aacb82becb6f8 1-32
+lib/pages/note_editor/editor_location_fetch.dart
+  s_160ab8255aa3d1::t_dd943d0bbad9ba 16-34,36,224-239,241
+  s_160ab8255aa3d1::t_b5b7e04f147c6b 13-15,39-42,44-46,52-53,221-223,245-248,250-252,255
+lib/services/database/database_cache_mixin.dart
+  s_160ab8255aa3d1::t_b5b7e04f147c6b 23-24,27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "1f128c79ef2790f2057a373ebf26cb34ca7f54d0",
+  "prompts": {},
+  "sessions": {
+    "s_160ab8255aa3d1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1edf5f602ffe4hGznWN4Li7RIP",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
