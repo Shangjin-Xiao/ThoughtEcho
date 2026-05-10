@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show FrameTiming;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -54,7 +55,8 @@ class AddNoteDialog extends StatefulWidget {
   State<AddNoteDialog> createState() => _AddNoteDialogState();
 }
 
-class _AddNoteDialogState extends State<AddNoteDialog> {
+class _AddNoteDialogState extends State<AddNoteDialog>
+    with WidgetsBindingObserver {
   late TextEditingController _contentController;
   late TextEditingController _authorController;
   late TextEditingController _workController;
@@ -94,6 +96,20 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   final FocusNode _contentFocusNode = FocusNode();
   Animation<double>? _routeAnimation;
   bool _focusRequested = false;
+
+  // 开发者模式：添加笔记弹窗打开/键盘性能监测。
+  bool _dialogPerfEnabled = false;
+  bool _dialogPerfRecording = false;
+  bool _dialogPerfTimingsCallbackAttached = false;
+  bool _dialogPerfMetricsObserverAttached = false;
+  bool _dialogPerfFirstFrameLogged = false;
+  bool _dialogPerfFocusLogged = false;
+  bool _dialogPerfKeyboardStartLogged = false;
+  double _dialogPerfLastKeyboardInset = 0;
+  final Stopwatch _dialogPerfStopwatch = Stopwatch();
+  final List<FrameTiming> _dialogPerfFrameTimings = <FrameTiming>[];
+  Timer? _dialogPerfKeyboardSettleTimer;
+  Timer? _dialogPerfFinalizeTimer;
 
   // 性能优化：缓存Provider引用，避免重复查找
   LocationService? _cachedLocationService;
@@ -176,6 +192,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
     // 优化：初始化内部标签列表
     _availableTags = List.from(widget.tags);
+
+    _contentFocusNode.addListener(_onContentFocusChanged);
+    _startDialogPerfCapture();
 
     // 新建笔记时，自动填充默认作者、出处和标签
     if (widget.initialQuote == null && !isHitokotoQuickAdd) {
@@ -299,11 +318,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         _routeAnimation = route.animation;
         if (route.animation!.isCompleted) {
           // 动画已完成（如无障碍关闭动画），直接请求焦点
-          _contentFocusNode.requestFocus();
+          _requestContentFocus('routeCompleted');
           _focusRequested = true;
         } else if (route.animation!.value >= 0.7) {
           // 动画已过 70%，直接请求焦点
-          _contentFocusNode.requestFocus();
+          _requestContentFocus('routeProgressReady');
           _focusRequested = true;
         } else {
           // 监听动画进度，到 70% 时请求焦点
@@ -311,7 +330,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         }
       } else {
         // 无法获取路由动画，直接请求焦点
-        _contentFocusNode.requestFocus();
+        _requestContentFocus('noRouteAnimation');
         _focusRequested = true;
       }
     });
@@ -490,7 +509,184 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     if (animation.value >= 0.7 || animation.isCompleted) {
       _focusRequested = true;
       animation.removeListener(_onRouteAnimationProgress);
-      _contentFocusNode.requestFocus();
+      _requestContentFocus('routeProgress70');
+    }
+  }
+
+  void _startDialogPerfCapture() {
+    final settingsService = _readServiceOrNull<SettingsService>(context);
+    if (settingsService == null ||
+        !settingsService.appSettings.developerMode ||
+        !settingsService.enableFirstOpenScrollPerfMonitor) {
+      return;
+    }
+
+    _dialogPerfEnabled = true;
+    _dialogPerfRecording = true;
+    _dialogPerfFrameTimings.clear();
+    _dialogPerfStopwatch
+      ..reset()
+      ..start();
+
+    WidgetsBinding.instance.addTimingsCallback(_collectDialogPerfTimings);
+    _dialogPerfTimingsCallbackAttached = true;
+    WidgetsBinding.instance.addObserver(this);
+    _dialogPerfMetricsObserverAttached = true;
+
+    logDebug(
+      '打开性能监测开始: editing=${widget.initialQuote != null}, '
+      'tags=${widget.tags.length}, contentLength=${_contentController.text.length}, '
+      'autoKeyboard=true',
+      source: 'AddNoteDialog.Perf',
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_dialogPerfRecording || _dialogPerfFirstFrameLogged) {
+        return;
+      }
+      _dialogPerfFirstFrameLogged = true;
+      logDebug(
+        '首帧完成: elapsed=${_dialogPerfStopwatch.elapsedMilliseconds}ms',
+        source: 'AddNoteDialog.Perf',
+      );
+    });
+
+    _dialogPerfFinalizeTimer = Timer(
+      const Duration(milliseconds: 1800),
+      () => _finalizeDialogPerfCapture('timeout'),
+    );
+  }
+
+  void _collectDialogPerfTimings(List<FrameTiming> timings) {
+    if (_dialogPerfRecording) {
+      _dialogPerfFrameTimings.addAll(timings);
+    }
+  }
+
+  void _requestContentFocus(String reason) {
+    if (_dialogPerfEnabled) {
+      final routeValue = _routeAnimation?.value.toStringAsFixed(2) ?? 'none';
+      logDebug(
+        '请求内容焦点: reason=$reason, route=$routeValue, '
+        'elapsed=${_dialogPerfStopwatch.elapsedMilliseconds}ms',
+        source: 'AddNoteDialog.Perf',
+      );
+    }
+    _contentFocusNode.requestFocus();
+  }
+
+  void _onContentFocusChanged() {
+    if (!_dialogPerfEnabled ||
+        _dialogPerfFocusLogged ||
+        !_contentFocusNode.hasFocus) {
+      return;
+    }
+
+    _dialogPerfFocusLogged = true;
+    logDebug(
+      '内容输入框获得焦点: elapsed=${_dialogPerfStopwatch.elapsedMilliseconds}ms',
+      source: 'AddNoteDialog.Perf',
+    );
+  }
+
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    if (!_dialogPerfEnabled || !_dialogPerfRecording) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_dialogPerfRecording) {
+        return;
+      }
+
+      final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+      _dialogPerfLastKeyboardInset = keyboardInset;
+      if (keyboardInset <= 0) {
+        return;
+      }
+
+      if (!_dialogPerfKeyboardStartLogged) {
+        _dialogPerfKeyboardStartLogged = true;
+        logDebug(
+          '键盘 inset 开始变化: inset=${keyboardInset.round()}, '
+          'elapsed=${_dialogPerfStopwatch.elapsedMilliseconds}ms',
+          source: 'AddNoteDialog.Perf',
+        );
+      }
+
+      _dialogPerfKeyboardSettleTimer?.cancel();
+      _dialogPerfKeyboardSettleTimer = Timer(
+        const Duration(milliseconds: 220),
+        () {
+          if (!_dialogPerfRecording) {
+            return;
+          }
+          logDebug(
+            '键盘 inset 稳定: inset=${_dialogPerfLastKeyboardInset.round()}, '
+            'elapsed=${_dialogPerfStopwatch.elapsedMilliseconds}ms',
+            source: 'AddNoteDialog.Perf',
+          );
+          _finalizeDialogPerfCapture('keyboardSettled');
+        },
+      );
+    });
+  }
+
+  void _finalizeDialogPerfCapture(String reason) {
+    if (!_dialogPerfRecording) {
+      return;
+    }
+
+    _dialogPerfRecording = false;
+    _dialogPerfStopwatch.stop();
+    _dialogPerfFinalizeTimer?.cancel();
+    _dialogPerfKeyboardSettleTimer?.cancel();
+    _detachDialogPerfHooks();
+
+    int jankyFrames = 0;
+    int totalFrameMicros = 0;
+    double worstFrameMs = 0;
+
+    for (final timing in _dialogPerfFrameTimings) {
+      final totalMicros = timing.buildDuration.inMicroseconds +
+          timing.rasterDuration.inMicroseconds;
+      totalFrameMicros += totalMicros;
+
+      final frameMs = totalMicros / 1000.0;
+      if (frameMs > worstFrameMs) {
+        worstFrameMs = frameMs;
+      }
+      if (totalMicros > 16600) {
+        jankyFrames++;
+      }
+    }
+
+    final totalFrames = _dialogPerfFrameTimings.length;
+    final avgFrameMs =
+        totalFrames == 0 ? 0.0 : (totalFrameMicros / totalFrames) / 1000.0;
+
+    logDebug(
+      '打开性能结果: reason=$reason, '
+      'elapsed=${_dialogPerfStopwatch.elapsedMilliseconds}ms, '
+      'frames=$totalFrames, jank=$jankyFrames, '
+      'avg=${avgFrameMs.toStringAsFixed(1)}ms, '
+      'worst=${worstFrameMs.toStringAsFixed(1)}ms, '
+      'focus=$_dialogPerfFocusLogged, '
+      'keyboardInset=${_dialogPerfLastKeyboardInset.round()}',
+      source: 'AddNoteDialog.Perf',
+    );
+  }
+
+  void _detachDialogPerfHooks() {
+    if (_dialogPerfTimingsCallbackAttached) {
+      WidgetsBinding.instance.removeTimingsCallback(_collectDialogPerfTimings);
+      _dialogPerfTimingsCallbackAttached = false;
+    }
+    if (_dialogPerfMetricsObserverAttached) {
+      WidgetsBinding.instance.removeObserver(this);
+      _dialogPerfMetricsObserverAttached = false;
     }
   }
 
@@ -1078,8 +1274,12 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   @override
   void dispose() {
+    _dialogPerfFinalizeTimer?.cancel();
+    _dialogPerfKeyboardSettleTimer?.cancel();
+    _detachDialogPerfHooks();
     _dbChangeDebounceTimer?.cancel();
     _routeAnimation?.removeListener(_onRouteAnimationProgress);
+    _contentFocusNode.removeListener(_onContentFocusChanged);
     _contentController.dispose();
     _authorController.dispose();
     _workController.dispose();
