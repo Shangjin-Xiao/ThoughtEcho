@@ -17,7 +17,7 @@ import 'svg_to_image_service.dart';
 import 'package:flutter/widgets.dart'; // 为新增的BuildContext参数添加导入
 
 /// AI卡片生成服务
-// TODO(refactor): This file exceeds 1500 lines. Consider splitting card generation 
+// TODO(refactor): This file exceeds 1500 lines. Consider splitting card generation
 // logic into separate strategies for different card types or layouts.
 class AICardGenerationService {
   final AIService _aiService;

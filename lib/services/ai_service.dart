@@ -17,7 +17,7 @@ typedef StreamingResponseCallback = void Function(String text);
 typedef StreamingCompleteCallback = void Function(String fullText);
 typedef StreamingErrorCallback = void Function(dynamic error);
 
-// TODO(refactor): This file exceeds 1300 lines. Consider splitting AI functionalities 
+// TODO(refactor): This file exceeds 1300 lines. Consider splitting AI functionalities
 // (e.g., summarization, translation, chat) into dedicated provider classes.
 class AIService extends ChangeNotifier {
   final SettingsService _settingsService;

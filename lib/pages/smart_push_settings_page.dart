@@ -12,7 +12,7 @@ import '../constants/app_constants.dart';
 
 /// 智能推送设置页面
 /// 重构版：简洁现代的UI设计，智能推送为默认模式
-// TODO(refactor): This file exceeds 1600 lines. Consider splitting settings 
+// TODO(refactor): This file exceeds 1600 lines. Consider splitting settings
 // categories into separate widgets or components.
 class SmartPushSettingsPage extends StatefulWidget {
   const SmartPushSettingsPage({super.key});

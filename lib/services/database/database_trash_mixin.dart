@@ -493,23 +493,21 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       final appDir = await getApplicationDocumentsDirectory();
       final appPath = normalize(appDir.path);
 
-      for (final mediaPath in mediaCandidates) {
-        try {
-          String absolutePath = mediaPath;
-          if (!isAbsolute(absolutePath)) {
-            absolutePath = join(appPath, mediaPath);
-          }
-          await MediaReferenceService.quickCheckAndDeleteIfOrphan(
-            absolutePath,
-            cachedAppPath: appPath,
-          );
-        } catch (e, stack) {
-          UnifiedLogService.instance.error(
-            '清理孤儿媒体文件失败: $mediaPath',
-            error: e,
-            stackTrace: stack,
-          );
-        }
+      try {
+        final mediaPaths = mediaCandidates.map((mediaPath) {
+          if (isAbsolute(mediaPath)) return mediaPath;
+          return join(appPath, mediaPath);
+        }).toList(growable: false);
+        await MediaReferenceService.quickCheckAndDeleteOrphans(
+          mediaPaths,
+          cachedAppPath: appPath,
+        );
+      } catch (e, stack) {
+        UnifiedLogService.instance.error(
+          '批量清理孤儿媒体文件失败',
+          error: e,
+          stackTrace: stack,
+        );
       }
 
       clearAllCacheForParts();

@@ -688,24 +688,27 @@ class DatabaseBackupService {
       if (mediaCleanupCandidates.isNotEmpty) {
         final appDir = await getApplicationDocumentsDirectory();
         final appPath = normalize(appDir.path);
+        final candidatePaths = <String>[];
         for (final mediaPath in mediaCleanupCandidates) {
-          try {
-            final candidatePath = normalize(
-              isAbsolute(mediaPath) ? mediaPath : join(appPath, mediaPath),
-            );
-            if (candidatePath != appPath &&
-                !candidatePath.startsWith(
-                  '$appPath${Platform.pathSeparator}',
-                )) {
-              continue;
-            }
-            await MediaReferenceService.quickCheckAndDeleteIfOrphan(
-              candidatePath,
-              cachedAppPath: appPath,
-            );
-          } catch (cleanupErr) {
-            reportBuilder.addError('清理墓碑删除后媒体文件失败: $cleanupErr');
+          final candidatePath = normalize(
+            isAbsolute(mediaPath) ? mediaPath : join(appPath, mediaPath),
+          );
+          if (candidatePath != appPath &&
+              !candidatePath.startsWith(
+                '$appPath${Platform.pathSeparator}',
+              )) {
+            continue;
           }
+          candidatePaths.add(candidatePath);
+        }
+
+        try {
+          await MediaReferenceService.quickCheckAndDeleteOrphans(
+            candidatePaths,
+            cachedAppPath: appPath,
+          );
+        } catch (cleanupErr) {
+          reportBuilder.addError('清理墓碑删除后媒体文件失败: $cleanupErr');
         }
       }
 
