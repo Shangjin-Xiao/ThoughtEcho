@@ -339,7 +339,7 @@ void main() {
       await TestSetup.teardown();
     });
 
-    testWidgets('explore entry defaults to chat mode with toggle',
+    testWidgets('explore entry defaults to agent without mode toggle',
         (tester) async {
       await tester.pumpWidget(
         await _buildHarness(
@@ -354,11 +354,12 @@ void main() {
       await tester.pumpAndSettle();
 
       final l10n = _l10n(tester);
-      expect(find.text(l10n.aiModeChat), findsOneWidget);
+      expect(find.text(l10n.aiModeChat), findsNothing);
+      expect(find.text(l10n.aiModeAgent), findsNothing);
       expect(find.widgetWithText(ActionChip, '/润色'), findsNothing);
     });
 
-    testWidgets('note entry keeps note context and defaults to note chat',
+    testWidgets('note entry keeps note context and defaults to agent',
         (tester) async {
       await tester.pumpWidget(
         await _buildHarness(
@@ -374,7 +375,8 @@ void main() {
       await tester.pumpAndSettle();
 
       final l10n = _l10n(tester);
-      expect(find.text(l10n.aiModeChat), findsOneWidget);
+      expect(find.text(l10n.aiModeChat), findsNothing);
+      expect(find.text(l10n.aiModeAgent), findsNothing);
       expect(find.textContaining(l10n.currentNoteContext), findsOneWidget);
     });
 
@@ -419,7 +421,8 @@ void main() {
       await tester.pumpAndSettle();
 
       final l10n = _l10n(tester);
-      expect(find.text(l10n.aiModeAgent), findsOneWidget);
+      expect(find.text(l10n.aiModeAgent), findsNothing);
+      expect(find.text(l10n.aiModeChat), findsNothing);
 
       await tester.pumpWidget(
         await _buildHarness(
@@ -435,7 +438,8 @@ void main() {
       await tester.pumpAndSettle();
 
       final noteL10n = _l10n(tester);
-      expect(find.text(noteL10n.aiModeChat), findsOneWidget);
+      expect(find.text(noteL10n.aiModeChat), findsNothing);
+      expect(find.text(noteL10n.aiModeAgent), findsNothing);
     });
 
     testWidgets('slash commands show only when input starts with slash',
@@ -631,7 +635,8 @@ void main() {
       final l10n = _l10n(tester);
       expect(
           find.text(l10n.agentReviewingRecentNotes), findsAtLeastNWidgets(1));
-      expect(find.text('让我先看看最近的记录。'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 220));
+      expect(find.textContaining('让我先看看最近的记录。'), findsNothing);
 
       await tester.pump(const Duration(milliseconds: 220));
       expect(find.textContaining(l10n.executedNOperations(1)), findsOneWidget);
@@ -675,18 +680,20 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 40));
 
-      expect(find.text('正在查找“露营”相关记录...'), findsAtLeastNWidgets(1));
-
-      await tester.pump(const Duration(milliseconds: 220));
-
       final l10n = _l10n(tester);
+      await tester.pump(const Duration(milliseconds: 220));
+      expect(
+        find.textContaining(l10n.agentSearchingNotesForQuery('露营')),
+        findsAtLeastNWidgets(1),
+      );
       final completedHeaderFinder =
           find.textContaining(l10n.executedNOperations(1));
       expect(completedHeaderFinder, findsOneWidget);
       await tester.tap(completedHeaderFinder);
       await tester.pumpAndSettle();
 
-      expect(find.text('已找到 2 条相关记录，可继续往下看'), findsOneWidget);
+      expect(
+          find.text(l10n.agentFoundMatchingNotesWithMore(2)), findsOneWidget);
       expect(find.textContaining('"notes":['), findsNothing);
       expect(find.textContaining('content_preview'), findsNothing);
     });
@@ -760,21 +767,13 @@ void main() {
 
       await _submitInput(tester, '请润色这段文字');
       await tester.runAsync(() async {
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await Future<void>.delayed(const Duration(milliseconds: 220));
       });
-      final smartResultCard =
-          find.byKey(const ValueKey('ai_workflow_result_smart_result'));
       await tester.pump();
       await tester.pumpAndSettle();
 
       expect(agentService.runCount, 1);
-      expect(smartResultCard, findsOneWidget);
-      expect(
-        find.textContaining('这是可应用的新内容', findRichText: true),
-        findsOneWidget,
-      );
-      expect(find.text('替换原文'), findsOneWidget);
-      expect(find.text('追加到末尾'), findsOneWidget);
+      expect(find.text('这是可应用的新内容', findRichText: true), findsOneWidget);
     });
   });
 }

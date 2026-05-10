@@ -104,5 +104,25 @@ void main() {
       expect(savedLocation, isTrue);
       expect(savedWeather, isFalse);
     });
+
+    testWidgets('hides location and weather toggles for existing-note results',
+        (tester) async {
+      await tester.pumpWidget(
+        _buildTestWidget(
+          SmartResultCard(
+            title: '润色结果',
+            content: '润色后的内容',
+            editorSource: 'fullscreen',
+            initialIncludeLocation: true,
+            initialIncludeWeather: true,
+            onSaveDirectly: (_, __) {},
+            onOpenInEditor: (_, __) {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FilterChip), findsNothing);
+    });
   });
 }

@@ -7,17 +7,10 @@ class AIAssistantEntryConfig {
 
   final AIAssistantEntrySource source;
 
-  AIAssistantPageMode get defaultMode => switch (source) {
-        AIAssistantEntrySource.explore => AIAssistantPageMode.chat,
-        AIAssistantEntrySource.note => AIAssistantPageMode.noteChat,
-      };
+  AIAssistantPageMode get defaultMode => AIAssistantPageMode.agent;
 
-  bool allowsMode(AIAssistantPageMode mode) => switch (source) {
-        AIAssistantEntrySource.explore =>
-          mode == AIAssistantPageMode.chat || mode == AIAssistantPageMode.agent,
-        AIAssistantEntrySource.note => mode == AIAssistantPageMode.noteChat ||
-            mode == AIAssistantPageMode.agent,
-      };
+  bool allowsMode(AIAssistantPageMode mode) =>
+      mode == AIAssistantPageMode.agent;
 
   AIAssistantPageMode resolveRestoredMode(AIAssistantPageMode? restoredMode) {
     if (restoredMode != null && allowsMode(restoredMode)) {

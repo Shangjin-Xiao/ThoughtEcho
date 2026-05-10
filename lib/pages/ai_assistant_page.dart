@@ -35,6 +35,7 @@ import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../services/weather_service.dart';
 import '../utils/ai_command_helpers.dart';
+import '../utils/ai_smart_result_utils.dart';
 import '../utils/app_logger.dart';
 import '../utils/string_utils.dart';
 import '../utils/time_utils.dart';

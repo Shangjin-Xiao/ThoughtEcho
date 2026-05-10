@@ -147,6 +147,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           case 'smart_result':
             final action = meta['action']?.toString();
             final isNewNoteProposal = action == 'create';
+            final initialNewNoteMetadata =
+                isNewNoteProposal ? _resolveInitialNewNoteMetadata(meta) : null;
             final rawTagNames = meta['tag_names'] as List<dynamic>? ?? const [];
             final tagNames = rawTagNames
                 .map((item) => item.toString().trim())
@@ -174,23 +176,24 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 locationPreview: locationPreview,
                 weatherPreview: weatherPreview,
                 editorSource: isNewNoteProposal ? 'new_note' : 'fullscreen',
-                initialIncludeLocation: meta['include_location'] == true,
-                initialIncludeWeather: meta['include_weather'] == true,
+                initialIncludeLocation:
+                    initialNewNoteMetadata?.includeLocation ?? false,
+                initialIncludeWeather:
+                    initialNewNoteMetadata?.includeWeather ?? false,
                 onOpenInEditor: (includeLocation, includeWeather) async {
                   if (isNewNoteProposal) {
-                    final rawTagIds =
-                        meta['tag_ids'] as List<dynamic>? ?? const [];
-                    final tagIds = rawTagIds
-                        .map((item) => item.toString().trim())
-                        .where((item) => item.isNotEmpty)
-                        .toList();
-                    await _openSmartResultAsNewNote(
-                      message.content,
-                      tagIds: tagIds,
-                      author: meta['author']?.toString(),
-                      source: meta['source']?.toString(),
+                    final confirmedMetadata = _resolveConfirmedNewNoteMetadata(
+                      meta,
                       includeLocation: includeLocation,
                       includeWeather: includeWeather,
+                    );
+                    await _openSmartResultAsNewNote(
+                      message.content,
+                      tagIds: confirmedMetadata.tagIds,
+                      author: confirmedMetadata.author,
+                      source: confirmedMetadata.source,
+                      includeLocation: confirmedMetadata.includeLocation,
+                      includeWeather: confirmedMetadata.includeWeather,
                     );
                   } else {
                     final updatedMeta = Map<String, dynamic>.from(meta);
@@ -203,8 +206,18 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 onSaveDirectly: (includeLocation, includeWeather) async {
                   if (isNewNoteProposal) {
                     final updatedMeta = Map<String, dynamic>.from(meta);
-                    updatedMeta['include_location'] = includeLocation;
-                    updatedMeta['include_weather'] = includeWeather;
+                    final confirmedMetadata = _resolveConfirmedNewNoteMetadata(
+                      meta,
+                      includeLocation: includeLocation,
+                      includeWeather: includeWeather,
+                    );
+                    updatedMeta['tag_ids'] = confirmedMetadata.tagIds;
+                    updatedMeta['author'] = confirmedMetadata.author;
+                    updatedMeta['source'] = confirmedMetadata.source;
+                    updatedMeta['include_location'] =
+                        confirmedMetadata.includeLocation;
+                    updatedMeta['include_weather'] =
+                        confirmedMetadata.includeWeather;
                     await _saveSmartResultAsNewNote(
                       updatedMeta,
                       message.content,
@@ -626,54 +639,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                       minimumSize: const Size(36, 36),
                     ),
                   ),
-                  // Mode toggle (direct tap)
-                  if (_entryConfig.allowsMode(AIAssistantPageMode.agent))
-                    GestureDetector(
-                      onTap: _isLoading
-                          ? null
-                          : () {
-                              final next = _isAgentMode
-                                  ? _entryConfig.defaultMode
-                                  : AIAssistantPageMode.agent;
-                              _setMode(next);
-                            },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _isAgentMode
-                              ? theme.colorScheme.primaryContainer
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _isAgentMode
-                                  ? Icons.smart_toy
-                                  : Icons.chat_outlined,
-                              size: 16,
-                              color: _isAgentMode
-                                  ? theme.colorScheme.onPrimaryContainer
-                                  : theme.colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _isAgentMode ? l10n.aiModeAgent : l10n.aiModeChat,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: _isAgentMode
-                                    ? theme.colorScheme.onPrimaryContainer
-                                    : theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                   // Thinking toggle
                   if (_currentModelSupportsThinking)
                     IconButton(
@@ -805,7 +770,60 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
   }
 
   bool _isShortContent(String content) {
-    return content.length < 200 && '\n'.allMatches(content).length <= 2;
+    return !AiSmartResultUtils.shouldOpenFullEditor(content);
+  }
+
+  AiSmartResultMetadata _resolveInitialNewNoteMetadata(
+    Map<String, dynamic> meta,
+  ) {
+    final settings = context.read<SettingsService>();
+    return AiSmartResultUtils.resolveNewNoteMetadata(
+      aiAuthor: meta['author']?.toString(),
+      aiSource: meta['source']?.toString(),
+      aiTagIds: _extractStringList(meta['tag_ids']),
+      defaultTagIds: settings.defaultTagIds,
+      aiIncludeLocation: meta['include_location'] == true,
+      aiIncludeWeather: meta['include_weather'] == true,
+      userAutoAttachLocation: settings.autoAttachLocation,
+      userAutoAttachWeather: settings.autoAttachWeather,
+    );
+  }
+
+  AiSmartResultMetadata _resolveConfirmedNewNoteMetadata(
+    Map<String, dynamic> meta, {
+    required bool includeLocation,
+    required bool includeWeather,
+  }) {
+    final settings = context.read<SettingsService>();
+    return AiSmartResultMetadata(
+      author: _trimToNull(meta['author']?.toString()),
+      source: _trimToNull(meta['source']?.toString()),
+      tagIds: AiSmartResultUtils.resolveNewNoteMetadata(
+        aiAuthor: null,
+        aiSource: null,
+        aiTagIds: _extractStringList(meta['tag_ids']),
+        defaultTagIds: settings.defaultTagIds,
+        aiIncludeLocation: false,
+        aiIncludeWeather: false,
+        userAutoAttachLocation: false,
+        userAutoAttachWeather: false,
+      ).tagIds,
+      includeLocation: includeLocation,
+      includeWeather: includeWeather,
+    );
+  }
+
+  List<String> _extractStringList(Object? value) {
+    final rawItems = value is List ? value : const [];
+    return rawItems
+        .map((item) => item.toString().trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  String? _trimToNull(String? value) {
+    final trimmed = value?.trim() ?? '';
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   Future<void> _openSmartResultAsNewNote(

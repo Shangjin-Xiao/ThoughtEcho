@@ -217,7 +217,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
     // 新建笔记时，自动填充默认作者、出处和标签
     // 注意：仅在没有预填充值时才使用默认值，AI 填写的作者/出处/标签不会被覆盖
-    if (widget.initialQuote == null && !isHitokotoQuickAdd) {
+    if (widget.initialQuote == null &&
+        !isHitokotoQuickAdd &&
+        !widget.useAIPrefilledLocationWeather) {
       final settingsService = _readServiceOrNull<SettingsService>(context);
       if (settingsService != null) {
         // 仅在没有预填充值时使用默认作者
