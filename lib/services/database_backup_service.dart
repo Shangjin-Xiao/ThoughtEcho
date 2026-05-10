@@ -20,6 +20,9 @@ class DatabaseBackupService {
   /// 将所有笔记和分类数据导出为Map对象
   Future<Map<String, dynamic>> exportDataAsMap(Database db) async {
     try {
+      // TODO(perf): This legacy export path builds all notes/tags in memory.
+      // Prefer BackupService's streaming export for large datasets, or replace
+      // this method with a paged writer before exposing it to UI flows.
       final dbVersion = await db.getVersion();
 
       // 查询所有分类数据

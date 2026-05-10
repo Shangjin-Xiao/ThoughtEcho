@@ -241,6 +241,8 @@ class MediaCleanupService {
 
       int checkedReferences = 0;
       int missingFiles = 0;
+      final appDir = await getApplicationDocumentsDirectory();
+      final appPath = appDir.path;
 
       for (final quote in quotes) {
         final mediaPaths =
@@ -250,10 +252,9 @@ class MediaCleanupService {
           checkedReferences++;
 
           // 转换为绝对路径
-          final appDir = await getApplicationDocumentsDirectory();
           final absolutePath = path.isAbsolute(mediaPath)
               ? mediaPath
-              : path.join(appDir.path, mediaPath);
+              : path.join(appPath, mediaPath);
 
           if (!await File(absolutePath).exists()) {
             missingFiles++;

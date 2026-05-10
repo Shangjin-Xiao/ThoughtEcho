@@ -101,6 +101,8 @@ class StreamingBackupProcessor {
     final fileSize = await file.length();
     logDebug('ZIP备份文件大小: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB');
 
+    // TODO(perf): This still materializes the whole ZIP before decoding. Replace
+    // it with a true streaming ZIP reader before supporting very large backups.
     // 读取ZIP文件
     final bytes = await _readFileInChunks(file, onStatusUpdate, shouldCancel);
 

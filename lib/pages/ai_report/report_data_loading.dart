@@ -10,6 +10,8 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
     try {
       final databaseService = context.read<DatabaseService>();
       // 获取所有笔记（排除隐藏笔记，隐藏笔记不参与AI分析统计）
+      // TODO(perf): Add a date-range query that returns only fields needed by
+      // periodic reports instead of loading every note and filtering in Dart.
       final quotes = await databaseService.getAllQuotes();
 
       // 调试：打印获取到的所有笔记数量

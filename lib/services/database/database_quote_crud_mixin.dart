@@ -480,24 +480,21 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         final appDir = await getApplicationDocumentsDirectory();
         final appPath = normalize(appDir.path);
 
-        for (final storedPath in oldReferencedFiles) {
-          try {
-            String absolutePath = storedPath;
-            if (!absolutePath.startsWith('/') && !absolutePath.contains(':')) {
-              absolutePath = join(appPath, storedPath);
+        if (oldReferencedFiles.isNotEmpty) {
+          final absolutePaths = oldReferencedFiles.map((storedPath) {
+            if (storedPath.startsWith('/') || storedPath.contains(':')) {
+              return storedPath;
             }
+            return join(appPath, storedPath);
+          }).toList(growable: false);
 
-            // 使用增强版的 quickCheckAndDeleteIfOrphan（包含内容二次校验）
-            final deleted =
-                await MediaReferenceService.quickCheckAndDeleteIfOrphan(
-              absolutePath,
-              cachedAppPath: appPath,
-            );
-            if (deleted) {
-              logDebug('已清理无引用媒体文件: $absolutePath');
-            }
-          } catch (e) {
-            logDebug('清理无引用媒体文件失败: $storedPath, 错误: $e');
+          final deletedCount =
+              await MediaReferenceService.quickCheckAndDeleteOrphans(
+            absolutePaths,
+            cachedAppPath: appPath,
+          );
+          if (deletedCount > 0) {
+            logDebug('已批量清理 $deletedCount 个无引用媒体文件');
           }
         }
 
