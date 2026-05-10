@@ -1,0 +1,29 @@
+lib/pages/ai_report/report_overview.dart
+  s_1ac9885efebca8::t_13e4226d595a6b 192,283
+lib/utils/report_period_utils.dart
+  s_1ac9885efebca8::t_e7609f153c9aac 1-87
+test/all_tests.dart
+  s_1ac9885efebca8::t_d2b82cd9a8ce3b 56,111
+lib/pages/ai_periodic_report_page.dart
+  s_1ac9885efebca8::t_13e4226d595a6b 22,54
+test/unit/utils/report_period_utils_test.dart
+  s_1ac9885efebca8::t_9039a0c7af2513 1-41
+lib/pages/ai_report/report_data_loading.dart
+  s_1ac9885efebca8::t_13e4226d595a6b 26-31,40,380-384
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "627d0ad0d9ab2c9ddc517ad0018913436bf56cd5",
+  "prompts": {},
+  "sessions": {
+    "s_1ac9885efebca8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1edf858ffffeT4mkhiRvQ5fGZB",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
