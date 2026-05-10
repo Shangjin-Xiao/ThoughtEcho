@@ -1,0 +1,39 @@
+.agents/skills/flutter-setup-localization/SKILL.md
+  s_652b9b56a5b6ff::t_c121ad1e18dff1 1-210
+.agents/skills/flutter-implement-json-serialization/SKILL.md
+  s_652b9b56a5b6ff::t_c121ad1e18dff1 1-153
+.agents/skills/flutter-use-http-package/SKILL.md
+  s_652b9b56a5b6ff::t_c121ad1e18dff1 1-175
+.agents/skills/flutter-setup-declarative-routing/SKILL.md
+  s_652b9b56a5b6ff::t_c121ad1e18dff1 1-255
+.agents/skills/flutter-fix-layout-issues/SKILL.md
+  s_652b9b56a5b6ff::t_c121ad1e18dff1 1-130
+skills-lock.json
+  s_652b9b56a5b6ff::t_c121ad1e18dff1 1-65
+.agents/skills/flutter-add-integration-test/SKILL.md
+  s_652b9b56a5b6ff::t_c121ad1e18dff1 1-163
+.agents/skills/flutter-add-widget-preview/SKILL.md
+  s_652b9b56a5b6ff::t_c121ad1e18dff1 1-145
+.agents/skills/flutter-add-widget-test/SKILL.md
+  s_652b9b56a5b6ff::t_c121ad1e18dff1 1-154
+.agents/skills/flutter-apply-architecture-best-practices/SKILL.md
+  s_652b9b56a5b6ff::t_c121ad1e18dff1 1-162
+.agents/skills/flutter-build-responsive-layout/SKILL.md
+  s_652b9b56a5b6ff::t_c121ad1e18dff1 1-139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "f9387a02a828fa329aa12c5feed4bda2be174b7b",
+  "prompts": {},
+  "sessions": {
+    "s_652b9b56a5b6ff": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f054f8feffehROX1IIp59wfOI",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
