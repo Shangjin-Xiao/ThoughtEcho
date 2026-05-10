@@ -1,0 +1,47 @@
+lib/pages/ai_assistant_page.dart
+  s_b478c32a5b8bae::t_1d1bb3c5534b64 38
+test/widget/pages/ai_assistant_page_test.dart
+  s_b478c32a5b8bae::t_adb0ac4bcdb6c3 695-696
+  s_b478c32a5b8bae::t_78088276baa472 639
+  s_b478c32a5b8bae::t_464fda3c1d22fd 342,357-358,362,378-379,424-425,441-442
+  s_b478c32a5b8bae::t_e71a3c65f2033d 685,687-688
+  s_b478c32a5b8bae::t_215e428a592de3 638,684,686,770,776
+lib/widgets/add_note_dialog.dart
+  s_b478c32a5b8bae::t_4185154f0c385a 220-222
+lib/utils/ai_smart_result_utils.dart
+  s_b478c32a5b8bae::t_d2bade63ca67a0 1-61
+lib/models/ai_assistant_entry.dart
+  s_b478c32a5b8bae::t_d4714f00aa15f2 10
+  s_b478c32a5b8bae::t_7b419404b6a42e 12-13
+test/unit/models/ai_assistant_entry_test.dart
+  s_b478c32a5b8bae::t_b70eca5d1a623c 7,12-13,18,23,25,36
+lib/pages/ai_assistant/ai_assistant_page_ui.dart
+  s_b478c32a5b8bae::t_a814da1c240d4b 179-182,185-186,190-197,209-220,773-826
+  s_b478c32a5b8bae::t_7b419404b6a42e 150-151
+test/unit/utils/ai_smart_result_utils_test.dart
+  s_b478c32a5b8bae::t_1af459e25a809c 1-6,15-35,38-56
+  s_b478c32a5b8bae::t_7b419404b6a42e 36-37
+  s_b478c32a5b8bae::t_b5006fb0f8e9d7 7-14
+lib/pages/ai_assistant/ai_assistant_page_workflow.dart
+  s_b478c32a5b8bae::t_2fdf1a5a2717d8 50-51
+lib/widgets/ai/smart_result_card.dart
+  s_b478c32a5b8bae::t_b6f158b4fb205c 69
+test/widget/smart_result_card_test.dart
+  s_b478c32a5b8bae::t_5320940caf4660 107-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "54684725320d21930c548f3ce4b76da35b19191b",
+  "prompts": {},
+  "sessions": {
+    "s_b478c32a5b8bae": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1edec0dbbffe68jBsR6SC8f4Tv",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
