@@ -6,7 +6,7 @@ import '../models/note_category.dart';
 import '../services/database_service.dart';
 import '../utils/icon_utils.dart';
 
-/// 只让外层边距响应键盘 inset，避免键盘动画驱动整个弹窗内容重建。
+/// 只让外层位移响应键盘 inset，避免键盘动画驱动弹窗内容重新布局。
 class KeyboardInsetPadding extends StatelessWidget {
   final Widget child;
 
@@ -14,14 +14,13 @@ class KeyboardInsetPadding extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-        left: 16,
-        right: 16,
-        top: 16,
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 16),
+      child: Transform.translate(
+        offset: Offset(0, -keyboardInset),
+        child: RepaintBoundary(child: child),
       ),
-      child: child,
     );
   }
 }
