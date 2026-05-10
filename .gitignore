@@ -288,3 +288,7 @@ node_modules/
 
 # New store/marketing assets (not yet in repo)
 assets/store/
+
+# Additional cleanup
+.metadata
+windows/flutter/generated_plugin_registrant.h

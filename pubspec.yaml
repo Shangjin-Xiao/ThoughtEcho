@@ -105,12 +105,12 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "icon.png"
+  image_path: "assets/icon.png"
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "icon.png"
+  adaptive_icon_foreground: "assets/icon.png"
   # iOS 特定配置
   # 使用优化后的大图标（去除多余背景，放大主体）
-  image_path_ios: "icon_ios_large.png"
+  image_path_ios: "assets/icon_ios_large.png"
   # 仍然需要背景色来填充图标内部或角落的透明区域
   remove_alpha_ios: true
   background_color_ios: "#9ACDF7"
