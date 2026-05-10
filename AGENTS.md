@@ -31,6 +31,34 @@ ThoughtEcho/
 └── assets/                 # Lottie 动画, 图标, 用户文档
 ```
 
+---
+
+## 文件存放规范 (File Organization Standards)
+
+为了保持代码库整洁，所有文件必须遵循以下存放规范：
+
+### 1. 脚本文件 (Scripts)
+- **存放路径**：统一存放在根目录的 `scripts/` 文件夹下。
+- **禁止事项**：禁止将任何 `.py`, `.sh`, `.bat`, `.ps1` 等脚本文件直接放在项目根目录。
+- **配置脚本**：即使是用于修改代码或文档的辅助脚本（如 `replace_code.py`, `update_l10n.py`），也必须存放在 `scripts/` 中。
+
+### 2. 静态资源 (Assets)
+- **应用图标**：
+    - 主图标（原始文件）应存放在 `assets/icon.png`。
+    - 针对不同平台优化过的图标（如 `icon_ios_large.png`）也应存放在 `assets/` 目录下。
+    - **禁止**：严禁在项目根目录存放图标文件（如 `icon.png`）。
+- **动效文件**：`.json` 格式的 Lottie 动画应存放在 `assets/lottie/`。
+- **矢量图**：SVG 文件应存放在 `assets/svg/`。
+- **营销/网页资源**：用于 `README.md`、`res/index.html` 或 Banner 展示的资源，应存放在 `res/` 目录下。
+
+### 3. 构建产物与临时文件 (Build & Temp)
+- **Git 忽略**：
+    - 严禁提交 `.gradle/`, `.dart_tool/`, `build/`, `node_modules/` 等自动生成的目录。
+    - 严禁提交平台自动生成的注册文件（如 `GeneratedPluginRegistrant.java`, `generated_plugins.cmake`）。
+- **元数据**：`.metadata` 严禁提交。
+
+---
+
 大文件通过 `part`/mixin 或子目录拆分：`database/`(12 mixin)、`note_editor/`(10)、`ai_report/`(6)、`smart_push/`(6)、`note_list/`(5)。
 
 ---
