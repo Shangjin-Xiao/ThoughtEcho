@@ -332,7 +332,7 @@ extension _NoteListItemsExtension on NoteListViewState {
         } else if (notification is ScrollUpdateNotification) {
           _recordScrollSessionUpdate(notification.metrics);
         } else if (notification is ScrollEndNotification) {
-          _finalizeScrollSessionPerfCapture(notification.metrics);
+          _scheduleScrollSessionPerfFinalize(notification.metrics);
         }
 
         // 预加载逻辑：热路径不做日志、不做分配

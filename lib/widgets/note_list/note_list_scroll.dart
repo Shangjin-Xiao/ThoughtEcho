@@ -66,6 +66,8 @@ extension _NoteListScrollExtension on NoteListViewState {
     }
 
     _scrollSessionPerfRecording = true;
+    _scrollSessionPerfPendingFinalize = false;
+    _scrollSessionPerfStopTimer?.cancel();
     _scrollSessionStartMicros = DateTime.now().microsecondsSinceEpoch;
     _scrollSessionStartOffset = metrics.pixels;
     _scrollSessionLastOffset = metrics.pixels;
@@ -97,14 +99,33 @@ extension _NoteListScrollExtension on NoteListViewState {
     }
   }
 
-  void _finalizeScrollSessionPerfCapture(ScrollMetrics metrics) {
+  void _scheduleScrollSessionPerfFinalize(ScrollMetrics metrics) {
+    if (!_scrollSessionPerfRecording || _scrollSessionPerfPendingFinalize) {
+      return;
+    }
+
+    _scrollSessionPerfPendingFinalize = true;
+    _scrollSessionLastOffset = metrics.pixels;
+    _scrollSessionPerfStopTimer?.cancel();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollSessionPerfRecording) {
+        return;
+      }
+      _scrollSessionPerfStopTimer = Timer(
+        const Duration(milliseconds: 260),
+        _finalizeScrollSessionPerfCapture,
+      );
+    });
+  }
+
+  void _finalizeScrollSessionPerfCapture() {
     if (!_scrollSessionPerfRecording) {
       return;
     }
 
+    _scrollSessionPerfStopTimer?.cancel();
     _scrollSessionPerfRecording = false;
-    _scrollSessionLastOffset = metrics.pixels;
-    _releasePerfTimingsCallbackIfIdle();
+    _scrollSessionPerfPendingFinalize = false;
 
     final elapsedMs =
         (DateTime.now().microsecondsSinceEpoch - _scrollSessionStartMicros) /
@@ -168,6 +189,7 @@ extension _NoteListScrollExtension on NoteListViewState {
       source: 'NoteListView.Perf',
     );
     _logNoteListPerfSnapshot('滚动会话缓存状态');
+    _releasePerfTimingsCallbackIfIdle();
   }
 
   void _startFirstOpenScrollPerfCapture() {
