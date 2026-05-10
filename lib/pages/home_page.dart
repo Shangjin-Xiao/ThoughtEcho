@@ -675,10 +675,13 @@ class _HomePageState extends State<HomePage>
     await showAnniversaryAnimationOverlay(context);
   }
 
+  /*
   /// 开发者模式预览一周年动画
+  /// 一周年开发者模式预览入口已临时关闭，保留给两周年复用。
   void _showAnniversaryPreview(BuildContext context) {
     showAnniversaryAnimationOverlay(context);
   }
+  */
 
   // 检查是否有未保存的草稿
   Future<bool> _checkDraftRecovery() async {
@@ -2172,7 +2175,8 @@ class _HomePageState extends State<HomePage>
                           ),
                         ),
 
-                      // 开发者模式下：一周年动画预览按钮
+                      /*
+                      // 一周年开发者模式预览入口已临时关闭，保留给两周年复用。
                       Consumer<SettingsService>(
                         builder: (context, settingsSvc, _) {
                           if (!settingsSvc.appSettings.developerMode) {
@@ -2185,6 +2189,7 @@ class _HomePageState extends State<HomePage>
                           );
                         },
                       ),
+                      */
                     ],
                   )
                 : AppBar(toolbarHeight: 0),
