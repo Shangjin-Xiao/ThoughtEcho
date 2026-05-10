@@ -1,0 +1,22 @@
+lib/widgets/add_note_dialog.dart
+  s_08abb7ef992dfb::t_c980ea1691dd6f 196-198
+  s_08abb7ef992dfb::t_37dc016b6738b6 321,325,333,512-689
+  s_08abb7ef992dfb::t_99725b3e7cc74e 2,58-59,100-112
+  s_08abb7ef992dfb::t_e564b826598942 1277-1279,1282
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "50363dc57dbe914f9ed88c502b446235cbe5f7d9",
+  "prompts": {},
+  "sessions": {
+    "s_08abb7ef992dfb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f056ba8affey4ly9yCPeiFGvH",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
