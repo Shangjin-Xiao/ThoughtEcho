@@ -1,0 +1,213 @@
+test/widget/add_note_dialog_focus_timing_test.dart
+  s_38eab5adef65b9::t_857125ab1bc566 1-69
+lib/widgets/note_list/note_list_scroll.dart
+  s_38eab5adef65b9::t_857125ab1bc566 17,40,114-245,512,519-524,529-531,533-534
+lib/pages/storage_management_page.dart
+  s_38eab5adef65b9::t_857125ab1bc566 12,30,54-61,65,101-109,438-441,656-671
+lib/pages/annual_report_page.dart
+  s_38eab5adef65b9::t_857125ab1bc566 406,422
+lib/pages/trash_page.dart
+  s_38eab5adef65b9::t_857125ab1bc566 192,197-244,469-470,481-484,486-492,498,500-519,521-546,550-623
+.gitignore
+  s_38eab5adef65b9::t_857125ab1bc566 291-294
+lib/pages/note_editor/editor_metadata_dialog.dart
+  s_38eab5adef65b9::t_857125ab1bc566 18-23,200,210,217,287,341,343-348,350-352,414-418
+.agents/skills/flutter-add-integration-test/SKILL.md
+  s_38eab5adef65b9::t_857125ab1bc566 1-163
+lib/services/database/AGENTS.md
+  s_38eab5adef65b9::t_857125ab1bc566 3,5-9
+lib/widgets/add_note_dialog.dart
+  s_38eab5adef65b9::t_857125ab1bc566 1-3,6-7,9,11-12,16,21,25-27,32-33,69-70,109,111-126,214-216,360-380,597-641,643-647,649-653,656-660,662-672,674-697,699-729,733-788,1373-1375,1377-1378,1387,1905,1932,1937-1940,2135-2157,2417
+.agents/skills/flutter-use-http-package/SKILL.md
+  s_38eab5adef65b9::t_857125ab1bc566 1-175
+lib/widgets/quote_item_widget.dart
+  s_38eab5adef65b9::t_1fc64a09fef69e 40-45,65-70,238-252,311-333,364-393,402-451,453-458,460-488,491-508,510-511,875-898,900,976-982,984-1005,1008,1012,1016,1020-1031,1033-1046,1048-1049
+scripts/replace_markdown_widget.py
+  s_38eab5adef65b9::t_857125ab1bc566 1-10
+lib/services/database_backup_service.dart
+  s_38eab5adef65b9::t_857125ab1bc566 28-30,35-50,329-331,475-485,489-490,493-507,509,511-520,523-524,697-699,1062-1064,1099,1117,1121,1129-1135
+tools/optimize_ios_icon.py
+  s_38eab5adef65b9::t_857125ab1bc566 75
+lib/services/database/database_hidden_tag_mixin.dart
+  s_38eab5adef65b9::t_857125ab1bc566 126-128
+lib/services/location_service.dart
+  s_38eab5adef65b9::t_857125ab1bc566 162-164,683-685,749-751
+scripts/replace_code.py
+  s_38eab5adef65b9::t_857125ab1bc566 1-10
+test/widget/pages/note_editor_draft_behavior_test.dart
+  s_38eab5adef65b9::t_857125ab1bc566 6,183-235
+test/widget/pages/home_page_test.dart
+  s_38eab5adef65b9::t_857125ab1bc566 6,50-122
+test/widget/pages/storage_management_page_test.dart
+  s_38eab5adef65b9::t_857125ab1bc566 1-112
+skills-lock.json
+  s_38eab5adef65b9::t_857125ab1bc566 1-65
+test/unit/services/database_multi_tag_filter_test.dart
+  s_38eab5adef65b9::t_857125ab1bc566 1-367
+lib/pages/user_guide_page.dart
+  s_38eab5adef65b9::t_857125ab1bc566 413
+lib/services/database_schema_manager.dart
+  s_38eab5adef65b9::t_857125ab1bc566 10-11,164,921,923,1236,1238,1376-1379,1384
+lib/services/database/database_quote_crud_mixin.dart
+  s_38eab5adef65b9::t_857125ab1bc566 107,124,136-145,197,202-209,211-235,294-298,356,519-523
+docs/Release_3.6.0.md
+  s_38eab5adef65b9::t_857125ab1bc566 1-91
+lib/l10n/app_ja.arb
+  s_38eab5adef65b9::t_857125ab1bc566 767-775,2772
+lib/services/smart_push/smart_push_notification.dart
+  s_38eab5adef65b9::t_857125ab1bc566 139-144
+pubspec.yaml
+  s_38eab5adef65b9::t_857125ab1bc566 117,119,122
+test/unit/utils/media_optimization_utils_test.dart
+  s_38eab5adef65b9::t_857125ab1bc566 1-76
+lib/services/apk_download_service.dart
+  s_38eab5adef65b9::t_857125ab1bc566 11-63,75-81,261,268-271,276-281,313,316,318-337,342-347,349-352,354-377,379,382,386-389,583-715
+lib/widgets/add_note_dialog_parts.dart
+  s_38eab5adef65b9::t_857125ab1bc566 9-28
+lib/services/localsend/AGENTS.md
+  s_38eab5adef65b9::t_857125ab1bc566 1,3,5-11
+lib/widgets/AGENTS.md
+  s_38eab5adef65b9::t_857125ab1bc566 3,5-6,9-15
+res/index.html
+  s_38eab5adef65b9::t_857125ab1bc566 1,3-22,24-28,30-48,50-63,91-92,94-95,99-169,171,175-176,178,180-184,186-218,221-230,232-290,293-297,299-316,321-361,364-388,390-405,407-421,423-438,440-453,455,460-499,502-516,518-532,534-549,551-564,566,571-602,605-620,622-636,638-652,654-669,671-685,687-704,709-738,741-755,757-771,773-788,790-803,805,807,809-810,812-823,832-867,869-1107,1109-1140,1142,1144-1145,1147-1163,1167-1174,1176-1185,1187-1196,1198-1207,1209-1218,1220-1229,1231-1240,1242-1254,1256-1265,1267,1269,1271-1272,1274-1275,1277-1290,1294-1310,1312-1322,1324,1326-1339,1341-1352,1354-1368,1370,1372,1374-1375,1377-1392,1396-1410,1412-1457,1459-1504,1506-1550,1552-1582,1584-1612,1614-1637,1639-1651,1653,1655-1656,1658-1665,1669-1694,1696-1724,1726-1754,1756-1783,1785,1787,1789-1790,1792-1805,1809-1896,1898-1918,1922,1927-1973,1975-2091,2093-2104,2106,2110-2112,2115
+.agents/skills/flutter-build-responsive-layout/SKILL.md
+  s_38eab5adef65b9::t_857125ab1bc566 1-139
+lib/controllers/search_controller.dart
+  s_38eab5adef65b9::t_857125ab1bc566 107
+lib/l10n/app_fr.arb
+  s_38eab5adef65b9::t_857125ab1bc566 760-768,2758
+.jules/bolt.md
+  s_38eab5adef65b9::t_857125ab1bc566 23-28
+lib/pages/note_editor/AGENTS.md
+  s_38eab5adef65b9::t_857125ab1bc566 1-27
+test/quote_content_widget_test.dart
+  s_38eab5adef65b9::t_857125ab1bc566 10,32-35,104-123
+test/unit/models/app_settings_test.dart
+  s_38eab5adef65b9::t_857125ab1bc566 12,15-41,44-45,48-76,78-80,83-96,98-99,101-152,155-177,180,182-183,186-187,190-196,198-201,204-210,212-217,219-223,225-230
+.jules/caliper.md
+  s_38eab5adef65b9::t_857125ab1bc566 13-20
+lib/pages/license_page.dart
+  s_38eab5adef65b9::t_857125ab1bc566 677
+lib/utils/AGENTS.md
+  s_38eab5adef65b9::t_857125ab1bc566 3,5,7-15,18-21,24-27,29-30
+lib/pages/api_ninjas_category_selection_page.dart
+  s_38eab5adef65b9::t_857125ab1bc566 73,110
+lib/services/ai_card_generation_service.dart
+  s_38eab5adef65b9::t_857125ab1bc566 20-21
+lib/l10n/app_ko.arb
+  s_38eab5adef65b9::t_857125ab1bc566 767-775,2772
+lib/services/database/database_query_mixin.dart
+  s_38eab5adef65b9::t_857125ab1bc566 356-366,389,446-477
+lib/pages/smart_push_settings_page.dart
+  s_38eab5adef65b9::t_857125ab1bc566 15-16
+test/widget/pages/hitokoto_settings_page_test.dart
+  s_38eab5adef65b9::t_857125ab1bc566 60-67,112,120-128
+lib/services/database/database_query_helpers_mixin.dart
+  s_38eab5adef65b9::t_857125ab1bc566 120,130-154,159-161,163,165,416-422,424,429-430
+lib/widgets/enhanced_markdown_widgets.dart
+  s_38eab5adef65b9::t_857125ab1bc566 71-73
+test/widget/note_list_view_filter_test.dart
+  s_38eab5adef65b9::t_857125ab1bc566 132-165,391-438
+.jules/wenji.md
+  s_38eab5adef65b9::t_857125ab1bc566 11-16
+lib/services/database/database_pagination_mixin.dart
+  s_38eab5adef65b9::t_857125ab1bc566 278-287
+lib/widgets/note_list_view.dart
+  s_38eab5adef65b9::t_857125ab1bc566 134,141-150,282-291,294-305,443-444,446,448,450
+test/AGENTS.md
+  s_38eab5adef65b9::t_857125ab1bc566 3,5,7-10,12,15-30
+lib/widgets/trash_quote_card.dart
+  s_38eab5adef65b9::t_857125ab1bc566 5,9,28,31-32,36-63
+.agents/skills/flutter-fix-layout-issues/SKILL.md
+  s_38eab5adef65b9::t_857125ab1bc566 1-130
+lib/widgets/note_list/note_list_data_stream.dart
+  s_38eab5adef65b9::t_857125ab1bc566 72-74,108,111-117,159,313-315,320,323-329
+lib/pages/preferences_detail_page.dart
+  s_38eab5adef65b9::t_857125ab1bc566 59
+lib/main.dart
+  s_38eab5adef65b9::t_857125ab1bc566 341-342
+lib/pages/media_management_page.dart
+  s_38eab5adef65b9::t_857125ab1bc566 114
+.agents/skills/flutter-apply-architecture-best-practices/SKILL.md
+  s_38eab5adef65b9::t_857125ab1bc566 1-162
+test/unit/services/mdns_discovery_service_test.dart
+  s_38eab5adef65b9::t_857125ab1bc566 1-30
+lib/pages/ai_settings_page.dart
+  s_38eab5adef65b9::t_857125ab1bc566 1001
+lib/pages/tag_settings_page.dart
+  s_38eab5adef65b9::t_857125ab1bc566 52,194,557,763
+lib/controllers/AGENTS.md
+  s_38eab5adef65b9::t_857125ab1bc566 3,5-9,14-16,18-21
+lib/services/AGENTS.md
+  s_38eab5adef65b9::t_857125ab1bc566 3,7-11,13-19,24,43-44,53-55
+lib/constants/AGENTS.md
+  s_38eab5adef65b9::t_857125ab1bc566 1-19
+README.md
+  s_38eab5adef65b9::t_857125ab1bc566 3
+lib/pages/logs_page.dart
+  s_38eab5adef65b9::t_857125ab1bc566 593
+lib/pages/category_settings_page.dart
+  s_38eab5adef65b9::t_857125ab1bc566 324,599,764,872
+lib/pages/home_page.dart
+  s_38eab5adef65b9::t_857125ab1bc566 50-51,66-148,2103-2106,2174,2176,2181-2182,2184-2197
+scripts/update_l10n.py
+  s_38eab5adef65b9::t_857125ab1bc566 1-36
+lib/pages/ai_analysis_history_page_clean.dart
+  s_38eab5adef65b9::t_857125ab1bc566 311-312,1050
+docs/USER_MANUAL.md
+  s_38eab5adef65b9::t_857125ab1bc566 218-222,528-534,544-554,556,910-914,1223-1229,1239-1251
+lib/services/database/database_trash_mixin.dart
+  s_38eab5adef65b9::t_857125ab1bc566 60-64,77,82-86,114,122-153,409-410,419-420,423-448,452-453,462-471,474-475,478-481,507-511
+.agents/skills/flutter-setup-declarative-routing/SKILL.md
+  s_38eab5adef65b9::t_857125ab1bc566 1-255
+.agents/skills/flutter-add-widget-test/SKILL.md
+  s_38eab5adef65b9::t_857125ab1bc566 1-154
+lib/pages/AGENTS.md
+  s_38eab5adef65b9::t_857125ab1bc566 3-5,7-8,11-15,18
+.jules/palette.md
+  s_38eab5adef65b9::t_857125ab1bc566 13-21
+lib/services/ai_service.dart
+  s_38eab5adef65b9::t_857125ab1bc566 23-24
+lib/services/database_health_service.dart
+  s_38eab5adef65b9::t_857125ab1bc566 378-389,394,400,598-602,609-610
+.agents/skills/flutter-add-widget-preview/SKILL.md
+  s_38eab5adef65b9::t_857125ab1bc566 1-145
+.agents/skills/flutter-setup-localization/SKILL.md
+  s_38eab5adef65b9::t_857125ab1bc566 1-210
+lib/models/AGENTS.md
+  s_38eab5adef65b9::t_857125ab1bc566 3-17
+lib/services/mdns_discovery_service.dart
+  s_38eab5adef65b9::t_857125ab1bc566 190-191,197-198
+lib/pages/insights_page.dart
+  s_38eab5adef65b9::t_857125ab1bc566 621
+lib/widgets/note_list/note_list_items.dart
+  s_38eab5adef65b9::t_857125ab1bc566 223,236
+lib/widgets/quote_content_widget.dart
+  s_38eab5adef65b9::t_857125ab1bc566 54,58-63,68,72,75-82,97,131,219-223,306,335,341-346,494-599
+AGENTS.md
+  s_38eab5adef65b9::t_857125ab1bc566 14,21-22,27,30,36-65,166,228-242,252,257,263-266,288,290-292
+lib/pages/hitokoto_settings_page.dart
+  s_38eab5adef65b9::t_857125ab1bc566 291,388-389,394,401-472
+test/unit/controllers/search_controller_test.dart
+  s_38eab5adef65b9::t_857125ab1bc566 1,45-174
+.agents/skills/flutter-implement-json-serialization/SKILL.md
+  s_38eab5adef65b9::t_857125ab1bc566 1-153
+test/unit/services/error_recovery_manager_test.dart
+  s_38eab5adef65b9::t_857125ab1bc566 1-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "69abc14364c4e55a151d2e0b48114d1bbba78e02",
+  "prompts": {},
+  "sessions": {
+    "s_38eab5adef65b9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f020deb7ffeomfRXAPCApgibX",
+        "model": "gpt-5.4-mini"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
