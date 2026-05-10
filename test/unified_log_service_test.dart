@@ -1,9 +1,32 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logging/logging.dart' as logging;
+import 'package:sqflite/sqflite.dart';
 import 'package:thoughtecho/services/log_database_service.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
 
 import 'test_setup.dart';
+
+class _RecordingDatabase implements Database {
+  final rawQueries = <String>[];
+  final executes = <String>[];
+
+  @override
+  Future<List<Map<String, Object?>>> rawQuery(
+    String sql, [
+    List<Object?>? arguments,
+  ]) async {
+    rawQueries.add(sql);
+    return const [];
+  }
+
+  @override
+  Future<void> execute(String sql, [List<Object?>? arguments]) async {
+    executes.add(sql);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -65,6 +88,33 @@ void main() {
 
       expect(service.logs, isEmpty);
       expect(queried, isEmpty);
+    });
+
+    test('opening log database does not emit PRAGMA setup failure', () async {
+      await service.setLogLevel(UnifiedLogLevel.debug);
+      service.clearMemoryLogs();
+      await logDb.close();
+
+      await logDb.ready;
+
+      expect(
+        service.logs.any(
+          (entry) => entry.message.contains('PRAGMA setup failed'),
+        ),
+        isFalse,
+      );
+    });
+
+    test('log database PRAGMA setup uses rawQuery', () async {
+      final db = _RecordingDatabase();
+
+      await configureLogDatabasePragmasForTest(db);
+
+      expect(db.rawQueries, [
+        'PRAGMA journal_mode=WAL;',
+        'PRAGMA synchronous=NORMAL;',
+      ]);
+      expect(db.executes, isEmpty);
     });
   });
 }
