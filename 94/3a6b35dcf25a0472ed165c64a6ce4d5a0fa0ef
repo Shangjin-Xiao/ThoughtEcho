@@ -1,0 +1,25 @@
+test/all_tests.dart
+  s_23138fe204d31b::t_ce362adcb0f194 33-34,93
+test/unit/services/mdns_discovery_service_test.dart
+  s_23138fe204d31b::t_d75b19bdcbf47e 19-20
+  s_23138fe204d31b::t_28f48d0873240f 1-18,21-30
+lib/services/mdns_discovery_service.dart
+  s_23138fe204d31b::t_f03c6688d16805 197-198
+  s_23138fe204d31b::t_8672f5b84bf5ff 190-191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "943a6b35dcf25a0472ed165c64a6ce4d5a0fa0ef",
+  "prompts": {},
+  "sessions": {
+    "s_23138fe204d31b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f068050dffeoYQOuEdmzM5wXK",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
