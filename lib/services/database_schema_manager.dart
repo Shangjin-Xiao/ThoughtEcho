@@ -7,6 +7,8 @@ import '../utils/app_logger.dart';
 import '../utils/time_utils.dart';
 import 'media_reference_service.dart';
 
+// TODO(refactor): This file exceeds 1600 lines and handles complex migration logic.
+// Consider using a strategy pattern or separate migration step classes for each version.
 class DatabaseSchemaManager {
   // 抽取数据库初始化逻辑到单独方法，便于复用
   Future<Database> _initDatabase(String path) async {

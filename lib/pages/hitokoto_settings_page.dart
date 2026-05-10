@@ -432,6 +432,8 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                           ),
                         ),
                         const SizedBox(height: 16),
+                        // TODO(tech-debt): groupValue and onChanged are deprecated in RadioListTile.
+                        // Use a RadioGroup ancestor to manage the value instead.
                         RadioListTile<String>(
                           title: Text(
                             l10n.offlineQuoteSourceTagOnly,
@@ -447,6 +449,8 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                           contentPadding: EdgeInsets.zero,
                           activeColor: colorScheme.primary,
                         ),
+                        // TODO(tech-debt): groupValue and onChanged are deprecated in RadioListTile.
+                        // Use a RadioGroup ancestor to manage the value instead.
                         RadioListTile<String>(
                           title: Text(
                             l10n.offlineQuoteSourceAll,
