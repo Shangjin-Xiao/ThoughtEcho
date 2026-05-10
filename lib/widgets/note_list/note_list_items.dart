@@ -326,6 +326,15 @@ extension _NoteListItemsExtension on NoteListViewState {
           }
         }
 
+        if (notification is ScrollStartNotification &&
+            notification.dragDetails != null) {
+          _startScrollSessionPerfCapture(notification.metrics);
+        } else if (notification is ScrollUpdateNotification) {
+          _recordScrollSessionUpdate(notification.metrics);
+        } else if (notification is ScrollEndNotification) {
+          _finalizeScrollSessionPerfCapture(notification.metrics);
+        }
+
         // 预加载逻辑：热路径不做日志、不做分配
         if (notification is ScrollUpdateNotification) {
           // 标记列表正在滚动（含惯性阶段），阻止图片提前解码
