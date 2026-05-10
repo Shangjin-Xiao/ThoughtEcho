@@ -1,13 +1,15 @@
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
+
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
-import '../utils/app_logger.dart';
+
 import '../models/quote_model.dart';
+import '../utils/app_logger.dart';
 import 'database_service.dart';
 
 /// 媒体文件引用管理服务
@@ -716,6 +718,163 @@ class MediaReferenceService {
     }
   }
 
+  /// 批量检查媒体文件是否仍被引用，并删除确认无引用的文件。
+  ///
+  /// 用于回收站清空、备份合并后的媒体清理，避免每个文件分别查询引用表和全文搜索。
+  static Future<int> quickCheckAndDeleteOrphans(
+    Iterable<String> filePaths, {
+    String? cachedAppPath,
+  }) async {
+    final uniquePaths = filePaths
+        .where((filePath) => filePath.trim().isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    if (uniquePaths.isEmpty) return 0;
+
+    try {
+      final appPath = cachedAppPath ??
+          path.normalize((await getApplicationDocumentsDirectory()).path);
+
+      final candidatesByKey = <String, _OrphanCandidate>{};
+      for (final filePath in uniquePaths) {
+        final normalizedPath = await _normalizeFilePath(
+          filePath,
+          cachedAppPath: appPath,
+        );
+        final canonicalKey = _canonicalComparisonKey(normalizedPath);
+        candidatesByKey.putIfAbsent(
+          canonicalKey,
+          () => _OrphanCandidate(
+            absolutePath: filePath,
+            normalizedPath: normalizedPath,
+            canonicalKey: canonicalKey,
+          ),
+        );
+      }
+
+      final candidates = candidatesByKey.values.toList(growable: false);
+      final db = await database;
+      final storedKeys = await _fetchStoredReferenceKeysForCandidates(
+        db,
+        candidates,
+      );
+      final candidatesWithoutStoredRefs = candidates
+          .where((candidate) => !storedKeys.contains(candidate.canonicalKey))
+          .toList(growable: false);
+
+      final quoteRefs = await _findQuoteReferencesForCandidates(
+        db,
+        candidatesWithoutStoredRefs,
+      );
+      if (quoteRefs.isNotEmpty) {
+        final healed = await _healMissingReferences(quoteRefs);
+        if (healed > 0) {
+          logDebug('已自动修复 $healed 条缺失的媒体引用记录');
+        }
+      }
+
+      var deletedCount = 0;
+      for (final candidate in candidates) {
+        if (storedKeys.contains(candidate.canonicalKey) ||
+            quoteRefs.containsKey(candidate.canonicalKey)) {
+          continue;
+        }
+
+        try {
+          final file = File(candidate.absolutePath);
+          if (await file.exists()) {
+            await file.delete();
+            deletedCount++;
+            logDebug('已删除无引用文件: ${candidate.absolutePath}');
+          }
+        } catch (e) {
+          logDebug('删除无引用文件失败: ${candidate.absolutePath}, 错误: $e');
+        }
+      }
+
+      return deletedCount;
+    } catch (e) {
+      logDebug('批量检查并删除文件失败: $e');
+      return 0;
+    }
+  }
+
+  static Future<Set<String>> _fetchStoredReferenceKeysForCandidates(
+    Database db,
+    List<_OrphanCandidate> candidates,
+  ) async {
+    const maxChunkSize = 900;
+    final keys = <String>{};
+    for (var start = 0; start < candidates.length; start += maxChunkSize) {
+      final end = math.min(start + maxChunkSize, candidates.length);
+      final chunk = candidates.sublist(start, end);
+      final placeholders = List.filled(chunk.length, '?').join(',');
+      final rows = await db.query(
+        _tableName,
+        columns: ['file_path'],
+        where: 'file_path IN ($placeholders)',
+        whereArgs: chunk.map((candidate) => candidate.normalizedPath).toList(),
+      );
+      for (final row in rows) {
+        final filePath = row['file_path'] as String?;
+        if (filePath != null && filePath.isNotEmpty) {
+          keys.add(_canonicalComparisonKey(filePath));
+        }
+      }
+    }
+    return keys;
+  }
+
+  static Future<Map<String, Map<String, Set<String>>>>
+      _findQuoteReferencesForCandidates(
+    Database db,
+    List<_OrphanCandidate> candidates,
+  ) async {
+    const maxChunkSize = 50;
+    final references = <String, Map<String, Set<String>>>{};
+    if (candidates.isEmpty) return references;
+
+    for (var start = 0; start < candidates.length; start += maxChunkSize) {
+      final end = math.min(start + maxChunkSize, candidates.length);
+      final chunk = candidates.sublist(start, end);
+      final conditions = chunk
+          .map((_) => '(content LIKE ? OR delta_content LIKE ?)')
+          .join(' OR ');
+      final args = <Object?>[];
+      for (final candidate in chunk) {
+        args.add('%${candidate.normalizedPath}%');
+        args.add('%${candidate.normalizedPath}%');
+      }
+
+      final rows = await db.rawQuery(
+        'SELECT id, content, delta_content FROM quotes WHERE $conditions',
+        args,
+      );
+
+      for (final row in rows) {
+        final quoteId = row['id'] as String?;
+        if (quoteId == null || quoteId.isEmpty) continue;
+
+        final content = row['content']?.toString() ?? '';
+        final deltaContent = row['delta_content']?.toString() ?? '';
+        for (final candidate in chunk) {
+          if (content.contains(candidate.normalizedPath) ||
+              deltaContent.contains(candidate.normalizedPath)) {
+            final variants = references.putIfAbsent(
+              candidate.canonicalKey,
+              () => <String, Set<String>>{},
+            );
+            variants
+                .putIfAbsent(candidate.normalizedPath, () => <String>{})
+                .add(quoteId);
+          }
+        }
+      }
+    }
+
+    return references;
+  }
+
   /// 安全检查并清理单个媒体文件（使用快照机制，避免误删）
   /// 返回 true 表示文件已被安全删除，false 表示文件仍被引用或删除失败
   static Future<bool> safeCheckAndDeleteOrphan(
@@ -875,8 +1034,26 @@ class MediaReferenceService {
       );
 
       // 添加新的引用
+      final db = await database;
+      final batch = db.batch();
       for (final mediaPath in mediaPaths) {
-        await addReference(mediaPath, quoteId, cachedAppPath: appPath);
+        final normalizedPath = await _normalizeFilePath(
+          mediaPath,
+          cachedAppPath: appPath,
+        );
+        batch.insert(
+          _tableName,
+          {
+            'id': const Uuid().v4(),
+            'file_path': normalizedPath,
+            'quote_id': quoteId,
+            'created_at': DateTime.now().toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      }
+      if (mediaPaths.isNotEmpty) {
+        await batch.commit(noResult: true);
       }
 
       logDebug('同步笔记媒体文件引用完成: $quoteId, 共 ${mediaPaths.length} 个文件');
@@ -917,12 +1094,13 @@ class MediaReferenceService {
       );
 
       // 添加新的引用
+      final batch = txn.batch();
       for (final mediaPath in mediaPaths) {
         final normalizedPath = await _normalizeFilePath(
           mediaPath,
           cachedAppPath: appPath,
         );
-        await txn.insert(
+        batch.insert(
           _tableName,
           {
             'id': const Uuid().v4(),
@@ -932,6 +1110,9 @@ class MediaReferenceService {
           },
           conflictAlgorithm: ConflictAlgorithm.ignore,
         );
+      }
+      if (mediaPaths.isNotEmpty) {
+        await batch.commit(noResult: true);
       }
 
       logDebug('同步笔记媒体文件引用完成: $quoteId, 共 ${mediaPaths.length} 个文件');

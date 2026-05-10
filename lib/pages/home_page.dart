@@ -45,7 +45,7 @@ import '../widgets/anniversary_animation_overlay.dart';
 import '../utils/anniversary_display_utils.dart';
 import '../utils/draft_restore_utils.dart';
 
-// TODO(refactor): This file exceeds 2500 lines. It should be split into smaller 
+// TODO(refactor): This file exceeds 2500 lines. It should be split into smaller
 // feature-specific widgets or mixins (e.g., home_header, home_content, home_actions).
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数

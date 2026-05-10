@@ -82,10 +82,10 @@ flutter analyze --no-fatal-infos
 flutter test test/all_tests.dart
 
 # 运行单个测试文件
-flutter test test/unit/models/quote_model_test.dart
+timeout 60s flutter test --reporter compact test/unit/models/quote_model_test.dart
 
 # 运行单个测试用例 (按名称匹配)
-flutter test test/unit/models/quote_model_test.dart --name "测试用例名称"
+timeout 60s flutter test --reporter compact test/unit/models/quote_model_test.dart --name "测试用例名称"
 
 # 生成国际化代码 (修改 ARB 后必须执行)
 flutter gen-l10n
@@ -144,6 +144,16 @@ import 'package:thoughtecho/services/database_service.dart';
 - 行宽：80 字符（`dart format` 默认）
 - 尾随逗号：Widget 参数列表必须加，便于 `dart format` 格式化
 - 禁止提交未格式化代码（CI 会检查 `dart format --set-exit-if-changed .`）
+
+### 测试执行约束
+- 主动验证时只运行相关单文件或单用例，避免全量测试导致 CI/本地超时。
+- 运行 Flutter 测试必须限制时长并压缩输出：优先使用 `timeout 60s flutter test --reporter compact <path>`。
+- 若测试输出过多或卡住，先停止并定位编译/分析错误，不要反复运行长输出命令塞满上下文。
+
+### 数据库性能约束
+- 避免 N+1 查询：禁止在列表循环中逐条调用数据库查询、计数、全文搜索或关联表查询。
+- 列表、批量清理、同步、备份恢复、统计报告等批量场景必须优先使用 `IN (...)`、批量查询、批量写入或预加载 Map。
+- 如果必须逐条处理，先确认数据规模很小或有明确串行副作用，并在代码中保持局部、可解释。
 
 ### 注释规范
 - 代码注释可用中文
