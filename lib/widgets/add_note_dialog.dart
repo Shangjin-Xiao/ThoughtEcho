@@ -1,30 +1,32 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
+import 'package:flutter_markdown/flutter_markdown.dart'; // 导入 markdown 库
 import 'package:provider/provider.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:uuid/uuid.dart';
-import 'dart:async';
+
+import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
+import '../pages/note_full_editor_page.dart'; // 导入全屏富文本编辑器
 import '../services/api_service.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/local_geocoding_service.dart';
+import '../services/settings_service.dart';
 import '../services/weather_service.dart';
-import '../utils/time_utils.dart'; // 导入时间工具类
 import '../theme/app_theme.dart';
-import 'package:flex_color_picker/flex_color_picker.dart';
-import 'package:flutter_markdown/flutter_markdown.dart'; // 导入 markdown 库
 import '../utils/color_utils.dart'; // Import color_utils
+import '../utils/feature_guide_helper.dart';
+import '../utils/icon_utils.dart';
+import '../utils/time_utils.dart'; // 导入时间工具类
 import 'accessible_color_grid.dart'; // Import the new accessible color grid
 import 'add_note_ai_menu.dart'; // 导入 AI 菜单组件
-import '../pages/note_full_editor_page.dart'; // 导入全屏富文本编辑器
-import 'package:thoughtecho/utils/app_logger.dart';
-import '../constants/app_constants.dart';
 import 'add_note_dialog_parts.dart'; // 导入拆分的组件
-import '../utils/feature_guide_helper.dart';
-import '../services/settings_service.dart';
-import '../utils/icon_utils.dart';
 
 // TODO(refactor): This file exceeds 2400 lines and contains redundant location/weather logic.
 // Consider extracting core business logic into a separate controller or service.
@@ -88,9 +90,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   // 颜色选择
   String? _selectedColorHex;
 
-  // 标签搜索控制器
-  final TextEditingController _tagSearchController = TextEditingController();
-
   // 性能优化：等 BottomSheet 入场动画进行到一定程度再请求焦点，避免首帧竞争导致卡顿
   final FocusNode _contentFocusNode = FocusNode();
   Animation<double>? _routeAnimation;
@@ -99,11 +98,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   // 性能优化：缓存Provider引用，避免重复查找
   LocationService? _cachedLocationService;
   WeatherService? _cachedWeatherService;
-
-  // 搜索防抖和过滤缓存
-  Timer? _searchDebounceTimer;
-  List<NoteCategory> _filteredTags = [];
-  String _lastSearchQuery = '';
 
   // 数据库监听防抖
   Timer? _dbChangeDebounceTimer;
@@ -114,9 +108,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   // AI推荐标签相关状态
   // 预留：后续接入本地 embedding/标签推荐时使用
-
-  // 优化：缓存过滤结果，避免重复计算
-  final Map<String, List<NoteCategory>> _filterCache = {};
 
   // 用于检测未保存内容的初始状态
   late String _initialContent;
@@ -185,8 +176,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
     // 优化：初始化内部标签列表
     _availableTags = List.from(widget.tags);
-    _filteredTags = _availableTags;
-    _lastSearchQuery = '';
 
     // 新建笔记时，自动填充默认作者、出处和标签
     if (widget.initialQuote == null && !isHitokotoQuickAdd) {
@@ -300,9 +289,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         });
       });
     });
-
-    // 添加搜索防抖监听器
-    _tagSearchController.addListener(_onSearchChanged);
 
     // 性能优化：等 BottomSheet 入场动画进行到一定程度再请求焦点，避免首帧竞争导致卡顿
     // 监听路由动画进度，动画进行到 70% 时开始弹键盘，让两个动画平滑重叠
@@ -472,8 +458,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         if (needsUpdate) {
           setState(() {
             _availableTags = updatedTags;
-            // 重新应用当前的搜索过滤
-            _updateFilteredTags(_lastSearchQuery);
           });
           logDebug('标签列表已更新，当前共 ${updatedTags.length} 个标签');
         }
@@ -508,43 +492,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       animation.removeListener(_onRouteAnimationProgress);
       _contentFocusNode.requestFocus();
     }
-  }
-
-  // 搜索变化处理 - 使用防抖优化
-  void _onSearchChanged() {
-    _searchDebounceTimer?.cancel();
-    _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () {
-      final query = _tagSearchController.text.toLowerCase();
-      if (query != _lastSearchQuery) {
-        _lastSearchQuery = query;
-        _updateFilteredTags(query);
-      }
-    });
-  }
-
-  // 更新过滤标签 - 使用缓存优化
-  void _updateFilteredTags(String query) {
-    if (!mounted) return;
-
-    setState(() {
-      if (query.isEmpty) {
-        _filteredTags = _availableTags;
-      } else {
-        // 优化：使用缓存避免重复计算
-        if (_filterCache.containsKey(query)) {
-          _filteredTags = _filterCache[query]!;
-        } else {
-          _filteredTags = _availableTags.where((tag) {
-            return tag.name.toLowerCase().contains(query);
-          }).toList();
-
-          // 缓存结果，限制缓存大小防止内存泄漏
-          if (_filterCache.length < 50) {
-            _filterCache[query] = _filteredTags;
-          }
-        }
-      }
-    });
   }
 
   /// 获取新建笔记的实时位置（与全屏编辑器逻辑一致）
@@ -1131,23 +1078,19 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   @override
   void dispose() {
-    _searchDebounceTimer?.cancel();
     _dbChangeDebounceTimer?.cancel();
     _routeAnimation?.removeListener(_onRouteAnimationProgress);
     _contentController.dispose();
     _authorController.dispose();
     _workController.dispose();
-    _tagSearchController.dispose();
     _contentFocusNode.dispose();
 
     // 优化：移除数据库监听器，防止内存泄漏
     _databaseService?.removeListener(_onDatabaseChanged);
 
-    // 优化：清理所有缓存，释放内存
-    _filterCache.clear();
+    // 优化：清理缓存，释放内存
     _allCategoriesCache = null;
     _availableTags.clear();
-    _filteredTags.clear();
 
     super.dispose();
   }
@@ -1660,13 +1603,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         }
         // dialogResult == null: 继续编辑，不做任何操作
       },
-      child: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 16,
-          right: 16,
-          top: 16,
-        ),
+      child: KeyboardInsetPadding(
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1698,10 +1635,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                   Positioned(
                     top: 0,
                     right: 0,
-                    child: Builder(
-                      builder: (context) {
-                        final isLongContent =
-                            _contentController.text.length > 100;
+                    child: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _contentController,
+                      builder: (context, value, child) {
+                        final isLongContent = value.text.length > 100;
                         return Stack(
                           children: [
                             // 如果是长文本，添加一个提示小红点
@@ -1878,7 +1815,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         prefixIcon: const Icon(Icons.person),
                       ),
                       maxLines: 1,
-                      onChanged: (value) => setState(() {}),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1891,26 +1827,35 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         prefixIcon: const Icon(Icons.book),
                       ),
                       maxLines: 1,
-                      onChanged: (value) => setState(() {}),
                     ),
                   ),
                 ],
               ),
               const SizedBox(width: 8),
               // 显示格式化后的来源预览
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  l10n.sourcePreviewFormat(_formatSource(
-                      _authorController.text, _workController.text)),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    color: theme.colorScheme.onSurface.applyOpacity(
-                      0.6,
-                    ), // MODIFIED
-                  ),
-                ),
+              AnimatedBuilder(
+                animation: Listenable.merge([
+                  _authorController,
+                  _workController,
+                ]),
+                builder: (context, child) {
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      l10n.sourcePreviewFormat(_formatSource(
+                        _authorController.text,
+                        _workController.text,
+                      )),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        color: theme.colorScheme.onSurface.applyOpacity(
+                          0.6,
+                        ), // MODIFIED
+                      ),
+                    ),
+                  );
+                },
               ),
 
               // 位置和天气选项
@@ -2170,7 +2115,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'AI分析',
+                            l10n.aiAnalysis,
                             style: TextStyle(
                               color: theme.colorScheme.primary,
                               fontWeight: FontWeight.bold,
