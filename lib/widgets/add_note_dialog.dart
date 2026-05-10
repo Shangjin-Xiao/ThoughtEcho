@@ -26,6 +26,8 @@ import '../utils/feature_guide_helper.dart';
 import '../services/settings_service.dart';
 import '../utils/icon_utils.dart';
 
+// TODO(refactor): This file exceeds 2400 lines and contains redundant location/weather logic.
+// Consider extracting core business logic into a separate controller or service.
 class AddNoteDialog extends StatefulWidget {
   final Quote? initialQuote; // 如果是编辑笔记，则传入初始值
   final String? prefilledContent; // 预填充的内容
