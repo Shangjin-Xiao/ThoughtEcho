@@ -1,0 +1,21 @@
+tools/optimize_ios_icon.py
+  s_8775e39dfe4e68::t_3eecf3488172f5 75
+pubspec.yaml
+  s_8775e39dfe4e68::t_84dbe0b50938c5 108,110,113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "80fc95bec2e828bdd395bf0dc30964796211bc26",
+  "prompts": {},
+  "sessions": {
+    "s_8775e39dfe4e68": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "8998ffe5-4a3c-42c5-92a2-62f03380a02b",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
