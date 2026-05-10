@@ -1,0 +1,35 @@
+lib/pages/home_page.dart
+  s_160ab8255aa3d1::t_a76454637a2226 2178-2179,2192
+  s_b0caa78347e3a0::t_8023a2aa71269a 678,680,684
+lib/utils/anniversary_display_utils.dart
+  s_160ab8255aa3d1::t_a76454637a2226 13-14,23-24
+lib/pages/settings_page.dart
+  s_160ab8255aa3d1::t_a76454637a2226 997,999,1066
+test/unit/utils/anniversary_display_utils_test.dart
+  s_b0caa78347e3a0::t_34fc813e72df82 39,96
+  s_b0caa78347e3a0::t_8c30941aa9cf05 31-32,50-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "9438f2ac698405751e9f85973294e5374c24f2a8",
+  "prompts": {},
+  "sessions": {
+    "s_160ab8255aa3d1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1edf5f602ffe4hGznWN4Li7RIP",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_b0caa78347e3a0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1edf13cadffebDMSi4OtVlBt7M",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
