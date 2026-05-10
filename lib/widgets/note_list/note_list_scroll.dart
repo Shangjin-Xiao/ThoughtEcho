@@ -2,6 +2,169 @@ part of '../note_list_view.dart';
 
 /// Scroll-related methods for NoteListViewState.
 extension _NoteListScrollExtension on NoteListViewState {
+  String _quoteContentCacheStatsText() {
+    final stats = QuoteContent.debugCacheStats();
+    return 'document=${stats['document']}, height=${stats['heightEstimate']}, '
+        'controller=${stats['controller']}';
+  }
+
+  String _flutterImageCacheStatsText() {
+    final imageCache = PaintingBinding.instance.imageCache;
+    return 'live=${imageCache.liveImageCount}, '
+        'pending=${imageCache.pendingImageCount}, '
+        'current=${imageCache.currentSize}/${imageCache.maximumSize}, '
+        'bytes=${imageCache.currentSizeBytes}/${imageCache.maximumSizeBytes}';
+  }
+
+  String _quoteMixStatsText() {
+    final total = _quotes.length;
+    var rich = 0;
+    var media = 0;
+    var expandable = 0;
+
+    for (final quote in _quotes) {
+      final deltaContent = quote.deltaContent;
+      if (deltaContent != null && quote.editSource == 'fullscreen') {
+        rich++;
+        if (deltaContent.contains('"image"') ||
+            deltaContent.contains('"video"') ||
+            deltaContent.contains('"audio"')) {
+          media++;
+        }
+      }
+      if (QuoteItemWidget.needsExpansionFor(quote)) {
+        expandable++;
+      }
+    }
+
+    return 'total=$total, rich=$rich, media=$media, expandable=$expandable, '
+        'expanded=${_expandedItems.length}';
+  }
+
+  void _logNoteListPerfSnapshot(String reason) {
+    if (!_firstOpenScrollPerfEnabled) {
+      return;
+    }
+
+    logDebug(
+      '$reason: quotes={${_quoteMixStatsText()}}, '
+      'quoteContent={${_quoteContentCacheStatsText()}}, '
+      'quoteItem=${QuoteItemWidget.getCacheStats()}, '
+      'imageCache={${_flutterImageCacheStatsText()}}',
+      source: 'NoteListView.Perf',
+    );
+  }
+
+  void _startScrollSessionPerfCapture(ScrollMetrics metrics) {
+    if (!_firstOpenScrollPerfEnabled || !_initialDataLoaded) {
+      return;
+    }
+
+    _scrollSessionPerfRecording = true;
+    _scrollSessionStartMicros = DateTime.now().microsecondsSinceEpoch;
+    _scrollSessionStartOffset = metrics.pixels;
+    _scrollSessionLastOffset = metrics.pixels;
+    _scrollSessionMinOffset = metrics.pixels;
+    _scrollSessionMaxOffset = metrics.pixels;
+    _scrollSessionUpdateMicros.clear();
+    _scrollSessionFrameTimings.clear();
+    _ensurePerfTimingsCallback();
+
+    logDebug(
+      '滚动会话开始: offset=${metrics.pixels.round()}, '
+      'max=${metrics.maxScrollExtent.round()}, viewport=${metrics.viewportDimension.round()}',
+      source: 'NoteListView.Perf',
+    );
+  }
+
+  void _recordScrollSessionUpdate(ScrollMetrics metrics) {
+    if (!_scrollSessionPerfRecording) {
+      return;
+    }
+
+    _scrollSessionUpdateMicros.add(DateTime.now().microsecondsSinceEpoch);
+    _scrollSessionLastOffset = metrics.pixels;
+    if (metrics.pixels < _scrollSessionMinOffset) {
+      _scrollSessionMinOffset = metrics.pixels;
+    }
+    if (metrics.pixels > _scrollSessionMaxOffset) {
+      _scrollSessionMaxOffset = metrics.pixels;
+    }
+  }
+
+  void _finalizeScrollSessionPerfCapture(ScrollMetrics metrics) {
+    if (!_scrollSessionPerfRecording) {
+      return;
+    }
+
+    _scrollSessionPerfRecording = false;
+    _scrollSessionLastOffset = metrics.pixels;
+    _releasePerfTimingsCallbackIfIdle();
+
+    final elapsedMs =
+        (DateTime.now().microsecondsSinceEpoch - _scrollSessionStartMicros) /
+            1000.0;
+    final distance = _scrollSessionLastOffset - _scrollSessionStartOffset;
+    final direction = distance > 0
+        ? 'down'
+        : distance < 0
+            ? 'up'
+            : 'still';
+
+    var jankyIntervals = 0;
+    var worstIntervalMicros = 0;
+    var totalIntervalMicros = 0;
+    for (var i = 1; i < _scrollSessionUpdateMicros.length; i++) {
+      final interval =
+          _scrollSessionUpdateMicros[i] - _scrollSessionUpdateMicros[i - 1];
+      totalIntervalMicros += interval;
+      if (interval > worstIntervalMicros) {
+        worstIntervalMicros = interval;
+      }
+      if (interval > 20000) {
+        jankyIntervals++;
+      }
+    }
+
+    var jankyFrames = 0;
+    var totalFrameMicros = 0;
+    var worstFrameMs = 0.0;
+    for (final timing in _scrollSessionFrameTimings) {
+      final totalMicros = timing.buildDuration.inMicroseconds +
+          timing.rasterDuration.inMicroseconds;
+      totalFrameMicros += totalMicros;
+      final frameMs = totalMicros / 1000.0;
+      if (frameMs > worstFrameMs) {
+        worstFrameMs = frameMs;
+      }
+      if (totalMicros > 16600) {
+        jankyFrames++;
+      }
+    }
+
+    final intervalSamples =
+        (_scrollSessionUpdateMicros.length - 1).clamp(0, 1 << 30);
+    final avgIntervalMs = intervalSamples == 0
+        ? 0.0
+        : (totalIntervalMicros / intervalSamples) / 1000.0;
+    final frameSamples = _scrollSessionFrameTimings.length;
+    final avgFrameMs =
+        frameSamples == 0 ? 0.0 : (totalFrameMicros / frameSamples) / 1000.0;
+
+    logDebug(
+      '滚动会话结果: direction=$direction, '
+      'start=${_scrollSessionStartOffset.round()}, end=${_scrollSessionLastOffset.round()}, '
+      'distance=${distance.round()}, range=${_scrollSessionMinOffset.round()}-${_scrollSessionMaxOffset.round()}, '
+      'elapsed=${elapsedMs.toStringAsFixed(0)}ms, updates=$intervalSamples, '
+      'jankIntervals=$jankyIntervals, avgInterval=${avgIntervalMs.toStringAsFixed(1)}ms, '
+      'worstInterval=${(worstIntervalMicros / 1000.0).toStringAsFixed(1)}ms, '
+      'frames=$frameSamples, frameJank=$jankyFrames, '
+      'avgFrame=${avgFrameMs.toStringAsFixed(1)}ms, worstFrame=${worstFrameMs.toStringAsFixed(1)}ms',
+      source: 'NoteListView.Perf',
+    );
+    _logNoteListPerfSnapshot('滚动会话缓存状态');
+  }
+
   void _startFirstOpenScrollPerfCapture() {
     if (!_firstOpenScrollPerfEnabled ||
         _firstOpenScrollPerfCaptured ||
@@ -109,6 +272,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     if (!mounted) {
       return;
     }
+    _logNoteListPerfSnapshot('首次滑动缓存状态');
   }
 
   void _startLoadMorePerfCapture() {
@@ -214,6 +378,7 @@ extension _NoteListScrollExtension on NoteListViewState {
       'worst=${worstFrameMs.toStringAsFixed(1)}ms',
       source: 'NoteListView.Perf',
     );
+    _logNoteListPerfSnapshot('加载更多缓存状态');
 
     _loadMorePerfRecording = false;
     _loadMorePerfPendingFrameSettle = false;
