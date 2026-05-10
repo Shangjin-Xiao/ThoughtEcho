@@ -1,0 +1,21 @@
+lib/pages/ai_periodic_report_page.dart
+  s_cd7a584a4a84cf::t_f9a9ab8e3dae93 96-101,108-109,112-113
+  s_cd7a584a4a84cf::t_eb098534391a9c 142
+  s_cd7a584a4a84cf::t_b1d7f045058c29 94-95,110-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "9f9a3a3da704f29678afe5269331b09a8b5ec720",
+  "prompts": {},
+  "sessions": {
+    "s_cd7a584a4a84cf": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f0d6307fffe3ubLz6K248Lxs0",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
