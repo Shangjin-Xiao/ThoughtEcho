@@ -30,6 +30,8 @@ import 'unit/services/database_multi_tag_filter_test.dart'
 import 'unit/services/location_format_test.dart' as location_format_test;
 import 'unit/services/log_service_adapter_test.dart'
     as log_service_adapter_test;
+import 'unit/services/mdns_discovery_service_test.dart'
+    as mdns_discovery_service_test;
 import 'unit/services/smart_push_security_test.dart'
     as smart_push_security_test;
 import 'unit/services/error_recovery_manager_test.dart'
@@ -88,6 +90,7 @@ void main() {
       database_health_security_test.main();
       database_multi_tag_filter_test.main();
       log_service_adapter_test.main();
+      mdns_discovery_service_test.main();
       smart_push_security_test.main();
       error_recovery_manager_test.main();
       storage_management_test.main();
