@@ -1,0 +1,43 @@
+lib/services/database/database_trash_mixin.dart
+  s_b17c298277ced8::t_2b7d9877d0f23f 496-510
+AGENTS.md
+  s_b17c298277ced8::t_05d8357ba0b60b 85,88,148-151
+  s_b17c298277ced8::t_3bd24ad050a9f7 153-157
+lib/services/ai_card_generation_service.dart
+  s_b17c298277ced8::t_0810a6cbb40bc6 20
+lib/services/database_backup_service.dart
+  s_b17c298277ced8::t_f1cd3a6e2ed99a 691,693-700,702-711
+lib/services/media_reference_service.dart
+  s_b17c298277ced8::t_04dd3d1107a460 2,4,10,12
+  s_b17c298277ced8::t_0c8c9e5f19cf00 721-877,1037-1038,1040-1056,1097,1103,1114-1115
+lib/main.dart
+  s_b17c298277ced8::t_0810a6cbb40bc6 307
+lib/pages/home_page.dart
+  s_b17c298277ced8::t_0810a6cbb40bc6 48
+lib/pages/smart_push_settings_page.dart
+  s_b17c298277ced8::t_0810a6cbb40bc6 15
+test/unit/services/media_reference_optimization_test.dart
+  s_b17c298277ced8::t_b873a0184fcc7b 22-23
+  s_b17c298277ced8::t_74e53ebdc1e7e9 89-90
+  s_b17c298277ced8::t_49701ee5162b20 3,5-6
+  s_b17c298277ced8::t_aa73debc3cad14 57-59,82
+  s_b17c298277ced8::t_6bee4cfe931f16 2,37-44,47-52,60,97-135
+lib/services/ai_service.dart
+  s_b17c298277ced8::t_0810a6cbb40bc6 20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "0d1ea72dc7b47d4473b9bbd79de04abfd59f17b5",
+  "prompts": {},
+  "sessions": {
+    "s_b17c298277ced8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f04e8df9ffehd6neBZbI6q6b5",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
