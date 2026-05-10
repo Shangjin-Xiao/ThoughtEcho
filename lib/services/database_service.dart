@@ -92,6 +92,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool excludeHiddenNotes = true,
+    String? dateStart,
+    String? dateEnd,
     bool includeDeleted = false,
   });
   Future<List<Quote>> getQuotesForSmartPush({
@@ -106,6 +108,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool excludeHiddenNotes = true,
+    String? dateStart,
+    String? dateEnd,
     bool includeDeleted = false,
   });
 
@@ -640,7 +644,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   Future<Database> _initDatabase(String path) async {
     return await openDatabase(
       path,
-      version: 20,
+      version: DatabaseService.databaseVersion,
       onCreate: (db, version) async {
         await _schemaManager.createTables(db);
       },
@@ -1007,6 +1011,9 @@ class DatabaseService extends _DatabaseServiceBase
   static const String defaultCategoryIdJoke = 'default_joke';
   static const String hiddenTagId = 'system_hidden_tag';
   static const String hiddenTagIconName = '🔒';
+
+  @visibleForTesting
+  static const int databaseVersion = DatabaseSchemaManager.schemaVersion;
 
   static Database? get rawDatabaseInstance => _DatabaseServiceBase._database;
 

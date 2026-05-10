@@ -14,6 +14,8 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     List<String>? selectedWeathers, // 天气筛选
     List<String>? selectedDayPeriods, // 时间段筛选
     bool excludeHiddenNotes = true, // 默认排除隐藏笔记
+    String? dateStart,
+    String? dateEnd,
     bool includeDeleted = false,
   }) async {
     try {
@@ -91,6 +93,28 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
               .toList();
         }
 
+        // 日期筛选
+        if (dateStart != null && dateStart.isNotEmpty) {
+          final start = DateTime.tryParse(dateStart);
+          if (start != null) {
+            filtered = filtered.where((q) {
+              final qDate = DateTime.tryParse(q.date);
+              return qDate != null &&
+                  (qDate.isAfter(start) || qDate.isAtSameMomentAs(start));
+            }).toList();
+          }
+        }
+        if (dateEnd != null && dateEnd.isNotEmpty) {
+          final end = DateTime.tryParse(dateEnd);
+          if (end != null) {
+            filtered = filtered.where((q) {
+              final qDate = DateTime.tryParse(q.date);
+              return qDate != null &&
+                  (qDate.isBefore(end) || qDate.isAtSameMomentAs(end));
+            }).toList();
+          }
+        }
+
         // 排序（支持日期、喜爱度、名称）
         filtered.sort((a, b) {
           if (orderBy.startsWith('date')) {
@@ -143,6 +167,8 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
           limit: limit,
           offset: offset,
           excludeHiddenNotes: shouldExcludeHidden,
+          dateStart: dateStart,
+          dateEnd: dateEnd,
           includeDeleted: includeDeleted,
         );
       });
@@ -247,6 +273,8 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     required int limit,
     required int offset,
     bool excludeHiddenNotes = true,
+    String? dateStart,
+    String? dateEnd,
     bool includeDeleted = false,
   }) async {
     // 修复：添加数据库连接状态检查
@@ -299,6 +327,16 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
           selectedDayPeriods.map((_) => '?').join(',');
       conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
       args.addAll(selectedDayPeriods);
+    }
+
+    // 日期范围筛选
+    if (dateStart != null && dateStart.isNotEmpty) {
+      conditions.add('q.date >= ?');
+      args.add(dateStart);
+    }
+    if (dateEnd != null && dateEnd.isNotEmpty) {
+      conditions.add('q.date <= ?');
+      args.add(dateEnd);
     }
 
     /// 修复：优化标签筛选查询，减少复杂度

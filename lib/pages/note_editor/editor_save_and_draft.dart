@@ -131,6 +131,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         'tagIds': _selectedTagIds,
         'colorHex': _selectedColorHex,
         'location': _showLocation ? _location : null,
+        'poiName': _showLocation ? _poiName : null,
         'latitude': (_showLocation || _showWeather) ? _latitude : null,
         'longitude': (_showLocation || _showWeather) ? _longitude : null,
         'weather': _showWeather ? _weather : null,
@@ -217,11 +218,14 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       return true;
     }
 
-    // 对于编辑已有笔记的情况，检查位置和天气变化
+// 对于编辑已有笔记的情况，检查位置和天气变化
     // 对于新建笔记，位置和天气是自动获取的，不视为用户修改
     if (widget.initialQuote != null) {
       // 检查位置
       if (_location != _initialLocation) {
+        return true;
+      }
+      if (_poiName != _initialPoiName) {
         return true;
       }
       if (_latitude != _initialLatitude) {
@@ -373,6 +377,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           ? (_location ??
               (_latitude != null ? LocationService.kAddressPending : null))
           : null,
+      poiName: _showLocation ? _poiName : null,
       latitude: _showLocation ? _latitude : null,
       longitude: _showLocation ? _longitude : null,
       weather: _showWeather ? _weather : null,

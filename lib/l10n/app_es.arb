@@ -17,6 +17,43 @@
   "complete": "Completado",
   "clipboardFoundHint": "Contenido del portapapeles encontrado, toca para añadir como nota",
   "operationFailed": "Operación fallida",
+  "deleteNoteWithChatsConfirmation": "Are you sure you want to delete this note? This action cannot be undone.\n\n{count} chat conversations linked to this note will also be deleted.",
+  "@deleteNoteWithChatsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatHistory": "Chat History",
+  "newChat": "New Chat",
+  "deleteChat": "Delete Chat",
+  "deleteChatConfirm": "Delete this conversation? All messages will be removed.",
+  "noChats": "No conversations yet",
+  "mapPickerTitle": "Select Location",
+  "mapPickerCurrentLocation": "Current Location",
+  "mapPickerConfirm": "Confirm Selection",
+  "longPressForMapPicker": "Long press for precise location",
+  "poiNameLabel": "Precise Location",
+  "explore": "Explore",
+  "exploreMapMemory": "Map Memories",
+  "exploreMapMemoryDesc": "Browse your notes on a map",
+  "aiChat": "AI Chat",
+  "aiAgent": "AI Agent",
+  "agentThinking": "Agent is thinking...",
+  "agentToolCall": "Calling tool: {toolName}",
+  "@agentToolCall": {
+    "placeholders": {
+      "toolName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentSearchingNotes": "Searching notes...",
+  "agentAnalyzingData": "Analyzing data...",
+  "agentWebSearching": "Searching the web...",
+  "favoriteNotes": "Favorite Notes",
+  "clear": "Clear",
   "dailyQuoteApiDesc": "Elige el proveedor de servicio para el texto diario de la pantalla principal.",
   "dailyQuoteProviderNoTypeSelection": "Este proveedor no admite filtrado por categoría.",
   "dailyQuoteApiHitokoto": "Hitokoto",
@@ -24,12 +61,12 @@
   "dailyQuoteApiApiNinjas": "API Ninjas",
   "dailyQuoteApiMeigen": "Meigen Oshieruyo",
   "dailyQuoteApiKoreanAdvice": "Korean Advice",
+  "featureDailyQuote": "Cita diaria",
+  "hitokotoTypeJoke": "Humor",
   "dailyQuoteApiNinjasManageApiKey": "Configurar clave del servicio",
   "dailyQuoteApiNinjasApiKeyHint": "Introduce la clave de servicio X-Api-Key de API Ninjas",
   "dailyQuoteApiNinjasApiKeyConfigured": "Clave de servicio configurada",
   "dailyQuoteApiNinjasApiKeyMissing": "Aún no hay una clave de servicio configurada",
   "dailyQuoteApiNinjasApiKeyInvalid": "El formato de la clave de servicio parece inválido",
-  "featureDailyQuote": "Cita diaria",
-  "hitokotoTypeJoke": "Humor",
   "dailyQuoteApi": "Proveedor de cita diaria"
 }

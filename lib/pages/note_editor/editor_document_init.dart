@@ -56,25 +56,123 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
   }
 
   /// 异步初始化文档内容
+  /// 优先级 Fallback 逻辑：
+  /// P1: 有富文本deltaContent → 直接使用
+  /// P2: 内存充足且有纯文本content → 生成富文本表示
+  /// P3: 内存紧张 → 使用纯文本
+  /// P4: 其他错误 → 创建空文档并日志记录
   Future<void> _initializeDocumentAsync() async {
     try {
-      if (widget.initialQuote?.deltaContent != null) {
-        // 如果有富文本内容，使用后台处理避免阻塞UI
+      if (widget.initialQuote?.deltaContent != null &&
+          widget.initialQuote!.deltaContent!.isNotEmpty) {
+        // P1: 优先使用富文本内容
         logDebug('开始异步解析富文本内容...');
 
         final deltaContent = widget.initialQuote!.deltaContent!;
 
         // 使用内存安全的处理策略
         await _initializeRichTextContentSafely(deltaContent);
+      } else if (widget.initialQuote?.content != null &&
+          widget.initialQuote!.content!.isNotEmpty) {
+        // P2: Fallback 到从纯文本生成富文本
+        logDebug('无富文本内容，尝试从纯文本生成富文本表示...');
+        await _initializeFromPlainTextFallback(widget.initialQuote!.content!);
       } else {
-        logDebug('使用纯文本初始化编辑器');
+        // P3: 都无则初始化为空文档
+        logDebug('无任何内容，初始化为空文档');
         _initializeAsPlainText();
       }
     } catch (e) {
-      logDebug('文档初始化失败: $e');
-      _initializeAsPlainText();
+      logDebug('文档初始化失败: $e，尝试使用纯文本fallback');
+      try {
+        // P3: 异常情况下使用纯文本
+        if (widget.initialQuote?.content != null) {
+          await _initializeFromPlainTextFallback(widget.initialQuote!.content!);
+        } else {
+          _initializeAsPlainText();
+        }
+      } catch (fallbackError) {
+        logDebug('纯文本fallback也失败: $fallbackError，初始化为空');
+        _initializeAsPlainText();
+      }
     } finally {
       _draftLoaded = true;
+    }
+  }
+
+  /// P2 Fallback: 从纯文本生成富文本表示
+  /// 确保内容不丢失，即使缺少原始deltaContent
+  Future<void> _initializeFromPlainTextFallback(String plainText) async {
+    try {
+      logDebug('从纯文本生成富文本表示，长度: ${plainText.length}');
+
+      final memoryManager = DeviceMemoryManager();
+      final memoryPressure = await memoryManager.getMemoryPressureLevel();
+
+      if (memoryPressure >= 3) {
+        // 内存临界：直接使用纯文本
+        logDebug('内存临界，使用纯文本模式');
+        _initializeAsPlainText();
+        return;
+      }
+
+      // 生成简单的Delta格式富文本
+      final generatedDelta = _generateDeltaFromPlainText(plainText);
+
+      if (mounted) {
+        _updateState(() {
+          _controller.dispose();
+          _controller = quill.QuillController(
+            document: quill.Document.fromJson(generatedDelta),
+            selection: const TextSelection.collapsed(offset: 0),
+          );
+          _attachDraftListener();
+        });
+        logDebug('从纯文本生成的富文本初始化完成');
+      }
+    } catch (e) {
+      logDebug('从纯文本生成富文本失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 从纯文本生成基础Delta JSON格式
+  /// 保留原始内容，同时提供基础格式支持
+  List<dynamic> _generateDeltaFromPlainText(String plainText) {
+    try {
+      // 按段落分割文本
+      final paragraphs = plainText.split('\n');
+      final List<Map<String, dynamic>> ops = [];
+
+      for (int i = 0; i < paragraphs.length; i++) {
+        final paragraph = paragraphs[i];
+        if (paragraph.isNotEmpty) {
+          ops.add({
+            'insert': paragraph,
+          });
+        }
+        // 每段后添加换行符（除了最后一段）
+        if (i < paragraphs.length - 1) {
+          ops.add({'insert': '\n'});
+        }
+      }
+
+      // 确保至少有一个换行符
+      if (ops.isEmpty) {
+        ops.add({'insert': '\n'});
+      } else if (!ops.last.containsKey('insert') ||
+          ops.last['insert'] != '\n') {
+        ops.add({'insert': '\n'});
+      }
+
+      logDebug('生成的Delta操作数: ${ops.length}');
+      return ops;
+    } catch (e) {
+      logDebug('生成Delta格式失败: $e，返回空文档');
+      return [
+        {'insert': plainText},
+        {'insert': '\n'},
+      ];
     }
   }
 

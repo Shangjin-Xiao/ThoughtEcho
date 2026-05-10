@@ -47,5 +47,40 @@ void main() {
         expect(appliedText, 'Hello [[TE_MEDIA_1]] world');
       },
     );
+
+    testWidgets(
+      'stream error shows error text and keeps apply disabled',
+      (tester) async {
+        final controller = StreamController<String>();
+        var applyCount = 0;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: StreamingTextDialog(
+                title: 'Polish',
+                textStream: controller.stream,
+                applyButtonText: '应用',
+                onApply: (_) {
+                  applyCount++;
+                },
+                onCancel: () {},
+              ),
+            ),
+          ),
+        );
+
+        controller.addError(Exception('network down'));
+        await controller.close();
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining('network down'), findsOneWidget);
+        await tester.tap(find.text('应用'));
+        await tester.pump();
+        expect(applyCount, 0);
+      },
+    );
   });
 }

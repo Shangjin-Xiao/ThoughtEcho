@@ -55,7 +55,8 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                       child: Stack(
                         children: [
                           FilterChip(
-                            key: const ValueKey('full_editor_location_chip'),
+                            key:
+                                const ValueKey('full_editor_location_chip'),
                             avatar: Icon(
                               Icons.location_on,
                               color: _showLocation
@@ -87,14 +88,13 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                                 });
                                 setDialogState(() {});
                                 await _fetchLocationForNewNoteWithFailCallback(
-                                  () {
-                                    // 失败回调：取消选中
-                                    _updateState(() {
-                                      _showLocation = false;
-                                    });
-                                    setDialogState(() {});
-                                  },
-                                );
+                                    () {
+                                  // 失败回调：取消选中
+                                  _updateState(() {
+                                    _showLocation = false;
+                                  });
+                                  setDialogState(() {});
+                                });
                               } else {
                                 _updateState(() {
                                   _showLocation = value;
@@ -102,7 +102,8 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                                 setDialogState(() {});
                               }
                             },
-                            selectedColor: theme.colorScheme.primaryContainer,
+                            selectedColor:
+                                theme.colorScheme.primaryContainer,
                           ),
                           // 小红点：有坐标但没地址时提示可更新（仅已保存笔记）
                           if (widget.initialQuote?.id != null &&
@@ -227,16 +228,7 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                         Expanded(
                           child: Text(
                             // 优先显示地址，没有地址时显示坐标
-                            (_location != null &&
-                                    LocationService.formatLocationForDisplay(
-                                      _location,
-                                    ).isNotEmpty)
-                                ? LocationService.formatLocationForDisplay(
-                                    _location,
-                                  )
-                                : ((_latitude != null && _longitude != null)
-                                    ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
-                                    : l10n.gettingLocationHint),
+                            _buildLocationDisplayText(l10n),
                             style: TextStyle(
                               fontSize: 14,
                               color: theme.colorScheme.onSurfaceVariant,
@@ -285,7 +277,7 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                   _originalWeather == null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  l10n.noLocationWeatherRecorded,
+                  l10n.noteNoLocationWeatherInfo,
                   style: TextStyle(
                     fontSize: 12,
                     color: theme.colorScheme.onSurfaceVariant,
@@ -299,4 +291,23 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
       ],
     );
   }
+
+  String _buildLocationDisplayText(AppLocalizations l10n) {
+    if (_poiName != null && _poiName!.trim().isNotEmpty) {
+      return _poiName!.trim();
+    }
+
+    final formattedLocation =
+        LocationService.formatLocationForDisplay(_location);
+    if (formattedLocation.isNotEmpty) {
+      return formattedLocation;
+    }
+
+    if (_latitude != null && _longitude != null) {
+      return LocationService.formatCoordinates(_latitude, _longitude);
+    }
+
+    return l10n.gettingLocationHint;
+  }
+
 }

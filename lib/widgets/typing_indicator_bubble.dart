@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
 
+import '../gen_l10n/app_localizations.dart';
+
 /// 正在输入指示器组件
 class TypingIndicatorBubble extends StatefulWidget {
   final types.User author;
   final ThemeData theme;
+  final String? thinkingText;
 
   const TypingIndicatorBubble({
     super.key,
     required this.author,
     required this.theme,
+    this.thinkingText,
   });
 
   @override
@@ -93,7 +97,8 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
                         _buildDot(400),
                         const SizedBox(width: 8),
                         Text(
-                          '正在思考中...',
+                          widget.thinkingText ??
+                              AppLocalizations.of(context).thinkingInProgress,
                           style: TextStyle(
                             color: widget.theme.colorScheme.onSurface
                                 .withValues(alpha: 0.7),

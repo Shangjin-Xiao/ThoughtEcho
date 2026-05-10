@@ -88,6 +88,11 @@ class _AISettingsPageState extends State<AISettingsPage> {
         'model': '',
       },
       {
+        'name': 'Ollama Cloud',
+        'apiUrl': 'https://api.ollama.ai/v1/chat/completions',
+        'model': '',
+      },
+      {
         'name': l10n.aiProviderLMStudio,
         'apiUrl': 'http://localhost:1234/v1/chat/completions',
         'model': '',
