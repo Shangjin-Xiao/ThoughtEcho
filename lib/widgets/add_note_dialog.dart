@@ -309,8 +309,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       });
     });
 
-    // 性能优化：等 BottomSheet 入场动画进行到一定程度再请求焦点，避免首帧竞争导致卡顿
-    // 监听路由动画进度，动画进行到 70% 时开始弹键盘，让两个动画平滑重叠
+    // 性能优化：等 BottomSheet 入场动画结束后再请求焦点。
+    // 避免键盘 inset 动画与 BottomSheet 入场动画叠加导致打开阶段掉帧。
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final route = ModalRoute.of(context);
@@ -320,12 +320,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           // 动画已完成（如无障碍关闭动画），直接请求焦点
           _requestContentFocus('routeCompleted');
           _focusRequested = true;
-        } else if (route.animation!.value >= 0.7) {
-          // 动画已过 70%，直接请求焦点
-          _requestContentFocus('routeProgressReady');
-          _focusRequested = true;
         } else {
-          // 监听动画进度，到 70% 时请求焦点
+          // 监听动画完成后请求焦点
           route.animation!.addListener(_onRouteAnimationProgress);
         }
       } else {
@@ -497,8 +493,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     );
   }
 
-  /// BottomSheet 入场动画进度回调：动画进行到 70% 时请求焦点弹出键盘
-  /// 让键盘动画与 BottomSheet 尾段平滑重叠，避免两步式视觉断裂
+  /// BottomSheet 入场动画进度回调：动画完成后请求焦点弹出键盘。
   void _onRouteAnimationProgress() {
     if (_focusRequested) return;
     final animation = _routeAnimation;
@@ -506,10 +501,10 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       _focusRequested = true;
       return;
     }
-    if (animation.value >= 0.7 || animation.isCompleted) {
+    if (animation.isCompleted) {
       _focusRequested = true;
       animation.removeListener(_onRouteAnimationProgress);
-      _requestContentFocus('routeProgress70');
+      _requestContentFocus('routeCompleted');
     }
   }
 
@@ -552,7 +547,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     });
 
     _dialogPerfFinalizeTimer = Timer(
-      const Duration(milliseconds: 1800),
+      const Duration(milliseconds: 2400),
       () => _finalizeDialogPerfCapture('timeout'),
     );
   }
