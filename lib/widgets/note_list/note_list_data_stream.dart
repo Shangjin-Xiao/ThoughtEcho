@@ -69,6 +69,9 @@ extension _NoteListDataStreamExtension on NoteListViewState {
         .listen(
       (list) {
         if (mounted) {
+          final isLoadMorePage = _loadMoreAwaitingPage &&
+              (list.length > _loadMoreRequestStartCount ||
+                  list.length < NoteListViewState._pageSize);
           final isPlaceholderInitialEmission =
               isFirstLoad && list.isEmpty && db.hasMoreQuotes;
 
@@ -102,12 +105,15 @@ extension _NoteListDataStreamExtension on NoteListViewState {
                 list,
               ); // Simplified: always replace for consistency, but flag prevents extra sets
             _hasMore = list.length >= NoteListViewState._pageSize;
-            _isLoading = false;
+            _isLoading = isLoadMorePage;
             _pruneExpansionControllers();
           });
           if (_loadMorePerfRecording &&
               (_quotes.length > _loadMorePerfStartCount || !_hasMore)) {
             _markLoadMorePerfDataArrived();
+          }
+          if (isLoadMorePage) {
+            _settleLoadMoreGateAfterPage();
           }
           _scheduleExpandableQuoteCheck();
 
@@ -304,16 +310,22 @@ extension _NoteListDataStreamExtension on NoteListViewState {
         .listen(
       (list) {
         if (mounted) {
+          final isLoadMorePage = _loadMoreAwaitingPage &&
+              (list.length > _loadMoreRequestStartCount ||
+                  list.length < NoteListViewState._pageSize);
           _updateState(() {
             _quotes.clear();
             _quotes.addAll(list);
             _hasMore = list.length >= NoteListViewState._pageSize;
-            _isLoading = false;
+            _isLoading = isLoadMorePage;
             _pruneExpansionControllers();
           });
           if (_loadMorePerfRecording &&
               (_quotes.length > _loadMorePerfStartCount || !_hasMore)) {
             _markLoadMorePerfDataArrived();
+          }
+          if (isLoadMorePage) {
+            _settleLoadMoreGateAfterPage();
           }
           _scheduleExpandableQuoteCheck();
 
