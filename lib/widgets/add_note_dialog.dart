@@ -24,6 +24,7 @@ import '../theme/app_theme.dart';
 import '../utils/color_utils.dart'; // Import color_utils
 import '../utils/feature_guide_helper.dart';
 import '../utils/icon_utils.dart';
+import '../utils/location_weather_helper.dart';
 import '../utils/time_utils.dart'; // 导入时间工具类
 import 'accessible_color_grid.dart'; // Import the new accessible color grid
 import 'add_note_ai_menu.dart'; // 导入 AI 菜单组件
@@ -797,50 +798,48 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   }
 
   /// 获取新建笔记的实时位置（与全屏编辑器逻辑一致）
-  // TODO(low): 位置/天气获取逻辑与 note_full_editor_page.dart 大量重复，
-  // 可提取为 LocationWeatherHelper 共享。
   Future<void> _fetchLocationForNewNote() async {
     final locationService = _cachedLocationService;
     if (locationService == null) return;
 
     // 检查并请求权限（与全屏编辑器一致）
-    if (!locationService.hasLocationPermission) {
-      bool permissionGranted =
-          await locationService.requestLocationPermission();
-      if (!permissionGranted) {
-        if (mounted && context.mounted) {
-          final l10n = AppLocalizations.of(context);
-          _recordDialogPerfStateChange('locationPermissionDenied');
-          setState(() {
-            _includeLocation = false;
-          });
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(l10n.cannotGetLocationTitle),
-              content: Text(l10n.cannotGetLocationPermissionShort),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(l10n.iKnow),
-                ),
-              ],
-            ),
-          );
-        }
-        return;
+    if (!await LocationWeatherHelper.ensureLocationPermission(
+      locationService,
+    )) {
+      if (mounted && context.mounted) {
+        final l10n = AppLocalizations.of(context);
+        _recordDialogPerfStateChange('locationPermissionDenied');
+        setState(() {
+          _includeLocation = false;
+        });
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.cannotGetLocationTitle),
+            content: Text(l10n.cannotGetLocationPermissionShort),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.iKnow),
+              ),
+            ],
+          ),
+        );
       }
+      return;
     }
 
     try {
-      final position = await locationService.getCurrentLocation();
-      if (position != null && mounted) {
-        final location = locationService.getFormattedLocation();
+      final snapshot = await LocationWeatherHelper.fetchLocation(
+        locationService,
+      );
+      if (snapshot != null && mounted) {
         _recordDialogPerfStateChange('locationFetched');
         setState(() {
-          _newLatitude = position.latitude;
-          _newLongitude = position.longitude;
-          _newLocation = location.isNotEmpty ? location : null;
+          _newLatitude = snapshot.position.latitude;
+          _newLongitude = snapshot.position.longitude;
+          _newLocation =
+              snapshot.location.isNotEmpty ? snapshot.location : null;
         });
       } else if (mounted) {
         // 获取位置失败，提示并还原开关状态

@@ -41,6 +41,7 @@ import '../services/media_file_service.dart';
 import '../services/media_reference_service.dart';
 import '../services/draft_service.dart'; // 导入草稿服务
 import '../utils/feature_guide_helper.dart';
+import '../utils/location_weather_helper.dart';
 import '../services/settings_service.dart';
 
 part 'note_editor/editor_document_init.dart';

@@ -20,36 +20,11 @@ mixin _DatabaseCacheMixin on _DatabaseServiceBase {
 
   /// 优化：检查并清理过期缓存
   void _cleanExpiredCache() {
-    final now = DateTime.now();
-    final expiredKeys = <String>[];
-    final expiredCountKeys = <String>[];
-
-    // 清理查询缓存
-    for (final entry in _cacheTimestamps.entries) {
-      if (now.difference(entry.value) > _cacheExpiration) {
-        expiredKeys.add(entry.key);
-      }
-    }
-
-    for (final key in expiredKeys) {
-      _filterCache.remove(key);
-      _cacheTimestamps.remove(key);
-    }
-
-    // 清理计数缓存
-    for (final entry in _countCacheTimestamps.entries) {
-      if (now.difference(entry.value) > _cacheExpiration) {
-        expiredCountKeys.add(entry.key);
-      }
-    }
-
-    for (final key in expiredCountKeys) {
-      _countCache.remove(key);
-      _countCacheTimestamps.remove(key);
-    }
+    final expiredKeys = _filterCache.removeExpired();
+    final expiredCountKeys = _countCache.removeExpired();
 
     logDebug(
-      '缓存清理完成，移除 ${expiredKeys.length} 个查询缓存和 ${expiredCountKeys.length} 个计数缓存',
+      '缓存清理完成，移除 $expiredKeys 个查询缓存和 $expiredCountKeys 个计数缓存',
     );
   }
 
@@ -57,8 +32,6 @@ mixin _DatabaseCacheMixin on _DatabaseServiceBase {
   @override
   void _clearAllCache() {
     _filterCache.clear();
-    _cacheTimestamps.clear();
     _countCache.clear();
-    _countCacheTimestamps.clear();
   }
 }
