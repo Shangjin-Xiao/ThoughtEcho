@@ -1,0 +1,33 @@
+lib/widgets/add_note_dialog.dart
+  s_40bab2e1ca5a4f::t_f3a9634c27a150 29-30
+lib/pages/home_page.dart
+  s_40bab2e1ca5a4f::t_0643eb801f28a9 48-49
+lib/services/database_schema_manager.dart
+  s_40bab2e1ca5a4f::t_1d990b35b7a537 10-11
+lib/pages/smart_push_settings_page.dart
+  s_40bab2e1ca5a4f::t_b979e85a34a3b7 15-16
+lib/main.dart
+  s_40bab2e1ca5a4f::t_e4fb8e5c7ab899 307-308
+lib/services/ai_card_generation_service.dart
+  s_40bab2e1ca5a4f::t_ee288dfda2ccae 20-21
+lib/pages/hitokoto_settings_page.dart
+  s_40bab2e1ca5a4f::t_a9a64e99805e18 435-436,452-453
+lib/services/ai_service.dart
+  s_40bab2e1ca5a4f::t_e6cd76c6d9d040 20-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "ea325521d50f558e13ea1f60fddd5e5e7261b54a",
+  "prompts": {},
+  "sessions": {
+    "s_40bab2e1ca5a4f": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "bdd9ed34-9b81-4d36-9c1b-267fb2d0c617",
+        "model": "gemini-3-flash-preview"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
