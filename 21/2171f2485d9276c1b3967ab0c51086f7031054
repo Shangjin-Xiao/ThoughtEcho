@@ -1,0 +1,22 @@
+lib/widgets/add_note_dialog_parts.dart
+  s_08abb7ef992dfb::t_32e3245751897c 9,17,19-22
+test/widget/keyboard_inset_padding_test.dart
+  s_08abb7ef992dfb::t_6a7e8630111832 1-10,22-37
+  s_08abb7ef992dfb::t_d4826ce7cc477d 11-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "212171f2485d9276c1b3967ab0c51086f7031054",
+  "prompts": {},
+  "sessions": {
+    "s_08abb7ef992dfb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f056ba8affey4ly9yCPeiFGvH",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
