@@ -1,0 +1,35 @@
+lib/widgets/note_list/note_list_scroll.dart
+  s_23138fe204d31b::t_bfd25e5e3a2c9f 223-245,521-523,534
+test/widget/note_list_view_filter_test.dart
+  s_66721181e8ea4b::t_9119fbb8379fe7 151-152,156,424-427,429-438
+  s_66721181e8ea4b::t_95079c8ad5f2a5 132-150,153-155,157-165,391-423
+  s_66721181e8ea4b::t_d4a13c6a148e2b 428
+lib/widgets/note_list_view.dart
+  s_66721181e8ea4b::t_40082f9e92e757 148-150,444
+lib/widgets/note_list/note_list_data_stream.dart
+  ai_agent 72-74,108,115-117,313-315,320,327-328
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "753c455db7b9d61bd10951cb4fdb9ae43775ee7e",
+  "prompts": {},
+  "sessions": {
+    "s_23138fe204d31b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f068050dffeoYQOuEdmzM5wXK",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_66721181e8ea4b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f0616bd8ffeCo1fLwVLBfPozv",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
