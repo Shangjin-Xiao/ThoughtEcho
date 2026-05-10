@@ -1,0 +1,27 @@
+lib/widgets/add_note_dialog_parts.dart
+  s_08abb7ef992dfb::t_af40998106d811 9-28
+lib/widgets/add_note_dialog.dart
+  s_08abb7ef992dfb::t_dd2fd12a40388e 1-2,6,8,10-11,15,20,24-26
+  s_08abb7ef992dfb::t_dc0249176034f8 1836-1858
+  s_08abb7ef992dfb::t_545851f1498387 1606
+  s_08abb7ef992dfb::t_7a962e5054a69f 2118
+  s_08abb7ef992dfb::t_a52f5a7e6d94c5 1091
+  s_08abb7ef992dfb::t_8b220ccea2e562 1638-1641
+  s_08abb7ef992dfb::t_65cad9c56eec3b 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "e4df33c160097baae3e9e344eb23badad50724ba",
+  "prompts": {},
+  "sessions": {
+    "s_08abb7ef992dfb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f056ba8affey4ly9yCPeiFGvH",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
