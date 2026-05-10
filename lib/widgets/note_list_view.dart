@@ -149,6 +149,7 @@ class NoteListViewState extends State<NoteListView> {
   int _loadMoreRequestStartCount = 0;
   Timer? _loadMoreSettleTimer;
   bool _scrollSessionPerfRecording = false;
+  bool _scrollSessionPerfPendingFinalize = false;
   int _scrollSessionStartMicros = 0;
   double _scrollSessionStartOffset = 0;
   double _scrollSessionLastOffset = 0;
@@ -156,6 +157,7 @@ class NoteListViewState extends State<NoteListView> {
   double _scrollSessionMaxOffset = 0;
   final List<int> _scrollSessionUpdateMicros = <int>[];
   final List<FrameTiming> _scrollSessionFrameTimings = <FrameTiming>[];
+  Timer? _scrollSessionPerfStopTimer;
 
   bool _hasExpandableQuoteCached = false;
   bool _hasExpandableQuoteComputed = false;
@@ -454,6 +456,7 @@ class NoteListViewState extends State<NoteListView> {
     _firstOpenScrollStopTimer?.cancel();
     _loadMorePerfStopTimer?.cancel();
     _loadMoreSettleTimer?.cancel();
+    _scrollSessionPerfStopTimer?.cancel();
 
     if (_perfTimingsCallbackAttached) {
       WidgetsBinding.instance.removeTimingsCallback(_collectFrameTimings);
@@ -461,6 +464,7 @@ class NoteListViewState extends State<NoteListView> {
       _firstOpenScrollPerfRecording = false;
       _loadMorePerfRecording = false;
       _scrollSessionPerfRecording = false;
+      _scrollSessionPerfPendingFinalize = false;
     }
 
     for (final notifier in _expansionNotifiers.values) {

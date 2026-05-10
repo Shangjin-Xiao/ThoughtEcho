@@ -236,6 +236,21 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     return WeatherService.getWeatherIconDataByKey(weatherKey);
   }
 
+  double _measureSingleLineTextWidth(
+    BuildContext context,
+    String text,
+    TextStyle style,
+  ) {
+    final textPainter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      maxLines: 1,
+      textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+
+    return textPainter.width;
+  }
+
   void _handleDoubleTap(bool isExpanded, Quote quote) {
     if (!_needsExpansion(quote)) {
       return;
@@ -390,12 +405,40 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                   final bool hasLocationText = locationText != null;
                   final bool hasWeatherText = weatherText != null;
                   final bool hasMetaText = hasLocationText || hasWeatherText;
+                  final double dateWidth = _measureSingleLineTextWidth(
+                    context,
+                    formattedDate,
+                    headerDateStyle,
+                  );
+                  double metaWidth = 0;
+
+                  if (hasLocationText) {
+                    metaWidth += 14 + 2;
+                    metaWidth += _measureSingleLineTextWidth(
+                      context,
+                      locationText,
+                      headerMetaStyle,
+                    );
+                  }
+                  if (hasLocationText && hasWeatherText) {
+                    metaWidth += 8;
+                  }
+                  if (hasWeatherText) {
+                    metaWidth += 14 + 2;
+                    metaWidth += _measureSingleLineTextWidth(
+                      context,
+                      weatherText,
+                      headerMetaStyle,
+                    );
+                  }
+
+                  final double compactWidth =
+                      dateWidth + (hasMetaText ? 12 + metaWidth : 0);
 
                   Widget buildDate() => Text(
                         formattedDate,
                         maxLines: 1,
                         softWrap: false,
-                        overflow: TextOverflow.ellipsis,
                         style: headerDateStyle,
                       );
 
@@ -413,7 +456,6 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                               locationText,
                               maxLines: 1,
                               softWrap: false,
-                              overflow: TextOverflow.ellipsis,
                               style: headerMetaStyle,
                             ),
                           ],
@@ -430,39 +472,42 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                               weatherText,
                               maxLines: 1,
                               softWrap: false,
-                              overflow: TextOverflow.ellipsis,
                               style: headerMetaStyle,
                             ),
                           ],
                         ],
                       );
 
-                  if (!hasMetaText) {
-                    return Align(
-                      alignment: Alignment.centerLeft,
-                      child: buildDate(),
-                    );
-                  }
-
-                  if (constraints.maxWidth >= 280) {
+                  if (compactWidth <= constraints.maxWidth) {
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(child: buildDate()),
-                        const SizedBox(width: 12),
-                        Flexible(child: buildMeta()),
+                        Flexible(child: buildDate()),
+                        if (hasMetaText) ...[
+                          const SizedBox(width: 12),
+                          buildMeta(),
+                        ],
                       ],
                     );
                   }
 
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      buildDate(),
-                      const SizedBox(height: 4),
-                      buildMeta(),
-                    ],
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          buildDate(),
+                          if (hasMetaText) ...[
+                            const SizedBox(width: 12),
+                            buildMeta(),
+                          ],
+                        ],
+                      ),
+                    ),
                   );
                 },
               ),

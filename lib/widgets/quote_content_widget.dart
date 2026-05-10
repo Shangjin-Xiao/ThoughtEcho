@@ -125,7 +125,7 @@ class QuoteContent extends StatelessWidget {
   @visibleForTesting
   static void clearCacheForTesting() => resetCaches();
 
-  @visibleForTesting
+  /// Returns lightweight cache counters for performance diagnostics.
   static Map<String, dynamic> debugCacheStats() => {
         'document': _QuoteDocumentCache.stats,
         'heightEstimate': _QuoteHeightEstimateCache.stats,
