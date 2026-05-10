@@ -189,7 +189,7 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
           const SizedBox(height: 24),
 
           // 本周期收藏最多（放在洞察下面，最近笔记上面）- 根据标志决定是否播放动画
-          if (_periodQuotes.isNotEmpty) ...[
+          if (_periodQuotes.isNotEmpty || _periodFavoriteQuotes.isNotEmpty) ...[
             TweenAnimationBuilder<double>(
               key: ValueKey('favorites_$_dataKey'),
               duration: _shouldAnimateOverview
@@ -280,10 +280,7 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
   Widget _buildPeriodTopFavoritesSection() {
     final l10n = AppLocalizations.of(context);
     // 过滤出有心形点击的笔记，并按次数排序
-    final List<Quote> favorited = _periodQuotes
-        .where((q) => q.favoriteCount > 0)
-        .toList()
-      ..sort((a, b) => b.favoriteCount.compareTo(a.favoriteCount));
+    final favorited = _periodFavoriteQuotes;
 
     if (favorited.isEmpty) {
       // 若本周期没有心形点击，显示一个轻量提示
