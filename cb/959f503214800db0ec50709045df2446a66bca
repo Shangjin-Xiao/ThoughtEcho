@@ -1,0 +1,22 @@
+test/widgets/quote_item_widget_test.dart
+  s_66721181e8ea4b::t_4a96c9ff9edf0e 10-11,82,125-161
+lib/widgets/quote_item_widget.dart
+  s_66721181e8ea4b::t_6a42609a3681ec 15
+  s_66721181e8ea4b::t_66d21fbf802296 584-600,602-616,618-640
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "cb959f503214800db0ec50709045df2446a66bca",
+  "prompts": {},
+  "sessions": {
+    "s_66721181e8ea4b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f0616bd8ffeCo1fLwVLBfPozv",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
