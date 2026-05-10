@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:multicast_dns/multicast_dns.dart';
 import 'package:thoughtecho/services/localsend/constants.dart';
@@ -172,7 +171,6 @@ class MDNSServiceRegistration {
   static MDNSServiceRegistration get I => _instance;
 
   bool _isRegistered = false;
-  ServerSocket? _dummyServer;
 
   bool get isRegistered => _isRegistered;
 
@@ -189,29 +187,19 @@ class MDNSServiceRegistration {
   }) async {
     if (kIsWeb) return false;
 
-    // 目前 Dart 的 multicast_dns 包不支持服务注册
-    // 在 iOS 上，UDP 组播发送需要 multicast entitlement
-    // 而 mDNS 服务注册使用系统 API，不需要该 entitlement
-    //
-    // TODO: 实现原生 mDNS 服务注册
-    // - iOS: 使用 Network.framework 的 NWListener
-    // - Android: 使用 NsdManager.registerService
-    // - macOS: 使用 DNSServiceRegister
-
+    // Native registration still needs platform implementations:
+    // iOS Network.framework, Android NsdManager, macOS DNSServiceRegister.
     logWarning(
       'mdns_register_not_implemented - native code required',
       source: 'mDNS',
     );
 
-    // 暂时标记为已注册，依赖 UDP 组播
-    _isRegistered = true;
-    return true;
+    _isRegistered = false;
+    return false;
   }
 
   /// 注销 mDNS 服务
   Future<void> unregisterService() async {
-    _dummyServer?.close();
-    _dummyServer = null;
     _isRegistered = false;
     logInfo('mdns_unregister', source: 'mDNS');
   }
