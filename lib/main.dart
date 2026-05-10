@@ -338,6 +338,8 @@ Future<void> main() async {
         // 使用ValueNotifier跟踪服务初始化状态
         final servicesInitialized = ValueNotifier<bool>(false);
 
+        // TODO(refactor): The provider tree is growing large. Consider grouping related 
+        // providers or moving some initialization logic to a dedicated Bootstrapper class.
         runApp(
           MultiProvider(
             providers: [

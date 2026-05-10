@@ -14,7 +14,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     _firstOpenScrollFrameTimings.clear();
     _firstOpenScrollUpdateMicros.clear();
     _firstOpenScrollStopTimer?.cancel();
-    WidgetsBinding.instance.addTimingsCallback(_collectFrameTimings);
+    _ensurePerfTimingsCallback();
     logDebug('首次滑动性能监测开始', source: 'NoteListView.Perf');
   }
 
@@ -37,7 +37,7 @@ extension _NoteListScrollExtension on NoteListViewState {
 
     _firstOpenScrollPerfRecording = false;
     _firstOpenScrollPerfCaptured = true;
-    WidgetsBinding.instance.removeTimingsCallback(_collectFrameTimings);
+    _releasePerfTimingsCallbackIfIdle();
 
     if (_firstOpenScrollFrameTimings.isNotEmpty) {
       int jankyFrames = 0;
@@ -109,6 +109,138 @@ extension _NoteListScrollExtension on NoteListViewState {
     if (!mounted) {
       return;
     }
+  }
+
+  void _startLoadMorePerfCapture() {
+    if (!_firstOpenScrollPerfEnabled || _loadMorePerfRecording) {
+      return;
+    }
+
+    _loadMorePerfRecording = true;
+    _loadMorePerfPendingFrameSettle = false;
+    _loadMorePerfStartCount = _quotes.length;
+    _loadMorePerfTriggerOffset =
+        _scrollController.hasClients ? _scrollController.offset.round() : 0;
+    _loadMorePerfFrameTimings.clear();
+    _loadMorePerfStopTimer?.cancel();
+    _loadMorePerfStopwatch
+      ..reset()
+      ..start();
+    _ensurePerfTimingsCallback();
+
+    logDebug(
+      '加载更多性能监测开始: startCount=$_loadMorePerfStartCount, '
+      'offset=$_loadMorePerfTriggerOffset',
+      source: 'NoteListView.Perf',
+    );
+  }
+
+  void _markLoadMorePerfDataArrived() {
+    if (!_loadMorePerfRecording || _loadMorePerfPendingFrameSettle) {
+      return;
+    }
+    _loadMorePerfPendingFrameSettle = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_loadMorePerfRecording) {
+        return;
+      }
+      _loadMorePerfStopTimer?.cancel();
+      _loadMorePerfStopTimer = Timer(
+        const Duration(milliseconds: 220),
+        _finalizeLoadMorePerfCapture,
+      );
+    });
+  }
+
+  void _cancelLoadMorePerfCapture(String reason) {
+    if (!_loadMorePerfRecording) {
+      return;
+    }
+
+    _loadMorePerfStopTimer?.cancel();
+    _loadMorePerfStopwatch.stop();
+    _loadMorePerfRecording = false;
+    _loadMorePerfPendingFrameSettle = false;
+    _releasePerfTimingsCallbackIfIdle();
+
+    logDebug(
+      '加载更多性能监测取消: $reason, elapsed=${_loadMorePerfStopwatch.elapsedMilliseconds}ms',
+      source: 'NoteListView.Perf',
+    );
+  }
+
+  void _finalizeLoadMorePerfCapture() {
+    if (!_loadMorePerfRecording) {
+      return;
+    }
+
+    _loadMorePerfStopTimer?.cancel();
+    _loadMorePerfStopwatch.stop();
+
+    final elapsedMs = _loadMorePerfStopwatch.elapsedMilliseconds;
+    final addedCount = (_quotes.length - _loadMorePerfStartCount).clamp(
+      0,
+      _quotes.length,
+    );
+
+    int jankyFrames = 0;
+    double worstFrameMs = 0;
+    int totalFrameMicros = 0;
+
+    for (final timing in _loadMorePerfFrameTimings) {
+      final int totalMicros = timing.buildDuration.inMicroseconds +
+          timing.rasterDuration.inMicroseconds;
+      totalFrameMicros += totalMicros;
+
+      final frameMs = totalMicros / 1000.0;
+      if (frameMs > worstFrameMs) {
+        worstFrameMs = frameMs;
+      }
+      if (totalMicros > 16600) {
+        jankyFrames++;
+      }
+    }
+
+    final totalFrames = _loadMorePerfFrameTimings.length;
+    final avgFrameMs =
+        totalFrames == 0 ? 0.0 : (totalFrameMicros / totalFrames) / 1000.0;
+
+    logDebug(
+      '加载更多性能结果: start=$_loadMorePerfStartCount, '
+      'current=${_quotes.length}, added=$addedCount, hasMore=$_hasMore, '
+      'elapsed=${elapsedMs}ms, frames=$totalFrames, jank=$jankyFrames, '
+      'avg=${avgFrameMs.toStringAsFixed(1)}ms, '
+      'worst=${worstFrameMs.toStringAsFixed(1)}ms',
+      source: 'NoteListView.Perf',
+    );
+
+    _loadMorePerfRecording = false;
+    _loadMorePerfPendingFrameSettle = false;
+    _releasePerfTimingsCallbackIfIdle();
+  }
+
+  void _settleLoadMoreGateAfterPage() {
+    if (!_loadMoreAwaitingPage) {
+      return;
+    }
+
+    _loadMoreAwaitingPage = false;
+    _loadMoreSettleTimer?.cancel();
+    _loadMoreSettleTimer = Timer(const Duration(milliseconds: 320), () {
+      if (!mounted || !_isLoading) {
+        return;
+      }
+      _updateState(() {
+        _isLoading = false;
+      });
+    });
+  }
+
+  void _resetLoadMoreGate() {
+    _loadMoreAwaitingPage = false;
+    _loadMoreSettleTimer?.cancel();
+    _loadMoreSettleTimer = null;
   }
 
   /// 修复：检测并修复滚动范围异常
@@ -377,29 +509,29 @@ extension _NoteListScrollExtension on NoteListViewState {
     final db = Provider.of<DatabaseService>(context, listen: false);
     if (!db.hasMoreQuotes) {
       logDebug('数据库显示无更多数据，同步 _hasMore 为 false', source: 'NoteListView');
+      _cancelLoadMorePerfCapture('数据库显示无更多数据');
       _updateState(() {
         _hasMore = false;
       });
       return;
     }
 
-    // 修复：立即设置加载状态，防止并发调用
-    _updateState(() {
-      _isLoading = true;
-    });
+    // 仅作为并发保护；非首屏加载时 _isLoading 不改变可见 UI，避免多一次列表重建。
+    _isLoading = true;
+    _loadMoreSettleTimer?.cancel();
+    _loadMoreAwaitingPage = true;
+    _loadMoreRequestStartCount = _quotes.length;
+    _startLoadMorePerfCapture();
 
     try {
       logDebug('触发加载更多，当前有${_quotes.length}条数据', source: 'NoteListView');
       await db.loadMoreQuotes();
-
-      // 强制检查状态更新
-      if (mounted) {
-        _updateState(() {
-          _hasMore = db.hasMoreQuotes;
-          _isLoading = false; // 加载完成后重置状态
-        });
-      }
+      // 成功路径由 watchQuotes 的流回调统一更新 _quotes/_hasMore/_isLoading，
+      // 避免在流事件送达前把 _isLoading 提前置回 false，导致滚动惯性期间
+      // 再次触发 loadMore，一次追加两页数据。
     } catch (e) {
+      _cancelLoadMorePerfCapture('加载失败: $e');
+      _resetLoadMoreGate();
       // 修复：出错时也要重置加载状态
       if (mounted) {
         _updateState(() {

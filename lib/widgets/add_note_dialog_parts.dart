@@ -6,6 +6,26 @@ import '../models/note_category.dart';
 import '../services/database_service.dart';
 import '../utils/icon_utils.dart';
 
+/// 只让外层边距响应键盘 inset，避免键盘动画驱动整个弹窗内容重建。
+class KeyboardInsetPadding extends StatelessWidget {
+  final Widget child;
+
+  const KeyboardInsetPadding({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.viewInsetsOf(context).bottom,
+        left: 16,
+        right: 16,
+        top: 16,
+      ),
+      child: child,
+    );
+  }
+}
+
 /// 标签选择区域 - 独立组件，避免AddNoteDialog重建时重复构建
 class TagSelectionSection extends StatefulWidget {
   final List<NoteCategory> tags;

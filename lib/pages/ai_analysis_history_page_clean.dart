@@ -308,6 +308,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                   IconButton(
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close_rounded),
+                    tooltip:
+                        MaterialLocalizations.of(context).closeButtonTooltip,
                     style: IconButton.styleFrom(
                       backgroundColor: Theme.of(context)
                           .colorScheme
@@ -1045,6 +1047,7 @@ $positiveQuotesText
                             _loadAnalyses();
                           },
                           icon: const Icon(Icons.clear),
+                          tooltip: AppLocalizations.of(context).clear,
                         )
                       : null,
                   border: OutlineInputBorder(

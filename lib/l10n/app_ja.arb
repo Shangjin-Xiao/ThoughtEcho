@@ -764,6 +764,15 @@
   "mediaFilesUsage": "メディアファイル",
   "cacheUsage": "キャッシュ",
   "notesDatabase": "ノートDB",
+  "trashStorageUsageHint": "ゴミ箱に {count} 件のノートがあり、データベースと添付ファイルの容量を使用しています。",
+  "@trashStorageUsageHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewTrash": "ゴミ箱を表示",
   "aiDatabase": "AIDB",
   "logDatabase": "ログDB",
   "images": "画像",
@@ -2760,7 +2769,7 @@
       }
     }
   },
-  "apkDownloadHint": "閉じないでください",
+  "apkDownloadHint": "アプリを終了しないでください。ダウンロード後、自動的にインストールが開始されます。",
   "apkDownloadStarted": "開始 {version}",
   "@apkDownloadStarted": {
     "placeholders": {

@@ -288,6 +288,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
           scrolledUnderElevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
@@ -310,75 +311,6 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                 providerLabels: providerLabels,
                 onProviderSelected: (provider) {
                   unawaited(_saveSelectedProvider(provider));
-                },
-              ),
-              const SizedBox(height: 24),
-              Consumer<SettingsService>(
-                builder: (context, settings, _) {
-                  final theme = Theme.of(context);
-                  final colorScheme = theme.colorScheme;
-                  return Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                      border: Border.all(
-                        color: colorScheme.outline.withAlpha(50),
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.offlineQuoteSourceTitle,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          l10n.offlineQuoteSourceDesc,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurface.withAlpha(150),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        RadioListTile<String>(
-                          title: Text(
-                            l10n.offlineQuoteSourceTagOnly,
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                          value: 'tagOnly',
-                          groupValue: settings.offlineQuoteSource,
-                          onChanged: (value) {
-                            if (value != null) {
-                              settings.setOfflineQuoteSource(value);
-                            }
-                          },
-                          contentPadding: EdgeInsets.zero,
-                          activeColor: colorScheme.primary,
-                        ),
-                        RadioListTile<String>(
-                          title: Text(
-                            l10n.offlineQuoteSourceAll,
-                            style: theme.textTheme.bodyMedium,
-                          ),
-                          value: 'allNotes',
-                          groupValue: settings.offlineQuoteSource,
-                          onChanged: (value) {
-                            if (value != null) {
-                              settings.setOfflineQuoteSource(value);
-                            }
-                          },
-                          contentPadding: EdgeInsets.zero,
-                          activeColor: colorScheme.primary,
-                        ),
-                      ],
-                    ),
-                  );
                 },
               ),
               if (_selectedProvider == ApiService.apiNinjasProvider) ...[
@@ -453,16 +385,91 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                   l10n: l10n,
                 ),
               ],
-              if (showHitokotoTypeSelection)
+              if (showHitokotoTypeSelection) ...[
+                const SizedBox(height: 24),
                 _buildUsageInstructionsCard(
                   context: context,
                   l10n: l10n,
                 ),
+              ],
               const SizedBox(height: 24),
               _buildProviderAttributionCard(
                 context: context,
                 l10n: l10n,
                 providerLabel: providerLabel,
+              ),
+              const SizedBox(height: 24),
+              Consumer<SettingsService>(
+                builder: (context, settings, _) {
+                  final theme = Theme.of(context);
+                  final colorScheme = theme.colorScheme;
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                      border: Border.all(
+                        color: colorScheme.outline.withAlpha(50),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.offlineQuoteSourceTitle,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.offlineQuoteSourceDesc,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurface.withAlpha(150),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // TODO(tech-debt): groupValue and onChanged are deprecated in RadioListTile.
+                        // Use a RadioGroup ancestor to manage the value instead.
+                        RadioListTile<String>(
+                          title: Text(
+                            l10n.offlineQuoteSourceTagOnly,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                          value: 'tagOnly',
+                          groupValue: settings.offlineQuoteSource,
+                          onChanged: (value) {
+                            if (value != null) {
+                              settings.setOfflineQuoteSource(value);
+                            }
+                          },
+                          contentPadding: EdgeInsets.zero,
+                          activeColor: colorScheme.primary,
+                        ),
+                        // TODO(tech-debt): groupValue and onChanged are deprecated in RadioListTile.
+                        // Use a RadioGroup ancestor to manage the value instead.
+                        RadioListTile<String>(
+                          title: Text(
+                            l10n.offlineQuoteSourceAll,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                          value: 'allNotes',
+                          groupValue: settings.offlineQuoteSource,
+                          onChanged: (value) {
+                            if (value != null) {
+                              settings.setOfflineQuoteSource(value);
+                            }
+                          },
+                          contentPadding: EdgeInsets.zero,
+                          activeColor: colorScheme.primary,
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 32),
             ],

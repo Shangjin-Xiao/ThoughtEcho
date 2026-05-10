@@ -136,6 +136,12 @@ extension SmartPushNotification on SmartPushService {
         return;
       }
 
+      // 检查笔记是否被隐藏（隐藏笔记在列表视图中不可见，无法滚动定位）
+      if (await _databaseService.isQuoteHidden(noteId)) {
+        AppLogger.d('通知导航已取消：笔记已隐藏，无法在列表中定位 $noteId');
+        return;
+      }
+
       // 重试机制：等待 navigatorKey.currentState 就绪 (例如冷启动场景)
       int retryCount = 0;
       const maxRetries = 15;

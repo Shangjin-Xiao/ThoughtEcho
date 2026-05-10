@@ -72,7 +72,7 @@ def create_large_ios_icon(input_path, output_path, padding_percent=0.1):
 
 if __name__ == "__main__":
     # Use the original icon as source to ensure best quality
-    create_large_ios_icon("icon.png", "icon_ios_large.png", padding_percent=0.15) 
+    create_large_ios_icon("assets/icon.png", "assets/icon_ios_large.png", padding_percent=0.15) 
     # 0.15 padding (15%) leaves some breathing room but makes it much larger than a small center logo.
     # Adjust padding_percent to 0.0 for "full bleed" if the icon shape allows.
     # Given it's a book, 10-15% is usually good for iOS "Safe Zone".

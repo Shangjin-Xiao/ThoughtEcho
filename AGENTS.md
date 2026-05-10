@@ -11,25 +11,55 @@
 ```
 ThoughtEcho/
 ├── lib/
-│   ├── main.dart           # 入口 + Provider 注入 + 紧急恢复 (1354 行)
+│   ├── main.dart           # 入口 + Provider 注入 + 紧急恢复
 │   ├── controllers/        # UI 控制器 → 见子目录 AGENTS.md
 │   ├── models/             # 数据模型 → 见子目录 AGENTS.md
 │   ├── pages/              # 页面组件 → 见子目录 AGENTS.md
 │   ├── services/           # 业务服务 → 见子目录 AGENTS.md
 │   ├── utils/              # 工具类 → 见子目录 AGENTS.md
 │   ├── widgets/            # UI 组件 → 见子目录 AGENTS.md
-│   ├── theme/              # Material 3 主题
-│   ├── constants/          # 常量 (卡片模板, AI prompts)
+│   ├── theme/              # Material 3 主题 (app_theme.dart)
+│   ├── constants/          # 常量 (card_templates, ai_card_prompts, app_constants)
 │   ├── config/             # Lottie/引导页配置
 │   ├── extensions/         # Dart 扩展方法
 │   ├── l10n/               # ARB 源文件 (修改此处)
 │   └── gen_l10n/           # 国际化生成文件 (禁止手动编辑)
-├── test/                   # 单元/Widget/集成/性能测试
+├── test/                   # 单元/Widget/集成/性能测试 → 见 test/AGENTS.md
 ├── .github/workflows/      # CI: test.yml / flutter-release-build.yml / build-windows.yml / ios-build.yml
 ├── scripts/                # iOS 无签名构建 / Windows MSIX 脚本
-├── android/ ios/ web/ windows/  # 平台原生代码
+├── android/ ios/ windows/  # 平台原生代码
 └── assets/                 # Lottie 动画, 图标, 用户文档
 ```
+
+---
+
+## 文件存放规范 (File Organization Standards)
+
+为了保持代码库整洁，所有文件必须遵循以下存放规范：
+
+### 1. 脚本文件 (Scripts)
+- **存放路径**：统一存放在根目录的 `scripts/` 文件夹下。
+- **禁止事项**：禁止将任何 `.py`, `.sh`, `.bat`, `.ps1` 等脚本文件直接放在项目根目录。
+- **配置脚本**：即使是用于修改代码或文档的辅助脚本（如 `replace_code.py`, `update_l10n.py`），也必须存放在 `scripts/` 中。
+
+### 2. 静态资源 (Assets)
+- **应用图标**：
+    - 主图标（原始文件）应存放在 `assets/icon.png`。
+    - 针对不同平台优化过的图标（如 `icon_ios_large.png`）也应存放在 `assets/` 目录下。
+    - **禁止**：严禁在项目根目录存放图标文件（如 `icon.png`）。
+- **动效文件**：`.json` 格式的 Lottie 动画应存放在 `assets/lottie/`。
+- **矢量图**：SVG 文件应存放在 `assets/svg/`。
+- **营销/网页资源**：用于 `README.md`、`res/index.html` 或 Banner 展示的资源，应存放在 `res/` 目录下。
+
+### 3. 构建产物与临时文件 (Build & Temp)
+- **Git 忽略**：
+    - 严禁提交 `.gradle/`, `.dart_tool/`, `build/`, `node_modules/` 等自动生成的目录。
+    - 严禁提交平台自动生成的注册文件（如 `GeneratedPluginRegistrant.java`, `generated_plugins.cmake`）。
+- **元数据**：`.metadata` 严禁提交。
+
+---
+
+大文件通过 `part`/mixin 或子目录拆分：`database/`(12 mixin)、`note_editor/`(10)、`ai_report/`(6)、`smart_push/`(6)、`note_list/`(5)。
 
 ---
 
@@ -133,6 +163,7 @@ import 'package:thoughtecho/services/database_service.dart';
 ### 服务层模式
 ```dart
 class XxxService extends ChangeNotifier {
+  // 服务层禁止 import flutter/widgets.dart，使用 scheduler.dart
   Future<void> doSomething() async {
     try {
       // 业务逻辑
@@ -194,13 +225,21 @@ class XxxService extends ChangeNotifier {
 
 ## 复杂度热点 (修改前必读)
 
-| 文件 | 行数 | 说明 |
-|------|------|------|
-| `lib/services/database_service.dart` | 5820+ | God class，通过 part/mixin 拆分为 11 个文件 |
-| `lib/pages/note_full_editor_page.dart` | 3083+ | 富文本编辑器，拆分有 `note_editor/` 子目录 |
-| `lib/pages/ai_periodic_report_page.dart` | 2680+ | 报告页，拆分有 `ai_report/` 子目录 |
-| `lib/services/smart_push_service.dart` | 2560+ | 拆分有 `smart_push/` 子目录 |
-| `lib/widgets/note_list_view.dart` | 2100+ | 拆分有 `note_list/` 子目录 |
+以下文件体积较大或逻辑复杂，修改前需仔细阅读相关子目录拆分：
+
+| 文件 | 说明 |
+|------|------|
+| `lib/services/database_service.dart` | God class，通过 part/mixin 拆分为 12 个 mixin 文件 + `database_schema_manager.dart` |
+| `lib/pages/home_page.dart` | 主页面，包含大量交互逻辑 |
+| `lib/widgets/add_note_dialog.dart` | 最大 Widget 文件 |
+| `lib/pages/settings_page.dart` | 设置中心 |
+| `lib/pages/note_sync_page.dart` | 设备同步 |
+| `lib/pages/annual_report_page.dart` | 年度报告 |
+| `lib/pages/note_full_editor_page.dart` | 富文本编辑器，拆分有 `note_editor/` 子目录 (10 个) |
+| `lib/pages/ai_periodic_report_page.dart` | 报告页，拆分有 `ai_report/` 子目录 |
+| `lib/services/smart_push_service.dart` | 拆分有 `smart_push/` 子目录 (6 个) |
+| `lib/widgets/note_list_view.dart` | 拆分有 `note_list/` 子目录 (5 个) |
+| `lib/constants/card_templates.dart` | 卡片模板定义，极复杂 |
 
 ---
 
@@ -210,15 +249,21 @@ class XxxService extends ChangeNotifier {
 |------|------|
 | 数据库 CRUD | `lib/services/database_service.dart` + `lib/services/database/` |
 | AI 请求 | `lib/services/ai_service.dart` → `lib/utils/ai_request_helper.dart` |
+| AI 卡片生成 | `lib/services/ai_card_generation_service.dart` |
 | API 密钥管理 | `lib/services/api_key_manager.dart` |
 | 状态管理入口 | `lib/main.dart` Provider 树 |
 | 富文本编辑器 | `lib/pages/note_full_editor_page.dart` + `lib/pages/note_editor/` |
 | 设备同步 | `lib/services/note_sync_service.dart` + `lib/services/localsend/` |
+| 智能推送 | `lib/services/smart_push_service.dart` + `lib/services/smart_push/` |
 | 备份恢复 | `lib/services/backup_service.dart` |
 | 主题 | `lib/theme/app_theme.dart` |
 | 国际化源文件 | `lib/l10n/app_zh.arb` / `app_en.arb` |
 | 测试入口 | `test/all_tests.dart` |
 | 测试 Mock 配置 | `test/test_setup.dart` |
+| 日志 | `lib/services/unified_log_service.dart` + `lib/services/log_database_service.dart` |
+| 大文件 | `lib/services/large_file_manager.dart` |
+| 媒体管理 | `lib/services/media_file_service.dart` + `lib/services/media_reference_service.dart` |
+| 位置/天气 | `lib/services/location_service.dart` + `lib/services/weather_service.dart` |
 
 ---
 
@@ -240,11 +285,11 @@ MultiAISettings → AIProviderSettings → AINetworkManager → APIKeyManager
 
 ---
 
-## 废弃 API (禁止使用)
+## 已删除 API (禁止重新实现)
 
-- `AIService.generateDailyPrompt` → 改用 `streamGenerateDailyPrompt`
-- `TimeUtils.formatTime` → 改用 `formatRelativeDateTime` 或 `formatQuoteTime`
-- `NoteSyncService.receiveAndMerge` → 已废弃的同步逻辑
+- `AIService.generateDailyPrompt` → 已删除，改用 `streamGenerateDailyPrompt`
+- `TimeUtils.formatTime` → 已删除，改用 `formatRelativeDateTime` 或 `formatQuoteTime`
+- `NoteSyncService.receiveAndMerge` → 已删除
 
 ---
 

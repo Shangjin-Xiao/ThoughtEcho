@@ -10,3 +10,11 @@
 ## 2026-03-24 - [补充 MemoryOptimizationHelper 的测试]
 **盲点:** `ProcessingStrategyExt` 在 `MemoryOptimizationHelper` 中作为一个核心的纯枚举扩展，包含了内存优化策略的状态描述与隔离执行判断（`description`, `useIsolate`）。但由于缺乏单元测试覆盖，其逻辑在重构或新增状态时可能出现遗漏。
 **对策:** 编写极简的枚举扩展测试。通过直接断言各种策略类型在调用 `description` 和 `useIsolate` 方法时的返回结果，快速验证且不依赖其他环境。
+## 2026-04-28 - [补充 MediaOptimizationUtils 的测试]
+**盲点:** `MediaOptimizationUtils` 中的 `getMimeType` 和 `estimateOptimizedSize` 等纯函数负责媒体类型识别与大小估算，但长期缺乏单元测试覆盖。这容易在添加新的文件类型支持或调整大小估算逻辑时引入无法预料的错误。
+**对策:** 为此类明确的输入输出映射纯函数编写了极简的单元测试。覆盖了正常情况（如常见的图片、视频、音频扩展名与大小映射）、边界条件（如未知文件类型、空字符串）及容错情况（大写扩展名）。测试完全隔离并只断言基本逻辑。
+## 2026-05-03 - 补充 SearchController 的测试
+**对策:** 添加了针对 `clearSearch` 方法的单元测试。利用 `fake_async` 模拟防抖延时并确保方法能正确取消进行中的定时器。同时修复了代码中的 bug，确保当 `_isSearching` 为 true 时（不论 `_searchQuery` 是否为空），清除逻辑也能正确重置搜索状态并触发状态更新。
+## 2026-05-04 - 补充 updateSearchImmediate 的测试
+**盲点:** `NoteSearchController` 的 `updateSearchImmediate` 方法缺乏测试，导致搜索防抖取消逻辑和立即状态更新未受覆盖。
+**对策:** 在 `test/unit/controllers/search_controller_test.dart` 中新增针对 `updateSearchImmediate` 的单元测试，利用 `fakeAsync` 模拟验证正在进行的延时任务能够被正确取消，并验证正常及无变化时的状态更新情况。

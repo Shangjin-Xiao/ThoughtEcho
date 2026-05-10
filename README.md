@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://github.com/Shangjin-Xiao/ThoughtEcho">
-    <img src="res/bento-banner.png" alt="ThoughtEcho 心迹 - AI-Powered Inspiration Notebook" width="100%">
+    <img src="res/readme-banner.png" alt="ThoughtEcho 心迹 - AI-Powered Inspiration Notebook" width="100%">
   </a>
   
   # 心迹 (ThoughtEcho)
@@ -55,10 +55,6 @@
 
 ## 🌟 为什么选择 ThoughtEcho？
 
-<div align="center">
-  <img src="res/readme-banner.png" alt="Your Personal AI-Powered Inspiration Notebook" width="100%">
-</div>
-
 **心迹是你的专属灵感摘录本**。它能帮你：
 
 - 📝 **随时随地捕获**：富文本、多媒体，甚至一句话的灵感碎片
@@ -96,11 +92,6 @@
 </div>
 
 ## 📸 应用截图
-
-<div align="center">
-  <img src="res/thoughtecho banner.webp" alt="ThoughtEcho UI Showcase" width="100%">
-</div>
-<br>
 
 ### 核心功能
 | 主页 | 笔记列表 | 添加笔记 |
@@ -317,10 +308,6 @@
 
 ## 🌟 Why ThoughtEcho?
 
-<div align="center">
-  <img src="res/readme-banner.png" alt="Your Personal AI-Powered Inspiration Notebook" width="100%">
-</div>
-
 **ThoughtEcho is your personal inspiration notebook.** It helps you:
 
 - 📝 **Capture** thoughts instantly with rich text, images, audio, and video
@@ -356,11 +343,6 @@
 </div>
 
 ## 📸 Application Screenshots
-
-<div align="center">
-  <img src="res/thoughtecho banner.webp" alt="ThoughtEcho UI Showcase" width="100%">
-</div>
-<br>
 
 ### Core Features
 | Homepage | Note List | Add Note |

@@ -674,6 +674,7 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                     ? null
                     : IconButton(
                         icon: const Icon(Icons.clear),
+                        tooltip: l10n.clear,
                         onPressed: () => _searchController.clear(),
                       ),
                 border: OutlineInputBorder(

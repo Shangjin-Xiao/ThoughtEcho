@@ -764,6 +764,15 @@
   "mediaFilesUsage": "미디어 파일 사용량",
   "cacheUsage": "캐시 사용량",
   "notesDatabase": "노트 데이터베이스",
+  "trashStorageUsageHint": "휴지통에 {count}개의 노트가 있으며 데이터베이스와 첨부 파일 공간을 계속 사용합니다.",
+  "@trashStorageUsageHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewTrash": "휴지통 보기",
   "aiDatabase": "AI 데이터베이스",
   "logDatabase": "로그 데이터베이스",
   "images": "이미지",
@@ -2760,7 +2769,7 @@
       }
     }
   },
-  "apkDownloadHint": "앱을 닫지 마세요. 다운로드 후 설치가 자동으로 시작됩니다.",
+  "apkDownloadHint": "앱을 종료하지 마세요. 다운로드 후 설치가 자동으로 시작됩니다.",
   "apkDownloadStarted": "Started downloading ThoughtEcho {version}",
   "@apkDownloadStarted": {
     "placeholders": {

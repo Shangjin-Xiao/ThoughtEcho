@@ -1,31 +1,36 @@
+import 'dart:async';
+import 'dart:ui' show FrameTiming;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
+import 'package:flutter_markdown/flutter_markdown.dart'; // 导入 markdown 库
 import 'package:provider/provider.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:uuid/uuid.dart';
-import 'dart:async';
+
+import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
+import '../pages/note_full_editor_page.dart'; // 导入全屏富文本编辑器
 import '../services/api_service.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/local_geocoding_service.dart';
+import '../services/settings_service.dart';
 import '../services/weather_service.dart';
-import '../utils/time_utils.dart'; // 导入时间工具类
 import '../theme/app_theme.dart';
-import 'package:flex_color_picker/flex_color_picker.dart';
-import 'package:flutter_markdown/flutter_markdown.dart'; // 导入 markdown 库
 import '../utils/color_utils.dart'; // Import color_utils
+import '../utils/feature_guide_helper.dart';
+import '../utils/icon_utils.dart';
+import '../utils/time_utils.dart'; // 导入时间工具类
 import 'accessible_color_grid.dart'; // Import the new accessible color grid
 import 'add_note_ai_menu.dart'; // 导入 AI 菜单组件
-import '../pages/note_full_editor_page.dart'; // 导入全屏富文本编辑器
-import 'package:thoughtecho/utils/app_logger.dart';
-import '../constants/app_constants.dart';
 import 'add_note_dialog_parts.dart'; // 导入拆分的组件
-import '../utils/feature_guide_helper.dart';
-import '../services/settings_service.dart';
-import '../utils/icon_utils.dart';
 
+// TODO(refactor): This file exceeds 2400 lines and contains redundant location/weather logic.
+// Consider extracting core business logic into a separate controller or service.
 class AddNoteDialog extends StatefulWidget {
   final Quote? initialQuote; // 如果是编辑笔记，则传入初始值
   final String? prefilledContent; // 预填充的内容
@@ -61,7 +66,8 @@ class AddNoteDialog extends StatefulWidget {
   State<AddNoteDialog> createState() => _AddNoteDialogState();
 }
 
-class _AddNoteDialogState extends State<AddNoteDialog> {
+class _AddNoteDialogState extends State<AddNoteDialog>
+    with WidgetsBindingObserver {
   late TextEditingController _contentController;
   late TextEditingController _authorController;
   late TextEditingController _workController;
@@ -100,20 +106,28 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   // 颜色选择
   String? _selectedColorHex;
 
-  // 标签搜索控制器
-  final TextEditingController _tagSearchController = TextEditingController();
-
-  // 性能优化：延迟请求焦点，避免与 BottomSheet 动画竞争
+  // 性能优化：等 BottomSheet 入场动画进行到一定程度再请求焦点，避免首帧竞争导致卡顿
   final FocusNode _contentFocusNode = FocusNode();
+  Animation<double>? _routeAnimation;
+  bool _focusRequested = false;
+
+  // 开发者模式：添加笔记弹窗打开/键盘性能监测。
+  bool _dialogPerfEnabled = false;
+  bool _dialogPerfRecording = false;
+  bool _dialogPerfTimingsCallbackAttached = false;
+  bool _dialogPerfMetricsObserverAttached = false;
+  bool _dialogPerfFirstFrameLogged = false;
+  bool _dialogPerfFocusLogged = false;
+  bool _dialogPerfKeyboardStartLogged = false;
+  double _dialogPerfLastKeyboardInset = 0;
+  final Stopwatch _dialogPerfStopwatch = Stopwatch();
+  final List<FrameTiming> _dialogPerfFrameTimings = <FrameTiming>[];
+  Timer? _dialogPerfKeyboardSettleTimer;
+  Timer? _dialogPerfFinalizeTimer;
 
   // 性能优化：缓存Provider引用，避免重复查找
   LocationService? _cachedLocationService;
   WeatherService? _cachedWeatherService;
-
-  // 搜索防抖和过滤缓存
-  Timer? _searchDebounceTimer;
-  List<NoteCategory> _filteredTags = [];
-  String _lastSearchQuery = '';
 
   // 数据库监听防抖
   Timer? _dbChangeDebounceTimer;
@@ -124,9 +138,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   // AI推荐标签相关状态
   // 预留：后续接入本地 embedding/标签推荐时使用
-
-  // 优化：缓存过滤结果，避免重复计算
-  final Map<String, List<NoteCategory>> _filterCache = {};
 
   // 用于检测未保存内容的初始状态
   late String _initialContent;
@@ -200,8 +211,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
     // 优化：初始化内部标签列表
     _availableTags = List.from(widget.tags);
-    _filteredTags = _availableTags;
-    _lastSearchQuery = '';
+
+    _contentFocusNode.addListener(_onContentFocusChanged);
+    _startDialogPerfCapture();
 
     // 新建笔记时，自动填充默认作者、出处和标签
     // 注意：仅在没有预填充值时才使用默认值，AI 填写的作者/出处/标签不会被覆盖
@@ -345,8 +357,27 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       });
     });
 
-    // 添加搜索防抖监听器
-    _tagSearchController.addListener(_onSearchChanged);
+    // 性能优化：等 BottomSheet 入场动画结束后再请求焦点。
+    // 避免键盘 inset 动画与 BottomSheet 入场动画叠加导致打开阶段掉帧。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final route = ModalRoute.of(context);
+      if (route != null && route.animation != null) {
+        _routeAnimation = route.animation;
+        if (route.animation!.isCompleted) {
+          // 动画已完成（如无障碍关闭动画），直接请求焦点
+          _requestContentFocus('routeCompleted');
+          _focusRequested = true;
+        } else {
+          // 监听动画完成后请求焦点
+          route.animation!.addListener(_onRouteAnimationProgress);
+        }
+      } else {
+        // 无法获取路由动画，直接请求焦点
+        _requestContentFocus('noRouteAnimation');
+        _focusRequested = true;
+      }
+    });
 
     // 性能优化：延迟 Feature Guide 弹出，避免与键盘动画竞争
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -491,8 +522,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         if (needsUpdate) {
           setState(() {
             _availableTags = updatedTags;
-            // 重新应用当前的搜索过滤
-            _updateFilteredTags(_lastSearchQuery);
           });
           logDebug('标签列表已更新，当前共 ${updatedTags.length} 个标签');
         }
@@ -565,41 +594,196 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     );
   }
 
-  // 搜索变化处理 - 使用防抖优化
-  void _onSearchChanged() {
-    _searchDebounceTimer?.cancel();
-    _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () {
-      final query = _tagSearchController.text.toLowerCase();
-      if (query != _lastSearchQuery) {
-        _lastSearchQuery = query;
-        _updateFilteredTags(query);
+  /// BottomSheet 入场动画进度回调：动画完成后请求焦点弹出键盘。
+  void _onRouteAnimationProgress() {
+    if (_focusRequested) return;
+    final animation = _routeAnimation;
+    if (animation == null) {
+      _focusRequested = true;
+      return;
+    }
+    if (animation.isCompleted) {
+      _focusRequested = true;
+      animation.removeListener(_onRouteAnimationProgress);
+      _requestContentFocus('routeCompleted');
+    }
+  }
+
+  void _startDialogPerfCapture() {
+    final settingsService = _readServiceOrNull<SettingsService>(context);
+    if (settingsService == null ||
+        !settingsService.appSettings.developerMode ||
+        !settingsService.enableFirstOpenScrollPerfMonitor) {
+      return;
+    }
+
+    _dialogPerfEnabled = true;
+    _dialogPerfRecording = true;
+    _dialogPerfFrameTimings.clear();
+    _dialogPerfStopwatch
+      ..reset()
+      ..start();
+
+    WidgetsBinding.instance.addTimingsCallback(_collectDialogPerfTimings);
+    _dialogPerfTimingsCallbackAttached = true;
+    WidgetsBinding.instance.addObserver(this);
+    _dialogPerfMetricsObserverAttached = true;
+
+    logDebug(
+      '打开性能监测开始: editing=${widget.initialQuote != null}, '
+      'tags=${widget.tags.length}, contentLength=${_contentController.text.length}, '
+      'autoKeyboard=true',
+      source: 'AddNoteDialog.Perf',
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_dialogPerfRecording || _dialogPerfFirstFrameLogged) {
+        return;
       }
+      _dialogPerfFirstFrameLogged = true;
+      logDebug(
+        '首帧完成: elapsed=${_dialogPerfStopwatch.elapsedMilliseconds}ms',
+        source: 'AddNoteDialog.Perf',
+      );
+    });
+
+    _dialogPerfFinalizeTimer = Timer(
+      const Duration(milliseconds: 2400),
+      () => _finalizeDialogPerfCapture('timeout'),
+    );
+  }
+
+  void _collectDialogPerfTimings(List<FrameTiming> timings) {
+    if (_dialogPerfRecording) {
+      _dialogPerfFrameTimings.addAll(timings);
+    }
+  }
+
+  void _requestContentFocus(String reason) {
+    if (_dialogPerfEnabled) {
+      final routeValue = _routeAnimation?.value.toStringAsFixed(2) ?? 'none';
+      logDebug(
+        '请求内容焦点: reason=$reason, route=$routeValue, '
+        'elapsed=${_dialogPerfStopwatch.elapsedMilliseconds}ms',
+        source: 'AddNoteDialog.Perf',
+      );
+    }
+    _contentFocusNode.requestFocus();
+  }
+
+  void _onContentFocusChanged() {
+    if (!_dialogPerfEnabled ||
+        _dialogPerfFocusLogged ||
+        !_contentFocusNode.hasFocus) {
+      return;
+    }
+
+    _dialogPerfFocusLogged = true;
+    logDebug(
+      '内容输入框获得焦点: elapsed=${_dialogPerfStopwatch.elapsedMilliseconds}ms',
+      source: 'AddNoteDialog.Perf',
+    );
+  }
+
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    if (!_dialogPerfEnabled || !_dialogPerfRecording) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_dialogPerfRecording) {
+        return;
+      }
+
+      final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+      _dialogPerfLastKeyboardInset = keyboardInset;
+      if (keyboardInset <= 0) {
+        return;
+      }
+
+      if (!_dialogPerfKeyboardStartLogged) {
+        _dialogPerfKeyboardStartLogged = true;
+        logDebug(
+          '键盘 inset 开始变化: inset=${keyboardInset.round()}, '
+          'elapsed=${_dialogPerfStopwatch.elapsedMilliseconds}ms',
+          source: 'AddNoteDialog.Perf',
+        );
+      }
+
+      _dialogPerfKeyboardSettleTimer?.cancel();
+      _dialogPerfKeyboardSettleTimer = Timer(
+        const Duration(milliseconds: 220),
+        () {
+          if (!_dialogPerfRecording) {
+            return;
+          }
+          logDebug(
+            '键盘 inset 稳定: inset=${_dialogPerfLastKeyboardInset.round()}, '
+            'elapsed=${_dialogPerfStopwatch.elapsedMilliseconds}ms',
+            source: 'AddNoteDialog.Perf',
+          );
+          _finalizeDialogPerfCapture('keyboardSettled');
+        },
+      );
     });
   }
 
-  // 更新过滤标签 - 使用缓存优化
-  void _updateFilteredTags(String query) {
-    if (!mounted) return;
+  void _finalizeDialogPerfCapture(String reason) {
+    if (!_dialogPerfRecording) {
+      return;
+    }
 
-    setState(() {
-      if (query.isEmpty) {
-        _filteredTags = _availableTags;
-      } else {
-        // 优化：使用缓存避免重复计算
-        if (_filterCache.containsKey(query)) {
-          _filteredTags = _filterCache[query]!;
-        } else {
-          _filteredTags = _availableTags.where((tag) {
-            return tag.name.toLowerCase().contains(query);
-          }).toList();
+    _dialogPerfRecording = false;
+    _dialogPerfStopwatch.stop();
+    _dialogPerfFinalizeTimer?.cancel();
+    _dialogPerfKeyboardSettleTimer?.cancel();
+    _detachDialogPerfHooks();
 
-          // 缓存结果，限制缓存大小防止内存泄漏
-          if (_filterCache.length < 50) {
-            _filterCache[query] = _filteredTags;
-          }
-        }
+    int jankyFrames = 0;
+    int totalFrameMicros = 0;
+    double worstFrameMs = 0;
+
+    for (final timing in _dialogPerfFrameTimings) {
+      final totalMicros = timing.buildDuration.inMicroseconds +
+          timing.rasterDuration.inMicroseconds;
+      totalFrameMicros += totalMicros;
+
+      final frameMs = totalMicros / 1000.0;
+      if (frameMs > worstFrameMs) {
+        worstFrameMs = frameMs;
       }
-    });
+      if (totalMicros > 16600) {
+        jankyFrames++;
+      }
+    }
+
+    final totalFrames = _dialogPerfFrameTimings.length;
+    final avgFrameMs =
+        totalFrames == 0 ? 0.0 : (totalFrameMicros / totalFrames) / 1000.0;
+
+    logDebug(
+      '打开性能结果: reason=$reason, '
+      'elapsed=${_dialogPerfStopwatch.elapsedMilliseconds}ms, '
+      'frames=$totalFrames, jank=$jankyFrames, '
+      'avg=${avgFrameMs.toStringAsFixed(1)}ms, '
+      'worst=${worstFrameMs.toStringAsFixed(1)}ms, '
+      'focus=$_dialogPerfFocusLogged, '
+      'keyboardInset=${_dialogPerfLastKeyboardInset.round()}',
+      source: 'AddNoteDialog.Perf',
+    );
+  }
+
+  void _detachDialogPerfHooks() {
+    if (_dialogPerfTimingsCallbackAttached) {
+      WidgetsBinding.instance.removeTimingsCallback(_collectDialogPerfTimings);
+      _dialogPerfTimingsCallbackAttached = false;
+    }
+    if (_dialogPerfMetricsObserverAttached) {
+      WidgetsBinding.instance.removeObserver(this);
+      _dialogPerfMetricsObserverAttached = false;
+    }
   }
 
   /// 获取新建笔记的实时位置（与全屏编辑器逻辑一致）
@@ -1186,22 +1370,23 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   @override
   void dispose() {
-    _searchDebounceTimer?.cancel();
+    _dialogPerfFinalizeTimer?.cancel();
+    _dialogPerfKeyboardSettleTimer?.cancel();
+    _detachDialogPerfHooks();
     _dbChangeDebounceTimer?.cancel();
+    _routeAnimation?.removeListener(_onRouteAnimationProgress);
+    _contentFocusNode.removeListener(_onContentFocusChanged);
     _contentController.dispose();
     _authorController.dispose();
     _workController.dispose();
-    _tagSearchController.dispose();
     _contentFocusNode.dispose();
 
     // 优化：移除数据库监听器，防止内存泄漏
     _databaseService?.removeListener(_onDatabaseChanged);
 
-    // 优化：清理所有缓存，释放内存
-    _filterCache.clear();
+    // 优化：清理缓存，释放内存
     _allCategoriesCache = null;
     _availableTags.clear();
-    _filteredTags.clear();
 
     super.dispose();
   }
@@ -1717,13 +1902,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         }
         // dialogResult == null: 继续编辑，不做任何操作
       },
-      child: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 16,
-          right: 16,
-          top: 16,
-        ),
+      child: KeyboardInsetPadding(
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1750,15 +1929,15 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                       contentPadding: const EdgeInsets.fromLTRB(16, 16, 48, 16),
                     ),
                     maxLines: 3,
-                    autofocus: true, // 立即弹出键盘，其他重操作已延迟
+                    autofocus: false, // 延迟请求焦点，避免与 BottomSheet 动画竞争
                   ),
                   Positioned(
                     top: 0,
                     right: 0,
-                    child: Builder(
-                      builder: (context) {
-                        final isLongContent =
-                            _contentController.text.length > 100;
+                    child: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _contentController,
+                      builder: (context, value, child) {
+                        final isLongContent = value.text.length > 100;
                         return Stack(
                           children: [
                             // 如果是长文本，添加一个提示小红点
@@ -1935,7 +2114,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         prefixIcon: const Icon(Icons.person),
                       ),
                       maxLines: 1,
-                      onChanged: (value) => setState(() {}),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1948,26 +2126,35 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         prefixIcon: const Icon(Icons.book),
                       ),
                       maxLines: 1,
-                      onChanged: (value) => setState(() {}),
                     ),
                   ),
                 ],
               ),
               const SizedBox(width: 8),
               // 显示格式化后的来源预览
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  l10n.sourcePreviewFormat(_formatSource(
-                      _authorController.text, _workController.text)),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    color: theme.colorScheme.onSurface.applyOpacity(
-                      0.6,
-                    ), // MODIFIED
-                  ),
-                ),
+              AnimatedBuilder(
+                animation: Listenable.merge([
+                  _authorController,
+                  _workController,
+                ]),
+                builder: (context, child) {
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      l10n.sourcePreviewFormat(_formatSource(
+                        _authorController.text,
+                        _workController.text,
+                      )),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        color: theme.colorScheme.onSurface.applyOpacity(
+                          0.6,
+                        ), // MODIFIED
+                      ),
+                    ),
+                  );
+                },
               ),
 
               // 位置和天气选项
@@ -2227,7 +2414,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'AI分析',
+                            l10n.aiAnalysis,
                             style: TextStyle(
                               color: theme.colorScheme.primary,
                               fontWeight: FontWeight.bold,
