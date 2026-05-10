@@ -19,6 +19,7 @@ import '../widgets/svg_card_widget.dart';
 import '../utils/app_logger.dart';
 import '../utils/time_utils.dart';
 import '../utils/icon_utils.dart';
+import '../utils/report_period_utils.dart';
 import '../constants/app_constants.dart'; // 导入应用常量
 import '../gen_l10n/app_localizations.dart';
 
@@ -50,6 +51,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   // 数据状态
   List<Quote> _periodQuotes = [];
+  List<Quote> _periodFavoriteQuotes = [];
   List<GeneratedCard> _featuredCards = [];
   bool _isLoadingData = false;
   bool _isGeneratingCards = false;

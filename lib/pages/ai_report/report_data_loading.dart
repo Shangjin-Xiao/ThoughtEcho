@@ -23,6 +23,12 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
 
       // 根据选择的时间范围筛选笔记
       final filteredQuotes = _filterQuotesByPeriod(quotes);
+      final filteredFavorites =
+          ReportPeriodUtils.filterFavoritedByActivityPeriod(
+        quotes,
+        selectedPeriod: _selectedPeriod,
+        selectedDate: _selectedDate,
+      );
 
       // 更新数据版本key，触发动画
       final newDataKey =
@@ -31,6 +37,7 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
 
       _updateState(() {
         _periodQuotes = filteredQuotes;
+        _periodFavoriteQuotes = filteredFavorites;
         _isLoadingData = false;
         _dataKey = newDataKey;
         // 只在数据真正变化时才播放动画
@@ -364,56 +371,17 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
 
   /// 根据时间范围筛选笔记
   List<Quote> _filterQuotesByPeriod(List<Quote> quotes) {
-    // 归一化选中日期为当天开始时间（去除时间分量）
-    final now = DateTime(
-      _selectedDate.year,
-      _selectedDate.month,
-      _selectedDate.day,
-    );
-    DateTime startDate;
-    DateTime endDate;
-
-    switch (_selectedPeriod) {
-      case 'week':
-        // 本周（周一到周日）
-        final weekday = now.weekday;
-        startDate = now.subtract(Duration(days: weekday - 1));
-        endDate = startDate.add(const Duration(days: 6));
-        break;
-      case 'month':
-        // 本月
-        startDate = DateTime(now.year, now.month, 1);
-        endDate = DateTime(now.year, now.month + 1, 0); // 下个月第0天 = 当月最后一天
-        break;
-      case 'year':
-        // 本年
-        startDate = DateTime(now.year, 1, 1);
-        endDate = DateTime(now.year, 12, 31);
-        break;
-      default:
-        return quotes;
-    }
-
     // 调试日志
     AppLogger.d(
       'Filter conditions: period=$_selectedPeriod, selectedDate=$_selectedDate',
     );
-    AppLogger.d('Filter range: startDate=$startDate, endDate=$endDate');
     AppLogger.d('Total notes: ${quotes.length}');
 
-    final filtered = quotes.where((quote) {
-      final quoteDateTime = DateTime.parse(quote.date);
-      // 归一化笔记日期为当天开始时间，只比较日期部分
-      final quoteDate = DateTime(
-        quoteDateTime.year,
-        quoteDateTime.month,
-        quoteDateTime.day,
-      );
-      // 使用 >= startDate 且 <= endDate 的逻辑
-      final isInRange =
-          !quoteDate.isBefore(startDate) && !quoteDate.isAfter(endDate);
-      return isInRange;
-    }).toList();
+    final filtered = ReportPeriodUtils.filterByCreatedPeriod(
+      quotes,
+      selectedPeriod: _selectedPeriod,
+      selectedDate: _selectedDate,
+    );
 
     AppLogger.d('Filtered notes count: ${filtered.length}');
     // 打印前5条笔记的日期以便调试
