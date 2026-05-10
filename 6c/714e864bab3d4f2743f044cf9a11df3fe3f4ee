@@ -1,0 +1,28 @@
+test/widget/keyboard_inset_padding_test.dart
+  s_08abb7ef992dfb::t_1dd468fb440891 1-29
+lib/widgets/add_note_dialog.dart
+  s_08abb7ef992dfb::t_031d4a21635a3c 263,286,399,443,489,813,839,847,872,913,942,966
+  s_08abb7ef992dfb::t_974c0b5e5ae6f8 109-118,121
+  s_08abb7ef992dfb::t_76c3a7ea77cdc1 1892-1895,1924
+  s_08abb7ef992dfb::t_285ec69dbc6fd3 699-700,702-703,705-706,709-713,717-718,722-727,731-736,742-749,761-783
+  s_08abb7ef992dfb::t_a5f244c3f48eee 538-548,570,572,591,595,610,612,617-636,644-645,659,662,674-675,678
+lib/widgets/add_note_dialog_parts.dart
+  s_08abb7ef992dfb::t_76535fc986c747 14-15
+  s_08abb7ef992dfb::t_c6e61d52624593 12,19-20,23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "6c714e864bab3d4f2743f044cf9a11df3fe3f4ee",
+  "prompts": {},
+  "sessions": {
+    "s_08abb7ef992dfb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f056ba8affey4ly9yCPeiFGvH",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
