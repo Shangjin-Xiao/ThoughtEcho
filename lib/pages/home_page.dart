@@ -470,6 +470,9 @@ class _HomePageState extends State<HomePage>
 
     Future.microtask(() async {
       try {
+        // TODO(perf): Replace this full-table scan with a database query for
+        // recent notes whose location marker is pending/failed, then batch-update
+        // only the location field instead of routing each note through updateQuote.
         final allQuotes = await dbService.getAllQuotes();
         final cutoff = DateTime.now().subtract(const Duration(hours: 24));
         int updatedCount = 0;
