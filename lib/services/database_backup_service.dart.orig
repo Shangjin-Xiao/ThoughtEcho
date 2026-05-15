@@ -1082,7 +1082,7 @@ class DatabaseBackupService {
 
         final localTombstone = localTombstoneMap[quoteId];
         if (localTombstone != null) {
-          final localDeletedAt = localTombstone['deleted_at']?.toString() ?? '';
+          final localDeletedAt = localTombstone['deleted_at']?.toString();
           if (_compareIsoTime(localDeletedAt, normalizedIncoming) >= 0) {
             continue;
           }

@@ -26,3 +26,6 @@
 ## 2026-05-08 - [SQLite GROUP_CONCAT Subquery Bottleneck]
 **Learning:** While using a scalar subquery (`(SELECT GROUP_CONCAT(...) ...`) prevents full-table aggregation before pagination compared to `LEFT JOIN`, executing this subquery per row still incurs an O(N) performance overhead and can cause SQLite query planner inefficiencies.
 **Action:** Remove `GROUP_CONCAT` scalar subqueries. Instead, fetch the primary rows (e.g., quotes), extract their IDs, and perform a single batched `IN (...)` lookup on the related table (e.g., `quote_tags`). Map the relationships in-memory via Dart. This is significantly faster.
+## 2026-05-24 - [N+1 query issue on local tombstones check in DB merge process]
+**Learning:** In `DatabaseBackupService.importDataWithLWWMerge` method, during the quote sync and tombstone sync process, there was an N+1 query issue for querying local tombstones `await txn.query('quote_tombstones', where: 'quote_id = ?')`, which resulted in poor performance. Also inserting `await txn.insert('quote_tombstones', ...)` inside the loop caused huge overhead.
+**Action:** Use pre-fetch method by running `await txn.query('quote_tombstones')` to get all tombstones before the loop and use `txn.batch()` to insert tombstones.
