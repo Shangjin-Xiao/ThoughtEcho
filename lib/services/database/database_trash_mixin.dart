@@ -390,9 +390,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       // 然后持久化墓碑
       await _saveWebTombstones();
 
-      for (final id in targetDeletedIds) {
-        QuoteContent.removeCacheForQuote(id);
-      }
+      QuoteContent.removeCachesForQuotes(targetDeletedIds);
       clearAllCacheForParts();
       refreshQuotesStreamForParts();
       notifyListeners();
@@ -485,9 +483,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
         return;
       }
 
-      for (final id in deletedIdsInTxn) {
-        QuoteContent.removeCacheForQuote(id);
-      }
+      QuoteContent.removeCachesForQuotes(deletedIdsInTxn);
 
       // Convert relative media paths to absolute paths before cleanup
       final appDir = await getApplicationDocumentsDirectory();
