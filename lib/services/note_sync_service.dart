@@ -84,9 +84,9 @@ class NoteSyncService extends ChangeNotifier {
     required DatabaseService databaseService,
     required SettingsService settingsService,
     required AIAnalysisDatabaseService aiAnalysisDbService,
-  })  : _backupService = backupService,
-        _databaseService = databaseService,
-        _settingsService = settingsService {
+  }) : _backupService = backupService,
+       _databaseService = databaseService,
+       _settingsService = settingsService {
     AppLogger.d('NoteSyncService 构造函数完成', source: 'NoteSyncService');
   }
   bool get skipSyncConfirmation => _settingsService.syncSkipConfirm;
@@ -143,8 +143,14 @@ class NoteSyncService extends ChangeNotifier {
       // 启动LocalSend服务器
       // ensure fingerprint ready before server start
       await DeviceIdentityManager.I.getFingerprint();
+
+      // 安全性：对于点对点同步，我们必须绑定到所有接口，
+      // 以便在同一本地网络上的其他设备能够发现并访问。
+      // 访问通过 LocalSendServer 中的 _isSafeAddress 过滤进行保护，
+      // 并且任何数据传输都需要强制的手动审批机制。
       await _localSendServer!.start(
         port: defaultPort, // 明确指定端口
+        bindAddress: InternetAddress.anyIPv4,
         onFileReceived: (filePath) async {
           // 文件接收完毕后开始处理合并
           await processSyncPackage(filePath);
@@ -552,11 +558,13 @@ class NoteSyncService extends ChangeNotifier {
   }
 
   Future<void> _preflightCheck(Device target) async {
-    final dio = Dio(BaseOptions(
-      connectTimeout: const Duration(seconds: 3),
-      receiveTimeout: const Duration(seconds: 3),
-      validateStatus: (_) => true,
-    ));
+    final dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 3),
+        receiveTimeout: const Duration(seconds: 3),
+        validateStatus: (_) => true,
+      ),
+    );
     try {
       final infoUrlV2 =
           'http://${target.ip}:${target.port}/api/localsend/v2/info';
@@ -578,15 +586,9 @@ class NoteSyncService extends ChangeNotifier {
         }
       }
       if (statusCode >= 200 && statusCode < 300) {
-        AppLogger.d(
-          'Preflight OK: $statusCode',
-          source: 'NoteSyncService',
-        );
+        AppLogger.d('Preflight OK: $statusCode', source: 'NoteSyncService');
       } else {
-        AppLogger.w(
-          'Preflight warn: $statusCode',
-          source: 'NoteSyncService',
-        );
+        AppLogger.w('Preflight warn: $statusCode', source: 'NoteSyncService');
       }
     } finally {
       dio.close();
@@ -668,7 +670,8 @@ class NoteSyncService extends ChangeNotifier {
     // 通知策略：
     // 1. 状态或消息变化立即通知
     // 2. 进度变化累计 >=0.5% 或 距上次>=_minUiNotifyIntervalMs 才通知（更实时）
-    final shouldNotify = statusChanged ||
+    final shouldNotify =
+        statusChanged ||
         messageChanged ||
         progressDelta >= 0.002 || // 0.2% 进度变化就刷新
         timeDeltaMs >= _minUiNotifyIntervalMs ||
@@ -927,8 +930,7 @@ class NoteSyncService extends ChangeNotifier {
     String sessionId,
     int totalBytes,
     String senderAlias,
-  ) =>
-      _handleReceiveSessionCreated(sessionId, totalBytes, senderAlias);
+  ) => _handleReceiveSessionCreated(sessionId, totalBytes, senderAlias);
 
   @visibleForTesting
   void debugHandleReceiveProgress(int received, int total) =>
