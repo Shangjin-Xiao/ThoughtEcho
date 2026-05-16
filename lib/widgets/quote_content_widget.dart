@@ -48,8 +48,10 @@ class QuoteContent extends StatelessWidget {
   static const Key collapsedWrapperKey = ValueKey(
     'quote_content.collapsed_wrapper',
   );
+  static int _cacheGeneration = 0;
 
   static void resetCaches() {
+    _cacheGeneration++;
     _QuoteDocumentCache.clear();
     _QuoteHeightEstimateCache.clear();
     _QuoteContentControllerCache.clear();
@@ -70,7 +72,9 @@ class QuoteContent extends StatelessWidget {
     if (richQuotes.isEmpty) return;
 
     const batchSize = 1;
+    final generation = _cacheGeneration;
     void processBatch(int startIndex) {
+      if (generation != _cacheGeneration) return;
       if (startIndex >= richQuotes.length) return;
       if (isListScrolling.value) {
         Timer(
@@ -91,6 +95,74 @@ class QuoteContent extends StatelessWidget {
       }
       if (end < richQuotes.length) {
         Timer.run(() => processBatch(end));
+      }
+    }
+
+    Timer(delay, () => processBatch(0));
+  }
+
+  /// 预热折叠态富文本控制器，避免快速滚动首次遇到富文本时同步创建
+  /// Document/QuillController 造成 build 峰值。
+  ///
+  /// 每批只处理 1 条，并在列表滚动时自动延期，保证不与手势滚动抢主线程。
+  static void prewarmCollapsedContentCache(
+    List<Quote> quotes, {
+    required bool prioritizeBoldContent,
+    int maxItems = 48,
+    Duration delay = const Duration(milliseconds: 500),
+  }) {
+    final richQuotes = quotes
+        .where(
+          (q) => q.deltaContent != null && q.editSource == 'fullscreen',
+        )
+        .take(maxItems)
+        .toList();
+    if (richQuotes.isEmpty) return;
+
+    const batchDelay = Duration(milliseconds: 80);
+    final generation = _cacheGeneration;
+
+    void processBatch(int index) {
+      if (generation != _cacheGeneration) return;
+      if (index >= richQuotes.length) return;
+      if (isListScrolling.value) {
+        Timer(
+          const Duration(milliseconds: 240),
+          () => processBatch(index),
+        );
+        return;
+      }
+
+      final quote = richQuotes[index];
+      final deltaContent = quote.deltaContent!;
+      final needsExpansion = exceedsCollapsedHeight(quote);
+      final usePrioritizedDoc = prioritizeBoldContent;
+      final cacheQuoteId =
+          quote.id ?? 'local_${quote.date}_${quote.content.hashCode}';
+      final contentVariant = _QuoteContentControllerCache.resolveVariant(
+        showFullContent: false,
+        usePrioritizedDoc: usePrioritizedDoc,
+        needsExpansion: needsExpansion,
+      );
+      final contentSignature =
+          '${deltaContent.hashCode}_${deltaContent.length}_$contentVariant';
+
+      _QuoteContentControllerCache.getOrCreate(
+        quoteId: cacheQuoteId,
+        contentSignature: contentSignature,
+        variant: contentVariant,
+        documentBuilder: () => _QuoteDocumentCache.getOrCreate(
+          deltaContent: deltaContent,
+          prioritizeBold: usePrioritizedDoc,
+          builder: () => QuoteContent(quote: quote)._buildRichTextDocument(
+            deltaContent,
+            usePrioritizedDoc,
+          ),
+        ),
+      );
+
+      if (index + 1 < richQuotes.length) {
+        Timer(batchDelay, () => processBatch(index + 1));
       }
     }
 

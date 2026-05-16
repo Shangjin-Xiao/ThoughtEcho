@@ -181,6 +181,45 @@ void main() {
     );
   });
 
+  testWidgets('prewarms collapsed rich text controller before first build', (
+    tester,
+  ) async {
+    final quote = _buildRichQuote(id: 'prewarmA', content: 'Prewarm document');
+
+    QuoteContent.prewarmCollapsedContentCache(
+      [quote],
+      prioritizeBoldContent: false,
+      delay: Duration.zero,
+    );
+    await tester.pump(const Duration(milliseconds: 1));
+
+    var controllerStats = _controllerStats();
+    expect(
+      controllerStats['createCount'],
+      1,
+      reason: 'controller stats: $controllerStats',
+    );
+
+    await _pumpQuoteContent(
+      tester,
+      settings: settings,
+      quote: quote,
+      showFullContent: false,
+    );
+
+    controllerStats = _controllerStats();
+    expect(
+      controllerStats['createCount'],
+      1,
+      reason: 'controller stats: $controllerStats',
+    );
+    expect(
+      controllerStats['hitCount'],
+      greaterThan(0),
+      reason: 'controller stats: $controllerStats',
+    );
+  });
+
   testWidgets('creates distinct controller variants when view changes', (
     tester,
   ) async {

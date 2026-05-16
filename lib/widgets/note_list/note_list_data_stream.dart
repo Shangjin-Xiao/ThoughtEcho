@@ -156,8 +156,16 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             });
             // 冷启动保护期：设置较长的保护期，避免首次进入时的滚动冲突
             _lastUserScrollTime = DateTime.now();
-            // 只预热首屏附近富文本，避免首滑前后集中解析所有 Delta JSON。
-            QuoteContent.prewarmDocumentCache(list);
+            // 空闲时小批量预热折叠态富文本控制器，避免滚动首次遇到
+            // 富文本时同步创建 Quill Document/Controller 造成 build 峰值。
+            final settings = Provider.of<SettingsService>(
+              context,
+              listen: false,
+            );
+            QuoteContent.prewarmCollapsedContentCache(
+              list,
+              prioritizeBoldContent: settings.prioritizeBoldContentInCollapse,
+            );
             logDebug('首次数据加载完成', source: 'NoteListView');
           }
 
