@@ -3489,7 +3489,7 @@
   "first100CharsLabel": "最初の100文字：",
   "trash": "ゴミ箱",
   "trashEmpty": "ゴミ箱は空です",
-  "trashEmptyHint": "誤って削除した内容はここに一時保存され、画像・音声・動画もまとめて復元できます。",
+  "trashEmptyHint": "削除されたノートはここに表示され、保存期間の後に完全に削除されます。",
   "trashRetentionHint": "最近削除したノートと添付ファイルはここに一時保存され、保持期間を過ぎると自動で削除されます。",
   "moveNoteToTrashTitle": "ゴミ箱に移動",
   "moveNoteToTrashConfirmation": "このノートをゴミ箱に移動しますか？{days}日以内なら復元できます。",
