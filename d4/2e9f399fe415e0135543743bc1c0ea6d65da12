@@ -1,0 +1,49 @@
+lib/widgets/quote_content_widget.dart
+  s_fa6d5ecc38ec99::t_77b08638a3c77b 207-277
+test/unit/quote_content_cache_test.dart
+  s_96e3670e04925f::t_95ce5026442d0b 223-246
+lib/widgets/note_list_view.dart
+  s_aab3468628851c::t_cf489b5a7f7bd4 161-164
+lib/widgets/note_list/note_list_scroll.dart
+  s_0b91b9dbac7332::t_21606b37130130 6,9,11-51,92,113-117,233-244,246-248,250-251,255-257,260-261
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "d42e9f399fe415e0135543743bc1c0ea6d65da12",
+  "prompts": {},
+  "sessions": {
+    "s_0b91b9dbac7332": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033HhE6ZBzUhSnhVixDBm9",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_96e3670e04925f": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033HhCikvPjFHELOREaMho",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_aab3468628851c": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033HhDzGsybhkdZ3y6zBzs",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_fa6d5ecc38ec99": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033HhDEUYnTXh8bOzoSiYJ",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
