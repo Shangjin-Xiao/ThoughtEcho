@@ -19,3 +19,7 @@
 ## 2024-05-31 - [完善 NetworkService 模块的结构化日志]
 **异常:** NetworkService 的 GET 和 POST 方法在遇到 DioException 时，只返回了携带简短 error 信息的 HttpResponse，没有使用统一的 AppLogger 进行上报；AI 流式请求和重试拦截器中的错误捕获存在空捕获或缺失堆栈信息的情况，会导致线上排查困难且掩盖了重试中途的隐蔽错误。
 **拦截:** 修改所有拦截点，强制使用 `catch (e, stack)` 进行捕获，并使用 `AppLogger.e('...', error: e, stackTrace: stack, source: 'NetworkService')` 上报。所有日志中均仅记录 url、状态码和异常对象，绝不包含用户授权凭证、请求体或响应体内容。
+
+## 2025-05-18 - 🗃️ 黑匣: [完善 mDNSDiscoveryService 模块的结构化日志]
+**异常:** [mDNSDiscoveryService 模块在启动服务和扫描时如果报错，缺少详细的堆栈信息和统一的 logError 格式。特别是 `_scanForService` 使用了 `debugPrint` 掩盖了潜在隐患。]
+**拦截:** [修改了该文件，在 catch 中统一添加 `stack` 捕获，并使用带有 error 和 stackTrace 参数的 `logError`，便于定位底层网络异常情况。]

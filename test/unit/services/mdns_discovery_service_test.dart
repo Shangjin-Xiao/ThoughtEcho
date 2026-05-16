@@ -2,8 +2,15 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/mdns_discovery_service.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() {
+    AppLogger.initialize();
+  });
+
   group('MDNSServiceRegistration', () {
     late MDNSServiceRegistration registration;
 
