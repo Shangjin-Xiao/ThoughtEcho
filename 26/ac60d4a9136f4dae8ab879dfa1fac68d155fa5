@@ -1,0 +1,28 @@
+lib/widgets/add_note_dialog.dart
+  s_21fe651cea7a99::t_2e3315ce13393d 111,549,645-647,834
+  s_62fe9486ae89e4::t_c93d9c3ce48661 126-132,215,597,610-644,648-656,695-703,1451,1455,1986-1988,1990-2040,2043-2124,2127-2193,2195-2202,2204-2217,2219-2231,2234-2257,2260-2380,2382-2385,2390-2391,2395,2398-2400,2404-2414,2420-2434,2436-2445,2447-2451,2453-2455,2457,2460,2466-2468,2470-2485,2487,2489-2497,2499-2510,2512-2515,2517,2519-2552,2557-2589,2591-2592,2594-2599,2602-2624,2626,2629
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "26ac60d4a9136f4dae8ab879dfa1fac68d155fa5",
+  "prompts": {},
+  "sessions": {
+    "s_21fe651cea7a99": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033HgWQva2n8SpOoPSvRxP",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_62fe9486ae89e4": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033HgU2Eh1OPZEhwQlsNkp",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
