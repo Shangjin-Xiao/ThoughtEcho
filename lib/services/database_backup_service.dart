@@ -866,6 +866,12 @@ class DatabaseBackupService {
       for (final row in existingQuoteRows) (row['id'] as String): row,
     };
 
+    // ⚡ Bolt: 预加载本地墓碑数据，避免循环中 N 次查询
+    final existingTombstoneRows = await txn.query('quote_tombstones');
+    final Map<String, Map<String, dynamic>> localTombstoneMap = {
+      for (final row in existingTombstoneRows) (row['quote_id'] as String): row,
+    };
+
     final batch = txn.batch();
 
     for (final q in quotes) {
@@ -944,25 +950,21 @@ class DatabaseBackupService {
         quoteData['is_deleted'] = _parseDeletedFlag(quoteData['is_deleted']);
         quoteData['deleted_at'] = quoteData['deleted_at']?.toString();
 
-        final localTombstone = await txn.query(
-          'quote_tombstones',
-          where: 'quote_id = ?',
-          whereArgs: [quoteId],
-          limit: 1,
-        );
-        if (localTombstone.isNotEmpty) {
-          final tombstoneAt = localTombstone.first['deleted_at']?.toString();
+        final localTombstone = localTombstoneMap[quoteId];
+        if (localTombstone != null) {
+          final tombstoneAt = localTombstone['deleted_at']?.toString();
           final quoteLastModified = quoteData['last_modified']?.toString();
 
           // Defensive check: tombstone must have a valid timestamp to block import
           // If remote quote lacks last_modified, keep the tombstone decision.
           if (tombstoneAt == null || tombstoneAt.isEmpty) {
             // Invalid tombstone without timestamp - remove it and allow import
-            await txn.delete(
+            batch.delete(
               'quote_tombstones',
               where: 'quote_id = ?',
               whereArgs: [quoteId],
             );
+            localTombstoneMap.remove(quoteId);
           } else if (quoteLastModified == null || quoteLastModified.isEmpty) {
             // Missing remote timestamp must not revive a permanently deleted quote.
             reportBuilder.addSkippedQuote();
@@ -973,11 +975,12 @@ class DatabaseBackupService {
             continue;
           } else {
             // Quote is newer - delete the tombstone and allow import
-            await txn.delete(
+            batch.delete(
               'quote_tombstones',
               where: 'quote_id = ?',
               whereArgs: [quoteId],
             );
+            localTombstoneMap.remove(quoteId);
           }
         }
 
@@ -1049,6 +1052,14 @@ class DatabaseBackupService {
     MergeReportBuilder reportBuilder,
     Set<String> mediaCleanupCandidates,
   ) async {
+    // ⚡ Bolt: 预加载本地墓碑数据，避免循环中 N 次查询
+    final existingTombstoneRows = await txn.query('quote_tombstones');
+    final Map<String, Map<String, dynamic>> localTombstoneMap = {
+      for (final row in existingTombstoneRows) (row['quote_id'] as String): row,
+    };
+
+    final batch = txn.batch();
+
     for (final item in tombstones) {
       try {
         if (item is! Map<String, dynamic>) {
@@ -1069,15 +1080,9 @@ class DatabaseBackupService {
           incomingDeletedAt,
         );
 
-        final localTombstones = await txn.query(
-          'quote_tombstones',
-          where: 'quote_id = ?',
-          whereArgs: [quoteId],
-          limit: 1,
-        );
-        if (localTombstones.isNotEmpty) {
-          final localDeletedAt =
-              localTombstones.first['deleted_at']?.toString();
+        final localTombstone = localTombstoneMap[quoteId];
+        if (localTombstone != null) {
+          final localDeletedAt = localTombstone['deleted_at']?.toString() ?? '';
           if (_compareIsoTime(localDeletedAt, normalizedIncoming) >= 0) {
             continue;
           }
@@ -1120,18 +1125,18 @@ class DatabaseBackupService {
 
           final quoteLastModified = quoteRow['last_modified']?.toString();
           if (quoteLastModified == null || quoteLastModified.isEmpty) {
-            await txn.delete('quotes', where: 'id = ?', whereArgs: [quoteId]);
+            batch.delete('quotes', where: 'id = ?', whereArgs: [quoteId]);
             reportBuilder.addDeletedByTombstone();
           } else if (_compareIsoTime(normalizedIncoming, quoteLastModified) >=
               0) {
-            await txn.delete('quotes', where: 'id = ?', whereArgs: [quoteId]);
+            batch.delete('quotes', where: 'id = ?', whereArgs: [quoteId]);
             reportBuilder.addDeletedByTombstone();
           } else {
             continue;
           }
         }
 
-        await txn.insert(
+        batch.insert(
             'quote_tombstones',
             {
               'quote_id': quoteId,
@@ -1139,10 +1144,17 @@ class DatabaseBackupService {
               'device_id': item['device_id']?.toString(),
             },
             conflictAlgorithm: ConflictAlgorithm.replace);
+
+        localTombstoneMap[quoteId] = {
+          'quote_id': quoteId,
+          'deleted_at': normalizedIncoming,
+        };
       } catch (e) {
         reportBuilder.addError('处理 tombstone 失败: $e');
       }
     }
+
+    await batch.commit(noResult: true);
   }
 
   int _parseDeletedFlag(dynamic value) {
