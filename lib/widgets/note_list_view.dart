@@ -158,6 +158,10 @@ class NoteListViewState extends State<NoteListView> {
   final List<int> _scrollSessionUpdateMicros = <int>[];
   final List<FrameTiming> _scrollSessionFrameTimings = <FrameTiming>[];
   Timer? _scrollSessionPerfStopTimer;
+  Map<String, dynamic>? _scrollSessionStartQuoteContentStats;
+  Map<String, int>? _scrollSessionStartQuoteItemStats;
+  int _scrollSessionStartImageCount = 0;
+  int _scrollSessionStartImageBytes = 0;
 
   bool _hasExpandableQuoteCached = false;
   bool _hasExpandableQuoteComputed = false;

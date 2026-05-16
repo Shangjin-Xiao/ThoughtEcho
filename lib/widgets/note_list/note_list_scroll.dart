@@ -3,17 +3,52 @@ part of '../note_list_view.dart';
 /// Scroll-related methods for NoteListViewState.
 extension _NoteListScrollExtension on NoteListViewState {
   String _quoteContentCacheStatsText() {
-    final stats = QuoteContent.debugCacheStats();
-    return 'document=${stats['document']}, height=${stats['heightEstimate']}, '
-        'controller=${stats['controller']}';
+    return QuoteContent.debugCompactCacheStats();
   }
 
-  String _flutterImageCacheStatsText() {
+  String _flutterImageCacheStatsText({int? baselineCount, int? baselineBytes}) {
     final imageCache = PaintingBinding.instance.imageCache;
-    return 'live=${imageCache.liveImageCount}, '
-        'pending=${imageCache.pendingImageCount}, '
-        'current=${imageCache.currentSize}/${imageCache.maximumSize}, '
-        'bytes=${imageCache.currentSizeBytes}/${imageCache.maximumSizeBytes}';
+    final deltaCount =
+        baselineCount == null ? null : imageCache.currentSize - baselineCount;
+    final deltaBytes = baselineBytes == null
+        ? null
+        : imageCache.currentSizeBytes - baselineBytes;
+    return 'img=${imageCache.currentSize}/${imageCache.maximumSize}, '
+        'live=${imageCache.liveImageCount}, pending=${imageCache.pendingImageCount}, '
+        'bytes=${_formatBytes(imageCache.currentSizeBytes)}/${_formatBytes(imageCache.maximumSizeBytes)}'
+        '${deltaCount == null ? '' : ',Δimg${_formatSignedInt(deltaCount)}'}'
+        '${deltaBytes == null ? '' : ',Δbytes${_formatSignedBytes(deltaBytes)}'}';
+  }
+
+  String _quoteItemCacheStatsText({Map<String, int>? baseline}) {
+    final stats = QuoteItemWidget.getCacheStats();
+    final cacheSize = stats['cacheSize'] ?? 0;
+    final cacheHits = stats['cacheHits'] ?? 0;
+    final baselineHits = baseline?['cacheHits'];
+    return 'item=$cacheSize,hit=$cacheHits'
+        '${baselineHits == null ? '' : ',Δhit+${cacheHits - baselineHits}'}';
+  }
+
+  String _formatSignedInt(int value) {
+    if (value >= 0) {
+      return '+$value';
+    }
+    return value.toString();
+  }
+
+  String _formatSignedBytes(int bytes) {
+    final sign = bytes >= 0 ? '+' : '-';
+    return '$sign${_formatBytes(bytes.abs())}';
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes >= 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
+    }
+    if (bytes >= 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)}KB';
+    }
+    return '${bytes}B';
   }
 
   String _quoteMixStatsText() {
@@ -54,7 +89,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     logDebug(
       '$reason: quotes={${_quoteMixStatsText()}}, '
       'quoteContent={${_quoteContentCacheStatsText()}}, '
-      'quoteItem=${QuoteItemWidget.getCacheStats()}, '
+      'quoteItem={${_quoteItemCacheStatsText()}}, '
       'imageCache={${_flutterImageCacheStatsText()}}',
       source: 'NoteListView.Perf',
     );
@@ -75,13 +110,12 @@ extension _NoteListScrollExtension on NoteListViewState {
     _scrollSessionMaxOffset = metrics.pixels;
     _scrollSessionUpdateMicros.clear();
     _scrollSessionFrameTimings.clear();
+    _scrollSessionStartQuoteContentStats = QuoteContent.debugCacheStats();
+    _scrollSessionStartQuoteItemStats = QuoteItemWidget.getCacheStats();
+    final imageCache = PaintingBinding.instance.imageCache;
+    _scrollSessionStartImageCount = imageCache.currentSize;
+    _scrollSessionStartImageBytes = imageCache.currentSizeBytes;
     _ensurePerfTimingsCallback();
-
-    logDebug(
-      '滚动会话开始: offset=${metrics.pixels.round()}, '
-      'max=${metrics.maxScrollExtent.round()}, viewport=${metrics.viewportDimension.round()}',
-      source: 'NoteListView.Perf',
-    );
   }
 
   void _recordScrollSessionUpdate(ScrollMetrics metrics) {
@@ -196,20 +230,35 @@ extension _NoteListScrollExtension on NoteListViewState {
     final avgRasterMs =
         frameSamples == 0 ? 0.0 : (totalRasterMicros / frameSamples) / 1000.0;
 
+    final cacheBaseline = _scrollSessionStartQuoteContentStats;
+    final quoteContentStats = QuoteContent.debugCompactCacheStats(
+      baseline: cacheBaseline,
+    );
+    final quoteItemStats = _quoteItemCacheStatsText(
+      baseline: _scrollSessionStartQuoteItemStats,
+    );
+    final imageStats = _flutterImageCacheStatsText(
+      baselineCount: _scrollSessionStartImageCount,
+      baselineBytes: _scrollSessionStartImageBytes,
+    );
+
     logDebug(
-      '滚动会话结果: direction=$direction, '
-      'start=${_scrollSessionStartOffset.round()}, end=${_scrollSessionLastOffset.round()}, '
-      'distance=${distance.round()}, range=${_scrollSessionMinOffset.round()}-${_scrollSessionMaxOffset.round()}, '
+      '滚动性能摘要(复制此行): dir=$direction, '
+      'offset=${_scrollSessionStartOffset.round()}→${_scrollSessionLastOffset.round()}, '
+      'dist=${distance.round()}, range=${_scrollSessionMinOffset.round()}-${_scrollSessionMaxOffset.round()}, '
       'elapsed=${elapsedMs.toStringAsFixed(0)}ms, updates=$intervalSamples, '
-      'jankIntervals=$jankyIntervals, avgInterval=${avgIntervalMs.toStringAsFixed(1)}ms, '
-      'worstInterval=${(worstIntervalMicros / 1000.0).toStringAsFixed(1)}ms, '
+      'eventJank=$jankyIntervals, eventAvg=${avgIntervalMs.toStringAsFixed(1)}ms, '
+      'eventWorst=${(worstIntervalMicros / 1000.0).toStringAsFixed(1)}ms, '
       'frames=$frameSamples, frameJank=$jankyFrames, '
       'avgFrame=${avgFrameMs.toStringAsFixed(1)}ms, worstFrame=${worstFrameMs.toStringAsFixed(1)}ms, '
       'avgBuild=${avgBuildMs.toStringAsFixed(1)}ms, worstBuild=${worstBuildMs.toStringAsFixed(1)}ms, '
-      'avgRaster=${avgRasterMs.toStringAsFixed(1)}ms, worstRaster=${worstRasterMs.toStringAsFixed(1)}ms',
+      'avgRaster=${avgRasterMs.toStringAsFixed(1)}ms, worstRaster=${worstRasterMs.toStringAsFixed(1)}ms, '
+      'quotes={${_quoteMixStatsText()}}, quoteContent={$quoteContentStats}, '
+      'quoteItem={$quoteItemStats}, imageCache={$imageStats}',
       source: 'NoteListView.Perf',
     );
-    _logNoteListPerfSnapshot('滚动会话缓存状态');
+    _scrollSessionStartQuoteContentStats = null;
+    _scrollSessionStartQuoteItemStats = null;
     _releasePerfTimingsCallbackIfIdle();
   }
 

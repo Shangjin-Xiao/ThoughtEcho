@@ -204,6 +204,77 @@ class QuoteContent extends StatelessWidget {
         'controller': _QuoteContentControllerCache.stats,
       };
 
+  /// Returns a compact one-line summary suitable for copy/paste performance logs.
+  static String debugCompactCacheStats({Map<String, dynamic>? baseline}) {
+    final stats = debugCacheStats();
+    final document = Map<String, dynamic>.from(
+      stats['document'] as Map<String, dynamic>,
+    );
+    final height = Map<String, dynamic>.from(
+      stats['heightEstimate'] as Map<String, dynamic>,
+    );
+    final controller = Map<String, dynamic>.from(
+      stats['controller'] as Map<String, dynamic>,
+    );
+
+    final buffer = StringBuffer()
+      ..write('doc=${document['cacheSize']}')
+      ..write('/${document['maxSize']}')
+      ..write(',height=${height['cacheSize']}')
+      ..write('/${height['maxSize']}')
+      ..write(',ctrl=${controller['cacheSize']}')
+      ..write('/${controller['maxSize']}')
+      ..write(',ctrlCreate=${controller['createCount']}')
+      ..write(',ctrlDispose=${controller['disposeCount']}');
+
+    if (baseline != null) {
+      final baselineDocument = Map<String, dynamic>.from(
+        baseline['document'] as Map<String, dynamic>? ?? const {},
+      );
+      final baselineHeight = Map<String, dynamic>.from(
+        baseline['heightEstimate'] as Map<String, dynamic>? ?? const {},
+      );
+      final baselineController = Map<String, dynamic>.from(
+        baseline['controller'] as Map<String, dynamic>? ?? const {},
+      );
+
+      buffer
+        ..write(',ΔdocMiss+')
+        ..write(
+          _debugIntDelta(document, baselineDocument, 'missCount'),
+        )
+        ..write(',heightMiss+')
+        ..write(
+          _debugIntDelta(height, baselineHeight, 'missCount'),
+        )
+        ..write(',ctrlMiss+')
+        ..write(
+          _debugIntDelta(controller, baselineController, 'missCount'),
+        )
+        ..write(',ctrlCreate+')
+        ..write(
+          _debugIntDelta(controller, baselineController, 'createCount'),
+        )
+        ..write(',ctrlDispose+')
+        ..write(
+          _debugIntDelta(controller, baselineController, 'disposeCount'),
+        );
+    }
+
+    return buffer.toString();
+  }
+
+  static int _debugIntDelta(
+    Map<String, dynamic> current,
+    Map<String, dynamic> baseline,
+    String key,
+  ) {
+    final currentValue = current[key];
+    final baselineValue = baseline[key];
+    return (currentValue is int ? currentValue : 0) -
+        (baselineValue is int ? baselineValue : 0);
+  }
+
   /// 检查是否为媒体软连接或其他应该过滤的内容
   bool _shouldFilterBoldContent(String content) {
     // 去除空白字符进行检查

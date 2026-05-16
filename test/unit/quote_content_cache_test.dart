@@ -220,6 +220,30 @@ void main() {
     );
   });
 
+  testWidgets('debug compact cache delta highlights newly created controllers',
+      (
+    tester,
+  ) async {
+    final baseline = QuoteContent.debugCacheStats();
+    final quote = _buildRichQuote(id: 'compactA', content: 'Compact stats');
+
+    await _pumpQuoteContent(
+      tester,
+      settings: settings,
+      quote: quote,
+      showFullContent: false,
+    );
+
+    final compactStats = QuoteContent.debugCompactCacheStats(
+      baseline: baseline,
+    );
+
+    expect(compactStats, contains('doc=1'));
+    expect(compactStats, contains('ctrl=1'));
+    expect(compactStats, contains('ctrlCreate+1'));
+    expect(compactStats, contains('docMiss+1'));
+  });
+
   testWidgets('creates distinct controller variants when view changes', (
     tester,
   ) async {
