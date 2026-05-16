@@ -5,6 +5,7 @@ import 'dart:io';
 import 'constants.dart';
 import 'receive_controller.dart';
 import 'package:flutter/foundation.dart';
+import 'package:meta/meta.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
 /// Simple HTTP server for LocalSend protocol
@@ -16,22 +17,25 @@ class LocalSendServer {
   int _port = defaultPort;
   final Set<String> _preApprovedFingerprints = {}; // 预先批准一次性
   Function(String sessionId, int totalBytes, String senderAlias)?
-      _onReceiveSessionCreated;
+  _onReceiveSessionCreated;
   Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
-      _onApprovalNeeded;
+  _onApprovalNeeded;
 
   bool get isRunning => _isRunning;
   int get port => _port;
 
   /// Start the HTTP server
+  /// [bindAddress] defaults to loopbackIPv4 for security.
+  /// Set to [InternetAddress.anyIPv4] only if network access is required and handled.
   Future<void> start({
     int? port,
+    InternetAddress? bindAddress,
     Function(String filePath)? onFileReceived,
     Function(int received, int total)? onReceiveProgress,
     Function(String sessionId, int totalBytes, String senderAlias)?
-        onReceiveSessionCreated,
+    onReceiveSessionCreated,
     Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
-        onApprovalNeeded,
+    onApprovalNeeded,
   }) async {
     if (_isRunning) return;
 
@@ -62,18 +66,25 @@ class LocalSendServer {
     // ensure fingerprint ready before advertising info endpoint
     await _receiveController.initializeFingerprint();
 
+    final address = bindAddress ?? InternetAddress.loopbackIPv4;
     try {
-      logInfo('server_start_attempt port=$_port', source: 'LocalSend');
+      logInfo(
+        'server_start_attempt address=${address.address} port=$_port',
+        source: 'LocalSend',
+      );
 
       // Try to bind to the specified port
-      _server = await HttpServer.bind(InternetAddress.anyIPv4, _port);
+      _server = await HttpServer.bind(address, _port);
       _server!.autoCompress = true;
 
       // Set up request handling
       _server!.listen(_handleRequest);
 
       _isRunning = true;
-      logInfo('server_started port=$_port', source: 'LocalSend');
+      logInfo(
+        'server_started address=${address.address} port=$_port',
+        source: 'LocalSend',
+      );
     } catch (e) {
       logWarning('server_start_fail port=$_port error=$e', source: 'LocalSend');
 
@@ -88,12 +99,15 @@ class LocalSendServer {
       for (int altPort in alternativePorts) {
         try {
           logDebug('server_try_port port=$altPort', source: 'LocalSend');
-          _server = await HttpServer.bind(InternetAddress.anyIPv4, altPort);
+          _server = await HttpServer.bind(address, altPort);
           _server!.autoCompress = true;
           _server!.listen(_handleRequest);
           _port = altPort == 0 ? _server!.port : altPort;
           _isRunning = true;
-          logInfo('server_started_alt port=$_port', source: 'LocalSend');
+          logInfo(
+            'server_started_alt address=${address.address} port=$_port',
+            source: 'LocalSend',
+          );
           break;
         } catch (e) {
           // Continue trying
@@ -129,10 +143,22 @@ class LocalSendServer {
   /// Handle incoming HTTP requests
   Future<void> _handleRequest(HttpRequest request) async {
     try {
+      final remoteAddress = request.connectionInfo?.remoteAddress;
       logDebug(
-        'req method=${request.method} path=${request.uri.path}',
+        'req method=${request.method} path=${request.uri.path} remote=${remoteAddress?.address}',
         source: 'LocalSend',
       );
+
+      // Security: Reject requests from non-safe addresses (not loopback, link-local, or private)
+      if (remoteAddress != null && !_isSafeAddress(remoteAddress)) {
+        logSecurity(
+          'blocked_request remote=${remoteAddress.address} path=${request.uri.path}',
+          source: 'LocalSend',
+        );
+        request.response.statusCode = HttpStatus.forbidden;
+        await request.response.close();
+        return;
+      }
 
       request.response.headers.add('Connection', 'keep-alive');
 
@@ -368,4 +394,29 @@ class LocalSendServer {
 
   /// Get receive controller
   ReceiveController get receiveController => _receiveController;
+
+  /// Check if the address is safe (loopback, link-local, or private network)
+  bool _isSafeAddress(InternetAddress address) =>
+      isSafeAddressForTesting(address);
+
+  @visibleForTesting
+  bool isSafeAddressForTesting(InternetAddress address) {
+    if (address.isLoopback || address.isLinkLocal) return true;
+
+    if (address.type == InternetAddressType.IPv4) {
+      final bytes = address.rawAddress;
+      // 10.0.0.0/8
+      if (bytes[0] == 10) return true;
+      // 172.16.0.0/12
+      if (bytes[0] == 172 && (bytes[1] >= 16 && bytes[1] <= 31)) return true;
+      // 192.168.0.0/16
+      if (bytes[0] == 192 && bytes[1] == 168) return true;
+    } else if (address.type == InternetAddressType.IPv6) {
+      final bytes = address.rawAddress;
+      // fc00::/7 (Unique Local Address)
+      if ((bytes[0] & 0xfe) == 0xfc) return true;
+    }
+
+    return false;
+  }
 }
