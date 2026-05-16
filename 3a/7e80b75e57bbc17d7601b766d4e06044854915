@@ -1,0 +1,27 @@
+lib/l10n/app_ja.arb
+  s_0f2b787b23c834::t_7fcd44412631cc 3492
+lib/l10n/app_fr.arb
+  s_0f2b787b23c834::t_58e0472e07bb45 3478
+lib/l10n/app_ko.arb
+  s_0f2b787b23c834::t_75425b0ba52410 3492
+lib/l10n/app_zh.arb
+  s_0f2b787b23c834::t_ff0fd4eebdf855 3603
+lib/l10n/app_en.arb
+  s_0f2b787b23c834::t_9a08e1506162ba 3603
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "3a7e80b75e57bbc17d7601b766d4e06044854915",
+  "prompts": {},
+  "sessions": {
+    "s_0f2b787b23c834": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "181270f9-afe8-4b02-bae7-c17461c61fdd",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
