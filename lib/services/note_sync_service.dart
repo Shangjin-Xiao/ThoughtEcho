@@ -428,8 +428,9 @@ class NoteSyncService extends ChangeNotifier {
     // 注意：即使本地设置了 skipSyncConfirmation，我们仍然需要发送 intent
     // 以便接收方知道即将到来的同步，并且接收方可以根据自己的设置决定是否需要审批
     try {
+      final protocol = target.https ? 'https' : 'http';
       final uri = Uri.parse(
-        'http://${target.ip}:${target.port}/api/thoughtecho/v1/sync-intent',
+        '$protocol://${target.ip}:${target.port}/api/thoughtecho/v1/sync-intent',
       );
       final fp = await DeviceIdentityManager.I.getFingerprint();
       // 直接使用 discoveryService 的设备型号，它已经正确地从设备信息中获取
@@ -566,10 +567,11 @@ class NoteSyncService extends ChangeNotifier {
       ),
     );
     try {
+      final protocol = target.https ? 'https' : 'http';
       final infoUrlV2 =
-          'http://${target.ip}:${target.port}/api/localsend/v2/info';
+          '$protocol://${target.ip}:${target.port}/api/localsend/v2/info';
       final infoUrlV1 =
-          'http://${target.ip}:${target.port}/api/localsend/v1/info';
+          '$protocol://${target.ip}:${target.port}/api/localsend/v1/info';
       int statusCode = 0;
       try {
         final resp = await dio.get(infoUrlV2);
