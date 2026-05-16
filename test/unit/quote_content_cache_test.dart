@@ -241,4 +241,41 @@ void main() {
       reason: 'document stats: $documentStats',
     );
   });
+
+  testWidgets(
+      'removeCacheForQuotes removes specific quote ids and updates stats',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final settings = _StubSettingsService(prefs);
+
+    final quote1 = _buildRichQuote(id: 'q1', content: 'test1\n');
+    final quote2 = _buildRichQuote(id: 'q2', content: 'test2\n');
+    final quote3 = _buildRichQuote(id: 'q3', content: 'test3\n');
+
+    await _pumpQuoteContent(tester,
+        settings: settings, quote: quote1, showFullContent: false);
+    await _pumpQuoteContent(tester,
+        settings: settings, quote: quote2, showFullContent: false);
+    await _pumpQuoteContent(tester,
+        settings: settings, quote: quote3, showFullContent: false);
+
+    var controllerStats = _controllerStats();
+    expect(controllerStats['createCount'], 3);
+
+    // Batch remove q1 and q3
+    QuoteContent.removeCacheForQuotes({'q1', 'q3'});
+
+    // Rebuild q1, it should result in a new creation (not a hit)
+    await _pumpQuoteContent(tester,
+        settings: settings, quote: quote1, showFullContent: false);
+    controllerStats = _controllerStats();
+    expect(controllerStats['createCount'], 4); // created again
+
+    // Rebuild q2, it should be a cache hit since it was not removed
+    await _pumpQuoteContent(tester,
+        settings: settings, quote: quote2, showFullContent: false);
+    controllerStats = _controllerStats();
+    expect(controllerStats['hitCount'], 1); // hit cache
+  });
 }
