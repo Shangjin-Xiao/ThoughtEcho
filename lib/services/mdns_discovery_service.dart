@@ -50,8 +50,9 @@ class MDNSDiscoveryService extends ChangeNotifier {
       _scanTimer = Timer(timeout, () {
         stopDiscovery();
       });
-    } catch (e) {
-      logError('mdns_discovery_start_fail error=$e', source: 'mDNS');
+    } catch (e, stack) {
+      logError('mdns_discovery_start_fail error=$e',
+          error: e, stackTrace: stack, source: 'mDNS');
       _isScanning = false;
       notifyListeners();
     }
@@ -93,8 +94,9 @@ class MDNSDiscoveryService extends ChangeNotifier {
           }
         }
       }
-    } catch (e) {
-      debugPrint('mDNS: 扫描 $serviceType 失败 - $e');
+    } catch (e, stack) {
+      logError('mDNS: 扫描 $serviceType 失败 - $e',
+          error: e, stackTrace: stack, source: 'mDNS');
     }
   }
 
