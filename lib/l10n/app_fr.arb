@@ -3475,7 +3475,7 @@
   "first100CharsLabel": "100 premiers caractères :",
   "trash": "Corbeille",
   "trashEmpty": "La corbeille est vide",
-  "trashEmptyHint": "Les notes supprimées par erreur restent d'abord ici, y compris les photos, l'audio et la vidéo, afin que vous puissiez tout restaurer ensemble.",
+  "trashEmptyHint": "Les notes supprimées apparaîtront ici et seront définitivement supprimées après la période de conservation.",
   "trashRetentionHint": "Les notes et pièces jointes récemment supprimées restent ici jusqu'à la fin de la période de rétention, puis sont supprimées automatiquement.",
   "moveNoteToTrashTitle": "Déplacer vers la corbeille",
   "moveNoteToTrashConfirmation": "Déplacer cette note dans la corbeille ? Vous pourrez la restaurer pendant {days} jours.",
