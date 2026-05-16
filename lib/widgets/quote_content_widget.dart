@@ -194,6 +194,11 @@ class QuoteContent extends StatelessWidget {
     // Document 缓存基于内容哈希，不需要按 ID 清理
   }
 
+  /// 批量清理特定笔记的缓存（优化批量删除操作的性能）
+  static void removeCachesForQuotes(Iterable<String> quoteIds) {
+    _QuoteContentControllerCache.removeByQuoteIds(quoteIds);
+  }
+
   @visibleForTesting
   static void clearCacheForTesting() => resetCaches();
 
@@ -964,6 +969,21 @@ class _QuoteContentControllerCache {
   static void removeByQuoteId(String quoteId) {
     final keysToRemove =
         _cache.keys.where((key) => key.quoteId == quoteId).toList();
+
+    for (final key in keysToRemove) {
+      final entry = _cache.remove(key);
+      if (entry != null) {
+        entry.controllers.dispose();
+        _disposeCount++;
+      }
+    }
+  }
+
+  /// 批量清理特定笔记的所有缓存
+  static void removeByQuoteIds(Iterable<String> quoteIds) {
+    final idSet = quoteIds is Set<String> ? quoteIds : quoteIds.toSet();
+    final keysToRemove =
+        _cache.keys.where((key) => idSet.contains(key.quoteId)).toList();
 
     for (final key in keysToRemove) {
       final entry = _cache.remove(key);
