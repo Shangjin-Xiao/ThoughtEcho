@@ -24,10 +24,12 @@ class _ControllerCacheKey {
 class CacheDeletionBenchmark extends BenchmarkBase {
   final int totalCacheItems;
   final int idsToDelete;
-  LinkedHashMap<_ControllerCacheKey, int> _cache = LinkedHashMap<_ControllerCacheKey, int>();
+  LinkedHashMap<_ControllerCacheKey, int> _cache =
+      LinkedHashMap<_ControllerCacheKey, int>();
   List<String> _targetDeletedIds = [];
 
-  CacheDeletionBenchmark(this.totalCacheItems, this.idsToDelete, String name) : super(name);
+  CacheDeletionBenchmark(this.totalCacheItems, this.idsToDelete, String name)
+      : super(name);
 
   @override
   void setup() {
@@ -44,13 +46,15 @@ class CacheDeletionBenchmark extends BenchmarkBase {
 
 class LoopCacheDeletionBenchmark extends CacheDeletionBenchmark {
   LoopCacheDeletionBenchmark(int totalCacheItems, int idsToDelete)
-      : super(totalCacheItems, idsToDelete, "LoopCacheDeletion ($totalCacheItems items, $idsToDelete deletions)");
+      : super(totalCacheItems, idsToDelete,
+            "LoopCacheDeletion ($totalCacheItems items, $idsToDelete deletions)");
 
   @override
   void run() {
     // Simulated O(N*M) loop approach from original code
     for (final quoteId in _targetDeletedIds) {
-      final keysToRemove = _cache.keys.where((key) => key.quoteId == quoteId).toList();
+      final keysToRemove =
+          _cache.keys.where((key) => key.quoteId == quoteId).toList();
       for (final key in keysToRemove) {
         _cache.remove(key);
       }
@@ -60,13 +64,15 @@ class LoopCacheDeletionBenchmark extends CacheDeletionBenchmark {
 
 class SetCacheDeletionBenchmark extends CacheDeletionBenchmark {
   SetCacheDeletionBenchmark(int totalCacheItems, int idsToDelete)
-      : super(totalCacheItems, idsToDelete, "SetCacheDeletion ($totalCacheItems items, $idsToDelete deletions)");
+      : super(totalCacheItems, idsToDelete,
+            "SetCacheDeletion ($totalCacheItems items, $idsToDelete deletions)");
 
   @override
   void run() {
     // Proposed optimized approach
     final idSet = _targetDeletedIds.toSet();
-    final keysToRemove = _cache.keys.where((key) => idSet.contains(key.quoteId)).toList();
+    final keysToRemove =
+        _cache.keys.where((key) => idSet.contains(key.quoteId)).toList();
     for (final key in keysToRemove) {
       _cache.remove(key);
     }
