@@ -122,6 +122,12 @@ class QuoteContent extends StatelessWidget {
     // Document 缓存基于内容哈希，不需要按 ID 清理
   }
 
+  /// 修复问题1：批量清理特定笔记的缓存（用于清空回收站）
+  static void removeCacheForQuotes(Set<String> quoteIds) {
+    _QuoteContentControllerCache.removeByQuoteIds(quoteIds);
+    // Document 缓存基于内容哈希，不需要按 ID 清理
+  }
+
   @visibleForTesting
   static void clearCacheForTesting() => resetCaches();
 
@@ -819,8 +825,13 @@ class _QuoteContentControllerCache {
 
   /// 修复问题1：清理特定笔记的所有缓存（用于笔记删除/更新）
   static void removeByQuoteId(String quoteId) {
+    removeByQuoteIds({quoteId});
+  }
+
+  /// 修复问题1：批量清理特定笔记的所有缓存（用于清空回收站）
+  static void removeByQuoteIds(Set<String> quoteIds) {
     final keysToRemove =
-        _cache.keys.where((key) => key.quoteId == quoteId).toList();
+        _cache.keys.where((key) => quoteIds.contains(key.quoteId)).toList();
 
     for (final key in keysToRemove) {
       final entry = _cache.remove(key);
