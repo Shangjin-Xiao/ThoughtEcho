@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
-import 'package:visibility_detector/visibility_detector.dart';
 
 import '../gen_l10n/app_localizations.dart';
 import '../utils/app_logger.dart';
