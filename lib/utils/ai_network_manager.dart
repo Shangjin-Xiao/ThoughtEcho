@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:thoughtecho/utils/dio_performance_interceptor.dart';
 import 'package:flutter/foundation.dart';
 import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
@@ -29,6 +30,7 @@ class AINetworkManager {
 
   /// 配置Dio实例
   static void _configureDio(Dio dio) {
+    dio.interceptors.add(DioPerformanceInterceptor());
     dio.options.connectTimeout = const Duration(seconds: 30);
     dio.options.receiveTimeout = const Duration(seconds: 300);
     dio.options.sendTimeout = const Duration(seconds: 30);
