@@ -57,10 +57,12 @@ jobs:
           cd ../..
           
       - name: 上传未签名的 IPA 文件
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ThoughtEcho-iOS-unsigned-${{ github.run_number }}
           path: build/ipa/ThoughtEcho-unsigned.ipa
+          archive: false
+          if-no-files-found: error
           retention-days: 30
           
       - name: 创建构建信息
@@ -96,8 +98,10 @@ jobs:
           EOF
           
       - name: 上传构建信息
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-info-${{ github.run_number }}
           path: build/ipa/build-info.txt
+          archive: false
+          if-no-files-found: error
           retention-days: 30
