@@ -1,0 +1,35 @@
+lib/utils/jank_detector.dart
+  s_6700869069e6c7::t_3dcb1883dbeea6 1-19,22-32
+  s_6700869069e6c7::t_ae329bb2ffe6a9 20-21
+lib/utils/dio_network_utils.dart
+  s_6700869069e6c7::t_3fcf11149a5430 29
+  s_6700869069e6c7::t_6e36d407fe4aad 4
+lib/main.dart
+  s_6700869069e6c7::t_fd8b9e942088ca 8
+  s_6700869069e6c7::t_6a031d5d6977c1 154-156
+lib/utils/ai_network_manager.dart
+  s_6700869069e6c7::t_3fcf11149a5430 33
+  s_6700869069e6c7::t_6e36d407fe4aad 4
+lib/utils/dio_performance_interceptor.dart
+  s_6700869069e6c7::t_6f7492520c7198 1-22,25-35,38,41-50
+  s_6700869069e6c7::t_ae329bb2ffe6a9 23-24,36-37,39-40
+lib/utils/http_utils.dart
+  s_6700869069e6c7::t_3fcf11149a5430 25
+  s_6700869069e6c7::t_6e36d407fe4aad 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "eb6f4765803528d9d3183810660f62a7f569751d",
+  "prompts": {},
+  "sessions": {
+    "s_6700869069e6c7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1ca61dd6cffeDDicrhiXmUvJ31",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
