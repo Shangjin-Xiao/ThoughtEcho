@@ -1,0 +1,19 @@
+.squad/decisions.md
+  s_1dee011b49f58a::t_9f533fdd4d95e6 130-150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "d35c99bdbbac890c4b57ff061d0ae1076cada008",
+  "prompts": {},
+  "sessions": {
+    "s_1dee011b49f58a": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "abd52752-7494-4960-bd7e-782c73a8bf23",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
