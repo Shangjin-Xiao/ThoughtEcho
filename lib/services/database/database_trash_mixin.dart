@@ -390,7 +390,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       // 然后持久化墓碑
       await _saveWebTombstones();
 
-      QuoteContent.removeCachesForQuotes(targetDeletedIds);
+      QuoteContent.removeCachesForQuotes(targetDeletedIds.toSet());
       clearAllCacheForParts();
       refreshQuotesStreamForParts();
       notifyListeners();
@@ -458,14 +458,11 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
           }
 
           for (final id in batchDeletedIds) {
-            tombstoneBatch.insert(
-                'quote_tombstones',
-                {
-                  'quote_id': id,
-                  'deleted_at': now,
-                  'device_id': null,
-                },
-                conflictAlgorithm: ConflictAlgorithm.replace);
+            tombstoneBatch.insert('quote_tombstones', {
+              'quote_id': id,
+              'deleted_at': now,
+              'device_id': null,
+            }, conflictAlgorithm: ConflictAlgorithm.replace);
           }
 
           await txn.rawDelete(
@@ -483,17 +480,19 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
         return;
       }
 
-      QuoteContent.removeCachesForQuotes(deletedIdsInTxn);
+      QuoteContent.removeCachesForQuotes(deletedIdsInTxn.toSet());
 
       // Convert relative media paths to absolute paths before cleanup
       final appDir = await getApplicationDocumentsDirectory();
       final appPath = normalize(appDir.path);
 
       try {
-        final mediaPaths = mediaCandidates.map((mediaPath) {
-          if (isAbsolute(mediaPath)) return mediaPath;
-          return join(appPath, mediaPath);
-        }).toList(growable: false);
+        final mediaPaths = mediaCandidates
+            .map((mediaPath) {
+              if (isAbsolute(mediaPath)) return mediaPath;
+              return join(appPath, mediaPath);
+            })
+            .toList(growable: false);
         await MediaReferenceService.quickCheckAndDeleteOrphans(
           mediaPaths,
           cachedAppPath: appPath,
