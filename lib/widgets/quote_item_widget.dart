@@ -606,19 +606,22 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                             ),
                                             alignment: Alignment.center,
                                             child: Container(
-                                              padding: const EdgeInsets.symmetric(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
                                                 horizontal: 8,
                                                 vertical: 2,
                                               ),
                                               decoration: BoxDecoration(
-                                                color: innerTheme.colorScheme.surface
+                                                color: innerTheme
+                                                    .colorScheme.surface
                                                     .withValues(alpha: 0.35),
                                                 borderRadius:
                                                     BorderRadius.circular(12),
                                               ),
                                               child: Text(
                                                 l10n.doubleTapToViewFull,
-                                                style: innerTheme.textTheme.bodySmall
+                                                style: innerTheme
+                                                    .textTheme.bodySmall
                                                     ?.copyWith(
                                                   color: innerTheme
                                                       .colorScheme.onSurface
