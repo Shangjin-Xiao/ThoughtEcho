@@ -4,7 +4,6 @@ library;
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:mockito/annotations.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/services/network_service.dart';
 import 'package:thoughtecho/services/weather_cache_manager.dart';
