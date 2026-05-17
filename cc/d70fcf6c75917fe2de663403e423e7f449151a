@@ -1,0 +1,38 @@
+test/widget/add_note_dialog_focus_timing_test.dart
+  s_3c6a8eed8dfbca::t_3062fe1cb6fccf 53-80,83
+  s_5864327104d1fc::t_209b33d02da628 81-82
+lib/widgets/add_note_dialog.dart
+  s_ee59df45fc19d8::t_12a68fff145eb9 696-698,2292,2385,2436
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "ccd70fcf6c75917fe2de663403e423e7f449151a",
+  "prompts": {},
+  "sessions": {
+    "s_3c6a8eed8dfbca": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033I9kPCT021iddGaHAvZs",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_5864327104d1fc": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033I9mtDE6ADbuvjXEVLoY",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_ee59df45fc19d8": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033I9ljqbbnXopbAEz0Yuq",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
