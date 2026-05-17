@@ -4,10 +4,15 @@ import 'package:thoughtecho/services/unified_log_service.dart';
 /// 零开销的 UI 卡顿/掉帧自动检测器
 class JankDetector {
   static DateTime? _lastLogTime;
+  static bool _initialized = false;
   // 防日志风暴机制：同一个卡顿周期内，最少间隔 2 秒才记录一次
   static const _throttleDuration = Duration(seconds: 2);
 
   static void init() {
+    if (_initialized) {
+      return;
+    }
+    _initialized = true;
     SchedulerBinding.instance.addTimingsCallback((List<FrameTiming> timings) {
       for (final timing in timings) {
         final buildMs = timing.buildDuration.inMilliseconds;

@@ -1,9 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
 
-/// 零开销的 API 请求耗时统计拦截器
+/// 记录异常或慢请求的 API 耗时统计拦截器
 class DioPerformanceInterceptor extends Interceptor {
   static const String _startTimeKey = 'request_start_time';
+  static const int _slowRequestThresholdMs = 3000;
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
@@ -30,6 +31,11 @@ class DioPerformanceInterceptor extends Interceptor {
     if (startTime != null) {
       final duration = DateTime.now().millisecondsSinceEpoch - startTime;
 
+      final shouldLog = error != null || duration > _slowRequestThresholdMs;
+      if (!shouldLog) {
+        return;
+      }
+
       final method = options.method;
       final path = options.uri.path;
       // 截断过长的 URL 防止日志污染数据库
@@ -39,12 +45,7 @@ class DioPerformanceInterceptor extends Interceptor {
       final message =
           '[API耗时] $method $displayPath -> 状态:$statusCode, 耗时:${duration}ms${error != null ? " (错误: $error)" : ""}';
 
-      if (duration > 3000 || error != null) {
-        // 如果 AI 请求超过 3 秒，或者发生报错，记录为警告
-        UnifiedLogService.instance.warning(message, source: 'NetworkPerf');
-      } else {
-        UnifiedLogService.instance.info(message, source: 'NetworkPerf');
-      }
+      UnifiedLogService.instance.warning(message, source: 'NetworkPerf');
     }
   }
 }
