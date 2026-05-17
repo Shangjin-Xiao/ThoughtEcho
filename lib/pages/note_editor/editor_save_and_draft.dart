@@ -255,6 +255,8 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
   }
 
   Future<void> _saveContent() async {
+    if (_isSaving) return;
+
     _draftSaveTimer?.cancel();
     _draftLoaded = false;
 

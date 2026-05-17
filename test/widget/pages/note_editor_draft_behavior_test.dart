@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -8,8 +10,10 @@ import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/note_full_editor_page.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/draft_service.dart';
+import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 import '../../test_setup.dart';
 
@@ -49,6 +53,43 @@ class _TestDatabaseService extends ChangeNotifier implements DatabaseService {
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class _SlowSaveDatabaseService extends ChangeNotifier
+    implements DatabaseService {
+  final _saveCompleter = Completer<void>();
+  int addQuoteCallCount = 0;
+
+  void completeSave() {
+    if (!_saveCompleter.isCompleted) {
+      _saveCompleter.complete();
+    }
+  }
+
+  @override
+  Future<void> addQuote(Quote quote) async {
+    addQuoteCallCount += 1;
+    await _saveCompleter.future;
+  }
+
+  @override
+  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _TestFeatureGuideService extends FeatureGuideService {
+  _TestFeatureGuideService() : super(SafeMMKV());
+
+  @override
+  bool hasShown(String guideId) => true;
+
+  @override
+  Future<void> markAsShown(String guideId) async {}
+
+  @override
+  Future<void> resetGuide(String guideId) async {}
+
+  @override
+  Future<void> resetAllGuides() async {}
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -83,6 +124,9 @@ void main() {
       providers: [
         ChangeNotifierProvider<SettingsService>.value(
           value: _TestSettingsService(),
+        ),
+        ChangeNotifierProvider<FeatureGuideService>(
+          create: (_) => _TestFeatureGuideService(),
         ),
       ],
       child: MaterialApp(
@@ -143,6 +187,9 @@ void main() {
         ChangeNotifierProvider<DatabaseService>.value(value: databaseService),
         ChangeNotifierProvider<SettingsService>.value(
           value: _TestSettingsService(),
+        ),
+        ChangeNotifierProvider<FeatureGuideService>(
+          create: (_) => _TestFeatureGuideService(),
         ),
       ],
       child: MaterialApp(
@@ -238,5 +285,57 @@ void main() {
 
     expect(find.text('1 tags selected'), findsOneWidget);
     expect(find.text('Mood'), findsNWidgets(2));
+  });
+
+  testWidgets('save action ignores repeated taps while create is in progress', (
+    tester,
+  ) async {
+    final slowDatabaseService = _SlowSaveDatabaseService();
+
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        ChangeNotifierProvider<DatabaseService>.value(
+          value: slowDatabaseService,
+        ),
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _TestSettingsService(),
+        ),
+        ChangeNotifierProvider<FeatureGuideService>(
+          create: (_) => _TestFeatureGuideService(),
+        ),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: const [
+          ...AppLocalizations.localizationsDelegates,
+          FlutterQuillLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const NoteFullEditorPage(
+          initialContent: '',
+          skipDefaultMetadataAutofill: true,
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final editor = find.byType(QuillEditor);
+    final controller = tester.widget<QuillEditor>(editor).controller;
+    controller.replaceText(
+      0,
+      0,
+      'Full editor duplicate save test',
+      const TextSelection.collapsed(offset: 31),
+    );
+    await tester.pump();
+
+    final saveButton = find.byIcon(Icons.save);
+    await tester.tap(saveButton);
+    await tester.tap(saveButton);
+    await tester.pump();
+
+    expect(slowDatabaseService.addQuoteCallCount, 1);
+
+    slowDatabaseService.completeSave();
+    await tester.pumpAndSettle();
   });
 }
