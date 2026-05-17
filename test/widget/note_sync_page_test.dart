@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/pages/note_sync_page.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
 // 生成Mock类
 @GenerateMocks([NoteSyncService])
@@ -29,6 +31,16 @@ void main() {
 
     Widget createTestWidget() {
       return MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('en', ''),
+          Locale('zh', ''),
+        ],
         home: ChangeNotifierProvider<NoteSyncService>.value(
           value: mockSyncService,
           child: const NoteSyncPage(),
