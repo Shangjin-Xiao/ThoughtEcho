@@ -1,0 +1,25 @@
+lib/pages/home/daily_prompt_panel.dart
+  s_18cf176997d060::t_b728725a983a2e 1-220,223-287,291-300
+  s_18cf176997d060::t_6f68b1436e8cc7 221-222,288-290
+lib/pages/home_page.dart
+  s_18cf176997d060::t_f8e8f635ada706 47-48
+  s_18cf176997d060::t_844d5fc1668cf8 45,170-171
+  s_18cf176997d060::t_1657eeec1a088b 217-218,734-736,740-742
+  s_18cf176997d060::t_3e0e3ebdc4115b 2086-2091
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "e859cb3c2d9836e09e12e6f69424cf246b4f6bd5",
+  "prompts": {},
+  "sessions": {
+    "s_18cf176997d060": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e306a-6a03-7701-baef-e0fdec8ad051",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
