@@ -274,6 +274,13 @@ class NetworkService {
     );
   }
 
+  @visibleForTesting
+  Map<String, String> buildAIHeadersForTesting(
+    AIProviderSettings? provider,
+    AISettings? legacySettings,
+  ) =>
+      _buildAIHeaders(provider, legacySettings);
+
   /// 构建AI请求头
   Map<String, String> _buildAIHeaders(
     AIProviderSettings? provider,
