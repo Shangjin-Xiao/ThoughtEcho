@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
@@ -81,6 +86,49 @@ void main() {
 
     await tester.pump(const Duration(seconds: 1));
   });
+
+  testWidgets('ignores repeated save taps while create is in progress',
+      (tester) async {
+    final databaseService = _SlowDatabaseService();
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<FeatureGuideService>(
+            create: (_) => _MockFeatureGuideService(),
+          ),
+          ChangeNotifierProvider<DatabaseService>.value(
+            value: databaseService,
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: AddNoteDialog(
+              tags: const [],
+              onSave: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField).first, '重复保存测试');
+    await tester.pump();
+
+    final saveButton = find.widgetWithText(FilledButton, '保存');
+    await tester.tap(saveButton);
+    await tester.pump();
+    await tester.tap(saveButton);
+    await tester.pump();
+
+    expect(databaseService.addQuoteCallCount, 1);
+
+    databaseService.completeSave();
+    await tester.pumpAndSettle();
+  });
 }
 
 class _MockFeatureGuideService extends FeatureGuideService {
@@ -97,4 +145,32 @@ class _MockFeatureGuideService extends FeatureGuideService {
 
   @override
   Future<void> resetAllGuides() async {}
+}
+
+class _SlowDatabaseService extends DatabaseService {
+  _SlowDatabaseService() : super.forTesting();
+
+  final _saveCompleter = Completer<void>();
+  int addQuoteCallCount = 0;
+
+  void completeSave() {
+    if (!_saveCompleter.isCompleted) {
+      _saveCompleter.complete();
+    }
+  }
+
+  @override
+  Future<List<NoteCategory>> getCategories() async => const [];
+
+  @override
+  Future<void> addQuote(Quote quote) async {
+    addQuoteCallCount += 1;
+    await _saveCompleter.future;
+  }
+
+  @override
+  Future<QuoteUpdateResult> updateQuote(Quote quote) async {
+    await _saveCompleter.future;
+    return QuoteUpdateResult.updated;
+  }
 }

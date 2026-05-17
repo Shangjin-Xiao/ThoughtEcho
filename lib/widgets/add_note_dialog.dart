@@ -140,6 +140,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   // 一言标签加载状态
   bool _isLoadingHitokotoTags = false;
   Future<void>? _pendingHitokotoTagTask;
+  bool _isSaving = false;
 
   // AI推荐标签相关状态
   // 预留：后续接入本地 embedding/标签推荐时使用
@@ -1789,6 +1790,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
   /// 保存笔记并退出
   Future<void> _saveAndExit() async {
+    if (_isSaving) return;
+
     // 如果内容为空，直接返回
     if (_contentController.text.isEmpty) {
       if (mounted) {
@@ -1797,72 +1800,76 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       return;
     }
 
+    setState(() {
+      _isSaving = true;
+    });
+
     // Capture context variables before any async operations
     final db = Provider.of<DatabaseService>(context, listen: false);
     final l10n = AppLocalizations.of(context);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
-    await _waitForPendingHitokotoTagTask();
-
-    // 获取当前时间段
-    final String currentDayPeriodKey = TimeUtils.getCurrentDayPeriodKey();
-
-    // 创建或更新笔记
-    final isEditing = widget.initialQuote != null;
-    final baseQuote = _fullInitialQuote ?? widget.initialQuote;
-
-    final Quote quote = Quote(
-      id: widget.initialQuote?.id ?? const Uuid().v4(),
-      content: _contentController.text,
-      date: widget.initialQuote?.date ?? DateTime.now().toIso8601String(),
-      aiAnalysis: _aiSummary,
-      source: _formatSource(
-        _authorController.text,
-        _workController.text,
-      ),
-      sourceAuthor: _authorController.text,
-      sourceWork: _workController.text,
-      tagIds: _selectedTagIds,
-      sentiment: baseQuote?.sentiment,
-      keywords: baseQuote?.keywords,
-      summary: baseQuote?.summary,
-      categoryId: _selectedCategory?.id ?? widget.initialQuote?.categoryId,
-      colorHex: _selectedColorHex,
-      location: _includeLocation
-          ? (isEditing
-              ? _originalLocation
-              : () {
-                  final loc = _newLocation ??
-                      _cachedLocationService?.getFormattedLocation();
-                  if ((loc == null || loc.isEmpty) && _newLatitude != null) {
-                    return LocationService.kAddressPending;
-                  }
-                  return loc;
-                }())
-          : null,
-      latitude: (_includeLocation || _includeWeather)
-          ? (isEditing ? _originalLatitude : _newLatitude)
-          : null,
-      longitude: (_includeLocation || _includeWeather)
-          ? (isEditing ? _originalLongitude : _newLongitude)
-          : null,
-      weather: _includeWeather
-          ? (isEditing
-              ? _originalWeather
-              : _cachedWeatherService?.currentWeather)
-          : null,
-      temperature: _includeWeather
-          ? (isEditing
-              ? _originalTemperature
-              : _cachedWeatherService?.temperature)
-          : null,
-      dayPeriod: widget.initialQuote?.dayPeriod ?? currentDayPeriodKey,
-      editSource: widget.initialQuote?.editSource,
-      deltaContent: widget.initialQuote?.deltaContent,
-    );
-
     try {
+      await _waitForPendingHitokotoTagTask();
+
+      // 获取当前时间段
+      final String currentDayPeriodKey = TimeUtils.getCurrentDayPeriodKey();
+
+      // 创建或更新笔记
+      final isEditing = widget.initialQuote != null;
+      final baseQuote = _fullInitialQuote ?? widget.initialQuote;
+
+      final Quote quote = Quote(
+        id: widget.initialQuote?.id ?? const Uuid().v4(),
+        content: _contentController.text,
+        date: widget.initialQuote?.date ?? DateTime.now().toIso8601String(),
+        aiAnalysis: _aiSummary,
+        source: _formatSource(
+          _authorController.text,
+          _workController.text,
+        ),
+        sourceAuthor: _authorController.text,
+        sourceWork: _workController.text,
+        tagIds: _selectedTagIds,
+        sentiment: baseQuote?.sentiment,
+        keywords: baseQuote?.keywords,
+        summary: baseQuote?.summary,
+        categoryId: _selectedCategory?.id ?? widget.initialQuote?.categoryId,
+        colorHex: _selectedColorHex,
+        location: _includeLocation
+            ? (isEditing
+                ? _originalLocation
+                : () {
+                    final loc = _newLocation ??
+                        _cachedLocationService?.getFormattedLocation();
+                    if ((loc == null || loc.isEmpty) && _newLatitude != null) {
+                      return LocationService.kAddressPending;
+                    }
+                    return loc;
+                  }())
+            : null,
+        latitude: (_includeLocation || _includeWeather)
+            ? (isEditing ? _originalLatitude : _newLatitude)
+            : null,
+        longitude: (_includeLocation || _includeWeather)
+            ? (isEditing ? _originalLongitude : _newLongitude)
+            : null,
+        weather: _includeWeather
+            ? (isEditing
+                ? _originalWeather
+                : _cachedWeatherService?.currentWeather)
+            : null,
+        temperature: _includeWeather
+            ? (isEditing
+                ? _originalTemperature
+                : _cachedWeatherService?.temperature)
+            : null,
+        dayPeriod: widget.initialQuote?.dayPeriod ?? currentDayPeriodKey,
+        editSource: widget.initialQuote?.editSource,
+        deltaContent: widget.initialQuote?.deltaContent,
+      );
+
       if (widget.initialQuote != null) {
         final updateResult = await db.updateQuote(quote);
         if (updateResult != QuoteUpdateResult.updated) {
@@ -1916,6 +1923,12 @@ class _AddNoteDialogState extends State<AddNoteDialog>
             backgroundColor: Colors.red,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
       }
     }
   }
@@ -2606,14 +2619,14 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                             ),
                           ),
                         ),
-                        onPressed: _isLoadingFullQuote
+                        onPressed: _isLoadingFullQuote || _isSaving
                             ? null
                             : () async {
                                 if (_contentController.text.isNotEmpty) {
                                   await _saveAndExit();
                                 }
                               },
-                        child: _isLoadingFullQuote
+                        child: _isLoadingFullQuote || _isSaving
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,

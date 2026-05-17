@@ -88,7 +88,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                     )
                   : const Icon(Icons.save),
               tooltip: l10n.save,
-              onPressed: _isLoadingFullQuote
+              onPressed: _isLoadingFullQuote || _isSaving
                   ? null
                   : () async {
                       try {
