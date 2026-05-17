@@ -50,6 +50,37 @@ void main() {
 
     await tester.pump(const Duration(seconds: 1));
   });
+
+  testWidgets('disables add info chip checkmarks to avoid keyboard jank flash',
+      (tester) async {
+    await tester.pumpWidget(
+      ChangeNotifierProvider<FeatureGuideService>(
+        create: (_) => _MockFeatureGuideService(),
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: AddNoteDialog(
+              tags: const [],
+              onSave: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    for (final key in const [
+      ValueKey('add_note_location_chip'),
+      ValueKey('add_note_weather_chip'),
+      ValueKey('add_note_color_chip'),
+    ]) {
+      final chip = tester.widget<FilterChip>(find.byKey(key));
+      expect(chip.showCheckmark, isFalse);
+    }
+
+    await tester.pump(const Duration(seconds: 1));
+  });
 }
 
 class _MockFeatureGuideService extends FeatureGuideService {
