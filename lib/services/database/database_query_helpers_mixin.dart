@@ -139,11 +139,12 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
       final batchIds = quoteIds.sublist(i, end);
       final placeholders = List.filled(batchIds.length, '?').join(',');
 
-      final tagMaps = await db.rawQuery('''
-        SELECT quote_id, tag_id
-        FROM quote_tags
-        WHERE quote_id IN ($placeholders)
-        ''', batchIds);
+      final tagMaps = await db.query(
+        'quote_tags',
+        columns: ['quote_id', 'tag_id'],
+        where: 'quote_id IN ($placeholders)',
+        whereArgs: batchIds,
+      );
 
       for (final tagMap in tagMaps) {
         final quoteId = tagMap['quote_id'] as String;
