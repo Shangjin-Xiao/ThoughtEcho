@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/localsend/localsend_server.dart';
 
-
 // Extension to access private method for testing
 extension LocalSendServerTest on LocalSendServer {
   bool testIsSafeAddress(InternetAddress address) {
