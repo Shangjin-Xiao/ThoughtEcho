@@ -163,6 +163,36 @@ void main() {
         await databaseService.disposeStream();
       },
     );
+
+    testWidgets('uses a light cache extent to keep drag scrolling responsive', (
+      tester,
+    ) async {
+      final databaseService = _FakeDatabaseService()
+        ..quotesToEmit = [
+          Quote(
+            id: 'quote-1',
+            content: '普通笔记',
+            date: DateTime(2026, 5, 16).toIso8601String(),
+          ),
+        ];
+      final settingsService = _FakeSettingsService();
+
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: settingsService,
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final listView = tester.widget<ListView>(find.byType(ListView));
+      expect(listView.cacheExtent, 250);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+    });
   });
 }
 
