@@ -58,6 +58,16 @@ class MockWeatherCacheManager extends Mock implements WeatherCacheManager {
       returnValue: Future.value(),
     );
   }
+
+  @override
+  Future<WeatherData?> loadWeatherDataIgnoreExpiry(
+      {double? latitude, double? longitude}) {
+    return super.noSuchMethod(
+      Invocation.method(#loadWeatherDataIgnoreExpiry, [],
+          {#latitude: latitude, #longitude: longitude}),
+      returnValue: Future.value(null),
+    );
+  }
 }
 
 void main() {
@@ -143,6 +153,66 @@ void main() {
       expect(weatherService.state, equals(WeatherServiceState.success));
       expect(weatherService.hasData, isTrue);
       expect(weatherService.temperatureValue, equals(20.5));
+    });
+
+    test(
+        'refreshWeather should handle API failure and fallback to expired cache',
+        () async {
+      // Arrange
+      const latitude = 39.9042;
+      const longitude = 116.4074;
+
+      when(mockCacheManager.initialize()).thenAnswer((_) async => {});
+
+      // Simulate API failure
+      when(mockNetworkService.get(
+        any,
+        timeoutSeconds: anyNamed('timeoutSeconds'),
+      )).thenAnswer((_) async => HttpResponse('', 500, headers: {}));
+
+      final expiredMockData = WeatherData(
+        key: 'partly_cloudy',
+        description: 'Partly Cloudy',
+        temperature: 15.0,
+        temperatureText: '15°C',
+        iconCode: '02d',
+        timestamp: DateTime.now().subtract(const Duration(days: 1)),
+        latitude: latitude,
+        longitude: longitude,
+      );
+
+      when(mockCacheManager.loadWeatherDataIgnoreExpiry(
+        latitude: anyNamed('latitude'),
+        longitude: anyNamed('longitude'),
+      )).thenAnswer((_) async => expiredMockData);
+
+      // Act
+      await weatherService.refreshWeather(latitude, longitude);
+
+      // Assert
+      // Verify cache loading was bypassed initially
+      verifyNever(mockCacheManager.loadWeatherData(
+        latitude: anyNamed('latitude'),
+        longitude: anyNamed('longitude'),
+      ));
+
+      // Verify network API was called
+      verify(mockNetworkService.get(
+        argThat(contains('latitude=$latitude')),
+        timeoutSeconds: anyNamed('timeoutSeconds'),
+      )).called(1);
+
+      // Verify fallback to expired cache
+      verify(mockCacheManager.loadWeatherDataIgnoreExpiry(
+        latitude: latitude,
+        longitude: longitude,
+      )).called(1);
+
+      // Verify state was updated to cached with expired data
+      expect(weatherService.state, equals(WeatherServiceState.cached));
+      expect(weatherService.hasData, isTrue);
+      expect(weatherService.temperatureValue, equals(15.0));
+      expect(weatherService.lastError, isNotNull);
     });
   });
 }
