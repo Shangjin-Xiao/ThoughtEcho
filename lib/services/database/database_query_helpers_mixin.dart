@@ -103,26 +103,23 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
     // 时间段筛选
     if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-      final dayPeriodPlaceholders = selectedDayPeriods
-          .map((_) => '?')
-          .join(',');
+      final dayPeriodPlaceholders =
+          selectedDayPeriods.map((_) => '?').join(',');
       conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
       args.addAll(selectedDayPeriods);
     }
 
-    final whereClause = conditions.isNotEmpty
-        ? 'WHERE ${conditions.join(' AND ')}'
-        : '';
+    final whereClause = conditions.isNotEmpty ? conditions.join(' AND ') : null;
 
     // ⚡ Bolt: 使用标量子查询替代 LEFT JOIN 和 GROUP BY，避免在 LIMIT 分页前全表聚合的性能瓶颈
 
     final sanitizedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
-    final query =
-        '''
+
+    final query = '''
       SELECT 
         q.*
       FROM quotes q
-      $whereClause
+      ${whereClause != null ? 'WHERE $whereClause' : ''}
       ORDER BY $sanitizedOrderBy
       LIMIT ? OFFSET ?
     ''';
@@ -230,20 +227,19 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
       if (!includeDeleted) {
         conditions.add('(q.is_deleted = 0 OR q.is_deleted IS NULL)');
       }
-      final where = conditions.isNotEmpty
-          ? 'WHERE ${conditions.join(' AND ')}'
-          : '';
+      final whereClause =
+          conditions.isNotEmpty ? conditions.join(' AND ') : null;
 
       // 只取必要列，不取 delta_content/ai_analysis/summary/keywords
       final sanitizedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
-      final query =
-          '''
+
+      final query = '''
         SELECT q.id, q.content, q.date, q.source, q.source_author, q.source_work,
                q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
                q.weather, q.temperature, q.edit_source, q.day_period,
                q.last_modified, q.favorite_count, q.is_deleted, q.deleted_at
         FROM quotes q
-        $where
+        ${whereClause != null ? 'WHERE $whereClause' : ''}
         ORDER BY $sanitizedOrderBy
         LIMIT ?
       ''';
@@ -375,9 +371,8 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
       // 时间段筛选
       if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-        final dayPeriodPlaceholders = selectedDayPeriods
-            .map((_) => '?')
-            .join(',');
+        final dayPeriodPlaceholders =
+            selectedDayPeriods.map((_) => '?').join(',');
         conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
         args.addAll(selectedDayPeriods);
       }
@@ -396,17 +391,15 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
         finalArgs.insertAll(0, tagIds);
 
-        final whereClause = conditions.isNotEmpty
-            ? 'WHERE ${conditions.join(' AND ')}'
-            : '';
+        final whereClause =
+            conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
         query =
             'SELECT COUNT(DISTINCT q.id) as count FROM quotes q$joins $whereClause';
       } else {
         // 没有标签筛选，使用简单的 COUNT
-        final whereClause = conditions.isNotEmpty
-            ? 'WHERE ${conditions.join(' AND ')}'
-            : '';
+        final whereClause =
+            conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
         query = 'SELECT COUNT(*) as count FROM quotes q $whereClause';
       }
 
