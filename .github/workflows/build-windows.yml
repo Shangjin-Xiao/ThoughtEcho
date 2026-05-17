@@ -322,7 +322,6 @@ jobs:
       with:
         name: thoughtecho-windows-${{ github.event.inputs.build_type || 'release' }}
         path: ${{ steps.artifacts.outputs.build_path }}
-        archive: false
         if-no-files-found: error
         retention-days: 90
         
