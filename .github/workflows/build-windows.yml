@@ -243,7 +243,7 @@ jobs:
           exit 1
         }
       
-    - name: Create release packages
+    - name: Prepare release artifacts
       run: |
         $buildType = "${{ github.event.inputs.build_type || 'release' }}"
         $buildPath = if ($buildType -eq "release") { "build/windows/x64/runner/Release" } else { "build/windows/x64/runner/Profile" }
@@ -254,22 +254,8 @@ jobs:
             exit 1
         }
         
-        # 创建ZIP压缩包
-        $archiveName = "thoughtecho-windows-x64-v$version-$buildType.zip"
-        New-Item -ItemType Directory -Path "release_temp" -Force
-        Copy-Item -Path "$buildPath/*" -Destination "release_temp/" -Recurse
-        
-        # 创建版本信息文件内容
-        $versionInfo = "ThoughtEcho Windows版本信息`n版本: $version`n构建类型: $buildType`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`nFlutter版本: ${{ github.event.inputs.flutter_version || 'latest' }}`n提交: ${{ github.sha }}`n`n使用说明:`n1. 解压到任意文件夹`n2. 双击 thoughtecho.exe 启动应用`n3. 如遇问题请查看 logs 文件夹下的日志文件`n`n注意事项:`n- 首次启动可能需要等待数秒`n- 确保系统已安装Visual C++ Redistributable`n- 建议在解压后将整个文件夹添加到杀毒软件白名单"
-        $versionInfo | Out-File -FilePath "release_temp/VERSION_INFO.txt" -Encoding UTF8
-        $versionInfo | Out-File -FilePath "release_temp/版本信息.txt" -Encoding UTF8
-
-        # 创建启动脚本内容
-        $launchScript = "@echo off`necho 正在启动 ThoughtEcho...`necho 首次启动可能需要等待数秒，请耐心等待`necho.`nstart thoughtecho.exe`necho 如果应用未正常启动，请检查版本信息.txt中的注意事项`npause"
-        $launchScript | Out-File -FilePath "release_temp/LAUNCH_APP.bat" -Encoding Default
-        $launchScript | Out-File -FilePath "release_temp/启动应用.bat" -Encoding Default
-        
-        Compress-Archive -Path "release_temp/*" -DestinationPath $archiveName -Force
+        # 设置构建路径输出
+        "build_path=$buildPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
         
         # 检查MSIX文件是否存在（改进逻辑）
         $msixSuccess = "${{ steps.msix_build.outputs.msix_success }}" -eq "true"
@@ -320,42 +306,43 @@ jobs:
                 "has_msix=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
             }
         } else {
-            Write-Host "⚠️ 未找到MSIX文件，将只提供ZIP包" -ForegroundColor Yellow
+            Write-Host "⚠️ 未找到MSIX文件" -ForegroundColor Yellow
             if (!$msixSuccess) {
                 Write-Host "  原因: MSIX构建步骤报告失败" -ForegroundColor Gray
             } elseif (!$msixPath) {
                 Write-Host "  原因: MSIX文件路径未设置" -ForegroundColor Gray
             }
-            Write-Host "✅ Windows应用已成功构建，可通过ZIP包分发" -ForegroundColor Green
+            Write-Host "✅ Windows应用已成功构建" -ForegroundColor Green
             "has_msix=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
         }
-        
-        "archive_name=$archiveName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-        Write-Output "✅ 创建ZIP发布包: $archiveName"
-      id: archive
+      id: artifacts
       
-    - name: Upload ZIP build artifacts
-      uses: actions/upload-artifact@v4
+    - name: Upload Windows build artifacts
+      uses: actions/upload-artifact@v7
       with:
-        name: thoughtecho-windows-${{ github.event.inputs.build_type || 'release' }}-zip
-        path: ${{ steps.archive.outputs.archive_name }}
+        name: thoughtecho-windows-${{ github.event.inputs.build_type || 'release' }}
+        path: ${{ steps.artifacts.outputs.build_path }}
+        archive: false
+        if-no-files-found: error
         retention-days: 90
         
     - name: Upload MSIX installer
-      if: steps.archive.outputs.has_msix == 'true'
-      uses: actions/upload-artifact@v4
+      if: steps.artifacts.outputs.has_msix == 'true'
+      uses: actions/upload-artifact@v7
       with:
         name: thoughtecho-windows-${{ github.event.inputs.build_type || 'release' }}-msix
-        path: ${{ steps.archive.outputs.msix_name }}
+        path: ${{ steps.artifacts.outputs.msix_name }}
+        archive: false
+        if-no-files-found: error
         retention-days: 90
         
     - name: Build summary
       run: |
         $version = "${{ steps.version.outputs.version }}"
         $buildType = "${{ github.event.inputs.build_type || 'release' }}"
-        $archiveName = "${{ steps.archive.outputs.archive_name }}"
-        $msixName = "${{ steps.archive.outputs.msix_name }}"
-        $hasMsix = "${{ steps.archive.outputs.has_msix }}" -eq "true"
+        $buildPath = "${{ steps.artifacts.outputs.build_path }}"
+        $msixName = "${{ steps.artifacts.outputs.msix_name }}"
+        $hasMsix = "${{ steps.artifacts.outputs.has_msix }}" -eq "true"
         
         Write-Output "## 🎉 Windows构建完成" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "" >> $env:GITHUB_STEP_SUMMARY
@@ -366,23 +353,23 @@ jobs:
         Write-Output "- **提交哈希**: ${{ github.sha }}" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "### 📦 发布文件" >> $env:GITHUB_STEP_SUMMARY
-        Write-Output "- **ZIP压缩包**: ✅ $archiveName" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "- **Windows应用**: ✅ 直接上传构建文件夹" >> $env:GITHUB_STEP_SUMMARY
         
         if ($hasMsix -and $msixName) {
             Write-Output "- **MSIX安装包**: ✅ $msixName" >> $env:GITHUB_STEP_SUMMARY
         } else {
-            Write-Output "- **MSIX安装包**: ❌ 构建失败（可使用ZIP包替代）" >> $env:GITHUB_STEP_SUMMARY
+            Write-Output "- **MSIX安装包**: ❌ 构建失败（可使用文件夹中的应用）" >> $env:GITHUB_STEP_SUMMARY
         }
         
         Write-Output "" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "### 📥 下载说明" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "1. 在Actions页面的Artifacts部分下载对应的发布包" >> $env:GITHUB_STEP_SUMMARY
-        Write-Output "2. **ZIP包**: 解压后直接运行 thoughtecho.exe" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "2. **Windows应用**: 下载后直接运行 thoughtecho.exe" >> $env:GITHUB_STEP_SUMMARY
         
         if ($hasMsix) {
             Write-Output "3. **MSIX包**: 双击安装到系统（推荐）" >> $env:GITHUB_STEP_SUMMARY
         } else {
-            Write-Output "3. **MSIX包**: 本次构建失败，请使用ZIP包" >> $env:GITHUB_STEP_SUMMARY
+            Write-Output "3. **MSIX包**: 本次构建失败，请使用文件夹中的应用" >> $env:GITHUB_STEP_SUMMARY
         }
         
         Write-Output "" >> $env:GITHUB_STEP_SUMMARY
