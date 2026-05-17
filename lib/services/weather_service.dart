@@ -20,7 +20,12 @@ class WeatherService extends ChangeNotifier {
   WeatherServiceState _state = WeatherServiceState.idle;
   String? _lastError;
 
-  final WeatherCacheManager _cacheManager = WeatherCacheManager();
+  WeatherCacheManager _cacheManager = WeatherCacheManager();
+
+  @visibleForTesting
+  set cacheManagerForTesting(WeatherCacheManager manager) =>
+      _cacheManager = manager;
+
   bool _isInitialized = false;
   Future<void>? _initFuture;
   final Map<String, Future<void>> _pendingWeatherRequests = {};
