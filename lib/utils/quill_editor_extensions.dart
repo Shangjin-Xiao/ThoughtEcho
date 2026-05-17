@@ -192,6 +192,11 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     if (_loadedSources.contains(widget.source)) {
       _shouldLoad = true;
       _isLoaded = true;
+    } else {
+      // 依赖 ListView 的 cacheExtent 提前加载，放弃会导致高度跳变的 VisibilityDetector
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _tryStartLoading();
+      });
     }
   }
 
@@ -204,21 +209,11 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
       _shouldLoad = previouslyLoaded;
       _isLoaded = previouslyLoaded;
       _deferredLoadTimer?.cancel();
-    }
-  }
-
-  void _handleVisibility(VisibilityInfo info) {
-    if (_shouldLoad) {
-      return;
-    }
-
-    if (info.visibleFraction <= 0.01) {
-      _deferredLoadTimer?.cancel();
-      return;
-    }
-
-    if (info.visibleFraction > 0.05) {
-      _tryStartLoading();
+      if (!_shouldLoad) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _tryStartLoading();
+        });
+      }
     }
   }
 
@@ -239,9 +234,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
       return;
     }
 
-    // 额外检查：recommendDeferredLoadingForContext 在 ballistic（惯性）阶段
-    // 也会返回 false，但此时列表仍在高速惯性滑动。通过外层 NoteListView 写入的
-    // 全局信号判断是否处于 ballistic 阶段，继续延迟解码避免和惯性帧竞争 raster。
+    // 额外检查：通过全局信号判断是否处于 ballistic 阶段
     if (isListScrolling.value) {
       _deferredLoadTimer?.cancel();
       _deferredLoadTimer = Timer(const Duration(milliseconds: 80), () {
@@ -302,20 +295,14 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
         );
 
         return RepaintBoundary(
-          child: VisibilityDetector(
-            key: ValueKey(
-              'quill_image_${widget.uniqueId}_${widget.source.hashCode}',
-            ),
-            onVisibilityChanged: _handleVisibility,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: displayWidth),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: _buildImageContent(
-                  context,
-                  displayWidth,
-                  targetCacheWidth,
-                ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: displayWidth),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: _buildImageContent(
+                context,
+                displayWidth,
+                targetCacheWidth,
               ),
             ),
           ),
