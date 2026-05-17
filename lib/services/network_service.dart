@@ -13,6 +13,10 @@ import '../utils/app_logger.dart';
 class NetworkService {
   static NetworkService? _instance;
   static NetworkService get instance => _instance ??= NetworkService._();
+
+  @visibleForTesting
+  static set instanceForTesting(NetworkService? value) => _instance = value;
+
   NetworkService._();
 
   // 不同用途的Dio实例
