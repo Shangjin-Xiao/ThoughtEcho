@@ -693,6 +693,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   void didChangeMetrics() {
     super.didChangeMetrics();
 
+    // 键盘弹出和收起都会连续改变 viewInsets；两种方向都暂停主体重建。
+    _beginKeyboardRebuildDeferral();
+
     if (_keyboardRebuildDeferralActive) {
       _keyboardRebuildResumeTimer?.cancel();
       _keyboardRebuildResumeTimer = Timer(
@@ -2286,6 +2289,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                   FilterChip(
                                     key: const ValueKey(
                                         'add_note_location_chip'),
+                                    showCheckmark: false,
                                     avatar: Icon(
                                       Icons.location_on,
                                       color: _includeLocation
@@ -2378,6 +2382,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                   : l10n.addWeatherInfo,
                               child: FilterChip(
                                 key: const ValueKey('add_note_weather_chip'),
+                                showCheckmark: false,
                                 avatar: Icon(
                                   weather != null && weatherService != null
                                       ? weatherService.getWeatherIconData()
@@ -2428,6 +2433,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                               : l10n.setCardColor,
                           child: FilterChip(
                             key: const ValueKey('add_note_color_chip'),
+                            showCheckmark: false,
                             avatar: _selectedColorHex != null
                                 ? Container(
                                     width: 18,
