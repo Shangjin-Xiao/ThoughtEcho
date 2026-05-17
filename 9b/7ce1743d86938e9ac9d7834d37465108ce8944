@@ -1,0 +1,21 @@
+lib/utils/dio_performance_interceptor.dart
+  s_061fdb08104418::t_5e7bfbc15c8e88 4,7,34-38,48
+lib/utils/jank_detector.dart
+  s_061fdb08104418::t_b6dc9d8fae3fb6 7,12-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "9b7ce1743d86938e9ac9d7834d37465108ce8944",
+  "prompts": {},
+  "sessions": {
+    "s_061fdb08104418": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1ca503480ffe1uqumMOwd6h0kd",
+        "model": "gpt-5.4-mini"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
