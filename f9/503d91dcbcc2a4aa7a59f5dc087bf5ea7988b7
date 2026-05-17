@@ -1,0 +1,24 @@
+.github/workflows/build-windows.yml
+  s_c6e7882fd72b52::t_b5da37fdeb2ad2 343-345,356,361,367,372
+  s_c6e7882fd72b52::t_5aa81536b9e87d 246,257-258,309,315,318
+  s_c6e7882fd72b52::t_381926eb95fd66 320-321,323-326,330-331,334-336
+.github/workflows/ios-build.yml
+  s_c6e7882fd72b52::t_046dd950f52eb9 60,64-65
+  s_c6e7882fd72b52::t_b64cb64d7f2ea9 101,105-106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "f9503d91dcbcc2a4aa7a59f5dc087bf5ea7988b7",
+  "prompts": {},
+  "sessions": {
+    "s_c6e7882fd72b52": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1caf603cdffekIz5mgQy4FZQCv",
+        "model": "mimo-v2.5-pro"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
