@@ -7,8 +7,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/settings_service.dart';
-import 'package:thoughtecho/utils/quill_editor_extensions.dart'
-    show isListScrolling;
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
@@ -79,7 +77,6 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   tearDown(QuoteItemWidget.clearExpansionCacheForTest);
-  tearDown(() => isListScrolling.value = false);
 
   group('QuoteItemWidget', () {
     testWidgets('默认状态下展示截断内容并显示提示', (tester) async {
@@ -122,8 +119,7 @@ void main() {
       expect(find.text('双击查看全文'), findsOneWidget);
     });
 
-    testWidgets('滚动中禁用折叠遮罩模糊以降低回滑成本', (tester) async {
-      isListScrolling.value = true;
+    testWidgets('折叠遮罩始终使用BackdropFilter.grouped', (tester) async {
       final quote = _buildQuote(
         content: List.filled(6, _longContentChunk).join('\n'),
         editSource: 'inline',
@@ -158,7 +154,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('双击查看全文'), findsOneWidget);
-      expect(find.byType(BackdropFilter), findsNothing);
+      expect(find.byType(BackdropFilter), findsOneWidget);
     });
 
     testWidgets('展开状态显示完整内容且截断提示消失', (tester) async {

@@ -12,7 +12,7 @@ import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../utils/time_utils.dart';
 import '../utils/icon_utils.dart';
-import '../utils/quill_editor_extensions.dart' show isListScrolling;
+
 import '../gen_l10n/app_localizations.dart';
 import 'quote_card_helpers.dart';
 
@@ -581,63 +581,53 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                               switchInCurve: Curves.easeIn,
                               switchOutCurve: Curves.easeOut,
                               child: (!isExpanded && needsExpansion)
-                                  ? ValueListenableBuilder<bool>(
-                                      valueListenable: isListScrolling,
-                                      builder: (context, scrolling, child) {
-                                        final overlay = Container(
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              begin: Alignment.topCenter,
-                                              end: Alignment.bottomCenter,
-                                              colors: [
-                                                innerTheme.colorScheme.surface
-                                                    .withValues(alpha: 0.0),
-                                                innerTheme.colorScheme.surface
-                                                    .withValues(alpha: 0.08),
-                                                innerTheme.colorScheme.surface
-                                                    .withValues(alpha: 0.18),
-                                              ],
-                                              stops: const [0.0, 0.4, 1.0],
+                                  ? RepaintBoundary(
+                                      child: ClipRect(
+                                        child: BackdropFilter.grouped(
+                                          filter: ui.ImageFilter.blur(
+                                            sigmaX: 1.2,
+                                            sigmaY: 1.2,
+                                          ),
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                                colors: [
+                                                  innerTheme.colorScheme.surface
+                                                      .withValues(alpha: 0.0),
+                                                  innerTheme.colorScheme.surface
+                                                      .withValues(alpha: 0.08),
+                                                  innerTheme.colorScheme.surface
+                                                      .withValues(alpha: 0.18),
+                                                ],
+                                                stops: const [0.0, 0.4, 1.0],
+                                              ),
                                             ),
-                                          ),
-                                          alignment: Alignment.center,
-                                          child: child,
-                                        );
-
-                                        return RepaintBoundary(
-                                          child: ClipRect(
-                                            child: scrolling
-                                                ? overlay
-                                                : BackdropFilter.grouped(
-                                                    filter: ui.ImageFilter.blur(
-                                                      sigmaX: 1.2,
-                                                      sigmaY: 1.2,
-                                                    ),
-                                                    child: overlay,
-                                                  ),
-                                          ),
-                                        );
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: innerTheme.colorScheme.surface
-                                              .withValues(alpha: 0.35),
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          l10n.doubleTapToViewFull,
-                                          style: innerTheme.textTheme.bodySmall
-                                              ?.copyWith(
-                                            color: innerTheme
-                                                .colorScheme.onSurface
-                                                .withValues(alpha: 0.65),
-                                            fontSize: 11,
-                                            fontStyle: FontStyle.italic,
+                                            alignment: Alignment.center,
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: innerTheme.colorScheme.surface
+                                                    .withValues(alpha: 0.35),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: Text(
+                                                l10n.doubleTapToViewFull,
+                                                style: innerTheme.textTheme.bodySmall
+                                                    ?.copyWith(
+                                                  color: innerTheme
+                                                      .colorScheme.onSurface
+                                                      .withValues(alpha: 0.65),
+                                                  fontSize: 11,
+                                                  fontStyle: FontStyle.italic,
+                                                ),
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
