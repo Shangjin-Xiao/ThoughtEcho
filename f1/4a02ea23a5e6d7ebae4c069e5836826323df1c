@@ -1,0 +1,29 @@
+test/widget/note_list_view_filter_test.dart
+  s_db76575ee15a83::t_2cec3e89d409c0 166-195
+lib/widgets/note_list/note_list_items.dart
+  s_4d31c334c9b4df::t_eb0e361d775561 381-382
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "f14a02ea23a5e6d7ebae4c069e5836826323df1c",
+  "prompts": {},
+  "sessions": {
+    "s_4d31c334c9b4df": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033I9HdFdScVB0aFQnIpK4",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_db76575ee15a83": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033I9GmsHSWEXrp50nbjZM",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
