@@ -1,0 +1,19 @@
+lib/widgets/note_list/note_list_items.dart
+  s_1dee011b49f58a::t_63e7e0144b2436 381-383
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "069de14453f5786cd022c69f3e35cc2338fc9dba",
+  "prompts": {},
+  "sessions": {
+    "s_1dee011b49f58a": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "abd52752-7494-4960-bd7e-782c73a8bf23",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
