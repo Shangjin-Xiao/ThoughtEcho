@@ -1,0 +1,23 @@
+lib/widgets/quote_item_widget.dart
+  s_fd1396dcb28aa8::t_2be700e19bb5ba 584-589,591-607
+  s_fd1396dcb28aa8::t_92d8edbc5594e9 15
+  s_fd1396dcb28aa8::t_83928a905947bd 608-630
+test/widgets/quote_item_widget_test.dart
+  s_fd1396dcb28aa8::t_bbb01f29c5f366 122,157
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "33ad2517b019e489a7b5a2fb1ce10700d3e700fb",
+  "prompts": {},
+  "sessions": {
+    "s_fd1396dcb28aa8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1cb11f1a4ffegHgG060zovVzs8",
+        "model": "mimo-v2.5-pro"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
