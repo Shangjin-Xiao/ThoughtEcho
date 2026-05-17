@@ -5,6 +5,7 @@ import 'package:thoughtecho/utils/platform_io_stub.dart'
 // Flutter核心库
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:thoughtecho/utils/jank_detector.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 // 国际化
@@ -149,6 +150,9 @@ Future<void> main() async {
   await runZonedGuarded<Future<void>>(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+
+      // 加上这一行启动卡顿监控
+      JankDetector.init();
 
       if (kIsWeb) {
         throw UnsupportedError(

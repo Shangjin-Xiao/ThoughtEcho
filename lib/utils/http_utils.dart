@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:thoughtecho/utils/dio_performance_interceptor.dart';
 import 'dio_network_utils.dart';
 import 'http_response.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
@@ -21,6 +22,7 @@ class HttpUtils {
 
   // 配置Dio实例
   static void _configureDio(Dio dio) {
+    dio.interceptors.add(DioPerformanceInterceptor());
     dio.options.connectTimeout = const Duration(seconds: 15);
     dio.options.receiveTimeout = const Duration(seconds: 15);
     dio.options.sendTimeout = const Duration(seconds: 15);
