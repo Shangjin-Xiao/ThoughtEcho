@@ -5,7 +5,7 @@ import 'dart:io';
 import 'constants.dart';
 import 'receive_controller.dart';
 import 'package:flutter/foundation.dart';
-import 'package:meta/meta.dart';
+
 import 'package:thoughtecho/utils/app_logger.dart';
 
 /// Simple HTTP server for LocalSend protocol
