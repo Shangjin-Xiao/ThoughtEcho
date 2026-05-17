@@ -51,6 +51,7 @@ import 'unit/utils/anniversary_banner_text_utils_test.dart'
 import 'unit/utils/motion_photo_utils_test.dart' as motion_photo_utils_test;
 import 'unit/utils/quill_ai_apply_utils_test.dart' as quill_ai_apply_utils_test;
 import 'unit/utils/http_utils_test.dart' as http_utils_test;
+import 'unit/utils/api_key_debugger_test.dart' as api_key_debugger_test;
 import 'unit/utils/memory_optimization_helper_test.dart'
     as memory_optimization_helper_test;
 import 'unit/utils/media_optimization_utils_test.dart'
@@ -108,6 +109,7 @@ void main() {
       anniversary_banner_text_utils_test.main();
       anniversary_display_utils_test.main();
       motion_photo_utils_test.main();
+      api_key_debugger_test.main();
       quill_ai_apply_utils_test.main();
       http_utils_test.main();
       memory_optimization_helper_test.main();
