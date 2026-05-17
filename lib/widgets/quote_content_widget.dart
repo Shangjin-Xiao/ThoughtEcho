@@ -64,9 +64,7 @@ class QuoteContent extends StatelessWidget {
     Duration delay = const Duration(milliseconds: 500),
   }) {
     final richQuotes = quotes
-        .where(
-          (q) => q.deltaContent != null && q.editSource == 'fullscreen',
-        )
+        .where((q) => q.deltaContent != null && q.editSource == 'fullscreen')
         .take(maxItems)
         .toList();
     if (richQuotes.isEmpty) return;
@@ -112,9 +110,7 @@ class QuoteContent extends StatelessWidget {
     Duration delay = const Duration(milliseconds: 500),
   }) {
     final richQuotes = quotes
-        .where(
-          (q) => q.deltaContent != null && q.editSource == 'fullscreen',
-        )
+        .where((q) => q.deltaContent != null && q.editSource == 'fullscreen')
         .take(maxItems)
         .toList();
     if (richQuotes.isEmpty) return;
@@ -126,10 +122,7 @@ class QuoteContent extends StatelessWidget {
       if (generation != _cacheGeneration) return;
       if (index >= richQuotes.length) return;
       if (isListScrolling.value) {
-        Timer(
-          const Duration(milliseconds: 240),
-          () => processBatch(index),
-        );
+        Timer(const Duration(milliseconds: 240), () => processBatch(index));
         return;
       }
 
@@ -154,10 +147,9 @@ class QuoteContent extends StatelessWidget {
         documentBuilder: () => _QuoteDocumentCache.getOrCreate(
           deltaContent: deltaContent,
           prioritizeBold: usePrioritizedDoc,
-          builder: () => QuoteContent(quote: quote)._buildRichTextDocument(
-            deltaContent,
-            usePrioritizedDoc,
-          ),
+          builder: () => QuoteContent(
+            quote: quote,
+          )._buildRichTextDocument(deltaContent, usePrioritizedDoc),
         ),
       );
 
@@ -195,7 +187,7 @@ class QuoteContent extends StatelessWidget {
   }
 
   /// 批量清理特定笔记的缓存（优化批量删除操作的性能）
-  static void removeCachesForQuotes(Iterable<String> quoteIds) {
+  static void removeCachesForQuotes(Set<String> quoteIds) {
     _QuoteContentControllerCache.removeByQuoteIds(quoteIds);
   }
 
@@ -245,25 +237,15 @@ class QuoteContent extends StatelessWidget {
 
       buffer
         ..write(',ΔdocMiss+')
-        ..write(
-          _debugIntDelta(document, baselineDocument, 'missCount'),
-        )
+        ..write(_debugIntDelta(document, baselineDocument, 'missCount'))
         ..write(',heightMiss+')
-        ..write(
-          _debugIntDelta(height, baselineHeight, 'missCount'),
-        )
+        ..write(_debugIntDelta(height, baselineHeight, 'missCount'))
         ..write(',ctrlMiss+')
-        ..write(
-          _debugIntDelta(controller, baselineController, 'missCount'),
-        )
+        ..write(_debugIntDelta(controller, baselineController, 'missCount'))
         ..write(',ctrlCreate+')
-        ..write(
-          _debugIntDelta(controller, baselineController, 'createCount'),
-        )
+        ..write(_debugIntDelta(controller, baselineController, 'createCount'))
         ..write(',ctrlDispose+')
-        ..write(
-          _debugIntDelta(controller, baselineController, 'disposeCount'),
-        );
+        ..write(_debugIntDelta(controller, baselineController, 'disposeCount'));
     }
 
     return buffer.toString();
@@ -967,31 +949,19 @@ class _QuoteContentControllerCache {
 
   /// 修复问题1：清理特定笔记的所有缓存（用于笔记删除/更新）
   static void removeByQuoteId(String quoteId) {
-    final keysToRemove =
-        _cache.keys.where((key) => key.quoteId == quoteId).toList();
-
-    for (final key in keysToRemove) {
-      final entry = _cache.remove(key);
-      if (entry != null) {
-        entry.controllers.dispose();
-        _disposeCount++;
-      }
-    }
+    removeByQuoteIds({quoteId});
   }
 
   /// 批量清理特定笔记的所有缓存
-  static void removeByQuoteIds(Iterable<String> quoteIds) {
-    final idSet = quoteIds is Set<String> ? quoteIds : quoteIds.toSet();
-    final keysToRemove =
-        _cache.keys.where((key) => idSet.contains(key.quoteId)).toList();
-
-    for (final key in keysToRemove) {
-      final entry = _cache.remove(key);
-      if (entry != null) {
+  static void removeByQuoteIds(Set<String> quoteIds) {
+    _cache.removeWhere((key, entry) {
+      if (quoteIds.contains(key.quoteId)) {
         entry.controllers.dispose();
         _disposeCount++;
+        return true;
       }
-    }
+      return false;
+    });
   }
 }
 
