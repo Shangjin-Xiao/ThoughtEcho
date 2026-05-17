@@ -1,0 +1,19 @@
+lib/utils/quill_editor_extensions.dart
+  s_1dee011b49f58a::t_ad40513f87efa8 195-199,212-216,237,298-305
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "c8e78305df5c3ac9e7af2562f5d13a7cf1ebf150",
+  "prompts": {},
+  "sessions": {
+    "s_1dee011b49f58a": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "abd52752-7494-4960-bd7e-782c73a8bf23",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
