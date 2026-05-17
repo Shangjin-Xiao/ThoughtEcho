@@ -1,0 +1,32 @@
+lib/widgets/add_note_dialog.dart
+  s_87eb59c960aa1c::t_b3dd5ae18a70fc 143,1793-1794,1803-1806,1814-1872,1927-1932,2622,2629
+lib/pages/note_editor/editor_save_and_draft.dart
+  s_87eb59c960aa1c::t_50681533773f44 258-259
+test/widget/pages/note_editor_draft_behavior_test.dart
+  s_87eb59c960aa1c::t_ca8f3f5af388e3 56-57
+  s_87eb59c960aa1c::t_22bd7350f191f8 303-305
+  s_87eb59c960aa1c::t_d85ecdbf6a7c0a 191-193
+  s_87eb59c960aa1c::t_3481d6c8eec0e4 13,16,77-92,128-129,340
+  s_87eb59c960aa1c::t_b49daf70c2d186 1-2,58-70,289-302,306-339
+lib/pages/note_editor/editor_build.dart
+  s_87eb59c960aa1c::t_d9cb3fa891e6a2 91
+test/widget/add_note_dialog_focus_timing_test.dart
+  s_87eb59c960aa1c::t_42044812fb09a1 1-2
+  s_87eb59c960aa1c::t_90aac5e6b42e68 7-9,89-131,149-175
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "68836b19a5c1ec286196452201ba0def974d59da",
+  "prompts": {},
+  "sessions": {
+    "s_87eb59c960aa1c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e3508-5e90-7dd3-ac8f-efc7dc0785b5",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
