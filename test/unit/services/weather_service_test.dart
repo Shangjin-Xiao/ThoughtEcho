@@ -134,13 +134,13 @@ void main() {
       await weatherService.refreshWeather(latitude, longitude);
 
       // Assert
-      // Verify cache loading was bypassed
+      // Verify cache loading was bypassed by checking interactions with CacheManager
       verifyNever(mockCacheManager.loadWeatherData(
         latitude: anyNamed('latitude'),
         longitude: anyNamed('longitude'),
       ));
 
-      // Verify network API was called
+      // Verify network API was called directly by checking interactions with NetworkService
       verify(mockNetworkService.get(
         argThat(contains('latitude=$latitude')),
         timeoutSeconds: anyNamed('timeoutSeconds'),
@@ -153,6 +153,57 @@ void main() {
       expect(weatherService.state, equals(WeatherServiceState.success));
       expect(weatherService.hasData, isTrue);
       expect(weatherService.temperatureValue, equals(20.5));
+    });
+
+    test('getWeatherData with forceRefresh=true should bypass cache', () async {
+      // Arrange
+      const latitude = 31.2304;
+      const longitude = 121.4737;
+
+      when(mockCacheManager.initialize()).thenAnswer((_) async => {});
+
+      final mockApiResponse = {
+        'current': {
+          'temperature_2m': 15.0,
+          'weather_code': 3, // Overcast
+          'wind_speed_10m': 3.0,
+        }
+      };
+
+      when(mockNetworkService.get(
+        any,
+        timeoutSeconds: anyNamed('timeoutSeconds'),
+      )).thenAnswer((_) async => HttpResponse(
+            json.encode(mockApiResponse),
+            200,
+            headers: {},
+          ));
+
+      when(mockCacheManager.saveWeatherData(any)).thenAnswer((_) async => {});
+
+      // Act
+      await weatherService.getWeatherData(latitude, longitude,
+          forceRefresh: true);
+
+      // Assert
+      // Cache reading bypassed
+      verifyNever(mockCacheManager.loadWeatherData(
+        latitude: anyNamed('latitude'),
+        longitude: anyNamed('longitude'),
+      ));
+
+      // Network accessed
+      verify(mockNetworkService.get(
+        any,
+        timeoutSeconds: anyNamed('timeoutSeconds'),
+      )).called(1);
+
+      // New data saved
+      verify(mockCacheManager.saveWeatherData(any)).called(1);
+
+      expect(weatherService.state, equals(WeatherServiceState.success));
+      expect(weatherService.hasData, isTrue);
+      expect(weatherService.temperatureValue, equals(15.0));
     });
 
     test(
