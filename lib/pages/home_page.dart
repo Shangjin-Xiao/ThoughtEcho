@@ -27,11 +27,9 @@ import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
 import '../services/settings_service.dart'; // Import SettingsService
-import '../services/insight_history_service.dart'; // Import InsightHistoryService
 import '../constants/app_constants.dart';
 import '../utils/app_logger.dart';
 import '../utils/color_utils.dart';
-import '../utils/daily_prompt_generator.dart';
 import '../services/ai_card_generation_service.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../widgets/svg_card_widget.dart';
@@ -44,9 +42,10 @@ import '../services/draft_service.dart';
 import '../widgets/anniversary_animation_overlay.dart';
 import '../utils/anniversary_display_utils.dart';
 import '../utils/draft_restore_utils.dart';
+import 'home/daily_prompt_panel.dart';
 
-// TODO(refactor): This file exceeds 2500 lines. It should be split into smaller
-// feature-specific widgets or mixins (e.g., home_header, home_content, home_actions).
+// TODO(refactor): Continue splitting high-churn home features into smaller
+// widgets or mixins (e.g., home_header, home_content, home_actions).
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
   final String? initialHighlightedNoteId;
@@ -168,6 +167,8 @@ class _HomePageState extends State<HomePage>
 
   // 功能引导：每日一言的 Key
   final GlobalKey _dailyQuoteGuideKey = GlobalKey();
+  final GlobalKey<HomeDailyPromptPanelState> _dailyPromptPanelKey =
+      GlobalKey<HomeDailyPromptPanelState>();
 
   // 功能引导：记录页的 Keys
   final GlobalKey _noteFilterGuideKey = GlobalKey();
@@ -194,162 +195,6 @@ class _HomePageState extends State<HomePage>
   // 网络恢复监听
   ConnectivityService? _connectivityService;
 
-  // --- 每日提示相关状态和逻辑 ---
-  String _accumulatedPromptText = ''; // Accumulated text for daily prompt
-  StreamSubscription<String>?
-      _promptSubscription; // Stream subscription for daily prompt
-  bool _isGeneratingDailyPrompt = false; // Loading state for daily prompt
-  // 获取每日提示的方法
-  Future<void> _fetchDailyPrompt({bool initialLoad = false}) async {
-    // 如果是初始加载，并且已经有订阅或累积文本，则不重复加载
-    if (initialLoad &&
-        (_promptSubscription != null || _accumulatedPromptText.isNotEmpty)) {
-      logDebug(
-        'Daily prompt already loaded or loading, skipping initial fetch.',
-      );
-      return;
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _accumulatedPromptText = ''; // Clear previous text
-      _isGeneratingDailyPrompt = true; // Set loading state
-      _promptSubscription?.cancel(); // Cancel previous subscription
-      _promptSubscription = null;
-    });
-
-    try {
-      final aiService = context.read<AIService>();
-      final locationService = context.read<LocationService>();
-      final weatherService = context.read<WeatherService>();
-
-      // 获取环境信息
-      String? city = locationService.city;
-      String? weather = weatherService.currentWeather;
-      String? temperature = weatherService.temperature;
-
-      // 检查是否启用今日思考AI，或是否有AI配置；不满足则使用本地生成
-      final settingsService = context.read<SettingsService>();
-      final aiEnabledForToday = settingsService.todayThoughtsUseAI;
-
-      if (!aiEnabledForToday || !aiService.hasValidApiKey()) {
-        // 使用本地的每日提示生成器
-        final l10n = AppLocalizations.of(context);
-        final localPrompt = DailyPromptGenerator.generatePromptBasedOnContext(
-          l10n,
-          city: city,
-          weather: weather,
-          temperature: temperature,
-        );
-
-        if (mounted) {
-          setState(() {
-            _accumulatedPromptText = localPrompt;
-            _isGeneratingDailyPrompt = false;
-          });
-        }
-        return;
-      }
-
-      // 获取最近的周期洞察（本周、上周、本月、上月）
-      final insightHistoryService = context.read<InsightHistoryService>();
-      final recentInsights =
-          await insightHistoryService.formatRecentInsightsForDailyPrompt();
-      logDebug('获取到 ${recentInsights.length} 条最近的周期洞察', source: 'HomePage');
-
-      // Call the new stream method with environment context and historical insights
-      if (!mounted) {
-        return; // Ensure the widget is still mounted after async work
-      }
-
-      final l10n = AppLocalizations.of(context);
-      final Stream<String> promptStream = aiService.streamGenerateDailyPrompt(
-        l10n,
-        city: city,
-        weather: weather,
-        temperature: temperature,
-        historicalInsights: recentInsights,
-      );
-
-      if (!mounted) {
-        return; // Ensure mounted before setting stream and listening
-      }
-
-      // Set the stream variable so StreamBuilder can react to connection state changes
-      setState(() {});
-
-      // Listen to the stream and accumulate text
-      _promptSubscription = promptStream.listen(
-        (String chunk) {
-          // Append the new chunk and update state to trigger UI rebuild
-          if (mounted) {
-            setState(() {
-              _accumulatedPromptText += chunk;
-            });
-          }
-        },
-        onError: (error) {
-          // Handle errors - 提供降级策略
-          logDebug('获取每日提示流出错: $error，使用本地生成的提示');
-          if (mounted) {
-            // 生成本地提示作为降级
-            final l10n = AppLocalizations.of(context);
-            final fallbackPrompt =
-                DailyPromptGenerator.generatePromptBasedOnContext(
-              l10n,
-              city: city,
-              weather: weather,
-              temperature: temperature,
-            );
-
-            setState(() {
-              _accumulatedPromptText = fallbackPrompt;
-              _isGeneratingDailyPrompt = false; // Stop loading on error
-            });
-
-            // 不显示错误信息，只在debug中记录，用户看到的是降级提示
-          }
-        },
-        onDone: () {
-          // Stream finished, update loading state and trim the accumulated text
-          if (mounted) {
-            setState(() {
-              _accumulatedPromptText =
-                  _accumulatedPromptText.trim(); // 去除前后空白字符
-              _isGeneratingDailyPrompt = false; // Stop loading on done
-            });
-            // 移除每日思考生成完成的弹窗通知
-          }
-        },
-        cancelOnError: true, // Cancel subscription if an error occurs
-      );
-    } catch (e) {
-      logDebug('获取每日提示失败 (setup): $e');
-      if (mounted) {
-        // 使用本地生成的提示作为降级策略
-        final locationService = context.read<LocationService>();
-        final weatherService = context.read<WeatherService>();
-        final l10n = AppLocalizations.of(context);
-
-        final fallbackPrompt =
-            DailyPromptGenerator.generatePromptBasedOnContext(
-          l10n,
-          city: locationService.city,
-          weather: weatherService.currentWeather,
-          temperature: weatherService.temperature,
-        );
-
-        setState(() {
-          _accumulatedPromptText = fallbackPrompt;
-          _isGeneratingDailyPrompt = false; // Stop loading on setup error
-        });
-
-        // 只在debug模式下显示错误，普通用户看到降级提示即可
-        logDebug('AI提示获取失败，已使用本地生成的提示');
-      }
-    }
-  } // --- 每日提示相关状态和逻辑结束 ---
-
   // 统一刷新方法 - 先刷新位置天气，再同时刷新每日一言和每日提示
   Future<void> _handleRefresh() async {
     try {
@@ -369,7 +214,8 @@ class _HomePageState extends State<HomePage>
         if (_dailyQuoteViewKey.currentState != null)
           _dailyQuoteViewKey.currentState!.refreshQuote(),
         // 刷新每日提示（现在会使用最新的位置和天气信息）
-        _fetchDailyPrompt(),
+        if (_dailyPromptPanelKey.currentState != null)
+          _dailyPromptPanelKey.currentState!.refreshPrompt(),
       ]);
 
       logDebug('刷新完成');
@@ -589,7 +435,6 @@ class _HomePageState extends State<HomePage>
     _aiTabController.dispose();
     // 移除生命周期观察器
     WidgetsBinding.instance.removeObserver(this);
-    _promptSubscription?.cancel();
     _connectivityService?.removeListener(_onConnectivityChanged);
     super.dispose();
   }
@@ -886,11 +731,15 @@ class _HomePageState extends State<HomePage>
       logDebug('位置和天气服务初始化完成，开始获取每日提示...');
 
       // 然后获取每日提示（包含位置和天气信息）
-      await _fetchDailyPrompt(initialLoad: true);
+      await _dailyPromptPanelKey.currentState?.refreshPrompt(
+        initialLoad: true,
+      );
     } catch (e) {
       logDebug('初始化位置天气和获取每日提示失败: $e');
       // 即使初始化失败，也尝试获取默认提示
-      await _fetchDailyPrompt(initialLoad: true);
+      await _dailyPromptPanelKey.currentState?.refreshPrompt(
+        initialLoad: true,
+      );
     }
   }
 
@@ -2234,170 +2083,12 @@ class _HomePageState extends State<HomePage>
                                 ),
                               ),
                             ),
-                          ), // 每日提示部分 - 固定在底部，紧凑布局
-                          Consumer2<AIService, SettingsService>(
-                            builder: (context, aiSvc, settingsSvc, _) {
-                              final bool isAiConfigured = aiSvc
-                                      .hasValidApiKey() &&
-                                  settingsSvc.aiSettings.apiUrl.isNotEmpty &&
-                                  settingsSvc.aiSettings.model.isNotEmpty;
-                              return Container(
-                                width: double.infinity,
-                                margin: EdgeInsets.fromLTRB(
-                                  screenWidth > 600
-                                      ? 16.0
-                                      : (isVerySmallScreen
-                                          ? 8.0
-                                          : 12.0), // 动态调整边距
-                                  isVerySmallScreen ? 2.0 : 4.0, // 极小屏幕减少上边距
-                                  screenWidth > 600
-                                      ? 16.0
-                                      : (isVerySmallScreen
-                                          ? 8.0
-                                          : 12.0), // 动态调整边距
-                                  isVerySmallScreen ? 8.0 : 12.0, // 极小屏幕减少下边距
-                                ),
-                                padding: EdgeInsets.all(
-                                  screenWidth > 600
-                                      ? 18.0
-                                      : (isVerySmallScreen
-                                          ? 10.0
-                                          : 14.0), // 动态调整内边距
-                                ),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.surface,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: AppTheme.defaultShadow,
-                                  border: Border.all(
-                                    color:
-                                        theme.colorScheme.outline.withAlpha(30),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.lightbulb_outline,
-                                          color: theme.colorScheme.primary,
-                                          size: screenWidth > 600
-                                              ? 22
-                                              : (isVerySmallScreen
-                                                  ? 16
-                                                  : 18), // 动态调整图标大小
-                                        ),
-                                        SizedBox(
-                                          width: isVerySmallScreen ? 4 : 6,
-                                        ), // 动态调整间距
-                                        Text(
-                                          AppLocalizations.of(
-                                            context,
-                                          ).todayThoughts,
-                                          style: theme.textTheme.titleMedium
-                                              ?.copyWith(
-                                            color: theme.colorScheme.primary,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: screenWidth > 600
-                                                ? 16
-                                                : (isVerySmallScreen
-                                                    ? 13
-                                                    : 15), // 动态调整字体
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    SizedBox(
-                                      height: isVerySmallScreen
-                                          ? 4
-                                          : (isSmallScreen ? 6 : 8),
-                                    ), // 动态调整间距
-                                    // 提示内容区域 - 更紧凑
-                                    _isGeneratingDailyPrompt &&
-                                            _accumulatedPromptText.isEmpty
-                                        ? Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              SizedBox(
-                                                width: isVerySmallScreen
-                                                    ? 16
-                                                    : 18, // 动态调整加载指示器大小
-                                                height:
-                                                    isVerySmallScreen ? 16 : 18,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  color:
-                                                      theme.colorScheme.primary,
-                                                ),
-                                              ),
-                                              SizedBox(
-                                                height: isVerySmallScreen
-                                                    ? 3
-                                                    : (isSmallScreen ? 4 : 6),
-                                              ), // 动态调整间距
-                                              Text(
-                                                isAiConfigured
-                                                    ? AppLocalizations.of(
-                                                        context,
-                                                      ).loadingTodayThoughts
-                                                    : AppLocalizations.of(
-                                                        context,
-                                                      ).fetchingDefaultPrompt,
-                                                style: theme.textTheme.bodySmall
-                                                    ?.copyWith(
-                                                  color: theme
-                                                      .colorScheme.onSurface
-                                                      .withAlpha(160),
-                                                  fontSize: screenWidth > 600
-                                                      ? 13
-                                                      : (isVerySmallScreen
-                                                          ? 10
-                                                          : 12), // 动态调整字体
-                                                ),
-                                                textAlign: TextAlign.center,
-                                              ),
-                                            ],
-                                          )
-                                        : Text(
-                                            _accumulatedPromptText.isNotEmpty
-                                                ? _accumulatedPromptText.trim()
-                                                : (isAiConfigured
-                                                    ? AppLocalizations.of(
-                                                        context,
-                                                      ).waitingForTodayThoughts
-                                                    : AppLocalizations.of(
-                                                        context,
-                                                      ).noTodayThoughts),
-                                            style: theme.textTheme.bodyMedium
-                                                ?.copyWith(
-                                              height: 1.4,
-                                              fontSize: screenWidth > 600
-                                                  ? 15
-                                                  : (isVerySmallScreen
-                                                      ? 12
-                                                      : 14), // 动态调整字体
-                                              color: _accumulatedPromptText
-                                                      .isNotEmpty
-                                                  ? theme.textTheme.bodyMedium
-                                                      ?.color
-                                                  : theme.colorScheme.onSurface
-                                                      .withAlpha(120),
-                                            ),
-                                            textAlign: TextAlign.center,
-                                            maxLines: isVerySmallScreen
-                                                ? 2
-                                                : 3, // 极小屏幕最多2行
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                  ],
-                                ),
-                              );
-                            },
+                          ),
+                          HomeDailyPromptPanel(
+                            key: _dailyPromptPanelKey,
+                            screenWidth: screenWidth,
+                            isSmallScreen: isSmallScreen,
+                            isVerySmallScreen: isVerySmallScreen,
                           ),
                         ],
                       ),
