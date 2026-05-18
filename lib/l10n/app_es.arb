@@ -31,5 +31,7 @@
   "dailyQuoteApiNinjasApiKeyInvalid": "El formato de la clave de servicio parece inválido",
   "featureDailyQuote": "Cita diaria",
   "hitokotoTypeJoke": "Humor",
-  "dailyQuoteApi": "Proveedor de cita diaria"
+  "dailyQuoteApi": "Proveedor de cita diaria",
+  "applyChanges": "Aplicar cambios",
+  "appendToOriginal": "Añadir al original"
 }

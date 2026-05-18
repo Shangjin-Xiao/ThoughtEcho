@@ -31,5 +31,7 @@
   "dailyQuoteApiNinjasApiKeyConfigured": "Dienstschlüssel konfiguriert",
   "dailyQuoteApiNinjasApiKeyMissing": "Noch kein Dienstschlüssel konfiguriert",
   "dailyQuoteApiNinjasApiKeyInvalid": "Das Format des Dienstschlüssels scheint ungültig zu sein",
-  "dailyQuoteApi": "Dienstanbieter für tägliche Zitate"
+  "dailyQuoteApi": "Dienstanbieter für tägliche Zitate",
+  "applyChanges": "Änderungen übernehmen",
+  "appendToOriginal": "An Original anhängen"
 }

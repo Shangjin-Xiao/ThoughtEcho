@@ -139,7 +139,7 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
             polishInput,
           ), // 调用流式方法，使用正确的参数名
           displayTextTransformer: QuillAiApplyUtils.stripMediaMarkersForDisplay,
-          applyButtonText: '应用更改', // 应用按钮文本
+          applyButtonText: l10n.applyChanges, // 应用按钮文本
           onApply: (fullText) {
             // 用户点击"应用更改"时调用
             // 返回结果给showDialog的await调用
@@ -196,7 +196,7 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
           textStream: aiService.streamContinueText(
             plainText,
           ), // 调用流式方法，使用正确的参数名
-          applyButtonText: '附加到原文', // 应用按钮文本
+          applyButtonText: l10n.appendToOriginal, // 应用按钮文本
           onApply: (fullText) {
             // 用户点击"附加到原文"时调用
             // 返回结果给showDialog的await调用

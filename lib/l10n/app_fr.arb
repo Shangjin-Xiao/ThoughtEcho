@@ -3526,5 +3526,6 @@
   "insertVideo": "Insérer une vidéo",
   "insertAudio": "Insérer un audio",
   "clipboardFoundHint": "Contenu du presse-papiers trouvé, appuyez pour ajouter comme note",
-  "operationFailedSimple": "L'opération a échoué"
+  "operationFailedSimple": "L'opération a échoué",
+  "appendToOriginal": "Ajouter à l'original"
 }
