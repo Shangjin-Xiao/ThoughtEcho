@@ -18,3 +18,6 @@
 ## 2026-05-04 - 补充 updateSearchImmediate 的测试
 **盲点:** `NoteSearchController` 的 `updateSearchImmediate` 方法缺乏测试，导致搜索防抖取消逻辑和立即状态更新未受覆盖。
 **对策:** 在 `test/unit/controllers/search_controller_test.dart` 中新增针对 `updateSearchImmediate` 的单元测试，利用 `fakeAsync` 模拟验证正在进行的延时任务能够被正确取消，并验证正常及无变化时的状态更新情况。
+## 2026-05-19 - [补充 DailyPromptGenerator 的单元测试]
+**盲点:** `DailyPromptGenerator` 负责根据时间、天气、温度及随机策略生成用户提示语，属于典型的数据驱动纯逻辑，但长期缺乏测试。其内部依赖于未 Mock 的本地化字典和隐式 `DateTime.now()`，可能导致未来迭代或新增语言时，某些边界条件（例如极端温度解析异常）静默崩溃。
+**对策:** 通过自定义简单的 `FakeAppLocalizations` 实现了与 Flutter UI（`AppLocalizations.of(context)`）的环境隔离，并针对日期兜底、天气及城市插入、温度解析等分支进行了纯粹的方法调用验证，提升代码健壮性且不增加集成测试维护成本。
