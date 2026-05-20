@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import '../utils/app_logger.dart';
 import 'settings_service.dart';
 
 /// 周期洞察记录
@@ -72,8 +73,9 @@ class InsightHistoryService extends ChangeNotifier {
         _insights.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         notifyListeners();
       }
-    } catch (e) {
-      debugPrint('加载洞察历史失败: $e');
+    } catch (e, stack) {
+      AppLogger.e('加载洞察历史失败',
+          error: e, stackTrace: stack, source: 'InsightHistoryService');
       _insights = [];
     }
   }
@@ -108,8 +110,9 @@ class InsightHistoryService extends ChangeNotifier {
 
       await _saveInsights();
       notifyListeners();
-    } catch (e) {
-      debugPrint('保存洞察失败: $e');
+    } catch (e, stack) {
+      AppLogger.e('保存洞察失败',
+          error: e, stackTrace: stack, source: 'InsightHistoryService');
     }
   }
 
@@ -119,19 +122,20 @@ class InsightHistoryService extends ChangeNotifier {
       final jsonList = _insights.map((insight) => insight.toJson()).toList();
       final jsonString = json.encode(jsonList);
       await _settingsService.setCustomString(_storageKey, jsonString);
-    } catch (e) {
-      debugPrint('保存洞察到存储失败: $e');
+    } catch (e, stack) {
+      AppLogger.e('保存洞察到存储失败',
+          error: e, stackTrace: stack, source: 'InsightHistoryService');
     }
   }
 
   /// 根据数据签名获取洞察
   PeriodicInsight? getInsightBySignature(String signature) {
-    try {
-      return _insights
-          .firstWhere((insight) => insight.dataSignature == signature);
-    } catch (e) {
-      return null;
+    for (final insight in _insights) {
+      if (insight.dataSignature == signature) {
+        return insight;
+      }
     }
+    return null;
   }
 
   /// 获取历史洞察上下文（用于AI分析）
