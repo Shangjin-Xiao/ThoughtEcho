@@ -134,11 +134,11 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
   Widget _buildCenteredPopover(BuildContext context) {
     return Material(
       color: Colors.black.withValues(alpha: 0.3),
-      child: GestureDetector(
-        onTap: () => _handleDismiss(),
-        child: Semantics(
-          label: 'Dismiss',
-          button: true,
+      child: Semantics(
+        label: MaterialLocalizations.of(context).closeButtonTooltip,
+        button: true,
+        child: GestureDetector(
+          onTap: () => _handleDismiss(),
           child: Center(
             child: FadeTransition(
               opacity: _fadeAnimation,
@@ -469,15 +469,19 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
                   ),
                 ),
               ),
-              GestureDetector(
-                onTap: () => _handleDismiss(),
-                child: Padding(
-                  padding: const EdgeInsets.all(2),
-                  child: Icon(
-                    Icons.close,
-                    size: 14,
-                    color: theme.textTheme.bodySmall?.color?.withValues(
-                      alpha: 0.7,
+              Semantics(
+                button: true,
+                label: MaterialLocalizations.of(context).closeButtonTooltip,
+                child: GestureDetector(
+                  onTap: () => _handleDismiss(),
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Icon(
+                      Icons.close,
+                      size: 14,
+                      color: theme.textTheme.bodySmall?.color?.withValues(
+                        alpha: 0.7,
+                      ),
                     ),
                   ),
                 ),
