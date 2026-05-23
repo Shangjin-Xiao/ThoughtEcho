@@ -33,6 +33,9 @@ import '../widgets/anniversary_animation_overlay.dart'; // 导入一周年动画
 import '../widgets/anniversary_notebook_icon.dart';
 import '../utils/anniversary_banner_text_utils.dart';
 import '../utils/anniversary_display_utils.dart';
+import 'webdav_sync_page.dart';
+import '../services/webdav_sync_service.dart';
+import '../utils/lww_utils.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -854,6 +857,44 @@ class SettingsPageState extends State<SettingsPage> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => const NoteSyncPage(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  title: Text(l10n.webdavSyncTitle),
+                  subtitle: Consumer<WebDAVSyncService>(
+                    builder: (context, webdavSync, _) {
+                      if (!webdavSync.enabled) {
+                        return Text(l10n.webdavSyncSubtitle);
+                      }
+                      String statusStr = '';
+                      if (webdavSync.syncStatus == WebDAVSyncStatus.syncing) {
+                        statusStr = l10n.webdavStatusSyncing;
+                      } else if (webdavSync.syncStatus ==
+                          WebDAVSyncStatus.success) {
+                        statusStr = l10n.webdavStatusSuccess;
+                      } else if (webdavSync.syncStatus ==
+                          WebDAVSyncStatus.failed) {
+                        statusStr = l10n.webdavStatusFailed;
+                      }
+
+                      final timeStr = webdavSync.lastSyncTime.isNotEmpty
+                          ? LWWUtils.formatTimestamp(webdavSync.lastSyncTime)
+                          : '从未同步';
+
+                      return Text(statusStr.isNotEmpty
+                          ? '$statusStr (上次：$timeStr)'
+                          : '已启用 (上次：$timeStr)');
+                    },
+                  ),
+                  leading: const Icon(Icons.cloud_sync_outlined),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const WebDAVSyncPage(),
                       ),
                     );
                   },

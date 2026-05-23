@@ -41,6 +41,7 @@ import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/utils/update_dialog_helper.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
 import 'package:thoughtecho/services/background_push_handler.dart';
+import 'package:thoughtecho/services/webdav_sync_service.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'utils/app_logger.dart';
@@ -552,6 +553,20 @@ Future<void> main() async {
             servicesInitialized.value = true;
             logInfo('所有后台服务初始化完成', source: 'BackgroundInit');
 
+            // 启动 WebDAV 启动自动同步，延迟1.5秒避免打断启动帧
+            Future.delayed(const Duration(milliseconds: 1500), () {
+              try {
+                final webdav = WebDAVSyncService();
+                if (webdav.enabled && webdav.syncOnLaunch) {
+                  logInfo('自动触发启动 WebDAV 同步...', source: 'WebDAVSync');
+                  webdav.triggerSync(isBackground: true);
+                }
+              } catch (e) {
+                logError('触发启动 WebDAV 同步失败: $e',
+                    error: e, source: 'WebDAVSync');
+              }
+            });
+
             // 启动后台版本检查（静默执行，不影响用户体验）
             VersionCheckService.backgroundCheckForUpdates(
               onUpdateAvailable: (versionInfo) {
@@ -689,6 +704,19 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         } catch (e) {
           logError('清理缓存失败: $e', error: e, source: 'AppLifecycle');
         }
+      });
+    }
+
+    // 应用回到前台时自动同步 WebDAV
+    if (state == AppLifecycleState.resumed) {
+      logDebug('应用回到前台，触发 WebDAV 后台同步...', source: 'AppLifecycle');
+      Future.microtask(() {
+        try {
+          final webdav = WebDAVSyncService();
+          if (webdav.enabled && webdav.syncOnLaunch) {
+            webdav.triggerSync(isBackground: true);
+          }
+        } catch (_) {}
       });
     }
   }

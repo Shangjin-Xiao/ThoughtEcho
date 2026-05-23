@@ -1,0 +1,588 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:archive/archive.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:uuid/uuid.dart';
+
+import '../services/database_service.dart';
+import '../services/mmkv_service.dart';
+import '../utils/app_logger.dart';
+
+/// WebDAV 同步状态枚举
+enum WebDAVSyncStatus {
+  idle,
+  syncing,
+  success,
+  failed,
+}
+
+class WebDAVSyncService extends ChangeNotifier {
+  static final WebDAVSyncService _instance = WebDAVSyncService._internal();
+  factory WebDAVSyncService() => _instance;
+
+  WebDAVSyncService._internal() {
+    _initSettings();
+  }
+
+  // 核心存储与安全服务
+  final MMKVService _mmkv = MMKVService();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+
+  // WebDAV 状态
+  WebDAVSyncStatus _syncStatus = WebDAVSyncStatus.idle;
+  String _lastSyncTime = '';
+  int _lastConflictCount = 0;
+
+  WebDAVSyncStatus get syncStatus => _syncStatus;
+  String get lastSyncTime => _lastSyncTime;
+  int get lastConflictCount => _lastConflictCount;
+  bool get isSyncing => _syncStatus == WebDAVSyncStatus.syncing;
+
+  // 配置缓存字段
+  bool _enabled = false;
+  String _provider = 'custom'; // nutstore, nextcloud, infinicloud, custom
+  String _url = '';
+  String _username = '';
+  bool _syncOnLaunch = true;
+  bool _syncOnChange = true;
+
+  bool get enabled => _enabled;
+  String get provider => _provider;
+  String get url => _url;
+  String get username => _username;
+  bool get syncOnLaunch => _syncOnLaunch;
+  bool get syncOnChange => _syncOnChange;
+
+  // 定时器用于防抖
+  Timer? _debounceTimer;
+
+  // 冲突分类固定ID
+  static const String conflictCategoryId = 'system_sync_conflicts_category';
+
+  /// 初始化设置，从 MMKV 中读取缓存配置
+  void _initSettings() {
+    _enabled = _mmkv.getBool('webdav_enabled') ?? false;
+    _provider = _mmkv.getString('webdav_provider') ?? 'custom';
+    _url = _mmkv.getString('webdav_url') ?? '';
+    _username = _mmkv.getString('webdav_username') ?? '';
+    _syncOnLaunch = _mmkv.getBool('webdav_sync_on_launch') ?? true;
+    _syncOnChange = _mmkv.getBool('webdav_sync_on_change') ?? true;
+    _lastSyncTime = _mmkv.getString('webdav_last_sync_time') ?? '';
+
+    // 如果是首次使用，且预设是坚果云，自动填入坚果云的地址
+    if (_url.isEmpty && _provider == 'nutstore') {
+      _url = 'https://dav.jianguoyun.com/dav/';
+    }
+  }
+
+  /// 获取保存的安全密码/Token
+  Future<String?> getPassword() async {
+    try {
+      return await _secureStorage.read(key: 'webdav_password');
+    } catch (e) {
+      logError('读取 WebDAV 密码失败', error: e, source: 'WebDAVSyncService');
+      return null;
+    }
+  }
+
+  /// 保存配置
+  Future<void> saveSettings({
+    required bool enabled,
+    required String provider,
+    required String url,
+    required String username,
+    String? password,
+    required bool syncOnLaunch,
+    required bool syncOnChange,
+  }) async {
+    _enabled = enabled;
+    _provider = provider;
+    _url = url.trim();
+    if (!_url.endsWith('/')) _url = '$_url/';
+    _username = username.trim();
+    _syncOnLaunch = syncOnLaunch;
+    _syncOnChange = syncOnChange;
+
+    await _mmkv.setBool('webdav_enabled', _enabled);
+    await _mmkv.setString('webdav_provider', _provider);
+    await _mmkv.setString('webdav_url', _url);
+    await _mmkv.setString('webdav_username', _username);
+    await _mmkv.setBool('webdav_sync_on_launch', _syncOnLaunch);
+    await _mmkv.setBool('webdav_sync_on_change', _syncOnChange);
+
+    if (password != null) {
+      await _secureStorage.write(
+          key: 'webdav_password', value: password.trim());
+    }
+
+    notifyListeners();
+  }
+
+  /// 创建配置好的 Dio 实例用于 WebDAV 请求
+  Future<Dio> _createDio(
+      String requestUrl, String requestUsername, String requestPassword) async {
+    final dio = Dio();
+    dio.options.connectTimeout = const Duration(seconds: 15);
+    dio.options.receiveTimeout = const Duration(seconds: 20);
+    dio.options.sendTimeout = const Duration(seconds: 20);
+
+    // 计算 Basic Auth 头
+    final basicAuth =
+        'Basic ${base64Encode(utf8.encode('$requestUsername:$requestPassword'))}';
+    dio.options.headers = {
+      'Authorization': basicAuth,
+      'Accept': '*/*',
+    };
+
+    return dio;
+  }
+
+  /// 测试 WebDAV 连接
+  Future<bool> testConnection(
+      String testUrl, String testUsername, String testPassword) async {
+    try {
+      String cleanUrl = testUrl.trim();
+      if (!cleanUrl.endsWith('/')) cleanUrl = '$cleanUrl/';
+
+      final dio = await _createDio(cleanUrl, testUsername, testPassword);
+
+      // 发送 PROPFIND 请求获取根目录信息，验证凭证和地址是否有效
+      final response = await dio.request(
+        cleanUrl,
+        options: Options(
+          method: 'PROPFIND',
+          headers: {'Depth': '0'},
+          validateStatus: (status) => status != null && status < 500,
+        ),
+      );
+
+      return response.statusCode == 200 || response.statusCode == 207;
+    } catch (e) {
+      logError('WebDAV 测试连接失败', error: e, source: 'WebDAVSyncService');
+      return false;
+    }
+  }
+
+  /// 触发网络数据同步
+  /// [isBackground] - 是否为后台静默同步（不报错弹窗，仅记录日志）
+  Future<void> triggerSync({bool isBackground = false}) async {
+    if (!_enabled || isSyncing) return;
+
+    final password = await getPassword();
+    if (_url.isEmpty ||
+        _username.isEmpty ||
+        password == null ||
+        password.isEmpty) {
+      logDebug('WebDAV 同步未完全配置，跳过同步');
+      return;
+    }
+
+    _syncStatus = WebDAVSyncStatus.syncing;
+    _lastConflictCount = 0;
+    notifyListeners();
+
+    try {
+      final dio = await _createDio(_url, _username, password);
+
+      // 1. 确保服务器同步目录结构存在 (/thoughtecho/ 和 /thoughtecho/media/ 等)
+      await _ensureDirectoryExists(dio, '${_url}thoughtecho/');
+      await _ensureDirectoryExists(dio, '${_url}thoughtecho/media/');
+      await _ensureDirectoryExists(dio, '${_url}thoughtecho/media/images/');
+      await _ensureDirectoryExists(dio, '${_url}thoughtecho/media/videos/');
+      await _ensureDirectoryExists(dio, '${_url}thoughtecho/media/audios/');
+
+      final remoteSyncZipUrl = '${_url}thoughtecho/thoughtecho_sync.zip';
+
+      // 2. 检查云端备份是否存在并下载
+      Map<String, dynamic>? remoteData;
+      bool hasRemote = false;
+      try {
+        final checkRes = await dio.request(
+          remoteSyncZipUrl,
+          options: Options(
+            method: 'PROPFIND',
+            headers: {'Depth': '0'},
+            validateStatus: (status) => status == 200 || status == 207,
+          ),
+        );
+        if (checkRes.statusCode == 200 || checkRes.statusCode == 207) {
+          hasRemote = true;
+        }
+      } catch (_) {
+        // 云端文件不存在
+      }
+
+      if (hasRemote) {
+        logDebug('发现云端备份文件，开始下载...');
+        final downloadRes = await dio.get<List<int>>(
+          remoteSyncZipUrl,
+          options: Options(responseType: ResponseType.bytes),
+        );
+
+        if (downloadRes.statusCode == 200 && downloadRes.data != null) {
+          // 解压 ZIP 提取 JSON
+          final archive = ZipDecoder().decodeBytes(downloadRes.data!);
+          final dataJsonFile = archive.findFile('backup_data.json');
+          if (dataJsonFile != null) {
+            final jsonStr = utf8.decode(dataJsonFile.content as List<int>);
+            remoteData = json.decode(jsonStr) as Map<String, dynamic>;
+          }
+        }
+      }
+
+      final dbService = DatabaseService();
+
+      // 3. 如果两端都有数据，进行冲突检测与克隆
+      if (remoteData != null && _lastSyncTime.isNotEmpty) {
+        logDebug('进行同步冲突检测与隔离...');
+        _lastConflictCount = await _detectAndCloneConflicts(
+          dbService,
+          remoteData,
+          _lastSyncTime,
+        );
+      }
+
+      // 4. 合并云端数据到本地数据库
+      if (remoteData != null) {
+        logDebug('开始执行 LWW 本地智能合并...');
+        await dbService.importDataWithLWWMerge(
+          remoteData,
+          sourceDevice: 'WebDAV_Cloud',
+        );
+        dbService.refreshQuotes(); // 刷新 UI
+      }
+
+      // 5. 增量比对并同步大媒体附件 (Images, Videos, Audios)
+      logDebug('开始同步本地与云端媒体文件...');
+      await _syncMediaFiles(dio);
+
+      // 6. 重新打包最新的本地数据库数据并上传
+      logDebug('打包本地最新数据上传云端...');
+      final localDataMap = await dbService.exportDataAsMap();
+      final localDataJson = json.encode(localDataMap);
+
+      final archive = Archive();
+      final jsonBytes = utf8.encode(localDataJson);
+      archive.addFile(
+          ArchiveFile('backup_data.json', jsonBytes.length, jsonBytes));
+      final zipBytes = ZipEncoder().encode(archive);
+
+      await dio.put(
+        remoteSyncZipUrl,
+        data: Stream.fromIterable([zipBytes]),
+        options: Options(
+          headers: {
+            'Content-Type': 'application/zip',
+            'Content-Length': zipBytes.length,
+          },
+        ),
+      );
+
+      // 7. 更新同步成功状态
+      _lastSyncTime = DateTime.now().toUtc().toIso8601String();
+      await _mmkv.setString('webdav_last_sync_time', _lastSyncTime);
+      _syncStatus = WebDAVSyncStatus.success;
+      await _mmkv.setString('webdav_sync_status', 'success');
+
+      logInfo('WebDAV 同步成功完成。冲突数: $_lastConflictCount');
+    } catch (e, stack) {
+      logError('WebDAV 同步失败',
+          error: e, stackTrace: stack, source: 'WebDAVSyncService');
+      _syncStatus = WebDAVSyncStatus.failed;
+      await _mmkv.setString('webdav_sync_status', 'failed');
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  /// 确保 WebDAV 上特定目录存在，如果不存在则自动创建
+  Future<void> _ensureDirectoryExists(Dio dio, String folderUrl) async {
+    try {
+      final response = await dio.request(
+        folderUrl,
+        options: Options(
+          method: 'PROPFIND',
+          headers: {'Depth': '0'},
+          validateStatus: (status) => status != null && status < 500,
+        ),
+      );
+
+      // 404 说明目录不存在，发起创建目录请求
+      if (response.statusCode == 404) {
+        logDebug('创建 WebDAV 目录: $folderUrl');
+        await dio.request(
+          folderUrl,
+          options: Options(
+            method: 'MKCOL',
+            validateStatus: (status) =>
+                status == 201 || status == 405, // 405 表示已存在
+          ),
+        );
+      }
+    } catch (e) {
+      // 捕获目录检查与创建错误，防止因单级目录问题阻断后续流程
+      logDebug('检查目录存在失败 ($folderUrl): $e');
+    }
+  }
+
+  /// 冲突检测，对两端都修改过的笔记的本地版进行“同步冲突”分类克隆
+  Future<int> _detectAndCloneConflicts(
+    DatabaseService dbService,
+    Map<String, dynamic> remoteData,
+    String lastSyncTimeStr,
+  ) async {
+    if (lastSyncTimeStr.isEmpty) return 0;
+
+    final db = dbService.database;
+    final remoteQuotes = remoteData['quotes'] as List?;
+    if (remoteQuotes == null || remoteQuotes.isEmpty) return 0;
+
+    final lastSync = DateTime.parse(lastSyncTimeStr).toUtc();
+
+    // 查询自上次同步后，本地被修改过且没有被软删除的笔记
+    final localQuotes = await db.query(
+      'quotes',
+      where: 'last_modified > ? AND is_deleted = 0',
+      whereArgs: [lastSyncTimeStr],
+    );
+
+    if (localQuotes.isEmpty) return 0;
+
+    final localQuotesMap = {
+      for (final q in localQuotes) (q['id'] as String): q
+    };
+
+    int conflictsCloned = 0;
+
+    // 比对云端对应笔记的修改时间
+    for (final rq in remoteQuotes) {
+      final rqMap = Map<String, dynamic>.from(rq as Map<String, dynamic>);
+      final quoteId = rqMap['id'] as String?;
+      if (quoteId == null) continue;
+
+      final localQuote = localQuotesMap[quoteId];
+      if (localQuote == null) continue;
+
+      final remoteModStr = rqMap['last_modified']?.toString() ??
+          rqMap['lastModified']?.toString() ??
+          '';
+      if (remoteModStr.isEmpty) continue;
+
+      final remoteModTime = DateTime.parse(remoteModStr).toUtc();
+      final localModTime =
+          DateTime.parse(localQuote['last_modified'] as String).toUtc();
+
+      // 如果两边都有修改，且内容不同，则判定为冲突
+      if (localModTime.isAfter(lastSync) && remoteModTime.isAfter(lastSync)) {
+        final localContent = localQuote['content'] as String? ?? '';
+        final remoteContent = rqMap['content'] as String? ?? '';
+
+        if (localContent != remoteContent) {
+          conflictsCloned++;
+          await _cloneConflictQuote(db, localQuote);
+        }
+      }
+    }
+
+    return conflictsCloned;
+  }
+
+  /// 克隆冲突的笔记，并将分类设为“同步冲突”
+  Future<void> _cloneConflictQuote(
+      Database db, Map<String, dynamic> localQuote) async {
+    try {
+      // 1. 确保冲突分类在本地存在
+      final catCheck = await db.query(
+        'categories',
+        where: 'id = ?',
+        whereArgs: [conflictCategoryId],
+      );
+
+      if (catCheck.isEmpty) {
+        await db.insert('categories', {
+          'id': conflictCategoryId,
+          'name': '同步冲突',
+          'is_default': 0,
+          'icon_name': 'warning_amber_rounded',
+          'last_modified': DateTime.now().toUtc().toIso8601String(),
+        });
+      }
+
+      // 2. 拷贝笔记元数据
+      final String quoteId = localQuote['id'] as String;
+      final String clonedId = const Uuid().v4();
+      final clonedQuote = Map<String, dynamic>.from(localQuote);
+
+      clonedQuote['id'] = clonedId;
+      clonedQuote['category_id'] = conflictCategoryId;
+      clonedQuote['last_modified'] = DateTime.now().toUtc().toIso8601String();
+      clonedQuote['content'] = '[冲突备份] ${clonedQuote['content']}';
+
+      // 富文本 Quill Delta JSON 插入前缀
+      if (clonedQuote['delta_content'] != null &&
+          (clonedQuote['delta_content'] as String).isNotEmpty) {
+        try {
+          final delta = json.decode(clonedQuote['delta_content'] as String);
+          if (delta is List && delta.isNotEmpty) {
+            final first = delta.first;
+            if (first is Map &&
+                first.containsKey('insert') &&
+                first['insert'] is String) {
+              first['insert'] = '[冲突备份] ${first['insert']}';
+              clonedQuote['delta_content'] = json.encode(delta);
+            }
+          }
+        } catch (_) {}
+      }
+
+      await db.insert('quotes', clonedQuote);
+
+      // 3. 复制对应的标签关联关系
+      final tags = await db.query(
+        'quote_tags',
+        where: 'quote_id = ?',
+        whereArgs: [quoteId],
+      );
+      for (final tag in tags) {
+        await db.insert('quote_tags', {
+          'quote_id': clonedId,
+          'tag_id': tag['tag_id'],
+        });
+      }
+
+      logDebug('已成功为冲突的笔记创建冲突隔离备份: $clonedId');
+    } catch (e) {
+      logDebug('克隆冲突笔记失败: $e');
+    }
+  }
+
+  /// 增量比对并同步本地与云端媒体文件夹 (Images, Videos, Audios)
+  Future<void> _syncMediaFiles(Dio dio) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final mediaRoot = Directory(p.join(appDir.path, 'media'));
+    if (!await mediaRoot.exists()) return;
+
+    // 1. 扫描本地所有存在的媒体文件
+    final List<File> localFiles =
+        mediaRoot.listSync(recursive: true).whereType<File>().toList();
+
+    final Map<String, File> localMediaMap = {};
+    for (final f in localFiles) {
+      final relPath = p.relative(f.path, from: mediaRoot.path);
+      // 标准化路径斜杠，防止 Windows 系统的反斜杠导致 WebDAV 匹配失败
+      final stdPath = relPath.replaceAll('\\', '/');
+      localMediaMap[stdPath] = f;
+    }
+
+    final subFolders = ['images', 'videos', 'audios'];
+    final Set<String> remoteFilePaths = {};
+
+    // 2. 扫描云端所有分类目录的文件列表
+    for (final folder in subFolders) {
+      final folderUrl = '${_url}thoughtecho/media/$folder/';
+      try {
+        final response = await dio.request(
+          folderUrl,
+          options: Options(
+            method: 'PROPFIND',
+            headers: {'Depth': '1'},
+            validateStatus: (status) => status == 207 || status == 200,
+          ),
+        );
+
+        if (response.statusCode == 207 && response.data != null) {
+          final String xmlData = response.data.toString();
+          // 使用 namespace-agnostic 正则提取云端文件的相对路径 URL 尾部
+          final hrefRegExp =
+              RegExp(r'<[a-zA-Z0-9:]*href>([\s\S]*?)<\/[a-zA-Z0-9:]*href>');
+          final matches = hrefRegExp.allMatches(xmlData);
+
+          for (final m in matches) {
+            String href = Uri.decodeFull(m.group(1)?.trim() ?? '');
+            if (href.endsWith('/') ||
+                href.endsWith('/media') ||
+                href.endsWith('/media/')) {
+              continue; // 过滤目录自身
+            }
+
+            // 截取 media/ 后面的部分，如 images/123.png
+            final mediaIdx = href.indexOf('media/');
+            if (mediaIdx != -1) {
+              final relPath = href.substring(mediaIdx + 6);
+              remoteFilePaths.add(relPath);
+            }
+          }
+        }
+      } catch (e) {
+        logDebug('获取云端媒体目录 ($folder) 列表失败: $e');
+      }
+    }
+
+    // 3. 上传本地独有文件到云端
+    for (final entry in localMediaMap.entries) {
+      final stdPath = entry.key;
+      final file = entry.value;
+
+      if (!remoteFilePaths.contains(stdPath)) {
+        logDebug('上传本地附件到云端: $stdPath');
+        final uploadUrl = '${_url}thoughtecho/media/$stdPath';
+        try {
+          final fileLen = await file.length();
+          await dio.put(
+            uploadUrl,
+            data: file.openRead(),
+            options: Options(
+              headers: {
+                'Content-Length': fileLen,
+              },
+            ),
+          );
+        } catch (e) {
+          logDebug('上传附件失败 ($stdPath): $e');
+        }
+      }
+    }
+
+    // 4. 从云端下载本地缺失文件
+    for (final stdPath in remoteFilePaths) {
+      if (!localMediaMap.containsKey(stdPath)) {
+        logDebug('从云端下载本地缺失附件: $stdPath');
+        final downloadUrl = '${_url}thoughtecho/media/$stdPath';
+        final localTargetFile =
+            File(p.join(mediaRoot.path, stdPath.replaceAll('/', p.separator)));
+
+        try {
+          // 确保父目录存在
+          await localTargetFile.parent.create(recursive: true);
+          await dio.download(downloadUrl, localTargetFile.path);
+        } catch (e) {
+          logDebug('下载附件失败 ($stdPath): $e');
+        }
+      }
+    }
+  }
+
+  /// 供 UI 层侦听数据库修改并静默防抖同步
+  void handleNoteChanged() {
+    if (!_enabled || !_syncOnChange) return;
+
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(seconds: 4), () {
+      logDebug('检测到笔记改变，触发后台自动同步...');
+      triggerSync(isBackground: true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+}

@@ -36,10 +36,12 @@ import 'unit/services/smart_push_security_test.dart'
     as smart_push_security_test;
 import 'unit/services/error_recovery_manager_test.dart'
     as error_recovery_manager_test;
-import 'unit/services/localsend_security_test.dart' as localsend_security_test;
-import 'unit/services/network_service_test.dart' as network_service_test;
 import 'unit/services/intelligent_memory_manager_test.dart'
     as intelligent_memory_manager_test;
+import 'unit/services/localsend_security_test.dart' as localsend_security_test;
+import 'unit/services/network_service_test.dart' as network_service_test;
+import 'unit/services/webdav_sync_service_test.dart'
+    as webdav_sync_service_test;
 import 'storage_management_test.dart' as storage_management_test;
 import 'performance/day_period_patch_test.dart' as day_period_patch_test;
 
@@ -74,6 +76,7 @@ import 'unit/widgets/motion_photo_preview_page_test.dart'
 import 'unit/controllers/search_controller_test.dart' as search_controller_test;
 
 import 'widget/pages/home_page_test.dart' as home_page_test;
+import 'widget/pages/webdav_sync_page_test.dart' as webdav_sync_page_test;
 
 void main() {
   group('ThoughtEcho Test Suite', () {
@@ -106,6 +109,7 @@ void main() {
       network_service_test.main();
       storage_management_test.main();
       day_period_patch_test.main();
+      webdav_sync_service_test.main();
     });
 
     group('Utility Tests', () {
@@ -134,6 +138,7 @@ void main() {
     group('Widget Tests', () {
       // excerpt_preferences_page_test 未并入全量入口，避免增加现有测试套件内存压力
       home_page_test.main();
+      webdav_sync_page_test.main();
     });
   });
 }
