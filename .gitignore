@@ -292,3 +292,7 @@ assets/store/
 # Additional cleanup
 .metadata
 windows/flutter/generated_plugin_registrant.h
+
+# AI agent workspace & skills
+.agents/
+

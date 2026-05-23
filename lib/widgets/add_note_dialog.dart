@@ -250,11 +250,20 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
     // 优化：完全延迟所有服务初始化和数据库监听器，避免阻塞首次绘制
     // 使用 postFrameCallback + delay 确保首帧渲染完成后再执行重量级操作
+    // 实验开关 addNoteDialogDeferAutoMetadata（默认 false）：
+    //   false → 延迟 300ms（首帧后）获取元数据（现有行为）
+    //   true  → 延迟 1500ms（键盘动画结束后）再获取元数据（实验）
+    final deferMetadata = (_readServiceOrNull<SettingsService>(context)
+            ?.addNoteDialogDeferAutoMetadata ??
+        false);
+    final metadataDelay = deferMetadata
+        ? const Duration(milliseconds: 1500)
+        : const Duration(milliseconds: 300);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      // 延迟 300ms 执行服务初始化和位置/天气获取，避免与动画竞争
-      Future.delayed(const Duration(milliseconds: 300), () async {
+      // 延迟执行服务初始化和位置/天气获取，避免与动画竞争
+      Future.delayed(metadataDelay, () async {
         if (!mounted) return;
 
         _cachedLocationService = _readServiceOrNull<LocationService>(context);
@@ -332,27 +341,36 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       });
     });
 
-    // 性能优化：等 BottomSheet 入场动画结束后再请求焦点。
+    // 性能优化：等 BottomSheet 入场动画结束后再请求焦点弹出键盘。
     // 避免键盘 inset 动画与 BottomSheet 入场动画叠加导致打开阶段掉帧。
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final route = ModalRoute.of(context);
-      if (route != null && route.animation != null) {
-        _routeAnimation = route.animation;
-        if (route.animation!.isCompleted) {
-          // 动画已完成（如无障碍关闭动画），直接请求焦点
-          _requestContentFocus('routeCompleted');
-          _focusRequested = true;
+    // 实验开关 addNoteDialogAutoFocus（默认 true）：关闭后跳过自动聚焦。
+    final autoFocusEnabled =
+        _readServiceOrNull<SettingsService>(context)?.addNoteDialogAutoFocus ??
+            true;
+    if (autoFocusEnabled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final route = ModalRoute.of(context);
+        if (route != null && route.animation != null) {
+          _routeAnimation = route.animation;
+          if (route.animation!.isCompleted) {
+            // 动画已完成（如无障碍关闭动画），直接请求焦点
+            _requestContentFocus('routeCompleted');
+            _focusRequested = true;
+          } else {
+            // 监听动画完成后请求焦点
+            route.animation!.addListener(_onRouteAnimationProgress);
+          }
         } else {
-          // 监听动画完成后请求焦点
-          route.animation!.addListener(_onRouteAnimationProgress);
+          // 无法获取路由动画，直接请求焦点
+          _requestContentFocus('noRouteAnimation');
+          _focusRequested = true;
         }
-      } else {
-        // 无法获取路由动画，直接请求焦点
-        _requestContentFocus('noRouteAnimation');
-        _focusRequested = true;
-      }
-    });
+      });
+    } else {
+      // 实验模式：不自动聚焦，标记为已处理避免监听器泄漏
+      _focusRequested = true;
+    }
 
     // 性能优化：延迟 Feature Guide 弹出，避免与键盘动画竞争
     WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -45,6 +45,19 @@ void main() {
       expect(AppSettings.fromJson(const {}).skipNonFullscreenEditor, isFalse);
     });
 
+    test('AppSettings should default add note dialog experiments safely', () {
+      expect(AppSettings.defaultSettings().addNoteDialogAutoFocus, isTrue);
+      expect(AppSettings.fromJson(const {}).addNoteDialogAutoFocus, isTrue);
+      expect(
+        AppSettings.defaultSettings().addNoteDialogDeferAutoMetadata,
+        isFalse,
+      );
+      expect(
+        AppSettings.fromJson(const {}).addNoteDialogDeferAutoMetadata,
+        isFalse,
+      );
+    });
+
     test('AppSettings should default note edit time toggle to false', () {
       expect(AppSettings.defaultSettings().showNoteEditTime, isFalse);
       expect(AppSettings.fromJson(const {}).showNoteEditTime, isFalse);
@@ -67,6 +80,22 @@ void main() {
 
       expect(settingsService.excerptIntentEnabled, isFalse);
       expect(settingsService.appSettings.excerptIntentEnabled, isFalse);
+    });
+
+    test('should persist add note dialog experiment toggles', () async {
+      expect(settingsService.addNoteDialogAutoFocus, isTrue);
+      expect(settingsService.addNoteDialogDeferAutoMetadata, isFalse);
+
+      await settingsService.setAddNoteDialogAutoFocus(false);
+      await settingsService.setAddNoteDialogDeferAutoMetadata(true);
+
+      expect(settingsService.addNoteDialogAutoFocus, isFalse);
+      expect(settingsService.appSettings.addNoteDialogAutoFocus, isFalse);
+      expect(settingsService.addNoteDialogDeferAutoMetadata, isTrue);
+      expect(
+        settingsService.appSettings.addNoteDialogDeferAutoMetadata,
+        isTrue,
+      );
     });
 
     test(

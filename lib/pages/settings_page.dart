@@ -651,6 +651,40 @@ class SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
+                Consumer<SettingsService>(
+                  builder: (context, settingsService, _) {
+                    if (!settingsService.appSettings.developerMode) {
+                      return const SizedBox.shrink();
+                    }
+                    return SwitchListTile(
+                      title: const Text('[实验] AddNote 自动聚焦'),
+                      subtitle: const Text('打开添加笔记对话框时是否自动弹出键盘（默认开）'),
+                      secondary: const Icon(Icons.keyboard_outlined),
+                      value: settingsService.addNoteDialogAutoFocus,
+                      onChanged: (enabled) {
+                        settingsService.setAddNoteDialogAutoFocus(enabled);
+                      },
+                    );
+                  },
+                ),
+                Consumer<SettingsService>(
+                  builder: (context, settingsService, _) {
+                    if (!settingsService.appSettings.developerMode) {
+                      return const SizedBox.shrink();
+                    }
+                    return SwitchListTile(
+                      title: const Text('[实验] AddNote 延迟获取元数据'),
+                      subtitle: const Text('延迟位置/天气获取至键盘动画结束后（默认关）'),
+                      secondary: const Icon(Icons.timer_outlined),
+                      value: settingsService.addNoteDialogDeferAutoMetadata,
+                      onChanged: (enabled) {
+                        settingsService.setAddNoteDialogDeferAutoMetadata(
+                          enabled,
+                        );
+                      },
+                    );
+                  },
+                ),
                 // 添加日志调试信息显示（仅在Debug模式下显示）
                 if (kDebugMode) ...[
                   ListTile(
