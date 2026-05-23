@@ -3544,5 +3544,6 @@
   "offlineQuoteSourceTitle": "オフライン/ローカルの一言ソース",
   "offlineQuoteSourceDesc": "オフライン時やローカルのみ使用時にホーム画面に表示する内容",
   "offlineQuoteSourceTagOnly": "「今日の一言」タグのノートのみ表示",
-  "offlineQuoteSourceAll": "すべてのノートをランダムに表示"
+  "offlineQuoteSourceAll": "すべてのノートをランダムに表示",
+  "appendToOriginal": "原文に追加"
 }
