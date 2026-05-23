@@ -254,6 +254,24 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 开发者实验：AddNoteDialog 自动聚焦开关
+  bool get addNoteDialogAutoFocus => _appSettings.addNoteDialogAutoFocus;
+  Future<void> setAddNoteDialogAutoFocus(bool enabled) async {
+    _appSettings = _appSettings.copyWith(addNoteDialogAutoFocus: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 开发者实验：AddNoteDialog 延迟获取位置/天气元数据开关
+  bool get addNoteDialogDeferAutoMetadata =>
+      _appSettings.addNoteDialogDeferAutoMetadata;
+  Future<void> setAddNoteDialogDeferAutoMetadata(bool enabled) async {
+    _appSettings =
+        _appSettings.copyWith(addNoteDialogDeferAutoMetadata: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   // 语言设置：获取当前语言代码（null 表示跟随系统）
   String? get localeCode => _appSettings.localeCode;
 

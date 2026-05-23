@@ -31,6 +31,8 @@ void main() {
       expect(settings.requireBiometricForHidden, isFalse);
       expect(settings.developerMode, isFalse);
       expect(settings.enableFirstOpenScrollPerfMonitor, isFalse);
+      expect(settings.addNoteDialogAutoFocus, isTrue);
+      expect(settings.addNoteDialogDeferAutoMetadata, isFalse);
       expect(settings.autoAttachLocation, isFalse);
       expect(settings.autoAttachWeather, isFalse);
       expect(settings.excerptIntentEnabled, isTrue);
@@ -66,6 +68,8 @@ void main() {
         requireBiometricForHidden: true,
         developerMode: true,
         enableFirstOpenScrollPerfMonitor: true,
+        addNoteDialogAutoFocus: false,
+        addNoteDialogDeferAutoMetadata: true,
         autoAttachLocation: true,
         autoAttachWeather: true,
         excerptIntentEnabled: false,
@@ -125,6 +129,14 @@ void main() {
       expect(
         fromJson.enableFirstOpenScrollPerfMonitor,
         equals(settings.enableFirstOpenScrollPerfMonitor),
+      );
+      expect(
+        fromJson.addNoteDialogAutoFocus,
+        equals(settings.addNoteDialogAutoFocus),
+      );
+      expect(
+        fromJson.addNoteDialogDeferAutoMetadata,
+        equals(settings.addNoteDialogDeferAutoMetadata),
       );
       expect(fromJson.autoAttachLocation, equals(settings.autoAttachLocation));
       expect(fromJson.autoAttachWeather, equals(settings.autoAttachWeather));
