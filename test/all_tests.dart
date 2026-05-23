@@ -38,6 +38,8 @@ import 'unit/services/error_recovery_manager_test.dart'
     as error_recovery_manager_test;
 import 'unit/services/localsend_security_test.dart' as localsend_security_test;
 import 'unit/services/network_service_test.dart' as network_service_test;
+import 'unit/services/intelligent_memory_manager_test.dart'
+    as intelligent_memory_manager_test;
 import 'storage_management_test.dart' as storage_management_test;
 import 'performance/day_period_patch_test.dart' as day_period_patch_test;
 
@@ -86,6 +88,7 @@ void main() {
     group('Service Tests', () {
       database_service_test.main();
       database_health_service_test.main();
+      intelligent_memory_manager_test.main();
       excerpt_intent_service_test.main();
       settings_service_test.main();
       weather_service_test.main();
