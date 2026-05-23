@@ -1,0 +1,29 @@
+test/unit/services/settings_service_test.dart
+  s_1f5c2453b73b6d::t_687c3e94e3cd73 48-60,85-98
+test/unit/models/app_settings_test.dart
+  s_40c396157c6fb6::t_11ca2636088f11 34-35,71-72,133-139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "d6946aff8ba2a00acb046018f48e8dc4e21e0d59",
+  "prompts": {},
+  "sessions": {
+    "s_1f5c2453b73b6d": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033IKsGIfK1TOWnxQddRnJ",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_40c396157c6fb6": {
+      "agent_id": {
+        "tool": "amp",
+        "id": "TU-033IJfmPS5aUADlgAfdqsB",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
