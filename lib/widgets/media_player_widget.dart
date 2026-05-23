@@ -423,40 +423,45 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
 
   /// 新增：视频占位符，等待用户点击
   Widget _buildVideoPlaceholder() {
-    return GestureDetector(
-      onTap: _startVideoInitialization,
-      child: Container(
-        width: widget.width ?? 300,
-        height: widget.height ?? 200,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainer,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+    return Semantics(
+      button: true,
+      label: l10n.clickToPlayVideo,
+      child: GestureDetector(
+        onTap: _startVideoInitialization,
+        child: Container(
+          width: widget.width ?? 300,
+          height: widget.height ?? 200,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainer,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color:
+                  Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+            ),
           ),
-        ),
-        child: Center(
-          child: _isInitializing
-              ? _buildVideoLoadingState() // 复用加载动画
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.play_circle_outline,
-                      size: 48,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.clickToPlayVideo,
-                      style: TextStyle(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.7),
+          child: Center(
+            child: _isInitializing
+                ? _buildVideoLoadingState() // 复用加载动画
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.play_circle_outline,
+                        size: 48,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.clickToPlayVideo,
+                        style: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );

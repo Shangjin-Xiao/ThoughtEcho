@@ -19,3 +19,6 @@
 ## 2025-05-18 - [Localize code copy button]
 **Learning:** Hardcoded text like "复制代码" and "已复制" in `IconButton` tooltips inside `CodeBlockWidget` breaks accessibility for non-Chinese speakers using screen readers.
 **Action:** Always extract text to ARB localization files and use `AppLocalizations.of(context)` for tooltips, ensuring screen readers receive correctly localized labels for UI actions.
+## 2026-05-19 - [Fix Missing Semantic Labels for Custom GestureDetectors]
+**Learning:** Found multiple custom `GestureDetector` widgets missing `Semantics` wrappers, making interactive UI elements inaccessible to screen readers. For instance, the video placeholder in `MediaPlayerWidget` and the close button in `FeatureGuidePopover`.
+**Action:** Always wrap interactive `GestureDetector` and `InkWell` widgets (especially those without text) with `Semantics(button: true, label: ...)` to ensure keyboard navigation and screen reader accessibility.
