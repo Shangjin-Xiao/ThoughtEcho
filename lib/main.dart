@@ -23,9 +23,6 @@ import 'package:logging/logging.dart' as logging;
 
 // 项目内部
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
-import 'package:thoughtecho/services/note_sync_service.dart';
-import 'package:thoughtecho/services/ai_service.dart';
-import 'package:thoughtecho/services/backup_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
@@ -37,7 +34,6 @@ import 'package:thoughtecho/services/clipboard_service.dart';
 import 'package:thoughtecho/services/media_cleanup_service.dart';
 import 'package:thoughtecho/services/apk_download_service.dart';
 import 'package:thoughtecho/services/version_check_service.dart';
-import 'package:thoughtecho/services/insight_history_service.dart';
 import 'package:thoughtecho/services/connectivity_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/data_directory_service.dart';
@@ -47,10 +43,10 @@ import 'package:thoughtecho/services/smart_push_service.dart';
 import 'package:thoughtecho/services/background_push_handler.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
-import 'controllers/search_controller.dart';
 import 'utils/app_logger.dart';
 import 'utils/global_exception_handler.dart';
 import 'theme/app_theme.dart';
+import 'providers/app_providers.dart';
 import 'pages/home_page.dart';
 import 'pages/onboarding_page.dart';
 import 'pages/backup_restore_page.dart';
@@ -310,88 +306,23 @@ Future<void> main() async {
         // 使用ValueNotifier跟踪服务初始化状态
         final servicesInitialized = ValueNotifier<bool>(false);
 
-        // TODO(refactor): The provider tree is growing large. Consider grouping related
-        // providers or moving some initialization logic to a dedicated Bootstrapper class.
         runApp(
           MultiProvider(
-            providers: [
-              ChangeNotifierProvider(create: (_) => settingsService),
-              // 兼容性说明：DatabaseService现在有dispose方法，但Provider会自动处理
-              ChangeNotifierProvider(create: (_) => databaseService),
-              ChangeNotifierProvider(create: (_) => locationService),
-              ChangeNotifierProvider(create: (_) => weatherService),
-              ChangeNotifierProvider(create: (_) => clipboardService),
-              ChangeNotifierProvider(create: (_) => unifiedLogService),
-              ChangeNotifierProvider(create: (_) => appTheme),
-              ChangeNotifierProvider(create: (_) => aiAnalysisDbService),
-              ChangeNotifierProvider(create: (_) => connectivityService),
-              ChangeNotifierProvider(create: (_) => featureGuideService),
-              ChangeNotifierProvider(create: (_) => smartPushService),
-              ChangeNotifierProvider(create: (_) => NoteSearchController()),
-              ChangeNotifierProxyProvider<SettingsService,
-                  InsightHistoryService>(
-                create: (context) => InsightHistoryService(
-                  settingsService: context.read<SettingsService>(),
-                ),
-                update: (context, settingsService, insightHistoryService) =>
-                    insightHistoryService ??
-                    InsightHistoryService(settingsService: settingsService),
-              ),
-              Provider.value(
-                value: mmkvService,
-              ), // 使用 Provider.value 提供 MMKVService
-              // 提供初始化状态的值
-              Provider<ValueNotifier<bool>>.value(
-                value: servicesInitialized,
-              ),
-              ValueListenableProvider<bool>.value(value: servicesInitialized),
-              ChangeNotifierProxyProvider<SettingsService, AIService>(
-                create: (context) =>
-                    AIService(settingsService: context.read<SettingsService>()),
-                update: (context, settings, previous) =>
-                    previous ?? AIService(settingsService: settings),
-              ),
-              ProxyProvider3<DatabaseService, SettingsService,
-                  AIAnalysisDatabaseService, BackupService>(
-                update: (
-                  context,
-                  dbService,
-                  settingsService,
-                  aiService,
-                  previous,
-                ) =>
-                    BackupService(
-                  databaseService: dbService,
-                  settingsService: settingsService,
-                  aiAnalysisDbService: aiService,
-                ),
-              ),
-              ChangeNotifierProxyProvider4<BackupService, DatabaseService,
-                  SettingsService, AIAnalysisDatabaseService, NoteSyncService>(
-                create: (context) => NoteSyncService(
-                  backupService: context.read<BackupService>(),
-                  databaseService: context.read<DatabaseService>(),
-                  settingsService: context.read<SettingsService>(),
-                  aiAnalysisDbService:
-                      context.read<AIAnalysisDatabaseService>(),
-                ),
-                update: (
-                  context,
-                  backupService,
-                  databaseService,
-                  settingsService,
-                  aiAnalysisDbService,
-                  previous,
-                ) =>
-                    previous ??
-                    NoteSyncService(
-                      backupService: backupService,
-                      databaseService: databaseService,
-                      settingsService: settingsService,
-                      aiAnalysisDbService: aiAnalysisDbService,
-                    ),
-              ),
-            ],
+            providers: buildAppProviders(
+              settingsService: settingsService,
+              databaseService: databaseService,
+              locationService: locationService,
+              weatherService: weatherService,
+              clipboardService: clipboardService,
+              unifiedLogService: unifiedLogService,
+              appTheme: appTheme,
+              aiAnalysisDbService: aiAnalysisDbService,
+              connectivityService: connectivityService,
+              featureGuideService: featureGuideService,
+              smartPushService: smartPushService,
+              mmkvService: mmkvService,
+              servicesInitialized: servicesInitialized,
+            ),
             child: Builder(
               builder: (context) {
                 return MyApp(
