@@ -134,18 +134,26 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
     final tagsByQuoteId = <String, List<String>>{};
 
+    final tagFutures = <Future<List<Map<String, Object?>>>>[];
+
     for (int i = 0; i < quoteIds.length; i += 900) {
       final end = (i + 900 < quoteIds.length) ? i + 900 : quoteIds.length;
       final batchIds = quoteIds.sublist(i, end);
       final placeholders = List.filled(batchIds.length, '?').join(',');
 
-      final tagMaps = await db.query(
-        'quote_tags',
-        columns: ['quote_id', 'tag_id'],
-        where: 'quote_id IN ($placeholders)',
-        whereArgs: batchIds,
+      tagFutures.add(
+        db.query(
+          'quote_tags',
+          columns: ['quote_id', 'tag_id'],
+          where: 'quote_id IN ($placeholders)',
+          whereArgs: batchIds,
+        ),
       );
+    }
 
+    final allTagMaps = await Future.wait(tagFutures);
+
+    for (final tagMaps in allTagMaps) {
       for (final tagMap in tagMaps) {
         final quoteId = tagMap['quote_id'] as String;
         final tagId = tagMap['tag_id'] as String;
