@@ -71,12 +71,13 @@ class InsightHistoryService extends ChangeNotifier {
 
         // 按时间倒序排列
         _insights.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        notifyListeners();
       }
     } catch (e, stack) {
       AppLogger.e('加载洞察历史失败',
           error: e, stackTrace: stack, source: 'InsightHistoryService');
       _insights = [];
+    } finally {
+      notifyListeners();
     }
   }
 
