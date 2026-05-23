@@ -37,7 +37,6 @@ class NoteSyncService extends ChangeNotifier {
   final BackupService _backupService;
   final DatabaseService _databaseService;
   final SettingsService _settingsService;
-  // final AIAnalysisDatabaseService _aiAnalysisDbService;
 
   // LocalSend核心组件
   ThoughtEchoDiscoveryService? _discoveryService;
