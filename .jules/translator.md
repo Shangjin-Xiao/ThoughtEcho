@@ -25,3 +25,8 @@
 **规则:**
 - 寻找现存翻译键值复用，并遵循极简规范。
 - 对于缺失项，新增 `manualApiTestTitle`, `manualApiTestDesc`, `testResultLabel`, `fillAllFieldsError`, `testReportTitle`, `testParamsLabel`, `keyFormatCheckLabel`, `sendRequestLabel`, `responseResultLabel` 到各语言 `arb` 文件。
+## 2024-05-26 - [提取编辑器 AI 助理特性的硬编码中文字符串]
+**发现:** 编辑器 AI 助理特性（`editor_ai_features.dart`）界面中的硬编码文本：`应用更改` 和 `附加到原文`
+**规则:**
+- 将 `应用更改` 替换为现存键值 `applyChanges`
+- 对于缺失项，新增 `appendToOriginal` (Append to Original) 到各语言 `arb` 文件，并遵循极简规范翻译。

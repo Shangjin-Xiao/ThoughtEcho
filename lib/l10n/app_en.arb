@@ -3660,7 +3660,8 @@
   "offlineQuoteSourceDesc": "Choose what appears on the home page when offline or when local-only is enabled",
   "offlineQuoteSourceTagOnly": "Previously saved daily quotes",
   "offlineQuoteSourceAll": "Random local records",
-  "noLocalSavedQuotes": "No previously saved daily quotes yet"
-,
+  "noLocalSavedQuotes": "No previously saved daily quotes yet",
   "copyCode": "Copy code",
-  "copiedCode": "Copied"}
+  "copiedCode": "Copied",
+  "appendToOriginal": "Append to Original"
+}
