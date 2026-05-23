@@ -3663,5 +3663,39 @@
   "noLocalSavedQuotes": "还没有历史保存的每日一言",
   "copyCode": "复制代码",
   "copiedCode": "已复制",
-  "appendToOriginal": "附加到原文"
+  "appendToOriginal": "附加到原文",
+  "webdavSyncTitle": "WebDAV 云同步",
+  "webdavSyncSubtitle": "配置私有云盘，实现多端自动同步笔记",
+  "webdavProvider": "网盘服务商",
+  "webdavServerUrl": "服务器地址",
+  "webdavUsername": "用户名/账号",
+  "webdavPassword": "应用密码/Token",
+  "webdavTestConnection": "测试连接",
+  "webdavTestSuccess": "连接测试成功！",
+  "webdavTestFailed": "连接失败，请检查配置和密码",
+  "webdavAutoSyncLaunch": "应用启动时自动同步",
+  "webdavAutoSyncChange": "修改笔记后自动后台同步",
+  "webdavLastSync": "上次同步：{time}",
+  "@webdavLastSync": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusSyncing": "正在同步...",
+  "webdavStatusSuccess": "同步成功",
+  "webdavStatusFailed": "同步失败",
+  "webdavSyncNow": "立即同步",
+  "webdavConflictCategoryName": "同步冲突",
+  "webdavConflictNotePrefix": "[冲突备份] ",
+  "webdavConflictNotification": "检测到 {count} 处同步冲突，已安全备份至『同步冲突』分类",
+  "@webdavConflictNotification": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webdavViewNow": "立即查看"
 }

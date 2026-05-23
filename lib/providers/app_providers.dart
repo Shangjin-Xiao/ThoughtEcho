@@ -17,6 +17,7 @@ import '../services/settings_service.dart';
 import '../services/smart_push_service.dart';
 import '../services/unified_log_service.dart';
 import '../services/weather_service.dart';
+import '../services/webdav_sync_service.dart';
 import '../theme/app_theme.dart';
 import '../controllers/search_controller.dart';
 
@@ -50,6 +51,7 @@ List<SingleChildWidget> buildAppProviders({
     ChangeNotifierProvider(create: (_) => featureGuideService),
     ChangeNotifierProvider(create: (_) => smartPushService),
     ChangeNotifierProvider(create: (_) => NoteSearchController()),
+    ChangeNotifierProvider(create: (_) => WebDAVSyncService()),
     ChangeNotifierProxyProvider<SettingsService, InsightHistoryService>(
       create: (context) => InsightHistoryService(
         settingsService: context.read<SettingsService>(),

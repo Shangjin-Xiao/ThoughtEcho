@@ -3663,5 +3663,39 @@
   "noLocalSavedQuotes": "No previously saved daily quotes yet",
   "copyCode": "Copy code",
   "copiedCode": "Copied",
-  "appendToOriginal": "Append to Original"
+  "appendToOriginal": "Append to Original",
+  "webdavSyncTitle": "WebDAV Cloud Sync",
+  "webdavSyncSubtitle": "Configure private cloud storage to auto-sync notes across devices",
+  "webdavProvider": "Cloud Provider",
+  "webdavServerUrl": "Server URL",
+  "webdavUsername": "Username / Account",
+  "webdavPassword": "App Password / Token",
+  "webdavTestConnection": "Test Connection",
+  "webdavTestSuccess": "Connection successful!",
+  "webdavTestFailed": "Connection failed. Please check your settings and password",
+  "webdavAutoSyncLaunch": "Auto-sync on app startup",
+  "webdavAutoSyncChange": "Auto-sync on note changes",
+  "webdavLastSync": "Last sync: {time}",
+  "@webdavLastSync": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusSyncing": "Syncing...",
+  "webdavStatusSuccess": "Sync Successful",
+  "webdavStatusFailed": "Sync Failed",
+  "webdavSyncNow": "Sync Now",
+  "webdavConflictCategoryName": "Sync Conflicts",
+  "webdavConflictNotePrefix": "[Conflict] ",
+  "webdavConflictNotification": "Detected {count} sync conflicts, safely backed up to 'Sync Conflicts' category",
+  "@webdavConflictNotification": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webdavViewNow": "View Now"
 }
