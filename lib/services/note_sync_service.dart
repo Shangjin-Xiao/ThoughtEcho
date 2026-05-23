@@ -37,7 +37,6 @@ class NoteSyncService extends ChangeNotifier {
   final BackupService _backupService;
   final DatabaseService _databaseService;
   final SettingsService _settingsService;
-  // final AIAnalysisDatabaseService _aiAnalysisDbService;
 
   // LocalSend核心组件
   ThoughtEchoDiscoveryService? _discoveryService;
@@ -84,9 +83,9 @@ class NoteSyncService extends ChangeNotifier {
     required DatabaseService databaseService,
     required SettingsService settingsService,
     required AIAnalysisDatabaseService aiAnalysisDbService,
-  })  : _backupService = backupService,
-        _databaseService = databaseService,
-        _settingsService = settingsService {
+  }) : _backupService = backupService,
+       _databaseService = databaseService,
+       _settingsService = settingsService {
     AppLogger.d('NoteSyncService 构造函数完成', source: 'NoteSyncService');
   }
   bool get skipSyncConfirmation => _settingsService.syncSkipConfirm;
@@ -672,7 +671,8 @@ class NoteSyncService extends ChangeNotifier {
     // 通知策略：
     // 1. 状态或消息变化立即通知
     // 2. 进度变化累计 >=0.5% 或 距上次>=_minUiNotifyIntervalMs 才通知（更实时）
-    final shouldNotify = statusChanged ||
+    final shouldNotify =
+        statusChanged ||
         messageChanged ||
         progressDelta >= 0.002 || // 0.2% 进度变化就刷新
         timeDeltaMs >= _minUiNotifyIntervalMs ||
@@ -931,8 +931,7 @@ class NoteSyncService extends ChangeNotifier {
     String sessionId,
     int totalBytes,
     String senderAlias,
-  ) =>
-      _handleReceiveSessionCreated(sessionId, totalBytes, senderAlias);
+  ) => _handleReceiveSessionCreated(sessionId, totalBytes, senderAlias);
 
   @visibleForTesting
   void debugHandleReceiveProgress(int received, int total) =>
