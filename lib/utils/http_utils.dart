@@ -11,6 +11,11 @@ class HttpUtils {
   // 单例Dio实例
   static Dio? _dioInstance;
 
+  @visibleForTesting
+  static set dioInstanceForTesting(Dio? dio) {
+    _dioInstance = dio;
+  }
+
   // 获取Dio实例
   static Dio get _dio {
     if (_dioInstance == null) {
