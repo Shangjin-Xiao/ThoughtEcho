@@ -387,17 +387,6 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
       if (queryTime > 500) {
         logDebug('慢查询SQL: $query');
         logDebug('查询参数: $args');
-
-        // 可选：记录查询执行计划用于优化
-        try {
-          final plan = await db.rawQuery('EXPLAIN QUERY PLAN $query', args);
-          logDebug('查询执行计划:');
-          for (final step in plan) {
-            logDebug('  ${step['detail']}');
-          }
-        } catch (e) {
-          logDebug('获取查询执行计划失败: $e');
-        }
       }
     }
 
