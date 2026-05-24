@@ -667,8 +667,6 @@ class _InsightsPageState extends State<InsightsPage> {
         children: [
           // 收藏功能移至周期报告页，智能洞察页专注AI分析
           // _buildWeeklyFavoritesSection(theme),
-
-          // const SizedBox(height: 24),
           Text(
             l10n.selectAnalysisMethod,
             style: theme.textTheme.titleMedium?.copyWith(
