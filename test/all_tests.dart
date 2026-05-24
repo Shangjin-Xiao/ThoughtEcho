@@ -39,6 +39,7 @@ import 'unit/services/error_recovery_manager_test.dart'
 import 'unit/services/intelligent_memory_manager_test.dart'
     as intelligent_memory_manager_test;
 import 'unit/services/localsend_security_test.dart' as localsend_security_test;
+import 'unit/services/localsend/send_session_test.dart' as send_session_test;
 import 'unit/services/network_service_test.dart' as network_service_test;
 import 'unit/services/webdav_sync_service_test.dart'
     as webdav_sync_service_test;
@@ -106,6 +107,7 @@ void main() {
       smart_push_security_test.main();
       error_recovery_manager_test.main();
       localsend_security_test.main();
+      send_session_test.main();
       network_service_test.main();
       storage_management_test.main();
       day_period_patch_test.main();
