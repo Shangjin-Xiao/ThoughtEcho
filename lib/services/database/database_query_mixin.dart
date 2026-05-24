@@ -54,8 +54,9 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         }
 
         if (tagIds != null && tagIds.isNotEmpty) {
+          final tagIdSet = tagIds.toSet();
           filtered = filtered
-              .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
+              .where((q) => q.tagIds.any((tag) => tagIdSet.contains(tag)))
               .toList();
         }
         if (categoryId != null && categoryId.isNotEmpty) {
