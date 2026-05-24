@@ -1,0 +1,19 @@
+lib/widgets/quote_item_widget.dart
+  s_3217ccbac05dee::t_968cc3b1767d23 388-389,437-446,448-458
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "4691dfc63043fe654fb1498c29eff4d06ee7886f",
+  "prompts": {},
+  "sessions": {
+    "s_3217ccbac05dee": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1a7932a00ffevds8XIgXb5jHtN",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
