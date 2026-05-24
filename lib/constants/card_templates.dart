@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
+
 import '../models/generated_card.dart';
 
 /// 卡片模板常量 - 优化版
@@ -1029,21 +1031,6 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
         (contentAreaHeight - contentHeight) / 2 +
         contentFontSize;
 
-    // 生成行号
-    String renderLineNumbers(
-      int count,
-      double startY,
-      double lineSpacing,
-      double fontSize,
-    ) {
-      final buffer = StringBuffer();
-      for (int i = 0; i < count; i++) {
-        buffer.writeln(
-            '<text x="50" y="${startY + i * lineSpacing}" text-anchor="end" fill="#4b5563" font-family="monospace" font-size="${fontSize.toStringAsFixed(0)}">${i + 1}</text>');
-      }
-      return buffer.toString();
-    }
-
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $_viewBoxWidth $_viewBoxHeight" preserveAspectRatio="xMidYMid meet">
   <!-- 背景 -->
@@ -1061,7 +1048,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
   <rect x="0" y="40" width="60" height="560" fill="#1e1e1e"/>
   
   <!-- 行号 -->
-  ${renderLineNumbers(textLines.length, contentStartY, contentFontSize * _lineHeight, lineNumberFontSize)}
+  ${CardTemplates.renderLineNumbers(textLines.length, contentStartY, contentFontSize * _lineHeight, lineNumberFontSize)}
 
   <!-- 内容文字 (左对齐) -->
   ${(() {
@@ -1968,6 +1955,21 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
   static String _capitalizeFirst(String text) {
     if (text.isEmpty) return text;
     return text[0].toUpperCase() + text.substring(1);
+  }
+
+  @visibleForTesting
+  static String renderLineNumbers(
+    int count,
+    double startY,
+    double lineSpacing,
+    double fontSize,
+  ) {
+    final buffer = StringBuffer();
+    for (int i = 0; i < count; i++) {
+      buffer.writeln(
+          '<text x="50" y="${startY + i * lineSpacing}" text-anchor="end" fill="#4b5563" font-family="monospace" font-size="${fontSize.toStringAsFixed(0)}">${i + 1}</text>');
+    }
+    return buffer.toString();
   }
 
   /// XML转义
