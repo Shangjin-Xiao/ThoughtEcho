@@ -1,7 +1,35 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dio/dio.dart';
+import 'package:mockito/mockito.dart';
 import 'package:thoughtecho/utils/http_utils.dart';
 import 'dart:convert';
+
+class MockDio extends Mock implements Dio {
+  @override
+  Future<Response<T>> get<T>(
+    String? path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+    ProgressCallback? onReceiveProgress,
+  }) {
+    return super.noSuchMethod(
+      Invocation.method(#get, [
+        path
+      ], {
+        #data: data,
+        #queryParameters: queryParameters,
+        #options: options,
+        #cancelToken: cancelToken,
+        #onReceiveProgress: onReceiveProgress,
+      }),
+      returnValue: Future.value(Response<T>(
+        requestOptions: RequestOptions(path: path ?? ''),
+      )),
+    ) as Future<Response<T>>;
+  }
+}
 
 void main() {
   group('HttpUtils._convertDioResponseToHttpResponse', () {
@@ -106,6 +134,53 @@ void main() {
       final result = HttpUtils.convertDioResponseToHttpResponse(dioResponse);
 
       expect(result.statusCode, 0); // Default when null
+    });
+  });
+
+  group('HttpUtils.secureGet edge cases', () {
+    late MockDio mockDio;
+
+    setUp(() {
+      mockDio = MockDio();
+      HttpUtils.dioInstanceForTesting = mockDio;
+    });
+
+    tearDown(() {
+      HttpUtils.dioInstanceForTesting = null;
+    });
+
+    test('should handle empty response body gracefully', () async {
+      when(mockDio.get<dynamic>(
+        any,
+        options: anyNamed('options'),
+      )).thenAnswer((_) async => Response<dynamic>(
+            requestOptions: RequestOptions(path: 'https://api.example.com'),
+            statusCode: 200,
+            data: '', // Empty body
+            headers: Headers(),
+          ));
+
+      final result = await HttpUtils.secureGet('https://api.example.com');
+
+      expect(result.statusCode, 200);
+      expect(result.body, '');
+    });
+
+    test('should handle null response body gracefully', () async {
+      when(mockDio.get<dynamic>(
+        any,
+        options: anyNamed('options'),
+      )).thenAnswer((_) async => Response<dynamic>(
+            requestOptions: RequestOptions(path: 'https://api.example.com'),
+            statusCode: 200,
+            data: null, // Null body
+            headers: Headers(),
+          ));
+
+      final result = await HttpUtils.secureGet('https://api.example.com');
+
+      expect(result.statusCode, 200);
+      expect(result.body, 'null');
     });
   });
 }
