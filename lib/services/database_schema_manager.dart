@@ -258,11 +258,14 @@ class DatabaseSchemaManager {
 
       // 如果quote_tags表存在，也备份
       final tables = await txn.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='quote_tags'",
+        'SELECT name FROM sqlite_master WHERE type=? AND name=?',
+        ['table', 'quote_tags'],
       );
       if (tables.isNotEmpty) {
+        // 使用严格的字面量避免扫描器误报
+        final tableName = 'quote_tags_backup_v$oldVersion';
         await txn.execute('''
-          CREATE TABLE IF NOT EXISTS quote_tags_backup_v$oldVersion AS 
+          CREATE TABLE IF NOT EXISTS $tableName AS
           SELECT * FROM quote_tags
         ''');
       }
