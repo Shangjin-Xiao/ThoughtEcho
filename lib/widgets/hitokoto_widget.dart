@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../utils/color_utils.dart'; // Import color_utils
 
 class HitokotoWidget extends StatelessWidget {
@@ -22,12 +22,12 @@ class HitokotoWidget extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              AppLocalizations.of(context)!.featureDailyQuote,
+              AppLocalizations.of(context).featureDailyQuote,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              quote['content'] ?? AppLocalizations.of(context)!.loading,
+              quote['content'] ?? AppLocalizations.of(context).loading,
               style: const TextStyle(fontSize: 14, height: 1.5),
             ),
             if (quote['author'] != null && quote['author'].isNotEmpty)
