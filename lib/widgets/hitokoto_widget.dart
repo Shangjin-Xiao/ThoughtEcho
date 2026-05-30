@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../utils/color_utils.dart'; // Import color_utils
 
 class HitokotoWidget extends StatelessWidget {
@@ -20,13 +21,13 @@ class HitokotoWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '每日一言',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Text(
+              AppLocalizations.of(context).featureDailyQuote,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              quote['content'] ?? '加载中...',
+              quote['content'] ?? AppLocalizations.of(context).loading,
               style: const TextStyle(fontSize: 14, height: 1.5),
             ),
             if (quote['author'] != null && quote['author'].isNotEmpty)
