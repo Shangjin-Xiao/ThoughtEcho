@@ -68,8 +68,7 @@ void main() {
         .setMockMethodCallHandler(
       urlLauncherChannel,
       (MethodCall methodCall) async {
-        if (methodCall.method == 'launch' ||
-            methodCall.method == 'launchUrl') {
+        if (methodCall.method == 'launch' || methodCall.method == 'launchUrl') {
           launchUrlCalled = true;
           return true;
         }
