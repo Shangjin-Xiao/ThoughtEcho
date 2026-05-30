@@ -100,6 +100,9 @@ class WebDAVSyncService extends ChangeNotifier {
     _enabled = enabled;
     _provider = provider;
     _url = url.trim();
+    if (_url.isNotEmpty && !_url.toLowerCase().startsWith('https://')) {
+      throw Exception('HTTPS is required to protect WebDAV credentials');
+    }
     if (!_url.endsWith('/')) _url = '$_url/';
     _username = username.trim();
     _syncOnLaunch = syncOnLaunch;
@@ -136,6 +139,9 @@ class WebDAVSyncService extends ChangeNotifier {
     dio.options.connectTimeout = const Duration(seconds: 15);
     dio.options.receiveTimeout = const Duration(seconds: 20);
     dio.options.sendTimeout = const Duration(seconds: 20);
+
+    // 禁用自动跟随重定向，防止 HTTPS 向 HTTP 降级导致 Basic Auth 凭据泄露
+    dio.options.followRedirects = false;
 
     // 计算 Basic Auth 头
     final basicAuth =

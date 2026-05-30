@@ -106,4 +106,36 @@ void main() {
     expect(service.syncStatus, WebDAVSyncStatus.idle);
     expect(service.isSyncing, false);
   });
+
+  test('WebDAVSyncService should enforce HTTPS strictly on saveSettings',
+      () async {
+    final service = WebDAVSyncService();
+
+    expect(
+      service.saveSettings(
+        enabled: true,
+        provider: 'custom',
+        url: 'http://insecure.server.local/dav/',
+        username: 'user',
+        syncOnLaunch: false,
+        syncOnChange: false,
+      ),
+      throwsA(isA<Exception>().having(
+        (e) => e.toString(),
+        'message',
+        contains('HTTPS is required to protect WebDAV credentials'),
+      )),
+    );
+  });
+
+  test('WebDAVSyncService should enforce HTTPS strictly on testConnection',
+      () async {
+    final service = WebDAVSyncService();
+
+    // The testConnection method catches exceptions and returns false.
+    // Instead of throwsA, we should test the boolean result.
+    final result = await service.testConnection(
+        'http://insecure.server.local/dav/', 'user', 'pass');
+    expect(result, isFalse);
+  });
 }
