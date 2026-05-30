@@ -65,6 +65,7 @@ import 'unit/utils/report_period_utils_test.dart' as report_period_utils_test;
 import 'unit/utils/lww_decision_maker_test.dart' as lww_decision_maker_test;
 import 'unit/utils/daily_prompt_generator_test.dart'
     as daily_prompt_generator_test;
+import 'unit/utils/app_logger_test.dart' as app_logger_test;
 import 'unit/widgets/anniversary_animation_overlay_test.dart'
     as anniversary_animation_overlay_test;
 import 'unit/widgets/anniversary_notebook_icon_test.dart'
@@ -128,6 +129,7 @@ void main() {
       report_period_utils_test.main();
       lww_decision_maker_test.main();
       daily_prompt_generator_test.main();
+      app_logger_test.main();
       anniversary_animation_overlay_test.main();
       anniversary_notebook_icon_test.main();
       motion_photo_preview_page_test.main();
