@@ -285,8 +285,12 @@ class StreamingUtils {
       }
 
       // 处理流式响应
+      final streamData = response.data is ResponseBody
+          ? (response.data as ResponseBody).stream
+          : response.data;
+
       await _processStreamResponseDio(
-        response.data,
+        streamData,
         onResponse,
         onComplete,
         onError,
