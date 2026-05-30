@@ -266,9 +266,10 @@ class StreamingUtils {
 
       if (response.statusCode != 200) {
         String errorBody = '';
-        if (response.data is Stream) {
+        if (response.data is ResponseBody) {
+          final responseBody = response.data as ResponseBody;
           final chunks = <int>[];
-          await for (final chunk in response.data) {
+          await for (final chunk in responseBody.stream) {
             chunks.addAll(chunk);
           }
           errorBody = utf8.decode(chunks);
@@ -306,13 +307,11 @@ class StreamingUtils {
             final responseData = e.response!.data;
             if (responseData is String) {
               errorBody = responseData;
-            } else if (responseData is Stream) {
+            } else if (responseData is ResponseBody) {
               // 对于流式响应，需要读取流数据
               final chunks = <int>[];
-              await for (final chunk in responseData) {
-                if (chunk is List<int>) {
-                  chunks.addAll(chunk);
-                }
+              await for (final chunk in responseData.stream) {
+                chunks.addAll(chunk);
               }
               errorBody = utf8.decode(chunks);
             } else {
