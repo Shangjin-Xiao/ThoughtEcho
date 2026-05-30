@@ -152,6 +152,7 @@ extension _AIReportCardActions on _AIPeriodicReportPageState {
     final l10n = AppLocalizations.of(context);
     // 关键修复：在关闭对话框之前，先获取外层scaffold的context
     final scaffoldContext = context;
+    final messenger = ScaffoldMessenger.maybeOf(scaffoldContext);
 
     Navigator.of(context).pop(); // 关闭对话框
 
@@ -159,8 +160,8 @@ extension _AIReportCardActions on _AIPeriodicReportPageState {
 
     try {
       // 显示加载指示器
-      if (mounted) {
-        ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+      if (mounted && messenger != null) {
+        messenger.showSnackBar(
           SnackBar(
             content: Row(
               children: [
@@ -188,11 +189,9 @@ extension _AIReportCardActions on _AIPeriodicReportPageState {
         context: scaffoldContext,
       );
 
-      if (mounted) {
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(scaffoldContext).hideCurrentSnackBar();
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+      if (mounted && messenger != null) {
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
           SnackBar(
             content: Row(
               children: [
@@ -207,11 +206,9 @@ extension _AIReportCardActions on _AIPeriodicReportPageState {
         );
       }
     } catch (e) {
-      if (mounted) {
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(scaffoldContext).hideCurrentSnackBar();
-        // ignore: use_build_context_synchronously
-        ScaffoldMessenger.of(scaffoldContext).showSnackBar(
+      if (mounted && messenger != null) {
+        messenger.hideCurrentSnackBar();
+        messenger.showSnackBar(
           SnackBar(
             content: Row(
               children: [

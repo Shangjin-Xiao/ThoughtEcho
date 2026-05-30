@@ -512,6 +512,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   Future<void> _sendNotesToDevice(Device device) async {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final syncService = context.read<NoteSyncService>();
 
     // 先弹出确认对话框（是否包含媒体文件）
     bool includeMedia = _sendIncludeMedia;
@@ -569,10 +571,6 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       _sendingFingerprint = device.fingerprint;
     });
 
-    // ignore: use_build_context_synchronously (已在 await 之前捕获所需引用)
-    final messenger = ScaffoldMessenger.of(context);
-    // ignore: use_build_context_synchronously
-    final syncService = context.read<NoteSyncService>();
     try {
       if (!includeMedia && mounted) {
         messenger.showSnackBar(
@@ -629,8 +627,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) {
           final allow = await _onWillPop();
-          // ignore: use_build_context_synchronously (allow结果与Widget生命周期无关，已检查mounted)
-          if (allow && mounted) Navigator.of(context).pop(result);
+          if (allow && context.mounted) Navigator.of(context).pop(result);
         }
       },
       child: Scaffold(

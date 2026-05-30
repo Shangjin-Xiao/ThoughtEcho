@@ -178,7 +178,7 @@ class FeatureGuideHelper {
       // 只要页面还在(context mounted),就一直等待用户切回来
       while (shouldShow != null && !shouldShow()) {
         // Context 已销毁,整个序列终止
-        if (context is Element && !context.mounted) {
+        if (!context.mounted) {
           debugPrint('功能引导序列终止: context 已销毁');
           return;
         }
@@ -187,16 +187,18 @@ class FeatureGuideHelper {
       }
 
       // 条件满足,显示当前引导
-      // ignore: use_build_context_synchronously
+      if (!context.mounted) {
+        return;
+      }
       await show(
-        context: context, // ignore: use_build_context_synchronously
+        context: context,
         guideId: guideId,
         targetKey: targetKey,
         autoDismissDuration: autoDismissDuration,
         shouldShow: shouldShow,
       );
 
-      if (context is Element && !context.mounted) {
+      if (!context.mounted) {
         break;
       }
 
