@@ -199,7 +199,7 @@ class WebDAVSyncService extends ChangeNotifier {
                 newOptions.extra['redirects'] = redirectCount + 1;
 
                 // 如果跨域，则移除认证以防跨域凭据泄露
-                if (resolvedUri.host != response.requestOptions.uri.host) {
+                if (resolvedUri.origin != response.requestOptions.uri.origin) {
                   newOptions.headers.remove('Authorization');
                 }
 
