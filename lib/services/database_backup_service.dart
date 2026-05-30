@@ -358,17 +358,10 @@ class DatabaseBackupService {
                 final tagIds =
                     tagIdsString.split(',').where((id) => id.trim().isNotEmpty);
                 for (final tagId in tagIds) {
-                  try {
-                    await txn.insert(
-                        'quote_tags',
-                        {
-                          'quote_id': quoteId,
-                          'tag_id': tagId.trim(),
-                        },
-                        conflictAlgorithm: ConflictAlgorithm.ignore);
-                  } catch (e3) {
-                    logDebug('插入标签关联失败: $e3');
-                  }
+                  tagRelations.add({
+                    'quote_id': quoteId,
+                    'tag_id': tagId.trim(),
+                  });
                 }
               }
             } catch (e2) {
