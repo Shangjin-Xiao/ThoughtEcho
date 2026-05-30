@@ -110,8 +110,14 @@ android {
             zipAlignEnabled true
             debuggable false
         }
+        profile {
+            initWith debug
+            applicationIdSuffix ".profile"
+            debuggable false
+        }
         debug {
             signingConfig signingConfigs.debug
+            applicationIdSuffix ".debug"
             minifyEnabled false
             shrinkResources false
             debuggable true
