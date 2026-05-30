@@ -22,3 +22,6 @@
 ## 2026-05-19 - [Fix Missing Semantic Labels for Custom GestureDetectors]
 **Learning:** Found multiple custom `GestureDetector` widgets missing `Semantics` wrappers, making interactive UI elements inaccessible to screen readers. For instance, the video placeholder in `MediaPlayerWidget` and the close button in `FeatureGuidePopover`.
 **Action:** Always wrap interactive `GestureDetector` and `InkWell` widgets (especially those without text) with `Semantics(button: true, label: ...)` to ensure keyboard navigation and screen reader accessibility.
+## 2025-02-28 - [完善引导弹窗遮罩层的无障碍支持]
+**Learning:** 自定义悬浮层（Overlay/Popover）中作为背景点击关闭的 GestureDetector 往往缺乏无障碍焦点和语意说明，屏幕阅读器用户无法感知这是一个可以用来关闭弹窗的可交互区域。
+**Action:** 确保这种非文字说明的交互背景元素（如全屏透明遮罩）被 Semantics 包装，提供 `button: true` 和 `label: MaterialLocalizations.of(context).closeButtonTooltip`，以此提升无障碍体验。

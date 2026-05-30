@@ -175,12 +175,16 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
       child: Stack(
         children: [
           // 透明可点击遮罩层（点击关闭）
-          GestureDetector(
-            onTap: () => _handleDismiss(),
-            child: Container(
-              color: Colors.transparent,
-              width: double.infinity,
-              height: double.infinity,
+          Semantics(
+            label: MaterialLocalizations.of(context).closeButtonTooltip,
+            button: true,
+            child: GestureDetector(
+              onTap: () => _handleDismiss(),
+              child: Container(
+                color: Colors.transparent,
+                width: double.infinity,
+                height: double.infinity,
+              ),
             ),
           ),
 
