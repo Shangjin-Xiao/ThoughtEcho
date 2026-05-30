@@ -239,6 +239,93 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     }
   }
 
+  /// 批量更新近期离线笔记的位置字段（仅 location 列）。
+  ///
+  /// 使用精准的 SQL UPDATE ... WHERE 替代全表扫描 + 逐条 updateQuote 的旧路径。
+  /// 只影响：
+  ///   - 最近 [hours] 小时内创建的笔记
+  ///   - location 为 pending/failed 标记（含旧版中文标记）
+  ///   - latitude / longitude 不为 NULL
+  ///   - 未被删除
+  @override
+  Future<int> batchUpdatePendingLocations({
+    required String resolvedAddress,
+    int hours = 24,
+  }) async {
+    if (kIsWeb) {
+      // Web 端内存模式：走内存过滤
+      final cutoff = DateTime.now().subtract(Duration(hours: hours));
+      int count = 0;
+      for (int i = 0; i < _memoryStore.length; i++) {
+        final q = _memoryStore[i];
+        final qDate = DateTime.tryParse(q.date);
+        if (qDate == null || qDate.isBefore(cutoff)) continue;
+        if (q.isDeleted) continue;
+        if (q.latitude == null || q.longitude == null) continue;
+        if (LocationService.isNonDisplayMarker(q.location)) {
+          _memoryStore[i] = q.copyWith(location: resolvedAddress);
+          count++;
+        }
+      }
+      if (count > 0) notifyListeners();
+      return count;
+    }
+
+    return _executeWithLock('batchUpdatePendingLocations', () async {
+      try {
+        final db = await safeDatabase;
+        final cutoff =
+            DateTime.now().subtract(Duration(hours: hours)).toIso8601String();
+        final now = DateTime.now().toUtc().toIso8601String();
+
+        // 所有 pending/failed 标记值（新旧两套）
+        const pendingMarkers = [
+          LocationService.kAddressPending, // '__address_pending__'
+          LocationService.kAddressFailed, // '__address_failed__'
+          '位置待解析', // 旧版中文标记
+          '地址解析失败', // 旧版中文标记
+          '', // 空字符串
+        ];
+
+        final placeholders = List.filled(pendingMarkers.length, '?').join(', ');
+
+        final updatedRows = await db.rawUpdate(
+          '''
+          UPDATE quotes
+          SET location = ?, last_modified = ?
+          WHERE date >= ?
+            AND (is_deleted = 0 OR is_deleted IS NULL)
+            AND latitude IS NOT NULL
+            AND longitude IS NOT NULL
+            AND (location IN ($placeholders) OR location IS NULL)
+          ''',
+          [
+            resolvedAddress,
+            now,
+            cutoff,
+            ...pendingMarkers,
+          ],
+        );
+
+        if (updatedRows > 0) {
+          // 刷新内存缓存
+          clearAllCacheForParts();
+          refreshQuotesStreamForParts();
+          notifyListeners();
+        }
+
+        return updatedRows;
+      } catch (e, stack) {
+        UnifiedLogService.instance.error(
+          '批量更新离线笔记位置失败',
+          error: e,
+          stackTrace: stack,
+        );
+        rethrow;
+      }
+    });
+  }
+
   /// 修复：删除指定的笔记，增加数据验证和错误处理
   @override
   Future<void> deleteQuote(String id) async {

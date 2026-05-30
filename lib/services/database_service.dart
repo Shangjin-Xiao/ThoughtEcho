@@ -20,6 +20,7 @@ import 'large_file_manager.dart';
 import 'media_reference_service.dart';
 import 'mmkv_service.dart';
 import 'unified_log_service.dart';
+import 'location_service.dart';
 import '../models/merge_report.dart';
 import '../widgets/quote_content_widget.dart'; // 用于缓存清理
 import 'database_schema_manager.dart';
@@ -82,6 +83,14 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     bool includeDeleted = false,
   });
   Future<QuoteUpdateResult> updateQuote(Quote quote);
+
+  /// 批量更新近期离线笔记的位置字段（仅 location 列）。
+  /// 只影响最近 [hours] 小时内、位置标记为 pending/failed 且已有坐标的笔记。
+  /// 返回实际更新的行数。
+  Future<int> batchUpdatePendingLocations({
+    required String resolvedAddress,
+    int hours = 24,
+  });
 
   Future<List<Quote>> getUserQuotes({
     List<String>? tagIds,

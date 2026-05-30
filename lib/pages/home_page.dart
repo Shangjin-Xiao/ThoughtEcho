@@ -316,38 +316,9 @@ class _HomePageState extends State<HomePage>
 
     Future.microtask(() async {
       try {
-        // TODO(perf): Replace this full-table scan with a database query for
-        // recent notes whose location marker is pending/failed, then batch-update
-        // only the location field instead of routing each note through updateQuote.
-        final allQuotes = await dbService.getAllQuotes();
-        final cutoff = DateTime.now().subtract(const Duration(hours: 24));
-        int updatedCount = 0;
-
-        for (final quote in allQuotes) {
-          // 只更新 24 小时内、有坐标但地址为 pending/failed 的笔记
-          final quoteDate = DateTime.tryParse(quote.date);
-          if (quoteDate == null || quoteDate.isBefore(cutoff)) continue;
-
-          if (LocationService.isNonDisplayMarker(quote.location) &&
-              quote.latitude != null &&
-              quote.longitude != null) {
-            final updatedQuote = quote.copyWith(
-              location: resolvedAddress,
-            );
-            final updateResult = await dbService.updateQuote(updatedQuote);
-            switch (updateResult) {
-              case QuoteUpdateResult.updated:
-                updatedCount++;
-                break;
-              case QuoteUpdateResult.notFound:
-                logWarning('回溯更新离线笔记位置时笔记不存在: ${quote.id}');
-                break;
-              case QuoteUpdateResult.skippedDeleted:
-                logWarning('回溯更新离线笔记位置时笔记已删除: ${quote.id}');
-                break;
-            }
-          }
-        }
+        final updatedCount = await dbService.batchUpdatePendingLocations(
+          resolvedAddress: resolvedAddress,
+        );
 
         if (updatedCount > 0) {
           logDebug('P1: 回溯更新了 $updatedCount 条离线笔记的位置信息');
