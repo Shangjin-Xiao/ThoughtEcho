@@ -100,7 +100,9 @@ class WebDAVSyncService extends ChangeNotifier {
     _enabled = enabled;
     _provider = provider;
     _url = url.trim();
-    if (_url.isNotEmpty && !_url.toLowerCase().startsWith('https://')) {
+    if (_enabled &&
+        _url.isNotEmpty &&
+        !_url.toLowerCase().startsWith('https://')) {
       throw Exception('HTTPS is required to protect WebDAV credentials');
     }
     if (!_url.endsWith('/')) _url = '$_url/';
@@ -140,13 +142,93 @@ class WebDAVSyncService extends ChangeNotifier {
     dio.options.receiveTimeout = const Duration(seconds: 20);
     dio.options.sendTimeout = const Duration(seconds: 20);
 
-    // 禁用自动跟随重定向，防止 HTTPS 向 HTTP 降级导致 Basic Auth 凭据泄露
+    // 禁用自动跟随重定向，通过拦截器手动处理安全跳转，防止 HTTPS 向 HTTP 降级泄露凭据
     dio.options.followRedirects = false;
+
+    dio.options.validateStatus = (status) {
+      return status != null &&
+          (status >= 200 && status < 300 ||
+              status == 301 ||
+              status == 302 ||
+              status == 307 ||
+              status == 308);
+    };
 
     // 计算 Basic Auth 头
     final basicAuth =
         'Basic ${base64Encode(utf8.encode('$requestUsername:$requestPassword'))}';
     dio.options.headers = {'Authorization': basicAuth, 'Accept': '*/*'};
+
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onResponse: (response, handler) async {
+          final status = response.statusCode;
+          if (status == 301 ||
+              status == 302 ||
+              status == 307 ||
+              status == 308) {
+
+            // 检查防重定向死循环
+            final redirectCount = (response.requestOptions.extra['redirects'] as int?) ?? 0;
+            if (redirectCount >= 5) {
+              return handler.reject(
+                DioException(
+                  requestOptions: response.requestOptions,
+                  error: 'Redirect limit exceeded',
+                ),
+              );
+            }
+
+            final location = response.headers.value('location');
+            if (location != null && location.isNotEmpty) {
+              final resolvedUri = response.requestOptions.uri.resolve(location);
+              if (resolvedUri.scheme != 'https') {
+                return handler.reject(
+                  DioException(
+                    requestOptions: response.requestOptions,
+                    error: 'HTTPS is required to protect WebDAV credentials',
+                  ),
+                );
+              }
+
+              // 手动跟随安全的 HTTPS 重定向
+              try {
+                final newOptions = response.requestOptions.copyWith(
+                  path: resolvedUri.toString(),
+                );
+                newOptions.extra['redirects'] = redirectCount + 1;
+
+                // 如果跨域，则移除认证以防跨域凭据泄露
+                if (resolvedUri.host != response.requestOptions.uri.host) {
+                  newOptions.headers.remove('Authorization');
+                }
+
+                final newResponse = await dio.fetch(newOptions);
+                return handler.resolve(newResponse);
+              } catch (e) {
+                if (e is DioException) {
+                  return handler.reject(e);
+                }
+                return handler.reject(
+                  DioException(
+                    requestOptions: response.requestOptions,
+                    error: e.toString(),
+                  ),
+                );
+              }
+            }
+            // 收到 3xx 但没有合法的 location 跳转时，显式拒绝（防止全局 validateStatus 放行导致无声失败）
+            return handler.reject(
+              DioException(
+                requestOptions: response.requestOptions,
+                error: 'Redirect failed: Missing or invalid Location header',
+              ),
+            );
+          }
+          return handler.next(response);
+        },
+      ),
+    );
 
     return dio;
   }

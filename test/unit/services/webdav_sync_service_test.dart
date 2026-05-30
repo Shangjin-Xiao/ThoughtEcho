@@ -107,10 +107,12 @@ void main() {
     expect(service.isSyncing, false);
   });
 
-  test('WebDAVSyncService should enforce HTTPS strictly on saveSettings',
+  test(
+      'WebDAVSyncService should enforce HTTPS strictly on saveSettings only when enabled',
       () async {
     final service = WebDAVSyncService();
 
+    // 当 enabled = true 时，应该抛出异常
     expect(
       service.saveSettings(
         enabled: true,
@@ -126,6 +128,18 @@ void main() {
         contains('HTTPS is required to protect WebDAV credentials'),
       )),
     );
+
+    // 当 enabled = false 时，应当允许用户暂存设置而不被阻止
+    await service.saveSettings(
+      enabled: false,
+      provider: 'custom',
+      url: 'http://insecure.server.local/dav/',
+      username: 'user',
+      syncOnLaunch: false,
+      syncOnChange: false,
+    );
+    expect(service.enabled, false);
+    expect(service.url, 'http://insecure.server.local/dav/');
   });
 
   test('WebDAVSyncService should enforce HTTPS strictly on testConnection',
