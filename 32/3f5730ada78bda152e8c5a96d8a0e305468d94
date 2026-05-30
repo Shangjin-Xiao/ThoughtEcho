@@ -1,0 +1,27 @@
+lib/services/webdav_sync_service.dart
+  s_e31cca6e13fb33::t_eb66e2274ffab4 500-505
+lib/l10n/app_en.arb
+  s_e31cca6e13fb33::t_594133e9e01471 3690-3693
+lib/pages/webdav_sync_page.dart
+  s_e31cca6e13fb33::t_dcda19afd7ac1b 105,116-134,385-388,486-493,565
+test/widget/pages/webdav_sync_page_test.dart
+  s_e31cca6e13fb33::t_47ef03aa53b5ab 18-19,22,31,67-82,126-135
+lib/l10n/app_zh.arb
+  s_e31cca6e13fb33::t_ed5bab34965105 3690-3693
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "323f5730ada78bda152e8c5a96d8a0e305468d94",
+  "prompts": {},
+  "sessions": {
+    "s_e31cca6e13fb33": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "a0a0f3f5-ca5b-4bf1-b41e-c8b3198a258a",
+        "model": "auto"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
