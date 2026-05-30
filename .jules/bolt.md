@@ -5,6 +5,9 @@
 **Action:**
 修改了 `lib/services/database/database_query_mixin.dart` 与 `lib/services/database/database_query_helpers_mixin.dart` 中 Web 平台的数据内存过滤逻辑。预先使用 `final tagIdSet = tagIds.toSet();`，并在之后的 `.any((tag) => tagIdSet.contains(tag))` 中使用该 Set 替代原有的 `tagIds.contains(tag)`，彻底消除了 N+1 的隐藏复杂度。验证通过了相关多标签过滤的测试。
 
+## 2024-05-30 - 优化 RegExp 编译性能
+**Learning:** 在高频调用的方法（如字符串过滤、格式化）中，如果使用字面量正则表达式，Dart 在每次执行到该行时都会调用 `RegExp` 构造函数。由于正则表达式的编译过程（即使带有缓存或者简单匹配）本身具有一定开销，尤其是在长循环或大列表过滤中会被不断放大，应当将其提取为静态只读成员（`static final`）来仅在类加载时编译一次。
+**Action:** 在 `lib/services/location_service.dart` 中，将 `_containsLatinOrDigit` 方法里的 `RegExp(r'[A-Za-z0-9]')` 提取为 `static final _latinOrDigitRegex` 并复用。
 ## 2024-05-30 - 优化 database_backup_service 中的降级插入性能
 **Learning:** The fallback block for database record insertion was incorrectly using sequential `await txn.insert()` for every tag of every quote. Although the initial quote array batch failed forcing this fallback, making another N+1 sequential request inside the fallback loop compounded the performance issue significantly.
 **Action:** Removed the sequential `txn.insert` call inside the tag resolution loop. Appended the records to `tagRelations` which is eventually processed by an existing, outer batched `txn.batch()` execution.
