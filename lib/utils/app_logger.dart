@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
 
 /// 全局日志工具类，用于替换 logDebug
@@ -13,6 +14,12 @@ class AppLogger {
   static UnifiedLogService get _service {
     _logService ??= UnifiedLogService.instance;
     return _logService!;
+  }
+
+  /// 用于测试的日志服务注入
+  @visibleForTesting
+  static set serviceForTesting(UnifiedLogService service) {
+    _logService = service;
   }
 
   /// 记录详细日志 (verbose)
