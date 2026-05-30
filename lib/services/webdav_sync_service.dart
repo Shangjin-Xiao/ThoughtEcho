@@ -167,9 +167,9 @@ class WebDAVSyncService extends ChangeNotifier {
               status == 302 ||
               status == 307 ||
               status == 308) {
-
             // 检查防重定向死循环
-            final redirectCount = (response.requestOptions.extra['redirects'] as int?) ?? 0;
+            final redirectCount =
+                (response.requestOptions.extra['redirects'] as int?) ?? 0;
             if (redirectCount >= 5) {
               return handler.reject(
                 DioException(
