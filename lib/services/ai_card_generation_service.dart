@@ -23,6 +23,14 @@ class AICardGenerationService {
   final AIService _aiService;
   final SettingsService _settingsService;
 
+  static final RegExp _viewBoxRegex = RegExp(r'viewBox="([^"]+)"');
+  static final RegExp _splitSpaceCommaRegex = RegExp(r'[\s,]+');
+  static final RegExp _widthRegex = RegExp(r'width="([^"]+)"');
+  static final RegExp _heightRegex = RegExp(r'height="([^"]+)"');
+  static final RegExp _rectFallbackRegex =
+      RegExp(r'<rect[^>]*width="([^"]+)"[^>]*height="([^"]+)"');
+  static final RegExp _numericRegex = RegExp('[^0-9.-]');
+
   AICardGenerationService(this._aiService, this._settingsService);
 
   /// 获取当前语言代码 (zh, en, ja, fr, etc.)
@@ -1413,9 +1421,9 @@ class AICardGenerationService {
   /// 推断SVG内在尺寸，忽略百分比/无效尺寸，防止viewBox被错误设置为100导致裁剪
   static (String, String) _inferSvgIntrinsicSize(String svgContent) {
     // 1) 优先使用合法的viewBox
-    final viewBoxMatch = RegExp(r'viewBox="([^"]+)"').firstMatch(svgContent);
+    final viewBoxMatch = _viewBoxRegex.firstMatch(svgContent);
     if (viewBoxMatch != null) {
-      final parts = viewBoxMatch.group(1)!.split(RegExp(r'[\s,]+'));
+      final parts = viewBoxMatch.group(1)!.split(_splitSpaceCommaRegex);
       if (parts.length == 4 && parts.every((p) => double.tryParse(p) != null)) {
         return (parts[2], parts[3]);
       }
@@ -1423,17 +1431,15 @@ class AICardGenerationService {
 
     // 2) 解析根节点的width/height（忽略百分比）
     double? w = _parseNumericDimension(
-      RegExp(r'width="([^"]+)"').firstMatch(svgContent)?.group(1),
+      _widthRegex.firstMatch(svgContent)?.group(1),
     );
     double? h = _parseNumericDimension(
-      RegExp(r'height="([^"]+)"').firstMatch(svgContent)?.group(1),
+      _heightRegex.firstMatch(svgContent)?.group(1),
     );
 
     // 3) 如果根尺寸不可靠，尝试从首个rect推断（通常为背景矩形）
     if (w == null || h == null) {
-      final rectMatch =
-          RegExp(r'<rect[^>]*width="([^"]+)"[^>]*height="([^"]+)"')
-              .firstMatch(svgContent);
+      final rectMatch = _rectFallbackRegex.firstMatch(svgContent);
       if (rectMatch != null) {
         w = _parseNumericDimension(rectMatch.group(1)) ?? w;
         h = _parseNumericDimension(rectMatch.group(2)) ?? h;
@@ -1450,7 +1456,7 @@ class AICardGenerationService {
   static double? _parseNumericDimension(String? raw) {
     if (raw == null || raw.trim().isEmpty) return null;
     if (raw.contains('%')) return null;
-    final cleaned = raw.replaceAll(RegExp('[^0-9.-]'), '');
+    final cleaned = raw.replaceAll(_numericRegex, '');
     if (cleaned.isEmpty) return null;
     final parsed = double.tryParse(cleaned);
     if (parsed == null || parsed <= 0) return null;
