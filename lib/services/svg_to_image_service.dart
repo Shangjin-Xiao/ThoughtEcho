@@ -18,6 +18,45 @@ enum ExportRenderMode {
 class SvgToImageService {
   static final ImageCacheService _cacheService = ImageCacheService();
 
+  // 预编译正则表达式以提升性能
+  static final RegExp _viewBoxRegex = RegExp(r'viewBox="([^"]+)"');
+  static final RegExp _splitSpaceCommaRegex = RegExp(r'[\s,]+');
+  static final RegExp _widthRegex = RegExp(r'width="([^"]+)"');
+  static final RegExp _heightRegex = RegExp(r'height="([^"]+)"');
+  static final RegExp _rectFallbackRegex =
+      RegExp(r'<rect[^>]*width="([^"]+)"[^>]*height="([^"]+)"');
+  static final RegExp _numericRegex = RegExp('[^0-9.-]');
+  static final RegExp _linearGradientRegex = RegExp(
+      r'<linearGradient[^>]*>.*?<\/linearGradient>',
+      dotAll: true,
+      caseSensitive: false);
+  static final RegExp _radialGradientRegex = RegExp(
+      r'<radialGradient[^>]*>.*?<\/radialGradient>',
+      dotAll: true,
+      caseSensitive: false);
+  static final RegExp _x1Regex = RegExp(r'x1="([^"]*)"');
+  static final RegExp _y1Regex = RegExp(r'y1="([^"]*)"');
+  static final RegExp _x2Regex = RegExp(r'x2="([^"]*)"');
+  static final RegExp _y2Regex = RegExp(r'y2="([^"]*)"');
+  static final RegExp _stopWithAttrsRegex = RegExp(
+    r'<stop[^>]*offset="([^"]*)"[^>]*(?:stop-color="([^"]*)"|style="[^"]*stop-color:\s*([^;"\s]+))[^>]*(?:stop-opacity="([^"]*)"|style="[^"]*stop-opacity:\s*([^;"\s]+))?',
+    caseSensitive: false,
+  );
+  static final RegExp _attrRegex =
+      RegExp(r'([a-zA-Z_:][\w:.-]*)\s*=\s*"([^"]*)"');
+  static final RegExp _rectRegex = RegExp(r'<rect[^>]*>', caseSensitive: false);
+  static final RegExp _circleRegex =
+      RegExp(r'<circle[^>]*>', caseSensitive: false);
+  static final RegExp _textRegex =
+      RegExp(r'<text[^>]*>.*?<\/text>', dotAll: true, caseSensitive: false);
+  static final RegExp _textContentRegex =
+      RegExp(r'>\s*(.*?)\s*<\/text>', dotAll: true);
+  static final RegExp _rgbaRegex = RegExp(r'^rgba?\(([^)]+)\)$');
+  static final RegExp _idRegex = RegExp(r'id="([^"]+)"');
+
+  // 缓存样式的RegExp，避免动态生成时的编译开销
+  static final Map<String, RegExp> _styleRegexCache = {};
+
   /// 将SVG字符串转换为图片字节数组
   static Future<Uint8List> convertSvgToImage(
     String svgContent, {
@@ -180,9 +219,9 @@ class SvgToImageService {
   // ignore: unused_element
   static (String, String) _inferSvgIntrinsicSize(String svgContent) {
     // 1) 优先使用合法的viewBox
-    final viewBoxMatch = RegExp(r'viewBox="([^"]+)"').firstMatch(svgContent);
+    final viewBoxMatch = _viewBoxRegex.firstMatch(svgContent);
     if (viewBoxMatch != null) {
-      final parts = viewBoxMatch.group(1)!.split(RegExp(r'[\s,]+'));
+      final parts = viewBoxMatch.group(1)!.split(_splitSpaceCommaRegex);
       if (parts.length == 4 && parts.every((p) => double.tryParse(p) != null)) {
         return (parts[2], parts[3]);
       }
@@ -190,17 +229,15 @@ class SvgToImageService {
 
     // 2) 解析数值width/height（忽略百分比/空值）
     double? w = _parseNumericDimension(
-      RegExp(r'width="([^"]+)"').firstMatch(svgContent)?.group(1),
+      _widthRegex.firstMatch(svgContent)?.group(1),
     );
     double? h = _parseNumericDimension(
-      RegExp(r'height="([^"]+)"').firstMatch(svgContent)?.group(1),
+      _heightRegex.firstMatch(svgContent)?.group(1),
     );
 
     // 3) 如果根节点给的是百分比或0，尝试从第一个rect推断背景尺寸
     if (w == null || h == null) {
-      final rectMatch = RegExp(
-        r'<rect[^>]*width="([^"]+)"[^>]*height="([^"]+)"',
-      ).firstMatch(svgContent);
+      final rectMatch = _rectFallbackRegex.firstMatch(svgContent);
       if (rectMatch != null) {
         w = _parseNumericDimension(rectMatch.group(1)) ?? w;
         h = _parseNumericDimension(rectMatch.group(2)) ?? h;
@@ -219,7 +256,7 @@ class SvgToImageService {
   static double? _parseNumericDimension(String? raw) {
     if (raw == null || raw.trim().isEmpty) return null;
     if (raw.contains('%')) return null;
-    final cleaned = raw.replaceAll(RegExp('[^0-9.-]'), '');
+    final cleaned = raw.replaceAll(_numericRegex, '');
     if (cleaned.isEmpty) return null;
     final parsed = double.tryParse(cleaned);
     if (parsed == null || parsed <= 0) return null;
@@ -421,42 +458,34 @@ class SvgToImageService {
     final gradients = <String, Gradient>{};
 
     // 解析 linearGradient
-    final linearGradientRegex = RegExp(
-      r'<linearGradient\s+id="([^"]+)"[^>]*>(.*?)</linearGradient>',
-      dotAll: true,
-    );
-
-    for (final match in linearGradientRegex.allMatches(svgContent)) {
-      final id = match.group(1) ?? '';
-      final content = match.group(2) ?? '';
+    for (final match in _linearGradientRegex.allMatches(svgContent)) {
       final tag = match.group(0) ?? '';
+      final idMatch = _idRegex.firstMatch(tag);
+      final id = idMatch?.group(1) ?? '';
+      final content = match.group(0) ??
+          ''; // Since we changed regex, but actually dotAll matches entire tag in _linearGradientRegex
 
       if (id.isEmpty) continue;
 
       // 解析渐变方向
       final x1 = _parsePercentage(
-        RegExp(r'x1="([^"]*)"').firstMatch(tag)?.group(1),
+        _x1Regex.firstMatch(tag)?.group(1),
       );
       final y1 = _parsePercentage(
-        RegExp(r'y1="([^"]*)"').firstMatch(tag)?.group(1),
+        _y1Regex.firstMatch(tag)?.group(1),
       );
       final x2 = _parsePercentage(
-        RegExp(r'x2="([^"]*)"').firstMatch(tag)?.group(1),
+        _x2Regex.firstMatch(tag)?.group(1),
       );
       final y2 = _parsePercentage(
-        RegExp(r'y2="([^"]*)"').firstMatch(tag)?.group(1),
+        _y2Regex.firstMatch(tag)?.group(1),
       );
 
       // 解析颜色停靠点
       final stops = <double>[];
       final colors = <Color>[];
 
-      final stopRegex = RegExp(
-        r'<stop[^>]*offset="([^"]*)"[^>]*(?:stop-color="([^"]*)"|style="[^"]*stop-color:\s*([^;"\s]+))[^>]*(?:stop-opacity="([^"]*)"|style="[^"]*stop-opacity:\s*([^;"\s]+))?',
-        caseSensitive: false,
-      );
-
-      for (final stopMatch in stopRegex.allMatches(content)) {
+      for (final stopMatch in _stopWithAttrsRegex.allMatches(content)) {
         final offset = _parsePercentage(stopMatch.group(1));
         final colorStr = stopMatch.group(2) ?? stopMatch.group(3) ?? '#000000';
         final opacityStr = stopMatch.group(4) ?? stopMatch.group(5);
@@ -481,26 +510,18 @@ class SvgToImageService {
     }
 
     // 解析 radialGradient
-    final radialGradientRegex = RegExp(
-      r'<radialGradient\s+id="([^"]+)"[^>]*>(.*?)</radialGradient>',
-      dotAll: true,
-    );
-
-    for (final match in radialGradientRegex.allMatches(svgContent)) {
-      final id = match.group(1) ?? '';
-      final content = match.group(2) ?? '';
+    for (final match in _radialGradientRegex.allMatches(svgContent)) {
+      final tag = match.group(0) ?? '';
+      final idMatch = _idRegex.firstMatch(tag);
+      final id = idMatch?.group(1) ?? '';
+      final content = match.group(0) ?? '';
 
       if (id.isEmpty) continue;
 
       final stops = <double>[];
       final colors = <Color>[];
 
-      final stopRegex = RegExp(
-        r'<stop[^>]*offset="([^"]*)"[^>]*(?:stop-color="([^"]*)"|style="[^"]*stop-color:\s*([^;"\s]+))[^>]*(?:stop-opacity="([^"]*)"|style="[^"]*stop-opacity:\s*([^;"\s]+))?',
-        caseSensitive: false,
-      );
-
-      for (final stopMatch in stopRegex.allMatches(content)) {
+      for (final stopMatch in _stopWithAttrsRegex.allMatches(content)) {
         final offset = _parsePercentage(stopMatch.group(1));
         final colorStr = stopMatch.group(2) ?? stopMatch.group(3) ?? '#000000';
         final opacityStr = stopMatch.group(4) ?? stopMatch.group(5);
@@ -537,8 +558,7 @@ class SvgToImageService {
   // ignore: unused_element
   static Map<String, String> _parseAttributes(String tag) {
     final attrs = <String, String>{};
-    final attrRegex = RegExp(r'([a-zA-Z_:][\w:.-]*)\s*=\s*"([^"]*)"');
-    for (final match in attrRegex.allMatches(tag)) {
+    for (final match in _attrRegex.allMatches(tag)) {
       attrs[match.group(1)!] = match.group(2)!;
     }
     return attrs;
@@ -577,7 +597,7 @@ class SvgToImageService {
   }) {
     final raw =
         attrs['font-size'] ?? _parseStyleValue(attrs['style'], 'font-size');
-    final cleaned = raw?.replaceAll(RegExp('[^0-9.-]'), '');
+    final cleaned = raw?.replaceAll(_numericRegex, '');
     final parsed = double.tryParse(cleaned ?? '');
     return parsed ?? defaultSize;
   }
@@ -586,7 +606,9 @@ class SvgToImageService {
   // ignore: unused_element
   static String? _parseStyleValue(String? style, String key) {
     if (style == null) return null;
-    final regex = RegExp('$key\\s*:\\s*([^;]+)', caseSensitive: false);
+
+    RegExp regex = _styleRegexCache[key] ??=
+        RegExp('$key\\s*:\\s*([^;]+)', caseSensitive: false);
     final match = regex.firstMatch(style);
     return match?.group(1)?.trim();
   }
@@ -595,7 +617,7 @@ class SvgToImageService {
   // ignore: unused_element
   static double _parseDimension(String? value) {
     if (value == null) return 0;
-    final cleaned = value.replaceAll(RegExp('[^0-9.-]'), '');
+    final cleaned = value.replaceAll(_numericRegex, '');
     return double.tryParse(cleaned) ?? 0;
   }
 
@@ -609,9 +631,7 @@ class SvgToImageService {
     Map<String, Gradient> gradients,
   ) {
     // 查找可能的背景矩形，兼容属性顺序与style写法
-    final rectRegex = RegExp(r'<rect[^>]*>', caseSensitive: false);
-
-    for (final match in rectRegex.allMatches(svgContent)) {
+    for (final match in _rectRegex.allMatches(svgContent)) {
       final tag = match.group(0) ?? '';
       final attrs = _parseAttributes(tag);
 
@@ -656,9 +676,7 @@ class SvgToImageService {
     Map<String, Gradient> gradients,
   ) {
     // 绘制圆形（兼容style写法）
-    final circleRegex = RegExp(r'<circle[^>]*>', caseSensitive: false);
-
-    for (final match in circleRegex.allMatches(svgContent)) {
+    for (final match in _circleRegex.allMatches(svgContent)) {
       try {
         final attrs = _parseAttributes(match.group(0) ?? '');
         final cx = _parseDimension(attrs['cx']);
@@ -687,9 +705,7 @@ class SvgToImageService {
     }
 
     // 绘制矩形（跳过背景矩形）
-    final rectRegex = RegExp(r'<rect[^>]*>', caseSensitive: false);
-
-    for (final match in rectRegex.allMatches(svgContent)) {
+    for (final match in _rectRegex.allMatches(svgContent)) {
       try {
         final tag = match.group(0) ?? '';
         final attrs = _parseAttributes(tag);
@@ -744,13 +760,7 @@ class SvgToImageService {
     int width,
     int height,
   ) {
-    final textRegex = RegExp(
-      r'<text[^>]*>.*?<\/text>',
-      dotAll: true,
-      caseSensitive: false,
-    );
-
-    for (final match in textRegex.allMatches(svgContent)) {
+    for (final match in _textRegex.allMatches(svgContent)) {
       try {
         final rawTag = match.group(0) ?? '';
         final attrs = _parseAttributes(rawTag);
@@ -763,10 +773,7 @@ class SvgToImageService {
         final fontSize = _extractFontSize(attrs, defaultSize: 14.0);
         final opacity = _extractOpacity(attrs, defaultOpacity: 1.0);
 
-        final contentMatch = RegExp(
-          r'>\s*(.*?)\s*<\/text>',
-          dotAll: true,
-        ).firstMatch(rawTag);
+        final contentMatch = _textContentRegex.firstMatch(rawTag);
         String text = contentMatch?.group(1) ?? '';
 
         // 解码HTML实体
@@ -856,7 +863,7 @@ class SvgToImageService {
 
     // rgb()/rgba()
     // 兼容：rgb(255,0,0) / rgb(100%,0%,0%) / rgba(255,0,0,0.5)
-    final rgbaMatch = RegExp(r'^rgba?\(([^)]+)\)$').firstMatch(lower);
+    final rgbaMatch = _rgbaRegex.firstMatch(lower);
     if (rgbaMatch != null) {
       final parts = rgbaMatch.group(1)!.split(',').map((e) => e.trim());
       final list = parts.toList(growable: false);
