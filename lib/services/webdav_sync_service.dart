@@ -16,12 +16,7 @@ import '../services/mmkv_service.dart';
 import '../utils/app_logger.dart';
 
 /// WebDAV 同步状态枚举
-enum WebDAVSyncStatus {
-  idle,
-  syncing,
-  success,
-  failed,
-}
+enum WebDAVSyncStatus { idle, syncing, success, failed }
 
 class WebDAVSyncService extends ChangeNotifier {
   static final WebDAVSyncService _instance = WebDAVSyncService._internal();
@@ -119,7 +114,9 @@ class WebDAVSyncService extends ChangeNotifier {
 
     if (password != null) {
       await _secureStorage.write(
-          key: 'webdav_password', value: password.trim());
+        key: 'webdav_password',
+        value: password.trim(),
+      );
     }
 
     notifyListeners();
@@ -127,7 +124,14 @@ class WebDAVSyncService extends ChangeNotifier {
 
   /// 创建配置好的 Dio 实例用于 WebDAV 请求
   Future<Dio> _createDio(
-      String requestUrl, String requestUsername, String requestPassword) async {
+    String requestUrl,
+    String requestUsername,
+    String requestPassword,
+  ) async {
+    if (!requestUrl.toLowerCase().startsWith('https://')) {
+      throw Exception('HTTPS is required to protect WebDAV credentials');
+    }
+
     final dio = Dio();
     dio.options.connectTimeout = const Duration(seconds: 15);
     dio.options.receiveTimeout = const Duration(seconds: 20);
@@ -136,17 +140,17 @@ class WebDAVSyncService extends ChangeNotifier {
     // 计算 Basic Auth 头
     final basicAuth =
         'Basic ${base64Encode(utf8.encode('$requestUsername:$requestPassword'))}';
-    dio.options.headers = {
-      'Authorization': basicAuth,
-      'Accept': '*/*',
-    };
+    dio.options.headers = {'Authorization': basicAuth, 'Accept': '*/*'};
 
     return dio;
   }
 
   /// 测试 WebDAV 连接
   Future<bool> testConnection(
-      String testUrl, String testUsername, String testPassword) async {
+    String testUrl,
+    String testUsername,
+    String testPassword,
+  ) async {
     try {
       String cleanUrl = testUrl.trim();
       if (!cleanUrl.endsWith('/')) cleanUrl = '$cleanUrl/';
@@ -271,7 +275,8 @@ class WebDAVSyncService extends ChangeNotifier {
       final archive = Archive();
       final jsonBytes = utf8.encode(localDataJson);
       archive.addFile(
-          ArchiveFile('backup_data.json', jsonBytes.length, jsonBytes));
+        ArchiveFile('backup_data.json', jsonBytes.length, jsonBytes),
+      );
       final zipBytes = ZipEncoder().encode(archive);
 
       await dio.put(
@@ -293,8 +298,12 @@ class WebDAVSyncService extends ChangeNotifier {
 
       logInfo('WebDAV 同步成功完成。冲突数: $_lastConflictCount');
     } catch (e, stack) {
-      logError('WebDAV 同步失败',
-          error: e, stackTrace: stack, source: 'WebDAVSyncService');
+      logError(
+        'WebDAV 同步失败',
+        error: e,
+        stackTrace: stack,
+        source: 'WebDAVSyncService',
+      );
       _syncStatus = WebDAVSyncStatus.failed;
       await _mmkv.setString('webdav_sync_status', 'failed');
     } finally {
@@ -356,7 +365,7 @@ class WebDAVSyncService extends ChangeNotifier {
     if (localQuotes.isEmpty) return 0;
 
     final localQuotesMap = {
-      for (final q in localQuotes) (q['id'] as String): q
+      for (final q in localQuotes) (q['id'] as String): q,
     };
 
     int conflictsCloned = 0;
@@ -370,14 +379,16 @@ class WebDAVSyncService extends ChangeNotifier {
       final localQuote = localQuotesMap[quoteId];
       if (localQuote == null) continue;
 
-      final remoteModStr = rqMap['last_modified']?.toString() ??
+      final remoteModStr =
+          rqMap['last_modified']?.toString() ??
           rqMap['lastModified']?.toString() ??
           '';
       if (remoteModStr.isEmpty) continue;
 
       final remoteModTime = DateTime.parse(remoteModStr).toUtc();
-      final localModTime =
-          DateTime.parse(localQuote['last_modified'] as String).toUtc();
+      final localModTime = DateTime.parse(
+        localQuote['last_modified'] as String,
+      ).toUtc();
 
       // 如果两边都有修改，且内容不同，则判定为冲突
       if (localModTime.isAfter(lastSync) && remoteModTime.isAfter(lastSync)) {
@@ -396,7 +407,9 @@ class WebDAVSyncService extends ChangeNotifier {
 
   /// 克隆冲突的笔记，并将分类设为“同步冲突”
   Future<void> _cloneConflictQuote(
-      Database db, Map<String, dynamic> localQuote) async {
+    Database db,
+    Map<String, dynamic> localQuote,
+  ) async {
     try {
       // 1. 确保冲突分类在本地存在
       final catCheck = await db.query(
@@ -470,8 +483,10 @@ class WebDAVSyncService extends ChangeNotifier {
     if (!await mediaRoot.exists()) return;
 
     // 1. 扫描本地所有存在的媒体文件
-    final List<File> localFiles =
-        mediaRoot.listSync(recursive: true).whereType<File>().toList();
+    final List<File> localFiles = mediaRoot
+        .listSync(recursive: true)
+        .whereType<File>()
+        .toList();
 
     final Map<String, File> localMediaMap = {};
     for (final f in localFiles) {
@@ -504,8 +519,9 @@ class WebDAVSyncService extends ChangeNotifier {
               ? utf8.decode(rawData, allowMalformed: true)
               : rawData.toString();
           // 使用 namespace-agnostic 正则提取云端文件的相对路径 URL 尾部
-          final hrefRegExp =
-              RegExp(r'<[a-zA-Z0-9:]*href>([\s\S]*?)<\/[a-zA-Z0-9:]*href>');
+          final hrefRegExp = RegExp(
+            r'<[a-zA-Z0-9:]*href>([\s\S]*?)<\/[a-zA-Z0-9:]*href>',
+          );
           final matches = hrefRegExp.allMatches(xmlData);
 
           for (final m in matches) {
@@ -542,11 +558,7 @@ class WebDAVSyncService extends ChangeNotifier {
           await dio.put(
             uploadUrl,
             data: file.openRead(),
-            options: Options(
-              headers: {
-                'Content-Length': fileLen,
-              },
-            ),
+            options: Options(headers: {'Content-Length': fileLen}),
           );
         } catch (e) {
           logDebug('上传附件失败 ($stdPath): $e');
@@ -559,8 +571,9 @@ class WebDAVSyncService extends ChangeNotifier {
       if (!localMediaMap.containsKey(stdPath)) {
         logDebug('从云端下载本地缺失附件: $stdPath');
         final downloadUrl = '${_url}thoughtecho/media/$stdPath';
-        final localTargetFile =
-            File(p.join(mediaRoot.path, stdPath.replaceAll('/', p.separator)));
+        final localTargetFile = File(
+          p.join(mediaRoot.path, stdPath.replaceAll('/', p.separator)),
+        );
 
         try {
           // 确保父目录存在
