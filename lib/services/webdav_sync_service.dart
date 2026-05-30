@@ -497,8 +497,12 @@ class WebDAVSyncService extends ChangeNotifier {
           ),
         );
 
-        if (response.statusCode == 207 && response.data != null) {
-          final String xmlData = response.data.toString();
+        if ((response.statusCode == 207 || response.statusCode == 200) &&
+            response.data != null) {
+          final dynamic rawData = response.data;
+          final String xmlData = rawData is List<int>
+              ? utf8.decode(rawData, allowMalformed: true)
+              : rawData.toString();
           // 使用 namespace-agnostic 正则提取云端文件的相对路径 URL 尾部
           final hrefRegExp =
               RegExp(r'<[a-zA-Z0-9:]*href>([\s\S]*?)<\/[a-zA-Z0-9:]*href>');

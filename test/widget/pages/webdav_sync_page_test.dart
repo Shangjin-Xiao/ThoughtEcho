@@ -15,8 +15,11 @@ import '../../test_setup.dart';
 void main() {
   const MethodChannel secureStorageChannel =
       MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+  const MethodChannel urlLauncherChannel =
+      MethodChannel('plugins.flutter.io/url_launcher');
 
   final Map<String, String> secureStorage = {};
+  bool launchUrlCalled = false;
   late WebDAVSyncService syncService;
 
   setUpAll(() async {
@@ -25,6 +28,7 @@ void main() {
 
   setUp(() async {
     secureStorage.clear();
+    launchUrlCalled = false;
 
     // Mock SharedPreferences
     SharedPreferences.setMockInitialValues({});
@@ -58,6 +62,22 @@ void main() {
           return secureStorage;
         }
         return null;
+      },
+    );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      urlLauncherChannel,
+      (MethodCall methodCall) async {
+        if (methodCall.method == 'launch' ||
+            methodCall.method == 'launchUrl') {
+          launchUrlCalled = true;
+          return true;
+        }
+        if (methodCall.method == 'canLaunch' ||
+            methodCall.method == 'canLaunchUrl') {
+          return true;
+        }
+        return false;
       },
     );
 
@@ -102,5 +122,16 @@ void main() {
     // 验证同步配置策略是否显示
     expect(find.text('应用启动时自动同步'), findsOneWidget);
     expect(find.text('修改笔记后自动后台同步'), findsOneWidget);
+  });
+
+  testWidgets('WebDAVSyncPage app password help button opens URL',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(buildTestApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('如何获取应用密码？'));
+    await tester.pumpAndSettle();
+
+    expect(launchUrlCalled, isTrue);
   });
 }
