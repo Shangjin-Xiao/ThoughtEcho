@@ -460,7 +460,9 @@ class SvgToImageService {
     // 解析 linearGradient
     for (final match in _linearGradientRegex.allMatches(svgContent)) {
       final tag = match.group(0) ?? '';
-      final idMatch = _idRegex.firstMatch(tag);
+      // 使用 RegExp 匹配以开始标签作为作用域
+      final startTagMatch = RegExp(r'<linearGradient[^>]*>').firstMatch(tag);
+      final idMatch = _idRegex.firstMatch(startTagMatch?.group(0) ?? '');
       final id = idMatch?.group(1) ?? '';
       final content = match.group(0) ??
           ''; // Since we changed regex, but actually dotAll matches entire tag in _linearGradientRegex
@@ -512,7 +514,9 @@ class SvgToImageService {
     // 解析 radialGradient
     for (final match in _radialGradientRegex.allMatches(svgContent)) {
       final tag = match.group(0) ?? '';
-      final idMatch = _idRegex.firstMatch(tag);
+      // 使用 RegExp 匹配以开始标签作为作用域
+      final startTagMatch = RegExp(r'<radialGradient[^>]*>').firstMatch(tag);
+      final idMatch = _idRegex.firstMatch(startTagMatch?.group(0) ?? '');
       final id = idMatch?.group(1) ?? '';
       final content = match.group(0) ?? '';
 
