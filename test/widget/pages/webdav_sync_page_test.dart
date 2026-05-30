@@ -128,7 +128,9 @@ void main() {
     await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('如何获取应用密码？'));
+    final helpButtonFinder = find.text('如何获取应用密码？');
+    await tester.ensureVisible(helpButtonFinder);
+    await tester.tap(helpButtonFinder);
     await tester.pumpAndSettle();
 
     expect(launchUrlCalled, isTrue);
