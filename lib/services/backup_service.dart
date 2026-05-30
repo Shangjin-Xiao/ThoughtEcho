@@ -530,14 +530,12 @@ class BackupService {
       final file = File(filePath);
       if (!await file.exists()) return false;
 
-      // 验证新的 zip 格式
+      // 验证新的 zip 格式：一次性检查 ZIP 结构与必需文件
       if (path.extension(filePath).toLowerCase() == '.zip') {
-        // 使用流式处理器验证
-        final isValid = await ZipStreamProcessor.validateZipFile(filePath);
-        if (!isValid) return false;
-
-        // 检查是否包含必需的文件
-        return await ZipStreamProcessor.containsFile(filePath, _backupDataFile);
+        return await ZipStreamProcessor.containsFile(
+          filePath,
+          _backupDataFile,
+        );
       }
 
       // 验证旧的 json 格式

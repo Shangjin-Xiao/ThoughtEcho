@@ -1,8 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
-import 'package:archive/archive.dart';
+import 'package:archive/archive_io.dart';
 import '../utils/app_logger.dart';
 import '../utils/path_security_utils.dart';
 import 'package:path_provider/path_provider.dart';
@@ -101,35 +100,38 @@ class StreamingBackupProcessor {
     final fileSize = await file.length();
     logDebug('ZIP备份文件大小: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB');
 
-    // TODO(perf): This still materializes the whole ZIP before decoding. Replace
-    // it with a true streaming ZIP reader before supporting very large backups.
-    // 读取ZIP文件
-    final bytes = await _readFileInChunks(file, onStatusUpdate, shouldCancel);
+    // 使用 InputFileStream 流式读取 ZIP，不将整个文件加载到内存
+    onStatusUpdate?.call('正在流式解压备份文件...');
+    final inputStream = InputFileStream(filePath);
 
-    onStatusUpdate?.call('正在解压备份文件...');
+    late final Archive archive;
+    try {
+      archive = ZipDecoder().decodeStream(inputStream);
+    } catch (e) {
+      inputStream.closeSync();
+      throw Exception('ZIP文件解压失败: $e');
+    }
 
-    // 解压ZIP
-    final archive = ZipDecoder().decodeBytes(bytes);
-
-    // 查找数据文件 - 修复：使用正确的文件名
+    // 查找数据文件
     ArchiveFile? dataFile;
     logDebug('ZIP文件包含的文件列表:');
-    for (final file in archive) {
-      logDebug('  - ${file.name} (${file.size} bytes)');
-      if (file.name == 'backup_data.json' || file.name == 'data.json') {
-        dataFile = file;
-        logDebug('找到数据文件: ${file.name}');
+    for (final f in archive) {
+      logDebug('  - ${f.name} (${f.size} bytes)');
+      if (f.name == 'backup_data.json' || f.name == 'data.json') {
+        dataFile = f;
+        logDebug('找到数据文件: ${f.name}');
         break;
       }
     }
 
     if (dataFile == null) {
+      inputStream.closeSync();
       throw Exception('备份文件中未找到数据文件 (backup_data.json 或 data.json)');
     }
 
     onStatusUpdate?.call('正在解析备份数据...');
 
-    // 解析JSON数据 - 修复：使用UTF-8解码避免中文乱码
+    // 解析JSON数据 — dataFile.content 按需从磁盘读取（流式解码后的懒加载）
     final jsonBytes = dataFile.content as List<int>;
     final jsonString = utf8.decode(jsonBytes);
     final map = json.decode(jsonString) as Map<String, dynamic>;
@@ -139,10 +141,14 @@ class StreamingBackupProcessor {
       try {
         final appDir = await getApplicationDocumentsDirectory();
         for (final f in archive) {
+          if (shouldCancel?.call() == true) {
+            inputStream.closeSync();
+            throw Exception('操作已取消');
+          }
+
           if (f.isFile && f.name != dataFile.name) {
             try {
               // 将 ZIP 条目名中的正斜杠转换为当前平台的路径分隔符
-              // ZIP 格式标准使用正斜杠，但在 Windows 上需要转换为反斜杠
               final normalizedName = f.name.replaceAll('/', p.separator);
               final safeRelativePath =
                   _normalizeSafeRelativePath(normalizedName);
@@ -161,8 +167,11 @@ class StreamingBackupProcessor {
               if (!await targetDir.exists()) {
                 await targetDir.create(recursive: true);
               }
-              final outFile = File(targetPath);
-              await outFile.writeAsBytes(f.content as List<int>, flush: true);
+
+              // 使用 OutputFileStream 直接写入磁盘，不经过内存中转
+              final outputStream = OutputFileStream(targetPath);
+              f.writeContent(outputStream);
+              outputStream.closeSync();
               logDebug('已解压媒体文件: ${f.name} -> $targetPath');
             } catch (e) {
               logWarning('媒体文件解压失败: ${f.name}, $e',
@@ -172,57 +181,15 @@ class StreamingBackupProcessor {
         }
         logDebug('媒体文件已解压到应用目录', source: 'StreamingBackupProcessor');
       } catch (e) {
+        if (e.toString().contains('操作已取消')) rethrow;
         logWarning('媒体文件解压失败: $e', source: 'StreamingBackupProcessor');
       }
     } else {
       logDebug('仅验证ZIP结构，跳过媒体文件解压', source: 'StreamingBackupProcessor');
     }
 
+    inputStream.closeSync();
     return map;
-  }
-
-  /// 分块读取文件
-  static Future<Uint8List> _readFileInChunks(
-    File file,
-    Function(String status)? onStatusUpdate,
-    bool Function()? shouldCancel,
-  ) async {
-    final totalSize = await file.length();
-    final chunks = <Uint8List>[];
-    int readBytes = 0;
-
-    final stream = file.openRead();
-    await for (final chunk in stream) {
-      if (shouldCancel?.call() == true) {
-        throw Exception('操作已取消');
-      }
-
-      chunks.add(Uint8List.fromList(chunk));
-      readBytes += chunk.length;
-
-      // 定期更新状态
-      if (readBytes % (1024 * 1024) == 0) {
-        // 每1MB更新一次
-        final progress = (readBytes / totalSize * 100).toInt();
-        onStatusUpdate?.call('读取进度: $progress%');
-
-        // 短暂休息
-        await Future.delayed(const Duration(milliseconds: 5));
-      }
-    }
-
-    // 合并所有块
-    onStatusUpdate?.call('正在合并数据...');
-    final totalLength = chunks.fold<int>(0, (sum, chunk) => sum + chunk.length);
-    final result = Uint8List(totalLength);
-    int offset = 0;
-
-    for (final chunk in chunks) {
-      result.setRange(offset, offset + chunk.length, chunk);
-      offset += chunk.length;
-    }
-
-    return result;
   }
 
   /// 检查备份文件类型
@@ -293,17 +260,43 @@ class StreamingBackupProcessor {
       logDebug('检测到备份文件类型: $type');
 
       if (type == 'json') {
-        // 验证JSON文件
+        // 验证JSON文件 — 对于小文件直接解析，大文件检查头部
         logDebug('验证JSON备份文件...');
-        await parseJsonBackupStreaming(filePath);
-        logDebug('JSON备份文件验证成功');
-        return true;
+        final file = File(filePath);
+        final fileSize = await file.length();
+        if (fileSize < 10 * 1024 * 1024) {
+          // 10MB以下直接验证
+          final content = await file.readAsString();
+          final decoded = json.decode(content);
+          final isValid = decoded is Map<String, dynamic>;
+          logDebug('JSON备份文件验证${isValid ? '成功' : '失败'}');
+          return isValid;
+        } else {
+          // 大文件：检查文件头是否为合法JSON
+          final bytes = await file.openRead(0, 1).first;
+          final firstChar = String.fromCharCode(bytes[0]);
+          final isValid = firstChar == '{';
+          logDebug('大JSON备份文件头部验证${isValid ? '成功' : '失败'}');
+          return isValid;
+        }
       } else if (type == 'zip') {
-        // 验证ZIP文件
+        // 轻量验证ZIP文件：仅检查结构和数据文件是否存在
         logDebug('验证ZIP备份文件...');
-        await processZipBackupStreaming(filePath, extractMediaFiles: false);
-        logDebug('ZIP备份文件验证成功');
-        return true;
+        final inputStream = InputFileStream(filePath);
+        try {
+          final archive = ZipDecoder().decodeStream(inputStream);
+          bool hasDataFile = false;
+          for (final f in archive) {
+            if (f.name == 'backup_data.json' || f.name == 'data.json') {
+              hasDataFile = true;
+              break;
+            }
+          }
+          logDebug('ZIP备份文件验证${hasDataFile ? '成功' : '失败：未找到数据文件'}');
+          return hasDataFile;
+        } finally {
+          inputStream.closeSync();
+        }
       }
 
       logDebug('不支持的备份文件类型: $type');
