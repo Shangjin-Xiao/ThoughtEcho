@@ -379,8 +379,7 @@ class WebDAVSyncService extends ChangeNotifier {
       final localQuote = localQuotesMap[quoteId];
       if (localQuote == null) continue;
 
-      final remoteModStr =
-          rqMap['last_modified']?.toString() ??
+      final remoteModStr = rqMap['last_modified']?.toString() ??
           rqMap['lastModified']?.toString() ??
           '';
       if (remoteModStr.isEmpty) continue;
@@ -483,10 +482,8 @@ class WebDAVSyncService extends ChangeNotifier {
     if (!await mediaRoot.exists()) return;
 
     // 1. 扫描本地所有存在的媒体文件
-    final List<File> localFiles = mediaRoot
-        .listSync(recursive: true)
-        .whereType<File>()
-        .toList();
+    final List<File> localFiles =
+        mediaRoot.listSync(recursive: true).whereType<File>().toList();
 
     final Map<String, File> localMediaMap = {};
     for (final f in localFiles) {
