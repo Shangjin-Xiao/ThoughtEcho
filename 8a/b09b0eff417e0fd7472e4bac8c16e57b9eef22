@@ -1,0 +1,19 @@
+android/app/build.gradle
+  s_3217ccbac05dee::t_ab6c6be1e4322d 113-117,120
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "8ab09b0eff417e0fd7472e4bac8c16e57b9eef22",
+  "prompts": {},
+  "sessions": {
+    "s_3217ccbac05dee": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1a7932a00ffevds8XIgXb5jHtN",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
