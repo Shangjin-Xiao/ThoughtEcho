@@ -123,6 +123,11 @@ class ApkDownloadService {
     String version,
   ) async {
     try {
+      // 强制使用 HTTPS
+      if (!apkUrl.toLowerCase().startsWith('https://')) {
+        throw Exception('Insecure download URL: APK downloads must use HTTPS');
+      }
+
       // 检查存储权限
       final hasPermission = await _checkStoragePermission();
       if (!hasPermission) {
