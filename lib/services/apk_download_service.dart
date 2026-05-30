@@ -73,9 +73,8 @@ class ApkDownloadService {
   static int? _currentNotificationId;
 
   /// 下载进度通知器
-  static ValueNotifier<DownloadProgress> progressNotifier = ValueNotifier(
-    const DownloadProgress(),
-  );
+  static ValueNotifier<DownloadProgress> progressNotifier =
+      ValueNotifier(const DownloadProgress());
 
   /// 下载取消令牌
   static CancelToken? _cancelToken;
@@ -332,9 +331,7 @@ class ApkDownloadService {
             final progressPercent = (progress * 100).round();
             _cachedDownloadProgress = l10n.apkDownloadProgress(progressPercent);
             _showDownloadNotification(
-              _cachedDownloadProgress!,
-              progressPercent,
-            );
+                _cachedDownloadProgress!, progressPercent);
           } else {
             // 未知总大小，仅更新已下载字节数
             progressNotifier.value = DownloadProgress(
@@ -471,8 +468,7 @@ class ApkDownloadService {
 
     await notificationsPlugin
         .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
+            AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(androidChannel);
   }
 
@@ -612,7 +608,11 @@ class _DownloadProgressDialog extends StatelessWidget {
     return AlertDialog(
       title: Row(
         children: [
-          Icon(Icons.system_update, color: colorScheme.primary, size: 24),
+          Icon(
+            Icons.system_update,
+            color: colorScheme.primary,
+            size: 24,
+          ),
           const SizedBox(width: 12),
           Expanded(child: Text(l10n.apkDownloadTitle)),
         ],
@@ -621,8 +621,7 @@ class _DownloadProgressDialog extends StatelessWidget {
         valueListenable: ApkDownloadService.progressNotifier,
         builder: (context, progress, _) {
           final hasTotalSize = progress.totalBytes > 0;
-          final isIndeterminate =
-              progress.status == DownloadStatus.idle ||
+          final isIndeterminate = progress.status == DownloadStatus.idle ||
               (!hasTotalSize && progress.status == DownloadStatus.downloading);
 
           return Column(
@@ -712,7 +711,12 @@ class _DownloadProgressDialog extends StatelessWidget {
           );
         },
       ),
-      actions: [TextButton(onPressed: onCancel, child: Text(l10n.cancel))],
+      actions: [
+        TextButton(
+          onPressed: onCancel,
+          child: Text(l10n.cancel),
+        ),
+      ],
     );
   }
 }
