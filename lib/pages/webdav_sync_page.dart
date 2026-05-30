@@ -102,6 +102,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
 
   /// 打开第三方应用密码的帮助指南链接
   Future<void> _launchHelpGuide() async {
+    final l10n = AppLocalizations.of(context);
     Uri url;
     if (_selectedProvider == 'nutstore') {
       url = Uri.parse('https://help.jianguoyun.com/?p=2064');
@@ -112,8 +113,25 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
           'https://google.com/search?q=how+to+setup+webdav+app+password');
     }
 
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+    try {
+      final launched = await launchUrl(url, mode: LaunchMode.platformDefault);
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.webdavOpenHelpFailed),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } on Exception {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.webdavOpenHelpFailed),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -364,8 +382,10 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                             child: TextButton.icon(
                               onPressed: _launchHelpGuide,
                               icon: const Icon(Icons.help_outline, size: 16),
-                              label: const Text('如何获取应用密码？',
-                                  style: TextStyle(fontSize: 13)),
+                              label: Text(
+                                l10n.webdavHowToGetAppPassword,
+                                style: const TextStyle(fontSize: 13),
+                              ),
                             ),
                           ),
                         ],
@@ -463,8 +483,14 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                                   height: 18,
                                   child: CircularProgressIndicator(
                                       strokeWidth: 2, color: Colors.white))
-                              : const Icon(Icons.cloud_upload),
-                          label: Text(syncService.enabled ? '保存并同步' : '启用云同步'),
+                              : Icon(
+                                  syncService.enabled
+                                      ? Icons.save_outlined
+                                      : Icons.cloud_sync_outlined,
+                                ),
+                          label: Text(syncService.enabled
+                              ? l10n.webdavSaveAndSync
+                              : l10n.webdavEnableSync),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
@@ -536,7 +562,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
       } else if (syncService.syncStatus == WebDAVSyncStatus.failed) {
         stateTitle = '同步出现异常';
         stateDesc = '网络通信或云盘文件锁冲突。我们将自动重试。';
-        stateIcon = Icons.cloud_queue;
+        stateIcon = Icons.error_outline;
         accentColor = theme.colorScheme.error;
       } else {
         stateTitle = '云同步已启用';
