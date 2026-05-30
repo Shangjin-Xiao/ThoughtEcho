@@ -136,11 +136,7 @@ class HttpUtils {
 
       try {
         if (e.response?.data != null) {
-          if (e.response!.data is String) {
-            errorBody = e.response!.data;
-          } else {
-            errorBody = e.response!.data.toString();
-          }
+          errorBody = e.response!.data.toString();
         }
       } catch (readError) {
         logDebug('读取错误响应体失败: $readError');
