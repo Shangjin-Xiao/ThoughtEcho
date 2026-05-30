@@ -1120,10 +1120,12 @@ class LocationService extends ChangeNotifier {
     return '';
   }
 
+  static final _latinOrDigitRegex = RegExp(r'[A-Za-z0-9]');
+
   /// 中文城市显示格式化：仅在明确是“城市名”时补全“市”后缀
   /// 避免把“新宿区”“Naka ward”这类行政区/英文名称错误显示成“新宿区市”“Naka ward市”
   bool _containsLatinOrDigit(String text) {
-    return RegExp(r'[A-Za-z0-9]').hasMatch(text);
+    return _latinOrDigitRegex.hasMatch(text);
   }
 
   bool _isChineseAdminDivision(String text) {
