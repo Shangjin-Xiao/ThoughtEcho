@@ -30,3 +30,6 @@
 **规则:**
 - 将 `应用更改` 替换为现存键值 `applyChanges`
 - 对于缺失项，新增 `appendToOriginal` (Append to Original) 到各语言 `arb` 文件，并遵循极简规范翻译。
+## 2026-05-25 - [HitokotoWidget 提取硬编码]
+**发现:** HitokotoWidget 中存在 "每日一言" 和 "加载中..." 硬编码
+**规则:** 分别替换为 featureDailyQuote 和 loading。
