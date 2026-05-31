@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
 class PdfPreviewDialog extends StatelessWidget {
   final Uint8List pdfBytes;
@@ -26,7 +27,7 @@ class PdfPreviewDialog extends StatelessWidget {
           height: double.infinity,
           child: Scaffold(
             appBar: AppBar(
-              title: const Text("PDF 预览 & 打印"),
+              title: Text(AppLocalizations.of(context).pdfPreviewAndPrint),
               leading: IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () => Navigator.pop(context),
