@@ -5,6 +5,7 @@ mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
   /// 将所有笔记和分类数据导出为Map对象
   @override
   Future<Map<String, dynamic>> exportDataAsMap() async {
+    // ignore: deprecated_member_use_from_same_package
     return _backupService.exportDataAsMap(database);
   }
 
@@ -14,6 +15,7 @@ mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
   /// 返回保存的文件路径
   @override
   Future<String> exportAllData({String? customPath}) async {
+    // ignore: deprecated_member_use_from_same_package
     return _backupService.exportAllData(database, customPath: customPath);
   }
 
