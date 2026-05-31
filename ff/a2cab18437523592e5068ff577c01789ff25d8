@@ -1,0 +1,13 @@
+lib/l10n/app_zh.arb
+  ai_agent 3677,3679
+lib/l10n/app_en.arb
+  ai_agent 3677,3679
+lib/pages/webdav_sync_page.dart
+  ai_agent 418,434
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "ffa2cab18437523592e5068ff577c01789ff25d8",
+  "prompts": {}
+}
