@@ -78,7 +78,8 @@ class WebDAVSyncService extends ChangeNotifier {
     _syncOnLaunch = _mmkv.getBool('webdav_sync_on_launch') ?? true;
     _syncOnChange = _mmkv.getBool('webdav_sync_on_change') ?? true;
     _syncOnCellular = _mmkv.getBool('webdav_sync_on_cellular') ?? false;
-    _syncNotesOnlyOnCellular = _mmkv.getBool('webdav_sync_notes_only_on_cellular') ?? false;
+    _syncNotesOnlyOnCellular =
+        _mmkv.getBool('webdav_sync_notes_only_on_cellular') ?? false;
     _lastSyncTime = _mmkv.getString('webdav_last_sync_time') ?? '';
 
     // 如果是首次使用，且预设是坚果云，自动填入坚果云的地址
@@ -131,7 +132,8 @@ class WebDAVSyncService extends ChangeNotifier {
     await _mmkv.setBool('webdav_sync_on_launch', _syncOnLaunch);
     await _mmkv.setBool('webdav_sync_on_change', _syncOnChange);
     await _mmkv.setBool('webdav_sync_on_cellular', _syncOnCellular);
-    await _mmkv.setBool('webdav_sync_notes_only_on_cellular', _syncNotesOnlyOnCellular);
+    await _mmkv.setBool(
+        'webdav_sync_notes_only_on_cellular', _syncNotesOnlyOnCellular);
 
     if (password != null) {
       await _secureStorage.write(
@@ -302,14 +304,12 @@ class WebDAVSyncService extends ChangeNotifier {
     final isCellular = await ConnectivityService().isCellularConnection();
     bool skipMedia = false;
     if (isCellular) {
-      if (!_syncOnCellular) {
-        if (_syncNotesOnlyOnCellular) {
-          logInfo('当前处于移动数据网络下且启用“仅同步笔记”，将跳过大媒体文件同步');
-          skipMedia = true;
-        } else {
-          logInfo('当前处于移动数据网络下且未允许流量同步，跳过 WebDAV 同步');
-          return;
-        }
+      if (_syncNotesOnlyOnCellular) {
+        logInfo('当前处于移动数据网络下且启用“仅同步笔记”，将跳过大媒体文件同步');
+        skipMedia = true;
+      } else if (!_syncOnCellular) {
+        logInfo('当前处于移动数据网络下且未允许流量同步，跳过 WebDAV 同步');
+        return;
       }
     }
 
