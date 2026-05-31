@@ -430,6 +430,44 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
     }
   }
 
+  /// 分页导出AI分析（供流式备份使用，避免全量加载到内存）
+  ///
+  /// [offset] - 起始偏移量
+  /// [limit]  - 每页条数
+  /// 返回该页的原始 Map 列表，为空则表示已到末尾
+  Future<List<Map<String, dynamic>>> exportAnalysesPage(
+    int offset,
+    int limit,
+  ) async {
+    try {
+      if (kIsWeb) {
+        // Web 平台数据在内存中，切片即可
+        final end = (offset + limit).clamp(0, _memoryStore.length);
+        if (offset >= _memoryStore.length) return [];
+        return _memoryStore
+            .sublist(offset, end)
+            .map((a) => a.toJson())
+            .toList();
+      } else {
+        final db = await database;
+        final maps = await db.query(
+          'ai_analyses',
+          orderBy: 'created_at DESC',
+          limit: limit,
+          offset: offset,
+        );
+        return maps.map((m) => Map<String, dynamic>.from(m)).toList();
+      }
+    } catch (e) {
+      AppLogger.e(
+        '分页导出AI分析失败: $e',
+        error: e,
+        source: 'AIAnalysisDB',
+      );
+      return [];
+    }
+  }
+
   /// 从List<Map>导入AI分析数据
   Future<int> importAnalysesFromList(
     List<Map<String, dynamic>> analyses,
