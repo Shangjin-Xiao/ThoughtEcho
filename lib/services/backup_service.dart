@@ -330,11 +330,30 @@ class BackupService {
       final settingsData = _settingsService.getAllSettingsForBackup();
       sink.write('"settings":${jsonEncode(settingsData)},');
 
-      // 4. 导出AI分析数据
-      logDebug('正在导出AI分析数据...');
-      // 假设AI分析数据量也不大，或者也可以改为分页查询
-      final aiAnalysisData = await _aiAnalysisDbService.exportAnalysesAsList();
-      sink.write('"ai_analysis":${jsonEncode(aiAnalysisData)}}'); // 结束JSON对象
+      // 4. 流式导出AI分析数据（分页写入，避免全量加载到内存）
+      logDebug('正在流式导出AI分析数据...');
+      sink.write('"ai_analysis":[');
+      const int aiPageSize = 20;
+      int aiOffset = 0;
+      bool isFirstAnalysis = true;
+      while (true) {
+        cancelToken?.throwIfCancelled();
+        final page = await _aiAnalysisDbService.exportAnalysesPage(
+          aiOffset,
+          aiPageSize,
+        );
+        if (page.isEmpty) break;
+        for (final item in page) {
+          if (!isFirstAnalysis) sink.write(',');
+          isFirstAnalysis = false;
+          sink.write(jsonEncode(item));
+        }
+        await sink.flush();
+        aiOffset += page.length;
+        if (page.length < aiPageSize) break;
+        await Future.delayed(const Duration(milliseconds: 1));
+      }
+      sink.write(']}'); // 结束 ai_analysis 数组 + 顶层 JSON 对象
 
       await sink.flush();
       onProgress?.call(1.0);
