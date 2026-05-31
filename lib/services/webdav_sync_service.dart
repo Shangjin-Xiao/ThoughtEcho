@@ -78,7 +78,8 @@ class WebDAVSyncService extends ChangeNotifier {
     _syncOnLaunch = _mmkv.getBool('webdav_sync_on_launch') ?? true;
     _syncOnChange = _mmkv.getBool('webdav_sync_on_change') ?? true;
     _syncOnCellular = _mmkv.getBool('webdav_sync_on_cellular') ?? false;
-    _syncNotesOnlyOnCellular = _mmkv.getBool('webdav_sync_notes_only_on_cellular') ?? false;
+    _syncNotesOnlyOnCellular =
+        _mmkv.getBool('webdav_sync_notes_only_on_cellular') ?? false;
     _lastSyncTime = _mmkv.getString('webdav_last_sync_time') ?? '';
 
     // 如果是首次使用，且预设是坚果云，自动填入坚果云的地址
@@ -131,7 +132,8 @@ class WebDAVSyncService extends ChangeNotifier {
     await _mmkv.setBool('webdav_sync_on_launch', _syncOnLaunch);
     await _mmkv.setBool('webdav_sync_on_change', _syncOnChange);
     await _mmkv.setBool('webdav_sync_on_cellular', _syncOnCellular);
-    await _mmkv.setBool('webdav_sync_notes_only_on_cellular', _syncNotesOnlyOnCellular);
+    await _mmkv.setBool(
+        'webdav_sync_notes_only_on_cellular', _syncNotesOnlyOnCellular);
 
     if (password != null) {
       await _secureStorage.write(
