@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../extensions/note_category_localization_extension.dart';
 import '../gen_l10n/app_localizations.dart';
@@ -232,7 +233,9 @@ class _TagSelectionContent extends StatelessWidget {
                   controller: scrollController,
                   padding: EdgeInsets.zero,
                   physics: const ClampingScrollPhysics(),
-                  cacheExtent: 100, // ✅ 移动端减少预渲染
+                  scrollCacheExtent: const ScrollCacheExtent.pixels(
+                    100.0,
+                  ), // ✅ 移动端减少预渲染
                   itemCount: filteredTags.length,
                   itemBuilder: (context, index) {
                     final tag = filteredTags[index];

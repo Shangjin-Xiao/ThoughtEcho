@@ -3,6 +3,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/controllers/search_controller.dart';
@@ -189,7 +190,16 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
 
       final listView = tester.widget<ListView>(find.byType(ListView));
-      expect(listView.cacheExtent, inInclusiveRange(400, 900));
+      final scrollCacheExtent = listView.scrollCacheExtent;
+      expect(scrollCacheExtent, isNotNull);
+      expect(
+        scrollCacheExtent?.style,
+        CacheExtentStyle.pixel,
+      );
+      expect(
+        scrollCacheExtent?.value,
+        inInclusiveRange(400.0, 900.0),
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(seconds: 2));

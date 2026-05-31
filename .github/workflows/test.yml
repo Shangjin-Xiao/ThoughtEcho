@@ -23,7 +23,7 @@ permissions:
   checks: write
 
 env:
-  FLUTTER_VERSION: '3.38.6'
+  FLUTTER_VERSION: '3.44.0'
 
 jobs:
   code-quality:
