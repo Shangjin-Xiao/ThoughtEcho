@@ -1,0 +1,35 @@
+.github/workflows/build-windows.yml
+  s_888373b6d6a469::t_e3c8210e584b03 14,17
+pubspec.lock
+  ai_agent 224,227,1355,1358,1363,1366,1371,1374,2216,2219,2224,2227,2232,2235,2565
+.github/workflows/flutter-release-build.yml
+  s_888373b6d6a469::t_bd998d8e4121c9 38
+.github/workflows/test.yml
+  s_888373b6d6a469::t_4671f5c0652dd3 26
+lib/widgets/add_note_dialog_parts.dart
+  s_888373b6d6a469::t_34eea8c34bb087 236,238
+  s_888373b6d6a469::t_2555eb69ab1a64 2,237
+lib/widgets/note_list/note_list_items.dart
+  s_888373b6d6a469::t_7c537fa32a3872 537-539
+test/widget/note_list_view_filter_test.dart
+  s_888373b6d6a469::t_3122ab28549d3f 194,196-201
+  s_888373b6d6a469::t_2e54b9d5eb3461 6,193,195,202
+.github/workflows/ios-build.yml
+  s_888373b6d6a469::t_2578495dad2741 22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "707e113b97667a5f40e695bc2adbbf5d12e46e5d",
+  "prompts": {},
+  "sessions": {
+    "s_888373b6d6a469": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_181fd4968ffebzZIRC9ooB1KsN",
+        "model": "gpt-5.3-codex"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
