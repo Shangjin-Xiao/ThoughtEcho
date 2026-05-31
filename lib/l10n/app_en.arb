@@ -3707,5 +3707,23 @@
       }
     }
   },
-  "webdavViewNow": "View Now"
+  "webdavViewNow": "View Now",
+  "exportFormatLabel": "Default Export Format",
+  "exportFormatCard": "Delicate Share Card",
+  "exportFormatPdf": "Standard A4 PDF",
+  "exportFormatDesc": "Configure the default format when exporting or sharing notes",
+  "exportToPdf": "Export to PDF",
+  "pdfExportSelectionMode": "Select Export Mode",
+  "selectSameMonth": "Select Same Month",
+  "selectSameCategory": "Select Same Category",
+  "exportSelected": "Export ({count})",
+  "@exportSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportSuccess": "Export Successful",
+  "exportFailed": "Export Failed"
 }

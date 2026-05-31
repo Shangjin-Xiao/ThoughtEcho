@@ -391,6 +391,14 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 默认导出格式配置
+  String get exportFormat => _appSettings.exportFormat;
+  Future<void> setExportFormat(String format) async {
+    _appSettings = _appSettings.copyWith(exportFormat: format);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   SettingsService(this._prefs);
 
   /// 创建SettingsService实例的静态工厂方法

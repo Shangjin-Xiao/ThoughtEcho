@@ -37,13 +37,12 @@ extension _NoteListItemsExtension on NoteListViewState {
           theme.brightness,
         );
 
-        return Container(
-          color: backgroundColor,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxWidth),
-              child: Column(
-                children: [
+        Widget mainContent = Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: Column(
+              children: [
+                if (!_isExportMode)
                   // 搜索框 - 现代圆角样式，筛选按钮内嵌到右侧
                   Container(
                     padding: EdgeInsets.fromLTRB(
@@ -112,6 +111,17 @@ extension _NoteListItemsExtension on NoteListViewState {
                                   );
                                 }
                                 return const SizedBox.shrink();
+                              },
+                            ),
+                            // PDF 导出选择模式入口按钮
+                            IconButton(
+                              icon: const Icon(Icons.picture_as_pdf_outlined),
+                              tooltip: l10n.pdfExportSelectionMode,
+                              onPressed: () {
+                                _updateState(() {
+                                  _isExportMode = true;
+                                  _selectedExportNoteIds.clear();
+                                });
                               },
                             ),
                             // 筛选按钮
@@ -200,34 +210,177 @@ extension _NoteListItemsExtension on NoteListViewState {
                       ),
                     ),
                   ),
+                if (_isExportMode)
+                  // 占位符，腾出顶部悬浮栏的位置
+                  SizedBox(height: MediaQuery.of(context).padding.top + 72.0),
 
-                  // 筛选条件展示区域
-                  _buildFilterDisplay(theme, horizontalPadding),
+                // 筛选条件展示区域
+                _buildFilterDisplay(theme, horizontalPadding),
 
-                  // 笔记列表 - 添加平滑过渡动画
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: horizontalPadding,
-                      ),
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 150),
-                        switchInCurve: Curves.easeOut,
-                        switchOutCurve: Curves.easeOut,
-                        transitionBuilder: (child, animation) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: child,
-                          );
-                        },
-                        child: _buildNoteList(theme),
-                      ),
+                // 笔记列表 - 添加平滑过渡动画
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: horizontalPadding,
+                    ),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 150),
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeOut,
+                      transitionBuilder: (child, animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: child,
+                        );
+                      },
+                      child: _buildNoteList(theme),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
+        );
+
+        if (_isExportMode) {
+          mainContent = Stack(
+            children: [
+              mainContent,
+              // 顶部悬浮控制栏
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 8.0,
+                left: horizontalPadding,
+                right: horizontalPadding,
+                child: Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.95),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          _updateState(() {
+                            _isExportMode = false;
+                            _selectedExportNoteIds.clear();
+                          });
+                        },
+                        child: Text(l10n.cancel),
+                      ),
+                      const Spacer(),
+                      Text(
+                        "${l10n.pdfExportSelectionMode} (${_selectedExportNoteIds.length})",
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: _selectAllVisibleNotes,
+                        child: Text(
+                          _selectedExportNoteIds.containsAll(
+                                  _quotes.map((q) => q.id).whereType<String>())
+                              ? l10n.prefClearAll
+                              : l10n.prefSelectAll,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // 底部悬浮控制栏
+              Positioned(
+                bottom: 16.0,
+                left: horizontalPadding,
+                right: horizontalPadding,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.95),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _selectSameMonthNotes,
+                          icon: const Icon(Icons.calendar_month_outlined,
+                              size: 18),
+                          label: Text(l10n.selectSameMonth,
+                              style: const TextStyle(fontSize: 11)),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _selectSameCategoryNotes,
+                          icon: const Icon(Icons.label_outline, size: 18),
+                          label: Text(l10n.selectSameCategory,
+                              style: const TextStyle(fontSize: 11)),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _selectedExportNoteIds.isEmpty
+                              ? null
+                              : _exportSelectedNotesToPdf,
+                          icon: const Icon(Icons.picture_as_pdf, size: 18),
+                          label: Text(
+                            l10n.exportSelected(_selectedExportNoteIds.length),
+                            style: const TextStyle(
+                                fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+
+        return Container(
+          color: backgroundColor,
+          child: mainContent,
         );
       },
     );
@@ -430,7 +583,7 @@ extension _NoteListItemsExtension on NoteListViewState {
               _expandedItems.putIfAbsent(
                   quoteId, () => expansionNotifier.value);
 
-              return KeyedSubtree(
+              Widget itemWidget = KeyedSubtree(
                 key: _itemKeys[quoteId],
                 child: ValueListenableBuilder<bool>(
                   valueListenable: expansionNotifier,
@@ -467,6 +620,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                     onGenerateCard: widget.onGenerateCard != null
                         ? () => widget.onGenerateCard!(quote)
                         : null,
+                    onExportPdf: () => _exportSingleNoteToPdf(quote),
                     onFavorite: widget.onFavorite != null
                         ? () => widget.onFavorite!(quote)
                         : null,
@@ -480,11 +634,57 @@ extension _NoteListItemsExtension on NoteListViewState {
                         attachMoreGuideKey ? widget.moreButtonGuideKey : null,
                     foldToggleGuideKey:
                         attachFoldGuideKey ? widget.foldToggleGuideKey : null,
-                    // 不使用自定义 tagBuilder，让 QuoteItemWidget 使用内部的标签渲染逻辑
-                    // 这样可以支持筛选标签的优先显示和高亮效果
                   ),
                 ),
               );
+
+              if (_isExportMode) {
+                final isSelected = _selectedExportNoteIds.contains(quoteId);
+                itemWidget = InkWell(
+                  onTap: () => _toggleExportSelection(quoteId),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Row(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 12.0),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          curve: Curves.easeInOut,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isSelected
+                                ? theme.colorScheme.primary
+                                : Colors.transparent,
+                            border: Border.all(
+                              color: isSelected
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.outline,
+                              width: 2,
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(2.0),
+                            child: Icon(
+                              Icons.check,
+                              size: 16,
+                              color: isSelected
+                                  ? theme.colorScheme.onPrimary
+                                  : Colors.transparent,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: IgnorePointer(
+                          child: itemWidget,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return itemWidget;
             }
             // 底部加载指示器
             return const Padding(
@@ -594,5 +794,159 @@ extension _NoteListItemsExtension on NoteListViewState {
         }
       });
     }
+  }
+
+  void _toggleExportSelection(String quoteId) {
+    _updateState(() {
+      if (_selectedExportNoteIds.contains(quoteId)) {
+        _selectedExportNoteIds.remove(quoteId);
+      } else {
+        _selectedExportNoteIds.add(quoteId);
+      }
+    });
+  }
+
+  void _selectAllVisibleNotes() {
+    _updateState(() {
+      final allIds = _quotes.map((q) => q.id).whereType<String>().toSet();
+      if (_selectedExportNoteIds.containsAll(allIds)) {
+        _selectedExportNoteIds.removeAll(allIds);
+      } else {
+        _selectedExportNoteIds.addAll(allIds);
+      }
+    });
+  }
+
+  void _selectSameMonthNotes() {
+    if (_selectedExportNoteIds.isEmpty) {
+      _showInfoSnackBar("请先选择至少一条笔记");
+      return;
+    }
+    final selectedMonths = <String>{};
+    for (final id in _selectedExportNoteIds) {
+      final quote = _quotes.firstWhere((q) => q.id == id);
+      if (quote.date.length >= 7) {
+        selectedMonths.add(quote.date.substring(0, 7));
+      }
+    }
+    _updateState(() {
+      for (final q in _quotes) {
+        if (q.id != null && q.date.length >= 7) {
+          final m = q.date.substring(0, 7);
+          if (selectedMonths.contains(m)) {
+            _selectedExportNoteIds.add(q.id!);
+          }
+        }
+      }
+    });
+  }
+
+  void _selectSameCategoryNotes() {
+    if (_selectedExportNoteIds.isEmpty) {
+      _showInfoSnackBar("请先选择至少一条笔记");
+      return;
+    }
+    final selectedTags = <String>{};
+    for (final id in _selectedExportNoteIds) {
+      final quote = _quotes.firstWhere((q) => q.id == id);
+      selectedTags.addAll(quote.tagIds);
+    }
+    if (selectedTags.isEmpty) {
+      _showInfoSnackBar("所选笔记没有分类标签");
+      return;
+    }
+    _updateState(() {
+      for (final q in _quotes) {
+        if (q.id != null && q.tagIds.any(selectedTags.contains)) {
+          _selectedExportNoteIds.add(q.id!);
+        }
+      }
+    });
+  }
+
+  void _showInfoSnackBar(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _exportSingleNoteToPdf(Quote quote) async {
+    try {
+      _showLoadingDialog("正在生成 PDF...");
+      final font = await PdfFontService.loadFont();
+      if (!mounted) return;
+      final pdfBytes =
+          await PdfExportService.exportNotesToPdf([quote], font, context);
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      showDialog(
+        context: context,
+        builder: (context) => PdfPreviewDialog(
+          pdfBytes: pdfBytes,
+          fileName: "thoughtecho_note_${quote.id ?? 'single'}.pdf",
+        ),
+      );
+    } catch (e, stack) {
+      logError("ExportSingleNoteToPdf", error: e, stackTrace: stack);
+      if (mounted) Navigator.pop(context);
+      _showInfoSnackBar("导出 PDF 失败: $e");
+    }
+  }
+
+  Future<void> _exportSelectedNotesToPdf() async {
+    if (_selectedExportNoteIds.isEmpty) return;
+    try {
+      _showLoadingDialog("正在生成 PDF...");
+      final selectedQuotes = _quotes
+          .where((q) => q.id != null && _selectedExportNoteIds.contains(q.id))
+          .toList();
+      final font = await PdfFontService.loadFont();
+      if (!mounted) return;
+      final pdfBytes = await PdfExportService.exportNotesToPdf(
+          selectedQuotes, font, context);
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      _updateState(() {
+        _isExportMode = false;
+        _selectedExportNoteIds.clear();
+      });
+
+      showDialog(
+        context: context,
+        builder: (context) => PdfPreviewDialog(
+          pdfBytes: pdfBytes,
+          fileName: "thoughtecho_notes_batch.pdf",
+        ),
+      );
+    } catch (e, stack) {
+      logError("ExportSelectedNotesToPdf", error: e, stackTrace: stack);
+      if (mounted) Navigator.pop(context);
+      _showInfoSnackBar("批量导出 PDF 失败: $e");
+    }
+  }
+
+  void _showLoadingDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Row(
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(width: 16),
+              Expanded(child: Text(message)),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

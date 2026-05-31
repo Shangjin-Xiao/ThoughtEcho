@@ -27,6 +27,9 @@ import '../controllers/search_controller.dart';
 import '../constants/app_constants.dart'; // 导入应用常量
 import '../utils/quill_editor_extensions.dart' show isListScrolling;
 import '../services/settings_service.dart'; // 导入设置服务
+import '../services/pdf_export_service.dart';
+import '../services/pdf_font_service.dart';
+import '../widgets/pdf_preview_dialog.dart';
 import 'note_list/scroll_alignment.dart';
 
 part 'note_list/note_list_scroll.dart';
@@ -103,6 +106,10 @@ class NoteListViewState extends State<NoteListView> {
 
   // AI搜索模式标志
   bool _isAISearchMode = false;
+
+  // PDF 导出选择模式状态
+  bool _isExportMode = false;
+  final Set<String> _selectedExportNoteIds = {};
 
   // 分页和懒加载状态
   final List<Quote> _quotes = [];

@@ -720,7 +720,8 @@ class WebDAVSyncService extends ChangeNotifier {
               deleteUrl,
               options: Options(
                 method: 'DELETE',
-                validateStatus: (status) => status == 200 || status == 204 || status == 404,
+                validateStatus: (status) =>
+                    status == 200 || status == 204 || status == 404,
               ),
             );
           } catch (e) {
