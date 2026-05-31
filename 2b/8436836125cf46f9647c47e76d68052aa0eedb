@@ -1,0 +1,25 @@
+lib/l10n/app_en.arb
+  ai_agent 3728-3748
+pubspec.yaml
+  ai_agent 89
+lib/l10n/app_zh.arb
+  ai_agent 3728-3748
+lib/services/settings_service.dart
+  ai_agent 397-399
+lib/widgets/note_list/note_list_items.dart
+  ai_agent 821,823,846,848,857,880,882,900,906,908,934
+lib/widgets/pdf_preview_dialog.dart
+  ai_agent 5,30
+test/pdf_export_test.dart
+  ai_agent 24-25,38-40
+pubspec.lock
+  ai_agent 292-307
+lib/pages/preferences_detail_page.dart
+  ai_agent 238-244,249-255,273-276
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "2b8436836125cf46f9647c47e76d68052aa0eedb",
+  "prompts": {}
+}
