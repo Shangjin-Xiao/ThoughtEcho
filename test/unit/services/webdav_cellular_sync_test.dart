@@ -71,7 +71,8 @@ void main() {
   });
 
   group('WebDAV Cellular Sync Tests', () {
-    test('Should initialize and save cellular sync settings correctly', () async {
+    test('Should initialize and save cellular sync settings correctly',
+        () async {
       final service = WebDAVSyncService();
 
       // Default values should be false
@@ -100,7 +101,8 @@ void main() {
       expect(newService.syncNotesOnlyOnCellular, true);
     });
 
-    test('ConnectivityService should correctly identify cellular network type', () async {
+    test('ConnectivityService should correctly identify cellular network type',
+        () async {
       final connectivityService = ConnectivityService();
 
       // WiFi Connection
