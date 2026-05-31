@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:archive/archive.dart';
+import 'package:archive/archive_io.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -355,28 +355,46 @@ class WebDAVSyncService extends ChangeNotifier {
       logDebug('开始同步本地与云端媒体文件...');
       await _syncMediaFiles(dio);
 
-      // 6. 重新打包最新的本地数据库数据并上传
+      // 6. 流式写入本地数据到临时文件并上传（避免全量数据入内存）
       logDebug('打包本地最新数据上传云端...');
-      final localDataMap = await dbService.exportDataAsMap();
-      final localDataJson = json.encode(localDataMap);
-
-      final archive = Archive();
-      final jsonBytes = utf8.encode(localDataJson);
-      archive.addFile(
-        ArchiveFile('backup_data.json', jsonBytes.length, jsonBytes),
+      final tempDir = await getTemporaryDirectory();
+      final tempJsonPath = p.join(
+        tempDir.path,
+        'thoughtecho_webdav_sync.json',
       );
-      final zipBytes = ZipEncoder().encode(archive);
-
-      await dio.put(
-        remoteSyncZipUrl,
-        data: Stream.fromIterable([zipBytes]),
-        options: Options(
-          headers: {
-            'Content-Type': 'application/zip',
-            'Content-Length': zipBytes.length,
-          },
-        ),
+      final tempZipPath = p.join(
+        tempDir.path,
+        'thoughtecho_webdav_sync.zip',
       );
+      try {
+        // 分页流式写入 JSON 到临时文件
+        await _writeLocalDataToTempJson(dbService.database, tempJsonPath);
+
+        // ZipFileEncoder 从磁盘流式打包，不全量入内存
+        final encoder = ZipFileEncoder();
+        encoder.create(tempZipPath);
+        encoder.addFile(File(tempJsonPath), 'backup_data.json');
+        encoder.closeSync();
+
+        // 从文件流上传，无需把 ZIP 全部读入内存
+        final zipFile = File(tempZipPath);
+        await dio.put(
+          remoteSyncZipUrl,
+          data: zipFile.openRead(),
+          options: Options(
+            headers: {
+              'Content-Type': 'application/zip',
+              'Content-Length': await zipFile.length(),
+            },
+          ),
+        );
+      } finally {
+        // 清理临时文件
+        for (final path in [tempJsonPath, tempZipPath]) {
+          final f = File(path);
+          if (await f.exists()) await f.delete();
+        }
+      }
 
       // 7. 更新同步成功状态
       _lastSyncTime = DateTime.now().toUtc().toIso8601String();
@@ -668,6 +686,82 @@ class WebDAVSyncService extends ChangeNotifier {
           logDebug('下载附件失败 ($stdPath): $e');
         }
       }
+    }
+  }
+
+  /// 流式写入本地同步数据到临时 JSON 文件
+  ///
+  /// 格式与 [DatabaseBackupService.exportDataAsMap] 兼容：
+  /// `{ metadata, categories, quotes: [...], tombstones }`
+  /// 笔记按每页 50 条分页查询，避免全表入内存。
+  Future<void> _writeLocalDataToTempJson(
+    Database db,
+    String filePath,
+  ) async {
+    final sink = File(filePath).openWrite(encoding: utf8);
+    try {
+      final dbVersion = await db.getVersion();
+      sink.write(
+        '{"metadata":${json.encode({
+              'app': '心迹',
+              'version': dbVersion,
+              'exportTime': DateTime.now().toIso8601String()
+            })},',
+      );
+
+      // categories — 数量有界，直接写入
+      final categories = await db.query('categories');
+      sink.write('"categories":${json.encode(categories)},');
+
+      // quotes — 分页写入，每页批量查询对应 tag_ids（避免 N+1）
+      sink.write('"quotes":[');
+      const pageSize = 50;
+      int offset = 0;
+      bool isFirstQuote = true;
+      while (true) {
+        final page = await db.rawQuery(
+          'SELECT * FROM quotes ORDER BY date DESC LIMIT ? OFFSET ?',
+          [pageSize, offset],
+        );
+        if (page.isEmpty) break;
+
+        // 批量查 tag 关联，避免逐条查询
+        final ids = page.map((q) => q['id'] as String).toList();
+        final placeholders = List.filled(ids.length, '?').join(',');
+        final tagRows = await db.rawQuery(
+          'SELECT quote_id, tag_id FROM quote_tags WHERE quote_id IN ($placeholders)',
+          ids,
+        );
+        final tagsByQuoteId = <String, List<String>>{};
+        for (final t in tagRows) {
+          tagsByQuoteId
+              .putIfAbsent(t['quote_id'] as String, () => [])
+              .add(t['tag_id'] as String);
+        }
+
+        for (final q in page) {
+          if (!isFirstQuote) sink.write(',');
+          isFirstQuote = false;
+          final m = Map<String, dynamic>.from(q);
+          m['tag_ids'] = (tagsByQuoteId[q['id'] as String] ?? []).join(',');
+          sink.write(json.encode(m));
+        }
+
+        await sink.flush();
+        offset += page.length;
+        if (page.length < pageSize) break;
+        // 让出 CPU，避免同步期间 UI 卡顿
+        await Future.delayed(const Duration(milliseconds: 1));
+      }
+      sink.write('],');
+
+      // tombstones — 三列短字符串，数量有界
+      final tombstones = await db.query('quote_tombstones');
+      sink.write('"tombstones":${json.encode(tombstones)}}');
+
+      await sink.flush();
+    } finally {
+      await sink.close();
     }
   }
 

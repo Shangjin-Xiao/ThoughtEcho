@@ -69,19 +69,23 @@ void main() {
       final workLocalId = workCats.first.id;
       final lifeLocalId = lifeCats.first.id;
 
-      // 使用导出接口重建tag_ids后校验
-      final exported = await db.exportDataAsMap();
-      final exportedQuotes =
-          (exported['quotes'] as List).cast<Map<String, dynamic>>();
-      final eq1 = exportedQuotes.firstWhere((m) => m['id'] == 'quote-1');
-      final eq2 = exportedQuotes.firstWhere((m) => m['id'] == 'quote-2');
+      // 直接查询 quote_tags 表验证标签关联（exportDataAsMap 已移除）
+      final rawDb = DatabaseService.rawDatabaseInstance!;
+      final tagRows1 = await rawDb.query(
+        'quote_tags',
+        where: 'quote_id = ?',
+        whereArgs: ['quote-1'],
+      );
+      final tagRows2 = await rawDb.query(
+        'quote_tags',
+        where: 'quote_id = ?',
+        whereArgs: ['quote-2'],
+      );
+      final tagIds1 = tagRows1.map((r) => r['tag_id'] as String).toSet();
+      final tagIds2 = tagRows2.map((r) => r['tag_id'] as String).toSet();
 
-      // GROUP_CONCAT 结果是用逗号分隔
-      expect((eq1['tag_ids'] as String).split(',').toSet(), {
-        workLocalId,
-        lifeLocalId,
-      });
-      expect((eq2['tag_ids'] as String).split(',').toSet(), {workLocalId});
+      expect(tagIds1, {workLocalId, lifeLocalId});
+      expect(tagIds2, {workLocalId});
     });
 
     test('hidden tag is always returned at the end of category list', () async {
