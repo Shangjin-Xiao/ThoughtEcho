@@ -23,10 +23,11 @@
 ## 修改内容
 
 - `lib/widgets/note_list/note_list_items.dart`
-  - 在 `ListView.builder` 增加 `addSemanticIndexes: false`，避免大缓存区中的屏外卡片
-    继续生成自动列表语义索引。
+  - 在 `ListView.builder` 增加 `addSemanticIndexes: false`，关闭自动列表语义索引。
+  - 同步设置 `semanticChildCount`，保留列表总数语义信息，减少无障碍回归风险。
 - `lib/widgets/quote_item_widget.dart`
-  - 对纯装饰图标、折叠底部毛玻璃遮罩、双击高亮覆盖层增加 `ExcludeSemantics`。
+  - 对纯装饰图标、折叠底部毛玻璃/渐变遮罩、双击高亮覆盖层增加 `ExcludeSemantics`。
+  - 保留折叠提示文字（`doubleTapToViewFull`）的语义，避免屏幕阅读器丢失展开提示。
   - 没有包裹卡片最外层渐变容器，因为那会连同正文、日期、标签和按钮一起从语义树移除。
 - `test/widget/note_list_view_filter_test.dart`
   - 增加列表语义索引关闭的回归测试。
@@ -38,6 +39,13 @@
 
 本次修改只增加语义树裁剪 widget，不改变布局、颜色、动画、尺寸、边距或绘制参数。
 预期视觉效果保持不变。
+
+## 无障碍说明
+
+`addSemanticIndexes: false` 会关闭所有列表项的自动顺序语义索引，而不只影响屏外缓存项。
+这意味着屏幕阅读器可能不再播报类似“第 N 项，共 M 项”的列表位置信息。当前选择该权衡是为了
+降低大缓存区记录列表的 `flushSemantics` 成本；后续如果做专项无障碍优化，可评估是否以更轻量的
+手动 `Semantics` 节点补回必要的位置信息。
 
 ## 验证
 

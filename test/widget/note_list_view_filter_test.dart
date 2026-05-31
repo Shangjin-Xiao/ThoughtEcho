@@ -219,6 +219,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
 
       final listView = tester.widget<ListView>(find.byType(ListView));
+      expect(listView.semanticChildCount, 1);
       final delegate = listView.childrenDelegate as SliverChildBuilderDelegate;
       expect(delegate.addSemanticIndexes, isFalse);
 

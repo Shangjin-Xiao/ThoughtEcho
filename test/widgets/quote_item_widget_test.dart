@@ -198,6 +198,13 @@ void main() {
         ),
         findsOneWidget,
       );
+      expect(
+        find.ancestor(
+          of: find.text('双击查看全文'),
+          matching: find.byType(ExcludeSemantics),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('展开状态显示完整内容且截断提示消失', (tester) async {
