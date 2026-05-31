@@ -63,8 +63,8 @@ List<SingleChildWidget> buildAppProviders({
     Provider.value(
       value: mmkvService,
     ), // 使用 Provider.value 提供 MMKVService
-    // 提供初始化状态的值
-    Provider<ValueNotifier<bool>>.value(
+    // 提供初始化状态的值（debug 下必须使用 ListenableProvider）
+    ListenableProvider<ValueNotifier<bool>>.value(
       value: servicesInitialized,
     ),
     ValueListenableProvider<bool>.value(value: servicesInitialized),
