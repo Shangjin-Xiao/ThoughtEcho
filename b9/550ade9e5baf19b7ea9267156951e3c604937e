@@ -1,0 +1,39 @@
+lib/widgets/note_list_view.dart
+  ai_agent 30-32,110-112
+lib/widgets/note_list/note_list_items.dart
+  ai_agent 40-45,116-126,213-243,245-264,266-276,278,280-297,299,301-383,586,623,640-687,798-950
+lib/widgets/quote_item_widget.dart
+  ai_agent 30,60,294-296,1035-1036,1066-1080
+lib/widgets/pdf_preview_dialog.dart
+  ai_agent 1-52
+lib/services/pdf_font_service.dart
+  ai_agent 1-131
+lib/services/delta_to_pdf_parser.dart
+  ai_agent 1-173
+pubspec.yaml
+  ai_agent 87-88
+lib/l10n/app_en.arb
+  ai_agent 3710-3728
+lib/services/pdf_export_service.dart
+  ai_agent 1-217
+test/pdf_export_test.dart
+  ai_agent 1-42
+pubspec.lock
+  ai_agent 108-115,124-131,1631-1646,1751-1758,1799-1806
+lib/models/app_settings.dart
+  ai_agent 66,102,147,223,261,303,355
+lib/pages/preferences_detail_page.dart
+  ai_agent 231-289
+lib/services/settings_service.dart
+  ai_agent 394-401
+lib/services/webdav_sync_service.dart
+  ai_agent 723-724
+lib/l10n/app_zh.arb
+  ai_agent 3710-3728
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "b9550ade9e5baf19b7ea9267156951e3c604937e",
+  "prompts": {}
+}
