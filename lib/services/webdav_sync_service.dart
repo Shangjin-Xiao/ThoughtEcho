@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
+import '../services/connectivity_service.dart';
 import '../services/database_service.dart';
 import '../services/media_reference_service.dart';
 import '../services/mmkv_service.dart';
@@ -50,12 +51,17 @@ class WebDAVSyncService extends ChangeNotifier {
   bool _syncOnLaunch = true;
   bool _syncOnChange = true;
 
+  bool _syncOnCellular = false;
+  bool _syncNotesOnlyOnCellular = false;
+
   bool get enabled => _enabled;
   String get provider => _provider;
   String get url => _url;
   String get username => _username;
   bool get syncOnLaunch => _syncOnLaunch;
   bool get syncOnChange => _syncOnChange;
+  bool get syncOnCellular => _syncOnCellular;
+  bool get syncNotesOnlyOnCellular => _syncNotesOnlyOnCellular;
 
   // 定时器用于防抖
   Timer? _debounceTimer;
@@ -71,6 +77,8 @@ class WebDAVSyncService extends ChangeNotifier {
     _username = _mmkv.getString('webdav_username') ?? '';
     _syncOnLaunch = _mmkv.getBool('webdav_sync_on_launch') ?? true;
     _syncOnChange = _mmkv.getBool('webdav_sync_on_change') ?? true;
+    _syncOnCellular = _mmkv.getBool('webdav_sync_on_cellular') ?? false;
+    _syncNotesOnlyOnCellular = _mmkv.getBool('webdav_sync_notes_only_on_cellular') ?? false;
     _lastSyncTime = _mmkv.getString('webdav_last_sync_time') ?? '';
 
     // 如果是首次使用，且预设是坚果云，自动填入坚果云的地址
@@ -98,6 +106,8 @@ class WebDAVSyncService extends ChangeNotifier {
     String? password,
     required bool syncOnLaunch,
     required bool syncOnChange,
+    required bool syncOnCellular,
+    required bool syncNotesOnlyOnCellular,
   }) async {
     _enabled = enabled;
     _provider = provider;
@@ -111,6 +121,8 @@ class WebDAVSyncService extends ChangeNotifier {
     _username = username.trim();
     _syncOnLaunch = syncOnLaunch;
     _syncOnChange = syncOnChange;
+    _syncOnCellular = syncOnCellular;
+    _syncNotesOnlyOnCellular = syncNotesOnlyOnCellular;
 
     await _mmkv.setBool('webdav_enabled', _enabled);
     await _mmkv.setString('webdav_provider', _provider);
@@ -118,6 +130,8 @@ class WebDAVSyncService extends ChangeNotifier {
     await _mmkv.setString('webdav_username', _username);
     await _mmkv.setBool('webdav_sync_on_launch', _syncOnLaunch);
     await _mmkv.setBool('webdav_sync_on_change', _syncOnChange);
+    await _mmkv.setBool('webdav_sync_on_cellular', _syncOnCellular);
+    await _mmkv.setBool('webdav_sync_notes_only_on_cellular', _syncNotesOnlyOnCellular);
 
     if (password != null) {
       await _secureStorage.write(
@@ -284,6 +298,21 @@ class WebDAVSyncService extends ChangeNotifier {
       return;
     }
 
+    // 移动数据网络检测与过滤策略
+    final isCellular = await ConnectivityService().isCellularConnection();
+    bool skipMedia = false;
+    if (isCellular) {
+      if (!_syncOnCellular) {
+        if (_syncNotesOnlyOnCellular) {
+          logInfo('当前处于移动数据网络下且启用“仅同步笔记”，将跳过大媒体文件同步');
+          skipMedia = true;
+        } else {
+          logInfo('当前处于移动数据网络下且未允许流量同步，跳过 WebDAV 同步');
+          return;
+        }
+      }
+    }
+
     _syncStatus = WebDAVSyncStatus.syncing;
     _lastConflictCount = 0;
     notifyListeners();
@@ -360,8 +389,12 @@ class WebDAVSyncService extends ChangeNotifier {
       }
 
       // 5. 增量比对并同步大媒体附件 (Images, Videos, Audios)
-      logDebug('开始同步本地与云端媒体文件...');
-      await _syncMediaFiles(dio);
+      if (skipMedia) {
+        logDebug('数据流量下跳过大媒体文件同步');
+      } else {
+        logDebug('开始同步本地与云端媒体文件...');
+        await _syncMediaFiles(dio);
+      }
 
       // 6. 流式写入本地数据到临时文件并上传（避免全量数据入内存）
       logDebug('打包本地最新数据上传云端...');
