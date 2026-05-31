@@ -517,45 +517,45 @@ class AINetworkManager {
 
   /// 处理错误
   static Exception _handleError(dynamic error) {
-    if (error is DioException) {
-      final statusCode = error.response?.statusCode;
-      final errorBody = error.response?.data?.toString() ?? error.message ?? '';
-
-      if (statusCode == 401) {
-        return Exception('API密钥无效或已过期 (401)，请检查API密钥设置');
-      } else if (statusCode == 429) {
-        return Exception('API调用频率超限 (429)，请稍后重试');
-      } else if (statusCode == 500) {
-        String errorMessage = 'AI服务器内部错误 (500)';
-
-        try {
-          final errorData = json.decode(errorBody);
-          if (errorData['error'] != null) {
-            final errorInfo = errorData['error'];
-            if (errorInfo['message'] != null) {
-              errorMessage += '：${errorInfo['message']}';
-            }
-          }
-        } catch (e) {
-          if (errorBody.contains('model')) {
-            errorMessage += '：可能是模型不存在或不可用';
-          }
-        }
-
-        return Exception(
-          '$errorMessage\n\n建议：\n1. 检查选择的AI模型是否正确\n2. 稍后重试\n3. 如果问题持续，请检查API服务状态',
-        );
-      } else if (error.type == DioExceptionType.connectionTimeout ||
-          error.type == DioExceptionType.receiveTimeout ||
-          error.type == DioExceptionType.sendTimeout ||
-          error.type == DioExceptionType.connectionError) {
-        return Exception('网络连接超时，请检查网络设置或稍后重试');
-      } else {
-        return Exception('AI请求未知错误: ${error.message ?? error.toString()}');
-      }
-    } else {
+    if (error is! DioException) {
       return Exception('未知错误: ${error.toString()}');
     }
+
+    final statusCode = error.response?.statusCode;
+    final errorBody = error.response?.data?.toString() ?? error.message ?? '';
+
+    if (statusCode == 401) {
+      return Exception('API密钥无效或已过期 (401)，请检查API密钥设置');
+    } else if (statusCode == 429) {
+      return Exception('API调用频率超限 (429)，请稍后重试');
+    } else if (statusCode == 500) {
+      String errorMessage = 'AI服务器内部错误 (500)';
+
+      try {
+        final errorData = json.decode(errorBody);
+        if (errorData['error'] != null) {
+          final errorInfo = errorData['error'];
+          if (errorInfo['message'] != null) {
+            errorMessage += '：${errorInfo['message']}';
+          }
+        }
+      } catch (e) {
+        if (errorBody.contains('model')) {
+          errorMessage += '：可能是模型不存在或不可用';
+        }
+      }
+
+      return Exception(
+        '$errorMessage\n\n建议：\n1. 检查选择的AI模型是否正确\n2. 稍后重试\n3. 如果问题持续，请检查API服务状态',
+      );
+    } else if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.connectionError) {
+      return Exception('网络连接超时，请检查网络设置或稍后重试');
+    }
+
+    return Exception('AI请求未知错误: ${error.message ?? error.toString()}');
   }
 
   /// 为provider加载API Key（从加密存储）
