@@ -3725,5 +3725,25 @@
     }
   },
   "exportSuccess": "Export Successful",
-  "exportFailed": "Export Failed"
+  "exportFailed": "Export Failed",
+  "generatingPdf": "Generating PDF...",
+  "pdfExportFailed": "Failed to export PDF: {error}",
+  "@pdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "batchPdfExportFailed": "Failed to batch export PDF: {error}",
+  "@batchPdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseSelectAtLeastOneNote": "Please select at least one note first",
+  "selectedNotesHaveNoCategories": "Selected notes have no category tags",
+  "pdfPreviewAndPrint": "PDF Preview & Print"
 }

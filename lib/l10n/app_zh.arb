@@ -3725,5 +3725,25 @@
     }
   },
   "exportSuccess": "导出成功",
-  "exportFailed": "导出失败"
+  "exportFailed": "导出失败",
+  "generatingPdf": "正在生成 PDF...",
+  "pdfExportFailed": "导出 PDF 失败: {error}",
+  "@pdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "batchPdfExportFailed": "批量导出 PDF 失败: {error}",
+  "@batchPdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseSelectAtLeastOneNote": "请先选择至少一条笔记",
+  "selectedNotesHaveNoCategories": "所选笔记没有分类标签",
+  "pdfPreviewAndPrint": "PDF 预览 & 打印"
 }

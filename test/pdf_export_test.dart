@@ -21,7 +21,8 @@ void main() {
     });
 
     test('DeltaToPdfParser parses structured deltaContent rich text', () {
-      final deltaJson = '[{"insert": "Rich Text Body "}, {"insert": "bold text", "attributes": {"bold": true}}, {"insert": "\\n"}]';
+      final deltaJson =
+          '[{"insert": "Rich Text Body "}, {"insert": "bold text", "attributes": {"bold": true}}, {"insert": "\\n"}]';
       final quote = Quote(
         content: 'Rich Text Body bold text\n',
         date: '2026-05-31',
@@ -34,7 +35,9 @@ void main() {
       expect(widgets.first, isA<pw.Container>());
     });
 
-    test('PdfFontService returns default system font if local and network fonts fail', () async {
+    test(
+        'PdfFontService returns default system font if local and network fonts fail',
+        () async {
       final font = await PdfFontService.loadFont();
       expect(font, isNotNull);
     });

@@ -235,16 +235,24 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                   leading: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: settings.exportFormat == 'pdf'
-                          ? theme.colorScheme.primaryContainer
-                          : theme.colorScheme.surfaceContainerHighest,
+                      color:
+                          (const ['card', 'pdf'].contains(settings.exportFormat)
+                                      ? settings.exportFormat
+                                      : 'card') ==
+                                  'pdf'
+                              ? theme.colorScheme.primaryContainer
+                              : theme.colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
                       Icons.output_outlined,
-                      color: settings.exportFormat == 'pdf'
-                          ? theme.colorScheme.onPrimaryContainer
-                          : theme.colorScheme.onSurfaceVariant,
+                      color:
+                          (const ['card', 'pdf'].contains(settings.exportFormat)
+                                      ? settings.exportFormat
+                                      : 'card') ==
+                                  'pdf'
+                              ? theme.colorScheme.onPrimaryContainer
+                              : theme.colorScheme.onSurfaceVariant,
                       size: 20,
                     ),
                   ),
@@ -262,7 +270,10 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                   ),
                   trailing: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
-                      value: settings.exportFormat,
+                      value:
+                          const ['card', 'pdf'].contains(settings.exportFormat)
+                              ? settings.exportFormat
+                              : 'card',
                       dropdownColor: theme.colorScheme.surfaceContainerHigh,
                       borderRadius: BorderRadius.circular(12),
                       style: theme.textTheme.bodyMedium?.copyWith(

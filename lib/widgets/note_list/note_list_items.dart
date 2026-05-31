@@ -818,8 +818,9 @@ extension _NoteListItemsExtension on NoteListViewState {
   }
 
   void _selectSameMonthNotes() {
+    final l10n = AppLocalizations.of(context);
     if (_selectedExportNoteIds.isEmpty) {
-      _showInfoSnackBar("请先选择至少一条笔记");
+      _showInfoSnackBar(l10n.pleaseSelectAtLeastOneNote);
       return;
     }
     final selectedMonths = <String>{};
@@ -842,8 +843,9 @@ extension _NoteListItemsExtension on NoteListViewState {
   }
 
   void _selectSameCategoryNotes() {
+    final l10n = AppLocalizations.of(context);
     if (_selectedExportNoteIds.isEmpty) {
-      _showInfoSnackBar("请先选择至少一条笔记");
+      _showInfoSnackBar(l10n.pleaseSelectAtLeastOneNote);
       return;
     }
     final selectedTags = <String>{};
@@ -852,7 +854,7 @@ extension _NoteListItemsExtension on NoteListViewState {
       selectedTags.addAll(quote.tagIds);
     }
     if (selectedTags.isEmpty) {
-      _showInfoSnackBar("所选笔记没有分类标签");
+      _showInfoSnackBar(l10n.selectedNotesHaveNoCategories);
       return;
     }
     _updateState(() {
@@ -875,8 +877,9 @@ extension _NoteListItemsExtension on NoteListViewState {
   }
 
   Future<void> _exportSingleNoteToPdf(Quote quote) async {
+    final l10n = AppLocalizations.of(context);
     try {
-      _showLoadingDialog("正在生成 PDF...");
+      _showLoadingDialog(l10n.generatingPdf);
       final font = await PdfFontService.loadFont();
       if (!mounted) return;
       final pdfBytes =
@@ -894,14 +897,15 @@ extension _NoteListItemsExtension on NoteListViewState {
     } catch (e, stack) {
       logError("ExportSingleNoteToPdf", error: e, stackTrace: stack);
       if (mounted) Navigator.pop(context);
-      _showInfoSnackBar("导出 PDF 失败: $e");
+      _showInfoSnackBar(l10n.pdfExportFailed(e.toString()));
     }
   }
 
   Future<void> _exportSelectedNotesToPdf() async {
     if (_selectedExportNoteIds.isEmpty) return;
+    final l10n = AppLocalizations.of(context);
     try {
-      _showLoadingDialog("正在生成 PDF...");
+      _showLoadingDialog(l10n.generatingPdf);
       final selectedQuotes = _quotes
           .where((q) => q.id != null && _selectedExportNoteIds.contains(q.id))
           .toList();
@@ -927,7 +931,7 @@ extension _NoteListItemsExtension on NoteListViewState {
     } catch (e, stack) {
       logError("ExportSelectedNotesToPdf", error: e, stackTrace: stack);
       if (mounted) Navigator.pop(context);
-      _showInfoSnackBar("批量导出 PDF 失败: $e");
+      _showInfoSnackBar(l10n.batchPdfExportFailed(e.toString()));
     }
   }
 
