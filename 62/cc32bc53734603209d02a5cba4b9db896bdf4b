@@ -1,0 +1,11 @@
+lib/services/webdav_sync_service.dart
+  ai_agent 15,38,270-276,425-429,618-619,662,685,688-692,695-728
+pubspec.lock
+  ai_agent 208,211,1323,1326,1331,1334,2152,2155,2160,2163,2168,2171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "62cc32bc53734603209d02a5cba4b9db896bdf4b",
+  "prompts": {}
+}
