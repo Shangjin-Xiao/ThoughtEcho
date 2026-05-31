@@ -154,11 +154,17 @@ extension _AIReportStats on _AIPeriodicReportPageState {
               children: [
                 // 显示标签图标
                 if (_mostTopTagIcon != null) ...[
-                  Icon(
-                    _mostTopTagIcon as IconData,
-                    size: 16,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                  if (_mostTopTagIcon is IconData)
+                    Icon(
+                      _mostTopTagIcon as IconData,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
+                    )
+                  else
+                    Text(
+                      _mostTopTagIcon.toString(),
+                      style: const TextStyle(fontSize: 14),
+                    ),
                   const SizedBox(width: 6),
                 ] else ...[
                   Icon(
