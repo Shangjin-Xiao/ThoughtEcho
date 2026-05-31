@@ -1,0 +1,13 @@
+lib/services/connectivity_service.dart
+  ai_agent 113-114
+lib/pages/webdav_sync_page.dart
+  ai_agent 489-490,508-509,527-528,535-536,625-626
+test/unit/services/webdav_cellular_sync_test.dart
+  ai_agent 74-75,104-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "a0d90c7ad63af36eeae4292c6326f4b509d4d1a0",
+  "prompts": {}
+}
