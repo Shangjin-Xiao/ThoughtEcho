@@ -378,6 +378,7 @@ extension _NoteListItemsExtension on NoteListViewState {
           physics: const AlwaysScrollableScrollPhysics(),
           addAutomaticKeepAlives: true, // 保持默认：图片组件依赖 keepAlive 避免重加载闪烁
           addRepaintBoundaries: true, // 性能优化：减少重绘范围
+          addSemanticIndexes: false, // 缓存区较大时避免为屏外卡片生成列表语义索引
           // 性能优化：惯性首帧移动距离远大于拖拽帧，需要更大缓存区预构建 item
           // 避免 drag→ballistic 过渡时集中构建新 item 导致卡顿
           cacheExtent: MediaQuery.sizeOf(context).height.clamp(400, 900),
