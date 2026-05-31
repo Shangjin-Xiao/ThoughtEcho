@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:dio/dio.dart';
-import 'package:thoughtecho/services/unified_log_service.dart';
 import 'package:thoughtecho/utils/dio_performance_interceptor.dart';
 import 'package:flutter/foundation.dart';
 import '../models/ai_settings.dart';
@@ -519,10 +518,9 @@ class AINetworkManager {
   /// 处理错误
   static Exception _handleError(dynamic error) {
     if (error is! DioException) {
-      UnifiedLogService.instance.error(
+      logError(
         'AI Request Error: Not a DioException',
         error: error,
-        source: 'AINetworkManager',
       );
       return Exception('未知错误: ${error.toString()}');
     }
@@ -531,17 +529,15 @@ class AINetworkManager {
     final errorBody = error.response?.data?.toString() ?? error.message ?? '';
 
     if (statusCode == 401) {
-      UnifiedLogService.instance.error(
+      logError(
         'AI Request Error: 401 Unauthorized',
         error: error,
-        source: 'AINetworkManager',
       );
       return Exception('API密钥无效或已过期 (401)，请检查API密钥设置');
     } else if (statusCode == 429) {
-      UnifiedLogService.instance.error(
+      logError(
         'AI Request Error: 429 Too Many Requests',
         error: error,
-        source: 'AINetworkManager',
       );
       return Exception('API调用频率超限 (429)，请稍后重试');
     } else if (statusCode == 500) {
@@ -559,17 +555,15 @@ class AINetworkManager {
         if (errorBody.contains('model')) {
           errorMessage += '：可能是模型不存在或不可用';
         }
-        UnifiedLogService.instance.error(
-          'Failed to parse 500 error body JSON, errorBody: $errorBody',
+        logError(
+          'Failed to parse 500 error body JSON',
           error: e,
-          source: 'AINetworkManager',
         );
       }
 
-      UnifiedLogService.instance.error(
+      logError(
         'AI Request Error: 500 Internal Server Error',
         error: error,
-        source: 'AINetworkManager',
       );
       return Exception(
         '$errorMessage\n\n建议：\n1. 检查选择的AI模型是否正确\n2. 稍后重试\n3. 如果问题持续，请检查API服务状态',
@@ -578,18 +572,16 @@ class AINetworkManager {
         error.type == DioExceptionType.receiveTimeout ||
         error.type == DioExceptionType.sendTimeout ||
         error.type == DioExceptionType.connectionError) {
-      UnifiedLogService.instance.error(
+      logError(
         'AI Request Error: Connection/Timeout Error (${error.type.name})',
         error: error,
-        source: 'AINetworkManager',
       );
       return Exception('网络连接超时，请检查网络设置或稍后重试');
     }
 
-    UnifiedLogService.instance.error(
+    logError(
       'AI Request Error: Unknown DioException',
       error: error,
-      source: 'AINetworkManager',
     );
     return Exception('AI请求未知错误: ${error.message ?? error.toString()}');
   }
