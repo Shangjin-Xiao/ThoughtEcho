@@ -1,0 +1,19 @@
+lib/providers/app_providers.dart
+  s_a6355890ece7af::t_73c087ac1257ee 66-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "8101d61ef9cefa3b8f925c739a36e63dba468ab0",
+  "prompts": {},
+  "sessions": {
+    "s_a6355890ece7af": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_183d7a846ffeOmit2nOLhAyzuz",
+        "model": "gpt-5.3-codex"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
