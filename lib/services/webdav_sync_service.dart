@@ -304,14 +304,12 @@ class WebDAVSyncService extends ChangeNotifier {
     final isCellular = await ConnectivityService().isCellularConnection();
     bool skipMedia = false;
     if (isCellular) {
-      if (!_syncOnCellular) {
-        if (_syncNotesOnlyOnCellular) {
-          logInfo('当前处于移动数据网络下且启用“仅同步笔记”，将跳过大媒体文件同步');
-          skipMedia = true;
-        } else {
-          logInfo('当前处于移动数据网络下且未允许流量同步，跳过 WebDAV 同步');
-          return;
-        }
+      if (_syncNotesOnlyOnCellular) {
+        logInfo('当前处于移动数据网络下且启用“仅同步笔记”，将跳过大媒体文件同步');
+        skipMedia = true;
+      } else if (!_syncOnCellular) {
+        logInfo('当前处于移动数据网络下且未允许流量同步，跳过 WebDAV 同步');
+        return;
       }
     }
 
