@@ -12,6 +12,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
 import '../services/database_service.dart';
+import '../services/media_reference_service.dart';
 import '../services/mmkv_service.dart';
 import '../utils/app_logger.dart';
 
@@ -34,6 +35,7 @@ class WebDAVSyncService extends ChangeNotifier {
   WebDAVSyncStatus _syncStatus = WebDAVSyncStatus.idle;
   String _lastSyncTime = '';
   int _lastConflictCount = 0;
+  bool _hasPendingSync = false; // 是否有排队中的同步任务
 
   WebDAVSyncStatus get syncStatus => _syncStatus;
   String get lastSyncTime => _lastSyncTime;
@@ -265,7 +267,13 @@ class WebDAVSyncService extends ChangeNotifier {
   /// 触发网络数据同步
   /// [isBackground] - 是否为后台静默同步（不报错弹窗，仅记录日志）
   Future<void> triggerSync({bool isBackground = false}) async {
-    if (!_enabled || isSyncing) return;
+    if (!_enabled) return;
+
+    if (isSyncing) {
+      logDebug('当前正在同步中，将此次同步请求加入排队队列');
+      _hasPendingSync = true;
+      return;
+    }
 
     final password = await getPassword();
     if (_url.isEmpty ||
@@ -414,6 +422,11 @@ class WebDAVSyncService extends ChangeNotifier {
       await _mmkv.setString('webdav_sync_status', 'failed');
     } finally {
       notifyListeners();
+      if (_hasPendingSync) {
+        _hasPendingSync = false;
+        logDebug('检测到排队中的同步任务，开始执行追加同步...');
+        Future.microtask(() => triggerSync(isBackground: isBackground));
+      }
     }
   }
 
@@ -602,8 +615,8 @@ class WebDAVSyncService extends ChangeNotifier {
     final subFolders = ['images', 'videos', 'audios'];
     final Set<String> remoteFilePaths = {};
 
-    // 2. 扫描云端所有分类目录的文件列表
-    for (final folder in subFolders) {
+    // 2. 并行扫描云端所有媒体子目录的文件列表，减少网络请求等待时间并防限流
+    await Future.wait(subFolders.map((folder) async {
       final folderUrl = '${_url}thoughtecho/media/$folder/';
       try {
         final response = await dio.request(
@@ -646,7 +659,7 @@ class WebDAVSyncService extends ChangeNotifier {
       } catch (e) {
         logDebug('获取云端媒体目录 ($folder) 列表失败: $e');
       }
-    }
+    }));
 
     // 3. 上传本地独有文件到云端
     for (final entry in localMediaMap.entries) {
@@ -669,21 +682,50 @@ class WebDAVSyncService extends ChangeNotifier {
       }
     }
 
-    // 4. 从云端下载本地缺失文件
+    // 4. 从云端同步本地缺失附件，或清理云端已废弃的孤儿附件（解决“无限复活”Bug）
     for (final stdPath in remoteFilePaths) {
       if (!localMediaMap.containsKey(stdPath)) {
-        logDebug('从云端下载本地缺失附件: $stdPath');
-        final downloadUrl = '${_url}thoughtecho/media/$stdPath';
-        final localTargetFile = File(
-          p.join(mediaRoot.path, stdPath.replaceAll('/', p.separator)),
+        // 拼接成 MediaReferenceService 能够识别的标准本地完整路径或数据库存储相对路径
+        final localFileFullPath = p.join(
+          appDir.path,
+          'media',
+          stdPath.replaceAll('/', p.separator),
         );
 
-        try {
-          // 确保父目录存在
-          await localTargetFile.parent.create(recursive: true);
-          await dio.download(downloadUrl, localTargetFile.path);
-        } catch (e) {
-          logDebug('下载附件失败 ($stdPath): $e');
+        // 校验该云端文件是否在本地数据库中仍有被引用
+        final refCount = await MediaReferenceService.getReferenceCount(
+          localFileFullPath,
+        );
+
+        if (refCount > 0) {
+          // 该云端媒体在本地数据库有笔记引用，需从云端下载（如新设备登录同步）
+          logDebug('从云端下载本地缺失且被引用的合法附件: $stdPath');
+          final downloadUrl = '${_url}thoughtecho/media/$stdPath';
+          final localTargetFile = File(localFileFullPath);
+
+          try {
+            // 确保父目录存在
+            await localTargetFile.parent.create(recursive: true);
+            await dio.download(downloadUrl, localTargetFile.path);
+          } catch (e) {
+            logDebug('下载附件失败 ($stdPath): $e');
+          }
+        } else {
+          // 数据库中已经没有任何笔记引用此文件（已被用户删除，且本地已被孤儿文件机制清理）
+          // 此时绝不下载，并且主动在 WebDAV 上删除该文件以防越攒越多，彻底清理云端存储
+          logDebug('从云端清理已无任何数据库引用的废弃附件: $stdPath');
+          final deleteUrl = '${_url}thoughtecho/media/$stdPath';
+          try {
+            await dio.request(
+              deleteUrl,
+              options: Options(
+                method: 'DELETE',
+                validateStatus: (status) => status == 200 || status == 204 || status == 404,
+              ),
+            );
+          } catch (e) {
+            logDebug('从云端删除废弃附件失败 ($stdPath): $e');
+          }
         }
       }
     }
