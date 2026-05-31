@@ -1,0 +1,32 @@
+.squad/log/2026-05-31-note-list-semantics-trimming.md
+  s_88d74abd2976dc::t_5cff43f5407b07 26-27
+  s_88d74abd2976dc::t_88a20a44b9293a 29-30,43-48
+.squad/decisions.md
+  ai_agent 151-170
+lib/widgets/quote_item_widget.dart
+  s_88d74abd2976dc::t_f0b7aa551c3beb 607-608
+  s_88d74abd2976dc::t_0f909d662adeaa 591-600,602-606,609-628,635-663
+test/widget/note_list_view_filter_test.dart
+  s_88d74abd2976dc::t_4ce811597ebdbf 222
+lib/widgets/note_list/note_list_items.dart
+  s_88d74abd2976dc::t_96ed363ed94ed0 385
+  s_88d74abd2976dc::t_afe89ce9ab6172 381
+test/widgets/quote_item_widget_test.dart
+  s_88d74abd2976dc::t_91bcfe286f6995 201-207
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "d08dd826ba92f52f9eebe1820a3e44f5148df1ae",
+  "prompts": {},
+  "sessions": {
+    "s_88d74abd2976dc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e7cb5-9750-7a71-8de0-3dd69b364e9a",
+        "model": "gpt-5.4-mini"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
