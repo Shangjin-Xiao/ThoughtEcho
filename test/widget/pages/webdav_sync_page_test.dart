@@ -40,6 +40,7 @@ void main() {
     final safeMMKV = SafeMMKV();
     await safeMMKV.initialize();
     await safeMMKV.clear();
+    await safeMMKV.setBool('webdav_ignore_experimental_warning', true);
 
     // Mock FlutterSecureStorage
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -130,6 +131,7 @@ void main() {
 
     final helpButtonFinder = find.text('如何获取应用密码？');
     await tester.ensureVisible(helpButtonFinder);
+    await tester.pumpAndSettle();
     await tester.tap(helpButtonFinder);
     await tester.pumpAndSettle();
 

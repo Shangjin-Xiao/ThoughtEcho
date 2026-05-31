@@ -75,6 +75,8 @@ void main() {
       password: 'my-app-token-123',
       syncOnLaunch: false,
       syncOnChange: true,
+      syncOnCellular: false,
+      syncNotesOnlyOnCellular: false,
     );
 
     // 检查缓存状态是否更新
@@ -121,6 +123,8 @@ void main() {
         username: 'user',
         syncOnLaunch: false,
         syncOnChange: false,
+        syncOnCellular: false,
+        syncNotesOnlyOnCellular: false,
       ),
       throwsA(isA<Exception>().having(
         (e) => e.toString(),
@@ -137,6 +141,8 @@ void main() {
       username: 'user',
       syncOnLaunch: false,
       syncOnChange: false,
+      syncOnCellular: false,
+      syncNotesOnlyOnCellular: false,
     );
     expect(service.enabled, false);
     expect(service.url, 'http://insecure.server.local/dav/');
