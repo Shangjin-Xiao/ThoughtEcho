@@ -242,6 +242,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
       password: _passwordController.text,
       syncOnLaunch: syncService.syncOnLaunch,
       syncOnChange: syncService.syncOnChange,
+      syncOnCellular: syncService.syncOnCellular,
+      syncNotesOnlyOnCellular: syncService.syncNotesOnlyOnCellular,
     );
 
     // 2. 触发一次手动同步
@@ -483,6 +485,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                               username: _usernameController.text,
                               syncOnLaunch: val,
                               syncOnChange: syncService.syncOnChange,
+                              syncOnCellular: syncService.syncOnCellular,
+                              syncNotesOnlyOnCellular: syncService.syncNotesOnlyOnCellular,
                             );
                           },
                         ),
@@ -499,8 +503,48 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                               username: _usernameController.text,
                               syncOnLaunch: syncService.syncOnLaunch,
                               syncOnChange: val,
+                              syncOnCellular: syncService.syncOnCellular,
+                              syncNotesOnlyOnCellular: syncService.syncNotesOnlyOnCellular,
                             );
                           },
+                        ),
+                        const Divider(height: 1),
+                        SwitchListTile(
+                          title: Text(l10n.webdavSyncOnCellular),
+                          subtitle: Text(l10n.webdavSyncOnCellularSubtitle),
+                          value: syncService.syncOnCellular,
+                          onChanged: (val) {
+                            syncService.saveSettings(
+                              enabled: syncService.enabled,
+                              provider: _selectedProvider,
+                              url: _urlController.text,
+                              username: _usernameController.text,
+                              syncOnLaunch: syncService.syncOnLaunch,
+                              syncOnChange: syncService.syncOnChange,
+                              syncOnCellular: val,
+                              syncNotesOnlyOnCellular: syncService.syncNotesOnlyOnCellular,
+                            );
+                          },
+                        ),
+                        const Divider(height: 1),
+                        SwitchListTile(
+                          title: Text(l10n.webdavSyncNotesOnlyOnCellular),
+                          subtitle: Text(l10n.webdavSyncNotesOnlyOnCellularSubtitle),
+                          value: syncService.syncNotesOnlyOnCellular,
+                          onChanged: syncService.syncOnCellular
+                              ? null
+                              : (val) {
+                                  syncService.saveSettings(
+                                    enabled: syncService.enabled,
+                                    provider: _selectedProvider,
+                                    url: _urlController.text,
+                                    username: _usernameController.text,
+                                    syncOnLaunch: syncService.syncOnLaunch,
+                                    syncOnChange: syncService.syncOnChange,
+                                    syncOnCellular: syncService.syncOnCellular,
+                                    syncNotesOnlyOnCellular: val,
+                                  );
+                                },
                         ),
                       ],
                     ),
@@ -573,6 +617,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                           username: _usernameController.text,
                           syncOnLaunch: syncService.syncOnLaunch,
                           syncOnChange: syncService.syncOnChange,
+                          syncOnCellular: syncService.syncOnCellular,
+                          syncNotesOnlyOnCellular: syncService.syncNotesOnlyOnCellular,
                         );
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../utils/app_logger.dart';
 import '../services/network_service.dart';
 
@@ -104,6 +105,17 @@ class ConnectivityService extends ChangeNotifier {
   Future<bool> checkConnectionNow() async {
     await _checkConnectivity();
     return _isConnected;
+  }
+
+  /// 检查当前是否为移动数据流量连接
+  Future<bool> isCellularConnection() async {
+    try {
+      final List<ConnectivityResult> results = await Connectivity().checkConnectivity();
+      return results.contains(ConnectivityResult.mobile);
+    } catch (e) {
+      logDebug('检查移动数据网络失败: $e');
+      return false;
+    }
   }
 
   @override
