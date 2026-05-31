@@ -164,7 +164,8 @@ void main() {
       },
     );
 
-    testWidgets('uses a light cache extent to keep drag scrolling responsive', (
+    testWidgets(
+        'uses an extended cache extent to preload variable-height items', (
       tester,
     ) async {
       final databaseService = _FakeDatabaseService()
@@ -188,7 +189,39 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
 
       final listView = tester.widget<ListView>(find.byType(ListView));
-      expect(listView.cacheExtent, 250);
+      expect(listView.cacheExtent, inInclusiveRange(400, 900));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+    });
+
+    testWidgets('disables automatic semantic indexes for cached list items', (
+      tester,
+    ) async {
+      final databaseService = _FakeDatabaseService()
+        ..quotesToEmit = [
+          Quote(
+            id: 'quote-1',
+            content: '普通笔记',
+            date: DateTime(2026, 5, 16).toIso8601String(),
+          ),
+        ];
+      final settingsService = _FakeSettingsService();
+
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: settingsService,
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final listView = tester.widget<ListView>(find.byType(ListView));
+      expect(listView.semanticChildCount, 1);
+      final delegate = listView.childrenDelegate as SliverChildBuilderDelegate;
+      expect(delegate.addSemanticIndexes, isFalse);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(seconds: 2));

@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
+
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../extensions/note_category_localization_extension.dart';
@@ -368,10 +369,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                 padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.auto_delete_outlined,
-                      size: 16,
-                      color: theme.colorScheme.error,
+                    ExcludeSemantics(
+                      child: Icon(
+                        Icons.auto_delete_outlined,
+                        size: 16,
+                        color: theme.colorScheme.error,
+                      ),
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -446,10 +449,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (hasLocationText) ...[
-                            Icon(
-                              Icons.location_on,
-                              size: 14,
-                              color: iconColor,
+                            ExcludeSemantics(
+                              child: Icon(
+                                Icons.location_on,
+                                size: 14,
+                                color: iconColor,
+                              ),
                             ),
                             const SizedBox(width: 2),
                             Text(
@@ -462,10 +467,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           if (hasLocationText && hasWeatherText)
                             const SizedBox(width: 8),
                           if (hasWeatherText) ...[
-                            Icon(
-                              _getWeatherIcon(quote.weather!),
-                              size: 14,
-                              color: iconColor,
+                            ExcludeSemantics(
+                              child: Icon(
+                                _getWeatherIcon(quote.weather!),
+                                size: 14,
+                                color: iconColor,
+                              ),
                             ),
                             const SizedBox(width: 2),
                             Text(
@@ -581,59 +588,79 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                               switchInCurve: Curves.easeIn,
                               switchOutCurve: Curves.easeOut,
                               child: (!isExpanded && needsExpansion)
-                                  ? RepaintBoundary(
-                                      child: ClipRect(
-                                        child: BackdropFilter.grouped(
-                                          filter: ui.ImageFilter.blur(
-                                            sigmaX: 1.2,
-                                            sigmaY: 1.2,
-                                          ),
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              gradient: LinearGradient(
-                                                begin: Alignment.topCenter,
-                                                end: Alignment.bottomCenter,
-                                                colors: [
-                                                  innerTheme.colorScheme.surface
-                                                      .withValues(alpha: 0.0),
-                                                  innerTheme.colorScheme.surface
-                                                      .withValues(alpha: 0.08),
-                                                  innerTheme.colorScheme.surface
-                                                      .withValues(alpha: 0.18),
-                                                ],
-                                                stops: const [0.0, 0.4, 1.0],
-                                              ),
-                                            ),
-                                            alignment: Alignment.center,
-                                            child: Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 2,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: innerTheme
-                                                    .colorScheme.surface
-                                                    .withValues(alpha: 0.35),
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                              child: Text(
-                                                l10n.doubleTapToViewFull,
-                                                style: innerTheme
-                                                    .textTheme.bodySmall
-                                                    ?.copyWith(
-                                                  color: innerTheme
-                                                      .colorScheme.onSurface
-                                                      .withValues(alpha: 0.65),
-                                                  fontSize: 11,
-                                                  fontStyle: FontStyle.italic,
+                                  ? Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        ExcludeSemantics(
+                                          child: RepaintBoundary(
+                                            child: ClipRect(
+                                              child: BackdropFilter.grouped(
+                                                filter: ui.ImageFilter.blur(
+                                                  sigmaX: 1.2,
+                                                  sigmaY: 1.2,
+                                                ),
+                                                child: Container(
+                                                  decoration: BoxDecoration(
+                                                    gradient: LinearGradient(
+                                                      begin:
+                                                          Alignment.topCenter,
+                                                      end: Alignment
+                                                          .bottomCenter,
+                                                      colors: [
+                                                        innerTheme
+                                                            .colorScheme.surface
+                                                            .withValues(
+                                                                alpha: 0.0),
+                                                        innerTheme
+                                                            .colorScheme.surface
+                                                            .withValues(
+                                                                alpha: 0.08),
+                                                        innerTheme
+                                                            .colorScheme.surface
+                                                            .withValues(
+                                                                alpha: 0.18),
+                                                      ],
+                                                      stops: const [
+                                                        0.0,
+                                                        0.4,
+                                                        1.0,
+                                                      ],
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
                                             ),
                                           ),
                                         ),
-                                      ),
+                                        Align(
+                                          alignment: Alignment.center,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: innerTheme
+                                                  .colorScheme.surface
+                                                  .withValues(alpha: 0.35),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              l10n.doubleTapToViewFull,
+                                              style: innerTheme
+                                                  .textTheme.bodySmall
+                                                  ?.copyWith(
+                                                color: innerTheme
+                                                    .colorScheme.onSurface
+                                                    .withValues(alpha: 0.65),
+                                                fontSize: 11,
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     )
                                   : const SizedBox.shrink(),
                             ),
@@ -667,14 +694,16 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                       child!,
                                       Positioned.fill(
                                         child: IgnorePointer(
-                                          child: DecoratedBox(
-                                            key: const ValueKey(
-                                              'quote_item.double_tap_overlay',
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withValues(
-                                                alpha: overlayStrength *
-                                                    highlightOpacity,
+                                          child: ExcludeSemantics(
+                                            child: DecoratedBox(
+                                              key: const ValueKey(
+                                                'quote_item.double_tap_overlay',
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withValues(
+                                                  alpha: overlayStrength *
+                                                      highlightOpacity,
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -728,7 +757,13 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
               child: Row(
                 children: [
                   if (quote.tagIds.isNotEmpty) ...[
-                    Icon(Icons.label_outline, size: 16, color: iconColor),
+                    ExcludeSemantics(
+                      child: Icon(
+                        Icons.label_outline,
+                        size: 16,
+                        color: iconColor,
+                      ),
+                    ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: SizedBox(
@@ -812,27 +847,32 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                       if (IconUtils.isEmoji(
                                                         tag.iconName!,
                                                       )) ...[
-                                                        Text(
-                                                          IconUtils
-                                                              .getDisplayIcon(
-                                                            tag.iconName!,
-                                                          ),
-                                                          style:
-                                                              const TextStyle(
-                                                            fontSize: 12,
+                                                        ExcludeSemantics(
+                                                          child: Text(
+                                                            IconUtils
+                                                                .getDisplayIcon(
+                                                              tag.iconName!,
+                                                            ),
+                                                            style:
+                                                                const TextStyle(
+                                                              fontSize: 12,
+                                                            ),
                                                           ),
                                                         ),
                                                         const SizedBox(
                                                           width: 3,
                                                         ),
                                                       ] else ...[
-                                                        Icon(
-                                                          IconUtils.getIconData(
-                                                            tag.iconName!,
+                                                        ExcludeSemantics(
+                                                          child: Icon(
+                                                            IconUtils
+                                                                .getIconData(
+                                                              tag.iconName!,
+                                                            ),
+                                                            size: 12,
+                                                            color:
+                                                                secondaryTextColor,
                                                           ),
-                                                          size: 12,
-                                                          color:
-                                                              secondaryTextColor,
                                                         ),
                                                         const SizedBox(
                                                           width: 3,

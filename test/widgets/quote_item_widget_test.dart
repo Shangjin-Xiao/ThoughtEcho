@@ -157,6 +157,56 @@ void main() {
       expect(find.byType(BackdropFilter), findsOneWidget);
     });
 
+    testWidgets('折叠遮罩不参与语义树生成', (tester) async {
+      final quote = _buildQuote(
+        content: List.filled(6, _longContentChunk).join('\n'),
+        editSource: 'inline',
+      );
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _FakeSettingsService(),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Material(
+              child: QuoteItemWidget(
+                quote: quote,
+                tagMap: const {},
+                isExpanded: false,
+                onToggleExpanded: (_) {},
+                onEdit: () {},
+                onDelete: () {},
+                onAskAI: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.ancestor(
+          of: find.byType(BackdropFilter),
+          matching: find.byType(ExcludeSemantics),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.ancestor(
+          of: find.text('双击查看全文'),
+          matching: find.byType(ExcludeSemantics),
+        ),
+        findsNothing,
+      );
+    });
+
     testWidgets('展开状态显示完整内容且截断提示消失', (tester) async {
       final quote = _buildQuote(
         content:
