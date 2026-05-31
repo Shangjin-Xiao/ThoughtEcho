@@ -747,6 +747,55 @@ class DatabaseBackupService {
     await batch.commit(noResult: true);
   }
 
+  /// quotes 表中本地 schema 已知的列名白名单。
+  /// 同步时若远端数据包含此列表之外的字段（对端版本更新），
+  /// 将静默忽略未知字段以保持向前兼容，而非抛出 SQLite 错误。
+  static const Set<String> _knownQuoteColumns = {
+    'id',
+    'content',
+    'date',
+    'source',
+    'source_author',
+    'source_work',
+    'ai_analysis',
+    'sentiment',
+    'keywords',
+    'summary',
+    'category_id',
+    'color_hex',
+    'location',
+    'latitude',
+    'longitude',
+    'weather',
+    'temperature',
+    'edit_source',
+    'delta_content',
+    'day_period',
+    'last_modified',
+    'weather_backup',
+    'day_period_backup',
+    'favorite_count',
+    'is_deleted',
+    'deleted_at',
+  };
+
+  /// 过滤掉 quoteData 中本地 schema 不认识的字段，
+  /// 记录被忽略的字段名（debug 级别，不含字段值）。
+  Map<String, dynamic> _filterKnownQuoteColumns(
+    Map<String, dynamic> quoteData,
+  ) {
+    final unknown =
+        quoteData.keys.where((k) => !_knownQuoteColumns.contains(k)).toList();
+    if (unknown.isEmpty) return quoteData;
+    logDebug(
+      '同步时忽略本地 schema 未知的字段（对端版本可能更新）: $unknown',
+      source: 'DatabaseBackupService',
+    );
+    return Map.fromEntries(
+      quoteData.entries.where((e) => _knownQuoteColumns.contains(e.key)),
+    );
+  }
+
   /// 合并笔记数据（LWW策略）
   Future<void> _mergeQuotes(
     Transaction txn,
@@ -891,14 +940,17 @@ class DatabaseBackupService {
           }
         }
 
+        // 过滤掉远端数据中本地 schema 不认识的字段，保持向前兼容
+        final filteredData = _filterKnownQuoteColumns(quoteData);
+
         // ⚡ Bolt: 使用预加载的 map 进行匹配，避免重复查询
         bool inserted = false;
         if (!idToQuote.containsKey(quoteId)) {
-          batch.insert('quotes', quoteData);
+          batch.insert('quotes', filteredData);
           reportBuilder.addInsertedQuote();
           inserted = true;
           // ⚡ Bolt: 更新本地缓存以处理输入数据中的重复项
-          idToQuote[quoteId] = quoteData;
+          idToQuote[quoteId] = filteredData;
         } else {
           final existingQuote = idToQuote[quoteId]!;
           final decision = LWWDecisionMaker.makeDecision(
@@ -911,13 +963,13 @@ class DatabaseBackupService {
           if (decision.shouldUseRemote) {
             batch.update(
               'quotes',
-              quoteData,
+              filteredData,
               where: 'id = ?',
               whereArgs: [quoteId],
             );
             reportBuilder.addUpdatedQuote();
             // ⚡ Bolt: 更新本地缓存以处理输入数据中的重复项
-            idToQuote[quoteId] = quoteData;
+            idToQuote[quoteId] = filteredData;
           } else if (decision.hasConflict) {
             reportBuilder.addSameTimestampDiffQuote();
           } else {
