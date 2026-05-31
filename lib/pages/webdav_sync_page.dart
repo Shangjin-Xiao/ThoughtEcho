@@ -486,7 +486,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                               syncOnLaunch: val,
                               syncOnChange: syncService.syncOnChange,
                               syncOnCellular: syncService.syncOnCellular,
-                              syncNotesOnlyOnCellular: syncService.syncNotesOnlyOnCellular,
+                              syncNotesOnlyOnCellular:
+                                  syncService.syncNotesOnlyOnCellular,
                             );
                           },
                         ),
@@ -504,7 +505,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                               syncOnLaunch: syncService.syncOnLaunch,
                               syncOnChange: val,
                               syncOnCellular: syncService.syncOnCellular,
-                              syncNotesOnlyOnCellular: syncService.syncNotesOnlyOnCellular,
+                              syncNotesOnlyOnCellular:
+                                  syncService.syncNotesOnlyOnCellular,
                             );
                           },
                         ),
@@ -522,14 +524,16 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                               syncOnLaunch: syncService.syncOnLaunch,
                               syncOnChange: syncService.syncOnChange,
                               syncOnCellular: val,
-                              syncNotesOnlyOnCellular: syncService.syncNotesOnlyOnCellular,
+                              syncNotesOnlyOnCellular:
+                                  syncService.syncNotesOnlyOnCellular,
                             );
                           },
                         ),
                         const Divider(height: 1),
                         SwitchListTile(
                           title: Text(l10n.webdavSyncNotesOnlyOnCellular),
-                          subtitle: Text(l10n.webdavSyncNotesOnlyOnCellularSubtitle),
+                          subtitle:
+                              Text(l10n.webdavSyncNotesOnlyOnCellularSubtitle),
                           value: syncService.syncNotesOnlyOnCellular,
                           onChanged: syncService.syncOnCellular
                               ? null
@@ -618,7 +622,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                           syncOnLaunch: syncService.syncOnLaunch,
                           syncOnChange: syncService.syncOnChange,
                           syncOnCellular: syncService.syncOnCellular,
-                          syncNotesOnlyOnCellular: syncService.syncNotesOnlyOnCellular,
+                          syncNotesOnlyOnCellular:
+                              syncService.syncNotesOnlyOnCellular,
                         );
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(

@@ -110,7 +110,8 @@ class ConnectivityService extends ChangeNotifier {
   /// 检查当前是否为移动数据流量连接
   Future<bool> isCellularConnection() async {
     try {
-      final List<ConnectivityResult> results = await Connectivity().checkConnectivity();
+      final List<ConnectivityResult> results =
+          await Connectivity().checkConnectivity();
       return results.contains(ConnectivityResult.mobile);
     } catch (e) {
       logDebug('检查移动数据网络失败: $e');
