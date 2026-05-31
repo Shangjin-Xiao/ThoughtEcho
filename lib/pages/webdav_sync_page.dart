@@ -415,7 +415,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                       children: [
                         SwitchListTile(
                           title: Text(l10n.webdavAutoSyncLaunch),
-                          subtitle: const Text('当您打开或返回应用时静默进行双向合并'),
+                          subtitle: Text(l10n.webdavAutoSyncLaunchSubtitle),
                           value: syncService.syncOnLaunch,
                           onChanged: (val) {
                             syncService.saveSettings(
@@ -431,7 +431,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                         const Divider(height: 1),
                         SwitchListTile(
                           title: Text(l10n.webdavAutoSyncChange),
-                          subtitle: const Text('在编辑笔记后 4 秒静默将更改推送合并至云端'),
+                          subtitle: Text(l10n.webdavAutoSyncChangeSubtitle),
                           value: syncService.syncOnChange,
                           onChanged: (val) {
                             syncService.saveSettings(

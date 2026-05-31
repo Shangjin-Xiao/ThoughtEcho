@@ -3674,7 +3674,9 @@
   "webdavTestSuccess": "Connection successful!",
   "webdavTestFailed": "Connection failed. Please check your settings and password",
   "webdavAutoSyncLaunch": "Auto-sync on app startup",
+  "webdavAutoSyncLaunchSubtitle": "Merge with cloud when app opens or returns to foreground",
   "webdavAutoSyncChange": "Auto-sync on note changes",
+  "webdavAutoSyncChangeSubtitle": "Quietly sync changes after 4 seconds of inactivity when editing",
   "webdavLastSync": "Last sync: {time}",
   "@webdavLastSync": {
     "placeholders": {
