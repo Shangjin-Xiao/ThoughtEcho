@@ -148,3 +148,23 @@
 - 此次改动后，经过真机实测，千帧以上的复杂图文长滑动，平均帧耗时成功从卡死级别压到了 `5.8ms`，仅出现 1 次极轻微掉帧。
 
 **结论**: 在 Flutter 中处理高度未知的复杂列表卡片时，应坚决防止 Layout Shift 和无意义的频繁重构，善用大缓存预构建与高效原生组件特性。
+
+---
+
+## 2026-05-31: 列表语义性能优化决策
+
+**决策者**: 性能顾问 (AI)
+**类型**: 性能优化
+
+**背景**:
+根据 2026-05-17 的架构决策，团队将 `ListView` 的 `cacheExtent` 提高到了 `400~900` 以预加载解决布局跳变（Layout Shift）导致的重绘卡顿。但在最新的 Profile 性能测试中发现，由于预加载了大量屏幕外的笔记卡片，Flutter 引擎需要为这些卡片构建庞大的无障碍语义树（Semantics Tree），导致 `PipelineOwner.flushSemantics` 耗时飙升，占用 UI 线程约 31% 的时间，产生了严重的掉帧卡顿（UI 线程最高 98ms，Raster 最高 127ms）。
+
+**核心决策**:
+1. **彻底分离视觉与语义**: 对于 `QuoteItemWidget` 中所有不需要被屏幕朗读的纯视觉组件（如 `BackdropFilter` 毛玻璃、`LinearGradient` 渐变遮罩、装饰性 `Icon` 等），强制使用 `ExcludeSemantics` 进行包裹。
+2. **列表级别语义控制**: 在 `NoteListView` 的 `ListView.builder` 层级，评估并考虑增加 `addSemanticIndexes: false`，避免为大量缓存卡片强制建立细粒度的列表语义索引，从而减少 `flushSemantics` 负担。
+
+**原因**:
+- `ExcludeSemantics` 对视觉渲染完全无损（0 像素变化），仅在数据层面上截断无障碍树的生成。
+- 大缓存区（`cacheExtent`）是必须保留的（为了防抖动），在此前提下，精简语义树是降低主线程 Build 阶段后置开销的唯一也是业界最佳实践。
+
+**结论**: 立即在 `quote_item_widget.dart` 内部铺设 `ExcludeSemantics` 进行语义裁剪，切断长列表预加载带来的无谓性能开销。
