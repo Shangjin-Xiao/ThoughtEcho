@@ -862,7 +862,29 @@ class SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 ListTile(
-                  title: Text(l10n.webdavSyncTitle),
+                  title: Row(
+                    children: [
+                      Text(l10n.webdavSyncTitle),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.tertiaryContainer,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Preview',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onTertiaryContainer,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   subtitle: Consumer<WebDAVSyncService>(
                     builder: (context, webdavSync, _) {
                       if (!webdavSync.enabled) {

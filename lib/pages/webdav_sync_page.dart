@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
+import '../services/mmkv_service.dart';
 import '../services/webdav_sync_service.dart';
 import '../utils/lww_utils.dart';
 
@@ -40,6 +41,63 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
 
     _loadSecurePassword();
     _checkConflictNotes();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showExperimentalWarningIfNeeded();
+    });
+  }
+
+  /// 弹出实验性功能预览提示（符合国际化，支持临时关闭或永久忽略）
+  Future<void> _showExperimentalWarningIfNeeded() async {
+    final mmkv = MMKVService();
+    final ignoreWarning =
+        mmkv.getBool('webdav_ignore_experimental_warning') ?? false;
+    if (ignoreWarning) return;
+
+    if (!mounted) return;
+
+    final l10n = AppLocalizations.of(context);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // 强制用户阅读并交互
+      builder: (BuildContext context) {
+        return AlertDialog(
+          icon: const Icon(
+            Icons.warning_amber_rounded,
+            color: Colors.amber,
+            size: 40,
+          ),
+          title: Text(l10n.webdavExperimentalTitle),
+          content: Text(
+            l10n.webdavExperimentalContent,
+            style: const TextStyle(height: 1.5),
+          ),
+          actionsAlignment: MainAxisAlignment.spaceBetween,
+          actions: [
+            TextButton(
+              onPressed: () async {
+                final mmkv = MMKVService();
+                await mmkv.setBool('webdav_ignore_experimental_warning', true);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
+              },
+              child: Text(
+                l10n.webdavExperimentalIgnore,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text(l10n.webdavExperimentalClose),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _loadSecurePassword() async {

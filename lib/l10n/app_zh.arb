@@ -3677,6 +3677,10 @@
   "webdavAutoSyncLaunchSubtitle": "打开应用或从后台切回前台时，自动与云端合并最新内容",
   "webdavAutoSyncChange": "修改笔记后自动后台同步",
   "webdavAutoSyncChangeSubtitle": "编辑笔记停止打字 4 秒后，自动静默同步最新修改",
+  "webdavExperimentalTitle": "实验性功能提示",
+  "webdavExperimentalContent": "当前 WebDAV 云同步功能处于实验性预览（Preview）阶段。为了您的数据安全，建议您在启用前备份本地核心笔记。在使用过程中，如遇到任何问题，欢迎随时反馈。",
+  "webdavExperimentalClose": "关闭提示",
+  "webdavExperimentalIgnore": "永久忽略",
   "webdavLastSync": "上次同步：{time}",
   "@webdavLastSync": {
     "placeholders": {
