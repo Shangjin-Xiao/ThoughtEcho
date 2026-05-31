@@ -226,27 +226,6 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
       ) as _i9.Future<void>);
 
   @override
-  _i9.Future<Map<String, dynamic>> exportDataAsMap() => (super.noSuchMethod(
-        Invocation.method(#exportDataAsMap, []),
-        returnValue: _i9.Future<Map<String, dynamic>>.value(
-          <String, dynamic>{},
-        ),
-      ) as _i9.Future<Map<String, dynamic>>);
-
-  @override
-  _i9.Future<String> exportAllData({String? customPath}) => (super.noSuchMethod(
-        Invocation.method(#exportAllData, [], {#customPath: customPath}),
-        returnValue: _i9.Future<String>.value(
-          _i11.dummyValue<String>(
-            this,
-            Invocation.method(#exportAllData, [], {
-              #customPath: customPath,
-            }),
-          ),
-        ),
-      ) as _i9.Future<String>);
-
-  @override
   _i9.Future<void> importDataFromMap(
     Map<String, dynamic>? data, {
     bool? clearExisting = true,

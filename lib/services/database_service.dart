@@ -184,8 +184,6 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     bool? includeDeleted,
   });
 
-  Future<Map<String, dynamic>> exportDataAsMap();
-  Future<String> exportAllData({String? customPath});
   Future<void> importDataFromMap(
     Map<String, dynamic> data, {
     bool clearExisting = true,

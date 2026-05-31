@@ -2,23 +2,6 @@ part of '../database_service.dart';
 
 /// Mixin providing import/export operations for DatabaseService.
 mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
-  /// 将所有笔记和分类数据导出为Map对象
-  @override
-  Future<Map<String, dynamic>> exportDataAsMap() async {
-    // ignore: deprecated_member_use_from_same_package
-    return _backupService.exportDataAsMap(database);
-  }
-
-  /// 导出全部数据到 JSON 格式
-  ///
-  /// [customPath] - 可选的自定义保存路径。如果提供，将保存到指定路径；否则保存到应用文档目录
-  /// 返回保存的文件路径
-  @override
-  Future<String> exportAllData({String? customPath}) async {
-    // ignore: deprecated_member_use_from_same_package
-    return _backupService.exportAllData(database, customPath: customPath);
-  }
-
   /// 从Map对象导入数据
   @override
   Future<void> importDataFromMap(
