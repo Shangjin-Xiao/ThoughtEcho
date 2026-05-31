@@ -18,11 +18,17 @@ class DatabaseBackupService {
   DatabaseBackupService({Uuid? uuid}) : _uuid = uuid ?? const Uuid();
 
   /// 将所有笔记和分类数据导出为Map对象
+  ///
+  /// **已废弃**：此方法将全部笔记/标签一次性加载到内存，大数据量下有 OOM 风险。
+  /// - 备份导出请改用 [BackupService.exportAllData]（流式分页）。
+  /// - 现有调用方：`webdav_sync_service.dart`（WebDAV 同步上传），待后续迁移。
+  @Deprecated(
+    'Loads all notes into memory. '
+    'Use BackupService.exportAllData for backup flows. '
+    'webdav_sync_service still calls this — migrate before removing.',
+  )
   Future<Map<String, dynamic>> exportDataAsMap(Database db) async {
     try {
-      // TODO(perf): This legacy export path builds all notes/tags in memory.
-      // Prefer BackupService's streaming export for large datasets, or replace
-      // this method with a paged writer before exposing it to UI flows.
       final dbVersion = await db.getVersion();
 
       // 查询所有分类数据
@@ -69,14 +75,21 @@ class DatabaseBackupService {
     }
   }
 
-  /// 导出全部数据到 JSON 格式
+  /// 导出全部数据到 JSON 格式（旧版 JSON 备份路径）
+  ///
+  /// **已废弃**：内部调用 [exportDataAsMap]，同样有全量内存加载问题。
+  /// 新备份流程请改用 [BackupService.exportAllData]（生成 ZIP，流式分页）。
+  /// 现有调用方：`database_import_export_mixin.dart`（供旧版 JSON 备份 UI 路径使用）。
   ///
   /// [customPath] - 可选的自定义保存路径。如果提供，将保存到指定路径；否则保存到应用文档目录
   /// 返回保存的文件路径
+  @Deprecated(
+    'Internally calls exportDataAsMap which loads all data into memory. '
+    'Use BackupService.exportAllData for ZIP-based streaming backup.',
+  )
   Future<String> exportAllData(Database db, {String? customPath}) async {
     try {
-      // 修复 P1-2: 避免直接构建巨大的 JSON 字符串并 writeAsString 导致 OOM
-      // 1. 调用新方法获取 Map 数据（在内存中构建 Map）
+      // ignore: deprecated_member_use_from_same_package
       final jsonData = await exportDataAsMap(db);
 
       String filePath;

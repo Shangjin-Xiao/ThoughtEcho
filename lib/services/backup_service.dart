@@ -569,32 +569,6 @@ class BackupService {
     }
   }
 
-  /// 聚合所有结构化数据到一个Map中
-  // ignore: unused_element
-  Future<Map<String, dynamic>> _gatherStructuredData(
-    bool includeMediaFiles,
-  ) async {
-    final notesData = await _databaseService.exportDataAsMap();
-    final settingsData = _settingsService.getAllSettingsForBackup();
-    final aiAnalysisData = await _aiAnalysisDbService.exportAnalysesAsList();
-    final deviceId = settingsData['device_id'];
-
-    // 处理笔记数据中的媒体文件路径
-    Map<String, dynamic> processedNotesData = notesData;
-    if (includeMediaFiles) {
-      processedNotesData = await _convertMediaPathsInNotesForBackup(notesData);
-    }
-
-    return {
-      'version': _backupVersion,
-      'createdAt': DateTime.now().toIso8601String(),
-      'device_id': deviceId,
-      'notes': processedNotesData,
-      'settings': settingsData,
-      'ai_analysis': aiAnalysisData,
-    };
-  }
-
   /// 检查备份数据是否包含媒体文件
   Future<bool> _checkBackupHasMediaFiles(
     Map<String, dynamic> backupData,
@@ -636,69 +610,6 @@ class BackupService {
     }
 
     return false;
-  }
-
-  /// 在备份时将笔记数据中的媒体文件绝对路径转换为相对路径
-  Future<Map<String, dynamic>> _convertMediaPathsInNotesForBackup(
-    Map<String, dynamic> notesData,
-  ) async {
-    final appDir = await getApplicationDocumentsDirectory();
-    final appPath = appDir.path;
-
-    // 深拷贝数据
-    final processedData = Map<String, dynamic>.from(notesData);
-
-    if (processedData.containsKey('quotes')) {
-      final quotes = List<Map<String, dynamic>>.from(processedData['quotes']);
-      int successCount = 0;
-      int failureCount = 0;
-      int skippedCount = 0;
-
-      for (final quote in quotes) {
-        final deltaField = _resolveQuoteDeltaField(quote);
-        if (deltaField == null) {
-          skippedCount++;
-          continue;
-        }
-
-        if (quote[deltaField] == null) {
-          skippedCount++;
-          continue;
-        }
-
-        final deltaContent = quote[deltaField] as String;
-        try {
-          final deltaJson = await LargeFileManager.processLargeJson<dynamic>(
-            deltaContent,
-            encode: false,
-          );
-          final convertedDelta = _convertDeltaMediaPaths(
-            deltaJson,
-            appPath,
-            true,
-          );
-          quote[deltaField] = jsonEncode(convertedDelta);
-          successCount++;
-          logDebug(
-            '处理笔记 ${quote['id']} 的富文本内容成功 (field: $deltaField)',
-          );
-        } catch (e) {
-          failureCount++;
-          logDebug(
-            '处理笔记 ${quote['id']} 的富文本内容时出错 (field: $deltaField): $e',
-          );
-          // 如果处理失败，保持原内容不变
-        }
-      }
-
-      logDebug(
-        '媒体路径转换完成 - 成功: $successCount, 失败: $failureCount, 跳过: $skippedCount',
-      );
-
-      processedData['quotes'] = quotes;
-    }
-
-    return processedData;
   }
 
   /// 在还原时将笔记数据中的媒体文件相对路径转换为当前环境的绝对路径
