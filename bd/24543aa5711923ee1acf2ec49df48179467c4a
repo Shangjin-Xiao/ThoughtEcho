@@ -1,0 +1,31 @@
+test/widgets/quote_item_widget_test.dart
+  s_88d74abd2976dc::t_f6b83ff5a33227 160-202
+lib/widgets/quote_item_widget.dart
+  s_88d74abd2976dc::t_932c073a151226 2-3,372-377,452-457,470-475,591-597,601-609,612-613,616-618,620-627,629-640,643-645,685-694,748-754,838-847,854-862
+  s_88d74abd2976dc::t_7ae69668d50245 610-611,614-615,641-642
+.squad/log/2026-05-31-note-list-semantics-trimming.md
+  s_88d74abd2976dc::t_13e9d5ca022b52 1-62
+lib/widgets/note_list/note_list_items.dart
+  s_88d74abd2976dc::t_224705cecf8518 381
+test/widget/note_list_view_filter_test.dart
+  s_88d74abd2976dc::t_7ae69668d50245 167,222
+  s_88d74abd2976dc::t_81f6f8a64df94d 192
+  ai_agent 168
+  s_88d74abd2976dc::t_0909e76b069b50 197-198,223
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "bd24543aa5711923ee1acf2ec49df48179467c4a",
+  "prompts": {},
+  "sessions": {
+    "s_88d74abd2976dc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e7cb5-9750-7a71-8de0-3dd69b364e9a",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
