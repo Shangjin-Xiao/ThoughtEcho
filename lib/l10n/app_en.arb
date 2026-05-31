@@ -3745,5 +3745,9 @@
   },
   "pleaseSelectAtLeastOneNote": "Please select at least one note first",
   "selectedNotesHaveNoCategories": "Selected notes have no category tags",
-  "pdfPreviewAndPrint": "PDF Preview & Print"
+  "pdfPreviewAndPrint": "PDF Preview & Print",
+  "webdavSyncOnCellular": "Sync over cellular data",
+  "webdavSyncOnCellularSubtitle": "Allow cloud backup and merge under mobile data networks",
+  "webdavSyncNotesOnlyOnCellular": "Sync notes only on cellular",
+  "webdavSyncNotesOnlyOnCellularSubtitle": "Only sync lightweight text notes and skip heavy media files to save data"
 }
