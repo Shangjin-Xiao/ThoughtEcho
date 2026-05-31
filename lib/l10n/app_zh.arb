@@ -3707,5 +3707,23 @@
       }
     }
   },
-  "webdavViewNow": "立即查看"
+  "webdavViewNow": "立即查看",
+  "exportFormatLabel": "默认导出格式",
+  "exportFormatCard": "精致分享卡片",
+  "exportFormatPdf": "标准 A4 PDF",
+  "exportFormatDesc": "配置笔记一键导出或分享时的默认生成格式",
+  "exportToPdf": "导出为 PDF",
+  "pdfExportSelectionMode": "选择导出模式",
+  "selectSameMonth": "一键选同月",
+  "selectSameCategory": "一键选同分类",
+  "exportSelected": "导出 ({count})",
+  "@exportSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportSuccess": "导出成功",
+  "exportFailed": "导出失败"
 }

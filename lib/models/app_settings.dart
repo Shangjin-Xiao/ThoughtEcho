@@ -63,6 +63,7 @@ class AppSettings {
   final String? trashRetentionLastModified; // 回收站保留设置更新时间（UTC ISO）
   final bool skipNonFullscreenEditor; // 新增：跳过非全屏编辑器，直接进入全屏编辑器
   final String offlineQuoteSource;
+  final String exportFormat;
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -98,6 +99,7 @@ class AppSettings {
     this.trashRetentionLastModified,
     this.skipNonFullscreenEditor = false, // 默认不跳过非全屏编辑器
     this.offlineQuoteSource = 'tagOnly', // 默认仅展示带每日一言标签的笔记
+    this.exportFormat = 'card', // 默认精致分享卡片
   }) : trashRetentionDays = normalizeTrashRetentionDays(trashRetentionDays);
 
   static int normalizeTrashRetentionDays(int? days) {
@@ -142,6 +144,7 @@ class AppSettings {
       'trashRetentionLastModified': trashRetentionLastModified,
       'skipNonFullscreenEditor': skipNonFullscreenEditor,
       'offlineQuoteSource': offlineQuoteSource,
+      'exportFormat': exportFormat,
     };
   }
 
@@ -217,6 +220,7 @@ class AppSettings {
       trashRetentionLastModified: map['trashRetentionLastModified'] as String?,
       skipNonFullscreenEditor: map['skipNonFullscreenEditor'] ?? false,
       offlineQuoteSource: _readString(map['offlineQuoteSource'], 'tagOnly'),
+      exportFormat: _readString(map['exportFormat'], 'card'),
     );
   }
 
@@ -254,6 +258,7 @@ class AppSettings {
         trashRetentionLastModified: null,
         skipNonFullscreenEditor: false, // 默认不跳过非全屏编辑器
         offlineQuoteSource: 'tagOnly',
+        exportFormat: 'card',
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
@@ -295,6 +300,7 @@ class AppSettings {
     bool clearTrashRetentionLastModified = false,
     bool? skipNonFullscreenEditor,
     String? offlineQuoteSource,
+    String? exportFormat,
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
@@ -346,6 +352,7 @@ class AppSettings {
       skipNonFullscreenEditor:
           skipNonFullscreenEditor ?? this.skipNonFullscreenEditor,
       offlineQuoteSource: offlineQuoteSource ?? this.offlineQuoteSource,
+      exportFormat: exportFormat ?? this.exportFormat,
     );
   }
 }

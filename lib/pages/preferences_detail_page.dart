@@ -228,6 +228,65 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                   value: settings.skipNonFullscreenEditor,
                   onChanged: (v) => settings.setSkipNonFullscreenEditor(v),
                 ),
+                _buildDivider(),
+                ListTile(
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: settings.exportFormat == 'pdf'
+                          ? theme.colorScheme.primaryContainer
+                          : theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.output_outlined,
+                      color: settings.exportFormat == 'pdf'
+                          ? theme.colorScheme.onPrimaryContainer
+                          : theme.colorScheme.onSurfaceVariant,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    l10n.exportFormatLabel,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  subtitle: Text(
+                    l10n.exportFormatDesc,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  trailing: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: settings.exportFormat,
+                      dropdownColor: theme.colorScheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(12),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          settings.setExportFormat(newValue);
+                        }
+                      },
+                      items: [
+                        DropdownMenuItem(
+                          value: 'card',
+                          child: Text(l10n.exportFormatCard),
+                        ),
+                        DropdownMenuItem(
+                          value: 'pdf',
+                          child: Text(l10n.exportFormatPdf),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
 

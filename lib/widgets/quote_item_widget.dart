@@ -27,6 +27,7 @@ class QuoteItemWidget extends StatefulWidget {
   final Function() onDelete;
   final Function() onAskAI;
   final Function()? onGenerateCard;
+  final Function()? onExportPdf; // PDF导出回调
   final Function()? onFavorite; // 心形按钮点击回调
   final Function()? onLongPressFavorite; // 心形按钮长按回调（清除收藏）
   final String? searchQuery;
@@ -56,6 +57,7 @@ class QuoteItemWidget extends StatefulWidget {
     required this.onDelete,
     required this.onAskAI,
     this.onGenerateCard,
+    this.onExportPdf,
     this.onFavorite, // 心形按钮点击回调
     this.onLongPressFavorite, // 心形按钮长按回调（清除收藏）
     this.tagBuilder,
@@ -288,6 +290,9 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     );
     final showNoteEditTime = context.select<SettingsService, bool>(
       (s) => s.showNoteEditTime,
+    );
+    final exportFormat = context.select<SettingsService, String>(
+      (s) => s.exportFormat,
     );
     final String formattedDate = TimeUtils.formatQuoteDateLocalized(
       context,
@@ -1027,6 +1032,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           widget.onEdit();
                         } else if (value == 'generate_card') {
                           widget.onGenerateCard?.call();
+                        } else if (value == 'export_pdf') {
+                          widget.onExportPdf?.call();
                         } else if (value == 'delete') {
                           widget.onDelete();
                         }
@@ -1056,7 +1063,21 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                             ],
                           ),
                         ),
-                        if (widget.onGenerateCard != null)
+                        if (exportFormat == 'pdf' && widget.onExportPdf != null)
+                          PopupMenuItem<String>(
+                            value: 'export_pdf',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.picture_as_pdf,
+                                  color: theme.colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(l10n.exportToPdf),
+                              ],
+                            ),
+                          )
+                        else if (widget.onGenerateCard != null)
                           PopupMenuItem<String>(
                             value: 'generate_card',
                             child: Row(
