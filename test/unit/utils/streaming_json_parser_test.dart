@@ -36,7 +36,8 @@ void main() {
       expect(result['value'], 42);
     });
 
-    test('canSafelyParse returns true for valid JSON starting with { or [', () async {
+    test('canSafelyParse returns true for valid JSON starting with { or [',
+        () async {
       final canParse = await StreamingJsonParser.canSafelyParse(testFile);
       expect(canParse, isTrue);
 

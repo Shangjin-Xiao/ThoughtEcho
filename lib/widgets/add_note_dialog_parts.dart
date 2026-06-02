@@ -233,7 +233,7 @@ class _TagSelectionContent extends StatelessWidget {
                   controller: scrollController,
                   padding: EdgeInsets.zero,
                   physics: const ClampingScrollPhysics(),
-                  cacheExtent:
+                  scrollCacheExtent: const ScrollCacheExtent.pixels(
                     100.0,
                   ), // ✅ 移动端减少预渲染
                   itemCount: filteredTags.length,

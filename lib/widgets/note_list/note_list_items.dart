@@ -534,7 +534,7 @@ extension _NoteListItemsExtension on NoteListViewState {
           addSemanticIndexes: false, // 性能权衡：关闭所有列表项的自动顺序语义索引
           // 性能优化：惯性首帧移动距离远大于拖拽帧，需要更大缓存区预构建 item
           // 避免 drag→ballistic 过渡时集中构建新 item 导致卡顿
-          cacheExtent:
+          scrollCacheExtent: ScrollCacheExtent.pixels(
             MediaQuery.sizeOf(context).height.clamp(400, 900).toDouble(),
           ),
           semanticChildCount: _quotes.length + (_hasMore ? 1 : 0),
