@@ -31,8 +31,13 @@ class MultiProviderManager {
       logDebug(
         '已配置的服务商: ${defaultSettings.providers.map((p) => p.name).join(', ')}',
       );
-    } catch (e) {
-      logDebug('初始化默认provider配置失败: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        '初始化默认provider配置失败',
+        error: e,
+        stackTrace: stack,
+        source: 'MultiProviderManager',
+      );
     }
   }
 
@@ -77,8 +82,13 @@ class MultiProviderManager {
       await settingsService.saveMultiAISettings(updatedSettings);
 
       logDebug('Provider $providerId 配置成功');
-    } catch (e) {
-      logDebug('配置provider失败: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        '配置provider失败: $providerId',
+        error: e,
+        stackTrace: stack,
+        source: 'MultiProviderManager',
+      );
     }
   }
 
@@ -102,8 +112,13 @@ class MultiProviderManager {
       await settingsService.saveMultiAISettings(updatedSettings);
 
       logDebug('当前provider已切换到: ${provider.name}');
-    } catch (e) {
-      logDebug('切换provider失败: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        '切换provider失败',
+        error: e,
+        stackTrace: stack,
+        source: 'MultiProviderManager',
+      );
     }
   }
 
@@ -131,8 +146,13 @@ class MultiProviderManager {
 
       final apiKeyManager = APIKeyManager();
       return await apiKeyManager.getProviderApiKey(currentProvider.id);
-    } catch (e) {
-      logDebug('获取当前供应商API密钥失败: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        '获取当前供应商API密钥失败',
+        error: e,
+        stackTrace: stack,
+        source: 'MultiProviderManager',
+      );
       return '';
     }
   }

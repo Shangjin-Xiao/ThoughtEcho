@@ -190,14 +190,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
 
       final listView = tester.widget<ListView>(find.byType(ListView));
-      final scrollCacheExtent = listView.scrollCacheExtent;
-      expect(scrollCacheExtent, isNotNull);
+      final cacheExtent = listView.cacheExtent;
+      expect(cacheExtent, isNotNull);
       expect(
-        scrollCacheExtent?.style,
-        CacheExtentStyle.pixel,
-      );
-      expect(
-        scrollCacheExtent?.value,
+        cacheExtent,
         inInclusiveRange(400.0, 900.0),
       );
 
