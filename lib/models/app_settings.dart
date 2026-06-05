@@ -64,6 +64,8 @@ class AppSettings {
   final bool skipNonFullscreenEditor; // 新增：跳过非全屏编辑器，直接进入全屏编辑器
   final String offlineQuoteSource;
   final String exportFormat;
+  final bool sentryEnabled; // 新增：是否启用 Sentry 错误日志上报
+  final bool sentryDisclosureShown; // 新增：Sentry 错误日志上报提示弹窗是否已显示过
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -100,6 +102,8 @@ class AppSettings {
     this.skipNonFullscreenEditor = false, // 默认不跳过非全屏编辑器
     this.offlineQuoteSource = 'tagOnly', // 默认仅展示带每日一言标签的笔记
     this.exportFormat = 'card', // 默认精致分享卡片
+    this.sentryEnabled = false, // 默认不启用 Sentry 错误日志上报
+    this.sentryDisclosureShown = false, // 默认未显示提示
   }) : trashRetentionDays = normalizeTrashRetentionDays(trashRetentionDays);
 
   static int normalizeTrashRetentionDays(int? days) {
@@ -145,6 +149,8 @@ class AppSettings {
       'skipNonFullscreenEditor': skipNonFullscreenEditor,
       'offlineQuoteSource': offlineQuoteSource,
       'exportFormat': exportFormat,
+      'sentryEnabled': sentryEnabled,
+      'sentryDisclosureShown': sentryDisclosureShown,
     };
   }
 
@@ -221,6 +227,8 @@ class AppSettings {
       skipNonFullscreenEditor: map['skipNonFullscreenEditor'] ?? false,
       offlineQuoteSource: _readString(map['offlineQuoteSource'], 'tagOnly'),
       exportFormat: _readString(map['exportFormat'], 'card'),
+      sentryEnabled: map['sentryEnabled'] ?? false,
+      sentryDisclosureShown: map['sentryDisclosureShown'] ?? false,
     );
   }
 
@@ -259,6 +267,8 @@ class AppSettings {
         skipNonFullscreenEditor: false, // 默认不跳过非全屏编辑器
         offlineQuoteSource: 'tagOnly',
         exportFormat: 'card',
+        sentryEnabled: false,
+        sentryDisclosureShown: false,
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
@@ -301,6 +311,8 @@ class AppSettings {
     bool? skipNonFullscreenEditor,
     String? offlineQuoteSource,
     String? exportFormat,
+    bool? sentryEnabled,
+    bool? sentryDisclosureShown,
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
@@ -353,6 +365,9 @@ class AppSettings {
           skipNonFullscreenEditor ?? this.skipNonFullscreenEditor,
       offlineQuoteSource: offlineQuoteSource ?? this.offlineQuoteSource,
       exportFormat: exportFormat ?? this.exportFormat,
+      sentryEnabled: sentryEnabled ?? this.sentryEnabled,
+      sentryDisclosureShown:
+          sentryDisclosureShown ?? this.sentryDisclosureShown,
     );
   }
 }

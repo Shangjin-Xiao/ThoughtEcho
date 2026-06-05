@@ -45,10 +45,12 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             flutter build ios --release --no-codesign --no-tree-shake-icons \
               --build-number=${{ github.run_number }} \
-              --build-name=${{ github.event.inputs.version_name }}
+              --build-name=${{ github.event.inputs.version_name }} \
+              --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN }}
           else
             flutter build ios --release --no-codesign --no-tree-shake-icons \
-              --build-number=${{ github.run_number }}
+              --build-number=${{ github.run_number }} \
+              --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN }}
           fi
         
       - name: 创建未签名的 IPA

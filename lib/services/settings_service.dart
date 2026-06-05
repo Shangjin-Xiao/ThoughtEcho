@@ -71,6 +71,22 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 是否启用 Sentry 错误上报
+  bool get sentryEnabled => _appSettings.sentryEnabled;
+  Future<void> setSentryEnabled(bool enabled) async {
+    _appSettings = _appSettings.copyWith(sentryEnabled: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // Sentry 错误日志上报提示弹窗是否已显示过
+  bool get sentryDisclosureShown => _appSettings.sentryDisclosureShown;
+  Future<void> setSentryDisclosureShown(bool shown) async {
+    _appSettings = _appSettings.copyWith(sentryDisclosureShown: shown);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   int get trashRetentionDays => _appSettings.trashRetentionDays;
   String? get trashRetentionLastModified =>
       _appSettings.trashRetentionLastModified;

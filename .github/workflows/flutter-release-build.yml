@@ -85,7 +85,8 @@ jobs:
           flutter build apk --$BUILD_MODE \
             --target-platform=android-arm,android-arm64 \
             --build-number=${{ github.run_number }} \
-            --build-name=${{ github.event.inputs.version_name }}
+            --build-name=${{ github.event.inputs.version_name }} \
+            --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN }}
 
       - name: 上传 APK
         uses: actions/upload-artifact@v7

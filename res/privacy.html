@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="心迹 ThoughtEcho 隐私政策 - 我们重视您的隐私，不收集任何个人数据，不进行遥测">
+    <meta name="description" content="心迹 ThoughtEcho 隐私政策 - 我们重视您的隐私，不收集任何个人数据，默认不启用错误遥测">
     <meta name="robots" content="index,follow">
     <meta name="theme-color" content="#a67c52">
     <title>隐私政策 - 心迹 ThoughtEcho</title>
@@ -11,7 +11,7 @@
 
     <!-- Open Graph / Social Media -->
     <meta property="og:title" content="隐私政策 - 心迹 ThoughtEcho">
-    <meta property="og:description" content="心迹秉承本地优先与隐私透明原则，不收集个人数据，不进行遥测追踪。你的数据完全由你掌控。">
+    <meta property="og:description" content="心迹秉承本地优先与隐私透明原则，不收集个人数据，默认不启用遥测。你的数据完全由你掌控。">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://note.shangjinyun.cn/privacy.html">
     <meta property="og:locale" content="zh_CN">
@@ -297,8 +297,8 @@
                 <ul>
                     <li class="content-zh"><strong>不主动收集</strong>：我们不主动收集您的个人识别信息（PII）。</li>
                     <li class="content-en"><strong>No Proactive Collection</strong>: We do not proactively collect your Personally Identifiable Information (PII).</li>
-                    <li class="content-zh"><strong>不进行遥测</strong>：应用内不包含任何分析、遥测或用户行为追踪代码。</li>
-                    <li class="content-en"><strong>No Telemetry</strong>: The app contains no analytics, telemetry, or behavioral tracking code.</li>
+                    <li class="content-zh"><strong>默认不进行遥测</strong>：应用默认不启用错误上报；仅在您手动开启后，才会上报崩溃诊断信息。</li>
+                    <li class="content-en"><strong>No Telemetry by Default</strong>: Crash reporting is disabled by default and only sends diagnostic crash data when you explicitly enable it.</li>
                     <li class="content-zh"><strong>完全本地运行</strong>：应用的所有核心功能均可在无网络环境下完全本地运行。</li>
                     <li class="content-en"><strong>Fully Local Operation</strong>: All core features of the app can operate entirely locally without an internet connection.</li>
                 </ul>
@@ -361,6 +361,11 @@
                 <h3 class="content-en">4. Sync via LocalSend</h3>
                 <p class="content-zh">应用支持局域网内的<strong>端到端点对点</strong>同步。此过程不经过任何外部服务器，数据不会离开您的私有局域网。</p>
                 <p class="content-en">The app supports <strong>end-to-end peer-to-peer</strong> sync within a local network. Data does not leave your private local network.</p>
+
+                <h3 class="content-zh">5. 错误日志上报 (Sentry)</h3>
+                <h3 class="content-en">5. Crash Reporting (Sentry)</h3>
+                <p class="content-zh">应用集成了 Sentry SDK 收集崩溃堆栈和诊断信息。为了尊重您的隐私，此功能<strong>默认关闭</strong>。您可以随时手动开启。开启后上报的信息不包含您的日记内容、出处、作者或任何个人身份数据，仅包含崩溃时的异常堆栈和必要的设备元数据。</p>
+                <p class="content-en">The app integrates the Sentry SDK to collect crash stack traces and diagnostic info. Respecting your privacy, this feature is <strong>disabled by default</strong>. You can enable it manually at any time. When enabled, reported info contains no note contents, authors, sources, or personal identity details, but only crash stack traces and necessary device metadata.</p>
             </section>
 
             <section>

@@ -101,7 +101,7 @@ jobs:
       run: flutter clean
       
     - name: Build Windows app
-      run: flutter build windows --${{ github.event.inputs.build_type || 'release' }} --verbose
+      run: flutter build windows --${{ github.event.inputs.build_type || 'release' }} --verbose --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN }}
       
     - name: Verify MSIX configuration
       shell: pwsh

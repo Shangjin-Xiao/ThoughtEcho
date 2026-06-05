@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart' as logging;
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/services/log_database_service.dart';
 import 'package:thoughtecho/services/log_service.dart' as old_log;
@@ -875,6 +876,36 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
           final logger = logging.Logger(loggerName);
 
           logger.log(loggingLevel, message, error, stackTrace);
+        }
+
+        // 仅在 Sentry 初始化完毕时上传日志辅助信息
+        if (Sentry.isEnabled) {
+          // 只把警告和错误传为面包屑，保护用户轨迹行为隐私
+          if (level == UnifiedLogLevel.warning ||
+              level == UnifiedLogLevel.error) {
+            Sentry.addBreadcrumb(
+              Breadcrumb(
+                message: message,
+                category: source ?? 'log',
+                level: level == UnifiedLogLevel.error
+                    ? SentryLevel.error
+                    : SentryLevel.warning,
+                timestamp: DateTime.now(),
+              ),
+            );
+          }
+
+          // 发生 Error 时，如果伴有异常对象，则直接上报错误
+          if (level == UnifiedLogLevel.error && error != null) {
+            Sentry.captureException(
+              error,
+              stackTrace: stackTrace,
+              hint: Hint.withMap({
+                'message': message,
+                'source': source ?? 'UnifiedLogService'
+              }),
+            );
+          }
         }
       } finally {
         _isLogging = false;

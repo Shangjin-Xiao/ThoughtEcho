@@ -45,6 +45,8 @@ void main() {
       expect(settings.trashRetentionLastModified, isNull);
       expect(settings.skipNonFullscreenEditor, isFalse);
       expect(settings.offlineQuoteSource, equals('tagOnly'));
+      expect(settings.sentryEnabled, isFalse);
+      expect(settings.sentryDisclosureShown, isFalse);
     });
 
     test('toJson and fromJson should be symmetrical', () {
@@ -82,6 +84,8 @@ void main() {
         trashRetentionLastModified: '2023-10-27T10:00:00Z',
         skipNonFullscreenEditor: true,
         offlineQuoteSource: 'all',
+        sentryEnabled: true,
+        sentryDisclosureShown: true,
       );
 
       final json = settings.toJson();
@@ -162,6 +166,9 @@ void main() {
         equals(settings.skipNonFullscreenEditor),
       );
       expect(fromJson.offlineQuoteSource, equals(settings.offlineQuoteSource));
+      expect(fromJson.sentryEnabled, equals(settings.sentryEnabled));
+      expect(fromJson.sentryDisclosureShown,
+          equals(settings.sentryDisclosureShown));
     });
 
     test('fromJson should handle different types for trashRetentionDays', () {
@@ -205,11 +212,15 @@ void main() {
         hitokotoType: 'a',
         dailyQuoteProvider: 'meigen',
         clipboardMonitoringEnabled: true,
+        sentryEnabled: true,
+        sentryDisclosureShown: true,
       );
 
       expect(updated.hitokotoType, equals('a'));
       expect(updated.dailyQuoteProvider, equals('meigen'));
       expect(updated.clipboardMonitoringEnabled, isTrue);
+      expect(updated.sentryEnabled, isTrue);
+      expect(updated.sentryDisclosureShown, isTrue);
       expect(updated.defaultStartPage, equals(settings.defaultStartPage));
     });
 

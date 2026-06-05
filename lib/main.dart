@@ -38,6 +38,7 @@ import 'package:thoughtecho/services/connectivity_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/data_directory_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
+import 'package:thoughtecho/utils/sentry_helper.dart';
 import 'package:thoughtecho/utils/update_dialog_helper.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
 import 'package:thoughtecho/services/background_push_handler.dart';
@@ -257,6 +258,7 @@ Future<void> main() async {
           SettingsService.create().then((s) => settingsService = s),
           PackageInfo.fromPlatform().then((p) => packageInfo = p),
         ]);
+
         final String currentVersion = packageInfo.version;
         final String? lastVersion = settingsService.getAppVersion();
         final bool hasCompletedOnboarding =
@@ -549,6 +551,9 @@ Future<void> main() async {
               // 媒体清理服务初始化失败不影响主要功能，继续执行
             }
 
+            // 后台异步初始化 Sentry 错误收集服务
+            await SentryHelper.initIfEnabled(settingsService.sentryEnabled);
+
             // 初始化完成，更新状态
             servicesInitialized.value = true;
             logInfo('所有后台服务初始化完成', source: 'BackgroundInit');
@@ -743,6 +748,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
         return MaterialApp(
           navigatorKey: widget.navigatorKey,
+          navigatorObservers: settingsService.sentryEnabled
+              ? [SentryHelper.navigatorObserver]
+              : const [],
           title: '心迹',
           builder: (context, child) {
             final mediaQuery = MediaQuery.of(context);
