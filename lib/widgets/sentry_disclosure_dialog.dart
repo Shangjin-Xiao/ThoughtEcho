@@ -8,10 +8,9 @@ class SentryDisclosureDialog {
 
   /// 检查并显示 Sentry 隐私披露弹窗
   static Future<void> checkAndShow(BuildContext context) async {
-    final settingsService =
-        Provider.of<SettingsService>(context, listen: false);
+    if (!context.mounted) return;
+    final settingsService = context.read<SettingsService>();
     if (!settingsService.sentryDisclosureShown) {
-      if (!context.mounted) return;
       await showDialog(
         context: context,
         barrierDismissible: false,

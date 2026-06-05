@@ -259,6 +259,9 @@ Future<void> main() async {
           PackageInfo.fromPlatform().then((p) => packageInfo = p),
         ]);
 
+        // 尽早初始化 Sentry，确保覆盖启动阶段异常与首屏导航
+        await SentryHelper.initIfEnabled(settingsService.sentryEnabled);
+
         final String currentVersion = packageInfo.version;
         final String? lastVersion = settingsService.getAppVersion();
         final bool hasCompletedOnboarding =
@@ -550,9 +553,6 @@ Future<void> main() async {
               logError('媒体清理服务初始化失败: $e', error: e, source: 'BackgroundInit');
               // 媒体清理服务初始化失败不影响主要功能，继续执行
             }
-
-            // 后台异步初始化 Sentry 错误收集服务
-            await SentryHelper.initIfEnabled(settingsService.sentryEnabled);
 
             // 初始化完成，更新状态
             servicesInitialized.value = true;
