@@ -78,15 +78,45 @@ class AppTheme with ChangeNotifier {
     );
   }
 
-  // 修复 Flutter 3.41+ variable font 字重自动映射问题（Android）
-  // 3.41 起 FontWeight 会直接驱动 variable font 的 wght 轴，导致视觉变粗。
-  // 通过显式设置 fontVariations 将每个样式的字重锁定为预期值，恢复 3.35 效果。
+  // 修复 Flutter 3.41+ Android variable font 字重视觉偏粗问题
+  //
+  // 原因：Flutter 3.41 起 FontWeight 自动驱动 variable font 的 wght 轴。
+  // Android 12+ 的 RobotoFlex 字形重绘后，相同 wght 值笔画比旧静态 Roboto 更粗。
+  //
+  // 方案：在 theme TextTheme 中使用补偿后的 FontWeight 值（Flutter 3.44 支持
+  // 任意 1-1000 整数），引擎会自动映射到 wght 轴。
+  // 优势：widget 层 inline fontWeight 覆盖时，merge 会直接替换 fontWeight，
+  //       不会像 fontVariations 那样从 DefaultTextStyle 泄漏。
+  //
+  // 补偿映射（原始 → 补偿后）：
+  //   w400 → 350 (正文：恢复清爽感)
+  //   w500 → 440 (label/title：适度区分)
+  //   其他 → 按比例下调约 10-15%
+  static FontWeight _compensateWeight(FontWeight weight) {
+    const Map<int, int> weightMap = {
+      100: 100,
+      200: 175,
+      300: 260,
+      400: 350,
+      500: 440,
+      600: 540,
+      700: 630,
+      800: 730,
+      900: 830,
+    };
+    final compensated = weightMap[weight.value];
+    if (compensated != null) return FontWeight(compensated);
+    // 非标准字重：按比例缩放 (大约 -12%)
+    final adjusted = (weight.value * 0.88).round().clamp(1, 1000);
+    return FontWeight(adjusted);
+  }
+
   static TextStyle? _fixWeight(TextStyle? style) {
     if (style == null) return null;
     if (kIsWeb || !Platform.isAndroid) return style;
     final weight = style.fontWeight ?? FontWeight.w400;
     return style.copyWith(
-      fontVariations: [FontVariation('wght', weight.value.toDouble())],
+      fontWeight: _compensateWeight(weight),
     );
   }
 
