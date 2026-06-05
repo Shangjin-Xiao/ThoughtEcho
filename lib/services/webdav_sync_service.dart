@@ -37,11 +37,13 @@ class WebDAVSyncService extends ChangeNotifier {
   String _lastSyncTime = '';
   int _lastConflictCount = 0;
   bool _hasPendingSync = false; // 是否有排队中的同步任务
+  String _lastSyncError = ''; // 最近一次失败的错误摘要（对用户安全）
 
   WebDAVSyncStatus get syncStatus => _syncStatus;
   String get lastSyncTime => _lastSyncTime;
   int get lastConflictCount => _lastConflictCount;
   bool get isSyncing => _syncStatus == WebDAVSyncStatus.syncing;
+  String get lastSyncError => _lastSyncError;
 
   // 配置缓存字段
   bool _enabled = false;
@@ -81,6 +83,12 @@ class WebDAVSyncService extends ChangeNotifier {
     _syncNotesOnlyOnCellular =
         _mmkv.getBool('webdav_sync_notes_only_on_cellular') ?? false;
     _lastSyncTime = _mmkv.getString('webdav_last_sync_time') ?? '';
+    _lastSyncError = _mmkv.getString('webdav_last_sync_error') ?? '';
+    // 若上次状态为 failed，恢复失败状态显示
+    if ((_mmkv.getString('webdav_sync_status') ?? '') == 'failed' &&
+        _lastSyncTime.isEmpty) {
+      _syncStatus = WebDAVSyncStatus.failed;
+    }
 
     // 如果是首次使用，且预设是坚果云，自动填入坚果云的地址
     if (_url.isEmpty && _provider == 'nutstore') {
@@ -441,7 +449,9 @@ class WebDAVSyncService extends ChangeNotifier {
       _lastSyncTime = DateTime.now().toUtc().toIso8601String();
       await _mmkv.setString('webdav_last_sync_time', _lastSyncTime);
       _syncStatus = WebDAVSyncStatus.success;
+      _lastSyncError = ''; // 成功时清除上次错误
       await _mmkv.setString('webdav_sync_status', 'success');
+      await _mmkv.setString('webdav_last_sync_error', '');
 
       logInfo('WebDAV 同步成功完成。冲突数: $_lastConflictCount');
     } catch (e, stack) {
@@ -452,7 +462,9 @@ class WebDAVSyncService extends ChangeNotifier {
         source: 'WebDAVSyncService',
       );
       _syncStatus = WebDAVSyncStatus.failed;
+      _lastSyncError = _sanitizeSyncError(e);
       await _mmkv.setString('webdav_sync_status', 'failed');
+      await _mmkv.setString('webdav_last_sync_error', _lastSyncError);
     } finally {
       notifyListeners();
       if (_hasPendingSync) {
@@ -461,6 +473,42 @@ class WebDAVSyncService extends ChangeNotifier {
         Future.microtask(() => triggerSync(isBackground: isBackground));
       }
     }
+  }
+
+  /// 将异常转换为对用户安全、友好的错误摘要（不含 URL、密码等敏感信息）
+  String _sanitizeSyncError(Object e) {
+    final raw = e.toString();
+    // HTTP 状态码识别
+    final statusMatch = RegExp(r'status[Cc]ode[:\s]+(\d+)').firstMatch(raw);
+    if (statusMatch != null) {
+      final code = int.tryParse(statusMatch.group(1) ?? '');
+      if (code == 401 || code == 403) return '认证失败，请检查用户名和密码';
+      if (code == 404) return '服务器路径不存在，请检查地址配置';
+      if (code == 507) return '服务器存储空间不足';
+      if (code != null && code >= 500) return '服务器内部错误 ($code)';
+      if (code != null) return 'HTTP 错误 ($code)';
+    }
+    // 网络类错误
+    if (raw.contains('SocketException') ||
+        raw.contains('NetworkException') ||
+        raw.contains('Connection refused') ||
+        raw.contains('Failed host lookup')) {
+      return '无法连接到服务器，请检查网络和地址';
+    }
+    if (raw.contains('HandshakeException') ||
+        raw.contains('CERTIFICATE') ||
+        raw.contains('certificate')) {
+      return 'SSL 证书验证失败';
+    }
+    if (raw.contains('TimeoutException') || raw.contains('timed out')) {
+      return '连接超时，请检查网络';
+    }
+    if (raw.contains('DioException') || raw.contains('DioError')) {
+      return '网络请求失败，请稍后重试';
+    }
+    // 截取前 80 个字符，去掉可能含 URL 的部分
+    final safe = raw.replaceAll(RegExp(r'https?://\S+'), '[服务器地址]');
+    return safe.length > 80 ? '${safe.substring(0, 80)}…' : safe;
   }
 
   /// 确保 WebDAV 上特定目录存在，如果不存在则自动创建
