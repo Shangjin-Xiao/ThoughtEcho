@@ -78,67 +78,20 @@ class AppTheme with ChangeNotifier {
     );
   }
 
-  // 修复 Flutter 3.41+ Android variable font 字重视觉偏粗问题
+  // Flutter 3.41+ variable font 字重适配（Android）
   //
-  // 原因：Flutter 3.41 起 FontWeight 自动驱动 variable font 的 wght 轴。
-  // Android 12+ 的 RobotoFlex 字形重绘后，相同 wght 值笔画比旧静态 Roboto 更粗。
+  // 背景：Flutter 3.41 起 FontWeight 自动驱动 variable font wght 轴。
+  // Android 12+ RobotoFlex 字形比旧静态 Roboto 更粗，导致升级后视觉变重。
   //
-  // 方案：在 theme TextTheme 中使用补偿后的 FontWeight 值（Flutter 3.44 支持
-  // 任意 1-1000 整数），引擎会自动映射到 wght 轴。
-  // 优势：widget 层 inline fontWeight 覆盖时，merge 会直接替换 fontWeight，
-  //       不会像 fontVariations 那样从 DefaultTextStyle 泄漏。
+  // 官方建议：逐个调整 FontWeight 值达到期望视觉效果。
+  // 当前状态：暂不在 theme 层做补偿（只改 theme 会导致 theme 文字和
+  //   inline fontWeight 文字粗细不一致，视觉更差）。
+  //   完整修复需审查全部 ~240 处 inline FontWeight 并统一调整。
+  //   详见 squad/font_issue_handoff.md。
   //
-  // 补偿映射（原始 → 补偿后）：
-  //   w400 → 350 (正文：恢复清爽感)
-  //   w500 → 440 (label/title：适度区分)
-  //   其他 → 按比例下调约 10-15%
-  static FontWeight _compensateWeight(FontWeight weight) {
-    const Map<int, int> weightMap = {
-      100: 100,
-      200: 175,
-      300: 260,
-      400: 350,
-      500: 440,
-      600: 540,
-      700: 630,
-      800: 730,
-      900: 830,
-    };
-    final compensated = weightMap[weight.value];
-    if (compensated != null) return FontWeight(compensated);
-    // 非标准字重：按比例缩放 (大约 -12%)
-    final adjusted = (weight.value * 0.88).round().clamp(1, 1000);
-    return FontWeight(adjusted);
-  }
-
-  static TextStyle? _fixWeight(TextStyle? style) {
-    if (style == null) return null;
-    if (kIsWeb || !Platform.isAndroid) return style;
-    final weight = style.fontWeight ?? FontWeight.w400;
-    return style.copyWith(
-      fontWeight: _compensateWeight(weight),
-    );
-  }
-
+  // 平台字体优化入口（目前仅 Windows 生效）
   static TextTheme _fixAndroidVariableFontWeight(TextTheme base) {
-    if (kIsWeb || !Platform.isAndroid) return base;
-    return base.copyWith(
-      displayLarge: _fixWeight(base.displayLarge),
-      displayMedium: _fixWeight(base.displayMedium),
-      displaySmall: _fixWeight(base.displaySmall),
-      headlineLarge: _fixWeight(base.headlineLarge),
-      headlineMedium: _fixWeight(base.headlineMedium),
-      headlineSmall: _fixWeight(base.headlineSmall),
-      titleLarge: _fixWeight(base.titleLarge),
-      titleMedium: _fixWeight(base.titleMedium),
-      titleSmall: _fixWeight(base.titleSmall),
-      bodyLarge: _fixWeight(base.bodyLarge),
-      bodyMedium: _fixWeight(base.bodyMedium),
-      bodySmall: _fixWeight(base.bodySmall),
-      labelLarge: _fixWeight(base.labelLarge),
-      labelMedium: _fixWeight(base.labelMedium),
-      labelSmall: _fixWeight(base.labelSmall),
-    );
+    return base;
   }
 
   static const String _customColorKey = 'custom_color';
