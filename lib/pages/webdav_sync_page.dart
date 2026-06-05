@@ -750,6 +750,40 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
               ],
             ),
 
+            // 同步失败时显示错误摘要（位于冲突区块之前）
+            if (syncService.syncStatus == WebDAVSyncStatus.failed &&
+                syncService.lastSyncError.isNotEmpty) ...[
+              const Divider(height: 24, thickness: 0.8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.errorContainer.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: theme.colorScheme.onErrorContainer,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        syncService.lastSyncError,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onErrorContainer,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             // 如果存在同步冲突，提供专属查看操作区
             if (_hasConflicts) ...[
               const Divider(height: 24, thickness: 0.8),
