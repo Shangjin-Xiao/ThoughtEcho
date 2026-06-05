@@ -15,7 +15,13 @@ void main() {
         date: '2026-05-31',
       );
       final font = pw.Font.helvetica();
-      final widgets = DeltaToPdfParser.parse(quote, font);
+      final fontSet = PdfFontSet(
+        regular: font,
+        bold: pw.Font.helveticaBold(),
+        italic: pw.Font.helveticaOblique(),
+        boldItalic: pw.Font.helveticaBoldOblique(),
+      );
+      final widgets = DeltaToPdfParser.parse(quote, fontSet);
 
       expect(widgets, isNotEmpty);
       expect(widgets.first, isA<pw.Paragraph>());
@@ -30,7 +36,13 @@ void main() {
         deltaContent: deltaJson,
       );
       final font = pw.Font.helvetica();
-      final widgets = DeltaToPdfParser.parse(quote, font);
+      final fontSet = PdfFontSet(
+        regular: font,
+        bold: pw.Font.helveticaBold(),
+        italic: pw.Font.helveticaOblique(),
+        boldItalic: pw.Font.helveticaBoldOblique(),
+      );
+      final widgets = DeltaToPdfParser.parse(quote, fontSet);
 
       expect(widgets, isNotEmpty);
       expect(widgets.first, isA<pw.Container>());

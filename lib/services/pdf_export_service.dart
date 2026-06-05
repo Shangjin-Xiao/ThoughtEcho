@@ -7,13 +7,14 @@ import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/models/note_category.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/delta_to_pdf_parser.dart';
+import 'package:thoughtecho/services/pdf_font_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
 class PdfExportService {
   /// 将一组笔记编译组装成一个符合 A4 标准、排版精致的 PDF 文件字节流
   static Future<Uint8List> exportNotesToPdf(
     List<Quote> quotes,
-    pw.Font font,
+    PdfFontSet fontSet,
     BuildContext context,
   ) async {
     final pdf = pw.Document(
@@ -52,7 +53,10 @@ class PdfExportService {
                 pw.Text(
                   "ThoughtEcho (心迹) — 专属思想摘录本",
                   style: pw.TextStyle(
-                    font: font,
+                    font: fontSet.regular,
+                    fontBold: fontSet.bold,
+                    fontItalic: fontSet.italic,
+                    fontBoldItalic: fontSet.boldItalic,
                     fontSize: 8,
                     color: PdfColors.grey600,
                   ),
@@ -60,7 +64,10 @@ class PdfExportService {
                 pw.Text(
                   "导出日期: ${DateTime.now().toString().substring(0, 10)}",
                   style: pw.TextStyle(
-                    font: font,
+                    font: fontSet.regular,
+                    fontBold: fontSet.bold,
+                    fontItalic: fontSet.italic,
+                    fontBoldItalic: fontSet.boldItalic,
                     fontSize: 8,
                     color: PdfColors.grey600,
                   ),
@@ -76,7 +83,10 @@ class PdfExportService {
             child: pw.Text(
               "第 ${context.pageNumber} 页 / 共 ${context.pagesCount} 页",
               style: pw.TextStyle(
-                font: font,
+                font: fontSet.regular,
+                fontBold: fontSet.bold,
+                fontItalic: fontSet.italic,
+                fontBoldItalic: fontSet.boldItalic,
                 fontSize: 9,
                 color: PdfColors.grey500,
               ),
@@ -112,7 +122,10 @@ class PdfExportService {
                         pw.Text(
                           "📅 ${quote.date.substring(0, 10)} ${quote.dayPeriod ?? ''}",
                           style: pw.TextStyle(
-                            font: font,
+                            font: fontSet.regular,
+                            fontBold: fontSet.bold,
+                            fontItalic: fontSet.italic,
+                            fontBoldItalic: fontSet.boldItalic,
                             fontSize: 10,
                             fontWeight: pw.FontWeight.bold,
                             color: PdfColor.fromHex("4A5568"),
@@ -125,7 +138,10 @@ class PdfExportService {
                               pw.Text(
                                 "☀️ ${quote.weather!} ${quote.temperature ?? ''}",
                                 style: pw.TextStyle(
-                                  font: font,
+                                  font: fontSet.regular,
+                                  fontBold: fontSet.bold,
+                                  fontItalic: fontSet.italic,
+                                  fontBoldItalic: fontSet.boldItalic,
                                   fontSize: 8,
                                   color: PdfColor.fromHex("718096"),
                                 ),
@@ -137,7 +153,10 @@ class PdfExportService {
                               pw.Text(
                                 "📍 ${quote.location}",
                                 style: pw.TextStyle(
-                                  font: font,
+                                  font: fontSet.regular,
+                                  fontBold: fontSet.bold,
+                                  fontItalic: fontSet.italic,
+                                  fontBoldItalic: fontSet.boldItalic,
                                   fontSize: 8,
                                   color: PdfColor.fromHex("718096"),
                                 ),
@@ -152,7 +171,7 @@ class PdfExportService {
                         height: 12),
 
                     // --- 富文本解析出的主体内容段落 ---
-                    ...DeltaToPdfParser.parse(quote, font),
+                    ...DeltaToPdfParser.parse(quote, fontSet),
 
                     // --- 出处作者 ---
                     if (quote.source != null && quote.source!.isNotEmpty) ...[
@@ -162,7 +181,10 @@ class PdfExportService {
                         child: pw.Text(
                           "—— ${quote.source}",
                           style: pw.TextStyle(
-                            font: font,
+                            font: fontSet.italic,
+                            fontBold: fontSet.boldItalic,
+                            fontItalic: fontSet.italic,
+                            fontBoldItalic: fontSet.boldItalic,
                             fontSize: 10,
                             fontStyle: pw.FontStyle.italic,
                             color: PdfColor.fromHex("4A5568"),
@@ -191,7 +213,10 @@ class PdfExportService {
                             child: pw.Text(
                               "🏷️ $tagName",
                               style: pw.TextStyle(
-                                font: font,
+                                font: fontSet.regular,
+                                fontBold: fontSet.bold,
+                                fontItalic: fontSet.italic,
+                                fontBoldItalic: fontSet.boldItalic,
                                 fontSize: 8,
                                 color: PdfColor.fromHex("4A5568"),
                               ),
