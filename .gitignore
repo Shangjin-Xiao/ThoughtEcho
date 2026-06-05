@@ -62,6 +62,7 @@ app.*.map.json
 /android/local.properties
 
 # Platform Build Artifacts
+android/build/
 ios/build/
 windows/build/
 
