@@ -73,6 +73,7 @@ jobs:
         run: |
           flutter --version
           flutter pub get
+          bash scripts/patch_flutter_quill.sh
 
       - name: 静态分析
         run: flutter analyze --no-fatal-warnings --no-fatal-infos
