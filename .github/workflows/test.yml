@@ -45,6 +45,9 @@ jobs:
     - name: Get dependencies
       run: flutter pub get
 
+    - name: Patch flutter_quill
+      run: bash scripts/patch_flutter_quill.sh
+
     - name: Check formatting
       run: dart format --set-exit-if-changed .
 

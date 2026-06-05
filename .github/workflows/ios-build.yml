@@ -28,6 +28,9 @@ jobs:
         
       - name: 安装依赖
         run: flutter pub get
+
+      - name: Patch flutter_quill
+        run: bash scripts/patch_flutter_quill.sh
         
       - name: 代码分析
         run: flutter analyze --no-fatal-infos
