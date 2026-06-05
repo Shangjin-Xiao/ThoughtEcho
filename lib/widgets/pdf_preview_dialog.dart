@@ -30,6 +30,7 @@ class PdfPreviewDialog extends StatelessWidget {
               title: Text(AppLocalizations.of(context).pdfPreviewAndPrint),
               leading: IconButton(
                 icon: const Icon(Icons.close),
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
                 onPressed: () => Navigator.pop(context),
               ),
               elevation: 0,
