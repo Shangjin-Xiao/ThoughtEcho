@@ -326,7 +326,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
             (_currentLevel == UnifiedLogLevel.verbose ||
                 _currentLevel == UnifiedLogLevel.debug)) {
           if (kDebugMode) {
-            print(
+            debugPrint(
               'UnifiedLogService: 检测到日志级别为${_currentLevel.name}，用户未手动设置，重置为info',
             );
           }
@@ -437,8 +437,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
         // 使用 debugPrint 输出到控制台，避免递归
         if (kDebugMode) {
           // 在调试模式下输出到控制台
-          // ignore: avoid_print
-          print(logOutput);
+          debugPrint(logOutput);
         }
       }
 
@@ -941,70 +940,65 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        UnifiedLogLevel.verbose,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    UnifiedLogLevel.verbose,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void debug(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        UnifiedLogLevel.debug,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    UnifiedLogLevel.debug,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void info(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        UnifiedLogLevel.info,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    UnifiedLogLevel.info,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void warning(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        UnifiedLogLevel.warning,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    UnifiedLogLevel.warning,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void error(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        UnifiedLogLevel.error,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    UnifiedLogLevel.error,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   /// 获取日志统计摘要
   Map<String, dynamic> getLogSummary() {
