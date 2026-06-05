@@ -10,45 +10,89 @@ import 'package:pdf/widgets.dart' as pw;
 
 import 'package:thoughtecho/utils/app_logger.dart';
 
+/// 字体数据集合，包含用于创建粗体/斜体/粗斜体变体所需的相同 TTF 数据
+class PdfFontSet {
+  final pw.Font regular;
+  final pw.Font bold;
+  final pw.Font italic;
+  final pw.Font boldItalic;
+
+  const PdfFontSet({
+    required this.regular,
+    required this.bold,
+    required this.italic,
+    required this.boldItalic,
+  });
+}
+
 class PdfFontService {
-  static pw.Font? _cachedFont;
+  static ByteData? _cachedFontData;
 
-  /// 加载最合适的中文字体，检索本地或动态下载缓存，保障 PDF 正确呈现中文字符
-  static Future<pw.Font> loadFont() async {
-    if (_cachedFont != null) {
-      return _cachedFont!;
+  /// 加载字体数据集合，所有变体均指向同一份中文 TTF 数据
+  /// 这可确保 pdf 包在渲染粗体/斜体文字时不会 fallback 到不含 CJK 的内置字体
+  static Future<PdfFontSet> loadFontSet() async {
+    final data = await _loadFontData();
+    if (data != null) {
+      // 同一份数据创建四份独立 pw.Font 实例（pdf 包要求每种变体是独立对象）
+      // 这样即便字体本身不含真正粗体/斜体，中文也不会乱码
+      return PdfFontSet(
+        regular: pw.Font.ttf(data),
+        bold: pw.Font.ttf(data),
+        italic: pw.Font.ttf(data),
+        boldItalic: pw.Font.ttf(data),
+      );
     }
+    // 兜底回退，避免应用崩溃（Helvetica 不含 CJK，仅作最后保底）
+    return PdfFontSet(
+      regular: pw.Font.helvetica(),
+      bold: pw.Font.helveticaBold(),
+      italic: pw.Font.helveticaOblique(),
+      boldItalic: pw.Font.helveticaBoldOblique(),
+    );
+  }
 
+  /// 仅加载 regular 字体，向后兼容接口（优先使用 loadFontSet）
+  static Future<pw.Font> loadFont() async {
+    final data = await _loadFontData();
+    if (data != null) {
+      return pw.Font.ttf(data);
+    }
+    return pw.Font.helvetica();
+  }
+
+  static Future<ByteData?> _loadFontData() async {
+    if (_cachedFontData != null) {
+      return _cachedFontData!;
+    }
     try {
       // 1. 尝试检索 Windows/Android 本地系统自带的中文字体（无网络/极速加载）
       final systemFontData = await _tryLoadLocalSystemFont();
       if (systemFontData != null && isValidFontData(systemFontData)) {
-        _cachedFont = pw.Font.ttf(systemFontData);
+        _cachedFontData = systemFontData;
         logDebug("成功从系统本地路径加载中文字体", source: "PdfFontService");
-        return _cachedFont!;
+        return _cachedFontData!;
       }
 
       // 2. 尝试从应用文档目录中读取已下载并缓存的字体
       final cachedFontData = await _tryLoadCachedFont();
       if (cachedFontData != null && isValidFontData(cachedFontData)) {
-        _cachedFont = pw.Font.ttf(cachedFontData);
+        _cachedFontData = cachedFontData;
         logDebug("成功从应用缓存路径加载中文字体", source: "PdfFontService");
-        return _cachedFont!;
+        return _cachedFontData!;
       }
 
       // 3. 动态下载中文字体并写入缓存
       final downloadedFontData = await _downloadAndCacheFont();
       if (downloadedFontData != null && isValidFontData(downloadedFontData)) {
-        _cachedFont = pw.Font.ttf(downloadedFontData);
+        _cachedFontData = downloadedFontData;
         logDebug("成功动态下载并加载中文字体", source: "PdfFontService");
-        return _cachedFont!;
+        return _cachedFontData!;
       }
     } catch (e, stack) {
-      logError("loadFont 失败，将回退到 PDF 默认系统英文字体", error: e, stackTrace: stack);
+      logError("_loadFontData 失败，将回退到 PDF 默认系统英文字体",
+          error: e, stackTrace: stack);
     }
-
-    // 4. 兜底回退，避免应用崩溃
-    return pw.Font.helvetica();
+    return null;
   }
 
   /// 校验字体数据是否为合法的 TrueType 或 OpenType 格式，排除 TTC 或损坏文件
@@ -100,8 +144,18 @@ class PdfFontService {
         }
       } else if (Platform.isAndroid) {
         final paths = [
-          "/system/fonts/NotoSansSC-Regular.otf",
+          // 优先使用 TTF 格式（pdf 包兼容更好）
           "/system/fonts/DroidSansFallback.ttf",
+          "/system/fonts/DroidSansFallbackFull.ttf",
+          // MIUI / 小米定制系统
+          "/system/fonts/MiLanProVF.ttf",
+          // 华为 EMUI
+          "/system/fonts/HWKangXi.ttf",
+          "/system/fonts/hwKangXi.ttf",
+          // 其他品牌常见路径
+          "/system/fonts/NotoSansCJK-Regular.ttc",
+          // OTF 格式（部分 AOSP 设备）
+          "/system/fonts/NotoSansSC-Regular.otf",
         ];
         for (final p in paths) {
           final f = File(p);

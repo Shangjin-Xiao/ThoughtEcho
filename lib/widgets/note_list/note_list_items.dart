@@ -884,10 +884,10 @@ extension _NoteListItemsExtension on NoteListViewState {
     final l10n = AppLocalizations.of(context);
     try {
       _showLoadingDialog(l10n.generatingPdf);
-      final font = await PdfFontService.loadFont();
+      final fontSet = await PdfFontService.loadFontSet();
       if (!mounted) return;
       final pdfBytes =
-          await PdfExportService.exportNotesToPdf([quote], font, context);
+          await PdfExportService.exportNotesToPdf([quote], fontSet, context);
       if (!mounted) return;
       Navigator.pop(context);
 
@@ -913,10 +913,10 @@ extension _NoteListItemsExtension on NoteListViewState {
       final selectedQuotes = _quotes
           .where((q) => q.id != null && _selectedExportNoteIds.contains(q.id))
           .toList();
-      final font = await PdfFontService.loadFont();
+      final fontSet = await PdfFontService.loadFontSet();
       if (!mounted) return;
       final pdfBytes = await PdfExportService.exportNotesToPdf(
-          selectedQuotes, font, context);
+          selectedQuotes, fontSet, context);
       if (!mounted) return;
       Navigator.pop(context);
 
