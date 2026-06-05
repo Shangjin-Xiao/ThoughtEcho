@@ -1,8 +1,13 @@
 import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/services.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:path_provider/path_provider.dart';
+
 import 'package:dio/dio.dart';
+import 'package:meta/meta.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/widgets.dart' as pw;
+
 import 'package:thoughtecho/utils/app_logger.dart';
 
 class PdfFontService {
@@ -17,7 +22,7 @@ class PdfFontService {
     try {
       // 1. 尝试检索 Windows/Android 本地系统自带的中文字体（无网络/极速加载）
       final systemFontData = await _tryLoadLocalSystemFont();
-      if (systemFontData != null) {
+      if (systemFontData != null && isValidFontData(systemFontData)) {
         _cachedFont = pw.Font.ttf(systemFontData);
         logDebug("成功从系统本地路径加载中文字体", source: "PdfFontService");
         return _cachedFont!;
@@ -25,7 +30,7 @@ class PdfFontService {
 
       // 2. 尝试从应用文档目录中读取已下载并缓存的字体
       final cachedFontData = await _tryLoadCachedFont();
-      if (cachedFontData != null) {
+      if (cachedFontData != null && isValidFontData(cachedFontData)) {
         _cachedFont = pw.Font.ttf(cachedFontData);
         logDebug("成功从应用缓存路径加载中文字体", source: "PdfFontService");
         return _cachedFont!;
@@ -33,7 +38,7 @@ class PdfFontService {
 
       // 3. 动态下载中文字体并写入缓存
       final downloadedFontData = await _downloadAndCacheFont();
-      if (downloadedFontData != null) {
+      if (downloadedFontData != null && isValidFontData(downloadedFontData)) {
         _cachedFont = pw.Font.ttf(downloadedFontData);
         logDebug("成功动态下载并加载中文字体", source: "PdfFontService");
         return _cachedFont!;
@@ -46,14 +51,42 @@ class PdfFontService {
     return pw.Font.helvetica();
   }
 
+  /// 校验字体数据是否为合法的 TrueType 或 OpenType 格式，排除 TTC 或损坏文件
+  @visibleForTesting
+  static bool isValidFontData(ByteData data) {
+    if (data.lengthInBytes < 4) return false;
+    final bytes = data.buffer.asUint8List(data.offsetInBytes, 4);
+    // 排除 TrueType Collection (TTC) 格式，其魔术字为 'ttcf' (0x74746366)
+    if (bytes[0] == 0x74 &&
+        bytes[1] == 0x74 &&
+        bytes[2] == 0x63 &&
+        bytes[3] == 0x66) {
+      return false;
+    }
+    // TrueType (0x00010000)、OpenType ('OTTO') 或 Apple TrueType ('true')
+    final isTtf = bytes[0] == 0x00 &&
+        bytes[1] == 0x01 &&
+        bytes[2] == 0x00 &&
+        bytes[3] == 0x00;
+    final isOtf = bytes[0] == 0x4F &&
+        bytes[1] == 0x54 &&
+        bytes[2] == 0x54 &&
+        bytes[3] == 0x4F;
+    final isAppleTtf = bytes[0] == 0x74 &&
+        bytes[1] == 0x72 &&
+        bytes[2] == 0x75 &&
+        bytes[3] == 0x65;
+    return isTtf || isOtf || isAppleTtf;
+  }
+
   /// 检索 Windows/Android 本地中文字体
   static Future<ByteData?> _tryLoadLocalSystemFont() async {
     try {
       if (Platform.isWindows) {
         final paths = [
-          "C:\\Windows\\Fonts\\msyh.ttc",
+          "C:\\Windows\\Fonts\\simhei.ttf",
+          "C:\\Windows\\Fonts\\deng.ttf",
           "C:\\Windows\\Fonts\\msyh.ttf",
-          "C:\\Windows\\Fonts\\simsun.ttc",
           "C:\\Windows\\Fonts\\simsun.ttf",
         ];
         for (final p in paths) {
@@ -69,7 +102,6 @@ class PdfFontService {
         final paths = [
           "/system/fonts/NotoSansSC-Regular.otf",
           "/system/fonts/DroidSansFallback.ttf",
-          "/system/fonts/NotoSansCJK-Regular.ttc",
         ];
         for (final p in paths) {
           final f = File(p);
