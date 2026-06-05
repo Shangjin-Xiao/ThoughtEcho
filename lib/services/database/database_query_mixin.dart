@@ -362,7 +362,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     args.addAll([limit, offset]);
 
     if (kDebugMode) {
-      logDebug('执行优化查询: $query\n参数: $args');
+      logDebug('执行优化查询: $query\n参数: [REDACTED]');
     }
 
     /// 修复：增强查询性能监控和慢查询检测
@@ -386,7 +386,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
 
       if (queryTime > 500) {
         logDebug('慢查询SQL: $query');
-        logDebug('查询参数: $args');
+        logDebug('查询参数: [REDACTED]');
       }
     }
 
