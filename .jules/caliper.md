@@ -21,3 +21,6 @@
 ## 2026-05-19 - [补充 DailyPromptGenerator 的单元测试]
 **盲点:** `DailyPromptGenerator` 负责根据时间、天气、温度及随机策略生成用户提示语，属于典型的数据驱动纯逻辑，但长期缺乏测试。其内部依赖于未 Mock 的本地化字典和隐式 `DateTime.now()`，可能导致未来迭代或新增语言时，某些边界条件（例如极端温度解析异常）静默崩溃。
 **对策:** 通过自定义简单的 `FakeAppLocalizations` 实现了与 Flutter UI（`AppLocalizations.of(context)`）的环境隔离，并针对日期兜底、天气及城市插入、温度解析等分支进行了纯粹的方法调用验证，提升代码健壮性且不增加集成测试维护成本。
+## 2026-06-02 - [补充 SafeCompute 与 StreamingJsonParser 的测试]
+**盲点:** 核心的 Isolate 包装类（`SafeCompute`）和 IO 密集型功能（`StreamingJsonParser`）缺乏针对不同生命周期及边界条件（如非法文件或超时任务）的独立单元测试覆盖。
+**对策:** 添加针对核心 `Isolate` 的创建、通讯（send/listen）和生命周期管理（kill）测试，确保使用纯 Flutter 测试能力即可运行。对于 `IO` 操作相关的组件，运用临时文件系统结合流式解析接口补充覆盖率，避免直接改动现存系统业务代码。
