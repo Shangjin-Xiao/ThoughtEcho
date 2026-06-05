@@ -521,6 +521,7 @@ class AINetworkManager {
       logError(
         'AI Request Error: Not a DioException',
         error: error,
+        source: 'AINetworkManager',
       );
       return Exception('未知错误: ${error.toString()}');
     }
