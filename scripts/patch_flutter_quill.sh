@@ -19,8 +19,8 @@ FILE=$(find "$CACHE_DIR" -path "*/flutter_quill-*/lib/src/editor/raw_editor/raw_
 if [ -n "$FILE" ] && [ -f "$FILE" ]; then
   if ! grep -q "onFocusReceived" "$FILE"; then
     echo "Patching flutter_quill in $FILE"
-    # Insert the missing method inside QuillRawEditorState class
-    sed -i -e '/class QuillRawEditorState extends EditorState/a \ \ @override\n  bool onFocusReceived() => false;' "$FILE"
+    # Insert the missing method inside QuillRawEditorState class safely
+    sed -i -e '/final GlobalKey _editorKey = GlobalKey();/a \ \ @override\n  bool onFocusReceived() => false;' "$FILE"
     echo "Patch applied successfully."
   else
     echo "flutter_quill is already patched."
