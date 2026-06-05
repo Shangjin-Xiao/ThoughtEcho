@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:thoughtecho/models/quote_model.dart';
@@ -40,6 +41,32 @@ void main() {
         () async {
       final font = await PdfFontService.loadFont();
       expect(font, isNotNull);
+    });
+
+    test('PdfFontService.isValidFontData validates font headers correctly', () {
+      // 1. Valid TTF (0x00010000)
+      final validTtf = ByteData(4)..setUint32(0, 0x00010000);
+      expect(PdfFontService.isValidFontData(validTtf), isTrue);
+
+      // 2. Valid OTF ('OTTO')
+      final validOtf = ByteData(4)..setUint32(0, 0x4F54544F);
+      expect(PdfFontService.isValidFontData(validOtf), isTrue);
+
+      // 3. Valid Apple TTF ('true')
+      final validAppleTtf = ByteData(4)..setUint32(0, 0x74727565);
+      expect(PdfFontService.isValidFontData(validAppleTtf), isTrue);
+
+      // 4. Invalid TTC ('ttcf')
+      final invalidTtc = ByteData(4)..setUint32(0, 0x74746366);
+      expect(PdfFontService.isValidFontData(invalidTtc), isFalse);
+
+      // 5. Too short
+      final tooShort = ByteData(3);
+      expect(PdfFontService.isValidFontData(tooShort), isFalse);
+
+      // 6. Arbitrary bad header
+      final badHeader = ByteData(4)..setUint32(0, 0x12345678);
+      expect(PdfFontService.isValidFontData(badHeader), isFalse);
     });
   });
 }
