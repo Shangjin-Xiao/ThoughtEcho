@@ -16,10 +16,35 @@ class ContentSanitizer {
       "img-src data: https:; font-src data: https:; connect-src 'none'; "
       "media-src 'none'; frame-src 'none'; child-src 'none';";
 
+  // Optimization: Extract RegExp to static final fields to avoid repeated parsing
+  // and compilation overhead on every invocation of injectCsp.
+  static final RegExp _cspMetaRegex = RegExp(
+    r'<meta[^>]*http-equiv=["'
+    "'"
+    r']?Content-Security-Policy["'
+    "'"
+    r']?[^>]*>',
+    caseSensitive: false,
+  );
+
+  static final RegExp _scriptRegex = RegExp(
+    r'<script\b[^>]*>[\s\S]*?</script>',
+    caseSensitive: false,
+  );
+
+  static final RegExp _headRegex =
+      RegExp(r'(<head[^>]*>)', caseSensitive: false);
+
+  static final RegExp _htmlRegex =
+      RegExp(r'(<html[^>]*>)', caseSensitive: false);
+
+  static final RegExp _doctypeRegex =
+      RegExp(r'(<!doctype[^>]*>)', caseSensitive: false);
+
   /// Injects a Content Security Policy (CSP) meta tag into the HTML content.
   ///
-  /// If the HTML already contains a CSP meta tag, it returns the content unchanged.
-  /// Otherwise, it injects the tag into the `<head>` section.
+  /// If the HTML already contains a CSP meta tag, it removes it first to prevent
+  /// attacker bypass, then injects the safe CSP tag into the `<head>` section.
   static String injectCsp(String html) {
     if (html.isEmpty) return html;
 
@@ -29,39 +54,27 @@ class ContentSanitizer {
     String sanitized = html;
 
     // 1. Remove any existing CSP meta tags to prevent attacker bypass
-    sanitized = sanitized.replaceAll(
-        RegExp(
-            r'<meta[^>]*http-equiv=["'
-            "'"
-            r']?Content-Security-Policy["'
-            "'"
-            r']?[^>]*>',
-            caseSensitive: false),
-        '');
+    sanitized = sanitized.replaceAll(_cspMetaRegex, '');
 
     // 2. Strip <script> tags as an additional layer of defense
-    sanitized = sanitized.replaceAll(
-        RegExp(r'<script\b[^>]*>[\s\S]*?</script>', caseSensitive: false), '');
+    sanitized = sanitized.replaceAll(_scriptRegex, '');
 
     // Try to find <head> tag (case-insensitive), preserving attributes
-    final headRegex = RegExp(r'(<head[^>]*>)', caseSensitive: false);
-    if (headRegex.hasMatch(sanitized)) {
+    if (_headRegex.hasMatch(sanitized)) {
       return sanitized.replaceFirstMapped(
-          headRegex, (match) => '${match.group(0)}\n    $cspTag');
+          _headRegex, (match) => '${match.group(0)}\n    $cspTag');
     }
 
     // Try to find <html> tag, preserving attributes
-    final htmlRegex = RegExp(r'(<html[^>]*>)', caseSensitive: false);
-    if (htmlRegex.hasMatch(sanitized)) {
-      return sanitized.replaceFirstMapped(htmlRegex,
+    if (_htmlRegex.hasMatch(sanitized)) {
+      return sanitized.replaceFirstMapped(_htmlRegex,
           (match) => '${match.group(0)}\n<head>\n    $cspTag\n</head>');
     }
 
     // Try to find doctype tag, preserving attributes
-    final doctypeRegex = RegExp(r'(<!doctype[^>]*>)', caseSensitive: false);
-    if (doctypeRegex.hasMatch(sanitized)) {
+    if (_doctypeRegex.hasMatch(sanitized)) {
       return sanitized.replaceFirstMapped(
-          doctypeRegex, (match) => '${match.group(0)}\n$cspTag');
+          _doctypeRegex, (match) => '${match.group(0)}\n$cspTag');
     }
 
     // If no structure, just prepend it
