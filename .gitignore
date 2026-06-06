@@ -297,3 +297,6 @@ windows/flutter/generated_plugin_registrant.h
 # Dart DevTools exports
 dart_devtools_*
 
+# Project local worktrees
+.worktrees/
+worktrees/
