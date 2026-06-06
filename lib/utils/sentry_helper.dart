@@ -42,6 +42,8 @@ class SentryHelper {
           options.dsn = dsn;
           options.tracesSampleRate =
               kDebugMode ? 1.0 : 0.2; // 开启性能监控，生产环境采用较低采样率
+          options.profilesSampleRate =
+              kDebugMode ? 1.0 : 0.2; // 开启函数级性能分析 (Profiling)
           options.environment = kDebugMode ? 'debug' : 'production';
           // 仅开启必要级别的打印调试
           options.debug = kDebugMode;
