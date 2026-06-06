@@ -662,11 +662,15 @@ class WebDAVSyncService extends ChangeNotifier {
         where: 'quote_id = ?',
         whereArgs: [quoteId],
       );
-      for (final tag in tags) {
-        await db.insert('quote_tags', {
-          'quote_id': clonedId,
-          'tag_id': tag['tag_id'],
-        });
+      if (tags.isNotEmpty) {
+        final batch = db.batch();
+        for (final tag in tags) {
+          batch.insert('quote_tags', {
+            'quote_id': clonedId,
+            'tag_id': tag['tag_id'],
+          });
+        }
+        await batch.commit(noResult: true);
       }
 
       logDebug('已成功为冲突的笔记创建冲突隔离备份: $clonedId');

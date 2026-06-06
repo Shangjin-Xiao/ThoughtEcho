@@ -220,8 +220,7 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
           style: Theme.of(context)
               .textTheme
               .titleSmall
-              ?.copyWith(
-                  color: result.isSuccess ? Colors.green : Colors.red),
+              ?.copyWith(color: result.isSuccess ? Colors.green : Colors.red),
         ),
         const SizedBox(height: 8),
         ...result.steps.map(

@@ -407,10 +407,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                 ),
                 Text(
                   '${_currentPage + 1} / 7',
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: isDark ? Colors.white70 : Colors.black54,
                       ),
                 ),
