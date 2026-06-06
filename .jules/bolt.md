@@ -11,3 +11,8 @@
 ## 2024-05-30 - 优化 database_backup_service 中的降级插入性能
 **Learning:** The fallback block for database record insertion was incorrectly using sequential `await txn.insert()` for every tag of every quote. Although the initial quote array batch failed forcing this fallback, making another N+1 sequential request inside the fallback loop compounded the performance issue significantly.
 **Action:** Removed the sequential `txn.insert` call inside the tag resolution loop. Appended the records to `tagRelations` which is eventually processed by an existing, outer batched `txn.batch()` execution.
+## 2024-05-30 - 优化 ContentSanitizer 正则表达式编译性能
+**Learning:**
+在处理基于字符串分析的操作时（如 `injectCsp` 等方法），如果内联声明 `RegExp(...)`，Dart 会在每次调用方法时重新解析和编译正则表达式对象。尽管内部有一定缓存，但对于存在多次替换操作（如连续调用 `replaceAll` 和 `replaceFirstMapped`），频繁的对象分配和匹配查找依然会构成性能开销。
+**Action:**
+将 `injectCsp` 方法体内的所有用于 CSP 标签过滤、 `<script>` 标签清除以及 `<head>` 和 `<html>` 标签查找的正则表达式提取为类的 `static final RegExp` 字段。这种模式确保它们只会在类第一次被加载时进行编译（单次分配），避免了每次执行清理操作时重复实例化对象的问题，并更新了受影响的单元测试。

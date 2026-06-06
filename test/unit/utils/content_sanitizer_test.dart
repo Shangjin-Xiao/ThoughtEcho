@@ -7,7 +7,7 @@ void main() {
     const expectedCspTag =
         '<meta http-equiv="Content-Security-Policy" content="$expectedCspContent">';
 
-    test('injectCsp returns unchanged HTML if CSP already exists', () {
+    test('injectCsp replaces existing CSP to prevent attacker bypass', () {
       const html = '''
 <!DOCTYPE html>
 <html>
@@ -18,7 +18,18 @@ void main() {
 <body>Hello</body>
 </html>
 ''';
-      expect(ContentSanitizer.injectCsp(html), html);
+      final expectedHtml = '''
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; object-src 'none'; style-src 'unsafe-inline'; img-src data: https:; font-src data: https:; connect-src 'none'; media-src 'none'; frame-src 'none'; child-src 'none';">
+
+    <title>Test</title>
+</head>
+<body>Hello</body>
+</html>
+''';
+      expect(ContentSanitizer.injectCsp(html), expectedHtml);
     });
 
     test('injectCsp injects CSP into existing <head>', () {
