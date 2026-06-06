@@ -88,6 +88,8 @@ dependencies:
   printing: ^5.14.3
   connectivity_plus: ^7.1.1
   sentry_flutter: ^9.0.0
+  sentry_dio: ^9.0.0
+  sentry_sqflite: ^9.0.0
 
 dev_dependencies:
   flutter_test:

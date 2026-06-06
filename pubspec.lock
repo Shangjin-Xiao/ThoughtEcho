@@ -1972,11 +1972,27 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "9.21.0"
+  sentry_dio:
+    dependency: "direct main"
+    description:
+      name: sentry_dio
+      sha256: "19684044e0a37a8b7166b6098a6e3161b3de49df2a3451f1348c9300cb14f61f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "9.21.0"
   sentry_flutter:
     dependency: "direct main"
     description:
       name: sentry_flutter
       sha256: fc14658d90645e83e2305e8300513d5633aa5cd2cbf5b5d805e78416acbc61e9
+      url: "https://pub.dev"
+    source: hosted
+    version: "9.21.0"
+  sentry_sqflite:
+    dependency: "direct main"
+    description:
+      name: sentry_sqflite
+      sha256: "707f8219189063121a73224333c32b8525bf23144ee774f4836ac53e94732dc9"
       url: "https://pub.dev"
     source: hosted
     version: "9.21.0"
