@@ -127,7 +127,7 @@ class PdfFontService {
     return isTtf || isOtf || isAppleTtf;
   }
 
-  /// 检索 Windows/Android 本地中文字体
+  /// 检索 Windows/Android/Linux 本地中文字体
   static Future<ByteData?> _tryLoadLocalSystemFont() async {
     try {
       if (Platform.isWindows) {
@@ -175,6 +175,22 @@ class PdfFontService {
             }
           }
         }
+      } else if (Platform.isLinux) {
+        final paths = [
+          "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+          "/usr/share/fonts/truetype/droid/DroidSansFallback.ttf",
+          "/usr/share/fonts/truetype/wqy/wqy-microhei.ttf",
+          "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttf",
+        ];
+        for (final p in paths) {
+          final f = File(p);
+          if (await f.exists()) {
+            final bytes = await f.readAsBytes();
+            if (bytes.isNotEmpty) {
+              return ByteData.view(bytes.buffer);
+            }
+          }
+        }
       }
     } catch (e) {
       logDebug("本地系统中文字体检索异常: $e", source: "PdfFontService");
@@ -203,9 +219,9 @@ class PdfFontService {
   /// 提供了国内 CDN 镜像作为备选，且设置了超时时间以防无响应挂起
   static Future<ByteData?> _downloadAndCacheFont() async {
     final urls = [
-      "https://fonts.geekzu.org/s/zcoolxiaowei/v13/q5uD35KLXuK6LALR-3uPA4vS0D2d2tL5.ttf",
-      "https://fonts.loli.net/s/zcoolxiaowei/v13/q5uD35KLXuK6LALR-3uPA4vS0D2d2tL5.ttf",
-      "https://fonts.gstatic.com/s/zcoolxiaowei/v13/q5uD35KLXuK6LALR-3uPA4vS0D2d2tL5.ttf",
+      "https://fonts.geekzu.org/s/zcoolxiaowei/v15/i7dMIFFrTRywPpUVX9_RJyM1YFI.ttf",
+      "https://fonts.loli.net/s/zcoolxiaowei/v15/i7dMIFFrTRywPpUVX9_RJyM1YFI.ttf",
+      "https://fonts.gstatic.com/s/zcoolxiaowei/v15/i7dMIFFrTRywPpUVX9_RJyM1YFI.ttf",
     ];
 
     final dio = Dio(BaseOptions(
