@@ -888,6 +888,10 @@ extension _NoteListItemsExtension on NoteListViewState {
       if (!mounted) return;
       Navigator.pop(context);
 
+      if (fontSet.isFallback) {
+        _showInfoSnackBar(l10n.pdfFontFallbackWarning);
+      }
+
       showDialog(
         context: context,
         builder: (context) => PdfPreviewDialog(
@@ -921,6 +925,10 @@ extension _NoteListItemsExtension on NoteListViewState {
         _isExportMode = false;
         _selectedExportNoteIds.clear();
       });
+
+      if (fontSet.isFallback) {
+        _showInfoSnackBar(l10n.pdfFontFallbackWarning);
+      }
 
       showDialog(
         context: context,

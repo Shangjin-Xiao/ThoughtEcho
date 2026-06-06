@@ -8,7 +8,9 @@ import 'package:thoughtecho/models/note_category.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/delta_to_pdf_parser.dart';
 import 'package:thoughtecho/services/pdf_font_service.dart';
+import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/time_utils.dart';
 
 class PdfExportService {
   /// 将一组笔记编译组装成一个符合 A4 标准、排版精致的 PDF 文件字节流
@@ -99,7 +101,7 @@ class PdfExportService {
             ),
           );
         },
-        build: (pw.Context context) {
+        build: (pw.Context pdfContext) {
           final List<pw.Widget> content = [];
 
           for (int i = 0; i < quotes.length; i++) {
@@ -126,7 +128,7 @@ class PdfExportService {
                       children: [
                         // 日期与时间段
                         pw.Text(
-                          "📅 ${quote.date.substring(0, 10)} ${quote.dayPeriod ?? ''}",
+                          "📅 ${quote.date.substring(0, 10)}${quote.dayPeriod != null ? ' ${TimeUtils.getLocalizedDayPeriodLabel(context, quote.dayPeriod!)}' : ''}",
                           style: pw.TextStyle(
                             font: fontSet.regular,
                             fontBold: fontSet.bold,
@@ -142,7 +144,7 @@ class PdfExportService {
                           children: [
                             if (quote.weather != null) ...[
                               pw.Text(
-                                "☀️ ${quote.weather!} ${quote.temperature ?? ''}",
+                                "☀️ ${WeatherService.getLocalizedWeatherLabel(context, quote.weather!)} ${quote.temperature ?? ''}",
                                 style: pw.TextStyle(
                                   font: fontSet.regular,
                                   fontBold: fontSet.bold,

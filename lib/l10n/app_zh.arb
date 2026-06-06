@@ -3752,6 +3752,7 @@
   "pleaseSelectAtLeastOneNote": "请先选择至少一条笔记",
   "selectedNotesHaveNoCategories": "所选笔记没有分类标签",
   "pdfPreviewAndPrint": "PDF 预览 & 打印",
+  "pdfFontFallbackWarning": "未检测到中文字体，中文内容可能会显示为乱码。请检查网络后重试。",
   "webdavSyncOnCellular": "允许数据流量下同步",
   "webdavSyncOnCellularSubtitle": "允许在移动数据网络下进行云端备份和合并",
   "webdavSyncNotesOnlyOnCellular": "数据流量下仅同步笔记",

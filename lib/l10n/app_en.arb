@@ -3752,6 +3752,7 @@
   "pleaseSelectAtLeastOneNote": "Please select at least one note first",
   "selectedNotesHaveNoCategories": "Selected notes have no category tags",
   "pdfPreviewAndPrint": "PDF Preview & Print",
+  "pdfFontFallbackWarning": "No Chinese font detected. Chinese content may display as gibberish. Please check your network and try again.",
   "webdavSyncOnCellular": "Sync over cellular data",
   "webdavSyncOnCellularSubtitle": "Allow cloud backup and merge under mobile data networks",
   "webdavSyncNotesOnlyOnCellular": "Sync notes only on cellular",

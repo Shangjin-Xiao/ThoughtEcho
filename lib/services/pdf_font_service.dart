@@ -16,12 +16,14 @@ class PdfFontSet {
   final pw.Font bold;
   final pw.Font italic;
   final pw.Font boldItalic;
+  final bool isFallback;
 
   const PdfFontSet({
     required this.regular,
     required this.bold,
     required this.italic,
     required this.boldItalic,
+    this.isFallback = false,
   });
 }
 
@@ -40,6 +42,7 @@ class PdfFontService {
         bold: pw.Font.ttf(data),
         italic: pw.Font.ttf(data),
         boldItalic: pw.Font.ttf(data),
+        isFallback: false,
       );
     }
     // 兜底回退，避免应用崩溃（Helvetica 不含 CJK，仅作最后保底）
@@ -48,6 +51,7 @@ class PdfFontService {
       bold: pw.Font.helveticaBold(),
       italic: pw.Font.helveticaOblique(),
       boldItalic: pw.Font.helveticaBoldOblique(),
+      isFallback: true,
     );
   }
 
@@ -144,7 +148,16 @@ class PdfFontService {
         }
       } else if (Platform.isAndroid) {
         final paths = [
-          // 优先使用 TTF 格式（pdf 包兼容更好）
+          // 优先使用 TTF/OTF 格式（pdf 包兼容更好，排除了不支持的 TTC 格式）
+          "/system/fonts/NotoSansSC-Regular.otf",
+          "/system/fonts/NotoSansSC-Regular.ttf",
+          "/system/fonts/SourceHanSansCN-Regular.otf",
+          "/system/fonts/SourceHanSans-Regular.ttf",
+          "/system/fonts/SourceHanSansSC-Regular.otf",
+          "/system/fonts/SourceHanSansTC-Regular.otf",
+          "/system/fonts/NotoSansCJKsc-Regular.otf",
+          "/system/fonts/NotoSansCJKtc-Regular.otf",
+          "/system/fonts/NotoSansCJK-Regular.otf",
           "/system/fonts/DroidSansFallback.ttf",
           "/system/fonts/DroidSansFallbackFull.ttf",
           // MIUI / 小米定制系统
@@ -152,10 +165,6 @@ class PdfFontService {
           // 华为 EMUI
           "/system/fonts/HWKangXi.ttf",
           "/system/fonts/hwKangXi.ttf",
-          // 其他品牌常见路径
-          "/system/fonts/NotoSansCJK-Regular.ttc",
-          // OTF 格式（部分 AOSP 设备）
-          "/system/fonts/NotoSansSC-Regular.otf",
         ];
         for (final p in paths) {
           final f = File(p);
@@ -191,26 +200,43 @@ class PdfFontService {
   }
 
   /// 从公共 CDN 动态下载小巧精美且支持中文的 TrueType 字体（站酷小薇，约 2.0MB）
+  /// 提供了国内 CDN 镜像作为备选，且设置了超时时间以防无响应挂起
   static Future<ByteData?> _downloadAndCacheFont() async {
-    final url =
-        "https://fonts.gstatic.com/s/zcoolxiaowei/v13/q5uD35KLXuK6LALR-3uPA4vS0D2d2tL5.ttf";
-    try {
-      logDebug("开始网络下载中文字体: $url", source: "PdfFontService");
-      final dio = Dio();
-      final response = await dio.get<List<int>>(
-        url,
-        options: Options(responseType: ResponseType.bytes),
-      );
-      if (response.data != null && response.data!.isNotEmpty) {
-        final bytes = Uint8List.fromList(response.data!);
-        final docDir = await getApplicationDocumentsDirectory();
-        final fontFile = File("${docDir.path}/cached_chinese_font.ttf");
-        await fontFile.writeAsBytes(bytes);
-        logDebug("中文字体下载成功，并已缓存至: ${fontFile.path}", source: "PdfFontService");
-        return ByteData.view(bytes.buffer);
+    final urls = [
+      "https://fonts.geekzu.org/s/zcoolxiaowei/v13/q5uD35KLXuK6LALR-3uPA4vS0D2d2tL5.ttf",
+      "https://fonts.loli.net/s/zcoolxiaowei/v13/q5uD35KLXuK6LALR-3uPA4vS0D2d2tL5.ttf",
+      "https://fonts.gstatic.com/s/zcoolxiaowei/v13/q5uD35KLXuK6LALR-3uPA4vS0D2d2tL5.ttf",
+    ];
+
+    final dio = Dio(BaseOptions(
+      connectTimeout: const Duration(seconds: 8),
+      receiveTimeout: const Duration(seconds: 15),
+    ));
+
+    for (final url in urls) {
+      try {
+        logDebug("开始网络下载中文字体: $url", source: "PdfFontService");
+        final response = await dio.get<List<int>>(
+          url,
+          options: Options(responseType: ResponseType.bytes),
+        );
+        if (response.data != null && response.data!.isNotEmpty) {
+          final bytes = Uint8List.fromList(response.data!);
+          final byteData = ByteData.view(bytes.buffer);
+          if (isValidFontData(byteData)) {
+            final docDir = await getApplicationDocumentsDirectory();
+            final fontFile = File("${docDir.path}/cached_chinese_font.ttf");
+            await fontFile.writeAsBytes(bytes);
+            logDebug("中文字体下载成功，并已缓存至: ${fontFile.path}",
+                source: "PdfFontService");
+            return byteData;
+          } else {
+            logDebug("下载的字体数据格式无效，跳过该源: $url", source: "PdfFontService");
+          }
+        }
+      } catch (e) {
+        logDebug("从 $url 下载中文字体失败: $e", source: "PdfFontService");
       }
-    } catch (e) {
-      logDebug("网络下载字体失败: $e", source: "PdfFontService");
     }
     return null;
   }
