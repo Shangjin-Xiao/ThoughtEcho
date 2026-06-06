@@ -105,9 +105,6 @@ class NoteListViewState extends State<NoteListView> {
   /// 事件驱动：首批数据加载完成信号，替代忙等轮询
   Completer<void>? _initialDataCompleter = Completer<void>();
 
-  // AI搜索模式标志
-  bool _isAISearchMode = false;
-
   // PDF 导出选择模式状态
   bool _isExportMode = false;
   final Set<String> _selectedExportNoteIds = {};

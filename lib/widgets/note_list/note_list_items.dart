@@ -79,51 +79,6 @@ extension _NoteListItemsExtension on NoteListViewState {
                         suffixIcon: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // AI搜索切换按钮
-                            Consumer<SettingsService>(
-                              builder: (context, settings, _) {
-                                final localAI = settings.localAISettings;
-                                // 只有启用了本地AI和AI搜索功能才显示
-                                if (localAI.enabled &&
-                                    localAI.aiSearchEnabled) {
-                                  return IconButton(
-                                    icon: Icon(
-                                      _isAISearchMode
-                                          ? Icons.auto_awesome
-                                          : Icons.search,
-                                      color: _isAISearchMode
-                                          ? theme.colorScheme.primary
-                                          : null,
-                                    ),
-                                    tooltip: _isAISearchMode
-                                        ? l10n.aiSearchMode
-                                        : l10n.normalSearchMode,
-                                    onPressed: () {
-                                      _updateState(() {
-                                        _isAISearchMode = !_isAISearchMode;
-                                      });
-                                      // 如果有搜索词，重新搜索
-                                      if (_searchController.text.isNotEmpty) {
-                                        _onSearchChanged(
-                                            _searchController.text);
-                                      }
-                                    },
-                                  );
-                                }
-                                return const SizedBox.shrink();
-                              },
-                            ),
-                            // PDF 导出选择模式入口按钮
-                            IconButton(
-                              icon: const Icon(Icons.picture_as_pdf_outlined),
-                              tooltip: l10n.pdfExportSelectionMode,
-                              onPressed: () {
-                                _updateState(() {
-                                  _isExportMode = true;
-                                  _selectedExportNoteIds.clear();
-                                });
-                              },
-                            ),
                             // 筛选按钮
                             IconButton(
                               key: widget.filterButtonKey, // 功能引导 key
@@ -619,7 +574,15 @@ extension _NoteListItemsExtension on NoteListViewState {
                     onGenerateCard: widget.onGenerateCard != null
                         ? () => widget.onGenerateCard!(quote)
                         : null,
-                    onExportPdf: () => _exportSingleNoteToPdf(quote),
+                    onExportPdf: () {
+                      _updateState(() {
+                        _isExportMode = true;
+                        _selectedExportNoteIds.clear();
+                        if (quote.id != null) {
+                          _selectedExportNoteIds.add(quote.id!);
+                        }
+                      });
+                    },
                     onFavorite: widget.onFavorite != null
                         ? () => widget.onFavorite!(quote)
                         : null,
@@ -875,35 +838,6 @@ extension _NoteListItemsExtension on NoteListViewState {
         duration: const Duration(seconds: 2),
       ),
     );
-  }
-
-  Future<void> _exportSingleNoteToPdf(Quote quote) async {
-    final l10n = AppLocalizations.of(context);
-    try {
-      _showLoadingDialog(l10n.generatingPdf);
-      final fontSet = await PdfFontService.loadFontSet();
-      if (!mounted) return;
-      final pdfBytes =
-          await PdfExportService.exportNotesToPdf([quote], fontSet, context);
-      if (!mounted) return;
-      Navigator.pop(context);
-
-      if (fontSet.isFallback) {
-        _showInfoSnackBar(l10n.pdfFontFallbackWarning);
-      }
-
-      showDialog(
-        context: context,
-        builder: (context) => PdfPreviewDialog(
-          pdfBytes: pdfBytes,
-          fileName: "thoughtecho_note_${quote.id ?? 'single'}.pdf",
-        ),
-      );
-    } catch (e, stack) {
-      logError("ExportSingleNoteToPdf", error: e, stackTrace: stack);
-      if (mounted) Navigator.pop(context);
-      _showInfoSnackBar(l10n.pdfExportFailed(e.toString()));
-    }
   }
 
   Future<void> _exportSelectedNotesToPdf() async {
