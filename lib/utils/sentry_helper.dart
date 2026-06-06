@@ -68,10 +68,11 @@ class SentryHelper {
       if (_initialized) {
         try {
           await Sentry.close();
-          _initialized = false;
           logInfo('Sentry 关闭成功', source: 'BackgroundInit');
         } catch (e) {
           logWarning('Sentry 关闭失败: $e', source: 'BackgroundInit');
+        } finally {
+          _initialized = false;
         }
       }
     }
