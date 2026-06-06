@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+
 import 'package:provider/provider.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+
 import 'package:thoughtecho/constants/app_constants.dart';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
@@ -117,6 +120,51 @@ class FeedbackContactPage extends StatelessWidget {
                   subtitle: Text(l10n.feedbackEmailDesc),
                   trailing: const Icon(Icons.open_in_new, size: 18),
                   onTap: () => _launchUrl(context, _emailUrl),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Text(
+                    l10n.feedbackSentryTitle,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: colorScheme.primary,
+                        ),
+                  ),
+                ),
+                const Divider(indent: 16, endIndent: 16),
+                Consumer<SettingsService>(
+                  builder: (context, settingsService, _) {
+                    final isEnabled = settingsService.sentryEnabled;
+                    return ListTile(
+                      enabled: isEnabled,
+                      leading: Icon(
+                        Icons.rate_review_outlined,
+                        color: isEnabled ? colorScheme.primary : null,
+                      ),
+                      title: Text(l10n.feedbackSentryDesc),
+                      subtitle: isEnabled
+                          ? null
+                          : Text(
+                              l10n.feedbackSentryDisabledHint,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: colorScheme.error,
+                                  ),
+                            ),
+                      onTap: isEnabled
+                          ? () => SentryFeedbackForm.show(context)
+                          : null,
+                    );
+                  },
                 ),
               ],
             ),
