@@ -384,10 +384,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                     const SizedBox(width: 6),
                     Text(
                       widget.trashRemainingDaysText ?? '',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: theme.colorScheme.error,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: theme.textTheme.labelMedium
+                          ?.copyWith(color: theme.colorScheme.error),
                     ),
                     const Spacer(),
                     Text(
@@ -996,12 +994,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                           quote.favoriteCount > 99
                                               ? '99+'
                                               : '${quote.favoriteCount}',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                            height: 1.0,
-                                          ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelSmall
+                                              ?.copyWith(
+                                                  color: Colors.white,
+                                                  height: 1.0),
                                           textAlign: TextAlign.center,
                                         ),
                                       ),

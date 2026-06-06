@@ -19,7 +19,7 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
           children: [
             Text(
               l10n.locationAndWeather,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const Spacer(),
             // 编辑模式提示

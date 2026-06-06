@@ -354,9 +354,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                 children: [
                   Text(
                     l10n.smartPushEnable,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: theme.textTheme.titleMedium,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -449,10 +447,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                 const SizedBox(width: 8),
                 Text(
                   l10n.smartPushContentType,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.primary,
-                  ),
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(color: colorScheme.primary),
                 ),
               ],
             ),
@@ -548,7 +544,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                           title,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: isSelected
-                                ? FontWeight.w600
+                                ? FontWeight.w500
                                 : FontWeight.normal,
                           ),
                         ),
@@ -564,10 +560,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                             ),
                             child: Text(
                               AppLocalizations.of(context).recommended,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.w500,
-                              ),
+                              style: theme.textTheme.labelSmall
+                                  ?.copyWith(color: colorScheme.primary),
                             ),
                           ),
                         ],
@@ -617,10 +611,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                 const SizedBox(width: 8),
                 Text(
                   l10n.smartPushTimeSettings,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.primary,
-                  ),
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(color: colorScheme.primary),
                 ),
               ],
             ),
@@ -674,18 +666,15 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
             child: Text(
               slot.periodDescription,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: slot.enabled
-                    ? colorScheme.primary
-                    : colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
-              ),
+                  color: slot.enabled
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant),
             ),
           ),
         ),
         title: Text(
           slot.formattedTime,
           style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
@@ -771,10 +760,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                 const SizedBox(width: 8),
                 Text(
                   l10n.smartPushFrequency,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.primary,
-                  ),
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(color: colorScheme.primary),
                 ),
               ],
             ),
@@ -865,10 +852,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                   const SizedBox(width: 8),
                   Text(
                     l10n.smartPushAdvancedOptions,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.primary,
-                    ),
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(color: colorScheme.primary),
                   ),
                   const Spacer(),
                   AnimatedRotation(
@@ -897,9 +882,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                   if (_settings.pushMode != PushMode.dailyQuote) ...[
                     Text(
                       l10n.smartPushPastNoteTypes,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 8),
                     Wrap(
@@ -939,9 +922,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                       .contains(PastNoteType.sameWeather)) ...[
                     Text(
                       l10n.smartPushWeatherFilter,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 8),
                     Wrap(
@@ -976,9 +957,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                   // 标签筛选
                   Text(
                     l10n.smartPushTagFilter,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: theme.textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -1086,9 +1065,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                 children: [
                   Text(
                     l10n.smartPushNotice,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: theme.textTheme.titleSmall,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -1256,10 +1233,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                 Expanded(
                   child: Text(
                     l10n.smartPushDailyQuote,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.primary,
-                    ),
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(color: colorScheme.primary),
                   ),
                 ),
                 Switch(
@@ -1299,10 +1274,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                         children: [
                           Text(
                             _settings.dailyQuotePushTime.formattedTime,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: colorScheme.primary,
-                            ),
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(color: colorScheme.primary),
                           ),
                           const SizedBox(width: 8),
                           Icon(Icons.edit_outlined,
@@ -1374,10 +1347,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                       Expanded(
                         child: Text(
                           l10n.smartPushPermissionWarningTitle,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: colorScheme.onErrorContainer,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(color: colorScheme.onErrorContainer),
                         ),
                       ),
                     ],
@@ -1617,18 +1588,14 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
               ),
               child: Text(
                 displayManufacturer,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: theme.textTheme.labelMedium
+                    ?.copyWith(color: colorScheme.onPrimaryContainer),
               ),
             ),
             const SizedBox(height: 16),
             Text(
               l10n.smartPushAutoStartInstructions,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 8),
             Container(

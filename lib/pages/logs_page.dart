@@ -1046,10 +1046,7 @@ class _LogEntryItem extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   log.level.name.toUpperCase(),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: logColor,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: theme.textTheme.labelSmall?.copyWith(color: logColor),
                 ),
                 const SizedBox(width: 8),
                 if (log.source != null && log.source!.isNotEmpty)

@@ -177,11 +177,10 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
                     children: [
                       Text(
                         l10n.yearAIAnnualReport(widget.year.toString()),
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onPrimary,
-                        ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(color: colorScheme.onPrimary),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -246,11 +245,10 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
                 const SizedBox(width: 12),
                 Text(
                   l10n.reportPreview,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
-                  ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(color: colorScheme.onSurface),
                 ),
               ],
             ),
@@ -846,7 +844,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
             Text(l10n.htmlReportCopiedSteps),
             const SizedBox(height: 16),
             Text(l10n.annualReportMobileInstructions,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+                style: Theme.of(context).textTheme.titleSmall),
             Text(l10n.browserInstructionsStep1),
             Text(l10n.browserInstructionsStep2),
             Text(l10n.browserInstructionsStep3),
@@ -854,7 +852,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
             Text(l10n.browserInstructionsStep5),
             const SizedBox(height: 12),
             Text(l10n.annualReportDesktopInstructions,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+                style: Theme.of(context).textTheme.titleSmall),
             Text(l10n.desktopInstructionsStep1),
             Text(l10n.desktopInstructionsStep2),
             Text(l10n.desktopInstructionsStep3),

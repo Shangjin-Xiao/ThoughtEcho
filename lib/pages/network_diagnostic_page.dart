@@ -158,7 +158,7 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
           children: [
             Text(
               l10n.networkConfig,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 10),
             Text(l10n.httpServerPort(defaultPort)),
@@ -180,7 +180,7 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
           children: [
             Text(
               l10n.networkDiagnosticSection,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 10),
             ElevatedButton(
@@ -217,10 +217,11 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
       children: [
         Text(
           l10n.diagnosticResult(result.successCount, result.totalCount),
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: result.isSuccess ? Colors.green : Colors.red,
-          ),
+          style: Theme.of(context)
+              .textTheme
+              .titleSmall
+              ?.copyWith(
+                  color: result.isSuccess ? Colors.green : Colors.red),
         ),
         const SizedBox(height: 8),
         ...result.steps.map(
@@ -258,7 +259,7 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
           children: [
             Text(
               l10n.deviceDiscovery,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 10),
             Row(
@@ -301,7 +302,7 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
           children: [
             Text(
               l10n.discoveredDevicesCount(devices.length),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 10),
             if (devices.isEmpty)

@@ -129,10 +129,7 @@ class HomeLocationWeatherDisplay extends StatelessWidget {
                   weatherText,
                   maxLines: 1,
                   softWrap: false,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: theme.textTheme.bodySmall?.copyWith(color: color),
                 ),
               ],
             ),

@@ -149,10 +149,8 @@ class _WelcomePageViewState extends State<WelcomePageView>
                     // 标题
                     Text(
                       widget.pageData.title,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
+                      style: theme.textTheme.headlineMedium
+                          ?.copyWith(color: theme.colorScheme.primary),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
@@ -204,7 +202,6 @@ class _WelcomePageViewState extends State<WelcomePageView>
                               widget.pageData.subtitle,
                               style: theme.textTheme.titleLarge?.copyWith(
                                 color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.bold,
                                 fontSize: 23,
                                 letterSpacing: 1.1,
                                 shadows: [
@@ -268,10 +265,11 @@ class _WelcomePageViewState extends State<WelcomePageView>
                 return Center(
                   child: AnimatedDefaultTextStyle(
                     duration: const Duration(milliseconds: 200),
-                    style: TextStyle(
+                    style: (theme.textTheme.titleMedium ?? const TextStyle())
+                        .copyWith(
                       fontSize: isSelected ? 18 : 15,
                       fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
                       color: isSelected
                           ? theme.colorScheme.primary
                           : theme.colorScheme.onSurface.withValues(alpha: 0.45),
@@ -400,9 +398,7 @@ class _FeaturesPageViewState extends State<FeaturesPageView>
           // 页面标题
           Text(
             widget.pageData.title,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: theme.textTheme.headlineMedium,
           ),
           const SizedBox(height: 8),
           Text(
@@ -475,10 +471,8 @@ class _FeaturesPageViewState extends State<FeaturesPageView>
               const SizedBox(width: 8),
               Text(
                 AppLocalizations.of(context).quickTips,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
-                ),
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(color: theme.colorScheme.primary),
               ),
             ],
           ),
@@ -560,11 +554,9 @@ class _FeatureCard extends StatelessWidget {
                     Text(
                       feature.title,
                       style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: isHighlight
-                            ? theme.colorScheme.onPrimaryContainer
-                            : null,
-                      ),
+                          color: isHighlight
+                              ? theme.colorScheme.onPrimaryContainer
+                              : null),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -596,10 +588,8 @@ class _FeatureCard extends StatelessWidget {
                   ),
                   child: Text(
                     AppLocalizations.of(context).coreFeature,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onPrimary,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(color: theme.colorScheme.onPrimary),
                   ),
                 ),
             ],

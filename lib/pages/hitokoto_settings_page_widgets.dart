@@ -33,11 +33,9 @@ extension _HitokotoSettingsPageWidgets on _HitokotoSettingsPageState {
               Text(
                 label,
                 style: theme.textTheme.labelLarge?.copyWith(
-                  color: isPrimary
-                      ? colorScheme.onPrimary
-                      : colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
+                    color: isPrimary
+                        ? colorScheme.onPrimary
+                        : colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -62,12 +60,13 @@ extension _HitokotoSettingsPageWidgets on _HitokotoSettingsPageState {
       avatar: isSelected
           ? Icon(Icons.check_rounded, size: 16, color: colorScheme.onPrimary)
           : null,
-      labelStyle: TextStyle(
-        color:
-            isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
-        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-        fontSize: 13,
-      ),
+      labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: isSelected
+                ? colorScheme.onPrimary
+                : colorScheme.onSurfaceVariant,
+            fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+            fontSize: 13,
+          ),
       backgroundColor: colorScheme.surface,
       selectedColor: colorScheme.primary,
       side: BorderSide(
@@ -111,9 +110,7 @@ extension _HitokotoSettingsPageWidgets on _HitokotoSettingsPageState {
                   children: [
                     Text(
                       title,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: theme.textTheme.titleSmall,
                     ),
                     const SizedBox(height: 4),
                     Text(

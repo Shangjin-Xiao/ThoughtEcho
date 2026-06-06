@@ -467,10 +467,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
                 child: Text(
                   widget.guide.title,
                   style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: theme.colorScheme.primary,
-                  ),
+                      fontSize: 13, color: theme.colorScheme.primary),
                 ),
               ),
               Semantics(

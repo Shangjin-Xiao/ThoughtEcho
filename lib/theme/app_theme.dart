@@ -91,7 +91,32 @@ class AppTheme with ChangeNotifier {
   //
   // 平台字体优化入口（目前仅 Windows 生效）
   static TextTheme _fixAndroidVariableFontWeight(TextTheme base) {
-    return base;
+    if (kIsWeb) return base;
+    if (Platform.isAndroid) {
+      // Android 12+ variable font (RobotoFlex) 字重精准映射优化
+      // 降档处理以防变粗：
+      // - w700 (bold) -> w600 (title)
+      // - w600 -> w500 (labelLarge)
+      // - w500 -> w400 (labelMedium/Small)
+      return base.copyWith(
+        titleLarge: base.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+        titleMedium: base.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+        titleSmall: base.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+        labelLarge: base.labelLarge?.copyWith(fontWeight: FontWeight.w500),
+        labelMedium: base.labelMedium?.copyWith(fontWeight: FontWeight.w400),
+        labelSmall: base.labelSmall?.copyWith(fontWeight: FontWeight.w400),
+      );
+    } else {
+      // 其他平台使用常规设计字重以保持良好的视觉层次
+      return base.copyWith(
+        titleLarge: base.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+        titleMedium: base.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+        titleSmall: base.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+        labelLarge: base.labelLarge?.copyWith(fontWeight: FontWeight.w500),
+        labelMedium: base.labelMedium?.copyWith(fontWeight: FontWeight.w500),
+        labelSmall: base.labelSmall?.copyWith(fontWeight: FontWeight.w500),
+      );
+    }
   }
 
   static const String _customColorKey = 'custom_color';

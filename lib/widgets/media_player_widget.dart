@@ -582,9 +582,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                   children: [
                     Text(
                       _getFileName(widget.filePath),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                          ),
+                      style: Theme.of(context).textTheme.bodyMedium,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -849,7 +847,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
             width: 60,
             child: Text(
               '$label:',
-              style: const TextStyle(fontWeight: FontWeight.w500),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),
           Expanded(

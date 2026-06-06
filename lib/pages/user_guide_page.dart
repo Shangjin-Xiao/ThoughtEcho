@@ -523,11 +523,11 @@ class _UserGuidePageState extends State<UserGuidePage> {
                                       ),
                                       title: Text(
                                         chapter.title,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: colorScheme.onSurface,
-                                          fontSize: 16,
-                                        ),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                                color: colorScheme.onSurface),
                                       ),
                                       childrenPadding:
                                           const EdgeInsets.fromLTRB(
@@ -573,11 +573,10 @@ class _UserGuidePageState extends State<UserGuidePage> {
                 Expanded(
                   child: Text(
                     section.title,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.primary,
-                    ),
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(color: colorScheme.primary),
                   ),
                 ),
               ],

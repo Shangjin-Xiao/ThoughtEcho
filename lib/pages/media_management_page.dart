@@ -157,7 +157,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
           children: [
             Text(
               l10n.mediaFileStats,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 16),
             _buildStatRow(l10n.totalFiles, '${stats['totalFiles'] ?? 0}'),
@@ -190,7 +190,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
             const Divider(),
             Text(
               l10n.tempFiles,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             _buildStatRow(
@@ -218,7 +218,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+          Text(value, style: Theme.of(context).textTheme.bodyMedium),
         ],
       ),
     );
@@ -234,7 +234,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
           children: [
             Text(
               l10n.cleanupOperations,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 16),
             _buildActionButton(
@@ -315,7 +315,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      style: Theme.of(context).textTheme.titleSmall,
                     ),
                     Text(
                       subtitle,
@@ -346,7 +346,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
           children: [
             Text(
               l10n.operationResult(_lastOperation!),
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 16),
             for (final entry in result.entries)
@@ -358,7 +358,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
                     Text(_formatKey(entry.key)),
                     Text(
                       _formatValue(entry.value),
-                      style: const TextStyle(fontWeight: FontWeight.w500),
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
                 ),

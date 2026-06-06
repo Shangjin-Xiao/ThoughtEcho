@@ -512,11 +512,10 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                       const SizedBox(height: 4),
                       Text(
                         StorageStats.formatBytes(totalSize),
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.primary,
-                        ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(color: colorScheme.primary),
                       ),
                     ],
                   ),
@@ -741,7 +740,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       subtitle: count != null && count > 0 ? Text(l10n.fileCount(count)) : null,
       trailing: Text(
         StorageStats.formatBytes(size),
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        style: Theme.of(context).textTheme.titleMedium,
       ),
     );
   }
@@ -1115,11 +1114,12 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Text(
         title,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-        ),
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.7),
+            ),
       ),
     );
   }

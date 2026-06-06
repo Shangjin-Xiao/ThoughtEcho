@@ -68,11 +68,10 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
               if (widget.author.firstName != null) ...[
                 Text(
                   widget.author.firstName!,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: widget.theme.colorScheme.primary,
-                  ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelMedium
+                      ?.copyWith(color: widget.theme.colorScheme.primary),
                 ),
                 const SizedBox(height: 4),
               ],

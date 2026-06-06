@@ -143,9 +143,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                 children: [
                   Text(
                     l10n.filterAndSort,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: theme.textTheme.titleMedium,
                   ),
                   TextButton(
                     onPressed: () {
@@ -250,9 +248,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
               children: [
                 Text(
                   title,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: theme.textTheme.bodyLarge,
                 ),
                 if (showScrollHint) ...[
                   const SizedBox(width: 8),

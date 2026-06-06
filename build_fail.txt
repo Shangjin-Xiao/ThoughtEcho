@@ -1,0 +1,378 @@
+build	构建 APK	﻿2026-06-05T10:13:50.2110200Z ##[group]Run BUILD_MODE="release"
+build	构建 APK	2026-06-05T10:13:50.2111017Z [36;1mBUILD_MODE="release"[0m
+build	构建 APK	2026-06-05T10:13:50.2111728Z [36;1mecho "正在构建 $BUILD_MODE 版 APK..."[0m
+build	构建 APK	2026-06-05T10:13:50.2112534Z [36;1mflutter build apk --$BUILD_MODE \[0m
+build	构建 APK	2026-06-05T10:13:50.2113399Z [36;1m  --target-platform=android-arm,android-arm64 \[0m
+build	构建 APK	2026-06-05T10:13:50.2114277Z [36;1m  --build-number=753 \[0m
+build	构建 APK	2026-06-05T10:13:50.2114978Z [36;1m  --build-name=3.6.8[0m
+build	构建 APK	2026-06-05T10:13:50.2152659Z shell: /usr/bin/bash -e {0}
+build	构建 APK	2026-06-05T10:13:50.2153302Z env:
+build	构建 APK	2026-06-05T10:13:50.2154006Z   JAVA_HOME: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.19-10/x64
+build	构建 APK	2026-06-05T10:13:50.2155053Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Zulu_jdk/17.0.19-10/x64
+build	构建 APK	2026-06-05T10:13:50.2156141Z   FLUTTER_ROOT: /opt/hostedtoolcache/flutter/stable-3.44.0-x64/flutter
+build	构建 APK	2026-06-05T10:13:50.2157065Z   PUB_CACHE: /home/runner/.pub-cache
+build	构建 APK	2026-06-05T10:13:50.2160357Z   GRADLE_OPTS: -Xmx2g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-opens=java.base/java.nio.charset=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED
+build	构建 APK	2026-06-05T10:13:50.2163994Z ##[endgroup]
+build	构建 APK	2026-06-05T10:13:50.2235276Z 正在构建 release 版 APK...
+build	构建 APK	2026-06-05T10:13:50.4672351Z Resolving dependencies...
+build	构建 APK	2026-06-05T10:13:50.8840949Z Downloading packages...
+build	构建 APK	2026-06-05T10:13:51.0142544Z   _fe_analyzer_shared 91.0.0 (101.0.0 available)
+build	构建 APK	2026-06-05T10:13:51.0143370Z   analyzer 8.4.1 (13.1.0 available)
+build	构建 APK	2026-06-05T10:13:51.0144139Z   android_alarm_manager_plus 4.0.8 (5.0.0 available)
+build	构建 APK	2026-06-05T10:13:51.0144902Z   archive 4.0.7 (4.0.9 available)
+build	构建 APK	2026-06-05T10:13:51.0145589Z   async 2.13.0 (2.13.1 available)
+build	构建 APK	2026-06-05T10:13:51.0146288Z   audioplayers 6.5.1 (6.7.1 available)
+build	构建 APK	2026-06-05T10:13:51.0147060Z   audioplayers_darwin 6.3.0 (6.4.0 available)
+build	构建 APK	2026-06-05T10:13:51.0147907Z   audioplayers_web 5.1.1 (5.2.1 available)
+build	构建 APK	2026-06-05T10:13:51.0148682Z   audioplayers_windows 4.2.1 (4.3.1 available)
+build	构建 APK	2026-06-05T10:13:51.0149698Z   build 3.1.0 (4.0.6 available)
+build	构建 APK	2026-06-05T10:13:51.0150382Z   build_config 1.2.0 (1.3.0 available)
+build	构建 APK	2026-06-05T10:13:51.0151127Z   build_resolvers 3.0.3 (3.0.4 available)
+build	构建 APK	2026-06-05T10:13:51.0151870Z   build_runner 2.7.1 (2.15.0 available)
+build	构建 APK	2026-06-05T10:13:51.0164092Z   build_runner_core 9.3.1 (9.3.2 available)
+build	构建 APK	2026-06-05T10:13:51.0165021Z   built_value 8.12.3 (8.12.6 available)
+build	构建 APK	2026-06-05T10:13:51.0165557Z   chewie 1.13.0 (1.14.1 available)
+build	构建 APK	2026-06-05T10:13:51.0166033Z   cli_util 0.4.2 (0.5.1 available)
+build	构建 APK	2026-06-05T10:13:51.0166521Z   cupertino_icons 1.0.8 (1.0.9 available)
+build	构建 APK	2026-06-05T10:13:51.0167040Z   dart_mappable 4.6.1 (4.8.0 available)
+build	构建 APK	2026-06-05T10:13:51.0167529Z   dart_style 3.1.3 (3.1.9 available)
+build	构建 APK	2026-06-05T10:13:51.0168005Z   dbus 0.7.12 (0.7.14 available)
+build	构建 APK	2026-06-05T10:13:51.0168518Z   dev_build 1.1.3+1 (1.1.8+1 available)
+build	构建 APK	2026-06-05T10:13:51.0169343Z   device_info_plus 12.3.0 (13.1.0 available)
+build	构建 APK	2026-06-05T10:13:51.0170138Z   device_info_plus_platform_interface 7.0.3 (8.1.0 available)
+build	构建 APK	2026-06-05T10:13:51.0170893Z   dio 5.9.1 (5.9.2 available)
+build	构建 APK	2026-06-05T10:13:51.0171495Z   dio_web_adapter 2.1.1 (2.1.2 available)
+build	构建 APK	2026-06-05T10:13:51.0172188Z   file_picker 10.3.10 (11.0.2 available)
+build	构建 APK	2026-06-05T10:13:51.0172716Z   file_selector_android 0.5.2+4 (0.5.2+8 available)
+build	构建 APK	2026-06-05T10:13:51.0173269Z   file_selector_ios 0.5.3+4 (0.5.3+5 available)
+build	构建 APK	2026-06-05T10:13:51.0173797Z   file_selector_web 0.9.4+2 (0.9.5 available)
+build	构建 APK	2026-06-05T10:13:51.0174304Z   flex_color_picker 3.7.2 (3.8.0 available)
+build	构建 APK	2026-06-05T10:13:51.0174806Z   flex_color_scheme 8.3.1 (8.4.0 available)
+build	构建 APK	2026-06-05T10:13:51.0175302Z   flex_seed_scheme 3.6.1 (4.0.1 available)
+build	构建 APK	2026-06-05T10:13:51.0175811Z   flutter_blue_plus 1.36.8 (2.3.6 available)
+build	构建 APK	2026-06-05T10:13:51.0176334Z   flutter_blue_plus_android 7.0.4 (9.0.1 available)
+build	构建 APK	2026-06-05T10:13:51.0176888Z   flutter_blue_plus_darwin 7.0.3 (9.0.0 available)
+build	构建 APK	2026-06-05T10:13:51.0177811Z   flutter_blue_plus_linux 7.0.3 (9.0.0 available)
+build	构建 APK	2026-06-05T10:13:51.0178390Z   flutter_blue_plus_platform_interface 7.0.0 (9.0.1 available)
+build	构建 APK	2026-06-05T10:13:51.0179230Z   flutter_blue_plus_web 7.0.2 (9.0.0 available)
+build	构建 APK	2026-06-05T10:13:51.0179784Z   flutter_local_notifications 19.5.0 (21.0.0 available)
+build	构建 APK	2026-06-05T10:13:51.0180378Z   flutter_local_notifications_linux 6.0.0 (8.0.0 available)
+build	构建 APK	2026-06-05T10:13:51.0181051Z   flutter_local_notifications_platform_interface 9.1.0 (11.0.0 available)
+build	构建 APK	2026-06-05T10:13:51.0181724Z   flutter_local_notifications_windows 1.0.3 (3.0.0 available)
+build	构建 APK	2026-06-05T10:13:51.0182439Z   flutter_markdown 0.7.7+1 (discontinued replaced by flutter_markdown_plus)
+build	构建 APK	2026-06-05T10:13:51.0183131Z   flutter_plugin_android_lifecycle 2.0.33 (2.0.35 available)
+build	构建 APK	2026-06-05T10:13:51.0183698Z   flutter_quill 11.5.0 (11.5.1 available)
+build	构建 APK	2026-06-05T10:13:51.0184208Z   flutter_rust_bridge 2.11.1 (2.12.0 available)
+build	构建 APK	2026-06-05T10:13:51.0184751Z   flutter_secure_storage 9.2.4 (10.3.1 available)
+build	构建 APK	2026-06-05T10:13:51.0185495Z   flutter_secure_storage_linux 1.2.3 (3.0.1 available)
+build	构建 APK	2026-06-05T10:13:51.0186066Z   flutter_secure_storage_macos 3.1.3 (4.0.0 available)
+build	构建 APK	2026-06-05T10:13:51.0186688Z   flutter_secure_storage_platform_interface 1.1.2 (2.0.1 available)
+build	构建 APK	2026-06-05T10:13:51.0187313Z   flutter_secure_storage_web 1.2.1 (2.1.1 available)
+build	构建 APK	2026-06-05T10:13:51.0187887Z   flutter_secure_storage_windows 3.1.2 (4.2.2 available)
+build	构建 APK	2026-06-05T10:13:51.0188433Z   flutter_svg 2.2.4 (2.3.0 available)
+build	构建 APK	2026-06-05T10:13:51.0189109Z   geocoding_android 4.0.1 (5.0.1 available)
+build	构建 APK	2026-06-05T10:13:51.0189738Z   geocoding_platform_interface 3.2.0 (5.0.0 available)
+build	构建 APK	2026-06-05T10:13:51.0190287Z   geolocator_linux 0.2.3 (0.2.5 available)
+build	构建 APK	2026-06-05T10:13:51.0190771Z   get_it 9.2.0 (9.2.1 available)
+build	构建 APK	2026-06-05T10:13:51.0191261Z   http_server 1.0.0 (discontinued replaced by shelf)
+build	构建 APK	2026-06-05T10:13:51.0191789Z   idb_shim 2.6.7+1 (2.9.3 available)
+build	构建 APK	2026-06-05T10:13:51.0192312Z   image 4.7.2 (4.9.1 available)
+build	构建 APK	2026-06-05T10:13:51.0192776Z   image_picker 1.2.1 (1.2.2 available)
+build	构建 APK	2026-06-05T10:13:51.0193296Z   image_picker_android 0.8.13+13 (0.8.13+19 available)
+build	构建 APK	2026-06-05T10:13:51.0193838Z   image_picker_ios 0.8.13+3 (0.8.13+6 available)
+build	构建 APK	2026-06-05T10:13:51.0194483Z   js 0.6.7 (0.7.2 available)
+build	构建 APK	2026-06-05T10:13:51.0195127Z   json_annotation 4.10.0 (4.12.0 available)
+build	构建 APK	2026-06-05T10:13:51.0195840Z   local_auth 2.3.0 (3.0.1 available)
+build	构建 APK	2026-06-05T10:13:51.0196582Z   local_auth_android 1.0.56 (2.0.9 available)
+build	构建 APK	2026-06-05T10:13:51.0197341Z   local_auth_darwin 1.6.1 (2.0.3 available)
+build	构建 APK	2026-06-05T10:13:51.0198056Z   local_auth_windows 1.0.11 (2.0.1 available)
+build	构建 APK	2026-06-05T10:13:51.0198758Z   lottie 3.3.2 (3.3.3 available)
+build	构建 APK	2026-06-05T10:13:51.0199626Z   markdown 7.3.0 (7.3.1 available)
+build	构建 APK	2026-06-05T10:13:51.0200304Z   matcher 0.12.19 (0.12.20 available)
+build	构建 APK	2026-06-05T10:13:51.0200958Z   meta 1.18.0 (1.18.3 available)
+build	构建 APK	2026-06-05T10:13:51.0201576Z   mime 1.0.6 (2.0.0 available)
+build	构建 APK	2026-06-05T10:13:51.0202180Z   mmkv 1.3.16 (2.4.0 available)
+build	构建 APK	2026-06-05T10:13:51.0202818Z   mmkv_android 1.0.11 (2.4.0 available)
+build	构建 APK	2026-06-05T10:13:51.0203500Z   mmkv_ios 1.0.9 (2.4.0 available)
+build	构建 APK	2026-06-05T10:13:51.0204152Z   mmkv_ohos 1.0.5 (2.4.0 available)
+build	构建 APK	2026-06-05T10:13:51.0204860Z   mmkv_platform_interface 1.0.3 (2.4.0 available)
+build	构建 APK	2026-06-05T10:13:51.0205589Z   mockito 5.6.4 (5.7.0 available)
+build	构建 APK	2026-06-05T10:13:51.0206257Z   network_info_plus 7.0.0 (8.1.0 available)
+build	构建 APK	2026-06-05T10:13:51.0207059Z   network_info_plus_platform_interface 2.0.2 (3.1.0 available)
+build	构建 APK	2026-06-05T10:13:51.0207918Z   package_info_plus 8.3.1 (10.1.0 available)
+build	构建 APK	2026-06-05T10:13:51.0208737Z   package_info_plus_platform_interface 3.2.1 (4.1.0 available)
+build	构建 APK	2026-06-05T10:13:51.0209754Z   pasteboard 0.4.0 (0.5.0 available)
+build	构建 APK	2026-06-05T10:13:51.0210481Z   path_provider_android 2.2.22 (2.3.1 available)
+build	构建 APK	2026-06-05T10:13:51.0211222Z   path_provider_foundation 2.5.1 (2.6.0 available)
+build	构建 APK	2026-06-05T10:13:51.0211965Z   permission_handler 12.0.1 (12.0.3 available)
+build	构建 APK	2026-06-05T10:13:51.0212983Z   permission_handler_apple 9.4.7 (9.4.9 available)
+build	构建 APK	2026-06-05T10:13:51.0213721Z   posix 6.0.3 (6.5.0 available)
+build	构建 APK	2026-06-05T10:13:51.0214374Z   process_run 1.2.4 (1.3.4 available)
+build	构建 APK	2026-06-05T10:13:51.0215059Z   qr 3.0.2 (4.0.0 available)
+build	构建 APK	2026-06-05T10:13:51.0215690Z   rhttp 0.14.0 (0.17.0 available)
+build	构建 APK	2026-06-05T10:13:51.0216371Z   scrollview_observer 1.26.3 (1.27.0 available)
+build	构建 APK	2026-06-05T10:13:51.0217108Z   sembast 3.8.5+2 (3.8.8 available)
+build	构建 APK	2026-06-05T10:13:51.0217791Z   share_plus 12.0.1 (13.1.0 available)
+build	构建 APK	2026-06-05T10:13:51.0218549Z   share_plus_platform_interface 6.1.0 (7.1.0 available)
+build	构建 APK	2026-06-05T10:13:51.0219505Z   shared_preferences 2.5.4 (2.5.5 available)
+build	构建 APK	2026-06-05T10:13:51.0220291Z   shared_preferences_android 2.4.20 (2.4.25 available)
+build	构建 APK	2026-06-05T10:13:51.0221169Z   shared_preferences_platform_interface 2.4.1 (2.4.2 available)
+build	构建 APK	2026-06-05T10:13:51.0222004Z   source_gen 3.1.0 (4.2.3 available)
+build	构建 APK	2026-06-05T10:13:51.0222677Z   sqflite 2.4.2 (2.4.3 available)
+build	构建 APK	2026-06-05T10:13:51.0223356Z   sqflite_android 2.4.2+2 (2.4.3 available)
+build	构建 APK	2026-06-05T10:13:51.0224316Z   sqflite_common 2.5.6 (2.5.9 available)
+build	构建 APK	2026-06-05T10:13:51.0225044Z   sqflite_common_ffi 2.3.7+1 (2.4.1 available)
+build	构建 APK	2026-06-05T10:13:51.0225797Z   sqflite_common_ffi_web 1.0.2 (1.1.2 available)
+build	构建 APK	2026-06-05T10:13:51.0226524Z   sqflite_darwin 2.4.2 (2.4.3 available)
+build	构建 APK	2026-06-05T10:13:51.0227264Z   sqflite_platform_interface 2.4.0 (2.4.1 available)
+build	构建 APK	2026-06-05T10:13:51.0228027Z   sqlite3 2.9.4 (3.3.2 available)
+build	构建 APK	2026-06-05T10:13:51.0228731Z   sqlite3_flutter_libs 0.5.41 (0.6.0+eol available)
+build	构建 APK	2026-06-05T10:13:51.0229636Z   synchronized 3.4.0 (3.4.1 available)
+build	构建 APK	2026-06-05T10:13:51.0230311Z   test 1.31.0 (1.31.1 available)
+build	构建 APK	2026-06-05T10:13:51.0230963Z   test_api 0.7.11 (0.7.12 available)
+build	构建 APK	2026-06-05T10:13:51.0231649Z   test_core 0.6.17 (0.6.18 available)
+build	构建 APK	2026-06-05T10:13:51.0232331Z   timezone 0.10.1 (0.11.0 available)
+build	构建 APK	2026-06-05T10:13:51.0233044Z   url_launcher_android 6.3.28 (6.3.32 available)
+build	构建 APK	2026-06-05T10:13:51.0233781Z   url_launcher_ios 6.3.6 (6.4.1 available)
+build	构建 APK	2026-06-05T10:13:51.0234508Z   url_launcher_web 2.4.1 (2.4.3 available)
+build	构建 APK	2026-06-05T10:13:51.0235206Z   uuid 4.5.2 (4.5.3 available)
+build	构建 APK	2026-06-05T10:13:51.0235862Z   vector_graphics 1.1.19 (1.2.2 available)
+build	构建 APK	2026-06-05T10:13:51.0236559Z   vector_graphics_compiler 1.1.20 (1.2.5 available)
+build	构建 APK	2026-06-05T10:13:51.0237306Z   vector_math 2.2.0 (2.4.0 available)
+build	构建 APK	2026-06-05T10:13:51.0237961Z   video_player 2.10.1 (2.11.1 available)
+build	构建 APK	2026-06-05T10:13:51.0238664Z   video_player_android 2.9.1 (2.9.6 available)
+build	构建 APK	2026-06-05T10:13:51.0239558Z   video_player_avfoundation 2.8.9 (2.9.7 available)
+build	构建 APK	2026-06-05T10:13:51.0240413Z   video_player_platform_interface 6.6.0 (6.7.0 available)
+build	构建 APK	2026-06-05T10:13:51.0241208Z   vm_service 15.0.2 (15.2.0 available)
+build	构建 APK	2026-06-05T10:13:51.0241913Z   wakelock_plus 1.3.3 (1.6.1 available)
+build	构建 APK	2026-06-05T10:13:51.0242727Z   wakelock_plus_platform_interface 1.3.0 (1.5.1 available)
+build	构建 APK	2026-06-05T10:13:51.0243545Z   win32 5.15.0 (6.3.0 available)
+build	构建 APK	2026-06-05T10:13:51.0244181Z   win32_registry 2.1.0 (3.0.3 available)
+build	构建 APK	2026-06-05T10:13:51.0244869Z   xml 6.6.1 (7.0.1 available)
+build	构建 APK	2026-06-05T10:13:51.0245490Z Got dependencies!
+build	构建 APK	2026-06-05T10:13:51.0246102Z 2 packages are discontinued.
+build	构建 APK	2026-06-05T10:13:51.0246909Z 131 packages have newer versions incompatible with dependency constraints.
+build	构建 APK	2026-06-05T10:13:51.0247885Z Try `flutter pub outdated` for more information.
+build	构建 APK	2026-06-05T10:15:32.0345588Z Running Gradle task 'assembleRelease'...                        
+build	构建 APK	2026-06-05T10:15:32.0365928Z Warning: Flutter support for your project's Kotlin version (2.0.0) will soon be dropped. Please upgrade your Kotlin version to a version of at least 2.2.20 soon.
+build	构建 APK	2026-06-05T10:15:32.0371330Z Alternatively, use the flag "--android-skip-build-dependency-validation" to bypass this check.
+build	构建 APK	2026-06-05T10:15:32.0372768Z 
+build	构建 APK	2026-06-05T10:15:32.0374492Z Potential fix: Your project's KGP version is typically defined in the plugins block of the `settings.gradle` file (/home/runner/work/ThoughtEcho/ThoughtEcho/android/settings.gradle), by a plugin with the id of org.jetbrains.kotlin.android. 
+build	构建 APK	2026-06-05T10:15:32.0378707Z If you don't see a plugins block, your project was likely created with an older template version, in which case it is most likely defined in the top-level build.gradle file (/home/runner/work/ThoughtEcho/ThoughtEcho/android/build.gradle) by the ext.kotlin_version property.
+build	构建 APK	2026-06-05T10:15:32.0380996Z 
+build	构建 APK	2026-06-05T10:18:12.4265924Z Checking the license for package Android SDK Platform 33 in /usr/local/lib/android/sdk/licenses
+build	构建 APK	2026-06-05T10:18:12.4268765Z License for package Android SDK Platform 33 accepted.
+build	构建 APK	2026-06-05T10:18:12.4271559Z Preparing "Install Android SDK Platform 33 (revision 3)".
+build	构建 APK	2026-06-05T10:18:15.1254474Z "Install Android SDK Platform 33 (revision 3)" ready.
+build	构建 APK	2026-06-05T10:18:15.1255966Z Installing Android SDK Platform 33 in /usr/local/lib/android/sdk/platforms/android-33
+build	构建 APK	2026-06-05T10:18:15.1257560Z "Install Android SDK Platform 33 (revision 3)" complete.
+build	构建 APK	2026-06-05T10:18:15.2254013Z "Install Android SDK Platform 33 (revision 3)" finished.
+build	构建 APK	2026-06-05T10:18:15.3259642Z [=========                              ] 25%                                   
+build	构建 APK	2026-06-05T10:18:15.3264039Z [=========                              ] 25% Fetch remote repository...        
+build	构建 APK	2026-06-05T10:18:15.3265377Z [=======================================] 100% Fetch remote repository...       
+build	构建 APK	2026-06-05T10:18:15.8279168Z WARNING: Your app uses the following plugins that apply Kotlin Gradle Plugin (KGP): android_alarm_manager_plus, audioplayers_android, device_info_plus, dynamic_color, file_picker, network_info_plus, package_info_plus, pasteboard, quill_native_bridge_android, share_plus, shared_preferences_android, video_player_android, wakelock_plus, workmanager_android
+build	构建 APK	2026-06-05T10:18:15.8286124Z Future versions of Flutter will fail to build if your app uses plugins that apply KGP.
+build	构建 APK	2026-06-05T10:18:15.8287284Z 
+build	构建 APK	2026-06-05T10:18:15.8288225Z Please check the changelogs of these plugins and upgrade to a version that supports Built-in Kotlin.
+build	构建 APK	2026-06-05T10:18:15.8290458Z If no such version exists, report the issue to the plugin. If necessary, here is a guide on filing 
+build	构建 APK	2026-06-05T10:18:15.8293054Z an issue against a plugin: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-app-developers#report-incompatible-kotlin-gradle-plugin-usage-to-plugin-authors
+build	构建 APK	2026-06-05T10:18:15.8294750Z 
+build	构建 APK	2026-06-05T10:18:15.8296136Z If you are a plugin author, please migrate your plugin to Built-in Kotlin using this guide: https://docs.flutter.dev/release/breaking-changes/migrate-to-built-in-kotlin/for-plugin-authors
+build	构建 APK	2026-06-05T10:18:16.7256988Z Checking the license for package CMake 3.22.1 in /usr/local/lib/android/sdk/licenses
+build	构建 APK	2026-06-05T10:18:16.7258003Z License for package CMake 3.22.1 accepted.
+build	构建 APK	2026-06-05T10:18:16.7258646Z Preparing "Install CMake 3.22.1 v.3.22.1".
+build	构建 APK	2026-06-05T10:18:17.6254488Z "Install CMake 3.22.1 v.3.22.1" ready.
+build	构建 APK	2026-06-05T10:18:17.6256086Z Installing CMake 3.22.1 in /usr/local/lib/android/sdk/cmake/3.22.1
+build	构建 APK	2026-06-05T10:18:17.6257458Z "Install CMake 3.22.1 v.3.22.1" complete.
+build	构建 APK	2026-06-05T10:18:17.6258456Z "Install CMake 3.22.1 v.3.22.1" finished.
+build	构建 APK	2026-06-05T10:18:19.9258051Z Resolving dependencies...
+build	构建 APK	2026-06-05T10:18:20.1254555Z Downloading packages...
+build	构建 APK	2026-06-05T10:18:21.1256135Z + adaptive_number 1.0.0
+build	构建 APK	2026-06-05T10:18:21.1270021Z + args 2.4.2 (2.7.0 available)
+build	构建 APK	2026-06-05T10:18:21.1270537Z + async 2.13.1
+build	构建 APK	2026-06-05T10:18:21.1271680Z + build_tool 1.0.0 from path /home/runner/.pub-cache/hosted/pub.dev/rhttp-0.14.0/cargokit/gradle/../build_tool
+build	构建 APK	2026-06-05T10:18:21.1272457Z + collection 1.18.0 (1.19.1 available)
+build	构建 APK	2026-06-05T10:18:21.1272961Z + convert 3.1.1 (3.1.2 available)
+build	构建 APK	2026-06-05T10:18:21.1273575Z + crypto 3.0.3 (3.0.7 available)
+build	构建 APK	2026-06-05T10:18:21.1274279Z + ed25519_edwards 0.3.1
+build	构建 APK	2026-06-05T10:18:21.1274738Z + fixnum 1.1.1
+build	构建 APK	2026-06-05T10:18:21.1275145Z + github 9.17.0 (9.25.1 available)
+build	构建 APK	2026-06-05T10:18:21.1275615Z + hex 0.2.0
+build	构建 APK	2026-06-05T10:18:21.1276013Z + http 1.1.0 (1.6.0 available)
+build	构建 APK	2026-06-05T10:18:21.1276826Z + http_parser 4.0.2 (4.1.2 available)
+build	构建 APK	2026-06-05T10:18:21.1277671Z + json_annotation 4.12.0
+build	构建 APK	2026-06-05T10:18:21.1278112Z + logging 1.2.0 (1.3.0 available)
+build	构建 APK	2026-06-05T10:18:21.1278828Z + meta 1.18.3
+build	构建 APK	2026-06-05T10:18:21.1279606Z + path 1.8.0 (1.9.1 available)
+build	构建 APK	2026-06-05T10:18:21.1280181Z + petitparser 5.4.0 (7.0.2 available)
+build	构建 APK	2026-06-05T10:18:21.1280799Z + source_span 1.10.0 (1.10.2 available)
+build	构建 APK	2026-06-05T10:18:21.1281518Z + string_scanner 1.4.1
+build	构建 APK	2026-06-05T10:18:21.1281992Z + term_glyph 1.2.2
+build	构建 APK	2026-06-05T10:18:21.1282409Z + toml 0.14.0 (0.18.0 available)
+build	构建 APK	2026-06-05T10:18:21.1282999Z + typed_data 1.4.0
+build	构建 APK	2026-06-05T10:18:21.1283513Z + version 3.0.0 (3.0.2 available)
+build	构建 APK	2026-06-05T10:18:21.1284152Z + yaml 3.1.2 (3.1.3 available)
+build	构建 APK	2026-06-05T10:18:21.1284660Z Changed 25 dependencies!
+build	构建 APK	2026-06-05T10:18:21.1285493Z 14 packages have newer versions incompatible with dependency constraints.
+build	构建 APK	2026-06-05T10:18:21.1286280Z Try `dart pub outdated` for more information.
+build	构建 APK	2026-06-05T10:18:21.1286968Z Compiling bin/build_tool_runner.dart to kernel file bin/build_tool_runner.dill.
+build	构建 APK	2026-06-05T10:18:22.4254466Z INFO: Precompiled binaries are disabled
+build	构建 APK	2026-06-05T10:18:22.6254632Z INFO: Installing Rust target: armv7-linux-androideabi
+build	构建 APK	2026-06-05T10:18:25.3253067Z INFO: Building rhttp for armv7-linux-androideabi
+build	构建 APK	2026-06-05T10:18:38.4280014Z "de": 2063 untranslated message(s).
+build	构建 APK	2026-06-05T10:18:38.4310737Z "es": 2063 untranslated message(s).
+build	构建 APK	2026-06-05T10:18:38.4343370Z "fr": 159 untranslated message(s).
+build	构建 APK	2026-06-05T10:18:38.4400345Z "ja": 148 untranslated message(s).
+build	构建 APK	2026-06-05T10:18:38.4409817Z "ko": 153 untranslated message(s).
+build	构建 APK	2026-06-05T10:18:38.4449759Z To see a detailed report, use the untranslated-messages-file 
+build	构建 APK	2026-06-05T10:18:38.4486345Z option in the l10n.yaml file:
+build	构建 APK	2026-06-05T10:18:38.4510475Z untranslated-messages-file: desiredFileName.txt
+build	构建 APK	2026-06-05T10:18:38.4570159Z <other option>: <other selection> 
+build	构建 APK	2026-06-05T10:18:38.4609487Z 
+build	构建 APK	2026-06-05T10:18:38.4622542Z 
+build	构建 APK	2026-06-05T10:18:38.4672021Z This will generate a JSON format file containing all messages that 
+build	构建 APK	2026-06-05T10:18:38.4673379Z need to be translated.
+build	构建 APK	2026-06-05T10:18:57.7311279Z ../../../.pub-cache/hosted/pub.dev/flutter_quill-11.5.0/lib/src/editor/raw_editor/raw_editor_state.dart:42:7: Error: The non-abstract class 'QuillRawEditorState' is missing implementations for these members:
+build	构建 APK	2026-06-05T10:18:57.7351757Z  - TextInputClient.onFocusReceived
+build	构建 APK	2026-06-05T10:18:57.7399770Z Try to either
+build	构建 APK	2026-06-05T10:18:57.7459829Z  - provide an implementation,
+build	构建 APK	2026-06-05T10:18:57.7550123Z  - inherit an implementation from a superclass or mixin,
+build	构建 APK	2026-06-05T10:18:57.7609908Z  - mark the class as abstract, or
+build	构建 APK	2026-06-05T10:18:57.7710223Z  - provide a 'noSuchMethod' implementation.
+build	构建 APK	2026-06-05T10:18:57.7749941Z class QuillRawEditorState extends EditorState
+build	构建 APK	2026-06-05T10:18:57.7789773Z       ^^^^^^^^^^^^^^^^^^^
+build	构建 APK	2026-06-05T10:18:57.7871098Z /opt/hostedtoolcache/flutter/stable-3.44.0-x64/flutter/packages/flutter/lib/src/services/text_input.dart:1401:8: Context: 'TextInputClient.onFocusReceived' is defined here.
+build	构建 APK	2026-06-05T10:18:57.7900001Z   bool onFocusReceived() => false;
+build	构建 APK	2026-06-05T10:18:57.7969989Z        ^^^^^^^^^^^^^^^
+build	构建 APK	2026-06-05T10:19:11.0312629Z Note: /home/runner/.pub-cache/hosted/pub.dev/android_alarm_manager_plus-4.0.8/android/src/main/java/dev/fluttercommunity/plus/androidalarmmanager/AlarmService.java uses or overrides a deprecated API.
+build	构建 APK	2026-06-05T10:19:11.0340473Z Note: Recompile with -Xlint:deprecation for details.
+build	构建 APK	2026-06-05T10:19:25.5292192Z e: Incompatible classes were found in dependencies. Remove them from the classpath or use '-Xskip-metadata-version-check' to suppress errors
+build	构建 APK	2026-06-05T10:19:25.5341624Z e: file:///home/runner/.gradle/caches/8.14/transforms/44cf29439d53628bd7d69ad73b3a8c1c/transformed/jetified-kotlin-stdlib-2.2.0.jar!/META-INF/kotlin-stdlib-jdk7.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.2.0, expected version is 2.0.0.
+build	构建 APK	2026-06-05T10:19:25.5431673Z e: file:///home/runner/.gradle/caches/8.14/transforms/44cf29439d53628bd7d69ad73b3a8c1c/transformed/jetified-kotlin-stdlib-2.2.0.jar!/META-INF/kotlin-stdlib-jdk8.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.2.0, expected version is 2.0.0.
+build	构建 APK	2026-06-05T10:19:25.5481684Z e: file:///home/runner/.gradle/caches/8.14/transforms/44cf29439d53628bd7d69ad73b3a8c1c/transformed/jetified-kotlin-stdlib-2.2.0.jar!/META-INF/kotlin-stdlib.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.2.0, expected version is 2.0.0.
+build	构建 APK	2026-06-05T10:19:25.5531492Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/DeviceInfoPlusPlugin.kt:16:9 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+build	构建 APK	2026-06-05T10:19:25.5590630Z The class is loaded from /home/runner/.gradle/caches/8.14/transforms/44cf29439d53628bd7d69ad73b3a8c1c/transformed/jetified-kotlin-stdlib-2.2.0.jar!/kotlin/Unit.class
+build	构建 APK	2026-06-05T10:19:25.5621474Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/DeviceInfoPlusPlugin.kt:20:9 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+build	构建 APK	2026-06-05T10:19:25.5831065Z The class is loaded from /home/runner/.gradle/caches/8.14/transforms/44cf29439d53628bd7d69ad73b3a8c1c/transformed/jetified-kotlin-stdlib-2.2.0.jar!/kotlin/Unit.class
+build	构建 APK	2026-06-05T10:19:25.5861700Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/DeviceInfoPlusPlugin.kt:30:9 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+build	构建 APK	2026-06-05T10:19:25.5890504Z The class is loaded from /home/runner/.gradle/caches/8.14/transforms/44cf29439d53628bd7d69ad73b3a8c1c/transformed/jetified-kotlin-stdlib-2.2.0.jar!/kotlin/Unit.class
+build	构建 APK	2026-06-05T10:19:25.5920627Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:12:27 Unresolved reference 'HashMap'.
+build	构建 APK	2026-06-05T10:19:25.5950764Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:28:50 Unresolved reference 'HashMap'.
+build	构建 APK	2026-06-05T10:19:25.5980807Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:30:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6009861Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:31:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6040835Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:32:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6070663Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:33:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6191288Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:34:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6212349Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:35:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6250437Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:36:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6280513Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:37:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6340697Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:38:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6360993Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:39:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6390699Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:40:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6420879Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:41:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6429381Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:44:22 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6471568Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:48:22 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6500728Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:48:47 Unresolved reference 'listOf'.
+build	构建 APK	2026-06-05T10:19:25.6520744Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:49:22 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6550672Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:49:47 Unresolved reference 'listOf'.
+build	构建 APK	2026-06-05T10:19:25.6579975Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:50:22 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6610744Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:50:42 Unresolved reference 'listOf'.
+build	构建 APK	2026-06-05T10:19:25.6640861Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:52:22 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6650661Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:52:47 Unresolved reference 'emptyList'.
+build	构建 APK	2026-06-05T10:19:25.6690846Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:53:22 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6701369Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:53:47 Unresolved reference 'emptyList'.
+build	构建 APK	2026-06-05T10:19:25.6730759Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:54:22 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6760799Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:54:42 Unresolved reference 'emptyList'.
+build	构建 APK	2026-06-05T10:19:25.6775444Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:57:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6820496Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:58:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6830086Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:59:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6860819Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:60:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6890634Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:63:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6900854Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:64:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6920667Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:66:52 Unresolved reference 'HashMap'.
+build	构建 APK	2026-06-05T10:19:25.6950815Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:68:24 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.6979834Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:69:24 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.7010764Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:70:24 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.7040893Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:72:20 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.7043948Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:73:20 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.7070797Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:74:20 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.7102650Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:75:20 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.7130736Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:76:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.7141269Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:79:13 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+build	构建 APK	2026-06-05T10:19:25.7170534Z The class is loaded from /home/runner/.gradle/caches/8.14/transforms/44cf29439d53628bd7d69ad73b3a8c1c/transformed/jetified-kotlin-stdlib-2.2.0.jar!/kotlin/Unit.class
+build	构建 APK	2026-06-05T10:19:25.7230779Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:80:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.7233899Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:81:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.7261420Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:82:18 No 'set' operator method providing array access.
+build	构建 APK	2026-06-05T10:19:25.7291548Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:83:13 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+build	构建 APK	2026-06-05T10:19:25.7317501Z The class is loaded from /home/runner/.gradle/caches/8.14/transforms/44cf29439d53628bd7d69ad73b3a8c1c/transformed/jetified-kotlin-stdlib-2.2.0.jar!/kotlin/Unit.class
+build	构建 APK	2026-06-05T10:19:25.7341351Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:85:13 Class 'kotlin.Unit' was compiled with an incompatible version of Kotlin. The actual metadata version is 2.2.0, but the compiler version 2.0.0 can read versions up to 2.1.0.
+build	构建 APK	2026-06-05T10:19:25.7350459Z The class is loaded from /home/runner/.gradle/caches/8.14/transforms/44cf29439d53628bd7d69ad73b3a8c1c/transformed/jetified-kotlin-stdlib-2.2.0.jar!/kotlin/Unit.class
+build	构建 APK	2026-06-05T10:19:25.7380592Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:92:14 Unresolved reference 'filterNot'.
+build	构建 APK	2026-06-05T10:19:25.7383215Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:92:26 Cannot infer type for this parameter. Please specify it explicitly.
+build	构建 APK	2026-06-05T10:19:25.7385888Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:92:53 Unresolved reference 'name'.
+build	构建 APK	2026-06-05T10:19:25.7388469Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:93:20 Cannot infer type for this parameter. Please specify it explicitly.
+build	构建 APK	2026-06-05T10:19:25.7391329Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:93:47 Unresolved reference 'name'.
+build	构建 APK	2026-06-05T10:19:25.7393830Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:101:31 Unresolved reference 'startsWith'.
+build	构建 APK	2026-06-05T10:19:25.7396413Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:101:69 Unresolved reference 'startsWith'.
+build	构建 APK	2026-06-05T10:19:25.7399830Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:102:34 Unresolved reference 'startsWith'.
+build	构建 APK	2026-06-05T10:19:25.7402393Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:103:34 Unresolved reference 'startsWith'.
+build	构建 APK	2026-06-05T10:19:25.7404901Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:104:31 Unresolved reference 'contains'.
+build	构建 APK	2026-06-05T10:19:25.7407454Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:105:31 Unresolved reference 'contains'.
+build	构建 APK	2026-06-05T10:19:25.7520523Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:106:28 Unresolved reference 'contains'.
+build	构建 APK	2026-06-05T10:19:25.7523871Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:107:28 Unresolved reference 'contains'.
+build	构建 APK	2026-06-05T10:19:25.7526465Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:108:28 Unresolved reference 'contains'.
+build	构建 APK	2026-06-05T10:19:25.7528892Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:109:35 Unresolved reference 'contains'.
+build	构建 APK	2026-06-05T10:19:25.7531672Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:110:30 Unresolved reference 'contains'.
+build	构建 APK	2026-06-05T10:19:25.7534208Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:111:30 Unresolved reference 'contains'.
+build	构建 APK	2026-06-05T10:19:25.7536773Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:112:30 Unresolved reference 'contains'.
+build	构建 APK	2026-06-05T10:19:25.7539618Z e: file:///home/runner/.pub-cache/hosted/pub.dev/device_info_plus-12.3.0/android/src/main/kotlin/dev/fluttercommunity/plus/device_info/MethodCallHandlerImpl.kt:113:30 Unresolved reference 'contains'.
+build	构建 APK	2026-06-05T10:19:39.4255822Z Target kernel_snapshot_program failed: Exception
+build	构建 APK	2026-06-05T10:19:39.4299689Z 
+build	构建 APK	2026-06-05T10:20:35.3253681Z INFO: Installing Rust target: aarch64-linux-android
+build	构建 APK	2026-06-05T10:20:37.7253278Z INFO: Building rhttp for aarch64-linux-android
+build	构建 APK	2026-06-05T10:21:58.7260862Z 
+build	构建 APK	2026-06-05T10:21:58.7310692Z FAILURE: Build completed with 2 failures.
+build	构建 APK	2026-06-05T10:21:58.7326893Z 
+build	构建 APK	2026-06-05T10:21:58.7327831Z 1: Task failed with an exception.
+build	构建 APK	2026-06-05T10:21:58.7328806Z -----------
+build	构建 APK	2026-06-05T10:21:58.7333860Z * What went wrong:
+build	构建 APK	2026-06-05T10:21:58.7334955Z Execution failed for task ':device_info_plus:compileReleaseKotlin'.
+build	构建 APK	2026-06-05T10:21:58.7336833Z > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+build	构建 APK	2026-06-05T10:21:58.7338563Z    > Compilation error. See log for more details
+build	构建 APK	2026-06-05T10:21:58.7339498Z 
+build	构建 APK	2026-06-05T10:21:58.7339958Z * Try:
+build	构建 APK	2026-06-05T10:21:58.7340859Z > Run with --stacktrace option to get the stack trace.
+build	构建 APK	2026-06-05T10:21:58.7342030Z > Run with --info or --debug option to get more log output.
+build	构建 APK	2026-06-05T10:21:58.7343149Z > Run with --scan to get full insights.
+build	构建 APK	2026-06-05T10:21:58.7344179Z > Get more help at https://help.gradle.org.
+build	构建 APK	2026-06-05T10:21:58.7345251Z ==============================================================================
+build	构建 APK	2026-06-05T10:21:58.7346452Z 
+build	构建 APK	2026-06-05T10:21:58.7347046Z 2: Task failed with an exception.
+build	构建 APK	2026-06-05T10:21:58.7347978Z -----------
+build	构建 APK	2026-06-05T10:21:58.7348785Z * What went wrong:
+build	构建 APK	2026-06-05T10:21:58.7349952Z Execution failed for task ':app:compileFlutterBuildRelease'.
+build	构建 APK	2026-06-05T10:21:58.7351600Z > Process 'command '/opt/hostedtoolcache/flutter/stable-3.44.0-x64/flutter/bin/flutter'' finished with non-zero exit value 1
+build	构建 APK	2026-06-05T10:21:58.7352813Z 
+build	构建 APK	2026-06-05T10:21:58.7353281Z * Try:
+build	构建 APK	2026-06-05T10:21:58.7354219Z > Run with --stacktrace option to get the stack trace.
+build	构建 APK	2026-06-05T10:21:58.7355379Z > Run with --info or --debug option to get more log output.
+build	构建 APK	2026-06-05T10:21:58.7356491Z > Run with --scan to get full insights.
+build	构建 APK	2026-06-05T10:21:58.7357484Z > Get more help at https://help.gradle.org.
+build	构建 APK	2026-06-05T10:21:58.7358545Z ==============================================================================
+build	构建 APK	2026-06-05T10:21:58.7359608Z 
+build	构建 APK	2026-06-05T10:21:58.7360417Z BUILD FAILED in 8m 6s
+build	构建 APK	2026-06-05T10:21:59.2387631Z Running Gradle task 'assembleRelease'...                          487.5s
+build	构建 APK	2026-06-05T10:21:59.2413973Z 
+build	构建 APK	2026-06-05T10:21:59.2419277Z ┌─ Flutter Fix ────────────────────────────────────────────────────────────────────────────────┐
+build	构建 APK	2026-06-05T10:21:59.2420814Z │ [!] Your project requires a newer version of the Kotlin Gradle plugin.                       │
+build	构建 APK	2026-06-05T10:21:59.2422436Z │ Find the latest version on https://kotlinlang.org/docs/releases.html#release-details, then   │
+build	构建 APK	2026-06-05T10:21:59.2423954Z │ update the                                                                                   │
+build	构建 APK	2026-06-05T10:21:59.2425317Z │ version number of the plugin with id "org.jetbrains.kotlin.android" in the plugins block of  │
+build	构建 APK	2026-06-05T10:21:59.2426980Z │ /home/runner/work/ThoughtEcho/ThoughtEcho/android/settings.gradle.                           │
+build	构建 APK	2026-06-05T10:21:59.2428440Z │                                                                                              │
+build	构建 APK	2026-06-05T10:21:59.2429700Z │ Alternatively (if your project was created before Flutter 3.19), update                      │
+build	构建 APK	2026-06-05T10:21:59.2430795Z │ /home/runner/work/ThoughtEcho/ThoughtEcho/android/build.gradle                               │
+build	构建 APK	2026-06-05T10:21:59.2431727Z │ ext.kotlin_version = '<latest-version>'                                                      │
+build	构建 APK	2026-06-05T10:21:59.2432585Z └──────────────────────────────────────────────────────────────────────────────────────────────┘
+build	构建 APK	2026-06-05T10:21:59.2521624Z Gradle task assembleRelease failed with exit code 1
+build	构建 APK	2026-06-05T10:21:59.2600732Z ##[error]Process completed with exit code 1.

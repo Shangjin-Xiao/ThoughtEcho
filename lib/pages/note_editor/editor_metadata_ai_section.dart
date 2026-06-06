@@ -29,10 +29,7 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
             const SizedBox(width: 8),
             Text(
               l10n.aiAnalysis,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const Spacer(),
             // 删除按钮
@@ -160,10 +157,8 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
                       Expanded(
                         child: Text(
                           l10n.aiAnalysis,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: colorScheme.onSurface,
-                          ),
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(color: colorScheme.onSurface),
                         ),
                       ),
                       IconButton(
@@ -202,18 +197,12 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
                               color: colorScheme.onSurface,
                               height: 1.6,
                             ),
-                            h1: theme.textTheme.headlineSmall?.copyWith(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            h2: theme.textTheme.titleLarge?.copyWith(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            h3: theme.textTheme.titleMedium?.copyWith(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            h1: theme.textTheme.headlineSmall
+                                ?.copyWith(color: colorScheme.onSurface),
+                            h2: theme.textTheme.titleLarge
+                                ?.copyWith(color: colorScheme.onSurface),
+                            h3: theme.textTheme.titleMedium
+                                ?.copyWith(color: colorScheme.onSurface),
                             listBullet: theme.textTheme.bodyMedium?.copyWith(
                               color: colorScheme.primary,
                             ),

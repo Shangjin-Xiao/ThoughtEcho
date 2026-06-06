@@ -205,9 +205,7 @@ class _TrashPageState extends State<TrashPage> {
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                   child: Text(
                     l10n.trashRetentionPeriod,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: theme.textTheme.titleLarge,
                   ),
                 ),
                 ListTile(
@@ -579,10 +577,8 @@ class _TrashPageState extends State<TrashPage> {
             const SizedBox(height: 24),
             Text(
               l10n.trashEmpty,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: colorScheme.onSurface,
-              ),
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(color: colorScheme.onSurface),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),

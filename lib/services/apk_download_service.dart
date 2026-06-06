@@ -654,10 +654,8 @@ class _DownloadProgressDialog extends StatelessWidget {
                       l10n.apkDownloadProgress(
                         (progress.progress * 100).round(),
                       ),
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.primary,
-                      ),
+                      style: theme.textTheme.titleSmall
+                          ?.copyWith(color: colorScheme.primary),
                     ),
                     Text(
                       progress.sizeText,

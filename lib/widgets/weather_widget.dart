@@ -46,11 +46,10 @@ class WeatherWidget extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       l10n.currentWeather,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(color: theme.colorScheme.primary),
                     ),
                   ],
                 ),
@@ -110,10 +109,7 @@ class WeatherWidget extends StatelessWidget {
             Text(
               weatherService.temperature ?? '',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 22, // 稍微放大温度字体
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(context).textTheme.titleLarge,
             ),
             // 移除了旧的位置标签，因为现在放到了顶部
           ],

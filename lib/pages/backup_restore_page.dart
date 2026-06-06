@@ -76,7 +76,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                   l10n.dataBackup,
                   style: Theme.of(
                     context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  ).textTheme.titleLarge,
                 ),
               ],
             ),
@@ -190,7 +190,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                   l10n.dataRestore,
                   style: Theme.of(
                     context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  ).textTheme.titleLarge,
                 ),
               ],
             ),
@@ -286,9 +286,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 const SizedBox(width: 8),
                 Text(
                   l10n.importantNotes,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],
             ),
@@ -325,7 +323,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 children: [
                   TextSpan(
                     text: '$title: ',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style: Theme.of(context).textTheme.titleSmall,
                   ),
                   TextSpan(text: content),
                 ],
@@ -709,7 +707,7 @@ Details: $e''';
               children: [
                 Text(
                   l10n.restoreConfirmDialogDesc,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 8),
                 Text(l10n.restoreConfirmDialogItem1),
@@ -718,10 +716,10 @@ Details: $e''';
                 const SizedBox(height: 16),
                 Text(
                   l10n.restoreConfirmDialogWarning,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.red,
-                  ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(color: Colors.red),
                 ),
               ],
             ),

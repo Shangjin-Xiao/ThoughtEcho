@@ -55,7 +55,7 @@ class SourceAnalysisResultDialog {
                 if (author != null && author.isNotEmpty) ...[
                   Text(
                     l10n.possibleAuthor,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleSmall,
                   ),
                   Text(author),
                   const SizedBox(height: 8),
@@ -63,7 +63,7 @@ class SourceAnalysisResultDialog {
                 if (work != null && work.isNotEmpty) ...[
                   Text(
                     l10n.possibleWork,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleSmall,
                   ),
                   Text(work),
                   const SizedBox(height: 8),
@@ -71,7 +71,7 @@ class SourceAnalysisResultDialog {
                 if (explanation.isNotEmpty) ...[
                   Text(
                     l10n.analysisExplanation,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleSmall,
                   ),
                   Text(explanation, style: const TextStyle(fontSize: 13)),
                 ],

@@ -324,10 +324,7 @@ class ClipboardService extends ChangeNotifier {
                     Flexible(
                       child: Text(
                         AppLocalizations.of(context).clipboardFoundHint,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
+                        style: Theme.of(context).textTheme.titleSmall,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),

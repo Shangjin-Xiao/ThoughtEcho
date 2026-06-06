@@ -107,9 +107,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
           // 页面标题
           Text(
             widget.pageData.title,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: theme.textTheme.headlineMedium,
           ),
           const SizedBox(height: 8),
           Text(
@@ -302,9 +300,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
         },
         title: Text(
           preference.title,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: theme.textTheme.titleMedium,
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
@@ -355,9 +351,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
           children: [
             Text(
               preference.title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 4),
             Text(
@@ -416,9 +410,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
           children: [
             Text(
               preference.title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 4),
             Text(
@@ -500,9 +492,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
           children: [
             Text(
               preference.title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 4),
             Text(
@@ -590,12 +580,13 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                       : theme.colorScheme.surfaceContainerHighest.withValues(
                           alpha: 0.8,
                         ),
-                  labelStyle: TextStyle(
+                  labelStyle: (theme.textTheme.labelLarge ?? const TextStyle())
+                      .copyWith(
                     color: isSelected
                         ? theme.colorScheme.onPrimaryContainer
                         : theme.colorScheme.onSurface,
                     fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                        isSelected ? FontWeight.w500 : FontWeight.normal,
                   ),
                   side: BorderSide(
                     color: isSelected
@@ -635,9 +626,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
         children: [
           Text(
             providerPreference.title,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: theme.textTheme.titleSmall,
           ),
           const SizedBox(height: 4),
           Text(
@@ -695,10 +684,8 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
               const SizedBox(width: 8),
               Text(
                 AppLocalizations.of(context).prefAboutSettings,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
-                ),
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(color: theme.colorScheme.primary),
               ),
             ],
           ),

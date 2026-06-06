@@ -105,9 +105,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                             Text(
                               l10n.tagManagement,
                               style: theme.textTheme.titleLarge?.copyWith(
-                                color: colorScheme.onPrimaryContainer,
-                                fontWeight: FontWeight.bold,
-                              ),
+                                  color: colorScheme.onPrimaryContainer),
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -146,10 +144,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                 children: [
                   Text(
                     l10n.addNewTag,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(color: colorScheme.onSurface),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -291,10 +287,10 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                 )
                               : Text(
                                   l10n.add,
-                                  style: TextStyle(
-                                    color: colorScheme.onPrimary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleSmall
+                                      ?.copyWith(color: colorScheme.onPrimary),
                                 ),
                         ),
                       ),
@@ -324,10 +320,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                     padding: const EdgeInsets.all(20),
                     child: Text(
                       l10n.myTags,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                      ),
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(color: colorScheme.onSurface),
                     ),
                   ),
                   StreamBuilder<List<NoteCategory>>(
@@ -513,8 +507,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                 displayName,
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: tag.isDefault
-                                      ? FontWeight.w600
-                                      : FontWeight.w500,
+                                      ? FontWeight.w500
+                                      : FontWeight.w400,
                                   color: tag.isDefault
                                       ? colorScheme.primary
                                       : colorScheme.onSurface,
@@ -544,9 +538,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                             : l10n.defaultTag,
                                         style: theme.textTheme.labelSmall
                                             ?.copyWith(
-                                          color: colorScheme.primary,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                                color: colorScheme.primary),
                                       ),
                                     )
                                   : IconButton(
@@ -817,9 +809,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                 ListTile(
                                   title: Text(
                                     category,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style:
+                                        Theme.of(context).textTheme.titleSmall,
                                   ),
                                   trailing: Icon(
                                     expandedCategories[category] ?? false
@@ -901,9 +892,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                           ListTile(
                             title: Text(
                               l10n.systemIcons,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Theme.of(context).textTheme.titleSmall,
                             ),
                             trailing: Icon(
                               expandedCategories[l10n.systemIcons] ?? false

@@ -124,7 +124,7 @@ class _TagSelectionSectionState extends State<TagSelectionSection> {
           Flexible(
             child: Text(
               l10n.selectTagsWithCount(widget.selectedTagIds.length),
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleSmall,
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -343,7 +343,7 @@ class SelectedTagsDisplay extends StatelessWidget {
         children: [
           Text(
             l10n.selectedTags,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.labelMedium,
           ),
           const SizedBox(height: 4),
           Wrap(

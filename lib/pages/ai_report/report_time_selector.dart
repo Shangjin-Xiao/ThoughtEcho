@@ -100,13 +100,14 @@ extension _AIReportTimeSelector on _AIPeriodicReportPageState {
               const SizedBox(width: 6),
               Text(
                 title,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.onPrimary
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: 13,
+                      fontWeight:
+                          isSelected ? FontWeight.w500 : FontWeight.w400,
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.onPrimary
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
               ),
             ],
           ),
@@ -161,7 +162,7 @@ extension _AIReportTimeSelector on _AIPeriodicReportPageState {
             '${_getPeriodName(l10n)} - ${_getDateRangeText(l10n)}',
             style: Theme.of(
               context,
-            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+            ).textTheme.bodyMedium,
           ),
           const Spacer(),
           Icon(
@@ -201,7 +202,7 @@ extension _AIReportTimeSelector on _AIPeriodicReportPageState {
                 l10n.timeRange,
                 style: Theme.of(
                   context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                ).textTheme.titleMedium,
               ),
               const Spacer(),
               Container(

@@ -669,9 +669,7 @@ class _InsightsPageState extends State<InsightsPage> {
           // _buildWeeklyFavoritesSection(theme),
           Text(
             l10n.selectAnalysisMethod,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: theme.textTheme.titleMedium,
           ),
           const SizedBox(height: 16),
 
@@ -684,9 +682,7 @@ class _InsightsPageState extends State<InsightsPage> {
 
           Text(
             l10n.selectAnalysisStyle,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+            style: theme.textTheme.titleMedium,
           ),
           const SizedBox(height: 12),
 
@@ -728,13 +724,13 @@ class _InsightsPageState extends State<InsightsPage> {
                         )
                       : null,
                   selectedColor: theme.colorScheme.secondaryContainer,
-                  labelStyle: TextStyle(
-                    color: isSelected
-                        ? theme.colorScheme.onSecondaryContainer
-                        : theme.colorScheme.onSurface,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
+                  labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: isSelected
+                            ? theme.colorScheme.onSecondaryContainer
+                            : theme.colorScheme.onSurface,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.normal,
+                      ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                     side: BorderSide(
@@ -790,10 +786,10 @@ class _InsightsPageState extends State<InsightsPage> {
                         const SizedBox(width: 4),
                         Text(
                           l10n.advancedOptions,
-                          style: TextStyle(
-                            color: theme.primaryColor,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall
+                              ?.copyWith(color: theme.primaryColor),
                         ),
                       ],
                     ),
@@ -864,7 +860,7 @@ class _InsightsPageState extends State<InsightsPage> {
               ),
               title: Text(
                 l10n.analysisHistoryRecord,
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                style: Theme.of(context).textTheme.titleSmall,
               ),
               subtitle: Text(l10n.viewPreviousAnalysis),
               trailing: const Icon(Icons.chevron_right),
@@ -900,10 +896,8 @@ class _InsightsPageState extends State<InsightsPage> {
                     Flexible(
                       child: Text(
                         l10n.analysisDescriptionTitle,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSecondaryContainer,
-                        ),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: theme.colorScheme.onSecondaryContainer),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -941,7 +935,7 @@ class _InsightsPageState extends State<InsightsPage> {
                     Flexible(
                       child: Text(
                         l10n.aiAnalysisUsageInstructionsTitle,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.titleSmall,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -1022,11 +1016,9 @@ class _InsightsPageState extends State<InsightsPage> {
                     Text(
                       _analysisTypeKeyToLabel[key] ?? key,
                       style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: isSelected
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurface,
-                      ),
+                          color: isSelected
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurface),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -1092,10 +1084,8 @@ class _InsightsPageState extends State<InsightsPage> {
                             const SizedBox(width: 8),
                             Text(
                               _getAnalysisTitle(),
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: theme.primaryColor,
-                              ),
+                              style: theme.textTheme.titleMedium
+                                  ?.copyWith(color: theme.primaryColor),
                             ),
                             const Spacer(),
                             // Show copy button only after generation is complete
@@ -1143,19 +1133,12 @@ class _InsightsPageState extends State<InsightsPage> {
                               fontSize: 16,
                             ),
                             h1: theme.textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: theme.primaryColor,
-                              height: 1.5,
-                            ),
+                                color: theme.primaryColor, height: 1.5),
                             h2: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.onSurface,
-                              height: 1.5,
-                            ),
-                            h3: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              height: 1.4,
-                            ),
+                                color: theme.colorScheme.onSurface,
+                                height: 1.5),
+                            h3: theme.textTheme.titleMedium
+                                ?.copyWith(height: 1.4),
                             listBullet: theme.textTheme.bodyMedium
                                 ?.copyWith(color: theme.primaryColor),
                             blockquote: theme.textTheme.bodyMedium?.copyWith(

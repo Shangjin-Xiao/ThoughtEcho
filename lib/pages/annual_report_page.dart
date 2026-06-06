@@ -407,11 +407,12 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                 ),
                 Text(
                   '${_currentPage + 1} / 7',
-                  style: TextStyle(
-                    color: isDark ? Colors.white70 : Colors.black54,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(
+                        color: isDark ? Colors.white70 : Colors.black54,
+                      ),
                 ),
                 IconButton(
                   onPressed: _shareReport,
@@ -516,11 +517,10 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                 ),
                 child: Text(
                   l10n.yourThoughtTrack,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w600,
-                    height: 1.2,
-                  ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(height: 1.2),
                 ),
               ),
             ),
@@ -574,11 +574,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                   const SizedBox(width: 8),
                   Text(
                     l10n.tapToExplore,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.primary),
                   ),
                 ],
               ),
@@ -600,7 +597,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
           children: [
             Text(
               l10n.annualOverview,
-              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleLarge,
             ),
 
             const SizedBox(height: 40),
@@ -702,7 +699,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
           children: [
             Text(
               l10n.writingHabits,
-              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleLarge,
             ),
 
             const SizedBox(height: 40),
@@ -817,16 +814,13 @@ class _AnnualReportPageState extends State<AnnualReportPage>
           children: [
             Text(
               l10n.tagAnalysis,
-              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 40),
             if (_stats!.topTags.isNotEmpty) ...[
               Text(
                 l10n.mostUsedTags,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 20),
             ],
@@ -864,10 +858,10 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                 child: Center(
                                   child: Text(
                                     '${index + 1}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(color: Colors.white),
                                   ),
                                 ),
                               ),
@@ -880,10 +874,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                       scrollDirection: Axis.horizontal,
                                       child: Text(
                                         tag.name,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -954,7 +947,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
           children: [
             Text(
               l10n.timeline,
-              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 40),
             Expanded(
@@ -1011,10 +1004,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                 width: 60,
                                 child: Text(
                                   l10n.monthX(month.month),
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
                                 ),
                               ),
                               Expanded(
@@ -1056,10 +1047,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                         const SizedBox(width: 12),
                                         Text(
                                           l10n.notesCount(month.count),
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                          ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium,
                                         ),
                                       ],
                                     ),
@@ -1089,7 +1079,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
           children: [
             Text(
               l10n.deepInsights,
-              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 40),
             _buildInsightBulbBar(),
@@ -1177,7 +1167,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
           const SizedBox(height: 32),
           Text(
             l10n.thankYou,
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.titleLarge,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -1204,7 +1194,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             ),
             child: Text(
               l10n.continueRecording(2025),
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
         ],
@@ -1253,14 +1243,11 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: ColorUtils.withOpacitySafe(
-                        Theme.of(context).colorScheme.onSurface,
-                        0.7,
-                      ),
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: ColorUtils.withOpacitySafe(
+                          Theme.of(context).colorScheme.onSurface,
+                          0.7,
+                        )),
                   ),
                   const SizedBox(height: 4),
                   Row(
@@ -1268,24 +1255,19 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     children: [
                       Text(
                         value,
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(width: 4),
                       Padding(
                         padding: const EdgeInsets.only(bottom: 4),
                         child: Text(
                           subtitle,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: ColorUtils.withOpacitySafe(
-                              Theme.of(context).colorScheme.onSurface,
-                              0.6,
-                            ),
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: ColorUtils.withOpacitySafe(
+                                    Theme.of(context).colorScheme.onSurface,
+                                    0.6,
+                                  )),
                         ),
                       ),
                     ],
@@ -1330,24 +1312,18 @@ class _AnnualReportPageState extends State<AnnualReportPage>
               children: [
                 Text(
                   title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: ColorUtils.withOpacitySafe(
-                      Theme.of(context).colorScheme.onSurface,
-                      0.7,
-                    ),
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: ColorUtils.withOpacitySafe(
+                        Theme.of(context).colorScheme.onSurface,
+                        0.7,
+                      )),
                 ),
                 const SizedBox(height: 4),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Text(
                     content,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
               ],
@@ -1388,10 +1364,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
               const SizedBox(width: 16),
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(context).textTheme.titleMedium,
               ),
             ],
           ),

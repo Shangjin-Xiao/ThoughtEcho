@@ -42,10 +42,7 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
                   children: [
                     Text(
                       l10n.dataOverview,
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     Text(
                       _getDateRangeText(l10n),
@@ -235,10 +232,7 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
                             const SizedBox(width: 8),
                             Text(
                               l10n.recentNotes,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w600),
+                              style: Theme.of(context).textTheme.titleMedium,
                             ),
                           ],
                         ),
@@ -337,9 +331,7 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
                     const SizedBox(width: 8),
                     Text(
                       l10n.mostFavoritedInPeriod,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ],
                 ),
@@ -431,11 +423,10 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
                             const SizedBox(width: 4),
                             Text(
                               '${quote.favoriteCount}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(color: Colors.white),
                             ),
                           ],
                         ),

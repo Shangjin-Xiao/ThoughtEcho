@@ -31,7 +31,7 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
           children: [
             Text(
               l10n.apiKeyDiagnosticsTool,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
             Text(
@@ -53,8 +53,7 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
             if (_diagnosticResult.isNotEmpty) ...[
               Text(
                 l10n.diagnosticResultLabel,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
               Expanded(

@@ -50,11 +50,10 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                         children: [
                           Text(
                             AppLocalizations.of(context).editMetadata,
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.onSurface,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(color: theme.colorScheme.onSurface),
                           ),
                           const Spacer(),
                           TextButton.icon(
@@ -73,10 +72,7 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                           // 作者/作品输入
                           Text(
                             l10n.sourceInfo,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 12),
                           Row(
@@ -129,10 +125,7 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                           // 颜色选择
                           Text(
                             l10n.colorLabel,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 12),
                           Container(
@@ -224,10 +217,7 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                             children: [
                               Text(
                                 l10n.tagsLabel,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: Theme.of(context).textTheme.titleMedium,
                               ),
                               const Spacer(),
                               Text(
@@ -382,10 +372,8 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                 children: [
                                   Text(
                                     l10n.selectedTags,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style:
+                                        Theme.of(context).textTheme.titleSmall,
                                   ),
                                   const SizedBox(height: 8),
                                   Wrap(

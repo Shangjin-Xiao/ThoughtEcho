@@ -193,9 +193,7 @@ extension _AIReportFeaturedCards on _AIPeriodicReportPageState {
                   children: [
                     Text(
                       l10n.featuredCards,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
                     if (_featuredCards.isNotEmpty)
                       Row(
@@ -230,11 +228,9 @@ extension _AIReportFeaturedCards on _AIPeriodicReportPageState {
                                     .textTheme
                                     .bodySmall
                                     ?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onPrimaryContainer,
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                        color: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimaryContainer),
                               ),
                             ),
                           ],
@@ -326,7 +322,7 @@ extension _AIReportFeaturedCards on _AIPeriodicReportPageState {
                     : l10n.featuredCards,
                 style: Theme.of(
                   context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                ).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
@@ -441,10 +437,8 @@ extension _AIReportFeaturedCards on _AIPeriodicReportPageState {
                   const SizedBox(height: 12),
                   Text(
                     l10n.loadMoreCards,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(color: theme.colorScheme.primary),
                   ),
                   const SizedBox(height: 4),
                   Text(

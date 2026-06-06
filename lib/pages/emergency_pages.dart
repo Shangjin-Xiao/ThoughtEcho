@@ -29,10 +29,7 @@ class EmergencyRecoveryPage extends StatelessWidget {
                 const SizedBox(height: 24),
                 Text(
                   l10n.emergencyRecoveryHeading,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(context).textTheme.titleLarge,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
@@ -205,10 +202,7 @@ class EmergencyHomePage extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 emergencyAppStartFailedTitle,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(context).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -229,7 +223,7 @@ class EmergencyHomePage extends StatelessWidget {
                   children: [
                     Text(
                       emergencyErrorLabel,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleSmall,
                     ),
                     const SizedBox(height: 4),
                     Text(error),
@@ -369,10 +363,7 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
               const SizedBox(height: 16),
               Text(
                 l10n.emergencyBackupToolTitle,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(context).textTheme.titleLarge,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),

@@ -52,13 +52,11 @@ class _CodeBlockWidgetState extends State<CodeBlockWidget> {
               children: [
                 Text(
                   widget.language?.toUpperCase() ?? 'CODE',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: widget.theme.colorScheme.onSurface.withValues(
-                      alpha: 0.7,
-                    ),
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: widget.theme.colorScheme.onSurface.withValues(
+                          alpha: 0.7,
+                        ),
+                      ),
                 ),
                 IconButton(
                   icon: Icon(_isCopied ? Icons.check : Icons.copy, size: 16),

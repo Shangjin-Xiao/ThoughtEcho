@@ -280,9 +280,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                       const Spacer(),
                       Text(
                         "${l10n.pdfExportSelectionMode} (${_selectedExportNoteIds.length})",
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: theme.textTheme.titleMedium,
                       ),
                       const Spacer(),
                       TextButton(
@@ -359,8 +357,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                           icon: const Icon(Icons.picture_as_pdf, size: 18),
                           label: Text(
                             l10n.exportSelected(_selectedExportNoteIds.length),
-                            style: const TextStyle(
-                                fontSize: 11, fontWeight: FontWeight.bold),
+                            style: Theme.of(context).textTheme.labelSmall,
                           ),
                           style: FilledButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -443,7 +440,7 @@ extension _NoteListItemsExtension on NoteListViewState {
             const SizedBox(height: 16),
             Text(
               l10n.noteSearchEmptyTitle,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             Text(

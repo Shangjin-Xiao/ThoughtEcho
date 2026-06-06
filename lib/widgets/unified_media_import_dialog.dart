@@ -110,10 +110,9 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
                   const SizedBox(width: 8),
                   Text(
                     l10n.importInstructions,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                   ),
                 ],
               ),

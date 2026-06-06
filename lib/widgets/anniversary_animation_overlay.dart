@@ -303,12 +303,11 @@ class _AnniversaryAnimationOverlayState
                         ),
                         child: Text(
                           l10n.anniversaryBannerSubtitle,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.white,
-                            letterSpacing: 1.0,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelSmall
+                              ?.copyWith(
+                                  color: Colors.white, letterSpacing: 1.0),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -328,10 +327,10 @@ class _AnniversaryAnimationOverlayState
                               ),
                               label: Text(
                                 l10n.anniversaryEnterApp,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.3,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(letterSpacing: 0.3),
                               ),
                               style: FilledButton.styleFrom(
                                 backgroundColor:

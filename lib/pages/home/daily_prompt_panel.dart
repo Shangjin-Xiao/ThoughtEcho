@@ -209,7 +209,6 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
                 l10n.todayThoughts,
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.bold,
                   fontSize: widget.screenWidth > 600
                       ? 16
                       : (widget.isVerySmallScreen ? 13 : 15),

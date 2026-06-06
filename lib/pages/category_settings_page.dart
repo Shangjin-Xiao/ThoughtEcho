@@ -42,7 +42,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
           children: [
             Text(
               l10n.tagManagement,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 16),
             // 输入与添加区域卡片化
@@ -382,9 +382,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                 ListTile(
                                   title: Text(
                                     category,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style:
+                                        Theme.of(context).textTheme.titleSmall,
                                   ),
                                   trailing: Icon(
                                     expandedCategories[category] ?? false
@@ -466,9 +465,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                           ListTile(
                             title: Text(
                               l10n.systemIcons,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Theme.of(context).textTheme.titleSmall,
                             ),
                             trailing: Icon(
                               expandedCategories[l10n.systemIcons] ?? false
@@ -686,10 +683,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                       Expanded(
                         child: Text(
                           displayName,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -918,9 +912,7 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                           ListTile(
                             title: Text(
                               category,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: Theme.of(context).textTheme.titleSmall,
                             ),
                             trailing: Icon(
                               expandedCategories[category] ?? false
@@ -982,7 +974,7 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                     ListTile(
                       title: Text(
                         l10n.systemIcons,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.titleSmall,
                       ),
                       trailing: Icon(
                         expandedCategories[l10n.systemIcons] ?? false

@@ -60,11 +60,10 @@ class MarkdownMessageBubble extends StatelessWidget {
                 if (!isCurrentUser && message.author.firstName != null) ...[
                   Text(
                     message.author.firstName!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.primary,
-                    ),
+                    style: Theme.of(context)
+                        .textTheme
+                        .labelMedium
+                        ?.copyWith(color: theme.colorScheme.primary),
                   ),
                   const SizedBox(height: 4),
                 ],

@@ -32,10 +32,8 @@ extension _HitokotoSettingsPageInfoSections on _HitokotoSettingsPageState {
               const SizedBox(width: 8),
               Text(
                 l10n.usageInstructions,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: colorScheme.onSurface,
-                ),
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(color: colorScheme.onSurface),
               ),
             ],
           ),
