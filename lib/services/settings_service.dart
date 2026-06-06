@@ -77,9 +77,7 @@ class SettingsService extends ChangeNotifier {
   Future<void> setSentryEnabled(bool enabled) async {
     _appSettings = _appSettings.copyWith(sentryEnabled: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    if (enabled) {
-      await SentryHelper.initIfEnabled(true);
-    }
+    await SentryHelper.initIfEnabled(enabled);
     notifyListeners();
   }
 

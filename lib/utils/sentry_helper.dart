@@ -55,14 +55,25 @@ class SentryHelper {
     }
   }
 
-  /// 尝试根据是否启用初始化 Sentry SDK，并记录日志
+  /// 尝试根据是否启用初始化 Sentry SDK，并记录或反初始化 SDK
   static Future<void> initIfEnabled(bool enabled) async {
-    if (!enabled) return;
-    try {
-      await init();
-      logInfo('Sentry 初始化成功', source: 'BackgroundInit');
-    } catch (e) {
-      logWarning('Sentry 初始化失败: $e', source: 'BackgroundInit');
+    if (enabled) {
+      try {
+        await init();
+        logInfo('Sentry 初始化成功', source: 'BackgroundInit');
+      } catch (e) {
+        logWarning('Sentry 初始化失败: $e', source: 'BackgroundInit');
+      }
+    } else {
+      if (_initialized) {
+        try {
+          await Sentry.close();
+          _initialized = false;
+          logInfo('Sentry 关闭成功', source: 'BackgroundInit');
+        } catch (e) {
+          logWarning('Sentry 关闭失败: $e', source: 'BackgroundInit');
+        }
+      }
     }
   }
 }

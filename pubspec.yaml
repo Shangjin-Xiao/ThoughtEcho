@@ -87,7 +87,7 @@ dependencies:
   pdf: ^3.12.0
   printing: ^5.14.3
   connectivity_plus: ^7.1.1
-  sentry_flutter: ^8.14.2
+  sentry_flutter: ^9.0.0
 
 dev_dependencies:
   flutter_test:

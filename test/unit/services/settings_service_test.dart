@@ -284,6 +284,13 @@ void main() {
       expect(settingsService.sentryDisclosureShown, isTrue);
       expect(settingsService.appSettings.sentryEnabled, isTrue);
       expect(settingsService.appSettings.sentryDisclosureShown, isTrue);
+
+      // Verify persistence by creating a new SettingsService instance
+      final rebuiltService = await SettingsService.create();
+      expect(rebuiltService.sentryEnabled, isTrue);
+      expect(rebuiltService.sentryDisclosureShown, isTrue);
+      expect(rebuiltService.appSettings.sentryEnabled, isTrue);
+      expect(rebuiltService.appSettings.sentryDisclosureShown, isTrue);
     });
   });
 }
