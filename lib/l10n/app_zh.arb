@@ -2767,6 +2767,7 @@
   },
   "cannotAddWeather": "无法添加天气",
   "cannotAddWeatherDesc": "此笔记首次保存时未记录天气信息，无法补充添加。\n\n如需记录天气，请在新建笔记时勾选天气选项。",
+  "editModeMetadataReadOnlyHint": "已保存笔记的位置和天气不支持编辑修改",
   "weatherInfo2": "天气信息",
   "weatherRemoveHint": "当前天气：{weather}\n\n移除天气信息后将无法再次添加或更改。",
   "@weatherRemoveHint": {

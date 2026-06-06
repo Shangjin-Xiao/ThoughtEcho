@@ -2761,6 +2761,7 @@
   },
   "cannotAddWeather": "Cannot Add Weather",
   "cannotAddWeatherDesc": "This note did not record weather info on first save, cannot add later.\n\nTo record weather, check the weather option when creating a new note.",
+  "editModeMetadataReadOnlyHint": "Location and weather of saved notes cannot be modified",
   "weatherInfo2": "Weather Info",
   "weatherRemoveHint": "Current weather: {weather}\n\nWeather info cannot be added or changed again after removal.",
   "@weatherRemoveHint": {
