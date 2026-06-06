@@ -331,3 +331,7 @@ MultiAISettings → AIProviderSettings → AINetworkManager → APIKeyManager
 1. **隐私与安全第一**：随时注意隐私安全，绝不提交任何包含敏感信息（如真实的 API 密钥、个人隐私数据、包含个人信息的截图等）的文件，并确保代码和行为符合开源规范。
 2. **精准代码提交**：每次提交时，**只提交你明确更改过的文件**（例如 `git add <specific_file>`），**绝不允许使用 `git add .` 或 `git add -A`（绝不 add 所有）**，避免误提交缓存或敏感测试文件。
 3. **隔离工作区**：如果需要在其他分支上进行工作或排查问题，请务必使用 `git worktree` 在隔离的工作树中进行，不要在当前工作区直接切换分支。
+4. **文档时效性 — 主动调用 context7**：涉及第三方库、框架、SDK、CLI 或云服务 API 时，**优先调用 `context7` MCP 工具**查询最新文档（即使你"觉得自己知道"——训练数据可能滞后于 breaking change），以保证使用最新且推荐的 API、避免引入已废弃用法和技术债。
+   - **必须调用**的典型场景：Flutter / Dart SDK 升级影响、`flutter_quill` 富文本 API、`provider` / `sqflite` / `dio` / `intl` / `flutter_secure_storage` / `MMKV` 等核心依赖的用法、各 AI 服务商（OpenAI / Anthropic / SiliconFlow / Ollama / LMStudio 等）的 REST/SSE 协议字段、Android/iOS/Windows 原生 API、CI Action 配置。
+   - **不要调用**的场景（避免噪音）：纯本项目内重构、调试业务逻辑、修 lint/format、改 i18n ARB 文案、删除注释、git/shell 等通用操作。
+   - 工作流：先调用 `resolve-library-id` 确定库 ID → 再调用 `get-library-docs` 拉文档 → 引用具体段落或代码示例后再动手写代码；如果 context7 没有该库，再退回到 WebSearch。
