@@ -2199,7 +2199,14 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                 onSelected: (value) async {
                                   // 编辑模式下统一弹对话框
                                   if (widget.initialQuote != null) {
-                                    await _showLocationDialog(context, theme);
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(AppLocalizations.of(context).editModeMetadataReadOnlyHint),
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
+                                    }
                                     return;
                                   }
                                   // 新建模式：已有坐标/地址时弹对话框（查看/转换/移除）
@@ -2290,9 +2297,16 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                             label: Text(l10n.weather),
                             selected: _includeWeather,
                             onSelected: (value) async {
-                              // 编辑模式下统一弹对话框
+                              // 编辑模式下不允许修改位置与天气信息
                               if (widget.initialQuote != null) {
-                                await _showWeatherDialog(context, theme);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(AppLocalizations.of(context).editModeMetadataReadOnlyHint),
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
                                 return;
                               }
                               // 新建模式：已勾选天气时，点击弹出详情/移除对话框

@@ -69,13 +69,14 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                             onSelected: (value) async {
                               // 编辑模式下统一弹对话框（只有已保存的笔记才是编辑模式）
                               if (widget.initialQuote?.id != null) {
-                                // 编辑模式：使用完整对话框（包含移除、更新地址等选项）
-                                await _showLocationDialogInEditor(
-                                  context,
-                                  theme,
-                                );
-                                // 刷新 BottomSheet 内的 UI
-                                setDialogState(() {});
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(l10n.editModeMetadataReadOnlyHint),
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
                                 return;
                               }
                               // 新建模式
@@ -142,31 +143,16 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                         label: Text(l10n.weatherLabel),
                         selected: _showWeather,
                         onSelected: (value) async {
-                          // 编辑模式下统一弹对话框（只有已保存的笔记才是编辑模式）
+                          // 编辑模式下统一弹只读提示
                           if (widget.initialQuote?.id != null) {
-                            // 编辑模式：如果没有天气数据，直接弹窗提示，不改变选中状态
-                            if (_originalWeather == null) {
-                              final l10n = AppLocalizations.of(context);
-                              await showDialog(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  title: Text(l10n.cannotAddWeather),
-                                  content: Text(l10n.cannotAddWeatherDesc),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(ctx),
-                                      child: Text(l10n.iKnow),
-                                    ),
-                                  ],
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(l10n.editModeMetadataReadOnlyHint),
+                                  duration: const Duration(seconds: 2),
                                 ),
                               );
-                              return;
                             }
-                            // 有天气数据时才允许切换
-                            _updateState(() {
-                              _showWeather = value;
-                            });
-                            setDialogState(() {});
                             return;
                           }
                           // 新建模式
