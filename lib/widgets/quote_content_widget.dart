@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../models/quote_model.dart';
@@ -24,7 +26,56 @@ class QuoteContent extends StatelessWidget {
     this.showFullContent = false,
   });
 
-  // 性能优化:提取为静态常量,避免每次 build 创建
+  // Flutter 3.41+ Android (Impeller + 精准 wght 轴) 下 FontWeight.bold (w700)
+  // 渲染明显偏粗。在 Android 上注入 customStyles 将 bold 降为 w600，
+  // 标题按比例降档，使视觉接近升级前效果。
+  static quill.DefaultStyles? _buildAndroidCustomStyles() {
+    if (kIsWeb || !Platform.isAndroid) return null;
+    return quill.DefaultStyles(
+      bold: const TextStyle(fontWeight: FontWeight.w600),
+      h1: quill.DefaultTextBlockStyle(
+        const TextStyle(
+          fontSize: 34,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.5,
+          height: 1.083,
+          decoration: TextDecoration.none,
+        ),
+        const quill.HorizontalSpacing(0, 0),
+        const quill.VerticalSpacing(16, 0),
+        quill.VerticalSpacing.zero,
+        null,
+      ),
+      h2: quill.DefaultTextBlockStyle(
+        const TextStyle(
+          fontSize: 30,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.8,
+          height: 1.067,
+          decoration: TextDecoration.none,
+        ),
+        const quill.HorizontalSpacing(0, 0),
+        const quill.VerticalSpacing(8, 0),
+        quill.VerticalSpacing.zero,
+        null,
+      ),
+      h3: quill.DefaultTextBlockStyle(
+        const TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.w500,
+          letterSpacing: -0.5,
+          height: 1.083,
+          decoration: TextDecoration.none,
+        ),
+        const quill.HorizontalSpacing(0, 0),
+        const quill.VerticalSpacing(8, 0),
+        quill.VerticalSpacing.zero,
+        null,
+      ),
+    );
+  }
+
+  // 性能优化：静态缓存 config，避免每次 build 创建
   static final quill.QuillEditorConfig _staticEditorConfig =
       quill.QuillEditorConfig(
     enableInteractiveSelection: false,
@@ -36,6 +87,7 @@ class QuoteContent extends StatelessWidget {
     padding: EdgeInsets.zero,
     expands: false,
     scrollable: false,
+    customStyles: _buildAndroidCustomStyles(),
   );
 
   static const double collapsedContentMaxHeight = 160.0;

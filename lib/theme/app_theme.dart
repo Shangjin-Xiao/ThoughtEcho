@@ -94,18 +94,29 @@ class AppTheme with ChangeNotifier {
     if (kIsWeb) return base;
     if (!Platform.isAndroid) return base;
     // Flutter 3.41+ Impeller + FontWeight 精准映射 wght 轴，Android 字体视觉变粗。
-    // M3 默认字重：
-    //   display*/headline*/body* → w400（不需要调整）
-    //   titleLarge               → w400（不需要调整）
-    //   titleMedium/Small        → w500 → 降为 w400
-    //   label*                   → w500 → 降为 w400
-    // 注意：只降有 w500 的 slot，w400 的 slot 不动，避免过细。
+    // M3 默认字重与补偿：
+    //   body*       → w400 → FontWeight(350)：正文/设置项偏重，降至 350 还原旧视觉
+    //   titleMedium/Small → w500 → w400
+    //   label*      → w500 → w400
+    //   display*/headline*/titleLarge → w400 → FontWeight(350)（大字号同样偏重）
+    // FontWeight(350) 是 Flutter 3.44 支持的任意整数值，引擎映射到 wght=350。
     return base.copyWith(
-      titleMedium: base.titleMedium?.copyWith(fontWeight: FontWeight.w400),
-      titleSmall: base.titleSmall?.copyWith(fontWeight: FontWeight.w400),
-      labelLarge: base.labelLarge?.copyWith(fontWeight: FontWeight.w400),
-      labelMedium: base.labelMedium?.copyWith(fontWeight: FontWeight.w400),
-      labelSmall: base.labelSmall?.copyWith(fontWeight: FontWeight.w400),
+      displayLarge: base.displayLarge?.copyWith(fontWeight: FontWeight(350)),
+      displayMedium: base.displayMedium?.copyWith(fontWeight: FontWeight(350)),
+      displaySmall: base.displaySmall?.copyWith(fontWeight: FontWeight(350)),
+      headlineLarge: base.headlineLarge?.copyWith(fontWeight: FontWeight(350)),
+      headlineMedium:
+          base.headlineMedium?.copyWith(fontWeight: FontWeight(350)),
+      headlineSmall: base.headlineSmall?.copyWith(fontWeight: FontWeight(350)),
+      titleLarge: base.titleLarge?.copyWith(fontWeight: FontWeight(350)),
+      titleMedium: base.titleMedium?.copyWith(fontWeight: FontWeight(450)),
+      titleSmall: base.titleSmall?.copyWith(fontWeight: FontWeight(450)),
+      bodyLarge: base.bodyLarge?.copyWith(fontWeight: FontWeight(350)),
+      bodyMedium: base.bodyMedium?.copyWith(fontWeight: FontWeight(350)),
+      bodySmall: base.bodySmall?.copyWith(fontWeight: FontWeight(350)),
+      labelLarge: base.labelLarge?.copyWith(fontWeight: FontWeight(450)),
+      labelMedium: base.labelMedium?.copyWith(fontWeight: FontWeight(400)),
+      labelSmall: base.labelSmall?.copyWith(fontWeight: FontWeight(400)),
     );
   }
 
@@ -532,8 +543,8 @@ class AppTheme with ChangeNotifier {
         surfaceTintColor: Colors.transparent,
         titleTextStyle: baseTheme.appBarTheme.titleTextStyle?.copyWith(
           color: colorScheme.onSurface,
-          fontWeight: FontWeight.w500, // 增强标题字重（3.41+ variable font 适配）
-          fontSize: 20, // 适当增大字号
+          fontWeight: FontWeight.w400, // M3 titleLarge 默认 w400，与 textTheme 补偿一致
+          fontSize: 20,
         ),
       ),
 
