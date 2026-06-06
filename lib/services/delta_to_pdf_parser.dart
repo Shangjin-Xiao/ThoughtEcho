@@ -8,7 +8,7 @@ import 'package:thoughtecho/utils/app_logger.dart';
 
 class DeltaToPdfParser {
   /// 将富文本的 Delta JSON 解析编译为适合 pdf 渲染的 Widget 列表
-  static List<pw.Widget> parse(Quote quote, PdfFontSet fontSet) {
+  static Future<List<pw.Widget>> parse(Quote quote, PdfFontSet fontSet) async {
     final List<pw.Widget> widgets = [];
     final deltaStr = quote.deltaContent;
 
@@ -49,7 +49,7 @@ class DeltaToPdfParser {
           }
 
           final imagePath = insert['image'] as String;
-          final imageWidget = _buildPdfImage(imagePath);
+          final imageWidget = await _buildPdfImage(imagePath);
           if (imageWidget != null) {
             widgets.add(pw.Padding(
               padding: const pw.EdgeInsets.symmetric(vertical: 8),
@@ -170,11 +170,11 @@ class DeltaToPdfParser {
     );
   }
 
-  static pw.Widget? _buildPdfImage(String path) {
+  static Future<pw.Widget?> _buildPdfImage(String path) async {
     try {
       final file = File(path);
-      if (file.existsSync()) {
-        final bytes = file.readAsBytesSync();
+      if (await file.exists()) {
+        final bytes = await file.readAsBytes();
         if (bytes.isNotEmpty) {
           final image = pw.MemoryImage(bytes);
           return pw.Container(

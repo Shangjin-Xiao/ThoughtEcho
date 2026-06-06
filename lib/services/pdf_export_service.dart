@@ -32,7 +32,13 @@ class PdfExportService {
       logDebug("PdfExportService 获取标签映射失败: $e", source: "PdfExportService");
     }
 
-    // 2. 组装 PDF 页面布局
+    // 2. 预解析所有笔记富文本内容（避免在同步的 build 方法中执行异步解析）
+    List<List<pw.Widget>> parsedQuotes = [];
+    for (var quote in quotes) {
+      parsedQuotes.add(await DeltaToPdfParser.parse(quote, fontSet));
+    }
+
+    // 3. 组装 PDF 页面布局
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
@@ -171,7 +177,7 @@ class PdfExportService {
                         height: 12),
 
                     // --- 富文本解析出的主体内容段落 ---
-                    ...DeltaToPdfParser.parse(quote, fontSet),
+                    ...parsedQuotes[i],
 
                     // --- 出处作者 ---
                     if (quote.source != null && quote.source!.isNotEmpty) ...[
@@ -236,7 +242,7 @@ class PdfExportService {
       ),
     );
 
-    // 3. 编译并生成 PDF 字节数据
+    // 4. 编译并生成 PDF 字节数据
     return await pdf.save();
   }
 }
