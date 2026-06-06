@@ -17,6 +17,7 @@ import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import '../widgets/daily_quote_view.dart';
 import '../widgets/note_list_view.dart';
+import '../widgets/sentry_disclosure_dialog.dart';
 import '../widgets/add_note_dialog.dart';
 import '../widgets/local_ai/ocr_capture_page.dart';
 import '../widgets/local_ai/ocr_result_sheet.dart';
@@ -377,6 +378,11 @@ class _HomePageState extends State<HomePage>
 
       // 检查是否应该显示一周年庆典动画（在其他检查之后，优先级最低）
       await _checkAndShowAnniversaryAnimation();
+
+      // 检查是否需要显示 Sentry 错误上报提示
+      if (mounted) {
+        await SentryDisclosureDialog.checkAndShow(context);
+      }
     });
 
     // 根据初始页面尝试触发对应的功能引导

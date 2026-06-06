@@ -292,6 +292,11 @@ class OnboardingController extends ChangeNotifier {
           _state.getPreference<bool>('reportInsightsUseAI') ?? false;
       await _settingsService.setReportInsightsUseAI(reportAI);
 
+      // 保存 Sentry 开关设置
+      final sentryEnabled =
+          _state.getPreference<bool>('sentryEnabled') ?? false;
+      await _settingsService.setSentryEnabled(sentryEnabled);
+
       logDebug('用户偏好设置保存完成');
     } catch (e) {
       logError('保存用户偏好设置失败', error: e, source: 'OnboardingController');

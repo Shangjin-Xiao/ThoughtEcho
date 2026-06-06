@@ -8,6 +8,7 @@ import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
 import '../models/local_ai_settings.dart'; // 新增 LocalAISettings 导入
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
+import 'package:thoughtecho/utils/sentry_helper.dart';
 import '../utils/lww_utils.dart';
 
 import '../services/mmkv_service.dart';
@@ -67,6 +68,23 @@ class SettingsService extends ChangeNotifier {
   bool get todayThoughtsUseAI => _appSettings.todayThoughtsUseAI;
   Future<void> setTodayThoughtsUseAI(bool enabled) async {
     _appSettings = _appSettings.copyWith(todayThoughtsUseAI: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 是否启用 Sentry 错误上报
+  bool get sentryEnabled => _appSettings.sentryEnabled;
+  Future<void> setSentryEnabled(bool enabled) async {
+    _appSettings = _appSettings.copyWith(sentryEnabled: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    await SentryHelper.initIfEnabled(enabled);
+    notifyListeners();
+  }
+
+  // Sentry 错误日志上报提示弹窗是否已显示过
+  bool get sentryDisclosureShown => _appSettings.sentryDisclosureShown;
+  Future<void> setSentryDisclosureShown(bool shown) async {
+    _appSettings = _appSettings.copyWith(sentryDisclosureShown: shown);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }

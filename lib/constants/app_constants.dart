@@ -84,4 +84,9 @@ class AppConstants {
 
   /// 数据缓存过期时间
   static const Duration dataCacheExpiration = Duration(hours: 24);
+
+  // ==================== Sentry 配置 ====================
+  /// Sentry DSN 配置，支持编译期通过 --dart-define=SENTRY_DSN 注入
+  static const String sentryDsn =
+      String.fromEnvironment('SENTRY_DSN', defaultValue: '');
 }

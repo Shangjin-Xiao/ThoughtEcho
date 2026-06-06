@@ -14,7 +14,19 @@ else
   CACHE_DIR="$HOME/.pub-cache"
 fi
 
-FILE=$(find "$CACHE_DIR" -path "*/flutter_quill-*/lib/src/editor/raw_editor/raw_editor_state.dart" 2>/dev/null | head -n 1)
+# Read the exact version of flutter_quill from pubspec.lock to be deterministic
+QUILL_VERSION=""
+if [ -f "pubspec.lock" ]; then
+  QUILL_VERSION=$(awk '/  flutter_quill:/{flag=1;next} flag && /version:/{print $2;exit}' pubspec.lock | tr -d '"')
+fi
+
+if [ -n "$QUILL_VERSION" ]; then
+  FILE=$(find "$CACHE_DIR" -path "*/flutter_quill-$QUILL_VERSION/lib/src/editor/raw_editor/raw_editor_state.dart" 2>/dev/null | head -n 1)
+fi
+
+if [ -z "$FILE" ]; then
+  FILE=$(find "$CACHE_DIR" -path "*/flutter_quill-*/lib/src/editor/raw_editor/raw_editor_state.dart" 2>/dev/null | head -n 1)
+fi
 
 if [ -n "$FILE" ] && [ -f "$FILE" ]; then
   if ! grep -q "onFocusReceived" "$FILE"; then

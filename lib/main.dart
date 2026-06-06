@@ -38,6 +38,7 @@ import 'package:thoughtecho/services/connectivity_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/data_directory_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
+import 'package:thoughtecho/utils/sentry_helper.dart';
 import 'package:thoughtecho/utils/update_dialog_helper.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
 import 'package:thoughtecho/services/background_push_handler.dart';
@@ -257,6 +258,10 @@ Future<void> main() async {
           SettingsService.create().then((s) => settingsService = s),
           PackageInfo.fromPlatform().then((p) => packageInfo = p),
         ]);
+
+        // 尽早初始化 Sentry，确保覆盖启动阶段异常与首屏导航
+        await SentryHelper.initIfEnabled(settingsService.sentryEnabled);
+
         final String currentVersion = packageInfo.version;
         final String? lastVersion = settingsService.getAppVersion();
         final bool hasCompletedOnboarding =
@@ -743,6 +748,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
         return MaterialApp(
           navigatorKey: widget.navigatorKey,
+          navigatorObservers: settingsService.sentryEnabled
+              ? [SentryHelper.navigatorObserver]
+              : const [],
           title: '心迹',
           builder: (context, child) {
             final mediaQuery = MediaQuery.of(context);

@@ -175,6 +175,15 @@ class OnboardingConfig {
           ),
         ],
       ),
+
+      // 4. Sentry 错误日志上报 (帮助改进应用)
+      OnboardingPreference<bool>(
+        key: 'sentryEnabled',
+        title: l10n.settingsSentryTitle,
+        description: l10n.settingsSentryDesc,
+        defaultValue: false,
+        type: OnboardingPreferenceType.toggle,
+      ),
     ];
   }
 

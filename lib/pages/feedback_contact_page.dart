@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/constants/app_constants.dart';
+import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 class FeedbackContactPage extends StatelessWidget {
   const FeedbackContactPage({super.key});
@@ -116,6 +119,56 @@ class FeedbackContactPage extends StatelessWidget {
                   onTap: () => _launchUrl(context, _emailUrl),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: Consumer<SettingsService>(
+              builder: (context, settingsService, _) {
+                final theme = Theme.of(context);
+                return SwitchListTile(
+                  title: Text(l10n.settingsSentryTitle),
+                  subtitle: Text(
+                    l10n.settingsSentryDesc,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  secondary: Icon(
+                    Icons.bug_report_outlined,
+                    color: colorScheme.primary,
+                  ),
+                  value: settingsService.sentryEnabled,
+                  onChanged: (enabled) async {
+                    try {
+                      await settingsService.setSentryEnabled(enabled);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.sentryRestartHint),
+                            duration: AppConstants.snackBarDurationImportant,
+                          ),
+                        );
+                      }
+                    } catch (e, stack) {
+                      logError(
+                        'FeedbackContactPage.setSentryEnabled failed',
+                        error: e,
+                        stackTrace: stack,
+                        source: 'FeedbackContact',
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.saveFailed(e.toString())),
+                            duration: AppConstants.snackBarDurationError,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                );
+              },
             ),
           ),
         ],
