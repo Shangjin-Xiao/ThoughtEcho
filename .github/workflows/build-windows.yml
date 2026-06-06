@@ -56,8 +56,10 @@ jobs:
       run: flutter config --enable-windows-desktop
       
     - name: Update versions
+      env:
+        APP_VERSION: ${{ github.event.inputs.app_version || '1.0.0.0' }}
       run: |
-        $version = "${{ github.event.inputs.app_version || '1.0.0.0' }}"
+        $version = $env:APP_VERSION
         
         # 验证版本号格式（应为4位：x.x.x.x）
         if ($version -notmatch '^\d+\.\d+\.\d+\.\d+$') {
@@ -101,7 +103,15 @@ jobs:
       run: flutter clean
       
     - name: Build Windows app
-      run: flutter build windows --${{ github.event.inputs.build_type || 'release' }} --verbose --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+      env:
+        BUILD_TYPE: ${{ github.event.inputs.build_type || 'release' }}
+        SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      run: |
+        if ($env:BUILD_TYPE -notin @('release', 'profile')) {
+          Write-Error "Invalid build type: $env:BUILD_TYPE"
+          exit 1
+        }
+        flutter build windows --$env:BUILD_TYPE --verbose --dart-define=SENTRY_DSN=$env:SENTRY_DSN
       
     - name: Verify MSIX configuration
       shell: pwsh

@@ -40,17 +40,25 @@ jobs:
         run: flutter clean
         
       - name: 构建 iOS 应用包 (无签名)
+        env:
+          VERSION_NAME: ${{ github.event.inputs.version_name }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           # 如果是手动触发，使用输入的版本号；否则使用默认版本
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # 验证版本名称是否符合合法格式 (数字、点，可选的连字符加字母数字)
+            if [[ ! "$VERSION_NAME" =~ ^[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9.-]+)?$ ]]; then
+              echo "Error: Invalid version_name format: $VERSION_NAME"
+              exit 1
+            fi
             flutter build ios --release --no-codesign --no-tree-shake-icons \
-              --build-number=${{ github.run_number }} \
-              --build-name=${{ github.event.inputs.version_name }} \
-              --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+              --build-number="${{ github.run_number }}" \
+              --build-name="$VERSION_NAME" \
+              --dart-define=SENTRY_DSN="$SENTRY_DSN"
           else
             flutter build ios --release --no-codesign --no-tree-shake-icons \
-              --build-number=${{ github.run_number }} \
-              --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+              --build-number="${{ github.run_number }}" \
+              --dart-define=SENTRY_DSN="$SENTRY_DSN"
           fi
         
       - name: 创建未签名的 IPA
@@ -71,14 +79,19 @@ jobs:
           retention-days: 30
           
       - name: 创建构建信息
+        env:
+          VERSION_NAME: ${{ github.event.inputs.version_name || '1.0.0' }}
         run: |
-          VERSION="${{ github.event.inputs.version_name || '1.0.0' }}"
+          if [[ ! "$VERSION_NAME" =~ ^[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9.-]+)?$ ]]; then
+            echo "Error: Invalid version_name format: $VERSION_NAME"
+            exit 1
+          fi
           cat > build/ipa/build-info.txt << EOF
           心迹 ThoughtEcho iOS 构建信息
           ================================
           构建日期: $(date '+%Y-%m-%d %H:%M:%S')
           Flutter 版本: $(flutter --version | head -n 1)
-          应用版本: ${VERSION}+${{ github.run_number }}
+          应用版本: ${VERSION_NAME}+${{ github.run_number }}
           Bundle ID: com.shangjin.thoughtecho
           构建编号: ${{ github.run_number }}
           

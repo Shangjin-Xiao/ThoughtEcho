@@ -79,14 +79,27 @@ jobs:
         run: flutter analyze --no-fatal-warnings --no-fatal-infos
 
       - name: 构建 APK
+        env:
+          BUILD_MODE: ${{ github.event.inputs.build_mode || 'release' }}
+          VERSION_NAME: ${{ github.event.inputs.version_name }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
-          BUILD_MODE="${{ github.event.inputs.build_mode || 'release' }}"
+          # 验证 BUILD_MODE 是否合法
+          if [[ "$BUILD_MODE" != "release" && "$BUILD_MODE" != "debug" && "$BUILD_MODE" != "profile" ]]; then
+            echo "Error: Invalid build_mode: $BUILD_MODE"
+            exit 1
+          fi
+          # 验证 VERSION_NAME 是否符合合法格式
+          if [[ ! "$VERSION_NAME" =~ ^[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9.-]+)?$ ]]; then
+            echo "Error: Invalid version_name format: $VERSION_NAME"
+            exit 1
+          fi
           echo "正在构建 $BUILD_MODE 版 APK..."
-          flutter build apk --$BUILD_MODE \
+          flutter build apk --"$BUILD_MODE" \
             --target-platform=android-arm,android-arm64 \
-            --build-number=${{ github.run_number }} \
-            --build-name=${{ github.event.inputs.version_name }} \
-            --dart-define=SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+            --build-number="${{ github.run_number }}" \
+            --build-name="$VERSION_NAME" \
+            --dart-define=SENTRY_DSN="$SENTRY_DSN"
 
       - name: 上传 APK
         uses: actions/upload-artifact@v7

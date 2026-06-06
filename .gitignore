@@ -293,3 +293,10 @@ assets/store/
 # Additional cleanup
 .metadata
 windows/flutter/generated_plugin_registrant.h
+
+# CI build logs
+build_fail.txt
+
+# Dart DevTools exports
+dart_devtools_*
+
