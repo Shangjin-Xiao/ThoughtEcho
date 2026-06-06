@@ -22,7 +22,9 @@ fi
 
 if [ -n "$QUILL_VERSION" ]; then
   FILE=$(find "$CACHE_DIR" -path "*/flutter_quill-$QUILL_VERSION/lib/src/editor/raw_editor/raw_editor_state.dart" 2>/dev/null | head -n 1)
-else
+fi
+
+if [ -z "$FILE" ]; then
   FILE=$(find "$CACHE_DIR" -path "*/flutter_quill-*/lib/src/editor/raw_editor/raw_editor_state.dart" 2>/dev/null | head -n 1)
 fi
 

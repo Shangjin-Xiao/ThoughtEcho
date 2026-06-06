@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
@@ -18,6 +20,12 @@ class SentryHelper {
   /// 初始化 Sentry SDK
   static Future<void> init() async {
     if (_initialized) return;
+
+    // Avoid initializing Sentry in unit tests to prevent errors/logs
+    if (Platform.environment.containsKey('FLUTTER_TEST')) {
+      _initialized = true;
+      return;
+    }
 
     final dsn = AppConstants.sentryDsn;
     if (dsn.isEmpty) {

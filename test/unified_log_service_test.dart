@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logging/logging.dart' as logging;
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:thoughtecho/services/log_database_service.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
@@ -116,5 +117,74 @@ void main() {
       ]);
       expect(db.executes, isEmpty);
     });
+
+    test('sentry integration records breadcrumbs and exceptions', () async {
+      final mockTransport = _MockSentryTransport();
+      await Sentry.init((options) {
+        options.dsn = 'https://fake-dsn@sentry.io/1';
+        options.transport = mockTransport;
+      });
+
+      expect(Sentry.isEnabled, isTrue);
+
+      final warningMessage =
+          'sentry-warning-test-${DateTime.now().microsecondsSinceEpoch}';
+      service.warning(warningMessage, source: 'UnifiedLogServiceTest');
+      await service.flushLogs();
+
+      final errorMessage =
+          'sentry-error-test-${DateTime.now().microsecondsSinceEpoch}';
+      final exception = Exception('test exception');
+      service.error(errorMessage,
+          error: exception, source: 'UnifiedLogServiceTest');
+      await service.flushLogs();
+
+      // Wait for the asynchronous Sentry event capture to execute
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+
+      expect(mockTransport.envelopes.isNotEmpty, isTrue);
+
+      bool foundBreadcrumb = false;
+      bool foundException = false;
+
+      for (final envelope in mockTransport.envelopes) {
+        for (final item in envelope.items) {
+          final original = item.originalObject;
+          if (original is SentryEvent) {
+            if (original.breadcrumbs != null) {
+              for (final breadcrumb in original.breadcrumbs!) {
+                if (breadcrumb.message == warningMessage) {
+                  foundBreadcrumb = true;
+                }
+              }
+            }
+            if (original.exceptions != null) {
+              for (final ex in original.exceptions!) {
+                if (ex.value == 'Exception: test exception') {
+                  foundException = true;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      expect(foundBreadcrumb, isTrue,
+          reason: 'Warning log should be added as a breadcrumb');
+      expect(foundException, isTrue,
+          reason: 'Severe log with exception should be captured by Sentry');
+
+      Sentry.close();
+    });
   });
+}
+
+class _MockSentryTransport implements Transport {
+  final envelopes = <SentryEnvelope>[];
+
+  @override
+  Future<SentryId?> send(SentryEnvelope envelope) async {
+    envelopes.add(envelope);
+    return SentryId.newId();
+  }
 }

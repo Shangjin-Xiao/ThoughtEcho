@@ -4,7 +4,7 @@
   "settingsSentryDesc": "Enable when you encounter a bug. This automatically sends error logs (mainly crash stack traces and device info) to help us troubleshoot.",
   "sentryRestartHint": "Settings saved, takes effect after restarting",
   "sentryDisclosureTitle": "Error Reporting Added",
-  "sentryDisclosureMessage": "To better locate and troubleshoot crashes, we've integrated the Sentry error collection service in this new version.\n\nTo respect your privacy, this feature is disabled by default. You can enable or disable it at any time in \"Settings -> Feedback & Contact\".\n\nMeanwhile, we have updated our Privacy Policy to describe the data processing rules in detail. You can review the full text in the app's privacy section.",
+  "sentryDisclosureMessage": "To better locate and troubleshoot crashes, we've integrated the Sentry error collection service in this new version.\n\nTo respect your privacy, this feature is disabled by default. You can enable or disable it at any time in \"Settings -> Feedback & Contact\".",
   "sentryDisclosureGotIt": "Got it",
   "appTitle": "ThoughtEcho",
   "draftRestored": "Draft automatically restored",

@@ -16,17 +16,20 @@ class SentryDisclosureDialog {
         barrierDismissible: false,
         builder: (context) {
           final l10n = AppLocalizations.of(context);
-          return AlertDialog(
-            title: Text(l10n.sentryDisclosureTitle),
-            content: Text(l10n.sentryDisclosureMessage),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: Text(l10n.sentryDisclosureGotIt),
-              ),
-            ],
+          return PopScope(
+            canPop: false,
+            child: AlertDialog(
+              title: Text(l10n.sentryDisclosureTitle),
+              content: Text(l10n.sentryDisclosureMessage),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(l10n.sentryDisclosureGotIt),
+                ),
+              ],
+            ),
           );
         },
       );

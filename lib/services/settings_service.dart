@@ -8,6 +8,7 @@ import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
 import '../models/local_ai_settings.dart'; // 新增 LocalAISettings 导入
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
+import 'package:thoughtecho/utils/sentry_helper.dart';
 import '../utils/lww_utils.dart';
 
 import '../services/mmkv_service.dart';
@@ -76,6 +77,9 @@ class SettingsService extends ChangeNotifier {
   Future<void> setSentryEnabled(bool enabled) async {
     _appSettings = _appSettings.copyWith(sentryEnabled: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    if (enabled) {
+      await SentryHelper.initIfEnabled(true);
+    }
     notifyListeners();
   }
 
