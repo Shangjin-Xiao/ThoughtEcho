@@ -1,9 +1,13 @@
+// ignore_for_file: experimental_member_use
+
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:sentry_sqflite/sentry_sqflite.dart';
+import 'package:sqflite/sqflite.dart';
 
 import 'package:thoughtecho/constants/app_constants.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
@@ -43,6 +47,8 @@ class SentryHelper {
           options.debug = kDebugMode;
         },
       );
+      databaseFactory =
+          SentrySqfliteDatabaseFactory(databaseFactory: databaseFactory);
       _initialized = true;
       if (kDebugMode) {
         print('[Sentry] Sentry SDK initialized successfully.');
