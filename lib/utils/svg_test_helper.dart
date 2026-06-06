@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 /// SVG测试辅助工具
 class SVGTestHelper {
@@ -47,26 +47,26 @@ class SVGTestHelper {
   /// 验证SVG内容是否有效
   static bool validateSVG(String svgContent) {
     if (svgContent.trim().isEmpty) {
-      if (kDebugMode) print('SVG验证失败: 内容为空');
+      AppLogger.w('SVG验证失败: 内容为空', source: 'SVGTestHelper');
       return false;
     }
 
     if (!svgContent.contains('<svg')) {
-      if (kDebugMode) print('SVG验证失败: 缺少<svg>标签');
+      AppLogger.w('SVG验证失败: 缺少<svg>标签', source: 'SVGTestHelper');
       return false;
     }
 
     if (!svgContent.contains('</svg>')) {
-      if (kDebugMode) print('SVG验证失败: 缺少</svg>结束标签');
+      AppLogger.w('SVG验证失败: 缺少</svg>结束标签', source: 'SVGTestHelper');
       return false;
     }
 
     if (!svgContent.contains('xmlns="http://www.w3.org/2000/svg"')) {
-      if (kDebugMode) print('SVG验证警告: 缺少xmlns命名空间');
+      AppLogger.w('SVG验证警告: 缺少xmlns命名空间', source: 'SVGTestHelper');
     }
 
     if (!svgContent.contains('viewBox')) {
-      if (kDebugMode) print('SVG验证警告: 缺少viewBox属性');
+      AppLogger.w('SVG验证警告: 缺少viewBox属性', source: 'SVGTestHelper');
     }
 
     return true;
