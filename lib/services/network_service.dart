@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:sentry_dio/sentry_dio.dart';
 import 'package:flutter/foundation.dart';
 import '../utils/http_response.dart';
 import '../models/ai_settings.dart';
@@ -67,6 +68,7 @@ class NetworkService {
         retries: 1,
       ),
     );
+    _generalDio.addSentry();
   }
 
   /// 配置AI专用Dio实例
@@ -88,6 +90,7 @@ class NetworkService {
         ),
       );
     }
+    _aiDio.addSentry();
   }
 
   /// 通用HTTP GET请求

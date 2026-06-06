@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:sentry_dio/sentry_dio.dart';
 import 'package:thoughtecho/utils/dio_performance_interceptor.dart';
 import 'package:flutter/foundation.dart';
 import '../models/ai_settings.dart';
@@ -53,6 +54,7 @@ class DioNetworkUtils {
         retryDelays: const [Duration(seconds: 2), Duration(seconds: 5)],
       ),
     );
+    dio.addSentry();
   }
 
   /// 重置Dio实例（用于测试或配置更改）

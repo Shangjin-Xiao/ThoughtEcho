@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:sentry_dio/sentry_dio.dart';
 import 'package:thoughtecho/utils/dio_performance_interceptor.dart';
 import 'dio_network_utils.dart';
 import 'http_response.dart';
@@ -54,6 +55,7 @@ class HttpUtils {
         retries: 1,
       ),
     );
+    dio.addSentry();
   } // 兼容旧的http.Response格式
 
   @visibleForTesting
