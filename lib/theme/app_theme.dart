@@ -92,31 +92,21 @@ class AppTheme with ChangeNotifier {
   // 平台字体优化入口（目前仅 Windows 生效）
   static TextTheme _fixAndroidVariableFontWeight(TextTheme base) {
     if (kIsWeb) return base;
-    if (Platform.isAndroid) {
-      // Android 12+ variable font (RobotoFlex) 字重精准映射优化
-      // 降档处理以防变粗：
-      // - w700 (bold) -> w600 (title)
-      // - w600 -> w500 (labelLarge)
-      // - w500 -> w400 (labelMedium/Small)
-      return base.copyWith(
-        titleLarge: base.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-        titleMedium: base.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-        titleSmall: base.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-        labelLarge: base.labelLarge?.copyWith(fontWeight: FontWeight.w500),
-        labelMedium: base.labelMedium?.copyWith(fontWeight: FontWeight.w400),
-        labelSmall: base.labelSmall?.copyWith(fontWeight: FontWeight.w400),
-      );
-    } else {
-      // 其他平台使用常规设计字重以保持良好的视觉层次
-      return base.copyWith(
-        titleLarge: base.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-        titleMedium: base.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-        titleSmall: base.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-        labelLarge: base.labelLarge?.copyWith(fontWeight: FontWeight.w500),
-        labelMedium: base.labelMedium?.copyWith(fontWeight: FontWeight.w500),
-        labelSmall: base.labelSmall?.copyWith(fontWeight: FontWeight.w500),
-      );
-    }
+    if (!Platform.isAndroid) return base;
+    // Flutter 3.41+ Impeller + FontWeight 精准映射 wght 轴，Android 字体视觉变粗。
+    // M3 默认字重：
+    //   display*/headline*/body* → w400（不需要调整）
+    //   titleLarge               → w400（不需要调整）
+    //   titleMedium/Small        → w500 → 降为 w400
+    //   label*                   → w500 → 降为 w400
+    // 注意：只降有 w500 的 slot，w400 的 slot 不动，避免过细。
+    return base.copyWith(
+      titleMedium: base.titleMedium?.copyWith(fontWeight: FontWeight.w400),
+      titleSmall: base.titleSmall?.copyWith(fontWeight: FontWeight.w400),
+      labelLarge: base.labelLarge?.copyWith(fontWeight: FontWeight.w400),
+      labelMedium: base.labelMedium?.copyWith(fontWeight: FontWeight.w400),
+      labelSmall: base.labelSmall?.copyWith(fontWeight: FontWeight.w400),
+    );
   }
 
   static const String _customColorKey = 'custom_color';
