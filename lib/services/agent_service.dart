@@ -699,7 +699,8 @@ $toolDescriptions
 
 ## 工具调用策略（重要）
 - 使用原生 function calling，不要在文本里伪造 XML/JSON 标签。
-- 对于笔记检索与探索，主要调用 `explore_notes`。
+- 对于笔记检索与探索，主要调用 `explore_notes`。**注意：其返回的列表项仅包含前 200 字内容预览。**
+- **当你要对某篇特定笔记进行润色、总结、续写或深度分析时，为了获取其完整全部正文，你必须优先调用 `get_note_detail` 工具传入该笔记的 ID，不可仅凭 200 字预览做修改。**
 - 当你要创建新笔记，必须调用 `propose_new_note`，不要用 `propose_edit` 冒充新建。
 - 当你要为新笔记选择标签，先调用 `get_tags`；要判断是否建议附加当前位置/天气，调用 `get_location_weather`。
 - 你可以像用户浏览朋友圈一样使用 `explore_notes`：
@@ -743,6 +744,7 @@ $toolDescriptions
       'explore_notes' || 'search_notes' => 'agentSearchingNotes',
       'get_tags' => 'agentToolCall:get_tags',
       'get_location_weather' => 'agentToolCall:get_location_weather',
+      'get_note_detail' => 'agentToolCall:get_note_detail',
       'propose_new_note' => 'agentToolCall:propose_new_note',
       'web_search' => 'agentWebSearching',
       'web_fetch' => 'agentFetchingWeb',
@@ -754,6 +756,7 @@ $toolDescriptions
     return switch (toolName) {
       'explore_notes' ||
       'search_notes' ||
+      'get_note_detail' ||
       'web_fetch' ||
       'web_search' =>
         _searchToolMaxSingleMessageChars,

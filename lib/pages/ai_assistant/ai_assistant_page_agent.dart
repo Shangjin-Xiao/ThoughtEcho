@@ -422,6 +422,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           ? l10n.agentReviewingRecentNotes
           : l10n.agentSearchingNotesForQuery(query),
       'get_tags' => l10n.agentCollectingTags,
+      'get_note_detail' => l10n.agentReadingNoteDetail,
       'get_location_weather' => l10n.agentCheckingLocationWeather,
       'propose_new_note' => l10n.agentPreparingNewNoteSuggestion,
       'propose_edit' => l10n.agentPreparingEditSuggestion,
@@ -443,6 +444,9 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       return '';
     }
     if (toolName == 'get_tags') {
+      return '';
+    }
+    if (toolName == 'get_note_detail') {
       return '';
     }
     if (toolName == 'get_location_weather') {
@@ -489,12 +493,24 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       'search_notes' =>
         _summarizeNoteSearchResult(l10n, trimmed),
       'get_tags' => _summarizeTagResult(l10n, trimmed),
+      'get_note_detail' => _summarizeGetNoteDetailResult(l10n, trimmed),
       'get_location_weather' => _summarizeLocationWeatherResult(l10n, trimmed),
       'web_search' => _summarizeWebSearchResult(l10n, trimmed),
       'web_fetch' => _summarizeWebFetchResult(l10n, trimmed),
       'propose_new_note' || 'propose_edit' => l10n.agentPreparedSuggestionCard,
       _ => l10n.agentToolStepFinished,
     };
+  }
+
+  String _summarizeGetNoteDetailResult(AppLocalizations l10n, String result) {
+    final payload = _tryParseJsonMap(result);
+    if (payload == null) {
+      return l10n.agentToolStepFinished;
+    }
+    final content = payload['content']?.toString() ?? '';
+    final snippet = content.trim().replaceAll('\n', ' ');
+    final cleanSnippet = snippet.length > 15 ? '${snippet.substring(0, 15)}...' : snippet;
+    return l10n.agentReadNoteDetailSummary(cleanSnippet.isNotEmpty ? cleanSnippet : l10n.unknown);
   }
 
   String _summarizeNoteSearchResult(AppLocalizations l10n, String result) {

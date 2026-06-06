@@ -49,6 +49,7 @@ import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/explore_notes_tool.dart';
 import 'package:thoughtecho/services/agent_tools/get_app_context_tool.dart';
+import 'package:thoughtecho/services/agent_tools/get_note_detail_tool.dart';
 import 'package:thoughtecho/services/agent_tools/propose_new_note_tool.dart';
 import 'package:thoughtecho/services/agent_tools/web_fetch_tool.dart';
 import 'package:thoughtecho/services/agent_tools/web_search_tool.dart';
@@ -160,6 +161,7 @@ List<AgentTool> _buildAgentTools(
       locationService: locationService,
       weatherService: weatherService,
     ),
+    GetNoteDetailTool(db),
     WebSearchTool(settingsService),
     WebFetchTool(WebFetchService()),
     const ProposeEditTool(),

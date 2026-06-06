@@ -3756,6 +3756,7 @@
     }
   },
   "agentCollectingTags": "正在获取标签...",
+  "agentReadingNoteDetail": "正在读取笔记详情...",
   "agentCheckingLocationWeather": "正在获取位置和天气...",
   "agentSearchingWebForQuery": "正在查找\"{query}\"的资料...",
   "@agentSearchingWebForQuery": {
@@ -3818,6 +3819,14 @@
     "placeholders": {
       "count": {
         "type": "int"
+      }
+    }
+  },
+  "agentReadNoteDetailSummary": "已读取笔记《{title}》的完整正文",
+  "@agentReadNoteDetailSummary": {
+    "placeholders": {
+      "title": {
+        "type": "String"
       }
     }
   },
