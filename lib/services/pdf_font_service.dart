@@ -219,8 +219,7 @@ class PdfFontService {
   /// 提供了国内 CDN 镜像作为备选，且设置了超时时间以防无响应挂起
   static Future<ByteData?> _downloadAndCacheFont() async {
     final urls = [
-      "https://fonts.geekzu.org/s/zcoolxiaowei/v15/i7dMIFFrTRywPpUVX9_RJyM1YFI.ttf",
-      "https://fonts.loli.net/s/zcoolxiaowei/v15/i7dMIFFrTRywPpUVX9_RJyM1YFI.ttf",
+      "https://gstatic.loli.net/s/zcoolxiaowei/v15/i7dMIFFrTRywPpUVX9_RJyM1YFI.ttf",
       "https://fonts.gstatic.com/s/zcoolxiaowei/v15/i7dMIFFrTRywPpUVX9_RJyM1YFI.ttf",
     ];
 
