@@ -5,7 +5,9 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:uuid/uuid.dart';
 import '../services/large_file_manager.dart';
+import '../services/media_file_service.dart';
 import '../constants/app_constants.dart';
 import '../utils/content_sanitizer.dart';
 import '../gen_l10n/app_localizations.dart';
@@ -517,16 +519,15 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
 
       // 方法2：尝试文件URL方式（优先用于桌面端和支持的移动端）
       try {
-        final tempDir = await getTemporaryDirectory();
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final htmlFile = File(
-          '${tempDir.path}/annual_report_${widget.year}_$timestamp.html',
-        );
+        final uniqueId = const Uuid().v4();
+        final fileName = 'annual_report_${widget.year}_$uniqueId.html';
+        final savedPath =
+            await MediaFileService.saveTempHtmlFile(contentToWrite, fileName);
 
-        await LargeFileManager.writeStringToFile(htmlFile, contentToWrite);
+        if (savedPath == null) throw Exception('保存临时文件失败');
 
         // 尝试直接打开文件URL
-        final uri = Uri.file(htmlFile.path);
+        final uri = Uri.file(savedPath);
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
 
@@ -661,16 +662,15 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
     // 2. Fallback: 原有的文件方式 (对于某些Android设备可能有效，或者作为失败后的各种尝试)
     try {
       // 创建临时文件
-      final tempDir = await getTemporaryDirectory();
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final htmlFile = File(
-        '${tempDir.path}/annual_report_${widget.year}_$timestamp.html',
-      );
+      final uniqueId = const Uuid().v4();
+      final fileName = 'annual_report_${widget.year}_$uniqueId.html';
+      final savedPath =
+          await MediaFileService.saveTempHtmlFile(htmlContent, fileName);
 
-      await LargeFileManager.writeStringToFile(htmlFile, htmlContent);
+      if (savedPath == null) throw Exception('保存临时文件失败');
 
       // 尝试使用不同的LaunchMode来打开文件
-      final uri = Uri.file(htmlFile.path);
+      final uri = Uri.file(savedPath);
 
       // 首先尝试platformDefault模式
       try {
@@ -714,7 +714,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
             action: SnackBarAction(
               label: l10n.shareBtn,
               textColor: Colors.white,
-              onPressed: () => _shareReportFile(htmlFile.path),
+              onPressed: () => _shareReportFile(savedPath),
             ),
           ),
         );
@@ -889,13 +889,6 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
         _isLoading = true;
       });
 
-      // 创建临时HTML文件用于分享
-      final tempDir = await getTemporaryDirectory();
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final htmlFile = File(
-        '${tempDir.path}/annual_report_${widget.year}_$timestamp.html',
-      );
-
       // 准备HTML内容
       String contentToShare = _sanitizedHtmlContent;
       if (!_sanitizedHtmlContent.trim().toLowerCase().startsWith('<!doctype') &&
@@ -951,14 +944,20 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
 
       // Note: contentToShare already has CSP - from either the wrapper template above or _sanitizedHtmlContent (which was sanitized in initState)
 
-      await LargeFileManager.writeStringToFile(htmlFile, contentToShare);
+      // 创建临时HTML文件用于分享
+      final uniqueId = const Uuid().v4();
+      final fileName = 'annual_report_${widget.year}_$uniqueId.html';
+      final savedPath =
+          await MediaFileService.saveTempHtmlFile(contentToShare, fileName);
+
+      if (savedPath == null) throw Exception('创建分享文件失败');
 
       // 使用系统分享功能
       await SharePlus.instance.share(
         ShareParams(
           text: l10n.yearAIAnnualReport(widget.year.toString()),
           subject: l10n.yearAIAnnualReport(widget.year.toString()),
-          files: [XFile(htmlFile.path)],
+          files: [XFile(savedPath)],
         ),
       );
 
@@ -1005,7 +1004,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
       });
 
       try {
-        // 尝试获取文档目录
+        // 尝试获取文档目录用于持久化保存年度报告
         final appDir = await getApplicationDocumentsDirectory();
         final reportsDir = Directory('${appDir.path}/annual_reports');
 
@@ -1015,8 +1014,8 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
         }
 
         // 创建文件名
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final fileName = 'annual_report_${widget.year}_$timestamp.html';
+        final uniqueId = const Uuid().v4();
+        final fileName = 'annual_report_${widget.year}_$uniqueId.html';
         final reportFile = File('${reportsDir.path}/$fileName');
 
         // Note: _sanitizedHtmlContent already has CSP (sanitized in initState)

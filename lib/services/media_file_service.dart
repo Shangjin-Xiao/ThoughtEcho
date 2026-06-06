@@ -15,6 +15,7 @@ class MediaFileService {
   static const String _imagesFolder = 'images';
   static const String _videosFolder = 'videos';
   static const String _audiosFolder = 'audios';
+  static const String _htmlFolder = 'html';
 
   /// 获取媒体文件目录
   static Future<Directory> _getMediaDirectory(String subfolder) async {
@@ -24,6 +25,34 @@ class MediaFileService {
       await mediaDir.create(recursive: true);
     }
     return mediaDir;
+  }
+
+  /// 获取临时文件目录 (用于存放需要定期清理或随应用生命周期销毁的文件)
+  static Future<Directory> _getTempDirectory(String subfolder) async {
+    final tempDir = await getTemporaryDirectory();
+    final specificTempDir =
+        Directory(path.join(tempDir.path, _mediaFolder, subfolder));
+    if (!await specificTempDir.exists()) {
+      await specificTempDir.create(recursive: true);
+    }
+    return specificTempDir;
+  }
+
+  /// 保存临时HTML文件
+  static Future<String?> saveTempHtmlFile(
+    String content,
+    String fileName,
+  ) async {
+    try {
+      final htmlDir = await _getTempDirectory(_htmlFolder);
+      final targetPath = path.join(htmlDir.path, fileName);
+      final file = File(targetPath);
+      await LargeFileManager.writeStringToFile(file, content);
+      return targetPath;
+    } catch (e) {
+      logDebug('保存HTML失败: $e');
+      return null;
+    }
   }
 
   /// 流式保存图片（使用新的流式处理器，彻底防止OOM）
