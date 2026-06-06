@@ -1,0 +1,19 @@
+AGENTS.md
+  s_90fdb1ceeabbcb::t_6070ff0863499c 334-337
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "cb7fcc295f123d5c1e483296f5d23fea8c4dd5b1",
+  "prompts": {},
+  "sessions": {
+    "s_90fdb1ceeabbcb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_16347a5a3ffeWI8qgIvs24iJpN",
+        "model": "minimax-m3-free"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
