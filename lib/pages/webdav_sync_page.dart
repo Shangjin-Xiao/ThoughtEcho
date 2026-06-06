@@ -339,10 +339,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                   // --- 账号配置表单 Section ---
                   Text(
                     '服务商配置',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(color: theme.colorScheme.primary),
                   ),
                   const SizedBox(height: 12),
                   Card(
@@ -457,10 +455,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                   // --- 自动同步策略 Switch ---
                   Text(
                     '同步策略',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(color: theme.colorScheme.primary),
                   ),
                   const SizedBox(height: 12),
                   Card(
@@ -731,10 +727,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                     children: [
                       Text(
                         stateTitle,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onSurface,
-                        ),
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(color: theme.colorScheme.onSurface),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -803,11 +797,10 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                     Expanded(
                       child: Text(
                         '检测到有 $_conflictNotesCount 篇同步冲突备份，建议立即处理。',
-                        style: TextStyle(
-                          color: Colors.amber.shade900,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelMedium
+                            ?.copyWith(color: Colors.amber.shade900),
                       ),
                     ),
                     TextButton(
@@ -818,8 +811,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: const Text('去处理',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text('去处理',
+                          style: Theme.of(context).textTheme.titleSmall),
                     ),
                   ],
                 ),
@@ -904,7 +897,7 @@ class QuoteListViewByConflict extends StatelessWidget {
                   quote.content,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 subtitle: Padding(
                   padding: const EdgeInsets.only(top: 6.0),

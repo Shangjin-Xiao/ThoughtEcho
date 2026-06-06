@@ -417,9 +417,7 @@ class SettingsPageState extends State<SettingsPage> {
                     children: [
                       Text(
                         l10n.settingsSetLocation,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: theme.textTheme.titleSmall,
                       ),
                       const SizedBox(height: 8.0),
                       ElevatedButton.icon(
@@ -554,11 +552,10 @@ class SettingsPageState extends State<SettingsPage> {
                             ),
                             child: Text(
                               'Preview',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.tertiary,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(color: theme.colorScheme.tertiary),
                             ),
                           ),
                         ],
@@ -719,9 +716,8 @@ class SettingsPageState extends State<SettingsPage> {
                                 children: [
                                   Text(
                                     l10n.databaseStatus,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style:
+                                        Theme.of(context).textTheme.titleSmall,
                                   ),
                                   ...dbStatus.entries.map(
                                     (e) => Text('${e.key}: ${e.value}'),
@@ -729,9 +725,8 @@ class SettingsPageState extends State<SettingsPage> {
                                   const SizedBox(height: 16),
                                   Text(
                                     l10n.logStatistics,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style:
+                                        Theme.of(context).textTheme.titleSmall,
                                   ),
                                   ...logSummary.entries.map(
                                     (e) => Text('${e.key}: ${e.value}'),
@@ -878,9 +873,7 @@ class SettingsPageState extends State<SettingsPage> {
                         child: Text(
                           'Preview',
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: theme.colorScheme.onTertiaryContainer,
-                            fontWeight: FontWeight.bold,
-                          ),
+                              color: theme.colorScheme.onTertiaryContainer),
                         ),
                       ),
                     ],
@@ -1529,14 +1522,15 @@ class SettingsPageState extends State<SettingsPage> {
                             formatAnniversaryBannerSubtitleForTile(
                               l10n.anniversaryBannerSubtitle,
                             ),
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: isDark
-                                  ? const Color(0xFF94A3B8)
-                                  : const Color(0xFF475569),
-                              height: 1.4,
-                            ),
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelMedium
+                                ?.copyWith(
+                                  color: isDark
+                                      ? const Color(0xFF94A3B8)
+                                      : const Color(0xFF475569),
+                                  height: 1.4,
+                                ),
                             softWrap: true,
                           ),
                           const SizedBox(height: 12),
@@ -1544,13 +1538,14 @@ class SettingsPageState extends State<SettingsPage> {
                             children: [
                               Text(
                                 l10n.anniversaryBannerTap,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark
-                                      ? const Color(0xFF818CF8)
-                                      : const Color(0xFF4F46E5),
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelMedium
+                                    ?.copyWith(
+                                      color: isDark
+                                          ? const Color(0xFF818CF8)
+                                          : const Color(0xFF4F46E5),
+                                    ),
                               ),
                               const SizedBox(width: 4),
                               Icon(

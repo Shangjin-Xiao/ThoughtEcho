@@ -62,10 +62,7 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
                 alpha: 0.6,
               ),
               indicatorColor: theme.primaryColor,
-              labelStyle: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
+              labelStyle: Theme.of(context).textTheme.titleSmall,
               unselectedLabelStyle: const TextStyle(fontSize: 14),
               indicatorSize: TabBarIndicatorSize.tab,
               dividerHeight: 0,

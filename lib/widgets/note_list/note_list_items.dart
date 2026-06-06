@@ -280,9 +280,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                       const Spacer(),
                       Text(
                         "${l10n.pdfExportSelectionMode} (${_selectedExportNoteIds.length})",
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: theme.textTheme.titleMedium,
                       ),
                       const Spacer(),
                       TextButton(
@@ -359,8 +357,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                           icon: const Icon(Icons.picture_as_pdf, size: 18),
                           label: Text(
                             l10n.exportSelected(_selectedExportNoteIds.length),
-                            style: const TextStyle(
-                                fontSize: 11, fontWeight: FontWeight.bold),
+                            style: Theme.of(context).textTheme.labelSmall,
                           ),
                           style: FilledButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -443,7 +440,7 @@ extension _NoteListItemsExtension on NoteListViewState {
             const SizedBox(height: 16),
             Text(
               l10n.noteSearchEmptyTitle,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             Text(
@@ -884,10 +881,10 @@ extension _NoteListItemsExtension on NoteListViewState {
     final l10n = AppLocalizations.of(context);
     try {
       _showLoadingDialog(l10n.generatingPdf);
-      final font = await PdfFontService.loadFont();
+      final fontSet = await PdfFontService.loadFontSet();
       if (!mounted) return;
       final pdfBytes =
-          await PdfExportService.exportNotesToPdf([quote], font, context);
+          await PdfExportService.exportNotesToPdf([quote], fontSet, context);
       if (!mounted) return;
       Navigator.pop(context);
 
@@ -913,10 +910,10 @@ extension _NoteListItemsExtension on NoteListViewState {
       final selectedQuotes = _quotes
           .where((q) => q.id != null && _selectedExportNoteIds.contains(q.id))
           .toList();
-      final font = await PdfFontService.loadFont();
+      final fontSet = await PdfFontService.loadFontSet();
       if (!mounted) return;
       final pdfBytes = await PdfExportService.exportNotesToPdf(
-          selectedQuotes, font, context);
+          selectedQuotes, fontSet, context);
       if (!mounted) return;
       Navigator.pop(context);
 

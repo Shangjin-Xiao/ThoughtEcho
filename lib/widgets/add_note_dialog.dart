@@ -2300,10 +2300,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                       children: [
                         Text(
                           l10n.addInfo,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium,
                         ),
                         const SizedBox(width: 16),
                         // 位置信息按钮
@@ -2556,10 +2553,11 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                               const SizedBox(width: 8),
                               Text(
                                 l10n.aiAnalysis,
-                                style: TextStyle(
-                                  color: theme.colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(
+                                        color: theme.colorScheme.primary),
                               ),
                               const Spacer(),
                               Tooltip(

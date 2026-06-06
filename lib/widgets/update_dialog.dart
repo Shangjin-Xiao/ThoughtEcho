@@ -134,9 +134,7 @@ class UpdateBottomSheet extends StatelessWidget {
                       ),
                       Text(
                         versionInfo.currentVersion,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: theme.textTheme.bodyMedium,
                       ),
                     ],
                   ),
@@ -163,7 +161,6 @@ class UpdateBottomSheet extends StatelessWidget {
                           versionInfo.latestVersion,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: colorScheme.onPrimary,
-                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
@@ -180,9 +177,7 @@ class UpdateBottomSheet extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
               child: Text(
                 AppLocalizations.of(context).updateReleaseNotes,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: theme.textTheme.titleSmall,
               ),
             ),
             Padding(
@@ -312,9 +307,7 @@ class UpdateBottomSheet extends StatelessWidget {
                     AppLocalizations.of(
                       context,
                     ).updateCurrentVersionLabel(versionInfo.currentVersion),
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: theme.textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -428,26 +421,23 @@ class UpdateBottomSheet extends StatelessWidget {
       // 标题样式
       h1: theme.textTheme.headlineSmall?.copyWith(
         color: baseColor,
-        fontWeight: FontWeight.bold,
         fontSize: 18,
         height: 1.2,
       ),
       h2: theme.textTheme.titleLarge?.copyWith(
         color: baseColor,
-        fontWeight: FontWeight.bold,
         fontSize: 16,
         height: 1.3,
       ),
       h3: theme.textTheme.titleMedium?.copyWith(
         color: baseColor,
-        fontWeight: FontWeight.w600,
         fontSize: 15,
         height: 1.3,
       ),
 
       // 文本装饰
       em: TextStyle(color: baseColor, fontStyle: FontStyle.italic),
-      strong: TextStyle(color: baseColor, fontWeight: FontWeight.bold),
+      strong: theme.textTheme.titleSmall?.copyWith(color: baseColor),
       del: TextStyle(
         color: baseColor.withValues(alpha: 0.7),
         decoration: TextDecoration.lineThrough,
@@ -478,14 +468,13 @@ class UpdateBottomSheet extends StatelessWidget {
       blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
 
       // 行内代码样式
-      code: TextStyle(
+      code: theme.textTheme.bodyMedium?.copyWith(
         color: colorScheme.primary,
         backgroundColor: colorScheme.surfaceContainerHighest.withValues(
           alpha: 0.4,
         ),
         fontFamily: 'JetBrains Mono, Consolas, Monaco, Courier New, monospace',
         fontSize: 13,
-        fontWeight: FontWeight.w500,
         letterSpacing: 0.2,
       ),
 
@@ -501,10 +490,9 @@ class UpdateBottomSheet extends StatelessWidget {
       codeblockPadding: const EdgeInsets.all(12),
 
       // 列表样式
-      listBullet: TextStyle(
+      listBullet: theme.textTheme.titleSmall?.copyWith(
         color: colorScheme.primary,
         fontSize: 14,
-        fontWeight: FontWeight.w600,
       ),
       listIndent: 20,
 

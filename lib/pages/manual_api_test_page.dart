@@ -41,7 +41,7 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
           children: [
             Text(
               l10n.manualApiTestTitle,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
             Text(
@@ -88,8 +88,7 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
             if (_testResult.isNotEmpty) ...[
               Text(
                 l10n.testResultLabel,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
               Expanded(

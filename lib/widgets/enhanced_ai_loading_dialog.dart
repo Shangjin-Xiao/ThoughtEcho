@@ -191,10 +191,8 @@ class EnhancedAIProgressDialog extends StatelessWidget {
               const SizedBox(height: 20),
               Text(
                 message!,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.onSurface,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: theme.textTheme.titleMedium
+                    ?.copyWith(color: theme.colorScheme.onSurface),
                 textAlign: TextAlign.center,
               ),
             ],

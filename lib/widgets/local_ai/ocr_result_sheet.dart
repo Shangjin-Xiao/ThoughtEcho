@@ -81,9 +81,7 @@ class _OCRResultSheetState extends State<OCRResultSheet> {
                     children: [
                       Text(
                         l10n.ocrResultTitle,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: theme.textTheme.titleMedium,
                       ),
                       const Spacer(),
                       IconButton(

@@ -729,10 +729,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Text(
       title,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: Theme.of(context).colorScheme.primary,
-            fontWeight: FontWeight.bold,
-          ),
+      style: Theme.of(context)
+          .textTheme
+          .titleMedium
+          ?.copyWith(color: Theme.of(context).colorScheme.primary),
     );
   }
 
@@ -759,9 +759,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 Expanded(
                   child: Text(
                     _currentProvider!.name,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: theme.textTheme.titleMedium,
                   ),
                 ),
                 IconButton(

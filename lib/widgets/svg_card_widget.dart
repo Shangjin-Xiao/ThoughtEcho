@@ -53,21 +53,21 @@ class SVGCardWidget extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: _buildSVGWidget(),
+          child: _buildSVGWidget(context),
         ),
       ),
     );
   }
 
-  Widget _buildSVGWidget() {
+  Widget _buildSVGWidget(BuildContext context) {
     try {
       // 验证SVG内容
       if (svgContent.trim().isEmpty) {
-        return _buildErrorWidget('SVG内容为空');
+        return _buildErrorWidget(context, 'SVG内容为空');
       }
 
       if (!svgContent.contains('<svg') || !svgContent.contains('</svg>')) {
-        return _buildErrorWidget('无效的SVG格式');
+        return _buildErrorWidget(context, '无效的SVG格式');
       }
 
       // 使用与导出完全一致的渲染配置
@@ -109,17 +109,17 @@ class SVGCardWidget extends StatelessWidget {
             );
           }
           // 使用回退SVG模板而不是错误提示
-          return _buildFallbackSVG();
+          return _buildFallbackSVG(context);
         },
       );
     } catch (e) {
       AppLogger.e('SVG组件构建错误: $e', error: e, source: 'SvgCardWidget');
       return _buildErrorWidget(
-          kDebugMode ? 'SVG error: $e' : 'SVG render error');
+          context, kDebugMode ? 'SVG error: $e' : 'SVG render error');
     }
   }
 
-  Widget _buildErrorWidget(String message) {
+  Widget _buildErrorWidget(BuildContext context, String message) {
     return errorWidget ??
         Container(
           width: width,
@@ -143,11 +143,10 @@ class SVGCardWidget extends StatelessWidget {
                   const SizedBox(height: 12),
                   Text(
                     'SVG渲染失败',
-                    style: TextStyle(
-                      color: Colors.grey[700],
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(color: Colors.grey[700]),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -184,7 +183,7 @@ class SVGCardWidget extends StatelessWidget {
   }
 
   /// 构建回退SVG模板
-  Widget _buildFallbackSVG() {
+  Widget _buildFallbackSVG(BuildContext context) {
     try {
       // 尝试从原始SVG内容中提取文本内容
       String extractedContent = _extractContentFromSVG(svgContent);
@@ -224,17 +223,17 @@ class SVGCardWidget extends StatelessWidget {
             error: error,
             source: 'SvgCardWidget',
           );
-          return _buildFinalErrorWidget();
+          return _buildFinalErrorWidget(context);
         },
       );
     } catch (e) {
       AppLogger.e('构建回退SVG失败: $e', error: e, source: 'SvgCardWidget');
-      return _buildFinalErrorWidget();
+      return _buildFinalErrorWidget(context);
     }
   }
 
   /// 构建最终错误提示（当所有方案都失败时）
-  Widget _buildFinalErrorWidget() {
+  Widget _buildFinalErrorWidget(BuildContext context) {
     return Container(
       width: width,
       height: height,
@@ -253,11 +252,10 @@ class SVGCardWidget extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 '卡片渲染失败',
-                style: TextStyle(
-                  color: Colors.red[700],
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(color: Colors.red[700]),
               ),
               const SizedBox(height: 8),
               Text(
@@ -632,10 +630,7 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                               // 标题
                               Text(
                                 l10n.featuredCards,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
-                                    ?.copyWith(fontWeight: FontWeight.bold),
+                                style: Theme.of(context).textTheme.titleLarge,
                               ),
                               const SizedBox(height: 16),
                               // 卡片

@@ -270,12 +270,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                       children: [
                         Text(
                           AppLocalizations.of(context).aiAnalysisDetails,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style: Theme.of(context).textTheme.headlineSmall,
                         ),
                         const SizedBox(height: 4),
                         Row(
@@ -349,12 +344,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                             .textTheme
                             .headlineMedium
                             ?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                        h2: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                                color: Theme.of(context).colorScheme.primary),
+                        h2: Theme.of(context).textTheme.titleLarge,
                         blockquote:
                             Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontStyle: FontStyle.italic,
@@ -413,7 +404,6 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         Text(
           title,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.primary,
               ),
         ),
@@ -490,10 +480,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -1145,11 +1132,7 @@ $positiveQuotesText
                                                 ),
                                                 style: Theme.of(context)
                                                     .textTheme
-                                                    .titleMedium
-                                                    ?.copyWith(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
+                                                    .titleMedium,
                                               ),
                                               Text(
                                                 analysis.createdAt,

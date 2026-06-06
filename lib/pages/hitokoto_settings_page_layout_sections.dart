@@ -52,10 +52,8 @@ extension _HitokotoSettingsPageLayoutSections on _HitokotoSettingsPageState {
                       showHitokotoTypeSelection
                           ? l10n.hitokotoTypeSettings
                           : l10n.dailyQuoteApi,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: theme.textTheme.titleLarge
+                          ?.copyWith(color: colorScheme.onPrimaryContainer),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -111,10 +109,8 @@ extension _HitokotoSettingsPageLayoutSections on _HitokotoSettingsPageState {
         children: [
           Text(
             l10n.dailyQuoteApi,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface,
-            ),
+            style: theme.textTheme.titleMedium
+                ?.copyWith(color: colorScheme.onSurface),
           ),
           const SizedBox(height: 4),
           Text(
@@ -200,10 +196,8 @@ extension _HitokotoSettingsPageLayoutSections on _HitokotoSettingsPageState {
         children: [
           Text(
             l10n.typeSelection,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: colorScheme.onSurface,
-            ),
+            style: theme.textTheme.titleMedium
+                ?.copyWith(color: colorScheme.onSurface),
           ),
           const SizedBox(height: 4),
           Text(

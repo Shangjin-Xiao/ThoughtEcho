@@ -23,7 +23,7 @@ class HitokotoWidget extends StatelessWidget {
           children: [
             Text(
               AppLocalizations.of(context).featureDailyQuote,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             Text(

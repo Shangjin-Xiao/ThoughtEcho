@@ -184,10 +184,8 @@ class _LicensePageState extends State<LicensePage> {
                 const SizedBox(width: 8),
                 Text(
                   title,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
-                  ),
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(color: theme.colorScheme.primary),
                 ),
               ],
             ),
@@ -282,7 +280,7 @@ class _LicensePageState extends State<LicensePage> {
         // 同步功能相关鸣谢
         Text(
           l10n.syncIntegrationNote,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          style: Theme.of(context).textTheme.labelMedium,
         ),
         const SizedBox(height: 6),
         _buildAttributionRow(
@@ -295,7 +293,7 @@ class _LicensePageState extends State<LicensePage> {
         const SizedBox(height: 12),
         Text(
           l10n.serviceApiAcknowledgements,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          style: Theme.of(context).textTheme.labelMedium,
         ),
         const SizedBox(height: 8),
         _buildAttributionRow(
@@ -361,10 +359,7 @@ class _LicensePageState extends State<LicensePage> {
               children: [
                 Text(
                   '$title: $name',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium,
                 ),
                 if (description != null) ...[
                   const SizedBox(height: 4),
@@ -436,10 +431,7 @@ class _LicensePageState extends State<LicensePage> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: Theme.of(context).textTheme.labelMedium,
                 ),
                 InkWell(
                   onTap: () => _launchUrl(url),
@@ -759,15 +751,15 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
               radius: 18,
               child: Text(
                 initials,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleSmall
+                    ?.copyWith(color: Colors.white),
               ),
             ),
             title: Text(
               packages.isEmpty ? l10n.unnamed : packages,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.titleSmall,
             ),
             subtitle: Text(
               preview.length > 120 ? '${preview.substring(0, 120)}…' : preview,
@@ -986,7 +978,7 @@ class _ProgressiveSystemLicensesPageState
                     radius: 24,
                     child: Text(
                       initials,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: Theme.of(context).textTheme.titleSmall,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -996,10 +988,7 @@ class _ProgressiveSystemLicensesPageState
                       children: [
                         Text(
                           packages.isEmpty ? l10n.unnamed : packages,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 4),
                         Text(

@@ -1,4 +1,3 @@
-// ignore_for_file: unused_element
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/quote_model.dart';
@@ -10,30 +9,6 @@ import 'media_reference_service.dart';
 // TODO(refactor): This file exceeds 1600 lines and handles complex migration logic.
 // Consider using a strategy pattern or separate migration step classes for each version.
 class DatabaseSchemaManager {
-  // 抽取数据库初始化逻辑到单独方法，便于复用
-  Future<Database> _initDatabase(String path) async {
-    return await openDatabase(
-      path,
-      version: 20,
-      onCreate: (db, version) async {
-        await createTables(db);
-      },
-      onUpgrade: (db, oldVersion, newVersion) async {
-        await upgradeDatabase(db, oldVersion, newVersion);
-      },
-      onOpen: (db) async {
-        // 关键：确保外键约束已启用（必须在事务外执行）
-        await db.rawQuery('PRAGMA foreign_keys = ON');
-
-        // 每次打开数据库时配置PRAGMA参数
-        await configureDatabasePragmas(db);
-
-        // 验证外键约束状态
-        await verifyForeignKeysEnabled(db);
-      },
-    );
-  }
-
   Future<void> createTables(Database db) async {
     // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
     await db.execute('''
@@ -728,41 +703,6 @@ class DatabaseSchemaManager {
       logError('数据库升级验证失败: $e', error: e, source: 'DatabaseUpgrade');
       rethrow;
     }
-  }
-
-  /// 修复：安全的版本12升级
-  Future<void> _upgradeToVersion12Safely(Database db) async {
-    await db.transaction((txn) async {
-      try {
-        // 1. 创建新的关联表
-        await txn.execute('''
-          CREATE TABLE IF NOT EXISTS quote_tags(
-            quote_id TEXT NOT NULL,
-            tag_id TEXT NOT NULL,
-            PRIMARY KEY (quote_id, tag_id),
-            FOREIGN KEY (quote_id) REFERENCES quotes(id) ON DELETE CASCADE,
-            FOREIGN KEY (tag_id) REFERENCES categories(id) ON DELETE CASCADE
-          )
-        ''');
-
-        // 2. 创建索引
-        await txn.execute(
-          'CREATE INDEX IF NOT EXISTS idx_quote_tags_quote_id ON quote_tags(quote_id)',
-        );
-        // 复合索引优化JOIN查询 (且最左前缀覆盖单列 tag_id 查询)
-        await txn.execute(
-          'CREATE INDEX IF NOT EXISTS idx_quote_tags_composite ON quote_tags(tag_id, quote_id)',
-        );
-
-        // 3. 安全迁移数据
-        await _migrateTagDataSafely(txn);
-
-        logDebug('版本12升级安全完成');
-      } catch (e) {
-        logError('版本12升级失败: $e', error: e, source: 'DatabaseUpgrade');
-        rethrow;
-      }
-    });
   }
 
   /// 修复：安全的标签数据迁移

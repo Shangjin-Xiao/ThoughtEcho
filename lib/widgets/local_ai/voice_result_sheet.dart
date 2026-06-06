@@ -82,9 +82,7 @@ class _VoiceResultSheetState extends State<VoiceResultSheet> {
                     children: [
                       Text(
                         l10n.voiceResultTitle,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: theme.textTheme.titleMedium,
                       ),
                       const Spacer(),
                       IconButton(

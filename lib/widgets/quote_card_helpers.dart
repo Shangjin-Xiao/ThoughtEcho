@@ -95,11 +95,10 @@ class QuoteTagChip extends StatelessWidget {
           ],
           Text(
             tag.name,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: secondaryTextColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: secondaryTextColor, fontSize: 11),
           ),
         ],
       ),

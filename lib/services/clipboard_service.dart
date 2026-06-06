@@ -1,5 +1,4 @@
 // filepath: /workspaces/ThoughtEcho/lib/services/clipboard_service.dart
-// ignore_for_file: unused_field
 import '../constants/app_constants.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -18,17 +17,7 @@ class ClipboardService extends ChangeNotifier {
       'enable_clipboard_monitoring';
 
   // 常见的引述格式匹配
-  static final RegExp _quoteAuthorPattern = RegExp(
-    r'[-—–]\s*([^，。,\.、\n]{2,20})$|《([^》]+)》\s*[-—–]\s*([^，。,\.、\n]{2,20})|"(.+)"\s*[-—–]\s*([^，。,\.、\n]{2,20})',
-    multiLine: true,
-  );
-
   // 可能的出处标识
-  static final RegExp _sourcePattern = RegExp(
-    r'[（\(](.{2,30}?)[）\)]$|《(.{2,30}?)》$|摘自[《]?(.{2,30}?)[》]?$|选自[《]?(.{2,30}?)[》]?$|出自[《]?(.{2,30}?)[》]?$',
-    multiLine: true,
-  );
-
   // 是否启用剪贴板监控
   bool _enableClipboardMonitoring = false;
   bool get enableClipboardMonitoring => _enableClipboardMonitoring;
@@ -324,10 +313,7 @@ class ClipboardService extends ChangeNotifier {
                     Flexible(
                       child: Text(
                         AppLocalizations.of(context).clipboardFoundHint,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
+                        style: Theme.of(context).textTheme.titleSmall,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),

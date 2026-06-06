@@ -183,11 +183,10 @@ class AiOptionsMenu extends StatelessWidget {
                     const SizedBox(width: 12),
                     Text(
                       l10n.aiAssistant,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(color: theme.colorScheme.onSurface),
                     ),
                   ],
                 ),
@@ -246,11 +245,10 @@ class AiOptionsMenu extends StatelessWidget {
                     children: [
                       Text(
                         option.title,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.onSurface,
-                        ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(color: theme.colorScheme.onSurface),
                       ),
                       const SizedBox(height: 4),
                       Text(

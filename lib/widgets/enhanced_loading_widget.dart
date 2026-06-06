@@ -221,10 +221,7 @@ class _StatusAnimationWidgetState extends State<StatusAnimationWidget>
     final effectiveTextColor = widget.textColor ??
         (widget.isSuccess ? Colors.green : theme.colorScheme.error);
     final effectiveTextStyle = widget.textStyle ??
-        theme.textTheme.bodyLarge?.copyWith(
-          color: effectiveTextColor,
-          fontWeight: FontWeight.w500,
-        );
+        theme.textTheme.bodyLarge?.copyWith(color: effectiveTextColor);
     final icon =
         widget.isSuccess ? Icons.check_circle_rounded : Icons.error_rounded;
     return Padding(

@@ -60,12 +60,9 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                   const SizedBox(width: 4),
                   Text(
                     l10n.localAiFeaturesPreview,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onPrimaryContainer,
-                      letterSpacing: 0.5,
-                    ),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onPrimaryContainer,
+                        letterSpacing: 0.5),
                   ),
                 ],
               ),
@@ -184,9 +181,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                   ),
                   title: Text(
                     l10n.enableLocalAi,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: theme.textTheme.titleMedium,
                   ),
                   subtitle: Padding(
                     padding: const EdgeInsets.only(top: 6),
@@ -403,10 +398,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                 Text(
                   title,
                   style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                    letterSpacing: 0.5,
-                  ),
+                      color: theme.colorScheme.onSurface, letterSpacing: 0.5),
                 ),
               ],
             ),
@@ -466,9 +458,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
           ),
           title: Text(
             title,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
+            style: theme.textTheme.bodyLarge,
           ),
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),

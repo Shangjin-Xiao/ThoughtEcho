@@ -911,7 +911,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                           const SizedBox(width: 8),
                           Text(
                             l10n.usageInstructionsTitle,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: Theme.of(context).textTheme.titleSmall,
                           ),
                         ],
                       ),
@@ -1030,10 +1030,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                         Expanded(
                           child: Text(
                             titleText,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 18,
-                            ),
+                            style: Theme.of(context).textTheme.titleMedium,
                           ),
                         ),
                       ],
@@ -1061,11 +1058,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               const SizedBox(width: 12),
                               Text(
                                 percentLabel,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleSmall
+                                    ?.copyWith(
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                    ),
                               ),
                             ],
                           ),
@@ -1405,12 +1404,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       ),
       child: Text(
         '#$short',
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-          color: Theme.of(context).colorScheme.onSecondaryContainer,
-          letterSpacing: 0.5,
-        ),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSecondaryContainer,
+              letterSpacing: 0.5,
+            ),
       ),
     );
   }
@@ -1434,15 +1431,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     final tooltipMessage =
         showAlias ? l10n.deviceAliasAndModel(displayName, alias) : displayName;
 
-    final titleStyle = theme.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w600,
-          height: 1.15,
-        ) ??
-        const TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 16,
-          height: 1.15,
-        );
+    final titleStyle = theme.textTheme.titleMedium?.copyWith(height: 1.15) ??
+        Theme.of(context).textTheme.titleMedium?.copyWith(height: 1.15);
 
     final aliasStyle = theme.textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,

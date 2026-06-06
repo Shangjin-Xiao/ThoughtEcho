@@ -33,43 +33,37 @@ class ChatMarkdownStyleSheet {
       h1: textTheme.headlineLarge?.copyWith(
         color: baseColor,
         fontSize: 24,
-        fontWeight: FontWeight.bold,
         height: 1.2,
       ),
       h2: textTheme.headlineMedium?.copyWith(
         color: baseColor,
         fontSize: 20,
-        fontWeight: FontWeight.bold,
         height: 1.3,
       ),
       h3: textTheme.headlineSmall?.copyWith(
         color: baseColor,
         fontSize: 18,
-        fontWeight: FontWeight.w600,
         height: 1.3,
       ),
       h4: textTheme.titleLarge?.copyWith(
         color: baseColor,
         fontSize: 16,
-        fontWeight: FontWeight.w600,
         height: 1.3,
       ),
       h5: textTheme.titleMedium?.copyWith(
         color: baseColor,
         fontSize: 14,
-        fontWeight: FontWeight.w600,
         height: 1.3,
       ),
       h6: textTheme.titleSmall?.copyWith(
         color: baseColor,
         fontSize: 13,
-        fontWeight: FontWeight.w600,
         height: 1.3,
       ),
 
       // 文本装饰
       em: TextStyle(color: baseColor, fontStyle: FontStyle.italic),
-      strong: TextStyle(color: baseColor, fontWeight: FontWeight.bold),
+      strong: textTheme.titleMedium?.copyWith(color: baseColor),
       del: TextStyle(
         color: baseColor.withValues(alpha: 0.7),
         decoration: TextDecoration.lineThrough,
@@ -97,12 +91,11 @@ class ChatMarkdownStyleSheet {
       blockquotePadding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
 
       // 行内代码样式
-      code: TextStyle(
+      code: textTheme.bodyMedium?.copyWith(
         color: colorScheme.primary,
         backgroundColor: codeBlockBg,
         fontFamily: 'JetBrains Mono, Consolas, Monaco, Courier New, monospace',
         fontSize: 14,
-        fontWeight: FontWeight.w500,
         letterSpacing: 0.2,
       ),
 
@@ -118,18 +111,14 @@ class ChatMarkdownStyleSheet {
       codeblockPadding: const EdgeInsets.all(16),
 
       // 列表样式
-      listBullet: TextStyle(
+      listBullet: textTheme.titleMedium?.copyWith(
         color: colorScheme.primary,
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
       ),
       listIndent: 24,
 
       // 表格样式
-      tableHead: textTheme.bodyMedium?.copyWith(
+      tableHead: textTheme.titleSmall?.copyWith(
         color: baseColor,
-        fontWeight: FontWeight.w600,
-        fontSize: 14,
       ),
       tableBody: textTheme.bodyMedium?.copyWith(color: baseColor, fontSize: 14),
       tableBorder: TableBorder.all(

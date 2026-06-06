@@ -465,7 +465,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
           child: ListTile(
             title: Text(
               city.name,
-              style: const TextStyle(fontWeight: FontWeight.w500),
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
             subtitle: Text(city.fullName),
             leading: CircleAvatar(

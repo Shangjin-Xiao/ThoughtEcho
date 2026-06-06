@@ -86,10 +86,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                 children: [
                   Text(
                     l10n.themeMode,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -139,10 +136,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     children: [
                       Text(
                         l10n.useCustomThemeColor,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
                       Switch(
                         value: _useCustomColor,
@@ -196,10 +190,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                         children: [
                           Text(
                             l10n.dynamicColor,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -343,10 +334,13 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
             const SizedBox(height: 8),
             Text(
               label,
-              style: TextStyle(
-                color: isSelected ? colorScheme.primary : colorScheme.onSurface,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: isSelected
+                        ? colorScheme.primary
+                        : colorScheme.onSurface,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                  ),
             ),
           ],
         ),

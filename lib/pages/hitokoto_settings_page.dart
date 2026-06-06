@@ -419,10 +419,8 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                       children: [
                         Text(
                           l10n.offlineQuoteSourceTitle,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onSurface,
-                          ),
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(color: colorScheme.onSurface),
                         ),
                         const SizedBox(height: 4),
                         Text(

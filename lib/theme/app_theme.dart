@@ -78,6 +78,37 @@ class AppTheme with ChangeNotifier {
     );
   }
 
+  // Flutter 3.41+ variable font 字重适配（Android）
+  //
+  // 背景：Flutter 3.41 起 FontWeight 自动驱动 variable font wght 轴。
+  // Android 12+ RobotoFlex 字形比旧静态 Roboto 更粗，导致升级后视觉变重。
+  //
+  // 官方建议：逐个调整 FontWeight 值达到期望视觉效果。
+  // 当前状态：暂不在 theme 层做补偿（只改 theme 会导致 theme 文字和
+  //   inline fontWeight 文字粗细不一致，视觉更差）。
+  //   完整修复需审查全部 ~240 处 inline FontWeight 并统一调整。
+  //   详见 squad/font_issue_handoff.md。
+  //
+  // 平台字体优化入口（目前仅 Windows 生效）
+  static TextTheme _fixAndroidVariableFontWeight(TextTheme base) {
+    if (kIsWeb) return base;
+    if (!Platform.isAndroid) return base;
+    // Flutter 3.41+ Impeller + FontWeight 精准映射 wght 轴，Android 字体视觉变粗。
+    // M3 默认字重：
+    //   display*/headline*/body* → w400（不需要调整）
+    //   titleLarge               → w400（不需要调整）
+    //   titleMedium/Small        → w500 → 降为 w400
+    //   label*                   → w500 → 降为 w400
+    // 注意：只降有 w500 的 slot，w400 的 slot 不动，避免过细。
+    return base.copyWith(
+      titleMedium: base.titleMedium?.copyWith(fontWeight: FontWeight.w400),
+      titleSmall: base.titleSmall?.copyWith(fontWeight: FontWeight.w400),
+      labelLarge: base.labelLarge?.copyWith(fontWeight: FontWeight.w400),
+      labelMedium: base.labelMedium?.copyWith(fontWeight: FontWeight.w400),
+      labelSmall: base.labelSmall?.copyWith(fontWeight: FontWeight.w400),
+    );
+  }
+
   static const String _customColorKey = 'custom_color';
   static const String _useCustomColorKey = 'use_custom_color';
   static const String _themeModeKey = 'theme_mode';
@@ -501,7 +532,7 @@ class AppTheme with ChangeNotifier {
         surfaceTintColor: Colors.transparent,
         titleTextStyle: baseTheme.appBarTheme.titleTextStyle?.copyWith(
           color: colorScheme.onSurface,
-          fontWeight: FontWeight.w600, // 增强标题字重
+          fontWeight: FontWeight.w500, // 增强标题字重（3.41+ variable font 适配）
           fontSize: 20, // 适当增大字号
         ),
       ),
@@ -523,8 +554,12 @@ class AppTheme with ChangeNotifier {
       ),
 
       // Windows 平台字体优化
-      textTheme: _createPlatformTextTheme(baseTheme.textTheme),
-      primaryTextTheme: _createPlatformTextTheme(baseTheme.primaryTextTheme),
+      textTheme: _fixAndroidVariableFontWeight(
+        _createPlatformTextTheme(baseTheme.textTheme),
+      ),
+      primaryTextTheme: _fixAndroidVariableFontWeight(
+        _createPlatformTextTheme(baseTheme.primaryTextTheme),
+      ),
     );
   }
 
@@ -752,8 +787,12 @@ class AppTheme with ChangeNotifier {
       ),
 
       // Windows 平台字体优化
-      textTheme: _createPlatformTextTheme(baseTheme.textTheme),
-      primaryTextTheme: _createPlatformTextTheme(baseTheme.primaryTextTheme),
+      textTheme: _fixAndroidVariableFontWeight(
+        _createPlatformTextTheme(baseTheme.textTheme),
+      ),
+      primaryTextTheme: _fixAndroidVariableFontWeight(
+        _createPlatformTextTheme(baseTheme.primaryTextTheme),
+      ),
     );
   }
 }

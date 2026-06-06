@@ -9,19 +9,25 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('PDF Export and Parser Tests', () {
-    test('DeltaToPdfParser parses empty deltaContent successfully', () {
+    test('DeltaToPdfParser parses empty deltaContent successfully', () async {
       final quote = Quote(
         content: 'Hello, this is a plain text note.',
         date: '2026-05-31',
       );
       final font = pw.Font.helvetica();
-      final widgets = DeltaToPdfParser.parse(quote, font);
+      final fontSet = PdfFontSet(
+        regular: font,
+        bold: pw.Font.helveticaBold(),
+        italic: pw.Font.helveticaOblique(),
+        boldItalic: pw.Font.helveticaBoldOblique(),
+      );
+      final widgets = await DeltaToPdfParser.parse(quote, fontSet);
 
       expect(widgets, isNotEmpty);
       expect(widgets.first, isA<pw.Paragraph>());
     });
 
-    test('DeltaToPdfParser parses structured deltaContent rich text', () {
+    test('DeltaToPdfParser parses structured deltaContent rich text', () async {
       final deltaJson =
           '[{"insert": "Rich Text Body "}, {"insert": "bold text", "attributes": {"bold": true}}, {"insert": "\\n"}]';
       final quote = Quote(
@@ -30,7 +36,13 @@ void main() {
         deltaContent: deltaJson,
       );
       final font = pw.Font.helvetica();
-      final widgets = DeltaToPdfParser.parse(quote, font);
+      final fontSet = PdfFontSet(
+        regular: font,
+        bold: pw.Font.helveticaBold(),
+        italic: pw.Font.helveticaOblique(),
+        boldItalic: pw.Font.helveticaBoldOblique(),
+      );
+      final widgets = await DeltaToPdfParser.parse(quote, fontSet);
 
       expect(widgets, isNotEmpty);
       expect(widgets.first, isA<pw.Container>());

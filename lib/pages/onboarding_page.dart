@@ -328,10 +328,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                     const SizedBox(height: 32),
                     Text(
                       AppLocalizations.of(context).onboardingUpdateComplete,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
+                      style: theme.textTheme.headlineMedium
+                          ?.copyWith(color: theme.colorScheme.primary),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -482,9 +480,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                               children: [
                                 Text(
                                   hitokotoPreference.title,
-                                  style: theme.textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: theme.textTheme.titleLarge,
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -602,14 +598,17 @@ class _OnboardingPageState extends State<OnboardingPage>
                             backgroundColor: theme.colorScheme.surface,
                             selectedColor: Colors.transparent,
                             checkmarkColor: theme.colorScheme.primary,
-                            labelStyle: TextStyle(
-                              color: isSelected
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurface,
-                              fontWeight: isSelected
-                                  ? FontWeight.w500
-                                  : FontWeight.normal,
-                            ),
+                            labelStyle: Theme.of(context)
+                                .textTheme
+                                .labelLarge
+                                ?.copyWith(
+                                  color: isSelected
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.onSurface,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w500
+                                      : FontWeight.normal,
+                                ),
                             side: BorderSide(
                               color: isSelected
                                   ? theme.colorScheme.primary
@@ -640,9 +639,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                     const SizedBox(height: 32),
                     Text(
                       AppLocalizations.of(context).onboardingComplete,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: theme.textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -668,9 +665,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                       child: Text(
                         AppLocalizations.of(context).onboardingStartJourney,
                         style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onPrimaryContainer,
-                        ),
+                            color: theme.colorScheme.onPrimaryContainer),
                       ),
                     ),
                   ],

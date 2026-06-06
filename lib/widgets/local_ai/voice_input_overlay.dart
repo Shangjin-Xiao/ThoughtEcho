@@ -205,11 +205,8 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                   // 状态文本
                   Text(
                     l10n.voiceRecording,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
+                    style: theme.textTheme.headlineSmall
+                        ?.copyWith(color: Colors.white, letterSpacing: 0.5),
                   ),
 
                   const SizedBox(height: 24),
@@ -275,7 +272,7 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                                 ? colorScheme.primaryContainer
                                 : Colors.white.withValues(alpha: 0.8),
                             fontWeight: willTriggerOCR
-                                ? FontWeight.bold
+                                ? FontWeight.w600
                                 : FontWeight.normal,
                           ),
                         ),

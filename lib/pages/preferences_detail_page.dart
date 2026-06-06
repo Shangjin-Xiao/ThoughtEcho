@@ -108,10 +108,8 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                       children: [
                         Text(
                           l10n.personalizationSettings,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onPrimaryContainer,
-                          ),
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(color: colorScheme.onPrimaryContainer),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -258,9 +256,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                   ),
                   title: Text(
                     l10n.exportFormatLabel,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: theme.textTheme.titleSmall,
                   ),
                   subtitle: Text(
                     l10n.exportFormatDesc,
@@ -276,10 +272,8 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                               : 'card',
                       dropdownColor: theme.colorScheme.surfaceContainerHigh,
                       borderRadius: BorderRadius.circular(12),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(color: theme.colorScheme.onSurface),
                       onChanged: (String? newValue) {
                         if (newValue != null) {
                           settings.setExportFormat(newValue);
@@ -484,10 +478,8 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
         const SizedBox(width: 8),
         Text(
           title,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: theme.colorScheme.primary,
-          ),
+          style: theme.textTheme.titleMedium
+              ?.copyWith(color: theme.colorScheme.primary),
         ),
       ],
     );
@@ -551,7 +543,6 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
       title: Text(
         title,
         style: theme.textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w500,
           color: isEnabled
               ? null
               : theme.colorScheme.onSurface.withValues(alpha: 0.5),
@@ -609,7 +600,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                 title: Text(
                   title,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
                   ),
                 ),
               ),
@@ -636,9 +627,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
             SwitchListTile(
               title: Text(
                 l10n.useLocalNotesOnly,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: theme.textTheme.titleSmall,
               ),
               subtitle: Text(
                 l10n.useLocalNotesOnlyDesc,
@@ -668,9 +657,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                 children: [
                   Text(
                     l10n.offlineQuoteSourceTitle,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: theme.textTheme.titleSmall,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -744,9 +731,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
       ),
       title: Text(
         title,
-        style: theme.textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w500,
-        ),
+        style: theme.textTheme.titleSmall,
       ),
       subtitle: Text(
         subtitle,
@@ -866,9 +851,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
       ),
       title: Text(
         l10n.defaultTags,
-        style: theme.textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w500,
-        ),
+        style: theme.textTheme.titleSmall,
       ),
       subtitle: Text(
         hasValue
@@ -953,10 +936,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                               ),
                               child: Text(
                                 l10n.defaultTagsCount(selectedIds.length),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(fontWeight: FontWeight.w600),
+                                style: Theme.of(context).textTheme.bodyMedium,
                               ),
                             ),
                             const SizedBox(height: 10),

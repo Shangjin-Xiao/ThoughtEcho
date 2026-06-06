@@ -364,7 +364,6 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
                           screenHeight,
                         ),
                         height: isVerySmallScreen ? 1.3 : 1.4, // 极小屏幕进一步减少行高
-                        fontWeight: FontWeight.w500,
                       ),
                       textAlign: TextAlign.center,
                       maxLines: _getResponsiveMaxLines(

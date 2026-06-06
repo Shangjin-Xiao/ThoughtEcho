@@ -62,11 +62,10 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
                       padding: const EdgeInsets.only(left: 4, bottom: 8),
                       child: Text(
                         AppLocalizations.of(context).presetColors,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(color: colorScheme.onSurfaceVariant),
                       ),
                     ),
                     Wrap(

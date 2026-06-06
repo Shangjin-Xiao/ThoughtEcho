@@ -327,11 +327,8 @@ extension NoteListFiltersExtension on NoteListViewState {
                 ],
                 Text(
                   label,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 14,
-                  ),
+                  style: theme.textTheme.labelMedium
+                      ?.copyWith(color: color, fontSize: 14),
                 ),
               ],
             ),
