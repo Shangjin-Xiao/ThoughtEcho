@@ -245,12 +245,6 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       return true;
     }
 
-    // 使用 _initialDeltaContent 避免编译器警告
-    // 富文本内容如果被修改，纯文本内容通常也会反映这个变化
-    // 所以这里仅用于记录初始状态，实际比对通过纯文本进行
-    // ignore: unused_local_variable
-    final _ = _initialDeltaContent;
-
     return false;
   }
 
@@ -497,7 +491,8 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
   }
 
   Future<void> _rollbackMovedPermanentMediaFiles(
-      List<String> movedPaths) async {
+    List<String> movedPaths,
+  ) async {
     if (movedPaths.isEmpty) {
       return;
     }
