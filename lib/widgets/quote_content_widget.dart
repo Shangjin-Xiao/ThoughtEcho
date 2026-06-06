@@ -32,7 +32,7 @@ class QuoteContent extends StatelessWidget {
   static quill.DefaultStyles? _buildAndroidCustomStyles() {
     if (kIsWeb || !Platform.isAndroid) return null;
     return quill.DefaultStyles(
-      bold: const TextStyle(fontWeight: FontWeight.w600),
+      bold: const TextStyle(fontWeight: FontWeight.w500),
       h1: quill.DefaultTextBlockStyle(
         const TextStyle(
           fontSize: 34,
