@@ -1,0 +1,61 @@
+test/pdf_export_test.dart
+  s_db4d6918964195::t_231bf0dcb7f3d9 7,60,64-67,72
+  s_db4d6918964195::t_ae5909feba2d61 1-2
+  s_db4d6918964195::t_223f052940c682 75-76
+  s_db4d6918964195::t_f690fc2b5776a8 77-86
+lib/widgets/note_list/note_list_items.dart
+  s_db4d6918964195::t_4e9a5964149ea9 607,766
+  s_db4d6918964195::t_b6913ac2c93ecd 777,801,831
+  s_0ae85df4a4d229::t_5faa3bba412fc3 565-566,576-577,639-645
+lib/l10n/app_zh.arb
+  s_db4d6918964195::t_d4e66af3a9faa8 3724
+  s_db4d6918964195::t_ca576198603af6 3764
+lib/widgets/quote_item_widget.dart
+  s_0ae85df4a4d229::t_ae08e35a2d4f98 346-347,351-354,357,359-360,362-370,375-380,384-386
+  s_0ae85df4a4d229::t_cc92c25c0acba4 49-50,77-78
+lib/l10n/app_en.arb
+  s_db4d6918964195::t_d4e66af3a9faa8 3724
+  s_db4d6918964195::t_ca576198603af6 3764
+test/widget/note_list_view_filter_test.dart
+  s_db4d6918964195::t_8e903e34b6f6f2 261-267
+  s_db4d6918964195::t_59c9feff99585c 268-272
+  s_db4d6918964195::t_ca576198603af6 289
+lib/services/delta_to_pdf_parser.dart
+  s_db4d6918964195::t_58baa19232e59e 25,118,166
+lib/widgets/note_list_view.dart
+  s_db4d6918964195::t_4e9a5964149ea9 9
+lib/pages/preferences_detail_page.dart
+  s_0ae85df4a4d229::t_751d783afc3591 281-283,286-290
+  s_db4d6918964195::t_cb6ac6ea9d0693 278-279,284-285
+lib/services/pdf_font_service.dart
+  s_db4d6918964195::t_223f052940c682 93-94
+  s_db4d6918964195::t_ca576198603af6 2
+  s_db4d6918964195::t_4e9a5964149ea9 17,25,32-45,51-54,63,73,92,97,101-105,108-116,126-128,130-143,246,249,262-265,283,285
+lib/services/pdf_export_service.dart
+  s_db4d6918964195::t_6b26e1b2893eed 16-46,169-172,186-189,202-205,265,267,294-311
+  s_db4d6918964195::t_4e9a5964149ea9 13,57-63,263-264,266,312-339
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "15a29a52dcded203f7f5edc714f8e1facfd9f668",
+  "prompts": {},
+  "sessions": {
+    "s_0ae85df4a4d229": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "1382f21e-fd17-49e5-bc64-0d43b9b49e3f",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_db4d6918964195": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9fce-73a9-7d13-a7e2-1cb06c912408",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
