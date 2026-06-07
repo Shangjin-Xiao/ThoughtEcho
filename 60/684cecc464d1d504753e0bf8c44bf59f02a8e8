@@ -1,0 +1,64 @@
+lib/models/app_settings.dart
+  s_fb7f875b2ef39e::t_48d4c532c00658 67-68,105
+test/unit/utils/sentry_network_tracing_test.dart
+  s_fb7f875b2ef39e::t_6d3b3368b710ab 1-30
+test/unit/utils/sentry_database_tracing_test.dart
+  s_fb7f875b2ef39e::t_64cd4652ef7ce3 16,31-41,50-58,60
+test/unit/utils/sentry_helper_test.dart
+  s_fb7f875b2ef39e::t_2896b27a66afc6 8-15,17,21-26
+  s_fb7f875b2ef39e::t_6d3b3368b710ab 1-2
+  s_fb7f875b2ef39e::t_9c3760e2f31a69 16,18-20,57-69
+  s_fb7f875b2ef39e::t_8aa0cfe9cd1837 71-92
+lib/utils/sentry_database_tracing.dart
+  s_fb7f875b2ef39e::t_48d4c532c00658 9-26
+lib/utils/sentry_network_tracing.dart
+  s_fb7f875b2ef39e::t_6d3b3368b710ab 1-20
+lib/services/background_push_handler.dart
+  s_fb7f875b2ef39e::t_88bd252a039ef4 12,14,21-22,29-31,55,140,223
+lib/utils/http_utils.dart
+  s_fb7f875b2ef39e::t_6d3b3368b710ab 5,58
+lib/services/settings_service.dart
+  s_fb7f875b2ef39e::t_48d4c532c00658 11,77,82,84
+  s_fb7f875b2ef39e::t_6d3b3368b710ab 13,83
+lib/config/onboarding_config.dart
+  s_fb7f875b2ef39e::t_48d4c532c00658 179
+lib/l10n/app_zh.arb
+  s_fb7f875b2ef39e::t_48d4c532c00658 3,6
+  s_fb7f875b2ef39e::t_9c3760e2f31a69 4,7
+lib/utils/sentry_helper.dart
+  s_fb7f875b2ef39e::t_154ebdc56226eb 52-58
+  s_fb7f875b2ef39e::t_48d4c532c00658 3,20-21,23-25,30-32,34-38,164,179-181
+  s_fb7f875b2ef39e::t_7645973d3d0810 62-66,96
+  s_fb7f875b2ef39e::t_36fc1099e72c1c 116-119,127-130,133-149,186,190-192,197-213,217-232
+  s_fb7f875b2ef39e::t_8aa0cfe9cd1837 33,48-51,59-61,67-76,83-86,98-101
+  s_fb7f875b2ef39e::t_82056ca159c29f 22
+  s_fb7f875b2ef39e::t_9c3760e2f31a69 26-29,87-88,102-103
+lib/l10n/app_en.arb
+  s_fb7f875b2ef39e::t_48d4c532c00658 3,6
+  s_fb7f875b2ef39e::t_9c3760e2f31a69 4,7
+lib/main.dart
+  s_fb7f875b2ef39e::t_48d4c532c00658 41,263-264,266
+  s_fb7f875b2ef39e::t_6d3b3368b710ab 43,265,267
+lib/services/network_service.dart
+  s_fb7f875b2ef39e::t_6d3b3368b710ab 10,71
+test/unified_log_service_test.dart
+  s_fb7f875b2ef39e::t_231a3255e55aed 121-122,173-174
+lib/services/database_service.dart
+  s_fb7f875b2ef39e::t_48d4c532c00658 670
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "60684cecc464d1d504753e0bf8c44bf59f02a8e8",
+  "prompts": {},
+  "sessions": {
+    "s_fb7f875b2ef39e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9fc1-6a22-7b60-a42b-e7d50efcf7a4",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
