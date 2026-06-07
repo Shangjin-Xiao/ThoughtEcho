@@ -1,0 +1,34 @@
+pubspec.lock
+  ai_agent 1991-1998
+lib/utils/sentry_helper.dart
+  s_fb7f875b2ef39e::t_a49afd80a8ed7e 13-49,83-84
+pubspec.yaml
+  s_fb7f875b2ef39e::t_941dbc82834064 92
+lib/services/database_health_service.dart
+  s_fb7f875b2ef39e::t_941dbc82834064 265-266
+test/unit/utils/sentry_database_tracing_test.dart
+  s_fb7f875b2ef39e::t_7229ae7df00136 3-46
+  s_fb7f875b2ef39e::t_a49afd80a8ed7e 1-2
+lib/services/database_service.dart
+  s_fb7f875b2ef39e::t_941dbc82834064 19,650,670
+lib/utils/sentry_database_tracing.dart
+  s_fb7f875b2ef39e::t_941dbc82834064 1-14
+test/unit/utils/sentry_helper_test.dart
+  s_fb7f875b2ef39e::t_a49afd80a8ed7e 1-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "5689b1418bb6e8f0a398a23ac079a0b9dc692bb8",
+  "prompts": {},
+  "sessions": {
+    "s_fb7f875b2ef39e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9fc1-6a22-7b60-a42b-e7d50efcf7a4",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
