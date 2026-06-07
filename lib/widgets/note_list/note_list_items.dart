@@ -42,132 +42,137 @@ extension _NoteListItemsExtension on NoteListViewState {
             constraints: BoxConstraints(maxWidth: maxWidth),
             child: Column(
               children: [
-                if (!_isExportMode)
-                  // 搜索框 - 现代圆角样式，筛选按钮内嵌到右侧
-                  Container(
-                    padding: EdgeInsets.fromLTRB(
-                      horizontalPadding,
-                      MediaQuery.of(context).padding.top + 8.0,
-                      horizontalPadding,
-                      0,
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      focusNode: _searchFocusNode,
-                      onChanged: _onSearchChanged,
-                      textInputAction: TextInputAction.search,
-                      decoration: InputDecoration(
-                        hintText: l10n.searchNotes,
-                        isDense: true,
-                        filled: true,
-                        fillColor: ColorUtils.getSearchBoxBackgroundColor(
-                          theme.colorScheme.surface,
-                          theme.brightness,
-                        ),
-                        prefixIcon: searchController.isSearching
-                            ? const Padding(
-                                padding: EdgeInsets.all(12.0),
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              )
-                            : const Icon(Icons.search),
-                        suffixIcon: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // 筛选按钮
-                            IconButton(
-                              key: widget.filterButtonKey, // 功能引导 key
-                              icon: const Icon(Icons.tune),
-                              tooltip: l10n.filterAndSortTooltip,
-                              onPressed: () {
-                                final settings =
-                                    context.read<SettingsService>();
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  backgroundColor: Theme.of(
-                                    context,
-                                  ).colorScheme.surfaceContainerLowest,
-                                  shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.vertical(
-                                      top: Radius.circular(16),
+                // 搜索框 - 现代圆角样式，筛选按钮内嵌到右侧
+                // 使用 AnimatedOpacity 保持布局树稳定，避免 ListView 滚动跳动
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                  opacity: _isExportMode ? 0.0 : 1.0,
+                  child: IgnorePointer(
+                    ignoring: _isExportMode,
+                    child: Container(
+                      padding: EdgeInsets.fromLTRB(
+                        horizontalPadding,
+                        MediaQuery.of(context).padding.top + 8.0,
+                        horizontalPadding,
+                        0,
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        onChanged: _onSearchChanged,
+                        textInputAction: TextInputAction.search,
+                        decoration: InputDecoration(
+                          hintText: l10n.searchNotes,
+                          isDense: true,
+                          filled: true,
+                          fillColor: ColorUtils.getSearchBoxBackgroundColor(
+                            theme.colorScheme.surface,
+                            theme.brightness,
+                          ),
+                          prefixIcon: searchController.isSearching
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12.0),
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
                                     ),
                                   ),
-                                  builder: (context) => NoteFilterSortSheet(
-                                    allTags: _effectiveTags,
-                                    selectedTagIds: widget.selectedTagIds,
-                                    sortType: widget.sortType,
-                                    sortAscending: widget.sortAscending,
-                                    selectedWeathers: widget.selectedWeathers,
-                                    selectedDayPeriods:
-                                        widget.selectedDayPeriods,
-                                    requireBiometricForHidden:
-                                        settings.requireBiometricForHidden,
-                                    onApply: (
-                                      tagIds,
-                                      sortType,
-                                      sortAscending,
-                                      selectedWeathers,
-                                      selectedDayPeriods,
-                                    ) {
-                                      widget.onTagSelectionChanged(tagIds);
-                                      widget.onSortChanged(
+                                )
+                              : const Icon(Icons.search),
+                          suffixIcon: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // 筛选按钮
+                              IconButton(
+                                key: widget.filterButtonKey, // 功能引导 key
+                                icon: const Icon(Icons.tune),
+                                tooltip: l10n.filterAndSortTooltip,
+                                onPressed: () {
+                                  final settings =
+                                      context.read<SettingsService>();
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Theme.of(
+                                      context,
+                                    ).colorScheme.surfaceContainerLowest,
+                                    shape: const RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(16),
+                                      ),
+                                    ),
+                                    builder: (context) => NoteFilterSortSheet(
+                                      allTags: _effectiveTags,
+                                      selectedTagIds: widget.selectedTagIds,
+                                      sortType: widget.sortType,
+                                      sortAscending: widget.sortAscending,
+                                      selectedWeathers: widget.selectedWeathers,
+                                      selectedDayPeriods:
+                                          widget.selectedDayPeriods,
+                                      requireBiometricForHidden:
+                                          settings.requireBiometricForHidden,
+                                      onApply: (
+                                        tagIds,
                                         sortType,
                                         sortAscending,
-                                      );
-                                      widget.onFilterChanged(
                                         selectedWeathers,
                                         selectedDayPeriods,
-                                      );
-                                    },
-                                  ),
-                                );
-                              },
+                                      ) {
+                                        widget.onTagSelectionChanged(tagIds);
+                                        widget.onSortChanged(
+                                          sortType,
+                                          sortAscending,
+                                        );
+                                        widget.onFilterChanged(
+                                          selectedWeathers,
+                                          selectedDayPeriods,
+                                        );
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                            horizontal: 12,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.outline.withValues(alpha: 0.28),
+                              width: 1,
                             ),
-                          ],
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 10,
-                          horizontal: 12,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: BorderSide(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.outline.withValues(alpha: 0.28),
-                            width: 1,
                           ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: BorderSide(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.outline.withValues(alpha: 0.20),
-                            width: 1,
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.outline.withValues(alpha: 0.20),
+                              width: 1,
+                            ),
                           ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          borderSide: BorderSide(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.primary.withValues(alpha: 0.65),
-                            width: 1.5,
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            borderSide: BorderSide(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withValues(alpha: 0.65),
+                              width: 1.5,
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                if (_isExportMode)
-                  // 占位符，腾出顶部悬浮栏的位置
-                  SizedBox(height: MediaQuery.of(context).padding.top + 72.0),
+                ),
 
                 // 筛选条件展示区域
                 _buildFilterDisplay(theme, horizontalPadding),
@@ -197,138 +202,158 @@ extension _NoteListItemsExtension on NoteListViewState {
           ),
         );
 
-        if (_isExportMode) {
-          mainContent = Stack(
-            children: [
-              mainContent,
-              // 顶部悬浮控制栏
-              Positioned(
-                top: MediaQuery.of(context).padding.top + 8.0,
-                left: horizontalPadding,
-                right: horizontalPadding,
-                child: Container(
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.95),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      TextButton(
-                        onPressed: () {
-                          _updateState(() {
-                            _isExportMode = false;
-                            _selectedExportNoteIds.clear();
-                          });
-                        },
-                        child: Text(l10n.cancel),
-                      ),
-                      const Spacer(),
-                      Text(
-                        "${l10n.pdfExportSelectionMode} (${_selectedExportNoteIds.length})",
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: _selectAllVisibleNotes,
-                        child: Text(
-                          _selectedExportNoteIds.containsAll(
-                                  _quotes.map((q) => q.id).whereType<String>())
-                              ? l10n.prefClearAll
-                              : l10n.prefSelectAll,
+        mainContent = Stack(
+          children: [
+            mainContent,
+            // 顶部悬浮控制栏
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              top: _isExportMode
+                  ? MediaQuery.of(context).padding.top + 8.0
+                  : -(MediaQuery.of(context).padding.top + 80.0),
+              left: horizontalPadding,
+              right: horizontalPadding,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 250),
+                opacity: _isExportMode ? 1.0 : 0.0,
+                child: IgnorePointer(
+                  ignoring: !_isExportMode,
+                  child: Container(
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              // 底部悬浮控制栏
-              Positioned(
-                bottom: 16.0,
-                left: horizontalPadding,
-                right: horizontalPadding,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest
-                        .withValues(alpha: 0.95),
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _selectSameMonthNotes,
-                          icon: const Icon(Icons.calendar_month_outlined,
-                              size: 18),
-                          label: Text(l10n.selectSameMonth,
-                              style: const TextStyle(fontSize: 11)),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            _updateState(() {
+                              _isExportMode = false;
+                              _selectedExportNoteIds.clear();
+                            });
+                          },
+                          child: Text(l10n.cancel),
+                        ),
+                        const Spacer(),
+                        Text(
+                          "${l10n.pdfExportSelectionMode} (${_selectedExportNoteIds.length})",
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: _selectAllVisibleNotes,
+                          child: Text(
+                            _selectedExportNoteIds.containsAll(_quotes
+                                    .map((q) => q.id)
+                                    .whereType<String>())
+                                ? l10n.prefClearAll
+                                : l10n.prefSelectAll,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _selectSameCategoryNotes,
-                          icon: const Icon(Icons.label_outline, size: 18),
-                          label: Text(l10n.selectSameCategory,
-                              style: const TextStyle(fontSize: 11)),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: _selectedExportNoteIds.isEmpty
-                              ? null
-                              : _exportSelectedNotesToPdf,
-                          icon: const Icon(Icons.picture_as_pdf, size: 18),
-                          label: Text(
-                            l10n.exportSelected(_selectedExportNoteIds.length),
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ],
-          );
-        }
+            ),
+            // 底部悬浮控制栏
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              bottom: _isExportMode ? 16.0 : -100.0,
+              left: horizontalPadding,
+              right: horizontalPadding,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 250),
+                opacity: _isExportMode ? 1.0 : 0.0,
+                child: IgnorePointer(
+                  ignoring: !_isExportMode,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _selectSameMonthNotes,
+                            icon: const Icon(Icons.calendar_month_outlined,
+                                size: 18),
+                            label: Text(l10n.selectSameMonth,
+                                style: const TextStyle(fontSize: 11)),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _selectSameCategoryNotes,
+                            icon: const Icon(Icons.label_outline, size: 18),
+                            label: Text(l10n.selectSameCategory,
+                                style: const TextStyle(fontSize: 11)),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: _selectedExportNoteIds.isEmpty
+                                ? null
+                                : _exportSelectedNotesToPdf,
+                            icon: const Icon(Icons.picture_as_pdf, size: 18),
+                            label: Text(
+                              l10n.exportSelected(
+                                  _selectedExportNoteIds.length),
+                              style: Theme.of(context).textTheme.labelSmall,
+                            ),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
 
         return Container(
           color: backgroundColor,
@@ -600,51 +625,88 @@ extension _NoteListItemsExtension on NoteListViewState {
                 ),
               );
 
-              if (_isExportMode) {
-                final isSelected = _selectedExportNoteIds.contains(quoteId);
-                itemWidget = InkWell(
-                  onTap: () => _toggleExportSelection(quoteId),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Row(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 12.0),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          curve: Curves.easeInOut,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isSelected
-                                ? theme.colorScheme.primary
-                                : Colors.transparent,
-                            border: Border.all(
-                              color: isSelected
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.outline,
-                              width: 2,
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(2.0),
-                            child: Icon(
-                              Icons.check,
-                              size: 16,
-                              color: isSelected
-                                  ? theme.colorScheme.onPrimary
-                                  : Colors.transparent,
+              final isSelected = _selectedExportNoteIds.contains(quoteId);
+
+              itemWidget = Stack(
+                children: [
+                  itemWidget,
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      ignoring: !_isExportMode,
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 200),
+                        opacity: _isExportMode ? 1.0 : 0.0,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: _isExportMode
+                                ? () => _toggleExportSelection(quoteId)
+                                : null,
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isSelected && _isExportMode
+                                      ? theme.colorScheme.primary
+                                      : Colors.transparent,
+                                  width: 2,
+                                ),
+                                color: isSelected && _isExportMode
+                                    ? theme.colorScheme.primary
+                                        .withValues(alpha: 0.05)
+                                    : Colors.transparent,
+                              ),
+                              alignment: Alignment.centerLeft,
+                              padding: const EdgeInsets.only(left: 16.0),
+                              child: AnimatedScale(
+                                duration: const Duration(milliseconds: 250),
+                                scale: _isExportMode ? 1.0 : 0.0,
+                                curve: Curves.easeOutBack,
+                                child: AnimatedOpacity(
+                                  duration: const Duration(milliseconds: 200),
+                                  opacity: _isExportMode ? 1.0 : 0.0,
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: isSelected
+                                          ? theme.colorScheme.primary
+                                          : theme.colorScheme.surface,
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? theme.colorScheme.primary
+                                            : theme.colorScheme.outline,
+                                        width: 2,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: theme.colorScheme.shadow
+                                              .withValues(alpha: 0.1),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    padding: const EdgeInsets.all(4.0),
+                                    child: Icon(
+                                      Icons.check,
+                                      size: 20,
+                                      color: isSelected
+                                          ? theme.colorScheme.onPrimary
+                                          : Colors.transparent,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                      Expanded(
-                        child: IgnorePointer(
-                          child: itemWidget,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                );
-              }
+                ],
+              );
 
               return itemWidget;
             }

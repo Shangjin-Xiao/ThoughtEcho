@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:thoughtecho/models/quote_model.dart';
@@ -53,6 +53,26 @@ void main() {
         () async {
       final font = await PdfFontService.loadFont();
       expect(font, isNotNull);
+    });
+
+    test('bundles a Chinese font for offline PDF export', () async {
+      final fontData = await rootBundle.load(PdfFontService.bundledFontAsset);
+      final fontSet = await PdfFontService.loadFontSet();
+      final document = pw.Document();
+      document.addPage(
+        pw.Page(
+          build: (_) => pw.Text(
+            '中文 PDF 离线导出',
+            style: pw.TextStyle(font: fontSet.regular),
+          ),
+        ),
+      );
+      final bytes = await document.save();
+
+      expect(fontData.lengthInBytes, greaterThan(1000));
+      expect(PdfFontService.isValidFontData(fontData), isTrue);
+      expect(fontSet.isFallback, isFalse);
+      expect(bytes, isNotEmpty);
     });
 
     test('PdfFontService.isValidFontData validates font headers correctly', () {

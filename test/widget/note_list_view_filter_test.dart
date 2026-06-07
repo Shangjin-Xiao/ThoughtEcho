@@ -15,6 +15,7 @@ import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/widgets/note_list_view.dart';
+import 'package:thoughtecho/widgets/quote_item_widget.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -236,6 +237,49 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(seconds: 2));
     });
+
+    testWidgets(
+      'entering PDF selection keeps the selected note at the same position',
+      (tester) async {
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = _makeQuotes(20);
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        final listView = tester.widget<ListView>(find.byType(ListView));
+        listView.controller!.jumpTo(900);
+        await tester.pump();
+
+        final moreButton = find.byIcon(Icons.more_vert).first;
+        final selectedNote = find.ancestor(
+          of: moreButton,
+          matching: find.byType(QuoteItemWidget),
+        );
+        final offsetBefore = listView.controller!.offset;
+        final positionBefore = tester.getTopLeft(selectedNote).dy;
+
+        await tester.tap(moreButton);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('导出为 PDF'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        final updatedListView = tester.widget<ListView>(find.byType(ListView));
+        expect(updatedListView.controller!.offset, closeTo(offsetBefore, 0.1));
+        expect(tester.getTopLeft(selectedNote).dy, closeTo(positionBefore, 1));
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
   });
 }
 
@@ -336,6 +380,9 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
 
   @override
   bool get showNoteEditTime => false;
+
+  @override
+  String get exportFormat => 'pdf';
 
   @override
   bool get prioritizeBoldContentInCollapse => false;

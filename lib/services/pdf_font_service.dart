@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 
@@ -28,6 +27,8 @@ class PdfFontSet {
 }
 
 class PdfFontService {
+  static const bundledFontAsset = "assets/fonts/ZCOOLXiaoWei-Regular.ttf";
+
   static ByteData? _cachedFontData;
 
   /// 加载字体数据集合，所有变体均指向同一份中文 TTF 数据
@@ -69,7 +70,15 @@ class PdfFontService {
       return _cachedFontData!;
     }
     try {
-      // 1. 尝试检索 Windows/Android 本地系统自带的中文字体（无网络/极速加载）
+      // 1. 优先使用随应用打包的中文字体，确保所有平台离线导出可用。
+      final bundledFontData = await _tryLoadBundledFont();
+      if (bundledFontData != null && isValidFontData(bundledFontData)) {
+        _cachedFontData = bundledFontData;
+        logDebug("成功从应用资源加载中文字体", source: "PdfFontService");
+        return _cachedFontData!;
+      }
+
+      // 2. 尝试检索 Windows/Android 本地系统自带的中文字体（无网络/极速加载）
       final systemFontData = await _tryLoadLocalSystemFont();
       if (systemFontData != null && isValidFontData(systemFontData)) {
         _cachedFontData = systemFontData;
@@ -77,7 +86,7 @@ class PdfFontService {
         return _cachedFontData!;
       }
 
-      // 2. 尝试从应用文档目录中读取已下载并缓存的字体
+      // 3. 尝试从应用文档目录中读取已下载并缓存的字体
       final cachedFontData = await _tryLoadCachedFont();
       if (cachedFontData != null && isValidFontData(cachedFontData)) {
         _cachedFontData = cachedFontData;
@@ -85,7 +94,7 @@ class PdfFontService {
         return _cachedFontData!;
       }
 
-      // 3. 动态下载中文字体并写入缓存
+      // 4. 动态下载中文字体并写入缓存
       final downloadedFontData = await _downloadAndCacheFont();
       if (downloadedFontData != null && isValidFontData(downloadedFontData)) {
         _cachedFontData = downloadedFontData;
@@ -97,6 +106,15 @@ class PdfFontService {
           error: e, stackTrace: stack);
     }
     return null;
+  }
+
+  static Future<ByteData?> _tryLoadBundledFont() async {
+    try {
+      return await rootBundle.load(bundledFontAsset);
+    } catch (e) {
+      logDebug("读取应用内置中文字体异常: $e", source: "PdfFontService");
+      return null;
+    }
   }
 
   /// 校验字体数据是否为合法的 TrueType 或 OpenType 格式，排除 TTC 或损坏文件
