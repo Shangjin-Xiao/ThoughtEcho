@@ -1,0 +1,38 @@
+test_driver/note_list_performance_driver.dart
+  s_7e762a83fe1272::t_1757e0c5b70abe 1-14,21-35
+  s_7e762a83fe1272::t_9cd666e3f2b0e9 15-20
+pubspec.yaml
+  s_7e762a83fe1272::t_9cd666e3f2b0e9 96-97
+scripts/run_note_list_performance.sh
+  s_7e762a83fe1272::t_1757e0c5b70abe 1-17
+.github/workflows/firebase-note-list-performance.yml
+  s_7e762a83fe1272::t_1757e0c5b70abe 1-64
+scripts/analyze_note_list_performance.dart
+  s_7e762a83fe1272::t_1757e0c5b70abe 1-55
+android/app/build.gradle
+  s_7e762a83fe1272::t_1757e0c5b70abe 55,149
+  s_7e762a83fe1272::t_0cdf8b348e51b1 150-151
+integration_test/note_list_performance_test.dart
+  s_7e762a83fe1272::t_9cd666e3f2b0e9 102
+  s_7e762a83fe1272::t_1a6f7757af0602 4
+  s_7e762a83fe1272::t_eee462dd0e16c7 8,154-180
+  s_7e762a83fe1272::t_1757e0c5b70abe 1-3,5-7,9-101,103-153,181-182
+android/app/src/androidTest/java/com/shangjin/thoughtecho/MainActivityTest.java
+  s_7e762a83fe1272::t_1757e0c5b70abe 1-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "d4ad6f9ba92193e50e7dc8dd177889b3f2debc63",
+  "prompts": {},
+  "sessions": {
+    "s_7e762a83fe1272": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9d34-17da-7023-839b-a71d835ccfcd",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
