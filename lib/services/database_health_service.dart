@@ -40,18 +40,6 @@ class DatabaseStartupDiagnostic {
   }
 }
 
-class DatabaseStartupDiagnosticException implements Exception {
-  const DatabaseStartupDiagnosticException(this.diagnostic);
-
-  final DatabaseStartupDiagnostic diagnostic;
-
-  @override
-  String toString() {
-    return 'DatabaseStartupDiagnosticException('
-        '${diagnostic.toSafeLogMessage()})';
-  }
-}
-
 class DatabaseHealthService {
   static const int _maxOfflineQuoteLength = 100;
   static const String dailyQuoteTagId = 'default_hitokoto';
@@ -274,9 +262,8 @@ class DatabaseHealthService {
         expectedPath: expectedPath,
       );
       if (startupDiagnostic.isSuspicious) {
-        logError(
-          '数据库启动身份检测异常',
-          error: DatabaseStartupDiagnosticException(startupDiagnostic),
+        logWarning(
+          '数据库启动身份检测异常: ${startupDiagnostic.toSafeLogMessage()}',
           source: 'DatabaseHealthCheck',
         );
       } else {

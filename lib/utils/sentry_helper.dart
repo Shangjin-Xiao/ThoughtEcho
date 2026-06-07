@@ -10,6 +10,43 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:thoughtecho/constants/app_constants.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
+const _databaseDescriptionPrefixes = <String>[
+  'Open DB:',
+  'Close DB:',
+  'Transaction DB:',
+];
+
+String sanitizeSentryDatabaseDescription(String description) {
+  for (final prefix in _databaseDescriptionPrefixes) {
+    if (description.startsWith(prefix)) {
+      return '$prefix main';
+    }
+  }
+  return description;
+}
+
+Breadcrumb? sanitizeSentryBreadcrumb(Breadcrumb? breadcrumb, Hint hint) {
+  if (breadcrumb?.message != null) {
+    breadcrumb!.message = sanitizeSentryDatabaseDescription(
+      breadcrumb.message!,
+    );
+  }
+  return breadcrumb;
+}
+
+SentryTransaction? sanitizeSentryTransaction(
+  SentryTransaction transaction,
+  Hint hint,
+) {
+  for (final span in transaction.spans) {
+    final description = span.context.description;
+    if (description != null) {
+      span.context.description = sanitizeSentryDatabaseDescription(description);
+    }
+  }
+  return transaction;
+}
+
 class SentryHelper {
   SentryHelper._();
 
@@ -43,6 +80,8 @@ class SentryHelper {
           options.profilesSampleRate =
               kDebugMode ? 1.0 : 0.2; // 开启函数级性能分析 (Profiling)
           options.environment = kDebugMode ? 'debug' : 'production';
+          options.beforeBreadcrumb = sanitizeSentryBreadcrumb;
+          options.beforeSendTransaction = sanitizeSentryTransaction;
           // 仅开启必要级别的打印调试
           options.debug = kDebugMode;
         },

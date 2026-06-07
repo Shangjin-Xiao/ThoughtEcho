@@ -16,6 +16,7 @@ import 'package:uuid/uuid.dart';
 import '../utils/app_logger.dart';
 import '../utils/database_platform_init.dart';
 import '../utils/expiring_cache.dart';
+import '../utils/sentry_database_tracing.dart';
 import 'large_file_manager.dart';
 import 'media_reference_service.dart';
 import 'mmkv_service.dart';
@@ -646,7 +647,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
   // 抽取数据库初始化逻辑到单独方法，便于复用
   Future<Database> _initDatabase(String path) async {
-    return await openDatabase(
+    final database = await openDatabase(
       path,
       version: 20,
       onCreate: (db, version) async {
@@ -666,6 +667,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
         await _verifyForeignKeysEnabled(db);
       },
     );
+    return enableSentryDatabaseTracing(database);
   }
 
   /// 验证外键约束是否已启用

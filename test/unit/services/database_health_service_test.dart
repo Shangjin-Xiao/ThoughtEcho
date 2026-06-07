@@ -200,10 +200,6 @@ void main() {
       expect(safeMessage, isNot(contains(tempDirectory.path)));
       expect(safeMessage, contains('expectedFingerprint='));
       expect(safeMessage, contains('actualFingerprint='));
-      expect(
-        DatabaseStartupDiagnosticException(diagnostic).toString(),
-        isNot(contains(tempDirectory.path)),
-      );
     });
 
     test('诊断只读取数据并返回笔记数量和数据库版本', () async {

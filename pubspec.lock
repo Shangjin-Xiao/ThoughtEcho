@@ -1988,6 +1988,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "9.21.0"
+  sentry_sqflite:
+    dependency: "direct main"
+    description:
+      name: sentry_sqflite
+      sha256: "707f8219189063121a73224333c32b8525bf23144ee774f4836ac53e94732dc9"
+      url: "https://pub.dev"
+    source: hosted
+    version: "9.21.0"
   share_plus:
     dependency: "direct main"
     description:
