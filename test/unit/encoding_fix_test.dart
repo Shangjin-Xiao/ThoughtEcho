@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'package:archive/archive.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('编码修复测试', () {
     late Directory tempDir;
 
@@ -91,6 +93,7 @@ void main() {
       // 测试解析
       final result = await StreamingBackupProcessor.processZipBackupStreaming(
         zipPath,
+        extractMediaFiles: false,
       );
 
       // 验证中文内容是否正确

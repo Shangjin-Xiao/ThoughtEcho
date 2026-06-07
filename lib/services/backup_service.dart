@@ -84,7 +84,10 @@ class BackupService {
     final tempDir = await getTemporaryDirectory();
     final backupId = DateTime.now().millisecondsSinceEpoch;
     final archivePath = customPath ??
-        path.join(tempDir.path, 'thoughtecho_backup_$backupId.zip');
+        path.join(
+          tempDir.path,
+          'thoughtecho_backup_$backupId.${includeMediaFiles ? 'zip' : 'json'}',
+        );
 
     File? jsonFile;
 
@@ -98,7 +101,7 @@ class BackupService {
       // 让UI有机会更新
       await Future.delayed(const Duration(milliseconds: 50));
 
-      jsonFile = File(path.join(tempDir.path, _backupDataFile));
+      jsonFile = File(path.join(tempDir.path, 'backup_data_$backupId.json'));
 
       // 修复 P1-2：流式导出数据到JSON文件
       await _exportStructuredDataStreaming(
@@ -114,6 +117,26 @@ class BackupService {
 
       cancelToken?.throwIfCancelled();
       onProgress?.call(stageNoteEnd, 100); // 更新进度
+
+      if (!includeMediaFiles) {
+        await LargeFileManager.copyFileInChunks(
+          jsonFile.path,
+          archivePath,
+          onProgress: (current, total) {
+            final copyProgress =
+                total <= 0 ? 0 : (current / total * 60).round();
+            onProgress?.call(stageNoteEnd + copyProgress, 100);
+          },
+          cancelToken: cancelToken,
+        );
+
+        if (!await StreamingBackupProcessor.validateBackupFile(archivePath)) {
+          throw Exception('生成的备份文件验证失败');
+        }
+
+        onProgress?.call(100, 100);
+        return archivePath;
+      }
 
       // 2. 准备ZIP文件列表
       final filesToZip = <String, String>{};
@@ -411,14 +434,14 @@ class BackupService {
     }
   }
 
-  /// 执行受保护的导入操作（流式处理版）
+  /// 执行受保护的导入操作。
   Future<void> _performImportWithProtection(
     String filePath, {
     bool clearExisting = true,
     Function(int current, int total)? onProgress,
     CancelToken? cancelToken,
   }) async {
-    logDebug('开始流式导入备份文件: $filePath');
+    logDebug('开始导入备份文件: $filePath');
 
     // 检查内存状态
     final memoryManager = DeviceMemoryManager();
@@ -429,6 +452,7 @@ class BackupService {
     }
 
     // 获取备份文件信息
+    onProgress?.call(5, 100);
     final backupInfo = await StreamingBackupProcessor.getBackupInfo(filePath);
     logDebug('备份文件信息: $backupInfo');
 
@@ -439,20 +463,23 @@ class BackupService {
 
     Map<String, dynamic> backupData;
 
-    // 根据文件类型使用相应的流式处理器
+    // 根据文件类型使用相应的后台处理器
     if (backupInfo['type'] == 'json') {
-      logDebug('使用流式JSON处理器...');
+      logDebug('使用后台JSON处理器...');
       backupData = await StreamingBackupProcessor.parseJsonBackupStreaming(
         filePath,
         onStatusUpdate: (status) => logDebug('JSON处理状态: $status'),
         shouldCancel: () => cancelToken?.isCancelled == true,
       );
     } else if (backupInfo['type'] == 'zip') {
-      logDebug('使用流式ZIP处理器...');
+      logDebug('使用后台ZIP处理器...');
       backupData = await StreamingBackupProcessor.processZipBackupStreaming(
         filePath,
         onStatusUpdate: (status) => logDebug('ZIP处理状态: $status'),
-        onProgress: onProgress,
+        onProgress: (current, total) {
+          final safeTotal = total <= 0 ? 1 : total;
+          onProgress?.call(5 + (current / safeTotal * 50).round(), 100);
+        },
         shouldCancel: () => cancelToken?.isCancelled == true,
       );
     } else {
@@ -460,16 +487,18 @@ class BackupService {
     }
 
     // 处理导入数据
-    await _processImportDataStreaming(backupData, clearExisting, cancelToken);
+    onProgress?.call(60, 100);
+    await _processImportData(backupData, clearExisting, cancelToken);
+    onProgress?.call(100, 100);
   }
 
-  /// 流式处理导入数据
-  Future<void> _processImportDataStreaming(
+  /// 处理已解析的导入数据。
+  Future<void> _processImportData(
     Map<String, dynamic> backupData,
     bool clearExisting,
     CancelToken? cancelToken,
   ) async {
-    logDebug('开始流式处理导入数据...');
+    logDebug('开始处理导入数据...');
 
     try {
       cancelToken?.throwIfCancelled();
@@ -536,9 +565,9 @@ class BackupService {
         );
       }
 
-      logDebug('流式导入数据完成');
+      logDebug('导入数据处理完成');
     } catch (e) {
-      logDebug('流式导入数据失败: $e');
+      logDebug('导入数据处理失败: $e');
       rethrow;
     }
   }
@@ -878,6 +907,7 @@ class BackupService {
     }
 
     // 获取并验证备份文件
+    onProgress?.call(5, 100);
     final backupInfo = await StreamingBackupProcessor.getBackupInfo(filePath);
     logDebug('备份文件信息: $backupInfo');
 
@@ -889,20 +919,23 @@ class BackupService {
     try {
       Map<String, dynamic> backupData;
 
-      // 根据文件类型使用相应的流式处理器
+      // 根据文件类型使用相应的后台处理器
       if (backupInfo['type'] == 'json') {
-        logDebug('使用流式JSON处理器...');
+        logDebug('使用后台JSON处理器...');
         backupData = await StreamingBackupProcessor.parseJsonBackupStreaming(
           filePath,
           onStatusUpdate: (status) => logDebug('JSON处理状态: $status'),
           shouldCancel: () => cancelToken?.isCancelled == true,
         );
       } else if (backupInfo['type'] == 'zip') {
-        logDebug('使用流式ZIP处理器...');
+        logDebug('使用后台ZIP处理器...');
         backupData = await StreamingBackupProcessor.processZipBackupStreaming(
           filePath,
           onStatusUpdate: (status) => logDebug('ZIP处理状态: $status'),
-          onProgress: onProgress,
+          onProgress: (current, total) {
+            final safeTotal = total <= 0 ? 1 : total;
+            onProgress?.call(5 + (current / safeTotal * 50).round(), 100);
+          },
           shouldCancel: () => cancelToken?.isCancelled == true,
         );
       } else {
@@ -929,10 +962,12 @@ class BackupService {
           rawTrashSettings is Map<String, dynamic> ? rawTrashSettings : null;
 
       // 使用LWW策略合并数据
+      onProgress?.call(60, 100);
       final report = await _databaseService.importDataWithLWWMerge(
         backupData.containsKey('notes') ? backupData['notes'] : backupData,
         sourceDevice: sourceDevice,
       );
+      onProgress?.call(100, 100);
 
       // 数据库合并成功后，尝试应用设置
       // 设置应用失败不应阻止整体导入成功，仅记录警告

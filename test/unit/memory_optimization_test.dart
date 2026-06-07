@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/utils/zip_stream_processor.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('Memory Optimization Tests', () {
     test('StreamingUtils should not accumulate fullText in memory', () async {
       // Test that the streaming callback is called for each chunk
@@ -83,6 +85,34 @@ void main() {
         '/nonexistent/path.zip',
       );
       expect(result, isFalse);
+    });
+
+    test('ZipStreamProcessor creates a valid ZIP and reports progress',
+        () async {
+      final tempDir = await Directory.systemTemp.createTemp('zip_isolate_');
+      final sourceFile = File('${tempDir.path}/source.txt');
+      final zipPath = '${tempDir.path}/backup.zip';
+      final progress = <int>[];
+
+      try {
+        await sourceFile.writeAsString('ThoughtEcho backup');
+
+        await ZipStreamProcessor.createZipStreaming(
+          zipPath,
+          {'backup_data.json': sourceFile.path},
+          onProgress: (current, total) => progress.add(current),
+        );
+
+        expect(await ZipStreamProcessor.validateZipFile(zipPath), isTrue);
+        expect(
+          await ZipStreamProcessor.containsFile(zipPath, 'backup_data.json'),
+          isTrue,
+        );
+        expect(progress, isNotEmpty);
+        expect(progress.last, 1);
+      } finally {
+        await tempDir.delete(recursive: true);
+      }
     });
   });
 }

@@ -1,17 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
+
 import 'package:archive/archive_io.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+
 import '../utils/app_logger.dart';
 import '../utils/path_security_utils.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
 
-/// 流式备份处理器
+/// 备份文件后台处理器
 ///
-/// 专门处理大备份文件的导入和导出，防止OOM
+/// ZIP 条目使用流式磁盘 I/O，JSON 解码移至后台 isolate。
+/// JSON 结果仍会完整驻留内存，不属于增量 JSON 解析。
 class StreamingBackupProcessor {
-  /// 流式解析JSON备份文件
+  /// 在后台 isolate 解析 JSON 备份文件，避免阻塞 UI isolate。
   static Future<Map<String, dynamic>> parseJsonBackupStreaming(
     String filePath, {
     Function(String status)? onStatusUpdate,
@@ -27,59 +31,25 @@ class StreamingBackupProcessor {
     final fileSize = await file.length();
     logDebug('备份文件大小: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB');
 
-    // 对于小文件，直接读取
-    if (fileSize < 10 * 1024 * 1024) {
-      // 10MB以下
-      onStatusUpdate?.call('读取小备份文件...');
-      final content = await file.readAsString();
-      return json.decode(content) as Map<String, dynamic>;
+    if (shouldCancel?.call() == true) {
+      throw Exception('操作已取消');
     }
+    onStatusUpdate?.call('正在后台解析JSON数据...');
 
-    // 对于大文件，使用流式解析
-    onStatusUpdate?.call('流式解析大备份文件...');
-    return await _parseJsonStreaming(file, onStatusUpdate, shouldCancel);
-  }
-
-  /// 流式解析大JSON文件
-  static Future<Map<String, dynamic>> _parseJsonStreaming(
-    File file,
-    Function(String status)? onStatusUpdate,
-    bool Function()? shouldCancel,
-  ) async {
-    final stream = file.openRead();
-    final buffer = <int>[];
-    int processedBytes = 0;
-    final totalSize = await file.length();
-
-    await for (final chunk in stream) {
+    try {
+      final result = await Isolate.run(() => _decodeJsonFile(filePath));
       if (shouldCancel?.call() == true) {
         throw Exception('操作已取消');
       }
-
-      // 修复：收集字节而不是直接转换为字符
-      buffer.addAll(chunk);
-      processedBytes += chunk.length;
-
-      // 定期更新状态
-      if (processedBytes % (1024 * 1024) == 0) {
-        // 每1MB更新一次
-        final progress = (processedBytes / totalSize * 100).toInt();
-        onStatusUpdate?.call('解析进度: $progress%');
-
-        // 短暂休息，让系统有机会回收内存
-        await Future.delayed(const Duration(milliseconds: 10));
-      }
-    }
-
-    onStatusUpdate?.call('正在解析JSON数据...');
-
-    try {
-      // 修复：使用UTF-8解码避免中文乱码
-      final jsonString = utf8.decode(buffer);
-      return json.decode(jsonString) as Map<String, dynamic>;
+      return result;
     } catch (e) {
       throw Exception('JSON解析失败: $e');
     }
+  }
+
+  static Map<String, dynamic> _decodeJsonFile(String filePath) {
+    return json.decode(File(filePath).readAsStringSync())
+        as Map<String, dynamic>;
   }
 
   /// 流式处理ZIP备份文件
@@ -100,96 +70,82 @@ class StreamingBackupProcessor {
     final fileSize = await file.length();
     logDebug('ZIP备份文件大小: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB');
 
-    // 使用 InputFileStream 流式读取 ZIP，不将整个文件加载到内存
-    onStatusUpdate?.call('正在流式解压备份文件...');
+    if (shouldCancel?.call() == true) {
+      throw Exception('操作已取消');
+    }
+    onStatusUpdate?.call('正在后台解压并解析备份文件...');
+    onProgress?.call(0, 100);
+
+    final appDirectoryPath = extractMediaFiles
+        ? (await getApplicationDocumentsDirectory()).path
+        : '';
+    final map = await Isolate.run(
+      () => _decodeZipBackup(
+        filePath,
+        appDirectoryPath,
+        extractMediaFiles,
+      ),
+    );
+
+    if (shouldCancel?.call() == true) {
+      throw Exception('操作已取消');
+    }
+    onProgress?.call(100, 100);
+    return map;
+  }
+
+  static Map<String, dynamic> _decodeZipBackup(
+    String filePath,
+    String appDirectoryPath,
+    bool extractMediaFiles,
+  ) {
     final inputStream = InputFileStream(filePath);
-
-    late final Archive archive;
     try {
-      archive = ZipDecoder().decodeStream(inputStream);
-    } catch (e) {
-      inputStream.closeSync();
-      throw Exception('ZIP文件解压失败: $e');
-    }
-
-    // 查找数据文件
-    ArchiveFile? dataFile;
-    logDebug('ZIP文件包含的文件列表:');
-    for (final f in archive) {
-      logDebug('  - ${f.name} (${f.size} bytes)');
-      if (f.name == 'backup_data.json' || f.name == 'data.json') {
-        dataFile = f;
-        logDebug('找到数据文件: ${f.name}');
-        break;
+      final archive = ZipDecoder().decodeStream(inputStream);
+      ArchiveFile? dataFile;
+      for (final file in archive) {
+        if (file.name == 'backup_data.json' || file.name == 'data.json') {
+          dataFile = file;
+          break;
+        }
       }
-    }
+      if (dataFile == null) {
+        throw Exception('备份文件中未找到数据文件 (backup_data.json 或 data.json)');
+      }
 
-    if (dataFile == null) {
-      inputStream.closeSync();
-      throw Exception('备份文件中未找到数据文件 (backup_data.json 或 data.json)');
-    }
+      final map = json.decode(utf8.decode(dataFile.content as List<int>))
+          as Map<String, dynamic>;
 
-    onStatusUpdate?.call('正在解析备份数据...');
+      if (extractMediaFiles) {
+        for (final file in archive) {
+          if (!file.isFile || file.name == dataFile.name) continue;
 
-    // 解析JSON数据 — dataFile.content 按需从磁盘读取（流式解码后的懒加载）
-    final jsonBytes = dataFile.content as List<int>;
-    final jsonString = utf8.decode(jsonBytes);
-    final map = json.decode(jsonString) as Map<String, dynamic>;
+          try {
+            final normalizedName = file.name.replaceAll('/', p.separator);
+            final safeRelativePath = _normalizeSafeRelativePath(normalizedName);
+            if (safeRelativePath == null) continue;
 
-    // 提取媒体文件到应用目录 (排除数据文件本身 & 目录)
-    if (extractMediaFiles) {
-      try {
-        final appDir = await getApplicationDocumentsDirectory();
-        for (final f in archive) {
-          if (shouldCancel?.call() == true) {
-            inputStream.closeSync();
-            throw Exception('操作已取消');
-          }
-
-          if (f.isFile && f.name != dataFile.name) {
+            final targetPath = p.join(appDirectoryPath, safeRelativePath);
+            PathSecurityUtils.validateExtractionPath(
+              targetPath,
+              appDirectoryPath,
+            );
+            Directory(p.dirname(targetPath)).createSync(recursive: true);
+            final outputStream = OutputFileStream(targetPath);
             try {
-              // 将 ZIP 条目名中的正斜杠转换为当前平台的路径分隔符
-              final normalizedName = f.name.replaceAll('/', p.separator);
-              final safeRelativePath =
-                  _normalizeSafeRelativePath(normalizedName);
-              if (safeRelativePath == null) {
-                logWarning('跳过不安全的ZIP条目: ${f.name}',
-                    source: 'StreamingBackupProcessor');
-                continue;
-              }
-
-              final targetPath = p.join(appDir.path, safeRelativePath);
-
-              // 安全检查：防止Zip Slip路径穿越漏洞
-              PathSecurityUtils.validateExtractionPath(targetPath, appDir.path);
-
-              final targetDir = Directory(p.dirname(targetPath));
-              if (!await targetDir.exists()) {
-                await targetDir.create(recursive: true);
-              }
-
-              // 使用 OutputFileStream 直接写入磁盘，不经过内存中转
-              final outputStream = OutputFileStream(targetPath);
-              f.writeContent(outputStream);
+              file.writeContent(outputStream);
+            } finally {
               outputStream.closeSync();
-              logDebug('已解压媒体文件: ${f.name} -> $targetPath');
-            } catch (e) {
-              logWarning('媒体文件解压失败: ${f.name}, $e',
-                  source: 'StreamingBackupProcessor');
             }
+          } catch (_) {
+            // 单个媒体文件损坏不应阻止结构化数据还原。
           }
         }
-        logDebug('媒体文件已解压到应用目录', source: 'StreamingBackupProcessor');
-      } catch (e) {
-        if (e.toString().contains('操作已取消')) rethrow;
-        logWarning('媒体文件解压失败: $e', source: 'StreamingBackupProcessor');
       }
-    } else {
-      logDebug('仅验证ZIP结构，跳过媒体文件解压', source: 'StreamingBackupProcessor');
+      return map;
+    } finally {
+      inputStream.closeSync();
     }
-
-    inputStream.closeSync();
-    return map;
   }
 
   /// 检查备份文件类型
@@ -266,9 +222,7 @@ class StreamingBackupProcessor {
         final fileSize = await file.length();
         if (fileSize < 10 * 1024 * 1024) {
           // 10MB以下直接验证
-          final content = await file.readAsString();
-          final decoded = json.decode(content);
-          final isValid = decoded is Map<String, dynamic>;
+          final isValid = await Isolate.run(() => _isValidJsonBackup(filePath));
           logDebug('JSON备份文件验证${isValid ? '成功' : '失败'}');
           return isValid;
         } else {
@@ -282,21 +236,11 @@ class StreamingBackupProcessor {
       } else if (type == 'zip') {
         // 轻量验证ZIP文件：仅检查结构和数据文件是否存在
         logDebug('验证ZIP备份文件...');
-        final inputStream = InputFileStream(filePath);
-        try {
-          final archive = ZipDecoder().decodeStream(inputStream);
-          bool hasDataFile = false;
-          for (final f in archive) {
-            if (f.name == 'backup_data.json' || f.name == 'data.json') {
-              hasDataFile = true;
-              break;
-            }
-          }
-          logDebug('ZIP备份文件验证${hasDataFile ? '成功' : '失败：未找到数据文件'}');
-          return hasDataFile;
-        } finally {
-          inputStream.closeSync();
-        }
+        final hasDataFile = await Isolate.run(
+          () => _zipContainsBackupData(filePath),
+        );
+        logDebug('ZIP备份文件验证${hasDataFile ? '成功' : '失败：未找到数据文件'}');
+        return hasDataFile;
       }
 
       logDebug('不支持的备份文件类型: $type');
@@ -304,6 +248,23 @@ class StreamingBackupProcessor {
     } catch (e) {
       logDebug('备份文件验证失败: $e');
       return false;
+    }
+  }
+
+  static bool _isValidJsonBackup(String filePath) {
+    return json.decode(File(filePath).readAsStringSync())
+        is Map<String, dynamic>;
+  }
+
+  static bool _zipContainsBackupData(String filePath) {
+    final inputStream = InputFileStream(filePath);
+    try {
+      return ZipDecoder().decodeStream(inputStream).any(
+            (file) =>
+                file.name == 'backup_data.json' || file.name == 'data.json',
+          );
+    } finally {
+      inputStream.closeSync();
     }
   }
 

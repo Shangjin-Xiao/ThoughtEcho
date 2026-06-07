@@ -4,7 +4,6 @@ import '../gen_l10n/app_localizations.dart';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -143,11 +142,6 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                   TextButton(
                     onPressed: () {
                       _cancelToken?.cancel();
-                      setState(() {
-                        _isLoading = false;
-                        _progress = 0.0;
-                        _progressText = '';
-                      });
                     },
                     child: Text(l10n.cancel),
                   ),
@@ -237,11 +231,6 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                   TextButton(
                     onPressed: () {
                       _cancelToken?.cancel();
-                      setState(() {
-                        _isLoading = false;
-                        _progress = 0.0;
-                        _progressText = '';
-                      });
                     },
                     child: Text(l10n.cancel),
                   ),
@@ -362,26 +351,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         _handleBackupProgressUpdate(current, total);
       }
 
-      if (kIsWeb) {
-        // Web 平台：直接创建备份并分享
-        backupPath = await backupService.exportAllData(
-          includeMediaFiles: _includeMediaFiles,
-          onProgress: onBackupProgress,
-          cancelToken: _cancelToken,
-        );
-
-        if (mounted) {
-          await SharePlus.instance.share(
-            ShareParams(
-              text: l10n.thoughtEchoBackupFile,
-              subject: fileName,
-              files: [XFile(backupPath)],
-            ),
-          );
-
-          _showSuccessSnackBar(l10n.backupFileReady);
-        }
-      } else if (Platform.isAndroid || Platform.isIOS) {
+      if (Platform.isAndroid || Platform.isIOS) {
         // 移动平台：创建备份并分享
         backupPath = await backupService.exportAllData(
           includeMediaFiles: _includeMediaFiles,
@@ -451,6 +421,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           _isLoading = false;
         });
       }
+      _cancelToken = null;
     }
   }
 
@@ -511,6 +482,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
       setState(() {
         _isLoading = true;
+        _progress = 0;
+        _progressText = '';
       });
 
       final backupService = Provider.of<BackupService>(context, listen: false);
@@ -586,18 +559,15 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       }
 
       // 执行导入
+      _backupProgressUpdateGate.reset();
+      _cancelToken = CancelToken();
       if (useMerge) {
         final report = await backupService.importData(
           file.path!,
           clearExisting: false,
           merge: true,
           onProgress: (current, total) {
-            if (mounted) {
-              setState(() {
-                _progress = (current / total * 100).toDouble();
-                _progressText = '${l10n.mergingDataProgress} $current/$total';
-              });
-            }
+            _handleRestoreProgressUpdate(current, total, isMerge: true);
           },
           cancelToken: _cancelToken,
         );
@@ -607,13 +577,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           file.path!,
           clearExisting: true,
           onProgress: (current, total) {
-            if (mounted) {
-              final l10n = AppLocalizations.of(context);
-              setState(() {
-                _progress = (current / total * 100).toDouble();
-                _progressText = l10n.restoringData(current, total);
-              });
-            }
+            _handleRestoreProgressUpdate(current, total);
           },
           cancelToken: _cancelToken,
         );
@@ -679,7 +643,32 @@ Details: $e''';
           _isLoading = false;
         });
       }
+      _cancelToken = null;
     }
+  }
+
+  void _handleRestoreProgressUpdate(
+    int current,
+    int total, {
+    bool isMerge = false,
+  }) {
+    if (!mounted) return;
+
+    final safeTotal = total <= 0 ? 1 : total;
+    final progressPercent = ((current / safeTotal) * 100).clamp(0, 100).round();
+    if (!_backupProgressUpdateGate.shouldUpdate(
+      progressPercent: progressPercent,
+      stageKey: isMerge ? 'merge' : 'restore',
+    )) {
+      return;
+    }
+
+    setState(() {
+      _progress = progressPercent.toDouble();
+      _progressText = isMerge
+          ? '${l10n.mergingDataProgress} $current/$safeTotal'
+          : l10n.restoringData(current, safeTotal);
+    });
   }
 
   /// 显示还原确认对话框

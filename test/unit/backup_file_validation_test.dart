@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'package:archive/archive.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('备份文件验证测试', () {
     late Directory tempDir;
 

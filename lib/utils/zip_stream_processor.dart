@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
-import 'dart:typed_data';
+
 import 'package:archive/archive_io.dart';
 import 'package:flutter/foundation.dart';
 import '../services/large_file_manager.dart';
@@ -42,66 +42,105 @@ class ZipStreamProcessor {
     Function(int current, int total)? onProgress,
     CancelToken? cancelToken,
   }) async {
-    final encoder = ZipFileEncoder();
-    encoder.create(outputPath);
+    final receivePort = ReceivePort();
+    final completer = Completer<void>();
+    Isolate? isolate;
+    Timer? cancelTimer;
 
     try {
       logDebug('开始流式创建ZIP: $outputPath');
-      int processed = 0;
-      final total = files.length;
+      cancelToken?.throwIfCancelled();
 
-      for (final entry in files.entries) {
-        cancelToken?.throwIfCancelled();
-        final relativePath = entry.key;
-        final absolutePath = entry.value;
+      isolate = await Isolate.spawn(_createZipInIsolate, {
+        'sendPort': receivePort.sendPort,
+        'outputPath': outputPath,
+        'files': files,
+      });
 
-        try {
-          final file = File(absolutePath);
-          if (await file.exists()) {
-            // 使用新的流式方法添加文件
-            await _addFileStreaming(encoder, file, relativePath);
-            logDebug('已通过流式方法添加文件到ZIP: $relativePath');
-          } else {
-            logDebug('文件不存在，跳过: $absolutePath');
+      receivePort.listen((message) {
+        if (message is Map) {
+          final type = message['type'];
+          if (type == 'progress') {
+            onProgress?.call(
+              message['current'] as int,
+              message['total'] as int,
+            );
+          } else if (type == 'done' && !completer.isCompleted) {
+            completer.complete();
+          } else if (type == 'error' && !completer.isCompleted) {
+            completer.completeError(
+              Exception(message['error']),
+              StackTrace.fromString(message['stackTrace'] as String? ?? ''),
+            );
           }
-        } catch (e) {
-          logDebug('添加文件到ZIP失败，跳过: $relativePath, 错误: $e');
         }
+      });
 
-        processed++;
-        onProgress?.call(processed, total);
-
-        // 更频繁的UI更新机会，特别是处理大文件时
-        if (processed % 5 == 0) {
-          await Future.delayed(const Duration(milliseconds: 10));
-        } else {
-          // 即使是小批次也给UI一个更新机会
-          await Future.delayed(const Duration(milliseconds: 1));
+      cancelTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+        if (cancelToken?.isCancelled == true && !completer.isCompleted) {
+          isolate?.kill(priority: Isolate.immediate);
+          completer.completeError(const CancelledException());
         }
-      }
+      });
+
+      await completer.future;
     } catch (e, s) {
-      AppLogger.e(
-        '流式创建ZIP失败',
-        error: e,
-        stackTrace: s,
-        source: 'ZipStreamProcessor',
-      );
+      if (e is! CancelledException) {
+        AppLogger.e(
+          '流式创建ZIP失败',
+          error: e,
+          stackTrace: s,
+          source: 'ZipStreamProcessor',
+        );
+      }
       rethrow;
     } finally {
-      encoder.close();
+      cancelTimer?.cancel();
+      isolate?.kill();
+      receivePort.close();
       logDebug('ZIP创建完成: $outputPath');
     }
   }
 
-  /// 内部辅助方法：以流的方式添加文件到ZIP（支持超大文件）
-  static Future<void> _addFileStreaming(
-    ZipFileEncoder encoder,
-    File file,
-    String relativePath,
-  ) async {
-    // ZipFileEncoder.addFile 从磁盘流式读取文件并压缩，
-    // 内存占用仅为压缩缓冲区（~32KB），不会将整个文件加载到内存
-    encoder.addFile(file, relativePath);
+  static Future<void> _createZipInIsolate(Map<String, dynamic> args) async {
+    final sendPort = args['sendPort'] as SendPort;
+    final outputPath = args['outputPath'] as String;
+    final files = Map<String, String>.from(args['files'] as Map);
+    final encoder = ZipFileEncoder();
+
+    try {
+      encoder.create(outputPath);
+      var processed = 0;
+
+      for (final entry in files.entries) {
+        final file = File(entry.value);
+        if (file.existsSync()) {
+          try {
+            await encoder.addFile(file, entry.key);
+          } catch (_) {
+            if (entry.key == 'backup_data.json') rethrow;
+          }
+        }
+        processed++;
+        sendPort.send({
+          'type': 'progress',
+          'current': processed,
+          'total': files.length,
+        });
+      }
+
+      await encoder.close();
+      sendPort.send({'type': 'done'});
+    } catch (e, s) {
+      try {
+        await encoder.close();
+      } catch (_) {}
+      sendPort.send({
+        'type': 'error',
+        'error': e.toString(),
+        'stackTrace': s.toString(),
+      });
+    }
   }
 
   /// 流式解压ZIP文件（增强版，支持大文件安全处理）
@@ -267,38 +306,24 @@ class ZipStreamProcessor {
     }
   }
 
-  /// 通用ZIP文件解码方法
-  static Future<Archive?> _decodeZipFile(String zipPath) async {
-    try {
-      final zipFile = File(zipPath);
-      if (!await zipFile.exists()) {
-        return null;
-      }
-
-      // 使用 InputFileStream 流式读取，避免将整个 ZIP 加载到内存
-      final inputStream = InputFileStream(zipPath);
-      try {
-        return ZipDecoder().decodeStream(inputStream);
-      } catch (e) {
-        inputStream.closeSync();
-        rethrow;
-      }
-    } catch (e) {
-      logDebug('ZIP文件解码失败: $zipPath, 错误: $e');
-      return null;
-    }
-  }
-
   /// 验证ZIP文件完整性（流式方式）
   ///
   /// [zipPath] - ZIP文件路径
   static Future<bool> validateZipFile(String zipPath) async {
     try {
-      final archive = await _decodeZipFile(zipPath);
-      return archive?.isNotEmpty ?? false;
+      return await compute(_validateZipFileInIsolate, zipPath);
     } catch (e) {
       logDebug('ZIP文件验证失败: $zipPath, 错误: $e');
       return false;
+    }
+  }
+
+  static bool _validateZipFileInIsolate(String zipPath) {
+    final inputStream = InputFileStream(zipPath);
+    try {
+      return ZipDecoder().decodeStream(inputStream).isNotEmpty;
+    } finally {
+      inputStream.closeSync();
     }
   }
 
@@ -353,31 +378,23 @@ class ZipStreamProcessor {
   /// [fileName] - 要查找的文件名
   static Future<bool> containsFile(String zipPath, String fileName) async {
     try {
-      final zipFile = File(zipPath);
-      if (!await zipFile.exists()) {
-        return false;
-      }
-
-      try {
-        // 使用流式解码，避免一次性读入大文件
-        final inputStream = InputFileStream(zipPath);
-        final archive = ZipDecoder().decodeStream(inputStream);
-        for (final file in archive) {
-          if (file.name == fileName) {
-            inputStream.closeSync();
-            return true;
-          }
-        }
-
-        inputStream.closeSync();
-        return false;
-      } catch (e) {
-        logDebug('检查ZIP文件失败: $zipPath, 错误: $e');
-        return false;
-      }
+      return await compute(_containsFileInIsolate, {
+        'zipPath': zipPath,
+        'fileName': fileName,
+      });
     } catch (e) {
       logDebug('检查ZIP文件内容失败: $zipPath, 错误: $e');
       return false;
+    }
+  }
+
+  static bool _containsFileInIsolate(Map<String, String> args) {
+    final inputStream = InputFileStream(args['zipPath']!);
+    try {
+      final archive = ZipDecoder().decodeStream(inputStream);
+      return archive.any((file) => file.name == args['fileName']);
+    } finally {
+      inputStream.closeSync();
     }
   }
 
