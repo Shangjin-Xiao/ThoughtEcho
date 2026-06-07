@@ -9,24 +9,26 @@ import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/network_service.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/sentry_database_tracing.dart';
 import 'package:thoughtecho/utils/sentry_helper.dart';
+import 'package:thoughtecho/utils/sentry_network_tracing.dart';
 import 'package:thoughtecho/main.dart' show initializeDatabasePlatform;
 
 // WorkManager 任务名称常量
 const String kBackgroundPushTask = 'com.shangjin.thoughtecho.backgroundPush';
 const String kPeriodicCheckTask = 'com.shangjin.thoughtecho.periodicCheck';
 
-/// 从 MMKV 读取设置并根据用户配置初始化 Sentry
-Future<void> _initializeSentryFromSettings(MMKVService mmkvService) async {
+/// 从 MMKV 读取设置并根据用户配置后台初始化 Sentry
+void _configureSentryFromSettings(MMKVService mmkvService) {
   final appSettingsJson = mmkvService.getString('app_settings');
   if (appSettingsJson == null) return;
 
   try {
     final settingsMap = json.decode(appSettingsJson) as Map<String, dynamic>;
     final sentryEnabled = settingsMap['sentryEnabled'] as bool? ?? false;
-    if (sentryEnabled) {
-      await SentryHelper.init();
-    }
+    SentryDatabaseTracing.configure(enabled: sentryEnabled);
+    SentryNetworkTracing.configure(enabled: sentryEnabled);
+    SentryHelper.startIfEnabled(sentryEnabled);
   } catch (e) {
     AppLogger.w('后台 Sentry 初始化失败: $e');
   }
@@ -50,7 +52,7 @@ void callbackDispatcher() {
       await mmkvService.init();
 
       // 从 mmkv 加载设置并判断是否启用 Sentry
-      await _initializeSentryFromSettings(mmkvService);
+      _configureSentryFromSettings(mmkvService);
 
       // 关键修复：后台 Isolate 必须先设置数据库路径
       // main.dart 中的 setDatabasesPath() 设置仅在主 Isolate 中生效，
@@ -135,7 +137,7 @@ void backgroundPushCallback(int id) async {
     AppLogger.d('MMKV 初始化完成');
 
     // 从 mmkv 加载设置并判断是否启用 Sentry
-    await _initializeSentryFromSettings(mmkvService);
+    _configureSentryFromSettings(mmkvService);
 
     // 关键修复：后台 Isolate 必须先设置数据库路径
     // main.dart 中的 setDatabasesPath() 设置仅在主 Isolate 中生效，
@@ -218,7 +220,7 @@ Future<void> backgroundPeriodicCheck() async {
     await mmkvService.init();
 
     // 从 mmkv 加载设置并判断是否启用 Sentry
-    await _initializeSentryFromSettings(mmkvService);
+    _configureSentryFromSettings(mmkvService);
 
     // 关键修复：后台 Isolate 必须先设置数据库路径
     await initializeDatabasePlatform();

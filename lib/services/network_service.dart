@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:dio/dio.dart';
-import 'package:sentry_dio/sentry_dio.dart';
 import 'package:flutter/foundation.dart';
 import '../utils/http_response.dart';
 import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/multi_ai_settings.dart';
 import '../utils/app_logger.dart';
+import '../utils/sentry_network_tracing.dart';
 
 /// 统一的网络服务管理器
 /// 整合所有网络请求功能，提供统一的接口
@@ -68,7 +68,7 @@ class NetworkService {
         retries: 1,
       ),
     );
-    _generalDio.addSentry();
+    SentryNetworkTracing.addToGeneralDioIfEnabled(_generalDio);
   }
 
   /// 配置AI专用Dio实例
@@ -90,7 +90,6 @@ class NetworkService {
         ),
       );
     }
-    _aiDio.addSentry();
   }
 
   /// 通用HTTP GET请求

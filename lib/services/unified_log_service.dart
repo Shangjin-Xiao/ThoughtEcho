@@ -879,21 +879,6 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
         // 仅在 Sentry 初始化完毕时上传日志辅助信息
         if (Sentry.isEnabled) {
-          // 只把警告和错误传为面包屑，保护用户轨迹行为隐私
-          if (level == UnifiedLogLevel.warning ||
-              level == UnifiedLogLevel.error) {
-            Sentry.addBreadcrumb(
-              Breadcrumb(
-                message: message,
-                category: source ?? 'log',
-                level: level == UnifiedLogLevel.error
-                    ? SentryLevel.error
-                    : SentryLevel.warning,
-                timestamp: DateTime.now(),
-              ),
-            );
-          }
-
           // 发生 Error 时，如果伴有异常对象，则直接上报错误
           if (level == UnifiedLogLevel.error && error != null) {
             Sentry.captureException(

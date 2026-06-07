@@ -667,7 +667,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
         await _verifyForeignKeysEnabled(db);
       },
     );
-    return enableSentryDatabaseTracing(database);
+    return SentryDatabaseTracing.wrapMainDatabase(database);
   }
 
   /// 验证外键约束是否已启用

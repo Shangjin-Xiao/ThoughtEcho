@@ -13,6 +13,7 @@ void main() {
     late Database database;
 
     setUp(() async {
+      SentryDatabaseTracing.configure(enabled: false);
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
       originalFactory = databaseFactory;
@@ -27,9 +28,17 @@ void main() {
       await database.close();
     });
 
-    test('wraps the opened database without replacing the global factory',
-        () async {
-      final traced = enableSentryDatabaseTracing(database);
+    test('does not wrap the database by default', () {
+      final traced = SentryDatabaseTracing.wrapMainDatabase(database);
+
+      expect(traced, same(database));
+      expect(databaseFactory, same(originalFactory));
+    });
+
+    test('wraps the opened database only after explicit opt-in', () async {
+      SentryDatabaseTracing.configure(enabled: true);
+
+      final traced = SentryDatabaseTracing.wrapMainDatabase(database);
 
       expect(traced, isA<SentryDatabase>());
       expect(databaseFactory, same(originalFactory));
@@ -38,9 +47,17 @@ void main() {
     });
 
     test('does not wrap an already traced database twice', () {
-      final traced = enableSentryDatabaseTracing(database);
+      SentryDatabaseTracing.configure(enabled: true);
+      final traced = SentryDatabaseTracing.wrapMainDatabase(database);
 
-      expect(enableSentryDatabaseTracing(traced), same(traced));
+      expect(SentryDatabaseTracing.wrapMainDatabase(traced), same(traced));
+    });
+
+    test('stops wrapping newly opened databases after opt-out', () {
+      SentryDatabaseTracing.configure(enabled: true);
+      SentryDatabaseTracing.configure(enabled: false);
+
+      expect(SentryDatabaseTracing.wrapMainDatabase(database), same(database));
     });
   });
 }

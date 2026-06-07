@@ -176,7 +176,7 @@ class OnboardingConfig {
         ],
       ),
 
-      // 4. Sentry 错误日志上报 (帮助改进应用)
+      // 4. Sentry 诊断与性能上报 (帮助改进应用)
       OnboardingPreference<bool>(
         key: 'sentryEnabled',
         title: l10n.settingsSentryTitle,

@@ -38,7 +38,9 @@ import 'package:thoughtecho/services/connectivity_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/data_directory_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
+import 'package:thoughtecho/utils/sentry_database_tracing.dart';
 import 'package:thoughtecho/utils/sentry_helper.dart';
+import 'package:thoughtecho/utils/sentry_network_tracing.dart';
 import 'package:thoughtecho/utils/update_dialog_helper.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
 import 'package:thoughtecho/services/background_push_handler.dart';
@@ -254,13 +256,15 @@ Future<void> main() async {
         await Future.wait([
           initializeDatabasePlatform(),
           mmkvService.init(),
-          NetworkService.instance.init(),
           SettingsService.create().then((s) => settingsService = s),
           PackageInfo.fromPlatform().then((p) => packageInfo = p),
         ]);
 
-        // 尽早初始化 Sentry，确保覆盖启动阶段异常与首屏导航
-        await SentryHelper.initIfEnabled(settingsService.sentryEnabled);
+        // Sentry 默认关闭；用户开启后也在后台初始化，不阻塞应用启动。
+        SentryDatabaseTracing.configure(enabled: settingsService.sentryEnabled);
+        SentryNetworkTracing.configure(enabled: settingsService.sentryEnabled);
+        SentryHelper.startIfEnabled(settingsService.sentryEnabled);
+        await NetworkService.instance.init();
 
         final String currentVersion = packageInfo.version;
         final String? lastVersion = settingsService.getAppVersion();

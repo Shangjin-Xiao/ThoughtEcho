@@ -118,7 +118,8 @@ void main() {
       expect(db.executes, isEmpty);
     });
 
-    test('sentry integration records breadcrumbs and exceptions', () async {
+    test('sentry integration excludes log text and records exceptions',
+        () async {
       final mockTransport = _MockSentryTransport();
       await Sentry.init((options) {
         options.dsn = 'https://fake-dsn@sentry.io/1';
@@ -169,8 +170,8 @@ void main() {
         }
       }
 
-      expect(foundBreadcrumb, isTrue,
-          reason: 'Warning log should be added as a breadcrumb');
+      expect(foundBreadcrumb, isFalse,
+          reason: 'Unstructured warning text should not be sent to Sentry');
       expect(foundException, isTrue,
           reason: 'Severe log with exception should be captured by Sentry');
 

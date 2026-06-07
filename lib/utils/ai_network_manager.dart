@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:dio/dio.dart';
-import 'package:sentry_dio/sentry_dio.dart';
 import 'package:thoughtecho/utils/dio_performance_interceptor.dart';
 import 'package:flutter/foundation.dart';
 import '../models/ai_settings.dart';
@@ -57,7 +56,6 @@ class AINetworkManager {
         },
       ),
     );
-    dio.addSentry();
   }
 
   /// 重置Dio实例

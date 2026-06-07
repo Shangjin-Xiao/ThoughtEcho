@@ -64,8 +64,8 @@ class AppSettings {
   final bool skipNonFullscreenEditor; // 新增：跳过非全屏编辑器，直接进入全屏编辑器
   final String offlineQuoteSource;
   final String exportFormat;
-  final bool sentryEnabled; // 新增：是否启用 Sentry 错误日志上报
-  final bool sentryDisclosureShown; // 新增：Sentry 错误日志上报提示弹窗是否已显示过
+  final bool sentryEnabled; // 是否启用 Sentry 诊断与性能上报
+  final bool sentryDisclosureShown; // Sentry 上报提示弹窗是否已显示过
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -102,7 +102,7 @@ class AppSettings {
     this.skipNonFullscreenEditor = false, // 默认不跳过非全屏编辑器
     this.offlineQuoteSource = 'tagOnly', // 默认仅展示带每日一言标签的笔记
     this.exportFormat = 'card', // 默认精致分享卡片
-    this.sentryEnabled = false, // 默认不启用 Sentry 错误日志上报
+    this.sentryEnabled = false, // 默认不启用 Sentry 诊断与性能上报
     this.sentryDisclosureShown = false, // 默认未显示提示
   }) : trashRetentionDays = normalizeTrashRetentionDays(trashRetentionDays);
 

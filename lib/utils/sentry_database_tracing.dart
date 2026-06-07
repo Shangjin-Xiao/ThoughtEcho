@@ -6,9 +6,23 @@ import 'package:sqflite/sqflite.dart';
 /// 为已打开的数据库实例启用 Sentry SQL 与事务性能追踪。
 ///
 /// 不替换全局 [databaseFactory]，避免影响数据库路径和平台工厂。
-Database enableSentryDatabaseTracing(Database database) {
-  if (database is SentryDatabase) {
-    return database;
+class SentryDatabaseTracing {
+  SentryDatabaseTracing._();
+
+  static bool _enabled = false;
+
+  /// 根据用户明确授权配置主数据库性能追踪。
+  ///
+  /// 仅影响之后打开的主数据库连接，避免运行时热替换现有连接。
+  static void configure({required bool enabled}) {
+    _enabled = enabled;
   }
-  return SentryDatabase(database);
+
+  /// 仅在用户明确授权后包装主笔记数据库。
+  static Database wrapMainDatabase(Database database) {
+    if (!_enabled || database is SentryDatabase) {
+      return database;
+    }
+    return SentryDatabase(database);
+  }
 }
