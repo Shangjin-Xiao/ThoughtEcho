@@ -1,0 +1,46 @@
+test/unit/backup_file_validation_test.dart
+  s_cdf9380f86b99c::t_298f7eb2717339 8-9
+test/unit/encoding_fix_test.dart
+  s_cdf9380f86b99c::t_794c49c204e52c 96
+  s_cdf9380f86b99c::t_298f7eb2717339 8-9
+lib/utils/zip_stream_processor.dart
+  s_cdf9380f86b99c::t_1090955e2b4b70 118-122
+  s_cdf9380f86b99c::t_8a08f9fb98ddf6 105,132,136
+  s_cdf9380f86b99c::t_fa5d85cc043191 4
+  s_cdf9380f86b99c::t_144630cc445b58 45-48,52,54-74,77,79-82,84-86,88-95,98-100,106-117,123-130,133-135,137-143,314,321-329,381-384,391-397
+test/unit/memory_optimization_test.dart
+  s_cdf9380f86b99c::t_039d3e952c9a26 6-7
+  s_cdf9380f86b99c::t_0eb2063311ee20 89-116
+lib/services/backup_service.dart
+  s_cdf9380f86b99c::t_794c49c204e52c 455,479-482,490,492,910,935-938,970
+  s_cdf9380f86b99c::t_d31e7c341ab6cf 87-90,104,121-139
+  s_cdf9380f86b99c::t_27f013b09d59f5 965
+  s_cdf9380f86b99c::t_31a3d8291fcdde 437,491,495-496,501,568,570
+  s_cdf9380f86b99c::t_c0a1a42f375ae3 444,466,468,475,922,924,931
+lib/pages/backup_restore_page.dart
+  s_cdf9380f86b99c::t_9adbc0c6b066c7 424,646
+  s_cdf9380f86b99c::t_c374ead8bc9f77 354,485-486,562-563,570,580,650-657,659-671
+  s_cdf9380f86b99c::t_cc58369b75c6bb 658
+lib/services/streaming_backup_processor.dart
+  s_cdf9380f86b99c::t_f80c5b2174f9a9 4-5,7-9,37,39-40,44,50-52,76-78,82-91,93-95,97-104,112-114,116-123,145-147,239-243,257-267
+  s_cdf9380f86b99c::t_dee57b3a0ecbd6 34-35,73-74,105-111,225,254-256
+  s_cdf9380f86b99c::t_31a3d8291fcdde 13,15-16,18
+  s_cdf9380f86b99c::t_cc58369b75c6bb 79-81
+  s_cdf9380f86b99c::t_d60bb33fc38583 124-134,136-137,140-141
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "96449fd8f11e2362b8af3431805182e459eaf80b",
+  "prompts": {},
+  "sessions": {
+    "s_cdf9380f86b99c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9fc5-7b63-76f0-bc08-da65d3e196c3",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
