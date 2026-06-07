@@ -1,0 +1,19 @@
+android/app/src/main/AndroidManifest.xml
+  s_451316a9f93a4a::t_4cd21374238120 56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "60f696690da0ede6e7b2b77fab3b662883073296",
+  "prompts": {},
+  "sessions": {
+    "s_451316a9f93a4a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9ffa-5d8a-7e20-bd18-88a64f65973b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
