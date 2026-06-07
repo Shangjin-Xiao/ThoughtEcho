@@ -80,17 +80,17 @@ class QuoteContent extends StatelessWidget {
   // 性能优化：静态缓存 config，避免每次 build 创建
   static final quill.QuillEditorConfig _staticEditorConfig =
       quill.QuillEditorConfig(
-    enableInteractiveSelection: false,
-    enableSelectionToolbar: false,
-    showCursor: false,
-    embedBuilders: QuillEditorExtensions.getEmbedBuilders(
-      optimizedImages: true,
-    ),
-    padding: EdgeInsets.zero,
-    expands: false,
-    scrollable: false,
-    customStyles: _buildAndroidCustomStyles(),
-  );
+        enableInteractiveSelection: false,
+        enableSelectionToolbar: false,
+        showCursor: false,
+        embedBuilders: QuillEditorExtensions.getEmbedBuilders(
+          optimizedImages: true,
+        ),
+        padding: EdgeInsets.zero,
+        expands: false,
+        scrollable: false,
+        customStyles: _buildAndroidCustomStyles(),
+      );
 
   static const double collapsedContentMaxHeight = 160.0;
   static const double _estimatedLineHeight = 24.0;
@@ -250,10 +250,10 @@ class QuoteContent extends StatelessWidget {
 
   /// Returns lightweight cache counters for performance diagnostics.
   static Map<String, dynamic> debugCacheStats() => {
-        'document': _QuoteDocumentCache.stats,
-        'heightEstimate': _QuoteHeightEstimateCache.stats,
-        'controller': _QuoteContentControllerCache.stats,
-      };
+    'document': _QuoteDocumentCache.stats,
+    'heightEstimate': _QuoteHeightEstimateCache.stats,
+    'controller': _QuoteContentControllerCache.stats,
+  };
 
   /// Returns a compact one-line summary suitable for copy/paste performance logs.
   static String debugCompactCacheStats({Map<String, dynamic>? baseline}) {
@@ -317,7 +317,7 @@ class QuoteContent extends StatelessWidget {
   }
 
   /// 检查是否为媒体软连接或其他应该过滤的内容
-  bool _shouldFilterBoldContent(String content) {
+  static bool _shouldFilterBoldContent(String content) {
     // 去除空白字符进行检查
     final trimmed = content.trim();
 
@@ -337,7 +337,7 @@ class QuoteContent extends StatelessWidget {
   }
 
   /// 提取有效的加粗文本内容，过滤媒体软连接
-  List<Map<String, dynamic>> _extractValidBoldOps(String deltaContent) {
+  static List<Map<String, dynamic>> _extractValidBoldOps(String deltaContent) {
     try {
       final decoded = jsonDecode(deltaContent);
       if (decoded is List) {
@@ -365,7 +365,7 @@ class QuoteContent extends StatelessWidget {
   }
 
   /// 获取非加粗的正文内容（包括媒体嵌入）
-  List<Map<String, dynamic>> _extractNonBoldOps(String deltaContent) {
+  static List<Map<String, dynamic>> _extractNonBoldOps(String deltaContent) {
     try {
       final decoded = jsonDecode(deltaContent);
       if (decoded is List) {
@@ -487,7 +487,9 @@ class QuoteContent extends StatelessWidget {
     return height;
   }
 
-  List<Map<String, dynamic>>? _createBoldPriorityOps(String deltaContent) {
+  static List<Map<String, dynamic>>? _createBoldPriorityOps(
+    String deltaContent,
+  ) {
     try {
       final boldOps = _extractValidBoldOps(deltaContent);
       if (boldOps.isEmpty) {
@@ -523,7 +525,7 @@ class QuoteContent extends StatelessWidget {
   }
 
   /// 创建优先显示加粗内容的 Document（保持原始嵌入，重新排序）。
-  quill.Document? _createBoldPriorityDocument(String deltaContent) {
+  static quill.Document? _createBoldPriorityDocument(String deltaContent) {
     final orderedOps = _createBoldPriorityOps(deltaContent);
     return orderedOps == null ? null : quill.Document.fromJson(orderedOps);
   }
@@ -540,6 +542,96 @@ class QuoteContent extends StatelessWidget {
     }
 
     return _documentFromDelta(deltaContent);
+  }
+
+  static List<dynamic> _extractOpsFromDelta(
+    String deltaContent,
+    bool prioritizeBold,
+  ) {
+    if (prioritizeBold) {
+      final orderedOps = _createBoldPriorityOps(deltaContent);
+      if (orderedOps != null) {
+        return orderedOps;
+      }
+    }
+    try {
+      final decoded = jsonDecode(deltaContent);
+      if (decoded is List) {
+        return decoded;
+      }
+      if (decoded is Map && decoded.containsKey('ops')) {
+        final ops = decoded['ops'];
+        if (ops is List) {
+          return ops;
+        }
+      }
+    } catch (_) {
+      // ignore
+    }
+    return [
+      {'insert': ''},
+    ];
+  }
+
+  static Map<String, List<dynamic>> _decodeBatchWorker(
+    Map<String, dynamic> args,
+  ) {
+    final Map<String, List<dynamic>> result = {};
+    final List<String> deltas = args['deltas'] as List<String>;
+    final bool prioritizeBold = args['prioritizeBold'] as bool;
+    for (final delta in deltas) {
+      final key = '${delta.hashCode}_${delta.length}_$prioritizeBold';
+      result[key] = _extractOpsFromDelta(delta, prioritizeBold);
+    }
+    return result;
+  }
+
+  /// 异步在 Isolate 中预解析所有的富文本数据，避免主线程解码 JSON 导致的卡顿
+  static Future<void> prewarmDocumentsInIsolate(
+    List<Quote> quotes, {
+    required bool prioritizeBoldContent,
+  }) async {
+    final richQuotes = quotes
+        .where((q) => q.deltaContent != null && q.editSource == 'fullscreen')
+        .toList();
+    if (richQuotes.isEmpty) return;
+
+    final List<String> toProcess = [];
+    for (final q in richQuotes) {
+      final deltaContent = q.deltaContent!;
+      final key = _DocumentCacheKey(
+        deltaContent: deltaContent,
+        prioritizeBold: prioritizeBoldContent,
+      );
+      if (!_QuoteDocumentCache._cache.containsKey(key)) {
+        toProcess.add(deltaContent);
+      }
+    }
+
+    if (toProcess.isEmpty) return;
+
+    try {
+      final decodedMap = await compute(_decodeBatchWorker, {
+        'deltas': toProcess,
+        'prioritizeBold': prioritizeBoldContent,
+      });
+
+      for (final delta in toProcess) {
+        final keyStr =
+            '${delta.hashCode}_${delta.length}_$prioritizeBoldContent';
+        final ops = decodedMap[keyStr];
+        if (ops != null) {
+          final doc = quill.Document.fromJson(ops);
+          _QuoteDocumentCache.getOrCreate(
+            deltaContent: delta,
+            prioritizeBold: prioritizeBoldContent,
+            builder: () => doc,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('[QuoteContent] prewarm in isolate failed: $e');
+    }
   }
 
   quill.Document _documentFromDelta(String deltaContent) {
@@ -582,18 +674,18 @@ class QuoteContent extends StatelessWidget {
 
       final _CachedControllerSet controllerSet =
           _QuoteContentControllerCache.getOrCreate(
-        quoteId: cacheQuoteId,
-        contentSignature: contentSignature,
-        variant: contentVariant,
-        documentBuilder: () => _QuoteDocumentCache.getOrCreate(
-          deltaContent: quote.deltaContent!,
-          prioritizeBold: usePrioritizedDoc,
-          builder: () => _buildRichTextDocument(
-            quote.deltaContent!,
-            usePrioritizedDoc,
-          ),
-        ),
-      );
+            quoteId: cacheQuoteId,
+            contentSignature: contentSignature,
+            variant: contentVariant,
+            documentBuilder: () => _QuoteDocumentCache.getOrCreate(
+              deltaContent: quote.deltaContent!,
+              prioritizeBold: usePrioritizedDoc,
+              builder: () => _buildRichTextDocument(
+                quote.deltaContent!,
+                usePrioritizedDoc,
+              ),
+            ),
+          );
 
       Widget richTextEditor = quill.QuillEditor(
         controller: controllerSet.quillController,
@@ -686,8 +778,7 @@ class _CollapsedContentWrapper extends StatelessWidget {
 
 class _QuoteHeightEstimateCache {
   static final LinkedHashMap<_HeightEstimateCacheKey, _HeightEstimateCacheEntry>
-      _cache =
-      LinkedHashMap<_HeightEstimateCacheKey, _HeightEstimateCacheEntry>();
+  _cache = LinkedHashMap<_HeightEstimateCacheKey, _HeightEstimateCacheEntry>();
 
   static const int _maxCacheSize = 300;
   static const int _pruneBatchSize = 50;
@@ -783,7 +874,7 @@ class _HeightEstimateCacheKey {
 
 class _HeightEstimateCacheEntry {
   _HeightEstimateCacheEntry({required this.height})
-      : lastAccess = DateTime.now();
+    : lastAccess = DateTime.now();
 
   final double height;
   DateTime lastAccess;
@@ -902,7 +993,7 @@ class _DocumentCacheEntry {
 
 class _QuoteContentControllerCache {
   static final LinkedHashMap<_ControllerCacheKey, _ControllerCacheEntry>
-      _cache = LinkedHashMap<_ControllerCacheKey, _ControllerCacheEntry>();
+  _cache = LinkedHashMap<_ControllerCacheKey, _ControllerCacheEntry>();
 
   static const int _maxCacheSize = 50;
   static const int _pruneBatchSize = 10;
@@ -1054,7 +1145,7 @@ class _ControllerCacheKey {
 
 class _ControllerCacheEntry {
   _ControllerCacheEntry({required this.controllers})
-      : lastAccess = DateTime.now();
+    : lastAccess = DateTime.now();
 
   final _CachedControllerSet controllers;
   DateTime lastAccess;
