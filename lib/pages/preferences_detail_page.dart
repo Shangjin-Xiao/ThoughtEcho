@@ -275,8 +275,19 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                       style: theme.textTheme.bodyMedium
                           ?.copyWith(color: theme.colorScheme.onSurface),
                       onChanged: (String? newValue) {
-                        if (newValue != null) {
+                        if (newValue != null &&
+                            newValue != settings.exportFormat) {
                           settings.setExportFormat(newValue);
+                          if (newValue == 'pdf') {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content:
+                                    Text(l10n.pdfExportExperimentalWarning),
+                                duration: const Duration(seconds: 4),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
                         }
                       },
                       items: [

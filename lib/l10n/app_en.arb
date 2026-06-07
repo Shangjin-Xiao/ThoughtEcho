@@ -3721,6 +3721,7 @@
   "exportFormatCard": "Delicate Share Card",
   "exportFormatPdf": "Standard A4 PDF",
   "exportFormatDesc": "Configure the default format when exporting or sharing notes",
+  "pdfExportExperimentalWarning": "PDF export is experimental and requires multilingual and emoji font files. The first use may need an internet connection to download them; it can be used offline afterward.",
   "exportToPdf": "Export to PDF",
   "pdfExportSelectionMode": "Select Export Mode",
   "selectSameMonth": "Select Same Month",

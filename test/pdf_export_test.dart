@@ -1,8 +1,10 @@
-import 'package:flutter/services.dart';
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/delta_to_pdf_parser.dart';
+import 'package:thoughtecho/services/pdf_export_service.dart';
 import 'package:thoughtecho/services/pdf_font_service.dart';
 
 void main() {
@@ -55,24 +57,33 @@ void main() {
       expect(font, isNotNull);
     });
 
-    test('bundles a Chinese font for offline PDF export', () async {
-      final fontData = await rootBundle.load(PdfFontService.bundledFontAsset);
-      final fontSet = await PdfFontService.loadFontSet();
+    test('metadata icons render without emoji font support', () async {
       final document = pw.Document();
       document.addPage(
         pw.Page(
-          build: (_) => pw.Text(
-            '中文 PDF 离线导出',
-            style: pw.TextStyle(font: fontSet.regular),
+          build: (_) => pw.Row(
+            children: PdfExportIcons.values
+                .map((icon) => PdfExportIcons.build(icon))
+                .toList(),
           ),
         ),
       );
-      final bytes = await document.save();
 
-      expect(fontData.lengthInBytes, greaterThan(1000));
-      expect(PdfFontService.isValidFontData(fontData), isTrue);
-      expect(fontSet.isFallback, isFalse);
-      expect(bytes, isNotEmpty);
+      expect(await document.save(), isNotEmpty);
+    });
+
+    test('PdfFontSet exposes fallback fonts for multilingual text and emoji',
+        () {
+      final fallback = pw.Font.courier();
+      final fontSet = PdfFontSet(
+        regular: pw.Font.helvetica(),
+        bold: pw.Font.helveticaBold(),
+        italic: pw.Font.helveticaOblique(),
+        boldItalic: pw.Font.helveticaBoldOblique(),
+        fallbackFonts: [fallback],
+      );
+
+      expect(fontSet.fallbackFonts, contains(fallback));
     });
 
     test('PdfFontService.isValidFontData validates font headers correctly', () {

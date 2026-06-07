@@ -1,6 +1,5 @@
 import 'dart:io';
-
-import 'package:flutter/services.dart';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:meta/meta.dart';
@@ -15,6 +14,7 @@ class PdfFontSet {
   final pw.Font bold;
   final pw.Font italic;
   final pw.Font boldItalic;
+  final List<pw.Font> fallbackFonts;
   final bool isFallback;
 
   const PdfFontSet({
@@ -22,19 +22,36 @@ class PdfFontSet {
     required this.bold,
     required this.italic,
     required this.boldItalic,
+    this.fallbackFonts = const [],
     this.isFallback = false,
   });
 }
 
 class PdfFontService {
-  static const bundledFontAsset = "assets/fonts/ZCOOLXiaoWei-Regular.ttf";
-
   static ByteData? _cachedFontData;
+  static ByteData? _cachedEmojiFontData;
+
+  static const _multilingualFontFileName = "cached_noto_sans_cjk_sc.otf";
+  static const _emojiFontFileName = "cached_noto_color_emoji.ttf";
+
+  static const _multilingualFontUrls = [
+    "https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf",
+    "https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf",
+  ];
+
+  static const _emojiFontUrls = [
+    "https://fonts.gstatic.com/s/notocoloremoji/v30/Yq6P-KqIXTD0t4D9z1ESnKM3-HpFab5s79iz64w.ttf",
+    "https://rawcdn.githack.com/googlefonts/noto-emoji/9a5261d871451f9b5183c93483cbd68ed916b1e9/fonts/NotoColorEmoji.ttf",
+  ];
 
   /// 加载字体数据集合，所有变体均指向同一份中文 TTF 数据
   /// 这可确保 pdf 包在渲染粗体/斜体文字时不会 fallback 到不含 CJK 的内置字体
   static Future<PdfFontSet> loadFontSet() async {
     final data = await _loadFontData();
+    final emojiData = await _loadEmojiFontData();
+    final fallbackFonts = emojiData == null
+        ? const <pw.Font>[]
+        : <pw.Font>[pw.Font.ttf(emojiData)];
     if (data != null) {
       // 同一份数据创建四份独立 pw.Font 实例（pdf 包要求每种变体是独立对象）
       // 这样即便字体本身不含真正粗体/斜体，中文也不会乱码
@@ -43,6 +60,7 @@ class PdfFontService {
         bold: pw.Font.ttf(data),
         italic: pw.Font.ttf(data),
         boldItalic: pw.Font.ttf(data),
+        fallbackFonts: fallbackFonts,
         isFallback: false,
       );
     }
@@ -52,6 +70,7 @@ class PdfFontService {
       bold: pw.Font.helveticaBold(),
       italic: pw.Font.helveticaOblique(),
       boldItalic: pw.Font.helveticaBoldOblique(),
+      fallbackFonts: fallbackFonts,
       isFallback: true,
     );
   }
@@ -70,35 +89,31 @@ class PdfFontService {
       return _cachedFontData!;
     }
     try {
-      // 1. 优先使用随应用打包的中文字体，确保所有平台离线导出可用。
-      final bundledFontData = await _tryLoadBundledFont();
-      if (bundledFontData != null && isValidFontData(bundledFontData)) {
-        _cachedFontData = bundledFontData;
-        logDebug("成功从应用资源加载中文字体", source: "PdfFontService");
+      // 1. 优先读取覆盖中日韩及拉丁字符的已缓存 Noto Sans CJK。
+      final cachedFontData =
+          await _tryLoadCachedFont(_multilingualFontFileName);
+      if (cachedFontData != null && isValidFontData(cachedFontData)) {
+        _cachedFontData = cachedFontData;
+        logDebug("成功从应用缓存路径加载多语言字体", source: "PdfFontService");
         return _cachedFontData!;
       }
 
-      // 2. 尝试检索 Windows/Android 本地系统自带的中文字体（无网络/极速加载）
+      // 2. 下载并缓存标准 Noto Sans CJK，确保中日韩字形稳定一致。
+      final downloadedFontData = await _downloadAndCacheFont(
+        fileName: _multilingualFontFileName,
+        urls: _multilingualFontUrls,
+      );
+      if (downloadedFontData != null && isValidFontData(downloadedFontData)) {
+        _cachedFontData = downloadedFontData;
+        logDebug("成功动态下载并加载多语言字体", source: "PdfFontService");
+        return _cachedFontData!;
+      }
+
+      // 3. 网络不可用时尝试系统字体作为降级。
       final systemFontData = await _tryLoadLocalSystemFont();
       if (systemFontData != null && isValidFontData(systemFontData)) {
         _cachedFontData = systemFontData;
-        logDebug("成功从系统本地路径加载中文字体", source: "PdfFontService");
-        return _cachedFontData!;
-      }
-
-      // 3. 尝试从应用文档目录中读取已下载并缓存的字体
-      final cachedFontData = await _tryLoadCachedFont();
-      if (cachedFontData != null && isValidFontData(cachedFontData)) {
-        _cachedFontData = cachedFontData;
-        logDebug("成功从应用缓存路径加载中文字体", source: "PdfFontService");
-        return _cachedFontData!;
-      }
-
-      // 4. 动态下载中文字体并写入缓存
-      final downloadedFontData = await _downloadAndCacheFont();
-      if (downloadedFontData != null && isValidFontData(downloadedFontData)) {
-        _cachedFontData = downloadedFontData;
-        logDebug("成功动态下载并加载中文字体", source: "PdfFontService");
+        logDebug("成功从系统本地路径加载多语言字体", source: "PdfFontService");
         return _cachedFontData!;
       }
     } catch (e, stack) {
@@ -108,13 +123,24 @@ class PdfFontService {
     return null;
   }
 
-  static Future<ByteData?> _tryLoadBundledFont() async {
-    try {
-      return await rootBundle.load(bundledFontAsset);
-    } catch (e) {
-      logDebug("读取应用内置中文字体异常: $e", source: "PdfFontService");
-      return null;
+  static Future<ByteData?> _loadEmojiFontData() async {
+    if (_cachedEmojiFontData != null) {
+      return _cachedEmojiFontData!;
     }
+    final cached = await _tryLoadCachedFont(_emojiFontFileName);
+    if (cached != null && isValidFontData(cached)) {
+      _cachedEmojiFontData = cached;
+      return cached;
+    }
+    final downloaded = await _downloadAndCacheFont(
+      fileName: _emojiFontFileName,
+      urls: _emojiFontUrls,
+    );
+    if (downloaded != null && isValidFontData(downloaded)) {
+      _cachedEmojiFontData = downloaded;
+      return downloaded;
+    }
+    return null;
   }
 
   /// 校验字体数据是否为合法的 TrueType 或 OpenType 格式，排除 TTC 或损坏文件
@@ -217,10 +243,10 @@ class PdfFontService {
   }
 
   /// 读取已下载缓存的字体
-  static Future<ByteData?> _tryLoadCachedFont() async {
+  static Future<ByteData?> _tryLoadCachedFont(String fileName) async {
     try {
       final docDir = await getApplicationDocumentsDirectory();
-      final fontFile = File("${docDir.path}/cached_chinese_font.ttf");
+      final fontFile = File("${docDir.path}/$fileName");
       if (await fontFile.exists()) {
         final bytes = await fontFile.readAsBytes();
         if (bytes.isNotEmpty) {
@@ -233,14 +259,10 @@ class PdfFontService {
     return null;
   }
 
-  /// 从公共 CDN 动态下载小巧精美且支持中文的 TrueType 字体（站酷小薇，约 2.0MB）
-  /// 提供了国内 CDN 镜像作为备选，且设置了超时时间以防无响应挂起
-  static Future<ByteData?> _downloadAndCacheFont() async {
-    final urls = [
-      "https://gstatic.loli.net/s/zcoolxiaowei/v15/i7dMIFFrTRywPpUVX9_RJyM1YFI.ttf",
-      "https://fonts.gstatic.com/s/zcoolxiaowei/v15/i7dMIFFrTRywPpUVX9_RJyM1YFI.ttf",
-    ];
-
+  static Future<ByteData?> _downloadAndCacheFont({
+    required String fileName,
+    required List<String> urls,
+  }) async {
     final dio = Dio(BaseOptions(
       connectTimeout: const Duration(seconds: 8),
       receiveTimeout: const Duration(seconds: 15),
@@ -258,9 +280,9 @@ class PdfFontService {
           final byteData = ByteData.view(bytes.buffer);
           if (isValidFontData(byteData)) {
             final docDir = await getApplicationDocumentsDirectory();
-            final fontFile = File("${docDir.path}/cached_chinese_font.ttf");
+            final fontFile = File("${docDir.path}/$fileName");
             await fontFile.writeAsBytes(bytes);
-            logDebug("中文字体下载成功，并已缓存至: ${fontFile.path}",
+            logDebug("PDF 字体下载成功，并已缓存至: ${fontFile.path}",
                 source: "PdfFontService");
             return byteData;
           } else {

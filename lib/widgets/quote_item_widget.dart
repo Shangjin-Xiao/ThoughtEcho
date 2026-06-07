@@ -46,6 +46,8 @@ class QuoteItemWidget extends StatefulWidget {
   final VoidCallback? onRestore;
   final VoidCallback? onPermanentlyDelete;
   final bool trashActionsEnabled;
+  final bool isSelected;
+  final bool selectionMode;
 
   const QuoteItemWidget({
     super.key,
@@ -72,6 +74,8 @@ class QuoteItemWidget extends StatefulWidget {
     this.onRestore,
     this.onPermanentlyDelete,
     this.trashActionsEnabled = true,
+    this.isSelected = false,
+    this.selectionMode = false,
   });
 
   @override
@@ -339,28 +343,47 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         ) ??
         TextStyle(color: secondaryTextColor, fontSize: 12);
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        boxShadow: isExpanded
+        border: widget.selectionMode && widget.isSelected
+            ? Border.all(color: theme.colorScheme.primary, width: 2)
+            : Border.all(color: Colors.transparent, width: 2),
+        boxShadow: widget.isSelected && widget.selectionMode
             ? [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
                   blurRadius: 12,
-                  offset: const Offset(0, 6),
-                ),
+                  spreadRadius: 2,
+                )
               ]
-            : AppTheme.defaultShadow,
+            : (isExpanded
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : AppTheme.defaultShadow),
         gradient: quote.colorHex != null && quote.colorHex!.isNotEmpty
             ? LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [cardColor, cardColor.withValues(alpha: 0.95)],
+                colors: widget.isSelected && widget.selectionMode
+                    ? [
+                        cardColor.withValues(alpha: 0.8),
+                        theme.colorScheme.primary.withValues(alpha: 0.1)
+                      ]
+                    : [cardColor, cardColor.withValues(alpha: 0.95)],
               )
             : null,
         color: quote.colorHex == null || quote.colorHex!.isEmpty
-            ? cardColor
+            ? (widget.isSelected && widget.selectionMode
+                ? theme.colorScheme.primary.withValues(alpha: 0.05)
+                : cardColor)
             : null,
       ),
       child: Padding(

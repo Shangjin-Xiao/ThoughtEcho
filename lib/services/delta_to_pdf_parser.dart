@@ -22,6 +22,7 @@ class DeltaToPdfParser {
             fontBold: fontSet.bold,
             fontItalic: fontSet.italic,
             fontBoldItalic: fontSet.boldItalic,
+            fontFallback: fontSet.fallbackFonts,
             fontSize: 12,
             lineSpacing: 4,
           ),
@@ -114,6 +115,7 @@ class DeltaToPdfParser {
             fontBold: fontSet.bold,
             fontItalic: fontSet.italic,
             fontBoldItalic: fontSet.boldItalic,
+            fontFallback: fontSet.fallbackFonts,
             fontSize: 12,
             lineSpacing: 4,
           ),
@@ -161,6 +163,7 @@ class DeltaToPdfParser {
         fontBold: fontSet.bold,
         fontItalic: fontSet.italic,
         fontBoldItalic: fontSet.boldItalic,
+        fontFallback: fontSet.fallbackFonts,
         fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
         fontStyle: isItalic ? pw.FontStyle.italic : pw.FontStyle.normal,
         decoration:

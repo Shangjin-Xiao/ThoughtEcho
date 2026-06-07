@@ -3721,6 +3721,7 @@
   "exportFormatCard": "精致分享卡片",
   "exportFormatPdf": "标准 A4 PDF",
   "exportFormatDesc": "配置笔记一键导出或分享时的默认生成格式",
+  "pdfExportExperimentalWarning": "PDF 导出目前是实验性功能，需要多语言及 Emoji 字体文件；首次使用可能需要联网下载，下载后可离线使用。",
   "exportToPdf": "导出为 PDF",
   "pdfExportSelectionMode": "选择导出模式",
   "selectSameMonth": "一键选同月",

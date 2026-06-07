@@ -562,6 +562,8 @@ extension _NoteListItemsExtension on NoteListViewState {
               _expandedItems.putIfAbsent(
                   quoteId, () => expansionNotifier.value);
 
+              final isSelected = _selectedExportNoteIds.contains(quoteId);
+
               Widget itemWidget = KeyedSubtree(
                 key: _itemKeys[quoteId],
                 child: ValueListenableBuilder<bool>(
@@ -571,6 +573,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                     tagMap: tagMap,
                     selectedTagIds: widget.selectedTagIds,
                     isExpanded: isExpanded,
+                    isSelected: isSelected,
+                    selectionMode: _isExportMode,
                     onToggleExpanded: (expanded) {
                       if (expansionNotifier.value != expanded) {
                         expansionNotifier.value = expanded;
@@ -600,6 +604,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                         ? () => widget.onGenerateCard!(quote)
                         : null,
                     onExportPdf: () {
+                      HapticFeedback.selectionClick();
                       _updateState(() {
                         _isExportMode = true;
                         _selectedExportNoteIds.clear();
@@ -625,82 +630,19 @@ extension _NoteListItemsExtension on NoteListViewState {
                 ),
               );
 
-              final isSelected = _selectedExportNoteIds.contains(quoteId);
-
               itemWidget = Stack(
                 children: [
                   itemWidget,
                   Positioned.fill(
                     child: IgnorePointer(
                       ignoring: !_isExportMode,
-                      child: AnimatedOpacity(
-                        duration: const Duration(milliseconds: 200),
-                        opacity: _isExportMode ? 1.0 : 0.0,
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: _isExportMode
-                                ? () => _toggleExportSelection(quoteId)
-                                : null,
-                            borderRadius: BorderRadius.circular(16),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: isSelected && _isExportMode
-                                      ? theme.colorScheme.primary
-                                      : Colors.transparent,
-                                  width: 2,
-                                ),
-                                color: isSelected && _isExportMode
-                                    ? theme.colorScheme.primary
-                                        .withValues(alpha: 0.05)
-                                    : Colors.transparent,
-                              ),
-                              alignment: Alignment.centerLeft,
-                              padding: const EdgeInsets.only(left: 16.0),
-                              child: AnimatedScale(
-                                duration: const Duration(milliseconds: 250),
-                                scale: _isExportMode ? 1.0 : 0.0,
-                                curve: Curves.easeOutBack,
-                                child: AnimatedOpacity(
-                                  duration: const Duration(milliseconds: 200),
-                                  opacity: _isExportMode ? 1.0 : 0.0,
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: isSelected
-                                          ? theme.colorScheme.primary
-                                          : theme.colorScheme.surface,
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? theme.colorScheme.primary
-                                            : theme.colorScheme.outline,
-                                        width: 2,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: theme.colorScheme.shadow
-                                              .withValues(alpha: 0.1),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    padding: const EdgeInsets.all(4.0),
-                                    child: Icon(
-                                      Icons.check,
-                                      size: 20,
-                                      color: isSelected
-                                          ? theme.colorScheme.onPrimary
-                                          : Colors.transparent,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: _isExportMode
+                              ? () => _toggleExportSelection(quoteId)
+                              : null,
+                          borderRadius: BorderRadius.circular(16),
                         ),
                       ),
                     ),
@@ -821,6 +763,7 @@ extension _NoteListItemsExtension on NoteListViewState {
   }
 
   void _toggleExportSelection(String quoteId) {
+    HapticFeedback.selectionClick();
     _updateState(() {
       if (_selectedExportNoteIds.contains(quoteId)) {
         _selectedExportNoteIds.remove(quoteId);
@@ -831,6 +774,7 @@ extension _NoteListItemsExtension on NoteListViewState {
   }
 
   void _selectAllVisibleNotes() {
+    HapticFeedback.selectionClick();
     _updateState(() {
       final allIds = _quotes.map((q) => q.id).whereType<String>().toSet();
       if (_selectedExportNoteIds.containsAll(allIds)) {
@@ -854,6 +798,7 @@ extension _NoteListItemsExtension on NoteListViewState {
         selectedMonths.add(quote.date.substring(0, 7));
       }
     }
+    HapticFeedback.selectionClick();
     _updateState(() {
       for (final q in _quotes) {
         if (q.id != null && q.date.length >= 7) {
@@ -883,6 +828,7 @@ extension _NoteListItemsExtension on NoteListViewState {
       _showInfoSnackBar(l10n.selectedNotesHaveNoCategories);
       return;
     }
+    HapticFeedback.selectionClick();
     _updateState(() {
       for (final q in _quotes) {
         if (q.id != null && q.tagIds.any(selectedTags.contains)) {

@@ -10,7 +10,39 @@ import 'package:thoughtecho/services/delta_to_pdf_parser.dart';
 import 'package:thoughtecho/services/pdf_font_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/icon_utils.dart';
 import 'package:thoughtecho/utils/time_utils.dart';
+
+enum PdfExportIcon { calendar, weather, location, tag }
+
+class PdfExportIcons {
+  static const values = PdfExportIcon.values;
+
+  static pw.Widget build(
+    PdfExportIcon icon, {
+    double size = 9,
+    PdfColor color = PdfColors.grey700,
+  }) {
+    return pw.SvgImage(
+      svg: _svg(icon),
+      width: size,
+      height: size,
+      fit: pw.BoxFit.contain,
+      colorFilter: color,
+    );
+  }
+
+  static String _svg(PdfExportIcon icon) => switch (icon) {
+        PdfExportIcon.calendar =>
+          '<svg viewBox="0 0 24 24"><path d="M7 2h2v3h6V2h2v3h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2V2Zm12 8H5v9h14v-9Z"/></svg>',
+        PdfExportIcon.weather =>
+          '<svg viewBox="0 0 24 24"><path d="M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0-5 1 3h-2l1-3Zm0 20-1-3h2l-1 3ZM2 12l3-1v2l-3-1Zm20 0-3 1v-2l3 1ZM5 5l3 1-2 2-1-3Zm14 14-3-1 2-2 1 3Zm0-14-1 3-2-2 3-1ZM5 19l1-3 2 2-3 1Z"/></svg>',
+        PdfExportIcon.location =>
+          '<svg viewBox="0 0 24 24"><path d="M12 2a8 8 0 0 1 8 8c0 5.5-8 12-8 12S4 15.5 4 10a8 8 0 0 1 8-8Zm0 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/></svg>',
+        PdfExportIcon.tag =>
+          '<svg viewBox="0 0 24 24"><path d="M3 4a1 1 0 0 1 1-1h7l10 10a2 2 0 0 1 0 3l-5 5a2 2 0 0 1-3 0L3 11V4Zm5 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/></svg>',
+      };
+}
 
 class PdfExportService {
   /// 将一组笔记编译组装成一个符合 A4 标准、排版精致的 PDF 文件字节流
@@ -22,6 +54,13 @@ class PdfExportService {
     final pdf = pw.Document(
       title: "ThoughtEcho Notes Export",
       author: "ThoughtEcho",
+      theme: pw.ThemeData.withFont(
+        base: fontSet.regular,
+        bold: fontSet.bold,
+        italic: fontSet.italic,
+        boldItalic: fontSet.boldItalic,
+        fontFallback: fontSet.fallbackFonts,
+      ),
     );
 
     // 1. 获取全局标签分类映射，用来还原标签名字
@@ -127,9 +166,10 @@ class PdfExportService {
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
                         // 日期与时间段
-                        pw.Text(
-                          "📅 ${quote.date.substring(0, 10)}${quote.dayPeriod != null ? ' ${TimeUtils.getLocalizedDayPeriodLabel(context, quote.dayPeriod!)}' : ''}",
-                          style: pw.TextStyle(
+                        _iconText(
+                          PdfExportIcon.calendar,
+                          "${quote.date.substring(0, 10)}${quote.dayPeriod != null ? ' ${TimeUtils.getLocalizedDayPeriodLabel(context, quote.dayPeriod!)}' : ''}",
+                          pw.TextStyle(
                             font: fontSet.regular,
                             fontBold: fontSet.bold,
                             fontItalic: fontSet.italic,
@@ -143,9 +183,10 @@ class PdfExportService {
                         pw.Row(
                           children: [
                             if (quote.weather != null) ...[
-                              pw.Text(
-                                "☀️ ${WeatherService.getLocalizedWeatherLabel(context, quote.weather!)} ${quote.temperature ?? ''}",
-                                style: pw.TextStyle(
+                              _iconText(
+                                PdfExportIcon.weather,
+                                "${WeatherService.getLocalizedWeatherLabel(context, quote.weather!)} ${quote.temperature ?? ''}",
+                                pw.TextStyle(
                                   font: fontSet.regular,
                                   fontBold: fontSet.bold,
                                   fontItalic: fontSet.italic,
@@ -158,9 +199,10 @@ class PdfExportService {
                             ],
                             if (quote.location != null &&
                                 quote.location!.isNotEmpty)
-                              pw.Text(
-                                "📍 ${quote.location}",
-                                style: pw.TextStyle(
+                              _iconText(
+                                PdfExportIcon.location,
+                                quote.location!,
+                                pw.TextStyle(
                                   font: fontSet.regular,
                                   fontBold: fontSet.bold,
                                   fontItalic: fontSet.italic,
@@ -218,9 +260,11 @@ class PdfExportService {
                               borderRadius: const pw.BorderRadius.all(
                                   pw.Radius.circular(4)),
                             ),
-                            child: pw.Text(
-                              "🏷️ $tagName",
-                              style: pw.TextStyle(
+                            child: _tagText(
+                              tag,
+                              tagName,
+                              fontSet,
+                              pw.TextStyle(
                                 font: fontSet.regular,
                                 fontBold: fontSet.bold,
                                 fontItalic: fontSet.italic,
@@ -246,5 +290,51 @@ class PdfExportService {
 
     // 4. 编译并生成 PDF 字节数据
     return await pdf.save();
+  }
+
+  static pw.Widget _iconText(
+    PdfExportIcon icon,
+    String text,
+    pw.TextStyle style,
+  ) {
+    return pw.Row(
+      mainAxisSize: pw.MainAxisSize.min,
+      children: [
+        PdfExportIcons.build(
+          icon,
+          size: style.fontSize ?? 9,
+          color: style.color ?? PdfColors.grey700,
+        ),
+        pw.SizedBox(width: 3),
+        pw.Text(text, style: style),
+      ],
+    );
+  }
+
+  static pw.Widget _tagText(
+    NoteCategory? tag,
+    String text,
+    PdfFontSet fontSet,
+    pw.TextStyle style,
+  ) {
+    final iconName = tag?.iconName;
+    if (IconUtils.isEmoji(iconName)) {
+      return pw.Row(
+        mainAxisSize: pw.MainAxisSize.min,
+        children: [
+          pw.Text(
+            iconName!,
+            style: pw.TextStyle(
+              font: fontSet.regular,
+              fontFallback: fontSet.fallbackFonts,
+              fontSize: (style.fontSize ?? 8) + 1,
+            ),
+          ),
+          pw.SizedBox(width: 3),
+          pw.Text(text, style: style),
+        ],
+      );
+    }
+    return _iconText(PdfExportIcon.tag, text, style);
   }
 }

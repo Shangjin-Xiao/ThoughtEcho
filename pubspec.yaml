@@ -182,7 +182,6 @@ flutter:
   # 确保应用可以使用Material Design图标
   uses-material-design: true
   assets:
-    - assets/fonts/
     - assets/lottie/
     - assets/svg/
     - assets/icon.png

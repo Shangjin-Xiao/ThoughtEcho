@@ -258,7 +258,18 @@ void main() {
         listView.controller!.jumpTo(900);
         await tester.pump();
 
-        final moreButton = find.byIcon(Icons.more_vert).first;
+        final visibleMoreButtonElement =
+            find.byIcon(Icons.more_vert).evaluate().firstWhere((element) {
+          final y = tester
+              .getCenter(find.byElementPredicate(
+                (candidate) => identical(candidate, element),
+              ))
+              .dy;
+          return y > 160 && y < 700;
+        });
+        final moreButton = find.byElementPredicate(
+          (element) => identical(element, visibleMoreButtonElement),
+        );
         final selectedNote = find.ancestor(
           of: moreButton,
           matching: find.byType(QuoteItemWidget),
@@ -275,6 +286,7 @@ void main() {
         final updatedListView = tester.widget<ListView>(find.byType(ListView));
         expect(updatedListView.controller!.offset, closeTo(offsetBefore, 0.1));
         expect(tester.getTopLeft(selectedNote).dy, closeTo(positionBefore, 1));
+        expect(find.byIcon(Icons.check), findsNothing);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(seconds: 2));
