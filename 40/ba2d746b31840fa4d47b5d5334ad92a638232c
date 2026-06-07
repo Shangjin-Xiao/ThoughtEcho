@@ -1,0 +1,19 @@
+lib/services/database/database_category_init_mixin.dart
+  s_db4d6918964195::t_3873e11be80fd9 48,110,133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "40ba2d746b31840fa4d47b5d5334ad92a638232c",
+  "prompts": {},
+  "sessions": {
+    "s_db4d6918964195": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9fce-73a9-7d13-a7e2-1cb06c912408",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
