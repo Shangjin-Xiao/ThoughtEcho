@@ -1,0 +1,26 @@
+test/unit/services/database_health_service_test.dart
+  s_fb7f875b2ef39e::t_c64ee08069f516 1-2,4-5,9-12,149-202,207-219
+  s_fb7f875b2ef39e::t_86f427a24c4f4d 203-206
+lib/services/database_service.dart
+  s_fb7f875b2ef39e::t_95d6b2770df49a 29,812-818
+  s_fb7f875b2ef39e::t_dc613899dca886 799-811
+lib/services/database_health_service.dart
+  s_fb7f875b2ef39e::t_ad7d21476227f9 32,43-54,237-238,278-279
+  s_fb7f875b2ef39e::t_373c6d93de6a57 1,4,13-31,33-42,58-62,217-236,239-258,260-263,272-277,280-287
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "2105ffb672751cbdd6095140eff0122b8f166dab",
+  "prompts": {},
+  "sessions": {
+    "s_fb7f875b2ef39e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9fc1-6a22-7b60-a42b-e7d50efcf7a4",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
