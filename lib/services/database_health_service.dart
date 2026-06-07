@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -8,9 +10,56 @@ import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import '../utils/app_logger.dart';
 
+class DatabaseStartupDiagnostic {
+  const DatabaseStartupDiagnostic({
+    required this.expectedPathFingerprint,
+    required this.actualPathFingerprint,
+    required this.pathsMatch,
+    required this.fileExists,
+    required this.requiredTablesPresent,
+    required this.databaseVersion,
+    required this.quoteCount,
+  });
+
+  final String expectedPathFingerprint;
+  final String actualPathFingerprint;
+  final bool pathsMatch;
+  final bool fileExists;
+  final bool requiredTablesPresent;
+  final int databaseVersion;
+  final int quoteCount;
+
+  bool get isSuspicious => !pathsMatch || !fileExists || !requiredTablesPresent;
+
+  String toSafeLogMessage() {
+    return 'expectedFingerprint=$expectedPathFingerprint, '
+        'actualFingerprint=$actualPathFingerprint, '
+        'pathsMatch=$pathsMatch, fileExists=$fileExists, '
+        'requiredTablesPresent=$requiredTablesPresent, '
+        'databaseVersion=$databaseVersion, quoteCount=$quoteCount';
+  }
+}
+
+class DatabaseStartupDiagnosticException implements Exception {
+  const DatabaseStartupDiagnosticException(this.diagnostic);
+
+  final DatabaseStartupDiagnostic diagnostic;
+
+  @override
+  String toString() {
+    return 'DatabaseStartupDiagnosticException('
+        '${diagnostic.toSafeLogMessage()})';
+  }
+}
+
 class DatabaseHealthService {
   static const int _maxOfflineQuoteLength = 100;
   static const String dailyQuoteTagId = 'default_hitokoto';
+  static const Set<String> _requiredMainDatabaseTables = {
+    'quotes',
+    'categories',
+    'quote_tags',
+  };
 
   /// 修复：添加查询性能统计
   final Map<String, int> _queryStats = {}; // 查询次数统计
@@ -165,8 +214,53 @@ class DatabaseHealthService {
     );
   }
 
+  String _normalizeDatabasePath(String value) {
+    final normalized = normalize(absolute(value));
+    return Platform.isWindows ? normalized.toLowerCase() : normalized;
+  }
+
+  String _pathFingerprint(String value) {
+    final normalized = _normalizeDatabasePath(value);
+    return sha256.convert(utf8.encode(normalized)).toString().substring(0, 12);
+  }
+
+  /// 只读检查主数据库身份，不记录完整路径，也不执行修复操作。
+  Future<DatabaseStartupDiagnostic> inspectStartupDatabase(
+    Database db, {
+    required String expectedPath,
+  }) async {
+    final expectedNormalized = _normalizeDatabasePath(expectedPath);
+    final actualNormalized = _normalizeDatabasePath(db.path);
+    final tableRows = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table'",
+    );
+    final tableNames =
+        tableRows.map((row) => row['name']).whereType<String>().toSet();
+    final requiredTablesPresent =
+        _requiredMainDatabaseTables.every(tableNames.contains);
+
+    var quoteCount = 0;
+    if (tableNames.contains('quotes')) {
+      final result = await db.rawQuery('SELECT COUNT(*) as count FROM quotes');
+      quoteCount = _readCount(result.first, 'count');
+    }
+
+    return DatabaseStartupDiagnostic(
+      expectedPathFingerprint: _pathFingerprint(expectedNormalized),
+      actualPathFingerprint: _pathFingerprint(actualNormalized),
+      pathsMatch: expectedNormalized == actualNormalized,
+      fileExists: await File(actualNormalized).exists(),
+      requiredTablesPresent: requiredTablesPresent,
+      databaseVersion: await db.getVersion(),
+      quoteCount: quoteCount,
+    );
+  }
+
   /// 启动时执行数据库健康检查
-  Future<void> performStartupHealthCheck(Database db) async {
+  Future<void> performStartupHealthCheck(
+    Database db, {
+    required String expectedPath,
+  }) async {
     if (kIsWeb) {
       logDebug('Web平台跳过数据库健康检查');
       return;
@@ -174,6 +268,23 @@ class DatabaseHealthService {
 
     try {
       logDebug('开始数据库健康检查...');
+
+      final startupDiagnostic = await inspectStartupDatabase(
+        db,
+        expectedPath: expectedPath,
+      );
+      if (startupDiagnostic.isSuspicious) {
+        logError(
+          '数据库启动身份检测异常',
+          error: DatabaseStartupDiagnosticException(startupDiagnostic),
+          source: 'DatabaseHealthCheck',
+        );
+      } else {
+        logInfo(
+          '数据库启动身份检测通过: ${startupDiagnostic.toSafeLogMessage()}',
+          source: 'DatabaseHealthCheck',
+        );
+      }
 
       // 1. 验证外键约束状态
       final foreignKeysResult = await db.rawQuery('PRAGMA foreign_keys');

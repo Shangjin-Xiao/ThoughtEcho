@@ -1,7 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as path;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/services/database_health_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
+
   group('DatabaseHealthService Query Tracking Tests', () {
     late DatabaseHealthService service;
 
@@ -136,6 +144,79 @@ void main() {
         ),
         isTrue,
       );
+    });
+  });
+
+  group('DatabaseHealthService Startup Diagnostic', () {
+    late DatabaseHealthService service;
+    late Directory tempDirectory;
+    late Database database;
+    late String databasePath;
+
+    setUp(() async {
+      service = DatabaseHealthService();
+      tempDirectory = await Directory.systemTemp.createTemp(
+        'thoughtecho_database_diagnostic_',
+      );
+      databasePath = path.join(tempDirectory.path, 'thoughtecho.db');
+      database = await databaseFactory.openDatabase(databasePath);
+      await database.execute('CREATE TABLE quotes (id TEXT PRIMARY KEY)');
+      await database.execute('CREATE TABLE categories (id TEXT PRIMARY KEY)');
+      await database.execute(
+        'CREATE TABLE quote_tags (quote_id TEXT, tag_id TEXT)',
+      );
+      await database.setVersion(20);
+    });
+
+    tearDown(() async {
+      await database.close();
+      await tempDirectory.delete(recursive: true);
+    });
+
+    test('匹配路径的合法空库不会被判定为异常', () async {
+      final diagnostic = await service.inspectStartupDatabase(
+        database,
+        expectedPath: databasePath,
+      );
+
+      expect(diagnostic.pathsMatch, isTrue);
+      expect(diagnostic.fileExists, isTrue);
+      expect(diagnostic.requiredTablesPresent, isTrue);
+      expect(diagnostic.quoteCount, 0);
+      expect(diagnostic.isSuspicious, isFalse);
+    });
+
+    test('路径不匹配时报告异常且日志不泄露完整路径', () async {
+      final expectedPath = path.join(tempDirectory.path, 'expected.db');
+
+      final diagnostic = await service.inspectStartupDatabase(
+        database,
+        expectedPath: expectedPath,
+      );
+      final safeMessage = diagnostic.toSafeLogMessage();
+
+      expect(diagnostic.pathsMatch, isFalse);
+      expect(diagnostic.isSuspicious, isTrue);
+      expect(safeMessage, isNot(contains(tempDirectory.path)));
+      expect(safeMessage, contains('expectedFingerprint='));
+      expect(safeMessage, contains('actualFingerprint='));
+      expect(
+        DatabaseStartupDiagnosticException(diagnostic).toString(),
+        isNot(contains(tempDirectory.path)),
+      );
+    });
+
+    test('诊断只读取数据并返回笔记数量和数据库版本', () async {
+      await database.insert('quotes', {'id': 'quote-1'});
+
+      final diagnostic = await service.inspectStartupDatabase(
+        database,
+        expectedPath: databasePath,
+      );
+
+      expect(diagnostic.quoteCount, 1);
+      expect(diagnostic.databaseVersion, 20);
+      expect(diagnostic.isSuspicious, isFalse);
     });
   });
 }

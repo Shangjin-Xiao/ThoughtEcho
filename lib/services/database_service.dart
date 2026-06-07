@@ -26,6 +26,7 @@ import '../widgets/quote_content_widget.dart'; // 用于缓存清理
 import 'database_schema_manager.dart';
 import 'database_backup_service.dart';
 import 'database_health_service.dart';
+import 'data_directory_service.dart';
 
 part 'database/database_cache_mixin.dart';
 part 'database/database_query_mixin.dart';
@@ -795,7 +796,26 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
   /// 启动时执行数据库健康检查
   Future<void> _performStartupHealthCheck() async {
-    await _healthService.performStartupHealthCheck(await safeDatabase);
+    try {
+      await _healthService.performStartupHealthCheck(
+        await safeDatabase,
+        expectedPath: await _getExpectedMainDatabasePath(),
+      );
+    } catch (e, stackTrace) {
+      logError(
+        '数据库启动健康检查调度失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DatabaseHealthCheck',
+      );
+    }
+  }
+
+  Future<String> _getExpectedMainDatabasePath() async {
+    final basePath = Platform.isWindows
+        ? await DataDirectoryService.getCurrentDataDirectory()
+        : (await getApplicationDocumentsDirectory()).path;
+    return join(basePath, 'databases', 'thoughtecho.db');
   }
 
   /// 优化：在初始化阶段执行所有数据迁移
