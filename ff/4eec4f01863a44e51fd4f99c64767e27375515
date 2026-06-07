@@ -1,0 +1,57 @@
+lib/services/pdf_font_service.dart
+  s_db4d6918964195::t_f5c3630aa59fea 30
+  s_db4d6918964195::t_ab31ce16cc1d28 31,73-81,89,97,111-117
+test/widget/note_list_view_filter_test.dart
+  s_db4d6918964195::t_36a765fadb15c5 240-282,384-385
+  s_db4d6918964195::t_e9841602cc593e 18
+pubspec.yaml
+  s_db4d6918964195::t_ab31ce16cc1d28 185
+assets/fonts/OFL-ZCOOLXiaoWei.txt
+  s_cdf9380f86b99c::t_08b87e73df5d0c 1-20,22-93
+  s_db4d6918964195::t_bd823188d6ef91 21
+lib/widgets/note_list/note_list_items.dart
+  s_db4d6918964195::t_0203b766b17b4b 175,269
+  s_f9e67604fd1841::t_7a490bda4e7a21 628-663,665-667,671-672,682-683,686-687,689-694,698-701,706,708-709
+  s_db4d6918964195::t_566926c0be6742 61-80,83-118,123-150,153-160,162-169,212-214,223-232,234-265,283-310,314-325,329-345,349-350,685
+  s_f9e67604fd1841::t_781a9f65128954 205-211,215-222
+  s_db4d6918964195::t_0a7ce84238f3e8 670
+  s_db4d6918964195::t_5f915fd42f8b88 664,668-669,673-681,684,688,695-697
+  s_f9e67604fd1841::t_b2b537b25c2c09 45-60
+  s_f9e67604fd1841::t_4acc28b8fae8d5 270-282
+  s_f9e67604fd1841::t_2d8883953c2117 354-356
+test/pdf_export_test.dart
+  s_db4d6918964195::t_36a765fadb15c5 1,58-59,71-73
+  s_db4d6918964195::t_5f915fd42f8b88 60-70,74-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "ff4eec4f01863a44e51fd4f99c64767e27375515",
+  "prompts": {},
+  "sessions": {
+    "s_cdf9380f86b99c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9fc5-7b63-76f0-bc08-da65d3e196c3",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_db4d6918964195": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9fce-73a9-7d13-a7e2-1cb06c912408",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_f9e67604fd1841": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "a7ebbcd2-dc09-496d-a7ae-a08e8a944127",
+        "model": "gemini-3.1-pro-preview"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
