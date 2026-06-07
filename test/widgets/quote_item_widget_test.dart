@@ -38,6 +38,9 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   @override
   bool get showNoteEditTime => _showNoteEditTime;
 
+  @override
+  String get exportFormat => 'card';
+
   set showNoteEditTime(bool value) {
     if (_showNoteEditTime != value) {
       _showNoteEditTime = value;
@@ -399,6 +402,67 @@ void main() {
 
       expect(find.text('fallback content'), findsNothing);
       expect(find.byType(quill.QuillEditor), findsOneWidget);
+    });
+
+    testWidgets('列表富文本正文压平为单一摘要语义节点且保留Quill渲染', (tester) async {
+      final delta = jsonEncode([
+        {'insert': '第一段\n'},
+        {'insert': '第二段\n'},
+      ]);
+      final quote = _buildQuote(
+        content: '第一段\n第二段',
+        deltaContent: delta,
+        editSource: 'fullscreen',
+      );
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _FakeSettingsService(),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Material(
+              child: QuoteItemWidget(
+                quote: quote,
+                tagMap: const {},
+                isExpanded: false,
+                onToggleExpanded: (_) {},
+                onEdit: () {},
+                onDelete: () {},
+                onAskAI: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final semantics = find.byKey(
+        const ValueKey('quote_content.rich_text_semantics'),
+      );
+      expect(semantics, findsOneWidget);
+
+      final semanticsWidget = tester.widget<Semantics>(semantics);
+      expect(semanticsWidget.container, isTrue);
+      expect(semanticsWidget.properties.label, quote.content);
+      expect(
+        find.descendant(
+          of: semantics,
+          matching: find.byType(ExcludeSemantics),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+            of: semantics, matching: find.byType(quill.QuillEditor)),
+        findsOneWidget,
+      );
     });
 
     testWidgets('开启后在时间与正文之间轻量显示编辑时间', (tester) async {

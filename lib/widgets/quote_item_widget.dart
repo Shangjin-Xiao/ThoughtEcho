@@ -577,6 +577,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                 height: 1.5,
                               ),
                               showFullContent: showFullContent,
+                              collapseRichTextSemantics: true,
                             ),
                           ),
                         ),

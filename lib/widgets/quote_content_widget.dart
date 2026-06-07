@@ -17,6 +17,7 @@ class QuoteContent extends StatelessWidget {
   final TextStyle? style;
   final int? maxLines;
   final bool showFullContent;
+  final bool collapseRichTextSemantics;
 
   const QuoteContent({
     super.key,
@@ -24,6 +25,7 @@ class QuoteContent extends StatelessWidget {
     this.style,
     this.maxLines,
     this.showFullContent = false,
+    this.collapseRichTextSemantics = false,
   });
 
   // Flutter 3.41+ Android (Impeller + 精准 wght 轴) 下 FontWeight.bold (w700)
@@ -612,6 +614,15 @@ class QuoteContent extends StatelessWidget {
           key: collapsedWrapperKey,
           maxHeight: collapsedContentMaxHeight,
           child: richTextEditor,
+        );
+      }
+
+      if (collapseRichTextSemantics) {
+        richTextEditor = Semantics(
+          key: const ValueKey('quote_content.rich_text_semantics'),
+          container: true,
+          label: quote.content,
+          child: ExcludeSemantics(child: richTextEditor),
         );
       }
 
