@@ -53,10 +53,7 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- ARM32设备兼容性配置 -->
-        <meta-data
-            android:name="io.flutter.embedding.android.EnableSoftwareRendering"
-            android:value="true" />
+        <!-- 暂时保留 Skia 作为移除全局软件渲染后的性能对照基线 -->
         <meta-data
             android:name="io.flutter.embedding.android.EnableImpeller"
             android:value="false" />
