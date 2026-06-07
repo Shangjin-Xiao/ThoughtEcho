@@ -29,14 +29,33 @@ class PdfFontSet {
 
 class PdfFontService {
   static ByteData? _cachedFontData;
+  static final Map<String, ByteData> _cachedLanguageFallbackData = {};
   static ByteData? _cachedEmojiFontData;
 
-  static const _multilingualFontFileName = "cached_noto_sans_cjk_sc.otf";
+  static const _multilingualFontFileName = "cached_noto_sans_sc.ttf";
+  static const _obsoleteMultilingualFontFileName =
+      "cached_noto_sans_cjk_sc.otf";
+  static const _japaneseFontFileName = "cached_noto_sans_jp.ttf";
+  static const _koreanFontFileName = "cached_noto_sans_kr.ttf";
   static const _emojiFontFileName = "cached_noto_color_emoji.ttf";
 
   static const _multilingualFontUrls = [
-    "https://cdn.jsdelivr.net/gh/notofonts/noto-cjk@main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf",
-    "https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf",
+    "https://fonts.gstatic.com/s/notosanssc/v37/k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaG9_FnYxNbPzS5HE.ttf",
+  ];
+
+  static const _languageFallbackFonts = [
+    (
+      fileName: _japaneseFontFileName,
+      urls: [
+        "https://fonts.gstatic.com/s/notosansjp/v53/-F6jfjtqLzI2JPCgQBnw7HFyzSD-AsregP8VFBEj75vY0rw-oME.ttf",
+      ],
+    ),
+    (
+      fileName: _koreanFontFileName,
+      urls: [
+        "https://fonts.gstatic.com/s/notosanskr/v36/PbyxFmXiEBPT4ITbgNA5Cgms3VYcOA-vvnIzzuoyeLTq8H4hfeE.ttf",
+      ],
+    ),
   ];
 
   static const _emojiFontUrls = [
@@ -48,10 +67,12 @@ class PdfFontService {
   /// 这可确保 pdf 包在渲染粗体/斜体文字时不会 fallback 到不含 CJK 的内置字体
   static Future<PdfFontSet> loadFontSet() async {
     final data = await _loadFontData();
+    final languageFallbackData = await _loadLanguageFallbackFontData();
     final emojiData = await _loadEmojiFontData();
-    final fallbackFonts = emojiData == null
-        ? const <pw.Font>[]
-        : <pw.Font>[pw.Font.ttf(emojiData)];
+    final fallbackFonts = <pw.Font>[
+      ...languageFallbackData.map(pw.Font.ttf),
+      if (emojiData != null) pw.Font.ttf(emojiData),
+    ];
     if (data != null) {
       // 同一份数据创建四份独立 pw.Font 实例（pdf 包要求每种变体是独立对象）
       // 这样即便字体本身不含真正粗体/斜体，中文也不会乱码
@@ -89,6 +110,8 @@ class PdfFontService {
       return _cachedFontData!;
     }
     try {
+      await _removeObsoleteFontCache();
+
       // 1. 优先读取覆盖中日韩及拉丁字符的已缓存 Noto Sans CJK。
       final cachedFontData =
           await _tryLoadCachedFont(_multilingualFontFileName);
@@ -143,7 +166,28 @@ class PdfFontService {
     return null;
   }
 
-  /// 校验字体数据是否为合法的 TrueType 或 OpenType 格式，排除 TTC 或损坏文件
+  static Future<List<ByteData>> _loadLanguageFallbackFontData() async {
+    for (final config in _languageFallbackFonts) {
+      if (_cachedLanguageFallbackData.containsKey(config.fileName)) {
+        continue;
+      }
+      final cached = await _tryLoadCachedFont(config.fileName);
+      if (cached != null && isValidFontData(cached)) {
+        _cachedLanguageFallbackData[config.fileName] = cached;
+        continue;
+      }
+      final downloaded = await _downloadAndCacheFont(
+        fileName: config.fileName,
+        urls: config.urls,
+      );
+      if (downloaded != null && isValidFontData(downloaded)) {
+        _cachedLanguageFallbackData[config.fileName] = downloaded;
+      }
+    }
+    return List.unmodifiable(_cachedLanguageFallbackData.values);
+  }
+
+  /// 仅接受 pdf 包可稳定进行 Unicode 子集编码的 TrueType 字体。
   @visibleForTesting
   static bool isValidFontData(ByteData data) {
     if (data.lengthInBytes < 4) return false;
@@ -155,20 +199,16 @@ class PdfFontService {
         bytes[3] == 0x66) {
       return false;
     }
-    // TrueType (0x00010000)、OpenType ('OTTO') 或 Apple TrueType ('true')
+    // CFF OpenType ('OTTO') 会在 pdf 包排版 Unicode 时回退到 Latin-1。
     final isTtf = bytes[0] == 0x00 &&
         bytes[1] == 0x01 &&
         bytes[2] == 0x00 &&
         bytes[3] == 0x00;
-    final isOtf = bytes[0] == 0x4F &&
-        bytes[1] == 0x54 &&
-        bytes[2] == 0x54 &&
-        bytes[3] == 0x4F;
     final isAppleTtf = bytes[0] == 0x74 &&
         bytes[1] == 0x72 &&
         bytes[2] == 0x75 &&
         bytes[3] == 0x65;
-    return isTtf || isOtf || isAppleTtf;
+    return isTtf || isAppleTtf;
   }
 
   /// 检索 Windows/Android/Linux 本地中文字体
@@ -259,6 +299,18 @@ class PdfFontService {
     return null;
   }
 
+  static Future<void> _removeObsoleteFontCache() async {
+    try {
+      final docDir = await getApplicationDocumentsDirectory();
+      final oldFont = File("${docDir.path}/$_obsoleteMultilingualFontFileName");
+      if (await oldFont.exists()) {
+        await oldFont.delete();
+      }
+    } catch (e) {
+      logDebug("清理旧版 PDF 字体缓存异常: $e", source: "PdfFontService");
+    }
+  }
+
   static Future<ByteData?> _downloadAndCacheFont({
     required String fileName,
     required List<String> urls,
@@ -270,7 +322,7 @@ class PdfFontService {
 
     for (final url in urls) {
       try {
-        logDebug("开始网络下载中文字体: $url", source: "PdfFontService");
+        logDebug("开始网络下载 PDF 字体: $url", source: "PdfFontService");
         final response = await dio.get<List<int>>(
           url,
           options: Options(responseType: ResponseType.bytes),

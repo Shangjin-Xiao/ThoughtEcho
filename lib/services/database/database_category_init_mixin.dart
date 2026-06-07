@@ -45,7 +45,7 @@ mixin _DatabaseCategoryInitMixin on _DatabaseServiceBase {
       // 1. 一次性查询所有现有分类名称（小写）
       final existingCategories = await db.query(
         'categories',
-        columns: ['name', 'id'],
+        columns: ['name', 'id', 'icon_name'],
       );
       final existingNamesLower = existingCategories
           .map((row) => (row['name'] as String?)?.toLowerCase())
@@ -56,6 +56,10 @@ mixin _DatabaseCategoryInitMixin on _DatabaseServiceBase {
       final existingIdToName = {
         for (var row in existingCategories)
           row['id'] as String: row['name'] as String,
+      };
+      final existingIdToIcon = {
+        for (var row in existingCategories)
+          row['id'] as String: row['icon_name'] as String?,
       };
 
       // 2. 筛选出数据库中尚不存在的默认分类
@@ -76,6 +80,9 @@ mixin _DatabaseCategoryInitMixin on _DatabaseServiceBase {
           idsToUpdate[category.id] = category.name;
         }
       }
+      final shouldMigrateHitokotoIcon =
+          existingIdToIcon[_DatabaseServiceBase.defaultCategoryIdHitokoto] ==
+              'format_quote';
 
       // 4. 如果有需要添加的分类，则使用批处理插入
       final batch = db.batch();
@@ -89,6 +96,14 @@ mixin _DatabaseCategoryInitMixin on _DatabaseServiceBase {
           whereArgs: [entry.key],
         );
         logDebug('更新ID为${entry.key}的分类名称为: ${entry.value}');
+      }
+      if (shouldMigrateHitokotoIcon) {
+        batch.update(
+          'categories',
+          {'icon_name': '💬'},
+          where: 'id = ?',
+          whereArgs: [_DatabaseServiceBase.defaultCategoryIdHitokoto],
+        );
       }
 
       // 再处理新增
@@ -110,7 +125,9 @@ mixin _DatabaseCategoryInitMixin on _DatabaseServiceBase {
       }
 
       // 提交批处理
-      if (categoriesToAdd.isNotEmpty || idsToUpdate.isNotEmpty) {
+      if (categoriesToAdd.isNotEmpty ||
+          idsToUpdate.isNotEmpty ||
+          shouldMigrateHitokotoIcon) {
         await batch.commit(noResult: true);
         logDebug(
           '批量处理了 ${categoriesToAdd.length} 个新分类和 ${idsToUpdate.length} 个更新',
@@ -133,7 +150,7 @@ mixin _DatabaseCategoryInitMixin on _DatabaseServiceBase {
         id: _DatabaseServiceBase.defaultCategoryIdHitokoto, // 使用固定 ID
         name: '每日一言',
         isDefault: true,
-        iconName: 'format_quote',
+        iconName: '💬',
       ),
       NoteCategory(
         id: _DatabaseServiceBase.defaultCategoryIdAnime, // 使用固定 ID

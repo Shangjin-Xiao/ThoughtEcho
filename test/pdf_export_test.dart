@@ -91,9 +91,9 @@ void main() {
       final validTtf = ByteData(4)..setUint32(0, 0x00010000);
       expect(PdfFontService.isValidFontData(validTtf), isTrue);
 
-      // 2. Valid OTF ('OTTO')
+      // 2. CFF OTF ('OTTO') is rejected because pdf cannot reliably encode it.
       final validOtf = ByteData(4)..setUint32(0, 0x4F54544F);
-      expect(PdfFontService.isValidFontData(validOtf), isTrue);
+      expect(PdfFontService.isValidFontData(validOtf), isFalse);
 
       // 3. Valid Apple TTF ('true')
       final validAppleTtf = ByteData(4)..setUint32(0, 0x74727565);
