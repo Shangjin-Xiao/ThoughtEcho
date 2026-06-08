@@ -55,7 +55,9 @@ jobs:
           popd
 
       - name: Run on Firebase Test Lab
+        id: firebase-test
         run: |
+          set +e
           gcloud firebase test android run \
             --project="${{ inputs.firebase_project }}" \
             --type=instrumentation \
@@ -63,4 +65,37 @@ jobs:
             --test=build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk \
             --device="model=${{ inputs.device_model }},version=${{ inputs.android_version }},locale=zh_CN,orientation=portrait" \
             --timeout=15m \
-            --client-details=matrixLabel="ThoughtEcho note-list performance"
+            --client-details=matrixLabel="ThoughtEcho segmented performance" \
+            2>&1 | tee firebase-test-run.log
+          test_exit=${PIPESTATUS[0]}
+          raw_uri=$(sed -n \
+            's#.*storage/browser/\([^]]*\)/\{0,1\}\].*#gs://\1#p' \
+            firebase-test-run.log | tail -1)
+          echo "raw_uri=$raw_uri" >> "$GITHUB_OUTPUT"
+          exit "$test_exit"
+
+      - name: Download Firebase Test Lab raw results
+        if: always() && steps.firebase-test.outputs.raw_uri != ''
+        run: |
+          mkdir -p build/firebase-test-lab
+          gcloud storage cp --recursive \
+            "${{ steps.firebase-test.outputs.raw_uri }}" \
+            build/firebase-test-lab/
+
+      - name: Extract segmented performance report
+        if: always() && steps.firebase-test.outputs.raw_uri != ''
+        run: |
+          dart run scripts/extract_firebase_performance_results.dart \
+            build/firebase-test-lab \
+            build/firebase-test-lab/thoughtecho-performance-summary.json
+
+      - name: Upload Firebase performance diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firebase-performance-${{ github.run_id }}
+          path: |
+            firebase-test-run.log
+            build/firebase-test-lab/
+          if-no-files-found: warn
+          retention-days: 30

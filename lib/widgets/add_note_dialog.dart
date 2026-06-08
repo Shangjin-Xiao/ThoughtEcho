@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:ui' show FrameTiming;
 
 import 'package:flutter/material.dart';
@@ -120,6 +121,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   final Stopwatch _dialogPerfStopwatch = Stopwatch();
   final List<FrameTiming> _dialogPerfFrameTimings = <FrameTiming>[];
   final Map<String, int> _dialogPerfStateChanges = <String, int>{};
+  late final developer.TimelineTask _dialogOpenTimelineTask;
+  bool _dialogOpenTimelineFinished = false;
+  Timer? _dialogOpenTimelineTimeout;
   Timer? _dialogPerfKeyboardSettleTimer;
   Timer? _dialogPerfFinalizeTimer;
 
@@ -193,6 +197,29 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   @override
   void initState() {
     super.initState();
+    _dialogOpenTimelineTask = developer.TimelineTask(filterKey: 'ThoughtEcho')
+      ..start(
+        'ThoughtEcho.AddNoteDialog.open',
+        arguments: <String, Object>{
+          'mode': widget.initialQuote == null ? 'create' : 'edit',
+          'tagCount': widget.tags.length,
+          'contentLength':
+              (widget.initialQuote?.content ?? widget.prefilledContent ?? '')
+                  .length,
+        },
+      );
+    _dialogOpenTimelineTask
+        .instant('ThoughtEcho.AddNoteDialog.initState.start');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _dialogOpenTimelineTask
+            .instant('ThoughtEcho.AddNoteDialog.firstFrame.complete');
+      }
+    });
+    _dialogOpenTimelineTimeout = Timer(
+      const Duration(milliseconds: 2400),
+      () => _finishDialogOpenTimeline('timeout'),
+    );
 
     // 每日一言双击添加：使用一言数据专属填充，跳过通用默认填充（作者/出处/默认标签）
     final bool isHitokotoQuickAdd = widget.hitokotoData != null;
@@ -266,6 +293,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       Future.delayed(metadataDelay, () async {
         if (!mounted) return;
 
+        _dialogOpenTimelineTask
+            .instant('ThoughtEcho.AddNoteDialog.deferredMetadata.start');
         _cachedLocationService = _readServiceOrNull<LocationService>(context);
         _cachedWeatherService = _readServiceOrNull<WeatherService>(context);
         _databaseService = _readServiceOrNull<DatabaseService>(context);
@@ -338,6 +367,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
             _databaseService!.addListener(_onDatabaseChanged);
           }
         });
+        _dialogOpenTimelineTask
+            .instant('ThoughtEcho.AddNoteDialog.deferredMetadata.complete');
       });
     });
 
@@ -355,6 +386,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           _routeAnimation = route.animation;
           if (route.animation!.isCompleted) {
             // 动画已完成（如无障碍关闭动画），直接请求焦点
+            _dialogOpenTimelineTask
+                .instant('ThoughtEcho.AddNoteDialog.routeAnimation.complete');
             _requestContentFocus('routeCompleted');
             _focusRequested = true;
           } else {
@@ -363,6 +396,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           }
         } else {
           // 无法获取路由动画，直接请求焦点
+          _dialogOpenTimelineTask
+              .instant('ThoughtEcho.AddNoteDialog.routeAnimation.unavailable');
           _requestContentFocus('noRouteAnimation');
           _focusRequested = true;
         }
@@ -548,6 +583,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     if (animation.isCompleted) {
       _focusRequested = true;
       animation.removeListener(_onRouteAnimationProgress);
+      _dialogOpenTimelineTask
+          .instant('ThoughtEcho.AddNoteDialog.routeAnimation.complete');
       _requestContentFocus('routeCompleted');
     }
   }
@@ -614,6 +651,10 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
   void _requestContentFocus(String reason) {
     _beginKeyboardRebuildDeferral();
+    _dialogOpenTimelineTask.instant(
+      'ThoughtEcho.AddNoteDialog.focus.requested',
+      arguments: <String, Object>{'reason': reason},
+    );
     if (_dialogPerfEnabled) {
       _dialogPerfFocusRequestMs ??= _dialogPerfStopwatch.elapsedMilliseconds;
       final routeValue = _routeAnimation?.value.toStringAsFixed(2) ?? 'none';
@@ -674,9 +715,12 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   }
 
   void _onContentFocusChanged() {
-    if (!_dialogPerfEnabled ||
-        _dialogPerfFocusLogged ||
-        !_contentFocusNode.hasFocus) {
+    if (!_contentFocusNode.hasFocus) {
+      return;
+    }
+
+    _dialogOpenTimelineTask.instant('ThoughtEcho.AddNoteDialog.focus.acquired');
+    if (!_dialogPerfEnabled || _dialogPerfFocusLogged) {
       return;
     }
 
@@ -723,14 +767,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       );
     }
 
-    if (!_dialogPerfEnabled || !_dialogPerfRecording) {
-      return;
-    }
-
-    _dialogPerfMetricsChangeCount++;
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_dialogPerfRecording) {
+      if (!mounted) {
         return;
       }
 
@@ -742,23 +780,40 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
       if (!_dialogPerfKeyboardStartLogged) {
         _dialogPerfKeyboardStartLogged = true;
-        _dialogPerfKeyboardStartMs = _dialogPerfStopwatch.elapsedMilliseconds;
-        logDebug(
-          '键盘 inset 开始变化: inset=${keyboardInset.round()}, '
-          'elapsed=${_dialogPerfKeyboardStartMs}ms',
-          source: 'AddNoteDialog.Perf',
+        if (_dialogPerfRecording) {
+          _dialogPerfKeyboardStartMs = _dialogPerfStopwatch.elapsedMilliseconds;
+        }
+        _dialogOpenTimelineTask.instant(
+          'ThoughtEcho.AddNoteDialog.keyboardInset.started',
+          arguments: <String, Object>{'inset': keyboardInset.round()},
         );
+        if (_dialogPerfRecording) {
+          logDebug(
+            '键盘 inset 开始变化: inset=${keyboardInset.round()}, '
+            'elapsed=${_dialogPerfKeyboardStartMs}ms',
+            source: 'AddNoteDialog.Perf',
+          );
+        }
       }
 
       _dialogPerfKeyboardSettleTimer?.cancel();
       _dialogPerfKeyboardSettleTimer = Timer(
         const Duration(milliseconds: 220),
         () {
+          if (_dialogPerfRecording) {
+            _dialogPerfKeyboardSettledMs =
+                _dialogPerfStopwatch.elapsedMilliseconds;
+          }
+          _dialogOpenTimelineTask.instant(
+            'ThoughtEcho.AddNoteDialog.keyboardInset.settled',
+            arguments: <String, Object>{
+              'inset': _dialogPerfLastKeyboardInset.round(),
+            },
+          );
+          _finishDialogOpenTimeline('keyboardSettled');
           if (!_dialogPerfRecording) {
             return;
           }
-          _dialogPerfKeyboardSettledMs =
-              _dialogPerfStopwatch.elapsedMilliseconds;
           logDebug(
             '键盘 inset 稳定: inset=${_dialogPerfLastKeyboardInset.round()}, '
             'elapsed=${_dialogPerfKeyboardSettledMs}ms',
@@ -768,6 +823,11 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         },
       );
     });
+
+    if (!_dialogPerfEnabled || !_dialogPerfRecording) {
+      return;
+    }
+    _dialogPerfMetricsChangeCount++;
   }
 
   void _finalizeDialogPerfCapture(String reason) {
@@ -869,6 +929,17 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       'rasterAvg=${avgRasterMs.toStringAsFixed(1)}ms, '
       'rasterWorst=${worstRasterMs.toStringAsFixed(1)}ms',
       source: 'AddNoteDialog.Perf',
+    );
+  }
+
+  void _finishDialogOpenTimeline(String reason) {
+    if (_dialogOpenTimelineFinished) {
+      return;
+    }
+    _dialogOpenTimelineFinished = true;
+    _dialogOpenTimelineTimeout?.cancel();
+    _dialogOpenTimelineTask.finish(
+      arguments: <String, Object>{'reason': reason},
     );
   }
 
@@ -1468,6 +1539,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
   @override
   void dispose() {
+    _finishDialogOpenTimeline('disposed');
+    _dialogOpenTimelineTimeout?.cancel();
     _dialogPerfFinalizeTimer?.cancel();
     _dialogPerfKeyboardSettleTimer?.cancel();
     _keyboardRebuildResumeTimer?.cancel();

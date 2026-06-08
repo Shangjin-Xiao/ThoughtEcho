@@ -13,5 +13,15 @@ flutter drive \
   --driver=test_driver/note_list_performance_driver.dart \
   --target=integration_test/note_list_performance_test.dart
 
-summary="build/note_list_mixed_scroll_timeline.timeline_summary.json"
-dart run scripts/analyze_note_list_performance.dart "$summary"
+mapfile -t summaries < <(
+  find build -maxdepth 1 -type f \
+    -name 'thoughtecho_*.timeline_summary.json' \
+    -print | sort
+)
+
+if [[ ${#summaries[@]} -eq 0 ]]; then
+  echo "No ThoughtEcho performance summaries were generated." >&2
+  exit 66
+fi
+
+dart run scripts/analyze_note_list_performance.dart "${summaries[@]}"

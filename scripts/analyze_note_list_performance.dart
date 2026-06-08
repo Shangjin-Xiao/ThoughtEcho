@@ -11,17 +11,22 @@ String _format(Object? value) {
 Never _usage() {
   stderr.writeln(
     'Usage: dart run scripts/analyze_note_list_performance.dart '
-    '<timeline_summary.json>',
+    '<timeline_summary.json> [timeline_summary.json ...]',
   );
   exit(64);
 }
 
 void main(List<String> arguments) {
-  if (arguments.length != 1) {
+  if (arguments.isEmpty) {
     _usage();
   }
 
-  final File file = File(arguments.single);
+  for (final path in arguments) {
+    _printReport(File(path));
+  }
+}
+
+void _printReport(File file) {
   if (!file.existsSync()) {
     stderr.writeln('Performance summary not found: ${file.path}');
     exit(66);
@@ -52,4 +57,5 @@ void main(List<String> arguments) {
   for (final (String key, String label) in fields) {
     stdout.writeln('${label.padRight(24)} ${_format(decoded[key])}');
   }
+  stdout.writeln();
 }
