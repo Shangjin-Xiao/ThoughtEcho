@@ -61,9 +61,10 @@ String sanitizeSentryDatabaseDescription(String description) {
       return '$prefix main';
     }
   }
+  final lowerDescription = description.toLowerCase();
   final normalized = description.trimLeft().toUpperCase();
-  if (description.contains('app_logs') ||
-      description.contains('log_database')) {
+  if (lowerDescription.contains('app_logs') ||
+      lowerDescription.contains('log_database')) {
     return 'Log database write';
   }
   if (normalized.startsWith('SELECT ') ||
@@ -80,7 +81,7 @@ String sanitizeSentryDatabaseDescription(String description) {
 }
 
 String sanitizeSentrySpanDescription(String description) {
-  final parts = description.split(' ');
+  final parts = description.trim().split(RegExp(r'\s+'));
   if (parts.length >= 2 && Uri.tryParse(parts[1])?.hasScheme == true) {
     return [
       parts.first,
