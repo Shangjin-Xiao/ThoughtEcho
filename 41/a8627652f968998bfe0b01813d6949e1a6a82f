@@ -1,0 +1,15 @@
+lib/utils/sentry_helper.dart
+  ai_agent 23-28,30-34,43-53,188-193
+lib/pages/custom_feedback_page.dart
+  ai_agent 42-43,61-62,118-119,129,148-149,153,171-172,176,190-191,195-196
+test/unit/utils/sentry_helper_test.dart
+  ai_agent 23
+lib/pages/feedback_contact_page.dart
+  ai_agent 90-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "41a8627652f968998bfe0b01813d6949e1a6a82f",
+  "prompts": {}
+}
