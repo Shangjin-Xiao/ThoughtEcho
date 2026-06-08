@@ -21,7 +21,10 @@ import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
+import 'package:thoughtecho/widgets/quote_content_widget.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
+
+import 'support/timeline_slice_extractor.dart';
 
 const ValueKey<String> _listKey = ValueKey<String>(
   'note_list_performance.list',
@@ -275,6 +278,32 @@ Future<void> _runScrollSequence(WidgetTester tester, String scenario) async {
   }
 }
 
+Future<void> _runDiagnosticScrollSequence(
+  WidgetTester tester,
+  String scenario,
+) async {
+  final Finder list = find.byKey(_listKey);
+  final developer.TimelineTask flingTask = developer.TimelineTask(
+    filterKey: 'ThoughtEcho',
+  )..start(
+      'ThoughtEcho.NoteList.diagnosticFling',
+      arguments: <String, Object>{'scenario': scenario},
+    );
+  await tester.fling(list, const Offset(0, -900), 4200);
+  await tester.pumpAndSettle();
+  flingTask.finish();
+}
+
+void _jumpListToStart(WidgetTester tester) {
+  final ScrollableState scrollable = tester.state<ScrollableState>(
+    find.descendant(
+      of: find.byKey(_listKey),
+      matching: find.byType(Scrollable),
+    ),
+  );
+  scrollable.position.jumpTo(0);
+}
+
 Map<String, dynamic> _diagnosticSummary(
   String scenario,
   Map<String, dynamic> rawTimeline,
@@ -305,29 +334,26 @@ Map<String, dynamic> _diagnosticSummary(
         ));
       }
     }
-    if (const <String>{
-      'Frame',
-      'BUILD',
-      'LAYOUT',
-      'SEMANTICS',
-      'GPURasterizer::Draw',
-      'DartIsolate::HandleMessage',
-    }.contains(name)) {
-      final Object? duration = rawEvent['dur'];
-      if (duration is num) {
-        final double millis = duration.toDouble() / 1000;
-        if (millis > (slowestSlices[name] ?? 0)) {
-          slowestSlices[name] = millis;
-        }
-        final Object? timestamp = rawEvent['ts'];
-        if (millis >= 8 && timestamp is num) {
-          slowSlices.add(<String, dynamic>{
-            'name': name,
-            'duration_ms': double.parse(millis.toStringAsFixed(2)),
-            'timestamp_us': timestamp.toDouble(),
-          });
-        }
-      }
+  }
+
+  for (final Map<String, dynamic> slice in extractTimelineSlices(events)) {
+    final String name = slice['name'] as String;
+    final double millis = (slice['duration_us'] as double) / 1000;
+    if (slice['kind'] == 'asynchronous') {
+      continue;
+    }
+    if (millis > (slowestSlices[name] ?? 0)) {
+      slowestSlices[name] = double.parse(millis.toStringAsFixed(2));
+    }
+    if (millis >= 8) {
+      slowSlices.add(<String, dynamic>{
+        'name': name,
+        if (slice['category'] != null) 'category': slice['category'],
+        if (slice['thread_id'] != null) 'thread_id': slice['thread_id'],
+        if (slice['arguments'] != null) 'arguments': slice['arguments'],
+        'duration_ms': double.parse(millis.toStringAsFixed(2)),
+        'timestamp_us': slice['timestamp_us'],
+      });
     }
   }
 
@@ -336,7 +362,7 @@ Map<String, dynamic> _diagnosticSummary(
         (b['duration_ms'] as double).compareTo(a['duration_ms'] as double),
   );
   final List<Map<String, dynamic>> correlatedSlowSlices =
-      slowSlices.take(8).map((Map<String, dynamic> slice) {
+      slowSlices.take(16).map((Map<String, dynamic> slice) {
     final double timestamp = slice['timestamp_us'] as double;
     if (customEvents.isEmpty) {
       return slice..remove('timestamp_us');
@@ -358,9 +384,21 @@ Map<String, dynamic> _diagnosticSummary(
         ((timestamp - nearest.timestampMicros) / 1000).toStringAsFixed(2),
       );
   }).toList();
+  final List<MapEntry<String, double>> slowestEntries =
+      slowestSlices.entries.toList()
+        ..sort(
+          (MapEntry<String, double> a, MapEntry<String, double> b) =>
+              b.value.compareTo(a.value),
+        );
+  final Map<String, double> topSlowestSlices = <String, double>{
+    for (final MapEntry<String, double> entry in slowestEntries.take(30))
+      entry.key: entry.value,
+  };
 
   return <String, dynamic>{
     'scenario': scenario,
+    'trace_event_count': events.length,
+    'duration_slice_name_count': slowestSlices.length,
     for (final String key in <String>[
       'frame_count',
       '90th_percentile_frame_build_time_millis',
@@ -375,10 +413,32 @@ Map<String, dynamic> _diagnosticSummary(
       'old_gen_gc_count',
     ])
       if (summary.containsKey(key)) key: summary[key],
-    'slowest_slices_ms': slowestSlices,
+    'slowest_slices_ms': topSlowestSlices,
     'correlated_slow_slices': correlatedSlowSlices,
     'custom_event_counts': customEventCounts,
   };
+}
+
+Future<void> _traceDetailedRichTextScenario(
+  IntegrationTestWidgetsFlutterBinding binding,
+  WidgetTester tester,
+) async {
+  debugProfileBuildsEnabled = true;
+  debugProfileLayoutsEnabled = true;
+  debugEnhanceBuildTimelineArguments = true;
+  debugEnhanceLayoutTimelineArguments = true;
+  try {
+    await _traceScenario(
+      binding,
+      'note_list_richText_diagnostic',
+      () => _runDiagnosticScrollSequence(tester, 'richText_diagnostic'),
+    );
+  } finally {
+    debugProfileBuildsEnabled = false;
+    debugProfileLayoutsEnabled = false;
+    debugEnhanceBuildTimelineArguments = false;
+    debugEnhanceLayoutTimelineArguments = false;
+  }
 }
 
 Future<void> _traceScenario(
@@ -438,11 +498,28 @@ void main() {
         _buildBenchmarkApp(_buildBenchmarkQuotes(scenario, const <String>[])),
       );
       await tester.pumpAndSettle();
+      _jumpListToStart(tester);
+      await tester.pumpAndSettle();
       await _traceScenario(
         binding,
         'note_list_${scenario.name}',
         () => _runScrollSequence(tester, scenario.name),
       );
+      if (scenario == _ListScenario.richText) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        QuoteContent.resetCaches();
+        QuoteItemWidget.clearExpansionCache();
+        await tester.pumpWidget(
+          _buildBenchmarkApp(
+            _buildBenchmarkQuotes(_ListScenario.richText, const <String>[]),
+          ),
+        );
+        await tester.pumpAndSettle();
+        _jumpListToStart(tester);
+        await tester.pumpAndSettle();
+        await _traceDetailedRichTextScenario(binding, tester);
+      }
     }
 
     final List<String> imageDataUrls = await _prepareImageFilePaths();
@@ -453,6 +530,8 @@ void main() {
         _buildBenchmarkQuotes(_ListScenario.images, imageDataUrls),
       ),
     );
+    await tester.pumpAndSettle();
+    _jumpListToStart(tester);
     await tester.pumpAndSettle();
     expect(
       find.byType(Image),
@@ -466,13 +545,7 @@ void main() {
       'note_list_images_cold',
       () => _runScrollSequence(tester, 'images_cold'),
     );
-    final ScrollableState scrollable = tester.state<ScrollableState>(
-      find.descendant(
-        of: find.byKey(_listKey),
-        matching: find.byType(Scrollable),
-      ),
-    );
-    scrollable.position.jumpTo(0);
+    _jumpListToStart(tester);
     await tester.pumpAndSettle();
     await _traceScenario(
       binding,
