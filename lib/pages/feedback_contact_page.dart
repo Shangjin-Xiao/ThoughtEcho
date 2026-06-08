@@ -8,7 +8,7 @@ import 'package:thoughtecho/constants/app_constants.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
-import 'package:thoughtecho/widgets/custom_feedback_dialog.dart';
+import 'package:thoughtecho/pages/custom_feedback_page.dart';
 
 class FeedbackContactPage extends StatelessWidget {
   const FeedbackContactPage({super.key});
@@ -84,7 +84,12 @@ class FeedbackContactPage extends StatelessWidget {
                                   ),
                             ),
                       onTap: isEnabled
-                          ? () => CustomFeedbackDialog.show(context)
+                          ? () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const CustomFeedbackPage(),
+                                ),
+                              )
                           : null,
                     );
                   },

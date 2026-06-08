@@ -4,21 +4,14 @@ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/constants/app_constants.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
-class CustomFeedbackDialog extends StatefulWidget {
-  const CustomFeedbackDialog({super.key});
-
-  static void show(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => const CustomFeedbackDialog(),
-    );
-  }
+class CustomFeedbackPage extends StatefulWidget {
+  const CustomFeedbackPage({super.key});
 
   @override
-  State<CustomFeedbackDialog> createState() => _CustomFeedbackDialogState();
+  State<CustomFeedbackPage> createState() => _CustomFeedbackPageState();
 }
 
-class _CustomFeedbackDialogState extends State<CustomFeedbackDialog> {
+class _CustomFeedbackPageState extends State<CustomFeedbackPage> {
   final _formKey = GlobalKey<FormState>();
   final _messageController = TextEditingController();
   final _nameController = TextEditingController();
@@ -64,7 +57,7 @@ class _CustomFeedbackDialogState extends State<CustomFeedbackDialog> {
         );
       }
     } catch (e, stackTrace) {
-      logError('CustomFeedbackDialog._submit', error: e, stackTrace: stackTrace, source: 'Feedback');
+      logError('CustomFeedbackPage._submit', error: e, stackTrace: stackTrace, source: 'Feedback');
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -89,33 +82,18 @@ class _CustomFeedbackDialogState extends State<CustomFeedbackDialog> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: SingleChildScrollView(
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.customFeedbackTitle),
+      ),
+      body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Form(
             key: _formKey,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  children: [
-                    Icon(Icons.feedback_outlined, color: colorScheme.primary, size: 28),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        l10n.customFeedbackTitle,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                
                 // Feedback Message (Required)
                 Text(
                   l10n.customFeedbackMessageLabel,
@@ -127,8 +105,8 @@ class _CustomFeedbackDialogState extends State<CustomFeedbackDialog> {
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _messageController,
-                  maxLines: 5,
-                  minLines: 3,
+                  maxLines: 8,
+                  minLines: 5,
                   decoration: InputDecoration(
                     hintText: l10n.customFeedbackMessageHint,
                     border: OutlineInputBorder(
@@ -144,7 +122,7 @@ class _CustomFeedbackDialogState extends State<CustomFeedbackDialog> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
                 
                 // Email (Optional)
                 Text(
@@ -167,7 +145,7 @@ class _CustomFeedbackDialogState extends State<CustomFeedbackDialog> {
                     fillColor: colorScheme.surfaceContainerHighest.withAlpha(100),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
                 
                 // Name (Optional)
                 Text(
@@ -189,34 +167,27 @@ class _CustomFeedbackDialogState extends State<CustomFeedbackDialog> {
                     fillColor: colorScheme.surfaceContainerHighest.withAlpha(100),
                   ),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 48),
                 
                 // Action Buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
-                      child: Text(l10n.cancel),
+                FilledButton(
+                  onPressed: _isSubmitting ? null : _submit,
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      onPressed: _isSubmitting ? null : _submit,
-                      style: FilledButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : Text(
+                          l10n.customFeedbackSubmit,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      ),
-                      child: _isSubmitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : Text(l10n.customFeedbackSubmit),
-                    ),
-                  ],
                 ),
               ],
             ),
