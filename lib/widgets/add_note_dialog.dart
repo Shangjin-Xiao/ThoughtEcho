@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer' as developer;
 import 'dart:ui' show FrameTiming;
 
 import 'package:flutter/material.dart';
@@ -7,7 +6,6 @@ import 'package:flutter/services.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter_markdown/flutter_markdown.dart'; // 导入 markdown 库
 import 'package:provider/provider.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/utils/app_tracer.dart';
 import 'package:uuid/uuid.dart';
