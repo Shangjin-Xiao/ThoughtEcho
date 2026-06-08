@@ -65,13 +65,21 @@ class _PerformanceFeatureGuideService extends FeatureGuideService {
 }
 
 Future<List<String>> _loadImageDataUrls() async {
-  final ByteData data = await rootBundle.load('assets/icon.png');
-  final Uint8List bytes = data.buffer.asUint8List(
-    data.offsetInBytes,
-    data.lengthInBytes,
+  final List<String> paths = <String>[
+    'assets/icon.png',
+    'assets/icon_ios_full.png',
+    'assets/icon_ios_large.png',
+  ];
+  return Future.wait(
+    paths.map((String path) async {
+      final ByteData data = await rootBundle.load(path);
+      final Uint8List bytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
+      return 'data:image/png;base64,${base64Encode(bytes)}';
+    }),
   );
-  final String base64 = 'data:image/png;base64,${base64Encode(bytes)}';
-  return <String>[base64, base64, base64];
 }
 
 List<Quote> _buildBenchmarkQuotes(

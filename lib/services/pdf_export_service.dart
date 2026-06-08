@@ -107,23 +107,7 @@ class PdfExportService {
             ),
           );
         },
-        footer: (pw.Context context) {
-          return pw.Container(
-            alignment: pw.Alignment.center,
-            margin: const pw.EdgeInsets.only(top: 16),
-            child: pw.Text(
-              "第 ${context.pageNumber} 页 / 共 ${context.pagesCount} 页",
-              style: pw.TextStyle(
-                font: fontSet.regular,
-                fontBold: fontSet.bold,
-                fontItalic: fontSet.italic,
-                fontBoldItalic: fontSet.boldItalic,
-                fontSize: 9,
-                color: PdfColors.grey500,
-              ),
-            ),
-          );
-        },
+
         build: (pw.Context pdfContext) {
           final List<pw.Widget> content = [];
 
@@ -224,30 +208,36 @@ class PdfExportService {
                     if ((quote.sourceAuthor != null && quote.sourceAuthor!.isNotEmpty) ||
                         (quote.sourceWork != null && quote.sourceWork!.isNotEmpty)) ...[
                       pw.SizedBox(height: 8),
-                      pw.Text(
-                        _formatSource(quote.sourceAuthor ?? '', quote.sourceWork ?? ''),
-                        style: pw.TextStyle(
-                          font: fontSet.italic,
-                          fontBold: fontSet.boldItalic,
-                          fontItalic: fontSet.italic,
-                          fontBoldItalic: fontSet.boldItalic,
-                          fontSize: 10,
-                          fontStyle: pw.FontStyle.italic,
-                          color: PdfColor.fromHex("4A5568"),
+                      pw.Align(
+                        alignment: pw.Alignment.centerRight,
+                        child: pw.Text(
+                          _formatSource(quote.sourceAuthor ?? '', quote.sourceWork ?? ''),
+                          style: pw.TextStyle(
+                            font: fontSet.italic,
+                            fontBold: fontSet.boldItalic,
+                            fontItalic: fontSet.italic,
+                            fontBoldItalic: fontSet.boldItalic,
+                            fontSize: 10,
+                            fontStyle: pw.FontStyle.italic,
+                            color: PdfColor.fromHex("4A5568"),
+                          ),
                         ),
                       ),
                     ] else if (quote.source != null && quote.source!.isNotEmpty) ...[
                       pw.SizedBox(height: 8),
-                      pw.Text(
-                        quote.source!,
-                        style: pw.TextStyle(
-                          font: fontSet.italic,
-                          fontBold: fontSet.boldItalic,
-                          fontItalic: fontSet.italic,
-                          fontBoldItalic: fontSet.boldItalic,
-                          fontSize: 10,
-                          fontStyle: pw.FontStyle.italic,
-                          color: PdfColor.fromHex("4A5568"),
+                      pw.Align(
+                        alignment: pw.Alignment.centerRight,
+                        child: pw.Text(
+                          quote.source!,
+                          style: pw.TextStyle(
+                            font: fontSet.italic,
+                            fontBold: fontSet.boldItalic,
+                            fontItalic: fontSet.italic,
+                            fontBoldItalic: fontSet.boldItalic,
+                            fontSize: 10,
+                            fontStyle: pw.FontStyle.italic,
+                            color: PdfColor.fromHex("4A5568"),
+                          ),
                         ),
                       ),
                     ],

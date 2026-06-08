@@ -188,5 +188,7 @@ flutter:
     - assets/lottie/
     - assets/svg/
     - assets/icon.png
+    - assets/icon_ios_full.png
+    - assets/icon_ios_large.png
     - docs/
     - LICENSE
