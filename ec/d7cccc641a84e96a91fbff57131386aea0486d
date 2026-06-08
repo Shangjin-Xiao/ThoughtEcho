@@ -1,0 +1,22 @@
+integration_test/note_list_performance_test.dart
+  s_6c3f45dd05ba45::t_6c2315338c9160 128,136,139-145,448-452
+.github/workflows/firebase-note-list-performance.yml
+  s_6c3f45dd05ba45::t_6c2315338c9160 77-85,87
+  s_6c3f45dd05ba45::t_609025b394c3cb 91-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "ecd7cccc641a84e96a91fbff57131386aea0486d",
+  "prompts": {},
+  "sessions": {
+    "s_6c3f45dd05ba45": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ea4f0-49d0-7900-a0ea-d0e557e1df14",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
