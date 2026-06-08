@@ -1,5 +1,6 @@
 import 'dart:typed_data';
-import 'package:flutter/material.dart' show BuildContext, IconData;
+import 'package:flutter/material.dart'
+    show BuildContext, IconData, Localizations;
 import 'package:provider/provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -79,6 +80,11 @@ class PdfExportService {
       parsedQuotes.add(await DeltaToPdfParser.parse(quote, fontSet));
     }
 
+    final isZh = Localizations.maybeLocaleOf(context)?.languageCode == 'zh';
+    final headerTitle = isZh
+        ? "心迹 — 你的专属灵感摘录本"
+        : "ThoughtEcho — Your Personal Inspiration Notebook";
+
     // 3. 组装 PDF 页面布局
     pdf.addPage(
       pw.MultiPage(
@@ -95,7 +101,7 @@ class PdfExportService {
               ),
             ),
             child: pw.Text(
-              "ThoughtEcho (心迹) — 专属思想摘录本",
+              headerTitle,
               style: pw.TextStyle(
                 font: fontSet.regular,
                 fontBold: fontSet.bold,
@@ -205,13 +211,16 @@ class PdfExportService {
                     ...parsedQuotes[i],
 
                     // --- 出处作者 ---
-                    if ((quote.sourceAuthor != null && quote.sourceAuthor!.isNotEmpty) ||
-                        (quote.sourceWork != null && quote.sourceWork!.isNotEmpty)) ...[
+                    if ((quote.sourceAuthor != null &&
+                            quote.sourceAuthor!.isNotEmpty) ||
+                        (quote.sourceWork != null &&
+                            quote.sourceWork!.isNotEmpty)) ...[
                       pw.SizedBox(height: 8),
                       pw.Align(
                         alignment: pw.Alignment.centerRight,
                         child: pw.Text(
-                          _formatSource(quote.sourceAuthor ?? '', quote.sourceWork ?? ''),
+                          _formatSource(
+                              quote.sourceAuthor ?? '', quote.sourceWork ?? ''),
                           style: pw.TextStyle(
                             font: fontSet.italic,
                             fontBold: fontSet.boldItalic,
@@ -223,7 +232,8 @@ class PdfExportService {
                           ),
                         ),
                       ),
-                    ] else if (quote.source != null && quote.source!.isNotEmpty) ...[
+                    ] else if (quote.source != null &&
+                        quote.source!.isNotEmpty) ...[
                       pw.SizedBox(height: 8),
                       pw.Align(
                         alignment: pw.Alignment.centerRight,
