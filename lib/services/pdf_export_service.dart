@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:flutter/material.dart' show BuildContext;
+import 'package:flutter/material.dart' show BuildContext, IconData;
 import 'package:provider/provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -317,24 +317,51 @@ class PdfExportService {
     PdfFontSet fontSet,
     pw.TextStyle style,
   ) {
+    return pw.Row(
+      mainAxisSize: pw.MainAxisSize.min,
+      children: [
+        buildTagIcon(
+          tag,
+          fontSet,
+          size: (style.fontSize ?? 8) + 1,
+          color: style.color ?? PdfColors.grey700,
+        ),
+        pw.SizedBox(width: 3),
+        pw.Text(text, style: style),
+      ],
+    );
+  }
+
+  static pw.Widget buildTagIcon(
+    NoteCategory? tag,
+    PdfFontSet fontSet, {
+    double size = 9,
+    PdfColor color = PdfColors.grey700,
+  }) {
     final iconName = tag?.iconName;
     if (IconUtils.isEmoji(iconName)) {
-      return pw.Row(
-        mainAxisSize: pw.MainAxisSize.min,
-        children: [
-          pw.Text(
-            iconName!,
-            style: pw.TextStyle(
-              font: fontSet.regular,
-              fontFallback: fontSet.fallbackFonts,
-              fontSize: (style.fontSize ?? 8) + 1,
-            ),
-          ),
-          pw.SizedBox(width: 3),
-          pw.Text(text, style: style),
-        ],
+      return pw.Text(
+        iconName!,
+        style: pw.TextStyle(
+          font: fontSet.regular,
+          fontFallback: fontSet.fallbackFonts,
+          fontSize: size,
+        ),
       );
     }
-    return _iconText(PdfExportIcon.tag, text, style);
+    if (fontSet.materialIcons != null &&
+        IconUtils.categoryIcons.containsKey(iconName)) {
+      final icon = IconUtils.getIconData(iconName) as IconData;
+      return pw.Icon(
+        pw.IconData(
+          icon.codePoint,
+          matchTextDirection: icon.matchTextDirection,
+        ),
+        font: fontSet.materialIcons,
+        size: size,
+        color: color,
+      );
+    }
+    return PdfExportIcons.build(PdfExportIcon.tag, size: size, color: color);
   }
 }

@@ -14,6 +14,7 @@ class PdfFontSet {
   final pw.Font bold;
   final pw.Font italic;
   final pw.Font boldItalic;
+  final pw.Font? materialIcons;
   final List<pw.Font> fallbackFonts;
   final bool isFallback;
 
@@ -22,6 +23,7 @@ class PdfFontSet {
     required this.bold,
     required this.italic,
     required this.boldItalic,
+    this.materialIcons,
     this.fallbackFonts = const [],
     this.isFallback = false,
   });
@@ -31,6 +33,7 @@ class PdfFontService {
   static ByteData? _cachedFontData;
   static final Map<String, ByteData> _cachedLanguageFallbackData = {};
   static ByteData? _cachedEmojiFontData;
+  static ByteData? _cachedMaterialIconFontData;
 
   static const _multilingualFontFileName = "cached_noto_sans_sc.ttf";
   static const _obsoleteMultilingualFontFileName =
@@ -38,6 +41,7 @@ class PdfFontService {
   static const _japaneseFontFileName = "cached_noto_sans_jp.ttf";
   static const _koreanFontFileName = "cached_noto_sans_kr.ttf";
   static const _emojiFontFileName = "cached_noto_color_emoji.ttf";
+  static const _materialIconFontFileName = "cached_material_icons.ttf";
 
   static const _multilingualFontUrls = [
     "https://fonts.gstatic.com/s/notosanssc/v37/k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaG9_FnYxNbPzS5HE.ttf",
@@ -63,12 +67,17 @@ class PdfFontService {
     "https://rawcdn.githack.com/googlefonts/noto-emoji/9a5261d871451f9b5183c93483cbd68ed916b1e9/fonts/NotoColorEmoji.ttf",
   ];
 
+  static const _materialIconFontUrls = [
+    "https://fonts.gstatic.com/s/materialicons/v142/flUhRq6tzZclQEJ-Vdg-IuiaDsNZIhI8tIHh.ttf",
+  ];
+
   /// 加载字体数据集合，所有变体均指向同一份中文 TTF 数据
   /// 这可确保 pdf 包在渲染粗体/斜体文字时不会 fallback 到不含 CJK 的内置字体
   static Future<PdfFontSet> loadFontSet() async {
     final data = await _loadFontData();
     final languageFallbackData = await _loadLanguageFallbackFontData();
     final emojiData = await _loadEmojiFontData();
+    final materialIconData = await _loadMaterialIconFontData();
     final fallbackFonts = <pw.Font>[
       ...languageFallbackData.map(pw.Font.ttf),
       if (emojiData != null) pw.Font.ttf(emojiData),
@@ -81,6 +90,8 @@ class PdfFontService {
         bold: pw.Font.ttf(data),
         italic: pw.Font.ttf(data),
         boldItalic: pw.Font.ttf(data),
+        materialIcons:
+            materialIconData == null ? null : pw.Font.ttf(materialIconData),
         fallbackFonts: fallbackFonts,
         isFallback: false,
       );
@@ -91,6 +102,8 @@ class PdfFontService {
       bold: pw.Font.helveticaBold(),
       italic: pw.Font.helveticaOblique(),
       boldItalic: pw.Font.helveticaBoldOblique(),
+      materialIcons:
+          materialIconData == null ? null : pw.Font.ttf(materialIconData),
       fallbackFonts: fallbackFonts,
       isFallback: true,
     );
@@ -162,6 +175,27 @@ class PdfFontService {
     );
     if (downloaded != null && isValidFontData(downloaded)) {
       _cachedEmojiFontData = downloaded;
+      return downloaded;
+    }
+    return null;
+  }
+
+  static Future<ByteData?> _loadMaterialIconFontData() async {
+    if (_cachedMaterialIconFontData != null &&
+        isValidFontData(_cachedMaterialIconFontData!)) {
+      return _cachedMaterialIconFontData;
+    }
+    final cached = await _tryLoadCachedFont(_materialIconFontFileName);
+    if (cached != null && isValidFontData(cached)) {
+      _cachedMaterialIconFontData = cached;
+      return cached;
+    }
+    final downloaded = await _downloadAndCacheFont(
+      fileName: _materialIconFontFileName,
+      urls: _materialIconFontUrls,
+    );
+    if (downloaded != null && isValidFontData(downloaded)) {
+      _cachedMaterialIconFontData = downloaded;
       return downloaded;
     }
     return null;

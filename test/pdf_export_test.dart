@@ -1,7 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:thoughtecho/models/note_category.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/delta_to_pdf_parser.dart';
 import 'package:thoughtecho/services/pdf_export_service.dart';
@@ -84,6 +86,41 @@ void main() {
       );
 
       expect(fontSet.fallbackFonts, contains(fallback));
+    });
+
+    test('PDF tags preserve configured material icons and emoji', () {
+      final fontSet = PdfFontSet(
+        regular: pw.Font.helvetica(),
+        bold: pw.Font.helveticaBold(),
+        italic: pw.Font.helveticaOblique(),
+        boldItalic: pw.Font.helveticaBoldOblique(),
+        materialIcons: pw.Font.helvetica(),
+      );
+
+      expect(
+        PdfExportService.buildTagIcon(
+          NoteCategory(id: 'book', name: 'Book', iconName: 'book'),
+          fontSet,
+          color: PdfColors.grey700,
+        ),
+        isA<pw.Icon>(),
+      );
+      expect(
+        PdfExportService.buildTagIcon(
+          NoteCategory(id: 'emoji', name: 'Emoji', iconName: '📚'),
+          fontSet,
+          color: PdfColors.grey700,
+        ),
+        isA<pw.Text>(),
+      );
+      expect(
+        PdfExportService.buildTagIcon(
+          NoteCategory(id: 'unknown', name: 'Unknown', iconName: 'not-an-icon'),
+          fontSet,
+          color: PdfColors.grey700,
+        ),
+        isA<pw.SvgImage>(),
+      );
     });
 
     test('PdfFontService.isValidFontData validates font headers correctly', () {
