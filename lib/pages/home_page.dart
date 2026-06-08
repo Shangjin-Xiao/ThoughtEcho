@@ -1138,18 +1138,95 @@ class _HomePageState extends State<HomePage>
             prefilledWork: prefilledWork,
             hitokotoData: hitokotoData,
             tags: _tags, // 使用预加载的标签数据
-            onSave: (_) {
-              // 笔记保存后刷新标签列表
-              _loadTags();
-              // 新增：强制刷新NoteListView
-              if (_noteListViewKey.currentState != null) {
-                _noteListViewKey.currentState!.resetAndLoad();
-              }
-            },
+            onSave: (quote) => _saveNonFullscreenQuote(
+              quote,
+              isEditing: false,
+            ),
           ),
         );
       }
     });
+  }
+
+  Future<void> _saveNonFullscreenQuote(
+    Quote quote, {
+    required bool isEditing,
+  }) async {
+    if (!mounted) return;
+
+    final db = context.read<DatabaseService>();
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+
+    try {
+      if (isEditing) {
+        final result = await db.updateQuote(quote);
+        if (result != QuoteUpdateResult.updated) {
+          if (!mounted) return;
+          _showNonFullscreenSaveFailure(
+            quote,
+            isEditing: true,
+            message: switch (result) {
+              QuoteUpdateResult.notFound => l10n.noteNotFound,
+              QuoteUpdateResult.skippedDeleted => l10n.noteUpdateSkippedDeleted,
+              QuoteUpdateResult.updated => l10n.noteUpdated,
+            },
+          );
+          return;
+        }
+      } else {
+        await db.addQuote(quote);
+      }
+
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(isEditing ? l10n.noteUpdated : l10n.noteSaved),
+          duration: AppConstants.snackBarDurationImportant,
+        ),
+      );
+      _loadTags();
+      _noteListViewKey.currentState?.resetAndLoad();
+    } catch (e, stack) {
+      logError(
+        '非全屏编辑器保存失败: id=${quote.id}, isEditing=$isEditing',
+        error: e,
+        stackTrace: stack,
+        source: 'HomePage',
+      );
+      if (!mounted) return;
+      _showNonFullscreenSaveFailure(
+        quote,
+        isEditing: isEditing,
+        message: l10n.saveFailedWithError(e.toString()),
+      );
+    }
+  }
+
+  void _showNonFullscreenSaveFailure(
+    Quote quote, {
+    required bool isEditing,
+    required String message,
+  }) {
+    if (!mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: AppConstants.snackBarDurationError,
+        backgroundColor: Colors.red,
+        action: SnackBarAction(
+          label: l10n.retry,
+          onPressed: () {
+            unawaited(
+              _saveNonFullscreenQuote(quote, isEditing: isEditing),
+            );
+          },
+        ),
+      ),
+    );
   }
 
   /// 直接打开全屏编辑器（跳过非全屏编辑器）
@@ -1369,10 +1446,10 @@ class _HomePageState extends State<HomePage>
         builder: (context) => AddNoteDialog(
           initialQuote: quote,
           tags: _tags,
-          onSave: (_) {
-            // 笔记更新后刷新标签列表
-            _loadTags();
-          },
+          onSave: (updatedQuote) => _saveNonFullscreenQuote(
+            updatedQuote,
+            isEditing: true,
+          ),
         ),
       );
     }

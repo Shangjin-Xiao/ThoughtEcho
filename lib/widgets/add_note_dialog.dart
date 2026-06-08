@@ -10,7 +10,6 @@ import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/utils/app_tracer.dart';
 import 'package:uuid/uuid.dart';
 
-import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
@@ -24,7 +23,6 @@ import '../services/weather_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/color_utils.dart'; // Import color_utils
 import '../utils/feature_guide_helper.dart';
-import '../utils/icon_utils.dart';
 import '../utils/location_weather_helper.dart';
 import '../utils/time_utils.dart'; // 导入时间工具类
 import 'accessible_color_grid.dart'; // Import the new accessible color grid
@@ -40,7 +38,7 @@ class AddNoteDialog extends StatefulWidget {
   final String? prefilledWork; // 预填充的作品
   final Map<String, dynamic>? hitokotoData; // 添加一言API返回的完整数据
   final List<NoteCategory> tags;
-  final Function(Quote)? onSave; // 保存后的回调
+  final FutureOr<void> Function(Quote) onSave; // 关闭后由外层执行保存
 
   const AddNoteDialog({
     super.key,
@@ -50,7 +48,7 @@ class AddNoteDialog extends StatefulWidget {
     this.prefilledWork,
     this.hitokotoData,
     required this.tags,
-    this.onSave,
+    required this.onSave,
   });
 
   @override
@@ -143,7 +141,6 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
   // 一言标签加载状态
   bool _isLoadingHitokotoTags = false;
-  Future<void>? _pendingHitokotoTagTask;
   bool _isSaving = false;
 
   // AI推荐标签相关状态
@@ -161,20 +158,6 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       return Provider.of<T>(context, listen: false);
     } catch (_) {
       return null;
-    }
-  }
-
-  String _updateFailureMessage(
-    AppLocalizations l10n,
-    QuoteUpdateResult result,
-  ) {
-    switch (result) {
-      case QuoteUpdateResult.notFound:
-        return l10n.noteNotFound;
-      case QuoteUpdateResult.skippedDeleted:
-        return l10n.noteUpdateSkippedDeleted;
-      case QuoteUpdateResult.updated:
-        return l10n.noteUpdated;
     }
   }
 
@@ -469,25 +452,12 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
     // 优化：完全异步执行重量级操作，不阻塞 UI
     if (widget.hitokotoData != null) {
-      _pendingHitokotoTagTask = Future.microtask(() async {
-        if (!mounted) return;
-        await _addDefaultHitokotoTagsAsync();
-      });
-    }
-  }
-
-  Future<void> _waitForPendingHitokotoTagTask() async {
-    final pendingTask = _pendingHitokotoTagTask;
-    if (pendingTask == null) return;
-
-    try {
-      await pendingTask;
-    } catch (e) {
-      logDebug('等待默认一言标签任务失败: $e');
-    } finally {
-      if (identical(_pendingHitokotoTagTask, pendingTask)) {
-        _pendingHitokotoTagTask = null;
-      }
+      unawaited(
+        Future.microtask(() async {
+          if (!mounted) return;
+          await _addDefaultHitokotoTagsAsync();
+        }),
+      );
     }
   }
 
@@ -1880,7 +1850,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   }
 
   /// 保存笔记并退出
-  Future<void> _saveAndExit() async {
+  void _saveAndExit() {
     if (_isSaving) return;
 
     // 如果内容为空，直接返回
@@ -1893,15 +1863,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
     _isSaving = true;
 
-    // Capture context variables before any async operations
-    final db = Provider.of<DatabaseService>(context, listen: false);
-    final l10n = AppLocalizations.of(context);
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
     try {
-      await _waitForPendingHitokotoTagTask();
-
       // 获取当前时间段
       final String currentDayPeriodKey = TimeUtils.getCurrentDayPeriodKey();
 
@@ -1920,7 +1884,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         ),
         sourceAuthor: _authorController.text,
         sourceWork: _workController.text,
-        tagIds: _selectedTagIds,
+        tagIds: List.unmodifiable(_selectedTagIds),
         sentiment: baseQuote?.sentiment,
         keywords: baseQuote?.keywords,
         summary: baseQuote?.summary,
@@ -1959,61 +1923,12 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         deltaContent: widget.initialQuote?.deltaContent,
       );
 
-      if (widget.initialQuote != null) {
-        final updateResult = await db.updateQuote(quote);
-        if (updateResult != QuoteUpdateResult.updated) {
-          if (!mounted) return;
-          scaffoldMessenger.showSnackBar(
-            SnackBar(
-              content: Text(_updateFailureMessage(l10n, updateResult)),
-              duration: AppConstants.snackBarDurationError,
-              backgroundColor: Colors.orange,
-            ),
-          );
-          return;
-        }
-        if (!mounted) return;
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.noteUpdated),
-            duration: AppConstants.snackBarDurationImportant,
-          ),
-        );
-      } else {
-        await db.addQuote(quote);
-        if (!mounted) return;
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.noteSaved),
-            duration: AppConstants.snackBarDurationImportant,
-          ),
-        );
-      }
-
-      if (widget.onSave != null) {
-        widget.onSave!(quote);
-      }
-
-      if (!isEditing) {
-        await _showAIRecommendedTags(quote.content);
-      }
-
       if (mounted) {
         navigator.pop();
       }
+      unawaited(Future<void>.sync(() => widget.onSave(quote)));
     } catch (e) {
-      if (mounted) {
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              l10n.saveFailedWithError(e.toString()),
-            ),
-            duration: AppConstants.snackBarDurationError,
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
+      logDebug('创建非全屏笔记保存快照失败: $e');
       _isSaving = false;
     }
   }
@@ -2078,7 +1993,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           Navigator.pop(context);
         } else if (dialogResult == 'save') {
           // 用户选择保存并退出
-          await _saveAndExit();
+          _saveAndExit();
         }
         // dialogResult == null: 继续编辑，不做任何操作
       },
@@ -2704,9 +2619,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                         ),
                         onPressed: _isLoadingFullQuote
                             ? null
-                            : () async {
+                            : () {
                                 if (_contentController.text.isNotEmpty) {
-                                  await _saveAndExit();
+                                  _saveAndExit();
                                 }
                               },
                         child: _isLoadingFullQuote
@@ -2845,87 +2760,5 @@ class _AddNoteDialogState extends State<AddNoteDialog>
             : '#${result.toARGB32().toRadixString(16).substring(2)}'; // MODIFIED
       });
     }
-  }
-
-  /// 显示AI推荐标签对话框
-  Future<void> _showAIRecommendedTags(String content) async {
-    if (!mounted) return;
-
-    final settingsService = _readServiceOrNull<SettingsService>(context);
-    if (settingsService == null) return;
-
-    final localAI = settingsService.localAISettings;
-    // 检查是否启用了智能标签推荐
-    if (!localAI.enabled || !localAI.smartTagsEnabled) {
-      return;
-    }
-
-    // TODO: 调用本地AI模型获取推荐标签 - 后端实现后添加
-    // 目前返回mock数据
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    if (!mounted) return;
-
-    // Mock: 暂时不推荐任何标签
-    final List<String> recommendedTagIds = [];
-
-    if (recommendedTagIds.isEmpty) return;
-
-    // 显示推荐标签对话框
-    final l10n = AppLocalizations.of(context);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.recommendedTags),
-        content: Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: recommendedTagIds.map((tagId) {
-            final tag = _availableTags.firstWhere(
-              (t) => t.id == tagId,
-              orElse: () => NoteCategory(
-                id: tagId,
-                name: tagId,
-                iconName: 'label',
-              ),
-            );
-            return FilterChip(
-              label: Text(tag.name),
-              avatar: IconUtils.isEmoji(tag.iconName)
-                  ? IconUtils.getDisplayIcon(tag.iconName)
-                  : Icon(IconUtils.getIconData(tag.iconName), size: 18),
-              onSelected: (selected) {
-                // 应用推荐标签
-                setState(() {
-                  if (selected && !_selectedTagIds.contains(tagId)) {
-                    _selectedTagIds.add(tagId);
-                  }
-                });
-              },
-            );
-          }).toList(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () {
-              // 应用所有推荐标签
-              setState(() {
-                for (final tagId in recommendedTagIds) {
-                  if (!_selectedTagIds.contains(tagId)) {
-                    _selectedTagIds.add(tagId);
-                  }
-                }
-              });
-              Navigator.pop(context);
-            },
-            child: Text(l10n.applyToEditor),
-          ),
-        ],
-      ),
-    );
   }
 }

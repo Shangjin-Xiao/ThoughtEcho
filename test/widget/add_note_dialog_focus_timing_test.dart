@@ -108,7 +108,7 @@ void main() {
           home: Scaffold(
             body: AddNoteDialog(
               tags: const [],
-              onSave: (_) {},
+              onSave: databaseService.addQuote,
             ),
           ),
         ),
@@ -119,19 +119,66 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
 
     final saveButton = find.widgetWithText(FilledButton, '保存');
-    await tester.tap(saveButton);
-    await tester.pump();
-
-    expect(find.widgetWithText(FilledButton, '保存'), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsNothing);
-
-    await tester.tap(saveButton);
+    final button = tester.widget<FilledButton>(saveButton);
+    button.onPressed!();
+    button.onPressed!();
     await tester.pump();
 
     expect(databaseService.addQuoteCallCount, 1);
 
     databaseService.completeSave();
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('closes immediately while parent saves the note', (tester) async {
+    final databaseService = _SlowDatabaseService();
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<FeatureGuideService>(
+            create: (_) => _MockFeatureGuideService(),
+          ),
+          ChangeNotifierProvider<DatabaseService>.value(
+            value: databaseService,
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => AddNoteDialog(
+                      tags: const [],
+                      onSave: databaseService.addQuote,
+                    ),
+                  );
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, '立即关闭测试');
+
+    await tester.tap(find.widgetWithText(FilledButton, '保存'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AddNoteDialog), findsNothing);
+    expect(databaseService.addQuoteCallCount, 1);
+
+    databaseService.completeSave();
   });
 }
 

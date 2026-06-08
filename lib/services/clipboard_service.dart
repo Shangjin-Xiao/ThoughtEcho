@@ -1,9 +1,12 @@
 // filepath: /workspaces/ThoughtEcho/lib/services/clipboard_service.dart
+import 'dart:async';
+
 import '../constants/app_constants.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/note_category.dart';
+import '../models/quote_model.dart';
 import '../services/database_service.dart';
 import '../widgets/add_note_dialog.dart'; // 导入AddNoteDialog
 import 'package:provider/provider.dart';
@@ -363,22 +366,12 @@ class ClipboardService extends ChangeNotifier {
         backgroundColor: Theme.of(context).brightness == Brightness.light
             ? Colors.white
             : Theme.of(context).colorScheme.surface,
-        builder: (context) => AddNoteDialog(
+        builder: (_) => AddNoteDialog(
           prefilledContent: content,
           prefilledAuthor: author,
           prefilledWork: source,
           tags: tags,
-          onSave: (quote) {
-            // 可以在这里添加保存后的回调
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(AppLocalizations.of(context).noteSaved),
-                  duration: AppConstants.snackBarDurationImportant,
-                ),
-              );
-            }
-          },
+          onSave: (quote) => _saveClipboardQuote(context, quote),
         ),
       );
     } catch (e) {
@@ -392,6 +385,49 @@ class ClipboardService extends ChangeNotifier {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _saveClipboardQuote(BuildContext context, Quote quote) async {
+    if (!context.mounted) return;
+
+    final databaseService = Provider.of<DatabaseService>(
+      context,
+      listen: false,
+    );
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
+
+    try {
+      await databaseService.addQuote(quote);
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.noteSaved),
+          duration: AppConstants.snackBarDurationImportant,
+        ),
+      );
+    } catch (e, stack) {
+      logError(
+        '剪贴板笔记保存失败: id=${quote.id}',
+        error: e,
+        stackTrace: stack,
+        source: 'ClipboardService',
+      );
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.saveFailedWithError(e.toString())),
+          duration: AppConstants.snackBarDurationError,
+          backgroundColor: Colors.red,
+          action: SnackBarAction(
+            label: l10n.retry,
+            onPressed: () {
+              unawaited(_saveClipboardQuote(context, quote));
+            },
+          ),
+        ),
+      );
     }
   }
 }
