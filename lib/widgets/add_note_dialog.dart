@@ -7,7 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter_markdown/flutter_markdown.dart'; // 导入 markdown 库
 import 'package:provider/provider.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/app_tracer.dart';
 import 'package:uuid/uuid.dart';
 
 import '../constants/app_constants.dart';
@@ -121,7 +123,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   final Stopwatch _dialogPerfStopwatch = Stopwatch();
   final List<FrameTiming> _dialogPerfFrameTimings = <FrameTiming>[];
   final Map<String, int> _dialogPerfStateChanges = <String, int>{};
-  late final developer.TimelineTask _dialogOpenTimelineTask;
+  late final AppTracer _dialogOpenTimelineTask;
   bool _dialogOpenTimelineFinished = false;
   Timer? _dialogOpenTimelineTimeout;
   Timer? _dialogPerfKeyboardSettleTimer;
@@ -197,17 +199,17 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   @override
   void initState() {
     super.initState();
-    _dialogOpenTimelineTask = developer.TimelineTask(filterKey: 'ThoughtEcho')
-      ..start(
-        'ThoughtEcho.AddNoteDialog.open',
-        arguments: <String, Object>{
-          'mode': widget.initialQuote == null ? 'create' : 'edit',
-          'tagCount': widget.tags.length,
-          'contentLength':
-              (widget.initialQuote?.content ?? widget.prefilledContent ?? '')
-                  .length,
-        },
-      );
+    _dialogOpenTimelineTask = AppTracer.start(
+      'ThoughtEcho.AddNoteDialog.open',
+      operation: 'ui.load',
+      arguments: <String, Object>{
+        'mode': widget.initialQuote == null ? 'create' : 'edit',
+        'tagCount': widget.tags.length,
+        'contentLength':
+            (widget.initialQuote?.content ?? widget.prefilledContent ?? '')
+                .length,
+      },
+    );
     _dialogOpenTimelineTask
         .instant('ThoughtEcho.AddNoteDialog.initState.start');
     WidgetsBinding.instance.addPostFrameCallback((_) {

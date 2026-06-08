@@ -81,6 +81,9 @@ jobs:
           gcloud storage cp --recursive \
             "${{ steps.firebase-test.outputs.raw_uri }}" \
             build/firebase-test-lab/
+          find build/firebase-test-lab -depth -name '*:*' | while read -r item; do
+            mv "$item" "$(dirname "$item")/$(basename "$item" | tr ':' '_')"
+          done
 
       - name: Extract segmented performance report
         if: always() && steps.firebase-test.outputs.raw_uri != ''

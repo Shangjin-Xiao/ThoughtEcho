@@ -376,7 +376,8 @@ Future<void> _openAddNoteDialog(WidgetTester tester) async {
 }
 
 Future<void> _closeAddNoteDialog(WidgetTester tester) async {
-  await tester.tapAt(const Offset(8, 8));
+  final BuildContext context = tester.element(find.byType(AddNoteDialog));
+  Navigator.pop(context);
   await tester.pumpAndSettle();
   expect(find.byType(AddNoteDialog), findsNothing);
 }

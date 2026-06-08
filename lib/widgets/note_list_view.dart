@@ -22,6 +22,7 @@ import '../widgets/app_loading_view.dart';
 import '../widgets/app_empty_view.dart';
 import 'note_filter_sort_sheet.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import '../utils/app_tracer.dart';
 import '../utils/color_utils.dart';
 import '../services/weather_service.dart'; // 导入天气服务
 import '../utils/time_utils.dart'; // 导入时间工具
@@ -138,6 +139,9 @@ class NoteListViewState extends State<NoteListView> {
 
   // 开发者模式：首次打开后首次手势滑动性能监测（非首帧）
   bool _perfTimingsCallbackAttached = false;
+  AppTracer? _firstOpenTracer;
+  AppTracer? _loadMoreTracer;
+  AppTracer? _scrollSessionTracer;
   bool _firstOpenScrollPerfEnabled = false;
   bool _firstOpenScrollPerfRecording = false;
   bool _firstOpenScrollPerfCaptured = false;
