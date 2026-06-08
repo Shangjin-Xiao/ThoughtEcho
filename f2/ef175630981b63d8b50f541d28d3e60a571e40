@@ -1,0 +1,17 @@
+lib/pages/feedback_contact_page.dart
+  ai_agent 4,11,51-95,174
+lib/l10n/app_zh.arb
+  ai_agent 139,3763-3771
+lib/l10n/app_en.arb
+  ai_agent 3763-3771
+lib/pages/settings_page.dart
+  ai_agent 984,1032-1052
+lib/widgets/custom_feedback_dialog.dart
+  ai_agent 1-228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "f2ef175630981b63d8b50f541d28d3e60a571e40",
+  "prompts": {}
+}
