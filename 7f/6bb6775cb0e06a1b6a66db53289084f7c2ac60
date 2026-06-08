@@ -1,0 +1,15 @@
+integration_test/note_list_performance_test.dart
+  ai_agent 70-74,76-78,81-93
+lib/utils/sentry_helper.dart
+  ai_agent 50
+.github/workflows/firebase-note-list-performance.yml
+  ai_agent 44-57
+lib/widgets/note_list/note_list_scroll.dart
+  ai_agent 119-121,266-273,291-293,367-374,413-420,447-448
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "7f6bb6775cb0e06a1b6a66db53289084f7c2ac60",
+  "prompts": {}
+}
