@@ -4,7 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:thoughtecho/utils/sentry_helper.dart';
 
+import '../../test_setup.dart';
+
 void main() {
+  setUpAll(() async {
+    await setupTestEnvironment();
+  });
+
   group('Sentry minimal collection options', () {
     test('disables sensitive and high-overhead collection', () {
       final options = SentryFlutterOptions();
@@ -27,6 +33,10 @@ void main() {
   group('Sentry database privacy', () {
     test('removes local paths from database descriptions', () {
       const privatePath = '/Users/private/Documents/ThoughtEcho/quotes.db';
+      const longSql = '''
+INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack_trace) VALUES (?, ?, ?, ?, NULL, NULL)
+INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack_trace) VALUES (?, ?, ?, ?, NULL, NULL)
+''';
 
       expect(
         sanitizeSentryDatabaseDescription('Transaction DB: $privatePath'),
@@ -38,8 +48,88 @@ void main() {
       );
       expect(
         sanitizeSentryDatabaseDescription('SELECT * FROM quotes'),
-        'SELECT * FROM quotes',
+        'SQL query',
       );
+      expect(
+        sanitizeSentryDatabaseDescription(longSql),
+        'Log database write',
+      );
+      expect(
+        sanitizeSentryDatabaseDescription('INSERT INTO APP_LOGS VALUES (?)'),
+        'Log database write',
+      );
+      expect(
+        sanitizeSentrySpanDescription(
+          'GET\t https://example.com/path?api_key=secret#private',
+        ),
+        'GET https://example.com/path',
+      );
+    });
+
+    test('removes sensitive and bulky transaction span data', () async {
+      final mockTransport = _MockSentryTransport();
+      await Sentry.init((options) {
+        options.dsn = 'https://public@example.com/1';
+        options.transport = mockTransport;
+        options.tracesSampleRate = 1.0;
+        options.beforeSendTransaction = sanitizeSentryTransaction;
+      });
+
+      try {
+        final transaction = Sentry.startTransaction('root /', 'ui.load');
+        final httpSpan = transaction.startChild(
+          'http.client',
+          description: 'GET https://example.com/path?api_key=secret#private',
+        );
+        httpSpan
+          ..setData('url', 'https://example.com/path?api_key=secret#private')
+          ..setData('http.query', 'api_key=secret')
+          ..setData('http.fragment', 'private');
+        await httpSpan.finish();
+        final sqlSpan = transaction.startChild(
+          'db.sql.query',
+          description: 'SELECT * FROM quotes WHERE content LIKE ?',
+        );
+        await sqlSpan.finish();
+        final logSpan = transaction.startChild(
+          'db',
+          description: '''
+INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack_trace) VALUES (?, ?, ?, ?, NULL, NULL)
+INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack_trace) VALUES (?, ?, ?, ?, NULL, NULL)
+''',
+        );
+        await logSpan.finish();
+        await transaction.finish();
+
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+
+        final sentryTransaction = mockTransport.envelopes
+            .expand((envelope) => envelope.items)
+            .map((item) => item.originalObject)
+            .whereType<SentryTransaction>()
+            .single;
+        final httpTransactionSpan = sentryTransaction.spans.singleWhere(
+          (span) => span.context.operation == 'http.client',
+        );
+        final sqlTransactionSpan = sentryTransaction.spans.singleWhere(
+          (span) => span.context.operation == 'db.sql.query',
+        );
+        final logTransactionSpan = sentryTransaction.spans.singleWhere(
+          (span) => span.context.operation == 'db',
+        );
+
+        expect(
+          httpTransactionSpan.context.description,
+          'GET https://example.com/path',
+        );
+        expect(httpTransactionSpan.data['url'], 'https://example.com/path');
+        expect(httpTransactionSpan.data, isNot(contains('http.query')));
+        expect(httpTransactionSpan.data, isNot(contains('http.fragment')));
+        expect(sqlTransactionSpan.context.description, 'SQL query');
+        expect(logTransactionSpan.context.description, 'Log database write');
+      } finally {
+        await Sentry.close();
+      }
     });
 
     test('removes local paths from database breadcrumbs', () {
@@ -91,4 +181,14 @@ void main() {
       expect(sanitized?.request?.headers, isEmpty);
     });
   });
+}
+
+class _MockSentryTransport implements Transport {
+  final envelopes = <SentryEnvelope>[];
+
+  @override
+  Future<SentryId?> send(SentryEnvelope envelope) async {
+    envelopes.add(envelope);
+    return SentryId.newId();
+  }
 }
