@@ -1,0 +1,36 @@
+test/widget/add_note_dialog_focus_timing_test.dart
+  s_d4d1795ef0db43::t_c80e744e0f1686 133-178
+  s_d4d1795ef0db43::t_4112b5767a7ccb 122-124
+  s_d4d1795ef0db43::t_877eda6955599b 111
+lib/pages/home_page.dart
+  s_d4d1795ef0db43::t_e91c7dd7cff6a2 1190-1196
+  s_d4d1795ef0db43::t_4af9df9aee9220 1141-1144,1151-1154,1157-1189,1197-1210,1213-1231,1449-1452
+  s_d4d1795ef0db43::t_4a2fb89ba948a2 1155-1156,1211-1212
+lib/services/clipboard_service.dart
+  s_d4d1795ef0db43::t_e91c7dd7cff6a2 410-416,431-432
+  s_d4d1795ef0db43::t_4a2fb89ba948a2 392-393
+  s_d4d1795ef0db43::t_4eea4ffdc10588 9
+  s_d4d1795ef0db43::t_eef02ca5968e33 2-3,369,374,390-391,394-409,417-430
+lib/widgets/add_note_dialog.dart
+  s_d4d1795ef0db43::t_5c2fbf25def727 1887
+  s_d4d1795ef0db43::t_cbd66aa6033a39 455-460
+  s_d4d1795ef0db43::t_382959978d2062 41,51,1929
+  s_d4d1795ef0db43::t_26b968a61c1829 1853,1996,2622,2624
+  s_d4d1795ef0db43::t_418c155a361c19 1931
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "1ecbad519684007960fc19ae2cd9b46114e71ec6",
+  "prompts": {},
+  "sessions": {
+    "s_d4d1795ef0db43": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ea4c3-f829-7eb0-aca2-688e9a066160",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
