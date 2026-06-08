@@ -103,12 +103,13 @@ class PdfExportService {
             child: pw.Text(
               headerTitle,
               style: pw.TextStyle(
-                font: fontSet.regular,
+                font: fontSet.bold, // 使用粗体让字迹更锐利
                 fontBold: fontSet.bold,
                 fontItalic: fontSet.italic,
                 fontBoldItalic: fontSet.boldItalic,
-                fontSize: 9,
-                color: PdfColor.fromHex("94A3B8"), // 更高级的浅灰
+                fontSize: 10.5, // 增大字号
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColor.fromHex("64748B"), // 颜色加深（Slate 500），提高对比度
               ),
             ),
           );
