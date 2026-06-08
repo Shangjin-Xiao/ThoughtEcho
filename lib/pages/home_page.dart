@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show File;
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -61,7 +62,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class HomeLocationWeatherDisplay extends StatelessWidget {
+class HomeLocationWeatherDisplay extends StatefulWidget {
   static const Key chipKey = ValueKey('home.location_weather_chip');
 
   final String locationText;
@@ -76,6 +77,39 @@ class HomeLocationWeatherDisplay extends StatelessWidget {
   });
 
   @override
+  State<HomeLocationWeatherDisplay> createState() =>
+      _HomeLocationWeatherDisplayState();
+}
+
+class _HomeLocationWeatherDisplayState extends State<HomeLocationWeatherDisplay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _fadeController;
+  late final Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    );
+    // 首帧后淡入
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _fadeController.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = theme.colorScheme.onPrimaryContainer;
@@ -84,55 +118,58 @@ class HomeLocationWeatherDisplay extends StatelessWidget {
       padding: const EdgeInsets.only(right: 8.0),
       child: Align(
         alignment: Alignment.centerRight,
-        child: FittedBox(
-          key: chipKey,
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerRight,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-              boxShadow: AppTheme.defaultShadow,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.location_on,
-                  size: 14,
-                  color: color,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  locationText,
-                  maxLines: 1,
-                  softWrap: false,
-                  style: theme.textTheme.bodySmall?.copyWith(color: color),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '|',
-                  maxLines: 1,
-                  softWrap: false,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: color.withAlpha(128),
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: FittedBox(
+            key: HomeLocationWeatherDisplay.chipKey,
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                boxShadow: AppTheme.defaultShadow,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    size: 14,
+                    color: color,
                   ),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                  weatherIcon,
-                  size: 18,
-                  color: color,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  weatherText,
-                  maxLines: 1,
-                  softWrap: false,
-                  style: theme.textTheme.bodySmall?.copyWith(color: color),
-                ),
-              ],
+                  const SizedBox(width: 4),
+                  Text(
+                    widget.locationText,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: theme.textTheme.bodySmall?.copyWith(color: color),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '|',
+                    maxLines: 1,
+                    softWrap: false,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: color.withAlpha(128),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    widget.weatherIcon,
+                    size: 18,
+                    color: color,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    widget.weatherText,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: theme.textTheme.bodySmall?.copyWith(color: color),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1894,7 +1931,7 @@ class _HomePageState extends State<HomePage>
     });
   }
 
-  /// 构建首页位置天气显示（保持原有样式，只改文字）
+  /// 构建首页位置天气显示（数据就绪后淡入，初始化期间不占位）
   Widget _buildLocationWeatherDisplay(
     BuildContext context,
     LocationService locationService,
@@ -1911,6 +1948,14 @@ class _HomePageState extends State<HomePage>
     final hasWeather = weatherService.currentWeather != null &&
         weatherService.currentWeather != 'error' &&
         weatherService.currentWeather != 'unknown';
+
+    // 位置服务初始化期间：没有任何位置数据且权限状态也未确定（即 hasPermission=false、isServiceEnabled=true 同时成立说明未完成检查）
+    // 这个状态下 chip 不展示，避免显示无意义的"加载中"文字
+    final isLocationInitializing =
+        !hasCoordinates && !hasCity && hasPermission && isServiceEnabled;
+    if (isLocationInitializing) {
+      return const SizedBox.shrink();
+    }
 
     String locationText;
     String weatherText;
@@ -2064,8 +2109,7 @@ class _HomePageState extends State<HomePage>
                       },
                     ),
                     actions: [
-                      // 显示服务初始化状态指示器
-                      if (!servicesInitialized)
+                      if (!servicesInitialized && kDebugMode)
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8.0),
                           child: SizedBox(

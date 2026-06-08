@@ -36,7 +36,10 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
   @override
   void initState() {
     super.initState();
-    _loadDailyQuote();
+    // 推迟到首帧绘制完成后再发起 HTTP 请求，避免阻塞 ui.load 事务
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadDailyQuote();
+    });
   }
 
   @override
