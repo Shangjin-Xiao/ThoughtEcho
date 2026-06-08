@@ -1,0 +1,32 @@
+integration_test/support/timeline_slice_extractor.dart
+  s_6c3f45dd05ba45::t_ed38dbc978b10b 109-111,115-127
+  s_6c3f45dd05ba45::t_cb1596a39ed2dc 1-24,28-55,57-81,83-100,104-105,107-108,112-114,128
+  s_6c3f45dd05ba45::t_14aab3e510b00a 25-27,56,82,102,106
+  s_6c3f45dd05ba45::t_664dccc160e5a4 101,103
+integration_test/note_list_performance_test.dart
+  s_6c3f45dd05ba45::t_0cc6f9c02a6c96 24,509-518
+  s_6c3f45dd05ba45::t_cb1596a39ed2dc 27-28,337-341,345-352,354-356,365
+  s_6c3f45dd05ba45::t_824c8cca205a2c 281-306,353,387-396,400-401,416,422-443,501-502,508,519-522,534-535,548
+  s_6c3f45dd05ba45::t_14aab3e510b00a 342-344
+test/unit/utils/timeline_slice_extractor_test.dart
+  s_6c3f45dd05ba45::t_cb1596a39ed2dc 1-15,17-66,68-73,78,83-107
+  s_6c3f45dd05ba45::t_839ff8bce69509 67
+  s_6c3f45dd05ba45::t_ed38dbc978b10b 16,74-77
+  s_6c3f45dd05ba45::t_14aab3e510b00a 79-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "79ded6e010a8080268592579dc89b83b790cab91",
+  "prompts": {},
+  "sessions": {
+    "s_6c3f45dd05ba45": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ea4f0-49d0-7900-a0ea-d0e557e1df14",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
