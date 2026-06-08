@@ -1,0 +1,21 @@
+lib/utils/sentry_helper.dart
+  ai_agent 50
+lib/services/pdf_export_service.dart
+  ai_agent 86,89-91,94,97-106,133-146,149-150,152,154,156
+lib/widgets/note_list/note_list_scroll.dart
+  ai_agent 118
+docs/code_review_report.md
+  ai_agent 1-89
+lib/widgets/note_list_view.dart
+  ai_agent 469-474
+local_ai_architecture_report.md
+  ai_agent 1-69
+sentry-span-streaming.md
+  ai_agent 1-423
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "45fc066273b13c3996a7c5df9e9bd90b0ba40e8b",
+  "prompts": {}
+}
