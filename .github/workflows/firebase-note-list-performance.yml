@@ -43,19 +43,55 @@ jobs:
 
       - name: Build Flutter integration-test APKs
         run: |
+          mkdir -p build/firebase-build-logs
+
+          run_build_with_sqlite_download_retry() {
+            local log_file="$1"
+            shift
+
+            set +e
+            "$@" 2>&1 | tee "$log_file"
+            local exit_code=${PIPESTATUS[0]}
+            set -e
+
+            if [[ $exit_code -ne 0 ]] &&
+              grep -q 'Hash of downloaded file libsqlite3.*expected' "$log_file"; then
+              echo "::warning::sqlite3 native asset download failed checksum verification; clearing only its hook cache and retrying once"
+              rm -rf \
+                "$GITHUB_WORKSPACE/.dart_tool/hooks_runner/sqlite3" \
+                "$GITHUB_WORKSPACE/.dart_tool/hooks_runner/shared/sqlite3" \
+                "$GITHUB_WORKSPACE/.dart_tool/native_assets" \
+                "$GITHUB_WORKSPACE/.dart_tool/native_assets.yaml" \
+                "$GITHUB_WORKSPACE/.dart_tool/lib/libsqlite3.so"
+
+              set +e
+              "$@" 2>&1 | tee -a "$log_file"
+              exit_code=${PIPESTATUS[0]}
+              set -e
+            fi
+
+            return "$exit_code"
+          }
+
           flutter pub get
           dart run scripts/prepare_performance_test_images.dart
           for image in assets/large_test_{1..5}.jpg; do
             echo "    - $image" >> pubspec.yaml
           done
           bash scripts/patch_flutter_quill.sh
-          flutter build apk --debug --target-platform android-arm64
+          run_build_with_sqlite_download_retry \
+            build/firebase-build-logs/flutter-build-apk.log \
+            flutter build apk --debug --target-platform android-arm64
           pushd android
-          ./gradlew --no-parallel app:assembleAndroidTest \
-            -Ptarget-platform=android-arm64
-          ./gradlew --no-parallel app:assembleDebug \
-            -Ptarget-platform=android-arm64 \
-            -Ptarget="$GITHUB_WORKSPACE/integration_test/note_list_performance_test.dart"
+          run_build_with_sqlite_download_retry \
+            "$GITHUB_WORKSPACE/build/firebase-build-logs/assemble-android-test.log" \
+            ./gradlew --no-parallel app:assembleAndroidTest \
+              -Ptarget-platform=android-arm64
+          run_build_with_sqlite_download_retry \
+            "$GITHUB_WORKSPACE/build/firebase-build-logs/assemble-integration-test.log" \
+            ./gradlew --no-parallel app:assembleDebug \
+              -Ptarget-platform=android-arm64 \
+              -Ptarget="$GITHUB_WORKSPACE/integration_test/note_list_performance_test.dart"
           popd
 
       - name: Run on Firebase Test Lab
@@ -103,6 +139,7 @@ jobs:
           name: firebase-performance-${{ github.run_id }}
           path: |
             firebase-test-run.log
+            build/firebase-build-logs/
             build/firebase-test-lab/
           if-no-files-found: warn
           retention-days: 30
