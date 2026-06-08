@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/app_settings.dart';
+import 'package:thoughtecho/models/local_ai_settings.dart';
 import 'package:thoughtecho/models/note_category.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
@@ -32,17 +33,42 @@ enum _ListScenario { plainText, richText, images }
 
 class _PerformanceSettingsService extends ChangeNotifier
     implements SettingsService {
-  @override
-  AppSettings get appSettings => AppSettings.defaultSettings();
+  final AppSettings _settings = AppSettings.defaultSettings();
 
   @override
-  bool get addNoteDialogAutoFocus => true;
+  AppSettings get appSettings => _settings;
 
   @override
-  bool get addNoteDialogDeferAutoMetadata => false;
+  bool get addNoteDialogAutoFocus => _settings.addNoteDialogAutoFocus;
+
+  @override
+  bool get addNoteDialogDeferAutoMetadata =>
+      _settings.addNoteDialogDeferAutoMetadata;
+
+  @override
+  bool get autoAttachLocation => _settings.autoAttachLocation;
+
+  @override
+  bool get autoAttachWeather => _settings.autoAttachWeather;
+
+  @override
+  String? get defaultAuthor => _settings.defaultAuthor;
+
+  @override
+  String? get defaultSource => _settings.defaultSource;
+
+  @override
+  List<String> get defaultTagIds => _settings.defaultTagIds;
+
+  @override
+  bool get enableFirstOpenScrollPerfMonitor =>
+      _settings.enableFirstOpenScrollPerfMonitor;
 
   @override
   String get exportFormat => 'card';
+
+  @override
+  LocalAISettings get localAISettings => LocalAISettings.defaultSettings();
 
   @override
   bool get prioritizeBoldContentInCollapse => false;
@@ -66,31 +92,20 @@ class _PerformanceFeatureGuideService extends FeatureGuideService {
 
 Future<List<String>> _loadImageDataUrls() async {
   final List<String> paths = <String>[
-    'assets/icon.png',
     'assets/large_test_1.jpg',
     'assets/large_test_2.jpg',
     'assets/large_test_3.jpg',
     'assets/large_test_4.jpg',
     'assets/large_test_5.jpg',
   ];
-  final ByteData fallbackData = await rootBundle.load('assets/icon.png');
-  final String fallbackBase64 = 'data:image/png;base64,${base64Encode(fallbackData.buffer.asUint8List(fallbackData.offsetInBytes, fallbackData.lengthInBytes))}';
-  
   return Future.wait(
     paths.map((String path) async {
-      try {
-        final ByteData data = await rootBundle.load(path);
-        final Uint8List bytes = data.buffer.asUint8List(
-          data.offsetInBytes,
-          data.lengthInBytes,
-        );
-        final String mimeType = path.endsWith('.jpg') || path.endsWith('.jpeg')
-            ? 'image/jpeg'
-            : 'image/png';
-        return 'data:$mimeType;base64,${base64Encode(bytes)}';
-      } catch (_) {
-        return fallbackBase64;
-      }
+      final ByteData data = await rootBundle.load(path);
+      final Uint8List bytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
+      return 'data:image/jpeg;base64,${base64Encode(bytes)}';
     }),
   );
 }
@@ -405,14 +420,12 @@ void main() {
       (
     WidgetTester tester,
   ) async {
-    final List<String> imageDataUrls = await _loadImageDataUrls();
-
     for (final _ListScenario scenario in <_ListScenario>[
       _ListScenario.plainText,
       _ListScenario.richText,
     ]) {
       await tester.pumpWidget(
-        _buildBenchmarkApp(_buildBenchmarkQuotes(scenario, imageDataUrls)),
+        _buildBenchmarkApp(_buildBenchmarkQuotes(scenario, const <String>[])),
       );
       await tester.pumpAndSettle();
       await _traceScenario(
@@ -422,6 +435,7 @@ void main() {
       );
     }
 
+    final List<String> imageDataUrls = await _loadImageDataUrls();
     PaintingBinding.instance.imageCache.clear();
     PaintingBinding.instance.imageCache.clearLiveImages();
     await tester.pumpWidget(
@@ -451,6 +465,9 @@ void main() {
       () => _runScrollSequence(tester, 'images_warm'),
     );
 
+    imageDataUrls.clear();
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
     await tester.pumpWidget(_buildAddNoteBenchmarkApp());
     await tester.pumpAndSettle();
     await _traceScenario(
