@@ -33,5 +33,9 @@
   "dailyQuoteApiNinjasApiKeyInvalid": "Das Format des Dienstschlüssels scheint ungültig zu sein",
   "dailyQuoteApi": "Dienstanbieter für tägliche Zitate",
   "applyChanges": "Änderungen übernehmen",
-  "appendToOriginal": "An Original anhängen"
+  "appendToOriginal": "An Original anhängen",
+  "webdavConflictKeepTooltip": "Behalten und in Standardkategorie verschieben",
+  "webdavConflictKeepSuccess": "Bestätigt und in Standardliste verschoben.",
+  "webdavConflictDiscardTooltip": "Dieses Konflikt-Backup verwerfen",
+  "webdavConflictDiscardSuccess": "Diese Konfliktnotiz wurde dauerhaft verworfen."
 }

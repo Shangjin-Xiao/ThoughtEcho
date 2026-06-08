@@ -33,5 +33,9 @@
   "hitokotoTypeJoke": "Humor",
   "dailyQuoteApi": "Proveedor de cita diaria",
   "applyChanges": "Aplicar cambios",
-  "appendToOriginal": "Añadir al original"
+  "appendToOriginal": "Añadir al original",
+  "webdavConflictKeepTooltip": "Mantener y mover a categoría predeterminada",
+  "webdavConflictKeepSuccess": "Confirmado y movido a la lista predeterminada.",
+  "webdavConflictDiscardTooltip": "Descartar esta copia de seguridad de conflicto",
+  "webdavConflictDiscardSuccess": "Nota de conflicto descartada permanentemente."
 }

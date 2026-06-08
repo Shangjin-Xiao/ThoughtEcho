@@ -920,7 +920,8 @@ class QuoteListViewByConflict extends StatelessWidget {
                     // 一键恢复/移动：改分类至默认，使其移出冲突
                     IconButton(
                       icon: const Icon(Icons.check, color: Colors.green),
-                      tooltip: '确认保留（移入默认分类）',
+                      tooltip: AppLocalizations.of(context)
+                          .webdavConflictKeepTooltip,
                       onPressed: () async {
                         // 更新分类为默认（空）
                         final updated = quote.copyWith(
@@ -934,8 +935,9 @@ class QuoteListViewByConflict extends StatelessWidget {
 
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('已确认并移回默认笔记列表。'),
+                            SnackBar(
+                              content: Text(AppLocalizations.of(context)
+                                  .webdavConflictKeepSuccess),
                               behavior: SnackBarBehavior.floating,
                             ),
                           );
@@ -945,7 +947,8 @@ class QuoteListViewByConflict extends StatelessWidget {
                     // 一键丢弃/删除
                     IconButton(
                       icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      tooltip: '丢弃此冲突备份',
+                      tooltip: AppLocalizations.of(context)
+                          .webdavConflictDiscardTooltip,
                       onPressed: () async {
                         // 永久删除该笔记
                         await dbService.permanentlyDeleteQuote(quote.id!);
@@ -953,8 +956,9 @@ class QuoteListViewByConflict extends StatelessWidget {
 
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('已永久丢弃此冲突笔记。'),
+                            SnackBar(
+                              content: Text(AppLocalizations.of(context)
+                                  .webdavConflictDiscardSuccess),
                               behavior: SnackBarBehavior.floating,
                             ),
                           );

@@ -33,3 +33,6 @@
 ## 2026-05-25 - [HitokotoWidget 提取硬编码]
 **发现:** HitokotoWidget 中存在 "每日一言" 和 "加载中..." 硬编码
 **规则:** 分别替换为 featureDailyQuote 和 loading。
+## YYYY-MM-DD - [提取 WebDAV 同步冲突处理相关的硬编码字符串]
+**发现:** WebDAV 同步页面冲突处理的提示：`"确认保留（移入默认分类）"`, `"已确认并移回默认笔记列表。"`, `"丢弃此冲突备份"`, `"已永久丢弃此冲突笔记。"`
+**规则:** 采用极简风格翻译，例如 `webdavConflictKeepTooltip`, `webdavConflictKeepSuccess`, `webdavConflictDiscardTooltip`, `webdavConflictDiscardSuccess`

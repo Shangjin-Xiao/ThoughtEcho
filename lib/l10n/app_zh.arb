@@ -3717,6 +3717,10 @@
     }
   },
   "webdavViewNow": "立即查看",
+  "webdavConflictKeepTooltip": "确认保留（移入默认分类）",
+  "webdavConflictKeepSuccess": "已确认并移回默认笔记列表。",
+  "webdavConflictDiscardTooltip": "丢弃此冲突备份",
+  "webdavConflictDiscardSuccess": "已永久丢弃此冲突笔记。",
   "exportFormatLabel": "默认导出格式",
   "exportFormatCard": "精致分享卡片",
   "exportFormatPdf": "标准 A4 PDF",

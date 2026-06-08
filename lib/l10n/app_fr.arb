@@ -3527,5 +3527,9 @@
   "insertAudio": "Insérer un audio",
   "clipboardFoundHint": "Contenu du presse-papiers trouvé, appuyez pour ajouter comme note",
   "operationFailedSimple": "L'opération a échoué",
-  "appendToOriginal": "Ajouter à l'original"
+  "appendToOriginal": "Ajouter à l'original",
+  "webdavConflictKeepTooltip": "Conserver et déplacer vers la catégorie par défaut",
+  "webdavConflictKeepSuccess": "Confirmé et déplacé vers la liste par défaut.",
+  "webdavConflictDiscardTooltip": "Ignorer cette sauvegarde de conflit",
+  "webdavConflictDiscardSuccess": "Note de conflit définitivement supprimée."
 }
