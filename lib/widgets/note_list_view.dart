@@ -160,6 +160,7 @@ class NoteListViewState extends State<NoteListView> {
   Timer? _loadMoreSettleTimer;
   bool _scrollSessionPerfRecording = false;
   bool _scrollSessionPerfPendingFinalize = false;
+  bool _scrollSessionPerfFinalizeScheduled = false;
   int _scrollSessionStartMicros = 0;
   double _scrollSessionStartOffset = 0;
   double _scrollSessionLastOffset = 0;
@@ -311,6 +312,11 @@ class NoteListViewState extends State<NoteListView> {
     }
     if (_scrollSessionPerfRecording) {
       _scrollSessionFrameTimings.addAll(timings);
+      if (_scrollSessionPerfPendingFinalize &&
+          !_scrollSessionPerfFinalizeScheduled) {
+        _scrollSessionPerfFinalizeScheduled = true;
+        Timer.run(_finalizeScrollSessionPerfCapture);
+      }
     }
   }
 

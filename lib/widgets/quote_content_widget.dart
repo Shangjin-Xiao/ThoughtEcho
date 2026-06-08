@@ -292,12 +292,24 @@ class QuoteContent extends StatelessWidget {
       buffer
         ..write(',ΔdocMiss+')
         ..write(_debugIntDelta(document, baselineDocument, 'missCount'))
+        ..write(',docWorkUs+')
+        ..write(_debugIntDelta(document, baselineDocument, 'workMicros'))
+        ..write(',docWorstUs=')
+        ..write(_debugNewWorst(document, baselineDocument))
         ..write(',heightMiss+')
         ..write(_debugIntDelta(height, baselineHeight, 'missCount'))
+        ..write(',heightWorkUs+')
+        ..write(_debugIntDelta(height, baselineHeight, 'workMicros'))
+        ..write(',heightWorstUs=')
+        ..write(_debugNewWorst(height, baselineHeight))
         ..write(',ctrlMiss+')
         ..write(_debugIntDelta(controller, baselineController, 'missCount'))
         ..write(',ctrlCreate+')
         ..write(_debugIntDelta(controller, baselineController, 'createCount'))
+        ..write(',ctrlWorkUs+')
+        ..write(_debugIntDelta(controller, baselineController, 'workMicros'))
+        ..write(',ctrlWorstUs=')
+        ..write(_debugNewWorst(controller, baselineController))
         ..write(',ctrlDispose+')
         ..write(_debugIntDelta(controller, baselineController, 'disposeCount'));
     }
@@ -314,6 +326,17 @@ class QuoteContent extends StatelessWidget {
     final baselineValue = baseline[key];
     return (currentValue is int ? currentValue : 0) -
         (baselineValue is int ? baselineValue : 0);
+  }
+
+  static int _debugNewWorst(
+    Map<String, dynamic> current,
+    Map<String, dynamic> baseline,
+  ) {
+    final currentValue = current['worstWorkMicros'];
+    final baselineValue = baseline['worstWorkMicros'];
+    final currentMicros = currentValue is int ? currentValue : 0;
+    final baselineMicros = baselineValue is int ? baselineValue : 0;
+    return currentMicros > baselineMicros ? currentMicros : 0;
   }
 
   /// 检查是否为媒体软连接或其他应该过滤的内容
@@ -694,6 +717,8 @@ class _QuoteHeightEstimateCache {
 
   static int _hitCount = 0;
   static int _missCount = 0;
+  static int _workMicros = 0;
+  static int _worstWorkMicros = 0;
 
   static double getOrCreate({
     required Quote quote,
@@ -713,7 +738,13 @@ class _QuoteHeightEstimateCache {
       _pruneOldest();
     }
 
+    final stopwatch = Stopwatch()..start();
     final height = builder();
+    stopwatch.stop();
+    _workMicros += stopwatch.elapsedMicroseconds;
+    if (stopwatch.elapsedMicroseconds > _worstWorkMicros) {
+      _worstWorkMicros = stopwatch.elapsedMicroseconds;
+    }
     _cache[key] = _HeightEstimateCacheEntry(height: height);
     return height;
   }
@@ -722,6 +753,8 @@ class _QuoteHeightEstimateCache {
     _cache.clear();
     _hitCount = 0;
     _missCount = 0;
+    _workMicros = 0;
+    _worstWorkMicros = 0;
   }
 
   static Map<String, dynamic> get stats {
@@ -732,6 +765,8 @@ class _QuoteHeightEstimateCache {
       'maxSize': _maxCacheSize,
       'hitCount': _hitCount,
       'missCount': _missCount,
+      'workMicros': _workMicros,
+      'worstWorkMicros': _worstWorkMicros,
       'hitRate': hitRate,
     };
   }
@@ -801,6 +836,8 @@ class _QuoteDocumentCache {
 
   static int _hitCount = 0;
   static int _missCount = 0;
+  static int _workMicros = 0;
+  static int _worstWorkMicros = 0;
 
   static quill.Document getOrCreate({
     required String deltaContent,
@@ -826,10 +863,16 @@ class _QuoteDocumentCache {
     }
 
     quill.Document document;
+    final stopwatch = Stopwatch()..start();
     try {
       document = builder();
     } catch (_) {
       document = quill.Document()..insert(0, '');
+    }
+    stopwatch.stop();
+    _workMicros += stopwatch.elapsedMicroseconds;
+    if (stopwatch.elapsedMicroseconds > _worstWorkMicros) {
+      _worstWorkMicros = stopwatch.elapsedMicroseconds;
     }
 
     _cache[key] = _DocumentCacheEntry(document: document);
@@ -840,6 +883,8 @@ class _QuoteDocumentCache {
     _cache.clear();
     _hitCount = 0;
     _missCount = 0;
+    _workMicros = 0;
+    _worstWorkMicros = 0;
   }
 
   static Map<String, dynamic> get stats {
@@ -850,6 +895,8 @@ class _QuoteDocumentCache {
       'maxSize': _maxCacheSize,
       'hitCount': _hitCount,
       'missCount': _missCount,
+      'workMicros': _workMicros,
+      'worstWorkMicros': _worstWorkMicros,
       'hitRate': hitRate,
     };
   }
@@ -911,6 +958,8 @@ class _QuoteContentControllerCache {
   static int _missCount = 0;
   static int _createCount = 0;
   static int _disposeCount = 0;
+  static int _workMicros = 0;
+  static int _worstWorkMicros = 0;
 
   static _CachedControllerSet getOrCreate({
     required String quoteId,
@@ -941,6 +990,7 @@ class _QuoteContentControllerCache {
     }
 
     final document = documentBuilder();
+    final stopwatch = Stopwatch()..start();
     final controllers = _CachedControllerSet(
       quillController: quill.QuillController(
         document: document,
@@ -950,6 +1000,11 @@ class _QuoteContentControllerCache {
       focusNode: FocusNode(),
       variant: variant,
     );
+    stopwatch.stop();
+    _workMicros += stopwatch.elapsedMicroseconds;
+    if (stopwatch.elapsedMicroseconds > _worstWorkMicros) {
+      _worstWorkMicros = stopwatch.elapsedMicroseconds;
+    }
 
     final entry = _ControllerCacheEntry(controllers: controllers);
     _cache[key] = entry;
@@ -967,6 +1022,8 @@ class _QuoteContentControllerCache {
     _missCount = 0;
     _createCount = 0;
     _disposeCount = 0;
+    _workMicros = 0;
+    _worstWorkMicros = 0;
   }
 
   static Map<String, dynamic> get stats {
@@ -979,6 +1036,8 @@ class _QuoteContentControllerCache {
       'missCount': _missCount,
       'createCount': _createCount,
       'disposeCount': _disposeCount,
+      'workMicros': _workMicros,
+      'worstWorkMicros': _worstWorkMicros,
       'hitRate': hitRate,
     };
   }

@@ -102,6 +102,7 @@ extension _NoteListScrollExtension on NoteListViewState {
 
     _scrollSessionPerfRecording = true;
     _scrollSessionPerfPendingFinalize = false;
+    _scrollSessionPerfFinalizeScheduled = false;
     _scrollSessionPerfStopTimer?.cancel();
     _scrollSessionStartMicros = DateTime.now().microsecondsSinceEpoch;
     _scrollSessionStartOffset = metrics.pixels;
@@ -145,15 +146,12 @@ extension _NoteListScrollExtension on NoteListViewState {
     _scrollSessionPerfPendingFinalize = true;
     _scrollSessionLastOffset = metrics.pixels;
     _scrollSessionPerfStopTimer?.cancel();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollSessionPerfRecording) {
-        return;
-      }
-      _scrollSessionPerfStopTimer = Timer(
-        const Duration(milliseconds: 260),
-        _finalizeScrollSessionPerfCapture,
-      );
-    });
+    // FrameTiming callbacks may be delivered in batches well after a short
+    // scroll ends. Prefer the next delivered batch, with a bounded fallback.
+    _scrollSessionPerfStopTimer = Timer(
+      const Duration(milliseconds: 1200),
+      _finalizeScrollSessionPerfCapture,
+    );
   }
 
   void _finalizeScrollSessionPerfCapture() {
@@ -164,6 +162,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     _scrollSessionPerfStopTimer?.cancel();
     _scrollSessionPerfRecording = false;
     _scrollSessionPerfPendingFinalize = false;
+    _scrollSessionPerfFinalizeScheduled = false;
 
     final elapsedMs =
         (DateTime.now().microsecondsSinceEpoch - _scrollSessionStartMicros) /
