@@ -20,10 +20,12 @@ import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
+import 'package:thoughtecho/utils/quill_editor_extensions.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
 
+import 'support/layout_probe.dart';
 import 'support/timeline_slice_extractor.dart';
 
 const ValueKey<String> _listKey = ValueKey<String>(
@@ -95,7 +97,9 @@ class _PerformanceFeatureGuideService extends FeatureGuideService {
   bool hasShown(String guideId) => true;
 }
 
-Future<List<String>> _prepareImageFilePaths() async {
+Future<List<String>> _prepareImageFilePaths({
+  String namespace = 'standard',
+}) async {
   final List<String> paths = <String>[
     'assets/large_test_1.jpg',
     'assets/large_test_2.jpg',
@@ -104,7 +108,8 @@ Future<List<String>> _prepareImageFilePaths() async {
     'assets/large_test_5.jpg',
   ];
   final Directory directory = Directory(
-    '${(await getTemporaryDirectory()).path}/thoughtecho-performance-images',
+    '${(await getTemporaryDirectory()).path}/thoughtecho-performance-images/'
+    '$namespace',
   );
   await directory.create(recursive: true);
   return Future.wait(
@@ -166,7 +171,10 @@ List<Quote> _buildBenchmarkQuotes(
   });
 }
 
-Widget _buildBenchmarkApp(List<Quote> quotes) {
+Widget _buildBenchmarkApp(
+  List<Quote> quotes, {
+  bool probeItemLayouts = false,
+}) {
   return ChangeNotifierProvider<SettingsService>.value(
     value: _PerformanceSettingsService(),
     child: MaterialApp(
@@ -185,7 +193,7 @@ Widget _buildBenchmarkApp(List<Quote> quotes) {
           scrollCacheExtent: const ScrollCacheExtent.pixels(800),
           itemCount: quotes.length,
           itemBuilder: (BuildContext context, int index) {
-            return QuoteItemWidget(
+            final Widget item = QuoteItemWidget(
               key: ValueKey<String>('benchmark-quote-$index'),
               quote: quotes[index],
               tagMap: const <String, NoteCategory>{},
@@ -194,6 +202,18 @@ Widget _buildBenchmarkApp(List<Quote> quotes) {
               onEdit: () {},
               onDelete: () {},
               onAskAI: () {},
+            );
+            if (!probeItemLayouts) {
+              return item;
+            }
+            return DiagnosticLayoutProbe(
+              index: index,
+              kind: quotes[index].deltaContent == null
+                  ? 'plainText'
+                  : quotes[index].deltaContent!.contains('"image"')
+                      ? 'images'
+                      : 'richText',
+              child: item,
             );
           },
         ),
@@ -294,6 +314,15 @@ Future<void> _runDiagnosticScrollSequence(
   flingTask.finish();
 }
 
+Future<void> _runDiagnosticImageScrollSequence(
+  WidgetTester tester,
+  String scenario,
+) async {
+  isListScrolling.value = false;
+  await tester.pump(const Duration(milliseconds: 250));
+  await _runDiagnosticScrollSequence(tester, scenario);
+}
+
 void _jumpListToStart(WidgetTester tester) {
   final ScrollableState scrollable = tester.state<ScrollableState>(
     find.descendant(
@@ -318,6 +347,8 @@ Map<String, dynamic> _diagnosticSummary(
   final List<({String name, double timestampMicros})> customEvents =
       <({String name, double timestampMicros})>[];
   final List<Map<String, dynamic>> slowSlices = <Map<String, dynamic>>[];
+  final List<Map<String, dynamic>> itemInitialSizes = <Map<String, dynamic>>[];
+  final List<Map<String, dynamic>> itemSizeChanges = <Map<String, dynamic>>[];
 
   for (final dynamic rawEvent in events) {
     if (rawEvent is! Map<String, dynamic>) {
@@ -332,6 +363,19 @@ Map<String, dynamic> _diagnosticSummary(
           name: name,
           timestampMicros: timestamp.toDouble(),
         ));
+      }
+    }
+    if (name == 'NoteListItemSizeChanged') {
+      final Map<String, dynamic> sizeEvent = <String, dynamic>{
+        if (rawEvent['args'] is Map<String, dynamic>)
+          ...rawEvent['args'] as Map<String, dynamic>,
+        if (rawEvent['ts'] is num)
+          'timestamp_us': (rawEvent['ts'] as num).toDouble(),
+      };
+      if (sizeEvent['oldHeight'] == 'none') {
+        itemInitialSizes.add(sizeEvent);
+      } else {
+        itemSizeChanges.add(sizeEvent);
       }
     }
   }
@@ -384,6 +428,22 @@ Map<String, dynamic> _diagnosticSummary(
         ((timestamp - nearest.timestampMicros) / 1000).toStringAsFixed(2),
       );
   }).toList();
+  final List<Map<String, dynamic>> itemLayoutSlices = extractTimelineSlices(
+    events,
+  ).where((Map<String, dynamic> slice) {
+    return slice['name'] == 'NoteListItemLayout';
+  }).map((Map<String, dynamic> slice) {
+    return <String, dynamic>{
+      'duration_ms': double.parse(
+        ((slice['duration_us'] as double) / 1000).toStringAsFixed(2),
+      ),
+      if (slice['arguments'] != null) 'arguments': slice['arguments'],
+    };
+  }).toList()
+    ..sort(
+      (Map<String, dynamic> a, Map<String, dynamic> b) =>
+          (b['duration_ms'] as double).compareTo(a['duration_ms'] as double),
+    );
   final List<MapEntry<String, double>> slowestEntries =
       slowestSlices.entries.toList()
         ..sort(
@@ -415,6 +475,12 @@ Map<String, dynamic> _diagnosticSummary(
       if (summary.containsKey(key)) key: summary[key],
     'slowest_slices_ms': topSlowestSlices,
     'correlated_slow_slices': correlatedSlowSlices,
+    if (itemLayoutSlices.isNotEmpty)
+      'slowest_item_layouts': itemLayoutSlices.take(20).toList(),
+    if (itemInitialSizes.isNotEmpty)
+      'item_initial_sizes': itemInitialSizes.take(100).toList(),
+    if (itemSizeChanges.isNotEmpty)
+      'item_size_changes': itemSizeChanges.take(100).toList(),
     'custom_event_counts': customEventCounts,
   };
 }
@@ -423,16 +489,24 @@ Future<void> _traceDetailedRichTextScenario(
   IntegrationTestWidgetsFlutterBinding binding,
   WidgetTester tester,
 ) async {
+  await _traceDetailedScenario(
+    binding,
+    'note_list_richText_diagnostic',
+    () => _runDiagnosticScrollSequence(tester, 'richText_diagnostic'),
+  );
+}
+
+Future<void> _traceDetailedScenario(
+  IntegrationTestWidgetsFlutterBinding binding,
+  String scenario,
+  Future<void> Function() action,
+) async {
   debugProfileBuildsEnabled = true;
   debugProfileLayoutsEnabled = true;
   debugEnhanceBuildTimelineArguments = true;
   debugEnhanceLayoutTimelineArguments = true;
   try {
-    await _traceScenario(
-      binding,
-      'note_list_richText_diagnostic',
-      () => _runDiagnosticScrollSequence(tester, 'richText_diagnostic'),
-    );
+    await _traceScenario(binding, scenario, action);
   } finally {
     debugProfileBuildsEnabled = false;
     debugProfileLayoutsEnabled = false;
@@ -513,6 +587,7 @@ void main() {
         await tester.pumpWidget(
           _buildBenchmarkApp(
             _buildBenchmarkQuotes(_ListScenario.richText, const <String>[]),
+            probeItemLayouts: true,
           ),
         );
         await tester.pumpAndSettle();
@@ -553,7 +628,45 @@ void main() {
       () => _runScrollSequence(tester, 'images_warm'),
     );
 
+    final List<String> diagnosticImagePaths = await _prepareImageFilePaths(
+      namespace: 'diagnostic',
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    QuoteContent.resetCaches();
+    QuoteItemWidget.clearExpansionCache();
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+    isListScrolling.value = true;
+    await tester.pumpWidget(
+      _buildBenchmarkApp(
+        _buildBenchmarkQuotes(_ListScenario.images, diagnosticImagePaths),
+        probeItemLayouts: true,
+      ),
+    );
+    await tester.pump();
+    try {
+      await _traceDetailedScenario(
+        binding,
+        'note_list_images_cold_diagnostic',
+        () => _runDiagnosticImageScrollSequence(
+          tester,
+          'images_cold_diagnostic',
+        ),
+      );
+    } finally {
+      isListScrolling.value = false;
+    }
+    _jumpListToStart(tester);
+    await tester.pumpAndSettle();
+    await _traceDetailedScenario(
+      binding,
+      'note_list_images_warm_diagnostic',
+      () => _runDiagnosticScrollSequence(tester, 'images_warm_diagnostic'),
+    );
+
     imageDataUrls.clear();
+    diagnosticImagePaths.clear();
     PaintingBinding.instance.imageCache.clear();
     PaintingBinding.instance.imageCache.clearLiveImages();
     await tester.pumpWidget(_buildAddNoteBenchmarkApp());
@@ -567,6 +680,20 @@ void main() {
     await _traceScenario(
       binding,
       'add_note_dialog_warm_open',
+      () => _openAddNoteDialog(tester),
+    );
+    await _closeAddNoteDialog(tester);
+    await tester.pumpWidget(_buildAddNoteBenchmarkApp());
+    await tester.pumpAndSettle();
+    await _traceDetailedScenario(
+      binding,
+      'add_note_dialog_cold_diagnostic_open',
+      () => _openAddNoteDialog(tester),
+    );
+    await _closeAddNoteDialog(tester);
+    await _traceDetailedScenario(
+      binding,
+      'add_note_dialog_warm_diagnostic_open',
       () => _openAddNoteDialog(tester),
     );
     await _closeAddNoteDialog(tester);
