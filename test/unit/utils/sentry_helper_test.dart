@@ -1,6 +1,7 @@
-// ignore_for_file: experimental_member_use
+// ignore_for_file: depend_on_referenced_packages, experimental_member_use, implementation_imports
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sentry/src/sentry_tracer.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:thoughtecho/utils/sentry_helper.dart';
 
@@ -27,6 +28,10 @@ void main() {
   group('Sentry database privacy', () {
     test('removes local paths from database descriptions', () {
       const privatePath = '/Users/private/Documents/ThoughtEcho/quotes.db';
+      const longSql = '''
+INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack_trace) VALUES (?, ?, ?, ?, NULL, NULL)
+INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack_trace) VALUES (?, ?, ?, ?, NULL, NULL)
+''';
 
       expect(
         sanitizeSentryDatabaseDescription('Transaction DB: $privatePath'),
@@ -38,8 +43,59 @@ void main() {
       );
       expect(
         sanitizeSentryDatabaseDescription('SELECT * FROM quotes'),
-        'SELECT * FROM quotes',
+        'SQL query',
       );
+      expect(
+        sanitizeSentryDatabaseDescription(longSql),
+        'Log database write',
+      );
+    });
+
+    test('removes sensitive and bulky transaction span data', () async {
+      final tracer = SentryTracer(
+        SentryTransactionContext(
+          'root /',
+          'ui.load',
+          samplingDecision: SentryTracesSamplingDecision(true),
+          transactionNameSource: SentryTransactionNameSource.component,
+        ),
+        Hub(SentryOptions(dsn: 'https://public@example.com/1')),
+      );
+      final httpSpan = tracer.startChild(
+        'http.client',
+        description: 'GET https://example.com/path?api_key=secret#private',
+      ) as SentrySpan;
+      httpSpan
+        ..setData('url', 'https://example.com/path?api_key=secret#private')
+        ..setData('http.query', 'api_key=secret')
+        ..setData('http.fragment', 'private');
+      await httpSpan.finish();
+      final sqlSpan = tracer.startChild(
+        'db.sql.query',
+        description: 'SELECT * FROM quotes WHERE content LIKE ?',
+      ) as SentrySpan;
+      await sqlSpan.finish();
+      final logSpan = tracer.startChild(
+        'db',
+        description: '''
+INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack_trace) VALUES (?, ?, ?, ?, NULL, NULL)
+INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack_trace) VALUES (?, ?, ?, ?, NULL, NULL)
+''',
+      ) as SentrySpan;
+      await logSpan.finish();
+      await tracer.finish();
+
+      final transaction = SentryTransaction(tracer);
+
+      final sanitized = sanitizeSentryTransaction(transaction, Hint());
+
+      expect(sanitized, same(transaction));
+      expect(httpSpan.context.description, 'GET https://example.com/path');
+      expect(httpSpan.data['url'], 'https://example.com/path');
+      expect(httpSpan.data, isNot(contains('http.query')));
+      expect(httpSpan.data, isNot(contains('http.fragment')));
+      expect(sqlSpan.context.description, 'SQL query');
+      expect(logSpan.context.description, 'Log database write');
     });
 
     test('removes local paths from database breadcrumbs', () {

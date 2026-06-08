@@ -61,7 +61,34 @@ String sanitizeSentryDatabaseDescription(String description) {
       return '$prefix main';
     }
   }
+  final normalized = description.trimLeft().toUpperCase();
+  if (description.contains('app_logs') ||
+      description.contains('log_database')) {
+    return 'Log database write';
+  }
+  if (normalized.startsWith('SELECT ') ||
+      normalized.startsWith('INSERT ') ||
+      normalized.startsWith('UPDATE ') ||
+      normalized.startsWith('DELETE ') ||
+      normalized.startsWith('CREATE ') ||
+      normalized.startsWith('ALTER ') ||
+      normalized.startsWith('DROP ') ||
+      normalized.startsWith('PRAGMA ')) {
+    return 'SQL query';
+  }
   return description;
+}
+
+String sanitizeSentrySpanDescription(String description) {
+  final parts = description.split(' ');
+  if (parts.length >= 2 && Uri.tryParse(parts[1])?.hasScheme == true) {
+    return [
+      parts.first,
+      sanitizeSentryUrl(parts[1]),
+      if (parts.length > 2) ...parts.skip(2),
+    ].join(' ');
+  }
+  return sanitizeSentryDatabaseDescription(description);
 }
 
 String? sanitizeSentryUrl(String? url) {
@@ -116,13 +143,13 @@ SentryTransaction? sanitizeSentryTransaction(
   for (final span in transaction.spans) {
     final url = span.data['url'];
     if (url is String) {
-      span.setData('url', sanitizeSentryUrl(url));
+      span.data['url'] = sanitizeSentryUrl(url);
     }
-    span.removeData('http.query');
-    span.removeData('http.fragment');
+    span.data.remove('http.query');
+    span.data.remove('http.fragment');
     final description = span.context.description;
     if (description != null) {
-      span.context.description = sanitizeSentryDatabaseDescription(description);
+      span.context.description = sanitizeSentrySpanDescription(description);
     }
   }
   return transaction;
