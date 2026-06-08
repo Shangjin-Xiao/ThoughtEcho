@@ -158,6 +158,18 @@ void main() {
 
       expect(find.text('双击查看全文'), findsOneWidget);
       expect(find.byType(BackdropFilter), findsOneWidget);
+      final backdropElement = tester.element(find.byType(BackdropFilter));
+      final ancestors = <Widget>[];
+      backdropElement.visitAncestorElements((element) {
+        ancestors.add(element.widget);
+        return ancestors.length < 2;
+      });
+      expect(ancestors.first, isA<ClipRect>());
+      expect(
+        ancestors.last,
+        isA<ExcludeSemantics>(),
+        reason: '动态 backdrop 不能被额外缓存，否则底层富文本更新后可能显示白块。',
+      );
     });
 
     testWidgets('折叠遮罩不参与语义树生成', (tester) async {

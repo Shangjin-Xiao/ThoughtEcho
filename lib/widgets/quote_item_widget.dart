@@ -619,40 +619,36 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                       fit: StackFit.expand,
                                       children: [
                                         ExcludeSemantics(
-                                          child: RepaintBoundary(
-                                            child: ClipRect(
-                                              child: BackdropFilter.grouped(
-                                                filter: ui.ImageFilter.blur(
-                                                  sigmaX: 1.2,
-                                                  sigmaY: 1.2,
-                                                ),
-                                                child: Container(
-                                                  decoration: BoxDecoration(
-                                                    gradient: LinearGradient(
-                                                      begin:
-                                                          Alignment.topCenter,
-                                                      end: Alignment
-                                                          .bottomCenter,
-                                                      colors: [
-                                                        innerTheme
-                                                            .colorScheme.surface
-                                                            .withValues(
-                                                                alpha: 0.0),
-                                                        innerTheme
-                                                            .colorScheme.surface
-                                                            .withValues(
-                                                                alpha: 0.08),
-                                                        innerTheme
-                                                            .colorScheme.surface
-                                                            .withValues(
-                                                                alpha: 0.18),
-                                                      ],
-                                                      stops: const [
-                                                        0.0,
-                                                        0.4,
-                                                        1.0,
-                                                      ],
-                                                    ),
+                                          child: ClipRect(
+                                            child: BackdropFilter.grouped(
+                                              filter: ui.ImageFilter.blur(
+                                                sigmaX: 1.2,
+                                                sigmaY: 1.2,
+                                              ),
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    begin: Alignment.topCenter,
+                                                    end: Alignment.bottomCenter,
+                                                    colors: [
+                                                      innerTheme
+                                                          .colorScheme.surface
+                                                          .withValues(
+                                                              alpha: 0.0),
+                                                      innerTheme
+                                                          .colorScheme.surface
+                                                          .withValues(
+                                                              alpha: 0.08),
+                                                      innerTheme
+                                                          .colorScheme.surface
+                                                          .withValues(
+                                                              alpha: 0.18),
+                                                    ],
+                                                    stops: const [
+                                                      0.0,
+                                                      0.4,
+                                                      1.0,
+                                                    ],
                                                   ),
                                                 ),
                                               ),
