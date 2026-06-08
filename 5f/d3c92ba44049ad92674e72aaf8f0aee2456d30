@@ -1,0 +1,21 @@
+integration_test/support/layout_probe.dart
+  ai_agent 1-80
+integration_test/note_list_performance_test.dart
+  s_6c3f45dd05ba45::t_099807d80c7f19 23,28,100-102,111-112,174-177,196,206-217,317-325,350-351,368-380,431-446,478-483,491-502,509,590,631-667,669,686-696
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "5fd3c92ba44049ad92674e72aaf8f0aee2456d30",
+  "prompts": {},
+  "sessions": {
+    "s_6c3f45dd05ba45": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ea4f0-49d0-7900-a0ea-d0e557e1df14",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
