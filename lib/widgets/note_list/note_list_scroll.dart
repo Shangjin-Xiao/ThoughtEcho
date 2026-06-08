@@ -103,6 +103,12 @@ extension _NoteListScrollExtension on NoteListViewState {
     _scrollSessionPerfRecording = true;
     _scrollSessionPerfPendingFinalize = false;
     _scrollSessionPerfFinalizeScheduled = false;
+    final previousSessionId = _scrollSessionId;
+    if (previousSessionId != null) {
+      JankDetector.endSession(previousSessionId);
+    }
+    _scrollSessionId = 'scroll-${++_scrollSessionSequence}';
+    JankDetector.beginSession(_scrollSessionId!);
     _scrollSessionPerfStopTimer?.cancel();
     _scrollSessionStartMicros = DateTime.now().microsecondsSinceEpoch;
     _scrollSessionStartOffset = metrics.pixels;
@@ -246,7 +252,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     );
 
     logDebug(
-      '滚动性能摘要(复制此行): dir=$direction, '
+      '滚动性能摘要(复制此行): session=$_scrollSessionId, dir=$direction, '
       'offset=${_scrollSessionStartOffset.round()}→${_scrollSessionLastOffset.round()}, '
       'dist=${distance.round()}, range=${_scrollSessionMinOffset.round()}-${_scrollSessionMaxOffset.round()}, '
       'elapsed=${elapsedMs.toStringAsFixed(0)}ms, updates=$intervalSamples, '
@@ -272,6 +278,11 @@ extension _NoteListScrollExtension on NoteListViewState {
         });
     _scrollSessionTracer?.finish();
     _scrollSessionTracer = null;
+    final sessionId = _scrollSessionId;
+    if (sessionId != null) {
+      JankDetector.endSession(sessionId);
+    }
+    _scrollSessionId = null;
     _releasePerfTimingsCallbackIfIdle();
   }
 

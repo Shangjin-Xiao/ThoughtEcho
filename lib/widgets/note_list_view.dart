@@ -15,6 +15,7 @@ import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../services/database_service.dart';
 import '../utils/icon_utils.dart';
+import '../utils/jank_detector.dart';
 import '../utils/lottie_animation_manager.dart';
 import '../widgets/quote_item_widget.dart';
 import '../widgets/quote_content_widget.dart';
@@ -161,6 +162,8 @@ class NoteListViewState extends State<NoteListView> {
   bool _scrollSessionPerfRecording = false;
   bool _scrollSessionPerfPendingFinalize = false;
   bool _scrollSessionPerfFinalizeScheduled = false;
+  int _scrollSessionSequence = 0;
+  String? _scrollSessionId;
   int _scrollSessionStartMicros = 0;
   double _scrollSessionStartOffset = 0;
   double _scrollSessionLastOffset = 0;
@@ -478,6 +481,11 @@ class NoteListViewState extends State<NoteListView> {
     _loadMoreTracer = null;
     _scrollSessionTracer?.finish();
     _scrollSessionTracer = null;
+    final scrollSessionId = _scrollSessionId;
+    if (scrollSessionId != null) {
+      JankDetector.endSession(scrollSessionId);
+      _scrollSessionId = null;
+    }
     _searchDebounceTimer?.cancel(); // 清理防抖定时器
     _firstOpenScrollStopTimer?.cancel();
     _loadMorePerfStopTimer?.cancel();

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_driver/flutter_driver.dart' as driver;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
@@ -90,7 +92,7 @@ class _PerformanceFeatureGuideService extends FeatureGuideService {
   bool hasShown(String guideId) => true;
 }
 
-Future<List<String>> _loadImageDataUrls() async {
+Future<List<String>> _prepareImageFilePaths() async {
   final List<String> paths = <String>[
     'assets/large_test_1.jpg',
     'assets/large_test_2.jpg',
@@ -98,14 +100,21 @@ Future<List<String>> _loadImageDataUrls() async {
     'assets/large_test_4.jpg',
     'assets/large_test_5.jpg',
   ];
+  final Directory directory = Directory(
+    '${(await getTemporaryDirectory()).path}/thoughtecho-performance-images',
+  );
+  await directory.create(recursive: true);
   return Future.wait(
     paths.map((String path) async {
       final ByteData data = await rootBundle.load(path);
-      final Uint8List bytes = data.buffer.asUint8List(
-        data.offsetInBytes,
-        data.lengthInBytes,
+      final File file = File(
+        '${directory.path}/${path.substring(path.lastIndexOf('/') + 1)}',
       );
-      return 'data:image/jpeg;base64,${base64Encode(bytes)}';
+      await file.writeAsBytes(
+        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+        flush: true,
+      );
+      return file.path;
     }),
   );
 }
@@ -436,7 +445,7 @@ void main() {
       );
     }
 
-    final List<String> imageDataUrls = await _loadImageDataUrls();
+    final List<String> imageDataUrls = await _prepareImageFilePaths();
     PaintingBinding.instance.imageCache.clear();
     PaintingBinding.instance.imageCache.clearLiveImages();
     await tester.pumpWidget(

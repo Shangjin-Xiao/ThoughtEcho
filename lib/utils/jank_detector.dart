@@ -5,8 +5,19 @@ import 'package:thoughtecho/services/unified_log_service.dart';
 class JankDetector {
   static DateTime? _lastLogTime;
   static bool _initialized = false;
+  static String? _activeSessionId;
   // 防日志风暴机制：同一个卡顿周期内，最少间隔 2 秒才记录一次
   static const _throttleDuration = Duration(seconds: 2);
+
+  static void beginSession(String sessionId) {
+    _activeSessionId = sessionId;
+  }
+
+  static void endSession(String sessionId) {
+    if (_activeSessionId == sessionId) {
+      _activeSessionId = null;
+    }
+  }
 
   static void init() {
     if (_initialized) {
@@ -25,8 +36,11 @@ class JankDetector {
           if (_lastLogTime == null ||
               now.difference(_lastLogTime!) > _throttleDuration) {
             _lastLogTime = now;
+            final session = _activeSessionId;
             UnifiedLogService.instance.warning(
-              '⚠️ [UI卡顿] 严重掉帧! UI构建: ${buildMs}ms, GPU渲染: ${rasterMs}ms',
+              '⚠️ [UI卡顿] 严重掉帧! '
+              '${session == null ? '' : 'session=$session, '}'
+              'UI构建: ${buildMs}ms, GPU渲染: ${rasterMs}ms',
               source: 'JankDetector',
             );
           }
