@@ -125,13 +125,7 @@ List<Quote> _buildBenchmarkQuotes(
       );
     }
 
-    final List<Map<String, Object>> operations = <Map<String, Object>>[
-      <String, Object>{
-        'insert': '富文本性能测试标题 $index',
-        'attributes': <String, Object>{'bold': true},
-      },
-      <String, Object>{'insert': '\n$content\n'},
-    ];
+    final List<Map<String, Object>> operations = <Map<String, Object>>[];
     if (scenario == _ListScenario.images) {
       operations.addAll(<Map<String, Object>>[
         <String, Object>{
@@ -139,9 +133,16 @@ List<Quote> _buildBenchmarkQuotes(
             'image': imageDataUrls[index % imageDataUrls.length],
           },
         },
-        <String, Object>{'insert': '\n图片后的说明文字\n'},
+        <String, Object>{'insert': '\n'},
       ]);
     }
+    operations.addAll(<Map<String, Object>>[
+      <String, Object>{
+        'insert': '富文本性能测试标题 $index',
+        'attributes': <String, Object>{'bold': true},
+      },
+      <String, Object>{'insert': '\n$content\n'},
+    ]);
 
     return Quote(
       id: '${scenario.name}-$index',
@@ -444,6 +445,11 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(
+      find.byType(Image),
+      findsWidgets,
+      reason: 'Image scenario must render visible images before tracing.',
+    );
     PaintingBinding.instance.imageCache.clear();
     PaintingBinding.instance.imageCache.clearLiveImages();
     await _traceScenario(

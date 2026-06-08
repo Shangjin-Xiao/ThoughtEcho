@@ -74,10 +74,29 @@ jobs:
           }
 
           flutter pub get
+          cat >> pubspec.yaml <<'EOF'
+
+          # The image preparation script does not use SQLite. Avoid triggering
+          # sqlite3's downloadable native-asset hook before the Android build.
+          hooks:
+            user_defines:
+              sqlite3:
+                source: system
+          EOF
           dart run scripts/prepare_performance_test_images.dart
+          git checkout -- pubspec.yaml
           for image in assets/large_test_{1..5}.jpg; do
             echo "    - $image" >> pubspec.yaml
           done
+          cat >> pubspec.yaml <<'EOF'
+
+          # This isolated UI benchmark never opens a database. Keep the test
+          # build independent from sqlite3 GitHub release asset availability.
+          hooks:
+            user_defines:
+              sqlite3:
+                source: system
+          EOF
           bash scripts/patch_flutter_quill.sh
           run_build_with_sqlite_download_retry \
             build/firebase-build-logs/flutter-build-apk.log \
