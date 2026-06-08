@@ -1,0 +1,17 @@
+lib/widgets/note_list/note_list_scroll.dart
+  ai_agent 118,263-270,286,360-365,372-373,404-409,412-414,436,473-474
+lib/widgets/note_list_view.dart
+  ai_agent 25,142-144
+integration_test/note_list_performance_test.dart
+  ai_agent 379-380
+.github/workflows/firebase-note-list-performance.yml
+  ai_agent 84-86
+lib/widgets/add_note_dialog.dart
+  ai_agent 10,12,126,202-212
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "a40edbbb6b8ffc2347c905facb3ea5fd3238221d",
+  "prompts": {}
+}
