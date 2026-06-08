@@ -1,0 +1,9 @@
+integration_test/note_list_performance_test.dart
+  ai_agent 441-444
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "bd77a39ff04387d61a40b6e1502e8250f070c90a",
+  "prompts": {}
+}
