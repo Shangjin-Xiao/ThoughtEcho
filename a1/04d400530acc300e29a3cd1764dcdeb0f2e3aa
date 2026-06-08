@@ -1,0 +1,24 @@
+test/unit/utils/sentry_helper_test.dart
+  s_023d33fac1ccaf::t_3450fe5116ecff 67,76,84
+  s_023d33fac1ccaf::t_938c2861df2732 62
+  s_023d33fac1ccaf::t_96157f8f265762 4,31-34,46,48-61,63-66,68-75,77-83,85-98
+  s_023d33fac1ccaf::t_3f5567af34ad11 1
+lib/utils/sentry_helper.dart
+  s_023d33fac1ccaf::t_c1c22beed75db1 64-78,82-93,146,148-149,152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "a104d400530acc300e29a3cd1764dcdeb0f2e3aa",
+  "prompts": {},
+  "sessions": {
+    "s_023d33fac1ccaf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ea6f7-3006-7702-8bf1-4555ea5d202b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
