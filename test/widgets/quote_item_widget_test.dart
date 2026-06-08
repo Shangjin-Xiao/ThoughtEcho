@@ -122,7 +122,7 @@ void main() {
       expect(find.text('双击查看全文'), findsOneWidget);
     });
 
-    testWidgets('折叠遮罩始终使用BackdropFilter.grouped', (tester) async {
+    testWidgets('折叠遮罩使用卡片级独立BackdropKey', (tester) async {
       final quote = _buildQuote(
         content: List.filled(6, _longContentChunk).join('\n'),
         editSource: 'inline',
@@ -141,14 +141,20 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             locale: const Locale('zh'),
             home: Material(
-              child: QuoteItemWidget(
-                quote: quote,
-                tagMap: const {},
-                isExpanded: false,
-                onToggleExpanded: (_) {},
-                onEdit: () {},
-                onDelete: () {},
-                onAskAI: () {},
+              child: Column(
+                children: [
+                  for (final id in const <String>['first', 'second'])
+                    QuoteItemWidget(
+                      key: ValueKey<String>(id),
+                      quote: quote.copyWith(id: id),
+                      tagMap: const {},
+                      isExpanded: false,
+                      onToggleExpanded: (_) {},
+                      onEdit: () {},
+                      onDelete: () {},
+                      onAskAI: () {},
+                    ),
+                ],
               ),
             ),
           ),
@@ -156,8 +162,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('双击查看全文'), findsOneWidget);
-      expect(find.byType(BackdropFilter), findsOneWidget);
+      expect(
+        find.text('双击查看全文', skipOffstage: false),
+        findsNWidgets(2),
+      );
+      final filters = tester.widgetList<BackdropFilter>(
+        find.byType(BackdropFilter, skipOffstage: false),
+      );
+      final keys = filters.map((filter) => filter.backdropGroupKey).toList();
+      expect(keys, everyElement(isNotNull));
+      expect(keys.toSet(), hasLength(2));
     });
 
     testWidgets('折叠遮罩不参与语义树生成', (tester) async {

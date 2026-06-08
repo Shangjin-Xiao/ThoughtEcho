@@ -139,6 +139,7 @@ class QuoteItemWidget extends StatefulWidget {
 
 class _QuoteItemWidgetState extends State<QuoteItemWidget>
     with SingleTickerProviderStateMixin {
+  final BackdropKey _backdropKey = BackdropKey();
   late final AnimationController _doubleTapController;
   late final Animation<double> _scaleAnimation;
   late final Animation<double> _highlightProgress;
@@ -621,7 +622,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                         ExcludeSemantics(
                                           child: RepaintBoundary(
                                             child: ClipRect(
-                                              child: BackdropFilter.grouped(
+                                              child: BackdropFilter(
+                                                backdropGroupKey: _backdropKey,
                                                 filter: ui.ImageFilter.blur(
                                                   sigmaX: 1.2,
                                                   sigmaY: 1.2,
