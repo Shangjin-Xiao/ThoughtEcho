@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
@@ -41,6 +43,14 @@ void main() {
     return ChangeNotifierProvider<SettingsService>.value(
       value: _TestSettingsService(prioritizeBold: prioritizeBold),
       child: MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
         home: Scaffold(
           body: QuoteContent(
             quote: quote,
@@ -86,6 +96,21 @@ void main() {
     expect(find.byKey(QuoteContent.collapsedWrapperKey), findsOneWidget);
   });
 
+  testWidgets('折叠裁剪不会让不可见内容进行无界高度布局', (tester) async {
+    final quote = createPlainQuote('A' * 400);
+    await tester.pumpWidget(buildTestApp(quote));
+
+    final collapsedWrapper = find.byKey(QuoteContent.collapsedWrapperKey);
+    expect(collapsedWrapper, findsOneWidget);
+    expect(
+      find.descendant(
+        of: collapsedWrapper,
+        matching: find.byType(OverflowBox),
+      ),
+      findsNothing,
+    );
+  });
+
   testWidgets('短文本不会启用折叠裁剪', (tester) async {
     final quote = createPlainQuote('简短内容');
 
@@ -101,7 +126,7 @@ void main() {
     expect(QuoteItemWidget.needsExpansionFor(quote), isTrue);
   });
 
-  testWidgets('折叠状态下仍保留富文本图片占位', (tester) async {
+  testWidgets('折叠状态下长富文本仍使用裁剪包装器', (tester) async {
     final delta = jsonEncode([
       {'insert': '这是一段很长的图片前正文。' * 80},
       {
@@ -120,7 +145,7 @@ void main() {
     await tester.pumpWidget(buildTestApp(quote));
     await tester.pump();
 
-    expect(find.byIcon(Icons.image_outlined), findsOneWidget);
+    expect(find.byKey(QuoteContent.collapsedWrapperKey), findsOneWidget);
   });
 
   test('纯文本与富文本高度判定保持一致', () {

@@ -683,26 +683,11 @@ class _CollapsedContentWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final double resolvedMaxWidth = constraints.hasBoundedWidth
-            ? constraints.maxWidth
-            : double.infinity;
-
-        return ClipRect(
-          child: SizedBox(
-            height: maxHeight,
-            child: OverflowBox(
-              alignment: Alignment.topLeft,
-              minWidth: 0,
-              maxWidth: resolvedMaxWidth,
-              minHeight: 0,
-              maxHeight: double.infinity,
-              child: child,
-            ),
-          ),
-        );
-      },
+    return ClipRect(
+      child: SizedBox(
+        height: maxHeight,
+        child: child,
+      ),
     );
   }
 }
