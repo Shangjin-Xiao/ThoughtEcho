@@ -67,17 +67,30 @@ class _PerformanceFeatureGuideService extends FeatureGuideService {
 Future<List<String>> _loadImageDataUrls() async {
   final List<String> paths = <String>[
     'assets/icon.png',
-    'assets/icon_ios_full.png',
-    'assets/icon_ios_large.png',
+    'assets/large_test_1.jpg',
+    'assets/large_test_2.jpg',
+    'assets/large_test_3.jpg',
+    'assets/large_test_4.jpg',
+    'assets/large_test_5.jpg',
   ];
+  final ByteData fallbackData = await rootBundle.load('assets/icon.png');
+  final String fallbackBase64 = 'data:image/png;base64,${base64Encode(fallbackData.buffer.asUint8List(fallbackData.offsetInBytes, fallbackData.lengthInBytes))}';
+  
   return Future.wait(
     paths.map((String path) async {
-      final ByteData data = await rootBundle.load(path);
-      final Uint8List bytes = data.buffer.asUint8List(
-        data.offsetInBytes,
-        data.lengthInBytes,
-      );
-      return 'data:image/png;base64,${base64Encode(bytes)}';
+      try {
+        final ByteData data = await rootBundle.load(path);
+        final Uint8List bytes = data.buffer.asUint8List(
+          data.offsetInBytes,
+          data.lengthInBytes,
+        );
+        final String mimeType = path.endsWith('.jpg') || path.endsWith('.jpeg')
+            ? 'image/jpeg'
+            : 'image/png';
+        return 'data:$mimeType;base64,${base64Encode(bytes)}';
+      } catch (_) {
+        return fallbackBase64;
+      }
     }),
   );
 }

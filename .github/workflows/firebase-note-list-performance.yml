@@ -41,6 +41,20 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
+      - name: Download and inject large test images
+        run: |
+          mkdir -p assets
+          curl -L -s "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?dl=1" -o assets/large_test_1.jpg
+          curl -L -s "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?dl=1" -o assets/large_test_2.jpg
+          curl -L -s "https://images.unsplash.com/photo-1472214222541-d510753a4707?dl=1" -o assets/large_test_3.jpg
+          curl -L -s "https://images.unsplash.com/photo-1501854140801-50d01698950b?dl=1" -o assets/large_test_4.jpg
+          curl -L -s "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?dl=1" -o assets/large_test_5.jpg
+          echo "    - assets/large_test_1.jpg" >> pubspec.yaml
+          echo "    - assets/large_test_2.jpg" >> pubspec.yaml
+          echo "    - assets/large_test_3.jpg" >> pubspec.yaml
+          echo "    - assets/large_test_4.jpg" >> pubspec.yaml
+          echo "    - assets/large_test_5.jpg" >> pubspec.yaml
+
       - name: Build Flutter integration-test APKs
         run: |
           flutter pub get

@@ -116,7 +116,9 @@ extension _NoteListScrollExtension on NoteListViewState {
     _scrollSessionStartImageCount = imageCache.currentSize;
     _scrollSessionStartImageBytes = imageCache.currentSizeBytes;
     _scrollSessionTracer?.finish();
-    _scrollSessionTracer = AppTracer.start('ThoughtEcho.NoteListView.scrollSession', operation: 'ui.scroll');
+    _scrollSessionTracer = AppTracer.start(
+        'ThoughtEcho.NoteListView.scrollSession',
+        operation: 'ui.scroll');
     _ensurePerfTimingsCallback();
   }
 
@@ -261,12 +263,14 @@ extension _NoteListScrollExtension on NoteListViewState {
     );
     _scrollSessionStartQuoteContentStats = null;
     _scrollSessionStartQuoteItemStats = null;
-    _scrollSessionTracer?.instant('ThoughtEcho.NoteListView.scrollSession.finalize', arguments: {
-      'frames': frameSamples,
-      'frameJank': jankyFrames,
-      'worstFrameMs': worstFrameMs.toStringAsFixed(1),
-      'avgFrameMs': avgFrameMs.toStringAsFixed(1),
-    });
+    _scrollSessionTracer?.instant(
+        'ThoughtEcho.NoteListView.scrollSession.finalize',
+        arguments: {
+          'frames': frameSamples,
+          'frameJank': jankyFrames,
+          'worstFrameMs': worstFrameMs.toStringAsFixed(1),
+          'avgFrameMs': avgFrameMs.toStringAsFixed(1),
+        });
     _scrollSessionTracer?.finish();
     _scrollSessionTracer = null;
     _releasePerfTimingsCallbackIfIdle();
@@ -284,7 +288,9 @@ extension _NoteListScrollExtension on NoteListViewState {
     _firstOpenScrollFrameTimings.clear();
     _firstOpenScrollUpdateMicros.clear();
     _firstOpenScrollStopTimer?.cancel();
-    _firstOpenTracer = AppTracer.start('ThoughtEcho.NoteListView.firstOpenScroll', operation: 'ui.scroll.first');
+    _firstOpenTracer = AppTracer.start(
+        'ThoughtEcho.NoteListView.firstOpenScroll',
+        operation: 'ui.scroll.first');
     _ensurePerfTimingsCallback();
     logDebug('首次滑动性能监测开始', source: 'NoteListView.Perf');
   }
@@ -358,12 +364,14 @@ extension _NoteListScrollExtension on NoteListViewState {
         'avgRaster=${avgRasterMs.toStringAsFixed(1)}ms, worstRaster=${worstRasterMs.toStringAsFixed(1)}ms',
         source: 'NoteListView.Perf',
       );
-      _firstOpenTracer?.instant('ThoughtEcho.NoteListView.firstOpenScroll.finalize', arguments: {
-        'frames': totalFrames,
-        'frameJank': jankyFrames,
-        'worstFrameMs': worstFrameMs.toStringAsFixed(1),
-        'avgFrameMs': avgFrameMs.toStringAsFixed(1),
-      });
+      _firstOpenTracer?.instant(
+          'ThoughtEcho.NoteListView.firstOpenScroll.finalize',
+          arguments: {
+            'frames': totalFrames,
+            'frameJank': jankyFrames,
+            'worstFrameMs': worstFrameMs.toStringAsFixed(1),
+            'avgFrameMs': avgFrameMs.toStringAsFixed(1),
+          });
     } else {
       if (_firstOpenScrollUpdateMicros.length < 2) {
         logDebug(
@@ -402,12 +410,14 @@ extension _NoteListScrollExtension on NoteListViewState {
         'worstInterval=${worstIntervalMs.toStringAsFixed(1)}ms',
         source: 'NoteListView.Perf',
       );
-      _firstOpenTracer?.instant('ThoughtEcho.NoteListView.firstOpenScroll.finalize', arguments: {
-        'samples': sampleCount,
-        'jankIntervals': jankyIntervals,
-        'avgIntervalMs': avgIntervalMs.toStringAsFixed(1),
-        'worstIntervalMs': worstIntervalMs.toStringAsFixed(1),
-      });
+      _firstOpenTracer?.instant(
+          'ThoughtEcho.NoteListView.firstOpenScroll.finalize',
+          arguments: {
+            'samples': sampleCount,
+            'jankIntervals': jankyIntervals,
+            'avgIntervalMs': avgIntervalMs.toStringAsFixed(1),
+            'worstIntervalMs': worstIntervalMs.toStringAsFixed(1),
+          });
     }
 
     _firstOpenTracer?.finish();
@@ -434,7 +444,8 @@ extension _NoteListScrollExtension on NoteListViewState {
     _loadMorePerfStopwatch
       ..reset()
       ..start();
-    _loadMoreTracer = AppTracer.start('ThoughtEcho.NoteListView.loadMore', operation: 'ui.load');
+    _loadMoreTracer = AppTracer.start('ThoughtEcho.NoteListView.loadMore',
+        operation: 'ui.load');
     _ensurePerfTimingsCallback();
 
     logDebug(
