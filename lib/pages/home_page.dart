@@ -62,7 +62,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class HomeLocationWeatherDisplay extends StatefulWidget {
+class HomeLocationWeatherDisplay extends StatelessWidget {
   static const Key chipKey = ValueKey('home.location_weather_chip');
 
   final String locationText;
@@ -77,39 +77,6 @@ class HomeLocationWeatherDisplay extends StatefulWidget {
   });
 
   @override
-  State<HomeLocationWeatherDisplay> createState() =>
-      _HomeLocationWeatherDisplayState();
-}
-
-class _HomeLocationWeatherDisplayState extends State<HomeLocationWeatherDisplay>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _fadeController;
-  late final Animation<double> _fadeAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 450),
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOut,
-    );
-    // 首帧后淡入
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _fadeController.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _fadeController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = theme.colorScheme.onPrimaryContainer;
@@ -118,58 +85,54 @@ class _HomeLocationWeatherDisplayState extends State<HomeLocationWeatherDisplay>
       padding: const EdgeInsets.only(right: 8.0),
       child: Align(
         alignment: Alignment.centerRight,
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: FittedBox(
-            key: HomeLocationWeatherDisplay.chipKey,
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerRight,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                boxShadow: AppTheme.defaultShadow,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.location_on,
-                    size: 14,
-                    color: color,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerRight,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+              boxShadow: AppTheme.defaultShadow,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.location_on,
+                  size: 14,
+                  color: color,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  locationText,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: theme.textTheme.bodySmall?.copyWith(color: color),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '|',
+                  maxLines: 1,
+                  softWrap: false,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: color.withAlpha(128),
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    widget.locationText,
-                    maxLines: 1,
-                    softWrap: false,
-                    style: theme.textTheme.bodySmall?.copyWith(color: color),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '|',
-                    maxLines: 1,
-                    softWrap: false,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: color.withAlpha(128),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    widget.weatherIcon,
-                    size: 18,
-                    color: color,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    widget.weatherText,
-                    maxLines: 1,
-                    softWrap: false,
-                    style: theme.textTheme.bodySmall?.copyWith(color: color),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  weatherIcon,
+                  size: 18,
+                  color: color,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  weatherText,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: theme.textTheme.bodySmall?.copyWith(color: color),
+                ),
+              ],
             ),
           ),
         ),
@@ -1931,7 +1894,9 @@ class _HomePageState extends State<HomePage>
     });
   }
 
-  /// 构建首页位置天气显示（数据就绪后淡入，初始化期间不占位）
+  /// 构建首页位置天气显示。
+  /// 用 AnimatedSwitcher 包裹：chip 从无到有时（key: null→chipKey）触发一次淡入；
+  /// 切回首页时 chip 已存在、key 不变，AnimatedSwitcher 不重复播动画。
   Widget _buildLocationWeatherDisplay(
     BuildContext context,
     LocationService locationService,
@@ -1949,72 +1914,74 @@ class _HomePageState extends State<HomePage>
         weatherService.currentWeather != 'error' &&
         weatherService.currentWeather != 'unknown';
 
-    // 位置服务初始化期间：没有任何位置数据且权限状态也未确定（即 hasPermission=false、isServiceEnabled=true 同时成立说明未完成检查）
-    // 这个状态下 chip 不展示，避免显示无意义的"加载中"文字
+    // 位置服务初始化期间（权限已授予但坐标尚未返回），chip 隐藏避免显示无意义的"加载中"
     final isLocationInitializing =
         !hasCoordinates && !hasCity && hasPermission && isServiceEnabled;
+
+    Widget chip;
     if (isLocationInitializing) {
-      return const SizedBox.shrink();
-    }
-
-    String locationText;
-    String weatherText;
-    IconData weatherIcon;
-
-    // --- 构建天气文本的辅助函数 ---
-    String buildWeatherText() {
-      return '${WeatherService.getLocalizedWeatherDescription(l10n, weatherService.currentWeather!)}'
-          '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}';
-    }
-
-    // --- 优先级链：位置显示 ---
-    if (hasCity) {
-      // 有城市信息（可能来自 GPS 解析或手动搜索城市）
-      locationText = locationService.getDisplayLocation();
-    } else if (hasCoordinates) {
-      // 有坐标但没有城市名（离线 GPS 或解析中）
-      locationText = LocationService.formatCoordinates(
-        locationService.currentPosition!.latitude,
-        locationService.currentPosition!.longitude,
-      );
-    } else if (!isServiceEnabled) {
-      // P3: 位置服务未启用（优先于权限文案）
-      locationText = l10n.tileLocationServiceOff;
-    } else if (!hasPermission) {
-      // 有位置服务但没有权限
-      locationText = l10n.tileNoLocationPermission;
-    } else if (!isConnected) {
-      locationText = l10n.tileNoNetwork;
+      // 隐藏占位：key 为 null，AnimatedSwitcher 识别为"空"状态
+      chip = const SizedBox.shrink();
     } else {
-      locationText = l10n.tileLoading;
-    }
+      String locationText;
+      String weatherText;
+      IconData weatherIcon;
 
-    // --- 优先级链：天气显示 ---
-    // P5: 不再把天气显示绑死在权限上；只要有天气数据就显示
-    if (hasWeather) {
-      weatherText = buildWeatherText();
-      weatherIcon = weatherService.getWeatherIconData();
-    } else if (!hasCoordinates && !hasCity) {
-      // 完全没有位置坐标，天气无法获取
-      if (!isConnected) {
-        weatherText = l10n.tileOffline;
-        weatherIcon = Icons.cloud_off;
+      // --- 构建天气文本的辅助函数 ---
+      String buildWeatherText() {
+        return '${WeatherService.getLocalizedWeatherDescription(l10n, weatherService.currentWeather!)}'
+            '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}';
+      }
+
+      // --- 优先级链：位置显示 ---
+      if (hasCity) {
+        locationText = locationService.getDisplayLocation();
+      } else if (hasCoordinates) {
+        locationText = LocationService.formatCoordinates(
+          locationService.currentPosition!.latitude,
+          locationService.currentPosition!.longitude,
+        );
+      } else if (!isServiceEnabled) {
+        locationText = l10n.tileLocationServiceOff;
+      } else if (!hasPermission) {
+        locationText = l10n.tileNoLocationPermission;
+      } else if (!isConnected) {
+        locationText = l10n.tileNoNetwork;
       } else {
-        weatherText = '--';
+        locationText = l10n.tileLoading;
+      }
+
+      // --- 优先级链：天气显示 ---
+      if (hasWeather) {
+        weatherText = buildWeatherText();
+        weatherIcon = weatherService.getWeatherIconData();
+      } else if (!hasCoordinates && !hasCity) {
+        weatherText = isConnected ? '--' : l10n.tileOffline;
+        weatherIcon = Icons.cloud_off;
+      } else if (isConnected) {
+        weatherText = l10n.tileLoading;
+        weatherIcon = Icons.cloud_queue;
+      } else {
+        weatherText = l10n.tileNoWeather;
         weatherIcon = Icons.cloud_off;
       }
-    } else if (isConnected) {
-      weatherText = l10n.tileLoading;
-      weatherIcon = Icons.cloud_queue;
-    } else {
-      weatherText = l10n.tileNoWeather;
-      weatherIcon = Icons.cloud_off;
+
+      // chip 携带稳定的 chipKey：切回首页时 key 不变，AnimatedSwitcher 不重新动画
+      chip = HomeLocationWeatherDisplay(
+        key: HomeLocationWeatherDisplay.chipKey,
+        locationText: locationText,
+        weatherText: weatherText,
+        weatherIcon: weatherIcon,
+      );
     }
 
-    return HomeLocationWeatherDisplay(
-      locationText: locationText,
-      weatherText: weatherText,
-      weatherIcon: weatherIcon,
+    // AnimatedSwitcher 仅在 child 的 key 发生变化时播放动画（即首次出现），
+    // 页面切换回来时 key 不变，直接复用，无动画。
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 400),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      child: chip,
     );
   }
 
