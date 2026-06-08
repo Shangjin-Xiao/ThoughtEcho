@@ -304,3 +304,6 @@ dart_devtools_*
 # Project local worktrees
 .worktrees/
 worktrees/
+
+# MCP configs
+.mcp.json

@@ -1980,6 +1980,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "9.21.0"
+  sentry_file:
+    dependency: "direct main"
+    description:
+      name: sentry_file
+      sha256: f92379e232e7365ba9bfa68921cf339d2fc79835e221d25ea0ef5fb63cc139e1
+      url: "https://pub.dev"
+    source: hosted
+    version: "9.21.0"
   sentry_flutter:
     dependency: "direct main"
     description:

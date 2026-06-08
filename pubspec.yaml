@@ -90,6 +90,7 @@ dependencies:
   sentry_flutter: ^9.0.0
   sentry_dio: ^9.0.0
   sentry_sqflite: ^9.0.0
+  sentry_file: ^9.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

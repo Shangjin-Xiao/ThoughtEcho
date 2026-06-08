@@ -9,6 +9,7 @@ import 'package:flutter/widgets.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'package:thoughtecho/constants/app_constants.dart';
+import 'package:thoughtecho/services/device_identity_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
 const _databaseDescriptionPrefixes = <String>[
@@ -19,8 +20,18 @@ const _databaseDescriptionPrefixes = <String>[
 
 void configureSentryOptions(SentryFlutterOptions options) {
   options.dsn = AppConstants.sentryDsn;
-  options.tracesSampleRate = 0.05;
+
+  // 既然数据收集默认关闭，开启用户的意愿较强，将链路采样率设为 1.0 获取充足性能样本
+  options.tracesSampleRate = 1.0;
+
+  // CPU Profiling 深度性能剖析 (目前仅支持 iOS/macOS)
+  // TODO: 当前无 iOS 发行版暂不开启，后续发布 iOS 版时可将其设为 1.0 或 0.5 开启深度剖析
   options.profilesSampleRate = null;
+
+  // 开启 TTFD (完全渲染时间监控)
+  // 在异步数据加载完成的页面手动调用 SentryFlutter.currentDisplay()?.reportFullyDisplayed();
+  options.enableTimeToFullDisplayTracing = true;
+
   options.sendDefaultPii = false;
   options.attachScreenshot = false;
   options.attachViewHierarchy = false;
@@ -29,7 +40,17 @@ void configureSentryOptions(SentryFlutterOptions options) {
   options.enableUserInteractionBreadcrumbs = false;
   options.enableUserInteractionTracing = false;
   options.enableAutoPerformanceTracing = true;
-  options.environment = kDebugMode ? 'debug' : 'production';
+
+  // 1. 开启安卓底层崩溃与 ANR 监控 (针对安卓端的救星)
+  options.anrEnabled = true;
+  options.enableNativeCrashHandling = true;
+  options.enableNdkScopeSync = true;
+
+  // 使用底层标志更精确地区分真实生产环境与开发环境
+  options.environment = const bool.fromEnvironment('dart.vm.product')
+      ? 'production'
+      : 'development';
+
   options.beforeSend = sanitizeSentryEvent;
   options.beforeBreadcrumb = sanitizeSentryBreadcrumb;
   options.beforeSendTransaction = sanitizeSentryTransaction;
@@ -164,6 +185,16 @@ class SentryHelper {
           configureSentryOptions(options);
         },
       );
+
+      // 5. 绑定完全脱敏的匿名 Device ID，用于 Sentry 统计影响的用户百分比
+      try {
+        final deviceId = await DeviceIdentityManager.I.getFingerprint();
+        Sentry.configureScope(
+            (scope) => scope.setUser(SentryUser(id: deviceId)));
+      } catch (e) {
+        if (kDebugMode) print('[Sentry] Failed to set User ID: $e');
+      }
+
       _initialized = true;
       if (kDebugMode) {
         print('[Sentry] Sentry SDK initialized successfully.');

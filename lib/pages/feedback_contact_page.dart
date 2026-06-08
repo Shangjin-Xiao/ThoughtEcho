@@ -87,7 +87,8 @@ class FeedbackContactPage extends StatelessWidget {
                           ? () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const CustomFeedbackPage(),
+                                  builder: (context) =>
+                                      const CustomFeedbackPage(),
                                 ),
                               )
                           : null,
@@ -176,7 +177,6 @@ class FeedbackContactPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-
           Card(
             child: Consumer<SettingsService>(
               builder: (context, settingsService, _) {

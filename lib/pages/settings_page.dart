@@ -981,7 +981,6 @@ class SettingsPageState extends State<SettingsPage> {
                                 text: l10n.settingsVisitWebsite,
                                 url: _websiteUrl,
                               ),
-
                               ElevatedButton.icon(
                                 onPressed: () {
                                   Navigator.pop(dialogContext);

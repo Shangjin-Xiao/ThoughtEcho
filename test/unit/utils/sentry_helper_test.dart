@@ -20,7 +20,7 @@ void main() {
       expect(options.enableUserInteractionBreadcrumbs, isFalse);
       expect(options.enableUserInteractionTracing, isFalse);
       expect(options.enableAutoPerformanceTracing, isTrue);
-      expect(options.tracesSampleRate, inInclusiveRange(0.0, 0.05));
+      expect(options.tracesSampleRate, equals(1.0));
     });
   });
 

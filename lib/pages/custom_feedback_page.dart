@@ -39,7 +39,8 @@ class _CustomFeedbackPageState extends State<CustomFeedbackPage> {
       final feedback = SentryFeedback(
         message: _messageController.text,
         name: _nameController.text.isNotEmpty ? _nameController.text : null,
-        contactEmail: _emailController.text.isNotEmpty ? _emailController.text : null,
+        contactEmail:
+            _emailController.text.isNotEmpty ? _emailController.text : null,
       );
 
       await Sentry.captureFeedback(feedback);
@@ -57,7 +58,8 @@ class _CustomFeedbackPageState extends State<CustomFeedbackPage> {
         );
       }
     } catch (e, stackTrace) {
-      logError('CustomFeedbackPage._submit', error: e, stackTrace: stackTrace, source: 'Feedback');
+      logError('CustomFeedbackPage._submit',
+          error: e, stackTrace: stackTrace, source: 'Feedback');
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -113,7 +115,8 @@ class _CustomFeedbackPageState extends State<CustomFeedbackPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest.withAlpha(100),
+                    fillColor:
+                        colorScheme.surfaceContainerHighest.withAlpha(100),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -123,7 +126,7 @@ class _CustomFeedbackPageState extends State<CustomFeedbackPage> {
                   },
                 ),
                 const SizedBox(height: 24),
-                
+
                 // Email (Optional)
                 Text(
                   l10n.customFeedbackEmailLabel,
@@ -142,11 +145,12 @@ class _CustomFeedbackPageState extends State<CustomFeedbackPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest.withAlpha(100),
+                    fillColor:
+                        colorScheme.surfaceContainerHighest.withAlpha(100),
                   ),
                 ),
                 const SizedBox(height: 24),
-                
+
                 // Name (Optional)
                 Text(
                   l10n.customFeedbackNameLabel,
@@ -164,11 +168,12 @@ class _CustomFeedbackPageState extends State<CustomFeedbackPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     filled: true,
-                    fillColor: colorScheme.surfaceContainerHighest.withAlpha(100),
+                    fillColor:
+                        colorScheme.surfaceContainerHighest.withAlpha(100),
                   ),
                 ),
                 const SizedBox(height: 48),
-                
+
                 // Action Buttons
                 FilledButton(
                   onPressed: _isSubmitting ? null : _submit,
@@ -182,11 +187,13 @@ class _CustomFeedbackPageState extends State<CustomFeedbackPage> {
                       ? const SizedBox(
                           width: 24,
                           height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
                         )
                       : Text(
                           l10n.customFeedbackSubmit,
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                 ),
               ],
