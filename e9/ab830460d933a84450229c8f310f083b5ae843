@@ -1,0 +1,9 @@
+lib/utils/app_tracer.dart
+  ai_agent 1-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "e9ab830460d933a84450229c8f310f083b5ae843",
+  "prompts": {}
+}
