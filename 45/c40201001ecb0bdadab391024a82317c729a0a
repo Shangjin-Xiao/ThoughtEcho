@@ -1,0 +1,15 @@
+lib/utils/sentry_helper.dart
+  ai_agent 12,23-28,30-34,43-51,186-194
+pubspec.lock
+  ai_agent 1983-1990
+pubspec.yaml
+  ai_agent 93
+.gitignore
+  ai_agent 307-309
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "45c40201001ecb0bdadab391024a82317c729a0a",
+  "prompts": {}
+}
