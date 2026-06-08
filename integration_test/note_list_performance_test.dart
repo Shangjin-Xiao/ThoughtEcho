@@ -438,7 +438,10 @@ void main() {
       () => _runScrollSequence(tester, 'images_cold'),
     );
     final ScrollableState scrollable = tester.state<ScrollableState>(
-      find.byKey(_listKey),
+      find.descendant(
+        of: find.byKey(_listKey),
+        matching: find.byType(Scrollable),
+      ),
     );
     scrollable.position.jumpTo(0);
     await tester.pumpAndSettle();
