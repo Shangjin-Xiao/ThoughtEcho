@@ -1818,9 +1818,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       return;
     }
 
-    setState(() {
-      _isSaving = true;
-    });
+    _isSaving = true;
 
     // Capture context variables before any async operations
     final db = Provider.of<DatabaseService>(context, listen: false);
@@ -1943,11 +1941,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
-      }
+      _isSaving = false;
     }
   }
 
@@ -2635,14 +2629,14 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                             ),
                           ),
                         ),
-                        onPressed: _isLoadingFullQuote || _isSaving
+                        onPressed: _isLoadingFullQuote
                             ? null
                             : () async {
                                 if (_contentController.text.isNotEmpty) {
                                   await _saveAndExit();
                                 }
                               },
-                        child: _isLoadingFullQuote || _isSaving
+                        child: _isLoadingFullQuote
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,

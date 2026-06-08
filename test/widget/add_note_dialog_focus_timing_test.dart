@@ -116,11 +116,15 @@ void main() {
     );
 
     await tester.enterText(find.byType(TextField).first, '重复保存测试');
-    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
 
     final saveButton = find.widgetWithText(FilledButton, '保存');
     await tester.tap(saveButton);
     await tester.pump();
+
+    expect(find.widgetWithText(FilledButton, '保存'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
     await tester.tap(saveButton);
     await tester.pump();
 

@@ -313,13 +313,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
           _statusMessage = l10n.importComplete;
         });
 
-        // 延迟一下让用户看到完成状态
-        await Future.delayed(const Duration(milliseconds: 500));
-
-        if (mounted) {
-          Navigator.of(context).pop();
-          widget.onMediaImported(savedPath);
-        }
+        _completeImport(savedPath);
       } else {
         throw Exception(l10n.fileSaveFailed);
       }
@@ -395,12 +389,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
           _statusMessage = l10n.importComplete;
         });
 
-        await Future.delayed(const Duration(milliseconds: 500));
-
-        if (mounted) {
-          Navigator.of(context).pop();
-          widget.onMediaImported(savedPath);
-        }
+        _completeImport(savedPath);
       }
     } catch (e) {
       logDebug('相机导入失败: $e');
@@ -476,12 +465,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
           _statusMessage = l10n.downloadComplete;
         });
 
-        await Future.delayed(const Duration(milliseconds: 500));
-
-        if (mounted) {
-          Navigator.of(context).pop();
-          widget.onMediaImported(savedPath);
-        }
+        _completeImport(savedPath);
       }
     } catch (e) {
       logDebug('网址导入失败: $e');
@@ -528,6 +512,14 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         _progress = progress;
       });
     }
+  }
+
+  void _completeImport(String savedPath) {
+    if (!mounted) return;
+
+    // 先写入编辑器，再关闭对话框，确保随后触发的保存包含该媒体。
+    widget.onMediaImported(savedPath);
+    Navigator.of(context).pop();
   }
 
   /// 更新状态消息

@@ -288,6 +288,7 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
   void _showUnifiedMediaDialog(String mediaType) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => UnifiedMediaImportDialog(
         mediaType: mediaType,
         onMediaImported: (String filePath) {
