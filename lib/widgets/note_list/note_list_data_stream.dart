@@ -146,16 +146,13 @@ extension _NoteListDataStreamExtension on NoteListViewState {
                 !_initialDataCompleter!.isCompleted) {
               _initialDataCompleter!.complete();
             }
-            // 延迟启用自动滚动，避免冷启动时的滚动冲突
+            // 冷启动完成后允许正常记录用户滚动。
             Future.delayed(const Duration(milliseconds: 1500), () {
               if (mounted) {
-                _autoScrollEnabled = true;
                 _isInitializing = false;
-                logDebug('首次加载完成，启用自动滚动', source: 'NoteListView');
+                logDebug('首次加载完成，结束滚动保护期', source: 'NoteListView');
               }
             });
-            // 冷启动保护期：设置较长的保护期，避免首次进入时的滚动冲突
-            _lastUserScrollTime = DateTime.now();
             // 空闲时小批量预热折叠态富文本控制器，避免滚动首次遇到
             // 富文本时同步创建 Quill Document/Controller 造成 build 峰值。
             final settings = Provider.of<SettingsService>(

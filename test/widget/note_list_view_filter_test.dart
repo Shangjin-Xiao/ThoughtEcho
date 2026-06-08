@@ -121,7 +121,7 @@ void main() {
           ),
         ]);
         await tester.pump();
-        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpAndSettle(const Duration(milliseconds: 50));
 
         expect(await scrollFuture, isTrue);
         expect(find.text('延迟到达的目标笔记'), findsOneWidget);
@@ -129,6 +129,111 @@ void main() {
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(seconds: 2));
         await databaseService.disposeStream();
+      },
+    );
+
+    testWidgets(
+      'uses local keys for ordinary items and precisely positions a deep target',
+      (tester) async {
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = _makeQuotes(60);
+        final settingsService = _FakeSettingsService();
+        final noteListKey = GlobalKey<NoteListViewState>();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            noteListKey: noteListKey,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(
+          find.byKey(const ValueKey<String>('note-list-item-quote-0')),
+          findsOneWidget,
+        );
+
+        final scrollFuture = noteListKey.currentState!.scrollToQuoteById(
+          'quote-55',
+        );
+        await tester.pumpAndSettle(const Duration(milliseconds: 50));
+
+        expect(await scrollFuture, isTrue);
+        final target = find.ancestor(
+          of: find.textContaining('分页测试笔记 55'),
+          matching: find.byType(QuoteItemWidget),
+        );
+        expect(target, findsOneWidget);
+        final listTop = tester.getTopLeft(find.byType(ListView)).dy;
+        expect(tester.getTopLeft(target).dy, closeTo(listTop + 12, 3));
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
+      'loads the next page before positioning a notification target',
+      (tester) async {
+        final databaseService = _PagingFakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+        final noteListKey = GlobalKey<NoteListViewState>();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            noteListKey: noteListKey,
+          ),
+        );
+        await tester.pump();
+        databaseService.emitInitialPage();
+        await tester.pump();
+
+        final scrollFuture = noteListKey.currentState!.scrollToQuoteById(
+          'quote-35',
+        );
+        await tester.pumpAndSettle(const Duration(milliseconds: 50));
+
+        expect(await scrollFuture, isTrue);
+        expect(databaseService.loadMoreCallCount, 1);
+        expect(find.textContaining('分页测试笔记 35'), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+        await databaseService.disposeStream();
+      },
+    );
+
+    testWidgets(
+      'returns false immediately when the notification target is unavailable',
+      (tester) async {
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = _makeQuotes(5);
+        final settingsService = _FakeSettingsService();
+        final noteListKey = GlobalKey<NoteListViewState>();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            noteListKey: noteListKey,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(
+          await noteListKey.currentState!.scrollToQuoteById('missing-quote'),
+          isFalse,
+        );
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
       },
     );
 

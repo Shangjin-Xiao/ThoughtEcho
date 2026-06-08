@@ -474,6 +474,7 @@ extension _NoteListItemsExtension on NoteListViewState {
               metrics.maxScrollExtent * AppConstants.scrollPreloadThreshold;
           if (metrics.pixels > threshold &&
               metrics.maxScrollExtent > 0 &&
+              !_isAutoScrolling &&
               !_isLoading &&
               _hasMore) {
             _loadMore();
@@ -484,12 +485,12 @@ extension _NoteListItemsExtension on NoteListViewState {
         if (notification is ScrollEndNotification) {
           // 列表完全静止，允许图片开始解码
           isListScrolling.value = false;
-          // 重置用户滚动状态，记录最后滚动时间用于 _scrollToItem 的 900ms 冷却
+          // 重置用户滚动状态。
           _isUserScrolling = false;
-          _lastUserScrollTime = DateTime.now();
 
           final metrics = notification.metrics;
           if (metrics.pixels >= metrics.maxScrollExtent - 100 &&
+              !_isAutoScrolling &&
               _hasMore &&
               !_isLoading) {
             _loadMore();
@@ -525,11 +526,9 @@ extension _NoteListItemsExtension on NoteListViewState {
               }
 
               final quoteId = quote.id!;
-              final String itemKey = 'quote_${quoteId}_$index';
-              _itemKeys.putIfAbsent(
-                quoteId,
-                () => GlobalKey(debugLabel: itemKey),
-              );
+              final itemKey = quoteId == _positioningQuoteId
+                  ? _positioningItemKey
+                  : ValueKey<String>('note-list-item-$quoteId');
 
               final bool shouldCheckExpansionForGuide =
                   !foldGuideAssigned && widget.foldToggleGuideKey != null;
@@ -565,7 +564,7 @@ extension _NoteListItemsExtension on NoteListViewState {
               final isSelected = _selectedExportNoteIds.contains(quoteId);
 
               Widget itemWidget = KeyedSubtree(
-                key: _itemKeys[quoteId],
+                key: itemKey,
                 child: ValueListenableBuilder<bool>(
                   valueListenable: expansionNotifier,
                   builder: (context, isExpanded, child) => QuoteItemWidget(
@@ -592,7 +591,13 @@ extension _NoteListItemsExtension on NoteListViewState {
                           if (!mounted) return;
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             if (!mounted) return;
-                            _scrollToItem(quoteId, index);
+                            unawaited(
+                              _positionAndAlignQuote(
+                                quoteId,
+                                index,
+                                forceAlignToTop: false,
+                              ),
+                            );
                           });
                         });
                       }

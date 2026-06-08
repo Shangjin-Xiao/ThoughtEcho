@@ -100,8 +100,10 @@ class NoteListViewState extends State<NoteListView> {
   final FocusNode _searchFocusNode = FocusNode(); // 添加焦点节点管理
   final ScrollController _scrollController = ScrollController(); // 添加滚动控制器
   final Map<String, bool> _expandedItems = {};
-  final Map<String, GlobalKey> _itemKeys = {}; // 保存每个笔记的GlobalKey
   final Map<String, ValueNotifier<bool>> _expansionNotifiers = {};
+  String? _positioningQuoteId;
+  GlobalKey? _positioningItemKey;
+  int _positioningRequest = 0;
 
   /// 事件驱动：首批数据加载完成信号，替代忙等轮询
   Completer<void>? _initialDataCompleter = Completer<void>();
@@ -130,10 +132,8 @@ class NoteListViewState extends State<NoteListView> {
   // 修复：添加防抖定时器和性能优化
   Timer? _searchDebounceTimer;
   // ---- 自动滚动控制新增状态 ----
-  bool _autoScrollEnabled = false; // 首批数据加载完成后再允许自动滚动
   bool _initialDataLoaded = false; // 标记是否已收到首批数据（后续用于启用自动滚动）
   bool _isAutoScrolling = false; // 当前是否有程序驱动的滚动动画
-  DateTime? _lastUserScrollTime; // 最近一次用户滚动时间
   bool _isInitializing = true; // 标记是否正在初始化，避免冷启动滚动冲突
 
   // 开发者模式：首次打开后首次手势滑动性能监测（非首帧）
@@ -538,50 +538,22 @@ class NoteListViewState extends State<NoteListView> {
         await Future.delayed(const Duration(milliseconds: 80));
         if (!mounted) return false;
 
-        _autoScrollEnabled = true;
         _isInitializing = false;
         _isUserScrolling = false;
-        _lastUserScrollTime = null;
 
-        // ── 阶段 3: 动态估算偏移量触发 ListView 构建 ──
-        if (_scrollController.hasClients) {
-          final key = _itemKeys[quoteId];
-          if (key == null || key.currentContext == null) {
-            final estimatedHeight = _estimateItemHeight();
-            final estimatedOffset = index * estimatedHeight;
-            final maxOffset = _scrollController.position.maxScrollExtent;
-            _scrollController.jumpTo(estimatedOffset.clamp(0.0, maxOffset));
-          }
-        }
-
-        // ── 阶段 4: 指数退避等待 widget build + context 就绪 ──
-        const maxRenderWait = 8;
-        var renderDelay = 30; // ms, 指数增长
-        for (var renderWait = 0; renderWait < maxRenderWait; renderWait++) {
-          await Future.delayed(
-            Duration(milliseconds: renderDelay),
-          );
-          if (!mounted) return false;
-          // 让出一帧给框架完成 layout
-          await WidgetsBinding.instance.endOfFrame;
-          final key = _itemKeys[quoteId];
-          if (key != null && key.currentContext != null) {
-            _scrollToItem(quoteId, index, forceAlignToTop: true);
-            return true;
-          }
-          renderDelay = (renderDelay * 1.5).toInt().clamp(30, 200);
-        }
-
-        // 最终兜底尝试
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          _scrollToItem(quoteId, index, forceAlignToTop: true);
-        });
-        return true;
+        return _positionAndAlignQuote(
+          quoteId,
+          index,
+          forceAlignToTop: true,
+        );
       }
 
       // 目标不在已加载范围内，等待或加载更多
-      if (!_hasMore || _isLoading) {
+      if (!_hasMore) {
+        logDebug('目标笔记不在可见列表且已无更多分页: $quoteId', source: 'NoteListView');
+        return false;
+      }
+      if (_isLoading) {
         await Future.delayed(const Duration(milliseconds: 200));
       } else {
         await _loadMore();
@@ -590,27 +562,6 @@ class NoteListViewState extends State<NoteListView> {
 
     logDebug('未能在列表中定位笔记: $quoteId', source: 'NoteListView');
     return false;
-  }
-
-  /// 动态估算列表项高度：从已渲染的 item 中采样。
-  /// 比硬编码 120.0 精确得多，分页/长内容场景偏差更小。
-  double _estimateItemHeight() {
-    const fallback = 120.0;
-    if (_itemKeys.isEmpty) return fallback;
-
-    double totalHeight = 0;
-    int measured = 0;
-    for (final key in _itemKeys.values) {
-      final ctx = key.currentContext;
-      if (ctx == null) continue;
-      final rb = ctx.findRenderObject();
-      if (rb is RenderBox && rb.hasSize) {
-        totalHeight += rb.size.height;
-        measured++;
-        if (measured >= 10) break; // 最多采样 10 个，够用了
-      }
-    }
-    return measured > 0 ? totalHeight / measured : fallback;
   }
 
   ValueNotifier<bool> _obtainExpansionNotifier(String quoteId) {
@@ -631,7 +582,6 @@ class NoteListViewState extends State<NoteListView> {
     for (final id in removableIds) {
       _expansionNotifiers.remove(id)?.dispose();
       _expandedItems.remove(id);
-      _itemKeys.remove(id);
     }
   }
 
