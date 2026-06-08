@@ -221,21 +221,33 @@ class PdfExportService {
                     ...parsedQuotes[i],
 
                     // --- 出处作者 ---
-                    if (quote.source != null && quote.source!.isNotEmpty) ...[
+                    if ((quote.sourceAuthor != null && quote.sourceAuthor!.isNotEmpty) ||
+                        (quote.sourceWork != null && quote.sourceWork!.isNotEmpty)) ...[
                       pw.SizedBox(height: 8),
-                      pw.Align(
-                        alignment: pw.Alignment.centerRight,
-                        child: pw.Text(
-                          "—— ${quote.source}",
-                          style: pw.TextStyle(
-                            font: fontSet.italic,
-                            fontBold: fontSet.boldItalic,
-                            fontItalic: fontSet.italic,
-                            fontBoldItalic: fontSet.boldItalic,
-                            fontSize: 10,
-                            fontStyle: pw.FontStyle.italic,
-                            color: PdfColor.fromHex("4A5568"),
-                          ),
+                      pw.Text(
+                        _formatSource(quote.sourceAuthor ?? '', quote.sourceWork ?? ''),
+                        style: pw.TextStyle(
+                          font: fontSet.italic,
+                          fontBold: fontSet.boldItalic,
+                          fontItalic: fontSet.italic,
+                          fontBoldItalic: fontSet.boldItalic,
+                          fontSize: 10,
+                          fontStyle: pw.FontStyle.italic,
+                          color: PdfColor.fromHex("4A5568"),
+                        ),
+                      ),
+                    ] else if (quote.source != null && quote.source!.isNotEmpty) ...[
+                      pw.SizedBox(height: 8),
+                      pw.Text(
+                        quote.source!,
+                        style: pw.TextStyle(
+                          font: fontSet.italic,
+                          fontBold: fontSet.boldItalic,
+                          fontItalic: fontSet.italic,
+                          fontBoldItalic: fontSet.boldItalic,
+                          fontSize: 10,
+                          fontStyle: pw.FontStyle.italic,
+                          color: PdfColor.fromHex("4A5568"),
                         ),
                       ),
                     ],
@@ -360,5 +372,21 @@ class PdfExportService {
       );
     }
     return PdfExportIcons.build(PdfExportIcon.tag, size: size, color: color);
+  }
+
+  static String _formatSource(String author, String work) {
+    if (author.isEmpty && work.isEmpty) {
+      return '';
+    }
+
+    String result = '';
+    if (author.isNotEmpty) {
+      result += '——$author';
+    }
+
+    if (work.isNotEmpty) {
+      result += ' 《$work》';
+    }
+    return result;
   }
 }
