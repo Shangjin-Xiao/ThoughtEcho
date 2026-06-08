@@ -136,7 +136,7 @@
   "settingsBackupDesc": "备份数据或从备份中恢复",
   "settingsSync": "笔记同步",
   "settingsSyncDesc": "与附近设备同步笔记数据",
-  "settingsAbout": "关于 心迹 (ThoughtEcho)",
+  "settingsAbout": "关于心迹",
   "settingsAboutSlogan": "你的专属灵感摘录本",
   "settingsViewSource": "查看项目源码 (GitHub)",
   "settingsVisitWebsite": "访问官网",
@@ -3760,5 +3760,13 @@
   "webdavSyncOnCellular": "允许数据流量下同步",
   "webdavSyncOnCellularSubtitle": "允许在移动数据网络下进行云端备份和合并",
   "webdavSyncNotesOnlyOnCellular": "数据流量下仅同步笔记",
-  "webdavSyncNotesOnlyOnCellularSubtitle": "启用后在移动网络下仅同步文本，跳过大型媒体文件以节省流量"
+  "webdavSyncNotesOnlyOnCellularSubtitle": "启用后在移动网络下仅同步文本，跳过大型媒体文件以节省流量",
+  "customFeedbackTitle": "发送意见反馈",
+  "customFeedbackMessageLabel": "反馈内容",
+  "customFeedbackMessageHint": "请描述您遇到的问题或建议...",
+  "customFeedbackNameLabel": "您的称呼 (可选)",
+  "customFeedbackEmailLabel": "联系邮箱 (可选)",
+  "customFeedbackSubmit": "发送反馈",
+  "customFeedbackSuccess": "感谢您的反馈！",
+  "customFeedbackEmptyError": "请输入反馈内容"
 }

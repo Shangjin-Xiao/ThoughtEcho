@@ -981,23 +981,7 @@ class SettingsPageState extends State<SettingsPage> {
                                 text: l10n.settingsVisitWebsite,
                                 url: _websiteUrl,
                               ),
-                              const SizedBox(height: 16),
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  Navigator.pop(dialogContext);
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const FeedbackContactPage(),
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(Icons.feedback_outlined),
-                                label: Text(l10n.feedbackAndContact),
-                                style: _primaryButtonStyle(context),
-                              ),
-                              const SizedBox(height: 8),
+
                               ElevatedButton.icon(
                                 onPressed: () {
                                   Navigator.pop(dialogContext);
@@ -1044,6 +1028,28 @@ class SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 // --- 关于标题 ListTile 结束 ---
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Divider(
+                    color: theme.colorScheme.outline.withAlpha(
+                      (0.2 * 255).round(),
+                    ),
+                  ),
+                ),
+                ListTile(
+                  title: Text(l10n.feedbackAndContact),
+                  leading: const Icon(Icons.feedback_outlined),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const FeedbackContactPage(),
+                      ),
+                    );
+                  },
+                ),
 
                 // 添加分隔线
                 Padding(
