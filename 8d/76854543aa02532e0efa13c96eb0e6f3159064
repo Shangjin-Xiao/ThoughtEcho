@@ -1,0 +1,29 @@
+integration_test/note_list_performance_test.dart
+  s_6c3f45dd05ba45::t_bbf00924e26bd2 15,36-53,55,58,61-65,70-71
+  s_6c3f45dd05ba45::t_c25ef9fa29e14f 103-108
+  s_6c3f45dd05ba45::t_f2fcf08065625d 428,438,468-470
+scripts/prepare_performance_test_images.dart
+  s_6c3f45dd05ba45::t_c25ef9fa29e14f 2,16,66-76,79,92
+  s_6c3f45dd05ba45::t_bbf00924e26bd2 1,4-9,11-15,17-18,32-51,55-65,77-78,80-91,93-99
+  s_6c3f45dd05ba45::t_4f96c4d0d6e6b7 19-31
+  s_6c3f45dd05ba45::t_adbdd9e6db9fbb 3,52-54
+  s_6c3f45dd05ba45::t_c935c9a973e436 10
+.github/workflows/firebase-note-list-performance.yml
+  s_6c3f45dd05ba45::t_bbf00924e26bd2 47-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "8d76854543aa02532e0efa13c96eb0e6f3159064",
+  "prompts": {},
+  "sessions": {
+    "s_6c3f45dd05ba45": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ea4f0-49d0-7900-a0ea-d0e557e1df14",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
