@@ -106,8 +106,9 @@ class PdfFontService {
   }
 
   static Future<ByteData?> _loadFontData() async {
-    if (_cachedFontData != null) {
-      return _cachedFontData!;
+    final validMemoryCache = _takeValidCachedFontData();
+    if (validMemoryCache != null) {
+      return validMemoryCache;
     }
     try {
       await _removeObsoleteFontCache();
@@ -209,6 +210,29 @@ class PdfFontService {
         bytes[2] == 0x75 &&
         bytes[3] == 0x65;
     return isTtf || isAppleTtf;
+  }
+
+  @visibleForTesting
+  static void setCachedFontDataForTesting(ByteData? data) {
+    _cachedFontData = data;
+  }
+
+  @visibleForTesting
+  static ByteData? takeValidCachedFontDataForTesting() {
+    return _takeValidCachedFontData();
+  }
+
+  static ByteData? _takeValidCachedFontData() {
+    final cached = _cachedFontData;
+    if (cached == null) {
+      return null;
+    }
+    if (isValidFontData(cached)) {
+      return cached;
+    }
+    logDebug("丢弃不支持 Unicode 的旧版内存字体缓存", source: "PdfFontService");
+    _cachedFontData = null;
+    return null;
   }
 
   /// 检索 Windows/Android/Linux 本地中文字体

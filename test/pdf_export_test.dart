@@ -111,5 +111,13 @@ void main() {
       final badHeader = ByteData(4)..setUint32(0, 0x12345678);
       expect(PdfFontService.isValidFontData(badHeader), isFalse);
     });
+
+    test('PdfFontService rejects a stale non-Unicode in-memory font cache', () {
+      final staleOtf = ByteData(4)..setUint32(0, 0x4F54544F);
+      PdfFontService.setCachedFontDataForTesting(staleOtf);
+
+      expect(PdfFontService.takeValidCachedFontDataForTesting(), isNull);
+      expect(PdfFontService.takeValidCachedFontDataForTesting(), isNull);
+    });
   });
 }
