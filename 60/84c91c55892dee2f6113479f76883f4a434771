@@ -1,0 +1,11 @@
+lib/services/pdf_export_service.dart
+  ai_agent 224-225,227-250,376-390
+integration_test/note_list_performance_test.dart
+  ai_agent 68-71,73-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "6084c91c55892dee2f6113479f76883f4a434771",
+  "prompts": {}
+}
