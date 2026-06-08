@@ -20,6 +20,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      GRADLE_OPTS: >-
+        -Dorg.gradle.jvmargs=-Xmx5g
+        -Dorg.gradle.parallel=false
     steps:
       - uses: actions/checkout@v4
 
@@ -45,10 +49,11 @@ jobs:
         run: |
           flutter pub get
           bash scripts/patch_flutter_quill.sh
-          flutter build apk --debug
+          flutter build apk --debug --target-platform android-arm64
           pushd android
-          ./gradlew app:assembleAndroidTest
-          ./gradlew app:assembleDebug \
+          ./gradlew --no-parallel app:assembleAndroidTest
+          ./gradlew --no-parallel app:assembleDebug \
+            -Ptarget-platform=android-arm64 \
             -Ptarget="$GITHUB_WORKSPACE/integration_test/note_list_performance_test.dart"
           popd
 
