@@ -1,0 +1,23 @@
+lib/services/pdf_font_service.dart
+  s_db4d6918964195::t_d9b4aa61741360 215-220
+  s_db4d6918964195::t_c99ef3f65b799f 109-111,221-235
+test/pdf_export_test.dart
+  s_db4d6918964195::t_8a56079d37dc71 114,116-118,121
+  s_db4d6918964195::t_c99ef3f65b799f 115,119-120
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "3943d6510dcd559ac96106184a2756cbcf3b8695",
+  "prompts": {},
+  "sessions": {
+    "s_db4d6918964195": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e9fce-73a9-7d13-a7e2-1cb06c912408",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
