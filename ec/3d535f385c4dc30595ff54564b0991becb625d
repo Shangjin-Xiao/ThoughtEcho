@@ -1,0 +1,9 @@
+lib/pages/home_page.dart
+  ai_agent 65,88-119,121-135,1897-1899,1917,1921-1924,1926-1952,1954-1959,1961-1963,1965,1968-1975,1978-1984
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "ec3d535f385c4dc30595ff54564b0991becb625d",
+  "prompts": {}
+}
