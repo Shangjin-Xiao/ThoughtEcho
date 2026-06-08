@@ -83,43 +83,27 @@ class PdfExportService {
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(36), // 0.5 英寸边距
+        margin: const pw.EdgeInsets.all(48), // 增加留白
         header: (pw.Context context) {
           return pw.Container(
-            alignment: pw.Alignment.centerRight,
-            margin: const pw.EdgeInsets.only(bottom: 12),
-            padding: const pw.EdgeInsets.only(bottom: 4),
+            alignment: pw.Alignment.centerLeft,
+            margin: const pw.EdgeInsets.only(bottom: 16),
+            padding: const pw.EdgeInsets.only(bottom: 8),
             decoration: const pw.BoxDecoration(
               border: pw.Border(
-                bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+                bottom: pw.BorderSide(color: PdfColors.grey200, width: 0.5),
               ),
             ),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(
-                  "ThoughtEcho (心迹) — 专属思想摘录本",
-                  style: pw.TextStyle(
-                    font: fontSet.regular,
-                    fontBold: fontSet.bold,
-                    fontItalic: fontSet.italic,
-                    fontBoldItalic: fontSet.boldItalic,
-                    fontSize: 8,
-                    color: PdfColors.grey600,
-                  ),
-                ),
-                pw.Text(
-                  "导出日期: ${DateTime.now().toString().substring(0, 10)}",
-                  style: pw.TextStyle(
-                    font: fontSet.regular,
-                    fontBold: fontSet.bold,
-                    fontItalic: fontSet.italic,
-                    fontBoldItalic: fontSet.boldItalic,
-                    fontSize: 8,
-                    color: PdfColors.grey600,
-                  ),
-                ),
-              ],
+            child: pw.Text(
+              "ThoughtEcho (心迹) — 专属思想摘录本",
+              style: pw.TextStyle(
+                font: fontSet.regular,
+                fontBold: fontSet.bold,
+                fontItalic: fontSet.italic,
+                fontBoldItalic: fontSet.boldItalic,
+                fontSize: 9,
+                color: PdfColor.fromHex("94A3B8"), // 更高级的浅灰
+              ),
             ),
           );
         },
@@ -146,17 +130,30 @@ class PdfExportService {
           for (int i = 0; i < quotes.length; i++) {
             final quote = quotes[i];
 
-            // 每一个笔记卡片以容器封装，配有细虚线或实线边框
+            PdfColor cardColor = PdfColors.white;
+            if (quote.colorHex != null && quote.colorHex!.isNotEmpty) {
+              try {
+                String hex = quote.colorHex!.trim();
+                if (!hex.startsWith('#')) {
+                  hex = '#$hex';
+                }
+                cardColor = PdfColor.fromHex(hex);
+              } catch (e) {
+                cardColor = PdfColors.white;
+              }
+            }
+
+            // 每一个笔记卡片以容器封装，还原应用内的圆润卡片质感
             content.add(
               pw.Container(
-                margin: const pw.EdgeInsets.only(bottom: 16),
-                padding: const pw.EdgeInsets.all(12),
+                margin: const pw.EdgeInsets.only(bottom: 20),
+                padding: const pw.EdgeInsets.all(16),
                 decoration: pw.BoxDecoration(
-                  color: PdfColors.white,
+                  color: cardColor,
                   borderRadius:
-                      const pw.BorderRadius.all(pw.Radius.circular(8)),
+                      const pw.BorderRadius.all(pw.Radius.circular(12)),
                   border: pw.Border.all(
-                      color: PdfColor.fromHex("E2E8F0"), width: 0.8),
+                      color: PdfColor.fromHex("F1F5F9"), width: 1.0),
                 ),
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,

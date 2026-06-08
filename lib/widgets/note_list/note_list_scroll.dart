@@ -115,6 +115,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     final imageCache = PaintingBinding.instance.imageCache;
     _scrollSessionStartImageCount = imageCache.currentSize;
     _scrollSessionStartImageBytes = imageCache.currentSizeBytes;
+    _scrollSessionTracer?.finish();
     _scrollSessionTracer = AppTracer.start('ThoughtEcho.NoteListView.scrollSession', operation: 'ui.scroll');
     _ensurePerfTimingsCallback();
   }

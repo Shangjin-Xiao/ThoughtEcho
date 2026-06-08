@@ -47,7 +47,7 @@ void configureSentryOptions(SentryFlutterOptions options) {
   options.enableNdkScopeSync = true;
 
   // 使用底层标志更精确地区分真实生产环境与开发环境
-  options.environment = const bool.fromEnvironment('dart.vm.product')
+  options.environment = kReleaseMode
       ? 'production'
       : 'development';
 

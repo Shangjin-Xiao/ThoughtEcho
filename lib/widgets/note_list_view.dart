@@ -466,6 +466,12 @@ class NoteListViewState extends State<NoteListView> {
       logDebug('清理焦点节点时出错: $e');
     }
 
+    _firstOpenTracer?.finish();
+    _firstOpenTracer = null;
+    _loadMoreTracer?.finish();
+    _loadMoreTracer = null;
+    _scrollSessionTracer?.finish();
+    _scrollSessionTracer = null;
     _searchDebounceTimer?.cancel(); // 清理防抖定时器
     _firstOpenScrollStopTimer?.cancel();
     _loadMorePerfStopTimer?.cancel();
