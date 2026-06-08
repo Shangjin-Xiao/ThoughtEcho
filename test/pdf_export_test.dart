@@ -9,6 +9,20 @@ import 'package:thoughtecho/services/delta_to_pdf_parser.dart';
 import 'package:thoughtecho/services/pdf_export_service.dart';
 import 'package:thoughtecho/services/pdf_font_service.dart';
 
+ByteData _buildFontDataWithTables(List<String> tableTags) {
+  final data = ByteData(12 + tableTags.length * 16);
+  data.setUint32(0, 0x00010000);
+  data.setUint16(4, tableTags.length);
+  for (var index = 0; index < tableTags.length; index++) {
+    final tag = tableTags[index];
+    final offset = 12 + index * 16;
+    for (var charIndex = 0; charIndex < tag.length; charIndex++) {
+      data.setUint8(offset + charIndex, tag.codeUnitAt(charIndex));
+    }
+  }
+  return data;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -147,6 +161,15 @@ void main() {
       // 6. Arbitrary bad header
       final badHeader = ByteData(4)..setUint32(0, 0x12345678);
       expect(PdfFontService.isValidFontData(badHeader), isFalse);
+    });
+
+    test('PdfFontService accepts only bitmap color fonts for emoji fallback',
+        () {
+      final colrFont = _buildFontDataWithTables(['COLR', 'CPAL']);
+      final bitmapEmojiFont = _buildFontDataWithTables(['CBDT', 'CBLC']);
+
+      expect(PdfFontService.isValidEmojiFontData(colrFont), isFalse);
+      expect(PdfFontService.isValidEmojiFontData(bitmapEmojiFont), isTrue);
     });
 
     test('PdfFontService rejects a stale non-Unicode in-memory font cache', () {

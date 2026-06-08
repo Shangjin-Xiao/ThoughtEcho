@@ -63,8 +63,8 @@ class PdfFontService {
   ];
 
   static const _emojiFontUrls = [
-    "https://fonts.gstatic.com/s/notocoloremoji/v30/Yq6P-KqIXTD0t4D9z1ESnKM3-HpFab5s79iz64w.ttf",
     "https://rawcdn.githack.com/googlefonts/noto-emoji/9a5261d871451f9b5183c93483cbd68ed916b1e9/fonts/NotoColorEmoji.ttf",
+    "https://raw.githubusercontent.com/googlefonts/noto-emoji/9a5261d871451f9b5183c93483cbd68ed916b1e9/fonts/NotoColorEmoji.ttf",
   ];
 
   static const _materialIconFontUrls = [
@@ -161,19 +161,22 @@ class PdfFontService {
   }
 
   static Future<ByteData?> _loadEmojiFontData() async {
-    if (_cachedEmojiFontData != null) {
+    if (_cachedEmojiFontData != null &&
+        isValidEmojiFontData(_cachedEmojiFontData!)) {
       return _cachedEmojiFontData!;
     }
+    _cachedEmojiFontData = null;
     final cached = await _tryLoadCachedFont(_emojiFontFileName);
-    if (cached != null && isValidFontData(cached)) {
+    if (cached != null && isValidEmojiFontData(cached)) {
       _cachedEmojiFontData = cached;
       return cached;
     }
     final downloaded = await _downloadAndCacheFont(
       fileName: _emojiFontFileName,
       urls: _emojiFontUrls,
+      validator: isValidEmojiFontData,
     );
-    if (downloaded != null && isValidFontData(downloaded)) {
+    if (downloaded != null) {
       _cachedEmojiFontData = downloaded;
       return downloaded;
     }
@@ -244,6 +247,32 @@ class PdfFontService {
         bytes[2] == 0x75 &&
         bytes[3] == 0x65;
     return isTtf || isAppleTtf;
+  }
+
+  /// pdf 包仅能将带 CBDT/CBLC 位图表的彩色 Emoji 字体渲染为图片。
+  @visibleForTesting
+  static bool isValidEmojiFontData(ByteData data) {
+    if (!isValidFontData(data) || data.lengthInBytes < 12) {
+      return false;
+    }
+
+    final tableCount = data.getUint16(4);
+    final tableDirectoryLength = 12 + tableCount * 16;
+    if (data.lengthInBytes < tableDirectoryLength) {
+      return false;
+    }
+
+    var hasBitmapData = false;
+    var hasBitmapLocation = false;
+    for (var index = 0; index < tableCount; index++) {
+      final offset = 12 + index * 16;
+      final tag = String.fromCharCodes(
+        List.generate(4, (charIndex) => data.getUint8(offset + charIndex)),
+      );
+      hasBitmapData |= tag == 'CBDT';
+      hasBitmapLocation |= tag == 'CBLC';
+    }
+    return hasBitmapData && hasBitmapLocation;
   }
 
   @visibleForTesting
@@ -372,7 +401,9 @@ class PdfFontService {
   static Future<ByteData?> _downloadAndCacheFont({
     required String fileName,
     required List<String> urls,
+    bool Function(ByteData)? validator,
   }) async {
+    final isValid = validator ?? isValidFontData;
     final dio = Dio(BaseOptions(
       connectTimeout: const Duration(seconds: 8),
       receiveTimeout: const Duration(seconds: 15),
@@ -388,7 +419,7 @@ class PdfFontService {
         if (response.data != null && response.data!.isNotEmpty) {
           final bytes = Uint8List.fromList(response.data!);
           final byteData = ByteData.view(bytes.buffer);
-          if (isValidFontData(byteData)) {
+          if (isValid(byteData)) {
             final docDir = await getApplicationDocumentsDirectory();
             final fontFile = File("${docDir.path}/$fileName");
             await fontFile.writeAsBytes(bytes);
