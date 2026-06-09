@@ -3768,5 +3768,9 @@
   "customFeedbackEmailLabel": "Email (Optional)",
   "customFeedbackSubmit": "Submit Feedback",
   "customFeedbackSuccess": "Thanks for your feedback!",
-  "customFeedbackEmptyError": "Please enter feedback details"
+  "customFeedbackEmptyError": "Please enter feedback details",
+  "webdavConflictKeepTooltip": "Keep and move to default category",
+  "webdavConflictKeepSuccess": "Confirmed and moved to default list.",
+  "webdavConflictDiscardTooltip": "Discard this conflict backup",
+  "webdavConflictDiscardSuccess": "Permanently discarded this conflict note."
 }

@@ -3545,5 +3545,9 @@
   "offlineQuoteSourceDesc": "オフライン時やローカルのみ使用時にホーム画面に表示する内容",
   "offlineQuoteSourceTagOnly": "「今日の一言」タグのノートのみ表示",
   "offlineQuoteSourceAll": "すべてのノートをランダムに表示",
-  "appendToOriginal": "原文に追加"
+  "appendToOriginal": "原文に追加",
+  "webdavConflictKeepTooltip": "保持してデフォルトカテゴリに移動",
+  "webdavConflictKeepSuccess": "確認してデフォルトリストに移動しました。",
+  "webdavConflictDiscardTooltip": "この競合バックアップを破棄",
+  "webdavConflictDiscardSuccess": "この競合メモを完全に破棄しました。"
 }
