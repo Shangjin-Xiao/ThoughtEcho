@@ -1,0 +1,41 @@
+test/unit/services/settings_service_test.dart
+  s_6c3f45dd05ba45::t_e76e5a2bc3a811 61-74,115-125
+test/widget/add_note_dialog_focus_timing_test.dart
+  s_6c3f45dd05ba45::t_29c3de40fe7d04 363-367
+lib/l10n/app_zh.arb
+  s_6c3f45dd05ba45::t_a32a8be76a78ee 167-170
+test/unit/models/app_settings_test.dart
+  s_6c3f45dd05ba45::t_875a3b85354131 34-35,75-76,141-148,227-228,236-237
+integration_test/note_list_performance_test.dart
+  s_6c3f45dd05ba45::t_5e46bc4b057166 82-86
+lib/services/settings_service.dart
+  s_6c3f45dd05ba45::t_3212b652cc04dd 284-296
+lib/models/app_settings.dart
+  s_6c3f45dd05ba45::t_3f57b0a51091af 53,93,142,221,264,307,357-358
+lib/widgets/quote_item_widget.dart
+  s_6c3f45dd05ba45::t_143eb532b94334 383-386,433-434,436-438
+lib/l10n/app_en.arb
+  s_6c3f45dd05ba45::t_f3a7c2af77abb0 167-170
+lib/pages/settings_page.dart
+  s_6c3f45dd05ba45::t_695a9f3a147ec6 642-671
+test/widget/note_list_view_filter_test.dart
+  s_6c3f45dd05ba45::t_b66ce122713c37 496-500
+test/widgets/quote_item_widget_test.dart
+  s_6c3f45dd05ba45::t_ecc8b73eab6b6b 42-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "f14d25170fa43c51c2328e778efcd6a488fe1aff",
+  "prompts": {},
+  "sessions": {
+    "s_6c3f45dd05ba45": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ea4f0-49d0-7900-a0ea-d0e557e1df14",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
