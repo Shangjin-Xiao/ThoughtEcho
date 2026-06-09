@@ -1,0 +1,33 @@
+lib/models/app_settings.dart
+  s_3cf32bf8891d39::t_628f3b31484bc1 52,90,214,255
+lib/l10n/app_zh.arb
+  s_3cf32bf8891d39::t_628f3b31484bc1 311
+lib/l10n/app_en.arb
+  s_3cf32bf8891d39::t_628f3b31484bc1 311
+test/unit/services/settings_service_test.dart
+  s_3cf32bf8891d39::t_077bb5cd7d7a57 49-50,86
+squad/add_note_dialog_firebase_perf_handoff.md
+  s_3cf32bf8891d39::t_802f8fe5da4501 358-367
+lib/widgets/add_note_dialog.dart
+  s_3cf32bf8891d39::t_628f3b31484bc1 150,380-382,385,396,406,580,662-673,1552
+test/unit/models/app_settings_test.dart
+  s_3cf32bf8891d39::t_077bb5cd7d7a57 34
+test/widget/add_note_dialog_focus_timing_test.dart
+  s_3cf32bf8891d39::t_077bb5cd7d7a57 72-75,81-82,116-119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "5a5909c8e4d670eda5bb2832ac5fc9340d84acf4",
+  "prompts": {},
+  "sessions": {
+    "s_3cf32bf8891d39": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eab9b-ca66-7051-b2ad-081c17227dcb",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
