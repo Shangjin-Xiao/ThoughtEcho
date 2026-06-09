@@ -1,0 +1,36 @@
+squad/add_note_dialog_firebase_perf_handoff.md
+  s_3cf32bf8891d39::t_b4de6e9de76468 190-256
+  s_3cf32bf8891d39::t_d72c4dd5e6db54 1-189
+test/widget/add_note_dialog_focus_timing_test.dart
+  s_3cf32bf8891d39::t_6bde0ebfe2697f 7-8,13,21-29,69-104,274-328
+test/unit/models/app_settings_test.dart
+  s_3cf32bf8891d39::t_4536f2f6e7c52c 34
+lib/widgets/add_note_dialog.dart
+  s_3cf32bf8891d39::t_cdb4d7d7fe6906 360,363
+lib/l10n/app_en.arb
+  s_3cf32bf8891d39::t_6a5e5434d8e373 310-311
+lib/models/app_settings.dart
+  s_3cf32bf8891d39::t_1edd23b65a0403 52,90,214,255
+test/unit/services/settings_service_test.dart
+  s_3cf32bf8891d39::t_4750f7e3a92623 49-50,86
+lib/l10n/app_zh.arb
+  s_3cf32bf8891d39::t_9aea7c414c9fba 310-311
+lib/pages/settings_page.dart
+  s_3cf32bf8891d39::t_4d1867c6b81bba 660-661
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "1c34e1aa3f4e66b9d0b614eb08e6c8608255692a",
+  "prompts": {},
+  "sessions": {
+    "s_3cf32bf8891d39": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eab9b-ca66-7051-b2ad-081c17227dcb",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
