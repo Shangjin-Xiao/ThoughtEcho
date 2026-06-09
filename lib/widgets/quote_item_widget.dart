@@ -407,799 +407,798 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         ) ??
         TextStyle(color: secondaryTextColor, fontSize: 12);
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        border: widget.selectionMode && widget.isSelected
-            ? Border.all(color: theme.colorScheme.primary, width: 2)
-            : Border.all(color: Colors.transparent, width: 2),
-        boxShadow: widget.isSelected && widget.selectionMode
-            ? [
-                BoxShadow(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                  blurRadius: 12,
-                  spreadRadius: 2,
-                )
-              ]
-            : (isExpanded
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : AppTheme.defaultShadow),
-        gradient: quote.colorHex != null && quote.colorHex!.isNotEmpty
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: widget.isSelected && widget.selectionMode
-                    ? [
-                        cardColor.withValues(alpha: 0.8),
-                        theme.colorScheme.primary.withValues(alpha: 0.1)
-                      ]
-                    : [cardColor, cardColor.withValues(alpha: 0.95)],
+    final cardMargin = const EdgeInsets.symmetric(horizontal: 12, vertical: 6);
+    final cardDecoration = BoxDecoration(
+      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+      border: widget.selectionMode && widget.isSelected
+          ? Border.all(color: theme.colorScheme.primary, width: 2)
+          : Border.all(color: Colors.transparent, width: 2),
+      boxShadow: widget.isSelected && widget.selectionMode
+          ? [
+              BoxShadow(
+                color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                blurRadius: 12,
+                spreadRadius: 2,
               )
-            : null,
-        color: quote.colorHex == null || quote.colorHex!.isEmpty
-            ? (widget.isSelected && widget.selectionMode
-                ? theme.colorScheme.primary.withValues(alpha: 0.05)
-                : cardColor)
-            : null,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12), // 减少内边距从16到12
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- Trash Metadata Row ---
-            if (widget.isTrashMode)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-                child: Row(
-                  children: [
-                    ExcludeSemantics(
-                      child: Icon(
-                        Icons.auto_delete_outlined,
-                        size: 16,
-                        color: theme.colorScheme.error,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      widget.trashRemainingDaysText ?? '',
-                      style: theme.textTheme.labelMedium
-                          ?.copyWith(color: theme.colorScheme.error),
-                    ),
-                    const Spacer(),
-                    Text(
-                      widget.trashDeletedAtText ?? '',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: secondaryTextColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // 头部日期显示
+            ]
+          : (isExpanded
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : AppTheme.defaultShadow),
+      gradient: quote.colorHex != null && quote.colorHex!.isNotEmpty
+          ? LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: widget.isSelected && widget.selectionMode
+                  ? [
+                      cardColor.withValues(alpha: 0.8),
+                      theme.colorScheme.primary.withValues(alpha: 0.1)
+                    ]
+                  : [cardColor, cardColor.withValues(alpha: 0.95)],
+            )
+          : null,
+      color: quote.colorHex == null || quote.colorHex!.isEmpty
+          ? (widget.isSelected && widget.selectionMode
+              ? theme.colorScheme.primary.withValues(alpha: 0.05)
+              : cardColor)
+          : null,
+    );
+    final cardChild = Padding(
+      padding: const EdgeInsets.all(12), // 减少内边距从16到12
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // --- Trash Metadata Row ---
+          if (widget.isTrashMode)
             Padding(
-              padding: EdgeInsets.fromLTRB(
-                4,
-                0,
-                4,
-                formattedEditedAt != null ? 2 : 8,
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+              child: Row(
+                children: [
+                  ExcludeSemantics(
+                    child: Icon(
+                      Icons.auto_delete_outlined,
+                      size: 16,
+                      color: theme.colorScheme.error,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    widget.trashRemainingDaysText ?? '',
+                    style: theme.textTheme.labelMedium
+                        ?.copyWith(color: theme.colorScheme.error),
+                  ),
+                  const Spacer(),
+                  Text(
+                    widget.trashDeletedAtText ?? '',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: secondaryTextColor,
+                    ),
+                  ),
+                ],
               ),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final bool hasLocationText = locationText != null;
-                  final bool hasWeatherText = weatherText != null;
-                  final bool hasMetaText = hasLocationText || hasWeatherText;
-                  final double dateWidth = _measureSingleLineTextWidth(
+            ),
+
+          // 头部日期显示
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              4,
+              0,
+              4,
+              formattedEditedAt != null ? 2 : 8,
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final bool hasLocationText = locationText != null;
+                final bool hasWeatherText = weatherText != null;
+                final bool hasMetaText = hasLocationText || hasWeatherText;
+                final double dateWidth = _measureSingleLineTextWidth(
+                  context,
+                  formattedDate,
+                  headerDateStyle,
+                );
+                double metaWidth = 0;
+
+                if (hasLocationText) {
+                  metaWidth += 14 + 2;
+                  metaWidth += _measureSingleLineTextWidth(
                     context,
-                    formattedDate,
-                    headerDateStyle,
+                    locationText,
+                    headerMetaStyle,
                   );
-                  double metaWidth = 0;
+                }
+                if (hasLocationText && hasWeatherText) {
+                  metaWidth += 8;
+                }
+                if (hasWeatherText) {
+                  metaWidth += 14 + 2;
+                  metaWidth += _measureSingleLineTextWidth(
+                    context,
+                    weatherText,
+                    headerMetaStyle,
+                  );
+                }
 
-                  if (hasLocationText) {
-                    metaWidth += 14 + 2;
-                    metaWidth += _measureSingleLineTextWidth(
-                      context,
-                      locationText,
-                      headerMetaStyle,
+                final double compactWidth =
+                    dateWidth + (hasMetaText ? 12 + metaWidth : 0);
+
+                Widget buildDate() => Text(
+                      formattedDate,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: headerDateStyle,
                     );
-                  }
-                  if (hasLocationText && hasWeatherText) {
-                    metaWidth += 8;
-                  }
-                  if (hasWeatherText) {
-                    metaWidth += 14 + 2;
-                    metaWidth += _measureSingleLineTextWidth(
-                      context,
-                      weatherText,
-                      headerMetaStyle,
-                    );
-                  }
 
-                  final double compactWidth =
-                      dateWidth + (hasMetaText ? 12 + metaWidth : 0);
-
-                  Widget buildDate() => Text(
-                        formattedDate,
-                        maxLines: 1,
-                        softWrap: false,
-                        style: headerDateStyle,
-                      );
-
-                  Widget buildMeta() => Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (hasLocationText) ...[
-                            ExcludeSemantics(
-                              child: Icon(
-                                Icons.location_on,
-                                size: 14,
-                                color: iconColor,
-                              ),
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              locationText,
-                              maxLines: 1,
-                              softWrap: false,
-                              style: headerMetaStyle,
-                            ),
-                          ],
-                          if (hasLocationText && hasWeatherText)
-                            const SizedBox(width: 8),
-                          if (hasWeatherText) ...[
-                            ExcludeSemantics(
-                              child: Icon(
-                                _getWeatherIcon(quote.weather!),
-                                size: 14,
-                                color: iconColor,
-                              ),
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              weatherText,
-                              maxLines: 1,
-                              softWrap: false,
-                              style: headerMetaStyle,
-                            ),
-                          ],
-                        ],
-                      );
-
-                  if (compactWidth <= constraints.maxWidth) {
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                Widget buildMeta() => Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Flexible(child: buildDate()),
+                        if (hasLocationText) ...[
+                          ExcludeSemantics(
+                            child: Icon(
+                              Icons.location_on,
+                              size: 14,
+                              color: iconColor,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            locationText,
+                            maxLines: 1,
+                            softWrap: false,
+                            style: headerMetaStyle,
+                          ),
+                        ],
+                        if (hasLocationText && hasWeatherText)
+                          const SizedBox(width: 8),
+                        if (hasWeatherText) ...[
+                          ExcludeSemantics(
+                            child: Icon(
+                              _getWeatherIcon(quote.weather!),
+                              size: 14,
+                              color: iconColor,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            weatherText,
+                            maxLines: 1,
+                            softWrap: false,
+                            style: headerMetaStyle,
+                          ),
+                        ],
+                      ],
+                    );
+
+                if (compactWidth <= constraints.maxWidth) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Flexible(child: buildDate()),
+                      if (hasMetaText) ...[
+                        const SizedBox(width: 12),
+                        buildMeta(),
+                      ],
+                    ],
+                  );
+                }
+
+                return Align(
+                  alignment: Alignment.centerLeft,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        buildDate(),
                         if (hasMetaText) ...[
                           const SizedBox(width: 12),
                           buildMeta(),
                         ],
                       ],
-                    );
-                  }
-
-                  return Align(
-                    alignment: Alignment.centerLeft,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          buildDate(),
-                          if (hasMetaText) ...[
-                            const SizedBox(width: 12),
-                            buildMeta(),
-                          ],
-                        ],
-                      ),
                     ),
-                  );
-                },
-              ),
-            ),
-            if (formattedEditedAt != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
-                child: Text(
-                  formattedEditedAt,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: secondaryTextColor.withValues(alpha: 0.82),
-                    fontSize: 10,
-                    fontStyle: FontStyle.italic,
                   ),
+                );
+              },
+            ),
+          ),
+          if (formattedEditedAt != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+              child: Text(
+                formattedEditedAt,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: secondaryTextColor.withValues(alpha: 0.82),
+                  fontSize: 10,
+                  fontStyle: FontStyle.italic,
                 ),
               ),
+            ),
 
-            // 笔记内容 - 支持双击展开/折叠
-            GestureDetector(
-              key: widget.foldToggleGuideKey ??
-                  const ValueKey('quote_item.double_tap_region'),
-              behavior: HitTestBehavior.translucent,
-              onDoubleTap: _needsExpansion(quote)
-                  ? () => _handleDoubleTap(isExpanded, quote)
-                  : null,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-                child: Builder(
-                  builder: (context) {
-                    final innerTheme = Theme.of(context);
-                    final needsExpansion = _needsExpansion(quote);
-                    final showFullContent = isExpanded || !needsExpansion;
+          // 笔记内容 - 支持双击展开/折叠
+          GestureDetector(
+            key: widget.foldToggleGuideKey ??
+                const ValueKey('quote_item.double_tap_region'),
+            behavior: HitTestBehavior.translucent,
+            onDoubleTap: _needsExpansion(quote)
+                ? () => _handleDoubleTap(isExpanded, quote)
+                : null,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+              child: Builder(
+                builder: (context) {
+                  final innerTheme = Theme.of(context);
+                  final needsExpansion = _needsExpansion(quote);
+                  final showFullContent = isExpanded || !needsExpansion;
 
-                    // 构建不依赖双击动画的内容子树（QuoteContent + 底部遮罩）
-                    // 作为 AnimatedBuilder 的 child 传入，避免动画 tick 时重建重型子树
-                    final contentChild = Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        AnimatedSwitcher(
-                          duration: QuoteItemWidget._fadeDuration,
-                          switchInCurve: Curves.easeOut,
-                          switchOutCurve: Curves.easeIn,
-                          layoutBuilder: (currentChild, previousChildren) =>
-                              Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              ...previousChildren,
-                              if (currentChild != null) currentChild,
-                            ],
-                          ),
-                          child: KeyedSubtree(
-                            key: ValueKey<bool>(showFullContent),
-                            child: QuoteContent(
-                              quote: quote,
-                              style: innerTheme.textTheme.bodyLarge?.copyWith(
-                                color: primaryTextColor,
-                                height: 1.5,
-                              ),
-                              showFullContent: showFullContent,
-                              collapseRichTextSemantics: true,
+                  // 构建不依赖双击动画的内容子树（QuoteContent + 底部遮罩）
+                  // 作为 AnimatedBuilder 的 child 传入，避免动画 tick 时重建重型子树
+                  final contentChild = Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      AnimatedSwitcher(
+                        duration: QuoteItemWidget._fadeDuration,
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        layoutBuilder: (currentChild, previousChildren) =>
+                            Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            ...previousChildren,
+                            if (currentChild != null) currentChild,
+                          ],
+                        ),
+                        child: KeyedSubtree(
+                          key: ValueKey<bool>(showFullContent),
+                          child: QuoteContent(
+                            quote: quote,
+                            style: innerTheme.textTheme.bodyLarge?.copyWith(
+                              color: primaryTextColor,
+                              height: 1.5,
                             ),
+                            showFullContent: showFullContent,
+                            collapseRichTextSemantics: true,
                           ),
                         ),
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          height: 30,
-                          child: IgnorePointer(
-                            child: AnimatedSwitcher(
-                              duration: QuoteItemWidget._fadeDuration,
-                              switchInCurve: Curves.easeIn,
-                              switchOutCurve: Curves.easeOut,
-                              child: (!isExpanded && needsExpansion)
-                                  ? Stack(
-                                      fit: StackFit.expand,
-                                      children: [
-                                        ExcludeSemantics(
-                                          child: RepaintBoundary(
-                                            child: ClipRect(
-                                              child: BackdropFilter(
-                                                backdropGroupKey: _backdropKey,
-                                                filter: ui.ImageFilter.blur(
-                                                  sigmaX: 1.2,
-                                                  sigmaY: 1.2,
-                                                ),
-                                                child: Container(
-                                                  decoration: BoxDecoration(
-                                                    gradient: LinearGradient(
-                                                      begin:
-                                                          Alignment.topCenter,
-                                                      end: Alignment
-                                                          .bottomCenter,
-                                                      colors: [
-                                                        innerTheme
-                                                            .colorScheme.surface
-                                                            .withValues(
-                                                                alpha: 0.0),
-                                                        innerTheme
-                                                            .colorScheme.surface
-                                                            .withValues(
-                                                                alpha: 0.08),
-                                                        innerTheme
-                                                            .colorScheme.surface
-                                                            .withValues(
-                                                                alpha: 0.18),
-                                                      ],
-                                                      stops: const [
-                                                        0.0,
-                                                        0.4,
-                                                        1.0,
-                                                      ],
-                                                    ),
+                      ),
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        height: 30,
+                        child: IgnorePointer(
+                          child: AnimatedSwitcher(
+                            duration: QuoteItemWidget._fadeDuration,
+                            switchInCurve: Curves.easeIn,
+                            switchOutCurve: Curves.easeOut,
+                            child: (!isExpanded && needsExpansion)
+                                ? Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      ExcludeSemantics(
+                                        child: RepaintBoundary(
+                                          child: ClipRect(
+                                            child: BackdropFilter(
+                                              backdropGroupKey: _backdropKey,
+                                              filter: ui.ImageFilter.blur(
+                                                sigmaX: 1.2,
+                                                sigmaY: 1.2,
+                                              ),
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    begin: Alignment.topCenter,
+                                                    end: Alignment.bottomCenter,
+                                                    colors: [
+                                                      innerTheme
+                                                          .colorScheme.surface
+                                                          .withValues(
+                                                              alpha: 0.0),
+                                                      innerTheme
+                                                          .colorScheme.surface
+                                                          .withValues(
+                                                              alpha: 0.08),
+                                                      innerTheme
+                                                          .colorScheme.surface
+                                                          .withValues(
+                                                              alpha: 0.18),
+                                                    ],
+                                                    stops: const [
+                                                      0.0,
+                                                      0.4,
+                                                      1.0,
+                                                    ],
                                                   ),
                                                 ),
                                               ),
                                             ),
                                           ),
                                         ),
-                                        Align(
-                                          alignment: Alignment.center,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: innerTheme
-                                                  .colorScheme.surface
-                                                  .withValues(alpha: 0.35),
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            child: Text(
-                                              l10n.doubleTapToViewFull,
-                                              style: innerTheme
-                                                  .textTheme.bodySmall
-                                                  ?.copyWith(
-                                                color: innerTheme
-                                                    .colorScheme.onSurface
-                                                    .withValues(alpha: 0.65),
-                                                fontSize: 11,
-                                                fontStyle: FontStyle.italic,
-                                              ),
-                                            ),
+                                      ),
+                                      Align(
+                                        alignment: Alignment.center,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
                                           ),
-                                        ),
-                                      ],
-                                    )
-                                  : const SizedBox.shrink(),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-
-                    return AnimatedSize(
-                      duration: QuoteItemWidget.expandCollapseDuration,
-                      curve: QuoteItemWidget._expandCurve,
-                      alignment: Alignment.topLeft,
-                      clipBehavior: Clip.none,
-                      child: AnimatedBuilder(
-                        animation: _doubleTapController,
-                        // 将不依赖动画值的子树通过 child 传入，避免动画帧间重建
-                        child: contentChild,
-                        builder: (context, child) {
-                          final highlightOpacity = _highlightProgress.value;
-                          final brightness = innerTheme.brightness;
-                          final overlayStrength =
-                              brightness == Brightness.dark ? 0.12 : 0.05;
-
-                          return Transform.scale(
-                            scale: _scaleAnimation.value,
-                            alignment: Alignment.topLeft,
-                            child: highlightOpacity > 0
-                                ? Stack(
-                                    clipBehavior: Clip.none,
-                                    children: [
-                                      child!,
-                                      Positioned.fill(
-                                        child: IgnorePointer(
-                                          child: ExcludeSemantics(
-                                            child: DecoratedBox(
-                                              key: const ValueKey(
-                                                'quote_item.double_tap_overlay',
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withValues(
-                                                  alpha: overlayStrength *
-                                                      highlightOpacity,
-                                                ),
-                                              ),
+                                          decoration: BoxDecoration(
+                                            color: innerTheme
+                                                .colorScheme.surface
+                                                .withValues(alpha: 0.35),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            l10n.doubleTapToViewFull,
+                                            style: innerTheme
+                                                .textTheme.bodySmall
+                                                ?.copyWith(
+                                              color: innerTheme
+                                                  .colorScheme.onSurface
+                                                  .withValues(alpha: 0.65),
+                                              fontSize: 11,
+                                              fontStyle: FontStyle.italic,
                                             ),
                                           ),
                                         ),
                                       ),
                                     ],
                                   )
-                                : child!,
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-
-            // 来源信息（如果有）
-            if ((quote.sourceAuthor != null &&
-                    quote.sourceAuthor!.isNotEmpty) ||
-                (quote.sourceWork != null && quote.sourceWork!.isNotEmpty)) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 4, 4, 8), // 减少左右边距从16到4
-                child: Text(
-                  _formatSource(
-                    quote.sourceAuthor ?? '',
-                    quote.sourceWork ?? '',
-                  ),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: secondaryTextColor,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-            ] else if (quote.source != null && quote.source!.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 4, 4, 8), // 减少左右边距从16到4
-                child: Text(
-                  quote.source!,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: secondaryTextColor,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-            ],
-
-            // 底部工具栏 - 标签、心形和更多按钮在同一行
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
-              child: Row(
-                children: [
-                  if (quote.tagIds.isNotEmpty) ...[
-                    ExcludeSemantics(
-                      child: Icon(
-                        Icons.label_outline,
-                        size: 16,
-                        color: iconColor,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: SizedBox(
-                        height: 32,
-                        child: Builder(
-                          builder: (context) {
-                            // 对标签进行排序：优先显示匹配筛选条件的标签
-                            final sortedTagIds = _getSortedTagIds(
-                              quote.tagIds,
-                              widget.selectedTagIds,
-                            );
-
-                            return SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              physics: const BouncingScrollPhysics(),
-                              child: Row(
-                                children: [
-                                  for (int index = 0;
-                                      index < sortedTagIds.length;
-                                      index++)
-                                    () {
-                                      final tagId = sortedTagIds[index];
-                                      final tag = widget.tagMap[tagId] ??
-                                          NoteCategory(
-                                            id: tagId,
-                                            name: l10n.unknownTag,
-                                          );
-
-                                      // 判断是否是筛选条件中的标签
-                                      final isFilteredTag =
-                                          widget.selectedTagIds.contains(tagId);
-
-                                      return Container(
-                                        margin: EdgeInsets.only(
-                                          right: index < sortedTagIds.length - 1
-                                              ? 8
-                                              : 0,
-                                        ),
-                                        child: widget.tagBuilder != null
-                                            ? widget.tagBuilder!(tag)
-                                            : Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 10,
-                                                  vertical: 4,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: isFilteredTag
-                                                      ? baseContentColor
-                                                          .withValues(
-                                                          alpha: 0.15,
-                                                        )
-                                                      : baseContentColor
-                                                          .withValues(
-                                                          alpha: 0.08,
-                                                        ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(14),
-                                                  border: Border.all(
-                                                    color: isFilteredTag
-                                                        ? baseContentColor
-                                                            .withValues(
-                                                            alpha: 0.4,
-                                                          )
-                                                        : baseContentColor
-                                                            .withValues(
-                                                            alpha: 0.15,
-                                                          ),
-                                                    width: isFilteredTag
-                                                        ? 1.0
-                                                        : 0.5,
-                                                  ),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    if (tag.iconName
-                                                            ?.isNotEmpty ==
-                                                        true) ...[
-                                                      if (IconUtils.isEmoji(
-                                                        tag.iconName!,
-                                                      )) ...[
-                                                        ExcludeSemantics(
-                                                          child: Text(
-                                                            IconUtils
-                                                                .getDisplayIcon(
-                                                              tag.iconName!,
-                                                            ),
-                                                            style:
-                                                                const TextStyle(
-                                                              fontSize: 12,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 3,
-                                                        ),
-                                                      ] else ...[
-                                                        ExcludeSemantics(
-                                                          child: Icon(
-                                                            IconUtils
-                                                                .getIconData(
-                                                              tag.iconName!,
-                                                            ),
-                                                            size: 12,
-                                                            color:
-                                                                secondaryTextColor,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                          width: 3,
-                                                        ),
-                                                      ],
-                                                    ],
-                                                    Text(
-                                                      tag.localizedName(l10n),
-                                                      style: theme
-                                                          .textTheme.bodySmall
-                                                          ?.copyWith(
-                                                        color:
-                                                            secondaryTextColor,
-                                                        fontSize: 11,
-                                                        fontWeight:
-                                                            isFilteredTag
-                                                                ? FontWeight
-                                                                    .w600
-                                                                : FontWeight
-                                                                    .w500,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                      );
-                                    }(),
-                                ],
-                              ),
-                            );
-                          },
+                                : const SizedBox.shrink(),
+                          ),
                         ),
                       ),
-                    ),
-                  ] else ...[
-                    const Expanded(child: SizedBox.shrink()),
-                  ],
+                    ],
+                  );
 
-                  if (widget.isTrashMode) ...[
-                    TextButton(
-                      onPressed: widget.trashActionsEnabled
-                          ? widget.onPermanentlyDelete
-                          : null,
-                      style: TextButton.styleFrom(
-                        foregroundColor: theme.colorScheme.error,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                      ),
-                      child: Text(l10n.permanentlyDelete),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton.tonal(
-                      onPressed:
-                          widget.trashActionsEnabled ? widget.onRestore : null,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: theme.colorScheme.secondaryContainer,
-                        foregroundColor: theme.colorScheme.onSecondaryContainer,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                      ),
-                      child: Text(l10n.restore),
-                    ),
-                  ],
+                  return AnimatedSize(
+                    duration: QuoteItemWidget.expandCollapseDuration,
+                    curve: QuoteItemWidget._expandCurve,
+                    alignment: Alignment.topLeft,
+                    clipBehavior: Clip.none,
+                    child: AnimatedBuilder(
+                      animation: _doubleTapController,
+                      // 将不依赖动画值的子树通过 child 传入，避免动画帧间重建
+                      child: contentChild,
+                      builder: (context, child) {
+                        final highlightOpacity = _highlightProgress.value;
+                        final brightness = innerTheme.brightness;
+                        final overlayStrength =
+                            brightness == Brightness.dark ? 0.12 : 0.05;
 
-                  // 心形按钮（如果启用）
-                  if (!widget.isTrashMode && widget.onFavorite != null) ...[
-                    Tooltip(
-                      message: l10n.actionFavorite,
-                      child: Semantics(
-                        button: true,
-                        label: l10n.actionFavorite,
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            key: widget.favoriteButtonGuideKey,
-                            onTap: widget.onFavorite,
-                            onLongPress: quote.favoriteCount > 0
-                                ? widget.onLongPressFavorite
-                                : null,
-                            borderRadius: BorderRadius.circular(20),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Stack(
-                                children: [
-                                  Icon(
-                                    quote.favoriteCount > 0
-                                        ? Icons.favorite
-                                        : Icons.favorite_border,
-                                    size: 20,
-                                    color: quote.favoriteCount > 0
-                                        ? Colors.red.shade400
-                                        : iconColor,
-                                  ),
-                                  if (quote.favoriteCount > 0)
-                                    Positioned(
-                                      right: -2,
-                                      top: -2,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(2),
-                                        decoration: BoxDecoration(
-                                          color: Colors.red.shade600,
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          border: Border.all(
-                                            color: (quote.colorHex == null ||
-                                                    quote.colorHex!.isEmpty)
-                                                ? theme.colorScheme
-                                                    .surfaceContainerLowest
-                                                : cardColor,
-                                            width: 1.5,
+                        return Transform.scale(
+                          scale: _scaleAnimation.value,
+                          alignment: Alignment.topLeft,
+                          child: highlightOpacity > 0
+                              ? Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    child!,
+                                    Positioned.fill(
+                                      child: IgnorePointer(
+                                        child: ExcludeSemantics(
+                                          child: DecoratedBox(
+                                            key: const ValueKey(
+                                              'quote_item.double_tap_overlay',
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withValues(
+                                                alpha: overlayStrength *
+                                                    highlightOpacity,
+                                              ),
+                                            ),
                                           ),
-                                        ),
-                                        constraints: const BoxConstraints(
-                                          minWidth: 16,
-                                          minHeight: 16,
-                                        ),
-                                        child: Text(
-                                          quote.favoriteCount > 99
-                                              ? '99+'
-                                              : '${quote.favoriteCount}',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .labelSmall
-                                              ?.copyWith(
-                                                  color: Colors.white,
-                                                  height: 1.0),
-                                          textAlign: TextAlign.center,
                                         ),
                                       ),
                                     ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                  ],
-
-                  // 更多操作按钮
-                  if (!widget.isTrashMode)
-                    PopupMenuButton<String>(
-                      tooltip: l10n.moreOptions,
-                      key: widget.moreButtonGuideKey, // 功能引导 key
-                      icon: Icon(Icons.more_vert, color: iconColor),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      onSelected: (value) {
-                        if (value == 'ask') {
-                          widget.onAskAI();
-                        } else if (value == 'edit') {
-                          widget.onEdit();
-                        } else if (value == 'generate_card') {
-                          widget.onGenerateCard?.call();
-                        } else if (value == 'export_pdf') {
-                          widget.onExportPdf?.call();
-                        } else if (value == 'delete') {
-                          widget.onDelete();
-                        }
+                                  ],
+                                )
+                              : child!,
+                        );
                       },
-                      itemBuilder: (context) => [
-                        PopupMenuItem<String>(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit,
-                                  color: theme.colorScheme.primary),
-                              const SizedBox(width: 8),
-                              Text(l10n.editNoteMenu),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem<String>(
-                          value: 'ask',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.question_answer,
-                                color: theme.colorScheme.primary,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(l10n.askAIMenu),
-                            ],
-                          ),
-                        ),
-                        if (exportFormat == 'pdf' && widget.onExportPdf != null)
-                          PopupMenuItem<String>(
-                            value: 'export_pdf',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.picture_as_pdf,
-                                  color: theme.colorScheme.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(l10n.exportToPdf),
-                              ],
-                            ),
-                          )
-                        else if (widget.onGenerateCard != null)
-                          PopupMenuItem<String>(
-                            value: 'generate_card',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.auto_awesome,
-                                  color: theme.colorScheme.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(l10n.generateCardShareMenu),
-                              ],
-                            ),
-                          ),
-                        PopupMenuItem<String>(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.delete, color: Colors.red),
-                              const SizedBox(width: 8),
-                              Text(
-                                l10n.deleteNoteMenu,
-                                style:
-                                    TextStyle(color: theme.colorScheme.error),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
                     ),
-                ],
+                  );
+                },
+              ),
+            ),
+          ),
+
+          // 来源信息（如果有）
+          if ((quote.sourceAuthor != null && quote.sourceAuthor!.isNotEmpty) ||
+              (quote.sourceWork != null && quote.sourceWork!.isNotEmpty)) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 8), // 减少左右边距从16到4
+              child: Text(
+                _formatSource(
+                  quote.sourceAuthor ?? '',
+                  quote.sourceWork ?? '',
+                ),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: secondaryTextColor,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ] else if (quote.source != null && quote.source!.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 8), // 减少左右边距从16到4
+              child: Text(
+                quote.source!,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: secondaryTextColor,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
             ),
           ],
-        ),
+
+          // 底部工具栏 - 标签、心形和更多按钮在同一行
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+            child: Row(
+              children: [
+                if (quote.tagIds.isNotEmpty) ...[
+                  ExcludeSemantics(
+                    child: Icon(
+                      Icons.label_outline,
+                      size: 16,
+                      color: iconColor,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: SizedBox(
+                      height: 32,
+                      child: Builder(
+                        builder: (context) {
+                          // 对标签进行排序：优先显示匹配筛选条件的标签
+                          final sortedTagIds = _getSortedTagIds(
+                            quote.tagIds,
+                            widget.selectedTagIds,
+                          );
+
+                          return SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            child: Row(
+                              children: [
+                                for (int index = 0;
+                                    index < sortedTagIds.length;
+                                    index++)
+                                  () {
+                                    final tagId = sortedTagIds[index];
+                                    final tag = widget.tagMap[tagId] ??
+                                        NoteCategory(
+                                          id: tagId,
+                                          name: l10n.unknownTag,
+                                        );
+
+                                    // 判断是否是筛选条件中的标签
+                                    final isFilteredTag =
+                                        widget.selectedTagIds.contains(tagId);
+
+                                    return Container(
+                                      margin: EdgeInsets.only(
+                                        right: index < sortedTagIds.length - 1
+                                            ? 8
+                                            : 0,
+                                      ),
+                                      child: widget.tagBuilder != null
+                                          ? widget.tagBuilder!(tag)
+                                          : Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 10,
+                                                vertical: 4,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: isFilteredTag
+                                                    ? baseContentColor
+                                                        .withValues(
+                                                        alpha: 0.15,
+                                                      )
+                                                    : baseContentColor
+                                                        .withValues(
+                                                        alpha: 0.08,
+                                                      ),
+                                                borderRadius:
+                                                    BorderRadius.circular(14),
+                                                border: Border.all(
+                                                  color: isFilteredTag
+                                                      ? baseContentColor
+                                                          .withValues(
+                                                          alpha: 0.4,
+                                                        )
+                                                      : baseContentColor
+                                                          .withValues(
+                                                          alpha: 0.15,
+                                                        ),
+                                                  width:
+                                                      isFilteredTag ? 1.0 : 0.5,
+                                                ),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  if (tag.iconName
+                                                          ?.isNotEmpty ==
+                                                      true) ...[
+                                                    if (IconUtils.isEmoji(
+                                                      tag.iconName!,
+                                                    )) ...[
+                                                      ExcludeSemantics(
+                                                        child: Text(
+                                                          IconUtils
+                                                              .getDisplayIcon(
+                                                            tag.iconName!,
+                                                          ),
+                                                          style:
+                                                              const TextStyle(
+                                                            fontSize: 12,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(
+                                                        width: 3,
+                                                      ),
+                                                    ] else ...[
+                                                      ExcludeSemantics(
+                                                        child: Icon(
+                                                          IconUtils.getIconData(
+                                                            tag.iconName!,
+                                                          ),
+                                                          size: 12,
+                                                          color:
+                                                              secondaryTextColor,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(
+                                                        width: 3,
+                                                      ),
+                                                    ],
+                                                  ],
+                                                  Text(
+                                                    tag.localizedName(l10n),
+                                                    style: theme
+                                                        .textTheme.bodySmall
+                                                        ?.copyWith(
+                                                      color: secondaryTextColor,
+                                                      fontSize: 11,
+                                                      fontWeight: isFilteredTag
+                                                          ? FontWeight.w600
+                                                          : FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                    );
+                                  }(),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  const Expanded(child: SizedBox.shrink()),
+                ],
+
+                if (widget.isTrashMode) ...[
+                  TextButton(
+                    onPressed: widget.trashActionsEnabled
+                        ? widget.onPermanentlyDelete
+                        : null,
+                    style: TextButton.styleFrom(
+                      foregroundColor: theme.colorScheme.error,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                    child: Text(l10n.permanentlyDelete),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.tonal(
+                    onPressed:
+                        widget.trashActionsEnabled ? widget.onRestore : null,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: theme.colorScheme.secondaryContainer,
+                      foregroundColor: theme.colorScheme.onSecondaryContainer,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                    child: Text(l10n.restore),
+                  ),
+                ],
+
+                // 心形按钮（如果启用）
+                if (!widget.isTrashMode && widget.onFavorite != null) ...[
+                  Tooltip(
+                    message: l10n.actionFavorite,
+                    child: Semantics(
+                      button: true,
+                      label: l10n.actionFavorite,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          key: widget.favoriteButtonGuideKey,
+                          onTap: widget.onFavorite,
+                          onLongPress: quote.favoriteCount > 0
+                              ? widget.onLongPressFavorite
+                              : null,
+                          borderRadius: BorderRadius.circular(20),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Stack(
+                              children: [
+                                Icon(
+                                  quote.favoriteCount > 0
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  size: 20,
+                                  color: quote.favoriteCount > 0
+                                      ? Colors.red.shade400
+                                      : iconColor,
+                                ),
+                                if (quote.favoriteCount > 0)
+                                  Positioned(
+                                    right: -2,
+                                    top: -2,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.shade600,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: (quote.colorHex == null ||
+                                                  quote.colorHex!.isEmpty)
+                                              ? theme.colorScheme
+                                                  .surfaceContainerLowest
+                                              : cardColor,
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 16,
+                                        minHeight: 16,
+                                      ),
+                                      child: Text(
+                                        quote.favoriteCount > 99
+                                            ? '99+'
+                                            : '${quote.favoriteCount}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(
+                                                color: Colors.white,
+                                                height: 1.0),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
+
+                // 更多操作按钮
+                if (!widget.isTrashMode)
+                  PopupMenuButton<String>(
+                    tooltip: l10n.moreOptions,
+                    key: widget.moreButtonGuideKey, // 功能引导 key
+                    icon: Icon(Icons.more_vert, color: iconColor),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    onSelected: (value) {
+                      if (value == 'ask') {
+                        widget.onAskAI();
+                      } else if (value == 'edit') {
+                        widget.onEdit();
+                      } else if (value == 'generate_card') {
+                        widget.onGenerateCard?.call();
+                      } else if (value == 'export_pdf') {
+                        widget.onExportPdf?.call();
+                      } else if (value == 'delete') {
+                        widget.onDelete();
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem<String>(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, color: theme.colorScheme.primary),
+                            const SizedBox(width: 8),
+                            Text(l10n.editNoteMenu),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'ask',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.question_answer,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(l10n.askAIMenu),
+                          ],
+                        ),
+                      ),
+                      if (exportFormat == 'pdf' && widget.onExportPdf != null)
+                        PopupMenuItem<String>(
+                          value: 'export_pdf',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.picture_as_pdf,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(l10n.exportToPdf),
+                            ],
+                          ),
+                        )
+                      else if (widget.onGenerateCard != null)
+                        PopupMenuItem<String>(
+                          value: 'generate_card',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.auto_awesome,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(l10n.generateCardShareMenu),
+                            ],
+                          ),
+                        ),
+                      PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            const Icon(Icons.delete, color: Colors.red),
+                            const SizedBox(width: 8),
+                            Text(
+                              l10n.deleteNoteMenu,
+                              style: TextStyle(color: theme.colorScheme.error),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
+    );
+    final shouldAnimateCardShell = widget.selectionMode || isExpanded;
+    if (shouldAnimateCardShell) {
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: cardMargin,
+        decoration: cardDecoration,
+        child: cardChild,
+      );
+    }
+
+    return Container(
+      margin: cardMargin,
+      decoration: cardDecoration,
+      child: cardChild,
     );
   }
 }
