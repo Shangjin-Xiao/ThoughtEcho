@@ -7,9 +7,7 @@ extension _NoteListItemsExtension on NoteListViewState {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     _firstOpenScrollPerfEnabled = context.select<SettingsService, bool>(
-      (s) =>
-          kProfileMode ||
-          (s.appSettings.developerMode && s.enableFirstOpenScrollPerfMonitor),
+      (s) => s.appSettings.developerMode && s.enableFirstOpenScrollPerfMonitor,
     );
 
     // 监听搜索控制器状态，如果搜索出错则重置本地加载状态
