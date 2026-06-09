@@ -49,6 +49,11 @@ class DatabaseHealthService {
     'quote_tags',
   };
 
+  /// Cache for pragma_table_info results, keyed by table name.
+  /// Populated on first access and reused across all startup checks to avoid
+  /// N+1 identical `SELECT name FROM pragma_table_info(?)` queries.
+  final Map<String, Set<String>> _tableColumnCache = {};
+
   /// 修复：添加查询性能统计
   final Map<String, int> _queryStats = {}; // 查询次数统计
   final Map<String, int> _queryTotalTime = {}; // 查询总耗时统计
@@ -143,6 +148,8 @@ class DatabaseHealthService {
   }
 
   /// 修复：检查列是否存在
+  /// 结果按表名缓存，避免在同一次启动中对相同表发出多个相同的
+  /// `SELECT name FROM pragma_table_info(?)` 查询（N+1 性能问题）。
   Future<bool> checkColumnExists(
     Database db,
     String tableName,
@@ -153,6 +160,11 @@ class DatabaseHealthService {
       return false;
     }
     try {
+      // Return cached result if available to avoid repeated pragma queries.
+      if (_tableColumnCache.containsKey(tableName)) {
+        return _tableColumnCache[tableName]!.contains(columnName);
+      }
+
       // Use the parameterised pragma_table_info() table-valued function.
       // It requires SQLite 3.16+ (Android 8 / API 26), which is guaranteed
       // because our minSdkVersion is 28 (Android 9, ships with SQLite 3.22+).
@@ -161,15 +173,25 @@ class DatabaseHealthService {
         'SELECT name FROM pragma_table_info(?)',
         [tableName],
       );
-      for (final row in result) {
-        if (row['name'] == columnName) {
-          return true;
-        }
-      }
-      return false;
+
+      // Cache the full column set for this table.
+      final columns =
+          result.map((row) => row['name'] as String).toSet();
+      _tableColumnCache[tableName] = columns;
+
+      return columns.contains(columnName);
     } catch (e) {
       logDebug('检查列 $columnName 是否存在失败: $e');
       return false;
+    }
+  }
+
+  /// 清除列缓存（在 schema 变更后调用，例如 ALTER TABLE 后）。
+  void invalidateTableColumnCache([String? tableName]) {
+    if (tableName != null) {
+      _tableColumnCache.remove(tableName);
+    } else {
+      _tableColumnCache.clear();
     }
   }
 
