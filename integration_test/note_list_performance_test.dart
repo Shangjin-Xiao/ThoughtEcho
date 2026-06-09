@@ -43,7 +43,10 @@ enum _ListScenario { plainText, richText, images }
 
 class _PerformanceSettingsService extends ChangeNotifier
     implements SettingsService {
-  final AppSettings _settings = AppSettings.defaultSettings();
+  final AppSettings _settings = AppSettings.defaultSettings().copyWith(
+    developerMode: true,
+    enableFirstOpenScrollPerfMonitor: true,
+  );
 
   @override
   AppSettings get appSettings => _settings;

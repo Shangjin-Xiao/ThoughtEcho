@@ -103,6 +103,59 @@ void main() {
       );
     });
 
+    testWidgets('重复卡片头部文本测宽复用缓存', (tester) async {
+      final quote = _buildQuote(
+        id: 'same-header-1',
+        date: DateTime(2025, 6, 21, 9, 0).toIso8601String(),
+        editSource: 'inline',
+      );
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _FakeSettingsService(),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Material(
+              child: Column(
+                children: [
+                  QuoteItemWidget(
+                    quote: quote,
+                    tagMap: const {},
+                    isExpanded: false,
+                    onToggleExpanded: (_) {},
+                    onEdit: () {},
+                    onDelete: () {},
+                    onAskAI: () {},
+                  ),
+                  QuoteItemWidget(
+                    quote: quote.copyWith(id: 'same-header-2'),
+                    tagMap: const {},
+                    isExpanded: false,
+                    onToggleExpanded: (_) {},
+                    onEdit: () {},
+                    onDelete: () {},
+                    onAskAI: () {},
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final stats = QuoteItemWidget.getHeaderTextWidthCacheStats();
+      expect(stats['cacheSize'], greaterThanOrEqualTo(1));
+      expect(stats['cacheMisses'], greaterThanOrEqualTo(1));
+      expect(stats['cacheHits'], greaterThanOrEqualTo(1));
+    });
+
     testWidgets('默认状态下展示截断内容并显示提示', (tester) async {
       final quote = _buildQuote(
         content: List.filled(6, _longContentChunk).join('\n'),

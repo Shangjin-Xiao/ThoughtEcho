@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -89,11 +90,24 @@ class QuoteItemWidget extends StatefulWidget {
   // 优化：缓存计算结果，避免重复计算
   static final Map<String, bool> _expansionCache = <String, bool>{};
   static int _cacheHitCount = 0; // 统计缓存命中次数
+  static final LinkedHashMap<_HeaderTextWidthCacheKey, double>
+      _headerTextWidthCache = LinkedHashMap<_HeaderTextWidthCacheKey, double>();
+  static const int _maxHeaderTextWidthCacheSize = 512;
+  static const int _headerTextWidthPruneBatchSize = 128;
+  static int _headerTextWidthCacheHits = 0;
+  static int _headerTextWidthCacheMisses = 0;
 
   /// 清理折叠判断缓存，常用于测试或手动刷新场景。
   static void clearExpansionCache() {
     _expansionCache.clear();
     _cacheHitCount = 0;
+  }
+
+  /// 清理列表卡片头部文本测宽缓存，常用于测试或主题/字体变化后的兜底刷新。
+  static void clearHeaderTextWidthCache() {
+    _headerTextWidthCache.clear();
+    _headerTextWidthCacheHits = 0;
+    _headerTextWidthCacheMisses = 0;
   }
 
   /// 获取折叠缓存当前状态，便于调试观察命中率。
@@ -111,8 +125,18 @@ class QuoteItemWidget extends StatefulWidget {
     };
   }
 
+  @visibleForTesting
+  static Map<String, int> getHeaderTextWidthCacheStats() => {
+        'cacheSize': _headerTextWidthCache.length,
+        'cacheHits': _headerTextWidthCacheHits,
+        'cacheMisses': _headerTextWidthCacheMisses,
+      };
+
   /// 测试辅助方法，等价于 [clearExpansionCache]。
-  static void clearExpansionCacheForTest() => clearExpansionCache();
+  static void clearExpansionCacheForTest() {
+    clearExpansionCache();
+    clearHeaderTextWidthCache();
+  }
 
   /// 优化：基于高度判断是否需要展开按钮 - 带缓存
   /// 折叠策略说明：
@@ -259,14 +283,43 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     String text,
     TextStyle style,
   ) {
+    final textDirection = Directionality.maybeOf(context) ?? TextDirection.ltr;
+    final textScaler = MediaQuery.textScalerOf(context);
+    final locale = Localizations.maybeLocaleOf(context);
+    final cacheKey = _HeaderTextWidthCacheKey(
+      text: text,
+      styleHash: style.hashCode,
+      textDirection: textDirection,
+      textScalerHash: textScaler.hashCode,
+      localeTag: locale?.toLanguageTag(),
+    );
+    final cached = QuoteItemWidget._headerTextWidthCache.remove(cacheKey);
+    if (cached != null) {
+      QuoteItemWidget._headerTextWidthCacheHits++;
+      QuoteItemWidget._headerTextWidthCache[cacheKey] = cached;
+      return cached;
+    }
+
+    QuoteItemWidget._headerTextWidthCacheMisses++;
     final textPainter = TextPainter(
       text: TextSpan(text: text, style: style),
       maxLines: 1,
-      textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
-      textScaler: MediaQuery.textScalerOf(context),
+      textDirection: textDirection,
+      textScaler: textScaler,
     )..layout();
 
-    return textPainter.width;
+    final width = textPainter.width;
+    if (QuoteItemWidget._headerTextWidthCache.length >=
+        QuoteItemWidget._maxHeaderTextWidthCacheSize) {
+      final keysToRemove = QuoteItemWidget._headerTextWidthCache.keys
+          .take(QuoteItemWidget._headerTextWidthPruneBatchSize)
+          .toList();
+      for (final key in keysToRemove) {
+        QuoteItemWidget._headerTextWidthCache.remove(key);
+      }
+    }
+    QuoteItemWidget._headerTextWidthCache[cacheKey] = width;
+    return width;
   }
 
   void _handleDoubleTap(bool isExpanded, Quote quote) {
@@ -1149,4 +1202,40 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       ),
     );
   }
+}
+
+@immutable
+class _HeaderTextWidthCacheKey {
+  const _HeaderTextWidthCacheKey({
+    required this.text,
+    required this.styleHash,
+    required this.textDirection,
+    required this.textScalerHash,
+    required this.localeTag,
+  });
+
+  final String text;
+  final int styleHash;
+  final TextDirection textDirection;
+  final int textScalerHash;
+  final String? localeTag;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _HeaderTextWidthCacheKey &&
+        other.text == text &&
+        other.styleHash == styleHash &&
+        other.textDirection == textDirection &&
+        other.textScalerHash == textScalerHash &&
+        other.localeTag == localeTag;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        text,
+        styleHash,
+        textDirection,
+        textScalerHash,
+        localeTag,
+      );
 }
