@@ -308,7 +308,7 @@
   "logDebugInfo": "Log Debug Info",
   "logDebugInfoDesc": "Show log database status and path info",
   "addNoteAutoFocusExperiment": "[Experiment] AddNote auto focus",
-  "addNoteAutoFocusExperimentDesc": "Automatically show the keyboard when opening the add note dialog (off by default)",
+  "addNoteAutoFocusExperimentDesc": "Automatically show the keyboard after the add note dialog settles (on by default)",
   "databaseStatus": "Database Status:",
   "logStatistics": "Log Statistics:",
   "getDebugInfoFailed": "Failed to get debug info: {error}",

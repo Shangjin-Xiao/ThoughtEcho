@@ -69,12 +69,17 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    expect(contentField.focusNode?.hasFocus, isFalse);
+
+    await tester.pump(const Duration(milliseconds: 650));
+
     expect(contentField.focusNode?.hasFocus, isTrue);
 
     await tester.pump(const Duration(seconds: 1));
   });
 
-  testWidgets('does not auto focus content field by default', (tester) async {
+  testWidgets('delays auto focus by default to avoid open jank',
+      (tester) async {
     await tester.pumpWidget(
       ChangeNotifierProvider<FeatureGuideService>(
         create: (_) => _MockFeatureGuideService(),
@@ -108,6 +113,10 @@ void main() {
 
     final contentField = tester.widget<TextField>(find.byType(TextField).first);
     expect(contentField.focusNode?.hasFocus, isFalse);
+
+    await tester.pump(const Duration(milliseconds: 650));
+
+    expect(contentField.focusNode?.hasFocus, isTrue);
   });
 
   testWidgets('defers secondary controls until after first frame',

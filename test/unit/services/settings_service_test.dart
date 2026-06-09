@@ -46,8 +46,8 @@ void main() {
     });
 
     test('AppSettings should default add note dialog experiments safely', () {
-      expect(AppSettings.defaultSettings().addNoteDialogAutoFocus, isFalse);
-      expect(AppSettings.fromJson(const {}).addNoteDialogAutoFocus, isFalse);
+      expect(AppSettings.defaultSettings().addNoteDialogAutoFocus, isTrue);
+      expect(AppSettings.fromJson(const {}).addNoteDialogAutoFocus, isTrue);
       expect(
         AppSettings.defaultSettings().addNoteDialogDeferAutoMetadata,
         isFalse,
@@ -83,7 +83,7 @@ void main() {
     });
 
     test('should persist add note dialog experiment toggles', () async {
-      expect(settingsService.addNoteDialogAutoFocus, isFalse);
+      expect(settingsService.addNoteDialogAutoFocus, isTrue);
       expect(settingsService.addNoteDialogDeferAutoMetadata, isFalse);
 
       await settingsService.setAddNoteDialogAutoFocus(false);

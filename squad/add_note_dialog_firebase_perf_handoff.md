@@ -355,6 +355,16 @@ main 基线结果：
   控件延迟挂载帧；首帧打开路径不再伴随键盘/inset，也不再有超预算 raster。
 - cold 路径的残余峰值主要来自云设备冷 JIT/GC/Surface，不建议继续用业务代码
   针对单次冷设备抖动做高风险改动。
+
+## 2026-06-09 UX 修正
+
+用户反馈默认关闭自动聚焦会让新建笔记多一次手动点击，体验变差。最终策略调整为：
+
+- `addNoteDialogAutoFocus` 默认恢复为 `true`。
+- 自动聚焦不再发生在 BottomSheet 刚打开时，而是在 route 稳定后延迟 650ms。
+- 这样保留“打开后自动弹键盘”的体验，同时避免键盘 inset 与打开首帧、次要控件
+  挂载叠加。
+- Widget 测试已覆盖：默认打开时先不聚焦，延迟后自动获得焦点。
 - 通过：
   `timeout 120s flutter test --reporter compact test/unit/services/settings_service_test.dart`
 - 通过：

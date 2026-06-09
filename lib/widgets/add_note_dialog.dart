@@ -147,6 +147,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   bool _isSaving = false;
   bool _deferredControlsVisible = false;
   Timer? _deferredControlsTimer;
+  Timer? _autoFocusTimer;
 
   // AI推荐标签相关状态
   // 预留：后续接入本地 embedding/标签推荐时使用
@@ -376,12 +377,12 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       });
     });
 
-    // 性能优化：等 BottomSheet 入场动画结束后再请求焦点弹出键盘。
-    // 避免键盘 inset 动画与 BottomSheet 入场动画叠加导致打开阶段掉帧。
-    // 实验开关 addNoteDialogAutoFocus（默认 false）：关闭后跳过自动聚焦。
+    // 性能优化：等 BottomSheet 入场和次要控件挂载稳定后再请求焦点弹出键盘。
+    // 避免键盘 inset 动画与打开首帧/次要控件挂载叠加导致掉帧。
+    // 实验开关 addNoteDialogAutoFocus（默认 true）：关闭后跳过自动聚焦。
     final autoFocusEnabled =
         _readServiceOrNull<SettingsService>(context)?.addNoteDialogAutoFocus ??
-            false;
+            true;
     if (autoFocusEnabled) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -392,7 +393,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
             // 动画已完成（如无障碍关闭动画），直接请求焦点
             _dialogOpenTimelineTask
                 .instant('ThoughtEcho.AddNoteDialog.routeAnimation.complete');
-            _requestContentFocus('routeCompleted');
+            _scheduleContentFocus('routeCompleted');
             _focusRequested = true;
           } else {
             // 监听动画完成后请求焦点
@@ -402,7 +403,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           // 无法获取路由动画，直接请求焦点
           _dialogOpenTimelineTask
               .instant('ThoughtEcho.AddNoteDialog.routeAnimation.unavailable');
-          _requestContentFocus('noRouteAnimation');
+          _scheduleContentFocus('noRouteAnimation');
           _focusRequested = true;
         }
       });
@@ -576,7 +577,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       animation.removeListener(_onRouteAnimationProgress);
       _dialogOpenTimelineTask
           .instant('ThoughtEcho.AddNoteDialog.routeAnimation.complete');
-      _requestContentFocus('routeCompleted');
+      _scheduleContentFocus('routeCompleted');
     }
   }
 
@@ -656,6 +657,18 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       );
     }
     _contentFocusNode.requestFocus();
+  }
+
+  void _scheduleContentFocus(String reason) {
+    _autoFocusTimer?.cancel();
+    _dialogOpenTimelineTask.instant(
+      'ThoughtEcho.AddNoteDialog.focus.scheduled',
+      arguments: <String, Object>{'reason': reason},
+    );
+    _autoFocusTimer = Timer(const Duration(milliseconds: 650), () {
+      if (!mounted || _contentFocusNode.hasFocus) return;
+      _requestContentFocus(reason);
+    });
   }
 
   void _beginKeyboardRebuildDeferral() {
@@ -1536,6 +1549,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     _dialogPerfKeyboardSettleTimer?.cancel();
     _keyboardRebuildResumeTimer?.cancel();
     _deferredControlsTimer?.cancel();
+    _autoFocusTimer?.cancel();
     _detachDialogPerfHooks();
     _dbChangeDebounceTimer?.cancel();
     _routeAnimation?.removeListener(_onRouteAnimationProgress);
