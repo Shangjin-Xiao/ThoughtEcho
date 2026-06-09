@@ -20,6 +20,9 @@ import 'quote_card_helpers.dart';
 
 /// 优化：使用StatefulWidget以支持双击反馈动画，数据变化通过父组件管理
 class QuoteItemWidget extends StatefulWidget {
+  @visibleForTesting
+  static bool disableVisualEffectsForTesting = false;
+
   final Quote quote;
   final Map<String, NoteCategory> tagMap;
   final bool isExpanded;
@@ -406,6 +409,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
           fontSize: 12,
         ) ??
         TextStyle(color: secondaryTextColor, fontSize: 12);
+    final visualEffectsDisabled =
+        QuoteItemWidget.disableVisualEffectsForTesting;
 
     final cardMargin = const EdgeInsets.symmetric(horizontal: 12, vertical: 6);
     final cardDecoration = BoxDecoration(
@@ -413,23 +418,25 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       border: widget.selectionMode && widget.isSelected
           ? Border.all(color: theme.colorScheme.primary, width: 2)
           : Border.all(color: Colors.transparent, width: 2),
-      boxShadow: widget.isSelected && widget.selectionMode
-          ? [
-              BoxShadow(
-                color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                blurRadius: 12,
-                spreadRadius: 2,
-              )
-            ]
-          : (isExpanded
+      boxShadow: visualEffectsDisabled
+          ? const <BoxShadow>[]
+          : widget.isSelected && widget.selectionMode
               ? [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.15),
                     blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
+                    spreadRadius: 2,
+                  )
                 ]
-              : AppTheme.defaultShadow),
+              : (isExpanded
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ]
+                  : AppTheme.defaultShadow),
       gradient: quote.colorHex != null && quote.colorHex!.isNotEmpty
           ? LinearGradient(
               begin: Alignment.topLeft,
@@ -677,78 +684,79 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                             switchInCurve: Curves.easeIn,
                             switchOutCurve: Curves.easeOut,
                             child: (!isExpanded && needsExpansion)
-                                ? Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      ExcludeSemantics(
-                                        child: RepaintBoundary(
-                                          child: ClipRect(
-                                            child: BackdropFilter(
-                                              backdropGroupKey: _backdropKey,
-                                              filter: ui.ImageFilter.blur(
-                                                sigmaX: 1.2,
-                                                sigmaY: 1.2,
-                                              ),
-                                              child: Container(
-                                                decoration: BoxDecoration(
-                                                  gradient: LinearGradient(
-                                                    begin: Alignment.topCenter,
-                                                    end: Alignment.bottomCenter,
-                                                    colors: [
-                                                      innerTheme
-                                                          .colorScheme.surface
-                                                          .withValues(
-                                                              alpha: 0.0),
-                                                      innerTheme
-                                                          .colorScheme.surface
-                                                          .withValues(
-                                                              alpha: 0.08),
-                                                      innerTheme
-                                                          .colorScheme.surface
-                                                          .withValues(
-                                                              alpha: 0.18),
-                                                    ],
-                                                    stops: const [
-                                                      0.0,
-                                                      0.4,
-                                                      1.0,
-                                                    ],
+                                ? Builder(
+                                    builder: (context) {
+                                      final fadeScrim = Container(
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: [
+                                              innerTheme.colorScheme.surface
+                                                  .withValues(alpha: 0.0),
+                                              innerTheme.colorScheme.surface
+                                                  .withValues(alpha: 0.08),
+                                              innerTheme.colorScheme.surface
+                                                  .withValues(alpha: 0.18),
+                                            ],
+                                            stops: const [0.0, 0.4, 1.0],
+                                          ),
+                                        ),
+                                      );
+
+                                      return Stack(
+                                        fit: StackFit.expand,
+                                        children: [
+                                          ExcludeSemantics(
+                                            child: visualEffectsDisabled
+                                                ? fadeScrim
+                                                : RepaintBoundary(
+                                                    child: ClipRect(
+                                                      child: BackdropFilter(
+                                                        backdropGroupKey:
+                                                            _backdropKey,
+                                                        filter:
+                                                            ui.ImageFilter.blur(
+                                                          sigmaX: 1.2,
+                                                          sigmaY: 1.2,
+                                                        ),
+                                                        child: fadeScrim,
+                                                      ),
+                                                    ),
                                                   ),
+                                          ),
+                                          Align(
+                                            alignment: Alignment.center,
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: innerTheme
+                                                    .colorScheme.surface
+                                                    .withValues(alpha: 0.35),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: Text(
+                                                l10n.doubleTapToViewFull,
+                                                style: innerTheme
+                                                    .textTheme.bodySmall
+                                                    ?.copyWith(
+                                                  color: innerTheme
+                                                      .colorScheme.onSurface
+                                                      .withValues(alpha: 0.65),
+                                                  fontSize: 11,
+                                                  fontStyle: FontStyle.italic,
                                                 ),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                      ),
-                                      Align(
-                                        alignment: Alignment.center,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: innerTheme
-                                                .colorScheme.surface
-                                                .withValues(alpha: 0.35),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          child: Text(
-                                            l10n.doubleTapToViewFull,
-                                            style: innerTheme
-                                                .textTheme.bodySmall
-                                                ?.copyWith(
-                                              color: innerTheme
-                                                  .colorScheme.onSurface
-                                                  .withValues(alpha: 0.65),
-                                              fontSize: 11,
-                                              fontStyle: FontStyle.italic,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                        ],
+                                      );
+                                    },
                                   )
                                 : const SizedBox.shrink(),
                           ),

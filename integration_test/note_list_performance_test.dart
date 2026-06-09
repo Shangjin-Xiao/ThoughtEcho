@@ -634,6 +634,19 @@ Future<void> _traceDetailedScenario(
   }
 }
 
+Future<void> _traceDetailedFlatVisualScenario(
+  IntegrationTestWidgetsFlutterBinding binding,
+  String scenario,
+  Future<void> Function() action,
+) async {
+  QuoteItemWidget.disableVisualEffectsForTesting = true;
+  try {
+    await _traceDetailedScenario(binding, scenario, action);
+  } finally {
+    QuoteItemWidget.disableVisualEffectsForTesting = false;
+  }
+}
+
 Future<void> _traceScenario(
   IntegrationTestWidgetsFlutterBinding binding,
   String scenario,
@@ -677,7 +690,10 @@ void main() {
   final IntegrationTestWidgetsFlutterBinding binding =
       IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  tearDown(QuoteItemWidget.clearExpansionCache);
+  tearDown(() {
+    QuoteItemWidget.disableVisualEffectsForTesting = false;
+    QuoteItemWidget.clearExpansionCache();
+  });
 
   testWidgets('exports segmented note-list and add-note performance timelines',
       (
@@ -804,6 +820,16 @@ void main() {
         'real_richText_diagnostic',
       ),
     );
+    _jumpListToStart(tester);
+    await tester.pumpAndSettle();
+    await _traceDetailedFlatVisualScenario(
+      binding,
+      'real_note_list_richText_flatVisual_diagnostic',
+      () => _runDiagnosticScrollSequence(
+        tester,
+        'real_richText_flatVisual_diagnostic',
+      ),
+    );
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
@@ -830,6 +856,16 @@ void main() {
     } finally {
       isListScrolling.value = false;
     }
+    _jumpListToStart(tester);
+    await tester.pumpAndSettle();
+    await _traceDetailedFlatVisualScenario(
+      binding,
+      'real_note_list_images_flatVisual_diagnostic',
+      () => _runDiagnosticScrollSequence(
+        tester,
+        'real_images_flatVisual_diagnostic',
+      ),
+    );
 
     imageDataUrls.clear();
     diagnosticImagePaths.clear();

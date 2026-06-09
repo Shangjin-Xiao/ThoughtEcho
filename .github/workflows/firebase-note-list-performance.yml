@@ -151,6 +151,12 @@ jobs:
             build/firebase-test-lab \
             build/firebase-test-lab/thoughtecho-performance-summary.json
 
+      - name: Print Firebase performance summary
+        if: always() && steps.firebase-test.outputs.raw_uri != ''
+        run: |
+          dart run scripts/summarize_firebase_performance_results.dart \
+            build/firebase-test-lab/thoughtecho-performance-summary.json
+
       - name: Upload Firebase performance diagnostics
         if: always()
         uses: actions/upload-artifact@v4
