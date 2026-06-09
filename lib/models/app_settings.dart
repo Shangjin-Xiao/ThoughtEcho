@@ -49,7 +49,7 @@ class AppSettings {
   final bool requireBiometricForHidden; // 新增：访问隐藏笔记是否需要生物识别验证
   final bool developerMode; // 新增：开发者模式
   final bool enableFirstOpenScrollPerfMonitor; // 新增：首次打开后首次滑动性能监测
-  final bool addNoteDialogAutoFocus; // 实验：打开添加笔记对话框时是否自动聚焦输入框（默认开启）
+  final bool addNoteDialogAutoFocus; // 实验：打开添加笔记对话框时是否自动聚焦输入框（默认关闭）
   final bool addNoteDialogDeferAutoMetadata; // 实验：是否延迟获取位置/天气元数据（默认关闭）
   final bool autoAttachLocation; // 新增：添加笔记时自动勾选位置
   final bool autoAttachWeather; // 新增：添加笔记时自动勾选天气
@@ -87,7 +87,7 @@ class AppSettings {
     this.requireBiometricForHidden = false, // 默认不需要生物识别验证
     this.developerMode = false, // 默认关闭开发者模式
     this.enableFirstOpenScrollPerfMonitor = false, // 默认关闭首次滑动性能监测
-    this.addNoteDialogAutoFocus = true, // 默认自动聚焦
+    this.addNoteDialogAutoFocus = false, // 默认不自动聚焦
     this.addNoteDialogDeferAutoMetadata = false, // 默认不延迟元数据
     this.autoAttachLocation = false, // 默认不自动勾选位置
     this.autoAttachWeather = false, // 默认不自动勾选天气
@@ -211,7 +211,7 @@ class AppSettings {
       developerMode: map['developerMode'] ?? false,
       enableFirstOpenScrollPerfMonitor:
           map['enableFirstOpenScrollPerfMonitor'] ?? false,
-      addNoteDialogAutoFocus: map['addNoteDialogAutoFocus'] ?? true,
+      addNoteDialogAutoFocus: map['addNoteDialogAutoFocus'] ?? false,
       addNoteDialogDeferAutoMetadata:
           map['addNoteDialogDeferAutoMetadata'] ?? false,
       autoAttachLocation: map['autoAttachLocation'] ?? false,
@@ -252,7 +252,7 @@ class AppSettings {
         requireBiometricForHidden: false, // 默认不需要生物识别验证
         developerMode: false, // 默认关闭开发者模式
         enableFirstOpenScrollPerfMonitor: false,
-        addNoteDialogAutoFocus: true, // 默认自动聚焦
+        addNoteDialogAutoFocus: false, // 默认不自动聚焦
         addNoteDialogDeferAutoMetadata: false, // 默认不延迟元数据
         autoAttachLocation: false, // 默认不自动勾选位置
         autoAttachWeather: false, // 默认不自动勾选天气

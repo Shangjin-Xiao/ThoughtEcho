@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/models/app_settings.dart';
+import 'package:thoughtecho/models/local_ai_settings.dart';
 import 'package:thoughtecho/models/note_category.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
 
@@ -15,8 +18,15 @@ void main() {
   testWidgets('delays content focus until bottom sheet entrance settles',
       (tester) async {
     await tester.pumpWidget(
-      ChangeNotifierProvider<FeatureGuideService>(
-        create: (_) => _MockFeatureGuideService(),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<FeatureGuideService>(
+            create: (_) => _MockFeatureGuideService(),
+          ),
+          ChangeNotifierProvider<SettingsService>.value(
+            value: _MockSettingsService(addNoteDialogAutoFocus: true),
+          ),
+        ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -54,6 +64,42 @@ void main() {
     expect(contentField.focusNode?.hasFocus, isTrue);
 
     await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('does not auto focus content field by default', (tester) async {
+    await tester.pumpWidget(
+      ChangeNotifierProvider<FeatureGuideService>(
+        create: (_) => _MockFeatureGuideService(),
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (context) => AddNoteDialog(
+                      tags: const [],
+                      onSave: (_) {},
+                    ),
+                  );
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    final contentField = tester.widget<TextField>(find.byType(TextField).first);
+    expect(contentField.focusNode?.hasFocus, isFalse);
   });
 
   testWidgets('disables add info chip checkmarks to avoid keyboard jank flash',
@@ -224,4 +270,60 @@ class _SlowDatabaseService extends DatabaseService {
     await _saveCompleter.future;
     return QuoteUpdateResult.updated;
   }
+}
+
+class _MockSettingsService extends ChangeNotifier implements SettingsService {
+  _MockSettingsService({required bool addNoteDialogAutoFocus})
+      : _settings = AppSettings.defaultSettings().copyWith(
+          addNoteDialogAutoFocus: addNoteDialogAutoFocus,
+        );
+
+  final AppSettings _settings;
+
+  @override
+  AppSettings get appSettings => _settings;
+
+  @override
+  bool get addNoteDialogAutoFocus => _settings.addNoteDialogAutoFocus;
+
+  @override
+  bool get addNoteDialogDeferAutoMetadata =>
+      _settings.addNoteDialogDeferAutoMetadata;
+
+  @override
+  bool get autoAttachLocation => _settings.autoAttachLocation;
+
+  @override
+  bool get autoAttachWeather => _settings.autoAttachWeather;
+
+  @override
+  String? get defaultAuthor => _settings.defaultAuthor;
+
+  @override
+  String? get defaultSource => _settings.defaultSource;
+
+  @override
+  List<String> get defaultTagIds => _settings.defaultTagIds;
+
+  @override
+  bool get enableFirstOpenScrollPerfMonitor =>
+      _settings.enableFirstOpenScrollPerfMonitor;
+
+  @override
+  String get exportFormat => 'card';
+
+  @override
+  LocalAISettings get localAISettings => LocalAISettings.defaultSettings();
+
+  @override
+  bool get prioritizeBoldContentInCollapse => false;
+
+  @override
+  bool get showExactTime => false;
+
+  @override
+  bool get showNoteEditTime => false;
+
+  @override
+  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

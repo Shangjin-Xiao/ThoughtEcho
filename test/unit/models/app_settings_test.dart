@@ -31,7 +31,7 @@ void main() {
       expect(settings.requireBiometricForHidden, isFalse);
       expect(settings.developerMode, isFalse);
       expect(settings.enableFirstOpenScrollPerfMonitor, isFalse);
-      expect(settings.addNoteDialogAutoFocus, isTrue);
+      expect(settings.addNoteDialogAutoFocus, isFalse);
       expect(settings.addNoteDialogDeferAutoMetadata, isFalse);
       expect(settings.autoAttachLocation, isFalse);
       expect(settings.autoAttachWeather, isFalse);

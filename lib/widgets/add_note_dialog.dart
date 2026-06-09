@@ -357,10 +357,10 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
     // 性能优化：等 BottomSheet 入场动画结束后再请求焦点弹出键盘。
     // 避免键盘 inset 动画与 BottomSheet 入场动画叠加导致打开阶段掉帧。
-    // 实验开关 addNoteDialogAutoFocus（默认 true）：关闭后跳过自动聚焦。
+    // 实验开关 addNoteDialogAutoFocus（默认 false）：关闭后跳过自动聚焦。
     final autoFocusEnabled =
         _readServiceOrNull<SettingsService>(context)?.addNoteDialogAutoFocus ??
-            true;
+            false;
     if (autoFocusEnabled) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;

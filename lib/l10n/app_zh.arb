@@ -307,6 +307,8 @@
   "cannotGetLocationPermission": "无法获取位置权限",
   "logDebugInfo": "日志调试信息",
   "logDebugInfoDesc": "显示日志数据库状态和路径信息",
+  "addNoteAutoFocusExperiment": "[实验] AddNote 自动聚焦",
+  "addNoteAutoFocusExperimentDesc": "打开添加笔记对话框时是否自动弹出键盘（默认关）",
   "databaseStatus": "数据库状态:",
   "logStatistics": "日志统计:",
   "getDebugInfoFailed": "获取调试信息失败: {error}",
