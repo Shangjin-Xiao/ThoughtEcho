@@ -640,6 +640,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                       ),
                     ),
                   );
+                  final keepAliveItem =
+                      NoteListView.shouldKeepAliveQuoteItem(quote);
 
                   itemWidget = Stack(
                     children: [
@@ -660,6 +662,10 @@ extension _NoteListItemsExtension on NoteListViewState {
                       ),
                     ],
                   );
+
+                  if (keepAliveItem) {
+                    itemWidget = _NoteListItemKeepAlive(child: itemWidget);
+                  }
 
                   return _wrapNoteListItemPerfProbe(
                     quote: quote,
@@ -981,6 +987,27 @@ extension _NoteListItemsExtension on NoteListViewState {
         ),
       ),
     );
+  }
+}
+
+class _NoteListItemKeepAlive extends StatefulWidget {
+  const _NoteListItemKeepAlive({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_NoteListItemKeepAlive> createState() => _NoteListItemKeepAliveState();
+}
+
+class _NoteListItemKeepAliveState extends State<_NoteListItemKeepAlive>
+    with AutomaticKeepAliveClientMixin<_NoteListItemKeepAlive> {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }
 

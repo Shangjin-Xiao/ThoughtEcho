@@ -56,6 +56,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     var rich = 0;
     var media = 0;
     var expanded = 0;
+    var keepAlive = 0;
     final quoteItemStats = QuoteItemWidget.getCacheStats();
     final expandable = quoteItemStats['expandableCount'] ?? 0;
 
@@ -73,10 +74,14 @@ extension _NoteListScrollExtension on NoteListViewState {
           media++;
         }
       }
+      if (NoteListView.shouldKeepAliveQuoteItem(quote)) {
+        keepAlive++;
+      }
     }
 
     return 'total=$total, rich=$rich, media=$media, expandable=$expandable, '
-        'expanded=$expanded, tracked=${_expandedItems.length}';
+        'expanded=$expanded, keepAlive=$keepAlive, '
+        'tracked=${_expandedItems.length}';
   }
 
   void _logNoteListPerfSnapshot(String reason) {
