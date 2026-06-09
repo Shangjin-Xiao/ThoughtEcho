@@ -1,0 +1,20 @@
+integration_test/note_list_performance_test.dart
+  s_6c3f45dd05ba45::t_bd65a372c4594f 639-654,656-657,659-665,667
+  s_6c3f45dd05ba45::t_cf0db80642ef78 847-850,880-884
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "88e56ae107170e9bba96df272a2459a46ff239d3",
+  "prompts": {},
+  "sessions": {
+    "s_6c3f45dd05ba45": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ea4f0-49d0-7900-a0ea-d0e557e1df14",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
