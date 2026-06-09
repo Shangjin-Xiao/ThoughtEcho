@@ -1,0 +1,19 @@
+squad/add_note_dialog_firebase_perf_handoff.md
+  s_3cf32bf8891d39::t_668a64c4659599 323-357
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "0f917d35eba5faa8ab9627236f013d92ecb020dc",
+  "prompts": {},
+  "sessions": {
+    "s_3cf32bf8891d39": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eab9b-ca66-7051-b2ad-081c17227dcb",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
