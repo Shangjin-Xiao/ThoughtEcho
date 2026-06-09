@@ -118,6 +118,11 @@ extension _NoteListScrollExtension on NoteListViewState {
     _scrollSessionLastOffset = metrics.pixels;
     _scrollSessionMinOffset = metrics.pixels;
     _scrollSessionMaxOffset = metrics.pixels;
+    _scrollSessionStartMaxExtent = metrics.maxScrollExtent;
+    _scrollSessionLastMaxExtent = metrics.maxScrollExtent;
+    _scrollSessionMinMaxExtent = metrics.maxScrollExtent;
+    _scrollSessionMaxMaxExtent = metrics.maxScrollExtent;
+    _scrollSessionExtentChangeCount = 0;
     _scrollSessionUpdateMicros.clear();
     _scrollSessionFrameTimings.clear();
     _scrollSessionItemLayoutCount = 0;
@@ -127,6 +132,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     _scrollSessionSlowItemLayouts.clear();
     _scrollSessionStartQuoteContentStats = QuoteContent.debugCacheStats();
     _scrollSessionStartQuoteItemStats = QuoteItemWidget.getCacheStats();
+    _scrollSessionStartImageEmbedStats = QuillImageEmbedPerfStats.snapshot();
     final imageCache = PaintingBinding.instance.imageCache;
     _scrollSessionStartImageCount = imageCache.currentSize;
     _scrollSessionStartImageBytes = imageCache.currentSizeBytes;
@@ -149,6 +155,17 @@ extension _NoteListScrollExtension on NoteListViewState {
     }
     if (metrics.pixels > _scrollSessionMaxOffset) {
       _scrollSessionMaxOffset = metrics.pixels;
+    }
+    final maxExtent = metrics.maxScrollExtent;
+    if ((maxExtent - _scrollSessionLastMaxExtent).abs() >= 1) {
+      _scrollSessionExtentChangeCount++;
+    }
+    _scrollSessionLastMaxExtent = maxExtent;
+    if (maxExtent < _scrollSessionMinMaxExtent) {
+      _scrollSessionMinMaxExtent = maxExtent;
+    }
+    if (maxExtent > _scrollSessionMaxMaxExtent) {
+      _scrollSessionMaxMaxExtent = maxExtent;
     }
   }
 
@@ -258,6 +275,9 @@ extension _NoteListScrollExtension on NoteListViewState {
       baselineCount: _scrollSessionStartImageCount,
       baselineBytes: _scrollSessionStartImageBytes,
     );
+    final imageEmbedStats = QuillImageEmbedPerfStats.compact(
+      baseline: _scrollSessionStartImageEmbedStats,
+    );
     final itemLayoutAvgMs = _scrollSessionItemLayoutCount == 0
         ? 0.0
         : (_scrollSessionItemLayoutMicros / _scrollSessionItemLayoutCount) /
@@ -283,11 +303,17 @@ extension _NoteListScrollExtension on NoteListViewState {
       'avgRaster=${avgRasterMs.toStringAsFixed(1)}ms, worstRaster=${worstRasterMs.toStringAsFixed(1)}ms, '
       'quotes={${_quoteMixStatsText()}}, quoteContent={$quoteContentStats}, '
       'quoteItem={$quoteItemStats}, imageCache={$imageStats}, '
+      'imageEmbed={$imageEmbedStats}, '
+      'extent={start=${_scrollSessionStartMaxExtent.round()},'
+      'end=${_scrollSessionLastMaxExtent.round()},'
+      'range=${_scrollSessionMinMaxExtent.round()}-${_scrollSessionMaxMaxExtent.round()},'
+      'changes=$_scrollSessionExtentChangeCount}, '
       'itemLayout={$itemLayoutStats}, slowLayouts=[$slowLayouts]',
       source: 'NoteListView.Perf',
     );
     _scrollSessionStartQuoteContentStats = null;
     _scrollSessionStartQuoteItemStats = null;
+    _scrollSessionStartImageEmbedStats = null;
     _scrollSessionTracer?.instant(
         'ThoughtEcho.NoteListView.scrollSession.finalize',
         arguments: {

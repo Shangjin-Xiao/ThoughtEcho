@@ -17,6 +17,51 @@ import '../widgets/motion_photo_preview_page.dart';
 /// 从而避免松手后图片立即解码与惯性帧竞争 raster 线程导致的卡顿。
 final ValueNotifier<bool> isListScrolling = ValueNotifier<bool>(false);
 
+/// Lightweight counters for correlating rich-text image loading with list
+/// scroll jank. These counters are only read by developer performance logs.
+class QuillImageEmbedPerfStats {
+  static int _startLoadCount = 0;
+  static int _deferForScrollCount = 0;
+  static int _frameCompleteCount = 0;
+  static int _stateUpdateCount = 0;
+  static int _errorCount = 0;
+
+  static void recordStartLoad() => _startLoadCount++;
+
+  static void recordDeferForScroll() => _deferForScrollCount++;
+
+  static void recordFrameComplete() => _frameCompleteCount++;
+
+  static void recordStateUpdate() => _stateUpdateCount++;
+
+  static void recordError() => _errorCount++;
+
+  static Map<String, int> snapshot() => {
+        'start': _startLoadCount,
+        'defer': _deferForScrollCount,
+        'complete': _frameCompleteCount,
+        'state': _stateUpdateCount,
+        'error': _errorCount,
+      };
+
+  static String compact({Map<String, int>? baseline}) {
+    final stats = snapshot();
+    final start = stats['start']!;
+    final defer = stats['defer']!;
+    final complete = stats['complete']!;
+    final state = stats['state']!;
+    final error = stats['error']!;
+
+    return 'start=$start,defer=$defer,complete=$complete,'
+        'state=$state,error=$error'
+        '${baseline == null ? '' : ',Δstart+${start - (baseline['start'] ?? 0)}'}'
+        '${baseline == null ? '' : ',Δdefer+${defer - (baseline['defer'] ?? 0)}'}'
+        '${baseline == null ? '' : ',Δcomplete+${complete - (baseline['complete'] ?? 0)}'}'
+        '${baseline == null ? '' : ',Δstate+${state - (baseline['state'] ?? 0)}'}'
+        '${baseline == null ? '' : ',Δerror+${error - (baseline['error'] ?? 0)}'}';
+  }
+}
+
 /// Quill编辑器扩展配置
 /// 图片使用flutter_quill_extensions官方实现，视频和音频使用自定义MediaPlayerWidget
 class QuillEditorExtensions {
@@ -223,6 +268,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
 
     // 检查 Flutter 滚动系统是否建议推迟加载（drag 阶段）
     if (Scrollable.recommendDeferredLoadingForContext(context)) {
+      QuillImageEmbedPerfStats.recordDeferForScroll();
       _deferredLoadTimer?.cancel();
       _deferredLoadTimer = Timer(const Duration(milliseconds: 120), () {
         if (!mounted || _shouldLoad) {
@@ -235,6 +281,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
 
     // 额外检查：通过全局信号判断是否处于 ballistic 阶段
     if (isListScrolling.value) {
+      QuillImageEmbedPerfStats.recordDeferForScroll();
       _deferredLoadTimer?.cancel();
       _deferredLoadTimer = Timer(const Duration(milliseconds: 80), () {
         if (!mounted || _shouldLoad) return;
@@ -244,6 +291,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     }
 
     setState(() {
+      QuillImageEmbedPerfStats.recordStartLoad();
       _shouldLoad = true;
     });
   }
@@ -361,6 +409,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
             if (wasSynchronouslyLoaded) {
               _rememberSource(widget.source);
               _isLoaded = true;
+              QuillImageEmbedPerfStats.recordFrameComplete();
               return child;
             }
 
@@ -372,6 +421,8 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
                 setState(() {
                   _isLoaded = true;
                   _rememberSource(widget.source);
+                  QuillImageEmbedPerfStats.recordFrameComplete();
+                  QuillImageEmbedPerfStats.recordStateUpdate();
                 });
               });
             }
@@ -429,6 +480,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
             );
 
             if (!_hasError && mounted) {
+              QuillImageEmbedPerfStats.recordError();
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted) {
                   setState(() {

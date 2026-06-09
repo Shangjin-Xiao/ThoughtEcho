@@ -30,7 +30,8 @@ import '../services/weather_service.dart'; // 导入天气服务
 import '../utils/time_utils.dart'; // 导入时间工具
 import '../controllers/search_controller.dart';
 import '../constants/app_constants.dart'; // 导入应用常量
-import '../utils/quill_editor_extensions.dart' show isListScrolling;
+import '../utils/quill_editor_extensions.dart'
+    show QuillImageEmbedPerfStats, isListScrolling;
 import '../services/settings_service.dart'; // 导入设置服务
 import '../services/pdf_export_service.dart';
 import '../services/pdf_font_service.dart';
@@ -190,11 +191,17 @@ class NoteListViewState extends State<NoteListView> {
   double _scrollSessionLastOffset = 0;
   double _scrollSessionMinOffset = 0;
   double _scrollSessionMaxOffset = 0;
+  double _scrollSessionStartMaxExtent = 0;
+  double _scrollSessionLastMaxExtent = 0;
+  double _scrollSessionMinMaxExtent = 0;
+  double _scrollSessionMaxMaxExtent = 0;
+  int _scrollSessionExtentChangeCount = 0;
   final List<int> _scrollSessionUpdateMicros = <int>[];
   final List<FrameTiming> _scrollSessionFrameTimings = <FrameTiming>[];
   Timer? _scrollSessionPerfStopTimer;
   Map<String, dynamic>? _scrollSessionStartQuoteContentStats;
   Map<String, int>? _scrollSessionStartQuoteItemStats;
+  Map<String, int>? _scrollSessionStartImageEmbedStats;
   int _scrollSessionStartImageCount = 0;
   int _scrollSessionStartImageBytes = 0;
   int _scrollSessionItemLayoutCount = 0;
