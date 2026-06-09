@@ -4,19 +4,37 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/models/app_settings.dart';
+import 'package:thoughtecho/models/local_ai_settings.dart';
 import 'package:thoughtecho/models/note_category.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
 
 void main() {
+  test('bottom sheet opens without route animation', () {
+    expect(AddNoteDialog.bottomSheetAnimationStyle.duration, Duration.zero);
+    expect(
+      AddNoteDialog.bottomSheetAnimationStyle.reverseDuration,
+      Duration.zero,
+    );
+  });
+
   testWidgets('delays content focus until bottom sheet entrance settles',
       (tester) async {
     await tester.pumpWidget(
-      ChangeNotifierProvider<FeatureGuideService>(
-        create: (_) => _MockFeatureGuideService(),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<FeatureGuideService>(
+            create: (_) => _MockFeatureGuideService(),
+          ),
+          ChangeNotifierProvider<SettingsService>.value(
+            value: _MockSettingsService(addNoteDialogAutoFocus: true),
+          ),
+        ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -51,7 +69,83 @@ void main() {
 
     await tester.pumpAndSettle();
 
+    expect(contentField.focusNode?.hasFocus, isFalse);
+
+    await tester.pump(const Duration(milliseconds: 650));
+
     expect(contentField.focusNode?.hasFocus, isTrue);
+
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('delays auto focus by default to avoid open jank',
+      (tester) async {
+    await tester.pumpWidget(
+      ChangeNotifierProvider<FeatureGuideService>(
+        create: (_) => _MockFeatureGuideService(),
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (context) => AddNoteDialog(
+                      tags: const [],
+                      onSave: (_) {},
+                    ),
+                  );
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    final contentField = tester.widget<TextField>(find.byType(TextField).first);
+    expect(contentField.focusNode?.hasFocus, isFalse);
+
+    await tester.pump(const Duration(milliseconds: 650));
+
+    expect(contentField.focusNode?.hasFocus, isTrue);
+  });
+
+  testWidgets('defers secondary controls until after first frame',
+      (tester) async {
+    await tester.pumpWidget(
+      ChangeNotifierProvider<FeatureGuideService>(
+        create: (_) => _MockFeatureGuideService(),
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: AddNoteDialog(
+              tags: const [],
+              onSave: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(AddNoteDialog), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.byKey(const ValueKey('add_note_location_chip')), findsNothing);
+
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(
+        find.byKey(const ValueKey('add_note_location_chip')), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 1));
   });
@@ -74,6 +168,8 @@ void main() {
         ),
       ),
     );
+
+    await tester.pump(const Duration(milliseconds: 200));
 
     for (final key in const [
       ValueKey('add_note_location_chip'),
@@ -224,4 +320,60 @@ class _SlowDatabaseService extends DatabaseService {
     await _saveCompleter.future;
     return QuoteUpdateResult.updated;
   }
+}
+
+class _MockSettingsService extends ChangeNotifier implements SettingsService {
+  _MockSettingsService({required bool addNoteDialogAutoFocus})
+      : _settings = AppSettings.defaultSettings().copyWith(
+          addNoteDialogAutoFocus: addNoteDialogAutoFocus,
+        );
+
+  final AppSettings _settings;
+
+  @override
+  AppSettings get appSettings => _settings;
+
+  @override
+  bool get addNoteDialogAutoFocus => _settings.addNoteDialogAutoFocus;
+
+  @override
+  bool get addNoteDialogDeferAutoMetadata =>
+      _settings.addNoteDialogDeferAutoMetadata;
+
+  @override
+  bool get autoAttachLocation => _settings.autoAttachLocation;
+
+  @override
+  bool get autoAttachWeather => _settings.autoAttachWeather;
+
+  @override
+  String? get defaultAuthor => _settings.defaultAuthor;
+
+  @override
+  String? get defaultSource => _settings.defaultSource;
+
+  @override
+  List<String> get defaultTagIds => _settings.defaultTagIds;
+
+  @override
+  bool get enableFirstOpenScrollPerfMonitor =>
+      _settings.enableFirstOpenScrollPerfMonitor;
+
+  @override
+  String get exportFormat => 'card';
+
+  @override
+  LocalAISettings get localAISettings => LocalAISettings.defaultSettings();
+
+  @override
+  bool get prioritizeBoldContentInCollapse => false;
+
+  @override
+  bool get showExactTime => false;
+
+  @override
+  bool get showNoteEditTime => false;
+
+  @override
+  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

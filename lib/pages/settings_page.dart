@@ -657,8 +657,8 @@ class SettingsPageState extends State<SettingsPage> {
                       return const SizedBox.shrink();
                     }
                     return SwitchListTile(
-                      title: const Text('[实验] AddNote 自动聚焦'),
-                      subtitle: const Text('打开添加笔记对话框时是否自动弹出键盘（默认开）'),
+                      title: Text(l10n.addNoteAutoFocusExperiment),
+                      subtitle: Text(l10n.addNoteAutoFocusExperimentDesc),
                       secondary: const Icon(Icons.keyboard_outlined),
                       value: settingsService.addNoteDialogAutoFocus,
                       onChanged: (enabled) {
