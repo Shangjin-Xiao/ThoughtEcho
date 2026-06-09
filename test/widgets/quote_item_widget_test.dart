@@ -82,6 +82,27 @@ void main() {
   tearDown(QuoteItemWidget.clearExpansionCacheForTest);
 
   group('QuoteItemWidget', () {
+    test('缓存统计包含已缓存的可展开数量', () {
+      final shortQuote = _buildQuote(
+        id: 'short',
+        content: '短笔记',
+        editSource: 'inline',
+      );
+      final longQuote = _buildQuote(
+        id: 'long',
+        content: List.filled(6, _longContentChunk).join('\n'),
+        editSource: 'inline',
+      );
+
+      expect(QuoteItemWidget.needsExpansionFor(shortQuote), isFalse);
+      expect(QuoteItemWidget.needsExpansionFor(longQuote), isTrue);
+
+      expect(
+        QuoteItemWidget.getCacheStats(),
+        containsPair('expandableCount', 1),
+      );
+    });
+
     testWidgets('默认状态下展示截断内容并显示提示', (tester) async {
       final quote = _buildQuote(
         content: List.filled(6, _longContentChunk).join('\n'),

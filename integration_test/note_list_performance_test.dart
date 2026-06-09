@@ -365,7 +365,8 @@ Map<String, dynamic> _diagnosticSummary(
         ));
       }
     }
-    if (name == 'NoteListItemSizeChanged') {
+    if (name == 'NoteListItemSizeChanged' ||
+        name == 'ThoughtEcho.NoteListView.itemSizeChanged') {
       final Map<String, dynamic> sizeEvent = <String, dynamic>{
         if (rawEvent['args'] is Map<String, dynamic>)
           ...rawEvent['args'] as Map<String, dynamic>,
@@ -431,7 +432,24 @@ Map<String, dynamic> _diagnosticSummary(
   final List<Map<String, dynamic>> itemLayoutSlices = extractTimelineSlices(
     events,
   ).where((Map<String, dynamic> slice) {
-    return slice['name'] == 'NoteListItemLayout';
+    return slice['name'] == 'NoteListItemLayout' ||
+        slice['name'] == 'ThoughtEcho.NoteListView.itemLayout';
+  }).map((Map<String, dynamic> slice) {
+    return <String, dynamic>{
+      'duration_ms': double.parse(
+        ((slice['duration_us'] as double) / 1000).toStringAsFixed(2),
+      ),
+      if (slice['arguments'] != null) 'arguments': slice['arguments'],
+    };
+  }).toList()
+    ..sort(
+      (Map<String, dynamic> a, Map<String, dynamic> b) =>
+          (b['duration_ms'] as double).compareTo(a['duration_ms'] as double),
+    );
+  final List<Map<String, dynamic>> itemBuildSlices = extractTimelineSlices(
+    events,
+  ).where((Map<String, dynamic> slice) {
+    return slice['name'] == 'ThoughtEcho.NoteListView.itemBuilder';
   }).map((Map<String, dynamic> slice) {
     return <String, dynamic>{
       'duration_ms': double.parse(
@@ -477,6 +495,8 @@ Map<String, dynamic> _diagnosticSummary(
     'correlated_slow_slices': correlatedSlowSlices,
     if (itemLayoutSlices.isNotEmpty)
       'slowest_item_layouts': itemLayoutSlices.take(20).toList(),
+    if (itemBuildSlices.isNotEmpty)
+      'slowest_item_builds': itemBuildSlices.take(20).toList(),
     if (itemInitialSizes.isNotEmpty)
       'item_initial_sizes': itemInitialSizes.take(100).toList(),
     if (itemSizeChanges.isNotEmpty)

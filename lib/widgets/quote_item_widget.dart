@@ -98,7 +98,17 @@ class QuoteItemWidget extends StatefulWidget {
 
   /// 获取折叠缓存当前状态，便于调试观察命中率。
   static Map<String, int> getCacheStats() {
-    return {'cacheSize': _expansionCache.length, 'cacheHits': _cacheHitCount};
+    var expandableCount = 0;
+    for (final needsExpansion in _expansionCache.values) {
+      if (needsExpansion) {
+        expandableCount++;
+      }
+    }
+    return {
+      'cacheSize': _expansionCache.length,
+      'cacheHits': _cacheHitCount,
+      'expandableCount': expandableCount,
+    };
   }
 
   /// 测试辅助方法，等价于 [clearExpansionCache]。

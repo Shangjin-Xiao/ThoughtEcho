@@ -55,8 +55,9 @@ extension _NoteListScrollExtension on NoteListViewState {
     final total = _quotes.length;
     var rich = 0;
     var media = 0;
-    var expandable = 0;
     var expanded = 0;
+    final quoteItemStats = QuoteItemWidget.getCacheStats();
+    final expandable = quoteItemStats['expandableCount'] ?? 0;
 
     for (final quote in _quotes) {
       final quoteId = quote.id;
@@ -71,9 +72,6 @@ extension _NoteListScrollExtension on NoteListViewState {
             deltaContent.contains('"audio"')) {
           media++;
         }
-      }
-      if (QuoteItemWidget.needsExpansionFor(quote)) {
-        expandable++;
       }
     }
 

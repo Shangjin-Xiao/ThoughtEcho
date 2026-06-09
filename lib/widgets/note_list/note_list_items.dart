@@ -519,143 +519,155 @@ extension _NoteListItemsExtension on NoteListViewState {
           itemCount: _quotes.length + (_hasMore ? 1 : 0),
           itemBuilder: (context, index) {
             if (index < _quotes.length) {
-              final quote = _quotes[index];
-              if (quote.id == null) {
-                logDebug('笔记缺少ID，跳过扩展状态管理', source: 'NoteListView');
-                return const SizedBox.shrink();
-              }
+              return _traceNoteListItemBuild(
+                index: index,
+                quote: _quotes[index],
+                builder: () {
+                  final quote = _quotes[index];
+                  if (quote.id == null) {
+                    logDebug('笔记缺少ID，跳过扩展状态管理', source: 'NoteListView');
+                    return const SizedBox.shrink();
+                  }
 
-              final quoteId = quote.id!;
-              final itemKey = quoteId == _positioningQuoteId
-                  ? _positioningItemKey
-                  : ValueKey<String>('note-list-item-$quoteId');
+                  final quoteId = quote.id!;
+                  final itemKey = quoteId == _positioningQuoteId
+                      ? _positioningItemKey
+                      : ValueKey<String>('note-list-item-$quoteId');
 
-              final bool shouldCheckExpansionForGuide =
-                  !foldGuideAssigned && widget.foldToggleGuideKey != null;
-              final bool needsExpansion = shouldCheckExpansionForGuide
-                  ? QuoteItemWidget.needsExpansionFor(quote)
-                  : false;
+                  final bool shouldCheckExpansionForGuide =
+                      !foldGuideAssigned && widget.foldToggleGuideKey != null;
+                  final bool needsExpansion = shouldCheckExpansionForGuide
+                      ? QuoteItemWidget.needsExpansionFor(quote)
+                      : false;
 
-              final attachFavoriteGuideKey = !favoriteGuideAssigned &&
-                  widget.favoriteButtonGuideKey != null &&
-                  widget.onFavorite != null;
-              final attachMoreGuideKey =
-                  !moreGuideAssigned && widget.moreButtonGuideKey != null;
-              final attachFoldGuideKey = !foldGuideAssigned &&
-                  widget.foldToggleGuideKey != null &&
-                  needsExpansion;
+                  final attachFavoriteGuideKey = !favoriteGuideAssigned &&
+                      widget.favoriteButtonGuideKey != null &&
+                      widget.onFavorite != null;
+                  final attachMoreGuideKey =
+                      !moreGuideAssigned && widget.moreButtonGuideKey != null;
+                  final attachFoldGuideKey = !foldGuideAssigned &&
+                      widget.foldToggleGuideKey != null &&
+                      needsExpansion;
 
-              if (attachFavoriteGuideKey) {
-                favoriteGuideAssigned = true;
-              }
+                  if (attachFavoriteGuideKey) {
+                    favoriteGuideAssigned = true;
+                  }
 
-              if (attachMoreGuideKey) {
-                moreGuideAssigned = true;
-              }
+                  if (attachMoreGuideKey) {
+                    moreGuideAssigned = true;
+                  }
 
-              if (attachFoldGuideKey) {
-                foldGuideAssigned = true;
-              }
+                  if (attachFoldGuideKey) {
+                    foldGuideAssigned = true;
+                  }
 
-              final expansionNotifier = _obtainExpansionNotifier(quoteId);
-              _expandedItems.putIfAbsent(
-                  quoteId, () => expansionNotifier.value);
+                  final expansionNotifier = _obtainExpansionNotifier(quoteId);
+                  _expandedItems.putIfAbsent(
+                      quoteId, () => expansionNotifier.value);
 
-              final isSelected = _selectedExportNoteIds.contains(quoteId);
+                  final isSelected = _selectedExportNoteIds.contains(quoteId);
 
-              Widget itemWidget = KeyedSubtree(
-                key: itemKey,
-                child: ValueListenableBuilder<bool>(
-                  valueListenable: expansionNotifier,
-                  builder: (context, isExpanded, child) => QuoteItemWidget(
-                    quote: quote,
-                    tagMap: tagMap,
-                    selectedTagIds: widget.selectedTagIds,
-                    isExpanded: isExpanded,
-                    isSelected: isSelected,
-                    selectionMode: _isExportMode,
-                    onToggleExpanded: (expanded) {
-                      if (expansionNotifier.value != expanded) {
-                        expansionNotifier.value = expanded;
-                      }
-                      _expandedItems[quoteId] = expanded;
+                  Widget itemWidget = KeyedSubtree(
+                    key: itemKey,
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: expansionNotifier,
+                      builder: (context, isExpanded, child) => QuoteItemWidget(
+                        quote: quote,
+                        tagMap: tagMap,
+                        selectedTagIds: widget.selectedTagIds,
+                        isExpanded: isExpanded,
+                        isSelected: isSelected,
+                        selectionMode: _isExportMode,
+                        onToggleExpanded: (expanded) {
+                          if (expansionNotifier.value != expanded) {
+                            expansionNotifier.value = expanded;
+                          }
+                          _expandedItems[quoteId] = expanded;
 
-                      final bool requiresAlignment =
-                          QuoteItemWidget.needsExpansionFor(quote);
+                          final bool requiresAlignment =
+                              QuoteItemWidget.needsExpansionFor(quote);
 
-                      if (!expanded && requiresAlignment) {
-                        final waitDuration =
-                            QuoteItemWidget.expandCollapseDuration +
-                                const Duration(milliseconds: 80);
-                        Future.delayed(waitDuration, () {
-                          if (!mounted) return;
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (!mounted) return;
-                            unawaited(
-                              _positionAndAlignQuote(
-                                quoteId,
-                                index,
-                                forceAlignToTop: false,
-                              ),
-                            );
+                          if (!expanded && requiresAlignment) {
+                            final waitDuration =
+                                QuoteItemWidget.expandCollapseDuration +
+                                    const Duration(milliseconds: 80);
+                            Future.delayed(waitDuration, () {
+                              if (!mounted) return;
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (!mounted) return;
+                                unawaited(
+                                  _positionAndAlignQuote(
+                                    quoteId,
+                                    index,
+                                    forceAlignToTop: false,
+                                  ),
+                                );
+                              });
+                            });
+                          }
+                        },
+                        onEdit: () => widget.onEdit(quote),
+                        onDelete: () => widget.onDelete(quote),
+                        onAskAI: () => widget.onAskAI(quote),
+                        onGenerateCard: widget.onGenerateCard != null
+                            ? () => widget.onGenerateCard!(quote)
+                            : null,
+                        onExportPdf: () {
+                          HapticFeedback.selectionClick();
+                          _updateState(() {
+                            _isExportMode = true;
+                            _selectedExportNoteIds.clear();
+                            if (quote.id != null) {
+                              _selectedExportNoteIds.add(quote.id!);
+                            }
                           });
-                        });
-                      }
-                    },
-                    onEdit: () => widget.onEdit(quote),
-                    onDelete: () => widget.onDelete(quote),
-                    onAskAI: () => widget.onAskAI(quote),
-                    onGenerateCard: widget.onGenerateCard != null
-                        ? () => widget.onGenerateCard!(quote)
-                        : null,
-                    onExportPdf: () {
-                      HapticFeedback.selectionClick();
-                      _updateState(() {
-                        _isExportMode = true;
-                        _selectedExportNoteIds.clear();
-                        if (quote.id != null) {
-                          _selectedExportNoteIds.add(quote.id!);
-                        }
-                      });
-                    },
-                    onFavorite: widget.onFavorite != null
-                        ? () => widget.onFavorite!(quote)
-                        : null,
-                    onLongPressFavorite: widget.onLongPressFavorite != null
-                        ? () => widget.onLongPressFavorite!(quote)
-                        : null,
-                    favoriteButtonGuideKey: attachFavoriteGuideKey
-                        ? widget.favoriteButtonGuideKey
-                        : null,
-                    moreButtonGuideKey:
-                        attachMoreGuideKey ? widget.moreButtonGuideKey : null,
-                    foldToggleGuideKey:
-                        attachFoldGuideKey ? widget.foldToggleGuideKey : null,
-                  ),
-                ),
-              );
-
-              itemWidget = Stack(
-                children: [
-                  itemWidget,
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      ignoring: !_isExportMode,
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: _isExportMode
-                              ? () => _toggleExportSelection(quoteId)
-                              : null,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
+                        },
+                        onFavorite: widget.onFavorite != null
+                            ? () => widget.onFavorite!(quote)
+                            : null,
+                        onLongPressFavorite: widget.onLongPressFavorite != null
+                            ? () => widget.onLongPressFavorite!(quote)
+                            : null,
+                        favoriteButtonGuideKey: attachFavoriteGuideKey
+                            ? widget.favoriteButtonGuideKey
+                            : null,
+                        moreButtonGuideKey: attachMoreGuideKey
+                            ? widget.moreButtonGuideKey
+                            : null,
+                        foldToggleGuideKey: attachFoldGuideKey
+                            ? widget.foldToggleGuideKey
+                            : null,
                       ),
                     ),
-                  ),
-                ],
-              );
+                  );
 
-              return itemWidget;
+                  itemWidget = Stack(
+                    children: [
+                      itemWidget,
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          ignoring: !_isExportMode,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _isExportMode
+                                  ? () => _toggleExportSelection(quoteId)
+                                  : null,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+
+                  return _wrapNoteListItemPerfProbe(
+                    quote: quote,
+                    index: index,
+                    child: itemWidget,
+                  );
+                },
+              );
             }
             // 底部加载指示器
             return const Padding(
@@ -666,6 +678,66 @@ extension _NoteListItemsExtension on NoteListViewState {
         ),
       ),
     );
+  }
+
+  Widget _traceNoteListItemBuild({
+    required int index,
+    required Quote quote,
+    required Widget Function() builder,
+  }) {
+    if (!_firstOpenScrollPerfEnabled) {
+      return builder();
+    }
+
+    developer.Timeline.startSync(
+      'ThoughtEcho.NoteListView.itemBuilder',
+      arguments: <String, Object>{
+        'index': index,
+        'quoteId': quote.id ?? 'null',
+        'kind': _noteListPerfKindFor(quote),
+        if (_scrollSessionId != null) 'session': _scrollSessionId!,
+      },
+    );
+    try {
+      return builder();
+    } finally {
+      developer.Timeline.finishSync();
+    }
+  }
+
+  Widget _wrapNoteListItemPerfProbe({
+    required Quote quote,
+    required int index,
+    required Widget child,
+  }) {
+    if (!_firstOpenScrollPerfEnabled) {
+      return child;
+    }
+
+    return _NoteListItemPerfProbe(
+      index: index,
+      quoteId: quote.id ?? 'null',
+      kind: _noteListPerfKindFor(quote),
+      sessionId: _scrollSessionId,
+      child: child,
+    );
+  }
+
+  String _noteListPerfKindFor(Quote quote) {
+    final deltaContent = quote.deltaContent;
+    if (deltaContent == null || quote.editSource != 'fullscreen') {
+      return 'plain';
+    }
+    if (deltaContent.contains('"image"')) {
+      return 'rich-image';
+    }
+    if (deltaContent.contains('"video"')) {
+      return 'rich-video';
+    }
+    if (deltaContent.contains('"audio"')) {
+      return 'rich-audio';
+    }
+    return 'rich';
   }
 
   // 优化：搜索内容变化回调，添加防抖机制
@@ -908,5 +980,103 @@ extension _NoteListItemsExtension on NoteListViewState {
         ),
       ),
     );
+  }
+}
+
+class _NoteListItemPerfProbe extends SingleChildRenderObjectWidget {
+  const _NoteListItemPerfProbe({
+    required this.index,
+    required this.quoteId,
+    required this.kind,
+    required this.sessionId,
+    required super.child,
+  });
+
+  final int index;
+  final String quoteId;
+  final String kind;
+  final String? sessionId;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return _NoteListItemPerfProbeRenderObject(
+      index: index,
+      quoteId: quoteId,
+      kind: kind,
+      sessionId: sessionId,
+    );
+  }
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    covariant _NoteListItemPerfProbeRenderObject renderObject,
+  ) {
+    renderObject
+      ..index = index
+      ..quoteId = quoteId
+      ..kind = kind
+      ..sessionId = sessionId;
+  }
+}
+
+class _NoteListItemPerfProbeRenderObject extends RenderProxyBox {
+  _NoteListItemPerfProbeRenderObject({
+    required int index,
+    required String quoteId,
+    required String kind,
+    required String? sessionId,
+  })  : _index = index,
+        _quoteId = quoteId,
+        _kind = kind,
+        _sessionId = sessionId;
+
+  int _index;
+  String _quoteId;
+  String _kind;
+  String? _sessionId;
+  Size? _previousSize;
+
+  set index(int value) => _index = value;
+  set quoteId(String value) => _quoteId = value;
+  set kind(String value) => _kind = value;
+  set sessionId(String? value) => _sessionId = value;
+
+  @override
+  void performLayout() {
+    final previousSize = _previousSize;
+    developer.Timeline.startSync(
+      'ThoughtEcho.NoteListView.itemLayout',
+      arguments: <String, Object>{
+        'index': _index,
+        'quoteId': _quoteId,
+        'kind': _kind,
+        'oldHeight': previousSize?.height.toStringAsFixed(1) ?? 'none',
+        if (_sessionId != null) 'session': _sessionId!,
+      },
+    );
+    try {
+      super.performLayout();
+    } finally {
+      developer.Timeline.finishSync();
+    }
+
+    if (previousSize == null ||
+        (size.height - previousSize.height).abs() >= 1) {
+      developer.Timeline.instantSync(
+        'ThoughtEcho.NoteListView.itemSizeChanged',
+        arguments: <String, Object>{
+          'index': _index,
+          'quoteId': _quoteId,
+          'kind': _kind,
+          'oldHeight': previousSize?.height.toStringAsFixed(1) ?? 'none',
+          'newHeight': size.height.toStringAsFixed(1),
+          'deltaHeight':
+              (size.height - (previousSize?.height ?? 0)).toStringAsFixed(1),
+          if (_sessionId != null) 'session': _sessionId!,
+        },
+      );
+    }
+    _previousSize = size;
   }
 }
