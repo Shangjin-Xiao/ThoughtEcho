@@ -636,13 +636,35 @@ Future<void> _traceDetailedScenario(
 
 Future<void> _traceDetailedFlatVisualScenario(
   IntegrationTestWidgetsFlutterBinding binding,
-  String scenario,
-  Future<void> Function() action,
-) async {
+  WidgetTester tester, {
+  required String scenario,
+  required List<Quote> quotes,
+  required String actionScenario,
+  bool coldImages = false,
+}) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pumpAndSettle();
+  QuoteContent.resetCaches();
+  QuoteItemWidget.clearExpansionCache();
+  if (coldImages) {
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+    isListScrolling.value = true;
+  }
+
   QuoteItemWidget.disableVisualEffectsForTesting = true;
+  await tester.pumpWidget(_buildRealNoteListBenchmarkApp(quotes));
+  await tester.pump();
   try {
-    await _traceDetailedScenario(binding, scenario, action);
+    await _traceDetailedScenario(
+      binding,
+      scenario,
+      coldImages
+          ? () => _runDiagnosticImageScrollSequence(tester, actionScenario)
+          : () => _runDiagnosticScrollSequence(tester, actionScenario),
+    );
   } finally {
+    isListScrolling.value = false;
     QuoteItemWidget.disableVisualEffectsForTesting = false;
   }
 }
@@ -820,15 +842,12 @@ void main() {
         'real_richText_diagnostic',
       ),
     );
-    _jumpListToStart(tester);
-    await tester.pumpAndSettle();
     await _traceDetailedFlatVisualScenario(
       binding,
-      'real_note_list_richText_flatVisual_diagnostic',
-      () => _runDiagnosticScrollSequence(
-        tester,
-        'real_richText_flatVisual_diagnostic',
-      ),
+      tester,
+      scenario: 'real_note_list_richText_flatVisual_diagnostic',
+      quotes: _buildBenchmarkQuotes(_ListScenario.richText, const <String>[]),
+      actionScenario: 'real_richText_flatVisual_diagnostic',
     );
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -856,15 +875,13 @@ void main() {
     } finally {
       isListScrolling.value = false;
     }
-    _jumpListToStart(tester);
-    await tester.pumpAndSettle();
     await _traceDetailedFlatVisualScenario(
       binding,
-      'real_note_list_images_flatVisual_diagnostic',
-      () => _runDiagnosticScrollSequence(
-        tester,
-        'real_images_flatVisual_diagnostic',
-      ),
+      tester,
+      scenario: 'real_note_list_images_flatVisual_diagnostic',
+      quotes: _buildBenchmarkQuotes(_ListScenario.images, diagnosticImagePaths),
+      actionScenario: 'real_images_flatVisual_diagnostic',
+      coldImages: true,
     );
 
     imageDataUrls.clear();
