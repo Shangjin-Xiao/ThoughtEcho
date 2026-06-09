@@ -79,6 +79,12 @@ class _PerformanceSettingsService extends ChangeNotifier
   bool get enableFirstOpenScrollPerfMonitor => true;
 
   @override
+  bool get noteListDisableCardShadows => _settings.noteListDisableCardShadows;
+
+  @override
+  bool get noteListDisableBackdropBlur => _settings.noteListDisableBackdropBlur;
+
+  @override
   String get exportFormat => 'card';
 
   @override

@@ -639,6 +639,42 @@ class SettingsPageState extends State<SettingsPage> {
                       return const SizedBox.shrink();
                     }
                     return SwitchListTile(
+                      title: Text(l10n.noteListDisableCardShadowsExperiment),
+                      subtitle:
+                          Text(l10n.noteListDisableCardShadowsExperimentDesc),
+                      secondary: const Icon(Icons.layers_clear_outlined),
+                      value: settingsService.noteListDisableCardShadows,
+                      onChanged: (enabled) {
+                        settingsService.setNoteListDisableCardShadows(enabled);
+                      },
+                    );
+                  },
+                ),
+                Consumer<SettingsService>(
+                  builder: (context, settingsService, _) {
+                    if (!settingsService.appSettings.developerMode) {
+                      return const SizedBox.shrink();
+                    }
+                    return SwitchListTile(
+                      title: Text(l10n.noteListDisableBackdropBlurExperiment),
+                      subtitle:
+                          Text(l10n.noteListDisableBackdropBlurExperimentDesc),
+                      secondary: const Icon(Icons.blur_off_outlined),
+                      value: settingsService.noteListDisableBackdropBlur,
+                      onChanged: (enabled) {
+                        settingsService.setNoteListDisableBackdropBlur(
+                          enabled,
+                        );
+                      },
+                    );
+                  },
+                ),
+                Consumer<SettingsService>(
+                  builder: (context, settingsService, _) {
+                    if (!settingsService.appSettings.developerMode) {
+                      return const SizedBox.shrink();
+                    }
+                    return SwitchListTile(
                       title: Text(l10n.logDebugInfo),
                       subtitle: Text(l10n.logDebugInfoDesc),
                       secondary: const Icon(Icons.speed_outlined),

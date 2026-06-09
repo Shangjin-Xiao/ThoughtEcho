@@ -164,6 +164,10 @@
   "developerModeDisabled": "✅ 开发者模式已关闭",
   "devFirstScrollPerfMonitorTitle": "首次滑动卡顿监测（开发者）",
   "devFirstScrollPerfMonitorDesc": "监测首次打开记录页后的首次手势滑动帧耗时（非首帧）",
+  "noteListDisableCardShadowsExperiment": "[实验] 记录页禁用卡片阴影",
+  "noteListDisableCardShadowsExperimentDesc": "发布版可用。用于对比阴影对记录页滑动性能和视觉观感的影响（默认关）",
+  "noteListDisableBackdropBlurExperiment": "[实验] 记录页禁用折叠模糊",
+  "noteListDisableBackdropBlurExperimentDesc": "发布版可用。将长内容折叠底部的背景模糊替换为渐变遮罩（默认关）",
   "devFirstScrollPerfResult": "首次滑动性能：总帧 {total}，卡顿帧 {jank}，平均 {avgMs}ms，最慢 {worstMs}ms",
   "@devFirstScrollPerfResult": {
     "placeholders": {

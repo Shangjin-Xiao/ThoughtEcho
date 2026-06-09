@@ -39,6 +39,12 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   bool get showNoteEditTime => _showNoteEditTime;
 
   @override
+  bool get noteListDisableCardShadows => false;
+
+  @override
+  bool get noteListDisableBackdropBlur => false;
+
+  @override
   String get exportFormat => 'card';
 
   set showNoteEditTime(bool value) {

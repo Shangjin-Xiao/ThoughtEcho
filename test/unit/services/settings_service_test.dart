@@ -58,6 +58,20 @@ void main() {
       );
     });
 
+    test('AppSettings should default note-list visual experiments safely', () {
+      expect(AppSettings.defaultSettings().noteListDisableCardShadows, isFalse);
+      expect(
+          AppSettings.fromJson(const {}).noteListDisableCardShadows, isFalse);
+      expect(
+        AppSettings.defaultSettings().noteListDisableBackdropBlur,
+        isFalse,
+      );
+      expect(
+        AppSettings.fromJson(const {}).noteListDisableBackdropBlur,
+        isFalse,
+      );
+    });
+
     test('AppSettings should default note edit time toggle to false', () {
       expect(AppSettings.defaultSettings().showNoteEditTime, isFalse);
       expect(AppSettings.fromJson(const {}).showNoteEditTime, isFalse);
@@ -96,6 +110,19 @@ void main() {
         settingsService.appSettings.addNoteDialogDeferAutoMetadata,
         isTrue,
       );
+    });
+
+    test('should persist note-list visual experiment toggles', () async {
+      expect(settingsService.noteListDisableCardShadows, isFalse);
+      expect(settingsService.noteListDisableBackdropBlur, isFalse);
+
+      await settingsService.setNoteListDisableCardShadows(true);
+      await settingsService.setNoteListDisableBackdropBlur(true);
+
+      expect(settingsService.noteListDisableCardShadows, isTrue);
+      expect(settingsService.appSettings.noteListDisableCardShadows, isTrue);
+      expect(settingsService.noteListDisableBackdropBlur, isTrue);
+      expect(settingsService.appSettings.noteListDisableBackdropBlur, isTrue);
     });
 
     test(

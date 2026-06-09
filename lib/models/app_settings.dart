@@ -49,6 +49,8 @@ class AppSettings {
   final bool requireBiometricForHidden; // 新增：访问隐藏笔记是否需要生物识别验证
   final bool developerMode; // 新增：开发者模式
   final bool enableFirstOpenScrollPerfMonitor; // 新增：首次打开后首次滑动性能监测
+  final bool noteListDisableCardShadows; // 开发者实验：记录页卡片禁用阴影
+  final bool noteListDisableBackdropBlur; // 开发者实验：记录页折叠遮罩禁用背景模糊
   final bool addNoteDialogAutoFocus; // 实验：打开添加笔记对话框后是否延迟自动聚焦输入框（默认开启）
   final bool addNoteDialogDeferAutoMetadata; // 实验：是否延迟获取位置/天气元数据（默认关闭）
   final bool autoAttachLocation; // 新增：添加笔记时自动勾选位置
@@ -87,6 +89,8 @@ class AppSettings {
     this.requireBiometricForHidden = false, // 默认不需要生物识别验证
     this.developerMode = false, // 默认关闭开发者模式
     this.enableFirstOpenScrollPerfMonitor = false, // 默认关闭首次滑动性能监测
+    this.noteListDisableCardShadows = false, // 默认保持原始卡片阴影
+    this.noteListDisableBackdropBlur = false, // 默认保持折叠遮罩背景模糊
     this.addNoteDialogAutoFocus = true, // 默认延迟自动聚焦
     this.addNoteDialogDeferAutoMetadata = false, // 默认不延迟元数据
     this.autoAttachLocation = false, // 默认不自动勾选位置
@@ -134,6 +138,8 @@ class AppSettings {
       'requireBiometricForHidden': requireBiometricForHidden,
       'developerMode': developerMode,
       'enableFirstOpenScrollPerfMonitor': enableFirstOpenScrollPerfMonitor,
+      'noteListDisableCardShadows': noteListDisableCardShadows,
+      'noteListDisableBackdropBlur': noteListDisableBackdropBlur,
       'addNoteDialogAutoFocus': addNoteDialogAutoFocus,
       'addNoteDialogDeferAutoMetadata': addNoteDialogDeferAutoMetadata,
       'autoAttachLocation': autoAttachLocation,
@@ -211,6 +217,8 @@ class AppSettings {
       developerMode: map['developerMode'] ?? false,
       enableFirstOpenScrollPerfMonitor:
           map['enableFirstOpenScrollPerfMonitor'] ?? false,
+      noteListDisableCardShadows: map['noteListDisableCardShadows'] ?? false,
+      noteListDisableBackdropBlur: map['noteListDisableBackdropBlur'] ?? false,
       addNoteDialogAutoFocus: map['addNoteDialogAutoFocus'] ?? true,
       addNoteDialogDeferAutoMetadata:
           map['addNoteDialogDeferAutoMetadata'] ?? false,
@@ -252,6 +260,8 @@ class AppSettings {
         requireBiometricForHidden: false, // 默认不需要生物识别验证
         developerMode: false, // 默认关闭开发者模式
         enableFirstOpenScrollPerfMonitor: false,
+        noteListDisableCardShadows: false,
+        noteListDisableBackdropBlur: false,
         addNoteDialogAutoFocus: true, // 默认延迟自动聚焦
         addNoteDialogDeferAutoMetadata: false, // 默认不延迟元数据
         autoAttachLocation: false, // 默认不自动勾选位置
@@ -293,6 +303,8 @@ class AppSettings {
     bool? requireBiometricForHidden,
     bool? developerMode,
     bool? enableFirstOpenScrollPerfMonitor,
+    bool? noteListDisableCardShadows,
+    bool? noteListDisableBackdropBlur,
     bool? addNoteDialogAutoFocus,
     bool? addNoteDialogDeferAutoMetadata,
     bool? autoAttachLocation,
@@ -340,6 +352,10 @@ class AppSettings {
       developerMode: developerMode ?? this.developerMode,
       enableFirstOpenScrollPerfMonitor: enableFirstOpenScrollPerfMonitor ??
           this.enableFirstOpenScrollPerfMonitor,
+      noteListDisableCardShadows:
+          noteListDisableCardShadows ?? this.noteListDisableCardShadows,
+      noteListDisableBackdropBlur:
+          noteListDisableBackdropBlur ?? this.noteListDisableBackdropBlur,
       addNoteDialogAutoFocus:
           addNoteDialogAutoFocus ?? this.addNoteDialogAutoFocus,
       addNoteDialogDeferAutoMetadata:

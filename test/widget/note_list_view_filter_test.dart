@@ -493,6 +493,12 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   bool get enableFirstOpenScrollPerfMonitor => false;
 
   @override
+  bool get noteListDisableCardShadows => false;
+
+  @override
+  bool get noteListDisableBackdropBlur => false;
+
+  @override
   bool get showExactTime => false;
 
   @override

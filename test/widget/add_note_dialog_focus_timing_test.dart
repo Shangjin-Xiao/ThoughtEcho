@@ -360,6 +360,12 @@ class _MockSettingsService extends ChangeNotifier implements SettingsService {
       _settings.enableFirstOpenScrollPerfMonitor;
 
   @override
+  bool get noteListDisableCardShadows => _settings.noteListDisableCardShadows;
+
+  @override
+  bool get noteListDisableBackdropBlur => _settings.noteListDisableBackdropBlur;
+
+  @override
   String get exportFormat => 'card';
 
   @override

@@ -31,6 +31,8 @@ void main() {
       expect(settings.requireBiometricForHidden, isFalse);
       expect(settings.developerMode, isFalse);
       expect(settings.enableFirstOpenScrollPerfMonitor, isFalse);
+      expect(settings.noteListDisableCardShadows, isFalse);
+      expect(settings.noteListDisableBackdropBlur, isFalse);
       expect(settings.addNoteDialogAutoFocus, isTrue);
       expect(settings.addNoteDialogDeferAutoMetadata, isFalse);
       expect(settings.autoAttachLocation, isFalse);
@@ -70,6 +72,8 @@ void main() {
         requireBiometricForHidden: true,
         developerMode: true,
         enableFirstOpenScrollPerfMonitor: true,
+        noteListDisableCardShadows: true,
+        noteListDisableBackdropBlur: true,
         addNoteDialogAutoFocus: false,
         addNoteDialogDeferAutoMetadata: true,
         autoAttachLocation: true,
@@ -133,6 +137,14 @@ void main() {
       expect(
         fromJson.enableFirstOpenScrollPerfMonitor,
         equals(settings.enableFirstOpenScrollPerfMonitor),
+      );
+      expect(
+        fromJson.noteListDisableCardShadows,
+        equals(settings.noteListDisableCardShadows),
+      );
+      expect(
+        fromJson.noteListDisableBackdropBlur,
+        equals(settings.noteListDisableBackdropBlur),
       );
       expect(
         fromJson.addNoteDialogAutoFocus,
@@ -212,6 +224,8 @@ void main() {
         hitokotoType: 'a',
         dailyQuoteProvider: 'meigen',
         clipboardMonitoringEnabled: true,
+        noteListDisableCardShadows: true,
+        noteListDisableBackdropBlur: true,
         sentryEnabled: true,
         sentryDisclosureShown: true,
       );
@@ -219,6 +233,8 @@ void main() {
       expect(updated.hitokotoType, equals('a'));
       expect(updated.dailyQuoteProvider, equals('meigen'));
       expect(updated.clipboardMonitoringEnabled, isTrue);
+      expect(updated.noteListDisableCardShadows, isTrue);
+      expect(updated.noteListDisableBackdropBlur, isTrue);
       expect(updated.sentryEnabled, isTrue);
       expect(updated.sentryDisclosureShown, isTrue);
       expect(updated.defaultStartPage, equals(settings.defaultStartPage));

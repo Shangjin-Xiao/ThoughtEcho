@@ -378,6 +378,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     final exportFormat = context.select<SettingsService, String>(
       (s) => s.exportFormat,
     );
+    final disableCardShadows = context.select<SettingsService, bool>(
+      (s) => s.noteListDisableCardShadows,
+    );
+    final disableBackdropBlur = context.select<SettingsService, bool>(
+      (s) => s.noteListDisableBackdropBlur,
+    );
     final String formattedDate = TimeUtils.formatQuoteDateLocalized(
       context,
       quoteDate,
@@ -424,10 +430,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         TextStyle(color: secondaryTextColor, fontSize: 12);
     final visualEffectsDisabled =
         QuoteItemWidget.disableVisualEffectsForTesting;
-    final cardShadowsDisabled =
-        visualEffectsDisabled || QuoteItemWidget.disableCardShadowsForTesting;
-    final backdropBlurDisabled =
-        visualEffectsDisabled || QuoteItemWidget.disableBackdropBlurForTesting;
+    final cardShadowsDisabled = visualEffectsDisabled ||
+        QuoteItemWidget.disableCardShadowsForTesting ||
+        disableCardShadows;
+    final backdropBlurDisabled = visualEffectsDisabled ||
+        QuoteItemWidget.disableBackdropBlurForTesting ||
+        disableBackdropBlur;
 
     final cardMargin = const EdgeInsets.symmetric(horizontal: 12, vertical: 6);
     final cardDecoration = BoxDecoration(

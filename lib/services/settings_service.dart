@@ -276,6 +276,24 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 开发者实验：记录页卡片禁用阴影
+  bool get noteListDisableCardShadows =>
+      _appSettings.noteListDisableCardShadows;
+  Future<void> setNoteListDisableCardShadows(bool enabled) async {
+    _appSettings = _appSettings.copyWith(noteListDisableCardShadows: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 开发者实验：记录页折叠遮罩禁用背景模糊
+  bool get noteListDisableBackdropBlur =>
+      _appSettings.noteListDisableBackdropBlur;
+  Future<void> setNoteListDisableBackdropBlur(bool enabled) async {
+    _appSettings = _appSettings.copyWith(noteListDisableBackdropBlur: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   // 开发者实验：AddNoteDialog 自动聚焦开关
   bool get addNoteDialogAutoFocus => _appSettings.addNoteDialogAutoFocus;
   Future<void> setAddNoteDialogAutoFocus(bool enabled) async {
