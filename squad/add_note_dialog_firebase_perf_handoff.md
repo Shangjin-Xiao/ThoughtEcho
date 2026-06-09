@@ -320,6 +320,41 @@ main 基线结果：
 - 目的不是隐藏功能，而是避免 modal route 首帧同时构建整张大表单；后续控件
   在 route 稳定后局部构建。
 - 新增 widget 测试固定该策略：首帧找不到 `add_note_location_chip`，延迟后出现。
+
+## 2026-06-09 第三版 Firebase 结果
+
+已重跑首帧瘦身后的分支：
+
+- GitHub Actions run：`27199364065`
+- Firebase 产物目录：`temp_firebase_perf_fix_deferred_controls/`
+
+结果：
+
+| 场景 | worst build | missed build | worst raster | missed raster | 关键 marker |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `add_note_dialog_cold_open` | 107.136ms | 2 | 96.326ms | 1 | deferredControls, no focus/keyboardInset |
+| `add_note_dialog_cold_diagnostic_open` | 80.366ms | 2 | 13.473ms | 0 | deferredControls, no focus/keyboardInset |
+| `add_note_dialog_warm_open` | 36.510ms | 2 | 11.370ms | 0 | deferredControls, no focus/keyboardInset |
+| `add_note_dialog_warm_diagnostic_open` | 45.492ms | 2 | 24.785ms | 2 | deferredControls, no focus/keyboardInset |
+
+与第二版相比：
+
+- `warm_open`：build 51.438ms → 36.510ms，raster 24.433ms → 11.370ms。
+- `warm_diagnostic_open`：build 80.469ms → 45.492ms。
+- `cold_diagnostic_open`：build 93.386ms → 80.366ms，raster 22.436ms → 13.473ms。
+- `cold_open` 仍有 GC/JIT/Surface 冷路径抖动：`ConcurrentMark` 约 104ms，
+  `GPURasterizer::Draw` 约 96ms，old GC 4 次。
+
+最终判断：
+
+- 用户反馈的“非全屏编辑器打开会卡”主因已定位并修复：默认自动聚焦拉起键盘
+  导致 BottomSheet + keyboard inset 在打开阶段重布局/重绘。
+- 第二层 route/bottom sheet 打开成本已通过禁用 sheet 动画、关闭 route 级焦点、
+  首帧瘦身降低。
+- 当前 warm 路径剩余 build 大帧主要发生在 `deferredControls.visible` 后，即次要
+  控件延迟挂载帧；首帧打开路径不再伴随键盘/inset，也不再有超预算 raster。
+- cold 路径的残余峰值主要来自云设备冷 JIT/GC/Surface，不建议继续用业务代码
+  针对单次冷设备抖动做高风险改动。
 - 通过：
   `timeout 120s flutter test --reporter compact test/unit/services/settings_service_test.dart`
 - 通过：
