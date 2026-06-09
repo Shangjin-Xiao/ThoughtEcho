@@ -115,6 +115,11 @@ extension _NoteListScrollExtension on NoteListViewState {
     _scrollSessionMaxOffset = metrics.pixels;
     _scrollSessionUpdateMicros.clear();
     _scrollSessionFrameTimings.clear();
+    _scrollSessionItemLayoutCount = 0;
+    _scrollSessionItemLayoutMicros = 0;
+    _scrollSessionItemLayoutJank = 0;
+    _scrollSessionWorstItemLayoutMicros = 0;
+    _scrollSessionSlowItemLayouts.clear();
     _scrollSessionStartQuoteContentStats = QuoteContent.debugCacheStats();
     _scrollSessionStartQuoteItemStats = QuoteItemWidget.getCacheStats();
     final imageCache = PaintingBinding.instance.imageCache;
@@ -248,6 +253,17 @@ extension _NoteListScrollExtension on NoteListViewState {
       baselineCount: _scrollSessionStartImageCount,
       baselineBytes: _scrollSessionStartImageBytes,
     );
+    final itemLayoutAvgMs = _scrollSessionItemLayoutCount == 0
+        ? 0.0
+        : (_scrollSessionItemLayoutMicros / _scrollSessionItemLayoutCount) /
+            1000.0;
+    final itemLayoutStats =
+        'count=$_scrollSessionItemLayoutCount,jank=$_scrollSessionItemLayoutJank,'
+        'avg=${itemLayoutAvgMs.toStringAsFixed(1)}ms,'
+        'worst=${(_scrollSessionWorstItemLayoutMicros / 1000.0).toStringAsFixed(1)}ms';
+    final slowLayouts = _scrollSessionSlowItemLayouts
+        .map((sample) => sample.toCompactText())
+        .join('|');
 
     logDebug(
       '滚动性能摘要(复制此行): session=$_scrollSessionId, dir=$direction, '
@@ -261,7 +277,8 @@ extension _NoteListScrollExtension on NoteListViewState {
       'avgBuild=${avgBuildMs.toStringAsFixed(1)}ms, worstBuild=${worstBuildMs.toStringAsFixed(1)}ms, '
       'avgRaster=${avgRasterMs.toStringAsFixed(1)}ms, worstRaster=${worstRasterMs.toStringAsFixed(1)}ms, '
       'quotes={${_quoteMixStatsText()}}, quoteContent={$quoteContentStats}, '
-      'quoteItem={$quoteItemStats}, imageCache={$imageStats}',
+      'quoteItem={$quoteItemStats}, imageCache={$imageStats}, '
+      'itemLayout={$itemLayoutStats}, slowLayouts=[$slowLayouts]',
       source: 'NoteListView.Perf',
     );
     _scrollSessionStartQuoteContentStats = null;
@@ -282,6 +299,50 @@ extension _NoteListScrollExtension on NoteListViewState {
     }
     _scrollSessionId = null;
     _releasePerfTimingsCallbackIfIdle();
+  }
+
+  void _recordNoteListItemLayout({
+    required int index,
+    required String quoteId,
+    required String kind,
+    required int durationMicros,
+    required double height,
+    required double? oldHeight,
+  }) {
+    if (!_scrollSessionPerfRecording) {
+      return;
+    }
+
+    _scrollSessionItemLayoutCount++;
+    _scrollSessionItemLayoutMicros += durationMicros;
+    if (durationMicros > _scrollSessionWorstItemLayoutMicros) {
+      _scrollSessionWorstItemLayoutMicros = durationMicros;
+    }
+    if (durationMicros > 8000) {
+      _scrollSessionItemLayoutJank++;
+    }
+
+    const maxSamples = 8;
+    if (durationMicros < 3000 &&
+        _scrollSessionSlowItemLayouts.length >= maxSamples) {
+      return;
+    }
+
+    final sample = _SlowItemLayoutSample(
+      index: index,
+      quoteId: quoteId,
+      kind: kind,
+      durationMicros: durationMicros,
+      height: height,
+      oldHeight: oldHeight,
+    );
+    _scrollSessionSlowItemLayouts.add(sample);
+    _scrollSessionSlowItemLayouts.sort(
+      (a, b) => b.durationMicros.compareTo(a.durationMicros),
+    );
+    if (_scrollSessionSlowItemLayouts.length > maxSamples) {
+      _scrollSessionSlowItemLayouts.removeLast();
+    }
   }
 
   void _startFirstOpenScrollPerfCapture() {

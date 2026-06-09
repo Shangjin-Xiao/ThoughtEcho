@@ -685,7 +685,7 @@ extension _NoteListItemsExtension on NoteListViewState {
     required Quote quote,
     required Widget Function() builder,
   }) {
-    if (!_firstOpenScrollPerfEnabled) {
+    if (!_firstOpenScrollPerfEnabled || !kDebugMode) {
       return builder();
     }
 
@@ -719,6 +719,7 @@ extension _NoteListItemsExtension on NoteListViewState {
       quoteId: quote.id ?? 'null',
       kind: _noteListPerfKindFor(quote),
       sessionId: _scrollSessionId,
+      onLayout: _recordNoteListItemLayout,
       child: child,
     );
   }
@@ -989,6 +990,7 @@ class _NoteListItemPerfProbe extends SingleChildRenderObjectWidget {
     required this.quoteId,
     required this.kind,
     required this.sessionId,
+    required this.onLayout,
     required super.child,
   });
 
@@ -996,6 +998,7 @@ class _NoteListItemPerfProbe extends SingleChildRenderObjectWidget {
   final String quoteId;
   final String kind;
   final String? sessionId;
+  final _NoteListItemLayoutCallback onLayout;
 
   @override
   RenderObject createRenderObject(BuildContext context) {
@@ -1004,6 +1007,7 @@ class _NoteListItemPerfProbe extends SingleChildRenderObjectWidget {
       quoteId: quoteId,
       kind: kind,
       sessionId: sessionId,
+      onLayout: onLayout,
     );
   }
 
@@ -1016,7 +1020,8 @@ class _NoteListItemPerfProbe extends SingleChildRenderObjectWidget {
       ..index = index
       ..quoteId = quoteId
       ..kind = kind
-      ..sessionId = sessionId;
+      ..sessionId = sessionId
+      ..onLayout = onLayout;
   }
 }
 
@@ -1026,57 +1031,112 @@ class _NoteListItemPerfProbeRenderObject extends RenderProxyBox {
     required String quoteId,
     required String kind,
     required String? sessionId,
+    required _NoteListItemLayoutCallback onLayout,
   })  : _index = index,
         _quoteId = quoteId,
         _kind = kind,
-        _sessionId = sessionId;
+        _sessionId = sessionId,
+        _onLayout = onLayout;
 
   int _index;
   String _quoteId;
   String _kind;
   String? _sessionId;
+  _NoteListItemLayoutCallback _onLayout;
   Size? _previousSize;
 
   set index(int value) => _index = value;
   set quoteId(String value) => _quoteId = value;
   set kind(String value) => _kind = value;
   set sessionId(String? value) => _sessionId = value;
+  set onLayout(_NoteListItemLayoutCallback value) => _onLayout = value;
 
   @override
   void performLayout() {
     final previousSize = _previousSize;
-    developer.Timeline.startSync(
-      'ThoughtEcho.NoteListView.itemLayout',
-      arguments: <String, Object>{
-        'index': _index,
-        'quoteId': _quoteId,
-        'kind': _kind,
-        'oldHeight': previousSize?.height.toStringAsFixed(1) ?? 'none',
-        if (_sessionId != null) 'session': _sessionId!,
-      },
-    );
-    try {
-      super.performLayout();
-    } finally {
-      developer.Timeline.finishSync();
-    }
-
-    if (previousSize == null ||
-        (size.height - previousSize.height).abs() >= 1) {
-      developer.Timeline.instantSync(
-        'ThoughtEcho.NoteListView.itemSizeChanged',
+    final stopwatch = Stopwatch()..start();
+    if (kDebugMode) {
+      developer.Timeline.startSync(
+        'ThoughtEcho.NoteListView.itemLayout',
         arguments: <String, Object>{
           'index': _index,
           'quoteId': _quoteId,
           'kind': _kind,
           'oldHeight': previousSize?.height.toStringAsFixed(1) ?? 'none',
-          'newHeight': size.height.toStringAsFixed(1),
-          'deltaHeight':
-              (size.height - (previousSize?.height ?? 0)).toStringAsFixed(1),
           if (_sessionId != null) 'session': _sessionId!,
         },
       );
     }
+    try {
+      super.performLayout();
+    } finally {
+      if (kDebugMode) {
+        developer.Timeline.finishSync();
+      }
+      stopwatch.stop();
+    }
+
+    _onLayout(
+      index: _index,
+      quoteId: _quoteId,
+      kind: _kind,
+      durationMicros: stopwatch.elapsedMicroseconds,
+      height: size.height,
+      oldHeight: previousSize?.height,
+    );
+
+    if (previousSize == null ||
+        (size.height - previousSize.height).abs() >= 1) {
+      if (kDebugMode) {
+        developer.Timeline.instantSync(
+          'ThoughtEcho.NoteListView.itemSizeChanged',
+          arguments: <String, Object>{
+            'index': _index,
+            'quoteId': _quoteId,
+            'kind': _kind,
+            'oldHeight': previousSize?.height.toStringAsFixed(1) ?? 'none',
+            'newHeight': size.height.toStringAsFixed(1),
+            'deltaHeight':
+                (size.height - (previousSize?.height ?? 0)).toStringAsFixed(1),
+            if (_sessionId != null) 'session': _sessionId!,
+          },
+        );
+      }
+    }
     _previousSize = size;
+  }
+}
+
+typedef _NoteListItemLayoutCallback = void Function({
+  required int index,
+  required String quoteId,
+  required String kind,
+  required int durationMicros,
+  required double height,
+  required double? oldHeight,
+});
+
+class _SlowItemLayoutSample {
+  const _SlowItemLayoutSample({
+    required this.index,
+    required this.quoteId,
+    required this.kind,
+    required this.durationMicros,
+    required this.height,
+    required this.oldHeight,
+  });
+
+  final int index;
+  final String quoteId;
+  final String kind;
+  final int durationMicros;
+  final double height;
+  final double? oldHeight;
+
+  String toCompactText() {
+    final oldHeightText = oldHeight?.toStringAsFixed(0) ?? 'none';
+    return '$index:$quoteId:$kind:'
+        '${(durationMicros / 1000.0).toStringAsFixed(1)}ms:'
+        'h=$oldHeightText→${height.toStringAsFixed(0)}';
   }
 }

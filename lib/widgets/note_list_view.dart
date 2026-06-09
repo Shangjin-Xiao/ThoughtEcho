@@ -177,6 +177,12 @@ class NoteListViewState extends State<NoteListView> {
   Map<String, int>? _scrollSessionStartQuoteItemStats;
   int _scrollSessionStartImageCount = 0;
   int _scrollSessionStartImageBytes = 0;
+  int _scrollSessionItemLayoutCount = 0;
+  int _scrollSessionItemLayoutMicros = 0;
+  int _scrollSessionItemLayoutJank = 0;
+  int _scrollSessionWorstItemLayoutMicros = 0;
+  final List<_SlowItemLayoutSample> _scrollSessionSlowItemLayouts =
+      <_SlowItemLayoutSample>[];
 
   bool _hasExpandableQuoteCached = false;
   bool _hasExpandableQuoteComputed = false;
