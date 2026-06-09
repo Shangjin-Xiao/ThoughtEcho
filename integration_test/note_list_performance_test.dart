@@ -41,6 +41,8 @@ const String _resultChunkPrefix = 'THOUGHTECHO_PERF_CHUNK:';
 
 enum _ListScenario { plainText, richText, images }
 
+enum _VisualEffectOverride { all, shadows, backdropBlur }
+
 class _PerformanceSettingsService extends ChangeNotifier
     implements SettingsService {
   final AppSettings _settings = AppSettings.defaultSettings().copyWith(
@@ -640,6 +642,7 @@ Future<void> _traceDetailedFlatVisualScenario(
   required String scenario,
   required List<Quote> quotes,
   required String actionScenario,
+  _VisualEffectOverride override = _VisualEffectOverride.all,
   bool coldImages = false,
 }) async {
   await tester.pumpWidget(const SizedBox.shrink());
@@ -652,7 +655,17 @@ Future<void> _traceDetailedFlatVisualScenario(
     isListScrolling.value = true;
   }
 
-  QuoteItemWidget.disableVisualEffectsForTesting = true;
+  switch (override) {
+    case _VisualEffectOverride.all:
+      QuoteItemWidget.disableVisualEffectsForTesting = true;
+      break;
+    case _VisualEffectOverride.shadows:
+      QuoteItemWidget.disableCardShadowsForTesting = true;
+      break;
+    case _VisualEffectOverride.backdropBlur:
+      QuoteItemWidget.disableBackdropBlurForTesting = true;
+      break;
+  }
   await tester.pumpWidget(_buildRealNoteListBenchmarkApp(quotes));
   await tester.pump();
   try {
@@ -665,7 +678,7 @@ Future<void> _traceDetailedFlatVisualScenario(
     );
   } finally {
     isListScrolling.value = false;
-    QuoteItemWidget.disableVisualEffectsForTesting = false;
+    QuoteItemWidget.resetVisualEffectTestingOverrides();
   }
 }
 
@@ -713,7 +726,7 @@ void main() {
       IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   tearDown(() {
-    QuoteItemWidget.disableVisualEffectsForTesting = false;
+    QuoteItemWidget.resetVisualEffectTestingOverrides();
     QuoteItemWidget.clearExpansionCache();
   });
 
@@ -849,6 +862,22 @@ void main() {
       quotes: _buildBenchmarkQuotes(_ListScenario.richText, const <String>[]),
       actionScenario: 'real_richText_flatVisual_diagnostic',
     );
+    await _traceDetailedFlatVisualScenario(
+      binding,
+      tester,
+      scenario: 'real_note_list_richText_noShadow_diagnostic',
+      quotes: _buildBenchmarkQuotes(_ListScenario.richText, const <String>[]),
+      actionScenario: 'real_richText_noShadow_diagnostic',
+      override: _VisualEffectOverride.shadows,
+    );
+    await _traceDetailedFlatVisualScenario(
+      binding,
+      tester,
+      scenario: 'real_note_list_richText_noBackdrop_diagnostic',
+      quotes: _buildBenchmarkQuotes(_ListScenario.richText, const <String>[]),
+      actionScenario: 'real_richText_noBackdrop_diagnostic',
+      override: _VisualEffectOverride.backdropBlur,
+    );
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
@@ -881,6 +910,24 @@ void main() {
       scenario: 'real_note_list_images_flatVisual_diagnostic',
       quotes: _buildBenchmarkQuotes(_ListScenario.images, diagnosticImagePaths),
       actionScenario: 'real_images_flatVisual_diagnostic',
+      coldImages: true,
+    );
+    await _traceDetailedFlatVisualScenario(
+      binding,
+      tester,
+      scenario: 'real_note_list_images_noShadow_diagnostic',
+      quotes: _buildBenchmarkQuotes(_ListScenario.images, diagnosticImagePaths),
+      actionScenario: 'real_images_noShadow_diagnostic',
+      override: _VisualEffectOverride.shadows,
+      coldImages: true,
+    );
+    await _traceDetailedFlatVisualScenario(
+      binding,
+      tester,
+      scenario: 'real_note_list_images_noBackdrop_diagnostic',
+      quotes: _buildBenchmarkQuotes(_ListScenario.images, diagnosticImagePaths),
+      actionScenario: 'real_images_noBackdrop_diagnostic',
+      override: _VisualEffectOverride.backdropBlur,
       coldImages: true,
     );
 

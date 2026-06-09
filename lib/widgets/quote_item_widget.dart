@@ -23,6 +23,19 @@ class QuoteItemWidget extends StatefulWidget {
   @visibleForTesting
   static bool disableVisualEffectsForTesting = false;
 
+  @visibleForTesting
+  static bool disableCardShadowsForTesting = false;
+
+  @visibleForTesting
+  static bool disableBackdropBlurForTesting = false;
+
+  @visibleForTesting
+  static void resetVisualEffectTestingOverrides() {
+    disableVisualEffectsForTesting = false;
+    disableCardShadowsForTesting = false;
+    disableBackdropBlurForTesting = false;
+  }
+
   final Quote quote;
   final Map<String, NoteCategory> tagMap;
   final bool isExpanded;
@@ -411,6 +424,10 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         TextStyle(color: secondaryTextColor, fontSize: 12);
     final visualEffectsDisabled =
         QuoteItemWidget.disableVisualEffectsForTesting;
+    final cardShadowsDisabled =
+        visualEffectsDisabled || QuoteItemWidget.disableCardShadowsForTesting;
+    final backdropBlurDisabled =
+        visualEffectsDisabled || QuoteItemWidget.disableBackdropBlurForTesting;
 
     final cardMargin = const EdgeInsets.symmetric(horizontal: 12, vertical: 6);
     final cardDecoration = BoxDecoration(
@@ -418,7 +435,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       border: widget.selectionMode && widget.isSelected
           ? Border.all(color: theme.colorScheme.primary, width: 2)
           : Border.all(color: Colors.transparent, width: 2),
-      boxShadow: visualEffectsDisabled
+      boxShadow: cardShadowsDisabled
           ? const <BoxShadow>[]
           : widget.isSelected && widget.selectionMode
               ? [
@@ -708,7 +725,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                         fit: StackFit.expand,
                                         children: [
                                           ExcludeSemantics(
-                                            child: visualEffectsDisabled
+                                            child: backdropBlurDisabled
                                                 ? fadeScrim
                                                 : RepaintBoundary(
                                                     child: ClipRect(
