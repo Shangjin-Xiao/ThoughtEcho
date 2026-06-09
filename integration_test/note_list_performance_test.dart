@@ -346,7 +346,7 @@ Widget _buildAddNoteBenchmarkApp() {
 }
 
 Future<void> _runScrollSequence(WidgetTester tester, String scenario) async {
-  final Finder list = find.byKey(_listKey);
+  final Finder list = _findBenchmarkListScrollable();
   for (int i = 0; i < 5; i++) {
     final developer.TimelineTask flingTask = developer.TimelineTask(
       filterKey: 'ThoughtEcho',
@@ -383,7 +383,7 @@ Future<void> _runDiagnosticScrollSequence(
   WidgetTester tester,
   String scenario,
 ) async {
-  final Finder list = find.byKey(_listKey);
+  final Finder list = _findBenchmarkListScrollable();
   final developer.TimelineTask flingTask = developer.TimelineTask(
     filterKey: 'ThoughtEcho',
   )..start(
@@ -406,12 +406,25 @@ Future<void> _runDiagnosticImageScrollSequence(
 
 void _jumpListToStart(WidgetTester tester) {
   final ScrollableState scrollable = tester.state<ScrollableState>(
-    find.descendant(
-      of: find.byKey(_listKey),
-      matching: find.byType(Scrollable),
-    ),
+    _findBenchmarkListScrollable(),
   );
   scrollable.position.jumpTo(0);
+}
+
+Finder _findBenchmarkListScrollable() {
+  final keyedRoot = find.byKey(_listKey);
+  final listViews = find.descendant(
+    of: keyedRoot,
+    matching: find.byType(ListView),
+  );
+  final listView =
+      listViews.evaluate().isNotEmpty ? listViews.first : keyedRoot;
+  return find
+      .descendant(
+        of: listView,
+        matching: find.byType(Scrollable),
+      )
+      .first;
 }
 
 Map<String, dynamic> _diagnosticSummary(

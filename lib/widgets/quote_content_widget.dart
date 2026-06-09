@@ -160,8 +160,9 @@ class QuoteContent extends StatelessWidget {
   static void prewarmCollapsedContentCache(
     List<Quote> quotes, {
     required bool prioritizeBoldContent,
-    int maxItems = 48,
-    Duration delay = const Duration(milliseconds: 500),
+    int maxItems = 24,
+    Duration delay = const Duration(milliseconds: 1500),
+    Duration idleAfterScrollDelay = const Duration(milliseconds: 900),
   }) {
     final richQuotes = quotes
         .where((q) => q.deltaContent != null && q.editSource == 'fullscreen')
@@ -169,47 +170,55 @@ class QuoteContent extends StatelessWidget {
         .toList();
     if (richQuotes.isEmpty) return;
 
-    const batchDelay = Duration(milliseconds: 80);
+    const batchDelay = Duration(milliseconds: 120);
     final generation = _cacheGeneration;
 
     void processBatch(int index) {
       if (generation != _cacheGeneration) return;
       if (index >= richQuotes.length) return;
       if (isListScrolling.value) {
-        Timer(const Duration(milliseconds: 240), () => processBatch(index));
+        Timer(idleAfterScrollDelay, () => processBatch(index));
         return;
       }
 
-      final quote = richQuotes[index];
-      final deltaContent = quote.deltaContent!;
-      final needsExpansion = exceedsCollapsedHeight(quote);
-      final usePrioritizedDoc = prioritizeBoldContent;
-      final cacheQuoteId =
-          quote.id ?? 'local_${quote.date}_${quote.content.hashCode}';
-      final contentVariant = _QuoteContentControllerCache.resolveVariant(
-        showFullContent: false,
-        usePrioritizedDoc: usePrioritizedDoc,
-        needsExpansion: needsExpansion,
-      );
-      final contentSignature =
-          '${deltaContent.hashCode}_${deltaContent.length}_$contentVariant';
+      Timer(idleAfterScrollDelay, () {
+        if (generation != _cacheGeneration) return;
+        if (isListScrolling.value) {
+          processBatch(index);
+          return;
+        }
 
-      _QuoteContentControllerCache.getOrCreate(
-        quoteId: cacheQuoteId,
-        contentSignature: contentSignature,
-        variant: contentVariant,
-        documentBuilder: () => _QuoteDocumentCache.getOrCreate(
-          deltaContent: deltaContent,
-          prioritizeBold: usePrioritizedDoc,
-          builder: () => QuoteContent(
-            quote: quote,
-          )._buildRichTextDocument(deltaContent, usePrioritizedDoc),
-        ),
-      );
+        final quote = richQuotes[index];
+        final deltaContent = quote.deltaContent!;
+        final needsExpansion = exceedsCollapsedHeight(quote);
+        final usePrioritizedDoc = prioritizeBoldContent;
+        final cacheQuoteId =
+            quote.id ?? 'local_${quote.date}_${quote.content.hashCode}';
+        final contentVariant = _QuoteContentControllerCache.resolveVariant(
+          showFullContent: false,
+          usePrioritizedDoc: usePrioritizedDoc,
+          needsExpansion: needsExpansion,
+        );
+        final contentSignature =
+            '${deltaContent.hashCode}_${deltaContent.length}_$contentVariant';
 
-      if (index + 1 < richQuotes.length) {
-        Timer(batchDelay, () => processBatch(index + 1));
-      }
+        _QuoteContentControllerCache.getOrCreate(
+          quoteId: cacheQuoteId,
+          contentSignature: contentSignature,
+          variant: contentVariant,
+          documentBuilder: () => _QuoteDocumentCache.getOrCreate(
+            deltaContent: deltaContent,
+            prioritizeBold: usePrioritizedDoc,
+            builder: () => QuoteContent(
+              quote: quote,
+            )._buildRichTextDocument(deltaContent, usePrioritizedDoc),
+          ),
+        );
+
+        if (index + 1 < richQuotes.length) {
+          Timer(batchDelay, () => processBatch(index + 1));
+        }
+      });
     }
 
     Timer(delay, () => processBatch(0));

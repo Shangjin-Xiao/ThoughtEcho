@@ -190,6 +190,7 @@ void main() {
       [quote],
       prioritizeBoldContent: false,
       delay: Duration.zero,
+      idleAfterScrollDelay: Duration.zero,
     );
     await tester.pump(const Duration(milliseconds: 1));
 
