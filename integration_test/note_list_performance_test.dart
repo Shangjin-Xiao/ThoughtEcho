@@ -17,11 +17,14 @@ import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/local_ai_settings.dart';
 import 'package:thoughtecho/models/note_category.dart';
 import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/controllers/search_controller.dart';
+import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/utils/quill_editor_extensions.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
+import 'package:thoughtecho/widgets/note_list_view.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
 
@@ -68,8 +71,7 @@ class _PerformanceSettingsService extends ChangeNotifier
   List<String> get defaultTagIds => _settings.defaultTagIds;
 
   @override
-  bool get enableFirstOpenScrollPerfMonitor =>
-      _settings.enableFirstOpenScrollPerfMonitor;
+  bool get enableFirstOpenScrollPerfMonitor => true;
 
   @override
   String get exportFormat => 'card';
@@ -95,6 +97,45 @@ class _PerformanceFeatureGuideService extends FeatureGuideService {
 
   @override
   bool hasShown(String guideId) => true;
+}
+
+class _PerformanceDatabaseService extends DatabaseService {
+  _PerformanceDatabaseService(this.quotes) : super.forTesting();
+
+  final List<Quote> quotes;
+
+  @override
+  bool get isInitialized => true;
+
+  @override
+  bool get hasMoreQuotes => false;
+
+  @override
+  Future<List<NoteCategory>> getCategories() async => const <NoteCategory>[];
+
+  @override
+  Future<void> loadMoreQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool? includeDeleted,
+  }) async {}
+
+  @override
+  Stream<List<Quote>> watchQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    int limit = 20,
+    String orderBy = 'date DESC',
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool includeDeleted = false,
+  }) {
+    return Stream<List<Quote>>.value(quotes);
+  }
 }
 
 Future<List<String>> _prepareImageFilePaths({
@@ -216,6 +257,46 @@ Widget _buildBenchmarkApp(
               child: item,
             );
           },
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _buildRealNoteListBenchmarkApp(List<Quote> quotes) {
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider<DatabaseService>.value(
+        value: _PerformanceDatabaseService(quotes),
+      ),
+      ChangeNotifierProvider<SettingsService>.value(
+        value: _PerformanceSettingsService(),
+      ),
+      ChangeNotifierProvider<NoteSearchController>(
+        create: (_) => NoteSearchController(),
+      ),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('zh'),
+      home: Scaffold(
+        body: NoteListView(
+          key: _listKey,
+          tags: const <NoteCategory>[],
+          selectedTagIds: const <String>[],
+          onTagSelectionChanged: (_) {},
+          searchQuery: '',
+          sortType: 'time',
+          sortAscending: false,
+          onSortChanged: (_, __) {},
+          onSearchChanged: (_) {},
+          onEdit: (_) {},
+          onDelete: (_) {},
+          onAskAI: (_) {},
+          selectedWeathers: const <String>[],
+          selectedDayPeriods: const <String>[],
+          onFilterChanged: (_, __) {},
         ),
       ),
     ),
@@ -684,6 +765,53 @@ void main() {
       'note_list_images_warm_diagnostic',
       () => _runDiagnosticScrollSequence(tester, 'images_warm_diagnostic'),
     );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    QuoteContent.resetCaches();
+    QuoteItemWidget.clearExpansionCache();
+    await tester.pumpWidget(
+      _buildRealNoteListBenchmarkApp(
+        _buildBenchmarkQuotes(_ListScenario.richText, const <String>[]),
+      ),
+    );
+    await tester.pumpAndSettle();
+    _jumpListToStart(tester);
+    await tester.pumpAndSettle();
+    await _traceDetailedScenario(
+      binding,
+      'real_note_list_richText_diagnostic',
+      () => _runDiagnosticScrollSequence(
+        tester,
+        'real_richText_diagnostic',
+      ),
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    QuoteContent.resetCaches();
+    QuoteItemWidget.clearExpansionCache();
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
+    isListScrolling.value = true;
+    await tester.pumpWidget(
+      _buildRealNoteListBenchmarkApp(
+        _buildBenchmarkQuotes(_ListScenario.images, diagnosticImagePaths),
+      ),
+    );
+    await tester.pump();
+    try {
+      await _traceDetailedScenario(
+        binding,
+        'real_note_list_images_cold_diagnostic',
+        () => _runDiagnosticImageScrollSequence(
+          tester,
+          'real_images_cold_diagnostic',
+        ),
+      );
+    } finally {
+      isListScrolling.value = false;
+    }
 
     imageDataUrls.clear();
     diagnosticImagePaths.clear();
