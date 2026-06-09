@@ -1,0 +1,19 @@
+lib/services/database_health_service.dart
+  s_8f6351daa565c8::t_bea1da66f67056 178
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "f802a64dffd935360fa4aa5fcd08fe370081ef88",
+  "prompts": {},
+  "sessions": {
+    "s_8f6351daa565c8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_15518f9e8ffeKrOd7t8yk5mB70",
+        "model": "nemotron-3-ultra-free"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
