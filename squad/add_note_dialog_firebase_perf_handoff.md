@@ -285,6 +285,41 @@ main 基线结果：
 - 生产入口使用 `sheetAnimationStyle` 禁用非全屏编辑器 bottom sheet 动画。
 - 生产入口同时设置 `requestFocus: false`，避免 route 打开时额外请求焦点。
 - Firebase 性能 harness 使用同一策略，确保 CI 测到真实修复路径。
+
+## 2026-06-09 第二版 Firebase 结果
+
+已重跑禁用 bottom sheet 动画后的分支：
+
+- GitHub Actions run：`27198079389`
+- Firebase 产物目录：`temp_firebase_perf_fix_no_animation/`
+
+结果：
+
+| 场景 | worst build | missed build | worst raster | missed raster | 关键 marker |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `add_note_dialog_cold_open` | 86.097ms | 1 | 148.574ms | 3 | no focus/keyboardInset |
+| `add_note_dialog_cold_diagnostic_open` | 93.386ms | 2 | 22.436ms | 1 | no focus/keyboardInset |
+| `add_note_dialog_warm_open` | 51.438ms | 2 | 24.433ms | 1 | no focus/keyboardInset |
+| `add_note_dialog_warm_diagnostic_open` | 80.469ms | 2 | 19.171ms | 1 | no focus/keyboardInset |
+
+结论：
+
+- `sheetAnimationStyle: AnimationStyle.noAnimation` 和 `requestFocus: false`
+  保持了键盘链路关闭，但不足以消除首帧大帧。
+- detailed slice 仍显示 `Navigator`/`Overlay`/`FocusTraversalGroup` 包住的
+  route 首帧构建达到 35-55ms；`warm_open` 还出现约 17ms semantics 更新。
+- `cold_open` 的 148ms raster 主要落在 `GPURasterizer::Draw` /
+  `SurfaceGLES::WrapOnScreenFBO`，更像冷设备/Surface 抖动；但 warm 路径的
+  Dart build 仍高，说明还需要减少首帧表单复杂度。
+
+第三版本地修复方向：
+
+- AddNoteDialog 打开首帧只挂载正文输入和保存/取消按钮。
+- 作者/作品、附加信息 chips、标签选择、已选标签展示、AI 菜单延后 180ms
+  挂载。
+- 目的不是隐藏功能，而是避免 modal route 首帧同时构建整张大表单；后续控件
+  在 route 稳定后局部构建。
+- 新增 widget 测试固定该策略：首帧找不到 `add_note_location_chip`，延迟后出现。
 - 通过：
   `timeout 120s flutter test --reporter compact test/unit/services/settings_service_test.dart`
 - 通过：

@@ -110,6 +110,37 @@ void main() {
     expect(contentField.focusNode?.hasFocus, isFalse);
   });
 
+  testWidgets('defers secondary controls until after first frame',
+      (tester) async {
+    await tester.pumpWidget(
+      ChangeNotifierProvider<FeatureGuideService>(
+        create: (_) => _MockFeatureGuideService(),
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: AddNoteDialog(
+              tags: const [],
+              onSave: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(AddNoteDialog), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.byKey(const ValueKey('add_note_location_chip')), findsNothing);
+
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(
+        find.byKey(const ValueKey('add_note_location_chip')), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+  });
+
   testWidgets('disables add info chip checkmarks to avoid keyboard jank flash',
       (tester) async {
     await tester.pumpWidget(
@@ -128,6 +159,8 @@ void main() {
         ),
       ),
     );
+
+    await tester.pump(const Duration(milliseconds: 200));
 
     for (final key in const [
       ValueKey('add_note_location_chip'),
