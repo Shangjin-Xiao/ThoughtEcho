@@ -238,6 +238,53 @@ Detailed 证据：
   在实现前失败，实际值为 `true`。
 - 实现后通过：
   `timeout 120s flutter test --reporter compact test/unit/models/app_settings_test.dart --name "defaultSettings should have expected default values"`
+
+## 2026-06-09 Firebase 重跑结果
+
+已重跑 main 基线：
+
+- GitHub Actions run：`27196077326`
+- Firebase 产物目录：`temp_firebase_perf_main_current/`
+
+main 基线结果：
+
+| 场景 | worst build | missed build | worst raster | missed raster | 关键 marker |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `add_note_dialog_cold_open` | 101.981ms | 3 | 60.936ms | 2 | focus + keyboardInset |
+| `add_note_dialog_cold_diagnostic_open` | 71.274ms | 2 | 20.428ms | 2 | focus + keyboardInset |
+| `add_note_dialog_warm_open` | 36.083ms | 3 | 27.405ms | 1 | focus + keyboardInset |
+| `add_note_dialog_warm_diagnostic_open` | 74.661ms | 4 | 1.859ms | 0 | focus + keyboardInset |
+
+已重跑第一版修复分支：
+
+- GitHub Actions run：`27196624573`
+- Firebase 产物目录：`temp_firebase_perf_fix/`
+
+第一版修复结果：
+
+| 场景 | worst build | missed build | worst raster | missed raster | 关键 marker |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `add_note_dialog_cold_open` | 124.855ms | 2 | 71.232ms | 3 | no focus/keyboardInset |
+| `add_note_dialog_cold_diagnostic_open` | 87.577ms | 2 | 15.946ms | 0 | no focus/keyboardInset |
+| `add_note_dialog_warm_open` | 52.479ms | 1 | 30.427ms | 2 | no focus/keyboardInset |
+| `add_note_dialog_warm_diagnostic_open` | 87.275ms | 2 | 1.403ms | 0 | no focus/keyboardInset |
+
+结论：
+
+- 默认关闭 AddNoteDialog 自动聚焦已经移除了 `focus.requested`、
+  `focus.acquired`、`keyboardInset.started`，键盘/inset 卡顿链路被切断。
+- 但打开阶段仍有大帧，说明第二层问题是 modal bottom sheet route 打开本身：
+  detailed slice 中仍可见 `Navigator`、`ModalRoute`、`Overlay`、`BottomSheet`、
+  `FocusTraversalGroup` 等 route/动画/焦点链路。
+- 因此需要继续减少 AddNoteDialog 打开时的 route 动画和 route 级焦点工作。
+
+第二版本地修复方向：
+
+- 在 `AddNoteDialog` 旁统一定义 `bottomSheetAnimationStyle =
+  AnimationStyle.noAnimation`。
+- 生产入口使用 `sheetAnimationStyle` 禁用非全屏编辑器 bottom sheet 动画。
+- 生产入口同时设置 `requestFocus: false`，避免 route 打开时额外请求焦点。
+- Firebase 性能 harness 使用同一策略，确保 CI 测到真实修复路径。
 - 通过：
   `timeout 120s flutter test --reporter compact test/unit/services/settings_service_test.dart`
 - 通过：

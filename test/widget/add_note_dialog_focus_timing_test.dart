@@ -15,6 +15,14 @@ import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
 
 void main() {
+  test('bottom sheet opens without route animation', () {
+    expect(AddNoteDialog.bottomSheetAnimationStyle.duration, Duration.zero);
+    expect(
+      AddNoteDialog.bottomSheetAnimationStyle.reverseDuration,
+      Duration.zero,
+    );
+  });
+
   testWidgets('delays content focus until bottom sheet entrance settles',
       (tester) async {
     await tester.pumpWidget(
