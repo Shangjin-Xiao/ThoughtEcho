@@ -101,14 +101,25 @@ class NoteListView extends StatefulWidget {
   /// Returns whether a note-list item should be kept alive after it scrolls off
   /// screen.
   ///
-  /// Real-device traces showed the remaining "jump" after rich item keep-alive
-  /// was dominated by scroll extent drift: cheap plain items were still
-  /// repeatedly rebuilt with `oldHeight=none`, causing [RenderSliverList] to
-  /// revise its max scroll extent during gestures. Keep the current loaded page
-  /// alive to stabilize the variable-height list; pagination still bounds the
-  /// retained item count.
+  /// Rich/media/expandable notes are expensive to lay out and should keep their
+  /// measured extent. Plain notes are handled by a viewport-relative keep-alive
+  /// window in [NoteListViewState] so a parent rebuild does not sweep the whole
+  /// loaded list.
   @visibleForTesting
-  static bool shouldKeepAliveQuoteItem(Quote quote) => true;
+  static bool shouldKeepAliveQuoteItem(Quote quote) {
+    final deltaContent = quote.deltaContent;
+    if (deltaContent == null || quote.editSource != 'fullscreen') {
+      return false;
+    }
+
+    if (deltaContent.contains('"image"') ||
+        deltaContent.contains('"video"') ||
+        deltaContent.contains('"audio"')) {
+      return true;
+    }
+
+    return QuoteItemWidget.needsExpansionFor(quote);
+  }
 }
 
 class NoteListViewState extends State<NoteListView> {
@@ -134,6 +145,7 @@ class NoteListViewState extends State<NoteListView> {
   bool _hasMore = true;
   static const int _pageSize = AppConstants.defaultPageSize;
   StreamSubscription<List<Quote>>? _quotesSub;
+  static const int _plainKeepAliveWindowRadius = 18;
 
   // 修复：添加等待服务初始化的标志
   bool _waitingForServices = true;

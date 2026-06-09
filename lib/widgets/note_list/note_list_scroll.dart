@@ -57,10 +57,13 @@ extension _NoteListScrollExtension on NoteListViewState {
     var media = 0;
     var expanded = 0;
     var keepAlive = 0;
+    var pinnedKeepAlive = 0;
+    final keepAliveCenterIndex = _estimatedScrollCenterIndex();
     final quoteItemStats = QuoteItemWidget.getCacheStats();
     final expandable = quoteItemStats['expandableCount'] ?? 0;
 
-    for (final quote in _quotes) {
+    for (var index = 0; index < _quotes.length; index++) {
+      final quote = _quotes[index];
       final quoteId = quote.id;
       if (quoteId != null && (_expandedItems[quoteId] ?? false)) {
         expanded++;
@@ -75,12 +78,19 @@ extension _NoteListScrollExtension on NoteListViewState {
         }
       }
       if (NoteListView.shouldKeepAliveQuoteItem(quote)) {
+        pinnedKeepAlive++;
+        keepAlive++;
+      } else if (_quotes.length <=
+              NoteListViewState._plainKeepAliveWindowRadius * 2 + 1 ||
+          (index - keepAliveCenterIndex).abs() <=
+              NoteListViewState._plainKeepAliveWindowRadius) {
         keepAlive++;
       }
     }
 
     return 'total=$total, rich=$rich, media=$media, expandable=$expandable, '
         'expanded=$expanded, keepAlive=$keepAlive, '
+        'pinnedKeepAlive=$pinnedKeepAlive, '
         'tracked=${_expandedItems.length}';
   }
 

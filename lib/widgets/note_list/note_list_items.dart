@@ -644,7 +644,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                     ),
                   );
                   final keepAliveItem =
-                      NoteListView.shouldKeepAliveQuoteItem(quote);
+                      _shouldKeepAliveNoteListItem(index, quote);
 
                   itemWidget = Stack(
                     children: [
@@ -666,9 +666,10 @@ extension _NoteListItemsExtension on NoteListViewState {
                     ],
                   );
 
-                  if (keepAliveItem) {
-                    itemWidget = _NoteListItemKeepAlive(child: itemWidget);
-                  }
+                  itemWidget = _NoteListItemKeepAlive(
+                    keepAlive: keepAliveItem,
+                    child: itemWidget,
+                  );
 
                   return _wrapNoteListItemPerfProbe(
                     quote: quote,
@@ -687,6 +688,38 @@ extension _NoteListItemsExtension on NoteListViewState {
         ),
       ),
     );
+  }
+
+  bool _shouldKeepAliveNoteListItem(int index, Quote quote) {
+    if (NoteListView.shouldKeepAliveQuoteItem(quote)) {
+      return true;
+    }
+
+    if (_quotes.length <=
+        NoteListViewState._plainKeepAliveWindowRadius * 2 + 1) {
+      return true;
+    }
+
+    final centerIndex = _estimatedScrollCenterIndex();
+    return (index - centerIndex).abs() <=
+        NoteListViewState._plainKeepAliveWindowRadius;
+  }
+
+  int _estimatedScrollCenterIndex() {
+    if (_quotes.isEmpty || !_scrollController.hasClients) {
+      return 0;
+    }
+
+    final position = _scrollController.position;
+    final maxExtent = position.maxScrollExtent;
+    if (maxExtent <= 0) {
+      return 0;
+    }
+
+    final viewportCenter = (position.pixels + position.viewportDimension / 2)
+        .clamp(0.0, maxExtent);
+    final fraction = (viewportCenter / maxExtent).clamp(0.0, 1.0);
+    return (fraction * (_quotes.length - 1)).round();
   }
 
   Widget _traceNoteListItemBuild({
@@ -1021,8 +1054,12 @@ extension _NoteListItemsExtension on NoteListViewState {
 }
 
 class _NoteListItemKeepAlive extends StatefulWidget {
-  const _NoteListItemKeepAlive({required this.child});
+  const _NoteListItemKeepAlive({
+    required this.keepAlive,
+    required this.child,
+  });
 
+  final bool keepAlive;
   final Widget child;
 
   @override
@@ -1032,7 +1069,15 @@ class _NoteListItemKeepAlive extends StatefulWidget {
 class _NoteListItemKeepAliveState extends State<_NoteListItemKeepAlive>
     with AutomaticKeepAliveClientMixin<_NoteListItemKeepAlive> {
   @override
-  bool get wantKeepAlive => true;
+  bool get wantKeepAlive => widget.keepAlive;
+
+  @override
+  void didUpdateWidget(covariant _NoteListItemKeepAlive oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.keepAlive != widget.keepAlive) {
+      updateKeepAlive();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
