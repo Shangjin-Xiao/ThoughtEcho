@@ -196,6 +196,21 @@ class NoteListViewState extends State<NoteListView> {
   double _scrollSessionMinMaxExtent = 0;
   double _scrollSessionMaxMaxExtent = 0;
   int _scrollSessionExtentChangeCount = 0;
+  int _scrollSessionStartStateUpdateCount = 0;
+  int _scrollSessionStartNoteListBuildCount = 0;
+  int _scrollSessionStartLoadMoreAttemptCount = 0;
+  int _scrollSessionStartLoadMoreStartCount = 0;
+  int _scrollSessionStartLoadMoreSkipCount = 0;
+  int _scrollSessionStartDataEventCount = 0;
+  int _scrollSessionNotificationStarts = 0;
+  int _scrollSessionNotificationUpdates = 0;
+  int _scrollSessionNotificationEnds = 0;
+  int _scrollSessionItemBuildCount = 0;
+  int _scrollSessionMinBuiltIndex = 1 << 30;
+  int _scrollSessionMaxBuiltIndex = -1;
+  int _scrollSessionBuiltPlain = 0;
+  int _scrollSessionBuiltRich = 0;
+  int _scrollSessionBuiltMedia = 0;
   final List<int> _scrollSessionUpdateMicros = <int>[];
   final List<FrameTiming> _scrollSessionFrameTimings = <FrameTiming>[];
   Timer? _scrollSessionPerfStopTimer;
@@ -210,6 +225,12 @@ class NoteListViewState extends State<NoteListView> {
   int _scrollSessionWorstItemLayoutMicros = 0;
   final List<_SlowItemLayoutSample> _scrollSessionSlowItemLayouts =
       <_SlowItemLayoutSample>[];
+  int _stateUpdateCount = 0;
+  int _noteListBuildCount = 0;
+  int _loadMoreAttemptCount = 0;
+  int _loadMoreStartCount = 0;
+  int _loadMoreSkipCount = 0;
+  int _dataStreamEventCount = 0;
 
   bool _hasExpandableQuoteCached = false;
   bool _hasExpandableQuoteComputed = false;
@@ -221,6 +242,7 @@ class NoteListViewState extends State<NoteListView> {
 
   void _updateState(VoidCallback fn) {
     if (!mounted) return;
+    _stateUpdateCount++;
     setState(fn);
   }
 

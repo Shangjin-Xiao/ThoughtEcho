@@ -69,6 +69,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
         .listen(
       (list) {
         if (mounted) {
+          _dataStreamEventCount++;
           final isLoadMorePage = _loadMoreAwaitingPage &&
               (list.length > _loadMoreRequestStartCount ||
                   list.length < NoteListViewState._pageSize);
@@ -315,6 +316,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
         .listen(
       (list) {
         if (mounted) {
+          _dataStreamEventCount++;
           final isLoadMorePage = _loadMoreAwaitingPage &&
               (list.length > _loadMoreRequestStartCount ||
                   list.length < NoteListViewState._pageSize);

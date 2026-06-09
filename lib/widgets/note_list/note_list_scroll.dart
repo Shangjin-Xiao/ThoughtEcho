@@ -123,6 +123,21 @@ extension _NoteListScrollExtension on NoteListViewState {
     _scrollSessionMinMaxExtent = metrics.maxScrollExtent;
     _scrollSessionMaxMaxExtent = metrics.maxScrollExtent;
     _scrollSessionExtentChangeCount = 0;
+    _scrollSessionStartStateUpdateCount = _stateUpdateCount;
+    _scrollSessionStartNoteListBuildCount = _noteListBuildCount;
+    _scrollSessionStartLoadMoreAttemptCount = _loadMoreAttemptCount;
+    _scrollSessionStartLoadMoreStartCount = _loadMoreStartCount;
+    _scrollSessionStartLoadMoreSkipCount = _loadMoreSkipCount;
+    _scrollSessionStartDataEventCount = _dataStreamEventCount;
+    _scrollSessionNotificationStarts = 1;
+    _scrollSessionNotificationUpdates = 0;
+    _scrollSessionNotificationEnds = 0;
+    _scrollSessionItemBuildCount = 0;
+    _scrollSessionMinBuiltIndex = 1 << 30;
+    _scrollSessionMaxBuiltIndex = -1;
+    _scrollSessionBuiltPlain = 0;
+    _scrollSessionBuiltRich = 0;
+    _scrollSessionBuiltMedia = 0;
     _scrollSessionUpdateMicros.clear();
     _scrollSessionFrameTimings.clear();
     _scrollSessionItemLayoutCount = 0;
@@ -149,6 +164,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     }
 
     _scrollSessionUpdateMicros.add(DateTime.now().microsecondsSinceEpoch);
+    _scrollSessionNotificationUpdates++;
     _scrollSessionLastOffset = metrics.pixels;
     if (metrics.pixels < _scrollSessionMinOffset) {
       _scrollSessionMinOffset = metrics.pixels;
@@ -175,6 +191,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     }
 
     _scrollSessionPerfPendingFinalize = true;
+    _scrollSessionNotificationEnds++;
     _scrollSessionLastOffset = metrics.pixels;
     _scrollSessionPerfStopTimer?.cancel();
     // FrameTiming callbacks may be delivered in batches well after a short
@@ -286,6 +303,19 @@ extension _NoteListScrollExtension on NoteListViewState {
         'count=$_scrollSessionItemLayoutCount,jank=$_scrollSessionItemLayoutJank,'
         'avg=${itemLayoutAvgMs.toStringAsFixed(1)}ms,'
         'worst=${(_scrollSessionWorstItemLayoutMicros / 1000.0).toStringAsFixed(1)}ms';
+    final builtRange = _scrollSessionItemBuildCount == 0
+        ? 'none'
+        : '$_scrollSessionMinBuiltIndex-$_scrollSessionMaxBuiltIndex';
+    final activityStats =
+        'stateΔ=${_stateUpdateCount - _scrollSessionStartStateUpdateCount},'
+        'buildΔ=${_noteListBuildCount - _scrollSessionStartNoteListBuildCount},'
+        'dataΔ=${_dataStreamEventCount - _scrollSessionStartDataEventCount},'
+        'loadMoreAttemptΔ=${_loadMoreAttemptCount - _scrollSessionStartLoadMoreAttemptCount},'
+        'loadMoreStartΔ=${_loadMoreStartCount - _scrollSessionStartLoadMoreStartCount},'
+        'loadMoreSkipΔ=${_loadMoreSkipCount - _scrollSessionStartLoadMoreSkipCount},'
+        'notif=$_scrollSessionNotificationStarts/$_scrollSessionNotificationUpdates/$_scrollSessionNotificationEnds,'
+        'built=$_scrollSessionItemBuildCount@$builtRange,'
+        'builtKind=p$_scrollSessionBuiltPlain/r$_scrollSessionBuiltRich/m$_scrollSessionBuiltMedia';
     final slowLayouts = _scrollSessionSlowItemLayouts
         .map((sample) => sample.toCompactText())
         .join('|');
@@ -308,6 +338,7 @@ extension _NoteListScrollExtension on NoteListViewState {
       'end=${_scrollSessionLastMaxExtent.round()},'
       'range=${_scrollSessionMinMaxExtent.round()}-${_scrollSessionMaxMaxExtent.round()},'
       'changes=$_scrollSessionExtentChangeCount}, '
+      'activity={$activityStats}, '
       'itemLayout={$itemLayoutStats}, slowLayouts=[$slowLayouts]',
       source: 'NoteListView.Perf',
     );
@@ -949,8 +980,10 @@ extension _NoteListScrollExtension on NoteListViewState {
   }
 
   Future<void> _loadMore() async {
+    _loadMoreAttemptCount++;
     // 防止重复加载
     if (!_hasMore || _isLoading) {
+      _loadMoreSkipCount++;
       logDebug(
         '跳过加载更多：_hasMore=$_hasMore, _isLoading=$_isLoading',
         source: 'NoteListView',
@@ -961,6 +994,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     // 修复：在加载前先同步一次状态，确保 _hasMore 是最新的
     final db = Provider.of<DatabaseService>(context, listen: false);
     if (!db.hasMoreQuotes) {
+      _loadMoreSkipCount++;
       logDebug('数据库显示无更多数据，同步 _hasMore 为 false', source: 'NoteListView');
       _cancelLoadMorePerfCapture('数据库显示无更多数据');
       _updateState(() {
@@ -974,6 +1008,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     _loadMoreSettleTimer?.cancel();
     _loadMoreAwaitingPage = true;
     _loadMoreRequestStartCount = _quotes.length;
+    _loadMoreStartCount++;
     _startLoadMorePerfCapture();
 
     try {

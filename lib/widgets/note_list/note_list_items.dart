@@ -9,6 +9,9 @@ extension _NoteListItemsExtension on NoteListViewState {
     _firstOpenScrollPerfEnabled = context.select<SettingsService, bool>(
       (s) => s.appSettings.developerMode && s.enableFirstOpenScrollPerfMonitor,
     );
+    if (_firstOpenScrollPerfEnabled) {
+      _noteListBuildCount++;
+    }
 
     // 监听搜索控制器状态，如果搜索出错则重置本地加载状态
     if (searchController.searchError != null && _isLoading) {
@@ -691,6 +694,7 @@ extension _NoteListItemsExtension on NoteListViewState {
     required Quote quote,
     required Widget Function() builder,
   }) {
+    _recordNoteListItemBuild(index: index, quote: quote);
     if (!_firstOpenScrollPerfEnabled || !kDebugMode) {
       return builder();
     }
@@ -708,6 +712,32 @@ extension _NoteListItemsExtension on NoteListViewState {
       return builder();
     } finally {
       developer.Timeline.finishSync();
+    }
+  }
+
+  void _recordNoteListItemBuild({
+    required int index,
+    required Quote quote,
+  }) {
+    if (!_scrollSessionPerfRecording) {
+      return;
+    }
+
+    _scrollSessionItemBuildCount++;
+    if (index < _scrollSessionMinBuiltIndex) {
+      _scrollSessionMinBuiltIndex = index;
+    }
+    if (index > _scrollSessionMaxBuiltIndex) {
+      _scrollSessionMaxBuiltIndex = index;
+    }
+
+    final kind = _noteListPerfKindFor(quote);
+    if (kind == 'plain') {
+      _scrollSessionBuiltPlain++;
+    } else if (kind == 'rich') {
+      _scrollSessionBuiltRich++;
+    } else {
+      _scrollSessionBuiltMedia++;
     }
   }
 
