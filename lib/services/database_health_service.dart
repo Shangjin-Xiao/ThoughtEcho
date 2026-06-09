@@ -175,8 +175,7 @@ class DatabaseHealthService {
       );
 
       // Cache the full column set for this table.
-      final columns =
-          result.map((row) => row['name'] as String).toSet();
+      final columns = result.map((row) => row['name'] as String).toSet();
       _tableColumnCache[tableName] = columns;
 
       return columns.contains(columnName);
