@@ -1,0 +1,19 @@
+lib/services/database_health_service.dart
+  s_f2f96e3c67ee0a::t_c4b41f48d18a35 178
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.6",
+  "base_commit_sha": "fc8e857f3f3af2356f348b3ae96eda2b5eff13ca",
+  "prompts": {},
+  "sessions": {
+    "s_f2f96e3c67ee0a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019eaae7-354f-7223-ba77-bd464e6714ef",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
