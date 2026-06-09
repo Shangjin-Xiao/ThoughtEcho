@@ -11,7 +11,8 @@ void main() {
 
     setUp(() async {
       // Create a temporary directory for test files
-      tempDir = await Directory.systemTemp.createTemp('streaming_json_parser_test');
+      tempDir =
+          await Directory.systemTemp.createTemp('streaming_json_parser_test');
 
       // Create a valid small JSON file
       smallFile = File('${tempDir.path}/small.json');
@@ -46,7 +47,8 @@ void main() {
     test('parseJsonFile should throw exception on invalid file', () async {
       expect(
         () async => await StreamingJsonParser.parseJsonFile(invalidFile),
-        throwsA(isA<Exception>()), // JsonUnsupportedObjectError or FormatException usually wrapped or thrown
+        throwsA(isA<
+            Exception>()), // JsonUnsupportedObjectError or FormatException usually wrapped or thrown
       );
     });
 
@@ -55,7 +57,8 @@ void main() {
       expect(result, isTrue);
     });
 
-    test('canSafelyParse should return false for invalid json file format', () async {
+    test('canSafelyParse should return false for invalid json file format',
+        () async {
       final result = await StreamingJsonParser.canSafelyParse(invalidFile);
       expect(result, isFalse);
     });
@@ -68,7 +71,8 @@ void main() {
 
     test('estimateMemoryUsage should return roughly 3x file size', () async {
       final fileSize = await smallFile.length();
-      final estimatedUsage = await StreamingJsonParser.estimateMemoryUsage(smallFile);
+      final estimatedUsage =
+          await StreamingJsonParser.estimateMemoryUsage(smallFile);
 
       expect(estimatedUsage, fileSize * 3);
     });

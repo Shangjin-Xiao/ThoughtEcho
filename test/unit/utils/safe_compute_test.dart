@@ -58,7 +58,8 @@ void main() {
       // 我们更希望断言 fallback 被触发。如果是异步死循环，应当超时，返回 'fallback_timeout'。
       // 但对于顶层同步循环有时不会让出执行权，我们可以断言结果不是空并且在特定值之内。
       // 为了测试的严肃性，我们只接受回退值（若隔离/超时机制生效）或执行完毕的值。
-      expect(result == 'fallback_timeout' || result!.startsWith('Done'), isTrue);
+      expect(
+          result == 'fallback_timeout' || result!.startsWith('Done'), isTrue);
     });
 
     test('runMultiple should execute and handle mixed results', () async {
@@ -101,7 +102,8 @@ void main() {
       expect(result['num'], 123);
     });
 
-    test('decodeJson should return null on invalid string (fallback)', () async {
+    test('decodeJson should return null on invalid string (fallback)',
+        () async {
       const invalidJsonString = '{invalid_json}';
       final result = await CommonSafeCompute.decodeJson(invalidJsonString);
 
