@@ -98,25 +98,17 @@ class NoteListView extends StatefulWidget {
   @override
   State<NoteListView> createState() => NoteListViewState();
 
-  /// Returns whether a note-list item is expensive enough to keep alive after
-  /// it scrolls off screen.
+  /// Returns whether a note-list item should be kept alive after it scrolls off
+  /// screen.
   ///
-  /// Rich fullscreen notes repeatedly showed `oldHeight=none` and 10-80ms
-  /// first-layout spikes in real-device/Firebase scroll traces. Keeping only
-  /// expandable or media rich previews alive avoids that repeated first layout
-  /// without retaining every plain text item.
+  /// Real-device traces showed the remaining "jump" after rich item keep-alive
+  /// was dominated by scroll extent drift: cheap plain items were still
+  /// repeatedly rebuilt with `oldHeight=none`, causing [RenderSliverList] to
+  /// revise its max scroll extent during gestures. Keep the current loaded page
+  /// alive to stabilize the variable-height list; pagination still bounds the
+  /// retained item count.
   @visibleForTesting
-  static bool shouldKeepAliveQuoteItem(Quote quote) {
-    final deltaContent = quote.deltaContent;
-    if (deltaContent == null || quote.editSource != 'fullscreen') {
-      return false;
-    }
-
-    final hasMedia = deltaContent.contains('"image"') ||
-        deltaContent.contains('"video"') ||
-        deltaContent.contains('"audio"');
-    return hasMedia || QuoteItemWidget.needsExpansionFor(quote);
-  }
+  static bool shouldKeepAliveQuoteItem(Quote quote) => true;
 }
 
 class NoteListViewState extends State<NoteListView> {

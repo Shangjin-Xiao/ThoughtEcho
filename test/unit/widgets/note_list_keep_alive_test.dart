@@ -21,17 +21,17 @@ Quote _quote({
 
 void main() {
   group('NoteListView.shouldKeepAliveQuoteItem', () {
-    test('普通文本不保活', () {
+    test('普通文本也保活以稳定滚动范围', () {
       final quote = _quote(
         id: 'plain',
         content: List.filled(8, 'plain text').join('\n'),
         editSource: 'inline',
       );
 
-      expect(NoteListView.shouldKeepAliveQuoteItem(quote), isFalse);
+      expect(NoteListView.shouldKeepAliveQuoteItem(quote), isTrue);
     });
 
-    test('短 fullscreen 富文本不保活', () {
+    test('短 fullscreen 富文本保活', () {
       final delta = jsonEncode([
         {'insert': 'short rich text\n'},
       ]);
@@ -42,7 +42,7 @@ void main() {
         editSource: 'fullscreen',
       );
 
-      expect(NoteListView.shouldKeepAliveQuoteItem(quote), isFalse);
+      expect(NoteListView.shouldKeepAliveQuoteItem(quote), isTrue);
     });
 
     test('需要折叠的 fullscreen 富文本保活', () {
