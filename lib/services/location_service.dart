@@ -63,6 +63,9 @@ class LocationService extends ChangeNotifier {
   bool get hasLocationPermission => _hasLocationPermission;
   bool get isLocationServiceEnabled => _isLocationServiceEnabled;
   bool get isLoading => _isLoading;
+
+  /// init() 是否已完成首次执行（完成后状态字段才有意义，可供 UI 判断显示时机）
+  bool get isInitialized => _initCompleter?.isCompleted ?? false;
   List<CityInfo> get searchResults => _searchResults;
   bool get isSearching => _isSearching;
 

@@ -1914,13 +1914,12 @@ class _HomePageState extends State<HomePage>
         weatherService.currentWeather != 'error' &&
         weatherService.currentWeather != 'unknown';
 
-    // 位置服务初始化期间（权限已授予但坐标尚未返回），chip 隐藏避免显示无意义的"加载中"
-    final isLocationInitializing =
-        !hasCoordinates && !hasCity && hasPermission && isServiceEnabled;
-
+    // 位置服务 init() 完成前，所有状态字段都是初始默认值（false/null），
+    // 不能作为显示依据——直接隐藏 chip，避免冷启动时出现错误状态的闪烁：
+    // "定位未开启" → 消失 → 坐标出现后淡入
     Widget chip;
-    if (isLocationInitializing) {
-      // 隐藏占位：key 为 null，AnimatedSwitcher 识别为"空"状态
+    if (!locationService.isInitialized) {
+      // key 为 null：AnimatedSwitcher 识别为"空"，init 完成后 chipKey 出现时触发一次淡入
       chip = const SizedBox.shrink();
     } else {
       String locationText;
