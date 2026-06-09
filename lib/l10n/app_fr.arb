@@ -3530,6 +3530,6 @@
   "appendToOriginal": "Ajouter à l'original",
   "webdavConflictKeepTooltip": "Conserver et déplacer vers la catégorie par défaut",
   "webdavConflictKeepSuccess": "Confirmé et déplacé vers la liste par défaut.",
-  "webdavConflictDiscardTooltip": "Ignorer cette sauvegarde de conflit",
+  "webdavConflictDiscardTooltip": "Jeter cette sauvegarde de conflit",
   "webdavConflictDiscardSuccess": "Note de conflit définitivement supprimée."
 }
