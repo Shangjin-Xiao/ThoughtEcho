@@ -27,3 +27,7 @@
 ## 2025-10-24 - 🗃️ 黑匣: [完善 InsightHistoryService 模块的结构化日志]
 **异常:** [InsightHistoryService 模块在解析和存储周期洞察（AI分析报告）历史时，如果遇到 JSON 解析错误或其他隐蔽异常，当前仅使用 catch (e) 进行了粗糙拦截，并依赖 debugPrint 输出，这会导致丢失关键的错误堆栈信息，且缺乏统一的模块标识。]
 **拦截:** [已将该模块中的异常捕获统一升级为 catch (e, stack)，并使用 AppLogger.e('...', error: e, stackTrace: stack, source: 'InsightHistoryService')。同时规范了 getInsightBySignature 中的控制流，避免使用 try...catch 进行预期内的查找。]
+
+## 2025-05-18 - 🗃️ 黑匣: [完善 WebDAVSyncPage 模块的结构化日志]
+**异常:** [WebDAVSyncPage 模块在 `_checkConflictNotes` 检查冲突笔记时，遇到数据库查询错误仅使用了 `catch (_) {}` 进行了空捕获。这会隐藏潜在的数据库或表结构问题，导致用户无法发现并处理同步冲突。]
+**拦截:** [已将该空捕获替换为 `AppLogger.e`，注入了描述信息、具体的错误对象 `error: e`、堆栈轨迹 `stackTrace: stackTrace`，并指定了明确的日志来源模块 `source: 'WebDAVSyncPage'`。确认记录内容不包含任何笔记实体数据。]
