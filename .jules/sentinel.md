@@ -43,3 +43,7 @@
 **Vulnerability:** The `LocalSendServer` (`lib/services/localsend/localsend_server.dart`), which binds to the local network interface (`InternetAddress.anyIPv4`), explicitly added permissive CORS headers (`Access-Control-Allow-Origin: *`) and handled `OPTIONS` preflight requests. This allowed any external malicious website the user visits to bypass the browser's Same-Origin Policy and make direct HTTP requests to the local server via the browser (e.g., DNS rebinding).
 **Learning:** Local network servers must be extremely strict about cross-origin requests. Adding wildcard CORS headers to a local server completely negates the security boundary provided by the browser's Same-Origin Policy.
 **Prevention:** Do not add `Access-Control-Allow-Origin: *` to local servers. Rely on standard Same-Origin Policy to block unauthorized cross-origin access from web browsers.
+## 2024-05-18 - 避免通过日志记录敏感数据库查询参数
+**Vulnerability:** 数据库查询参数（`$finalArgs`，可能包含用户标签、分类等敏感筛选条件）在 `logDebug` 中以明文形式记录，有数据泄漏风险。
+**Learning:** 在拼接或调用日志工具（如 `logDebug`、`AppLogger.e`）输出带参的 SQL 执行或排查信息时，极易忽略敏感信息脱敏，导致 PII 等数据泄漏。
+**Prevention:** 在日志中记录数据库操作时，永远不要将 `$args` 列表明文打印，必须使用 `[REDACTED]` 或其他脱敏手段隐藏参数内容。
