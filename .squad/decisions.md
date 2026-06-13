@@ -195,3 +195,127 @@
 - 如果 `slowLayouts` 未下降，则优先拆解 `QuoteContent`/FlutterQuill 布局和媒体占位高度稳定性。
 
 **结论**: 当前可以确定“富文本/图文卡片首次布局”是主要可优化项之一，但不是全部卡顿来源；后续优化必须同时保留对非 item layout build 尖峰的定位能力。
+
+---
+
+## 2026-06-09: Codex 自动化测试性能结论与正式版实验开关
+
+**决策者**: Codex
+**类型**: 性能诊断与开关方案
+
+**Codex 测试与诊断结论（原话记录）**：
+
+> 当前最重要结论：有效 Firebase A/B 显示，关闭卡片视觉重效果后，真实列表指标大幅改善：
+>
+> - richText：`build99 71.9ms → 36.1ms`，`raster99 190.8ms → 1.8ms`
+> - images：`build99 58.7ms → 23.0ms`，`raster99 206.9ms → 10.1ms`
+>
+> 但这个 A/B 同时关了阴影和 BackdropFilter，所以还不能说“就是阴影”或“就是模糊”。我已经把拆分诊断推上去了：只关阴影、只关 BackdropFilter、全关。刚才继续跑 Firebase 时失败，原因是 Firebase Test Lab `TEST_QUOTA_EXCEEDED`，不是代码问题。
+>
+> 已推到 `main`：`f14d2517 feat(settings): add note list visual effect toggles`
+>
+> 这次加的是发布版也可用的开发者模式实验开关，默认都关闭，不改变现有视觉效果：
+>
+> - `[实验] 记录页禁用卡片阴影`
+> - `[实验] 记录页禁用折叠模糊`
+>
+> 位置在设置页的开发者模式区域。用于你在正式 APK 里直接切换实际观感和体感，不需要我再改代码才能比较。
+>
+> 验证已跑：
+>
+> - `flutter analyze --no-fatal-infos ...` 通过
+> - `flutter test test/unit/models/app_settings_test.dart` 通过
+> - `flutter test test/unit/services/settings_service_test.dart` 通过
+> - `flutter test test/widgets/quote_item_widget_test.dart` 通过
+>
+> 没有在这台机器构建 APK。Firebase 暂时没再跑，因为前面已经遇到 `TEST_QUOTA_EXCEEDED`，现在触发大概率还是浪费额度。
+
+---
+
+## 2026-06-13: 记录页卡顿根因复核（待实测验证）
+
+**决策者**: 上晋 + 性能顾问 (AI / Claude)
+**类型**: 性能定位复核 / 待验证假设
+
+**复核动机**:
+用户反馈：即使在正式版（main, `f14d2517`）打开“禁用卡片阴影”和“禁用折叠模糊”两个实验开关，
+记录页仍然首次滑动卡、之后上下滑有小卡顿，只是略微改善。需要复核“是不是阴影/模糊”这一结论。
+
+**已核实的事实（非猜测）**:
+1. 实验开关 commit `f14d2517` 只在 main，不在 `fix/add-note-dialog-keyboard-jank` 分支；
+   `fix/add-note-dialog-keyboard-jank` 相对 main 无独有 commit（diff 为空），其内容已全部在 main 中，
+   不需要单独并入 main。
+2. 阴影/模糊主要影响 GPU 光栅线程（`raster99`），Codex A/B 实测 `raster99 190.8ms → 1.8ms`；
+   而用户体感的“首次滑动卡 / 上下滑小卡顿”属于 UI 线程 build/layout 尖峰（`build99 ~71ms`）。
+   两者是不同线程的不同问题，因此“关掉阴影/模糊仍卡”与现有数据一致，并不矛盾。
+3. Codex 自己记录的反证：`worstBuild=114ms` 时 `itemLayout.worst=2.6ms` 且缓存无 miss，
+   说明阴影/模糊不是 UI 线程尖峰主因。
+
+**主因假设（高度怀疑，待 log/Timeline 确证，尚未定论）**:
+- `lib/widgets/quote_content_widget.dart` 中，每条富文本笔记（`editSource == 'fullscreen'`）
+  在列表 cell 内都用一个完整的 `flutter_quill` (11.5.0) `QuillEditor` 实例渲染。
+- `QuillEditor` 即便只读（`showCursor:false` / `enableInteractiveSelection:false`），
+  仍是为编辑设计的重型组件（内部含 RenderEditor、逐行 RenderObject、文本输入/选区层）。
+  将其用于长列表只读展示，首次进入 `cacheExtent`(400~900px) 时集中触发 `performLayout`，
+  推断是 `rich`/`rich-image` 首次布局尖峰（10~67ms）与 `flushLayout 26%` / `TextPainter.layout 10%` 的来源。
+- 现有 `_QuoteContentControllerCache` / `_QuoteDocumentCache` 只缓存了 Document 解析与控制器创建，
+  **无法消除 QuillEditor 自身首次布局成本**，因此控制器无 miss 时仍出现高 build。
+
+**待验证项（必须拿到下列任一才能定论，不得据旧数据拍板）**:
+1. 最新 scroll session 应用内日志：`slowLayouts` 中 `rich`/`rich-image` 的 ms 分布与数量、
+   `worstBuild` 对应 `itemLayout.worst`、缓存行 `ctrlMiss+`/`ctrlWorkUs+`。
+2. DevTools/Perfetto Timeline 导出，确认 UI 线程 `performLayout` 火焰图中 QuillEditor 占比。
+
+**候选方向（验证后再实施，本次不动视觉）**:
+- 折叠态/非展开态富文本改用轻量只读渲染（Delta → `TextSpan` + `RichText`，图片用占位/缩略），
+  仅在用户展开该条时才实例化真正的 `QuillEditor`；预期把首次布局从 10~67ms 压到 ~1-2ms，
+  且折叠态可见效果不变。
+- 注意：已有分支 `perf/note-list-stutter`（`5f2710ad` 将 quill delta json 解析移入后台 isolate）
+  方向相关，后续可参考但需独立验证其是否触及布局成本本身（JSON 解析≠布局）。
+
+**本次已批准的低风险改动（用户同意，不改变视觉）**:
+- 折叠态静态卡片的阴影：当前静态卡走普通 `Container` 无 `RepaintBoundary` 隔离，
+  阴影 `BoxShadow` 高斯模糊每帧重算。计划用 `RepaintBoundary` 隔离卡片绘制以缓存阴影栅格，
+  滚动时仅做位移合成。视觉像素不变。
+
+**结论**: “阴影/模糊是主因”不成立；最可能的 UI 线程主因是列表内 `QuillEditor` 的首次布局，
+但在拿到用户最新实测日志前，此为待验证假设，不作为已定论结论。
+
+---
+
+## 2026-06-13: 实测确证 + 修复计划
+
+**决策者**: 上晋 + 性能顾问 (AI / Claude)
+**类型**: 性能根因确证 / 修复计划
+
+**实测确证（用户提供 main `f14d2517` 真机日志，已不再是假设）**:
+对照同一段“向下滑第二屏”：
+
+| 指标 | 视觉效果全关 | 视觉效果全开 |
+|---|---|---|
+| worstBuild | 88.8ms | 145.4ms |
+| worstRaster | 10.2ms | 95.7ms |
+| itemLayout.worst | 39.1ms (rich) | 51.5ms (rich) |
+
+- 阴影/模糊只影响 raster 线程（worstRaster 95→10ms），关掉确实有用但治标。
+- 即便全关，worstBuild 仍 88ms、单条 rich 卡片首次 layout 仍 39ms，远超 16.7ms 帧预算，
+  与用户“关了还是卡”体感一致。
+- `slowLayouts` 每个尖峰均为 `rich`/`rich-image` 且 `h=none→324`（首次布局）。
+  向上滑回时同卡片变 `h=324→324`，layout 掉到 0.1~0.5ms、frameJank=0。
+- 结论：**主因 = 列表内 `QuillEditor` 渲染折叠态富文本的首次 `performLayout`**。
+  “等一会儿再滑”无效，因为 layout 只在 cell 进入视口时发生，缓存/预热/keepAlive 只省 build 与
+  Document 解析，省不掉 QuillEditor 首次布局。
+
+**已废弃方案**:
+- “全部 item 无条件 keepAlive”（stash 实验）已丢弃：保活只防重复 layout，不解决首次 layout，
+  且长列表内存/element 无上限增长。
+- “低性能模式开关”暂不做，仅作第二步视觉还原失败时的 Plan B。
+
+**修复计划**:
+1. **（已实施）阴影 RepaintBoundary**：折叠态静态卡片用 `RepaintBoundary` 隔离，缓存阴影栅格，
+   滚动仅位移合成。视觉零变化。见 `lib/widgets/quote_item_widget.dart` 末尾 return 分支。
+2. **（待办，核心）折叠态富文本弃用 `QuillEditor`**：折叠态改 Delta→`TextSpan`/`RichText` 轻量只读
+   渲染，图片复用现有 embed 组件；仅展开单条时实例化真正 `QuillEditor`。预期首次 layout 10~50ms→1~2ms。
+   主要风险为视觉还原度，须先写渲染器 + 真实笔记截图对照测试，达标方可合入。
+3. **（待办，可选）高度占位**：用 `_estimateDeltaHeight` 估算值给未布局 cell 占位，减少 `h=none`
+   滚动范围漂移。第二步完成后视数据决定是否需要。

@@ -1228,10 +1228,17 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       );
     }
 
-    return Container(
-      margin: cardMargin,
-      decoration: cardDecoration,
-      child: cardChild,
+    // 性能优化（第一步）：折叠态静态卡片用 RepaintBoundary 隔离绘制。
+    // 卡片阴影（BoxShadow 高斯模糊）与渐变属于静态像素，套重绘边界后
+    // 其栅格结果可被缓存，滚动时仅做位移合成，避免每帧重新栅格化阴影。
+    // 视觉像素不变；展开/选择态走 AnimatedContainer 分支，decoration 每帧变化，
+    // 缓存收益小，故不在该分支额外包裹。
+    return RepaintBoundary(
+      child: Container(
+        margin: cardMargin,
+        decoration: cardDecoration,
+        child: cardChild,
+      ),
     );
   }
 }
