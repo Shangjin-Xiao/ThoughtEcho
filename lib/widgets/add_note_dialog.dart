@@ -32,8 +32,11 @@ import 'add_note_dialog_parts.dart'; // 导入拆分的组件
 // TODO(refactor): This file exceeds 2400 lines and contains redundant location/weather logic.
 // Consider extracting core business logic into a separate controller or service.
 class AddNoteDialog extends StatefulWidget {
-  static const AnimationStyle bottomSheetAnimationStyle =
-      AnimationStyle.noAnimation;
+  static final AnimationStyle bottomSheetAnimationStyle = AnimationStyle(
+    duration: const Duration(milliseconds: 180),
+    reverseDuration: const Duration(milliseconds: 150),
+    curve: Curves.easeOut,
+  );
 
   final Quote? initialQuote; // 如果是编辑笔记，则传入初始值
   final String? prefilledContent; // 预填充的内容

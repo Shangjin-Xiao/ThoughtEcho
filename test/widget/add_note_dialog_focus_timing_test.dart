@@ -15,11 +15,14 @@ import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
 
 void main() {
-  test('bottom sheet opens without route animation', () {
-    expect(AddNoteDialog.bottomSheetAnimationStyle.duration, Duration.zero);
+  test('bottom sheet uses short animation style', () {
+    expect(
+      AddNoteDialog.bottomSheetAnimationStyle.duration,
+      const Duration(milliseconds: 180),
+    );
     expect(
       AddNoteDialog.bottomSheetAnimationStyle.reverseDuration,
-      Duration.zero,
+      const Duration(milliseconds: 150),
     );
   });
 
