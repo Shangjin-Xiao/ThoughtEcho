@@ -1625,7 +1625,8 @@ class _HomePageState extends State<HomePage>
           content: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.check_circle_outline, color: Colors.white, size: 16),
+              const Icon(Icons.check_circle_outline,
+                  color: Colors.white, size: 16),
               const SizedBox(width: 8),
               Text(l10n.clearFavoriteSuccess),
             ],

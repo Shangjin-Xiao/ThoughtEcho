@@ -80,6 +80,10 @@ class PdfExportService {
       parsedQuotes.add(await DeltaToPdfParser.parse(quote, fontSet));
     }
 
+    if (!context.mounted) {
+      return Uint8List(0);
+    }
+
     final isZh = Localizations.maybeLocaleOf(context)?.languageCode == 'zh';
     final headerTitle = isZh
         ? "心迹 — 你的专属灵感摘录本"
