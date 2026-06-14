@@ -350,8 +350,11 @@ class PdfExportService {
   }) {
     final iconName = tag?.iconName;
     if (IconUtils.isEmoji(iconName)) {
+      // 过滤 Unicode 变体选择符（U+FE00–U+FE0F），避免 ✈️（U+2708 + U+FE0F）等
+      // 由「传统符号 + VS-16」组成的 emoji 把 U+FE0F 溢出到主字体，渲染成乱码字形（如 #）。
+      final emojiText = iconName!.replaceAll(RegExp(r'[\uFE00-\uFE0F]'), '');
       return pw.Text(
-        iconName!,
+        emojiText,
         style: pw.TextStyle(
           font: fontSet.regular,
           fontFallback: fontSet.fallbackFonts,
