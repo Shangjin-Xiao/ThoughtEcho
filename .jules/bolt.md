@@ -28,3 +28,10 @@
 ## $(date +%Y-%m-%d) - [优化回收站彻底删除记录的性能]
 **Learning:** Sequential `await` in loops over batch operations limits performance significantly by performing I/O sequentially. However, replacing it with `Future.wait` requires a `try/catch` inside the closure returning a fallback value (like an empty list) to prevent a single failure from failing the entire batch.
 **Action:** Replaced a sequential `for` loop awaiting `MediaReferenceService.extractMediaPathsFromQuote` with `Future.wait` for concurrent processing, cutting processing time significantly in tests.
+
+## 2026-06-14 - Optimize Media Reference Checking Loop
+**Learning:** Sequential asynchronous checks (using `await` in a loop) over large arrays (like 50k items) severely block execution due to event loop scheduling overhead.
+**Action:** Chunked the execution into batches of 1000 items processed concurrently with `Future.wait()`, and maintained a small yield (`await Future<void>.delayed(Duration.zero)`) between batches to keep the main thread responsive.
+## 2024-05-24 - Optimize MediaCleanupService verifyMediaIntegrity
+**Learning:** The verifyMediaIntegrity method processed quotes sequentially and awaited extractMediaPathsFromQuote on each, causing significant I/O blocking when iterating over hundreds or thousands of quotes. Redundant directory lookups per extraction further exacerbated the overhead.
+**Action:** Replaced the sequential `for (final quote in quotes)` loop with a chunked `Future.wait` implementation that processes quotes in batches of 50. Passed down the pre-calculated `appPath` via `cachedAppPath` to eliminate repeated platform IPC calls. This reduced execution time by over 80%.

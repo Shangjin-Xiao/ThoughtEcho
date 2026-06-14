@@ -244,21 +244,37 @@ class MediaCleanupService {
       final appDir = await getApplicationDocumentsDirectory();
       final appPath = appDir.path;
 
-      for (final quote in quotes) {
-        final mediaPaths =
-            await MediaReferenceService.extractMediaPathsFromQuote(quote);
+      // 批量并发处理笔记，避免顺序执行导致的 I/O 阻塞
+      const chunkSize = 50;
+      for (var i = 0; i < quotes.length; i += chunkSize) {
+        final chunk = quotes.sublist(
+          i,
+          i + chunkSize > quotes.length ? quotes.length : i + chunkSize,
+        );
 
-        for (final mediaPath in mediaPaths) {
-          checkedReferences++;
+        final chunkResults = await Future.wait(chunk.map((quote) async {
+          return await MediaReferenceService.extractMediaPathsFromQuote(
+            quote,
+            cachedAppPath: appPath, // 传递缓存的路径以避免多余的平台调用
+          );
+        }));
 
-          // 转换为绝对路径
-          final absolutePath = path.isAbsolute(mediaPath)
-              ? mediaPath
-              : path.join(appPath, mediaPath);
+        for (var j = 0; j < chunk.length; j++) {
+          final quote = chunk[j];
+          final mediaPaths = chunkResults[j];
 
-          if (!await File(absolutePath).exists()) {
-            missingFiles++;
-            issues.add('笔记 ${quote.id} 引用的文件不存在: $mediaPath');
+          for (final mediaPath in mediaPaths) {
+            checkedReferences++;
+
+            // 转换为绝对路径
+            final absolutePath = path.isAbsolute(mediaPath)
+                ? mediaPath
+                : path.join(appPath, mediaPath);
+
+            if (!await File(absolutePath).exists()) {
+              missingFiles++;
+              issues.add('笔记 ${quote.id} 引用的文件不存在: $mediaPath');
+            }
           }
         }
       }

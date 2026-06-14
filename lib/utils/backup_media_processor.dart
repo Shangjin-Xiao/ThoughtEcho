@@ -417,31 +417,46 @@ class BackupMediaProcessor {
       final appDir = await getApplicationDocumentsDirectory();
       final appPath = path.normalize(appDir.path);
 
-      // 检查每个文件的引用计数
-      int processedCount = 0;
-      for (final filePath in allMediaFiles) {
-        final normalizedPath =
-            await MediaReferenceService.normalizePathForBackup(
-          filePath,
-          appPath: appPath,
+      // 分批并发处理文件的引用检查
+      const chunkSize = 1000;
+      for (int i = 0; i < allMediaFiles.length; i += chunkSize) {
+        final end = (i + chunkSize < allMediaFiles.length)
+            ? i + chunkSize
+            : allMediaFiles.length;
+        final chunk = allMediaFiles.sublist(i, end);
+
+        final results = await Future.wait(
+          chunk.map((filePath) async {
+            final normalizedPath =
+                await MediaReferenceService.normalizePathForBackup(
+              filePath,
+              appPath: appPath,
+            );
+            final canonicalKey = MediaReferenceService.canonicalKeyForBackup(
+              normalizedPath,
+            );
+            final hasStoredRefs =
+                snapshot.storedIndex[canonicalKey]?.values.any(
+                      (refs) => refs.isNotEmpty,
+                    ) ??
+                    false;
+            final hasQuoteRefs = snapshot.quoteIndex[canonicalKey]?.values.any(
+                  (refs) => refs.isNotEmpty,
+                ) ??
+                false;
+
+            return (hasStoredRefs || hasQuoteRefs) ? filePath : null;
+          }),
         );
-        final canonicalKey =
-            MediaReferenceService.canonicalKeyForBackup(normalizedPath);
-        final hasStoredRefs = snapshot.storedIndex[canonicalKey]?.values
-                .any((refs) => refs.isNotEmpty) ??
-            false;
-        final hasQuoteRefs = snapshot.quoteIndex[canonicalKey]?.values
-                .any((refs) => refs.isNotEmpty) ??
-            false;
 
-        if (hasStoredRefs || hasQuoteRefs) {
-          referencedFiles.add(filePath);
+        for (final res in results) {
+          if (res != null) {
+            referencedFiles.add(res);
+          }
         }
 
-        processedCount++;
-        if (processedCount % 80 == 0) {
-          await Future<void>.delayed(Duration.zero);
-        }
+        // 让出控制权，避免阻塞主线程
+        await Future<void>.delayed(Duration.zero);
       }
 
       logDebug('找到 ${referencedFiles.length} 个被引用的媒体文件');
