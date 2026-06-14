@@ -53,13 +53,9 @@ void main() {
         fallbackValue: 'fallback_timeout',
       );
 
-      // 测试需要明确地保证触发了回退（如果支持异步延迟中断）或者能够正确完成。
-      // 在这个测试环境里如果不抛出异常而是顺利完成，返回的是 'Done xxx'，我们通过检查实际返回来保证至少是合法预期内之一
-      // 我们更希望断言 fallback 被触发。如果是异步死循环，应当超时，返回 'fallback_timeout'。
-      // 但对于顶层同步循环有时不会让出执行权，我们可以断言结果不是空并且在特定值之内。
-      // 为了测试的严肃性，我们只接受回退值（若隔离/超时机制生效）或执行完毕的值。
-      expect(
-          result == 'fallback_timeout' || result!.startsWith('Done'), isTrue);
+      // 测试需要明确地保证触发了回退以覆盖超时逻辑路径。
+      // 必须严格检查我们仅收到了后备值。
+      expect(result, equals('fallback_timeout'));
     });
 
     test('runMultiple should execute and handle mixed results', () async {

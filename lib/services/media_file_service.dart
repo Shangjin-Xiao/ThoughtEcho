@@ -38,6 +38,47 @@ class MediaFileService {
     return specificTempDir;
   }
 
+  /// 公开的方法，仅供测试使用获取临时目录
+  @visibleForTesting
+  static Future<Directory> getTempDirectoryForTesting(String subfolder) async {
+    return _getTempDirectory(subfolder);
+  }
+
+  /// 公开的方法，仅供测试使用创建临时目录
+  @visibleForTesting
+  static Future<Directory> createTempDirForTesting(String prefix) async {
+    final sysTempDir = await getTemporaryDirectory();
+    final tempDir = await sysTempDir.createTemp(prefix);
+    return tempDir;
+  }
+
+  /// 公开的方法，仅供测试使用写入文件
+  @visibleForTesting
+  static Future<File> writeFileForTesting(String path, String content) async {
+    final file = File(path);
+    await file.writeAsString(content);
+    return file;
+  }
+
+  /// 公开的方法，仅供测试使用获取内容文件
+  @visibleForTesting
+  static Future<File> getFileForTesting(String path) async {
+    return File(path);
+  }
+
+  /// 公开的方法，仅供测试使用删除文件/目录
+  @visibleForTesting
+  static Future<void> deleteForTesting(String path, {bool recursive = false}) async {
+    final isDir = await FileSystemEntity.isDirectory(path);
+    if (isDir) {
+      final dir = Directory(path);
+      if (await dir.exists()) await dir.delete(recursive: recursive);
+    } else {
+      final file = File(path);
+      if (await file.exists()) await file.delete();
+    }
+  }
+
   /// 保存临时HTML文件
   static Future<String?> saveTempHtmlFile(
     String content,

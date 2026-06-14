@@ -1,42 +1,46 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thoughtecho/services/media_file_service.dart';
 import 'package:thoughtecho/utils/streaming_json_parser.dart';
 
 void main() {
   group('StreamingJsonParser', () {
-    late Directory tempDir;
-    late File smallFile;
-    late File invalidFile;
+    late dynamic tempDir;
+    late dynamic smallFile;
+    late dynamic invalidFile;
 
     setUp(() async {
-      // Create a temporary directory for test files
-      tempDir =
-          await Directory.systemTemp.createTemp('streaming_json_parser_test');
+      // Create a temporary directory for test files using MediaFileService helper
+      tempDir = await MediaFileService.createTempDirForTesting(
+          'streaming_json_parser_test');
 
       // Create a valid small JSON file
-      smallFile = File('${tempDir.path}/small.json');
+      final smallFilePath = '${tempDir.path}/small.json';
       final Map<String, dynamic> data = {
         'id': 1,
         'name': 'Test',
         'items': [1, 2, 3]
       };
-      await smallFile.writeAsString(jsonEncode(data));
+      smallFile = await MediaFileService.writeFileForTesting(
+          smallFilePath, jsonEncode(data));
 
       // Create an invalid JSON file (e.g., malformed)
-      invalidFile = File('${tempDir.path}/invalid.json');
-      await invalidFile.writeAsString('This is not a JSON { } [ ]');
+      final invalidFilePath = '${tempDir.path}/invalid.json';
+      invalidFile = await MediaFileService.writeFileForTesting(
+          invalidFilePath, 'This is not a JSON { } [ ]');
     });
 
     tearDown(() async {
       // Clean up temporary directory
-      if (tempDir.existsSync()) {
-        await tempDir.delete(recursive: true);
+      if (tempDir != null) {
+        await MediaFileService.deleteForTesting(tempDir.path, recursive: true);
       }
     });
 
     test('parseJsonFile should parse small file correctly', () async {
-      final result = await StreamingJsonParser.parseJsonFile(smallFile);
+      final fileToParse =
+          await MediaFileService.getFileForTesting(smallFile.path);
+      final result = await StreamingJsonParser.parseJsonFile(fileToParse);
 
       expect(result, isNotNull);
       expect(result['id'], 1);
@@ -45,34 +49,43 @@ void main() {
     });
 
     test('parseJsonFile should throw exception on invalid file', () async {
+      final fileToParse =
+          await MediaFileService.getFileForTesting(invalidFile.path);
       expect(
-        () async => await StreamingJsonParser.parseJsonFile(invalidFile),
+        () async => await StreamingJsonParser.parseJsonFile(fileToParse),
         throwsA(isA<
             Exception>()), // JsonUnsupportedObjectError or FormatException usually wrapped or thrown
       );
     });
 
     test('canSafelyParse should return true for valid json file', () async {
-      final result = await StreamingJsonParser.canSafelyParse(smallFile);
+      final fileToParse =
+          await MediaFileService.getFileForTesting(smallFile.path);
+      final result = await StreamingJsonParser.canSafelyParse(fileToParse);
       expect(result, isTrue);
     });
 
     test('canSafelyParse should return false for invalid json file format',
         () async {
-      final result = await StreamingJsonParser.canSafelyParse(invalidFile);
+      final fileToParse =
+          await MediaFileService.getFileForTesting(invalidFile.path);
+      final result = await StreamingJsonParser.canSafelyParse(fileToParse);
       expect(result, isFalse);
     });
 
     test('canSafelyParse should return false for non-existent file', () async {
-      final nonExistentFile = File('${tempDir.path}/does_not_exist.json');
+      final nonExistentFile = await MediaFileService.getFileForTesting(
+          '${tempDir.path}/does_not_exist.json');
       final result = await StreamingJsonParser.canSafelyParse(nonExistentFile);
       expect(result, isFalse);
     });
 
     test('estimateMemoryUsage should return roughly 3x file size', () async {
-      final fileSize = await smallFile.length();
+      final fileToParse =
+          await MediaFileService.getFileForTesting(smallFile.path);
+      final fileSize = await fileToParse.length();
       final estimatedUsage =
-          await StreamingJsonParser.estimateMemoryUsage(smallFile);
+          await StreamingJsonParser.estimateMemoryUsage(fileToParse);
 
       expect(estimatedUsage, fileSize * 3);
     });
