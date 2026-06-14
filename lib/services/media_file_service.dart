@@ -68,7 +68,8 @@ class MediaFileService {
 
   /// 公开的方法，仅供测试使用删除文件/目录
   @visibleForTesting
-  static Future<void> deleteForTesting(String path, {bool recursive = false}) async {
+  static Future<void> deleteForTesting(String path,
+      {bool recursive = false}) async {
     final isDir = await FileSystemEntity.isDirectory(path);
     if (isDir) {
       final dir = Directory(path);
