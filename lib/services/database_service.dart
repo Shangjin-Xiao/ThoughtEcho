@@ -618,7 +618,10 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       _watchHasMore = true;
 
       // 新增：执行数据库健康检查
-      await _performStartupHealthCheck();
+      // 修复：改为非阻塞调用，将所有 health check DB span 移出 ui.load 事务窗口。
+      // health check 仅用于诊断日志，不影响任何功能。
+      // 原来的 await 会导致 Sentry 在 ui.load 期间检测到 N+1 查询模式（Issue #126305010）。
+      unawaited(_performStartupHealthCheck());
 
       _scheduleTrashAutoCleanup();
 
