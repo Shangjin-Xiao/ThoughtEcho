@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/utils/safe_compute.dart';
 
@@ -26,6 +25,8 @@ Future<String> _timeoutCompute(String message) async {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('SafeCompute', () {
     test('run should complete successfully', () async {
       final result = await SafeCompute.run<String, String>(
