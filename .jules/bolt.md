@@ -25,3 +25,6 @@
 ## 2026-06-14 - Optimize N+1 Query in quote_tags
 **Learning:** The correct optimization for chunked SQLite `IN` queries (to bypass the 900 parameter limit) in `sqflite` is to accumulate the chunk queries using `db.batch()` and execute them in a single IPC call with `await batch.commit()`, rather than sequentially awaiting each or using `Future.wait`.
 **Action:** Replaced `for` loops sequentially awaiting `rawQuery` or using `Future.wait` with `db.batch()` in `database_query_helpers_mixin.dart`, `database_query_mixin.dart`, `database_quote_crud_mixin.dart`, and `database_trash_mixin.dart`.
+## 2024-05-24 - Optimize MediaCleanupService verifyMediaIntegrity
+**Learning:** The verifyMediaIntegrity method processed quotes sequentially and awaited extractMediaPathsFromQuote on each, causing significant I/O blocking when iterating over hundreds or thousands of quotes. Redundant directory lookups per extraction further exacerbated the overhead.
+**Action:** Replaced the sequential `for (final quote in quotes)` loop with a chunked `Future.wait` implementation that processes quotes in batches of 50. Passed down the pre-calculated `appPath` via `cachedAppPath` to eliminate repeated platform IPC calls. This reduced execution time by over 80%.
