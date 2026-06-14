@@ -8,6 +8,7 @@ import '../services/database_service.dart';
 import '../services/mmkv_service.dart';
 import '../services/webdav_sync_service.dart';
 import '../utils/lww_utils.dart';
+import '../utils/app_logger.dart';
 
 class WebDAVSyncPage extends StatefulWidget {
   const WebDAVSyncPage({super.key});
@@ -127,7 +128,14 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
           _hasConflicts = result.isNotEmpty;
         });
       }
-    } catch (_) {}
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        '检查冲突笔记失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'WebDAVSyncPage',
+      );
+    }
   }
 
   @override
