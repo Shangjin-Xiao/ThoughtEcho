@@ -25,3 +25,6 @@
 ## 2026-06-14 - Optimize N+1 Query in quote_tags
 **Learning:** The correct optimization for chunked SQLite `IN` queries (to bypass the 900 parameter limit) in `sqflite` is to accumulate the chunk queries using `db.batch()` and execute them in a single IPC call with `await batch.commit()`, rather than sequentially awaiting each or using `Future.wait`.
 **Action:** Replaced `for` loops sequentially awaiting `rawQuery` or using `Future.wait` with `db.batch()` in `database_query_helpers_mixin.dart`, `database_query_mixin.dart`, `database_quote_crud_mixin.dart`, and `database_trash_mixin.dart`.
+## $(date +%Y-%m-%d) - [优化回收站彻底删除记录的性能]
+**Learning:** Sequential `await` in loops over batch operations limits performance significantly by performing I/O sequentially. However, replacing it with `Future.wait` requires a `try/catch` inside the closure returning a fallback value (like an empty list) to prevent a single failure from failing the entire batch.
+**Action:** Replaced a sequential `for` loop awaiting `MediaReferenceService.extractMediaPathsFromQuote` with `Future.wait` for concurrent processing, cutting processing time significantly in tests.
