@@ -26,6 +26,6 @@
 **Learning:** The correct optimization for chunked SQLite `IN` queries (to bypass the 900 parameter limit) in `sqflite` is to accumulate the chunk queries using `db.batch()` and execute them in a single IPC call with `await batch.commit()`, rather than sequentially awaiting each or using `Future.wait`.
 **Action:** Replaced `for` loops sequentially awaiting `rawQuery` or using `Future.wait` with `db.batch()` in `database_query_helpers_mixin.dart`, `database_query_mixin.dart`, `database_quote_crud_mixin.dart`, and `database_trash_mixin.dart`.
 
-## $(date +%Y-%m-%d) - Optimize Media Reference Checking Loop
+## 2026-06-14 - Optimize Media Reference Checking Loop
 **Learning:** Sequential asynchronous checks (using `await` in a loop) over large arrays (like 50k items) severely block execution due to event loop scheduling overhead.
 **Action:** Chunked the execution into batches of 1000 items processed concurrently with `Future.wait()`, and maintained a small yield (`await Future<void>.delayed(Duration.zero)`) between batches to keep the main thread responsive.
