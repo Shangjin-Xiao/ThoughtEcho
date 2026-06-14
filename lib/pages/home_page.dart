@@ -1899,8 +1899,9 @@ class _HomePageState extends State<HomePage>
   }
 
   /// 构建首页位置天气显示。
-  /// 用 AnimatedSwitcher 包裹：chip 从无到有时（key: null→chipKey）触发一次淡入；
-  /// 切回首页时 chip 已存在、key 不变，AnimatedSwitcher 不重复播动画。
+  /// chip 仅在有真实位置数据（坐标或城市）时显示，其余所有状态
+  /// （初始化中、获取 GPS 中、无权限、服务关闭）一律隐藏，保持 AppBar 干净。
+  /// AnimatedSwitcher 保证 chip 首次出现时淡入一次，页面切回不重复动画。
   Widget _buildLocationWeatherDisplay(
     BuildContext context,
     LocationService locationService,
@@ -1909,8 +1910,6 @@ class _HomePageState extends State<HomePage>
     final l10n = AppLocalizations.of(context);
     final connectivityService = Provider.of<ConnectivityService>(context);
     final isConnected = connectivityService.isConnected;
-    final hasPermission = locationService.hasLocationPermission;
-    final isServiceEnabled = locationService.isLocationServiceEnabled;
     final hasCoordinates = locationService.hasCoordinates;
     final hasCity =
         locationService.city != null && locationService.city!.isNotEmpty;
@@ -1918,58 +1917,45 @@ class _HomePageState extends State<HomePage>
         weatherService.currentWeather != 'error' &&
         weatherService.currentWeather != 'unknown';
 
-    // 位置服务 init() 完成前，所有状态字段都是初始默认值（false/null），
-    // 不能作为显示依据——直接隐藏 chip，避免冷启动时出现错误状态的闪烁：
-    // "定位未开启" → 消失 → 坐标出现后淡入
+    // 只有真实位置数据才值得显示 chip；
+    // 其他一切状态（loading、无权限、服务关闭）对用户没有操作价值，AppBar 保持干净更好。
+    final hasRealLocation = hasCity || hasCoordinates;
+
     Widget chip;
-    if (!locationService.isInitialized) {
-      // key 为 null：AnimatedSwitcher 识别为"空"，init 完成后 chipKey 出现时触发一次淡入
+    if (!hasRealLocation) {
+      // 无 key → AnimatedSwitcher 视为"空"，位置就绪后 chipKey 出现触发一次淡入
       chip = const SizedBox.shrink();
     } else {
-      String locationText;
-      String weatherText;
-      IconData weatherIcon;
+      // 位置文字：优先城市名，其次坐标
+      final locationText = hasCity
+          ? locationService.getDisplayLocation()
+          : LocationService.formatCoordinates(
+              locationService.currentPosition!.latitude,
+              locationService.currentPosition!.longitude,
+            );
 
-      // --- 构建天气文本的辅助函数 ---
-      String buildWeatherText() {
-        return '${WeatherService.getLocalizedWeatherDescription(l10n, weatherService.currentWeather!)}'
-            '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}';
-      }
-
-      // --- 优先级链：位置显示 ---
-      if (hasCity) {
-        locationText = locationService.getDisplayLocation();
-      } else if (hasCoordinates) {
-        locationText = LocationService.formatCoordinates(
-          locationService.currentPosition!.latitude,
-          locationService.currentPosition!.longitude,
-        );
-      } else if (!isServiceEnabled) {
-        locationText = l10n.tileLocationServiceOff;
-      } else if (!hasPermission) {
-        locationText = l10n.tileNoLocationPermission;
-      } else if (!isConnected) {
-        locationText = l10n.tileNoNetwork;
-      } else {
-        locationText = l10n.tileLoading;
-      }
-
-      // --- 优先级链：天气显示 ---
+      // 天气文字：有数据就显示，获取中或离线显示 '--'（不显示"加载中"）
+      final String weatherText;
+      final IconData weatherIcon;
       if (hasWeather) {
-        weatherText = buildWeatherText();
+        final desc = WeatherService.getLocalizedWeatherDescription(
+          l10n,
+          weatherService.currentWeather!,
+        );
+        final temp = (weatherService.temperature?.isNotEmpty ?? false)
+            ? ' ${weatherService.temperature}'
+            : '';
+        weatherText = '$desc$temp';
         weatherIcon = weatherService.getWeatherIconData();
-      } else if (!hasCoordinates && !hasCity) {
-        weatherText = isConnected ? '--' : l10n.tileOffline;
+      } else if (!isConnected) {
+        weatherText = '--';
         weatherIcon = Icons.cloud_off;
-      } else if (isConnected) {
-        weatherText = l10n.tileLoading;
-        weatherIcon = Icons.cloud_queue;
       } else {
-        weatherText = l10n.tileNoWeather;
-        weatherIcon = Icons.cloud_off;
+        // 联网中但天气尚未返回：显示 '--'，数据到了原地更新，key 不变不重播动画
+        weatherText = '--';
+        weatherIcon = Icons.cloud_queue;
       }
 
-      // chip 携带稳定的 chipKey：切回首页时 key 不变，AnimatedSwitcher 不重新动画
       chip = HomeLocationWeatherDisplay(
         key: HomeLocationWeatherDisplay.chipKey,
         locationText: locationText,
@@ -1978,8 +1964,8 @@ class _HomePageState extends State<HomePage>
       );
     }
 
-    // AnimatedSwitcher 仅在 child 的 key 发生变化时播放动画（即首次出现），
-    // 页面切换回来时 key 不变，直接复用，无动画。
+    // key 变化时（null → chipKey）AnimatedSwitcher 触发淡入；
+    // 页面切回时 key 不变，直接复用，无动画。
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 400),
       switchInCurve: Curves.easeOut,
