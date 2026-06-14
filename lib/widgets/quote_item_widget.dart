@@ -1051,10 +1051,14 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                 // 心形按钮（如果启用）
                 if (!widget.isTrashMode && widget.onFavorite != null) ...[
                   Tooltip(
-                    message: l10n.actionFavorite,
+                    message: quote.favoriteCount > 0
+                        ? l10n.actionUnfavorite
+                        : l10n.actionFavorite,
                     child: Semantics(
                       button: true,
-                      label: l10n.actionFavorite,
+                      label: quote.favoriteCount > 0
+                          ? l10n.actionUnfavorite
+                          : l10n.actionFavorite,
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
@@ -1067,6 +1071,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Stack(
+                              clipBehavior: Clip.none,
                               children: [
                                 Icon(
                                   quote.favoriteCount > 0
@@ -1108,6 +1113,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                             .labelSmall
                                             ?.copyWith(
                                                 color: Colors.white,
+                                                fontSize: 10,
                                                 height: 1.0),
                                         textAlign: TextAlign.center,
                                       ),

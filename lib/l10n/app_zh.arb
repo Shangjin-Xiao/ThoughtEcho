@@ -400,7 +400,7 @@
       }
     }
   },
-  "favoriteFailed": "收藏失败，请重试",
+  "favoriteFailed": "珍藏失败，请重试",
   "aiCardServiceNotInitialized": "AI卡片服务未初始化",
   "generateCardFailed": "生成卡片失败: {error}",
   "@generateCardFailed": {
@@ -3485,10 +3485,10 @@
   "smartPushUnknownManufacturer": "未知设备",
   "iHaveConfigured": "我已设置",
   "recommended": "推荐",
-  "actionFavorite": "收藏",
-  "actionUnfavorite": "取消收藏",
-  "clearFavoriteTitle": "清除收藏",
-  "clearFavoriteMessage": "确定要清除这条笔记的 {count} 次收藏吗？",
+  "actionFavorite": "珍藏",
+  "actionUnfavorite": "取消珍藏",
+  "clearFavoriteTitle": "清除珍藏",
+  "clearFavoriteMessage": "确定要清除这条笔记的 {count} 次珍藏记录吗？",
   "@clearFavoriteMessage": {
     "description": "清除收藏确认消息",
     "placeholders": {
@@ -3497,8 +3497,8 @@
       }
     }
   },
-  "clearFavoriteSuccess": "已清除收藏",
-  "clearFavoriteFailed": "清除收藏失败",
+  "clearFavoriteSuccess": "已清除珍藏",
+  "clearFavoriteFailed": "清除珍藏失败",
   "moreOptions": "更多选项",
   "settingsUserManual": "用户手册",
   "settingsUserManualDesc": "了解如何使用心迹的各项功能",
