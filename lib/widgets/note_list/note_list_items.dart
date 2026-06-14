@@ -73,18 +73,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                             theme.colorScheme.surface,
                             theme.brightness,
                           ),
-                          prefixIcon: searchController.isSearching
-                              ? const Padding(
-                                  padding: EdgeInsets.all(12.0),
-                                  child: SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                )
-                              : const Icon(Icons.search),
+                          prefixIcon: const Icon(Icons.search),
                           suffixIcon: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -368,45 +357,30 @@ extension _NoteListItemsExtension on NoteListViewState {
 
   Widget _buildNoteList(ThemeData theme) {
     final l10n = AppLocalizations.of(context);
-    // 为 AnimatedSwitcher 提供唯一 key，确保筛选变化时能触发动画
-    final listKey = ValueKey(
-      '${widget.selectedTagIds.join(',')}_${widget.selectedWeathers.join(',')}_${widget.selectedDayPeriods.join(',')}_${widget.searchQuery}',
-    );
+    // key 拆为两个：
+    // • stateKey 含 searchQuery，用于状态切换（loading/empty/无结果）的 AnimatedSwitcher 动画
+    // • resultsKey 不含 searchQuery，用于结果列表；击键时 key 不变，消除整列表闪烁
+    final filterBase =
+        '${widget.selectedTagIds.join(',')}_${widget.selectedWeathers.join(',')}_${widget.selectedDayPeriods.join(',')}';
+    final stateKey = ValueKey('${filterBase}_${widget.searchQuery}');
+    final resultsKey = ValueKey('${filterBase}_results');
 
     // 仅在服务初始化或首批笔记尚未返回时显示 loading。
-    // 标签映射允许延后到达；QuoteItemWidget 会对缺失标签做兜底，
-    // 因此不能让标签加载状态阻塞整个笔记列表，否则在新建 HomePage
-    // 的并发初始化场景下会出现“笔记已收到但页面永久 loading”。
+    // 本地 SQLite 搜索通常 < 100 ms，不单独显示搜索加载动画；
+    // 旧结果保持可见直到新结果到达，由 AnimatedSwitcher 淡入淡出切换。
     if (_waitingForServices || (_isLoading && _quotes.isEmpty)) {
-      // 搜索时用专属动画
-      if (widget.searchQuery.isNotEmpty) {
-        return LayoutBuilder(
-          key: listKey,
-          builder: (context, constraints) {
-            final size = (constraints.maxHeight * 0.7).clamp(120.0, 400.0);
-            return Center(
-              child: EnhancedLottieAnimation(
-                type: LottieAnimationType.weatherSearchLoading,
-                width: size,
-                height: size,
-                semanticLabel: l10n.searchingLabel,
-              ),
-            );
-          },
-        );
-      }
-      return AppLoadingView(key: listKey);
+      return AppLoadingView(key: stateKey);
     }
     if (_quotes.isEmpty && widget.searchQuery.isEmpty) {
       return AppEmptyView(
-        key: listKey,
+        key: stateKey,
         svgAsset: 'assets/empty/empty_state.svg',
         text: l10n.noteListEmptyTitle,
       );
     }
     if (_quotes.isEmpty && widget.searchQuery.isNotEmpty) {
       return Center(
-        key: listKey,
+        key: stateKey,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -444,7 +418,7 @@ extension _NoteListItemsExtension on NoteListViewState {
     final tagMap = {for (var t in _effectiveTags) t.id: t};
 
     return NotificationListener<ScrollNotification>(
-      key: listKey,
+      key: resultsKey,
       onNotification: (ScrollNotification notification) {
         if (_firstOpenScrollPerfEnabled && !_firstOpenScrollPerfCaptured) {
           if (notification is ScrollStartNotification &&
