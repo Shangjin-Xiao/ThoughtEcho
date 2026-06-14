@@ -6,7 +6,7 @@ class NoteSearchController extends ChangeNotifier {
   String _searchQuery = '';
   Timer? _debounceTimer;
   Timer? _timeoutTimer;
-  final int _debounceTime = 500; // 优化：增加防抖时间到500ms，减少频繁查询
+  final int _debounceTime = 300; // 防抖时间：300ms 足以防止过频查询，同时保持响应感
   bool _isSearching = false;
   String? _searchError;
   int _searchVersion = 0; // 优化：添加搜索版本号，避免过期结果覆盖新结果

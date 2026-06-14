@@ -418,14 +418,14 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     }
 
     final db = await safeDatabase;
+    // delta_content 是 Quill Delta JSON，content 已是提取的纯文本，搜索 delta_content 是冗余且慢
     final where = includeDeleted
-        ? 'content LIKE ? OR delta_content LIKE ?'
-        : '(content LIKE ? OR delta_content LIKE ?) '
-            'AND (is_deleted = 0 OR is_deleted IS NULL)';
+        ? 'content LIKE ?'
+        : '(content LIKE ?) AND (is_deleted = 0 OR is_deleted IS NULL)';
     final List<Map<String, dynamic>> results = await db.query(
       'quotes',
       where: where,
-      whereArgs: ['%$query%', '%$query%'],
+      whereArgs: ['%$query%'],
     );
 
     return results.map((map) => Quote.fromJson(map)).toList();
