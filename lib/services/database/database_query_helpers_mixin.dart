@@ -135,27 +135,28 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
     final tagsByQuoteId = <String, List<String>>{};
 
-    final tagFutures = <Future<List<Map<String, Object?>>>>[];
+    // ⚡ Bolt: 使用 batch 批量执行查询，减少数据库往返和 N+1 开销
+    final batch = db.batch();
 
     for (int i = 0; i < quoteIds.length; i += 900) {
       final end = (i + 900 < quoteIds.length) ? i + 900 : quoteIds.length;
       final batchIds = quoteIds.sublist(i, end);
       final placeholders = List.filled(batchIds.length, '?').join(',');
 
-      tagFutures.add(
-        db.query(
-          'quote_tags',
-          columns: ['quote_id', 'tag_id'],
-          where: 'quote_id IN ($placeholders)',
-          whereArgs: batchIds,
-        ),
+      batch.query(
+        'quote_tags',
+        columns: ['quote_id', 'tag_id'],
+        where: 'quote_id IN ($placeholders)',
+        whereArgs: batchIds,
       );
     }
 
-    final allTagMaps = await Future.wait(tagFutures);
+    final allTagMaps = await batch.commit();
 
-    for (final tagMaps in allTagMaps) {
-      for (final tagMap in tagMaps) {
+    for (final result in allTagMaps) {
+      final tagMaps = result as List;
+      for (final item in tagMaps) {
+        final tagMap = item as Map<String, dynamic>;
         final quoteId = tagMap['quote_id'] as String;
         final tagId = tagMap['tag_id'] as String;
         tagsByQuoteId.putIfAbsent(quoteId, () => []).add(tagId);

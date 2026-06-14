@@ -22,3 +22,6 @@
 在工具类高频调用的方法中，如果内联声明 `RegExp` 对象，Dart 每次调用都会重新分配和编译正则表达式，即使它们是纯字符串常量。虽然有内部缓存，依然存在分配开销。特别是在 `StringUtils` 等纯函数或解析工具中，频繁调用会被放大性能损耗。
 **Action:**
 将 `lib/utils/string_utils.dart` 中的相关正则表达式（如提取作者和作品的模式）提取为类的 `static final RegExp` 字段。这样在类首次加载时只需编译一次，提高了反复解析文本时的性能。
+## 2026-06-14 - Optimize N+1 Query in quote_tags
+**Learning:** The correct optimization for chunked SQLite `IN` queries (to bypass the 900 parameter limit) in `sqflite` is to accumulate the chunk queries using `db.batch()` and execute them in a single IPC call with `await batch.commit()`, rather than sequentially awaiting each or using `Future.wait`.
+**Action:** Replaced `for` loops sequentially awaiting `rawQuery` or using `Future.wait` with `db.batch()` in `database_query_helpers_mixin.dart`, `database_query_mixin.dart`, `database_quote_crud_mixin.dart`, and `database_trash_mixin.dart`.
