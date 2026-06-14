@@ -434,19 +434,23 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
 
           deletedIdsInTxn.addAll(batchDeletedIds);
 
-          for (final row in fullRows) {
+          final extractFutures = fullRows.map((row) async {
             try {
               final quote = Quote.fromJson(row);
-              final extracted =
-                  await MediaReferenceService.extractMediaPathsFromQuote(quote);
-              mediaCandidates.addAll(extracted);
+              return await MediaReferenceService.extractMediaPathsFromQuote(
+                  quote);
             } catch (e, stack) {
               UnifiedLogService.instance.error(
                 '提取已删除笔记媒体路径失败',
                 error: e,
                 stackTrace: stack,
               );
+              return <String>[];
             }
+          });
+          final extractedResults = await Future.wait(extractFutures);
+          for (final extracted in extractedResults) {
+            mediaCandidates.addAll(extracted);
           }
 
           final actualPlaceholders = List.filled(
