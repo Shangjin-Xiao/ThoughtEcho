@@ -27,6 +27,10 @@ class StringUtils {
     return result;
   }
 
+  // Optimization: 提取 RegExp 为静态常量，避免频繁创建对象的开销。
+  static final RegExp _authorRegex = RegExp(r'——([^《]+)');
+  static final RegExp _workRegex = RegExp(r'《(.+?)》');
+
   /// 解析格式如"——作者《作品》"的字符串，提取作者和作品
   /// 返回[作者, 作品]元组
   static List<String> parseSource(String source) {
@@ -34,13 +38,13 @@ class StringUtils {
     String work = '';
 
     // 提取作者（在"——"之后，"《"之前）
-    final authorMatch = RegExp(r'——([^《]+)').firstMatch(source);
+    final authorMatch = _authorRegex.firstMatch(source);
     if (authorMatch != null && authorMatch.groupCount >= 1) {
       author = authorMatch.group(1)?.trim() ?? '';
     }
 
     // 提取作品（在《》之间）
-    final workMatch = RegExp(r'《(.+?)》').firstMatch(source);
+    final workMatch = _workRegex.firstMatch(source);
     if (workMatch != null && workMatch.groupCount >= 1) {
       work = workMatch.group(1) ?? '';
     }
