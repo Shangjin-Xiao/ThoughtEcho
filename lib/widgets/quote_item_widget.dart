@@ -65,6 +65,7 @@ class QuoteItemWidget extends StatefulWidget {
   final bool trashActionsEnabled;
   final bool isSelected;
   final bool selectionMode;
+  final bool isHighlighted;
 
   const QuoteItemWidget({
     super.key,
@@ -93,6 +94,7 @@ class QuoteItemWidget extends StatefulWidget {
     this.trashActionsEnabled = true,
     this.isSelected = false,
     this.selectionMode = false,
+    this.isHighlighted = false,
   });
 
   @override
@@ -1225,26 +1227,58 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       ),
     );
     final shouldAnimateCardShell = widget.selectionMode || isExpanded;
+    final Widget card;
     if (shouldAnimateCardShell) {
-      return AnimatedContainer(
+      card = AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         margin: cardMargin,
         decoration: cardDecoration,
         child: cardChild,
       );
+    } else {
+      // 性能优化（第一步）：折叠态静态卡片用 RepaintBoundary 隔离绘制。
+      // 卡片阴影（BoxShadow 高斯模糊）与渐变属于静态像素，套重绘边界后
+      // 其栅格结果可被缓存，滚动时仅做位移合成，避免每帧重新栅格化阴影。
+      // 视觉像素不变；展开/选择态走 AnimatedContainer 分支，decoration 每帧变化，
+      // 缓存收益小，故不在该分支额外包裹。
+      card = RepaintBoundary(
+        child: Container(
+          margin: cardMargin,
+          decoration: cardDecoration,
+          child: cardChild,
+        ),
+      );
     }
 
-    // 性能优化（第一步）：折叠态静态卡片用 RepaintBoundary 隔离绘制。
-    // 卡片阴影（BoxShadow 高斯模糊）与渐变属于静态像素，套重绘边界后
-    // 其栅格结果可被缓存，滚动时仅做位移合成，避免每帧重新栅格化阴影。
-    // 视觉像素不变；展开/选择态走 AnimatedContainer 分支，decoration 每帧变化，
-    // 缓存收益小，故不在该分支额外包裹。
-    return RepaintBoundary(
-      child: Container(
-        margin: cardMargin,
-        decoration: cardDecoration,
-        child: cardChild,
-      ),
+    if (!widget.isHighlighted) return card;
+
+    // 保存/修改笔记后的高亮动画：仅影响单张卡片，TweenAnimationBuilder
+    // 做纯 GPU Opacity 操作（无 blur），性能开销极低。
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('save_highlight_${widget.quote.id}'),
+      tween: Tween(begin: 1.0, end: 0.0),
+      duration: const Duration(milliseconds: 650),
+      curve: Curves.easeOut,
+      builder: (context, value, child) {
+        if (value < 0.01) return child!;
+        return Stack(
+          children: [
+            child!,
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                    color: theme.colorScheme.primary
+                        .withValues(alpha: 0.18 * value),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      child: card,
     );
   }
 }

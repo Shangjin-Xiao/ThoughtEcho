@@ -1189,6 +1189,9 @@ class _HomePageState extends State<HomePage>
       );
       _loadTags();
       _noteListViewKey.currentState?.resetAndLoad();
+      if (quote.id != null) {
+        _noteListViewKey.currentState?.highlightNote(quote.id!);
+      }
     } catch (e, stack) {
       logError(
         '非全屏编辑器保存失败: id=${quote.id}, isEditing=$isEditing',

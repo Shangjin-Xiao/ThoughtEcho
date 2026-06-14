@@ -132,6 +132,9 @@ class NoteListViewState extends State<NoteListView> {
   GlobalKey? _positioningItemKey;
   int _positioningRequest = 0;
 
+  /// 保存/修改笔记后高亮目标卡片的 ID，650ms 动画完成后自动清除
+  String? _highlightedQuoteId;
+
   /// 事件驱动：首批数据加载完成信号，替代忙等轮询
   Completer<void>? _initialDataCompleter = Completer<void>();
 
@@ -583,6 +586,16 @@ class NoteListViewState extends State<NoteListView> {
     _quotes.clear();
     _hasMore = true;
     _loadMore();
+  }
+
+  /// 触发指定 ID 的笔记卡片高亮动画（保存/修改后调用）。
+  /// 动画时长 650ms，900ms 后自动清除高亮状态。
+  void highlightNote(String id) {
+    if (!mounted) return;
+    setState(() => _highlightedQuoteId = id);
+    Future.delayed(const Duration(milliseconds: 900), () {
+      if (mounted) setState(() => _highlightedQuoteId = null);
+    });
   }
 
   Future<bool> scrollToQuoteById(String quoteId) async {
