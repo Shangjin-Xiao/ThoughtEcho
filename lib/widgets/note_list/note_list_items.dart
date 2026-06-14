@@ -710,7 +710,7 @@ extension _NoteListItemsExtension on NoteListViewState {
       return 0;
     }
 
-    final position = _scrollController.position;
+    final position = _scrollController.positions.first;
     final maxExtent = position.maxScrollExtent;
     if (maxExtent <= 0) {
       return 0;
