@@ -412,7 +412,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
         query = 'SELECT COUNT(*) as count FROM quotes q $whereClause';
       }
 
-      logDebug('执行计数查询: $query\n参数: $finalArgs');
+      logDebug('执行计数查询: $query\n参数: [REDACTED]');
       final result = await db.rawQuery(query, finalArgs);
       return Sqflite.firstIntValue(result) ?? 0;
     } catch (e) {
