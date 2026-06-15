@@ -230,7 +230,8 @@ class _SlidingCardState extends State<SlidingCard>
                                   duration: const Duration(milliseconds: 200),
                                   opacity: _isHovered ? 0.8 : 0.5,
                                   child: Text(
-                                    AppLocalizations.of(context).slideLeftToAddNote,
+                                    AppLocalizations.of(context)
+                                        .slideLeftToAddNote,
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: theme.colorScheme.onSurface
