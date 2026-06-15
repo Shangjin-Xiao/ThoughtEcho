@@ -3531,5 +3531,6 @@
   "webdavConflictKeepTooltip": "Conserver et déplacer vers la catégorie par défaut",
   "webdavConflictKeepSuccess": "Confirmé et déplacé vers la liste par défaut.",
   "webdavConflictDiscardTooltip": "Jeter cette sauvegarde de conflit",
-  "webdavConflictDiscardSuccess": "Note de conflit définitivement supprimée."
+  "webdavConflictDiscardSuccess": "Note de conflit définitivement supprimée.",
+  "slideLeftToAddNote": "← Glisser vers la gauche pour ajouter une note"
 }

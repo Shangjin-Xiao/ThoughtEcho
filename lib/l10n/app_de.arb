@@ -37,5 +37,6 @@
   "webdavConflictKeepTooltip": "Behalten und in Standardkategorie verschieben",
   "webdavConflictKeepSuccess": "Bestätigt und in Standardliste verschoben.",
   "webdavConflictDiscardTooltip": "Dieses Konflikt-Backup verwerfen",
-  "webdavConflictDiscardSuccess": "Diese Konfliktnotiz wurde dauerhaft verworfen."
+  "webdavConflictDiscardSuccess": "Diese Konfliktnotiz wurde dauerhaft verworfen.",
+  "slideLeftToAddNote": "← Nach links wischen, um eine Notiz hinzuzufügen"
 }

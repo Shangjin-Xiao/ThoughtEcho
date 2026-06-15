@@ -36,3 +36,6 @@
 ## YYYY-MM-DD - [提取 WebDAV 同步冲突处理相关的硬编码字符串]
 **发现:** WebDAV 同步页面冲突处理的提示：`"确认保留（移入默认分类）"`, `"已确认并移回默认笔记列表。"`, `"丢弃此冲突备份"`, `"已永久丢弃此冲突笔记。"`
 **规则:** 采用极简风格翻译，例如 `webdavConflictKeepTooltip`, `webdavConflictKeepSuccess`, `webdavConflictDiscardTooltip`, `webdavConflictDiscardSuccess`
+## 2024-05-18 - [滑动卡片添加笔记提示的国际化]
+**发现:** `← 左滑添加到笔记` 这个提示语被硬编码在了 `lib/widgets/sliding_card.dart` 中。这是一个通用的卡片滑动交互提示。
+**规则:** 遵循 Material Design 的极简交互文本风格。英文翻译为 `← Swipe left to add note`，日文为 `← 左にスワイプしてノートに追加`，其他语言类似处理。

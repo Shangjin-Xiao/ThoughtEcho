@@ -3778,5 +3778,6 @@
   "customFeedbackEmailLabel": "联系邮箱 (可选)",
   "customFeedbackSubmit": "发送反馈",
   "customFeedbackSuccess": "感谢您的反馈！",
-  "customFeedbackEmptyError": "请输入反馈内容"
+  "customFeedbackEmptyError": "请输入反馈内容",
+  "slideLeftToAddNote": "← 左滑添加到笔记"
 }

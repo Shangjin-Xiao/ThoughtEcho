@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../utils/color_utils.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class SlidingCard extends StatefulWidget {
   final Widget child;
@@ -229,7 +230,7 @@ class _SlidingCardState extends State<SlidingCard>
                                   duration: const Duration(milliseconds: 200),
                                   opacity: _isHovered ? 0.8 : 0.5,
                                   child: Text(
-                                    '← 左滑添加到笔记',
+                                    AppLocalizations.of(context).slideLeftToAddNote,
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: theme.colorScheme.onSurface
