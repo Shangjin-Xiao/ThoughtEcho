@@ -629,8 +629,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         if (!_isDisposed) notifyListeners();
       });
-    } catch (e) {
-      logDebug('数据库初始化失败: $e');
+    } catch (e, stackTrace) {
+      AppLogger.e('数据库初始化失败', error: e, stackTrace: stackTrace, source: 'DatabaseService');
       _isInitializing = false;
       if (_initCompleter != null && !_initCompleter!.isCompleted) {
         _initCompleter!.completeError(e);
@@ -733,8 +733,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
         if (!_isDisposed) notifyListeners();
       });
       logDebug('成功初始化新数据库');
-    } catch (e) {
-      logDebug('初始化新数据库失败: $e');
+    } catch (e, stackTrace) {
+      AppLogger.e('初始化新数据库失败', error: e, stackTrace: stackTrace, source: 'DatabaseService');
       rethrow;
     }
   }
@@ -782,8 +782,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
         _safeNotifyQuotesStream();
         logDebug('预加载完成，获取到 ${quotes.length} 条笔记，已通知UI更新');
       }
-    } catch (e) {
-      logDebug('预加载笔记时出错: $e');
+    } catch (e, stackTrace) {
+      AppLogger.e('预加载笔记时出错', error: e, stackTrace: stackTrace, source: 'DatabaseService');
       // 确保状态一致
       _currentQuotes = [];
       _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set
@@ -925,8 +925,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       _clearAllCache();
 
       logDebug('数据库恢复措施已执行');
-    } catch (e) {
-      logDebug('数据库恢复失败: $e');
+    } catch (e, stackTrace) {
+      AppLogger.e('数据库恢复失败', error: e, stackTrace: stackTrace, source: 'DatabaseService');
       rethrow;
     }
   }
