@@ -343,7 +343,6 @@ Widget _buildAddNoteBenchmarkApp() {
             onPressed: () => showModalBottomSheet<void>(
               context: context,
               isScrollControlled: true,
-              sheetAnimationStyle: AddNoteDialog.bottomSheetAnimationStyle,
               requestFocus: false,
               builder: (BuildContext context) => AddNoteDialog(
                 tags: tags,

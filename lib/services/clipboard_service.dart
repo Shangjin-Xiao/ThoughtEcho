@@ -366,7 +366,6 @@ class ClipboardService extends ChangeNotifier {
         backgroundColor: Theme.of(context).brightness == Brightness.light
             ? Colors.white
             : Theme.of(context).colorScheme.surface,
-        sheetAnimationStyle: AddNoteDialog.bottomSheetAnimationStyle,
         requestFocus: false,
         builder: (_) => AddNoteDialog(
           prefilledContent: content,

@@ -15,17 +15,6 @@ import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
 
 void main() {
-  test('bottom sheet uses short animation style', () {
-    expect(
-      AddNoteDialog.bottomSheetAnimationStyle.duration,
-      const Duration(milliseconds: 180),
-    );
-    expect(
-      AddNoteDialog.bottomSheetAnimationStyle.reverseDuration,
-      const Duration(milliseconds: 150),
-    );
-  });
-
   testWidgets('delays content focus until bottom sheet entrance settles',
       (tester) async {
     await tester.pumpWidget(

@@ -1132,7 +1132,6 @@ class _HomePageState extends State<HomePage>
           context: context,
           isScrollControlled: true,
           backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
-          sheetAnimationStyle: AddNoteDialog.bottomSheetAnimationStyle,
           requestFocus: false,
           builder: (context) => AddNoteDialog(
             prefilledContent: prefilledContent,
@@ -1448,7 +1447,6 @@ class _HomePageState extends State<HomePage>
         backgroundColor: Theme.of(context).brightness == Brightness.light
             ? Colors.white
             : Theme.of(context).colorScheme.surface,
-        sheetAnimationStyle: AddNoteDialog.bottomSheetAnimationStyle,
         requestFocus: false,
         builder: (context) => AddNoteDialog(
           initialQuote: quote,
