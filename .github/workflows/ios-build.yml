@@ -19,7 +19,7 @@ jobs:
       - name: 设置 Flutter 环境
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.0'
+          flutter-version: '3.44.x'
           channel: 'stable'
           cache: true
 

@@ -11,10 +11,10 @@ on:
       flutter_version:
         description: 'Flutter版本'
         required: false
-        default: '3.44.0'
+        default: '3.44.x'
         type: choice
         options:
-          - '3.44.0'
+          - '3.44.x'
           - '3.38.6'
           - '3.35.3'
           - '3.29.2'
