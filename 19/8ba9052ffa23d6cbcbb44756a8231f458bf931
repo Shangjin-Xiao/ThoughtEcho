@@ -1,0 +1,27 @@
+.github/workflows/flutter-release-build.yml
+  s_e4e1e41c19b329::t_b5e53a53680556 38
+.github/workflows/test.yml
+  s_e4e1e41c19b329::t_b5e53a53680556 27
+.github/workflows/firebase-note-list-performance.yml
+  s_e4e1e41c19b329::t_be4b43f4d6fbb5 34
+.github/workflows/build-windows.yml
+  s_e4e1e41c19b329::t_be4b43f4d6fbb5 14,17
+.github/workflows/ios-build.yml
+  s_e4e1e41c19b329::t_b5e53a53680556 22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "198ba9052ffa23d6cbcbb44756a8231f458bf931",
+  "prompts": {},
+  "sessions": {
+    "s_e4e1e41c19b329": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_124f01d90ffew9lIHXj42n6bBP",
+        "model": "z-ai/glm-5.2-free"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
