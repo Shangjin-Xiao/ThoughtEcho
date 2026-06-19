@@ -273,19 +273,30 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         ? const Duration(milliseconds: 1500)
         : const Duration(milliseconds: 300);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _deferredControlsTimer = Timer(
-        const Duration(milliseconds: 180),
-        () {
-          if (!mounted || _deferredControlsVisible) return;
-          _recordDialogPerfStateChange('deferredControlsVisible');
-          _dialogOpenTimelineTask.instant(
-            'ThoughtEcho.AddNoteDialog.deferredControls.visible',
-          );
-          setState(() {
-            _deferredControlsVisible = true;
+      if (!mounted) return;
+      final route = ModalRoute.of(context);
+      if (route != null && route.animation != null) {
+        final animation = route.animation!;
+        if (animation.isCompleted) {
+          _showDeferredControls();
+        } else {
+          void statusListener(AnimationStatus status) {
+            if (status == AnimationStatus.completed) {
+              animation.removeStatusListener(statusListener);
+              _showDeferredControls();
+            }
+          }
+
+          animation.addStatusListener(statusListener);
+          // 兜底定时器：如果由于某些原因没有触发 completed 状态，也在 350ms 后显示次要控件
+          _deferredControlsTimer = Timer(const Duration(milliseconds: 350), () {
+            animation.removeStatusListener(statusListener);
+            _showDeferredControls();
           });
-        },
-      );
+        }
+      } else {
+        _showDeferredControls();
+      }
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -654,6 +665,18 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       );
     }
     _contentFocusNode.requestFocus();
+  }
+
+  void _showDeferredControls() {
+    if (!mounted || _deferredControlsVisible) return;
+    _deferredControlsTimer?.cancel();
+    _recordDialogPerfStateChange('deferredControlsVisible');
+    _dialogOpenTimelineTask.instant(
+      'ThoughtEcho.AddNoteDialog.deferredControls.visible',
+    );
+    setState(() {
+      _deferredControlsVisible = true;
+    });
   }
 
   void _scheduleContentFocus(String reason) {
@@ -2223,8 +2246,15 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
                                       if (result != null && result == true) {
                                         // 如果笔记已在全屏编辑器中保存，关闭本对话框
+                                        // 性能优化：延迟 300ms 等待全屏编辑器的退出动画执行完毕，避免动画冲突导致视觉上的中断
                                         if (mounted && context.mounted) {
-                                          Navigator.pop(context);
+                                          Future.delayed(
+                                              const Duration(milliseconds: 300),
+                                              () {
+                                            if (mounted && context.mounted) {
+                                              Navigator.pop(context);
+                                            }
+                                          });
                                         }
                                       }
                                     } catch (e) {
