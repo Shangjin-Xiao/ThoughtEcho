@@ -140,8 +140,8 @@ class ApiKeyDebugger {
 
       if (afterSave != apiKey) {
         logDebug('❌ 保存验证失败！');
-        logDebug('期望: $apiKey');
-        logDebug('实际: $afterSave');
+        logDebug('期望: [REDACTED]');
+        logDebug('实际: [REDACTED]');
       }
     } catch (e) {
       logDebug('❌ 保存过程出错: $e');
