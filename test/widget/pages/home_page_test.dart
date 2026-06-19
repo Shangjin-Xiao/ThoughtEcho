@@ -63,6 +63,7 @@ void main() {
               child: SizedBox(
                 width: 400,
                 child: HomeLocationWeatherDisplay(
+                  key: HomeLocationWeatherDisplay.chipKey,
                   locationText: 'Beijing',
                   weatherText: 'Sunny 18°C',
                   weatherIcon: Icons.wb_sunny,
@@ -74,7 +75,10 @@ void main() {
       );
 
       final chipSize = tester.getSize(
-        find.byKey(HomeLocationWeatherDisplay.chipKey),
+        find.descendant(
+          of: find.byKey(HomeLocationWeatherDisplay.chipKey),
+          matching: find.byType(FittedBox),
+        ),
       );
 
       expect(chipSize.width, lessThan(360));
@@ -99,6 +103,7 @@ void main() {
                   SizedBox(width: 8),
                   Expanded(
                     child: HomeLocationWeatherDisplay(
+                      key: HomeLocationWeatherDisplay.chipKey,
                       locationText:
                           'Washington, District of Columbia, United States',
                       weatherText: 'Partly cloudy 18°C',
@@ -114,7 +119,10 @@ void main() {
 
       final titleSize = tester.getSize(find.text('ThoughtEcho'));
       final chipSize = tester.getSize(
-        find.byKey(HomeLocationWeatherDisplay.chipKey),
+        find.descendant(
+          of: find.byKey(HomeLocationWeatherDisplay.chipKey),
+          matching: find.byType(FittedBox),
+        ),
       );
 
       expect(titleSize.width, greaterThan(80));
