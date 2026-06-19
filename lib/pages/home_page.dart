@@ -1078,6 +1078,7 @@ class _HomePageState extends State<HomePage>
     String? prefilledWork,
     dynamic hitokotoData,
   }) async {
+    FocusScope.of(context).unfocus();
     await _loadTags();
     if (!mounted) return;
 
@@ -1187,9 +1188,10 @@ class _HomePageState extends State<HomePage>
         ),
       );
       _loadTags();
-      if (quote.id != null) {
-        _noteListViewKey.currentState?.highlightNote(quote.id!);
-      }
+      // 动画已根据用户反馈移除，不再需要触发高亮/闪烁效果
+      // if (quote.id != null) {
+      //   _noteListViewKey.currentState?.highlightNote(quote.id!);
+      // }
     } catch (e, stack) {
       logError(
         '非全屏编辑器保存失败: id=${quote.id}, isEditing=$isEditing',
@@ -1401,6 +1403,7 @@ class _HomePageState extends State<HomePage>
 
   // 显示编辑笔记对话框
   void _showEditQuoteDialog(Quote quote) {
+    FocusScope.of(context).unfocus();
     // 检查笔记是否来自全屏编辑器
     if (quote.editSource == 'fullscreen') {
       // 如果是来自全屏编辑器的笔记，则直接打开全屏编辑页面
