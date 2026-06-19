@@ -63,8 +63,9 @@ class ApiKeyDebugger {
         final authHeader =
             headers['Authorization'] ?? headers['x-api-key'] ?? '';
         if (authHeader.isNotEmpty) {
-          final apiKeyFromHeader =
-              authHeader.replaceAll('Bearer ', '').replaceAll('x-api-key ', '');
+          final apiKeyFromHeader = authHeader
+              .replaceAll('Bearer ', '')
+              .replaceAll('x-api-key ', '');
           logDebug(
             '   Headers中的API Key: ${apiKeyFromHeader.isEmpty ? "空" : "${apiKeyFromHeader.length}字符"}',
           );
@@ -140,8 +141,8 @@ class ApiKeyDebugger {
 
       if (afterSave != apiKey) {
         logDebug('❌ 保存验证失败！');
-        logDebug('期望: $apiKey');
-        logDebug('实际: $afterSave');
+        logDebug('期望: [REDACTED]');
+        logDebug('实际: [REDACTED]');
       }
     } catch (e) {
       logDebug('❌ 保存过程出错: $e');
