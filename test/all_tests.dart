@@ -10,6 +10,7 @@ import 'unit/models/note_category_test.dart' as note_category_test;
 import 'unit/models/note_tag_test.dart' as note_tag_test;
 import 'unit/models/weather_data_test.dart' as weather_data_test;
 import 'unit/models/app_settings_test.dart' as app_settings_test;
+import 'unit/models/onboarding_models_test.dart' as onboarding_models_test;
 
 // Import service tests
 import 'unit/services/database_service_test.dart' as database_service_test;
@@ -95,6 +96,7 @@ void main() {
       note_tag_test.main();
       weather_data_test.main();
       app_settings_test.main();
+      onboarding_models_test.main();
     });
 
     group('Service Tests', () {
