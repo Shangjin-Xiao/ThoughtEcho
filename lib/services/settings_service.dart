@@ -943,53 +943,85 @@ class SettingsService extends ChangeNotifier {
 
   /// 迁移遗留的明文API密钥到安全存储
   Future<void> _secureLegacyApiKey() async {
-    if (_aiSettings.apiKey.isEmpty) return;
+    if (_aiSettings.apiKey.isEmpty) {
+      // 安全起见，如果在 _prefs 中还残留包含 apiKey 的 json，也要清理
+      try {
+        final legacyJson = _prefs.getString(_aiSettingsKey);
+        if (legacyJson != null &&
+            legacyJson.contains('"apiKey":') &&
+            !legacyJson.contains('"apiKey":""') &&
+            !legacyJson.contains('"apiKey":" "')) {
+          final Map<String, dynamic> settingsMap = json.decode(legacyJson);
+          if (settingsMap['apiKey'] != null &&
+              settingsMap['apiKey'].toString().isNotEmpty) {
+            settingsMap['apiKey'] = '';
+            await _prefs.setString(_aiSettingsKey, json.encode(settingsMap));
+            logDebug('Cleared residual legacy API key from SharedPreferences.');
+          }
+        }
+      } catch (_) {}
+      return;
+    }
 
     bool shouldClear = false;
 
-    // 如果我们有当前选中的服务商
-    if (_multiAISettings.currentProviderId != null) {
-      final apiKeyManager = APIKeyManager();
-      final providerId = _multiAISettings.currentProviderId!;
-
-      try {
-        // 检查安全存储中是否已有密钥
-        final hasSecureKey = await apiKeyManager.hasValidProviderApiKey(
-          providerId,
-        );
-
-        if (hasSecureKey) {
-          // 安全存储中已有密钥，遗留的明文密钥是冗余的，可以直接清除
-          shouldClear = true;
-          logDebug(
-              'Found redundant plaintext API key in AISettings. Clearing.');
-        } else {
-          // 安全存储中没有密钥，尝试迁移
-          await apiKeyManager.saveProviderApiKey(
-            providerId,
-            _aiSettings.apiKey,
-          );
-          shouldClear = true;
-          logDebug(
-            'Migrated legacy plaintext API key to SecureStorage for provider: $providerId',
-          );
-        }
-      } catch (e) {
-        logDebug('Error securing legacy API key: $e');
-        // 出错时不清除，避免数据丢失
-      }
-    } else {
-      // 如果没有选中的服务商，暂时不清除，因为无法确定归属
-      // 但这种情况很少见，因为通常会有默认或已配置的服务商
+    // 确定要迁移到的服务商 ID，如果没有选中则回退到 openai 或 default
+    String? providerId = _multiAISettings.currentProviderId;
+    if (providerId == null) {
+      providerId = _multiAISettings.providers.isNotEmpty
+          ? _multiAISettings.providers.first.id
+          : 'openai';
       logDebug(
-        'Legacy API key found but no current provider selected. Skipping migration.',
+          'No current provider selected. Defaulting migration to provider: $providerId');
+    }
+
+    final apiKeyManager = APIKeyManager();
+
+    try {
+      // 检查安全存储中是否已有密钥
+      final hasSecureKey = await apiKeyManager.hasValidProviderApiKey(
+        providerId,
       );
+
+      if (hasSecureKey) {
+        // 安全存储中已有密钥，遗留的明文密钥是冗余的，可以直接清除
+        shouldClear = true;
+        logDebug('Found redundant plaintext API key in AISettings. Clearing.');
+      } else {
+        // 安全存储中没有密钥，尝试迁移
+        await apiKeyManager.saveProviderApiKey(
+          providerId,
+          _aiSettings.apiKey,
+        );
+        shouldClear = true;
+        logDebug(
+          'Migrated legacy plaintext API key to SecureStorage for provider: $providerId',
+        );
+      }
+    } catch (e) {
+      logDebug('Error securing legacy API key: $e');
+      // 即使出错，如果是格式错误等不可恢复的错误，为了安全也应该考虑清除，但这里暂保持保守，出错时不清除，避免数据丢失
+      // 除非我们能确定错误类型
     }
 
     if (shouldClear) {
+      // 从内存和 MMKV 中清除
       _aiSettings = _aiSettings.copyWith(apiKey: '');
-      await _mmkv.setString(_aiSettingsKey, json.encode(_aiSettings.toJson()));
-      logDebug('Legacy plaintext API key cleared from AISettings.');
+      final clearedJsonString = json.encode(_aiSettings.toJson());
+      await _mmkv.setString(_aiSettingsKey, clearedJsonString);
+
+      // 彻底：同时从 SharedPreferences 中彻底清除
+      try {
+        // 更新或删除 _prefs 中的 _aiSettingsKey 以彻底消灭明文密钥
+        await _prefs.setString(_aiSettingsKey, clearedJsonString);
+        logDebug(
+            'Legacy plaintext API key also cleared from SharedPreferences.');
+      } catch (e) {
+        logDebug('Failed to clear legacy API key from SharedPreferences: $e');
+      }
+
+      logDebug(
+          'Legacy plaintext API key completely cleared from AISettings storage layers.');
     }
   }
 }
