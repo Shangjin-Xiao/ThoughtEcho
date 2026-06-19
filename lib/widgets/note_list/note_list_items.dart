@@ -65,6 +65,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                         focusNode: _searchFocusNode,
                         onChanged: _onSearchChanged,
                         textInputAction: TextInputAction.search,
+                        onSubmitted: (_) => _searchFocusNode.unfocus(),
                         decoration: InputDecoration(
                           hintText: l10n.searchNotes,
                           isDense: true,
@@ -357,30 +358,34 @@ extension _NoteListItemsExtension on NoteListViewState {
 
   Widget _buildNoteList(ThemeData theme) {
     final l10n = AppLocalizations.of(context);
-    // key 拆为两个：
-    // • stateKey 含 searchQuery，用于状态切换（loading/empty/无结果）的 AnimatedSwitcher 动画
-    // • resultsKey 不含 searchQuery，用于结果列表；击键时 key 不变，消除整列表闪烁
+    // key 拆分，避免状态内输入时由于 searchQuery 改变导致 AnimatedSwitcher 触发不必要闪烁：
+    // • loadingKey 用于加载态的 Key
+    // • emptyKey 用于初始无笔记状态的 Key
+    // • noResultsKey 用于搜索无匹配结果状态的 Key
+    // • resultsKey 用于展示列表的 Key
     final filterBase =
         '${widget.selectedTagIds.join(',')}_${widget.selectedWeathers.join(',')}_${widget.selectedDayPeriods.join(',')}';
-    final stateKey = ValueKey('${filterBase}_${widget.searchQuery}');
+    final loadingKey = ValueKey('${filterBase}_loading');
+    final emptyKey = ValueKey('${filterBase}_empty');
+    final noResultsKey = ValueKey('${filterBase}_no_results');
     final resultsKey = ValueKey('${filterBase}_results');
 
     // 仅在服务初始化或首批笔记尚未返回时显示 loading。
     // 本地 SQLite 搜索通常 < 100 ms，不单独显示搜索加载动画；
     // 旧结果保持可见直到新结果到达，由 AnimatedSwitcher 淡入淡出切换。
     if (_waitingForServices || (_isLoading && _quotes.isEmpty)) {
-      return AppLoadingView(key: stateKey);
+      return AppLoadingView(key: loadingKey);
     }
     if (_quotes.isEmpty && widget.searchQuery.isEmpty) {
       return AppEmptyView(
-        key: stateKey,
+        key: emptyKey,
         svgAsset: 'assets/empty/empty_state.svg',
         text: l10n.noteListEmptyTitle,
       );
     }
     if (_quotes.isEmpty && widget.searchQuery.isNotEmpty) {
       return Center(
-        key: stateKey,
+        key: noResultsKey,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -435,6 +440,9 @@ extension _NoteListItemsExtension on NoteListViewState {
 
         if (notification is ScrollStartNotification &&
             notification.dragDetails != null) {
+          if (_searchFocusNode.hasFocus) {
+            _searchFocusNode.unfocus();
+          }
           _startScrollSessionPerfCapture(notification.metrics);
         } else if (notification is ScrollUpdateNotification) {
           _recordScrollSessionUpdate(notification.metrics);
@@ -686,6 +694,9 @@ extension _NoteListItemsExtension on NoteListViewState {
     }
 
     final position = _scrollController.positions.first;
+    if (!position.hasContentDimensions) {
+      return 0;
+    }
     final maxExtent = position.maxScrollExtent;
     if (maxExtent <= 0) {
       return 0;
