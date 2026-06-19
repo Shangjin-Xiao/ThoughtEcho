@@ -2,7 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/onboarding_models.dart';
 
+import '../../test_setup.dart';
+
 void main() {
+  setUp(() async {
+    await setupTestEnvironment();
+  });
+
   group('Onboarding Models Test', () {
     group('OnboardingPageData', () {
       test('should correctly assign all required properties', () {
