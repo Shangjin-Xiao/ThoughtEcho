@@ -1,0 +1,20 @@
+lib/widgets/note_list/note_list_items.dart
+  s_4111d80340520d::t_250f3e43cf14f6 68
+  s_4111d80340520d::t_31d17c8872845a 443-445
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "c3b78ef3170f8355724ea1d0faab4232f3cf4f9d",
+  "prompts": {},
+  "sessions": {
+    "s_4111d80340520d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_124d77667ffey7vBfbF7N9rOVs",
+        "model": "z-ai/glm-5.2-free"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
