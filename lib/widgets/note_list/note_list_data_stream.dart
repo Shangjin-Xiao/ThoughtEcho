@@ -192,6 +192,8 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           } catch (e) {
             logDebug('更新搜索控制器状态失败: $e');
           }
+          // 保险清除搜索过渡状态（首次加载期间用户可能已输入搜索）
+          _setSearchUpdating(false);
 
           if (isFirstLoad) {
             isFirstLoad = false;
@@ -203,6 +205,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           _updateState(() {
             _isLoading = false;
           });
+          _setSearchUpdating(false); // 出错时清除搜索过渡状态
 
           // 重置搜索控制器状态
           try {
@@ -393,6 +396,9 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             logDebug('更新搜索控制器状态失败: $e');
           }
 
+          // 清除搜索过渡动画状态，让列表从"更新中"淡入恢复到正常透明度
+          _setSearchUpdating(false);
+
           logDebug(
             '数据流更新完成，加载了 ${list.length} 条记录',
             source: 'NoteListView',
@@ -404,6 +410,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           _updateState(() {
             _isLoading = false; // 出错时停止加载
           });
+          _setSearchUpdating(false); // 出错时也清除搜索过渡状态
 
           // 重置搜索控制器状态
           try {

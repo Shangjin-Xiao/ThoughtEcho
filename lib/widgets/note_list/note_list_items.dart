@@ -170,23 +170,30 @@ extension _NoteListItemsExtension on NoteListViewState {
                 // 筛选条件展示区域
                 _buildFilterDisplay(theme, horizontalPadding),
 
-                // 笔记列表 - 添加平滑过渡动画
+                // 笔记列表 - 搜索过渡动画 + 状态切换动画
+                // AnimatedOpacity: 搜索时列表轻微变淡提示"更新中"，结果到达后淡入恢复
+                // AnimatedSwitcher: 处理 loading/empty/no_results/results 之间的状态切换
                 Expanded(
                   child: Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: horizontalPadding,
                     ),
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 150),
-                      switchInCurve: Curves.easeOut,
-                      switchOutCurve: Curves.easeOut,
-                      transitionBuilder: (child, animation) {
-                        return FadeTransition(
-                          opacity: animation,
-                          child: child,
-                        );
-                      },
-                      child: _buildNoteList(theme),
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                      opacity: _isSearchUpdating ? 0.4 : 1.0,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 150),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeOut,
+                        transitionBuilder: (child, animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          );
+                        },
+                        child: _buildNoteList(theme),
+                      ),
                     ),
                   ),
                 ),
@@ -801,17 +808,14 @@ extension _NoteListItemsExtension on NoteListViewState {
     // 取消之前的防抖定时器
     _searchDebounceTimer?.cancel();
 
-    // 性能优化：只在必要时调用 setState，避免不必要的重建
-    final shouldSetLoading = (value.isEmpty && widget.searchQuery.isNotEmpty) ||
-        (value.isNotEmpty && value.length >= AppConstants.minSearchLength);
-
-    if (shouldSetLoading && !_isLoading) {
+    // 性能优化：搜索时不设置 _isLoading，避免无视觉变化的 setState 引起 jank。
+    // 旧结果保持可见，新结果到达后由 AnimatedOpacity 平滑淡入。
+    // 仅在清空搜索时重置 loading 标志（防止之前残留状态卡住）。
+    if (value.isEmpty && _isLoading) {
       _updateState(() {
-        _isLoading = true;
+        _isLoading = false;
       });
-      if (value.isEmpty) {
-        logDebug('搜索内容被清空，重置加载状态');
-      }
+      logDebug('搜索内容被清空，重置加载状态');
     }
 
     // 对于清空操作，立即执行
@@ -833,11 +837,35 @@ extension _NoteListItemsExtension on NoteListViewState {
     }
   }
 
+  /// 设置搜索过渡动画状态，配合 AnimatedOpacity 实现 200ms 淡入淡出。
+  /// updating=true 时列表轻微变淡提示"更新中"，结果到达后置 false 恢复。
+  /// 内置 800ms 安全定时器，防止 stream 回调丢失导致列表卡在变淡状态。
+  void _setSearchUpdating(bool updating) {
+    if (!mounted) return;
+    _searchUpdatingTimer?.cancel();
+    if (_isSearchUpdating == updating) return;
+    _updateState(() {
+      _isSearchUpdating = updating;
+    });
+    if (updating) {
+      _searchUpdatingTimer = Timer(const Duration(milliseconds: 800), () {
+        if (mounted && _isSearchUpdating) {
+          _updateState(() {
+            _isSearchUpdating = false;
+          });
+        }
+      });
+    }
+  }
+
   /// 优化：执行搜索的统一方法
   void _performSearch(String value) {
     if (!mounted) return;
 
     logDebug('执行搜索: "$value"', source: 'NoteListView');
+
+    // 标记搜索更新中，触发列表淡入淡出过渡动画
+    _setSearchUpdating(true);
 
     // 如果是非空搜索且长度>=2，通知搜索控制器开始搜索
     if (value.isNotEmpty && value.length >= AppConstants.minSearchLength) {
@@ -862,6 +890,7 @@ extension _NoteListItemsExtension on NoteListViewState {
           _updateState(() {
             _isLoading = false;
           });
+          _setSearchUpdating(false);
           try {
             final searchController = Provider.of<NoteSearchController>(
               context,

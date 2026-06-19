@@ -163,6 +163,12 @@ class NoteListViewState extends State<NoteListView> {
 
   // 修复：添加防抖定时器和性能优化
   Timer? _searchDebounceTimer;
+
+  // 搜索过渡动画状态：搜索开始时置 true 让列表轻微变淡提示"更新中"，
+  // 搜索结果到达后置 false 恢复。配合 AnimatedOpacity 实现 200ms 淡入淡出，
+  // 替代旧方案中"列表瞬间清空再填充"的硬切换闪烁。
+  bool _isSearchUpdating = false;
+  Timer? _searchUpdatingTimer;
   // ---- 自动滚动控制新增状态 ----
   bool _initialDataLoaded = false; // 标记是否已收到首批数据（后续用于启用自动滚动）
   bool _isAutoScrolling = false; // 当前是否有程序驱动的滚动动画
@@ -480,8 +486,14 @@ class NoteListViewState extends State<NoteListView> {
           (oldWidget.sortType != widget.sortType ||
               oldWidget.sortAscending != widget.sortAscending);
 
+      // 搜索 query 变化时也保留滚动位置，避免删字时列表跳回顶部加剧闪烁感。
+      // stream callback 会校验 offset 是否仍在 maxScrollExtent 范围内。
+      final bool isSearchChange = oldWidget.searchQuery != widget.searchQuery;
+
       // 更新流订阅，传入是否仅为排序变化
-      _updateStreamSubscription(preserveScrollPosition: isOnlySortChange);
+      _updateStreamSubscription(
+        preserveScrollPosition: isOnlySortChange || isSearchChange,
+      );
     } else if (shouldUpdate) {
       logDebug('跳过更新：数据尚未完成首次加载', source: 'NoteListView');
     }
@@ -551,6 +563,7 @@ class NoteListViewState extends State<NoteListView> {
       _scrollSessionId = null;
     }
     _searchDebounceTimer?.cancel(); // 清理防抖定时器
+    _searchUpdatingTimer?.cancel(); // 清理搜索过渡动画安全定时器
     _firstOpenScrollStopTimer?.cancel();
     _loadMorePerfStopTimer?.cancel();
     _loadMoreSettleTimer?.cancel();

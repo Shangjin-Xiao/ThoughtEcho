@@ -241,8 +241,12 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       _isLoading = false;
       _watchHasMore = true; // 重置分页状态
 
-      // 修复：使用同步方式立即发送空列表，然后异步加载数据
-      _quotesController!.add([]);
+      // 性能优化：仅在首次调用时同步发送空列表（UI 需要显示 loading/空状态）。
+      // 搜索/筛选变化时不发送空列表，让 UI 保留旧结果可见，
+      // 等异步加载完成后用新数据平滑替换，避免列表瞬间清空造成视觉闪烁。
+      if (isFirstCall) {
+        _quotesController!.add([]);
+      }
 
       // 在新的异步上下文中执行初始化
       Future.microtask(() async {
