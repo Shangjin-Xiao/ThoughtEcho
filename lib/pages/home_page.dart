@@ -1187,7 +1187,6 @@ class _HomePageState extends State<HomePage>
         ),
       );
       _loadTags();
-      _noteListViewKey.currentState?.resetAndLoad();
       if (quote.id != null) {
         _noteListViewKey.currentState?.highlightNote(quote.id!);
       }
@@ -1288,13 +1287,10 @@ class _HomePageState extends State<HomePage>
         ),
       );
 
-      // 如果保存成功，刷新列表
+      // 如果保存成功，通过数据流自动刷新列表
       if (saved == true && mounted) {
         logDebug('全屏编辑器保存成功返回，触发列表刷新');
         _loadTags();
-        if (_noteListViewKey.currentState != null) {
-          _noteListViewKey.currentState!.resetAndLoad();
-        }
       }
     } catch (e) {
       logError('打开全屏编辑器失败', error: e, source: 'HomePage');

@@ -134,6 +134,7 @@ class NoteListViewState extends State<NoteListView> {
 
   /// 保存/修改笔记后高亮目标卡片的 ID，650ms 动画完成后自动清除
   String? _highlightedQuoteId;
+  Timer? _highlightTimer;
 
   /// 事件驱动：首批数据加载完成信号，替代忙等轮询
   Completer<void>? _initialDataCompleter = Completer<void>();
@@ -554,6 +555,7 @@ class NoteListViewState extends State<NoteListView> {
     _loadMorePerfStopTimer?.cancel();
     _loadMoreSettleTimer?.cancel();
     _scrollSessionPerfStopTimer?.cancel();
+    _highlightTimer?.cancel(); // 清理高亮定时器
 
     if (_perfTimingsCallbackAttached) {
       WidgetsBinding.instance.removeTimingsCallback(_collectFrameTimings);
@@ -592,9 +594,12 @@ class NoteListViewState extends State<NoteListView> {
   /// 动画时长 650ms，900ms 后自动清除高亮状态。
   void highlightNote(String id) {
     if (!mounted) return;
+    _highlightTimer?.cancel(); // 取消上一次高亮计时
     setState(() => _highlightedQuoteId = id);
-    Future.delayed(const Duration(milliseconds: 900), () {
-      if (mounted) setState(() => _highlightedQuoteId = null);
+    _highlightTimer = Timer(const Duration(milliseconds: 900), () {
+      if (mounted) {
+        setState(() => _highlightedQuoteId = null);
+      }
     });
   }
 

@@ -375,9 +375,15 @@ void main() {
         final moreButton = find.byElementPredicate(
           (element) => identical(element, visibleMoreButtonElement),
         );
-        final selectedNote = find.ancestor(
-          of: moreButton,
-          matching: find.byType(QuoteItemWidget),
+        final initialQuoteItem = tester.widget<QuoteItemWidget>(
+          find.ancestor(
+            of: moreButton,
+            matching: find.byType(QuoteItemWidget),
+          ),
+        );
+        final targetQuoteId = initialQuoteItem.quote.id;
+        final selectedNote = find.byWidgetPredicate(
+          (widget) => widget is QuoteItemWidget && widget.quote.id == targetQuoteId,
         );
         final offsetBefore = listView.controller!.offset;
         final positionBefore = tester.getTopLeft(selectedNote).dy;
