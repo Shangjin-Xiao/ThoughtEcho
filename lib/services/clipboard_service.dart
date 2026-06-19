@@ -277,9 +277,9 @@ class ClipboardService extends ChangeNotifier {
     OverlayEntry? overlayEntry;
 
     overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
+      builder: (overlayContext) => Positioned(
         // 放置在屏幕上方合适位置
-        top: MediaQuery.of(context).size.height * 0.15,
+        top: MediaQuery.of(overlayContext).size.height * 0.15,
         left: 0,
         right: 0,
         child: Material(
@@ -299,7 +299,7 @@ class ClipboardService extends ChangeNotifier {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
+                  color: Theme.of(overlayContext).colorScheme.surface,
                   borderRadius: BorderRadius.circular(AppTheme.dialogRadius),
                   boxShadow: AppTheme.defaultShadow,
                 ),
@@ -309,14 +309,14 @@ class ClipboardService extends ChangeNotifier {
                   children: [
                     Icon(
                       Icons.content_paste,
-                      color: Theme.of(context).colorScheme.primary,
+                      color: Theme.of(overlayContext).colorScheme.primary,
                       size: 20,
                     ),
                     const SizedBox(width: 10),
                     Flexible(
                       child: Text(
-                        AppLocalizations.of(context).clipboardFoundHint,
-                        style: Theme.of(context).textTheme.titleSmall,
+                        AppLocalizations.of(overlayContext).clipboardFoundHint,
+                        style: Theme.of(overlayContext).textTheme.titleSmall,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -333,8 +333,8 @@ class ClipboardService extends ChangeNotifier {
     logDebug('显示剪贴板通知弹窗');
     Overlay.of(context).insert(overlayEntry);
 
-    // 10秒后自动移除通知
-    Future.delayed(const Duration(seconds: 3), () {
+    // 自动移除通知，延长至 6 秒
+    Future.delayed(const Duration(seconds: 6), () {
       if (overlayEntry?.mounted ?? false) {
         overlayEntry?.remove();
       }

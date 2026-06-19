@@ -67,15 +67,45 @@ String sanitizeSentryDatabaseDescription(String description) {
       lowerDescription.contains('log_database')) {
     return 'Log database write';
   }
-  if (normalized.startsWith('SELECT ') ||
-      normalized.startsWith('INSERT ') ||
-      normalized.startsWith('UPDATE ') ||
-      normalized.startsWith('DELETE ') ||
-      normalized.startsWith('CREATE ') ||
-      normalized.startsWith('ALTER ') ||
+  if (normalized.startsWith('SELECT ')) {
+    final match = RegExp(r'\bFROM\s+([a-zA-Z0-9_]+)', caseSensitive: false).firstMatch(normalized);
+    if (match != null) {
+      return 'SELECT FROM ${match.group(1)}';
+    }
+    return 'SELECT query';
+  }
+  if (normalized.startsWith('INSERT ')) {
+    final match = RegExp(r'\bINTO\s+([a-zA-Z0-9_]+)', caseSensitive: false).firstMatch(normalized);
+    if (match != null) {
+      return 'INSERT INTO ${match.group(1)}';
+    }
+    return 'INSERT query';
+  }
+  if (normalized.startsWith('UPDATE ')) {
+    final match = RegExp(r'\bUPDATE\s+([a-zA-Z0-9_]+)', caseSensitive: false).firstMatch(normalized);
+    if (match != null) {
+      return 'UPDATE ${match.group(1)}';
+    }
+    return 'UPDATE query';
+  }
+  if (normalized.startsWith('DELETE ')) {
+    final match = RegExp(r'\bFROM\s+([a-zA-Z0-9_]+)', caseSensitive: false).firstMatch(normalized);
+    if (match != null) {
+      return 'DELETE FROM ${match.group(1)}';
+    }
+    return 'DELETE query';
+  }
+  if (normalized.startsWith('CREATE ')) {
+    final match = RegExp(r'\bTABLE\s+([a-zA-Z0-9_]+)', caseSensitive: false).firstMatch(normalized);
+    if (match != null) {
+      return 'CREATE TABLE ${match.group(1)}';
+    }
+    return 'CREATE query';
+  }
+  if (normalized.startsWith('ALTER ') ||
       normalized.startsWith('DROP ') ||
       normalized.startsWith('PRAGMA ')) {
-    return 'SQL query';
+    return 'SQL schema/pragma query';
   }
   return description;
 }

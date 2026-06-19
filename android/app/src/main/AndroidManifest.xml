@@ -86,6 +86,17 @@
             android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"
             android:exported="false"/>
 
+        <!-- FileProvider config for quill_native_bridge/flutter_quill clipboard sharing -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true" >
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
     </application>
     <!-- 网络权限 -->
     <uses-permission android:name="android.permission.INTERNET"/>
