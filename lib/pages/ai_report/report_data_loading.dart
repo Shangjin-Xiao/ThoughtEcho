@@ -9,20 +9,36 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
 
     try {
       final databaseService = context.read<DatabaseService>();
-      // 获取所有笔记（排除隐藏笔记，隐藏笔记不参与AI分析统计）
-      // TODO(perf): Add a date-range query that returns only fields needed by
-      // periodic reports instead of loading every note and filtering in Dart.
-      final quotes = await databaseService.getAllQuotes();
+
+      List<Quote> quotes;
+      final range = ReportPeriodUtils.dateRange(_selectedPeriod, _selectedDate);
+
+      if (range != null) {
+        // 构建结束日期的第二天（00:00:00）作为边界，在SQL中使用 q.date < endBoundary
+        final endBoundary = range.end.add(const Duration(days: 1));
+        quotes = await databaseService.getQuotesByDateRange(
+          range.start,
+          endBoundary,
+        );
+      } else {
+        // Fallback，获取所有笔记（排除隐藏笔记）
+        quotes = await databaseService.getAllQuotes();
+      }
 
       // 调试：打印获取到的所有笔记数量
-      AppLogger.d('getAllQuotes returned notes count: ${quotes.length}');
+      AppLogger.d('Data query returned notes count: ${quotes.length}');
       // 打印每条笔记的日期（前10条）
       for (var i = 0; i < quotes.length && i < 10; i++) {
         AppLogger.d('  Raw note[$i]: date=${quotes[i].date}');
       }
 
-      // 根据选择的时间范围筛选笔记
-      final filteredQuotes = _filterQuotesByPeriod(quotes);
+      // 只有在没有应用范围查询时（如全周期），才需要基于创建周期在内存进行一次筛选
+      // 理论上如果已在DB层面筛选好，这里相当于恒为 true，不影响结果
+      final filteredQuotes =
+          range != null ? quotes : _filterQuotesByPeriod(quotes);
+
+      // 喜欢和更新时间过滤单独处理，由于这里仍然可能依赖 last_modified 和 date
+      // 我们在 db 查询时保证返回该时间范围的“创建”时间笔记
       final filteredFavorites =
           ReportPeriodUtils.filterFavoritedByActivityPeriod(
         quotes,

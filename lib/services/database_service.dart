@@ -79,6 +79,12 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     bool excludeHiddenNotes = true,
     bool includeDeleted = false,
   });
+  Future<List<Quote>> getQuotesByDateRange(
+    DateTime start,
+    DateTime end, {
+    bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
+  });
   Future<void> deleteQuote(String id);
   Future<List<Quote>> searchQuotesByContent(
     String query, {

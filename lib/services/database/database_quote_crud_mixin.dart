@@ -149,6 +149,117 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     }
   }
 
+  /// 根据日期范围获取笔记（优化版本，仅加载必要字段）
+  @override
+  Future<List<Quote>> getQuotesByDateRange(
+    DateTime start,
+    DateTime end, {
+    bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
+  }) async {
+    if (kIsWeb) {
+      var result = List<Quote>.from(_memoryStore);
+      if (!includeDeleted) {
+        result = result.where((q) => !q.isDeleted).toList();
+      }
+      if (excludeHiddenNotes) {
+        result = result
+            .where((q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId))
+            .toList();
+      }
+      return result.where((q) {
+        final d = DateTime.tryParse(q.date);
+        if (d == null) return false;
+        return d.isAfter(start) && d.isBefore(end) || d.isAtSameMomentAs(start);
+      }).toList();
+    }
+
+    try {
+      final db = await safeDatabase;
+
+      final conditions = <String>[];
+      final args = <Object?>[];
+
+      conditions.add('q.date >= ? AND q.date < ?');
+      args.add(start.toUtc().toIso8601String());
+      args.add(end.toUtc().toIso8601String());
+
+      if (excludeHiddenNotes) {
+        conditions.add('''
+          NOT EXISTS (
+            SELECT 1 FROM quote_tags qt_hidden
+            WHERE qt_hidden.quote_id = q.id
+            AND qt_hidden.tag_id = ?
+          )
+        ''');
+        args.add(_DatabaseServiceBase.hiddenTagId);
+      }
+
+      if (!includeDeleted) {
+        conditions.add('(q.is_deleted = 0 OR q.is_deleted IS NULL)');
+      }
+
+      final whereClause =
+          conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+
+      final String query = '''
+        SELECT
+          q.id, q.content, q.date, q.category_id, q.color_hex, q.location,
+          q.latitude, q.longitude, q.weather, q.temperature, q.edit_source,
+          q.day_period, q.last_modified, q.favorite_count, q.is_deleted, q.deleted_at
+        FROM quotes q
+        $whereClause
+      ''';
+
+      final List<Map<String, dynamic>> maps = await db.rawQuery(
+        query,
+        args.whereType<Object>().toList(),
+      );
+
+      if (maps.isEmpty) return [];
+
+      final tagsByQuoteId = <String, List<String>>{};
+      final quoteIds = maps.map((m) => m['id'] as String).toList();
+
+      final batch = db.batch();
+
+      for (int i = 0; i < quoteIds.length; i += 900) {
+        final batchEnd =
+            (i + 900 < quoteIds.length) ? i + 900 : quoteIds.length;
+        final batchIds = quoteIds.sublist(i, batchEnd);
+        final placeholders = List.filled(batchIds.length, '?').join(',');
+
+        batch.rawQuery(
+          'SELECT quote_id, tag_id FROM quote_tags WHERE quote_id IN ($placeholders)',
+          batchIds,
+        );
+      }
+
+      final allTagMaps = await batch.commit();
+
+      for (final result in allTagMaps) {
+        final tagMaps = result as List;
+        for (final item in tagMaps) {
+          final tagMap = item as Map<String, dynamic>;
+          final quoteId = tagMap['quote_id'] as String;
+          final tagId = tagMap['tag_id'] as String;
+          tagsByQuoteId.putIfAbsent(quoteId, () => []).add(tagId);
+        }
+      }
+
+      return maps.map((map) {
+        final quoteId = map['id'] as String;
+        final tags = tagsByQuoteId[quoteId] ?? [];
+        final mutableMap = Map<String, dynamic>.from(map);
+        mutableMap['tag_ids'] = tags.join(',');
+        return Quote.fromJson(mutableMap);
+      }).toList();
+    } catch (e) {
+      logDebug('获取日期范围笔记失败: $e');
+      return [];
+    }
+  }
+
   /// 获取所有笔记
   @override
   Future<List<Quote>> getAllQuotes({
