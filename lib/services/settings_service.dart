@@ -968,9 +968,14 @@ class SettingsService extends ChangeNotifier {
     // 确定要迁移到的服务商 ID，如果没有选中则回退到 openai 或 default
     String? providerId = _multiAISettings.currentProviderId;
     if (providerId == null) {
-      providerId = _multiAISettings.providers.isNotEmpty
-          ? _multiAISettings.providers.first.id
-          : 'openai';
+      // 优先寻找 openai，否则找第一个不是 default 的，如果都没有则回退到 openai
+      final providers = _multiAISettings.providers;
+      if (providers.any((p) => p.id == 'openai')) {
+        providerId = 'openai';
+      } else {
+        final nonDefault = providers.where((p) => p.id != 'default');
+        providerId = nonDefault.isNotEmpty ? nonDefault.first.id : 'openai';
+      }
       logDebug(
           'No current provider selected. Defaulting migration to provider: $providerId');
     }
