@@ -653,7 +653,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   Future<Database> _initDatabase(String path) async {
     final database = await openDatabase(
       path,
-      version: 20,
+      version: DatabaseSchemaManager.schemaVersion,
       onCreate: (db, version) async {
         await _schemaManager.createTables(db);
       },
@@ -1041,6 +1041,8 @@ class DatabaseService extends _DatabaseServiceBase
   static const String defaultCategoryIdJoke = 'default_joke';
   static const String hiddenTagId = 'system_hidden_tag';
   static const String hiddenTagIconName = '🔒';
+
+  static const int databaseVersion = DatabaseSchemaManager.schemaVersion;
 
   static Database? get rawDatabaseInstance => _DatabaseServiceBase._database;
 

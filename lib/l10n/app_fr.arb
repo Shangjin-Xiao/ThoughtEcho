@@ -3475,7 +3475,7 @@
   "first100CharsLabel": "100 premiers caractères :",
   "trash": "Corbeille",
   "trashEmpty": "La corbeille est vide",
-  "trashEmptyHint": "Les notes supprimées apparaîtront ici et seront définitivement supprimées après la période de conservation.",
+  "trashEmptyHint": "Les notes supprimées par erreur restent d'abord ici, y compris les photos, l'audio et la vidéo, afin que vous puissiez tout restaurer ensemble.",
   "trashRetentionHint": "Les notes et pièces jointes récemment supprimées restent ici jusqu'à la fin de la période de rétention, puis sont supprimées automatiquement.",
   "moveNoteToTrashTitle": "Déplacer vers la corbeille",
   "moveNoteToTrashConfirmation": "Déplacer cette note dans la corbeille ? Vous pourrez la restaurer pendant {days} jours.",
@@ -3531,5 +3531,41 @@
   "webdavConflictKeepTooltip": "Conserver et déplacer vers la catégorie par défaut",
   "webdavConflictKeepSuccess": "Confirmé et déplacé vers la liste par défaut.",
   "webdavConflictDiscardTooltip": "Jeter cette sauvegarde de conflit",
-  "webdavConflictDiscardSuccess": "Note de conflit définitivement supprimée."
+  "webdavConflictDiscardSuccess": "Note de conflit définitivement supprimée.",
+  "deleteNoteWithChatsConfirmation": "Are you sure you want to delete this note? This action cannot be undone.\n\n{count} chat conversations linked to this note will also be deleted.",
+  "@deleteNoteWithChatsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatHistory": "Chat History",
+  "newChat": "New Chat",
+  "deleteChat": "Delete Chat",
+  "deleteChatConfirm": "Delete this conversation? All messages will be removed.",
+  "noChats": "No conversations yet",
+  "mapPickerTitle": "Select Location",
+  "mapPickerCurrentLocation": "Current Location",
+  "mapPickerConfirm": "Confirm Selection",
+  "longPressForMapPicker": "Long press for precise location",
+  "poiNameLabel": "Precise Location",
+  "explore": "Explore",
+  "exploreMapMemory": "Map Memories",
+  "exploreMapMemoryDesc": "Browse your notes on a map",
+  "aiChat": "AI Chat",
+  "aiAgent": "AI Agent",
+  "agentThinking": "Agent is thinking...",
+  "agentToolCall": "Calling tool: {toolName}",
+  "@agentToolCall": {
+    "placeholders": {
+      "toolName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentSearchingNotes": "Searching notes...",
+  "agentAnalyzingData": "Analyzing data...",
+  "agentWebSearching": "Searching the web...",
+  "favoriteNotes": "Favorite Notes"
 }

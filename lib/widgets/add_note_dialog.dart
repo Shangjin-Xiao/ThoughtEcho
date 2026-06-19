@@ -39,6 +39,10 @@ class AddNoteDialog extends StatefulWidget {
   final Map<String, dynamic>? hitokotoData; // 添加一言API返回的完整数据
   final List<NoteCategory> tags;
   final FutureOr<void> Function(Quote) onSave; // 关闭后由外层执行保存
+  final List<String>? prefilledTagIds;
+  final bool? prefilledIncludeLocation;
+  final bool? prefilledIncludeWeather;
+  final bool? useAIPrefilledLocationWeather;
 
   const AddNoteDialog({
     super.key,
@@ -47,6 +51,10 @@ class AddNoteDialog extends StatefulWidget {
     this.prefilledAuthor,
     this.prefilledWork,
     this.hitokotoData,
+    this.prefilledTagIds,
+    this.prefilledIncludeLocation,
+    this.prefilledIncludeWeather,
+    this.useAIPrefilledLocationWeather,
     required this.tags,
     required this.onSave,
   });
@@ -245,10 +253,14 @@ class _AddNoteDialogState extends State<AddNoteDialog>
             settingsService.defaultSource!.isNotEmpty) {
           _workController.text = settingsService.defaultSource!;
         }
-        // 自动添加默认标签
-        if (_selectedTagIds.isEmpty &&
-            settingsService.defaultTagIds.isNotEmpty) {
-          _selectedTagIds.addAll(settingsService.defaultTagIds);
+        // 自动添加标签
+        if (_selectedTagIds.isEmpty) {
+          if (widget.prefilledTagIds != null &&
+              widget.prefilledTagIds!.isNotEmpty) {
+            _selectedTagIds.addAll(widget.prefilledTagIds!);
+          } else if (settingsService.defaultTagIds.isNotEmpty) {
+            _selectedTagIds.addAll(settingsService.defaultTagIds);
+          }
         }
       }
     }
@@ -305,8 +317,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         if (widget.initialQuote == null) {
           final settingsService = _readServiceOrNull<SettingsService>(context);
           if (settingsService != null) {
-            final autoLocation = settingsService.autoAttachLocation;
-            final autoWeather = settingsService.autoAttachWeather;
+            final autoLocation = widget.prefilledIncludeLocation ?? settingsService.autoAttachLocation;
+            final autoWeather = widget.prefilledIncludeWeather ?? settingsService.autoAttachWeather;
 
             if (autoLocation || autoWeather) {
               if (mounted) {

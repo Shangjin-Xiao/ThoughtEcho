@@ -393,6 +393,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.14"
+  ddgs:
+    dependency: "direct main"
+    description:
+      name: ddgs
+      sha256: "93947843eeaf1a8bb136c94b78bcb07d94ca029748d2f31ee84a0df7e3458fc0"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.2"
   dev_build:
     dependency: transitive
     description:
@@ -784,6 +792,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.7+1"
+  flutter_math_fork:
+    dependency: transitive
+    description:
+      name: flutter_math_fork
+      sha256: "6d5f2f1aa57ae539ffb0a04bb39d2da67af74601d685a161aff7ce5bda5fa407"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.7.4"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:
@@ -869,6 +885,14 @@ packages:
     description:
       name: flutter_secure_storage_windows
       sha256: b20b07cb5ed4ed74fc567b78a72936203f587eba460af1df11281c9326cd3709
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.2"
+  flutter_slidable:
+    dependency: "direct main"
+    description:
+      name: flutter_slidable
+      sha256: a857de7ea701f276fd6a6c4c67ae885b60729a3449e42766bb0e655171042801
       url: "https://pub.dev"
     source: hosted
     version: "3.1.2"
@@ -1047,6 +1071,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.3"
+  gpt_markdown:
+    dependency: "direct main"
+    description:
+      name: gpt_markdown
+      sha256: c14c2a4599a67df5b6a984808cbb7631b8d15c91984ffdd7998597b93a6ff136
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.7"
   graphs:
     dependency: transitive
     description:
@@ -1072,13 +1104,21 @@ packages:
     source: hosted
     version: "2.0.2"
   html:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: html
       sha256: "6d1264f2dffa1b1101c25a91dff0dc2daee4c18e87cd8538729773c073dbf602"
       url: "https://pub.dev"
     source: hosted
     version: "0.15.6"
+  html2md:
+    dependency: "direct main"
+    description:
+      name: html2md
+      sha256: "465cf8ffa1b510fe0e97941579bf5b22e2d575f2cecb500a9c0254efe33a8036"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.3.2"
   http:
     dependency: "direct main"
     description:
@@ -1572,6 +1612,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.0.3"
+  openai_dart:
+    dependency: "direct main"
+    description:
+      name: openai_dart
+      sha256: "7b46f591b30e513555dc1539633e8c7ad05c9dcd3b9c8c031f3c83cf11dcdee7"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.3.0"
   package_config:
     dependency: transitive
     description:
@@ -2305,6 +2353,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.10.1"
+  tuple:
+    dependency: transitive
+    description:
+      name: tuple
+      sha256: a97ce2013f240b2f3807bcbaf218765b6f301c3eff91092bcfa23a039e7dd151
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.2"
   type_plus:
     dependency: transitive
     description:

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
@@ -8,6 +9,7 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
 
 // 生成Mock类
 @GenerateMocks([
@@ -15,22 +17,27 @@ import 'package:thoughtecho/models/quote_model.dart';
   DatabaseService,
   SettingsService,
   AIAnalysisDatabaseService,
+  LocalSendProvider,
 ])
 import 'sync_integration_test.mocks.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('同步功能端到端测试', () {
     late NoteSyncService syncService;
     late MockBackupService mockBackupService;
     late MockDatabaseService mockDatabaseService;
     late MockSettingsService mockSettingsService;
     late MockAIAnalysisDatabaseService mockAiAnalysisDbService;
+    late MockLocalSendProvider mockLocalSendProvider;
 
     setUp(() {
       mockBackupService = MockBackupService();
       mockDatabaseService = MockDatabaseService();
       mockSettingsService = MockSettingsService();
       mockAiAnalysisDbService = MockAIAnalysisDatabaseService();
+      mockLocalSendProvider = MockLocalSendProvider();
 
       syncService = NoteSyncService(
         backupService: mockBackupService,
@@ -38,10 +45,34 @@ void main() {
         settingsService: mockSettingsService,
         aiAnalysisDbService: mockAiAnalysisDbService,
       );
+      syncService.localSendProviderForTesting = mockLocalSendProvider;
+
+      // 为 startSession 设置默认 mock 行为
+      when(
+        mockLocalSendProvider.startSession(
+          target: anyNamed('target'),
+          files: anyNamed('files'),
+          background: anyNamed('background'),
+          onProgress: anyNamed('onProgress'),
+          onSessionCreated: anyNamed('onSessionCreated'),
+        ),
+      ).thenAnswer((_) async {
+        return 'session-123';
+      });
+
+      // 写入物理临时文件，以让 NoteSyncService 的备份文件大小校验通过
+      File('/tmp/test_backup.zip').writeAsStringSync('fake zip data');
+      File('/tmp/backup_with_media.zip').writeAsStringSync('fake zip data');
     });
 
     tearDown(() {
       syncService.dispose();
+      try {
+        final f1 = File('/tmp/test_backup.zip');
+        if (f1.existsSync()) f1.deleteSync();
+        final f2 = File('/tmp/backup_with_media.zip');
+        if (f2.existsSync()) f2.deleteSync();
+      } catch (_) {}
     });
 
     test('同步状态管理测试', () {
@@ -77,13 +108,8 @@ void main() {
         return '/tmp/test_backup.zip';
       });
 
-      // 由于SyncSendService需要实际的网络连接，这里我们主要测试状态管理
-      try {
-        await syncService.createSyncPackage(testDevice);
-      } catch (e) {
-        // 预期会失败，因为没有实际的网络连接
-        expect(e.toString(), contains('同步服务未初始化'));
-      }
+      final sessionId = await syncService.createSyncPackage(testDevice);
+      expect(sessionId, equals('session-123'));
 
       // 验证备份服务被调用
       verify(
@@ -126,7 +152,10 @@ void main() {
         mockBackupService.importData(
           testBackupPath,
           clearExisting: false,
+          merge: anyNamed('merge'),
           onProgress: anyNamed('onProgress'),
+          cancelToken: anyNamed('cancelToken'),
+          sourceDevice: anyNamed('sourceDevice'),
         ),
       ).thenAnswer((_) async {
         return null;
@@ -140,15 +169,15 @@ void main() {
         mockBackupService.importData(
           testBackupPath,
           clearExisting: false,
+          merge: anyNamed('merge'),
           onProgress: anyNamed('onProgress'),
+          cancelToken: anyNamed('cancelToken'),
+          sourceDevice: anyNamed('sourceDevice'),
         ),
       ).called(1);
 
-      // 验证重复笔记检测被调用
-      verify(mockDatabaseService.getAllQuotes()).called(1);
-
-      // 验证删除重复笔记被调用（应该删除较旧的quote2）
-      verify(mockDatabaseService.deleteQuote('quote2')).called(1);
+      // 验证刷新数据库接口被调用
+      verify(mockDatabaseService.refreshAllData()).called(1);
     });
 
     test('媒体文件同步支持测试', () async {
@@ -174,11 +203,8 @@ void main() {
         discoveryMethods: <DiscoveryMethod>{const MulticastDiscovery()},
       );
 
-      try {
-        await syncService.createSyncPackage(testDevice);
-      } catch (e) {
-        // 预期会失败，但我们主要验证参数传递
-      }
+      final sessionId = await syncService.createSyncPackage(testDevice);
+      expect(sessionId, equals('session-123'));
 
       // 验证includeMediaFiles参数被正确传递
       verify(

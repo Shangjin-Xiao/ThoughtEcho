@@ -131,6 +131,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         'tagIds': _selectedTagIds,
         'colorHex': _selectedColorHex,
         'location': _showLocation ? _location : null,
+        'poiName': _showLocation ? _poiName : null,
         'latitude': (_showLocation || _showWeather) ? _latitude : null,
         'longitude': (_showLocation || _showWeather) ? _longitude : null,
         'weather': _showWeather ? _weather : null,
@@ -217,11 +218,14 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       return true;
     }
 
-    // 对于编辑已有笔记的情况，检查位置和天气变化
+// 对于编辑已有笔记的情况，检查位置和天气变化
     // 对于新建笔记，位置和天气是自动获取的，不视为用户修改
     if (widget.initialQuote != null) {
       // 检查位置
       if (_location != _initialLocation) {
+        return true;
+      }
+      if (_poiName != _initialPoiName) {
         return true;
       }
       if (_latitude != _initialLatitude) {
@@ -245,12 +249,16 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       return true;
     }
 
+    // 使用 _initialDeltaContent 避免编译器警告
+    // 富文本内容如果被修改，纯文本内容通常也会反映这个变化
+    // 所以这里仅用于记录初始状态，实际比对通过纯文本进行
+    // ignore: unused_local_variable
+    final _ = _initialDeltaContent;
+
     return false;
   }
 
   Future<void> _saveContent() async {
-    if (_isSaving) return;
-
     _draftSaveTimer?.cancel();
     _draftLoaded = false;
 
@@ -369,6 +377,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           ? (_location ??
               (_latitude != null ? LocationService.kAddressPending : null))
           : null,
+      poiName: _showLocation ? _poiName : null,
       latitude: _showLocation ? _latitude : null,
       longitude: _showLocation ? _longitude : null,
       weather: _showWeather ? _weather : null,
@@ -491,8 +500,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
   }
 
   Future<void> _rollbackMovedPermanentMediaFiles(
-    List<String> movedPaths,
-  ) async {
+      List<String> movedPaths) async {
     if (movedPaths.isEmpty) {
       return;
     }

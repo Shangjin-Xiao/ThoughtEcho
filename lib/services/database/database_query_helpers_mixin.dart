@@ -276,6 +276,8 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool excludeHiddenNotes = true,
+    String? dateStart,
+    String? dateEnd,
     bool includeDeleted = false,
   }) async {
     // 判断是否正在查询隐藏标签
@@ -341,6 +343,28 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
             .toList();
       }
 
+      // 日期筛选
+      if (dateStart != null && dateStart.isNotEmpty) {
+        final startVal = DateTime.tryParse(dateStart);
+        if (startVal != null) {
+          filtered = filtered.where((q) {
+            final qDate = DateTime.tryParse(q.date);
+            return qDate != null &&
+                (qDate.isAfter(startVal) || qDate.isAtSameMomentAs(startVal));
+          }).toList();
+        }
+      }
+      if (dateEnd != null && dateEnd.isNotEmpty) {
+        final endVal = DateTime.tryParse(dateEnd);
+        if (endVal != null) {
+          filtered = filtered.where((q) {
+            final qDate = DateTime.tryParse(q.date);
+            return qDate != null &&
+                (qDate.isBefore(endVal) || qDate.isAtSameMomentAs(endVal));
+          }).toList();
+        }
+      }
+
       return filtered.length;
     }
     try {
@@ -371,6 +395,16 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
       // 搜索查询
       _applySearchQuery(searchQuery, conditions, args);
+
+      // 日期范围筛选
+      if (dateStart != null && dateStart.isNotEmpty) {
+        conditions.add('q.date >= ?');
+        args.add(dateStart);
+      }
+      if (dateEnd != null && dateEnd.isNotEmpty) {
+        conditions.add('q.date <= ?');
+        args.add(dateEnd);
+      }
 
       // 天气筛选
       if (selectedWeathers != null && selectedWeathers.isNotEmpty) {

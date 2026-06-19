@@ -14,6 +14,8 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     List<String>? selectedWeathers, // 天气筛选
     List<String>? selectedDayPeriods, // 时间段筛选
     bool excludeHiddenNotes = true, // 默认排除隐藏笔记
+    String? dateStart,
+    String? dateEnd,
     bool includeDeleted = false,
   }) async {
     try {
@@ -92,6 +94,26 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
               .toList();
         }
 
+        // 日期范围过滤
+        if (dateStart != null && dateStart.isNotEmpty) {
+          final startVal = DateTime.tryParse(dateStart);
+          if (startVal != null) {
+            filtered = filtered.where((q) {
+              final qDate = DateTime.tryParse(q.date);
+              return qDate != null && (qDate.isAfter(startVal) || qDate.isAtSameMomentAs(startVal));
+            }).toList();
+          }
+        }
+        if (dateEnd != null && dateEnd.isNotEmpty) {
+          final endVal = DateTime.tryParse(dateEnd);
+          if (endVal != null) {
+            filtered = filtered.where((q) {
+              final qDate = DateTime.tryParse(q.date);
+              return qDate != null && (qDate.isBefore(endVal) || qDate.isAtSameMomentAs(endVal));
+            }).toList();
+          }
+        }
+
         // 排序（支持日期、喜爱度、名称）
         filtered.sort((a, b) {
           if (orderBy.startsWith('date')) {
@@ -144,6 +166,8 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
           limit: limit,
           offset: offset,
           excludeHiddenNotes: shouldExcludeHidden,
+          dateStart: dateStart,
+          dateEnd: dateEnd,
           includeDeleted: includeDeleted,
         );
       });
@@ -248,6 +272,8 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     required int limit,
     required int offset,
     bool excludeHiddenNotes = true,
+    String? dateStart,
+    String? dateEnd,
     bool includeDeleted = false,
   }) async {
     // 修复：添加数据库连接状态检查
@@ -282,6 +308,16 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     if (categoryId != null && categoryId.isNotEmpty) {
       conditions.add('q.category_id = ?');
       args.add(categoryId);
+    }
+
+    // 日期范围筛选
+    if (dateStart != null && dateStart.isNotEmpty) {
+      conditions.add('q.date >= ?');
+      args.add(dateStart);
+    }
+    if (dateEnd != null && dateEnd.isNotEmpty) {
+      conditions.add('q.date <= ?');
+      args.add(dateEnd);
     }
 
     // 优化：搜索查询使用FTS（全文搜索）如果可用，否则使用优化的LIKE查询

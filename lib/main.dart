@@ -23,6 +23,7 @@ import 'package:logging/logging.dart' as logging;
 
 // 项目内部
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
+import 'package:thoughtecho/services/chat_session_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
@@ -298,6 +299,7 @@ Future<void> main() async {
         final aiAnalysisDbService = AIAnalysisDatabaseService();
         final connectivityService = ConnectivityService();
         final featureGuideService = FeatureGuideService(SafeMMKV());
+        final chatSessionService = ChatSessionService();
 
         // 创建智能推送服务实例
         final smartPushService = SmartPushService(
@@ -330,6 +332,7 @@ Future<void> main() async {
               connectivityService: connectivityService,
               featureGuideService: featureGuideService,
               smartPushService: smartPushService,
+              chatSessionService: chatSessionService,
               mmkvService: mmkvService,
               servicesInitialized: servicesInitialized,
             ),
@@ -557,6 +560,9 @@ Future<void> main() async {
               logError('媒体清理服务初始化失败: $e', error: e, source: 'BackgroundInit');
               // 媒体清理服务初始化失败不影响主要功能，继续执行
             }
+
+            // 注入数据库到聊天会话服务
+            chatSessionService.setDatabase(databaseService.database);
 
             // 初始化完成，更新状态
             servicesInitialized.value = true;

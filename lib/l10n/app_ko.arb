@@ -3489,7 +3489,7 @@
   "first100CharsLabel": "처음 100자:",
   "trash": "휴지통",
   "trashEmpty": "휴지통이 비어 있습니다",
-  "trashEmptyHint": "삭제된 노트는 여기에 표시되며, 보존 기간이 지나면 영구적으로 삭제됩니다.",
+  "trashEmptyHint": "실수로 삭제한 내용은 먼저 여기에 보관되며, 사진·오디오·비디오도 함께 복원할 수 있습니다.",
   "trashRetentionHint": "최근 삭제한 노트와 첨부 파일은 여기 잠시 보관되며, 보관 기간이 지나면 자동으로 정리됩니다.",
   "moveNoteToTrashTitle": "휴지통으로 이동",
   "moveNoteToTrashConfirmation": "이 노트를 휴지통으로 이동하시겠습니까? {days}일 동안 복원할 수 있습니다.",
@@ -3544,5 +3544,42 @@
   "webdavConflictKeepTooltip": "유지 및 기본 카테고리로 이동",
   "webdavConflictKeepSuccess": "확인 후 기본 목록으로 이동되었습니다.",
   "webdavConflictDiscardTooltip": "이 충돌 백업 취소",
-  "webdavConflictDiscardSuccess": "이 충돌 메모를 영구적으로 삭제했습니다."
+  "webdavConflictDiscardSuccess": "이 충돌 메모를 영구적으로 삭제했습니다.",
+  "operationFailedSimple": "작업 실패",
+  "deleteNoteWithChatsConfirmation": "Are you sure you want to delete this note? This action cannot be undone.\n\n{count} chat conversations linked to this note will also be deleted.",
+  "@deleteNoteWithChatsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatHistory": "Chat History",
+  "newChat": "New Chat",
+  "deleteChat": "Delete Chat",
+  "deleteChatConfirm": "Delete this conversation? All messages will be removed.",
+  "noChats": "No conversations yet",
+  "mapPickerTitle": "Select Location",
+  "mapPickerCurrentLocation": "Current Location",
+  "mapPickerConfirm": "Confirm Selection",
+  "longPressForMapPicker": "Long press for precise location",
+  "poiNameLabel": "Precise Location",
+  "explore": "Explore",
+  "exploreMapMemory": "Map Memories",
+  "exploreMapMemoryDesc": "Browse your notes on a map",
+  "aiChat": "AI Chat",
+  "aiAgent": "AI Agent",
+  "agentThinking": "Agent is thinking...",
+  "agentToolCall": "Calling tool: {toolName}",
+  "@agentToolCall": {
+    "placeholders": {
+      "toolName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentSearchingNotes": "Searching notes...",
+  "agentAnalyzingData": "Analyzing data...",
+  "agentWebSearching": "Searching the web...",
+  "favoriteNotes": "Favorite Notes"
 }

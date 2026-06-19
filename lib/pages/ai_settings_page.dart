@@ -88,6 +88,11 @@ class _AISettingsPageState extends State<AISettingsPage> {
         'model': '',
       },
       {
+        'name': 'Ollama Cloud',
+        'apiUrl': 'https://api.ollama.ai/v1/chat/completions',
+        'model': '',
+      },
+      {
         'name': l10n.aiProviderLMStudio,
         'apiUrl': 'http://localhost:1234/v1/chat/completions',
         'model': '',
@@ -729,10 +734,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Text(
       title,
-      style: Theme.of(context)
-          .textTheme
-          .titleMedium
-          ?.copyWith(color: Theme.of(context).colorScheme.primary),
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: Theme.of(context).colorScheme.primary,
+            fontWeight: FontWeight.bold,
+          ),
     );
   }
 
@@ -759,7 +764,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 Expanded(
                   child: Text(
                     _currentProvider!.name,
-                    style: theme.textTheme.titleMedium,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 IconButton(

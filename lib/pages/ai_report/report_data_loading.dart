@@ -10,8 +10,6 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
     try {
       final databaseService = context.read<DatabaseService>();
       // 获取所有笔记（排除隐藏笔记，隐藏笔记不参与AI分析统计）
-      // TODO(perf): Add a date-range query that returns only fields needed by
-      // periodic reports instead of loading every note and filtering in Dart.
       final quotes = await databaseService.getAllQuotes();
 
       // 调试：打印获取到的所有笔记数量
@@ -23,12 +21,6 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
 
       // 根据选择的时间范围筛选笔记
       final filteredQuotes = _filterQuotesByPeriod(quotes);
-      final filteredFavorites =
-          ReportPeriodUtils.filterFavoritedByActivityPeriod(
-        quotes,
-        selectedPeriod: _selectedPeriod,
-        selectedDate: _selectedDate,
-      );
 
       // 更新数据版本key，触发动画
       final newDataKey =
@@ -37,12 +29,10 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
 
       _updateState(() {
         _periodQuotes = filteredQuotes;
-        _periodFavoriteQuotes = filteredFavorites;
         _isLoadingData = false;
         _dataKey = newDataKey;
         // 只在数据真正变化时才播放动画
         _shouldAnimateOverview = dataChanged;
-        _shouldAnimateCards = dataChanged;
       });
 
       // 计算“最多”指标并触发洞察
@@ -371,17 +361,56 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
 
   /// 根据时间范围筛选笔记
   List<Quote> _filterQuotesByPeriod(List<Quote> quotes) {
+    // 归一化选中日期为当天开始时间（去除时间分量）
+    final now = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+    );
+    DateTime startDate;
+    DateTime endDate;
+
+    switch (_selectedPeriod) {
+      case 'week':
+        // 本周（周一到周日）
+        final weekday = now.weekday;
+        startDate = now.subtract(Duration(days: weekday - 1));
+        endDate = startDate.add(const Duration(days: 6));
+        break;
+      case 'month':
+        // 本月
+        startDate = DateTime(now.year, now.month, 1);
+        endDate = DateTime(now.year, now.month + 1, 0); // 下个月第0天 = 当月最后一天
+        break;
+      case 'year':
+        // 本年
+        startDate = DateTime(now.year, 1, 1);
+        endDate = DateTime(now.year, 12, 31);
+        break;
+      default:
+        return quotes;
+    }
+
     // 调试日志
     AppLogger.d(
       'Filter conditions: period=$_selectedPeriod, selectedDate=$_selectedDate',
     );
+    AppLogger.d('Filter range: startDate=$startDate, endDate=$endDate');
     AppLogger.d('Total notes: ${quotes.length}');
 
-    final filtered = ReportPeriodUtils.filterByCreatedPeriod(
-      quotes,
-      selectedPeriod: _selectedPeriod,
-      selectedDate: _selectedDate,
-    );
+    final filtered = quotes.where((quote) {
+      final quoteDateTime = DateTime.parse(quote.date);
+      // 归一化笔记日期为当天开始时间，只比较日期部分
+      final quoteDate = DateTime(
+        quoteDateTime.year,
+        quoteDateTime.month,
+        quoteDateTime.day,
+      );
+      // 使用 >= startDate 且 <= endDate 的逻辑
+      final isInRange =
+          !quoteDate.isBefore(startDate) && !quoteDate.isAfter(endDate);
+      return isInRange;
+    }).toList();
 
     AppLogger.d('Filtered notes count: ${filtered.length}');
     // 打印前5条笔记的日期以便调试
@@ -435,39 +464,5 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
         source: 'AIPeriodicReportPage',
       );
     }
-  }
-
-  /// 选择有代表性的笔记
-  /// [maxCount] 根据周期类型动态调整（周=6，月=12，年=18）
-  List<Quote> _selectRepresentativeQuotes(
-    List<Quote> quotes, {
-    int maxCount = 6,
-  }) {
-    // 按内容长度和多样性选择
-    final sortedQuotes = List<Quote>.from(quotes);
-
-    // 优先选择内容丰富的笔记
-    sortedQuotes.sort((a, b) => b.content.length.compareTo(a.content.length));
-
-    // 选择指定数量的笔记，确保多样性
-    final selected = <Quote>[];
-    final usedKeywords = <String>{};
-
-    for (final quote in sortedQuotes) {
-      if (selected.length >= maxCount) break;
-
-      // 简单的关键词去重逻辑
-      final words = quote.content.toLowerCase().split(' ');
-      final hasNewKeyword = words.any(
-        (word) => word.length > 3 && !usedKeywords.contains(word),
-      );
-
-      if (hasNewKeyword || selected.isEmpty) {
-        selected.add(quote);
-        usedKeywords.addAll(words.where((word) => word.length > 3));
-      }
-    }
-
-    return selected;
   }
 }

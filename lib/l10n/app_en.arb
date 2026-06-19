@@ -3615,7 +3615,7 @@
   "developerAnniversaryPreviewDesc": "Tap to play the anniversary animation immediately",
   "trash": "Trash",
   "trashEmpty": "Trash is empty",
-  "trashEmptyHint": "Deleted notes will appear here and will be permanently deleted after the retention period.",
+  "trashEmptyHint": "Accidentally deleted notes stay here first, including photos, audio, and video, so you can restore them together.",
   "trashRetentionHint": "Recently deleted notes and attachments stay here until the retention period ends, then they are cleaned up automatically.",
   "moveNoteToTrashTitle": "Move Note to Trash",
   "moveNoteToTrashConfirmation": "Move this note to trash? You can restore it within {days} days.",
@@ -3778,5 +3778,216 @@
   "webdavConflictKeepTooltip": "Keep and move to default category",
   "webdavConflictKeepSuccess": "Confirmed and moved to default list.",
   "webdavConflictDiscardTooltip": "Discard this conflict backup",
-  "webdavConflictDiscardSuccess": "Permanently discarded this conflict note."
+  "webdavConflictDiscardSuccess": "Permanently discarded this conflict note.",
+  "saveSuccess": "Saved successfully",
+  "toolCallStatusPending": "Pending",
+  "toolCallStatusExecuting": "Executing",
+  "toolCallStatusCompleted": "Completed",
+  "toolCallStatusError": "Error",
+  "toolCallParameters": "Parameters",
+  "toolCallResult": "Result",
+  "failedToPickFiles": "Failed to pick files: {error}",
+  "@failedToPickFiles": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "editModeMetadataReadOnlyHint": "Location and weather of saved notes cannot be modified",
+  "explore": "Explore",
+  "aiChat": "AI Chat",
+  "dataInsights": "Data Insights",
+  "dataInsightsDesc": "Deep analysis of your notes and writing trends",
+  "exploreMapMemory": "Map Memory",
+  "exploreMapMemoryDesc": "Explore your footprints on the map",
+  "favoriteNotes": "Favorite Notes",
+  "chatHistory": "Chat History",
+  "newChat": "New Chat",
+  "noChats": "No chats yet",
+  "deleteChat": "Delete Chat",
+  "deleteChatConfirm": "Are you sure you want to delete this chat?",
+  "searchChatHistory": "Search chats...",
+  "dynamicInsightStats": "You have recorded {count} thoughts, with {recentCount} from the past 7 days.",
+  "@dynamicInsightStats": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "recentCount": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionGroupToday": "Today",
+  "sessionGroupYesterday": "Yesterday",
+  "sessionGroupThisWeek": "This Week",
+  "sessionGroupEarlier": "Earlier",
+  "messageCountLabel": "{count} msgs",
+  "@messageCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteNoteWithChatsConfirmation": "Deleting this note will also delete {count} related chat(s). Continue?",
+  "@deleteNoteWithChatsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commandPolish": "Polish",
+  "commandContinue": "Continue",
+  "commandDeepAnalysis": "Deep Analysis",
+  "commandInsight": "Insights",
+  "aiAssistantInputHint": "Enter question or use / commands...",
+  "aiAssistantExploreWelcome": "{summary}",
+  "@aiAssistantExploreWelcome": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "currentNoteContext": "Current Note Context",
+  "workflowUnavailable": "Workflow Unavailable",
+  "aiWorkflowNeedsBoundNote": "This feature requires a bound note",
+  "confidenceLabel": "Confidence",
+  "replaceOriginalNote": "Replace Original",
+  "appendToEnd": "Append to End",
+  "stopGenerate": "Stop",
+  "aiModeChat": "Chat Mode",
+  "aiModeAgent": "Agent Mode",
+  "agentThinking": "Thinking...",
+  "agentSearchingNotes": "Searching notes...",
+  "agentAnalyzingData": "Analyzing data...",
+  "agentWebSearching": "Searching the web...",
+  "agentReviewingRecentNotes": "Checking recent notes...",
+  "agentSearchingNotesForQuery": "Looking for notes about \"{query}\"...",
+  "@agentSearchingNotesForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentCollectingTags": "Getting tags...",
+  "agentReadingNoteDetail": "Reading note details...",
+  "agentCheckingLocationWeather": "Getting location and weather...",
+  "agentSearchingWebForQuery": "Looking up sources for \"{query}\"...",
+  "@agentSearchingWebForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentReadingWebPage": "Fetching webpage...",
+  "agentPreparingNewNoteSuggestion": "Preparing a new note suggestion...",
+  "agentPreparingEditSuggestion": "Preparing an edit suggestion...",
+  "agentFoundNoMatchingNotes": "No matching notes found",
+  "agentFoundMatchingNotes": "Found {count} related notes",
+  "@agentFoundMatchingNotes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentFoundMatchingNotesWithMore": "Found {count} related notes, more available",
+  "@agentFoundMatchingNotesWithMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentPreparedTagChoices": "Found {count} tags",
+  "@agentPreparedTagChoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentCheckedLocationWeather": "Got location and weather",
+  "agentCheckedLocationWeatherWithDetails": "Location: {location}, Weather: {weather}",
+  "@agentCheckedLocationWeatherWithDetails": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      },
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "agentFoundWebSources": "Found {count} web sources",
+  "@agentFoundWebSources": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadWebPageSummary": "Fetched webpage, about {count} chars",
+  "@agentReadWebPageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadNoteDetailSummary": "Read full content of note \"{title}\"",
+  "@agentReadNoteDetailSummary": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "agentPreparedSuggestionCard": "Suggestion ready",
+  "agentToolStepFinished": "Done",
+  "agentToolStepDidNotFinish": "Failed",
+  "aiThinking": "Thinking...",
+  "thinkingMode": "Deep Thinking",
+  "showThinking": "Show thinking",
+  "hideThinking": "Hide thinking",
+  "toolExecutionProgress": "Working...",
+  "toolExecutionCompleted": "Done",
+  "executedNOperations": "{count} operations done",
+  "@executedNOperations": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentToolCall": "Using {toolName}",
+  "@agentToolCall": {
+    "placeholders": {
+      "toolName": {
+        "type": "String"
+      }
+    }
+  },
+  "mapPickerTitle": "Select Location",
+  "mapPickerCurrentLocation": "Current Location",
+  "mapPickerConfirm": "Confirm Location",
+  "poiNameLabel": "Place Name",
+  "longPressForMapPicker": "Long press to open map picker",
+  "attachFile": "Attach file",
+  "yesterday": "Yesterday",
+  "openInEditor": "Open in Editor",
+  "saveDirectly": "Save Directly",
+  "replace": "Replace",
+  "append": "Append",
+  "saveRequired": "Save Required",
+  "saveBeforeAiAssistant": "Please save your note before entering the AI assistant",
+  "saveAndContinue": "Save & Continue",
+  "toggleAddLocation": "Add location",
+  "toggleAddWeather": "Add weather"
 }

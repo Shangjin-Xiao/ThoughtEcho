@@ -9,6 +9,25 @@ import 'media_reference_service.dart';
 // TODO(refactor): This file exceeds 1600 lines and handles complex migration logic.
 // Consider using a strategy pattern or separate migration step classes for each version.
 class DatabaseSchemaManager {
+  static const int schemaVersion = 21;
+
+  @visibleForTesting
+  static const Set<String> requiredTablesForValidation = {
+    'quotes',
+    'categories',
+    'quote_tags',
+    'chat_sessions',
+    'chat_messages',
+  };
+
+  @visibleForTesting
+  static String poiNameSelectExpressionFromTableInfo(
+    List<Map<String, Object?>> tableInfo,
+  ) {
+    final hasPoiNameColumn = tableInfo.any((col) => col['name'] == 'poi_name');
+    return hasPoiNameColumn ? 'poi_name' : 'NULL AS poi_name';
+  }
+
   Future<void> createTables(Database db) async {
     // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
     await db.execute('''
@@ -38,6 +57,7 @@ class DatabaseSchemaManager {
         location TEXT,
         latitude REAL,
         longitude REAL,
+        poi_name TEXT,
         weather TEXT,
         temperature TEXT,
         edit_source TEXT,
@@ -89,6 +109,9 @@ class DatabaseSchemaManager {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_quotes_deleted_at ON quotes(deleted_at)',
     );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_quotes_poi_name ON quotes(poi_name)',
+    );
 
     // 创建新的 quote_tags 关联表
     await db.execute('''
@@ -119,6 +142,48 @@ class DatabaseSchemaManager {
     // 复合索引优化JOIN查询 (且最左前缀覆盖单列 tag_id 查询)
     await db.execute(
       'CREATE INDEX idx_quote_tags_composite ON quote_tags(tag_id, quote_id)',
+    );
+
+    // 创建聊天会话表
+    await db.execute('''
+      CREATE TABLE chat_sessions(
+        id TEXT PRIMARY KEY,
+        session_type TEXT NOT NULL DEFAULT 'note',
+        note_id TEXT,
+        title TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        last_active_at TEXT NOT NULL,
+        is_pinned INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (note_id) REFERENCES quotes(id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute(
+      'CREATE INDEX idx_chat_sessions_note_id ON chat_sessions(note_id)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_chat_sessions_last_active ON chat_sessions(last_active_at DESC)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_chat_sessions_type ON chat_sessions(session_type)',
+    );
+
+    // 创建聊天消息表
+    await db.execute('''
+      CREATE TABLE chat_messages(
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'user',
+        content TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        included_in_context INTEGER NOT NULL DEFAULT 1,
+        meta_json TEXT,
+        FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute(
+      'CREATE INDEX idx_chat_messages_session_id ON chat_messages(session_id)',
     );
 
     // 创建媒体文件引用表
@@ -680,6 +745,66 @@ class DatabaseSchemaManager {
         logError('回收站历史数据回填失败: $e', error: e, source: 'DatabaseUpgrade');
       }
     }
+
+    // 版本21：添加 poi_name 字段 + 聊天会话/消息表
+    if (oldVersion < 21) {
+      try {
+        logDebug(
+          '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 poi_name + 聊天表',
+        );
+        final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
+        final hasPoiName = columns.any((col) => col['name'] == 'poi_name');
+        if (!hasPoiName) {
+          await txn.execute('ALTER TABLE quotes ADD COLUMN poi_name TEXT');
+          logDebug('数据库升级：poi_name 字段添加完成');
+        }
+
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_quotes_poi_name ON quotes(poi_name)',
+        );
+
+        await txn.execute('''
+          CREATE TABLE IF NOT EXISTS chat_sessions(
+            id TEXT PRIMARY KEY,
+            session_type TEXT NOT NULL DEFAULT 'note',
+            note_id TEXT,
+            title TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL,
+            last_active_at TEXT NOT NULL,
+            is_pinned INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (note_id) REFERENCES quotes(id) ON DELETE CASCADE
+          )
+        ''');
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_chat_sessions_note_id ON chat_sessions(note_id)',
+        );
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_chat_sessions_last_active ON chat_sessions(last_active_at DESC)',
+        );
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_chat_sessions_type ON chat_sessions(session_type)',
+        );
+
+        await txn.execute('''
+          CREATE TABLE IF NOT EXISTS chat_messages(
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'user',
+            content TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL,
+            included_in_context INTEGER NOT NULL DEFAULT 1,
+            meta_json TEXT,
+            FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
+          )
+        ''');
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id)',
+        );
+      } catch (e) {
+        logError('版本21升级失败: $e', error: e, source: 'DatabaseUpgrade');
+        rethrow;
+      }
+    }
   }
 
   /// 修复：验证升级结果
@@ -691,11 +816,36 @@ class DatabaseSchemaManager {
       );
       final tableNames = tables.map((t) => t['name'] as String).toSet();
 
-      final requiredTables = {'quotes', 'categories'};
+      final requiredTables = {
+        'quotes',
+        'categories',
+        'quote_tags',
+        'chat_sessions',
+        'chat_messages',
+      };
       final missingTables = requiredTables.difference(tableNames);
 
       if (missingTables.isNotEmpty) {
         throw Exception('升级后缺少必要的表: $missingTables');
+      }
+
+      // 验证 quotes 表的关键列是否存在（v21 新增 poi_name）
+      final quotesColumns = await txn.rawQuery('PRAGMA table_info(quotes)');
+      final columnNames =
+          quotesColumns.map((col) => col['name'] as String).toSet();
+
+      final requiredColumns = {
+        'id',
+        'content',
+        'date',
+        'latitude',
+        'longitude',
+        'poi_name', // v21 新增
+      };
+      final missingColumns = requiredColumns.difference(columnNames);
+
+      if (missingColumns.isNotEmpty) {
+        throw Exception('升级后 quotes 表缺少必要的列: $missingColumns');
       }
 
       logDebug('数据库升级验证通过');
