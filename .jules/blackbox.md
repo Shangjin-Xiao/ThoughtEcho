@@ -31,3 +31,7 @@
 ## 2025-05-18 - 🗃️ 黑匣: [完善 WebDAVSyncPage 模块的结构化日志]
 **异常:** [WebDAVSyncPage 模块在 `_checkConflictNotes` 检查冲突笔记时，遇到数据库查询错误仅使用了 `catch (_) {}` 进行了空捕获。这会隐藏潜在的数据库或表结构问题，导致用户无法发现并处理同步冲突。]
 **拦截:** [已将该空捕获替换为 `AppLogger.e`，注入了描述信息、具体的错误对象 `error: e`、堆栈轨迹 `stackTrace: stackTrace`，并指定了明确的日志来源模块 `source: 'WebDAVSyncPage'`。确认记录内容不包含任何笔记实体数据。]
+
+## 2025-10-24 - 🗃️ 黑匣: [完善 DatabaseService 模块的结构化日志]
+**异常:** [DatabaseService 模块在数据库初始化失败、初始化新数据库失败、预加载笔记失败和数据库恢复失败时，仅使用了 logDebug 进行了粗糙的打印，丢失了关键的错误堆栈信息以及明确的模块来源信息，这使得排查数据库连接和读写故障十分困难。]
+**拦截:** [已将上述环节中的 catch (e) 替换为 catch (e, stackTrace)，并将 logDebug 替换为结构化的 AppLogger.e，注入了对应的报错描述、具体的异常对象 error: e、堆栈轨迹 stackTrace: stackTrace，并指定了来源模块 source: 'DatabaseService'。确认修改不超过 50 行，且未记录用户的任何隐私数据。]
