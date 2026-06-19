@@ -721,6 +721,40 @@ class SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
+                Consumer<SettingsService>(
+                  builder: (context, settingsService, _) {
+                    if (!settingsService.appSettings.developerMode) {
+                      return const SizedBox.shrink();
+                    }
+                    return ListTile(
+                      title: const Text('[实验] 记录页添加笔记动画'),
+                      subtitle: Text(
+                        settingsService.noteInsertAnimationType == 'scale'
+                            ? '当前：方案 1 (气泡缩放)'
+                            : '当前：方案 2 (平滑上升)',
+                      ),
+                      leading: const Icon(Icons.animation_outlined),
+                      trailing: DropdownButton<String>(
+                        value: settingsService.noteInsertAnimationType,
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'scale',
+                            child: Text('气泡缩放'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'slide',
+                            child: Text('平滑上升'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            settingsService.setNoteInsertAnimationType(value);
+                          }
+                        },
+                      ),
+                    );
+                  },
+                ),
                 // 添加日志调试信息显示（仅在Debug模式下显示）
                 if (kDebugMode) ...[
                   ListTile(

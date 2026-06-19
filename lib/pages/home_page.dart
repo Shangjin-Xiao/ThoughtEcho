@@ -1188,10 +1188,10 @@ class _HomePageState extends State<HomePage>
         ),
       );
       _loadTags();
-      // 动画已根据用户反馈移除，不再需要触发高亮/闪烁效果
-      // if (quote.id != null) {
-      //   _noteListViewKey.currentState?.highlightNote(quote.id!);
-      // }
+      // 触发新增/修改笔记卡片的平滑渐入动画
+      if (quote.id != null) {
+        _noteListViewKey.currentState?.highlightNote(quote.id!);
+      }
     } catch (e, stack) {
       logError(
         '非全屏编辑器保存失败: id=${quote.id}, isEditing=$isEditing',

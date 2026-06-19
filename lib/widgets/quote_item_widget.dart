@@ -1250,8 +1250,39 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       );
     }
 
-    // 已根据用户反馈移除保存/修改笔记后的卡片高亮/闪烁动画
-    return card;
+    if (!widget.isHighlighted) return card;
+
+    final animationType = context.select<SettingsService, String>(
+      (s) => s.noteInsertAnimationType,
+    );
+
+    final bool isScale = animationType == 'scale';
+
+    // 气泡微升与渐入动画 (可根据开发者实验选项进行切换)
+    // 采用 TweenAnimationBuilder 制作纯 GPU 动效，结束后立即释放以保证性能。
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('save_animate_${widget.quote.id}_$animationType'),
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        if (value >= 0.99) return child!;
+        final double scale = isScale ? (0.96 + 0.04 * value) : 1.0;
+        final double slideOffset = isScale ? 0.0 : (12.0 * (1.0 - value));
+
+        return Transform.translate(
+          offset: Offset(0, slideOffset),
+          child: Transform.scale(
+            scale: scale,
+            child: Opacity(
+              opacity: value.clamp(0.0, 1.0),
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: card,
+    );
   }
 }
 
