@@ -48,7 +48,7 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
       );
       expect(
         sanitizeSentryDatabaseDescription('SELECT * FROM quotes'),
-        'SQL query',
+        'SELECT FROM QUOTES',
       );
       expect(
         sanitizeSentryDatabaseDescription(longSql),
@@ -125,7 +125,7 @@ INSERT OR REPLACE INTO app_logs (timestamp, level, message, source, error, stack
         expect(httpTransactionSpan.data['url'], 'https://example.com/path');
         expect(httpTransactionSpan.data, isNot(contains('http.query')));
         expect(httpTransactionSpan.data, isNot(contains('http.fragment')));
-        expect(sqlTransactionSpan.context.description, 'SQL query');
+        expect(sqlTransactionSpan.context.description, 'SELECT FROM QUOTES');
         expect(logTransactionSpan.context.description, 'Log database write');
       } finally {
         await Sentry.close();

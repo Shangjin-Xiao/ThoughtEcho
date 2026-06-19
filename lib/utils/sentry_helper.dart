@@ -55,6 +55,42 @@ void configureSentryOptions(SentryFlutterOptions options) {
   options.debug = kDebugMode;
 }
 
+class _QueryPattern {
+  final String prefix;
+  final RegExp regExp;
+  final String formatPrefix;
+
+  _QueryPattern(this.prefix, this.regExp, this.formatPrefix);
+}
+
+final _queryPatterns = <_QueryPattern>[
+  _QueryPattern(
+    'SELECT ',
+    RegExp(r'\bFROM\s+([a-zA-Z0-9_]+)', caseSensitive: false),
+    'SELECT FROM',
+  ),
+  _QueryPattern(
+    'INSERT ',
+    RegExp(r'\bINTO\s+([a-zA-Z0-9_]+)', caseSensitive: false),
+    'INSERT INTO',
+  ),
+  _QueryPattern(
+    'UPDATE ',
+    RegExp(r'\bUPDATE\s+([a-zA-Z0-9_]+)', caseSensitive: false),
+    'UPDATE',
+  ),
+  _QueryPattern(
+    'DELETE ',
+    RegExp(r'\bFROM\s+([a-zA-Z0-9_]+)', caseSensitive: false),
+    'DELETE FROM',
+  ),
+  _QueryPattern(
+    'CREATE ',
+    RegExp(r'\bTABLE\s+([a-zA-Z0-9_]+)', caseSensitive: false),
+    'CREATE TABLE',
+  ),
+];
+
 String sanitizeSentryDatabaseDescription(String description) {
   for (final prefix in _databaseDescriptionPrefixes) {
     if (description.startsWith(prefix)) {
@@ -62,45 +98,19 @@ String sanitizeSentryDatabaseDescription(String description) {
     }
   }
   final lowerDescription = description.toLowerCase();
-  final normalized = description.trimLeft().toUpperCase();
   if (lowerDescription.contains('app_logs') ||
       lowerDescription.contains('log_database')) {
     return 'Log database write';
   }
-  if (normalized.startsWith('SELECT ')) {
-    final match = RegExp(r'\bFROM\s+([a-zA-Z0-9_]+)', caseSensitive: false).firstMatch(normalized);
-    if (match != null) {
-      return 'SELECT FROM ${match.group(1)}';
+  final normalized = description.trimLeft().toUpperCase();
+  for (final pattern in _queryPatterns) {
+    if (normalized.startsWith(pattern.prefix)) {
+      final match = pattern.regExp.firstMatch(normalized);
+      if (match != null) {
+        return '${pattern.formatPrefix} ${match.group(1)}';
+      }
+      return '${pattern.prefix.trim()} query';
     }
-    return 'SELECT query';
-  }
-  if (normalized.startsWith('INSERT ')) {
-    final match = RegExp(r'\bINTO\s+([a-zA-Z0-9_]+)', caseSensitive: false).firstMatch(normalized);
-    if (match != null) {
-      return 'INSERT INTO ${match.group(1)}';
-    }
-    return 'INSERT query';
-  }
-  if (normalized.startsWith('UPDATE ')) {
-    final match = RegExp(r'\bUPDATE\s+([a-zA-Z0-9_]+)', caseSensitive: false).firstMatch(normalized);
-    if (match != null) {
-      return 'UPDATE ${match.group(1)}';
-    }
-    return 'UPDATE query';
-  }
-  if (normalized.startsWith('DELETE ')) {
-    final match = RegExp(r'\bFROM\s+([a-zA-Z0-9_]+)', caseSensitive: false).firstMatch(normalized);
-    if (match != null) {
-      return 'DELETE FROM ${match.group(1)}';
-    }
-    return 'DELETE query';
-  }
-  if (normalized.startsWith('CREATE ')) {
-    final match = RegExp(r'\bTABLE\s+([a-zA-Z0-9_]+)', caseSensitive: false).firstMatch(normalized);
-    if (match != null) {
-      return 'CREATE TABLE ${match.group(1)}';
-    }
-    return 'CREATE query';
   }
   if (normalized.startsWith('ALTER ') ||
       normalized.startsWith('DROP ') ||
