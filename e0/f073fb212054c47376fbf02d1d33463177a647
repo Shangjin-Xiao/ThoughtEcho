@@ -1,0 +1,31 @@
+lib/services/database/database_pagination_mixin.dart
+  s_3a13e166627a3b::t_c4fec9de15b905 244-249
+lib/widgets/note_list_view.dart
+  s_3a13e166627a3b::t_0f8674794419da 166-171
+  s_3a13e166627a3b::t_76482116fcd59e 489-492,494-496
+  s_3a13e166627a3b::t_f6a1418d122838 566
+lib/widgets/note_list/note_list_data_stream.dart
+  s_3a13e166627a3b::t_f168e908e287b1 195-196
+  s_3a13e166627a3b::t_eb5464419c882f 208
+  s_3a13e166627a3b::t_c7b0f7f862fb04 399-401
+  s_3a13e166627a3b::t_6821a5cb004e84 413
+lib/widgets/note_list/note_list_items.dart
+  s_3a13e166627a3b::t_a0673761925341 173-175,181-196
+  s_3a13e166627a3b::t_e3cd4aed3fbcd0 811-814,816,818,840-860,867-869,893
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "e0f073fb212054c47376fbf02d1d33463177a647",
+  "prompts": {},
+  "sessions": {
+    "s_3a13e166627a3b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_121865ac2ffelBymnse73ImFOd",
+        "model": "z-ai/glm-5.2-free"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
