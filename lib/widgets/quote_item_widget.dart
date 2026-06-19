@@ -1250,36 +1250,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       );
     }
 
-    if (!widget.isHighlighted) return card;
-
-    // 保存/修改笔记后的高亮动画：仅影响单张卡片，TweenAnimationBuilder
-    // 做纯 GPU Opacity 操作（无 blur），性能开销极低。
-    return TweenAnimationBuilder<double>(
-      key: ValueKey('save_highlight_${widget.quote.id}'),
-      tween: Tween(begin: 1.0, end: 0.0),
-      duration: const Duration(milliseconds: 650),
-      curve: Curves.easeOut,
-      builder: (context, value, child) {
-        if (value < 0.01) return child!;
-        return Stack(
-          children: [
-            child!,
-            Positioned.fill(
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                    color: theme.colorScheme.primary
-                        .withValues(alpha: 0.18 * value),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-      child: card,
-    );
+    // 已根据用户反馈移除保存/修改笔记后的卡片高亮/闪烁动画
+    return card;
   }
 }
 
