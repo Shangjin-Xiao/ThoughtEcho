@@ -28,6 +28,3 @@
 ## 2026-05-20 - [Fix Missing Tooltips for IconButton]
 **Learning:** `pdf_preview_dialog.dart` where `IconButton` with `Icons.close` was missing a `tooltip` property.
 **Action:** When adding close buttons inside standard dialogs and modals, always set `tooltip: MaterialLocalizations.of(context).closeButtonTooltip`.
-## 2026-06-19 - [Fix Missing Tooltip for Password Visibility Toggle in WebDAV Sync Page]
-**Learning:** Found an `IconButton` used to toggle password visibility in `WebDAVSyncPage` that was missing a `tooltip`. This prevents screen readers from announcing the button's action ("Show" or "Hide" password) and hides it from mouse hover on desktop/web.
-**Action:** When adding an `IconButton` to toggle password visibility or other stateful settings, always include a dynamic `tooltip` using the appropriate localized strings (e.g., `l10n.show` or `l10n.hide`).

@@ -1252,30 +1252,33 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
     if (!widget.isHighlighted) return card;
 
-    // 保存/修改笔记后的高亮动画：仅影响单张卡片，TweenAnimationBuilder
-    // 做纯 GPU Opacity 操作（无 blur），性能开销极低。
+    final animationType = context.select<SettingsService, String>(
+      (s) => s.noteInsertAnimationType,
+    );
+
+    final bool isScale = animationType == 'scale';
+
+    // 气泡微升与渐入动画 (可根据开发者实验选项进行切换)
+    // 采用 TweenAnimationBuilder 制作纯 GPU 动效，结束后立即释放以保证性能。
     return TweenAnimationBuilder<double>(
-      key: ValueKey('save_highlight_${widget.quote.id}'),
-      tween: Tween(begin: 1.0, end: 0.0),
-      duration: const Duration(milliseconds: 650),
-      curve: Curves.easeOut,
+      key: ValueKey('save_animate_${widget.quote.id}_$animationType'),
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
       builder: (context, value, child) {
-        if (value < 0.01) return child!;
-        return Stack(
-          children: [
-            child!,
-            Positioned.fill(
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                    color: theme.colorScheme.primary
-                        .withValues(alpha: 0.18 * value),
-                  ),
-                ),
-              ),
+        if (value >= 0.99) return child!;
+        final double scale = isScale ? (0.96 + 0.04 * value) : 1.0;
+        final double slideOffset = isScale ? 0.0 : (12.0 * (1.0 - value));
+
+        return Transform.translate(
+          offset: Offset(0, slideOffset),
+          child: Transform.scale(
+            scale: scale,
+            child: Opacity(
+              opacity: value.clamp(0.0, 1.0),
+              child: child,
             ),
-          ],
+          ),
         );
       },
       child: card,

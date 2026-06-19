@@ -590,13 +590,13 @@ class NoteListViewState extends State<NoteListView> {
     _loadMore();
   }
 
-  /// 触发指定 ID 的笔记卡片高亮动画（保存/修改后调用）。
-  /// 动画时长 650ms，900ms 后自动清除高亮状态。
+  /// 触发指定 ID 的笔记卡片出现/更新动画（保存/修改后调用）。
+  /// 动画时长 250ms，300ms 后自动清除状态以保证性能。
   void highlightNote(String id) {
     if (!mounted) return;
-    _highlightTimer?.cancel(); // 取消上一次高亮计时
+    _highlightTimer?.cancel();
     setState(() => _highlightedQuoteId = id);
-    _highlightTimer = Timer(const Duration(milliseconds: 900), () {
+    _highlightTimer = Timer(const Duration(milliseconds: 300), () {
       if (mounted) {
         setState(() => _highlightedQuoteId = null);
       }

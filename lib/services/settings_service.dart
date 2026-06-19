@@ -312,6 +312,14 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 开发者实验：记录页添加/更新卡片动画类型 ('scale' 或 'slide')
+  String get noteInsertAnimationType => _appSettings.noteInsertAnimationType;
+  Future<void> setNoteInsertAnimationType(String type) async {
+    _appSettings = _appSettings.copyWith(noteInsertAnimationType: type);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   // 语言设置：获取当前语言代码（null 表示跟随系统）
   String? get localeCode => _appSettings.localeCode;
 

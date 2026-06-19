@@ -1078,6 +1078,7 @@ class _HomePageState extends State<HomePage>
     String? prefilledWork,
     dynamic hitokotoData,
   }) async {
+    FocusScope.of(context).unfocus();
     await _loadTags();
     if (!mounted) return;
 
@@ -1187,6 +1188,7 @@ class _HomePageState extends State<HomePage>
         ),
       );
       _loadTags();
+      // 触发新增/修改笔记卡片的平滑渐入动画
       if (quote.id != null) {
         _noteListViewKey.currentState?.highlightNote(quote.id!);
       }
@@ -1401,6 +1403,7 @@ class _HomePageState extends State<HomePage>
 
   // 显示编辑笔记对话框
   void _showEditQuoteDialog(Quote quote) {
+    FocusScope.of(context).unfocus();
     // 检查笔记是否来自全屏编辑器
     if (quote.editSource == 'fullscreen') {
       // 如果是来自全屏编辑器的笔记，则直接打开全屏编辑页面
