@@ -434,6 +434,9 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                                 icon: Icon(_obscurePassword
                                     ? Icons.visibility_off
                                     : Icons.visibility),
+                                tooltip: _obscurePassword
+                                    ? l10n.show
+                                    : l10n.hide,
                                 onPressed: () => setState(
                                     () => _obscurePassword = !_obscurePassword),
                               ),
