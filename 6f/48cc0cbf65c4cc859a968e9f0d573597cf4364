@@ -1,0 +1,20 @@
+lib/pages/home_page.dart
+  s_4111d80340520d::t_e7342d850479b0 1081
+  s_4111d80340520d::t_0c620377dacc7f 1406
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "6f48cc0cbf65c4cc859a968e9f0d573597cf4364",
+  "prompts": {},
+  "sessions": {
+    "s_4111d80340520d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_124d77667ffey7vBfbF7N9rOVs",
+        "model": "z-ai/glm-5.2-free"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
