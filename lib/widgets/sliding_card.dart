@@ -4,14 +4,12 @@ import '../utils/color_utils.dart';
 
 class SlidingCard extends StatefulWidget {
   final Widget child;
-  final VoidCallback? onSlideComplete;
   final VoidCallback? onTap;
   final VoidCallback? onDoubleTap;
 
   const SlidingCard({
     super.key,
     required this.child,
-    this.onSlideComplete,
     this.onTap,
     this.onDoubleTap,
   });
@@ -150,14 +148,6 @@ class _SlidingCardState extends State<SlidingCard>
                 onTapCancel: _onTapCancel,
                 onTap: widget.onTap,
                 onDoubleTap: widget.onDoubleTap,
-                onHorizontalDragEnd: (details) {
-                  // 检测左滑动作
-                  if (details.primaryVelocity != null &&
-                      details.primaryVelocity! < 0 &&
-                      widget.onSlideComplete != null) {
-                    widget.onSlideComplete!();
-                  }
-                },
                 child: Container(
                   padding: EdgeInsets.all(cardPadding), // 使用动态padding
                   child: Card(
@@ -222,23 +212,6 @@ class _SlidingCardState extends State<SlidingCard>
                             const SizedBox(height: 16),
                             widget.child,
                             const SizedBox(height: 16),
-                            if (widget.onSlideComplete != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: AnimatedOpacity(
-                                  duration: const Duration(milliseconds: 200),
-                                  opacity: _isHovered ? 0.8 : 0.5,
-                                  child: Text(
-                                    '← 左滑添加到笔记',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: theme.colorScheme.onSurface
-                                          .withValues(alpha: 0.5),
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ),
-                              ),
                           ],
                         ),
                       ),
