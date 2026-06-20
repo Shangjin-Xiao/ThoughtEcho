@@ -171,6 +171,7 @@ class NoteListViewState extends State<NoteListView> {
   Timer? _searchUpdatingTimer;
   Timer? _searchDimTimer; // 延迟变淡，防止快速搜索结果回来之前列表闪烁
   int _searchTimeoutVersion = 0; // 超时 SnackBar 版本号，过期不弹
+  int _resultsVersion = 0; // 结果版本号，results→results 切换时驱动 AnimatedSwitcher 淡入淡出
   // ---- 自动滚动控制新增状态 ----
   bool _initialDataLoaded = false; // 标记是否已收到首批数据（后续用于启用自动滚动）
   bool _isAutoScrolling = false; // 当前是否有程序驱动的滚动动画

@@ -108,6 +108,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             _hasMore = list.length >= NoteListViewState._pageSize;
             _isLoading = isLoadMorePage;
             _pruneExpansionControllers();
+            _resultsVersion++; // 驱动 AnimatedSwitcher 淡入新结果
           });
           if (_loadMorePerfRecording &&
               (_quotes.length > _loadMorePerfStartCount || !_hasMore)) {

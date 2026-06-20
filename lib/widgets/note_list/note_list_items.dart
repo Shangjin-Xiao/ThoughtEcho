@@ -375,7 +375,7 @@ extension _NoteListItemsExtension on NoteListViewState {
     final loadingKey = ValueKey('${filterBase}_loading');
     final emptyKey = ValueKey('${filterBase}_empty');
     final noResultsKey = ValueKey('${filterBase}_no_results');
-    final resultsKey = ValueKey('${filterBase}_results');
+    final resultsKey = ValueKey('${filterBase}_results_$_resultsVersion');
 
     // 仅在服务初始化或首批笔记尚未返回时显示 loading。
     // 本地 SQLite 搜索通常 < 100 ms，不单独显示搜索加载动画；
