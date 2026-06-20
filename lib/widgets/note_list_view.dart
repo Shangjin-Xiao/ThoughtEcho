@@ -165,10 +165,12 @@ class NoteListViewState extends State<NoteListView> {
   Timer? _searchDebounceTimer;
 
   // 搜索过渡动画状态：搜索开始时置 true 让列表轻微变淡提示"更新中"，
-  // 搜索结果到达后置 false 恢复。配合 AnimatedOpacity 实现 200ms 淡入淡出，
-  // 替代旧方案中"列表瞬间清空再填充"的硬切换闪烁。
+  // 搜索结果到达后置 false 恢复。配合 AnimatedOpacity 实现 200ms 淡入淡出。
+  // _searchDimTimer：延迟 120ms 再变淡，避免快速搜索（< 120ms）触发不必要的闪烁。
   bool _isSearchUpdating = false;
   Timer? _searchUpdatingTimer;
+  Timer? _searchDimTimer; // 延迟变淡，防止快速搜索结果回来之前列表闪烁
+  int _searchTimeoutVersion = 0; // 超时 SnackBar 版本号，过期不弹
   // ---- 自动滚动控制新增状态 ----
   bool _initialDataLoaded = false; // 标记是否已收到首批数据（后续用于启用自动滚动）
   bool _isAutoScrolling = false; // 当前是否有程序驱动的滚动动画
@@ -564,6 +566,7 @@ class NoteListViewState extends State<NoteListView> {
     }
     _searchDebounceTimer?.cancel(); // 清理防抖定时器
     _searchUpdatingTimer?.cancel(); // 清理搜索过渡动画安全定时器
+    _searchDimTimer?.cancel(); // 清理延迟变淡定时器
     _firstOpenScrollStopTimer?.cancel();
     _loadMorePerfStopTimer?.cancel();
     _loadMoreSettleTimer?.cancel();

@@ -838,17 +838,33 @@ extension _NoteListItemsExtension on NoteListViewState {
     }
   }
 
-  /// 设置搜索过渡动画状态，配合 AnimatedOpacity 实现 200ms 淡入淡出。
-  /// updating=true 时列表轻微变淡提示"更新中"，结果到达后置 false 恢复。
-  /// 内置 800ms 安全定时器，防止 stream 回调丢失导致列表卡在变淡状态。
+  /// 设置搜索过渡动画状态。
+  /// - updating=true：延迟 120ms 再变淡，避免快速搜索（< 120ms 就返回结果）引起闪烁。
+  /// - updating=false：立即取消延迟定时器并恢复透明度。
+  /// - 内置 800ms 安全定时器，防止 stream 回调丢失导致列表卡在变淡状态。
   void _setSearchUpdating(bool updating) {
     if (!mounted) return;
     _searchUpdatingTimer?.cancel();
-    if (_isSearchUpdating == updating) return;
-    _updateState(() {
-      _isSearchUpdating = updating;
-    });
-    if (updating) {
+    if (!updating) {
+      // 立即取消延迟定时器，结果已回来就不需要变淡了
+      _searchDimTimer?.cancel();
+      if (_isSearchUpdating) {
+        _updateState(() {
+          _isSearchUpdating = false;
+        });
+      }
+      return;
+    }
+    // updating=true：延迟 120ms 再变淡
+    _searchDimTimer?.cancel();
+    _searchDimTimer = Timer(const Duration(milliseconds: 120), () {
+      if (!mounted) return;
+      if (!_isSearchUpdating) {
+        _updateState(() {
+          _isSearchUpdating = true;
+        });
+      }
+      // 800ms 安全定时器，防止卡在变淡状态
       _searchUpdatingTimer = Timer(const Duration(milliseconds: 800), () {
         if (mounted && _isSearchUpdating) {
           _updateState(() {
@@ -856,7 +872,7 @@ extension _NoteListItemsExtension on NoteListViewState {
           });
         }
       });
-    }
+    });
   }
 
   /// 优化：执行搜索的统一方法
@@ -865,7 +881,11 @@ extension _NoteListItemsExtension on NoteListViewState {
 
     logDebug('执行搜索: "$value"', source: 'NoteListView');
 
-    // 标记搜索更新中，触发列表淡入淡出过渡动画
+    // 绑定当前搜索版本（超时 SnackBar 用）
+    _searchTimeoutVersion++;
+    final capturedVersion = _searchTimeoutVersion;
+
+    // 标记搜索更新中（延迟 120ms 再变淡，避免快速搜索闪烁）
     _setSearchUpdating(true);
 
     // 如果是非空搜索且长度>=2，通知搜索控制器开始搜索
@@ -884,9 +904,11 @@ extension _NoteListItemsExtension on NoteListViewState {
     // 直接调用父组件的搜索回调
     widget.onSearchChanged(value);
 
-    // 优化：只有在实际搜索时才设置超时保护，使用常量配置的超时时间
+    // 超时保护：绑定版本号，过期的超时不弹提示
     if (value.isNotEmpty && value.length >= AppConstants.minSearchLength) {
       Timer(AppConstants.searchTimeout, () {
+        // 版本号不匹配说明用户已开始搜索其他内容，不弹过期的超时提示
+        if (capturedVersion != _searchTimeoutVersion) return;
         if (mounted && _isLoading) {
           _updateState(() {
             _isLoading = false;
@@ -903,7 +925,7 @@ extension _NoteListItemsExtension on NoteListViewState {
           }
           logDebug('搜索超时，已重置加载状态');
 
-          // 显示超时提示
+          // 弹超时提示（版本号匹配才弹）
           if (mounted) {
             final l10n = AppLocalizations.of(context);
             ScaffoldMessenger.of(context).showSnackBar(
