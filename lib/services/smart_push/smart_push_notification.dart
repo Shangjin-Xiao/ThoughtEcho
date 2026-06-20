@@ -155,7 +155,7 @@ extension SmartPushNotification on SmartPushService {
         final route = MaterialPageRoute(
           builder: (context) => HomePage(
             initialPage: 1,
-            initialHighlightedNoteId: noteId,
+            initialTargetNoteId: noteId,
           ),
         );
         SmartPushService.replaceAppStackForNotification(

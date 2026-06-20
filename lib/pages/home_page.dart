@@ -50,12 +50,12 @@ import 'home/daily_prompt_panel.dart';
 // widgets or mixins (e.g., home_header, home_content, home_actions).
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
-  final String? initialHighlightedNoteId;
+  final String? initialTargetNoteId;
 
   const HomePage({
     super.key,
     this.initialPage = 0,
-    this.initialHighlightedNoteId,
+    this.initialTargetNoteId,
   });
 
   @override
@@ -182,10 +182,10 @@ class _HomePageState extends State<HomePage>
   bool _trashGuideScheduled = false;
   String? _lastConsumedExcerptText;
   bool _isHandlingExcerptIntent = false;
-  bool _hasConsumedInitialHighlightedNote = false;
-  bool _isConsumingInitialHighlightedNote = false;
-  int _initialHighlightRetryCount = 0;
-  static const int _maxInitialHighlightRetries = 8;
+  bool _hasConsumedInitialTargetNote = false;
+  bool _isConsumingInitialTargetNote = false;
+  int _initialTargetScrollRetryCount = 0;
+  static const int _maxInitialTargetScrollRetries = 8;
 
   // AI卡片生成服务
   AICardGenerationService? _aiCardService;
@@ -344,7 +344,7 @@ class _HomePageState extends State<HomePage>
       if (widget.initialPage == 1) {
         // 记录页启动时，先加载标签（高优先级）
         await _loadTags();
-        _consumeInitialHighlightedNote();
+        _consumeInitialTargetNote();
       } else {
         // 其他页面启动时，使用预加载方式
         _preloadTags();
@@ -631,7 +631,7 @@ class _HomePageState extends State<HomePage>
     // 当切换到笔记列表页时，重新加载标签
     if (_currentIndex == 1) {
       _refreshTags();
-      _consumeInitialHighlightedNote();
+      _consumeInitialTargetNote();
     }
 
     _triggerGuideForCurrentIndex();
@@ -819,19 +819,19 @@ class _HomePageState extends State<HomePage>
       return;
     }
 
-    _consumeInitialHighlightedNote();
+    _consumeInitialTargetNote();
     _scheduleNoteGuideIfNeeded(delay: const Duration(milliseconds: 150));
   }
 
-  void _consumeInitialHighlightedNote() {
+  void _consumeInitialTargetNote() {
     if (!mounted ||
-        _hasConsumedInitialHighlightedNote ||
-        _isConsumingInitialHighlightedNote ||
+        _hasConsumedInitialTargetNote ||
+        _isConsumingInitialTargetNote ||
         _currentIndex != 1) {
       return;
     }
 
-    final noteId = widget.initialHighlightedNoteId;
+    final noteId = widget.initialTargetNoteId;
     if (noteId == null || noteId.isEmpty) {
       return;
     }
@@ -842,49 +842,47 @@ class _HomePageState extends State<HomePage>
     if (noteListState == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        _consumeInitialHighlightedNote();
+        _consumeInitialTargetNote();
       });
       return;
     }
 
-    _isConsumingInitialHighlightedNote = true;
-    unawaited(_attemptInitialHighlightedNote(noteListState, noteId));
+    _isConsumingInitialTargetNote = true;
+    unawaited(_attemptInitialTargetNote(noteListState, noteId));
   }
 
-  Future<void> _attemptInitialHighlightedNote(
+  Future<void> _attemptInitialTargetNote(
     NoteListViewState noteListState,
     String noteId,
   ) async {
     final success = await noteListState.scrollToQuoteById(noteId);
-    if (!mounted || widget.initialHighlightedNoteId != noteId) {
-      _isConsumingInitialHighlightedNote = false;
+    if (!mounted || widget.initialTargetNoteId != noteId) {
+      _isConsumingInitialTargetNote = false;
       return;
     }
 
     if (success) {
-      _hasConsumedInitialHighlightedNote = true;
-      _initialHighlightRetryCount = 0;
-      _isConsumingInitialHighlightedNote = false;
+      _hasConsumedInitialTargetNote = true;
+      _initialTargetScrollRetryCount = 0;
+      _isConsumingInitialTargetNote = false;
       return;
     }
 
-    _isConsumingInitialHighlightedNote = false;
-    _initialHighlightRetryCount++;
-    if (_initialHighlightRetryCount >= _maxInitialHighlightRetries) {
+    _isConsumingInitialTargetNote = false;
+    _initialTargetScrollRetryCount++;
+    if (_initialTargetScrollRetryCount >= _maxInitialTargetScrollRetries) {
       logDebug(
-        '初始高亮笔记定位失败，已达到最大重试次数: $noteId',
+        '初始目标笔记定位失败，已达到最大重试次数: $noteId',
         source: 'HomePage',
       );
       return;
     }
 
     Future.delayed(const Duration(milliseconds: 250), () {
-      if (!mounted ||
-          _currentIndex != 1 ||
-          _hasConsumedInitialHighlightedNote) {
+      if (!mounted || _currentIndex != 1 || _hasConsumedInitialTargetNote) {
         return;
       }
-      _consumeInitialHighlightedNote();
+      _consumeInitialTargetNote();
     });
   }
 
@@ -1188,9 +1186,9 @@ class _HomePageState extends State<HomePage>
         ),
       );
       _loadTags();
-      // 触发新增/修改笔记卡片的平滑渐入动画
+      // 触发新增/修改笔记卡片的平滑入场动画
       if (quote.id != null) {
-        _noteListViewKey.currentState?.highlightNote(quote.id!);
+        _noteListViewKey.currentState?.triggerInsertAnimation(quote.id!);
       }
     } catch (e, stack) {
       logError(

@@ -68,7 +68,7 @@ class AppSettings {
   final String exportFormat;
   final bool sentryEnabled; // 是否启用 Sentry 诊断与性能上报
   final bool sentryDisclosureShown; // Sentry 上报提示弹窗是否已显示过
-  final String noteInsertAnimationType; // 记录页卡片增加/修改动画类型: 'scale' 或 'slide'
+  final String noteInsertAnimationType; // 记录页卡片增加/修改动画类型: 'scale'、'slide' 或 'none'
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型

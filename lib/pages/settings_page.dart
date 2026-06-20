@@ -731,7 +731,9 @@ class SettingsPageState extends State<SettingsPage> {
                       subtitle: Text(
                         settingsService.noteInsertAnimationType == 'scale'
                             ? '当前：方案 1 (气泡缩放)'
-                            : '当前：方案 2 (平滑上升)',
+                            : settingsService.noteInsertAnimationType == 'slide'
+                                ? '当前：方案 2 (平滑上升)'
+                                : '当前：无动画',
                       ),
                       leading: const Icon(Icons.animation_outlined),
                       trailing: DropdownButton<String>(
@@ -744,6 +746,10 @@ class SettingsPageState extends State<SettingsPage> {
                           DropdownMenuItem(
                             value: 'slide',
                             child: Text('平滑上升'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'none',
+                            child: Text('无动画'),
                           ),
                         ],
                         onChanged: (value) {

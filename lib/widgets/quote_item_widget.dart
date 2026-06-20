@@ -65,7 +65,7 @@ class QuoteItemWidget extends StatefulWidget {
   final bool trashActionsEnabled;
   final bool isSelected;
   final bool selectionMode;
-  final bool isHighlighted;
+  final bool shouldAnimateInsert;
 
   const QuoteItemWidget({
     super.key,
@@ -94,7 +94,7 @@ class QuoteItemWidget extends StatefulWidget {
     this.trashActionsEnabled = true,
     this.isSelected = false,
     this.selectionMode = false,
-    this.isHighlighted = false,
+    this.shouldAnimateInsert = false,
   });
 
   @override
@@ -1250,11 +1250,13 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       );
     }
 
-    if (!widget.isHighlighted) return card;
+    if (!widget.shouldAnimateInsert) return card;
 
     final animationType = context.select<SettingsService, String>(
       (s) => s.noteInsertAnimationType,
     );
+
+    if (animationType == 'none') return card;
 
     final bool isScale = animationType == 'scale';
 

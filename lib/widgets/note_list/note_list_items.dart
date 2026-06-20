@@ -570,7 +570,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                         isExpanded: isExpanded,
                         isSelected: isSelected,
                         selectionMode: _isExportMode,
-                        isHighlighted: quoteId == _highlightedQuoteId,
+                        shouldAnimateInsert:
+                            _animatingQuoteIds.contains(quoteId),
                         onToggleExpanded: (expanded) {
                           if (expansionNotifier.value != expanded) {
                             expansionNotifier.value = expanded;
