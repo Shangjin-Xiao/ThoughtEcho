@@ -142,7 +142,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   // 一言标签加载状态
   bool _isLoadingHitokotoTags = false;
   bool _isSaving = false;
-  bool _deferredControlsVisible = true;
+  bool _deferredControlsVisible = false;
   Timer? _deferredControlsTimer;
   Timer? _autoFocusTimer;
 
@@ -685,7 +685,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       'ThoughtEcho.AddNoteDialog.focus.scheduled',
       arguments: <String, Object>{'reason': reason},
     );
-    _autoFocusTimer = Timer(const Duration(milliseconds: 650), () {
+    _autoFocusTimer = Timer(Duration.zero, () {
       if (!mounted || _contentFocusNode.hasFocus) return;
       _requestContentFocus(reason);
     });
