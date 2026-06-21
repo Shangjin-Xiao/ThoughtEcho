@@ -142,7 +142,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   // 一言标签加载状态
   bool _isLoadingHitokotoTags = false;
   bool _isSaving = false;
-  bool _deferredControlsVisible = false;
+  bool _deferredControlsVisible = true;
   Timer? _deferredControlsTimer;
   Timer? _autoFocusTimer;
 
