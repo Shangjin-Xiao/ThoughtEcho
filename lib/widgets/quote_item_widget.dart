@@ -1090,7 +1090,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                     top: -3,
                                     child: Container(
                                       alignment: Alignment.center,
-                                      padding: const EdgeInsets.symmetric(horizontal: 2.5),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 2.5),
                                       decoration: BoxDecoration(
                                         color: Colors.red.shade600,
                                         borderRadius: BorderRadius.circular(10),

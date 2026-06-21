@@ -805,10 +805,12 @@ void main() {
       expect(find.text('5'), findsOneWidget);
 
       // 验证 Badge 气泡容器的约束和样式
-      final containerFinder = find.ancestor(
-        of: find.text('5'),
-        matching: find.byType(Container),
-      ).first;
+      final containerFinder = find
+          .ancestor(
+            of: find.text('5'),
+            matching: find.byType(Container),
+          )
+          .first;
       expect(containerFinder, findsOneWidget);
 
       final containerWidget = tester.widget<Container>(containerFinder);
