@@ -1457,89 +1457,39 @@ class _HomePageState extends State<HomePage>
     }
   }
 
-  // 显示删除确认对话框
-  void _showDeleteConfirmDialog(Quote quote) {
-    final pageContext = context;
+  // 直接将笔记移入回收站（有回收站保障，无需二次确认）
+  Future<void> _deleteQuote(Quote quote) async {
+    if (!mounted || quote.id == null) return;
     final l10n = AppLocalizations.of(context);
-    final retentionDays = context.read<SettingsService>().trashRetentionDays;
-    final messenger = ScaffoldMessenger.of(pageContext);
-
-    showDialog(
-      context: pageContext,
-      builder: (dialogContext) {
-        var isDeleting = false;
-        return StatefulBuilder(
-          builder: (dialogContext, setDialogState) => AlertDialog(
-            title: Text(l10n.moveNoteToTrashTitle),
-            content: Text(l10n.moveNoteToTrashConfirmation(retentionDays)),
-            actions: [
-              TextButton(
-                onPressed: isDeleting
-                    ? null
-                    : () {
-                        Navigator.pop(dialogContext);
-                      },
-                child: Text(l10n.cancel),
-              ),
-              TextButton(
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                onPressed: isDeleting
-                    ? null
-                    : () async {
-                        setDialogState(() {
-                          isDeleting = true;
-                        });
-                        final db = Provider.of<DatabaseService>(
-                          pageContext,
-                          listen: false,
-                        );
-                        try {
-                          await db.deleteQuote(quote.id!);
-                          if (!dialogContext.mounted || !pageContext.mounted) {
-                            return;
-                          }
-                          Navigator.pop(dialogContext);
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(l10n.noteMovedToTrash),
-                              duration: const Duration(seconds: 1),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                          // 显示回收站位置引导（仅第一次删除笔记时）
-                          _scheduleTrashLocationGuide();
-                        } catch (e, stackTrace) {
-                          logError(
-                            '移动笔记到回收站失败: $e',
-                            error: e,
-                            stackTrace: stackTrace,
-                            source: 'HomePage',
-                          );
-                          if (!dialogContext.mounted || !pageContext.mounted) {
-                            return;
-                          }
-                          Navigator.pop(dialogContext);
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(l10n.deleteFailed(e.toString())),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        }
-                      },
-                child: isDeleting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(l10n.delete),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    final messenger = ScaffoldMessenger.of(context);
+    final db = Provider.of<DatabaseService>(context, listen: false);
+    try {
+      await db.deleteQuote(quote.id!);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.noteMovedToTrash),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      // 显示回收站位置引导（仅第一次删除笔记时）
+      _scheduleTrashLocationGuide();
+    } catch (e, stackTrace) {
+      logError(
+        '移动笔记到回收站失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'HomePage',
+      );
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.deleteFailed(e.toString())),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   // 处理心形按钮点击
@@ -2169,7 +2119,7 @@ class _HomePageState extends State<HomePage>
                         searchController.updateSearch(query);
                       },
                       onEdit: _showEditQuoteDialog,
-                      onDelete: _showDeleteConfirmDialog,
+                      onDelete: _deleteQuote,
                       onAskAI: _showAIQuestionDialog,
                       onGenerateCard: _generateAICard,
                       onFavorite: settingsService.showFavoriteButton
