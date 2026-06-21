@@ -274,6 +274,17 @@ class NoteListViewState extends State<NoteListView> {
 
   bool get hasExpandableQuote => _hasExpandableQuoteCached;
 
+  /// 安全地获取 ScrollPosition：仅当控制器恰好附加了 1 个 ScrollPosition 时才返回，
+  /// 避免多个 client 同时挂载时 `.position` 抛出 "Bad state: Too many elements"。
+  ScrollPosition? get _safeScrollPosition {
+    final positions = _scrollController.positions;
+    if (positions.length != 1) return null;
+    return positions.first;
+  }
+
+  /// 安全地获取当前滚动偏移量，不可用时返回 null。
+  double? get _safeScrollOffset => _safeScrollPosition?.pixels;
+
   bool get isFilterGuideReady =>
       widget.filterButtonKey != null &&
       widget.filterButtonKey!.currentContext != null &&

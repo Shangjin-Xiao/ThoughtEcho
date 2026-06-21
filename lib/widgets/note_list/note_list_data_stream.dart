@@ -89,7 +89,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           if (isFirstLoad &&
               _scrollController.hasClients &&
               _quotes.isNotEmpty) {
-            savedScrollOffset = _scrollController.offset;
+            savedScrollOffset = _safeScrollOffset;
             logDebug(
               '首次加载期间保存滚动位置: $savedScrollOffset',
               source: 'NoteListView',
@@ -136,10 +136,11 @@ extension _NoteListDataStreamExtension on NoteListViewState {
               !_isUserScrolling) {
             final offset = savedScrollOffset; // 捕获非空值
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted &&
-                  _scrollController.hasClients &&
-                  offset <= _scrollController.position.maxScrollExtent) {
-                _scrollController.jumpTo(offset);
+              if (mounted && _scrollController.hasClients) {
+                final pos = _safeScrollPosition;
+                if (pos != null && offset <= pos.maxScrollExtent) {
+                  _scrollController.jumpTo(offset);
+                }
                 logDebug('首次加载期间恢复滚动位置: $offset', source: 'NoteListView');
               }
             });
@@ -291,7 +292,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
     if (preserveScrollPosition &&
         _scrollController.hasClients &&
         _quotes.isNotEmpty) {
-      savedScrollOffset = _scrollController.offset;
+      savedScrollOffset = _safeScrollOffset;
       logDebug('保存滚动位置: $savedScrollOffset', source: 'NoteListView');
     } else if (!preserveScrollPosition) {
       logDebug('筛选条件变化，不保存滚动位置，将重置到顶部', source: 'NoteListView');
@@ -375,21 +376,21 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             final offsetToRestore = savedScrollOffset;
             savedScrollOffset = null; // 立即置空，防止后续 stream 事件再次触发
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (offsetToRestore != null &&
-                  _scrollController.hasClients &&
-                  offsetToRestore <=
-                      _scrollController.position.maxScrollExtent) {
-                _scrollController.animateTo(
-                  offsetToRestore,
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOut,
-                );
-                logDebug(
-                  '平滑恢复滚动位置: $offsetToRestore',
-                  source: 'NoteListView',
-                );
-              } else {
-                logDebug('滚动位置超出范围或条件不满足，保持当前位置', source: 'NoteListView');
+              if (offsetToRestore != null && _scrollController.hasClients) {
+                final pos = _safeScrollPosition;
+                if (pos != null && offsetToRestore <= pos.maxScrollExtent) {
+                  _scrollController.animateTo(
+                    offsetToRestore,
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                  );
+                  logDebug(
+                    '平滑恢复滚动位置: $offsetToRestore',
+                    source: 'NoteListView',
+                  );
+                } else {
+                  logDebug('滚动位置超出范围或条件不满足，保持当前位置', source: 'NoteListView');
+                }
               }
             });
           }

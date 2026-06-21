@@ -579,7 +579,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     _loadMorePerfPendingFrameSettle = false;
     _loadMorePerfStartCount = _quotes.length;
     _loadMorePerfTriggerOffset =
-        _scrollController.hasClients ? _scrollController.offset.round() : 0;
+        _scrollController.hasClients ? (_safeScrollOffset?.round() ?? 0) : 0;
     _loadMorePerfFrameTimings.clear();
     _loadMorePerfStopTimer?.cancel();
     _loadMorePerfStopwatch
@@ -734,7 +734,8 @@ extension _NoteListScrollExtension on NoteListViewState {
     if (!mounted || !_scrollController.hasClients) return;
     if (_isLoading || !_hasMore) return;
 
-    final position = _scrollController.position;
+    final position = _safeScrollPosition;
+    if (position == null) return;
     final maxExtent = position.maxScrollExtent;
     final currentOffset = position.pixels;
 
@@ -816,7 +817,8 @@ extension _NoteListScrollExtension on NoteListViewState {
 
     final viewport = RenderAbstractViewport.of(renderObject);
     final reveal = viewport.getOffsetToReveal(renderObject, 0.0);
-    final position = _scrollController.position;
+    final position = _safeScrollPosition;
+    if (position == null) return null;
 
     return (reveal.offset - 12.0)
         .clamp(position.minScrollExtent, position.maxScrollExtent)
@@ -833,7 +835,8 @@ extension _NoteListScrollExtension on NoteListViewState {
       return false;
     }
 
-    final position = _scrollController.position;
+    final position = _safeScrollPosition;
+    if (position == null) return false;
     final targetOffset = RenderAbstractViewport.of(renderObject)
         .getOffsetToReveal(
           renderObject,
@@ -924,7 +927,10 @@ extension _NoteListScrollExtension on NoteListViewState {
         return true;
       }
 
-      final position = _scrollController.position;
+      final position = _safeScrollPosition;
+      if (position == null) {
+        return false;
+      }
       final itemFraction =
           _quotes.length <= 1 ? 0.0 : index / (_quotes.length - 1);
       final estimatedOffset = position.maxScrollExtent * itemFraction;
@@ -945,7 +951,8 @@ extension _NoteListScrollExtension on NoteListViewState {
       var candidateOffset = 0.0;
       var attempts = 0;
       while (mounted && _scrollController.hasClients && attempts < 600) {
-        final currentPosition = _scrollController.position;
+        final currentPosition = _safeScrollPosition;
+        if (currentPosition == null) break;
         final maxOffset = currentPosition.maxScrollExtent;
         if (candidateOffset > maxOffset + 1.0) {
           break;
@@ -962,11 +969,12 @@ extension _NoteListScrollExtension on NoteListViewState {
           return true;
         }
 
-        final step = (_scrollController.position.viewportDimension * 0.8).clamp(
+        final step = (_safeScrollPosition?.viewportDimension ?? 480.0) * 0.8;
+        final clampedStep = step.clamp(
           240.0,
           800.0,
         );
-        candidateOffset += step;
+        candidateOffset += clampedStep;
         attempts++;
       }
 
