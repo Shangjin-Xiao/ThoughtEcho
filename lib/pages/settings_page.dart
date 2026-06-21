@@ -48,6 +48,7 @@ class SettingsPageState extends State<SettingsPage> {
   // --- 定义链接地址 ---
   final String _projectUrl = 'https://github.com/Shangjin-Xiao/ThoughtEcho';
   final String _websiteUrl = 'https://note.shangjinyun.cn/';
+  final String _privacyUrl = 'https://note.shangjinyun.cn/privacy';
   // --- 链接地址结束 ---
   final TextEditingController _locationController = TextEditingController();
 
@@ -1046,17 +1047,25 @@ class SettingsPageState extends State<SettingsPage> {
                               const SizedBox(height: 20),
                               _buildAboutLink(
                                 context: context,
+                                icon: Icons.language_outlined,
+                                text: l10n.settingsVisitWebsite,
+                                url: _websiteUrl,
+                              ),
+                              const SizedBox(height: 8),
+                              _buildAboutLink(
+                                context: context,
+                                icon: Icons.privacy_tip_outlined,
+                                text: l10n.settingsPrivacyPolicy,
+                                url: _privacyUrl,
+                              ),
+                              const SizedBox(height: 8),
+                              _buildAboutLink(
+                                context: context,
                                 icon: Icons.code_outlined,
                                 text: l10n.settingsViewSource,
                                 url: _projectUrl,
                               ),
                               const SizedBox(height: 8),
-                              _buildAboutLink(
-                                context: context,
-                                icon: Icons.language_outlined,
-                                text: l10n.settingsVisitWebsite,
-                                url: _websiteUrl,
-                              ),
                               ElevatedButton.icon(
                                 onPressed: () {
                                   Navigator.pop(dialogContext);

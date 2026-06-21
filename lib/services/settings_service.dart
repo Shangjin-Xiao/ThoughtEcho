@@ -489,7 +489,10 @@ class SettingsService extends ChangeNotifier {
 
       // 首次安装时，载入应用默认设置
       _loadAppSettings();
-      _appSettings = _appSettings.copyWith(hasCompletedOnboarding: false);
+      _appSettings = _appSettings.copyWith(
+        hasCompletedOnboarding: false,
+        sentryDisclosureShown: true, // 新安装用户不弹窗
+      );
       await _mmkv.setString(
         _appSettingsKey,
         json.encode(_appSettings.toJson()),
