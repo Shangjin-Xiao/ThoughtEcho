@@ -762,5 +762,63 @@ void main() {
 
       expect(find.textContaining('编辑于'), findsNothing);
     });
+
+    testWidgets('渲染心形按钮及紧凑型计数气泡', (tester) async {
+      final quote = _buildQuote(
+        id: 'q-fav',
+        editSource: 'inline',
+      ).copyWith(favoriteCount: 5);
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _FakeSettingsService(),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Material(
+              child: QuoteItemWidget(
+                quote: quote,
+                tagMap: const {},
+                isExpanded: false,
+                onToggleExpanded: (_) {},
+                onEdit: () {},
+                onDelete: () {},
+                onAskAI: () {},
+                onFavorite: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 验证心形图标已渲染
+      expect(find.byIcon(Icons.favorite), findsOneWidget);
+
+      // 验证计数文本 '5' 已渲染
+      expect(find.text('5'), findsOneWidget);
+
+      // 验证 Badge 气泡容器的约束和样式
+      final containerFinder = find.ancestor(
+        of: find.text('5'),
+        matching: find.byType(Container),
+      ).first;
+      expect(containerFinder, findsOneWidget);
+
+      final containerWidget = tester.widget<Container>(containerFinder);
+      final constraints = containerWidget.constraints;
+      expect(constraints?.minWidth, 14.0);
+      expect(constraints?.minHeight, 14.0);
+
+      final textWidget = tester.widget<Text>(find.text('5'));
+      expect(textWidget.style?.fontSize, 9.0);
+      expect(textWidget.style?.fontWeight, FontWeight.bold);
+    });
   });
 }

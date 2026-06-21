@@ -1086,10 +1086,11 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                 ),
                                 if (quote.favoriteCount > 0)
                                   Positioned(
-                                    right: -2,
-                                    top: -2,
+                                    right: -3,
+                                    top: -3,
                                     child: Container(
-                                      padding: const EdgeInsets.all(2),
+                                      alignment: Alignment.center,
+                                      padding: const EdgeInsets.symmetric(horizontal: 2.5),
                                       decoration: BoxDecoration(
                                         color: Colors.red.shade600,
                                         borderRadius: BorderRadius.circular(10),
@@ -1099,12 +1100,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                               ? theme.colorScheme
                                                   .surfaceContainerLowest
                                               : cardColor,
-                                          width: 1.5,
+                                          width: 1.0,
                                         ),
                                       ),
                                       constraints: const BoxConstraints(
-                                        minWidth: 16,
-                                        minHeight: 16,
+                                        minWidth: 14,
+                                        minHeight: 14,
                                       ),
                                       child: Text(
                                         quote.favoriteCount > 99
@@ -1115,7 +1116,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                             .labelSmall
                                             ?.copyWith(
                                                 color: Colors.white,
-                                                fontSize: 10,
+                                                fontSize: 9.0,
+                                                fontWeight: FontWeight.bold,
                                                 height: 1.0),
                                         textAlign: TextAlign.center,
                                       ),
