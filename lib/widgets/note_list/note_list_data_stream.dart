@@ -279,6 +279,8 @@ extension _NoteListDataStreamExtension on NoteListViewState {
   }) {
     if (!mounted) return; // 确保组件仍然挂载
 
+    bool isFirstSearchEvent = isSearchUpdate;
+
     logDebug(
       '更新数据流订阅 (preserveScrollPosition: $preserveScrollPosition, isSearchUpdate: $isSearchUpdate)',
       source: 'NoteListView',
@@ -341,9 +343,12 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             _hasMore = list.length >= NoteListViewState._pageSize;
             _isLoading = isLoadMorePage;
             _pruneExpansionControllers();
-            // 仅搜索 query 变化时递增，驱动 AnimatedSwitcher 淡入新搜索结果。
-            // load more、排序、标签切换等不递增，避免 ListView 重建跳回顶部。
-            if (isSearchUpdate) _resultsVersion++;
+            // 仅搜索 query 变化时的第一次事件递增，驱动 AnimatedSwitcher 淡入新搜索结果。
+            // 随后的 load more 不递增，避免 ListView 重建跳回顶部。
+            if (isFirstSearchEvent) {
+              _resultsVersion++;
+              isFirstSearchEvent = false;
+            }
           });
           if (_loadMorePerfRecording &&
               (_quotes.length > _loadMorePerfStartCount || !_hasMore)) {
