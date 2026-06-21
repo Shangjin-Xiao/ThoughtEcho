@@ -65,7 +65,9 @@ class QuoteItemWidget extends StatefulWidget {
   final bool trashActionsEnabled;
   final bool isSelected;
   final bool selectionMode;
-  final bool shouldAnimateInsert;
+
+  /// 动画版本号（不为 null 时播放入场动画，每次触发递增确保重播）
+  final int? animateInsertVersion;
 
   const QuoteItemWidget({
     super.key,
@@ -94,7 +96,7 @@ class QuoteItemWidget extends StatefulWidget {
     this.trashActionsEnabled = true,
     this.isSelected = false,
     this.selectionMode = false,
-    this.shouldAnimateInsert = false,
+    this.animateInsertVersion,
   });
 
   @override
@@ -1253,7 +1255,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       );
     }
 
-    if (!widget.shouldAnimateInsert) return card;
+    final version = widget.animateInsertVersion;
+    if (version == null) return card;
 
     final animationType = context.select<SettingsService, String>(
       (s) => s.noteInsertAnimationType,
@@ -1263,17 +1266,18 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
     final bool isScale = animationType == 'scale';
 
-    // 气泡微升与渐入动画 (可根据开发者实验选项进行切换)
-    // 采用 TweenAnimationBuilder 制作纯 GPU 动效，结束后立即释放以保证性能。
+    // 入场动画：slide（从上方滑入+渐显）或 scale（微缩放+渐显）
+    // key 包含版本号，确保每次触发都是新 key，TweenAnimationBuilder 必然重播。
     return TweenAnimationBuilder<double>(
-      key: ValueKey('save_animate_${widget.quote.id}_$animationType'),
+      key:
+          ValueKey('save_animate_${widget.quote.id}_${animationType}_$version'),
       tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 250),
+      duration: const Duration(milliseconds: 200),
       curve: Curves.easeOutCubic,
       builder: (context, value, child) {
         if (value >= 0.99) return child!;
         final double scale = isScale ? (0.96 + 0.04 * value) : 1.0;
-        final double slideOffset = isScale ? 0.0 : (12.0 * (1.0 - value));
+        final double slideOffset = isScale ? 0.0 : (-20.0 * (1.0 - value));
 
         return Transform.translate(
           offset: Offset(0, slideOffset),

@@ -110,7 +110,7 @@ class AppSettings {
     this.exportFormat = 'card', // 默认精致分享卡片
     this.sentryEnabled = false, // 默认不启用 Sentry 诊断与性能上报
     this.sentryDisclosureShown = false, // 默认未显示提示
-    this.noteInsertAnimationType = 'scale', // 默认气泡缩放
+    this.noteInsertAnimationType = 'slide', // 默认平滑上升
   }) : trashRetentionDays = normalizeTrashRetentionDays(trashRetentionDays);
 
   static int normalizeTrashRetentionDays(int? days) {
@@ -285,7 +285,7 @@ class AppSettings {
         exportFormat: 'card',
         sentryEnabled: false,
         sentryDisclosureShown: false,
-        noteInsertAnimationType: 'scale',
+        noteInsertAnimationType: 'slide',
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"

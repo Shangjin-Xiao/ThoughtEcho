@@ -132,9 +132,12 @@ class NoteListViewState extends State<NoteListView> {
   GlobalKey? _positioningItemKey;
   int _positioningRequest = 0;
 
-  /// 保存/修改笔记后触发入场动画的 ID 集合，动画完成后自动清除
-  final Set<String> _animatingQuoteIds = {};
+  /// 保存/修改笔记后触发入场动画的 ID 计数，每次触发递增以确保编辑场景下也能重播
+  final Map<String, int> _animatingQuoteVersions = {};
   final Map<String, Timer> _animationTimers = {};
+
+  /// 删除笔记时触发缩小渐隐动画的 ID 集合
+  final Set<String> _deletingQuoteIds = {};
 
   /// 事件驱动：首批数据加载完成信号，替代忙等轮询
   Completer<void>? _initialDataCompleter = Completer<void>();
@@ -613,17 +616,18 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   /// 触发指定 ID 的笔记卡片入场/更新动画（保存/修改后调用）。
-  /// 动画时长 250ms，1500ms 后自动清除状态以保证性能，并处理多次连续保存的情况。
+  /// 每次触发递增版本号，确保编辑同一卡片时也能重播动画。
+  /// 1500ms 后自动清除状态以保证性能。
   void triggerInsertAnimation(String id) {
     if (!mounted) return;
     _animationTimers[id]?.cancel();
     setState(() {
-      _animatingQuoteIds.add(id);
+      _animatingQuoteVersions[id] = (_animatingQuoteVersions[id] ?? 0) + 1;
     });
     _animationTimers[id] = Timer(const Duration(milliseconds: 1500), () {
       if (mounted) {
         setState(() {
-          _animatingQuoteIds.remove(id);
+          _animatingQuoteVersions.remove(id);
           _animationTimers.remove(id);
         });
       }

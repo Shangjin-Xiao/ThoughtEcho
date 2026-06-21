@@ -570,8 +570,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                         isExpanded: isExpanded,
                         isSelected: isSelected,
                         selectionMode: _isExportMode,
-                        shouldAnimateInsert:
-                            _animatingQuoteIds.contains(quoteId),
+                        animateInsertVersion: _animatingQuoteVersions[quoteId],
                         onToggleExpanded: (expanded) {
                           if (expansionNotifier.value != expanded) {
                             expansionNotifier.value = expanded;
@@ -601,7 +600,21 @@ extension _NoteListItemsExtension on NoteListViewState {
                           }
                         },
                         onEdit: () => widget.onEdit(quote),
-                        onDelete: () => widget.onDelete(quote),
+                        onDelete: () {
+                          if (quoteId.isNotEmpty) {
+                            _updateState(() {
+                              _deletingQuoteIds.add(quoteId);
+                            });
+                            // 等动画播完（180ms）再执行真正的删除，
+                            // 卡片消失后 widget 随之销毁，无需回撤 _deletingQuoteIds。
+                            Future.delayed(const Duration(milliseconds: 180),
+                                () {
+                              widget.onDelete(quote);
+                            });
+                          } else {
+                            widget.onDelete(quote);
+                          }
+                        },
                         onAskAI: () => widget.onAskAI(quote),
                         onGenerateCard: widget.onGenerateCard != null
                             ? () => widget.onGenerateCard!(quote)
@@ -660,6 +673,24 @@ extension _NoteListItemsExtension on NoteListViewState {
                   itemWidget = _NoteListItemKeepAlive(
                     keepAlive: keepAliveItem,
                     child: itemWidget,
+                  );
+
+                  final isDeleting = _deletingQuoteIds.contains(quoteId);
+                  itemWidget = AnimatedOpacity(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeInCubic,
+                    opacity: isDeleting ? 0.0 : 1.0,
+                    child: AnimatedSize(
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeInCubic,
+                      alignment: Alignment.topCenter,
+                      clipBehavior: Clip.hardEdge,
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        heightFactor: isDeleting ? 0.0 : 1.0,
+                        child: itemWidget,
+                      ),
+                    ),
                   );
 
                   return _wrapNoteListItemPerfProbe(
