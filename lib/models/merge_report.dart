@@ -9,7 +9,9 @@
 /// 旧代码仍可使用 addAppliedQuote/addAppliedCategory（标记为 @deprecated）。
 class MergeReport {
   // 旧统计（兼容）: 应用的笔记与分类（新增 + 更新）
+  @Deprecated('Use insertedQuotes and updatedQuotes instead')
   final int appliedQuotes;
+  @Deprecated('Use insertedCategories and updatedCategories instead')
   final int appliedCategories;
 
   // 新增：细分统计
@@ -35,7 +37,9 @@ class MergeReport {
   final String? sourceDevice;
 
   const MergeReport({
+    @Deprecated('Use insertedQuotes and updatedQuotes instead')
     this.appliedQuotes = 0,
+    @Deprecated('Use insertedCategories and updatedCategories instead')
     this.appliedCategories = 0,
     this.insertedQuotes = 0,
     this.updatedQuotes = 0,
@@ -130,6 +134,7 @@ class MergeReport {
 
   /// 复制并修改
   MergeReport copyWith({
+    @Deprecated('Use insertedQuotes and updatedQuotes instead')
     int? appliedQuotes,
     int? insertedQuotes,
     int? updatedQuotes,
@@ -137,6 +142,7 @@ class MergeReport {
     int? deletedByTombstoneQuotes,
     int? skippedQuotes,
     int? sameTimestampDiffQuotes,
+    @Deprecated('Use insertedCategories and updatedCategories instead')
     int? appliedCategories,
     int? insertedCategories,
     int? updatedCategories,
@@ -292,6 +298,7 @@ class MergeReport {
 
 /// 可变的合并报告构建器，用于在合并过程中累积统计信息
 class MergeReportBuilder {
+  @Deprecated('Use _insertedQuotes and _updatedQuotes instead')
   int _appliedQuotes = 0; // 兼容旧逻辑
   int _insertedQuotes = 0;
   int _updatedQuotes = 0;
@@ -300,6 +307,7 @@ class MergeReportBuilder {
   int _sameTimestampDiffQuotes = 0;
   int _skippedQuotes = 0;
 
+  @Deprecated('Use _insertedCategories and _updatedCategories instead')
   int _appliedCategories = 0; // 兼容旧逻辑
   int _insertedCategories = 0;
   int _updatedCategories = 0;
