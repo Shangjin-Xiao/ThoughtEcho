@@ -496,6 +496,7 @@ class NoteListViewState extends State<NoteListView> {
       // 更新流订阅，传入是否仅为排序变化
       _updateStreamSubscription(
         preserveScrollPosition: isOnlySortChange || isSearchChange,
+        isSearchUpdate: isSearchChange,
       );
     } else if (shouldUpdate) {
       logDebug('跳过更新：数据尚未完成首次加载', source: 'NoteListView');

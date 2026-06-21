@@ -269,11 +269,14 @@ extension _NoteListDataStreamExtension on NoteListViewState {
   }
 
   // 修复：新增方法：更新数据库监听流（改进版本）
-  void _updateStreamSubscription({bool preserveScrollPosition = false}) {
+  void _updateStreamSubscription({
+    bool preserveScrollPosition = false,
+    bool isSearchUpdate = false,
+  }) {
     if (!mounted) return; // 确保组件仍然挂载
 
     logDebug(
-      '更新数据流订阅 (preserveScrollPosition: $preserveScrollPosition)',
+      '更新数据流订阅 (preserveScrollPosition: $preserveScrollPosition, isSearchUpdate: $isSearchUpdate)',
       source: 'NoteListView',
     );
 
@@ -288,14 +291,18 @@ extension _NoteListDataStreamExtension on NoteListViewState {
       logDebug('筛选条件变化，不保存滚动位置，将重置到顶部', source: 'NoteListView');
     }
 
-    // Set loading only if not first load
-    if (_initialDataLoaded) {
+    // 搜索更新时不设 _isLoading，旧内容保持显示，避免底部临时出现加载动画。
+    // 非搜索更新时（标签/天气/排序切换）才设 _isLoading = true。
+    if (_initialDataLoaded && !isSearchUpdate) {
       _updateState(() {
         _isLoading = true;
       });
     }
 
-    _hasMore = true;
+    // 搜索更新时不重置 _hasMore，防止底部加载动画瞬间闪现
+    if (!isSearchUpdate) {
+      _hasMore = true;
+    }
 
     final db = Provider.of<DatabaseService>(context, listen: false);
 
