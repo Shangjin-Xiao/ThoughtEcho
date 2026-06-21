@@ -355,21 +355,25 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           }
 
           // Restore scroll position smoothly (only if preserveScrollPosition is true)
+          // 只在第一次数据到达时恢复一次；之后置 null 防止后续 stream 事件
+          // （如 load more）重复 animateTo，导致用户滑动时列表跳回旧位置。
           if (savedScrollOffset != null &&
               _scrollController.hasClients &&
               _initialDataLoaded) {
+            final offsetToRestore = savedScrollOffset;
+            savedScrollOffset = null; // 立即置空，防止后续 stream 事件再次触发
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (savedScrollOffset != null &&
+              if (offsetToRestore != null &&
                   _scrollController.hasClients &&
-                  savedScrollOffset <=
+                  offsetToRestore <=
                       _scrollController.position.maxScrollExtent) {
                 _scrollController.animateTo(
-                  savedScrollOffset,
+                  offsetToRestore,
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeOut,
                 );
                 logDebug(
-                  '平滑恢复滚动位置: $savedScrollOffset',
+                  '平滑恢复滚动位置: $offsetToRestore',
                   source: 'NoteListView',
                 );
               } else {
