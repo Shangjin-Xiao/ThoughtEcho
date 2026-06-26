@@ -35,3 +35,8 @@
 ## 2024-05-24 - Optimize MediaCleanupService verifyMediaIntegrity
 **Learning:** The verifyMediaIntegrity method processed quotes sequentially and awaited extractMediaPathsFromQuote on each, causing significant I/O blocking when iterating over hundreds or thousands of quotes. Redundant directory lookups per extraction further exacerbated the overhead.
 **Action:** Replaced the sequential `for (final quote in quotes)` loop with a chunked `Future.wait` implementation that processes quotes in batches of 50. Passed down the pre-calculated `appPath` via `cachedAppPath` to eliminate repeated platform IPC calls. This reduced execution time by over 80%.
+## 2026-06-26 - [优化 QuillAiApplyUtils 正则表达式编译性能]
+**Learning:**
+在处理文档内容的高频工具方法（如 `stripMediaMarkersForDisplay`）中，内联调用 `RegExp` 构造函数会导致每次方法执行时重新分配和编译正则表达式。在连续使用链式 `replaceAll` 操作时，这种性能损耗会被进一步放大。
+**Action:**
+将 `QuillAiApplyUtils` 中的空白字符和换行符匹配模式提取为类的 `static final RegExp` 静态成员，使其仅在类加载时编译一次。测试执行通过且时间未受影响，有效降低了高频字符串处理时的资源消耗。
