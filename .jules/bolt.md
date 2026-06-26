@@ -35,3 +35,6 @@
 ## 2024-05-24 - Optimize MediaCleanupService verifyMediaIntegrity
 **Learning:** The verifyMediaIntegrity method processed quotes sequentially and awaited extractMediaPathsFromQuote on each, causing significant I/O blocking when iterating over hundreds or thousands of quotes. Redundant directory lookups per extraction further exacerbated the overhead.
 **Action:** Replaced the sequential `for (final quote in quotes)` loop with a chunked `Future.wait` implementation that processes quotes in batches of 50. Passed down the pre-calculated `appPath` via `cachedAppPath` to eliminate repeated platform IPC calls. This reduced execution time by over 80%.
+## 2024-06-26 - Optimize N+1 Query in database fallback insert
+**Learning:** In database batch insert operations, when a bulk `commit` fails, falling back to a loop that sequentially performs `await txn.insert()` is a severe performance bottleneck (N+1 I/O problem) in degraded/fallback execution paths.
+**Action:** Replaced sequential `await txn.insert()` in the fallback loops for `categories`, `quotes`, `quote_tags`, and `quote_tombstones` with `txn.batch()` and used `batch.commit(continueOnError: true, noResult: true)` in `lib/services/database_backup_service.dart`.

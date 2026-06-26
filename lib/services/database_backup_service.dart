@@ -80,7 +80,8 @@ class DatabaseBackupService {
           logDebug('批量插入${categories.length}个分类成功');
         } catch (e) {
           logError('批量插入分类失败，降级为逐条插入: $e', error: e, source: 'BackupRestore');
-          // 降级：逐条插入
+          // 降级：通过 continueOnError: true 重新批量插入
+          final fallbackBatch = txn.batch();
           for (final c in categories) {
             final categoryData = Map<String, dynamic>.from(
               c as Map<String, dynamic>,
@@ -99,15 +100,16 @@ class DatabaseBackupService {
             categoryData['name'] ??= '未命名分类';
             categoryData['is_default'] ??= 0;
 
-            try {
-              await txn.insert(
-                'categories',
-                categoryData,
-                conflictAlgorithm: ConflictAlgorithm.replace,
-              );
-            } catch (e2) {
-              logDebug('插入单个分类失败: ${categoryData['id']}');
-            }
+            fallbackBatch.insert(
+              'categories',
+              categoryData,
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+          try {
+            await fallbackBatch.commit(continueOnError: true, noResult: true);
+          } catch (e2) {
+            logDebug('降级批量插入分类再次失败: $e2');
           }
         }
 
@@ -202,7 +204,8 @@ class DatabaseBackupService {
           logDebug('批量插入${quotes.length}条笔记成功');
         } catch (e) {
           logError('批量插入笔记失败，降级为逐条插入: $e', error: e, source: 'BackupRestore');
-          // 降级：逐条插入
+          // 降级：通过 continueOnError: true 重新批量插入
+          final fallbackQuoteBatch = txn.batch();
           for (final q in quotes) {
             final quoteData = Map<String, dynamic>.from(
               q as Map<String, dynamic>,
@@ -259,28 +262,30 @@ class DatabaseBackupService {
                       : DateTime.now().toUtc().toIso8601String();
             }
 
-            try {
-              await txn.insert(
-                'quotes',
-                quoteData,
-                conflictAlgorithm: ConflictAlgorithm.replace,
-              );
+            fallbackQuoteBatch.insert(
+              'quotes',
+              quoteData,
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
 
-              // 插入成功后，处理标签关联
-              if (tagIdsString != null && tagIdsString.isNotEmpty) {
-                final quoteId = quoteData['id'] as String;
-                final tagIds =
-                    tagIdsString.split(',').where((id) => id.trim().isNotEmpty);
-                for (final tagId in tagIds) {
-                  tagRelations.add({
-                    'quote_id': quoteId,
-                    'tag_id': tagId.trim(),
-                  });
-                }
+            // 在降级批处理中预先收集标签关联，依靠 foreign key 或 ignore 跳过失败记录的关联
+            if (tagIdsString != null && tagIdsString.isNotEmpty) {
+              final quoteId = quoteData['id'] as String;
+              final tagIds =
+                  tagIdsString.split(',').where((id) => id.trim().isNotEmpty);
+              for (final tagId in tagIds) {
+                tagRelations.add({
+                  'quote_id': quoteId,
+                  'tag_id': tagId.trim(),
+                });
               }
-            } catch (e2) {
-              logDebug('插入单条笔记失败: ${quoteData['id']}');
             }
+          }
+          try {
+            await fallbackQuoteBatch.commit(
+                continueOnError: true, noResult: true);
+          } catch (e2) {
+            logDebug('降级批量插入笔记再次失败: $e2');
           }
         }
 
@@ -300,17 +305,20 @@ class DatabaseBackupService {
             logDebug('批量插入${tagRelations.length}条标签关联成功');
           } catch (e) {
             logError('批量插入标签关联失败: $e', error: e, source: 'BackupRestore');
-            // 降级：逐条插入
+            // 降级：通过 continueOnError: true 重新批量插入
+            final fallbackTagBatch = txn.batch();
             for (final relation in tagRelations) {
-              try {
-                await txn.insert(
-                  'quote_tags',
-                  relation,
-                  conflictAlgorithm: ConflictAlgorithm.ignore,
-                );
-              } catch (e2) {
-                logDebug('插入单条标签关联失败: ${relation['quote_id']}');
-              }
+              fallbackTagBatch.insert(
+                'quote_tags',
+                relation,
+                conflictAlgorithm: ConflictAlgorithm.ignore,
+              );
+            }
+            try {
+              await fallbackTagBatch.commit(
+                  continueOnError: true, noResult: true);
+            } catch (e2) {
+              logDebug('降级批量插入标签关联再次失败: $e2');
             }
           }
         }
@@ -367,17 +375,20 @@ class DatabaseBackupService {
           try {
             await tombstoneBatch.commit(noResult: true);
           } catch (e) {
-            logDebug('tombstones批量提交失败，回退到逐行插入: $e');
+            logDebug('tombstones批量提交失败，回退到 continueOnError 批量插入: $e');
+            final fallbackTombstoneBatch = txn.batch();
             for (final tombstoneData in tombstoneRows) {
-              try {
-                await txn.insert(
-                  'quote_tombstones',
-                  tombstoneData,
-                  conflictAlgorithm: ConflictAlgorithm.replace,
-                );
-              } catch (e2) {
-                logDebug('插入单条tombstone失败: ${tombstoneData['quote_id']}');
-              }
+              fallbackTombstoneBatch.insert(
+                'quote_tombstones',
+                tombstoneData,
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
+            }
+            try {
+              await fallbackTombstoneBatch.commit(
+                  continueOnError: true, noResult: true);
+            } catch (e2) {
+              logDebug('降级批量插入 tombstone 再次失败: $e2');
             }
           }
 
