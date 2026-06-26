@@ -3712,6 +3712,7 @@
   "webdavEnableSync": "启用云同步",
   "webdavSaveAndSync": "保存并同步",
   "webdavHowToGetAppPassword": "如何获取应用密码？",
+  "webdavShowPasswordTooltip": "显示/隐藏密码",
   "webdavOpenHelpFailed": "无法打开帮助链接，请检查系统默认浏览器设置",
   "webdavConflictCategoryName": "同步冲突",
   "webdavConflictNotePrefix": "[冲突备份] ",
