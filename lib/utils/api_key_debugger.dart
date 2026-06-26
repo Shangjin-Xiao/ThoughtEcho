@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'dart:math' as math;
 import '../services/api_key_manager.dart';
 import '../services/settings_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
@@ -33,7 +32,7 @@ class ApiKeyDebugger {
           '   配置中的API Key: ${currentProvider.apiKey.isEmpty ? "空" : "${currentProvider.apiKey.length}字符"}',
         );
         logDebug(
-          '   配置中的API Key内容: ${currentProvider.apiKey.isEmpty ? "空" : "${currentProvider.apiKey.substring(0, math.min(4, currentProvider.apiKey.length))}****"}',
+          '   配置中的API Key内容: ${currentProvider.apiKey.isEmpty ? "空" : "[REDACTED]"}',
         );
 
         // 3. 检查加密存储中的API Key状态
@@ -45,7 +44,7 @@ class ApiKeyDebugger {
           '   安全存储中的API Key: ${secureApiKey.isEmpty ? "空" : "${secureApiKey.length}字符"}',
         );
         logDebug(
-          '   安全存储中的API Key内容: ${secureApiKey.isEmpty ? "空" : "${secureApiKey.substring(0, math.min(4, secureApiKey.length))}****"}',
+          '   安全存储中的API Key内容: ${secureApiKey.isEmpty ? "空" : "[REDACTED]"}',
         );
 
         // 4. 检查有效性验证结果
@@ -69,7 +68,7 @@ class ApiKeyDebugger {
             '   Headers中的API Key: ${apiKeyFromHeader.isEmpty ? "空" : "${apiKeyFromHeader.length}字符"}',
           );
           logDebug(
-            '   Headers中的API Key内容: ${apiKeyFromHeader.isEmpty ? "空" : apiKeyFromHeader.substring(0, math.min(20, apiKeyFromHeader.length))}...',
+            '   Headers中的API Key内容: ${apiKeyFromHeader.isEmpty ? "空" : "[REDACTED]"}',
           );
           logDebug('   Headers与安全存储是否一致: ${apiKeyFromHeader == secureApiKey}');
         } else {
@@ -117,7 +116,7 @@ class ApiKeyDebugger {
     logDebug('Provider ID: $providerId');
     logDebug('API Key长度: ${apiKey.length}');
     logDebug(
-      'API Key前缀: ${apiKey.length > 20 ? apiKey.substring(0, 20) : apiKey}...',
+      'API Key前缀: ${apiKey.isEmpty ? "空" : "[REDACTED]"}',
     );
 
     try {
@@ -164,7 +163,7 @@ class ApiKeyDebugger {
     logDebug('传入API Key长度: ${apiKey.length}');
     logDebug('传入API Key是否为空: ${apiKey.isEmpty}');
     logDebug(
-      '传入API Key前缀: ${apiKey.isNotEmpty ? apiKey.substring(0, math.min(20, apiKey.length)) : "无"}',
+      '传入API Key前缀: ${apiKey.isNotEmpty ? "[REDACTED]" : "无"}',
     );
 
     try {
@@ -175,7 +174,7 @@ class ApiKeyDebugger {
       logDebug('存储中的API Key长度: ${storedApiKey.length}');
       logDebug('存储中的API Key是否为空: ${storedApiKey.isEmpty}');
       logDebug(
-        '存储中的API Key前缀: ${storedApiKey.isNotEmpty ? storedApiKey.substring(0, math.min(20, storedApiKey.length)) : "无"}',
+        '存储中的API Key前缀: ${storedApiKey.isNotEmpty ? "[REDACTED]" : "无"}',
       );
 
       // 比较传入的API Key和存储的API Key

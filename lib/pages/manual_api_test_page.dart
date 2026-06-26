@@ -149,7 +149,7 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
       buffer.writeln('  Model: $model');
       buffer.writeln('  API Key长度: ${apiKey.length}');
       buffer.writeln(
-        '  API Key前缀: ${apiKey.substring(0, apiKey.length > 10 ? 10 : apiKey.length)}...',
+        '  API Key前缀: ${apiKey.isEmpty ? "空" : "[REDACTED]"}',
       );
       buffer.writeln();
 

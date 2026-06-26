@@ -47,3 +47,7 @@
 **Vulnerability:** 数据库查询参数（`$finalArgs`，可能包含用户标签、分类等敏感筛选条件）在 `logDebug` 中以明文形式记录，有数据泄漏风险。
 **Learning:** 在拼接或调用日志工具（如 `logDebug`、`AppLogger.e`）输出带参的 SQL 执行或排查信息时，极易忽略敏感信息脱敏，导致 PII 等数据泄漏。
 **Prevention:** 在日志中记录数据库操作时，永远不要将 `$args` 列表明文打印，必须使用 `[REDACTED]` 或其他脱敏手段隐藏参数内容。
+## 2026-06-26 - [防止日志中敏感凭证泄露]
+**Vulnerability:** API Key debugging logic printed substrings of sensitive credentials, potentially exposing full short keys or significant portions of long keys.
+**Learning:** Even partial logging of API keys for debugging can lead to full credential compromise, especially with short or predictable keys. `logDebug` outputs might be persisted or exposed.
+**Prevention:** Uniformly use `[REDACTED]` when masking credentials in logs and diagnostic UIs, rather than relying on substring operations that leak partial information.
