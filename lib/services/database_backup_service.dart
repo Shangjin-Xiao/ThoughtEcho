@@ -205,6 +205,8 @@ class DatabaseBackupService {
         } catch (e) {
           logError('批量插入笔记失败，降级为逐条插入: $e', error: e, source: 'BackupRestore');
           // 降级：通过 continueOnError: true 重新批量插入
+          // 清空主循环中已收集的 tagRelations，防止孤立关联和重复写入
+          tagRelations.clear();
           final fallbackQuoteBatch = txn.batch();
           for (final q in quotes) {
             final quoteData = Map<String, dynamic>.from(
