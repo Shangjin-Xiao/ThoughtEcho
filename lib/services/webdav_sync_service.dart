@@ -570,6 +570,8 @@ class WebDAVSyncService extends ChangeNotifier {
 
     int conflictsCloned = 0;
 
+    final List<Map<String, dynamic>> conflictingQuotes = [];
+
     // 比对云端对应笔记的修改时间
     for (final rq in remoteQuotes) {
       final rqMap = Map<String, dynamic>.from(rq as Map<String, dynamic>);
@@ -595,40 +597,87 @@ class WebDAVSyncService extends ChangeNotifier {
         final remoteContent = rqMap['content'] as String? ?? '';
 
         if (localContent != remoteContent) {
-          conflictsCloned++;
-          await _cloneConflictQuote(db, localQuote);
+          conflictingQuotes.add(localQuote);
         }
       }
     }
 
+    if (conflictingQuotes.isEmpty) return 0;
+
+    // 批量预取所有冲突笔记的标签，消除 N+1 查询
+    final Map<String, List<Map<String, Object?>>> tagsMap = {};
+    final batchQuery = db.batch();
+
+    // 按块处理以避免超过 900 个参数的 SQLite 限制
+    for (var i = 0; i < conflictingQuotes.length; i += 900) {
+      final end = (i + 900 < conflictingQuotes.length)
+          ? i + 900
+          : conflictingQuotes.length;
+      final chunk = conflictingQuotes
+          .sublist(i, end)
+          .map((q) => q['id'] as String)
+          .toList();
+      final placeholders = List.filled(chunk.length, '?').join(',');
+      batchQuery.query(
+        'quote_tags',
+        where: 'quote_id IN ($placeholders)',
+        whereArgs: chunk,
+      );
+    }
+
+    final results = await batchQuery.commit();
+    for (final chunkResult in results) {
+      final tagsList = chunkResult as List<Object?>;
+      for (final tagObj in tagsList) {
+        final tag = tagObj as Map<String, Object?>;
+        final qId = tag['quote_id'] as String;
+        tagsMap.putIfAbsent(qId, () => []).add(tag);
+      }
+    }
+
+    // 在循环前提前确保冲突分类存在，避免 N+1 查询
+    await _ensureConflictCategoryExists(db);
+
+    for (final quote in conflictingQuotes) {
+      conflictsCloned++;
+      await _cloneConflictQuote(
+        db,
+        quote,
+        tagsMap[quote['id'] as String] ?? [],
+      );
+    }
+
     return conflictsCloned;
+  }
+
+  Future<void> _ensureConflictCategoryExists(Database db) async {
+    final catCheck = await db.query(
+      'categories',
+      where: 'id = ?',
+      whereArgs: [conflictCategoryId],
+    );
+
+    if (catCheck.isEmpty) {
+      await db.insert('categories', {
+        'id': conflictCategoryId,
+        'name': '同步冲突',
+        'is_default': 0,
+        'icon_name': 'warning_amber_rounded',
+        'last_modified': DateTime.now().toUtc().toIso8601String(),
+      });
+    }
   }
 
   /// 克隆冲突的笔记，并将分类设为“同步冲突”
   Future<void> _cloneConflictQuote(
     Database db,
     Map<String, dynamic> localQuote,
+    List<Map<String, Object?>> tags,
   ) async {
     try {
-      // 1. 确保冲突分类在本地存在
-      final catCheck = await db.query(
-        'categories',
-        where: 'id = ?',
-        whereArgs: [conflictCategoryId],
-      );
-
-      if (catCheck.isEmpty) {
-        await db.insert('categories', {
-          'id': conflictCategoryId,
-          'name': '同步冲突',
-          'is_default': 0,
-          'icon_name': 'warning_amber_rounded',
-          'last_modified': DateTime.now().toUtc().toIso8601String(),
-        });
-      }
+      // 分类已在调用方确保存在，无需在此重复查询
 
       // 2. 拷贝笔记元数据
-      final String quoteId = localQuote['id'] as String;
       final String clonedId = const Uuid().v4();
       final clonedQuote = Map<String, dynamic>.from(localQuote);
 
@@ -657,11 +706,6 @@ class WebDAVSyncService extends ChangeNotifier {
       await db.insert('quotes', clonedQuote);
 
       // 3. 复制对应的标签关联关系
-      final tags = await db.query(
-        'quote_tags',
-        where: 'quote_id = ?',
-        whereArgs: [quoteId],
-      );
       if (tags.isNotEmpty) {
         final batch = db.batch();
         for (final tag in tags) {
