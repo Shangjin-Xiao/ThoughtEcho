@@ -357,9 +357,15 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         mutableMap['tag_ids'] = tags.join(',');
         return Quote.fromJson(mutableMap);
       }).toList();
-    } catch (e) {
-      logDebug('获取周期内笔记失败: $e');
-      return [];
+    } catch (e, stackTrace) {
+      logError(
+        '获取周期内笔记失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DatabaseQuoteCrudMixin',
+      );
+      rethrow;
+    }
     }
   }
 
