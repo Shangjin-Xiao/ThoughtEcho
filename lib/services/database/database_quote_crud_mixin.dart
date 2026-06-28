@@ -303,12 +303,11 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
 
       // 添加日期范围查询
       final startIso = start.toIso8601String();
-      final endIso =
-          end.add(const Duration(days: 1, milliseconds: -1)).toIso8601String();
+      final endIso = end.add(const Duration(days: 1)).toIso8601String();
       conditions.add('''
         (
-          (q.date >= ? AND q.date <= ?)
-          OR (q.favorite_count > 0 AND q.last_modified >= ? AND q.last_modified <= ?)
+          (q.date >= ? AND q.date < ?)
+          OR (q.favorite_count > 0 AND q.last_modified >= ? AND q.last_modified < ?)
         )
       ''');
       args.add(startIso);
