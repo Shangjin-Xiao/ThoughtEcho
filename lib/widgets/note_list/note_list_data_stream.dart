@@ -259,10 +259,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
       _initialLoadSafetyTimer = Timer(
         const Duration(seconds: 8),
         () {
-          if (mounted &&
-              !_initialDataLoaded &&
-              _isLoading &&
-              _quotes.isEmpty) {
+          if (mounted && !_initialDataLoaded && _isLoading && _quotes.isEmpty) {
             logDebug(
               '首次数据加载安全超时（8s），结束加载状态',
               source: 'NoteListView',
