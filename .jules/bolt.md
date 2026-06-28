@@ -47,6 +47,6 @@
 **Action:**
 将 `QuillAiApplyUtils` 中的空白字符和换行符匹配模式提取为类的 `static final RegExp` 静态成员，使其仅在类加载时编译一次。测试执行通过且时间未受影响，有效降低了高频字符串处理时的资源消耗。
 
-## $(date +%Y-%m-%d) - Optimize Database Schema Migration
+## 2026-06-26 - Optimize Database Schema Migration
 **Learning:** For database schema migrations involving dictionary mapping (e.g., legacy string labels to string keys), fetching all records into Dart memory and iterating through them to perform row-by-row `batch.update()` calls introduces severe N+1 overhead across the SQLite FFI boundary.
 **Action:** Replaced the row-by-row iteration with a loop that directly executes `txn.rawUpdate('UPDATE quotes SET field = ? WHERE field = ?', [key, label])` for each dictionary entry. This pushes the update logic entirely into the SQLite engine, saving ~35-60% of migration time on large datasets by eliminating unnecessary read queries and FFI data transfers.
