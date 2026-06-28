@@ -392,7 +392,7 @@
   "noteDeleted": "笔记已删除",
   "noteNotFound": "笔记不存在",
   "noteUpdateSkippedDeleted": "笔记已删除，更新已跳过",
-  "favorited": "已珍藏 ({count})",
+  "favorited": "已收藏 ({count})",
   "@favorited": {
     "placeholders": {
       "count": {
@@ -2010,6 +2010,7 @@
   "aiProviderDeepSeek": "DeepSeek",
   "aiProviderAnthropic": "Anthropic (Claude)",
   "aiProviderOllama": "Ollama",
+  "aiProviderOllamaCloud": "Ollama 云端",
   "aiProviderLMStudio": "LMStudio",
   "apiKeyStatusEmpty": "空",
   "apiKeyStatusNotEmpty": "{length}字符",
@@ -2041,7 +2042,7 @@
   "mergeImportHint": "此操作将保留当前数据，并与备份数据进行合并：",
   "mergeImportReversible": "此操作可逆：可再次导入覆盖备份或继续合并。",
   "confirmRestoreBtn": "确认还原",
-  "favoriteCountWithNum": "已珍藏 ({count})",
+  "favoriteCountWithNum": "已收藏 ({count})",
   "@favoriteCountWithNum": {
     "placeholders": {
       "count": {
@@ -3861,6 +3862,7 @@
   "stopGenerate": "停止生成",
   "aiModeChat": "对话模式",
   "aiModeAgent": "Agent 模式",
+  "aiAgent": "智能体",
   "agentThinking": "正在思考...",
   "agentSearchingNotes": "正在搜索笔记...",
   "agentAnalyzingData": "正在分析数据...",

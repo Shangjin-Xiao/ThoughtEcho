@@ -49,10 +49,12 @@ class AIRequestHelper {
 
     // 只保留 includedInContext && 非 loading 的 user/assistant 消息
     final contextMessages = history
-        .where((m) =>
-            m.includedInContext &&
-            !m.isLoading &&
-            (m.role == 'user' || m.role == 'assistant'))
+        .where(
+          (m) =>
+              m.includedInContext &&
+              !m.isLoading &&
+              (m.role == 'user' || m.role == 'assistant'),
+        )
         .toList();
 
     if (contextMessages.isEmpty) return messages;
@@ -66,7 +68,7 @@ class AIRequestHelper {
       if (content.length > singleMessageCap) {
         content = '${content.substring(0, singleMessageCap)}...';
       }
-      if (usedChars + content.length > budget && selected.isNotEmpty) break;
+      if (usedChars + content.length > budget) break;
       usedChars += content.length;
       selected.insert(0, {'role': contextMessages[i].role, 'content': content});
     }
@@ -422,11 +424,7 @@ class AIRequestHelper {
         try {
           await operation(controller);
         } catch (e) {
-          handleStreamError(
-            controller: controller,
-            error: e,
-            context: context,
-          );
+          handleStreamError(controller: controller, error: e, context: context);
         }
       },
     );

@@ -161,7 +161,9 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
       // 如果是筛选分类key，直接使用分类标签
       if (WeatherService.filterCategoryToKeys.containsKey(mostWeather)) {
         weatherDisplay = WeatherService.getLocalizedFilterCategoryLabel(
-            context, mostWeather);
+          context,
+          mostWeather,
+        );
         weatherIcon = WeatherService.getFilterCategoryIcon(mostWeather);
       } else {
         // 否则按原逻辑处理
@@ -250,7 +252,7 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
 
       // 准备完整的笔记内容用于AI分析
       final fullNotesContent = _periodQuotes.map((quote) {
-        final date = DateTime.parse(quote.date);
+        final date = DateTime.tryParse(quote.date) ?? DateTime.now();
         final dateStr = l10n.formattedDate(date.month, date.day);
         var content = quote.content.trim();
 
@@ -399,7 +401,8 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
     AppLogger.d('Total notes: ${quotes.length}');
 
     final filtered = quotes.where((quote) {
-      final quoteDateTime = DateTime.parse(quote.date);
+      final quoteDateTime = DateTime.tryParse(quote.date);
+      if (quoteDateTime == null) return false;
       // 归一化笔记日期为当天开始时间，只比较日期部分
       final quoteDate = DateTime(
         quoteDateTime.year,

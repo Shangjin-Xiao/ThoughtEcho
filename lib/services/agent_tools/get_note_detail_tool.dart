@@ -27,10 +27,7 @@ class GetNoteDetailTool extends AgentTool {
   Map<String, Object?> get parametersSchema => {
         'type': 'object',
         'properties': {
-          'note_id': {
-            'type': 'string',
-            'description': '要获取详情的笔记 ID',
-          },
+          'note_id': {'type': 'string', 'description': '要获取详情的笔记 ID'},
         },
         'required': ['note_id'],
       };
@@ -52,7 +49,7 @@ class GetNoteDetailTool extends AgentTool {
       if (q == null) {
         return ToolResult(
           toolCallId: call.id,
-          content: '未找到ID为${noteId}的笔记',
+          content: '未找到ID为$noteId的笔记',
           isError: true,
         );
       }
@@ -79,7 +76,8 @@ class GetNoteDetailTool extends AgentTool {
       };
 
       // 优先使用 poiName，其次使用 location
-      final loc = q.poiName ?? q.location;
+      final loc =
+          (q.poiName != null && q.poiName!.isNotEmpty) ? q.poiName : q.location;
       if (loc != null && loc.isNotEmpty) {
         response['location'] = loc;
       }
@@ -109,21 +107,20 @@ class GetNoteDetailTool extends AgentTool {
         }
       }
 
-      final tagNames = q.tagIds
-          .map((id) => nameMap[id])
-          .whereType<String>()
-          .toList();
+      final tagNames =
+          q.tagIds.map((id) => nameMap[id]).whereType<String>().toList();
       if (tagNames.isNotEmpty) {
         response['tags'] = tagNames;
       }
 
-      return ToolResult(
-        toolCallId: call.id,
-        content: jsonEncode(response),
-      );
+      return ToolResult(toolCallId: call.id, content: jsonEncode(response));
     } catch (e, stack) {
-      logError('GetNoteDetailTool.execute 失败',
-          error: e, stackTrace: stack, source: 'GetNoteDetailTool');
+      logError(
+        'GetNoteDetailTool.execute 失败',
+        error: e,
+        stackTrace: stack,
+        source: 'GetNoteDetailTool',
+      );
       return ToolResult(
         toolCallId: call.id,
         content: '读取笔记详情失败：$e',

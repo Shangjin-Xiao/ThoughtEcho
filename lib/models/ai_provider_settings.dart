@@ -41,8 +41,9 @@ class AIProviderSettings implements AIConfig {
         (m.contains('reasoner') || m.contains('r1'))) {
       return true;
     }
-    // OpenAI o1/o3 系列
-    if (m.startsWith('o1') || m.startsWith('o3') || m.startsWith('o4')) {
+    // OpenAI o-series models (supports namespace prefixes like azure/o1, /o3)
+    final isOSeries = RegExp(r'(^|/)(o1|o3|o4)\b').hasMatch(m);
+    if (isOSeries) {
       return true;
     }
     // Qwen QwQ / reasoning 系列
@@ -83,6 +84,8 @@ class AIProviderSettings implements AIConfig {
     return id == 'openai' ||
         id == 'openrouter' ||
         id == 'deepseek' ||
+        id == 'ollama' ||
+        id == 'lmstudio' ||
         lowerUrl.contains('openai.com') ||
         lowerUrl.contains('openrouter.ai') ||
         lowerUrl.contains('deepseek.com');
@@ -105,21 +108,30 @@ class AIProviderSettings implements AIConfig {
     }
 
     var path = uri.path.trim();
+    if (path == '/') path = '';
     while (path.length > 1 && path.endsWith('/')) {
       path = path.substring(0, path.length - 1);
     }
 
-    if (isAnthropicMessagesApi) {
-      return uri.replace(path: path).toString();
+    // Anthropic
+    if (id == 'anthropic' || uri.host.contains('anthropic.com')) {
+      if (path.isEmpty || path == '/v1') {
+        return uri.replace(path: '/v1/messages').toString();
+      } else if (path.endsWith('/messages')) {
+        return uri.replace(path: path).toString();
+      }
     }
 
-    const chatCompletionsPath = '/chat/completions';
-    if (path.endsWith(chatCompletionsPath)) {
-      return uri.replace(path: path).toString();
-    }
-
-    if (isLikelyOpenAICompatible && path.endsWith('/v1')) {
-      return uri.replace(path: '$path$chatCompletionsPath').toString();
+    // OpenAI / Compatible
+    if (isLikelyOpenAICompatible ||
+        id == 'openai' ||
+        id == 'openrouter' ||
+        id == 'deepseek') {
+      if (path.isEmpty || path == '/v1') {
+        return uri.replace(path: '/v1/chat/completions').toString();
+      } else if (path.endsWith('/chat/completions')) {
+        return uri.replace(path: path).toString();
+      }
     }
 
     return uri.replace(path: path).toString();

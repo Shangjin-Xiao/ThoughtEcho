@@ -21,22 +21,10 @@ class ProposeNewNoteTool extends AgentTool {
   Map<String, Object?> get parametersSchema => {
         'type': 'object',
         'properties': {
-          'title': {
-            'type': 'string',
-            'description': '建议卡片标题，例如"新笔记草稿"',
-          },
-          'content': {
-            'type': 'string',
-            'description': '新笔记正文内容',
-          },
-          'author': {
-            'type': 'string',
-            'description': '可选：作者名称',
-          },
-          'source': {
-            'type': 'string',
-            'description': '可选：出处/作品名称',
-          },
+          'title': {'type': 'string', 'description': '建议卡片标题，例如"新笔记草稿"'},
+          'content': {'type': 'string', 'description': '新笔记正文内容'},
+          'author': {'type': 'string', 'description': '可选：作者名称'},
+          'source': {'type': 'string', 'description': '可选：出处/作品名称'},
           'tag_ids': {
             'type': 'array',
             'items': {'type': 'string'},
@@ -44,16 +32,13 @@ class ProposeNewNoteTool extends AgentTool {
           },
           'include_location': {
             'type': 'boolean',
-            'description': '是否建议由程序附加当前位置',
+            'description': '是否建议由程序附加当前位置'
           },
           'include_weather': {
             'type': 'boolean',
-            'description': '是否建议由程序附加当前天气',
+            'description': '是否建议由程序附加当前天气'
           },
-          'reason': {
-            'type': 'string',
-            'description': '可选：为什么建议创建这条笔记',
-          },
+          'reason': {'type': 'string', 'description': '可选：为什么建议创建这条笔记'},
         },
         'required': ['title', 'content'],
       };
@@ -85,8 +70,9 @@ class ProposeNewNoteTool extends AgentTool {
         : <String>[];
 
     final knownTags = await _databaseService.getCategories();
-    final visibleTags =
-        knownTags.where((tag) => tag.id != 'system_hidden_tag').toList();
+    final visibleTags = knownTags
+        .where((tag) => tag.id != DatabaseService.hiddenTagId)
+        .toList();
     final validTagIds = visibleTags.map((tag) => tag.id).toSet();
     final invalidTagIds =
         tagIds.where((tagId) => !validTagIds.contains(tagId)).toList();

@@ -18,7 +18,6 @@ class AIWorkflowDescriptor {
     required this.producesEditableResult,
     this.description,
     this.icon,
-    this.naturalLanguageTriggers = const [],
   });
 
   final AIWorkflowId id;
@@ -30,7 +29,6 @@ class AIWorkflowDescriptor {
   final bool producesEditableResult;
   final String? description; // 简短描述
   final String? icon; // icon标记符
-  final List<String> naturalLanguageTriggers; // 自然语言触发关键词
 }
 
 class AIWorkflowCommandRegistry {
@@ -48,15 +46,7 @@ class AIWorkflowCommandRegistry {
   // 自然语言触发关键词映射
   static const Map<AIWorkflowId, List<String>> naturalLanguageTriggers =
       <AIWorkflowId, List<String>>{
-    AIWorkflowId.polish: [
-      '润色',
-      '修饰',
-      '打磨',
-      '改进表达',
-      '优化文字',
-      '美化',
-      '帮我润色',
-    ],
+    AIWorkflowId.polish: ['润色', '修饰', '打磨', '改进表达', '优化文字', '美化', '帮我润色'],
     AIWorkflowId.continueWriting: [
       '续写',
       '继续',
@@ -75,32 +65,9 @@ class AIWorkflowCommandRegistry {
       '深层分析',
       '帮我分析',
     ],
-    AIWorkflowId.sourceAnalysis: [
-      '分析来源',
-      '验证来源',
-      '查证来源',
-      '来源',
-      '出处',
-      '这是谁说的',
-    ],
-    AIWorkflowId.insights: [
-      '智能洞察',
-      '生成洞察',
-      '关联',
-      '扩展',
-      '这告诉我们',
-      '背景',
-      '联想',
-    ],
-    AIWorkflowId.webFetch: [
-      '网页',
-      '抓取',
-      '获取',
-      '网址',
-      '链接',
-      '查看网页',
-      '获取网页内容',
-    ],
+    AIWorkflowId.sourceAnalysis: ['分析来源', '验证来源', '查证来源', '来源', '出处', '这是谁说的'],
+    AIWorkflowId.insights: ['智能洞察', '生成洞察', '关联', '扩展', '这告诉我们', '背景', '联想'],
+    AIWorkflowId.webFetch: ['网页', '抓取', '获取', '网址', '链接', '查看网页', '获取网页内容'],
   };
 
   static AIWorkflowId? match(String text) {

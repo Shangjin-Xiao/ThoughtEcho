@@ -3546,7 +3546,7 @@
   "webdavConflictDiscardTooltip": "이 충돌 백업 취소",
   "webdavConflictDiscardSuccess": "이 충돌 메모를 영구적으로 삭제했습니다.",
   "operationFailedSimple": "작업 실패",
-  "deleteNoteWithChatsConfirmation": "Are you sure you want to delete this note? This action cannot be undone.\n\n{count} chat conversations linked to this note will also be deleted.",
+  "deleteNoteWithChatsConfirmation": "이 노트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.\n\n이 노트와 연결된 {count}개의 대화방도 함께 삭제됩니다.",
   "@deleteNoteWithChatsConfirmation": {
     "placeholders": {
       "count": {
@@ -3554,23 +3554,23 @@
       }
     }
   },
-  "chatHistory": "Chat History",
-  "newChat": "New Chat",
-  "deleteChat": "Delete Chat",
-  "deleteChatConfirm": "Delete this conversation? All messages will be removed.",
-  "noChats": "No conversations yet",
-  "mapPickerTitle": "Select Location",
-  "mapPickerCurrentLocation": "Current Location",
-  "mapPickerConfirm": "Confirm Selection",
-  "longPressForMapPicker": "Long press for precise location",
-  "poiNameLabel": "Precise Location",
-  "explore": "Explore",
-  "exploreMapMemory": "Map Memories",
-  "exploreMapMemoryDesc": "Browse your notes on a map",
-  "aiChat": "AI Chat",
-  "aiAgent": "AI Agent",
-  "agentThinking": "Agent is thinking...",
-  "agentToolCall": "Calling tool: {toolName}",
+  "chatHistory": "대화 기록",
+  "newChat": "새 대화",
+  "deleteChat": "대화 삭제",
+  "deleteChatConfirm": "이 대화를 삭제하시겠습니까? 모든 메시지가 삭제됩니다.",
+  "noChats": "대화가 없습니다",
+  "mapPickerTitle": "위치 선택",
+  "mapPickerCurrentLocation": "현재 위치",
+  "mapPickerConfirm": "위치 확인",
+  "longPressForMapPicker": "길게 눌러 정밀한 위치 선택",
+  "poiNameLabel": "정밀 위치",
+  "explore": "탐색",
+  "exploreMapMemory": "지도 기억",
+  "exploreMapMemoryDesc": "지도에서 노트 둘러보기",
+  "aiChat": "AI 대화",
+  "aiAgent": "AI 에이전트",
+  "agentThinking": "에이전트가 생각 중입니다...",
+  "agentToolCall": "도구 호출 중: {toolName}",
   "@agentToolCall": {
     "placeholders": {
       "toolName": {
@@ -3578,8 +3578,8 @@
       }
     }
   },
-  "agentSearchingNotes": "Searching notes...",
-  "agentAnalyzingData": "Analyzing data...",
-  "agentWebSearching": "Searching the web...",
-  "favoriteNotes": "Favorite Notes"
+  "agentSearchingNotes": "노트 검색 중...",
+  "agentAnalyzingData": "데이터 분석 중...",
+  "agentWebSearching": "웹 검색 중...",
+  "favoriteNotes": "즐겨찾는 노트"
 }

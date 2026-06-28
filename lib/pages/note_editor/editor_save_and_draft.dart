@@ -5,10 +5,14 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
   void _initializeAsPlainText() {
     try {
       if (mounted) {
+        final text = (widget.initialQuote != null &&
+                widget.initialQuote!.content.isNotEmpty)
+            ? widget.initialQuote!.content
+            : widget.initialContent;
         _updateState(() {
           _controller.dispose(); // 释放旧控制器
           _controller = quill.QuillController(
-            document: quill.Document()..insert(0, widget.initialContent),
+            document: quill.Document()..insert(0, text),
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
@@ -218,7 +222,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       return true;
     }
 
-// 对于编辑已有笔记的情况，检查位置和天气变化
+    // 对于编辑已有笔记的情况，检查位置和天气变化
     // 对于新建笔记，位置和天气是自动获取的，不视为用户修改
     if (widget.initialQuote != null) {
       // 检查位置
@@ -500,7 +504,8 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
   }
 
   Future<void> _rollbackMovedPermanentMediaFiles(
-      List<String> movedPaths) async {
+    List<String> movedPaths,
+  ) async {
     if (movedPaths.isEmpty) {
       return;
     }

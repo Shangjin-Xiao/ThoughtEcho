@@ -37,7 +37,6 @@ import '../services/web_fetch_service.dart';
 List<AgentTool> _buildAgentTools(
   SettingsService settingsService,
   DatabaseService db,
-  ChatSessionService chatSessionService,
   LocationService locationService,
   WeatherService weatherService,
 ) {
@@ -90,42 +89,22 @@ List<SingleChildWidget> buildAppProviders({
     ChangeNotifierProvider<OpenAIStreamService>(
       create: (_) => OpenAIStreamService(),
     ),
-    ChangeNotifierProxyProvider5<
-        SettingsService,
-        DatabaseService,
-        ChatSessionService,
-        LocationService,
-        WeatherService,
-        AgentService>(
+    ChangeNotifierProxyProvider4<SettingsService, DatabaseService,
+        LocationService, WeatherService, AgentService>(
       create: (context) => AgentService(
         settingsService: context.read<SettingsService>(),
         tools: _buildAgentTools(
           context.read<SettingsService>(),
           context.read<DatabaseService>(),
-          context.read<ChatSessionService>(),
           context.read<LocationService>(),
           context.read<WeatherService>(),
         ),
       ),
-      update: (
-        context,
-        settings,
-        db,
-        chatSession,
-        location,
-        weather,
-        previous,
-      ) =>
+      update: (context, settings, db, location, weather, previous) =>
           previous ??
           AgentService(
             settingsService: settings,
-            tools: _buildAgentTools(
-              settings,
-              db,
-              chatSession,
-              location,
-              weather,
-            ),
+            tools: _buildAgentTools(settings, db, location, weather),
           ),
     ),
     ChangeNotifierProvider(create: (_) => NoteSearchController()),
@@ -138,13 +117,9 @@ List<SingleChildWidget> buildAppProviders({
           insightHistoryService ??
           InsightHistoryService(settingsService: settingsService),
     ),
-    Provider.value(
-      value: mmkvService,
-    ), // 使用 Provider.value 提供 MMKVService
+    Provider.value(value: mmkvService), // 使用 Provider.value 提供 MMKVService
     // 提供初始化状态的值（debug 下必须使用 ListenableProvider）
-    ListenableProvider<ValueNotifier<bool>>.value(
-      value: servicesInitialized,
-    ),
+    ListenableProvider<ValueNotifier<bool>>.value(value: servicesInitialized),
     ValueListenableProvider<bool>.value(value: servicesInitialized),
     ChangeNotifierProxyProvider<SettingsService, AIService>(
       create: (context) =>
@@ -154,13 +129,7 @@ List<SingleChildWidget> buildAppProviders({
     ),
     ProxyProvider3<DatabaseService, SettingsService, AIAnalysisDatabaseService,
         BackupService>(
-      update: (
-        context,
-        dbService,
-        settingsService,
-        aiService,
-        previous,
-      ) =>
+      update: (context, dbService, settingsService, aiService, previous) =>
           BackupService(
         databaseService: dbService,
         settingsService: settingsService,

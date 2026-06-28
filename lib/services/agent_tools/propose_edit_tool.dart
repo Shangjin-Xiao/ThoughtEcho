@@ -19,13 +19,10 @@ class ProposeEditTool extends AgentTool {
   Map<String, Object?> get parametersSchema => {
         'type': 'object',
         'properties': {
-          'title': {
-            'type': 'string',
-            'description': '建议卡片的标题（如：润色建议、思路总结）',
-          },
+          'title': {'type': 'string', 'description': '建议卡片的标题（如：润色建议、思路总结）'},
           'content': {
             'type': 'string',
-            'description': '提议的具体内容（纯文本或 Markdown）',
+            'description': '提议的具体内容（纯文本或 Markdown）'
           },
           'action': {
             'type': 'string',
@@ -41,14 +38,8 @@ class ProposeEditTool extends AgentTool {
             'items': {'type': 'string'},
             'description': '可选：修改后的标签 ID 列表（仅使用 get_tags 返回的现有标签 ID）',
           },
-          'author': {
-            'type': 'string',
-            'description': '可选：修改后的作者名称',
-          },
-          'source': {
-            'type': 'string',
-            'description': '可选：修改后的出处/作品名称',
-          },
+          'author': {'type': 'string', 'description': '可选：修改后的作者名称'},
+          'source': {'type': 'string', 'description': '可选：修改后的出处/作品名称'},
           'include_location': {
             'type': 'boolean',
             'description': '是否建议由程序附加当前位置（新建时有效）',
@@ -57,10 +48,7 @@ class ProposeEditTool extends AgentTool {
             'type': 'boolean',
             'description': '是否建议由程序附加当前天气（新建时有效）',
           },
-          'reason': {
-            'type': 'string',
-            'description': '可选：为什么要这样修改的简短理由',
-          },
+          'reason': {'type': 'string', 'description': '可选：为什么要这样修改的简短理由'},
         },
         'required': ['title', 'content', 'action'],
       };
@@ -81,6 +69,14 @@ class ProposeEditTool extends AgentTool {
       return ToolResult(
         toolCallId: call.id,
         content: '标题和内容不能为空',
+        isError: true,
+      );
+    }
+
+    if (action != 'replace' && action != 'append') {
+      return ToolResult(
+        toolCallId: call.id,
+        content: '无效的动作: $action，必须为 replace 或 append',
         isError: true,
       );
     }
@@ -127,13 +123,14 @@ class ProposeEditTool extends AgentTool {
       // 将 payload 包装在标准的 smart_result 代码块中，以便 UI 现有逻辑能直接识别
       final resultBlock = '```smart_result\n${jsonEncode(payload)}\n```';
 
-      return ToolResult(
-        toolCallId: call.id,
-        content: resultBlock,
-      );
+      return ToolResult(toolCallId: call.id, content: resultBlock);
     } catch (e, stack) {
-      logError('ProposeEditTool.execute 失败',
-          error: e, stackTrace: stack, source: 'ProposeEditTool');
+      logError(
+        'ProposeEditTool.execute 失败',
+        error: e,
+        stackTrace: stack,
+        source: 'ProposeEditTool',
+      );
       return ToolResult(
         toolCallId: call.id,
         content: '生成编辑提议失败：$e',

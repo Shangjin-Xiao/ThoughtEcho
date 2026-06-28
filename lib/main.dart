@@ -157,7 +157,8 @@ Future<void> main() async {
 
       if (kIsWeb) {
         throw UnsupportedError(
-            'ThoughtEcho does not support the Web platform.');
+          'ThoughtEcho does not support the Web platform.',
+        );
       }
 
       // 初始化后台任务组件
@@ -293,13 +294,23 @@ Future<void> main() async {
         final unifiedLogService = UnifiedLogService.instance;
 
         // 根据开发者模式设置日志服务的持久化状态
-        unifiedLogService
-            .setPersistenceEnabled(settingsService.appSettings.developerMode);
+        unifiedLogService.setPersistenceEnabled(
+          settingsService.appSettings.developerMode,
+        );
 
         final aiAnalysisDbService = AIAnalysisDatabaseService();
         final connectivityService = ConnectivityService();
         final featureGuideService = FeatureGuideService(SafeMMKV());
         final chatSessionService = ChatSessionService();
+
+        // 监听 databaseService 并在初始化完成时动态绑定数据库
+        databaseService.addListener(() {
+          if (databaseService.isInitialized) {
+            try {
+              chatSessionService.setDatabase(databaseService.database);
+            } catch (_) {}
+          }
+        });
 
         // 创建智能推送服务实例
         final smartPushService = SmartPushService(
@@ -562,7 +573,9 @@ Future<void> main() async {
             }
 
             // 注入数据库到聊天会话服务
-            chatSessionService.setDatabase(databaseService.database);
+            if (databaseService.isInitialized) {
+              chatSessionService.setDatabase(databaseService.database);
+            }
 
             // 初始化完成，更新状态
             servicesInitialized.value = true;
@@ -577,8 +590,11 @@ Future<void> main() async {
                   webdav.triggerSync(isBackground: true);
                 }
               } catch (e) {
-                logError('触发启动 WebDAV 同步失败: $e',
-                    error: e, source: 'WebDAVSync');
+                logError(
+                  '触发启动 WebDAV 同步失败: $e',
+                  error: e,
+                  source: 'WebDAVSync',
+                );
               }
             });
 

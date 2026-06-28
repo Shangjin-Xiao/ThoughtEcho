@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:html/parser.dart' as html_parser;
 import 'package:html2md/html2md.dart' as html2md;
 import 'package:http/http.dart' as http;
@@ -83,8 +85,13 @@ class WebFetchService {
         'image': image,
         'url': url,
       };
-    } catch (e) {
-      logDebug('元数据提取异常: $e');
+    } catch (e, stack) {
+      logError(
+        '元数据提取异常',
+        error: e,
+        stackTrace: stack,
+        source: 'WebFetchService',
+      );
       rethrow;
     }
   }
@@ -94,15 +101,19 @@ class WebFetchService {
     try {
       final client = http.Client();
       try {
-        final response = await client
-            .head(Uri.parse(url), headers: {'User-Agent': _userAgent})
-            .timeout(_timeout);
+        final response = await client.head(Uri.parse(url),
+            headers: {'User-Agent': _userAgent}).timeout(_timeout);
         return response.statusCode == 200;
       } finally {
         client.close();
       }
-    } catch (e) {
-      logDebug('URL 验证异常: $e');
+    } catch (e, stack) {
+      logError(
+        'URL 验证异常',
+        error: e,
+        stackTrace: stack,
+        source: 'WebFetchService',
+      );
       return false;
     }
   }
@@ -124,26 +135,50 @@ class WebFetchService {
     logDebug('WebFetchService: 开始抓取 $url');
     final client = http.Client();
     try {
-      final response = await client.get(
-        Uri.parse(url),
-        headers: {
-          'User-Agent': _userAgent,
-          'Accept':
-              'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        },
-      ).timeout(
-        _timeout,
-        onTimeout: () => throw WebFetchTimeoutException(
-          '网页抓取超时（${_timeout.inSeconds}秒）',
-          _timeout,
-        ),
-      );
+      final request = http.Request('GET', Uri.parse(url));
+      request.headers.addAll({
+        'User-Agent': _userAgent,
+        'Accept':
+            'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      });
+
+      final response = await client.send(request).timeout(
+            _timeout,
+            onTimeout: () => throw WebFetchTimeoutException(
+              '网页抓取超时（${_timeout.inSeconds}秒）',
+              _timeout,
+            ),
+          );
 
       if (response.statusCode != 200) {
         throw Exception('网页请求失败: 状态码 ${response.statusCode}');
       }
 
-      return response.body;
+      const maxSizeBytes = 2 * 1024 * 1024; // 2MB
+      final contentLength = response.contentLength;
+      if (contentLength != null && contentLength > maxSizeBytes) {
+        throw Exception('网页内容超出大小限制 (最大 2MB)');
+      }
+
+      final bytes = <int>[];
+      int totalBytes = 0;
+      await for (final chunk in response.stream) {
+        totalBytes += chunk.length;
+        if (totalBytes > maxSizeBytes) {
+          throw Exception('网页内容超出大小限制 (最大 2MB)');
+        }
+        bytes.addAll(chunk);
+      }
+
+      final body =
+          response.headers['content-type']?.contains('charset=') ?? false
+              ? http.Response.bytes(
+                  bytes,
+                  response.statusCode,
+                  headers: response.headers,
+                ).body
+              : utf8.decode(bytes, allowMalformed: true);
+      return body;
     } finally {
       client.close();
     }

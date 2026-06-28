@@ -1,8 +1,9 @@
-library;
+import 'dart:convert';
+import 'package:collection/collection.dart';
 
 /// AI Skill 数据模型
 ///
-/// 用于描述一个可被注册到 OpenAI tool calling 的技能定义。
+/// 用于描述一个可被注册 to OpenAI tool calling 的技能定义。
 class AISkill {
   static final RegExp _openAIToolNamePattern = RegExp(r'^[a-zA-Z0-9_-]{1,64}$');
 
@@ -26,10 +27,9 @@ class AISkill {
         name = name.trim(),
         triggerWord = triggerWord.trim(),
         systemPrompt = systemPrompt.trim(),
-        inputProperties =
-            Map<String, Object?>.unmodifiable(Map<String, Object?>.from(
-          inputProperties,
-        )),
+        inputProperties = Map<String, Object?>.unmodifiable(
+          Map<String, Object?>.from(inputProperties),
+        ),
         requiredInputs = List<String>.unmodifiable(
           List<String>.from(requiredInputs),
         ) {
@@ -103,4 +103,97 @@ class AISkill {
       },
     };
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'trigger_word': triggerWord,
+      'system_prompt': systemPrompt,
+      'description': description,
+      'input_properties': jsonEncode(inputProperties),
+      'required_inputs': jsonEncode(requiredInputs),
+    };
+  }
+
+  factory AISkill.fromMap(Map<String, dynamic> map) {
+    Map<String, dynamic> parseProperties(dynamic val) {
+      if (val is String) {
+        try {
+          return jsonDecode(val) as Map<String, dynamic>;
+        } catch (_) {}
+      } else if (val is Map) {
+        return Map<String, dynamic>.from(val);
+      }
+      return {};
+    }
+
+    List<String> parseRequired(dynamic val) {
+      if (val is String) {
+        try {
+          return List<String>.from(jsonDecode(val) as List);
+        } catch (_) {}
+      } else if (val is List) {
+        return List<String>.from(val);
+      }
+      return [];
+    }
+
+    return AISkill(
+      id: map['id'] as String? ?? '',
+      name: map['name'] as String? ?? '',
+      triggerWord: map['trigger_word'] ?? map['triggerWord'] ?? '',
+      systemPrompt: map['system_prompt'] ?? map['systemPrompt'] ?? '',
+      description: map['description'] as String?,
+      inputProperties: parseProperties(
+        map['input_properties'] ?? map['inputProperties'],
+      ),
+      requiredInputs: parseRequired(
+        map['required_inputs'] ?? map['requiredInputs'],
+      ),
+    );
+  }
+
+  AISkill copyWith({
+    String? id,
+    String? name,
+    String? triggerWord,
+    String? systemPrompt,
+    String? description,
+    Map<String, Object?>? inputProperties,
+    List<String>? requiredInputs,
+  }) {
+    return AISkill(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      triggerWord: triggerWord ?? this.triggerWord,
+      systemPrompt: systemPrompt ?? this.systemPrompt,
+      description: description ?? this.description,
+      inputProperties: inputProperties ?? this.inputProperties,
+      requiredInputs: requiredInputs ?? this.requiredInputs,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! AISkill) return false;
+    return other.id == id &&
+        other.name == name &&
+        other.triggerWord == triggerWord &&
+        other.systemPrompt == systemPrompt &&
+        other.description == description &&
+        const MapEquality().equals(other.inputProperties, inputProperties) &&
+        const ListEquality().equals(other.requiredInputs, requiredInputs);
+  }
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      name.hashCode ^
+      triggerWord.hashCode ^
+      systemPrompt.hashCode ^
+      description.hashCode ^
+      const MapEquality().hash(inputProperties) ^
+      const ListEquality().hash(requiredInputs);
 }

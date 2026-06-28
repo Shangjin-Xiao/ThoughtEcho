@@ -357,10 +357,10 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
       if (dateEnd != null && dateEnd.isNotEmpty) {
         final endVal = DateTime.tryParse(dateEnd);
         if (endVal != null) {
+          final nextDay = endVal.add(const Duration(days: 1));
           filtered = filtered.where((q) {
             final qDate = DateTime.tryParse(q.date);
-            return qDate != null &&
-                (qDate.isBefore(endVal) || qDate.isAtSameMomentAs(endVal));
+            return qDate != null && qDate.isBefore(nextDay);
           }).toList();
         }
       }
@@ -402,8 +402,14 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
         args.add(dateStart);
       }
       if (dateEnd != null && dateEnd.isNotEmpty) {
-        conditions.add('q.date <= ?');
-        args.add(dateEnd);
+        final endVal = DateTime.tryParse(dateEnd);
+        if (endVal != null) {
+          final nextDay = endVal.add(const Duration(days: 1));
+          final nextDayStr =
+              "${nextDay.year.toString().padLeft(4, '0')}-${nextDay.month.toString().padLeft(2, '0')}-${nextDay.day.toString().padLeft(2, '0')}";
+          conditions.add('q.date < ?');
+          args.add(nextDayStr);
+        }
       }
 
       // 天气筛选

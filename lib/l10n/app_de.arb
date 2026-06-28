@@ -38,7 +38,7 @@
   "webdavConflictKeepSuccess": "Bestätigt und in Standardliste verschoben.",
   "webdavConflictDiscardTooltip": "Dieses Konflikt-Backup verwerfen",
   "webdavConflictDiscardSuccess": "Diese Konfliktnotiz wurde dauerhaft verworfen.",
-  "deleteNoteWithChatsConfirmation": "Are you sure you want to delete this note? This action cannot be undone.\n\n{count} chat conversations linked to this note will also be deleted.",
+  "deleteNoteWithChatsConfirmation": "Sind Sie sicher, dass Sie diese Notiz löschen möchten? Dies kann nicht rückgängig gemacht werden.\n\n{count} verknüpfte Chat-Unterhaltungen werden ebenfalls gelöscht.",
   "@deleteNoteWithChatsConfirmation": {
     "placeholders": {
       "count": {
@@ -46,23 +46,23 @@
       }
     }
   },
-  "chatHistory": "Chat History",
-  "newChat": "New Chat",
-  "deleteChat": "Delete Chat",
-  "deleteChatConfirm": "Delete this conversation? All messages will be removed.",
-  "noChats": "No conversations yet",
-  "mapPickerTitle": "Select Location",
-  "mapPickerCurrentLocation": "Current Location",
-  "mapPickerConfirm": "Confirm Selection",
-  "longPressForMapPicker": "Long press for precise location",
-  "poiNameLabel": "Precise Location",
-  "explore": "Explore",
-  "exploreMapMemory": "Map Memories",
-  "exploreMapMemoryDesc": "Browse your notes on a map",
-  "aiChat": "AI Chat",
-  "aiAgent": "AI Agent",
-  "agentThinking": "Agent is thinking...",
-  "agentToolCall": "Calling tool: {toolName}",
+  "chatHistory": "Chatverlauf",
+  "newChat": "Neuer Chat",
+  "deleteChat": "Chat löschen",
+  "deleteChatConfirm": "Diese Unterhaltung löschen? Alle Nachrichten werden entfernt.",
+  "noChats": "Noch keine Chats",
+  "mapPickerTitle": "Ort auswählen",
+  "mapPickerCurrentLocation": "Aktueller Standort",
+  "mapPickerConfirm": "Auswahl bestätigen",
+  "longPressForMapPicker": "Gedrückt halten für präzisen Standort",
+  "poiNameLabel": "Präziser Standort",
+  "explore": "Erkunden",
+  "exploreMapMemory": "Karten-Erinnerungen",
+  "exploreMapMemoryDesc": "Durchsuchen Sie Ihre Notizen auf einer Karte",
+  "aiChat": "AI-Chat",
+  "aiAgent": "AI-Agent",
+  "agentThinking": "Agent denkt nach...",
+  "agentToolCall": "Rufe Werkzeug auf: {toolName}",
   "@agentToolCall": {
     "placeholders": {
       "toolName": {
@@ -70,9 +70,9 @@
       }
     }
   },
-  "agentSearchingNotes": "Searching notes...",
-  "agentAnalyzingData": "Analyzing data...",
-  "agentWebSearching": "Searching the web...",
-  "favoriteNotes": "Favorite Notes",
-  "clear": "Clear"
+  "agentSearchingNotes": "Notizen werden durchsucht...",
+  "agentAnalyzingData": "Daten werden analysiert...",
+  "agentWebSearching": "Websuche läuft...",
+  "favoriteNotes": "Favorisierte Notizen",
+  "clear": "Leeren"
 }

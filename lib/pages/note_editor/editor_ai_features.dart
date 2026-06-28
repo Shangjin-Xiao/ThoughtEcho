@@ -105,12 +105,14 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
 
   // 润色文本
   Future<void> _polishText() async {
-    await _openAiAssistant('/润色');
+    final l10n = AppLocalizations.of(context);
+    await _openAiAssistant('/${l10n.commandPolish}');
   }
 
   // 续写文本
   Future<void> _continueText() async {
-    await _openAiAssistant('/续写');
+    final l10n = AppLocalizations.of(context);
+    await _openAiAssistant('/${l10n.commandContinue}');
   }
 
   // 深度分析内容 (使用流式传输，保存结果到 _currentAiAnalysis)

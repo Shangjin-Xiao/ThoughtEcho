@@ -30,26 +30,21 @@ class GetTagsTool extends AgentTool {
   Map<String, Object?> get parametersSchema => const {
         'type': 'object',
         'properties': {
-          'offset': {
-            'type': 'integer',
-            'description': '分页偏移量，默认 0',
-          },
-          'limit': {
-            'type': 'integer',
-            'description': '返回数量 (1-50, 默认 20)',
-          },
+          'offset': {'type': 'integer', 'description': '分页偏移量，默认 0'},
+          'limit': {'type': 'integer', 'description': '返回数量 (1-50, 默认 20)'},
         },
       };
 
   @override
   Future<ToolResult> execute(ToolCall toolCall) async {
     try {
-      final offset = toolCall.getInt('offset', defaultValue: 0);
+      final offset =
+          toolCall.getInt('offset', defaultValue: 0).clamp(0, 1000000);
       final limit = toolCall.getInt('limit', defaultValue: 20).clamp(1, 50);
 
       final categories = await _databaseService.getCategories();
       final visibleCategories =
-          categories.where((c) => c.id != 'system_hidden_tag').toList();
+          categories.where((c) => c.id != DatabaseService.hiddenTagId).toList();
       final totalCount = visibleCategories.length;
       final paged = visibleCategories.skip(offset).take(limit).toList();
 
@@ -71,13 +66,14 @@ class GetTagsTool extends AgentTool {
         },
       };
 
-      return ToolResult(
-        toolCallId: toolCall.id,
-        content: jsonEncode(payload),
-      );
+      return ToolResult(toolCallId: toolCall.id, content: jsonEncode(payload));
     } catch (e, stack) {
-      logError('GetTagsTool.execute 失败',
-          error: e, stackTrace: stack, source: 'GetTagsTool');
+      logError(
+        'GetTagsTool.execute 失败',
+        error: e,
+        stackTrace: stack,
+        source: 'GetTagsTool',
+      );
       return ToolResult(
         toolCallId: toolCall.id,
         content: '获取标签列表时出错：$e',
@@ -141,13 +137,14 @@ class GetLocationWeatherTool extends AgentTool {
             : null,
       };
 
-      return ToolResult(
-        toolCallId: toolCall.id,
-        content: jsonEncode(payload),
-      );
+      return ToolResult(toolCallId: toolCall.id, content: jsonEncode(payload));
     } catch (e, stack) {
-      logError('GetLocationWeatherTool.execute 失败',
-          error: e, stackTrace: stack, source: 'GetLocationWeatherTool');
+      logError(
+        'GetLocationWeatherTool.execute 失败',
+        error: e,
+        stackTrace: stack,
+        source: 'GetLocationWeatherTool',
+      );
       return ToolResult(
         toolCallId: toolCall.id,
         content: '获取位置天气时出错：$e',

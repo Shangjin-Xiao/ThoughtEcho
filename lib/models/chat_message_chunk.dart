@@ -94,22 +94,30 @@ class ChatMessageChunk {
       );
 
   /// 创建一个toolCalling块
-  factory ChatMessageChunk.toolCalling(
-    String content, {
-    int index = 0,
-  }) =>
-      ChatMessageChunk(
-        type: 'toolCalling',
-        content: content,
-        index: index,
-      );
+  factory ChatMessageChunk.toolCalling(String content, {int index = 0}) =>
+      ChatMessageChunk(type: 'toolCalling', content: content, index: index);
 
   /// 创建一个error块
-  factory ChatMessageChunk.error(String content) => ChatMessageChunk(
-        type: 'error',
-        content: content,
-        isLast: true,
-      );
+  factory ChatMessageChunk.error(String content) =>
+      ChatMessageChunk(type: 'error', content: content, isLast: true);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ChatMessageChunk &&
+          other.type == type &&
+          other.content == content &&
+          other.index == index &&
+          other.isLast == isLast &&
+          other.fullContent == fullContent;
+
+  @override
+  int get hashCode =>
+      type.hashCode ^
+      content.hashCode ^
+      index.hashCode ^
+      isLast.hashCode ^
+      fullContent.hashCode;
 
   @override
   String toString() =>

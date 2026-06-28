@@ -1,11 +1,11 @@
 class AiSmartResultMetadata {
-  const AiSmartResultMetadata({
-    required this.tagIds,
+  AiSmartResultMetadata({
+    required List<String> tagIds,
     required this.includeLocation,
     required this.includeWeather,
     this.author,
     this.source,
-  });
+  }) : tagIds = List<String>.unmodifiable(tagIds);
 
   final String? author;
   final String? source;

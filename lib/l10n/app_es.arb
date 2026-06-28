@@ -38,7 +38,7 @@
   "webdavConflictKeepSuccess": "Confirmado y movido a la lista predeterminada.",
   "webdavConflictDiscardTooltip": "Descartar esta copia de seguridad de conflicto",
   "webdavConflictDiscardSuccess": "Nota de conflicto descartada permanentemente.",
-  "deleteNoteWithChatsConfirmation": "Are you sure you want to delete this note? This action cannot be undone.\n\n{count} chat conversations linked to this note will also be deleted.",
+  "deleteNoteWithChatsConfirmation": "¿Está seguro de que desea eliminar esta nota? Esta acción no se puede deshacer.\n\nTambién se eliminarán {count} conversaciones de chat asociadas.",
   "@deleteNoteWithChatsConfirmation": {
     "placeholders": {
       "count": {
@@ -46,23 +46,23 @@
       }
     }
   },
-  "chatHistory": "Chat History",
-  "newChat": "New Chat",
-  "deleteChat": "Delete Chat",
-  "deleteChatConfirm": "Delete this conversation? All messages will be removed.",
-  "noChats": "No conversations yet",
-  "mapPickerTitle": "Select Location",
-  "mapPickerCurrentLocation": "Current Location",
-  "mapPickerConfirm": "Confirm Selection",
-  "longPressForMapPicker": "Long press for precise location",
-  "poiNameLabel": "Precise Location",
-  "explore": "Explore",
-  "exploreMapMemory": "Map Memories",
-  "exploreMapMemoryDesc": "Browse your notes on a map",
-  "aiChat": "AI Chat",
-  "aiAgent": "AI Agent",
-  "agentThinking": "Agent is thinking...",
-  "agentToolCall": "Calling tool: {toolName}",
+  "chatHistory": "Historial de chat",
+  "newChat": "Nuevo chat",
+  "deleteChat": "Eliminar chat",
+  "deleteChatConfirm": "¿Eliminar esta conversación? Se borrarán todos los mensajes.",
+  "noChats": "Aún no hay conversaciones",
+  "mapPickerTitle": "Seleccionar ubicación",
+  "mapPickerCurrentLocation": "Ubicación actual",
+  "mapPickerConfirm": "Confirmar selección",
+  "longPressForMapPicker": "Mantenga presionado para una ubicación precisa",
+  "poiNameLabel": "Ubicación precisa",
+  "explore": "Explorar",
+  "exploreMapMemory": "Memorias del mapa",
+  "exploreMapMemoryDesc": "Explore sus notas en un mapa",
+  "aiChat": "Chat de IA",
+  "aiAgent": "Agente de IA",
+  "agentThinking": "El agente está pensando...",
+  "agentToolCall": "Llamando al herramienta: {toolName}",
   "@agentToolCall": {
     "placeholders": {
       "toolName": {
@@ -70,9 +70,9 @@
       }
     }
   },
-  "agentSearchingNotes": "Searching notes...",
-  "agentAnalyzingData": "Analyzing data...",
-  "agentWebSearching": "Searching the web...",
-  "favoriteNotes": "Favorite Notes",
-  "clear": "Clear"
+  "agentSearchingNotes": "Buscando notas...",
+  "agentAnalyzingData": "Analizando datos...",
+  "agentWebSearching": "Buscando en la web...",
+  "favoriteNotes": "Notas favoritas",
+  "clear": "Limpiar"
 }

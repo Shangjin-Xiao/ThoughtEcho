@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import '../agent_tool.dart';
 import '../web_fetch_service.dart';
 
@@ -36,8 +38,9 @@ class WebFetchTool extends AgentTool {
   @override
   Future<ToolResult> execute(ToolCall call) async {
     final url = call.getString('url');
+    final trimmedUrl = url.trim();
 
-    if (url.trim().isEmpty) {
+    if (trimmedUrl.isEmpty) {
       return ToolResult(
         toolCallId: call.id,
         content: 'URL 不能为空',
@@ -45,7 +48,8 @@ class WebFetchTool extends AgentTool {
       );
     }
 
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    if (!trimmedUrl.startsWith('http://') &&
+        !trimmedUrl.startsWith('https://')) {
       return ToolResult(
         toolCallId: call.id,
         content: 'URL 格式无效，必须以 http:// 或 https:// 开头',
@@ -53,14 +57,24 @@ class WebFetchTool extends AgentTool {
       );
     }
 
-    try {
-      final text = await _webFetchService.fetchText(url);
-
-      if (text.isEmpty) {
+    // SSRF Validation
+    final uri = Uri.tryParse(trimmedUrl);
+    if (uri != null) {
+      final host = uri.host.toLowerCase().trim();
+      if (_isPrivateOrLocalHost(host)) {
         return ToolResult(
           toolCallId: call.id,
-          content: '网页内容为空或无法提取文本内容。',
+          content: '安全限制：不允许访问本地或私有网络地址。',
+          isError: true,
         );
+      }
+    }
+
+    try {
+      final text = await _webFetchService.fetchText(trimmedUrl);
+
+      if (text.isEmpty) {
+        return ToolResult(toolCallId: call.id, content: '网页内容为空或无法提取文本内容。');
       }
 
       // Truncate if too long
@@ -77,5 +91,27 @@ class WebFetchTool extends AgentTool {
         isError: true,
       );
     }
+  }
+
+  bool _isPrivateOrLocalHost(String host) {
+    if (host == 'localhost') return true;
+    final ip = InternetAddress.tryParse(host);
+    if (ip == null) {
+      return false;
+    }
+    if (ip.isLoopback) return true;
+    if (ip.type == InternetAddressType.IPv4) {
+      final bytes = ip.rawAddress;
+      // 10.0.0.0/8
+      if (bytes[0] == 10) return true;
+      // 172.16.0.0/12
+      if (bytes[0] == 172 && (bytes[1] >= 16 && bytes[1] <= 31)) return true;
+      // 192.168.0.0/16
+      if (bytes[0] == 192 && bytes[1] == 168) return true;
+    } else if (ip.type == InternetAddressType.IPv6) {
+      final bytes = ip.rawAddress;
+      if (bytes.isNotEmpty && (bytes[0] & 0xfe) == 0xfc) return true;
+    }
+    return false;
   }
 }

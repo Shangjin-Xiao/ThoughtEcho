@@ -7,16 +7,20 @@ import 'package:thoughtecho/services/chat_session_service.dart';
 
 import '../../test_helpers.dart';
 
-class _FakeDatabase implements Database {
-  _FakeDatabase({
-    this.sessionsQueryResult = const <Map<String, Object?>>[],
-  });
+class _FakeDatabase implements Database, Transaction {
+  _FakeDatabase({this.sessionsQueryResult = const <Map<String, Object?>>[]});
 
   final List<Map<String, Object?>> sessionsQueryResult;
   int chatSessionsInsertCount = 0;
   int chatMessagesInsertCount = 0;
   int chatSessionsUpdateCount = 0;
   final Completer<void> unblockWrites = Completer<void>();
+
+  @override
+  Future<T> transaction<T>(Future<T> Function(Transaction txn) action,
+      {bool? exclusive}) async {
+    return await action(this);
+  }
 
   @override
   Future<int> insert(
@@ -91,40 +95,42 @@ void main() {
   });
 
   group('ChatSessionService startup race handling', () {
-    test('read waits and restores session after database is injected',
-        () async {
-      final service = ChatSessionService();
-      final now = DateTime.now().toIso8601String();
-      final db = _FakeDatabase(
-        sessionsQueryResult: <Map<String, Object?>>[
-          <String, Object?>{
-            'id': 'session-1',
-            'session_type': 'note',
-            'note_id': 'note-1',
-            'title': 'Recovered',
-            'created_at': now,
-            'last_active_at': now,
-            'is_pinned': 0,
-          },
-        ],
-      );
+    test(
+      'read waits and restores session after database is injected',
+      () async {
+        final service = ChatSessionService();
+        final now = DateTime.now().toIso8601String();
+        final db = _FakeDatabase(
+          sessionsQueryResult: <Map<String, Object?>>[
+            <String, Object?>{
+              'id': 'session-1',
+              'session_type': 'note',
+              'note_id': 'note-1',
+              'title': 'Recovered',
+              'created_at': now,
+              'last_active_at': now,
+              'is_pinned': 0,
+            },
+          ],
+        );
 
-      var resolved = false;
-      final pending = service.getLatestSessionForNote('note-1').then((value) {
-        resolved = true;
-        return value;
-      });
+        var resolved = false;
+        final pending = service.getLatestSessionForNote('note-1').then((value) {
+          resolved = true;
+          return value;
+        });
 
-      await Future<void>.delayed(const Duration(milliseconds: 20));
-      expect(resolved, isFalse);
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        expect(resolved, isFalse);
 
-      service.setDatabase(db);
+        service.setDatabase(db);
 
-      final result = await pending;
-      expect(result, isNotNull);
-      expect(result!.id, equals('session-1'));
-      expect(resolved, isTrue);
-    });
+        final result = await pending;
+        expect(result, isNotNull);
+        expect(result!.id, equals('session-1'));
+        expect(resolved, isTrue);
+      },
+    );
 
     test('createSession waits and persists after database injection', () async {
       final service = ChatSessionService();
@@ -175,26 +181,30 @@ void main() {
       expect(db.chatSessionsUpdateCount, equals(1));
     });
 
-    test('write operations queue when database not ready and flush later',
-        () async {
-      final service = ChatSessionService();
-      final message = ChatMessage(
-        id: 'queued-msg',
-        content: 'queued',
-        isUser: true,
-        role: 'user',
-        timestamp: DateTime.now(),
-      );
+    test(
+      'write operations queue when database not ready and flush later',
+      () async {
+        final service = ChatSessionService();
+        final message = ChatMessage(
+          id: 'queued-msg',
+          content: 'queued',
+          isUser: true,
+          role: 'user',
+          timestamp: DateTime.now(),
+        );
 
-      await service.addMessage('queued-session', message);
+        final messageFuture = service.addMessage('queued-session', message);
 
-      final db = _FakeDatabase();
-      service.setDatabase(db);
-      db.unblockWrites.complete();
+        final db = _FakeDatabase();
+        service.setDatabase(db);
+        db.unblockWrites.complete();
 
-      await _waitFor(() => db.chatMessagesInsertCount == 1);
-      expect(db.chatMessagesInsertCount, equals(1));
-      expect(db.chatSessionsUpdateCount, equals(1));
-    });
+        await messageFuture;
+
+        await _waitFor(() => db.chatMessagesInsertCount == 1);
+        expect(db.chatMessagesInsertCount, equals(1));
+        expect(db.chatSessionsUpdateCount, equals(1));
+      },
+    );
   });
 }
