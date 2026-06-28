@@ -370,10 +370,10 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                               labelText: l10n.webdavProvider,
                               prefixIcon: const Icon(Icons.cloud_outlined),
                             ),
-                            items: const [
+                            items: [
                               DropdownMenuItem(
                                   value: 'nutstore',
-                                  child: Text('坚果云 (Nutstore)')),
+                                  child: Text(l10n.webdavProviderNutstore)),
                               DropdownMenuItem(
                                   value: 'nextcloud',
                                   child: Text('Nextcloud / ownCloud')),
@@ -381,7 +381,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                                   value: 'infinicloud',
                                   child: Text('InfiniCLOUD')),
                               DropdownMenuItem(
-                                  value: 'custom', child: Text('自定义 (Custom)')),
+                                  value: 'custom',
+                                  child: Text(l10n.webdavProviderCustom)),
                             ],
                             onChanged: _onProviderChanged,
                           ),
@@ -630,14 +631,14 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                               syncService.syncNotesOnlyOnCellular,
                         );
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('已关闭 WebDAV 云同步。本地数据完全保留。'),
+                          SnackBar(
+                            content: Text(l10n.webdavDisableSyncSuccess),
                             behavior: SnackBarBehavior.floating,
                           ),
                         );
                       },
                       icon: const Icon(Icons.cloud_off, color: Colors.red),
-                      label: const Text('关闭并停用云同步',
+                      label: Text(l10n.webdavDisableSync,
                           style: TextStyle(color: Colors.red)),
                     ),
                   ],
@@ -819,7 +820,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: Text('去处理',
+                      child: Text(l10n.webdavGoToResolve,
                           style: Theme.of(context).textTheme.titleSmall),
                     ),
                   ],
@@ -880,9 +881,10 @@ class QuoteListViewByConflict extends StatelessWidget {
                 Icon(Icons.check_circle_outline,
                     size: 64, color: Colors.green.shade500),
                 const SizedBox(height: 16),
-                Text('没有检测到冲突笔记', style: theme.textTheme.titleMedium),
+                Text(AppLocalizations.of(context)!.webdavNoConflicts,
+                    style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
-                Text('您的所有同步冲突均已处理干净。',
+                Text(AppLocalizations.of(context)!.webdavAllConflictsResolved,
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(color: theme.colorScheme.outline)),
               ],
