@@ -344,8 +344,7 @@ class _CircleIconButton extends StatelessWidget {
       child: IconButton(
         onPressed: onPressed,
         icon: Icon(icon, color: Colors.white),
-        tooltip:
-            tooltip ?? MaterialLocalizations.of(context).closeButtonTooltip,
+        tooltip: tooltip,
       ),
     );
   }
