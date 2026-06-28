@@ -659,7 +659,12 @@ class NoteListViewState extends State<NoteListView> {
       if (_initialDataCompleter == null) {
         const maxWaitMs = 500;
         const stepMs = 50;
-        for (var waited = 0; waited < maxWaitMs && mounted && !_initialDataLoaded && _initialDataCompleter == null; waited += stepMs) {
+        for (var waited = 0;
+            waited < maxWaitMs &&
+                mounted &&
+                !_initialDataLoaded &&
+                _initialDataCompleter == null;
+            waited += stepMs) {
           await Future<void>.delayed(const Duration(milliseconds: stepMs));
         }
       }
