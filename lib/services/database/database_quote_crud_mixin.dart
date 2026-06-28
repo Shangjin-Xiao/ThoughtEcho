@@ -297,10 +297,19 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       }
 
       // 添加日期范围查询
-      conditions.add('q.date >= ? AND q.date <= ?');
-      args.add(start.toIso8601String());
-      args.add(
-          end.add(const Duration(days: 1, milliseconds: -1)).toIso8601String());
+      final startIso = start.toIso8601String();
+      final endIso =
+          end.add(const Duration(days: 1, milliseconds: -1)).toIso8601String();
+      conditions.add('''
+        (
+          (q.date >= ? AND q.date <= ?)
+          OR (q.favorite_count > 0 AND q.last_modified >= ? AND q.last_modified <= ?)
+        )
+      ''');
+      args.add(startIso);
+      args.add(endIso);
+      args.add(startIso);
+      args.add(endIso);
 
       final whereClause =
           conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
