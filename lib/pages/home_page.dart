@@ -1463,14 +1463,39 @@ class _HomePageState extends State<HomePage>
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
     final db = Provider.of<DatabaseService>(context, listen: false);
+    final quoteId = quote.id!;
     try {
-      await db.deleteQuote(quote.id!);
+      await db.deleteQuote(quoteId);
       if (!mounted) return;
+      // 先清除旧 SnackBar，避免多次删除时堆叠
+      messenger.clearSnackBars();
       messenger.showSnackBar(
         SnackBar(
           content: Text(l10n.noteMovedToTrash),
-          duration: const Duration(seconds: 2),
+          duration: const Duration(seconds: 4),
           behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: l10n.undoDelete,
+            onPressed: () async {
+              try {
+                await db.restoreQuote(quoteId);
+              } catch (e, stack) {
+                logError(
+                  '撤销删除失败: $e',
+                  error: e,
+                  stackTrace: stack,
+                  source: 'HomePage',
+                );
+                if (!mounted) return;
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(l10n.restoreFailed),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+          ),
         ),
       );
       // 显示回收站位置引导（仅第一次删除笔记时）

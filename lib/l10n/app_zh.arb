@@ -3651,6 +3651,7 @@
   "emptyTrashConfirmation": "确定要清空整个回收站吗？所有笔记将被永久删除且无法恢复。",
   "noteMovedToTrash": "笔记已移至回收站，可在回收站恢复",
   "noteRestored": "笔记已恢复",
+  "undoDelete": "撤销",
   "trashEmptied": "回收站已清空",
   "deletedAt": "删除于 {date}",
   "@deletedAt": {

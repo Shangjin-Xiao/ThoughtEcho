@@ -3651,6 +3651,7 @@
   "emptyTrashConfirmation": "Permanently delete all notes in trash? This cannot be undone and cannot be recovered.",
   "noteMovedToTrash": "Note moved to trash. You can restore it from Trash",
   "noteRestored": "Note restored",
+  "undoDelete": "Undo",
   "trashEmptied": "Trash emptied",
   "deletedAt": "Deleted on {date}",
   "@deletedAt": {

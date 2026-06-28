@@ -393,30 +393,36 @@ extension _NoteListItemsExtension on NoteListViewState {
     if (_quotes.isEmpty && widget.searchQuery.isNotEmpty) {
       return Center(
         key: noResultsKey,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final size = (constraints.maxHeight * 0.5).clamp(80.0, 220.0);
-                return EnhancedLottieAnimation(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 32),
+              SizedBox(
+                width: 180,
+                height: 180,
+                child: EnhancedLottieAnimation(
                   type: LottieAnimationType.notFound,
-                  width: size,
-                  height: size,
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            Text(
-              l10n.noteSearchEmptyTitle,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.noteSearchEmptySubtitle,
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ],
+                  width: 180,
+                  height: 180,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l10n.noteSearchEmptyTitle,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.noteSearchEmptySubtitle,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
       );
     }
@@ -605,12 +611,22 @@ extension _NoteListItemsExtension on NoteListViewState {
                             _updateState(() {
                               _deletingQuoteIds.add(quoteId);
                             });
-                            // 等动画播完（180ms）再执行真正的删除，
-                            // 卡片消失后 widget 随之销毁，无需回撤 _deletingQuoteIds。
-                            Future.delayed(const Duration(milliseconds: 180),
-                                () {
-                              widget.onDelete(quote);
-                            });
+                            // 等动画播完（250ms）+ 50ms 余量再执行真正的删除。
+                            // 先从本地列表乐观移除，避免 stream 更新时的视觉跳动。
+                            Future.delayed(
+                              const Duration(milliseconds: 280),
+                              () {
+                                if (mounted) {
+                                  _updateState(() {
+                                    _quotes.removeWhere(
+                                      (q) => q.id == quoteId,
+                                    );
+                                    _deletingQuoteIds.remove(quoteId);
+                                  });
+                                }
+                                widget.onDelete(quote);
+                              },
+                            );
                           } else {
                             widget.onDelete(quote);
                           }
@@ -677,11 +693,11 @@ extension _NoteListItemsExtension on NoteListViewState {
 
                   final isDeleting = _deletingQuoteIds.contains(quoteId);
                   itemWidget = AnimatedOpacity(
-                    duration: const Duration(milliseconds: 180),
+                    duration: const Duration(milliseconds: 250),
                     curve: Curves.easeInCubic,
                     opacity: isDeleting ? 0.0 : 1.0,
                     child: AnimatedSize(
-                      duration: const Duration(milliseconds: 180),
+                      duration: const Duration(milliseconds: 250),
                       curve: Curves.easeInCubic,
                       alignment: Alignment.topCenter,
                       clipBehavior: Clip.hardEdge,
