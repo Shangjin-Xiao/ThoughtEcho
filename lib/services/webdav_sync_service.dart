@@ -635,6 +635,9 @@ class WebDAVSyncService extends ChangeNotifier {
       }
     }
 
+    // 在循环前提前确保冲突分类存在，避免 N+1 查询
+    await _ensureConflictCategoryExists(db);
+
     for (final quote in conflictingQuotes) {
       conflictsCloned++;
       await _cloneConflictQuote(
@@ -647,6 +650,24 @@ class WebDAVSyncService extends ChangeNotifier {
     return conflictsCloned;
   }
 
+  Future<void> _ensureConflictCategoryExists(Database db) async {
+    final catCheck = await db.query(
+      'categories',
+      where: 'id = ?',
+      whereArgs: [conflictCategoryId],
+    );
+
+    if (catCheck.isEmpty) {
+      await db.insert('categories', {
+        'id': conflictCategoryId,
+        'name': '同步冲突',
+        'is_default': 0,
+        'icon_name': 'warning_amber_rounded',
+        'last_modified': DateTime.now().toUtc().toIso8601String(),
+      });
+    }
+  }
+
   /// 克隆冲突的笔记，并将分类设为“同步冲突”
   Future<void> _cloneConflictQuote(
     Database db,
@@ -654,22 +675,7 @@ class WebDAVSyncService extends ChangeNotifier {
     List<Map<String, Object?>> tags,
   ) async {
     try {
-      // 1. 确保冲突分类在本地存在
-      final catCheck = await db.query(
-        'categories',
-        where: 'id = ?',
-        whereArgs: [conflictCategoryId],
-      );
-
-      if (catCheck.isEmpty) {
-        await db.insert('categories', {
-          'id': conflictCategoryId,
-          'name': '同步冲突',
-          'is_default': 0,
-          'icon_name': 'warning_amber_rounded',
-          'last_modified': DateTime.now().toUtc().toIso8601String(),
-        });
-      }
+      // 分类已在调用方确保存在，无需在此重复查询
 
       // 2. 拷贝笔记元数据
       final String clonedId = const Uuid().v4();
