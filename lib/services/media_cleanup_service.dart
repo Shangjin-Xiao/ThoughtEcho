@@ -227,7 +227,7 @@ class MediaCleanupService {
             }
           } catch (e, stackTrace) {
             AppLogger.e(
-              '获取文件大小失败: ${entity.path}',
+              '获取媒体文件大小失败',
               error: e,
               stackTrace: stackTrace,
               source: 'MediaCleanupService',
