@@ -270,7 +270,13 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       final endIso =
           end.add(const Duration(days: 1)).toIso8601String();
       result = result.where((q) {
-        return q.date.compareTo(startIso) >= 0 && q.date.compareTo(endIso) < 0;
+        final inCreatedRange =
+            q.date.compareTo(startIso) >= 0 && q.date.compareTo(endIso) < 0;
+        final activityDate = q.lastModified ?? q.date;
+        final inFavoriteActivityRange = q.favoriteCount > 0 &&
+            activityDate.compareTo(startIso) >= 0 &&
+            activityDate.compareTo(endIso) < 0;
+        return inCreatedRange || inFavoriteActivityRange;
       }).toList();
       return result;
     }
