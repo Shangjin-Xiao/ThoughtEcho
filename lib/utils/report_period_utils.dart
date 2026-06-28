@@ -46,7 +46,7 @@ class ReportPeriodUtils {
     required String selectedPeriod,
     required DateTime selectedDate,
   }) {
-    final range = _dateRange(selectedPeriod, selectedDate);
+    final range = dateRange(selectedPeriod, selectedDate);
     if (range == null) return true;
 
     final parsed = DateTime.tryParse(isoDate);
@@ -56,7 +56,7 @@ class ReportPeriodUtils {
     return !date.isBefore(range.start) && !date.isAfter(range.end);
   }
 
-  static ({DateTime start, DateTime end})? _dateRange(
+  static ({DateTime start, DateTime end})? dateRange(
     String selectedPeriod,
     DateTime selectedDate,
   ) {

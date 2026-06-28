@@ -248,6 +248,121 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     }
   }
 
+  @override
+  Future<List<Quote>> getQuotesForPeriod(
+    DateTime start,
+    DateTime end, {
+    bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
+  }) async {
+    if (kIsWeb) {
+      var result = List<Quote>.from(_memoryStore);
+      if (!includeDeleted) {
+        result = result.where((q) => !q.isDeleted).toList();
+      }
+      if (excludeHiddenNotes) {
+        result = result
+            .where((q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId))
+            .toList();
+      }
+      // 在 Dart 层过滤日期
+      final startIso = start.toIso8601String();
+      final endIso =
+          end.add(const Duration(days: 1, milliseconds: -1)).toIso8601String();
+      result = result.where((q) {
+        return q.date.compareTo(startIso) >= 0 && q.date.compareTo(endIso) <= 0;
+      }).toList();
+      return result;
+    }
+
+    try {
+      final db = await safeDatabase;
+
+      final conditions = <String>[];
+      final args = <Object?>[];
+
+      if (excludeHiddenNotes) {
+        conditions.add('''
+          NOT EXISTS (
+            SELECT 1 FROM quote_tags qt_hidden
+            WHERE qt_hidden.quote_id = q.id
+            AND qt_hidden.tag_id = ?
+          )
+        ''');
+        args.add(_DatabaseServiceBase.hiddenTagId);
+      }
+
+      if (!includeDeleted) {
+        conditions.add('(q.is_deleted = 0 OR q.is_deleted IS NULL)');
+      }
+
+      // 添加日期范围查询
+      conditions.add('q.date >= ? AND q.date <= ?');
+      args.add(start.toIso8601String());
+      args.add(
+          end.add(const Duration(days: 1, milliseconds: -1)).toIso8601String());
+
+      final whereClause =
+          conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+
+      // 仅返回周期报告所需字段
+      final String query = '''
+        SELECT
+          q.id, q.content, q.date, q.category_id, q.weather,
+          q.day_period, q.location, q.favorite_count, q.last_modified, q.is_deleted
+        FROM quotes q
+        $whereClause
+      ''';
+
+      final List<Map<String, dynamic>> maps = await db.rawQuery(
+        query,
+        args.whereType<Object>().toList(),
+      );
+
+      if (maps.isEmpty) return [];
+
+      final tagsByQuoteId = <String, List<String>>{};
+
+      final quoteIds = maps.map((m) => m['id'] as String).toList();
+      // 使用 batch 批量执行查询
+      final batch = db.batch();
+
+      for (int i = 0; i < quoteIds.length; i += 900) {
+        final endIdx = (i + 900 < quoteIds.length) ? i + 900 : quoteIds.length;
+        final batchIds = quoteIds.sublist(i, endIdx);
+        final placeholders = List.filled(batchIds.length, '?').join(',');
+
+        batch.rawQuery(
+          'SELECT quote_id, tag_id FROM quote_tags WHERE quote_id IN ($placeholders)',
+          batchIds,
+        );
+      }
+
+      final allTagMaps = await batch.commit();
+
+      for (final result in allTagMaps) {
+        final tagMaps = result as List;
+        for (final item in tagMaps) {
+          final tagMap = item as Map<String, dynamic>;
+          final quoteId = tagMap['quote_id'] as String;
+          final tagId = tagMap['tag_id'] as String;
+          tagsByQuoteId.putIfAbsent(quoteId, () => []).add(tagId);
+        }
+      }
+
+      return maps.map((map) {
+        final quoteId = map['id'] as String;
+        final tags = tagsByQuoteId[quoteId] ?? [];
+        final mutableMap = Map<String, dynamic>.from(map);
+        mutableMap['tag_ids'] = tags.join(',');
+        return Quote.fromJson(mutableMap);
+      }).toList();
+    } catch (e) {
+      logDebug('获取周期内笔记失败: $e');
+      return [];
+    }
+  }
+
   /// 批量更新近期离线笔记的位置字段（仅 location 列）。
   ///
   /// 使用精准的 SQL UPDATE ... WHERE 替代全表扫描 + 逐条 updateQuote 的旧路径。
