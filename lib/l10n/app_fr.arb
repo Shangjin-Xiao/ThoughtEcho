@@ -1922,6 +1922,7 @@
   "aiProviderOllama": "Ollama",
   "aiProviderLMStudio": "LMStudio",
   "apiKeyStatusEmpty": "vide",
+  "apiKeyStatusRedacted": "[REDACTED]",
   "apiKeyStatusNotEmpty": "{length} caractères",
   "@apiKeyStatusNotEmpty": {
     "placeholders": {

@@ -1929,6 +1929,7 @@
   "aiProviderOllama": "Ollama",
   "aiProviderLMStudio": "LMStudio",
   "apiKeyStatusEmpty": "空",
+  "apiKeyStatusRedacted": "[REDACTED]",
   "apiKeyStatusNotEmpty": "{length}文字",
   "@apiKeyStatusNotEmpty": {
     "placeholders": {

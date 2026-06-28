@@ -2006,6 +2006,7 @@
   "aiProviderOllama": "Ollama",
   "aiProviderLMStudio": "LMStudio",
   "apiKeyStatusEmpty": "empty",
+  "apiKeyStatusRedacted": "[REDACTED]",
   "apiKeyStatusNotEmpty": "{length} characters",
   "@apiKeyStatusNotEmpty": {
     "placeholders": {
@@ -3593,6 +3594,14 @@
   "testReportTitle": "=== Manual API Key Test Report ===",
   "testParamsLabel": "Test Parameters:",
   "keyFormatCheckLabel": "Key Format Check:",
+  "testApiKeyPrefixLabel": "  API Key Prefix: {prefix}",
+  "@testApiKeyPrefixLabel": {
+    "placeholders": {
+      "prefix": {
+        "type": "String"
+      }
+    }
+  },
   "sendRequestLabel": "Send Request:",
   "responseResultLabel": "Response Result:",
   "testApiKey": "Test API Key",

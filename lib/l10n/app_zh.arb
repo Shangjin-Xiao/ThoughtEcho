@@ -2013,6 +2013,7 @@
   "aiProviderOllama": "Ollama",
   "aiProviderLMStudio": "LMStudio",
   "apiKeyStatusEmpty": "空",
+  "apiKeyStatusRedacted": "[REDACTED]",
   "apiKeyStatusNotEmpty": "{length}字符",
   "@apiKeyStatusNotEmpty": {
     "placeholders": {
@@ -3593,6 +3594,14 @@
   "testReportTitle": "=== 手动API密钥测试报告 ===",
   "testParamsLabel": "测试参数:",
   "keyFormatCheckLabel": "密钥格式检查:",
+  "testApiKeyPrefixLabel": "  API Key前缀: {prefix}",
+  "@testApiKeyPrefixLabel": {
+    "placeholders": {
+      "prefix": {
+        "type": "String"
+      }
+    }
+  },
   "sendRequestLabel": "发送请求:",
   "responseResultLabel": "响应结果:",
   "testApiKey": "测试API密钥",
