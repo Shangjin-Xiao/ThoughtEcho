@@ -74,6 +74,7 @@ import 'unit/utils/stream_file_selector_test.dart' as stream_file_selector_test;
 import 'unit/utils/safe_compute_test.dart' as safe_compute_test;
 import 'unit/utils/streaming_json_parser_test.dart'
     as streaming_json_parser_test;
+import 'unit/utils/svg_test_helper_test.dart' as svg_test_helper_test;
 import 'unit/widgets/anniversary_animation_overlay_test.dart'
     as anniversary_animation_overlay_test;
 import 'unit/widgets/anniversary_notebook_icon_test.dart'
@@ -144,6 +145,7 @@ void main() {
       stream_file_selector_test.main();
       safe_compute_test.main();
       streaming_json_parser_test.main();
+      svg_test_helper_test.main();
       anniversary_animation_overlay_test.main();
       anniversary_notebook_icon_test.main();
       motion_photo_preview_page_test.main();

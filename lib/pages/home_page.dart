@@ -1951,6 +1951,9 @@ class _HomePageState extends State<HomePage>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemUiOverlayStyle,
       child: Scaffold(
+        // BottomSheet 已自行处理键盘 inset，关闭 Scaffold 级重排，
+        // 避免首页背景（如每日一言）在非全屏编辑器弹出/收起时跟随位移。
+        resizeToAvoidBottomInset: false,
         backgroundColor: scaffoldBackgroundColor,
         appBar: _currentIndex == 1
             ? null // 记录页不需要标题栏

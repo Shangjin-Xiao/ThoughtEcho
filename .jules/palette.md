@@ -28,3 +28,6 @@
 ## 2026-05-20 - [Fix Missing Tooltips for IconButton]
 **Learning:** `pdf_preview_dialog.dart` where `IconButton` with `Icons.close` was missing a `tooltip` property.
 **Action:** When adding close buttons inside standard dialogs and modals, always set `tooltip: MaterialLocalizations.of(context).closeButtonTooltip`.
+## 2026-06-26 - Missing Tooltips on Icon-Only Buttons
+**Learning:** Found multiple instances where icon-only `IconButton`s lacked the `tooltip` property, causing accessibility issues for screen readers and missing hover text for desktop users. Examples included the password visibility toggle in `webdav_sync_page.dart` and `_CircleIconButton` wrapper in `motion_photo_preview_page.dart`.
+**Action:** Always verify `tooltip` property presence on `IconButton` usage, especially in custom widget wrappers (`_CircleIconButton`) or inline suffixes (`suffixIcon`). Use standard `MaterialLocalizations` where applicable (e.g., `closeButtonTooltip`).

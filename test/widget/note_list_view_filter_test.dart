@@ -198,7 +198,7 @@ void main() {
         await tester.pumpAndSettle(const Duration(milliseconds: 50));
 
         expect(await scrollFuture, isTrue);
-        expect(databaseService.loadMoreCallCount, 1);
+        expect(databaseService.loadMoreCallCount, 2); // 1 查找 + 1 定位后预加载
         expect(find.textContaining('分页测试笔记 35'), findsOneWidget);
         expect(find.byType(CircularProgressIndicator), findsNothing);
 

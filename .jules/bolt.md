@@ -41,3 +41,8 @@
 ## 2024-06-28 - Fallback retry logic data integrity issue
 **Learning:** During database backup restoration, re-parsing original JSON payloads and randomly generating missing IDs (e.g., `_uuid.v4()`) directly inside a fallback insertion loop (e.g. after a batch `commit` failure) creates a critical data integrity flaw. If an initial pass already generated UUIDs and collected relational data (like `tagRelations`), regenerating new UUIDs in the fallback will decouple the records from those previously built relationships, causing orphan relationships and duplicated entities.
 **Action:** Modified `lib/services/database_backup_service.dart` to store processed, normalized map representations (including generated UUIDs) into lists (`processedCategories`, `processedQuotes`) during the primary loop. The fallback `batch.commit(continueOnError: true)` now iterates over these pre-processed objects instead of the raw parsed JSON, ensuring ID consistency and perfectly retaining existing relational mappings.
+## 2026-06-26 - [优化 QuillAiApplyUtils 正则表达式编译性能]
+**Learning:**
+在处理文档内容的高频工具方法（如 `stripMediaMarkersForDisplay`）中，内联调用 `RegExp` 构造函数会导致每次方法执行时重新分配和编译正则表达式。在连续使用链式 `replaceAll` 操作时，这种性能损耗会被进一步放大。
+**Action:**
+将 `QuillAiApplyUtils` 中的空白字符和换行符匹配模式提取为类的 `static final RegExp` 静态成员，使其仅在类加载时编译一次。测试执行通过且时间未受影响，有效降低了高频字符串处理时的资源消耗。

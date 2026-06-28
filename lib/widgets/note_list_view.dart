@@ -142,6 +142,9 @@ class NoteListViewState extends State<NoteListView> {
   /// 事件驱动：首批数据加载完成信号，替代忙等轮询
   Completer<void>? _initialDataCompleter = Completer<void>();
 
+  /// 安全超时：防止首次加载永久卡在加载动画
+  Timer? _initialLoadSafetyTimer;
+
   // PDF 导出选择模式状态
   bool _isExportMode = false;
   final Set<String> _selectedExportNoteIds = {};
@@ -583,6 +586,7 @@ class NoteListViewState extends State<NoteListView> {
     _searchDebounceTimer?.cancel(); // 清理防抖定时器
     _searchUpdatingTimer?.cancel(); // 清理搜索过渡动画安全定时器
     _searchDimTimer?.cancel(); // 清理延迟变淡定时器
+    _initialLoadSafetyTimer?.cancel(); // 清理首次加载安全超时
     _firstOpenScrollStopTimer?.cancel();
     _loadMorePerfStopTimer?.cancel();
     _loadMoreSettleTimer?.cancel();
@@ -650,15 +654,26 @@ class NoteListViewState extends State<NoteListView> {
 
     // ── 阶段 1: 事件驱动等待首批数据（取代忙等轮询）──
     if (!_initialDataLoaded) {
+      // completer 为 null 说明数据流尚未启动（initState 的 postFrameCallback 还没执行），
+      // 短暂轮询等待，最多 500ms；之后 completer 会被创建或数据已加载完毕。
+      if (_initialDataCompleter == null) {
+        const maxWaitMs = 500;
+        const stepMs = 50;
+        for (var waited = 0; waited < maxWaitMs && mounted && !_initialDataLoaded && _initialDataCompleter == null; waited += stepMs) {
+          await Future<void>.delayed(const Duration(milliseconds: stepMs));
+        }
+      }
+      if (!mounted) return false;
       final completer = _initialDataCompleter;
-      if (completer != null && !completer.isCompleted) {
+      if (!_initialDataLoaded && completer != null && !completer.isCompleted) {
         try {
+          // 超时后返回 false，由 home_page 的重试机制（250ms 间隔）重新尝试。
           await completer.future.timeout(
             const Duration(seconds: 5),
           );
         } on TimeoutException {
           logDebug(
-            'scrollToQuoteById 放弃：首次数据加载超时',
+            'scrollToQuoteById 超时（数据流尚未就绪），将由调用方重试',
             source: 'NoteListView',
           );
           return false;
@@ -685,11 +700,29 @@ class NoteListViewState extends State<NoteListView> {
         _isInitializing = false;
         _isUserScrolling = false;
 
-        return _positionAndAlignQuote(
+        final result = await _positionAndAlignQuote(
           quoteId,
           index,
           forceAlignToTop: true,
         );
+
+        // 定位完成后重置加载门控并主动预加载后续页面，
+        // 确保目标笔记下方不出现留白。
+        if (mounted && _hasMore) {
+          _resetLoadMoreGate();
+          if (_isLoading) {
+            _updateState(() {
+              _isLoading = false;
+            });
+          }
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _hasMore && !_isLoading) {
+              _loadMore();
+            }
+          });
+        }
+
+        return result;
       }
 
       // 目标不在已加载范围内，等待或加载更多
