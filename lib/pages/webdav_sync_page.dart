@@ -376,10 +376,10 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                                   child: Text(l10n.webdavProviderNutstore)),
                               DropdownMenuItem(
                                   value: 'nextcloud',
-                                  child: Text('Nextcloud / ownCloud')),
+                                  child: Text(l10n.webdavProviderNextcloud)),
                               DropdownMenuItem(
                                   value: 'infinicloud',
-                                  child: Text('InfiniCLOUD')),
+                                  child: Text(l10n.webdavProviderInfinicloud)),
                               DropdownMenuItem(
                                   value: 'custom',
                                   child: Text(l10n.webdavProviderCustom)),
@@ -881,10 +881,10 @@ class QuoteListViewByConflict extends StatelessWidget {
                 Icon(Icons.check_circle_outline,
                     size: 64, color: Colors.green.shade500),
                 const SizedBox(height: 16),
-                Text(AppLocalizations.of(context)!.webdavNoConflicts,
+                Text(AppLocalizations.of(context).webdavNoConflicts,
                     style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
-                Text(AppLocalizations.of(context)!.webdavAllConflictsResolved,
+                Text(AppLocalizations.of(context).webdavAllConflictsResolved,
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(color: theme.colorScheme.outline)),
               ],

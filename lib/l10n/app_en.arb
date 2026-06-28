@@ -3786,5 +3786,7 @@
   "webdavNoConflicts": "No Conflicts Detected",
   "webdavAllConflictsResolved": "All sync conflicts have been resolved.",
   "webdavProviderNutstore": "Nutstore",
-  "webdavProviderCustom": "Custom"
+  "webdavProviderCustom": "Custom",
+  "webdavProviderNextcloud": "Nextcloud / ownCloud",
+  "webdavProviderInfinicloud": "InfiniCLOUD"
 }

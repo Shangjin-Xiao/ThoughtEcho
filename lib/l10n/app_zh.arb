@@ -3786,5 +3786,7 @@
   "webdavNoConflicts": "没有检测到冲突笔记",
   "webdavAllConflictsResolved": "您的所有同步冲突均已处理干净。",
   "webdavProviderNutstore": "坚果云 (Nutstore)",
-  "webdavProviderCustom": "自定义 (Custom)"
+  "webdavProviderCustom": "自定义 (Custom)",
+  "webdavProviderNextcloud": "Nextcloud / ownCloud",
+  "webdavProviderInfinicloud": "InfiniCLOUD"
 }
