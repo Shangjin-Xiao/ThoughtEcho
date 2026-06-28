@@ -108,6 +108,127 @@ void main() {
     });
   });
 
+  group('NoteSearchController - updateSearch', () {
+    late NoteSearchController controller;
+
+    setUp(() {
+      controller = NoteSearchController();
+    });
+
+    test('should do nothing if query is unchanged', () {
+      controller.updateSearchImmediate('test');
+
+      bool notified = false;
+      controller.addListener(() {
+        notified = true;
+      });
+
+      controller.updateSearch('test');
+      expect(notified, false);
+      expect(controller.searchQuery, 'test');
+    });
+
+    test('should clear search if query is empty', () {
+      controller.updateSearchImmediate('test');
+      expect(controller.searchQuery, 'test');
+
+      controller.updateSearch('');
+      expect(controller.searchQuery, '');
+      expect(controller.isSearching, false);
+      expect(controller.searchError, null);
+    });
+
+    test('should only update query if length < 2', () {
+      controller.updateSearch('a');
+      expect(controller.searchQuery, 'a');
+      expect(controller.isSearching, false);
+      expect(controller.searchError, null);
+    });
+
+    test('should update query and set searching if length >= 2', () {
+      controller.updateSearch('test');
+      expect(controller.searchQuery, 'test');
+      expect(controller.isSearching, true);
+      expect(controller.searchError, null);
+    });
+
+    test('should set timeout error after 5 seconds of searching', () {
+      fakeAsync((async) {
+        controller.updateSearch('test query');
+        expect(controller.isSearching, true);
+        expect(controller.searchError, null);
+
+        // Advance time by 4 seconds (no timeout yet)
+        async.elapse(const Duration(seconds: 4));
+        expect(controller.isSearching, true);
+        expect(controller.searchError, null);
+
+        // Advance time by 1 more second (timeout hits)
+        async.elapse(const Duration(seconds: 1));
+        expect(controller.isSearching, false);
+        expect(controller.searchError, '搜索超时，请重试');
+      });
+    });
+
+    test('should not set timeout error if search completed before 5 seconds',
+        () {
+      fakeAsync((async) {
+        controller.updateSearch('test query');
+
+        // Advance time by 2 seconds
+        async.elapse(const Duration(seconds: 2));
+
+        // Simulate search completing
+        controller.setSearchState(false);
+
+        // Advance time past 5 seconds
+        async.elapse(const Duration(seconds: 4));
+
+        expect(controller.searchError, null);
+      });
+    });
+  });
+
+  group('NoteSearchController - resetSearchState', () {
+    late NoteSearchController controller;
+
+    setUp(() {
+      controller = NoteSearchController();
+    });
+
+    test('should reset state flags and notify listeners', () {
+      controller.updateSearch('test');
+      expect(controller.isSearching, true);
+
+      bool notified = false;
+      controller.addListener(() {
+        notified = true;
+      });
+
+      controller.resetSearchState();
+
+      expect(controller.isSearching, false);
+      expect(controller.searchError, null);
+      expect(notified, true);
+    });
+
+    test('should invalidate pending timeout timer', () {
+      fakeAsync((async) {
+        controller.updateSearch('test query');
+        expect(controller.isSearching, true);
+
+        controller.resetSearchState();
+        expect(controller.isSearching, false);
+
+        // Advance time past 5 seconds
+        async.elapse(const Duration(seconds: 6));
+
+        // Error should not be set because the version changed and timer was cancelled
+        expect(controller.searchError, null);
+      });
+    });
+  });
+
   group('NoteSearchController - clearSearch', () {
     late NoteSearchController controller;
 
