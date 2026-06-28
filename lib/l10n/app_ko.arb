@@ -1929,6 +1929,7 @@
   "aiProviderOllama": "장차 ~ 가 되는",
   "aiProviderLMStudio": "LM스튜디오",
   "apiKeyStatusEmpty": "비어 있는",
+  "apiKeyStatusRedacted": "[REDACTED]",
   "apiKeyStatusNotEmpty": "{length} characters",
   "@apiKeyStatusNotEmpty": {
     "placeholders": {

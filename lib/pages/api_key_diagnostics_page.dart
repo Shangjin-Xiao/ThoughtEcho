@@ -139,9 +139,9 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
           buffer.writeln(
               l10n.diagnosticApiKeyLength(currentProvider.apiKey.length));
           buffer.writeln(
-            l10n.diagnosticApiKeyPrefix(currentProvider.apiKey.length > 15
-                ? "${currentProvider.apiKey.substring(0, 15)}..."
-                : currentProvider.apiKey),
+            l10n.diagnosticApiKeyPrefix(currentProvider.apiKey.isEmpty
+                ? l10n.apiKeyStatusEmpty
+                : l10n.apiKeyStatusRedacted),
           );
         }
 
@@ -157,9 +157,9 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
           buffer
               .writeln(l10n.diagnosticSecureApiKeyLength(secureApiKey.length));
           buffer.writeln(
-            l10n.diagnosticSecureApiKeyPrefix(secureApiKey.length > 15
-                ? "${secureApiKey.substring(0, 15)}..."
-                : secureApiKey),
+            l10n.diagnosticSecureApiKeyPrefix(secureApiKey.isEmpty
+                ? l10n.apiKeyStatusEmpty
+                : l10n.apiKeyStatusRedacted),
           );
         }
         buffer.writeln();
