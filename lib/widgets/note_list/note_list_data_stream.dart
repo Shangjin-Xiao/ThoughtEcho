@@ -148,7 +148,6 @@ extension _NoteListDataStreamExtension on NoteListViewState {
 
           if (isFirstLoad) {
             _initialDataLoaded = true;
-            _initialLoadSafetyTimer?.cancel();
             // 通知 Completer：首批数据已就绪（scrollToQuoteById 事件驱动等待）
             if (_initialDataCompleter != null &&
                 !_initialDataCompleter!.isCompleted) {
@@ -209,11 +208,6 @@ extension _NoteListDataStreamExtension on NoteListViewState {
       },
       onError: (error) {
         if (mounted) {
-          // 出错时也需要 complete completer，避免 scrollToQuoteById 挂起直到超时
-          if (_initialDataCompleter != null &&
-              !_initialDataCompleter!.isCompleted) {
-            _initialDataCompleter!.complete();
-          }
           _updateState(() {
             _isLoading = false;
           });
@@ -252,33 +246,8 @@ extension _NoteListDataStreamExtension on NoteListViewState {
         }
       },
     );
-    // 安全超时：首次加载若 8 秒仍未收到数据，强制结束加载状态，
-    // 避免用户永久看到全屏加载动画。用户可通过下拉刷新重试。
-    _initialLoadSafetyTimer?.cancel();
-    if (isFirstLoad) {
-      _initialLoadSafetyTimer = Timer(
-        const Duration(seconds: 8),
-        () {
-          if (mounted &&
-              !_initialDataLoaded &&
-              _isLoading &&
-              _quotes.isEmpty) {
-            logDebug(
-              '首次数据加载安全超时（8s），结束加载状态',
-              source: 'NoteListView',
-            );
-            _updateState(() {
-              _isLoading = false;
-            });
-            // 同时释放 completer，避免 scrollToQuoteById 继续等待
-            if (_initialDataCompleter != null &&
-                !_initialDataCompleter!.isCompleted) {
-              _initialDataCompleter!.complete();
-            }
-          }
-        },
-      );
-    }
+    // 注释掉重复的loadMore调用，因为watchQuotes已经会自动加载数据
+    // _loadMore(); // 这行导致双重加载和滚动位置混乱
   }
 
   /// 优化：判断是否需要更新订阅

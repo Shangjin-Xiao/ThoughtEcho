@@ -35,7 +35,3 @@
 ## 2025-10-24 - 🗃️ 黑匣: [完善 DatabaseService 模块的结构化日志]
 **异常:** [DatabaseService 模块在数据库初始化失败、初始化新数据库失败、预加载笔记失败和数据库恢复失败时，仅使用了 logDebug 进行了粗糙的打印，丢失了关键的错误堆栈信息以及明确的模块来源信息，这使得排查数据库连接和读写故障十分困难。]
 **拦截:** [已将上述环节中的 catch (e) 替换为 catch (e, stackTrace)，并将 logDebug 替换为结构化的 AppLogger.e，注入了对应的报错描述、具体的异常对象 error: e、堆栈轨迹 stackTrace: stackTrace，并指定了来源模块 source: 'DatabaseService'。确认修改不超过 50 行，且未记录用户的任何隐私数据。]
-
-## 2025-05-18 - 🗃️ 黑匣: [完善 MediaCleanupService 模块的结构化日志]
-**异常:** [MediaCleanupService 模块在初始化、清理、迁移和统计媒体文件等任务发生错误时，仅使用了 `logDebug` 进行粗糙的字符串拼接打印。这不仅掩盖了底层 `FileSystemException` 或 `StateError` 等导致错误的真实原因，还丢失了完整的异常堆栈轨迹 (stackTrace)，导致排查本地文件系统的读写异常极其困难。]
-**拦截:** [已将上述所有流程中的 `catch (e)` 替换为结构化的 `catch (e, stackTrace)`，并使用 `AppLogger.e` 进行记录。注入了描述信息、具体的错误对象 `error: e`、堆栈轨迹 `stackTrace: stackTrace`，并指定了明确的日志来源模块 `source: 'MediaCleanupService'`。确认所有的错误记录仅涉及本地存储系统与数据库交互时的 IO/状态异常，未记录任何用户笔记的正文或凭证数据。]

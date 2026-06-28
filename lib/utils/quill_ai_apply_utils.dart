@@ -5,9 +5,6 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 /// Utilities for applying AI-generated plain text back into a Quill document.
 class QuillAiApplyUtils {
   static final RegExp _mediaMarkerPattern = RegExp(r'\[\[TE_MEDIA_(\d+)]]');
-  static final RegExp _trailingWhitespacePattern = RegExp(r'[ \t]+\n');
-  static final RegExp _multipleNewlinesPattern = RegExp(r'\n{3,}');
-  static final RegExp _multipleSpacesPattern = RegExp(r' {2,}');
 
   static String buildPolishInputText(quill.Document document) {
     final buffer = StringBuffer();
@@ -105,9 +102,9 @@ class QuillAiApplyUtils {
   static String stripMediaMarkersForDisplay(String text) {
     final withoutMarkers = text.replaceAll(_mediaMarkerPattern, '');
     return withoutMarkers
-        .replaceAll(_trailingWhitespacePattern, '\n')
-        .replaceAll(_multipleNewlinesPattern, '\n\n')
-        .replaceAll(_multipleSpacesPattern, ' ');
+        .replaceAll(RegExp(r'[ \t]+\n'), '\n')
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .replaceAll(RegExp(r' {2,}'), ' ');
   }
 
   static String _markerForIndex(int index) => '[[TE_MEDIA_$index]]';

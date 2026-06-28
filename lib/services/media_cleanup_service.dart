@@ -27,13 +27,8 @@ class MediaCleanupService {
 
       _isInitialized = true;
       logDebug('媒体清理服务初始化完成');
-    } catch (e, stackTrace) {
-      AppLogger.e(
-        '媒体清理服务初始化失败',
-        error: e,
-        stackTrace: stackTrace,
-        source: 'MediaCleanupService',
-      );
+    } catch (e) {
+      logDebug('媒体清理服务初始化失败: $e');
     }
   }
 
@@ -61,13 +56,8 @@ class MediaCleanupService {
 
       logDebug('媒体清理任务完成: $results');
       return results;
-    } catch (e, stackTrace) {
-      AppLogger.e(
-        '媒体清理任务失败',
-        error: e,
-        stackTrace: stackTrace,
-        source: 'MediaCleanupService',
-      );
+    } catch (e) {
+      logDebug('媒体清理任务失败: $e');
       return {'error': 1};
     }
   }
@@ -111,13 +101,8 @@ class MediaCleanupService {
 
       logDebug('完整清理完成: $results');
       return results;
-    } catch (e, stackTrace) {
-      AppLogger.e(
-        '完整清理失败',
-        error: e,
-        stackTrace: stackTrace,
-        source: 'MediaCleanupService',
-      );
+    } catch (e) {
+      logDebug('完整清理失败: $e');
       return {'error': e.toString()};
     }
   }
@@ -148,13 +133,8 @@ class MediaCleanupService {
 
       logDebug('迁移完成: $results');
       return results;
-    } catch (e, stackTrace) {
-      AppLogger.e(
-        '迁移失败',
-        error: e,
-        stackTrace: stackTrace,
-        source: 'MediaCleanupService',
-      );
+    } catch (e) {
+      logDebug('迁移失败: $e');
       return {'error': e.toString()};
     }
   }
@@ -177,13 +157,8 @@ class MediaCleanupService {
       stats.addAll(sizeStats);
 
       return stats;
-    } catch (e, stackTrace) {
-      AppLogger.e(
-        '获取媒体统计信息失败',
-        error: e,
-        stackTrace: stackTrace,
-        source: 'MediaCleanupService',
-      );
+    } catch (e) {
+      logDebug('获取媒体统计信息失败: $e');
       return {'error': e.toString()};
     }
   }
@@ -225,13 +200,8 @@ class MediaCleanupService {
             } else if (relativePath.startsWith('audios')) {
               audiosSize += fileSize;
             }
-          } catch (e, stackTrace) {
-            AppLogger.e(
-              '获取媒体文件大小失败',
-              error: e,
-              stackTrace: stackTrace,
-              source: 'MediaCleanupService',
-            );
+          } catch (e) {
+            logDebug('获取文件大小失败: ${entity.path}, 错误: $e');
           }
         }
       }
@@ -242,13 +212,8 @@ class MediaCleanupService {
         'videosSizeMB': videosSize / 1024 / 1024,
         'audiosSizeMB': audiosSize / 1024 / 1024,
       };
-    } catch (e, stackTrace) {
-      AppLogger.e(
-        '计算媒体文件大小失败',
-        error: e,
-        stackTrace: stackTrace,
-        source: 'MediaCleanupService',
-      );
+    } catch (e) {
+      logDebug('计算媒体文件大小失败: $e');
       return {
         'totalSizeMB': 0.0,
         'imagesSizeMB': 0.0,
@@ -287,14 +252,12 @@ class MediaCleanupService {
           i + chunkSize > quotes.length ? quotes.length : i + chunkSize,
         );
 
-        final chunkResults = await Future.wait(
-          chunk.map((quote) async {
-            return await MediaReferenceService.extractMediaPathsFromQuote(
-              quote,
-              cachedAppPath: appPath, // 传递缓存的路径以避免多余的平台调用
-            );
-          }),
-        );
+        final chunkResults = await Future.wait(chunk.map((quote) async {
+          return await MediaReferenceService.extractMediaPathsFromQuote(
+            quote,
+            cachedAppPath: appPath, // 传递缓存的路径以避免多余的平台调用
+          );
+        }));
 
         for (var j = 0; j < chunk.length; j++) {
           final quote = chunk[j];
@@ -323,13 +286,8 @@ class MediaCleanupService {
 
       logDebug('媒体文件完整性验证完成: $results');
       return results;
-    } catch (e, stackTrace) {
-      AppLogger.e(
-        '验证媒体文件完整性失败',
-        error: e,
-        stackTrace: stackTrace,
-        source: 'MediaCleanupService',
-      );
+    } catch (e) {
+      logDebug('验证媒体文件完整性失败: $e');
       return {'error': e.toString()};
     }
   }
@@ -351,13 +309,8 @@ class MediaCleanupService {
 
       logDebug('媒体文件引用修复完成: $results');
       return results;
-    } catch (e, stackTrace) {
-      AppLogger.e(
-        '修复媒体文件引用失败',
-        error: e,
-        stackTrace: stackTrace,
-        source: 'MediaCleanupService',
-      );
+    } catch (e) {
+      logDebug('修复媒体文件引用失败: $e');
       return {'error': e.toString()};
     }
   }

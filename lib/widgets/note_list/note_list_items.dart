@@ -701,15 +701,11 @@ extension _NoteListItemsExtension on NoteListViewState {
                 },
               );
             }
-            // 底部加载指示器：仅在主动加载时显示动画，
-            // 空闲态用透明占位确保 itemCount 正确以触发自动加载。
-            if (_isLoading) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: AppLoadingView(size: 32),
-              );
-            }
-            return const SizedBox(height: 48);
+            // 底部加载指示器
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: AppLoadingView(size: 32),
+            );
           },
         ),
       ),

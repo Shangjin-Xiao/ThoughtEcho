@@ -2006,6 +2006,7 @@
   "aiProviderOllama": "Ollama",
   "aiProviderLMStudio": "LMStudio",
   "apiKeyStatusEmpty": "empty",
+  "apiKeyStatusRedacted": "[REDACTED]",
   "apiKeyStatusNotEmpty": "{length} characters",
   "@apiKeyStatusNotEmpty": {
     "placeholders": {
@@ -3593,6 +3594,14 @@
   "testReportTitle": "=== Manual API Key Test Report ===",
   "testParamsLabel": "Test Parameters:",
   "keyFormatCheckLabel": "Key Format Check:",
+  "testApiKeyPrefixLabel": "  API Key Prefix: {prefix}",
+  "@testApiKeyPrefixLabel": {
+    "placeholders": {
+      "prefix": {
+        "type": "String"
+      }
+    }
+  },
   "sendRequestLabel": "Send Request:",
   "responseResultLabel": "Response Result:",
   "testApiKey": "Test API Key",
@@ -3712,8 +3721,6 @@
   "webdavEnableSync": "Enable Cloud Sync",
   "webdavSaveAndSync": "Save and Sync",
   "webdavHowToGetAppPassword": "How to get app password?",
-  "webdavShowPasswordTooltip": "Show password",
-  "webdavHidePasswordTooltip": "Hide password",
   "webdavOpenHelpFailed": "Unable to open help link. Please check default browser settings.",
   "webdavConflictCategoryName": "Sync Conflicts",
   "webdavConflictNotePrefix": "[Conflict] ",
