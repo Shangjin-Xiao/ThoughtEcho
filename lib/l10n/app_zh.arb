@@ -3791,5 +3791,14 @@
   "customFeedbackEmailLabel": "联系邮箱 (可选)",
   "customFeedbackSubmit": "发送反馈",
   "customFeedbackSuccess": "感谢您的反馈！",
-  "customFeedbackEmptyError": "请输入反馈内容"
+  "customFeedbackEmptyError": "请输入反馈内容",
+  "webdavDisableSyncSuccess": "已关闭 WebDAV 云同步。本地数据完全保留。",
+  "webdavDisableSync": "关闭并停用云同步",
+  "webdavGoToResolve": "去处理",
+  "webdavNoConflicts": "没有检测到冲突笔记",
+  "webdavAllConflictsResolved": "您的所有同步冲突均已处理干净。",
+  "webdavProviderNutstore": "坚果云 (Nutstore)",
+  "webdavProviderCustom": "自定义 (Custom)",
+  "webdavProviderNextcloud": "Nextcloud / ownCloud",
+  "webdavProviderInfinicloud": "InfiniCLOUD"
 }

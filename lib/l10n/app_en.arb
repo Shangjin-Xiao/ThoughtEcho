@@ -3791,5 +3791,14 @@
   "webdavConflictKeepTooltip": "Keep and move to default category",
   "webdavConflictKeepSuccess": "Confirmed and moved to default list.",
   "webdavConflictDiscardTooltip": "Discard this conflict backup",
-  "webdavConflictDiscardSuccess": "Permanently discarded this conflict note."
+  "webdavConflictDiscardSuccess": "Permanently discarded this conflict note.",
+  "webdavDisableSyncSuccess": "WebDAV sync disabled. Local data retained.",
+  "webdavDisableSync": "Disable Cloud Sync",
+  "webdavGoToResolve": "Resolve Now",
+  "webdavNoConflicts": "No Conflicts Detected",
+  "webdavAllConflictsResolved": "All sync conflicts have been resolved.",
+  "webdavProviderNutstore": "Nutstore",
+  "webdavProviderCustom": "Custom",
+  "webdavProviderNextcloud": "Nextcloud / ownCloud",
+  "webdavProviderInfinicloud": "InfiniCLOUD"
 }
