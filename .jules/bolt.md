@@ -50,3 +50,10 @@
 ## 2026-06-26 - Optimize Database Schema Migration
 **Learning:** For database schema migrations involving dictionary mapping (e.g., legacy string labels to string keys), fetching all records into Dart memory and iterating through them to perform row-by-row `batch.update()` calls introduces severe N+1 overhead across the SQLite FFI boundary.
 **Action:** Replaced the row-by-row iteration with a loop that directly executes `txn.rawUpdate('UPDATE quotes SET field = ? WHERE field = ?', [key, label])` for each dictionary entry. This pushes the update logic entirely into the SQLite engine, saving ~35-60% of migration time on large datasets by eliminating unnecessary read queries and FFI data transfers.
+## 2026-06-28 - Optimize String Splitting in SmartPushAnalytics
+**Learning:** Nested  in frequently called loops allocates unnecessary temporary arrays causing GC pressure.
+**Action:** Replaced nested  with  and  to reduce memory allocations.
+
+## 2026-06-28 - Optimize String Splitting in SmartPushAnalytics
+**Learning:** Nested .split() in frequently called loops allocates unnecessary temporary arrays causing GC pressure.
+**Action:** Replaced nested split with indexOf and substring to reduce memory allocations.
