@@ -431,6 +431,9 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                               labelText: l10n.webdavPassword,
                               prefixIcon: const Icon(Icons.lock_outline),
                               suffixIcon: IconButton(
+                                tooltip: _obscurePassword
+                                    ? l10n.webdavShowPasswordTooltip
+                                    : l10n.webdavHidePasswordTooltip,
                                 icon: Icon(_obscurePassword
                                     ? Icons.visibility_off
                                     : Icons.visibility),

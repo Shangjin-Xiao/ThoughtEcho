@@ -3712,6 +3712,8 @@
   "webdavEnableSync": "Enable Cloud Sync",
   "webdavSaveAndSync": "Save and Sync",
   "webdavHowToGetAppPassword": "How to get app password?",
+  "webdavShowPasswordTooltip": "Show password",
+  "webdavHidePasswordTooltip": "Hide password",
   "webdavOpenHelpFailed": "Unable to open help link. Please check default browser settings.",
   "webdavConflictCategoryName": "Sync Conflicts",
   "webdavConflictNotePrefix": "[Conflict] ",
