@@ -267,8 +267,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       }
       // 在 Dart 层过滤日期
       final startIso = start.toIso8601String();
-      final endIso =
-          end.add(const Duration(days: 1)).toIso8601String();
+      final endIso = end.add(const Duration(days: 1)).toIso8601String();
       result = result.where((q) {
         final inCreatedRange =
             q.date.compareTo(startIso) >= 0 && q.date.compareTo(endIso) < 0;
@@ -380,7 +379,6 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         source: 'DatabaseQuoteCrudMixin',
       );
       rethrow;
-    }
     }
   }
 
