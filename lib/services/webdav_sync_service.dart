@@ -570,6 +570,8 @@ class WebDAVSyncService extends ChangeNotifier {
 
     int conflictsCloned = 0;
 
+    final List<Map<String, dynamic>> conflictingQuotes = [];
+
     // 比对云端对应笔记的修改时间
     for (final rq in remoteQuotes) {
       final rqMap = Map<String, dynamic>.from(rq as Map<String, dynamic>);
@@ -595,10 +597,51 @@ class WebDAVSyncService extends ChangeNotifier {
         final remoteContent = rqMap['content'] as String? ?? '';
 
         if (localContent != remoteContent) {
-          conflictsCloned++;
-          await _cloneConflictQuote(db, localQuote);
+          conflictingQuotes.add(localQuote);
         }
       }
+    }
+
+    if (conflictingQuotes.isEmpty) return 0;
+
+    // 批量预取所有冲突笔记的标签，消除 N+1 查询
+    final Map<String, List<Map<String, Object?>>> tagsMap = {};
+    final batchQuery = db.batch();
+
+    // 按块处理以避免超过 900 个参数的 SQLite 限制
+    for (var i = 0; i < conflictingQuotes.length; i += 900) {
+      final end = (i + 900 < conflictingQuotes.length)
+          ? i + 900
+          : conflictingQuotes.length;
+      final chunk = conflictingQuotes
+          .sublist(i, end)
+          .map((q) => q['id'] as String)
+          .toList();
+      final placeholders = List.filled(chunk.length, '?').join(',');
+      batchQuery.query(
+        'quote_tags',
+        where: 'quote_id IN ($placeholders)',
+        whereArgs: chunk,
+      );
+    }
+
+    final results = await batchQuery.commit();
+    for (final chunkResult in results) {
+      final tagsList = chunkResult as List<Object?>;
+      for (final tagObj in tagsList) {
+        final tag = tagObj as Map<String, Object?>;
+        final qId = tag['quote_id'] as String;
+        tagsMap.putIfAbsent(qId, () => []).add(tag);
+      }
+    }
+
+    for (final quote in conflictingQuotes) {
+      conflictsCloned++;
+      await _cloneConflictQuote(
+        db,
+        quote,
+        tagsMap[quote['id'] as String] ?? [],
+      );
     }
 
     return conflictsCloned;
@@ -608,6 +651,7 @@ class WebDAVSyncService extends ChangeNotifier {
   Future<void> _cloneConflictQuote(
     Database db,
     Map<String, dynamic> localQuote,
+    List<Map<String, Object?>> tags,
   ) async {
     try {
       // 1. 确保冲突分类在本地存在
@@ -628,7 +672,6 @@ class WebDAVSyncService extends ChangeNotifier {
       }
 
       // 2. 拷贝笔记元数据
-      final String quoteId = localQuote['id'] as String;
       final String clonedId = const Uuid().v4();
       final clonedQuote = Map<String, dynamic>.from(localQuote);
 
@@ -657,11 +700,6 @@ class WebDAVSyncService extends ChangeNotifier {
       await db.insert('quotes', clonedQuote);
 
       // 3. 复制对应的标签关联关系
-      final tags = await db.query(
-        'quote_tags',
-        where: 'quote_id = ?',
-        whereArgs: [quoteId],
-      );
       if (tags.isNotEmpty) {
         final batch = db.batch();
         for (final tag in tags) {
