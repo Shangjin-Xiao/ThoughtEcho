@@ -1,0 +1,26 @@
+lib/services/smart_push_service.dart
+  s_4e3c5afaac5aac::t_004769ce4d9ed2 22
+lib/services/smart_push/smart_push_notification.dart
+  s_4e3c5afaac5aac::t_5072cf7fb66b16 116
+lib/services/clipboard_service.dart
+  s_4e3c5afaac5aac::t_66fe93450e41d3 30-33,41-45,81-86
+test/unit/services/clipboard_service_test.dart
+  s_4e3c5afaac5aac::t_8e5efdae31dfff 23-24
+  s_4e3c5afaac5aac::t_6f31b9ea718ba6 22,25-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "0048c4b880f465347f73bc776d6b704b11d8ea55",
+  "prompts": {},
+  "sessions": {
+    "s_4e3c5afaac5aac": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f134a-6bc1-7ce3-b596-47c08424278b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
