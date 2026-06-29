@@ -102,10 +102,9 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
   }
 
   Future<void> _loadSecurePassword() async {
-    final password = await Provider.of<WebDAVSyncService>(
-      context,
-      listen: false,
-    ).getPassword();
+    final password =
+        await Provider.of<WebDAVSyncService>(context, listen: false)
+            .getPassword();
     if (password != null && mounted) {
       setState(() {
         _passwordController.text = password;
@@ -177,8 +176,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
       url = Uri.parse('https://infinicloud.com/en/support.html');
     } else {
       url = Uri.parse(
-        'https://google.com/search?q=how+to+setup+webdav+app+password',
-      );
+          'https://google.com/search?q=how+to+setup+webdav+app+password');
     }
 
     try {
@@ -227,12 +225,10 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            success ? l10n.webdavTestSuccess : l10n.webdavTestFailed,
-          ),
-          backgroundColor: success
-              ? Colors.green.shade600
-              : Colors.red.shade600,
+          content:
+              Text(success ? l10n.webdavTestSuccess : l10n.webdavTestFailed),
+          backgroundColor:
+              success ? Colors.green.shade600 : Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -264,9 +260,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
 
   /// 触发手动同步
   Future<void> _triggerManualSync(
-    WebDAVSyncService syncService,
-    AppLocalizations l10n,
-  ) async {
+      WebDAVSyncService syncService, AppLocalizations l10n) async {
     await syncService.triggerSync();
     await _checkConflictNotes();
 
@@ -276,9 +270,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
         if (syncService.lastConflictCount > 0) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                l10n.webdavConflictNotification(syncService.lastConflictCount),
-              ),
+              content: Text(l10n
+                  .webdavConflictNotification(syncService.lastConflictCount)),
               backgroundColor: Colors.amber.shade800,
               behavior: SnackBarBehavior.floating,
               action: SnackBarAction(
@@ -333,14 +326,15 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.webdavSyncTitle), elevation: 0),
+      appBar: AppBar(
+        title: Text(l10n.webdavSyncTitle),
+        elevation: 0,
+      ),
       body: Consumer<WebDAVSyncService>(
         builder: (context, syncService, _) {
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20.0,
-              vertical: 16.0,
-            ),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
             child: Form(
               key: _formKey,
               child: Column(
@@ -353,9 +347,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                   // --- 账号配置表单 Section ---
                   Text(
                     l10n.webdavProviderConfig,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                    ),
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(color: theme.colorScheme.primary),
                   ),
                   const SizedBox(height: 12),
                   Card(
@@ -363,10 +356,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                       side: BorderSide(
-                        color: theme.colorScheme.outlineVariant.withValues(
-                          alpha: 0.5,
-                        ),
-                      ),
+                          color: theme.colorScheme.outlineVariant
+                              .withValues(alpha: 0.5)),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
@@ -381,21 +372,17 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                             ),
                             items: [
                               DropdownMenuItem(
-                                value: 'nutstore',
-                                child: Text(l10n.webdavProviderNutstore),
-                              ),
+                                  value: 'nutstore',
+                                  child: Text(l10n.webdavProviderNutstore)),
                               DropdownMenuItem(
-                                value: 'nextcloud',
-                                child: Text(l10n.webdavProviderNextcloud),
-                              ),
+                                  value: 'nextcloud',
+                                  child: Text(l10n.webdavProviderNextcloud)),
                               DropdownMenuItem(
-                                value: 'infinicloud',
-                                child: Text(l10n.webdavProviderInfinicloud),
-                              ),
+                                  value: 'infinicloud',
+                                  child: Text(l10n.webdavProviderInfinicloud)),
                               DropdownMenuItem(
-                                value: 'custom',
-                                child: Text(l10n.webdavProviderCustom),
-                              ),
+                                  value: 'custom',
+                                  child: Text(l10n.webdavProviderCustom)),
                             ],
                             onChanged: _onProviderChanged,
                           ),
@@ -404,8 +391,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                           // 2. 服务器 URL
                           TextFormField(
                             controller: _urlController,
-                            enabled:
-                                _selectedProvider == 'custom' ||
+                            enabled: _selectedProvider == 'custom' ||
                                 _selectedProvider == 'nextcloud',
                             decoration: InputDecoration(
                               labelText: l10n.webdavServerUrl,
@@ -433,8 +419,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                             ),
                             validator: (val) =>
                                 (val == null || val.trim().isEmpty)
-                                ? l10n.webdavUsernameEmptyError
-                                : null,
+                                    ? l10n.webdavUsernameEmptyError
+                                    : null,
                           ),
                           const SizedBox(height: 16),
 
@@ -449,14 +435,11 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                                 tooltip: _obscurePassword
                                     ? l10n.webdavShowPasswordTooltip
                                     : l10n.webdavHidePasswordTooltip,
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_off
-                                      : Icons.visibility,
-                                ),
+                                icon: Icon(_obscurePassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility),
                                 onPressed: () => setState(
-                                  () => _obscurePassword = !_obscurePassword,
-                                ),
+                                    () => _obscurePassword = !_obscurePassword),
                               ),
                             ),
                             validator: (val) => (val == null || val.isEmpty)
@@ -485,9 +468,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                   // --- 自动同步策略 Switch ---
                   Text(
                     '同步策略',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                    ),
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(color: theme.colorScheme.primary),
                   ),
                   const SizedBox(height: 12),
                   Card(
@@ -495,10 +477,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                       side: BorderSide(
-                        color: theme.colorScheme.outlineVariant.withValues(
-                          alpha: 0.5,
-                        ),
-                      ),
+                          color: theme.colorScheme.outlineVariant
+                              .withValues(alpha: 0.5)),
                     ),
                     child: Column(
                       children: [
@@ -561,9 +541,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                         const Divider(height: 1),
                         SwitchListTile(
                           title: Text(l10n.webdavSyncNotesOnlyOnCellular),
-                          subtitle: Text(
-                            l10n.webdavSyncNotesOnlyOnCellularSubtitle,
-                          ),
+                          subtitle:
+                              Text(l10n.webdavSyncNotesOnlyOnCellularSubtitle),
                           value: syncService.syncNotesOnlyOnCellular,
                           onChanged: syncService.syncOnCellular
                               ? null
@@ -590,24 +569,20 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: _isTestingConnection
-                              ? null
-                              : _testConnection,
+                          onPressed:
+                              _isTestingConnection ? null : _testConnection,
                           icon: _isTestingConnection
                               ? const SizedBox(
                                   width: 18,
                                   height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2))
                               : const Icon(Icons.wifi_tethering),
                           label: Text(l10n.webdavTestConnection),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                         ),
                       ),
@@ -622,25 +597,19 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                                   width: 18,
                                   height: 18,
                                   child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
+                                      strokeWidth: 2, color: Colors.white))
                               : Icon(
                                   syncService.enabled
                                       ? Icons.save_outlined
                                       : Icons.cloud_sync_outlined,
                                 ),
-                          label: Text(
-                            syncService.enabled
-                                ? l10n.webdavSaveAndSync
-                                : l10n.webdavEnableSync,
-                          ),
+                          label: Text(syncService.enabled
+                              ? l10n.webdavSaveAndSync
+                              : l10n.webdavEnableSync),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                                borderRadius: BorderRadius.circular(12)),
                             backgroundColor: theme.colorScheme.primary,
                             foregroundColor: theme.colorScheme.onPrimary,
                           ),
@@ -673,10 +642,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                         );
                       },
                       icon: const Icon(Icons.cloud_off, color: Colors.red),
-                      label: Text(
-                        l10n.webdavDisableSync,
-                        style: TextStyle(color: Colors.red),
-                      ),
+                      label: Text(l10n.webdavDisableSync,
+                          style: TextStyle(color: Colors.red)),
                     ),
                   ],
                 ],
@@ -690,10 +657,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
 
   /// 构建状态预览卡片
   Widget _buildStatusCard(
-    WebDAVSyncService syncService,
-    AppLocalizations l10n,
-    ThemeData theme,
-  ) {
+      WebDAVSyncService syncService, AppLocalizations l10n, ThemeData theme) {
     String stateTitle = '未启用云同步';
     String stateDesc = '配置您的 WebDAV 服务，享受安全跨端多路同步。';
     IconData stateIcon = Icons.cloud_off_outlined;
@@ -776,9 +740,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                     children: [
                       Text(
                         stateTitle,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: theme.colorScheme.onSurface,
-                        ),
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(color: theme.colorScheme.onSurface),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -799,14 +762,11 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                 syncService.lastSyncError.isNotEmpty) ...[
               const Divider(height: 24, thickness: 0.8),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.errorContainer.withValues(
-                    alpha: 0.5,
-                  ),
+                  color:
+                      theme.colorScheme.errorContainer.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
@@ -836,26 +796,23 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
             if (_hasConflicts) ...[
               const Divider(height: 24, thickness: 0.8),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.amber.shade500.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      color: Colors.amber.shade800,
-                      size: 20,
-                    ),
+                    Icon(Icons.warning_amber_rounded,
+                        color: Colors.amber.shade800, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         '检测到有 $_conflictNotesCount 篇同步冲突备份，建议立即处理。',
-                        style: Theme.of(context).textTheme.labelMedium
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelMedium
                             ?.copyWith(color: Colors.amber.shade900),
                       ),
                     ),
@@ -863,16 +820,12 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                       onPressed: _navigateToConflicts,
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
-                        ),
+                            horizontal: 12, vertical: 4),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: Text(
-                        l10n.webdavGoToResolve,
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
+                      child: Text(l10n.webdavGoToResolve,
+                          style: Theme.of(context).textTheme.titleSmall),
                     ),
                   ],
                 ),
@@ -890,8 +843,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                   label: Text(l10n.webdavSyncNow),
                   style: FilledButton.styleFrom(
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                        borderRadius: BorderRadius.circular(12)),
                     backgroundColor: theme.colorScheme.secondaryContainer,
                     foregroundColor: theme.colorScheme.onSecondaryContainer,
                   ),
@@ -930,23 +882,15 @@ class QuoteListViewByConflict extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.check_circle_outline,
-                  size: 64,
-                  color: Colors.green.shade500,
-                ),
+                Icon(Icons.check_circle_outline,
+                    size: 64, color: Colors.green.shade500),
                 const SizedBox(height: 16),
-                Text(
-                  AppLocalizations.of(context).webdavNoConflicts,
-                  style: theme.textTheme.titleMedium,
-                ),
+                Text(AppLocalizations.of(context).webdavNoConflicts,
+                    style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
-                Text(
-                  AppLocalizations.of(context).webdavAllConflictsResolved,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.outline,
-                  ),
-                ),
+                Text(AppLocalizations.of(context).webdavAllConflictsResolved,
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: theme.colorScheme.outline)),
               ],
             ),
           );
@@ -961,8 +905,7 @@ class QuoteListViewByConflict extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 12),
               elevation: 1,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+                  borderRadius: BorderRadius.circular(12)),
               child: ListTile(
                 title: Text(
                   quote.content,
@@ -974,18 +917,13 @@ class QuoteListViewByConflict extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 6.0),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.access_time,
-                        size: 14,
-                        color: theme.colorScheme.outline,
-                      ),
+                      Icon(Icons.access_time,
+                          size: 14, color: theme.colorScheme.outline),
                       const SizedBox(width: 4),
                       Text(
                         LWWUtils.formatTimestamp(quote.lastModified),
                         style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.outline,
-                        ),
+                            fontSize: 12, color: theme.colorScheme.outline),
                       ),
                     ],
                   ),
@@ -996,17 +934,15 @@ class QuoteListViewByConflict extends StatelessWidget {
                     // 一键恢复/移动：改分类至默认，使其移出冲突
                     IconButton(
                       icon: const Icon(Icons.check, color: Colors.green),
-                      tooltip: AppLocalizations.of(
-                        context,
-                      ).webdavConflictKeepTooltip,
+                      tooltip: AppLocalizations.of(context)
+                          .webdavConflictKeepTooltip,
                       onPressed: () async {
                         // 更新分类为默认（空）
                         final updated = quote.copyWith(
                           categoryId: '',
                           content: quote.content.replaceFirst('[冲突备份] ', ''),
-                          lastModified: DateTime.now()
-                              .toUtc()
-                              .toIso8601String(),
+                          lastModified:
+                              DateTime.now().toUtc().toIso8601String(),
                         );
                         await dbService.updateQuote(updated);
                         dbService.refreshQuotes();
@@ -1014,11 +950,8 @@ class QuoteListViewByConflict extends StatelessWidget {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(
-                                AppLocalizations.of(
-                                  context,
-                                ).webdavConflictKeepSuccess,
-                              ),
+                              content: Text(AppLocalizations.of(context)
+                                  .webdavConflictKeepSuccess),
                               behavior: SnackBarBehavior.floating,
                             ),
                           );
@@ -1028,9 +961,8 @@ class QuoteListViewByConflict extends StatelessWidget {
                     // 一键丢弃/删除
                     IconButton(
                       icon: const Icon(Icons.delete_outline, color: Colors.red),
-                      tooltip: AppLocalizations.of(
-                        context,
-                      ).webdavConflictDiscardTooltip,
+                      tooltip: AppLocalizations.of(context)
+                          .webdavConflictDiscardTooltip,
                       onPressed: () async {
                         // 永久删除该笔记
                         await dbService.permanentlyDeleteQuote(quote.id!);
@@ -1039,11 +971,8 @@ class QuoteListViewByConflict extends StatelessWidget {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(
-                                AppLocalizations.of(
-                                  context,
-                                ).webdavConflictDiscardSuccess,
-                              ),
+                              content: Text(AppLocalizations.of(context)
+                                  .webdavConflictDiscardSuccess),
                               behavior: SnackBarBehavior.floating,
                             ),
                           );
