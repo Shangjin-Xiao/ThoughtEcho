@@ -107,7 +107,10 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                       }
                     }
                   } catch (e, stack) {
-                    logError('启用智能推送权限请求失败', error: e, stackTrace: stack, source: 'SmartPushSettingsPage');
+                    logError('启用智能推送权限请求失败',
+                        error: e,
+                        stackTrace: stack,
+                        source: 'SmartPushSettingsPage');
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -437,7 +440,8 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                               if (!mounted) return;
                               setState(() {});
                             } catch (e) {
-                              debugPrint('Error requesting battery optimization exemption: $e');
+                              debugPrint(
+                                  'Error requesting battery optimization exemption: $e');
                             }
                           },
                     theme: theme,
