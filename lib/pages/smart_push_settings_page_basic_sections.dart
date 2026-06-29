@@ -652,6 +652,7 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
       initialTime: TimeOfDay(hour: slot.hour, minute: slot.minute),
     );
     if (time != null) {
+      if (!mounted) return;
       setState(() {
         _settings = _settings.copyWith(
           dailyQuotePushTime: slot.copyWith(
