@@ -250,7 +250,11 @@ class SmartPushSettings {
                   orElse: () => PastNoteType.yearAgoToday,
                 ))
             .toSet() ??
-        {PastNoteType.yearAgoToday, PastNoteType.randomMemory};
+        {
+          PastNoteType.yearAgoToday,
+          PastNoteType.monthAgoToday,
+          PastNoteType.randomMemory,
+        };
 
     if (mode == PushMode.dailyQuote) {
       finalMode = PushMode.custom;
@@ -294,7 +298,7 @@ class SmartPushSettings {
       pushTimeSlots: (json['pushTimeSlots'] as List<dynamic>?)
               ?.map((e) => PushTimeSlot.fromJson(e as Map<String, dynamic>))
               .toList() ??
-          [const PushTimeSlot(hour: 8, minute: 0)],
+          [const PushTimeSlot(hour: 8, minute: 0, label: '早晨灵感')],
       selectedWeekdays: (json['selectedWeekdays'] as List<dynamic>?)
               ?.map((e) => int.tryParse(e.toString()) ?? 1)
               .where((weekday) => weekday >= 1 && weekday <= 7)
