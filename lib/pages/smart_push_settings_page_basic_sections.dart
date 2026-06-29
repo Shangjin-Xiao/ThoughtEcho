@@ -439,9 +439,23 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                                   .requestBatteryOptimizationExemption();
                               if (!mounted) return;
                               setState(() {});
-                            } catch (e) {
-                              debugPrint(
-                                  'Error requesting battery optimization exemption: $e');
+                            } catch (e, stack) {
+                              logError(
+                                '请求电池优化豁免失败',
+                                error: e,
+                                stackTrace: stack,
+                                source: 'SmartPushSettingsPage',
+                              );
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    l10n.smartPushPermissionRequired,
+                                  ),
+                                  backgroundColor: colorScheme.error,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
                             }
                           },
                     theme: theme,

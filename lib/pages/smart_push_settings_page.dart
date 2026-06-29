@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../constants/app_constants.dart';
-import '../extensions/note_category_localization_extension.dart';
-import '../gen_l10n/app_localizations.dart';
-import '../models/note_category.dart';
-import '../models/smart_push_settings.dart';
-import '../services/database_service.dart';
-import '../services/settings_service.dart';
-import '../services/smart_push_service.dart';
-import '../utils/app_logger.dart';
+import 'package:thoughtecho/constants/app_constants.dart';
+import 'package:thoughtecho/extensions/note_category_localization_extension.dart';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/smart_push_settings.dart';
+import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/services/smart_push_service.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 
 part 'smart_push_settings_page_basic_sections.dart';
 part 'smart_push_settings_page_custom_sections.dart';
@@ -60,14 +60,17 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
       final databaseService = context.read<DatabaseService>();
 
       final tags = await databaseService.getCategories();
+      var loadedSettings = smartPushService.settings;
+      final shouldMigratePushMode =
+          loadedSettings.pushMode == PushMode.dailyQuote ||
+              loadedSettings.pushMode == PushMode.pastNotes ||
+              loadedSettings.pushMode == PushMode.both;
+      if (shouldMigratePushMode) {
+        loadedSettings = loadedSettings.copyWith(pushMode: PushMode.custom);
+        await smartPushService.saveSettings(loadedSettings);
+      }
 
       if (mounted) {
-        var loadedSettings = smartPushService.settings;
-        if (loadedSettings.pushMode == PushMode.dailyQuote ||
-            loadedSettings.pushMode == PushMode.pastNotes ||
-            loadedSettings.pushMode == PushMode.both) {
-          loadedSettings = loadedSettings.copyWith(pushMode: PushMode.custom);
-        }
         setState(() {
           _settings = loadedSettings;
           _availableTags = tags;
