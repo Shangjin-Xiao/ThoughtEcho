@@ -67,50 +67,13 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
               value: _settings.enabled,
               onChanged: (value) async {
                 if (value) {
-                  try {
-                    // 开启时请求权限
-                    final smartPushService = context.read<SmartPushService>();
+                  // 开启时请求权限
+                  final smartPushService = context.read<SmartPushService>();
 
-                    // 1. 请求通知权限
-                    final hasNotificationPermission =
-                        await smartPushService.requestNotificationPermission();
-                    if (!hasNotificationPermission) {
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.smartPushPermissionRequired),
-                          backgroundColor: colorScheme.error,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                      return;
-                    }
-
-                    // 2. 检查精确闹钟权限 (Android 12+)
-                    final hasExactAlarmPermission =
-                        await smartPushService.checkExactAlarmPermission();
-                    if (!hasExactAlarmPermission) {
-                      if (!mounted) return;
-                      // 直接申请精确闹钟权限（无需询问）
-                      final granted =
-                          await smartPushService.requestExactAlarmPermission();
-                      if (!granted && mounted) {
-                        // 显示降级提示
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              AppLocalizations.of(context).exactAlarmDeniedHint,
-                            ),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      }
-                    }
-                  } catch (e, stack) {
-                    logError('启用智能推送权限请求失败',
-                        error: e,
-                        stackTrace: stack,
-                        source: 'SmartPushSettingsPage');
+                  // 1. 请求通知权限
+                  final hasNotificationPermission =
+                      await smartPushService.requestNotificationPermission();
+                  if (!hasNotificationPermission) {
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -120,6 +83,27 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                       ),
                     );
                     return;
+                  }
+
+                  // 2. 检查精确闹钟权限 (Android 12+)
+                  final hasExactAlarmPermission =
+                      await smartPushService.checkExactAlarmPermission();
+                  if (!hasExactAlarmPermission) {
+                    if (!mounted) return;
+                    // 直接申请精确闹钟权限（无需询问）
+                    final granted =
+                        await smartPushService.requestExactAlarmPermission();
+                    if (!granted && mounted) {
+                      // 显示降级提示
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            AppLocalizations.of(context).exactAlarmDeniedHint,
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
                   }
                 }
 
@@ -397,7 +381,6 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                                 context.read<SmartPushService>();
                             await smartPushService
                                 .requestNotificationPermission();
-                            if (!mounted) return;
                             setState(() {});
                           },
                     theme: theme,
@@ -417,7 +400,6 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                                   context.read<SmartPushService>();
                               await smartPushService
                                   .requestExactAlarmPermission();
-                              if (!mounted) return;
                               setState(() {});
                             },
                       theme: theme,
@@ -432,17 +414,11 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                     onTap: status.batteryOptimizationExempted
                         ? null
                         : () async {
-                            try {
-                              final smartPushService =
-                                  context.read<SmartPushService>();
-                              await smartPushService
-                                  .requestBatteryOptimizationExemption();
-                              if (!mounted) return;
-                              setState(() {});
-                            } catch (e) {
-                              debugPrint(
-                                  'Error requesting battery optimization exemption: $e');
-                            }
+                            final smartPushService =
+                                context.read<SmartPushService>();
+                            await smartPushService
+                                .requestBatteryOptimizationExemption();
+                            setState(() {});
                           },
                     theme: theme,
                     colorScheme: colorScheme,
@@ -676,7 +652,6 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
       initialTime: TimeOfDay(hour: slot.hour, minute: slot.minute),
     );
     if (time != null) {
-      if (!mounted) return;
       setState(() {
         _settings = _settings.copyWith(
           dailyQuotePushTime: slot.copyWith(

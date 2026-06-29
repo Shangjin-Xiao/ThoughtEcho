@@ -79,7 +79,7 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
           ),
           child: Center(
             child: Text(
-              _getPeriodDescription(l10n, slot),
+              slot.periodDescription,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: slot.enabled
                     ? colorScheme.primary
@@ -334,7 +334,7 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
                             );
                             if (selected) {
                               types.add(type);
-                            } else if (types.length > 1) {
+                            } else {
                               types.remove(type);
                             }
                             setState(() {
@@ -452,16 +452,5 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
         ],
       ),
     );
-  }
-
-  String _getPeriodDescription(AppLocalizations l10n, PushTimeSlot slot) {
-    final hour = slot.hour;
-    if (hour >= 5 && hour < 9) return l10n.smartPushPeriodEarlyMorning;
-    if (hour >= 9 && hour < 12) return l10n.smartPushPeriodMorning;
-    if (hour >= 12 && hour < 14) return l10n.smartPushPeriodNoon;
-    if (hour >= 14 && hour < 18) return l10n.smartPushPeriodAfternoon;
-    if (hour >= 18 && hour < 21) return l10n.smartPushPeriodEvening;
-    if (hour >= 21 || hour < 5) return l10n.smartPushPeriodNight;
-    return '';
   }
 }
