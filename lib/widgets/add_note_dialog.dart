@@ -574,6 +574,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
             });
           }
         }
+        if (!mounted) return;
         setState(() {
           _fullInitialQuote = fullQuote;
           // 如果列表页传递的对象缺少 AI 分析等大字段，这里补全

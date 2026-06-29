@@ -354,7 +354,8 @@ class AddNoteController extends ChangeNotifier {
         if (_isDisposed) return;
         if (tagId != null) {
           tagIds.add(tagId);
-          if (tagInfo['fixedId'] != DatabaseService.defaultCategoryIdHitokoto) {
+          if (tagInfo['fixedId'] != null &&
+              tagInfo['fixedId'] != DatabaseService.defaultCategoryIdHitokoto) {
             subtypeTagId = tagId;
           }
         }
