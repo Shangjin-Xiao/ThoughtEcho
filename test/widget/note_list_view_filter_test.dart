@@ -211,6 +211,102 @@ void main() {
     );
 
     testWidgets(
+      'provides stable row index lookup for animated note deletion',
+      (tester) async {
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = [
+            Quote(
+              id: 'quote-1',
+              content: '第一条',
+              date: DateTime(2026, 3, 29, 12).toIso8601String(),
+            ),
+            Quote(
+              id: 'quote-2',
+              content: '第二条',
+              date: DateTime(2026, 3, 29, 11).toIso8601String(),
+            ),
+            Quote(
+              id: 'quote-3',
+              content: '第三条',
+              date: DateTime(2026, 3, 29, 10).toIso8601String(),
+            ),
+          ];
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: const [],
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        final listView = tester.widget<ListView>(find.byType(ListView));
+        final delegate =
+            listView.childrenDelegate as SliverChildBuilderDelegate;
+
+        expect(
+          delegate.findChildIndexCallback!(
+            const ValueKey<String>('note-list-row-quote-2'),
+          ),
+          1,
+        );
+        expect(
+          delegate.findChildIndexCallback!(
+            const ValueKey<String>('note-list-row-quote-3'),
+          ),
+          2,
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
+      'uses the default note insertion animation duration',
+      (tester) async {
+        final noteListKey = GlobalKey<NoteListViewState>();
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = [
+            Quote(
+              id: 'quote-1',
+              content: '新增动画笔记',
+              date: DateTime(2026, 3, 29, 12).toIso8601String(),
+            ),
+          ];
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: const [],
+            noteListKey: noteListKey,
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        noteListKey.currentState!.triggerInsertAnimation('quote-1');
+        await tester.pump();
+
+        final animation = tester.widget<TweenAnimationBuilder<double>>(
+          find.byKey(const ValueKey('save_animate_quote-1_slide_1')),
+        );
+
+        expect(animation.duration, const Duration(milliseconds: 250));
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
       'loads the next page before positioning a notification target',
       (tester) async {
         final databaseService = _PagingFakeDatabaseService();
@@ -552,6 +648,9 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
 
   @override
   bool get prioritizeBoldContentInCollapse => false;
+
+  @override
+  String get noteInsertAnimationType => 'slide';
 
   @override
   noSuchMethod(Invocation invocation) =>

@@ -1490,6 +1490,8 @@ class _HomePageState extends State<HomePage>
             onPressed: () async {
               try {
                 await db.restoreQuote(quoteId);
+                if (!mounted) return;
+                _noteListViewKey.currentState?.triggerInsertAnimation(quoteId);
               } catch (e, stack) {
                 logError(
                   '撤销删除失败: $e',

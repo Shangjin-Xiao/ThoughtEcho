@@ -434,6 +434,10 @@ extension _NoteListItemsExtension on NoteListViewState {
     // 优化：提前创建标签映射，避免在 item builder 中重复计算
     // 将整体复杂度从 O(L * T) 优化为 O(L + T)，其中构建映射为 O(L)，每次查找为 O(1)
     final tagMap = {for (var t in _effectiveTags) t.id: t};
+    final rowIndexByKey = <String, int>{
+      for (var i = 0; i < _quotes.length; i++)
+        if (_quotes[i].id case final id?) 'note-list-row-$id': i,
+    };
 
     return NotificationListener<ScrollNotification>(
       key: resultsKey,
@@ -504,6 +508,12 @@ extension _NoteListItemsExtension on NoteListViewState {
       child: BackdropGroup(
         child: ListView.builder(
           controller: _scrollController, // 添加滚动控制器
+          findChildIndexCallback: (key) {
+            if (key is ValueKey<String>) {
+              return rowIndexByKey[key.value];
+            }
+            return null;
+          },
           physics: const AlwaysScrollableScrollPhysics(),
           addAutomaticKeepAlives: true, // 保持默认：图片组件依赖 keepAlive 避免重加载闪烁
           addRepaintBoundaries: true, // 性能优化：减少重绘范围
@@ -530,7 +540,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                   final quoteId = quote.id!;
                   final itemKey = quoteId == _positioningQuoteId
                       ? _positioningItemKey
-                      : ValueKey<String>('note-list-item-$quoteId');
+                      : ValueKey<String>('note-list-row-$quoteId');
 
                   final bool shouldCheckExpansionForGuide =
                       !foldGuideAssigned && widget.foldToggleGuideKey != null;
@@ -565,102 +575,97 @@ extension _NoteListItemsExtension on NoteListViewState {
 
                   final isSelected = _selectedExportNoteIds.contains(quoteId);
 
-                  Widget itemWidget = KeyedSubtree(
-                    key: itemKey,
-                    child: ValueListenableBuilder<bool>(
-                      valueListenable: expansionNotifier,
-                      builder: (context, isExpanded, child) => QuoteItemWidget(
-                        quote: quote,
-                        tagMap: tagMap,
-                        selectedTagIds: widget.selectedTagIds,
-                        isExpanded: isExpanded,
-                        isSelected: isSelected,
-                        selectionMode: _isExportMode,
-                        animateInsertVersion: _animatingQuoteVersions[quoteId],
-                        onToggleExpanded: (expanded) {
-                          if (expansionNotifier.value != expanded) {
-                            expansionNotifier.value = expanded;
-                          }
-                          _expandedItems[quoteId] = expanded;
+                  Widget itemWidget = ValueListenableBuilder<bool>(
+                    valueListenable: expansionNotifier,
+                    builder: (context, isExpanded, child) => QuoteItemWidget(
+                      quote: quote,
+                      tagMap: tagMap,
+                      selectedTagIds: widget.selectedTagIds,
+                      isExpanded: isExpanded,
+                      isSelected: isSelected,
+                      selectionMode: _isExportMode,
+                      animateInsertVersion: _animatingQuoteVersions[quoteId],
+                      onToggleExpanded: (expanded) {
+                        if (expansionNotifier.value != expanded) {
+                          expansionNotifier.value = expanded;
+                        }
+                        _expandedItems[quoteId] = expanded;
 
-                          final bool requiresAlignment =
-                              QuoteItemWidget.needsExpansionFor(quote);
+                        final bool requiresAlignment =
+                            QuoteItemWidget.needsExpansionFor(quote);
 
-                          if (!expanded && requiresAlignment) {
-                            final waitDuration =
-                                QuoteItemWidget.expandCollapseDuration +
-                                    const Duration(milliseconds: 80);
-                            Future.delayed(waitDuration, () {
+                        if (!expanded && requiresAlignment) {
+                          final waitDuration =
+                              QuoteItemWidget.expandCollapseDuration +
+                                  const Duration(milliseconds: 80);
+                          Future.delayed(waitDuration, () {
+                            if (!mounted) return;
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
                               if (!mounted) return;
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (!mounted) return;
-                                unawaited(
-                                  _positionAndAlignQuote(
-                                    quoteId,
-                                    index,
-                                    forceAlignToTop: false,
-                                  ),
-                                );
-                              });
+                              unawaited(
+                                _positionAndAlignQuote(
+                                  quoteId,
+                                  index,
+                                  forceAlignToTop: false,
+                                ),
+                              );
                             });
-                          }
-                        },
-                        onEdit: () => widget.onEdit(quote),
-                        onDelete: () {
-                          if (quoteId.isNotEmpty) {
-                            _updateState(() {
-                              _deletingQuoteIds.add(quoteId);
-                            });
-                            // 等动画播完（250ms）+ 50ms 余量再执行真正的删除。
-                            // 先从本地列表乐观移除，避免 stream 更新时的视觉跳动。
-                            Future.delayed(
-                              const Duration(milliseconds: 280),
-                              () {
-                                if (mounted) {
-                                  _updateState(() {
-                                    _quotes.removeWhere(
-                                      (q) => q.id == quoteId,
-                                    );
-                                    _deletingQuoteIds.remove(quoteId);
-                                  });
-                                }
-                                widget.onDelete(quote);
-                              },
-                            );
-                          } else {
-                            widget.onDelete(quote);
-                          }
-                        },
-                        onAskAI: () => widget.onAskAI(quote),
-                        onGenerateCard: widget.onGenerateCard != null
-                            ? () => widget.onGenerateCard!(quote)
-                            : null,
-                        onExportPdf: () {
-                          HapticFeedback.selectionClick();
-                          _updateState(() {
-                            _isExportMode = true;
-                            _selectedExportNoteIds.clear();
-                            if (quote.id != null) {
-                              _selectedExportNoteIds.add(quote.id!);
-                            }
                           });
-                        },
-                        onFavorite: widget.onFavorite != null
-                            ? () => widget.onFavorite!(quote)
-                            : null,
-                        onLongPressFavorite: widget.onLongPressFavorite != null
-                            ? () => widget.onLongPressFavorite!(quote)
-                            : null,
-                        favoriteButtonGuideKey: attachFavoriteGuideKey
-                            ? widget.favoriteButtonGuideKey
-                            : null,
-                        moreButtonGuideKey: attachMoreGuideKey
-                            ? widget.moreButtonGuideKey
-                            : null,
-                        foldToggleGuideKey: attachFoldGuideKey
-                            ? widget.foldToggleGuideKey
-                            : null,
-                      ),
+                        }
+                      },
+                      onEdit: () => widget.onEdit(quote),
+                      onDelete: () {
+                        if (quoteId.isNotEmpty) {
+                          _updateState(() {
+                            _deletingQuoteIds.add(quoteId);
+                          });
+                          // 等动画播完（250ms）+ 50ms 余量再执行真正的删除。
+                          // 先从本地列表乐观移除，避免 stream 更新时的视觉跳动。
+                          Future.delayed(
+                            const Duration(milliseconds: 280),
+                            () {
+                              if (mounted) {
+                                _updateState(() {
+                                  _quotes.removeWhere(
+                                    (q) => q.id == quoteId,
+                                  );
+                                  _deletingQuoteIds.remove(quoteId);
+                                });
+                              }
+                              widget.onDelete(quote);
+                            },
+                          );
+                        } else {
+                          widget.onDelete(quote);
+                        }
+                      },
+                      onAskAI: () => widget.onAskAI(quote),
+                      onGenerateCard: widget.onGenerateCard != null
+                          ? () => widget.onGenerateCard!(quote)
+                          : null,
+                      onExportPdf: () {
+                        HapticFeedback.selectionClick();
+                        _updateState(() {
+                          _isExportMode = true;
+                          _selectedExportNoteIds.clear();
+                          if (quote.id != null) {
+                            _selectedExportNoteIds.add(quote.id!);
+                          }
+                        });
+                      },
+                      onFavorite: widget.onFavorite != null
+                          ? () => widget.onFavorite!(quote)
+                          : null,
+                      onLongPressFavorite: widget.onLongPressFavorite != null
+                          ? () => widget.onLongPressFavorite!(quote)
+                          : null,
+                      favoriteButtonGuideKey: attachFavoriteGuideKey
+                          ? widget.favoriteButtonGuideKey
+                          : null,
+                      moreButtonGuideKey:
+                          attachMoreGuideKey ? widget.moreButtonGuideKey : null,
+                      foldToggleGuideKey:
+                          attachFoldGuideKey ? widget.foldToggleGuideKey : null,
                     ),
                   );
                   final keepAliveItem =
@@ -709,10 +714,13 @@ extension _NoteListItemsExtension on NoteListViewState {
                     ),
                   );
 
-                  return _wrapNoteListItemPerfProbe(
-                    quote: quote,
-                    index: index,
-                    child: itemWidget,
+                  return KeyedSubtree(
+                    key: itemKey,
+                    child: _wrapNoteListItemPerfProbe(
+                      quote: quote,
+                      index: index,
+                      child: itemWidget,
+                    ),
                   );
                 },
               );

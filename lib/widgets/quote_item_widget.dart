@@ -1272,7 +1272,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       key:
           ValueKey('save_animate_${widget.quote.id}_${animationType}_$version'),
       tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 250),
       curve: Curves.easeOutCubic,
       builder: (context, value, child) {
         if (value >= 0.99) return child!;
