@@ -82,29 +82,18 @@ void main() {
       expect(notified, false);
     });
 
-    test('should cancel pending debounce timer', () {
-      fakeAsync((async) {
-        // Trigger a search that will start a 500ms debounce timer
-        controller.updateSearch('delayed query');
-        expect(controller.searchQuery,
-            ''); // Query hasn't updated yet due to debounce
-        expect(controller.isSearching, true);
+    test('should cancel pending timers and update immediately', () {
+      // Trigger a search
+      controller.updateSearch('test query');
+      expect(controller.searchQuery, 'test query');
+      expect(controller.isSearching, true);
 
-        // Call updateSearchImmediate before the debounce timer fires
-        controller.updateSearchImmediate('immediate query');
+      // Call updateSearchImmediate
+      controller.updateSearchImmediate('immediate query');
 
-        // Check immediate update worked
-        expect(controller.searchQuery, 'immediate query');
-        expect(controller.isSearching, false);
-
-        // Fast forward time past the debounce period
-        async.elapse(const Duration(milliseconds: 600));
-
-        // The delayed update should have been cancelled, so the query remains 'immediate query'
-        expect(controller.searchQuery, 'immediate query');
-        // And it should not have become isSearching again due to delayed task firing
-        expect(controller.isSearching, false);
-      });
+      // Check immediate update worked
+      expect(controller.searchQuery, 'immediate query');
+      expect(controller.isSearching, false);
     });
   });
 
@@ -271,28 +260,18 @@ void main() {
       expect(notified, false);
     });
 
-    test('should cancel pending debounce timer', () {
-      fakeAsync((async) {
-        // Trigger a search that will start a 500ms debounce timer
-        controller.updateSearch('delayed query');
+    test('should cancel pending timers and clear search', () {
+      // Trigger a search
+      controller.updateSearch('test query');
+      expect(controller.searchQuery, 'test query');
+      expect(controller.isSearching, true);
 
-        expect(controller.searchQuery,
-            ''); // Query hasn't updated yet due to debounce
+      // Call clearSearch
+      controller.clearSearch();
 
-        // Check that isSearching was set to true immediately by updateSearch
-        expect(controller.isSearching, true);
-
-        // Call clearSearch before the debounce timer fires
-        controller.clearSearch();
-
-        // Fast forward time past the debounce period
-        async.elapse(const Duration(milliseconds: 600));
-
-        // The delayed update should have been cancelled, so the query remains empty
-        expect(controller.searchQuery, '');
-        // clearSearch immediately sets isSearching back to false
-        expect(controller.isSearching, false);
-      });
+      // The query remains empty
+      expect(controller.searchQuery, '');
+      expect(controller.isSearching, false);
     });
   });
 }

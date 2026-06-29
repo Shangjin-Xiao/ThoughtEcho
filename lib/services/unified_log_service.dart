@@ -273,15 +273,34 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   /// 单例模式访问
   static UnifiedLogService get instance {
-    _instance ??= UnifiedLogService();
+    if (_instance == null) {
+      final service = UnifiedLogService._();
+      _instance = service;
+      service._initObserverAndStart();
+    }
     return _instance!;
   }
 
   /// 创建统一日志服务实例
-  UnifiedLogService() {
+  UnifiedLogService._();
+
+  void _initObserverAndStart() {
     unawaited(_initialize());
     // 监听应用生命周期，确保在后台/退出前刷新日志到数据库
-    WidgetsBinding.instance.addObserver(this);
+    try {
+      WidgetsBinding.instance.addObserver(this);
+    } catch (_) {
+      // 单元测试环境中可能未初始化 WidgetsBinding
+    }
+  }
+
+  void _safeAddPostFrameCallback(VoidCallback callback) {
+    try {
+      WidgetsBinding.instance.addPostFrameCallback((_) => callback());
+    } catch (_) {
+      // 单元测试环境中可能未初始化 WidgetsBinding，直接同步调用
+      callback();
+    }
   }
 
   /// 初始化统一日志服务
@@ -528,7 +547,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
         if (!_notifyScheduled) {
           _notifyScheduled = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
+          _safeAddPostFrameCallback(() {
             if (hasListeners) {
               notifyListeners();
             }
@@ -621,7 +640,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     // 延迟通知监听器，避免在 build 方法中直接调用
     if (!_notifyScheduled) {
       _notifyScheduled = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      _safeAddPostFrameCallback(() {
         if (hasListeners) {
           notifyListeners();
         }
@@ -720,7 +739,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
       if (!_notifyScheduled) {
         _notifyScheduled = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
+        _safeAddPostFrameCallback(() {
           if (hasListeners) {
             notifyListeners();
           }
@@ -736,7 +755,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     _memoryLogs.clear();
     if (!_notifyScheduled) {
       _notifyScheduled = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      _safeAddPostFrameCallback(() {
         if (hasListeners) {
           notifyListeners();
         }
@@ -755,7 +774,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
     if (!_notifyScheduled) {
       _notifyScheduled = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      _safeAddPostFrameCallback(() {
         if (hasListeners) {
           notifyListeners();
         }
