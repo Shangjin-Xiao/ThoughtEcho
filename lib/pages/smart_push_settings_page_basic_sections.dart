@@ -71,8 +71,8 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                   final smartPushService = context.read<SmartPushService>();
 
                   // 1. 请求通知权限
-                  final hasNotificationPermission = await smartPushService
-                      .requestNotificationPermission();
+                  final hasNotificationPermission =
+                      await smartPushService.requestNotificationPermission();
                   if (!hasNotificationPermission) {
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -86,13 +86,13 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                   }
 
                   // 2. 检查精确闹钟权限 (Android 12+)
-                  final hasExactAlarmPermission = await smartPushService
-                      .checkExactAlarmPermission();
+                  final hasExactAlarmPermission =
+                      await smartPushService.checkExactAlarmPermission();
                   if (!hasExactAlarmPermission) {
                     if (!mounted) return;
                     // 直接申请精确闹钟权限（无需询问）
-                    final granted = await smartPushService
-                        .requestExactAlarmPermission();
+                    final granted =
+                        await smartPushService.requestExactAlarmPermission();
                     if (!granted && mounted) {
                       // 显示降级提示
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -377,8 +377,8 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                     onTap: status.notificationEnabled
                         ? null
                         : () async {
-                            final smartPushService = context
-                                .read<SmartPushService>();
+                            final smartPushService =
+                                context.read<SmartPushService>();
                             await smartPushService
                                 .requestNotificationPermission();
                             setState(() {});
@@ -396,8 +396,8 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                       onTap: status.exactAlarmEnabled
                           ? null
                           : () async {
-                              final smartPushService = context
-                                  .read<SmartPushService>();
+                              final smartPushService =
+                                  context.read<SmartPushService>();
                               await smartPushService
                                   .requestExactAlarmPermission();
                               setState(() {});
@@ -414,8 +414,8 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                     onTap: status.batteryOptimizationExempted
                         ? null
                         : () async {
-                            final smartPushService = context
-                                .read<SmartPushService>();
+                            final smartPushService =
+                                context.read<SmartPushService>();
                             await smartPushService
                                 .requestBatteryOptimizationExemption();
                             setState(() {});
@@ -529,9 +529,8 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                       l10n.smartPushAutoStartPermission,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onErrorContainer,
-                        decoration: isGranted
-                            ? TextDecoration.lineThrough
-                            : null,
+                        decoration:
+                            isGranted ? TextDecoration.lineThrough : null,
                       ),
                     ),
                     Text(

@@ -2,7 +2,6 @@
 part of 'smart_push_settings_page.dart';
 
 extension _SmartPushSettingsPageMiscSections on _SmartPushSettingsPageState {
-  /// 测试按钮
   Widget _buildTestButton(
     AppLocalizations l10n,
     ThemeData theme,
@@ -28,7 +27,6 @@ extension _SmartPushSettingsPageMiscSections on _SmartPushSettingsPageState {
     );
   }
 
-  /// 说明卡片
   Widget _buildNoticeCard(
     AppLocalizations l10n,
     ThemeData theme,
@@ -194,7 +192,6 @@ extension _SmartPushSettingsPageMiscSections on _SmartPushSettingsPageState {
     }
   }
 
-  /// 每日一言独立推送卡片
   Widget _buildDailyQuoteCard(
     AppLocalizations l10n,
     ThemeData theme,
@@ -299,6 +296,5 @@ extension _SmartPushSettingsPageMiscSections on _SmartPushSettingsPageState {
     );
   }
 
-  /// 权限状态卡片
-  ///
+
 }

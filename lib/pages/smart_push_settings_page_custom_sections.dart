@@ -322,8 +322,8 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
                       spacing: 8,
                       runSpacing: 8,
                       children: PastNoteType.values.map((type) {
-                        final isSelected = _settings.enabledPastNoteTypes
-                            .contains(type);
+                        final isSelected =
+                            _settings.enabledPastNoteTypes.contains(type);
                         return FilterChip(
                           avatar: Icon(_getPastNoteTypeIcon(type), size: 16),
                           label: Text(_getPastNoteTypeLabel(l10n, type)),
@@ -362,8 +362,8 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
                       spacing: 8,
                       runSpacing: 8,
                       children: WeatherFilterType.values.map((weather) {
-                        final isSelected = _settings.filterWeatherTypes
-                            .contains(weather);
+                        final isSelected =
+                            _settings.filterWeatherTypes.contains(weather);
                         return FilterChip(
                           avatar: Text(_getWeatherEmoji(weather)),
                           label: Text(_getWeatherLabel(l10n, weather)),

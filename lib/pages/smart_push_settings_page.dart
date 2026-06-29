@@ -126,8 +126,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
     try {
       final smartPushService = context.read<SmartPushService>();
 
-      final hasPermission = await smartPushService
-          .requestNotificationPermission();
+      final hasPermission =
+          await smartPushService.requestNotificationPermission();
       if (!hasPermission) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -189,8 +189,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
     if (!mounted) return;
     try {
       final smartPushService = context.read<SmartPushService>();
-      final hasExactAlarmPermission = await smartPushService
-          .checkExactAlarmPermission();
+      final hasExactAlarmPermission =
+          await smartPushService.checkExactAlarmPermission();
 
       if (!hasExactAlarmPermission && mounted) {
         // 直接申请精确闹钟权限（无需询问）
