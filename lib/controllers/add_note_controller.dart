@@ -264,7 +264,8 @@ class AddNoteController extends ChangeNotifier {
   }
 
   // 添加默认的一言相关标签
-  Future<void> addDefaultHitokotoTagsAsync(void Function(NoteCategory?) onCategoryUpdated) async {
+  Future<void> addDefaultHitokotoTagsAsync(
+      void Function(NoteCategory?) onCategoryUpdated) async {
     isLoadingHitokotoTags = true;
     notifyListeners();
 
@@ -322,7 +323,8 @@ class AddNoteController extends ChangeNotifier {
         }
       }
 
-      if (hitokotoType != null && hitokotoTypeToCategoryIdMap.containsKey(hitokotoType)) {
+      if (hitokotoType != null &&
+          hitokotoTypeToCategoryIdMap.containsKey(hitokotoType)) {
         final categoryId = hitokotoTypeToCategoryIdMap[hitokotoType];
         final category = await db.getCategoryById(categoryId!);
         selectedCategory = category;
