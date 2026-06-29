@@ -14,7 +14,6 @@ import '../gen_l10n/app_localizations.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import '../pages/note_full_editor_page.dart'; // 导入全屏富文本编辑器
-import '../services/api_service.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/local_geocoding_service.dart';
@@ -23,10 +22,10 @@ import '../services/weather_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/color_utils.dart'; // Import color_utils
 import '../utils/feature_guide_helper.dart';
-import '../utils/location_weather_helper.dart';
 import '../utils/time_utils.dart'; // 导入时间工具类
 import 'accessible_color_grid.dart'; // Import the new accessible color grid
 import 'add_note_ai_menu.dart'; // 导入 AI 菜单组件
+import '../controllers/add_note_controller.dart';
 import 'add_note_dialog_parts.dart'; // 导入拆分的组件
 
 // TODO(refactor): This file exceeds 2400 lines and contains redundant location/weather logic.
@@ -71,24 +70,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   List<NoteCategory> _availableTags = [];
   DatabaseService? _databaseService;
 
-  // 分类选择
-  NoteCategory? _selectedCategory;
-
-  // 位置和天气相关
-  bool _includeLocation = false;
-  bool _includeWeather = false;
-
-  // 保存原始笔记的位置和天气信息（用于编辑模式）
-  String? _originalLocation;
-  double? _originalLatitude;
-  double? _originalLongitude;
-  String? _originalWeather;
-  String? _originalTemperature;
-
-  // 新建笔记时的实时位置信息
-  String? _newLocation;
-  double? _newLatitude;
-  double? _newLongitude;
+  // 分类选择 (Now in Controller, except for early init use but we'll adapt)
   // 颜色选择
   String? _selectedColorHex;
 
@@ -139,8 +121,6 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   // 数据库监听防抖
   Timer? _dbChangeDebounceTimer;
 
-  // 一言标签加载状态
-  bool _isLoadingHitokotoTags = false;
   bool _isSaving = false;
   bool _deferredControlsVisible = true;
   Timer? _deferredControlsTimer;
@@ -156,6 +136,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   late List<String> _initialTagIds;
   late String? _initialColorHex;
 
+  late final AddNoteController _controller;
+
   T? _readServiceOrNull<T>(BuildContext context) {
     try {
       return Provider.of<T>(context, listen: false);
@@ -164,25 +146,112 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     }
   }
 
-  // 一言类型到固定分类 ID 的映射
-  static final Map<String, String> _hitokotoTypeToCategoryIdMap = {
-    'a': DatabaseService.defaultCategoryIdAnime, // 动画
-    'b': DatabaseService.defaultCategoryIdComic, // 漫画
-    'c': DatabaseService.defaultCategoryIdGame, // 游戏
-    'd': DatabaseService.defaultCategoryIdNovel, // 文学
-    'e': DatabaseService.defaultCategoryIdOriginal, // 原创
-    'f': DatabaseService.defaultCategoryIdInternet, // 来自网络
-    'g': DatabaseService.defaultCategoryIdOther, // 其他
-    'h': DatabaseService.defaultCategoryIdMovie, // 影视
-    'i': DatabaseService.defaultCategoryIdPoem, // 诗词
-    'j': DatabaseService.defaultCategoryIdMusic, // 网易云
-    'k': DatabaseService.defaultCategoryIdPhilosophy, // 哲学
-    'l': DatabaseService.defaultCategoryIdJoke, // 抖机灵
-  };
-
   @override
   void initState() {
     super.initState();
+    _controller = AddNoteController(
+      context: context,
+      initialQuote: widget.initialQuote,
+      hitokotoData: widget.hitokotoData,
+      initialTagIds: _selectedTagIds,
+      onLocationError: (msg) {
+        if (!mounted || !context.mounted) return;
+        final l10n = AppLocalizations.of(context);
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.getLocationFailedTitle),
+            content: Text(l10n.getLocationFailedDesc(msg)),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx), child: Text(l10n.iKnow)),
+            ],
+          ),
+        );
+      },
+      onLocationPermissionDenied: () {
+        if (!mounted || !context.mounted) return;
+        final l10n = AppLocalizations.of(context);
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.cannotGetLocationTitle),
+            content: Text(l10n.cannotGetLocationPermissionShort),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx), child: Text(l10n.iKnow)),
+            ],
+          ),
+        );
+      },
+      onLocationFetchEmpty: () {
+        if (!mounted || !context.mounted) return;
+        final l10n = AppLocalizations.of(context);
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.cannotGetLocationTitle),
+            content: Text(l10n.cannotGetLocationDesc),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx), child: Text(l10n.iKnow)),
+            ],
+          ),
+        );
+      },
+      onWeatherFetchEmpty: () {
+        if (!mounted || !context.mounted) return;
+        final l10n = AppLocalizations.of(context);
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.weatherFetchFailedTitle),
+            content: Text(l10n.weatherFetchFailedDesc),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx), child: Text(l10n.iKnow)),
+            ],
+          ),
+        );
+      },
+      onWeatherMissingCoordinates: () {
+        if (!mounted || !context.mounted) return;
+        final l10n = AppLocalizations.of(context);
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.weatherFetchFailedTitle),
+            content: Text(l10n.locationAndWeatherUnavailable),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx), child: Text(l10n.iKnow)),
+            ],
+          ),
+        );
+      },
+      onWeatherFetchError: () {
+        if (!mounted || !context.mounted) return;
+        final l10n = AppLocalizations.of(context);
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.weatherFetchFailedTitle),
+            content: Text(l10n.weatherFetchFailedDesc),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx), child: Text(l10n.iKnow)),
+            ],
+          ),
+        );
+      },
+    );
+    _controller.addListener(_onControllerChanged);
+    _controller.updateServices(
+      locService: _readServiceOrNull<LocationService>(context),
+      weaService: _readServiceOrNull<WeatherService>(context),
+      dbService: _readServiceOrNull<DatabaseService>(context),
+    );
+
     _dialogOpenTimelineTask = AppTracer.start(
       'ThoughtEcho.AddNoteDialog.open',
       operation: 'ui.load',
@@ -324,51 +393,38 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                 _recordDialogPerfStateChange('autoAttachPrefs');
                 setState(() {
                   if (autoLocation) {
-                    _includeLocation = true;
+                    _controller.includeLocation = true;
                   }
                   if (autoWeather) {
-                    _includeWeather = true;
+                    _controller.includeWeather = true;
                   }
                 });
               }
 
+              _controller.updateServices(
+                locService: _cachedLocationService,
+                weaService: _cachedWeatherService,
+                dbService: _databaseService,
+              );
               // 如果自动勾选了位置，获取位置；天气需要位置坐标，所以在位置获取后处理
               if (autoLocation) {
-                await _fetchLocationForNewNote();
+                await _controller.fetchLocationForNewNote();
                 // 位置获取后再获取天气
                 if (autoWeather &&
-                    _includeLocation &&
-                    (_newLatitude != null ||
+                    _controller.includeLocation &&
+                    (_controller.newLatitude != null ||
                         _cachedLocationService?.currentPosition != null)) {
-                  _fetchWeatherForNewNote();
-                } else if (autoWeather && !_includeLocation) {
+                  _controller.fetchWeatherForNewNote();
+                } else if (autoWeather && !_controller.includeLocation) {
                   // 位置获取失败，天气也无法获取，取消天气选中并提示
                   if (mounted) {
                     _recordDialogPerfStateChange('autoWeatherDisabled');
-                    setState(() {
-                      _includeWeather = false;
-                    });
-                    if (context.mounted) {
-                      final l10n = AppLocalizations.of(context);
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: Text(l10n.weatherFetchFailedTitle),
-                          content: Text(l10n.locationAndWeatherUnavailable),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: Text(l10n.iKnow),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
+                    _controller.setIncludeWeather(false);
                   }
                 }
               } else if (autoWeather) {
                 // 没有勾选位置但勾选了天气，尝试用缓存的位置获取天气
-                _fetchWeatherForNewNote();
+                _controller.fetchWeatherForNewNote();
               }
             }
           }
@@ -436,18 +492,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       _aiSummary = widget.initialQuote!.aiAnalysis;
       _selectedColorHex = widget.initialQuote!.colorHex;
 
-      // 保存原始的位置和天气信息
-      _originalLocation = widget.initialQuote!.location;
-      _originalLatitude = widget.initialQuote!.latitude;
-      _originalLongitude = widget.initialQuote!.longitude;
-      _originalWeather = widget.initialQuote!.weather;
-      _originalTemperature = widget.initialQuote!.temperature;
-
-      // 根据现有笔记的位置和天气信息设置复选框状态
-      _includeLocation = widget.initialQuote!.location != null ||
-          (widget.initialQuote!.latitude != null &&
-              widget.initialQuote!.longitude != null);
-      _includeWeather = widget.initialQuote!.weather != null;
+      // 已经在 controller 构造函数中初始化
 
       // 添加标签
       if (widget.initialQuote!.tagIds.isNotEmpty) {
@@ -485,7 +530,23 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       unawaited(
         Future.microtask(() async {
           if (!mounted) return;
-          await _addDefaultHitokotoTagsAsync();
+          final db =
+              _databaseService ?? _readServiceOrNull<DatabaseService>(context);
+          _controller.updateServices(dbService: db);
+          await _controller.addDefaultHitokotoTagsAsync((category) {
+            if (mounted && category != null) {
+              setState(() {
+                _controller.selectedCategory = category;
+              });
+            }
+          });
+          if (!mounted || db == null) return;
+          final updatedTags = await db.getCategories();
+          if (!mounted) return;
+          setState(() {
+            _availableTags = updatedTags;
+            _initialTagIds = List.from(_controller.selectedTagIds);
+          });
         }),
       );
     }
@@ -504,6 +565,16 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       final fullQuote = await db.getQuoteById(widget.initialQuote!.id!);
       if (fullQuote != null && mounted) {
         _recordDialogPerfStateChange('fullQuoteLoaded');
+        _controller.hydrateFromQuote(fullQuote);
+        if (fullQuote.categoryId != null) {
+          final category = await db.getCategoryById(fullQuote.categoryId!);
+          if (category != null && mounted) {
+            setState(() {
+              _controller.selectedCategory = category;
+            });
+          }
+        }
+        if (!mounted) return;
         setState(() {
           _fullInitialQuote = fullQuote;
           // 如果列表页传递的对象缺少 AI 分析等大字段，这里补全
@@ -974,195 +1045,6 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     }
   }
 
-  /// 获取新建笔记的实时位置（与全屏编辑器逻辑一致）
-  Future<void> _fetchLocationForNewNote() async {
-    final locationService = _cachedLocationService;
-    if (locationService == null) return;
-
-    // 检查并请求权限（与全屏编辑器一致）
-    if (!await LocationWeatherHelper.ensureLocationPermission(
-      locationService,
-    )) {
-      if (mounted && context.mounted) {
-        final l10n = AppLocalizations.of(context);
-        _recordDialogPerfStateChange('locationPermissionDenied');
-        setState(() {
-          _includeLocation = false;
-        });
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(l10n.cannotGetLocationTitle),
-            content: Text(l10n.cannotGetLocationPermissionShort),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text(l10n.iKnow),
-              ),
-            ],
-          ),
-        );
-      }
-      return;
-    }
-
-    try {
-      final snapshot = await LocationWeatherHelper.fetchLocation(
-        locationService,
-      );
-      if (snapshot != null && mounted) {
-        _recordDialogPerfStateChange('locationFetched');
-        setState(() {
-          _newLatitude = snapshot.position.latitude;
-          _newLongitude = snapshot.position.longitude;
-          _newLocation =
-              snapshot.location.isNotEmpty ? snapshot.location : null;
-        });
-      } else if (mounted) {
-        // 获取位置失败，提示并还原开关状态
-        _recordDialogPerfStateChange('locationFetchEmpty');
-        setState(() {
-          _includeLocation = false;
-        });
-        if (context.mounted) {
-          final l10n = AppLocalizations.of(context);
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(l10n.cannotGetLocationTitle),
-              content: Text(l10n.cannotGetLocationDesc),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(l10n.iKnow),
-                ),
-              ],
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      logDebug('对话框获取位置失败: $e');
-      if (mounted && context.mounted) {
-        final l10n = AppLocalizations.of(context);
-        _recordDialogPerfStateChange('locationFetchError');
-        setState(() {
-          _includeLocation = false;
-        });
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(l10n.getLocationFailedTitle),
-            content: Text(l10n.getLocationFailedDesc(e.toString())),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text(l10n.iKnow),
-              ),
-            ],
-          ),
-        );
-      }
-    }
-  }
-
-  /// 获取新建笔记的天气信息
-  Future<void> _fetchWeatherForNewNote() async {
-    final weatherService = _cachedWeatherService;
-    final locationService = _cachedLocationService;
-    if (weatherService == null) return;
-
-    try {
-      // 天气需要位置坐标
-      double? lat = _newLatitude;
-      double? lon = _newLongitude;
-
-      // 如果还没有坐标，尝试从 locationService 获取
-      if (lat == null || lon == null) {
-        lat = locationService?.currentPosition?.latitude;
-        lon = locationService?.currentPosition?.longitude;
-      }
-
-      if (lat == null || lon == null) {
-        // 没有坐标，无法获取天气
-        if (mounted) {
-          _recordDialogPerfStateChange('weatherMissingCoordinates');
-          setState(() {
-            _includeWeather = false;
-          });
-          if (context.mounted) {
-            final l10n = AppLocalizations.of(context);
-            showDialog(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: Text(l10n.weatherFetchFailedTitle),
-                content: Text(l10n.locationAndWeatherUnavailable),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text(l10n.iKnow),
-                  ),
-                ],
-              ),
-            );
-          }
-        }
-        return;
-      }
-
-      // 获取天气
-      await weatherService.getWeatherData(lat, lon);
-
-      if (!weatherService.hasData && mounted) {
-        // 天气获取失败
-        _recordDialogPerfStateChange('weatherFetchEmpty');
-        setState(() {
-          _includeWeather = false;
-        });
-        if (context.mounted) {
-          final l10n = AppLocalizations.of(context);
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(l10n.weatherFetchFailedTitle),
-              content: Text(l10n.weatherFetchFailedDesc),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(l10n.iKnow),
-                ),
-              ],
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      logDebug('对话框获取天气失败: $e');
-      if (mounted) {
-        _recordDialogPerfStateChange('weatherFetchError');
-        setState(() {
-          _includeWeather = false;
-        });
-        if (context.mounted) {
-          final l10n = AppLocalizations.of(context);
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(l10n.weatherFetchFailedTitle),
-              content: Text(l10n.weatherFetchFailedDesc),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(l10n.iKnow),
-                ),
-              ],
-            ),
-          );
-        }
-      }
-    }
-  }
-
   /// 获取位置提示文本（支持坐标显示）
   /// 修复：新建模式只显示实时获取的位置，而不是从 LocationService 获取的缓存位置
   String _getLocationTooltipText(BuildContext context) {
@@ -1170,24 +1052,29 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
     // 编辑模式：显示原始位置
     if (widget.initialQuote != null) {
-      if (_originalLocation != null && _originalLocation!.isNotEmpty) {
-        return LocationService.formatLocationForDisplay(_originalLocation);
+      if (_controller.originalLocation != null &&
+          _controller.originalLocation!.isNotEmpty) {
+        return LocationService.formatLocationForDisplay(
+            _controller.originalLocation);
       }
-      if (_originalLatitude != null && _originalLongitude != null) {
+      if (_controller.originalLatitude != null &&
+          _controller.originalLongitude != null) {
         return LocationService.formatCoordinates(
-          _originalLatitude,
-          _originalLongitude,
+          _controller.originalLatitude,
+          _controller.originalLongitude,
         );
       }
       return l10n.noLocationInfo;
     }
 
     // 新建模式：只显示实时获取的位置
-    if (_newLocation != null && _newLocation!.isNotEmpty) {
-      return LocationService.formatLocationForDisplay(_newLocation);
+    if (_controller.newLocation != null &&
+        _controller.newLocation!.isNotEmpty) {
+      return LocationService.formatLocationForDisplay(_controller.newLocation);
     }
-    if (_newLatitude != null && _newLongitude != null) {
-      return LocationService.formatCoordinates(_newLatitude, _newLongitude);
+    if (_controller.newLatitude != null && _controller.newLongitude != null) {
+      return LocationService.formatCoordinates(
+          _controller.newLatitude, _controller.newLongitude);
     }
     // 未获取位置时显示"当前位置"提示
     return l10n.currentLocationLabel;
@@ -1199,11 +1086,13 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     ThemeData theme,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final hasLocationData = _originalLocation != null ||
-        (_originalLatitude != null && _originalLongitude != null);
-    final hasCoordinates =
-        _originalLatitude != null && _originalLongitude != null;
-    final hasOnlyCoordinates = _originalLocation == null && hasCoordinates;
+    final hasLocationData = _controller.originalLocation != null ||
+        (_controller.originalLatitude != null &&
+            _controller.originalLongitude != null);
+    final hasCoordinates = _controller.originalLatitude != null &&
+        _controller.originalLongitude != null;
+    final hasOnlyCoordinates =
+        _controller.originalLocation == null && hasCoordinates;
 
     String title;
     String content;
@@ -1224,12 +1113,13 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       title = l10n.locationInfo;
       content = hasOnlyCoordinates
           ? l10n.locationUpdateHint(LocationService.formatCoordinates(
-              _originalLatitude, _originalLongitude))
+              _controller.originalLatitude, _controller.originalLongitude))
           : l10n.locationRemoveHint(
-              LocationService.formatLocationForDisplay(_originalLocation),
+              LocationService.formatLocationForDisplay(
+                  _controller.originalLocation),
             );
       actions = [
-        if (_includeLocation)
+        if (_controller.includeLocation)
           TextButton(
             onPressed: () => Navigator.pop(context, 'remove'),
             child: Text(l10n.remove),
@@ -1262,16 +1152,16 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         final localeCode = _cachedLocationService?.currentLocaleCode;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
-          _originalLatitude!,
-          _originalLongitude!,
+          _controller.originalLatitude!,
+          _controller.originalLongitude!,
           localeCode: localeCode,
         );
         if (addressInfo != null && mounted) {
           final formattedAddress = addressInfo['formatted_address'];
           if (formattedAddress != null && formattedAddress.isNotEmpty) {
             setState(() {
-              _originalLocation = formattedAddress;
-              _includeLocation = true;
+              _controller.originalLocation = formattedAddress;
+              _controller.includeLocation = true;
             });
             if (context.mounted) {
               final l10n = AppLocalizations.of(context);
@@ -1303,7 +1193,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       }
     } else if (result == 'remove') {
       setState(() {
-        _includeLocation = false;
+        _controller.includeLocation = false;
       });
     }
   }
@@ -1311,7 +1201,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   /// 编辑模式下的天气对话框
   Future<void> _showWeatherDialog(BuildContext context, ThemeData theme) async {
     final l10n = AppLocalizations.of(context);
-    final hasWeatherData = _originalWeather != null;
+    final hasWeatherData = _controller.originalWeather != null;
 
     String title;
     String content;
@@ -1331,10 +1221,10 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       // 有天气数据
       title = l10n.weatherInfo2;
       final weatherDisplay =
-          '$_originalWeather${_originalTemperature != null ? " $_originalTemperature" : ""}';
+          '${_controller.originalWeather}${_controller.originalTemperature != null ? " ${_controller.originalTemperature}" : ""}';
       content = l10n.weatherRemoveHint(weatherDisplay);
       actions = [
-        if (_includeWeather)
+        if (_controller.includeWeather)
           TextButton(
             onPressed: () => Navigator.pop(context, 'remove'),
             child: Text(l10n.remove),
@@ -1357,7 +1247,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
     if (result == 'remove') {
       setState(() {
-        _includeWeather = false;
+        _controller.includeWeather = false;
       });
     }
   }
@@ -1369,8 +1259,10 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     ThemeData theme,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final hasAddress = _newLocation != null && _newLocation!.isNotEmpty;
-    final hasCoordinates = _newLatitude != null && _newLongitude != null;
+    final hasAddress =
+        _controller.newLocation != null && _controller.newLocation!.isNotEmpty;
+    final hasCoordinates =
+        _controller.newLatitude != null && _controller.newLongitude != null;
     final hasOnlyCoordinates = !hasAddress && hasCoordinates;
 
     String title;
@@ -1390,10 +1282,10 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     } else {
       title = l10n.locationInfo;
       content = hasOnlyCoordinates
-          ? l10n.locationUpdateHint(
-              LocationService.formatCoordinates(_newLatitude, _newLongitude))
+          ? l10n.locationUpdateHint(LocationService.formatCoordinates(
+              _controller.newLatitude, _controller.newLongitude))
           : l10n.locationRemoveHint(
-              LocationService.formatLocationForDisplay(_newLocation),
+              LocationService.formatLocationForDisplay(_controller.newLocation),
             );
       actions = [
         TextButton(
@@ -1431,7 +1323,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           final resolved = locationService.getFormattedLocation();
           if (resolved.isNotEmpty && mounted) {
             setState(() {
-              _newLocation = resolved;
+              _controller.newLocation = resolved;
             });
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -1448,15 +1340,15 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         final localeCode = locationService?.currentLocaleCode;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
-          _newLatitude!,
-          _newLongitude!,
+          _controller.newLatitude!,
+          _controller.newLongitude!,
           localeCode: localeCode,
         );
         if (addressInfo != null && mounted) {
           final formattedAddress = addressInfo['formatted_address'];
           if (formattedAddress != null && formattedAddress.isNotEmpty) {
             setState(() {
-              _newLocation = formattedAddress;
+              _controller.newLocation = formattedAddress;
             });
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -1482,10 +1374,10 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       }
     } else if (result == 'remove') {
       setState(() {
-        _includeLocation = false;
-        _newLocation = null;
-        _newLatitude = null;
-        _newLongitude = null;
+        _controller.includeLocation = false;
+        _controller.newLocation = null;
+        _controller.newLatitude = null;
+        _controller.newLongitude = null;
       });
     }
   }
@@ -1514,7 +1406,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           child: Text(l10n.remove),
         ),
         // 如果有坐标，允许重试获取天气
-        if (_newLatitude != null && _newLongitude != null)
+        if (_controller.newLatitude != null && _controller.newLongitude != null)
           TextButton(
             onPressed: () => Navigator.pop(context, 'retry'),
             child: Text(l10n.retry),
@@ -1554,15 +1446,21 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
     if (result == 'remove') {
       setState(() {
-        _includeWeather = false;
+        _controller.includeWeather = false;
       });
     } else if (result == 'retry') {
-      _fetchWeatherForNewNote();
+      _controller.fetchWeatherForNewNote();
     }
+  }
+
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_onControllerChanged);
+    _controller.dispose();
     _finishDialogOpenTimeline('disposed');
     _dialogOpenTimelineTimeout?.cancel();
     _dialogPerfFinalizeTimer?.cancel();
@@ -1584,244 +1482,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     _databaseService?.removeListener(_onDatabaseChanged);
 
     // 优化：清理缓存，释放内存
-    _allCategoriesCache = null;
     _availableTags.clear();
 
     super.dispose();
-  }
-
-  // 添加默认的一言相关标签（完全异步执行，不阻塞UI）
-  Future<void> _addDefaultHitokotoTagsAsync() async {
-    if (!mounted) return;
-
-    setState(() {
-      _isLoadingHitokotoTags = true;
-    });
-
-    try {
-      final db =
-          _databaseService ?? _readServiceOrNull<DatabaseService>(context);
-
-      if (db == null) {
-        logDebug('未找到DatabaseService，跳过默认标签添加');
-        return;
-      }
-
-      // 批量准备标签信息，减少异步等待次数
-      final List<Map<String, String>> tagsToEnsure = [];
-
-      // 添加"每日一言"标签
-      tagsToEnsure.add({
-        'name': '每日一言',
-        'icon': '💭',
-        'fixedId': DatabaseService.defaultCategoryIdHitokoto,
-      });
-
-      // 添加一言类型对应的标签
-      String? hitokotoType;
-      if (_shouldApplyHitokotoSubtypeTag()) {
-        hitokotoType = _getHitokotoTypeFromApiResponse();
-        if (hitokotoType != null && hitokotoType.isNotEmpty) {
-          String tagName = _convertHitokotoTypeToTagName(hitokotoType);
-          String iconName = _getIconForHitokotoType(hitokotoType);
-          String? fixedId;
-
-          if (_hitokotoTypeToCategoryIdMap.containsKey(hitokotoType)) {
-            fixedId = _hitokotoTypeToCategoryIdMap[hitokotoType];
-          }
-
-          tagsToEnsure.add({
-            'name': tagName,
-            'icon': iconName,
-            if (fixedId != null) 'fixedId': fixedId,
-          });
-        }
-      }
-
-      // 批量确保标签存在
-      final List<String> tagIds = [];
-      for (final tagInfo in tagsToEnsure) {
-        final tagId = await _ensureTagExists(
-          db,
-          tagInfo['name']!,
-          tagInfo['icon']!,
-          fixedId: tagInfo['fixedId'],
-        );
-        if (tagId != null) {
-          tagIds.add(tagId);
-        }
-      }
-
-      if (!mounted) return;
-
-      // 一次性更新所有选中的标签
-      setState(() {
-        for (final tagId in tagIds) {
-          if (!_selectedTagIds.contains(tagId)) {
-            _selectedTagIds.add(tagId);
-          }
-        }
-      });
-
-      // 设置分类（如果需要）
-      if (hitokotoType != null &&
-          _hitokotoTypeToCategoryIdMap.containsKey(hitokotoType)) {
-        final categoryId = _hitokotoTypeToCategoryIdMap[hitokotoType];
-        final category = await db.getCategoryById(categoryId!);
-        if (mounted) {
-          setState(() {
-            _selectedCategory = category;
-          });
-        }
-      }
-    } catch (e) {
-      logDebug('添加默认标签失败: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingHitokotoTags = false;
-        });
-      }
-    }
-  }
-
-  // 从hitokotoData中获取一言类型
-  String? _getHitokotoTypeFromApiResponse() {
-    // 一言API的类型字段是'type'
-    if (widget.hitokotoData != null &&
-        widget.hitokotoData!.containsKey('type')) {
-      return widget.hitokotoData!['type'].toString();
-    }
-    return null;
-  }
-
-  bool _shouldApplyHitokotoSubtypeTag() {
-    final provider = widget.hitokotoData?['provider']?.toString();
-    if (provider == null || provider.trim().isEmpty) {
-      return true;
-    }
-    return provider == ApiService.hitokotoProvider;
-  }
-
-  // 将一言API的类型代码转换为可读标签名称
-  String _convertHitokotoTypeToTagName(String typeCode) {
-    // 一言API的类型映射
-    const Map<String, String> typeMap = {
-      'a': '动画',
-      'b': '漫画',
-      'c': '游戏',
-      'd': '文学',
-      'e': '原创',
-      'f': '来自网络',
-      'g': '其他',
-      'h': '影视',
-      'i': '诗词',
-      'j': '网易云',
-      'k': '哲学',
-      'l': '抖机灵',
-    };
-
-    return typeMap[typeCode] ?? '其他一言';
-  }
-
-  // 为不同类型的一言选择对应的图标
-  String _getIconForHitokotoType(String typeCode) {
-    const Map<String, String> iconMap = {
-      'a': '🎬', // 动画
-      'b': '📚', // 漫画
-      'c': '🎮', // 游戏
-      'd': '📖', // 文学
-      'e': '✨', // 原创
-      'f': '🌐', // 来自网络
-      'g': '📦', // 其他 -> 新 emoji
-      'h': '🎞️', // 影视 -> 随机 emoji
-      'i': '🪶', // 诗词 -> 随机 emoji
-      'j': '�', // 网易云 -> 🎧
-      'k': '🤔', // 哲学
-      'l': '😄', // 抖机灵
-    };
-
-    // 默认使用 Material 的 format_quote 图标名
-    return iconMap[typeCode] ?? 'format_quote';
-  }
-
-  // 缓存所有标签，避免重复查询
-  List<NoteCategory>? _allCategoriesCache;
-
-  // 确保标签存在，如果不存在则创建（优化版：减少数据库查询）
-  Future<String?> _ensureTagExists(
-    DatabaseService db,
-    String name,
-    String iconName, {
-    String? fixedId,
-  }) async {
-    try {
-      // 使用传入的 fixedId 或检查是否有固定ID映射
-      if (fixedId == null) {
-        for (var entry in _hitokotoTypeToCategoryIdMap.entries) {
-          if (_convertHitokotoTypeToTagName(entry.key) == name) {
-            fixedId = entry.value;
-            break;
-          }
-        }
-
-        // 如果是"每日一言"标签的特殊情况
-        if (name == '每日一言') {
-          fixedId = DatabaseService.defaultCategoryIdHitokoto;
-        }
-      }
-
-      // 无论标签是否被重命名，优先通过固定ID查找
-      if (fixedId != null) {
-        final category = await db.getCategoryById(fixedId);
-        if (category != null) {
-          logDebug('通过固定ID找到标签: ${category.name}(ID=${category.id})');
-          return category.id;
-        }
-      }
-
-      // 优化：使用缓存的标签列表，避免每次都查询数据库
-      _allCategoriesCache ??= await db.getCategories();
-      final categories = _allCategoriesCache!;
-
-      final existingTag = categories.firstWhere(
-        (tag) => tag.name.toLowerCase() == name.toLowerCase(),
-        orElse: () => NoteCategory(id: '', name: ''),
-      );
-
-      // 如果标签已存在，返回其ID
-      if (existingTag.id.isNotEmpty) {
-        return existingTag.id;
-      }
-
-      // 创建新标签
-      if (fixedId != null) {
-        try {
-          await db.addCategoryWithId(fixedId, name, iconName: iconName);
-          // 清除缓存，下次会重新加载
-          _allCategoriesCache = null;
-          return fixedId;
-        } catch (e) {
-          logDebug('使用固定ID创建标签失败: $e');
-          await db.addCategory(name, iconName: iconName);
-        }
-      } else {
-        await db.addCategory(name, iconName: iconName);
-      }
-
-      // 清除缓存并重新获取
-      _allCategoriesCache = null;
-      final updatedCategories = await db.getCategories();
-      final newTag = updatedCategories.firstWhere(
-        (tag) => tag.name.toLowerCase() == name.toLowerCase(),
-        orElse: () => NoteCategory(id: '', name: ''),
-      );
-
-      return newTag.id.isNotEmpty ? newTag.id : null;
-    } catch (e) {
-      logDebug('确保标签"$name"存在时出错: $e');
-      return null;
-    }
   }
 
   // 解析格式如"——作者《作品》"的字符串
@@ -1944,34 +1607,42 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         sentiment: baseQuote?.sentiment,
         keywords: baseQuote?.keywords,
         summary: baseQuote?.summary,
-        categoryId: _selectedCategory?.id ?? widget.initialQuote?.categoryId,
+        categoryId:
+            _controller.selectedCategory?.id ?? widget.initialQuote?.categoryId,
         colorHex: _selectedColorHex,
-        location: _includeLocation
+        location: _controller.includeLocation
             ? (isEditing
-                ? _originalLocation
+                ? _controller.originalLocation
                 : () {
-                    final loc = _newLocation ??
+                    final loc = _controller.newLocation ??
                         _cachedLocationService?.getFormattedLocation();
-                    if ((loc == null || loc.isEmpty) && _newLatitude != null) {
+                    if ((loc == null || loc.isEmpty) &&
+                        _controller.newLatitude != null) {
                       return LocationService.kAddressPending;
                     }
                     return loc;
                   }())
             : null,
-        latitude: (_includeLocation || _includeWeather)
-            ? (isEditing ? _originalLatitude : _newLatitude)
-            : null,
-        longitude: (_includeLocation || _includeWeather)
-            ? (isEditing ? _originalLongitude : _newLongitude)
-            : null,
-        weather: _includeWeather
+        // 刻意设计：只勾选天气而不勾选位置时，因为 _controller.newLatitude/Longitude 未被写回（保持为 null），
+        // 因而最终保存的坐标为 null，以保障用户的物理地理隐私，不强制记录具体坐标。
+        latitude: (_controller.includeLocation || _controller.includeWeather)
             ? (isEditing
-                ? _originalWeather
+                ? _controller.originalLatitude
+                : _controller.newLatitude)
+            : null,
+        longitude: (_controller.includeLocation || _controller.includeWeather)
+            ? (isEditing
+                ? _controller.originalLongitude
+                : _controller.newLongitude)
+            : null,
+        weather: _controller.includeWeather
+            ? (isEditing
+                ? _controller.originalWeather
                 : _cachedWeatherService?.currentWeather)
             : null,
-        temperature: _includeWeather
+        temperature: _controller.includeWeather
             ? (isEditing
-                ? _originalTemperature
+                ? _controller.originalTemperature
                 : _cachedWeatherService?.temperature)
             : null,
         dayPeriod: widget.initialQuote?.dayPeriod ?? currentDayPeriodKey,
@@ -2154,17 +1825,19 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                       String? currentWeather;
                                       String? currentTemperature;
 
-                                      if (_includeLocation) {
-                                        currentLocation = _originalLocation ??
-                                            locationService
-                                                .getFormattedLocation();
+                                      if (_controller.includeLocation) {
+                                        currentLocation =
+                                            _controller.originalLocation ??
+                                                locationService
+                                                    .getFormattedLocation();
                                       }
 
-                                      if (_includeWeather) {
-                                        currentWeather = _originalWeather ??
-                                            weatherService.currentWeather;
+                                      if (_controller.includeWeather) {
+                                        currentWeather =
+                                            _controller.originalWeather ??
+                                                weatherService.currentWeather;
                                         currentTemperature =
-                                            _originalTemperature ??
+                                            _controller.originalTemperature ??
                                                 weatherService.temperature;
                                       }
 
@@ -2172,15 +1845,15 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                       // 获取经纬度（编辑时用原始值，新建时用实时获取的值）
                                       final currentLat =
                                           widget.initialQuote != null
-                                              ? _originalLatitude
-                                              : _newLatitude ??
+                                              ? _controller.originalLatitude
+                                              : _controller.newLatitude ??
                                                   locationService
                                                       .currentPosition
                                                       ?.latitude;
                                       final currentLon =
                                           widget.initialQuote != null
-                                              ? _originalLongitude
-                                              : _newLongitude ??
+                                              ? _controller.originalLongitude
+                                              : _controller.newLongitude ??
                                                   locationService
                                                       .currentPosition
                                                       ?.longitude;
@@ -2203,10 +1876,10 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                         tagIds: _selectedTagIds,
                                         colorHex: _selectedColorHex,
                                         location: currentLocation,
-                                        latitude: _includeLocation
+                                        latitude: _controller.includeLocation
                                             ? currentLat
                                             : null,
-                                        longitude: _includeLocation
+                                        longitude: _controller.includeLocation
                                             ? currentLon
                                             : null,
                                         weather: currentWeather,
@@ -2367,13 +2040,14 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                       showCheckmark: false,
                                       avatar: Icon(
                                         Icons.location_on,
-                                        color: _includeLocation
+                                        color: _controller.includeLocation
                                             ? theme.colorScheme.primary
-                                            : Colors.grey,
+                                            : theme
+                                                .colorScheme.onSurfaceVariant,
                                         size: 18,
                                       ),
                                       label: Text(l10n.location),
-                                      selected: _includeLocation,
+                                      selected: _controller.includeLocation,
                                       onSelected: (value) async {
                                         // 编辑模式下统一弹对话框
                                         if (widget.initialQuote != null) {
@@ -2382,21 +2056,22 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                           return;
                                         }
                                         // 新建模式：已有坐标/地址时弹对话框（查看/转换/移除）
-                                        if (_includeLocation &&
-                                            (_newLatitude != null ||
-                                                _newLocation != null)) {
+                                        if (_controller.includeLocation &&
+                                            (_controller.newLatitude != null ||
+                                                _controller.newLocation !=
+                                                    null)) {
                                           await _showNewNoteLocationDialog(
                                               context, theme);
                                           return;
                                         }
                                         // 新建模式：首次勾选，获取位置
                                         if (value &&
-                                            _newLocation == null &&
-                                            _newLatitude == null) {
-                                          _fetchLocationForNewNote();
+                                            _controller.newLocation == null &&
+                                            _controller.newLatitude == null) {
+                                          _controller.fetchLocationForNewNote();
                                         }
                                         setState(() {
-                                          _includeLocation = value;
+                                          _controller.includeLocation = value;
                                         });
                                       },
                                       selectedColor:
@@ -2404,10 +2079,10 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                     ),
                                     // 小红点：有坐标但没地址时提示可更新
                                     if (widget.initialQuote == null &&
-                                        _includeLocation &&
-                                        _newLocation == null &&
-                                        _newLatitude != null &&
-                                        _newLongitude != null)
+                                        _controller.includeLocation &&
+                                        _controller.newLocation == null &&
+                                        _controller.newLatitude != null &&
+                                        _controller.newLongitude != null)
                                       Positioned(
                                         right: 0,
                                         top: 0,
@@ -2421,9 +2096,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                         ),
                                       ),
                                     if (widget.initialQuote != null &&
-                                        _originalLocation == null &&
-                                        _originalLatitude != null &&
-                                        _originalLongitude != null)
+                                        _controller.originalLocation == null &&
+                                        _controller.originalLatitude != null &&
+                                        _controller.originalLongitude != null)
                                       Positioned(
                                         right: 0,
                                         top: 0,
@@ -2463,13 +2138,13 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                     weather != null && weatherService != null
                                         ? weatherService.getWeatherIconData()
                                         : Icons.cloud,
-                                    color: _includeWeather
+                                    color: _controller.includeWeather
                                         ? theme.colorScheme.primary
                                         : Colors.grey,
                                     size: 18,
                                   ),
                                   label: Text(l10n.weather),
-                                  selected: _includeWeather,
+                                  selected: _controller.includeWeather,
                                   onSelected: (value) async {
                                     // 编辑模式下统一弹对话框
                                     if (widget.initialQuote != null) {
@@ -2477,7 +2152,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                       return;
                                     }
                                     // 新建模式：已勾选天气时，点击弹出详情/移除对话框
-                                    if (_includeWeather) {
+                                    if (_controller.includeWeather) {
                                       await _showNewNoteWeatherDialog(
                                           context, theme);
                                       return;
@@ -2485,13 +2160,13 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                     // 新建模式：首次勾选
                                     if (value) {
                                       setState(() {
-                                        _includeWeather = true;
+                                        _controller.includeWeather = true;
                                       });
                                       // 勾选时获取天气
-                                      _fetchWeatherForNewNote();
+                                      _controller.fetchWeatherForNewNote();
                                     } else {
                                       setState(() {
-                                        _includeWeather = false;
+                                        _controller.includeWeather = false;
                                       });
                                     }
                                   },
@@ -2564,7 +2239,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                               ..addAll(newSelection);
                           });
                         },
-                        isLoading: _isLoadingHitokotoTags,
+                        isLoading: _controller.isLoadingHitokotoTags,
                       ),
                     ),
 
