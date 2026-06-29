@@ -351,6 +351,7 @@ class AddNoteController extends ChangeNotifier {
           tagInfo['icon']!,
           fixedId: tagInfo['fixedId'],
         );
+        if (_isDisposed) return;
         if (tagId != null) {
           tagIds.add(tagId);
           if (tagInfo['fixedId'] != DatabaseService.defaultCategoryIdHitokoto) {
@@ -403,12 +404,17 @@ class AddNoteController extends ChangeNotifier {
 
       if (fixedId != null) {
         final category = await db.getCategoryById(fixedId);
+        if (_isDisposed) return null;
         if (category != null) {
           return category.id;
         }
       }
 
-      allCategoriesCache ??= await db.getCategories();
+      if (allCategoriesCache == null) {
+        final fetchedCategories = await db.getCategories();
+        if (_isDisposed) return null;
+        allCategoriesCache = fetchedCategories;
+      }
       final categories = allCategoriesCache!;
 
       final existingTag = categories.firstWhere(
@@ -423,18 +429,23 @@ class AddNoteController extends ChangeNotifier {
       if (fixedId != null) {
         try {
           await db.addCategoryWithId(fixedId, name, iconName: iconName);
+          if (_isDisposed) return null;
           allCategoriesCache = null;
           return fixedId;
         } catch (e) {
           logDebug('使用固定ID创建标签失败: $e');
+          if (_isDisposed) return null;
           await db.addCategory(name, iconName: iconName);
+          if (_isDisposed) return null;
         }
       } else {
         await db.addCategory(name, iconName: iconName);
+        if (_isDisposed) return null;
       }
 
       allCategoriesCache = null;
       final updatedCategories = await db.getCategories();
+      if (_isDisposed) return null;
       final newTag = updatedCategories.firstWhere(
         (tag) => tag.name.toLowerCase() == name.toLowerCase(),
         orElse: () => NoteCategory(id: '', name: ''),
