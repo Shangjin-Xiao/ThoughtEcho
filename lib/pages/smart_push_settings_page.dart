@@ -60,15 +60,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
       final databaseService = context.read<DatabaseService>();
 
       final tags = await databaseService.getCategories();
-      var loadedSettings = smartPushService.settings;
-      final shouldMigratePushMode =
-          loadedSettings.pushMode == PushMode.dailyQuote ||
-              loadedSettings.pushMode == PushMode.pastNotes ||
-              loadedSettings.pushMode == PushMode.both;
-      if (shouldMigratePushMode) {
-        loadedSettings = loadedSettings.copyWith(pushMode: PushMode.custom);
-        await smartPushService.saveSettings(loadedSettings);
-      }
+      final loadedSettings = smartPushService.settings;
 
       if (mounted) {
         setState(() {

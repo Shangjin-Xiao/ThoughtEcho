@@ -1,5 +1,11 @@
 {
   "@@locale": "en",
+  "smartPushPeriodEarlyMorning": "Early Morning",
+  "smartPushPeriodMorning": "Morning",
+  "smartPushPeriodNoon": "Noon",
+  "smartPushPeriodAfternoon": "Afternoon",
+  "smartPushPeriodEvening": "Evening",
+  "smartPushPeriodNight": "Night",
   "settingsSentryTitle": "Send diagnostics to help improve",
   "settingsSentryDesc": "Disabled by default. When enabled, sends error stacks, device information, page performance, regular network request performance, and main database performance. AI requests are excluded. Database monitoring records SQL templates and timing only, never note content or query parameters.",
   "sentryRestartHint": "Settings saved, takes effect after restarting",

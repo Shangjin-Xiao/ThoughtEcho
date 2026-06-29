@@ -78,12 +78,18 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
             borderRadius: BorderRadius.circular(10),
           ),
           child: Center(
-            child: Text(
-              _getPeriodDescription(l10n, slot),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: slot.enabled
-                    ? colorScheme.primary
-                    : colorScheme.onSurfaceVariant,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  _getPeriodDescription(l10n, slot),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: slot.enabled
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ),
             ),
           ),
@@ -455,13 +461,21 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
   }
 
   String _getPeriodDescription(AppLocalizations l10n, PushTimeSlot slot) {
-    final hour = slot.hour;
-    if (hour >= 5 && hour < 9) return l10n.smartPushPeriodEarlyMorning;
-    if (hour >= 9 && hour < 12) return l10n.smartPushPeriodMorning;
-    if (hour >= 12 && hour < 14) return l10n.smartPushPeriodNoon;
-    if (hour >= 14 && hour < 18) return l10n.smartPushPeriodAfternoon;
-    if (hour >= 18 && hour < 21) return l10n.smartPushPeriodEvening;
-    if (hour >= 21 || hour < 5) return l10n.smartPushPeriodNight;
-    return '';
+    switch (slot.period) {
+      case PushTimePeriod.earlyMorning:
+        return l10n.smartPushPeriodEarlyMorning;
+      case PushTimePeriod.morning:
+        return l10n.smartPushPeriodMorning;
+      case PushTimePeriod.noon:
+        return l10n.smartPushPeriodNoon;
+      case PushTimePeriod.afternoon:
+        return l10n.smartPushPeriodAfternoon;
+      case PushTimePeriod.evening:
+        return l10n.smartPushPeriodEvening;
+      case PushTimePeriod.night:
+        return l10n.smartPushPeriodNight;
+      case PushTimePeriod.invalid:
+        return '';
+    }
   }
 }

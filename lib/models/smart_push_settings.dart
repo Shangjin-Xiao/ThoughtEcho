@@ -41,6 +41,17 @@ enum PushFrequency {
 }
 
 /// 推送时间段
+/// 推送时间段类型
+enum PushTimePeriod {
+  earlyMorning, // 清晨 (5-9)
+  morning, // 上午 (9-12)
+  noon, // 中午 (12-14)
+  afternoon, // 下午 (14-18)
+  evening, // 傍晚/晚上 (18-21)
+  night, // 夜间 (21-5)
+  invalid, // 无效/超出范围
+}
+
 class PushTimeSlot {
   final int hour; // 小时 (0-23)
   final int minute; // 分钟 (0-59)
@@ -92,15 +103,35 @@ class PushTimeSlot {
     return '$h:$m';
   }
 
+  /// 获取所属时间段
+  PushTimePeriod get period {
+    if (hour < 0 || hour > 23) return PushTimePeriod.invalid;
+    if (hour >= 5 && hour < 9) return PushTimePeriod.earlyMorning;
+    if (hour >= 9 && hour < 12) return PushTimePeriod.morning;
+    if (hour >= 12 && hour < 14) return PushTimePeriod.noon;
+    if (hour >= 14 && hour < 18) return PushTimePeriod.afternoon;
+    if (hour >= 18 && hour < 21) return PushTimePeriod.evening;
+    return PushTimePeriod.night;
+  }
+
   /// 获取友好的时间段描述
   String get periodDescription {
-    if (hour >= 5 && hour < 9) return '清晨';
-    if (hour >= 9 && hour < 12) return '上午';
-    if (hour >= 12 && hour < 14) return '午间';
-    if (hour >= 14 && hour < 18) return '下午';
-    if (hour >= 18 && hour < 21) return '傍晚';
-    if (hour >= 21 || hour < 5) return '夜间';
-    return '';
+    switch (period) {
+      case PushTimePeriod.earlyMorning:
+        return '清晨';
+      case PushTimePeriod.morning:
+        return '上午';
+      case PushTimePeriod.noon:
+        return '午间';
+      case PushTimePeriod.afternoon:
+        return '下午';
+      case PushTimePeriod.evening:
+        return '傍晚';
+      case PushTimePeriod.night:
+        return '夜间';
+      case PushTimePeriod.invalid:
+        return '';
+    }
   }
 
   @override
@@ -209,22 +240,46 @@ class SmartPushSettings {
       }
     }
 
+    final PushMode finalMode;
+    final bool dailyQuoteEnabled;
+    final Set<PastNoteType> pastNoteTypes;
+
+    final parsedPastNoteTypes = (json['enabledPastNoteTypes'] as List<dynamic>?)
+            ?.map((e) => PastNoteType.values.firstWhere(
+                  (type) => type.name == e,
+                  orElse: () => PastNoteType.yearAgoToday,
+                ))
+            .toSet() ??
+        {PastNoteType.yearAgoToday, PastNoteType.randomMemory};
+
+    if (mode == PushMode.dailyQuote) {
+      finalMode = PushMode.custom;
+      dailyQuoteEnabled = true;
+      pastNoteTypes = {};
+    } else if (mode == PushMode.pastNotes) {
+      finalMode = PushMode.custom;
+      dailyQuoteEnabled = false;
+      pastNoteTypes = parsedPastNoteTypes;
+    } else if (mode == PushMode.both) {
+      finalMode = PushMode.custom;
+      dailyQuoteEnabled = true;
+      pastNoteTypes = parsedPastNoteTypes;
+    } else {
+      finalMode = mode;
+      dailyQuoteEnabled = json['dailyQuotePushEnabled'] as bool? ?? false;
+      pastNoteTypes = parsedPastNoteTypes;
+    }
+
     return SmartPushSettings(
       enabled: json['enabled'] as bool? ?? false,
-      pushMode: mode,
+      pushMode: finalMode,
       frequency: json['frequency'] != null
           ? PushFrequency.values.firstWhere(
               (f) => f.name == json['frequency'],
               orElse: () => PushFrequency.daily,
             )
           : PushFrequency.daily,
-      enabledPastNoteTypes: (json['enabledPastNoteTypes'] as List<dynamic>?)
-              ?.map((e) => PastNoteType.values.firstWhere(
-                    (type) => type.name == e,
-                    orElse: () => PastNoteType.yearAgoToday,
-                  ))
-              .toSet() ??
-          {PastNoteType.yearAgoToday, PastNoteType.randomMemory},
+      enabledPastNoteTypes: pastNoteTypes,
       filterTagIds: (json['filterTagIds'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
@@ -246,7 +301,7 @@ class SmartPushSettings {
               .toSet() ??
           {1, 2, 3, 4, 5},
       showAdvancedOptions: json['showAdvancedOptions'] as bool? ?? false,
-      dailyQuotePushEnabled: json['dailyQuotePushEnabled'] as bool? ?? false,
+      dailyQuotePushEnabled: dailyQuoteEnabled,
       dailyQuotePushTime: json['dailyQuotePushTime'] != null
           ? PushTimeSlot.fromJson(
               json['dailyQuotePushTime'] as Map<String, dynamic>)
