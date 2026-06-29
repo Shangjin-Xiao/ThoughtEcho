@@ -19,6 +19,7 @@ import '../models/quote_model.dart';
 import '../pages/home_page.dart';
 import '../main.dart' show navigatorKey;
 import 'api_service.dart';
+import 'clipboard_service.dart';
 import 'database_service.dart';
 import 'mmkv_service.dart';
 import 'location_service.dart';

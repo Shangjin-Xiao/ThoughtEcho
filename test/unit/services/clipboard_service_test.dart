@@ -19,5 +19,15 @@ void main() {
     test('should have basic functionality', () {
       expect(() => clipboardService.toString(), returnsNormally);
     });
+
+    test('skips clipboard check once after note notification navigation',
+        () async {
+      clipboardService.setEnableClipboardMonitoring(true);
+
+      ClipboardService.suppressNextCheckForNotificationNavigation();
+
+      expect(await clipboardService.checkClipboard(), isNull);
+      expect(clipboardService.shouldSkipNextClipboardCheck, isFalse);
+    });
   });
 }

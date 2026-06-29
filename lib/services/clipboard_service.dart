@@ -27,12 +27,21 @@ class ClipboardService extends ChangeNotifier {
 
   // 剪贴板上次处理的内容缓存（仅内存中，不需要持久化）
   String _lastProcessedContent = '';
+  static bool _skipNextClipboardCheck = false;
+
+  @visibleForTesting
+  bool get shouldSkipNextClipboardCheck => _skipNextClipboardCheck;
 
   // 使用安全包装类替代直接的MMKV
   SafeMMKV? _storage;
 
   // 构造函数
   ClipboardService();
+
+  static void suppressNextCheckForNotificationNavigation() {
+    _skipNextClipboardCheck = true;
+    logDebug('通知笔记导航后跳过下一次剪贴板检查');
+  }
 
   /// 初始化服务（需要在应用启动时显式调用）
   Future<void> init() async {
@@ -69,6 +78,12 @@ class ClipboardService extends ChangeNotifier {
 
   // 检查剪贴板内容（应用启动或从后台恢复时调用）
   Future<Map<String, dynamic>?> checkClipboard() async {
+    if (_skipNextClipboardCheck) {
+      _skipNextClipboardCheck = false;
+      logDebug('已跳过通知笔记导航后的剪贴板检查');
+      return null;
+    }
+
     if (!_enableClipboardMonitoring) {
       logDebug('剪贴板监控已禁用，跳过检查');
       return null;
