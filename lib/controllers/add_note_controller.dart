@@ -73,6 +73,8 @@ class AddNoteController extends ChangeNotifier {
   final void Function()? onWeatherMissingCoordinates;
   final void Function()? onWeatherFetchError;
 
+  bool _isDisposed = false;
+
   AddNoteController({
     required this.context,
     this.initialQuote,
@@ -99,6 +101,12 @@ class AddNoteController extends ChangeNotifier {
     }
   }
 
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
   void updateServices({
     LocationService? locService,
     WeatherService? weaService,
@@ -109,12 +117,29 @@ class AddNoteController extends ChangeNotifier {
     databaseService = dbService ?? databaseService;
   }
 
+  void _clearNewLocation() {
+    newLocation = null;
+    newLatitude = null;
+    newLongitude = null;
+  }
+
+  void hydrateFromQuote(Quote quote) {
+    originalLocation = quote.location;
+    originalLatitude = quote.latitude;
+    originalLongitude = quote.longitude;
+    originalWeather = quote.weather;
+    originalTemperature = quote.temperature;
+
+    includeLocation = quote.location != null ||
+        (quote.latitude != null && quote.longitude != null);
+    includeWeather = quote.weather != null;
+    notifyListeners();
+  }
+
   void setIncludeLocation(bool value) {
     includeLocation = value;
     if (!value) {
-      newLocation = null;
-      newLatitude = null;
-      newLongitude = null;
+      _clearNewLocation();
     }
     notifyListeners();
   }
@@ -144,8 +169,12 @@ class AddNoteController extends ChangeNotifier {
     if (locService == null) return;
 
     // 检查并请求权限
-    if (!await LocationWeatherHelper.ensureLocationPermission(locService)) {
+    final hasPermission =
+        await LocationWeatherHelper.ensureLocationPermission(locService);
+    if (_isDisposed) return;
+    if (!hasPermission) {
       includeLocation = false;
+      _clearNewLocation();
       onLocationPermissionDenied?.call();
       notifyListeners();
       return;
@@ -153,6 +182,7 @@ class AddNoteController extends ChangeNotifier {
 
     try {
       final snapshot = await LocationWeatherHelper.fetchLocation(locService);
+      if (_isDisposed) return;
       if (snapshot != null) {
         newLatitude = snapshot.position.latitude;
         newLongitude = snapshot.position.longitude;
@@ -161,12 +191,15 @@ class AddNoteController extends ChangeNotifier {
         notifyListeners();
       } else {
         includeLocation = false;
+        _clearNewLocation();
         onLocationFetchEmpty?.call();
         notifyListeners();
       }
     } catch (e) {
       logDebug('获取位置失败: $e');
+      if (_isDisposed) return;
       includeLocation = false;
+      _clearNewLocation();
       onLocationError?.call(e.toString());
       notifyListeners();
     }
@@ -195,14 +228,19 @@ class AddNoteController extends ChangeNotifier {
       }
 
       await weaService.getWeatherData(lat, lon);
+      if (_isDisposed) return;
 
       if (!weaService.hasData) {
         includeWeather = false;
         onWeatherFetchEmpty?.call();
         notifyListeners();
+        return;
       }
+
+      notifyListeners();
     } catch (e) {
       logDebug('获取天气失败: $e');
+      if (_isDisposed) return;
       includeWeather = false;
       onWeatherFetchError?.call();
       notifyListeners();
@@ -305,6 +343,7 @@ class AddNoteController extends ChangeNotifier {
       }
 
       final List<String> tagIds = [];
+      String? subtypeTagId;
       for (final tagInfo in tagsToEnsure) {
         final tagId = await ensureTagExists(
           db,
@@ -314,6 +353,9 @@ class AddNoteController extends ChangeNotifier {
         );
         if (tagId != null) {
           tagIds.add(tagId);
+          if (tagInfo['fixedId'] != DatabaseService.defaultCategoryIdHitokoto) {
+            subtypeTagId = tagId;
+          }
         }
       }
 
@@ -323,18 +365,19 @@ class AddNoteController extends ChangeNotifier {
         }
       }
 
-      if (hitokotoType != null &&
-          hitokotoTypeToCategoryIdMap.containsKey(hitokotoType)) {
-        final categoryId = hitokotoTypeToCategoryIdMap[hitokotoType];
-        final category = await db.getCategoryById(categoryId!);
+      if (subtypeTagId != null) {
+        final category = await db.getCategoryById(subtypeTagId);
+        if (_isDisposed) return;
         selectedCategory = category;
         onCategoryUpdated(category);
       }
     } catch (e) {
       logDebug('添加默认标签失败: $e');
     } finally {
-      isLoadingHitokotoTags = false;
-      notifyListeners();
+      if (!_isDisposed) {
+        isLoadingHitokotoTags = false;
+        notifyListeners();
+      }
     }
   }
 

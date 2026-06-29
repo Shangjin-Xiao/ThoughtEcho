@@ -246,6 +246,11 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       },
     );
     _controller.addListener(_onControllerChanged);
+    _controller.updateServices(
+      locService: _readServiceOrNull<LocationService>(context),
+      weaService: _readServiceOrNull<WeatherService>(context),
+      dbService: _readServiceOrNull<DatabaseService>(context),
+    );
 
     _dialogOpenTimelineTask = AppTracer.start(
       'ThoughtEcho.AddNoteDialog.open',
@@ -525,15 +530,22 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       unawaited(
         Future.microtask(() async {
           if (!mounted) return;
-          _controller.updateServices(
-              dbService: _databaseService ??
-                  _readServiceOrNull<DatabaseService>(context));
+          final db =
+              _databaseService ?? _readServiceOrNull<DatabaseService>(context);
+          _controller.updateServices(dbService: db);
           await _controller.addDefaultHitokotoTagsAsync((category) {
             if (mounted && category != null) {
               setState(() {
                 _controller.selectedCategory = category;
               });
             }
+          });
+          if (!mounted || db == null) return;
+          final updatedTags = await db.getCategories();
+          if (!mounted) return;
+          setState(() {
+            _availableTags = updatedTags;
+            _initialTagIds = List.from(_controller.selectedTagIds);
           });
         }),
       );
@@ -553,6 +565,15 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       final fullQuote = await db.getQuoteById(widget.initialQuote!.id!);
       if (fullQuote != null && mounted) {
         _recordDialogPerfStateChange('fullQuoteLoaded');
+        _controller.hydrateFromQuote(fullQuote);
+        if (fullQuote.categoryId != null) {
+          final category = await db.getCategoryById(fullQuote.categoryId!);
+          if (category != null && mounted) {
+            setState(() {
+              _controller.selectedCategory = category;
+            });
+          }
+        }
         setState(() {
           _fullInitialQuote = fullQuote;
           // 如果列表页传递的对象缺少 AI 分析等大字段，这里补全
@@ -2018,7 +2039,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                         Icons.location_on,
                                         color: _controller.includeLocation
                                             ? theme.colorScheme.primary
-                                            : Colors.grey,
+                                            : theme
+                                                .colorScheme.onSurfaceVariant,
                                         size: 18,
                                       ),
                                       label: Text(l10n.location),
