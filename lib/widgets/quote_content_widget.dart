@@ -108,6 +108,7 @@ class QuoteContent extends StatelessWidget {
     _cacheGeneration++;
     _QuoteDocumentCache.clear();
     _QuoteHeightEstimateCache.clear();
+    _QuotePlainTextLayoutExpansionCache.clear();
     _QuoteContentControllerCache.clear();
   }
 
@@ -437,6 +438,40 @@ class QuoteContent extends StatelessWidget {
           builder: () => _estimateRenderedHeight(quote),
         ) >
         collapsedContentMaxHeight;
+  }
+
+  static bool exceedsCollapsedHeightForLayout({
+    required Quote quote,
+    required TextStyle? style,
+    required double maxWidth,
+    required TextDirection textDirection,
+    required TextScaler textScaler,
+    Locale? locale,
+  }) {
+    if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
+      return exceedsCollapsedHeight(quote);
+    }
+    if (!maxWidth.isFinite || maxWidth <= 0) {
+      return exceedsCollapsedHeight(quote);
+    }
+
+    return _QuotePlainTextLayoutExpansionCache.getOrCreate(
+      quote: quote,
+      style: style,
+      maxWidth: maxWidth,
+      textDirection: textDirection,
+      textScaler: textScaler,
+      locale: locale,
+      builder: () {
+        final painter = TextPainter(
+          text: TextSpan(text: quote.content, style: style),
+          textDirection: textDirection,
+          textScaler: textScaler,
+          locale: locale,
+        )..layout(maxWidth: maxWidth);
+        return painter.height > collapsedContentMaxHeight + 0.5;
+      },
+    );
   }
 
   static double _estimateRenderedHeight(Quote quote) {
@@ -815,6 +850,122 @@ class _HeightEstimateCacheEntry {
       : lastAccess = DateTime.now();
 
   final double height;
+  DateTime lastAccess;
+
+  void touch() {
+    lastAccess = DateTime.now();
+  }
+}
+
+class _QuotePlainTextLayoutExpansionCache {
+  static final LinkedHashMap<_PlainTextLayoutExpansionCacheKey,
+          _PlainTextLayoutExpansionCacheEntry> _cache =
+      LinkedHashMap<_PlainTextLayoutExpansionCacheKey,
+          _PlainTextLayoutExpansionCacheEntry>();
+
+  static const int _maxCacheSize = 300;
+  static const int _pruneBatchSize = 50;
+
+  static bool getOrCreate({
+    required Quote quote,
+    required TextStyle? style,
+    required double maxWidth,
+    required TextDirection textDirection,
+    required TextScaler textScaler,
+    required Locale? locale,
+    required bool Function() builder,
+  }) {
+    final key = _PlainTextLayoutExpansionCacheKey(
+      contentSignature:
+          Object.hash(quote.content.hashCode, quote.content.length),
+      maxWidth: maxWidth.ceil(),
+      styleHash: style.hashCode,
+      textDirection: textDirection,
+      textScalerHash: textScaler.hashCode,
+      localeTag: locale?.toLanguageTag(),
+    );
+    final existing = _cache.remove(key);
+    if (existing != null) {
+      existing.touch();
+      _cache[key] = existing;
+      return existing.exceedsCollapsedHeight;
+    }
+
+    if (_cache.length >= _maxCacheSize) {
+      _pruneOldest();
+    }
+
+    final exceedsCollapsedHeight = builder();
+    _cache[key] = _PlainTextLayoutExpansionCacheEntry(
+      exceedsCollapsedHeight: exceedsCollapsedHeight,
+    );
+    return exceedsCollapsedHeight;
+  }
+
+  static void clear() {
+    _cache.clear();
+  }
+
+  static void _pruneOldest() {
+    if (_cache.isEmpty) {
+      return;
+    }
+
+    final entries = _cache.entries.toList()
+      ..sort((a, b) => a.value.lastAccess.compareTo(b.value.lastAccess));
+
+    for (final entry in entries.take(_pruneBatchSize)) {
+      _cache.remove(entry.key);
+    }
+  }
+}
+
+class _PlainTextLayoutExpansionCacheKey {
+  const _PlainTextLayoutExpansionCacheKey({
+    required this.contentSignature,
+    required this.maxWidth,
+    required this.styleHash,
+    required this.textDirection,
+    required this.textScalerHash,
+    required this.localeTag,
+  });
+
+  final int contentSignature;
+  final int maxWidth;
+  final int styleHash;
+  final TextDirection textDirection;
+  final int textScalerHash;
+  final String? localeTag;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is _PlainTextLayoutExpansionCacheKey &&
+        other.contentSignature == contentSignature &&
+        other.maxWidth == maxWidth &&
+        other.styleHash == styleHash &&
+        other.textDirection == textDirection &&
+        other.textScalerHash == textScalerHash &&
+        other.localeTag == localeTag;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        contentSignature,
+        maxWidth,
+        styleHash,
+        textDirection,
+        textScalerHash,
+        localeTag,
+      );
+}
+
+class _PlainTextLayoutExpansionCacheEntry {
+  _PlainTextLayoutExpansionCacheEntry({
+    required this.exceedsCollapsedHeight,
+  }) : lastAccess = DateTime.now();
+
+  final bool exceedsCollapsedHeight;
   DateTime lastAccess;
 
   void touch() {

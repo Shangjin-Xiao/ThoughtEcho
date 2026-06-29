@@ -271,6 +271,64 @@ void main() {
       expect(find.text('双击查看全文'), findsOneWidget);
     });
 
+    testWidgets('宽布局下实际未溢出的边界文本不显示展开提示', (tester) async {
+      final quote = _buildQuote(
+        id: 'wide-boundary',
+        content: List.filled(170, '界').join(),
+        editSource: 'inline',
+      );
+
+      expect(QuoteItemWidget.needsExpansionFor(quote), isTrue);
+
+      bool toggled = false;
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _FakeSettingsService(),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Material(
+              child: Center(
+                child: SizedBox(
+                  width: 720,
+                  child: QuoteItemWidget(
+                    quote: quote,
+                    tagMap: const {},
+                    isExpanded: false,
+                    onToggleExpanded: (_) {
+                      toggled = true;
+                    },
+                    onEdit: () {},
+                    onDelete: () {},
+                    onAskAI: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('双击查看全文'), findsNothing);
+
+      final contentGesture = find.byKey(
+        const ValueKey('quote_item.double_tap_region'),
+      );
+      await tester.tap(contentGesture);
+      await tester.pump(const Duration(milliseconds: 40));
+      await tester.tap(contentGesture);
+      await tester.pumpAndSettle();
+
+      expect(toggled, isFalse);
+    });
+
     testWidgets('折叠遮罩使用卡片级独立BackdropKey', (tester) async {
       final quote = _buildQuote(
         content: List.filled(6, _longContentChunk).join('\n'),

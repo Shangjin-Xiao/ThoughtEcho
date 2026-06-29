@@ -342,8 +342,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     return width;
   }
 
-  void _handleDoubleTap(bool isExpanded, Quote quote) {
-    if (!_needsExpansion(quote)) {
+  void _handleDoubleTap(
+    bool isExpanded,
+    Quote quote, {
+    bool? canExpand,
+  }) {
+    if (!(canExpand ?? _needsExpansion(quote))) {
       return;
     }
 
@@ -353,6 +357,22 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     Feedback.forTap(context);
 
     widget.onToggleExpanded(!isExpanded);
+  }
+
+  bool _needsExpansionForLayout(
+    BuildContext context,
+    Quote quote,
+    TextStyle? contentStyle,
+    double maxWidth,
+  ) {
+    return QuoteContent.exceedsCollapsedHeightForLayout(
+      quote: quote,
+      style: contentStyle,
+      maxWidth: maxWidth,
+      textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+      locale: Localizations.maybeLocaleOf(context),
+    );
   }
 
   @override
@@ -657,144 +677,152 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             ),
 
           // 笔记内容 - 支持双击展开/折叠
-          GestureDetector(
-            key: widget.foldToggleGuideKey ??
-                const ValueKey('quote_item.double_tap_region'),
-            behavior: HitTestBehavior.translucent,
-            onDoubleTap: _needsExpansion(quote)
-                ? () => _handleDoubleTap(isExpanded, quote)
-                : null,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-              child: Builder(
-                builder: (context) {
-                  final innerTheme = Theme.of(context);
-                  final needsExpansion = _needsExpansion(quote);
-                  final showFullContent = isExpanded || !needsExpansion;
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final innerTheme = Theme.of(context);
+                final contentStyle = innerTheme.textTheme.bodyLarge?.copyWith(
+                  color: primaryTextColor,
+                  height: 1.5,
+                );
+                final needsExpansion = _needsExpansionForLayout(
+                  context,
+                  quote,
+                  contentStyle,
+                  constraints.maxWidth,
+                );
+                final showFullContent = isExpanded || !needsExpansion;
 
-                  // 构建不依赖双击动画的内容子树（QuoteContent + 底部遮罩）
-                  // 作为 AnimatedBuilder 的 child 传入，避免动画 tick 时重建重型子树
-                  final contentChild = Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      AnimatedSwitcher(
-                        duration: QuoteItemWidget._fadeDuration,
-                        switchInCurve: Curves.easeOut,
-                        switchOutCurve: Curves.easeIn,
-                        layoutBuilder: (currentChild, previousChildren) =>
-                            Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            ...previousChildren,
-                            if (currentChild != null) currentChild,
-                          ],
-                        ),
-                        child: KeyedSubtree(
-                          key: ValueKey<bool>(showFullContent),
-                          child: QuoteContent(
-                            quote: quote,
-                            style: innerTheme.textTheme.bodyLarge?.copyWith(
-                              color: primaryTextColor,
-                              height: 1.5,
-                            ),
-                            showFullContent: showFullContent,
-                            collapseRichTextSemantics: true,
-                          ),
+                // 构建不依赖双击动画的内容子树（QuoteContent + 底部遮罩）
+                // 作为 AnimatedBuilder 的 child 传入，避免动画 tick 时重建重型子树
+                final contentChild = Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    AnimatedSwitcher(
+                      duration: QuoteItemWidget._fadeDuration,
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      layoutBuilder: (currentChild, previousChildren) => Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          ...previousChildren,
+                          if (currentChild != null) currentChild,
+                        ],
+                      ),
+                      child: KeyedSubtree(
+                        key: ValueKey<bool>(showFullContent),
+                        child: QuoteContent(
+                          quote: quote,
+                          style: contentStyle,
+                          showFullContent: showFullContent,
+                          collapseRichTextSemantics: true,
                         ),
                       ),
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        height: 30,
-                        child: IgnorePointer(
-                          child: AnimatedSwitcher(
-                            duration: QuoteItemWidget._fadeDuration,
-                            switchInCurve: Curves.easeIn,
-                            switchOutCurve: Curves.easeOut,
-                            child: (!isExpanded && needsExpansion)
-                                ? Builder(
-                                    builder: (context) {
-                                      final fadeScrim = Container(
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.bottomCenter,
-                                            colors: [
-                                              innerTheme.colorScheme.surface
-                                                  .withValues(alpha: 0.0),
-                                              innerTheme.colorScheme.surface
-                                                  .withValues(alpha: 0.08),
-                                              innerTheme.colorScheme.surface
-                                                  .withValues(alpha: 0.18),
-                                            ],
-                                            stops: const [0.0, 0.4, 1.0],
-                                          ),
+                    ),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: 30,
+                      child: IgnorePointer(
+                        child: AnimatedSwitcher(
+                          duration: QuoteItemWidget._fadeDuration,
+                          switchInCurve: Curves.easeIn,
+                          switchOutCurve: Curves.easeOut,
+                          child: (!isExpanded && needsExpansion)
+                              ? Builder(
+                                  builder: (context) {
+                                    final fadeScrim = Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [
+                                            innerTheme.colorScheme.surface
+                                                .withValues(alpha: 0.0),
+                                            innerTheme.colorScheme.surface
+                                                .withValues(alpha: 0.08),
+                                            innerTheme.colorScheme.surface
+                                                .withValues(alpha: 0.18),
+                                          ],
+                                          stops: const [0.0, 0.4, 1.0],
                                         ),
-                                      );
+                                      ),
+                                    );
 
-                                      return Stack(
-                                        fit: StackFit.expand,
-                                        children: [
-                                          ExcludeSemantics(
-                                            child: backdropBlurDisabled
-                                                ? fadeScrim
-                                                : RepaintBoundary(
-                                                    child: ClipRect(
-                                                      child: BackdropFilter(
-                                                        backdropGroupKey:
-                                                            _backdropKey,
-                                                        filter:
-                                                            ui.ImageFilter.blur(
-                                                          sigmaX: 1.2,
-                                                          sigmaY: 1.2,
-                                                        ),
-                                                        child: fadeScrim,
+                                    return Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        ExcludeSemantics(
+                                          child: backdropBlurDisabled
+                                              ? fadeScrim
+                                              : RepaintBoundary(
+                                                  child: ClipRect(
+                                                    child: BackdropFilter(
+                                                      backdropGroupKey:
+                                                          _backdropKey,
+                                                      filter:
+                                                          ui.ImageFilter.blur(
+                                                        sigmaX: 1.2,
+                                                        sigmaY: 1.2,
                                                       ),
+                                                      child: fadeScrim,
                                                     ),
                                                   ),
-                                          ),
-                                          Align(
-                                            alignment: Alignment.center,
-                                            child: Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 2,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: innerTheme
-                                                    .colorScheme.surface
-                                                    .withValues(alpha: 0.35),
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                              child: Text(
-                                                l10n.doubleTapToViewFull,
-                                                style: innerTheme
-                                                    .textTheme.bodySmall
-                                                    ?.copyWith(
-                                                  color: innerTheme
-                                                      .colorScheme.onSurface
-                                                      .withValues(alpha: 0.65),
-                                                  fontSize: 11,
-                                                  fontStyle: FontStyle.italic,
                                                 ),
+                                        ),
+                                        Align(
+                                          alignment: Alignment.center,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: innerTheme
+                                                  .colorScheme.surface
+                                                  .withValues(alpha: 0.35),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              l10n.doubleTapToViewFull,
+                                              style: innerTheme
+                                                  .textTheme.bodySmall
+                                                  ?.copyWith(
+                                                color: innerTheme
+                                                    .colorScheme.onSurface
+                                                    .withValues(alpha: 0.65),
+                                                fontSize: 11,
+                                                fontStyle: FontStyle.italic,
                                               ),
                                             ),
                                           ),
-                                        ],
-                                      );
-                                    },
-                                  )
-                                : const SizedBox.shrink(),
-                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                )
+                              : const SizedBox.shrink(),
                         ),
                       ),
-                    ],
-                  );
+                    ),
+                  ],
+                );
 
-                  return AnimatedSize(
+                return GestureDetector(
+                  key: widget.foldToggleGuideKey ??
+                      const ValueKey('quote_item.double_tap_region'),
+                  behavior: HitTestBehavior.translucent,
+                  onDoubleTap: needsExpansion
+                      ? () => _handleDoubleTap(
+                            isExpanded,
+                            quote,
+                            canExpand: needsExpansion,
+                          )
+                      : null,
+                  child: AnimatedSize(
                     duration: QuoteItemWidget.expandCollapseDuration,
                     curve: QuoteItemWidget._expandCurve,
                     alignment: Alignment.topLeft,
@@ -840,9 +868,9 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                         );
                       },
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
           ),
 
