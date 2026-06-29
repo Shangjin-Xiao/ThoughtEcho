@@ -3806,5 +3806,10 @@
   "webdavProviderNutstore": "坚果云 (Nutstore)",
   "webdavProviderCustom": "自定义 (Custom)",
   "webdavProviderNextcloud": "Nextcloud / ownCloud",
-  "webdavProviderInfinicloud": "InfiniCLOUD"
+  "webdavProviderInfinicloud": "InfiniCLOUD",
+  "webdavProviderConfig": "服务商配置",
+  "webdavServerUrlEmptyError": "请输入 WebDAV 服务器地址",
+  "webdavServerUrlInvalidError": "地址必须以 http:// 或 https:// 开头",
+  "webdavUsernameEmptyError": "请输入用户名",
+  "webdavPasswordEmptyError": "请输入应用密码"
 }
