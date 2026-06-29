@@ -823,6 +823,10 @@ class _HomePageState extends State<HomePage>
     _scheduleNoteGuideIfNeeded(delay: const Duration(milliseconds: 150));
   }
 
+  void _releaseNoteSearchFocus() {
+    _noteListViewKey.currentState?.unfocusSearchField();
+  }
+
   void _consumeInitialTargetNote() {
     if (!mounted ||
         _hasConsumedInitialTargetNote ||
@@ -1076,6 +1080,7 @@ class _HomePageState extends State<HomePage>
     String? prefilledWork,
     dynamic hitokotoData,
   }) async {
+    _releaseNoteSearchFocus();
     FocusScope.of(context).unfocus();
     await _loadTags();
     if (!mounted) return;
@@ -1125,27 +1130,28 @@ class _HomePageState extends State<HomePage>
     logDebug('显示添加笔记对话框，可用标签数: ${_tags.length}');
 
     // 使用延迟显示，确保动画流畅
-    Future.microtask(() {
-      if (mounted) {
-        showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
-          requestFocus: false,
-          builder: (context) => AddNoteDialog(
-            prefilledContent: prefilledContent,
-            prefilledAuthor: prefilledAuthor,
-            prefilledWork: prefilledWork,
-            hitokotoData: hitokotoData,
-            tags: _tags, // 使用预加载的标签数据
-            onSave: (quote) => _saveNonFullscreenQuote(
-              quote,
-              isEditing: false,
-            ),
-          ),
-        );
-      }
-    });
+    await Future<void>.delayed(Duration.zero);
+    if (!mounted) return;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
+      requestFocus: false,
+      builder: (context) => AddNoteDialog(
+        prefilledContent: prefilledContent,
+        prefilledAuthor: prefilledAuthor,
+        prefilledWork: prefilledWork,
+        hitokotoData: hitokotoData,
+        tags: _tags, // 使用预加载的标签数据
+        onSave: (quote) => _saveNonFullscreenQuote(
+          quote,
+          isEditing: false,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    _releaseNoteSearchFocus();
   }
 
   Future<void> _saveNonFullscreenQuote(
@@ -1401,6 +1407,7 @@ class _HomePageState extends State<HomePage>
 
   // 显示编辑笔记对话框
   void _showEditQuoteDialog(Quote quote) {
+    _releaseNoteSearchFocus();
     FocusScope.of(context).unfocus();
     // 检查笔记是否来自全屏编辑器
     if (quote.editSource == 'fullscreen') {
@@ -1453,7 +1460,11 @@ class _HomePageState extends State<HomePage>
             isEditing: true,
           ),
         ),
-      );
+      ).whenComplete(() {
+        if (mounted) {
+          _releaseNoteSearchFocus();
+        }
+      });
     }
   }
 

@@ -379,6 +379,15 @@ class NoteListViewState extends State<NoteListView> {
     logDebug('搜索框焦点状态: ${_searchFocusNode.hasFocus}');
   }
 
+  /// 释放搜索框焦点，并清掉当前 FocusScope 的历史焦点。
+  ///
+  /// 首页弹出非全屏编辑器后，关闭弹窗时路由可能恢复到之前的搜索框焦点；
+  /// 使用 scope disposition 可以避免搜索框被重新聚焦并拉起输入法。
+  void unfocusSearchField() {
+    if (!_searchFocusNode.hasFocus) return;
+    _searchFocusNode.unfocus(disposition: UnfocusDisposition.scope);
+  }
+
   /// 滚动监听器，用于检测用户滑动状态
   void _onScroll() {
     if (!mounted || !_scrollController.hasClients) return;

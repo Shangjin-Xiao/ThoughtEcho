@@ -22,6 +22,42 @@ void main() {
 
   group('NoteListView filter subscription race', () {
     testWidgets(
+      'can explicitly release search field focus for modal flows',
+      (tester) async {
+        final databaseService = _FakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+        final noteListKey = GlobalKey<NoteListViewState>();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            noteListKey: noteListKey,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        final searchField = find.byType(TextField);
+        await tester.tap(searchField);
+        await tester.pump();
+
+        EditableText editableText() =>
+            tester.widget<EditableText>(find.byType(EditableText).first);
+
+        expect(editableText().focusNode.hasFocus, isTrue);
+
+        noteListKey.currentState!.unfocusSearchField();
+        await tester.pump();
+
+        expect(editableText().focusNode.hasFocus, isFalse);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
       'clearing filters resubscribes only once with updated filter params',
       (tester) async {
         final databaseService = _FakeDatabaseService();
