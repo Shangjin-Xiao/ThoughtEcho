@@ -1,0 +1,26 @@
+test/unit/services/database_trash_flow_test.dart
+  s_6e82860cfb3b90::t_662a92e5e4e468 207-260
+  s_6e82860cfb3b90::t_3872d032da81be 150-167,169-172,176-179,181-184,186-187
+  s_6e82860cfb3b90::t_a3a175b6501a9c 139-149,168,173-175,180,185,188-206
+lib/services/database/database_pagination_mixin.dart
+  s_6e82860cfb3b90::t_71b544ead3b1d7 39-40,244
+  s_6e82860cfb3b90::t_7580356a098494 325,349-353,388-391,401-403
+lib/services/database_service.dart
+  s_6e82860cfb3b90::t_1b6d7710bc6395 393-395
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "5573c8b6b91e37b637d2fe6e2a651954a75a6780",
+  "prompts": {},
+  "sessions": {
+    "s_6e82860cfb3b90": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1331-4fdd-74c2-b387-0a7c99781a07",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
