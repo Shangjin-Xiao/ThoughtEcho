@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../constants/app_constants.dart';
 import '../extensions/note_category_localization_extension.dart';
 import '../gen_l10n/app_localizations.dart';
-import '../models/smart_push_settings.dart';
 import '../models/note_category.dart';
-import '../services/smart_push_service.dart';
+import '../models/smart_push_settings.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
-import '../constants/app_constants.dart';
+import '../services/smart_push_service.dart';
+import '../utils/app_logger.dart';
 
 part 'smart_push_settings_page_basic_sections.dart';
 part 'smart_push_settings_page_custom_sections.dart';
@@ -61,8 +62,14 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
       final tags = await databaseService.getCategories();
 
       if (mounted) {
+        var loadedSettings = smartPushService.settings;
+        if (loadedSettings.pushMode == PushMode.dailyQuote ||
+            loadedSettings.pushMode == PushMode.pastNotes ||
+            loadedSettings.pushMode == PushMode.both) {
+          loadedSettings = loadedSettings.copyWith(pushMode: PushMode.custom);
+        }
         setState(() {
-          _settings = smartPushService.settings;
+          _settings = loadedSettings;
           _availableTags = tags;
           _isLoading = false;
         });

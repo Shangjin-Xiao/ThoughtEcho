@@ -170,6 +170,7 @@ extension _SmartPushSettingsPageMiscSections on _SmartPushSettingsPageState {
       initialTime: TimeOfDay(hour: slot.hour, minute: slot.minute),
     );
     if (time != null) {
+      if (!mounted) return;
       final slots = List<PushTimeSlot>.from(_settings.pushTimeSlots);
       slots[index] = slot.copyWith(hour: time.hour, minute: time.minute);
       setState(() {
@@ -184,6 +185,7 @@ extension _SmartPushSettingsPageMiscSections on _SmartPushSettingsPageState {
       initialTime: const TimeOfDay(hour: 12, minute: 0),
     );
     if (time != null) {
+      if (!mounted) return;
       final slots = List<PushTimeSlot>.from(_settings.pushTimeSlots);
       slots.add(PushTimeSlot(hour: time.hour, minute: time.minute));
       setState(() {
