@@ -248,8 +248,6 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     super.dispose();
   }
 
-  bool _needsExpansion(Quote quote) => QuoteItemWidget.needsExpansionFor(quote);
-
   /// 对标签ID列表进行排序，优先显示匹配筛选条件的标签
   List<String> _getSortedTagIds(
     List<String> tagIds,
@@ -342,12 +340,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     return width;
   }
 
-  void _handleDoubleTap(
-    bool isExpanded,
-    Quote quote, {
-    bool? canExpand,
-  }) {
-    if (!(canExpand ?? _needsExpansion(quote))) {
+  void _handleDoubleTap(bool isExpanded, {required bool canExpand}) {
+    if (!canExpand) {
       return;
     }
 
@@ -372,6 +366,227 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
       textScaler: MediaQuery.textScalerOf(context),
       locale: Localizations.maybeLocaleOf(context),
+    );
+  }
+
+  Widget _buildQuoteContentSection({
+    required Quote quote,
+    required bool isExpanded,
+    required Color primaryTextColor,
+    required bool backdropBlurDisabled,
+    required AppLocalizations l10n,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final innerTheme = Theme.of(context);
+          final contentStyle = innerTheme.textTheme.bodyLarge?.copyWith(
+            color: primaryTextColor,
+            height: 1.5,
+          );
+          final needsExpansion = _needsExpansionForLayout(
+            context,
+            quote,
+            contentStyle,
+            constraints.maxWidth,
+          );
+          final showFullContent = isExpanded || !needsExpansion;
+          final contentChild = _buildQuoteContentStack(
+            quote: quote,
+            showFullContent: showFullContent,
+            needsExpansion: needsExpansion,
+            isExpanded: isExpanded,
+            contentStyle: contentStyle,
+            innerTheme: innerTheme,
+            backdropBlurDisabled: backdropBlurDisabled,
+            l10n: l10n,
+          );
+
+          return GestureDetector(
+            key: widget.foldToggleGuideKey ??
+                const ValueKey('quote_item.double_tap_region'),
+            behavior: HitTestBehavior.translucent,
+            onDoubleTap: needsExpansion
+                ? () => _handleDoubleTap(
+                      isExpanded,
+                      canExpand: needsExpansion,
+                    )
+                : null,
+            child: _buildAnimatedQuoteContent(
+              innerTheme: innerTheme,
+              child: contentChild,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildQuoteContentStack({
+    required Quote quote,
+    required bool showFullContent,
+    required bool needsExpansion,
+    required bool isExpanded,
+    required TextStyle? contentStyle,
+    required ThemeData innerTheme,
+    required bool backdropBlurDisabled,
+    required AppLocalizations l10n,
+  }) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        AnimatedSwitcher(
+          duration: QuoteItemWidget._fadeDuration,
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeIn,
+          layoutBuilder: (currentChild, previousChildren) => Stack(
+            clipBehavior: Clip.none,
+            children: [
+              ...previousChildren,
+              if (currentChild != null) currentChild,
+            ],
+          ),
+          child: KeyedSubtree(
+            key: ValueKey<bool>(showFullContent),
+            child: QuoteContent(
+              quote: quote,
+              style: contentStyle,
+              showFullContent: showFullContent,
+              needsExpansionOverride: needsExpansion,
+              collapseRichTextSemantics: true,
+            ),
+          ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 30,
+          child: IgnorePointer(
+            child: AnimatedSwitcher(
+              duration: QuoteItemWidget._fadeDuration,
+              switchInCurve: Curves.easeIn,
+              switchOutCurve: Curves.easeOut,
+              child: (!isExpanded && needsExpansion)
+                  ? _buildCollapseHintOverlay(
+                      innerTheme: innerTheme,
+                      backdropBlurDisabled: backdropBlurDisabled,
+                      l10n: l10n,
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCollapseHintOverlay({
+    required ThemeData innerTheme,
+    required bool backdropBlurDisabled,
+    required AppLocalizations l10n,
+  }) {
+    final fadeScrim = Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            innerTheme.colorScheme.surface.withValues(alpha: 0.0),
+            innerTheme.colorScheme.surface.withValues(alpha: 0.08),
+            innerTheme.colorScheme.surface.withValues(alpha: 0.18),
+          ],
+          stops: const [0.0, 0.4, 1.0],
+        ),
+      ),
+    );
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ExcludeSemantics(
+          child: backdropBlurDisabled
+              ? fadeScrim
+              : RepaintBoundary(
+                  child: ClipRect(
+                    child: BackdropFilter(
+                      backdropGroupKey: _backdropKey,
+                      filter: ui.ImageFilter.blur(sigmaX: 1.2, sigmaY: 1.2),
+                      child: fadeScrim,
+                    ),
+                  ),
+                ),
+        ),
+        Align(
+          alignment: Alignment.center,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: innerTheme.colorScheme.surface.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              l10n.doubleTapToViewFull,
+              style: innerTheme.textTheme.bodySmall?.copyWith(
+                color: innerTheme.colorScheme.onSurface.withValues(alpha: 0.65),
+                fontSize: 11,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAnimatedQuoteContent({
+    required ThemeData innerTheme,
+    required Widget child,
+  }) {
+    return AnimatedSize(
+      duration: QuoteItemWidget.expandCollapseDuration,
+      curve: QuoteItemWidget._expandCurve,
+      alignment: Alignment.topLeft,
+      clipBehavior: Clip.none,
+      child: AnimatedBuilder(
+        animation: _doubleTapController,
+        child: child,
+        builder: (context, child) {
+          final highlightOpacity = _highlightProgress.value;
+          final brightness = innerTheme.brightness;
+          final overlayStrength = brightness == Brightness.dark ? 0.12 : 0.05;
+
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            alignment: Alignment.topLeft,
+            child: highlightOpacity > 0
+                ? Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      child!,
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: ExcludeSemantics(
+                            child: DecoratedBox(
+                              key: const ValueKey(
+                                'quote_item.double_tap_overlay',
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(
+                                  alpha: overlayStrength * highlightOpacity,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : child!,
+          );
+        },
+      ),
     );
   }
 
@@ -676,202 +891,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
               ),
             ),
 
-          // 笔记内容 - 支持双击展开/折叠
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final innerTheme = Theme.of(context);
-                final contentStyle = innerTheme.textTheme.bodyLarge?.copyWith(
-                  color: primaryTextColor,
-                  height: 1.5,
-                );
-                final needsExpansion = _needsExpansionForLayout(
-                  context,
-                  quote,
-                  contentStyle,
-                  constraints.maxWidth,
-                );
-                final showFullContent = isExpanded || !needsExpansion;
-
-                // 构建不依赖双击动画的内容子树（QuoteContent + 底部遮罩）
-                // 作为 AnimatedBuilder 的 child 传入，避免动画 tick 时重建重型子树
-                final contentChild = Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    AnimatedSwitcher(
-                      duration: QuoteItemWidget._fadeDuration,
-                      switchInCurve: Curves.easeOut,
-                      switchOutCurve: Curves.easeIn,
-                      layoutBuilder: (currentChild, previousChildren) => Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          ...previousChildren,
-                          if (currentChild != null) currentChild,
-                        ],
-                      ),
-                      child: KeyedSubtree(
-                        key: ValueKey<bool>(showFullContent),
-                        child: QuoteContent(
-                          quote: quote,
-                          style: contentStyle,
-                          showFullContent: showFullContent,
-                          collapseRichTextSemantics: true,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      height: 30,
-                      child: IgnorePointer(
-                        child: AnimatedSwitcher(
-                          duration: QuoteItemWidget._fadeDuration,
-                          switchInCurve: Curves.easeIn,
-                          switchOutCurve: Curves.easeOut,
-                          child: (!isExpanded && needsExpansion)
-                              ? Builder(
-                                  builder: (context) {
-                                    final fadeScrim = Container(
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          begin: Alignment.topCenter,
-                                          end: Alignment.bottomCenter,
-                                          colors: [
-                                            innerTheme.colorScheme.surface
-                                                .withValues(alpha: 0.0),
-                                            innerTheme.colorScheme.surface
-                                                .withValues(alpha: 0.08),
-                                            innerTheme.colorScheme.surface
-                                                .withValues(alpha: 0.18),
-                                          ],
-                                          stops: const [0.0, 0.4, 1.0],
-                                        ),
-                                      ),
-                                    );
-
-                                    return Stack(
-                                      fit: StackFit.expand,
-                                      children: [
-                                        ExcludeSemantics(
-                                          child: backdropBlurDisabled
-                                              ? fadeScrim
-                                              : RepaintBoundary(
-                                                  child: ClipRect(
-                                                    child: BackdropFilter(
-                                                      backdropGroupKey:
-                                                          _backdropKey,
-                                                      filter:
-                                                          ui.ImageFilter.blur(
-                                                        sigmaX: 1.2,
-                                                        sigmaY: 1.2,
-                                                      ),
-                                                      child: fadeScrim,
-                                                    ),
-                                                  ),
-                                                ),
-                                        ),
-                                        Align(
-                                          alignment: Alignment.center,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: innerTheme
-                                                  .colorScheme.surface
-                                                  .withValues(alpha: 0.35),
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            child: Text(
-                                              l10n.doubleTapToViewFull,
-                                              style: innerTheme
-                                                  .textTheme.bodySmall
-                                                  ?.copyWith(
-                                                color: innerTheme
-                                                    .colorScheme.onSurface
-                                                    .withValues(alpha: 0.65),
-                                                fontSize: 11,
-                                                fontStyle: FontStyle.italic,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                )
-                              : const SizedBox.shrink(),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-
-                return GestureDetector(
-                  key: widget.foldToggleGuideKey ??
-                      const ValueKey('quote_item.double_tap_region'),
-                  behavior: HitTestBehavior.translucent,
-                  onDoubleTap: needsExpansion
-                      ? () => _handleDoubleTap(
-                            isExpanded,
-                            quote,
-                            canExpand: needsExpansion,
-                          )
-                      : null,
-                  child: AnimatedSize(
-                    duration: QuoteItemWidget.expandCollapseDuration,
-                    curve: QuoteItemWidget._expandCurve,
-                    alignment: Alignment.topLeft,
-                    clipBehavior: Clip.none,
-                    child: AnimatedBuilder(
-                      animation: _doubleTapController,
-                      // 将不依赖动画值的子树通过 child 传入，避免动画帧间重建
-                      child: contentChild,
-                      builder: (context, child) {
-                        final highlightOpacity = _highlightProgress.value;
-                        final brightness = innerTheme.brightness;
-                        final overlayStrength =
-                            brightness == Brightness.dark ? 0.12 : 0.05;
-
-                        return Transform.scale(
-                          scale: _scaleAnimation.value,
-                          alignment: Alignment.topLeft,
-                          child: highlightOpacity > 0
-                              ? Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    child!,
-                                    Positioned.fill(
-                                      child: IgnorePointer(
-                                        child: ExcludeSemantics(
-                                          child: DecoratedBox(
-                                            key: const ValueKey(
-                                              'quote_item.double_tap_overlay',
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withValues(
-                                                alpha: overlayStrength *
-                                                    highlightOpacity,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : child!,
-                        );
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
+          _buildQuoteContentSection(
+            quote: quote,
+            isExpanded: isExpanded,
+            primaryTextColor: primaryTextColor,
+            backdropBlurDisabled: backdropBlurDisabled,
+            l10n: l10n,
           ),
 
           // 来源信息（如果有）

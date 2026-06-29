@@ -18,6 +18,7 @@ class QuoteContent extends StatelessWidget {
   final int? maxLines;
   final bool showFullContent;
   final bool collapseRichTextSemantics;
+  final bool? needsExpansionOverride;
 
   const QuoteContent({
     super.key,
@@ -26,6 +27,7 @@ class QuoteContent extends StatelessWidget {
     this.maxLines,
     this.showFullContent = false,
     this.collapseRichTextSemantics = false,
+    this.needsExpansionOverride,
   });
 
   // Flutter 3.41+ Android (Impeller + 精准 wght 轴) 下 FontWeight.bold (w700)
@@ -440,6 +442,13 @@ class QuoteContent extends StatelessWidget {
         collapsedContentMaxHeight;
   }
 
+  /// Returns whether [quote] should be collapsed for the current layout.
+  ///
+  /// Plain text is measured with [TextPainter] using the actual [style],
+  /// [maxWidth], [textDirection], [textScaler], and optional [locale]. Rich text
+  /// and non-positive or infinite [maxWidth] values fall back to the lightweight
+  /// estimation path used by [exceedsCollapsedHeight]. Callers should pass a
+  /// finite content width from layout constraints when available.
   static bool exceedsCollapsedHeightForLayout({
     required Quote quote,
     required TextStyle? style,
@@ -633,7 +642,8 @@ class QuoteContent extends StatelessWidget {
     final prioritizeBoldContent = context.select<SettingsService, bool>(
       (s) => s.prioritizeBoldContentInCollapse,
     );
-    final bool needsExpansion = exceedsCollapsedHeight(quote);
+    final bool needsExpansion =
+        needsExpansionOverride ?? exceedsCollapsedHeight(quote);
 
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
       final bool usePrioritizedDoc = !showFullContent && prioritizeBoldContent;
@@ -878,7 +888,7 @@ class _QuotePlainTextLayoutExpansionCache {
     final key = _PlainTextLayoutExpansionCacheKey(
       contentSignature:
           Object.hash(quote.content.hashCode, quote.content.length),
-      maxWidth: maxWidth.ceil(),
+      maxWidthKey: (maxWidth * 100).round(),
       styleHash: style.hashCode,
       textDirection: textDirection,
       textScalerHash: textScaler.hashCode,
@@ -923,7 +933,7 @@ class _QuotePlainTextLayoutExpansionCache {
 class _PlainTextLayoutExpansionCacheKey {
   const _PlainTextLayoutExpansionCacheKey({
     required this.contentSignature,
-    required this.maxWidth,
+    required this.maxWidthKey,
     required this.styleHash,
     required this.textDirection,
     required this.textScalerHash,
@@ -931,7 +941,7 @@ class _PlainTextLayoutExpansionCacheKey {
   });
 
   final int contentSignature;
-  final int maxWidth;
+  final int maxWidthKey;
   final int styleHash;
   final TextDirection textDirection;
   final int textScalerHash;
@@ -942,7 +952,7 @@ class _PlainTextLayoutExpansionCacheKey {
     if (identical(this, other)) return true;
     return other is _PlainTextLayoutExpansionCacheKey &&
         other.contentSignature == contentSignature &&
-        other.maxWidth == maxWidth &&
+        other.maxWidthKey == maxWidthKey &&
         other.styleHash == styleHash &&
         other.textDirection == textDirection &&
         other.textScalerHash == textScalerHash &&
@@ -952,7 +962,7 @@ class _PlainTextLayoutExpansionCacheKey {
   @override
   int get hashCode => Object.hash(
         contentSignature,
-        maxWidth,
+        maxWidthKey,
         styleHash,
         textDirection,
         textScalerHash,
