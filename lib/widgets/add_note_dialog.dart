@@ -1622,6 +1622,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                     return loc;
                   }())
             : null,
+        // 刻意设计：只勾选天气而不勾选位置时，因为 _controller.newLatitude/Longitude 未被写回（保持为 null），
+        // 因而最终保存的坐标为 null，以保障用户的物理地理隐私，不强制记录具体坐标。
         latitude: (_controller.includeLocation || _controller.includeWeather)
             ? (isEditing
                 ? _controller.originalLatitude
