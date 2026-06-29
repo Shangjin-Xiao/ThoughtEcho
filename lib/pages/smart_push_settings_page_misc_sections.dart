@@ -295,6 +295,4 @@ extension _SmartPushSettingsPageMiscSections on _SmartPushSettingsPageState {
       ),
     );
   }
-
-
 }
