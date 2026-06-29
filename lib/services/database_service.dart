@@ -390,6 +390,9 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   // 添加存储加载状态的变量
   bool _isLoading = false;
 
+  // 当前分页流加载代次。筛选条件或写操作刷新时递增，用于丢弃旧异步查询结果。
+  int _quotesLoadGeneration = 0;
+
   // 添加存储当前加载的笔记列表的变量
   List<Quote> _currentQuotes = [];
 

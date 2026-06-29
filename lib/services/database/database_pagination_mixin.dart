@@ -36,6 +36,8 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       _watchHasMore = true;
       _currentQuotes = [];
       _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set
+      _quotesLoadGeneration++;
+      _isLoading = false;
 
       // 触发重新加载
       loadMoreQuotes();
@@ -239,6 +241,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       _currentQuotes = [];
       _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set
       _isLoading = false;
+      _quotesLoadGeneration++;
       _watchHasMore = true; // 重置分页状态
 
       // 性能优化：仅在首次调用时同步发送空列表（UI 需要显示 loading/空状态）。
@@ -319,6 +322,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     }
 
     _isLoading = true;
+    final loadGeneration = _quotesLoadGeneration;
     logDebug(
       '开始加载更多笔记，当前已有 ${_currentQuotes.length} 条，offset=${_currentQuotes.length}，limit=$_watchLimit',
     );
@@ -341,6 +345,11 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
           throw TimeoutException('数据库查询超时', const Duration(seconds: 5));
         },
       );
+
+      if (loadGeneration != _quotesLoadGeneration) {
+        logDebug('丢弃过期笔记加载结果');
+        return;
+      }
 
       if (quotes.isEmpty) {
         // 没有更多数据了
@@ -376,6 +385,10 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       // 修复：使用安全的方式通知订阅者
       _safeNotifyQuotesStream();
     } catch (e) {
+      if (loadGeneration != _quotesLoadGeneration) {
+        logDebug('忽略过期笔记加载错误: $e');
+        return;
+      }
       logError('加载更多笔记失败: $e', error: e, source: 'DatabaseService');
       // 确保即使出错也通知UI，避免无限加载状态
       _safeNotifyQuotesStream();
@@ -385,7 +398,9 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
         rethrow;
       }
     } finally {
-      _isLoading = false; // 确保加载状态总是被重置
+      if (loadGeneration == _quotesLoadGeneration) {
+        _isLoading = false; // 确保当前加载状态总是被重置
+      }
     }
   }
 }
