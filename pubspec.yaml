@@ -107,6 +107,7 @@ dev_dependencies:
   msix: ^3.16.7
   path_provider_platform_interface: ^2.1.2
   plugin_platform_interface: ^2.1.8
+  xml: ^6.6.1
 
 # 应用图标配置
 flutter_launcher_icons:
