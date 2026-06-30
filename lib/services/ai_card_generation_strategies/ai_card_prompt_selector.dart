@@ -59,7 +59,15 @@ class AICardPromptSelector {
     if (hasAuthor ||
         content.contains('说') ||
         content.contains('曰') ||
-        content.contains('"')) {
+        content.contains('"') ||
+        content.contains('“') ||
+        content.contains('”') ||
+        content.contains('「') ||
+        content.contains('」') ||
+        content.contains('said') ||
+        content.contains('says') ||
+        content.contains('wrote') ||
+        content.contains('quote')) {
       if (random < 30) {
         return _dispatchPrompt(
             'intelligent', note, brandName, cleanContent, formattedDate);
@@ -70,7 +78,38 @@ class AICardPromptSelector {
     }
 
     // 2. 检查是否为技术/学习内容（40%视觉增强，30%智能，30%随机）
-    final techKeywords = ['代码', '编程', '算法', '技术', '开发', '学习', '知识', '方法', '原理'];
+    final techKeywords = [
+      '代码',
+      '编程',
+      '算法',
+      '技术',
+      '开发',
+      '学习',
+      '知识',
+      '方法',
+      '原理',
+      'code',
+      'program',
+      'algorithm',
+      'tech',
+      'develop',
+      'learn',
+      'knowledge',
+      'method',
+      'principle',
+      'study',
+      'コード',
+      'プログラミング',
+      '技術',
+      '学習',
+      '開発',
+      'développe',
+      'techno',
+      'apprendre',
+      'étudier',
+      'kod',
+      'desarroll'
+    ];
     if (techKeywords.any((keyword) => content.contains(keyword))) {
       if (random < 40) {
         return _dispatchPrompt(
@@ -85,7 +124,38 @@ class AICardPromptSelector {
     }
 
     // 3. 检查是否为情感/生活内容（50%随机海报，50%视觉增强）
-    final emotionalKeywords = ['感受', '心情', '生活', '感悟', '体验', '回忆', '梦想', '希望'];
+    final emotionalKeywords = [
+      '感受',
+      '心情',
+      '生活',
+      '感悟',
+      '体验',
+      '回忆',
+      '梦想',
+      '希望',
+      'feel',
+      'mood',
+      'life',
+      'experience',
+      'memory',
+      'dream',
+      'hope',
+      'sad',
+      'happy',
+      'love',
+      'feeling',
+      'emotion',
+      '人生',
+      '気持ち',
+      '思い出',
+      '夢',
+      'espoir',
+      'vie',
+      'sentiment',
+      'amour',
+      'sentimiento',
+      'vida'
+    ];
     if (emotionalKeywords.any((keyword) => content.contains(keyword))) {
       if (random < 50) {
         return _dispatchPrompt(

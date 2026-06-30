@@ -179,6 +179,18 @@ String _cleanSVGContentStatic(String response, List<AICardProcessingLog> logs) {
   return cleaned;
 }
 
+/// 安全地检测SVG中是否包含特定字段，避免短值匹配到路径数据或属性
+bool _svgSafeContains(String svgLower, String? val) {
+  if (val == null || val.trim().isEmpty) return false;
+  final cleanVal = val.trim().toLowerCase();
+  if (cleanVal.length <= 2) {
+    // 针对短值（<=2字符），通过正则仅匹配位于标签文本节点内的文字，防止误中属性或路径数据
+    final pattern = RegExp('>[^<]*${RegExp.escape(cleanVal)}[^<]*<');
+    return pattern.hasMatch(svgLower);
+  }
+  return svgLower.contains(cleanVal);
+}
+
 /// 静态元数据补全 (用于Isolate)
 String _ensureMetadataPresenceStatic(
   String svg, {
@@ -194,24 +206,42 @@ String _ensureMetadataPresenceStatic(
   List<AICardProcessingLog>? logs,
 }) {
   final lower = svg.toLowerCase();
-  final hasDate = date != null && lower.contains(date.toLowerCase());
-  final hasLocation =
-      location != null && lower.contains(location.toLowerCase());
-  final hasWeather = weather != null && lower.contains(weather.toLowerCase());
-  final hasBrand = lower.contains(brandName.toLowerCase());
-  final hasAuthor = author != null && lower.contains(author.toLowerCase());
-  final hasSource = source != null && lower.contains(source.toLowerCase());
-  final hasDayPeriod =
-      dayPeriod != null && lower.contains(dayPeriod.toLowerCase());
+
+  // 1. 本地化天气与时间段
+  final localizedWeather =
+      CardGenerationUtils.localizeWeather(weather, languageCode: languageCode);
+  final localizedDayPeriod = CardGenerationUtils.localizeDayPeriod(dayPeriod,
+      languageCode: languageCode);
+
+  // 2. 检测各字段是否存在（考虑原始值、本地化值以及转义值，并使用短值防误判包含机制）
+  final hasDate = date != null &&
+      (_svgSafeContains(lower, date) || _svgSafeContains(lower, _escape(date)));
+  final hasLocation = location != null &&
+      (_svgSafeContains(lower, location) ||
+          _svgSafeContains(lower, _escape(location)));
+  final hasWeather = localizedWeather != null &&
+      (_svgSafeContains(lower, localizedWeather) ||
+          _svgSafeContains(lower, _escape(localizedWeather)));
+  final hasBrand = _svgSafeContains(lower, brandName) ||
+      _svgSafeContains(lower, _escape(brandName));
+  final hasAuthor = author != null &&
+      (_svgSafeContains(lower, author) ||
+          _svgSafeContains(lower, _escape(author)));
+  final hasSource = source != null &&
+      (_svgSafeContains(lower, source) ||
+          _svgSafeContains(lower, _escape(source)));
+  final hasDayPeriod = localizedDayPeriod != null &&
+      (_svgSafeContains(lower, localizedDayPeriod) ||
+          _svgSafeContains(lower, _escape(localizedDayPeriod)));
 
   // 只要有任何必需或传入的非空元数据字段缺失，就认为需要补全
   final need = !hasBrand ||
       (date != null && !hasDate) ||
       (location != null && !hasLocation) ||
-      (weather != null && !hasWeather) ||
+      (localizedWeather != null && !hasWeather) ||
       (author != null && !hasAuthor) ||
       (source != null && !hasSource) ||
-      (dayPeriod != null && !hasDayPeriod);
+      (localizedDayPeriod != null && !hasDayPeriod);
 
   if (!need) {
     return svg; // 所有被提供的元数据已在原SVG中存在
@@ -219,11 +249,6 @@ String _ensureMetadataPresenceStatic(
 
   // 简单插入在 </svg> 前
   final metaParts = <String>[];
-  // 规则：程序自动补全 -> 根据语言本地化
-  final localizedWeather =
-      CardGenerationUtils.localizeWeather(weather, languageCode: languageCode);
-  final localizedDayPeriod = CardGenerationUtils.localizeDayPeriod(dayPeriod,
-      languageCode: languageCode);
 
   // 关键优化：仅对原SVG中没有包含的非空字段进行补全，避免与大模型自渲染的内容发生重合
   if (date != null && !hasDate) metaParts.add(date);
