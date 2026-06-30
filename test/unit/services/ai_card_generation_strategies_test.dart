@@ -26,8 +26,10 @@ void main() {
 
   group('CardGenerationUtils', () {
     test('localizeWeather works correctly', () {
-      expect(CardGenerationUtils.localizeWeather('clear', languageCode: 'zh'), '晴');
-      expect(CardGenerationUtils.localizeWeather('clear', languageCode: 'en'), 'Clear');
+      expect(CardGenerationUtils.localizeWeather('clear', languageCode: 'zh'),
+          '晴');
+      expect(CardGenerationUtils.localizeWeather('clear', languageCode: 'en'),
+          'Clear');
     });
   });
 }
