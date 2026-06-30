@@ -422,6 +422,7 @@ class SmartPushService extends ChangeNotifier {
       }
 
       _isInitialized = true;
+      notifyListeners();
       AppLogger.i('SmartPushService 初始化完成');
     } catch (e, stack) {
       AppLogger.e('SmartPushService 初始化失败', error: e, stackTrace: stack);
