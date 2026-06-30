@@ -1745,7 +1745,7 @@
     }
   },
   "noFavoritesInPeriod": "本周期暂无喜爱记录，去给喜欢的笔记点个心吧！",
-  "mostFavoritedInPeriod": "本周期收藏最多",
+  "mostFavoritedInPeriod": "本周期珍藏数最多",
   "recentNotes": "最近笔记",
   "noNotesInPeriodForPeriod": "本{period}暂无笔记",
   "@noNotesInPeriodForPeriod": {
