@@ -8,11 +8,13 @@ class SmartPushFilterInput {
   final List<Quote> candidates;
   final DateTime now;
   final Set<String> recentlyPushedIds;
+  final Set<String> todayPushedIds;
 
   SmartPushFilterInput({
     required this.candidates,
     required this.now,
     required this.recentlyPushedIds,
+    this.todayPushedIds = const {},
   });
 }
 
@@ -76,21 +78,25 @@ SmartPushFilterResult runSmartPushFilters(SmartPushFilterInput input) {
       yearAgoQuotes,
       input.recentlyPushedIds,
       random,
+      strictExcludedIds: input.todayPushedIds,
     ),
     selectedSameTime: selectUnpushedNote(
       sameTimeQuotes,
       input.recentlyPushedIds,
       random,
+      strictExcludedIds: input.todayPushedIds,
     ),
     selectedMonthAgo: selectUnpushedNote(
       monthAgoQuotes,
       input.recentlyPushedIds,
       random,
+      strictExcludedIds: input.todayPushedIds,
     ),
     selectedWeekAgo: selectUnpushedNote(
       weekAgoQuotes,
       input.recentlyPushedIds,
       random,
+      strictExcludedIds: input.todayPushedIds,
     ),
     selectedRandom: null,
   );
@@ -182,9 +188,32 @@ List<Quote> filterRandomMemory(
 Quote? selectUnpushedNote(
   List<Quote> candidates,
   Set<String> recentlyPushedIds,
-  Random random,
-) {
-  final unpushed = candidates
+  Random random, {
+  Set<String> strictExcludedIds = const {},
+}) {
+  return selectSmartPushNote(
+    candidates,
+    recentlyPushedIds,
+    random,
+    strictExcludedIds: strictExcludedIds,
+  );
+}
+
+/// Selects a smart-push note while strictly excluding notes that must not be
+/// repeated in the current context, such as notes already pushed today.
+Quote? selectSmartPushNote(
+  List<Quote> candidates,
+  Set<String> recentlyPushedIds,
+  Random random, {
+  Set<String> strictExcludedIds = const {},
+}) {
+  final eligible = candidates
+      .where(
+        (note) => note.id == null || !strictExcludedIds.contains(note.id),
+      )
+      .toList();
+
+  final unpushed = eligible
       .where(
         (note) => note.id == null || !recentlyPushedIds.contains(note.id),
       )
@@ -195,13 +224,25 @@ Quote? selectUnpushedNote(
     return unpushed.first;
   }
 
-  if (candidates.isNotEmpty) {
-    final shuffled = List<Quote>.from(candidates);
+  if (eligible.isNotEmpty) {
+    final shuffled = List<Quote>.from(eligible);
     shuffled.shuffle(random);
     return shuffled.first;
   }
 
   return null;
+}
+
+double scoreSmartPushCandidate({
+  required int basePriority,
+  required Quote note,
+  double contentTypeScore = 0.5,
+}) {
+  final normalizedTypeScore = contentTypeScore.clamp(0.0, 1.0);
+  final engagementBonus = (normalizedTypeScore - 0.5) * 20;
+  final favoriteBonus = min(log(note.favoriteCount + 1) / ln2 * 4, 16);
+
+  return basePriority + engagementBonus + favoriteBonus;
 }
 
 List<TypedSmartPushCandidate> buildTypedCandidates({

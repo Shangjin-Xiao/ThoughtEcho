@@ -294,6 +294,11 @@ class SmartPushAnalytics extends ChangeNotifier {
     return true;
   }
 
+  /// 获取内容类型点击学习得分快照，供候选排序使用。
+  Future<Map<String, double>> getContentTypeScores() async {
+    return Map.unmodifiable(await _getContentScores());
+  }
+
   /// 消费疲劳预算（发送推送后调用）
   Future<void> consumeBudget(String contentType) async {
     final cost = contentTypeCosts[contentType] ?? 3.0;

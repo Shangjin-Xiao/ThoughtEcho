@@ -156,5 +156,97 @@ void main() {
       expect(locationCandidates.single.note.id, 'old-location');
       expect(weatherCandidates.single.note.id, 'old-weather');
     });
+
+    test('smart filter skips today-pushed notes when another match exists', () {
+      final yearAgo = _quote(
+        id: 'year',
+        date: DateTime(2025, 3, 13, 9, 0),
+      );
+      final olderYearAgo = _quote(
+        id: 'older-year',
+        date: DateTime(2024, 3, 13, 9, 0),
+      );
+
+      final result = runSmartPushFilters(
+        SmartPushFilterInput(
+          candidates: [yearAgo, olderYearAgo],
+          now: now,
+          recentlyPushedIds: const {},
+          todayPushedIds: const {'year'},
+        ),
+      );
+
+      expect(result.selectedYearAgo?.id, 'older-year');
+    });
+
+    test('custom typed candidates keep existing unweighted priorities', () {
+      final favoredMonthAgo = Quote(
+        id: 'favored',
+        content: 'note-favored',
+        date: DateTime(2026, 2, 13, 9, 0).toIso8601String(),
+        favoriteCount: 99,
+      );
+      final yearAgo = _quote(
+        id: 'year',
+        date: DateTime(2025, 3, 13, 9, 0),
+      );
+
+      final typed = buildTypedCandidates(
+        notes: [favoredMonthAgo, yearAgo],
+        now: now,
+        enabledPastNoteTypes: const {
+          PastNoteType.yearAgoToday,
+          PastNoteType.monthAgoToday,
+        },
+        recentPushedIds: const {},
+        random: Random(7),
+      );
+
+      expect(typed.first.note.id, 'year');
+      expect(typed.first.priority, 100);
+    });
+
+    test('strict exclusion returns no note instead of repeating same-day push',
+        () {
+      final onlyCandidate = _quote(
+        id: 'year',
+        date: DateTime(2025, 3, 13, 9, 0),
+      );
+
+      final selected = selectSmartPushNote(
+        [onlyCandidate],
+        const {},
+        Random(6),
+        strictExcludedIds: const {'year'},
+      );
+
+      expect(selected, isNull);
+    });
+
+    test('candidate score includes favorite count and content engagement', () {
+      final plain = _quote(
+        id: 'plain',
+        date: DateTime(2026, 2, 13, 9, 0),
+      );
+      final favored = Quote(
+        id: 'favored',
+        content: 'note-favored',
+        date: DateTime(2026, 2, 13, 9, 0).toIso8601String(),
+        favoriteCount: 8,
+      );
+
+      final plainScore = scoreSmartPushCandidate(
+        basePriority: 75,
+        note: plain,
+        contentTypeScore: 0.5,
+      );
+      final favoredScore = scoreSmartPushCandidate(
+        basePriority: 70,
+        note: favored,
+        contentTypeScore: 0.8,
+      );
+
+      expect(favoredScore, greaterThan(plainScore));
+    });
   });
 }
