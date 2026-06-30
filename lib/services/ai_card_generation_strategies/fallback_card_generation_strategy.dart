@@ -100,7 +100,8 @@ class FallbackCardGenerationStrategy implements CardGenerationStrategy {
         case DatabaseService.defaultCategoryIdMusic: // 音乐 -> 情感/日记
           candidate = CardType.emotional;
           break;
-        case DatabaseService.defaultCategoryIdInternet: // 网络 -> 开发者/代码 (通常是网络段子或技术梗)
+        case DatabaseService
+              .defaultCategoryIdInternet: // 网络 -> 开发者/代码 (通常是网络段子或技术梗)
           candidate = CardType.dev;
           break;
         case DatabaseService.defaultCategoryIdMovie: // 影视 -> 引用/剧照感

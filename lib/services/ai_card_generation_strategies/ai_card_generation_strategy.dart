@@ -38,8 +38,8 @@ class AiCardGenerationStrategy implements CardGenerationStrategy {
       );
     }
 
-    final formattedDate = CardGenerationUtils.formatDate(note.date,
-        languageCode: languageCode);
+    final formattedDate =
+        CardGenerationUtils.formatDate(note.date, languageCode: languageCode);
 
     // 1. 智能选择最适合的提示词
     var prompt = _selectBestPrompt(
