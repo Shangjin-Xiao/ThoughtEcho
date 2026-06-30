@@ -178,6 +178,7 @@ class _HomePageState extends State<HomePage>
       GlobalKey<SettingsPageState>();
   bool _homeGuidePending = false;
   bool _noteGuidePending = false;
+  Timer? _trashSnackBarTimer;
   bool _settingsGuidePending = false;
   bool _trashGuideScheduled = false;
   String? _lastConsumedExcerptText;
@@ -406,6 +407,7 @@ class _HomePageState extends State<HomePage>
 
   @override
   void dispose() {
+    _trashSnackBarTimer?.cancel();
     _aiTabController.dispose();
     // 移除生命周期观察器
     WidgetsBinding.instance.removeObserver(this);
@@ -1479,15 +1481,18 @@ class _HomePageState extends State<HomePage>
       await db.deleteQuote(quoteId);
       if (!mounted) return;
       // 先清除旧 SnackBar，避免多次删除时堆叠
+      _trashSnackBarTimer?.cancel();
+      const trashSnackBarDuration = Duration(seconds: 3);
       messenger.clearSnackBars();
-      messenger.showSnackBar(
+      final snackBarController = messenger.showSnackBar(
         SnackBar(
           content: Text(l10n.noteMovedToTrash),
-          duration: const Duration(seconds: 4),
+          duration: trashSnackBarDuration,
           behavior: SnackBarBehavior.floating,
           action: SnackBarAction(
             label: l10n.undoDelete,
             onPressed: () async {
+              _trashSnackBarTimer?.cancel();
               try {
                 await db.restoreQuote(quoteId);
                 if (!mounted) return;
@@ -1511,6 +1516,11 @@ class _HomePageState extends State<HomePage>
           ),
         ),
       );
+      _trashSnackBarTimer = Timer(trashSnackBarDuration, () {
+        if (mounted) {
+          snackBarController.close();
+        }
+      });
       // 显示回收站位置引导（仅第一次删除笔记时）
       _scheduleTrashLocationGuide();
     } catch (e, stackTrace) {

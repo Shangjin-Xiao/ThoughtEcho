@@ -151,6 +151,27 @@ class _TrashPageState extends State<TrashPage> {
     await _loadTrashQuotes(reset: false);
   }
 
+  bool _removeQuoteFromTrash(String id) {
+    final remainingQuotes =
+        _trashQuotes.where((quote) => quote.id != id).toList();
+    final remainingTotal =
+        _trashTotalCount > 0 ? _trashTotalCount - 1 : remainingQuotes.length;
+
+    _trashQuotes = remainingQuotes;
+    _trashTotalCount = remainingTotal;
+    if (_trashQuotes.length >= _trashTotalCount) {
+      _hasMore = false;
+    }
+    return _trashQuotes.isEmpty && _trashTotalCount > 0;
+  }
+
+  Future<void> _loadNextPageIfVisibleListWasDrained(bool shouldLoad) async {
+    if (!shouldLoad || _isLoadingMore || _isLoading) {
+      return;
+    }
+    await _loadTrashQuotes(reset: false);
+  }
+
   String _deletedAtText(BuildContext context, Quote quote) {
     final l10n = AppLocalizations.of(context);
     final deletedAt = quote.deletedAt;
@@ -287,17 +308,20 @@ class _TrashPageState extends State<TrashPage> {
       if (!mounted) {
         return;
       }
+      late final bool shouldLoadNextPage;
       setState(() {
-        _trashQuotes = _trashQuotes.where((quote) => quote.id != id).toList();
-        _trashTotalCount = (_trashTotalCount - 1).clamp(0, _trashTotalCount);
+        shouldLoadNextPage = _removeQuoteFromTrash(id);
       });
+      await _loadNextPageIfVisibleListWasDrained(shouldLoadNextPage);
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context).noteRestored),
           behavior: SnackBarBehavior.floating,
         ),
       );
-      await _loadTrashQuotes(reset: true);
     } catch (e, stackTrace) {
       logError(
         '恢复回收站笔记失败: $e',
@@ -357,11 +381,11 @@ class _TrashPageState extends State<TrashPage> {
       if (!mounted) {
         return;
       }
+      late final bool shouldLoadNextPage;
       setState(() {
-        _trashQuotes = _trashQuotes.where((quote) => quote.id != id).toList();
-        _trashTotalCount = (_trashTotalCount - 1).clamp(0, _trashTotalCount);
+        shouldLoadNextPage = _removeQuoteFromTrash(id);
       });
-      await _loadTrashQuotes(reset: true);
+      await _loadNextPageIfVisibleListWasDrained(shouldLoadNextPage);
     } catch (e, stackTrace) {
       logError(
         '永久删除回收站笔记失败: $e',
@@ -391,7 +415,7 @@ class _TrashPageState extends State<TrashPage> {
     if (_isRunningAction ||
         _isLoadingMore ||
         _isLoading ||
-        _trashQuotes.isEmpty) {
+        _displayTrashCount == 0) {
       return;
     }
     final l10n = AppLocalizations.of(context);
@@ -435,7 +459,6 @@ class _TrashPageState extends State<TrashPage> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      await _loadTrashQuotes(reset: true);
     } catch (e, stackTrace) {
       logError(
         '清空回收站失败: $e',
@@ -467,13 +490,12 @@ class _TrashPageState extends State<TrashPage> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final retentionDays = context.watch<SettingsService>().trashRetentionDays;
+    final hasTrash = _displayTrashCount > 0;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _trashQuotes.isEmpty
-              ? l10n.trash
-              : l10n.trashCount(_displayTrashCount),
+          hasTrash ? l10n.trashCount(_displayTrashCount) : l10n.trash,
         ),
         actions: [
           IconButton(
@@ -481,7 +503,7 @@ class _TrashPageState extends State<TrashPage> {
             onPressed: _showTrashRetentionSelector,
             tooltip: l10n.trashRetentionPeriod,
           ),
-          if (_trashQuotes.isNotEmpty)
+          if (hasTrash)
             TextButton(
               onPressed: (_isLoadingMore || _isLoading || _isRunningAction)
                   ? null
@@ -494,7 +516,7 @@ class _TrashPageState extends State<TrashPage> {
           ? const Center(child: CircularProgressIndicator())
           : _loadError
               ? _buildErrorState(l10n)
-              : _trashQuotes.isEmpty
+              : !hasTrash
                   ? _buildEmptyState(l10n, colorScheme, theme)
                   : RefreshIndicator(
                       onRefresh: () => _loadTrashQuotes(reset: true),
