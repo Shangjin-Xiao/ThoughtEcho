@@ -66,6 +66,37 @@ void main() {
       expect(widgets.first, isA<pw.Container>());
     });
 
+    test('DeltaToPdfParser renders Quill list lines with PDF markers',
+        () async {
+      final deltaJson =
+          '[{"insert":"First task"},{"insert":"\\n","attributes":{"list":"checked"}},{"insert":"Second bullet"},{"insert":"\\n","attributes":{"list":"bullet"}},{"insert":"Third ordered"},{"insert":"\\n","attributes":{"list":"ordered"}}]';
+      final quote = Quote(
+        content: 'First task\nSecond bullet\nThird ordered',
+        date: '2026-05-31',
+        deltaContent: deltaJson,
+      );
+      final font = pw.Font.helvetica();
+      final fontSet = PdfFontSet(
+        regular: font,
+        bold: pw.Font.helveticaBold(),
+        italic: pw.Font.helveticaOblique(),
+        boldItalic: pw.Font.helveticaBoldOblique(),
+      );
+
+      final widgets = await DeltaToPdfParser.parse(quote, fontSet);
+
+      expect(widgets, hasLength(3));
+      expect(widgets, everyElement(isA<pw.Container>()));
+    });
+
+    test('DeltaToPdfParser strips PDF-hostile control characters from body',
+        () {
+      expect(
+        DeltaToPdfParser.sanitizeTextForPdf('✈️ family👨‍👩‍👧 \uFFFC'),
+        '✈ family👨👩👧 ',
+      );
+    });
+
     test(
         'PdfFontService returns default system font if local and network fonts fail',
         () async {

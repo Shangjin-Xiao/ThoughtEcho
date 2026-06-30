@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+
+import 'package:meta/meta.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/pdf_font_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
@@ -34,6 +37,7 @@ class DeltaToPdfParser {
     try {
       final List<dynamic> ops = json.decode(deltaStr);
       List<pw.InlineSpan> currentSpans = [];
+      var orderedListIndex = 1;
 
       for (final op in ops) {
         if (op is! Map<String, dynamic>) continue;
@@ -63,46 +67,47 @@ class DeltaToPdfParser {
         // 2. 处理普通样式文本段落
         if (insert is String) {
           if (insert == '\n') {
-            if (currentSpans.isNotEmpty) {
-              widgets.add(pw.Container(
-                margin: const pw.EdgeInsets.only(bottom: 6),
-                child: pw.RichText(text: pw.TextSpan(children: currentSpans)),
-              ));
-              currentSpans = [];
-            } else {
-              widgets.add(pw.SizedBox(height: 8));
-            }
+            orderedListIndex = _flushLine(
+              widgets: widgets,
+              spans: currentSpans,
+              lineAttributes: attributes,
+              fontSet: fontSet,
+              orderedListIndex: orderedListIndex,
+            );
+            currentSpans = [];
             continue;
           }
 
           final lines = insert.split('\n');
           for (int i = 0; i < lines.length; i++) {
-            final lineText = lines[i];
+            final lineText = sanitizeTextForPdf(lines[i]);
             if (lineText.isNotEmpty) {
               final span = _buildTextSpan(lineText, attributes, fontSet);
               currentSpans.add(span);
             }
 
             if (i < lines.length - 1) {
-              if (currentSpans.isNotEmpty) {
-                widgets.add(pw.Container(
-                  margin: const pw.EdgeInsets.only(bottom: 6),
-                  child: pw.RichText(text: pw.TextSpan(children: currentSpans)),
-                ));
-                currentSpans = [];
-              } else {
-                widgets.add(pw.SizedBox(height: 8));
-              }
+              orderedListIndex = _flushLine(
+                widgets: widgets,
+                spans: currentSpans,
+                lineAttributes: attributes,
+                fontSet: fontSet,
+                orderedListIndex: orderedListIndex,
+              );
+              currentSpans = [];
             }
           }
         }
       }
 
       if (currentSpans.isNotEmpty) {
-        widgets.add(pw.Container(
-          margin: const pw.EdgeInsets.only(bottom: 6),
-          child: pw.RichText(text: pw.TextSpan(children: currentSpans)),
-        ));
+        _flushLine(
+          widgets: widgets,
+          spans: currentSpans,
+          lineAttributes: const {},
+          fontSet: fontSet,
+          orderedListIndex: orderedListIndex,
+        );
       }
     } catch (e, stack) {
       logError("DeltaToPdfParser 解析异常", error: e, stackTrace: stack);
@@ -124,6 +129,126 @@ class DeltaToPdfParser {
     }
 
     return widgets;
+  }
+
+  @visibleForTesting
+  static String sanitizeTextForPdf(String text) {
+    if (text.isEmpty) return text;
+    final sanitizedRunes = text.runes.where((rune) {
+      if (rune == 0xFFFC) return false; // Object replacement character.
+      if (rune == 0x200D) return false; // Zero-width joiner.
+      if (rune >= 0xFE00 && rune <= 0xFE0F) return false;
+      if (rune >= 0xE0100 && rune <= 0xE01EF) return false;
+      return true;
+    });
+    return String.fromCharCodes(sanitizedRunes);
+  }
+
+  static int _flushLine({
+    required List<pw.Widget> widgets,
+    required List<pw.InlineSpan> spans,
+    required Map<String, dynamic> lineAttributes,
+    required PdfFontSet fontSet,
+    required int orderedListIndex,
+  }) {
+    final listType = lineAttributes['list']?.toString();
+    if (spans.isEmpty && listType == null) {
+      widgets.add(pw.SizedBox(height: 8));
+      return 1;
+    }
+
+    final line = pw.Container(
+      margin: const pw.EdgeInsets.only(bottom: 6),
+      child: _buildLineContent(
+        spans,
+        listType: listType,
+        fontSet: fontSet,
+        orderedListIndex: orderedListIndex,
+      ),
+    );
+    widgets.add(line);
+
+    if (listType == 'ordered') {
+      return orderedListIndex + 1;
+    }
+    return 1;
+  }
+
+  static pw.Widget _buildLineContent(
+    List<pw.InlineSpan> spans, {
+    required String? listType,
+    required PdfFontSet fontSet,
+    required int orderedListIndex,
+  }) {
+    final text = pw.RichText(text: pw.TextSpan(children: List.of(spans)));
+    final marker = switch (listType) {
+      'bullet' => _bulletMarker(),
+      'ordered' => _textMarker('$orderedListIndex.', fontSet),
+      'checked' => _checkboxMarker(checked: true),
+      'unchecked' => _checkboxMarker(checked: false),
+      _ => null,
+    };
+
+    if (marker == null) {
+      return text;
+    }
+
+    return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Container(
+          width: 18,
+          alignment: pw.Alignment.topRight,
+          padding: const pw.EdgeInsets.only(top: 2),
+          child: marker,
+        ),
+        pw.SizedBox(width: 6),
+        pw.Expanded(child: text),
+      ],
+    );
+  }
+
+  static pw.Widget _bulletMarker() {
+    return pw.Container(
+      width: 4,
+      height: 4,
+      margin: const pw.EdgeInsets.only(top: 4),
+      decoration: const pw.BoxDecoration(
+        color: PdfColors.black,
+        shape: pw.BoxShape.circle,
+      ),
+    );
+  }
+
+  static pw.Widget _textMarker(String text, PdfFontSet fontSet) {
+    return pw.Text(
+      text,
+      style: pw.TextStyle(
+        font: fontSet.regular,
+        fontFallback: fontSet.fallbackFonts,
+        fontSize: 10,
+      ),
+    );
+  }
+
+  static pw.Widget _checkboxMarker({required bool checked}) {
+    return pw.Container(
+      width: 9,
+      height: 9,
+      margin: const pw.EdgeInsets.only(top: 1.5),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.black, width: 0.8),
+      ),
+      child: checked
+          ? pw.Center(
+              child: pw.Container(
+                width: 5,
+                height: 5,
+                color: PdfColors.black,
+              ),
+            )
+          : null,
+    );
   }
 
   static pw.InlineSpan _buildTextSpan(
