@@ -307,3 +307,10 @@ worktrees/
 
 # MCP configs
 .mcp.json
+
+# AI agent runtime and temporary files
+agent/
+.agents/orchestrator/
+.agents/sentinel/
+.agents/ORIGINAL_REQUEST.md
+
