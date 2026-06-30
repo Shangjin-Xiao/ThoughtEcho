@@ -10,6 +10,7 @@ import '../settings_service.dart';
 import 'ai_card_prompt_selector.dart';
 import 'card_generation_strategy.dart';
 import 'card_generation_utils.dart';
+import 'fallback_card_generation_strategy.dart';
 import 'svg_processing_isolate.dart';
 
 class AiCardGenerationStrategy implements CardGenerationStrategy {
@@ -33,8 +34,15 @@ class AiCardGenerationStrategy implements CardGenerationStrategy {
     }
 
     if (excludeType == CardType.knowledge) {
-      throw const AICardGenerationException(
-        'AI 路径无法满足 excludeType=knowledge，请回退到其他策略',
+      AppLogger.i('AI卡片类型（knowledge）被排斥，AI策略自适应回退至Fallback策略',
+          source: 'AICardGeneration');
+      return FallbackCardGenerationStrategy().generate(
+        note: note,
+        brandName: brandName,
+        languageCode: languageCode,
+        customStyle: customStyle,
+        isRegeneration: isRegeneration,
+        excludeType: excludeType,
       );
     }
 
