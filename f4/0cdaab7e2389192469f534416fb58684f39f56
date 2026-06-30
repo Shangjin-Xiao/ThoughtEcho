@@ -1,0 +1,22 @@
+test/widget/add_note_dialog_focus_timing_test.dart
+  s_4f149dc74cc3a1::t_39b521ffc4f6e6 271-328
+lib/widgets/add_note_dialog.dart
+  s_4f149dc74cc3a1::t_cb58c1e780c2d4 325-329,514-515,555-560
+  s_4f149dc74cc3a1::t_d10fc124c74090 561-562
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "f40cdaab7e2389192469f534416fb58684f39f56",
+  "prompts": {},
+  "sessions": {
+    "s_4f149dc74cc3a1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1761-ce9b-7ef0-9300-a6222c87c53f",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
