@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show BuildContext;
 import 'dart:io';
 
 // 条件导入：Web平台使用stub实现，其他平台使用gal
@@ -162,7 +163,7 @@ class AICardGenerationService extends ChangeNotifier {
     String fileNamePrefix = 'ThoughtEcho_Card',
     double scaleFactor = 2.0,
     ExportRenderMode renderMode = ExportRenderMode.contain,
-    dynamic context,
+    BuildContext? context,
   }) async {
     try {
       AppLogger.i(
@@ -185,14 +186,8 @@ class AICardGenerationService extends ChangeNotifier {
       }
 
       // 先渲染图片（此时尚未出现 async gap，满足 use_build_context_synchronously 规范）
-      dynamic safeContext = context;
-      if (context != null) {
-        try {
-          if (context.mounted == false) {
-            safeContext = null;
-          }
-        } catch (_) {}
-      }
+      final safeContext =
+          (context != null && !context.mounted) ? null : context;
 
       // 关键修复：直接使用原始 svgContent，不做任何标准化处理
       // 这样保证保存时的渲染与预览完全一致（预览使用 SVGCardWidget 直接渲染原始 SVG）
@@ -275,7 +270,7 @@ class AICardGenerationService extends ChangeNotifier {
     Function(int current, int total)? onProgress,
     double scaleFactor = 2.0,
     ExportRenderMode renderMode = ExportRenderMode.contain,
-    dynamic context,
+    BuildContext? context,
   }) async {
     final savedFiles = <String>[];
 

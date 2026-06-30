@@ -199,13 +199,24 @@ String _ensureMetadataPresenceStatic(
       location != null && lower.contains(location.toLowerCase());
   final hasWeather = weather != null && lower.contains(weather.toLowerCase());
   final hasBrand = lower.contains(brandName.toLowerCase());
+  final hasAuthor = author != null && lower.contains(author.toLowerCase());
+  final hasSource = source != null && lower.contains(source.toLowerCase());
+  final hasDayPeriod =
+      dayPeriod != null && lower.contains(dayPeriod.toLowerCase());
+
+  // 只要有任何必需或传入的非空元数据字段缺失，就认为需要补全
   final need = !hasBrand ||
       (date != null && !hasDate) ||
       (location != null && !hasLocation) ||
-      (weather != null && !hasWeather);
+      (weather != null && !hasWeather) ||
+      (author != null && !hasAuthor) ||
+      (source != null && !hasSource) ||
+      (dayPeriod != null && !hasDayPeriod);
+
   if (!need) {
-    return svg; // 必需元数据已存在
+    return svg; // 所有被提供的元数据已在原SVG中存在
   }
+
   // 简单插入在 </svg> 前
   final metaParts = <String>[];
   // 规则：程序自动补全 -> 根据语言本地化
@@ -214,17 +225,25 @@ String _ensureMetadataPresenceStatic(
   final localizedDayPeriod = CardGenerationUtils.localizeDayPeriod(dayPeriod,
       languageCode: languageCode);
 
-  if (date != null) metaParts.add(date); // 已是格式化的
-  if (location != null) metaParts.add(location); // 用户输入不改动
-  if (localizedWeather != null) {
+  // 关键优化：仅对原SVG中没有包含的非空字段进行补全，避免与大模型自渲染的内容发生重合
+  if (date != null && !hasDate) metaParts.add(date);
+  if (location != null && !hasLocation) metaParts.add(location);
+  if (localizedWeather != null && !hasWeather) {
     metaParts.add(
       temperature != null ? '$localizedWeather $temperature' : localizedWeather,
     );
   }
-  if (author != null) metaParts.add(author);
-  if (source != null && source != author) metaParts.add(source);
-  if (localizedDayPeriod != null) metaParts.add(localizedDayPeriod);
-  metaParts.add(brandName);
+  if (author != null && !hasAuthor) metaParts.add(author);
+  if (source != null && source != author && !hasSource) metaParts.add(source);
+  if (localizedDayPeriod != null && !hasDayPeriod) {
+    metaParts.add(localizedDayPeriod);
+  }
+  if (!hasBrand) metaParts.add(brandName);
+
+  if (metaParts.isEmpty) {
+    return svg;
+  }
+
   final meta = metaParts.join(' · ');
   final (width, height) = _inferSvgIntrinsicSize(svg);
   final footerX = (double.tryParse(width) ?? 400) / 2;
