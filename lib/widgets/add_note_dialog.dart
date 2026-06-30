@@ -322,13 +322,11 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       }
     }
 
-    // 记录自动填充后的初始状态（用于检测未保存内容）
-    // 这些值是自动预填充的，不应被视为用户输入
-    _initialContent = _contentController.text;
-    _initialAuthor = _authorController.text;
-    _initialWork = _workController.text;
-    _initialTagIds = List.from(_selectedTagIds);
-    _initialColorHex = _selectedColorHex;
+    if (widget.initialQuote == null) {
+      // 记录自动填充后的初始状态（用于检测未保存内容）
+      // 这些值是自动预填充的，不应被视为用户输入
+      _captureInitialState();
+    }
 
     // 优化：完全延迟所有服务初始化和数据库监听器，避免阻塞首次绘制
     // 使用 postFrameCallback + delay 确保首帧渲染完成后再执行重量级操作
@@ -513,6 +511,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         );
       }
 
+      _captureInitialState();
+
       // 异步获取完整的 Quote 信息（防止列表页传递的是不完整的对象）
       _isLoadingFullQuote = true;
       _fetchFullQuote().whenComplete(() {
@@ -550,6 +550,14 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         }),
       );
     }
+  }
+
+  void _captureInitialState() {
+    _initialContent = _contentController.text;
+    _initialAuthor = _authorController.text;
+    _initialWork = _workController.text;
+    _initialTagIds = List.from(_selectedTagIds);
+    _initialColorHex = _selectedColorHex;
   }
 
   /// 异步获取完整的 Quote 对象
