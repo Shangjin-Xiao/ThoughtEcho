@@ -70,6 +70,7 @@ class _FakeDatabaseService extends ChangeNotifier implements DatabaseService {
   String? lastPermanentlyDeletedId;
   bool emptyTrashCalled = false;
   int getDeletedQuotesCallCount = 0;
+  int? maxItemsPerFetch;
   Completer<List<Quote>>? delayedDeletedQuotesAfterInitialLoad;
 
   @override
@@ -83,7 +84,10 @@ class _FakeDatabaseService extends ChangeNotifier implements DatabaseService {
     if (getDeletedQuotesCallCount > 1 && delayedFetch != null) {
       return delayedFetch.future;
     }
-    final end = (offset + limit).clamp(0, _quotes.length);
+    final effectiveLimit = maxItemsPerFetch == null
+        ? limit
+        : (limit < maxItemsPerFetch! ? limit : maxItemsPerFetch!);
+    final end = (offset + effectiveLimit).clamp(0, _quotes.length);
     if (offset >= _quotes.length) {
       return const [];
     }
@@ -137,7 +141,7 @@ Quote _buildDeletedRichQuote({
     editSource: 'fullscreen',
     deltaContent: jsonEncode([
       {
-        'insert': '今天拍了一张照片并补了几句说明\n',
+        'insert': '$content\n',
       },
       {
         'insert': {
@@ -300,6 +304,40 @@ void main() {
       expect(find.text(l10n.noteRestored), findsOneWidget);
 
       databaseService.delayedDeletedQuotesAfterInitialLoad?.complete(const []);
+      await _disposeApp(tester);
+    });
+
+    testWidgets('恢复已加载的最后一条时继续补拉未加载回收站数据', (tester) async {
+      final databaseService = _FakeDatabaseService(
+        quotes: [
+          _buildDeletedRichQuote(content: '第一页笔记'),
+          _buildDeletedRichQuote(
+            id: 'trash-note-2',
+            content: '下一页笔记',
+            deletedAt: DateTime(2026, 4, 4, 12),
+          ),
+        ],
+      )..maxItemsPerFetch = 1;
+
+      await tester.pumpWidget(_buildTestApp(databaseService: databaseService));
+      await tester.pumpAndSettle();
+
+      final context = tester.element(find.byType(TrashPage));
+      final l10n = AppLocalizations.of(context);
+
+      expect(find.byType(TrashQuoteCard), findsOneWidget);
+      expect(find.text(l10n.trashCount(2)), findsOneWidget);
+
+      await tester.tap(find.text(l10n.restore));
+      await tester.pumpAndSettle();
+
+      expect(databaseService.lastRestoredId, 'trash-note-1');
+      expect(find.byType(TrashQuoteCard), findsOneWidget);
+      final card = tester.widget<TrashQuoteCard>(find.byType(TrashQuoteCard));
+      expect(card.quote.id, 'trash-note-2');
+      expect(find.text(l10n.trashCount(1)), findsOneWidget);
+      expect(find.text(l10n.trashEmpty), findsNothing);
+
       await _disposeApp(tester);
     });
 

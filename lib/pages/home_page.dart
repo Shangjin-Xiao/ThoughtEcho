@@ -179,7 +179,6 @@ class _HomePageState extends State<HomePage>
   bool _homeGuidePending = false;
   bool _noteGuidePending = false;
   Timer? _trashSnackBarTimer;
-  int _trashSnackBarToken = 0;
   bool _settingsGuidePending = false;
   bool _trashGuideScheduled = false;
   String? _lastConsumedExcerptText;
@@ -1483,10 +1482,9 @@ class _HomePageState extends State<HomePage>
       if (!mounted) return;
       // 先清除旧 SnackBar，避免多次删除时堆叠
       _trashSnackBarTimer?.cancel();
-      final snackBarToken = ++_trashSnackBarToken;
       const trashSnackBarDuration = Duration(seconds: 3);
       messenger.clearSnackBars();
-      messenger.showSnackBar(
+      final snackBarController = messenger.showSnackBar(
         SnackBar(
           content: Text(l10n.noteMovedToTrash),
           duration: trashSnackBarDuration,
@@ -1495,7 +1493,6 @@ class _HomePageState extends State<HomePage>
             label: l10n.undoDelete,
             onPressed: () async {
               _trashSnackBarTimer?.cancel();
-              _trashSnackBarToken++;
               try {
                 await db.restoreQuote(quoteId);
                 if (!mounted) return;
@@ -1520,8 +1517,8 @@ class _HomePageState extends State<HomePage>
         ),
       );
       _trashSnackBarTimer = Timer(trashSnackBarDuration, () {
-        if (mounted && snackBarToken == _trashSnackBarToken) {
-          messenger.hideCurrentSnackBar(reason: SnackBarClosedReason.timeout);
+        if (mounted) {
+          snackBarController.close();
         }
       });
       // 显示回收站位置引导（仅第一次删除笔记时）
