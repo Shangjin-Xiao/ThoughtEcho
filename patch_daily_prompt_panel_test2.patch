@@ -1,0 +1,21 @@
+--- test/widget/pages/home/daily_prompt_panel_test.dart
++++ test/widget/pages/home/daily_prompt_panel_test.dart
+@@ -9,8 +9,7 @@
+ import 'package:thoughtecho/services/location_service.dart';
+ import 'package:thoughtecho/services/settings_service.dart';
+ import 'package:thoughtecho/services/weather_service.dart';
+-import 'package:thoughtecho/models/app_settings.dart';
+ import 'package:thoughtecho/models/ai_settings.dart';
+ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+
+ class MockAIService extends ChangeNotifier implements AIService {
+@@ -41,8 +40,7 @@
+   bool todayThoughtsUseAI = true;
+
+   @override
+-  AISettings get aiSettings =>
+-      AISettings(apiUrl: 'https://api.test.com', model: 'test-model');
++  AISettings get aiSettings => AISettings(apiUrl: 'https://api.test.com', model: 'test-model', apiKey: 'test-key');
+
+   @override
+   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

@@ -10,8 +10,6 @@ import 'package:thoughtecho/services/ai_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/services/excerpt_intent_service.dart';
-import 'package:thoughtecho/models/quote_model.dart';
-import 'package:thoughtecho/models/note_category.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/widgets/daily_quote_view.dart';
 import 'package:thoughtecho/pages/home/daily_prompt_panel.dart';
@@ -22,16 +20,6 @@ import 'package:thoughtecho/pages/settings_page.dart';
 class MockDatabaseService extends ChangeNotifier implements DatabaseService {
   @override
   bool isInitialized = true;
-  @override
-  Future<void> initDatabase() async {}
-  @override
-  Future<List<NoteCategory>> getTags() async => [];
-  @override
-  Future<List<Quote>> searchQuotes(String query,
-          {List<String>? tagIds,
-          String sortBy = 'time',
-          bool ascending = false}) async =>
-      [];
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

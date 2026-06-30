@@ -1,0 +1,11 @@
+--- test/widget/pages/home_page_test.dart
++++ test/widget/pages/home_page_test.dart
+@@ -10,8 +10,6 @@
+ import 'package:thoughtecho/services/location_service.dart';
+ import 'package:thoughtecho/services/weather_service.dart';
+ import 'package:thoughtecho/services/excerpt_intent_service.dart';
+-import 'package:thoughtecho/models/quote_model.dart';
+-import 'package:thoughtecho/models/note_category.dart';
+ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+ import 'package:thoughtecho/widgets/daily_quote_view.dart';
+ import 'package:thoughtecho/pages/home/daily_prompt_panel.dart';

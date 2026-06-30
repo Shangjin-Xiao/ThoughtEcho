@@ -9,6 +9,7 @@ import 'package:thoughtecho/services/insight_history_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
+import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/ai_settings.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
@@ -43,7 +44,6 @@ class MockSettingsService extends ChangeNotifier implements SettingsService {
   AISettings get aiSettings => AISettings(
         apiUrl: 'https://api.test.com',
         model: 'test-model',
-        apiKey: 'test-key',
       );
 
   @override

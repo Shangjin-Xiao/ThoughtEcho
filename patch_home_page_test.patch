@@ -1,0 +1,37 @@
+--- test/widget/pages/home_page_test.dart
++++ test/widget/pages/home_page_test.dart
+@@ -10,7 +10,8 @@
+ import 'package:thoughtecho/services/location_service.dart';
+ import 'package:thoughtecho/services/weather_service.dart';
+ import 'package:thoughtecho/services/excerpt_intent_service.dart';
+-import 'package:thoughtecho/models/settings_models.dart';
++import 'package:thoughtecho/models/app_settings.dart';
++import 'package:thoughtecho/models/ai_settings.dart';
+ import 'package:thoughtecho/models/quote_model.dart';
+ import 'package:thoughtecho/models/note_category.dart';
+ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+@@ -23,10 +24,6 @@
+ class MockDatabaseService extends ChangeNotifier implements DatabaseService {
+   @override
+   bool isInitialized = true;
+-  @override
+-  Future<void> initDatabase() async {}
+-  @override
+-  Future<List<NoteCategory>> getTags() async => [];
+-  @override
+-  Future<List<Quote>> searchQuotes(String query, {List<String>? tagIds, String sortBy = 'time', bool ascending = false}) async => [];
+   @override
+   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+ }
+@@ -35,10 +32,6 @@
+   @override
+-  AppSettings get appSettings => AppSettings();
+   @override
+   bool get showFavoriteButton => true;
+   @override
+   bool get todayThoughtsUseAI => false;
+-  @override
+-  AISettings get aiSettings => AISettings(apiUrl: '', model: '');
+   @override
+   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+ }

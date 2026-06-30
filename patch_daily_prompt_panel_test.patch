@@ -1,0 +1,21 @@
+--- test/widget/pages/home/daily_prompt_panel_test.dart
++++ test/widget/pages/home/daily_prompt_panel_test.dart
+@@ -9,7 +9,8 @@
+ import 'package:thoughtecho/services/location_service.dart';
+ import 'package:thoughtecho/services/settings_service.dart';
+ import 'package:thoughtecho/services/weather_service.dart';
+-import 'package:thoughtecho/models/settings_models.dart';
++import 'package:thoughtecho/models/app_settings.dart';
++import 'package:thoughtecho/models/ai_settings.dart';
+ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+
+ class MockAIService extends ChangeNotifier implements AIService {
+@@ -23,7 +24,7 @@
+     String? city,
+     String? weather,
+     String? temperature,
+-    List<Map<String, dynamic>> historicalInsights = const [],
++    String? historicalInsights,
+   }) {
+     return _mockStream ?? Stream.value('This is a test prompt.');
+   }

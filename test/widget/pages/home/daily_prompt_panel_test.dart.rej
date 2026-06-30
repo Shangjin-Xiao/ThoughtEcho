@@ -1,0 +1,12 @@
+--- daily_prompt_panel_test.dart
++++ daily_prompt_panel_test.dart
+@@ -40,8 +39,7 @@
+   bool todayThoughtsUseAI = true;
+
+   @override
+-  AISettings get aiSettings =>
+-      AISettings(apiUrl: 'https://api.test.com', model: 'test-model');
++  AISettings get aiSettings => AISettings(apiUrl: 'https://api.test.com', model: 'test-model', apiKey: 'test-key');
+
+   @override
+   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
