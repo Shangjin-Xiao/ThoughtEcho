@@ -1,0 +1,21 @@
+lib/services/ai_card_generation_strategies/ai_card_prompt_selector.dart
+  s_46f1cacd811be1::t_7fc2e17a2e9dad 62-70,81-112,127-158
+lib/services/ai_card_generation_strategies/svg_processing_isolate.dart
+  s_46f1cacd811be1::t_9169aea53575a5 182-193,209-235,241,244
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "aca1b552fa1580622fe4381d224947ba4effb494",
+  "prompts": {},
+  "sessions": {
+    "s_46f1cacd811be1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1674-0605-7b51-bca3-f2a87174e6dd",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
