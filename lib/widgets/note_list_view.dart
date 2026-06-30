@@ -134,6 +134,7 @@ class NoteListViewState extends State<NoteListView> {
 
   /// 保存/修改笔记后触发入场动画的 ID 计数，每次触发递增以确保编辑场景下也能重播
   final Map<String, int> _animatingQuoteVersions = {};
+  final Set<String> _structuralInsertQuoteIds = {};
   final Map<String, Timer> _animationTimers = {};
 
   /// 删除笔记时触发缩小渐隐动画的 ID 集合
@@ -645,13 +646,20 @@ class NoteListViewState extends State<NoteListView> {
   void triggerInsertAnimation(String id) {
     if (!mounted) return;
     _animationTimers[id]?.cancel();
+    final animateListInsertion = !_quotes.any((quote) => quote.id == id);
     setState(() {
       _animatingQuoteVersions[id] = (_animatingQuoteVersions[id] ?? 0) + 1;
+      if (animateListInsertion) {
+        _structuralInsertQuoteIds.add(id);
+      } else {
+        _structuralInsertQuoteIds.remove(id);
+      }
     });
     _animationTimers[id] = Timer(const Duration(milliseconds: 1500), () {
       if (mounted) {
         setState(() {
           _animatingQuoteVersions.remove(id);
+          _structuralInsertQuoteIds.remove(id);
           _animationTimers.remove(id);
         });
       }

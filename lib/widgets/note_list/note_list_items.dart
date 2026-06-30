@@ -9,6 +9,9 @@ extension _NoteListItemsExtension on NoteListViewState {
     _firstOpenScrollPerfEnabled = context.select<SettingsService, bool>(
       (s) => s.appSettings.developerMode && s.enableFirstOpenScrollPerfMonitor,
     );
+    final noteInsertAnimationType = context.select<SettingsService, String>(
+      (s) => s.noteInsertAnimationType,
+    );
     if (_firstOpenScrollPerfEnabled) {
       _noteListBuildCount++;
     }
@@ -192,7 +195,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                             child: child,
                           );
                         },
-                        child: _buildNoteList(theme),
+                        child: _buildNoteList(theme, noteInsertAnimationType),
                       ),
                     ),
                   ),
@@ -363,7 +366,7 @@ extension _NoteListItemsExtension on NoteListViewState {
     );
   }
 
-  Widget _buildNoteList(ThemeData theme) {
+  Widget _buildNoteList(ThemeData theme, String noteInsertAnimationType) {
     final l10n = AppLocalizations.of(context);
     // key 拆分，避免状态内输入时由于 searchQuery 改变导致 AnimatedSwitcher 触发不必要闪烁：
     // • loadingKey 用于加载态的 Key
@@ -575,6 +578,11 @@ extension _NoteListItemsExtension on NoteListViewState {
 
                   final isSelected = _selectedExportNoteIds.contains(quoteId);
 
+                  final insertAnimationVersion =
+                      _animatingQuoteVersions[quoteId];
+                  final isStructuralInsert =
+                      _structuralInsertQuoteIds.contains(quoteId);
+
                   Widget itemWidget = ValueListenableBuilder<bool>(
                     valueListenable: expansionNotifier,
                     builder: (context, isExpanded, child) => QuoteItemWidget(
@@ -584,7 +592,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                       isExpanded: isExpanded,
                       isSelected: isSelected,
                       selectionMode: _isExportMode,
-                      animateInsertVersion: _animatingQuoteVersions[quoteId],
+                      animateInsertVersion:
+                          isStructuralInsert ? null : insertAnimationVersion,
                       onToggleExpanded: (expanded) {
                         if (expansionNotifier.value != expanded) {
                           expansionNotifier.value = expanded;
@@ -712,6 +721,14 @@ extension _NoteListItemsExtension on NoteListViewState {
                         child: itemWidget,
                       ),
                     ),
+                  );
+
+                  itemWidget = _wrapNoteInsertAnimation(
+                    quoteId: quoteId,
+                    version: insertAnimationVersion,
+                    animateLayout: isStructuralInsert,
+                    animationType: noteInsertAnimationType,
+                    child: itemWidget,
                   );
 
                   return KeyedSubtree(
@@ -1089,6 +1106,57 @@ extension _NoteListItemsExtension on NoteListViewState {
         content: Text(msg),
         duration: const Duration(seconds: 2),
       ),
+    );
+  }
+
+  Widget _wrapNoteInsertAnimation({
+    required String quoteId,
+    required int? version,
+    required bool animateLayout,
+    required String animationType,
+    required Widget child,
+  }) {
+    if (version == null) return child;
+    if (animationType == 'none') return child;
+
+    final isScale = animationType == 'scale';
+
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('note_list_insert_${quoteId}_${animationType}_$version'),
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        if (value >= 0.99) return child!;
+
+        final progress = value.clamp(0.0, 1.0);
+        Widget animatedChild = Opacity(
+          opacity: progress,
+          child: child,
+        );
+
+        animatedChild = isScale
+            ? Transform.scale(
+                alignment: Alignment.topCenter,
+                scale: 0.98 + 0.02 * progress,
+                child: animatedChild,
+              )
+            : Transform.translate(
+                offset: Offset(0, -16.0 * (1.0 - progress)),
+                child: animatedChild,
+              );
+
+        if (!animateLayout) return animatedChild;
+
+        return ClipRect(
+          child: Align(
+            alignment: Alignment.topCenter,
+            heightFactor: progress,
+            child: animatedChild,
+          ),
+        );
+      },
+      child: child,
     );
   }
 

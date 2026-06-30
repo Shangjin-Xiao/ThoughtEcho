@@ -267,7 +267,7 @@ void main() {
     );
 
     testWidgets(
-      'uses the default note insertion animation duration',
+      'uses a list-level note insertion animation duration',
       (tester) async {
         final noteListKey = GlobalKey<NoteListViewState>();
         final databaseService = _FakeDatabaseService()
@@ -296,7 +296,7 @@ void main() {
         await tester.pump();
 
         final animation = tester.widget<TweenAnimationBuilder<double>>(
-          find.byKey(const ValueKey('save_animate_quote-1_slide_1')),
+          find.byKey(const ValueKey('note_list_insert_quote-1_slide_1')),
         );
 
         expect(animation.duration, const Duration(milliseconds: 250));
