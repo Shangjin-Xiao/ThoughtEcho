@@ -1,0 +1,183 @@
+import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../models/generated_card.dart';
+import '../../models/quote_model.dart';
+import '../../utils/app_logger.dart';
+import '../../utils/string_utils.dart';
+import '../ai_service.dart';
+import '../settings_service.dart';
+import 'ai_card_prompt_selector.dart';
+import 'card_generation_strategy.dart';
+import 'card_generation_utils.dart';
+import 'fallback_card_generation_strategy.dart';
+import 'svg_processing_isolate.dart';
+
+class AiCardGenerationStrategy implements CardGenerationStrategy {
+  final AIService _aiService;
+  final SettingsService _settingsService;
+
+  AiCardGenerationStrategy(this._aiService, this._settingsService);
+
+  @override
+  Future<GeneratedCard> generate({
+    required Quote note,
+    required String brandName,
+    required String languageCode,
+    String? customStyle,
+    bool isRegeneration = false,
+    CardType? excludeType,
+  }) async {
+    final noteId = note.id;
+    if (noteId == null || noteId.isEmpty) {
+      throw const AICardGenerationException('无法生成卡片：笔记ID为空');
+    }
+
+    if (excludeType == CardType.knowledge) {
+      AppLogger.i('AI卡片类型（knowledge）被排斥，AI策略自适应回退至Fallback策略',
+          source: 'AICardGeneration');
+      return FallbackCardGenerationStrategy().generate(
+        note: note,
+        brandName: brandName,
+        languageCode: languageCode,
+        customStyle: customStyle,
+        isRegeneration: isRegeneration,
+        excludeType: excludeType,
+      );
+    }
+
+    final formattedDate =
+        CardGenerationUtils.formatDate(note.date, languageCode: languageCode);
+
+    // 1. 智能选择最适合的提示词
+    var prompt = AICardPromptSelector.selectBestPrompt(
+      note,
+      customStyle,
+      brandName: brandName,
+      isRegeneration: isRegeneration,
+      languageCode: languageCode,
+      formattedDate: formattedDate,
+    );
+
+    // 1.1 根据用户语言设置追加语言统一指令
+    String langDirective;
+    switch (languageCode) {
+      case 'zh':
+        langDirective =
+            '使用全中文作为所有底部元数据（日期、天气、时间段等），不要出现英文单词（例如用"雨""晨间""夜晚"而不是 rain/Morning）。如果某项信息缺失可以省略，不要编造。';
+        break;
+      case 'ja':
+        langDirective =
+            'Use Japanese for all footer metadata (date, weather, period). Do not mix English. If some info is missing, omit it.';
+        break;
+      case 'fr':
+        langDirective =
+            'Use French for all footer metadata (date, weather, period). Do not mix English. If some info is missing, omit it.';
+        break;
+      case 'en':
+      default:
+        langDirective =
+            'Use English for all footer metadata (date, weather, period). Do not mix Chinese. If some info is missing, omit it.';
+        break;
+    }
+
+    prompt = '$prompt\n\n### 语言 / Language Constraint\n$langDirective';
+
+    AppLogger.i(
+      '开始AI生成SVG卡片，内容长度: ${note.content.length}',
+      source: 'AICardGeneration',
+    );
+
+    // 2. 调用AI生成SVG
+    final svgContent = await _generateSVGContent(prompt);
+
+    // 3. 在后台 isolate 中处理 SVG (清理 + 元数据补全)
+    final processingData = AICardProcessingData(
+      svgContent: svgContent,
+      brandName: brandName,
+      date: formattedDate,
+      location: note.location,
+      weather: note.weather,
+      temperature: note.temperature,
+      author: note.sourceAuthor,
+      source: note.fullSource,
+      dayPeriod: note.dayPeriod,
+      languageCode: languageCode,
+    );
+
+    final result = await compute(processSVGTask, processingData);
+
+    // 4. 重放日志
+    for (final log in result.logs) {
+      switch (log.level) {
+        case 'ERROR':
+          AppLogger.e(log.message, source: 'AICardGeneration');
+          break;
+        case 'WARN':
+          AppLogger.w(log.message, source: 'AICardGeneration');
+          break;
+        case 'INFO':
+          AppLogger.i(log.message, source: 'AICardGeneration');
+          break;
+        case 'DEBUG':
+        default:
+          AppLogger.d(log.message, source: 'AICardGeneration');
+          break;
+      }
+    }
+
+    final cleanedSVG = result.svg;
+
+    AppLogger.i(
+      'AI生成SVG成功，长度: ${cleanedSVG.length}',
+      source: 'AICardGeneration',
+    );
+
+    // 5. 创建卡片对象（AI生成默认类型：knowledge）
+    return GeneratedCard(
+      id: const Uuid().v4(),
+      noteId: noteId,
+      originalContent: StringUtils.removeObjectReplacementChar(note.content),
+      svgContent: cleanedSVG,
+      type: CardType.knowledge,
+      createdAt: DateTime.now(),
+      author: note.sourceAuthor,
+      source: note.fullSource,
+      location: note.location,
+      weather: note.weather,
+      temperature: note.temperature,
+      date: note.date,
+      dayPeriod: note.dayPeriod,
+    );
+  }
+
+  Future<String> _generateSVGContent(String prompt) async {
+    // 检查AI服务是否可用
+    if (!await _aiService.hasValidApiKeyAsync()) {
+      throw const AICardGenerationException('请先在设置中配置 API Key');
+    }
+
+    try {
+      // 获取当前provider
+      final multiSettings = _settingsService.multiAISettings;
+      final currentProvider = multiSettings.currentProvider;
+
+      if (currentProvider == null) {
+        throw const AICardGenerationException('未找到可用的AI提供商配置');
+      }
+
+      // 使用专门的SVG生成方法
+      final svgContent = await _aiService.generateSVG(prompt);
+
+      // 验证生成的SVG是否有效
+      if (svgContent.trim().isEmpty) {
+        throw const AICardGenerationException('AI返回了空的SVG内容');
+      }
+
+      return svgContent;
+    } catch (e) {
+      AppLogger.e('AI SVG生成失败: $e', error: e, source: 'AICardGeneration');
+      rethrow; // 重新抛出异常，让上层处理回退
+    }
+  }
+}
