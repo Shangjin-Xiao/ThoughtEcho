@@ -1,0 +1,34 @@
+lib/services/smart_push/smart_push_execution.dart
+  s_091b0327d2ee48::t_efaef4032ff3a9 317-319
+lib/services/smart_push_analytics.dart
+  s_091b0327d2ee48::t_21a2ca839a8651 297-301
+lib/services/smart_push/smart_push_content.dart
+  s_091b0327d2ee48::t_3a107e8ec4ccde 24-25,47,91-95,101-104,113-117,137-141,147,149,151-155,161-164,169-173,203-207,296-299,304
+lib/services/smart_push_computation.dart
+  s_091b0327d2ee48::t_146db4187cd73d 192-216,227-228,236-246
+  s_091b0327d2ee48::t_a3b563cfc4132a 11,17,81,87,93,99
+  s_091b0327d2ee48::t_2a8c7abe7571f0 191
+  s_091b0327d2ee48::t_56765cbb69fcbc 247
+lib/services/smart_push_service.dart
+  s_091b0327d2ee48::t_82e6ae60545c3e 87-90,188-208
+  s_091b0327d2ee48::t_44179699ee8491 209
+test/unit/services/smart_push_computation_test.dart
+  s_091b0327d2ee48::t_b66c2988a4ee6b 159,161-164,168-169,194,196-198,200-201,203-204,207-250
+  s_091b0327d2ee48::t_1d6c7c926aa40a 160,165-167,170-193,195,199,202,205-206
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "7f3caec26698f570840166b50420620b686dbbe9",
+  "prompts": {},
+  "sessions": {
+    "s_091b0327d2ee48": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1773-10dd-75d2-93ad-674f688eefba",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
