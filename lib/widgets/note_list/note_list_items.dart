@@ -625,6 +625,9 @@ extension _NoteListItemsExtension on NoteListViewState {
                       onEdit: () => widget.onEdit(quote),
                       onDelete: () {
                         if (quoteId.isNotEmpty) {
+                          if (_deletingQuoteIds.contains(quoteId)) {
+                            return;
+                          }
                           _updateState(() {
                             _deletingQuoteIds.add(quoteId);
                           });

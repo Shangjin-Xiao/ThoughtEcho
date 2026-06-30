@@ -267,6 +267,47 @@ void main() {
     );
 
     testWidgets(
+      'coalesces repeated delete requests while note removal animation is pending',
+      (tester) async {
+        final deletedQuoteIds = <String>[];
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = [
+            Quote(
+              id: 'quote-1',
+              content: '待删除笔记',
+              date: DateTime(2026, 3, 29, 12).toIso8601String(),
+            ),
+          ];
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: const [],
+            onDelete: (quote) => deletedQuoteIds.add(quote.id!),
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        final item = tester.widget<QuoteItemWidget>(
+          find.byType(QuoteItemWidget).first,
+        );
+        item.onDelete();
+        item.onDelete();
+
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(deletedQuoteIds, ['quote-1']);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
       'uses a list-level note insertion animation duration',
       (tester) async {
         final noteListKey = GlobalKey<NoteListViewState>();
@@ -544,6 +585,7 @@ class _TestApp extends StatefulWidget {
   final _FakeSettingsService settingsService;
   final List<NoteCategory> tags;
   final GlobalKey<NoteListViewState>? noteListKey;
+  final ValueChanged<Quote>? onDelete;
 
   _TestApp({
     super.key,
@@ -551,6 +593,7 @@ class _TestApp extends StatefulWidget {
     required this.settingsService,
     List<NoteCategory>? tags,
     this.noteListKey,
+    this.onDelete,
   }) : tags = tags ?? _defaultTags;
 
   static final List<NoteCategory> _defaultTags = [
@@ -598,7 +641,7 @@ class _TestAppState extends State<_TestApp> {
             onSortChanged: (_, __) {},
             onSearchChanged: (_) {},
             onEdit: (_) {},
-            onDelete: (_) {},
+            onDelete: widget.onDelete ?? (_) {},
             onAskAI: (_) {},
             selectedWeathers: _selectedWeathers,
             selectedDayPeriods: _selectedDayPeriods,
