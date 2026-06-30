@@ -1,0 +1,27 @@
+lib/widgets/note_list_view.dart
+  s_030b7e111722fc::t_6beba0a3987705 137,649,652-656,662
+lib/widgets/note_list/note_list_items.dart
+  s_030b7e111722fc::t_3948f69d75eff3 581-585,595-596,726-729,731
+  s_030b7e111722fc::t_fc6c200183adbd 730,1116
+  s_030b7e111722fc::t_558362261c2dd3 12-14,198,369
+  s_030b7e111722fc::t_e7afad14929b52 1112-1115,1117-1162
+  s_030b7e111722fc::t_8d4d21bf4afec9 732-733
+test/widget/note_list_view_filter_test.dart
+  s_030b7e111722fc::t_49e00b259d878b 270,299
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "cefd9bf5e4eb1e67d62372064c2f3451e562ed5f",
+  "prompts": {},
+  "sessions": {
+    "s_030b7e111722fc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1608-471c-7f03-a5bc-b4043d6002e6",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
