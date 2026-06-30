@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -21,6 +22,33 @@ ByteData _buildFontDataWithTables(List<String> tableTags) {
     }
   }
   return data;
+}
+
+Future<List<String>> _capturePdfFontWarnings(
+  Quote quote,
+  PdfFontSet fontSet,
+) async {
+  final warnings = <String>[];
+  await runZoned(
+    () async {
+      final widgets = await DeltaToPdfParser.parse(quote, fontSet);
+      final document = pw.Document();
+      document.addPage(
+        pw.Page(
+          build: (_) => pw.Column(children: widgets),
+        ),
+      );
+      await document.save();
+    },
+    zoneSpecification: ZoneSpecification(
+      print: (_, __, ___, line) {
+        if (line.contains('Unable to find a font')) {
+          warnings.add(line);
+        }
+      },
+    ),
+  );
+  return warnings;
 }
 
 void main() {
@@ -89,12 +117,95 @@ void main() {
       expect(widgets, everyElement(isA<pw.Container>()));
     });
 
+    test('DeltaToPdfParser tolerates map-shaped image embeds', () async {
+      final deltaJson =
+          '[{"insert":"Before image\\n"},{"insert":{"image":{"source":"/missing/image.png"}}},{"insert":"After image\\n"}]';
+      final quote = Quote(
+        content: 'Before image\n\uFFFCAfter image',
+        date: '2026-06-30',
+        deltaContent: deltaJson,
+      );
+      final font = pw.Font.helvetica();
+      final fontSet = PdfFontSet(
+        regular: font,
+        bold: pw.Font.helveticaBold(),
+        italic: pw.Font.helveticaOblique(),
+        boldItalic: pw.Font.helveticaBoldOblique(),
+      );
+
+      final widgets = await DeltaToPdfParser.parse(quote, fontSet);
+
+      expect(widgets, hasLength(2));
+    });
+
+    test('DeltaToPdfParser accepts object-wrapped Delta ops', () async {
+      final deltaJson =
+          '{"ops":[{"insert":"Wrapped "},{"insert":"bold","attributes":{"bold":true}},{"insert":"\\n"}]}';
+      final quote = Quote(
+        content: 'Wrapped bold',
+        date: '2026-06-30',
+        deltaContent: deltaJson,
+      );
+      final font = pw.Font.helvetica();
+      final fontSet = PdfFontSet(
+        regular: font,
+        bold: pw.Font.helveticaBold(),
+        italic: pw.Font.helveticaOblique(),
+        boldItalic: pw.Font.helveticaBoldOblique(),
+      );
+
+      final widgets = await DeltaToPdfParser.parse(quote, fontSet);
+
+      expect(widgets.single, isA<pw.Container>());
+    });
+
     test('DeltaToPdfParser strips PDF-hostile control characters from body',
         () {
       expect(
-        DeltaToPdfParser.sanitizeTextForPdf('✈️ family👨‍👩‍👧 \uFFFC'),
-        '✈ family👨👩👧 ',
+        DeltaToPdfParser.sanitizeTextForPdf(
+          '✈️ family👨‍👩‍👧 👍🏽 #️⃣ 🏴\u{E0067}\u{E0062}\u{E007F} \uFFFC',
+        ),
+        '✈ family👨👩👧 👍 # 🏴 ',
       );
+    });
+
+    test('DeltaToPdfParser sanitizes plain text fallback before PDF rendering',
+        () async {
+      final font = pw.Font.helvetica();
+      final fontSet = PdfFontSet(
+        regular: font,
+        bold: pw.Font.helveticaBold(),
+        italic: pw.Font.helveticaOblique(),
+        boldItalic: pw.Font.helveticaBoldOblique(),
+      );
+      final quote = Quote(
+        content: 'First line\n\uFFFCSecond line',
+        date: '2026-06-30',
+      );
+
+      final warnings = await _capturePdfFontWarnings(quote, fontSet);
+
+      expect(warnings, isEmpty);
+    });
+
+    test('DeltaToPdfParser sanitizes invalid delta fallback before rendering',
+        () async {
+      final font = pw.Font.helvetica();
+      final fontSet = PdfFontSet(
+        regular: font,
+        bold: pw.Font.helveticaBold(),
+        italic: pw.Font.helveticaOblique(),
+        boldItalic: pw.Font.helveticaBoldOblique(),
+      );
+      final quote = Quote(
+        content: 'Recovered \uFFFC body',
+        date: '2026-06-30',
+        deltaContent: '{not valid json',
+      );
+
+      final warnings = await _capturePdfFontWarnings(quote, fontSet);
+
+      expect(warnings, isEmpty);
     });
 
     test(
@@ -158,6 +269,20 @@ void main() {
         ),
         isA<pw.Text>(),
       );
+      final skinToneEmoji = PdfExportService.buildTagIcon(
+        NoteCategory(id: 'skin-tone', name: 'Skin tone', iconName: '👍🏽'),
+        fontSet,
+        color: PdfColors.grey700,
+      ) as pw.Text;
+      expect((skinToneEmoji.text as pw.TextSpan).text, '👍');
+
+      final keycapEmoji = PdfExportService.buildTagIcon(
+        NoteCategory(id: 'keycap', name: 'Keycap', iconName: '#️⃣'),
+        fontSet,
+        color: PdfColors.grey700,
+      ) as pw.Text;
+      expect((keycapEmoji.text as pw.TextSpan).text, '#');
+
       expect(
         PdfExportService.buildTagIcon(
           NoteCategory(id: 'unknown', name: 'Unknown', iconName: 'not-an-icon'),

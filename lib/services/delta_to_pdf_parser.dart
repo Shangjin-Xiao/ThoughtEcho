@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:meta/meta.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -19,7 +18,7 @@ class DeltaToPdfParser {
     if (deltaStr == null || deltaStr.isEmpty) {
       widgets.add(
         pw.Paragraph(
-          text: quote.content,
+          text: sanitizeTextForPdf(quote.content),
           style: pw.TextStyle(
             font: fontSet.regular,
             fontBold: fontSet.bold,
@@ -35,7 +34,7 @@ class DeltaToPdfParser {
     }
 
     try {
-      final List<dynamic> ops = json.decode(deltaStr);
+      final ops = _decodeDeltaOps(deltaStr);
       List<pw.InlineSpan> currentSpans = [];
       var orderedListIndex = 1;
 
@@ -114,7 +113,7 @@ class DeltaToPdfParser {
       // 异常兜底：返回纯文本段落
       widgets.add(
         pw.Paragraph(
-          text: quote.content,
+          text: sanitizeTextForPdf(quote.content),
           style: pw.TextStyle(
             font: fontSet.regular,
             fontBold: fontSet.bold,
@@ -131,7 +130,17 @@ class DeltaToPdfParser {
     return widgets;
   }
 
-  @visibleForTesting
+  static List<dynamic> _decodeDeltaOps(String deltaStr) {
+    final decoded = json.decode(deltaStr);
+    if (decoded is List) {
+      return decoded;
+    }
+    if (decoded is Map<String, dynamic> && decoded['ops'] is List) {
+      return decoded['ops'] as List<dynamic>;
+    }
+    throw const FormatException('Unsupported Delta JSON format');
+  }
+
   static String sanitizeTextForPdf(String text) {
     if (text.isEmpty) return text;
     final sanitizedRunes = text.runes.where((rune) {
@@ -139,6 +148,9 @@ class DeltaToPdfParser {
       if (rune == 0x200D) return false; // Zero-width joiner.
       if (rune >= 0xFE00 && rune <= 0xFE0F) return false;
       if (rune >= 0xE0100 && rune <= 0xE01EF) return false;
+      if (rune >= 0x1F3FB && rune <= 0x1F3FF) return false;
+      if (rune == 0x20E3) return false; // Keycap combining mark.
+      if (rune >= 0xE0020 && rune <= 0xE007F) return false;
       return true;
     });
     return String.fromCharCodes(sanitizedRunes);
