@@ -354,7 +354,7 @@ class PdfExportService {
   }) {
     final iconName = tag?.iconName;
     if (IconUtils.isEmoji(iconName)) {
-      final emojiText = DeltaToPdfParser.sanitizeTextForPdf(iconName!);
+      final emojiText = DeltaToPdfParser.sanitizeTextForPdf(iconName!, fontSet);
       return pw.Text(
         emojiText,
         style: pw.TextStyle(

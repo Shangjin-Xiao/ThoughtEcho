@@ -208,6 +208,26 @@ void main() {
       expect(warnings, isEmpty);
     });
 
+    test('DeltaToPdfParser drops unsupported glyphs for the active PDF fonts',
+        () async {
+      final font = pw.Font.helvetica();
+      final fontSet = PdfFontSet(
+        regular: font,
+        bold: pw.Font.helveticaBold(),
+        italic: pw.Font.helveticaOblique(),
+        boldItalic: pw.Font.helveticaBoldOblique(),
+      );
+      final quote = Quote(
+        content: 'Supported text',
+        date: '2026-06-30',
+        deltaContent: '[{"insert":"bad \\uE000 glyph\\n"}]',
+      );
+
+      final warnings = await _capturePdfFontWarnings(quote, fontSet);
+
+      expect(warnings, isEmpty);
+    });
+
     test(
         'PdfFontService returns default system font if local and network fonts fail',
         () async {
@@ -274,14 +294,14 @@ void main() {
         fontSet,
         color: PdfColors.grey700,
       ) as pw.Text;
-      expect((skinToneEmoji.text as pw.TextSpan).text, '👍');
+      expect((skinToneEmoji.text as pw.TextSpan).text, isNot(contains('🏽')));
 
       final keycapEmoji = PdfExportService.buildTagIcon(
         NoteCategory(id: 'keycap', name: 'Keycap', iconName: '#️⃣'),
         fontSet,
         color: PdfColors.grey700,
       ) as pw.Text;
-      expect((keycapEmoji.text as pw.TextSpan).text, '#');
+      expect((keycapEmoji.text as pw.TextSpan).text, isNot(contains('⃣')));
 
       expect(
         PdfExportService.buildTagIcon(

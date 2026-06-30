@@ -33,6 +33,7 @@ class PdfFontService {
   static ByteData? _cachedFontData;
   static final Map<String, ByteData> _cachedLanguageFallbackData = {};
   static ByteData? _cachedEmojiFontData;
+  static ByteData? _cachedMonochromeEmojiFontData;
   static ByteData? _cachedMaterialIconFontData;
 
   static const _multilingualFontFileName = "cached_noto_sans_sc.ttf";
@@ -41,6 +42,7 @@ class PdfFontService {
   static const _japaneseFontFileName = "cached_noto_sans_jp.ttf";
   static const _koreanFontFileName = "cached_noto_sans_kr.ttf";
   static const _emojiFontFileName = "cached_noto_color_emoji.ttf";
+  static const _monochromeEmojiFontFileName = "cached_noto_emoji_regular.ttf";
   static const _materialIconFontFileName = "cached_material_icons.ttf";
 
   static const _multilingualFontUrls = [
@@ -67,6 +69,10 @@ class PdfFontService {
     "https://raw.githubusercontent.com/googlefonts/noto-emoji/9a5261d871451f9b5183c93483cbd68ed916b1e9/fonts/NotoColorEmoji.ttf",
   ];
 
+  static const _monochromeEmojiFontUrls = [
+    "https://fonts.gstatic.com/s/notoemoji/v50/bMrnmSyK7YY-MEu6aWjPDs-ar6uWaGWuob-r0jwvS-FGJCMY.ttf",
+  ];
+
   static const _materialIconFontUrls = [
     "https://fonts.gstatic.com/s/materialicons/v142/flUhRq6tzZclQEJ-Vdg-IuiaDsNZIhI8tIHh.ttf",
   ];
@@ -77,10 +83,12 @@ class PdfFontService {
     final data = await _loadFontData();
     final languageFallbackData = await _loadLanguageFallbackFontData();
     final emojiData = await _loadEmojiFontData();
+    final monochromeEmojiData = await _loadMonochromeEmojiFontData();
     final materialIconData = await _loadMaterialIconFontData();
     final fallbackFonts = <pw.Font>[
       ...languageFallbackData.map(pw.Font.ttf),
       if (emojiData != null) pw.Font.ttf(emojiData),
+      if (monochromeEmojiData != null) pw.Font.ttf(monochromeEmojiData),
     ];
     if (data != null) {
       // 同一份数据创建四份独立 pw.Font 实例（pdf 包要求每种变体是独立对象）
@@ -199,6 +207,27 @@ class PdfFontService {
     );
     if (downloaded != null && isValidFontData(downloaded)) {
       _cachedMaterialIconFontData = downloaded;
+      return downloaded;
+    }
+    return null;
+  }
+
+  static Future<ByteData?> _loadMonochromeEmojiFontData() async {
+    if (_cachedMonochromeEmojiFontData != null &&
+        isValidFontData(_cachedMonochromeEmojiFontData!)) {
+      return _cachedMonochromeEmojiFontData;
+    }
+    final cached = await _tryLoadCachedFont(_monochromeEmojiFontFileName);
+    if (cached != null && isValidFontData(cached)) {
+      _cachedMonochromeEmojiFontData = cached;
+      return cached;
+    }
+    final downloaded = await _downloadAndCacheFont(
+      fileName: _monochromeEmojiFontFileName,
+      urls: _monochromeEmojiFontUrls,
+    );
+    if (downloaded != null && isValidFontData(downloaded)) {
+      _cachedMonochromeEmojiFontData = downloaded;
       return downloaded;
     }
     return null;

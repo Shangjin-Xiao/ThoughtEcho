@@ -9,6 +9,11 @@ import 'package:thoughtecho/services/pdf_font_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
 class DeltaToPdfParser {
+  static final Expando<pw.Context> _glyphContextByFontSet =
+      Expando<pw.Context>();
+  static final Expando<Map<int, bool>> _glyphSupportCacheByFontSet =
+      Expando<Map<int, bool>>();
+
   /// 将富文本的 Delta JSON 解析编译为适合 pdf 渲染的 Widget 列表
   static Future<List<pw.Widget>> parse(Quote quote, PdfFontSet fontSet) async {
     final List<pw.Widget> widgets = [];
@@ -18,7 +23,7 @@ class DeltaToPdfParser {
     if (deltaStr == null || deltaStr.isEmpty) {
       widgets.add(
         pw.Paragraph(
-          text: sanitizeTextForPdf(quote.content),
+          text: sanitizeTextForPdf(quote.content, fontSet),
           style: pw.TextStyle(
             font: fontSet.regular,
             fontBold: fontSet.bold,
@@ -79,7 +84,7 @@ class DeltaToPdfParser {
 
           final lines = insert.split('\n');
           for (int i = 0; i < lines.length; i++) {
-            final lineText = sanitizeTextForPdf(lines[i]);
+            final lineText = sanitizeTextForPdf(lines[i], fontSet);
             if (lineText.isNotEmpty) {
               final span = _buildTextSpan(lineText, attributes, fontSet);
               currentSpans.add(span);
@@ -113,7 +118,7 @@ class DeltaToPdfParser {
       // 异常兜底：返回纯文本段落
       widgets.add(
         pw.Paragraph(
-          text: sanitizeTextForPdf(quote.content),
+          text: sanitizeTextForPdf(quote.content, fontSet),
           style: pw.TextStyle(
             font: fontSet.regular,
             fontBold: fontSet.bold,
@@ -141,7 +146,7 @@ class DeltaToPdfParser {
     throw const FormatException('Unsupported Delta JSON format');
   }
 
-  static String sanitizeTextForPdf(String text) {
+  static String sanitizeTextForPdf(String text, [PdfFontSet? fontSet]) {
     if (text.isEmpty) return text;
     final sanitizedRunes = text.runes.where((rune) {
       if (rune == 0xFFFC) return false; // Object replacement character.
@@ -153,7 +158,52 @@ class DeltaToPdfParser {
       if (rune >= 0xE0020 && rune <= 0xE007F) return false;
       return true;
     });
-    return String.fromCharCodes(sanitizedRunes);
+    final sanitized = String.fromCharCodes(sanitizedRunes);
+    if (fontSet == null || fontSet.isFallback) {
+      return sanitized;
+    }
+
+    final supportedRunes = sanitized.runes.where((rune) {
+      if (rune == 0x09 || rune == 0x0A || rune == 0x0D) {
+        return true;
+      }
+      return _fontSetSupportsRune(fontSet, rune);
+    });
+    return String.fromCharCodes(supportedRunes);
+  }
+
+  static bool _fontSetSupportsRune(PdfFontSet fontSet, int rune) {
+    final cache = _glyphSupportCacheByFontSet[fontSet] ??= <int, bool>{};
+    final cached = cache[rune];
+    if (cached != null) {
+      return cached;
+    }
+
+    final context = _glyphContextByFontSet[fontSet] ??=
+        pw.Context(document: pw.Document().document);
+    final fonts = [
+      fontSet.regular,
+      fontSet.bold,
+      fontSet.italic,
+      fontSet.boldItalic,
+      ...fontSet.fallbackFonts,
+    ];
+
+    final supported =
+        fonts.any((font) => _fontSupportsRune(font, context, rune));
+    cache[rune] = supported;
+    return supported;
+  }
+
+  static bool _fontSupportsRune(pw.Font font, pw.Context context, int rune) {
+    if (font.font != null) {
+      return rune >= 0x20 && rune <= 0x7E;
+    }
+    try {
+      return font.getFont(context).isRuneSupported(rune);
+    } catch (_) {
+      return false;
+    }
   }
 
   static int _flushLine({
