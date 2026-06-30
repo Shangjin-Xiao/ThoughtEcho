@@ -132,10 +132,17 @@ class NoteListViewState extends State<NoteListView> {
   GlobalKey? _positioningItemKey;
   int _positioningRequest = 0;
 
-  /// 保存/修改笔记后触发入场动画的 ID 计数，每次触发递增以确保编辑场景下也能重播
+  /// 保存/修改笔记后触发入场动画的 ID 计数。
+  /// 同一 ID 的动画进行中时保持当前版本，避免保存回流重复触发造成闪烁。
   final Map<String, int> _animatingQuoteVersions = {};
   final Set<String> _structuralInsertQuoteIds = {};
   final Map<String, Timer> _animationTimers = {};
+  static const Duration _noteInsertAnimationDuration =
+      Duration(milliseconds: 250);
+  static const Duration _noteUpdateAnimationCleanupDelay =
+      Duration(milliseconds: 300);
+  static const Duration _pendingInsertAnimationCleanupDelay =
+      Duration(milliseconds: 1500);
 
   /// 删除笔记时触发缩小渐隐动画的 ID 集合
   final Set<String> _deletingQuoteIds = {};
@@ -642,10 +649,15 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   /// 触发指定 ID 的笔记卡片入场/更新动画（保存/修改后调用）。
-  /// 每次触发递增版本号，确保编辑同一卡片时也能重播动画。
-  /// 1500ms 后自动清除状态以保证性能。
+  /// 空闲时递增版本号；同一 ID 的动画进行中时忽略重复触发。
+  /// 新增笔记可能需要等待数据流返回，保留较长的待入场窗口；更新已有笔记
+  /// 则在动画结束后快速清除状态，保证下一次保存仍可播放。
   void triggerInsertAnimation(String id) {
     if (!mounted) return;
+    if (_animatingQuoteVersions.containsKey(id)) {
+      return;
+    }
+
     _animationTimers[id]?.cancel();
     final animateListInsertion = !_quotes.any((quote) => quote.id == id);
     setState(() {
@@ -656,7 +668,10 @@ class NoteListViewState extends State<NoteListView> {
         _structuralInsertQuoteIds.remove(id);
       }
     });
-    _animationTimers[id] = Timer(const Duration(milliseconds: 1500), () {
+    final cleanupDelay = animateListInsertion
+        ? _pendingInsertAnimationCleanupDelay
+        : _noteUpdateAnimationCleanupDelay;
+    _animationTimers[id] = Timer(cleanupDelay, () {
       if (mounted) {
         setState(() {
           _animatingQuoteVersions.remove(id);

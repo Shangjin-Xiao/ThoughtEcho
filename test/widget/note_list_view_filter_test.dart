@@ -348,6 +348,94 @@ void main() {
     );
 
     testWidgets(
+      'plays edited note save animation only at the list level',
+      (tester) async {
+        final noteListKey = GlobalKey<NoteListViewState>();
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = [
+            Quote(
+              id: 'quote-1',
+              content: '编辑动画笔记',
+              date: DateTime(2026, 3, 29, 12).toIso8601String(),
+            ),
+          ];
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: const [],
+            noteListKey: noteListKey,
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        noteListKey.currentState!.triggerInsertAnimation('quote-1');
+        await tester.pump();
+
+        expect(
+          find.byKey(const ValueKey('note_list_insert_quote-1_slide_1')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('save_animate_quote-1_slide_1')),
+          findsNothing,
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
+      'does not restart an active save animation for the same note',
+      (tester) async {
+        final noteListKey = GlobalKey<NoteListViewState>();
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = [
+            Quote(
+              id: 'quote-1',
+              content: '重复保存动画笔记',
+              date: DateTime(2026, 3, 29, 12).toIso8601String(),
+            ),
+          ];
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: const [],
+            noteListKey: noteListKey,
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        noteListKey.currentState!.triggerInsertAnimation('quote-1');
+        await tester.pump();
+        noteListKey.currentState!.triggerInsertAnimation('quote-1');
+        await tester.pump();
+
+        expect(
+          find.byKey(const ValueKey('note_list_insert_quote-1_slide_1')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('note_list_insert_quote-1_slide_2')),
+          findsNothing,
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
       'loads the next page before positioning a notification target',
       (tester) async {
         final databaseService = _PagingFakeDatabaseService();

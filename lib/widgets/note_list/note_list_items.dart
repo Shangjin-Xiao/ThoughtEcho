@@ -592,8 +592,6 @@ extension _NoteListItemsExtension on NoteListViewState {
                       isExpanded: isExpanded,
                       isSelected: isSelected,
                       selectionMode: _isExportMode,
-                      animateInsertVersion:
-                          isStructuralInsert ? null : insertAnimationVersion,
                       onToggleExpanded: (expanded) {
                         if (expansionNotifier.value != expanded) {
                           expansionNotifier.value = expanded;
@@ -1130,7 +1128,7 @@ extension _NoteListItemsExtension on NoteListViewState {
     return TweenAnimationBuilder<double>(
       key: ValueKey('note_list_insert_${quoteId}_${animationType}_$version'),
       tween: Tween<double>(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 250),
+      duration: NoteListViewState._noteInsertAnimationDuration,
       curve: Curves.easeOutCubic,
       builder: (context, value, child) {
         if (value >= 0.99) return child!;
