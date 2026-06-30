@@ -1,0 +1,21 @@
+lib/utils/string_utils.dart
+  s_5d86dfa300b012::t_e9e3464e146e8f 81-82,84
+test/unit/utils/string_utils_test.dart
+  s_5d86dfa300b012::t_4435bfec3e096c 148-151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "3ab9c5d812201ffbb9f68db9a5b485a79551d091",
+  "prompts": {},
+  "sessions": {
+    "s_5d86dfa300b012": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f188d-a943-7c52-a333-d0046d163a9c",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
