@@ -1,0 +1,21 @@
+test/widget/daily_quote_view_startup_test.dart
+  s_1f382f33f37963::t_ccc122c587b898 1-117
+lib/services/smart_push_service.dart
+  s_1f382f33f37963::t_5a0390f7d1fe93 425
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "ec47c806022d86cbc5337fed55e2149c5e4f684c",
+  "prompts": {},
+  "sessions": {
+    "s_1f382f33f37963": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f165c-c498-79c1-bc0f-705f5032db45",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
