@@ -145,6 +145,10 @@ void main() {
       test('should return original text when it fits the preview limit', () {
         expect(StringUtils.truncateForPreview('短句😊', 3), '短句😊');
       });
+
+      test('should remove rich-text object placeholders from previews', () {
+        expect(StringUtils.truncateForPreview('珍藏\u{FFFC}😊', 20), '珍藏😊');
+      });
     });
 
     group('removeObjectReplacementChar', () {

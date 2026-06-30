@@ -78,9 +78,10 @@ class StringUtils {
       throw ArgumentError.value(maxCharacters, 'maxCharacters', '不能为负数');
     }
 
-    final characters = text.characters;
+    final previewText = removeObjectReplacementChar(text);
+    final characters = previewText.characters;
     if (characters.length <= maxCharacters) {
-      return text;
+      return previewText;
     }
 
     return '${characters.take(maxCharacters)}$ellipsis';
