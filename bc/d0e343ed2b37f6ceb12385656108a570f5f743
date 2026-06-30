@@ -1,0 +1,22 @@
+test/pdf_export_test.dart
+  s_6fbfafda95bb59::t_3072ef18ea46ad 69-99
+lib/services/delta_to_pdf_parser.dart
+  s_6fbfafda95bb59::t_26893c2e5c25a5 252-253
+  s_6fbfafda95bb59::t_c7d4e8277a1710 3-4,7,40,70-77,83,90-97,104-110,134-251
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "bcd0e343ed2b37f6ceb12385656108a570f5f743",
+  "prompts": {},
+  "sessions": {
+    "s_6fbfafda95bb59": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1772-e727-75f3-b0a6-7a283170a36a",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
