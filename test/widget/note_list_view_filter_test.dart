@@ -187,7 +187,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 50));
 
         expect(
-          find.byKey(const ValueKey<String>('note-list-item-quote-0')),
+          find.byKey(const ValueKey<String>('note-list-row-quote-0')),
           findsOneWidget,
         );
 

@@ -323,15 +323,16 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
 
     _isLoading = true;
     final loadGeneration = _quotesLoadGeneration;
+    final requestOffset = _watchOffset;
     logDebug(
-      '开始加载更多笔记，当前已有 ${_currentQuotes.length} 条，offset=${_currentQuotes.length}，limit=$_watchLimit',
+      '开始加载更多笔记，当前已有 ${_currentQuotes.length} 条，offset=$requestOffset，limit=$_watchLimit',
     );
 
     try {
       final quotes = await getUserQuotes(
         tagIds: tagIds,
         categoryId: categoryId,
-        offset: _currentQuotes.length,
+        offset: requestOffset,
         limit: _watchLimit,
         orderBy: _watchOrderBy,
         searchQuery: searchQuery,
@@ -350,6 +351,8 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
         logDebug('丢弃过期笔记加载结果');
         return;
       }
+
+      _watchOffset = requestOffset + quotes.length;
 
       if (quotes.isEmpty) {
         // 没有更多数据了

@@ -28,6 +28,8 @@ import 'unit/services/database_health_security_test.dart'
     as database_health_security_test;
 import 'unit/services/database_multi_tag_filter_test.dart'
     as database_multi_tag_filter_test;
+import 'unit/services/database_pagination_test.dart'
+    as database_pagination_test;
 import 'unit/services/location_format_test.dart' as location_format_test;
 import 'unit/services/log_service_adapter_test.dart'
     as log_service_adapter_test;
@@ -113,6 +115,7 @@ void main() {
       ai_analysis_service_test.main();
       database_health_security_test.main();
       database_multi_tag_filter_test.main();
+      database_pagination_test.main();
       log_service_adapter_test.main();
       mdns_discovery_service_test.main();
       smart_push_security_test.main();

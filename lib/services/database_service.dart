@@ -780,6 +780,10 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       );
 
       _currentQuotes = quotes;
+      _currentQuoteIds
+        ..clear()
+        ..addAll(quotes.map((quote) => quote.id).whereType<String>());
+      _watchOffset = quotes.length;
       _watchHasMore = quotes.length >= _watchLimit;
 
       // 修复：针对安卓平台的特殊处理
