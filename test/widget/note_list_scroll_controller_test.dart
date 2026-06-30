@@ -50,6 +50,40 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
     },
   );
+
+  testWidgets(
+    'starts pagination before the current page boundary is reached',
+    (tester) async {
+      final databaseService = _FakeDatabaseService(hasMoreQuotes: true);
+      final settingsService = _FakeSettingsService();
+
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: settingsService,
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final listScrollable = find.descendant(
+        of: find.byType(ListView).first,
+        matching: find.byType(Scrollable),
+      );
+      final scrollable = tester.state<ScrollableState>(listScrollable);
+      final maxScrollExtent = scrollable.position.maxScrollExtent;
+      expect(maxScrollExtent, greaterThan(0));
+
+      scrollable.position.jumpTo(maxScrollExtent * 0.5);
+      await tester.pump();
+
+      expect(databaseService.loadMoreCallCount, 1);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+    },
+  );
 }
 
 class _TestApp extends StatefulWidget {
@@ -161,13 +195,15 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
 }
 
 class _FakeDatabaseService extends DatabaseService {
-  _FakeDatabaseService() : super.forTesting();
+  _FakeDatabaseService({this.hasMoreQuotes = false}) : super.forTesting();
+
+  @override
+  final bool hasMoreQuotes;
+
+  int loadMoreCallCount = 0;
 
   @override
   bool get isInitialized => true;
-
-  @override
-  bool get hasMoreQuotes => false;
 
   @override
   Stream<List<Quote>> watchQuotes({
@@ -191,7 +227,9 @@ class _FakeDatabaseService extends DatabaseService {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool? includeDeleted,
-  }) async {}
+  }) async {
+    loadMoreCallCount++;
+  }
 
   @override
   Future<List<NoteCategory>> getCategories() async => const [];

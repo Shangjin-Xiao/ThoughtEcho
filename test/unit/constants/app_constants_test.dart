@@ -19,8 +19,8 @@ void main() {
       // 验证默认分页大小
       expect(AppConstants.defaultPageSize, 20);
 
-      // 验证滚动预加载阈值
-      expect(AppConstants.scrollPreloadThreshold, 0.8);
+      // 验证滚动预加载阈值：记录页单页 20 条，提前补页避免撞到分页边界
+      expect(AppConstants.scrollPreloadThreshold, 0.35);
     });
 
     test('响应式设计常量应该有合理的断点', () {
