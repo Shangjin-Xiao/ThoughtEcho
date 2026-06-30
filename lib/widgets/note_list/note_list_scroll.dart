@@ -825,6 +825,16 @@ extension _NoteListScrollExtension on NoteListViewState {
         .toDouble();
   }
 
+  bool _isScrollOffsetFartherThan(double targetOffset, double tolerance) {
+    final offset = _safeScrollOffset;
+    return offset == null || (offset - targetOffset).abs() > tolerance;
+  }
+
+  bool _isScrollOffsetWithin(double targetOffset, double tolerance) {
+    final offset = _safeScrollOffset;
+    return offset != null && (offset - targetOffset).abs() <= tolerance;
+  }
+
   Future<bool> _alignPositioningTarget({
     required String quoteId,
     required int index,
@@ -865,7 +875,7 @@ extension _NoteListScrollExtension on NoteListViewState {
           return false;
         }
 
-        if ((_scrollController.offset - desiredOffset).abs() > 2.0) {
+        if (_isScrollOffsetFartherThan(desiredOffset, 2.0)) {
           await _scrollController.animateTo(
             desiredOffset,
             duration: attempt == 0
@@ -884,7 +894,7 @@ extension _NoteListScrollExtension on NoteListViewState {
         if (correctedOffset == null) {
           return false;
         }
-        if ((_scrollController.offset - correctedOffset).abs() <= 2.0) {
+        if (_isScrollOffsetWithin(correctedOffset, 2.0)) {
           logDebug(
             '滚动完成（精确对齐）: $quoteId (index: $index)',
             source: 'NoteListView',

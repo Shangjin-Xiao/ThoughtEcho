@@ -780,7 +780,10 @@ extension _NoteListItemsExtension on NoteListViewState {
       return 0;
     }
 
-    final position = _scrollController.positions.first;
+    final position = _safeScrollPosition;
+    if (position == null) {
+      return 0;
+    }
     if (!position.hasContentDimensions) {
       return 0;
     }

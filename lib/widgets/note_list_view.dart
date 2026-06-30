@@ -394,7 +394,8 @@ class NoteListViewState extends State<NoteListView> {
     if (!mounted || !_scrollController.hasClients) return;
 
     // 性能优化：增加阈值判断，避免微小滚动触发逻辑
-    final currentOffset = _scrollController.offset;
+    final currentOffset = _safeScrollOffset;
+    if (currentOffset == null) return;
     if ((currentOffset - _lastScrollOffset).abs() < _scrollThreshold) {
       return;
     }
