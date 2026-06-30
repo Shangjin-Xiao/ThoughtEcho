@@ -1,0 +1,29 @@
+lib/pages/home_page.dart
+  s_866d8081a1fe70::t_6c6c8990c335ff 1487,1520-1521
+lib/pages/trash_page.dart
+  s_866d8081a1fe70::t_87c3b7e0595623 418,493,498,506,519
+  s_866d8081a1fe70::t_dac5d7ee27f167 154,168-172,315-318,388
+  s_866d8081a1fe70::t_2594030f8ac6d7 165
+  s_866d8081a1fe70::t_b926c2ef1f6224 311,313,384,386
+  s_866d8081a1fe70::t_94bdca8b370668 166-167
+test/widget/pages/trash_page_test.dart
+  s_866d8081a1fe70::t_d3b473f9d1d148 73,87-90,144,310-335,338-340
+  s_866d8081a1fe70::t_127b5d73d68fcb 336-337
+  s_866d8081a1fe70::t_d56178c6bc6a2f 341-343
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "6762a4ea8db8a8561b616b60975de0ac9502e206",
+  "prompts": {},
+  "sessions": {
+    "s_866d8081a1fe70": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f161e-4018-71a1-94f6-63e510cbfd3c",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
