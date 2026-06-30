@@ -3811,5 +3811,21 @@
   "webdavServerUrlEmptyError": "Please enter WebDAV server address",
   "webdavServerUrlInvalidError": "Address must start with http:// or https://",
   "webdavUsernameEmptyError": "Please enter username",
-  "webdavPasswordEmptyError": "Please enter app password"
+  "webdavPasswordEmptyError": "Please enter app password",
+  "webdavSyncStrategy": "Sync Strategy",
+  "webdavStatusNotEnabled": "Cloud Sync Disabled",
+  "webdavStatusNotEnabledDesc": "Configure your WebDAV service to enjoy secure cross-device multi-way synchronization.",
+  "webdavStatusSyncingDesc": "Securely comparing and merging cloud and local database files...",
+  "webdavStatusRunning": "Cloud Sync Running",
+  "webdavStatusRunningDesc": "An encrypted merge pipeline has been established with the cloud drive.\nLast sync: {time}",
+  "@webdavStatusRunningDesc": {"placeholders": {"time": {"type": "String"}}},
+  "webdavStatusException": "Sync Exception",
+  "webdavStatusExceptionDesc": "Network communication or cloud drive file lock conflict. We will retry automatically.",
+  "webdavStatusEnabled": "Cloud Sync Enabled",
+  "webdavStatusEnabledDesc": "Service ready. Last sync: {time}",
+  "@webdavStatusEnabledDesc": {"placeholders": {"time": {"type": "String"}}},
+  "webdavNeverSynced": "Never synced",
+  "webdavNeverSucceeded": "Never succeeded",
+  "webdavConflictPrompt": "Detected {count} sync conflict backup(s). It is recommended to resolve them immediately.",
+  "@webdavConflictPrompt": {"placeholders": {"count": {"type": "int"}}}
 }

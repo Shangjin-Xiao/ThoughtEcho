@@ -3811,5 +3811,21 @@
   "webdavServerUrlEmptyError": "请输入 WebDAV 服务器地址",
   "webdavServerUrlInvalidError": "地址必须以 http:// 或 https:// 开头",
   "webdavUsernameEmptyError": "请输入用户名",
-  "webdavPasswordEmptyError": "请输入应用密码"
+  "webdavPasswordEmptyError": "请输入应用密码",
+  "webdavSyncStrategy": "同步策略",
+  "webdavStatusNotEnabled": "未启用云同步",
+  "webdavStatusNotEnabledDesc": "配置您的 WebDAV 服务，享受安全跨端多路同步。",
+  "webdavStatusSyncingDesc": "正在安全比对合并云端与本地数据库文件...",
+  "webdavStatusRunning": "云同步运行中",
+  "webdavStatusRunningDesc": "已与云端网盘建立加密合并管道。\n上次同步：{time}",
+  "@webdavStatusRunningDesc": {"placeholders": {"time": {"type": "String"}}},
+  "webdavStatusException": "同步出现异常",
+  "webdavStatusExceptionDesc": "网络通信或云盘文件锁冲突。我们将自动重试。",
+  "webdavStatusEnabled": "云同步已启用",
+  "webdavStatusEnabledDesc": "服务就绪。上次同步：{time}",
+  "@webdavStatusEnabledDesc": {"placeholders": {"time": {"type": "String"}}},
+  "webdavNeverSynced": "从未同步",
+  "webdavNeverSucceeded": "从未成功",
+  "webdavConflictPrompt": "检测到有 {count} 篇同步冲突备份，建议立即处理。",
+  "@webdavConflictPrompt": {"placeholders": {"count": {"type": "int"}}}
 }

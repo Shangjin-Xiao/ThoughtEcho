@@ -212,15 +212,21 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     final l10n = AppLocalizations.of(context);
     final syncService = Provider.of<WebDAVSyncService>(context, listen: false);
 
-    final success = await syncService.testConnection(
-      _urlController.text,
-      _usernameController.text,
-      _passwordController.text,
-    );
-
-    setState(() {
-      _isTestingConnection = false;
-    });
+    bool success = false;
+    try {
+      success = await syncService.testConnection(
+        _urlController.text,
+        _usernameController.text,
+        _passwordController.text,
+      );
+    } catch (e, stackTrace) {
+      AppLogger.e('连接测试异常', error: e, stackTrace: stackTrace);
+      success = false;
+    } finally {
+      setState(() {
+        _isTestingConnection = false;
+      });
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -467,7 +473,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
 
                   // --- 自动同步策略 Switch ---
                   Text(
-                    '同步策略',
+                    l10n.webdavSyncStrategy,
                     style: theme.textTheme.titleMedium
                         ?.copyWith(color: theme.colorScheme.primary),
                   ),
@@ -658,36 +664,36 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
   /// 构建状态预览卡片
   Widget _buildStatusCard(
       WebDAVSyncService syncService, AppLocalizations l10n, ThemeData theme) {
-    String stateTitle = '未启用云同步';
-    String stateDesc = '配置您的 WebDAV 服务，享受安全跨端多路同步。';
+    String stateTitle = l10n.webdavStatusNotEnabled;
+    String stateDesc = l10n.webdavStatusNotEnabledDesc;
     IconData stateIcon = Icons.cloud_off_outlined;
     Color accentColor = theme.colorScheme.outline;
 
     if (syncService.enabled) {
       if (syncService.isSyncing) {
         stateTitle = l10n.webdavStatusSyncing;
-        stateDesc = '正在安全比对合并云端与本地数据库文件...';
+        stateDesc = l10n.webdavStatusSyncingDesc;
         stateIcon = Icons.sync;
         accentColor = theme.colorScheme.primary;
       } else if (syncService.syncStatus == WebDAVSyncStatus.success) {
-        stateTitle = '云同步运行中';
+        stateTitle = l10n.webdavStatusRunning;
         final relativeTime = syncService.lastSyncTime.isNotEmpty
             ? LWWUtils.formatTimestamp(syncService.lastSyncTime)
-            : '从未成功';
-        stateDesc = '已与云端网盘建立加密合并管道。\n上次同步：$relativeTime';
+            : l10n.webdavNeverSucceeded;
+        stateDesc = l10n.webdavStatusRunningDesc(relativeTime);
         stateIcon = Icons.cloud_done;
         accentColor = Colors.green.shade600;
       } else if (syncService.syncStatus == WebDAVSyncStatus.failed) {
-        stateTitle = '同步出现异常';
-        stateDesc = '网络通信或云盘文件锁冲突。我们将自动重试。';
+        stateTitle = l10n.webdavStatusException;
+        stateDesc = l10n.webdavStatusExceptionDesc;
         stateIcon = Icons.error_outline;
         accentColor = theme.colorScheme.error;
       } else {
-        stateTitle = '云同步已启用';
+        stateTitle = l10n.webdavStatusEnabled;
         final relativeTime = syncService.lastSyncTime.isNotEmpty
             ? LWWUtils.formatTimestamp(syncService.lastSyncTime)
-            : '从未同步';
-        stateDesc = '服务就绪。上次同步：$relativeTime';
+            : l10n.webdavNeverSynced;
+        stateDesc = l10n.webdavStatusEnabledDesc(relativeTime);
         stateIcon = Icons.cloud_queue;
         accentColor = theme.colorScheme.secondary;
       }
@@ -809,7 +815,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '检测到有 $_conflictNotesCount 篇同步冲突备份，建议立即处理。',
+                        l10n.webdavConflictPrompt(_conflictNotesCount),
                         style: Theme.of(context)
                             .textTheme
                             .labelMedium
