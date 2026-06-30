@@ -52,8 +52,7 @@ class AICardProcessingResult {
 /// Isolate worker function responsible for cleaning SVG and injecting metadata.
 ///
 /// This runs in a background isolate to prevent UI jank.
-Future<AICardProcessingResult> processSVGTask(
-    AICardProcessingData data) async {
+Future<AICardProcessingResult> processSVGTask(AICardProcessingData data) async {
   final logs = <AICardProcessingLog>[];
   logs.add(AICardProcessingLog(
       'DEBUG', '开始清理SVG内容，原始长度: ${data.svgContent.length}'));
@@ -86,8 +85,7 @@ Future<AICardProcessingResult> processSVGTask(
 }
 
 /// 静态清理SVG内容 (用于Isolate)
-String _cleanSVGContentStatic(
-    String response, List<AICardProcessingLog> logs) {
+String _cleanSVGContentStatic(String response, List<AICardProcessingLog> logs) {
   String cleaned = response.trim();
 
   // 移除常见的markdown标记和说明文字
@@ -159,8 +157,8 @@ String _cleanSVGContentStatic(
 
   // 深度清理：修复AI常见的XML语法错误
   // 1. 修复重复的 xmlns 属性
-  cleaned = cleaned.replaceAll(
-      RegExp(r'xmlns="[^"]+"\s+xmlns="[^"]+"'), 'xmlns="http://www.w3.org/2000/svg"');
+  cleaned = cleaned.replaceAll(RegExp(r'xmlns="[^"]+"\s+xmlns="[^"]+"'),
+      'xmlns="http://www.w3.org/2000/svg"');
 
   // 2. 修复未闭合的标签（简单修复，针对单标签如 <path ... > 变 <path ... />）
   // 这种修复比较危险，仅在无法解析时作为备选方案，这里暂且跳过
@@ -209,16 +207,14 @@ String _ensureMetadataPresenceStatic(
   // 规则：程序自动补全 -> 根据语言本地化
   final localizedWeather =
       CardGenerationUtils.localizeWeather(weather, languageCode: languageCode);
-  final localizedDayPeriod =
-      CardGenerationUtils.localizeDayPeriod(dayPeriod, languageCode: languageCode);
+  final localizedDayPeriod = CardGenerationUtils.localizeDayPeriod(dayPeriod,
+      languageCode: languageCode);
 
   if (date != null) metaParts.add(date); // 已是格式化的
   if (location != null) metaParts.add(location); // 用户输入不改动
   if (localizedWeather != null) {
     metaParts.add(
-      temperature != null
-          ? '$localizedWeather $temperature'
-          : localizedWeather,
+      temperature != null ? '$localizedWeather $temperature' : localizedWeather,
     );
   }
   if (author != null) metaParts.add(author);
@@ -235,15 +231,12 @@ String _ensureMetadataPresenceStatic(
   return svg.substring(0, idx) + injection + svg.substring(idx);
 }
 
-String _escape(String v) => v
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;');
+String _escape(String v) =>
+    v.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
 // 检测是否包含中文
 // ignore: unused_element
-bool _containsChinese(String text) =>
-    RegExp(r'[\u4e00-\u9fff]').hasMatch(text);
+bool _containsChinese(String text) => RegExp(r'[\u4e00-\u9fff]').hasMatch(text);
 
 /// 验证SVG基本结构
 bool _isValidSVGStructure(String svgContent) {
@@ -354,8 +347,7 @@ double? _parseNumericDimension(String? raw) {
 }
 
 /// 验证SVG内容安全性
-bool _isSafeSVGContent(String svgContent,
-    [List<AICardProcessingLog>? logs]) {
+bool _isSafeSVGContent(String svgContent, [List<AICardProcessingLog>? logs]) {
   // 检查是否包含潜在危险的元素
   final dangerousElements = [
     '<script',

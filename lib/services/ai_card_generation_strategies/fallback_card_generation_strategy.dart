@@ -27,12 +27,15 @@ class FallbackCardGenerationStrategy implements CardGenerationStrategy {
       type: cardType,
       content: cleanContent,
       author: note.sourceAuthor,
-      date: CardGenerationUtils.formatDate(note.date, languageCode: languageCode),
+      date:
+          CardGenerationUtils.formatDate(note.date, languageCode: languageCode),
       source: note.fullSource,
       location: note.location,
-      weather: CardGenerationUtils.localizeWeather(note.weather, languageCode: languageCode),
+      weather: CardGenerationUtils.localizeWeather(note.weather,
+          languageCode: languageCode),
       temperature: note.temperature,
-      dayPeriod: CardGenerationUtils.localizeDayPeriod(note.dayPeriod, languageCode: languageCode),
+      dayPeriod: CardGenerationUtils.localizeDayPeriod(note.dayPeriod,
+          languageCode: languageCode),
     );
 
     return GeneratedCard(
