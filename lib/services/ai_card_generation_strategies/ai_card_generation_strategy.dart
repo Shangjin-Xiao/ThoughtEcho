@@ -27,11 +27,29 @@ class AiCardGenerationStrategy implements CardGenerationStrategy {
     bool isRegeneration = false,
     CardType? excludeType,
   }) async {
-    // 1. 智能选择最适合的提示词
-    var prompt = _selectBestPrompt(note, customStyle,
-        brandName: brandName,
-        isRegeneration: isRegeneration,
+    final noteId = note.id;
+    if (noteId == null || noteId.isEmpty) {
+      throw const AICardGenerationException('无法生成卡片：笔记ID为空');
+    }
+
+    if (excludeType == CardType.knowledge) {
+      throw const AICardGenerationException(
+        'AI 路径无法满足 excludeType=knowledge，请回退到其他策略',
+      );
+    }
+
+    final formattedDate = CardGenerationUtils.formatDate(note.date,
         languageCode: languageCode);
+
+    // 1. 智能选择最适合的提示词
+    var prompt = _selectBestPrompt(
+      note,
+      customStyle,
+      brandName: brandName,
+      isRegeneration: isRegeneration,
+      languageCode: languageCode,
+      formattedDate: formattedDate,
+    );
 
     // 1.1 根据用户语言设置追加语言统一指令
     String langDirective;
@@ -69,8 +87,7 @@ class AiCardGenerationStrategy implements CardGenerationStrategy {
     final processingData = AICardProcessingData(
       svgContent: svgContent,
       brandName: brandName,
-      date:
-          CardGenerationUtils.formatDate(note.date, languageCode: languageCode),
+      date: formattedDate,
       location: note.location,
       weather: note.weather,
       temperature: note.temperature,
@@ -111,7 +128,7 @@ class AiCardGenerationStrategy implements CardGenerationStrategy {
     // 5. 创建卡片对象（AI生成默认类型：knowledge）
     return GeneratedCard(
       id: const Uuid().v4(),
-      noteId: note.id!,
+      noteId: noteId,
       originalContent: StringUtils.removeObjectReplacementChar(note.content),
       svgContent: cleanedSVG,
       type: CardType.knowledge,
@@ -157,10 +174,14 @@ class AiCardGenerationStrategy implements CardGenerationStrategy {
   }
 
   /// 智能选择最适合的提示词（改进：增加随机性和变化）
-  String _selectBestPrompt(Quote note, String? customStyle,
-      {required String brandName,
-      bool isRegeneration = false,
-      String languageCode = 'zh'}) {
+  String _selectBestPrompt(
+    Quote note,
+    String? customStyle, {
+    required String brandName,
+    required String formattedDate,
+    bool isRegeneration = false,
+    String languageCode = 'zh',
+  }) {
     // 移除媒体占位符(U+FFFC)，避免发送给AI时产生干扰
     final cleanContent = StringUtils.removeObjectReplacementChar(note.content);
     // 重新生成时完全随机，跳过内容匹配
@@ -168,45 +189,15 @@ class AiCardGenerationStrategy implements CardGenerationStrategy {
       final random = DateTime.now().millisecondsSinceEpoch % 3;
       switch (random) {
         case 0:
-          return AICardPrompts.randomStylePosterPrompt(
-            brandName: brandName,
-            content: cleanContent,
-            author: note.sourceAuthor,
-            date: CardGenerationUtils.formatDate(note.date,
-                languageCode: languageCode),
-            location: note.location,
-            weather: note.weather,
-            temperature: note.temperature,
-            dayPeriod: note.dayPeriod,
-            source: note.fullSource,
-          );
+          return _dispatchPrompt(
+              'creative', note, brandName, cleanContent, formattedDate);
         case 1:
-          return AICardPrompts.intelligentCardPrompt(
-            brandName: brandName,
-            content: cleanContent,
-            author: note.sourceAuthor,
-            date: CardGenerationUtils.formatDate(note.date,
-                languageCode: languageCode),
-            location: note.location,
-            weather: note.weather,
-            temperature: note.temperature,
-            dayPeriod: note.dayPeriod,
-            source: note.fullSource,
-          );
+          return _dispatchPrompt(
+              'intelligent', note, brandName, cleanContent, formattedDate);
         case 2:
         default:
-          return AICardPrompts.contentAwareVisualPrompt(
-            brandName: brandName,
-            content: cleanContent,
-            author: note.sourceAuthor,
-            date: CardGenerationUtils.formatDate(note.date,
-                languageCode: languageCode),
-            location: note.location,
-            weather: note.weather,
-            temperature: note.temperature,
-            dayPeriod: note.dayPeriod,
-            source: note.fullSource,
-          );
+          return _dispatchPrompt(
+              'visual', note, brandName, cleanContent, formattedDate);
       }
     }
 
@@ -219,44 +210,14 @@ class AiCardGenerationStrategy implements CardGenerationStrategy {
     if (customStyle != null) {
       switch (customStyle) {
         case 'creative':
-          return AICardPrompts.randomStylePosterPrompt(
-            brandName: brandName,
-            content: cleanContent,
-            author: note.sourceAuthor,
-            date: CardGenerationUtils.formatDate(note.date,
-                languageCode: languageCode),
-            location: note.location,
-            weather: note.weather,
-            temperature: note.temperature,
-            dayPeriod: note.dayPeriod,
-            source: note.fullSource,
-          );
+          return _dispatchPrompt(
+              'creative', note, brandName, cleanContent, formattedDate);
         case 'intelligent':
-          return AICardPrompts.intelligentCardPrompt(
-            brandName: brandName,
-            content: cleanContent,
-            author: note.sourceAuthor,
-            date: CardGenerationUtils.formatDate(note.date,
-                languageCode: languageCode),
-            location: note.location,
-            weather: note.weather,
-            temperature: note.temperature,
-            dayPeriod: note.dayPeriod,
-            source: note.fullSource,
-          );
+          return _dispatchPrompt(
+              'intelligent', note, brandName, cleanContent, formattedDate);
         case 'visual':
-          return AICardPrompts.contentAwareVisualPrompt(
-            brandName: brandName,
-            content: cleanContent,
-            author: note.sourceAuthor,
-            date: CardGenerationUtils.formatDate(note.date,
-                languageCode: languageCode),
-            location: note.location,
-            weather: note.weather,
-            temperature: note.temperature,
-            dayPeriod: note.dayPeriod,
-            source: note.fullSource,
-          );
+          return _dispatchPrompt(
+              'visual', note, brandName, cleanContent, formattedDate);
       }
     }
 
@@ -269,31 +230,11 @@ class AiCardGenerationStrategy implements CardGenerationStrategy {
         content.contains('曰') ||
         content.contains('"')) {
       if (random < 30) {
-        return AICardPrompts.intelligentCardPrompt(
-          brandName: brandName,
-          content: cleanContent,
-          author: note.sourceAuthor,
-          date: CardGenerationUtils.formatDate(note.date,
-              languageCode: languageCode),
-          location: note.location,
-          weather: note.weather,
-          temperature: note.temperature,
-          dayPeriod: note.dayPeriod,
-          source: note.fullSource,
-        );
+        return _dispatchPrompt(
+            'intelligent', note, brandName, cleanContent, formattedDate);
       } else {
-        return AICardPrompts.randomStylePosterPrompt(
-          brandName: brandName,
-          content: cleanContent,
-          author: note.sourceAuthor,
-          date: CardGenerationUtils.formatDate(note.date,
-              languageCode: languageCode),
-          location: note.location,
-          weather: note.weather,
-          temperature: note.temperature,
-          dayPeriod: note.dayPeriod,
-          source: note.fullSource,
-        );
+        return _dispatchPrompt(
+            'creative', note, brandName, cleanContent, formattedDate);
       }
     }
 
@@ -301,44 +242,14 @@ class AiCardGenerationStrategy implements CardGenerationStrategy {
     final techKeywords = ['代码', '编程', '算法', '技术', '开发', '学习', '知识', '方法', '原理'];
     if (techKeywords.any((keyword) => content.contains(keyword))) {
       if (random < 40) {
-        return AICardPrompts.contentAwareVisualPrompt(
-          brandName: brandName,
-          content: cleanContent,
-          author: note.sourceAuthor,
-          date: CardGenerationUtils.formatDate(note.date,
-              languageCode: languageCode),
-          location: note.location,
-          weather: note.weather,
-          temperature: note.temperature,
-          dayPeriod: note.dayPeriod,
-          source: note.fullSource,
-        );
+        return _dispatchPrompt(
+            'visual', note, brandName, cleanContent, formattedDate);
       } else if (random < 70) {
-        return AICardPrompts.intelligentCardPrompt(
-          brandName: brandName,
-          content: cleanContent,
-          author: note.sourceAuthor,
-          date: CardGenerationUtils.formatDate(note.date,
-              languageCode: languageCode),
-          location: note.location,
-          weather: note.weather,
-          temperature: note.temperature,
-          dayPeriod: note.dayPeriod,
-          source: note.fullSource,
-        );
+        return _dispatchPrompt(
+            'intelligent', note, brandName, cleanContent, formattedDate);
       } else {
-        return AICardPrompts.randomStylePosterPrompt(
-          brandName: brandName,
-          content: cleanContent,
-          author: note.sourceAuthor,
-          date: CardGenerationUtils.formatDate(note.date,
-              languageCode: languageCode),
-          location: note.location,
-          weather: note.weather,
-          temperature: note.temperature,
-          dayPeriod: note.dayPeriod,
-          source: note.fullSource,
-        );
+        return _dispatchPrompt(
+            'creative', note, brandName, cleanContent, formattedDate);
       }
     }
 
@@ -346,31 +257,11 @@ class AiCardGenerationStrategy implements CardGenerationStrategy {
     final emotionalKeywords = ['感受', '心情', '生活', '感悟', '体验', '回忆', '梦想', '希望'];
     if (emotionalKeywords.any((keyword) => content.contains(keyword))) {
       if (random < 50) {
-        return AICardPrompts.randomStylePosterPrompt(
-          brandName: brandName,
-          content: cleanContent,
-          author: note.sourceAuthor,
-          date: CardGenerationUtils.formatDate(note.date,
-              languageCode: languageCode),
-          location: note.location,
-          weather: note.weather,
-          temperature: note.temperature,
-          dayPeriod: note.dayPeriod,
-          source: note.fullSource,
-        );
+        return _dispatchPrompt(
+            'creative', note, brandName, cleanContent, formattedDate);
       } else {
-        return AICardPrompts.contentAwareVisualPrompt(
-          brandName: brandName,
-          content: cleanContent,
-          author: note.sourceAuthor,
-          date: CardGenerationUtils.formatDate(note.date,
-              languageCode: languageCode),
-          location: note.location,
-          weather: note.weather,
-          temperature: note.temperature,
-          dayPeriod: note.dayPeriod,
-          source: note.fullSource,
-        );
+        return _dispatchPrompt(
+            'visual', note, brandName, cleanContent, formattedDate);
       }
     }
 
@@ -378,96 +269,76 @@ class AiCardGenerationStrategy implements CardGenerationStrategy {
     if (cleanContent.length > 100) {
       // 长内容：40%随机海报，30%智能，30%视觉
       if (random < 40) {
-        return AICardPrompts.randomStylePosterPrompt(
-          brandName: brandName,
-          content: cleanContent,
-          author: note.sourceAuthor,
-          date: CardGenerationUtils.formatDate(note.date,
-              languageCode: languageCode),
-          location: note.location,
-          weather: note.weather,
-          temperature: note.temperature,
-          dayPeriod: note.dayPeriod,
-          source: note.fullSource,
-        );
+        return _dispatchPrompt(
+            'creative', note, brandName, cleanContent, formattedDate);
       } else if (random < 70) {
-        return AICardPrompts.intelligentCardPrompt(
-          brandName: brandName,
-          content: cleanContent,
-          author: note.sourceAuthor,
-          date: CardGenerationUtils.formatDate(note.date,
-              languageCode: languageCode),
-          location: note.location,
-          weather: note.weather,
-          temperature: note.temperature,
-          dayPeriod: note.dayPeriod,
-          source: note.fullSource,
-        );
+        return _dispatchPrompt(
+            'intelligent', note, brandName, cleanContent, formattedDate);
       } else {
-        return AICardPrompts.contentAwareVisualPrompt(
-          brandName: brandName,
-          content: cleanContent,
-          author: note.sourceAuthor,
-          date: CardGenerationUtils.formatDate(note.date,
-              languageCode: languageCode),
-          location: note.location,
-          weather: note.weather,
-          temperature: note.temperature,
-          dayPeriod: note.dayPeriod,
-          source: note.fullSource,
-        );
+        return _dispatchPrompt(
+            'visual', note, brandName, cleanContent, formattedDate);
       }
     }
 
     // 5. 默认使用三种提示词随机选择（各33%）
     if (random < 33) {
-      return AICardPrompts.randomStylePosterPrompt(
-        brandName: brandName,
-        content: cleanContent,
-        author: note.sourceAuthor,
-        date: CardGenerationUtils.formatDate(note.date,
-            languageCode: languageCode),
-        location: note.location,
-        weather: note.weather,
-        temperature: note.temperature,
-        dayPeriod: note.dayPeriod,
-        source: note.fullSource,
-      );
+      return _dispatchPrompt(
+          'creative', note, brandName, cleanContent, formattedDate);
     } else if (random < 66) {
-      return AICardPrompts.intelligentCardPrompt(
-        brandName: brandName,
-        content: cleanContent,
-        author: note.sourceAuthor,
-        date: CardGenerationUtils.formatDate(note.date,
-            languageCode: languageCode),
-        location: note.location,
-        weather: note.weather,
-        temperature: note.temperature,
-        dayPeriod: note.dayPeriod,
-        source: note.fullSource,
-      );
+      return _dispatchPrompt(
+          'intelligent', note, brandName, cleanContent, formattedDate);
     } else {
-      return AICardPrompts.contentAwareVisualPrompt(
-        brandName: brandName,
-        content: cleanContent,
-        author: note.sourceAuthor,
-        date: CardGenerationUtils.formatDate(note.date,
-            languageCode: languageCode),
-        location: note.location,
-        weather: note.weather,
-        temperature: note.temperature,
-        dayPeriod: note.dayPeriod,
-        source: note.fullSource,
-      );
+      return _dispatchPrompt(
+          'visual', note, brandName, cleanContent, formattedDate);
     }
   }
-}
 
-/// 自定义异常类
-class AICardGenerationException implements Exception {
-  final String message;
-  const AICardGenerationException(this.message);
-
-  @override
-  String toString() => 'AICardGenerationException: $message';
+  /// 根据风格分发调用对应的提示词方法，减少重复参数列表构建
+  String _dispatchPrompt(
+    String type,
+    Quote note,
+    String brandName,
+    String cleanContent,
+    String formattedDate,
+  ) {
+    switch (type) {
+      case 'creative':
+        return AICardPrompts.randomStylePosterPrompt(
+          brandName: brandName,
+          content: cleanContent,
+          author: note.sourceAuthor,
+          date: formattedDate,
+          location: note.location,
+          weather: note.weather,
+          temperature: note.temperature,
+          dayPeriod: note.dayPeriod,
+          source: note.fullSource,
+        );
+      case 'intelligent':
+        return AICardPrompts.intelligentCardPrompt(
+          brandName: brandName,
+          content: cleanContent,
+          author: note.sourceAuthor,
+          date: formattedDate,
+          location: note.location,
+          weather: note.weather,
+          temperature: note.temperature,
+          dayPeriod: note.dayPeriod,
+          source: note.fullSource,
+        );
+      case 'visual':
+      default:
+        return AICardPrompts.contentAwareVisualPrompt(
+          brandName: brandName,
+          content: cleanContent,
+          author: note.sourceAuthor,
+          date: formattedDate,
+          location: note.location,
+          weather: note.weather,
+          temperature: note.temperature,
+          dayPeriod: note.dayPeriod,
+          source: note.fullSource,
+        );
+    }
+  }
 }

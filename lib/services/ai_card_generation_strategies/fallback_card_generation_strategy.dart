@@ -8,6 +8,7 @@ import '../database_service.dart';
 import 'card_generation_strategy.dart';
 import 'card_generation_utils.dart';
 
+/// 基于本地模板和启发式规则的卡片生成策略。
 class FallbackCardGenerationStrategy implements CardGenerationStrategy {
   @override
   Future<GeneratedCard> generate({
@@ -18,11 +19,16 @@ class FallbackCardGenerationStrategy implements CardGenerationStrategy {
     bool isRegeneration = false,
     CardType? excludeType,
   }) async {
+    final noteId = note.id;
+    if (noteId == null || noteId.isEmpty) {
+      throw AICardGenerationException('无法生成卡片：笔记ID为空');
+    }
+
     // 智能检测最适合的模板类型
     final cardType = _determineTemplateType(note,
         isRegeneration: isRegeneration, excludeType: excludeType);
     final cleanContent = StringUtils.removeObjectReplacementChar(note.content);
-    final fallbackSVG = CardTemplates.getTemplateByType(
+    final fallbackSvg = CardTemplates.getTemplateByType(
       brandName: brandName,
       type: cardType,
       content: cleanContent,
@@ -40,9 +46,9 @@ class FallbackCardGenerationStrategy implements CardGenerationStrategy {
 
     return GeneratedCard(
       id: const Uuid().v4(),
-      noteId: note.id!,
+      noteId: noteId,
       originalContent: cleanContent,
-      svgContent: fallbackSVG,
+      svgContent: fallbackSvg,
       type: cardType,
       createdAt: DateTime.now(),
       author: note.sourceAuthor,
@@ -68,30 +74,44 @@ class FallbackCardGenerationStrategy implements CardGenerationStrategy {
 
     // 1. 优先匹配 Hitokoto 官方分类 (如果 categoryId 匹配)
     if (note.categoryId != null) {
+      CardType? candidate;
       switch (note.categoryId) {
         case DatabaseService.defaultCategoryIdAnime: // 动画 -> 几何/视觉
-          return CardType.geometric;
+          candidate = CardType.geometric;
+          break;
         case DatabaseService.defaultCategoryIdComic: // 漫画 -> 几何/视觉
-          return CardType.geometric;
+          candidate = CardType.geometric;
+          break;
         case DatabaseService.defaultCategoryIdGame: // 游戏 -> 赛博/科技
-          return CardType.cyberpunk;
+          candidate = CardType.cyberpunk;
+          break;
         case DatabaseService.defaultCategoryIdNovel: // 小说 -> 复古/纸张
-          return CardType.retro;
+          candidate = CardType.retro;
+          break;
         case DatabaseService.defaultCategoryIdPoem: // 诗词 -> 水墨/禅意
-          return CardType.ink;
+          candidate = CardType.ink;
+          break;
         case DatabaseService.defaultCategoryIdPhilosophy: // 哲学 -> 哲学/深邃
-          return CardType.philosophical;
+          candidate = CardType.philosophical;
+          break;
         case DatabaseService.defaultCategoryIdOriginal: // 原创 -> 情感/日记
-          return CardType.emotional;
+          candidate = CardType.emotional;
+          break;
         case DatabaseService.defaultCategoryIdMusic: // 音乐 -> 情感/日记
-          return CardType.emotional;
-        case DatabaseService
-              .defaultCategoryIdInternet: // 网络 -> 开发者/代码 (通常是网络段子或技术梗)
-          return CardType.dev;
+          candidate = CardType.emotional;
+          break;
+        case DatabaseService.defaultCategoryIdInternet: // 网络 -> 开发者/代码 (通常是网络段子或技术梗)
+          candidate = CardType.dev;
+          break;
         case DatabaseService.defaultCategoryIdMovie: // 影视 -> 引用/剧照感
-          return CardType.quote;
+          candidate = CardType.quote;
+          break;
         case DatabaseService.defaultCategoryIdJoke: // 抖机灵 -> 极简/留白 (突出笑点)
-          return CardType.minimalist;
+          candidate = CardType.minimalist;
+          break;
+      }
+      if (candidate != null && candidate != excludeType) {
+        return candidate;
       }
     }
 
@@ -111,7 +131,8 @@ class FallbackCardGenerationStrategy implements CardGenerationStrategy {
       'dart',
       'api'
     ])) {
-      return CardType.dev;
+      const candidate = CardType.dev;
+      if (candidate != excludeType) return candidate;
     }
 
     if (_hasKeyword(content, keywords, [
@@ -126,7 +147,8 @@ class FallbackCardGenerationStrategy implements CardGenerationStrategy {
       '悲伤',
       '快乐'
     ])) {
-      return CardType.emotional;
+      const candidate = CardType.emotional;
+      if (candidate != excludeType) return candidate;
     }
 
     if (_hasKeyword(content, keywords, [
@@ -141,7 +163,8 @@ class FallbackCardGenerationStrategy implements CardGenerationStrategy {
       'paper',
       '学术'
     ])) {
-      return CardType.academic;
+      const candidate = CardType.academic;
+      if (candidate != excludeType) return candidate;
     }
 
     if (_hasKeyword(content, keywords, [
@@ -155,12 +178,14 @@ class FallbackCardGenerationStrategy implements CardGenerationStrategy {
       'green',
       'eco'
     ])) {
-      return CardType.nature;
+      const candidate = CardType.nature;
+      if (candidate != excludeType) return candidate;
     }
 
     if (_hasKeyword(content, keywords,
         ['思考', '哲学', '意义', 'philosophy', 'think', 'mind', 'reason', 'truth'])) {
-      return CardType.philosophical;
+      const candidate = CardType.philosophical;
+      if (candidate != excludeType) return candidate;
     }
 
     if (_hasKeyword(content, keywords, [
@@ -174,7 +199,8 @@ class FallbackCardGenerationStrategy implements CardGenerationStrategy {
       'memory',
       'time'
     ])) {
-      return CardType.retro;
+      const candidate = CardType.retro;
+      if (candidate != excludeType) return candidate;
     }
 
     if (_hasKeyword(content, keywords, [
@@ -188,7 +214,8 @@ class FallbackCardGenerationStrategy implements CardGenerationStrategy {
       'calligraphy',
       'buddha'
     ])) {
-      return CardType.ink;
+      const candidate = CardType.ink;
+      if (candidate != excludeType) return candidate;
     }
 
     if (_hasKeyword(content, keywords, [
@@ -202,12 +229,14 @@ class FallbackCardGenerationStrategy implements CardGenerationStrategy {
       'glitch',
       'punk'
     ])) {
-      return CardType.cyberpunk;
+      const candidate = CardType.cyberpunk;
+      if (candidate != excludeType) return candidate;
     }
 
     if (_hasKeyword(content, keywords,
         ['几何', '设计', '艺术', 'geo', 'design', 'art', 'shape', 'abstract'])) {
-      return CardType.geometric;
+      const candidate = CardType.geometric;
+      if (candidate != excludeType) return candidate;
     }
 
     // 2. 基于元数据的启发式规则
@@ -217,7 +246,8 @@ class FallbackCardGenerationStrategy implements CardGenerationStrategy {
     if (hasAuthor && note.content.length < 100) {
       // 50% 概率使用专门的引用模板
       if (DateTime.now().millisecond % 2 == 0) {
-        return CardType.quote;
+        const candidate = CardType.quote;
+        if (candidate != excludeType) return candidate;
       }
     }
 

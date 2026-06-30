@@ -198,9 +198,13 @@ String _ensureMetadataPresenceStatic(
   final hasLocation =
       location != null && lower.contains(location.toLowerCase());
   final hasWeather = weather != null && lower.contains(weather.toLowerCase());
-  final need = !(hasDate || hasLocation || hasWeather);
+  final hasBrand = lower.contains(brandName.toLowerCase());
+  final need = !hasBrand ||
+      (date != null && !hasDate) ||
+      (location != null && !hasLocation) ||
+      (weather != null && !hasWeather);
   if (!need) {
-    return svg; // 已有至少一个信息
+    return svg; // 必需元数据已存在
   }
   // 简单插入在 </svg> 前
   final metaParts = <String>[];
@@ -222,8 +226,11 @@ String _ensureMetadataPresenceStatic(
   if (localizedDayPeriod != null) metaParts.add(localizedDayPeriod);
   metaParts.add(brandName);
   final meta = metaParts.join(' · ');
+  final (width, height) = _inferSvgIntrinsicSize(svg);
+  final footerX = (double.tryParse(width) ?? 400) / 2;
+  final footerY = (double.tryParse(height) ?? 600) - 10;
   final injection =
-      '<text x="200" y="590" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#ffffff" fill-opacity="0.75">${_escape(meta)}</text>';
+      '<text x="$footerX" y="$footerY" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#ffffff" fill-opacity="0.75">${_escape(meta)}</text>';
   final idx = svg.lastIndexOf('</svg>');
   if (idx == -1) {
     return svg; // 非法结构保持原样
@@ -286,11 +293,15 @@ String _normalizeSVGAttributes(String svgContent) {
   final inferredSize = _inferSvgIntrinsicSize(normalized);
 
   // 移除现有的viewBox、width、height、preserveAspectRatio属性，避免AI返回的百分比尺寸导致错位
-  normalized = normalized
-      .replaceAll(RegExp(r'\s+viewBox="[^"]*"'), '')
-      .replaceAll(RegExp(r'\s+width="[^"]*"'), '')
-      .replaceAll(RegExp(r'\s+height="[^"]*"'), '')
-      .replaceAll(RegExp(r'\s+preserveAspectRatio="[^"]*"'), '');
+  normalized = normalized.replaceFirstMapped(
+    RegExp(r'<svg\b[^>]*>'),
+    (match) => match
+        .group(0)!
+        .replaceAll(RegExp(r'\s+viewBox="[^"]*"'), '')
+        .replaceAll(RegExp(r'\s+width="[^"]*"'), '')
+        .replaceAll(RegExp(r'\s+height="[^"]*"'), '')
+        .replaceAll(RegExp(r'\s+preserveAspectRatio="[^"]*"'), ''),
+  );
 
   // 统一设置标准属性: 仅设置viewBox与保留比例，不强制width/height，让预览与导出一致
   normalized = normalized.replaceFirst(
@@ -349,22 +360,16 @@ double? _parseNumericDimension(String? raw) {
 /// 验证SVG内容安全性
 bool _isSafeSVGContent(String svgContent, [List<AICardProcessingLog>? logs]) {
   // 检查是否包含潜在危险的元素
-  final dangerousElements = [
-    '<script',
-    '<iframe',
-    '<object',
-    '<embed',
-    'javascript:',
-    'data:text/html',
-    'onload=',
-    'onclick=',
-    'onerror=',
+  final dangerousPatterns = [
+    RegExp(r'<\s*(script|iframe|object|embed|foreignObject)\b',
+        caseSensitive: false),
+    RegExp(r'\bon[a-z]+\s*=', caseSensitive: false),
+    RegExp(r'''(?:javascript:|data:text/html)''', caseSensitive: false),
   ];
 
-  final lowerContent = svgContent.toLowerCase();
-  for (final dangerous in dangerousElements) {
-    if (lowerContent.contains(dangerous)) {
-      final msg = '发现不安全的SVG元素: $dangerous';
+  for (final dangerous in dangerousPatterns) {
+    if (dangerous.hasMatch(svgContent)) {
+      final msg = '发现不安全的SVG元素: ${dangerous.pattern}';
       if (logs != null) {
         logs.add(AICardProcessingLog('WARN', msg));
       } else {

@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'dart:io';
-import 'package:flutter/widgets.dart';
 
 // 条件导入：Web平台使用stub实现，其他平台使用gal
 import '../utils/stub_implementations.dart'
@@ -16,7 +15,7 @@ import 'ai_card_generation_strategies/ai_card_generation_strategy.dart';
 import 'ai_card_generation_strategies/fallback_card_generation_strategy.dart';
 
 /// AI卡片生成服务
-class AICardGenerationService {
+class AICardGenerationService extends ChangeNotifier {
   final SettingsService _settingsService;
   final AiCardGenerationStrategy _aiStrategy;
   final FallbackCardGenerationStrategy _fallbackStrategy;
@@ -134,7 +133,7 @@ class AICardGenerationService {
 
         // 如果失败卡片太多，停止生成
         if (errors.length > maxCards ~/ 2) {
-          AppLogger.e('批量生成失败率过高，停止生成', source: 'AICardGenerationService');
+          logError('批量生成失败率过高，停止生成', source: 'AICardGenerationService');
           break;
         }
 
@@ -143,7 +142,7 @@ class AICardGenerationService {
     }
 
     if (cards.isEmpty && errors.isNotEmpty) {
-      throw Exception('批量生成完全失败: ${errors.join('; ')}');
+      throw AICardGenerationException('批量生成完全失败: ${errors.join('; ')}');
     }
 
     AppLogger.i(
@@ -163,7 +162,7 @@ class AICardGenerationService {
     String fileNamePrefix = 'ThoughtEcho_Card',
     double scaleFactor = 2.0,
     ExportRenderMode renderMode = ExportRenderMode.contain,
-    BuildContext? context,
+    dynamic context,
   }) async {
     try {
       AppLogger.i(
@@ -186,10 +185,14 @@ class AICardGenerationService {
       }
 
       // 先渲染图片（此时尚未出现 async gap，满足 use_build_context_synchronously 规范）
-      final safeContext =
-          (context != null && context is Element && !context.mounted)
-              ? null
-              : context;
+      dynamic safeContext = context;
+      if (context != null) {
+        try {
+          if (context.mounted == false) {
+            safeContext = null;
+          }
+        } catch (_) {}
+      }
 
       // 关键修复：直接使用原始 svgContent，不做任何标准化处理
       // 这样保证保存时的渲染与预览完全一致（预览使用 SVGCardWidget 直接渲染原始 SVG）
@@ -272,7 +275,7 @@ class AICardGenerationService {
     Function(int current, int total)? onProgress,
     double scaleFactor = 2.0,
     ExportRenderMode renderMode = ExportRenderMode.contain,
-    BuildContext? context,
+    dynamic context,
   }) async {
     final savedFiles = <String>[];
 

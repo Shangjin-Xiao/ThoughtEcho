@@ -104,20 +104,18 @@ class CardGenerationUtils {
       {String languageCode = 'zh'}) {
     if (weather == null || weather.trim().isEmpty) return null;
     final w = weather.toLowerCase().trim();
+    final variants = <String>{
+      w,
+      w.replaceAll('_', ' '),
+      w.replaceAll(' ', '_'),
+    };
 
-    // 如果已经是目标语言，直接返回
-    if (_weatherLocalizations.containsKey(w)) {
-      return _weatherLocalizations[w]?[languageCode] ??
-          _weatherLocalizations[w]?['en'] ??
-          weather;
-    }
-
-    // 尝试匹配（可能输入带下划线或空格变体）
-    final normalized = w.replaceAll('_', ' ');
-    if (_weatherLocalizations.containsKey(normalized)) {
-      return _weatherLocalizations[normalized]?[languageCode] ??
-          _weatherLocalizations[normalized]?['en'] ??
-          weather;
+    for (final key in variants) {
+      if (_weatherLocalizations.containsKey(key)) {
+        return _weatherLocalizations[key]?[languageCode] ??
+            _weatherLocalizations[key]?['en'] ??
+            weather;
+      }
     }
 
     // 未命中保持原样（可能已是目标语言）
