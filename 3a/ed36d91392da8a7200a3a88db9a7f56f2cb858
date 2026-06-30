@@ -1,0 +1,141 @@
+.agents/skills/triage/AGENT-BRIEF.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-207
+.agents/skills/review/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-69
+.agents/skills/triage/OUT-OF-SCOPE.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-105
+.agents/skills/decision-mapping/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-103
+.agents/skills/tdd/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-111
+.agents/skills/wizard/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-45
+.agents/skills/codebase-design/DEEPENING.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-37
+.agents/skills/wizard/template.sh
+  s_030b7e111722fc::t_69a8387bb9397a 1-211
+.agents/skills/resolving-merge-conflicts/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-14
+.agents/skills/teach/GLOSSARY-FORMAT.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-35
+.agents/skills/writing-great-skills/GLOSSARY.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-195
+.agents/skills/teach/RESOURCES-FORMAT.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-32
+.agents/skills/request-refactor-plan/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-68
+.agents/skills/codebase-design/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-114
+.agents/skills/diagnosing-bugs/scripts/hitl-loop.template.sh
+  s_030b7e111722fc::t_69a8387bb9397a 1-41
+.agents/skills/handoff/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-16
+.agents/skills/grill-me/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-7
+.agents/skills/setup-matt-pocock-skills/issue-tracker-gitlab.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-35
+.agents/skills/git-guardrails-claude-code/scripts/block-dangerous-git.sh
+  s_030b7e111722fc::t_69a8387bb9397a 1-25
+.agents/skills/setup-matt-pocock-skills/issue-tracker-github.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-34
+.agents/skills/teach/LEARNING-RECORD-FORMAT.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-46
+.agents/skills/obsidian-vault/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-59
+.agents/skills/domain-modeling/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-74
+.agents/skills/edit-article/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-15
+.agents/skills/prototype/UI.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-112
+.agents/skills/triage/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-112
+.agents/skills/tdd/tests.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-77
+.agents/skills/setup-pre-commit/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-91
+.agents/skills/prototype/LOGIC.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-79
+.agents/skills/codebase-design/DESIGN-IT-TWICE.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-44
+.agents/skills/teach/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-140
+skills-lock.json
+  s_030b7e111722fc::t_69a8387bb9397a 4-15,70-99,166-261,321-398
+.agents/skills/domain-modeling/CONTEXT-FORMAT.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-60
+.agents/skills/to-issues/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-84
+.agents/skills/writing-fragments/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-79
+.agents/skills/tdd/mocking.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-59
+.agents/skills/improve-codebase-architecture/HTML-REPORT.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-123
+.agents/skills/ubiquitous-language/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-93
+.agents/skills/diagnosing-bugs/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-134
+.agents/skills/tdd/refactoring.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-10
+.agents/skills/ask-matt/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-61
+.agents/skills/writing-beats/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-67
+.agents/skills/setup-matt-pocock-skills/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-127
+.agents/skills/git-guardrails-claude-code/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-95
+.agents/skills/qa/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-130
+.agents/skills/grill-with-docs/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-7
+.agents/skills/to-prd/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-75
+.agents/skills/prototype/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-30
+.agents/skills/domain-modeling/ADR-FORMAT.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-47
+.agents/skills/setup-matt-pocock-skills/issue-tracker-local.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-19
+.agents/skills/design-an-interface/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-94
+.agents/skills/loop-me/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-32
+.agents/skills/migrate-to-shoehorn/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-118
+.agents/skills/grilling/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-10
+.agents/skills/writing-great-skills/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-82
+.agents/skills/teach/MISSION-FORMAT.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-31
+.agents/skills/setup-matt-pocock-skills/triage-labels.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-15
+.agents/skills/implement/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-15
+.agents/skills/setup-matt-pocock-skills/domain.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-51
+.agents/skills/improve-codebase-architecture/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-66
+.agents/skills/scaffold-exercises/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-106
+.agents/skills/writing-shape/SKILL.md
+  s_030b7e111722fc::t_69a8387bb9397a 1-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "3aed36d91392da8a7200a3a88db9a7f56f2cb858",
+  "prompts": {},
+  "sessions": {
+    "s_030b7e111722fc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1608-471c-7f03-a5bc-b4043d6002e6",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
