@@ -1,0 +1,24 @@
+test/unit/android/file_provider_config_test.dart
+  s_1f382f33f37963::t_488f44a189171c 57
+  s_1f382f33f37963::t_05269bc2cc0ea2 1-56,58-66
+pubspec.yaml
+  s_1f382f33f37963::t_05269bc2cc0ea2 110
+pubspec.lock
+  s_1f382f33f37963::t_dbe1d9c1441f01 2605
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "31d0a02766d64600be80ac9812a5c28a8bdf43e0",
+  "prompts": {},
+  "sessions": {
+    "s_1f382f33f37963": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f165c-c498-79c1-bc0f-705f5032db45",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
