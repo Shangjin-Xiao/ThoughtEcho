@@ -1,0 +1,19 @@
+lib/services/ai_card_generation_strategies/ai_card_prompt_selector.dart
+  s_f62d9653fe219e::t_d90f6840945c62 1-175
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "15dc26d777a69b78aacaf794f3c2fc8238f33e86",
+  "prompts": {},
+  "sessions": {
+    "s_f62d9653fe219e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1646-6f52-7931-99a2-c1220b8f983f",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
