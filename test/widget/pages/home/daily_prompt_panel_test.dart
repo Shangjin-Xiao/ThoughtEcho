@@ -10,6 +10,7 @@ import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/models/ai_settings.dart';
+import '../../../test_setup.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
 class MockAIService extends ChangeNotifier implements AIService {
@@ -81,6 +82,10 @@ class MockInsightHistoryService extends ChangeNotifier
 }
 
 void main() {
+  setUpAll(() async {
+    await setupTestEnvironment();
+  });
+
   group('HomeDailyPromptPanel Widget Tests', () {
     late MockAIService mockAIService;
     late MockSettingsService mockSettingsService;
@@ -88,7 +93,7 @@ void main() {
     late MockWeatherService mockWeatherService;
     late MockInsightHistoryService mockInsightHistoryService;
 
-    setUp(() {
+    setUp(() async {
       mockAIService = MockAIService();
       mockSettingsService = MockSettingsService();
       mockLocationService = MockLocationService();

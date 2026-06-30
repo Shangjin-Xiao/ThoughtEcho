@@ -10,6 +10,7 @@ import 'package:thoughtecho/services/ai_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/services/excerpt_intent_service.dart';
+import '../../test_setup.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/widgets/daily_quote_view.dart';
 import 'package:thoughtecho/pages/home/daily_prompt_panel.dart';
@@ -78,6 +79,10 @@ class MockExcerptIntentService implements ExcerptIntentService {
 }
 
 void main() {
+  setUpAll(() async {
+    await setupTestEnvironment();
+  });
+
   group('HomePage Widget Tests', () {
     late MockDatabaseService mockDatabaseService;
     late MockSettingsService mockSettingsService;
@@ -88,7 +93,7 @@ void main() {
     late MockWeatherService mockWeatherService;
     late MockExcerptIntentService mockExcerptIntentService;
 
-    setUp(() {
+    setUp(() async {
       mockDatabaseService = MockDatabaseService();
       mockSettingsService = MockSettingsService();
       mockSearchController = MockSearchController();
@@ -207,6 +212,7 @@ void main() {
       );
 
       expect(chipSize.width, lessThan(360));
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('long English location chip uses remaining title space',
@@ -250,6 +256,7 @@ void main() {
 
       expect(titleSize.width, greaterThan(80));
       expect(chipSize.width, lessThanOrEqualTo(320 - titleSize.width - 8));
+      expect(tester.takeException(), isNull);
     });
   });
 }
