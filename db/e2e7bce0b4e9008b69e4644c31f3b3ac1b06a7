@@ -1,0 +1,26 @@
+lib/services/unified_log_service.dart
+  s_f62d9653fe219e::t_49a8ce6b557377 268,366-368,594-598,600-608,614-630,657-658,673-674,686-689,697
+test/log_persistence_test.dart
+  s_f62d9653fe219e::t_20131cb162dade 12
+test/unified_log_service_test.dart
+  s_f62d9653fe219e::t_0a7d58b7a8eba0 55-56
+  s_f62d9653fe219e::t_1338694801092e 57,59-62,67-79
+  s_f62d9653fe219e::t_4460300afc6edd 49
+  s_f62d9653fe219e::t_d8f5e58da6d755 80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "dbe2e7bce0b4e9008b69e4644c31f3b3ac1b06a7",
+  "prompts": {},
+  "sessions": {
+    "s_f62d9653fe219e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1646-6f52-7931-99a2-c1220b8f983f",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
