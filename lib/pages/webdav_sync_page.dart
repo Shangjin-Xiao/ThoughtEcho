@@ -223,9 +223,11 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
       AppLogger.e('连接测试异常', error: e, stackTrace: stackTrace);
       success = false;
     } finally {
-      setState(() {
-        _isTestingConnection = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isTestingConnection = false;
+        });
+      }
     }
 
     if (mounted) {
