@@ -151,6 +151,19 @@ class _TrashPageState extends State<TrashPage> {
     await _loadTrashQuotes(reset: false);
   }
 
+  void _removeQuoteFromTrash(String id) {
+    final remainingQuotes =
+        _trashQuotes.where((quote) => quote.id != id).toList();
+    final remainingTotal =
+        _trashTotalCount > 0 ? _trashTotalCount - 1 : remainingQuotes.length;
+
+    _trashQuotes = remainingQuotes;
+    _trashTotalCount = remainingTotal;
+    if (_trashQuotes.length >= _trashTotalCount) {
+      _hasMore = false;
+    }
+  }
+
   String _deletedAtText(BuildContext context, Quote quote) {
     final l10n = AppLocalizations.of(context);
     final deletedAt = quote.deletedAt;
@@ -288,8 +301,7 @@ class _TrashPageState extends State<TrashPage> {
         return;
       }
       setState(() {
-        _trashQuotes = _trashQuotes.where((quote) => quote.id != id).toList();
-        _trashTotalCount = (_trashTotalCount - 1).clamp(0, _trashTotalCount);
+        _removeQuoteFromTrash(id);
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -297,7 +309,6 @@ class _TrashPageState extends State<TrashPage> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      await _loadTrashQuotes(reset: true);
     } catch (e, stackTrace) {
       logError(
         '恢复回收站笔记失败: $e',
@@ -358,10 +369,8 @@ class _TrashPageState extends State<TrashPage> {
         return;
       }
       setState(() {
-        _trashQuotes = _trashQuotes.where((quote) => quote.id != id).toList();
-        _trashTotalCount = (_trashTotalCount - 1).clamp(0, _trashTotalCount);
+        _removeQuoteFromTrash(id);
       });
-      await _loadTrashQuotes(reset: true);
     } catch (e, stackTrace) {
       logError(
         '永久删除回收站笔记失败: $e',
@@ -435,7 +444,6 @@ class _TrashPageState extends State<TrashPage> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      await _loadTrashQuotes(reset: true);
     } catch (e, stackTrace) {
       logError(
         '清空回收站失败: $e',
