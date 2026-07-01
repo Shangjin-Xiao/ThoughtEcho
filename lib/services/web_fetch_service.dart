@@ -168,7 +168,7 @@ class WebFetchService {
     if (ip == null) {
       return false;
     }
-    if (ip.isLoopback) return true;
+    if (ip.isLoopback || ip.isLinkLocal || ip.isMulticast) return true;
     if (ip.type == InternetAddressType.IPv4) {
       final bytes = ip.rawAddress;
       // 10.0.0.0/8

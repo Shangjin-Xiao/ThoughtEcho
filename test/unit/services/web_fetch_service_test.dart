@@ -18,6 +18,9 @@ void main() {
         'http://172.16.0.1/',
         'http://169.254.169.254/latest/meta-data',
         'http://[::1]/',
+        'http://[fe80::1]/',
+        'http://224.0.0.1/',
+        'http://[ff02::1]/',
       ];
 
       for (final url in blockedUrls) {
