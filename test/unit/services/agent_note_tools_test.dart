@@ -86,7 +86,7 @@ void main() {
           arguments: const {
             'title': '草稿建议',
             'content': '今天想把这段感受记下来。',
-            'tag_ids': ['tag_work'],
+            'tag_names': ['工作'],
             'include_location': true,
             'include_weather': true,
             'reason': '整理成单独笔记更方便回顾。',
@@ -106,6 +106,7 @@ void main() {
       expect(payload['content'], '今天想把这段感受记下来。');
       expect(payload['action'], 'create');
       expect(payload['tag_ids'], ['tag_work']);
+      expect(payload['tag_names'], ['工作']);
       expect(payload['include_location'], isTrue);
       expect(payload['include_weather'], isTrue);
       expect(payload['reason'], '整理成单独笔记更方便回顾。');
@@ -129,7 +130,7 @@ void main() {
             'content': '这是一段读书笔记内容。',
             'author': '王小波',
             'source': '《黄金时代》',
-            'tag_ids': ['tag_lit'],
+            'tag_names': ['文学'],
             'include_location': false,
             'include_weather': false,
           },
@@ -146,11 +147,12 @@ void main() {
       expect(payload['author'], '王小波');
       expect(payload['source'], '《黄金时代》');
       expect(payload['tag_ids'], ['tag_lit']);
+      expect(payload['tag_names'], ['文学']);
       expect(payload['include_location'], isFalse);
       expect(payload['include_weather'], isFalse);
     });
 
-    test('rejects tag ids that do not exist in app categories', () async {
+    test('rejects tag names that do not exist in app categories', () async {
       final tool = ProposeNewNoteTool(
         _TestDatabaseService(
           [
@@ -166,13 +168,14 @@ void main() {
           arguments: const {
             'title': '草稿建议',
             'content': '这是一条新笔记',
-            'tag_ids': ['tag_missing'],
+            'tag_names': ['不存在'],
           },
         ),
       );
 
       expect(result.isError, isTrue);
-      expect(result.content, contains('tag_missing'));
+      expect(result.retryable, isTrue);
+      expect(result.content, contains('不存在'));
     });
   });
 
@@ -240,7 +243,14 @@ void main() {
 
   group('ProposeEditTool', () {
     test('returns smart result payload with new fields', () async {
-      const tool = ProposeEditTool();
+      final tool = ProposeEditTool(
+        _TestDatabaseService(
+          [
+            NoteCategory(id: 'tag_1', name: '摘录'),
+            NoteCategory(id: 'tag_2', name: '文学'),
+          ],
+        ),
+      );
 
       final result = await tool.execute(
         ToolCall(
@@ -251,7 +261,7 @@ void main() {
             'content': '润色后的内容',
             'action': 'replace',
             'note_id': 'note_123',
-            'tag_ids': ['tag_1', 'tag_2'],
+            'tag_names': ['摘录', '文学'],
             'author': '鲁迅',
             'source': '《呐喊》',
             'include_location': true,
@@ -274,15 +284,16 @@ void main() {
       expect(payload['action'], 'replace');
       expect(payload['note_id'], 'note_123');
       expect(payload['tag_ids'], ['tag_1', 'tag_2']);
+      expect(payload['tag_names'], ['摘录', '文学']);
       expect(payload['author'], '鲁迅');
       expect(payload['source'], '《呐喊》');
-      expect(payload['include_location'], isTrue);
-      expect(payload['include_weather'], isFalse);
+      expect(payload.containsKey('include_location'), isFalse);
+      expect(payload.containsKey('include_weather'), isFalse);
       expect(payload['reason'], '优化表达');
     });
 
     test('returns smart result payload without optional fields', () async {
-      const tool = ProposeEditTool();
+      final tool = ProposeEditTool(_TestDatabaseService(const []));
 
       final result = await tool.execute(
         ToolCall(
@@ -305,10 +316,38 @@ void main() {
       final payload = jsonDecode(match!.group(1)!) as Map<String, dynamic>;
       expect(payload['action'], 'append');
       expect(payload.containsKey('tag_ids'), isFalse);
+      expect(payload.containsKey('tag_names'), isFalse);
       expect(payload.containsKey('author'), isFalse);
       expect(payload.containsKey('source'), isFalse);
-      expect(payload['include_location'], isFalse);
-      expect(payload['include_weather'], isFalse);
+      expect(payload.containsKey('include_location'), isFalse);
+      expect(payload.containsKey('include_weather'), isFalse);
+    });
+
+    test('rejects unknown tag names as model-correctable errors', () async {
+      final tool = ProposeEditTool(
+        _TestDatabaseService(
+          [
+            NoteCategory(id: 'tag_1', name: '摘录'),
+          ],
+        ),
+      );
+
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_edit_unknown_tag',
+          name: 'propose_edit',
+          arguments: const {
+            'title': '润色建议',
+            'content': '润色内容',
+            'action': 'replace',
+            'tag_names': ['不存在'],
+          },
+        ),
+      );
+
+      expect(result.isError, isTrue);
+      expect(result.retryable, isTrue);
+      expect(result.content, contains('不存在'));
     });
   });
 

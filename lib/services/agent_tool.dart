@@ -102,27 +102,31 @@ class ToolResult {
     required this.toolCallId,
     required this.content,
     this.isError = false,
+    this.retryable = false,
   });
 
   final String toolCallId;
   final String content;
   final bool isError;
+  final bool retryable;
 
   ToolResult copyWith({
     String? toolCallId,
     String? content,
     bool? isError,
+    bool? retryable,
   }) {
     return ToolResult(
       toolCallId: toolCallId ?? this.toolCallId,
       content: content ?? this.content,
       isError: isError ?? this.isError,
+      retryable: retryable ?? this.retryable,
     );
   }
 
   @override
   String toString() {
-    return 'ToolResult(toolCallId: $toolCallId, isError: $isError, content: $content)';
+    return 'ToolResult(toolCallId: $toolCallId, isError: $isError, retryable: $retryable, content: $content)';
   }
 
   @override
@@ -133,12 +137,13 @@ class ToolResult {
     return other is ToolResult &&
         other.toolCallId == toolCallId &&
         other.content == content &&
-        other.isError == isError;
+        other.isError == isError &&
+        other.retryable == retryable;
   }
 
   @override
   int get hashCode {
-    return Object.hash(toolCallId, content, isError);
+    return Object.hash(toolCallId, content, isError, retryable);
   }
 }
 

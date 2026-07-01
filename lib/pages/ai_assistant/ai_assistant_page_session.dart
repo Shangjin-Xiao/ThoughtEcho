@@ -5,6 +5,7 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
     _currentMode = _entryConfig.defaultMode;
     _textController.addListener(_onTextChanged);
     _inputFocusNode.addListener(_onInputFocusChanged);
+    _scrollController.addListener(_onScrollPositionChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _initServicesAndLoad());
   }
 
@@ -17,6 +18,7 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
     _streamSubscription?.cancel();
     _inputFocusNode.removeListener(_onInputFocusChanged);
     _textController.removeListener(_onTextChanged);
+    _scrollController.removeListener(_onScrollPositionChanged);
     _inputFocusNode.dispose();
     _textController.dispose();
     _scrollController.dispose();

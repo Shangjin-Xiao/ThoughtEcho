@@ -16,8 +16,6 @@ class DatabaseSchemaManager {
     'quotes',
     'categories',
     'quote_tags',
-    'chat_sessions',
-    'chat_messages',
   };
 
   @visibleForTesting
@@ -142,48 +140,6 @@ class DatabaseSchemaManager {
     // 复合索引优化JOIN查询 (且最左前缀覆盖单列 tag_id 查询)
     await db.execute(
       'CREATE INDEX idx_quote_tags_composite ON quote_tags(tag_id, quote_id)',
-    );
-
-    // 创建聊天会话表
-    await db.execute('''
-      CREATE TABLE chat_sessions(
-        id TEXT PRIMARY KEY,
-        session_type TEXT NOT NULL DEFAULT 'note',
-        note_id TEXT,
-        title TEXT NOT NULL DEFAULT '',
-        created_at TEXT NOT NULL,
-        last_active_at TEXT NOT NULL,
-        is_pinned INTEGER NOT NULL DEFAULT 0,
-        FOREIGN KEY (note_id) REFERENCES quotes(id) ON DELETE CASCADE
-      )
-    ''');
-
-    await db.execute(
-      'CREATE INDEX idx_chat_sessions_note_id ON chat_sessions(note_id)',
-    );
-    await db.execute(
-      'CREATE INDEX idx_chat_sessions_last_active ON chat_sessions(last_active_at DESC)',
-    );
-    await db.execute(
-      'CREATE INDEX idx_chat_sessions_type ON chat_sessions(session_type)',
-    );
-
-    // 创建聊天消息表
-    await db.execute('''
-      CREATE TABLE chat_messages(
-        id TEXT PRIMARY KEY,
-        session_id TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'user',
-        content TEXT NOT NULL DEFAULT '',
-        created_at TEXT NOT NULL,
-        included_in_context INTEGER NOT NULL DEFAULT 1,
-        meta_json TEXT,
-        FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
-      )
-    ''');
-
-    await db.execute(
-      'CREATE INDEX idx_chat_messages_session_id ON chat_messages(session_id)',
     );
 
     // 创建媒体文件引用表
@@ -746,11 +702,12 @@ class DatabaseSchemaManager {
       }
     }
 
-    // 版本21：添加 poi_name 字段 + 聊天会话/消息表
+    // 版本21：添加 poi_name 字段。聊天历史使用独立 chat.db，
+    // 不再写入主笔记数据库。
     if (oldVersion < 21) {
       try {
         logDebug(
-          '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 poi_name + 聊天表',
+          '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 poi_name',
         );
         final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
         final hasPoiName = columns.any((col) => col['name'] == 'poi_name');
@@ -761,44 +718,6 @@ class DatabaseSchemaManager {
 
         await txn.execute(
           'CREATE INDEX IF NOT EXISTS idx_quotes_poi_name ON quotes(poi_name)',
-        );
-
-        await txn.execute('''
-          CREATE TABLE IF NOT EXISTS chat_sessions(
-            id TEXT PRIMARY KEY,
-            session_type TEXT NOT NULL DEFAULT 'note',
-            note_id TEXT,
-            title TEXT NOT NULL DEFAULT '',
-            created_at TEXT NOT NULL,
-            last_active_at TEXT NOT NULL,
-            is_pinned INTEGER NOT NULL DEFAULT 0,
-            FOREIGN KEY (note_id) REFERENCES quotes(id) ON DELETE CASCADE
-          )
-        ''');
-        await txn.execute(
-          'CREATE INDEX IF NOT EXISTS idx_chat_sessions_note_id ON chat_sessions(note_id)',
-        );
-        await txn.execute(
-          'CREATE INDEX IF NOT EXISTS idx_chat_sessions_last_active ON chat_sessions(last_active_at DESC)',
-        );
-        await txn.execute(
-          'CREATE INDEX IF NOT EXISTS idx_chat_sessions_type ON chat_sessions(session_type)',
-        );
-
-        await txn.execute('''
-          CREATE TABLE IF NOT EXISTS chat_messages(
-            id TEXT PRIMARY KEY,
-            session_id TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'user',
-            content TEXT NOT NULL DEFAULT '',
-            created_at TEXT NOT NULL,
-            included_in_context INTEGER NOT NULL DEFAULT 1,
-            meta_json TEXT,
-            FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
-          )
-        ''');
-        await txn.execute(
-          'CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id)',
         );
       } catch (e) {
         logError('版本21升级失败: $e', error: e, source: 'DatabaseUpgrade');
@@ -820,8 +739,6 @@ class DatabaseSchemaManager {
         'quotes',
         'categories',
         'quote_tags',
-        'chat_sessions',
-        'chat_messages',
       };
       final missingTables = requiredTables.difference(tableNames);
 

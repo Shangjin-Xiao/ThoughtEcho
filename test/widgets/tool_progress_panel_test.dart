@@ -75,8 +75,8 @@ void main() {
         ),
       );
 
-      // 应该显示"已执行 N 个操作"
-      expect(find.text('已执行 1 个操作'), findsOneWidget);
+      // 应该显示本地化的完成摘要
+      expect(find.text('执行了 1 个操作'), findsOneWidget);
 
       // 应该显示完成图标
       expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);

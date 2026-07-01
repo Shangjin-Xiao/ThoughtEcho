@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thoughtecho/models/note_category.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/explore_notes_tool.dart';
@@ -70,6 +71,11 @@ class _TestDatabaseService extends DatabaseService {
     }
     return null;
   }
+
+  @override
+  Future<List<NoteCategory>> getCategories() async {
+    return const <NoteCategory>[];
+  }
 }
 
 void main() {
@@ -134,6 +140,40 @@ void main() {
       expect(result.isError, isFalse);
       final data = jsonDecode(result.content);
       expect(data['notes'], hasLength(10));
+    });
+
+    test('returns snippet around query match in long content', () async {
+      final prefix = List<String>.filled(260, '前').join();
+      final suffix = List<String>.filled(260, '后').join();
+      quotes
+        ..clear()
+        ..add(
+          Quote(
+            id: 'late_match',
+            content: '$prefix important keyword $suffix',
+            date: DateTime(2026, 1, 1).toIso8601String(),
+          ),
+        );
+
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_snippet',
+          name: 'explore_notes',
+          arguments: const {
+            'query': 'important keyword',
+            'limit': 1,
+          },
+        ),
+      );
+
+      expect(result.isError, isFalse);
+      final data = jsonDecode(result.content) as Map<String, dynamic>;
+      final notes = data['notes'] as List;
+      final note = notes.single as Map<String, dynamic>;
+      expect(note['match_snippet'], contains('important keyword'));
+      expect(note['content_preview'], isNot(contains('important keyword')));
+      expect(note['is_truncated'], isTrue);
+      expect(note['match_start'], prefix.length + 1);
     });
   });
 }

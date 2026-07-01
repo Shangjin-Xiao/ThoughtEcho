@@ -50,7 +50,7 @@ List<AgentTool> _buildAgentTools(
     GetNoteDetailTool(db),
     WebSearchTool(settingsService),
     WebFetchTool(WebFetchService()),
-    const ProposeEditTool(),
+    ProposeEditTool(db),
     ProposeNewNoteTool(db),
   ];
 }

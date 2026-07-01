@@ -303,25 +303,6 @@ Future<void> main() async {
         final featureGuideService = FeatureGuideService(SafeMMKV());
         final chatSessionService = ChatSessionService();
 
-        // 监听 databaseService 并在初始化完成时动态绑定数据库
-        late VoidCallback databaseReadyListener;
-        databaseReadyListener = () {
-          if (databaseService.isInitialized) {
-            try {
-              chatSessionService.setDatabase(databaseService.database);
-              databaseService.removeListener(databaseReadyListener);
-            } catch (e, stackTrace) {
-              logError(
-                '聊天会话数据库绑定失败: $e',
-                error: e,
-                stackTrace: stackTrace,
-                source: 'Main',
-              );
-            }
-          }
-        };
-        databaseService.addListener(databaseReadyListener);
-
         // 创建智能推送服务实例
         final smartPushService = SmartPushService(
           databaseService: databaseService,
@@ -582,9 +563,18 @@ Future<void> main() async {
               // 媒体清理服务初始化失败不影响主要功能，继续执行
             }
 
-            // 注入数据库到聊天会话服务
-            if (databaseService.isInitialized) {
-              chatSessionService.setDatabase(databaseService.database);
+            // 初始化独立聊天数据库。聊天历史不再存入主笔记库，
+            // 避免大量会话记录影响核心笔记数据生命周期。
+            try {
+              await chatSessionService.init();
+              logInfo('聊天会话数据库初始化完成', source: 'BackgroundInit');
+            } catch (e, stackTrace) {
+              logError(
+                '聊天会话数据库初始化失败: $e',
+                error: e,
+                stackTrace: stackTrace,
+                source: 'BackgroundInit',
+              );
             }
 
             // 初始化完成，更新状态

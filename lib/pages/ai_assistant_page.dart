@@ -199,6 +199,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
   // ==================== 性能优化：_scrollToBottom 节流 ====================
   Timer? _scrollThrottleTimer;
+  bool _autoScrollEnabled = true;
+  bool _showScrollToBottom = false;
   // ==================== 性能优化结束 ====================
 
   // ==================== 性能优化：MarkdownStyleSheet 缓存 ====================
@@ -437,7 +439,44 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     _finishLoading();
   }
 
-  void _scrollToBottom() {
+  void _onScrollPositionChanged() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    final distanceFromBottom = position.maxScrollExtent - position.pixels;
+    if (distanceFromBottom <= 80) {
+      _setAutoScrollEnabled(true);
+    } else if (!_autoScrollEnabled && !_showScrollToBottom) {
+      _setState(() {
+        _showScrollToBottom = true;
+      });
+    }
+  }
+
+  void _setAutoScrollEnabled(bool enabled) {
+    if (_autoScrollEnabled == enabled &&
+        _showScrollToBottom == (!enabled && _isLoading)) {
+      return;
+    }
+    _setState(() {
+      _autoScrollEnabled = enabled;
+      _showScrollToBottom = !enabled && _isLoading;
+    });
+  }
+
+  void _resumeAutoScroll() {
+    _setAutoScrollEnabled(true);
+    _scrollToBottom(force: true);
+  }
+
+  void _scrollToBottom({bool force = false}) {
+    if (!_autoScrollEnabled && !force) {
+      if (_isLoading && !_showScrollToBottom) {
+        _setState(() {
+          _showScrollToBottom = true;
+        });
+      }
+      return;
+    }
     if (_scrollThrottleTimer?.isActive ?? false) return;
     _scrollThrottleTimer = Timer(const Duration(milliseconds: 200), () {});
 
@@ -448,6 +487,12 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
+        if (force) {
+          _setState(() {
+            _autoScrollEnabled = true;
+            _showScrollToBottom = false;
+          });
+        }
       }
     });
   }

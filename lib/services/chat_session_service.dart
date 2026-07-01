@@ -1,22 +1,37 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/chat_message.dart';
 import '../models/chat_session.dart';
 import '../utils/app_logger.dart';
+import 'data_directory_service.dart';
 
 class ChatSessionService extends ChangeNotifier {
   Database? _database;
+  final String? _databasePath;
+  final bool _openOwnDatabase;
+  bool _ownsDatabase = false;
+  Completer<Database>? _openingCompleter;
   final List<Future<void> Function(Database db)> _pendingWrites = [];
   final Completer<void> _databaseReady = Completer<void>();
 
-  ChatSessionService();
+  static const int _schemaVersion = 2;
+
+  ChatSessionService({
+    String? databasePath,
+    bool openOwnDatabase = true,
+  })  : _databasePath = databasePath,
+        _openOwnDatabase = openOwnDatabase;
 
   void setDatabase(Database? db) {
     _database = db;
+    _ownsDatabase = false;
     if (db != null && !_databaseReady.isCompleted) {
       _databaseReady.complete();
     }
@@ -56,6 +71,19 @@ class ChatSessionService extends ChangeNotifier {
     Duration timeout = const Duration(seconds: 5),
   }) async {
     if (_database != null) return _database;
+    if (_openOwnDatabase) {
+      try {
+        return await _ensureDatabase();
+      } catch (e, stack) {
+        logError(
+          'ChatSessionService 打开聊天数据库失败',
+          error: e,
+          stackTrace: stack,
+          source: 'ChatSessionService',
+        );
+        return null;
+      }
+    }
     try {
       await _databaseReady.future.timeout(timeout);
     } on TimeoutException {
@@ -72,7 +100,7 @@ class ChatSessionService extends ChangeNotifier {
     Future<void> Function(Database db) write, {
     required String operationName,
   }) async {
-    final db = _database;
+    final db = _database ?? (_openOwnDatabase ? await _ensureDatabase() : null);
     if (db == null) {
       // 数据库尚未就绪，加入队列等待后续执行
       logWarning(
@@ -92,6 +120,184 @@ class ChatSessionService extends ChangeNotifier {
       return completer.future;
     }
     await write(db);
+  }
+
+  Future<void> init() async {
+    await _ensureDatabase();
+  }
+
+  Future<void> close() async {
+    final db = _database;
+    _database = null;
+    if (db != null && _ownsDatabase) {
+      await db.close();
+    }
+  }
+
+  Future<Database> _ensureDatabase() async {
+    final current = _database;
+    if (current != null) return current;
+
+    final existingOpen = _openingCompleter;
+    if (existingOpen != null) return existingOpen.future;
+
+    final completer = Completer<Database>();
+    _openingCompleter = completer;
+    try {
+      final dbPath = _databasePath ?? await _defaultDatabasePath();
+      await Directory(path.dirname(dbPath)).create(recursive: true);
+      final db = await openDatabase(
+        dbPath,
+        version: _schemaVersion,
+        onCreate: (db, version) async {
+          await _ensureChatSchema(db);
+        },
+        onUpgrade: (db, oldVersion, newVersion) async {
+          await _ensureChatSchema(db);
+        },
+        onOpen: (db) async {
+          await _ensureChatSchema(db);
+        },
+      );
+      _database = db;
+      _ownsDatabase = true;
+      if (!_databaseReady.isCompleted) {
+        _databaseReady.complete();
+      }
+      _flushPendingWrites(db);
+      completer.complete(db);
+      return db;
+    } catch (e, stack) {
+      if (!_databaseReady.isCompleted) {
+        _databaseReady.completeError(e, stack);
+      }
+      completer.completeError(e, stack);
+      rethrow;
+    } finally {
+      _openingCompleter = null;
+    }
+  }
+
+  Future<String> _defaultDatabasePath() async {
+    final basePath = Platform.isWindows
+        ? await DataDirectoryService.getCurrentDataDirectory()
+        : (await getApplicationDocumentsDirectory()).path;
+    return path.join(basePath, 'chat.db');
+  }
+
+  Future<void> _ensureChatSchema(DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS chat_sessions(
+        id TEXT PRIMARY KEY,
+        session_type TEXT NOT NULL DEFAULT 'note',
+        note_id TEXT,
+        title TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        last_active_at TEXT NOT NULL,
+        is_pinned INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS chat_messages(
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'user',
+        content TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        included_in_context INTEGER NOT NULL DEFAULT 1,
+        meta_json TEXT,
+        content_format TEXT,
+        delta_json TEXT,
+        FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
+      )
+    ''');
+
+    await _addColumnIfMissing(
+      db,
+      tableName: 'chat_sessions',
+      columnName: 'session_type',
+      definition: "TEXT NOT NULL DEFAULT 'note'",
+    );
+    await _addColumnIfMissing(
+      db,
+      tableName: 'chat_sessions',
+      columnName: 'note_id',
+      definition: 'TEXT',
+    );
+    await _addColumnIfMissing(
+      db,
+      tableName: 'chat_sessions',
+      columnName: 'title',
+      definition: "TEXT NOT NULL DEFAULT ''",
+    );
+    await _addColumnIfMissing(
+      db,
+      tableName: 'chat_sessions',
+      columnName: 'last_active_at',
+      definition: 'TEXT',
+    );
+    await _addColumnIfMissing(
+      db,
+      tableName: 'chat_sessions',
+      columnName: 'is_pinned',
+      definition: 'INTEGER NOT NULL DEFAULT 0',
+    );
+    await _addColumnIfMissing(
+      db,
+      tableName: 'chat_messages',
+      columnName: 'included_in_context',
+      definition: 'INTEGER NOT NULL DEFAULT 1',
+    );
+    await _addColumnIfMissing(
+      db,
+      tableName: 'chat_messages',
+      columnName: 'meta_json',
+      definition: 'TEXT',
+    );
+    await _addColumnIfMissing(
+      db,
+      tableName: 'chat_messages',
+      columnName: 'content_format',
+      definition: 'TEXT',
+    );
+    await _addColumnIfMissing(
+      db,
+      tableName: 'chat_messages',
+      columnName: 'delta_json',
+      definition: 'TEXT',
+    );
+
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_chat_sessions_note_id ON chat_sessions(note_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_chat_sessions_last_active ON chat_sessions(last_active_at DESC)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_chat_sessions_type ON chat_sessions(session_type)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_chat_messages_content ON chat_messages(content)',
+    );
+  }
+
+  Future<void> _addColumnIfMissing(
+    DatabaseExecutor db, {
+    required String tableName,
+    required String columnName,
+    required String definition,
+  }) async {
+    final columns = await db.rawQuery('PRAGMA table_info($tableName)');
+    final hasColumn = columns.any((column) => column['name'] == columnName);
+    if (!hasColumn) {
+      await db.execute(
+        'ALTER TABLE $tableName ADD COLUMN $columnName $definition',
+      );
+    }
   }
 
   Future<ChatSession> createSession({
@@ -236,6 +442,72 @@ class ChatSessionService extends ChangeNotifier {
         source: 'ChatSessionService',
       );
       return [];
+    }
+  }
+
+  Future<List<ChatSessionSearchResult>> searchSessions(
+    String query, {
+    int limit = 20,
+  }) async {
+    final normalizedQuery = query.trim();
+    if (normalizedQuery.isEmpty) return const [];
+
+    final db = await _getDatabaseForRead();
+    if (db == null) return const [];
+
+    try {
+      final like = '%$normalizedQuery%';
+      final rows = await db.rawQuery(
+        '''
+        SELECT
+          s.id,
+          s.session_type,
+          s.note_id,
+          s.title,
+          s.created_at,
+          s.last_active_at,
+          s.is_pinned,
+          m.content AS matched_content
+        FROM chat_sessions s
+        LEFT JOIN chat_messages m
+          ON m.session_id = s.id
+          AND m.content LIKE ?
+        WHERE s.title LIKE ?
+          OR m.content LIKE ?
+        ORDER BY s.last_active_at DESC
+        LIMIT ?
+        ''',
+        [like, like, like, limit],
+      );
+
+      final seen = <String>{};
+      final results = <ChatSessionSearchResult>[];
+      for (final row in rows) {
+        final session = ChatSession.fromMap(row);
+        if (!seen.add(session.id)) continue;
+        final matchedContent = row['matched_content'] as String?;
+        final sourceText = (matchedContent?.isNotEmpty ?? false)
+            ? matchedContent!
+            : session.title;
+        final snippet = _buildSnippet(sourceText, normalizedQuery);
+        results.add(
+          ChatSessionSearchResult(
+            session: session,
+            snippet: snippet.text,
+            isTruncated: snippet.isTruncated,
+            matchStart: snippet.matchStart,
+            matchEnd: snippet.matchEnd,
+          ),
+        );
+      }
+      return results;
+    } catch (e) {
+      logError(
+        'ChatSessionService.searchSessions 失败',
+        error: e,
+        source: 'ChatSessionService',
+      );
+      return const [];
     }
   }
 
@@ -473,226 +745,66 @@ class ChatSessionService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 按标签查询笔记（支持多标签AND查询）
-  Future<List<Map<String, dynamic>>> getNotesByTags(
-    List<String> tags, {
-    int limit = 20,
-  }) async {
-    final db = await _getDatabaseForRead();
-    if (db == null || tags.isEmpty) return [];
-    try {
-      final placeholders = List.filled(tags.length, '?').join(',');
-      final query = '''
-        SELECT DISTINCT q.* FROM quotes q
-        JOIN quote_tags qt ON q.id = qt.quote_id
-        WHERE qt.tag_id IN ($placeholders)
-        GROUP BY q.id
-        HAVING COUNT(DISTINCT qt.tag_id) = ${tags.length}
-        ORDER BY q.date DESC
-        LIMIT ?
-      ''';
-      final args = [...tags, limit];
-      final rows = await db.rawQuery(query, args);
-      return rows;
-    } catch (e) {
-      logError(
-        'ChatSessionService.getNotesByTags 失败',
-        error: e,
-        source: 'ChatSessionService',
+  _Snippet _buildSnippet(String text, String query) {
+    final lowerText = text.toLowerCase();
+    final lowerQuery = query.toLowerCase();
+    final index = lowerText.indexOf(lowerQuery);
+    if (index < 0) {
+      final snippet = _truncate(text, 120);
+      return _Snippet(
+        text: snippet,
+        isTruncated: snippet.length < text.length,
+        matchStart: -1,
+        matchEnd: -1,
       );
-      return [];
     }
+
+    const radius = 48;
+    final start = (index - radius).clamp(0, text.length);
+    final end = (index + query.length + radius).clamp(0, text.length);
+    final prefix = start > 0 ? '...' : '';
+    final suffix = end < text.length ? '...' : '';
+    final snippet = '$prefix${text.substring(start, end)}$suffix';
+    return _Snippet(
+      text: snippet,
+      isTruncated: start > 0 || end < text.length,
+      matchStart: prefix.length + index - start,
+      matchEnd: prefix.length + index - start + query.length,
+    );
   }
 
-  /// 获取最新N条笔记
-  Future<List<Map<String, dynamic>>> getRecentNotes({
-    int limit = 10,
-    String? beforeNoteId,
-  }) async {
-    final db = await _getDatabaseForRead();
-    if (db == null) return [];
-    try {
-      String query = '''
-        SELECT * FROM quotes
-        ORDER BY date DESC
-      ''';
-      final args = <dynamic>[];
-
-      if (beforeNoteId != null && beforeNoteId.isNotEmpty) {
-        query += ' WHERE id != ?';
-        args.add(beforeNoteId);
-      }
-
-      query += ' LIMIT ?';
-      args.add(limit);
-
-      final rows = await db.rawQuery(query, args);
-      return rows;
-    } catch (e) {
-      logError(
-        'ChatSessionService.getRecentNotes 失败',
-        error: e,
-        source: 'ChatSessionService',
-      );
-      return [];
-    }
+  String _truncate(String value, int maxLength) {
+    if (value.length <= maxLength) return value;
+    return value.substring(0, maxLength);
   }
+}
 
-  /// 按日期范围查询
-  Future<List<Map<String, dynamic>>> getNotesByDateRange(
-    DateTime start,
-    DateTime end, {
-    int limit = 20,
-  }) async {
-    final db = await _getDatabaseForRead();
-    if (db == null) return [];
-    try {
-      final startStr = start.toIso8601String();
-      final endStr = end.toIso8601String();
-      final rows = await db.query(
-        'quotes',
-        where: 'date BETWEEN ? AND ?',
-        whereArgs: [startStr, endStr],
-        orderBy: 'date DESC',
-        limit: limit,
-      );
-      return rows;
-    } catch (e) {
-      logError(
-        'ChatSessionService.getNotesByDateRange 失败',
-        error: e,
-        source: 'ChatSessionService',
-      );
-      return [];
-    }
-  }
+class ChatSessionSearchResult {
+  final ChatSession session;
+  final String snippet;
+  final bool isTruncated;
+  final int matchStart;
+  final int matchEnd;
 
-  /// 组合查询：标签 + 日期 + 关键词
-  Future<List<Map<String, dynamic>>> queryNotes({
-    List<String>? tags,
-    DateTime? dateStart,
-    DateTime? dateEnd,
-    String? keyword,
-    int limit = 20,
-  }) async {
-    final db = await _getDatabaseForRead();
-    if (db == null) return [];
-    try {
-      var query = 'SELECT DISTINCT q.* FROM quotes q';
-      final args = <dynamic>[];
-      final conditions = <String>[];
+  const ChatSessionSearchResult({
+    required this.session,
+    required this.snippet,
+    required this.isTruncated,
+    required this.matchStart,
+    required this.matchEnd,
+  });
+}
 
-      // 标签条件
-      if (tags != null && tags.isNotEmpty) {
-        query += ' JOIN quote_tags qt ON q.id = qt.quote_id';
-        final placeholders = List.filled(tags.length, '?').join(',');
-        conditions.add('qt.tag_id IN ($placeholders)');
-        args.addAll(tags);
-      }
+class _Snippet {
+  final String text;
+  final bool isTruncated;
+  final int matchStart;
+  final int matchEnd;
 
-      // 日期范围条件
-      if (dateStart != null && dateEnd != null) {
-        conditions.add('q.date BETWEEN ? AND ?');
-        args.add(dateStart.toIso8601String());
-        args.add(dateEnd.toIso8601String());
-      }
-
-      // 关键词条件
-      if (keyword != null && keyword.trim().isNotEmpty) {
-        conditions.add('q.content LIKE ?');
-        args.add('%${keyword.trim()}%');
-      }
-
-      if (conditions.isNotEmpty) {
-        query += ' WHERE ${conditions.join(' AND ')}';
-      }
-
-      // 多标签AND查询
-      if (tags != null && tags.isNotEmpty) {
-        query +=
-            ' GROUP BY q.id HAVING COUNT(DISTINCT qt.tag_id) = ${tags.length}';
-      }
-
-      query += ' ORDER BY q.date DESC LIMIT ?';
-      args.add(limit);
-
-      final rows = await db.rawQuery(query, args);
-      return rows;
-    } catch (e) {
-      logError(
-        'ChatSessionService.queryNotes 失败',
-        error: e,
-        source: 'ChatSessionService',
-      );
-      return [];
-    }
-  }
-
-  /// 获取笔记标签
-  Future<List<String>> getNoteTagIds(String noteId) async {
-    final db = await _getDatabaseForRead();
-    if (db == null) return [];
-    try {
-      final rows = await db.query(
-        'quote_tags',
-        columns: ['tag_id'],
-        where: 'quote_id = ?',
-        whereArgs: [noteId],
-      );
-      return rows.map((row) => row['tag_id'].toString()).toList();
-    } catch (e) {
-      logError(
-        'ChatSessionService.getNoteTagIds 失败',
-        error: e,
-        source: 'ChatSessionService',
-      );
-      return [];
-    }
-  }
-
-  /// 将笔记数据转换为Agent友好的格式
-  static Map<String, dynamic> formatNoteForAgent(
-    Map<String, dynamic> noteRow, {
-    List<String>? tags,
-    double? matchScore,
-  }) {
-    return {
-      'id': noteRow['id'] ?? '',
-      'title': _extractTitle(noteRow['content'] ?? '', maxLength: 50),
-      'content': noteRow['content'] ?? '',
-      'tags': tags ?? [],
-      'createdAt': noteRow['date'] ?? '',
-      'matchScore': matchScore ?? 1.0,
-      'summary': noteRow['summary'],
-      'sentiment': noteRow['sentiment'],
-      'keywords': _parseKeywords(noteRow['keywords']),
-    };
-  }
-
-  /// 从内容提取标题（前50字）
-  static String _extractTitle(String content, {int maxLength = 50}) {
-    if (content.isEmpty) return '';
-    final lines = content.split('\n');
-    final firstLine = lines.first.trim();
-    if (firstLine.length <= maxLength) {
-      return firstLine;
-    }
-    return '${firstLine.substring(0, maxLength)}...';
-  }
-
-  /// 解析关键词字符串
-  static List<String> _parseKeywords(dynamic keywords) {
-    if (keywords == null) return [];
-    if (keywords is String) {
-      return keywords
-          .split(',')
-          .map((k) => k.trim())
-          .where((k) => k.isNotEmpty)
-          .toList();
-    }
-    if (keywords is List) {
-      return keywords.map((k) => k.toString().trim()).toList();
-    }
-    return [];
-  }
+  const _Snippet({
+    required this.text,
+    required this.isTruncated,
+    required this.matchStart,
+    required this.matchEnd,
+  });
 }

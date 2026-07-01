@@ -58,6 +58,41 @@ class _CountingTool extends AgentTool {
   }
 }
 
+class _FailingTool extends AgentTool {
+  _FailingTool({
+    required this.toolName,
+    required this.resultContent,
+  });
+
+  final String toolName;
+  final String resultContent;
+  int executeCount = 0;
+
+  @override
+  String get name => toolName;
+
+  @override
+  String get description => 'failing test tool';
+
+  @override
+  Map<String, Object?> get parametersSchema => const {
+        'type': 'object',
+        'properties': {
+          'query': {'type': 'string'}
+        },
+      };
+
+  @override
+  Future<ToolResult> execute(ToolCall toolCall) async {
+    executeCount++;
+    return ToolResult(
+      toolCallId: toolCall.id,
+      content: resultContent,
+      isError: true,
+    );
+  }
+}
+
 class _DelayedTool extends AgentTool {
   _DelayedTool({
     required this.toolName,
@@ -141,6 +176,20 @@ openai.ToolCall _buildToolCall({
     call: openai.FunctionCall.fromMap(
       name: toolName,
       arguments: args,
+    ),
+  );
+}
+
+openai.ToolCall _buildRawToolCall({
+  required String callId,
+  required String toolName,
+  required String rawArguments,
+}) {
+  return openai.ToolCall.functionCall(
+    id: callId,
+    call: openai.FunctionCall(
+      name: toolName,
+      arguments: rawArguments,
     ),
   );
 }
@@ -392,6 +441,159 @@ void main() {
       await service.runAgent(userMessage: 'test');
 
       expect(forwardedTranscript, contains(marker));
+    });
+
+    test(
+        'asks model to repair malformed tool arguments once without forwarding raw payload',
+        () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final settings = _FakeSettingsService(provider);
+      final tool = _CountingTool(
+        toolName: 'search_notes',
+        resultContent: '{"items": []}',
+      );
+      const malformedArguments = '{}{"limit":10}';
+      final responses = <openai.ChatCompletion>[
+        _multiToolCallCompletion([
+          _buildRawToolCall(
+            callId: 'call_bad',
+            toolName: 'search_notes',
+            rawArguments: malformedArguments,
+          ),
+        ]),
+        _toolCallCompletion(
+          callId: 'call_fixed',
+          toolName: 'search_notes',
+          args: const {'query': 'fixed', 'limit': 10},
+        ),
+        _textCompletion('修正后完成'),
+      ];
+      var requestCount = 0;
+      var correctionTranscript = '';
+
+      final service = AgentService(
+        settingsService: settings,
+        tools: [tool],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          requestCount++;
+          if (requestCount == 2) {
+            correctionTranscript =
+                messages.map(_chatMessageText).join('\n----\n');
+          }
+          return responses.removeAt(0);
+        },
+      );
+
+      final response = await service.runAgent(userMessage: 'test');
+
+      expect(tool.executeCount, 1);
+      expect(response.content, '修正后完成');
+      expect(correctionTranscript, contains('参数不是有效的 JSON 对象'));
+      expect(correctionTranscript, isNot(contains(malformedArguments)));
+    });
+
+    test('stops after one malformed argument repair attempt', () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final settings = _FakeSettingsService(provider);
+      final tool = _CountingTool(
+        toolName: 'search_notes',
+        resultContent: '{"items": []}',
+      );
+      final responses = <openai.ChatCompletion>[
+        for (final id in ['call_bad_1', 'call_bad_2'])
+          _multiToolCallCompletion([
+            _buildRawToolCall(
+              callId: id,
+              toolName: 'search_notes',
+              rawArguments: '{}{"limit":10}',
+            ),
+          ]),
+      ];
+
+      final service = AgentService(
+        settingsService: settings,
+        tools: [tool],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          return responses.removeAt(0);
+        },
+      );
+
+      final response = await service.runAgent(userMessage: 'test');
+
+      expect(tool.executeCount, 0);
+      expect(response.content, contains('工具调用参数连续无效'));
+    });
+
+    test(
+        'does not continue to suggestion cards after non-retryable tool failure',
+        () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final settings = _FakeSettingsService(provider);
+      final tool = _FailingTool(
+        toolName: 'propose_new_note',
+        resultContent: '保存失败：数据库不可写',
+      );
+      final responses = <openai.ChatCompletion>[
+        _toolCallCompletion(
+          callId: 'call_1',
+          toolName: 'propose_new_note',
+          args: const {'title': 't', 'content': 'c'},
+        ),
+        _textCompletion('```smart_result\n{"type":"smart_result"}\n```'),
+      ];
+      var requestCount = 0;
+
+      final service = AgentService(
+        settingsService: settings,
+        tools: [tool],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          requestCount++;
+          return responses.removeAt(0);
+        },
+      );
+
+      final response = await service.runAgent(userMessage: 'test');
+
+      expect(tool.executeCount, 1);
+      expect(requestCount, 1);
+      expect(response.content, contains('保存失败：数据库不可写'));
+      expect(response.content, isNot(contains('smart_result')));
     });
 
     test('keeps events stream active across consecutive runs', () async {

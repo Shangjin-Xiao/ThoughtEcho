@@ -17,7 +17,8 @@ class GetTagsTool extends AgentTool {
 
   @override
   String get description => '获取用户已有的标签列表（排除系统隐藏标签），支持分页。'
-      '当你要为新笔记选择标签时，先调用此工具来获取可选标签 ID、名称及是否为默认标签。'
+      '当你要为新笔记或编辑建议选择标签时，先调用此工具来获取可选标签名称。'
+      '后续工具调用请提交标签名称，程序会内部解析成数据库 ID。'
       '标签较多时可使用 offset 和 limit 分页获取。';
 
   @override

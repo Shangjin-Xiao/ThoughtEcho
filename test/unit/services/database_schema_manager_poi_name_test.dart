@@ -34,16 +34,16 @@ void main() {
     });
   });
 
-  group('DatabaseSchemaManager v20 validation targets', () {
-    test('required tables include chat persistence tables', () {
+  group('DatabaseSchemaManager v21 validation targets', () {
+    test('required tables stay scoped to the main notes database', () {
       // Use the actual required tables set from production code
       final requiredTables = DatabaseSchemaManager.requiredTablesForValidation;
 
       expect(requiredTables.contains('quotes'), isTrue);
       expect(requiredTables.contains('categories'), isTrue);
       expect(requiredTables.contains('quote_tags'), isTrue);
-      expect(requiredTables.contains('chat_sessions'), isTrue);
-      expect(requiredTables.contains('chat_messages'), isTrue);
+      expect(requiredTables.contains('chat_sessions'), isFalse);
+      expect(requiredTables.contains('chat_messages'), isFalse);
     });
   });
 }

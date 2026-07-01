@@ -1,6 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../gen_l10n/app_localizations.dart';
+
+class SmartResultDraft {
+  const SmartResultDraft({
+    required this.content,
+    required this.author,
+    required this.source,
+    required this.tagNames,
+    required this.includeLocation,
+    required this.includeWeather,
+  });
+
+  final String content;
+  final String? author;
+  final String? source;
+  final List<String> tagNames;
+  final bool includeLocation;
+  final bool includeWeather;
+}
 
 class SmartResultCard extends StatefulWidget {
   final String title;
@@ -14,9 +31,13 @@ class SmartResultCard extends StatefulWidget {
       onOpenInEditor;
   final void Function(bool includeLocation, bool includeWeather)?
       onSaveDirectly;
+  final Future<void> Function(SmartResultDraft draft)? onOpenDraftInEditor;
+  final Future<String?> Function(SmartResultDraft draft)? onSaveDraftDirectly;
+  final void Function(String noteId)? onSavedNoteId;
   final String editorSource;
   final bool initialIncludeLocation;
   final bool initialIncludeWeather;
+  final String? initialSavedNoteId;
 
   const SmartResultCard({
     super.key,
@@ -29,9 +50,13 @@ class SmartResultCard extends StatefulWidget {
     this.weatherPreview,
     this.onOpenInEditor,
     this.onSaveDirectly,
+    this.onOpenDraftInEditor,
+    this.onSaveDraftDirectly,
+    this.onSavedNoteId,
     this.editorSource = 'fullscreen',
     this.initialIncludeLocation = false,
     this.initialIncludeWeather = false,
+    this.initialSavedNoteId,
   });
 
   @override
@@ -39,14 +64,26 @@ class SmartResultCard extends StatefulWidget {
 }
 
 class _SmartResultCardState extends State<SmartResultCard> {
+  late final TextEditingController _contentController;
+  late final TextEditingController _authorController;
+  late final TextEditingController _sourceController;
+  late final TextEditingController _tagsController;
   late bool _includeLocation;
   late bool _includeWeather;
+  bool _isSaving = false;
+  String? _savedNoteId;
+  String? _saveError;
 
   @override
   void initState() {
     super.initState();
+    _contentController = TextEditingController(text: widget.content);
+    _authorController = TextEditingController(text: widget.author ?? '');
+    _sourceController = TextEditingController(text: widget.source ?? '');
+    _tagsController = TextEditingController(text: widget.tagNames.join(', '));
     _includeLocation = widget.initialIncludeLocation;
     _includeWeather = widget.initialIncludeWeather;
+    _savedNoteId = widget.initialSavedNoteId;
   }
 
   @override
@@ -58,6 +95,18 @@ class _SmartResultCardState extends State<SmartResultCard> {
     if (oldWidget.initialIncludeWeather != widget.initialIncludeWeather) {
       _includeWeather = widget.initialIncludeWeather;
     }
+    if (oldWidget.initialSavedNoteId != widget.initialSavedNoteId) {
+      _savedNoteId = widget.initialSavedNoteId;
+    }
+  }
+
+  @override
+  void dispose() {
+    _contentController.dispose();
+    _authorController.dispose();
+    _sourceController.dispose();
+    _tagsController.dispose();
+    super.dispose();
   }
 
   @override
@@ -67,7 +116,9 @@ class _SmartResultCardState extends State<SmartResultCard> {
 
     final isNewNote = widget.editorSource == 'new_note' ||
         widget.editorSource == 'addnote_dialog';
-    final showSaveDirectly = widget.onSaveDirectly != null;
+    final showSaveDirectly =
+        widget.onSaveDirectly != null || widget.onSaveDraftDirectly != null;
+    final isSaved = _savedNoteId != null && _savedNoteId!.isNotEmpty;
 
     return Card(
       elevation: 0,
@@ -109,15 +160,47 @@ class _SmartResultCardState extends State<SmartResultCard> {
           ),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: MarkdownBody(
-              data: widget.content,
-              selectable: true,
-              styleSheet: MarkdownStyleSheet(
-                p: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-              ),
+            child: Column(
+              children: [
+                TextField(
+                  controller: _contentController,
+                  minLines: 3,
+                  maxLines: 8,
+                  decoration: InputDecoration(
+                    labelText: l10n.content,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _authorController,
+                  decoration: InputDecoration(
+                    labelText: l10n.author,
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _sourceController,
+                  decoration: InputDecoration(
+                    labelText: l10n.source,
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _tagsController,
+                  decoration: InputDecoration(
+                    labelText: l10n.tagsLabel,
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+              ],
             ),
           ),
-          // 元数据预览：作者、出处、标签、位置、天气
           if (_hasMetadataPreview)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -126,24 +209,6 @@ class _SmartResultCardState extends State<SmartResultCard> {
                 runSpacing: 4,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  if (widget.author != null && widget.author!.isNotEmpty)
-                    _MetaChip(
-                      icon: Icons.person_outline,
-                      label: widget.author!,
-                    ),
-                  if (widget.source != null && widget.source!.isNotEmpty)
-                    _MetaChip(
-                      icon: Icons.menu_book_outlined,
-                      label: widget.source!,
-                    ),
-                  ...widget.tagNames.map(
-                    (name) => _MetaChip(
-                      icon: Icons.local_offer_outlined,
-                      label: name,
-                      backgroundColor: theme.colorScheme.primaryContainer,
-                      foregroundColor: theme.colorScheme.onPrimaryContainer,
-                    ),
-                  ),
                   if (_includeLocation && widget.locationPreview != null)
                     _MetaChip(
                       icon: Icons.location_on_outlined,
@@ -154,7 +219,24 @@ class _SmartResultCardState extends State<SmartResultCard> {
                       icon: Icons.wb_sunny_outlined,
                       label: widget.weatherPreview!,
                     ),
+                  if (isSaved)
+                    _MetaChip(
+                      icon: Icons.check_circle_outline,
+                      label: l10n.noteSaved,
+                      backgroundColor: theme.colorScheme.primaryContainer,
+                      foregroundColor: theme.colorScheme.onPrimaryContainer,
+                    ),
                 ],
+              ),
+            ),
+          if (_saveError != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                l10n.saveFailed(_saveError!),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
               ),
             ),
           if (isNewNote)
@@ -192,19 +274,30 @@ class _SmartResultCardState extends State<SmartResultCard> {
               alignment: WrapAlignment.end,
               spacing: 8,
               children: [
-                if (widget.onOpenInEditor != null)
+                if (widget.onOpenInEditor != null ||
+                    widget.onOpenDraftInEditor != null)
                   TextButton.icon(
-                    onPressed: () => widget.onOpenInEditor
-                        ?.call(_includeLocation, _includeWeather),
+                    onPressed: _isSaving ? null : _handleOpenInEditor,
                     icon: const Icon(Icons.edit_note, size: 18),
                     label: Text(l10n.openInEditor),
                   ),
                 if (showSaveDirectly)
                   FilledButton.icon(
-                    onPressed: () => widget.onSaveDirectly
-                        ?.call(_includeLocation, _includeWeather),
-                    icon: const Icon(Icons.save_outlined, size: 18),
-                    label: Text(l10n.saveDirectly),
+                    onPressed:
+                        (_isSaving || isSaved) ? null : _handleSaveDirectly,
+                    icon: _isSaving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Icon(
+                            isSaved
+                                ? Icons.check_circle_outline
+                                : Icons.save_outlined,
+                            size: 18,
+                          ),
+                    label: Text(isSaved ? l10n.noteSaved : l10n.saveDirectly),
                   ),
               ],
             ),
@@ -215,11 +308,72 @@ class _SmartResultCardState extends State<SmartResultCard> {
   }
 
   bool get _hasMetadataPreview {
-    return (widget.author != null && widget.author!.isNotEmpty) ||
-        (widget.source != null && widget.source!.isNotEmpty) ||
-        widget.tagNames.isNotEmpty ||
-        (_includeLocation && widget.locationPreview != null) ||
-        (_includeWeather && widget.weatherPreview != null);
+    return (_includeLocation && widget.locationPreview != null) ||
+        (_includeWeather && widget.weatherPreview != null) ||
+        (_savedNoteId != null && _savedNoteId!.isNotEmpty);
+  }
+
+  SmartResultDraft _buildDraft() {
+    return SmartResultDraft(
+      content: _contentController.text.trim(),
+      author: _trimToNull(_authorController.text),
+      source: _trimToNull(_sourceController.text),
+      tagNames: _tagsController.text
+          .split(RegExp(r'[,，、]'))
+          .map((item) => item.trim())
+          .where((item) => item.isNotEmpty)
+          .toList(),
+      includeLocation: _includeLocation,
+      includeWeather: _includeWeather,
+    );
+  }
+
+  String? _trimToNull(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  Future<void> _handleOpenInEditor() async {
+    final draft = _buildDraft();
+    if (widget.onOpenDraftInEditor != null) {
+      await widget.onOpenDraftInEditor!(draft);
+      return;
+    }
+    widget.onOpenInEditor?.call(draft.includeLocation, draft.includeWeather);
+  }
+
+  Future<void> _handleSaveDirectly() async {
+    setState(() {
+      _isSaving = true;
+      _saveError = null;
+    });
+    try {
+      final draft = _buildDraft();
+      final noteId = widget.onSaveDraftDirectly != null
+          ? await widget.onSaveDraftDirectly!(draft)
+          : null;
+      if (widget.onSaveDirectly != null && widget.onSaveDraftDirectly == null) {
+        widget.onSaveDirectly!(draft.includeLocation, draft.includeWeather);
+      }
+      if (!mounted) return;
+      if (noteId != null && noteId.isNotEmpty) {
+        widget.onSavedNoteId?.call(noteId);
+        setState(() {
+          _savedNoteId = noteId;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _saveError = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
   }
 }
 

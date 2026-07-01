@@ -81,24 +81,41 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               widget.exploreGuideSummary?.trim().isNotEmpty == true)
             _buildExploreGuideBanner(theme, l10n),
           Expanded(
-            child: NotificationListener<ScrollUpdateNotification>(
-              onNotification: (notification) {
-                if (notification.dragDetails != null &&
-                    notification.scrollDelta != null) {
-                  if (_inputFocusNode.hasFocus) {
-                    _inputFocusNode.unfocus();
-                  }
-                }
-                return false;
-              },
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  return _buildMessageBubble(_messages[index], theme, l10n);
-                },
-              ),
+            child: Stack(
+              children: [
+                NotificationListener<ScrollUpdateNotification>(
+                  onNotification: (notification) {
+                    if (notification.dragDetails != null &&
+                        notification.scrollDelta != null) {
+                      if (_inputFocusNode.hasFocus) {
+                        _inputFocusNode.unfocus();
+                      }
+                      if (notification.scrollDelta! < 0) {
+                        _setAutoScrollEnabled(false);
+                      }
+                    }
+                    return false;
+                  },
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      return _buildMessageBubble(_messages[index], theme, l10n);
+                    },
+                  ),
+                ),
+                if (_showScrollToBottom)
+                  Positioned(
+                    right: 16,
+                    bottom: 12,
+                    child: FloatingActionButton.small(
+                      heroTag: 'ai_assistant_scroll_to_bottom',
+                      onPressed: _resumeAutoScroll,
+                      child: const Icon(Icons.keyboard_arrow_down),
+                    ),
+                  ),
+              ],
             ),
           ),
           _buildInputArea(theme, l10n),
@@ -180,15 +197,18 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     initialNewNoteMetadata?.includeLocation ?? false,
                 initialIncludeWeather:
                     initialNewNoteMetadata?.includeWeather ?? false,
-                onOpenInEditor: (includeLocation, includeWeather) async {
+                initialSavedNoteId: meta['saved_note_id']?.toString(),
+                onOpenDraftInEditor: (draft) async {
+                  final updatedMeta =
+                      await _buildSmartResultMetaFromDraft(meta, draft);
                   if (isNewNoteProposal) {
                     final confirmedMetadata = _resolveConfirmedNewNoteMetadata(
-                      meta,
-                      includeLocation: includeLocation,
-                      includeWeather: includeWeather,
+                      updatedMeta,
+                      includeLocation: draft.includeLocation,
+                      includeWeather: draft.includeWeather,
                     );
                     await _openSmartResultAsNewNote(
-                      message.content,
+                      draft.content,
                       tagIds: confirmedMetadata.tagIds,
                       author: confirmedMetadata.author,
                       source: confirmedMetadata.source,
@@ -196,20 +216,20 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                       includeWeather: confirmedMetadata.includeWeather,
                     );
                   } else {
-                    final updatedMeta = Map<String, dynamic>.from(meta);
                     await _openSmartResultInEditor(
                       updatedMeta,
-                      message.content,
+                      draft.content,
                     );
                   }
                 },
-                onSaveDirectly: (includeLocation, includeWeather) async {
+                onSaveDraftDirectly: (draft) async {
+                  final updatedMeta =
+                      await _buildSmartResultMetaFromDraft(meta, draft);
                   if (isNewNoteProposal) {
-                    final updatedMeta = Map<String, dynamic>.from(meta);
                     final confirmedMetadata = _resolveConfirmedNewNoteMetadata(
-                      meta,
-                      includeLocation: includeLocation,
-                      includeWeather: includeWeather,
+                      updatedMeta,
+                      includeLocation: draft.includeLocation,
+                      includeWeather: draft.includeWeather,
                     );
                     updatedMeta['tag_ids'] = confirmedMetadata.tagIds;
                     updatedMeta['author'] = confirmedMetadata.author;
@@ -218,17 +238,19 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                         confirmedMetadata.includeLocation;
                     updatedMeta['include_weather'] =
                         confirmedMetadata.includeWeather;
-                    await _saveSmartResultAsNewNote(
+                    return _saveSmartResultAsNewNote(
                       updatedMeta,
-                      message.content,
+                      draft.content,
                     );
                   } else {
-                    final updatedMeta = Map<String, dynamic>.from(meta);
-                    await _saveSmartResultToExistingNote(
+                    return _saveSmartResultToExistingNote(
                       updatedMeta,
-                      message.content,
+                      draft.content,
                     );
                   }
+                },
+                onSavedNoteId: (noteId) {
+                  _updateSmartResultSavedNoteId(message.id, noteId);
                 },
               ),
             );
@@ -769,6 +791,68 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     );
   }
 
+  Future<Map<String, dynamic>> _buildSmartResultMetaFromDraft(
+    Map<String, dynamic> meta,
+    SmartResultDraft draft,
+  ) async {
+    final updatedMeta = Map<String, dynamic>.from(meta);
+    updatedMeta['author'] = draft.author;
+    updatedMeta['source'] = draft.source;
+    updatedMeta['tag_names'] = draft.tagNames;
+    updatedMeta['tag_ids'] = await _resolveDraftTagIds(draft.tagNames);
+    updatedMeta['include_location'] = draft.includeLocation;
+    updatedMeta['include_weather'] = draft.includeWeather;
+    return updatedMeta;
+  }
+
+  Future<List<String>> _resolveDraftTagIds(List<String> tagNames) async {
+    if (tagNames.isEmpty) {
+      return const <String>[];
+    }
+    final db = context.read<DatabaseService>();
+    final categories = await db.getCategories();
+    final nameToId = <String, String>{
+      for (final tag in categories)
+        if (tag.id != DatabaseService.hiddenTagId) tag.name.trim(): tag.id,
+    };
+    final ids = <String>[];
+    final unknownNames = <String>[];
+    for (final name in tagNames) {
+      final id = nameToId[name.trim()];
+      if (id == null) {
+        unknownNames.add(name);
+        continue;
+      }
+      if (!ids.contains(id)) {
+        ids.add(id);
+      }
+    }
+    if (unknownNames.isNotEmpty) {
+      throw Exception('${AppLocalizations.of(context).noMatchingTags}: '
+          '${unknownNames.join(', ')}');
+    }
+    return ids;
+  }
+
+  void _updateSmartResultSavedNoteId(String messageId, String noteId) {
+    _setState(() {
+      final index = _messages.indexWhere((message) => message.id == messageId);
+      if (index == -1) return;
+      final oldMessage = _messages[index];
+      final rawMeta = oldMessage.metaJson;
+      if (rawMeta == null) return;
+      final meta = jsonDecode(rawMeta) as Map<String, dynamic>;
+      meta['saved_note_id'] = noteId;
+      final updatedMessage = oldMessage.copyWith(metaJson: jsonEncode(meta));
+      _messages[index] = updatedMessage;
+      if (_currentSessionId != null) {
+        unawaited(
+          _chatSessionService.addMessage(_currentSessionId!, updatedMessage),
+        );
+      }
+    });
+  }
+
   bool _isShortContent(String content) {
     return !AiSmartResultUtils.shouldOpenFullEditor(content);
   }
@@ -946,7 +1030,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     );
   }
 
-  Future<void> _saveSmartResultToExistingNote(
+  Future<String?> _saveSmartResultToExistingNote(
     Map<String, dynamic> meta,
     String content,
   ) async {
@@ -997,20 +1081,21 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
             SnackBar(content: Text(l10n.saveSuccess)),
           );
         }
+        return noteId;
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(l10n.saveFailed(e.toString()))),
           );
         }
+        rethrow;
       }
-      return;
     }
 
-    await _saveSmartResultAsNewNote(meta, content);
+    return _saveSmartResultAsNewNote(meta, content);
   }
 
-  Future<void> _saveSmartResultAsNewNote(
+  Future<String?> _saveSmartResultAsNewNote(
     Map<String, dynamic> meta,
     String content,
   ) async {
@@ -1107,7 +1192,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               : (position != null ? LocationService.kAddressPending : null))
           : null;
 
+      final noteId = _uuid.v4();
       final quote = Quote.validated(
+        id: noteId,
         content: content,
         date: DateTime.now().toIso8601String(),
         tagIds: tagIds,
@@ -1129,12 +1216,14 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           SnackBar(content: Text(l10n.saveSuccess)),
         );
       }
+      return noteId;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.saveFailed(e.toString()))),
         );
       }
+      rethrow;
     }
   }
 }

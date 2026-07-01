@@ -107,6 +107,7 @@ class DataDirectoryService {
         'databases',
         'media',
         'ai_analyses.db',
+        'chat.db',
       ];
 
       for (final item in itemsToMigrate) {

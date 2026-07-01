@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart' as path;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/models/chat_message.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
 
@@ -92,13 +94,15 @@ Future<void> _waitFor(
 void main() {
   setUpAll(() async {
     await TestHelpers.setupTestEnvironment();
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
   });
 
   group('ChatSessionService startup race handling', () {
     test(
       'read waits and restores session after database is injected',
       () async {
-        final service = ChatSessionService();
+        final service = ChatSessionService(openOwnDatabase: false);
         final now = DateTime.now().toIso8601String();
         final db = _FakeDatabase(
           sessionsQueryResult: <Map<String, Object?>>[
@@ -133,7 +137,7 @@ void main() {
     );
 
     test('createSession waits and persists after database injection', () async {
-      final service = ChatSessionService();
+      final service = ChatSessionService(openOwnDatabase: false);
       final db = _FakeDatabase();
       db.unblockWrites.complete();
       final sessionFuture = service.createSession(
@@ -155,7 +159,7 @@ void main() {
     });
 
     test('addMessage waits and persists after database injection', () async {
-      final service = ChatSessionService();
+      final service = ChatSessionService(openOwnDatabase: false);
       final db = _FakeDatabase();
       db.unblockWrites.complete();
       final messageFuture = service.addMessage(
@@ -184,7 +188,7 @@ void main() {
     test(
       'write operations queue when database not ready and flush later',
       () async {
-        final service = ChatSessionService();
+        final service = ChatSessionService(openOwnDatabase: false);
         final message = ChatMessage(
           id: 'queued-msg',
           content: 'queued',
@@ -206,5 +210,136 @@ void main() {
         expect(db.chatSessionsUpdateCount, equals(1));
       },
     );
+  });
+
+  group('ChatSessionService independent chat database', () {
+    late Directory tempDir;
+    late String databasePath;
+
+    setUp(() async {
+      tempDir = await Directory.systemTemp.createTemp('chat_session_test_');
+      databasePath = path.join(tempDir.path, 'chat.db');
+    });
+
+    tearDown(() async {
+      await deleteDatabase(databasePath);
+      if (await tempDir.exists()) {
+        await tempDir.delete(recursive: true);
+      }
+    });
+
+    test('opens its own chat database without main database injection',
+        () async {
+      final service = ChatSessionService(databasePath: databasePath);
+
+      final session = await service.createSession(
+        sessionType: 'agent',
+        title: 'AI Chat',
+      );
+      await service.addMessage(
+        session.id,
+        ChatMessage(
+          id: 'message-1',
+          content: 'hello from independent chat db',
+          isUser: true,
+          role: 'user',
+          timestamp: DateTime.now(),
+        ),
+      );
+
+      final messages = await service.getMessages(session.id);
+      final db = await openDatabase(databasePath);
+      final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table'",
+      );
+      await db.close();
+
+      expect(messages, hasLength(1));
+      expect(messages.single.content, contains('independent chat db'));
+      expect(tables.map((row) => row['name']), contains('chat_sessions'));
+      expect(tables.map((row) => row['name']), isNot(contains('quotes')));
+      await service.close();
+    });
+
+    test('repairs legacy chat_messages missing rich content columns', () async {
+      final legacyDb = await openDatabase(databasePath);
+      await legacyDb.execute('''
+        CREATE TABLE chat_sessions(
+          id TEXT PRIMARY KEY,
+          session_type TEXT NOT NULL DEFAULT 'note',
+          note_id TEXT,
+          title TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          last_active_at TEXT NOT NULL,
+          is_pinned INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      await legacyDb.execute('''
+        CREATE TABLE chat_messages(
+          id TEXT PRIMARY KEY,
+          session_id TEXT NOT NULL,
+          role TEXT NOT NULL DEFAULT 'user',
+          content TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          included_in_context INTEGER NOT NULL DEFAULT 1,
+          meta_json TEXT
+        )
+      ''');
+      await legacyDb.setVersion(1);
+      await legacyDb.close();
+
+      final service = ChatSessionService(databasePath: databasePath);
+      final session = await service.createSession(
+        sessionType: 'agent',
+        title: 'Migrated chat',
+      );
+      await service.addMessage(
+        session.id,
+        ChatMessage(
+          id: 'message-1',
+          content: 'hello',
+          isUser: true,
+          role: 'user',
+          timestamp: DateTime.now(),
+        ),
+      );
+
+      final messages = await service.getMessages(session.id);
+
+      expect(messages, hasLength(1));
+      expect(messages.single.contentFormat, isNull);
+      expect(messages.single.deltaJson, isNull);
+      await service.close();
+    });
+
+    test('searches titles and message bodies with hit snippets', () async {
+      final service = ChatSessionService(databasePath: databasePath);
+      final session = await service.createSession(
+        sessionType: 'agent',
+        title: 'Weekly reflection',
+      );
+      await service.addMessage(
+        session.id,
+        ChatMessage(
+          id: 'message-1',
+          content:
+              'A long prefix that should not be returned as the only preview. '
+              'The important keyword appears near the end with useful context.',
+          isUser: false,
+          role: 'assistant',
+          timestamp: DateTime.now(),
+        ),
+      );
+
+      final results = await service.searchSessions('keyword');
+
+      expect(results, hasLength(1));
+      expect(results.single.session.id, session.id);
+      expect(results.single.snippet, contains('keyword'));
+      expect(results.single.snippet, contains('important'));
+      expect(results.single.snippet.startsWith('A long prefix'), isFalse);
+      expect(results.single.isTruncated, isTrue);
+      await service.close();
+    });
   });
 }

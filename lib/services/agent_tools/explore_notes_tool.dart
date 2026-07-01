@@ -2,6 +2,7 @@ import 'dart:convert';
 import '../../utils/app_logger.dart';
 import '../agent_tool.dart';
 import '../database_service.dart';
+import 'tag_argument_resolver.dart';
 
 /// 探索笔记工具 - 支持多维筛选与分页
 ///
@@ -35,10 +36,10 @@ class ExploreNotesTool extends AgentTool {
             'type': 'string',
             'description': '搜索关键词（可选）',
           },
-          'tag_ids': {
+          'tag_names': {
             'type': 'array',
             'items': {'type': 'string'},
-            'description': '标签ID列表（可选）',
+            'description': '标签名称列表（可选）',
           },
           'category_id': {
             'type': 'string',
@@ -77,8 +78,16 @@ class ExploreNotesTool extends AgentTool {
   Future<ToolResult> execute(ToolCall call) async {
     try {
       final query = call.getString('query');
-      final tagIds =
-          (call.arguments['tag_ids'] as List?)?.whereType<String>().toList();
+      final resolvedTags = await resolveTagArguments(_db, call.arguments);
+      if (resolvedTags.hasError) {
+        return ToolResult(
+          toolCallId: call.id,
+          content: resolvedTags.errorMessage!,
+          isError: true,
+          retryable: true,
+        );
+      }
+      final tagIds = resolvedTags.ids.isEmpty ? null : resolvedTags.ids;
       final categoryId = call.getString('category_id');
       final dateStart = call.getString('date_start');
       final dateEnd = call.getString('date_end');
@@ -112,29 +121,25 @@ class ExploreNotesTool extends AgentTool {
         selectedDayPeriods: dayPeriods,
       );
 
-      // 批量解析标签ID/分类ID → 名称
-      final allIds = <String>{
-        ...quotes.expand((q) => q.tagIds),
-        ...quotes
-            .map((q) => q.categoryId)
-            .whereType<String>()
-            .where((id) => id.isNotEmpty),
+      final categories = await _db.getCategories();
+      final tagNameMap = <String, String>{
+        for (final category in categories) category.id: category.name,
       };
-      final tagNameMap = <String, String>{};
-      for (final id in allIds) {
-        final cat = await _db.getCategoryById(id);
-        if (cat != null) tagNameMap[id] = cat.name;
-      }
 
       final formattedNotes = quotes.map((q) {
+        final snippet = _buildMatchSnippet(q.content, query);
         final note = <String, Object?>{
           'id': q.id,
-          'content_preview': q.content.length > 200
-              ? '${q.content.substring(0, 200)}...'
-              : q.content,
+          'content_preview': _truncate(q.content, 200),
           'date': q.date,
           'content_length': q.content.length,
+          'is_truncated': q.content.length > 200,
         };
+        if (snippet != null) {
+          note['match_snippet'] = snippet.text;
+          note['match_start'] = snippet.matchStart;
+          note['match_end'] = snippet.matchEnd;
+        }
 
         // 标签：返回人类可读名称
         final tagNames = q.tagIds
@@ -205,4 +210,41 @@ class ExploreNotesTool extends AgentTool {
       );
     }
   }
+
+  static String _truncate(String text, int maxLength) {
+    if (text.length <= maxLength) return text;
+    return '${text.substring(0, maxLength)}...';
+  }
+
+  static _MatchSnippet? _buildMatchSnippet(String content, String query) {
+    final normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) return null;
+
+    final lowerContent = content.toLowerCase();
+    final matchStart = lowerContent.indexOf(normalizedQuery);
+    if (matchStart < 0) return null;
+
+    final matchEnd = matchStart + normalizedQuery.length;
+    final snippetStart = (matchStart - 80).clamp(0, content.length);
+    final snippetEnd = (matchEnd + 120).clamp(0, content.length);
+    final prefix = snippetStart > 0 ? '...' : '';
+    final suffix = snippetEnd < content.length ? '...' : '';
+    return _MatchSnippet(
+      text: '$prefix${content.substring(snippetStart, snippetEnd)}$suffix',
+      matchStart: matchStart,
+      matchEnd: matchEnd,
+    );
+  }
+}
+
+class _MatchSnippet {
+  const _MatchSnippet({
+    required this.text,
+    required this.matchStart,
+    required this.matchEnd,
+  });
+
+  final String text;
+  final int matchStart;
+  final int matchEnd;
 }

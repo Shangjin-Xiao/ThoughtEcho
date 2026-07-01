@@ -306,9 +306,9 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
 
       if (parsed.smartResult != null) {
         // 解析标签 ID 为可读名称，供 SmartResultCard 同步展示
-        List<String> tagNames = [];
+        List<String> tagNames = parsed.smartResult!.tagNames ?? [];
         final tagIds = parsed.smartResult!.tagIds;
-        if (tagIds != null && tagIds.isNotEmpty) {
+        if (tagNames.isEmpty && tagIds != null && tagIds.isNotEmpty) {
           try {
             final db = context.read<DatabaseService>();
             final allTags = await db.getCategories();
@@ -615,6 +615,9 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             tagIds: (call.arguments['tag_ids'] as List?)
                 ?.map((item) => item.toString())
                 .toList(),
+            tagNames: (call.arguments['tag_names'] as List?)
+                ?.map((item) => item.toString())
+                .toList(),
             author: call.arguments['author']?.toString(),
             source: call.arguments['source']?.toString(),
             includeLocation: call.arguments['include_location'] == true,
@@ -656,6 +659,9 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           tagIds: (data['tag_ids'] as List?)
               ?.map((item) => item.toString())
               .toList(),
+          tagNames: (data['tag_names'] as List?)
+              ?.map((item) => item.toString())
+              .toList(),
           author: data['author']?.toString(),
           source: data['source']?.toString(),
           includeLocation: data['include_location'] == true,
@@ -685,6 +691,7 @@ class _AgentSmartResultPayload {
     this.noteId,
     this.action,
     this.tagIds,
+    this.tagNames,
     this.author,
     this.source,
     this.includeLocation = false,
@@ -696,6 +703,7 @@ class _AgentSmartResultPayload {
   final String? noteId;
   final String? action;
   final List<String>? tagIds;
+  final List<String>? tagNames;
   final String? author;
   final String? source;
   final bool includeLocation;

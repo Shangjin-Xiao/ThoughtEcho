@@ -162,6 +162,7 @@ class AgentService extends ChangeNotifier {
       final executedCalls = <ToolCall>[];
       final seenCallSignatures = <String>{};
       final repeatedRoundPatterns = <String, int>{};
+      final correctionAttempts = <String, int>{};
       var round = 0;
 
       while (true) {
@@ -247,6 +248,38 @@ class AgentService extends ChangeNotifier {
           return AgentResponse(content: fallback, toolCalls: executedCalls);
         }
 
+        final invalidToolNames = <String>[];
+        for (final raw in rawToolCalls) {
+          if (_tryConvertToolCall(raw) == null) {
+            invalidToolNames.add(raw.function.name);
+          }
+        }
+        if (invalidToolNames.isNotEmpty) {
+          final correctionKey = 'invalid-json:${invalidToolNames.join(',')}';
+          if (!_tryRegisterCorrectionAttempt(
+            correctionAttempts,
+            correctionKey,
+          )) {
+            final fallback = '工具调用参数连续无效，已停止。请重试或换一种说法。';
+            _emitEvent(AgentResponseEvent(
+              content: fallback,
+              toolCalls: executedCalls,
+            ));
+            return AgentResponse(content: fallback, toolCalls: executedCalls);
+          }
+          if (assistantContent.isNotEmpty) {
+            messages.add(openai.ChatMessage.assistant(
+              content: assistantContent,
+            ));
+          }
+          messages.add(openai.ChatMessage.user(
+            '上一次工具调用失败：参数不是有效的 JSON 对象。'
+            '请重新调用工具 ${invalidToolNames.join(', ')}，'
+            '只提交一个合法 JSON 对象，不要把多个 JSON 对象拼接在一起。',
+          ));
+          continue;
+        }
+
         messages.add(
           openai.ChatMessage.assistant(
             content: result.content.isNotEmpty ? result.content : null,
@@ -260,19 +293,7 @@ class AgentService extends ChangeNotifier {
 
         for (final rawToolCall in rawToolCalls) {
           final parsedToolCall = _tryConvertToolCall(rawToolCall);
-          if (parsedToolCall == null) {
-            repliedAnyToolCall = true;
-            // 返回详细的错误信息，引导 AI 修复参数格式并重试
-            messages.add(
-              openai.ChatMessage.tool(
-                toolCallId: rawToolCall.id,
-                content: '工具调用失败：参数不是有效的 JSON 对象。'
-                    '请检查参数格式是否正确，确保所有引号和括号匹配，'
-                    '然后使用正确的参数格式重新调用工具「${rawToolCall.function.name}」。',
-              ),
-            );
-            continue;
-          }
+          if (parsedToolCall == null) continue;
 
           final signature =
               '${parsedToolCall.name}:${canonicalJsonForArguments(parsedToolCall.arguments)}';
@@ -328,6 +349,39 @@ class AgentService extends ChangeNotifier {
               isError: toolResult.isError,
             ));
             executedCalls.add(parsedToolCall);
+
+            if (toolResult.isError) {
+              final correctionKey =
+                  '${parsedToolCall.name}:${canonicalJsonForArguments(parsedToolCall.arguments)}';
+              if (toolResult.retryable &&
+                  _tryRegisterCorrectionAttempt(
+                    correctionAttempts,
+                    correctionKey,
+                  )) {
+                final escapedContent = _escapeToolResult(toolResult.content);
+                messages.add(
+                  openai.ChatMessage.tool(
+                    toolCallId: rawToolCall.id,
+                    content: _truncate(
+                        escapedContent, _defaultMaxSingleMessageChars),
+                  ),
+                );
+                continue;
+              }
+
+              final responseContent = toolResult.content.trim().isNotEmpty
+                  ? toolResult.content
+                  : '工具「${parsedToolCall.name}」执行失败。';
+              _setStatus('');
+              _emitEvent(AgentResponseEvent(
+                content: responseContent,
+                toolCalls: executedCalls,
+              ));
+              return AgentResponse(
+                content: responseContent,
+                toolCalls: executedCalls,
+              );
+            }
 
             // 转义工具返回内容以防止提示注入攻击
             final escapedContent = _escapeToolResult(toolResult.content);
@@ -618,6 +672,7 @@ class AgentService extends ChangeNotifier {
         toolCallId: toolCall.id,
         content: '工具「${toolCall.name}」不存在',
         isError: true,
+        retryable: true,
       );
     }
 
@@ -702,7 +757,7 @@ $toolDescriptions
 - 对于笔记检索与探索，主要调用 `explore_notes`。**注意：其返回的列表项仅包含前 200 字内容预览。**
 - **当你要对某篇特定笔记进行润色、总结、续写或深度分析时，为了获取其完整全部正文，你必须优先调用 `get_note_detail` 工具传入该笔记的 ID，不可仅凭 200 字预览做修改。**
 - 当你要创建新笔记，必须调用 `propose_new_note`，不要用 `propose_edit` 冒充新建。
-- 当你要为新笔记选择标签，先调用 `get_tags`；要判断是否建议附加当前位置/天气，调用 `get_location_weather`。
+- 当你要为新笔记或编辑建议选择标签，先调用 `get_tags`；工具调用里提交标签名称 `tag_names`，不要提交数据库 ID。
 - 你可以像用户浏览朋友圈一样使用 `explore_notes`：
   - 如果用户问“我最近写了什么”，不传参数直接调用，查看最新笔记。
   - 支持多维组合：你可以同时根据“下雨天”、“凌晨”、“标签”和“日期范围”来精准定位某条记录。
@@ -714,10 +769,10 @@ $toolDescriptions
 - 调用 `propose_edit` 时：
   - `action`: 润色或修正现有内容时使用 `replace`；续写、补充或整理到末尾时使用 `append`。
   - `note_id`: 如果是对已有的特定笔记（通过搜索找到的）提出修改建议，**必须**填入该笔记 ID。
-  - `tag_ids` / `author` / `source`: 如果你认为需要修改标签、作者或出处，可以一并提供。不提供这些字段则保持原笔记不变。
-  - `include_location` / `include_weather`: 如果建议为笔记附加位置/天气，设为 true，程序会在保存时自动附加。
+  - `tag_names` / `author` / `source`: 如果你认为需要修改标签、作者或出处，可以一并提供。不提供这些字段则保持原笔记不变。
+  - 旧笔记建议不要修改位置/天气。
 - 调用 `propose_new_note` 时：
-  - `tag_ids` 只能使用 `get_tags` 返回的现有标签 ID。
+  - `tag_names` 只能使用 `get_tags` 返回的现有标签名称。
   - `author` / `source`: 可以填写建议的作者和出处。
   - `include_location` / `include_weather` 只表示“让程序在保存时附加”，不是让你自己编写位置或天气文本。
 - 在工具执行并产生卡片后，你可以在最终回复中简要说明你的修改理由。
@@ -732,6 +787,18 @@ $toolDescriptions
       }
     }
     return null;
+  }
+
+  bool _tryRegisterCorrectionAttempt(
+    Map<String, int> correctionAttempts,
+    String key,
+  ) {
+    final count = correctionAttempts[key] ?? 0;
+    if (count >= 1) {
+      return false;
+    }
+    correctionAttempts[key] = count + 1;
+    return true;
   }
 
   void _setStatus(String status) {

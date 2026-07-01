@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:thoughtecho/services/database_service.dart';
 
 import '../agent_tool.dart';
+import 'tag_argument_resolver.dart';
 
 /// 提议创建一条新笔记，输出 Smart Result 卡片供用户直接保存或打开编辑器。
 class ProposeNewNoteTool extends AgentTool {
@@ -25,10 +26,10 @@ class ProposeNewNoteTool extends AgentTool {
           'content': {'type': 'string', 'description': '新笔记正文内容'},
           'author': {'type': 'string', 'description': '可选：作者名称'},
           'source': {'type': 'string', 'description': '可选：出处/作品名称'},
-          'tag_ids': {
+          'tag_names': {
             'type': 'array',
             'items': {'type': 'string'},
-            'description': '可选：从应用现有标签中选择的标签 ID 列表',
+            'description': '可选：从应用现有标签中选择的标签名称列表',
           },
           'include_location': {
             'type': 'boolean',
@@ -58,29 +59,18 @@ class ProposeNewNoteTool extends AgentTool {
         toolCallId: call.id,
         content: '标题和内容不能为空',
         isError: true,
+        retryable: true,
       );
     }
 
-    final rawTagIds = call.arguments['tag_ids'];
-    final tagIds = rawTagIds is List
-        ? rawTagIds
-            .map((item) => item?.toString().trim() ?? '')
-            .where((item) => item.isNotEmpty)
-            .toList()
-        : <String>[];
-
-    final knownTags = await _databaseService.getCategories();
-    final visibleTags = knownTags
-        .where((tag) => tag.id != DatabaseService.hiddenTagId)
-        .toList();
-    final validTagIds = visibleTags.map((tag) => tag.id).toSet();
-    final invalidTagIds =
-        tagIds.where((tagId) => !validTagIds.contains(tagId)).toList();
-    if (invalidTagIds.isNotEmpty) {
+    final resolvedTags =
+        await resolveTagArguments(_databaseService, call.arguments);
+    if (resolvedTags.hasError) {
       return ToolResult(
         toolCallId: call.id,
-        content: '存在无效标签 ID：${invalidTagIds.join(', ')}',
+        content: resolvedTags.errorMessage!,
         isError: true,
+        retryable: true,
       );
     }
 
@@ -89,7 +79,8 @@ class ProposeNewNoteTool extends AgentTool {
       'title': title,
       'content': content,
       'action': 'create',
-      'tag_ids': tagIds,
+      'tag_ids': resolvedTags.ids,
+      'tag_names': resolvedTags.names,
       'include_location': includeLocation,
       'include_weather': includeWeather,
     };
