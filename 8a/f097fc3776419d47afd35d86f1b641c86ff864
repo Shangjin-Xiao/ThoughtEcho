@@ -1,0 +1,94 @@
+lib/providers/app_providers.dart
+  s_3ba7ed68623ace::t_f8fb6838e8a684 53
+test/widgets/smart_result_card_test.dart
+  s_3ba7ed68623ace::t_f4b0f049fa1af2 76
+  s_3ba7ed68623ace::t_2e0b2181148c2a 7-15,19-25,37-75,77-112
+lib/services/agent_tools/propose_edit_tool.dart
+  s_3ba7ed68623ace::t_dbea33ff097af9 4-5,12-14,40,43,66,75,79-88,102-104
+lib/services/agent_tools/get_app_context_tool.dart
+  s_3ba7ed68623ace::t_6035f0d78bb3e3 20-21
+lib/widgets/ai/smart_result_card.dart
+  s_3ba7ed68623ace::t_36b3d44f550134 4-21,34-36,40,53-55,59,67-70,73-75,80-83,86,98-109,119-121,163-201,222-228,232-239,280,286-300,311-376
+  s_3ba7ed68623ace::t_266ea7194bef6c 277-278
+  s_3ba7ed68623ace::t_d12f4ab7a477c2 240-241
+test/unit/services/explore_notes_tool_test.dart
+  s_3ba7ed68623ace::t_c957aba3d384e2 144-177
+  s_3ba7ed68623ace::t_f86b99588ec885 4,74-77
+  s_3ba7ed68623ace::t_05582dda4d0739 78
+lib/main.dart
+  s_3ba7ed68623ace::t_cdbbd016650ed9 566-577
+lib/services/agent_tools/explore_notes_tool.dart
+  s_3ba7ed68623ace::t_474613c6ea14d0 5,39,42,81-90,124-126,130,133,136,138-142,213-249
+lib/services/agent_service.dart
+  s_3ba7ed68623ace::t_1cafe80e530943 165,251-282,296,353-383
+  s_3ba7ed68623ace::t_08138117cf0b53 772
+  s_3ba7ed68623ace::t_8e3738e7c37697 792-802
+  s_3ba7ed68623ace::t_e578fb241d8444 384-385,675,760,773,775,803
+test/widgets/tool_progress_panel_test.dart
+  s_3ba7ed68623ace::t_20c84cf37b96c5 78-79
+lib/pages/ai_assistant/ai_assistant_page_agent.dart
+  s_3ba7ed68623ace::t_83ac2f78f333cc 309,311,618-620,662-664,694,706
+lib/services/chat_session_service.dart
+  s_3ba7ed68623ace::t_cd94a6a8eea183 301,448-513
+  s_3ba7ed68623ace::t_0cfdefbe978ac8 2,5-6,13,17-20,24-30,34,74-86,103,125-184,186-300
+  s_3ba7ed68623ace::t_387f6de7082278 185
+  s_3ba7ed68623ace::t_2cbabd47bfebac 748-758,762-773,776-778,780,782-796,798-809
+  s_3ba7ed68623ace::t_35c0839beac801 302
+test/unit/services/database_schema_manager_poi_name_test.dart
+  s_3ba7ed68623ace::t_2405f2df7dfc31 37-38,45-46
+test/unit/services/chat_session_service_test.dart
+  s_3ba7ed68623ace::t_872f2288ef50ec 6,97-98
+  s_3ba7ed68623ace::t_4e79e1bdb958b9 2,5,214-343
+  s_3ba7ed68623ace::t_7fd33dbfc1ac83 105,140,162,191
+  s_3ba7ed68623ace::t_b6112b37b44162 344
+lib/services/data_directory_service.dart
+  s_3ba7ed68623ace::t_75d11ce9265fd5 110
+lib/widgets/ai/tool_progress_panel.dart
+  s_3ba7ed68623ace::t_97a0dd96178193 282,313
+test/unit/services/agent_service_loop_test.dart
+  s_3ba7ed68623ace::t_c9c18085ea3144 446-447,551-552
+  s_3ba7ed68623ace::t_bd01d1d811e967 61-95,183-192,195,448-550,553-597
+  s_3ba7ed68623ace::t_26a8a1428deb32 193-194
+  s_3ba7ed68623ace::t_7a6b60ddd6f14e 196
+  s_3ba7ed68623ace::t_26f930e6db8352 598
+lib/services/agent_tool.dart
+  s_3ba7ed68623ace::t_c3e0c5711f2e50 140-141,146
+  s_3ba7ed68623ace::t_381ba6900e94ff 105,111,117,123,129
+lib/services/agent_tools/tag_argument_resolver.dart
+  s_3ba7ed68623ace::t_22e8a73bbd6eaa 1-90
+lib/services/agent_tools/propose_new_note_tool.dart
+  s_3ba7ed68623ace::t_e5bbf5559b3cd0 6,29,32,66-68,71,73,82-83
+  s_3ba7ed68623ace::t_8d4170b26494cf 62
+lib/pages/ai_assistant/ai_assistant_page_ui.dart
+  s_3ba7ed68623ace::t_e0d3247b53e94b 1033,1084,1091,1095,1098,1195,1197,1219,1226
+  s_3ba7ed68623ace::t_efe829e0073eff 794-855
+  s_3ba7ed68623ace::t_3ea71498e4b0c7 200-203,206-208,211,221,225-227,230-232,241,243,246,248,252-253
+  s_3ba7ed68623ace::t_5a827cb0843cc1 84-118
+  s_3ba7ed68623ace::t_fa32a157524ca7 254
+lib/services/database_schema_manager.dart
+  s_3ba7ed68623ace::t_b14967748a01d0 705-706,710
+lib/pages/ai_assistant_page.dart
+  s_3ba7ed68623ace::t_b069ea0447dbce 202-203
+  s_3ba7ed68623ace::t_edc6ffcd714895 442-479,490-495
+lib/pages/ai_assistant/ai_assistant_page_session.dart
+  s_3ba7ed68623ace::t_95f855dfed571a 8,21
+test/unit/services/agent_note_tools_test.dart
+  s_3ba7ed68623ace::t_422f113db529ab 89,109,133,150,155,171,177-178,246-253,264,287,296,319,322-350
+  s_3ba7ed68623ace::t_6f3b4940ccb635 290-291
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "8af097fc3776419d47afd35d86f1b641c86ff864",
+  "prompts": {},
+  "sessions": {
+    "s_3ba7ed68623ace": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1c85-1d3b-71b2-9ccd-62a4c5ac4f16",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
