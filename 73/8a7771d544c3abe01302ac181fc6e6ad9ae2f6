@@ -1,0 +1,19 @@
+lib/widgets/add_note_dialog.dart
+  s_e0eb36301e125d::t_b70cf23538d847 406
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "738a7771d544c3abe01302ac181fc6e6ad9ae2f6",
+  "prompts": {},
+  "sessions": {
+    "s_e0eb36301e125d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f18b3-e1ec-7d32-9714-5f4b5febd120",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
