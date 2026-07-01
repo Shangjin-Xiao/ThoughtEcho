@@ -71,7 +71,8 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text(l10n.editModeMetadataReadOnlyHint),
+                                      content: Text(
+                                          l10n.editModeMetadataReadOnlyHint),
                                       duration: const Duration(seconds: 2),
                                     ),
                                   );
@@ -147,7 +148,8 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(l10n.editModeMetadataReadOnlyHint),
+                                  content:
+                                      Text(l10n.editModeMetadataReadOnlyHint),
                                   duration: const Duration(seconds: 2),
                                 ),
                               );

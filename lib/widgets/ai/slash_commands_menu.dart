@@ -39,7 +39,8 @@ class _SlashCommandsMenuState extends State<SlashCommandsMenu>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, -0.1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOut));
+    ).animate(
+        CurvedAnimation(parent: _animationController, curve: Curves.easeOut));
 
     _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
@@ -73,7 +74,9 @@ class _SlashCommandsMenuState extends State<SlashCommandsMenu>
     final filteredCommands = widget.commands
         .where((cmd) =>
             widget.filterText.isEmpty ||
-            cmd.command.toLowerCase().contains(widget.filterText.toLowerCase()) ||
+            cmd.command
+                .toLowerCase()
+                .contains(widget.filterText.toLowerCase()) ||
             cmd.displayName
                 .toLowerCase()
                 .contains(widget.filterText.toLowerCase()))
@@ -84,7 +87,8 @@ class _SlashCommandsMenuState extends State<SlashCommandsMenu>
     }
 
     // 确保selected index在范围内
-    _selectedIndex = _selectedIndex.clamp(0, filteredCommands.length - 1);
+    _selectedIndex =
+        _selectedIndex.clamp(0, filteredCommands.length - 1).toInt();
 
     return SlideTransition(
       position: _slideAnimation,
@@ -344,7 +348,8 @@ class _SlashCommandsInputFieldState extends State<SlashCommandsInputField> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final filterText = widget.controller.text.trimLeft().substring(1).trim();
+    final text = widget.controller.text.trimLeft();
+    final filterText = text.startsWith('/') ? text.substring(1).trim() : '';
 
     return Column(
       mainAxisSize: MainAxisSize.min,

@@ -1,9 +1,8 @@
 import 'dart:convert';
-import 'package:collection/collection.dart';
 
 /// AI Skill 数据模型
 ///
-/// 用于描述一个可被注册 to OpenAI tool calling 的技能定义。
+/// 用于描述一个可被注册到 OpenAI tool calling 的技能定义。
 class AISkill {
   static final RegExp _openAIToolNamePattern = RegExp(r'^[a-zA-Z0-9_-]{1,64}$');
 
@@ -118,39 +117,71 @@ class AISkill {
 
   factory AISkill.fromMap(Map<String, dynamic> map) {
     Map<String, dynamic> parseProperties(dynamic val) {
-      if (val is String) {
-        try {
+      try {
+        if (val is String) {
           return jsonDecode(val) as Map<String, dynamic>;
-        } catch (_) {}
-      } else if (val is Map) {
-        return Map<String, dynamic>.from(val);
+        } else if (val is Map) {
+          return val.map(
+            (key, value) => MapEntry(key.toString(), value),
+          );
+        }
+      } catch (_) {
+        return {};
       }
       return {};
     }
 
     List<String> parseRequired(dynamic val) {
-      if (val is String) {
-        try {
-          return List<String>.from(jsonDecode(val) as List);
-        } catch (_) {}
-      } else if (val is List) {
-        return List<String>.from(val);
+      try {
+        final decoded = val is String ? jsonDecode(val) : val;
+        if (decoded is List) {
+          return decoded
+              .whereType<String>()
+              .map((value) => value.trim())
+              .where((value) => value.isNotEmpty)
+              .toList(growable: false);
+        }
+      } catch (_) {
+        return [];
       }
       return [];
     }
 
+    String safeString(dynamic value, String fallback) {
+      final text = value is String ? value.trim() : '';
+      return text.isEmpty ? fallback : text;
+    }
+
+    String safeToolName(dynamic value) {
+      final text = safeString(value, 'invalid_skill')
+          .replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+      final limited = text.length > 64 ? text.substring(0, 64) : text;
+      return _openAIToolNamePattern.hasMatch(limited)
+          ? limited
+          : 'invalid_skill';
+    }
+
+    final id = safeToolName(map['id']);
+    final properties = parseProperties(
+      map['input_properties'] ?? map['inputProperties'],
+    );
+    final requiredInputs = parseRequired(
+      map['required_inputs'] ?? map['requiredInputs'],
+    ).where(properties.containsKey).toList(growable: false);
+
     return AISkill(
-      id: map['id'] as String? ?? '',
-      name: map['name'] as String? ?? '',
-      triggerWord: map['trigger_word'] ?? map['triggerWord'] ?? '',
-      systemPrompt: map['system_prompt'] ?? map['systemPrompt'] ?? '',
-      description: map['description'] as String?,
-      inputProperties: parseProperties(
-        map['input_properties'] ?? map['inputProperties'],
+      id: id,
+      name: safeString(map['name'], id),
+      triggerWord: safeString(map['trigger_word'] ?? map['triggerWord'], id),
+      systemPrompt: safeString(
+        map['system_prompt'] ?? map['systemPrompt'],
+        'Execute $id',
       ),
-      requiredInputs: parseRequired(
-        map['required_inputs'] ?? map['requiredInputs'],
-      ),
+      description: map['description'] is String
+          ? (map['description'] as String).trim()
+          : null,
+      inputProperties: properties,
+      requiredInputs: requiredInputs,
     );
   }
 
@@ -176,24 +207,9 @@ class AISkill {
 
   @override
   bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    if (other is! AISkill) return false;
-    return other.id == id &&
-        other.name == name &&
-        other.triggerWord == triggerWord &&
-        other.systemPrompt == systemPrompt &&
-        other.description == description &&
-        const MapEquality().equals(other.inputProperties, inputProperties) &&
-        const ListEquality().equals(other.requiredInputs, requiredInputs);
+    return identical(this, other) || (other is AISkill && other.id == id);
   }
 
   @override
-  int get hashCode =>
-      id.hashCode ^
-      name.hashCode ^
-      triggerWord.hashCode ^
-      systemPrompt.hashCode ^
-      description.hashCode ^
-      const MapEquality().hash(inputProperties) ^
-      const ListEquality().hash(requiredInputs);
+  int get hashCode => id.hashCode;
 }

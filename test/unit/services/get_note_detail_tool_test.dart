@@ -50,7 +50,8 @@ void main() {
       quotes = <Quote>[
         Quote(
           id: 'note_123',
-          content: 'This is a very long note that needs to be fully read by the Agent for polishing.',
+          content:
+              'This is a very long note that needs to be fully read by the Agent for polishing.',
           date: '2026-06-06T12:00:00Z',
           location: 'Beijing',
           poiName: 'Tsinghua University',
@@ -65,7 +66,8 @@ void main() {
       tool = GetNoteDetailTool(_TestDatabaseService(quotes));
     });
 
-    test('returns full note details including all metadata and full content', () async {
+    test('returns full note details including all metadata and full content',
+        () async {
       final result = await tool.execute(
         ToolCall(
           id: 'call_detail_1',
@@ -79,7 +81,8 @@ void main() {
       expect(result.isError, isFalse);
       final data = jsonDecode(result.content);
       expect(data['id'], 'note_123');
-      expect(data['content'], 'This is a very long note that needs to be fully read by the Agent for polishing.');
+      expect(data['content'],
+          'This is a very long note that needs to be fully read by the Agent for polishing.');
       expect(data['location'], 'Tsinghua University');
       expect(data['weather'], 'Sunny');
       expect(data['temperature'], '25°C');

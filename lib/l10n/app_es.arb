@@ -62,7 +62,7 @@
   "aiChat": "Chat de IA",
   "aiAgent": "Agente de IA",
   "agentThinking": "El agente está pensando...",
-  "agentToolCall": "Llamando al herramienta: {toolName}",
+  "agentToolCall": "Llamando a la herramienta: {toolName}",
   "@agentToolCall": {
     "placeholders": {
       "toolName": {

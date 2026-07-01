@@ -150,5 +150,41 @@ void main() {
 
       expect(required, ['content', 'style']);
     });
+
+    test('fromMap tolerates malformed persisted values', () {
+      final skill = AISkill.fromMap({
+        'id': 'bad id!',
+        'name': '',
+        'trigger_word': null,
+        'system_prompt': '',
+        'input_properties': '{"not": "closed"',
+        'required_inputs': [1, null, 'missing'],
+      });
+
+      expect(skill.id, 'bad_id_');
+      expect(skill.name, 'bad_id_');
+      expect(skill.triggerWord, 'bad_id_');
+      expect(skill.systemPrompt, 'Execute bad_id_');
+      expect(skill.inputProperties, isEmpty);
+      expect(skill.requiredInputs, isEmpty);
+    });
+
+    test('equality is based on business id', () {
+      final original = AISkill(
+        id: 'note_summarize',
+        name: 'Note Summarize',
+        triggerWord: '/summary',
+        systemPrompt: 'Summarize the note.',
+      );
+      final updated = AISkill(
+        id: 'note_summarize',
+        name: 'Updated name',
+        triggerWord: '/sum',
+        systemPrompt: 'Updated prompt.',
+      );
+
+      expect(original, updated);
+      expect(<AISkill>{original, updated}, hasLength(1));
+    });
   });
 }

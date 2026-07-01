@@ -29,7 +29,8 @@ void main() {
     if (apiKey.isEmpty) {
       test('skipped - TE_TEST_API_KEY not set', () {
         print('⚠️  设置 TE_TEST_API_KEY 环境变量以运行集成测试');
-        print('   示例: TE_TEST_API_KEY=your-key flutter test test/integration/ai_service_integration_test.dart');
+        print(
+            '   示例: TE_TEST_API_KEY=your-key flutter test test/integration/ai_service_integration_test.dart');
       });
       return;
     }
@@ -81,8 +82,7 @@ void main() {
         print('❌ FAIL: Invalid title (thinking process) -> "$title"');
       }
 
-      expect(isValid, isTrue,
-          reason: 'Title should not be a thinking process');
+      expect(isValid, isTrue, reason: 'Title should not be a thinking process');
     });
 
     test('streamChat for daily prompt', () async {
@@ -108,13 +108,15 @@ void main() {
       await for (final chunk in stream) {
         chunks.add(chunk);
         if (chunk.isNotEmpty) {
-          print('[CHUNK] "${chunk.substring(0, chunk.length > 40 ? 40 : chunk.length)}${chunk.length > 40 ? '...' : ''}"');
+          print(
+              '[CHUNK] "${chunk.substring(0, chunk.length > 40 ? 40 : chunk.length)}${chunk.length > 40 ? '...' : ''}"');
         }
       }
 
       final fullText = chunks.join('');
       print('\nFull text: ${fullText.length} chars');
-      print('Content: "${fullText.substring(0, fullText.length > 100 ? 100 : fullText.length)}${fullText.length > 100 ? '...' : ''}"');
+      print(
+          'Content: "${fullText.substring(0, fullText.length > 100 ? 100 : fullText.length)}${fullText.length > 100 ? '...' : ''}"');
 
       final isEmpty = fullText.isEmpty;
       final isThinking = fullText.toLowerCase().contains('the user') ||
@@ -148,25 +150,29 @@ void main() {
         messages: messages,
         onThinking: (thinking) {
           thinkingChunks.add(thinking);
-          print('[THINKING] "${thinking.substring(0, thinking.length > 40 ? 40 : thinking.length)}${thinking.length > 40 ? '...' : ''}"');
+          print(
+              '[THINKING] "${thinking.substring(0, thinking.length > 40 ? 40 : thinking.length)}${thinking.length > 40 ? '...' : ''}"');
         },
       );
 
       await for (final chunk in stream) {
         contentChunks.add(chunk);
         if (chunk.isNotEmpty) {
-          print('[CONTENT ] "${chunk.substring(0, chunk.length > 40 ? 40 : chunk.length)}${chunk.length > 40 ? '...' : ''}"');
+          print(
+              '[CONTENT ] "${chunk.substring(0, chunk.length > 40 ? 40 : chunk.length)}${chunk.length > 40 ? '...' : ''}"');
         }
       }
 
       print('\nResults:');
-      print('Content chunks : ${contentChunks.length} (${contentChunks.join('').length} chars)');
-      print('Thinking chunks: ${thinkingChunks.length} (${thinkingChunks.join('').length} chars)');
+      print(
+          'Content chunks : ${contentChunks.length} (${contentChunks.join('').length} chars)');
+      print(
+          'Thinking chunks: ${thinkingChunks.length} (${thinkingChunks.join('').length} chars)');
 
-      final hasThinking = thinkingChunks.isNotEmpty &&
-          thinkingChunks.join('').isNotEmpty;
-      final hasContent = contentChunks.isNotEmpty &&
-          contentChunks.join('').isNotEmpty;
+      final hasThinking =
+          thinkingChunks.isNotEmpty && thinkingChunks.join('').isNotEmpty;
+      final hasContent =
+          contentChunks.isNotEmpty && contentChunks.join('').isNotEmpty;
 
       if (hasThinking) {
         print('✅ Thinking data exists');

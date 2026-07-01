@@ -509,8 +509,10 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     }
     final content = payload['content']?.toString() ?? '';
     final snippet = content.trim().replaceAll('\n', ' ');
-    final cleanSnippet = snippet.length > 15 ? '${snippet.substring(0, 15)}...' : snippet;
-    return l10n.agentReadNoteDetailSummary(cleanSnippet.isNotEmpty ? cleanSnippet : l10n.unknown);
+    final cleanSnippet =
+        snippet.length > 15 ? '${snippet.substring(0, 15)}...' : snippet;
+    return l10n.agentReadNoteDetailSummary(
+        cleanSnippet.isNotEmpty ? cleanSnippet : l10n.unknown);
   }
 
   String _summarizeNoteSearchResult(AppLocalizations l10n, String result) {

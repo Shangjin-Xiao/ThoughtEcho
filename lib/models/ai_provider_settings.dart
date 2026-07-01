@@ -115,8 +115,10 @@ class AIProviderSettings implements AIConfig {
 
     // Anthropic
     if (id == 'anthropic' || uri.host.contains('anthropic.com')) {
-      if (path.isEmpty || path == '/v1') {
+      if (path.isEmpty) {
         return uri.replace(path: '/v1/messages').toString();
+      } else if (path.endsWith('/v1')) {
+        return uri.replace(path: '$path/messages').toString();
       } else if (path.endsWith('/messages')) {
         return uri.replace(path: path).toString();
       }
@@ -127,8 +129,10 @@ class AIProviderSettings implements AIConfig {
         id == 'openai' ||
         id == 'openrouter' ||
         id == 'deepseek') {
-      if (path.isEmpty || path == '/v1') {
+      if (path.isEmpty) {
         return uri.replace(path: '/v1/chat/completions').toString();
+      } else if (path.endsWith('/v1')) {
+        return uri.replace(path: '$path/chat/completions').toString();
       } else if (path.endsWith('/chat/completions')) {
         return uri.replace(path: path).toString();
       }

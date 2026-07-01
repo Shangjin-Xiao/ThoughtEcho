@@ -304,13 +304,23 @@ Future<void> main() async {
         final chatSessionService = ChatSessionService();
 
         // 监听 databaseService 并在初始化完成时动态绑定数据库
-        databaseService.addListener(() {
+        late VoidCallback databaseReadyListener;
+        databaseReadyListener = () {
           if (databaseService.isInitialized) {
             try {
               chatSessionService.setDatabase(databaseService.database);
-            } catch (_) {}
+              databaseService.removeListener(databaseReadyListener);
+            } catch (e, stackTrace) {
+              logError(
+                '聊天会话数据库绑定失败: $e',
+                error: e,
+                stackTrace: stackTrace,
+                source: 'Main',
+              );
+            }
           }
-        });
+        };
+        databaseService.addListener(databaseReadyListener);
 
         // 创建智能推送服务实例
         final smartPushService = SmartPushService(

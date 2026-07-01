@@ -18,6 +18,20 @@ void main() {
       );
     });
 
+    test('preserves prefixed OpenAI-compatible v1 base URL', () {
+      const provider = AIProviderSettings(
+        id: 'openrouter',
+        name: 'OpenRouter',
+        apiUrl: 'https://openrouter.ai/api/v1',
+        model: 'anthropic/claude-3.7-sonnet',
+      );
+
+      expect(
+        provider.resolveRequestUrl(provider.apiUrl),
+        'https://openrouter.ai/api/v1/chat/completions',
+      );
+    });
+
     test('keeps explicit chat completions endpoint unchanged', () {
       const provider = AIProviderSettings(
         id: 'deepseek',

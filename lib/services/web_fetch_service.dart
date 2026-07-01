@@ -162,22 +162,35 @@ class WebFetchService {
 
       final bytes = <int>[];
       int totalBytes = 0;
-      await for (final chunk in response.stream) {
-        totalBytes += chunk.length;
-        if (totalBytes > maxSizeBytes) {
-          throw Exception('网页内容超出大小限制 (最大 2MB)');
+      await (() async {
+        await for (final chunk in response.stream) {
+          totalBytes += chunk.length;
+          if (totalBytes > maxSizeBytes) {
+            throw Exception('网页内容超出大小限制 (最大 2MB)');
+          }
+          bytes.addAll(chunk);
         }
-        bytes.addAll(chunk);
-      }
+      })()
+          .timeout(
+        _timeout,
+        onTimeout: () => throw WebFetchTimeoutException(
+          '网页抓取超时（${_timeout.inSeconds}秒）',
+          _timeout,
+        ),
+      );
 
-      final body =
-          response.headers['content-type']?.contains('charset=') ?? false
-              ? http.Response.bytes(
-                  bytes,
-                  response.statusCode,
-                  headers: response.headers,
-                ).body
-              : utf8.decode(bytes, allowMalformed: true);
+      final hasCharset =
+          response.headers['content-type']?.toLowerCase().contains(
+                    'charset=',
+                  ) ??
+              false;
+      final body = hasCharset
+          ? http.Response.bytes(
+              bytes,
+              response.statusCode,
+              headers: response.headers,
+            ).body
+          : utf8.decode(bytes, allowMalformed: true);
       return body;
     } finally {
       client.close();

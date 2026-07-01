@@ -299,8 +299,7 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                       builder: (context) {
                                         // 过滤标签
                                         final filteredTags =
-                                            (widget.allTags ?? [])
-                                                .where((tag) {
+                                            (widget.allTags ?? []).where((tag) {
                                           return _tagSearchQuery.isEmpty ||
                                               tag
                                                   .localizedName(l10n)

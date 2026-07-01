@@ -90,7 +90,8 @@ class _TestDatabaseService extends ChangeNotifier implements DatabaseService {
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class _TestFeatureGuideService extends ChangeNotifier implements FeatureGuideService {
+class _TestFeatureGuideService extends ChangeNotifier
+    implements FeatureGuideService {
   @override
   bool hasShown(String guideId) => true;
 
@@ -116,7 +117,9 @@ void main() {
     UnifiedLogService.instance.dispose();
   });
 
-  testWidgets('AddNoteDialog shows SnackBar and retains check state in edit mode', (WidgetTester tester) async {
+  testWidgets(
+      'AddNoteDialog shows SnackBar and retains check state in edit mode',
+      (WidgetTester tester) async {
     final initialQuote = Quote(
       id: 'test-id-123',
       content: 'Test initial note content',

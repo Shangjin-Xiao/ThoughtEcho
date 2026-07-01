@@ -61,7 +61,18 @@ class WebFetchTool extends AgentTool {
     final uri = Uri.tryParse(trimmedUrl);
     if (uri != null) {
       final host = uri.host.toLowerCase().trim();
-      if (_isPrivateOrLocalHost(host)) {
+      var blocked = _isPrivateOrLocalHost(host);
+      if (!blocked) {
+        try {
+          final resolved = await InternetAddress.lookup(host);
+          blocked = resolved.any(
+            (address) => _isPrivateOrLocalHost(address.address),
+          );
+        } catch (_) {
+          blocked = true;
+        }
+      }
+      if (blocked) {
         return ToolResult(
           toolCallId: call.id,
           content: '安全限制：不允许访问本地或私有网络地址。',
@@ -106,6 +117,8 @@ class WebFetchTool extends AgentTool {
       if (bytes[0] == 10) return true;
       // 172.16.0.0/12
       if (bytes[0] == 172 && (bytes[1] >= 16 && bytes[1] <= 31)) return true;
+      // 169.254.0.0/16
+      if (bytes[0] == 169 && bytes[1] == 254) return true;
       // 192.168.0.0/16
       if (bytes[0] == 192 && bytes[1] == 168) return true;
     } else if (ip.type == InternetAddressType.IPv6) {
