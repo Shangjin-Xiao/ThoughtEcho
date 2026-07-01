@@ -1,0 +1,20 @@
+lib/services/database_service.dart
+  s_939069f26d60c8::t_8480a195fecb6c 402-405,633,893-894,931-932
+  s_939069f26d60c8::t_a6743cf40b7d59 833-850
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "357367ae299f1eafa6d589fce74ff6508bfecaac",
+  "prompts": {},
+  "sessions": {
+    "s_939069f26d60c8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1b7e-5ee5-7342-a3d9-410785fa2e51",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
