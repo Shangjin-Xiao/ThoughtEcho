@@ -46,21 +46,22 @@ class ChatSessionService extends ChangeNotifier {
       _pendingWrites,
     );
     _pendingWrites.clear();
-    for (final write in writes) {
-      Future<void>.microtask(() async {
+    Future<void>.microtask(() async {
+      for (final write in writes) {
         try {
           await write(db);
-        } catch (e) {
+        } catch (e, stack) {
           logError(
             'ChatSessionService 延迟写入执行失败',
             error: e,
+            stackTrace: stack,
             source: 'ChatSessionService',
           );
         } finally {
           notifyListeners();
         }
-      });
-    }
+      }
+    });
   }
 
   /// 获取数据库实例，带超时限制（仅用于只读查询）
@@ -537,7 +538,7 @@ class ChatSessionService extends ChangeNotifier {
         LEFT JOIN chat_messages m ON s.id = m.session_id
         WHERE m.id IS NULL
       ''');
-      
+
       final now = DateTime.now();
       int deletedCount = 0;
 

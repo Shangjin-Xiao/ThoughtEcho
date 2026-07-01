@@ -4006,6 +4006,7 @@
   "saveDirectly": "直接保存",
   "replace": "替换",
   "append": "追加",
+  "notice": "提示",
   "saveRequired": "保存提示",
   "saveBeforeAiAssistant": "进入 AI 助手前需先保存当前笔记内容",
   "saveAndContinue": "保存并继续",

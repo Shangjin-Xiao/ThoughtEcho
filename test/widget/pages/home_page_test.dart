@@ -146,7 +146,8 @@ void main() {
           ChangeNotifierProvider<WeatherService>.value(
               value: mockWeatherService),
           Provider<ExcerptIntentService>.value(value: mockExcerptIntentService),
-          ChangeNotifierProvider<ClipboardService>.value(value: mockClipboardService),
+          ChangeNotifierProvider<ClipboardService>.value(
+              value: mockClipboardService),
           Provider<bool>.value(value: true),
         ],
         child: const MaterialApp(

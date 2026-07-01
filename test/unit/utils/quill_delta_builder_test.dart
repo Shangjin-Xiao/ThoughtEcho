@@ -11,10 +11,13 @@ void main() {
       expect(ops[1]['insert'], '\n');
     });
 
-    test('appendTextToDelta appends new text preserving original ops order', () {
+    test('appendTextToDelta appends new text preserving original ops order',
+        () {
       final originalOps = [
         {'insert': 'Hello '},
-        {'insert': {'image': 'img1'}},
+        {
+          'insert': {'image': 'img1'}
+        },
         {'insert': '\n'}
       ];
       final originalJson = jsonEncode({'ops': originalOps});
@@ -32,12 +35,18 @@ void main() {
       expect(resultOps[3]['insert'], '\n');
     });
 
-    test('replaceTextInDelta replaces text and performs position-aware merge of embeds', () {
+    test(
+        'replaceTextInDelta replaces text and performs position-aware merge of embeds',
+        () {
       final originalOps = [
         {'insert': 'Hello '}, // Length 6
-        {'insert': {'image': 'img1'}}, // Offset 6
+        {
+          'insert': {'image': 'img1'}
+        }, // Offset 6
         {'insert': 'World'}, // Length 5 (Total 11)
-        {'insert': {'image': 'img2'}}, // Offset 11
+        {
+          'insert': {'image': 'img2'}
+        }, // Offset 11
         {'insert': '\n'}
       ];
       final originalJson = jsonEncode({'ops': originalOps});

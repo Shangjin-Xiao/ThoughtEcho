@@ -4006,6 +4006,7 @@
   "saveDirectly": "Save Directly",
   "replace": "Replace",
   "append": "Append",
+  "notice": "Notice",
   "saveRequired": "Save Required",
   "saveBeforeAiAssistant": "Please save your note before entering the AI assistant",
   "saveAndContinue": "Save & Continue",

@@ -41,7 +41,8 @@ class GetTagsTool extends AgentTool {
     try {
       final offset =
           toolCall.getInt('offset', defaultValue: 0).clamp(0, 1000000).toInt();
-      final limit = toolCall.getInt('limit', defaultValue: 20).clamp(1, 50).toInt();
+      final limit =
+          toolCall.getInt('limit', defaultValue: 20).clamp(1, 50).toInt();
 
       final categories = await _databaseService.getCategories();
       final visibleCategories =

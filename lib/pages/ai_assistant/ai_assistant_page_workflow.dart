@@ -147,6 +147,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
         _scheduleStreamUpdate(aiMsgId, fullResponse, isLoading: true);
       },
       onDone: () {
+        _flushStreamUpdate();
         _cancelStreamUpdate();
         _updateMessage(
           aiMsgId,
@@ -161,6 +162,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
         );
       },
       onError: (error) {
+        _flushStreamUpdate();
         _cancelStreamUpdate();
         _updateMessage(aiMsgId, l10n.aiResponseError(error.toString()),
             isLoading: false);
@@ -194,6 +196,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
         _scheduleStreamUpdate(aiMsgId, fullResponse, isLoading: true);
       },
       onDone: () {
+        _flushStreamUpdate();
         _cancelStreamUpdate();
         _updateMessage(
           aiMsgId,
@@ -206,6 +209,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
         );
       },
       onError: (error) {
+        _flushStreamUpdate();
         _cancelStreamUpdate();
         _updateMessage(aiMsgId, l10n.aiResponseError(error.toString()),
             isLoading: false);
@@ -237,6 +241,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
         _scheduleStreamUpdate(aiMsgId, fullResponse, isLoading: true);
       },
       onDone: () {
+        _flushStreamUpdate();
         _cancelStreamUpdate();
         try {
           final sourceData =
@@ -267,6 +272,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
         }
       },
       onError: (error) {
+        _flushStreamUpdate();
         _cancelStreamUpdate();
         _updateMessage(aiMsgId, l10n.aiResponseError(error.toString()),
             isLoading: false);
@@ -286,8 +292,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
     if (url == null || url.isEmpty) {
       _appendCardMessage(
         type: 'notice',
-        content: l10n
-            .aiResponseError(l10n.webCommandInvalidUrl),
+        content: l10n.aiResponseError(l10n.webCommandInvalidUrl),
         meta: <String, dynamic>{
           'title': l10n.webCommandInvalidUrlTitle,
           'icon': Icons.info_outline.codePoint,

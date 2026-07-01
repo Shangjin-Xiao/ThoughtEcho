@@ -254,6 +254,14 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               ),
             );
           case 'notice':
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: AIWorkflowNoticeCard(
+                title: meta['title'] as String? ?? l10n.notice,
+                message: message.content,
+                icon: Icons.info_outline,
+              ),
+            );
           case 'source_analysis_result':
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
