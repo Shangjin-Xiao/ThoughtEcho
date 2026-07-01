@@ -50,10 +50,11 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                         children: [
                           Text(
                             AppLocalizations.of(context).editMetadata,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(color: theme.colorScheme.onSurface),
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onSurface,
+                            ),
                           ),
                           const Spacer(),
                           TextButton.icon(
@@ -72,7 +73,10 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                           // 作者/作品输入
                           Text(
                             l10n.sourceInfo,
-                            style: Theme.of(context).textTheme.titleMedium,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           Row(
@@ -125,7 +129,10 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                           // 颜色选择
                           Text(
                             l10n.colorLabel,
-                            style: Theme.of(context).textTheme.titleMedium,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           Container(
@@ -217,7 +224,10 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                             children: [
                               Text(
                                 l10n.tagsLabel,
-                                style: Theme.of(context).textTheme.titleMedium,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               const Spacer(),
                               Text(
@@ -289,7 +299,7 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                       builder: (context) {
                                         // 过滤标签
                                         final filteredTags =
-                                            widget.allTags!.where((tag) {
+                                            (widget.allTags ?? []).where((tag) {
                                           return _tagSearchQuery.isEmpty ||
                                               tag
                                                   .localizedName(l10n)
@@ -372,15 +382,18 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                 children: [
                                   Text(
                                     l10n.selectedTags,
-                                    style:
-                                        Theme.of(context).textTheme.titleSmall,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                   const SizedBox(height: 8),
                                   Wrap(
                                     spacing: 8.0,
                                     runSpacing: 4.0,
                                     children: _selectedTagIds.map((tagId) {
-                                      final tag = widget.allTags!.firstWhere(
+                                      final tag =
+                                          (widget.allTags ?? []).firstWhere(
                                         (t) => t.id == tagId,
                                         orElse: () => NoteCategory(
                                           id: tagId,

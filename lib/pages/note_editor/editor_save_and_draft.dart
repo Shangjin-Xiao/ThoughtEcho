@@ -5,10 +5,14 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
   void _initializeAsPlainText() {
     try {
       if (mounted) {
+        final text = (widget.initialQuote != null &&
+                widget.initialQuote!.content.isNotEmpty)
+            ? widget.initialQuote!.content
+            : widget.initialContent;
         _updateState(() {
           _controller.dispose(); // 释放旧控制器
           _controller = quill.QuillController(
-            document: quill.Document()..insert(0, widget.initialContent),
+            document: quill.Document()..insert(0, text),
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
@@ -131,6 +135,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         'tagIds': _selectedTagIds,
         'colorHex': _selectedColorHex,
         'location': _showLocation ? _location : null,
+        'poiName': _showLocation ? _poiName : null,
         'latitude': (_showLocation || _showWeather) ? _latitude : null,
         'longitude': (_showLocation || _showWeather) ? _longitude : null,
         'weather': _showWeather ? _weather : null,
@@ -224,6 +229,9 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       if (_location != _initialLocation) {
         return true;
       }
+      if (_poiName != _initialPoiName) {
+        return true;
+      }
       if (_latitude != _initialLatitude) {
         return true;
       }
@@ -245,12 +253,17 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       return true;
     }
 
+    final currentDeltaContent = jsonEncode(
+      _controller.document.toDelta().toJson(),
+    );
+    if (currentDeltaContent != (_initialDeltaContent ?? '')) {
+      return true;
+    }
+
     return false;
   }
 
   Future<void> _saveContent() async {
-    if (_isSaving) return;
-
     _draftSaveTimer?.cancel();
     _draftLoaded = false;
 
@@ -369,6 +382,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           ? (_location ??
               (_latitude != null ? LocationService.kAddressPending : null))
           : null,
+      poiName: _showLocation ? _poiName : null,
       latitude: _showLocation ? _latitude : null,
       longitude: _showLocation ? _longitude : null,
       weather: _showWeather ? _weather : null,

@@ -9,6 +9,23 @@ import 'media_reference_service.dart';
 // TODO(refactor): This file exceeds 1600 lines and handles complex migration logic.
 // Consider using a strategy pattern or separate migration step classes for each version.
 class DatabaseSchemaManager {
+  static const int schemaVersion = 21;
+
+  @visibleForTesting
+  static const Set<String> requiredTablesForValidation = {
+    'quotes',
+    'categories',
+    'quote_tags',
+  };
+
+  @visibleForTesting
+  static String poiNameSelectExpressionFromTableInfo(
+    List<Map<String, Object?>> tableInfo,
+  ) {
+    final hasPoiNameColumn = tableInfo.any((col) => col['name'] == 'poi_name');
+    return hasPoiNameColumn ? 'poi_name' : 'NULL AS poi_name';
+  }
+
   Future<void> createTables(Database db) async {
     // 创建分类表：包含 id、名称、是否为默认、图标名称等字段
     await db.execute('''
@@ -38,6 +55,7 @@ class DatabaseSchemaManager {
         location TEXT,
         latitude REAL,
         longitude REAL,
+        poi_name TEXT,
         weather TEXT,
         temperature TEXT,
         edit_source TEXT,
@@ -88,6 +106,9 @@ class DatabaseSchemaManager {
     );
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_quotes_deleted_at ON quotes(deleted_at)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_quotes_poi_name ON quotes(poi_name)',
     );
 
     // 创建新的 quote_tags 关联表
@@ -680,6 +701,29 @@ class DatabaseSchemaManager {
         logError('回收站历史数据回填失败: $e', error: e, source: 'DatabaseUpgrade');
       }
     }
+
+    // 版本21：添加 poi_name 字段。聊天历史使用独立 chat.db，
+    // 不再写入主笔记数据库。
+    if (oldVersion < 21) {
+      try {
+        logDebug(
+          '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 poi_name',
+        );
+        final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
+        final hasPoiName = columns.any((col) => col['name'] == 'poi_name');
+        if (!hasPoiName) {
+          await txn.execute('ALTER TABLE quotes ADD COLUMN poi_name TEXT');
+          logDebug('数据库升级：poi_name 字段添加完成');
+        }
+
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_quotes_poi_name ON quotes(poi_name)',
+        );
+      } catch (e) {
+        logError('版本21升级失败: $e', error: e, source: 'DatabaseUpgrade');
+        rethrow;
+      }
+    }
   }
 
   /// 修复：验证升级结果
@@ -691,11 +735,34 @@ class DatabaseSchemaManager {
       );
       final tableNames = tables.map((t) => t['name'] as String).toSet();
 
-      final requiredTables = {'quotes', 'categories'};
+      final requiredTables = {
+        'quotes',
+        'categories',
+        'quote_tags',
+      };
       final missingTables = requiredTables.difference(tableNames);
 
       if (missingTables.isNotEmpty) {
         throw Exception('升级后缺少必要的表: $missingTables');
+      }
+
+      // 验证 quotes 表的关键列是否存在（v21 新增 poi_name）
+      final quotesColumns = await txn.rawQuery('PRAGMA table_info(quotes)');
+      final columnNames =
+          quotesColumns.map((col) => col['name'] as String).toSet();
+
+      final requiredColumns = {
+        'id',
+        'content',
+        'date',
+        'latitude',
+        'longitude',
+        'poi_name', // v21 新增
+      };
+      final missingColumns = requiredColumns.difference(columnNames);
+
+      if (missingColumns.isNotEmpty) {
+        throw Exception('升级后 quotes 表缺少必要的列: $missingColumns');
       }
 
       logDebug('数据库升级验证通过');
@@ -840,7 +907,8 @@ class DatabaseSchemaManager {
           last_modified TEXT,
           favorite_count INTEGER DEFAULT 0,
           is_deleted INTEGER DEFAULT 0,
-          deleted_at TEXT
+          deleted_at TEXT,
+          poi_name TEXT
         )
       ''');
 
@@ -860,7 +928,7 @@ class DatabaseSchemaManager {
           ai_analysis, sentiment, keywords, summary, category_id,
           color_hex, location, latitude, longitude, weather, temperature, edit_source,
           delta_content, day_period, last_modified, favorite_count, is_deleted,
-          deleted_at
+          deleted_at, poi_name
         )
         SELECT
           ${expr('id', fallback: "''")},
@@ -886,7 +954,8 @@ class DatabaseSchemaManager {
           ${expr('last_modified', fallback: 'NULL')},
           COALESCE(${expr('favorite_count', fallback: '0')}, 0),
           COALESCE(${expr('is_deleted', fallback: '0')}, 0),
-          ${expr('deleted_at', fallback: 'NULL')}
+          ${expr('deleted_at', fallback: 'NULL')},
+          ${expr('poi_name', fallback: 'NULL')}
         FROM quotes
       ''');
 
@@ -929,6 +998,9 @@ class DatabaseSchemaManager {
       );
       await txn.execute(
         'CREATE INDEX IF NOT EXISTS idx_quotes_deleted_at ON quotes(deleted_at)',
+      );
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quotes_poi_name ON quotes(poi_name)',
       );
 
       logDebug('tag_ids列删除完成，favorite_count字段已保留');

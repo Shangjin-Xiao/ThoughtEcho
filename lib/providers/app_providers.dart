@@ -20,6 +20,40 @@ import '../services/weather_service.dart';
 import '../services/webdav_sync_service.dart';
 import '../theme/app_theme.dart';
 import '../controllers/search_controller.dart';
+import '../services/chat_session_service.dart';
+import '../services/openai_stream_service.dart';
+import '../services/agent_service.dart';
+import '../services/agent_tool.dart';
+import '../services/agent_tools/explore_notes_tool.dart';
+import '../services/agent_tools/get_app_context_tool.dart';
+import '../services/agent_tools/get_note_detail_tool.dart';
+import '../services/agent_tools/propose_edit_tool.dart';
+import '../services/agent_tools/propose_new_note_tool.dart';
+import '../services/agent_tools/web_fetch_tool.dart';
+import '../services/agent_tools/web_search_tool.dart';
+import '../services/web_fetch_service.dart';
+
+/// 构建 Agent 工具列表
+List<AgentTool> _buildAgentTools(
+  SettingsService settingsService,
+  DatabaseService db,
+  LocationService locationService,
+  WeatherService weatherService,
+) {
+  return [
+    ExploreNotesTool(db),
+    GetTagsTool(db),
+    GetLocationWeatherTool(
+      locationService: locationService,
+      weatherService: weatherService,
+    ),
+    GetNoteDetailTool(db),
+    WebSearchTool(settingsService),
+    WebFetchTool(WebFetchService()),
+    ProposeEditTool(db),
+    ProposeNewNoteTool(db),
+  ];
+}
 
 /// 构建应用级别的所有 Provider
 List<SingleChildWidget> buildAppProviders({
@@ -34,6 +68,7 @@ List<SingleChildWidget> buildAppProviders({
   required ConnectivityService connectivityService,
   required FeatureGuideService featureGuideService,
   required SmartPushService smartPushService,
+  required ChatSessionService chatSessionService,
   required MMKVService mmkvService,
   required ValueNotifier<bool> servicesInitialized,
 }) {
@@ -50,6 +85,28 @@ List<SingleChildWidget> buildAppProviders({
     ChangeNotifierProvider(create: (_) => connectivityService),
     ChangeNotifierProvider(create: (_) => featureGuideService),
     ChangeNotifierProvider(create: (_) => smartPushService),
+    ChangeNotifierProvider(create: (_) => chatSessionService),
+    ChangeNotifierProvider<OpenAIStreamService>(
+      create: (_) => OpenAIStreamService(),
+    ),
+    ChangeNotifierProxyProvider4<SettingsService, DatabaseService,
+        LocationService, WeatherService, AgentService>(
+      create: (context) => AgentService(
+        settingsService: context.read<SettingsService>(),
+        tools: _buildAgentTools(
+          context.read<SettingsService>(),
+          context.read<DatabaseService>(),
+          context.read<LocationService>(),
+          context.read<WeatherService>(),
+        ),
+      ),
+      update: (context, settings, db, location, weather, previous) =>
+          previous ??
+          AgentService(
+            settingsService: settings,
+            tools: _buildAgentTools(settings, db, location, weather),
+          ),
+    ),
     ChangeNotifierProvider(create: (_) => NoteSearchController()),
     ChangeNotifierProvider(create: (_) => WebDAVSyncService()),
     ChangeNotifierProxyProvider<SettingsService, InsightHistoryService>(
@@ -60,13 +117,9 @@ List<SingleChildWidget> buildAppProviders({
           insightHistoryService ??
           InsightHistoryService(settingsService: settingsService),
     ),
-    Provider.value(
-      value: mmkvService,
-    ), // 使用 Provider.value 提供 MMKVService
+    Provider.value(value: mmkvService), // 使用 Provider.value 提供 MMKVService
     // 提供初始化状态的值（debug 下必须使用 ListenableProvider）
-    ListenableProvider<ValueNotifier<bool>>.value(
-      value: servicesInitialized,
-    ),
+    ListenableProvider<ValueNotifier<bool>>.value(value: servicesInitialized),
     ValueListenableProvider<bool>.value(value: servicesInitialized),
     ChangeNotifierProxyProvider<SettingsService, AIService>(
       create: (context) =>
@@ -76,13 +129,7 @@ List<SingleChildWidget> buildAppProviders({
     ),
     ProxyProvider3<DatabaseService, SettingsService, AIAnalysisDatabaseService,
         BackupService>(
-      update: (
-        context,
-        dbService,
-        settingsService,
-        aiService,
-        previous,
-      ) =>
+      update: (context, dbService, settingsService, aiService, previous) =>
           BackupService(
         databaseService: dbService,
         settingsService: settingsService,

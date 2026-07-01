@@ -37,5 +37,42 @@
   "webdavConflictKeepTooltip": "Behalten und in Standardkategorie verschieben",
   "webdavConflictKeepSuccess": "Bestätigt und in Standardliste verschoben.",
   "webdavConflictDiscardTooltip": "Dieses Konflikt-Backup verwerfen",
-  "webdavConflictDiscardSuccess": "Diese Konfliktnotiz wurde dauerhaft verworfen."
+  "webdavConflictDiscardSuccess": "Diese Konfliktnotiz wurde dauerhaft verworfen.",
+  "deleteNoteWithChatsConfirmation": "Sind Sie sicher, dass Sie diese Notiz löschen möchten? Dies kann nicht rückgängig gemacht werden.\n\n{count} verknüpfte Chat-Unterhaltungen werden ebenfalls gelöscht.",
+  "@deleteNoteWithChatsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatHistory": "Chatverlauf",
+  "newChat": "Neuer Chat",
+  "deleteChat": "Chat löschen",
+  "deleteChatConfirm": "Diese Unterhaltung löschen? Alle Nachrichten werden entfernt.",
+  "noChats": "Noch keine Chats",
+  "mapPickerTitle": "Ort auswählen",
+  "mapPickerCurrentLocation": "Aktueller Standort",
+  "mapPickerConfirm": "Auswahl bestätigen",
+  "longPressForMapPicker": "Gedrückt halten für präzisen Standort",
+  "poiNameLabel": "Präziser Standort",
+  "explore": "Erkunden",
+  "exploreMapMemory": "Karten-Erinnerungen",
+  "exploreMapMemoryDesc": "Durchsuchen Sie Ihre Notizen auf einer Karte",
+  "aiChat": "AI-Chat",
+  "aiAgent": "AI-Agent",
+  "agentThinking": "Agent denkt nach...",
+  "agentToolCall": "Rufe Werkzeug auf: {toolName}",
+  "@agentToolCall": {
+    "placeholders": {
+      "toolName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentSearchingNotes": "Notizen werden durchsucht...",
+  "agentAnalyzingData": "Daten werden analysiert...",
+  "agentWebSearching": "Websuche läuft...",
+  "favoriteNotes": "Favorisierte Notizen",
+  "clear": "Leeren"
 }

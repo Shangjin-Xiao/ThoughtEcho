@@ -3476,7 +3476,7 @@
   "first100CharsLabel": "100 premiers caractères :",
   "trash": "Corbeille",
   "trashEmpty": "La corbeille est vide",
-  "trashEmptyHint": "Les notes supprimées apparaîtront ici et seront définitivement supprimées après la période de conservation.",
+  "trashEmptyHint": "Les notes supprimées par erreur restent d'abord ici, y compris les photos, l'audio et la vidéo, afin que vous puissiez tout restaurer ensemble.",
   "trashRetentionHint": "Les notes et pièces jointes récemment supprimées restent ici jusqu'à la fin de la période de rétention, puis sont supprimées automatiquement.",
   "moveNoteToTrashTitle": "Déplacer vers la corbeille",
   "moveNoteToTrashConfirmation": "Déplacer cette note dans la corbeille ? Vous pourrez la restaurer pendant {days} jours.",
@@ -3533,5 +3533,41 @@
   "webdavConflictKeepTooltip": "Conserver et déplacer vers la catégorie par défaut",
   "webdavConflictKeepSuccess": "Confirmé et déplacé vers la liste par défaut.",
   "webdavConflictDiscardTooltip": "Jeter cette sauvegarde de conflit",
-  "webdavConflictDiscardSuccess": "Note de conflit définitivement supprimée."
+  "webdavConflictDiscardSuccess": "Note de conflit définitivement supprimée.",
+  "deleteNoteWithChatsConfirmation": "Êtes-vous sûr de vouloir supprimer cette note ? Cette action est irréversible.\n\n{count} conversations de chat associées à cette note seront également supprimées.",
+  "@deleteNoteWithChatsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatHistory": "Historique des chats",
+  "newChat": "Nouveau chat",
+  "deleteChat": "Supprimer le chat",
+  "deleteChatConfirm": "Supprimer cette conversation ? Tous les messages seront supprimés.",
+  "noChats": "Pas encore de conversations",
+  "mapPickerTitle": "Sélectionner l'emplacement",
+  "mapPickerCurrentLocation": "Position actuelle",
+  "mapPickerConfirm": "Confirmer la sélection",
+  "longPressForMapPicker": "Appuyez longuement pour un emplacement précis",
+  "poiNameLabel": "Emplacement précis",
+  "explore": "Explorer",
+  "exploreMapMemory": "Souvenirs de carte",
+  "exploreMapMemoryDesc": "Parcourez vos notes sur une carte",
+  "aiChat": "Chat IA",
+  "aiAgent": "Agent IA",
+  "agentThinking": "L'agent réfléchit...",
+  "agentToolCall": "Appel de l'outil : {toolName}",
+  "@agentToolCall": {
+    "placeholders": {
+      "toolName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentSearchingNotes": "Recherche dans les notes...",
+  "agentAnalyzingData": "Analyse des données...",
+  "agentWebSearching": "Recherche sur le web...",
+  "favoriteNotes": "Notes favorites"
 }

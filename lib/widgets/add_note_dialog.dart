@@ -38,6 +38,17 @@ class AddNoteDialog extends StatefulWidget {
   final Map<String, dynamic>? hitokotoData; // 添加一言API返回的完整数据
   final List<NoteCategory> tags;
   final FutureOr<void> Function(Quote) onSave; // 关闭后由外层执行保存
+  /// 预填充的标签 ID 列表
+  final List<String>? prefilledTagIds;
+
+  /// 预填充的是否包含位置信息
+  final bool? prefilledIncludeLocation;
+
+  /// 预填充的是否包含天气信息
+  final bool? prefilledIncludeWeather;
+
+  /// 是否使用 AI 预填充的位置和天气标记
+  final bool? useAIPrefilledLocationWeather;
 
   const AddNoteDialog({
     super.key,
@@ -46,6 +57,10 @@ class AddNoteDialog extends StatefulWidget {
     this.prefilledAuthor,
     this.prefilledWork,
     this.hitokotoData,
+    this.prefilledTagIds,
+    this.prefilledIncludeLocation,
+    this.prefilledIncludeWeather,
+    this.useAIPrefilledLocationWeather,
     required this.tags,
     required this.onSave,
   });
@@ -301,6 +316,11 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
     // 新建笔记时，自动填充默认作者、出处和标签
     if (widget.initialQuote == null && !isHitokotoQuickAdd) {
+      if (widget.prefilledTagIds != null &&
+          widget.prefilledTagIds!.isNotEmpty) {
+        _selectedTagIds.addAll(widget.prefilledTagIds!);
+      }
+
       final settingsService = _readServiceOrNull<SettingsService>(context);
       if (settingsService != null) {
         // 仅在没有预填充值时使用默认值
@@ -314,7 +334,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
             settingsService.defaultSource!.isNotEmpty) {
           _workController.text = settingsService.defaultSource!;
         }
-        // 自动添加默认标签
+        // 自动添加标签
         if (_selectedTagIds.isEmpty &&
             settingsService.defaultTagIds.isNotEmpty) {
           _selectedTagIds.addAll(settingsService.defaultTagIds);
@@ -382,48 +402,50 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         // 新建笔记时，读取用户偏好并自动勾选位置/天气
         if (widget.initialQuote == null) {
           final settingsService = _readServiceOrNull<SettingsService>(context);
-          if (settingsService != null) {
-            final autoLocation = settingsService.autoAttachLocation;
-            final autoWeather = settingsService.autoAttachWeather;
+          final autoLocation = widget.prefilledIncludeLocation ??
+              widget.useAIPrefilledLocationWeather ??
+              (settingsService?.autoAttachLocation ?? false);
+          final autoWeather = widget.prefilledIncludeWeather ??
+              widget.useAIPrefilledLocationWeather ??
+              (settingsService?.autoAttachWeather ?? false);
 
-            if (autoLocation || autoWeather) {
-              if (mounted) {
-                _recordDialogPerfStateChange('autoAttachPrefs');
-                setState(() {
-                  if (autoLocation) {
-                    _controller.includeLocation = true;
-                  }
-                  if (autoWeather) {
-                    _controller.includeWeather = true;
-                  }
-                });
-              }
-
-              _controller.updateServices(
-                locService: _cachedLocationService,
-                weaService: _cachedWeatherService,
-                dbService: _databaseService,
-              );
-              // 如果自动勾选了位置，获取位置；天气需要位置坐标，所以在位置获取后处理
-              if (autoLocation) {
-                await _controller.fetchLocationForNewNote();
-                // 位置获取后再获取天气
-                if (autoWeather &&
-                    _controller.includeLocation &&
-                    (_controller.newLatitude != null ||
-                        _cachedLocationService?.currentPosition != null)) {
-                  _controller.fetchWeatherForNewNote();
-                } else if (autoWeather && !_controller.includeLocation) {
-                  // 位置获取失败，天气也无法获取，取消天气选中并提示
-                  if (mounted) {
-                    _recordDialogPerfStateChange('autoWeatherDisabled');
-                    _controller.setIncludeWeather(false);
-                  }
+          if (autoLocation || autoWeather) {
+            if (mounted) {
+              _recordDialogPerfStateChange('autoAttachPrefs');
+              setState(() {
+                if (autoLocation) {
+                  _controller.includeLocation = true;
                 }
-              } else if (autoWeather) {
-                // 没有勾选位置但勾选了天气，尝试用缓存的位置获取天气
+                if (autoWeather) {
+                  _controller.includeWeather = true;
+                }
+              });
+            }
+
+            _controller.updateServices(
+              locService: _cachedLocationService,
+              weaService: _cachedWeatherService,
+              dbService: _databaseService,
+            );
+            // 如果自动勾选了位置，获取位置；天气需要位置坐标，所以在位置获取后处理
+            if (autoLocation) {
+              await _controller.fetchLocationForNewNote();
+              // 位置获取后再获取天气
+              if (autoWeather &&
+                  _controller.includeLocation &&
+                  (_controller.newLatitude != null ||
+                      _cachedLocationService?.currentPosition != null)) {
                 _controller.fetchWeatherForNewNote();
+              } else if (autoWeather && !_controller.includeLocation) {
+                // 位置获取失败，天气也无法获取，取消天气选中并提示
+                if (mounted) {
+                  _recordDialogPerfStateChange('autoWeatherDisabled');
+                  _controller.setIncludeWeather(false);
+                }
               }
+            } else if (autoWeather) {
+              // 没有勾选位置但勾选了天气，尝试用缓存的位置获取天气
+              _controller.fetchWeatherForNewNote();
             }
           }
         }

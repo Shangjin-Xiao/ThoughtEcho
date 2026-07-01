@@ -10,6 +10,8 @@ import 'package:thoughtecho/services/ai_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/services/excerpt_intent_service.dart';
+import 'package:thoughtecho/services/clipboard_service.dart';
+import 'package:thoughtecho/models/app_settings.dart';
 import '../../test_setup.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/widgets/daily_quote_view.dart';
@@ -30,6 +32,27 @@ class MockSettingsService extends ChangeNotifier implements SettingsService {
   bool get showFavoriteButton => true;
   @override
   bool get todayThoughtsUseAI => false;
+  @override
+  bool get excerptIntentEnabled => false;
+  @override
+  AppSettings get appSettings => AppSettings();
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.isGetter) {
+      final name = invocation.memberName;
+      if (name == #sentryDisclosureShown) return true;
+      if (name == #skipNonFullscreenEditor) return false;
+      if (name == #defaultAuthor) return null;
+      if (name == #defaultSource) return null;
+      if (name == #localAISettings) return null;
+    }
+    return null;
+  }
+}
+
+class MockClipboardService extends ChangeNotifier implements ClipboardService {
+  @override
+  bool get enableClipboardMonitoring => false;
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -92,6 +115,7 @@ void main() {
     late MockLocationService mockLocationService;
     late MockWeatherService mockWeatherService;
     late MockExcerptIntentService mockExcerptIntentService;
+    late MockClipboardService mockClipboardService;
 
     setUp(() async {
       mockDatabaseService = MockDatabaseService();
@@ -102,6 +126,7 @@ void main() {
       mockLocationService = MockLocationService();
       mockWeatherService = MockWeatherService();
       mockExcerptIntentService = MockExcerptIntentService();
+      mockClipboardService = MockClipboardService();
     });
 
     Widget createWidgetUnderTest() {
@@ -121,6 +146,9 @@ void main() {
           ChangeNotifierProvider<WeatherService>.value(
               value: mockWeatherService),
           Provider<ExcerptIntentService>.value(value: mockExcerptIntentService),
+          ChangeNotifierProvider<ClipboardService>.value(
+              value: mockClipboardService),
+          Provider<bool>.value(value: true),
         ],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,

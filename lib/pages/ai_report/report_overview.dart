@@ -15,7 +15,7 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
     );
     final avgWords = totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
 
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,10 +183,14 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
 
           // 洞察小灯泡（移到常用标签下面）
           _buildInsightBulbBar(),
+          const SizedBox(height: 20),
+
+          // ─── AI 对话入口 ───
+          _buildQuickEntries(),
           const SizedBox(height: 24),
 
           // 本周期收藏最多（放在洞察下面，最近笔记上面）- 根据标志决定是否播放动画
-          if (_periodQuotes.isNotEmpty || _periodFavoriteQuotes.isNotEmpty) ...[
+          if (_periodQuotes.isNotEmpty) ...[
             TweenAnimationBuilder<double>(
               key: ValueKey('favorites_$_dataKey'),
               duration: _shouldAnimateOverview
@@ -274,7 +278,10 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
   Widget _buildPeriodTopFavoritesSection() {
     final l10n = AppLocalizations.of(context);
     // 过滤出有心形点击的笔记，并按次数排序
-    final favorited = _periodFavoriteQuotes;
+    final List<Quote> favorited = _periodQuotes
+        .where((q) => q.favoriteCount > 0)
+        .toList()
+      ..sort((a, b) => b.favoriteCount.compareTo(a.favoriteCount));
 
     if (favorited.isEmpty) {
       // 若本周期没有心形点击，显示一个轻量提示
@@ -446,6 +453,106 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// 构建 AI 对话快捷入口
+  Widget _buildQuickEntries() {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+
+    return _buildEntryCard(
+      icon: Icons.smart_toy_outlined,
+      title: l10n.aiChat,
+      subtitle: l10n.chatWithAiAssistant,
+      color: theme.colorScheme.primaryContainer,
+      iconColor: theme.colorScheme.onPrimaryContainer,
+      onTap: () => _openAIAssistant(),
+    );
+  }
+
+  Widget _buildEntryCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required Color iconColor,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0,
+      color: color,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 28, color: iconColor),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: iconColor,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: iconColor.withAlpha(180),
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 打开 AI 助手，传递当前周期数据摘要作为引导
+  Future<void> _openAIAssistant() async {
+    final l10n = AppLocalizations.of(context);
+    final navigator = Navigator.of(context);
+
+    // Build summary from current period data
+    final buffer = StringBuffer()
+      ..writeln('${l10n.noteCount}: ${_periodQuotes.length}')
+      ..writeln('${l10n.totalWordCount}: $_totalWordCount')
+      ..writeln('${l10n.activeDays}: ${_getActiveDays()}')
+      ..writeln(
+        '${l10n.commonPeriod}: ${_mostDayPeriodDisplay ?? _mostDayPeriod ?? l10n.noDataYet}',
+      )
+      ..writeln(
+        '${l10n.commonWeather}: ${_mostWeatherDisplay ?? _mostWeather ?? l10n.noDataYet}',
+      )
+      ..writeln(
+        '${l10n.commonTag}: ${_mostTopTag ?? l10n.noDataYet}',
+      );
+
+    if (_insightText.isNotEmpty) {
+      buffer.writeln(_insightText);
+    }
+
+    final summary = buffer.toString().trim();
+
+    if (!mounted) return;
+
+    await navigator.push(
+      MaterialPageRoute(
+        builder: (_) => AIAssistantPage(
+          entrySource: AIAssistantEntrySource.explore,
+          exploreGuideSummary: summary,
         ),
       ),
     );
