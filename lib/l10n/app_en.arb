@@ -4040,5 +4040,17 @@
   "webdavNeverSynced": "Never synced",
   "webdavNeverSucceeded": "Never succeeded",
   "webdavConflictPrompt": "Detected {count} sync conflict backup(s). It is recommended to resolve them immediately.",
-  "@webdavConflictPrompt": {"placeholders": {"count": {"type": "int"}}}
+  "@webdavConflictPrompt": {"placeholders": {"count": {"type": "int"}}},
+  "webContentTitle": "Web Content",
+  "fetchingWebContent": "Fetching web content from: {url}",
+  "@fetchingWebContent": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "webCommandInvalidUrl": "Please provide a valid URL with /web command",
+  "webCommandInvalidUrlTitle": "Invalid URL",
+  "aiSuggestion": "AI Suggestion"
 }

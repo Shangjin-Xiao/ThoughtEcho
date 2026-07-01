@@ -254,6 +254,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               ),
             );
           case 'notice':
+          case 'source_analysis_result':
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: AISourceAnalysisResultCard(
@@ -748,11 +749,25 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         final suggestedAuthor = meta['author']?.toString();
         final suggestedSource = meta['source']?.toString();
 
-        // 清空旧 Delta，否则编辑器走 P1 富文本路径会渲染旧内容，
-        // 让用户以为 AI 修改没生效。
+        // 使用 DeltaBuilder 合并修改并生成新的 deltaContent，保持双存储一致
+        final String updatedDeltaContent;
+        if (modeAction == 'append') {
+          final updatedOps = DeltaBuilder.appendTextToDelta(
+            originalDeltaJson: note.deltaContent,
+            newText: content,
+          );
+          updatedDeltaContent = DeltaBuilder.deltaToJson(updatedOps);
+        } else {
+          final updatedOps = DeltaBuilder.replaceTextInDelta(
+            originalDeltaJson: note.deltaContent,
+            newText: content,
+          );
+          updatedDeltaContent = DeltaBuilder.deltaToJson(updatedOps);
+        }
+
         final noteForEditor = note.copyWith(
           content: mergedContent,
-          deltaContent: '',
+          deltaContent: updatedDeltaContent,
           tagIds: suggestedTagIds ?? note.tagIds,
           sourceAuthor: suggestedAuthor ?? note.sourceAuthor,
           sourceWork: suggestedSource ?? note.sourceWork,

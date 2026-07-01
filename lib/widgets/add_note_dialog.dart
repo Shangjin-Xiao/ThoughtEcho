@@ -309,6 +309,11 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
     // 新建笔记时，自动填充默认作者、出处和标签
     if (widget.initialQuote == null && !isHitokotoQuickAdd) {
+      if (widget.prefilledTagIds != null &&
+          widget.prefilledTagIds!.isNotEmpty) {
+        _selectedTagIds.addAll(widget.prefilledTagIds!);
+      }
+
       final settingsService = _readServiceOrNull<SettingsService>(context);
       if (settingsService != null) {
         // 仅在没有预填充值时使用默认值
@@ -323,13 +328,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           _workController.text = settingsService.defaultSource!;
         }
         // 自动添加标签
-        if (_selectedTagIds.isEmpty) {
-          if (widget.prefilledTagIds != null &&
-              widget.prefilledTagIds!.isNotEmpty) {
-            _selectedTagIds.addAll(widget.prefilledTagIds!);
-          } else if (settingsService.defaultTagIds.isNotEmpty) {
-            _selectedTagIds.addAll(settingsService.defaultTagIds);
-          }
+        if (_selectedTagIds.isEmpty && settingsService.defaultTagIds.isNotEmpty) {
+          _selectedTagIds.addAll(settingsService.defaultTagIds);
         }
       }
     }
@@ -394,13 +394,12 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         // 新建笔记时，读取用户偏好并自动勾选位置/天气
         if (widget.initialQuote == null) {
           final settingsService = _readServiceOrNull<SettingsService>(context);
-          if (settingsService != null) {
-            final autoLocation = widget.prefilledIncludeLocation ??
-                settingsService.autoAttachLocation;
-            final autoWeather = widget.prefilledIncludeWeather ??
-                settingsService.autoAttachWeather;
+          final autoLocation = widget.prefilledIncludeLocation ??
+              (settingsService?.autoAttachLocation ?? false);
+          final autoWeather = widget.prefilledIncludeWeather ??
+              (settingsService?.autoAttachWeather ?? false);
 
-            if (autoLocation || autoWeather) {
+          if (autoLocation || autoWeather) {
               if (mounted) {
                 _recordDialogPerfStateChange('autoAttachPrefs');
                 setState(() {
@@ -440,7 +439,6 @@ class _AddNoteDialogState extends State<AddNoteDialog>
               }
             }
           }
-        }
 
         // 延迟注册监听器，避免初始化时触发不必要的查询
         Future.delayed(const Duration(milliseconds: 200), () {

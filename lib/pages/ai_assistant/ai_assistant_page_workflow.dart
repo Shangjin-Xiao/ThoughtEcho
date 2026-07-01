@@ -287,9 +287,9 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
       _appendCardMessage(
         type: 'notice',
         content: l10n
-            .aiResponseError('Please provide a valid URL with /web command'),
+            .aiResponseError(l10n.webCommandInvalidUrl),
         meta: <String, dynamic>{
-          'title': 'Invalid URL',
+          'title': l10n.webCommandInvalidUrlTitle,
           'icon': Icons.info_outline.codePoint,
         },
       );
@@ -306,8 +306,8 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
 
     // 运行网页抓取工作流
     await _runMarkdownWorkflow(
-      title: 'Web Content',
-      loadingText: 'Fetching web content from: $url',
+      title: l10n.webContentTitle,
+      loadingText: l10n.fetchingWebContent(url),
       stream: _aiService.streamFetchWebContent(url),
     );
   }

@@ -37,14 +37,20 @@ extension _AIReportTimeSelector on _AIPeriodicReportPageState {
                 child: _buildTimeSelector(),
               ),
             ),
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: _isLoadingData
-                  ? const Center(child: CircularProgressIndicator())
-                  : _periodQuotes.isEmpty
-                      ? _buildEmptyState()
-                      : _buildDataOverview(),
-            ),
+            if (_isLoadingData)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_periodQuotes.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: _buildEmptyState(),
+              )
+            else
+              SliverToBoxAdapter(
+                child: _buildDataOverview(),
+              ),
           ],
         ),
       ),

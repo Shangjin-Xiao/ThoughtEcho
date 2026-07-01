@@ -53,6 +53,8 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
   Future<void> _initServicesAndLoad() async {
     try {
       _chatSessionService = context.read<ChatSessionService>();
+      await _chatSessionService.init(); // 确保数据库已初始化
+      if (!mounted) return;
       _agentService = context.read<AgentService>();
       _aiService = context.read<AIService>();
       _settingsService = context.read<SettingsService>();
@@ -150,10 +152,11 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
   }
 
   Future<void> _createNewSession() async {
+    final l10n = AppLocalizations.of(context);
     final session = await _chatSessionService.createSession(
       sessionType: _sessionTypeForMode(_currentMode),
       noteId: _boundNoteId,
-      title: _hasBoundNote ? _getQuotePreview() : 'AI Chat',
+      title: _hasBoundNote ? _getQuotePreview() : l10n.aiChat,
     );
     _currentSessionId = session.id;
   }
@@ -338,9 +341,17 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
 
   Future<void> _startNewChat() async {
     try {
-      // Cancel any ongoing stream before starting new chat
+      // Cancel any ongoing stream and Agent session before starting new chat
       await _streamSubscription?.cancel();
       _streamSubscription = null;
+      await _agentEventSubscription?.cancel();
+      _agentEventSubscription = null;
+      if (_agentListenerAttached) {
+        _agentService.removeListener(_onAgentServiceChanged);
+        _agentListenerAttached = false;
+      }
+      _cancelStreamUpdate();
+      _cancelToolProgressUpdate();
       _isLoading = false;
       _agentStatusDismissTimer?.cancel();
 

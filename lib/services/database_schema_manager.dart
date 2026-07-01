@@ -907,7 +907,8 @@ class DatabaseSchemaManager {
           last_modified TEXT,
           favorite_count INTEGER DEFAULT 0,
           is_deleted INTEGER DEFAULT 0,
-          deleted_at TEXT
+          deleted_at TEXT,
+          poi_name TEXT
         )
       ''');
 
@@ -927,7 +928,7 @@ class DatabaseSchemaManager {
           ai_analysis, sentiment, keywords, summary, category_id,
           color_hex, location, latitude, longitude, weather, temperature, edit_source,
           delta_content, day_period, last_modified, favorite_count, is_deleted,
-          deleted_at
+          deleted_at, poi_name
         )
         SELECT
           ${expr('id', fallback: "''")},
@@ -953,7 +954,8 @@ class DatabaseSchemaManager {
           ${expr('last_modified', fallback: 'NULL')},
           COALESCE(${expr('favorite_count', fallback: '0')}, 0),
           COALESCE(${expr('is_deleted', fallback: '0')}, 0),
-          ${expr('deleted_at', fallback: 'NULL')}
+          ${expr('deleted_at', fallback: 'NULL')},
+          ${expr('poi_name', fallback: 'NULL')}
         FROM quotes
       ''');
 
@@ -996,6 +998,9 @@ class DatabaseSchemaManager {
       );
       await txn.execute(
         'CREATE INDEX IF NOT EXISTS idx_quotes_deleted_at ON quotes(deleted_at)',
+      );
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quotes_poi_name ON quotes(poi_name)',
       );
 
       logDebug('tag_ids列删除完成，favorite_count字段已保留');

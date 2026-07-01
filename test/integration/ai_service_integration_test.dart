@@ -8,7 +8,7 @@ import 'package:thoughtecho/services/openai_stream_service.dart';
 
 /// 集成测试：直接调用 ThoughtEcho 代码测试 AI 功能
 ///
-/// 运行: flutter test test/integration/ai_service_integration_test.dart
+/// 运行: timeout 60s flutter test --reporter compact test/integration/ai_service_integration_test.dart
 ///
 /// 环境变量:
 ///   TE_TEST_API_KEY  - API 密钥（必填）

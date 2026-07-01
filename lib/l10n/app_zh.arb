@@ -4040,5 +4040,17 @@
   "webdavNeverSynced": "从未同步",
   "webdavNeverSucceeded": "从未成功",
   "webdavConflictPrompt": "检测到有 {count} 篇同步冲突备份，建议立即处理。",
-  "@webdavConflictPrompt": {"placeholders": {"count": {"type": "int"}}}
+  "@webdavConflictPrompt": {"placeholders": {"count": {"type": "int"}}},
+  "webContentTitle": "网页内容",
+  "fetchingWebContent": "正在获取网页内容：{url}",
+  "@fetchingWebContent": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "webCommandInvalidUrl": "请使用 /web 命令提供有效的 URL",
+  "webCommandInvalidUrlTitle": "无效的 URL",
+  "aiSuggestion": "AI 建议"
 }

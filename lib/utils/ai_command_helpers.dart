@@ -217,7 +217,9 @@ class WebCommandHelper {
 
     // 验证URL格式
     final uri = Uri.tryParse(urlPart);
-    if (uri == null || !uri.isAbsolute) {
+    if (uri == null ||
+        !uri.isAbsolute ||
+        (uri.scheme != 'http' && uri.scheme != 'https')) {
       return null;
     }
 

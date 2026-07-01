@@ -37,6 +37,7 @@ import '../services/weather_service.dart';
 import '../utils/ai_command_helpers.dart';
 import '../utils/ai_smart_result_utils.dart';
 import '../utils/app_logger.dart';
+import '../utils/quill_delta_builder.dart';
 import '../utils/string_utils.dart';
 import '../utils/time_utils.dart';
 import '../widgets/ai/ai_workflow_cards.dart';

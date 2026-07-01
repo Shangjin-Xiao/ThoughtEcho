@@ -284,7 +284,7 @@ class AIProviderSettings implements AIConfig {
         headers['HTTP-Referer'] = 'https://thoughtecho.app';
         headers['X-Title'] = 'ThoughtEcho App';
       }
-    } else if (apiUrl.contains('anthropic.com') || id == 'anthropic') {
+    } else if (isAnthropicMessagesApi || apiUrl.contains('anthropic.com')) {
       headers['x-api-key'] = apiKey;
       headers['anthropic-version'] = '2023-06-01';
     } else if (apiUrl.contains('deepseek.com') || id == 'deepseek') {
@@ -326,7 +326,7 @@ class AIProviderSettings implements AIConfig {
     }
 
     // Anthropic特殊处理
-    if (apiUrl.contains('anthropic.com') || id == 'anthropic') {
+    if (isAnthropicMessagesApi || apiUrl.contains('anthropic.com')) {
       // Anthropic API不在请求体中包含model，而是在URL中
       adjustedData.remove('model');
       // Anthropic API需要确保stream参数正确

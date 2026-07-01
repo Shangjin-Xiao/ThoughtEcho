@@ -16,85 +16,145 @@ class DeltaBuilder {
   }
 
   /// 在现有Delta基础上append新的纯文本
-  /// 用于append模式：新文本总是在末尾（文字后、embed前）
+  /// 用于append模式：新文本总是在末尾，且保持所有原始ops的顺序
   static List<Map<String, dynamic>> appendTextToDelta({
     required String? originalDeltaJson,
     required String newText,
   }) {
-    final ops = <Map<String, dynamic>>[];
+    if (originalDeltaJson == null || originalDeltaJson.isEmpty) {
+      return textToDelta(newText);
+    }
 
-    if (originalDeltaJson != null && originalDeltaJson.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(originalDeltaJson);
-        final originalOps = (decoded is List)
-            ? decoded
-            : (decoded is Map ? decoded['ops'] ?? [] : []);
+    try {
+      final decoded = jsonDecode(originalDeltaJson);
+      final originalOps = (decoded is List)
+          ? decoded
+          : (decoded is Map ? decoded['ops'] ?? [] : []);
 
-        // 分离纯文本ops和embed ops
-        final textOps = <Map<String, dynamic>>[];
-        final embedOps = <Map<String, dynamic>>[];
+      final ops = <Map<String, dynamic>>[];
+      for (final op in originalOps) {
+        if (op is Map) {
+          ops.add(Map<String, dynamic>.from(op));
+        }
+      }
 
-        for (final op in originalOps) {
-          if (op is Map) {
-            if (op.containsKey('insert') && op['insert'] is Map) {
-              // 这是一个embed（图片、视频等）
-              embedOps.add(Map<String, dynamic>.from(op));
+      // 移除最后一个文本 ops 尾部的换行符，以便直接连接新文本
+      if (ops.isNotEmpty) {
+        final lastOp = ops.last;
+        if (lastOp.containsKey('insert') && lastOp['insert'] is String) {
+          final lastText = lastOp['insert'] as String;
+          if (lastText.endsWith('\n')) {
+            if (lastText == '\n') {
+              ops.removeLast();
             } else {
-              textOps.add(Map<String, dynamic>.from(op));
+              ops[ops.length - 1] = {
+                ...lastOp,
+                'insert': lastText.substring(0, lastText.length - 1),
+              };
             }
           }
         }
-
-        // 构建新的ops: 原有text ops + 新文本 + 原有embeds
-        ops.addAll(textOps);
-        ops.addAll(textToDelta(newText));
-        ops.addAll(embedOps);
-      } catch (e) {
-        // 如果解析失败，返回新文本（不破坏系统）
-        return textToDelta(newText);
       }
-    } else {
-      // 没有原有Delta，直接转换新文本
-      ops.addAll(textToDelta(newText));
-    }
 
-    return ops;
+      ops.addAll(textToDelta(newText));
+      return ops;
+    } catch (e) {
+      return textToDelta(newText);
+    }
   }
 
-  /// 替换Delta中的纯文本部分，保留所有embed
-  /// 用于replace模式：只改文本，保存所有图片
+  /// 替换Delta中的纯文本部分，且根据相对位置保留所有embed
   static List<Map<String, dynamic>> replaceTextInDelta({
     required String? originalDeltaJson,
     required String newText,
   }) {
-    final ops = <Map<String, dynamic>>[];
-
-    if (originalDeltaJson != null && originalDeltaJson.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(originalDeltaJson);
-        final originalOps = (decoded is List)
-            ? decoded
-            : (decoded is Map ? decoded['ops'] ?? [] : []);
-
-        // 只保留embed ops，删除纯文本ops
-        for (final op in originalOps) {
-          if (op is Map && op.containsKey('insert') && op['insert'] is Map) {
-            // 这是一个embed，保留
-            ops.add(Map<String, dynamic>.from(op));
-          }
-        }
-
-        // 在开头插入新文本
-        ops.insertAll(0, textToDelta(newText));
-      } catch (e) {
-        // 解析失败，返回新文本
-        return textToDelta(newText);
-      }
-    } else {
-      ops.addAll(textToDelta(newText));
+    if (originalDeltaJson == null || originalDeltaJson.isEmpty) {
+      return textToDelta(newText);
     }
 
-    return ops;
+    try {
+      final decoded = jsonDecode(originalDeltaJson);
+      final originalOps = (decoded is List)
+          ? decoded
+          : (decoded is Map ? decoded['ops'] ?? [] : []);
+
+      // 1. 提取所有 embeds 及其在原始纯文本中的偏移量，同时计算原始纯文本总长度
+      final embeds = <_EmbedInfo>[];
+      int originalTextLength = 0;
+
+      for (final op in originalOps) {
+        if (op is Map && op.containsKey('insert')) {
+          final insert = op['insert'];
+          if (insert is Map) {
+            // 这是一个 embed
+            embeds.add(_EmbedInfo(
+              op: Map<String, dynamic>.from(op),
+              originalOffset: originalTextLength,
+            ));
+          } else if (insert is String) {
+            originalTextLength += insert.length;
+          }
+        }
+      }
+
+      // 如果原始文本没有 embeds，直接返回新文本
+      if (embeds.isEmpty) {
+        return textToDelta(newText);
+      }
+
+      // 2. 映射每个 embed 到新文本中的偏移量
+      final mappedEmbeds = <_MappedEmbed>[];
+      for (final embed in embeds) {
+        final newOffset = originalTextLength > 0
+            ? (embed.originalOffset * newText.length) ~/ originalTextLength
+            : 0;
+        final safeOffset = newOffset.clamp(0, newText.length);
+        mappedEmbeds.add(_MappedEmbed(op: embed.op, offset: safeOffset));
+      }
+
+      // 按照新偏移量从小到大排序
+      mappedEmbeds.sort((a, b) => a.offset.compareTo(b.offset));
+
+      // 3. 根据映射的偏移量重新构建 ops 列表
+      final ops = <Map<String, dynamic>>[];
+      int currentTextIndex = 0;
+
+      for (final embed in mappedEmbeds) {
+        // 插入当前位置到 embed 偏移量之间的文本
+        if (embed.offset > currentTextIndex) {
+          final segment = newText.substring(currentTextIndex, embed.offset);
+          ops.add({"insert": segment});
+          currentTextIndex = embed.offset;
+        }
+        // 插入 embed
+        ops.add(embed.op);
+      }
+
+      // 插入剩余的文本
+      if (currentTextIndex < newText.length) {
+        final remaining = newText.substring(currentTextIndex);
+        ops.add({"insert": remaining});
+      }
+
+      // 确保整个文档以 \n 结尾
+      bool endsWithNewline = false;
+      if (ops.isNotEmpty) {
+        final lastOp = ops.last;
+        if (lastOp.containsKey('insert') && lastOp['insert'] is String) {
+          final lastText = lastOp['insert'] as String;
+          if (lastText.endsWith('\n')) {
+            endsWithNewline = true;
+          }
+        }
+      }
+      if (!endsWithNewline) {
+        ops.add({"insert": "\n"});
+      }
+
+      return ops;
+    } catch (e) {
+      return textToDelta(newText);
+    }
   }
 
   /// 将Delta操作数组转换为JSON字符串
@@ -153,4 +213,18 @@ class DeltaBuilder {
 
     return buffer.toString();
   }
+}
+
+class _EmbedInfo {
+  final Map<String, dynamic> op;
+  final int originalOffset;
+
+  _EmbedInfo({required this.op, required this.originalOffset});
+}
+
+class _MappedEmbed {
+  final Map<String, dynamic> op;
+  final int offset;
+
+  _MappedEmbed({required this.op, required this.offset});
 }

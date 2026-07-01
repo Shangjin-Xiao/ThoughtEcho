@@ -528,21 +528,34 @@ class ChatSessionService extends ChangeNotifier {
     }
   }
 
-  /// 清理没有消息的会话（修复之前保存失败残留的脏数据）
+  /// 清理没有消息的会话（修复之前保存失败残留的脏数据，排除最近5分钟内新创建的）
   Future<void> _cleanupEmptySessions(Database db) async {
     try {
       // 查找没有关联 chat_messages 的 chat_sessions
       final emptySessions = await db.rawQuery('''
-        SELECT s.id FROM chat_sessions s
+        SELECT s.id, s.created_at FROM chat_sessions s
         LEFT JOIN chat_messages m ON s.id = m.session_id
         WHERE m.id IS NULL
       ''');
+      
+      final now = DateTime.now();
+      int deletedCount = 0;
+
       for (final row in emptySessions) {
         final id = row['id'] as String;
+        final createdAtStr = row['created_at'] as String?;
+        if (createdAtStr != null) {
+          final createdAt = DateTime.tryParse(createdAtStr);
+          if (createdAt != null && now.difference(createdAt).inMinutes < 5) {
+            // 最近 5 分钟内创建的空会话，可能是刚生成的，跳过清理
+            continue;
+          }
+        }
         await db.delete('chat_sessions', where: 'id = ?', whereArgs: [id]);
+        deletedCount++;
       }
-      if (emptySessions.isNotEmpty) {
-        logDebug('清理了 ${emptySessions.length} 个空会话');
+      if (deletedCount > 0) {
+        logDebug('清理了 $deletedCount 个空会话');
       }
     } catch (e) {
       logDebug('清理空会话失败: $e');

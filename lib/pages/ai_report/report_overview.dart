@@ -15,7 +15,7 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
     );
     final avgWords = totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
 
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

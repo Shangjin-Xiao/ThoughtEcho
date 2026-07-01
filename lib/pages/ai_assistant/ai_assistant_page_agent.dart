@@ -357,6 +357,8 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       await _agentEventSubscription?.cancel();
       _agentEventSubscription = null;
       // 确保 flush 所有 pending 的节流更新
+      _flushStreamUpdate();
+      _flushToolProgressUpdate();
       _cancelStreamUpdate();
       _cancelToolProgressUpdate();
       if (mounted) {
@@ -608,7 +610,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
         return _AgentSmartResultParseResult(
           displayText: trimmed, // 显示 AI 最终的回复（解释理由）
           smartResult: _AgentSmartResultPayload(
-            title: call.arguments['title']?.toString() ?? 'AI 建议',
+            title: call.arguments['title']?.toString() ?? l10n.aiSuggestion,
             content: call.arguments['content']?.toString() ?? '',
             noteId: call.arguments['note_id']?.toString(),
             action: call.arguments['action']?.toString(),
