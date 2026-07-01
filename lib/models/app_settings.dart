@@ -68,7 +68,8 @@ class AppSettings {
   final String exportFormat;
   final bool sentryEnabled; // 是否启用 Sentry 诊断与性能上报
   final bool sentryDisclosureShown; // Sentry 上报提示弹窗是否已显示过
-  final String noteInsertAnimationType; // 记录页卡片增加/修改动画类型: 'scale' 或 'slide'
+  final String
+      noteInsertAnimationType; // 记录页卡片增加/修改动画类型: 'scale'、'slide' 或 'none'
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -109,7 +110,7 @@ class AppSettings {
     this.exportFormat = 'card', // 默认精致分享卡片
     this.sentryEnabled = false, // 默认不启用 Sentry 诊断与性能上报
     this.sentryDisclosureShown = false, // 默认未显示提示
-    this.noteInsertAnimationType = 'scale', // 默认气泡缩放
+    this.noteInsertAnimationType = 'slide', // 默认平滑上升
   }) : trashRetentionDays = normalizeTrashRetentionDays(trashRetentionDays);
 
   static int normalizeTrashRetentionDays(int? days) {
@@ -284,7 +285,7 @@ class AppSettings {
         exportFormat: 'card',
         sentryEnabled: false,
         sentryDisclosureShown: false,
-        noteInsertAnimationType: 'scale',
+        noteInsertAnimationType: 'slide',
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"

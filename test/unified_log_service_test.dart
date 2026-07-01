@@ -46,18 +46,37 @@ void main() {
     });
 
     tearDown(() async {
+      service.setPersistenceEnabled(false);
       service.clearMemoryLogs();
       await logDb.clearAllLogs();
       await logDb.close();
     });
 
-    test('warning logs persist promptly even when persistence is disabled',
-        () async {
+    test(
+        'warning logs stay in memory without opening the database when '
+        'persistence is disabled', () async {
       final message =
-          'warning-persist-${DateTime.now().microsecondsSinceEpoch}';
+          'warning-memory-only-${DateTime.now().microsecondsSinceEpoch}';
+
+      service.setPersistenceEnabled(false);
+      await logDb.close();
 
       service.warning(message, source: 'UnifiedLogServiceTest');
       await Future<void>.delayed(const Duration(milliseconds: 150));
+
+      final status = await logDb.getDatabaseStatus();
+
+      expect(service.logs.any((entry) => entry.message == message), isTrue);
+      expect(status['initialized'], isFalse);
+    });
+
+    test('info logs persist when persistence is enabled', () async {
+      final message =
+          'developer-persist-${DateTime.now().microsecondsSinceEpoch}';
+
+      service.setPersistenceEnabled(true);
+      service.info(message, source: 'UnifiedLogServiceTest');
+      await service.flushLogs();
 
       final queried = await service.queryLogs(
         searchText: message,

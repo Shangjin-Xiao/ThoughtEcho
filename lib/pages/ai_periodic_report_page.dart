@@ -13,6 +13,8 @@ import '../services/weather_service.dart';
 import '../utils/app_logger.dart';
 import '../utils/time_utils.dart';
 import '../utils/icon_utils.dart';
+import '../utils/report_period_utils.dart';
+import '../utils/string_utils.dart';
 import '../constants/app_constants.dart'; // 导入应用常量
 import '../gen_l10n/app_localizations.dart';
 import 'ai_assistant_page.dart';

@@ -136,6 +136,128 @@ void main() {
       expect(tombstones.first['deleted_at'], isNotNull);
     });
 
+    test('restore refreshes active note list and search streams', () async {
+      final id = const Uuid().v4();
+      final quote = Quote(
+        id: id,
+        content: 'Restored searchable note',
+        date: DateTime.now().toIso8601String(),
+      );
+
+      final listEvents = <List<Quote>>[];
+      final listSub = service.watchQuotes(limit: 20).listen(listEvents.add);
+      addTearDown(listSub.cancel);
+
+      Future<int> waitForListEvent(
+        int startIndex,
+        bool Function(List<Quote> quotes) matches,
+      ) async {
+        final deadline = DateTime.now().add(const Duration(seconds: 3));
+        while (DateTime.now().isBefore(deadline)) {
+          for (var i = startIndex; i < listEvents.length; i++) {
+            if (matches(listEvents[i])) {
+              return i + 1;
+            }
+          }
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+        fail('Timed out waiting for matching list stream event');
+      }
+
+      var listCursor = 0;
+
+      await service.addQuote(quote);
+      listCursor = await waitForListEvent(
+        listCursor,
+        (quotes) => quotes.any((quote) => quote.id == id),
+      );
+
+      await service.deleteQuote(id);
+      listCursor = await waitForListEvent(
+        listCursor,
+        (quotes) => quotes.every((quote) => quote.id != id),
+      );
+
+      await service.restoreQuote(id);
+      await waitForListEvent(
+        listCursor,
+        (quotes) => quotes.any((quote) => quote.id == id),
+      );
+
+      await listSub.cancel();
+
+      await expectLater(
+        service.watchQuotes(
+          limit: 20,
+          searchQuery: 'Restored searchable',
+        ),
+        emits(
+          predicate<List<Quote>>(
+            (quotes) => quotes.any((quote) => quote.id == id),
+          ),
+        ),
+      );
+
+      expect(
+        listEvents.any((quotes) => quotes.any((quote) => quote.id == id)),
+        isTrue,
+      );
+    });
+
+    test(
+        'search after restore is not starved by an in-flight default list refresh',
+        () async {
+      final restoredId = const Uuid().v4();
+      final restoredQuote = Quote(
+        id: restoredId,
+        content: 'Concurrent restored unique note',
+        date: DateTime(2020).toIso8601String(),
+        isDeleted: true,
+        deletedAt: DateTime.now().toUtc().toIso8601String(),
+      );
+
+      await db.insert('quotes', restoredQuote.toJson());
+      for (var i = 0; i < 25; i++) {
+        final quote = Quote(
+          id: const Uuid().v4(),
+          content: 'Regular visible note $i',
+          date: DateTime(2026, 1, 1, 12, i).toIso8601String(),
+        );
+        await db.insert('quotes', quote.toJson());
+      }
+
+      final listEvents = <List<Quote>>[];
+      final listSub = service.watchQuotes(limit: 20).listen(listEvents.add);
+      addTearDown(listSub.cancel);
+
+      final deadline = DateTime.now().add(const Duration(seconds: 3));
+      while (DateTime.now().isBefore(deadline) && listEvents.isEmpty) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      expect(listEvents, isNotEmpty);
+      expect(
+        listEvents.last.any((quote) => quote.id == restoredId),
+        isFalse,
+      );
+
+      await service.restoreQuote(restoredId);
+      await listSub.cancel();
+
+      await expectLater(
+        service
+            .watchQuotes(
+              limit: 20,
+              searchQuery: 'Concurrent restored unique',
+            )
+            .timeout(const Duration(seconds: 3)),
+        emits(
+          predicate<List<Quote>>(
+            (quotes) => quotes.any((quote) => quote.id == restoredId),
+          ),
+        ),
+      );
+    });
+
     test('autoCleanupExpiredTrash should remove expired soft-deleted quotes',
         () async {
       final id = const Uuid().v4();

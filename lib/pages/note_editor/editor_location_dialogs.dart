@@ -2,6 +2,7 @@ part of '../note_full_editor_page.dart';
 
 /// Location and weather dialog handlers and basic fetch methods.
 extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
+  // ignore: unused_element
   Future<void> _showLocationDialogInEditor(
     BuildContext context,
     ThemeData theme,

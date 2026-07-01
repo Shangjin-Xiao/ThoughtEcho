@@ -67,8 +67,12 @@ class SmartPushAnalytics extends ChangeNotifier {
       await _saveAppOpenRecords(records);
       AppLogger.d('记录 App 打开时间: ${now.hour}:${now.minute}');
     } catch (e, stack) {
-      AppLogger.e('记录 App 打开时间失败',
-          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+      AppLogger.e(
+        '记录 App 打开时间失败',
+        error: e,
+        stackTrace: stack,
+        source: 'SmartPushAnalytics',
+      );
     }
   }
 
@@ -100,8 +104,12 @@ class SmartPushAnalytics extends ChangeNotifier {
         final dt = DateTime.parse(record);
         hourCounts[dt.hour] = (hourCounts[dt.hour] ?? 0) + 1;
       } catch (e, stack) {
-        AppLogger.e('解析应用打开记录失败',
-            error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+        AppLogger.e(
+          '解析应用打开记录失败',
+          error: e,
+          stackTrace: stack,
+          source: 'SmartPushAnalytics',
+        );
       }
     }
 
@@ -192,7 +200,9 @@ class SmartPushAnalytics extends ChangeNotifier {
   }
 
   Future<void> _applyTimeDecay(
-      Map<int, double> heatmap, List<String> records) async {
+    Map<int, double> heatmap,
+    List<String> records,
+  ) async {
     // 简化的时间衰减：最近 7 天的记录权重 2x
     final now = DateTime.now();
     final recentCutoff = now.subtract(const Duration(days: 7));
@@ -209,8 +219,12 @@ class SmartPushAnalytics extends ChangeNotifier {
           recentCounts[dt.hour] = (recentCounts[dt.hour] ?? 0) + 1;
         }
       } catch (e, stack) {
-        AppLogger.e('解析应用打开记录(时间衰减)失败',
-            error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+        AppLogger.e(
+          '解析应用打开记录(时间衰减)失败',
+          error: e,
+          stackTrace: stack,
+          source: 'SmartPushAnalytics',
+        );
       }
     }
 
@@ -228,12 +242,17 @@ class SmartPushAnalytics extends ChangeNotifier {
       final jsonStr = _mmkv.getString(_appOpenTimesKey);
       if (jsonStr == null || jsonStr.isEmpty) return [];
 
-      final List<dynamic> list =
-          List<dynamic>.from((jsonStr.split(',').where((s) => s.isNotEmpty)));
+      final List<dynamic> list = List<dynamic>.from(
+        (jsonStr.split(',').where((s) => s.isNotEmpty)),
+      );
       return list.cast<String>();
     } catch (e, stack) {
-      AppLogger.e('获取应用打开记录异常',
-          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+      AppLogger.e(
+        '获取应用打开记录异常',
+        error: e,
+        stackTrace: stack,
+        source: 'SmartPushAnalytics',
+      );
       return [];
     }
   }
@@ -275,6 +294,11 @@ class SmartPushAnalytics extends ChangeNotifier {
     return true;
   }
 
+  /// 获取内容类型点击学习得分快照，供候选排序使用。
+  Future<Map<String, double>> getContentTypeScores() async {
+    return Map.unmodifiable(await _getContentScores());
+  }
+
   /// 消费疲劳预算（发送推送后调用）
   Future<void> consumeBudget(String contentType) async {
     final cost = contentTypeCosts[contentType] ?? 3.0;
@@ -308,13 +332,18 @@ class SmartPushAnalytics extends ChangeNotifier {
       if (lastDismissal == null || lastDismissal.isEmpty) return false;
 
       final dismissTime = DateTime.parse(lastDismissal);
-      final cooldownEnd =
-          dismissTime.add(Duration(hours: cooldownHoursAfterDismiss));
+      final cooldownEnd = dismissTime.add(
+        Duration(hours: cooldownHoursAfterDismiss),
+      );
 
       return DateTime.now().isBefore(cooldownEnd);
     } catch (e, stack) {
-      AppLogger.e('解析忽略时间记录失败',
-          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+      AppLogger.e(
+        '解析忽略时间记录失败',
+        error: e,
+        stackTrace: stack,
+        source: 'SmartPushAnalytics',
+      );
       return false;
     }
   }
@@ -340,8 +369,12 @@ class SmartPushAnalytics extends ChangeNotifier {
 
       return budget;
     } catch (e, stack) {
-      AppLogger.e('解析每日疲劳预算失败',
-          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+      AppLogger.e(
+        '解析每日疲劳预算失败',
+        error: e,
+        stackTrace: stack,
+        source: 'SmartPushAnalytics',
+      );
       return dailyFatigueBudget;
     }
   }
@@ -423,16 +456,27 @@ class SmartPushAnalytics extends ChangeNotifier {
       if (jsonStr == null || jsonStr.isEmpty) return {};
 
       final Map<String, double> scores = {};
-      for (final pair in jsonStr.split(';')) {
-        final parts = pair.split(':');
-        if (parts.length == 2) {
-          scores[parts[0]] = double.tryParse(parts[1]) ?? 0.5;
+      int start = 0;
+      while (start < jsonStr.length) {
+        int end = jsonStr.indexOf(';', start);
+        if (end == -1) end = jsonStr.length;
+
+        int colon = jsonStr.indexOf(':', start);
+        if (colon != -1 && colon < end) {
+          final key = jsonStr.substring(start, colon);
+          final valueStr = jsonStr.substring(colon + 1, end);
+          scores[key] = double.tryParse(valueStr) ?? 0.5;
         }
+        start = end + 1;
       }
       return scores;
     } catch (e, stack) {
-      AppLogger.e('解析内容得分配置失败',
-          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+      AppLogger.e(
+        '解析内容得分配置失败',
+        error: e,
+        stackTrace: stack,
+        source: 'SmartPushAnalytics',
+      );
       return {};
     }
   }
@@ -448,16 +492,27 @@ class SmartPushAnalytics extends ChangeNotifier {
       if (jsonStr == null || jsonStr.isEmpty) return {};
 
       final Map<String, int> metrics = {};
-      for (final pair in jsonStr.split(';')) {
-        final parts = pair.split(':');
-        if (parts.length == 2) {
-          metrics[parts[0]] = int.tryParse(parts[1]) ?? 0;
+      int start = 0;
+      while (start < jsonStr.length) {
+        int end = jsonStr.indexOf(';', start);
+        if (end == -1) end = jsonStr.length;
+
+        int colon = jsonStr.indexOf(':', start);
+        if (colon != -1 && colon < end) {
+          final key = jsonStr.substring(start, colon);
+          final valueStr = jsonStr.substring(colon + 1, end);
+          metrics[key] = int.tryParse(valueStr) ?? 0;
         }
+        start = end + 1;
       }
       return metrics;
     } catch (e, stack) {
-      AppLogger.e('解析推送统计指标失败',
-          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+      AppLogger.e(
+        '解析推送统计指标失败',
+        error: e,
+        stackTrace: stack,
+        source: 'SmartPushAnalytics',
+      );
       return {};
     }
   }

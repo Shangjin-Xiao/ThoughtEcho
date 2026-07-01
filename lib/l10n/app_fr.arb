@@ -1922,6 +1922,7 @@
   "aiProviderOllama": "Ollama",
   "aiProviderLMStudio": "LMStudio",
   "apiKeyStatusEmpty": "vide",
+  "apiKeyStatusRedacted": "[REDACTED]",
   "apiKeyStatusNotEmpty": "{length} caractères",
   "@apiKeyStatusNotEmpty": {
     "placeholders": {
@@ -3501,6 +3502,7 @@
   "emptyTrashConfirmation": "Supprimer définitivement toutes les notes de la corbeille ? Cette action est irréversible.",
   "noteMovedToTrash": "Note déplacée dans la corbeille. Vous pouvez la restaurer depuis la corbeille",
   "noteRestored": "Note restaurée",
+  "undoDelete": "Annuler",
   "trashEmptied": "Corbeille vidée",
   "deletedAt": "Supprimée le {date}",
   "@deletedAt": {

@@ -453,9 +453,7 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    quote.content.length > 80
-                        ? '${quote.content.substring(0, 80)}...'
-                        : quote.content,
+                    StringUtils.truncateForPreview(quote.content, 80),
                     style: theme.textTheme.bodyMedium?.copyWith(height: 1.3),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,

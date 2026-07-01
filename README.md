@@ -257,6 +257,7 @@
 感谢以下开源项目与服务提供商的支持：
 - [Flutter](https://flutter.dev/) - UI 框架
 - [LocalSend](https://github.com/localsend/localsend) - 局域网同步协议集成
+- [Sentry](https://sentry.io/) - 提供应用崩溃与结构化日志（slog）监控服务
 - [一言（Hitokoto）](https://hitokoto.cn/) - 每日一言服务商之一（支持类型筛选）
 - [ZenQuotes](https://zenquotes.io/) - 每日一言英文服务商
 - [API Ninjas Quotes API](https://api-ninjas.com/api/quotes) - 每日一言分类服务商（支持分类筛选）
@@ -511,6 +512,7 @@ This project is licensed under the [MIT License](LICENSE) - feel free to use, mo
 Thanks to the following open-source projects and service providers:
 - [Flutter](https://flutter.dev/) - UI framework
 - [LocalSend](https://github.com/localsend/localsend) - Local network sync integration
+- [Sentry](https://sentry.io/) - Application crash and structured log (slog) monitoring
 - [Hitokoto](https://hitokoto.cn/) - One of the daily quote providers (supports type filtering)
 - [ZenQuotes](https://zenquotes.io/) - English daily quote provider
 - [API Ninjas Quotes API](https://api-ninjas.com/api/quotes) - Category-based daily quote provider

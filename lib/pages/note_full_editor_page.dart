@@ -104,7 +104,6 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   double? _originalLatitude;
   double? _originalLongitude;
   String? _originalWeather;
-  String? _originalPoiName;
 
   // 标记是否是从草稿恢复的
   late bool _isRestoredFromDraft;
@@ -219,8 +218,6 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _originalLatitude = widget.initialQuote?.latitude;
     _originalLongitude = widget.initialQuote?.longitude;
     _originalWeather = widget.initialQuote?.weather;
-    _originalPoiName = widget.initialQuote?.poiName;
-
     // 分别检查并设置位置和天气状态
     // 有地址字符串或有坐标都算有位置
     _showLocation =

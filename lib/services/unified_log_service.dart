@@ -265,6 +265,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   // 标志位，控制是否持久化日志（默认关闭，由开发者模式控制）
   bool _isPersistenceEnabled = false;
+  bool _persistenceStorageReady = false;
 
   // 日志性能监控
   int _logOperationCount = 0;
@@ -273,15 +274,34 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   /// 单例模式访问
   static UnifiedLogService get instance {
-    _instance ??= UnifiedLogService();
+    if (_instance == null) {
+      final service = UnifiedLogService._();
+      _instance = service;
+      service._initObserverAndStart();
+    }
     return _instance!;
   }
 
   /// 创建统一日志服务实例
-  UnifiedLogService() {
+  UnifiedLogService._();
+
+  void _initObserverAndStart() {
     unawaited(_initialize());
     // 监听应用生命周期，确保在后台/退出前刷新日志到数据库
-    WidgetsBinding.instance.addObserver(this);
+    try {
+      WidgetsBinding.instance.addObserver(this);
+    } catch (_) {
+      // 单元测试环境中可能未初始化 WidgetsBinding
+    }
+  }
+
+  void _safeAddPostFrameCallback(VoidCallback callback) {
+    try {
+      WidgetsBinding.instance.addPostFrameCallback((_) => callback());
+    } catch (_) {
+      // 单元测试环境中可能未初始化 WidgetsBinding，直接同步调用
+      callback();
+    }
   }
 
   /// 初始化统一日志服务
@@ -343,11 +363,9 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       // 设置 logging_flutter 的日志级别
       _updateLoggingFlutterLevel();
 
-      // 启动批量保存定时器
-      _startBatchSaveTimer();
-
-      // 从数据库加载最近的日志
-      await _loadRecentLogs();
+      if (_isPersistenceEnabled) {
+        await _ensurePersistenceStorageReady();
+      }
 
       _initialized = true;
       // 将初始化前缓存的日志入列
@@ -528,7 +546,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
         if (!_notifyScheduled) {
           _notifyScheduled = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
+          _safeAddPostFrameCallback(() {
             if (hasListeners) {
               notifyListeners();
             }
@@ -573,17 +591,41 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
   void setPersistenceEnabled(bool enabled) {
     if (_isPersistenceEnabled != enabled) {
       _isPersistenceEnabled = enabled;
-      log(
-        UnifiedLogLevel.info,
-        '日志持久化已${enabled ? "启用" : "禁用"}',
-        source: 'UnifiedLogService',
-      );
-      // 如果禁用了持久化，立即清除待处理的日志
-      if (!enabled) {
+
+      if (enabled) {
+        _startBatchSaveTimer();
+        unawaited(_enablePersistenceStorage());
+      } else {
         _pendingLogs.clear();
+        _batchSaveTimer?.cancel();
+        _batchSaveTimer = null;
+        _persistenceStorageReady = false;
+        log(
+          UnifiedLogLevel.info,
+          '日志持久化已禁用',
+          source: 'UnifiedLogService',
+        );
+        unawaited(_logDb.close());
       }
       notifyListeners();
     }
+  }
+
+  Future<void> _enablePersistenceStorage() async {
+    await _ensurePersistenceStorageReady();
+    log(
+      UnifiedLogLevel.info,
+      '日志持久化已启用',
+      source: 'UnifiedLogService',
+    );
+    await flushLogs();
+  }
+
+  Future<void> _ensurePersistenceStorageReady() async {
+    if (_persistenceStorageReady || !_isPersistenceEnabled) return;
+    await _logDb.ready;
+    _persistenceStorageReady = true;
+    await _loadRecentLogs();
   }
 
   /// 添加日志条目到内存缓存和待处理队列
@@ -612,16 +654,15 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     _sourceStats[entry.source ?? 'unknown'] =
         (_sourceStats[entry.source ?? 'unknown'] ?? 0) + 1;
 
-    // 只有在启用持久化时，才添加到待处理队列准备写入数据库
-    // 唯一的例外是：如果这是严重错误或警告，即使未开启持久化也记录，以便后续诊断问题
-    if (_isPersistenceEnabled || _isUrgentLog(entry)) {
+    // 只有在开发者模式启用持久化时，才添加到待处理队列准备写入数据库。
+    if (_isPersistenceEnabled) {
       _pendingLogs.add(entry);
     }
 
     // 延迟通知监听器，避免在 build 方法中直接调用
     if (!_notifyScheduled) {
       _notifyScheduled = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      _safeAddPostFrameCallback(() {
         if (hasListeners) {
           notifyListeners();
         }
@@ -629,9 +670,8 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       });
     }
 
-    // 对错误级别的日志进行更积极的持久化，但仅当持久化启用时
-    // 如果正在刷新，则跳过以避免递归
-    if (_isUrgentLog(entry) && !_isFlushing) {
+    // 对错误级别的日志进行更积极的持久化，但仅当持久化启用时。
+    if (_isPersistenceEnabled && _isUrgentLog(entry) && !_isFlushing) {
       unawaited(flushLogs());
     }
   }
@@ -643,6 +683,10 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   /// 将待处理的日志保存到数据库
   Future<void> _savePendingLogsToDatabase() async {
+    if (!_isPersistenceEnabled) {
+      _pendingLogs.clear();
+      return;
+    }
     if (_pendingLogs.isEmpty || _isFlushing) return;
 
     _isFlushing = true;
@@ -650,8 +694,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     _pendingLogs.clear();
 
     try {
-      // 确保数据库已准备好
-      await _logDb.ready;
+      await _ensurePersistenceStorageReady();
 
       // 记录批量保存的统计信息
       if (kDebugMode) {
@@ -720,7 +763,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
       if (!_notifyScheduled) {
         _notifyScheduled = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
+        _safeAddPostFrameCallback(() {
           if (hasListeners) {
             notifyListeners();
           }
@@ -736,7 +779,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     _memoryLogs.clear();
     if (!_notifyScheduled) {
       _notifyScheduled = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      _safeAddPostFrameCallback(() {
         if (hasListeners) {
           notifyListeners();
         }
@@ -755,7 +798,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
     if (!_notifyScheduled) {
       _notifyScheduled = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      _safeAddPostFrameCallback(() {
         if (hasListeners) {
           notifyListeners();
         }

@@ -370,9 +370,7 @@ extension _AIReportStats on _AIPeriodicReportPageState {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  quote.content.length > 120
-                      ? '${quote.content.substring(0, 120)}...'
-                      : quote.content,
+                  StringUtils.truncateForPreview(quote.content, 120),
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(height: 1.4),

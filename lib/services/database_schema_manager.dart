@@ -1430,53 +1430,27 @@ class DatabaseSchemaManager {
           (k, v) => MapEntry(v, k),
         );
 
-        // 3. 查询需要迁移的数据
-        // 性能优化：仅查询值为中文标签的记录
-        final legacyLabels = labelToKey.keys.toList();
-        final placeholders = List.filled(legacyLabels.length, '?').join(',');
-        final List<Map<String, dynamic>> maps = await txn.query(
-          'quotes',
-          columns: ['id', 'day_period'],
-          where: 'day_period IN ($placeholders)',
-          whereArgs: legacyLabels,
-        );
+        // 3. 执行迁移更新
+        // 性能优化：直接使用 SQL UPDATE 语句按标签批量更新，避免 N+1 查询
+        int migratedCount = 0;
 
-        if (maps.isEmpty) {
+        for (final entry in labelToKey.entries) {
+          final label = entry.key;
+          final key = entry.value;
+
+          final count = await txn.rawUpdate(
+            'UPDATE quotes SET day_period = ? WHERE day_period = ?',
+            [key, label],
+          );
+          migratedCount += count;
+        }
+
+        if (migratedCount == 0) {
           logDebug('没有需要迁移 dayPeriod 字段的记录');
           return;
         }
 
-        int migratedCount = 0;
-        int skippedCount = 0;
-
-        // 使用 Batch 批量更新
-        final batch = txn.batch();
-
-        for (final map in maps) {
-          final id = map['id'] as String?;
-          final dayPeriod = map['day_period'] as String?;
-
-          if (id == null || dayPeriod == null || dayPeriod.isEmpty) continue;
-
-          if (labelToKey.containsKey(dayPeriod)) {
-            final key = labelToKey[dayPeriod]!;
-            batch.update(
-              'quotes',
-              {'day_period': key},
-              where: 'id = ?',
-              whereArgs: [id],
-            );
-            migratedCount++;
-          } else {
-            skippedCount++;
-          }
-        }
-
-        if (migratedCount > 0) {
-          await batch.commit(noResult: true);
-        }
-
-        logDebug('dayPeriod字段迁移完成：转换 $migratedCount 条，跳过 $skippedCount 条');
+        logDebug('dayPeriod字段迁移完成：转换 $migratedCount 条');
 
         // 4. 验证迁移结果
         final verifyCount = await txn.rawQuery(
@@ -1546,63 +1520,27 @@ class DatabaseSchemaManager {
           logDebug('weather_backup列可能已存在: $e');
         }
 
-        // 3. 查询需要迁移的数据
-        // 性能优化：仅查询值为中文标签的记录
-        // 使用参数化查询而不是字符串拼接，防止潜在的 SQL 注入问题
-        final weatherLabels =
-            WeatherService.legacyWeatherKeyToLabel.values.toList();
-        if (weatherLabels.isEmpty) {
-          logDebug('没有需要迁移的 weather 标签');
-          return;
-        }
-        final placeholders = List.filled(weatherLabels.length, '?').join(',');
-        final maps = await txn.query(
-          'quotes',
-          columns: ['id', 'weather'],
-          where: 'weather IN ($placeholders)',
-          whereArgs: weatherLabels,
-        );
+        // 3. 执行迁移更新
+        // 性能优化：直接使用 SQL UPDATE 语句按标签批量更新，避免 N+1 查询
+        int migratedCount = 0;
 
-        if (maps.isEmpty) {
+        for (final entry in WeatherService.legacyWeatherKeyToLabel.entries) {
+          final key = entry.key;
+          final label = entry.value;
+
+          final count = await txn.rawUpdate(
+            'UPDATE quotes SET weather = ? WHERE weather = ?',
+            [key, label],
+          );
+          migratedCount += count;
+        }
+
+        if (migratedCount == 0) {
           logDebug('没有需要迁移 weather 字段的记录');
           return;
         }
 
-        int migratedCount = 0;
-        int skippedCount = 0;
-
-        // 使用 Batch 批量更新
-        final batch = txn.batch();
-
-        for (final m in maps) {
-          final id = m['id'] as String?;
-          final weather = m['weather'] as String?;
-
-          if (id == null || weather == null || weather.isEmpty) continue;
-
-          // 检查是否需要迁移（是否为中文标签）
-          if (WeatherService.legacyWeatherKeyToLabel.values.contains(weather)) {
-            final key = WeatherService.legacyWeatherKeyToLabel.entries
-                .firstWhere((e) => e.value == weather)
-                .key;
-
-            batch.update(
-              'quotes',
-              {'weather': key},
-              where: 'id = ?',
-              whereArgs: [id],
-            );
-            migratedCount++;
-          } else {
-            skippedCount++;
-          }
-        }
-
-        if (migratedCount > 0) {
-          await batch.commit(noResult: true);
-        }
-
-        logDebug('weather字段迁移完成：转换 $migratedCount 条，跳过 $skippedCount 条');
+        logDebug('weather字段迁移完成：转换 $migratedCount 条');
 
         // 4. 验证迁移结果
         final verifyCount = await txn.rawQuery(

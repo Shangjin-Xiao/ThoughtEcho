@@ -22,6 +22,42 @@ void main() {
 
   group('NoteListView filter subscription race', () {
     testWidgets(
+      'can explicitly release search field focus for modal flows',
+      (tester) async {
+        final databaseService = _FakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+        final noteListKey = GlobalKey<NoteListViewState>();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            noteListKey: noteListKey,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        final searchField = find.byType(TextField);
+        await tester.tap(searchField);
+        await tester.pump();
+
+        EditableText editableText() =>
+            tester.widget<EditableText>(find.byType(EditableText).first);
+
+        expect(editableText().focusNode.hasFocus, isTrue);
+
+        noteListKey.currentState!.unfocusSearchField();
+        await tester.pump();
+
+        expect(editableText().focusNode.hasFocus, isFalse);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
       'clearing filters resubscribes only once with updated filter params',
       (tester) async {
         final databaseService = _FakeDatabaseService();
@@ -151,7 +187,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 50));
 
         expect(
-          find.byKey(const ValueKey<String>('note-list-item-quote-0')),
+          find.byKey(const ValueKey<String>('note-list-row-quote-0')),
           findsOneWidget,
         );
 
@@ -171,6 +207,309 @@ void main() {
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
+      'provides stable row index lookup for animated note deletion',
+      (tester) async {
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = [
+            Quote(
+              id: 'quote-1',
+              content: '第一条',
+              date: DateTime(2026, 3, 29, 12).toIso8601String(),
+            ),
+            Quote(
+              id: 'quote-2',
+              content: '第二条',
+              date: DateTime(2026, 3, 29, 11).toIso8601String(),
+            ),
+            Quote(
+              id: 'quote-3',
+              content: '第三条',
+              date: DateTime(2026, 3, 29, 10).toIso8601String(),
+            ),
+          ];
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: const [],
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        final listView = tester.widget<ListView>(find.byType(ListView));
+        final delegate =
+            listView.childrenDelegate as SliverChildBuilderDelegate;
+
+        expect(
+          delegate.findChildIndexCallback!(
+            const ValueKey<String>('note-list-row-quote-2'),
+          ),
+          1,
+        );
+        expect(
+          delegate.findChildIndexCallback!(
+            const ValueKey<String>('note-list-row-quote-3'),
+          ),
+          2,
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
+      'coalesces repeated delete requests while note removal animation is pending',
+      (tester) async {
+        final deletedQuoteIds = <String>[];
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = [
+            Quote(
+              id: 'quote-1',
+              content: '待删除笔记',
+              date: DateTime(2026, 3, 29, 12).toIso8601String(),
+            ),
+          ];
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: const [],
+            onDelete: (quote) => deletedQuoteIds.add(quote.id!),
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        final item = tester.widget<QuoteItemWidget>(
+          find.byType(QuoteItemWidget).first,
+        );
+        item.onDelete();
+        item.onDelete();
+
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(deletedQuoteIds, ['quote-1']);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
+      'uses a list-level note insertion animation duration',
+      (tester) async {
+        final noteListKey = GlobalKey<NoteListViewState>();
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = [
+            Quote(
+              id: 'quote-1',
+              content: '新增动画笔记',
+              date: DateTime(2026, 3, 29, 12).toIso8601String(),
+            ),
+          ];
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: const [],
+            noteListKey: noteListKey,
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        noteListKey.currentState!.triggerInsertAnimation('quote-1');
+        await tester.pump();
+
+        final animation = tester.widget<TweenAnimationBuilder<double>>(
+          find.byKey(const ValueKey('note_list_insert_quote-1_slide_1')),
+        );
+
+        expect(animation.duration, const Duration(milliseconds: 250));
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
+      'plays edited note save animation only at the list level',
+      (tester) async {
+        final noteListKey = GlobalKey<NoteListViewState>();
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = [
+            Quote(
+              id: 'quote-1',
+              content: '编辑动画笔记',
+              date: DateTime(2026, 3, 29, 12).toIso8601String(),
+            ),
+          ];
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: const [],
+            noteListKey: noteListKey,
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        noteListKey.currentState!.triggerInsertAnimation('quote-1');
+        await tester.pump();
+
+        expect(
+          find.byKey(const ValueKey('note_list_insert_quote-1_slide_1')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('save_animate_quote-1_slide_1')),
+          findsNothing,
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
+      'does not restart an active save animation for the same note',
+      (tester) async {
+        final noteListKey = GlobalKey<NoteListViewState>();
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = [
+            Quote(
+              id: 'quote-1',
+              content: '重复保存动画笔记',
+              date: DateTime(2026, 3, 29, 12).toIso8601String(),
+            ),
+          ];
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: const [],
+            noteListKey: noteListKey,
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        noteListKey.currentState!.triggerInsertAnimation('quote-1');
+        await tester.pump();
+        noteListKey.currentState!.triggerInsertAnimation('quote-1');
+        await tester.pump();
+
+        expect(
+          find.byKey(const ValueKey('note_list_insert_quote-1_slide_1')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('note_list_insert_quote-1_slide_2')),
+          findsNothing,
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
+      'restarts pending restore animation for repeated delete undo',
+      (tester) async {
+        final noteListKey = GlobalKey<NoteListViewState>();
+        final databaseService = _DelayedFakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: const [],
+            noteListKey: noteListKey,
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        databaseService.emitQuotes(const []);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(find.byType(ListView), findsNothing);
+
+        noteListKey.currentState!.triggerInsertAnimation(
+          'quote-1',
+          animateListInsertion: true,
+        );
+        databaseService.emitQuotes([
+          Quote(
+            id: 'quote-1',
+            content: '反复删除撤销的笔记',
+            date: DateTime(2026, 6, 30, 12).toIso8601String(),
+          ),
+        ]);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(
+          find.byKey(const ValueKey('note_list_insert_quote-1_slide_1')),
+          findsOneWidget,
+        );
+
+        await tester.pump(const Duration(milliseconds: 700));
+        databaseService.emitQuotes(const []);
+        await tester.pump();
+
+        noteListKey.currentState!.triggerInsertAnimation(
+          'quote-1',
+          animateListInsertion: true,
+        );
+        databaseService.emitQuotes([
+          Quote(
+            id: 'quote-1',
+            content: '反复删除撤销的笔记',
+            date: DateTime(2026, 6, 30, 12).toIso8601String(),
+          ),
+        ]);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(
+          find.byKey(const ValueKey('note_list_insert_quote-1_slide_2')),
+          findsOneWidget,
+        );
+
+        await tester.pump(const Duration(milliseconds: 850));
+
+        expect(
+          find.byKey(const ValueKey('note_list_insert_quote-1_slide_2')),
+          findsOneWidget,
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+        await databaseService.disposeStream();
       },
     );
 
@@ -198,7 +537,7 @@ void main() {
         await tester.pumpAndSettle(const Duration(milliseconds: 50));
 
         expect(await scrollFuture, isTrue);
-        expect(databaseService.loadMoreCallCount, 1);
+        expect(databaseService.loadMoreCallCount, 2); // 1 查找 + 1 定位后预加载
         expect(find.textContaining('分页测试笔记 35'), findsOneWidget);
         expect(find.byType(CircularProgressIndicator), findsNothing);
 
@@ -412,6 +751,7 @@ class _TestApp extends StatefulWidget {
   final _FakeSettingsService settingsService;
   final List<NoteCategory> tags;
   final GlobalKey<NoteListViewState>? noteListKey;
+  final ValueChanged<Quote>? onDelete;
 
   _TestApp({
     super.key,
@@ -419,6 +759,7 @@ class _TestApp extends StatefulWidget {
     required this.settingsService,
     List<NoteCategory>? tags,
     this.noteListKey,
+    this.onDelete,
   }) : tags = tags ?? _defaultTags;
 
   static final List<NoteCategory> _defaultTags = [
@@ -466,7 +807,7 @@ class _TestAppState extends State<_TestApp> {
             onSortChanged: (_, __) {},
             onSearchChanged: (_) {},
             onEdit: (_) {},
-            onDelete: (_) {},
+            onDelete: widget.onDelete ?? (_) {},
             onAskAI: (_) {},
             selectedWeathers: _selectedWeathers,
             selectedDayPeriods: _selectedDayPeriods,
@@ -516,6 +857,9 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
 
   @override
   bool get prioritizeBoldContentInCollapse => false;
+
+  @override
+  String get noteInsertAnimationType => 'slide';
 
   @override
   noSuchMethod(Invocation invocation) =>

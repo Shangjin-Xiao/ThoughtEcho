@@ -68,6 +68,25 @@ class StringUtils {
     return text.length > threshold;
   }
 
+  /// 按用户可见字符截断预览文本，避免截断 Emoji 或组合字符。
+  static String truncateForPreview(
+    String text,
+    int maxCharacters, {
+    String ellipsis = '...',
+  }) {
+    if (maxCharacters < 0) {
+      throw ArgumentError.value(maxCharacters, 'maxCharacters', '不能为负数');
+    }
+
+    final previewText = removeObjectReplacementChar(text);
+    final characters = previewText.characters;
+    if (characters.length <= maxCharacters) {
+      return previewText;
+    }
+
+    return '${characters.take(maxCharacters)}$ellipsis';
+  }
+
   /// 移除文本中的 Object Replacement Character (U+FFFC)
   ///
   /// 当富文本编辑器中包含图片、音频、视频等嵌入媒体时，

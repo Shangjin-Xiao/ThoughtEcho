@@ -39,7 +39,11 @@ void main() {
     QuoteItemWidget.clearExpansionCache();
   });
 
-  Widget buildTestApp(Quote quote, {bool prioritizeBold = false}) {
+  Widget buildTestApp(
+    Quote quote, {
+    bool prioritizeBold = false,
+    bool? needsExpansionOverride,
+  }) {
     return ChangeNotifierProvider<SettingsService>.value(
       value: _TestSettingsService(prioritizeBold: prioritizeBold),
       child: MaterialApp(
@@ -56,6 +60,7 @@ void main() {
             quote: quote,
             style: const TextStyle(fontSize: 16, height: 1.5),
             showFullContent: false,
+            needsExpansionOverride: needsExpansionOverride,
           ),
         ),
       ),
@@ -117,6 +122,16 @@ void main() {
     await tester.pumpWidget(buildTestApp(quote));
 
     expect(find.byKey(QuoteContent.collapsedWrapperKey), findsNothing);
+  });
+
+  testWidgets('外层布局测量可覆盖静态折叠判定', (tester) async {
+    final quote = createPlainQuote('简短内容');
+
+    await tester.pumpWidget(
+      buildTestApp(quote, needsExpansionOverride: true),
+    );
+
+    expect(find.byKey(QuoteContent.collapsedWrapperKey), findsOneWidget);
   });
 
   test('富文本图片内容需要折叠', () {

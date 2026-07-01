@@ -18,6 +18,7 @@ class QuoteContent extends StatelessWidget {
   final int? maxLines;
   final bool showFullContent;
   final bool collapseRichTextSemantics;
+  final bool? needsExpansionOverride;
 
   const QuoteContent({
     super.key,
@@ -26,6 +27,7 @@ class QuoteContent extends StatelessWidget {
     this.maxLines,
     this.showFullContent = false,
     this.collapseRichTextSemantics = false,
+    this.needsExpansionOverride,
   });
 
   // Flutter 3.41+ Android (Impeller + 精准 wght 轴) 下 FontWeight.bold (w700)
@@ -108,6 +110,7 @@ class QuoteContent extends StatelessWidget {
     _cacheGeneration++;
     _QuoteDocumentCache.clear();
     _QuoteHeightEstimateCache.clear();
+    _QuotePlainTextLayoutExpansionCache.clear();
     _QuoteContentControllerCache.clear();
   }
 
@@ -439,6 +442,47 @@ class QuoteContent extends StatelessWidget {
         collapsedContentMaxHeight;
   }
 
+  /// Returns whether [quote] should be collapsed for the current layout.
+  ///
+  /// Plain text is measured with [TextPainter] using the actual [style],
+  /// [maxWidth], [textDirection], [textScaler], and optional [locale]. Rich text
+  /// and non-positive or infinite [maxWidth] values fall back to the lightweight
+  /// estimation path used by [exceedsCollapsedHeight]. Callers should pass a
+  /// finite content width from layout constraints when available.
+  static bool exceedsCollapsedHeightForLayout({
+    required Quote quote,
+    required TextStyle? style,
+    required double maxWidth,
+    required TextDirection textDirection,
+    required TextScaler textScaler,
+    Locale? locale,
+  }) {
+    if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
+      return exceedsCollapsedHeight(quote);
+    }
+    if (!maxWidth.isFinite || maxWidth <= 0) {
+      return exceedsCollapsedHeight(quote);
+    }
+
+    return _QuotePlainTextLayoutExpansionCache.getOrCreate(
+      quote: quote,
+      style: style,
+      maxWidth: maxWidth,
+      textDirection: textDirection,
+      textScaler: textScaler,
+      locale: locale,
+      builder: () {
+        final painter = TextPainter(
+          text: TextSpan(text: quote.content, style: style),
+          textDirection: textDirection,
+          textScaler: textScaler,
+          locale: locale,
+        )..layout(maxWidth: maxWidth);
+        return painter.height > collapsedContentMaxHeight + 0.5;
+      },
+    );
+  }
+
   static double _estimateRenderedHeight(Quote quote) {
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
       return _estimateDeltaHeight(quote.deltaContent!);
@@ -598,7 +642,8 @@ class QuoteContent extends StatelessWidget {
     final prioritizeBoldContent = context.select<SettingsService, bool>(
       (s) => s.prioritizeBoldContentInCollapse,
     );
-    final bool needsExpansion = exceedsCollapsedHeight(quote);
+    final bool needsExpansion =
+        needsExpansionOverride ?? exceedsCollapsedHeight(quote);
 
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
       final bool usePrioritizedDoc = !showFullContent && prioritizeBoldContent;
@@ -815,6 +860,122 @@ class _HeightEstimateCacheEntry {
       : lastAccess = DateTime.now();
 
   final double height;
+  DateTime lastAccess;
+
+  void touch() {
+    lastAccess = DateTime.now();
+  }
+}
+
+class _QuotePlainTextLayoutExpansionCache {
+  static final LinkedHashMap<_PlainTextLayoutExpansionCacheKey,
+          _PlainTextLayoutExpansionCacheEntry> _cache =
+      LinkedHashMap<_PlainTextLayoutExpansionCacheKey,
+          _PlainTextLayoutExpansionCacheEntry>();
+
+  static const int _maxCacheSize = 300;
+  static const int _pruneBatchSize = 50;
+
+  static bool getOrCreate({
+    required Quote quote,
+    required TextStyle? style,
+    required double maxWidth,
+    required TextDirection textDirection,
+    required TextScaler textScaler,
+    required Locale? locale,
+    required bool Function() builder,
+  }) {
+    final key = _PlainTextLayoutExpansionCacheKey(
+      contentSignature:
+          Object.hash(quote.content.hashCode, quote.content.length),
+      maxWidthKey: (maxWidth * 100).round(),
+      styleHash: style.hashCode,
+      textDirection: textDirection,
+      textScalerHash: textScaler.hashCode,
+      localeTag: locale?.toLanguageTag(),
+    );
+    final existing = _cache.remove(key);
+    if (existing != null) {
+      existing.touch();
+      _cache[key] = existing;
+      return existing.exceedsCollapsedHeight;
+    }
+
+    if (_cache.length >= _maxCacheSize) {
+      _pruneOldest();
+    }
+
+    final exceedsCollapsedHeight = builder();
+    _cache[key] = _PlainTextLayoutExpansionCacheEntry(
+      exceedsCollapsedHeight: exceedsCollapsedHeight,
+    );
+    return exceedsCollapsedHeight;
+  }
+
+  static void clear() {
+    _cache.clear();
+  }
+
+  static void _pruneOldest() {
+    if (_cache.isEmpty) {
+      return;
+    }
+
+    final entries = _cache.entries.toList()
+      ..sort((a, b) => a.value.lastAccess.compareTo(b.value.lastAccess));
+
+    for (final entry in entries.take(_pruneBatchSize)) {
+      _cache.remove(entry.key);
+    }
+  }
+}
+
+class _PlainTextLayoutExpansionCacheKey {
+  const _PlainTextLayoutExpansionCacheKey({
+    required this.contentSignature,
+    required this.maxWidthKey,
+    required this.styleHash,
+    required this.textDirection,
+    required this.textScalerHash,
+    required this.localeTag,
+  });
+
+  final int contentSignature;
+  final int maxWidthKey;
+  final int styleHash;
+  final TextDirection textDirection;
+  final int textScalerHash;
+  final String? localeTag;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is _PlainTextLayoutExpansionCacheKey &&
+        other.contentSignature == contentSignature &&
+        other.maxWidthKey == maxWidthKey &&
+        other.styleHash == styleHash &&
+        other.textDirection == textDirection &&
+        other.textScalerHash == textScalerHash &&
+        other.localeTag == localeTag;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        contentSignature,
+        maxWidthKey,
+        styleHash,
+        textDirection,
+        textScalerHash,
+        localeTag,
+      );
+}
+
+class _PlainTextLayoutExpansionCacheEntry {
+  _PlainTextLayoutExpansionCacheEntry({
+    required this.exceedsCollapsedHeight,
+  }) : lastAccess = DateTime.now();
+
+  final bool exceedsCollapsedHeight;
   DateTime lastAccess;
 
   void touch() {

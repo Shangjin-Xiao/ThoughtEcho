@@ -36,3 +36,11 @@
 ## YYYY-MM-DD - [提取 WebDAV 同步冲突处理相关的硬编码字符串]
 **发现:** WebDAV 同步页面冲突处理的提示：`"确认保留（移入默认分类）"`, `"已确认并移回默认笔记列表。"`, `"丢弃此冲突备份"`, `"已永久丢弃此冲突笔记。"`
 **规则:** 采用极简风格翻译，例如 `webdavConflictKeepTooltip`, `webdavConflictKeepSuccess`, `webdavConflictDiscardTooltip`, `webdavConflictDiscardSuccess`
+## 2026-06-22 - [提取 WebDAV 同步页面硬编码字符串]
+**发现:** WebDAV 同步页面硬编码："已关闭 WebDAV 云同步。本地数据完全保留。", "关闭并停用云同步", "去处理", "没有检测到冲突笔记", "您的所有同步冲突均已处理干净。", "坚果云 (Nutstore)", "自定义 (Custom)"
+**规则:**
+- 采用极简风格翻译，例如 `webdavDisableSyncSuccess`, `webdavDisableSync`, `webdavGoToResolve`, `webdavNoConflicts`, `webdavAllConflictsResolved`, `webdavProviderNutstore`, `webdavProviderCustom`。
+
+## 2024-05-24 - [提取 WebDAV 服务商配置表单硬编码]
+**发现:** WebDAV 同步配置页面存在硬编码的表单提示（如：服务商配置、未填写必填项的错误提示）。
+**规则:** 将表单相关的标题及校验失败文案统一抽取到 `.arb` 文件中，英文翻译采用清晰直接（"Please enter..."）且符合极简主义要求的设计。

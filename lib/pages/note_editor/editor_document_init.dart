@@ -63,20 +63,19 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
   /// P4: 其他错误 → 创建空文档并日志记录
   Future<void> _initializeDocumentAsync() async {
     try {
-      if (widget.initialQuote?.deltaContent != null &&
-          widget.initialQuote!.deltaContent!.isNotEmpty) {
+      final initialQuote = widget.initialQuote;
+      final deltaContent = initialQuote?.deltaContent;
+      final plainContent = initialQuote?.content;
+      if (deltaContent != null && deltaContent.isNotEmpty) {
         // P1: 优先使用富文本内容
         logDebug('开始异步解析富文本内容...');
 
-        final deltaContent = widget.initialQuote!.deltaContent!;
-
         // 使用内存安全的处理策略
         await _initializeRichTextContentSafely(deltaContent);
-      } else if (widget.initialQuote?.content != null &&
-          widget.initialQuote!.content!.isNotEmpty) {
+      } else if (plainContent != null && plainContent.isNotEmpty) {
         // P2: Fallback 到从纯文本生成富文本
         logDebug('无富文本内容，尝试从纯文本生成富文本表示...');
-        await _initializeFromPlainTextFallback(widget.initialQuote!.content!);
+        await _initializeFromPlainTextFallback(plainContent);
       } else {
         // P3: 都无则初始化为空文档
         logDebug('无任何内容，初始化为空文档');
@@ -86,8 +85,9 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       logDebug('文档初始化失败: $e，尝试使用纯文本fallback');
       try {
         // P3: 异常情况下使用纯文本
-        if (widget.initialQuote?.content != null) {
-          await _initializeFromPlainTextFallback(widget.initialQuote!.content!);
+        final plainContent = widget.initialQuote?.content;
+        if (plainContent != null) {
+          await _initializeFromPlainTextFallback(plainContent);
         } else {
           _initializeAsPlainText();
         }

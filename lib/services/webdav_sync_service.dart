@@ -70,6 +70,7 @@ class WebDAVSyncService extends ChangeNotifier {
 
   // 冲突分类固定ID
   static const String conflictCategoryId = 'system_sync_conflicts_category';
+  static const Set<String> _mediaSubFolders = {'images', 'videos', 'audios'};
 
   /// 初始化设置，从 MMKV 中读取缓存配置
   void _initSettings() {
@@ -570,6 +571,8 @@ class WebDAVSyncService extends ChangeNotifier {
 
     int conflictsCloned = 0;
 
+    final List<Map<String, dynamic>> conflictingQuotes = [];
+
     // 比对云端对应笔记的修改时间
     for (final rq in remoteQuotes) {
       final rqMap = Map<String, dynamic>.from(rq as Map<String, dynamic>);
@@ -595,40 +598,87 @@ class WebDAVSyncService extends ChangeNotifier {
         final remoteContent = rqMap['content'] as String? ?? '';
 
         if (localContent != remoteContent) {
-          conflictsCloned++;
-          await _cloneConflictQuote(db, localQuote);
+          conflictingQuotes.add(localQuote);
         }
       }
     }
 
+    if (conflictingQuotes.isEmpty) return 0;
+
+    // 批量预取所有冲突笔记的标签，消除 N+1 查询
+    final Map<String, List<Map<String, Object?>>> tagsMap = {};
+    final batchQuery = db.batch();
+
+    // 按块处理以避免超过 900 个参数的 SQLite 限制
+    for (var i = 0; i < conflictingQuotes.length; i += 900) {
+      final end = (i + 900 < conflictingQuotes.length)
+          ? i + 900
+          : conflictingQuotes.length;
+      final chunk = conflictingQuotes
+          .sublist(i, end)
+          .map((q) => q['id'] as String)
+          .toList();
+      final placeholders = List.filled(chunk.length, '?').join(',');
+      batchQuery.query(
+        'quote_tags',
+        where: 'quote_id IN ($placeholders)',
+        whereArgs: chunk,
+      );
+    }
+
+    final results = await batchQuery.commit();
+    for (final chunkResult in results) {
+      final tagsList = chunkResult as List<Object?>;
+      for (final tagObj in tagsList) {
+        final tag = tagObj as Map<String, Object?>;
+        final qId = tag['quote_id'] as String;
+        tagsMap.putIfAbsent(qId, () => []).add(tag);
+      }
+    }
+
+    // 在循环前提前确保冲突分类存在，避免 N+1 查询
+    await _ensureConflictCategoryExists(db);
+
+    for (final quote in conflictingQuotes) {
+      conflictsCloned++;
+      await _cloneConflictQuote(
+        db,
+        quote,
+        tagsMap[quote['id'] as String] ?? [],
+      );
+    }
+
     return conflictsCloned;
+  }
+
+  Future<void> _ensureConflictCategoryExists(Database db) async {
+    final catCheck = await db.query(
+      'categories',
+      where: 'id = ?',
+      whereArgs: [conflictCategoryId],
+    );
+
+    if (catCheck.isEmpty) {
+      await db.insert('categories', {
+        'id': conflictCategoryId,
+        'name': '同步冲突',
+        'is_default': 0,
+        'icon_name': 'warning_amber_rounded',
+        'last_modified': DateTime.now().toUtc().toIso8601String(),
+      });
+    }
   }
 
   /// 克隆冲突的笔记，并将分类设为“同步冲突”
   Future<void> _cloneConflictQuote(
     Database db,
     Map<String, dynamic> localQuote,
+    List<Map<String, Object?>> tags,
   ) async {
     try {
-      // 1. 确保冲突分类在本地存在
-      final catCheck = await db.query(
-        'categories',
-        where: 'id = ?',
-        whereArgs: [conflictCategoryId],
-      );
-
-      if (catCheck.isEmpty) {
-        await db.insert('categories', {
-          'id': conflictCategoryId,
-          'name': '同步冲突',
-          'is_default': 0,
-          'icon_name': 'warning_amber_rounded',
-          'last_modified': DateTime.now().toUtc().toIso8601String(),
-        });
-      }
+      // 分类已在调用方确保存在，无需在此重复查询
 
       // 2. 拷贝笔记元数据
-      final String quoteId = localQuote['id'] as String;
       final String clonedId = const Uuid().v4();
       final clonedQuote = Map<String, dynamic>.from(localQuote);
 
@@ -657,11 +707,6 @@ class WebDAVSyncService extends ChangeNotifier {
       await db.insert('quotes', clonedQuote);
 
       // 3. 复制对应的标签关联关系
-      final tags = await db.query(
-        'quote_tags',
-        where: 'quote_id = ?',
-        whereArgs: [quoteId],
-      );
       if (tags.isNotEmpty) {
         final batch = db.batch();
         for (final tag in tags) {
@@ -697,11 +742,11 @@ class WebDAVSyncService extends ChangeNotifier {
       localMediaMap[stdPath] = f;
     }
 
-    final subFolders = ['images', 'videos', 'audios'];
-    final Set<String> remoteFilePaths = {};
+    final remoteMediaFiles = <String, int?>{};
+    final failedRemoteMediaFolders = <String>{};
 
     // 2. 并行扫描云端所有媒体子目录的文件列表，减少网络请求等待时间并防限流
-    await Future.wait(subFolders.map((folder) async {
+    await Future.wait(_mediaSubFolders.map((folder) async {
       final folderUrl = '${_url}thoughtecho/media/$folder/';
       try {
         final response = await dio.request(
@@ -709,6 +754,7 @@ class WebDAVSyncService extends ChangeNotifier {
           options: Options(
             method: 'PROPFIND',
             headers: {'Depth': '1'},
+            responseType: ResponseType.plain,
             validateStatus: (status) => status == 207 || status == 200,
           ),
         );
@@ -719,29 +765,10 @@ class WebDAVSyncService extends ChangeNotifier {
           final String xmlData = rawData is List<int>
               ? utf8.decode(rawData, allowMalformed: true)
               : rawData.toString();
-          // 使用 namespace-agnostic 正则提取云端文件的相对路径 URL 尾部
-          final hrefRegExp = RegExp(
-            r'<[a-zA-Z0-9:]*href>([\s\S]*?)<\/[a-zA-Z0-9:]*href>',
-          );
-          final matches = hrefRegExp.allMatches(xmlData);
-
-          for (final m in matches) {
-            String href = Uri.decodeFull(m.group(1)?.trim() ?? '');
-            if (href.endsWith('/') ||
-                href.endsWith('/media') ||
-                href.endsWith('/media/')) {
-              continue; // 过滤目录自身
-            }
-
-            // 截取 media/ 后面的部分，如 images/123.png
-            final mediaIdx = href.indexOf('media/');
-            if (mediaIdx != -1) {
-              final relPath = href.substring(mediaIdx + 6);
-              remoteFilePaths.add(relPath);
-            }
-          }
+          remoteMediaFiles.addAll(_extractRemoteMediaFiles(xmlData));
         }
       } catch (e) {
+        failedRemoteMediaFolders.add(folder);
         logDebug('获取云端媒体目录 ($folder) 列表失败: $e');
       }
     }));
@@ -750,16 +777,28 @@ class WebDAVSyncService extends ChangeNotifier {
     for (final entry in localMediaMap.entries) {
       final stdPath = entry.key;
       final file = entry.value;
+      final fileLen = await file.length();
+      final mediaFolder = _mediaFolderFromRelativePath(stdPath);
+      if (mediaFolder != null &&
+          failedRemoteMediaFolders.contains(mediaFolder)) {
+        logDebug('跳过附件上传，等待下次成功获取远端目录后再增量判断: $stdPath');
+        continue;
+      }
 
-      if (!remoteFilePaths.contains(stdPath)) {
-        logDebug('上传本地附件到云端: $stdPath');
+      if (_shouldUploadMediaFile(stdPath, fileLen, remoteMediaFiles)) {
+        final remoteSize = remoteMediaFiles[stdPath];
+        final reason = remoteMediaFiles.containsKey(stdPath)
+            ? '远端大小不一致，本地=$fileLen, 远端=$remoteSize'
+            : '远端不存在';
+        logDebug('上传本地附件到云端: $stdPath ($reason)');
         final uploadUrl = '${_url}thoughtecho/media/$stdPath';
         try {
-          final fileLen = await file.length();
           await dio.put(
             uploadUrl,
             data: file.openRead(),
-            options: Options(headers: {'Content-Length': fileLen}),
+            options: Options(
+              headers: {Headers.contentLengthHeader: fileLen},
+            ),
           );
         } catch (e) {
           logDebug('上传附件失败 ($stdPath): $e');
@@ -768,7 +807,7 @@ class WebDAVSyncService extends ChangeNotifier {
     }
 
     // 4. 从云端同步本地缺失附件，或清理云端已废弃的孤儿附件（解决“无限复活”Bug）
-    for (final stdPath in remoteFilePaths) {
+    for (final stdPath in remoteMediaFiles.keys) {
       if (!localMediaMap.containsKey(stdPath)) {
         // 拼接成 MediaReferenceService 能够识别的标准本地完整路径或数据库存储相对路径
         final localFileFullPath = p.join(
@@ -815,6 +854,111 @@ class WebDAVSyncService extends ChangeNotifier {
         }
       }
     }
+  }
+
+  static Map<String, int?> _extractRemoteMediaFiles(String xmlData) {
+    final files = <String, int?>{};
+    final responseRegExp = RegExp(
+      r'<(?:[a-zA-Z0-9_.-]+:)?response\b[\s\S]*?<\/(?:[a-zA-Z0-9_.-]+:)?response>',
+      caseSensitive: false,
+    );
+    final hrefRegExp = RegExp(
+      r'<(?:[a-zA-Z0-9_.-]+:)?href>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?href>',
+      caseSensitive: false,
+    );
+    final lengthRegExp = RegExp(
+      r'<(?:[a-zA-Z0-9_.-]+:)?getcontentlength>(\d+)<\/(?:[a-zA-Z0-9_.-]+:)?getcontentlength>',
+      caseSensitive: false,
+    );
+
+    final responses = responseRegExp.allMatches(xmlData).toList();
+    final responseBlocks = responses.isEmpty
+        ? <String>[xmlData]
+        : responses.map((m) => m[0]!).toList();
+
+    for (final block in responseBlocks) {
+      final hrefMatch = hrefRegExp.firstMatch(block);
+      if (hrefMatch == null) continue;
+
+      final relPath = _mediaRelativePathFromHref(hrefMatch.group(1) ?? '');
+      if (relPath == null) continue;
+
+      final lengthMatch = lengthRegExp.firstMatch(block);
+      files[relPath] =
+          lengthMatch == null ? null : int.tryParse(lengthMatch.group(1)!);
+    }
+
+    return files;
+  }
+
+  static String? _mediaRelativePathFromHref(String href) {
+    final trimmed = href.trim();
+    if (trimmed.isEmpty) return null;
+
+    final uri = Uri.tryParse(trimmed);
+    final rawPath = uri?.path ?? trimmed;
+    String decodedPath;
+    try {
+      decodedPath = Uri.decodeComponent(rawPath);
+    } catch (_) {
+      decodedPath = Uri.decodeFull(rawPath);
+    }
+
+    final normalizedPath = decodedPath.replaceAll('\\', '/');
+    if (normalizedPath.endsWith('/')) return null;
+
+    final segments = normalizedPath
+        .split('/')
+        .where((segment) => segment.isNotEmpty)
+        .toList();
+    for (var i = 0; i < segments.length - 1; i++) {
+      if (segments[i] == 'media' &&
+          _mediaSubFolders.contains(segments[i + 1])) {
+        return segments.sublist(i + 1).join('/');
+      }
+    }
+    return null;
+  }
+
+  static bool _shouldUploadMediaFile(
+    String stdPath,
+    int localSize,
+    Map<String, int?> remoteMediaFiles,
+  ) {
+    if (!remoteMediaFiles.containsKey(stdPath)) return true;
+
+    final remoteSize = remoteMediaFiles[stdPath];
+    return remoteSize != null && remoteSize != localSize;
+  }
+
+  static String? _mediaFolderFromRelativePath(String stdPath) {
+    final segments = stdPath.split('/');
+    final firstSegment = segments.isEmpty ? null : segments.first;
+    return _mediaSubFolders.contains(firstSegment) ? firstSegment : null;
+  }
+
+  @visibleForTesting
+  static Map<String, int?> extractRemoteMediaFilesForTesting(String xmlData) {
+    return _extractRemoteMediaFiles(xmlData);
+  }
+
+  @visibleForTesting
+  static String? mediaRelativePathFromHrefForTesting(String href) {
+    return _mediaRelativePathFromHref(href);
+  }
+
+  @visibleForTesting
+  static bool shouldUploadMediaFileForTesting(
+    String stdPath,
+    int localSize,
+    Map<String, int?> remoteMediaFiles,
+  ) {
+    return _shouldUploadMediaFile(stdPath, localSize, remoteMediaFiles);
+  }
+
+  @visibleForTesting
+  static String? mediaFolderFromRelativePathForTesting(String stdPath) {
+    return _mediaFolderFromRelativePath(stdPath);
   }
 
   /// 流式写入本地同步数据到临时 JSON 文件

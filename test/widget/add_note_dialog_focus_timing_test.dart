@@ -268,6 +268,64 @@ void main() {
 
     databaseService.completeSave();
   });
+
+  testWidgets('does not warn about unsaved changes when editing unchanged note',
+      (tester) async {
+    final initialQuote = Quote(
+      id: 'quote-1',
+      content: '已有内容',
+      date: DateTime(2026).toIso8601String(),
+      sourceAuthor: '作者',
+      sourceWork: '出处',
+      tagIds: const ['tag-1'],
+      colorHex: '#336699',
+    );
+    final tags = [
+      NoteCategory(id: 'tag-1', name: '标签', iconName: 'tag'),
+    ];
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<FeatureGuideService>(
+            create: (_) => _MockFeatureGuideService(),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => AddNoteDialog(
+                      initialQuote: initialQuote,
+                      tags: tags,
+                      onSave: (_) {},
+                    ),
+                  );
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('未保存的内容'), findsNothing);
+    expect(find.byType(AddNoteDialog), findsNothing);
+  });
 }
 
 class _MockFeatureGuideService extends FeatureGuideService {

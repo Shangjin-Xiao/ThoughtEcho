@@ -24,3 +24,15 @@
 ## 2026-06-10 - [补充 SafeCompute 和 StreamingJsonParser 的测试]
 **盲点:** `SafeCompute` 和 `StreamingJsonParser` 作为隔离运行和流式解析的核心工具类，长期缺乏测试，容易在重构或者修改时导致未预见的边缘情况崩溃。
 **对策:** 通过编写简单的隔离测试及文件存取操作测试验证流式解析。利用 `ComputeCallback` 的同步调用特性模拟成功与异常的回退逻辑；利用临时小文件及无效文件测试大 JSON 分块解析器的各项方法（包括安全边界检查、内存预估），从而加强代码库的健壮性。
+## 2026-06-25 - [补充 SVGTestHelper 的测试]
+**盲点:** `SVGTestHelper` 包含生成、验证和清理修复 SVG 内容的核心纯函数，在测试环境中用于快速构建和校验 SVG 格式。然而，它作为一个基础的测试工具集却没有自己的测试覆盖。如果后续调整了标签验证或补全规则，容易导致依赖它的上层组件测试集遭遇大面积的断言失败。
+**对策:** 为其编写独立的纯函数单元测试，涵盖了正确的 SVG 结构验证、空内容与缺失标签等边界条件的失败验证，以及清理函数对多余 markdown 和缺失基础属性（`xmlns`, `viewBox`）的容错机制。这保证了底层辅助工具自身的健壮性。
+## 2026-06-28 - 补充 SearchController 的测试
+**盲点:** SearchController 的核心 `updateSearch` 和 `resetSearchState` 逻辑（包含长度校验和异步超时定时器）缺失测试覆盖。
+**对策:** 添加了针对这部分逻辑的单元测试，涵盖了空查询清除、短查询忽略、超时定时器挂起等核心场景，并使用 `fakeAsync` 测试了定时器的启动与取消，防止定时器泄漏。
+
+## 2026-06-30 - [补充 homepage 各项功能的测试]
+**盲点:** `HomePage` 作为最复杂的主页面，其内部包含众多 Service 和子视图，原本仅进行了极其简单的 widget 测试，缺乏对 `DailyQuoteView`、`HomeDailyPromptPanel` 等核心业务组件的加载与切换验证。
+**对策:**
+1. 为 `HomeDailyPromptPanel` 编写了独立的 Widget 测试，采用 `MultiProvider` 注入 `MockAIService`、`MockSettingsService` 等完整依赖链，成功测试了流式提示信息的渲染以及失败降级的本地提示加载机制。
+2. 彻底重构 `HomePage` 的 Widget 测试，Mock 其依赖的至少 8 个核心 Service，验证了 `DailyQuoteView` 和 `HomeDailyPromptPanel` 的正确挂载，并通过模拟用户交互点击 `NavigationBar`，全面验证了由主页向 `NoteListView`、`AIFeaturesPage`、`SettingsPage` 三个主要 Tab 页面的无缝切换逻辑，大幅提升了主页面的功能稳定性保证。

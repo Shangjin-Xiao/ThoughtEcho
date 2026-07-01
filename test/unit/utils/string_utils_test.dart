@@ -135,6 +135,22 @@ void main() {
       });
     });
 
+    group('truncateForPreview', () {
+      test('should preserve emoji grapheme clusters while truncating', () {
+        const text = 'ab👨‍👩‍👧‍👦cd';
+
+        expect(StringUtils.truncateForPreview(text, 3), 'ab👨‍👩‍👧‍👦...');
+      });
+
+      test('should return original text when it fits the preview limit', () {
+        expect(StringUtils.truncateForPreview('短句😊', 3), '短句😊');
+      });
+
+      test('should remove rich-text object placeholders from previews', () {
+        expect(StringUtils.truncateForPreview('珍藏\u{FFFC}😊', 20), '珍藏😊');
+      });
+    });
+
     group('removeObjectReplacementChar', () {
       test('should remove U+FFFC characters from string', () {
         expect(StringUtils.removeObjectReplacementChar('Hello\u{FFFC}World'),

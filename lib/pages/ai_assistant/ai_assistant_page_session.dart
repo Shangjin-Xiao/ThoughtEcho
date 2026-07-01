@@ -113,24 +113,6 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
     return _entryConfig.resolveRestoredMode(restored);
   }
 
-  Future<void> _persistMode(AIAssistantPageMode mode) async {
-    if (_entrySource == AIAssistantEntrySource.explore) {
-      await _settingsService.setExploreAiAssistantMode(mode);
-    } else {
-      await _settingsService.setNoteAiAssistantMode(mode);
-    }
-  }
-
-  Future<void> _setMode(AIAssistantPageMode mode) async {
-    if (!_entryConfig.allowsMode(mode) || _currentMode == mode) {
-      return;
-    }
-    _setState(() {
-      _currentMode = mode;
-    });
-    await _persistMode(mode);
-  }
-
   Future<void> _setThinkingEnabled(bool enabled) async {
     _setState(() {
       _enableThinking = enabled;

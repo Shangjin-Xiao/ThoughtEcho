@@ -19,6 +19,7 @@ import '../models/quote_model.dart';
 import '../pages/home_page.dart';
 import '../main.dart' show navigatorKey;
 import 'api_service.dart';
+import 'clipboard_service.dart';
 import 'database_service.dart';
 import 'mmkv_service.dart';
 import 'location_service.dart';
@@ -82,6 +83,10 @@ class SmartPushService extends ChangeNotifier {
 
   /// 今日智能推送是否已执行过（任意内容类型）
   static const String _todayPushedDateKey = 'smart_push_today_pushed_date';
+
+  /// 今日智能推送已发送过的用户笔记 ID 列表
+  static const String _todayPushedNoteIdsKey =
+      'smart_push_today_pushed_note_ids';
 
   /// 今日是否已推送过每日一言（智能推送流程内）
   static const String _todayDailyQuotePushedKey =
@@ -178,6 +183,28 @@ class SmartPushService extends ChangeNotifier {
   void _markPushedToday() {
     final today = DateTime.now().toIso8601String().substring(0, 10);
     _mmkv.setString(_todayPushedDateKey, today);
+  }
+
+  Set<String> _getTodayPushedNoteIds() {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final rawData = _mmkv.getString(_todayPushedNoteIdsKey);
+    if (rawData == null || !rawData.startsWith('$today|')) return {};
+
+    final ids = rawData
+        .substring(today.length + 1)
+        .split(',')
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    return ids;
+  }
+
+  void _markNotePushedToday(String noteId) {
+    if (noteId.isEmpty) return;
+
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final ids = _getTodayPushedNoteIds()..add(noteId);
+    _mmkv.setString(_todayPushedNoteIdsKey, '$today|${ids.join(',')}');
   }
 
   /// 检查今日在智能推送流程中是否已推送每日一言
@@ -395,6 +422,7 @@ class SmartPushService extends ChangeNotifier {
       }
 
       _isInitialized = true;
+      notifyListeners();
       AppLogger.i('SmartPushService 初始化完成');
     } catch (e, stack) {
       AppLogger.e('SmartPushService 初始化失败', error: e, stackTrace: stack);

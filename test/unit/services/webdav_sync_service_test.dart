@@ -158,4 +158,91 @@ void main() {
         'http://insecure.server.local/dav/', 'user', 'pass');
     expect(result, isFalse);
   });
+
+  test('WebDAV media parser should extract existing remote files and sizes',
+      () {
+    const xml = '''
+<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:">
+  <d:response>
+    <d:href>/dav/thoughtecho/media/images/</d:href>
+    <d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop></d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/dav/thoughtecho/media/images/1700000000000_%E5%9B%BE.png</d:href>
+    <d:propstat><d:prop><d:getcontentlength>12345</d:getcontentlength></d:prop></d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>https://example.com/dav/thoughtecho/media/videos/movie.mp4</d:href>
+    <d:propstat><d:prop><d:getcontentlength>99</d:getcontentlength></d:prop></d:propstat>
+  </d:response>
+</d:multistatus>
+''';
+
+    final files = WebDAVSyncService.extractRemoteMediaFilesForTesting(xml);
+
+    expect(files, {
+      'images/1700000000000_图.png': 12345,
+      'videos/movie.mp4': 99,
+    });
+  });
+
+  test('WebDAV media upload decision should skip files already on remote', () {
+    final remoteMediaFiles = {
+      'images/existing.png': 1024,
+      'videos/no_size.mp4': null,
+    };
+
+    expect(
+      WebDAVSyncService.shouldUploadMediaFileForTesting(
+        'images/existing.png',
+        1024,
+        remoteMediaFiles,
+      ),
+      isFalse,
+    );
+    expect(
+      WebDAVSyncService.shouldUploadMediaFileForTesting(
+        'videos/no_size.mp4',
+        2048,
+        remoteMediaFiles,
+      ),
+      isFalse,
+    );
+    expect(
+      WebDAVSyncService.shouldUploadMediaFileForTesting(
+        'images/existing.png',
+        512,
+        remoteMediaFiles,
+      ),
+      isTrue,
+    );
+    expect(
+      WebDAVSyncService.shouldUploadMediaFileForTesting(
+        'audios/new.mp3',
+        256,
+        remoteMediaFiles,
+      ),
+      isTrue,
+    );
+  });
+
+  test('WebDAV media folder helper should only classify synced folders', () {
+    expect(
+      WebDAVSyncService.mediaFolderFromRelativePathForTesting(
+        'images/photo.png',
+      ),
+      'images',
+    );
+    expect(
+      WebDAVSyncService.mediaFolderFromRelativePathForTesting(
+        'videos/movie.mp4',
+      ),
+      'videos',
+    );
+    expect(
+      WebDAVSyncService.mediaFolderFromRelativePathForTesting('html/card.html'),
+      isNull,
+    );
+  });
 }

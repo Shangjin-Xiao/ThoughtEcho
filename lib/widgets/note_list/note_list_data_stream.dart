@@ -89,7 +89,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           if (isFirstLoad &&
               _scrollController.hasClients &&
               _quotes.isNotEmpty) {
-            savedScrollOffset = _scrollController.offset;
+            savedScrollOffset = _safeScrollOffset;
             logDebug(
               '首次加载期间保存滚动位置: $savedScrollOffset',
               source: 'NoteListView',
@@ -108,6 +108,11 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             _hasMore = list.length >= NoteListViewState._pageSize;
             _isLoading = isLoadMorePage;
             _pruneExpansionControllers();
+            // 注意：此处不递增 _resultsVersion。
+            // _initializeDataStream 的 stream 持续接收事件（含 load more），
+            // 若递增则 resultsKey 变化，AnimatedSwitcher 会销毁旧 ListView 并
+            // 创建从偏移量 0 开始的新 ListView，导致列表跳回顶部。
+            // 搜索切换动画由 _updateStreamSubscription(isSearchUpdate:true) 负责递增。
           });
           if (_loadMorePerfRecording &&
               (_quotes.length > _loadMorePerfStartCount || !_hasMore)) {
@@ -131,10 +136,11 @@ extension _NoteListDataStreamExtension on NoteListViewState {
               !_isUserScrolling) {
             final offset = savedScrollOffset; // 捕获非空值
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted &&
-                  _scrollController.hasClients &&
-                  offset <= _scrollController.position.maxScrollExtent) {
-                _scrollController.jumpTo(offset);
+              if (mounted && _scrollController.hasClients) {
+                final pos = _safeScrollPosition;
+                if (pos != null && offset <= pos.maxScrollExtent) {
+                  _scrollController.jumpTo(offset);
+                }
                 logDebug('首次加载期间恢复滚动位置: $offset', source: 'NoteListView');
               }
             });
@@ -142,6 +148,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
 
           if (isFirstLoad) {
             _initialDataLoaded = true;
+            _initialLoadSafetyTimer?.cancel();
             // 通知 Completer：首批数据已就绪（scrollToQuoteById 事件驱动等待）
             if (_initialDataCompleter != null &&
                 !_initialDataCompleter!.isCompleted) {
@@ -202,6 +209,11 @@ extension _NoteListDataStreamExtension on NoteListViewState {
       },
       onError: (error) {
         if (mounted) {
+          // 出错时也需要 complete completer，避免 scrollToQuoteById 挂起直到超时
+          if (_initialDataCompleter != null &&
+              !_initialDataCompleter!.isCompleted) {
+            _initialDataCompleter!.complete();
+          }
           _updateState(() {
             _isLoading = false;
           });
@@ -240,8 +252,30 @@ extension _NoteListDataStreamExtension on NoteListViewState {
         }
       },
     );
-    // 注释掉重复的loadMore调用，因为watchQuotes已经会自动加载数据
-    // _loadMore(); // 这行导致双重加载和滚动位置混乱
+    // 安全超时：首次加载若 8 秒仍未收到数据，强制结束加载状态，
+    // 避免用户永久看到全屏加载动画。用户可通过下拉刷新重试。
+    _initialLoadSafetyTimer?.cancel();
+    if (isFirstLoad) {
+      _initialLoadSafetyTimer = Timer(
+        const Duration(seconds: 8),
+        () {
+          if (mounted && !_initialDataLoaded && _isLoading && _quotes.isEmpty) {
+            logDebug(
+              '首次数据加载安全超时（8s），结束加载状态',
+              source: 'NoteListView',
+            );
+            _updateState(() {
+              _isLoading = false;
+            });
+            // 同时释放 completer，避免 scrollToQuoteById 继续等待
+            if (_initialDataCompleter != null &&
+                !_initialDataCompleter!.isCompleted) {
+              _initialDataCompleter!.complete();
+            }
+          }
+        },
+      );
+    }
   }
 
   /// 优化：判断是否需要更新订阅
@@ -268,11 +302,16 @@ extension _NoteListDataStreamExtension on NoteListViewState {
   }
 
   // 修复：新增方法：更新数据库监听流（改进版本）
-  void _updateStreamSubscription({bool preserveScrollPosition = false}) {
+  void _updateStreamSubscription({
+    bool preserveScrollPosition = false,
+    bool isSearchUpdate = false,
+  }) {
     if (!mounted) return; // 确保组件仍然挂载
 
+    bool isFirstSearchEvent = isSearchUpdate;
+
     logDebug(
-      '更新数据流订阅 (preserveScrollPosition: $preserveScrollPosition)',
+      '更新数据流订阅 (preserveScrollPosition: $preserveScrollPosition, isSearchUpdate: $isSearchUpdate)',
       source: 'NoteListView',
     );
 
@@ -281,20 +320,24 @@ extension _NoteListDataStreamExtension on NoteListViewState {
     if (preserveScrollPosition &&
         _scrollController.hasClients &&
         _quotes.isNotEmpty) {
-      savedScrollOffset = _scrollController.offset;
+      savedScrollOffset = _safeScrollOffset;
       logDebug('保存滚动位置: $savedScrollOffset', source: 'NoteListView');
     } else if (!preserveScrollPosition) {
       logDebug('筛选条件变化，不保存滚动位置，将重置到顶部', source: 'NoteListView');
     }
 
-    // Set loading only if not first load
-    if (_initialDataLoaded) {
+    // 搜索更新时不设 _isLoading，旧内容保持显示，避免底部临时出现加载动画。
+    // 非搜索更新时（标签/天气/排序切换）才设 _isLoading = true。
+    if (_initialDataLoaded && !isSearchUpdate) {
       _updateState(() {
         _isLoading = true;
       });
     }
 
-    _hasMore = true;
+    // 搜索更新时不重置 _hasMore，防止底部加载动画瞬间闪现
+    if (!isSearchUpdate) {
+      _hasMore = true;
+    }
 
     final db = Provider.of<DatabaseService>(context, listen: false);
 
@@ -329,6 +372,12 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             _hasMore = list.length >= NoteListViewState._pageSize;
             _isLoading = isLoadMorePage;
             _pruneExpansionControllers();
+            // 仅搜索 query 变化时的第一次事件递增，驱动 AnimatedSwitcher 淡入新搜索结果。
+            // 随后的 load more 不递增，避免 ListView 重建跳回顶部。
+            if (isFirstSearchEvent) {
+              _resultsVersion++;
+              isFirstSearchEvent = false;
+            }
           });
           if (_loadMorePerfRecording &&
               (_quotes.length > _loadMorePerfStartCount || !_hasMore)) {
@@ -347,25 +396,29 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           }
 
           // Restore scroll position smoothly (only if preserveScrollPosition is true)
+          // 只在第一次数据到达时恢复一次；之后置 null 防止后续 stream 事件
+          // （如 load more）重复 animateTo，导致用户滑动时列表跳回旧位置。
           if (savedScrollOffset != null &&
               _scrollController.hasClients &&
               _initialDataLoaded) {
+            final offsetToRestore = savedScrollOffset;
+            savedScrollOffset = null; // 立即置空，防止后续 stream 事件再次触发
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (savedScrollOffset != null &&
-                  _scrollController.hasClients &&
-                  savedScrollOffset <=
-                      _scrollController.position.maxScrollExtent) {
-                _scrollController.animateTo(
-                  savedScrollOffset,
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOut,
-                );
-                logDebug(
-                  '平滑恢复滚动位置: $savedScrollOffset',
-                  source: 'NoteListView',
-                );
-              } else {
-                logDebug('滚动位置超出范围或条件不满足，保持当前位置', source: 'NoteListView');
+              if (offsetToRestore != null && _scrollController.hasClients) {
+                final pos = _safeScrollPosition;
+                if (pos != null && offsetToRestore <= pos.maxScrollExtent) {
+                  _scrollController.animateTo(
+                    offsetToRestore,
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                  );
+                  logDebug(
+                    '平滑恢复滚动位置: $offsetToRestore',
+                    source: 'NoteListView',
+                  );
+                } else {
+                  logDebug('滚动位置超出范围或条件不满足，保持当前位置', source: 'NoteListView');
+                }
               }
             });
           }

@@ -1929,6 +1929,7 @@
   "aiProviderOllama": "장차 ~ 가 되는",
   "aiProviderLMStudio": "LM스튜디오",
   "apiKeyStatusEmpty": "비어 있는",
+  "apiKeyStatusRedacted": "[REDACTED]",
   "apiKeyStatusNotEmpty": "{length} characters",
   "@apiKeyStatusNotEmpty": {
     "placeholders": {
@@ -3515,6 +3516,7 @@
   "emptyTrashConfirmation": "휴지통의 모든 노트를 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
   "noteMovedToTrash": "노트가 휴지통으로 이동되었습니다. 휴지통에서 복원할 수 있습니다",
   "noteRestored": "노트가 복원되었습니다",
+  "undoDelete": "실행 취소",
   "trashEmptied": "휴지통을 비웠습니다",
   "deletedAt": "삭제됨: {date}",
   "@deletedAt": {

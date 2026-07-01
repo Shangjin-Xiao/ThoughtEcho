@@ -1,10 +1,16 @@
 {
   "@@locale": "zh",
+  "smartPushPeriodEarlyMorning": "清晨",
+  "smartPushPeriodMorning": "上午",
+  "smartPushPeriodNoon": "中午",
+  "smartPushPeriodAfternoon": "下午",
+  "smartPushPeriodEvening": "晚上",
+  "smartPushPeriodNight": "夜间",
   "settingsSentryTitle": "发送诊断数据帮助改进",
   "settingsSentryDesc": "默认关闭。手动开启后将发送错误堆栈、设备信息、页面、普通网络请求与主数据库性能数据。不会接入 AI 请求；数据库仅记录 SQL 模板和耗时，不发送笔记内容或查询参数。",
   "sentryRestartHint": "设置已保存，重启应用后生效",
-  "sentryDisclosureTitle": "加入诊断与性能上报",
-  "sentryDisclosureMessage": "为了定位崩溃与性能问题，心迹集成了 Sentry 诊断服务。开启后会发送错误堆栈、设备信息、页面、普通网络请求与主数据库性能数据。不会接入 AI 请求；数据库仅记录 SQL 模板和耗时，不发送笔记内容或查询参数。\n\n为了保护您的隐私，该功能默认关闭。您可以在“设置 -> 反馈与联系”中随时开启或关闭。",
+  "sentryDisclosureTitle": "隐私政策已更新",
+  "sentryDisclosureMessage": "心迹隐私政策已更新，您可以在官网查看。\n\n本次更新加入了 Sentry 以收集崩溃错误与用户反馈，为保护您的隐私，该功能默认关闭。您可以在“设置 -> 反馈与联系”中随时开启。\n\n隐私政策链接：https://note.shangjinyun.cn/privacy",
   "sentryDisclosureGotIt": "我知道了",
   "appTitle": "心迹",
   "draftRestored": "已自动恢复未保存的草稿",
@@ -138,8 +144,9 @@
   "settingsSyncDesc": "与附近设备同步笔记数据",
   "settingsAbout": "关于 心迹 (ThoughtEcho)",
   "settingsAboutSlogan": "你的专属灵感摘录本",
-  "settingsViewSource": "查看项目源码 (GitHub)",
+  "settingsViewSource": "查看项目源码",
   "settingsVisitWebsite": "访问官网",
+  "settingsPrivacyPolicy": "隐私政策",
   "settingsFeedback": "反馈建议",
   "settingsContactDeveloper": "联系开发者",
   "feedbackAndContact": "反馈与联系",
@@ -1738,7 +1745,7 @@
     }
   },
   "noFavoritesInPeriod": "本周期暂无喜爱记录，去给喜欢的笔记点个心吧！",
-  "mostFavoritedInPeriod": "本周期收藏最多",
+  "mostFavoritedInPeriod": "本周期珍藏数最多",
   "recentNotes": "最近笔记",
   "noNotesInPeriodForPeriod": "本{period}暂无笔记",
   "@noNotesInPeriodForPeriod": {
@@ -2013,6 +2020,7 @@
   "aiProviderOllamaCloud": "Ollama 云端",
   "aiProviderLMStudio": "LMStudio",
   "apiKeyStatusEmpty": "空",
+  "apiKeyStatusRedacted": "[REDACTED]",
   "apiKeyStatusNotEmpty": "{length}字符",
   "@apiKeyStatusNotEmpty": {
     "placeholders": {
@@ -3593,6 +3601,14 @@
   "testReportTitle": "=== 手动API密钥测试报告 ===",
   "testParamsLabel": "测试参数:",
   "keyFormatCheckLabel": "密钥格式检查:",
+  "testApiKeyPrefixLabel": "  API Key前缀: {prefix}",
+  "@testApiKeyPrefixLabel": {
+    "placeholders": {
+      "prefix": {
+        "type": "String"
+      }
+    }
+  },
   "sendRequestLabel": "发送请求:",
   "responseResultLabel": "响应结果:",
   "testApiKey": "测试API密钥",
@@ -3642,6 +3658,7 @@
   "emptyTrashConfirmation": "确定要清空整个回收站吗？所有笔记将被永久删除且无法恢复。",
   "noteMovedToTrash": "笔记已移至回收站，可在回收站恢复",
   "noteRestored": "笔记已恢复",
+  "undoDelete": "撤销",
   "trashEmptied": "回收站已清空",
   "deletedAt": "删除于 {date}",
   "@deletedAt": {
@@ -3712,6 +3729,8 @@
   "webdavEnableSync": "启用云同步",
   "webdavSaveAndSync": "保存并同步",
   "webdavHowToGetAppPassword": "如何获取应用密码？",
+  "webdavShowPasswordTooltip": "显示密码",
+  "webdavHidePasswordTooltip": "隐藏密码",
   "webdavOpenHelpFailed": "无法打开帮助链接，请检查系统默认浏览器设置",
   "webdavConflictCategoryName": "同步冲突",
   "webdavConflictNotePrefix": "[冲突备份] ",
@@ -3991,5 +4010,35 @@
   "saveBeforeAiAssistant": "进入 AI 助手前需先保存当前笔记内容",
   "saveAndContinue": "保存并继续",
   "toggleAddLocation": "添加位置",
-  "toggleAddWeather": "添加天气"
+  "toggleAddWeather": "添加天气",
+  "webdavDisableSyncSuccess": "已关闭 WebDAV 云同步。本地数据完全保留。",
+  "webdavDisableSync": "关闭并停用云同步",
+  "webdavGoToResolve": "去处理",
+  "webdavNoConflicts": "没有检测到冲突笔记",
+  "webdavAllConflictsResolved": "您的所有同步冲突均已处理干净。",
+  "webdavProviderNutstore": "坚果云 (Nutstore)",
+  "webdavProviderCustom": "自定义 (Custom)",
+  "webdavProviderNextcloud": "Nextcloud / ownCloud",
+  "webdavProviderInfinicloud": "InfiniCLOUD",
+  "webdavProviderConfig": "服务商配置",
+  "webdavServerUrlEmptyError": "请输入 WebDAV 服务器地址",
+  "webdavServerUrlInvalidError": "地址必须以 http:// 或 https:// 开头",
+  "webdavUsernameEmptyError": "请输入用户名",
+  "webdavPasswordEmptyError": "请输入应用密码",
+  "webdavSyncStrategy": "同步策略",
+  "webdavStatusNotEnabled": "未启用云同步",
+  "webdavStatusNotEnabledDesc": "配置您的 WebDAV 服务，享受安全跨端多路同步。",
+  "webdavStatusSyncingDesc": "正在安全比对合并云端与本地数据库文件...",
+  "webdavStatusRunning": "云同步运行中",
+  "webdavStatusRunningDesc": "已与云端网盘建立加密合并管道。\n上次同步：{time}",
+  "@webdavStatusRunningDesc": {"placeholders": {"time": {"type": "String"}}},
+  "webdavStatusException": "同步出现异常",
+  "webdavStatusExceptionDesc": "网络通信或云盘文件锁冲突。我们将自动重试。",
+  "webdavStatusEnabled": "云同步已启用",
+  "webdavStatusEnabledDesc": "服务就绪。上次同步：{time}",
+  "@webdavStatusEnabledDesc": {"placeholders": {"time": {"type": "String"}}},
+  "webdavNeverSynced": "从未同步",
+  "webdavNeverSucceeded": "从未成功",
+  "webdavConflictPrompt": "检测到有 {count} 篇同步冲突备份，建议立即处理。",
+  "@webdavConflictPrompt": {"placeholders": {"count": {"type": "int"}}}
 }

@@ -314,6 +314,9 @@ extension SmartPushExecution on SmartPushService {
 
         // 记录推送历史（避免重复推送，测试模式也不记录）
         if (!isDailyQuote && noteToShow.id != null && !isTest) {
+          if (_settings.pushMode == PushMode.smart) {
+            _markNotePushedToday(noteToShow.id!);
+          }
           final updatedSettings = _settings.addPushedNoteId(noteToShow.id!);
           await _saveSettingsQuietly(updatedSettings);
         }

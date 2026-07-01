@@ -28,6 +28,8 @@ import 'unit/services/database_health_security_test.dart'
     as database_health_security_test;
 import 'unit/services/database_multi_tag_filter_test.dart'
     as database_multi_tag_filter_test;
+import 'unit/services/database_pagination_test.dart'
+    as database_pagination_test;
 import 'unit/services/location_format_test.dart' as location_format_test;
 import 'unit/services/log_service_adapter_test.dart'
     as log_service_adapter_test;
@@ -74,6 +76,7 @@ import 'unit/utils/stream_file_selector_test.dart' as stream_file_selector_test;
 import 'unit/utils/safe_compute_test.dart' as safe_compute_test;
 import 'unit/utils/streaming_json_parser_test.dart'
     as streaming_json_parser_test;
+import 'unit/utils/svg_test_helper_test.dart' as svg_test_helper_test;
 import 'unit/widgets/anniversary_animation_overlay_test.dart'
     as anniversary_animation_overlay_test;
 import 'unit/widgets/anniversary_notebook_icon_test.dart'
@@ -112,6 +115,7 @@ void main() {
       ai_analysis_service_test.main();
       database_health_security_test.main();
       database_multi_tag_filter_test.main();
+      database_pagination_test.main();
       log_service_adapter_test.main();
       mdns_discovery_service_test.main();
       smart_push_security_test.main();
@@ -144,6 +148,7 @@ void main() {
       stream_file_selector_test.main();
       safe_compute_test.main();
       streaming_json_parser_test.main();
+      svg_test_helper_test.main();
       anniversary_animation_overlay_test.main();
       anniversary_notebook_icon_test.main();
       motion_photo_preview_page_test.main();

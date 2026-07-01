@@ -23,10 +23,10 @@ class AppConstants {
   /// 默认分页大小
   static const int defaultPageSize = 20;
 
-  /// 滚动预加载阈值（65%）
-  /// 当滚动到列表的65%时开始预加载下一页
-  /// 提前预加载可避免用户滚动到底部时等待加载
-  static const double scrollPreloadThreshold = 0.65;
+  /// 滚动预加载阈值（35%）
+  /// 当滚动到当前已加载列表的35%时开始预加载下一页。
+  /// 记录页单页只有 20 条，较早补页可避免快速滑动时撞到分页边界等待。
+  static const double scrollPreloadThreshold = 0.35;
 
   // ==================== 动画时间常量 ====================
 

@@ -1929,6 +1929,7 @@
   "aiProviderOllama": "Ollama",
   "aiProviderLMStudio": "LMStudio",
   "apiKeyStatusEmpty": "空",
+  "apiKeyStatusRedacted": "[REDACTED]",
   "apiKeyStatusNotEmpty": "{length}文字",
   "@apiKeyStatusNotEmpty": {
     "placeholders": {
@@ -3515,6 +3516,7 @@
   "emptyTrashConfirmation": "ゴミ箱内のすべてのノートを完全に削除しますか？この操作は取り消せません。",
   "noteMovedToTrash": "ノートをゴミ箱に移動しました。ゴミ箱から復元できます",
   "noteRestored": "ノートを復元しました",
+  "undoDelete": "元に戻す",
   "trashEmptied": "ゴミ箱を空にしました",
   "deletedAt": "削除日: {date}",
   "@deletedAt": {

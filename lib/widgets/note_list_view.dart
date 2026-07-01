@@ -132,12 +132,26 @@ class NoteListViewState extends State<NoteListView> {
   GlobalKey? _positioningItemKey;
   int _positioningRequest = 0;
 
-  /// 保存/修改笔记后高亮目标卡片的 ID，650ms 动画完成后自动清除
-  String? _highlightedQuoteId;
-  Timer? _highlightTimer;
+  /// 保存/修改笔记后触发入场动画的 ID 计数。
+  /// 同一 ID 的动画进行中时保持当前版本，避免保存回流重复触发造成闪烁。
+  final Map<String, int> _animatingQuoteVersions = {};
+  final Set<String> _structuralInsertQuoteIds = {};
+  final Map<String, Timer> _animationTimers = {};
+  static const Duration _noteInsertAnimationDuration =
+      Duration(milliseconds: 250);
+  static const Duration _noteUpdateAnimationCleanupDelay =
+      Duration(milliseconds: 300);
+  static const Duration _pendingInsertAnimationCleanupDelay =
+      Duration(milliseconds: 1500);
+
+  /// 删除笔记时触发缩小渐隐动画的 ID 集合
+  final Set<String> _deletingQuoteIds = {};
 
   /// 事件驱动：首批数据加载完成信号，替代忙等轮询
   Completer<void>? _initialDataCompleter = Completer<void>();
+
+  /// 安全超时：防止首次加载永久卡在加载动画
+  Timer? _initialLoadSafetyTimer;
 
   // PDF 导出选择模式状态
   bool _isExportMode = false;
@@ -165,10 +179,13 @@ class NoteListViewState extends State<NoteListView> {
   Timer? _searchDebounceTimer;
 
   // 搜索过渡动画状态：搜索开始时置 true 让列表轻微变淡提示"更新中"，
-  // 搜索结果到达后置 false 恢复。配合 AnimatedOpacity 实现 200ms 淡入淡出，
-  // 替代旧方案中"列表瞬间清空再填充"的硬切换闪烁。
+  // 搜索结果到达后置 false 恢复。配合 AnimatedOpacity 实现 200ms 淡入淡出。
+  // _searchDimTimer：延迟 120ms 再变淡，避免快速搜索（< 120ms）触发不必要的闪烁。
   bool _isSearchUpdating = false;
   Timer? _searchUpdatingTimer;
+  Timer? _searchDimTimer; // 延迟变淡，防止快速搜索结果回来之前列表闪烁
+  int _searchTimeoutVersion = 0; // 超时 SnackBar 版本号，过期不弹
+  int _resultsVersion = 0; // 结果版本号，results→results 切换时驱动 AnimatedSwitcher 淡入淡出
   // ---- 自动滚动控制新增状态 ----
   bool _initialDataLoaded = false; // 标记是否已收到首批数据（后续用于启用自动滚动）
   bool _isAutoScrolling = false; // 当前是否有程序驱动的滚动动画
@@ -268,6 +285,17 @@ class NoteListViewState extends State<NoteListView> {
 
   bool get hasExpandableQuote => _hasExpandableQuoteCached;
 
+  /// 安全地获取 ScrollPosition：仅当控制器恰好附加了 1 个 ScrollPosition 时才返回，
+  /// 避免多个 client 同时挂载时 `.position` 抛出 "Bad state: Too many elements"。
+  ScrollPosition? get _safeScrollPosition {
+    final positions = _scrollController.positions;
+    if (positions.length != 1) return null;
+    return positions.first;
+  }
+
+  /// 安全地获取当前滚动偏移量，不可用时返回 null。
+  double? get _safeScrollOffset => _safeScrollPosition?.pixels;
+
   bool get isFilterGuideReady =>
       widget.filterButtonKey != null &&
       widget.filterButtonKey!.currentContext != null &&
@@ -359,12 +387,22 @@ class NoteListViewState extends State<NoteListView> {
     logDebug('搜索框焦点状态: ${_searchFocusNode.hasFocus}');
   }
 
+  /// 释放搜索框焦点，并清掉当前 FocusScope 的历史焦点。
+  ///
+  /// 首页弹出非全屏编辑器后，关闭弹窗时路由可能恢复到之前的搜索框焦点；
+  /// 使用 scope disposition 可以避免搜索框被重新聚焦并拉起输入法。
+  void unfocusSearchField() {
+    if (!_searchFocusNode.hasFocus) return;
+    _searchFocusNode.unfocus(disposition: UnfocusDisposition.scope);
+  }
+
   /// 滚动监听器，用于检测用户滑动状态
   void _onScroll() {
     if (!mounted || !_scrollController.hasClients) return;
 
     // 性能优化：增加阈值判断，避免微小滚动触发逻辑
-    final currentOffset = _scrollController.offset;
+    final currentOffset = _safeScrollOffset;
+    if (currentOffset == null) return;
     if ((currentOffset - _lastScrollOffset).abs() < _scrollThreshold) {
       return;
     }
@@ -493,6 +531,7 @@ class NoteListViewState extends State<NoteListView> {
       // 更新流订阅，传入是否仅为排序变化
       _updateStreamSubscription(
         preserveScrollPosition: isOnlySortChange || isSearchChange,
+        isSearchUpdate: isSearchChange,
       );
     } else if (shouldUpdate) {
       logDebug('跳过更新：数据尚未完成首次加载', source: 'NoteListView');
@@ -564,11 +603,17 @@ class NoteListViewState extends State<NoteListView> {
     }
     _searchDebounceTimer?.cancel(); // 清理防抖定时器
     _searchUpdatingTimer?.cancel(); // 清理搜索过渡动画安全定时器
+    _searchDimTimer?.cancel(); // 清理延迟变淡定时器
+    _initialLoadSafetyTimer?.cancel(); // 清理首次加载安全超时
     _firstOpenScrollStopTimer?.cancel();
     _loadMorePerfStopTimer?.cancel();
     _loadMoreSettleTimer?.cancel();
     _scrollSessionPerfStopTimer?.cancel();
-    _highlightTimer?.cancel(); // 清理高亮定时器
+    // 清理动画定时器
+    for (final timer in _animationTimers.values) {
+      timer.cancel();
+    }
+    _animationTimers.clear();
 
     if (_perfTimingsCallbackAttached) {
       WidgetsBinding.instance.removeTimingsCallback(_collectFrameTimings);
@@ -603,15 +648,45 @@ class NoteListViewState extends State<NoteListView> {
     _loadMore();
   }
 
-  /// 触发指定 ID 的笔记卡片出现/更新动画（保存/修改后调用）。
-  /// 动画时长 250ms，300ms 后自动清除状态以保证性能。
-  void highlightNote(String id) {
+  /// 触发指定 ID 的笔记卡片入场/更新动画（保存/修改/撤销恢复后调用）。
+  /// 空闲时递增版本号；同一 ID 的保存动画进行中时忽略重复触发。
+  /// 对仍在待入场窗口内的结构性插入，允许重启动画，用于删除后快速撤销。
+  /// 新增笔记可能需要等待数据流返回，保留较长的待入场窗口；更新已有笔记
+  /// 则在动画结束后快速清除状态，保证下一次保存仍可播放。
+  void triggerInsertAnimation(String id, {bool? animateListInsertion}) {
     if (!mounted) return;
-    _highlightTimer?.cancel();
-    setState(() => _highlightedQuoteId = id);
-    _highlightTimer = Timer(const Duration(milliseconds: 300), () {
+    final shouldAnimateListInsertion =
+        animateListInsertion ?? !_quotes.any((quote) => quote.id == id);
+    final hasPendingStructuralInsert = _structuralInsertQuoteIds.contains(id);
+    if (_animatingQuoteVersions.containsKey(id) &&
+        !shouldAnimateListInsertion &&
+        !hasPendingStructuralInsert) {
+      return;
+    }
+
+    _animationTimers[id]?.cancel();
+    final nextVersion = (_animatingQuoteVersions[id] ?? 0) + 1;
+    setState(() {
+      _animatingQuoteVersions[id] = nextVersion;
+      if (shouldAnimateListInsertion) {
+        _structuralInsertQuoteIds.add(id);
+      } else {
+        _structuralInsertQuoteIds.remove(id);
+      }
+    });
+    final cleanupDelay = shouldAnimateListInsertion
+        ? _pendingInsertAnimationCleanupDelay
+        : _noteUpdateAnimationCleanupDelay;
+    _animationTimers[id] = Timer(cleanupDelay, () {
       if (mounted) {
-        setState(() => _highlightedQuoteId = null);
+        if (_animatingQuoteVersions[id] != nextVersion) {
+          return;
+        }
+        setState(() {
+          _animatingQuoteVersions.remove(id);
+          _structuralInsertQuoteIds.remove(id);
+          _animationTimers.remove(id);
+        });
       }
     });
   }
@@ -621,15 +696,31 @@ class NoteListViewState extends State<NoteListView> {
 
     // ── 阶段 1: 事件驱动等待首批数据（取代忙等轮询）──
     if (!_initialDataLoaded) {
+      // completer 为 null 说明数据流尚未启动（initState 的 postFrameCallback 还没执行），
+      // 短暂轮询等待，最多 500ms；之后 completer 会被创建或数据已加载完毕。
+      if (_initialDataCompleter == null) {
+        const maxWaitMs = 500;
+        const stepMs = 50;
+        for (var waited = 0;
+            waited < maxWaitMs &&
+                mounted &&
+                !_initialDataLoaded &&
+                _initialDataCompleter == null;
+            waited += stepMs) {
+          await Future<void>.delayed(const Duration(milliseconds: stepMs));
+        }
+      }
+      if (!mounted) return false;
       final completer = _initialDataCompleter;
-      if (completer != null && !completer.isCompleted) {
+      if (!_initialDataLoaded && completer != null && !completer.isCompleted) {
         try {
+          // 超时后返回 false，由 home_page 的重试机制（250ms 间隔）重新尝试。
           await completer.future.timeout(
             const Duration(seconds: 5),
           );
         } on TimeoutException {
           logDebug(
-            'scrollToQuoteById 放弃：首次数据加载超时',
+            'scrollToQuoteById 超时（数据流尚未就绪），将由调用方重试',
             source: 'NoteListView',
           );
           return false;
@@ -656,11 +747,29 @@ class NoteListViewState extends State<NoteListView> {
         _isInitializing = false;
         _isUserScrolling = false;
 
-        return _positionAndAlignQuote(
+        final result = await _positionAndAlignQuote(
           quoteId,
           index,
           forceAlignToTop: true,
         );
+
+        // 定位完成后重置加载门控并主动预加载后续页面，
+        // 确保目标笔记下方不出现留白。
+        if (mounted && _hasMore) {
+          _resetLoadMoreGate();
+          if (_isLoading) {
+            _updateState(() {
+              _isLoading = false;
+            });
+          }
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _hasMore && !_isLoading) {
+              _loadMore();
+            }
+          });
+        }
+
+        return result;
       }
 
       // 目标不在已加载范围内，等待或加载更多

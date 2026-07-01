@@ -21,6 +21,8 @@ extension SmartPushContentSelection on SmartPushService {
     AppLogger.w(
       '智能选择：数据库查询完成 (总笔记数: ${allNotes.length})',
     );
+    final todayPushedIds = _getTodayPushedNoteIds();
+    final contentTypeScores = await _analytics.getContentTypeScores();
 
     if (allNotes.isEmpty) {
       // 没有任何笔记时，回退到每日一言
@@ -42,6 +44,7 @@ extension SmartPushContentSelection on SmartPushService {
       candidates: allNotes,
       now: now,
       recentlyPushedIds: _settings.recentlyPushedNoteIds.toSet(),
+      todayPushedIds: todayPushedIds,
     );
 
     SmartPushFilterResult filterResult;
@@ -85,13 +88,20 @@ extension SmartPushContentSelection on SmartPushService {
       availableContent['yearAgoToday'] = _ContentCandidate(
         note: note,
         title: pickYearAgoTodayTitle(_random, years),
-        priority: 100, // 最高优先级
+        priority: scoreSmartPushCandidate(
+          basePriority: 100,
+          note: note,
+          contentTypeScore: contentTypeScores['yearAgoToday'] ?? 0.5,
+        ).round(),
       );
     }
 
     // 2. 相同地点的笔记（动态 priority）
     if (sameLocationNotes.isNotEmpty) {
-      final note = _selectUnpushedNote(sameLocationNotes);
+      final note = _selectUnpushedNote(
+        sameLocationNotes,
+        strictExcludedIds: todayPushedIds,
+      );
       if (note != null) {
         final locationPriority = calcLocationPriority(
           sameLocationNotes.length,
@@ -100,7 +110,11 @@ extension SmartPushContentSelection on SmartPushService {
         availableContent['sameLocation'] = _ContentCandidate(
           note: note,
           title: pickSameLocationTitle(_random),
-          priority: locationPriority,
+          priority: scoreSmartPushCandidate(
+            basePriority: locationPriority,
+            note: note,
+            contentTypeScore: contentTypeScores['sameLocation'] ?? 0.5,
+          ).round(),
         );
       }
     }
@@ -120,27 +134,43 @@ extension SmartPushContentSelection on SmartPushService {
       availableContent['monthAgoToday'] = _ContentCandidate(
         note: note,
         title: title,
-        priority: 70,
+        priority: scoreSmartPushCandidate(
+          basePriority: 70,
+          note: note,
+          contentTypeScore: contentTypeScores['monthAgoToday'] ?? 0.5,
+        ).round(),
       );
     }
 
     // 4. 上周今日
     if (filterResult.selectedWeekAgo != null) {
+      final note = filterResult.selectedWeekAgo!;
       availableContent['weekAgoToday'] = _ContentCandidate(
-        note: filterResult.selectedWeekAgo!,
+        note: note,
         title: pickWeekAgoTodayTitle(_random),
-        priority: 55,
+        priority: scoreSmartPushCandidate(
+          basePriority: 55,
+          note: note,
+          contentTypeScore: contentTypeScores['weekAgoToday'] ?? 0.5,
+        ).round(),
       );
     }
 
     // 5. 相同天气的笔记
     if (sameWeatherNotes.isNotEmpty) {
-      final note = _selectUnpushedNote(sameWeatherNotes);
+      final note = _selectUnpushedNote(
+        sameWeatherNotes,
+        strictExcludedIds: todayPushedIds,
+      );
       if (note != null) {
         availableContent['sameWeather'] = _ContentCandidate(
           note: note,
           title: '🌤️ 同样的天气',
-          priority: 40,
+          priority: scoreSmartPushCandidate(
+            basePriority: 40,
+            note: note,
+            contentTypeScore: contentTypeScores['sameWeather'] ?? 0.5,
+          ).round(),
         );
       }
     }
@@ -170,7 +200,11 @@ extension SmartPushContentSelection on SmartPushService {
       fallbackContent['sameTimeOfDay'] = _ContentCandidate(
         note: note,
         title: title,
-        priority: 20, // 最低优先级
+        priority: scoreSmartPushCandidate(
+          basePriority: 20,
+          note: note,
+          contentTypeScore: contentTypeScores['sameTimeOfDay'] ?? 0.5,
+        ).round(),
       );
     }
 
@@ -259,11 +293,15 @@ extension SmartPushContentSelection on SmartPushService {
   }
 
   /// 从候选列表中选择未被推送过的笔记
-  Quote? _selectUnpushedNote(List<Quote> candidates) {
+  Quote? _selectUnpushedNote(
+    List<Quote> candidates, {
+    Set<String> strictExcludedIds = const {},
+  }) {
     return selectUnpushedNote(
       candidates,
       _settings.recentlyPushedNoteIds.toSet(),
       _random,
+      strictExcludedIds: strictExcludedIds,
     );
   }
 

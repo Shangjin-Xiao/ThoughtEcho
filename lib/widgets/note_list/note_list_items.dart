@@ -9,6 +9,9 @@ extension _NoteListItemsExtension on NoteListViewState {
     _firstOpenScrollPerfEnabled = context.select<SettingsService, bool>(
       (s) => s.appSettings.developerMode && s.enableFirstOpenScrollPerfMonitor,
     );
+    final noteInsertAnimationType = context.select<SettingsService, String>(
+      (s) => s.noteInsertAnimationType,
+    );
     if (_firstOpenScrollPerfEnabled) {
       _noteListBuildCount++;
     }
@@ -192,7 +195,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                             child: child,
                           );
                         },
-                        child: _buildNoteList(theme),
+                        child: _buildNoteList(theme, noteInsertAnimationType),
                       ),
                     ),
                   ),
@@ -363,7 +366,7 @@ extension _NoteListItemsExtension on NoteListViewState {
     );
   }
 
-  Widget _buildNoteList(ThemeData theme) {
+  Widget _buildNoteList(ThemeData theme, String noteInsertAnimationType) {
     final l10n = AppLocalizations.of(context);
     // key 拆分，避免状态内输入时由于 searchQuery 改变导致 AnimatedSwitcher 触发不必要闪烁：
     // • loadingKey 用于加载态的 Key
@@ -375,7 +378,7 @@ extension _NoteListItemsExtension on NoteListViewState {
     final loadingKey = ValueKey('${filterBase}_loading');
     final emptyKey = ValueKey('${filterBase}_empty');
     final noResultsKey = ValueKey('${filterBase}_no_results');
-    final resultsKey = ValueKey('${filterBase}_results');
+    final resultsKey = ValueKey('${filterBase}_results_$_resultsVersion');
 
     // 仅在服务初始化或首批笔记尚未返回时显示 loading。
     // 本地 SQLite 搜索通常 < 100 ms，不单独显示搜索加载动画；
@@ -393,30 +396,36 @@ extension _NoteListItemsExtension on NoteListViewState {
     if (_quotes.isEmpty && widget.searchQuery.isNotEmpty) {
       return Center(
         key: noResultsKey,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final size = (constraints.maxHeight * 0.5).clamp(80.0, 220.0);
-                return EnhancedLottieAnimation(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 32),
+              SizedBox(
+                width: 180,
+                height: 180,
+                child: EnhancedLottieAnimation(
                   type: LottieAnimationType.notFound,
-                  width: size,
-                  height: size,
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            Text(
-              l10n.noteSearchEmptyTitle,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.noteSearchEmptySubtitle,
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ],
+                  width: 180,
+                  height: 180,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l10n.noteSearchEmptyTitle,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.noteSearchEmptySubtitle,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
       );
     }
@@ -428,6 +437,10 @@ extension _NoteListItemsExtension on NoteListViewState {
     // 优化：提前创建标签映射，避免在 item builder 中重复计算
     // 将整体复杂度从 O(L * T) 优化为 O(L + T)，其中构建映射为 O(L)，每次查找为 O(1)
     final tagMap = {for (var t in _effectiveTags) t.id: t};
+    final rowIndexByKey = <String, int>{
+      for (var i = 0; i < _quotes.length; i++)
+        if (_quotes[i].id case final id?) 'note-list-row-$id': i,
+    };
 
     return NotificationListener<ScrollNotification>(
       key: resultsKey,
@@ -498,6 +511,12 @@ extension _NoteListItemsExtension on NoteListViewState {
       child: BackdropGroup(
         child: ListView.builder(
           controller: _scrollController, // 添加滚动控制器
+          findChildIndexCallback: (key) {
+            if (key is ValueKey<String>) {
+              return rowIndexByKey[key.value];
+            }
+            return null;
+          },
           physics: const AlwaysScrollableScrollPhysics(),
           addAutomaticKeepAlives: true, // 保持默认：图片组件依赖 keepAlive 避免重加载闪烁
           addRepaintBoundaries: true, // 性能优化：减少重绘范围
@@ -524,7 +543,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                   final quoteId = quote.id!;
                   final itemKey = quoteId == _positioningQuoteId
                       ? _positioningItemKey
-                      : ValueKey<String>('note-list-item-$quoteId');
+                      : ValueKey<String>('note-list-row-$quoteId');
 
                   final bool shouldCheckExpansionForGuide =
                       !foldGuideAssigned && widget.foldToggleGuideKey != null;
@@ -559,78 +578,104 @@ extension _NoteListItemsExtension on NoteListViewState {
 
                   final isSelected = _selectedExportNoteIds.contains(quoteId);
 
-                  Widget itemWidget = KeyedSubtree(
-                    key: itemKey,
-                    child: ValueListenableBuilder<bool>(
-                      valueListenable: expansionNotifier,
-                      builder: (context, isExpanded, child) => QuoteItemWidget(
-                        quote: quote,
-                        tagMap: tagMap,
-                        selectedTagIds: widget.selectedTagIds,
-                        isExpanded: isExpanded,
-                        isSelected: isSelected,
-                        selectionMode: _isExportMode,
-                        isHighlighted: quoteId == _highlightedQuoteId,
-                        onToggleExpanded: (expanded) {
-                          if (expansionNotifier.value != expanded) {
-                            expansionNotifier.value = expanded;
-                          }
-                          _expandedItems[quoteId] = expanded;
+                  final insertAnimationVersion =
+                      _animatingQuoteVersions[quoteId];
+                  final isStructuralInsert =
+                      _structuralInsertQuoteIds.contains(quoteId);
 
-                          final bool requiresAlignment =
-                              QuoteItemWidget.needsExpansionFor(quote);
+                  Widget itemWidget = ValueListenableBuilder<bool>(
+                    valueListenable: expansionNotifier,
+                    builder: (context, isExpanded, child) => QuoteItemWidget(
+                      quote: quote,
+                      tagMap: tagMap,
+                      selectedTagIds: widget.selectedTagIds,
+                      isExpanded: isExpanded,
+                      isSelected: isSelected,
+                      selectionMode: _isExportMode,
+                      onToggleExpanded: (expanded) {
+                        if (expansionNotifier.value != expanded) {
+                          expansionNotifier.value = expanded;
+                        }
+                        _expandedItems[quoteId] = expanded;
 
-                          if (!expanded && requiresAlignment) {
-                            final waitDuration =
-                                QuoteItemWidget.expandCollapseDuration +
-                                    const Duration(milliseconds: 80);
-                            Future.delayed(waitDuration, () {
+                        final bool requiresAlignment =
+                            QuoteItemWidget.needsExpansionFor(quote);
+
+                        if (!expanded && requiresAlignment) {
+                          final waitDuration =
+                              QuoteItemWidget.expandCollapseDuration +
+                                  const Duration(milliseconds: 80);
+                          Future.delayed(waitDuration, () {
+                            if (!mounted) return;
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
                               if (!mounted) return;
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (!mounted) return;
-                                unawaited(
-                                  _positionAndAlignQuote(
-                                    quoteId,
-                                    index,
-                                    forceAlignToTop: false,
-                                  ),
-                                );
-                              });
+                              unawaited(
+                                _positionAndAlignQuote(
+                                  quoteId,
+                                  index,
+                                  forceAlignToTop: false,
+                                ),
+                              );
                             });
-                          }
-                        },
-                        onEdit: () => widget.onEdit(quote),
-                        onDelete: () => widget.onDelete(quote),
-                        onAskAI: () => widget.onAskAI(quote),
-                        onGenerateCard: widget.onGenerateCard != null
-                            ? () => widget.onGenerateCard!(quote)
-                            : null,
-                        onExportPdf: () {
-                          HapticFeedback.selectionClick();
-                          _updateState(() {
-                            _isExportMode = true;
-                            _selectedExportNoteIds.clear();
-                            if (quote.id != null) {
-                              _selectedExportNoteIds.add(quote.id!);
-                            }
                           });
-                        },
-                        onFavorite: widget.onFavorite != null
-                            ? () => widget.onFavorite!(quote)
-                            : null,
-                        onLongPressFavorite: widget.onLongPressFavorite != null
-                            ? () => widget.onLongPressFavorite!(quote)
-                            : null,
-                        favoriteButtonGuideKey: attachFavoriteGuideKey
-                            ? widget.favoriteButtonGuideKey
-                            : null,
-                        moreButtonGuideKey: attachMoreGuideKey
-                            ? widget.moreButtonGuideKey
-                            : null,
-                        foldToggleGuideKey: attachFoldGuideKey
-                            ? widget.foldToggleGuideKey
-                            : null,
-                      ),
+                        }
+                      },
+                      onEdit: () => widget.onEdit(quote),
+                      onDelete: () {
+                        if (quoteId.isNotEmpty) {
+                          if (_deletingQuoteIds.contains(quoteId)) {
+                            return;
+                          }
+                          _updateState(() {
+                            _deletingQuoteIds.add(quoteId);
+                          });
+                          // 等动画播完（250ms）+ 50ms 余量再执行真正的删除。
+                          // 先从本地列表乐观移除，避免 stream 更新时的视觉跳动。
+                          Future.delayed(
+                            const Duration(milliseconds: 280),
+                            () {
+                              if (mounted) {
+                                _updateState(() {
+                                  _quotes.removeWhere(
+                                    (q) => q.id == quoteId,
+                                  );
+                                  _deletingQuoteIds.remove(quoteId);
+                                });
+                              }
+                              widget.onDelete(quote);
+                            },
+                          );
+                        } else {
+                          widget.onDelete(quote);
+                        }
+                      },
+                      onAskAI: () => widget.onAskAI(quote),
+                      onGenerateCard: widget.onGenerateCard != null
+                          ? () => widget.onGenerateCard!(quote)
+                          : null,
+                      onExportPdf: () {
+                        HapticFeedback.selectionClick();
+                        _updateState(() {
+                          _isExportMode = true;
+                          _selectedExportNoteIds.clear();
+                          if (quote.id != null) {
+                            _selectedExportNoteIds.add(quote.id!);
+                          }
+                        });
+                      },
+                      onFavorite: widget.onFavorite != null
+                          ? () => widget.onFavorite!(quote)
+                          : null,
+                      onLongPressFavorite: widget.onLongPressFavorite != null
+                          ? () => widget.onLongPressFavorite!(quote)
+                          : null,
+                      favoriteButtonGuideKey: attachFavoriteGuideKey
+                          ? widget.favoriteButtonGuideKey
+                          : null,
+                      moreButtonGuideKey:
+                          attachMoreGuideKey ? widget.moreButtonGuideKey : null,
+                      foldToggleGuideKey:
+                          attachFoldGuideKey ? widget.foldToggleGuideKey : null,
                     ),
                   );
                   final keepAliveItem =
@@ -661,19 +706,52 @@ extension _NoteListItemsExtension on NoteListViewState {
                     child: itemWidget,
                   );
 
-                  return _wrapNoteListItemPerfProbe(
-                    quote: quote,
-                    index: index,
+                  final isDeleting = _deletingQuoteIds.contains(quoteId);
+                  itemWidget = AnimatedOpacity(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeInCubic,
+                    opacity: isDeleting ? 0.0 : 1.0,
+                    child: AnimatedSize(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInCubic,
+                      alignment: Alignment.topCenter,
+                      clipBehavior: Clip.hardEdge,
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        heightFactor: isDeleting ? 0.0 : 1.0,
+                        child: itemWidget,
+                      ),
+                    ),
+                  );
+
+                  itemWidget = _wrapNoteInsertAnimation(
+                    quoteId: quoteId,
+                    version: insertAnimationVersion,
+                    animateLayout: isStructuralInsert,
+                    animationType: noteInsertAnimationType,
                     child: itemWidget,
+                  );
+
+                  return KeyedSubtree(
+                    key: itemKey,
+                    child: _wrapNoteListItemPerfProbe(
+                      quote: quote,
+                      index: index,
+                      child: itemWidget,
+                    ),
                   );
                 },
               );
             }
-            // 底部加载指示器
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: AppLoadingView(size: 32),
-            );
+            // 底部加载指示器：仅在主动加载时显示动画，
+            // 空闲态用透明占位确保 itemCount 正确以触发自动加载。
+            if (_isLoading) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: AppLoadingView(size: 32),
+              );
+            }
+            return const SizedBox(height: 48);
           },
         ),
       ),
@@ -700,7 +778,10 @@ extension _NoteListItemsExtension on NoteListViewState {
       return 0;
     }
 
-    final position = _scrollController.positions.first;
+    final position = _safeScrollPosition;
+    if (position == null) {
+      return 0;
+    }
     if (!position.hasContentDimensions) {
       return 0;
     }
@@ -837,17 +918,33 @@ extension _NoteListItemsExtension on NoteListViewState {
     }
   }
 
-  /// 设置搜索过渡动画状态，配合 AnimatedOpacity 实现 200ms 淡入淡出。
-  /// updating=true 时列表轻微变淡提示"更新中"，结果到达后置 false 恢复。
-  /// 内置 800ms 安全定时器，防止 stream 回调丢失导致列表卡在变淡状态。
+  /// 设置搜索过渡动画状态。
+  /// - updating=true：延迟 120ms 再变淡，避免快速搜索（< 120ms 就返回结果）引起闪烁。
+  /// - updating=false：立即取消延迟定时器并恢复透明度。
+  /// - 内置 800ms 安全定时器，防止 stream 回调丢失导致列表卡在变淡状态。
   void _setSearchUpdating(bool updating) {
     if (!mounted) return;
     _searchUpdatingTimer?.cancel();
-    if (_isSearchUpdating == updating) return;
-    _updateState(() {
-      _isSearchUpdating = updating;
-    });
-    if (updating) {
+    if (!updating) {
+      // 立即取消延迟定时器，结果已回来就不需要变淡了
+      _searchDimTimer?.cancel();
+      if (_isSearchUpdating) {
+        _updateState(() {
+          _isSearchUpdating = false;
+        });
+      }
+      return;
+    }
+    // updating=true：延迟 120ms 再变淡
+    _searchDimTimer?.cancel();
+    _searchDimTimer = Timer(const Duration(milliseconds: 120), () {
+      if (!mounted) return;
+      if (!_isSearchUpdating) {
+        _updateState(() {
+          _isSearchUpdating = true;
+        });
+      }
+      // 800ms 安全定时器，防止卡在变淡状态
       _searchUpdatingTimer = Timer(const Duration(milliseconds: 800), () {
         if (mounted && _isSearchUpdating) {
           _updateState(() {
@@ -855,7 +952,7 @@ extension _NoteListItemsExtension on NoteListViewState {
           });
         }
       });
-    }
+    });
   }
 
   /// 优化：执行搜索的统一方法
@@ -864,7 +961,11 @@ extension _NoteListItemsExtension on NoteListViewState {
 
     logDebug('执行搜索: "$value"', source: 'NoteListView');
 
-    // 标记搜索更新中，触发列表淡入淡出过渡动画
+    // 绑定当前搜索版本（超时 SnackBar 用）
+    _searchTimeoutVersion++;
+    final capturedVersion = _searchTimeoutVersion;
+
+    // 标记搜索更新中（延迟 120ms 再变淡，避免快速搜索闪烁）
     _setSearchUpdating(true);
 
     // 如果是非空搜索且长度>=2，通知搜索控制器开始搜索
@@ -883,9 +984,11 @@ extension _NoteListItemsExtension on NoteListViewState {
     // 直接调用父组件的搜索回调
     widget.onSearchChanged(value);
 
-    // 优化：只有在实际搜索时才设置超时保护，使用常量配置的超时时间
+    // 超时保护：绑定版本号，过期的超时不弹提示
     if (value.isNotEmpty && value.length >= AppConstants.minSearchLength) {
       Timer(AppConstants.searchTimeout, () {
+        // 版本号不匹配说明用户已开始搜索其他内容，不弹过期的超时提示
+        if (capturedVersion != _searchTimeoutVersion) return;
         if (mounted && _isLoading) {
           _updateState(() {
             _isLoading = false;
@@ -902,7 +1005,7 @@ extension _NoteListItemsExtension on NoteListViewState {
           }
           logDebug('搜索超时，已重置加载状态');
 
-          // 显示超时提示
+          // 弹超时提示（版本号匹配才弹）
           if (mounted) {
             final l10n = AppLocalizations.of(context);
             ScaffoldMessenger.of(context).showSnackBar(
@@ -1007,6 +1110,57 @@ extension _NoteListItemsExtension on NoteListViewState {
         content: Text(msg),
         duration: const Duration(seconds: 2),
       ),
+    );
+  }
+
+  Widget _wrapNoteInsertAnimation({
+    required String quoteId,
+    required int? version,
+    required bool animateLayout,
+    required String animationType,
+    required Widget child,
+  }) {
+    if (version == null) return child;
+    if (animationType == 'none') return child;
+
+    final isScale = animationType == 'scale';
+
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('note_list_insert_${quoteId}_${animationType}_$version'),
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: NoteListViewState._noteInsertAnimationDuration,
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        if (value >= 0.99) return child!;
+
+        final progress = value.clamp(0.0, 1.0);
+        Widget animatedChild = Opacity(
+          opacity: progress,
+          child: child,
+        );
+
+        animatedChild = isScale
+            ? Transform.scale(
+                alignment: Alignment.topCenter,
+                scale: 0.98 + 0.02 * progress,
+                child: animatedChild,
+              )
+            : Transform.translate(
+                offset: Offset(0, -16.0 * (1.0 - progress)),
+                child: animatedChild,
+              );
+
+        if (!animateLayout) return animatedChild;
+
+        return ClipRect(
+          child: Align(
+            alignment: Alignment.topCenter,
+            heightFactor: progress,
+            child: animatedChild,
+          ),
+        );
+      },
+      child: child,
     );
   }
 

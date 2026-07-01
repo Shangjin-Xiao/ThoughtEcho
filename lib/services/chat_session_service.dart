@@ -48,16 +48,6 @@ class ChatSessionService extends ChangeNotifier {
     }
   }
 
-  /// 获取数据库实例，若数据库尚未就绪则等待
-  ///
-  /// 平台差异（如 Web 内存库）由 DatabaseService 层处理，此处不做短路。
-  Future<Database?> _getDatabase() async {
-    if (_database != null) return _database;
-    // 无限等待数据库就绪，避免超时后静默丢数据
-    await _databaseReady.future;
-    return _database;
-  }
-
   /// 获取数据库实例，带超时限制（仅用于只读查询）
   ///
   /// 超时后返回 null，调用方需自行处理降级逻辑（如返回空列表）。

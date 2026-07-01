@@ -4,20 +4,20 @@ import '../utils/app_logger.dart';
 
 class NoteSearchController extends ChangeNotifier {
   String _searchQuery = '';
-  Timer? _debounceTimer;
+  Timer? _debounceTimer; // 保留字段用于 dispose 清理（updateSearch 不再使用）
   Timer? _timeoutTimer;
-  final int _debounceTime = 300; // 防抖时间：300ms 足以防止过频查询，同时保持响应感
   bool _isSearching = false;
   String? _searchError;
-  int _searchVersion = 0; // 优化：添加搜索版本号，避免过期结果覆盖新结果
+  int _searchVersion = 0; // 搜索版本号，超时保护用
 
   String get searchQuery => _searchQuery;
   bool get isSearching => _isSearching;
   String? get searchError => _searchError;
 
-  /// 更新搜索，带有防抖功能，避免频繁触发搜索操作
+  /// 更新搜索。防抖由调用方（NoteListView）负责，此处立即更新状态，
+  /// 避免双重 300ms 延迟导致列表长时间停留在变淡动画状态。
   void updateSearch(String query) {
-    // 取消之前的延迟操作和超时定时器
+    // 取消可能残留的旧定时器（updateSearchImmediate 等路径可能设置过）
     _debounceTimer?.cancel();
     _timeoutTimer?.cancel();
 
@@ -29,13 +29,13 @@ class NoteSearchController extends ChangeNotifier {
       _searchQuery = '';
       _isSearching = false;
       _searchError = null;
-      _searchVersion++; // 增加版本号
+      _searchVersion++;
       notifyListeners();
       logDebug('搜索控制器: 清空搜索内容', source: 'SearchController');
       return;
     }
 
-    // 优化：只有在查询长度大于1时才开始搜索，避免单字符搜索
+    // 查询长度 < 2 时，只同步文本但不触发实际搜索
     if (query.length < 2) {
       _searchQuery = query;
       _isSearching = false;
@@ -44,47 +44,24 @@ class NoteSearchController extends ChangeNotifier {
       return;
     }
 
-    // 标记开始搜索状态
+    // 立即更新查询并通知监听者（防抖已由 NoteListView 完成）
     _isSearching = true;
     _searchError = null;
-    _searchVersion++; // 增加版本号
+    _searchVersion++;
     final currentVersion = _searchVersion;
+    _searchQuery = query;
     notifyListeners();
+    logDebug('搜索查询已更新: $query', source: 'SearchController');
 
-    // 使用定时器实现防抖
-    _debounceTimer = Timer(Duration(milliseconds: _debounceTime), () {
-      try {
-        // 检查版本号，避免过期的搜索结果
-        if (currentVersion != _searchVersion) {
-          logDebug('搜索版本过期，忽略结果: $query', source: 'SearchController');
-          return;
-        }
-
-        _searchQuery = query;
-
-        // 优化：设置更合理的超时时间，与数据库查询超时保持一致
-        _timeoutTimer = Timer(const Duration(seconds: 5), () {
-          if (_isSearching &&
-              _searchQuery == query &&
-              currentVersion == _searchVersion) {
-            _isSearching = false;
-            _searchError = '搜索超时，请重试';
-            notifyListeners();
-            logDebug('搜索超时，已自动重置状态，查询: $query', source: 'SearchController');
-          }
-        });
-
-        notifyListeners();
-        logDebug('搜索查询已更新: $query', source: 'SearchController');
-      } catch (e) {
-        _searchError = '搜索处理出错: $e';
+    // 保留超时保护，防止数据库查询无限挂起
+    _timeoutTimer = Timer(const Duration(seconds: 5), () {
+      if (_isSearching &&
+          _searchQuery == query &&
+          currentVersion == _searchVersion) {
         _isSearching = false;
+        _searchError = '搜索超时，请重试';
         notifyListeners();
-        logError(
-          '搜索控制器错误: $_searchError',
-          error: e,
-          source: 'SearchController',
-        );
+        logDebug('搜索超时，已自动重置状态，查询: $query', source: 'SearchController');
       }
     });
   }

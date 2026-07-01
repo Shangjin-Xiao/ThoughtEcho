@@ -9,17 +9,27 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
 
     try {
       final databaseService = context.read<DatabaseService>();
-      // 获取所有笔记（排除隐藏笔记，隐藏笔记不参与AI分析统计）
-      final quotes = await databaseService.getAllQuotes();
+
+      final range = ReportPeriodUtils.dateRange(_selectedPeriod, _selectedDate);
+
+      List<Quote> quotes;
+      if (range != null) {
+        // 使用优化后的日期范围查询，仅返回周期报告所需字段
+        quotes =
+            await databaseService.getQuotesForPeriod(range.start, range.end);
+      } else {
+        // 获取所有笔记（排除隐藏笔记，隐藏笔记不参与AI分析统计）
+        quotes = await databaseService.getAllQuotes();
+      }
 
       // 调试：打印获取到的所有笔记数量
-      AppLogger.d('getAllQuotes returned notes count: ${quotes.length}');
+      AppLogger.d('getQuotes returned notes count: ${quotes.length}');
       // 打印每条笔记的日期（前10条）
       for (var i = 0; i < quotes.length && i < 10; i++) {
         AppLogger.d('  Raw note[$i]: date=${quotes[i].date}');
       }
 
-      // 根据选择的时间范围筛选笔记
+      // 根据选择的时间范围筛选笔记 (内存中再次确认筛选，处理可能存在的跨时区或边界情况)
       final filteredQuotes = _filterQuotesByPeriod(quotes);
 
       // 更新数据版本key，触发动画

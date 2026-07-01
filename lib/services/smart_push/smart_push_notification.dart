@@ -113,6 +113,7 @@ extension SmartPushNotification on SmartPushService {
 
     // 处理打开特定笔记的逻辑
     if (noteId != null && noteId.isNotEmpty) {
+      ClipboardService.suppressNextCheckForNotificationNavigation();
       _navigateToNoteList(noteId, routeTarget: routeTarget).catchError((e) {
         AppLogger.e('通知导航失败', error: e);
       });
@@ -155,7 +156,7 @@ extension SmartPushNotification on SmartPushService {
         final route = MaterialPageRoute(
           builder: (context) => HomePage(
             initialPage: 1,
-            initialHighlightedNoteId: noteId,
+            initialTargetNoteId: noteId,
           ),
         );
         SmartPushService.replaceAppStackForNotification(

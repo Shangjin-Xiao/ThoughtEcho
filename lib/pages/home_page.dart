@@ -51,12 +51,12 @@ import 'home/daily_prompt_panel.dart';
 // widgets or mixins (e.g., home_header, home_content, home_actions).
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
-  final String? initialHighlightedNoteId;
+  final String? initialTargetNoteId;
 
   const HomePage({
     super.key,
     this.initialPage = 0,
-    this.initialHighlightedNoteId,
+    this.initialTargetNoteId,
   });
 
   @override
@@ -179,14 +179,15 @@ class _HomePageState extends State<HomePage>
       GlobalKey<SettingsPageState>();
   bool _homeGuidePending = false;
   bool _noteGuidePending = false;
+  Timer? _trashSnackBarTimer;
   bool _settingsGuidePending = false;
   bool _trashGuideScheduled = false;
   String? _lastConsumedExcerptText;
   bool _isHandlingExcerptIntent = false;
-  bool _hasConsumedInitialHighlightedNote = false;
-  bool _isConsumingInitialHighlightedNote = false;
-  int _initialHighlightRetryCount = 0;
-  static const int _maxInitialHighlightRetries = 8;
+  bool _hasConsumedInitialTargetNote = false;
+  bool _isConsumingInitialTargetNote = false;
+  int _initialTargetScrollRetryCount = 0;
+  static const int _maxInitialTargetScrollRetries = 8;
 
   // AI卡片生成服务
   AICardGenerationService? _aiCardService;
@@ -345,7 +346,7 @@ class _HomePageState extends State<HomePage>
       if (widget.initialPage == 1) {
         // 记录页启动时，先加载标签（高优先级）
         await _loadTags();
-        _consumeInitialHighlightedNote();
+        _consumeInitialTargetNote();
       } else {
         // 其他页面启动时，使用预加载方式
         _preloadTags();
@@ -407,6 +408,7 @@ class _HomePageState extends State<HomePage>
 
   @override
   void dispose() {
+    _trashSnackBarTimer?.cancel();
     _aiTabController.dispose();
     // 移除生命周期观察器
     WidgetsBinding.instance.removeObserver(this);
@@ -632,7 +634,7 @@ class _HomePageState extends State<HomePage>
     // 当切换到笔记列表页时，重新加载标签
     if (_currentIndex == 1) {
       _refreshTags();
-      _consumeInitialHighlightedNote();
+      _consumeInitialTargetNote();
     }
 
     _triggerGuideForCurrentIndex();
@@ -820,19 +822,23 @@ class _HomePageState extends State<HomePage>
       return;
     }
 
-    _consumeInitialHighlightedNote();
+    _consumeInitialTargetNote();
     _scheduleNoteGuideIfNeeded(delay: const Duration(milliseconds: 150));
   }
 
-  void _consumeInitialHighlightedNote() {
+  void _releaseNoteSearchFocus() {
+    _noteListViewKey.currentState?.unfocusSearchField();
+  }
+
+  void _consumeInitialTargetNote() {
     if (!mounted ||
-        _hasConsumedInitialHighlightedNote ||
-        _isConsumingInitialHighlightedNote ||
+        _hasConsumedInitialTargetNote ||
+        _isConsumingInitialTargetNote ||
         _currentIndex != 1) {
       return;
     }
 
-    final noteId = widget.initialHighlightedNoteId;
+    final noteId = widget.initialTargetNoteId;
     if (noteId == null || noteId.isEmpty) {
       return;
     }
@@ -843,49 +849,47 @@ class _HomePageState extends State<HomePage>
     if (noteListState == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        _consumeInitialHighlightedNote();
+        _consumeInitialTargetNote();
       });
       return;
     }
 
-    _isConsumingInitialHighlightedNote = true;
-    unawaited(_attemptInitialHighlightedNote(noteListState, noteId));
+    _isConsumingInitialTargetNote = true;
+    unawaited(_attemptInitialTargetNote(noteListState, noteId));
   }
 
-  Future<void> _attemptInitialHighlightedNote(
+  Future<void> _attemptInitialTargetNote(
     NoteListViewState noteListState,
     String noteId,
   ) async {
     final success = await noteListState.scrollToQuoteById(noteId);
-    if (!mounted || widget.initialHighlightedNoteId != noteId) {
-      _isConsumingInitialHighlightedNote = false;
+    if (!mounted || widget.initialTargetNoteId != noteId) {
+      _isConsumingInitialTargetNote = false;
       return;
     }
 
     if (success) {
-      _hasConsumedInitialHighlightedNote = true;
-      _initialHighlightRetryCount = 0;
-      _isConsumingInitialHighlightedNote = false;
+      _hasConsumedInitialTargetNote = true;
+      _initialTargetScrollRetryCount = 0;
+      _isConsumingInitialTargetNote = false;
       return;
     }
 
-    _isConsumingInitialHighlightedNote = false;
-    _initialHighlightRetryCount++;
-    if (_initialHighlightRetryCount >= _maxInitialHighlightRetries) {
+    _isConsumingInitialTargetNote = false;
+    _initialTargetScrollRetryCount++;
+    if (_initialTargetScrollRetryCount >= _maxInitialTargetScrollRetries) {
       logDebug(
-        '初始高亮笔记定位失败，已达到最大重试次数: $noteId',
+        '初始目标笔记定位失败，已达到最大重试次数: $noteId',
         source: 'HomePage',
       );
       return;
     }
 
     Future.delayed(const Duration(milliseconds: 250), () {
-      if (!mounted ||
-          _currentIndex != 1 ||
-          _hasConsumedInitialHighlightedNote) {
+      if (!mounted || _currentIndex != 1 || _hasConsumedInitialTargetNote) {
         return;
       }
-      _consumeInitialHighlightedNote();
+      _consumeInitialTargetNote();
     });
   }
 
@@ -1079,6 +1083,7 @@ class _HomePageState extends State<HomePage>
     String? prefilledWork,
     dynamic hitokotoData,
   }) async {
+    _releaseNoteSearchFocus();
     FocusScope.of(context).unfocus();
     await _loadTags();
     if (!mounted) return;
@@ -1128,27 +1133,28 @@ class _HomePageState extends State<HomePage>
     logDebug('显示添加笔记对话框，可用标签数: ${_tags.length}');
 
     // 使用延迟显示，确保动画流畅
-    Future.microtask(() {
-      if (mounted) {
-        showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
-          requestFocus: false,
-          builder: (context) => AddNoteDialog(
-            prefilledContent: prefilledContent,
-            prefilledAuthor: prefilledAuthor,
-            prefilledWork: prefilledWork,
-            hitokotoData: hitokotoData,
-            tags: _tags, // 使用预加载的标签数据
-            onSave: (quote) => _saveNonFullscreenQuote(
-              quote,
-              isEditing: false,
-            ),
-          ),
-        );
-      }
-    });
+    await Future<void>.delayed(Duration.zero);
+    if (!mounted) return;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
+      requestFocus: false,
+      builder: (context) => AddNoteDialog(
+        prefilledContent: prefilledContent,
+        prefilledAuthor: prefilledAuthor,
+        prefilledWork: prefilledWork,
+        hitokotoData: hitokotoData,
+        tags: _tags, // 使用预加载的标签数据
+        onSave: (quote) => _saveNonFullscreenQuote(
+          quote,
+          isEditing: false,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    _releaseNoteSearchFocus();
   }
 
   Future<void> _saveNonFullscreenQuote(
@@ -1189,9 +1195,12 @@ class _HomePageState extends State<HomePage>
         ),
       );
       _loadTags();
-      // 触发新增/修改笔记卡片的平滑渐入动画
+      // 触发新增/修改笔记卡片的平滑入场动画
       if (quote.id != null) {
-        _noteListViewKey.currentState?.highlightNote(quote.id!);
+        _noteListViewKey.currentState?.triggerInsertAnimation(
+          quote.id!,
+          animateListInsertion: !isEditing,
+        );
       }
     } catch (e, stack) {
       logError(
@@ -1404,6 +1413,7 @@ class _HomePageState extends State<HomePage>
 
   // 显示编辑笔记对话框
   void _showEditQuoteDialog(Quote quote) {
+    _releaseNoteSearchFocus();
     FocusScope.of(context).unfocus();
     // 检查笔记是否来自全屏编辑器
     if (quote.editSource == 'fullscreen') {
@@ -1456,93 +1466,85 @@ class _HomePageState extends State<HomePage>
             isEditing: true,
           ),
         ),
-      );
+      ).whenComplete(() {
+        if (mounted) {
+          _releaseNoteSearchFocus();
+        }
+      });
     }
   }
 
-  // 显示删除确认对话框
-  void _showDeleteConfirmDialog(Quote quote) {
-    final pageContext = context;
+  // 直接将笔记移入回收站（有回收站保障，无需二次确认）
+  Future<void> _deleteQuote(Quote quote) async {
+    if (!mounted || quote.id == null) return;
     final l10n = AppLocalizations.of(context);
-    final retentionDays = context.read<SettingsService>().trashRetentionDays;
-    final messenger = ScaffoldMessenger.of(pageContext);
-
-    showDialog(
-      context: pageContext,
-      builder: (dialogContext) {
-        var isDeleting = false;
-        return StatefulBuilder(
-          builder: (dialogContext, setDialogState) => AlertDialog(
-            title: Text(l10n.moveNoteToTrashTitle),
-            content: Text(l10n.moveNoteToTrashConfirmation(retentionDays)),
-            actions: [
-              TextButton(
-                onPressed: isDeleting
-                    ? null
-                    : () {
-                        Navigator.pop(dialogContext);
-                      },
-                child: Text(l10n.cancel),
-              ),
-              TextButton(
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                onPressed: isDeleting
-                    ? null
-                    : () async {
-                        setDialogState(() {
-                          isDeleting = true;
-                        });
-                        final db = Provider.of<DatabaseService>(
-                          pageContext,
-                          listen: false,
-                        );
-                        try {
-                          await db.deleteQuote(quote.id!);
-                          if (!dialogContext.mounted || !pageContext.mounted) {
-                            return;
-                          }
-                          Navigator.pop(dialogContext);
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(l10n.noteMovedToTrash),
-                              duration: const Duration(seconds: 1),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                          // 显示回收站位置引导（仅第一次删除笔记时）
-                          _scheduleTrashLocationGuide();
-                        } catch (e, stackTrace) {
-                          logError(
-                            '移动笔记到回收站失败: $e',
-                            error: e,
-                            stackTrace: stackTrace,
-                            source: 'HomePage',
-                          );
-                          if (!dialogContext.mounted || !pageContext.mounted) {
-                            return;
-                          }
-                          Navigator.pop(dialogContext);
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(l10n.deleteFailed(e.toString())),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        }
-                      },
-                child: isDeleting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(l10n.delete),
-              ),
-            ],
+    final messenger = ScaffoldMessenger.of(context);
+    final db = Provider.of<DatabaseService>(context, listen: false);
+    final quoteId = quote.id!;
+    try {
+      await db.deleteQuote(quoteId);
+      if (!mounted) return;
+      // 先清除旧 SnackBar，避免多次删除时堆叠
+      _trashSnackBarTimer?.cancel();
+      const trashSnackBarDuration = Duration(seconds: 3);
+      messenger.clearSnackBars();
+      final snackBarController = messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.noteMovedToTrash),
+          duration: trashSnackBarDuration,
+          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: l10n.undoDelete,
+            onPressed: () async {
+              _trashSnackBarTimer?.cancel();
+              try {
+                await db.restoreQuote(quoteId);
+                if (!mounted) return;
+                _noteListViewKey.currentState?.triggerInsertAnimation(
+                  quoteId,
+                  animateListInsertion: true,
+                );
+              } catch (e, stack) {
+                logError(
+                  '撤销删除失败: $e',
+                  error: e,
+                  stackTrace: stack,
+                  source: 'HomePage',
+                );
+                if (!mounted) return;
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(l10n.restoreFailed),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
           ),
-        );
-      },
-    );
+        ),
+      );
+      _trashSnackBarTimer = Timer(trashSnackBarDuration, () {
+        if (mounted) {
+          snackBarController.close();
+        }
+      });
+      // 显示回收站位置引导（仅第一次删除笔记时）
+      _scheduleTrashLocationGuide();
+    } catch (e, stackTrace) {
+      logError(
+        '移动笔记到回收站失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'HomePage',
+      );
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.deleteFailed(e.toString())),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   // 处理心形按钮点击
@@ -2009,6 +2011,9 @@ class _HomePageState extends State<HomePage>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemUiOverlayStyle,
       child: Scaffold(
+        // BottomSheet 已自行处理键盘 inset，关闭 Scaffold 级重排，
+        // 避免首页背景（如每日一言）在非全屏编辑器弹出/收起时跟随位移。
+        resizeToAvoidBottomInset: false,
         backgroundColor: scaffoldBackgroundColor,
         appBar: _currentIndex == 1
             ? null // 记录页不需要标题栏
@@ -2177,7 +2182,7 @@ class _HomePageState extends State<HomePage>
                         searchController.updateSearch(query);
                       },
                       onEdit: _showEditQuoteDialog,
-                      onDelete: _showDeleteConfirmDialog,
+                      onDelete: _deleteQuote,
                       onAskAI: _showAIQuestionDialog,
                       onGenerateCard: _generateAICard,
                       onFavorite: settingsService.showFavoriteButton

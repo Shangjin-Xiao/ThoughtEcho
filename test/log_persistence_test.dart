@@ -9,6 +9,7 @@ void main() {
     test('写入后可从数据库查询到', () async {
       await TestSetup.setupAll();
       final unified = UnifiedLogService.instance;
+      unified.setPersistenceEnabled(true);
 
       // 写入一条唯一日志
       final uniqueMessage = '持久化测试-${DateTime.now().microsecondsSinceEpoch}';

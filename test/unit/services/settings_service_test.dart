@@ -301,6 +301,10 @@ void main() {
     });
 
     test('should persist Sentry settings changes', () async {
+      // Initialize to false to ensure a consistent starting state
+      await settingsService.setSentryEnabled(false);
+      await settingsService.setSentryDisclosureShown(false);
+
       expect(settingsService.sentryEnabled, isFalse);
       expect(settingsService.sentryDisclosureShown, isFalse);
 
