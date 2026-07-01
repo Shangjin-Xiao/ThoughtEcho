@@ -1,0 +1,38 @@
+lib/services/chat_session_service.dart
+  s_3ba7ed68623ace::t_1dc509981d40d1 158-160,243-247,478-485,488-493
+lib/services/web_fetch_service.dart
+  s_3ba7ed68623ace::t_6dab93cec9a5cd 132,147,152,165,174,186-190,195-202,205,210,259-301
+  s_3ba7ed68623ace::t_103408e7d13e6f 103
+  s_3ba7ed68623ace::t_514249d7b17d03 302
+lib/services/agent_tools/web_fetch_tool.dart
+  s_3ba7ed68623ace::t_1261ea447315d4 58-65
+lib/widgets/ai/smart_result_card.dart
+  s_3ba7ed68623ace::t_172d8d4d80aa3d 122-124,170,181,191,201
+lib/services/agent_service.dart
+  s_3ba7ed68623ace::t_4504607b308e6b 257,296-305
+lib/pages/ai_assistant_page.dart
+  s_3ba7ed68623ace::t_6bb3e40bf596f5 480-485
+lib/pages/ai_assistant/ai_assistant_page_agent.dart
+  s_3ba7ed68623ace::t_04914bc84752a5 615-616,655-656,667-679
+  s_3ba7ed68623ace::t_66229389ed128f 680
+lib/pages/ai_assistant/ai_assistant_page_ui.dart
+  s_3ba7ed68623ace::t_abed4c5dd6358b 88
+  s_3ba7ed68623ace::t_8d30bcc0b784e3 798-805,807-811,822,841,846-852
+  s_3ba7ed68623ace::t_f003e097e286bf 853
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "4074bcf3bf1ba8c7178cf3dfad3681947b52e0d1",
+  "prompts": {},
+  "sessions": {
+    "s_3ba7ed68623ace": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1c85-1d3b-71b2-9ccd-62a4c5ac4f16",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
