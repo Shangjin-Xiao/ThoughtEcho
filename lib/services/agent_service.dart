@@ -175,12 +175,12 @@ class AgentService extends ChangeNotifier {
             messages: messages,
           );
           _emitEvent(AgentResponseEvent(
-            content: '已达到最大执行次数（$maxToolRounds）。\n\n$summary',
+            content: '已达到最大执行轮数（$maxToolRounds）。\n\n$summary',
             toolCalls: executedCalls,
             reachedMaxRounds: true,
           ));
           return AgentResponse(
-            content: '已达到最大执行次数（$maxToolRounds）。\n\n$summary',
+            content: '已达到最大执行轮数（$maxToolRounds）。\n\n$summary',
             toolCalls: executedCalls,
             reachedMaxRounds: true,
           );

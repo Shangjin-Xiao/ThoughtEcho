@@ -102,8 +102,8 @@ class AIWorkflowCommandRegistry {
       for (final trigger in triggers) {
         final triggerLower = trigger.toLowerCase();
         if (lowerText.contains(triggerLower)) {
-          // 完全匹配得分更高
-          final score = (trigger.length / lowerText.length).clamp(0.5, 1.0);
+          // 完全匹配或较短的查询得分更高，确保只要包含触发词置信度就至少为 0.7
+          final score = 0.7 + 0.3 * (trigger.length / lowerText.length);
           if (score > bestScore) {
             bestScore = score;
             bestMatch = workflowId;
