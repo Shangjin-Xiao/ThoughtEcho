@@ -743,7 +743,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     // 且列表似乎没有更多内容可滚动，这可能是异常情况
     if (maxExtent > 0 && currentOffset > maxExtent - 200) {
       // 检查是否实际还有更多数据
-      final db = Provider.of<DatabaseService>(context, listen: false);
+      final db = _databaseService ?? _readDatabaseService();
       final dbHasMore = db.hasMoreQuotes;
 
       if (dbHasMore && !_isLoading) {
@@ -787,7 +787,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     });
 
     try {
-      final db = Provider.of<DatabaseService>(context, listen: false);
+      final db = _databaseService ?? _readDatabaseService();
       await db.loadMoreQuotes();
 
       if (mounted) {
@@ -1020,7 +1020,7 @@ extension _NoteListScrollExtension on NoteListViewState {
     }
 
     // 修复：在加载前先同步一次状态，确保 _hasMore 是最新的
-    final db = Provider.of<DatabaseService>(context, listen: false);
+    final db = _databaseService ?? _readDatabaseService();
     if (!db.hasMoreQuotes) {
       _loadMoreSkipCount++;
       logDebug('数据库显示无更多数据，同步 _hasMore 为 false', source: 'NoteListView');

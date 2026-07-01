@@ -152,6 +152,10 @@ class NoteListViewState extends State<NoteListView> {
 
   /// 安全超时：防止首次加载永久卡在加载动画
   Timer? _initialLoadSafetyTimer;
+  int _initialLoadTimeoutRecoveries = 0;
+
+  DatabaseService? _databaseService;
+  bool _databaseServiceListenerAttached = false;
 
   // PDF 导出选择模式状态
   bool _isExportMode = false;
@@ -285,6 +289,57 @@ class NoteListViewState extends State<NoteListView> {
 
   bool get hasExpandableQuote => _hasExpandableQuoteCached;
 
+  DatabaseService _readDatabaseService() {
+    final db = Provider.of<DatabaseService>(context, listen: false);
+    _cacheDatabaseService(db);
+    return db;
+  }
+
+  void _cacheDatabaseService(DatabaseService db) {
+    if (identical(_databaseService, db)) {
+      return;
+    }
+
+    if (_databaseServiceListenerAttached) {
+      try {
+        _databaseService?.removeListener(_onDatabaseServiceChanged);
+      } catch (e) {
+        logDebug('切换数据库服务监听器时出错: $e', source: 'NoteListView');
+      }
+      _databaseServiceListenerAttached = false;
+    }
+
+    _databaseService = db;
+  }
+
+  void _attachDatabaseServiceListener(DatabaseService db) {
+    _cacheDatabaseService(db);
+    if (_databaseServiceListenerAttached) {
+      return;
+    }
+
+    db.addListener(_onDatabaseServiceChanged);
+    _databaseServiceListenerAttached = true;
+  }
+
+  void _detachDatabaseServiceListener() {
+    if (!_databaseServiceListenerAttached) {
+      return;
+    }
+
+    final db = _databaseService;
+    _databaseServiceListenerAttached = false;
+    if (db == null) {
+      return;
+    }
+
+    try {
+      db.removeListener(_onDatabaseServiceChanged);
+    } catch (e) {
+      logDebug('清理数据库服务监听器时出错: $e', source: 'NoteListView');
+    }
+  }
+
   /// 安全地获取 ScrollPosition：仅当控制器恰好附加了 1 个 ScrollPosition 时才返回，
   /// 避免多个 client 同时挂载时 `.position` 抛出 "Bad state: Too many elements"。
   ScrollPosition? get _safeScrollPosition {
@@ -343,10 +398,11 @@ class NoteListViewState extends State<NoteListView> {
   Future<void> _checkServicesAndInitialize() async {
     if (!mounted) return;
 
-    final db = Provider.of<DatabaseService>(context, listen: false);
+    final db = _readDatabaseService();
 
     // 如果数据库已初始化，直接初始化数据流
     if (db.isInitialized) {
+      _detachDatabaseServiceListener();
       _waitingForServices = false;
       // 修复：如果外部传入的标签为空，先等待加载本地标签缓存
       await _loadLocalTagsCacheIfNeeded();
@@ -356,14 +412,14 @@ class NoteListViewState extends State<NoteListView> {
 
     // 否则，等待数据库初始化
     logDebug('等待数据库初始化...', source: 'NoteListView');
-    db.addListener(_onDatabaseServiceChanged);
+    _attachDatabaseServiceListener(db);
   }
 
   /// 修复：如果外部传入的标签为空，加载本地标签缓存
   Future<void> _loadLocalTagsCacheIfNeeded() async {
     if (widget.tags.isEmpty && _localTagsCache.isEmpty) {
       try {
-        final db = Provider.of<DatabaseService>(context, listen: false);
+        final db = _databaseService ?? _readDatabaseService();
         final categories = await db.getCategories();
         if (mounted && categories.isNotEmpty) {
           setState(() {
@@ -454,11 +510,15 @@ class NoteListViewState extends State<NoteListView> {
   void _onDatabaseServiceChanged() {
     if (!mounted) return;
 
-    final db = Provider.of<DatabaseService>(context, listen: false);
+    final db = _databaseService;
+    if (db == null) {
+      return;
+    }
+
     if (db.isInitialized) {
       logDebug('数据库初始化完成，重新订阅数据流', source: 'NoteListView');
       // 移除监听器，避免重复监听
-      db.removeListener(_onDatabaseServiceChanged);
+      _detachDatabaseServiceListener();
 
       // 修复：更新等待服务状态
       _waitingForServices = false;
@@ -565,12 +625,7 @@ class NoteListViewState extends State<NoteListView> {
     }
 
     // 修复：清理数据库服务监听器
-    try {
-      final db = Provider.of<DatabaseService>(context, listen: false);
-      db.removeListener(_onDatabaseServiceChanged);
-    } catch (e) {
-      logDebug('清理数据库服务监听器时出错: $e');
-    }
+    _detachDatabaseServiceListener();
 
     _searchController.dispose();
 

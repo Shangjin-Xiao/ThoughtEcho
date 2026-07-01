@@ -14,6 +14,7 @@ import 'package:thoughtecho/models/note_category.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/widgets/app_loading_view.dart';
 import 'package:thoughtecho/widgets/note_list_view.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
 
@@ -161,6 +162,87 @@ void main() {
 
         expect(await scrollFuture, isTrue);
         expect(find.text('延迟到达的目标笔记'), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+        await databaseService.disposeStream();
+      },
+    );
+
+    testWidgets(
+      'does not show an empty note list while initial placeholder data is unresolved',
+      (tester) async {
+        final databaseService = _DelayedFakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: const [],
+          ),
+        );
+
+        await tester.pump();
+        databaseService.emitPlaceholder();
+        await tester.pump();
+
+        expect(find.text('还没有笔记，开始记录吧！'), findsNothing);
+
+        await tester.pump(const Duration(seconds: 9));
+
+        expect(find.text('还没有笔记，开始记录吧！'), findsNothing);
+        expect(find.byType(AppLoadingView), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+        await databaseService.disposeStream();
+      },
+    );
+
+    testWidgets(
+      'notification target retry can recover after initial load safety timeout',
+      (tester) async {
+        final databaseService = _DelayedFakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+        final noteListKey = GlobalKey<NoteListViewState>();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: const [],
+            noteListKey: noteListKey,
+          ),
+        );
+
+        await tester.pump();
+        databaseService.emitPlaceholder();
+        await tester.pump();
+
+        final firstAttempt = noteListKey.currentState!.scrollToQuoteById(
+          'quote-1',
+        );
+        await tester.pump(const Duration(milliseconds: 5100));
+        expect(await firstAttempt, isFalse);
+
+        final retryAttempt = noteListKey.currentState!.scrollToQuoteById(
+          'quote-1',
+        );
+        await tester.pump(const Duration(milliseconds: 3900));
+
+        databaseService.emitQuotes([
+          Quote(
+            id: 'quote-1',
+            content: '安全超时后到达的目标笔记',
+            date: DateTime(2026, 7, 1, 10, 23).toIso8601String(),
+          ),
+        ]);
+        await tester.pump();
+        await tester.pumpAndSettle(const Duration(milliseconds: 50));
+
+        expect(await retryAttempt, isTrue);
+        expect(find.text('安全超时后到达的目标笔记'), findsOneWidget);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(seconds: 2));
