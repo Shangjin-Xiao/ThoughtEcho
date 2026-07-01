@@ -415,6 +415,10 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       listBullet: theme.textTheme.bodyMedium?.copyWith(
         color: bubbleTextColor,
       ),
+      strong: theme.textTheme.bodyMedium?.copyWith(
+        color: bubbleTextColor,
+        fontWeight: FontWeight.w600,
+      ),
       code: theme.textTheme.bodySmall?.copyWith(
         color: theme.colorScheme.onSurfaceVariant,
         fontFamily: 'monospace',

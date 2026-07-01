@@ -30,7 +30,6 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                     title,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
                         ),
                   ),
                 ),
@@ -48,7 +47,6 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                       value,
                       style:
                           Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
                                 color: Theme.of(context).colorScheme.primary,
                               ),
                       maxLines: 1,
@@ -99,7 +97,6 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                     title,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
                         ),
                   ),
                 ),
@@ -117,7 +114,6 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                       value,
                       style:
                           Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
                                 color: Theme.of(context).colorScheme.primary,
                               ),
                       maxLines: 1,
@@ -179,7 +175,6 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                     title,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
                         ),
                   ),
                 ),
@@ -197,7 +192,6 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                       value,
                       style:
                           Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
                                 color: Theme.of(context).colorScheme.primary,
                               ),
                       maxLines: 1,
@@ -444,7 +438,6 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                               color: Theme.of(
                                 context,
                               ).colorScheme.onPrimaryContainer,
-                              fontWeight: FontWeight.w500,
                             ),
                       ),
                     ),
