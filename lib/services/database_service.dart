@@ -399,6 +399,10 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   // 性能优化：增量维护的 ID Set，避免每次去重时遍历
   final Set<String> _currentQuoteIds = {};
 
+  Timer? _startupBackgroundMaintenanceTimer;
+  static const Duration _startupBackgroundMaintenanceDelay =
+      Duration(seconds: 12);
+
   @protected
   void clearAllCacheForParts() => _clearAllCache();
 
@@ -626,13 +630,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       _filterCache.clear();
       _watchHasMore = true;
 
-      // 新增：执行数据库健康检查
-      // 修复：改为非阻塞调用，将所有 health check DB span 移出 ui.load 事务窗口。
-      // health check 仅用于诊断日志，不影响任何功能。
-      // 原来的 await 会导致 Sentry 在 ui.load 期间检测到 N+1 查询模式（Issue #126305010）。
-      unawaited(_performStartupHealthCheck());
-
-      _scheduleTrashAutoCleanup();
+      _scheduleStartupBackgroundMaintenance();
 
       // 延迟通知监听者，让UI知道数据库已准备好
       SchedulerBinding.instance.addPostFrameCallback((_) {
@@ -832,6 +830,24 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     }
   }
 
+  void _scheduleStartupBackgroundMaintenance() {
+    _startupBackgroundMaintenanceTimer?.cancel();
+    _startupBackgroundMaintenanceTimer = Timer(
+      _startupBackgroundMaintenanceDelay,
+      () {
+        if (_isDisposed) {
+          return;
+        }
+
+        // These diagnostics and cleanup tasks are not required before the
+        // first visible note page. Keep them off the cold-start database queue
+        // so notification navigation can load and position notes first.
+        unawaited(_performStartupHealthCheck());
+        _scheduleTrashAutoCleanup();
+      },
+    );
+  }
+
   Future<String> _getExpectedMainDatabasePath() async {
     final basePath = Platform.isWindows
         ? await DataDirectoryService.getCurrentDataDirectory()
@@ -874,6 +890,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     // 取消定时器
     _cacheCleanupTimer?.cancel();
     _cacheCleanupTimer = null;
+    _startupBackgroundMaintenanceTimer?.cancel();
+    _startupBackgroundMaintenanceTimer = null;
 
     // 清理缓存
     _filterCache.clear();
@@ -910,6 +928,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     // 清理缓存，避免跨生命周期残留
     _cacheCleanupTimer?.cancel();
     _cacheCleanupTimer = null;
+    _startupBackgroundMaintenanceTimer?.cancel();
+    _startupBackgroundMaintenanceTimer = null;
     _clearAllCache();
     _quotesCache = [];
     _watchOffset = 0;
