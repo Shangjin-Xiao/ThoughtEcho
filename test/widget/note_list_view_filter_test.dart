@@ -436,6 +436,84 @@ void main() {
     );
 
     testWidgets(
+      'restarts pending restore animation for repeated delete undo',
+      (tester) async {
+        final noteListKey = GlobalKey<NoteListViewState>();
+        final databaseService = _DelayedFakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: const [],
+            noteListKey: noteListKey,
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        databaseService.emitQuotes(const []);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(find.byType(ListView), findsNothing);
+
+        noteListKey.currentState!.triggerInsertAnimation(
+          'quote-1',
+          animateListInsertion: true,
+        );
+        databaseService.emitQuotes([
+          Quote(
+            id: 'quote-1',
+            content: '反复删除撤销的笔记',
+            date: DateTime(2026, 6, 30, 12).toIso8601String(),
+          ),
+        ]);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(
+          find.byKey(const ValueKey('note_list_insert_quote-1_slide_1')),
+          findsOneWidget,
+        );
+
+        await tester.pump(const Duration(milliseconds: 700));
+        databaseService.emitQuotes(const []);
+        await tester.pump();
+
+        noteListKey.currentState!.triggerInsertAnimation(
+          'quote-1',
+          animateListInsertion: true,
+        );
+        databaseService.emitQuotes([
+          Quote(
+            id: 'quote-1',
+            content: '反复删除撤销的笔记',
+            date: DateTime(2026, 6, 30, 12).toIso8601String(),
+          ),
+        ]);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(
+          find.byKey(const ValueKey('note_list_insert_quote-1_slide_2')),
+          findsOneWidget,
+        );
+
+        await tester.pump(const Duration(milliseconds: 850));
+
+        expect(
+          find.byKey(const ValueKey('note_list_insert_quote-1_slide_2')),
+          findsOneWidget,
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+        await databaseService.disposeStream();
+      },
+    );
+
+    testWidgets(
       'loads the next page before positioning a notification target',
       (tester) async {
         final databaseService = _PagingFakeDatabaseService();

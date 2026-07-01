@@ -648,31 +648,40 @@ class NoteListViewState extends State<NoteListView> {
     _loadMore();
   }
 
-  /// 触发指定 ID 的笔记卡片入场/更新动画（保存/修改后调用）。
-  /// 空闲时递增版本号；同一 ID 的动画进行中时忽略重复触发。
+  /// 触发指定 ID 的笔记卡片入场/更新动画（保存/修改/撤销恢复后调用）。
+  /// 空闲时递增版本号；同一 ID 的保存动画进行中时忽略重复触发。
+  /// 对仍在待入场窗口内的结构性插入，允许重启动画，用于删除后快速撤销。
   /// 新增笔记可能需要等待数据流返回，保留较长的待入场窗口；更新已有笔记
   /// 则在动画结束后快速清除状态，保证下一次保存仍可播放。
-  void triggerInsertAnimation(String id) {
+  void triggerInsertAnimation(String id, {bool? animateListInsertion}) {
     if (!mounted) return;
-    if (_animatingQuoteVersions.containsKey(id)) {
+    final shouldAnimateListInsertion =
+        animateListInsertion ?? !_quotes.any((quote) => quote.id == id);
+    final hasPendingStructuralInsert = _structuralInsertQuoteIds.contains(id);
+    if (_animatingQuoteVersions.containsKey(id) &&
+        !shouldAnimateListInsertion &&
+        !hasPendingStructuralInsert) {
       return;
     }
 
     _animationTimers[id]?.cancel();
-    final animateListInsertion = !_quotes.any((quote) => quote.id == id);
+    final nextVersion = (_animatingQuoteVersions[id] ?? 0) + 1;
     setState(() {
-      _animatingQuoteVersions[id] = (_animatingQuoteVersions[id] ?? 0) + 1;
-      if (animateListInsertion) {
+      _animatingQuoteVersions[id] = nextVersion;
+      if (shouldAnimateListInsertion) {
         _structuralInsertQuoteIds.add(id);
       } else {
         _structuralInsertQuoteIds.remove(id);
       }
     });
-    final cleanupDelay = animateListInsertion
+    final cleanupDelay = shouldAnimateListInsertion
         ? _pendingInsertAnimationCleanupDelay
         : _noteUpdateAnimationCleanupDelay;
     _animationTimers[id] = Timer(cleanupDelay, () {
       if (mounted) {
+        if (_animatingQuoteVersions[id] != nextVersion) {
+          return;
+        }
         setState(() {
           _animatingQuoteVersions.remove(id);
           _structuralInsertQuoteIds.remove(id);

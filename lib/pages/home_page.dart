@@ -1196,7 +1196,10 @@ class _HomePageState extends State<HomePage>
       _loadTags();
       // 触发新增/修改笔记卡片的平滑入场动画
       if (quote.id != null) {
-        _noteListViewKey.currentState?.triggerInsertAnimation(quote.id!);
+        _noteListViewKey.currentState?.triggerInsertAnimation(
+          quote.id!,
+          animateListInsertion: !isEditing,
+        );
       }
     } catch (e, stack) {
       logError(
@@ -1496,7 +1499,10 @@ class _HomePageState extends State<HomePage>
               try {
                 await db.restoreQuote(quoteId);
                 if (!mounted) return;
-                _noteListViewKey.currentState?.triggerInsertAnimation(quoteId);
+                _noteListViewKey.currentState?.triggerInsertAnimation(
+                  quoteId,
+                  animateListInsertion: true,
+                );
               } catch (e, stack) {
                 logError(
                   '撤销删除失败: $e',
