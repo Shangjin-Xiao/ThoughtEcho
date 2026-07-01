@@ -1,0 +1,21 @@
+lib/services/web_fetch_service.dart
+  s_a03b34b543d3bc::t_4dc01425677140 171
+test/unit/services/web_fetch_service_test.dart
+  s_a03b34b543d3bc::t_0c7b3968cceef2 21-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "4a4bef0fc90398613440252564a551bc831746cd",
+  "prompts": {},
+  "sessions": {
+    "s_a03b34b543d3bc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1b5d-8ef0-7183-8b41-5418df6d9cc0",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
