@@ -253,11 +253,12 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       return true;
     }
 
-    // 使用 _initialDeltaContent 避免编译器警告
-    // 富文本内容如果被修改，纯文本内容通常也会反映这个变化
-    // 所以这里仅用于记录初始状态，实际比对通过纯文本进行
-    // ignore: unused_local_variable
-    final _ = _initialDeltaContent;
+    final currentDeltaContent = jsonEncode(
+      _controller.document.toDelta().toJson(),
+    );
+    if (currentDeltaContent != (_initialDeltaContent ?? '')) {
+      return true;
+    }
 
     return false;
   }

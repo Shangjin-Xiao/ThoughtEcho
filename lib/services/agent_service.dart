@@ -142,6 +142,9 @@ class AgentService extends ChangeNotifier {
     List<app_chat.ChatMessage>? history,
     String? noteContext,
   }) async {
+    if (_isRunning) {
+      throw StateError('AgentService.runAgent 不支持并发调用');
+    }
     _isRunning = true;
     _stopRequested = false;
     _setStatus('agentThinking');

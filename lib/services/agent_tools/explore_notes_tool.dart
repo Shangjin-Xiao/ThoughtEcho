@@ -97,7 +97,7 @@ class ExploreNotesTool extends AgentTool {
           ?.whereType<String>()
           .toList();
       final offset = call.getInt('offset', defaultValue: 0);
-      final limit = call.getInt('limit', defaultValue: 10).clamp(1, 20);
+      final limit = call.getInt('limit', defaultValue: 10).clamp(1, 20).toInt();
 
       final quotes = await _db.getUserQuotes(
         searchQuery: query.isEmpty ? null : query,
@@ -225,8 +225,8 @@ class ExploreNotesTool extends AgentTool {
     if (matchStart < 0) return null;
 
     final matchEnd = matchStart + normalizedQuery.length;
-    final snippetStart = (matchStart - 80).clamp(0, content.length);
-    final snippetEnd = (matchEnd + 120).clamp(0, content.length);
+    final snippetStart = (matchStart - 80).clamp(0, content.length).toInt();
+    final snippetEnd = (matchEnd + 120).clamp(0, content.length).toInt();
     final prefix = snippetStart > 0 ? '...' : '';
     final suffix = snippetEnd < content.length ? '...' : '';
     return _MatchSnippet(

@@ -317,6 +317,28 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
       ) as _i10.Future<List<_i14.Quote>>);
 
   @override
+  _i10.Future<List<_i14.Quote>> getQuotesForPeriod(
+    DateTime? start,
+    DateTime? end, {
+    bool? excludeHiddenNotes = true,
+    bool? includeDeleted = false,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getQuotesForPeriod,
+          [
+            start,
+            end,
+          ],
+          {
+            #excludeHiddenNotes: excludeHiddenNotes,
+            #includeDeleted: includeDeleted,
+          },
+        ),
+        returnValue: _i10.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
+      ) as _i10.Future<List<_i14.Quote>>);
+
+  @override
   _i10.Future<void> deleteQuote(String? id) => (super.noSuchMethod(
         Invocation.method(
           #deleteQuote,

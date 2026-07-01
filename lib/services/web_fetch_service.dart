@@ -283,6 +283,7 @@ class WebFetchService {
         return response;
       }
 
+      await response.stream.drain();
       final location = response.headers['location'];
       if (location == null || location.trim().isEmpty) {
         throw Exception('网页重定向缺少 Location 响应头');

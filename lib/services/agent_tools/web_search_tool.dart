@@ -75,7 +75,7 @@ class WebSearchTool extends AgentTool {
   Future<ToolResult> execute(ToolCall call) async {
     final query = call.getString('query');
     final requestedLimit = call.getInt('limit', defaultValue: _defaultLimit);
-    final limit = requestedLimit.clamp(1, _maxLimit);
+    final limit = requestedLimit.clamp(1, _maxLimit).toInt();
     final backendPreference = call.getString('backend').trim().toLowerCase();
 
     if (query.trim().isEmpty) {
