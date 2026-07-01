@@ -119,6 +119,9 @@ class _SmartResultCardState extends State<SmartResultCard> {
     final showSaveDirectly =
         widget.onSaveDirectly != null || widget.onSaveDraftDirectly != null;
     final isSaved = _savedNoteId != null && _savedNoteId!.isNotEmpty;
+    final supportsDraftEdits = widget.onOpenDraftInEditor != null ||
+        widget.onSaveDraftDirectly != null ||
+        (widget.onOpenInEditor == null && widget.onSaveDirectly == null);
 
     return Card(
       elevation: 0,
@@ -164,6 +167,7 @@ class _SmartResultCardState extends State<SmartResultCard> {
               children: [
                 TextField(
                   controller: _contentController,
+                  readOnly: !supportsDraftEdits,
                   minLines: 3,
                   maxLines: 8,
                   decoration: InputDecoration(
@@ -174,6 +178,7 @@ class _SmartResultCardState extends State<SmartResultCard> {
                 const SizedBox(height: 10),
                 TextField(
                   controller: _authorController,
+                  readOnly: !supportsDraftEdits,
                   decoration: InputDecoration(
                     labelText: l10n.author,
                     border: const OutlineInputBorder(),
@@ -183,6 +188,7 @@ class _SmartResultCardState extends State<SmartResultCard> {
                 const SizedBox(height: 10),
                 TextField(
                   controller: _sourceController,
+                  readOnly: !supportsDraftEdits,
                   decoration: InputDecoration(
                     labelText: l10n.source,
                     border: const OutlineInputBorder(),
@@ -192,6 +198,7 @@ class _SmartResultCardState extends State<SmartResultCard> {
                 const SizedBox(height: 10),
                 TextField(
                   controller: _tagsController,
+                  readOnly: !supportsDraftEdits,
                   decoration: InputDecoration(
                     labelText: l10n.tagsLabel,
                     border: const OutlineInputBorder(),

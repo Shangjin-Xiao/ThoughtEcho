@@ -612,12 +612,8 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             content: call.arguments['content']?.toString() ?? '',
             noteId: call.arguments['note_id']?.toString(),
             action: call.arguments['action']?.toString(),
-            tagIds: (call.arguments['tag_ids'] as List?)
-                ?.map((item) => item.toString())
-                .toList(),
-            tagNames: (call.arguments['tag_names'] as List?)
-                ?.map((item) => item.toString())
-                .toList(),
+            tagIds: _parseStringList(call.arguments['tag_ids']),
+            tagNames: _parseStringList(call.arguments['tag_names']),
             author: call.arguments['author']?.toString(),
             source: call.arguments['source']?.toString(),
             includeLocation: call.arguments['include_location'] == true,
@@ -656,12 +652,8 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           content: data['content']?.toString() ?? '',
           noteId: data['note_id']?.toString(),
           action: data['action']?.toString(),
-          tagIds: (data['tag_ids'] as List?)
-              ?.map((item) => item.toString())
-              .toList(),
-          tagNames: (data['tag_names'] as List?)
-              ?.map((item) => item.toString())
-              .toList(),
+          tagIds: _parseStringList(data['tag_ids']),
+          tagNames: _parseStringList(data['tag_names']),
           author: data['author']?.toString(),
           source: data['source']?.toString(),
           includeLocation: data['include_location'] == true,
@@ -671,6 +663,20 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     } catch (e) {
       return _AgentSmartResultParseResult(displayText: trimmed);
     }
+  }
+
+  List<String>? _parseStringList(Object? value) {
+    if (value == null) return null;
+    final rawItems = switch (value) {
+      List() => value,
+      String() => value.split(RegExp(r'[,，、]')),
+      _ => const <Object?>[],
+    };
+    final items = rawItems
+        .map((item) => item.toString().trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+    return items.isEmpty ? null : items;
   }
 }
 

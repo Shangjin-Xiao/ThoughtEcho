@@ -155,6 +155,9 @@ class ChatSessionService extends ChangeNotifier {
         onUpgrade: (db, oldVersion, newVersion) async {
           await _ensureChatSchema(db);
         },
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
         onOpen: (db) async {
           await _ensureChatSchema(db);
         },
@@ -237,6 +240,11 @@ class ChatSessionService extends ChangeNotifier {
       columnName: 'last_active_at',
       definition: 'TEXT',
     );
+    await db.execute('''
+      UPDATE chat_sessions
+      SET last_active_at = COALESCE(NULLIF(last_active_at, ''), created_at)
+      WHERE last_active_at IS NULL OR last_active_at = ''
+    ''');
     await _addColumnIfMissing(
       db,
       tableName: 'chat_sessions',
@@ -467,13 +475,22 @@ class ChatSessionService extends ChangeNotifier {
           s.created_at,
           s.last_active_at,
           s.is_pinned,
-          m.content AS matched_content
+          (
+            SELECT m.content
+            FROM chat_messages m
+            WHERE m.session_id = s.id
+              AND m.content LIKE ?
+            ORDER BY m.created_at ASC
+            LIMIT 1
+          ) AS matched_content
         FROM chat_sessions s
-        LEFT JOIN chat_messages m
-          ON m.session_id = s.id
-          AND m.content LIKE ?
         WHERE s.title LIKE ?
-          OR m.content LIKE ?
+          OR EXISTS (
+            SELECT 1
+            FROM chat_messages m
+            WHERE m.session_id = s.id
+              AND m.content LIKE ?
+          )
         ORDER BY s.last_active_at DESC
         LIMIT ?
         ''',

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import '../agent_tool.dart';
 import '../web_fetch_service.dart';
 
@@ -57,28 +55,14 @@ class WebFetchTool extends AgentTool {
       );
     }
 
-    // SSRF Validation
-    final uri = Uri.tryParse(trimmedUrl);
-    if (uri != null) {
-      final host = uri.host.toLowerCase().trim();
-      var blocked = _isPrivateOrLocalHost(host);
-      if (!blocked) {
-        try {
-          final resolved = await InternetAddress.lookup(host);
-          blocked = resolved.any(
-            (address) => _isPrivateOrLocalHost(address.address),
-          );
-        } catch (_) {
-          blocked = true;
-        }
-      }
-      if (blocked) {
-        return ToolResult(
-          toolCallId: call.id,
-          content: '安全限制：不允许访问本地或私有网络地址。',
-          isError: true,
-        );
-      }
+    try {
+      await WebFetchService.validateUrlSafety(trimmedUrl);
+    } catch (e) {
+      return ToolResult(
+        toolCallId: call.id,
+        content: e.toString(),
+        isError: true,
+      );
     }
 
     try {
@@ -102,29 +86,5 @@ class WebFetchTool extends AgentTool {
         isError: true,
       );
     }
-  }
-
-  bool _isPrivateOrLocalHost(String host) {
-    if (host == 'localhost') return true;
-    final ip = InternetAddress.tryParse(host);
-    if (ip == null) {
-      return false;
-    }
-    if (ip.isLoopback || ip.isLinkLocal || ip.isMulticast) return true;
-    if (ip.type == InternetAddressType.IPv4) {
-      final bytes = ip.rawAddress;
-      // 10.0.0.0/8
-      if (bytes[0] == 10) return true;
-      // 172.16.0.0/12
-      if (bytes[0] == 172 && (bytes[1] >= 16 && bytes[1] <= 31)) return true;
-      // 169.254.0.0/16
-      if (bytes[0] == 169 && bytes[1] == 254) return true;
-      // 192.168.0.0/16
-      if (bytes[0] == 192 && bytes[1] == 168) return true;
-    } else if (ip.type == InternetAddressType.IPv6) {
-      final bytes = ip.rawAddress;
-      if (bytes.isNotEmpty && (bytes[0] & 0xfe) == 0xfc) return true;
-    }
-    return false;
   }
 }

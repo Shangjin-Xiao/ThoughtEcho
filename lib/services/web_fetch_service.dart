@@ -100,7 +100,7 @@ class WebFetchService {
   /// 验证 URL 是否可访问
   Future<bool> isUrlAccessible(String url) async {
     try {
-      await _validateUrlSafety(url);
+      await validateUrlSafety(url);
       final client = http.Client();
       try {
         final response = await client.head(Uri.parse(url),
@@ -129,7 +129,7 @@ class WebFetchService {
   // ── 内部方法 ──
 
   /// 验证 URL 安全性以防御 SSRF
-  Future<void> _validateUrlSafety(String url) async {
+  static Future<void> validateUrlSafety(String url) async {
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       throw Exception('URL 格式无效，必须以 http:// 或 https:// 开头: $url');
     }
@@ -144,12 +144,12 @@ class WebFetchService {
       throw Exception('URL 主机名为空: $url');
     }
 
-    var blocked = _isPrivateOrLocalHost(host);
+    var blocked = isPrivateOrLocalHost(host);
     if (!blocked) {
       try {
         final resolved = await InternetAddress.lookup(host);
         blocked = resolved.any(
-          (address) => _isPrivateOrLocalHost(address.address),
+          (address) => isPrivateOrLocalHost(address.address),
         );
       } catch (_) {
         blocked = true;
@@ -162,7 +162,7 @@ class WebFetchService {
   }
 
   /// 检查主机名或 IP 是否为私有或本地地址
-  bool _isPrivateOrLocalHost(String host) {
+  static bool isPrivateOrLocalHost(String host) {
     if (host == 'localhost') return true;
     final ip = InternetAddress.tryParse(host);
     if (ip == null) {
@@ -171,6 +171,7 @@ class WebFetchService {
     if (ip.isLoopback || ip.isLinkLocal || ip.isMulticast) return true;
     if (ip.type == InternetAddressType.IPv4) {
       final bytes = ip.rawAddress;
+      if (bytes[0] == 0) return true;
       // 10.0.0.0/8
       if (bytes[0] == 10) return true;
       // 172.16.0.0/12
@@ -182,31 +183,31 @@ class WebFetchService {
     } else if (ip.type == InternetAddressType.IPv6) {
       final bytes = ip.rawAddress;
       if (bytes.isNotEmpty && (bytes[0] & 0xfe) == 0xfc) return true;
+      if (_isIpv4MappedIpv6(bytes)) {
+        return isPrivateOrLocalHost(
+          '${bytes[12]}.${bytes[13]}.${bytes[14]}.${bytes[15]}',
+        );
+      }
     }
     return false;
   }
 
+  static bool _isIpv4MappedIpv6(List<int> bytes) {
+    if (bytes.length != 16) return false;
+    for (var i = 0; i < 10; i++) {
+      if (bytes[i] != 0) return false;
+    }
+    return bytes[10] == 0xff && bytes[11] == 0xff;
+  }
+
   /// 抓取网页 HTML 原文
   Future<String> _fetchHtml(String url) async {
-    await _validateUrlSafety(url);
+    await validateUrlSafety(url);
 
     logDebug('WebFetchService: 开始抓取 $url');
     final client = http.Client();
     try {
-      final request = http.Request('GET', Uri.parse(url));
-      request.headers.addAll({
-        'User-Agent': _userAgent,
-        'Accept':
-            'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      });
-
-      final response = await client.send(request).timeout(
-            _timeout,
-            onTimeout: () => throw WebFetchTimeoutException(
-              '网页抓取超时（${_timeout.inSeconds}秒）',
-              _timeout,
-            ),
-          );
+      final response = await _sendSafeRequest(client, Uri.parse(url));
 
       if (response.statusCode != 200) {
         throw Exception('网页请求失败: 状态码 ${response.statusCode}');
@@ -253,6 +254,50 @@ class WebFetchService {
     } finally {
       client.close();
     }
+  }
+
+  Future<http.StreamedResponse> _sendSafeRequest(
+    http.Client client,
+    Uri initialUri,
+  ) async {
+    var uri = initialUri;
+    for (var redirectCount = 0; redirectCount <= 5; redirectCount++) {
+      await validateUrlSafety(uri.toString());
+      final request = http.Request('GET', uri)
+        ..followRedirects = false
+        ..headers.addAll({
+          'User-Agent': _userAgent,
+          'Accept':
+              'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        });
+
+      final response = await client.send(request).timeout(
+            _timeout,
+            onTimeout: () => throw WebFetchTimeoutException(
+              '网页抓取超时（${_timeout.inSeconds}秒）',
+              _timeout,
+            ),
+          );
+
+      if (!_isRedirectStatus(response.statusCode)) {
+        return response;
+      }
+
+      final location = response.headers['location'];
+      if (location == null || location.trim().isEmpty) {
+        throw Exception('网页重定向缺少 Location 响应头');
+      }
+      uri = uri.resolve(location.trim());
+    }
+    throw Exception('网页重定向次数过多');
+  }
+
+  bool _isRedirectStatus(int statusCode) {
+    return statusCode == 301 ||
+        statusCode == 302 ||
+        statusCode == 303 ||
+        statusCode == 307 ||
+        statusCode == 308;
   }
 
   /// 移除 HTML 中的噪声标签

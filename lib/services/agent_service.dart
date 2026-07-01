@@ -254,7 +254,7 @@ class AgentService extends ChangeNotifier {
             invalidToolNames.add(raw.function.name);
           }
         }
-        if (invalidToolNames.isNotEmpty) {
+        if (invalidToolNames.length == rawToolCalls.length) {
           final correctionKey = 'invalid-json:${invalidToolNames.join(',')}';
           if (!_tryRegisterCorrectionAttempt(
             correctionAttempts,
@@ -293,7 +293,16 @@ class AgentService extends ChangeNotifier {
 
         for (final rawToolCall in rawToolCalls) {
           final parsedToolCall = _tryConvertToolCall(rawToolCall);
-          if (parsedToolCall == null) continue;
+          if (parsedToolCall == null) {
+            repliedAnyToolCall = true;
+            messages.add(
+              openai.ChatMessage.tool(
+                toolCallId: rawToolCall.id,
+                content: '工具调用参数不是有效的 JSON 对象。请只提交一个合法 JSON 对象。',
+              ),
+            );
+            continue;
+          }
 
           final signature =
               '${parsedToolCall.name}:${canonicalJsonForArguments(parsedToolCall.arguments)}';

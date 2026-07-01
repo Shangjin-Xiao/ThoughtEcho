@@ -477,8 +477,12 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       }
       return;
     }
-    if (_scrollThrottleTimer?.isActive ?? false) return;
-    _scrollThrottleTimer = Timer(const Duration(milliseconds: 200), () {});
+    if (!force && (_scrollThrottleTimer?.isActive ?? false)) return;
+    if (force) {
+      _scrollThrottleTimer?.cancel();
+    } else {
+      _scrollThrottleTimer = Timer(const Duration(milliseconds: 200), () {});
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {

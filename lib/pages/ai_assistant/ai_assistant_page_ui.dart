@@ -85,8 +85,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               children: [
                 NotificationListener<ScrollUpdateNotification>(
                   onNotification: (notification) {
-                    if (notification.dragDetails != null &&
-                        notification.scrollDelta != null) {
+                    if (notification.scrollDelta != null) {
                       if (_inputFocusNode.hasFocus) {
                         _inputFocusNode.unfocus();
                       }
@@ -742,12 +741,10 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
 
         // 合并 Agent 建议的元数据（标签、作者、出处）
         final rawSuggestedTagIds = meta['tag_ids'] as List<dynamic>?;
-        final suggestedTagIds = rawSuggestedTagIds != null
-            ? rawSuggestedTagIds
-                .map((item) => item.toString().trim())
-                .where((item) => item.isNotEmpty)
-                .toList()
-            : null;
+        final suggestedTagIds = rawSuggestedTagIds
+            ?.map((item) => item.toString().trim())
+            .where((item) => item.isNotEmpty)
+            .toList();
         final suggestedAuthor = meta['author']?.toString();
         final suggestedSource = meta['source']?.toString();
 
@@ -798,8 +795,20 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     final updatedMeta = Map<String, dynamic>.from(meta);
     updatedMeta['author'] = draft.author;
     updatedMeta['source'] = draft.source;
+    final previousTagNames = (meta['tag_names'] as List<dynamic>? ?? const [])
+        .map((item) => item.toString().trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+    final previousTagIds = (meta['tag_ids'] as List<dynamic>? ?? const [])
+        .map((item) => item.toString().trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
     updatedMeta['tag_names'] = draft.tagNames;
-    updatedMeta['tag_ids'] = await _resolveDraftTagIds(draft.tagNames);
+    updatedMeta['tag_ids'] =
+        _sameStringList(previousTagNames, draft.tagNames) &&
+                previousTagIds.isNotEmpty
+            ? previousTagIds
+            : await _resolveDraftTagIds(draft.tagNames);
     updatedMeta['include_location'] = draft.includeLocation;
     updatedMeta['include_weather'] = draft.includeWeather;
     return updatedMeta;
@@ -810,6 +819,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       return const <String>[];
     }
     final db = context.read<DatabaseService>();
+    final noMatchingTags = AppLocalizations.of(context).noMatchingTags;
     final categories = await db.getCategories();
     final nameToId = <String, String>{
       for (final tag in categories)
@@ -828,10 +838,17 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       }
     }
     if (unknownNames.isNotEmpty) {
-      throw Exception('${AppLocalizations.of(context).noMatchingTags}: '
-          '${unknownNames.join(', ')}');
+      throw Exception('$noMatchingTags: ${unknownNames.join(', ')}');
     }
     return ids;
+  }
+
+  bool _sameStringList(List<String> left, List<String> right) {
+    if (left.length != right.length) return false;
+    for (var i = 0; i < left.length; i++) {
+      if (left[i] != right[i]) return false;
+    }
+    return true;
   }
 
   void _updateSmartResultSavedNoteId(String messageId, String noteId) {
@@ -944,8 +961,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     final db = context.read<DatabaseService>();
     final locationService = context.read<LocationService>();
     final weatherService = context.read<WeatherService>();
-    final tags = await db.getCategories();
     final l10n = AppLocalizations.of(context);
+    final tags = await db.getCategories();
 
     // 预获取位置/天气数据，确保传入编辑器的 initialQuote 包含真实数据
     if (includeLocation) {
@@ -1054,12 +1071,10 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
 
         // 合并 Agent 建议的元数据（标签、作者、出处）
         final rawSuggestedTagIds = meta['tag_ids'] as List<dynamic>?;
-        final suggestedTagIds = rawSuggestedTagIds != null
-            ? rawSuggestedTagIds
-                .map((item) => item.toString().trim())
-                .where((item) => item.isNotEmpty)
-                .toList()
-            : null;
+        final suggestedTagIds = rawSuggestedTagIds
+            ?.map((item) => item.toString().trim())
+            .where((item) => item.isNotEmpty)
+            .toList();
         final suggestedAuthor = meta['author']?.toString();
         final suggestedSource = meta['source']?.toString();
 
