@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:html/parser.dart' as html_parser;
 import 'package:html2md/html2md.dart' as html2md;
@@ -99,6 +100,7 @@ class WebFetchService {
   /// 验证 URL 是否可访问
   Future<bool> isUrlAccessible(String url) async {
     try {
+      await _validateUrlSafety(url);
       final client = http.Client();
       try {
         final response = await client.head(Uri.parse(url),
@@ -126,11 +128,67 @@ class WebFetchService {
 
   // ── 内部方法 ──
 
-  /// 抓取网页 HTML 原文
-  Future<String> _fetchHtml(String url) async {
+  /// 验证 URL 安全性以防御 SSRF
+  Future<void> _validateUrlSafety(String url) async {
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       throw Exception('URL 格式无效，必须以 http:// 或 https:// 开头: $url');
     }
+
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      throw Exception('URL 无法解析: $url');
+    }
+
+    final host = uri.host.toLowerCase().trim();
+    if (host.isEmpty) {
+      throw Exception('URL 主机名为空: $url');
+    }
+
+    var blocked = _isPrivateOrLocalHost(host);
+    if (!blocked) {
+      try {
+        final resolved = await InternetAddress.lookup(host);
+        blocked = resolved.any(
+          (address) => _isPrivateOrLocalHost(address.address),
+        );
+      } catch (_) {
+        blocked = true;
+      }
+    }
+
+    if (blocked) {
+      throw Exception('安全限制：不允许访问本地或私有网络地址: $url');
+    }
+  }
+
+  /// 检查主机名或 IP 是否为私有或本地地址
+  bool _isPrivateOrLocalHost(String host) {
+    if (host == 'localhost') return true;
+    final ip = InternetAddress.tryParse(host);
+    if (ip == null) {
+      return false;
+    }
+    if (ip.isLoopback) return true;
+    if (ip.type == InternetAddressType.IPv4) {
+      final bytes = ip.rawAddress;
+      // 10.0.0.0/8
+      if (bytes[0] == 10) return true;
+      // 172.16.0.0/12
+      if (bytes[0] == 172 && (bytes[1] >= 16 && bytes[1] <= 31)) return true;
+      // 169.254.0.0/16
+      if (bytes[0] == 169 && bytes[1] == 254) return true;
+      // 192.168.0.0/16
+      if (bytes[0] == 192 && bytes[1] == 168) return true;
+    } else if (ip.type == InternetAddressType.IPv6) {
+      final bytes = ip.rawAddress;
+      if (bytes.isNotEmpty && (bytes[0] & 0xfe) == 0xfc) return true;
+    }
+    return false;
+  }
+
+  /// 抓取网页 HTML 原文
+  Future<String> _fetchHtml(String url) async {
+    await _validateUrlSafety(url);
 
     logDebug('WebFetchService: 开始抓取 $url');
     final client = http.Client();
