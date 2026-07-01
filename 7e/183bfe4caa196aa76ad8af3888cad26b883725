@@ -1,0 +1,353 @@
+lib/widgets/add_note_dialog.dart
+  s_e0eb36301e125d::t_b70cf23538d847 28,81,133,147-148,160-262,274-275,278-279,337-341,348-349,355-378,388-389,408,411,416-420,423,426-427,429-430,434,439,451-452,470-471,480-481,507,528-529,547-563,569-576,590-599,679-680,763-774,781,1077-1080,1082-1083,1085-1086,1093-1095,1097-1099,1111-1117,1137-1138,1140-1141,1144,1177-1178,1185-1186,1192,1210-1213,1218,1226,1246,1249,1272,1284-1287,1307-1308,1310,1348,1353-1354,1365-1366,1373,1378-1380,1384-1385,1388-1389,1394,1399-1402,1431,1445-1447,1471,1474,1478-1481,1484-1485,1512-1519,1622-1625,1632-1633,1635,1637,1639,1641-1642,1648-1653,1655-1658,1660,1662,1665,1667,1742,1751-1776,1778-1779,1781-1804,1808-1817,1819-1827,1829-1831,1833-1843,1845-1852,1854-1855,1857-1864,1866-1923,1925-1935,1939-1967,1969-1974,1976-1992,1995-2004,2007-2020,2023-2029,2032-2034,2036-2100,2102-2117,2120-2133,2136,2138-2165,2168-2198,2201-2265,2267-2269,2271-2272,2274,2279-2320,2324-2335,2337-2355,2358-2370,2373-2374,2376-2382,2385-2404,2406-2409
+  s_e0eb36301e125d::t_9c0271c5527e58 2410-2411
+docs/slash_commands_integration.md
+  s_e0eb36301e125d::t_8406069da57ab7 1-223
+lib/pages/note_editor/editor_document_init.dart
+  s_e0eb36301e125d::t_8e083603826323 66-69,75,78,88-90
+test/unit/services/database_pagination_test.dart
+  s_e0eb36301e125d::t_1e6935b8447bd0 1-161
+lib/pages/ai_periodic_report_page.dart
+  s_e0eb36301e125d::t_61e98d46fd4d79 16-17
+lib/l10n/app_zh.arb
+  s_e0eb36301e125d::t_208cbc17b3b61a 3-8,12-13,147,149,1748,2023,3604-3611,3661,3732-3733,4013-4044
+lib/pages/note_editor/editor_location_dialogs.dart
+  s_e0eb36301e125d::t_f38c6ab4088c16 5
+.gitignore
+  s_e0eb36301e125d::t_8406069da57ab7 310-315
+lib/pages/ai_report/report_data_loading.dart
+  s_e0eb36301e125d::t_704169fb163c7c 13-23,26,32
+  s_e0eb36301e125d::t_f24855add53b9a 12
+lib/l10n/app_en.arb
+  s_e0eb36301e125d::t_5c8c719869ff67 3-8,12-13,149,2016,3604-3611,3661,3732-3733,4013-4044
+.agents/skills/ask-matt/SKILL.md
+  s_e0eb36301e125d::t_173f1c51babf40 1-61
+.agents/skills/codebase-design/DEEPENING.md
+  s_e0eb36301e125d::t_55b4f422c45a0a 1-37
+.agents/skills/codebase-design/DESIGN-IT-TWICE.md
+  s_e0eb36301e125d::t_c619719aa60e37 1-44
+.agents/skills/codebase-design/SKILL.md
+  s_e0eb36301e125d::t_4585d5c5dc3de1 1-114
+.agents/skills/decision-mapping/SKILL.md
+  s_e0eb36301e125d::t_0db61dde254e9d 2-4,7,9,11,13,15,17-19,21-22,24-26,28,30,32-34,37-59,61,63,65-67,69,71,73-78,80,82,84,86,88-101,103
+.agents/skills/design-an-interface/SKILL.md
+  s_e0eb36301e125d::t_7e9e248275c527 1-94
+.agents/skills/diagnosing-bugs/SKILL.md
+  s_e0eb36301e125d::t_90e5139d8026d7 1-4,6,8,10,12,14,16,18-74,76,78,80,82,84,86,88,90,92,94,96,98,100-102,104,106,108,110,112,114,116,118-122,124,126,128-132,134
+.agents/skills/diagnosing-bugs/scripts/hitl-loop.template.sh
+  s_e0eb36301e125d::t_88e22e868a0c48 1-41
+.agents/skills/domain-modeling/ADR-FORMAT.md
+  s_e0eb36301e125d::t_0680e2039780e8 1-47
+.agents/skills/domain-modeling/CONTEXT-FORMAT.md
+  s_e0eb36301e125d::t_bbb6b360e381c8 1-60
+.agents/skills/domain-modeling/SKILL.md
+  s_e0eb36301e125d::t_4a490ebe5756f3 1-74
+.agents/skills/edit-article/SKILL.md
+  s_e0eb36301e125d::t_ffefcedecb5388 1-15
+.agents/skills/git-guardrails-claude-code/SKILL.md
+  s_e0eb36301e125d::t_5721ac7c2a4b22 1-95
+.agents/skills/git-guardrails-claude-code/scripts/block-dangerous-git.sh
+  s_e0eb36301e125d::t_4b5c75fe5b4912 1-25
+.agents/skills/grill-me/SKILL.md
+  s_e0eb36301e125d::t_f794b80843bb3e 1-7
+.agents/skills/grill-with-docs/SKILL.md
+  s_e0eb36301e125d::t_87f5c3c3d1d553 1-7
+.agents/skills/grilling/SKILL.md
+  s_e0eb36301e125d::t_53caf4d97d55ce 1-10
+.agents/skills/handoff/SKILL.md
+  s_e0eb36301e125d::t_fa2f951f0838cc 1-16
+.agents/skills/implement/SKILL.md
+  s_e0eb36301e125d::t_4398afeb0bcf3f 1-15
+.agents/skills/improve-codebase-architecture/HTML-REPORT.md
+  s_e0eb36301e125d::t_4ed80cc8795b25 1-123
+.agents/skills/improve-codebase-architecture/SKILL.md
+  s_e0eb36301e125d::t_ee6fb3d481b542 1-66
+.agents/skills/loop-me/SKILL.md
+  s_e0eb36301e125d::t_429dc718b4f495 1-32
+.agents/skills/migrate-to-shoehorn/SKILL.md
+  s_e0eb36301e125d::t_c2378e249bac72 2-3,6-8,10,12,14,16-18,20,23,26-49,51,53-54,56-63,65,67-70,73,75-76,78-79,81,83,85-86,89,91-92,94,96-118
+.agents/skills/obsidian-vault/SKILL.md
+  s_e0eb36301e125d::t_8dae8b0fc32338 1-4,6,8,10,12,14,16-18,20,22-24,26,28,30-32,34-35,38-47,49,51-53,55-58
+.agents/skills/prototype/LOGIC.md
+  s_e0eb36301e125d::t_0924e22ce5f4e3 1-79
+.agents/skills/prototype/SKILL.md
+  s_e0eb36301e125d::t_c4193bb1b37183 1-30
+.agents/skills/prototype/UI.md
+  s_e0eb36301e125d::t_81d04792916386 1-112
+.agents/skills/qa/SKILL.md
+  s_e0eb36301e125d::t_debe8b1e225d10 1-130
+.agents/skills/request-refactor-plan/SKILL.md
+  s_e0eb36301e125d::t_0a3422d7d4b80f 1-68
+.agents/skills/resolving-merge-conflicts/SKILL.md
+  s_e0eb36301e125d::t_c2d792d58a707e 1-14
+.agents/skills/review/SKILL.md
+  s_e0eb36301e125d::t_48591f69f280d2 1-69
+.agents/skills/scaffold-exercises/SKILL.md
+  s_e0eb36301e125d::t_aceb7be2230f43 2-3,6,8,10,12-15,17,19,21-23,25,27,29-32,34-39,42-44,46-50,52,54,56-63,65,67,69-71,73-77,79-106
+.agents/skills/setup-matt-pocock-skills/SKILL.md
+  s_e0eb36301e125d::t_922cb27fe9662c 2-4,6-112,114-127
+.agents/skills/setup-matt-pocock-skills/domain.md
+  s_e0eb36301e125d::t_46ee7b8fbf62b2 1-51
+.agents/skills/setup-matt-pocock-skills/issue-tracker-github.md
+  s_e0eb36301e125d::t_16e1c7f803b7b3 1-34
+.agents/skills/setup-matt-pocock-skills/issue-tracker-gitlab.md
+  s_e0eb36301e125d::t_a74813acefcde5 1-35
+.agents/skills/setup-matt-pocock-skills/issue-tracker-local.md
+  s_e0eb36301e125d::t_4b90d066cd8048 1-19
+.agents/skills/setup-matt-pocock-skills/triage-labels.md
+  s_e0eb36301e125d::t_c9cc57933c4f04 1-15
+.agents/skills/setup-pre-commit/SKILL.md
+  s_e0eb36301e125d::t_cc33e31fe9b246 1-4,6,8,10-13,15,17,19,21,23,25-27,29,31-33,35,37,39,41-45,47,49,51-55,57,59,61-71,73,75-79,81,83,85,87,89-91
+.agents/skills/tdd/SKILL.md
+  s_e0eb36301e125d::t_aad95f6958b8f0 1-4,6,8,10,12,14,16,18-92,94-98,100,102,104-111
+.agents/skills/tdd/mocking.md
+  s_e0eb36301e125d::t_da1ee999553fd1 1-59
+.agents/skills/tdd/refactoring.md
+  s_e0eb36301e125d::t_714d08ef56d3ea 1-10
+.agents/skills/tdd/tests.md
+  s_e0eb36301e125d::t_9a1ab05270aba6 1-77
+.agents/skills/teach/GLOSSARY-FORMAT.md
+  s_e0eb36301e125d::t_9765a96bf029bc 1,3,5,7-8,10,12,14-16,18-20,22-25,27,29-35
+.agents/skills/teach/LEARNING-RECORD-FORMAT.md
+  s_e0eb36301e125d::t_753de44fd3bc52 1-46
+.agents/skills/teach/MISSION-FORMAT.md
+  s_e0eb36301e125d::t_7855b3dfd2e2ba 1-31
+.agents/skills/teach/RESOURCES-FORMAT.md
+  s_e0eb36301e125d::t_abfabc7e630434 1-32
+.agents/skills/teach/SKILL.md
+  s_e0eb36301e125d::t_52e3751e458c12 2-3,5,8,10,12,14-20,22,24,26-28,30,32,34,36,38-39,41,43-45,47,49,51,53,55,57,59,61,63,65,67,69,71,73,75,77,79,81,83,85,87-89,91,93,95,97,99,101,103-138,140
+.agents/skills/to-issues/SKILL.md
+  s_e0eb36301e125d::t_99422c9736565e 1-84
+.agents/skills/to-prd/SKILL.md
+  s_e0eb36301e125d::t_011c0670493b98 1-75
+.agents/skills/triage/AGENT-BRIEF.md
+  s_e0eb36301e125d::t_3e8d255d11fea2 1-68,72-198,200-207
+.agents/skills/triage/OUT-OF-SCOPE.md
+  s_e0eb36301e125d::t_23eb7a08a2e5af 1,3,5-6,8,11-14,17,19,21,24,26,28,30-31,33-35,37-39,41-46,49,51-54,56,58,60,62,64-66,68,70,72,74-76,78,80-82,84,86,88,90,92-97,99,101,103-105
+.agents/skills/triage/SKILL.md
+  s_e0eb36301e125d::t_659bd329bff04b 1-5,7,9,11,13,15-17,19,21-22,24,26,28-29,31,33-37,39,41,43,45-100,102,104-106,108,110,112
+.agents/skills/ubiquitous-language/SKILL.md
+  s_e0eb36301e125d::t_7de2e04c70a9a1 1-93
+.agents/skills/wizard/SKILL.md
+  s_e0eb36301e125d::t_497a637b75b4f2 1-45
+.agents/skills/wizard/template.sh
+  s_e0eb36301e125d::t_fcd92183999328 1-211
+.agents/skills/writing-beats/SKILL.md
+  s_e0eb36301e125d::t_ee0c58b9dd6a9f 1-67
+.agents/skills/writing-fragments/SKILL.md
+  s_e0eb36301e125d::t_cc2dbe6efdf8d4 1-79
+.agents/skills/writing-great-skills/GLOSSARY.md
+  s_e0eb36301e125d::t_ad9bd5aa1f769e 1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63,65,67,69,71,73,75-77,79,81,83,85,87,89,91,93,95,97,99,101,103,105,107,109,111,113,115,117,119,121,123,125,127,129,131,133,135,137,139,141,143,145,147,149,151,153,155,157,159,161,163,165,167,169,171,173,175,177,179,181,183,185,187,189,191,193,195
+.agents/skills/writing-great-skills/SKILL.md
+  s_e0eb36301e125d::t_7ac3d7d41cc905 1-82
+.agents/skills/writing-shape/SKILL.md
+  s_e0eb36301e125d::t_115f35129f1019 1-79
+.jules/blackbox.md
+  s_e0eb36301e125d::t_d086c07858a279 38-41
+.jules/bolt.md
+  s_e0eb36301e125d::t_674728ea76df62 38-62
+.jules/caliper.md
+  s_e0eb36301e125d::t_72377689eb0a67 27-38
+.jules/palette.md
+  s_e0eb36301e125d::t_8ec0bc3377677d 31-33
+.jules/sentinel.md
+  s_e0eb36301e125d::t_85185da31e40c6 50-53
+.jules/translator.md
+  s_e0eb36301e125d::t_c49276dcaa5de0 39-46
+.squad/decisions.md
+  s_e0eb36301e125d::t_9275fcc8784110 322-345
+README.md
+  s_e0eb36301e125d::t_d82eb5b040d745 260,515
+docs/PROJECT_SUMMARY.md
+  s_e0eb36301e125d::t_52549c30ea1dab 1-106
+lib/constants/app_constants.dart
+  s_e0eb36301e125d::t_98bec96a342d87 26-29
+lib/controllers/add_note_controller.dart
+  s_e0eb36301e125d::t_0d40a1ae1a1567 1-102,104-108,110-118,120-124,126-137,139-142,144,146-180,182-204,206-246,248-253,255-261,263,265-382,384-458
+lib/controllers/search_controller.dart
+  s_e0eb36301e125d::t_7222bd2c804e42 7,11,17-18,20,32,38,47,50,52,54,56-60,62,64
+lib/l10n/app_fr.arb
+  s_e0eb36301e125d::t_60fa8aaeb5c9b8 1925,3505
+lib/l10n/app_ja.arb
+  s_e0eb36301e125d::t_d309ccdeebe151 1932,3519
+lib/l10n/app_ko.arb
+  s_e0eb36301e125d::t_21cf1b7261699d 1932,3519
+lib/models/app_settings.dart
+  s_e0eb36301e125d::t_f30f8db35da98c 71-72,113,288
+lib/models/merge_report.dart
+  s_e0eb36301e125d::t_8a1cc2ff794912 12,14,40,42,137,145,301,310
+lib/models/smart_push_settings.dart
+  s_e0eb36301e125d::t_3ceea20e6cc8f6 44-54,106-116,119-134,243-276,279,286,301,308
+lib/pages/ai_report/report_overview.dart
+  s_e0eb36301e125d::t_83d1897f44bf79 456
+lib/pages/ai_report/report_stats.dart
+  s_e0eb36301e125d::t_2c6d60667a39dc 373
+lib/pages/api_key_diagnostics_page.dart
+  s_e0eb36301e125d::t_3b308683e4ad3c 142-144,160-162
+lib/pages/home_page.dart
+  s_e0eb36301e125d::t_5786efecf10ca5 54,59,182,187-190,349,411,637,825,829-833,835-836,841,852,857-858,861,866-867,872-874,878-880,882,889,892,1086,1136-1157,1198,1200-1203,1416,1469-1473,1477-1479,1481-1522,1524-1547,2014-2016,2185
+lib/pages/manual_api_test_page.dart
+  s_e0eb36301e125d::t_bf3665de4bffca 152-154
+lib/pages/settings_page.dart
+  s_e0eb36301e125d::t_4d28599fab0d24 51,735-737,751-754,1050-1052,1057-1059,1061,1093-1099
+lib/pages/smart_push_settings_page.dart
+  s_e0eb36301e125d::t_5f96b1d6d11e05 4-16,20,63,67,88-90,116-118,138-139,152-154,176-178,229
+lib/pages/smart_push_settings_page_basic_sections.dart
+  s_e0eb36301e125d::t_273893fac6b7a6 1-123,126-327,330-335,337,339-343,345-549,551-701,703-704
+lib/pages/smart_push_settings_page_custom_sections.dart
+  s_e0eb36301e125d::t_4d7ba617e1b644 1-481
+lib/pages/smart_push_settings_page_misc_sections.dart
+  s_e0eb36301e125d::t_0ddb15850ec406 1-300
+lib/pages/trash_page.dart
+  s_e0eb36301e125d::t_7798f1236fe3a2 154-174,311,313,315-318,384,386,388,418,493,498,506,519
+lib/pages/webdav_sync_page.dart
+  s_e0eb36301e125d::t_f311daf15e2efd 215-231,357,381,384,387,390,392-393,410,414,430,443-445,453-455,478,646-647,653,669-670,677,681,684-685,689-690,694,697-698,820,835,896-897,899
+lib/services/ai_card_generation_service.dart
+  s_e0eb36301e125d::t_917735f2cae3d3 2,4,14-16,19,21-22,24-26,58-59,63-70,74-75,78-80,84-91,95,157,190
+lib/services/ai_card_generation_strategies/ai_card_generation_strategy.dart
+  s_e0eb36301e125d::t_37cd0d2abd954d 1-2,4-14,16-18,20,22-34,36-47,49-50,52-60,62-82,84,86-89,91-92,94-183
+lib/services/ai_card_generation_strategies/ai_card_prompt_selector.dart
+  s_e0eb36301e125d::t_363f52cd5abaac 1-245
+lib/services/ai_card_generation_strategies/card_generation_strategy.dart
+  s_e0eb36301e125d::t_1d066582391f6b 1-15
+lib/services/ai_card_generation_strategies/card_generation_utils.dart
+  s_e0eb36301e125d::t_25b422f848b1d2 1-19,21-65,67-93,95-99,101-111,113-119,121-123,125-152,154-158,160-164,166-168,170-208
+lib/services/ai_card_generation_strategies/fallback_card_generation_strategy.dart
+  s_e0eb36301e125d::t_3ba848c10a41fa 1-299
+lib/services/ai_card_generation_strategies/svg_processing_isolate.dart
+  s_e0eb36301e125d::t_b84a6f67fa1505 1-30,33-36,38,41-44,46-111,114-120,122-128,130-427
+lib/services/clipboard_service.dart
+  s_e0eb36301e125d::t_9b5befa0476405 30-33,41-45,81-86
+lib/services/database/database_pagination_mixin.dart
+  s_e0eb36301e125d::t_619a4d4511b359 39-40,244,325-326,328,335,350-356,391-394,404-406
+lib/services/database/database_quote_crud_mixin.dart
+  s_e0eb36301e125d::t_afb34e51a4ac29 251-383
+lib/services/database_backup_service.dart
+  s_e0eb36301e125d::t_4a439aece4bd3a 45,71,85-91,93-97,105,180,194-200,202-207,227-228,230-240,297-298,300-310
+lib/services/database_schema_manager.dart
+  s_e0eb36301e125d::t_d3938a54cdbffa 1433-1434,1437-1439,1441-1445,1448-1450,1453,1523-1524,1527-1529,1531-1535,1538-1540,1543
+lib/services/database_service.dart
+  s_e0eb36301e125d::t_7dccd685b36329 82-87,393-395,783-786
+lib/services/delta_to_pdf_parser.dart
+  s_e0eb36301e125d::t_2ee7c7f1c9f539 3,6,12-16,26,42,44,74-81,87,94-101,108-114,121,138-315
+lib/services/media_cleanup_service.dart
+  s_e0eb36301e125d::t_96ac3dc06d038c 30-36,64-70,114-120,151-157,180-186,228-234,245-251,290-297,326-332,354-360
+lib/services/pdf_export_service.dart
+  s_e0eb36301e125d::t_79d0ef231f510e 357
+lib/services/pdf_font_service.dart
+  s_e0eb36301e125d::t_6eaada838c5d36 36,45,72-75,86,91,215-235
+lib/services/settings_service.dart
+  s_e0eb36301e125d::t_ec8f366014034e 517-520,982-1000,1004-1019,1021-1033,1035-1039,1042-1045,1049,1051-1065
+lib/services/smart_push/smart_push_content.dart
+  s_e0eb36301e125d::t_2a34468fca9615 24-25,47,91-95,101-104,113-117,137-141,147,149,151-155,161-164,169-173,203-207,296-299,304
+lib/services/smart_push/smart_push_execution.dart
+  s_e0eb36301e125d::t_5317b1eb49104f 317-319
+lib/services/smart_push/smart_push_notification.dart
+  s_e0eb36301e125d::t_b2533ffe717ad6 116,159
+lib/services/smart_push_analytics.dart
+  s_e0eb36301e125d::t_e8b027237256ca 70-75,107-112,203-205,222-227,245-247,250-255,297-301,335-337,341-346,372-377,459-468,470,474-479,495-504,506,510-515
+lib/services/smart_push_computation.dart
+  s_e0eb36301e125d::t_3fa38f2c7840ef 11,17,81,87,93,99,191-216,227-228,236-247
+lib/services/smart_push_service.dart
+  s_e0eb36301e125d::t_d2961b8a4bd166 22,87-90,188-209,425
+lib/services/unified_log_service.dart
+  s_e0eb36301e125d::t_bf6dc9c4fb7eae 268,277-281,286-288,291-304,366-368,549,594-598,600-608,614-630,657-658,665,673-674,686-689,697,766,782,801
+lib/services/webdav_sync_service.dart
+  s_e0eb36301e125d::t_7294c22a4e110a 73,574-575,601,606-650,654-671,676,679,745-746,749,757,768,771,780-786,788-793,799-801,810,859-963
+lib/utils/api_key_debugger.dart
+  s_e0eb36301e125d::t_da6da1da83dc05 35,47,71,119,142-143,166,177
+lib/utils/quill_ai_apply_utils.dart
+  s_e0eb36301e125d::t_65fe8833484974 8-10,108-110
+lib/utils/report_period_utils.dart
+  s_e0eb36301e125d::t_07cedeee266351 49,59
+lib/utils/string_utils.dart
+  s_e0eb36301e125d::t_d5f49e926cc0e8 71-89
+lib/widgets/ai/tool_call_card.dart
+  s_e0eb36301e125d::t_8503c5cba1a2d8 251-252,254,276-277,289-290
+lib/widgets/note_list/note_list_data_stream.dart
+  s_e0eb36301e125d::t_90da33c6fb3cd9 92,111-115,139-143,151,212-216,255-278,305-308,311-312,314,323,329-331,337-340,375-380,399-400,404-405,407-421
+lib/widgets/note_list/note_list_items.dart
+  s_e0eb36301e125d::t_e025bb980d3515 12-14,198,369,381,399-407,409-428,440-443,514-519,546,581-610,612-618,620-627,630,632-678,709-731,734-742,746-754,781-784,921-924,928-947,955,964-968,987,990-991,1008,1116-1166
+lib/widgets/note_list/note_list_scroll.dart
+  s_e0eb36301e125d::t_418d0f539c2b43 582,737-738,820-821,828-837,848-849,878,897,940-943,964-965,982-983,987
+lib/widgets/note_list_view.dart
+  s_e0eb36301e125d::t_0ad325b0111057 135-148,153-155,182-183,186-188,288-298,390-398,404-405,534,606-607,612-616,651-656,658-680,682-689,699-713,715,717,723,750,755-772
+lib/widgets/quote_content_widget.dart
+  s_e0eb36301e125d::t_c8a322a2ca6e81 21,30,113,445-485,645-646,870-985
+lib/widgets/quote_item_widget.dart
+  s_e0eb36301e125d::t_c891c8c1697754 339-340,352-588,890-895,1140-1141,1143-1145,1155,1159-1160,1171-1172,1307
+pubspec.lock
+  s_e0eb36301e125d::t_13bb88e24db6e4 2661
+pubspec.yaml
+  s_e0eb36301e125d::t_49c7b5f4df65a3 117
+res/privacy.html
+  s_e0eb36301e125d::t_ec15c3745e5e12 280-281,305-308,326-340,344-345,347,349-352,354-355,398-415
+skills-lock.json
+  s_e0eb36301e125d::t_8355c35f853ba0 4-15,70-99,166-261,321-398
+test/all_tests.dart
+  s_e0eb36301e125d::t_47feb3e76ab543 31-32,79,118,151
+test/log_persistence_test.dart
+  s_e0eb36301e125d::t_4bd503dce69aa8 12
+test/pdf_export_test.dart
+  s_e0eb36301e125d::t_55e488d443e929 1,27-53,97-230,292-305
+test/quote_content_widget_test.dart
+  s_e0eb36301e125d::t_4f910cc88af245 42-46,63,127-136
+test/unified_log_service_test.dart
+  s_e0eb36301e125d::t_037a60a8527f42 49,55-57,59-62,67-80
+test/unit/android/file_provider_config_test.dart
+  s_e0eb36301e125d::t_f6f00d866958c1 1-66
+test/unit/constants/app_constants_test.dart
+  s_e0eb36301e125d::t_c5eeef79e9cacd 22-23
+test/unit/controllers/search_controller_test.dart
+  s_e0eb36301e125d::t_6961b52f940e20 85-144,146,148,150-153,155-156,158-160,162-165,167-209,211-216,263-267,269-270,272-274
+test/unit/l10n/app_arb_consistency_test.dart
+  s_e0eb36301e125d::t_030ddaa4224888 18-25
+test/unit/services/ai_card_generation_strategies_test.dart
+  s_e0eb36301e125d::t_b900e814c7c50a 2-3,18,25,27-32
+test/unit/services/clipboard_service_test.dart
+  s_e0eb36301e125d::t_df7625355adda5 22-31
+test/unit/services/database_trash_flow_test.dart
+  s_e0eb36301e125d::t_fae3518335e621 139-260
+test/unit/services/settings_service_test.dart
+  s_e0eb36301e125d::t_756e79cc965a5d 304-307
+test/unit/services/smart_push_computation_test.dart
+  s_e0eb36301e125d::t_45554742f19f76 159-250
+test/unit/services/webdav_sync_service_test.dart
+  s_e0eb36301e125d::t_ba25e8f2a2c9ba 161-247
+test/unit/utils/string_utils_test.dart
+  s_e0eb36301e125d::t_29116829e769ca 138-153
+test/unit/utils/svg_test_helper_test.dart
+  s_e0eb36301e125d::t_2376f313b076ed 1-101
+test/widget/add_note_dialog_focus_timing_test.dart
+  s_e0eb36301e125d::t_eab4423d431000 271-328
+test/widget/daily_quote_view_startup_test.dart
+  s_e0eb36301e125d::t_867ed71062b7f5 2-63,67-90,92-93,95-96,98-99,101-102,104-112,114-117
+test/widget/note_list_scroll_controller_test.dart
+  s_e0eb36301e125d::t_cb5f348ce01f54 1-14,16-87,89-91,93-96,98-100,102-105,107-153,155-157,159-160,162-163,165-166,168-169,171-172,174-175,177-178,180-181,183-184,186-187,189-190,192-195,197-198,200-201,203,206,208-219,223-231,234-235,238-246
+test/widget/note_list_view_filter_test.dart
+  s_e0eb36301e125d::t_456b2e1ca54f80 24-59,190,213-515,540,754,762,810,861-863
+test/widget/pages/home/daily_prompt_panel_test.dart
+  s_e0eb36301e125d::t_75caf2817becd4 1-160
+test/widget/pages/home_page_test.dart
+  s_e0eb36301e125d::t_c59a34601743fd 3,5-79,82-85,87-128,131,133-143,146-149,151-173,175-177,179,182-183,218-219
+test/widget/pages/trash_page_test.dart
+  s_e0eb36301e125d::t_ebcf8d1d53ab1e 1,45-59,71-74,82-90,114-120,132-136,138-139,144,156-157,220,243,245,248,281-343,357,364,374-397,407
+test/widgets/quote_item_widget_test.dart
+  s_e0eb36301e125d::t_68ddf91f7ec0e4 274-331,823-882
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.5",
+  "base_commit_sha": "7e183bfe4caa196aa76ad8af3888cad26b883725",
+  "prompts": {},
+  "sessions": {
+    "s_e0eb36301e125d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f18b3-e1ec-7d32-9714-5f4b5febd120",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
