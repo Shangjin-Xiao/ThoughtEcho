@@ -1,0 +1,19 @@
+lib/widgets/quote_content_widget.dart
+  s_19ea9447b134d5::t_156d2d4b35670e 105,731
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "b902ec28c801bff4213e493520325a247ace2202",
+  "prompts": {},
+  "sessions": {
+    "s_19ea9447b134d5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f206e-eab2-7d52-8cca-dbe06410ffdc",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
