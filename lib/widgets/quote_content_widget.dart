@@ -102,7 +102,7 @@ class QuoteContent extends StatelessWidget {
   static const double _estimatedVideoHeight = 240.0;
   static const double _estimatedAudioHeight = 140.0;
   static const double _collapsedDocumentHeightBudget =
-      collapsedContentMaxHeight * 2;
+      collapsedContentMaxHeight * 4;
   static const Key collapsedWrapperKey = ValueKey(
     'quote_content.collapsed_wrapper',
   );
@@ -728,7 +728,7 @@ class QuoteContent extends StatelessWidget {
     final approxLines = (remainingHeight / _estimatedLineHeight).floor();
     final charLimit =
         (approxLines.clamp(1, 12) * _averageCharsPerLine).clamp(1, text.length);
-    return text.substring(0, charLimit);
+    return String.fromCharCodes(text.runes.take(charLimit));
   }
 
   quill.Document _buildRichTextDocument(
