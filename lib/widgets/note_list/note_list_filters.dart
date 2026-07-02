@@ -222,7 +222,7 @@ extension NoteListFiltersExtension on NoteListViewState {
       ),
     );
 
-    final width = MediaQuery.of(context).size.width;
+    final width = MediaQuery.sizeOf(context).width;
     final isTablet = width > AppConstants.tabletMinWidth;
     final maxWidth = isTablet ? AppConstants.tabletMaxContentWidth : width;
     // 为chip之间添加间距

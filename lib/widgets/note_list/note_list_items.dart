@@ -3,7 +3,9 @@ part of '../note_list_view.dart';
 /// List building, search, and item rendering for NoteListViewState.
 extension _NoteListItemsExtension on NoteListViewState {
   Widget _buildNoteListView(BuildContext context) {
-    final searchController = Provider.of<NoteSearchController>(context);
+    final searchError = context.select<NoteSearchController, String?>(
+      (controller) => controller.searchError,
+    );
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     _firstOpenScrollPerfEnabled = context.select<SettingsService, bool>(
@@ -17,19 +19,20 @@ extension _NoteListItemsExtension on NoteListViewState {
     }
 
     // 监听搜索控制器状态，如果搜索出错则重置本地加载状态
-    if (searchController.searchError != null && _isLoading) {
+    if (searchError != null && _isLoading) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _updateState(() {
             _isLoading = false;
           });
-          searchController.resetSearchState();
+          context.read<NoteSearchController>().resetSearchState();
         }
       });
     }
 
     // 响应式设计：根据屏幕宽度调整布局
-    final width = MediaQuery.of(context).size.width;
+    final width = MediaQuery.sizeOf(context).width;
+    final topPadding = MediaQuery.paddingOf(context).top;
     final isTablet = width > AppConstants.tabletMinWidth;
     final maxWidth = isTablet ? AppConstants.tabletMaxContentWidth : width;
     final horizontalPadding = isTablet ? 16.0 : 8.0;
@@ -59,7 +62,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                     child: Container(
                       padding: EdgeInsets.fromLTRB(
                         horizontalPadding,
-                        MediaQuery.of(context).padding.top + 8.0,
+                        topPadding + 8.0,
                         horizontalPadding,
                         0,
                       ),
@@ -212,9 +215,7 @@ extension _NoteListItemsExtension on NoteListViewState {
             AnimatedPositioned(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOutCubic,
-              top: _isExportMode
-                  ? MediaQuery.of(context).padding.top + 8.0
-                  : -(MediaQuery.of(context).padding.top + 80.0),
+              top: _isExportMode ? topPadding + 8.0 : -(topPadding + 80.0),
               left: horizontalPadding,
               right: horizontalPadding,
               child: AnimatedOpacity(
@@ -460,6 +461,7 @@ extension _NoteListItemsExtension on NoteListViewState {
 
         if (notification is ScrollStartNotification &&
             notification.dragDetails != null) {
+          _cancelScrollEndSettledWork();
           if (_searchFocusNode.hasFocus) {
             _searchFocusNode.unfocus();
           }
@@ -473,6 +475,8 @@ extension _NoteListItemsExtension on NoteListViewState {
         // 预加载逻辑：热路径不做日志、不做分配
         if (notification is ScrollUpdateNotification) {
           // 标记列表正在滚动（含惯性阶段），阻止图片提前解码
+          _scrollEndSettleGeneration++;
+          _scrollEndSettleTimer?.cancel();
           isListScrolling.value = true;
           final metrics = notification.metrics;
           final threshold =
@@ -488,8 +492,6 @@ extension _NoteListItemsExtension on NoteListViewState {
 
         // 滚动完全停止（含惯性）：重置用户滚动状态 + 延迟检查
         if (notification is ScrollEndNotification) {
-          // 列表完全静止，允许图片开始解码
-          isListScrolling.value = false;
           // 重置用户滚动状态。
           _isUserScrolling = false;
 
@@ -501,8 +503,7 @@ extension _NoteListItemsExtension on NoteListViewState {
             _loadMore();
           }
 
-          // 滚动范围异常检测：从 _onScroll 热路径移至此处，避免滚动期间做 Provider 查找
-          _checkAndFixScrollExtentAnomaly();
+          _scheduleScrollEndSettledWork();
         }
         return false;
       },
@@ -684,20 +685,16 @@ extension _NoteListItemsExtension on NoteListViewState {
                   itemWidget = Stack(
                     children: [
                       itemWidget,
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          ignoring: !_isExportMode,
+                      if (_isExportMode)
+                        Positioned.fill(
                           child: Material(
                             color: Colors.transparent,
                             child: InkWell(
-                              onTap: _isExportMode
-                                  ? () => _toggleExportSelection(quoteId)
-                                  : null,
+                              onTap: () => _toggleExportSelection(quoteId),
                               borderRadius: BorderRadius.circular(16),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   );
 
@@ -707,22 +704,12 @@ extension _NoteListItemsExtension on NoteListViewState {
                   );
 
                   final isDeleting = _deletingQuoteIds.contains(quoteId);
-                  itemWidget = AnimatedOpacity(
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeInCubic,
-                    opacity: isDeleting ? 0.0 : 1.0,
-                    child: AnimatedSize(
-                      duration: const Duration(milliseconds: 250),
-                      curve: Curves.easeInCubic,
-                      alignment: Alignment.topCenter,
-                      clipBehavior: Clip.hardEdge,
-                      child: Align(
-                        alignment: Alignment.topCenter,
-                        heightFactor: isDeleting ? 0.0 : 1.0,
-                        child: itemWidget,
-                      ),
-                    ),
-                  );
+                  if (isDeleting) {
+                    itemWidget = _NoteDeleteCollapse(
+                      key: ValueKey('note_delete_collapse_$quoteId'),
+                      child: itemWidget,
+                    );
+                  }
 
                   itemWidget = _wrapNoteInsertAnimation(
                     quoteId: quoteId,
@@ -756,6 +743,27 @@ extension _NoteListItemsExtension on NoteListViewState {
         ),
       ),
     );
+  }
+
+  void _cancelScrollEndSettledWork() {
+    _scrollEndSettleGeneration++;
+    _scrollEndSettleTimer?.cancel();
+    _scrollEndSettleTimer = null;
+    isListScrolling.value = true;
+  }
+
+  void _scheduleScrollEndSettledWork() {
+    final generation = ++_scrollEndSettleGeneration;
+    _scrollEndSettleTimer?.cancel();
+    _scrollEndSettleTimer = Timer(const Duration(milliseconds: 32), () {
+      if (!mounted || generation != _scrollEndSettleGeneration) {
+        return;
+      }
+
+      // 延迟放行图片解码和异常检测，避免与 ScrollEnd 帧的 loadMore 挤在同一帧。
+      isListScrolling.value = false;
+      _checkAndFixScrollExtentAnomaly();
+    });
   }
 
   bool _shouldKeepAliveNoteListItem(int index, Quote quote) {
@@ -1252,6 +1260,62 @@ class _NoteListItemKeepAliveState extends State<_NoteListItemKeepAlive>
   Widget build(BuildContext context) {
     super.build(context);
     return widget.child;
+  }
+}
+
+class _NoteDeleteCollapse extends StatefulWidget {
+  const _NoteDeleteCollapse({
+    super.key,
+    required this.child,
+  });
+
+  final Widget child;
+
+  @override
+  State<_NoteDeleteCollapse> createState() => _NoteDeleteCollapseState();
+}
+
+class _NoteDeleteCollapseState extends State<_NoteDeleteCollapse>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInCubic,
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _controller.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final reverseAnimation = ReverseAnimation(_animation);
+    return FadeTransition(
+      opacity: reverseAnimation,
+      child: SizeTransition(
+        sizeFactor: reverseAnimation,
+        alignment: Alignment.topCenter,
+        child: widget.child,
+      ),
+    );
   }
 }
 

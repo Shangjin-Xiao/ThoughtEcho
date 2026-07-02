@@ -249,6 +249,8 @@ class NoteListViewState extends State<NoteListView> {
   final List<int> _scrollSessionUpdateMicros = <int>[];
   final List<FrameTiming> _scrollSessionFrameTimings = <FrameTiming>[];
   Timer? _scrollSessionPerfStopTimer;
+  Timer? _scrollEndSettleTimer;
+  int _scrollEndSettleGeneration = 0;
   Map<String, dynamic>? _scrollSessionStartQuoteContentStats;
   Map<String, int>? _scrollSessionStartQuoteItemStats;
   Map<String, int>? _scrollSessionStartImageEmbedStats;
@@ -664,6 +666,7 @@ class NoteListViewState extends State<NoteListView> {
     _loadMorePerfStopTimer?.cancel();
     _loadMoreSettleTimer?.cancel();
     _scrollSessionPerfStopTimer?.cancel();
+    _scrollEndSettleTimer?.cancel();
     // 清理动画定时器
     for (final timer in _animationTimers.values) {
       timer.cancel();

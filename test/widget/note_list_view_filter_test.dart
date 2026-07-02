@@ -374,11 +374,16 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
 
+        expect(find.byType(SizeTransition), findsNothing);
+
         final item = tester.widget<QuoteItemWidget>(
           find.byType(QuoteItemWidget).first,
         );
         item.onDelete();
         item.onDelete();
+
+        await tester.pump();
+        expect(find.byType(SizeTransition), findsOneWidget);
 
         await tester.pump(const Duration(milliseconds: 300));
 
