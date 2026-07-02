@@ -101,6 +101,8 @@ class QuoteContent extends StatelessWidget {
   static const double _estimatedImageHeight = 200.0;
   static const double _estimatedVideoHeight = 240.0;
   static const double _estimatedAudioHeight = 140.0;
+  static const double _collapsedDocumentHeightBudget =
+      collapsedContentMaxHeight * 2;
   static const Key collapsedWrapperKey = ValueKey(
     'quote_content.collapsed_wrapper',
   );
@@ -145,6 +147,7 @@ class QuoteContent extends StatelessWidget {
         _QuoteDocumentCache.getOrCreate(
           deltaContent: deltaContent,
           prioritizeBold: false,
+          truncateForCollapse: false,
           builder: () => _buildDocumentFromDelta(deltaContent),
         );
       }
@@ -212,9 +215,14 @@ class QuoteContent extends StatelessWidget {
           documentBuilder: () => _QuoteDocumentCache.getOrCreate(
             deltaContent: deltaContent,
             prioritizeBold: usePrioritizedDoc,
+            truncateForCollapse: needsExpansion,
             builder: () => QuoteContent(
               quote: quote,
-            )._buildRichTextDocument(deltaContent, usePrioritizedDoc),
+            )._buildRichTextDocument(
+              deltaContent,
+              usePrioritizedDoc,
+              needsExpansion,
+            ),
           ),
         );
 
@@ -598,21 +606,147 @@ class QuoteContent extends StatelessWidget {
     }
   }
 
-  /// 创建优先显示加粗内容的 Document（保持原始嵌入，重新排序）。
-  quill.Document? _createBoldPriorityDocument(String deltaContent) {
-    final orderedOps = _createBoldPriorityOps(deltaContent);
-    return orderedOps == null ? null : quill.Document.fromJson(orderedOps);
+  static List<Map<String, dynamic>>? _decodeDeltaOps(String deltaContent) {
+    try {
+      final decoded = jsonDecode(deltaContent);
+      if (decoded is List) {
+        return decoded
+            .whereType<Map>()
+            .map((op) => Map<String, dynamic>.from(op))
+            .toList();
+      }
+      if (decoded is Map && decoded.containsKey('ops')) {
+        final ops = decoded['ops'];
+        if (ops is List) {
+          return ops
+              .whereType<Map>()
+              .map((op) => Map<String, dynamic>.from(op))
+              .toList();
+        }
+      }
+    } catch (_) {
+      // ignore and fall back to plain text content
+    }
+    return null;
+  }
+
+  static List<Map<String, dynamic>> _truncateDeltaOpsForCollapsedDocument(
+    List<Map<String, dynamic>> ops,
+  ) {
+    if (ops.isEmpty) {
+      return const [
+        {'insert': '\n'},
+      ];
+    }
+
+    final truncatedOps = <Map<String, dynamic>>[];
+    double usedHeight = 0;
+
+    for (final op in ops) {
+      if (!op.containsKey('insert')) continue;
+
+      final insert = op['insert'];
+      final opHeight = _estimateDeltaOpHeight(insert);
+      if (usedHeight + opHeight <= _collapsedDocumentHeightBudget) {
+        truncatedOps.add(Map<String, dynamic>.from(op));
+        usedHeight += opHeight;
+        continue;
+      }
+
+      if (insert is String && usedHeight < _collapsedDocumentHeightBudget) {
+        final textPrefix = _truncateTextForEstimatedHeight(
+          insert,
+          _collapsedDocumentHeightBudget - usedHeight,
+        );
+        if (textPrefix.isNotEmpty) {
+          final truncatedOp = Map<String, dynamic>.from(op);
+          truncatedOp['insert'] = textPrefix;
+          truncatedOps.add(truncatedOp);
+        }
+      }
+      break;
+    }
+
+    if (truncatedOps.isEmpty) {
+      truncatedOps.add(Map<String, dynamic>.from(ops.first));
+    }
+
+    _ensureDocumentOpsEndWithNewline(truncatedOps);
+    return truncatedOps;
+  }
+
+  static List<Map<String, dynamic>> _normalizedDocumentOps(
+    List<Map<String, dynamic>> ops,
+  ) {
+    final normalizedOps =
+        ops.map((op) => Map<String, dynamic>.from(op)).toList();
+    _ensureDocumentOpsEndWithNewline(normalizedOps);
+    return normalizedOps;
+  }
+
+  static void _ensureDocumentOpsEndWithNewline(
+    List<Map<String, dynamic>> ops,
+  ) {
+    if (ops.isEmpty) {
+      ops.add({'insert': '\n'});
+      return;
+    }
+
+    final lastInsert = ops.last['insert'];
+    if (lastInsert is! String || !lastInsert.endsWith('\n')) {
+      ops.add({'insert': '\n'});
+    }
+  }
+
+  static double _estimateDeltaOpHeight(dynamic insert) {
+    if (insert is Map) {
+      if (insert.containsKey('image')) {
+        return _estimatedImageHeight;
+      }
+      if (insert.containsKey('video')) {
+        return _estimatedVideoHeight;
+      }
+      if (insert.containsKey('audio')) {
+        return _estimatedAudioHeight;
+      }
+      return _estimatedLineHeight;
+    }
+    if (insert == null) {
+      return 0;
+    }
+    return _estimatePlainTextHeight(insert.toString());
+  }
+
+  static String _truncateTextForEstimatedHeight(
+    String text,
+    double remainingHeight,
+  ) {
+    if (text.isEmpty || remainingHeight <= 0) {
+      return '';
+    }
+
+    final approxLines = (remainingHeight / _estimatedLineHeight).floor();
+    final charLimit =
+        (approxLines.clamp(1, 12) * _averageCharsPerLine).clamp(1, text.length);
+    return text.substring(0, charLimit);
   }
 
   quill.Document _buildRichTextDocument(
     String deltaContent,
     bool prioritizeBold,
+    bool truncateForCollapse,
   ) {
+    List<Map<String, dynamic>>? ops;
     if (prioritizeBold) {
-      final prioritizedDoc = _createBoldPriorityDocument(deltaContent);
-      if (prioritizedDoc != null) {
-        return prioritizedDoc;
-      }
+      ops = _createBoldPriorityOps(deltaContent);
+    }
+
+    ops ??= _decodeDeltaOps(deltaContent);
+    if (ops != null) {
+      final documentOps = truncateForCollapse
+          ? _truncateDeltaOpsForCollapsedDocument(ops)
+          : _normalizedDocumentOps(ops);
+      return quill.Document.fromJson(documentOps);
     }
 
     return _documentFromDelta(deltaContent);
@@ -647,6 +781,7 @@ class QuoteContent extends StatelessWidget {
 
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
       final bool usePrioritizedDoc = !showFullContent && prioritizeBoldContent;
+      final bool truncateForCollapse = !showFullContent && needsExpansion;
       final String cacheQuoteId =
           quote.id ?? 'local_${quote.date}_${quote.content.hashCode}';
       final String contentVariant = _QuoteContentControllerCache.resolveVariant(
@@ -665,9 +800,11 @@ class QuoteContent extends StatelessWidget {
         documentBuilder: () => _QuoteDocumentCache.getOrCreate(
           deltaContent: quote.deltaContent!,
           prioritizeBold: usePrioritizedDoc,
+          truncateForCollapse: truncateForCollapse,
           builder: () => _buildRichTextDocument(
             quote.deltaContent!,
             usePrioritizedDoc,
+            truncateForCollapse,
           ),
         ),
       );
@@ -997,11 +1134,13 @@ class _QuoteDocumentCache {
   static quill.Document getOrCreate({
     required String deltaContent,
     required bool prioritizeBold,
+    required bool truncateForCollapse,
     required quill.Document Function() builder,
   }) {
     final key = _DocumentCacheKey(
       deltaContent: deltaContent,
       prioritizeBold: prioritizeBold,
+      truncateForCollapse: truncateForCollapse,
     );
 
     final existing = _cache.remove(key);
@@ -1074,21 +1213,28 @@ class _DocumentCacheKey {
   const _DocumentCacheKey({
     required this.deltaContent,
     required this.prioritizeBold,
+    required this.truncateForCollapse,
   });
 
   final String deltaContent;
   final bool prioritizeBold;
+  final bool truncateForCollapse;
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is _DocumentCacheKey &&
         other.prioritizeBold == prioritizeBold &&
+        other.truncateForCollapse == truncateForCollapse &&
         other.deltaContent == deltaContent;
   }
 
   @override
-  int get hashCode => Object.hash(deltaContent, prioritizeBold);
+  int get hashCode => Object.hash(
+        deltaContent,
+        prioritizeBold,
+        truncateForCollapse,
+      );
 }
 
 class _DocumentCacheEntry {
