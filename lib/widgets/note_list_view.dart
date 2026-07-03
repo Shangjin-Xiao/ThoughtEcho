@@ -138,20 +138,16 @@ class NoteListViewState extends State<NoteListView> {
   final Set<String> _structuralInsertQuoteIds = {};
   final Map<String, Timer> _animationTimers = {};
   static const Duration _noteInsertAnimationDuration =
-      Duration(milliseconds: 320);
+      Duration(milliseconds: 250);
   static const Duration _noteUpdateAnimationCleanupDelay =
-      Duration(milliseconds: 450);
+      Duration(milliseconds: 300);
   static const Duration _pendingInsertAnimationCleanupDelay =
-      Duration(milliseconds: 3500);
+      Duration(milliseconds: 1500);
   static const Duration _noteDeleteAnimationDuration =
-      Duration(milliseconds: 320);
+      Duration(milliseconds: 250);
 
   static String _normalizeSearchQuery(String query) {
-    final trimmed = query.trim();
-    if (trimmed.length < AppConstants.minSearchLength) {
-      return '';
-    }
-    return trimmed;
+    return query.trim();
   }
 
   String get _effectiveSearchQuery =>

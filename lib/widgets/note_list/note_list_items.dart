@@ -187,7 +187,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                     child: AnimatedOpacity(
                       duration: const Duration(milliseconds: 200),
                       curve: Curves.easeOut,
-                      opacity: _isSearchUpdating ? 0.72 : 1.0,
+                      opacity: _isSearchUpdating ? 0.4 : 1.0,
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 150),
                         switchInCurve: Curves.easeOut,
@@ -646,7 +646,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                           // 先从本地列表乐观移除，避免 stream 更新时的视觉跳动。
                           Future.delayed(
                             NoteListViewState._noteDeleteAnimationDuration +
-                                const Duration(milliseconds: 70),
+                                const Duration(milliseconds: 30),
                             () {
                               if (mounted) {
                                 _updateState(() {
@@ -1170,7 +1170,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                 child: animatedChild,
               )
             : Transform.translate(
-                offset: Offset(0, -10.0 * (1.0 - progress)),
+                offset: Offset(0, -16.0 * (1.0 - progress)),
                 child: animatedChild,
               );
 
