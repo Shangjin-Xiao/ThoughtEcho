@@ -1,0 +1,33 @@
+lib/widgets/note_list/note_list_data_stream.dart
+  s_d567d7d6f5bc22::t_973f275769257d 302-304,340-343
+  s_d567d7d6f5bc22::t_48abbc2da79746 329,333,336
+  s_d567d7d6f5bc22::t_66e5f12ea34b6b 62-63,381-382
+lib/widgets/note_list/note_list_items.dart
+  s_d567d7d6f5bc22::t_c02c5699f1765a 190,196-197,199-209,648-649,989-993,1173,1304
+  s_d567d7d6f5bc22::t_876581bafbb8b4 383,402,409
+lib/widgets/note_list_view.dart
+  s_d567d7d6f5bc22::t_3a1e8a7053ff9f 157-158
+  s_d567d7d6f5bc22::t_b22da42e4937a8 772-777,779-781,783-786
+  s_d567d7d6f5bc22::t_0949fcd4789bb2 778,782
+  s_d567d7d6f5bc22::t_c0b58bbbce53c3 148-155,604-608,610,788
+  s_d567d7d6f5bc22::t_1f7e0da771fb89 141,143,145-147,609,616
+  s_d567d7d6f5bc22::t_c4f986510601af 156
+  s_d567d7d6f5bc22::t_2a87b46a447e7e 787
+  s_d567d7d6f5bc22::t_0a3fc014bcddea 789
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.8",
+  "base_commit_sha": "f3f5d57a2798dfab5e2f1bc849b374d282aec1e5",
+  "prompts": {},
+  "sessions": {
+    "s_d567d7d6f5bc22": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "3d9a7065-d065-49ae-809a-967cc4e2c79b",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
