@@ -402,12 +402,16 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         // 新建笔记时，读取用户偏好并自动勾选位置/天气
         if (widget.initialQuote == null) {
           final settingsService = _readServiceOrNull<SettingsService>(context);
-          final autoLocation = widget.prefilledIncludeLocation ??
-              widget.useAIPrefilledLocationWeather ??
-              (settingsService?.autoAttachLocation ?? false);
-          final autoWeather = widget.prefilledIncludeWeather ??
-              widget.useAIPrefilledLocationWeather ??
-              (settingsService?.autoAttachWeather ?? false);
+          final bool useAIPrefill =
+              widget.useAIPrefilledLocationWeather ?? false;
+          final autoLocation = useAIPrefill
+              ? (widget.prefilledIncludeLocation ?? false)
+              : (widget.prefilledIncludeLocation ??
+                  (settingsService?.autoAttachLocation ?? false));
+          final autoWeather = useAIPrefill
+              ? (widget.prefilledIncludeWeather ?? false)
+              : (widget.prefilledIncludeWeather ??
+                  (settingsService?.autoAttachWeather ?? false));
 
           if (autoLocation || autoWeather) {
             if (mounted) {
