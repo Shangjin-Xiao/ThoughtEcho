@@ -1,0 +1,22 @@
+lib/widgets/note_list/note_list_items.dart
+  s_d567d7d6f5bc22::t_a01d14100e103c 190,649,1173
+lib/widgets/note_list_view.dart
+  s_d567d7d6f5bc22::t_e1f313a385cc22 141,143,145,147
+  s_d567d7d6f5bc22::t_53c848ad5e7d9e 150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "34050b59a105ca254382f9acf74623476e2820ea",
+  "prompts": {},
+  "sessions": {
+    "s_d567d7d6f5bc22": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "3d9a7065-d065-49ae-809a-967cc4e2c79b",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
