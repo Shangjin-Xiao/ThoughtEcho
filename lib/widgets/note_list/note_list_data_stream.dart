@@ -59,7 +59,8 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           : widget.sortType == 'favorite'
               ? 'favorite_count ${widget.sortAscending ? 'ASC' : 'DESC'}'
               : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-      searchQuery: widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
+      searchQuery:
+          _effectiveSearchQuery.isNotEmpty ? _effectiveSearchQuery : null,
       selectedWeathers:
           widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
       selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
@@ -298,7 +299,9 @@ extension _NoteListDataStreamExtension on NoteListViewState {
 
   /// 优化：判断是否需要更新订阅
   bool _shouldUpdateSubscription(NoteListView oldWidget) {
-    return oldWidget.searchQuery != widget.searchQuery ||
+    final oldEffectiveQuery =
+        NoteListViewState._normalizeSearchQuery(oldWidget.searchQuery);
+    return oldEffectiveQuery != _effectiveSearchQuery ||
         !_areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) ||
         oldWidget.sortType != widget.sortType ||
         oldWidget.sortAscending != widget.sortAscending ||
@@ -323,15 +326,20 @@ extension _NoteListDataStreamExtension on NoteListViewState {
   void _updateStreamSubscription({
     bool preserveScrollPosition = false,
     bool isSearchUpdate = false,
+    bool animateSearchTransition = true,
   }) {
     if (!mounted) return; // 确保组件仍然挂载
 
-    bool isFirstSearchEvent = isSearchUpdate;
+    bool isFirstSearchEvent = isSearchUpdate && animateSearchTransition;
 
     logDebug(
-      '更新数据流订阅 (preserveScrollPosition: $preserveScrollPosition, isSearchUpdate: $isSearchUpdate)',
+      '更新数据流订阅 (preserveScrollPosition: $preserveScrollPosition, isSearchUpdate: $isSearchUpdate, animateSearchTransition: $animateSearchTransition)',
       source: 'NoteListView',
     );
+
+    if (isSearchUpdate) {
+      _clearPendingInsertAnimations();
+    }
 
     double? savedScrollOffset;
     // 只有在需要保持滚动位置时才保存（仅排序变化时）
@@ -370,7 +378,8 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           : widget.sortType == 'favorite'
               ? 'favorite_count ${widget.sortAscending ? 'ASC' : 'DESC'}'
               : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-      searchQuery: widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
+      searchQuery:
+          _effectiveSearchQuery.isNotEmpty ? _effectiveSearchQuery : null,
       selectedWeathers:
           widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
       selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty

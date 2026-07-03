@@ -138,11 +138,24 @@ class NoteListViewState extends State<NoteListView> {
   final Set<String> _structuralInsertQuoteIds = {};
   final Map<String, Timer> _animationTimers = {};
   static const Duration _noteInsertAnimationDuration =
-      Duration(milliseconds: 250);
+      Duration(milliseconds: 320);
   static const Duration _noteUpdateAnimationCleanupDelay =
-      Duration(milliseconds: 300);
+      Duration(milliseconds: 450);
   static const Duration _pendingInsertAnimationCleanupDelay =
-      Duration(milliseconds: 1500);
+      Duration(milliseconds: 3500);
+  static const Duration _noteDeleteAnimationDuration =
+      Duration(milliseconds: 320);
+
+  static String _normalizeSearchQuery(String query) {
+    final trimmed = query.trim();
+    if (trimmed.length < AppConstants.minSearchLength) {
+      return '';
+    }
+    return trimmed;
+  }
+
+  String get _effectiveSearchQuery =>
+      NoteListViewState._normalizeSearchQuery(widget.searchQuery);
 
   /// 删除笔记时触发缩小渐隐动画的 ID 集合
   final Set<String> _deletingQuoteIds = {};
@@ -588,12 +601,19 @@ class NoteListViewState extends State<NoteListView> {
 
       // 搜索 query 变化时也保留滚动位置，避免删字时列表跳回顶部加剧闪烁感。
       // stream callback 会校验 offset 是否仍在 maxScrollExtent 范围内。
-      final bool isSearchChange = oldWidget.searchQuery != widget.searchQuery;
+      final oldEffectiveQuery =
+          NoteListViewState._normalizeSearchQuery(oldWidget.searchQuery);
+      final newEffectiveQuery =
+          NoteListViewState._normalizeSearchQuery(widget.searchQuery);
+      final bool isSearchChange = oldEffectiveQuery != newEffectiveQuery;
+      final bool shouldAnimateSearchTransition =
+          oldEffectiveQuery.isNotEmpty && newEffectiveQuery.isNotEmpty;
 
       // 更新流订阅，传入是否仅为排序变化
       _updateStreamSubscription(
         preserveScrollPosition: isOnlySortChange || isSearchChange,
         isSearchUpdate: isSearchChange,
+        animateSearchTransition: shouldAnimateSearchTransition,
       );
     } else if (shouldUpdate) {
       logDebug('跳过更新：数据尚未完成首次加载', source: 'NoteListView');
@@ -746,6 +766,24 @@ class NoteListViewState extends State<NoteListView> {
           _animationTimers.remove(id);
         });
       }
+    });
+  }
+
+  void _clearPendingInsertAnimations() {
+    if (_animatingQuoteVersions.isEmpty &&
+        _structuralInsertQuoteIds.isEmpty &&
+        _animationTimers.isEmpty) {
+      return;
+    }
+
+    for (final timer in _animationTimers.values) {
+      timer.cancel();
+    }
+
+    _updateState(() {
+      _animatingQuoteVersions.clear();
+      _structuralInsertQuoteIds.clear();
+      _animationTimers.clear();
     });
   }
 

@@ -187,15 +187,26 @@ extension _NoteListItemsExtension on NoteListViewState {
                     child: AnimatedOpacity(
                       duration: const Duration(milliseconds: 200),
                       curve: Curves.easeOut,
-                      opacity: _isSearchUpdating ? 0.4 : 1.0,
+                      opacity: _isSearchUpdating ? 0.72 : 1.0,
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 150),
                         switchInCurve: Curves.easeOut,
                         switchOutCurve: Curves.easeOut,
                         transitionBuilder: (child, animation) {
-                          return FadeTransition(
-                            opacity: animation,
+                          return AnimatedBuilder(
+                            animation: animation,
                             child: child,
+                            builder: (context, builtChild) {
+                              final isOutgoing =
+                                  animation.status == AnimationStatus.reverse;
+                              final opacity = isOutgoing
+                                  ? 0.0
+                                  : Curves.easeOut.transform(animation.value);
+                              return Opacity(
+                                opacity: opacity,
+                                child: builtChild,
+                              );
+                            },
                           );
                         },
                         child: _buildNoteList(theme, noteInsertAnimationType),
@@ -369,6 +380,7 @@ extension _NoteListItemsExtension on NoteListViewState {
 
   Widget _buildNoteList(ThemeData theme, String noteInsertAnimationType) {
     final l10n = AppLocalizations.of(context);
+    final hasEffectiveSearchQuery = _effectiveSearchQuery.isNotEmpty;
     // key 拆分，避免状态内输入时由于 searchQuery 改变导致 AnimatedSwitcher 触发不必要闪烁：
     // • loadingKey 用于加载态的 Key
     // • emptyKey 用于初始无笔记状态的 Key
@@ -387,14 +399,14 @@ extension _NoteListItemsExtension on NoteListViewState {
     if (_waitingForServices || (_isLoading && _quotes.isEmpty)) {
       return AppLoadingView(key: loadingKey);
     }
-    if (_quotes.isEmpty && widget.searchQuery.isEmpty) {
+    if (_quotes.isEmpty && !hasEffectiveSearchQuery) {
       return AppEmptyView(
         key: emptyKey,
         svgAsset: 'assets/empty/empty_state.svg',
         text: l10n.noteListEmptyTitle,
       );
     }
-    if (_quotes.isEmpty && widget.searchQuery.isNotEmpty) {
+    if (_quotes.isEmpty && hasEffectiveSearchQuery) {
       return Center(
         key: noResultsKey,
         child: SingleChildScrollView(
@@ -633,7 +645,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                           // 等动画播完（250ms）+ 50ms 余量再执行真正的删除。
                           // 先从本地列表乐观移除，避免 stream 更新时的视觉跳动。
                           Future.delayed(
-                            const Duration(milliseconds: 280),
+                            NoteListViewState._noteDeleteAnimationDuration +
+                                const Duration(milliseconds: 70),
                             () {
                               if (mounted) {
                                 _updateState(() {
@@ -973,8 +986,11 @@ extension _NoteListItemsExtension on NoteListViewState {
     _searchTimeoutVersion++;
     final capturedVersion = _searchTimeoutVersion;
 
-    // 标记搜索更新中（延迟 120ms 再变淡，避免快速搜索闪烁）
-    _setSearchUpdating(true);
+    // 仅在有效搜索（长度达到阈值）时才显示“更新中”过渡，
+    // 避免快速删字（2→1→0）触发重复变淡闪烁。
+    final shouldShowSearchUpdating =
+        value.length >= AppConstants.minSearchLength;
+    _setSearchUpdating(shouldShowSearchUpdating);
 
     // 如果是非空搜索且长度>=2，通知搜索控制器开始搜索
     if (value.isNotEmpty && value.length >= AppConstants.minSearchLength) {
@@ -1154,7 +1170,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                 child: animatedChild,
               )
             : Transform.translate(
-                offset: Offset(0, -16.0 * (1.0 - progress)),
+                offset: Offset(0, -10.0 * (1.0 - progress)),
                 child: animatedChild,
               );
 
@@ -1285,7 +1301,7 @@ class _NoteDeleteCollapseState extends State<_NoteDeleteCollapse>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 250),
+      duration: NoteListViewState._noteDeleteAnimationDuration,
     );
     _animation = CurvedAnimation(
       parent: _controller,
