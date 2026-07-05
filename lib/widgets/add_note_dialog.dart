@@ -122,6 +122,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   Timer? _dbChangeDebounceTimer;
 
   bool _isSaving = false;
+  bool _waitingForFetch = false; // 用户已触发保存，正在等待位置/天气获取完成
   bool _deferredControlsVisible = true;
   Timer? _deferredControlsTimer;
   Timer? _autoFocusTimer;
@@ -1592,7 +1593,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
   /// 保存笔记并退出
   Future<void> _saveAndExit() async {
-    if (_isSaving) return;
+    if (_isSaving || _waitingForFetch) return;
 
     // 如果内容为空，直接返回
     if (_contentController.text.isEmpty) {
@@ -1602,9 +1603,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       return;
     }
 
-    // 如果位置/天气正在异步获取中，等待完成（最多 5s）
+    // 如果位置/天气正在异步获取中，显示 loading 并等待完成（最多 5s）
     if (_controller.isFetchingMetadata) {
-      // notifyListeners 已由 controller 调用，这里只需要等待它变为 false
+      if (mounted) setState(() => _waitingForFetch = true);
       const pollInterval = Duration(milliseconds: 100);
       const maxWait = Duration(seconds: 5);
       var waited = Duration.zero;
@@ -1613,6 +1614,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         waited += pollInterval;
         if (!mounted) return;
       }
+      if (mounted) setState(() => _waitingForFetch = false);
     }
 
     _isSaving = true;
@@ -2395,16 +2397,14 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                             ),
                           ),
                         ),
-                        onPressed: (_isLoadingFullQuote ||
-                                _controller.isFetchingMetadata)
+                        onPressed: (_isLoadingFullQuote || _waitingForFetch)
                             ? null
                             : () async {
                                 if (_contentController.text.isNotEmpty) {
                                   await _saveAndExit();
                                 }
                               },
-                        child: (_isLoadingFullQuote ||
-                                _controller.isFetchingMetadata)
+                        child: (_isLoadingFullQuote || _waitingForFetch)
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
