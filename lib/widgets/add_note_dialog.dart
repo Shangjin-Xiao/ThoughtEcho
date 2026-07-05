@@ -319,6 +319,15 @@ class _AddNoteDialogState extends State<AddNoteDialog>
             settingsService.defaultTagIds.isNotEmpty) {
           _selectedTagIds.addAll(settingsService.defaultTagIds);
         }
+
+        // 提前预置 fetching 标志：避免 metadataDelay 期间按钮可点导致保存时丢失数据。
+        // 真正的 fetch 在 delay 后启动，但标志从这里就开始保护保存按钮。
+        if (settingsService.autoAttachLocation) {
+          _controller.isFetchingLocation = true;
+        }
+        if (settingsService.autoAttachWeather) {
+          _controller.isFetchingWeather = true;
+        }
       }
     }
 
@@ -371,6 +380,11 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
       // 延迟执行服务初始化和位置/天气获取，避免与动画竞争
       Future.delayed(metadataDelay, () async {
+        // 清理 initState 提前预置的标志；unmount 时 widget 已销毁不需要清，但
+        // 正常流程中这里重置后由各 fetch 方法重新置 true，保证状态准确。
+        _controller.isFetchingLocation = false;
+        _controller.isFetchingWeather = false;
+
         if (!mounted) return;
 
         _dialogOpenTimelineTask
@@ -2384,9 +2398,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                         onPressed: (_isLoadingFullQuote ||
                                 _controller.isFetchingMetadata)
                             ? null
-                            : () {
+                            : () async {
                                 if (_contentController.text.isNotEmpty) {
-                                  _saveAndExit();
+                                  await _saveAndExit();
                                 }
                               },
                         child: (_isLoadingFullQuote ||
