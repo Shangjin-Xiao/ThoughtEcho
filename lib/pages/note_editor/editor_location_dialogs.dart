@@ -76,7 +76,7 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
     if (result == 'update' && hasCoordinates) {
       // 尝试用坐标更新地址
       try {
-        // 获取当前语言设置（在异步操作前获取，避免context跨越异步间隙）
+        // 获取当前语言设置（在异步操作前获取，避免 context 跨越异步间隙）
         if (!context.mounted) return;
         final locationService =
             Provider.of<LocationService>(context, listen: false);
@@ -88,16 +88,29 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
           localeCode: localeCode,
         );
         if (addressInfo != null && mounted) {
-          final formattedAddress = addressInfo['formatted_address'];
-          if (formattedAddress != null && formattedAddress.isNotEmpty) {
+          // 使用 country,province,city,district 拼成标准存储格式，
+          // 而不是 formatted_address（带空格英文拼接），
+          // 避免 formatLocationForDisplay 解析失败导致显示英文。
+          final country = addressInfo['country'] ?? '';
+          final province = addressInfo['province'] ?? '';
+          final city = addressInfo['city'] ?? '';
+          final district = addressInfo['district'] ?? '';
+          final standardAddress = '$country,$province,$city,$district';
+          final hasAnyField =
+              country.isNotEmpty || province.isNotEmpty || city.isNotEmpty;
+          if (hasAnyField) {
             _updateState(() {
-              _location = formattedAddress;
-              _originalLocation = formattedAddress;
+              _location = standardAddress;
+              _originalLocation = standardAddress;
             });
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(l10n.locationUpdatedTo(formattedAddress)),
+                  content: Text(
+                    l10n.locationUpdatedTo(
+                      LocationService.formatLocationForDisplay(standardAddress),
+                    ),
+                  ),
                 ),
               );
             }

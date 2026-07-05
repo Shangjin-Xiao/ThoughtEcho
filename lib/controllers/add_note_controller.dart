@@ -96,7 +96,11 @@ class AddNoteController extends ChangeNotifier {
     this.onWeatherFetchError,
   }) : _selectedTagIds = initialTagIds ?? [] {
     if (initialQuote != null) {
-      originalLocation = initialQuote!.location;
+      // kAddressPending / kAddressFailed 等内部标记视为「只有坐标无地址」，
+      // 对 originalLocation 赋 null，让 hasOnlyCoordinates 判断正确。
+      final rawLoc = initialQuote!.location;
+      originalLocation =
+          LocationService.isNonDisplayMarker(rawLoc) ? null : rawLoc;
       originalLatitude = initialQuote!.latitude;
       originalLongitude = initialQuote!.longitude;
       originalWeather = initialQuote!.weather;
@@ -131,7 +135,9 @@ class AddNoteController extends ChangeNotifier {
   }
 
   void hydrateFromQuote(Quote quote) {
-    originalLocation = quote.location;
+    final rawLoc = quote.location;
+    originalLocation =
+        LocationService.isNonDisplayMarker(rawLoc) ? null : rawLoc;
     originalLatitude = quote.latitude;
     originalLongitude = quote.longitude;
     originalWeather = quote.weather;

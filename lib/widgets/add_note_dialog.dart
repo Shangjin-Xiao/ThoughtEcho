@@ -1180,17 +1180,31 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           localeCode: localeCode,
         );
         if (addressInfo != null && mounted) {
-          final formattedAddress = addressInfo['formatted_address'];
-          if (formattedAddress != null && formattedAddress.isNotEmpty) {
+          // 使用 country,province,city,district 拼成标准存储格式，
+          // 而不是 formatted_address（带空格进行英文拼接的格式），
+          // 避免 formatLocationForDisplay 解析失败导致显示英文。
+          final country = addressInfo['country'] ?? '';
+          final province = addressInfo['province'] ?? '';
+          final city = addressInfo['city'] ?? '';
+          final district = addressInfo['district'] ?? '';
+          final standardAddress = '$country,$province,$city,$district';
+          final hasAnyField =
+              country.isNotEmpty || province.isNotEmpty || city.isNotEmpty;
+          if (hasAnyField) {
             setState(() {
-              _controller.originalLocation = formattedAddress;
+              _controller.originalLocation = standardAddress;
               _controller.includeLocation = true;
             });
             if (context.mounted) {
               final l10n = AppLocalizations.of(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                    content: Text(l10n.locationUpdatedTo(formattedAddress))),
+                  content: Text(
+                    l10n.locationUpdatedTo(
+                      LocationService.formatLocationForDisplay(standardAddress),
+                    ),
+                  ),
+                ),
               );
             }
           } else if (context.mounted) {

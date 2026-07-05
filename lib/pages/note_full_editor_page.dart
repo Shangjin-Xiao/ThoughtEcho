@@ -209,7 +209,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _currentAiAnalysis = widget.initialQuote?.aiAnalysis;
 
     // 保存原始的位置和天气信息（用于编辑模式判断）
-    _originalLocation = widget.initialQuote?.location;
+    // kAddressPending / kAddressFailed 等内部标记视为「只有坐标无地址」
+    final rawLoc = widget.initialQuote?.location;
+    _originalLocation =
+        LocationService.isNonDisplayMarker(rawLoc) ? null : rawLoc;
     _originalLatitude = widget.initialQuote?.latitude;
     _originalLongitude = widget.initialQuote?.longitude;
     _originalWeather = widget.initialQuote?.weather;
