@@ -85,7 +85,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               children: [
                 NotificationListener<ScrollUpdateNotification>(
                   onNotification: (notification) {
-                    if (notification.scrollDelta != null) {
+                    if (notification.scrollDelta != null &&
+                        notification.dragDetails != null) {
                       if (_inputFocusNode.hasFocus) {
                         _inputFocusNode.unfocus();
                       }
@@ -198,27 +199,40 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     initialNewNoteMetadata?.includeWeather ?? false,
                 initialSavedNoteId: meta['saved_note_id']?.toString(),
                 onOpenDraftInEditor: (draft) async {
-                  final updatedMeta =
-                      await _buildSmartResultMetaFromDraft(meta, draft);
-                  if (isNewNoteProposal) {
-                    final confirmedMetadata = _resolveConfirmedNewNoteMetadata(
-                      updatedMeta,
-                      includeLocation: draft.includeLocation,
-                      includeWeather: draft.includeWeather,
-                    );
-                    await _openSmartResultAsNewNote(
-                      draft.content,
-                      tagIds: confirmedMetadata.tagIds,
-                      author: confirmedMetadata.author,
-                      source: confirmedMetadata.source,
-                      includeLocation: confirmedMetadata.includeLocation,
-                      includeWeather: confirmedMetadata.includeWeather,
-                    );
-                  } else {
-                    await _openSmartResultInEditor(
-                      updatedMeta,
-                      draft.content,
-                    );
+                  try {
+                    final updatedMeta =
+                        await _buildSmartResultMetaFromDraft(meta, draft);
+                    if (isNewNoteProposal) {
+                      final confirmedMetadata =
+                          _resolveConfirmedNewNoteMetadata(
+                        updatedMeta,
+                        includeLocation: draft.includeLocation,
+                        includeWeather: draft.includeWeather,
+                      );
+                      await _openSmartResultAsNewNote(
+                        draft.content,
+                        tagIds: confirmedMetadata.tagIds,
+                        author: confirmedMetadata.author,
+                        source: confirmedMetadata.source,
+                        includeLocation: confirmedMetadata.includeLocation,
+                        includeWeather: confirmedMetadata.includeWeather,
+                      );
+                    } else {
+                      await _openSmartResultInEditor(
+                        updatedMeta,
+                        draft.content,
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            e.toString().replaceAll('Exception: ', ''),
+                          ),
+                        ),
+                      );
+                    }
                   }
                 },
                 onSaveDraftDirectly: (draft) async {
@@ -1101,11 +1115,24 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         final suggestedAuthor = meta['author']?.toString();
         final suggestedSource = meta['source']?.toString();
 
+        final String updatedDeltaContent;
+        if (modeAction == 'append') {
+          final updatedOps = DeltaBuilder.appendTextToDelta(
+            originalDeltaJson: existingNote.deltaContent,
+            newText: content,
+          );
+          updatedDeltaContent = DeltaBuilder.deltaToJson(updatedOps);
+        } else {
+          final updatedOps = DeltaBuilder.replaceTextInDelta(
+            originalDeltaJson: existingNote.deltaContent,
+            newText: content,
+          );
+          updatedDeltaContent = DeltaBuilder.deltaToJson(updatedOps);
+        }
+
         final updatedNote = existingNote.copyWith(
           content: newContent,
-          // 富文本 Delta 与 plain content 不再同步，必须清空旧 Delta，
-          // 否则编辑器仍按旧 deltaContent 渲染，导致看似没保存。
-          deltaContent: '',
+          deltaContent: updatedDeltaContent,
           tagIds: suggestedTagIds ?? existingNote.tagIds,
           sourceAuthor: suggestedAuthor ?? existingNote.sourceAuthor,
           sourceWork: suggestedSource ?? existingNote.sourceWork,
@@ -1120,7 +1147,13 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           );
         }
         return noteId;
-      } catch (e) {
+      } catch (e, stack) {
+        logError(
+          'AIAssistantPage._saveSmartResultToExistingNote 失败',
+          error: e,
+          stackTrace: stack,
+          source: 'AIAssistantPage',
+        );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(l10n.saveFailed(e.toString()))),
@@ -1255,7 +1288,13 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         );
       }
       return noteId;
-    } catch (e) {
+    } catch (e, stack) {
+      logError(
+        'AIAssistantPage._saveSmartResultAsNewNote 失败',
+        error: e,
+        stackTrace: stack,
+        source: 'AIAssistantPage',
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.saveFailed(e.toString()))),

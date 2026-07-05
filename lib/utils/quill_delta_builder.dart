@@ -37,25 +37,6 @@ class DeltaBuilder {
           ops.add(Map<String, dynamic>.from(op));
         }
       }
-
-      // 移除最后一个文本 ops 尾部的换行符，以便直接连接新文本
-      if (ops.isNotEmpty) {
-        final lastOp = ops.last;
-        if (lastOp.containsKey('insert') && lastOp['insert'] is String) {
-          final lastText = lastOp['insert'] as String;
-          if (lastText.endsWith('\n')) {
-            if (lastText == '\n') {
-              ops.removeLast();
-            } else {
-              ops[ops.length - 1] = {
-                ...lastOp,
-                'insert': lastText.substring(0, lastText.length - 1),
-              };
-            }
-          }
-        }
-      }
-
       ops.addAll(textToDelta(newText));
       return ops;
     } catch (e) {

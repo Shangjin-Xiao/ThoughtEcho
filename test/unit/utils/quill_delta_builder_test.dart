@@ -27,12 +27,13 @@ void main() {
         newText: 'World',
       );
 
-      // Verify original order is preserved: text, image, then new text
-      expect(resultOps.length, 4);
+      // Verify original order is preserved: text, image, then new text starts on new line
+      expect(resultOps.length, 5);
       expect(resultOps[0]['insert'], 'Hello ');
       expect(resultOps[1]['insert'], {'image': 'img1'});
-      expect(resultOps[2]['insert'], 'World');
-      expect(resultOps[3]['insert'], '\n');
+      expect(resultOps[2]['insert'], '\n');
+      expect(resultOps[3]['insert'], 'World');
+      expect(resultOps[4]['insert'], '\n');
     });
 
     test(

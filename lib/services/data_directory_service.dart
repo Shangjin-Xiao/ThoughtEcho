@@ -107,7 +107,11 @@ class DataDirectoryService {
         'databases',
         'media',
         'ai_analyses.db',
+        'ai_analyses.db-wal',
+        'ai_analyses.db-shm',
         'chat.db',
+        'chat.db-wal',
+        'chat.db-shm',
       ];
 
       for (final item in itemsToMigrate) {
@@ -370,6 +374,11 @@ class DataDirectoryService {
       'databases', // 数据库目录
       'media', // 媒体文件目录
       'ai_analyses.db', // AI 分析数据库
+      'ai_analyses.db-wal',
+      'ai_analyses.db-shm',
+      'chat.db',
+      'chat.db-wal',
+      'chat.db-shm',
       'backups', // 备份目录
     ];
 

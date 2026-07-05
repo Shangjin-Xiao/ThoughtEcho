@@ -41,8 +41,7 @@ void main() {
       expect(find.text('鲁迅'), findsOneWidget);
       expect(find.text('《呐喊》'), findsOneWidget);
       // 标签
-      expect(find.text('文学'), findsOneWidget);
-      expect(find.text('经典'), findsOneWidget);
+      expect(find.text('文学, 经典'), findsOneWidget);
       // 位置和天气预览
       expect(find.text('北京市·东城区'), findsOneWidget);
       expect(find.text('晴朗 25°C'), findsOneWidget);

@@ -45,19 +45,29 @@ class WebFetchService {
   /// Markdown 保留了标题、链接、列表等结构信息，
   /// 对 LLM 理解网页内容比纯文本更友好。
   Future<String> fetchText(String url) async {
-    final rawHtml = await _fetchHtml(url);
+    try {
+      final rawHtml = await _fetchHtml(url);
 
-    // 先清理无用标签，再转 Markdown
-    final cleanedHtml = _stripNoiseTags(rawHtml);
-    final markdown = html2md.convert(
-      cleanedHtml,
-      styleOptions: {'headingStyle': 'atx'},
-      ignore: ['img'],
-    );
+      // 先清理无用标签，再转 Markdown
+      final cleanedHtml = _stripNoiseTags(rawHtml);
+      final markdown = html2md.convert(
+        cleanedHtml,
+        styleOptions: {'headingStyle': 'atx'},
+        ignore: ['img'],
+      );
 
-    final result = _normalizeWhitespace(markdown);
-    logDebug('WebFetchService: 转换完成（${result.length} 字符）');
-    return result;
+      final result = _normalizeWhitespace(markdown);
+      logDebug('WebFetchService: 转换完成（${result.length} 字符）');
+      return result;
+    } catch (e, stack) {
+      logError(
+        'WebFetchService.fetchText 失败: $url',
+        error: e,
+        stackTrace: stack,
+        source: 'WebFetchService',
+      );
+      rethrow;
+    }
   }
 
   /// 提取网页元数据（标题、描述、图片）

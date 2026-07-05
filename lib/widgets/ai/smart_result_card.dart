@@ -89,6 +89,18 @@ class _SmartResultCardState extends State<SmartResultCard> {
   @override
   void didUpdateWidget(SmartResultCard oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.content != widget.content) {
+      _contentController.text = widget.content;
+    }
+    if (oldWidget.author != widget.author) {
+      _authorController.text = widget.author ?? '';
+    }
+    if (oldWidget.source != widget.source) {
+      _sourceController.text = widget.source ?? '';
+    }
+    if (oldWidget.tagNames.join('\u001f') != widget.tagNames.join('\u001f')) {
+      _tagsController.text = widget.tagNames.join(', ');
+    }
     if (oldWidget.initialIncludeLocation != widget.initialIncludeLocation) {
       _includeLocation = widget.initialIncludeLocation;
     }

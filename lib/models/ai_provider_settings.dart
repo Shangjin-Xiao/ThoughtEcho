@@ -69,6 +69,7 @@ class AIProviderSettings implements AIConfig {
     this.enableThinking,
   });
 
+  @override
   bool get isAnthropicMessagesApi {
     if (id == 'anthropic') {
       return true;
