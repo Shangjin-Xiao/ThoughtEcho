@@ -41,6 +41,7 @@ import 'package:path_provider/path_provider.dart';
 import '../services/svg_to_image_service.dart';
 import '../utils/feature_guide_helper.dart';
 import '../services/draft_service.dart';
+import '../services/smart_push_service.dart';
 import '../widgets/anniversary_animation_overlay.dart';
 import '../utils/anniversary_display_utils.dart';
 import '../utils/draft_restore_utils.dart';
@@ -187,6 +188,12 @@ class _HomePageState extends State<HomePage>
   bool _isConsumingInitialTargetNote = false;
   int _initialTargetScrollRetryCount = 0;
   static const int _maxInitialTargetScrollRetries = 8;
+
+  // 通知定位：监听 SmartPushService.pendingTargetNoteId
+  SmartPushService? _smartPushService;
+
+  /// 暖启动通知定位的目标 noteId（与 widget.initialTargetNoteId 隔离）
+  String? _pendingNotificationNoteId;
 
   // AI卡片生成服务
   AICardGenerationService? _aiCardService;
@@ -341,6 +348,17 @@ class _HomePageState extends State<HomePage>
 
     // 使用延迟方法来确保在UI构建完成后执行初始化
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // 注册 SmartPushService 通知定位监听（暖启动路径）
+      if (mounted) {
+        _smartPushService = Provider.of<SmartPushService>(
+          context,
+          listen: false,
+        );
+        _smartPushService!.addListener(_onSmartPushServiceChanged);
+        // 检查是否已有待处理的通知定位（可能在 initState 之前就到达了）
+        _onSmartPushServiceChanged();
+      }
+
       // 如果初始页面是记录页，优先加载标签数据
       if (widget.initialPage == 1) {
         // 记录页启动时，先加载标签（高优先级）
@@ -412,7 +430,42 @@ class _HomePageState extends State<HomePage>
     // 移除生命周期观察器
     WidgetsBinding.instance.removeObserver(this);
     _connectivityService?.removeListener(_onConnectivityChanged);
+    _smartPushService?.removeListener(_onSmartPushServiceChanged);
     super.dispose();
+  }
+
+  /// 响应 SmartPushService 的通知定位请求（暖启动路径，无页面重建）
+  void _onSmartPushServiceChanged() {
+    if (!mounted || _smartPushService == null) return;
+    final noteId = _smartPushService!.consumePendingTargetNoteId();
+    if (noteId == null || noteId.isEmpty) return;
+
+    logDebug('收到通知定位请求（原地导航）: $noteId', source: 'HomePage');
+
+    // 切换到记录页 tab
+    if (_currentIndex != 1) {
+      setState(() {
+        _currentIndex = 1;
+      });
+    }
+
+    // 重置定位状态，触发定位
+    _hasConsumedInitialTargetNote = false;
+    _isConsumingInitialTargetNote = false;
+    _initialTargetScrollRetryCount = 0;
+    _pendingNotificationNoteId = noteId;
+
+    // 等标签加载完再定位
+    if (_isLoadingTags) {
+      _loadTags().then((_) {
+        if (mounted) _consumePendingNotificationNote();
+      });
+    } else {
+      // postFrameCallback 确保 tab 切换帧已渲染
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _consumePendingNotificationNote();
+      });
+    }
   }
 
   /// 网络状态变化回调：恢复联网时自动刷新位置和天气
@@ -889,6 +942,67 @@ class _HomePageState extends State<HomePage>
         return;
       }
       _consumeInitialTargetNote();
+    });
+  }
+
+  /// 暖启动通知定位：原地滚动到 [_pendingNotificationNoteId]，不重建页面
+  void _consumePendingNotificationNote() {
+    final noteId = _pendingNotificationNoteId;
+    if (!mounted ||
+        _isConsumingInitialTargetNote ||
+        noteId == null ||
+        noteId.isEmpty ||
+        _currentIndex != 1) {
+      return;
+    }
+
+    context.read<NoteSearchController>().clearSearch();
+
+    final noteListState = _noteListViewKey.currentState;
+    if (noteListState == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _consumePendingNotificationNote();
+      });
+      return;
+    }
+
+    _isConsumingInitialTargetNote = true;
+    unawaited(_attemptPendingNotificationNote(noteListState, noteId));
+  }
+
+  Future<void> _attemptPendingNotificationNote(
+    NoteListViewState noteListState,
+    String noteId,
+  ) async {
+    final success = await noteListState.scrollToQuoteById(noteId);
+    if (!mounted || _pendingNotificationNoteId != noteId) {
+      _isConsumingInitialTargetNote = false;
+      return;
+    }
+
+    if (success) {
+      _pendingNotificationNoteId = null;
+      _hasConsumedInitialTargetNote = true;
+      _initialTargetScrollRetryCount = 0;
+      _isConsumingInitialTargetNote = false;
+      return;
+    }
+
+    _isConsumingInitialTargetNote = false;
+    _initialTargetScrollRetryCount++;
+    if (_initialTargetScrollRetryCount >= _maxInitialTargetScrollRetries) {
+      logDebug(
+        '通知定位失败，已达到最大重试次数: $noteId',
+        source: 'HomePage',
+      );
+      _pendingNotificationNoteId = null;
+      return;
+    }
+
+    Future.delayed(const Duration(milliseconds: 250), () {
+      if (!mounted || _currentIndex != 1) return;
+      _consumePendingNotificationNote();
     });
   }
 

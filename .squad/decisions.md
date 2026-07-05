@@ -407,3 +407,56 @@
 
 **不做**：滚动中开关模糊（历史证明负优化）、全量 keepAlive（06-13 已废弃）、
 重复"修复"Gemini #1/#5（已核实不成立）。
+
+---
+
+## 2026-07-02: Step 1 实测结果 + Step 5 搁置 + Step 2/4 实施决定
+
+**决策者**: 上晋 + Claude Fable 5（GitLab Duo Chat）
+**类型**: 实测复盘 / 计划调整
+
+### Step 1（截断 Document，commit `8ac2508c`）真机实测结果
+
+用户真机日志（session scroll-4 首滑下 / scroll-7 回滑上，105 条中 rich=39, media=31）：
+
+| 指标 | 首滑(down) | 回滑(up) | 历史基线(06-13) |
+|---|---|---|---|
+| itemLayout.worst | **28.0ms** (rich-image) | 3.7ms (plain) | 39~67ms (rich) |
+| 纯 rich 首布局 | 11~12.5ms | — | 10~22ms 常见, 最高 67 |
+| worstBuild | 180.7ms | 9.0ms | 88~145ms |
+| frameJank | 14 | **0** | — |
+
+**结论**:
+1. 截断**有效**：单卡首布局峰值 67→28ms。但用户体感无变化，原因是**扎堆**：
+   slowLayouts 显示 index 75~87 区段 6 张 rich-image 卡各 20~28ms，合计 139.5ms，
+   与 worstBuild 180.7ms 对应。图片密集区连续进入 cacheExtent 时多卡首布局挤进相邻帧。
+2. 截断后 20~28ms 的剩余成本主体是 **QuillEditor 固定开销 + 图片 embed 脚手架布局**，
+   与文档长度无关（06-13 复核中"可能 1"被证实）。
+3. 回滑 session frameJank=0、全部 plain 3ms 级，证明现有 keepAlive + 缓存下回访路径已达标。
+4. 顺带发现：imageCache 29 张图 82.3MB（均 2.8MB/张），embed 图片解码未限制尺寸，
+   后续应加 `cacheWidth`（内存问题，与滚动卡顿无关）。
+5. 关于数据可信度：单次 session 有方差，但两 session 模式与历史数据一致，
+   且缓存计数器为精确计数非采样，方向性结论可靠。
+
+### 计划调整
+
+- **Step 5（轻量只读渲染器）搁置**：用户判断视觉还原风险与长期维护成本过高。
+  记录在案：若未来重启，剩余 20~28ms 的固定开销只能靠它消除，届时应限定"仅折叠态、
+  仅 160px 窗口内容"以缩小还原面。
+- **Step 3（keepAlive 固定策略）取消**：实测回滑 frameJank=0，现策略已达标；
+  keepAlive 翻转仅发生在整列表重建时（本次 session buildΔ=1，罕见），
+  Gemini #7 的"滚动中反复挂/摘"被高估。改动反而有富文本回访重新变卡的回归风险。
+- **Gemini #2（tagMap/rowIndexByKey 缓存）取消**：微秒级收益 vs 过期缓存风险，不值。
+- **立即实施 Step 2 + Step 4**（本次提交）：
+  1. 导出 InkWell 覆盖层仅 `_isExportMode` 时加入 Stack children
+     （保留常驻 Stack 壳避免 item 子树重挂载）；
+  2. 删除动画改为按需挂载的自驱动 `_NoteDeleteCollapse`
+     （FadeTransition+SizeTransition，250ms easeInCubic，视觉等价），
+     去掉每 item 常驻的 AnimatedOpacity+AnimatedSize ticker 与逐帧尺寸测量；
+  3. `MediaQuery.of` → `sizeOf`/`paddingOf`，避免键盘弹收触发整页重建；
+  4. `Provider.of<NoteSearchController>(listen:true)` → `context.select` 仅订阅 searchError；
+  5. ScrollEnd 的 `isListScrolling=false`（图片解码放行）与 anomaly 检查延迟约 2 帧
+     （Timer 32ms + generation 防过期覆盖），不与 ScrollEnd 帧的 loadMore 挤同一帧。
+
+**预期与验收**：Step 2/4 是削固定成本与削峰，预计缓解但不根除 rich-image 扎堆尖峰
+（根除需 Step 5）。验收同前：真机对比 worstBuild / frameJank / eventWorst。
