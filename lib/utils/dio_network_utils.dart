@@ -619,7 +619,6 @@ class DioNetworkUtils {
     if (provider.isAnthropicMessagesApi ||
         provider.apiUrl.contains('anthropic.com') ||
         provider.id == 'anthropic') {
-      adjustedData.remove('model');
       // Anthropic API需要确保stream参数正确
       if (adjustedData.containsKey('stream') &&
           adjustedData['stream'] == true) {

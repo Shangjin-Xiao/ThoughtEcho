@@ -108,6 +108,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
 
       final memoryManager = DeviceMemoryManager();
       final memoryPressure = await memoryManager.getMemoryPressureLevel();
+      if (!mounted) return;
 
       if (memoryPressure >= 3) {
         // 内存临界：直接使用纯文本
@@ -188,6 +189,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
 
       // 检查内存压力
       final memoryPressure = await memoryManager.getMemoryPressureLevel();
+      if (!mounted) return;
 
       if (memoryPressure >= 3) {
         // 临界状态
@@ -213,6 +215,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       }
     } catch (e) {
       logDebug('富文本初始化失败: $e，回退到纯文本');
+      if (!mounted) return;
       final plainContent =
           widget.initialQuote?.content ?? _fullInitialQuote?.content;
       _initializeAsPlainText(plainContent);

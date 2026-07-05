@@ -328,8 +328,6 @@ class AIProviderSettings implements AIConfig {
 
     // Anthropic特殊处理
     if (isAnthropicMessagesApi || apiUrl.contains('anthropic.com')) {
-      // Anthropic API不在请求体中包含model，而是在URL中
-      adjustedData.remove('model');
       // Anthropic API需要确保stream参数正确
       if (adjustedData.containsKey('stream') &&
           adjustedData['stream'] == true) {

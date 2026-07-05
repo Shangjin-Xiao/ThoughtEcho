@@ -111,7 +111,6 @@ class LegacyAIConfigWrapper implements AIConfig {
 
     // Anthropic特殊处理
     if (isAnthropicMessagesApi || apiUrl.contains('anthropic.com')) {
-      adjustedData.remove('model');
       // Anthropic API需要确保stream参数正确
       if (adjustedData.containsKey('stream') &&
           adjustedData['stream'] == true) {

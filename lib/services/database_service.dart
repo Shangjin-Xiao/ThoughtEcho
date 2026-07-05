@@ -330,7 +330,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     _database = null;
   }
 
-  static Future<void> closeDatabase() async {
+  static Future<void> closeDatabase({bool forMigration = false}) async {
     final service = DatabaseService();
     // 1. 标记销毁，防止新的操作启动
     service._isDisposed = true;
@@ -339,7 +339,9 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     if (service._isInitializing && service._initCompleter != null) {
       try {
         await service._initCompleter!.future;
-      } catch (_) {}
+      } catch (e, stack) {
+        logError('关闭数据库时等待初始化失败', error: e, stackTrace: stack);
+      }
     }
 
     // 3. 等待所有活跃的锁/操作执行完毕
@@ -348,7 +350,10 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
           service._databaseLock.values.map((c) => c.future).toList();
       try {
         await Future.wait(futures).timeout(const Duration(seconds: 5));
-      } catch (_) {}
+      } catch (e, stack) {
+        logError('关闭数据库时等待操作锁超时/失败', error: e, stackTrace: stack);
+        rethrow;
+      }
     }
 
     // 4. 关闭数据库
@@ -357,14 +362,22 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     if (db != null && db.isOpen) {
       try {
         await db.execute('PRAGMA wal_checkpoint(FULL);');
-      } catch (_) {}
+      } catch (e, stack) {
+        logError('关闭数据库时执行 WAL checkpoint 失败', error: e, stackTrace: stack);
+        rethrow;
+      }
       try {
         await db.close();
-      } catch (_) {}
+      } catch (e, stack) {
+        logError('关闭数据库连接失败', error: e, stackTrace: stack);
+        rethrow;
+      }
     }
 
-    // 5. 重置销毁和初始化状态，以便后续可能重新初始化
-    service.reinitialize();
+    // 5. 如果不是为了迁移，则重置销毁和初始化状态，以便后续可能重新初始化
+    if (!forMigration) {
+      service.reinitialize();
+    }
   }
 
   static Database? _database;
@@ -1104,8 +1117,8 @@ class DatabaseService extends _DatabaseServiceBase
     _DatabaseServiceBase.clearTestDatabase();
   }
 
-  static Future<void> closeDatabase() async {
-    await _DatabaseServiceBase.closeDatabase();
+  static Future<void> closeDatabase({bool forMigration = false}) async {
+    await _DatabaseServiceBase.closeDatabase(forMigration: forMigration);
   }
 
   DatabaseService._internal() : super._internal();

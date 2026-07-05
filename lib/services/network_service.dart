@@ -336,12 +336,6 @@ class NetworkService {
           adjustedData['temperature'] ?? provider.temperature;
       adjustedData['max_tokens'] =
           adjustedData['max_tokens'] ?? provider.maxTokens;
-
-      // Anthropic特殊处理
-      if (provider.isAnthropicMessagesApi ||
-          provider.apiUrl.contains('anthropic.com')) {
-        adjustedData.remove('model'); // Anthropic不在请求体中包含model
-      }
     } else if (legacySettings != null) {
       adjustedData['model'] = adjustedData['model'] ?? legacySettings.model;
       adjustedData['temperature'] =

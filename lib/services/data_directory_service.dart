@@ -62,9 +62,6 @@ class DataDirectoryService {
     }
 
     try {
-      // 迁移前确保关闭并冲刷所有数据库连接
-      await _closeAllDatabases();
-
       final prefs = await SharedPreferences.getInstance();
 
       // 检查是否已经完成迁移
@@ -104,6 +101,9 @@ class DataDirectoryService {
       }
 
       logInfo('检测到旧版数据，开始自动迁移到 $newDataDir');
+
+      // 迁移前确保关闭并冲刷所有数据库连接
+      await _closeAllDatabases();
 
       // 创建新目录
       await Directory(newDataDir).create(recursive: true);
@@ -147,30 +147,41 @@ class DataDirectoryService {
     }
   }
 
-  /// 关闭所有正在运行的数据库并冲刷 WAL 日志，确保数据完整性
+  /// 关闭所有正在运行的数据库并冲刷 WAL 日志，确保数据完整性。
+  /// 若关闭失败则抛出异常以中止后续迁移，防止数据损坏。
   static Future<void> _closeAllDatabases() async {
+    logInfo('正在关闭并冲刷所有数据库连接...');
+    final List<String> failures = [];
+
     try {
-      logInfo('正在关闭并冲刷所有数据库连接...');
-      try {
-        await DatabaseService.closeDatabase();
-      } catch (e, stack) {
-        logError('关闭 DatabaseService 失败', error: e, stackTrace: stack);
-      }
-      try {
-        await AIAnalysisDatabaseService().closeDatabase();
-      } catch (e, stack) {
-        logError('关闭 AIAnalysisDatabaseService 失败',
-            error: e, stackTrace: stack);
-      }
-      try {
-        await ChatSessionService.activeInstance?.close();
-      } catch (e, stack) {
-        logError('关闭 ChatSessionService 失败', error: e, stackTrace: stack);
-      }
-      logInfo('所有数据库已成功关闭并冲刷。');
+      await DatabaseService.closeDatabase(forMigration: true);
     } catch (e, stack) {
-      logError('关闭数据库总体流程遇到异常', error: e, stackTrace: stack);
+      logError('关闭 DatabaseService 失败', error: e, stackTrace: stack);
+      failures.add('DatabaseService: $e');
     }
+
+    try {
+      await AIAnalysisDatabaseService().closeDatabase();
+    } catch (e, stack) {
+      logError('关闭 AIAnalysisDatabaseService 失败', error: e, stackTrace: stack);
+      failures.add('AIAnalysisDatabaseService: $e');
+    }
+
+    try {
+      final activeInstance = ChatSessionService.activeInstance;
+      if (activeInstance != null) {
+        await activeInstance.close();
+      }
+    } catch (e, stack) {
+      logError('关闭 ChatSessionService 失败', error: e, stackTrace: stack);
+      failures.add('ChatSessionService: $e');
+    }
+
+    if (failures.isNotEmpty) {
+      throw Exception('关闭数据库连接失败，已中止迁移以防数据损坏。失败详情: ${failures.join(", ")}');
+    }
+
+    logInfo('所有数据库已成功关闭并冲刷。');
   }
 
   /// 复制目录及其内容

@@ -235,9 +235,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            l10n.openFullEditorFailed(
-                              e.toString().replaceAll('Exception: ', ''),
-                            ),
+                            l10n.openFullEditorFailedSimple,
                           ),
                         ),
                       );

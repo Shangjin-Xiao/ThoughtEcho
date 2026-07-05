@@ -152,10 +152,6 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       _database = null;
     }
 
-    if (!_analysesController.isClosed) {
-      await _analysesController.close();
-    }
-
     _initCompleter = null;
   }
 
