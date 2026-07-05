@@ -112,7 +112,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       if (memoryPressure >= 3) {
         // 内存临界：直接使用纯文本
         logDebug('内存临界，使用纯文本模式');
-        _initializeAsPlainText();
+        _initializeAsPlainText(plainText);
         return;
       }
 
@@ -192,7 +192,9 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       if (memoryPressure >= 3) {
         // 临界状态
         logDebug('内存不足，回退到纯文本模式');
-        _initializeAsPlainText();
+        final plainContent =
+            widget.initialQuote?.content ?? _fullInitialQuote?.content;
+        _initializeAsPlainText(plainContent);
         return;
       }
 
@@ -211,7 +213,9 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       }
     } catch (e) {
       logDebug('富文本初始化失败: $e，回退到纯文本');
-      _initializeAsPlainText();
+      final plainContent =
+          widget.initialQuote?.content ?? _fullInitialQuote?.content;
+      _initializeAsPlainText(plainContent);
     }
   }
 

@@ -1959,7 +1959,12 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                               const Duration(milliseconds: 300),
                                               () {
                                             if (mounted && context.mounted) {
-                                              Navigator.pop(context);
+                                              final route =
+                                                  ModalRoute.of(context);
+                                              if (route != null &&
+                                                  route.isCurrent) {
+                                                Navigator.pop(context);
+                                              }
                                             }
                                           });
                                         }

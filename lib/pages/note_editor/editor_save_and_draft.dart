@@ -2,17 +2,18 @@ part of '../note_full_editor_page.dart';
 
 /// Draft management, save logic, and state helper methods.
 extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
-  void _initializeAsPlainText() {
+  void _initializeAsPlainText([String? text]) {
     try {
       if (mounted) {
-        final text = (widget.initialQuote != null &&
-                widget.initialQuote!.content.isNotEmpty)
-            ? widget.initialQuote!.content
-            : widget.initialContent;
+        final contentText = text ??
+            ((widget.initialQuote != null &&
+                    widget.initialQuote!.content.isNotEmpty)
+                ? widget.initialQuote!.content
+                : widget.initialContent);
         _updateState(() {
           _controller.dispose(); // 释放旧控制器
           _controller = quill.QuillController(
-            document: quill.Document()..insert(0, text),
+            document: quill.Document()..insert(0, contentText),
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
