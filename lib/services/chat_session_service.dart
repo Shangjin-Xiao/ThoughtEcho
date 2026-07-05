@@ -565,9 +565,12 @@ class ChatSessionService extends ChangeNotifier {
         final createdAtStr = row['created_at'] as String?;
         if (createdAtStr != null) {
           final createdAt = DateTime.tryParse(createdAtStr);
-          if (createdAt != null && now.difference(createdAt).inMinutes < 5) {
-            // 最近 5 分钟内创建的空会话，可能是刚生成的，跳过清理
-            continue;
+          if (createdAt != null) {
+            final diffMinutes = now.difference(createdAt).inMinutes;
+            if (diffMinutes >= 0 && diffMinutes < 5) {
+              // 最近 5 分钟内创建的空会话，可能是刚生成的，跳过清理
+              continue;
+            }
           }
         }
         await db.delete('chat_sessions', where: 'id = ?', whereArgs: [id]);
