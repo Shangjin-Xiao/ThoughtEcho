@@ -1902,8 +1902,9 @@ class _HomePageState extends State<HomePage>
   }
 
   /// 构建首页位置天气显示。
-  /// chip 仅在有真实位置数据（坐标或城市）时显示，其余所有状态
-  /// （初始化中、获取 GPS 中、无权限、服务关闭）一律隐藏，保持 AppBar 干净。
+  /// chip 在位置与天气同时就绪后才显示，保持 AppBar 干净：
+  /// - 联网时：位置（城市/坐标）AND 天气数据同时可用才淡入
+  /// - 离线时：有位置即可显示（无法获取天气，不能永久隐藏）
   /// AnimatedSwitcher 保证 chip 首次出现时淡入一次，页面切回不重复动画。
   Widget _buildLocationWeatherDisplay(
     BuildContext context,
@@ -1920,13 +1921,15 @@ class _HomePageState extends State<HomePage>
         weatherService.currentWeather != 'error' &&
         weatherService.currentWeather != 'unknown';
 
-    // 只有真实位置数据才值得显示 chip；
-    // 其他一切状态（loading、无权限、服务关闭）对用户没有操作价值，AppBar 保持干净更好。
     final hasRealLocation = hasCity || hasCoordinates;
 
+    // 联网时：位置和天气都就绪才显示，避免天气加载中出现 '--' 中间态；
+    // 离线时：有位置即可显示（离线本来就获取不到天气，不能永远不显示）。
+    final shouldShow = hasRealLocation && (hasWeather || !isConnected);
+
     Widget chip;
-    if (!hasRealLocation) {
-      // 无 key → AnimatedSwitcher 视为"空"，位置就绪后 chipKey 出现触发一次淡入
+    if (!shouldShow) {
+      // 无 key → AnimatedSwitcher 视为"空"，两者就绪后 chipKey 出现触发一次淡入
       chip = const SizedBox.shrink();
     } else {
       // 位置文字：优先城市名，其次坐标
@@ -1937,7 +1940,7 @@ class _HomePageState extends State<HomePage>
               locationService.currentPosition!.longitude,
             );
 
-      // 天气文字：有数据就显示，获取中或离线显示 '--'（不显示"加载中"）
+      // 天气文字：有数据就显示；离线时显示 '--' + 断网图标
       final String weatherText;
       final IconData weatherIcon;
       if (hasWeather) {
@@ -1950,13 +1953,10 @@ class _HomePageState extends State<HomePage>
             : '';
         weatherText = '$desc$temp';
         weatherIcon = weatherService.getWeatherIconData();
-      } else if (!isConnected) {
+      } else {
+        // 离线且无天气缓存
         weatherText = '--';
         weatherIcon = Icons.cloud_off;
-      } else {
-        // 联网中但天气尚未返回：显示 '--'，数据到了原地更新，key 不变不重播动画
-        weatherText = '--';
-        weatherIcon = Icons.cloud_queue;
       }
 
       chip = HomeLocationWeatherDisplay(

@@ -1577,7 +1577,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   }
 
   /// 保存笔记并退出
-  void _saveAndExit() {
+  Future<void> _saveAndExit() async {
     if (_isSaving) return;
 
     // 如果内容为空，直接返回
@@ -1586,6 +1586,19 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         Navigator.pop(context);
       }
       return;
+    }
+
+    // 如果位置/天气正在异步获取中，等待完成（最多 5s）
+    if (_controller.isFetchingMetadata) {
+      // notifyListeners 已由 controller 调用，这里只需要等待它变为 false
+      const pollInterval = Duration(milliseconds: 100);
+      const maxWait = Duration(seconds: 5);
+      var waited = Duration.zero;
+      while (_controller.isFetchingMetadata && waited < maxWait) {
+        await Future<void>.delayed(pollInterval);
+        waited += pollInterval;
+        if (!mounted) return;
+      }
     }
 
     _isSaving = true;
@@ -1728,7 +1741,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           Navigator.pop(context);
         } else if (dialogResult == 'save') {
           // 用户选择保存并退出
-          _saveAndExit();
+          await _saveAndExit();
         }
         // dialogResult == null: 继续编辑，不做任何操作
       },
@@ -2368,14 +2381,16 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                             ),
                           ),
                         ),
-                        onPressed: _isLoadingFullQuote
+                        onPressed: (_isLoadingFullQuote ||
+                                _controller.isFetchingMetadata)
                             ? null
                             : () {
                                 if (_contentController.text.isNotEmpty) {
                                   _saveAndExit();
                                 }
                               },
-                        child: _isLoadingFullQuote
+                        child: (_isLoadingFullQuote ||
+                                _controller.isFetchingMetadata)
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,

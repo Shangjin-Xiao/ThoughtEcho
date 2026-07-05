@@ -35,6 +35,13 @@ class AddNoteController extends ChangeNotifier {
   double? newLatitude;
   double? newLongitude;
 
+  // 位置/天气后台获取中状态（自动附加偏好触发）
+  bool isFetchingLocation = false;
+  bool isFetchingWeather = false;
+
+  /// 是否有任何元数据正在后台获取中
+  bool get isFetchingMetadata => isFetchingLocation || isFetchingWeather;
+
   // 一言标签加载状态
   bool isLoadingHitokotoTags = false;
 
@@ -168,6 +175,9 @@ class AddNoteController extends ChangeNotifier {
     final locService = locationService;
     if (locService == null) return;
 
+    isFetchingLocation = true;
+    notifyListeners();
+
     // 检查并请求权限
     final hasPermission =
         await LocationWeatherHelper.ensureLocationPermission(locService);
@@ -175,8 +185,9 @@ class AddNoteController extends ChangeNotifier {
     if (!hasPermission) {
       includeLocation = false;
       _clearNewLocation();
-      onLocationPermissionDenied?.call();
+      isFetchingLocation = false;
       notifyListeners();
+      onLocationPermissionDenied?.call();
       return;
     }
 
@@ -187,21 +198,24 @@ class AddNoteController extends ChangeNotifier {
         newLatitude = snapshot.position.latitude;
         newLongitude = snapshot.position.longitude;
         newLocation = snapshot.location.isNotEmpty ? snapshot.location : null;
-        onLocationFetched?.call();
+        isFetchingLocation = false;
         notifyListeners();
+        onLocationFetched?.call();
       } else {
         includeLocation = false;
         _clearNewLocation();
-        onLocationFetchEmpty?.call();
+        isFetchingLocation = false;
         notifyListeners();
+        onLocationFetchEmpty?.call();
       }
     } catch (e) {
       logDebug('获取位置失败: $e');
       if (_isDisposed) return;
       includeLocation = false;
       _clearNewLocation();
-      onLocationError?.call(e.toString());
+      isFetchingLocation = false;
       notifyListeners();
+      onLocationError?.call(e.toString());
     }
   }
 
@@ -210,6 +224,9 @@ class AddNoteController extends ChangeNotifier {
     final weaService = weatherService;
     final locService = locationService;
     if (weaService == null) return;
+
+    isFetchingWeather = true;
+    notifyListeners();
 
     try {
       double? lat = newLatitude;
@@ -222,8 +239,9 @@ class AddNoteController extends ChangeNotifier {
 
       if (lat == null || lon == null) {
         includeWeather = false;
-        onWeatherMissingCoordinates?.call();
+        isFetchingWeather = false;
         notifyListeners();
+        onWeatherMissingCoordinates?.call();
         return;
       }
 
@@ -232,18 +250,21 @@ class AddNoteController extends ChangeNotifier {
 
       if (!weaService.hasData) {
         includeWeather = false;
-        onWeatherFetchEmpty?.call();
+        isFetchingWeather = false;
         notifyListeners();
+        onWeatherFetchEmpty?.call();
         return;
       }
 
+      isFetchingWeather = false;
       notifyListeners();
     } catch (e) {
       logDebug('获取天气失败: $e');
       if (_isDisposed) return;
       includeWeather = false;
-      onWeatherFetchError?.call();
+      isFetchingWeather = false;
       notifyListeners();
+      onWeatherFetchError?.call();
     }
   }
 
