@@ -223,12 +223,21 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                         draft.content,
                       );
                     }
-                  } catch (e) {
+                  } catch (e, stack) {
+                    logError(
+                      '打开编辑器失败',
+                      error: e,
+                      stackTrace: stack,
+                      source: 'ai_assistant_page_ui',
+                    );
                     if (mounted) {
+                      final l10n = AppLocalizations.of(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            e.toString().replaceAll('Exception: ', ''),
+                            l10n.openFullEditorFailed(
+                              e.toString().replaceAll('Exception: ', ''),
+                            ),
                           ),
                         ),
                       );
@@ -370,8 +379,13 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               ),
             );
         }
-      } catch (e) {
-        AppLogger.e('Failed to render AI workflow message', error: e);
+      } catch (e, stack) {
+        logError(
+          'Failed to render AI workflow message',
+          error: e,
+          stackTrace: stack,
+          source: 'ai_assistant_page_ui',
+        );
       }
     }
 

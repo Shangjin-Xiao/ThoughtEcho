@@ -134,6 +134,11 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
   /// 关闭数据库连接
   Future<void> closeDatabase() async {
     if (_database != null) {
+      try {
+        await _database!.execute('PRAGMA wal_checkpoint(FULL);');
+      } catch (e) {
+        logError('AIAnalysisDatabaseService WAL checkpoint failed: $e');
+      }
       await _database!.close();
       _database = null;
     }

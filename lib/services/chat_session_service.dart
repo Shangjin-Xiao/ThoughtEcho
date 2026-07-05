@@ -13,6 +13,7 @@ import '../utils/app_logger.dart';
 import 'data_directory_service.dart';
 
 class ChatSessionService extends ChangeNotifier {
+  static ChatSessionService? activeInstance;
   Database? _database;
   final String? _databasePath;
   final bool _openOwnDatabase;
@@ -27,7 +28,9 @@ class ChatSessionService extends ChangeNotifier {
     String? databasePath,
     bool openOwnDatabase = true,
   })  : _databasePath = databasePath,
-        _openOwnDatabase = openOwnDatabase;
+        _openOwnDatabase = openOwnDatabase {
+    activeInstance = this;
+  }
 
   void setDatabase(Database? db) {
     _database = db;
@@ -131,6 +134,11 @@ class ChatSessionService extends ChangeNotifier {
     final db = _database;
     _database = null;
     if (db != null && _ownsDatabase) {
+      try {
+        await db.execute('PRAGMA wal_checkpoint(FULL);');
+      } catch (e) {
+        logError('ChatSessionService WAL checkpoint failed: $e');
+      }
       await db.close();
     }
   }

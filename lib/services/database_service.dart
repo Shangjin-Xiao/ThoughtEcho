@@ -330,6 +330,19 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     _database = null;
   }
 
+  static Future<void> closeDatabase() async {
+    final db = _database;
+    _database = null;
+    if (db != null && db.isOpen) {
+      try {
+        await db.execute('PRAGMA wal_checkpoint(FULL);');
+      } catch (_) {
+        // ignore
+      }
+      await db.close();
+    }
+  }
+
   static Database? _database;
   StreamController<List<NoteCategory>> _categoriesController =
       StreamController<List<NoteCategory>>.broadcast();
@@ -1065,6 +1078,10 @@ class DatabaseService extends _DatabaseServiceBase
 
   static void clearTestDatabase() {
     _DatabaseServiceBase.clearTestDatabase();
+  }
+
+  static Future<void> closeDatabase() async {
+    await _DatabaseServiceBase.closeDatabase();
   }
 
   DatabaseService._internal() : super._internal();

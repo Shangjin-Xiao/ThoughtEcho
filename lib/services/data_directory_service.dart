@@ -5,6 +5,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/app_logger.dart';
 import '../utils/path_security_utils.dart';
+import 'ai_analysis_database_service.dart';
+import 'chat_session_service.dart';
+import 'database_service.dart';
 import 'large_file_manager.dart';
 
 /// 数据目录管理服务（桌面平台专用）
@@ -59,6 +62,17 @@ class DataDirectoryService {
     }
 
     try {
+      // 迁移前确保关闭/冲刷数据库连接
+      try {
+        await DatabaseService.closeDatabase();
+      } catch (_) {}
+      try {
+        await AIAnalysisDatabaseService().closeDatabase();
+      } catch (_) {}
+      try {
+        await ChatSessionService.activeInstance?.close();
+      } catch (_) {}
+
       final prefs = await SharedPreferences.getInstance();
 
       // 检查是否已经完成迁移
@@ -108,10 +122,8 @@ class DataDirectoryService {
         'media',
         'ai_analyses.db',
         'ai_analyses.db-wal',
-        'ai_analyses.db-shm',
         'chat.db',
         'chat.db-wal',
-        'chat.db-shm',
       ];
 
       for (final item in itemsToMigrate) {
@@ -153,7 +165,10 @@ class DataDirectoryService {
       final newPath = path.join(target.path, path.basename(entity.path));
 
       if (entity is File) {
-        await entity.copy(newPath);
+        final fileName = path.basename(entity.path).toLowerCase();
+        if (!fileName.endsWith('-shm')) {
+          await entity.copy(newPath);
+        }
       } else if (entity is Directory) {
         await _copyDirectory(entity, Directory(newPath));
       }
@@ -250,6 +265,24 @@ class DataDirectoryService {
       }
 
       onStatusUpdate?.call('正在准备迁移...');
+
+      // 迁移前确保关闭/冲刷数据库连接
+      try {
+        await DatabaseService.closeDatabase();
+      } catch (e) {
+        logError('关闭 DatabaseService 失败: $e');
+      }
+      try {
+        await AIAnalysisDatabaseService().closeDatabase();
+      } catch (e) {
+        logError('关闭 AIAnalysisDatabaseService 失败: $e');
+      }
+      try {
+        await ChatSessionService.activeInstance?.close();
+      } catch (e) {
+        logError('关闭 ChatSessionService 失败: $e');
+      }
+
       final currentDir = Directory(currentPath);
       if (!await currentDir.exists()) {
         throw Exception('当前数据目录不存在');
@@ -375,10 +408,8 @@ class DataDirectoryService {
       'media', // 媒体文件目录
       'ai_analyses.db', // AI 分析数据库
       'ai_analyses.db-wal',
-      'ai_analyses.db-shm',
       'chat.db',
       'chat.db-wal',
-      'chat.db-shm',
       'backups', // 备份目录
     ];
 
@@ -397,8 +428,9 @@ class DataDirectoryService {
             try {
               if (entity is File) {
                 final fileName = path.basename(entity.path).toLowerCase();
-                // 跳过系统文件
-                if (!_isWindowsSystemFile(fileName)) {
+                // 跳过系统文件和 SQLite shm 临时文件
+                if (!_isWindowsSystemFile(fileName) &&
+                    !fileName.endsWith('-shm')) {
                   filesToCopy.add(entity.path);
                 }
               }
@@ -407,7 +439,10 @@ class DataDirectoryService {
             }
           }
         } else if (await itemFile.exists()) {
-          filesToCopy.add(itemFile.path);
+          final fileName = path.basename(itemFile.path).toLowerCase();
+          if (!fileName.endsWith('-shm')) {
+            filesToCopy.add(itemFile.path);
+          }
         }
       } catch (e) {
         errors.add('无法访问目录: $itemPath');
