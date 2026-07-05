@@ -331,16 +331,40 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   }
 
   static Future<void> closeDatabase() async {
+    final service = DatabaseService();
+    // 1. 标记销毁，防止新的操作启动
+    service._isDisposed = true;
+
+    // 2. 等待初始化完成（如果正在初始化的话）
+    if (service._isInitializing && service._initCompleter != null) {
+      try {
+        await service._initCompleter!.future;
+      } catch (_) {}
+    }
+
+    // 3. 等待所有活跃的锁/操作执行完毕
+    if (service._databaseLock.isNotEmpty) {
+      final futures =
+          service._databaseLock.values.map((c) => c.future).toList();
+      try {
+        await Future.wait(futures).timeout(const Duration(seconds: 5));
+      } catch (_) {}
+    }
+
+    // 4. 关闭数据库
     final db = _database;
     _database = null;
     if (db != null && db.isOpen) {
       try {
         await db.execute('PRAGMA wal_checkpoint(FULL);');
-      } catch (_) {
-        // ignore
-      }
-      await db.close();
+      } catch (_) {}
+      try {
+        await db.close();
+      } catch (_) {}
     }
+
+    // 5. 重置销毁和初始化状态，以便后续可能重新初始化
+    service.reinitialize();
   }
 
   static Database? _database;

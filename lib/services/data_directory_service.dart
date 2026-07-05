@@ -62,16 +62,8 @@ class DataDirectoryService {
     }
 
     try {
-      // 迁移前确保关闭/冲刷数据库连接
-      try {
-        await DatabaseService.closeDatabase();
-      } catch (_) {}
-      try {
-        await AIAnalysisDatabaseService().closeDatabase();
-      } catch (_) {}
-      try {
-        await ChatSessionService.activeInstance?.close();
-      } catch (_) {}
+      // 迁移前确保关闭并冲刷所有数据库连接
+      await _closeAllDatabases();
 
       final prefs = await SharedPreferences.getInstance();
 
@@ -152,6 +144,32 @@ class DataDirectoryService {
     } catch (e, stackTrace) {
       logError('旧版数据迁移失败: $e', error: e, stackTrace: stackTrace);
       return false;
+    }
+  }
+
+  /// 关闭所有正在运行的数据库并冲刷 WAL 日志，确保数据完整性
+  static Future<void> _closeAllDatabases() async {
+    try {
+      logInfo('正在关闭并冲刷所有数据库连接...');
+      try {
+        await DatabaseService.closeDatabase();
+      } catch (e, stack) {
+        logError('关闭 DatabaseService 失败', error: e, stackTrace: stack);
+      }
+      try {
+        await AIAnalysisDatabaseService().closeDatabase();
+      } catch (e, stack) {
+        logError('关闭 AIAnalysisDatabaseService 失败',
+            error: e, stackTrace: stack);
+      }
+      try {
+        await ChatSessionService.activeInstance?.close();
+      } catch (e, stack) {
+        logError('关闭 ChatSessionService 失败', error: e, stackTrace: stack);
+      }
+      logInfo('所有数据库已成功关闭并冲刷。');
+    } catch (e, stack) {
+      logError('关闭数据库总体流程遇到异常', error: e, stackTrace: stack);
     }
   }
 
@@ -266,22 +284,8 @@ class DataDirectoryService {
 
       onStatusUpdate?.call('正在准备迁移...');
 
-      // 迁移前确保关闭/冲刷数据库连接
-      try {
-        await DatabaseService.closeDatabase();
-      } catch (e) {
-        logError('关闭 DatabaseService 失败: $e');
-      }
-      try {
-        await AIAnalysisDatabaseService().closeDatabase();
-      } catch (e) {
-        logError('关闭 AIAnalysisDatabaseService 失败: $e');
-      }
-      try {
-        await ChatSessionService.activeInstance?.close();
-      } catch (e) {
-        logError('关闭 ChatSessionService 失败: $e');
-      }
+      // 迁移前确保关闭并冲刷所有数据库连接
+      await _closeAllDatabases();
 
       final currentDir = Directory(currentPath);
       if (!await currentDir.exists()) {

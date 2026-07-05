@@ -131,15 +131,25 @@ class ChatSessionService extends ChangeNotifier {
   }
 
   Future<void> close() async {
+    final opening = _openingCompleter;
+    if (opening != null) {
+      try {
+        await opening.future;
+      } catch (_) {}
+    }
+
     final db = _database;
     _database = null;
+    _openingCompleter = null;
     if (db != null && _ownsDatabase) {
       try {
         await db.execute('PRAGMA wal_checkpoint(FULL);');
       } catch (e) {
         logError('ChatSessionService WAL checkpoint failed: $e');
       }
-      await db.close();
+      try {
+        await db.close();
+      } catch (_) {}
     }
   }
 
