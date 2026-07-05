@@ -110,6 +110,7 @@
   "weatherFetchFailedDesc": "Cannot get current weather info. Please check your network connection or try again later",
   "locationFetchFailedNoNetwork": "No network, coordinates saved",
   "locationAndWeatherUnavailable": "Cannot get location and weather info at this time",
+  "autoAttachMetadataUnavailable": "Location/weather unavailable, note saved without them",
   "settingsUseLocationService": "Use Location Service",
   "settingsLocationEnabled": "Permission granted and enabled",
   "settingsLocationPermissionOnly": "Permission granted but service disabled",

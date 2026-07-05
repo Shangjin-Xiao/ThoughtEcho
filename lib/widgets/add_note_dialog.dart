@@ -1604,6 +1604,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     }
 
     // 如果位置/天气正在异步获取中，显示 loading 并等待完成（最多 5s）
+    var metadataTimedOut = false;
     if (_controller.isFetchingMetadata) {
       if (mounted) setState(() => _waitingForFetch = true);
       const pollInterval = Duration(milliseconds: 100);
@@ -1614,6 +1615,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         waited += pollInterval;
         if (!mounted) return;
       }
+      // 仍在获取中说明是超时，需要告知用户
+      metadataTimedOut = _controller.isFetchingMetadata;
       if (mounted) setState(() => _waitingForFetch = false);
     }
 
@@ -1688,7 +1691,19 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       );
 
       if (mounted) {
+        // 在 pop 前取好 messenger 引用（pop 后 context 失效）
+        final messenger = ScaffoldMessenger.of(context);
+        final l10n = AppLocalizations.of(context);
         navigator.pop();
+        // 超时：位置/天气未能在规定时间内获取，已直接保存，通过 SnackBar 告知
+        if (metadataTimedOut) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(l10n.autoAttachMetadataUnavailable),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       }
       unawaited(Future<void>.sync(() => widget.onSave(quote)));
     } catch (e) {
