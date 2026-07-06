@@ -37,5 +37,14 @@
   "webdavConflictKeepTooltip": "Mantener y mover a categoría predeterminada",
   "webdavConflictKeepSuccess": "Confirmado y movido a la lista predeterminada.",
   "webdavConflictDiscardTooltip": "Descartar esta copia de seguridad de conflicto",
-  "webdavConflictDiscardSuccess": "Nota de conflicto descartada permanentemente."
+  "webdavConflictDiscardSuccess": "Nota de conflicto descartada permanentemente.",
+  "addNoteDeferMetadataExperiment": "[Exp] AddNote Diferir Metadatos",
+  "addNoteDeferMetadataExperimentDesc": "Diferir la obtención de ubicación/clima hasta el fin de la animación del teclado (Por defecto: desactivado)",
+  "noteInsertAnimationExperiment": "[Exp] Animación al insertar nota",
+  "noteInsertAnimationCurrentScale": "Actual: Opción 1 (Escala de burbuja)",
+  "noteInsertAnimationCurrentSlide": "Actual: Opción 2 (Deslizamiento suave)",
+  "noteInsertAnimationCurrentNone": "Actual: Sin animación",
+  "noteInsertAnimationScale": "Escala de burbuja",
+  "noteInsertAnimationSlide": "Deslizamiento suave",
+  "noteInsertAnimationNone": "Sin animación"
 }

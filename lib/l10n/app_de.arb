@@ -37,5 +37,14 @@
   "webdavConflictKeepTooltip": "Behalten und in Standardkategorie verschieben",
   "webdavConflictKeepSuccess": "Bestätigt und in Standardliste verschoben.",
   "webdavConflictDiscardTooltip": "Dieses Konflikt-Backup verwerfen",
-  "webdavConflictDiscardSuccess": "Diese Konfliktnotiz wurde dauerhaft verworfen."
+  "webdavConflictDiscardSuccess": "Diese Konfliktnotiz wurde dauerhaft verworfen.",
+  "addNoteDeferMetadataExperiment": "[Exp] AddNote Metadaten Verzögern",
+  "addNoteDeferMetadataExperimentDesc": "Standort/Wetter-Abruf bis zum Ende der Tastatur-Animation verzögern (Standard: aus)",
+  "noteInsertAnimationExperiment": "[Exp] Notiz Einfügen Animation",
+  "noteInsertAnimationCurrentScale": "Aktuell: Option 1 (Blasenskalierung)",
+  "noteInsertAnimationCurrentSlide": "Aktuell: Option 2 (Sanftes Gleiten)",
+  "noteInsertAnimationCurrentNone": "Aktuell: Keine Animation",
+  "noteInsertAnimationScale": "Blasenskalierung",
+  "noteInsertAnimationSlide": "Sanftes Gleiten",
+  "noteInsertAnimationNone": "Keine Animation"
 }

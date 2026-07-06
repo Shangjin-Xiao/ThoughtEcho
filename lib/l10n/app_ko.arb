@@ -3546,5 +3546,14 @@
   "webdavConflictKeepTooltip": "유지 및 기본 카테고리로 이동",
   "webdavConflictKeepSuccess": "확인 후 기본 목록으로 이동되었습니다.",
   "webdavConflictDiscardTooltip": "이 충돌 백업 취소",
-  "webdavConflictDiscardSuccess": "이 충돌 메모를 영구적으로 삭제했습니다."
+  "webdavConflictDiscardSuccess": "이 충돌 메모를 영구적으로 삭제했습니다.",
+  "addNoteDeferMetadataExperiment": "[실험] AddNote 메타데이터 지연",
+  "addNoteDeferMetadataExperimentDesc": "키보드 애니메이션 종료 시까지 위치/날씨 가져오기 지연 (기본: 꺼짐)",
+  "noteInsertAnimationExperiment": "[실험] 노트 추가 애니메이션",
+  "noteInsertAnimationCurrentScale": "현재: 옵션 1 (버블 스케일)",
+  "noteInsertAnimationCurrentSlide": "현재: 옵션 2 (부드러운 슬라이드)",
+  "noteInsertAnimationCurrentNone": "현재: 애니메이션 없음",
+  "noteInsertAnimationScale": "버블 스케일",
+  "noteInsertAnimationSlide": "부드러운 슬라이드",
+  "noteInsertAnimationNone": "애니메이션 없음"
 }

@@ -3551,5 +3551,14 @@
   "webdavConflictKeepTooltip": "保持してデフォルトカテゴリに移動",
   "webdavConflictKeepSuccess": "確認してデフォルトリストに移動しました。",
   "webdavConflictDiscardTooltip": "この競合バックアップを破棄",
-  "webdavConflictDiscardSuccess": "この競合メモを完全に破棄しました。"
+  "webdavConflictDiscardSuccess": "この競合メモを完全に破棄しました。",
+  "addNoteDeferMetadataExperiment": "[実験] AddNote メタデータ遅延取得",
+  "addNoteDeferMetadataExperimentDesc": "キーボードアニメーション終了後まで位置/天気の取得を遅延 (デフォルト: オフ)",
+  "noteInsertAnimationExperiment": "[実験] ノート追加アニメーション",
+  "noteInsertAnimationCurrentScale": "現在: オプション 1 (バブルスケーリング)",
+  "noteInsertAnimationCurrentSlide": "現在: オプション 2 (スムーズスライド)",
+  "noteInsertAnimationCurrentNone": "現在: アニメーションなし",
+  "noteInsertAnimationScale": "バブルスケーリング",
+  "noteInsertAnimationSlide": "スムーズスライド",
+  "noteInsertAnimationNone": "アニメーションなし"
 }

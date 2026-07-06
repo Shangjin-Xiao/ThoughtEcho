@@ -710,8 +710,10 @@ class SettingsPageState extends State<SettingsPage> {
                       return const SizedBox.shrink();
                     }
                     return SwitchListTile(
-                      title: const Text('[实验] AddNote 延迟获取元数据'),
-                      subtitle: const Text('延迟位置/天气获取至键盘动画结束后（默认关）'),
+                      title: Text(AppLocalizations.of(context)
+                          .addNoteDeferMetadataExperiment),
+                      subtitle: Text(AppLocalizations.of(context)
+                          .addNoteDeferMetadataExperimentDesc),
                       secondary: const Icon(Icons.timer_outlined),
                       value: settingsService.addNoteDialogDeferAutoMetadata,
                       onChanged: (enabled) {
@@ -728,29 +730,36 @@ class SettingsPageState extends State<SettingsPage> {
                       return const SizedBox.shrink();
                     }
                     return ListTile(
-                      title: const Text('[实验] 记录页添加笔记动画'),
+                      title: Text(AppLocalizations.of(context)
+                          .noteInsertAnimationExperiment),
                       subtitle: Text(
                         settingsService.noteInsertAnimationType == 'scale'
-                            ? '当前：方案 1 (气泡缩放)'
+                            ? AppLocalizations.of(context)
+                                .noteInsertAnimationCurrentScale
                             : settingsService.noteInsertAnimationType == 'slide'
-                                ? '当前：方案 2 (平滑上升)'
-                                : '当前：无动画',
+                                ? AppLocalizations.of(context)
+                                    .noteInsertAnimationCurrentSlide
+                                : AppLocalizations.of(context)
+                                    .noteInsertAnimationCurrentNone,
                       ),
                       leading: const Icon(Icons.animation_outlined),
                       trailing: DropdownButton<String>(
                         value: settingsService.noteInsertAnimationType,
-                        items: const [
+                        items: [
                           DropdownMenuItem(
                             value: 'scale',
-                            child: Text('气泡缩放'),
+                            child: Text(AppLocalizations.of(context)
+                                .noteInsertAnimationScale),
                           ),
                           DropdownMenuItem(
                             value: 'slide',
-                            child: Text('平滑上升'),
+                            child: Text(AppLocalizations.of(context)
+                                .noteInsertAnimationSlide),
                           ),
                           DropdownMenuItem(
                             value: 'none',
-                            child: Text('无动画'),
+                            child: Text(AppLocalizations.of(context)
+                                .noteInsertAnimationNone),
                           ),
                         ],
                         onChanged: (value) {

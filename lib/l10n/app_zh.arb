@@ -3819,14 +3819,41 @@
   "webdavStatusSyncingDesc": "正在安全比对合并云端与本地数据库文件...",
   "webdavStatusRunning": "云同步运行中",
   "webdavStatusRunningDesc": "已与云端网盘建立加密合并管道。\n上次同步：{time}",
-  "@webdavStatusRunningDesc": {"placeholders": {"time": {"type": "String"}}},
+  "@webdavStatusRunningDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "webdavStatusException": "同步出现异常",
   "webdavStatusExceptionDesc": "网络通信或云盘文件锁冲突。我们将自动重试。",
   "webdavStatusEnabled": "云同步已启用",
   "webdavStatusEnabledDesc": "服务就绪。上次同步：{time}",
-  "@webdavStatusEnabledDesc": {"placeholders": {"time": {"type": "String"}}},
+  "@webdavStatusEnabledDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "webdavNeverSynced": "从未同步",
   "webdavNeverSucceeded": "从未成功",
   "webdavConflictPrompt": "检测到有 {count} 篇同步冲突备份，建议立即处理。",
-  "@webdavConflictPrompt": {"placeholders": {"count": {"type": "int"}}}
+  "@webdavConflictPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addNoteDeferMetadataExperiment": "[实验] AddNote 延迟获取元数据",
+  "addNoteDeferMetadataExperimentDesc": "延迟位置/天气获取至键盘动画结束后（默认关）",
+  "noteInsertAnimationExperiment": "[实验] 记录页添加笔记动画",
+  "noteInsertAnimationCurrentScale": "当前：方案 1 (气泡缩放)",
+  "noteInsertAnimationCurrentSlide": "当前：方案 2 (平滑上升)",
+  "noteInsertAnimationCurrentNone": "当前：无动画",
+  "noteInsertAnimationScale": "气泡缩放",
+  "noteInsertAnimationSlide": "平滑上升",
+  "noteInsertAnimationNone": "无动画"
 }

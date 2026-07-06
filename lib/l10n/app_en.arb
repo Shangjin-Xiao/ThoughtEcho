@@ -3819,14 +3819,41 @@
   "webdavStatusSyncingDesc": "Securely comparing and merging cloud and local database files...",
   "webdavStatusRunning": "Cloud Sync Running",
   "webdavStatusRunningDesc": "An encrypted merge pipeline has been established with the cloud drive.\nLast sync: {time}",
-  "@webdavStatusRunningDesc": {"placeholders": {"time": {"type": "String"}}},
+  "@webdavStatusRunningDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "webdavStatusException": "Sync Exception",
   "webdavStatusExceptionDesc": "Network communication or cloud drive file lock conflict. We will retry automatically.",
   "webdavStatusEnabled": "Cloud Sync Enabled",
   "webdavStatusEnabledDesc": "Service ready. Last sync: {time}",
-  "@webdavStatusEnabledDesc": {"placeholders": {"time": {"type": "String"}}},
+  "@webdavStatusEnabledDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "webdavNeverSynced": "Never synced",
   "webdavNeverSucceeded": "Never succeeded",
   "webdavConflictPrompt": "Detected {count} sync conflict backup(s). It is recommended to resolve them immediately.",
-  "@webdavConflictPrompt": {"placeholders": {"count": {"type": "int"}}}
+  "@webdavConflictPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addNoteDeferMetadataExperiment": "[Exp] AddNote Defer Metadata",
+  "addNoteDeferMetadataExperimentDesc": "Defer location/weather fetching until keyboard animation ends (Default off)",
+  "noteInsertAnimationExperiment": "[Exp] Note Insert Animation",
+  "noteInsertAnimationCurrentScale": "Current: Option 1 (Bubble Scale)",
+  "noteInsertAnimationCurrentSlide": "Current: Option 2 (Smooth Slide)",
+  "noteInsertAnimationCurrentNone": "Current: No Animation",
+  "noteInsertAnimationScale": "Bubble Scale",
+  "noteInsertAnimationSlide": "Smooth Slide",
+  "noteInsertAnimationNone": "No Animation"
 }

@@ -3533,5 +3533,14 @@
   "webdavConflictKeepTooltip": "Conserver et déplacer vers la catégorie par défaut",
   "webdavConflictKeepSuccess": "Confirmé et déplacé vers la liste par défaut.",
   "webdavConflictDiscardTooltip": "Jeter cette sauvegarde de conflit",
-  "webdavConflictDiscardSuccess": "Note de conflit définitivement supprimée."
+  "webdavConflictDiscardSuccess": "Note de conflit définitivement supprimée.",
+  "addNoteDeferMetadataExperiment": "[Exp] AddNote Différer Métadonnées",
+  "addNoteDeferMetadataExperimentDesc": "Différer la récupération du lieu/météo à la fin de l'animation du clavier (Défaut: désactivé)",
+  "noteInsertAnimationExperiment": "[Exp] Animation d'insertion de note",
+  "noteInsertAnimationCurrentScale": "Actuel : Option 1 (Mise à l'échelle bulle)",
+  "noteInsertAnimationCurrentSlide": "Actuel : Option 2 (Glissement doux)",
+  "noteInsertAnimationCurrentNone": "Actuel : Aucune animation",
+  "noteInsertAnimationScale": "Mise à l'échelle bulle",
+  "noteInsertAnimationSlide": "Glissement doux",
+  "noteInsertAnimationNone": "Aucune animation"
 }
