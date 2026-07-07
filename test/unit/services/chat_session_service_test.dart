@@ -341,5 +341,72 @@ void main() {
       expect(results.single.isTruncated, isTrue);
       await service.close();
     });
+
+    test('migrates legacy chat tables from main database idempotently',
+        () async {
+      final mainDbPath = path.join(tempDir.path, 'main.db');
+      final mainDb = await openDatabase(mainDbPath);
+      await mainDb.execute('''
+        CREATE TABLE chat_sessions(
+          id TEXT PRIMARY KEY,
+          session_type TEXT NOT NULL DEFAULT 'note',
+          note_id TEXT,
+          title TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          last_active_at TEXT NOT NULL,
+          is_pinned INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      await mainDb.execute('''
+        CREATE TABLE chat_messages(
+          id TEXT PRIMARY KEY,
+          session_id TEXT NOT NULL,
+          role TEXT NOT NULL DEFAULT 'user',
+          content TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          included_in_context INTEGER NOT NULL DEFAULT 1,
+          meta_json TEXT,
+          content_format TEXT,
+          delta_json TEXT
+        )
+      ''');
+      final now = DateTime.now().toIso8601String();
+      await mainDb.insert('chat_sessions', {
+        'id': 'legacy-session',
+        'session_type': 'agent',
+        'note_id': null,
+        'title': 'Legacy chat',
+        'created_at': now,
+        'last_active_at': now,
+        'is_pinned': 0,
+      });
+      await mainDb.insert('chat_messages', {
+        'id': 'legacy-message',
+        'session_id': 'legacy-session',
+        'role': 'user',
+        'content': 'old chat content',
+        'created_at': now,
+        'included_in_context': 1,
+        'meta_json': null,
+        'content_format': null,
+        'delta_json': null,
+      });
+
+      final service = ChatSessionService(databasePath: databasePath);
+      await service.init();
+      await service.migrateFromMainDatabase(mainDb);
+      await service.migrateFromMainDatabase(mainDb);
+
+      final sessions = await service.getAllSessions();
+      final messages = await service.getMessages('legacy-session');
+
+      expect(sessions.map((s) => s.id), contains('legacy-session'));
+      expect(messages, hasLength(1));
+      expect(messages.single.content, 'old chat content');
+
+      await service.close();
+      await mainDb.close();
+      await deleteDatabase(mainDbPath);
+    });
   });
 }

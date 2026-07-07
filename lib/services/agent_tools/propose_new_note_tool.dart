@@ -26,10 +26,15 @@ class ProposeNewNoteTool extends AgentTool {
           'content': {'type': 'string', 'description': '新笔记正文内容'},
           'author': {'type': 'string', 'description': '可选：作者名称'},
           'source': {'type': 'string', 'description': '可选：出处/作品名称'},
+          'tag_ids': {
+            'type': 'array',
+            'items': {'type': 'string'},
+            'description': '可选：从 get_tags 返回的现有标签 ID 列表（优先使用）',
+          },
           'tag_names': {
             'type': 'array',
             'items': {'type': 'string'},
-            'description': '可选：从应用现有标签中选择的标签名称列表',
+            'description': '可选兼容字段：现有标签名称列表；名称重复时会被拒绝',
           },
           'include_location': {
             'type': 'boolean',

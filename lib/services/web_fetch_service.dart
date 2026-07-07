@@ -182,6 +182,10 @@ class WebFetchService {
     if (ip.type == InternetAddressType.IPv4) {
       final bytes = ip.rawAddress;
       if (bytes[0] == 0) return true;
+      // 100.64.0.0/10 (CGNAT)
+      if (bytes[0] == 100 && (bytes[1] >= 64 && bytes[1] <= 127)) {
+        return true;
+      }
       // 10.0.0.0/8
       if (bytes[0] == 10) return true;
       // 172.16.0.0/12
@@ -192,6 +196,7 @@ class WebFetchService {
       if (bytes[0] == 192 && bytes[1] == 168) return true;
     } else if (ip.type == InternetAddressType.IPv6) {
       final bytes = ip.rawAddress;
+      if (bytes.every((byte) => byte == 0)) return true;
       if (bytes.isNotEmpty && (bytes[0] & 0xfe) == 0xfc) return true;
       if (_isIpv4MappedIpv6(bytes)) {
         return isPrivateOrLocalHost(
@@ -293,7 +298,13 @@ class WebFetchService {
         return response;
       }
 
-      await response.stream.drain();
+      await response.stream.drain().timeout(
+            _timeout,
+            onTimeout: () => throw WebFetchTimeoutException(
+              '网页重定向响应体读取超时（${_timeout.inSeconds}秒）',
+              _timeout,
+            ),
+          );
       final location = response.headers['location'];
       if (location == null || location.trim().isEmpty) {
         throw Exception('网页重定向缺少 Location 响应头');

@@ -130,6 +130,60 @@ class ChatSessionService extends ChangeNotifier {
     await _ensureDatabase();
   }
 
+  /// 将早期版本存放在主笔记库中的聊天记录迁移到独立 chat.db。
+  ///
+  /// 迁移使用 INSERT OR IGNORE 保持幂等；主库中的旧表暂不删除，避免在用户
+  /// 降级或迁移中断时丢失聊天历史。
+  Future<void> migrateFromMainDatabase(Database sourceDb) async {
+    final targetDb = await _ensureDatabase();
+    try {
+      final hasLegacySessions = await _tableExists(sourceDb, 'chat_sessions');
+      final hasLegacyMessages = await _tableExists(sourceDb, 'chat_messages');
+      if (!hasLegacySessions || !hasLegacyMessages) return;
+
+      final legacySessions = await sourceDb.query('chat_sessions');
+      if (legacySessions.isEmpty) return;
+
+      await targetDb.transaction((txn) async {
+        for (final row in legacySessions) {
+          await txn.insert(
+            'chat_sessions',
+            row,
+            conflictAlgorithm: ConflictAlgorithm.ignore,
+          );
+        }
+
+        final legacyMessages = await sourceDb.query('chat_messages');
+        for (final row in legacyMessages) {
+          await txn.insert(
+            'chat_messages',
+            row,
+            conflictAlgorithm: ConflictAlgorithm.ignore,
+          );
+        }
+      });
+      logInfo(
+        '已迁移 ${legacySessions.length} 个旧聊天会话到独立聊天数据库',
+        source: 'ChatSessionService',
+      );
+    } catch (e, stack) {
+      logError(
+        'ChatSessionService.migrateFromMainDatabase 失败',
+        error: e,
+        stackTrace: stack,
+        source: 'ChatSessionService',
+      );
+    }
+  }
+
+  Future<bool> _tableExists(DatabaseExecutor db, String tableName) async {
+    final rows = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+      [tableName],
+    );
+    return rows.isNotEmpty;
+  }
+
   Future<void> close() async {
     final opening = _openingCompleter;
     if (opening != null) {
@@ -164,7 +218,7 @@ class ChatSessionService extends ChangeNotifier {
     _openingCompleter = completer;
     try {
       final dbPath = _databasePath ?? await _defaultDatabasePath();
-      await Directory(path.dirname(dbPath)).create(recursive: true);
+      await DataDirectoryService.ensureParentDirectoryForFile(dbPath);
       final db = await openDatabase(
         dbPath,
         version: _schemaVersion,

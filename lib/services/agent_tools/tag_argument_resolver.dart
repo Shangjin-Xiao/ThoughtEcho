@@ -25,9 +25,12 @@ Future<ResolvedTagArguments> resolveTagArguments(
   final idToName = <String, String>{
     for (final tag in visibleCategories) tag.id: tag.name,
   };
-  final nameToId = <String, String>{
-    for (final tag in visibleCategories) tag.name.trim(): tag.id,
-  };
+  final nameToIds = <String, List<String>>{};
+  for (final tag in visibleCategories) {
+    final name = tag.name.trim();
+    if (name.isEmpty) continue;
+    nameToIds.putIfAbsent(name, () => <String>[]).add(tag.id);
+  }
 
   final rawNames = arguments['tag_names'];
   final requestedNames = rawNames is List
@@ -49,18 +52,7 @@ Future<ResolvedTagArguments> resolveTagArguments(
   final resolvedNames = <String>[];
   final unknownNames = <String>[];
   final unknownIds = <String>[];
-
-  for (final name in requestedNames) {
-    final id = nameToId[name];
-    if (id == null) {
-      unknownNames.add(name);
-      continue;
-    }
-    if (!resolvedIds.contains(id)) {
-      resolvedIds.add(id);
-      resolvedNames.add(name);
-    }
-  }
+  final ambiguousNames = <String>[];
 
   for (final id in requestedIds) {
     final name = idToName[id];
@@ -74,8 +66,29 @@ Future<ResolvedTagArguments> resolveTagArguments(
     }
   }
 
-  if (unknownNames.isNotEmpty || unknownIds.isNotEmpty) {
+  for (final name in requestedNames) {
+    final ids = nameToIds[name] ?? const <String>[];
+    if (ids.length > 1) {
+      ambiguousNames.add(name);
+      continue;
+    }
+    final id = ids.isEmpty ? null : ids.single;
+    if (id == null) {
+      unknownNames.add(name);
+      continue;
+    }
+    if (!resolvedIds.contains(id)) {
+      resolvedIds.add(id);
+      resolvedNames.add(name);
+    }
+  }
+
+  if (ambiguousNames.isNotEmpty ||
+      unknownNames.isNotEmpty ||
+      unknownIds.isNotEmpty) {
     final parts = <String>[
+      if (ambiguousNames.isNotEmpty)
+        '标签名称不唯一，请改用标签 ID：${ambiguousNames.join(', ')}',
       if (unknownNames.isNotEmpty) '不存在的标签名称：${unknownNames.join(', ')}',
       if (unknownIds.isNotEmpty) '不存在的标签 ID：${unknownIds.join(', ')}',
     ];

@@ -177,6 +177,65 @@ void main() {
       expect(result.retryable, isTrue);
       expect(result.content, contains('不存在'));
     });
+
+    test('rejects ambiguous tag names and asks for tag ids', () async {
+      final tool = ProposeNewNoteTool(
+        _TestDatabaseService(
+          [
+            NoteCategory(id: 'tag_a', name: '重复'),
+            NoteCategory(id: 'tag_b', name: '重复'),
+          ],
+        ),
+      );
+
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_ambiguous_tag',
+          name: 'propose_new_note',
+          arguments: const {
+            'title': '草稿建议',
+            'content': '这是一条新笔记',
+            'tag_names': ['重复'],
+          },
+        ),
+      );
+
+      expect(result.isError, isTrue);
+      expect(result.retryable, isTrue);
+      expect(result.content, contains('标签名称不唯一'));
+      expect(result.content, contains('标签 ID'));
+    });
+
+    test('uses tag ids when duplicate tag names exist', () async {
+      final tool = ProposeNewNoteTool(
+        _TestDatabaseService(
+          [
+            NoteCategory(id: 'tag_a', name: '重复'),
+            NoteCategory(id: 'tag_b', name: '重复'),
+          ],
+        ),
+      );
+
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_tag_id',
+          name: 'propose_new_note',
+          arguments: const {
+            'title': '草稿建议',
+            'content': '这是一条新笔记',
+            'tag_ids': ['tag_b'],
+          },
+        ),
+      );
+
+      expect(result.isError, isFalse);
+      final match = RegExp(
+        r'```smart_result\s*([\s\S]*?)\s*```',
+      ).firstMatch(result.content);
+      final payload = jsonDecode(match!.group(1)!) as Map<String, dynamic>;
+      expect(payload['tag_ids'], ['tag_b']);
+      expect(payload['tag_names'], ['重复']);
+    });
   });
 
   group('GetTagsTool', () {

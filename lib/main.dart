@@ -567,6 +567,18 @@ Future<void> main() async {
             // 避免大量会话记录影响核心笔记数据生命周期。
             try {
               await chatSessionService.init();
+              try {
+                await chatSessionService.migrateFromMainDatabase(
+                  databaseService.database,
+                );
+              } catch (e, stackTrace) {
+                logError(
+                  '旧聊天记录迁移失败: $e',
+                  error: e,
+                  stackTrace: stackTrace,
+                  source: 'BackgroundInit',
+                );
+              }
               logInfo('聊天会话数据库初始化完成', source: 'BackgroundInit');
             } catch (e, stackTrace) {
               logError(

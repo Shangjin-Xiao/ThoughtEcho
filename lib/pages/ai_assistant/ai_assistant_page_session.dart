@@ -346,6 +346,7 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
       _streamSubscription = null;
       await _agentEventSubscription?.cancel();
       _agentEventSubscription = null;
+      _agentService.requestStop();
       if (_agentListenerAttached) {
         _agentService.removeListener(_onAgentServiceChanged);
         _agentListenerAttached = false;

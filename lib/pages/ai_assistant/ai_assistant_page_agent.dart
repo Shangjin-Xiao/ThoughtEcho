@@ -305,10 +305,10 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       }
 
       if (parsed.smartResult != null) {
-        // 解析标签 ID 为可读名称，供 SmartResultCard 同步展示
-        List<String> tagNames = parsed.smartResult!.tagNames ?? [];
+        // tag_ids 是权威来源；tag_names 只作为旧工具调用的展示回退。
+        List<String> tagNames = const <String>[];
         final tagIds = parsed.smartResult!.tagIds;
-        if (tagNames.isEmpty && tagIds != null && tagIds.isNotEmpty) {
+        if (tagIds != null && tagIds.isNotEmpty) {
           try {
             final db = context.read<DatabaseService>();
             final allTags = await db.getCategories();
@@ -322,6 +322,8 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           } catch (_) {
             tagNames = tagIds;
           }
+        } else {
+          tagNames = parsed.smartResult!.tagNames ?? const <String>[];
         }
 
         final cardMsg = app_chat.ChatMessage(
@@ -356,9 +358,6 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     } finally {
       await _agentEventSubscription?.cancel();
       _agentEventSubscription = null;
-      // 确保 flush 所有 pending 的节流更新
-      _flushStreamUpdate();
-      _flushToolProgressUpdate();
       _cancelStreamUpdate();
       _cancelToolProgressUpdate();
       if (mounted) {

@@ -54,6 +54,14 @@ class DataDirectoryService {
     }
   }
 
+  /// 创建文件的父目录。
+  ///
+  /// 数据库类服务通过这里创建存储目录，避免各服务各自拼路径和处理
+  /// 自定义数据目录策略。
+  static Future<void> ensureParentDirectoryForFile(String filePath) async {
+    await Directory(path.dirname(filePath)).create(recursive: true);
+  }
+
   /// 检查并执行旧版数据迁移（从 Documents 根目录迁移到 Documents/ThoughtEcho）
   /// 这是为了兼容旧版本用户，将数据从 Documents 根目录迁移到子文件夹
   static Future<bool> checkAndMigrateLegacyData() async {
@@ -178,6 +186,8 @@ class DataDirectoryService {
     }
 
     if (failures.isNotEmpty) {
+      // 迁移复制的是 SQLite 主库文件。任何连接未成功 checkpoint/close
+      // 都可能把 WAL 中的最近写入落在旧目录，因此这里故意硬失败。
       throw Exception('关闭数据库连接失败，已中止迁移以防数据损坏。失败详情: ${failures.join(", ")}');
     }
 

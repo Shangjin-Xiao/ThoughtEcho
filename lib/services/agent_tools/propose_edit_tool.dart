@@ -37,10 +37,15 @@ class ProposeEditTool extends AgentTool {
             'type': 'string',
             'description': '可选：如果是对特定已有笔记的修改，请务必提供该笔记 ID',
           },
+          'tag_ids': {
+            'type': 'array',
+            'items': {'type': 'string'},
+            'description': '可选：修改后的标签 ID 列表（优先使用 get_tags 返回的 id）',
+          },
           'tag_names': {
             'type': 'array',
             'items': {'type': 'string'},
-            'description': '可选：修改后的标签名称列表（仅使用 get_tags 返回的现有标签名称）',
+            'description': '可选兼容字段：现有标签名称列表；名称重复时会被拒绝',
           },
           'author': {'type': 'string', 'description': '可选：修改后的作者名称'},
           'source': {'type': 'string', 'description': '可选：修改后的出处/作品名称'},
