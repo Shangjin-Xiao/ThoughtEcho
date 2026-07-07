@@ -1,0 +1,46 @@
+lib/pages/ai_assistant/ai_assistant_page_session.dart
+  s_8f67e5604fda13::t_c492071ea7c125 349
+test/unit/services/chat_session_service_test.dart
+  s_8f67e5604fda13::t_29fb7e386d90f3 344-410
+test/unit/services/web_fetch_service_test.dart
+  s_8f67e5604fda13::t_608df8cbaa07e7 20-21,23,25
+lib/main.dart
+  s_8f67e5604fda13::t_1f0fee16e2ffc1 570-581
+lib/services/chat_session_service.dart
+  s_8f67e5604fda13::t_699dc674440a35 221
+  s_8f67e5604fda13::t_a72206dd66ee78 133-186
+lib/services/agent_tools/propose_edit_tool.dart
+  s_8f67e5604fda13::t_2f62167721b425 40-44,48
+lib/pages/ai_assistant/ai_assistant_page_agent.dart
+  s_8f67e5604fda13::t_28138c1f8ee441 308-309,311,325-326
+lib/services/agent_tools/get_app_context_tool.dart
+  s_8f67e5604fda13::t_2f62167721b425 20-21
+lib/services/agent_tools/propose_new_note_tool.dart
+  s_8f67e5604fda13::t_2f62167721b425 29-33,37
+lib/services/data_directory_service.dart
+  s_8f67e5604fda13::t_699dc674440a35 57-64,189-190
+lib/services/agent_tools/tag_argument_resolver.dart
+  s_8f67e5604fda13::t_2f62167721b425 28-33,55,57-60,69-77,86-88,90-91
+lib/services/agent_service.dart
+  s_8f67e5604fda13::t_64fc43f524c075 772,784,787
+lib/services/web_fetch_service.dart
+  s_8f67e5604fda13::t_0c1530d1d1c17a 185-188,199,301-307
+test/unit/services/agent_note_tools_test.dart
+  s_8f67e5604fda13::t_29fb7e386d90f3 180-238
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "2670905df6986f5fb8736c228a7b509c6e74339e",
+  "prompts": {},
+  "sessions": {
+    "s_8f67e5604fda13": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f3aff-c10b-7b00-b3f1-5df5ead364ec",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
