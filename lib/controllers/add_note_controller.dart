@@ -134,6 +134,24 @@ class AddNoteController extends ChangeNotifier {
     newLongitude = null;
   }
 
+  void _clearOriginalLocation() {
+    originalLocation = null;
+    originalLatitude = null;
+    originalLongitude = null;
+  }
+
+  void removeNewLocation() {
+    includeLocation = false;
+    _clearNewLocation();
+    notifyListeners();
+  }
+
+  void removeOriginalLocation() {
+    includeLocation = false;
+    _clearOriginalLocation();
+    notifyListeners();
+  }
+
   void hydrateFromQuote(Quote quote) {
     final rawLoc = quote.location;
     originalLocation =

@@ -78,9 +78,7 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
       try {
         // 获取当前语言设置（在异步操作前获取，避免 context 跨越异步间隙）
         if (!context.mounted) return;
-        final locationService =
-            Provider.of<LocationService>(context, listen: false);
-        final localeCode = locationService.currentLocaleCode;
+        final localeCode = l10n.localeName;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
           _originalLatitude!,
@@ -164,6 +162,12 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
     } else if (result == 'remove') {
       _updateState(() {
         _showLocation = false;
+        _location = null;
+        _latitude = null;
+        _longitude = null;
+        _originalLocation = null;
+        _originalLatitude = null;
+        _originalLongitude = null;
       });
     }
   }

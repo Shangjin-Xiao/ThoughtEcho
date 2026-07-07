@@ -1172,7 +1172,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       // 尝试用坐标更新地址
       try {
         // 获取当前语言设置
-        final localeCode = _cachedLocationService?.currentLocaleCode;
+        final localeCode = l10n.localeName;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
           _controller.originalLatitude!,
@@ -1191,10 +1191,13 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           final hasAnyField =
               country.isNotEmpty || province.isNotEmpty || city.isNotEmpty;
           if (hasAnyField) {
-            setState(() {
-              _controller.originalLocation = standardAddress;
-              _controller.includeLocation = true;
-            });
+            _controller.setOriginalLocationData(
+              standardAddress,
+              _controller.originalLatitude,
+              _controller.originalLongitude,
+            );
+            _controller.setIncludeLocation(true);
+            setState(() {});
             if (context.mounted) {
               final l10n = AppLocalizations.of(context);
               ScaffoldMessenger.of(context).showSnackBar(
@@ -1229,9 +1232,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         }
       }
     } else if (result == 'remove') {
-      setState(() {
-        _controller.includeLocation = false;
-      });
+      _controller.removeOriginalLocation();
+      setState(() {});
     }
   }
 
@@ -1353,15 +1355,22 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     if (result == 'update' && hasCoordinates) {
       // 尝试用坐标更新地址（优先在线 Nominatim → 回退系统 SDK）
       try {
-        // 先尝试通过 locationService 的完整解析链
         final locationService = _cachedLocationService;
-        if (locationService != null && locationService.hasCoordinates) {
+        if (locationService != null) {
+          locationService.currentLocaleCode = l10n.localeName;
+          locationService.setCoordinates(
+            _controller.newLatitude!,
+            _controller.newLongitude!,
+          );
           await locationService.getAddressFromLatLng();
           final resolved = locationService.getFormattedLocation();
           if (resolved.isNotEmpty && mounted) {
-            setState(() {
-              _controller.newLocation = resolved;
-            });
+            _controller.setNewLocationData(
+              resolved,
+              _controller.newLatitude,
+              _controller.newLongitude,
+            );
+            setState(() {});
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -1374,7 +1383,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         }
 
         // 回退到直接调用 LocalGeocodingService
-        final localeCode = locationService?.currentLocaleCode;
+        final localeCode = l10n.localeName;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
           _controller.newLatitude!,
@@ -1382,17 +1391,26 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           localeCode: localeCode,
         );
         if (addressInfo != null && mounted) {
-          final formattedAddress = addressInfo['formatted_address'];
-          if (formattedAddress != null && formattedAddress.isNotEmpty) {
-            setState(() {
-              _controller.newLocation = formattedAddress;
-            });
+          final country = addressInfo['country'] ?? '';
+          final province = addressInfo['province'] ?? '';
+          final city = addressInfo['city'] ?? '';
+          final district = addressInfo['district'] ?? '';
+          final standardAddress = '$country,$province,$city,$district';
+          final hasAnyField =
+              country.isNotEmpty || province.isNotEmpty || city.isNotEmpty;
+          if (hasAnyField) {
+            _controller.setNewLocationData(
+              standardAddress,
+              _controller.newLatitude,
+              _controller.newLongitude,
+            );
+            setState(() {});
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                     content: Text(l10n.locationUpdatedTo(
                         LocationService.formatLocationForDisplay(
-                            formattedAddress)))),
+                            standardAddress)))),
               );
             }
           } else if (context.mounted) {
@@ -1410,12 +1428,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         }
       }
     } else if (result == 'remove') {
-      setState(() {
-        _controller.includeLocation = false;
-        _controller.newLocation = null;
-        _controller.newLatitude = null;
-        _controller.newLongitude = null;
-      });
+      _controller.removeNewLocation();
+      setState(() {});
     }
   }
 
@@ -1677,14 +1691,13 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                     return loc;
                   }())
             : null,
-        // 刻意设计：只勾选天气而不勾选位置时，因为 _controller.newLatitude/Longitude 未被写回（保持为 null），
-        // 因而最终保存的坐标为 null，以保障用户的物理地理隐私，不强制记录具体坐标。
-        latitude: (_controller.includeLocation || _controller.includeWeather)
+        // 天气可临时使用坐标获取，但只有用户保留位置时才持久化坐标。
+        latitude: _controller.includeLocation
             ? (isEditing
                 ? _controller.originalLatitude
                 : _controller.newLatitude)
             : null,
-        longitude: (_controller.includeLocation || _controller.includeWeather)
+        longitude: _controller.includeLocation
             ? (isEditing
                 ? _controller.originalLongitude
                 : _controller.newLongitude)

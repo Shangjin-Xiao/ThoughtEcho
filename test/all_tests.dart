@@ -86,6 +86,8 @@ import 'unit/widgets/motion_photo_preview_page_test.dart'
 
 // Import widget tests
 // Import controller tests
+import 'unit/controllers/add_note_controller_test.dart'
+    as add_note_controller_test;
 import 'unit/controllers/search_controller_test.dart' as search_controller_test;
 
 import 'widget/pages/home_page_test.dart' as home_page_test;
@@ -155,6 +157,7 @@ void main() {
     });
 
     group('Controller Tests', () {
+      add_note_controller_test.main();
       search_controller_test.main();
     });
 
