@@ -77,6 +77,7 @@ mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
       _categoryStore.add(newCategory);
       _categoriesController.add(_categoryStore);
       notifyListeners();
+      notifyLocalDataChangedForParts();
       return;
     }
 
@@ -100,6 +101,7 @@ mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
     );
     await updateCategoriesStreamForParts();
     notifyListeners();
+    notifyLocalDataChangedForParts();
   }
 
   /// 修复：统一的分类名称唯一性验证
@@ -176,6 +178,7 @@ mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
 
       _categoriesController.add(_categoryStore);
       notifyListeners();
+      notifyLocalDataChangedForParts();
       return;
     }
 
@@ -251,6 +254,7 @@ mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
       // 操作成功后更新流和通知侦听器
       await updateCategoriesStreamForParts();
       notifyListeners();
+      notifyLocalDataChangedForParts();
     } catch (e) {
       logDebug('添加指定ID分类失败: $e');
       // 重试一次作为回退方案
@@ -274,6 +278,7 @@ mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
         await MediaReferenceService.migrateExistingQuotes();
 
         notifyListeners();
+        notifyLocalDataChangedForParts();
         logDebug('通过回退方式成功添加分类');
       } catch (retryError) {
         logDebug('重试添加分类也失败: $retryError');
@@ -301,6 +306,7 @@ mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
       _categoryStore.removeWhere((category) => category.id == id);
       _categoriesController.add(_categoryStore);
       notifyListeners();
+      notifyLocalDataChangedForParts();
       return;
     }
 
@@ -346,6 +352,7 @@ mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
 
     await updateCategoriesStreamForParts();
     notifyListeners();
+    notifyLocalDataChangedForParts();
 
     logDebug('分类删除完成，ID: $id');
   }
@@ -396,6 +403,7 @@ mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
       _categoryStore[index] = updatedCategory;
       _categoriesController.add(_categoryStore);
       notifyListeners();
+      notifyLocalDataChangedForParts();
       return;
     }
 
@@ -445,6 +453,7 @@ mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
 
     await updateCategoriesStreamForParts();
     notifyListeners();
+    notifyLocalDataChangedForParts();
   }
 
   /// 根据 ID 获取分类

@@ -14,6 +14,7 @@ class ConnectivityService extends ChangeNotifier {
   factory ConnectivityService() => _instance;
   ConnectivityService._internal();
 
+  final Connectivity _connectivity = Connectivity();
   bool _isConnected = true;
   Timer? _connectivityTimer;
 
@@ -111,7 +112,7 @@ class ConnectivityService extends ChangeNotifier {
   Future<bool> isCellularConnection() async {
     try {
       final List<ConnectivityResult> results =
-          await Connectivity().checkConnectivity();
+          await _connectivity.checkConnectivity();
       return results.contains(ConnectivityResult.mobile);
     } catch (e) {
       logDebug('检查移动数据网络失败: $e');

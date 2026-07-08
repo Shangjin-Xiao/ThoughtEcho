@@ -3706,7 +3706,7 @@
   "webdavTestConnection": "测试连接",
   "webdavTestSuccess": "连接测试成功！",
   "webdavTestFailed": "连接失败，请检查配置和密码",
-  "webdavAutoSyncLaunch": "应用启动时自动同步",
+  "webdavAutoSyncLaunch": "打开或回前台时自动同步",
   "webdavAutoSyncLaunchSubtitle": "打开应用或从后台切回前台时，自动与云端合并最新内容",
   "webdavAutoSyncChange": "修改笔记后自动后台同步",
   "webdavAutoSyncChangeSubtitle": "编辑笔记停止打字 4 秒后，自动静默同步最新修改",

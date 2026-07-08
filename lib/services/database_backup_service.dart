@@ -82,7 +82,6 @@ class DatabaseBackupService {
           logDebug('批量插入${categories.length}个分类成功');
         } catch (e) {
           logError('批量插入分类失败，降级为逐条插入: $e', error: e, source: 'BackupRestore');
-          // 降级：通过 continueOnError: true 重新批量插入
           final fallbackBatch = txn.batch();
           for (final categoryData in processedCategories) {
             fallbackBatch.insert(
@@ -92,9 +91,10 @@ class DatabaseBackupService {
             );
           }
           try {
-            await fallbackBatch.commit(continueOnError: true, noResult: true);
+            await fallbackBatch.commit(noResult: true);
           } catch (e2) {
             logDebug('降级批量插入分类再次失败: $e2');
+            rethrow;
           }
         }
 
@@ -191,7 +191,6 @@ class DatabaseBackupService {
           logDebug('批量插入${quotes.length}条笔记成功');
         } catch (e) {
           logError('批量插入笔记失败，降级为逐条插入: $e', error: e, source: 'BackupRestore');
-          // 降级：通过 continueOnError: true 重新批量插入
           final fallbackQuoteBatch = txn.batch();
           for (final quoteData in processedQuotes) {
             fallbackQuoteBatch.insert(
@@ -201,10 +200,10 @@ class DatabaseBackupService {
             );
           }
           try {
-            await fallbackQuoteBatch.commit(
-                continueOnError: true, noResult: true);
+            await fallbackQuoteBatch.commit(noResult: true);
           } catch (e2) {
             logDebug('降级批量插入笔记再次失败: $e2');
+            rethrow;
           }
         }
 
@@ -224,7 +223,6 @@ class DatabaseBackupService {
             logDebug('批量插入${tagRelations.length}条标签关联成功');
           } catch (e) {
             logError('批量插入标签关联失败: $e', error: e, source: 'BackupRestore');
-            // 降级：通过 continueOnError: true 重新批量插入
             final fallbackTagBatch = txn.batch();
             for (final relation in tagRelations) {
               fallbackTagBatch.insert(
@@ -234,10 +232,10 @@ class DatabaseBackupService {
               );
             }
             try {
-              await fallbackTagBatch.commit(
-                  continueOnError: true, noResult: true);
+              await fallbackTagBatch.commit(noResult: true);
             } catch (e2) {
               logDebug('降级批量插入标签关联再次失败: $e2');
+              rethrow;
             }
           }
         }
@@ -294,7 +292,7 @@ class DatabaseBackupService {
           try {
             await tombstoneBatch.commit(noResult: true);
           } catch (e) {
-            logDebug('tombstones批量提交失败，回退到 continueOnError 批量插入: $e');
+            logDebug('tombstones批量提交失败，回退到严格批量插入: $e');
             final fallbackTombstoneBatch = txn.batch();
             for (final tombstoneData in tombstoneRows) {
               fallbackTombstoneBatch.insert(
@@ -304,10 +302,10 @@ class DatabaseBackupService {
               );
             }
             try {
-              await fallbackTombstoneBatch.commit(
-                  continueOnError: true, noResult: true);
+              await fallbackTombstoneBatch.commit(noResult: true);
             } catch (e2) {
               logDebug('降级批量插入 tombstone 再次失败: $e2');
+              rethrow;
             }
           }
 

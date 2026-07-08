@@ -57,6 +57,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   final DatabaseSchemaManager _schemaManager = DatabaseSchemaManager();
   final DatabaseBackupService _backupService = DatabaseBackupService();
   final DatabaseHealthService _healthService = DatabaseHealthService();
+  VoidCallback? onLocalDataChanged;
   static const String defaultCategoryIdHitokoto = 'default_hitokoto';
   static const String defaultCategoryIdAnime = 'default_anime';
   static const String defaultCategoryIdComic = 'default_comic';
@@ -1127,6 +1128,10 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
         source: 'DatabaseService',
       );
     }
+  }
+
+  void notifyLocalDataChangedForParts() {
+    onLocalDataChanged?.call();
   }
 }
 

@@ -286,6 +286,8 @@ Future<void> main() async {
 
         // 创建服务实例但暂不初始化重量级服务
         final databaseService = DatabaseService();
+        databaseService.onLocalDataChanged =
+            WebDAVSyncService().handleNoteChanged;
         final locationService = LocationService();
         final weatherService = WeatherService();
         final clipboardService = ClipboardService(); // 创建统一日志服务
@@ -566,7 +568,7 @@ Future<void> main() async {
             Future.delayed(const Duration(milliseconds: 1500), () {
               try {
                 final webdav = WebDAVSyncService();
-                if (webdav.enabled && webdav.syncOnLaunch) {
+                if (webdav.enabled && webdav.syncOnOpenOrForeground) {
                   logInfo('自动触发启动 WebDAV 同步...', source: 'WebDAVSync');
                   webdav.triggerSync(isBackground: true);
                 }
@@ -722,7 +724,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       Future.microtask(() {
         try {
           final webdav = WebDAVSyncService();
-          if (webdav.enabled && webdav.syncOnLaunch) {
+          if (webdav.enabled && webdav.syncOnOpenOrForeground) {
             webdav.triggerSync(isBackground: true);
           }
         } catch (_) {}

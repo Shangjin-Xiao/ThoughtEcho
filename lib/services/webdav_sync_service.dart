@@ -20,6 +20,18 @@ import '../utils/app_logger.dart';
 /// WebDAV 同步状态枚举
 enum WebDAVSyncStatus { idle, syncing, success, failed }
 
+class _RemoteSyncFileMetadata {
+  const _RemoteSyncFileMetadata({
+    required this.exists,
+    this.etag,
+    this.contentLength,
+  });
+
+  final bool exists;
+  final String? etag;
+  final int? contentLength;
+}
+
 class WebDAVSyncService extends ChangeNotifier {
   static final WebDAVSyncService _instance = WebDAVSyncService._internal();
   factory WebDAVSyncService() => _instance;
@@ -60,6 +72,7 @@ class WebDAVSyncService extends ChangeNotifier {
   String get provider => _provider;
   String get url => _url;
   String get username => _username;
+  bool get syncOnOpenOrForeground => _syncOnLaunch;
   bool get syncOnLaunch => _syncOnLaunch;
   bool get syncOnChange => _syncOnChange;
   bool get syncOnCellular => _syncOnCellular;
@@ -340,24 +353,10 @@ class WebDAVSyncService extends ChangeNotifier {
 
       // 2. 检查云端备份是否存在并下载
       Map<String, dynamic>? remoteData;
-      bool hasRemote = false;
-      try {
-        final checkRes = await dio.request(
-          remoteSyncZipUrl,
-          options: Options(
-            method: 'PROPFIND',
-            headers: {'Depth': '0'},
-            validateStatus: (status) => status == 200 || status == 207,
-          ),
-        );
-        if (checkRes.statusCode == 200 || checkRes.statusCode == 207) {
-          hasRemote = true;
-        }
-      } catch (_) {
-        // 云端文件不存在
-      }
+      final remoteSyncFile =
+          await _getRemoteSyncFileMetadata(dio, remoteSyncZipUrl);
 
-      if (hasRemote) {
+      if (remoteSyncFile.exists) {
         logDebug('发现云端备份文件，开始下载...');
         final downloadRes = await dio.get<List<int>>(
           remoteSyncZipUrl,
@@ -365,13 +364,15 @@ class WebDAVSyncService extends ChangeNotifier {
         );
 
         if (downloadRes.statusCode == 200 && downloadRes.data != null) {
-          // 解压 ZIP 提取 JSON
-          final archive = ZipDecoder().decodeBytes(downloadRes.data!);
-          final dataJsonFile = archive.findFile('backup_data.json');
-          if (dataJsonFile != null) {
-            final jsonStr = utf8.decode(dataJsonFile.content as List<int>);
-            remoteData = json.decode(jsonStr) as Map<String, dynamic>;
+          final bytes = downloadRes.data!;
+          final expectedLength = remoteSyncFile.contentLength ??
+              _contentLengthFromHeaders(downloadRes.headers);
+          if (expectedLength != null && expectedLength != bytes.length) {
+            throw StateError(
+              '云端同步文件下载不完整，期望 $expectedLength 字节，实际 ${bytes.length} 字节',
+            );
           }
+          remoteData = _decodeAndValidateRemoteSyncZip(bytes);
         }
       }
 
@@ -390,10 +391,13 @@ class WebDAVSyncService extends ChangeNotifier {
       // 4. 合并云端数据到本地数据库
       if (remoteData != null) {
         logDebug('开始执行 LWW 本地智能合并...');
-        await dbService.importDataWithLWWMerge(
+        final mergeReport = await dbService.importDataWithLWWMerge(
           remoteData,
           sourceDevice: 'WebDAV_Cloud',
         );
+        if (mergeReport.hasErrors) {
+          throw StateError('云端数据合并失败: ${mergeReport.errors.join('; ')}');
+        }
         dbService.refreshQuotes(); // 刷新 UI
       }
 
@@ -426,17 +430,11 @@ class WebDAVSyncService extends ChangeNotifier {
         encoder.addFile(File(tempJsonPath), 'backup_data.json');
         encoder.closeSync();
 
-        // 从文件流上传，无需把 ZIP 全部读入内存
-        final zipFile = File(tempZipPath);
-        await dio.put(
+        await _uploadSyncZipWithConflictProtection(
+          dio,
           remoteSyncZipUrl,
-          data: zipFile.openRead(),
-          options: Options(
-            headers: {
-              'Content-Type': 'application/zip',
-              'Content-Length': await zipFile.length(),
-            },
-          ),
+          File(tempZipPath),
+          remoteSyncFile,
         );
       } finally {
         // 清理临时文件
@@ -510,6 +508,148 @@ class WebDAVSyncService extends ChangeNotifier {
     // 截取前 80 个字符，去掉可能含 URL 的部分
     final safe = raw.replaceAll(RegExp(r'https?://\S+'), '[服务器地址]');
     return safe.length > 80 ? '${safe.substring(0, 80)}…' : safe;
+  }
+
+  Future<_RemoteSyncFileMetadata> _getRemoteSyncFileMetadata(
+    Dio dio,
+    String fileUrl,
+  ) async {
+    try {
+      final response = await dio.request(
+        fileUrl,
+        options: Options(
+          method: 'PROPFIND',
+          headers: {'Depth': '0'},
+          responseType: ResponseType.plain,
+          validateStatus: (status) =>
+              status == 200 || status == 207 || status == 404,
+        ),
+      );
+
+      if (response.statusCode == 404) {
+        return const _RemoteSyncFileMetadata(exists: false);
+      }
+      if (response.statusCode != 200 && response.statusCode != 207) {
+        return const _RemoteSyncFileMetadata(exists: false);
+      }
+
+      final body = response.data?.toString() ?? '';
+      return _RemoteSyncFileMetadata(
+        exists: true,
+        etag: _extractFirstXmlTagValue(body, 'getetag'),
+        contentLength: int.tryParse(
+          _extractFirstXmlTagValue(body, 'getcontentlength') ?? '',
+        ),
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        return const _RemoteSyncFileMetadata(exists: false);
+      }
+      rethrow;
+    }
+  }
+
+  int? _contentLengthFromHeaders(Headers headers) {
+    final value = headers.value(Headers.contentLengthHeader);
+    if (value == null || value.isEmpty) return null;
+    return int.tryParse(value);
+  }
+
+  Map<String, dynamic> _decodeAndValidateRemoteSyncZip(List<int> bytes) {
+    final archive = ZipDecoder().decodeBytes(bytes);
+    final dataJsonFile = archive.findFile('backup_data.json');
+    if (dataJsonFile == null) {
+      throw const FormatException('云端同步文件缺少 backup_data.json');
+    }
+
+    final decoded = json.decode(utf8.decode(dataJsonFile.content));
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('云端同步数据不是有效对象');
+    }
+    _validateRemoteSyncData(decoded);
+    return decoded;
+  }
+
+  void _validateRemoteSyncData(Map<String, dynamic> data) {
+    final categories = data['categories'];
+    final quotes = data['quotes'];
+    if (categories is! List || quotes is! List) {
+      throw const FormatException('云端同步数据缺少 categories 或 quotes 列表');
+    }
+
+    for (final category in categories) {
+      if (category is! Map) {
+        throw const FormatException('云端同步分类数据格式无效');
+      }
+    }
+
+    for (final quote in quotes) {
+      if (quote is! Map) {
+        throw const FormatException('云端同步笔记数据格式无效');
+      }
+    }
+
+    final tombstones = data['tombstones'];
+    if (tombstones != null && tombstones is! List) {
+      throw const FormatException('云端同步墓碑数据格式无效');
+    }
+    if (tombstones is List) {
+      for (final tombstone in tombstones) {
+        if (tombstone is! Map) {
+          throw const FormatException('云端同步墓碑记录格式无效');
+        }
+      }
+    }
+  }
+
+  Future<void> _uploadSyncZipWithConflictProtection(
+    Dio dio,
+    String fileUrl,
+    File zipFile,
+    _RemoteSyncFileMetadata remoteSyncFile,
+  ) async {
+    final fileLen = await zipFile.length();
+    final headers = <String, Object>{
+      Headers.contentTypeHeader: 'application/zip',
+      Headers.contentLengthHeader: fileLen,
+    };
+
+    if (remoteSyncFile.exists) {
+      if (remoteSyncFile.etag != null && remoteSyncFile.etag!.isNotEmpty) {
+        headers['If-Match'] = remoteSyncFile.etag!;
+      } else {
+        logWarning(
+          '云端同步文件未提供 ETag，无法启用覆盖冲突保护',
+          source: 'WebDAVSyncService',
+        );
+      }
+    } else {
+      headers['If-None-Match'] = '*';
+    }
+
+    try {
+      await dio.put(
+        fileUrl,
+        data: zipFile.openRead(),
+        options: Options(headers: headers),
+      );
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status == 409 || status == 412) {
+        _hasPendingSync = true;
+        throw StateError('云端同步文件已被其他设备更新，将重新拉取合并后再上传');
+      }
+      rethrow;
+    }
+  }
+
+  String? _extractFirstXmlTagValue(String xmlData, String localName) {
+    final regExp = RegExp(
+      '<(?:[a-zA-Z0-9_.-]+:)?$localName>([\\s\\S]*?)'
+      '</(?:[a-zA-Z0-9_.-]+:)?$localName>',
+      caseSensitive: false,
+    );
+    return regExp.firstMatch(xmlData)?.group(1)?.trim();
   }
 
   /// 确保 WebDAV 上特定目录存在，如果不存在则自动创建
@@ -692,14 +832,9 @@ class WebDAVSyncService extends ChangeNotifier {
           (clonedQuote['delta_content'] as String).isNotEmpty) {
         try {
           final delta = json.decode(clonedQuote['delta_content'] as String);
-          if (delta is List && delta.isNotEmpty) {
-            final first = delta.first;
-            if (first is Map &&
-                first.containsKey('insert') &&
-                first['insert'] is String) {
-              first['insert'] = '[冲突备份] ${first['insert']}';
-              clonedQuote['delta_content'] = json.encode(delta);
-            }
+          if (delta is List) {
+            delta.insert(0, {'insert': '[冲突备份] '});
+            clonedQuote['delta_content'] = json.encode(delta);
           }
         } catch (_) {}
       }
@@ -728,11 +863,11 @@ class WebDAVSyncService extends ChangeNotifier {
   Future<void> _syncMediaFiles(Dio dio) async {
     final appDir = await getApplicationDocumentsDirectory();
     final mediaRoot = Directory(p.join(appDir.path, 'media'));
-    if (!await mediaRoot.exists()) return;
 
     // 1. 扫描本地所有存在的媒体文件
-    final List<File> localFiles =
-        mediaRoot.listSync(recursive: true).whereType<File>().toList();
+    final List<File> localFiles = await mediaRoot.exists()
+        ? mediaRoot.listSync(recursive: true).whereType<File>().toList()
+        : <File>[];
 
     final Map<String, File> localMediaMap = {};
     for (final f in localFiles) {
@@ -835,22 +970,9 @@ class WebDAVSyncService extends ChangeNotifier {
             logDebug('下载附件失败 ($stdPath): $e');
           }
         } else {
-          // 数据库中已经没有任何笔记引用此文件（已被用户删除，且本地已被孤儿文件机制清理）
-          // 此时绝不下载，并且主动在 WebDAV 上删除该文件以防越攒越多，彻底清理云端存储
-          logDebug('从云端清理已无任何数据库引用的废弃附件: $stdPath');
-          final deleteUrl = '${_url}thoughtecho/media/$stdPath';
-          try {
-            await dio.request(
-              deleteUrl,
-              options: Options(
-                method: 'DELETE',
-                validateStatus: (status) =>
-                    status == 200 || status == 204 || status == 404,
-              ),
-            );
-          } catch (e) {
-            logDebug('从云端删除废弃附件失败 ($stdPath): $e');
-          }
+          // 远端媒体删除需要完整可信的元数据与引用关系。为避免同步包损坏、
+          // 合并失败或新设备初次同步时误删云端附件，这里只跳过不再主动删除。
+          logDebug('跳过云端未引用附件删除，等待后续本地清理策略处理: $stdPath');
         }
       }
     }
@@ -914,7 +1036,12 @@ class WebDAVSyncService extends ChangeNotifier {
     for (var i = 0; i < segments.length - 1; i++) {
       if (segments[i] == 'media' &&
           _mediaSubFolders.contains(segments[i + 1])) {
-        return segments.sublist(i + 1).join('/');
+        final relativeSegments = segments.sublist(i + 1);
+        if (relativeSegments.any((segment) =>
+            segment == '.' || segment == '..' || segment.contains('\u0000'))) {
+          return null;
+        }
+        return relativeSegments.join('/');
       }
     }
     return null;
