@@ -91,11 +91,6 @@ class APIKeyManager {
       return true;
     }
 
-    // 其他格式，基本长度检查
-    if (trimmedKey.length >= 20) {
-      return true;
-    }
-
     return false;
   }
 }

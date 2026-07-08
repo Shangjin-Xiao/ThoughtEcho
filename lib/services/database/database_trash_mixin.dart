@@ -220,6 +220,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       clearAllCacheForParts();
       refreshQuotesStreamForParts();
       notifyListeners();
+      notifyLocalDataChangedForParts();
       return;
     }
 
@@ -262,6 +263,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       clearAllCacheForParts();
       refreshQuotesStreamForParts();
       notifyListeners();
+      notifyLocalDataChangedForParts();
     });
   }
 
@@ -403,6 +405,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       clearAllCacheForParts();
       refreshQuotesStreamForParts();
       notifyListeners();
+      notifyLocalDataChangedForParts();
       return;
     }
 
@@ -522,6 +525,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       clearAllCacheForParts();
       refreshQuotesStreamForParts();
       notifyListeners();
+      notifyLocalDataChangedForParts();
     });
   }
 

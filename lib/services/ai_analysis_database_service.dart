@@ -197,7 +197,10 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         AppLogger.i('数据库连接成功', source: 'AIAnalysisDB');
 
         final jsonData = newAnalysis.toJson();
-        AppLogger.i('转换为JSON: $jsonData', source: 'AIAnalysisDB');
+        AppLogger.i(
+          '转换为JSON完成，字段数: ${jsonData.length}',
+          source: 'AIAnalysisDB',
+        );
 
         await db.insert(
           'ai_analyses',
@@ -271,7 +274,10 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
     try {
       if (kIsWeb) {
         // Web平台使用内存存储
-        return _memoryStore.firstWhere((item) => item.id == id);
+        for (final item in _memoryStore) {
+          if (item.id == id) return item;
+        }
+        return null;
       } else {
         // 非Web平台使用SQLite
         final db = await database;

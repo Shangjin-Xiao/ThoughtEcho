@@ -98,6 +98,23 @@ class SmartPushService extends ChangeNotifier {
   /// 获取分析器实例
   SmartPushAnalytics get analytics => _analytics;
 
+  /// 通知点击后待定位的笔记 ID（一次性消费）
+  ///
+  /// 当 App 已在前台时，[_navigateToNoteList] 不再 push 新页面，
+  /// 而是通过此字段 + [notifyListeners] 通知 [HomePage] 原地定位。
+  String? _pendingTargetNoteId;
+  String? get pendingTargetNoteId => _pendingTargetNoteId;
+
+  /// 消费并清除待定位的笔记 ID，返回 ID 值（调用方应立即处理）
+  String? consumePendingTargetNoteId() {
+    final id = _pendingTargetNoteId;
+    if (id != null) {
+      _pendingTargetNoteId = null;
+      // 不调用 notifyListeners，避免 HomeState 因 null 再次响应
+    }
+    return id;
+  }
+
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
 

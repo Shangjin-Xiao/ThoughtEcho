@@ -3569,5 +3569,6 @@
   "agentSearchingNotes": "Recherche dans les notes...",
   "agentAnalyzingData": "Analyse des données...",
   "agentWebSearching": "Recherche sur le web...",
-  "favoriteNotes": "Notes favorites"
+  "favoriteNotes": "Notes favorites",
+  "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again."
 }

@@ -16,6 +16,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     if (kIsWeb) {
       _memoryStore.add(quote);
       notifyListeners();
+      notifyLocalDataChangedForParts();
       return;
     }
 
@@ -95,6 +96,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         // 修复：避免直接操作_currentQuotes，使用刷新机制确保数据一致性
         refreshQuotesStreamForParts();
         notifyListeners(); // 通知其他监听者（如Homepage的FAB）
+        notifyLocalDataChangedForParts();
       } catch (e) {
         logDebug('保存笔记到数据库时出错: $e');
         rethrow; // 重新抛出异常，让调用者处理
@@ -409,7 +411,10 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
           count++;
         }
       }
-      if (count > 0) notifyListeners();
+      if (count > 0) {
+        notifyListeners();
+        notifyLocalDataChangedForParts();
+      }
       return count;
     }
 
@@ -454,6 +459,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
           clearAllCacheForParts();
           refreshQuotesStreamForParts();
           notifyListeners();
+          notifyLocalDataChangedForParts();
         }
 
         return updatedRows;
@@ -490,6 +496,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       QuoteContent.removeCacheForQuote(id);
       refreshQuotesStreamForParts();
       notifyListeners();
+      notifyLocalDataChangedForParts();
       return;
     }
 
@@ -517,6 +524,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
 
         refreshQuotesStreamForParts();
         notifyListeners();
+        notifyLocalDataChangedForParts();
 
         logDebug('笔记已移入回收站，ID: $id');
       } catch (e, stack) {
@@ -593,6 +601,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       refreshQuotesStreamForParts();
 
       notifyListeners();
+      notifyLocalDataChangedForParts();
       return QuoteUpdateResult.updated;
     }
 

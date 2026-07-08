@@ -224,15 +224,14 @@ class ClipboardService extends ChangeNotifier {
       author = clean(m4.group(1));
       matchedSubstring = m4.group(0);
       // 尝试在此基础上再提取出处
-      final remainingText =
-          text.substring(0, text.length - matchedSubstring!.length).trim();
+      final remainingText = text.substring(
+        0,
+        text.length - matchedSubstring!.length,
+      );
       final m4Source = _pattern4Source.firstMatch(remainingText);
       if (m4Source != null) {
         source = clean(m4Source.group(1));
-        // 更新匹配的子串以包含出处部分 (可能不精确，但尝试包含)
-        matchedSubstring = text.substring(
-          remainingText.length - m4Source.group(0)!.length,
-        );
+        matchedSubstring = text.substring(m4Source.start);
       }
       return {
         'author': author,
@@ -247,15 +246,14 @@ class ClipboardService extends ChangeNotifier {
       source = clean(m5.group(1));
       matchedSubstring = m5.group(0);
       // 尝试在此基础上再提取作者
-      final remainingText =
-          text.substring(0, text.length - matchedSubstring!.length).trim();
+      final remainingText = text.substring(
+        0,
+        text.length - matchedSubstring!.length,
+      );
       final m5Author = _pattern5Author.firstMatch(remainingText);
       if (m5Author != null) {
         author = clean(m5Author.group(1));
-        // 更新匹配的子串以包含作者部分 (可能不精确，但尝试包含)
-        matchedSubstring = text.substring(
-          remainingText.length - m5Author.group(0)!.length,
-        );
+        matchedSubstring = text.substring(m5Author.start);
       }
       return {
         'author': author,
@@ -288,26 +286,46 @@ class ClipboardService extends ChangeNotifier {
     String? author,
     String? source,
   ) {
-    // 构建一个OverlayEntry，但不使用全屏覆盖层
-    OverlayEntry? overlayEntry;
+    OverlayEntry? backgroundEntry;
+    OverlayEntry? cardEntry;
 
-    overlayEntry = OverlayEntry(
+    // 用于记录卡片自身的渲染区域，以区分点卡片和点背景
+    final cardKey = GlobalKey();
+
+    void dismiss({bool openEditor = false}) {
+      if (backgroundEntry?.mounted ?? false) backgroundEntry!.remove();
+      if (cardEntry?.mounted ?? false) cardEntry!.remove();
+      if (openEditor && context.mounted) {
+        _openEditPage(context, content, author, source);
+      }
+    }
+
+    // 背景层：全屏透明，监听任意触摸即关闭通知
+    backgroundEntry = OverlayEntry(
+      builder: (overlayContext) => Positioned.fill(
+        child: Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) => dismiss(),
+        ),
+      ),
+    );
+
+    // 通知卡片层
+    cardEntry = OverlayEntry(
       builder: (overlayContext) => Positioned(
-        // 放置在屏幕上方合适位置
         top: MediaQuery.of(overlayContext).size.height * 0.15,
         left: 0,
         right: 0,
         child: Material(
           color: Colors.transparent,
           child: GestureDetector(
-            onTap: () async {
-              overlayEntry?.remove();
-              if (context.mounted) {
-                _openEditPage(context, content, author, source);
-              }
-            },
+            // 点卡片本身 → 打开编辑页
+            onTap: () => dismiss(openEditor: true),
+            // 拦截事件冒泡，防止触发背景层（卡片范围内的事件由此处处理）
+            behavior: HitTestBehavior.opaque,
             child: Center(
               child: Container(
+                key: cardKey,
                 constraints: const BoxConstraints(maxWidth: 320),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -344,16 +362,13 @@ class ClipboardService extends ChangeNotifier {
       ),
     );
 
-    // 添加到Overlay
     logDebug('显示剪贴板通知弹窗');
-    Overlay.of(context).insert(overlayEntry);
+    // 先插入背景层（z-order 靠下），再插入卡片层（z-order 靠上）
+    Overlay.of(context).insert(backgroundEntry);
+    Overlay.of(context).insert(cardEntry);
 
-    // 自动移除通知，延长至 6 秒
-    Future.delayed(const Duration(seconds: 6), () {
-      if (overlayEntry?.mounted ?? false) {
-        overlayEntry?.remove();
-      }
-    });
+    // 6 秒自动消失
+    Future.delayed(const Duration(seconds: 6), () => dismiss());
   }
 
   // 打开编辑页面

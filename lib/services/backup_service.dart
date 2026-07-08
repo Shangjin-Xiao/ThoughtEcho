@@ -503,18 +503,6 @@ class BackupService {
     try {
       cancelToken?.throwIfCancelled();
 
-      // 如果选择清空，则先清空所有相关数据
-      if (clearExisting) {
-        logDebug('清空现有数据...');
-        await _databaseService.importDataFromMap({
-          'categories': [],
-          'quotes': [],
-        }, clearExisting: true);
-        await _aiAnalysisDbService.deleteAllAnalyses();
-      }
-
-      cancelToken?.throwIfCancelled();
-
       // 恢复笔记数据
       Map<String, dynamic>? notesData;
       final rawNotes = backupData['notes'];
@@ -541,11 +529,15 @@ class BackupService {
 
         await _databaseService.importDataFromMap(
           notesData,
-          clearExisting: false,
+          clearExisting: clearExisting,
         );
       }
 
       cancelToken?.throwIfCancelled();
+
+      if (clearExisting) {
+        await _aiAnalysisDbService.deleteAllAnalyses();
+      }
 
       // 恢复设置（使用现有的方法）
       if (backupData.containsKey('settings')) {

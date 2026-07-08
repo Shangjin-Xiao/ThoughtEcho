@@ -30,9 +30,11 @@
 ## 2026-06-28 - 补充 SearchController 的测试
 **盲点:** SearchController 的核心 `updateSearch` 和 `resetSearchState` 逻辑（包含长度校验和异步超时定时器）缺失测试覆盖。
 **对策:** 添加了针对这部分逻辑的单元测试，涵盖了空查询清除、短查询忽略、超时定时器挂起等核心场景，并使用 `fakeAsync` 测试了定时器的启动与取消，防止定时器泄漏。
-
 ## 2026-06-30 - [补充 homepage 各项功能的测试]
 **盲点:** `HomePage` 作为最复杂的主页面，其内部包含众多 Service 和子视图，原本仅进行了极其简单的 widget 测试，缺乏对 `DailyQuoteView`、`HomeDailyPromptPanel` 等核心业务组件的加载与切换验证。
 **对策:**
 1. 为 `HomeDailyPromptPanel` 编写了独立的 Widget 测试，采用 `MultiProvider` 注入 `MockAIService`、`MockSettingsService` 等完整依赖链，成功测试了流式提示信息的渲染以及失败降级的本地提示加载机制。
 2. 彻底重构 `HomePage` 的 Widget 测试，Mock 其依赖的至少 8 个核心 Service，验证了 `DailyQuoteView` 和 `HomeDailyPromptPanel` 的正确挂载，并通过模拟用户交互点击 `NavigationBar`，全面验证了由主页向 `NoteListView`、`AIFeaturesPage`、`SettingsPage` 三个主要 Tab 页面的无缝切换逻辑，大幅提升了主页面的功能稳定性保证。
+## 2026-06-30 - [补充 Utils 核心纯函数的测试]
+**盲点:** 诸如 `AIRequestHelper`, `DatabasePlatformInit`, `ChatThemeHelper` 等核心工具类和纯函数缺乏基本测试覆盖。它们涉及 AI 参数组装、核心 FFI 数据库初始化和聊天主题配置，如果被破坏可能导致核心功能静默失效或引发启动崩溃。
+**对策:** 为这些高优先级、易测试的纯函数和单例/配置类编写了极简的隔离测试。比如校验 AIRequestHelper 的消息格式是否符合 Provider 标准，以及确保 DatabasePlatformInit 的状态重置逻辑正常，在不增加过多执行成本的前提下，提升基础代码的健壮性。

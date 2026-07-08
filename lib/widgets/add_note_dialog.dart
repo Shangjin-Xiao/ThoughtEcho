@@ -137,6 +137,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   Timer? _dbChangeDebounceTimer;
 
   bool _isSaving = false;
+  bool _waitingForFetch = false; // 用户已触发保存，正在等待位置/天气获取完成
   bool _deferredControlsVisible = true;
   Timer? _deferredControlsTimer;
   Timer? _autoFocusTimer;
@@ -339,6 +340,15 @@ class _AddNoteDialogState extends State<AddNoteDialog>
             settingsService.defaultTagIds.isNotEmpty) {
           _selectedTagIds.addAll(settingsService.defaultTagIds);
         }
+
+        // 提前预置 fetching 标志：避免 metadataDelay 期间按钮可点导致保存时丢失数据。
+        // 真正的 fetch 在 delay 后启动，但标志从这里就开始保护保存按钮。
+        if (settingsService.autoAttachLocation) {
+          _controller.isFetchingLocation = true;
+        }
+        if (settingsService.autoAttachWeather) {
+          _controller.isFetchingWeather = true;
+        }
       }
     }
 
@@ -391,6 +401,11 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
       // 延迟执行服务初始化和位置/天气获取，避免与动画竞争
       Future.delayed(metadataDelay, () async {
+        // 清理 initState 提前预置的标志；unmount 时 widget 已销毁不需要清，但
+        // 正常流程中这里重置后由各 fetch 方法重新置 true，保证状态准确。
+        _controller.isFetchingLocation = false;
+        _controller.isFetchingWeather = false;
+
         if (!mounted) return;
 
         _dialogOpenTimelineTask
@@ -1183,7 +1198,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       // 尝试用坐标更新地址
       try {
         // 获取当前语言设置
-        final localeCode = _cachedLocationService?.currentLocaleCode;
+        final localeCode = l10n.localeName;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
           _controller.originalLatitude!,
@@ -1191,17 +1206,34 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           localeCode: localeCode,
         );
         if (addressInfo != null && mounted) {
-          final formattedAddress = addressInfo['formatted_address'];
-          if (formattedAddress != null && formattedAddress.isNotEmpty) {
-            setState(() {
-              _controller.originalLocation = formattedAddress;
-              _controller.includeLocation = true;
-            });
+          // 使用 country,province,city,district 拼成标准存储格式，
+          // 而不是 formatted_address（带空格进行英文拼接的格式），
+          // 避免 formatLocationForDisplay 解析失败导致显示英文。
+          final country = addressInfo['country'] ?? '';
+          final province = addressInfo['province'] ?? '';
+          final city = addressInfo['city'] ?? '';
+          final district = addressInfo['district'] ?? '';
+          final standardAddress = '$country,$province,$city,$district';
+          final hasAnyField =
+              country.isNotEmpty || province.isNotEmpty || city.isNotEmpty;
+          if (hasAnyField) {
+            _controller.setOriginalLocationData(
+              standardAddress,
+              _controller.originalLatitude,
+              _controller.originalLongitude,
+            );
+            _controller.setIncludeLocation(true);
+            setState(() {});
             if (context.mounted) {
               final l10n = AppLocalizations.of(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                    content: Text(l10n.locationUpdatedTo(formattedAddress))),
+                  content: Text(
+                    l10n.locationUpdatedTo(
+                      LocationService.formatLocationForDisplay(standardAddress),
+                    ),
+                  ),
+                ),
               );
             }
           } else if (context.mounted) {
@@ -1226,9 +1258,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         }
       }
     } else if (result == 'remove') {
-      setState(() {
-        _controller.includeLocation = false;
-      });
+      _controller.removeOriginalLocation();
+      setState(() {});
     }
   }
 
@@ -1350,15 +1381,22 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     if (result == 'update' && hasCoordinates) {
       // 尝试用坐标更新地址（优先在线 Nominatim → 回退系统 SDK）
       try {
-        // 先尝试通过 locationService 的完整解析链
         final locationService = _cachedLocationService;
-        if (locationService != null && locationService.hasCoordinates) {
+        if (locationService != null) {
+          locationService.currentLocaleCode = l10n.localeName;
+          locationService.setCoordinates(
+            _controller.newLatitude!,
+            _controller.newLongitude!,
+          );
           await locationService.getAddressFromLatLng();
           final resolved = locationService.getFormattedLocation();
           if (resolved.isNotEmpty && mounted) {
-            setState(() {
-              _controller.newLocation = resolved;
-            });
+            _controller.setNewLocationData(
+              resolved,
+              _controller.newLatitude,
+              _controller.newLongitude,
+            );
+            setState(() {});
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -1371,7 +1409,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         }
 
         // 回退到直接调用 LocalGeocodingService
-        final localeCode = locationService?.currentLocaleCode;
+        final localeCode = l10n.localeName;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
           _controller.newLatitude!,
@@ -1379,17 +1417,26 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           localeCode: localeCode,
         );
         if (addressInfo != null && mounted) {
-          final formattedAddress = addressInfo['formatted_address'];
-          if (formattedAddress != null && formattedAddress.isNotEmpty) {
-            setState(() {
-              _controller.newLocation = formattedAddress;
-            });
+          final country = addressInfo['country'] ?? '';
+          final province = addressInfo['province'] ?? '';
+          final city = addressInfo['city'] ?? '';
+          final district = addressInfo['district'] ?? '';
+          final standardAddress = '$country,$province,$city,$district';
+          final hasAnyField =
+              country.isNotEmpty || province.isNotEmpty || city.isNotEmpty;
+          if (hasAnyField) {
+            _controller.setNewLocationData(
+              standardAddress,
+              _controller.newLatitude,
+              _controller.newLongitude,
+            );
+            setState(() {});
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                     content: Text(l10n.locationUpdatedTo(
                         LocationService.formatLocationForDisplay(
-                            formattedAddress)))),
+                            standardAddress)))),
               );
             }
           } else if (context.mounted) {
@@ -1407,12 +1454,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         }
       }
     } else if (result == 'remove') {
-      setState(() {
-        _controller.includeLocation = false;
-        _controller.newLocation = null;
-        _controller.newLatitude = null;
-        _controller.newLongitude = null;
-      });
+      _controller.removeNewLocation();
+      setState(() {});
     }
   }
 
@@ -1603,8 +1646,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   }
 
   /// 保存笔记并退出
-  void _saveAndExit() {
-    if (_isSaving) return;
+  Future<void> _saveAndExit() async {
+    if (_isSaving || _waitingForFetch) return;
 
     // 如果内容为空，直接返回
     if (_contentController.text.isEmpty) {
@@ -1612,6 +1655,23 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         Navigator.pop(context);
       }
       return;
+    }
+
+    // 如果位置/天气正在异步获取中，显示 loading 并等待完成（最多 5s）
+    var metadataTimedOut = false;
+    if (_controller.isFetchingMetadata) {
+      if (mounted) setState(() => _waitingForFetch = true);
+      const pollInterval = Duration(milliseconds: 100);
+      const maxWait = Duration(seconds: 5);
+      var waited = Duration.zero;
+      while (_controller.isFetchingMetadata && waited < maxWait) {
+        await Future<void>.delayed(pollInterval);
+        waited += pollInterval;
+        if (!mounted) return;
+      }
+      // 仍在获取中说明是超时，需要告知用户
+      metadataTimedOut = _controller.isFetchingMetadata;
+      if (mounted) setState(() => _waitingForFetch = false);
     }
 
     _isSaving = true;
@@ -1657,14 +1717,13 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                     return loc;
                   }())
             : null,
-        // 刻意设计：只勾选天气而不勾选位置时，因为 _controller.newLatitude/Longitude 未被写回（保持为 null），
-        // 因而最终保存的坐标为 null，以保障用户的物理地理隐私，不强制记录具体坐标。
-        latitude: (_controller.includeLocation || _controller.includeWeather)
+        // 天气可临时使用坐标获取，但只有用户保留位置时才持久化坐标。
+        latitude: _controller.includeLocation
             ? (isEditing
                 ? _controller.originalLatitude
                 : _controller.newLatitude)
             : null,
-        longitude: (_controller.includeLocation || _controller.includeWeather)
+        longitude: _controller.includeLocation
             ? (isEditing
                 ? _controller.originalLongitude
                 : _controller.newLongitude)
@@ -1685,7 +1744,19 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       );
 
       if (mounted) {
+        // 在 pop 前取好 messenger 引用（pop 后 context 失效）
+        final messenger = ScaffoldMessenger.of(context);
+        final l10n = AppLocalizations.of(context);
         navigator.pop();
+        // 超时：位置/天气未能在规定时间内获取，已直接保存，通过 SnackBar 告知
+        if (metadataTimedOut) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(l10n.autoAttachMetadataUnavailable),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       }
       unawaited(Future<void>.sync(() => widget.onSave(quote)));
     } catch (e) {
@@ -1754,7 +1825,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           Navigator.pop(context);
         } else if (dialogResult == 'save') {
           // 用户选择保存并退出
-          _saveAndExit();
+          await _saveAndExit();
         }
         // dialogResult == null: 继续编辑，不做任何操作
       },
@@ -2399,14 +2470,14 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                             ),
                           ),
                         ),
-                        onPressed: _isLoadingFullQuote
+                        onPressed: (_isLoadingFullQuote || _waitingForFetch)
                             ? null
-                            : () {
+                            : () async {
                                 if (_contentController.text.isNotEmpty) {
-                                  _saveAndExit();
+                                  await _saveAndExit();
                                 }
                               },
-                        child: _isLoadingFullQuote
+                        child: (_isLoadingFullQuote || _waitingForFetch)
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,

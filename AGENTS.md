@@ -147,7 +147,7 @@ import 'package:thoughtecho/services/database_service.dart';
 
 ### 测试执行约束
 - 主动验证时只运行相关单文件或单用例，避免全量测试导致 CI/本地超时。
-- 运行 Flutter 测试必须限制时长并压缩输出：优先使用 `timeout 60s flutter test --reporter compact <path>`。
+- 运行 Flutter 测试必须限制时长并压缩输出：优先使用 `timeout 60s flutter test --reporter compact <path>`。若首次运行卡在 `loading` 阶段（冷编译/VM 启动开销，本机可能耗时 60s+），属正常现象而非测试挂死，可先跑一次预热，或临时调大超时（如 `timeout 180s`）后再正式运行。
 - 若测试输出过多或卡住，先停止并定位编译/分析错误，不要反复运行长输出命令塞满上下文。
 
 ### 数据库性能约束

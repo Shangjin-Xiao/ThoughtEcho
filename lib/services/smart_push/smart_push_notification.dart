@@ -152,21 +152,19 @@ extension SmartPushNotification on SmartPushService {
         retryCount++;
       }
 
-      if (navigatorKey.currentState != null) {
-        final route = MaterialPageRoute(
-          builder: (context) => HomePage(
-            initialPage: 1,
-            initialTargetNoteId: noteId,
-          ),
-        );
-        SmartPushService.replaceAppStackForNotification(
-          navigator: navigatorKey.currentState!,
-          route: route,
-        );
-        AppLogger.i('已成功触发导航至记录页笔记定位: $noteId ($routeTarget)');
-      } else {
+      if (navigatorKey.currentState == null) {
         AppLogger.w('通知导航失败：navigatorKey.currentState 在多次重试后仍为空');
+        return;
       }
+
+      // ── 暖启动（App 已在前台）：通过 pendingTargetNoteId 通知现有 HomePage
+      // 原地切 tab + 定位，避免 pushAndRemoveUntil 销毁重建造成白屏闪烁。
+      // ── 冷启动路径：navigator 刚就绪，路由栈仍是 MaterialApp 的初始路由，
+      // 此时 canPop() == false 且路由栈仅有一个根 HomePage，
+      // 直接设置 pendingTargetNoteId 即可，HomePage 的 initState 会响应。
+      _pendingTargetNoteId = noteId;
+      notifyListenersFromParts();
+      AppLogger.i('已通过 pendingTargetNoteId 触发笔记定位: $noteId ($routeTarget)');
     } catch (e) {
       AppLogger.e('执行通知导航逻辑出错', error: e);
     }

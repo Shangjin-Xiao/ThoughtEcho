@@ -57,6 +57,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   final DatabaseSchemaManager _schemaManager = DatabaseSchemaManager();
   final DatabaseBackupService _backupService = DatabaseBackupService();
   final DatabaseHealthService _healthService = DatabaseHealthService();
+  VoidCallback? onLocalDataChanged;
   static const String defaultCategoryIdHitokoto = 'default_hitokoto';
   static const String defaultCategoryIdAnime = 'default_anime';
   static const String defaultCategoryIdComic = 'default_comic';
@@ -431,6 +432,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   // 添加初始化状态标志
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
+  bool _isReadOnlyConnection = false;
 
   // 添加并发访问控制
   Completer<void>? _initCompleter;
@@ -448,6 +450,10 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
   // 性能优化：增量维护的 ID Set，避免每次去重时遍历
   final Set<String> _currentQuoteIds = {};
+
+  Timer? _startupBackgroundMaintenanceTimer;
+  static const Duration _startupBackgroundMaintenanceDelay =
+      Duration(seconds: 12);
 
   @protected
   void clearAllCacheForParts() => _clearAllCache();
@@ -521,6 +527,10 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     String operationId,
     Future<T> Function() action,
   ) async {
+    if (_isReadOnlyConnection) {
+      throw StateError('后台只读数据库连接不允许执行写操作: $operationId');
+    }
+
     // 等待已有锁释放，使用循环处理多个等待者竞争的情况
     for (;;) {
       final existing = _databaseLock[operationId];
@@ -636,6 +646,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
       // 数据库初始化核心逻辑
       _database = await _initDatabase(path);
+      _isReadOnlyConnection = false;
 
       // 检查并修复数据库结构
       await _checkAndFixDatabaseStructure();
@@ -676,13 +687,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       _filterCache.clear();
       _watchHasMore = true;
 
-      // 新增：执行数据库健康检查
-      // 修复：改为非阻塞调用，将所有 health check DB span 移出 ui.load 事务窗口。
-      // health check 仅用于诊断日志，不影响任何功能。
-      // 原来的 await 会导致 Sentry 在 ui.load 期间检测到 N+1 查询模式（Issue #126305010）。
-      unawaited(_performStartupHealthCheck());
-
-      _scheduleTrashAutoCleanup();
+      _scheduleStartupBackgroundMaintenance();
 
       // 延迟通知监听者，让UI知道数据库已准备好
       SchedulerBinding.instance.addPostFrameCallback((_) {
@@ -708,6 +713,73 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     }
   }
 
+  /// 后台推送专用初始化。
+  ///
+  /// 只打开主数据库的只读连接，不执行 schema 修复、数据迁移、默认分类初始化
+  /// 等可能写库的启动逻辑，避免后台 isolate 与前台保存/迁移争用写锁。
+  Future<void> initForBackgroundReadOnly() async {
+    if (_isDisposed) {
+      logDebug('DatabaseService 已被销毁，重新初始化单例状态');
+      reinitialize();
+    }
+
+    if (_isInitialized) {
+      logDebug('后台只读数据库已初始化，跳过重复初始化');
+      return;
+    }
+
+    if (_isInitializing && _initCompleter != null) {
+      await _initCompleter!.future;
+      return;
+    }
+
+    _isInitializing = true;
+    _initCompleter = Completer<void>();
+
+    if (kIsWeb) {
+      _isInitialized = true;
+      _isReadOnlyConnection = true;
+      _isInitializing = false;
+      _initCompleter!.complete();
+      _initCompleter = null;
+      return;
+    }
+
+    try {
+      DatabasePlatformInit.initialize();
+
+      final dbPath = await getDatabasesPath();
+      final path = join(dbPath, 'thoughtecho.db');
+
+      _database = await _initBackgroundReadOnlyDatabase(path);
+      _isReadOnlyConnection = true;
+      _isInitialized = true;
+      _isInitializing = false;
+      if (_initCompleter != null && !_initCompleter!.isCompleted) {
+        _initCompleter!.complete();
+      }
+      _initCompleter = null;
+
+      logInfo(
+        '后台推送只读数据库初始化完成',
+        source: 'DatabaseService',
+      );
+    } catch (e, stackTrace) {
+      _isInitializing = false;
+      if (_initCompleter != null && !_initCompleter!.isCompleted) {
+        _initCompleter!.completeError(e);
+      }
+      _initCompleter = null;
+      AppLogger.e(
+        '后台推送只读数据库初始化失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DatabaseService',
+      );
+      rethrow;
+    }
+  }
+
   // 抽取数据库初始化逻辑到单独方法，便于复用
   Future<Database> _initDatabase(String path) async {
     final database = await openDatabase(
@@ -728,6 +800,20 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
         // 验证外键约束状态
         await _verifyForeignKeysEnabled(db);
+      },
+    );
+    return SentryDatabaseTracing.wrapMainDatabase(database);
+  }
+
+  Future<Database> _initBackgroundReadOnlyDatabase(String path) async {
+    final database = await openDatabase(
+      path,
+      readOnly: true,
+      singleInstance: false,
+      onOpen: (db) async {
+        await db.rawQuery('PRAGMA foreign_keys = ON');
+        await db.rawQuery('PRAGMA busy_timeout = 5000');
+        await db.rawQuery('PRAGMA query_only = ON');
       },
     );
     return SentryDatabaseTracing.wrapMainDatabase(database);
@@ -882,6 +968,24 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     }
   }
 
+  void _scheduleStartupBackgroundMaintenance() {
+    _startupBackgroundMaintenanceTimer?.cancel();
+    _startupBackgroundMaintenanceTimer = Timer(
+      _startupBackgroundMaintenanceDelay,
+      () {
+        if (_isDisposed) {
+          return;
+        }
+
+        // These diagnostics and cleanup tasks are not required before the
+        // first visible note page. Keep them off the cold-start database queue
+        // so notification navigation can load and position notes first.
+        unawaited(_performStartupHealthCheck());
+        _scheduleTrashAutoCleanup();
+      },
+    );
+  }
+
   Future<String> _getExpectedMainDatabasePath() async {
     final basePath = Platform.isWindows
         ? await DataDirectoryService.getCurrentDataDirectory()
@@ -924,6 +1028,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     // 取消定时器
     _cacheCleanupTimer?.cancel();
     _cacheCleanupTimer = null;
+    _startupBackgroundMaintenanceTimer?.cancel();
+    _startupBackgroundMaintenanceTimer = null;
 
     // 清理缓存
     _filterCache.clear();
@@ -946,6 +1052,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     _isDisposed = false;
     _isInitialized = false;
     _isInitializing = false;
+    _isReadOnlyConnection = false;
     _initCompleter = null;
     _databaseLock.clear();
 
@@ -960,6 +1067,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     // 清理缓存，避免跨生命周期残留
     _cacheCleanupTimer?.cancel();
     _cacheCleanupTimer = null;
+    _startupBackgroundMaintenanceTimer?.cancel();
+    _startupBackgroundMaintenanceTimer = null;
     _clearAllCache();
     _quotesCache = [];
     _watchOffset = 0;
@@ -1069,6 +1178,10 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
         source: 'DatabaseService',
       );
     }
+  }
+
+  void notifyLocalDataChangedForParts() {
+    onLocalDataChanged?.call();
   }
 }
 

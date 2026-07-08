@@ -343,3 +343,120 @@
 **风险**:
 - 会更早发起分页查询，轻微增加提前加载概率；但仍有 `_isLoading` 串行保护，不会并发多页加载。
 - 如果后续日志显示停顿仍伴随 `rich/rich-image` 首次 layout 尖峰，再回到轻量富文本预览器方案。
+
+---
+
+## 2026-07-02: 记录页卡顿综合复核 + 分步优化计划
+
+**决策者**: 上晋 + Claude Fable 5（判断者）+ Codex（执行者）
+**类型**: 根因复核 / 外部分析核实 / 分步实施计划
+
+### 一、对历史决策的复核结论
+
+- 2026-05-17 / 05-31 / 06-13 / 06-30 各决策方向正确、有实测数据支撑，无需推翻。
+- 2026-06-13 标注"（待办，核心）"的修复——折叠态弃用 QuillEditor——**至今未实施**。
+  已核实 `quote_content_widget.dart` 的 `build()` 中折叠态富文本仍实例化完整 `quill.QuillEditor`。
+  此前多轮模型的优化（Document/Controller 缓存、预热、语义裁剪、RepaintBoundary、分页阈值）
+  均为外围优化，无法消除 QuillEditor 首次 `performLayout`（实测 10~67ms/条），
+  这是"怎么优化都没用"的根本原因。
+- 关键机理（解释"首滑卡、之后顺"）：卡片首次进入视口/cacheExtent 时 `h=none→324` 布局
+  10~67ms；回滑时 `h=324→324` 仅 0.1~0.5ms。布局结果活在 render 树中，
+  每张卡的首次布局一个会话只发生一次，故卡顿集中在首滑。
+
+### 二、对 Gemini 3 DeepThink 外部分析的逐条核实（重要：防止未来重复排查）
+
+| # | Gemini 指控 | 核实结论 |
+|---|---|---|
+| 1 | loadMore 递增 `_resultsVersion` 导致 AnimatedSwitcher 整棵换树 | **不成立（已过时）**。`note_list_data_stream.dart` 明确注释并实现：load more **不**递增 `_resultsVersion`，仅搜索 query 变化的首次事件递增。勿重复"修复" |
+| 2 | 每次 setState 重建 tagMap / rowIndexByKey | **属实但量级小**。O(n) map 构建在每次 `_buildNoteList` 执行，n≈已加载条数，微秒级。低优先级 |
+| 3 | 顶层宽依赖：`Provider.of<NoteSearchController>(listen:true)` + `MediaQuery.of` 全量依赖 | **属实**。`note_list_items.dart` build 顶部确认。键盘收起（ScrollStart 里 unfocus）→ MediaQuery 变化 → 整页含 ListView 重建。搜索后首滑顿挫的合理来源之一 |
+| 4 | ScrollEnd 一帧堆积：`isListScrolling.value=false` 集中放行图片解码 + loadMore + anomaly 检查 | **属实**。anomaly 检查已移出热路径但仍在 ScrollEnd 同帧；图片解码集中放行是"停下那一顿"的合理来源 |
+| 5 | 滚动 session 性能采集无开关保护、`_noteListPerfKindFor` 每 build 三次全文扫描 | **不成立（已过时）**。`_startScrollSessionPerfCapture` 首行即检查 `_firstOpenScrollPerfEnabled`（= developerMode && 专用开关）；`_recordNoteListItemBuild` 未录制时提前返回。但提醒：测卡顿时**务必确认该开关关闭** |
+| 6 | 每 item 常驻重包装层：Stack+InkWell 导出层（99% 时间死重）+ AnimatedOpacity + AnimatedSize（每 item 常驻 ticker + 每次 layout 额外测量） | **属实，有价值**。`note_list_items.dart` itemBuilder 确认全部无条件包裹。是首滑/惯性时新 item 构建成本的放大器 |
+| 7 | keepAlive 窗口随滚动中心漂移，build 期间读 scrollController.position，滚动中 keepAlive 翻转造成 element 挂/摘抖动 | **属实**。`_shouldKeepAliveNoteListItem` 调用 `_estimatedScrollCenterIndex()` 确认 |
+| 8 | BackdropFilter 光栅压力 | 已知（06-13 实测 raster 95.7ms→10.2ms），维持"不在滚动中开关模糊"的历史结论，实验开关已可让用户自行取舍 |
+
+**综合判断**：主因仍是 QuillEditor 首次布局（有实测钉死）；Gemini 的 #6、#7、#3、#4 为**真实的叠加放大因素**，其 #1、#5 两条"高优先级"指控不成立，勿据其返工。
+
+### 三、分步优化计划（按序实施，每步独立验证，不达标即回退）
+
+**验证方法统一**：真机 release/profile 模式、关闭性能监控开关，用现有 scroll session 日志对比
+`worstBuild` / `itemLayout.worst` / `slowLayouts` 前后差异；每步独立提交。
+
+1. **Step 1（核心，零视觉变化）— 折叠态富文本喂截断 Document**：
+   折叠态只显示 160px 但 QuillEditor 布局整篇文档。改为按 `_estimateDeltaHeight` 截取约 2 倍
+   折叠高度的前若干 ops 构造截断 Document 交给 QuillEditor 布局。渲染引擎不变、像素级一致
+   （160px 以下本就被 ClipRect 裁掉）；展开态是独立缓存变体（`resolveVariant` 已区分），
+   用完整文档，互不影响。"加粗优先"已有折叠态改写文档先例。
+   预期：长笔记首次布局大幅下降；对短富文本无效（由 Step 2 补）。
+2. **Step 2 — item 包装层按需化**：
+   导出 Stack+Material+InkWell 层仅 `_isExportMode` 时叠加；删除动画的
+   AnimatedOpacity+AnimatedSize+Align 仅删除流程涉及的 item 包裹
+   （注意处理动画首帧：包裹后延迟一帧再驱动收起，保证删除动画不丢）。
+   去掉每 item 常驻 ticker 与 AnimatedSize 的逐帧尺寸测量。正常态视觉零变化。
+3. **Step 3 — keepAlive 改固定策略**：
+   仅媒体 item（现有 `shouldKeepAliveQuoteItem`）与短列表 keepAlive，
+   移除随滚动中心漂移的 ±18 窗口及 build 期间读 scroll position。
+4. **Step 4 — 收窄依赖 + ScrollEnd 削峰**：
+   `MediaQuery.of` → `sizeOf`/`paddingOf`；`Provider.of<NoteSearchController>` →
+   `context.select` 仅订阅 `searchError`；tagMap/rowIndexByKey 缓存为字段随 `_quotes` 失效；
+   ScrollEnd 的图片解码放行延迟 1~2 帧分批。
+5. **Step 5（仅当 Step 1-4 后短富文本首滑尖峰仍不达标）— 轻量只读渲染器**：
+   即 06-13 原计划的 Delta→TextSpan 方案。因造轮子成本与视觉还原风险，列为最后手段，
+   实施前必须先有截图对照测试。
+
+**不做**：滚动中开关模糊（历史证明负优化）、全量 keepAlive（06-13 已废弃）、
+重复"修复"Gemini #1/#5（已核实不成立）。
+
+---
+
+## 2026-07-02: Step 1 实测结果 + Step 5 搁置 + Step 2/4 实施决定
+
+**决策者**: 上晋 + Claude Fable 5（GitLab Duo Chat）
+**类型**: 实测复盘 / 计划调整
+
+### Step 1（截断 Document，commit `8ac2508c`）真机实测结果
+
+用户真机日志（session scroll-4 首滑下 / scroll-7 回滑上，105 条中 rich=39, media=31）：
+
+| 指标 | 首滑(down) | 回滑(up) | 历史基线(06-13) |
+|---|---|---|---|
+| itemLayout.worst | **28.0ms** (rich-image) | 3.7ms (plain) | 39~67ms (rich) |
+| 纯 rich 首布局 | 11~12.5ms | — | 10~22ms 常见, 最高 67 |
+| worstBuild | 180.7ms | 9.0ms | 88~145ms |
+| frameJank | 14 | **0** | — |
+
+**结论**:
+1. 截断**有效**：单卡首布局峰值 67→28ms。但用户体感无变化，原因是**扎堆**：
+   slowLayouts 显示 index 75~87 区段 6 张 rich-image 卡各 20~28ms，合计 139.5ms，
+   与 worstBuild 180.7ms 对应。图片密集区连续进入 cacheExtent 时多卡首布局挤进相邻帧。
+2. 截断后 20~28ms 的剩余成本主体是 **QuillEditor 固定开销 + 图片 embed 脚手架布局**，
+   与文档长度无关（06-13 复核中"可能 1"被证实）。
+3. 回滑 session frameJank=0、全部 plain 3ms 级，证明现有 keepAlive + 缓存下回访路径已达标。
+4. 顺带发现：imageCache 29 张图 82.3MB（均 2.8MB/张），embed 图片解码未限制尺寸，
+   后续应加 `cacheWidth`（内存问题，与滚动卡顿无关）。
+5. 关于数据可信度：单次 session 有方差，但两 session 模式与历史数据一致，
+   且缓存计数器为精确计数非采样，方向性结论可靠。
+
+### 计划调整
+
+- **Step 5（轻量只读渲染器）搁置**：用户判断视觉还原风险与长期维护成本过高。
+  记录在案：若未来重启，剩余 20~28ms 的固定开销只能靠它消除，届时应限定"仅折叠态、
+  仅 160px 窗口内容"以缩小还原面。
+- **Step 3（keepAlive 固定策略）取消**：实测回滑 frameJank=0，现策略已达标；
+  keepAlive 翻转仅发生在整列表重建时（本次 session buildΔ=1，罕见），
+  Gemini #7 的"滚动中反复挂/摘"被高估。改动反而有富文本回访重新变卡的回归风险。
+- **Gemini #2（tagMap/rowIndexByKey 缓存）取消**：微秒级收益 vs 过期缓存风险，不值。
+- **立即实施 Step 2 + Step 4**（本次提交）：
+  1. 导出 InkWell 覆盖层仅 `_isExportMode` 时加入 Stack children
+     （保留常驻 Stack 壳避免 item 子树重挂载）；
+  2. 删除动画改为按需挂载的自驱动 `_NoteDeleteCollapse`
+     （FadeTransition+SizeTransition，250ms easeInCubic，视觉等价），
+     去掉每 item 常驻的 AnimatedOpacity+AnimatedSize ticker 与逐帧尺寸测量；
+  3. `MediaQuery.of` → `sizeOf`/`paddingOf`，避免键盘弹收触发整页重建；
+  4. `Provider.of<NoteSearchController>(listen:true)` → `context.select` 仅订阅 searchError；
+  5. ScrollEnd 的 `isListScrolling=false`（图片解码放行）与 anomaly 检查延迟约 2 帧
+     （Timer 32ms + generation 防过期覆盖），不与 ScrollEnd 帧的 loadMore 挤同一帧。
+
+**预期与验收**：Step 2/4 是削固定成本与削峰，预计缓解但不根除 rich-image 扎堆尖峰
+（根除需 Step 5）。验收同前：真机对比 worstBuild / frameJank / eventWorst。

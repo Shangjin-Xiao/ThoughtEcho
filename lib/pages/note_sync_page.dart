@@ -1268,19 +1268,30 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       _dialogWasTerminal = true;
       final l10n = AppLocalizations.of(context);
       if (service.syncStatus == SyncStatus.completed) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.syncCompleted),
-            duration: const Duration(seconds: 2),
-          ),
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(l10n.syncCompleted),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          },
         );
       } else if (service.syncStatus == SyncStatus.failed) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(service.syncStatusMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
+        final message = service.syncStatusMessage;
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          },
         );
       }
     }

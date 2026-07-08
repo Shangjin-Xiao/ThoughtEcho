@@ -74,5 +74,6 @@
   "agentAnalyzingData": "Daten werden analysiert...",
   "agentWebSearching": "Websuche läuft...",
   "favoriteNotes": "Favorisierte Notizen",
-  "clear": "Leeren"
+  "clear": "Leeren",
+  "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again."
 }

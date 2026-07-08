@@ -128,14 +128,9 @@ class ApkDownloadService {
         throw Exception('Insecure download URL: APK downloads must use HTTPS');
       }
 
-      // 检查存储权限
-      final hasPermission = await _checkStoragePermission();
-      if (!hasPermission) {
-        if (context.mounted) {
-          _showPermissionDialog(context);
-        }
-        return;
-      }
+      // 下载到应用私有外部目录，不需要存储/全文件管理权限。
+      // 通知权限只影响系统通知，不应阻断应用内下载进度。
+      await _prepareDownloadPermissions();
 
       // 获取下载目录
       final downloadDir = await _getDownloadDirectory();
@@ -200,31 +195,14 @@ class ApkDownloadService {
     }
   }
 
-  /// 检查存储权限
-  static Future<bool> _checkStoragePermission() async {
+  /// 准备下载相关权限
+  static Future<void> _prepareDownloadPermissions() async {
     if (Platform.isAndroid) {
       // Android 13+ 需要请求通知权限用于下载进度
       if (await Permission.notification.isDenied) {
         await Permission.notification.request();
       }
-
-      // 检查存储权限
-      var status = await Permission.storage.status;
-      if (status.isDenied) {
-        status = await Permission.storage.request();
-      }
-
-      // Android 13+ 可能需要媒体权限
-      if (status.isDenied) {
-        status = await Permission.manageExternalStorage.status;
-        if (status.isDenied) {
-          status = await Permission.manageExternalStorage.request();
-        }
-      }
-
-      return status.isGranted;
     }
-    return true;
   }
 
   /// 获取下载目录
@@ -506,33 +484,6 @@ class ApkDownloadService {
     );
   }
 
-  /// 显示权限对话框
-  static void _showPermissionDialog(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(l10n.storagePermissionRequired),
-          content: Text(l10n.storagePermissionDesc),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(l10n.cancel),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                openAppSettings();
-              },
-              child: Text(l10n.goToSettings),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   /// 显示安装权限对话框
   static void _showInstallPermissionDialog(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -626,6 +577,7 @@ class _DownloadProgressDialog extends StatelessWidget {
 
           return Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // 版本信息
               Text(
@@ -635,6 +587,20 @@ class _DownloadProgressDialog extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
+
+              if (hasTotalSize) ...[
+                Text(
+                  l10n.apkDownloadProgress(
+                    (progress.progress * 100).round(),
+                  ),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
 
               // 进度条 - Material 3 风格
               LinearProgressIndicator(
@@ -651,14 +617,13 @@ class _DownloadProgressDialog extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      l10n.apkDownloadProgress(
-                        (progress.progress * 100).round(),
+                      DownloadProgress.formatBytes(progress.receivedBytes),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
                       ),
-                      style: theme.textTheme.titleSmall
-                          ?.copyWith(color: colorScheme.primary),
                     ),
                     Text(
-                      progress.sizeText,
+                      DownloadProgress.formatBytes(progress.totalBytes),
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                       ),

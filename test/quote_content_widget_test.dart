@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/quote_model.dart';
@@ -42,6 +43,7 @@ void main() {
   Widget buildTestApp(
     Quote quote, {
     bool prioritizeBold = false,
+    bool showFullContent = false,
     bool? needsExpansionOverride,
   }) {
     return ChangeNotifierProvider<SettingsService>.value(
@@ -59,7 +61,7 @@ void main() {
           body: QuoteContent(
             quote: quote,
             style: const TextStyle(fontSize: 16, height: 1.5),
-            showFullContent: false,
+            showFullContent: showFullContent,
             needsExpansionOverride: needsExpansionOverride,
           ),
         ),
@@ -161,6 +163,60 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(QuoteContent.collapsedWrapperKey), findsOneWidget);
+  });
+
+  testWidgets('折叠态长富文本只给 QuillEditor 截断 Document', (tester) async {
+    final longText = '一段很长的富文本内容' * 80;
+    final delta = jsonEncode([
+      {
+        'insert': longText,
+        'attributes': {'bold': true},
+      },
+      {'insert': '\n后续不可见内容' * 40},
+    ]);
+    final quote = Quote(
+      id: 'rich_truncated_document',
+      content: '$longText${'后续不可见内容' * 40}',
+      date: '2025-01-01T00:00:00.000Z',
+      editSource: 'fullscreen',
+      deltaContent: delta,
+    );
+
+    await tester.pumpWidget(
+      buildTestApp(quote, needsExpansionOverride: true),
+    );
+    await tester.pump();
+
+    final collapsedEditor = tester.widget<quill.QuillEditor>(
+      find.byType(quill.QuillEditor),
+    );
+    final collapsedDelta =
+        collapsedEditor.controller.document.toDelta().toJson();
+    final collapsedText =
+        collapsedDelta.map((op) => op['insert']).whereType<String>().join();
+
+    expect(find.byKey(QuoteContent.collapsedWrapperKey), findsOneWidget);
+    expect(collapsedText.length, lessThan(quote.content.length));
+
+    QuoteContent.clearCacheForTesting();
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        showFullContent: true,
+        needsExpansionOverride: true,
+      ),
+    );
+    await tester.pump();
+
+    final fullEditor = tester.widget<quill.QuillEditor>(
+      find.byType(quill.QuillEditor),
+    );
+    final fullDelta = fullEditor.controller.document.toDelta().toJson();
+    final fullText =
+        fullDelta.map((op) => op['insert']).whereType<String>().join();
+
+    expect(find.byKey(QuoteContent.collapsedWrapperKey), findsNothing);
+    expect(fullText.length, greaterThan(collapsedText.length));
   });
 
   test('纯文本与富文本高度判定保持一致', () {

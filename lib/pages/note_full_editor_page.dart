@@ -30,6 +30,7 @@ import '../models/ai_assistant_entry.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, compute;
 
 import '../extensions/note_category_localization_extension.dart';
+import '../utils/delta_content_serializer.dart';
 import '../utils/device_memory_manager.dart';
 import '../widgets/quill_enhanced_toolbar_unified.dart';
 import '../widgets/ai_options_menu.dart';
@@ -144,6 +145,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   // 完整笔记数据（从数据库重新获取，确保字段完整）
   Quote? _fullInitialQuote;
   bool _isLoadingFullQuote = false;
+  bool _richTextLoadFailed = false;
 
   // AI 分析结果（可在元数据抽屉中查看/编辑）
   String? _currentAiAnalysis;
@@ -151,6 +153,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   // 草稿自动保存
   Timer? _draftSaveTimer;
   String? _draftStorageKey;
+  final String _newDraftStorageId = const Uuid().v4();
   bool _draftLoaded = false;
 
   void _updateState(VoidCallback fn) {
@@ -165,7 +168,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   /// 在Isolate中编码JSON
   static String _encodeJsonInIsolate(dynamic data) {
-    return jsonEncode(data);
+    return DeltaContentSerializer.encode(data);
   }
 
   @override
@@ -214,7 +217,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _currentAiAnalysis = widget.initialQuote?.aiAnalysis;
 
     // 保存原始的位置和天气信息（用于编辑模式判断）
-    _originalLocation = widget.initialQuote?.location;
+    // kAddressPending / kAddressFailed 等内部标记视为「只有坐标无地址」
+    final rawLoc = widget.initialQuote?.location;
+    _originalLocation =
+        LocationService.isNonDisplayMarker(rawLoc) ? null : rawLoc;
     _originalLatitude = widget.initialQuote?.latitude;
     _originalLongitude = widget.initialQuote?.longitude;
     _originalWeather = widget.initialQuote?.weather;

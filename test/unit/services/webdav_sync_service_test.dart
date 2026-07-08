@@ -63,6 +63,7 @@ void main() {
     expect(service.provider, 'custom');
     expect(service.url, '');
     expect(service.username, '');
+    expect(service.syncOnOpenOrForeground, true);
     expect(service.syncOnLaunch, true);
     expect(service.syncOnChange, true);
 
@@ -85,6 +86,7 @@ void main() {
     // 服务自动在 URL 后附加斜杠
     expect(service.url, 'https://dav.jianguoyun.com/dav/');
     expect(service.username, 'user@example.com');
+    expect(service.syncOnOpenOrForeground, false);
     expect(service.syncOnLaunch, false);
     expect(service.syncOnChange, true);
 
@@ -185,6 +187,26 @@ void main() {
       'images/1700000000000_图.png': 12345,
       'videos/movie.mp4': 99,
     });
+  });
+
+  test('WebDAV media parser should reject traversal paths', () {
+    const xml = '''
+<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:">
+  <d:response>
+    <d:href>/dav/thoughtecho/media/images/../../thoughtecho_sync.zip</d:href>
+    <d:propstat><d:prop><d:getcontentlength>123</d:getcontentlength></d:prop></d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/dav/thoughtecho/media/audios/valid.mp3</d:href>
+    <d:propstat><d:prop><d:getcontentlength>456</d:getcontentlength></d:prop></d:propstat>
+  </d:response>
+</d:multistatus>
+''';
+
+    final files = WebDAVSyncService.extractRemoteMediaFilesForTesting(xml);
+
+    expect(files, {'audios/valid.mp3': 456});
   });
 
   test('WebDAV media upload decision should skip files already on remote', () {

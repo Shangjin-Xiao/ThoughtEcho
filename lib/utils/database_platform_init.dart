@@ -2,11 +2,13 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'app_logger.dart';
+import 'package:sqflite/sqflite.dart' as sqflite_core;
 
 /// 数据库平台初始化工具类
 /// 确保FFI只初始化一次，避免Windows平台启动卡死问题
 class DatabasePlatformInit {
   static bool _isInitialized = false;
+  static sqflite_core.DatabaseFactory? _originalFactory;
 
   /// 初始化数据库平台支持
   /// 在Windows平台下配置FFI，其他平台使用默认配置
@@ -18,6 +20,7 @@ class DatabasePlatformInit {
 
     if (!kIsWeb && Platform.isWindows) {
       try {
+        _originalFactory ??= databaseFactory;
         sqfliteFfiInit();
         databaseFactory = databaseFactoryFfi;
         logInfo('Windows平台FFI数据库工厂初始化成功', source: 'DatabasePlatformInit');
@@ -41,5 +44,9 @@ class DatabasePlatformInit {
   @visibleForTesting
   static void resetForTesting() {
     _isInitialized = false;
+    if (_originalFactory != null) {
+      databaseFactory = _originalFactory!;
+      _originalFactory = null;
+    }
   }
 }

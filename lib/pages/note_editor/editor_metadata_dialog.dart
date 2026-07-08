@@ -135,11 +135,12 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerLow,
+                          Material(
+                            color: theme.colorScheme.surfaceContainerLow,
+                            clipBehavior: Clip.antiAlias,
+                            shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
+                              side: BorderSide(
                                 color: theme.colorScheme.outlineVariant,
                               ),
                             ),
@@ -240,11 +241,12 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerLow,
+                          Material(
+                            color: theme.colorScheme.surfaceContainerLow,
+                            clipBehavior: Clip.antiAlias,
+                            shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
+                              side: BorderSide(
                                 color: theme.colorScheme.outlineVariant,
                               ),
                             ),

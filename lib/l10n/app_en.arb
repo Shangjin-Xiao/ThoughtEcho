@@ -3706,7 +3706,7 @@
   "webdavTestConnection": "Test Connection",
   "webdavTestSuccess": "Connection successful!",
   "webdavTestFailed": "Connection failed. Please check your settings and password",
-  "webdavAutoSyncLaunch": "Auto-sync on app startup",
+  "webdavAutoSyncLaunch": "Auto-sync on open or foreground",
   "webdavAutoSyncLaunchSubtitle": "Merge with cloud when app opens or returns to foreground",
   "webdavAutoSyncChange": "Auto-sync on note changes",
   "webdavAutoSyncChangeSubtitle": "Quietly sync changes after 4 seconds of inactivity when editing",
@@ -4032,16 +4032,34 @@
   "webdavStatusSyncingDesc": "Securely comparing and merging cloud and local database files...",
   "webdavStatusRunning": "Cloud Sync Running",
   "webdavStatusRunningDesc": "An encrypted merge pipeline has been established with the cloud drive.\nLast sync: {time}",
-  "@webdavStatusRunningDesc": {"placeholders": {"time": {"type": "String"}}},
+  "@webdavStatusRunningDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "webdavStatusException": "Sync Exception",
   "webdavStatusExceptionDesc": "Network communication or cloud drive file lock conflict. We will retry automatically.",
   "webdavStatusEnabled": "Cloud Sync Enabled",
   "webdavStatusEnabledDesc": "Service ready. Last sync: {time}",
-  "@webdavStatusEnabledDesc": {"placeholders": {"time": {"type": "String"}}},
+  "@webdavStatusEnabledDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "webdavNeverSynced": "Never synced",
   "webdavNeverSucceeded": "Never succeeded",
   "webdavConflictPrompt": "Detected {count} sync conflict backup(s). It is recommended to resolve them immediately.",
-  "@webdavConflictPrompt": {"placeholders": {"count": {"type": "int"}}},
+  "@webdavConflictPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "webContentTitle": "Web Content",
   "fetchingWebContent": "Fetching web content from: {url}",
   "@fetchingWebContent": {
@@ -4053,5 +4071,7 @@
   },
   "webCommandInvalidUrl": "Please provide a valid URL with /web command",
   "webCommandInvalidUrlTitle": "Invalid URL",
-  "aiSuggestion": "AI Suggestion"
+  "aiSuggestion": "AI Suggestion",
+  "autoAttachMetadataUnavailable": "Location/weather unavailable, note saved without them",
+  "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again."
 }

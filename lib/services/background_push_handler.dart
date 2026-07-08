@@ -60,7 +60,7 @@ void callbackDispatcher() {
       await initializeDatabasePlatform();
 
       final databaseService = DatabaseService();
-      await databaseService.init();
+      await databaseService.initForBackgroundReadOnly();
 
       // 初始化网络服务（后台获取一言需要）
       await NetworkService.instance.init();
@@ -146,7 +146,7 @@ void backgroundPushCallback(int id) async {
     AppLogger.d('数据库平台初始化完成（路径已设置）');
 
     final databaseService = DatabaseService();
-    await databaseService.init();
+    await databaseService.initForBackgroundReadOnly();
     AppLogger.d('数据库初始化完成');
 
     // 诊断日志：验证后台数据库路径和笔记数量
@@ -226,7 +226,7 @@ Future<void> backgroundPeriodicCheck() async {
     await initializeDatabasePlatform();
 
     final databaseService = DatabaseService();
-    await databaseService.init();
+    await databaseService.initForBackgroundReadOnly();
 
     // 初始化网络服务（后台获取一言需要）
     await NetworkService.instance.init();

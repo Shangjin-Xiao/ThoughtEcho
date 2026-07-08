@@ -143,6 +143,15 @@ class NoteListViewState extends State<NoteListView> {
       Duration(milliseconds: 300);
   static const Duration _pendingInsertAnimationCleanupDelay =
       Duration(milliseconds: 1500);
+  static const Duration _noteDeleteAnimationDuration =
+      Duration(milliseconds: 250);
+
+  static String _normalizeSearchQuery(String query) {
+    return query.trim();
+  }
+
+  String get _effectiveSearchQuery =>
+      NoteListViewState._normalizeSearchQuery(widget.searchQuery);
 
   /// 删除笔记时触发缩小渐隐动画的 ID 集合
   final Set<String> _deletingQuoteIds = {};
@@ -152,6 +161,10 @@ class NoteListViewState extends State<NoteListView> {
 
   /// 安全超时：防止首次加载永久卡在加载动画
   Timer? _initialLoadSafetyTimer;
+  int _initialLoadTimeoutRecoveries = 0;
+
+  DatabaseService? _databaseService;
+  bool _databaseServiceListenerAttached = false;
 
   // PDF 导出选择模式状态
   bool _isExportMode = false;
@@ -245,6 +258,8 @@ class NoteListViewState extends State<NoteListView> {
   final List<int> _scrollSessionUpdateMicros = <int>[];
   final List<FrameTiming> _scrollSessionFrameTimings = <FrameTiming>[];
   Timer? _scrollSessionPerfStopTimer;
+  Timer? _scrollEndSettleTimer;
+  int _scrollEndSettleGeneration = 0;
   Map<String, dynamic>? _scrollSessionStartQuoteContentStats;
   Map<String, int>? _scrollSessionStartQuoteItemStats;
   Map<String, int>? _scrollSessionStartImageEmbedStats;
@@ -284,6 +299,57 @@ class NoteListViewState extends State<NoteListView> {
   bool get hasQuotes => _quotes.isNotEmpty;
 
   bool get hasExpandableQuote => _hasExpandableQuoteCached;
+
+  DatabaseService _readDatabaseService() {
+    final db = Provider.of<DatabaseService>(context, listen: false);
+    _cacheDatabaseService(db);
+    return db;
+  }
+
+  void _cacheDatabaseService(DatabaseService db) {
+    if (identical(_databaseService, db)) {
+      return;
+    }
+
+    if (_databaseServiceListenerAttached) {
+      try {
+        _databaseService?.removeListener(_onDatabaseServiceChanged);
+      } catch (e) {
+        logDebug('切换数据库服务监听器时出错: $e', source: 'NoteListView');
+      }
+      _databaseServiceListenerAttached = false;
+    }
+
+    _databaseService = db;
+  }
+
+  void _attachDatabaseServiceListener(DatabaseService db) {
+    _cacheDatabaseService(db);
+    if (_databaseServiceListenerAttached) {
+      return;
+    }
+
+    db.addListener(_onDatabaseServiceChanged);
+    _databaseServiceListenerAttached = true;
+  }
+
+  void _detachDatabaseServiceListener() {
+    if (!_databaseServiceListenerAttached) {
+      return;
+    }
+
+    final db = _databaseService;
+    _databaseServiceListenerAttached = false;
+    if (db == null) {
+      return;
+    }
+
+    try {
+      db.removeListener(_onDatabaseServiceChanged);
+    } catch (e) {
+      logDebug('清理数据库服务监听器时出错: $e', source: 'NoteListView');
+    }
+  }
 
   /// 安全地获取 ScrollPosition：仅当控制器恰好附加了 1 个 ScrollPosition 时才返回，
   /// 避免多个 client 同时挂载时 `.position` 抛出 "Bad state: Too many elements"。
@@ -343,10 +409,11 @@ class NoteListViewState extends State<NoteListView> {
   Future<void> _checkServicesAndInitialize() async {
     if (!mounted) return;
 
-    final db = Provider.of<DatabaseService>(context, listen: false);
+    final db = _readDatabaseService();
 
     // 如果数据库已初始化，直接初始化数据流
     if (db.isInitialized) {
+      _detachDatabaseServiceListener();
       _waitingForServices = false;
       // 修复：如果外部传入的标签为空，先等待加载本地标签缓存
       await _loadLocalTagsCacheIfNeeded();
@@ -356,14 +423,14 @@ class NoteListViewState extends State<NoteListView> {
 
     // 否则，等待数据库初始化
     logDebug('等待数据库初始化...', source: 'NoteListView');
-    db.addListener(_onDatabaseServiceChanged);
+    _attachDatabaseServiceListener(db);
   }
 
   /// 修复：如果外部传入的标签为空，加载本地标签缓存
   Future<void> _loadLocalTagsCacheIfNeeded() async {
     if (widget.tags.isEmpty && _localTagsCache.isEmpty) {
       try {
-        final db = Provider.of<DatabaseService>(context, listen: false);
+        final db = _databaseService ?? _readDatabaseService();
         final categories = await db.getCategories();
         if (mounted && categories.isNotEmpty) {
           setState(() {
@@ -454,11 +521,15 @@ class NoteListViewState extends State<NoteListView> {
   void _onDatabaseServiceChanged() {
     if (!mounted) return;
 
-    final db = Provider.of<DatabaseService>(context, listen: false);
+    final db = _databaseService;
+    if (db == null) {
+      return;
+    }
+
     if (db.isInitialized) {
       logDebug('数据库初始化完成，重新订阅数据流', source: 'NoteListView');
       // 移除监听器，避免重复监听
-      db.removeListener(_onDatabaseServiceChanged);
+      _detachDatabaseServiceListener();
 
       // 修复：更新等待服务状态
       _waitingForServices = false;
@@ -526,12 +597,19 @@ class NoteListViewState extends State<NoteListView> {
 
       // 搜索 query 变化时也保留滚动位置，避免删字时列表跳回顶部加剧闪烁感。
       // stream callback 会校验 offset 是否仍在 maxScrollExtent 范围内。
-      final bool isSearchChange = oldWidget.searchQuery != widget.searchQuery;
+      final oldEffectiveQuery =
+          NoteListViewState._normalizeSearchQuery(oldWidget.searchQuery);
+      final newEffectiveQuery =
+          NoteListViewState._normalizeSearchQuery(widget.searchQuery);
+      final bool isSearchChange = oldEffectiveQuery != newEffectiveQuery;
+      final bool shouldAnimateSearchTransition =
+          oldEffectiveQuery.isNotEmpty && newEffectiveQuery.isNotEmpty;
 
       // 更新流订阅，传入是否仅为排序变化
       _updateStreamSubscription(
         preserveScrollPosition: isOnlySortChange || isSearchChange,
         isSearchUpdate: isSearchChange,
+        animateSearchTransition: shouldAnimateSearchTransition,
       );
     } else if (shouldUpdate) {
       logDebug('跳过更新：数据尚未完成首次加载', source: 'NoteListView');
@@ -565,12 +643,7 @@ class NoteListViewState extends State<NoteListView> {
     }
 
     // 修复：清理数据库服务监听器
-    try {
-      final db = Provider.of<DatabaseService>(context, listen: false);
-      db.removeListener(_onDatabaseServiceChanged);
-    } catch (e) {
-      logDebug('清理数据库服务监听器时出错: $e');
-    }
+    _detachDatabaseServiceListener();
 
     _searchController.dispose();
 
@@ -609,6 +682,7 @@ class NoteListViewState extends State<NoteListView> {
     _loadMorePerfStopTimer?.cancel();
     _loadMoreSettleTimer?.cancel();
     _scrollSessionPerfStopTimer?.cancel();
+    _scrollEndSettleTimer?.cancel();
     // 清理动画定时器
     for (final timer in _animationTimers.values) {
       timer.cancel();
@@ -688,6 +762,24 @@ class NoteListViewState extends State<NoteListView> {
           _animationTimers.remove(id);
         });
       }
+    });
+  }
+
+  void _clearPendingInsertAnimations() {
+    if (_animatingQuoteVersions.isEmpty &&
+        _structuralInsertQuoteIds.isEmpty &&
+        _animationTimers.isEmpty) {
+      return;
+    }
+
+    for (final timer in _animationTimers.values) {
+      timer.cancel();
+    }
+
+    _updateState(() {
+      _animatingQuoteVersions.clear();
+      _structuralInsertQuoteIds.clear();
+      _animationTimers.clear();
     });
   }
 

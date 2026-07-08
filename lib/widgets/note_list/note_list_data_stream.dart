@@ -40,11 +40,11 @@ extension _NoteListDataStreamExtension on NoteListViewState {
 
     _quotesSub?.cancel();
 
-    final db = Provider.of<DatabaseService>(context, listen: false);
+    final db = _readDatabaseService();
 
     if (!db.isInitialized) {
       logDebug('数据库未初始化，等待初始化完成后重新订阅');
-      db.addListener(_onDatabaseServiceChanged);
+      _attachDatabaseServiceListener(db);
       return;
     }
 
@@ -59,7 +59,8 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           : widget.sortType == 'favorite'
               ? 'favorite_count ${widget.sortAscending ? 'ASC' : 'DESC'}'
               : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-      searchQuery: widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
+      searchQuery:
+          _effectiveSearchQuery.isNotEmpty ? _effectiveSearchQuery : null,
       selectedWeathers:
           widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
       selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
@@ -148,6 +149,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
 
           if (isFirstLoad) {
             _initialDataLoaded = true;
+            _initialLoadTimeoutRecoveries = 0;
             _initialLoadSafetyTimer?.cancel();
             // 通知 Completer：首批数据已就绪（scrollToQuoteById 事件驱动等待）
             if (_initialDataCompleter != null &&
@@ -175,10 +177,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           }
 
           // 修复：同步 _hasMore 状态与数据库服务状态
-          final dbService = Provider.of<DatabaseService>(
-            context,
-            listen: false,
-          );
+          final dbService = _databaseService ?? _readDatabaseService();
           if (_hasMore != dbService.hasMoreQuotes) {
             logDebug(
               '同步 _hasMore 状态: $_hasMore -> ${dbService.hasMoreQuotes}',
@@ -252,35 +251,57 @@ extension _NoteListDataStreamExtension on NoteListViewState {
         }
       },
     );
-    // 安全超时：首次加载若 8 秒仍未收到数据，强制结束加载状态，
-    // 避免用户永久看到全屏加载动画。用户可通过下拉刷新重试。
-    _initialLoadSafetyTimer?.cancel();
+    // 安全超时：首次加载若 8 秒仍未收到数据，先区分“确认空数据”
+    // 和“分页仍未决”。后者恢复数据流并继续等待，避免把慢查询误判成无笔记。
     if (isFirstLoad) {
-      _initialLoadSafetyTimer = Timer(
-        const Duration(seconds: 8),
-        () {
-          if (mounted && !_initialDataLoaded && _isLoading && _quotes.isEmpty) {
-            logDebug(
-              '首次数据加载安全超时（8s），结束加载状态',
-              source: 'NoteListView',
-            );
-            _updateState(() {
-              _isLoading = false;
-            });
-            // 同时释放 completer，避免 scrollToQuoteById 继续等待
-            if (_initialDataCompleter != null &&
-                !_initialDataCompleter!.isCompleted) {
-              _initialDataCompleter!.complete();
-            }
-          }
-        },
+      _scheduleInitialLoadSafetyTimer();
+    }
+  }
+
+  void _scheduleInitialLoadSafetyTimer() {
+    _initialLoadSafetyTimer?.cancel();
+    _initialLoadSafetyTimer = Timer(
+      const Duration(seconds: 8),
+      _handleInitialLoadSafetyTimeout,
+    );
+  }
+
+  void _handleInitialLoadSafetyTimeout() {
+    if (!mounted || _initialDataLoaded || !_isLoading || _quotes.isNotEmpty) {
+      return;
+    }
+
+    final db = _databaseService;
+    if (db != null && db.hasMoreQuotes) {
+      _initialLoadTimeoutRecoveries++;
+      logDebug(
+        '首次数据加载安全超时（8s），数据库仍有未决分页，尝试恢复数据流: $_initialLoadTimeoutRecoveries',
+        source: 'NoteListView',
       );
+      db.refreshQuotes();
+      _scheduleInitialLoadSafetyTimer();
+      return;
+    }
+
+    logDebug(
+      '首次数据加载安全超时（8s），结束加载状态',
+      source: 'NoteListView',
+    );
+    _updateState(() {
+      _isLoading = false;
+    });
+    // 只有在数据库也确认没有更多数据时才释放等待定位的 completer；
+    // 否则通知定位会在数据仍未决时快速耗尽重试。
+    if (_initialDataCompleter != null && !_initialDataCompleter!.isCompleted) {
+      _initialDataCompleter!.complete();
     }
   }
 
   /// 优化：判断是否需要更新订阅
   bool _shouldUpdateSubscription(NoteListView oldWidget) {
-    return oldWidget.searchQuery != widget.searchQuery ||
+    final oldEffectiveQuery =
+        NoteListViewState._normalizeSearchQuery(oldWidget.searchQuery);
+    return oldEffectiveQuery != _effectiveSearchQuery ||
         !_areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) ||
         oldWidget.sortType != widget.sortType ||
         oldWidget.sortAscending != widget.sortAscending ||
@@ -305,15 +326,20 @@ extension _NoteListDataStreamExtension on NoteListViewState {
   void _updateStreamSubscription({
     bool preserveScrollPosition = false,
     bool isSearchUpdate = false,
+    bool animateSearchTransition = true,
   }) {
     if (!mounted) return; // 确保组件仍然挂载
 
-    bool isFirstSearchEvent = isSearchUpdate;
+    bool isFirstSearchEvent = isSearchUpdate && animateSearchTransition;
 
     logDebug(
-      '更新数据流订阅 (preserveScrollPosition: $preserveScrollPosition, isSearchUpdate: $isSearchUpdate)',
+      '更新数据流订阅 (preserveScrollPosition: $preserveScrollPosition, isSearchUpdate: $isSearchUpdate, animateSearchTransition: $animateSearchTransition)',
       source: 'NoteListView',
     );
+
+    if (isSearchUpdate) {
+      _clearPendingInsertAnimations();
+    }
 
     double? savedScrollOffset;
     // 只有在需要保持滚动位置时才保存（仅排序变化时）
@@ -339,7 +365,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
       _hasMore = true;
     }
 
-    final db = Provider.of<DatabaseService>(context, listen: false);
+    final db = _readDatabaseService();
 
     _quotesSub?.cancel();
 
@@ -352,7 +378,8 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           : widget.sortType == 'favorite'
               ? 'favorite_count ${widget.sortAscending ? 'ASC' : 'DESC'}'
               : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-      searchQuery: widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
+      searchQuery:
+          _effectiveSearchQuery.isNotEmpty ? _effectiveSearchQuery : null,
       selectedWeathers:
           widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
       selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
@@ -424,10 +451,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           }
 
           // 修复：同步 _hasMore 状态与数据库服务状态
-          final dbServiceForSync = Provider.of<DatabaseService>(
-            context,
-            listen: false,
-          );
+          final dbServiceForSync = _databaseService ?? _readDatabaseService();
           if (_hasMore != dbServiceForSync.hasMoreQuotes) {
             logDebug(
               '更新订阅后同步 _hasMore 状态: $_hasMore -> ${dbServiceForSync.hasMoreQuotes}',
