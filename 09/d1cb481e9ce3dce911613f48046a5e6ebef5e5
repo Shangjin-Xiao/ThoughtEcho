@@ -1,0 +1,19 @@
+res/index.html
+  s_8f67e5604fda13::t_044424d7029c6c 679,682,1448-1449,1453-1459
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "09d1cb481e9ce3dce911613f48046a5e6ebef5e5",
+  "prompts": {},
+  "sessions": {
+    "s_8f67e5604fda13": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f3aff-c10b-7b00-b3f1-5df5ead364ec",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
