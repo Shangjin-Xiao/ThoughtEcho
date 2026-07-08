@@ -1,0 +1,21 @@
+pubspec.yaml
+  s_939069f26d60c8::t_5dd7a5423d196a 4,142
+res/index.html
+  s_939069f26d60c8::t_8c7c0b034bd078 1396,1402,1405-1445
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1e23686625c36923b820ad93ae47f88d79e67321",
+  "prompts": {},
+  "sessions": {
+    "s_939069f26d60c8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f1b7e-5ee5-7342-a3d9-410785fa2e51",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
