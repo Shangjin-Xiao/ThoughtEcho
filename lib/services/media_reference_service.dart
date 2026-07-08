@@ -805,15 +805,21 @@ class MediaReferenceService {
   ) async {
     const maxChunkSize = 900;
     final keys = <String>{};
-    for (var start = 0; start < candidates.length; start += maxChunkSize) {
-      final end = math.min(start + maxChunkSize, candidates.length);
-      final chunk = candidates.sublist(start, end);
+    final lookupPaths = candidates
+        .expand((candidate) => <String>{
+              candidate.normalizedPath,
+              candidate.canonicalKey,
+            })
+        .toList(growable: false);
+    for (var start = 0; start < lookupPaths.length; start += maxChunkSize) {
+      final end = math.min(start + maxChunkSize, lookupPaths.length);
+      final chunk = lookupPaths.sublist(start, end);
       final placeholders = List.filled(chunk.length, '?').join(',');
       final rows = await db.query(
         _tableName,
         columns: ['file_path'],
         where: 'file_path IN ($placeholders)',
-        whereArgs: chunk.map((candidate) => candidate.normalizedPath).toList(),
+        whereArgs: chunk,
       );
       for (final row in rows) {
         final filePath = row['file_path'] as String?;
@@ -837,17 +843,19 @@ class MediaReferenceService {
     for (var start = 0; start < candidates.length; start += maxChunkSize) {
       final end = math.min(start + maxChunkSize, candidates.length);
       final chunk = candidates.sublist(start, end);
-      final conditions = chunk
-          .map((_) => '(content LIKE ? OR delta_content LIKE ?)')
-          .join(' OR ');
       final args = <Object?>[];
+      final conditions = <String>[];
       for (final candidate in chunk) {
-        args.add('%${candidate.normalizedPath}%');
-        args.add('%${candidate.normalizedPath}%');
+        for (final searchTerm in _contentSearchTermsForCandidate(candidate)) {
+          conditions.add('(content LIKE ? OR delta_content LIKE ?)');
+          args.add('%$searchTerm%');
+          args.add('%$searchTerm%');
+        }
       }
 
+      final whereClause = conditions.join(' OR ');
       final rows = await db.rawQuery(
-        'SELECT id, content, delta_content FROM quotes WHERE $conditions',
+        'SELECT id, content, delta_content FROM quotes WHERE $whereClause',
         args,
       );
 
@@ -858,8 +866,10 @@ class MediaReferenceService {
         final content = row['content']?.toString() ?? '';
         final deltaContent = row['delta_content']?.toString() ?? '';
         for (final candidate in chunk) {
-          if (content.contains(candidate.normalizedPath) ||
-              deltaContent.contains(candidate.normalizedPath)) {
+          final searchTerms = _contentSearchTermsForCandidate(candidate);
+          if (searchTerms.any(
+            (term) => content.contains(term) || deltaContent.contains(term),
+          )) {
             final variants = references.putIfAbsent(
               candidate.canonicalKey,
               () => <String, Set<String>>{},
@@ -873,6 +883,21 @@ class MediaReferenceService {
     }
 
     return references;
+  }
+
+  static Set<String> _contentSearchTermsForCandidate(
+    _OrphanCandidate candidate,
+  ) {
+    final terms = <String>{
+      candidate.normalizedPath,
+      candidate.canonicalKey,
+      candidate.absolutePath,
+    };
+
+    final uri = Uri.file(candidate.absolutePath).toString();
+    terms.add(uri);
+
+    return terms.where((term) => term.isNotEmpty).toSet();
   }
 
   /// 安全检查并清理单个媒体文件（使用快照机制，避免误删）

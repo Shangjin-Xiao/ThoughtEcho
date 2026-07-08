@@ -134,4 +134,37 @@ void main() {
     );
     expect(healedRefs, hasLength(1));
   });
+
+  test('quickCheckAndDeleteOrphans keeps file URI references with encoded path',
+      () async {
+    final referencedFile = File('/tmp/test_app_docs/media/stored relative.png')
+      ..writeAsStringSync('stored');
+    final fileUri = referencedFile.uri.toString();
+
+    await db.insert('quotes', {
+      'id': 'quote_file_uri_ref',
+      'content': 'image path: $fileUri',
+      'delta_content': jsonEncode([
+        {
+          'insert': {'image': fileUri}
+        }
+      ]),
+      'date': DateTime.now().toIso8601String(),
+    });
+
+    final deletedCount = await MediaReferenceService.quickCheckAndDeleteOrphans(
+      [referencedFile.path],
+      cachedAppPath: '/tmp/test_app_docs',
+    );
+
+    expect(deletedCount, 0);
+    expect(referencedFile.existsSync(), isTrue);
+
+    final healedRefs = await db.query(
+      'media_references',
+      where: 'file_path = ? AND quote_id = ?',
+      whereArgs: ['media/stored relative.png', 'quote_file_uri_ref'],
+    );
+    expect(healedRefs, hasLength(1));
+  });
 }

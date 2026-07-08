@@ -185,7 +185,10 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         AppLogger.i('数据库连接成功', source: 'AIAnalysisDB');
 
         final jsonData = newAnalysis.toJson();
-        AppLogger.i('转换为JSON: $jsonData', source: 'AIAnalysisDB');
+        AppLogger.i(
+          '转换为JSON完成，字段数: ${jsonData.length}',
+          source: 'AIAnalysisDB',
+        );
 
         await db.insert(
           'ai_analyses',
