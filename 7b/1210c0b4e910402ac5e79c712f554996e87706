@@ -1,0 +1,19 @@
+AGENTS.md
+  s_f5624ae866ea44::t_f7eeea3c719218 150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "7b1210c0b4e910402ac5e79c712f554996e87706",
+  "prompts": {},
+  "sessions": {
+    "s_f5624ae866ea44": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0bf73216cffeIKbkq3DQx3R6ko",
+        "model": "hy3-free"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
