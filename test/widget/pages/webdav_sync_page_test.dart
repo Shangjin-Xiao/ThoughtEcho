@@ -120,7 +120,7 @@ void main() {
     // expect(find.text('启用云同步'), findsOneWidget);
 
     // 验证同步配置策略是否显示
-    expect(find.text('应用启动时自动同步'), findsOneWidget);
+    expect(find.text('打开或回前台时自动同步'), findsOneWidget);
     expect(find.text('修改笔记后自动后台同步'), findsOneWidget);
   });
 
