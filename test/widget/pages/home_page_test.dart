@@ -39,23 +39,27 @@ class MockDatabaseService extends ChangeNotifier implements DatabaseService {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool includeDeleted = false,
-  }) => Stream.value([]);
+  }) =>
+      Stream.value([]);
   @override
   Future<List<Quote>> getAllQuotes({
     bool excludeHiddenNotes = true,
     bool includeDeleted = false,
-  }) async => [];
+  }) async =>
+      [];
   @override
   Future<List<Quote>> getQuotesForPeriod(
     DateTime start,
     DateTime end, {
     bool excludeHiddenNotes = true,
     bool includeDeleted = false,
-  }) async => [];
+  }) async =>
+      [];
   @override
   Future<Map<String, dynamic>?> getLocalDailyQuote({
     String offlineQuoteSource = 'tagOnly',
-  }) async => null;
+  }) async =>
+      null;
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -66,7 +70,8 @@ class MockSettingsService extends ChangeNotifier implements SettingsService {
   @override
   bool get todayThoughtsUseAI => false;
   @override
-  AppSettings get appSettings => AppSettings.defaultSettings().copyWith(useLocalQuotesOnly: true);
+  AppSettings get appSettings =>
+      AppSettings.defaultSettings().copyWith(useLocalQuotesOnly: true);
   @override
   ThemeMode get themeMode => ThemeMode.system;
   @override
@@ -158,7 +163,8 @@ class MockSmartPushService extends ChangeNotifier implements SmartPushService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class MockFeatureGuideService extends ChangeNotifier implements FeatureGuideService {
+class MockFeatureGuideService extends ChangeNotifier
+    implements FeatureGuideService {
   @override
   bool hasShown(String guideId) => true;
   @override
@@ -181,7 +187,8 @@ class MockClipboardService extends ChangeNotifier implements ClipboardService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class MockInsightHistoryService extends ChangeNotifier implements InsightHistoryService {
+class MockInsightHistoryService extends ChangeNotifier
+    implements InsightHistoryService {
   @override
   PeriodicInsight? getInsightBySignature(String signature) => null;
   @override
