@@ -172,6 +172,58 @@ void main() {
     expect(await draftService.getLatestDraft(), isNull);
   });
 
+  testWidgets('new note drafts from separate editor sessions use unique keys', (
+    tester,
+  ) async {
+    Future<void> pumpEditor(String text) async {
+      await tester.pumpWidget(MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(
+            value: _TestSettingsService(),
+          ),
+          ChangeNotifierProvider<FeatureGuideService>(
+            create: (_) => _TestFeatureGuideService(),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            ...AppLocalizations.localizationsDelegates,
+            FlutterQuillLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const NoteFullEditorPage(
+            initialContent: '',
+            skipDefaultMetadataAutofill: true,
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final editor = find.byType(QuillEditor);
+      final controller = tester.widget<QuillEditor>(editor).controller;
+      controller.replaceText(
+        0,
+        0,
+        text,
+        TextSelection.collapsed(offset: text.length),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 3));
+    }
+
+    await pumpEditor('First independent draft');
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+
+    await pumpEditor('Second independent draft');
+
+    final draftKeys = mmkvService
+        .getAllKeys()
+        .where((key) => key.startsWith('draft_new_note_'))
+        .toList();
+    expect(draftKeys, hasLength(2));
+  });
+
   testWidgets('back exits cleanly after full quote hydration without edits', (
     tester,
   ) async {

@@ -224,15 +224,14 @@ class ClipboardService extends ChangeNotifier {
       author = clean(m4.group(1));
       matchedSubstring = m4.group(0);
       // 尝试在此基础上再提取出处
-      final remainingText =
-          text.substring(0, text.length - matchedSubstring!.length).trim();
+      final remainingText = text.substring(
+        0,
+        text.length - matchedSubstring!.length,
+      );
       final m4Source = _pattern4Source.firstMatch(remainingText);
       if (m4Source != null) {
         source = clean(m4Source.group(1));
-        // 更新匹配的子串以包含出处部分 (可能不精确，但尝试包含)
-        matchedSubstring = text.substring(
-          remainingText.length - m4Source.group(0)!.length,
-        );
+        matchedSubstring = text.substring(m4Source.start);
       }
       return {
         'author': author,
@@ -247,15 +246,14 @@ class ClipboardService extends ChangeNotifier {
       source = clean(m5.group(1));
       matchedSubstring = m5.group(0);
       // 尝试在此基础上再提取作者
-      final remainingText =
-          text.substring(0, text.length - matchedSubstring!.length).trim();
+      final remainingText = text.substring(
+        0,
+        text.length - matchedSubstring!.length,
+      );
       final m5Author = _pattern5Author.firstMatch(remainingText);
       if (m5Author != null) {
         author = clean(m5Author.group(1));
-        // 更新匹配的子串以包含作者部分 (可能不精确，但尝试包含)
-        matchedSubstring = text.substring(
-          remainingText.length - m5Author.group(0)!.length,
-        );
+        matchedSubstring = text.substring(m5Author.start);
       }
       return {
         'author': author,

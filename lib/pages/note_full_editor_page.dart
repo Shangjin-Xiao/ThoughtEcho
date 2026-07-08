@@ -149,6 +149,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   // 草稿自动保存
   Timer? _draftSaveTimer;
   String? _draftStorageKey;
+  final String _newDraftStorageId = const Uuid().v4();
   bool _draftLoaded = false;
 
   void _updateState(VoidCallback fn) {

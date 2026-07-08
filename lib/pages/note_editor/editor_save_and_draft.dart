@@ -86,9 +86,9 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         widget.initialQuote!.id!.isNotEmpty) {
       return widget.initialQuote!.id!;
     }
-    // 3. 新建笔记，使用初始内容的哈希值作为临时ID
+    // 3. 新建笔记，使用本次编辑会话的稳定随机ID作为临时ID
     // 注意：如果是恢复的草稿，应优先使用 restoredDraftId
-    return 'new_note_${widget.initialContent.hashCode}';
+    return 'new_note_$_newDraftStorageId';
   }
 
   void _attachDraftListener() {
