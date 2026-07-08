@@ -94,6 +94,42 @@ void main() {
     );
 
     testWidgets(
+      'removing a tag filter keeps a single result list on screen',
+      (tester) async {
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = [
+            Quote(
+              id: 'quote-1',
+              content: '筛选变化前可见的笔记',
+              date: DateTime(2026, 7, 8, 9).toIso8601String(),
+            ),
+          ];
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(find.byType(ListView), findsOneWidget);
+
+        await tester.tap(find.byIcon(Icons.close).first);
+        await tester.pump();
+
+        expect(find.byType(ListView), findsOneWidget);
+        expect(find.text('筛选变化前可见的笔记'), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
       'shows notes even when tag list is still empty',
       (tester) async {
         final databaseService = _FakeDatabaseService()

@@ -381,17 +381,13 @@ extension _NoteListItemsExtension on NoteListViewState {
   Widget _buildNoteList(ThemeData theme, String noteInsertAnimationType) {
     final l10n = AppLocalizations.of(context);
     final hasEffectiveSearchQuery = _effectiveSearchQuery.isNotEmpty;
-    // key 拆分，避免状态内输入时由于 searchQuery 改变导致 AnimatedSwitcher 触发不必要闪烁：
-    // • loadingKey 用于加载态的 Key
-    // • emptyKey 用于初始无笔记状态的 Key
-    // • noResultsKey 用于搜索无匹配结果状态的 Key
-    // • resultsKey 用于展示列表的 Key
-    final filterBase =
-        '${widget.selectedTagIds.join(',')}_${widget.selectedWeathers.join(',')}_${widget.selectedDayPeriods.join(',')}';
-    final loadingKey = ValueKey('${filterBase}_loading');
-    final emptyKey = ValueKey('${filterBase}_empty');
-    final noResultsKey = ValueKey('${filterBase}_no_results');
-    final resultsKey = ValueKey('${filterBase}_results_$_resultsVersion');
+    // key 拆分，避免筛选 chip 变化时 AnimatedSwitcher 销毁整棵列表子树。
+    // 筛选变化应直接更新当前列表内容；只有搜索结果版本变化才触发
+    // results -> results 的淡入切换。
+    const loadingKey = ValueKey('note_list_loading');
+    const emptyKey = ValueKey('note_list_empty');
+    const noResultsKey = ValueKey('note_list_no_results');
+    final resultsKey = ValueKey('note_list_results_$_resultsVersion');
 
     // 仅在服务初始化或首批笔记尚未返回时显示 loading。
     // 本地 SQLite 搜索通常 < 100 ms，不单独显示搜索加载动画；
