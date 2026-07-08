@@ -395,12 +395,22 @@ void main() {
       final service = ChatSessionService(databasePath: databasePath);
       await service.init();
       await service.migrateFromMainDatabase(mainDb);
+      await mainDb.insert('chat_sessions', {
+        'id': 'late-legacy-session',
+        'session_type': 'agent',
+        'note_id': null,
+        'title': 'Late legacy chat',
+        'created_at': now,
+        'last_active_at': now,
+        'is_pinned': 0,
+      });
       await service.migrateFromMainDatabase(mainDb);
 
       final sessions = await service.getAllSessions();
       final messages = await service.getMessages('legacy-session');
 
       expect(sessions.map((s) => s.id), contains('legacy-session'));
+      expect(sessions.map((s) => s.id), isNot(contains('late-legacy-session')));
       expect(messages, hasLength(1));
       expect(messages.single.content, 'old chat content');
 

@@ -21,8 +21,12 @@ class ChatSessionService extends ChangeNotifier {
   Completer<Database>? _openingCompleter;
   final List<Future<void> Function(Database db)> _pendingWrites = [];
   final Completer<void> _databaseReady = Completer<void>();
+  DateTime? _lastEmptySessionCleanupAt;
 
   static const int _schemaVersion = 2;
+  static const String _legacyMainDbMigrationKey =
+      'legacy_main_db_chat_migration_complete';
+  static const Duration _emptySessionCleanupInterval = Duration(minutes: 5);
 
   ChatSessionService({
     String? databasePath,
@@ -137,12 +141,24 @@ class ChatSessionService extends ChangeNotifier {
   Future<void> migrateFromMainDatabase(Database sourceDb) async {
     final targetDb = await _ensureDatabase();
     try {
+      if (await _getMetadataValue(targetDb, _legacyMainDbMigrationKey) ==
+          'true') {
+        return;
+      }
+
       final hasLegacySessions = await _tableExists(sourceDb, 'chat_sessions');
       final hasLegacyMessages = await _tableExists(sourceDb, 'chat_messages');
-      if (!hasLegacySessions || !hasLegacyMessages) return;
+      if (!hasLegacySessions || !hasLegacyMessages) {
+        await _setMetadataValue(targetDb, _legacyMainDbMigrationKey, 'true');
+        return;
+      }
 
       final legacySessions = await sourceDb.query('chat_sessions');
-      if (legacySessions.isEmpty) return;
+      if (legacySessions.isEmpty) {
+        await _setMetadataValue(targetDb, _legacyMainDbMigrationKey, 'true');
+        return;
+      }
+      final legacyMessages = await sourceDb.query('chat_messages');
 
       await targetDb.transaction((txn) async {
         for (final row in legacySessions) {
@@ -153,7 +169,6 @@ class ChatSessionService extends ChangeNotifier {
           );
         }
 
-        final legacyMessages = await sourceDb.query('chat_messages');
         for (final row in legacyMessages) {
           await txn.insert(
             'chat_messages',
@@ -161,6 +176,14 @@ class ChatSessionService extends ChangeNotifier {
             conflictAlgorithm: ConflictAlgorithm.ignore,
           );
         }
+        await txn.insert(
+          'chat_metadata',
+          {
+            'key': _legacyMainDbMigrationKey,
+            'value': 'true',
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
       });
       logInfo(
         '已迁移 ${legacySessions.length} 个旧聊天会话到独立聊天数据库',
@@ -182,6 +205,33 @@ class ChatSessionService extends ChangeNotifier {
       [tableName],
     );
     return rows.isNotEmpty;
+  }
+
+  Future<String?> _getMetadataValue(DatabaseExecutor db, String key) async {
+    final rows = await db.query(
+      'chat_metadata',
+      columns: ['value'],
+      where: 'key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return rows.first['value'] as String?;
+  }
+
+  Future<void> _setMetadataValue(
+    DatabaseExecutor db,
+    String key,
+    String value,
+  ) async {
+    await db.insert(
+      'chat_metadata',
+      {
+        'key': key,
+        'value': value,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<void> close() async {
@@ -286,6 +336,13 @@ class ChatSessionService extends ChangeNotifier {
         content_format TEXT,
         delta_json TEXT,
         FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS chat_metadata(
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
       )
     ''');
 
@@ -506,8 +563,15 @@ class ChatSessionService extends ChangeNotifier {
     final db = await _getDatabaseForRead();
     if (db == null) return [];
     try {
-      // 先清理没有消息的会话（防止之前保存失败残留的脏数据）
-      await _cleanupEmptySessions(db);
+      final now = DateTime.now();
+      final shouldCleanup = _lastEmptySessionCleanupAt == null ||
+          now.difference(_lastEmptySessionCleanupAt!) >=
+              _emptySessionCleanupInterval;
+      if (shouldCleanup) {
+        // 先清理没有消息的会话（防止之前保存失败残留的脏数据）
+        _lastEmptySessionCleanupAt = now;
+        await _cleanupEmptySessions(db);
+      }
 
       final rows = await db.query(
         'chat_sessions',

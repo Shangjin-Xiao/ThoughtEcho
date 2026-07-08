@@ -308,6 +308,8 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
         // tag_ids 是权威来源；tag_names 只作为旧工具调用的展示回退。
         List<String> tagNames = const <String>[];
         final tagIds = parsed.smartResult!.tagIds;
+        final fallbackTagNames =
+            parsed.smartResult!.tagNames ?? const <String>[];
         if (tagIds != null && tagIds.isNotEmpty) {
           try {
             final db = context.read<DatabaseService>();
@@ -315,15 +317,19 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             final tagMap = <String, String>{
               for (final t in allTags) t.id: t.name,
             };
-            tagNames = tagIds
-                .map((id) => tagMap[id] ?? id)
-                .where((name) => name.isNotEmpty)
-                .toList();
+            tagNames = [
+              for (var i = 0; i < tagIds.length; i++)
+                tagMap[tagIds[i]] ??
+                    (i < fallbackTagNames.length &&
+                            fallbackTagNames[i].isNotEmpty
+                        ? fallbackTagNames[i]
+                        : tagIds[i]),
+            ].where((name) => name.isNotEmpty).toList();
           } catch (_) {
-            tagNames = tagIds;
+            tagNames = fallbackTagNames.isNotEmpty ? fallbackTagNames : tagIds;
           }
         } else {
-          tagNames = parsed.smartResult!.tagNames ?? const <String>[];
+          tagNames = fallbackTagNames;
         }
 
         final cardMsg = app_chat.ChatMessage(

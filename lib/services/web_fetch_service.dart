@@ -298,17 +298,12 @@ class WebFetchService {
         return response;
       }
 
-      await response.stream.drain().timeout(
-            _timeout,
-            onTimeout: () => throw WebFetchTimeoutException(
-              '网页重定向响应体读取超时（${_timeout.inSeconds}秒）',
-              _timeout,
-            ),
-          );
       final location = response.headers['location'];
       if (location == null || location.trim().isEmpty) {
+        await response.stream.listen((_) {}).cancel();
         throw Exception('网页重定向缺少 Location 响应头');
       }
+      await response.stream.listen((_) {}).cancel();
       uri = uri.resolve(location.trim());
     }
     throw Exception('网页重定向次数过多');
