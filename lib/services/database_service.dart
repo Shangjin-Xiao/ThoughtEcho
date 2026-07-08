@@ -381,6 +381,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   // 添加初始化状态标志
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
+  bool _isReadOnlyConnection = false;
 
   // 添加并发访问控制
   Completer<void>? _initCompleter;
@@ -475,6 +476,10 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     String operationId,
     Future<T> Function() action,
   ) async {
+    if (_isReadOnlyConnection) {
+      throw StateError('后台只读数据库连接不允许执行写操作: $operationId');
+    }
+
     // 等待已有锁释放，使用循环处理多个等待者竞争的情况
     for (;;) {
       final existing = _databaseLock[operationId];
@@ -590,6 +595,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
       // 数据库初始化核心逻辑
       _database = await _initDatabase(path);
+      _isReadOnlyConnection = false;
 
       // 检查并修复数据库结构
       await _checkAndFixDatabaseStructure();
@@ -656,6 +662,73 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     }
   }
 
+  /// 后台推送专用初始化。
+  ///
+  /// 只打开主数据库的只读连接，不执行 schema 修复、数据迁移、默认分类初始化
+  /// 等可能写库的启动逻辑，避免后台 isolate 与前台保存/迁移争用写锁。
+  Future<void> initForBackgroundReadOnly() async {
+    if (_isDisposed) {
+      logDebug('DatabaseService 已被销毁，重新初始化单例状态');
+      reinitialize();
+    }
+
+    if (_isInitialized) {
+      logDebug('后台只读数据库已初始化，跳过重复初始化');
+      return;
+    }
+
+    if (_isInitializing && _initCompleter != null) {
+      await _initCompleter!.future;
+      return;
+    }
+
+    _isInitializing = true;
+    _initCompleter = Completer<void>();
+
+    if (kIsWeb) {
+      _isInitialized = true;
+      _isReadOnlyConnection = true;
+      _isInitializing = false;
+      _initCompleter!.complete();
+      _initCompleter = null;
+      return;
+    }
+
+    try {
+      DatabasePlatformInit.initialize();
+
+      final dbPath = await getDatabasesPath();
+      final path = join(dbPath, 'thoughtecho.db');
+
+      _database = await _initBackgroundReadOnlyDatabase(path);
+      _isReadOnlyConnection = true;
+      _isInitialized = true;
+      _isInitializing = false;
+      if (_initCompleter != null && !_initCompleter!.isCompleted) {
+        _initCompleter!.complete();
+      }
+      _initCompleter = null;
+
+      logInfo(
+        '后台推送只读数据库初始化完成',
+        source: 'DatabaseService',
+      );
+    } catch (e, stackTrace) {
+      _isInitializing = false;
+      if (_initCompleter != null && !_initCompleter!.isCompleted) {
+        _initCompleter!.completeError(e);
+      }
+      _initCompleter = null;
+      AppLogger.e(
+        '后台推送只读数据库初始化失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DatabaseService',
+      );
+      rethrow;
+    }
+  }
+
   // 抽取数据库初始化逻辑到单独方法，便于复用
   Future<Database> _initDatabase(String path) async {
     final database = await openDatabase(
@@ -676,6 +749,20 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
         // 验证外键约束状态
         await _verifyForeignKeysEnabled(db);
+      },
+    );
+    return SentryDatabaseTracing.wrapMainDatabase(database);
+  }
+
+  Future<Database> _initBackgroundReadOnlyDatabase(String path) async {
+    final database = await openDatabase(
+      path,
+      readOnly: true,
+      singleInstance: false,
+      onOpen: (db) async {
+        await db.rawQuery('PRAGMA foreign_keys = ON');
+        await db.rawQuery('PRAGMA busy_timeout = 5000');
+        await db.rawQuery('PRAGMA query_only = ON');
       },
     );
     return SentryDatabaseTracing.wrapMainDatabase(database);
@@ -914,6 +1001,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     _isDisposed = false;
     _isInitialized = false;
     _isInitializing = false;
+    _isReadOnlyConnection = false;
     _initCompleter = null;
     _databaseLock.clear();
 
