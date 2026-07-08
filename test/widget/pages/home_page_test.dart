@@ -16,11 +16,46 @@ import 'package:thoughtecho/widgets/daily_quote_view.dart';
 import 'package:thoughtecho/pages/home/daily_prompt_panel.dart';
 import 'package:thoughtecho/widgets/note_list_view.dart';
 import 'package:thoughtecho/pages/ai_features_page.dart';
+import 'package:thoughtecho/models/app_settings.dart';
+import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/settings_page.dart';
+import 'package:thoughtecho/services/clipboard_service.dart';
+import 'package:thoughtecho/services/feature_guide_service.dart';
+import 'package:thoughtecho/services/insight_history_service.dart';
+import 'package:thoughtecho/services/smart_push_service.dart';
 
 class MockDatabaseService extends ChangeNotifier implements DatabaseService {
   @override
   bool isInitialized = true;
+  @override
+  bool get hasMoreQuotes => false;
+  @override
+  Stream<List<Quote>> watchQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    int limit = 20,
+    String orderBy = 'date DESC',
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool includeDeleted = false,
+  }) => Stream.value([]);
+  @override
+  Future<List<Quote>> getAllQuotes({
+    bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
+  }) async => [];
+  @override
+  Future<List<Quote>> getQuotesForPeriod(
+    DateTime start,
+    DateTime end, {
+    bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
+  }) async => [];
+  @override
+  Future<Map<String, dynamic>?> getLocalDailyQuote({
+    String offlineQuoteSource = 'tagOnly',
+  }) async => null;
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -31,6 +66,28 @@ class MockSettingsService extends ChangeNotifier implements SettingsService {
   @override
   bool get todayThoughtsUseAI => false;
   @override
+  AppSettings get appSettings => AppSettings.defaultSettings().copyWith(useLocalQuotesOnly: true);
+  @override
+  ThemeMode get themeMode => ThemeMode.system;
+  @override
+  String get noteInsertAnimationType => 'fade';
+  @override
+  String? get localeCode => null;
+  @override
+  bool get excerptIntentEnabled => true;
+  @override
+  bool get prioritizeBoldContentInCollapse => false;
+  @override
+  bool get sentryDisclosureShown => true;
+  @override
+  bool get reportInsightsUseAI => false;
+  @override
+  String get offlineQuoteSource => 'all';
+  @override
+  String get dailyQuoteProvider => 'hitokoto';
+  @override
+  List<String> get apiNinjasCategories => const [];
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -38,6 +95,10 @@ class MockSearchController extends ChangeNotifier
     implements NoteSearchController {
   @override
   String get searchQuery => '';
+  @override
+  bool get isSearching => false;
+  @override
+  String? get searchError => null;
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -61,6 +122,16 @@ class MockLocationService extends ChangeNotifier implements LocationService {
   @override
   String? get city => 'Test City';
   @override
+  bool get hasLocationPermission => false;
+  @override
+  String? get currentAddress => 'Test Address';
+  @override
+  bool get hasCoordinates => false;
+  @override
+  String getFormattedLocation() => 'Test Address';
+  @override
+  String getDisplayLocation() => 'Test Address';
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -70,10 +141,57 @@ class MockWeatherService extends ChangeNotifier implements WeatherService {
   @override
   String? get temperature => '20°C';
   @override
+  IconData getWeatherIconData() => Icons.wb_sunny;
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class MockExcerptIntentService implements ExcerptIntentService {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class MockSmartPushService extends ChangeNotifier implements SmartPushService {
+  @override
+  String? consumePendingTargetNoteId() => null;
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class MockFeatureGuideService extends ChangeNotifier implements FeatureGuideService {
+  @override
+  bool hasShown(String guideId) => true;
+  @override
+  Future<void> markAsShown(String guideId) async {}
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class MockClipboardService extends ChangeNotifier implements ClipboardService {
+  @override
+  bool get enableClipboardMonitoring => false;
+  @override
+  Future<Map<String, dynamic>?> checkClipboard() async => null;
+  @override
+  void showClipboardConfirmationDialog(
+    BuildContext context,
+    Map<String, dynamic> clipboardData,
+  ) {}
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class MockInsightHistoryService extends ChangeNotifier implements InsightHistoryService {
+  @override
+  PeriodicInsight? getInsightBySignature(String signature) => null;
+  @override
+  Future<void> addInsight({
+    required String insight,
+    required String periodType,
+    required String periodLabel,
+    bool isAiGenerated = true,
+    String? dataSignature,
+  }) async {}
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -92,6 +210,10 @@ void main() {
     late MockLocationService mockLocationService;
     late MockWeatherService mockWeatherService;
     late MockExcerptIntentService mockExcerptIntentService;
+    late MockSmartPushService mockSmartPushService;
+    late MockFeatureGuideService mockFeatureGuideService;
+    late MockClipboardService mockClipboardService;
+    late MockInsightHistoryService mockInsightHistoryService;
 
     setUp(() async {
       mockDatabaseService = MockDatabaseService();
@@ -102,11 +224,24 @@ void main() {
       mockLocationService = MockLocationService();
       mockWeatherService = MockWeatherService();
       mockExcerptIntentService = MockExcerptIntentService();
+      mockSmartPushService = MockSmartPushService();
+      mockFeatureGuideService = MockFeatureGuideService();
+      mockClipboardService = MockClipboardService();
+      mockInsightHistoryService = MockInsightHistoryService();
     });
 
     Widget createWidgetUnderTest() {
       return MultiProvider(
         providers: [
+          Provider<bool>.value(value: true),
+          ChangeNotifierProvider<SmartPushService>.value(
+              value: mockSmartPushService),
+          ChangeNotifierProvider<FeatureGuideService>.value(
+              value: mockFeatureGuideService),
+          ChangeNotifierProvider<ClipboardService>.value(
+              value: mockClipboardService),
+          ChangeNotifierProvider<InsightHistoryService>.value(
+              value: mockInsightHistoryService),
           ChangeNotifierProvider<DatabaseService>.value(
               value: mockDatabaseService),
           ChangeNotifierProvider<SettingsService>.value(
