@@ -7,7 +7,6 @@ import '../models/multi_ai_settings.dart';
 import '../utils/app_logger.dart';
 import '../services/api_key_manager.dart';
 import '../utils/ai_network_manager.dart';
-import '../utils/api_key_debugger.dart';
 import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
 
@@ -312,7 +311,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
     SettingsService settingsService,
   ) async {
     final l10n = AppLocalizations.of(context);
-    String providerName = _selectedPreset ?? l10n.customConfig;
+    final editingProvider = _currentProvider;
+    String providerName =
+        _selectedPreset ?? editingProvider?.name ?? l10n.customConfig;
 
     if (providerName == l10n.customConfig) {
       final uri = Uri.tryParse(_apiUrlController.text);
@@ -325,28 +326,35 @@ class _AISettingsPageState extends State<AISettingsPage> {
       }
     }
 
+    final providerId = editingProvider?.id ??
+        'provider_${DateTime.now().millisecondsSinceEpoch}';
+    final apiKeyManager = APIKeyManager();
+    final enteredApiKey = _apiKeyController.text.trim();
+    final hasStoredApiKey = await apiKeyManager.hasValidProviderApiKey(
+      providerId,
+    );
+    final isEnabled = enteredApiKey.isNotEmpty || hasStoredApiKey;
+
     final newProvider = AIProviderSettings(
-      id: 'provider_${DateTime.now().millisecondsSinceEpoch}',
+      id: providerId,
       name: providerName,
       apiKey: '',
       apiUrl: _apiUrlController.text,
       model: _modelController.text,
       maxTokens: maxTokens,
       hostOverride: hostOverride.isEmpty ? null : hostOverride,
-      isEnabled: _apiKeyController.text.isNotEmpty,
+      isEnabled: isEnabled,
     );
 
-    final apiKeyManager = APIKeyManager();
-    await ApiKeyDebugger.debugApiKeySave(
-      newProvider.id,
-      _apiKeyController.text,
-    );
-    await apiKeyManager.saveProviderApiKey(
-      newProvider.id,
-      _apiKeyController.text,
-    );
+    if (enteredApiKey.isNotEmpty) {
+      await apiKeyManager.saveProviderApiKey(newProvider.id, enteredApiKey);
+    }
 
-    final updatedProviders = [..._multiSettings.providers, newProvider];
+    final updatedProviders = editingProvider == null
+        ? [..._multiSettings.providers, newProvider]
+        : _multiSettings.providers.map((provider) {
+            return provider.id == editingProvider.id ? newProvider : provider;
+          }).toList(growable: false);
     final updatedMultiSettings = _multiSettings.copyWith(
       providers: updatedProviders,
       currentProviderId: newProvider.id,
@@ -358,7 +366,6 @@ class _AISettingsPageState extends State<AISettingsPage> {
     _currentProvider = newProvider;
 
     await _updateApiKeyStatusAsync();
-    await ApiKeyDebugger.debugApiKeyLifecycle(settingsService);
 
     await settingsService.updateAISettings(
       AISettings(

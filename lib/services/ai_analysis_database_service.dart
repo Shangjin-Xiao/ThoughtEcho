@@ -262,7 +262,10 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
     try {
       if (kIsWeb) {
         // Web平台使用内存存储
-        return _memoryStore.firstWhere((item) => item.id == id);
+        for (final item in _memoryStore) {
+          if (item.id == id) return item;
+        }
+        return null;
       } else {
         // 非Web平台使用SQLite
         final db = await database;

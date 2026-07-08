@@ -63,11 +63,7 @@ class AIService extends ChangeNotifier {
         throw Exception('请先为 ${currentProvider.name} 配置有效的API密钥');
       }
 
-      // 记录验证成功信息
-      final apiKey = await _apiKeyManager.getProviderApiKey(currentProvider.id);
-      logDebug(
-        '验证设置成功 - Provider: ${currentProvider.name}, API Key长度: ${apiKey.length}',
-      );
+      logDebug('验证设置成功 - Provider: ${currentProvider.name}');
 
       // 5. 可选的网络连接测试
       if (testNetwork) {
@@ -177,11 +173,8 @@ class AIService extends ChangeNotifier {
 
     final currentProvider = multiSettings.currentProvider!;
 
-    // 从加密存储获取真实的API Key
     final apiKey = await _apiKeyManager.getProviderApiKey(currentProvider.id);
-    logDebug(
-      '获取当前Provider - ${currentProvider.name}, API Key长度: ${apiKey.length}',
-    );
+    logDebug('获取当前Provider - ${currentProvider.name}');
 
     // 创建provider副本并注入API Key
     final providerWithApiKey = AIProviderSettings(
