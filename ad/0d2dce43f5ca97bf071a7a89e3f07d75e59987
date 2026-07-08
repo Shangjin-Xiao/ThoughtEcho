@@ -1,0 +1,45 @@
+lib/l10n/app_de.arb
+  s_97dd975147c9bd::t_f0dd3bdebdd7bd 40-42
+lib/pages/note_editor/editor_document_init.dart
+  s_97dd975147c9bd::t_0f00bd6991c88b 71,76,99,119,149,213,262,297,304,306-310,332-333,339-340,347,351-354,367-368,370
+lib/l10n/app_en.arb
+  s_97dd975147c9bd::t_2628929817c978 3831-3832
+test/unit/utils/delta_content_serializer_test.dart
+  s_97dd975147c9bd::t_ef3e275d3f2e57 1-37
+lib/l10n/app_es.arb
+  s_97dd975147c9bd::t_f0dd3bdebdd7bd 40-42
+lib/pages/note_full_editor_page.dart
+  s_97dd975147c9bd::t_e3a0e2f4831976 32,144,166
+lib/l10n/app_fr.arb
+  s_97dd975147c9bd::t_f0dd3bdebdd7bd 3536-3538
+lib/l10n/app_ko.arb
+  s_97dd975147c9bd::t_f0dd3bdebdd7bd 3549-3551
+lib/l10n/app_ja.arb
+  s_97dd975147c9bd::t_f0dd3bdebdd7bd 3554-3556
+test/all_tests.dart
+  s_97dd975147c9bd::t_8222525aa7f0d8 75-76,152
+lib/pages/note_editor/editor_save_and_draft.dart
+  s_97dd975147c9bd::t_b10461bc327105 149-157,315-332,345-359
+  s_97dd975147c9bd::t_7f3f252fd6201f 362,372-374
+lib/utils/delta_content_serializer.dart
+  s_97dd975147c9bd::t_25b91924b505ee 1-14,16-47
+  s_97dd975147c9bd::t_ea520437f8b0d2 15
+lib/l10n/app_zh.arb
+  s_97dd975147c9bd::t_a0f610dd69d2f9 3831-3832
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ad0d2dce43f5ca97bf071a7a89e3f07d75e59987",
+  "prompts": {},
+  "sessions": {
+    "s_97dd975147c9bd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4061-6aaf-7f70-aede-7543d8a78993",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
