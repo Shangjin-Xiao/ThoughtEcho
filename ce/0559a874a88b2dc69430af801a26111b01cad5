@@ -1,0 +1,55 @@
+lib/services/backup_service.dart
+  s_86b5eae1ea69e5::t_bced25d6c0ed42 532,538-540
+  s_86b5eae1ea69e5::t_8f1bc1518eb625 541
+lib/services/database_service.dart
+  s_86b5eae1ea69e5::t_41eb00eb705ae1 60,1132-1134
+  s_86b5eae1ea69e5::t_0a38d01595bebf 1135
+lib/l10n/app_en.arb
+  s_86b5eae1ea69e5::t_0936ca379b4498 3709
+lib/services/database/database_trash_mixin.dart
+  s_86b5eae1ea69e5::t_0fd51badf1fc8a 223,266,408,528
+lib/services/database/database_quote_crud_mixin.dart
+  s_86b5eae1ea69e5::t_370d09bdd23042 19,99,414-417,462,499,527,604
+test/unit/services/webdav_sync_service_test.dart
+  s_86b5eae1ea69e5::t_d03d638d236d22 66,89
+  s_86b5eae1ea69e5::t_8df19d8d832d6e 192-211
+lib/l10n/app_zh.arb
+  s_86b5eae1ea69e5::t_0936ca379b4498 3709
+lib/services/webdav_sync_service.dart
+  s_86b5eae1ea69e5::t_5f33a37053160a 565
+  s_86b5eae1ea69e5::t_b381b739e46755 1039-1044
+  s_86b5eae1ea69e5::t_789d5e20da8920 619,627
+  s_86b5eae1ea69e5::t_fa192ed73440d9 75
+  s_86b5eae1ea69e5::t_3ccd17f40e6d3e 23-34,356-357,359,367-373,375,433-434,436-437
+  s_86b5eae1ea69e5::t_d749d9584edf5f 868-870,973-975
+  s_86b5eae1ea69e5::t_20f7ac171722fe 394,398-400,835-837
+  s_86b5eae1ea69e5::t_a71b5c12fb057f 513-543,549-564,566-618,620-626,628-654
+  s_86b5eae1ea69e5::t_8d8456575341a5 544-548
+lib/services/database/database_category_mixin.dart
+  s_86b5eae1ea69e5::t_b49897308fa05b 80,104,181,257,281,309,355,406,456
+lib/services/database/database_favorite_mixin.dart
+  s_86b5eae1ea69e5::t_9f65506041aa30 38,122,162,227
+lib/services/database_backup_service.dart
+  s_86b5eae1ea69e5::t_b53594bc4f365c 94,97,203,206,235,238,295,305,308
+lib/main.dart
+  s_86b5eae1ea69e5::t_d3984d6351b83e 289-290
+  s_86b5eae1ea69e5::t_44dbf19a2cb6aa 571,727
+lib/services/connectivity_service.dart
+  s_86b5eae1ea69e5::t_c124bfc3922650 17,115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ce0559a874a88b2dc69430af801a26111b01cad5",
+  "prompts": {},
+  "sessions": {
+    "s_86b5eae1ea69e5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4095-0de5-7f81-8364-f297427bcaf2",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
