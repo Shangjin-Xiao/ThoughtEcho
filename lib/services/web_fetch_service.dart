@@ -300,13 +300,23 @@ class WebFetchService {
 
       final location = response.headers['location'];
       if (location == null || location.trim().isEmpty) {
-        await response.stream.listen((_) {}).cancel();
+        await _drainRedirectResponse(response);
         throw Exception('网页重定向缺少 Location 响应头');
       }
-      await response.stream.listen((_) {}).cancel();
+      await _drainRedirectResponse(response);
       uri = uri.resolve(location.trim());
     }
     throw Exception('网页重定向次数过多');
+  }
+
+  Future<void> _drainRedirectResponse(http.StreamedResponse response) async {
+    await response.stream.drain<void>().timeout(
+          _timeout,
+          onTimeout: () => throw WebFetchTimeoutException(
+            '网页重定向响应体读取超时（${_timeout.inSeconds}秒）',
+            _timeout,
+          ),
+        );
   }
 
   bool _isRedirectStatus(int statusCode) {

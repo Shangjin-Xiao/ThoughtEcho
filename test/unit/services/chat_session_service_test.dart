@@ -418,5 +418,65 @@ void main() {
       await mainDb.close();
       await deleteDatabase(mainDbPath);
     });
+
+    test('migration repairs injected target database before reading metadata',
+        () async {
+      final mainDbPath = path.join(tempDir.path, 'main_injected.db');
+      final injectedDbPath = path.join(tempDir.path, 'injected_chat.db');
+      final mainDb = await openDatabase(mainDbPath);
+      final injectedDb = await openDatabase(injectedDbPath);
+      await mainDb.execute('''
+        CREATE TABLE chat_sessions(
+          id TEXT PRIMARY KEY,
+          session_type TEXT NOT NULL DEFAULT 'note',
+          note_id TEXT,
+          title TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          last_active_at TEXT NOT NULL,
+          is_pinned INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      await mainDb.execute('''
+        CREATE TABLE chat_messages(
+          id TEXT PRIMARY KEY,
+          session_id TEXT NOT NULL,
+          role TEXT NOT NULL DEFAULT 'user',
+          content TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          included_in_context INTEGER NOT NULL DEFAULT 1,
+          meta_json TEXT,
+          content_format TEXT,
+          delta_json TEXT
+        )
+      ''');
+      final now = DateTime.now().toIso8601String();
+      await mainDb.insert('chat_sessions', {
+        'id': 'legacy-injected-session',
+        'session_type': 'agent',
+        'note_id': null,
+        'title': 'Legacy injected chat',
+        'created_at': now,
+        'last_active_at': now,
+        'is_pinned': 0,
+      });
+
+      final service = ChatSessionService(openOwnDatabase: false);
+      service.setDatabase(injectedDb);
+      await service.migrateFromMainDatabase(mainDb);
+
+      final sessions = await service.getAllSessions();
+      final metadata = await injectedDb.query('chat_metadata');
+
+      expect(sessions.map((s) => s.id), contains('legacy-injected-session'));
+      expect(
+        metadata.map((row) => row['key']),
+        contains('legacy_main_db_chat_migration_complete'),
+      );
+
+      await mainDb.close();
+      await injectedDb.close();
+      await deleteDatabase(mainDbPath);
+      await deleteDatabase(injectedDbPath);
+    });
   });
 }

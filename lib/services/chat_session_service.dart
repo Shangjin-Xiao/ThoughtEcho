@@ -26,7 +26,7 @@ class ChatSessionService extends ChangeNotifier {
   static const int _schemaVersion = 2;
   static const String _legacyMainDbMigrationKey =
       'legacy_main_db_chat_migration_complete';
-  static const Duration _emptySessionCleanupInterval = Duration(minutes: 5);
+  static const Duration _emptySessionCleanupInterval = Duration(minutes: 1);
 
   ChatSessionService({
     String? databasePath,
@@ -141,6 +141,8 @@ class ChatSessionService extends ChangeNotifier {
   Future<void> migrateFromMainDatabase(Database sourceDb) async {
     final targetDb = await _ensureDatabase();
     try {
+      await _ensureChatSchema(targetDb);
+
       if (await _getMetadataValue(targetDb, _legacyMainDbMigrationKey) ==
           'true') {
         return;
@@ -569,8 +571,10 @@ class ChatSessionService extends ChangeNotifier {
               _emptySessionCleanupInterval;
       if (shouldCleanup) {
         // 先清理没有消息的会话（防止之前保存失败残留的脏数据）
-        _lastEmptySessionCleanupAt = now;
-        await _cleanupEmptySessions(db);
+        final cleanupSucceeded = await _cleanupEmptySessions(db);
+        if (cleanupSucceeded) {
+          _lastEmptySessionCleanupAt = now;
+        }
       }
 
       final rows = await db.query(
@@ -666,7 +670,7 @@ class ChatSessionService extends ChangeNotifier {
   }
 
   /// 清理没有消息的会话（修复之前保存失败残留的脏数据，排除最近5分钟内新创建的）
-  Future<void> _cleanupEmptySessions(Database db) async {
+  Future<bool> _cleanupEmptySessions(Database db) async {
     try {
       // 查找没有关联 chat_messages 的 chat_sessions
       final emptySessions = await db.rawQuery('''
@@ -697,8 +701,10 @@ class ChatSessionService extends ChangeNotifier {
       if (deletedCount > 0) {
         logDebug('清理了 $deletedCount 个空会话');
       }
+      return true;
     } catch (e) {
       logDebug('清理空会话失败: $e');
+      return false;
     }
   }
 
