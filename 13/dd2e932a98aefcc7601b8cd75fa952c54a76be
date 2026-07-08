@@ -1,0 +1,19 @@
+test/widget/pages/webdav_sync_page_test.dart
+  s_8f67e5604fda13::t_45e6aa979e7508 123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "13dd2e932a98aefcc7601b8cd75fa952c54a76be",
+  "prompts": {},
+  "sessions": {
+    "s_8f67e5604fda13": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f3aff-c10b-7b00-b3f1-5df5ead364ec",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
