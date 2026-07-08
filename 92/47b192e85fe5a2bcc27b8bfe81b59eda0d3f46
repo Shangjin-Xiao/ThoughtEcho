@@ -1,0 +1,29 @@
+lib/services/media_reference_service.dart
+  s_e509ba66cdc4a1::t_ddb27a7077b09f 891-900
+  s_e509ba66cdc4a1::t_61346cab9ad8a0 808-816,822
+  s_e509ba66cdc4a1::t_110eafc424a1e9 847,850
+  s_e509ba66cdc4a1::t_4884d5da60519c 849,851-853,869-872,888-890
+  s_e509ba66cdc4a1::t_8954cec1a92438 856,858
+  s_e509ba66cdc4a1::t_72b3e5267d7997 901-902
+test/unit/services/media_reference_optimization_test.dart
+  s_e509ba66cdc4a1::t_4884d5da60519c 138,140,142,144-152,162-168
+  s_e509ba66cdc4a1::t_7caa37b45c4f80 137,139,141,143,153-161,169
+lib/services/ai_analysis_database_service.dart
+  s_e509ba66cdc4a1::t_7caa37b45c4f80 188-191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9247b192e85fe5a2bcc27b8bfe81b59eda0d3f46",
+  "prompts": {},
+  "sessions": {
+    "s_e509ba66cdc4a1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4197-7829-7de2-90e8-c127b18dc56b",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
