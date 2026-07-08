@@ -1,0 +1,23 @@
+lib/services/apk_download_service.dart
+  s_a98d2acea50d6e::t_e6f948ba888838 133,199
+  s_a98d2acea50d6e::t_dcf2a7796a58e2 131-132,198,580,591-604,620-622,626
+lib/widgets/update_dialog.dart
+  s_a98d2acea50d6e::t_672a28b7553d2a 8,536,596-597
+  s_a98d2acea50d6e::t_04af0e16be4a4f 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "64545421f59f840044bc77822cb5b1e128591959",
+  "prompts": {},
+  "sessions": {
+    "s_a98d2acea50d6e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4190-596e-7831-a2fc-48169923c2b0",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
