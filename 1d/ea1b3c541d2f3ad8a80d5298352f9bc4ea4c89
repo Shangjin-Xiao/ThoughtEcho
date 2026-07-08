@@ -1,0 +1,32 @@
+test/widget/pages/note_editor_draft_behavior_test.dart
+  s_85468a59031117::t_a828204034bcc7 175-226
+test/unit/services/clipboard_service_test.dart
+  s_85468a59031117::t_e2b48fa7944d41 13-30,33
+  s_85468a59031117::t_b5958d0ee418e5 54-83
+  s_85468a59031117::t_b1902228d8455c 9-10
+  s_85468a59031117::t_d0cd2cfe946554 5
+test/unit/services/api_key_manager_test.dart
+  s_85468a59031117::t_a828204034bcc7 1-29
+lib/pages/note_full_editor_page.dart
+  s_85468a59031117::t_7dd1bb2246bd0e 152
+lib/services/clipboard_service.dart
+  s_85468a59031117::t_7dd1bb2246bd0e 227-230,234,249-252,256
+lib/pages/note_editor/editor_save_and_draft.dart
+  s_85468a59031117::t_7dd1bb2246bd0e 89,91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1dea1b3c541d2f3ad8a80d5298352f9bc4ea4c89",
+  "prompts": {},
+  "sessions": {
+    "s_85468a59031117": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f40ab-e25f-7822-902b-5c13987e2fde",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
