@@ -3546,5 +3546,6 @@
   "webdavConflictKeepTooltip": "유지 및 기본 카테고리로 이동",
   "webdavConflictKeepSuccess": "확인 후 기본 목록으로 이동되었습니다.",
   "webdavConflictDiscardTooltip": "이 충돌 백업 취소",
-  "webdavConflictDiscardSuccess": "이 충돌 메모를 영구적으로 삭제했습니다."
+  "webdavConflictDiscardSuccess": "이 충돌 메모를 영구적으로 삭제했습니다.",
+  "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again."
 }

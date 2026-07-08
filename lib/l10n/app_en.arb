@@ -3828,5 +3828,6 @@
   "webdavNeverSynced": "Never synced",
   "webdavNeverSucceeded": "Never succeeded",
   "webdavConflictPrompt": "Detected {count} sync conflict backup(s). It is recommended to resolve them immediately.",
-  "@webdavConflictPrompt": {"placeholders": {"count": {"type": "int"}}}
+  "@webdavConflictPrompt": {"placeholders": {"count": {"type": "int"}}},
+  "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again."
 }

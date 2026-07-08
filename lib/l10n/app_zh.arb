@@ -3828,5 +3828,6 @@
   "webdavNeverSynced": "从未同步",
   "webdavNeverSucceeded": "从未成功",
   "webdavConflictPrompt": "检测到有 {count} 篇同步冲突备份，建议立即处理。",
-  "@webdavConflictPrompt": {"placeholders": {"count": {"type": "int"}}}
+  "@webdavConflictPrompt": {"placeholders": {"count": {"type": "int"}}},
+  "richTextSaveUnavailable": "保存已停止：富文本内容无法无损处理，请关闭其他应用释放内存后重试。"
 }

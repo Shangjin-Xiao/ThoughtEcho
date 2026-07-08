@@ -68,10 +68,12 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
         await _initializeRichTextContentSafely(deltaContent);
       } else {
         logDebug('使用纯文本初始化编辑器');
+        _richTextLoadFailed = false;
         _initializeAsPlainText();
       }
     } catch (e) {
       logDebug('文档初始化失败: $e');
+      _richTextLoadFailed = widget.initialQuote?.deltaContent != null;
       _initializeAsPlainText();
     } finally {
       _draftLoaded = true;
@@ -94,6 +96,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       if (memoryPressure >= 3) {
         // 临界状态
         logDebug('内存不足，回退到纯文本模式');
+        _richTextLoadFailed = true;
         _initializeAsPlainText();
         return;
       }
@@ -113,6 +116,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       }
     } catch (e) {
       logDebug('富文本初始化失败: $e，回退到纯文本');
+      _richTextLoadFailed = true;
       _initializeAsPlainText();
     }
   }
@@ -142,6 +146,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
+          _richTextLoadFailed = false;
         });
         logDebug('富文本内容直接初始化完成');
       }
@@ -205,6 +210,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
+          _richTextLoadFailed = false;
         });
         logDebug('富文本内容后台初始化完成');
       }
@@ -236,7 +242,6 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
         });
       }
 
-      // 修复：分批处理超大内容，避免内存峰值
       final deltaJson = await _processLargeContentSafely(deltaContent);
 
       if (deltaJson == null) {
@@ -254,6 +259,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
+          _richTextLoadFailed = false;
         });
         logDebug('超大富文本内容分段加载完成');
       }
@@ -288,44 +294,23 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
     }
   }
 
-  /// 修复：安全处理大型内容，分批加载避免内存峰值
+  /// 安全处理大型内容。必须保持 Delta 原样，禁止为省内存丢弃媒体。
   Future<dynamic> _processLargeContentSafely(String deltaContent) async {
     try {
-      // 动态获取适合当前设备的块大小
       final chunkSize = await _getOptimalChunkSize();
       logDebug('使用动态块大小: ${(chunkSize / 1024).toStringAsFixed(1)}KB');
 
       if (deltaContent.length > chunkSize) {
-        logDebug('内容过大，使用分批处理策略');
-
-        // 尝试简化内容
-        final simplifiedContent = _simplifyLargeContent(deltaContent);
-        return await compute(
-          _NoteFullEditorPageState._parseJsonInIsolate,
-          simplifiedContent,
-        );
-      } else {
-        // 正常处理
-        return await compute(
-          _NoteFullEditorPageState._parseJsonInIsolate,
-          deltaContent,
-        );
+        logDebug('内容较大，使用后台无损解析');
       }
+
+      return await compute(
+        _NoteFullEditorPageState._parseJsonInIsolate,
+        deltaContent,
+      );
     } catch (e) {
       logDebug('大型内容处理失败: $e');
       return null;
-    }
-  }
-
-  /// 修复：简化大型内容，移除非必要元素
-  String _simplifyLargeContent(String deltaContent) {
-    try {
-      final deltaJson = jsonDecode(deltaContent);
-      final simplified = _simplifyDeltaData(deltaJson);
-      return jsonEncode(simplified);
-    } catch (e) {
-      logDebug('简化大型内容失败: $e');
-      return deltaContent;
     }
   }
 
@@ -344,42 +329,29 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
 
       if (memoryPressure >= 3) {
         // 临界状态
-        logDebug('内存不足，使用最小化处理');
-        return _getMinimalDocumentContent();
+        logDebug('内存不足，阻止富文本有损保存');
+        throw const DeltaContentSerializationException('内存不足，无法无损保存富文本');
       }
 
       // 根据内容大小和内存压力选择处理策略
       if (estimatedSize > 5 * 1024 * 1024) {
         // 5MB以上
-        logDebug('超大文档，使用分段处理');
-        return await _getDocumentContentWithChunking(deltaData);
+        logDebug('超大文档，使用后台无损处理');
+        return await _getDocumentContentWithIsolate(deltaData);
       } else if (estimatedSize > 1 * 1024 * 1024 || memoryPressure >= 2) {
         // 1MB以上或高内存压力
         logDebug('大文档，使用后台处理');
         return await _getDocumentContentWithIsolate(deltaData);
       } else {
         logDebug('普通文档，直接处理');
-        return jsonEncode(deltaData);
+        return DeltaContentSerializer.encode(deltaData);
       }
     } catch (e) {
       logDebug('获取文档内容失败: $e');
-      return _getMinimalDocumentContent();
-    }
-  }
-
-  /// 获取最小化文档内容（仅纯文本）
-  String _getMinimalDocumentContent() {
-    try {
-      // 在内存不足时，只保存纯文本内容作为简单的Delta格式
-      final plainText = _controller.document.toPlainText();
-      final minimalDelta = [
-        {"insert": plainText},
-        {"insert": "\n"},
-      ];
-      return jsonEncode(minimalDelta);
-    } catch (e) {
-      logDebug('获取最小化内容失败: $e');
-      return '[]'; // 返回空的Delta
+      if (e is DeltaContentSerializationException) {
+        rethrow;
+      }
+      throw DeltaContentSerializationException(e.toString());
     }
   }
 
@@ -392,60 +364,10 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       );
     } catch (e) {
       logDebug('后台处理失败: $e');
-      return _getMinimalDocumentContent();
-    }
-  }
-
-  /// 使用分段处理超大文档内容
-  Future<String> _getDocumentContentWithChunking(dynamic deltaData) async {
-    try {
-      // 对于超大文档，尝试简化内容
-      logDebug('开始分段处理超大文档');
-
-      // 首先尝试移除一些可能占用大量空间的元素
-      final simplifiedData = _simplifyDeltaData(deltaData);
-
-      // 然后使用Isolate处理简化后的数据
-      return await compute(
-        _NoteFullEditorPageState._encodeJsonInIsolate,
-        simplifiedData,
-      );
-    } catch (e) {
-      logDebug('分段处理失败: $e');
-      return _getMinimalDocumentContent();
-    }
-  }
-
-  /// 简化Delta数据，移除可能占用大量内存的元素
-  dynamic _simplifyDeltaData(dynamic deltaData) {
-    try {
-      if (deltaData is List) {
-        return deltaData.map((item) {
-          if (item is Map<String, dynamic>) {
-            final simplified = Map<String, dynamic>.from(item);
-
-            // 移除大型嵌入内容，保留引用
-            if (simplified.containsKey('insert') &&
-                simplified['insert'] is Map) {
-              final insert = simplified['insert'] as Map;
-              if (insert.containsKey('image') || insert.containsKey('video')) {
-                // 保留类型信息但移除实际数据
-                simplified['insert'] = {
-                  'type': insert.keys.first,
-                  'simplified': true,
-                };
-              }
-            }
-
-            return simplified;
-          }
-          return item;
-        }).toList();
+      if (e is DeltaContentSerializationException) {
+        rethrow;
       }
-      return deltaData;
-    } catch (e) {
-      logDebug('简化Delta数据失败: $e');
-      return deltaData;
+      throw DeltaContentSerializationException(e.toString());
     }
   }
 

@@ -3551,5 +3551,6 @@
   "webdavConflictKeepTooltip": "保持してデフォルトカテゴリに移動",
   "webdavConflictKeepSuccess": "確認してデフォルトリストに移動しました。",
   "webdavConflictDiscardTooltip": "この競合バックアップを破棄",
-  "webdavConflictDiscardSuccess": "この競合メモを完全に破棄しました。"
+  "webdavConflictDiscardSuccess": "この競合メモを完全に破棄しました。",
+  "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again."
 }

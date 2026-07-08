@@ -146,6 +146,15 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     }
   }
 
+  void _resetSaveUiAfterFailure() {
+    if (!mounted) return;
+
+    _updateState(() {
+      _saveProgress = 0.0;
+      _isSaving = false;
+    });
+  }
+
   /// 检查是否有用户实际输入的内容（非自动填充的内容）
   bool _hasActualUserContent() {
     // 检查正文内容是否有变化
@@ -303,6 +312,24 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     // 获取纯文本内容
     String plainTextContent = '';
     String deltaJson = '';
+    final baseQuote = _fullInitialQuote ?? widget.initialQuote;
+
+    if (_richTextLoadFailed && baseQuote?.deltaContent != null) {
+      logDebug('富文本未能无损加载，阻止保存覆盖原始deltaContent');
+      await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.richTextSaveUnavailable),
+            backgroundColor: Colors.red,
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
+      }
+      _draftLoaded = true;
+      _resetSaveUiAfterFailure();
+      return;
+    }
 
     try {
       plainTextContent = _controller.document.toPlainText().trim();
@@ -315,11 +342,25 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       logDebug(
         '富文本JSON内容示例: ${deltaJson.substring(0, min(100, deltaJson.length))}...',
       );
+    } on DeltaContentSerializationException catch (e) {
+      logDebug('获取文档内容失败: $e');
+      await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.richTextSaveUnavailable),
+            backgroundColor: Colors.red,
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
+      }
+      _draftLoaded = true;
+      _resetSaveUiAfterFailure();
+      return;
     } catch (e) {
       logDebug('获取文档内容失败: $e');
-      // 显示错误但继续尝试保存
+      await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
       if (mounted) {
-        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(l10n.documentLoadFailed),
@@ -328,17 +369,9 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           ),
         );
       }
-
-      // 尝试获取内容
-      try {
-        plainTextContent = _controller.document.toPlainText().trim();
-        if (plainTextContent.isEmpty) {
-          plainTextContent = widget.initialContent; // 回退到初始内容
-        }
-        // 不设置deltaJson，这样将不会保存富文本格式
-      } catch (_) {
-        plainTextContent = widget.initialContent; // 回退到初始内容
-      }
+      _draftLoaded = true;
+      _resetSaveUiAfterFailure();
+      return;
     }
 
     final now = DateTime.now().toIso8601String();
@@ -349,8 +382,6 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
 
     // 构建笔记对象
     // 优先使用 _fullInitialQuote 中的数据，以保留未加载的字段（如aiAnalysis等）
-    final baseQuote = _fullInitialQuote ?? widget.initialQuote;
-
     final quote = Quote(
       id: baseQuote?.id ?? const Uuid().v4(),
       content: plainTextContent,

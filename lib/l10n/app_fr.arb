@@ -3533,5 +3533,6 @@
   "webdavConflictKeepTooltip": "Conserver et déplacer vers la catégorie par défaut",
   "webdavConflictKeepSuccess": "Confirmé et déplacé vers la liste par défaut.",
   "webdavConflictDiscardTooltip": "Jeter cette sauvegarde de conflit",
-  "webdavConflictDiscardSuccess": "Note de conflit définitivement supprimée."
+  "webdavConflictDiscardSuccess": "Note de conflit définitivement supprimée.",
+  "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again."
 }

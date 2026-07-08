@@ -72,6 +72,8 @@ import 'unit/utils/app_logger_test.dart' as app_logger_test;
 import 'unit/utils/location_weather_helper_test.dart'
     as location_weather_helper_test;
 import 'unit/utils/chat_markdown_styles_test.dart' as chat_markdown_styles_test;
+import 'unit/utils/delta_content_serializer_test.dart'
+    as delta_content_serializer_test;
 import 'unit/utils/stream_file_selector_test.dart' as stream_file_selector_test;
 import 'unit/utils/safe_compute_test.dart' as safe_compute_test;
 import 'unit/utils/streaming_json_parser_test.dart'
@@ -147,6 +149,7 @@ void main() {
       app_logger_test.main();
       location_weather_helper_test.main();
       chat_markdown_styles_test.main();
+      delta_content_serializer_test.main();
       stream_file_selector_test.main();
       safe_compute_test.main();
       streaming_json_parser_test.main();
