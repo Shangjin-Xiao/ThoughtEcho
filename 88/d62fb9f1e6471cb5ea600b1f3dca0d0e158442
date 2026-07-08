@@ -1,0 +1,152 @@
+test/widget/pages/home_page_test.dart
+  s_8f67e5604fda13::t_9e345147fbdc3f 285-292,296,307,318,329
+  s_8f67e5604fda13::t_8b6eb8522c15de 5-12,14-19,21-22,26-27,33-65,75-76,78,80,82-104,114-117,140-149,159-160,169-215,230-231,233,244-245,247,253-261
+lib/pages/note_editor/editor_document_init.dart
+  s_8f67e5604fda13::t_c9c1ede077149d 80-81,86,88-90,198,220,253,317,366,401,408,410-414,436-437,443-444,451,455-458,471-472,474
+.jules/caliper.md
+  s_8f67e5604fda13::t_ada8892f610f97 38-40
+.squad/decisions.md
+  s_8f67e5604fda13::t_c7dc84c2d2d295 346-462
+AGENTS.md
+  s_8f67e5604fda13::t_4038672abe34dc 150
+docs/Release_3.7.0.md
+  s_8f67e5604fda13::t_63051c40c05be5 1-55
+docs/USER_MANUAL.md
+  s_8f67e5604fda13::t_2242790dc00ad3 257,387,389-396,958,1087,1089-1092,1094,1096
+lib/controllers/add_note_controller.dart
+  s_8f67e5604fda13::t_0089fa33126d15 38-44,99-103,137-154,156-158,202-204,212,214,225,227,231,233,240,242,252-254,266,268,277,279,283,289,291
+lib/l10n/app_de.arb
+  s_8f67e5604fda13::t_db32a7ff0284f8 77-79
+lib/l10n/app_en.arb
+  s_8f67e5604fda13::t_cc3eccfb5ed763 3709,4035-4041,4046-4052,4056-4062,4074-4076
+lib/l10n/app_es.arb
+  s_8f67e5604fda13::t_48ac39855278e1 77-78
+lib/l10n/app_fr.arb
+  s_8f67e5604fda13::t_f5d31e1326af6b 3572-3574
+lib/l10n/app_ja.arb
+  s_8f67e5604fda13::t_797752a117984c 3590-3592
+lib/l10n/app_ko.arb
+  s_8f67e5604fda13::t_0eaab5850546c1 3586-3588
+lib/l10n/app_zh.arb
+  s_8f67e5604fda13::t_0a16794b49211a 3709,4035-4041,4046-4052,4056-4062,4074-4076
+lib/main.dart
+  s_8f67e5604fda13::t_4df9295dd598b1 291-292,604,763
+lib/pages/ai_settings_page.dart
+  s_8f67e5604fda13::t_c64cfd41b7c468 314-316,329-337,339,346,349-351,353-357
+lib/pages/home_page.dart
+  s_8f67e5604fda13::t_cc957a77ccb4d9 45,193-198,352-362,434,438-471,949-1009,2025-2027,2046-2049,2051-2052,2063,2077,2079
+lib/pages/note_editor/editor_location_dialogs.dart
+  s_8f67e5604fda13::t_63e2b7be31040c 89,91,99-109,111-112,117-121,175-180
+lib/pages/note_editor/editor_metadata_dialog.dart
+  s_8f67e5604fda13::t_33eab283cc977f 138-141,143,244-247,249
+lib/pages/note_editor/editor_save_and_draft.dart
+  s_8f67e5604fda13::t_1ab9a81b119e45 94,96,155-163,329-346,359-373,376,386-388
+lib/pages/note_full_editor_page.dart
+  s_8f67e5604fda13::t_6acc681986bde5 33,148,156,171,220-223
+lib/pages/note_sync_page.dart
+  s_8f67e5604fda13::t_928eecbff95433 1271-1280,1283-1294
+lib/services/ai_analysis_database_service.dart
+  s_8f67e5604fda13::t_bf0b23e8a5b661 200-203,277-280
+lib/services/ai_service.dart
+  s_8f67e5604fda13::t_4c7c69015121e1 70,179
+lib/services/apk_download_service.dart
+  s_8f67e5604fda13::t_fff2da9151bce0 131-133,198-199,580,591-604,620-622,626
+lib/services/background_push_handler.dart
+  s_8f67e5604fda13::t_ee92c1b8e645cf 63,149,229
+lib/services/backup_service.dart
+  s_8f67e5604fda13::t_9e2d6127413404 532,538-541
+lib/services/clipboard_service.dart
+  s_8f67e5604fda13::t_f28335afd528fa 227-230,234,249-252,256,289-290,292-314,322-325,328,366-368,370-371
+lib/services/connectivity_service.dart
+  s_8f67e5604fda13::t_3d2e82b8946c6f 17,115
+lib/services/database/database_category_mixin.dart
+  s_8f67e5604fda13::t_ed0e536b3c7a87 80,104,181,257,281,309,355,406,456
+lib/services/database/database_favorite_mixin.dart
+  s_8f67e5604fda13::t_4c5e74a86ebde8 38,122,162,227
+lib/services/database/database_quote_crud_mixin.dart
+  s_8f67e5604fda13::t_fa02ef625e1b14 19,99,414-417,462,499,527,604
+lib/services/database/database_trash_mixin.dart
+  s_8f67e5604fda13::t_a95bf6fceeac44 223,266,408,528
+lib/services/database_backup_service.dart
+  s_8f67e5604fda13::t_4daa4aa0901fa4 94,97,203,206,235,238,295,305,308
+lib/services/database_service.dart
+  s_8f67e5604fda13::t_24acf9232aa266 60,435,454-457,530-533,649,690,716-782,808-821,971-988,1031-1032,1055,1070-1071,1182-1185
+lib/services/media_reference_service.dart
+  s_8f67e5604fda13::t_4766a3f6e7eebe 808-816,822,847,849-853,856,858,869-872,888-902
+lib/services/smart_push/smart_push_notification.dart
+  s_8f67e5604fda13::t_1fb271de3b42fb 155,157,159-167
+lib/services/smart_push_service.dart
+  s_8f67e5604fda13::t_d07bca439b2439 101-117
+lib/services/webdav_sync_service.dart
+  s_8f67e5604fda13::t_05949d6512c616 23-34,75,356-357,359,367-373,375,394,398-400,433-434,436-437,513-654,835-837,868-870,973-975,1039-1044
+lib/utils/database_platform_init.dart
+  s_8f67e5604fda13::t_f11f0e0e57cb96 5,11,23,47-50
+lib/utils/delta_content_serializer.dart
+  s_8f67e5604fda13::t_11704d7519aa68 1,3-5,7,9-11,13-16,18-19,21-24,26-27,29-39,42-43,45
+lib/widgets/add_note_dialog.dart
+  s_8f67e5604fda13::t_bbdee9c9fc0419 140,343-351,404-408,1201,1209-1226,1231-1236,1261-1262,1385-1390,1394-1399,1412,1420-1433,1439,1457-1458,1649-1650,1660-1676,1720-1721,1726,1747-1749,1751-1759,1828,2473,2475,2477,2480
+lib/widgets/note_list/note_list_data_stream.dart
+  s_8f67e5604fda13::t_bdca8a2ebc19bd 43,47,62-63,152,180,254-255,257-279,281-296,302-304,329,333,336,340-343,368,381-382,454
+lib/widgets/note_list/note_list_filters.dart
+  s_8f67e5604fda13::t_c074383b023108 225
+lib/widgets/note_list/note_list_items.dart
+  s_8f67e5604fda13::t_fe5e65b5814b30 6-8,22,28,34-35,65,196-197,199-209,229,383-390,398,405,472,486-487,514,644-645,697-698,702,716-721,757-777,985-989,1278-1333
+lib/widgets/note_list/note_list_scroll.dart
+  s_8f67e5604fda13::t_206bb940cec036 746,790,1023
+lib/widgets/note_list_view.dart
+  s_8f67e5604fda13::t_f18ae2d52b4612 146-154,164-167,261-262,303-353,412,416,426,433,524-528,532,600-606,612,646,685,768-785
+lib/widgets/quote_content_widget.dart
+  s_8f67e5604fda13::t_c6a9a7239958ac 104-105,150,218,221-225,609-731,737,739,741-749,784,803,807,1137,1143,1216,1221,1228,1233-1237
+lib/widgets/update_dialog.dart
+  s_8f67e5604fda13::t_dcc0d6d12759b8 3,8,536,596-597
+pubspec.yaml
+  s_8f67e5604fda13::t_cc4ad8e5e0740b 4,149
+res/index.html
+  s_8f67e5604fda13::t_0ed4c302e00da1 1396,1402,1405-1445
+test/all_tests.dart
+  s_8f67e5604fda13::t_b5283993f3f308 75-76,91-92,152,163
+test/quote_content_widget_test.dart
+  s_8f67e5604fda13::t_9cb676e62a89ef 6,46,64,168-221
+test/unit/controllers/add_note_controller_test.dart
+  s_8f67e5604fda13::t_602a8a3f1c84c1 1-45
+test/unit/services/api_key_manager_test.dart
+  s_8f67e5604fda13::t_039f214642e735 1-29
+test/unit/services/clipboard_service_test.dart
+  s_8f67e5604fda13::t_3f1019913dda7a 5,9-10,13-30,33,54-83
+test/unit/services/media_reference_optimization_test.dart
+  s_8f67e5604fda13::t_5bf2b7a63ebaa7 137-169
+test/unit/services/smart_push_security_test.dart
+  s_8f67e5604fda13::t_08d477d1f42df1 1-2,4,6,126-209
+test/unit/services/webdav_sync_service_test.dart
+  s_8f67e5604fda13::t_0e460a3718ae0a 66,89,192-211
+test/unit/utils/ai_request_helper_test.dart
+  s_8f67e5604fda13::t_56cd172a592317 1-26
+test/unit/utils/chat_theme_helper_test.dart
+  s_8f67e5604fda13::t_308375afa4ac81 2-4,7-15,17-33,35,37-52,54,56,58-60,62-64
+test/unit/utils/database_platform_init_test.dart
+  s_8f67e5604fda13::t_803ce1e13a823b 1-23
+test/unit/utils/delta_content_serializer_test.dart
+  s_8f67e5604fda13::t_7e59c304b54982 1-37
+test/widget/note_list_view_filter_test.dart
+  s_8f67e5604fda13::t_83b9f1e4131cef 17,96-131,208-288,413-414,421-423
+test/widget/pages/note_editor_draft_behavior_test.dart
+  s_8f67e5604fda13::t_5b6bcc99114771 175-226
+test/widget/pages/webdav_sync_page_test.dart
+  s_8f67e5604fda13::t_e1cf93afead60e 123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "88d62fb9f1e6471cb5ea600b1f3dca0d0e158442",
+  "prompts": {},
+  "sessions": {
+    "s_8f67e5604fda13": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f3aff-c10b-7b00-b3f1-5df5ead364ec",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
