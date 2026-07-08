@@ -1,0 +1,19 @@
+lib/pages/note_editor/editor_metadata_dialog.dart
+  s_97dd975147c9bd::t_b30e9d418226d7 131-134,136,234-237,239
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f89ac49f2e80203b21a46bb2f11fde635dfd4b4e",
+  "prompts": {},
+  "sessions": {
+    "s_97dd975147c9bd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4061-6aaf-7f70-aede-7543d8a78993",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
