@@ -12,9 +12,7 @@ void main() {
         File('android/app/src/main/AndroidManifest.xml').readAsStringSync(),
       );
 
-      final provider = manifest
-          .findAllElements('provider')
-          .singleWhere(
+      final provider = manifest.findAllElements('provider').singleWhere(
             (element) =>
                 element.getAttribute('name', namespace: _androidNamespace) ==
                 'androidx.core.content.FileProvider',
@@ -36,9 +34,7 @@ void main() {
         'true',
       );
 
-      final metaData = provider
-          .findElements('meta-data')
-          .singleWhere(
+      final metaData = provider.findElements('meta-data').singleWhere(
             (element) =>
                 element.getAttribute('name', namespace: _androidNamespace) ==
                 'android.support.FILE_PROVIDER_PATHS',
@@ -76,8 +72,8 @@ void main() {
 
       final metadataByName = {
         for (final element in application.findElements('meta-data'))
-          element.getAttribute('name', namespace: _androidNamespace): element
-              .getAttribute('value', namespace: _androidNamespace),
+          element.getAttribute('name', namespace: _androidNamespace):
+              element.getAttribute('value', namespace: _androidNamespace),
       };
 
       expect(
