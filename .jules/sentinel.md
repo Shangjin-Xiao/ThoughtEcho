@@ -51,3 +51,8 @@
 **Vulnerability:** API Key debugging logic printed substrings of sensitive credentials, potentially exposing full short keys or significant portions of long keys.
 **Learning:** Even partial logging of API keys for debugging can lead to full credential compromise, especially with short or predictable keys. `logDebug` outputs might be persisted or exposed.
 **Prevention:** Uniformly use `[REDACTED]` when masking credentials in logs and diagnostic UIs, rather than relying on substring operations that leak partial information.
+
+## $(date +%Y-%m-%d) - Fix SQL Injection in DatabaseService Mixin
+**Vulnerability:** SQL Injection via String Interpolation in `db.rawQuery` (`_directGetQuotes`, `getQuotesForSmartPush`, `getQuotesCount`).
+**Learning:** SAST tools flag `db.rawQuery(query, args)` when the `query` string is constructed using dynamic string interpolation for `WHERE` clauses (e.g., `WHERE $whereClause`). Even if the conditions array itself is strictly controlled, interpolating it directly into the raw SQL string is an anti-pattern.
+**Prevention:** Always use the safer, built-in query builder `db.query` which natively separates the query skeleton (like `WHERE`) from its arguments via `where` and `whereArgs`.
