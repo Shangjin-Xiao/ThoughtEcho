@@ -60,3 +60,6 @@
 ## 2026-06-28 - 优化同步冲突隔离备份中的 N+1 查询问题
 **Learning:** 在处理可能包含大量数据循环处理的 SQLite 数据库查询时，不要在循环内部使用 `await db.query()` 引起 N+1 查询性能问题。
 **Action:** 利用 `IN` 语句配合 `db.batch()` 根据 SQLite 的 900 参数上限进行分块聚合查询，大大降低 IPC 边界开销，将时间从 920 ms 降低至 77 ms。
+## 2024-06-25 - 优化媒体文件清理服务大小计算
+**Learning:** Sequential `await entity.length()` queries block execution and create excessive microtask scheduling overhead in large directories, drastically slowing down directory size calculation.
+**Action:** Transformed the directory size calculation in `MediaCleanupService._calculateMediaFilesSizes` to aggregate file lists and chunk `entity.length()` requests using `Future.wait` combined with event loop yielding `await Future<void>.delayed(Duration.zero)`. This removes sequential blockage and significantly speeds up directory traversing.
