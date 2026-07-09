@@ -208,23 +208,12 @@ class MediaCleanupService {
       int videosSize = 0;
       int audiosSize = 0;
 
-      await for (final entity in mediaDir.list(recursive: true)) {
-        if (entity is File) {
-          try {
-            final fileSize = await entity.length();
-            totalSize += fileSize;
+      var currentChunk = <File>[];
 
-            final relativePath = path.relative(
-              entity.path,
-              from: mediaDir.path,
-            );
-            if (relativePath.startsWith('images')) {
-              imagesSize += fileSize;
-            } else if (relativePath.startsWith('videos')) {
-              videosSize += fileSize;
-            } else if (relativePath.startsWith('audios')) {
-              audiosSize += fileSize;
-            }
+      Future<void> processChunk(List<File> chunk) async {
+        final sizes = await Future.wait(chunk.map((file) async {
+          try {
+            return await file.length();
           } catch (e, stackTrace) {
             AppLogger.e(
               '获取媒体文件大小失败',
@@ -232,8 +221,43 @@ class MediaCleanupService {
               stackTrace: stackTrace,
               source: 'MediaCleanupService',
             );
+            return 0;
+          }
+        }));
+
+        for (var j = 0; j < chunk.length; j++) {
+          final fileSize = sizes[j];
+          if (fileSize == 0) continue;
+          totalSize += fileSize;
+
+          final relativePath = path.relative(
+            chunk[j].path,
+            from: mediaDir.path,
+          );
+          if (relativePath.startsWith('images')) {
+            imagesSize += fileSize;
+          } else if (relativePath.startsWith('videos')) {
+            videosSize += fileSize;
+          } else if (relativePath.startsWith('audios')) {
+            audiosSize += fileSize;
           }
         }
+      }
+
+      await for (final entity in mediaDir.list(recursive: true)) {
+        if (entity is File) {
+          currentChunk.add(entity);
+
+          if (currentChunk.length >= 50) {
+            await processChunk(currentChunk);
+            currentChunk = <File>[];
+            await Future<void>.delayed(Duration.zero);
+          }
+        }
+      }
+
+      if (currentChunk.isNotEmpty) {
+        await processChunk(currentChunk);
       }
 
       return {
