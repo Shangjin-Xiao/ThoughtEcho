@@ -249,18 +249,37 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
 
     final l10n = AppLocalizations.of(context);
 
-    // 1. 保存设置
-    await syncService.saveSettings(
-      enabled: true,
-      provider: _selectedProvider,
-      url: _urlController.text,
-      username: _usernameController.text,
-      password: _passwordController.text,
-      syncOnLaunch: syncService.syncOnLaunch,
-      syncOnChange: syncService.syncOnChange,
-      syncOnCellular: syncService.syncOnCellular,
-      syncNotesOnlyOnCellular: syncService.syncNotesOnlyOnCellular,
-    );
+    try {
+      // 1. 保存设置
+      await syncService.saveSettings(
+        enabled: true,
+        provider: _selectedProvider,
+        url: _urlController.text,
+        username: _usernameController.text,
+        password: _passwordController.text,
+        syncOnLaunch: syncService.syncOnLaunch,
+        syncOnChange: syncService.syncOnChange,
+        syncOnCellular: syncService.syncOnCellular,
+        syncNotesOnlyOnCellular: syncService.syncNotesOnlyOnCellular,
+      );
+    } catch (e, stackTrace) {
+      logError(
+        '保存 WebDAV 配置失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'WebDAVSyncPage',
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.webdavStatusFailed),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
 
     // 2. 触发一次手动同步
     await _triggerManualSync(syncService, l10n);
@@ -409,8 +428,10 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                               if (val == null || val.trim().isEmpty) {
                                 return l10n.webdavServerUrlEmptyError;
                               }
-                              if (!val.trim().startsWith('http://') &&
-                                  !val.trim().startsWith('https://')) {
+                              if (!val
+                                  .trim()
+                                  .toLowerCase()
+                                  .startsWith('https://')) {
                                 return l10n.webdavServerUrlInvalidError;
                               }
                               return null;

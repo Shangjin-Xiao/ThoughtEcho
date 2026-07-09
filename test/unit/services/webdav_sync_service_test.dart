@@ -267,4 +267,76 @@ void main() {
       isNull,
     );
   });
+
+  test('WebDAV sync file PROPFIND should ignore directory listings', () {
+    const xml = '''
+<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:">
+  <d:response>
+    <d:href>/dav/thoughtecho/</d:href>
+    <d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop></d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>/dav/thoughtecho/media/</d:href>
+    <d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop></d:propstat>
+  </d:response>
+</d:multistatus>
+''';
+
+    expect(
+      WebDAVSyncService.isTargetSyncFilePropfindResponseForTesting(
+        xml,
+        'https://example.com/dav/thoughtecho/thoughtecho_sync.zip',
+      ),
+      isFalse,
+    );
+  });
+
+  test('WebDAV sync file PROPFIND should accept the target zip file', () {
+    const xml = '''
+<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:">
+  <d:response>
+    <d:href>/dav/thoughtecho/thoughtecho_sync.zip</d:href>
+    <d:propstat>
+      <d:prop>
+        <d:getetag>"abc"</d:getetag>
+        <d:getcontentlength>321</d:getcontentlength>
+      </d:prop>
+    </d:propstat>
+  </d:response>
+</d:multistatus>
+''';
+
+    expect(
+      WebDAVSyncService.isTargetSyncFilePropfindResponseForTesting(
+        xml,
+        'https://example.com/dav/thoughtecho/thoughtecho_sync.zip',
+      ),
+      isTrue,
+    );
+  });
+
+  test('WebDAV sync file PROPFIND should ignore target 404 responses', () {
+    const xml = '''
+<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:">
+  <d:response>
+    <d:href>/dav/thoughtecho/thoughtecho_sync.zip</d:href>
+    <d:propstat>
+      <d:prop/>
+      <d:status>HTTP/1.1 404 Not Found</d:status>
+    </d:propstat>
+  </d:response>
+</d:multistatus>
+''';
+
+    expect(
+      WebDAVSyncService.isTargetSyncFilePropfindResponseForTesting(
+        xml,
+        'https://example.com/dav/thoughtecho/thoughtecho_sync.zip',
+      ),
+      isFalse,
+    );
+  });
 }

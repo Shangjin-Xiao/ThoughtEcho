@@ -4023,7 +4023,7 @@
   "webdavProviderInfinicloud": "InfiniCLOUD",
   "webdavProviderConfig": "Provider Configuration",
   "webdavServerUrlEmptyError": "Please enter WebDAV server address",
-  "webdavServerUrlInvalidError": "Address must start with http:// or https://",
+  "webdavServerUrlInvalidError": "Address must start with https://",
   "webdavUsernameEmptyError": "Please enter username",
   "webdavPasswordEmptyError": "Please enter app password",
   "webdavSyncStrategy": "Sync Strategy",

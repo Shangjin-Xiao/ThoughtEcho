@@ -534,11 +534,15 @@ class WebDAVSyncService extends ChangeNotifier {
       }
 
       final body = response.data?.toString() ?? '';
+      final targetResponse = _findTargetSyncFilePropfindResponse(body, fileUrl);
+      if (targetResponse == null) {
+        return const _RemoteSyncFileMetadata(exists: false);
+      }
       return _RemoteSyncFileMetadata(
         exists: true,
-        etag: _extractFirstXmlTagValue(body, 'getetag'),
+        etag: _extractFirstXmlTagValue(targetResponse, 'getetag'),
         contentLength: int.tryParse(
-          _extractFirstXmlTagValue(body, 'getcontentlength') ?? '',
+          _extractFirstXmlTagValue(targetResponse, 'getcontentlength') ?? '',
         ),
       );
     } on DioException catch (e) {
@@ -553,6 +557,82 @@ class WebDAVSyncService extends ChangeNotifier {
     final value = headers.value(Headers.contentLengthHeader);
     if (value == null || value.isEmpty) return null;
     return int.tryParse(value);
+  }
+
+  static String? _findTargetSyncFilePropfindResponse(
+    String xmlData,
+    String fileUrl,
+  ) {
+    if (xmlData.trim().isEmpty) return null;
+
+    final targetPath = _normalizedUriPath(fileUrl);
+    if (targetPath == null || targetPath.endsWith('/')) return null;
+
+    final responseRegExp = RegExp(
+      r'<(?:[a-zA-Z0-9_.-]+:)?response\b[\s\S]*?<\/(?:[a-zA-Z0-9_.-]+:)?response>',
+      caseSensitive: false,
+    );
+    final hrefRegExp = RegExp(
+      r'<(?:[a-zA-Z0-9_.-]+:)?href>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?href>',
+      caseSensitive: false,
+    );
+    final collectionRegExp = RegExp(
+      r'<(?:[a-zA-Z0-9_.-]+:)?collection\s*/?>',
+      caseSensitive: false,
+    );
+
+    final responses = responseRegExp.allMatches(xmlData).toList();
+    final responseBlocks = responses.isEmpty
+        ? <String>[xmlData]
+        : responses.map((m) => m[0]!).toList();
+
+    for (final block in responseBlocks) {
+      if (collectionRegExp.hasMatch(block)) continue;
+      if (!_propfindResponseHasSuccessStatus(block)) continue;
+
+      final hrefMatch = hrefRegExp.firstMatch(block);
+      if (hrefMatch == null) continue;
+
+      final hrefPath = _normalizedUriPath(hrefMatch.group(1) ?? '');
+      if (hrefPath == targetPath) return block;
+    }
+
+    return null;
+  }
+
+  static bool _propfindResponseHasSuccessStatus(String responseBlock) {
+    final statusRegExp = RegExp(
+      r'<(?:[a-zA-Z0-9_.-]+:)?status>\s*HTTP/\d(?:\.\d)?\s+(\d{3})[\s\S]*?<\/(?:[a-zA-Z0-9_.-]+:)?status>',
+      caseSensitive: false,
+    );
+    final statusCodes = statusRegExp
+        .allMatches(responseBlock)
+        .map((match) => int.tryParse(match.group(1) ?? ''))
+        .whereType<int>()
+        .toList();
+
+    if (statusCodes.isEmpty) return true;
+    return statusCodes.any((code) => code >= 200 && code < 300);
+  }
+
+  static String? _normalizedUriPath(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return null;
+
+    final uri = Uri.tryParse(trimmed);
+    final rawPath = uri?.path ?? trimmed;
+    String decodedPath;
+    try {
+      decodedPath = Uri.decodeComponent(rawPath);
+    } catch (_) {
+      decodedPath = Uri.decodeFull(rawPath);
+    }
+
+    var normalized = decodedPath.replaceAll('\\', '/');
+    while (normalized.length > 1 && normalized.endsWith('/')) {
+      normalized = normalized.substring(0, normalized.length - 1);
+    }
+    return normalized;
   }
 
   Map<String, dynamic> _decodeAndValidateRemoteSyncZip(List<int> bytes) {
@@ -1072,6 +1152,14 @@ class WebDAVSyncService extends ChangeNotifier {
   @visibleForTesting
   static String? mediaRelativePathFromHrefForTesting(String href) {
     return _mediaRelativePathFromHref(href);
+  }
+
+  @visibleForTesting
+  static bool isTargetSyncFilePropfindResponseForTesting(
+    String xmlData,
+    String fileUrl,
+  ) {
+    return _findTargetSyncFilePropfindResponse(xmlData, fileUrl) != null;
   }
 
   @visibleForTesting
