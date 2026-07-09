@@ -12,12 +12,11 @@ void main() {
         File('android/app/src/main/AndroidManifest.xml').readAsStringSync(),
       );
 
-      final provider = manifest.findAllElements('provider').singleWhere(
+      final provider = manifest
+          .findAllElements('provider')
+          .singleWhere(
             (element) =>
-                element.getAttribute(
-                  'name',
-                  namespace: _androidNamespace,
-                ) ==
+                element.getAttribute('name', namespace: _androidNamespace) ==
                 'androidx.core.content.FileProvider',
           );
 
@@ -37,12 +36,11 @@ void main() {
         'true',
       );
 
-      final metaData = provider.findElements('meta-data').singleWhere(
+      final metaData = provider
+          .findElements('meta-data')
+          .singleWhere(
             (element) =>
-                element.getAttribute(
-                  'name',
-                  namespace: _androidNamespace,
-                ) ==
+                element.getAttribute('name', namespace: _androidNamespace) ==
                 'android.support.FILE_PROVIDER_PATHS',
           );
 
@@ -64,8 +62,8 @@ void main() {
     });
   });
 
-  group('Android ARM32 startup compatibility', () {
-    test('keeps manifest-level rendering fallbacks for old ARM32 devices', () {
+  group('Android 64-bit startup defaults', () {
+    test('does not force global software rendering fallbacks', () {
       final manifest = XmlDocument.parse(
         File('android/app/src/main/AndroidManifest.xml').readAsStringSync(),
       );
@@ -73,36 +71,31 @@ void main() {
 
       expect(
         application.getAttribute('vmSafeMode', namespace: _androidNamespace),
-        'true',
+        isNull,
       );
 
       final metadataByName = {
         for (final element in application.findElements('meta-data'))
-          element.getAttribute('name', namespace: _androidNamespace):
-              element.getAttribute('value', namespace: _androidNamespace),
+          element.getAttribute('name', namespace: _androidNamespace): element
+              .getAttribute('value', namespace: _androidNamespace),
       };
 
       expect(
         metadataByName['io.flutter.embedding.android.EnableSoftwareRendering'],
-        'true',
+        isNull,
       );
-      expect(metadataByName['io.flutter.embedding.android.EnableImpeller'],
-          'false');
+      expect(
+        metadataByName['io.flutter.embedding.android.EnableImpeller'],
+        isNull,
+      );
     });
 
-    test('keeps native startup guards for ARM32 and MMKV load failures', () {
+    test('keeps MMKV native load failures from aborting startup', () {
       final application = File(
         'android/app/src/main/kotlin/com/shangjin/thoughtecho/ThoughtEchoApplication.kt',
       ).readAsStringSync();
-      final mainActivity = File(
-        'android/app/src/main/kotlin/com/shangjin/thoughtecho/MainActivity.kt',
-      ).readAsStringSync();
 
       expect(application, contains('catch (t: Throwable)'));
-      expect(application, contains('isArm32Device()'));
-      expect(application, contains('debug.egl.hw'));
-      expect(mainActivity, contains('isArm32Device()'));
-      expect(mainActivity, contains('FLAG_HARDWARE_ACCELERATED'));
     });
   });
 }

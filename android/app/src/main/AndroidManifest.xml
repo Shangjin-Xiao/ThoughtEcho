@@ -6,7 +6,6 @@
         android:icon="@mipmap/ic_launcher"
         android:largeHeap="true"
         android:hardwareAccelerated="true"
-        android:vmSafeMode="true"
         android:allowBackup="false"
         android:requestLegacyExternalStorage="true"
         android:networkSecurityConfig="@xml/network_security_config"
@@ -53,13 +52,6 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- ARM32 旧设备兼容性配置：避免老 GPU/驱动在启动渲染阶段闪退 -->
-        <meta-data
-            android:name="io.flutter.embedding.android.EnableSoftwareRendering"
-            android:value="true" />
-        <meta-data
-            android:name="io.flutter.embedding.android.EnableImpeller"
-            android:value="false" />
 
         <service
             android:name="dev.fluttercommunity.plus.androidalarmmanager.AlarmService"
