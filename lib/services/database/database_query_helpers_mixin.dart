@@ -104,9 +104,8 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
     // 时间段筛选
     if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-      final dayPeriodPlaceholders = selectedDayPeriods
-          .map((_) => '?')
-          .join(',');
+      final dayPeriodPlaceholders =
+          selectedDayPeriods.map((_) => '?').join(',');
       conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
       args.addAll(selectedDayPeriods);
     }
@@ -430,9 +429,8 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
       // 时间段筛选
       if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-        final dayPeriodPlaceholders = selectedDayPeriods
-            .map((_) => '?')
-            .join(',');
+        final dayPeriodPlaceholders =
+            selectedDayPeriods.map((_) => '?').join(',');
         conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
         args.addAll(selectedDayPeriods);
       }
