@@ -1,0 +1,21 @@
+test/unit/android/file_provider_config_test.dart
+  s_1fa6ca50664ed9::t_f9dbb7835eb771 15-17,19,39-41,43,79-80,87-89
+  s_1fa6ca50664ed9::t_c61a17e32d4a57 65-66,74,85,93
+  s_1fa6ca50664ed9::t_e182604343f073 86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "644a4a6c5e23ff0ec831f56a87b8cee927446cf7",
+  "prompts": {},
+  "sessions": {
+    "s_1fa6ca50664ed9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f44bf-d14b-71b0-b4aa-cefa1981689c",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
