@@ -208,20 +208,9 @@ class MediaCleanupService {
       int videosSize = 0;
       int audiosSize = 0;
 
-      final files = <File>[];
-      await for (final entity in mediaDir.list(recursive: true)) {
-        if (entity is File) {
-          files.add(entity);
-        }
-      }
+      var currentChunk = <File>[];
 
-      const chunkSize = 50;
-      for (var i = 0; i < files.length; i += chunkSize) {
-        final chunk = files.sublist(
-          i,
-          i + chunkSize > files.length ? files.length : i + chunkSize,
-        );
-
+      Future<void> processChunk(List<File> chunk) async {
         final sizes = await Future.wait(chunk.map((file) async {
           try {
             return await file.length();
@@ -253,7 +242,22 @@ class MediaCleanupService {
             audiosSize += fileSize;
           }
         }
-        await Future<void>.delayed(Duration.zero);
+      }
+
+      await for (final entity in mediaDir.list(recursive: true)) {
+        if (entity is File) {
+          currentChunk.add(entity);
+
+          if (currentChunk.length >= 50) {
+            await processChunk(currentChunk);
+            currentChunk = <File>[];
+            await Future<void>.delayed(Duration.zero);
+          }
+        }
+      }
+
+      if (currentChunk.isNotEmpty) {
+        await processChunk(currentChunk);
       }
 
       return {
