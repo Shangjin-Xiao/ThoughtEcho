@@ -110,24 +110,17 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
       args.addAll(selectedDayPeriods);
     }
 
-    final whereClause =
-        conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
-
     // ⚡ Bolt: 使用标量子查询替代 LEFT JOIN 和 GROUP BY，避免在 LIMIT 分页前全表聚合的性能瓶颈
 
     final sanitizedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
-    final query = '''
-      SELECT 
-        q.*
-      FROM quotes q
-      $whereClause
-      ORDER BY $sanitizedOrderBy
-      LIMIT ? OFFSET ?
-    ''';
-
-    args.addAll([limit, offset]);
-
-    final List<Map<String, dynamic>> maps = await db.rawQuery(query, args);
+    final List<Map<String, dynamic>> maps = await db.query(
+      'quotes q',
+      where: conditions.isNotEmpty ? conditions.join(' AND ') : null,
+      whereArgs: args,
+      orderBy: sanitizedOrderBy,
+      limit: limit,
+      offset: offset,
+    );
 
     if (maps.isEmpty) return [];
 
@@ -237,24 +230,39 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
       if (!includeDeleted) {
         conditions.add('(q.is_deleted = 0 OR q.is_deleted IS NULL)');
       }
-      final where =
-          conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
       // 只取必要列，不取 delta_content/ai_analysis/summary/keywords
       final sanitizedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
-      final query = '''
-        SELECT q.id, q.content, q.date, q.source, q.source_author, q.source_work,
-               q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
-               q.weather, q.temperature, q.edit_source, q.day_period,
-               q.last_modified, q.favorite_count, q.is_deleted, q.deleted_at
-        FROM quotes q
-        $where
-        ORDER BY $sanitizedOrderBy
-        LIMIT ?
-      ''';
-      args.add(limit);
 
-      final maps = await db.rawQuery(query, args.whereType<Object>().toList());
+      final maps = await db.query(
+        'quotes q',
+        columns: [
+          'q.id',
+          'q.content',
+          'q.date',
+          'q.source',
+          'q.source_author',
+          'q.source_work',
+          'q.category_id',
+          'q.color_hex',
+          'q.location',
+          'q.latitude',
+          'q.longitude',
+          'q.weather',
+          'q.temperature',
+          'q.edit_source',
+          'q.day_period',
+          'q.last_modified',
+          'q.favorite_count',
+          'q.is_deleted',
+          'q.deleted_at',
+        ],
+        where: conditions.isNotEmpty ? conditions.join(' AND ') : null,
+        whereArgs: args.whereType<Object>().toList(),
+        orderBy: sanitizedOrderBy,
+        limit: limit,
+      );
+
       return maps.map((m) => Quote.fromJson(m)).toList();
     } catch (e) {
       logError(
@@ -427,34 +435,32 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
         args.addAll(selectedDayPeriods);
       }
 
-      String query;
       List<dynamic> finalArgs = List.from(args);
+      String tableAndJoins = 'quotes q';
 
       if (tagIds != null && tagIds.isNotEmpty) {
         // ⚡ Bolt: 使用多个 INNER JOIN 替代 GROUP BY + HAVING，避免全表聚合的性能瓶颈
-        String joins = '';
         for (int i = 0; i < tagIds.length; i++) {
           final alias = 'qt$i';
-          joins +=
+          tableAndJoins +=
               ' INNER JOIN quote_tags $alias ON q.id = $alias.quote_id AND $alias.tag_id = ?';
         }
 
         finalArgs.insertAll(0, tagIds);
-
-        final whereClause =
-            conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
-
-        query =
-            'SELECT COUNT(DISTINCT q.id) as count FROM quotes q$joins $whereClause';
-      } else {
-        // 没有标签筛选，使用简单的 COUNT
-        final whereClause =
-            conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
-        query = 'SELECT COUNT(*) as count FROM quotes q $whereClause';
       }
 
-      logDebug('执行计数查询: $query\n参数: [REDACTED]');
-      final result = await db.rawQuery(query, finalArgs);
+      logDebug('执行计数查询\n表: $tableAndJoins\n参数: [REDACTED]');
+      final result = await db.query(
+        tableAndJoins,
+        columns: [
+          (tagIds != null && tagIds.isNotEmpty)
+              ? 'COUNT(DISTINCT q.id) as count'
+              : 'COUNT(*) as count',
+        ],
+        where: conditions.isNotEmpty ? conditions.join(' AND ') : null,
+        whereArgs: finalArgs,
+      );
+
       return Sqflite.firstIntValue(result) ?? 0;
     } catch (e) {
       logDebug('获取笔记总数错误: $e');
