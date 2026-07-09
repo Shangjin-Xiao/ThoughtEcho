@@ -23,6 +23,7 @@ import 'package:logging/logging.dart' as logging;
 
 // 项目内部
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
+import 'package:thoughtecho/services/chat_session_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
@@ -156,7 +157,8 @@ Future<void> main() async {
 
       if (kIsWeb) {
         throw UnsupportedError(
-            'ThoughtEcho does not support the Web platform.');
+          'ThoughtEcho does not support the Web platform.',
+        );
       }
 
       // 初始化后台任务组件
@@ -294,12 +296,14 @@ Future<void> main() async {
         final unifiedLogService = UnifiedLogService.instance;
 
         // 根据开发者模式设置日志服务的持久化状态
-        unifiedLogService
-            .setPersistenceEnabled(settingsService.appSettings.developerMode);
+        unifiedLogService.setPersistenceEnabled(
+          settingsService.appSettings.developerMode,
+        );
 
         final aiAnalysisDbService = AIAnalysisDatabaseService();
         final connectivityService = ConnectivityService();
         final featureGuideService = FeatureGuideService(SafeMMKV());
+        final chatSessionService = ChatSessionService();
 
         // 创建智能推送服务实例
         final smartPushService = SmartPushService(
@@ -332,6 +336,7 @@ Future<void> main() async {
               connectivityService: connectivityService,
               featureGuideService: featureGuideService,
               smartPushService: smartPushService,
+              chatSessionService: chatSessionService,
               mmkvService: mmkvService,
               servicesInitialized: servicesInitialized,
             ),
@@ -560,6 +565,34 @@ Future<void> main() async {
               // 媒体清理服务初始化失败不影响主要功能，继续执行
             }
 
+            // 初始化独立聊天数据库。聊天历史不再存入主笔记库，
+            // 避免大量会话记录影响核心笔记数据生命周期。
+            try {
+              await chatSessionService.init();
+              if (databaseService.isInitialized) {
+                try {
+                  await chatSessionService.migrateFromMainDatabase(
+                    databaseService.database,
+                  );
+                } catch (e, stackTrace) {
+                  logError(
+                    '旧聊天记录迁移失败: $e',
+                    error: e,
+                    stackTrace: stackTrace,
+                    source: 'BackgroundInit',
+                  );
+                }
+              }
+              logInfo('聊天会话数据库初始化完成', source: 'BackgroundInit');
+            } catch (e, stackTrace) {
+              logError(
+                '聊天会话数据库初始化失败: $e',
+                error: e,
+                stackTrace: stackTrace,
+                source: 'BackgroundInit',
+              );
+            }
+
             // 初始化完成，更新状态
             servicesInitialized.value = true;
             logInfo('所有后台服务初始化完成', source: 'BackgroundInit');
@@ -573,8 +606,11 @@ Future<void> main() async {
                   webdav.triggerSync(isBackground: true);
                 }
               } catch (e) {
-                logError('触发启动 WebDAV 同步失败: $e',
-                    error: e, source: 'WebDAVSync');
+                logError(
+                  '触发启动 WebDAV 同步失败: $e',
+                  error: e,
+                  source: 'WebDAVSync',
+                );
               }
             });
 

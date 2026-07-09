@@ -331,6 +331,56 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     _database = null;
   }
 
+  static Future<void> closeDatabase({bool forMigration = false}) async {
+    final service = DatabaseService();
+    // 1. 标记销毁，防止新的操作启动
+    service._isDisposed = true;
+
+    // 2. 等待初始化完成（如果正在初始化的话）
+    if (service._isInitializing && service._initCompleter != null) {
+      try {
+        await service._initCompleter!.future;
+      } catch (e, stack) {
+        logError('关闭数据库时等待初始化失败', error: e, stackTrace: stack);
+      }
+    }
+
+    // 3. 等待所有活跃的锁/操作执行完毕
+    if (service._databaseLock.isNotEmpty) {
+      final futures =
+          service._databaseLock.values.map((c) => c.future).toList();
+      try {
+        await Future.wait(futures).timeout(const Duration(seconds: 5));
+      } catch (e, stack) {
+        logError('关闭数据库时等待操作锁超时/失败', error: e, stackTrace: stack);
+        rethrow;
+      }
+    }
+
+    // 4. 关闭数据库
+    final db = _database;
+    _database = null;
+    if (db != null && db.isOpen) {
+      try {
+        await db.execute('PRAGMA wal_checkpoint(FULL);');
+      } catch (e, stack) {
+        logError('关闭数据库时执行 WAL checkpoint 失败', error: e, stackTrace: stack);
+        rethrow;
+      }
+      try {
+        await db.close();
+      } catch (e, stack) {
+        logError('关闭数据库连接失败', error: e, stackTrace: stack);
+        rethrow;
+      }
+    }
+
+    // 5. 如果不是为了迁移，则重置销毁和初始化状态，以便后续可能重新初始化
+    if (!forMigration) {
+      service.reinitialize();
+    }
+  }
+
   static Database? _database;
   StreamController<List<NoteCategory>> _categoriesController =
       StreamController<List<NoteCategory>>.broadcast();
@@ -734,7 +784,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   Future<Database> _initDatabase(String path) async {
     final database = await openDatabase(
       path,
-      version: 20,
+      version: DatabaseSchemaManager.schemaVersion,
       onCreate: (db, version) async {
         await _schemaManager.createTables(db);
       },
@@ -1168,6 +1218,8 @@ class DatabaseService extends _DatabaseServiceBase
   static const String hiddenTagId = 'system_hidden_tag';
   static const String hiddenTagIconName = '🔒';
 
+  static const int databaseVersion = DatabaseSchemaManager.schemaVersion;
+
   static Database? get rawDatabaseInstance => _DatabaseServiceBase._database;
 
   static void setTestDatabase(Database testDb) {
@@ -1176,6 +1228,10 @@ class DatabaseService extends _DatabaseServiceBase
 
   static void clearTestDatabase() {
     _DatabaseServiceBase.clearTestDatabase();
+  }
+
+  static Future<void> closeDatabase({bool forMigration = false}) async {
+    await _DatabaseServiceBase.closeDatabase(forMigration: forMigration);
   }
 
   DatabaseService._internal() : super._internal();

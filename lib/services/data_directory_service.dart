@@ -5,6 +5,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/app_logger.dart';
 import '../utils/path_security_utils.dart';
+import 'ai_analysis_database_service.dart';
+import 'chat_session_service.dart';
+import 'database_service.dart';
 import 'large_file_manager.dart';
 
 /// 数据目录管理服务（桌面平台专用）
@@ -49,6 +52,14 @@ class DataDirectoryService {
       logError('获取数据目录失败: $e', error: e);
       rethrow;
     }
+  }
+
+  /// 创建文件的父目录。
+  ///
+  /// 数据库类服务通过这里创建存储目录，避免各服务各自拼路径和处理
+  /// 自定义数据目录策略。
+  static Future<void> ensureParentDirectoryForFile(String filePath) async {
+    await Directory(path.dirname(filePath)).create(recursive: true);
   }
 
   /// 检查并执行旧版数据迁移（从 Documents 根目录迁移到 Documents/ThoughtEcho）
@@ -99,6 +110,9 @@ class DataDirectoryService {
 
       logInfo('检测到旧版数据，开始自动迁移到 $newDataDir');
 
+      // 迁移前确保关闭并冲刷所有数据库连接
+      await _closeAllDatabases();
+
       // 创建新目录
       await Directory(newDataDir).create(recursive: true);
 
@@ -107,6 +121,9 @@ class DataDirectoryService {
         'databases',
         'media',
         'ai_analyses.db',
+        'ai_analyses.db-wal',
+        'chat.db',
+        'chat.db-wal',
       ];
 
       for (final item in itemsToMigrate) {
@@ -138,6 +155,45 @@ class DataDirectoryService {
     }
   }
 
+  /// 关闭所有正在运行的数据库并冲刷 WAL 日志，确保数据完整性。
+  /// 若关闭失败则抛出异常以中止后续迁移，防止数据损坏。
+  static Future<void> _closeAllDatabases() async {
+    logInfo('正在关闭并冲刷所有数据库连接...');
+    final List<String> failures = [];
+
+    try {
+      await DatabaseService.closeDatabase(forMigration: true);
+    } catch (e, stack) {
+      logError('关闭 DatabaseService 失败', error: e, stackTrace: stack);
+      failures.add('DatabaseService: $e');
+    }
+
+    try {
+      await AIAnalysisDatabaseService().closeDatabase();
+    } catch (e, stack) {
+      logError('关闭 AIAnalysisDatabaseService 失败', error: e, stackTrace: stack);
+      failures.add('AIAnalysisDatabaseService: $e');
+    }
+
+    try {
+      final activeInstance = ChatSessionService.activeInstance;
+      if (activeInstance != null) {
+        await activeInstance.close();
+      }
+    } catch (e, stack) {
+      logError('关闭 ChatSessionService 失败', error: e, stackTrace: stack);
+      failures.add('ChatSessionService: $e');
+    }
+
+    if (failures.isNotEmpty) {
+      // 迁移复制的是 SQLite 主库文件。任何连接未成功 checkpoint/close
+      // 都可能把 WAL 中的最近写入落在旧目录，因此这里故意硬失败。
+      throw Exception('关闭数据库连接失败，已中止迁移以防数据损坏。失败详情: ${failures.join(", ")}');
+    }
+
+    logInfo('所有数据库已成功关闭并冲刷。');
+  }
+
   /// 复制目录及其内容
   static Future<void> _copyDirectory(Directory source, Directory target) async {
     if (!await target.exists()) {
@@ -148,7 +204,10 @@ class DataDirectoryService {
       final newPath = path.join(target.path, path.basename(entity.path));
 
       if (entity is File) {
-        await entity.copy(newPath);
+        final fileName = path.basename(entity.path).toLowerCase();
+        if (!fileName.endsWith('-shm')) {
+          await entity.copy(newPath);
+        }
       } else if (entity is Directory) {
         await _copyDirectory(entity, Directory(newPath));
       }
@@ -245,6 +304,10 @@ class DataDirectoryService {
       }
 
       onStatusUpdate?.call('正在准备迁移...');
+
+      // 迁移前确保关闭并冲刷所有数据库连接
+      await _closeAllDatabases();
+
       final currentDir = Directory(currentPath);
       if (!await currentDir.exists()) {
         throw Exception('当前数据目录不存在');
@@ -369,6 +432,9 @@ class DataDirectoryService {
       'databases', // 数据库目录
       'media', // 媒体文件目录
       'ai_analyses.db', // AI 分析数据库
+      'ai_analyses.db-wal',
+      'chat.db',
+      'chat.db-wal',
       'backups', // 备份目录
     ];
 
@@ -387,8 +453,9 @@ class DataDirectoryService {
             try {
               if (entity is File) {
                 final fileName = path.basename(entity.path).toLowerCase();
-                // 跳过系统文件
-                if (!_isWindowsSystemFile(fileName)) {
+                // 跳过系统文件和 SQLite shm 临时文件
+                if (!_isWindowsSystemFile(fileName) &&
+                    !fileName.endsWith('-shm')) {
                   filesToCopy.add(entity.path);
                 }
               }
@@ -397,7 +464,10 @@ class DataDirectoryService {
             }
           }
         } else if (await itemFile.exists()) {
-          filesToCopy.add(itemFile.path);
+          final fileName = path.basename(itemFile.path).toLowerCase();
+          if (!fileName.endsWith('-shm')) {
+            filesToCopy.add(itemFile.path);
+          }
         }
       } catch (e) {
         errors.add('无法访问目录: $itemPath');

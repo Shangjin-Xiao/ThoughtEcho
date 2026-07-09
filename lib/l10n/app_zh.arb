@@ -110,7 +110,6 @@
   "weatherFetchFailedDesc": "无法获取当前天气信息，请检查网络连接或稍后重试",
   "locationFetchFailedNoNetwork": "无网络连接，已保存坐标位置",
   "locationAndWeatherUnavailable": "当前无法获取位置和天气信息",
-  "autoAttachMetadataUnavailable": "位置/天气未能附加，已直接保存",
   "settingsUseLocationService": "使用位置服务",
   "settingsLocationEnabled": "已获得权限并启用",
   "settingsLocationPermissionOnly": "已获得权限但服务未启用",
@@ -143,7 +142,7 @@
   "settingsBackupDesc": "备份数据或从备份中恢复",
   "settingsSync": "笔记同步",
   "settingsSyncDesc": "与附近设备同步笔记数据",
-  "settingsAbout": "关于心迹",
+  "settingsAbout": "关于 心迹 (ThoughtEcho)",
   "settingsAboutSlogan": "你的专属灵感摘录本",
   "settingsViewSource": "查看项目源码",
   "settingsVisitWebsite": "访问官网",
@@ -400,7 +399,7 @@
   "noteDeleted": "笔记已删除",
   "noteNotFound": "笔记不存在",
   "noteUpdateSkippedDeleted": "笔记已删除，更新已跳过",
-  "favorited": "已珍藏 ({count})",
+  "favorited": "已收藏 ({count})",
   "@favorited": {
     "placeholders": {
       "count": {
@@ -408,7 +407,7 @@
       }
     }
   },
-  "favoriteFailed": "珍藏失败，请重试",
+  "favoriteFailed": "收藏失败，请重试",
   "aiCardServiceNotInitialized": "AI卡片服务未初始化",
   "generateCardFailed": "生成卡片失败: {error}",
   "@generateCardFailed": {
@@ -2018,6 +2017,7 @@
   "aiProviderDeepSeek": "DeepSeek",
   "aiProviderAnthropic": "Anthropic (Claude)",
   "aiProviderOllama": "Ollama",
+  "aiProviderOllamaCloud": "Ollama 云端",
   "aiProviderLMStudio": "LMStudio",
   "apiKeyStatusEmpty": "空",
   "apiKeyStatusRedacted": "[REDACTED]",
@@ -2050,7 +2050,7 @@
   "mergeImportHint": "此操作将保留当前数据，并与备份数据进行合并：",
   "mergeImportReversible": "此操作可逆：可再次导入覆盖备份或继续合并。",
   "confirmRestoreBtn": "确认还原",
-  "favoriteCountWithNum": "已珍藏 ({count})",
+  "favoriteCountWithNum": "已收藏 ({count})",
   "@favoriteCountWithNum": {
     "placeholders": {
       "count": {
@@ -3494,10 +3494,10 @@
   "smartPushUnknownManufacturer": "未知设备",
   "iHaveConfigured": "我已设置",
   "recommended": "推荐",
-  "actionFavorite": "珍藏",
-  "actionUnfavorite": "取消珍藏",
-  "clearFavoriteTitle": "清除珍藏",
-  "clearFavoriteMessage": "确定要清除这条笔记的 {count} 次珍藏记录吗？",
+  "actionFavorite": "收藏",
+  "actionUnfavorite": "取消收藏",
+  "clearFavoriteTitle": "清除收藏",
+  "clearFavoriteMessage": "确定要清除这条笔记的 {count} 次收藏吗？",
   "@clearFavoriteMessage": {
     "description": "清除收藏确认消息",
     "placeholders": {
@@ -3506,8 +3506,8 @@
       }
     }
   },
-  "clearFavoriteSuccess": "已清除珍藏",
-  "clearFavoriteFailed": "清除珍藏失败",
+  "clearFavoriteSuccess": "已清除收藏",
+  "clearFavoriteFailed": "清除收藏失败",
   "moreOptions": "更多选项",
   "settingsUserManual": "用户手册",
   "settingsUserManualDesc": "了解如何使用心迹的各项功能",
@@ -3632,7 +3632,7 @@
   "developerAnniversaryPreviewDesc": "点击立即播放一周年庆典动画",
   "trash": "回收站",
   "trashEmpty": "回收站为空",
-  "trashEmptyHint": "被删除的笔记将在此显示，并在保留期后被永久删除。",
+  "trashEmptyHint": "误删的内容会先暂存在这里，包含图片、音频和视频，也都可以一起恢复。",
   "trashRetentionHint": "最近删除的记录和附件会在这里暂存，超过保留期后自动清理。",
   "moveNoteToTrashTitle": "移至回收站",
   "moveNoteToTrashConfirmation": "确定要将此笔记移至回收站？您可在 {days} 天内恢复它。",
@@ -3799,6 +3799,219 @@
   "customFeedbackSubmit": "发送反馈",
   "customFeedbackSuccess": "感谢您的反馈！",
   "customFeedbackEmptyError": "请输入反馈内容",
+  "saveSuccess": "保存成功",
+  "toolCallStatusPending": "待执行",
+  "toolCallStatusExecuting": "执行中",
+  "toolCallStatusCompleted": "完成",
+  "toolCallStatusError": "错误",
+  "toolCallParameters": "参数",
+  "toolCallResult": "结果",
+  "failedToPickFiles": "选择文件失败: {error}",
+  "@failedToPickFiles": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "editModeMetadataReadOnlyHint": "已保存笔记的位置和天气不支持编辑修改",
+  "explore": "探索",
+  "aiChat": "AI 对话",
+  "dataInsights": "数据分析",
+  "dataInsightsDesc": "深度分析你的笔记数据和写作趋势",
+  "exploreMapMemory": "地图记忆",
+  "exploreMapMemoryDesc": "在地图上探索你的足迹",
+  "favoriteNotes": "收藏笔记",
+  "chatHistory": "对话历史",
+  "newChat": "新建对话",
+  "noChats": "暂无对话",
+  "deleteChat": "删除对话",
+  "deleteChatConfirm": "确定要删除这个对话吗？",
+  "searchChatHistory": "搜索对话...",
+  "dynamicInsightStats": "你已记录 {count} 条心迹，最近 7 天新增 {recentCount} 条。",
+  "@dynamicInsightStats": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "recentCount": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionGroupToday": "今天",
+  "sessionGroupYesterday": "昨天",
+  "sessionGroupThisWeek": "本周",
+  "sessionGroupEarlier": "更早",
+  "messageCountLabel": "{count} 条消息",
+  "@messageCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteNoteWithChatsConfirmation": "删除此笔记将同时删除 {count} 条相关对话。确定要继续吗？",
+  "@deleteNoteWithChatsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commandPolish": "润色",
+  "commandContinue": "续写",
+  "commandDeepAnalysis": "深度分析",
+  "commandInsight": "智能洞察",
+  "aiAssistantInputHint": "输入问题或使用 / 命令...",
+  "aiAssistantExploreWelcome": "{summary}",
+  "@aiAssistantExploreWelcome": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "currentNoteContext": "当前笔记上下文",
+  "workflowUnavailable": "工作流不可用",
+  "aiWorkflowNeedsBoundNote": "此功能需要绑定笔记才能使用",
+  "confidenceLabel": "置信度",
+  "replaceOriginalNote": "替换原文",
+  "appendToEnd": "追加到末尾",
+  "stopGenerate": "停止生成",
+  "aiModeChat": "对话模式",
+  "aiModeAgent": "Agent 模式",
+  "aiAgent": "智能体",
+  "agentThinking": "正在思考...",
+  "agentSearchingNotes": "正在搜索笔记...",
+  "agentAnalyzingData": "正在分析数据...",
+  "agentWebSearching": "正在联网搜索...",
+  "agentReviewingRecentNotes": "正在查看最近记录...",
+  "agentSearchingNotesForQuery": "正在查找\"{query}\"相关记录...",
+  "@agentSearchingNotesForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentCollectingTags": "正在获取标签...",
+  "agentReadingNoteDetail": "正在读取笔记详情...",
+  "agentCheckingLocationWeather": "正在获取位置和天气...",
+  "agentSearchingWebForQuery": "正在查找\"{query}\"的资料...",
+  "@agentSearchingWebForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentReadingWebPage": "正在读取网页...",
+  "agentPreparingNewNoteSuggestion": "正在准备新笔记建议...",
+  "agentPreparingEditSuggestion": "正在准备修改建议...",
+  "agentFoundNoMatchingNotes": "未找到相关记录",
+  "agentFoundMatchingNotes": "找到 {count} 条相关记录",
+  "@agentFoundMatchingNotes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentFoundMatchingNotesWithMore": "找到 {count} 条相关记录，还有更多",
+  "@agentFoundMatchingNotesWithMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentPreparedTagChoices": "找到 {count} 个可用标签",
+  "@agentPreparedTagChoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentCheckedLocationWeather": "已获取位置和天气",
+  "agentCheckedLocationWeatherWithDetails": "位置：{location}，天气：{weather}",
+  "@agentCheckedLocationWeatherWithDetails": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      },
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "agentFoundWebSources": "找到 {count} 条网络资料",
+  "@agentFoundWebSources": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadWebPageSummary": "已读取网页，约 {count} 字",
+  "@agentReadWebPageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadNoteDetailSummary": "已读取笔记《{title}》的完整正文",
+  "@agentReadNoteDetailSummary": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "agentPreparedSuggestionCard": "已生成建议",
+  "agentToolStepFinished": "已完成",
+  "agentToolStepDidNotFinish": "未完成",
+  "aiThinking": "正在思考...",
+  "thinkingMode": "深度思考",
+  "showThinking": "查看思考过程",
+  "hideThinking": "收起思考过程",
+  "toolExecutionProgress": "正在执行...",
+  "toolExecutionCompleted": "执行完成",
+  "executedNOperations": "执行了 {count} 个操作",
+  "@executedNOperations": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentToolCall": "使用 {toolName}",
+  "@agentToolCall": {
+    "placeholders": {
+      "toolName": {
+        "type": "String"
+      }
+    }
+  },
+  "mapPickerTitle": "选择位置",
+  "mapPickerCurrentLocation": "当前位置",
+  "mapPickerConfirm": "确认位置",
+  "poiNameLabel": "地点名称",
+  "longPressForMapPicker": "长按打开地图选点",
+  "attachFile": "附加文件",
+  "yesterday": "昨天",
+  "openInEditor": "打开编辑器",
+  "saveDirectly": "直接保存",
+  "replace": "替换",
+  "append": "追加",
+  "notice": "提示",
+  "saveRequired": "保存提示",
+  "saveBeforeAiAssistant": "进入 AI 助手前需先保存当前笔记内容",
+  "saveAndContinue": "保存并继续",
+  "toggleAddLocation": "添加位置",
+  "toggleAddWeather": "添加天气",
   "webdavDisableSyncSuccess": "已关闭 WebDAV 云同步。本地数据完全保留。",
   "webdavDisableSync": "关闭并停用云同步",
   "webdavGoToResolve": "去处理",
@@ -3819,15 +4032,46 @@
   "webdavStatusSyncingDesc": "正在安全比对合并云端与本地数据库文件...",
   "webdavStatusRunning": "云同步运行中",
   "webdavStatusRunningDesc": "已与云端网盘建立加密合并管道。\n上次同步：{time}",
-  "@webdavStatusRunningDesc": {"placeholders": {"time": {"type": "String"}}},
+  "@webdavStatusRunningDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "webdavStatusException": "同步出现异常",
   "webdavStatusExceptionDesc": "网络通信或云盘文件锁冲突。我们将自动重试。",
   "webdavStatusEnabled": "云同步已启用",
   "webdavStatusEnabledDesc": "服务就绪。上次同步：{time}",
-  "@webdavStatusEnabledDesc": {"placeholders": {"time": {"type": "String"}}},
+  "@webdavStatusEnabledDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "webdavNeverSynced": "从未同步",
   "webdavNeverSucceeded": "从未成功",
   "webdavConflictPrompt": "检测到有 {count} 篇同步冲突备份，建议立即处理。",
-  "@webdavConflictPrompt": {"placeholders": {"count": {"type": "int"}}},
+  "@webdavConflictPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webContentTitle": "网页内容",
+  "fetchingWebContent": "正在获取网页内容：{url}",
+  "@fetchingWebContent": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "webCommandInvalidUrl": "请使用 /web 命令提供有效的 URL",
+  "webCommandInvalidUrlTitle": "无效的 URL",
+  "aiSuggestion": "AI 建议",
+  "autoAttachMetadataUnavailable": "位置/天气未能附加，已直接保存",
   "richTextSaveUnavailable": "保存已停止：富文本内容无法无损处理，请关闭其他应用释放内存后重试。"
 }

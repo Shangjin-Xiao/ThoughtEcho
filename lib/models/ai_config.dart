@@ -11,6 +11,7 @@ abstract class AIConfig {
   double get temperature;
   int get maxTokens;
   bool get isEnabled;
+  bool get isAnthropicMessagesApi;
 
   /// 构建请求头
   Map<String, String> buildHeaders();
@@ -52,13 +53,17 @@ class LegacyAIConfigWrapper implements AIConfig {
   bool get isEnabled => true; // 旧版设置始终启用
 
   @override
+  bool get isAnthropicMessagesApi =>
+      apiUrl.toLowerCase().contains('/v1/messages');
+
+  @override
   Map<String, String> buildHeaders() {
     final headers = <String, String>{'Content-Type': 'application/json'};
 
     // 根据不同的AI服务提供商设置认证头
     if (apiUrl.contains('openai.com') || apiUrl.contains('api.openai.com')) {
       headers['Authorization'] = 'Bearer $apiKey';
-    } else if (apiUrl.contains('anthropic.com')) {
+    } else if (isAnthropicMessagesApi || apiUrl.contains('anthropic.com')) {
       headers['x-api-key'] = apiKey;
       headers['anthropic-version'] = '2023-06-01';
     } else if (apiUrl.contains('openrouter.ai')) {
@@ -105,8 +110,7 @@ class LegacyAIConfigWrapper implements AIConfig {
     }
 
     // Anthropic特殊处理
-    if (apiUrl.contains('anthropic.com')) {
-      adjustedData.remove('model');
+    if (isAnthropicMessagesApi || apiUrl.contains('anthropic.com')) {
       // Anthropic API需要确保stream参数正确
       if (adjustedData.containsKey('stream') &&
           adjustedData['stream'] == true) {

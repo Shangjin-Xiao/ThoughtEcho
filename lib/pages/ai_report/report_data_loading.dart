@@ -31,12 +31,6 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
 
       // 根据选择的时间范围筛选笔记 (内存中再次确认筛选，处理可能存在的跨时区或边界情况)
       final filteredQuotes = _filterQuotesByPeriod(quotes);
-      final filteredFavorites =
-          ReportPeriodUtils.filterFavoritedByActivityPeriod(
-        quotes,
-        selectedPeriod: _selectedPeriod,
-        selectedDate: _selectedDate,
-      );
 
       // 更新数据版本key，触发动画
       final newDataKey =
@@ -45,12 +39,10 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
 
       _updateState(() {
         _periodQuotes = filteredQuotes;
-        _periodFavoriteQuotes = filteredFavorites;
         _isLoadingData = false;
         _dataKey = newDataKey;
         // 只在数据真正变化时才播放动画
         _shouldAnimateOverview = dataChanged;
-        _shouldAnimateCards = dataChanged;
       });
 
       // 计算“最多”指标并触发洞察
@@ -179,7 +171,9 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
       // 如果是筛选分类key，直接使用分类标签
       if (WeatherService.filterCategoryToKeys.containsKey(mostWeather)) {
         weatherDisplay = WeatherService.getLocalizedFilterCategoryLabel(
-            context, mostWeather);
+          context,
+          mostWeather,
+        );
         weatherIcon = WeatherService.getFilterCategoryIcon(mostWeather);
       } else {
         // 否则按原逻辑处理
@@ -268,7 +262,7 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
 
       // 准备完整的笔记内容用于AI分析
       final fullNotesContent = _periodQuotes.map((quote) {
-        final date = DateTime.parse(quote.date);
+        final date = DateTime.tryParse(quote.date) ?? DateTime.now();
         final dateStr = l10n.formattedDate(date.month, date.day);
         var content = quote.content.trim();
 
@@ -377,20 +371,18 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
     }
   }
 
-  /// 根据时间范围筛选笔记
   List<Quote> _filterQuotesByPeriod(List<Quote> quotes) {
-    // 调试日志
-    AppLogger.d(
-      'Filter conditions: period=$_selectedPeriod, selectedDate=$_selectedDate',
-    );
-    AppLogger.d('Total notes: ${quotes.length}');
-
     final filtered = ReportPeriodUtils.filterByCreatedPeriod(
       quotes,
       selectedPeriod: _selectedPeriod,
       selectedDate: _selectedDate,
     );
 
+    // 调试日志
+    AppLogger.d(
+      'Filter conditions: period=$_selectedPeriod, selectedDate=$_selectedDate',
+    );
+    AppLogger.d('Total notes: ${quotes.length}');
     AppLogger.d('Filtered notes count: ${filtered.length}');
     // 打印前5条笔记的日期以便调试
     for (var i = 0; i < filtered.length && i < 5; i++) {
@@ -443,39 +435,5 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
         source: 'AIPeriodicReportPage',
       );
     }
-  }
-
-  /// 选择有代表性的笔记
-  /// [maxCount] 根据周期类型动态调整（周=6，月=12，年=18）
-  List<Quote> _selectRepresentativeQuotes(
-    List<Quote> quotes, {
-    int maxCount = 6,
-  }) {
-    // 按内容长度和多样性选择
-    final sortedQuotes = List<Quote>.from(quotes);
-
-    // 优先选择内容丰富的笔记
-    sortedQuotes.sort((a, b) => b.content.length.compareTo(a.content.length));
-
-    // 选择指定数量的笔记，确保多样性
-    final selected = <Quote>[];
-    final usedKeywords = <String>{};
-
-    for (final quote in sortedQuotes) {
-      if (selected.length >= maxCount) break;
-
-      // 简单的关键词去重逻辑
-      final words = quote.content.toLowerCase().split(' ');
-      final hasNewKeyword = words.any(
-        (word) => word.length > 3 && !usedKeywords.contains(word),
-      );
-
-      if (hasNewKeyword || selected.isEmpty) {
-        selected.add(quote);
-        usedKeywords.addAll(words.where((word) => word.length > 3));
-      }
-    }
-
-    return selected;
   }
 }

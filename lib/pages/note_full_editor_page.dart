@@ -25,7 +25,8 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 import '../utils/app_logger.dart';
 import '../utils/string_utils.dart';
-import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
+import 'ai_assistant_page.dart';
+import '../models/ai_assistant_entry.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, compute;
 
 import '../extensions/note_category_localization_extension.dart';
@@ -93,6 +94,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   String? _location;
   double? _latitude; // 位置纬度
   double? _longitude; // 位置经度
+  String? _poiName;
   String? _weather;
   String? _temperature; // 分离位置和天气控制
   bool _showLocation = false;
@@ -134,9 +136,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   late String? _initialLocation;
   late double? _initialLatitude;
   late double? _initialLongitude;
+  late String? _initialPoiName;
   late String? _initialWeather;
   late String? _initialTemperature;
   late String? _initialAiAnalysis;
+  late String? _initialDeltaContent;
 
   // 完整笔记数据（从数据库重新获取，确保字段完整）
   Quote? _fullInitialQuote;
@@ -205,6 +209,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _location = widget.initialQuote?.location;
     _latitude = widget.initialQuote?.latitude;
     _longitude = widget.initialQuote?.longitude;
+    _poiName = widget.initialQuote?.poiName;
     _weather = widget.initialQuote?.weather;
     _temperature = widget.initialQuote?.temperature;
 
@@ -219,7 +224,6 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _originalLatitude = widget.initialQuote?.latitude;
     _originalLongitude = widget.initialQuote?.longitude;
     _originalWeather = widget.initialQuote?.weather;
-
     // 分别检查并设置位置和天气状态
     // 有地址字符串或有坐标都算有位置
     _showLocation =
@@ -287,9 +291,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _initialLocation = widget.initialQuote?.location;
     _initialLatitude = widget.initialQuote?.latitude;
     _initialLongitude = widget.initialQuote?.longitude;
+    _initialPoiName = widget.initialQuote?.poiName;
     _initialWeather = widget.initialQuote?.weather;
     _initialTemperature = widget.initialQuote?.temperature;
     _initialAiAnalysis = widget.initialQuote?.aiAnalysis;
+    _initialDeltaContent = widget.initialQuote?.deltaContent;
 
     // 性能优化：延迟显示功能引导，避免与编辑器初始化竞争
     WidgetsBinding.instance.addPostFrameCallback((_) {

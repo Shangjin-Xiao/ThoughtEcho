@@ -135,6 +135,8 @@ class _DuplicatePageDatabaseService extends DatabaseService {
     int limit = 20,
     String orderBy = 'date DESC',
     String? searchQuery,
+    String? dateStart,
+    String? dateEnd,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool excludeHiddenNotes = true,

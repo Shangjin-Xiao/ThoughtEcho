@@ -2,6 +2,8 @@ import 'ai_config.dart';
 
 /// AI服务商的具体配置实现
 class AIProviderSettings implements AIConfig {
+  static const Object _copyWithUnset = Object();
+
   @override
   final String id;
   @override
@@ -20,6 +22,40 @@ class AIProviderSettings implements AIConfig {
   @override
   final bool isEnabled;
 
+  /// null: 自动推断；true: 强制开启；false: 强制关闭
+  final bool? enableThinking;
+
+  /// 判断当前模型是否支持思考/推理模式
+  bool get supportsThinking {
+    final m = model.toLowerCase();
+    if (m.startsWith('anthropic/')) {
+      return true;
+    }
+    // Claude 3.5+ 支持 extended thinking
+    if (m.contains('claude-3') &&
+        (m.contains('sonnet') || m.contains('opus'))) {
+      return true;
+    }
+    // DeepSeek Reasoner / R1 系列
+    if (m.contains('deepseek') &&
+        (m.contains('reasoner') || m.contains('r1'))) {
+      return true;
+    }
+    // OpenAI o-series models (supports namespace prefixes like azure/o1, /o3)
+    final isOSeries = RegExp(r'(^|/)(o1|o3|o4)\b').hasMatch(m);
+    if (isOSeries) {
+      return true;
+    }
+    // Qwen QwQ / reasoning 系列
+    if (m.contains('qwq') ||
+        m.contains('qwen3') ||
+        m.contains('qwen') && m.contains('reason')) {
+      return true;
+    }
+    // 兜底：用户手动强制开启时，显示支持思考能力
+    return enableThinking == true;
+  }
+
   const AIProviderSettings({
     required this.id,
     required this.name,
@@ -30,7 +66,82 @@ class AIProviderSettings implements AIConfig {
     this.maxTokens = 32000,
     this.hostOverride,
     this.isEnabled = true,
+    this.enableThinking,
   });
+
+  @override
+  bool get isAnthropicMessagesApi {
+    if (id == 'anthropic') {
+      return true;
+    }
+    return apiUrl.toLowerCase().contains('/v1/messages');
+  }
+
+  bool get isLikelyOpenAICompatible {
+    if (isAnthropicMessagesApi) {
+      return false;
+    }
+    final lowerUrl = apiUrl.toLowerCase();
+    return id == 'openai' ||
+        id == 'openrouter' ||
+        id == 'deepseek' ||
+        id == 'ollama' ||
+        id == 'lmstudio' ||
+        lowerUrl.contains('openai.com') ||
+        lowerUrl.contains('openrouter.ai') ||
+        lowerUrl.contains('deepseek.com');
+  }
+
+  /// 规范化请求 URL，兼容「base URL」与「完整 endpoint」两种输入。
+  ///
+  /// OpenAI 兼容接口若只配置到 `/v1`，会自动补全为 `/v1/chat/completions`。
+  String resolveRequestUrl(String rawUrl) {
+    final trimmed = rawUrl.trim();
+    if (trimmed.isEmpty) {
+      return trimmed;
+    }
+
+    Uri uri;
+    try {
+      uri = Uri.parse(trimmed);
+    } catch (_) {
+      return trimmed;
+    }
+
+    var path = uri.path.trim();
+    if (path == '/') path = '';
+    while (path.length > 1 && path.endsWith('/')) {
+      path = path.substring(0, path.length - 1);
+    }
+
+    // Anthropic
+    if (id == 'anthropic' || uri.host.contains('anthropic.com')) {
+      if (path.isEmpty) {
+        return uri.replace(path: '/v1/messages').toString();
+      } else if (path.endsWith('/v1')) {
+        return uri.replace(path: '$path/messages').toString();
+      } else if (path.endsWith('/messages')) {
+        return uri.replace(path: path).toString();
+      }
+    }
+
+    // OpenAI / Compatible
+    if (isLikelyOpenAICompatible ||
+        id == 'openai' ||
+        id == 'openrouter' ||
+        id == 'deepseek') {
+      if (path.isEmpty) {
+        return uri.replace(path: '/v1/chat/completions').toString();
+      } else if (path.endsWith('/v1')) {
+        return uri.replace(path: '$path/chat/completions').toString();
+      } else if (path.endsWith('/chat/completions')) {
+        return uri.replace(path: path).toString();
+      }
+    }
+
+    return uri.replace(path: path).toString();
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -42,6 +153,7 @@ class AIProviderSettings implements AIConfig {
       'maxTokens': maxTokens,
       'hostOverride': hostOverride,
       'isEnabled': isEnabled,
+      'enableThinking': enableThinking,
     };
   }
 
@@ -59,6 +171,7 @@ class AIProviderSettings implements AIConfig {
           map['maxTokens'] != null ? (map['maxTokens'] as num).toInt() : 1000,
       hostOverride: map['hostOverride'],
       isEnabled: map['isEnabled'] ?? true,
+      enableThinking: map['enableThinking'] as bool?,
     );
   }
 
@@ -72,6 +185,7 @@ class AIProviderSettings implements AIConfig {
     int? maxTokens,
     String? hostOverride,
     bool? isEnabled,
+    Object? enableThinking = _copyWithUnset,
   }) {
     return AIProviderSettings(
       id: id ?? this.id,
@@ -83,6 +197,9 @@ class AIProviderSettings implements AIConfig {
       maxTokens: maxTokens ?? this.maxTokens,
       hostOverride: hostOverride ?? this.hostOverride,
       isEnabled: isEnabled ?? this.isEnabled,
+      enableThinking: identical(enableThinking, _copyWithUnset)
+          ? this.enableThinking
+          : enableThinking as bool?,
     );
   }
 
@@ -168,7 +285,7 @@ class AIProviderSettings implements AIConfig {
         headers['HTTP-Referer'] = 'https://thoughtecho.app';
         headers['X-Title'] = 'ThoughtEcho App';
       }
-    } else if (apiUrl.contains('anthropic.com') || id == 'anthropic') {
+    } else if (isAnthropicMessagesApi || apiUrl.contains('anthropic.com')) {
       headers['x-api-key'] = apiKey;
       headers['anthropic-version'] = '2023-06-01';
     } else if (apiUrl.contains('deepseek.com') || id == 'deepseek') {
@@ -210,9 +327,7 @@ class AIProviderSettings implements AIConfig {
     }
 
     // Anthropic特殊处理
-    if (apiUrl.contains('anthropic.com') || id == 'anthropic') {
-      // Anthropic API不在请求体中包含model，而是在URL中
-      adjustedData.remove('model');
+    if (isAnthropicMessagesApi || apiUrl.contains('anthropic.com')) {
       // Anthropic API需要确保stream参数正确
       if (adjustedData.containsKey('stream') &&
           adjustedData['stream'] == true) {

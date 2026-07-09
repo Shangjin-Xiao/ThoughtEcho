@@ -63,7 +63,10 @@ class ChatMarkdownStyleSheet {
 
       // 文本装饰
       em: TextStyle(color: baseColor, fontStyle: FontStyle.italic),
-      strong: textTheme.titleMedium?.copyWith(color: baseColor),
+      strong: textTheme.bodyLarge?.copyWith(
+        color: baseColor,
+        fontWeight: FontWeight.w600,
+      ),
       del: TextStyle(
         color: baseColor.withValues(alpha: 0.7),
         decoration: TextDecoration.lineThrough,

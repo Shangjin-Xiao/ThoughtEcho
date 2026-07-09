@@ -3490,7 +3490,7 @@
   "first100CharsLabel": "最初の100文字：",
   "trash": "ゴミ箱",
   "trashEmpty": "ゴミ箱は空です",
-  "trashEmptyHint": "削除されたノートはここに表示され、保存期間の後に完全に削除されます。",
+  "trashEmptyHint": "誤って削除した内容はここに一時保存され、画像・音声・動画もまとめて復元できます。",
   "trashRetentionHint": "最近削除したノートと添付ファイルはここに一時保存され、保持期間を過ぎると自動で削除されます。",
   "moveNoteToTrashTitle": "ゴミ箱に移動",
   "moveNoteToTrashConfirmation": "このノートをゴミ箱に移動しますか？{days}日以内なら復元できます。",
@@ -3552,5 +3552,41 @@
   "webdavConflictKeepSuccess": "確認してデフォルトリストに移動しました。",
   "webdavConflictDiscardTooltip": "この競合バックアップを破棄",
   "webdavConflictDiscardSuccess": "この競合メモを完全に破棄しました。",
+  "deleteNoteWithChatsConfirmation": "このノートを削除してもよろしいですか？この操作は取り消せません。\n\n関連付けられている {count} 件のチャット会話も削除されます。",
+  "@deleteNoteWithChatsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatHistory": "チャット履歴",
+  "newChat": "新規チャット",
+  "deleteChat": "チャットを削除",
+  "deleteChatConfirm": "この会話を削除しますか？すべてのメッセージが削除されます。",
+  "noChats": "チャットはまだありません",
+  "mapPickerTitle": "場所を選択",
+  "mapPickerCurrentLocation": "現在地",
+  "mapPickerConfirm": "場所を確認",
+  "longPressForMapPicker": "長押しして詳細な場所を選択",
+  "poiNameLabel": "詳細な場所",
+  "explore": "探索",
+  "exploreMapMemory": "マップの記憶",
+  "exploreMapMemoryDesc": "地図上でノートを閲覧",
+  "aiChat": "AIチャット",
+  "aiAgent": "AIエージェント",
+  "agentThinking": "エージェントが考えています...",
+  "agentToolCall": "ツール呼び出し: {toolName}",
+  "@agentToolCall": {
+    "placeholders": {
+      "toolName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentSearchingNotes": "ノートを検索中...",
+  "agentAnalyzingData": "データを分析中...",
+  "agentWebSearching": "ウェブを検索中...",
+  "favoriteNotes": "お気に入りノート",
   "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again."
 }

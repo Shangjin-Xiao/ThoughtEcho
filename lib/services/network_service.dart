@@ -292,7 +292,8 @@ class NetworkService {
 
     if (provider != null) {
       // 使用新版服务商配置
-      if (provider.apiUrl.contains('anthropic.com')) {
+      if (provider.isAnthropicMessagesApi ||
+          provider.apiUrl.contains('anthropic.com')) {
         headers['anthropic-version'] = '2023-06-01';
         headers['x-api-key'] = provider.apiKey;
       } else if (provider.apiUrl.contains('openrouter.ai')) {
@@ -335,11 +336,6 @@ class NetworkService {
           adjustedData['temperature'] ?? provider.temperature;
       adjustedData['max_tokens'] =
           adjustedData['max_tokens'] ?? provider.maxTokens;
-
-      // Anthropic特殊处理
-      if (provider.apiUrl.contains('anthropic.com')) {
-        adjustedData.remove('model'); // Anthropic不在请求体中包含model
-      }
     } else if (legacySettings != null) {
       adjustedData['model'] = adjustedData['model'] ?? legacySettings.model;
       adjustedData['temperature'] =

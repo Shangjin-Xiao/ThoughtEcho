@@ -90,6 +90,11 @@ class NoteSyncService extends ChangeNotifier {
   }
   bool get skipSyncConfirmation => _settingsService.syncSkipConfirm;
 
+  @visibleForTesting
+  set localSendProviderForTesting(LocalSendProvider provider) {
+    _localSendProvider = provider;
+  }
+
   /// 初始化同步服务
   Future<void> initialize() async {
     // 在打开同步页面时才启动服务器
@@ -132,7 +137,7 @@ class NoteSyncService extends ChangeNotifier {
         throw Exception('LocalSendServer创建失败');
       }
 
-      _localSendProvider = LocalSendProvider();
+      _localSendProvider ??= LocalSendProvider();
       if (_localSendProvider == null) {
         throw Exception('LocalSendProvider创建失败');
       }

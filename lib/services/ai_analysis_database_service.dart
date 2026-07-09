@@ -133,14 +133,26 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
 
   /// 关闭数据库连接
   Future<void> closeDatabase() async {
+    final opening = _initCompleter;
+    if (opening != null) {
+      try {
+        await opening.future;
+      } catch (_) {}
+    }
+
     if (_database != null) {
-      await _database!.close();
+      try {
+        await _database!.execute('PRAGMA wal_checkpoint(FULL);');
+      } catch (e) {
+        logError('AIAnalysisDatabaseService WAL checkpoint failed: $e');
+      }
+      try {
+        await _database!.close();
+      } catch (_) {}
       _database = null;
     }
 
-    if (!_analysesController.isClosed) {
-      await _analysesController.close();
-    }
+    _initCompleter = null;
   }
 
   /// 准备用于保存的分析对象（生成ID和时间戳）

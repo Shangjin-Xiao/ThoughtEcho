@@ -38,5 +38,42 @@
   "webdavConflictKeepSuccess": "Confirmado y movido a la lista predeterminada.",
   "webdavConflictDiscardTooltip": "Descartar esta copia de seguridad de conflicto",
   "webdavConflictDiscardSuccess": "Nota de conflicto descartada permanentemente.",
+  "deleteNoteWithChatsConfirmation": "¿Está seguro de que desea eliminar esta nota? Esta acción no se puede deshacer.\n\nTambién se eliminarán {count} conversaciones de chat asociadas.",
+  "@deleteNoteWithChatsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatHistory": "Historial de chat",
+  "newChat": "Nuevo chat",
+  "deleteChat": "Eliminar chat",
+  "deleteChatConfirm": "¿Eliminar esta conversación? Se borrarán todos los mensajes.",
+  "noChats": "Aún no hay conversaciones",
+  "mapPickerTitle": "Seleccionar ubicación",
+  "mapPickerCurrentLocation": "Ubicación actual",
+  "mapPickerConfirm": "Confirmar selección",
+  "longPressForMapPicker": "Mantenga presionado para una ubicación precisa",
+  "poiNameLabel": "Ubicación precisa",
+  "explore": "Explorar",
+  "exploreMapMemory": "Memorias del mapa",
+  "exploreMapMemoryDesc": "Explore sus notas en un mapa",
+  "aiChat": "Chat de IA",
+  "aiAgent": "Agente de IA",
+  "agentThinking": "El agente está pensando...",
+  "agentToolCall": "Llamando a la herramienta: {toolName}",
+  "@agentToolCall": {
+    "placeholders": {
+      "toolName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentSearchingNotes": "Buscando notas...",
+  "agentAnalyzingData": "Analizando datos...",
+  "agentWebSearching": "Buscando en la web...",
+  "favoriteNotes": "Notas favoritas",
+  "clear": "Limpiar",
   "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again."
 }

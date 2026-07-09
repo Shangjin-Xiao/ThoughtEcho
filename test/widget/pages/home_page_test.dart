@@ -1,28 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:thoughtecho/pages/home_page.dart';
-import 'package:thoughtecho/services/database_service.dart';
-import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/controllers/search_controller.dart';
-import 'package:thoughtecho/services/connectivity_service.dart';
-import 'package:thoughtecho/services/ai_service.dart';
-import 'package:thoughtecho/services/location_service.dart';
-import 'package:thoughtecho/services/weather_service.dart';
-import 'package:thoughtecho/services/excerpt_intent_service.dart';
-import '../../test_setup.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
-import 'package:thoughtecho/widgets/daily_quote_view.dart';
-import 'package:thoughtecho/pages/home/daily_prompt_panel.dart';
-import 'package:thoughtecho/widgets/note_list_view.dart';
-import 'package:thoughtecho/pages/ai_features_page.dart';
 import 'package:thoughtecho/models/app_settings.dart';
+import 'package:thoughtecho/models/local_ai_settings.dart';
 import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/pages/ai_features_page.dart';
+import 'package:thoughtecho/pages/home/daily_prompt_panel.dart';
+import 'package:thoughtecho/pages/home_page.dart';
 import 'package:thoughtecho/pages/settings_page.dart';
+import 'package:thoughtecho/services/ai_service.dart';
 import 'package:thoughtecho/services/clipboard_service.dart';
+import 'package:thoughtecho/services/connectivity_service.dart';
+import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/excerpt_intent_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/insight_history_service.dart';
+import 'package:thoughtecho/services/location_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
+import 'package:thoughtecho/services/weather_service.dart';
+import 'package:thoughtecho/widgets/daily_quote_view.dart';
+import 'package:thoughtecho/widgets/note_list_view.dart';
+
+import '../../test_setup.dart';
 
 class MockDatabaseService extends ChangeNotifier implements DatabaseService {
   @override
@@ -85,6 +87,8 @@ class MockSettingsService extends ChangeNotifier implements SettingsService {
   @override
   bool get sentryDisclosureShown => true;
   @override
+  bool get skipNonFullscreenEditor => false;
+  @override
   bool get reportInsightsUseAI => false;
   @override
   String get offlineQuoteSource => 'all';
@@ -92,6 +96,12 @@ class MockSettingsService extends ChangeNotifier implements SettingsService {
   String get dailyQuoteProvider => 'hitokoto';
   @override
   List<String> get apiNinjasCategories => const [];
+  @override
+  String? get defaultAuthor => null;
+  @override
+  String? get defaultSource => null;
+  @override
+  LocalAISettings get localAISettings => LocalAISettings.defaultSettings();
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -272,11 +282,18 @@ void main() {
       );
     }
 
+    Future<void> pumpHomePage(WidgetTester tester) async {
+      await tester.pumpWidget(createWidgetUnderTest());
+      await tester.pumpAndSettle();
+      // NoteListView 会在首次数据加载后保留 1.5s 滚动保护期。
+      await tester.pump(const Duration(milliseconds: 1500));
+      await tester.pumpAndSettle();
+    }
+
     testWidgets(
         'should render DailyQuoteView and HomeDailyPromptPanel on initial load',
         (WidgetTester tester) async {
-      await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pumpAndSettle();
+      await pumpHomePage(tester);
 
       expect(find.byType(DailyQuoteView), findsOneWidget);
       expect(find.byType(HomeDailyPromptPanel), findsOneWidget);
@@ -287,8 +304,7 @@ void main() {
 
     testWidgets('should navigate to NoteListView when second tab is tapped',
         (WidgetTester tester) async {
-      await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pumpAndSettle();
+      await pumpHomePage(tester);
 
       // Tap the second tab (Notes)
       await tester.tap(find.byIcon(Icons.book_outlined));
@@ -299,8 +315,7 @@ void main() {
 
     testWidgets('should navigate to AIFeaturesPage when third tab is tapped',
         (WidgetTester tester) async {
-      await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pumpAndSettle();
+      await pumpHomePage(tester);
 
       // Tap the third tab (Insights)
       await tester.tap(find.byIcon(Icons.auto_awesome_outlined));
@@ -311,8 +326,7 @@ void main() {
 
     testWidgets('should navigate to SettingsPage when fourth tab is tapped',
         (WidgetTester tester) async {
-      await tester.pumpWidget(createWidgetUnderTest());
-      await tester.pumpAndSettle();
+      await pumpHomePage(tester);
 
       // Tap the fourth tab (Settings)
       await tester.tap(find.byIcon(Icons.settings_outlined));
