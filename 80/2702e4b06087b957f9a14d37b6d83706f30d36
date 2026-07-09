@@ -1,0 +1,27 @@
+android/app/src/main/kotlin/com/shangjin/thoughtecho/MainActivity.kt
+  s_1fa6ca50664ed9::t_acc3ceebba2685 6,9,60-69,125-141
+  s_1fa6ca50664ed9::t_dd19ad93bea140 142
+test/unit/android/file_provider_config_test.dart
+  s_1fa6ca50664ed9::t_acc3ceebba2685 66-88,91-107
+  s_1fa6ca50664ed9::t_b335fe3e875b73 89-90
+android/app/src/main/kotlin/com/shangjin/thoughtecho/ThoughtEchoApplication.kt
+  s_1fa6ca50664ed9::t_acc3ceebba2685 3,12-23,28-29,33-49
+android/app/src/main/AndroidManifest.xml
+  s_1fa6ca50664ed9::t_acc3ceebba2685 9,56-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "802702e4b06087b957f9a14d37b6d83706f30d36",
+  "prompts": {},
+  "sessions": {
+    "s_1fa6ca50664ed9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f44bf-d14b-71b0-b4aa-cefa1981689c",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
