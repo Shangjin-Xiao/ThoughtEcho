@@ -234,13 +234,13 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
     final filtered = _searchQuery.isEmpty
         ? _sessions!
         : _sessions!
-              .where(
-                (s) => _resolveSessionTitle(
-                  s,
-                  l10n,
-                ).toLowerCase().contains(_searchQuery.toLowerCase()),
-              )
-              .toList();
+            .where(
+              (s) => _resolveSessionTitle(
+                s,
+                l10n,
+              ).toLowerCase().contains(_searchQuery.toLowerCase()),
+            )
+            .toList();
     if (filtered.isEmpty) {
       return Center(
         child: Padding(
