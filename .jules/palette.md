@@ -31,3 +31,7 @@
 ## 2026-06-26 - Missing Tooltips on Icon-Only Buttons
 **Learning:** Found multiple instances where icon-only `IconButton`s lacked the `tooltip` property, causing accessibility issues for screen readers and missing hover text for desktop users. Examples included the password visibility toggle in `webdav_sync_page.dart` and `_CircleIconButton` wrapper in `motion_photo_preview_page.dart`.
 **Action:** Always verify `tooltip` property presence on `IconButton` usage, especially in custom widget wrappers (`_CircleIconButton`) or inline suffixes (`suffixIcon`). Use standard `MaterialLocalizations` where applicable (e.g., `closeButtonTooltip`).
+## 2024-07-10 - 补充无文字图标按钮的 Tooltip
+
+**Learning:** 图标按钮如果没有 `tooltip`，在使用读屏软件或仅靠悬浮提示的用户群体中会造成非常严重的可用性障碍（例如用户完全不知道 "+" 是指附加文件，还是新建内容）。在多媒体控件、AI 助手输入框周边等功能密集的区域，这类问题尤其常见。
+**Action:** 在使用 `IconButton` 时，除非在紧邻位置已经有非常明确的文字说明，否则必须强制添加 `tooltip` 属性。

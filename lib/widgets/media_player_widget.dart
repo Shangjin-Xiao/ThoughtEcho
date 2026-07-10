@@ -435,8 +435,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
             color: Theme.of(context).colorScheme.surfaceContainer,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color:
-                  Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+              color: Theme.of(
+                context,
+              ).colorScheme.outline.withValues(alpha: 0.2),
             ),
           ),
           child: Center(
@@ -589,10 +590,10 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                     Text(
                       _formatDuration(_duration),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
                     ),
                   ],
                 ),
@@ -600,6 +601,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
 
               // 更多选项
               PopupMenuButton<String>(
+                tooltip: l10n.moreOptions,
                 icon: Icon(
                   Icons.more_vert,
                   color: Theme.of(
@@ -671,9 +673,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                   child: Slider(
                     value: _position.inMilliseconds.toDouble(),
                     max: _duration.inMilliseconds.toDouble().clamp(
-                          1.0,
-                          double.infinity,
-                        ),
+                      1.0,
+                      double.infinity,
+                    ),
                     onChanged: _onAudioSeek,
                     activeColor: Theme.of(context).colorScheme.primary,
                     inactiveColor: Theme.of(

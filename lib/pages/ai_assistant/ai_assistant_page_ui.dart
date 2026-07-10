@@ -38,9 +38,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to pick files: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to pick files: $e')));
     }
   }
 
@@ -57,9 +57,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _hasBoundNote ? l10n.askNoteTitle : l10n.aiAssistantLabel,
-        ),
+        title: Text(_hasBoundNote ? l10n.askNoteTitle : l10n.aiAssistantLabel),
         centerTitle: true,
         actions: [
           IconButton(
@@ -164,8 +162,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           case 'smart_result':
             final action = meta['action']?.toString();
             final isNewNoteProposal = action == 'create';
-            final initialNewNoteMetadata =
-                isNewNoteProposal ? _resolveInitialNewNoteMetadata(meta) : null;
+            final initialNewNoteMetadata = isNewNoteProposal
+                ? _resolveInitialNewNoteMetadata(meta)
+                : null;
             final rawTagNames = meta['tag_names'] as List<dynamic>? ?? const [];
             final tagNames = rawTagNames
                 .map((item) => item.toString().trim())
@@ -175,8 +174,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
             final weatherService = context.read<WeatherService>();
             final locationPreview =
                 locationService.getDisplayLocation().isNotEmpty
-                    ? locationService.getDisplayLocation()
-                    : null;
+                ? locationService.getDisplayLocation()
+                : null;
             final weatherKey = weatherService.currentWeather;
             final weatherPreview = weatherKey != null
                 ? '${WeatherCodeMapper.getLocalizedDescription(l10n, weatherKey)}${weatherService.temperature != null ? ' ${weatherService.temperature}' : ''}'
@@ -200,15 +199,17 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 initialSavedNoteId: meta['saved_note_id']?.toString(),
                 onOpenDraftInEditor: (draft) async {
                   try {
-                    final updatedMeta =
-                        await _buildSmartResultMetaFromDraft(meta, draft);
+                    final updatedMeta = await _buildSmartResultMetaFromDraft(
+                      meta,
+                      draft,
+                    );
                     if (isNewNoteProposal) {
                       final confirmedMetadata =
                           _resolveConfirmedNewNoteMetadata(
-                        updatedMeta,
-                        includeLocation: draft.includeLocation,
-                        includeWeather: draft.includeWeather,
-                      );
+                            updatedMeta,
+                            includeLocation: draft.includeLocation,
+                            includeWeather: draft.includeWeather,
+                          );
                       await _openSmartResultAsNewNote(
                         draft.content,
                         tagIds: confirmedMetadata.tagIds,
@@ -234,17 +235,17 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                       final l10n = AppLocalizations.of(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(
-                            l10n.openFullEditorFailedSimple,
-                          ),
+                          content: Text(l10n.openFullEditorFailedSimple),
                         ),
                       );
                     }
                   }
                 },
                 onSaveDraftDirectly: (draft) async {
-                  final updatedMeta =
-                      await _buildSmartResultMetaFromDraft(meta, draft);
+                  final updatedMeta = await _buildSmartResultMetaFromDraft(
+                    meta,
+                    draft,
+                  );
                   if (isNewNoteProposal) {
                     final confirmedMetadata = _resolveConfirmedNewNoteMetadata(
                       updatedMeta,
@@ -345,10 +346,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               );
             }).toList();
             return Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: 6,
-                horizontal: 12,
-              ),
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -394,8 +392,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     final agentBubbleColor = theme.colorScheme.surfaceContainerHigh;
     final bubbleColor = isUser ? userBubbleColor : agentBubbleColor;
 
-    final bubbleTextColor =
-        isUser ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface;
+    final bubbleTextColor = isUser
+        ? theme.colorScheme.onPrimary
+        : theme.colorScheme.onSurface;
 
     final bubbleRadius = const Radius.circular(24);
     final borderRadius = BorderRadius.only(
@@ -408,16 +407,18 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
       child: Column(
-        crossAxisAlignment:
-            isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: isUser
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           // Sender Label with Timestamp
           Padding(
             padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
             child: Row(
               mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment:
-                  isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+              mainAxisAlignment: isUser
+                  ? MainAxisAlignment.end
+                  : MainAxisAlignment.start,
               children: [
                 Text(
                   isUser ? l10n.meUser : l10n.aiAssistantUser,
@@ -429,7 +430,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 const SizedBox(width: 8),
                 Text(
                   TimeUtils.formatRelativeDateTimeLocalized(
-                      context, message.timestamp),
+                    context,
+                    message.timestamp,
+                  ),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -560,30 +563,31 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               duration: const Duration(milliseconds: 180),
               child:
                   _showSlashCommands && filteredWorkflowDescriptors.isNotEmpty
-                      ? Padding(
-                          key: const ValueKey('slash_commands_visible'),
-                          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children:
-                                  filteredWorkflowDescriptors.map((descriptor) {
-                                return ActionChip(
-                                  label: Text(descriptor.command),
-                                  onPressed: () {
-                                    _textController.clear();
-                                    _handleSubmitted(descriptor.command);
-                                  },
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        )
-                      : const SizedBox.shrink(
-                          key: ValueKey('slash_commands_hidden'),
+                  ? Padding(
+                      key: const ValueKey('slash_commands_visible'),
+                      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: filteredWorkflowDescriptors.map((
+                            descriptor,
+                          ) {
+                            return ActionChip(
+                              label: Text(descriptor.command),
+                              onPressed: () {
+                                _textController.clear();
+                                _handleSubmitted(descriptor.command);
+                              },
+                            );
+                          }).toList(),
                         ),
+                      ),
+                    )
+                  : const SizedBox.shrink(
+                      key: ValueKey('slash_commands_hidden'),
+                    ),
             ),
             // Selected media files
             if (_selectedMediaFiles.isNotEmpty)
@@ -596,8 +600,13 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     itemCount: _selectedMediaFiles.length,
                     itemBuilder: (context, index) {
                       final file = _selectedMediaFiles[index];
-                      final isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif']
-                          .contains(file.extension?.toLowerCase());
+                      final isImage = [
+                        'jpg',
+                        'jpeg',
+                        'png',
+                        'webp',
+                        'gif',
+                      ].contains(file.extension?.toLowerCase());
 
                       return Padding(
                         padding: const EdgeInsets.only(right: 12),
@@ -624,7 +633,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                                         errorBuilder: (_, __, ___) => Icon(
                                           Icons.image_not_supported_outlined,
                                           color: theme
-                                              .colorScheme.onSurfaceVariant,
+                                              .colorScheme
+                                              .onSurfaceVariant,
                                         ),
                                       ),
                                     )
@@ -689,6 +699,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                   // Add media
                   IconButton(
                     icon: const Icon(Icons.add, size: 20),
+                    tooltip: l10n.attachFile,
                     onPressed: _isLoading ? null : _pickAndAttachMedia,
                     style: IconButton.styleFrom(
                       padding: const EdgeInsets.all(8),
@@ -707,12 +718,11 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                             ? theme.colorScheme.secondary
                             : theme.colorScheme.onSurfaceVariant,
                       ),
+                      tooltip: l10n.aiThinking,
                       onPressed: _isLoading
                           ? null
                           : () {
-                              unawaited(
-                                _setThinkingEnabled(!_enableThinking),
-                              );
+                              unawaited(_setThinkingEnabled(!_enableThinking));
                             },
                       style: IconButton.styleFrom(
                         padding: const EdgeInsets.all(8),
@@ -726,6 +736,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                       _isLoading ? Icons.stop : Icons.arrow_upward,
                       size: 20,
                     ),
+                    tooltip: _isLoading ? l10n.stopGenerate : l10n.send,
                     onPressed: _isLoading
                         ? _stopGenerating
                         : () {
@@ -757,9 +768,11 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     Map<String, dynamic> meta,
     String content,
   ) async {
-    final modeAction =
-        meta['action']?.toString() == 'append' ? 'append' : 'replace';
-    final noteId = meta['note_id']?.toString() ??
+    final modeAction = meta['action']?.toString() == 'append'
+        ? 'append'
+        : 'replace';
+    final noteId =
+        meta['note_id']?.toString() ??
         (_hasBoundNote ? widget.quote!.id : null);
 
     if (noteId != null && noteId.isNotEmpty) {
@@ -771,8 +784,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       }
       if (note != null) {
         // 根据润色(replace) / 续写(append) 决定带入编辑器的初始文本
-        final mergedContent =
-            modeAction == 'append' ? '${note.content}\n$content' : content;
+        final mergedContent = modeAction == 'append'
+            ? '${note.content}\n$content'
+            : content;
 
         // 合并 Agent 建议的元数据（标签、作者、出处）
         final rawSuggestedTagIds = meta['tag_ids'] as List<dynamic>?;
@@ -855,9 +869,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     updatedMeta['tag_names'] = draft.tagNames;
     updatedMeta['tag_ids'] =
         _sameStringList(previousTagNames, draft.tagNames) &&
-                previousTagIds.isNotEmpty
-            ? previousTagIds
-            : await _resolveDraftTagIds(draft.tagNames);
+            previousTagIds.isNotEmpty
+        ? previousTagIds
+        : await _resolveDraftTagIds(draft.tagNames);
     updatedMeta['include_location'] = draft.includeLocation;
     updatedMeta['include_weather'] = draft.includeWeather;
     return updatedMeta;
@@ -1071,8 +1085,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       sourceWork: source,
       location: includeLocation
           ? (formattedLocation.isNotEmpty
-              ? formattedLocation
-              : (position != null ? LocationService.kAddressPending : null))
+                ? formattedLocation
+                : (position != null ? LocationService.kAddressPending : null))
           : null,
       // 修复：只有勾选位置时才保存坐标，避免仅勾选天气时显示坐标
       latitude: includeLocation ? position?.latitude : null,
@@ -1101,9 +1115,11 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     String content,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final modeAction =
-        meta['action']?.toString() == 'append' ? 'append' : 'replace';
-    final noteId = meta['note_id']?.toString() ??
+    final modeAction = meta['action']?.toString() == 'append'
+        ? 'append'
+        : 'replace';
+    final noteId =
+        meta['note_id']?.toString() ??
         (_hasBoundNote ? widget.quote!.id : null);
 
     if (noteId != null && noteId.isNotEmpty) {
@@ -1154,9 +1170,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         await db.updateQuote(updatedNote);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.saveSuccess)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.saveSuccess)));
         }
         return noteId;
       } catch (e, stack) {
@@ -1231,10 +1247,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         final pos = locationService.currentPosition;
         if (pos != null) {
           try {
-            await weatherService.getWeatherData(
-              pos.latitude,
-              pos.longitude,
-            );
+            await weatherService.getWeatherData(pos.latitude, pos.longitude);
           } catch (e) {
             logDebug('AI 直接保存获取天气失败: $e');
             includeWeather = false;
@@ -1271,8 +1284,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       }
       final storedLocation = includeLocation
           ? (formattedLocation.isNotEmpty
-              ? formattedLocation
-              : (position != null ? LocationService.kAddressPending : null))
+                ? formattedLocation
+                : (position != null ? LocationService.kAddressPending : null))
           : null;
 
       final noteId = _uuid.v4();
@@ -1295,9 +1308,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       await db.addQuote(quote);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.saveSuccess)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.saveSuccess)));
       }
       return noteId;
     } catch (e, stack) {
@@ -1308,9 +1321,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         source: 'AIAssistantPage',
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.saveFailed(e.toString()))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.saveFailed(e.toString()))));
       }
       rethrow;
     }

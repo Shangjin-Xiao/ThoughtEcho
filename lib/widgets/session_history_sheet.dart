@@ -57,27 +57,31 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
       if (widget.noteId.isEmpty) {
         sessions = await widget.chatSessionService.getAllSessions();
       } else {
-        sessions =
-            await widget.chatSessionService.getSessionsForNote(widget.noteId);
+        sessions = await widget.chatSessionService.getSessionsForNote(
+          widget.noteId,
+        );
       }
 
       // Load message counts for each session
       final Map<String, int> counts = {};
       for (final session in sessions) {
         try {
-          counts[session.id] =
-              await widget.chatSessionService.getMessageCount(session.id);
+          counts[session.id] = await widget.chatSessionService.getMessageCount(
+            session.id,
+          );
         } catch (e) {
-          AppLogger.w('Failed to load message count for ${session.id}',
-              error: e);
+          AppLogger.w(
+            'Failed to load message count for ${session.id}',
+            error: e,
+          );
           counts[session.id] = 0;
         }
       }
       final visibleSessions = sessions
-          .where((session) => !_isEmptyUntitledSession(
-                session,
-                counts[session.id] ?? 0,
-              ))
+          .where(
+            (session) =>
+                !_isEmptyUntitledSession(session, counts[session.id] ?? 0),
+          )
           .toList();
 
       if (mounted) {
@@ -101,7 +105,9 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
 
   /// 按日期分组sessions
   Map<String, List<ChatSession>> _groupSessionsByDate(
-      List<ChatSession> sessions, AppLocalizations l10n) {
+    List<ChatSession> sessions,
+    AppLocalizations l10n,
+  ) {
     final groups = <String, List<ChatSession>>{};
     final now = DateTime.now();
 
@@ -137,15 +143,17 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
-            child: Row(children: [
-              Text(l10n.chatHistory, style: theme.textTheme.titleMedium),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: widget.onNewChat,
-                icon: const Icon(Icons.add, size: 18),
-                label: Text(l10n.newChat),
-              ),
-            ]),
+            child: Row(
+              children: [
+                Text(l10n.chatHistory, style: theme.textTheme.titleMedium),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: widget.onNewChat,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: Text(l10n.newChat),
+                ),
+              ],
+            ),
           ),
           const Divider(height: 1),
           Padding(
@@ -166,6 +174,7 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear, size: 18),
+                        tooltip: l10n.clear,
                         onPressed: () {
                           _searchController.clear();
                           setState(() => _searchQuery = '');
@@ -187,15 +196,20 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.chat_bubble_outline,
-                      size: 48,
-                      color: theme.colorScheme.onSurfaceVariant
-                          .withValues(alpha: 0.5)),
+                  Icon(
+                    Icons.chat_bubble_outline,
+                    size: 48,
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.5,
+                    ),
+                  ),
                   const SizedBox(height: 12),
-                  Text(l10n.noChats,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      )),
+                  Text(
+                    l10n.noChats,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ],
               ),
             )
@@ -220,10 +234,13 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
     final filtered = _searchQuery.isEmpty
         ? _sessions!
         : _sessions!
-            .where((s) => _resolveSessionTitle(s, l10n)
-                .toLowerCase()
-                .contains(_searchQuery.toLowerCase()))
-            .toList();
+              .where(
+                (s) => _resolveSessionTitle(
+                  s,
+                  l10n,
+                ).toLowerCase().contains(_searchQuery.toLowerCase()),
+              )
+              .toList();
     if (filtered.isEmpty) {
       return Center(
         child: Padding(
@@ -273,12 +290,7 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
             ),
             // Sessions in this group
             ...sessions.map((session) {
-              return _buildSessionCard(
-                context,
-                session,
-                theme,
-                l10n,
-              );
+              return _buildSessionCard(context, session, theme, l10n);
             }),
           ],
         );
@@ -339,8 +351,10 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
               onTap: isCurrent ? null : () => widget.onSelect(session.id),
               borderRadius: BorderRadius.circular(12),
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -368,8 +382,9 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary
-                                .withValues(alpha: 0.2),
+                            color: theme.colorScheme.primary.withValues(
+                              alpha: 0.2,
+                            ),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
