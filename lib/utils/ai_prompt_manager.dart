@@ -900,6 +900,8 @@ $contentSection
   }) {
     // 根据语言选择不同的模板
     final isEnglish = languageCode != null && languageCode.startsWith('en');
+    final cleanPeriodLabel =
+        isEnglish ? _cleanEnglishPeriodLabel(periodLabel) : periodLabel;
 
     final time = mostTimePeriod != null && mostTimePeriod.isNotEmpty
         ? _translateTimePeriod(mostTimePeriod, toEnglish: isEnglish)
@@ -928,7 +930,7 @@ $contentSection
       switch (styleIndex) {
         case 0:
           return _generateWarmCompanionInsightEn(
-            periodLabel,
+            cleanPeriodLabel,
             time,
             weather,
             tag,
@@ -939,7 +941,7 @@ $contentSection
           );
         case 1:
           return _generatePoeticInsightEn(
-            periodLabel,
+            cleanPeriodLabel,
             time,
             weather,
             tag,
@@ -950,7 +952,7 @@ $contentSection
           );
         case 2:
           return _generateGrowthMentorInsightEn(
-            periodLabel,
+            cleanPeriodLabel,
             time,
             weather,
             tag,
@@ -961,7 +963,7 @@ $contentSection
           );
         default:
           return _generateWarmCompanionInsightEn(
-            periodLabel,
+            cleanPeriodLabel,
             time,
             weather,
             tag,
@@ -1251,5 +1253,27 @@ $contentSection
       }
       return input;
     }
+  }
+
+  @visibleForTesting
+  String cleanEnglishPeriodLabel(String periodLabel) =>
+      _cleanEnglishPeriodLabel(periodLabel);
+
+  /// 清洗英文的周期标签，避免出现 "This This Week" 等语法语病
+  String _cleanEnglishPeriodLabel(String periodLabel) {
+    final trimmed = periodLabel.trim();
+    final lower = trimmed.toLowerCase();
+
+    // 如果是年度报告
+    if (lower.contains('annual report')) {
+      return 'year';
+    }
+
+    // 如果以 "this " 开头，去掉 "this "，并把首字母小写
+    if (lower.startsWith('this ')) {
+      return trimmed.substring(5).trim().toLowerCase();
+    }
+
+    return trimmed;
   }
 }

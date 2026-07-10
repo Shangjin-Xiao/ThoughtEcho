@@ -326,7 +326,7 @@ void main() {
         expect(output1, equals(output2));
         expect(output1, isNotEmpty);
         // Verify English content
-        expect(output1, contains('This Week'));
+        expect(output1, contains('week'));
         // Depending on template selected by seed 2, check for English words
         // seed 2 -> rng.nextInt(3)
         // We can just check it doesn't contain Chinese characters commonly used in templates
@@ -404,6 +404,14 @@ void main() {
           );
           expect(outputEn, contains('evening'));
           expect(outputEn, contains('clear'));
+        });
+
+        test('cleanEnglishPeriodLabel cleans period labels correctly', () {
+          expect(manager.cleanEnglishPeriodLabel('This Week'), 'week');
+          expect(manager.cleanEnglishPeriodLabel('this Month'), 'month');
+          expect(manager.cleanEnglishPeriodLabel('2026 Annual Report'), 'year');
+          expect(manager.cleanEnglishPeriodLabel('2026-07-01 to 2026-07-07'),
+              '2026-07-01 to 2026-07-07');
         });
       });
     });
