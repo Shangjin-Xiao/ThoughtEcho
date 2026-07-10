@@ -1,0 +1,41 @@
+lib/utils/AGENTS.md
+  s_2659473513d370::t_870888ee9bb859 1,3-4,8-9,11-15,17,19-28,30-31
+lib/services/database/AGENTS.md
+  s_2659473513d370::t_870888ee9bb859 1,3-5,7-22
+lib/controllers/AGENTS.md
+  s_2659473513d370::t_870888ee9bb859 1,3,5-20,23-25,28-29
+lib/models/AGENTS.md
+  s_2659473513d370::t_870888ee9bb859 1,3-5,7,9-25
+lib/pages/AGENTS.md
+  s_2659473513d370::t_870888ee9bb859 1,3-4,6-9,11,13-31
+lib/constants/AGENTS.md
+  s_2659473513d370::t_870888ee9bb859 1,3-4,6,8-16,18-19
+lib/pages/note_editor/AGENTS.md
+  s_2659473513d370::t_870888ee9bb859 1,3-4,9-19,21,23-36
+AGENTS.md
+  s_2659473513d370::t_870888ee9bb859 1,3,5-19,23,26-45,48-50,61-65,70-71,73-74,76-77,79,82,85,90-91,93,95-99,101-103,105,107-116,122-178,181-228,232-235,237-238,240,242-248
+lib/widgets/AGENTS.md
+  s_2659473513d370::t_870888ee9bb859 1,3-4,6,8-21
+lib/services/localsend/AGENTS.md
+  s_2659473513d370::t_870888ee9bb859 1,3-4,6-27
+test/AGENTS.md
+  s_2659473513d370::t_870888ee9bb859 1,3-4,7,9-22,24-45
+lib/services/AGENTS.md
+  s_2659473513d370::t_870888ee9bb859 1,3-4,9-17,19-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.11",
+  "base_commit_sha": "44636ff497b7134215e6189e1cbd1e57871886e0",
+  "prompts": {},
+  "sessions": {
+    "s_2659473513d370": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4afe-e085-7df3-96b0-0dec003c1261",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
