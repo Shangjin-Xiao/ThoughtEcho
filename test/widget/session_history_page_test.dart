@@ -221,4 +221,53 @@ void main() {
     expect(find.textContaining('海边露营和天气'), findsOneWidget);
     expect(find.text('周末计划'), findsOneWidget);
   });
+
+  testWidgets(
+      'applies highlight styles to matching search text in snippet and title',
+      (tester) async {
+    final now = DateTime(2026, 4, 18, 12);
+    final matchedSession = _session(
+      id: 'highlight-match',
+      title: '学习Flutter',
+      lastActiveAt: now,
+    );
+    final service = _FakeChatSessionService(
+      sessions: [matchedSession],
+      messageCounts: const {'highlight-match': 1},
+      searchResults: [
+        ChatSessionSearchResult(
+          session: matchedSession,
+          snippet: 'Flutter是Google的UI框架',
+          isTruncated: false,
+          matchStart: 0,
+          matchEnd: 7,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        SessionHistoryPage(
+          noteId: '',
+          currentSessionId: null,
+          chatSessionService: service,
+          onSelect: (_) {},
+          onDelete: (_) {},
+          onNewChat: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'Flutter');
+    await tester.pumpAndSettle();
+
+    // Verify both title and snippet are found
+    expect(find.textContaining('学习Flutter'), findsOneWidget);
+    expect(find.textContaining('Flutter是Google的UI框架'), findsOneWidget);
+
+    // Verify that RichText widgets exist for the highlights
+    final richTexts = tester.widgetList<RichText>(find.byType(RichText));
+    expect(richTexts.length, greaterThanOrEqualTo(2));
+  });
 }

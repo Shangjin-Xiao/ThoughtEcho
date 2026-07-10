@@ -179,11 +179,15 @@ extension _SessionHistoryPageContent on _SessionHistoryPageState {
                           const SizedBox(width: 4),
                         ],
                         Expanded(
-                          child: Text(
-                            title,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                          child: _buildHighlightedText(
+                            text: title,
+                            query: _searchQuery,
+                            baseStyle: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ) ??
+                                const TextStyle(fontWeight: FontWeight.w600),
+                            theme: theme,
+                            useBackground: false,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -211,11 +215,17 @@ extension _SessionHistoryPageContent on _SessionHistoryPageState {
                     ),
                     if (snippet.isNotEmpty) ...[
                       const SizedBox(height: 6),
-                      Text(
-                        snippet,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
+                      _buildHighlightedText(
+                        text: snippet,
+                        query: _searchQuery,
+                        baseStyle: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ) ??
+                            TextStyle(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                        theme: theme,
+                        useBackground: true,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -234,6 +244,72 @@ extension _SessionHistoryPageContent on _SessionHistoryPageState {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildHighlightedText({
+    required String text,
+    required String query,
+    required TextStyle baseStyle,
+    required ThemeData theme,
+    required bool useBackground,
+    int maxLines = 1,
+    TextOverflow overflow = TextOverflow.ellipsis,
+  }) {
+    if (query.isEmpty) {
+      return Text(
+        text,
+        style: baseStyle,
+        maxLines: maxLines,
+        overflow: overflow,
+      );
+    }
+
+    final List<InlineSpan> spans = [];
+    final lowerText = text.toLowerCase();
+    final lowerQuery = query.toLowerCase();
+
+    int start = 0;
+    int indexOfQuery = lowerText.indexOf(lowerQuery, start);
+
+    final highlightStyle = useBackground
+        ? baseStyle.copyWith(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.bold,
+            backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.15),
+          )
+        : baseStyle.copyWith(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.bold,
+          );
+
+    while (indexOfQuery != -1) {
+      if (indexOfQuery > start) {
+        spans.add(TextSpan(
+          text: text.substring(start, indexOfQuery),
+        ));
+      }
+      spans.add(TextSpan(
+        text: text.substring(indexOfQuery, indexOfQuery + query.length),
+        style: highlightStyle,
+      ));
+      start = indexOfQuery + query.length;
+      indexOfQuery = lowerText.indexOf(lowerQuery, start);
+    }
+
+    if (start < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(start),
+      ));
+    }
+
+    return Text.rich(
+      TextSpan(
+        style: baseStyle,
+        children: spans,
+      ),
+      maxLines: maxLines,
+      overflow: overflow,
     );
   }
 
