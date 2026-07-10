@@ -15,6 +15,114 @@ class DeltaBuilder {
     ];
   }
 
+  /// 将受控 Markdown 子集转换成程序可校验的 Quill Delta。
+  /// 模型不直接生成 Delta，未知语法按普通文本保留。
+  static List<Map<String, dynamic>> markdownToDelta(String markdown) {
+    if (markdown.isEmpty) return [];
+    final ops = <Map<String, dynamic>>[];
+    var inCodeBlock = false;
+    for (final line in markdown.replaceAll('\r\n', '\n').split('\n')) {
+      if (line.trimLeft().startsWith('```')) {
+        inCodeBlock = !inCodeBlock;
+        continue;
+      }
+      final heading = RegExp(r'^(#{1,6})\s+(.+)$').firstMatch(line);
+      final bullet = RegExp(r'^\s*[-*+]\s+(.+)$').firstMatch(line);
+      final ordered = RegExp(r'^\s*\d+[.)]\s+(.+)$').firstMatch(line);
+      final quote = RegExp(r'^\s*>\s?(.*)$').firstMatch(line);
+      final body = heading?.group(2) ??
+          bullet?.group(1) ??
+          ordered?.group(1) ??
+          quote?.group(1) ??
+          line;
+      _appendInlineMarkdown(ops, body);
+      final attributes = <String, dynamic>{
+        if (inCodeBlock) 'code-block': true,
+        if (heading != null) 'header': heading.group(1)!.length,
+        if (bullet != null) 'list': 'bullet',
+        if (ordered != null) 'list': 'ordered',
+        if (quote != null) 'blockquote': true,
+      };
+      ops.add({
+        'insert': '\n',
+        if (attributes.isNotEmpty) 'attributes': attributes,
+      });
+    }
+    return ops;
+  }
+
+  static void _appendInlineMarkdown(
+    List<Map<String, dynamic>> ops,
+    String text,
+  ) {
+    final pattern = RegExp(
+      r'(\*\*|__)(.+?)\1|\*([^*\n]+)\*|`([^`\n]+)`|~~(.+?)~~|\[([^\]]+)\]\(([^)]+)\)',
+    );
+    var cursor = 0;
+    for (final match in pattern.allMatches(text)) {
+      if (match.start > cursor) {
+        ops.add({'insert': text.substring(cursor, match.start)});
+      }
+      final attributes = <String, dynamic>{};
+      late final String value;
+      if (match.group(2) != null) {
+        value = match.group(2)!;
+        attributes['bold'] = true;
+      } else if (match.group(3) != null) {
+        value = match.group(3)!;
+        attributes['italic'] = true;
+      } else if (match.group(4) != null) {
+        value = match.group(4)!;
+        attributes['code'] = true;
+      } else if (match.group(5) != null) {
+        value = match.group(5)!;
+        attributes['strike'] = true;
+      } else {
+        value = match.group(6)!;
+        attributes['link'] = match.group(7)!;
+      }
+      ops.add({'insert': value, 'attributes': attributes});
+      cursor = match.end;
+    }
+    if (cursor < text.length) ops.add({'insert': text.substring(cursor)});
+  }
+
+  static String markdownToPlainText(String markdown) =>
+      markdownToDelta(markdown)
+          .map((op) => op['insert'])
+          .whereType<String>()
+          .join()
+          .replaceFirst(RegExp(r'\n$'), '');
+
+  static bool hasMarkdownFormatting(String markdown) => RegExp(
+        r'(^|\n)\s*(#{1,6}\s|[-*+]\s|\d+[.)]\s|>\s|```)|\*\*|__|~~|`[^`]+`|\[[^\]]+\]\([^)]+\)',
+      ).hasMatch(markdown);
+
+  static List<Map<String, dynamic>> appendMarkdownToDelta({
+    required String? originalDeltaJson,
+    required String markdown,
+  }) =>
+      [
+        ...?deltaFromJson(originalDeltaJson),
+        ...markdownToDelta(markdown),
+      ];
+
+  static List<Map<String, dynamic>> replaceMarkdownInDelta({
+    required String? originalDeltaJson,
+    required String markdown,
+  }) {
+    final ops = markdownToDelta(markdown);
+    final embeds = deltaFromJson(originalDeltaJson)
+            ?.where((op) => op['insert'] is Map)
+            .map((op) => Map<String, dynamic>.from(op))
+            .toList() ??
+        const <Map<String, dynamic>>[];
+    if (embeds.isNotEmpty) {
+      ops.insertAll(ops.isEmpty ? 0 : ops.length - 1, embeds);
+    }
+    return ops;
+  }
+
   /// 在现有Delta基础上append新的纯文本
   /// 用于append模式：新文本总是在末尾，且保持所有原始ops的顺序
   static List<Map<String, dynamic>> appendTextToDelta({

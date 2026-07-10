@@ -11,6 +11,31 @@ void main() {
       expect(ops[1]['insert'], '\n');
     });
 
+    test('markdownToDelta builds rich text operations', () {
+      final ops = DeltaBuilder.markdownToDelta(
+        '# 标题\n这是 **重点**。\n- 第一项',
+      );
+      expect(
+        ops,
+        containsAll(<Map<String, dynamic>>[
+          {'insert': '标题'},
+          {
+            'insert': '\n',
+            'attributes': {'header': 1},
+          },
+          {
+            'insert': '重点',
+            'attributes': {'bold': true},
+          },
+          {
+            'insert': '\n',
+            'attributes': {'list': 'bullet'},
+          },
+        ]),
+      );
+      expect(DeltaBuilder.markdownToPlainText('# 标题\n**重点**'), '标题\n重点');
+    });
+
     test('appendTextToDelta appends new text preserving original ops order',
         () {
       final originalOps = [

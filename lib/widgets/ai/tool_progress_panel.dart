@@ -160,6 +160,10 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
 
   String _getDisplayTitle(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    if (widget.items.isEmpty &&
+        widget.thinkingText?.trim().isNotEmpty == true) {
+      return widget.inProgress ? l10n.thinking : l10n.showThinking;
+    }
     if (widget.inProgress) {
       final runningItem = widget.items.lastWhere(
         (item) => item.status == ToolProgressStatus.running,

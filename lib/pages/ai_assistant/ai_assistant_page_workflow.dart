@@ -7,6 +7,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
     final l10n = AppLocalizations.of(context);
 
     _textController.clear();
+    _setAutoScrollEnabled(true);
 
     final userMsg = app_chat.ChatMessage(
       id: _uuid.v4(),
@@ -22,8 +23,13 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
     });
     _scrollToBottom();
 
-    await _ensureSessionCreated(trimmed);
-    await _chatSessionService.addMessage(_currentSessionId!, userMsg);
+    await _ensureSessionCreated();
+    final sessionId = _currentSessionId!;
+    final shouldGenerateTitle = !(await _sessionHasUserMessages(sessionId));
+    await _chatSessionService.addMessage(sessionId, userMsg);
+    if (shouldGenerateTitle) {
+      _generateAITitle(sessionId, trimmed);
+    }
 
     final descriptor = _matchWorkflowCommand(trimmed, l10n);
     if (descriptor != null) {

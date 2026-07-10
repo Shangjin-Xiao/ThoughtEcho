@@ -22,17 +22,42 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     String? toolProgressMsgId;
     final toolItems = <ToolProgressItem>[];
     String? streamingMsgId;
-    var streamingText = '';
     String? toolThinkingText;
-    // 工具组是否仍处于"采集叙述"状态：从首个 AgentToolCallStartEvent 起为 true，
-    // 直到 AgentResponseEvent / AgentErrorEvent / 流程结束，期间所有
-    // AgentTextDeltaEvent 都并入 tool_progress 卡片，按时间顺序穿插在工具调用之间，
-    // 而非另起独立聊天气泡。
-    var toolGroupOpen = false;
-    // 自上一次 AgentToolCallStartEvent 之后累积的尾部叙述长度。
-    // 在 AgentResponseEvent 触发时需要从最后一项 narrationText（或 thinkingText）
-    // 中删除这段内容，避免最终回答既出现在工具卡片里又出现在主气泡正文中重复。
-    var pendingTailNarration = '';
+    // 每轮正文先暂存。只有该轮确实调用工具时才写入过程面板；最终轮
+    // 使用 AgentResponseEvent 的完整正文，避免先显示再搬进折叠栏。
+    var pendingRoundText = '';
+
+    void ensureToolProgressMessage() {
+      if (toolProgressMsgId != null) return;
+      toolProgressMsgId = const Uuid().v4();
+      final msg = app_chat.ChatMessage(
+        id: toolProgressMsgId!,
+        role: 'assistant',
+        isUser: false,
+        content: '',
+        timestamp: DateTime.now(),
+        metaJson: jsonEncode({
+          'type': 'tool_progress',
+          'items': [],
+          'inProgress': true,
+          'thinkingText': toolThinkingText ?? '',
+        }),
+      );
+      _setState(() => _messages.add(msg));
+      _scrollToBottom();
+    }
+
+    void appendProcessText(String value) {
+      if (value.trim().isEmpty) return;
+      if (toolItems.isEmpty) {
+        toolThinkingText = '${toolThinkingText ?? ''}$value';
+      } else {
+        final last = toolItems.last;
+        toolItems[toolItems.length - 1] = last.copyWith(
+          narrationText: '${last.narrationText ?? ''}$value',
+        );
+      }
+    }
 
     try {
       await _agentEventSubscription?.cancel();
@@ -40,123 +65,23 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
         if (!mounted) return;
         switch (event) {
           case AgentThinkingEvent():
-            streamingMsgId = null;
-            streamingText = '';
-          case AgentTextDeltaEvent():
-            if (toolGroupOpen && toolProgressMsgId != null) {
-              // 检查是否还有运行中的工具。如果所有工具都已完成，
-              // 说明这是新一轮输出（最终回复），不应再放入工具卡片。
-              final hasRunningTool = toolItems.any(
-                (i) => i.status == ToolProgressStatus.running,
-              );
-              if (!hasRunningTool && toolItems.isNotEmpty) {
-                // 所有工具已完成，关闭工具组，走独立气泡路径
-                toolGroupOpen = false;
-                pendingTailNarration = '';
-                // 先完成工具面板
-                _updateToolProgressMessage(
-                  toolProgressMsgId!,
-                  toolItems,
-                  inProgress: false,
-                  thinkingText: toolThinkingText,
-                );
-                // 继续走下方的独立气泡逻辑（不 break）
-              } else {
-                // 工具调用进行中：把叙述按时间穿插进工具卡片。
-                pendingTailNarration += event.delta;
-                if (toolItems.isEmpty) {
-                  // 还没产出任何工具，只能并到 thinkingText（首个工具开始前的引子）。
-                  toolThinkingText = (toolThinkingText ?? '') + event.delta;
-                } else {
-                  // 追加到最后一个工具的 narrationText，让其在该工具下方按时序展示。
-                  final last = toolItems.last;
-                  final updated = (last.narrationText ?? '') + event.delta;
-                  toolItems[toolItems.length - 1] =
-                      last.copyWith(narrationText: updated);
-                }
-                _scheduleToolProgressUpdate(
-                  toolProgressMsgId!,
-                  toolItems,
-                  inProgress: true,
-                  thinkingText: toolThinkingText,
-                );
-                break;
-              }
-            }
-            if (streamingMsgId == null) {
-              streamingMsgId = _uuid.v4();
-              _setState(() {
-                _messages.add(app_chat.ChatMessage(
-                  id: streamingMsgId!,
-                  role: 'assistant',
-                  isUser: false,
-                  content: '',
-                  timestamp: DateTime.now(),
-                  isLoading: true,
-                ));
-              });
-            }
-            streamingText += event.delta;
-            _scheduleStreamUpdate(
-              streamingMsgId!,
-              streamingText,
-              isLoading: true,
+            pendingRoundText = '';
+          case AgentReasoningDeltaEvent():
+            ensureToolProgressMessage();
+            toolThinkingText = '${toolThinkingText ?? ''}${event.delta}';
+            _scheduleToolProgressUpdate(
+              toolProgressMsgId!,
+              toolItems,
+              inProgress: true,
+              thinkingText: toolThinkingText,
             );
+          case AgentTextDeltaEvent():
+            pendingRoundText += event.delta;
 
           case AgentToolCallStartEvent():
-            final wasToolProgressNull = toolProgressMsgId == null;
-            if (streamingMsgId != null && streamingText.trim().isNotEmpty) {
-              // 工具调用开始：把工具前的叙述并入 tool_progress 卡片的
-              // thinkingText，并移除原临时气泡，让所有内容时序集中到工具卡片。
-              final pendingId = streamingMsgId!;
-              final capturedThinkingText =
-                  (toolThinkingText ?? '') + streamingText;
-              toolThinkingText = capturedThinkingText;
-              streamingMsgId = null;
-              streamingText = '';
-              _setState(() {
-                _messages.removeWhere((m) => m.id == pendingId);
-                if (toolProgressMsgId == null) {
-                  toolProgressMsgId = const Uuid().v4();
-                  _messages.add(app_chat.ChatMessage(
-                    id: toolProgressMsgId!,
-                    role: 'assistant',
-                    isUser: false,
-                    content: '',
-                    timestamp: DateTime.now(),
-                    metaJson: jsonEncode({
-                      'type': 'tool_progress',
-                      'items': [],
-                      'inProgress': true,
-                      'thinkingText': capturedThinkingText,
-                    }),
-                  ));
-                }
-              });
-            } else if (toolProgressMsgId == null) {
-              toolProgressMsgId = const Uuid().v4();
-              final msg = app_chat.ChatMessage(
-                id: toolProgressMsgId!,
-                role: 'assistant',
-                isUser: false,
-                content: '',
-                timestamp: DateTime.now(),
-                metaJson: jsonEncode({
-                  'type': 'tool_progress',
-                  'items': [],
-                  'inProgress': true,
-                  'thinkingText': toolThinkingText ?? '',
-                }),
-              );
-              _setState(() => _messages.add(msg));
-            }
-            if (wasToolProgressNull && toolProgressMsgId != null) {
-              _scrollToBottom();
-            }
-            toolGroupOpen = true;
-            // 新工具开始 = 之前积累的尾部叙述属于"工具间过渡"，应保留在原位置
-            // （已通过 live update 写入），重置 pending 计数避免后续 ResponseEvent 误删。
-            pendingTailNarration = '';
+            ensureToolProgressMessage();
+            appendProcessText(pendingRoundText);
+            pendingRoundText = '';
 
             final newItem = ToolProgressItem(
               toolCallId: event.toolCallId,
@@ -205,26 +130,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             }
 
           case AgentResponseEvent():
-            toolGroupOpen = false;
-            // 把"最后一次工具调用之后到 ResponseEvent 之间的尾部叙述"
-            // 从工具卡片中剥离——那其实是 AI 流式输出的最终回答，
-            // 紧接着会作为独立主气泡呈现，避免重复。
-            if (pendingTailNarration.isNotEmpty) {
-              final stripLen = pendingTailNarration.length;
-              if (toolItems.isNotEmpty) {
-                final last = toolItems.last;
-                final current = last.narrationText ?? '';
-                final cut = current.length >= stripLen
-                    ? current.substring(0, current.length - stripLen)
-                    : '';
-                toolItems[toolItems.length - 1] =
-                    last.copyWith(narrationText: cut);
-              } else if ((toolThinkingText ?? '').length >= stripLen) {
-                final t = toolThinkingText!;
-                toolThinkingText = t.substring(0, t.length - stripLen);
-              }
-              pendingTailNarration = '';
-            }
+            pendingRoundText = '';
             if (toolProgressMsgId != null) {
               _updateToolProgressMessage(
                 toolProgressMsgId!,
@@ -235,14 +141,12 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             }
 
           case AgentErrorEvent():
-            toolGroupOpen = false;
-            pendingTailNarration = '';
+            pendingRoundText = '';
             if (streamingMsgId != null) {
               _setState(() {
                 _messages.removeWhere((m) => m.id == streamingMsgId);
               });
               streamingMsgId = null;
-              streamingText = '';
             }
             if (toolProgressMsgId != null) {
               _updateToolProgressMessage(

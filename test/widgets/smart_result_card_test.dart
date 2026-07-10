@@ -50,6 +50,7 @@ void main() {
           tagNames: const ['旧标签'],
           editorSource: 'new_note',
           onOpenDraftInEditor: (_) async {},
+          loadAvailableTagNames: () async => ['旧标签', '工作', '生活'],
           onSaveDraftDirectly: (draft) async {
             savedDraft = draft;
             return 'note_saved';
@@ -61,10 +62,21 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.widgetWithText(TextField, '内容'), '新内容');
+    await tester.tap(find.byTooltip('编辑'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '新内容');
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('编辑元数据'));
+    await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, '作者'), '新作者');
     await tester.enterText(find.widgetWithText(TextField, '来源'), '新出处');
-    await tester.enterText(find.widgetWithText(TextField, '标签'), '工作, 生活');
+    await tester.tap(find.widgetWithText(FilterChip, '旧标签'));
+    await tester.tap(find.widgetWithText(FilterChip, '工作'));
+    await tester.tap(find.widgetWithText(FilterChip, '生活'));
+    await tester.tap(find.text('确定'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('直接保存'));
     await tester.pumpAndSettle();
 

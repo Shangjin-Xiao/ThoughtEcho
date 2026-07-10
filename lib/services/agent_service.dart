@@ -18,6 +18,12 @@ sealed class AgentEvent {}
 /// Agent 开始思考（等待 AI 返回）
 class AgentThinkingEvent extends AgentEvent {}
 
+/// 模型明确标记的思考/推理增量，只供折叠的执行过程面板展示。
+class AgentReasoningDeltaEvent extends AgentEvent {
+  final String delta;
+  AgentReasoningDeltaEvent(this.delta);
+}
+
 /// Agent 收到一次工具调用请求
 class AgentToolCallStartEvent extends AgentEvent {
   final String toolCallId;
@@ -545,6 +551,16 @@ class AgentService extends ChangeNotifier {
           break;
         }
         accumulator.add(event);
+
+        final delta = event.choices?.firstOrNull?.delta;
+        final reasoningChunks = <String>[
+          if (delta?.reasoningContent?.isNotEmpty == true)
+            delta!.reasoningContent!,
+          if (delta?.reasoning?.isNotEmpty == true) delta!.reasoning!,
+        ];
+        for (final reasoning in reasoningChunks) {
+          _emitEvent(AgentReasoningDeltaEvent(reasoning));
+        }
 
         final textDelta = event.textDelta;
         if (!_stopRequested && textDelta != null && textDelta.isNotEmpty) {

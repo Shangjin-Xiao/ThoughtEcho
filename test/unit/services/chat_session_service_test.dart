@@ -342,6 +342,48 @@ void main() {
       await service.close();
     });
 
+    test('loads history overviews for multiple sessions in one batch',
+        () async {
+      final service = ChatSessionService(databasePath: databasePath);
+      final first = await service.createSession(
+        sessionType: 'agent',
+        title: 'First',
+      );
+      final second = await service.createSession(
+        sessionType: 'agent',
+        title: 'Second',
+      );
+      await service.addMessage(
+        first.id,
+        ChatMessage(
+          id: 'first-message',
+          content: '第一段对话正文',
+          isUser: true,
+          timestamp: DateTime.now(),
+        ),
+      );
+      await service.addMessage(
+        second.id,
+        ChatMessage(
+          id: 'second-message',
+          content: '第二段对话正文',
+          isUser: false,
+          timestamp: DateTime.now(),
+        ),
+      );
+
+      final overviews = await service.getSessionOverviews([
+        first.id,
+        second.id,
+      ]);
+
+      expect(overviews[first.id]?.messageCount, 1);
+      expect(overviews[first.id]?.snippet, '第一段对话正文');
+      expect(overviews[second.id]?.messageCount, 1);
+      expect(overviews[second.id]?.snippet, '第二段对话正文');
+      await service.close();
+    });
+
     test('migrates legacy chat tables from main database idempotently',
         () async {
       final mainDbPath = path.join(tempDir.path, 'main.db');

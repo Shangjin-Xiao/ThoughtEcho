@@ -383,20 +383,25 @@ void main() {
     testWidgets(
         'explore entry renders guide summary welcome as first system message',
         (tester) async {
-      const summary = '本周你写了 3 条记录，情绪更稳定。';
+      const insight = '这本月你用心记录了3天，4篇文字承载着日常感悟。'
+          '午后书写、雨相伴，「随记」是你的思绪主线。';
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           child: const AIAssistantPage(
             entrySource: AIAssistantEntrySource.explore,
-            exploreGuideSummary: summary,
+            exploreGuideSummary: insight,
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining(summary), findsOneWidget);
+      expect(
+        find.textContaining('这本月你用心记录了3天'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('「随记」是你的思绪主线'), findsOneWidget);
     });
 
     testWidgets('remembered mode is isolated between explore and note entry',
@@ -636,10 +641,17 @@ void main() {
       expect(
           find.text(l10n.agentReviewingRecentNotes), findsAtLeastNWidgets(1));
       await tester.pump(const Duration(milliseconds: 220));
+      final completedHeader = find.textContaining(l10n.executedNOperations(1));
+      expect(completedHeader, findsOneWidget);
       expect(find.textContaining('让我先看看最近的记录。'), findsNothing);
-
-      await tester.pump(const Duration(milliseconds: 220));
-      expect(find.textContaining(l10n.executedNOperations(1)), findsOneWidget);
+      await tester.tap(completedHeader);
+      await tester.pumpAndSettle();
+      final narration = find.textContaining('让我先看看最近的记录。');
+      expect(narration, findsOneWidget);
+      expect(
+        find.ancestor(of: narration, matching: find.byType(ToolProgressPanel)),
+        findsOneWidget,
+      );
     });
 
     testWidgets('agent tool panel shows human summary instead of raw payload',

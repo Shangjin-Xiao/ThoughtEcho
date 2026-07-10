@@ -106,13 +106,26 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                   ),
                 ),
                 if (_showScrollToBottom)
-                  Positioned(
-                    right: 16,
-                    bottom: 12,
-                    child: FloatingActionButton.small(
-                      heroTag: 'ai_assistant_scroll_to_bottom',
-                      onPressed: _resumeAutoScroll,
-                      child: const Icon(Icons.keyboard_arrow_down),
+                  Positioned.fill(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Material(
+                          color: theme.colorScheme.surfaceContainerHigh,
+                          elevation: 2,
+                          shape: const CircleBorder(),
+                          child: IconButton(
+                            key: const ValueKey(
+                              'ai_assistant_scroll_to_bottom',
+                            ),
+                            onPressed: _resumeAutoScroll,
+                            icon: const Icon(Icons.arrow_downward, size: 18),
+                            visualDensity: VisualDensity.compact,
+                            tooltip: l10n.scrollToBottom,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
               ],
@@ -198,6 +211,11 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 initialIncludeWeather:
                     initialNewNoteMetadata?.includeWeather ?? false,
                 initialSavedNoteId: meta['saved_note_id']?.toString(),
+                loadAvailableTagNames: () async {
+                  final categories =
+                      await context.read<DatabaseService>().getCategories();
+                  return categories.map((category) => category.name).toList();
+                },
                 onOpenDraftInEditor: (draft) async {
                   try {
                     final updatedMeta =
@@ -771,8 +789,10 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       }
       if (note != null) {
         // 根据润色(replace) / 续写(append) 决定带入编辑器的初始文本
-        final mergedContent =
-            modeAction == 'append' ? '${note.content}\n$content' : content;
+        final plainContent = DeltaBuilder.markdownToPlainText(content);
+        final mergedContent = modeAction == 'append'
+            ? '${note.content}\n$plainContent'
+            : plainContent;
 
         // 合并 Agent 建议的元数据（标签、作者、出处）
         final rawSuggestedTagIds = meta['tag_ids'] as List<dynamic>?;
@@ -786,15 +806,15 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         // 使用 DeltaBuilder 合并修改并生成新的 deltaContent，保持双存储一致
         final String updatedDeltaContent;
         if (modeAction == 'append') {
-          final updatedOps = DeltaBuilder.appendTextToDelta(
+          final updatedOps = DeltaBuilder.appendMarkdownToDelta(
             originalDeltaJson: note.deltaContent,
-            newText: content,
+            markdown: content,
           );
           updatedDeltaContent = DeltaBuilder.deltaToJson(updatedOps);
         } else {
-          final updatedOps = DeltaBuilder.replaceTextInDelta(
+          final updatedOps = DeltaBuilder.replaceMarkdownInDelta(
             originalDeltaJson: note.deltaContent,
-            newText: content,
+            markdown: content,
           );
           updatedDeltaContent = DeltaBuilder.deltaToJson(updatedOps);
         }
@@ -984,7 +1004,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     bool includeLocation = false,
     bool includeWeather = false,
   }) async {
-    if (_isShortContent(content)) {
+    if (_isShortContent(content) &&
+        !DeltaBuilder.hasMarkdownFormatting(content)) {
       final db = context.read<DatabaseService>();
       final tags = await db.getCategories();
       if (!mounted) return;
@@ -1063,8 +1084,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         formattedLocation = displayLocation;
       }
     }
+    final plainContent = DeltaBuilder.markdownToPlainText(content);
     final initialQuote = Quote(
-      content: content,
+      content: plainContent,
       date: DateTime.now().toIso8601String(),
       tagIds: tagIds ?? [],
       sourceAuthor: author,
@@ -1080,6 +1102,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       weather: includeWeather ? weatherService.currentWeather : null,
       temperature: includeWeather ? weatherService.temperature : null,
       dayPeriod: TimeUtils.getCurrentDayPeriodKey(),
+      deltaContent: DeltaBuilder.deltaToJson(
+        DeltaBuilder.markdownToDelta(content),
+      ),
     );
 
     if (!mounted) return;
@@ -1087,7 +1112,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       context,
       MaterialPageRoute(
         builder: (_) => NoteFullEditorPage(
-          initialContent: content,
+          initialContent: plainContent,
           initialQuote: initialQuote,
           allTags: tags,
           skipDefaultMetadataAutofill: true,
@@ -1114,9 +1139,10 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           throw Exception('Note not found');
         }
 
+        final plainContent = DeltaBuilder.markdownToPlainText(content);
         final newContent = modeAction == 'append'
-            ? '${existingNote.content}\n$content'
-            : content;
+            ? '${existingNote.content}\n$plainContent'
+            : plainContent;
 
         // 合并 Agent 建议的元数据（标签、作者、出处）
         final rawSuggestedTagIds = meta['tag_ids'] as List<dynamic>?;
@@ -1129,15 +1155,15 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
 
         final String updatedDeltaContent;
         if (modeAction == 'append') {
-          final updatedOps = DeltaBuilder.appendTextToDelta(
+          final updatedOps = DeltaBuilder.appendMarkdownToDelta(
             originalDeltaJson: existingNote.deltaContent,
-            newText: content,
+            markdown: content,
           );
           updatedDeltaContent = DeltaBuilder.deltaToJson(updatedOps);
         } else {
-          final updatedOps = DeltaBuilder.replaceTextInDelta(
+          final updatedOps = DeltaBuilder.replaceMarkdownInDelta(
             originalDeltaJson: existingNote.deltaContent,
-            newText: content,
+            markdown: content,
           );
           updatedDeltaContent = DeltaBuilder.deltaToJson(updatedOps);
         }
@@ -1276,9 +1302,10 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           : null;
 
       final noteId = _uuid.v4();
+      final plainContent = DeltaBuilder.markdownToPlainText(content);
       final quote = Quote.validated(
         id: noteId,
-        content: content,
+        content: plainContent,
         date: DateTime.now().toIso8601String(),
         tagIds: tagIds,
         sourceAuthor: author,
@@ -1290,6 +1317,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         weather: includeWeather ? weatherService.currentWeather : null,
         temperature: includeWeather ? weatherService.temperature : null,
         dayPeriod: TimeUtils.getCurrentDayPeriodKey(),
+        deltaContent: DeltaBuilder.deltaToJson(
+          DeltaBuilder.markdownToDelta(content),
+        ),
       );
 
       await db.addQuote(quote);

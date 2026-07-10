@@ -12,6 +12,16 @@ import '../models/chat_session.dart';
 import '../utils/app_logger.dart';
 import 'data_directory_service.dart';
 
+class ChatSessionOverview {
+  const ChatSessionOverview({
+    required this.messageCount,
+    required this.snippet,
+  });
+
+  final int messageCount;
+  final String snippet;
+}
+
 class ChatSessionService extends ChangeNotifier {
   static ChatSessionService? activeInstance;
   Database? _database;
@@ -594,6 +604,41 @@ class ChatSessionService extends ChangeNotifier {
       );
       return [];
     }
+  }
+
+  /// 批量读取历史列表需要的消息数和最后一条正文，避免列表 N+1 查询。
+  Future<Map<String, ChatSessionOverview>> getSessionOverviews(
+    List<String> sessionIds,
+  ) async {
+    if (sessionIds.isEmpty) return const {};
+    final db = await _getDatabaseForRead();
+    if (db == null) return const {};
+    final placeholders = List.filled(sessionIds.length, '?').join(',');
+    final rows = await db.rawQuery(
+      '''
+      SELECT s.id,
+        (SELECT COUNT(*) FROM chat_messages c WHERE c.session_id = s.id)
+          AS message_count,
+        (SELECT m.content FROM chat_messages m
+          WHERE m.session_id = s.id
+          ORDER BY m.created_at DESC LIMIT 1) AS last_content
+      FROM chat_sessions s
+      WHERE s.id IN ($placeholders)
+      ''',
+      sessionIds,
+    );
+    return {
+      for (final row in rows)
+        row['id'] as String: ChatSessionOverview(
+          messageCount: row['message_count'] as int? ?? 0,
+          snippet: _truncatePreview(row['last_content'] as String?),
+        ),
+    };
+  }
+
+  String _truncatePreview(String? content) {
+    final value = content?.trim() ?? '';
+    return value.length > 80 ? '${value.substring(0, 80)}...' : value;
   }
 
   Future<List<ChatSessionSearchResult>> searchSessions(

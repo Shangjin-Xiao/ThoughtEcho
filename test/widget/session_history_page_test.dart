@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/chat_session.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
-import 'package:thoughtecho/widgets/session_history_sheet.dart';
+import 'package:thoughtecho/pages/ai_assistant/session_history_page.dart';
 
 import '../test_setup.dart';
 
@@ -11,10 +11,13 @@ class _FakeChatSessionService extends ChatSessionService {
   _FakeChatSessionService({
     required this.sessions,
     required this.messageCounts,
+    this.searchResults = const [],
   });
 
   final List<ChatSession> sessions;
   final Map<String, int> messageCounts;
+  final List<ChatSessionSearchResult> searchResults;
+  String? lastSearchQuery;
 
   @override
   Future<List<ChatSession>> getAllSessions({
@@ -33,14 +36,46 @@ class _FakeChatSessionService extends ChatSessionService {
   Future<int> getMessageCount(String sessionId) async {
     return messageCounts[sessionId] ?? 0;
   }
+
+  @override
+  Future<Map<String, ChatSessionOverview>> getSessionOverviews(
+    List<String> sessionIds,
+  ) async {
+    return {
+      for (final id in sessionIds)
+        id: ChatSessionOverview(
+          messageCount: messageCounts[id] ?? 0,
+          snippet: '',
+        ),
+    };
+  }
+
+  @override
+  Future<List<ChatSessionSearchResult>> searchSessions(
+    String query, {
+    int limit = 20,
+  }) async {
+    lastSearchQuery = query;
+    return searchResults;
+  }
+
+  @override
+  Future<void> deleteSession(String sessionId) async {
+    // No-op for test fake
+  }
+
+  @override
+  Future<void> togglePin(String sessionId) async {
+    // No-op for test fake
+  }
 }
 
-Widget _buildTestApp(SessionHistorySheet child) {
+Widget _buildTestApp(SessionHistoryPage child) {
   return MaterialApp(
     locale: const Locale('zh'),
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
-    home: Scaffold(body: child),
+    home: child,
   );
 }
 
@@ -88,7 +123,7 @@ void main() {
 
     await tester.pumpWidget(
       _buildTestApp(
-        SessionHistorySheet(
+        SessionHistoryPage(
           noteId: '',
           currentSessionId: null,
           chatSessionService: service,
@@ -101,7 +136,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final l10n = AppLocalizations.of(
-      tester.element(find.byType(SessionHistorySheet)),
+      tester.element(find.byType(SessionHistoryPage)),
     );
     expect(find.text('有效会话'), findsOneWidget);
     expect(find.text(l10n.messageCountLabel(0)), findsNothing);
@@ -125,7 +160,7 @@ void main() {
 
     await tester.pumpWidget(
       _buildTestApp(
-        SessionHistorySheet(
+        SessionHistoryPage(
           noteId: '',
           currentSessionId: null,
           chatSessionService: service,
@@ -138,8 +173,52 @@ void main() {
     await tester.pumpAndSettle();
 
     final l10n = AppLocalizations.of(
-      tester.element(find.byType(SessionHistorySheet)),
+      tester.element(find.byType(SessionHistoryPage)),
     );
     expect(find.text(l10n.unnamed), findsOneWidget);
+  });
+
+  testWidgets('searches message content and displays the matching snippet',
+      (tester) async {
+    final now = DateTime(2026, 4, 18, 12);
+    final matchedSession = _session(
+      id: 'content-match',
+      title: '周末计划',
+      lastActiveAt: now,
+    );
+    final service = _FakeChatSessionService(
+      sessions: [matchedSession],
+      messageCounts: const {'content-match': 4},
+      searchResults: [
+        ChatSessionSearchResult(
+          session: matchedSession,
+          snippet: '后来我们聊到了海边露营和天气',
+          isTruncated: false,
+          matchStart: 8,
+          matchEnd: 10,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      _buildTestApp(
+        SessionHistoryPage(
+          noteId: '',
+          currentSessionId: null,
+          chatSessionService: service,
+          onSelect: (_) {},
+          onDelete: (_) {},
+          onNewChat: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '露营');
+    await tester.pumpAndSettle();
+
+    expect(service.lastSearchQuery, '露营');
+    expect(find.textContaining('海边露营和天气'), findsOneWidget);
+    expect(find.text('周末计划'), findsOneWidget);
   });
 }

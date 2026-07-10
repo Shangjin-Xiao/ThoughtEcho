@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+
 import '../../gen_l10n/app_localizations.dart';
+
+part 'smart_result_card_editing.dart';
 
 class SmartResultDraft {
   const SmartResultDraft({
@@ -33,6 +37,7 @@ class SmartResultCard extends StatefulWidget {
       onSaveDirectly;
   final Future<void> Function(SmartResultDraft draft)? onOpenDraftInEditor;
   final Future<String?> Function(SmartResultDraft draft)? onSaveDraftDirectly;
+  final Future<List<String>> Function()? loadAvailableTagNames;
   final void Function(String noteId)? onSavedNoteId;
   final String editorSource;
   final bool initialIncludeLocation;
@@ -52,6 +57,7 @@ class SmartResultCard extends StatefulWidget {
     this.onSaveDirectly,
     this.onOpenDraftInEditor,
     this.onSaveDraftDirectly,
+    this.loadAvailableTagNames,
     this.onSavedNoteId,
     this.editorSource = 'fullscreen',
     this.initialIncludeLocation = false,
@@ -73,6 +79,8 @@ class _SmartResultCardState extends State<SmartResultCard> {
   bool _isSaving = false;
   String? _savedNoteId;
   String? _saveError;
+
+  void _updateDraft(VoidCallback update) => setState(update);
 
   @override
   void initState() {
@@ -176,46 +184,59 @@ class _SmartResultCardState extends State<SmartResultCard> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextField(
-                  controller: _contentController,
-                  readOnly: !supportsDraftEdits,
-                  minLines: 3,
-                  maxLines: 8,
-                  decoration: InputDecoration(
-                    labelText: l10n.content,
-                    border: const OutlineInputBorder(),
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: MarkdownBody(
+                        data: _contentController.text,
+                        selectable: true,
+                      ),
+                    ),
+                    if (supportsDraftEdits)
+                      IconButton(
+                        onPressed: () => _editTextValue(
+                          title: l10n.content,
+                          controller: _contentController,
+                          maxLines: 10,
+                        ),
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        tooltip: l10n.edit,
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _authorController,
-                  readOnly: !supportsDraftEdits,
-                  decoration: InputDecoration(
-                    labelText: l10n.author,
-                    border: const OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _sourceController,
-                  readOnly: !supportsDraftEdits,
-                  decoration: InputDecoration(
-                    labelText: l10n.source,
-                    border: const OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _tagsController,
-                  readOnly: !supportsDraftEdits,
-                  decoration: InputDecoration(
-                    labelText: l10n.tagsLabel,
-                    border: const OutlineInputBorder(),
-                    isDense: true,
-                  ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (_authorController.text.trim().isNotEmpty)
+                      _MetaChip(
+                        icon: Icons.person_outline,
+                        label: _authorController.text.trim(),
+                      ),
+                    if (_sourceController.text.trim().isNotEmpty)
+                      _MetaChip(
+                        icon: Icons.menu_book_outlined,
+                        label: _sourceController.text.trim(),
+                      ),
+                    for (final tag in _draftTagNames)
+                      _MetaChip(
+                        icon: Icons.local_offer_outlined,
+                        label: tag,
+                        backgroundColor: theme.colorScheme.primaryContainer,
+                        foregroundColor: theme.colorScheme.onPrimaryContainer,
+                      ),
+                    if (supportsDraftEdits)
+                      ActionChip(
+                        avatar: const Icon(Icons.tune, size: 16),
+                        label: Text(l10n.editMetadataShort),
+                        onPressed: _editMetadata,
+                      ),
+                  ],
                 ),
               ],
             ),

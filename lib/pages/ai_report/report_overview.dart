@@ -522,29 +522,9 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
 
   /// 打开 AI 助手，传递当前周期数据摘要作为引导
   Future<void> _openAIAssistant() async {
-    final l10n = AppLocalizations.of(context);
     final navigator = Navigator.of(context);
 
-    // Build summary from current period data
-    final buffer = StringBuffer()
-      ..writeln('${l10n.noteCount}: ${_periodQuotes.length}')
-      ..writeln('${l10n.totalWordCount}: $_totalWordCount')
-      ..writeln('${l10n.activeDays}: ${_getActiveDays()}')
-      ..writeln(
-        '${l10n.commonPeriod}: ${_mostDayPeriodDisplay ?? _mostDayPeriod ?? l10n.noDataYet}',
-      )
-      ..writeln(
-        '${l10n.commonWeather}: ${_mostWeatherDisplay ?? _mostWeather ?? l10n.noDataYet}',
-      )
-      ..writeln(
-        '${l10n.commonTag}: ${_mostTopTag ?? l10n.noDataYet}',
-      );
-
-    if (_insightText.isNotEmpty) {
-      buffer.writeln(_insightText);
-    }
-
-    final summary = buffer.toString().trim();
+    final summary = _insightText.trim();
 
     if (!mounted) return;
 

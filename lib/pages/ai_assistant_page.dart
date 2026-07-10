@@ -21,6 +21,7 @@ import '../services/agent_service.dart'
     show
         AgentErrorEvent,
         AgentEvent,
+        AgentReasoningDeltaEvent,
         AgentResponseEvent,
         AgentService,
         AgentTextDeltaEvent,
@@ -44,7 +45,7 @@ import '../widgets/ai/ai_workflow_cards.dart';
 import '../widgets/ai/smart_result_card.dart';
 import '../widgets/ai/thinking_widget.dart';
 import '../widgets/ai/tool_progress_panel.dart';
-import '../widgets/session_history_sheet.dart';
+import 'ai_assistant/session_history_page.dart';
 import '../widgets/source_analysis_result_dialog.dart';
 import '../widgets/add_note_dialog.dart';
 import 'note_full_editor_page.dart';

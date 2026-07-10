@@ -42,11 +42,6 @@ extension _AIReportTimeSelector on _AIPeriodicReportPageState {
                 hasScrollBody: false,
                 child: Center(child: CircularProgressIndicator()),
               )
-            else if (_periodQuotes.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: _buildEmptyState(),
-              )
             else
               SliverToBoxAdapter(
                 child: _buildDataOverview(),

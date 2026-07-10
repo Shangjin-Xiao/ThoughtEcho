@@ -6,7 +6,14 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
     _textController.addListener(_onTextChanged);
     _inputFocusNode.addListener(_onInputFocusChanged);
     _scrollController.addListener(_onScrollPositionChanged);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _initServicesAndLoad());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // 探索摘要不依赖数据库或 AI 服务，先显示，避免初始化异常吞掉首条消息。
+      if (_messages.isEmpty &&
+          widget.exploreGuideSummary?.trim().isNotEmpty == true) {
+        _addWelcomeMessage();
+      }
+      _initServicesAndLoad();
+    });
   }
 
   void _disposeImpl() {
@@ -53,11 +60,11 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
   Future<void> _initServicesAndLoad() async {
     try {
       _chatSessionService = context.read<ChatSessionService>();
-      await _chatSessionService.init(); // 确保数据库已初始化
-      if (!mounted) return;
       _agentService = context.read<AgentService>();
       _aiService = context.read<AIService>();
       _settingsService = context.read<SettingsService>();
+      await _chatSessionService.init(); // 确保数据库已初始化
+      if (!mounted) return;
       if (!_agentListenerAttached) {
         _agentService.addListener(_onAgentServiceChanged);
         _agentListenerAttached = true;
@@ -169,27 +176,36 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
     };
   }
 
-  /// 延迟创建会话，并异步生成 AI 标题
-  Future<void> _ensureSessionCreated(String firstUserMessage) async {
+  /// 延迟创建会话。
+  Future<void> _ensureSessionCreated() async {
     if (_currentSessionId != null) return;
     await _createNewSession();
-    // 异步生成 AI 标题，不阻塞主流程
-    unawaited(_generateAITitle(firstUserMessage));
   }
 
-  Future<void> _generateAITitle(String firstUserMessage) async {
-    if (_currentSessionId == null) return;
+  Future<bool> _sessionHasUserMessages(String sessionId) async {
     try {
-      final title = await _aiService.generateSessionTitle(firstUserMessage);
+      final messages = await _chatSessionService.getMessages(sessionId);
+      return messages.any((msg) => msg.isUser);
+    } catch (e) {
+      logDebug('读取会话消息失败，使用内存状态判断标题生成: $e');
+      return _messages.any((msg) => msg.isUser);
+    }
+  }
+
+  void _generateAITitle(
+    String sessionId,
+    String firstUserMessage,
+  ) {
+    _aiService.generateSessionTitle(firstUserMessage).then((title) async {
       if (title.isNotEmpty && title != 'Chat') {
         await _chatSessionService.updateSessionTitle(
-          _currentSessionId!,
+          sessionId,
           title,
         );
       }
-    } catch (e) {
+    }).catchError((Object e) {
       logDebug('生成会话标题失败: $e');
-    }
+    });
   }
 
   Future<void> _loadSession(String sessionId) async {
@@ -236,8 +252,14 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
 
     // Explore 模式：如果有显式总结，显示总结；否则直接生成动态洞察（不显示"输入问题"提示）
     if (widget.exploreGuideSummary?.trim().isNotEmpty == true) {
-      final welcomeContent =
-          l10n.aiAssistantExploreWelcome(widget.exploreGuideSummary!.trim());
+      final summary = _extractExploreInsightSummary(
+        widget.exploreGuideSummary!,
+        l10n,
+      );
+      if (summary.isEmpty) {
+        return;
+      }
+      final welcomeContent = l10n.aiAssistantExploreWelcome(summary);
       final welcomeMsg = app_chat.ChatMessage(
         id: _uuid.v4(),
         content: welcomeContent,
@@ -251,6 +273,32 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
       // 无显式总结时，跳过"输入问题"提示，直接生成动态洞察
       _generateAndShowDynamicInsight();
     }
+  }
+
+  String _extractExploreInsightSummary(
+    String rawSummary,
+    AppLocalizations l10n,
+  ) {
+    final statisticPrefixes = <String>[
+      l10n.noteCount,
+      l10n.totalWordCount,
+      l10n.activeDays,
+      l10n.commonPeriod,
+      l10n.commonWeather,
+      l10n.commonTag,
+    ];
+    return rawSummary
+        .split('\n')
+        .map((line) => line.trim())
+        .where(
+          (line) =>
+              line.isNotEmpty &&
+              !statisticPrefixes.any(
+                (prefix) =>
+                    line.startsWith('$prefix:') || line.startsWith('$prefix：'),
+              ),
+        )
+        .join('\n');
   }
 
   /// Generate and display a dynamic insight based on current data
@@ -369,28 +417,29 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
   }
 
   void _showSessionHistory() {
-    showModalBottomSheet(
-      context: context,
-      builder: (ctx) => SessionHistorySheet(
-        noteId: _boundNoteId ?? '',
-        currentSessionId: _currentSessionId,
-        chatSessionService: _chatSessionService,
-        onSelect: (id) {
-          Navigator.of(ctx).pop();
-          _loadSession(id);
-        },
-        onDelete: (id) async {
-          await _chatSessionService.deleteSession(id);
-          if (!mounted || !ctx.mounted) return;
-          if (id == _currentSessionId) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (ctx) => SessionHistoryPage(
+          noteId: _boundNoteId ?? '',
+          currentSessionId: _currentSessionId,
+          chatSessionService: _chatSessionService,
+          onSelect: (id) {
             Navigator.of(ctx).pop();
-            await _startNewChat();
-          }
-        },
-        onNewChat: () {
-          Navigator.of(ctx).pop();
-          _startNewChat();
-        },
+            _loadSession(id);
+          },
+          onDelete: (id) async {
+            await _chatSessionService.deleteSession(id);
+            if (!mounted || !ctx.mounted) return;
+            if (id == _currentSessionId) {
+              Navigator.of(ctx).pop();
+              await _startNewChat();
+            }
+          },
+          onNewChat: () {
+            Navigator.of(ctx).pop();
+            _startNewChat();
+          },
+        ),
       ),
     );
   }
