@@ -163,8 +163,9 @@ class ChatSessionService extends ChangeNotifier {
       final legacyMessages = await sourceDb.query('chat_messages');
 
       await targetDb.transaction((txn) async {
+        final batch = txn.batch();
         for (final row in legacySessions) {
-          await txn.insert(
+          batch.insert(
             'chat_sessions',
             row,
             conflictAlgorithm: ConflictAlgorithm.ignore,
@@ -172,13 +173,13 @@ class ChatSessionService extends ChangeNotifier {
         }
 
         for (final row in legacyMessages) {
-          await txn.insert(
+          batch.insert(
             'chat_messages',
             row,
             conflictAlgorithm: ConflictAlgorithm.ignore,
           );
         }
-        await txn.insert(
+        batch.insert(
           'chat_metadata',
           {
             'key': _legacyMainDbMigrationKey,
@@ -186,6 +187,7 @@ class ChatSessionService extends ChangeNotifier {
           },
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
+        await batch.commit(noResult: true);
       });
       logInfo(
         '已迁移 ${legacySessions.length} 个旧聊天会话到独立聊天数据库',

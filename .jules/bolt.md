@@ -63,3 +63,6 @@
 ## 2024-06-25 - 优化媒体文件清理服务大小计算
 **Learning:** Sequential `await entity.length()` queries block execution and create excessive microtask scheduling overhead in large directories, drastically slowing down directory size calculation.
 **Action:** Transformed the directory size calculation in `MediaCleanupService._calculateMediaFilesSizes` to aggregate file lists and chunk `entity.length()` requests using `Future.wait` combined with event loop yielding `await Future<void>.delayed(Duration.zero)`. This removes sequential blockage and significantly speeds up directory traversing.
+## 2024-05-18 - [Batched Database Inserts for sqflite]
+**Learning:** Sequential `await txn.insert()` calls inside a loop in `sqflite` cause massive N+1 IPC overhead because each insert requires traversing the Dart-to-Native channel.
+**Action:** Always accumulate `insert` or `update` operations using `txn.batch()` (e.g., `batch.insert()`) and execute them together with a single `await batch.commit(noResult: true)` (if results aren't needed) to minimize platform channel serialization costs during migrations or bulk processing.
