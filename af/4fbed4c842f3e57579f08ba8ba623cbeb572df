@@ -1,0 +1,21 @@
+test/unit/android/file_provider_config_test.dart
+  s_1fa6ca50664ed9::t_6d578431ee3501 117-125
+.github/workflows/flutter-release-build.yml
+  s_1fa6ca50664ed9::t_7ed1f06d6f4b73 116,122,127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.11",
+  "base_commit_sha": "af4fbed4c842f3e57579f08ba8ba623cbeb572df",
+  "prompts": {},
+  "sessions": {
+    "s_1fa6ca50664ed9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f44bf-d14b-71b0-b4aa-cefa1981689c",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
