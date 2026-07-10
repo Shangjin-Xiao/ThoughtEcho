@@ -2,7 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:http/http.dart' as http;
+import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:uuid/uuid.dart';
+
+import '../device_identity_manager.dart';
 import 'api_route_builder.dart';
+import 'constants.dart';
 import 'models/device.dart';
 import 'models/file_dto.dart';
 import 'models/file_type.dart';
@@ -11,11 +17,6 @@ import 'models/multicast_dto.dart';
 import 'models/prepare_upload_request_dto.dart';
 import 'models/prepare_upload_response_dto.dart';
 import 'models/session_status.dart';
-import 'constants.dart';
-import 'package:uuid/uuid.dart';
-import 'package:http/http.dart' as http;
-import '../device_identity_manager.dart';
-import 'package:thoughtecho/utils/app_logger.dart';
 
 const _uuid = Uuid();
 
@@ -23,6 +24,8 @@ const _uuid = Uuid();
 /// Based on LocalSend's send_provider but with minimal dependencies
 class LocalSendProvider {
   final Map<String, SendSession> _sessions = {};
+  final Map<String, http.Client> _activeClients = {};
+  final Set<String> _cancelledSessions = {};
 
   /// Start a file transfer session
   Future<String> startSession({
@@ -50,10 +53,12 @@ class LocalSendProvider {
     );
 
     _sessions[sessionId] = session;
+    _cancelledSessions.remove(sessionId);
 
     try {
       // 0. Optional handshake: verify /info endpoint for better reliability
-      await _handshakeWithTarget(target);
+      await _handshakeWithTarget(target, sessionId);
+      _throwIfCancelled(sessionId);
 
       // Prepare upload request
       final requestDto = PrepareUploadRequestDto(
@@ -81,6 +86,7 @@ class LocalSendProvider {
       );
 
       final client = http.Client();
+      _activeClients[sessionId] = client;
       try {
         http.Response response = await client
             .post(
@@ -131,6 +137,7 @@ class LocalSendProvider {
             remoteSessionId: responseDto.sessionId,
             fileTokens: responseDto.files,
           );
+          _throwIfCancelled(sessionId);
 
           // Start file uploads with progress
           await _uploadFiles(sessionId, onProgress: onProgress);
@@ -142,13 +149,22 @@ class LocalSendProvider {
           );
         }
       } finally {
+        if (identical(_activeClients[sessionId], client)) {
+          _activeClients.remove(sessionId);
+        }
         client.close();
       }
     } catch (e) {
-      _sessions[sessionId] = session.copyWith(
-        status: SessionStatus.finishedWithErrors,
-        errorMessage: e.toString(),
-      );
+      if (_cancelledSessions.contains(sessionId)) {
+        _sessions[sessionId] = session.copyWith(
+          status: SessionStatus.canceledBySender,
+        );
+      } else {
+        _sessions[sessionId] = session.copyWith(
+          status: SessionStatus.finishedWithErrors,
+          errorMessage: e.toString(),
+        );
+      }
       rethrow;
     }
   }
@@ -171,6 +187,7 @@ class LocalSendProvider {
       }
       int sentBytes = 0;
       for (int i = 0; i < session.files.length; i++) {
+        _throwIfCancelled(sessionId);
         final file = session.files[i];
         final fileId = 'file_$i';
         final token = session.fileTokens?[fileId];
@@ -192,6 +209,7 @@ class LocalSendProvider {
 
         // Upload file with retry mechanism
         await _uploadSingleFile(
+          sessionId,
           session,
           fileId,
           token,
@@ -207,6 +225,7 @@ class LocalSendProvider {
       }
 
       // Mark as completed
+      _throwIfCancelled(sessionId);
       _sessions[sessionId] = session.copyWith(status: SessionStatus.finished);
       logInfo('All files uploaded for session: $sessionId',
           source: 'LocalSend');
@@ -222,6 +241,7 @@ class LocalSendProvider {
 
   /// Upload a single file with retry mechanism
   Future<void> _uploadSingleFile(
+    String sessionId,
     SendSession session,
     String fileId,
     String token,
@@ -233,6 +253,8 @@ class LocalSendProvider {
     int attempt = 0;
 
     while (attempt < maxRetries) {
+      _throwIfCancelled(sessionId);
+      http.Client? client;
       try {
         // 构建带查询参数的URL
         var url = ApiRoute.upload.target(
@@ -269,7 +291,9 @@ class LocalSendProvider {
         request.files.add(multipart);
 
         // Send request with timeout
-        final response = await request.send().timeout(
+        client = http.Client();
+        _activeClients[sessionId] = client;
+        final response = await client.send(request).timeout(
               const Duration(minutes: 5),
             );
 
@@ -301,7 +325,7 @@ class LocalSendProvider {
               filename: file.path.split('/').last,
             ),
           );
-          final legacyResp = await legacyReq.send().timeout(
+          final legacyResp = await client.send(legacyReq).timeout(
                 const Duration(minutes: 5),
               );
           if (legacyResp.statusCode == 200) {
@@ -331,6 +355,9 @@ class LocalSendProvider {
         }
         throw Exception('Retriable status $status: $summarizedBody');
       } catch (e) {
+        if (_cancelledSessions.contains(sessionId)) {
+          throw StateError('发送已取消');
+        }
         attempt++;
         logWarning(
           'upload_retry attempt=$attempt file=${file.path.split('/').last} error=$e',
@@ -354,7 +381,18 @@ class LocalSendProvider {
               ? const Duration(seconds: 8)
               : delay,
         );
+      } finally {
+        if (identical(_activeClients[sessionId], client)) {
+          _activeClients.remove(sessionId);
+        }
+        client?.close();
       }
+    }
+  }
+
+  void _throwIfCancelled(String sessionId) {
+    if (_cancelledSessions.contains(sessionId)) {
+      throw StateError('发送已取消');
     }
   }
 
@@ -367,40 +405,57 @@ class LocalSendProvider {
   void cancelSession(String sessionId) {
     final session = _sessions[sessionId];
     if (session != null) {
+      _cancelledSessions.add(sessionId);
+      _activeClients.remove(sessionId)?.close();
       _sessions[sessionId] = session.copyWith(
         status: SessionStatus.canceledBySender,
       );
       // 通知对端（最佳努力，不影响本地状态）
       final remoteId = session.remoteSessionId;
       if (remoteId != null) {
-        final url =
-            ApiRoute.info.target(session.target).replaceAll('/info', '/cancel');
-        try {
-          final client = http.Client();
-          client
-              .post(
-                Uri.parse(url),
-                headers: {'Content-Type': 'application/json'},
-                body: jsonEncode({'sessionId': remoteId}),
-              )
-              .timeout(const Duration(seconds: 2))
-              .catchError((_) => http.Response('{}', 499));
-        } catch (e) {
-          logDebug('[LocalSendSendProvider] cancel notify failed: $e');
-        }
+        unawaited(_notifyCancellation(session, remoteId));
       }
+    }
+  }
+
+  Future<void> _notifyCancellation(
+    SendSession session,
+    String remoteSessionId,
+  ) async {
+    final client = http.Client();
+    try {
+      final url =
+          ApiRoute.info.target(session.target).replaceAll('/info', '/cancel');
+      await client
+          .post(
+            Uri.parse(url),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'sessionId': remoteSessionId}),
+          )
+          .timeout(const Duration(seconds: 2));
+    } catch (e) {
+      logDebug('[LocalSendSendProvider] cancel notify failed: $e');
+    } finally {
+      client.close();
     }
   }
 
   /// Close a session
   void closeSession(String sessionId) {
     _sessions.remove(sessionId);
+    _cancelledSessions.remove(sessionId);
+    _activeClients.remove(sessionId)?.close();
   }
 
   /// Get all active sessions
   Map<String, SendSession> get sessions => Map.unmodifiable(_sessions);
 
   void dispose() {
+    for (final client in _activeClients.values) {
+      client.close();
+    }
+    _activeClients.clear();
+    _cancelledSessions.clear();
     _sessions.clear();
   }
 
@@ -411,8 +466,9 @@ class LocalSendProvider {
   }
 
   /// Query target /info once to validate connectivity and possibly adapt route
-  Future<void> _handshakeWithTarget(Device target) async {
+  Future<void> _handshakeWithTarget(Device target, String sessionId) async {
     final client = http.Client();
+    _activeClients[sessionId] = client;
     try {
       final infoUrl = ApiRoute.info.target(target);
       logDebug('Handshake check: $infoUrl', source: 'LocalSend');
@@ -442,6 +498,9 @@ class LocalSendProvider {
       logWarning('Handshake failed: $e', source: 'LocalSend');
       // Do not throw; allow prepare step to try as well but keep logs
     } finally {
+      if (identical(_activeClients[sessionId], client)) {
+        _activeClients.remove(sessionId);
+      }
       client.close();
     }
   }

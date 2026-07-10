@@ -143,6 +143,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   bool _sendIncludeMedia = true; // 发送时是否包含媒体文件（用户可选）
   bool _dialogWasTerminal = false; // 标记当前对话框是否停留在终态
   bool _dialogRestartPending = false; // 避免终态->活跃切换时重复重建
+  bool _allowPagePop = false;
   // 旧的接收确认弹窗标记已移除；审批与进度合并为单一对话框
 
   // 还原模式枚举（备份还原页中支持 LWW 合并导入，此处复用时可参考）
@@ -623,11 +624,16 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return PopScope(
-      canPop: true,
+      canPop: _allowPagePop,
       onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) {
           final allow = await _onWillPop();
-          if (allow && context.mounted) Navigator.of(context).pop(result);
+          if (allow && context.mounted) {
+            setState(() => _allowPagePop = true);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) Navigator.of(context).pop(result);
+            });
+          }
         }
       },
       child: Scaffold(
@@ -825,66 +831,70 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                     ]
                                   : const [],
                             ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 12,
-                              ),
-                              leading: CircleAvatar(
-                                radius: 24,
-                                backgroundColor: theme
-                                    .colorScheme.primaryContainer
-                                    .withValues(alpha: 0.65),
-                                child: Icon(
-                                  _getDeviceIcon(device.deviceType),
-                                  color: theme.colorScheme.onPrimaryContainer,
-                                  size: 24,
+                            child: Material(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(18),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 12,
                                 ),
-                              ),
-                              title: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(child: _buildDeviceName(device)),
-                                  const SizedBox(width: 8),
-                                  _buildShortFingerprint(device.fingerprint),
-                                ],
-                              ),
-                              subtitle: Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  ipLine,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: theme.colorScheme.onSurface
-                                        .withValues(alpha: 0.6),
+                                leading: CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: theme
+                                      .colorScheme.primaryContainer
+                                      .withValues(alpha: 0.65),
+                                  child: Icon(
+                                    _getDeviceIcon(device.deviceType),
+                                    color: theme.colorScheme.onPrimaryContainer,
+                                    size: 24,
                                   ),
                                 ),
-                              ),
-                              trailing: isSendingToThis
-                                  ? const SizedBox(
-                                      width: 32,
-                                      height: 32,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                      ),
-                                    )
-                                  : FilledButton.tonalIcon(
-                                      icon: const Icon(Icons.send, size: 18),
-                                      label: Text(l10n.send),
-                                      style: FilledButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ),
-                                      ),
-                                      onPressed: _isSending
-                                          ? null
-                                          : () => _sendNotesToDevice(device),
+                                title: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(child: _buildDeviceName(device)),
+                                    const SizedBox(width: 8),
+                                    _buildShortFingerprint(device.fingerprint),
+                                  ],
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    ipLine,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.6),
                                     ),
-                              onTap: _isSending
-                                  ? null
-                                  : () => _sendNotesToDevice(device),
-                              onLongPress: () => _copyIpPort(ipLine),
+                                  ),
+                                ),
+                                trailing: isSendingToThis
+                                    ? const SizedBox(
+                                        width: 32,
+                                        height: 32,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                        ),
+                                      )
+                                    : FilledButton.tonalIcon(
+                                        icon: const Icon(Icons.send, size: 18),
+                                        label: Text(l10n.send),
+                                        style: FilledButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                        ),
+                                        onPressed: _isSending
+                                            ? null
+                                            : () => _sendNotesToDevice(device),
+                                      ),
+                                onTap: _isSending
+                                    ? null
+                                    : () => _sendNotesToDevice(device),
+                                onLongPress: () => _copyIpPort(ipLine),
+                              ),
                             ),
                           );
                         },
@@ -959,6 +969,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     _dialogWasTerminal = false;
     final dialogContext = context;
     final l10n = AppLocalizations.of(context);
+    var cancellationHandled = false;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -1016,7 +1027,32 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                       ? l10n.syncRequestSent
                       : _localizeProgressMessage(s.syncStatusMessage, l10n);
 
-                  return AlertDialog(
+                  void closeCurrentDialog() {
+                    if (!_syncDialogVisible) return;
+                    _syncDialogVisible = false;
+                    _dialogWasTerminal = false;
+                    Navigator.of(ctx).pop();
+                  }
+
+                  void cancelCurrentSync({bool closeDialog = true}) {
+                    if (cancellationHandled) return;
+                    cancellationHandled = true;
+                    if (waitingUser) {
+                      s.rejectIncoming();
+                    } else if (s.syncStatus == SyncStatus.receiving) {
+                      s.cancelReceiving();
+                    } else if (waitingPeer ||
+                        s.syncStatus == SyncStatus.packaging ||
+                        s.syncStatus == SyncStatus.sending) {
+                      s.cancelOngoingSend();
+                    } else {
+                      cancellationHandled = false;
+                      return;
+                    }
+                    if (closeDialog) closeCurrentDialog();
+                  }
+
+                  final dialog = AlertDialog(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -1172,17 +1208,12 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                           },
                           child: Text(l10n.accept),
                         ),
-                      ] else if (inProgress &&
-                          (s.syncStatus == SyncStatus.sending ||
-                              s.syncStatus == SyncStatus.receiving)) ...[
+                      ] else if (waitingPeer ||
+                          s.syncStatus == SyncStatus.packaging ||
+                          s.syncStatus == SyncStatus.sending ||
+                          s.syncStatus == SyncStatus.receiving) ...[
                         TextButton(
-                          onPressed: () {
-                            if (s.syncStatus == SyncStatus.sending) {
-                              s.cancelOngoingSend();
-                            } else if (s.syncStatus == SyncStatus.receiving) {
-                              s.cancelReceiving();
-                            }
-                          },
+                          onPressed: cancelCurrentSync,
                           child: Text(
                             s.syncStatus == SyncStatus.receiving
                                 ? l10n.cancelReceive
@@ -1196,6 +1227,18 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                         ),
                       ],
                     ],
+                  );
+                  return PopScope(
+                    canPop: !inProgress ||
+                        waitingUser ||
+                        waitingPeer ||
+                        s.syncStatus == SyncStatus.packaging ||
+                        s.syncStatus == SyncStatus.sending ||
+                        s.syncStatus == SyncStatus.receiving,
+                    onPopInvokedWithResult: (didPop, result) {
+                      if (didPop) cancelCurrentSync(closeDialog: false);
+                    },
+                    child: dialog,
                   );
                 },
               );

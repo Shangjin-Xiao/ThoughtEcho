@@ -1,8 +1,10 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/localsend/models/session_status.dart';
-import 'dart:io';
 
 void main() {
   group('SendSession Tests', () {
@@ -76,6 +78,111 @@ void main() {
         expect(updatedSession.fileTokens, session.fileTokens);
         expect(updatedSession.errorMessage, session.errorMessage);
       });
+    });
+
+    test('cancelSession aborts a pending prepare request promptly', () async {
+      final prepareStarted = Completer<void>();
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      server.listen((request) async {
+        if (request.uri.path.endsWith('/info')) {
+          request.response
+            ..statusCode = HttpStatus.ok
+            ..write('{}');
+          await request.response.close();
+          return;
+        }
+        if (request.uri.path.endsWith('/prepare-upload')) {
+          if (!prepareStarted.isCompleted) prepareStarted.complete();
+          await request.response.done;
+          return;
+        }
+        request.response.statusCode = HttpStatus.notFound;
+        await request.response.close();
+      });
+      final file = File(
+        '${Directory.systemTemp.path}/localsend-cancel-test.txt',
+      );
+      await file.writeAsString('payload');
+      addTearDown(() async {
+        if (await file.exists()) await file.delete();
+      });
+      final provider = LocalSendProvider();
+      addTearDown(provider.dispose);
+      late String sessionId;
+      final sendFuture = provider.startSession(
+        target: Device.empty.copyWith(
+          ip: InternetAddress.loopbackIPv4.address,
+          port: server.port,
+          https: false,
+          version: '2.1',
+        ),
+        files: [file],
+        onSessionCreated: (value) => sessionId = value,
+      );
+      await prepareStarted.future.timeout(const Duration(seconds: 2));
+
+      final sendCompleted = Completer<void>();
+      sendFuture.then<void>(
+        (_) => sendCompleted.complete(),
+        onError: (_) => sendCompleted.complete(),
+      );
+      provider.cancelSession(sessionId);
+
+      await sendCompleted.future.timeout(const Duration(seconds: 2));
+      expect(
+        provider.getSession(sessionId)?.status,
+        SessionStatus.canceledBySender,
+      );
+    });
+
+    test('cancelSession aborts a pending info handshake promptly', () async {
+      final infoStarted = Completer<void>();
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      server.listen((request) async {
+        if (request.uri.path.endsWith('/info')) {
+          if (!infoStarted.isCompleted) infoStarted.complete();
+          await request.response.done;
+          return;
+        }
+        request.response.statusCode = HttpStatus.notFound;
+        await request.response.close();
+      });
+      final file = File(
+        '${Directory.systemTemp.path}/localsend-handshake-cancel-test.txt',
+      );
+      await file.writeAsString('payload');
+      addTearDown(() async {
+        if (await file.exists()) await file.delete();
+      });
+      final provider = LocalSendProvider();
+      addTearDown(provider.dispose);
+      late String sessionId;
+      final sendFuture = provider.startSession(
+        target: Device.empty.copyWith(
+          ip: InternetAddress.loopbackIPv4.address,
+          port: server.port,
+          https: false,
+          version: '2.1',
+        ),
+        files: [file],
+        onSessionCreated: (value) => sessionId = value,
+      );
+      await infoStarted.future.timeout(const Duration(seconds: 2));
+      final sendCompleted = Completer<void>();
+      sendFuture.then<void>(
+        (_) => sendCompleted.complete(),
+        onError: (_) => sendCompleted.complete(),
+      );
+
+      provider.cancelSession(sessionId);
+
+      await sendCompleted.future.timeout(const Duration(seconds: 2));
+      expect(
+        provider.getSession(sessionId)?.status,
+        SessionStatus.canceledBySender,
+      );
     });
   });
 }

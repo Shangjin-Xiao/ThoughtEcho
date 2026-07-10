@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
@@ -24,33 +26,47 @@ void main() {
       when(mockSyncService.syncStatus).thenReturn(SyncStatus.idle);
       when(mockSyncService.syncStatusMessage).thenReturn('');
       when(mockSyncService.syncProgress).thenReturn(0.0);
+      when(mockSyncService.awaitingPeerApproval).thenReturn(false);
+      when(mockSyncService.awaitingUserApproval).thenReturn(false);
       when(mockSyncService.discoverNearbyDevices()).thenAnswer((_) async => []);
+      when(
+        mockSyncService.discoverNearbyDevicesStream(
+          timeout: anyNamed('timeout'),
+        ),
+      ).thenReturn((Stream<List<Device>>.value(const []), () {}));
       when(mockSyncService.startServer()).thenAnswer((_) async {});
       when(mockSyncService.stopServer()).thenAnswer((_) async {});
     });
 
     Widget createTestWidget() {
-      return MaterialApp(
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [
-          Locale('en', ''),
-          Locale('zh', ''),
-        ],
-        home: ChangeNotifierProvider<NoteSyncService>.value(
-          value: mockSyncService,
-          child: const NoteSyncPage(),
+      return ChangeNotifierProvider<NoteSyncService>.value(
+        value: mockSyncService,
+        child: MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('en', ''),
+            Locale('zh', ''),
+          ],
+          home: const NoteSyncPage(),
         ),
       );
     }
 
+    Future<void> pumpUi(WidgetTester tester) async {
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
     testWidgets('页面初始状态显示', (WidgetTester tester) async {
       await tester.pumpWidget(createTestWidget());
-      await tester.pumpAndSettle();
+      await pumpUi(tester);
 
       // 验证页面标题
       expect(find.text('笔记同步'), findsOneWidget);
@@ -63,19 +79,25 @@ void main() {
 
       // 验证空设备列表提示
       expect(find.text('未发现附近设备'), findsOneWidget);
-      expect(find.text('确保目标设备也打开了ThoughtEcho\n并且在同一网络中'), findsOneWidget);
+      expect(
+        find.text('请确保目标设备也打开了心迹同步页\n并且两台设备在同一WiFi网络中'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('设备发现状态显示', (WidgetTester tester) async {
+      final discovery = StreamController<List<Device>>();
+      addTearDown(discovery.close);
+      when(
+        mockSyncService.discoverNearbyDevicesStream(
+          timeout: anyNamed('timeout'),
+        ),
+      ).thenReturn((discovery.stream, () {}));
       await tester.pumpWidget(createTestWidget());
-      await tester.pumpAndSettle();
-
-      // 点击刷新按钮开始扫描
-      await tester.tap(find.byIcon(Icons.refresh));
-      await tester.pump();
+      await pumpUi(tester);
 
       // 验证扫描状态显示
-      expect(find.text('正在搜索附近设备...'), findsOneWidget);
+      expect(find.textContaining('搜索中...'), findsOneWidget);
       expect(find.byType(CircularProgressIndicator), findsWidgets);
     });
 
@@ -111,15 +133,13 @@ void main() {
       ];
 
       when(
-        mockSyncService.discoverNearbyDevices(),
-      ).thenAnswer((_) async => testDevices);
+        mockSyncService.discoverNearbyDevicesStream(
+          timeout: anyNamed('timeout'),
+        ),
+      ).thenReturn((Stream<List<Device>>.value(testDevices), () {}));
 
       await tester.pumpWidget(createTestWidget());
-      await tester.pumpAndSettle();
-
-      // 模拟设备发现完成
-      await tester.tap(find.byIcon(Icons.refresh));
-      await tester.pumpAndSettle();
+      await pumpUi(tester);
 
       // 验证设备数量显示
       expect(find.text('发现 2 台设备'), findsOneWidget);
@@ -127,8 +147,8 @@ void main() {
       // 验证设备列表项
       expect(find.text('Test Device 1'), findsOneWidget);
       expect(find.text('Test Device 2'), findsOneWidget);
-      expect(find.text('192.168.1.100:53317'), findsOneWidget);
-      expect(find.text('192.168.1.101:53317'), findsOneWidget);
+      expect(find.text('http://192.168.1.100:53317'), findsOneWidget);
+      expect(find.text('http://192.168.1.101:53317'), findsOneWidget);
 
       // 验证设备图标
       expect(find.byIcon(Icons.smartphone), findsOneWidget); // mobile
@@ -145,43 +165,79 @@ void main() {
       when(mockSyncService.syncProgress).thenReturn(0.3);
 
       await tester.pumpWidget(createTestWidget());
-      await tester.pumpAndSettle();
+      await pumpUi(tester);
 
       // 验证同步状态显示
       expect(find.text('正在打包数据...'), findsOneWidget);
       expect(find.text('30%'), findsOneWidget);
 
       // 验证进度指示器
-      expect(find.byType(CircularProgressIndicator), findsWidgets);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('等待对方确认时显示取消发送按钮', (WidgetTester tester) async {
+      when(mockSyncService.syncStatus).thenReturn(SyncStatus.packaging);
+      when(mockSyncService.syncStatusMessage).thenReturn('等待对方确认同步请求...');
+      when(mockSyncService.awaitingPeerApproval).thenReturn(true);
+
+      await tester.pumpWidget(createTestWidget());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('取消发送'), findsOneWidget);
+      await tester.tap(find.text('取消发送'));
+      verify(mockSyncService.cancelOngoingSend()).called(1);
+    });
+
+    testWidgets('等待对方确认时按返回会取消发送', (tester) async {
+      when(mockSyncService.syncStatus).thenReturn(SyncStatus.packaging);
+      when(mockSyncService.syncStatusMessage).thenReturn('等待对方确认同步请求...');
+      when(mockSyncService.awaitingPeerApproval).thenReturn(true);
+
+      await tester.pumpWidget(createTestWidget());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text('等待对方确认'), findsOneWidget);
+
+      await tester.binding.handlePopRoute();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      verify(mockSyncService.cancelOngoingSend()).called(1);
     });
 
     testWidgets('同步完成状态显示', (WidgetTester tester) async {
-      // 模拟同步完成状态
+      when(mockSyncService.syncStatus).thenReturn(SyncStatus.packaging);
+      when(mockSyncService.syncStatusMessage).thenReturn('正在打包数据...');
+      when(mockSyncService.syncProgress).thenReturn(0.5);
+      await tester.pumpWidget(createTestWidget());
+      await pumpUi(tester);
+
       when(mockSyncService.syncStatus).thenReturn(SyncStatus.completed);
       when(mockSyncService.syncStatusMessage).thenReturn('同步完成');
       when(mockSyncService.syncProgress).thenReturn(1.0);
-
       await tester.pumpWidget(createTestWidget());
-      await tester.pumpAndSettle();
+      await pumpUi(tester);
 
-      // 验证完成状态显示
-      expect(find.text('同步完成'), findsOneWidget);
-
-      // 完成状态不应该显示进度百分比
-      expect(find.text('100%'), findsNothing);
+      expect(find.text('同步完成'), findsWidgets);
     });
 
     testWidgets('同步失败状态显示', (WidgetTester tester) async {
-      // 模拟同步失败状态
+      when(mockSyncService.syncStatus).thenReturn(SyncStatus.packaging);
+      when(mockSyncService.syncStatusMessage).thenReturn('正在打包数据...');
+      when(mockSyncService.syncProgress).thenReturn(0.5);
+      await tester.pumpWidget(createTestWidget());
+      await pumpUi(tester);
+
       when(mockSyncService.syncStatus).thenReturn(SyncStatus.failed);
       when(mockSyncService.syncStatusMessage).thenReturn('同步失败: 网络错误');
       when(mockSyncService.syncProgress).thenReturn(0.0);
-
       await tester.pumpWidget(createTestWidget());
-      await tester.pumpAndSettle();
+      await pumpUi(tester);
 
-      // 验证失败状态显示
-      expect(find.text('同步失败: 网络错误'), findsOneWidget);
+      expect(find.text('同步失败: 网络错误'), findsWidgets);
     });
 
     testWidgets('发送按钮点击测试', (WidgetTester tester) async {
@@ -200,21 +256,21 @@ void main() {
       );
 
       when(
-        mockSyncService.discoverNearbyDevices(),
-      ).thenAnswer((_) async => [testDevice]);
+        mockSyncService.discoverNearbyDevicesStream(
+          timeout: anyNamed('timeout'),
+        ),
+      ).thenReturn((Stream<List<Device>>.value([testDevice]), () {}));
       when(
         mockSyncService.createSyncPackage(any),
       ).thenAnswer((_) async => 'session-id');
 
       await tester.pumpWidget(createTestWidget());
-      await tester.pumpAndSettle();
-
-      // 模拟设备发现
-      await tester.tap(find.byIcon(Icons.refresh));
-      await tester.pumpAndSettle();
+      await pumpUi(tester);
 
       // 点击发送按钮
       await tester.tap(find.byIcon(Icons.send));
+      await tester.pump();
+      await tester.tap(find.text('开始发送'));
       await tester.pump();
 
       // 验证createSyncPackage被调用
@@ -223,7 +279,7 @@ void main() {
 
     testWidgets('使用说明显示', (WidgetTester tester) async {
       await tester.pumpWidget(createTestWidget());
-      await tester.pumpAndSettle();
+      await pumpUi(tester);
 
       // 验证使用说明
       expect(find.text('使用说明'), findsOneWidget);

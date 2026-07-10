@@ -1,15 +1,18 @@
+import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
-import 'package:thoughtecho/services/note_sync_service.dart';
+import 'package:mockito/mockito.dart';
+import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/backup_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
-import 'package:thoughtecho/services/settings_service.dart';
-import 'package:thoughtecho/services/ai_analysis_database_service.dart';
-import 'package:thoughtecho/services/localsend/models/device.dart';
-import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/services/large_file_manager.dart' as lfm;
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
+import 'package:thoughtecho/services/localsend/models/device.dart';
+import 'package:thoughtecho/services/note_sync_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
 
 // 生成Mock类
 @GenerateMocks([
@@ -46,6 +49,7 @@ void main() {
         aiAnalysisDbService: mockAiAnalysisDbService,
       );
       syncService.localSendProviderForTesting = mockLocalSendProvider;
+      syncService.syncIntentHandlerForTesting = (_) async => true;
 
       // 为 startSession 设置默认 mock 行为
       when(
@@ -82,6 +86,20 @@ void main() {
       expect(syncService.syncProgress, equals(0.0));
     });
 
+    test('同步审批地址遵循目标设备的HTTP配置', () {
+      final uri = NoteSyncService.buildSyncIntentUri(
+        Device.empty.copyWith(
+          ip: '192.168.1.20',
+          port: 54321,
+          https: false,
+        ),
+      );
+
+      expect(uri.scheme, 'http');
+      expect(uri.host, '192.168.1.20');
+      expect(uri.port, 54321);
+    });
+
     test('创建同步包流程测试', () async {
       // 准备测试数据
       final testDevice = Device(
@@ -103,6 +121,7 @@ void main() {
         mockBackupService.exportAllData(
           includeMediaFiles: true,
           onProgress: anyNamed('onProgress'),
+          cancelToken: anyNamed('cancelToken'),
         ),
       ).thenAnswer((_) async {
         return '/tmp/test_backup.zip';
@@ -116,8 +135,105 @@ void main() {
         mockBackupService.exportAllData(
           includeMediaFiles: true,
           onProgress: anyNamed('onProgress'),
+          cancelToken: anyNamed('cancelToken'),
         ),
       ).called(1);
+    });
+
+    test('接收端明确批准前不会开始打包', () async {
+      final intentStarted = Completer<void>();
+      final approval = Completer<bool>();
+      syncService.syncIntentHandlerForTesting = (_) {
+        intentStarted.complete();
+        return approval.future;
+      };
+
+      final sendFuture = syncService.createSyncPackage(Device.empty);
+      await intentStarted.future.timeout(const Duration(seconds: 2));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      verifyNever(
+        mockBackupService.exportAllData(
+          includeMediaFiles: anyNamed('includeMediaFiles'),
+          onProgress: anyNamed('onProgress'),
+          cancelToken: anyNamed('cancelToken'),
+        ),
+      );
+
+      approval.complete(false);
+      await expectLater(sendFuture, throwsA(isA<Exception>()));
+    });
+
+    test('等待接收端批准时取消不会开始打包', () async {
+      final intentStarted = Completer<void>();
+      final approval = Completer<bool>();
+      syncService.syncIntentHandlerForTesting = (_) {
+        intentStarted.complete();
+        return approval.future;
+      };
+      final sendFuture = syncService.createSyncPackage(Device.empty);
+      await intentStarted.future.timeout(const Duration(seconds: 2));
+
+      syncService.cancelOngoingSend();
+
+      await expectLater(
+        sendFuture.timeout(const Duration(seconds: 2)),
+        throwsA(anything),
+      );
+      verifyNever(
+        mockBackupService.exportAllData(
+          includeMediaFiles: anyNamed('includeMediaFiles'),
+          onProgress: anyNamed('onProgress'),
+          cancelToken: anyNamed('cancelToken'),
+        ),
+      );
+      expect(syncService.syncStatusMessage, contains('取消'));
+      approval.complete(false);
+    });
+
+    test('取消的发送完全结束前拒绝启动新发送', () async {
+      final approval = Completer<bool>();
+      syncService.syncIntentHandlerForTesting = (_) => approval.future;
+      final firstSend = syncService.createSyncPackage(Device.empty);
+      final firstFailure = expectLater(firstSend, throwsA(anything));
+      await Future<void>.delayed(Duration.zero);
+
+      syncService.cancelOngoingSend();
+
+      await expectLater(
+        syncService.createSyncPackage(Device.empty),
+        throwsStateError,
+      );
+      approval.complete(false);
+      await firstFailure;
+    });
+
+    test('打包阶段取消会传递到备份取消令牌', () async {
+      final exportStarted = Completer<void>();
+      final exportResult = Completer<String>();
+      late lfm.CancelToken cancelToken;
+      when(
+        mockBackupService.exportAllData(
+          includeMediaFiles: true,
+          onProgress: anyNamed('onProgress'),
+          cancelToken: anyNamed('cancelToken'),
+        ),
+      ).thenAnswer((invocation) {
+        cancelToken =
+            invocation.namedArguments[#cancelToken] as lfm.CancelToken;
+        exportStarted.complete();
+        return exportResult.future;
+      });
+
+      final sendFuture = syncService.createSyncPackage(Device.empty);
+      await exportStarted.future.timeout(const Duration(seconds: 2));
+
+      syncService.cancelOngoingSend();
+
+      expect(cancelToken.isCancelled, isTrue);
+      exportResult.complete('/tmp/test_backup.zip');
+      await expectLater(sendFuture, throwsA(isA<lfm.CancelledException>()));
+      expect(syncService.syncStatusMessage, contains('取消'));
     });
 
     test('处理同步包流程测试', () async {
@@ -186,6 +302,7 @@ void main() {
         mockBackupService.exportAllData(
           includeMediaFiles: true,
           onProgress: anyNamed('onProgress'),
+          cancelToken: anyNamed('cancelToken'),
         ),
       ).thenAnswer((_) async => '/tmp/backup_with_media.zip');
 
@@ -211,6 +328,7 @@ void main() {
         mockBackupService.exportAllData(
           includeMediaFiles: true,
           onProgress: anyNamed('onProgress'),
+          cancelToken: anyNamed('cancelToken'),
         ),
       ).called(1);
     });
@@ -221,6 +339,7 @@ void main() {
         mockBackupService.exportAllData(
           includeMediaFiles: true,
           onProgress: anyNamed('onProgress'),
+          cancelToken: anyNamed('cancelToken'),
         ),
       ).thenThrow(Exception('备份失败'));
 

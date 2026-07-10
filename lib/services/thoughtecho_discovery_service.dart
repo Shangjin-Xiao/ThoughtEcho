@@ -1,15 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:thoughtecho/services/localsend/constants.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/localsend/models/multicast_dto.dart';
 import 'package:thoughtecho/services/localsend/utils/network_interfaces.dart';
-import 'device_identity_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/utils/ios_local_network_permission.dart';
+
+import 'device_identity_manager.dart';
 
 /// ThoughtEcho设备发现服务 - 基于UDP组播
 class ThoughtEchoDiscoveryService extends ChangeNotifier {
@@ -47,6 +49,34 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
 
   List<Device> get devices => List.unmodifiable(_devices);
   bool get isScanning => _isScanning;
+
+  @visibleForTesting
+  static MulticastDto buildAnnouncement({
+    required String alias,
+    required String deviceModel,
+    required String fingerprint,
+    required int serverPort,
+    required bool isAnnouncement,
+    DeviceType deviceType = DeviceType.mobile,
+  }) {
+    return MulticastDto(
+      alias: alias,
+      version: protocolVersion,
+      deviceModel: deviceModel,
+      deviceType: deviceType,
+      fingerprint: fingerprint,
+      port: serverPort,
+      protocol: ProtocolType.http,
+      download: true,
+      announcement: isAnnouncement,
+      announce: isAnnouncement,
+    );
+  }
+
+  @visibleForTesting
+  static bool shouldReplyToAnnouncement(MulticastDto dto) {
+    return dto.announcement == true || dto.announce == true;
+  }
 
   /// 构造函数：开始异步获取指纹
   ThoughtEchoDiscoveryService() {
@@ -448,20 +478,20 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
             '当前设备列表: ${_devices.map((d) => '${d.alias}(${d.ip}:${d.port})').join(', ')}',
           );
         }
-
-        // 如果是公告消息，回应一个注册消息
-        if (dto.announcement == true || dto.announce == true) {
-          if (kDebugMode) {
-            debugPrint('收到公告消息，准备发送回应');
-          }
-          _respondToAnnouncement(device);
-        }
       } else {
         // 更新 last seen
         _deviceLastSeen[device.fingerprint] = DateTime.now();
         if (kDebugMode) {
           debugPrint('设备已存在: ${device.alias} (${device.ip}:${device.port})');
         }
+      }
+
+      // 每次公告都回应。首次回应可能丢包，不能因本机已记录设备而停止回应。
+      if (shouldReplyToAnnouncement(dto)) {
+        if (kDebugMode) {
+          debugPrint('收到公告消息，准备发送回应');
+        }
+        _respondToAnnouncement(device);
       }
     } catch (e, stack) {
       if (kDebugMode) {
@@ -491,17 +521,12 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       await _ensureDeviceInfo();
     }
     final fingerprint = _getDeviceFingerprint();
-    final dto = MulticastDto(
+    final dto = buildAnnouncement(
       alias: 'ThoughtEcho-${Platform.localHostname}',
-      version: protocolVersion,
       deviceModel: _deviceModel,
-      deviceType: DeviceType.mobile,
       fingerprint: fingerprint,
-      port: _actualServerPort, // 使用实际服务器端口
-      protocol: ProtocolType.http,
-      download: true,
-      announcement: true,
-      announce: true,
+      serverPort: _actualServerPort,
+      isAnnouncement: true,
     );
 
     final messageJson = jsonEncode(dto.toJson());
@@ -624,23 +649,26 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     if (!_fingerprintReady) {
       await _ensureFingerprint();
     }
-    final dto = MulticastDto(
+    final dto = buildAnnouncement(
       alias: 'ThoughtEcho-${Platform.localHostname}',
-      version: protocolVersion,
       deviceModel: _deviceModel,
       deviceType: DeviceType.desktop,
       fingerprint: _getDeviceFingerprint(),
-      port: defaultPort,
-      protocol: ProtocolType.http,
-      download: true,
-      announcement: false,
-      announce: false,
+      serverPort: _actualServerPort,
+      isAnnouncement: false,
     );
 
     final message = utf8.encode(jsonEncode(dto.toJson()));
 
     for (final socket in _sockets) {
       try {
+        if (peer.ip != null) {
+          socket.send(
+            message,
+            InternetAddress(peer.ip!),
+            defaultMulticastPort,
+          );
+        }
         socket.send(
           message,
           InternetAddress(defaultMulticastGroup),
@@ -677,17 +705,12 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       final fingerprint = _getDeviceFingerprint();
       debugPrint('创建设备公告，设备指纹: $fingerprint');
 
-      final announcement = MulticastDto(
+      final announcement = buildAnnouncement(
         alias: 'ThoughtEcho-${Platform.localHostname}',
-        version: protocolVersion,
         deviceModel: _deviceModel,
-        deviceType: DeviceType.mobile,
         fingerprint: fingerprint,
-        port: _actualServerPort, // 使用实际服务器端口
-        protocol: ProtocolType.http,
-        download: true,
-        announcement: true,
-        announce: true,
+        serverPort: _actualServerPort,
+        isAnnouncement: true,
       );
 
       final message = jsonEncode(announcement.toJson());

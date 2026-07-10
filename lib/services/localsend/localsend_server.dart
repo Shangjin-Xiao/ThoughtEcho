@@ -16,10 +16,13 @@ class LocalSendServer {
   bool _isRunning = false;
   int _port = defaultPort;
   final Set<String> _preApprovedFingerprints = {}; // 预先批准一次性
+  final Set<String> _cancelledIntentIds = {};
+  final Map<String, String> _approvedIntentFingerprints = {};
   Function(String sessionId, int totalBytes, String senderAlias)?
       _onReceiveSessionCreated;
   Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
       _onApprovalNeeded;
+  void Function(String sessionId)? _onApprovalCancelled;
 
   bool get isRunning => _isRunning;
   int get port => _port;
@@ -36,6 +39,7 @@ class LocalSendServer {
         onReceiveSessionCreated,
     Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
         onApprovalNeeded,
+    void Function(String sessionId)? onApprovalCancelled,
   }) async {
     if (_isRunning) return;
 
@@ -49,6 +53,7 @@ class LocalSendServer {
     _port = port ?? defaultPort;
     _onReceiveSessionCreated = onReceiveSessionCreated;
     _onApprovalNeeded = onApprovalNeeded;
+    _onApprovalCancelled = onApprovalCancelled;
 
     _receiveController = ReceiveController(
       onFileReceived: onFileReceived,
@@ -58,6 +63,7 @@ class LocalSendServer {
       consumePreApproval: (fp) {
         if (fp == null) return false;
         if (_preApprovedFingerprints.remove(fp)) {
+          _approvedIntentFingerprints.removeWhere((_, value) => value == fp);
           return true; // consumed
         }
         return false;
@@ -208,6 +214,31 @@ class LocalSendServer {
           // Add placeholder for future compatibility.
           responseData['token'] = 'compat';
           logDebug('register_ok', source: 'LocalSend');
+        } else if (path == '/api/thoughtecho/v1/sync-intent/cancel' &&
+            request.method == 'POST') {
+          final bodyBytes = await request.fold<List<int>>(
+            <int>[],
+            (p, e) => p..addAll(e),
+          );
+          final req =
+              jsonDecode(utf8.decode(bodyBytes)) as Map<String, dynamic>;
+          final intentId = req['intentId'];
+          if (intentId is! String || intentId.isEmpty) {
+            statusCode = HttpStatus.badRequest;
+            responseData = {'error': 'missing intentId'};
+          } else {
+            if (_cancelledIntentIds.length >= 100) {
+              _cancelledIntentIds.remove(_cancelledIntentIds.first);
+            }
+            _cancelledIntentIds.add(intentId);
+            final approvedFingerprint =
+                _approvedIntentFingerprints.remove(intentId);
+            if (approvedFingerprint != null) {
+              _preApprovedFingerprints.remove(approvedFingerprint);
+            }
+            _onApprovalCancelled?.call(intentId);
+            responseData = {'ok': true};
+          }
         } else if (path == '/api/thoughtecho/v1/sync-intent' &&
             request.method == 'POST') {
           // 轻量意向握手：请求体包含 fingerprint, alias, estimatedNotes(optional)
@@ -224,10 +255,17 @@ class LocalSendServer {
           }
           final senderFp = req['fingerprint'] as String?;
           final senderAlias = req['alias'] as String? ?? '对方';
+          final requestedIntentId = req['intentId'];
+          final tempId =
+              requestedIntentId is String && requestedIntentId.trim().isNotEmpty
+                  ? requestedIntentId
+                  : 'intent_${DateTime.now().millisecondsSinceEpoch}';
           bool approved = true;
-          if (_onReceiveSessionCreated != null && _onApprovalNeeded != null) {
+          if (_cancelledIntentIds.remove(tempId)) {
+            approved = false;
+          } else if (_onReceiveSessionCreated != null &&
+              _onApprovalNeeded != null) {
             // 临时使用虚拟 sessionId 供审批显示大小未知
-            final tempId = 'intent_${DateTime.now().millisecondsSinceEpoch}';
             try {
               _onReceiveSessionCreated!(tempId, 0, senderAlias);
             } catch (e) {
@@ -244,8 +282,12 @@ class LocalSendServer {
               approved = false;
             }
           }
+          if (_cancelledIntentIds.remove(tempId)) {
+            approved = false;
+          }
           if (approved && senderFp != null) {
             _preApprovedFingerprints.add(senderFp);
+            _approvedIntentFingerprints[tempId] = senderFp;
           }
           responseData = {'approved': approved};
         } else if ((path == '/api/localsend/v2/prepare-upload' ||

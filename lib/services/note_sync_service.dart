@@ -1,22 +1,23 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:convert';
+
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:thoughtecho/models/merge_report.dart';
+import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/backup_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
-import 'package:thoughtecho/services/settings_service.dart';
-import 'package:thoughtecho/services/ai_analysis_database_service.dart';
-import 'package:thoughtecho/services/thoughtecho_discovery_service.dart';
+import 'package:thoughtecho/services/large_file_manager.dart' as lfm;
+import 'package:thoughtecho/services/localsend/constants.dart';
 import 'package:thoughtecho/services/localsend/localsend_server.dart';
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
-import 'package:thoughtecho/services/localsend/constants.dart';
-import 'package:thoughtecho/models/merge_report.dart';
-import 'package:dio/dio.dart';
-import 'device_identity_manager.dart';
+import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/services/thoughtecho_discovery_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
-import 'package:device_info_plus/device_info_plus.dart';
-import 'package:http/http.dart' as http;
+
+import 'device_identity_manager.dart';
 
 /// 同步状态枚举
 enum SyncStatus {
@@ -65,6 +66,14 @@ class NoteSyncService extends ChangeNotifier {
   int? _pendingReceiveTotalBytes; // 等待审批大小
   bool _awaitingUserApproval = false; // 是否处于接收审批阶段
   bool _awaitingPeerApproval = false; // 发送端等待对方审批
+  CancelToken? _approvalCancelToken;
+  lfm.CancelToken? _packagingCancelToken;
+  Completer<void>? _sendCancellation;
+  bool _sendCancelled = false;
+  bool _sendInFlight = false;
+  String? _currentIntentId;
+  Device? _currentIntentTarget;
+  Future<bool> Function(Device target)? _syncIntentHandlerForTesting;
 
   bool get awaitingUserApproval => _awaitingUserApproval;
   int? get pendingReceiveTotalBytes => _pendingReceiveTotalBytes;
@@ -93,6 +102,19 @@ class NoteSyncService extends ChangeNotifier {
   @visibleForTesting
   set localSendProviderForTesting(LocalSendProvider provider) {
     _localSendProvider = provider;
+  }
+
+  @visibleForTesting
+  set syncIntentHandlerForTesting(Future<bool> Function(Device target) value) {
+    _syncIntentHandlerForTesting = value;
+  }
+
+  @visibleForTesting
+  static Uri buildSyncIntentUri(Device target) {
+    final protocol = target.https ? 'https' : 'http';
+    return Uri.parse(
+      '$protocol://${target.ip}:${target.port}/api/thoughtecho/v1/sync-intent',
+    );
   }
 
   /// 初始化同步服务
@@ -175,8 +197,21 @@ class NoteSyncService extends ChangeNotifier {
           // 等待 UI 调用 approve 或 reject
           final completer = Completer<bool>();
           _approvalWaiters[sid] = completer;
-          return completer.future;
+          return completer.future.timeout(
+            const Duration(minutes: 2),
+            onTimeout: () {
+              if (identical(_approvalWaiters[sid], completer)) {
+                _approvalWaiters.remove(sid);
+              }
+              if (_currentReceiveSessionId == sid) {
+                _awaitingUserApproval = false;
+                _updateSyncStatus(SyncStatus.failed, '同步接收请求已超时', 0.0);
+              }
+              return false;
+            },
+          );
         },
+        onApprovalCancelled: _cancelIncomingApproval,
       );
       final actualPort = _localSendServer!.port;
       AppLogger.i(
@@ -233,6 +268,13 @@ class NoteSyncService extends ChangeNotifier {
   /// 停止服务器（在关闭同步页面时调用）
   Future<void> stopServer() async {
     AppLogger.i('开始停止同步服务器...', source: 'NoteSyncService');
+
+    cancelOngoingSend();
+    for (final waiter in _approvalWaiters.values) {
+      if (!waiter.isCompleted) waiter.complete(false);
+    }
+    _approvalWaiters.clear();
+    _awaitingUserApproval = false;
 
     try {
       // 停止LocalSendServer
@@ -300,15 +342,40 @@ class NoteSyncService extends ChangeNotifier {
     if (_localSendProvider == null) {
       throw Exception('同步服务未初始化');
     }
+    if (_sendInFlight) {
+      throw StateError('已有同步发送任务正在进行');
+    }
 
+    _sendInFlight = true;
+    _sendCancelled = false;
+    _sendCancellation = Completer<void>();
+    _approvalCancelToken = CancelToken();
+    _packagingCancelToken = lfm.CancelToken();
+    _currentIntentId =
+        'intent_${DateTime.now().microsecondsSinceEpoch}_${targetDevice.fingerprint.hashCode}';
+    _currentIntentTarget = targetDevice;
+
+    File? backupFile;
     try {
       // 0. Preflight: ensure target /info reachable
-      await _preflightCheck(targetDevice);
+      _updateSyncStatus(SyncStatus.packaging, '正在连接目标设备...', 0.01);
+      if (_syncIntentHandlerForTesting == null) {
+        await _preflightCheck(targetDevice, _approvalCancelToken!);
+      }
+      _throwIfSendCancelled();
 
       // 0.1 发送意向握手（让对方先决定是否允许以及是否需要媒体）
       _setAwaitingPeerApproval(true);
       _updateSyncStatus(SyncStatus.packaging, '等待对方确认同步请求...', 0.02);
-      final approved = await _sendSyncIntent(targetDevice);
+      final approvalFuture = _syncIntentHandlerForTesting?.call(targetDevice) ??
+          _sendSyncIntent(targetDevice, _approvalCancelToken!);
+      final approved = await Future.any<bool>([
+        approvalFuture,
+        _sendCancellation!.future.then<bool>(
+          (_) => throw const lfm.CancelledException(),
+        ),
+      ]);
+      _throwIfSendCancelled();
       if (!approved) {
         _updateSyncStatus(SyncStatus.failed, '对方拒绝同步请求', 0.0);
         throw Exception('对方拒绝同步请求');
@@ -322,7 +389,9 @@ class NoteSyncService extends ChangeNotifier {
       // 2. 使用备份服务创建数据包（隐藏具体数量，仅显示百分比）
       final backupPath = await _backupService.exportAllData(
         includeMediaFiles: includeMediaFiles,
+        cancelToken: _packagingCancelToken,
         onProgress: (current, total) {
+          if (_sendCancelled) return;
           final ratio = total > 0 ? (current / total).clamp(0.0, 1.0) : 0.0;
           final progress = 0.1 + ratio * 0.4; // 10%-50%
           _updateSyncStatus(
@@ -332,8 +401,9 @@ class NoteSyncService extends ChangeNotifier {
           );
         },
       );
+      _throwIfSendCancelled();
       // 额外：打包完成后立即获取文件大小并校验
-      final backupFile = File(backupPath);
+      backupFile = File(backupPath);
       int size = 0;
       try {
         if (await backupFile.exists()) {
@@ -373,6 +443,7 @@ class NoteSyncService extends ChangeNotifier {
         files: [backupFile],
         background: true,
         onProgress: (sent, total) {
+          if (_sendCancelled) return;
           // 打包阶段占 0-0.5 ，发送阶段占 0.5-0.9，余下 0.9-1.0 为完成收尾
           final ratio = total == 0 ? 0.0 : sent / total;
           final now = DateTime.now();
@@ -402,23 +473,37 @@ class NoteSyncService extends ChangeNotifier {
           _currentSendSessionId = sid;
         },
       );
+      _throwIfSendCancelled();
 
       // 5. 完成
       _updateSyncStatus(SyncStatus.completed, '发送完成', 1.0);
 
-      // 6. 清理临时文件
-      try {
-        await backupFile.delete();
-      } catch (e) {
-        AppLogger.w('清理临时文件失败: $e', error: e, source: 'NoteSyncService');
-      }
-
       return sessionId;
     } catch (e) {
       _setAwaitingPeerApproval(false);
-      _updateSyncStatus(SyncStatus.failed, '发送失败: $e', 0.0);
+      if (!_sendCancelled) {
+        _updateSyncStatus(SyncStatus.failed, '发送失败: $e', 0.0);
+      }
       rethrow;
+    } finally {
+      _approvalCancelToken = null;
+      _packagingCancelToken = null;
+      _sendCancellation = null;
+      _sendInFlight = false;
+      _currentIntentId = null;
+      _currentIntentTarget = null;
+      if (backupFile != null) {
+        try {
+          if (await backupFile.exists()) await backupFile.delete();
+        } catch (e) {
+          AppLogger.w('清理临时文件失败: $e', error: e, source: 'NoteSyncService');
+        }
+      }
     }
+  }
+
+  void _throwIfSendCancelled() {
+    if (_sendCancelled) throw const lfm.CancelledException();
   }
 
   void _setAwaitingPeerApproval(bool value) {
@@ -428,14 +513,21 @@ class NoteSyncService extends ChangeNotifier {
   }
 
   /// 发送同步意向，返回是否获得对方批准
-  Future<bool> _sendSyncIntent(Device target) async {
+  Future<bool> _sendSyncIntent(
+    Device target,
+    CancelToken cancelToken,
+  ) async {
     // 注意：即使本地设置了 skipSyncConfirmation，我们仍然需要发送 intent
     // 以便接收方知道即将到来的同步，并且接收方可以根据自己的设置决定是否需要审批
+    final uri = buildSyncIntentUri(target);
+    final dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 5),
+        receiveTimeout: const Duration(minutes: 2),
+        validateStatus: (_) => true,
+      ),
+    );
     try {
-      final uri = Uri.https(
-        '${target.ip}:${target.port}',
-        '/api/thoughtecho/v1/sync-intent',
-      );
       final fp = await DeviceIdentityManager.I.getFingerprint();
       // 直接使用 discoveryService 的设备型号，它已经正确地从设备信息中获取
       String alias = 'ThoughtEcho';
@@ -473,17 +565,26 @@ class NoteSyncService extends ChangeNotifier {
       } catch (_) {
         // 忽略，Fallback 保持 ThoughtEcho
       }
-      final body = jsonEncode({'fingerprint': fp, 'alias': alias});
-      final resp = await http
-          .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
-          .timeout(const Duration(seconds: 10)); // 增加超时时间以等待用户审批
-      if (resp.statusCode != 200) return true; // 回退：旧版本对方不支持则直接继续
-      final data = jsonDecode(resp.body) as Map<String, dynamic>;
-      return data['approved'] != false;
-    } catch (e) {
-      // 容错：如果对方是旧版本（无该端点）或超时，继续旧流程
-      AppLogger.w('发送同步意向失败: $e', error: e, source: 'NoteSyncService');
-      return true;
+      final response = await dio.postUri<Map<String, dynamic>>(
+        uri,
+        data: {
+          'fingerprint': fp,
+          'alias': alias,
+          'intentId': _currentIntentId,
+        },
+        options: Options(contentType: Headers.jsonContentType),
+        cancelToken: cancelToken,
+      );
+      if (response.statusCode != HttpStatus.ok) {
+        throw Exception('目标设备不支持同步审批 (${response.statusCode})');
+      }
+      final approved = response.data?['approved'];
+      if (approved is! bool) {
+        throw const FormatException('同步审批响应格式无效');
+      }
+      return approved;
+    } finally {
+      dio.close(force: true);
     }
   }
 
@@ -534,16 +635,63 @@ class NoteSyncService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 取消当前发送（仅在发送阶段有效）
+  /// 取消当前发送，包括等待审批、打包和传输阶段。
   void cancelOngoingSend() {
-    if (_syncStatus != SyncStatus.sending || _currentSendSessionId == null) {
+    final cancellable = _sendInFlight ||
+        _awaitingPeerApproval ||
+        _syncStatus == SyncStatus.packaging ||
+        _syncStatus == SyncStatus.sending;
+    if (!cancellable) {
       return;
     }
     try {
-      _localSendProvider?.cancelSession(_currentSendSessionId!);
+      _sendCancelled = true;
+      unawaited(_cancelRemoteIntent());
+      _approvalCancelToken?.cancel('用户取消发送');
+      _packagingCancelToken?.cancel();
+      final cancellation = _sendCancellation;
+      if (cancellation != null && !cancellation.isCompleted) {
+        cancellation.complete();
+      }
+      if (_currentSendSessionId != null) {
+        _localSendProvider?.cancelSession(_currentSendSessionId!);
+      }
+      _setAwaitingPeerApproval(false);
       _updateSyncStatus(SyncStatus.failed, '发送已取消', 0.0);
     } catch (e) {
       AppLogger.e('取消发送失败: $e', error: e, source: 'NoteSyncService');
+    }
+  }
+
+  Future<void> _cancelRemoteIntent() async {
+    final target = _currentIntentTarget;
+    final intentId = _currentIntentId;
+    if (target == null || intentId == null) return;
+    final protocol = target.https ? 'https' : 'http';
+    final uri = Uri.parse(
+      '$protocol://${target.ip}:${target.port}/api/thoughtecho/v1/sync-intent/cancel',
+    );
+    final dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 2),
+        receiveTimeout: const Duration(seconds: 2),
+      ),
+    );
+    try {
+      await dio.postUri<void>(uri, data: {'intentId': intentId});
+    } catch (e) {
+      AppLogger.d('通知接收端取消审批失败: $e', source: 'NoteSyncService');
+    } finally {
+      dio.close(force: true);
+    }
+  }
+
+  void _cancelIncomingApproval(String sessionId) {
+    final waiter = _approvalWaiters.remove(sessionId);
+    if (waiter != null && !waiter.isCompleted) waiter.complete(false);
+    if (_currentReceiveSessionId == sessionId) {
+      _awaitingUserApproval = false;
+      _updateSyncStatus(SyncStatus.failed, '对方已取消同步请求', 0.0);
     }
   }
 
@@ -562,7 +710,10 @@ class NoteSyncService extends ChangeNotifier {
     }
   }
 
-  Future<void> _preflightCheck(Device target) async {
+  Future<void> _preflightCheck(
+    Device target,
+    CancelToken cancelToken,
+  ) async {
     final dio = Dio(
       BaseOptions(
         connectTimeout: const Duration(seconds: 3),
@@ -578,14 +729,14 @@ class NoteSyncService extends ChangeNotifier {
           '$protocol://${target.ip}:${target.port}/api/localsend/v1/info';
       int statusCode = 0;
       try {
-        final resp = await dio.get(infoUrlV2);
+        final resp = await dio.get(infoUrlV2, cancelToken: cancelToken);
         statusCode = resp.statusCode ?? 0;
       } catch (_) {
         statusCode = 404;
       }
       if (statusCode == 404) {
         try {
-          final resp = await dio.get(infoUrlV1);
+          final resp = await dio.get(infoUrlV1, cancelToken: cancelToken);
           statusCode = resp.statusCode ?? 0;
         } catch (_) {
           // ignore
@@ -594,7 +745,7 @@ class NoteSyncService extends ChangeNotifier {
       if (statusCode >= 200 && statusCode < 300) {
         AppLogger.d('Preflight OK: $statusCode', source: 'NoteSyncService');
       } else {
-        AppLogger.w('Preflight warn: $statusCode', source: 'NoteSyncService');
+        throw Exception('目标设备当前不可连接 ($statusCode)');
       }
     } finally {
       dio.close();
