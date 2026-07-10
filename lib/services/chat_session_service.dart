@@ -28,11 +28,9 @@ class ChatSessionService extends ChangeNotifier {
       'legacy_main_db_chat_migration_complete';
   static const Duration _emptySessionCleanupInterval = Duration(minutes: 1);
 
-  ChatSessionService({
-    String? databasePath,
-    bool openOwnDatabase = true,
-  })  : _databasePath = databasePath,
-        _openOwnDatabase = openOwnDatabase {
+  ChatSessionService({String? databasePath, bool openOwnDatabase = true})
+    : _databasePath = databasePath,
+      _openOwnDatabase = openOwnDatabase {
     activeInstance = this;
   }
 
@@ -163,8 +161,9 @@ class ChatSessionService extends ChangeNotifier {
       final legacyMessages = await sourceDb.query('chat_messages');
 
       await targetDb.transaction((txn) async {
+        final batch = txn.batch();
         for (final row in legacySessions) {
-          await txn.insert(
+          batch.insert(
             'chat_sessions',
             row,
             conflictAlgorithm: ConflictAlgorithm.ignore,
@@ -172,20 +171,17 @@ class ChatSessionService extends ChangeNotifier {
         }
 
         for (final row in legacyMessages) {
-          await txn.insert(
+          batch.insert(
             'chat_messages',
             row,
             conflictAlgorithm: ConflictAlgorithm.ignore,
           );
         }
-        await txn.insert(
-          'chat_metadata',
-          {
-            'key': _legacyMainDbMigrationKey,
-            'value': 'true',
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
+        batch.insert('chat_metadata', {
+          'key': _legacyMainDbMigrationKey,
+          'value': 'true',
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+        await batch.commit(noResult: true);
       });
       logInfo(
         '已迁移 ${legacySessions.length} 个旧聊天会话到独立聊天数据库',
@@ -226,14 +222,10 @@ class ChatSessionService extends ChangeNotifier {
     String key,
     String value,
   ) async {
-    await db.insert(
-      'chat_metadata',
-      {
-        'key': key,
-        'value': value,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('chat_metadata', {
+      'key': key,
+      'value': value,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<void> close() async {
@@ -566,7 +558,8 @@ class ChatSessionService extends ChangeNotifier {
     if (db == null) return [];
     try {
       final now = DateTime.now();
-      final shouldCleanup = _lastEmptySessionCleanupAt == null ||
+      final shouldCleanup =
+          _lastEmptySessionCleanupAt == null ||
           now.difference(_lastEmptySessionCleanupAt!) >=
               _emptySessionCleanupInterval;
       if (shouldCleanup) {
