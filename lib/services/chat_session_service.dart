@@ -28,9 +28,11 @@ class ChatSessionService extends ChangeNotifier {
       'legacy_main_db_chat_migration_complete';
   static const Duration _emptySessionCleanupInterval = Duration(minutes: 1);
 
-  ChatSessionService({String? databasePath, bool openOwnDatabase = true})
-    : _databasePath = databasePath,
-      _openOwnDatabase = openOwnDatabase {
+  ChatSessionService({
+    String? databasePath,
+    bool openOwnDatabase = true,
+  })  : _databasePath = databasePath,
+        _openOwnDatabase = openOwnDatabase {
     activeInstance = this;
   }
 
@@ -177,10 +179,14 @@ class ChatSessionService extends ChangeNotifier {
             conflictAlgorithm: ConflictAlgorithm.ignore,
           );
         }
-        batch.insert('chat_metadata', {
-          'key': _legacyMainDbMigrationKey,
-          'value': 'true',
-        }, conflictAlgorithm: ConflictAlgorithm.replace);
+        batch.insert(
+          'chat_metadata',
+          {
+            'key': _legacyMainDbMigrationKey,
+            'value': 'true',
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
         await batch.commit(noResult: true);
       });
       logInfo(
@@ -222,10 +228,14 @@ class ChatSessionService extends ChangeNotifier {
     String key,
     String value,
   ) async {
-    await db.insert('chat_metadata', {
-      'key': key,
-      'value': value,
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    await db.insert(
+      'chat_metadata',
+      {
+        'key': key,
+        'value': value,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<void> close() async {
@@ -558,8 +568,7 @@ class ChatSessionService extends ChangeNotifier {
     if (db == null) return [];
     try {
       final now = DateTime.now();
-      final shouldCleanup =
-          _lastEmptySessionCleanupAt == null ||
+      final shouldCleanup = _lastEmptySessionCleanupAt == null ||
           now.difference(_lastEmptySessionCleanupAt!) >=
               _emptySessionCleanupInterval;
       if (shouldCleanup) {
