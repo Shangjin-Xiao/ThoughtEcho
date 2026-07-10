@@ -1,0 +1,108 @@
+lib/widgets/ai/tool_progress_panel.dart
+  s_2d876b23ff59bb::t_dbe14289964ad7 163-166
+lib/pages/ai_assistant/session_history_page_content.dart
+  s_2d876b23ff59bb::t_7c575784b703d2 1-276
+lib/utils/quill_delta_builder.dart
+  s_2d876b23ff59bb::t_51ff9a1864114b 38
+  s_2d876b23ff59bb::t_99454f46667536 90-95,104-105
+  s_2d876b23ff59bb::t_479039aaaf48de 18-37,39-89,96-103,106-125
+test/widget/pages/ai_assistant_page_test.dart
+  s_2d876b23ff59bb::t_99454f46667536 644
+  s_2d876b23ff59bb::t_23afd256b29947 400-404
+  s_2d876b23ff59bb::t_051747a27b0751 386-387,645,647-654
+  s_2d876b23ff59bb::t_3411a2db1f8183 394
+test/unit/utils/quill_delta_builder_test.dart
+  s_2d876b23ff59bb::t_479039aaaf48de 14-38
+lib/services/chat_session_service.dart
+  s_2d876b23ff59bb::t_053bdab7b9a192 15-24,609-642
+  s_2d876b23ff59bb::t_792e548f561c9f 643
+test/widget/smart_result_card_test.dart
+  s_2d876b23ff59bb::t_9eee238c512ac9 44-45
+test/widget/pages/ai_periodic_report_page_test.dart
+  s_2d876b23ff59bb::t_99454f46667536 26
+  s_2d876b23ff59bb::t_08ba089788be54 16-21
+  s_2d876b23ff59bb::t_ccc2f383ad7f24 1-15,22-25,27-77
+lib/pages/ai_report/report_overview.dart
+  s_2d876b23ff59bb::t_2ccc14dbcf872d 527
+lib/pages/ai_assistant/ai_assistant_page_agent.dart
+  s_2d876b23ff59bb::t_8ea758e5be5a0f 26-60,68-76,78-79,82-84,133,144
+lib/widgets/ai/smart_result_card.dart
+  s_2d876b23ff59bb::t_f6edc2e5c23ea1 2-3,40,60,187,189-208,210-239
+  s_2d876b23ff59bb::t_51d9a548803e2d 83-84
+  s_2d876b23ff59bb::t_83394f145356a9 6-7
+lib/services/agent_service.dart
+  s_2d876b23ff59bb::t_e71fcda84d4eff 21-26,556-563
+  s_2d876b23ff59bb::t_51ff9a1864114b 555
+  s_2d876b23ff59bb::t_69dfdd67b2b59b 564
+test/widget/session_history_page_test.dart
+  s_2d876b23ff59bb::t_053bdab7b9a192 41-47,49-50,199,212
+  s_2d876b23ff59bb::t_5c0e19064ebb13 48
+  s_2d876b23ff59bb::t_fcc214f1fcf2bb 39-40
+  s_2d876b23ff59bb::t_c14f73ac878fad 51-53
+  s_2d876b23ff59bb::t_0adbdf4b9675b8 196-198
+  s_2d876b23ff59bb::t_69de593a3f0ddd 200-202,209-211
+  s_2d876b23ff59bb::t_44c241ef90362a 213-215
+  s_2d876b23ff59bb::t_75b849d525833f 6,14,19-20,54-70,73,78,126,139,163,176,180-195,203-208,216-223
+test/widgets/smart_result_card_test.dart
+  s_2d876b23ff59bb::t_715713d1d39294 53,65-72,75-79
+lib/pages/ai_assistant_page.dart
+  s_2d876b23ff59bb::t_51ff9a1864114b 24
+  s_2d876b23ff59bb::t_0ce08cfb478ff6 48
+lib/l10n/app_en.arb
+  s_2d876b23ff59bb::t_f42a8f6b091560 3881
+  s_2d876b23ff59bb::t_eca38cc70ce283 3882-3883
+lib/pages/ai_assistant/ai_assistant_page_session.dart
+  s_2d876b23ff59bb::t_9346d59b88aa23 9-16
+  s_85182ef69c48e5::t_c389e72a230f76 179-180,196-197,202
+  s_85182ef69c48e5::t_2d8c1edd01042c 195,198-199,206,208
+  s_85182ef69c48e5::t_af0c51727212ce 66-67
+  s_85182ef69c48e5::t_56f5952cb06f54 185,187-194,302
+  s_2d876b23ff59bb::t_c88ab257ce1994 255-262,278-301
+  s_85182ef69c48e5::t_bfa6f89d760d03 303
+  s_2d876b23ff59bb::t_9f219b799aad04 420-438,440-442
+test/unit/services/chat_session_service_test.dart
+  s_2d876b23ff59bb::t_95c696b62f0dd1 345-386
+lib/pages/ai_assistant/ai_assistant_page_workflow.dart
+  s_85182ef69c48e5::t_a25280b6b46c0a 26
+  s_2d876b23ff59bb::t_f42a8f6b091560 10
+  s_2d876b23ff59bb::t_51ff9a1864114b 27-32
+lib/pages/ai_assistant/session_history_page.dart
+  s_2d876b23ff59bb::t_053bdab7b9a192 69-79,233
+  s_2d876b23ff59bb::t_99454f46667536 122-123
+  s_2d876b23ff59bb::t_7c575784b703d2 10-11
+  s_2d876b23ff59bb::t_d09db6d764cb4e 1-9,12-68,80-121,124-232,234-251
+lib/widgets/ai/smart_result_card_editing.dart
+  s_2d876b23ff59bb::t_51d9a548803e2d 43,119
+  s_2d876b23ff59bb::t_83394f145356a9 1-42,44-118,120-125
+lib/pages/ai_assistant/ai_assistant_page_ui.dart
+  s_2d876b23ff59bb::t_f42a8f6b091560 214-218
+  s_2d876b23ff59bb::t_5690acc423bb97 792-795,809,811,815,817,1007-1008,1087,1089,1105-1107,1115,1142,1144-1145,1158,1160,1164,1166,1305,1308,1320-1322
+  s_2d876b23ff59bb::t_383fe7806027cd 109-128
+lib/l10n/app_zh.arb
+  s_2d876b23ff59bb::t_eca38cc70ce283 3882-3883
+  s_2d876b23ff59bb::t_f42a8f6b091560 3881
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f9dc8a00a0328d990ee1b9a278c4925c2d26363a",
+  "prompts": {},
+  "sessions": {
+    "s_2d876b23ff59bb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f49b5-8213-7153-93f3-3b85ab8c7768",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_85182ef69c48e5": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4506-c08a-7963-9b85-80633c1a3c45",
+        "model": "gpt-5.5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
