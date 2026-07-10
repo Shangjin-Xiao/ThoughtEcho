@@ -1,67 +1,53 @@
-# PROJECT KNOWLEDGE BASE
+# ThoughtEcho 项目指南
 
-**项目**: ThoughtEcho (心迹) — Flutter 3.x 跨平台笔记应用
-**平台支持**: Windows, Android, iOS. **明确不支持 Web 端，开发与代码调整中绝对不要考虑 Web 支持。**
-**技术栈**: Flutter + Dart + SQLite + Provider + FlutterQuill + AI 多 Provider
+## 项目概览
 
----
+- **项目**：ThoughtEcho（心迹），Flutter 3.x 跨平台笔记应用
+- **支持平台**：Windows、Android、iOS
+- **不支持平台**：Web。不要新增 Web 入口、Web 专用实现、Web 构建或 Web 测试；仓库中
+  现存的 `kIsWeb`、`*_web.dart` 和 Web 依赖属于历史兼容代码，不代表支持 Web，也不要在
+  无关任务中顺手清理。
+- **主要技术**：Flutter、Dart、SQLite、Provider、FlutterQuill、多 AI Provider
+
+## 指令作用域
+
+- 本文件适用于整个仓库；进入含有 `AGENTS.md` 的子目录后，还必须遵守距离目标文件最近的
+  子目录指令。
+- 子目录文件用于补充局部约定，不能放宽本文件中的平台、安全、隐私和 Git 约束。
+- 用户当前请求优先于仓库工作流偏好；如果请求与安全、隐私或数据完整性约束冲突，先说明
+  风险并请求确认。
+- 修改前先阅读目标实现、相邻测试和对应子目录 `AGENTS.md`。不要仅凭文件名或旧文档推断。
 
 ## 目录结构
 
-```
+```text
 ThoughtEcho/
 ├── lib/
-│   ├── main.dart           # 入口 + Provider 注入 + 紧急恢复
-│   ├── controllers/        # UI 控制器 → 见子目录 AGENTS.md
-│   ├── models/             # 数据模型 → 见子目录 AGENTS.md
-│   ├── pages/              # 页面组件 → 见子目录 AGENTS.md
-│   ├── services/           # 业务服务 → 见子目录 AGENTS.md
-│   ├── utils/              # 工具类 → 见子目录 AGENTS.md
-│   ├── widgets/            # UI 组件 → 见子目录 AGENTS.md
-│   ├── theme/              # Material 3 主题 (app_theme.dart)
-│   ├── constants/          # 常量 (card_templates, ai_card_prompts, app_constants)
-│   ├── config/             # Lottie/引导页配置
-│   ├── extensions/         # Dart 扩展方法
-│   ├── l10n/               # ARB 源文件 (修改此处)
-│   └── gen_l10n/           # 国际化生成文件 (禁止手动编辑)
-├── test/                   # 单元/Widget/集成/性能测试 → 见 test/AGENTS.md
-├── .github/workflows/      # CI: test.yml / flutter-release-build.yml / build-windows.yml / ios-build.yml
-├── scripts/                # iOS 无签名构建 / Windows MSIX 脚本
-├── android/ ios/ windows/  # 平台原生代码
-└── assets/                 # Lottie 动画, 图标, 用户文档
+│   ├── main.dart           # 应用入口、Provider 注入、启动恢复
+│   ├── controllers/        # 页面级 UI 状态与编排
+│   ├── models/             # 领域、持久化和展示模型
+│   ├── pages/              # 页面及页面级 part 拆分
+│   ├── services/           # 数据、网络、AI、同步等业务能力
+│   ├── utils/              # 可复用工具和平台适配
+│   ├── widgets/            # 可复用 UI 组件
+│   ├── constants/          # 应用常量、卡片模板、AI Prompt
+│   ├── theme/              # Material 3 主题
+│   ├── config/             # 动画和引导配置
+│   ├── extensions/         # Dart 扩展
+│   ├── l10n/               # ARB 国际化源文件
+│   └── gen_l10n/           # 生成的国际化代码，禁止手动编辑
+├── test/                   # 单元、Widget、集成、性能测试
+├── assets/                 # 应用图标、Lottie、SVG 等应用资源
+├── docs/                   # 用户手册等项目文档
+├── res/                    # 网站、营销和展示资源
+├── scripts/                # 构建及维护脚本
+├── .github/workflows/      # CI 与发布流程
+└── android/ ios/ windows/  # 平台原生工程
 ```
 
----
-
-## 文件存放规范 (File Organization Standards)
-
-为了保持代码库整洁，所有文件必须遵循以下存放规范：
-
-### 1. 脚本文件 (Scripts)
-- **存放路径**：统一存放在根目录的 `scripts/` 文件夹下。
-- **禁止事项**：禁止将任何 `.py`, `.sh`, `.bat`, `.ps1` 等脚本文件直接放在项目根目录。
-- **配置脚本**：即使是用于修改代码或文档的辅助脚本（如 `replace_code.py`, `update_l10n.py`），也必须存放在 `scripts/` 中。
-
-### 2. 静态资源 (Assets)
-- **应用图标**：
-    - 主图标（原始文件）应存放在 `assets/icon.png`。
-    - 针对不同平台优化过的图标（如 `icon_ios_large.png`）也应存放在 `assets/` 目录下。
-    - **禁止**：严禁在项目根目录存放图标文件（如 `icon.png`）。
-- **动效文件**：`.json` 格式的 Lottie 动画应存放在 `assets/lottie/`。
-- **矢量图**：SVG 文件应存放在 `assets/svg/`。
-- **营销/网页资源**：用于 `README.md`、`res/index.html` 或 Banner 展示的资源，应存放在 `res/` 目录下。
-
-### 3. 构建产物与临时文件 (Build & Temp)
-- **Git 忽略**：
-    - 严禁提交 `.gradle/`, `.dart_tool/`, `build/`, `node_modules/` 等自动生成的目录。
-    - 严禁提交平台自动生成的注册文件（如 `GeneratedPluginRegistrant.java`, `generated_plugins.cmake`）。
-- **元数据**：`.metadata` 严禁提交。
-
----
-
-大文件通过 `part`/mixin 或子目录拆分：`database/`(12 mixin)、`note_editor/`(10)、`ai_report/`(6)、`smart_push/`(6)、`note_list/`(5)。
-
----
+主要拆分：`services/database/`（12 个 mixin）、`pages/note_editor/`（10 个 part）、
+`pages/ai_report/`（4 个 part）、`services/smart_push/`（6 个 part）、
+`widgets/note_list/`（4 个 part + 1 个独立辅助文件）。
 
 ## 常用命令
 
@@ -72,266 +58,191 @@ flutter pub get
 # 运行应用
 flutter run
 
-# 代码格式化 (CI 强制检查)
-dart format --set-exit-if-changed .
+# 格式化本次修改的 Dart 文件
+dart format <changed-dart-files>
+
+# 只检查格式，不改文件
+dart format --output=none --set-exit-if-changed <changed-dart-files>
 
 # 静态分析
 flutter analyze --no-fatal-infos
 
-# 运行所有测试 (集中入口)
-flutter test test/all_tests.dart
+# 运行相关测试文件（默认做法）
+timeout 60s flutter test --reporter compact test/path/to/file_test.dart
 
-# 运行单个测试文件
-timeout 60s flutter test --reporter compact test/unit/models/quote_model_test.dart
+# 按名称运行单个用例
+timeout 60s flutter test --reporter compact test/path/to/file_test.dart --name "用例名称"
 
-# 运行单个测试用例 (按名称匹配)
-timeout 60s flutter test --reporter compact test/unit/models/quote_model_test.dart --name "测试用例名称"
+# 全量聚合测试（仅在用户明确要求时）
+timeout 180s flutter test --reporter compact test/all_tests.dart
 
-# 生成国际化代码 (修改 ARB 后必须执行)
+# 修改 ARB 后生成国际化代码
 flutter gen-l10n
 
-# 生成 Mock (修改接口后)
+# 修改 Mockito 接口或注解后重新生成 Mock
 dart run build_runner build --delete-conflicting-outputs
 
-# iOS 无签名构建
+# 平台构建
 ./scripts/build_ios_unsigned.sh
-
-# Windows MSIX
 pwsh ./scripts/build_msix_ci.ps1
 ```
 
----
+测试冷启动可能超过 60 秒；首次卡在 `loading` 时可预热或将单次超时提高到 180 秒。输出过多
+时先定位编译/分析错误，不要反复运行长输出命令。
 
-## 代码风格规范
+## 工作方式
 
-### 导入顺序 (严格遵循，dart format 自动排序)
-```dart
-// 1. dart:* 标准库
-import 'dart:async';
-import 'dart:io';
+1. 先确认请求范围和验收标准，再检查 `git status --short`，保留用户已有改动。
+2. 用 `rg` / `rg --files` 查找定义、调用方、测试和文档；修改复杂文件前阅读其拆分文件。
+3. 做最小且完整的改动。修 Bug 时优先添加能复现问题的回归测试；新增逻辑补相应测试。
+4. 只格式化和验证相关文件。除非用户明确要求，不主动运行全量测试或全仓库格式化。
+5. 完成前检查 diff、相关测试和静态分析结果；无法执行的验证要明确说明，不能声称已通过。
 
-// 2. package:flutter/* 框架
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+涉及第三方库、Flutter/Dart SDK、平台 API、AI 服务协议或 GitHub Actions 时，先用 Context7
+查询当前官方文档（`resolve-library-id` → `get-library-docs`）；Context7 不可用或无对应资料时，
+再查官方文档。纯项目内重构、业务调试、格式化和 ARB 文案调整无需查询。
 
-// 3. package:第三方包 (按字母序)
-import 'package:provider/provider.dart';
-import 'package:sqflite/sqflite.dart';
+## Dart 与 Flutter 规范
 
-// 4. package:thoughtecho/* 项目内部 (按字母序)
-import 'package:thoughtecho/models/quote_model.dart';
-import 'package:thoughtecho/services/database_service.dart';
-```
-
-### 命名规范
-| 类型 | 规范 | 示例 |
-|------|------|------|
-| 类/枚举 | UpperCamelCase | `DatabaseService`, `NoteCategory` |
-| 方法/变量 | lowerCamelCase | `getQuotes()`, `isLoading` |
-| 常量 | lowerCamelCase | `defaultCategoryId` |
-| 私有成员 | `_` 前缀 | `_database`, `_isInitialized` |
-| 文件名 | snake_case | `database_service.dart` |
-| 测试文件 | `*_test.dart` | `quote_model_test.dart` |
-
-### 类型与 Null Safety
-- 优先使用具体类型，避免 `dynamic`
-- 可空类型明确标注 `?`，不可空不省略断言
-- 使用 `late` 声明延迟初始化的非空字段
-- 模型类提供 `copyWith()` 做不可变更新
-
-### 格式化
-- 缩进：2 空格（Dart 默认）
-- 行宽：80 字符（`dart format` 默认）
-- 尾随逗号：Widget 参数列表必须加，便于 `dart format` 格式化
-- 禁止提交未格式化代码（CI 会检查 `dart format --set-exit-if-changed .`）
-
-### 测试执行约束
-- 主动验证时只运行相关单文件或单用例，避免全量测试导致 CI/本地超时。
-- 运行 Flutter 测试必须限制时长并压缩输出：优先使用 `timeout 60s flutter test --reporter compact <path>`。若首次运行卡在 `loading` 阶段（冷编译/VM 启动开销，本机可能耗时 60s+），属正常现象而非测试挂死，可先跑一次预热，或临时调大超时（如 `timeout 180s`）后再正式运行。
-- 若测试输出过多或卡住，先停止并定位编译/分析错误，不要反复运行长输出命令塞满上下文。
-
-### 数据库性能约束
-- 避免 N+1 查询：禁止在列表循环中逐条调用数据库查询、计数、全文搜索或关联表查询。
-- 列表、批量清理、同步、备份恢复、统计报告等批量场景必须优先使用 `IN (...)`、批量查询、批量写入或预加载 Map。
-- 如果必须逐条处理，先确认数据规模很小或有明确串行副作用，并在代码中保持局部、可解释。
-
-### 注释规范
-- 代码注释可用中文
-- 公共 API 用 `///` 文档注释
-- 临时调试注释在提交前删除
-
----
+- 遵循 `analysis_options.yaml` 和 `dart format`；不要假设格式化器会自动整理 import。
+- import 分组依次为 `dart:`、Flutter SDK、第三方 package、`package:thoughtecho/`，组内按字母序。
+- 使用具体类型和 null safety，避免无边界的 `dynamic`、不必要的 `!` 和宽泛类型转换。
+- 类/枚举使用 `UpperCamelCase`，成员使用 `lowerCamelCase`，私有成员加 `_`，文件使用
+  `snake_case.dart`，测试使用 `*_test.dart`。
+- 公共 API 使用 `///`；注释解释原因、约束或不直观行为，不复述代码。提交前删除临时日志和
+  调试注释。
+- 新增或重构时避免继续扩大超大文件；优先按职责抽取 Widget、helper、mixin 或子目录。
+  “500 行”是需要评估拆分的信号，不是为了达标而机械切文件的硬门槛。
+- 重复逻辑达到三处时评估抽取；只有在共享概念确实稳定时才抽象。
 
 ## 架构约定
 
 ### 状态管理
-- 所有服务继承 `ChangeNotifier`，在 `main.dart` 通过 `ChangeNotifierProvider` 注入
-- 写操作后**必须**调用 `notifyListeners()`
-- 访问服务（不监听）：`Provider.of<XxxService>(context, listen: false)`
-- 访问服务（监听变化）：`context.watch<XxxService>()` 或 `Consumer<XxxService>`
 
-### 服务层模式
-```dart
-class XxxService extends ChangeNotifier {
-  // 服务层禁止 import flutter/widgets.dart，使用 scheduler.dart
-  Future<void> doSomething() async {
-    try {
-      // 业务逻辑
-      notifyListeners(); // 写操作后必须调用
-    } catch (e, stack) {
-      logError('XxxService.doSomething', e, stack);
-      rethrow;
-    }
-  }
-}
+- 可观察的应用/UI 状态使用 `ChangeNotifier` 并由 Provider 注入；纯计算、文件工具和无状态服务
+  不需要为了统一形式继承 `ChangeNotifier`。
+- 只有可观察状态实际变化后才调用 `notifyListeners()`；只读操作或无状态 Service 不要空通知。
+- 不监听时使用 `context.read<T>()` 或 `Provider.of<T>(context, listen: false)`；需要重建时使用
+  `context.watch<T>()`、`select` 或 `Consumer<T>`，避免扩大重建范围。
+- Controller 管页面状态和交互编排，持久化、网络及可复用业务规则下沉到 Service。
+
+### 服务与错误处理
+
+- Service 不持有页面 `BuildContext`。现有 Service 如需调度帧，优先依赖
+  `package:flutter/scheduler.dart`，不要新增 `flutter/widgets.dart` 依赖来耦合 UI。
+- 异常应带操作上下文记录到 `UnifiedLogService` 或项目日志封装，再向上抛出或采用明确的降级
+  策略；禁止静默吞错。
+- 页面级用户操作用 `try/catch` 转成国际化、可理解的反馈，不向用户裸露堆栈或密钥。
+- 网络重试、超时和取消沿用现有网络工具；不要在调用点各自实现无限重试。
+
+### 模型与富文本
+
+- 需要持久化的模型提供与其存储格式匹配的序列化接口（如 `toMap/fromMap` 或
+  `toJson/fromJson`）；不可变模型提供 `copyWith()`。
+- `Quote` 同时保存 `content`（纯文本）和 `deltaContent`（Quill Delta JSON）；编辑、同步、
+  导入和恢复时必须保持两者一致。
+- 模型新增持久化字段时，同时检查 schema、迁移、备份/恢复、同步、`copyWith`、序列化和测试。
+
+### 国际化与主题
+
+- UI 层禁止硬编码任何用户可见文本，包括按钮、菜单、Tooltip、Dialog、SnackBar、空状态和
+  无障碍标签。
+- 新文案依次修改 `lib/l10n/app_zh.arb` 与 `lib/l10n/app_en.arb`，占位符声明元数据，然后运行
+  `flutter gen-l10n`；禁止手动编辑 `lib/gen_l10n/`。
+- 颜色和文字样式优先来自 `Theme.of(context)` / `ColorScheme`。只有品牌色、数据可视化语义色
+  或平台明确要求的颜色可集中定义，不在页面散落 `Color(0x...)`。
+- 异步间隔后使用 `context` 或更新 State 前检查 `mounted` / `context.mounted`。
+
+## 数据库与批量数据
+
+- Schema 真源位于 `lib/services/database_schema_manager.dart`，版本为
+  `DatabaseSchemaManager.schemaVersion`；`database_migration_mixin.dart` 处理运行期数据迁移和
+  维护，不是 schema 版本升级的唯一位置。
+- Schema 变更必须同时更新新建表结构、追加新的版本升级分支、递增 `schemaVersion`，并覆盖
+  新安装与旧版本升级两条路径。禁止改写已发布版本的迁移语义。
+- SQL 值使用参数绑定；动态 `orderBy` 必须经过 `sanitizeOrderBy()` 白名单处理。表名、列名等
+  无法绑定的标识符也必须来自内部白名单。
+- 禁止列表循环内逐条查询、计数、全文搜索或加载关联表。批量场景优先 `IN (...)`、事务、
+  `Batch`、批量 SQL 或预加载 Map。
+- 大文件和大 JSON 使用流式工具（如 `LargeFileManager`），不要用一次性
+  `File.writeAsString` / 全量内存编码。
+- 删除 SQL 查询字段前全局检查模型、UI、导入导出和同步依赖，避免运行期缺列或类型错误。
+
+## AI 服务
+
+主要链路：
+
+```text
+MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamService
+                                      ↓
+                                APIKeyManager
 ```
 
-### 模型模式
-- 必须提供 `toMap()` / `fromMap()` 用于数据库持久化
-- 必须提供 `copyWith()` 做不可变状态更新
-- 核心模型 `Quote` 双存储：`content`（纯文本）+ `deltaContent`（Quill Delta JSON）
+- API 密钥只能通过 `APIKeyManager` / 安全存储读写，禁止进入源码、日志、测试夹具、截图或
+  错误信息。
+- 新增 Provider 时至少检查预设、请求头、请求体适配、流式协议、设置 UI、连接测试、密钥存储
+  和相关单元测试；先查服务商当前官方协议。
+- 支持的预设以 `AIProviderSettings.getPresetProviders()` 为准，不在文档中复制易过期的名单。
+- 使用现有流式 API。已删除的 `AIService.generateDailyPrompt` 不得恢复，使用
+  `streamGenerateDailyPrompt`。
 
-### 国际化 (严格)
-- **禁止 UI 层硬编码任何用户可见文本（含中文）**
-- 新增文案流程：`lib/l10n/app_zh.arb` → `lib/l10n/app_en.arb` → `flutter gen-l10n`
-- 带占位符使用 ARB `{placeholder}` 语法并声明 `placeholders` 元数据
-- 注释和日志可用中文；SnackBar/Dialog/Tooltip/按钮文案必须国际化
+## 平台与文件组织
 
-### 错误处理
-- 异常先记录 `UnifiedLogService.logError()`，再 rethrow 或降级处理
-- 网络错误走 `dio_network_utils.dart` 的 retry 逻辑
-- 页面级操作用 try-catch 包裹，不让异常裸露给用户
+| 平台 | 约定 |
+|---|---|
+| Windows | SQLite 使用 FFI；数据目录逻辑由 `DataDirectoryService` 和现有初始化代码负责 |
+| Android | 使用 sqflite/MMKV；保留现有 32 位 ARM 回退策略 |
+| iOS | 使用 MMKV；无签名构建走 `scripts/build_ios_unsigned.sh` |
+| Web | 不支持；不得新增或扩展 Web 功能 |
 
----
+- `.py`、`.sh`、`.bat`、`.ps1` 等维护脚本放在 `scripts/`，不要放仓库根目录。
+- 应用图标放 `assets/`，Lottie 放 `assets/lottie/`，SVG 放 `assets/svg/`，营销/网站资源放
+  `res/`。
+- 不提交 `.gradle/`、`.dart_tool/`、`build/`、`node_modules/`、`.metadata` 等生成物或本机状态。
+- 生成文件（`lib/gen_l10n/`、`*.mocks.dart`、平台插件注册文件）不得手动编辑；是否提交遵循
+  当前 `.gitignore` 和仓库既有跟踪状态，不要一概删除或强行加入。
 
-## 平台差异
+## 复杂度热点
 
-| 平台 | 特殊处理 |
-|------|----------|
-| Windows | `sqfliteFfiInit()` + `databaseFactory = databaseFactoryFfi`；数据目录在 Documents/ThoughtEcho |
-| Web | **不支持 Web 端。禁止考虑或添加任何 Web 兼容代码。** |
-| iOS | 需无签名构建脚本；键值走 MMKV |
-| Android | 移动端用 sqflite + MMKV；32 位 ARM 自动回退 SharedPreferences |
+修改前先查找父文件的 `part` 声明、相关 mixin 和测试：
 
----
+| 区域 | 说明 |
+|---|---|
+| `lib/services/database_service.dart` + `services/database/` | 数据库接口、12 个 mixin、缓存与查询 |
+| `lib/services/database_schema_manager.dart` | 建表、版本升级、修复和迁移，数据风险高 |
+| `lib/pages/home_page.dart` | 主页面状态与多类交互 |
+| `lib/widgets/add_note_dialog.dart` | 超大新增笔记流程，另有 parts 文件 |
+| `lib/pages/settings_page.dart` | 设置入口与多 Service 交互 |
+| `lib/pages/note_sync_page.dart` | 设备发现、传输和合并状态 |
+| `lib/pages/annual_report_page.dart` | 报告聚合和复杂展示 |
+| `lib/pages/note_full_editor_page.dart` + `pages/note_editor/` | Quill 编辑、媒体、元数据和草稿 |
+| `lib/pages/ai_assistant_page.dart` + `pages/ai_assistant/` | Agent 会话、工作流与流式 UI |
+| `lib/services/smart_push_service.dart` + `services/smart_push/` | 调度、权限、通知和内容选择 |
+| `lib/widgets/note_list_view.dart` + `widgets/note_list/` | 分页、过滤、滚动定位和条目构建 |
+| `lib/constants/card_templates.dart` | 大量卡片模板，改动需验证渲染与国际化 |
 
-## 禁止事项 (Anti-Patterns)
+## 已删除 API
 
-| 禁止 | 原因 | 替代方案 |
-|------|------|----------|
-| 硬编码 API 密钥 | 安全风险 | `APIKeyManager` + flutter_secure_storage |
-| `File.writeAsString` 写大文件 | OOM | `LargeFileManager.encodeJsonToFileStreaming` |
-| 忽略 `notifyListeners()` | UI 不刷新 | 每次写操作后调用 |
-| 编辑 `gen_l10n/` 或 `*.mocks.dart` | 会被覆盖 | 修改源文件后重新生成 |
-| 服务层 `import 'package:flutter/widgets.dart'` | 关注点分离 | 用 `flutter/scheduler.dart` |
-| 单文件超过 500 行（新增/重构时） | 维护困难 | 拆分为独立组件/Mixin/part 文件 |
-| 重复逻辑超过 3 处 | 维护困难 | 提取共享方法或工具类 |
-| 未读代码直接优化 | 易误判 | 先读实现，确认问题存在 |
-| 移除 SQL 查询字段前未检查 UI 依赖 | 运行时崩溃 | 检查所有使用处后再删除 |
-| 调试按钮暴露在正式版 UI | 用户体验 | 限定在开发者模式或 kDebugMode |
-| 主动运行全量 `flutter test` | CI 超时风险 | 仅在用户明确要求时运行 |
-
----
-
-## 复杂度热点 (修改前必读)
-
-以下文件体积较大或逻辑复杂，修改前需仔细阅读相关子目录拆分：
-
-| 文件 | 说明 |
-|------|------|
-| `lib/services/database_service.dart` | God class，通过 part/mixin 拆分为 12 个 mixin 文件 + `database_schema_manager.dart` |
-| `lib/pages/home_page.dart` | 主页面，包含大量交互逻辑 |
-| `lib/widgets/add_note_dialog.dart` | 最大 Widget 文件 |
-| `lib/pages/settings_page.dart` | 设置中心 |
-| `lib/pages/note_sync_page.dart` | 设备同步 |
-| `lib/pages/annual_report_page.dart` | 年度报告 |
-| `lib/pages/note_full_editor_page.dart` | 富文本编辑器，拆分有 `note_editor/` 子目录 (10 个) |
-| `lib/pages/ai_periodic_report_page.dart` | 报告页，拆分有 `ai_report/` 子目录 |
-| `lib/services/smart_push_service.dart` | 拆分有 `smart_push/` 子目录 (6 个) |
-| `lib/widgets/note_list_view.dart` | 拆分有 `note_list/` 子目录 (5 个) |
-| `lib/constants/card_templates.dart` | 卡片模板定义，极复杂 |
-
----
-
-## 快速定位
-
-| 任务 | 位置 |
-|------|------|
-| 数据库 CRUD | `lib/services/database_service.dart` + `lib/services/database/` |
-| AI 请求 | `lib/services/ai_service.dart` → `lib/utils/ai_request_helper.dart` |
-| AI 卡片生成 | `lib/services/ai_card_generation_service.dart` |
-| API 密钥管理 | `lib/services/api_key_manager.dart` |
-| 状态管理入口 | `lib/main.dart` Provider 树 |
-| 富文本编辑器 | `lib/pages/note_full_editor_page.dart` + `lib/pages/note_editor/` |
-| 设备同步 | `lib/services/note_sync_service.dart` + `lib/services/localsend/` |
-| 智能推送 | `lib/services/smart_push_service.dart` + `lib/services/smart_push/` |
-| 备份恢复 | `lib/services/backup_service.dart` |
-| 主题 | `lib/theme/app_theme.dart` |
-| 国际化源文件 | `lib/l10n/app_zh.arb` / `app_en.arb` |
-| 测试入口 | `test/all_tests.dart` |
-| 测试 Mock 配置 | `test/test_setup.dart` |
-| 日志 | `lib/services/unified_log_service.dart` + `lib/services/log_database_service.dart` |
-| 大文件 | `lib/services/large_file_manager.dart` |
-| 媒体管理 | `lib/services/media_file_service.dart` + `lib/services/media_reference_service.dart` |
-| 位置/天气 | `lib/services/location_service.dart` + `lib/services/weather_service.dart` |
-
----
-
-## AI 服务配置
-
-AI 架构链路：
-```
-MultiAISettings → AIProviderSettings → AINetworkManager → APIKeyManager
-                                             ↓
-                               _requestHelper.makeStreamRequestWithProvider
-```
-
-支持服务商：OpenAI / OpenRouter / SiliconFlow / DeepSeek / Anthropic / Ollama (本地) / LMStudio (本地)
-
-新增 AI Provider 步骤：
-1. `AIProviderSettings.getPresetProviders()` 添加预设
-2. 实现 `buildHeaders()` + `adjustData()`
-3. 在 `lib/pages/ai_settings_page.dart` 添加配置 UI
-
----
-
-## 已删除 API (禁止重新实现)
-
-- `AIService.generateDailyPrompt` → 已删除，改用 `streamGenerateDailyPrompt`
-- `TimeUtils.formatTime` → 已删除，改用 `formatRelativeDateTime` 或 `formatQuoteTime`
-- `NoteSyncService.receiveAndMerge` → 已删除
-
----
-
-## 开发者模式
-
-**激活**：设置 → 关于心迹 → 连续点击应用图标 3 次
-
-开发者专属功能（仅此模式可见）：日志中心 / 本地 AI 设置 / 存储管理 / 数据库调试
-
----
+- `AIService.generateDailyPrompt` → 使用 `streamGenerateDailyPrompt`
+- `TimeUtils.formatTime` → 使用 `formatRelativeDateTime` 或 `formatQuoteTime`
+- `NoteSyncService.receiveAndMerge` → 不得重新引入，沿用当前同步/合并流程
 
 ## 文档维护
 
-| 文档 | 位置 |
-|------|------|
-| 用户手册 (双语) | `docs/USER_MANUAL.md` |
-| 中文用户手册 | `assets/docs/user_manual_zh.md` |
-| 英文用户手册 | `assets/docs/user_manual_en.md` |
-| 项目网站 | `res/index.html` |
+- 开发者文档：`AGENTS.md`、各子目录 `AGENTS.md`、`README.md`
+- 双语用户手册：`docs/USER_MANUAL.md`
+- 应用内手册：`assets/docs/user_manual_zh.md`、`assets/docs/user_manual_en.md`
+- 网站：`res/index.html`、`res/user-guide.html`
 
-**规范**：新增功能后必须同步更新用户手册；禁止在文档中编造未实现的功能。
+只有用户可见行为变化时才同步用户文档，并同时维护中英文内容；纯内部重构只更新确实受影响
+的开发者文档。禁止描述尚未实现的功能，除非明确标为路线图。
 
----
+## Git、隐私与提交
 
-## AI 代理工作规范 (AI Agent Work Standards)
-
-由于这是一个公开的开源仓库，所有 AI 代理在执行任务时必须严格遵守以下准则：
-
-1. **隐私与安全第一**：随时注意隐私安全，绝不提交任何包含敏感信息（如真实的 API 密钥、个人隐私数据、包含个人信息的截图等）的文件，并确保代码和行为符合开源规范。
-2. **精准代码提交**：每次提交时，**只提交你明确更改过的文件**（例如 `git add <specific_file>`），**绝不允许使用 `git add .` 或 `git add -A`（绝不 add 所有）**，避免误提交缓存或敏感测试文件。
-3. **隔离工作区**：如果需要在其他分支上进行工作或排查问题，请务必使用 `git worktree` 在隔离的工作树中进行，不要在当前工作区直接切换分支。
-4. **文档时效性 — 主动调用 context7**：涉及第三方库、框架、SDK、CLI 或云服务 API 时，**优先调用 `context7` MCP 工具**查询最新文档（即使你"觉得自己知道"——训练数据可能滞后于 breaking change），以保证使用最新且推荐的 API、避免引入已废弃用法和技术债。
-   - **必须调用**的典型场景：Flutter / Dart SDK 升级影响、`flutter_quill` 富文本 API、`provider` / `sqflite` / `dio` / `intl` / `flutter_secure_storage` / `MMKV` 等核心依赖的用法、各 AI 服务商（OpenAI / Anthropic / SiliconFlow / Ollama / LMStudio 等）的 REST/SSE 协议字段、Android/iOS/Windows 原生 API、CI Action 配置。
-   - **不要调用**的场景（避免噪音）：纯本项目内重构、调试业务逻辑、修 lint/format、改 i18n ARB 文案、删除注释、git/shell 等通用操作。
-   - 工作流：先调用 `resolve-library-id` 确定库 ID → 再调用 `get-library-docs` 拉文档 → 引用具体段落或代码示例后再动手写代码；如果 context7 没有该库，再退回到 WebSearch。
+- 开始和结束时检查 `git status --short` 与 `git diff`，不要覆盖、回滚或格式化用户的无关改动。
+- 切换其他分支或排查其他分支时使用 `git worktree`，不要在当前工作区直接切分支。
+- 提交时只用 `git add <明确文件...>`；禁止 `git add .` 和 `git add -A`。
+- 未经用户要求不要 amend、rebase、force-push、删除分支或创建远程 PR。
+- 提交前检查 staged diff，不得包含真实 API 密钥、令牌、个人数据、私密路径、含隐私截图或
+  本机缓存。
+- 提交信息应概括实际改动；只有验证通过或明确记录未执行项后，才能宣称完成。

@@ -1,18 +1,31 @@
-# PAGES 模块
+# Pages 模块
 
-页面组件层，Material 3 设计。拆分子目录：
-- `note_editor/` — 富文本编辑器（10 个 part 文件，见子目录 AGENTS.md）
-- `ai_report/` — AI 周期报告（6 个 part 文件）
+页面层负责路由目标、页面级状态组合和用户反馈，遵循 Material 3。复杂页面已经通过子目录或
+`part` 文件拆分：
 
-## 复杂度警告
-多个页面超 40k 行（`home_page`、`smart_push_settings`、`tag_settings`、`category_settings`、`annual_report`、`note_sync`、`settings`、`add_note_dialog`），修改前务必确认影响范围。
+- `note_editor/`：富文本编辑器，10 个 part，另见该目录 `AGENTS.md`
+- `ai_report/`：AI 周期报告，4 个 part
+- `ai_assistant/`：助手会话、工作流和 UI 拆分
+- `home/`：主页局部面板
 
-## 规范
-- **国际化（严格）**：禁止硬编码任何用户可见文本，必须 `AppLocalizations.of(context)!.xxx`
-- **颜色/间距**：用 `Theme.of(context).colorScheme`，禁止硬编码 `Color(0x...)`
-- **长列表**：必须 `ListView.builder`，禁止 `Column(children: items.map(...)`
-- **mounted 检查**：所有 async 操作后访问 context 前必须 `if (mounted)`
-- **try-catch**：页面级操作必须包裹，异常 `logError` 后用国际化文案提示用户
+## UI 规则
 
-## 开发者模式页面
-仅开发者模式可见：`LogsSettingsPage`、`LocalAISettingsPage`、`StorageManagementPage`。禁止在普通 UI 暴露。
+- 所有用户可见文本使用 `AppLocalizations`，包括 Tooltip、SnackBar、Dialog、菜单、空状态和
+  Semantics 文案。
+- 颜色、排版和形状优先来自 `Theme.of(context)` / `ColorScheme`，不要在页面散落硬编码颜色。
+- 大数据列表使用惰性构建（如 `ListView.builder`、sliver 或现有分页组件）；少量固定项无需为
+  规则机械改写。
+- 异步间隔后使用 `context`、`setState` 或导航前检查 `mounted` / `context.mounted`。
+- 页面捕获用户操作异常，记录技术上下文，并展示国际化、可行动的反馈；不显示原始堆栈、SQL
+  或密钥。
+- 页面只编排 Service/Controller，不在 `build()` 中执行 I/O，不复制数据库和网络业务规则。
+
+## 复杂页面
+
+`home_page.dart`、`settings_page.dart`、`note_sync_page.dart`、`annual_report_page.dart`、
+`smart_push_settings_page.dart`、`tag_settings_page.dart` 和 `category_settings_page.dart` 均有较多
+状态或交互。修改前先搜索关联 Service、part/辅助文件、路由入口和 Widget 测试。新增功能优先
+放入现有职责对应的子组件，不继续扩大父页面。
+
+开发者页面（日志、本地 AI、存储管理、数据库/诊断工具）必须受现有开发者模式或 debug 条件
+保护，不得出现在普通用户路径。

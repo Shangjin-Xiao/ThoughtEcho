@@ -1,15 +1,21 @@
-# WIDGETS 模块
+# Widgets 模块
 
-可复用 UI 组件层。拆分子目录：`note_list/`（5 文件）、`common/`、`local_ai/`、`onboarding/`。
+本目录存放可复用 UI 组件。主要子目录包括 `ai/`、`note_list/`、`common/`、`local_ai/` 和
+`onboarding/`。`add_note_dialog.dart`、`quote_item_widget.dart` 与 `note_list_view.dart` 是复杂热点。
 
-## 复杂度警告
-`add_note_dialog.dart`（88k+ 行）和 `quote_item_widget.dart`（40k+ 行）是最大 Widget 文件，修改前确认影响范围。
+## 组件规则
 
-## 规范
-- **单一职责**：build 方法不超过 50 行，能 `StatelessWidget` 就不用 `StatefulWidget`
-- **国际化（严格）**：所有用户可见文本必须 `AppLocalizations.of(context)!.xxx`，Tooltip/SemanticsLabel 同理
-- **颜色**：`Theme.of(context).colorScheme`，禁止硬编码
-- **长列表**：必须 `ListView.builder`，禁止 `Column(children: map.toList())`
-- **mounted 检查**：async 后访问 context 前必须 `if (mounted)`
-- **动画**：复杂用 `LottieAnimationWidget`，简单用 `AnimatedContainer/Opacity`，自定义 `AnimationController` 必须 `dispose()`
-- **Service 访问**：读取用 `context.read<>()`，监听用 `context.watch<>()` 或 `Consumer<>`
+- Widget 聚焦展示和局部交互，可复用业务规则与 I/O 放到 Controller/Service。不要在 `build()`
+  中发网络请求、写数据库或创建每次重建都会泄漏的 Controller。
+- 能保持无状态时使用 `StatelessWidget`；需要生命周期、动画或局部瞬态状态时合理使用
+  `StatefulWidget`，不为追求形式强行转换。
+- 拆分长 `build()` 时按语义提取私有 Widget/独立组件，避免仅为了行数拆成难导航的小方法。
+- 用户可见文本、Tooltip 和 Semantics 文案全部国际化；颜色和文本样式优先来自 Theme。
+- 大列表惰性构建并使用稳定 key；少量固定 children 无需机械改成 builder。
+- 异步间隔后操作 context/State 前检查 mounted。`AnimationController`、文本/滚动控制器、
+  `FocusNode`、订阅和 Timer 必须释放。
+- 读取一次状态使用 `context.read`，需要重建时优先 `select`、`watch` 或 `Consumer`，缩小监听范围。
+- 图片、视频和富文本组件要考虑加载失败、占位、内存占用、无障碍和资源释放。
+
+复杂 Widget 改动优先补 `test/widget/` 或 `test/unit/widgets/` 的交互回归测试，并使用已有测试
+helper，不依赖真实网络、文件选择器或用户数据。

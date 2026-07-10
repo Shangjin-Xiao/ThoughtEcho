@@ -1,9 +1,22 @@
-# DATABASE MIXINS 子模块
+# Database Mixins 子模块
 
-`DatabaseService` 的 `part`/`part of` 拆分，共 12 个 mixin。Schema 定义在 `database_schema_manager.dart`（57k+ 行）。
+本目录包含 `DatabaseService` 的 12 个 `part`/mixin，覆盖缓存、查询、CRUD、分类、收藏、隐藏标签、
+回收站、分页、导入导出和数据维护。Schema、版本号及 `onUpgrade` 逻辑位于
+`../database_schema_manager.dart`。
 
-## 修改注意事项
-- 新增字段**必须**在 `database_migration_mixin.dart` 添加 `ALTER TABLE`，**禁止修改已有迁移语句**
-- 每次 schema 变更**必须** bump `_databaseVersion`（在 `database_schema_manager.dart`）
-- `orderBy` 参数必须经 `sanitizeOrderBy()` 处理（防 SQL 注入，方法在 `database_service.dart` 中定义）
-- 所有写操作后**必须** `notifyListeners()`
+## 数据安全规则
+
+- Schema 变更同时更新 `createTables`、追加新的 `_performVersionUpgrades` 版本分支并递增
+  `DatabaseSchemaManager.schemaVersion`；不要改写已有版本分支。
+- `database_migration_mixin.dart` 主要承载运行期数据迁移/维护，不要把 schema 升级错误地只放
+  在该文件。
+- SQL 值一律参数绑定。动态排序字段必须经过父文件的 `sanitizeOrderBy()`；动态标识符必须来自
+  内部白名单。
+- 批量读取先预加载关系或聚合结果，禁止在结果循环中逐条查询。批量写入使用事务、`Batch` 或
+  单条集合 SQL，并评估 SQLite 参数数量上限。
+- 写入成功且可观察状态改变后再 `notifyListeners()`；事务失败时不能留下只更新了一半的缓存。
+- 删除/重命名查询字段前搜索 Model、UI、备份、同步和测试的所有读取点。
+- 保持非 Web 路径为实现目标；现有 Web 内存分支是历史代码，不得扩展。
+
+至少验证新建数据库、从上一个 schema 版本升级、失败回滚，以及受影响 CRUD/查询测试。迁移
+测试不得依赖开发机上的真实用户数据库。

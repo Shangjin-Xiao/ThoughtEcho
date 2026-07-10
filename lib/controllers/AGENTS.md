@@ -1,21 +1,29 @@
-# CONTROLLERS 模块
+# Controllers 模块
 
-UI 控制器层（3 个文件），桥接 Page 与 Service，专注 UI 状态管理。
+本目录包含页面级 UI 控制器。当前主要有新增笔记、引导、搜索和天气搜索控制器。
 
-## 规范
-- **轻量化**：Controller 只管 UI 状态（加载/错误/防抖），数据库写、网络请求下沉到 Service
-- **状态管理**：继承 `ChangeNotifier`，通过 `ChangeNotifierProvider` 注入
-- **解耦**：Controller 之间禁止直接引用，通过 Service 共享状态
-- **防抖**：搜索类操作用 `Timer` 防抖（参考 `search_controller.dart` 500ms + `_searchVersion` 防竞态）
-- **dispose**：Timer、StreamSubscription 必须在 `dispose()` 中取消
+## 职责边界
 
-## 在 Page 中使用
+- Controller 管理加载、错误、选择、输入、防抖等 UI 状态，并编排一个用户操作。
+- 数据库写入、网络请求、文件处理和可复用业务规则放在 Service；Controller 不直接拼 SQL，
+  也不复制 Service 的缓存。
+- Controller 之间不直接依赖。需要共享的数据通过明确的 Service 或上层组合传递。
+- 只有需要被 UI 监听的 Controller 才继承 `ChangeNotifier`；状态实际变化后再通知。
+
+## 异步与生命周期
+
+- 搜索类请求沿用 `search_controller.dart` 的防抖和版本号/请求序号模式，防止旧响应覆盖新结果。
+- `Timer`、`StreamSubscription`、controller 和其他可释放资源必须在 `dispose()` 中取消或释放。
+- 异常记录操作上下文，并暴露可供页面转成国际化提示的状态；不要把堆栈或敏感信息直接交给 UI。
+- 对可能在 `dispose()` 后完成的异步任务，通知前检查控制器是否仍有效。
+
+## Provider 使用
+
 ```dart
-ChangeNotifierProvider(create: (_) => XxxController(service)),  // 注入
-context.read<XxxController>(),    // 读取（不监听）
-context.watch<XxxController>(),   // 监听变化
+ChangeNotifierProvider(create: (_) => XxxController(service))
+context.read<XxxController>()
+context.watch<XxxController>()
 ```
 
-## 测试
-- `test/unit/controllers/search_controller_test.dart`
-- `test/unit/controllers/onboarding_controller_test.dart`
+优先将 Controller 作用域限制在使用它的页面。测试路径镜像本目录，参考
+`test/unit/controllers/`；新增状态分支时覆盖成功、失败、竞态和 dispose 场景。

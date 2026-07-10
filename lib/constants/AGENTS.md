@@ -1,19 +1,19 @@
-# CONSTANTS 模块
+# Constants 模块
 
-## 概览
-应用常量定义，包含卡片模板、AI 提示词和全局常量。
+本目录包含应用常量、卡片模板和 AI Prompt。`card_templates.dart` 是约 2,000 行的复杂模板集合；
+`ai_card_prompts.dart` 与 `app_constants.dart` 相对较小。不要用易过期的字节数冒充行数。
 
-## 关键文件
+## 规则
 
-| 文件 | 行数 | 说明 |
-|------|------|------|
-| `card_templates.dart` | ~2000 行 | 卡片模板定义，极复杂。修改前必须完整阅读相关模板 |
-| `ai_card_prompts.dart` | 7k+ | AI 卡片生成的 Prompt 模板 |
-| `app_constants.dart` | 3k | 全局常量（URL、默认值、阈值等） |
+- `thoughtecho_constants.dart` 当前只是兼容占位文件，不在其中新增常量；通用常量放
+  `app_constants.dart`，局部常量优先留在其唯一使用模块附近。
+- 只有编译期不变量使用 `const`。运行配置、密钥、用户偏好和可国际化文案不属于常量。
+- URL、阈值和默认值新增前先搜索已有定义，避免多个真源；常量名表达单位，如秒、字节、像素。
+- 修改 `card_templates.dart` 前搜索模板 ID、渲染器、保存/导出和快照测试。模板 ID 属于兼容数据，
+  不随意重命名或复用。
+- 新增/改名用户可见模板时同步中英文 ARB，并运行相关模板渲染测试。
+- AI Prompt 不包含真实密钥、私人数据或仅某个 Provider 支持的未说明语法。修改后至少验证结构、
+  插值/转义、输出约束和多个 Provider 的兼容路径。
 
-## 规范
-
-- **禁止手动编辑 `thoughtecho_constants.dart`** — 它是占位文件，常量应放在 `app_constants.dart`
-- `card_templates.dart` 体积巨大，修改任何模板前先搜索现有使用处
-- 新增卡片模板必须同步更新 `app_zh.arb` 和 `app_en.arb` 中的模板名称文案
-- AI Prompt 修改后需验证多个 Provider（OpenAI / Anthropic / DeepSeek / Ollama）的兼容性
+针对性测试位于 `test/card_templates_test.dart`、`test/sota_card_templates_test.dart`、
+`test/ai_card_prompts_test.dart` 和 `test/unit/constants/`。
