@@ -33,8 +33,7 @@ void main() {
       expect(metadata.includeWeather, isTrue);
     });
 
-    test('prefers AI author/source and user-enabled location/weather defaults',
-        () {
+    test('explicit AI location and weather choices override user defaults', () {
       final metadata = AiSmartResultUtils.resolveNewNoteMetadata(
         aiAuthor: '鲁迅',
         aiSource: '呐喊',
@@ -49,8 +48,24 @@ void main() {
       expect(metadata.author, '鲁迅');
       expect(metadata.source, '呐喊');
       expect(metadata.tagIds, const ['default', 'journal', 'ai']);
+      expect(metadata.includeLocation, isFalse);
+      expect(metadata.includeWeather, isFalse);
+    });
+
+    test('omitted AI location and weather choices use user defaults', () {
+      final metadata = AiSmartResultUtils.resolveNewNoteMetadata(
+        aiAuthor: null,
+        aiSource: null,
+        aiTagIds: const [],
+        defaultTagIds: const [],
+        aiIncludeLocation: null,
+        aiIncludeWeather: null,
+        userAutoAttachLocation: true,
+        userAutoAttachWeather: false,
+      );
+
       expect(metadata.includeLocation, isTrue);
-      expect(metadata.includeWeather, isTrue);
+      expect(metadata.includeWeather, isFalse);
     });
   });
 }

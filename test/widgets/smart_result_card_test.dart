@@ -35,7 +35,7 @@ void main() {
     expect(find.text('追加到笔记'), findsNothing);
   });
 
-  testWidgets('passes edited draft to direct save and disables after success',
+  testWidgets('passes preview draft to direct save and disables after success',
       (tester) async {
     SmartResultDraft? savedDraft;
     String? savedNoteId;
@@ -50,7 +50,6 @@ void main() {
           tagNames: const ['旧标签'],
           editorSource: 'new_note',
           onOpenDraftInEditor: (_) async {},
-          loadAvailableTagNames: () async => ['旧标签', '工作', '生活'],
           onSaveDraftDirectly: (draft) async {
             savedDraft = draft;
             return 'note_saved';
@@ -62,28 +61,13 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byTooltip('编辑'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '新内容');
-    await tester.tap(find.text('确定'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('编辑元数据'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.widgetWithText(TextField, '作者'), '新作者');
-    await tester.enterText(find.widgetWithText(TextField, '来源'), '新出处');
-    await tester.tap(find.widgetWithText(FilterChip, '旧标签'));
-    await tester.tap(find.widgetWithText(FilterChip, '工作'));
-    await tester.tap(find.widgetWithText(FilterChip, '生活'));
-    await tester.tap(find.text('确定'));
-    await tester.pumpAndSettle();
     await tester.tap(find.text('直接保存'));
     await tester.pumpAndSettle();
 
-    expect(savedDraft?.content, '新内容');
-    expect(savedDraft?.author, '新作者');
-    expect(savedDraft?.source, '新出处');
-    expect(savedDraft?.tagNames, ['工作', '生活']);
+    expect(savedDraft?.content, '原内容');
+    expect(savedDraft?.author, '原作者');
+    expect(savedDraft?.source, '原出处');
+    expect(savedDraft?.tagNames, ['旧标签']);
     expect(savedNoteId, 'note_saved');
     expect(find.text('笔记已保存'), findsAtLeastNWidgets(1));
     final savedButton = tester.widget<FilledButton>(

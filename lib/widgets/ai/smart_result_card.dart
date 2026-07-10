@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
+import '../../extensions/note_category_localization_extension.dart';
 import '../../gen_l10n/app_localizations.dart';
-
-part 'smart_result_card_editing.dart';
+import '../../models/note_category.dart';
+import '../../utils/icon_utils.dart';
 
 class SmartResultDraft {
   const SmartResultDraft({
@@ -29,6 +30,7 @@ class SmartResultCard extends StatefulWidget {
   final String? author;
   final String? source;
   final List<String> tagNames;
+  final List<NoteCategory> tags;
   final String? locationPreview;
   final String? weatherPreview;
   final void Function(bool includeLocation, bool includeWeather)?
@@ -37,7 +39,7 @@ class SmartResultCard extends StatefulWidget {
       onSaveDirectly;
   final Future<void> Function(SmartResultDraft draft)? onOpenDraftInEditor;
   final Future<String?> Function(SmartResultDraft draft)? onSaveDraftDirectly;
-  final Future<List<String>> Function()? loadAvailableTagNames;
+  final Future<void> Function()? onEditExistingLocationWeather;
   final void Function(String noteId)? onSavedNoteId;
   final String editorSource;
   final bool initialIncludeLocation;
@@ -51,13 +53,14 @@ class SmartResultCard extends StatefulWidget {
     this.author,
     this.source,
     this.tagNames = const [],
+    this.tags = const [],
     this.locationPreview,
     this.weatherPreview,
     this.onOpenInEditor,
     this.onSaveDirectly,
     this.onOpenDraftInEditor,
     this.onSaveDraftDirectly,
-    this.loadAvailableTagNames,
+    this.onEditExistingLocationWeather,
     this.onSavedNoteId,
     this.editorSource = 'fullscreen',
     this.initialIncludeLocation = false,
@@ -70,25 +73,15 @@ class SmartResultCard extends StatefulWidget {
 }
 
 class _SmartResultCardState extends State<SmartResultCard> {
-  late final TextEditingController _contentController;
-  late final TextEditingController _authorController;
-  late final TextEditingController _sourceController;
-  late final TextEditingController _tagsController;
   late bool _includeLocation;
   late bool _includeWeather;
   bool _isSaving = false;
   String? _savedNoteId;
   String? _saveError;
 
-  void _updateDraft(VoidCallback update) => setState(update);
-
   @override
   void initState() {
     super.initState();
-    _contentController = TextEditingController(text: widget.content);
-    _authorController = TextEditingController(text: widget.author ?? '');
-    _sourceController = TextEditingController(text: widget.source ?? '');
-    _tagsController = TextEditingController(text: widget.tagNames.join(', '));
     _includeLocation = widget.initialIncludeLocation;
     _includeWeather = widget.initialIncludeWeather;
     _savedNoteId = widget.initialSavedNoteId;
@@ -97,18 +90,6 @@ class _SmartResultCardState extends State<SmartResultCard> {
   @override
   void didUpdateWidget(SmartResultCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.content != widget.content) {
-      _contentController.text = widget.content;
-    }
-    if (oldWidget.author != widget.author) {
-      _authorController.text = widget.author ?? '';
-    }
-    if (oldWidget.source != widget.source) {
-      _sourceController.text = widget.source ?? '';
-    }
-    if (oldWidget.tagNames.join('\u001f') != widget.tagNames.join('\u001f')) {
-      _tagsController.text = widget.tagNames.join(', ');
-    }
     if (oldWidget.initialIncludeLocation != widget.initialIncludeLocation) {
       _includeLocation = widget.initialIncludeLocation;
     }
@@ -121,15 +102,6 @@ class _SmartResultCardState extends State<SmartResultCard> {
   }
 
   @override
-  void dispose() {
-    _contentController.dispose();
-    _authorController.dispose();
-    _sourceController.dispose();
-    _tagsController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
@@ -139,9 +111,11 @@ class _SmartResultCardState extends State<SmartResultCard> {
     final showSaveDirectly =
         widget.onSaveDirectly != null || widget.onSaveDraftDirectly != null;
     final isSaved = _savedNoteId != null && _savedNoteId!.isNotEmpty;
-    final supportsDraftEdits = widget.onOpenDraftInEditor != null ||
-        widget.onSaveDraftDirectly != null ||
-        (widget.onOpenInEditor == null && widget.onSaveDirectly == null);
+    final displayTags = widget.tags.isNotEmpty
+        ? widget.tags
+        : widget.tagNames
+            .map((name) => NoteCategory(id: name, name: name))
+            .toList();
 
     return Card(
       elevation: 0,
@@ -186,89 +160,25 @@ class _SmartResultCardState extends State<SmartResultCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: MarkdownBody(
-                        data: _contentController.text,
-                        selectable: true,
-                      ),
-                    ),
-                    if (supportsDraftEdits)
-                      IconButton(
-                        onPressed: () => _editTextValue(
-                          title: l10n.content,
-                          controller: _contentController,
-                          maxLines: 10,
-                        ),
-                        icon: const Icon(Icons.edit_outlined, size: 18),
-                        tooltip: l10n.edit,
-                      ),
-                  ],
+                MarkdownBody(
+                  data: widget.content,
+                  selectable: true,
                 ),
                 const SizedBox(height: 12),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    if (_authorController.text.trim().isNotEmpty)
-                      _MetaChip(
-                        icon: Icons.person_outline,
-                        label: _authorController.text.trim(),
-                      ),
-                    if (_sourceController.text.trim().isNotEmpty)
-                      _MetaChip(
-                        icon: Icons.menu_book_outlined,
-                        label: _sourceController.text.trim(),
-                      ),
-                    for (final tag in _draftTagNames)
-                      _MetaChip(
-                        icon: Icons.local_offer_outlined,
-                        label: tag,
-                        backgroundColor: theme.colorScheme.primaryContainer,
-                        foregroundColor: theme.colorScheme.onPrimaryContainer,
-                      ),
-                    if (supportsDraftEdits)
-                      ActionChip(
-                        avatar: const Icon(Icons.tune, size: 16),
-                        label: Text(l10n.editMetadataShort),
-                        onPressed: _editMetadata,
-                      ),
-                  ],
-                ),
+                if (_hasSourceInfo) _buildSourceInfo(),
+                if (_hasSourceInfo && displayTags.isNotEmpty)
+                  const SizedBox(height: 8),
+                if (displayTags.isNotEmpty)
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final tag in displayTags) _TagChip(tag: tag),
+                    ],
+                  ),
               ],
             ),
           ),
-          if (_hasMetadataPreview)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  if (_includeLocation && widget.locationPreview != null)
-                    _MetaChip(
-                      icon: Icons.location_on_outlined,
-                      label: widget.locationPreview!,
-                    ),
-                  if (_includeWeather && widget.weatherPreview != null)
-                    _MetaChip(
-                      icon: Icons.wb_sunny_outlined,
-                      label: widget.weatherPreview!,
-                    ),
-                  if (isSaved)
-                    _MetaChip(
-                      icon: Icons.check_circle_outline,
-                      label: l10n.noteSaved,
-                      backgroundColor: theme.colorScheme.primaryContainer,
-                      foregroundColor: theme.colorScheme.onPrimaryContainer,
-                    ),
-                ],
-              ),
-            ),
           if (_saveError != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -279,34 +189,29 @@ class _SmartResultCardState extends State<SmartResultCard> {
                 ),
               ),
             ),
-          if (isNewNote)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Wrap(
-                spacing: 8,
-                children: [
-                  FilterChip(
-                    label: Text(l10n.toggleAddLocation),
-                    selected: _includeLocation,
-                    onSelected: (value) {
-                      setState(() {
-                        _includeLocation = value;
-                      });
-                    },
-                  ),
-                  FilterChip(
-                    label: Text(l10n.toggleAddWeather),
-                    selected: _includeWeather,
-                    onSelected: (value) {
-                      setState(() {
-                        _includeWeather = value;
-                      });
-                    },
-                  ),
-                ],
-              ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilterChip(
+                  avatar: const Icon(Icons.location_on_outlined, size: 18),
+                  label: Text(widget.locationPreview ?? l10n.location),
+                  selected: _includeLocation,
+                  onSelected: (value) =>
+                      _handleLocationWeatherSelection(isNewNote, value, true),
+                ),
+                FilterChip(
+                  avatar: const Icon(Icons.wb_sunny_outlined, size: 18),
+                  label: Text(widget.weatherPreview ?? l10n.weather),
+                  selected: _includeWeather,
+                  onSelected: (value) =>
+                      _handleLocationWeatherSelection(isNewNote, value, false),
+                ),
+              ],
             ),
-          if (isNewNote) const SizedBox(height: 8),
+          ),
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.all(8),
@@ -347,22 +252,56 @@ class _SmartResultCardState extends State<SmartResultCard> {
     );
   }
 
-  bool get _hasMetadataPreview {
-    return (_includeLocation && widget.locationPreview != null) ||
-        (_includeWeather && widget.weatherPreview != null) ||
-        (_savedNoteId != null && _savedNoteId!.isNotEmpty);
+  bool get _hasSourceInfo {
+    return (widget.author?.trim().isNotEmpty ?? false) ||
+        (widget.source?.trim().isNotEmpty ?? false);
+  }
+
+  Widget _buildSourceInfo() {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 4,
+      children: [
+        if (widget.author?.trim().isNotEmpty ?? false)
+          _InlineMetadata(
+            icon: Icons.person_outline,
+            label: widget.author!.trim(),
+          ),
+        if (widget.source?.trim().isNotEmpty ?? false)
+          _InlineMetadata(
+            icon: Icons.menu_book_outlined,
+            label: widget.source!.trim(),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _handleLocationWeatherSelection(
+    bool isNewNote,
+    bool value,
+    bool isLocation,
+  ) async {
+    if (!isNewNote) {
+      await widget.onEditExistingLocationWeather?.call();
+      return;
+    }
+    setState(() {
+      if (isLocation) {
+        _includeLocation = value;
+      } else {
+        _includeWeather = value;
+      }
+    });
   }
 
   SmartResultDraft _buildDraft() {
     return SmartResultDraft(
-      content: _contentController.text.trim(),
-      author: _trimToNull(_authorController.text),
-      source: _trimToNull(_sourceController.text),
-      tagNames: _tagsController.text
-          .split(RegExp(r'[,，、]'))
-          .map((item) => item.trim())
-          .where((item) => item.isNotEmpty)
-          .toList(),
+      content: widget.content.trim(),
+      author: _trimToNull(widget.author ?? ''),
+      source: _trimToNull(widget.source ?? ''),
+      tagNames: widget.tags.isNotEmpty
+          ? widget.tags.map((tag) => tag.name).toList()
+          : widget.tagNames,
       includeLocation: _includeLocation,
       includeWeather: _includeWeather,
     );
@@ -417,40 +356,62 @@ class _SmartResultCardState extends State<SmartResultCard> {
   }
 }
 
-class _MetaChip extends StatelessWidget {
+class _InlineMetadata extends StatelessWidget {
+  const _InlineMetadata({required this.icon, required this.label});
+
   final IconData icon;
   final String label;
-  final Color? backgroundColor;
-  final Color? foregroundColor;
-
-  const _MetaChip({
-    required this.icon,
-    required this.label,
-    this.backgroundColor,
-    this.foregroundColor,
-  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Chip(
-      avatar: Icon(
-        icon,
-        size: 14,
-        color: foregroundColor ?? theme.colorScheme.onSurfaceVariant,
-      ),
-      label: Text(
-        label,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: foregroundColor ?? theme.colorScheme.onSurfaceVariant,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 15, color: theme.colorScheme.onSurfaceVariant),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
+      ],
+    );
+  }
+}
+
+class _TagChip extends StatelessWidget {
+  const _TagChip({required this.tag});
+
+  final NoteCategory tag;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final iconName = tag.iconName;
+    final Widget? avatar = switch (iconName) {
+      final value? when value.isNotEmpty && IconUtils.isEmoji(value) => Text(
+          IconUtils.getDisplayIcon(value),
+          style: const TextStyle(fontSize: 12),
+        ),
+      final value? when value.isNotEmpty => Icon(
+          IconUtils.getIconData(value),
+          size: 14,
+          color: theme.colorScheme.onPrimaryContainer,
+        ),
+      _ => null,
+    };
+
+    return Chip(
+      avatar: avatar,
+      label: Text(tag.localizedName(AppLocalizations.of(context))),
+      labelStyle: theme.textTheme.labelSmall?.copyWith(
+        color: theme.colorScheme.onPrimaryContainer,
       ),
-      backgroundColor: backgroundColor ??
-          theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+      backgroundColor: theme.colorScheme.primaryContainer,
       side: BorderSide.none,
       visualDensity: VisualDensity.compact,
-      padding: EdgeInsets.zero,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }

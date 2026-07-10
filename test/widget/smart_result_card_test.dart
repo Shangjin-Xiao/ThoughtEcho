@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/models/note_category.dart';
 import 'package:thoughtecho/widgets/ai/smart_result_card.dart';
 
 Widget _buildTestWidget(Widget child) {
@@ -22,7 +23,10 @@ void main() {
             content: '建议内容',
             author: '鲁迅',
             source: '《呐喊》',
-            tagNames: const ['文学', '经典'],
+            tags: [
+              NoteCategory(id: 'literature', name: '文学', iconName: 'book'),
+              NoteCategory(id: 'classic', name: '经典', iconName: '🌟'),
+            ],
             locationPreview: '北京市·东城区',
             weatherPreview: '晴朗 25°C',
             initialIncludeLocation: true,
@@ -43,6 +47,8 @@ void main() {
       // 标签
       expect(find.text('文学'), findsOneWidget);
       expect(find.text('经典'), findsOneWidget);
+      expect(find.byIcon(Icons.book), findsOneWidget);
+      expect(find.text('🌟'), findsOneWidget);
       // 位置和天气预览
       expect(find.text('北京市·东城区'), findsOneWidget);
       expect(find.text('晴朗 25°C'), findsOneWidget);
@@ -105,8 +111,9 @@ void main() {
       expect(savedWeather, isFalse);
     });
 
-    testWidgets('hides location and weather toggles for existing-note results',
+    testWidgets('shows location and weather controls for existing-note results',
         (tester) async {
+      var editRequests = 0;
       await tester.pumpWidget(
         _buildTestWidget(
           SmartResultCard(
@@ -117,12 +124,73 @@ void main() {
             initialIncludeWeather: true,
             onSaveDirectly: (_, __) {},
             onOpenInEditor: (_, __) {},
+            onEditExistingLocationWeather: () async {
+              editRequests++;
+            },
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(FilterChip), findsNothing);
+      expect(find.widgetWithText(FilterChip, '位置'), findsOneWidget);
+      expect(find.widgetWithText(FilterChip, '天气'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilterChip, '天气'));
+      await tester.pump();
+
+      expect(editRequests, 1);
+    });
+
+    testWidgets('turning off location preserves weather selection',
+        (tester) async {
+      SmartResultDraft? savedDraft;
+      await tester.pumpWidget(
+        _buildTestWidget(
+          SmartResultCard(
+            title: 'AI 建议',
+            content: '建议内容',
+            editorSource: 'new_note',
+            initialIncludeLocation: true,
+            initialIncludeWeather: true,
+            onSaveDraftDirectly: (draft) async {
+              savedDraft = draft;
+              return null;
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.widgetWithText(FilterChip, '位置'));
+      await tester.tap(find.text('直接保存'));
+      await tester.pumpAndSettle();
+
+      expect(savedDraft?.includeLocation, isFalse);
+      expect(savedDraft?.includeWeather, isTrue);
+    });
+
+    testWidgets('does not expose duplicate inline editing controls',
+        (tester) async {
+      await tester.pumpWidget(
+        _buildTestWidget(
+          SmartResultCard(
+            title: 'AI 建议',
+            content: '建议内容',
+            author: '作者',
+            source: '来源',
+            editorSource: 'new_note',
+            onOpenDraftInEditor: (_) async {},
+            onSaveDraftDirectly: (_) async => 'saved-note',
+          ),
+        ),
+      );
+
+      expect(find.byTooltip('编辑'), findsNothing);
+      expect(find.text('编辑元数据'), findsNothing);
+
+      await tester.tap(find.text('直接保存'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('笔记已保存'), findsOneWidget);
     });
   });
 }

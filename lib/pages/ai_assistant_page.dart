@@ -15,6 +15,7 @@ import '../models/ai_workflow_descriptor.dart';
 import '../models/chat_message.dart' as app_chat;
 import '../models/chat_message.dart' show MessageState;
 import '../models/chat_session.dart';
+import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import '../models/weather_data.dart' show WeatherCodeMapper;
 import '../services/agent_service.dart'

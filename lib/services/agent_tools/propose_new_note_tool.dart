@@ -38,11 +38,11 @@ class ProposeNewNoteTool extends AgentTool {
           },
           'include_location': {
             'type': 'boolean',
-            'description': '是否建议由程序附加当前位置'
+            'description': '可选：是否建议由程序附加当前位置；不传时采用用户默认设置'
           },
           'include_weather': {
             'type': 'boolean',
-            'description': '是否建议由程序附加当前天气'
+            'description': '可选：是否建议由程序附加当前天气；不传时采用用户默认设置'
           },
           'reason': {'type': 'string', 'description': '可选：为什么建议创建这条笔记'},
         },
@@ -56,8 +56,8 @@ class ProposeNewNoteTool extends AgentTool {
     final author = call.getString('author');
     final source = call.getString('source');
     final reason = call.getString('reason');
-    final includeLocation = call.arguments['include_location'] == true;
-    final includeWeather = call.arguments['include_weather'] == true;
+    final includeLocation = call.arguments['include_location'];
+    final includeWeather = call.arguments['include_weather'];
 
     if (title.isEmpty || content.isEmpty) {
       return ToolResult(
@@ -86,9 +86,13 @@ class ProposeNewNoteTool extends AgentTool {
       'action': 'create',
       'tag_ids': resolvedTags.ids,
       'tag_names': resolvedTags.names,
-      'include_location': includeLocation,
-      'include_weather': includeWeather,
     };
+    if (includeLocation is bool) {
+      payload['include_location'] = includeLocation;
+    }
+    if (includeWeather is bool) {
+      payload['include_weather'] = includeWeather;
+    }
     if (author.isNotEmpty) {
       payload['author'] = author;
     }

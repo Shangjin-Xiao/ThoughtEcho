@@ -26,8 +26,8 @@ class AiSmartResultUtils {
     required String? aiSource,
     required List<String> aiTagIds,
     required List<String> defaultTagIds,
-    required bool aiIncludeLocation,
-    required bool aiIncludeWeather,
+    required bool? aiIncludeLocation,
+    required bool? aiIncludeWeather,
     required bool userAutoAttachLocation,
     required bool userAutoAttachWeather,
   }) {
@@ -35,8 +35,8 @@ class AiSmartResultUtils {
       author: _trimToNull(aiAuthor),
       source: _trimToNull(aiSource),
       tagIds: _mergeTagIds(defaultTagIds, aiTagIds),
-      includeLocation: userAutoAttachLocation || aiIncludeLocation,
-      includeWeather: userAutoAttachWeather || aiIncludeWeather,
+      includeLocation: aiIncludeLocation ?? userAutoAttachLocation,
+      includeWeather: aiIncludeWeather ?? userAutoAttachWeather,
     );
   }
 

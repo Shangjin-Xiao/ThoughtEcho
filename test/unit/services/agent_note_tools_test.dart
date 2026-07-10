@@ -152,6 +152,30 @@ void main() {
       expect(payload['include_weather'], isFalse);
     });
 
+    test('omits location and weather choices when AI does not decide',
+        () async {
+      final tool = ProposeNewNoteTool(_TestDatabaseService(const []));
+
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_defaults',
+          name: 'propose_new_note',
+          arguments: const {
+            'title': '随手记',
+            'content': '交给用户默认设置决定附加信息。',
+          },
+        ),
+      );
+
+      final match = RegExp(
+        r'```smart_result\s*([\s\S]*?)\s*```',
+      ).firstMatch(result.content);
+      final payload = jsonDecode(match!.group(1)!) as Map<String, dynamic>;
+
+      expect(payload.containsKey('include_location'), isFalse);
+      expect(payload.containsKey('include_weather'), isFalse);
+    });
+
     test('rejects tag names that do not exist in app categories', () async {
       final tool = ProposeNewNoteTool(
         _TestDatabaseService(

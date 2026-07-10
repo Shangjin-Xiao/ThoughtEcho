@@ -184,16 +184,51 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 .map((item) => item.toString().trim())
                 .where((item) => item.isNotEmpty)
                 .toList();
+            final tagIds = _extractStringList(meta['tag_ids']);
+            final rawTagIconNames =
+                meta['tag_icon_names'] as List<dynamic>? ?? const [];
+            final tags = <NoteCategory>[
+              for (var index = 0; index < tagNames.length; index++)
+                NoteCategory(
+                  id: index < tagIds.length ? tagIds[index] : tagNames[index],
+                  name: tagNames[index],
+                  iconName: index < rawTagIconNames.length
+                      ? rawTagIconNames[index]?.toString()
+                      : null,
+                ),
+            ];
             final locationService = context.read<LocationService>();
             final weatherService = context.read<WeatherService>();
-            final locationPreview =
-                locationService.getDisplayLocation().isNotEmpty
+            final originalLocation =
+                meta['original_location']?.toString() ?? widget.quote?.location;
+            final locationPreview = isNewNoteProposal
+                ? (locationService.getDisplayLocation().isNotEmpty
                     ? locationService.getDisplayLocation()
-                    : null;
-            final weatherKey = weatherService.currentWeather;
+                    : null)
+                : (LocationService.isNonDisplayMarker(originalLocation)
+                    ? null
+                    : LocationService.formatLocationForDisplay(
+                        originalLocation,
+                      ));
+            final weatherKey = isNewNoteProposal
+                ? weatherService.currentWeather
+                : (meta['original_weather']?.toString() ??
+                    widget.quote?.weather);
+            final temperature = isNewNoteProposal
+                ? weatherService.temperature
+                : (meta['original_temperature']?.toString() ??
+                    widget.quote?.temperature);
             final weatherPreview = weatherKey != null
-                ? '${WeatherCodeMapper.getLocalizedDescription(l10n, weatherKey)}${weatherService.temperature != null ? ' ${weatherService.temperature}' : ''}'
+                ? '${WeatherCodeMapper.getLocalizedDescription(l10n, weatherKey)}${temperature != null ? ' $temperature' : ''}'
                 : null;
+            final existingHasLocation = meta['original_has_location'] == true ||
+                (!LocationService.isNonDisplayMarker(
+                      widget.quote?.location,
+                    ) ||
+                    (widget.quote?.latitude != null &&
+                        widget.quote?.longitude != null));
+            final existingHasWeather = meta['original_has_weather'] == true ||
+                widget.quote?.weather != null;
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: SmartResultCard(
@@ -202,20 +237,34 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 content: message.content,
                 author: meta['author']?.toString(),
                 source: meta['source']?.toString(),
-                tagNames: tagNames,
+                tags: tags,
                 locationPreview: locationPreview,
                 weatherPreview: weatherPreview,
                 editorSource: isNewNoteProposal ? 'new_note' : 'fullscreen',
                 initialIncludeLocation:
-                    initialNewNoteMetadata?.includeLocation ?? false,
-                initialIncludeWeather:
-                    initialNewNoteMetadata?.includeWeather ?? false,
+                    initialNewNoteMetadata?.includeLocation ??
+                        existingHasLocation,
+                initialIncludeWeather: initialNewNoteMetadata?.includeWeather ??
+                    existingHasWeather,
                 initialSavedNoteId: meta['saved_note_id']?.toString(),
-                loadAvailableTagNames: () async {
-                  final categories =
-                      await context.read<DatabaseService>().getCategories();
-                  return categories.map((category) => category.name).toList();
-                },
+                onEditExistingLocationWeather: isNewNoteProposal
+                    ? null
+                    : () async {
+                        final draft = SmartResultDraft(
+                          content: message.content,
+                          author: meta['author']?.toString(),
+                          source: meta['source']?.toString(),
+                          tagNames: tagNames,
+                          includeLocation: false,
+                          includeWeather: false,
+                        );
+                        final updatedMeta =
+                            await _buildSmartResultMetaFromDraft(meta, draft);
+                        await _openSmartResultInEditor(
+                          updatedMeta,
+                          draft.content,
+                        );
+                      },
                 onOpenDraftInEditor: (draft) async {
                   try {
                     final updatedMeta =
@@ -952,8 +1001,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       aiSource: meta['source']?.toString(),
       aiTagIds: _extractStringList(meta['tag_ids']),
       defaultTagIds: settings.defaultTagIds,
-      aiIncludeLocation: meta['include_location'] == true,
-      aiIncludeWeather: meta['include_weather'] == true,
+      aiIncludeLocation: _readOptionalBool(meta, 'include_location'),
+      aiIncludeWeather: _readOptionalBool(meta, 'include_weather'),
       userAutoAttachLocation: settings.autoAttachLocation,
       userAutoAttachWeather: settings.autoAttachWeather,
     );
@@ -994,6 +1043,11 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
   String? _trimToNull(String? value) {
     final trimmed = value?.trim() ?? '';
     return trimmed.isEmpty ? null : trimmed;
+  }
+
+  bool? _readOptionalBool(Map<String, dynamic> values, String key) {
+    final value = values[key];
+    return value is bool ? value : null;
   }
 
   Future<void> _openSmartResultAsNewNote(

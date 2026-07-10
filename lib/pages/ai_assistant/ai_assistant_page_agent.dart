@@ -211,29 +211,53 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       if (parsed.smartResult != null) {
         // tag_ids 是权威来源；tag_names 只作为旧工具调用的展示回退。
         List<String> tagNames = const <String>[];
+        List<String?> tagIconNames = const <String?>[];
         final tagIds = parsed.smartResult!.tagIds;
+        final noteId = parsed.smartResult!.noteId;
+        DatabaseService? db;
+        if ((tagIds != null && tagIds.isNotEmpty) ||
+            (noteId != null && noteId.isNotEmpty)) {
+          try {
+            db = context.read<DatabaseService>();
+          } catch (_) {
+            db = null;
+          }
+        }
         final fallbackTagNames =
             parsed.smartResult!.tagNames ?? const <String>[];
-        if (tagIds != null && tagIds.isNotEmpty) {
+        if (tagIds != null && tagIds.isNotEmpty && db != null) {
           try {
-            final db = context.read<DatabaseService>();
             final allTags = await db.getCategories();
-            final tagMap = <String, String>{
-              for (final t in allTags) t.id: t.name,
+            final tagMap = <String, NoteCategory>{
+              for (final tag in allTags) tag.id: tag,
             };
             tagNames = [
               for (var i = 0; i < tagIds.length; i++)
-                tagMap[tagIds[i]] ??
+                tagMap[tagIds[i]]?.name ??
                     (i < fallbackTagNames.length &&
                             fallbackTagNames[i].isNotEmpty
                         ? fallbackTagNames[i]
                         : tagIds[i]),
             ].where((name) => name.isNotEmpty).toList();
+            tagIconNames = [
+              for (final tagId in tagIds) tagMap[tagId]?.iconName,
+            ];
           } catch (_) {
             tagNames = fallbackTagNames.isNotEmpty ? fallbackTagNames : tagIds;
           }
         } else {
-          tagNames = fallbackTagNames;
+          tagNames = fallbackTagNames.isNotEmpty
+              ? fallbackTagNames
+              : (tagIds ?? const <String>[]);
+        }
+
+        Quote? originalNote;
+        if (noteId != null && noteId.isNotEmpty && db != null) {
+          try {
+            originalNote = await db.getQuoteById(noteId);
+          } catch (_) {
+            originalNote = null;
+          }
         }
 
         final cardMsg = app_chat.ChatMessage(
@@ -249,10 +273,21 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             'action': parsed.smartResult!.action,
             'tag_ids': parsed.smartResult!.tagIds,
             'tag_names': tagNames,
+            'tag_icon_names': tagIconNames,
             'author': parsed.smartResult!.author,
             'source': parsed.smartResult!.source,
             'include_location': parsed.smartResult!.includeLocation,
             'include_weather': parsed.smartResult!.includeWeather,
+            if (originalNote != null) ...{
+              'original_location': originalNote.location,
+              'original_has_location':
+                  !LocationService.isNonDisplayMarker(originalNote.location) ||
+                      (originalNote.latitude != null &&
+                          originalNote.longitude != null),
+              'original_weather': originalNote.weather,
+              'original_temperature': originalNote.temperature,
+              'original_has_weather': originalNote.weather != null,
+            },
           }),
         );
         _setState(() => _messages.add(cardMsg));
@@ -527,8 +562,12 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             tagNames: _parseStringList(call.arguments['tag_names']),
             author: call.arguments['author']?.toString(),
             source: call.arguments['source']?.toString(),
-            includeLocation: call.arguments['include_location'] == true,
-            includeWeather: call.arguments['include_weather'] == true,
+            includeLocation: _parseOptionalBool(
+              call.arguments['include_location'],
+            ),
+            includeWeather: _parseOptionalBool(
+              call.arguments['include_weather'],
+            ),
           ),
         );
       } catch (_) {
@@ -567,8 +606,8 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           tagNames: _parseStringList(data['tag_names']),
           author: data['author']?.toString(),
           source: data['source']?.toString(),
-          includeLocation: data['include_location'] == true,
-          includeWeather: data['include_weather'] == true,
+          includeLocation: _parseOptionalBool(data['include_location']),
+          includeWeather: _parseOptionalBool(data['include_weather']),
         ),
       );
     } catch (e) {
@@ -589,6 +628,8 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
         .toList();
     return items.isEmpty ? null : items;
   }
+
+  bool? _parseOptionalBool(Object? value) => value is bool ? value : null;
 }
 
 class _AgentSmartResultParseResult {
@@ -611,8 +652,8 @@ class _AgentSmartResultPayload {
     this.tagNames,
     this.author,
     this.source,
-    this.includeLocation = false,
-    this.includeWeather = false,
+    this.includeLocation,
+    this.includeWeather,
   });
 
   final String title;
@@ -623,6 +664,6 @@ class _AgentSmartResultPayload {
   final List<String>? tagNames;
   final String? author;
   final String? source;
-  final bool includeLocation;
-  final bool includeWeather;
+  final bool? includeLocation;
+  final bool? includeWeather;
 }
