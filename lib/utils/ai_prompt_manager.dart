@@ -901,10 +901,12 @@ $contentSection
     // 根据语言选择不同的模板
     final isEnglish = languageCode != null && languageCode.startsWith('en');
 
-    final time =
-        mostTimePeriod ?? (isEnglish ? 'evenly distributed' : '本期时段分布较均衡');
-    final weather = mostWeather ??
-        (isEnglish ? 'weather was not a significant factor' : '天气因素不明显');
+    final time = mostTimePeriod != null && mostTimePeriod.isNotEmpty
+        ? _translateTimePeriod(mostTimePeriod, toEnglish: isEnglish)
+        : (isEnglish ? 'evenly distributed' : '本期时段分布较均衡');
+    final weather = mostWeather != null && mostWeather.isNotEmpty
+        ? _translateWeather(mostWeather, toEnglish: isEnglish)
+        : (isEnglish ? 'weather was not a significant factor' : '天气因素不明显');
     // 处理标签：清理前后空格和多余符号，直接使用标签名
     String tag;
     if (topTag != null && topTag.trim().isNotEmpty) {
@@ -1140,5 +1142,114 @@ $contentSection
     ];
     final random = rng ?? math.Random();
     return templates[random.nextInt(templates.length)];
+  }
+
+  @visibleForTesting
+  String translateTimePeriod(String input, {required bool toEnglish}) =>
+      _translateTimePeriod(input, toEnglish: toEnglish);
+
+  @visibleForTesting
+  String translateWeather(String input, {required bool toEnglish}) =>
+      _translateWeather(input, toEnglish: toEnglish);
+
+  /// 根据语言翻译时间段
+  String _translateTimePeriod(String input, {required bool toEnglish}) {
+    const keyToLabelZh = {
+      'dawn': '晨曦',
+      'morning': '上午',
+      'afternoon': '午后',
+      'dusk': '黄昏',
+      'evening': '夜晚',
+      'midnight': '深夜',
+    };
+    const keyToLabelEn = {
+      'dawn': 'dawn',
+      'morning': 'morning',
+      'afternoon': 'afternoon',
+      'dusk': 'dusk',
+      'evening': 'evening',
+      'midnight': 'midnight',
+    };
+
+    if (toEnglish) {
+      final reverseZh =
+          keyToLabelZh.map((k, v) => MapEntry(v.toLowerCase(), k));
+      final cleanedInput = input.trim().toLowerCase();
+      if (reverseZh.containsKey(cleanedInput)) {
+        return reverseZh[cleanedInput]!;
+      }
+      return keyToLabelEn[cleanedInput] ?? input;
+    } else {
+      final cleanedInput = input.trim().toLowerCase();
+      if (keyToLabelZh.containsKey(cleanedInput)) {
+        return keyToLabelZh[cleanedInput]!;
+      }
+      return input;
+    }
+  }
+
+  /// 根据语言翻译天气
+  String _translateWeather(String input, {required bool toEnglish}) {
+    const keyToLabelZh = {
+      'clear': '晴',
+      'sunny': '晴',
+      'partly_cloudy': '少云',
+      'cloudy': '多云',
+      'fog': '雾',
+      'drizzle': '毛毛雨',
+      'freezing_rain': '冻雨',
+      'rain': '雨',
+      'rainy': '雨',
+      'snow': '雪',
+      'snowy': '雪',
+      'snow_grains': '雪粒',
+      'rain_shower': '阵雨',
+      'snow_shower': '阵雪',
+      'thunderstorm': '雷雨',
+      'thunderstorm_heavy': '雷暴雨',
+      'error': '获取失败',
+      'unknown': '未知',
+    };
+    const keyToLabelEn = {
+      'clear': 'clear',
+      'sunny': 'sunny',
+      'partly_cloudy': 'partly cloudy',
+      'cloudy': 'cloudy',
+      'fog': 'fog',
+      'drizzle': 'drizzle',
+      'freezing_rain': 'freezing rain',
+      'rain': 'rain',
+      'rainy': 'rainy',
+      'snow': 'snow',
+      'snowy': 'snowy',
+      'snow_grains': 'snow grains',
+      'rain_shower': 'rain shower',
+      'snow_shower': 'snow shower',
+      'thunderstorm': 'thunderstorm',
+      'thunderstorm_heavy': 'heavy thunderstorm',
+      'error': 'error',
+      'unknown': 'unknown',
+    };
+
+    if (toEnglish) {
+      final cleanedInput = input.trim().toLowerCase();
+      if (cleanedInput == '晴') return 'clear';
+      if (cleanedInput == '雨') return 'rainy';
+      if (cleanedInput == '多云') return 'cloudy';
+      if (cleanedInput == '雪') return 'snowy';
+
+      final reverseZh =
+          keyToLabelZh.map((k, v) => MapEntry(v.toLowerCase(), k));
+      if (reverseZh.containsKey(cleanedInput)) {
+        return reverseZh[cleanedInput]!;
+      }
+      return keyToLabelEn[cleanedInput] ?? input;
+    } else {
+      final cleanedInput = input.trim().toLowerCase();
+      if (keyToLabelZh.containsKey(cleanedInput)) {
+        return keyToLabelZh[cleanedInput]!;
+      }
+      return input;
+    }
   }
 }

@@ -2,7 +2,6 @@ part of '../ai_periodic_report_page.dart';
 
 extension _AIReportTimeSelector on _AIPeriodicReportPageState {
   Widget _buildReportPage(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: NotificationListener<ScrollNotification>(
         onNotification: (notification) {
@@ -24,10 +23,8 @@ extension _AIReportTimeSelector on _AIPeriodicReportPageState {
         },
         child: CustomScrollView(
           slivers: [
-            SliverAppBar(
-              floating: true,
-              title: Text(l10n.explore),
-              automaticallyImplyLeading: false,
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 16),
             ),
             SliverToBoxAdapter(
               child: AnimatedContainer(

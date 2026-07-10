@@ -347,6 +347,65 @@ void main() {
         expect(output, contains('天气因素不明显'));
         expect(output, contains('多元主题'));
       });
+
+      group('translateTimePeriod and translateWeather', () {
+        test('translates time periods correctly', () {
+          expect(
+              manager.translateTimePeriod('evening', toEnglish: false), '夜晚');
+          expect(
+              manager.translateTimePeriod('morning', toEnglish: false), '上午');
+          expect(manager.translateTimePeriod('夜晚', toEnglish: true), 'evening');
+          expect(manager.translateTimePeriod('上午', toEnglish: true), 'morning');
+          // Handles unknown or already translated
+          expect(
+              manager.translateTimePeriod('unknown_period', toEnglish: false),
+              'unknown_period');
+          expect(manager.translateTimePeriod('夜晚', toEnglish: false), '夜晚');
+        });
+
+        test('translates weather correctly', () {
+          expect(manager.translateWeather('clear', toEnglish: false), '晴');
+          expect(manager.translateWeather('rainy', toEnglish: false), '雨');
+          expect(manager.translateWeather('晴', toEnglish: true), 'clear');
+          expect(manager.translateWeather('雨', toEnglish: true), 'rainy');
+          // Handles unknown or already translated
+          expect(manager.translateWeather('unknown_weather', toEnglish: false),
+              'unknown_weather');
+          expect(manager.translateWeather('晴', toEnglish: false), '晴');
+        });
+
+        test('translates inputs through formatLocalReportInsight', () {
+          // Choose seed 1 (which generates Growth Mentor insight that contains $time)
+          final outputZh = manager.formatLocalReportInsight(
+            periodLabel: '本周',
+            activeDays: 3,
+            noteCount: 5,
+            totalWordCount: 500,
+            mostTimePeriod: 'evening',
+            mostWeather: 'clear',
+            topTag: '随记',
+            languageCode: 'zh',
+            seed: 1,
+          );
+          expect(outputZh, contains('夜晚'));
+          expect(outputZh, isNot(contains('evening')));
+
+          // Choose seed 2 (which generates Warm Companion insight that contains both $time and $weather)
+          final outputEn = manager.formatLocalReportInsight(
+            periodLabel: 'This Week',
+            activeDays: 3,
+            noteCount: 5,
+            totalWordCount: 500,
+            mostTimePeriod: '夜晚',
+            mostWeather: '晴',
+            topTag: 'Thoughts',
+            languageCode: 'en',
+            seed: 2,
+          );
+          expect(outputEn, contains('evening'));
+          expect(outputEn, contains('clear'));
+        });
+      });
     });
   });
 }
