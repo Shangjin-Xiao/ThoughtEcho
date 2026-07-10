@@ -1037,8 +1037,8 @@ $contentSection
   }) {
     final templates = [
       '$periodLabel你坚持记录了$activeDays天，写下$noteCount篇心情随笔。$time是你偏爱的书写时光，$weather相伴左右，$tag是你这段时间的关注焦点。',
-      '过去$periodLabel，你用$activeDays天记录生活点滴，留下$totalWordCount字的温暖印记。$time最能激发你的表达欲，$tag贯穿其中。',
-      '这$periodLabel你用心记录了$activeDays天，$noteCount篇文字承载着日常感悟。$time书写、$weather相伴，$tag是你的思绪主线。',
+      '$periodLabel里，你用$activeDays天记录生活点滴，留下$totalWordCount字的温暖印记。$time最能激发你的表达欲，$tag贯穿其中。',
+      '$periodLabel里你用心记录了$activeDays天，$noteCount篇文字承载着日常感悟。$time书写、$weather相伴，$tag是你的思绪主线。',
     ];
     final random = rng ?? math.Random();
     return templates[random.nextInt(templates.length)];
@@ -1077,7 +1077,7 @@ $contentSection
   }) {
     final templates = [
       '$periodLabel你保持了$activeDays天的记录习惯，积累$totalWordCount字的思考沉淀。$time适合深度思考，$tag值得持续探索。',
-      '这$periodLabel你坚持了$activeDays天，$noteCount篇记录见证着你的思维轨迹。$time是高效时段，$tag或许是下一个突破口。',
+      '$periodLabel你坚持了$activeDays天，$noteCount篇记录见证着你的思维轨迹。$time是高效时段，$tag或许是下一个突破口。',
       '$activeDays天的坚持展现了你的自律，$noteCount篇笔记记录着成长。$time是你的黄金时段，$tag体现了近期关注点。',
     ];
     final random = rng ?? math.Random();
