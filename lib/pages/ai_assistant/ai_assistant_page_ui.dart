@@ -36,11 +36,19 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           _selectedMediaFiles.addAll(result.files);
         });
       }
-    } catch (e) {
+    } catch (e, stack) {
+      logError(
+        'Failed to pick files',
+        error: e,
+        stackTrace: stack,
+        source: 'AIAssistantPage',
+      );
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Failed to pick files: $e')));
+      ).showSnackBar(
+          SnackBar(content: Text(l10n.failedToPickFiles(e.toString()))));
     }
   }
 
