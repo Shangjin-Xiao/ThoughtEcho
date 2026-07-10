@@ -1,0 +1,30 @@
+.github/workflows/flutter-release-build.yml
+  s_1fa6ca50664ed9::t_c53e17e4c81719 114-115,117,119-120,125-126
+  s_1fa6ca50664ed9::t_6006301d4a2eed 20-28,93,102-105,111-113,116,118,121-124,127-134,139-140
+android/app/build.gradle
+  s_1fa6ca50664ed9::t_6006301d4a2eed 62-86
+  s_1fa6ca50664ed9::t_4564c97c8ca05a 87-88
+android/app/src/main/AndroidManifest.xml
+  s_1fa6ca50664ed9::t_6006301d4a2eed 9,56-61
+test/unit/android/file_provider_config_test.dart
+  s_1fa6ca50664ed9::t_138f1d7558d84b 95-100,103-105
+  s_1fa6ca50664ed9::t_c412f18c12b53e 61-62,70,81,85,89-94,101-102,106-115,117
+  s_1fa6ca50664ed9::t_7ae875a73e4ec2 116
+  s_1fa6ca50664ed9::t_bf0b1d7deca634 118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e619658b6a37f3875108ba277e1efb9f63f76ecb",
+  "prompts": {},
+  "sessions": {
+    "s_1fa6ca50664ed9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f44bf-d14b-71b0-b4aa-cefa1981689c",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
