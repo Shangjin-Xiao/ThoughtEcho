@@ -1,0 +1,19 @@
+test/widget/session_history_page_test.dart
+  s_1fa6ca50664ed9::t_6f0b9986512819 224-272
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.11",
+  "base_commit_sha": "77c11f4010699d002e15f0648e2b14a863a02cc4",
+  "prompts": {},
+  "sessions": {
+    "s_1fa6ca50664ed9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f44bf-d14b-71b0-b4aa-cefa1981689c",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
