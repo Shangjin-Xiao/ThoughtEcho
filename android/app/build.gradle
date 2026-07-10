@@ -54,23 +54,36 @@ android {
         multiDexEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        // ARM32 binder64设备优化配置
-        manifestPlaceholders = [
-            'applicationName': 'io.flutter.app.FlutterApplication',
-            'largeHeap': 'true',
-            'hardwareAccelerated': 'false'
-        ]
-
-
-
-        // NDK配置 - 恢复原始配置以避免兼容性问题
-        ndk {
-            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
-        }
-
         // 内存和性能优化
         vectorDrawables.useSupportLibrary = true
         resConfigs "en", "zh"
+    }
+
+    flavorDimensions 'abi'
+
+    productFlavors {
+        standard64 {
+            dimension 'abi'
+            ndk {
+                abiFilters 'arm64-v8a'
+            }
+            manifestPlaceholders = [
+                'vmSafeMode': 'false',
+                'enableSoftwareRendering': 'false',
+                'enableImpeller': 'true'
+            ]
+        }
+        arm32Compat {
+            dimension 'abi'
+            ndk {
+                abiFilters 'armeabi-v7a'
+            }
+            manifestPlaceholders = [
+                'vmSafeMode': 'true',
+                'enableSoftwareRendering': 'true',
+                'enableImpeller': 'false'
+            ]
+        }
     }
 
     signingConfigs {

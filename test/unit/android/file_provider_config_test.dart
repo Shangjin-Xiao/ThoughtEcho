@@ -58,8 +58,8 @@ void main() {
     });
   });
 
-  group('Android 64-bit startup defaults', () {
-    test('does not force global software rendering fallbacks', () {
+  group('Android ABI build variants', () {
+    test('delegates rendering configuration to flavor placeholders', () {
       final manifest = XmlDocument.parse(
         File('android/app/src/main/AndroidManifest.xml').readAsStringSync(),
       );
@@ -67,7 +67,7 @@ void main() {
 
       expect(
         application.getAttribute('vmSafeMode', namespace: _androidNamespace),
-        isNull,
+        r'${vmSafeMode}',
       );
 
       final metadataByName = {
@@ -78,12 +78,42 @@ void main() {
 
       expect(
         metadataByName['io.flutter.embedding.android.EnableSoftwareRendering'],
-        isNull,
+        r'${enableSoftwareRendering}',
       );
       expect(
         metadataByName['io.flutter.embedding.android.EnableImpeller'],
-        isNull,
+        r'${enableImpeller}',
       );
+    });
+
+    test('defines isolated 64-bit and ARM32 compatibility flavors', () {
+      final buildGradle = File('android/app/build.gradle').readAsStringSync();
+
+      expect(buildGradle, contains("flavorDimensions 'abi'"));
+      expect(buildGradle, contains('standard64 {'));
+      expect(buildGradle, contains("abiFilters 'arm64-v8a'"));
+      expect(buildGradle, contains("'vmSafeMode': 'false'"));
+      expect(
+        buildGradle,
+        contains("'enableSoftwareRendering': 'false'"),
+      );
+      expect(buildGradle, contains("'enableImpeller': 'true'"));
+      expect(buildGradle, contains('arm32Compat {'));
+      expect(buildGradle, contains("abiFilters 'armeabi-v7a'"));
+      expect(buildGradle, contains("'vmSafeMode': 'true'"));
+      expect(buildGradle, contains("'enableSoftwareRendering': 'true'"));
+      expect(buildGradle, contains("'enableImpeller': 'false'"));
+    });
+
+    test('lets release CI build either or both ABI flavors', () {
+      final workflow = File(
+        '.github/workflows/flutter-release-build.yml',
+      ).readAsStringSync();
+
+      expect(workflow, contains('build_variant:'));
+      expect(workflow, contains('standard64'));
+      expect(workflow, contains('arm32Compat'));
+      expect(workflow, contains(r'--flavor "$FLAVOR"'));
     });
 
     test('keeps MMKV native load failures from aborting startup', () {
