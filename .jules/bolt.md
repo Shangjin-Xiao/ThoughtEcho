@@ -66,3 +66,6 @@
 ## 2024-05-18 - [Batched Database Inserts for sqflite]
 **Learning:** Sequential `await txn.insert()` calls inside a loop in `sqflite` cause massive N+1 IPC overhead because each insert requires traversing the Dart-to-Native channel.
 **Action:** Always accumulate `insert` or `update` operations using `txn.batch()` (e.g., `batch.insert()`) and execute them together with a single `await batch.commit(noResult: true)` (if results aren't needed) to minimize platform channel serialization costs during migrations or bulk processing.
+## 2024-05-14 - 避免使用 split('').length 计算字符串长度
+**Learning:** 在 Dart 中，使用 `str.split('').length` 来计算字符串长度会导致 O(N) 的时间和空间开销，因为系统会分配一个包含每个字符的临时列表，这会引发频繁的内存分配和垃圾回收，影响性能。
+**Action:** 在计算字数等场景，应当直接使用 O(1) 的 `str.length`，或者在需要过滤不可见字符时，使用 `str.characters.length` 配合正则等更高效的方式。
