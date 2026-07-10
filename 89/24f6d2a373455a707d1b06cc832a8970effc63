@@ -1,0 +1,61 @@
+lib/utils/ai_smart_result_utils.dart
+  s_12c5ff9deac0c0::t_c7c4917cc764b1 29-30,38-39
+lib/pages/ai_assistant/ai_assistant_page_agent.dart
+  s_12c5ff9deac0c0::t_86b87367c02944 242
+  s_12c5ff9deac0c0::t_2e136272e1f5fe 214,216-223,253
+  s_12c5ff9deac0c0::t_f782014534b895 252,254,256-260,276,281-288
+  s_12c5ff9deac0c0::t_f3b31a684075f6 249
+  s_12c5ff9deac0c0::t_c7c4917cc764b1 565-568
+  s_12c5ff9deac0c0::t_8231af0da87885 255
+  s_12c5ff9deac0c0::t_93bff2a0da6037 224-225
+  s_12c5ff9deac0c0::t_c48b7e95ffcd2b 243-244
+  s_12c5ff9deac0c0::t_f0f02d4b2f6ac5 250-251
+  s_12c5ff9deac0c0::t_883cee8842962c 289-290
+  s_12c5ff9deac0c0::t_5b59e3720a12e3 569-570
+  s_12c5ff9deac0c0::t_b82e97f752632b 228,231-232,236,609-610,631-632,655-656,667-668
+test/widget/smart_result_card_test.dart
+  s_12c5ff9deac0c0::t_b3943a5f106c9f 50,116,127-129,137-168
+  s_12c5ff9deac0c0::t_29f6149a35e01c 4,26-29,51,135-136,169-193
+  s_12c5ff9deac0c0::t_a835b6402d7bc6 114
+lib/services/agent_tools/propose_new_note_tool.dart
+  s_12c5ff9deac0c0::t_c7c4917cc764b1 41,45,59-60,90-95
+test/unit/utils/ai_smart_result_utils_test.dart
+  s_12c5ff9deac0c0::t_29f6149a35e01c 51-66,68
+  s_12c5ff9deac0c0::t_7c72b68e07807a 36
+docs/plans/2026-07-10-smart-result-card-ux.md
+  s_12c5ff9deac0c0::t_72d56e7b3c91dc 1-54
+lib/services/agent_service.dart
+  s_12c5ff9deac0c0::t_c7c4917cc764b1 806
+lib/widgets/ai/smart_result_card.dart
+  s_12c5ff9deac0c0::t_ccdc3e8cae65aa 168,260,359-361,365-387,392-396,398-410,412
+  s_12c5ff9deac0c0::t_2bd42ebce78787 33
+  s_12c5ff9deac0c0::t_9f0f93b21c1d88 4,6-7,42,56,63,114-118,163-165,169-178,192-212,214,255-259,261-294,299-304
+lib/pages/ai_assistant/ai_assistant_page_ui.dart
+  s_12c5ff9deac0c0::t_7c72b68e07807a 202-203,224-229,247-248
+  s_12c5ff9deac0c0::t_86b87367c02944 187-199,240,250-267
+  s_12c5ff9deac0c0::t_c7c4917cc764b1 1004-1005,1048-1050
+  s_12c5ff9deac0c0::t_f782014534b895 204-205,207-220,222,230-231,245-246
+  s_12c5ff9deac0c0::t_16c628add41a5c 1051-1052
+test/unit/services/agent_note_tools_test.dart
+  s_12c5ff9deac0c0::t_29f6149a35e01c 155-178
+lib/pages/ai_assistant_page.dart
+  s_12c5ff9deac0c0::t_86b87367c02944 18
+test/widgets/smart_result_card_test.dart
+  s_12c5ff9deac0c0::t_a835b6402d7bc6 38,67-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.11",
+  "base_commit_sha": "8924f6d2a373455a707d1b06cc832a8970effc63",
+  "prompts": {},
+  "sessions": {
+    "s_12c5ff9deac0c0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4b28-1538-7902-ac28-c106b217bf6a",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
