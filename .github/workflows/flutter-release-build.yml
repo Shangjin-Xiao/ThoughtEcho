@@ -113,16 +113,18 @@ jobs:
           build_flavor() {
             local FLAVOR="$1"
             local TARGET_PLATFORM="$2"
+            local OUTPUT_FLAVOR="${FLAVOR,,}"
 
             echo "正在构建 $FLAVOR ($BUILD_MODE)..."
             flutter build apk --"$BUILD_MODE" \
               --flavor "$FLAVOR" \
               --target-platform="$TARGET_PLATFORM" \
+              --android-project-arg=disable-abi-filtering=true \
               --build-number="${{ github.run_number }}" \
               --build-name="$VERSION_NAME" \
               --dart-define=SENTRY_DSN="$SENTRY_DSN"
 
-            cp "build/app/outputs/flutter-apk/app-$FLAVOR-$BUILD_MODE.apk" \
+            cp "build/app/outputs/flutter-apk/app-$OUTPUT_FLAVOR-$BUILD_MODE.apk" \
               "build/app/outputs/release-artifacts/thoughtecho-$FLAVOR-$BUILD_MODE.apk"
           }
 

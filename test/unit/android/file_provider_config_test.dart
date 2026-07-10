@@ -114,6 +114,15 @@ void main() {
       expect(workflow, contains('standard64'));
       expect(workflow, contains('arm32Compat'));
       expect(workflow, contains(r'--flavor "$FLAVOR"'));
+      expect(
+        workflow,
+        contains('--android-project-arg=disable-abi-filtering=true'),
+      );
+      expect(workflow, contains(r'local OUTPUT_FLAVOR="${FLAVOR,,}"'));
+      expect(
+        workflow,
+        contains(r'app-$OUTPUT_FLAVOR-$BUILD_MODE.apk'),
+      );
     });
 
     test('keeps MMKV native load failures from aborting startup', () {
