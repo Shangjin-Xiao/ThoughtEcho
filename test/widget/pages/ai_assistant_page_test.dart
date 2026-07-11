@@ -30,6 +30,14 @@ class _InMemoryChatSessionService extends ChatSessionService {
       <String, List<app_chat.ChatMessage>>{};
   int _sessionSeq = 0;
 
+  void seedSession(
+    ChatSession session,
+    List<app_chat.ChatMessage> messages,
+  ) {
+    _sessions[session.id] = session;
+    _messages[session.id] = List<app_chat.ChatMessage>.from(messages);
+  }
+
   @override
   Future<ChatSession> createSession({
     required String sessionType,
@@ -140,6 +148,8 @@ class _FakeAgentService extends AgentService {
     this.simulateToolProgress = false,
     this.emitSmartResultCard = false,
     this.responseContent = 'Agent 响应',
+    this.responseChunks = const <String>[],
+    this.responseChunkDelay = const Duration(milliseconds: 12),
     this.preToolText,
     this.toolProgressDelay = const Duration(milliseconds: 12),
     this.toolName = 'search_notes',
@@ -156,6 +166,8 @@ class _FakeAgentService extends AgentService {
   final bool simulateToolProgress;
   final bool emitSmartResultCard;
   final String responseContent;
+  final List<String> responseChunks;
+  final Duration responseChunkDelay;
   final String? preToolText;
   final Duration toolProgressDelay;
   final String toolName;
@@ -243,6 +255,10 @@ class _FakeAgentService extends AgentService {
           ]
         : const <ToolCall>[];
 
+    for (final chunk in responseChunks) {
+      _emitEvent(AgentTextDeltaEvent(chunk));
+      await Future<void>.delayed(responseChunkDelay);
+    }
     await Future<void>.delayed(const Duration(milliseconds: 12));
     if (stopRequested) {
       _setMockState(isRunning: false, statusKey: '');
@@ -497,6 +513,132 @@ void main() {
       expect(find.widgetWithText(ActionChip, '/续写'), findsNothing);
     });
 
+    testWidgets('dragging messages keeps the focused input keyboard active',
+        (tester) async {
+      final now = DateTime.now();
+      final session = ChatSession(
+        id: 'scroll-session',
+        sessionType: 'general',
+        title: '滚动测试',
+        createdAt: now,
+        lastActiveAt: now,
+      );
+      chatSessionService.seedSession(
+        session,
+        List<app_chat.ChatMessage>.generate(
+          30,
+          (index) => app_chat.ChatMessage(
+            id: 'history-$index',
+            role: 'assistant',
+            isUser: false,
+            content: '历史消息 $index：一段足以占据单行高度的内容',
+            timestamp: now,
+          ),
+        ),
+      );
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+            session: session,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final inputFinder = find.byType(TextField).last;
+      await tester.tap(inputFinder);
+      await tester.pump();
+      final inputFocusNode = tester.widget<TextField>(inputFinder).focusNode!;
+      expect(inputFocusNode.hasFocus, isTrue);
+
+      final listContext = tester.element(find.byType(ListView));
+      final listController =
+          tester.widget<ListView>(find.byType(ListView)).controller!;
+      ScrollUpdateNotification(
+        metrics: listController.position,
+        context: listContext,
+        scrollDelta: -1,
+        dragDetails: DragUpdateDetails(globalPosition: Offset.zero),
+      ).dispatch(listContext);
+      await tester.pump();
+
+      expect(inputFocusNode.hasFocus, isTrue);
+    });
+
+    testWidgets(
+        'scroll-to-bottom reaches the latest extent while input focused',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        responseContent: '回答完成',
+        responseChunks: <String>[
+          List<String>.filled(80, '第一批流式内容').join('\n'),
+          List<String>.filled(30, '随后到达的新内容').join('\n'),
+        ],
+        responseChunkDelay: const Duration(milliseconds: 1000),
+      );
+      await settingsService
+          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).last, '生成较长回答');
+      await tester.pump();
+      final inputFocusNode =
+          tester.widget<TextField>(find.byType(TextField).last).focusNode!;
+      final sendButton = find.byKey(
+        const ValueKey('ai_assistant_send_button'),
+      );
+      final effectiveSendButton = sendButton.evaluate().isNotEmpty
+          ? sendButton
+          : find.widgetWithIcon(IconButton, Icons.arrow_upward).last;
+      tester.widget<IconButton>(effectiveSendButton).onPressed?.call();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      final listContext = tester.element(find.byType(ListView));
+      final listController =
+          tester.widget<ListView>(find.byType(ListView)).controller!;
+      ScrollUpdateNotification(
+        metrics: listController.position,
+        context: listContext,
+        scrollDelta: -1,
+        dragDetails: DragUpdateDetails(globalPosition: Offset.zero),
+      ).dispatch(listContext);
+      await tester.pump();
+      final bottomButton = find.byKey(
+        const ValueKey('ai_assistant_scroll_to_bottom'),
+      );
+      expect(bottomButton, findsOneWidget);
+      expect(inputFocusNode.hasFocus, isTrue);
+
+      tester.widget<IconButton>(bottomButton).onPressed?.call();
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(
+        listController.position.pixels,
+        moreOrLessEquals(
+          listController.position.maxScrollExtent,
+          epsilon: 1,
+        ),
+      );
+      expect(inputFocusNode.hasFocus, isTrue);
+      await tester.pump(const Duration(seconds: 2));
+    });
+
     testWidgets('agent mode routes deep analysis with extra prompt to workflow',
         (tester) async {
       final aiService = _FakeAIService(settingsService: settingsService);
@@ -600,6 +742,48 @@ void main() {
         matching: find.byType(ToolProgressPanel),
       );
       expect(completedPanelFinder, findsWidgets);
+    });
+
+    testWidgets('agent response renders chunks before generation completes',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        responseContent: '第一段第二段',
+        responseChunks: const <String>['第一段', '第二段'],
+        responseChunkDelay: const Duration(milliseconds: 200),
+      );
+      await settingsService
+          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '请流式回答');
+      await tester.pump();
+      final sendButtonFinder =
+          find.byKey(const ValueKey('ai_assistant_send_button'));
+      final effectiveSendFinder = sendButtonFinder.evaluate().isNotEmpty
+          ? sendButtonFinder
+          : find.widgetWithIcon(IconButton, Icons.arrow_upward).last;
+      tester.widget<IconButton>(effectiveSendFinder).onPressed?.call();
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+
+      expect(find.textContaining('第一段'), findsOneWidget);
+      expect(find.textContaining('第一段第二段'), findsNothing);
+
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.textContaining('第一段第二段'), findsOneWidget);
     });
 
     testWidgets('agent tool panel keeps pre-tool thinking text inline',

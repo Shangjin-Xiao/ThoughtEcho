@@ -87,9 +87,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                   onNotification: (notification) {
                     if (notification.scrollDelta != null &&
                         notification.dragDetails != null) {
-                      if (_inputFocusNode.hasFocus) {
-                        _inputFocusNode.unfocus();
-                      }
                       if (notification.scrollDelta! < 0) {
                         _setAutoScrollEnabled(false);
                       }
