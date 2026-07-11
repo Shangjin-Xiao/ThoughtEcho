@@ -1,0 +1,21 @@
+docs/plans/2026-07-11-localsend-incremental-media-design.md
+  s_79ac41f0c77ab9::t_6970f80c6546fb 1-25
+docs/plans/2026-07-11-localsend-incremental-media.md
+  s_79ac41f0c77ab9::t_6970f80c6546fb 1-73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.11",
+  "base_commit_sha": "d6f30b7babc8f545986cc0c01f10f1f633e71a21",
+  "prompts": {},
+  "sessions": {
+    "s_79ac41f0c77ab9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4b4d-ac00-7e73-8e89-1c4546725320",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
