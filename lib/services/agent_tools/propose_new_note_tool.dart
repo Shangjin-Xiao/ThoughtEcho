@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:thoughtecho/services/database_service.dart';
 
+import '../../models/rich_text_edit.dart';
+import '../../utils/quill_structured_edit.dart';
 import '../agent_tool.dart';
 import 'tag_argument_resolver.dart';
 
@@ -24,6 +26,44 @@ class ProposeNewNoteTool extends AgentTool {
         'properties': {
           'title': {'type': 'string', 'description': '建议卡片标题，例如"新笔记草稿"'},
           'content': {'type': 'string', 'description': '新笔记正文内容'},
+          'blocks': {
+            'type': 'array',
+            'description': '可选：原生富文本块；需要格式时优先使用，不要同时提交 content',
+            'items': {
+              'type': 'object',
+              'properties': {
+                'type': {
+                  'type': 'string',
+                  'enum': [
+                    'paragraph',
+                    'heading',
+                    'bullet',
+                    'ordered',
+                    'quote',
+                    'code',
+                  ],
+                },
+                'level': {'type': 'integer', 'minimum': 1, 'maximum': 6},
+                'children': {
+                  'type': 'array',
+                  'items': {
+                    'type': 'object',
+                    'properties': {
+                      'text': {'type': 'string'},
+                      'bold': {'type': 'boolean'},
+                      'italic': {'type': 'boolean'},
+                      'underline': {'type': 'boolean'},
+                      'strike': {'type': 'boolean'},
+                      'code': {'type': 'boolean'},
+                      'link': {'type': 'string'},
+                    },
+                    'required': ['text'],
+                  },
+                },
+              },
+              'required': ['type', 'children'],
+            },
+          },
           'author': {'type': 'string', 'description': '可选：作者名称'},
           'source': {'type': 'string', 'description': '可选：出处/作品名称'},
           'tag_ids': {
@@ -46,13 +86,28 @@ class ProposeNewNoteTool extends AgentTool {
           },
           'reason': {'type': 'string', 'description': '可选：为什么建议创建这条笔记'},
         },
-        'required': ['title', 'content'],
+        'required': ['title'],
       };
 
   @override
   Future<ToolResult> execute(ToolCall call) async {
     final title = call.getString('title');
-    final content = call.getString('content');
+    var content = call.getString('content');
+    List<RichTextBlock>? blocks;
+    final rawBlocks = call.arguments['blocks'];
+    if (rawBlocks is List) {
+      blocks = rawBlocks
+          .whereType<Map>()
+          .map((item) => RichTextBlock.fromJson(
+                item.map((key, value) => MapEntry(key.toString(), value)),
+              ))
+          .toList(growable: false);
+      if (blocks.isNotEmpty) {
+        content = QuillStructuredEdit.plainTextOf(
+          QuillStructuredEdit.documentFromBlocks(blocks),
+        );
+      }
+    }
     final author = call.getString('author');
     final source = call.getString('source');
     final reason = call.getString('reason');
@@ -84,6 +139,8 @@ class ProposeNewNoteTool extends AgentTool {
       'title': title,
       'content': content,
       'action': 'create',
+      if (blocks?.isNotEmpty == true)
+        'rich_document': blocks!.map((block) => block.toJson()).toList(),
       'tag_ids': resolvedTags.ids,
       'tag_names': resolvedTags.names,
     };

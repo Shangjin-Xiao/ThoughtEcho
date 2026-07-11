@@ -108,7 +108,7 @@ class AgentService extends ChangeNotifier {
   }
 
   /// Agent 配置
-  static const int maxToolRounds = 8;
+  static const int maxToolRounds = 30;
   static const int _defaultMaxSingleMessageChars = 1200;
   static const int _searchToolMaxSingleMessageChars = 5000;
   static const int _maxRepeatedRoundPattern = 3;
@@ -172,6 +172,8 @@ class AgentService extends ChangeNotifier {
       final seenCallSignatures = <String>{};
       final repeatedRoundPatterns = <String, int>{};
       final correctionAttempts = <String, int>{};
+      final requiresExplicitCompletion =
+          _tools.any((tool) => tool.name == 'complete_task');
       var round = 0;
 
       while (true) {
@@ -217,6 +219,20 @@ class AgentService extends ChangeNotifier {
 
         final assistantContent = result.content.trim();
         final rawToolCalls = result.toolCalls;
+
+        if (rawToolCalls.isEmpty && requiresExplicitCompletion) {
+          if (assistantContent.isNotEmpty) {
+            messages.add(openai.ChatMessage.assistant(
+              content: assistantContent,
+            ));
+          }
+          messages.add(openai.ChatMessage.user(
+            '你已经使用过工具，但任务尚未通过 complete_task 完成。'
+            '请检查用户要求是否全部满足：如果仍有工作，继续调用合适工具；'
+            '只有确认交付完整后才调用 complete_task。不要仅回复过程说明。',
+          ));
+          continue;
+        }
 
         if (rawToolCalls.isEmpty) {
           _setStatus('');
@@ -313,6 +329,19 @@ class AgentService extends ChangeNotifier {
             continue;
           }
 
+          if (parsedToolCall.name == 'complete_task' &&
+              rawToolCalls.length > 1) {
+            repliedAnyToolCall = true;
+            messages.add(
+              openai.ChatMessage.tool(
+                toolCallId: rawToolCall.id,
+                content: 'complete_task 必须单独调用。请先处理同一轮的其他工具结果，'
+                    '确认全部完成后再单独调用 complete_task。',
+              ),
+            );
+            continue;
+          }
+
           final signature =
               '${parsedToolCall.name}:${canonicalJsonForArguments(parsedToolCall.arguments)}';
 
@@ -367,6 +396,18 @@ class AgentService extends ChangeNotifier {
               isError: toolResult.isError,
             ));
             executedCalls.add(parsedToolCall);
+
+            if (parsedToolCall.name == 'complete_task' && !toolResult.isError) {
+              _setStatus('');
+              _emitEvent(AgentResponseEvent(
+                content: toolResult.content,
+                toolCalls: executedCalls,
+              ));
+              return AgentResponse(
+                content: toolResult.content,
+                toolCalls: executedCalls,
+              );
+            }
 
             if (toolResult.isError) {
               final correctionKey =
@@ -784,6 +825,7 @@ $toolDescriptions
 - 使用原生 function calling，不要在文本里伪造 XML/JSON 标签。
 - 对于笔记检索与探索，主要调用 `explore_notes`。**注意：其返回的列表项仅包含前 200 字内容预览。**
 - **当你要对某篇特定笔记进行润色、总结、续写或深度分析时，为了获取其完整全部正文，你必须优先调用 `get_note_detail` 工具传入该笔记的 ID，不可仅凭 200 字预览做修改。**
+- 对已有富文本笔记进行局部润色、插入或删除时，优先调用 `propose_rich_edit`，并原样使用 `get_note_detail` 返回的 `document_revision`。`old_text` 或 `anchor_text` 必须提供足够上下文以唯一匹配。
 - 当你要创建新笔记，必须调用 `propose_new_note`，不要用 `propose_edit` 冒充新建。
 - 当你要为新笔记或编辑建议选择标签，先调用 `get_tags`；工具调用里优先提交 `tag_ids`，避免同名标签歧义。
 - 你可以像用户浏览朋友圈一样使用 `explore_notes`：
@@ -791,8 +833,9 @@ $toolDescriptions
   - 支持多维组合：你可以同时根据“下雨天”、“凌晨”、“标签”和“日期范围”来精准定位某条记录。
   - 使用 `next_offset` 参数进行翻页，不要重复拉取同一页。
 - 最终回复必须是面向用户的自然语言结论。
+- 使用过任何工具后，不得仅用普通文本自行结束。确认用户要求全部完成后，必须调用 `complete_task`，将最终答复放入 `result`。如果尚未完成，继续调用工具。
 - 默认使用中文回复（除非用户明确使用其他语言）。
-- 不要声称已直接修改笔记。所有改动都必须通过调用 `propose_edit` 或 `propose_new_note` 工具向用户提议，由用户确认后应用。
+- 不要声称已直接修改笔记。所有改动都必须通过调用 `propose_rich_edit`、`propose_edit` 或 `propose_new_note` 工具向用户提议，由用户确认后应用。
 - **严禁**在回复中手动编写 ` ```smart_result ` 代码块。你必须且只能通过调用工具来产生建议卡片。
 - 调用 `propose_edit` 时：
   - `action`: 润色或修正现有内容时使用 `replace`；续写、补充或整理到末尾时使用 `append`。
@@ -800,6 +843,7 @@ $toolDescriptions
   - `tag_ids` / `author` / `source`: 如果你认为需要修改标签、作者或出处，可以一并提供。不提供这些字段则保持原笔记不变。
   - 旧笔记建议不要修改位置/天气。
 - 调用 `propose_new_note` 时：
+  - 需要标题、列表、引用、代码或行内样式时使用 `blocks`，由应用直接生成富文本；不要把 Markdown 符号塞进 `content`。
   - `tag_ids` 只能使用 `get_tags` 返回的现有标签 ID。
   - `author` / `source`: 可以填写建议的作者和出处。
   - `include_location` / `include_weather` 只表示“让程序在保存时附加”，不是让你自己编写位置或天气文本。

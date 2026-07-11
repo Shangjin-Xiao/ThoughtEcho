@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/get_app_context_tool.dart';
 import 'package:thoughtecho/services/agent_tools/propose_edit_tool.dart';
 import 'package:thoughtecho/services/agent_tools/propose_new_note_tool.dart';
+import 'package:thoughtecho/services/agent_tools/propose_rich_edit_tool.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
@@ -13,9 +15,14 @@ import 'package:thoughtecho/services/weather_service.dart';
 import '../../test_helpers.dart';
 
 class _TestDatabaseService extends DatabaseService {
-  _TestDatabaseService(this._categories) : super.forTesting();
+  _TestDatabaseService(this._categories, {this.quote}) : super.forTesting();
 
   final List<NoteCategory> _categories;
+  final Quote? quote;
+
+  @override
+  Future<Quote?> getQuoteById(String id, {bool includeDeleted = false}) async =>
+      quote?.id == id ? quote : null;
 
   @override
   Future<List<NoteCategory>> getCategories() async {
@@ -68,6 +75,43 @@ void main() {
   });
 
   group('ProposeNewNoteTool', () {
+    test('accepts native rich-text blocks without markdown', () async {
+      final tool = ProposeNewNoteTool(_TestDatabaseService(const []));
+
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_rich_new',
+          name: 'propose_new_note',
+          arguments: const {
+            'title': '结构化新笔记',
+            'blocks': [
+              {
+                'type': 'heading',
+                'level': 2,
+                'children': [
+                  {'text': '旅行清单'},
+                ],
+              },
+              {
+                'type': 'bullet',
+                'children': [
+                  {'text': '身份证', 'bold': true},
+                ],
+              },
+            ],
+          },
+        ),
+      );
+
+      expect(result.isError, isFalse);
+      final match = RegExp(r'```smart_result\s*([\s\S]*?)\s*```')
+          .firstMatch(result.content);
+      final payload = jsonDecode(match!.group(1)!) as Map<String, dynamic>;
+      expect(payload['content'], '旅行清单\n身份证');
+      expect(payload['rich_document'], isA<List<dynamic>>());
+      expect(payload['content'], isNot(contains('#')));
+    });
+
     test('returns smart result payload with tags and location weather toggles',
         () async {
       final tool = ProposeNewNoteTool(
@@ -431,6 +475,65 @@ void main() {
       expect(result.isError, isTrue);
       expect(result.retryable, isTrue);
       expect(result.content, contains('不存在'));
+    });
+  });
+
+  group('ProposeRichEditTool', () {
+    test('returns a validated structured diff without rewriting the note',
+        () async {
+      final originalOps = <Map<String, dynamic>>[
+        {
+          'insert': '标题',
+          'attributes': {'bold': true},
+        },
+        {'insert': '\n旧段落\n'},
+      ];
+      final quote = Quote(
+        id: 'note_1',
+        content: '标题\n旧段落',
+        date: '2026-07-11T00:00:00.000Z',
+        deltaContent: jsonEncode(originalOps),
+      );
+      final tool = ProposeRichEditTool(
+        _TestDatabaseService(const [], quote: quote),
+      );
+
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_rich_edit',
+          name: 'propose_rich_edit',
+          arguments: {
+            'title': '精确润色',
+            'note_id': 'note_1',
+            'base_revision': ProposeRichEditTool.revisionForQuote(quote),
+            'operations': const [
+              {
+                'type': 'replace',
+                'old_text': '旧段落',
+                'blocks': [
+                  {
+                    'type': 'paragraph',
+                    'children': [
+                      {'text': '新'},
+                      {'text': '段落', 'bold': true},
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ),
+      );
+
+      expect(result.isError, isFalse);
+      final match = RegExp(r'```smart_result\s*([\s\S]*?)\s*```')
+          .firstMatch(result.content);
+      final payload = jsonDecode(match!.group(1)!) as Map<String, dynamic>;
+      expect(payload['action'], 'rich_edit');
+      expect(payload['content'], contains('旧段落'));
+      expect(payload['content'], contains('新段落'));
+      expect(payload['rich_edit'], isA<Map<String, dynamic>>());
+      expect(quote.deltaContent, jsonEncode(originalOps));
     });
   });
 

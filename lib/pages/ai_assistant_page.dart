@@ -17,6 +17,7 @@ import '../models/chat_message.dart' show MessageState;
 import '../models/chat_session.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
+import '../models/rich_text_edit.dart';
 import '../models/weather_data.dart' show WeatherCodeMapper;
 import '../services/agent_service.dart'
     show
@@ -40,6 +41,7 @@ import '../utils/ai_command_helpers.dart';
 import '../utils/ai_smart_result_utils.dart';
 import '../utils/app_logger.dart';
 import '../utils/quill_delta_builder.dart';
+import '../utils/quill_structured_edit.dart';
 import '../utils/string_utils.dart';
 import '../utils/time_utils.dart';
 import '../widgets/ai/ai_workflow_cards.dart';

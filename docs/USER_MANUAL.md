@@ -150,6 +150,8 @@
 | **深度分析**           | 生成笔记的总结和洞察       |
 | **问笔记**             | 针对笔记内容与 AI 对话交流 |
 
+Agent 会在完成任务前持续执行必要步骤。对富文本进行润色、插入或续写时，应用会显示原文与建议内容的对比；确认后只修改匹配的段落，并保留其他段落、格式和媒体。如果笔记在生成建议后又被修改，应用会拒绝覆盖并要求重新生成建议。
+
 ### 附加信息编辑面板
 
 点击编辑器顶部的 ✏️ 按钮或「编辑附加信息」，可编辑笔记的附加信息：
@@ -831,6 +833,8 @@ Click the ✨ button at the top of the editor for:
 | **Continue Writing**                     | AI continues your thoughts based on context |
 | **Deep Analysis**                        | Generate summary and insights               |
 | **Ask Note**                             | Chat with AI about note content             |
+
+The Agent continues through the required steps until the task is complete. For rich-text polishing, insertion, or continuation, the app previews the original and proposed content, then changes only the matched passage while preserving unrelated formatting and media. If the note changes after the proposal is generated, the app refuses to overwrite it and asks for a fresh proposal.
 
 ### Extra Information Panel
 

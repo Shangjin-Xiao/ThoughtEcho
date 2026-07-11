@@ -4076,5 +4076,12 @@
   "webCommandInvalidUrlTitle": "无效的 URL",
   "aiSuggestion": "AI 建议",
   "autoAttachMetadataUnavailable": "位置/天气未能附加，已直接保存",
-  "richTextSaveUnavailable": "保存已停止：富文本内容无法无损处理，请关闭其他应用释放内存后重试。"
+  "richTextSaveUnavailable": "保存已停止：富文本内容无法无损处理，请关闭其他应用释放内存后重试。",
+  "agentRichEditConflict": "笔记内容已发生变化。为避免覆盖你的修改，请让 AI 重新生成建议。",
+  "agentDiffOriginal": "原文",
+  "agentDiffReplacement": "改为",
+  "agentDiffInsertBefore": "在此内容前插入",
+  "agentDiffInsertAfter": "在此内容后插入",
+  "agentDiffAppend": "追加内容",
+  "agentDiffDelete": "删除内容"
 }

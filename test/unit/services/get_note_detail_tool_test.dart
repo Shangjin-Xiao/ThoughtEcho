@@ -90,6 +90,7 @@ void main() {
       expect(data['tags'], contains('灵感'));
       expect(data['author'], 'Lu Xun');
       expect(data['source'], 'Diary of a Madman');
+      expect(data['document_revision'], matches(RegExp(r'^[a-f0-9]{64}$')));
     });
 
     test('returns error if note_id is empty or missing', () async {

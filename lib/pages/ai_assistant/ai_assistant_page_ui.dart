@@ -275,6 +275,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                       );
                       await _openSmartResultAsNewNote(
                         draft.content,
+                        richDocument: updatedMeta['rich_document'],
                         tagIds: confirmedMetadata.tagIds,
                         author: confirmedMetadata.author,
                         source: confirmedMetadata.source,
@@ -834,11 +835,22 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         return;
       }
       if (note != null) {
+        Quote? richEditedNote;
+        try {
+          richEditedNote = _applyStructuredEdit(note, meta);
+        } on RichTextEditConflict {
+          _showRichEditConflict();
+          return;
+        } on RichTextEditMatchFailure {
+          _showRichEditConflict();
+          return;
+        }
         // 根据润色(replace) / 续写(append) 决定带入编辑器的初始文本
         final plainContent = DeltaBuilder.markdownToPlainText(content);
-        final mergedContent = modeAction == 'append'
-            ? '${note.content}\n$plainContent'
-            : plainContent;
+        final mergedContent = richEditedNote?.content ??
+            (modeAction == 'append'
+                ? '${note.content}\n$plainContent'
+                : plainContent);
 
         // 合并 Agent 建议的元数据（标签、作者、出处）
         final rawSuggestedTagIds = meta['tag_ids'] as List<dynamic>?;
@@ -851,7 +863,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
 
         // 使用 DeltaBuilder 合并修改并生成新的 deltaContent，保持双存储一致
         final String updatedDeltaContent;
-        if (modeAction == 'append') {
+        if (richEditedNote != null) {
+          updatedDeltaContent = richEditedNote.deltaContent!;
+        } else if (modeAction == 'append') {
           final updatedOps = DeltaBuilder.appendMarkdownToDelta(
             originalDeltaJson: note.deltaContent,
             markdown: content,
@@ -895,6 +909,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         .toList();
     await _openSmartResultAsNewNote(
       content,
+      richDocument: meta['rich_document'],
       tagIds: tagIds,
       author: meta['author']?.toString(),
       source: meta['source']?.toString(),
@@ -1049,13 +1064,15 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
 
   Future<void> _openSmartResultAsNewNote(
     String content, {
+    Object? richDocument,
     List<String>? tagIds,
     String? author,
     String? source,
     bool includeLocation = false,
     bool includeWeather = false,
   }) async {
-    if (_isShortContent(content) &&
+    if (richDocument == null &&
+        _isShortContent(content) &&
         !DeltaBuilder.hasMarkdownFormatting(content)) {
       final db = context.read<DatabaseService>();
       final tags = await db.getCategories();
@@ -1135,7 +1152,10 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         formattedLocation = displayLocation;
       }
     }
-    final plainContent = DeltaBuilder.markdownToPlainText(content);
+    final structuredOps = _opsFromRichDocument(richDocument);
+    final plainContent = structuredOps == null
+        ? DeltaBuilder.markdownToPlainText(content)
+        : QuillStructuredEdit.plainTextOf(structuredOps);
     final initialQuote = Quote(
       content: plainContent,
       date: DateTime.now().toIso8601String(),
@@ -1154,7 +1174,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       temperature: includeWeather ? weatherService.temperature : null,
       dayPeriod: TimeUtils.getCurrentDayPeriodKey(),
       deltaContent: DeltaBuilder.deltaToJson(
-        DeltaBuilder.markdownToDelta(content),
+        structuredOps ?? DeltaBuilder.markdownToDelta(content),
       ),
     );
 
@@ -1190,10 +1210,12 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           throw Exception('Note not found');
         }
 
+        final richEditedNote = _applyStructuredEdit(existingNote, meta);
         final plainContent = DeltaBuilder.markdownToPlainText(content);
-        final newContent = modeAction == 'append'
-            ? '${existingNote.content}\n$plainContent'
-            : plainContent;
+        final newContent = richEditedNote?.content ??
+            (modeAction == 'append'
+                ? '${existingNote.content}\n$plainContent'
+                : plainContent);
 
         // 合并 Agent 建议的元数据（标签、作者、出处）
         final rawSuggestedTagIds = meta['tag_ids'] as List<dynamic>?;
@@ -1205,7 +1227,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         final suggestedSource = meta['source']?.toString();
 
         final String updatedDeltaContent;
-        if (modeAction == 'append') {
+        if (richEditedNote != null) {
+          updatedDeltaContent = richEditedNote.deltaContent!;
+        } else if (modeAction == 'append') {
           final updatedOps = DeltaBuilder.appendMarkdownToDelta(
             originalDeltaJson: existingNote.deltaContent,
             markdown: content,
@@ -1236,6 +1260,24 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           );
         }
         return noteId;
+      } on RichTextEditConflict catch (e, stack) {
+        logError(
+          '结构化编辑版本冲突',
+          error: e,
+          stackTrace: stack,
+          source: 'AIAssistantPage',
+        );
+        _showRichEditConflict();
+        return null;
+      } on RichTextEditMatchFailure catch (e, stack) {
+        logError(
+          '结构化编辑目标不再匹配',
+          error: e,
+          stackTrace: stack,
+          source: 'AIAssistantPage',
+        );
+        _showRichEditConflict();
+        return null;
       } catch (e, stack) {
         logError(
           'AIAssistantPage._saveSmartResultToExistingNote 失败',
@@ -1253,6 +1295,56 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     }
 
     return _saveSmartResultAsNewNote(meta, content);
+  }
+
+  Quote? _applyStructuredEdit(Quote note, Map<String, dynamic> meta) {
+    final rawRequest = meta['rich_edit'];
+    if (rawRequest is! Map) return null;
+    final request = RichTextEditRequest.fromJson(
+      rawRequest.map((key, value) => MapEntry(key.toString(), value)),
+    );
+    final result = QuillStructuredEdit.apply(
+      originalOps: DeltaBuilder.deltaFromJson(note.deltaContent) ??
+          [
+            {
+              'insert': note.content.endsWith('\n')
+                  ? note.content
+                  : '${note.content}\n',
+            },
+          ],
+      request: request,
+    );
+    final plainContent = result.ops
+        .map((op) => op['insert'])
+        .whereType<String>()
+        .join()
+        .replaceFirst(RegExp(r'\n$'), '');
+    return note.copyWith(
+      content: plainContent,
+      deltaContent: jsonEncode(result.ops),
+    );
+  }
+
+  void _showRichEditConflict() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).agentRichEditConflict),
+      ),
+    );
+  }
+
+  List<Map<String, dynamic>>? _opsFromRichDocument(Object? rawBlocks) {
+    if (rawBlocks is! List || rawBlocks.isEmpty) return null;
+    final blocks = rawBlocks
+        .whereType<Map>()
+        .map((item) => RichTextBlock.fromJson(
+              item.map((key, value) => MapEntry(key.toString(), value)),
+            ))
+        .toList(growable: false);
+    return blocks.isEmpty
+        ? null
+        : QuillStructuredEdit.documentFromBlocks(blocks);
   }
 
   Future<String?> _saveSmartResultAsNewNote(
@@ -1353,7 +1445,10 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           : null;
 
       final noteId = _uuid.v4();
-      final plainContent = DeltaBuilder.markdownToPlainText(content);
+      final structuredOps = _opsFromRichDocument(meta['rich_document']);
+      final plainContent = structuredOps == null
+          ? DeltaBuilder.markdownToPlainText(content)
+          : QuillStructuredEdit.plainTextOf(structuredOps);
       final quote = Quote.validated(
         id: noteId,
         content: plainContent,
@@ -1369,7 +1464,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         temperature: includeWeather ? weatherService.temperature : null,
         dayPeriod: TimeUtils.getCurrentDayPeriodKey(),
         deltaContent: DeltaBuilder.deltaToJson(
-          DeltaBuilder.markdownToDelta(content),
+          structuredOps ?? DeltaBuilder.markdownToDelta(content),
         ),
       );
 

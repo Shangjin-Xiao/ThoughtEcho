@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../../utils/app_logger.dart';
 import '../agent_tool.dart';
 import '../database_service.dart';
+import 'propose_rich_edit_tool.dart';
 
 /// 获取单篇笔记详情工具 - 允许 AI 获取笔记的完整正文和元数据
 class GetNoteDetailTool extends AgentTool {
@@ -73,6 +74,7 @@ class GetNoteDetailTool extends AgentTool {
         'content': q.content,
         'date': q.date,
         'content_length': q.content.length,
+        'document_revision': ProposeRichEditTool.revisionForQuote(q),
       };
 
       // 优先使用 poiName，其次使用 location

@@ -24,11 +24,13 @@ import '../services/chat_session_service.dart';
 import '../services/openai_stream_service.dart';
 import '../services/agent_service.dart';
 import '../services/agent_tool.dart';
+import '../services/agent_tools/complete_task_tool.dart';
 import '../services/agent_tools/explore_notes_tool.dart';
 import '../services/agent_tools/get_app_context_tool.dart';
 import '../services/agent_tools/get_note_detail_tool.dart';
 import '../services/agent_tools/propose_edit_tool.dart';
 import '../services/agent_tools/propose_new_note_tool.dart';
+import '../services/agent_tools/propose_rich_edit_tool.dart';
 import '../services/agent_tools/web_fetch_tool.dart';
 import '../services/agent_tools/web_search_tool.dart';
 import '../services/web_fetch_service.dart';
@@ -41,6 +43,7 @@ List<AgentTool> _buildAgentTools(
   WeatherService weatherService,
 ) {
   return [
+    const CompleteTaskTool(),
     ExploreNotesTool(db),
     GetTagsTool(db),
     GetLocationWeatherTool(
@@ -51,6 +54,7 @@ List<AgentTool> _buildAgentTools(
     WebSearchTool(settingsService),
     WebFetchTool(WebFetchService()),
     ProposeEditTool(db),
+    ProposeRichEditTool(db),
     ProposeNewNoteTool(db),
   ];
 }

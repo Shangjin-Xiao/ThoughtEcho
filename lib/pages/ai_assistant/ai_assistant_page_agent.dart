@@ -315,6 +315,8 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             'source': parsed.smartResult!.source,
             'include_location': parsed.smartResult!.includeLocation,
             'include_weather': parsed.smartResult!.includeWeather,
+            'rich_edit': parsed.smartResult!.richEdit,
+            'rich_document': parsed.smartResult!.richDocument,
             if (originalNote != null) ...{
               'original_location': originalNote.location,
               'original_has_location':
@@ -408,7 +410,9 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       'get_note_detail' => l10n.agentReadingNoteDetail,
       'get_location_weather' => l10n.agentCheckingLocationWeather,
       'propose_new_note' => l10n.agentPreparingNewNoteSuggestion,
-      'propose_edit' => l10n.agentPreparingEditSuggestion,
+      'propose_edit' ||
+      'propose_rich_edit' =>
+        l10n.agentPreparingEditSuggestion,
       'web_search' => query.isEmpty
           ? l10n.agentWebSearching
           : l10n.agentSearchingWebForQuery(query),
@@ -480,7 +484,10 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       'get_location_weather' => _summarizeLocationWeatherResult(l10n, trimmed),
       'web_search' => _summarizeWebSearchResult(l10n, trimmed),
       'web_fetch' => _summarizeWebFetchResult(l10n, trimmed),
-      'propose_new_note' || 'propose_edit' => l10n.agentPreparedSuggestionCard,
+      'propose_new_note' ||
+      'propose_edit' ||
+      'propose_rich_edit' =>
+        l10n.agentPreparedSuggestionCard,
       _ => l10n.agentToolStepFinished,
     };
   }
@@ -583,7 +590,10 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
 
     // 首先检查结构化提议工具调用 (propose_edit 或 propose_new_note)
     final smartResultCalls = response.toolCalls
-        .where((c) => c.name == 'propose_edit' || c.name == 'propose_new_note')
+        .where((c) =>
+            c.name == 'propose_edit' ||
+            c.name == 'propose_new_note' ||
+            c.name == 'propose_rich_edit')
         .toList();
     if (smartResultCalls.isNotEmpty) {
       final call = smartResultCalls.last;
@@ -592,7 +602,12 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           displayText: trimmed, // 显示 AI 最终的回复（解释理由）
           smartResult: _AgentSmartResultPayload(
             title: call.arguments['title']?.toString() ?? l10n.aiSuggestion,
-            content: call.arguments['content']?.toString() ?? '',
+            content: call.name == 'propose_rich_edit'
+                ? _formatRichEditPreview(l10n, call.arguments)
+                : call.name == 'propose_new_note' &&
+                        call.arguments['blocks'] is List
+                    ? _formatRichBlocksText(call.arguments['blocks'])
+                    : call.arguments['content']?.toString() ?? '',
             noteId: call.arguments['note_id']?.toString(),
             action: call.arguments['action']?.toString(),
             tagIds: _parseStringList(call.arguments['tag_ids']),
@@ -605,6 +620,13 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             includeWeather: _parseOptionalBool(
               call.arguments['include_weather'],
             ),
+            richEdit: call.name == 'propose_rich_edit'
+                ? Map<String, Object?>.from(call.arguments)
+                : null,
+            richDocument: call.name == 'propose_new_note' &&
+                    call.arguments['blocks'] is List
+                ? List<Object?>.from(call.arguments['blocks'] as List)
+                : null,
           ),
         );
       } catch (_) {
@@ -645,6 +667,12 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           source: data['source']?.toString(),
           includeLocation: _parseOptionalBool(data['include_location']),
           includeWeather: _parseOptionalBool(data['include_weather']),
+          richEdit: data['rich_edit'] is Map
+              ? Map<String, Object?>.from(data['rich_edit'] as Map)
+              : null,
+          richDocument: data['rich_document'] is List
+              ? List<Object?>.from(data['rich_document'] as List)
+              : null,
         ),
       );
     } catch (e) {
@@ -667,6 +695,53 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
   }
 
   bool? _parseOptionalBool(Object? value) => value is bool ? value : null;
+
+  String _formatRichEditPreview(
+    AppLocalizations l10n,
+    Map<String, Object?> arguments,
+  ) {
+    final operations = arguments['operations'];
+    if (operations is! List) return '';
+    return operations.whereType<Map>().map((operation) {
+      final type = operation['type']?.toString() ?? 'replace';
+      final oldText = operation['old_text']?.toString() ??
+          operation['anchor_text']?.toString() ??
+          '';
+      final blocks = operation['blocks'];
+      final newText = blocks is List
+          ? blocks.whereType<Map>().map((block) {
+              final children = block['children'];
+              return children is List
+                  ? children
+                      .whereType<Map>()
+                      .map((child) => child['text']?.toString() ?? '')
+                      .join()
+                  : '';
+            }).join('\n')
+          : '';
+      return switch (type) {
+        'insertBefore' => '${l10n.agentDiffInsertBefore}: $oldText\n$newText',
+        'insertAfter' => '${l10n.agentDiffInsertAfter}: $oldText\n$newText',
+        'append' => '${l10n.agentDiffAppend}:\n$newText',
+        'delete' => '${l10n.agentDiffDelete}: $oldText',
+        _ => '${l10n.agentDiffOriginal}: $oldText\n'
+            '${l10n.agentDiffReplacement}: $newText',
+      };
+    }).join('\n\n');
+  }
+
+  String _formatRichBlocksText(Object? rawBlocks) {
+    if (rawBlocks is! List) return '';
+    return rawBlocks.whereType<Map>().map((block) {
+      final children = block['children'];
+      return children is List
+          ? children
+              .whereType<Map>()
+              .map((child) => child['text']?.toString() ?? '')
+              .join()
+          : '';
+    }).join('\n');
+  }
 }
 
 class _AgentSmartResultParseResult {
@@ -691,6 +766,8 @@ class _AgentSmartResultPayload {
     this.source,
     this.includeLocation,
     this.includeWeather,
+    this.richEdit,
+    this.richDocument,
   });
 
   final String title;
@@ -703,4 +780,6 @@ class _AgentSmartResultPayload {
   final String? source;
   final bool? includeLocation;
   final bool? includeWeather;
+  final Map<String, Object?>? richEdit;
+  final List<Object?>? richDocument;
 }
