@@ -4,30 +4,31 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i10;
-import 'dart:io' as _i23;
-import 'dart:ui' as _i16;
+import 'dart:io' as _i24;
+import 'dart:ui' as _i15;
 
-import 'package:flutter/material.dart' as _i18;
+import 'package:flutter/material.dart' as _i19;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i12;
+import 'package:mockito/src/dummies.dart' as _i13;
 import 'package:sqflite/sqflite.dart' as _i3;
 import 'package:thoughtecho/models/ai_analysis_model.dart' as _i8;
-import 'package:thoughtecho/models/ai_assistant_entry.dart' as _i19;
+import 'package:thoughtecho/models/ai_assistant_entry.dart' as _i20;
 import 'package:thoughtecho/models/ai_settings.dart' as _i4;
 import 'package:thoughtecho/models/app_settings.dart' as _i5;
 import 'package:thoughtecho/models/local_ai_settings.dart' as _i7;
 import 'package:thoughtecho/models/merge_report.dart' as _i2;
 import 'package:thoughtecho/models/multi_ai_settings.dart' as _i6;
-import 'package:thoughtecho/models/note_category.dart' as _i15;
-import 'package:thoughtecho/models/quote_model.dart' as _i14;
-import 'package:thoughtecho/services/ai_analysis_database_service.dart' as _i20;
+import 'package:thoughtecho/models/note_category.dart' as _i17;
+import 'package:thoughtecho/models/quote_model.dart' as _i16;
+import 'package:thoughtecho/services/ai_analysis_database_service.dart' as _i21;
 import 'package:thoughtecho/services/backup_service.dart' as _i9;
-import 'package:thoughtecho/services/database_service.dart' as _i13;
-import 'package:thoughtecho/services/large_file_manager.dart' as _i11;
+import 'package:thoughtecho/services/database_service.dart' as _i14;
+import 'package:thoughtecho/services/large_file_manager.dart' as _i12;
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart'
-    as _i21;
-import 'package:thoughtecho/services/localsend/models/device.dart' as _i22;
-import 'package:thoughtecho/services/settings_service.dart' as _i17;
+    as _i22;
+import 'package:thoughtecho/services/localsend/models/device.dart' as _i23;
+import 'package:thoughtecho/services/media_sync_manifest.dart' as _i11;
+import 'package:thoughtecho/services/settings_service.dart' as _i18;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -127,12 +128,13 @@ class MockBackupService extends _i1.Mock implements _i9.BackupService {
   @override
   _i10.Future<String> exportAllData({
     required bool? includeMediaFiles,
+    _i11.MediaSyncManifest? receiverMediaManifest,
     String? customPath,
     dynamic Function(
       int,
       int,
     )? onProgress,
-    _i11.CancelToken? cancelToken,
+    _i12.CancelToken? cancelToken,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -140,18 +142,20 @@ class MockBackupService extends _i1.Mock implements _i9.BackupService {
           [],
           {
             #includeMediaFiles: includeMediaFiles,
+            #receiverMediaManifest: receiverMediaManifest,
             #customPath: customPath,
             #onProgress: onProgress,
             #cancelToken: cancelToken,
           },
         ),
-        returnValue: _i10.Future<String>.value(_i12.dummyValue<String>(
+        returnValue: _i10.Future<String>.value(_i13.dummyValue<String>(
           this,
           Invocation.method(
             #exportAllData,
             [],
             {
               #includeMediaFiles: includeMediaFiles,
+              #receiverMediaManifest: receiverMediaManifest,
               #customPath: customPath,
               #onProgress: onProgress,
               #cancelToken: cancelToken,
@@ -169,7 +173,7 @@ class MockBackupService extends _i1.Mock implements _i9.BackupService {
       int,
       int,
     )? onProgress,
-    _i11.CancelToken? cancelToken,
+    _i12.CancelToken? cancelToken,
     String? sourceDevice,
   }) =>
       (super.noSuchMethod(
@@ -203,7 +207,7 @@ class MockBackupService extends _i1.Mock implements _i9.BackupService {
       int,
       int,
     )? onProgress,
-    _i11.CancelToken? cancelToken,
+    _i12.CancelToken? cancelToken,
     String? sourceDevice,
   }) =>
       (super.noSuchMethod(
@@ -234,7 +238,7 @@ class MockBackupService extends _i1.Mock implements _i9.BackupService {
 /// A class which mocks [DatabaseService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
+class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
   MockDatabaseService() {
     _i1.throwOnMissingStub(this);
   }
@@ -270,13 +274,22 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
       ) as _i10.Future<_i3.Database>);
 
   @override
+  set onLocalDataChanged(_i15.VoidCallback? value) => super.noSuchMethod(
+        Invocation.setter(
+          #onLocalDataChanged,
+          value,
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
   bool get hasListeners => (super.noSuchMethod(
         Invocation.getter(#hasListeners),
         returnValue: false,
       ) as bool);
 
   @override
-  _i10.Future<void> addQuote(_i14.Quote? quote) => (super.noSuchMethod(
+  _i10.Future<void> addQuote(_i16.Quote? quote) => (super.noSuchMethod(
         Invocation.method(
           #addQuote,
           [quote],
@@ -286,7 +299,7 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<_i14.Quote?> getQuoteById(
+  _i10.Future<_i16.Quote?> getQuoteById(
     String? id, {
     bool? includeDeleted = false,
   }) =>
@@ -296,11 +309,11 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
           [id],
           {#includeDeleted: includeDeleted},
         ),
-        returnValue: _i10.Future<_i14.Quote?>.value(),
-      ) as _i10.Future<_i14.Quote?>);
+        returnValue: _i10.Future<_i16.Quote?>.value(),
+      ) as _i10.Future<_i16.Quote?>);
 
   @override
-  _i10.Future<List<_i14.Quote>> getAllQuotes({
+  _i10.Future<List<_i16.Quote>> getAllQuotes({
     bool? excludeHiddenNotes = true,
     bool? includeDeleted = false,
   }) =>
@@ -313,11 +326,11 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
             #includeDeleted: includeDeleted,
           },
         ),
-        returnValue: _i10.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
-      ) as _i10.Future<List<_i14.Quote>>);
+        returnValue: _i10.Future<List<_i16.Quote>>.value(<_i16.Quote>[]),
+      ) as _i10.Future<List<_i16.Quote>>);
 
   @override
-  _i10.Future<List<_i14.Quote>> getQuotesForPeriod(
+  _i10.Future<List<_i16.Quote>> getQuotesForPeriod(
     DateTime? start,
     DateTime? end, {
     bool? excludeHiddenNotes = true,
@@ -335,8 +348,8 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
             #includeDeleted: includeDeleted,
           },
         ),
-        returnValue: _i10.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
-      ) as _i10.Future<List<_i14.Quote>>);
+        returnValue: _i10.Future<List<_i16.Quote>>.value(<_i16.Quote>[]),
+      ) as _i10.Future<List<_i16.Quote>>);
 
   @override
   _i10.Future<void> deleteQuote(String? id) => (super.noSuchMethod(
@@ -349,7 +362,7 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<List<_i14.Quote>> searchQuotesByContent(
+  _i10.Future<List<_i16.Quote>> searchQuotesByContent(
     String? query, {
     bool? includeDeleted = false,
   }) =>
@@ -359,19 +372,19 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
           [query],
           {#includeDeleted: includeDeleted},
         ),
-        returnValue: _i10.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
-      ) as _i10.Future<List<_i14.Quote>>);
+        returnValue: _i10.Future<List<_i16.Quote>>.value(<_i16.Quote>[]),
+      ) as _i10.Future<List<_i16.Quote>>);
 
   @override
-  _i10.Future<_i13.QuoteUpdateResult> updateQuote(_i14.Quote? quote) =>
+  _i10.Future<_i14.QuoteUpdateResult> updateQuote(_i16.Quote? quote) =>
       (super.noSuchMethod(
         Invocation.method(
           #updateQuote,
           [quote],
         ),
-        returnValue: _i10.Future<_i13.QuoteUpdateResult>.value(
-            _i13.QuoteUpdateResult.updated),
-      ) as _i10.Future<_i13.QuoteUpdateResult>);
+        returnValue: _i10.Future<_i14.QuoteUpdateResult>.value(
+            _i14.QuoteUpdateResult.updated),
+      ) as _i10.Future<_i14.QuoteUpdateResult>);
 
   @override
   _i10.Future<int> batchUpdatePendingLocations({
@@ -391,7 +404,7 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
       ) as _i10.Future<int>);
 
   @override
-  _i10.Future<List<_i14.Quote>> getUserQuotes({
+  _i10.Future<List<_i16.Quote>> getUserQuotes({
     List<String>? tagIds,
     String? categoryId,
     int? offset = 0,
@@ -424,11 +437,11 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
             #includeDeleted: includeDeleted,
           },
         ),
-        returnValue: _i10.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
-      ) as _i10.Future<List<_i14.Quote>>);
+        returnValue: _i10.Future<List<_i16.Quote>>.value(<_i16.Quote>[]),
+      ) as _i10.Future<List<_i16.Quote>>);
 
   @override
-  _i10.Future<List<_i14.Quote>> getQuotesForSmartPush({
+  _i10.Future<List<_i16.Quote>> getQuotesForSmartPush({
     int? limit = 200,
     String? orderBy = 'q.date DESC',
     bool? includeDeleted = false,
@@ -443,8 +456,8 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
             #includeDeleted: includeDeleted,
           },
         ),
-        returnValue: _i10.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
-      ) as _i10.Future<List<_i14.Quote>>);
+        returnValue: _i10.Future<List<_i16.Quote>>.value(<_i16.Quote>[]),
+      ) as _i10.Future<List<_i16.Quote>>);
 
   @override
   _i10.Future<int> getQuotesCount({
@@ -478,7 +491,7 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
       ) as _i10.Future<int>);
 
   @override
-  _i10.Future<List<_i14.Quote>> getDeletedQuotes({
+  _i10.Future<List<_i16.Quote>> getDeletedQuotes({
     int? offset = 0,
     int? limit = 20,
     String? orderBy = 'deleted_at DESC',
@@ -493,8 +506,8 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
             #orderBy: orderBy,
           },
         ),
-        returnValue: _i10.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
-      ) as _i10.Future<List<_i14.Quote>>);
+        returnValue: _i10.Future<List<_i16.Quote>>.value(<_i16.Quote>[]),
+      ) as _i10.Future<List<_i16.Quote>>);
 
   @override
   _i10.Future<int> getDeletedQuotesCount() => (super.noSuchMethod(
@@ -579,7 +592,7 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<List<_i14.Quote>> getMostFavoritedQuotesThisWeek(
+  _i10.Future<List<_i16.Quote>> getMostFavoritedQuotesThisWeek(
           {int? limit = 5}) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -587,8 +600,8 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
           [],
           {#limit: limit},
         ),
-        returnValue: _i10.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
-      ) as _i10.Future<List<_i14.Quote>>);
+        returnValue: _i10.Future<List<_i16.Quote>>.value(<_i16.Quote>[]),
+      ) as _i10.Future<List<_i16.Quote>>);
 
   @override
   _i10.Future<List<Map<String, dynamic>>> getAllCategories() =>
@@ -602,14 +615,14 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
       ) as _i10.Future<List<Map<String, dynamic>>>);
 
   @override
-  _i10.Future<List<_i15.NoteCategory>> getCategories() => (super.noSuchMethod(
+  _i10.Future<List<_i17.NoteCategory>> getCategories() => (super.noSuchMethod(
         Invocation.method(
           #getCategories,
           [],
         ),
         returnValue:
-            _i10.Future<List<_i15.NoteCategory>>.value(<_i15.NoteCategory>[]),
-      ) as _i10.Future<List<_i15.NoteCategory>>);
+            _i10.Future<List<_i17.NoteCategory>>.value(<_i17.NoteCategory>[]),
+      ) as _i10.Future<List<_i17.NoteCategory>>);
 
   @override
   _i10.Future<void> addCategory(
@@ -646,13 +659,13 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Stream<List<_i15.NoteCategory>> watchCategories() => (super.noSuchMethod(
+  _i10.Stream<List<_i17.NoteCategory>> watchCategories() => (super.noSuchMethod(
         Invocation.method(
           #watchCategories,
           [],
         ),
-        returnValue: _i10.Stream<List<_i15.NoteCategory>>.empty(),
-      ) as _i10.Stream<List<_i15.NoteCategory>>);
+        returnValue: _i10.Stream<List<_i17.NoteCategory>>.empty(),
+      ) as _i10.Stream<List<_i17.NoteCategory>>);
 
   @override
   _i10.Future<void> deleteCategory(String? id) => (super.noSuchMethod(
@@ -684,14 +697,14 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<_i15.NoteCategory?> getCategoryById(String? id) =>
+  _i10.Future<_i17.NoteCategory?> getCategoryById(String? id) =>
       (super.noSuchMethod(
         Invocation.method(
           #getCategoryById,
           [id],
         ),
-        returnValue: _i10.Future<_i15.NoteCategory?>.value(),
-      ) as _i10.Future<_i15.NoteCategory?>);
+        returnValue: _i10.Future<_i17.NoteCategory?>.value(),
+      ) as _i10.Future<_i17.NoteCategory?>);
 
   @override
   _i10.Future<void> initDefaultHitokotoCategories() => (super.noSuchMethod(
@@ -704,13 +717,13 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<_i15.NoteCategory?> getOrCreateHiddenTag() => (super.noSuchMethod(
+  _i10.Future<_i17.NoteCategory?> getOrCreateHiddenTag() => (super.noSuchMethod(
         Invocation.method(
           #getOrCreateHiddenTag,
           [],
         ),
-        returnValue: _i10.Future<_i15.NoteCategory?>.value(),
-      ) as _i10.Future<_i15.NoteCategory?>);
+        returnValue: _i10.Future<_i17.NoteCategory?>.value(),
+      ) as _i10.Future<_i17.NoteCategory?>);
 
   @override
   bool isHiddenTag(String? tagId) => (super.noSuchMethod(
@@ -759,7 +772,7 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
       );
 
   @override
-  _i10.Stream<List<_i14.Quote>> watchQuotes({
+  _i10.Stream<List<_i16.Quote>> watchQuotes({
     List<String>? tagIds,
     String? categoryId,
     int? limit = 20,
@@ -784,8 +797,8 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
             #includeDeleted: includeDeleted,
           },
         ),
-        returnValue: _i10.Stream<List<_i14.Quote>>.empty(),
-      ) as _i10.Stream<List<_i14.Quote>>);
+        returnValue: _i10.Stream<List<_i16.Quote>>.empty(),
+      ) as _i10.Stream<List<_i16.Quote>>);
 
   @override
   _i10.Future<void> loadMoreQuotes({
@@ -998,7 +1011,7 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
           [orderBy],
           {#prefix: prefix},
         ),
-        returnValue: _i12.dummyValue<String>(
+        returnValue: _i13.dummyValue<String>(
           this,
           Invocation.method(
             #sanitizeOrderBy,
@@ -1065,6 +1078,16 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
       ) as _i10.Future<void>);
 
   @override
+  _i10.Future<void> initForBackgroundReadOnly() => (super.noSuchMethod(
+        Invocation.method(
+          #initForBackgroundReadOnly,
+          [],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
   _i10.Future<void> initializeNewDatabase() => (super.noSuchMethod(
         Invocation.method(
           #initializeNewDatabase,
@@ -1102,7 +1125,16 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
       );
 
   @override
-  void addListener(_i16.VoidCallback? listener) => super.noSuchMethod(
+  void notifyLocalDataChangedForParts() => super.noSuchMethod(
+        Invocation.method(
+          #notifyLocalDataChangedForParts,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void addListener(_i15.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #addListener,
           [listener],
@@ -1111,7 +1143,7 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
       );
 
   @override
-  void removeListener(_i16.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i15.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #removeListener,
           [listener],
@@ -1132,7 +1164,7 @@ class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
 /// A class which mocks [SettingsService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockSettingsService extends _i1.Mock implements _i17.SettingsService {
+class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
   MockSettingsService() {
     _i1.throwOnMissingStub(this);
   }
@@ -1156,10 +1188,10 @@ class MockSettingsService extends _i1.Mock implements _i17.SettingsService {
       ) as _i5.AppSettings);
 
   @override
-  _i18.ThemeMode get themeMode => (super.noSuchMethod(
+  _i19.ThemeMode get themeMode => (super.noSuchMethod(
         Invocation.getter(#themeMode),
-        returnValue: _i18.ThemeMode.system,
-      ) as _i18.ThemeMode);
+        returnValue: _i19.ThemeMode.system,
+      ) as _i19.ThemeMode);
 
   @override
   _i6.MultiAISettings get multiAISettings => (super.noSuchMethod(
@@ -1192,16 +1224,16 @@ class MockSettingsService extends _i1.Mock implements _i17.SettingsService {
       ) as bool);
 
   @override
-  _i19.AIAssistantPageMode get exploreAiAssistantMode => (super.noSuchMethod(
+  _i20.AIAssistantPageMode get exploreAiAssistantMode => (super.noSuchMethod(
         Invocation.getter(#exploreAiAssistantMode),
-        returnValue: _i19.AIAssistantPageMode.chat,
-      ) as _i19.AIAssistantPageMode);
+        returnValue: _i20.AIAssistantPageMode.chat,
+      ) as _i20.AIAssistantPageMode);
 
   @override
-  _i19.AIAssistantPageMode get noteAiAssistantMode => (super.noSuchMethod(
+  _i20.AIAssistantPageMode get noteAiAssistantMode => (super.noSuchMethod(
         Invocation.getter(#noteAiAssistantMode),
-        returnValue: _i19.AIAssistantPageMode.chat,
-      ) as _i19.AIAssistantPageMode);
+        returnValue: _i20.AIAssistantPageMode.chat,
+      ) as _i20.AIAssistantPageMode);
 
   @override
   bool get reportInsightsUseAI => (super.noSuchMethod(
@@ -1254,7 +1286,7 @@ class MockSettingsService extends _i1.Mock implements _i17.SettingsService {
   @override
   String get dailyQuoteProvider => (super.noSuchMethod(
         Invocation.getter(#dailyQuoteProvider),
-        returnValue: _i12.dummyValue<String>(
+        returnValue: _i13.dummyValue<String>(
           this,
           Invocation.getter(#dailyQuoteProvider),
         ),
@@ -1275,7 +1307,7 @@ class MockSettingsService extends _i1.Mock implements _i17.SettingsService {
   @override
   String get offlineQuoteSource => (super.noSuchMethod(
         Invocation.getter(#offlineQuoteSource),
-        returnValue: _i12.dummyValue<String>(
+        returnValue: _i13.dummyValue<String>(
           this,
           Invocation.getter(#offlineQuoteSource),
         ),
@@ -1320,7 +1352,7 @@ class MockSettingsService extends _i1.Mock implements _i17.SettingsService {
   @override
   String get noteInsertAnimationType => (super.noSuchMethod(
         Invocation.getter(#noteInsertAnimationType),
-        returnValue: _i12.dummyValue<String>(
+        returnValue: _i13.dummyValue<String>(
           this,
           Invocation.getter(#noteInsertAnimationType),
         ),
@@ -1383,7 +1415,7 @@ class MockSettingsService extends _i1.Mock implements _i17.SettingsService {
   @override
   String get exportFormat => (super.noSuchMethod(
         Invocation.getter(#exportFormat),
-        returnValue: _i12.dummyValue<String>(
+        returnValue: _i13.dummyValue<String>(
           this,
           Invocation.getter(#exportFormat),
         ),
@@ -1423,7 +1455,7 @@ class MockSettingsService extends _i1.Mock implements _i17.SettingsService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<void> setExploreAiAssistantMode(_i19.AIAssistantPageMode? mode) =>
+  _i10.Future<void> setExploreAiAssistantMode(_i20.AIAssistantPageMode? mode) =>
       (super.noSuchMethod(
         Invocation.method(
           #setExploreAiAssistantMode,
@@ -1434,7 +1466,7 @@ class MockSettingsService extends _i1.Mock implements _i17.SettingsService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<void> setNoteAiAssistantMode(_i19.AIAssistantPageMode? mode) =>
+  _i10.Future<void> setNoteAiAssistantMode(_i20.AIAssistantPageMode? mode) =>
       (super.noSuchMethod(
         Invocation.method(
           #setNoteAiAssistantMode,
@@ -1840,7 +1872,7 @@ class MockSettingsService extends _i1.Mock implements _i17.SettingsService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<void> updateThemeMode(_i18.ThemeMode? mode) =>
+  _i10.Future<void> updateThemeMode(_i19.ThemeMode? mode) =>
       (super.noSuchMethod(
         Invocation.method(
           #updateThemeMode,
@@ -2012,7 +2044,7 @@ class MockSettingsService extends _i1.Mock implements _i17.SettingsService {
           #getOrCreateDeviceId,
           [],
         ),
-        returnValue: _i12.dummyValue<String>(
+        returnValue: _i13.dummyValue<String>(
           this,
           Invocation.method(
             #getOrCreateDeviceId,
@@ -2048,7 +2080,7 @@ class MockSettingsService extends _i1.Mock implements _i17.SettingsService {
       ) as _i10.Future<void>);
 
   @override
-  void addListener(_i16.VoidCallback? listener) => super.noSuchMethod(
+  void addListener(_i15.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #addListener,
           [listener],
@@ -2057,7 +2089,7 @@ class MockSettingsService extends _i1.Mock implements _i17.SettingsService {
       );
 
   @override
-  void removeListener(_i16.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i15.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #removeListener,
           [listener],
@@ -2088,7 +2120,7 @@ class MockSettingsService extends _i1.Mock implements _i17.SettingsService {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockAIAnalysisDatabaseService extends _i1.Mock
-    implements _i20.AIAnalysisDatabaseService {
+    implements _i21.AIAnalysisDatabaseService {
   MockAIAnalysisDatabaseService() {
     _i1.throwOnMissingStub(this);
   }
@@ -2226,7 +2258,7 @@ class MockAIAnalysisDatabaseService extends _i1.Mock
           #exportToJson,
           [],
         ),
-        returnValue: _i10.Future<String>.value(_i12.dummyValue<String>(
+        returnValue: _i10.Future<String>.value(_i13.dummyValue<String>(
           this,
           Invocation.method(
             #exportToJson,
@@ -2284,7 +2316,7 @@ class MockAIAnalysisDatabaseService extends _i1.Mock
       );
 
   @override
-  void addListener(_i16.VoidCallback? listener) => super.noSuchMethod(
+  void addListener(_i15.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #addListener,
           [listener],
@@ -2293,7 +2325,7 @@ class MockAIAnalysisDatabaseService extends _i1.Mock
       );
 
   @override
-  void removeListener(_i16.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i15.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #removeListener,
           [listener],
@@ -2314,21 +2346,21 @@ class MockAIAnalysisDatabaseService extends _i1.Mock
 /// A class which mocks [LocalSendProvider].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockLocalSendProvider extends _i1.Mock implements _i21.LocalSendProvider {
+class MockLocalSendProvider extends _i1.Mock implements _i22.LocalSendProvider {
   MockLocalSendProvider() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  Map<String, _i21.SendSession> get sessions => (super.noSuchMethod(
+  Map<String, _i22.SendSession> get sessions => (super.noSuchMethod(
         Invocation.getter(#sessions),
-        returnValue: <String, _i21.SendSession>{},
-      ) as Map<String, _i21.SendSession>);
+        returnValue: <String, _i22.SendSession>{},
+      ) as Map<String, _i22.SendSession>);
 
   @override
   _i10.Future<String> startSession({
-    required _i22.Device? target,
-    required List<_i23.File>? files,
+    required _i23.Device? target,
+    required List<_i24.File>? files,
     bool? background = true,
     void Function(
       int,
@@ -2348,7 +2380,7 @@ class MockLocalSendProvider extends _i1.Mock implements _i21.LocalSendProvider {
             #onSessionCreated: onSessionCreated,
           },
         ),
-        returnValue: _i10.Future<String>.value(_i12.dummyValue<String>(
+        returnValue: _i10.Future<String>.value(_i13.dummyValue<String>(
           this,
           Invocation.method(
             #startSession,
@@ -2365,11 +2397,11 @@ class MockLocalSendProvider extends _i1.Mock implements _i21.LocalSendProvider {
       ) as _i10.Future<String>);
 
   @override
-  _i21.SendSession? getSession(String? sessionId) =>
+  _i22.SendSession? getSession(String? sessionId) =>
       (super.noSuchMethod(Invocation.method(
         #getSession,
         [sessionId],
-      )) as _i21.SendSession?);
+      )) as _i22.SendSession?);
 
   @override
   void cancelSession(String? sessionId) => super.noSuchMethod(

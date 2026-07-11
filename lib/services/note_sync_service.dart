@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:thoughtecho/models/merge_report.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/backup_service.dart';
@@ -13,6 +15,7 @@ import 'package:thoughtecho/services/localsend/constants.dart';
 import 'package:thoughtecho/services/localsend/localsend_server.dart';
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
+import 'package:thoughtecho/services/media_sync_manifest.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/thoughtecho_discovery_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
@@ -28,6 +31,13 @@ enum SyncStatus {
   merging, // 合并中
   completed, // 完成
   failed, // 失败
+}
+
+class SyncIntentApproval {
+  final bool approved;
+  final MediaSyncManifest? mediaManifest;
+
+  const SyncIntentApproval({required this.approved, this.mediaManifest});
 }
 
 /// 笔记同步服务 - 基于LocalSend的P2P同步功能
@@ -74,6 +84,7 @@ class NoteSyncService extends ChangeNotifier {
   String? _currentIntentId;
   Device? _currentIntentTarget;
   Future<bool> Function(Device target)? _syncIntentHandlerForTesting;
+  MediaSyncManifest? _receiverMediaManifestForTesting;
 
   bool get awaitingUserApproval => _awaitingUserApproval;
   int? get pendingReceiveTotalBytes => _pendingReceiveTotalBytes;
@@ -110,10 +121,31 @@ class NoteSyncService extends ChangeNotifier {
   }
 
   @visibleForTesting
+  set receiverMediaManifestForTesting(MediaSyncManifest? value) {
+    _receiverMediaManifestForTesting = value;
+  }
+
+  @visibleForTesting
   static Uri buildSyncIntentUri(Device target) {
     final protocol = target.https ? 'https' : 'http';
     return Uri.parse(
       '$protocol://${target.ip}:${target.port}/api/thoughtecho/v1/sync-intent',
+    );
+  }
+
+  @visibleForTesting
+  static SyncIntentApproval parseSyncIntentApproval(
+    Map<String, dynamic> response,
+  ) {
+    final approved = response['approved'];
+    if (approved is! bool) {
+      throw const FormatException('同步审批响应格式无效');
+    }
+    return SyncIntentApproval(
+      approved: approved,
+      mediaManifest: approved
+          ? MediaSyncManifest.tryParse(response['mediaManifest'])
+          : null,
     );
   }
 
@@ -212,6 +244,12 @@ class NoteSyncService extends ChangeNotifier {
           );
         },
         onApprovalCancelled: _cancelIncomingApproval,
+        onMediaManifestRequested: () async {
+          final appDir = await getApplicationDocumentsDirectory();
+          return MediaSyncManifest.scan(
+            Directory(p.join(appDir.path, 'media')),
+          );
+        },
       );
       final actualPort = _localSendServer!.port;
       AppLogger.i(
@@ -367,16 +405,23 @@ class NoteSyncService extends ChangeNotifier {
       // 0.1 发送意向握手（让对方先决定是否允许以及是否需要媒体）
       _setAwaitingPeerApproval(true);
       _updateSyncStatus(SyncStatus.packaging, '等待对方确认同步请求...', 0.02);
-      final approvalFuture = _syncIntentHandlerForTesting?.call(targetDevice) ??
-          _sendSyncIntent(targetDevice, _approvalCancelToken!);
-      final approved = await Future.any<bool>([
+      final approvalFuture = _syncIntentHandlerForTesting != null
+          ? _syncIntentHandlerForTesting!(targetDevice).then(
+              (approved) => SyncIntentApproval(
+                approved: approved,
+                mediaManifest:
+                    approved ? _receiverMediaManifestForTesting : null,
+              ),
+            )
+          : _sendSyncIntent(targetDevice, _approvalCancelToken!);
+      final approval = await Future.any<SyncIntentApproval>([
         approvalFuture,
-        _sendCancellation!.future.then<bool>(
+        _sendCancellation!.future.then<SyncIntentApproval>(
           (_) => throw const lfm.CancelledException(),
         ),
       ]);
       _throwIfSendCancelled();
-      if (!approved) {
+      if (!approval.approved) {
         _updateSyncStatus(SyncStatus.failed, '对方拒绝同步请求', 0.0);
         throw Exception('对方拒绝同步请求');
       }
@@ -389,6 +434,8 @@ class NoteSyncService extends ChangeNotifier {
       // 2. 使用备份服务创建数据包（隐藏具体数量，仅显示百分比）
       final backupPath = await _backupService.exportAllData(
         includeMediaFiles: includeMediaFiles,
+        receiverMediaManifest:
+            includeMediaFiles ? approval.mediaManifest : null,
         cancelToken: _packagingCancelToken,
         onProgress: (current, total) {
           if (_sendCancelled) return;
@@ -512,8 +559,8 @@ class NoteSyncService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 发送同步意向，返回是否获得对方批准
-  Future<bool> _sendSyncIntent(
+  /// 发送同步意向，返回批准状态与可选的接收端媒体清单。
+  Future<SyncIntentApproval> _sendSyncIntent(
     Device target,
     CancelToken cancelToken,
   ) async {
@@ -578,11 +625,7 @@ class NoteSyncService extends ChangeNotifier {
       if (response.statusCode != HttpStatus.ok) {
         throw Exception('目标设备不支持同步审批 (${response.statusCode})');
       }
-      final approved = response.data?['approved'];
-      if (approved is! bool) {
-        throw const FormatException('同步审批响应格式无效');
-      }
-      return approved;
+      return parseSyncIntentApproval(response.data ?? const {});
     } finally {
       dio.close(force: true);
     }

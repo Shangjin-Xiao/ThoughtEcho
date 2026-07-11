@@ -11,6 +11,7 @@ import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/large_file_manager.dart' as lfm;
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
+import 'package:thoughtecho/services/media_sync_manifest.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 
@@ -98,6 +99,28 @@ void main() {
       expect(uri.scheme, 'http');
       expect(uri.host, '192.168.1.20');
       expect(uri.port, 54321);
+    });
+
+    test('同步审批响应解析增量媒体清单', () {
+      final approval = NoteSyncService.parseSyncIntentApproval({
+        'approved': true,
+        'mediaManifest': {
+          'version': 1,
+          'files': {'images/photo.jpg': 12},
+        },
+      });
+
+      expect(approval.approved, isTrue);
+      expect(approval.mediaManifest?.fileSizes, {'images/photo.jpg': 12});
+    });
+
+    test('旧版同步审批响应自动使用全量媒体', () {
+      final approval = NoteSyncService.parseSyncIntentApproval({
+        'approved': true,
+      });
+
+      expect(approval.approved, isTrue);
+      expect(approval.mediaManifest, isNull);
     });
 
     test('创建同步包流程测试', () async {
@@ -327,6 +350,32 @@ void main() {
       verify(
         mockBackupService.exportAllData(
           includeMediaFiles: true,
+          onProgress: anyNamed('onProgress'),
+          cancelToken: anyNamed('cancelToken'),
+        ),
+      ).called(1);
+    });
+
+    test('新版本接收端媒体清单会传递给备份筛选', () async {
+      const receiverManifest = MediaSyncManifest({
+        'images/existing.jpg': 128,
+      });
+      syncService.receiverMediaManifestForTesting = receiverManifest;
+      when(
+        mockBackupService.exportAllData(
+          includeMediaFiles: true,
+          receiverMediaManifest: receiverManifest,
+          onProgress: anyNamed('onProgress'),
+          cancelToken: anyNamed('cancelToken'),
+        ),
+      ).thenAnswer((_) async => '/tmp/backup_with_media.zip');
+
+      await syncService.createSyncPackage(Device.empty);
+
+      verify(
+        mockBackupService.exportAllData(
+          includeMediaFiles: true,
+          receiverMediaManifest: receiverManifest,
           onProgress: anyNamed('onProgress'),
           cancelToken: anyNamed('cancelToken'),
         ),

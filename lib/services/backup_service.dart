@@ -12,6 +12,7 @@ import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/utils/path_security_utils.dart';
 import 'package:thoughtecho/utils/device_memory_manager.dart';
 import 'package:thoughtecho/models/merge_report.dart';
+import 'package:thoughtecho/services/media_sync_manifest.dart';
 import 'streaming_backup_processor.dart';
 import 'package:meta/meta.dart';
 
@@ -48,6 +49,7 @@ class BackupService {
   /// 返回最终备份文件的路径
   Future<String> exportAllData({
     required bool includeMediaFiles,
+    MediaSyncManifest? receiverMediaManifest,
     String? customPath,
     Function(int current, int total)? onProgress,
     CancelToken? cancelToken,
@@ -64,6 +66,7 @@ class BackupService {
     return await LargeFileManager.executeWithMemoryProtection(
           () async => _performExportWithProtection(
             includeMediaFiles: includeMediaFiles,
+            receiverMediaManifest: receiverMediaManifest,
             customPath: customPath,
             onProgress: onProgress,
             cancelToken: cancelToken,
@@ -77,6 +80,7 @@ class BackupService {
   /// 执行受保护的导出操作
   Future<String> _performExportWithProtection({
     required bool includeMediaFiles,
+    MediaSyncManifest? receiverMediaManifest,
     String? customPath,
     Function(int current, int total)? onProgress,
     CancelToken? cancelToken,
@@ -148,6 +152,7 @@ class BackupService {
       final mediaFilesMap =
           await BackupMediaProcessor.collectMediaFilesForBackup(
         includeMediaFiles: includeMediaFiles,
+        receiverManifest: receiverMediaManifest,
         onProgress: (current, total) {
           // 媒体文件收集进度占总进度的25% (35% - 60%)
           final mediaProgress = (current / 100 * 25).round();

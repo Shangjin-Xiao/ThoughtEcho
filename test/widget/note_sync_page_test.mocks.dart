@@ -4,13 +4,14 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i5;
-import 'dart:ui' as _i7;
+import 'dart:ui' as _i8;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i3;
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart'
     as _i4;
 import 'package:thoughtecho/services/localsend/models/device.dart' as _i6;
+import 'package:thoughtecho/services/media_sync_manifest.dart' as _i7;
 import 'package:thoughtecho/services/note_sync_service.dart' as _i2;
 
 // ignore_for_file: type=lint
@@ -81,6 +82,27 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
         Invocation.setter(
           #localSendProviderForTesting,
           provider,
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  set syncIntentHandlerForTesting(
+          _i5.Future<bool> Function(_i6.Device)? value) =>
+      super.noSuchMethod(
+        Invocation.setter(
+          #syncIntentHandlerForTesting,
+          value,
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  set receiverMediaManifestForTesting(_i7.MediaSyncManifest? value) =>
+      super.noSuchMethod(
+        Invocation.setter(
+          #receiverMediaManifestForTesting,
+          value,
         ),
         returnValueForMissingStub: null,
       );
@@ -222,7 +244,7 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       ) as _i5.Future<List<_i6.Device>>);
 
   @override
-  (_i5.Stream<List<_i6.Device>>, _i7.VoidCallback) discoverNearbyDevicesStream(
+  (_i5.Stream<List<_i6.Device>>, _i8.VoidCallback) discoverNearbyDevicesStream(
           {int? timeout}) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -231,7 +253,7 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
           {#timeout: timeout},
         ),
         returnValue: (_i5.Stream<List<_i6.Device>>.empty(), () {}),
-      ) as (_i5.Stream<List<_i6.Device>>, _i7.VoidCallback));
+      ) as (_i5.Stream<List<_i6.Device>>, _i8.VoidCallback));
 
   @override
   void dispose() => super.noSuchMethod(
@@ -277,7 +299,7 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       );
 
   @override
-  void addListener(_i7.VoidCallback? listener) => super.noSuchMethod(
+  void addListener(_i8.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #addListener,
           [listener],
@@ -286,7 +308,7 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       );
 
   @override
-  void removeListener(_i7.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i8.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #removeListener,
           [listener],

@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/localsend/localsend_server.dart';
+import 'package:thoughtecho/services/media_sync_manifest.dart';
 
 // Extension to access private method for testing
 extension LocalSendServerTest on LocalSendServer {
@@ -92,6 +94,83 @@ void main() {
         server.isSafeAddressForTesting(InternetAddress('2001:4860:4860::8888')),
         isFalse,
       );
+    });
+  });
+
+  group('LocalSendServer media manifest approval', () {
+    test('returns media manifest only after approval', () async {
+      final server = LocalSendServer();
+      addTearDown(server.stop);
+      var manifestRequests = 0;
+      await server.start(
+        port: 0,
+        onReceiveSessionCreated: (_, __, ___) {},
+        onApprovalNeeded: (_, __, ___) async => true,
+        onMediaManifestRequested: () async {
+          manifestRequests++;
+          return const MediaSyncManifest({'images/photo.jpg': 3});
+        },
+      );
+
+      final client = HttpClient();
+      addTearDown(client.close);
+      final request = await client.postUrl(
+        Uri.parse(
+          'http://127.0.0.1:${server.port}/api/thoughtecho/v1/sync-intent',
+        ),
+      );
+      request.headers.contentType = ContentType.json;
+      request.write(jsonEncode({
+        'intentId': 'intent-approved',
+        'fingerprint': 'sender',
+        'alias': 'Sender',
+      }));
+      final response = await request.close();
+      final body = jsonDecode(await utf8.decoder.bind(response).join())
+          as Map<String, dynamic>;
+
+      expect(body['approved'], isTrue);
+      expect(body['mediaManifest'], {
+        'version': 1,
+        'files': {'images/photo.jpg': 3},
+      });
+      expect(manifestRequests, 1);
+    });
+
+    test('does not return or scan media manifest after rejection', () async {
+      final server = LocalSendServer();
+      addTearDown(server.stop);
+      var manifestRequests = 0;
+      await server.start(
+        port: 0,
+        onReceiveSessionCreated: (_, __, ___) {},
+        onApprovalNeeded: (_, __, ___) async => false,
+        onMediaManifestRequested: () async {
+          manifestRequests++;
+          return const MediaSyncManifest({});
+        },
+      );
+
+      final client = HttpClient();
+      addTearDown(client.close);
+      final request = await client.postUrl(
+        Uri.parse(
+          'http://127.0.0.1:${server.port}/api/thoughtecho/v1/sync-intent',
+        ),
+      );
+      request.headers.contentType = ContentType.json;
+      request.write(jsonEncode({
+        'intentId': 'intent-rejected',
+        'fingerprint': 'sender',
+        'alias': 'Sender',
+      }));
+      final response = await request.close();
+      final body = jsonDecode(await utf8.decoder.bind(response).join())
+          as Map<String, dynamic>;
+
+      expect(body['approved'], isFalse);
+      expect(body, isNot(contains('mediaManifest')));
+      expect(manifestRequests, 0);
     });
   });
 }

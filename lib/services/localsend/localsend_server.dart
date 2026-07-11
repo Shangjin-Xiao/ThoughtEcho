@@ -6,6 +6,7 @@ import 'constants.dart';
 import 'receive_controller.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:thoughtecho/services/media_sync_manifest.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
 /// Simple HTTP server for LocalSend protocol
@@ -23,6 +24,7 @@ class LocalSendServer {
   Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
       _onApprovalNeeded;
   void Function(String sessionId)? _onApprovalCancelled;
+  Future<MediaSyncManifest> Function()? _onMediaManifestRequested;
 
   bool get isRunning => _isRunning;
   int get port => _port;
@@ -40,6 +42,7 @@ class LocalSendServer {
     Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
         onApprovalNeeded,
     void Function(String sessionId)? onApprovalCancelled,
+    Future<MediaSyncManifest> Function()? onMediaManifestRequested,
   }) async {
     if (_isRunning) return;
 
@@ -54,6 +57,7 @@ class LocalSendServer {
     _onReceiveSessionCreated = onReceiveSessionCreated;
     _onApprovalNeeded = onApprovalNeeded;
     _onApprovalCancelled = onApprovalCancelled;
+    _onMediaManifestRequested = onMediaManifestRequested;
 
     _receiveController = ReceiveController(
       onFileReceived: onFileReceived,
@@ -81,6 +85,7 @@ class LocalSendServer {
 
       // Try to bind to the specified port
       _server = await HttpServer.bind(address, _port);
+      _port = _server!.port;
       _server!.autoCompress = true;
 
       // Set up request handling
@@ -282,14 +287,30 @@ class LocalSendServer {
               approved = false;
             }
           }
+          MediaSyncManifest? mediaManifest;
+          if (approved && _onMediaManifestRequested != null) {
+            try {
+              mediaManifest = await _onMediaManifestRequested!();
+            } catch (e) {
+              logWarning(
+                'media_manifest_scan_failed error=$e',
+                source: 'LocalSend',
+              );
+            }
+          }
           if (_cancelledIntentIds.remove(tempId)) {
             approved = false;
+            mediaManifest = null;
           }
           if (approved && senderFp != null) {
             _preApprovedFingerprints.add(senderFp);
             _approvedIntentFingerprints[tempId] = senderFp;
           }
-          responseData = {'approved': approved};
+          responseData = {
+            'approved': approved,
+            if (approved && mediaManifest != null)
+              'mediaManifest': mediaManifest.toJson(),
+          };
         } else if ((path == '/api/localsend/v2/prepare-upload' ||
                 path == '/api/localsend/v1/send-request') &&
             request.method == 'POST') {

@@ -5,6 +5,7 @@ import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
+import 'package:thoughtecho/services/media_sync_manifest.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/large_file_manager.dart';
 import 'package:thoughtecho/models/merge_report.dart';
@@ -100,6 +101,7 @@ class MockBackupService implements BackupService {
     String? customPath,
     Function(int current, int total)? onProgress,
     CancelToken? cancelToken,
+    MediaSyncManifest? receiverMediaManifest,
   }) async {
     return 'mock_backup_path.zip';
   }

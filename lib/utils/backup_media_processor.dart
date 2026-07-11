@@ -4,6 +4,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import '../services/large_file_manager.dart' as lfm;
 import '../services/media_reference_service.dart';
+import '../services/media_sync_manifest.dart';
 import 'app_logger.dart';
 
 /// 备份媒体处理器
@@ -19,6 +20,7 @@ class BackupMediaProcessor {
   /// 返回 `Map<relativePath, absolutePath>`
   static Future<Map<String, String>> collectMediaFilesForBackup({
     required bool includeMediaFiles,
+    MediaSyncManifest? receiverManifest,
     Function(int current, int total)? onProgress,
     Function(String status)? onStatusUpdate,
     lfm.CancelToken? cancelToken,
@@ -110,13 +112,17 @@ class BackupMediaProcessor {
         }
       }
 
-      final validFiles = filesToZip.length;
+      final filteredFiles = await filterArchiveEntries(
+        filesToZip,
+        receiverManifest: receiverManifest,
+      );
+      final validFiles = filteredFiles.length;
       final skippedFiles = totalFiles - validFiles;
 
       logDebug('媒体文件收集完成，有效文件: $validFiles, 跳过文件: $skippedFiles');
       onStatusUpdate?.call('媒体文件处理完成，包含 $validFiles 个文件');
       onProgress?.call(100, 100);
-      return filesToZip;
+      return filteredFiles;
     } catch (e) {
       if (e is lfm.CancelledException) {
         logDebug('媒体文件收集已取消');
@@ -129,6 +135,27 @@ class BackupMediaProcessor {
       // 返回已收集的部分结果
       return filesToZip;
     }
+  }
+
+  /// Filters archive entries against a receiver inventory.
+  ///
+  /// A null manifest means the peer is legacy or negotiation failed, so every
+  /// media file is retained for backward compatibility.
+  static Future<Map<String, String>> filterArchiveEntries(
+    Map<String, String> entries, {
+    required MediaSyncManifest? receiverManifest,
+  }) async {
+    if (receiverManifest == null) return Map.of(entries);
+
+    final filtered = <String, String>{};
+    for (final entry in entries.entries) {
+      final file = File(entry.value);
+      final size = await file.length();
+      if (receiverManifest.shouldTransfer(entry.key, size)) {
+        filtered[entry.key] = entry.value;
+      }
+    }
+    return filtered;
   }
 
   /// 并行处理一批文件
