@@ -1,0 +1,30 @@
+docs/USER_MANUAL.md
+  s_e11dce376d5b1f::t_0db976c399ae4d 153,837
+lib/pages/ai_assistant/ai_assistant_page_agent.dart
+  s_e11dce376d5b1f::t_10a75c57a6357a 50-51
+  s_e11dce376d5b1f::t_4e471b65981a6e 48-49,52-55,57-64,109
+docs/plans/2026-07-11-agent-rich-edit.md
+  s_e11dce376d5b1f::t_9c6a596086ebf7 21-23
+lib/widgets/ai/smart_result_card.dart
+  s_e11dce376d5b1f::t_d78b6e74369d7e 200-202,208-210,279
+test/widget/pages/ai_assistant_page_test.dart
+  s_e11dce376d5b1f::t_a774bacaa0b440 789,834
+test/widget/smart_result_card_test.dart
+  s_e11dce376d5b1f::t_d78b6e74369d7e 137-144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.12",
+  "base_commit_sha": "bae0f29a91260c5897c6badf8f64f0090b0771a4",
+  "prompts": {},
+  "sessions": {
+    "s_e11dce376d5b1f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5106-f433-7d21-a686-3ebdcd8c553c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
