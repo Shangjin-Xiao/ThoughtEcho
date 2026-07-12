@@ -25,9 +25,11 @@ Configure Sentry to track LLM calls, agent executions, tool usage, and token con
 
 AI monitoring requires **tracing enabled** (`tracesSampleRate > 0`).
 
+If the app has multi-turn chats, set a conversation ID by default anywhere it makes sense to identify a chat session. Sentry uses `gen_ai.conversation.id` to group related AI spans into Conversations. Some integrations infer it automatically, but many setups need to set it explicitly.
+
 ## Data Capture Warning
 
-**Prompt and output recording captures user content that is likely PII.** Before enabling send-default-PII (`sendDefaultPii: true` in JavaScript or `send_default_pii=True` in Python) or per-integration prompt/output capture (`recordInputs`/`recordOutputs` in JS, `include_prompts` in Python), confirm:
+**Prompt and output recording captures user content that is likely PII.** In JavaScript, genAI input/output capture is **on by default** (governed by `dataCollection.genAI`); in Python it is enabled via `send_default_pii=True`. Before relying on this capture (or per-integration overrides — `recordInputs`/`recordOutputs` in JS, `include_prompts` in Python), confirm:
 
 - The application's privacy policy permits capturing user prompts and model responses
 - Captured data complies with applicable regulations (GDPR, CCPA, etc.)
@@ -107,7 +109,6 @@ Just ensure tracing is enabled. Integrations auto-enable when the AI package is 
 Sentry.init({
   dsn: "YOUR_DSN",
   tracesSampleRate: 1.0, // Lower in production (e.g., 0.1)
-  streamGenAiSpans: true, // SDK ≥10.53.0
   // OpenAI, Anthropic, Google GenAI, LangChain integrations auto-enable in Node.js
 });
 ```
@@ -118,11 +119,15 @@ To customize (e.g., enable prompt capture after user confirmation — see Data C
 Sentry.init({
   dsn: "YOUR_DSN",
   tracesSampleRate: 1.0,
-  streamGenAiSpans: true,
-  sendDefaultPii: true,
+  dataCollection: {
+    // To disable sending user data and HTTP bodies, uncomment the lines below. For more info visit:
+    // https://docs.sentry.io/platforms/javascript/configuration/options/#dataCollection
+    // userInfo: false,
+    // httpBodies: [],
+  },
   integrations: [
     Sentry.openAIIntegration({
-      // recordInputs/recordOutputs default to true when sendDefaultPii is true
+      // recordInputs/recordOutputs default to true (governed by dataCollection.genAI)
     }),
   ],
 });
@@ -146,8 +151,12 @@ const openai = Sentry.instrumentOpenAiClient(new OpenAI());
 Sentry.init({
   dsn: "YOUR_DSN",
   tracesSampleRate: 1.0,
-  streamGenAiSpans: true,
-  sendDefaultPii: true,
+  dataCollection: {
+    // To disable sending user data and HTTP bodies, uncomment the lines below. For more info visit:
+    // https://docs.sentry.io/platforms/javascript/configuration/options/#dataCollection
+    // userInfo: false,
+    // httpBodies: [],
+  },
   integrations: [
     Sentry.langChainIntegration(),
     Sentry.langGraphIntegration(),
@@ -162,8 +171,12 @@ Add to `sentry.edge.config.ts` for Edge runtime:
 Sentry.init({
   dsn: "YOUR_DSN",
   tracesSampleRate: 1.0,
-  streamGenAiSpans: true,
-  sendDefaultPii: true,
+  dataCollection: {
+    // To disable sending user data and HTTP bodies, uncomment the lines below. For more info visit:
+    // https://docs.sentry.io/platforms/javascript/configuration/options/#dataCollection
+    // userInfo: false,
+    // httpBodies: [],
+  },
   integrations: [Sentry.vercelAIIntegration()],
 });
 ```
@@ -191,7 +204,6 @@ import sentry_sdk
 sentry_sdk.init(
     dsn="YOUR_DSN",
     traces_sample_rate=1.0,  # Lower in production (e.g., 0.1)
-    stream_gen_ai_spans=True,  # SDK ≥2.60.0
     send_default_pii=True,
     # Integrations auto-enable when the AI package is installed.
     # Only specify explicitly to customize (e.g., include_prompts):
@@ -235,7 +247,12 @@ await Sentry.startSpan({
   const outputMessages = [
     {
       role: "assistant",
-      parts: [{ type: "text", content: result.text }],
+      parts: [
+        // Thinking/reasoning content goes in a `reasoning` part, NOT a `text` part.
+        // Sentry surfaces it separately and filters it out of the Conversations view.
+        { type: "reasoning", content: result.reasoning },
+        { type: "text", content: result.text },
+      ],
       finish_reason: result.finishReason,
     },
   ];
@@ -256,12 +273,20 @@ await Sentry.startSpan({
 | `gen_ai.operation.name` | No | Operation label (`chat`, `embeddings`, `invoke_agent`, `execute_tool`, `handoff`, etc.) |
 | `gen_ai.agent.name` | No | Agent name (set on agent and tool spans) |
 
+**Model config (LLM call spans):**
+
+| Attribute | Description |
+|-----------|-------------|
+| `gen_ai.request.reasoning_effort` | Reasoning effort level for reasoning models (e.g., `low`, `medium`, `high`). Supported values vary by provider. |
+
 **Request / response content (PII — enable only after confirming; see Data Capture Warning above):**
 
 | Attribute | Description |
 |-----------|-------------|
-| `gen_ai.input.messages` | JSON-stringified array of input messages. Each item uses `{role, parts}` where `parts` is `[{type, content}]`; `role` is `"user"`, `"assistant"`, `"tool"`, or `"system"` |
+| `gen_ai.input.messages` | JSON-stringified array of input messages. Each item uses `{role, parts}` where `parts` is `[{type, content}]`; `role` is `"user"`, `"assistant"`, `"tool"`, or `"system"`. Common part `type`s: `"text"`, `"reasoning"`, `"tool_call"`, `"tool_call_response"` |
 | `gen_ai.output.messages` | JSON-stringified array of response messages (text + tool calls), same shape as inputs |
+
+**Thinking / reasoning messages:** Models with extended thinking (Anthropic `thinking` blocks, Gemini `thought`, DeepSeek `reasoning_content`) produce internal reasoning that isn't part of the user-visible reply. Represent it as a `reasoning` part inside the assistant message — `{"type": "reasoning", "content": "..."}` — alongside the user-facing `text` part. Sentry surfaces reasoning parts separately and filters them out of the user-facing Conversations view, so do **not** fold thinking into a `text` part. When previous thinking is fed back into a multi-turn request, include the same `reasoning` parts in the assistant messages within `gen_ai.input.messages`. Record reasoning token counts via `gen_ai.usage.output_tokens.reasoning` (a subset of `gen_ai.usage.output_tokens`).
 | `gen_ai.system_instructions` | System prompt passed to the model |
 | `gen_ai.tool.definitions` | JSON-stringified list of tools available to the model |
 
@@ -307,13 +332,15 @@ After configuring, make an LLM call and check the Sentry Traces dashboard. AI sp
 
 Conversations gives a readable, chat-style view of past sessions with your AI agent. It groups spans by `gen_ai.conversation.id` — so whether a user talked across multiple traces or multiple conversations happened inside one trace, you get a timeline of every message, tool call, and response.
 
+When the user asks for AI monitoring setup, proactively mention this requirement if the app has multi-turn chats. Without a conversation ID, the agent-monitoring spans still work, but the Conversations view cannot group the session correctly.
+
 Find it at **Explore > Conversations** in Sentry.
 
 ### Prerequisites for Conversations
 
 - Tracing enabled with `tracesSampleRate > 0`
-- `streamGenAiSpans: true` (JS SDK >=10.53.0) / `stream_gen_ai_spans=True` (Python SDK >=2.60.0) — required so AI spans are sent as standalone items. Without this, spans with large inputs/outputs can hit transaction payload size limits and be dropped.
-- **Input and output capture enabled** — Conversations reconstructs the chat from `gen_ai.input.messages` and `gen_ai.output.messages` attributes. Set `sendDefaultPii: true` (JS) / `send_default_pii=True` (Python). Without it, conversations appear empty.
+- Gen AI span streaming is on by default — `streamGenAiSpans` defaults to `true` since JS SDK 10.61.0 and `stream_gen_ai_spans` defaults to `True` since Python SDK 2.64.0. This sends AI spans as standalone items, so spans with large inputs/outputs don't hit transaction payload size limits and get dropped. (The options are available since JS 10.53.0 / Python 2.60.0 if you need to set them explicitly on older SDKs.)
+- **Input and output capture enabled** — Conversations reconstructs the chat from `gen_ai.input.messages` and `gen_ai.output.messages` attributes. In JS this is on by default (via `dataCollection`); in Python, set `send_default_pii=True`. Without it, conversations appear empty.
 
 ### Setting a Conversation ID
 
@@ -361,6 +388,28 @@ response = openai.responses.create(
 )
 ```
 
+### User Attribution
+
+The Conversations view shows a **User** column. To populate it, call `setUser` / `set_user` once per request or session, before any AI calls:
+
+#### JavaScript
+
+```javascript
+import * as Sentry from "@sentry/node"; // or @sentry/nextjs, @sentry/nestjs, etc.
+
+Sentry.setUser({ id: "user_123", email: "jane@example.com", username: "jane" });
+```
+
+#### Python
+
+```python
+import sentry_sdk
+
+sentry_sdk.set_user({"id": "user_123", "email": "jane@example.com", "username": "jane"})
+```
+
+Any of `id`, `email`, or `username` is sufficient — Conversations will display whichever fields are present.
+
 ### Conversations vs Traces
 
 These are independent concepts:
@@ -374,6 +423,7 @@ These are independent concepts:
 | AI spans not appearing | Verify `tracesSampleRate > 0`, check SDK version |
 | Token counts missing | Some providers don't return tokens for streaming |
 | Negative or wrong costs in dashboard | Cached/reasoning tokens are subsets of totals — see Token Usage and Cost Calculation |
-| Prompts not captured | Set `sendDefaultPii: true` (JS) or `send_default_pii=True` (Python); use `recordInputs`/`include_prompts` only for explicit overrides |
+| Prompts not captured | In JS, genAI capture is on by default — ensure you haven't set `dataCollection: { genAI: { inputs: false } }`, or pass `recordInputs: true` explicitly. In Python, set `send_default_pii=True`; use `include_prompts` only for explicit overrides |
 | Vercel AI not working | Add `experimental_telemetry` to each call |
-| Conversations view empty | Ensure `streamGenAiSpans: true` / `stream_gen_ai_spans=True`, `sendDefaultPii: true` / `send_default_pii=True`, and a conversation ID is set |
+| Conversations view empty | Ensure Gen AI span streaming is enabled (default since JS SDK 10.61.0 / Python SDK 2.64.0), genAI input/output capture enabled (on by default in JS via `dataCollection`; `send_default_pii=True` in Python), and a conversation ID is set |
+| User column shows "Unknown" | Call `Sentry.setUser()` (JS) or `sentry_sdk.set_user()` (Python) once per request or session |

@@ -5,7 +5,7 @@
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/engineering/ask-matt/SKILL.md",
-      "computedHash": "f3ac3351e2a242ce2591e4f8475424d58f62db3f5786332b78f330b15312d1e0"
+      "computedHash": "cacd2e77c8c0b456133a60be07493dd091ace65f52b02f90cbb8f75de15989f5"
     },
     "codebase-design": {
       "source": "mattpocock/skills",
@@ -47,7 +47,7 @@
       "source": "dart-lang/skills",
       "sourceType": "github",
       "skillPath": "skills/dart-migrate-to-checks-package/SKILL.md",
-      "computedHash": "c63c214e28d2cfd2a3f7812da1d54c3abddba90a04d9d2dfaf91e8e8fe53a243"
+      "computedHash": "00b7fa026dcf004421650f20147d020244886321f715ff57ee38a96b3a9945bc"
     },
     "dart-resolve-package-conflicts": {
       "source": "dart-lang/skills",
@@ -101,7 +101,7 @@
       "source": "firebase/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/firebase-basics/SKILL.md",
-      "computedHash": "88fb9ee785fa7aaa74b2c662e53b2aca0b9ee4b67c84587ee017460f54b97471"
+      "computedHash": "8210ee53231b8299df100561d4ef776d39a293fd54403008bd738c65a856d54f"
     },
     "flutter-add-integration-test": {
       "source": "flutter/skills",
@@ -185,19 +185,19 @@
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/productivity/grilling/SKILL.md",
-      "computedHash": "ef685a6fa0bbe73b05bbd8dc1ec97258191587f07c6aa7dbc9006675ceb8f90f"
+      "computedHash": "1de9e777a60b184b29412fadacb7bbde8c14bb7037e5c4d9d086c941281d1742"
     },
     "handoff": {
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/productivity/handoff/SKILL.md",
-      "computedHash": "5d0f81e38abe6b984e1feaa731927de5291d040982106ac513cf54ec240e00ec"
+      "computedHash": "87e353708ab36062eac54ddb593a97ca553c0cb4bfa1ed1fdaf68520700723f1"
     },
     "implement": {
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/engineering/implement/SKILL.md",
-      "computedHash": "f7b0f3636d20c12d1596336efa6943346f85c97f6419371347ac96c089dca08f"
+      "computedHash": "0d51255cab5cf937b8fe41252f00213706e0175ca9607fc00409d29562b5b839"
     },
     "improve-codebase-architecture": {
       "source": "mattpocock/skills",
@@ -227,7 +227,7 @@
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/engineering/prototype/SKILL.md",
-      "computedHash": "e70c8933d30153a4da47865829d356824b2a830367275e3b00c7b431a1544a79"
+      "computedHash": "86dc9537ca578d75866329effa07398f30e69d6c7e906013ce3438053646c601"
     },
     "qa": {
       "source": "mattpocock/skills",
@@ -275,7 +275,7 @@
       "source": "getsentry/sentry-for-ai",
       "sourceType": "github",
       "skillPath": "skills/sentry-feature-setup/SKILL.md",
-      "computedHash": "3c97d88fd29c67cc6cc1e4d19ae39a91a475749fa3f71714d7ed9cdba307f3a9"
+      "computedHash": "bc80b751e003b09e09135d897ca66caa2d6745d58b877acabd72f3791b8c44ce"
     },
     "sentry-fix-issues": {
       "source": "getsentry/sentry-for-ai",
@@ -305,7 +305,7 @@
       "source": "getsentry/sentry-for-ai",
       "sourceType": "github",
       "skillPath": "skills/sentry-setup-ai-monitoring/SKILL.md",
-      "computedHash": "12995e57245f0f98bdad2a279ed8483ccbfa283eeb3195598b861a587514c6e6"
+      "computedHash": "0605173648caed2d2385b0e7ba03a3fcb90ec63171685ec97e97f5f75413e697"
     },
     "sentry-span-streaming": {
       "source": "getsentry/sentry-for-ai",
@@ -317,13 +317,13 @@
       "source": "getsentry/sentry-for-ai",
       "sourceType": "github",
       "skillPath": "skills/sentry-workflow/SKILL.md",
-      "computedHash": "00a62d74aa26a9007d74532ab405b16684386e59c4121a5496f0059206683c6e"
+      "computedHash": "219e8f7bd0de395531b28974272859a5df2c9f52271152aeb3d4b0cd07a20f76"
     },
     "setup-matt-pocock-skills": {
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/engineering/setup-matt-pocock-skills/SKILL.md",
-      "computedHash": "400da4521ed701c99e8824ae7b71c7859632ee91481b3715890036cf8aec6857"
+      "computedHash": "4850d7286f7176178963ff53aeb928b241854785a0d8b5d8fe6d285190188651"
     },
     "setup-pre-commit": {
       "source": "mattpocock/skills",
@@ -335,7 +335,7 @@
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/engineering/tdd/SKILL.md",
-      "computedHash": "e08f6a9f1e64b4054c270f996d9a8c239589ec182856e22672ed08cf91ca0817"
+      "computedHash": "c9326b88419cfba1d54dd713b7ddb23020e6a93f4b0d13aea58cebba58cda2ee"
     },
     "teach": {
       "source": "mattpocock/skills",
@@ -389,7 +389,7 @@
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/productivity/writing-great-skills/SKILL.md",
-      "computedHash": "dd555ce552f82784c3d2b8d13a8e26a6677a07ddc00032e142dec33bfd5438c6"
+      "computedHash": "42fe94c64d7b9acda9ce7d6495a3476893a1b18615986528f55f7162a29789d4"
     },
     "writing-shape": {
       "source": "mattpocock/skills",
