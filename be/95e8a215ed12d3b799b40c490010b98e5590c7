@@ -1,0 +1,19 @@
+lib/pages/home_page.dart
+  s_e11dce376d5b1f::t_29274c82fac5b9 2221-2228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.12",
+  "base_commit_sha": "be95e8a215ed12d3b799b40c490010b98e5590c7",
+  "prompts": {},
+  "sessions": {
+    "s_e11dce376d5b1f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5106-f433-7d21-a686-3ebdcd8c553c",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
