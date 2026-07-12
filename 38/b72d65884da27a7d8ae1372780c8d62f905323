@@ -1,0 +1,58 @@
+.agents/skills/git-guardrails-claude-code/scripts/block-dangerous-git.sh
+  s_8bf4f071d07c6d::t_719377504ea865 1-25
+.agents/skills/tdd/SKILL.md
+  s_8bf4f071d07c6d::t_2e7ce88583c321 1-36
+.agents/skills/prototype/UI.md
+  s_8bf4f071d07c6d::t_719377504ea865 100,102-103,105
+.agents/skills/prototype/LOGIC.md
+  s_8bf4f071d07c6d::t_719377504ea865 39,69,71
+.agents/skills/git-guardrails-claude-code/SKILL.md
+  s_8bf4f071d07c6d::t_719377504ea865 1-95
+skills-lock.json
+  s_8bf4f071d07c6d::t_2e7ce88583c321 338
+  s_8bf4f071d07c6d::t_719377504ea865 188,194,200,230
+.agents/skills/implement/SKILL.md
+  s_8bf4f071d07c6d::t_719377504ea865 3,7,13
+.agents/skills/grilling/SKILL.md
+  s_8bf4f071d07c6d::t_719377504ea865 3,10-12
+.agents/skills/tdd/mocking.md
+  s_8bf4f071d07c6d::t_2e7ce88583c321 1-59
+.agents/skills/prototype/SKILL.md
+  s_8bf4f071d07c6d::t_719377504ea865 24,26
+.agents/skills/handoff/SKILL.md
+  s_8bf4f071d07c6d::t_719377504ea865 12
+.agents/skills/migrate-to-shoehorn/SKILL.md
+  s_8bf4f071d07c6d::t_719377504ea865 1-118
+.agents/skills/obsidian-vault/SKILL.md
+  s_8bf4f071d07c6d::t_719377504ea865 1-59
+.agents/skills/setup-pre-commit/SKILL.md
+  s_8bf4f071d07c6d::t_2e7ce88583c321 1-91
+.agents/skills/tdd/tests.md
+  s_8bf4f071d07c6d::t_2e7ce88583c321 1-77
+.agents/skills/ask-matt/SKILL.md
+  s_e11dce376d5b1f::t_81ae7de1a624b9 3,11,17,23,26-27,30,32,40-44,50-57,69-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.12",
+  "base_commit_sha": "38b72d65884da27a7d8ae1372780c8d62f905323",
+  "prompts": {},
+  "sessions": {
+    "s_8bf4f071d07c6d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f4f89-3e53-7d12-a09e-5845b02a3625",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_e11dce376d5b1f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5106-f433-7d21-a686-3ebdcd8c553c",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
