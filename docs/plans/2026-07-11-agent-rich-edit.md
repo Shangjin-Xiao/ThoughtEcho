@@ -14,15 +14,13 @@
 
 **Files:**
 - Modify: `lib/services/agent_service.dart`
-- Create: `lib/services/agent_tools/complete_task_tool.dart`
 - Modify: `lib/providers/app_providers.dart`
 - Test: `test/unit/services/agent_service_loop_test.dart`
 
 1. Write a failing test where the model emits interim text after a tool result and must receive a continuation prompt.
-2. Write a failing test where `complete_task` ends the loop with its result.
-3. Run the named tests and confirm they fail for the intended reason.
-4. Implement the completion protocol, bounded recovery, and explicit termination result.
-5. Run the Agent loop test file and confirm it passes.
+2. Run the named test and confirm it fails for the intended reason.
+3. Implement the bounded multi-round tool loop without a user-visible completion tool.
+4. Run the Agent loop test file and confirm it passes.
 
 ### Task 2: Native rich-text edit module
 

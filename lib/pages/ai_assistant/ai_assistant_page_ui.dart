@@ -244,24 +244,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 initialIncludeWeather: initialNewNoteMetadata?.includeWeather ??
                     existingHasWeather,
                 initialSavedNoteId: meta['saved_note_id']?.toString(),
-                onEditExistingLocationWeather: isNewNoteProposal
-                    ? null
-                    : () async {
-                        final draft = SmartResultDraft(
-                          content: message.content,
-                          author: meta['author']?.toString(),
-                          source: meta['source']?.toString(),
-                          tagNames: tagNames,
-                          includeLocation: false,
-                          includeWeather: false,
-                        );
-                        final updatedMeta =
-                            await _buildSmartResultMetaFromDraft(meta, draft);
-                        await _openSmartResultInEditor(
-                          updatedMeta,
-                          draft.content,
-                        );
-                      },
                 onOpenDraftInEditor: (draft) async {
                   try {
                     final updatedMeta =

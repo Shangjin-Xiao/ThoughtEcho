@@ -39,7 +39,6 @@ class SmartResultCard extends StatefulWidget {
       onSaveDirectly;
   final Future<void> Function(SmartResultDraft draft)? onOpenDraftInEditor;
   final Future<String?> Function(SmartResultDraft draft)? onSaveDraftDirectly;
-  final Future<void> Function()? onEditExistingLocationWeather;
   final void Function(String noteId)? onSavedNoteId;
   final String editorSource;
   final bool initialIncludeLocation;
@@ -60,7 +59,6 @@ class SmartResultCard extends StatefulWidget {
     this.onSaveDirectly,
     this.onOpenDraftInEditor,
     this.onSaveDraftDirectly,
-    this.onEditExistingLocationWeather,
     this.onSavedNoteId,
     this.editorSource = 'fullscreen',
     this.initialIncludeLocation = false,
@@ -199,15 +197,17 @@ class _SmartResultCardState extends State<SmartResultCard> {
                   avatar: const Icon(Icons.location_on_outlined, size: 18),
                   label: Text(widget.locationPreview ?? l10n.location),
                   selected: _includeLocation,
-                  onSelected: (value) =>
-                      _handleLocationWeatherSelection(isNewNote, value, true),
+                  onSelected: isNewNote
+                      ? (value) => _handleLocationWeatherSelection(value, true)
+                      : null,
                 ),
                 FilterChip(
                   avatar: const Icon(Icons.wb_sunny_outlined, size: 18),
                   label: Text(widget.weatherPreview ?? l10n.weather),
                   selected: _includeWeather,
-                  onSelected: (value) =>
-                      _handleLocationWeatherSelection(isNewNote, value, false),
+                  onSelected: isNewNote
+                      ? (value) => _handleLocationWeatherSelection(value, false)
+                      : null,
                 ),
               ],
             ),
@@ -276,15 +276,7 @@ class _SmartResultCardState extends State<SmartResultCard> {
     );
   }
 
-  Future<void> _handleLocationWeatherSelection(
-    bool isNewNote,
-    bool value,
-    bool isLocation,
-  ) async {
-    if (!isNewNote) {
-      await widget.onEditExistingLocationWeather?.call();
-      return;
-    }
+  void _handleLocationWeatherSelection(bool value, bool isLocation) {
     setState(() {
       if (isLocation) {
         _includeLocation = value;

@@ -24,9 +24,6 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     String? streamingMsgId;
     var streamingText = '';
     String? toolThinkingText;
-    // 每轮正文在主气泡中流式显示。如果该轮随后发起工具调用，
-    // 再将已显示的过渡文字移入执行过程面板。
-    var pendingRoundText = '';
 
     void ensureToolProgressMessage() {
       if (toolProgressMsgId != null) return;
@@ -48,16 +45,23 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       _scrollToBottom();
     }
 
-    void appendProcessText(String value) {
-      if (value.trim().isEmpty) return;
-      if (toolItems.isEmpty) {
-        toolThinkingText = '${toolThinkingText ?? ''}$value';
-      } else {
-        final last = toolItems.last;
-        toolItems[toolItems.length - 1] = last.copyWith(
-          narrationText: '${last.narrationText ?? ''}$value',
+    void finalizeNarrationMessage(String messageId, String content) {
+      _setState(() {
+        final index =
+            _messages.indexWhere((message) => message.id == messageId);
+        if (index == -1) return;
+        final finalized = _messages[index].copyWith(
+          content: content,
+          isLoading: false,
         );
-      }
+        _messages[index] = finalized;
+        if (_currentSessionId != null) {
+          unawaited(
+            _chatSessionService.addMessage(_currentSessionId!, finalized),
+          );
+        }
+      });
+      _scrollToBottom();
     }
 
     try {
@@ -66,7 +70,6 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
         if (!mounted) return;
         switch (event) {
           case AgentThinkingEvent():
-            pendingRoundText = '';
             streamingText = '';
           case AgentReasoningDeltaEvent():
             ensureToolProgressMessage();
@@ -78,7 +81,6 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
               thinkingText: toolThinkingText,
             );
           case AgentTextDeltaEvent():
-            pendingRoundText += event.delta;
             if (streamingMsgId == null) {
               streamingMsgId = _uuid.v4();
               _setState(() {
@@ -104,15 +106,11 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
               _flushStreamUpdate();
               _cancelStreamUpdate();
               final pendingId = streamingMsgId!;
-              _setState(() {
-                _messages.removeWhere((message) => message.id == pendingId);
-              });
+              finalizeNarrationMessage(pendingId, streamingText);
               streamingMsgId = null;
               streamingText = '';
             }
             ensureToolProgressMessage();
-            appendProcessText(pendingRoundText);
-            pendingRoundText = '';
 
             final newItem = ToolProgressItem(
               toolCallId: event.toolCallId,
@@ -161,7 +159,6 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             }
 
           case AgentResponseEvent():
-            pendingRoundText = '';
             if (streamingMsgId != null) {
               _flushStreamUpdate();
               _cancelStreamUpdate();
@@ -176,7 +173,6 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             }
 
           case AgentErrorEvent():
-            pendingRoundText = '';
             if (streamingMsgId != null) {
               _cancelStreamUpdate();
               _setState(() {

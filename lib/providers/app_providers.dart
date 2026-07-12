@@ -24,7 +24,6 @@ import '../services/chat_session_service.dart';
 import '../services/openai_stream_service.dart';
 import '../services/agent_service.dart';
 import '../services/agent_tool.dart';
-import '../services/agent_tools/complete_task_tool.dart';
 import '../services/agent_tools/explore_notes_tool.dart';
 import '../services/agent_tools/get_app_context_tool.dart';
 import '../services/agent_tools/get_note_detail_tool.dart';
@@ -43,7 +42,6 @@ List<AgentTool> _buildAgentTools(
   WeatherService weatherService,
 ) {
   return [
-    const CompleteTaskTool(),
     ExploreNotesTool(db),
     GetTagsTool(db),
     GetLocationWeatherTool(

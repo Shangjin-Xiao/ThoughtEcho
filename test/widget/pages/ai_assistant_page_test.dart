@@ -786,7 +786,7 @@ void main() {
       expect(find.textContaining('第一段第二段'), findsOneWidget);
     });
 
-    testWidgets('agent tool panel keeps pre-tool thinking text inline',
+    testWidgets('agent keeps pre-tool narration as a normal message',
         (tester) async {
       final agentService = _FakeAgentService(
         settingsService: settingsService,
@@ -827,14 +827,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 220));
       final completedHeader = find.textContaining(l10n.executedNOperations(1));
       expect(completedHeader, findsOneWidget);
-      expect(find.textContaining('让我先看看最近的记录。'), findsNothing);
-      await tester.tap(completedHeader);
-      await tester.pumpAndSettle();
       final narration = find.textContaining('让我先看看最近的记录。');
       expect(narration, findsOneWidget);
       expect(
         find.ancestor(of: narration, matching: find.byType(ToolProgressPanel)),
-        findsOneWidget,
+        findsNothing,
       );
     });
 

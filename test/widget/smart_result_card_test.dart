@@ -113,7 +113,6 @@ void main() {
 
     testWidgets('shows location and weather controls for existing-note results',
         (tester) async {
-      var editRequests = 0;
       await tester.pumpWidget(
         _buildTestWidget(
           SmartResultCard(
@@ -124,9 +123,6 @@ void main() {
             initialIncludeWeather: true,
             onSaveDirectly: (_, __) {},
             onOpenInEditor: (_, __) {},
-            onEditExistingLocationWeather: () async {
-              editRequests++;
-            },
           ),
         ),
       );
@@ -138,7 +134,14 @@ void main() {
       await tester.tap(find.widgetWithText(FilterChip, '天气'));
       await tester.pump();
 
-      expect(editRequests, 1);
+      final locationChip = tester.widget<FilterChip>(
+        find.widgetWithText(FilterChip, '位置'),
+      );
+      final weatherChip = tester.widget<FilterChip>(
+        find.widgetWithText(FilterChip, '天气'),
+      );
+      expect(locationChip.onSelected, isNull);
+      expect(weatherChip.onSelected, isNull);
     });
 
     testWidgets('turning off location preserves weather selection',

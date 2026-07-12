@@ -172,8 +172,6 @@ class AgentService extends ChangeNotifier {
       final seenCallSignatures = <String>{};
       final repeatedRoundPatterns = <String, int>{};
       final correctionAttempts = <String, int>{};
-      final requiresExplicitCompletion =
-          _tools.any((tool) => tool.name == 'complete_task');
       var round = 0;
 
       while (true) {
@@ -219,20 +217,6 @@ class AgentService extends ChangeNotifier {
 
         final assistantContent = result.content.trim();
         final rawToolCalls = result.toolCalls;
-
-        if (rawToolCalls.isEmpty && requiresExplicitCompletion) {
-          if (assistantContent.isNotEmpty) {
-            messages.add(openai.ChatMessage.assistant(
-              content: assistantContent,
-            ));
-          }
-          messages.add(openai.ChatMessage.user(
-            '你已经使用过工具，但任务尚未通过 complete_task 完成。'
-            '请检查用户要求是否全部满足：如果仍有工作，继续调用合适工具；'
-            '只有确认交付完整后才调用 complete_task。不要仅回复过程说明。',
-          ));
-          continue;
-        }
 
         if (rawToolCalls.isEmpty) {
           _setStatus('');
@@ -329,19 +313,6 @@ class AgentService extends ChangeNotifier {
             continue;
           }
 
-          if (parsedToolCall.name == 'complete_task' &&
-              rawToolCalls.length > 1) {
-            repliedAnyToolCall = true;
-            messages.add(
-              openai.ChatMessage.tool(
-                toolCallId: rawToolCall.id,
-                content: 'complete_task 必须单独调用。请先处理同一轮的其他工具结果，'
-                    '确认全部完成后再单独调用 complete_task。',
-              ),
-            );
-            continue;
-          }
-
           final signature =
               '${parsedToolCall.name}:${canonicalJsonForArguments(parsedToolCall.arguments)}';
 
@@ -396,18 +367,6 @@ class AgentService extends ChangeNotifier {
               isError: toolResult.isError,
             ));
             executedCalls.add(parsedToolCall);
-
-            if (parsedToolCall.name == 'complete_task' && !toolResult.isError) {
-              _setStatus('');
-              _emitEvent(AgentResponseEvent(
-                content: toolResult.content,
-                toolCalls: executedCalls,
-              ));
-              return AgentResponse(
-                content: toolResult.content,
-                toolCalls: executedCalls,
-              );
-            }
 
             if (toolResult.isError) {
               final correctionKey =
@@ -833,7 +792,6 @@ $toolDescriptions
   - 支持多维组合：你可以同时根据“下雨天”、“凌晨”、“标签”和“日期范围”来精准定位某条记录。
   - 使用 `next_offset` 参数进行翻页，不要重复拉取同一页。
 - 最终回复必须是面向用户的自然语言结论。
-- 使用过任何工具后，不得仅用普通文本自行结束。确认用户要求全部完成后，必须调用 `complete_task`，将最终答复放入 `result`。如果尚未完成，继续调用工具。
 - 默认使用中文回复（除非用户明确使用其他语言）。
 - 不要声称已直接修改笔记。所有改动都必须通过调用 `propose_rich_edit`、`propose_edit` 或 `propose_new_note` 工具向用户提议，由用户确认后应用。
 - **严禁**在回复中手动编写 ` ```smart_result ` 代码块。你必须且只能通过调用工具来产生建议卡片。
