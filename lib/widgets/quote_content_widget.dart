@@ -101,8 +101,11 @@ class QuoteContent extends StatelessWidget {
   static const double _estimatedImageHeight = 200.0;
   static const double _estimatedVideoHeight = 240.0;
   static const double _estimatedAudioHeight = 140.0;
-  static const double _collapsedDocumentHeightBudget =
-      collapsedContentMaxHeight * 4;
+  // Keep a small guard below the clipped viewport so differences between the
+  // conservative TextPainter estimate and Quill's block styles cannot expose
+  // an empty strip at the bottom of the preview.
+  static const double _collapsedDocumentHeightGuard = 96.0;
+  static const double _collapsedImagePlaceholderHeight = 96.0;
   static const Key collapsedWrapperKey = ValueKey(
     'quote_content.collapsed_wrapper',
   );
@@ -154,82 +157,6 @@ class QuoteContent extends StatelessWidget {
       if (end < richQuotes.length) {
         Timer.run(() => processBatch(end));
       }
-    }
-
-    Timer(delay, () => processBatch(0));
-  }
-
-  /// 预热折叠态富文本控制器，避免快速滚动首次遇到富文本时同步创建
-  /// Document/QuillController 造成 build 峰值。
-  ///
-  /// 每批只处理 1 条，并在列表滚动时自动延期，保证不与手势滚动抢主线程。
-  static void prewarmCollapsedContentCache(
-    List<Quote> quotes, {
-    required bool prioritizeBoldContent,
-    int maxItems = 24,
-    Duration delay = const Duration(milliseconds: 1500),
-    Duration idleAfterScrollDelay = const Duration(milliseconds: 900),
-  }) {
-    final richQuotes = quotes
-        .where((q) => q.deltaContent != null && q.editSource == 'fullscreen')
-        .take(maxItems)
-        .toList();
-    if (richQuotes.isEmpty) return;
-
-    const batchDelay = Duration(milliseconds: 120);
-    final generation = _cacheGeneration;
-
-    void processBatch(int index) {
-      if (generation != _cacheGeneration) return;
-      if (index >= richQuotes.length) return;
-      if (isListScrolling.value) {
-        Timer(idleAfterScrollDelay, () => processBatch(index));
-        return;
-      }
-
-      Timer(idleAfterScrollDelay, () {
-        if (generation != _cacheGeneration) return;
-        if (isListScrolling.value) {
-          processBatch(index);
-          return;
-        }
-
-        final quote = richQuotes[index];
-        final deltaContent = quote.deltaContent!;
-        final needsExpansion = exceedsCollapsedHeight(quote);
-        final usePrioritizedDoc = prioritizeBoldContent;
-        final cacheQuoteId =
-            quote.id ?? 'local_${quote.date}_${quote.content.hashCode}';
-        final contentVariant = _QuoteContentControllerCache.resolveVariant(
-          showFullContent: false,
-          usePrioritizedDoc: usePrioritizedDoc,
-          needsExpansion: needsExpansion,
-        );
-        final contentSignature =
-            '${deltaContent.hashCode}_${deltaContent.length}_$contentVariant';
-
-        _QuoteContentControllerCache.getOrCreate(
-          quoteId: cacheQuoteId,
-          contentSignature: contentSignature,
-          variant: contentVariant,
-          documentBuilder: () => _QuoteDocumentCache.getOrCreate(
-            deltaContent: deltaContent,
-            prioritizeBold: usePrioritizedDoc,
-            truncateForCollapse: needsExpansion,
-            builder: () => QuoteContent(
-              quote: quote,
-            )._buildRichTextDocument(
-              deltaContent,
-              usePrioritizedDoc,
-              needsExpansion,
-            ),
-          ),
-        );
-
-        if (index + 1 < richQuotes.length) {
-          Timer(batchDelay, () => processBatch(index + 1));
-        }
-      });
     }
 
     Timer(delay, () => processBatch(0));
@@ -631,38 +558,76 @@ class QuoteContent extends StatelessWidget {
   }
 
   static List<Map<String, dynamic>> _truncateDeltaOpsForCollapsedDocument(
-    List<Map<String, dynamic>> ops,
-  ) {
+    List<Map<String, dynamic>> ops, {
+    double? maxWidth,
+    TextStyle? textStyle,
+    TextDirection? textDirection,
+    TextScaler textScaler = TextScaler.noScaling,
+    Locale? locale,
+  }) {
     if (ops.isEmpty) {
       return const [
         {'insert': '\n'},
       ];
     }
 
+    if (maxWidth == null || !maxWidth.isFinite || maxWidth <= 0) {
+      return _truncateDeltaOpsWithLegacyBudget(ops);
+    }
+
     final truncatedOps = <Map<String, dynamic>>[];
-    double usedHeight = 0;
+    final targetHeight =
+        collapsedContentMaxHeight + _collapsedDocumentHeightGuard;
 
     for (final op in ops) {
       if (!op.containsKey('insert')) continue;
 
       final insert = op['insert'];
-      final opHeight = _estimateDeltaOpHeight(insert);
-      if (usedHeight + opHeight <= _collapsedDocumentHeightBudget) {
-        truncatedOps.add(Map<String, dynamic>.from(op));
-        usedHeight += opHeight;
+      final candidate = Map<String, dynamic>.from(op);
+      final candidateOps = [...truncatedOps, candidate];
+      final candidateHeight = _estimateCollapsedPrefixHeight(
+        candidateOps,
+        maxWidth: maxWidth,
+        textStyle: textStyle,
+        textDirection: textDirection ?? TextDirection.ltr,
+        textScaler: textScaler,
+        locale: locale,
+      );
+      if (candidateHeight <= targetHeight) {
+        truncatedOps.add(candidate);
         continue;
       }
 
-      if (insert is String && usedHeight < _collapsedDocumentHeightBudget) {
-        final textPrefix = _truncateTextForEstimatedHeight(
-          insert,
-          _collapsedDocumentHeightBudget - usedHeight,
+      if (insert is String) {
+        final textPrefix = _longestVisibleTextPrefix(
+          existingOps: truncatedOps,
+          op: candidate,
+          text: insert,
+          targetHeight: targetHeight,
+          maxWidth: maxWidth,
+          textStyle: textStyle,
+          textDirection: textDirection ?? TextDirection.ltr,
+          textScaler: textScaler,
+          locale: locale,
         );
         if (textPrefix.isNotEmpty) {
-          final truncatedOp = Map<String, dynamic>.from(op);
+          final truncatedOp = Map<String, dynamic>.from(candidate);
           truncatedOp['insert'] = textPrefix;
           truncatedOps.add(truncatedOp);
         }
+      } else if (truncatedOps.isEmpty ||
+          _estimateCollapsedPrefixHeight(
+                truncatedOps,
+                maxWidth: maxWidth,
+                textStyle: textStyle,
+                textDirection: textDirection ?? TextDirection.ltr,
+                textScaler: textScaler,
+                locale: locale,
+              ) <
+              targetHeight) {
+        // Preserve the first embed/block crossing the preview boundary. Quill
+        // remains the renderer for every pixel that can become visible.
+        truncatedOps.add(candidate);
       }
       break;
     }
@@ -673,6 +638,157 @@ class QuoteContent extends StatelessWidget {
 
     _ensureDocumentOpsEndWithNewline(truncatedOps);
     return truncatedOps;
+  }
+
+  static List<Map<String, dynamic>> _truncateDeltaOpsWithLegacyBudget(
+    List<Map<String, dynamic>> ops,
+  ) {
+    final truncatedOps = <Map<String, dynamic>>[];
+    var usedHeight = 0.0;
+    final budget = collapsedContentMaxHeight * 4;
+
+    for (final op in ops) {
+      if (!op.containsKey('insert')) continue;
+      final insert = op['insert'];
+      final opHeight = _estimateDeltaOpHeight(insert);
+      if (usedHeight + opHeight <= budget) {
+        truncatedOps.add(Map<String, dynamic>.from(op));
+        usedHeight += opHeight;
+        continue;
+      }
+      if (insert is String && usedHeight < budget) {
+        final prefix = _truncateTextForEstimatedHeight(
+          insert,
+          budget - usedHeight,
+        );
+        if (prefix.isNotEmpty) {
+          truncatedOps.add({...op, 'insert': prefix});
+        }
+      }
+      break;
+    }
+
+    if (truncatedOps.isEmpty) {
+      truncatedOps.add(Map<String, dynamic>.from(ops.first));
+    }
+    _ensureDocumentOpsEndWithNewline(truncatedOps);
+    return truncatedOps;
+  }
+
+  static double _estimateCollapsedPrefixHeight(
+    List<Map<String, dynamic>> ops, {
+    required double maxWidth,
+    required TextStyle? textStyle,
+    required TextDirection textDirection,
+    required TextScaler textScaler,
+    required Locale? locale,
+  }) {
+    var height = 0.0;
+    final textSpans = <InlineSpan>[];
+
+    void flushText() {
+      if (textSpans.isEmpty) return;
+      final painter = TextPainter(
+        text: TextSpan(style: textStyle, children: [...textSpans]),
+        textDirection: textDirection,
+        textScaler: textScaler,
+        locale: locale,
+      )..layout(maxWidth: maxWidth);
+      height += painter.height;
+      textSpans.clear();
+    }
+
+    for (final op in ops) {
+      final insert = op['insert'];
+      if (insert is String) {
+        textSpans.add(
+          TextSpan(
+            text: insert,
+            style: _measurementStyleForAttributes(op['attributes']),
+          ),
+        );
+        continue;
+      }
+
+      flushText();
+      if (insert is Map) {
+        if (insert.containsKey('image')) {
+          height += _collapsedImagePlaceholderHeight;
+        } else if (insert.containsKey('video')) {
+          height += _estimatedVideoHeight;
+        } else if (insert.containsKey('audio')) {
+          height += _estimatedAudioHeight;
+        } else {
+          height += _estimatedLineHeight;
+        }
+      }
+    }
+    flushText();
+    return height;
+  }
+
+  static TextStyle? _measurementStyleForAttributes(dynamic rawAttributes) {
+    if (rawAttributes is! Map) return null;
+
+    final attributes = Map<String, dynamic>.from(rawAttributes);
+    TextStyle style = const TextStyle();
+    final fontSize = switch (attributes['size']) {
+      'small' => 10.0,
+      'large' => 18.0,
+      'huge' => 22.0,
+      _ => null,
+    };
+    if (fontSize != null) {
+      style = style.copyWith(fontSize: fontSize);
+    }
+    if (attributes['bold'] == true) {
+      style = style.copyWith(fontWeight: FontWeight.bold);
+    }
+    if (attributes['italic'] == true) {
+      style = style.copyWith(fontStyle: FontStyle.italic);
+    }
+    final fontFamily = attributes['font'];
+    if (fontFamily is String && fontFamily.isNotEmpty) {
+      style = style.copyWith(fontFamily: fontFamily);
+    }
+    return style;
+  }
+
+  static String _longestVisibleTextPrefix({
+    required List<Map<String, dynamic>> existingOps,
+    required Map<String, dynamic> op,
+    required String text,
+    required double targetHeight,
+    required double maxWidth,
+    required TextStyle? textStyle,
+    required TextDirection textDirection,
+    required TextScaler textScaler,
+    required Locale? locale,
+  }) {
+    final codePoints = text.runes.toList(growable: false);
+    var low = 0;
+    var high = codePoints.length;
+
+    while (low < high) {
+      final mid = (low + high + 1) ~/ 2;
+      final candidate = Map<String, dynamic>.from(op)
+        ..['insert'] = String.fromCharCodes(codePoints.take(mid));
+      final height = _estimateCollapsedPrefixHeight(
+        [...existingOps, candidate],
+        maxWidth: maxWidth,
+        textStyle: textStyle,
+        textDirection: textDirection,
+        textScaler: textScaler,
+        locale: locale,
+      );
+      if (height <= targetHeight) {
+        low = mid;
+      } else {
+        high = mid - 1;
+      }
+    }
+
+    return String.fromCharCodes(codePoints.take(low));
   }
 
   static List<Map<String, dynamic>> _normalizedDocumentOps(
@@ -734,8 +850,13 @@ class QuoteContent extends StatelessWidget {
   quill.Document _buildRichTextDocument(
     String deltaContent,
     bool prioritizeBold,
-    bool truncateForCollapse,
-  ) {
+    bool truncateForCollapse, {
+    double? maxWidth,
+    TextStyle? textStyle,
+    TextDirection? textDirection,
+    TextScaler textScaler = TextScaler.noScaling,
+    Locale? locale,
+  }) {
     List<Map<String, dynamic>>? ops;
     if (prioritizeBold) {
       ops = _createBoldPriorityOps(deltaContent);
@@ -744,7 +865,14 @@ class QuoteContent extends StatelessWidget {
     ops ??= _decodeDeltaOps(deltaContent);
     if (ops != null) {
       final documentOps = truncateForCollapse
-          ? _truncateDeltaOpsForCollapsedDocument(ops)
+          ? _truncateDeltaOpsForCollapsedDocument(
+              ops,
+              maxWidth: maxWidth,
+              textStyle: textStyle,
+              textDirection: textDirection,
+              textScaler: textScaler,
+              locale: locale,
+            )
           : _normalizedDocumentOps(ops);
       return quill.Document.fromJson(documentOps);
     }
@@ -780,67 +908,21 @@ class QuoteContent extends StatelessWidget {
         needsExpansionOverride ?? exceedsCollapsedHeight(quote);
 
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
-      final bool usePrioritizedDoc = !showFullContent && prioritizeBoldContent;
-      final bool truncateForCollapse = !showFullContent && needsExpansion;
-      final String cacheQuoteId =
-          quote.id ?? 'local_${quote.date}_${quote.content.hashCode}';
-      final String contentVariant = _QuoteContentControllerCache.resolveVariant(
-        showFullContent: showFullContent,
-        usePrioritizedDoc: usePrioritizedDoc,
-        needsExpansion: needsExpansion,
-      );
-      final String contentSignature =
-          '${quote.deltaContent!.hashCode}_${quote.deltaContent!.length}_$contentVariant';
-
-      final _CachedControllerSet controllerSet =
-          _QuoteContentControllerCache.getOrCreate(
-        quoteId: cacheQuoteId,
-        contentSignature: contentSignature,
-        variant: contentVariant,
-        documentBuilder: () => _QuoteDocumentCache.getOrCreate(
-          deltaContent: quote.deltaContent!,
-          prioritizeBold: usePrioritizedDoc,
-          truncateForCollapse: truncateForCollapse,
-          builder: () => _buildRichTextDocument(
-            quote.deltaContent!,
-            usePrioritizedDoc,
-            truncateForCollapse,
-          ),
-        ),
-      );
-
-      Widget richTextEditor = quill.QuillEditor(
-        controller: controllerSet.quillController,
-        scrollController: controllerSet.scrollController,
-        focusNode: controllerSet.focusNode,
-        config: _staticEditorConfig,
-      );
-
-      if (style != null) {
-        richTextEditor = DefaultTextStyle.merge(
-          style: style!,
-          child: richTextEditor,
-        );
-      }
-
       if (!showFullContent && needsExpansion) {
-        richTextEditor = _CollapsedContentWrapper(
-          key: collapsedWrapperKey,
-          maxHeight: collapsedContentMaxHeight,
-          child: richTextEditor,
+        return LayoutBuilder(
+          builder: (context, constraints) => _buildRichTextContent(
+            context,
+            needsExpansion: needsExpansion,
+            prioritizeBoldContent: prioritizeBoldContent,
+            maxWidth: constraints.maxWidth,
+          ),
         );
       }
-
-      if (collapseRichTextSemantics) {
-        richTextEditor = Semantics(
-          key: const ValueKey('quote_content.rich_text_semantics'),
-          container: true,
-          label: quote.content,
-          child: ExcludeSemantics(child: richTextEditor),
-        );
-      }
-
-      return richTextEditor;
+      return _buildRichTextContent(
+        context,
+        needsExpansion: needsExpansion,
+        prioritizeBoldContent: prioritizeBoldContent,
+      );
     }
 
     Widget plainText = Text(
@@ -859,6 +941,92 @@ class QuoteContent extends StatelessWidget {
     }
 
     return plainText;
+  }
+
+  Widget _buildRichTextContent(
+    BuildContext context, {
+    required bool needsExpansion,
+    required bool prioritizeBoldContent,
+    double? maxWidth,
+  }) {
+    final bool usePrioritizedDoc = !showFullContent && prioritizeBoldContent;
+    final bool truncateForCollapse = !showFullContent && needsExpansion;
+    final textDirection = Directionality.of(context);
+    final textScaler = MediaQuery.textScalerOf(context);
+    final locale = Localizations.maybeLocaleOf(context);
+    final measuredMaxWidth =
+        maxWidth != null && maxWidth.isFinite && maxWidth > 0 ? maxWidth : null;
+    final layoutSignature = truncateForCollapse && measuredMaxWidth != null
+        ? 'w${(measuredMaxWidth * 100).round()}_s${style.hashCode}_'
+            'd${textDirection.name}_t${textScaler.hashCode}_'
+            'l${locale?.toLanguageTag()}'
+        : 'full';
+    final String cacheQuoteId =
+        quote.id ?? 'local_${quote.date}_${quote.content.hashCode}';
+    final baseVariant = _QuoteContentControllerCache.resolveVariant(
+      showFullContent: showFullContent,
+      usePrioritizedDoc: usePrioritizedDoc,
+      needsExpansion: needsExpansion,
+    );
+    final contentVariant = '${baseVariant}_$layoutSignature';
+    final String contentSignature =
+        '${quote.deltaContent!.hashCode}_${quote.deltaContent!.length}_$contentVariant';
+
+    final _CachedControllerSet controllerSet =
+        _QuoteContentControllerCache.getOrCreate(
+      quoteId: cacheQuoteId,
+      contentSignature: contentSignature,
+      variant: contentVariant,
+      documentBuilder: () => _QuoteDocumentCache.getOrCreate(
+        deltaContent: quote.deltaContent!,
+        prioritizeBold: usePrioritizedDoc,
+        truncateForCollapse: truncateForCollapse,
+        layoutSignature: layoutSignature,
+        builder: () => _buildRichTextDocument(
+          quote.deltaContent!,
+          usePrioritizedDoc,
+          truncateForCollapse,
+          maxWidth: measuredMaxWidth,
+          textStyle: style,
+          textDirection: textDirection,
+          textScaler: textScaler,
+          locale: locale,
+        ),
+      ),
+    );
+
+    Widget richTextEditor = quill.QuillEditor(
+      controller: controllerSet.quillController,
+      scrollController: controllerSet.scrollController,
+      focusNode: controllerSet.focusNode,
+      config: _staticEditorConfig,
+    );
+
+    if (style != null) {
+      richTextEditor = DefaultTextStyle.merge(
+        style: style!,
+        child: richTextEditor,
+      );
+    }
+
+    if (!showFullContent && needsExpansion) {
+      richTextEditor = _CollapsedContentWrapper(
+        key: collapsedWrapperKey,
+        maxHeight: collapsedContentMaxHeight,
+        child: richTextEditor,
+      );
+    }
+
+    if (collapseRichTextSemantics) {
+      richTextEditor = Semantics(
+        key: const ValueKey('quote_content.rich_text_semantics'),
+        container: true,
+        label: quote.content,
+        child: ExcludeSemantics(child: richTextEditor),
+      );
+    }
+
+    return richTextEditor;
   }
 }
 
@@ -1135,12 +1303,14 @@ class _QuoteDocumentCache {
     required String deltaContent,
     required bool prioritizeBold,
     required bool truncateForCollapse,
+    String layoutSignature = 'legacy',
     required quill.Document Function() builder,
   }) {
     final key = _DocumentCacheKey(
       deltaContent: deltaContent,
       prioritizeBold: prioritizeBold,
       truncateForCollapse: truncateForCollapse,
+      layoutSignature: layoutSignature,
     );
 
     final existing = _cache.remove(key);
@@ -1214,11 +1384,13 @@ class _DocumentCacheKey {
     required this.deltaContent,
     required this.prioritizeBold,
     required this.truncateForCollapse,
+    required this.layoutSignature,
   });
 
   final String deltaContent;
   final bool prioritizeBold;
   final bool truncateForCollapse;
+  final String layoutSignature;
 
   @override
   bool operator ==(Object other) {
@@ -1226,6 +1398,7 @@ class _DocumentCacheKey {
     return other is _DocumentCacheKey &&
         other.prioritizeBold == prioritizeBold &&
         other.truncateForCollapse == truncateForCollapse &&
+        other.layoutSignature == layoutSignature &&
         other.deltaContent == deltaContent;
   }
 
@@ -1234,6 +1407,7 @@ class _DocumentCacheKey {
         deltaContent,
         prioritizeBold,
         truncateForCollapse,
+        layoutSignature,
       );
 }
 

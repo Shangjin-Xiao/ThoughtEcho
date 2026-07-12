@@ -460,3 +460,47 @@
 
 **预期与验收**：Step 2/4 是削固定成本与削峰，预计缓解但不根除 rich-image 扎堆尖峰
 （根除需 Step 5）。验收同前：真机对比 worstBuild / frameJank / eventWorst。
+
+---
+
+## 2026-07-12: 折叠态 Quill 改为宽度感知的可见前缀
+
+**决策者**: 上晋 + Codex
+**类型**: 性能根因复核 / 实施
+
+### 最新真机证据
+
+用户在 102 条记录（rich=39、media=31）上从顶部持续滑到底，`scroll-12` 捕获到：
+
+- `worstBuild=152.8ms`，`worstRaster=12.6ms`；
+- `stateΔ=0`、`dataΔ=0`、`loadMoreStartΔ=0`，排除分页和列表状态更新；
+- 7 个首次布局超帧预算，主要是连续 `rich-image`：19.0～27.2ms，均为
+  `h=none→344`；
+- 慢 item layout 合计约 144ms，与 build 尖峰同量级；
+- 图片加载已经大量 defer，因此现有图片占位解决的是解码/raster 竞争，不能阻止
+  Quill 和 embed RenderObject 首次布局。
+
+### 实现决策
+
+不另写富文本 renderer，继续让 Flutter Quill 作为唯一视觉真源。旧折叠 Document 使用固定
+`160px × 4` 预算，Quill 即使外层只显示 160px，仍会构建并布局前 640px 的所有 child。
+
+改为：
+
+1. 在实际卡片宽度、字体缩放、方向和 locale 下，用 `TextPainter` 计算足以覆盖折叠视口的
+   最小 Delta 前缀，并保留 96px 安全余量；
+2. embed 与可见边界相交时仍完整保留并交给原 Quill builder；边界后的文本和 embed 不进入
+   Quill Document；
+3. Document/Controller 缓存变体加入宽度与文本环境，避免旋转或无障碍字号变化复用旧前缀；
+4. 展开态继续使用完整 Delta；
+5. 删除旧的宽度无关折叠 controller 预热。该预热无法命中新缓存变体，会额外创建无用
+   controller；历史日志也显示 controller/Document 创建为微秒级，并非本轮瓶颈。
+
+### 验证门
+
+- TDD 红灯证明旧实现会把完全位于可见正文之后的图片交给 Quill，修改后排除；
+- 同一 Delta 的“前缀 Quill”与“完整 Quill 后裁 160px”做运行时 RGBA 像素对比；96px
+  guard 下完全一致；
+- 覆盖不同宽度缓存隔离、展开态完整内容、QuoteItem 展开/折叠和 NoteListView 列表回归；
+- 自动化只能证明结构与视觉不回归，最终性能收益仍需同一真机数据复测
+  `itemLayout.worst` / `worstBuild` / `frameJank`。

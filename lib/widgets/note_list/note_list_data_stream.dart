@@ -163,16 +163,6 @@ extension _NoteListDataStreamExtension on NoteListViewState {
                 logDebug('首次加载完成，结束滚动保护期', source: 'NoteListView');
               }
             });
-            // 空闲时小批量预热折叠态富文本控制器，避免滚动首次遇到
-            // 富文本时同步创建 Quill Document/Controller 造成 build 峰值。
-            final settings = Provider.of<SettingsService>(
-              context,
-              listen: false,
-            );
-            QuoteContent.prewarmCollapsedContentCache(
-              list,
-              prioritizeBoldContent: settings.prioritizeBoldContentInCollapse,
-            );
             logDebug('首次数据加载完成', source: 'NoteListView');
           }
 
