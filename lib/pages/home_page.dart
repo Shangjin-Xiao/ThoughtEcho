@@ -2218,7 +2218,14 @@ class _HomePageState extends State<HomePage>
                       */
                     ],
                   )
-                : AppBar(toolbarHeight: 0),
+                : _currentIndex == 2
+                    ? AppBar(
+                        toolbarHeight: 0,
+                        elevation: 0,
+                        backgroundColor: scaffoldBackgroundColor,
+                        surfaceTintColor: Colors.transparent,
+                      )
+                    : AppBar(toolbarHeight: 0),
         body: IndexedStack(
           index: _currentIndex,
           children: [
