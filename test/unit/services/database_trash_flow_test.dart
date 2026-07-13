@@ -4,7 +4,7 @@ import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -16,7 +16,7 @@ void main() {
     late Database db;
 
     setUp(() async {
-      await TestSetup.setupAll();
+      await TestHarness.initialize();
       DatabaseService.clearTestDatabase();
       service = DatabaseService();
 
@@ -39,6 +39,7 @@ void main() {
             location TEXT,
             latitude REAL,
             longitude REAL,
+            poi_name TEXT,
             weather TEXT,
             temperature TEXT,
             edit_source TEXT,

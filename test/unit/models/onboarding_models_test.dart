@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/onboarding_models.dart';
 
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 void main() {
   setUp(() async {
-    await setupTestEnvironment();
+    await TestHarness.initialize();
   });
 
   group('Onboarding Models Test', () {

@@ -3,11 +3,11 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/ai_skill.dart';
 
-import '../../test_helpers.dart';
+import '../../test_harness.dart';
 
 void main() {
   setUpAll(() async {
-    await TestHelpers.setupTestEnvironment();
+    await TestHarness.initialize();
   });
 
   group('AISkill model', () {

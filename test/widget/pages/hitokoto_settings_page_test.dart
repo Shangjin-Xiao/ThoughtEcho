@@ -9,7 +9,7 @@ import 'package:thoughtecho/pages/hitokoto_settings_page.dart';
 import 'package:thoughtecho/services/api_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
   AppSettings _appSettings;
@@ -73,7 +73,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() async {
-    await TestSetup.setupWidgetTest();
+    await TestHarness.initialize();
   });
 
   Widget buildApp(

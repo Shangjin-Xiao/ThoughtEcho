@@ -88,18 +88,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                     )
                   : const Icon(Icons.save),
               tooltip: l10n.save,
-              onPressed: _isLoadingFullQuote || _isSaving
-                  ? null
-                  : () async {
-                      try {
-                        await pauseAllMediaPlayers();
-                      } catch (e) {
-                        debugPrint(
-                          '[NoteFullEditorPage] pauseAllMediaPlayers failed: $e',
-                        );
-                      }
-                      await _saveContent();
-                    },
+              onPressed: _isLoadingFullQuote || _isSaving ? null : _saveContent,
             ),
           ],
           automaticallyImplyLeading: true,

@@ -18,6 +18,16 @@ on:
       - 'analysis_options.yaml'
       - '.github/workflows/test.yml'
   workflow_dispatch:
+    inputs:
+      suite:
+        description: Test collection to run
+        required: true
+        default: gate
+        type: choice
+        options:
+          - gate
+          - integration
+          - performance
 
 permissions:
   contents: read
@@ -55,42 +65,121 @@ jobs:
     - name: Analyze code
       run: flutter analyze --no-fatal-infos
 
-  # Unit tests temporarily disabled due to tests hanging in CI
-  # TODO: Fix tests that are causing CI to hang (likely integration or database tests)
-  # unit-tests:
-  #   name: Unit Tests
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 15
-  #   needs: code-quality
-  #
-  #   steps:
-  #   - name: Checkout repository
-  #     uses: actions/checkout@v4
-  #
-  #   - name: Setup Flutter
-  #     uses: subosito/flutter-action@v2
-  #     with:
-  #       flutter-version: ${{ env.FLUTTER_VERSION }}
-  #       channel: 'stable'
-  #       cache: true
-  #
-  #   - name: Get dependencies
-  #     run: flutter pub get
-  #
-  #   - name: Run unit tests (shard 1)
-  #     run: flutter test --shard-index=0 --total-shards=2 --reporter compact --timeout 240s
-  #
-  #   - name: Run unit tests (shard 2)
-  #     run: flutter test --shard-index=1 --total-shards=2 --reporter compact --timeout 240s
-  #
-  #   - name: Generate test coverage
-  #     if: success()
-  #     run: flutter test --coverage --reporter compact --timeout 240s
-  #
-  #   - name: Upload coverage
-  #     uses: actions/upload-artifact@v4
-  #     if: success()
-  #     with:
-  #       name: coverage
-  #       path: coverage/lcov.info
-  #       retention-days: 7
+  test-gate:
+    name: Tests (${{ matrix.name }})
+    if: github.event_name != 'workflow_dispatch' || inputs.suite == 'gate'
+    needs: code-quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: unit 1/4
+            paths: test/unit
+            shard_index: 0
+            total_shards: 4
+          - name: unit 2/4
+            paths: test/unit
+            shard_index: 1
+            total_shards: 4
+          - name: unit 3/4
+            paths: test/unit
+            shard_index: 2
+            total_shards: 4
+          - name: unit 4/4
+            paths: test/unit
+            shard_index: 3
+            total_shards: 4
+          - name: widget 1/2
+            paths: test/widget test/widgets
+            shard_index: 0
+            total_shards: 2
+          - name: widget 2/2
+            paths: test/widget test/widgets
+            shard_index: 1
+            total_shards: 2
+          - name: legacy 1/2
+            paths: test/*_test.dart
+            shard_index: 0
+            total_shards: 2
+          - name: legacy 2/2
+            paths: test/*_test.dart
+            shard_index: 1
+            total_shards: 2
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: stable
+        cache: true
+
+    - name: Get dependencies
+      run: flutter pub get
+
+    - name: Patch flutter_quill
+      run: bash scripts/patch_flutter_quill.sh
+
+    - name: Run shard
+      run: >-
+        flutter test --reporter github --timeout 90s --concurrency 1
+        --shard-index=${{ matrix.shard_index }}
+        --total-shards=${{ matrix.total_shards }}
+        ${{ matrix.paths }}
+
+  integration-tests:
+    name: Integration Tests (manual)
+    if: github.event_name == 'workflow_dispatch' && inputs.suite == 'integration'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: stable
+        cache: true
+
+    - name: Get dependencies
+      run: flutter pub get
+
+    - name: Patch flutter_quill
+      run: bash scripts/patch_flutter_quill.sh
+
+    - name: Run integration tests
+      run: flutter test --reporter github --timeout 120s --concurrency 1 test/integration
+
+  performance-tests:
+    name: Performance Tests (manual)
+    if: github.event_name == 'workflow_dispatch' && inputs.suite == 'performance'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ env.FLUTTER_VERSION }}
+        channel: stable
+        cache: true
+
+    - name: Get dependencies
+      run: flutter pub get
+
+    - name: Patch flutter_quill
+      run: bash scripts/patch_flutter_quill.sh
+
+    - name: Run performance tests
+      run: flutter test --reporter github --timeout 180s --concurrency 1 test/performance

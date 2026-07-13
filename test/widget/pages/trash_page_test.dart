@@ -14,7 +14,7 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
 import 'package:thoughtecho/widgets/trash_quote_card.dart';
 
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   _FakeSettingsService({int trashRetentionDays = 30})
@@ -201,7 +201,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
-    await setupTestEnvironment();
+    await TestHarness.initialize();
   });
 
   group('TrashPage', () {

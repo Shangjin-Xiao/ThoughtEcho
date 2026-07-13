@@ -73,8 +73,7 @@ timeout 60s flutter test --reporter compact test/path/to/file_test.dart
 # 按名称运行单个用例
 timeout 60s flutter test --reporter compact test/path/to/file_test.dart --name "用例名称"
 
-# 全量聚合测试（仅在用户明确要求时）
-timeout 180s flutter test --reporter compact test/all_tests.dart
+# 默认门禁由 CI 自动按目录分片；性能和真实服务/设备集成测试需显式运行
 
 # 修改 ARB 后生成国际化代码
 flutter gen-l10n

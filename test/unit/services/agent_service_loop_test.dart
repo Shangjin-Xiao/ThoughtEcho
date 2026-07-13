@@ -7,7 +7,7 @@ import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 
-import '../../test_helpers.dart';
+import '../../test_harness.dart';
 
 class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   _FakeSettingsService(this._provider);
@@ -241,7 +241,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
-    await TestHelpers.setupTestEnvironment();
+    await TestHarness.initialize();
   });
 
   group('AgentService native tool loop', () {

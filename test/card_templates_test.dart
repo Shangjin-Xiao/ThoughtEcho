@@ -87,7 +87,7 @@ void main() {
       expect(svg, isNotNull);
       expect(svg, contains('<svg'));
       expect(svg, contains('</svg>'));
-      expect(svg, contains('minimalistBg'));
+      expect(svg, contains('minimalShadow'));
       expect(svg, contains(testAuthor));
       expect(svg, contains(testDate));
     });
@@ -119,7 +119,7 @@ void main() {
       expect(svg, isNotNull);
       expect(svg, contains('<svg'));
       expect(svg, contains('</svg>'));
-      expect(svg, contains('noise'));
+      expect(svg, contains('retroGrain'));
       expect(svg, contains(testAuthor));
       expect(svg, contains(testDate));
     });
@@ -163,7 +163,7 @@ void main() {
         author: testAuthor,
         date: testDate,
       );
-      expect(minimalistSvg, contains('minimalistBg'));
+      expect(minimalistSvg, contains('minimalShadow'));
 
       // 测试自然卡片
       final natureSvg = CardTemplates.getTemplateByType(
@@ -183,7 +183,7 @@ void main() {
         author: testAuthor,
         date: testDate,
       );
-      expect(retroSvg, contains('noise'));
+      expect(retroSvg, contains('retroGrain'));
 
       // 测试正念模板
       final mindfulSvg = CardTemplates.getTemplateByType(
@@ -193,7 +193,7 @@ void main() {
         author: testAuthor,
         date: testDate,
       );
-      expect(mindfulSvg, contains('paperNoise'));
+      expect(mindfulSvg, contains('paperTexture'));
 
       // 测试霓虹赛博模板
       final neonCyberSvg = CardTemplates.getTemplateByType(

@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/draft_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
 
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -11,7 +11,7 @@ void main() {
   late MMKVService mmkvService;
 
   setUpAll(() async {
-    await TestSetup.setupUnitTest();
+    await TestHarness.initialize();
     await MMKVService().init();
   });
 

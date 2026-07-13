@@ -263,17 +263,29 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       return true;
     }
 
-    final currentDeltaContent = jsonEncode(
-      _controller.document.toDelta().toJson(),
-    );
-    if (currentDeltaContent != (_initialDeltaContent ?? '')) {
-      return true;
+    // Notes that predate rich text have no persisted Delta. Their plain-text
+    // comparison above is the authoritative change signal until the note is
+    // saved once in the editor; comparing a generated Delta would otherwise
+    // mark an untouched note as edited.
+    final initialDeltaContent = _initialDeltaContent;
+    if (initialDeltaContent != null) {
+      final currentDeltaContent = jsonEncode(
+        _controller.document.toDelta().toJson(),
+      );
+      if (currentDeltaContent != initialDeltaContent) {
+        return true;
+      }
     }
 
     return false;
   }
 
   Future<void> _saveContent() async {
+    // Set the guard before the first await so every save entry point, including
+    // the app-bar action, is protected from rapid repeated taps.
+    if (_isSaving) return;
+    _isSaving = true;
+
     _draftSaveTimer?.cancel();
     _draftLoaded = false;
 
@@ -284,10 +296,15 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     logDebug('开始保存笔记内容...');
     if (mounted) {
       _updateState(() {
-        _isSaving = true;
         _saveProgress = 0.0;
         _saveStatus = l10n.preparingProcess;
       });
+    }
+
+    try {
+      await pauseAllMediaPlayers();
+    } catch (e) {
+      debugPrint('[NoteFullEditorPage] pauseAllMediaPlayers failed: $e');
     }
 
     // 处理临时媒体文件，带进度

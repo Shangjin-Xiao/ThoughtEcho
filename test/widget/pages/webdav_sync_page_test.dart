@@ -10,7 +10,7 @@ import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/webdav_sync_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 void main() {
   const MethodChannel secureStorageChannel =
@@ -23,7 +23,7 @@ void main() {
   late WebDAVSyncService syncService;
 
   setUpAll(() async {
-    await TestSetup.setupWidgetTest();
+    await TestHarness.initialize();
   });
 
   setUp(() async {

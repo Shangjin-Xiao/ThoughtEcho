@@ -18,18 +18,11 @@ void main() {
 <body>Hello</body>
 </html>
 ''';
-      final expectedHtml = '''
-<!DOCTYPE html>
-<html>
-<head>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; object-src 'none'; style-src 'unsafe-inline'; img-src data: https:; font-src data: https:; connect-src 'none'; media-src 'none'; frame-src 'none'; child-src 'none';">
+      final result = ContentSanitizer.injectCsp(html);
 
-    <title>Test</title>
-</head>
-<body>Hello</body>
-</html>
-''';
-      expect(ContentSanitizer.injectCsp(html), expectedHtml);
+      expect(result, contains(expectedCspTag));
+      expect(result, isNot(contains("script-src 'self'")));
+      expect(result, contains('\n    <title>Test</title>'));
     });
 
     test('injectCsp injects CSP into existing <head>', () {

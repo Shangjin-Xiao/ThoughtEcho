@@ -3,11 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/pages/api_ninjas_category_selection_page.dart';
 
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 void main() {
   setUpAll(() async {
-    await TestSetup.setupWidgetTest();
+    await TestHarness.initialize();
   });
 
   testWidgets('初始化时过滤不支持的分类', (tester) async {

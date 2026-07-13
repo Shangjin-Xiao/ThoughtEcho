@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/utils/backup_progress_update_gate.dart';
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 void main() {
   setUp(() async {
-    await setupTestEnvironment();
+    await TestHarness.initialize();
   });
 
   group('BackupProgressUpdateGate', () {

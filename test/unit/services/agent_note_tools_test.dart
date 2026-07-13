@@ -12,7 +12,7 @@ import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 
-import '../../test_helpers.dart';
+import '../../test_harness.dart';
 
 class _TestDatabaseService extends DatabaseService {
   _TestDatabaseService(this._categories, {this.quote}) : super.forTesting();
@@ -71,7 +71,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
-    await TestHelpers.setupTestEnvironment();
+    await TestHarness.initialize();
   });
 
   group('ProposeNewNoteTool', () {

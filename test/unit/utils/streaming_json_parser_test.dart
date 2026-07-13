@@ -1,15 +1,21 @@
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/media_file_service.dart';
 import 'package:thoughtecho/utils/streaming_json_parser.dart';
 
+import '../../test_harness.dart';
+
 void main() {
   group('StreamingJsonParser', () {
-    late dynamic tempDir;
-    late dynamic smallFile;
-    late dynamic invalidFile;
+    late Directory tempDir;
+    late File smallFile;
+    late File invalidFile;
 
     setUp(() async {
+      await TestHarness.initialize();
+
       // Create a temporary directory for test files using MediaFileService helper
       tempDir = await MediaFileService.createTempDirForTesting(
           'streaming_json_parser_test');
@@ -32,9 +38,8 @@ void main() {
 
     tearDown(() async {
       // Clean up temporary directory
-      if (tempDir != null) {
-        await MediaFileService.deleteForTesting(tempDir.path, recursive: true);
-      }
+      await MediaFileService.deleteForTesting(tempDir.path, recursive: true);
+      await TestHarness.tearDown();
     });
 
     test('parseJsonFile should parse small file correctly', () async {

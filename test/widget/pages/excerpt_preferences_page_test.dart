@@ -90,6 +90,12 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
   }
 
   @override
+  String get exportFormat => 'card';
+
+  @override
+  Future<void> setExportFormat(String format) async {}
+
+  @override
   bool get autoAttachLocation => false;
 
   @override

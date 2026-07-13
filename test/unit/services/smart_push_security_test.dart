@@ -5,11 +5,11 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 void main() {
   setUpAll(() async {
-    await setupTestEnvironment();
+    await TestHarness.initialize();
   });
 
   group('getQuotesForSmartPush Security Tests', () {

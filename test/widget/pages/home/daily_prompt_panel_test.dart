@@ -10,12 +10,13 @@ import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/models/ai_settings.dart';
-import '../../../test_setup.dart';
+import '../../../test_harness.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
 class MockAIService extends ChangeNotifier implements AIService {
   bool _hasValidApiKey = true;
   Stream<String>? _mockStream;
+  int streamGenerateDailyPromptCallCount = 0;
 
   @override
   bool hasValidApiKey() => _hasValidApiKey;
@@ -28,6 +29,7 @@ class MockAIService extends ChangeNotifier implements AIService {
     String? temperature,
     String? historicalInsights,
   }) {
+    streamGenerateDailyPromptCallCount += 1;
     return _mockStream ?? Stream.value('This is a test prompt.');
   }
 
@@ -83,7 +85,7 @@ class MockInsightHistoryService extends ChangeNotifier
 
 void main() {
   setUpAll(() async {
-    await setupTestEnvironment();
+    await TestHarness.initialize();
   });
 
   group('HomeDailyPromptPanel Widget Tests', () {
@@ -143,7 +145,7 @@ void main() {
       expect(find.text('This is a test prompt.'), findsOneWidget);
     });
 
-    testWidgets('should use local prompt when AI is not configured',
+    testWidgets('renders a local prompt without invoking AI when unconfigured',
         (WidgetTester tester) async {
       mockAIService._hasValidApiKey = false;
 
@@ -154,7 +156,19 @@ void main() {
       await state.refreshPrompt();
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('TestCity'), findsWidgets);
+      expect(mockAIService.streamGenerateDailyPromptCallCount, 0);
+
+      final promptText = find.descendant(
+        of: find.byType(HomeDailyPromptPanel),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              widget.textAlign == TextAlign.center &&
+              widget.maxLines == 3,
+        ),
+      );
+      expect(promptText, findsOneWidget);
+      expect(tester.widget<Text>(promptText).data, isNotEmpty);
     });
   });
 }

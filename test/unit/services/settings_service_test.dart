@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/services/api_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 void main() {
   group('SettingsService Tests', () {
@@ -14,14 +14,14 @@ void main() {
 
     setUp(() async {
       // Initialize test setup with all mocks
-      await TestSetup.setupAll();
+      await TestHarness.initialize();
 
       // Use the create method to properly initialize the service
       settingsService = await SettingsService.create();
     });
 
     tearDown(() async {
-      await TestSetup.teardown();
+      await TestHarness.tearDown();
     });
 
     test('should create SettingsService instance', () {

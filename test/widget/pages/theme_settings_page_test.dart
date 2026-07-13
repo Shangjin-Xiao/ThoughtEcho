@@ -6,14 +6,14 @@ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/pages/theme_settings_page.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 void main() {
   const brightnessKey = Key('theme-brightness-probe');
   const primaryColorKey = Key('theme-primary-color-probe');
 
   setUpAll(() async {
-    await TestSetup.setupWidgetTest();
+    await TestHarness.initialize();
   });
 
   Finder findColorSwatch(Color color) {

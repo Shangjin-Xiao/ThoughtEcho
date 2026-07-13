@@ -13,7 +13,7 @@ import 'package:thoughtecho/services/unified_log_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
 
-import '../test_setup.dart';
+import '../test_harness.dart';
 
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
   @override
@@ -109,7 +109,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
-    await TestSetup.setupWidgetTest();
+    await TestHarness.initialize();
   });
 
   tearDown(() {

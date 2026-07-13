@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/utils/motion_photo_utils.dart';
 
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 final List<int> _motionPhotoMp4Trailer = <int>[
   0x00,
@@ -61,15 +61,15 @@ Future<File> _createMotionPhotoFile(Directory directory) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUpAll(TestSetup.setupAll);
-  tearDownAll(TestSetup.teardown);
+  setUpAll(TestHarness.initialize);
+  tearDownAll(TestHarness.tearDown);
 
   group('MotionPhotoUtils', () {
     test('detects Google motion photo using embedded metadata', () async {
-      final tempDir = await TestSetup.createTempTestDir(
+      final tempDir = await TestHarness.createTempDirectory(
         'motion_photo_utils_detect',
       );
-      addTearDown(() => TestSetup.cleanupTempTestDir(tempDir));
+      addTearDown(() => TestHarness.deleteTempDirectory(tempDir));
 
       final file = await _createMotionPhotoFile(tempDir);
       final utils = createMotionPhotoUtils();
@@ -81,10 +81,10 @@ void main() {
     });
 
     test('extracts embedded motion photo video into a temporary mp4', () async {
-      final tempDir = await TestSetup.createTempTestDir(
+      final tempDir = await TestHarness.createTempDirectory(
         'motion_photo_utils_extract',
       );
-      addTearDown(() => TestSetup.cleanupTempTestDir(tempDir));
+      addTearDown(() => TestHarness.deleteTempDirectory(tempDir));
 
       final file = await _createMotionPhotoFile(tempDir);
       final utils = createMotionPhotoUtils();

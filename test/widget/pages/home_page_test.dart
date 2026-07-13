@@ -24,7 +24,7 @@ import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/widgets/daily_quote_view.dart';
 import 'package:thoughtecho/widgets/note_list_view.dart';
 
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 class MockDatabaseService extends ChangeNotifier implements DatabaseService {
   @override
@@ -215,7 +215,7 @@ class MockInsightHistoryService extends ChangeNotifier
 
 void main() {
   setUpAll(() async {
-    await setupTestEnvironment();
+    await TestHarness.initialize();
   });
 
   group('HomePage Widget Tests', () {

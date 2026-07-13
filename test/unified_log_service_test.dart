@@ -5,7 +5,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:thoughtecho/services/log_database_service.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
 
-import 'test_setup.dart';
+import 'test_harness.dart';
 
 class _RecordingDatabase implements Database {
   final rawQueries = <String>[];
@@ -37,7 +37,7 @@ void main() {
     late LogDatabaseService logDb;
 
     setUp(() async {
-      await TestSetup.setupAll();
+      await TestHarness.initialize();
       logDb = LogDatabaseService();
       await logDb.clearAllLogs();
       service = UnifiedLogService.instance;

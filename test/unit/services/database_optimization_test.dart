@@ -35,6 +35,7 @@ void main() {
             location TEXT,
             latitude REAL,
             longitude REAL,
+            poi_name TEXT,
             weather TEXT,
             temperature TEXT,
             edit_source TEXT,

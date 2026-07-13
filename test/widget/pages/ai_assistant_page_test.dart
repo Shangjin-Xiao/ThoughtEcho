@@ -16,7 +16,7 @@ import 'package:thoughtecho/services/chat_session_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/widgets/ai/tool_progress_panel.dart';
 
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 Quote _buildQuote() => Quote(
       id: 'note-1',
@@ -346,13 +346,13 @@ void main() {
     late _InMemoryChatSessionService chatSessionService;
 
     setUp(() async {
-      await TestSetup.setupAll();
+      await TestHarness.initialize();
       settingsService = await SettingsService.create();
       chatSessionService = _InMemoryChatSessionService();
     });
 
     tearDown(() async {
-      await TestSetup.teardown();
+      await TestHarness.tearDown();
     });
 
     testWidgets('explore entry defaults to agent without mode toggle',

@@ -3,7 +3,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
 
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -15,7 +15,7 @@ void main() {
     late Database db;
 
     setUp(() async {
-      await TestSetup.setupAll();
+      await TestHarness.initialize();
       DatabaseService.clearTestDatabase();
       service = _DuplicatePageDatabaseService();
 

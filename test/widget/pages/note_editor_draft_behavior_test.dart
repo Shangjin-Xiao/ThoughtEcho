@@ -15,7 +15,7 @@ import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
   @override
@@ -98,7 +98,7 @@ void main() {
   late MMKVService mmkvService;
 
   setUpAll(() async {
-    await TestSetup.setupWidgetTest();
+    await TestHarness.initialize();
     await MMKVService().init();
   });
 

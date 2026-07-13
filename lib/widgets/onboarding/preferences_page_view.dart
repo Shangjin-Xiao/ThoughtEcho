@@ -621,42 +621,45 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
         color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            providerPreference.title,
-            style: theme.textTheme.titleSmall,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            providerPreference.description,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              providerPreference.title,
+              style: theme.textTheme.titleSmall,
             ),
-          ),
-          const SizedBox(height: 8),
-          RadioGroup<String>(
-            groupValue: value,
-            onChanged: (newValue) {
-              if (newValue != null) {
-                widget.onPreferenceChanged('dailyQuoteProvider', newValue);
-              }
-            },
-            child: Column(
-              children: options.map((option) {
-                return RadioListTile<String>(
-                  value: option.value,
-                  title: Text(option.label),
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                  visualDensity: VisualDensity.compact,
-                  activeColor: theme.colorScheme.primary,
-                );
-              }).toList(),
+            const SizedBox(height: 4),
+            Text(
+              providerPreference.description,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            RadioGroup<String>(
+              groupValue: value,
+              onChanged: (newValue) {
+                if (newValue != null) {
+                  widget.onPreferenceChanged('dailyQuoteProvider', newValue);
+                }
+              },
+              child: Column(
+                children: options.map((option) {
+                  return RadioListTile<String>(
+                    value: option.value,
+                    title: Text(option.label),
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    visualDensity: VisualDensity.compact,
+                    activeColor: theme.colorScheme.primary,
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

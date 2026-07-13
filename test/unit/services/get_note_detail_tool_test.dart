@@ -7,7 +7,7 @@ import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/get_note_detail_tool.dart';
 import 'package:thoughtecho/services/database_service.dart';
 
-import '../../test_helpers.dart';
+import '../../test_harness.dart';
 
 class _TestDatabaseService extends DatabaseService {
   _TestDatabaseService(this._quotes) : super.forTesting();
@@ -39,7 +39,7 @@ class _TestDatabaseService extends DatabaseService {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
-    await TestHelpers.setupTestEnvironment();
+    await TestHarness.initialize();
   });
 
   group('GetNoteDetailTool', () {

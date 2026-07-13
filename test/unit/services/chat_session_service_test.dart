@@ -7,7 +7,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/models/chat_message.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
 
-import '../../test_helpers.dart';
+import '../../test_harness.dart';
 
 class _FakeDatabase implements Database, Transaction {
   _FakeDatabase({this.sessionsQueryResult = const <Map<String, Object?>>[]});
@@ -93,7 +93,7 @@ Future<void> _waitFor(
 
 void main() {
   setUpAll(() async {
-    await TestHelpers.setupTestEnvironment();
+    await TestHarness.initialize();
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   });

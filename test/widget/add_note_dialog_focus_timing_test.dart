@@ -61,7 +61,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(contentField.focusNode?.hasFocus, isFalse);
+    expect(contentField.focusNode?.hasFocus, isTrue);
 
     await tester.pump(const Duration(milliseconds: 650));
 
@@ -70,7 +70,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   });
 
-  testWidgets('delays auto focus by default to avoid open jank',
+  testWidgets('focuses after the sheet entrance settles by default',
       (tester) async {
     await tester.pumpWidget(
       ChangeNotifierProvider<FeatureGuideService>(
@@ -104,14 +104,14 @@ void main() {
     await tester.pumpAndSettle();
 
     final contentField = tester.widget<TextField>(find.byType(TextField).first);
-    expect(contentField.focusNode?.hasFocus, isFalse);
+    expect(contentField.focusNode?.hasFocus, isTrue);
 
     await tester.pump(const Duration(milliseconds: 650));
 
     expect(contentField.focusNode?.hasFocus, isTrue);
   });
 
-  testWidgets('defers secondary controls until after first frame',
+  testWidgets('renders secondary controls with the initial dialog frame',
       (tester) async {
     await tester.pumpWidget(
       ChangeNotifierProvider<FeatureGuideService>(
@@ -131,8 +131,9 @@ void main() {
     );
 
     expect(find.byType(AddNoteDialog), findsOneWidget);
-    expect(find.byType(TextField), findsOneWidget);
-    expect(find.byKey(const ValueKey('add_note_location_chip')), findsNothing);
+    expect(find.byType(TextField), findsNWidgets(3));
+    expect(
+        find.byKey(const ValueKey('add_note_location_chip')), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 200));
 

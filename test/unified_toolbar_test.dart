@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/utils/string_utils.dart';
 import 'package:thoughtecho/widgets/quill_enhanced_toolbar_unified.dart';
 
@@ -21,9 +21,7 @@ void main() {
     Widget createTestApp(Widget child) {
       return MaterialApp(
         localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
+          ...AppLocalizations.localizationsDelegates,
           quill.FlutterQuillLocalizations.delegate,
         ],
         supportedLocales: const [Locale('zh', 'CN'), Locale('en', 'US')],

@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
-import 'test_setup.dart';
+import 'test_harness.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('日志持久化', () {
     test('写入后可从数据库查询到', () async {
-      await TestSetup.setupAll();
+      await TestHarness.initialize();
       final unified = UnifiedLogService.instance;
       unified.setPersistenceEnabled(true);
 

@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 void main() {
   setUpAll(() async {
-    await setupTestEnvironment();
+    await TestHarness.initialize();
   });
 
   group('AppSettings Tests', () {

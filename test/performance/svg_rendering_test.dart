@@ -30,8 +30,13 @@ void main() {
         height: 600,
       );
 
-      testWidgets('离屏渲染保持对齐且无异常', (tester) async {
-        const svgContent = '''
+      expect(imageBytes, isNotNull);
+      expect(imageBytes.length, greaterThan(0));
+      expect(imageBytes, isA<Uint8List>());
+    });
+
+    testWidgets('离屏渲染保持对齐且无异常', (tester) async {
+      const svgContent = '''
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
       <rect width="400" height="600" fill="#ffffff"/>
       <rect x="40" y="60" width="320" height="480" fill="#f5f5f5" rx="24"/>
@@ -40,43 +45,38 @@ void main() {
     </svg>
     ''';
 
-        late BuildContext overlayContext;
+      late BuildContext overlayContext;
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: Builder(
-                builder: (context) {
-                  overlayContext = context;
-                  return const SizedBox.shrink();
-                },
-              ),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) {
+                overlayContext = context;
+                return const SizedBox.shrink();
+              },
             ),
           ),
+        ),
+      );
+
+      await tester.pump();
+
+      final bytes = await tester.runAsync(() async {
+        return SvgOffscreenRenderer.instance.renderSvgString(
+          svgContent,
+          context: overlayContext,
+          width: 400,
+          height: 600,
+          background: Colors.white,
+          mode: ExportRenderMode.contain,
         );
-
-        await tester.pump();
-
-        final bytes = await tester.runAsync(() async {
-          return await SvgOffscreenRenderer.instance.renderSvgString(
-            svgContent,
-            context: overlayContext,
-            width: 400,
-            height: 600,
-            background: Colors.white,
-            mode: ExportRenderMode.contain,
-          );
-        });
-
-        expect(bytes, isNotNull);
-        final nonNullBytes = bytes!;
-        expect(nonNullBytes, isA<Uint8List>());
-        expect(nonNullBytes.length, greaterThan(0));
       });
 
-      expect(imageBytes, isNotNull);
-      expect(imageBytes.length, greaterThan(0));
-      expect(imageBytes, isA<Uint8List>());
+      expect(bytes, isNotNull);
+      final nonNullBytes = bytes!;
+      expect(nonNullBytes, isA<Uint8List>());
+      expect(nonNullBytes.length, greaterThan(0));
     });
 
     test('不同尺寸渲染', () async {

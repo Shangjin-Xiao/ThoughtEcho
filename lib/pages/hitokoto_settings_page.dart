@@ -414,53 +414,56 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                         width: 1,
                       ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.offlineQuoteSourceTitle,
-                          style: theme.textTheme.titleMedium
-                              ?.copyWith(color: colorScheme.onSurface),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          l10n.offlineQuoteSourceDesc,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurface.withAlpha(150),
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.offlineQuoteSourceTitle,
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(color: colorScheme.onSurface),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        RadioGroup<String>(
-                          groupValue: settings.offlineQuoteSource,
-                          onChanged: (value) {
-                            if (value != null) {
-                              settings.setOfflineQuoteSource(value);
-                            }
-                          },
-                          child: Column(
-                            children: [
-                              RadioListTile<String>(
-                                title: Text(
-                                  l10n.offlineQuoteSourceTagOnly,
-                                  style: theme.textTheme.bodyMedium,
-                                ),
-                                value: 'tagOnly',
-                                contentPadding: EdgeInsets.zero,
-                                activeColor: colorScheme.primary,
-                              ),
-                              RadioListTile<String>(
-                                title: Text(
-                                  l10n.offlineQuoteSourceAll,
-                                  style: theme.textTheme.bodyMedium,
-                                ),
-                                value: 'allNotes',
-                                contentPadding: EdgeInsets.zero,
-                                activeColor: colorScheme.primary,
-                              ),
-                            ],
+                          const SizedBox(height: 4),
+                          Text(
+                            l10n.offlineQuoteSourceDesc,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurface.withAlpha(150),
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 16),
+                          RadioGroup<String>(
+                            groupValue: settings.offlineQuoteSource,
+                            onChanged: (value) {
+                              if (value != null) {
+                                settings.setOfflineQuoteSource(value);
+                              }
+                            },
+                            child: Column(
+                              children: [
+                                RadioListTile<String>(
+                                  title: Text(
+                                    l10n.offlineQuoteSourceTagOnly,
+                                    style: theme.textTheme.bodyMedium,
+                                  ),
+                                  value: 'tagOnly',
+                                  contentPadding: EdgeInsets.zero,
+                                  activeColor: colorScheme.primary,
+                                ),
+                                RadioListTile<String>(
+                                  title: Text(
+                                    l10n.offlineQuoteSourceAll,
+                                    style: theme.textTheme.bodyMedium,
+                                  ),
+                                  value: 'allNotes',
+                                  contentPadding: EdgeInsets.zero,
+                                  activeColor: colorScheme.primary,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },

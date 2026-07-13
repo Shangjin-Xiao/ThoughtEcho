@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/database_schema_manager.dart';
 
-import '../../test_helpers.dart';
+import '../../test_harness.dart';
 
 void main() {
   setUpAll(() async {
-    await TestHelpers.setupTestEnvironment();
+    await TestHarness.initialize();
   });
   group('DatabaseSchemaManager.poiNameSelectExpressionFromTableInfo', () {
     test('uses NULL AS poi_name when legacy table has no poi_name', () {

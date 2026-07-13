@@ -1,14 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/utils/global_exception_handler.dart';
 
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('GlobalExceptionHandler', () {
     setUp(() async {
-      await TestSetup.setupUnitTest();
+      await TestHarness.initialize();
       GlobalExceptionHandler.clearDeferredErrors();
     });
 

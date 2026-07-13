@@ -4,7 +4,7 @@ import 'package:thoughtecho/services/agent_tools/web_search_tool.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../test_helpers.dart';
+import '../../test_harness.dart';
 
 /// Mock SettingsService for testing
 class _MockSettingsService extends SettingsService {
@@ -34,7 +34,7 @@ List<Map<String, dynamic>> _mockResult(String title) => [
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
-    await TestHelpers.setupTestEnvironment();
+    await TestHarness.initialize();
   });
 
   group('WebSearchTool Language Detection', () {

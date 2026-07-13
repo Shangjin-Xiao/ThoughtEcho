@@ -5,7 +5,7 @@ import 'package:thoughtecho/models/chat_session.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
 import 'package:thoughtecho/pages/ai_assistant/session_history_page.dart';
 
-import '../test_setup.dart';
+import '../test_harness.dart';
 
 class _FakeChatSessionService extends ChatSessionService {
   _FakeChatSessionService({
@@ -97,7 +97,7 @@ ChatSession _session({
 
 void main() {
   setUpAll(() async {
-    await TestSetup.setupWidgetTest();
+    await TestHarness.initialize();
   });
 
   testWidgets('hides empty untitled sessions in history list', (tester) async {

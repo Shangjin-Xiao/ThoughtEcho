@@ -518,7 +518,10 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: Column(children: children),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(children: children),
+        ),
       ),
     );
   }
@@ -632,77 +635,81 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
             color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SwitchListTile(
-              title: Text(
-                l10n.useLocalNotesOnly,
-                style: theme.textTheme.titleSmall,
-              ),
-              subtitle: Text(
-                l10n.useLocalNotesOnlyDesc,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SwitchListTile(
+                title: Text(
+                  l10n.useLocalNotesOnly,
+                  style: theme.textTheme.titleSmall,
+                ),
+                subtitle: Text(
+                  l10n.useLocalNotesOnlyDesc,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                secondary: Icon(
+                  Icons.offline_bolt_outlined,
+                  color: theme.colorScheme.primary,
+                ),
+                value: settings.useLocalQuotesOnly,
+                onChanged: (v) => settings.setUseLocalQuotesOnly(v),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
                 ),
               ),
-              secondary: Icon(
-                Icons.offline_bolt_outlined,
-                color: theme.colorScheme.primary,
-              ),
-              value: settings.useLocalQuotesOnly,
-              onChanged: (v) => settings.setUseLocalQuotesOnly(v),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 4,
-              ),
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-              ),
-            ),
-            const Divider(height: 1, indent: 16, endIndent: 16),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.offlineQuoteSourceTitle,
-                    style: theme.textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    l10n.offlineQuoteSourceDesc,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                      height: 1.35,
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.offlineQuoteSourceTitle,
+                      style: theme.textTheme.titleSmall,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  RadioGroup<String>(
-                    groupValue: settings.offlineQuoteSource,
-                    onChanged: (selectedValue) {
-                      if (selectedValue != null) {
-                        settings.setOfflineQuoteSource(selectedValue);
-                      }
-                    },
-                    child: Column(
-                      children: [
-                        buildOption(
-                          title: l10n.offlineQuoteSourceTagOnly,
-                          value: 'tagOnly',
-                        ),
-                        buildOption(
-                          title: l10n.offlineQuoteSourceAll,
-                          value: 'allNotes',
-                        ),
-                      ],
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.offlineQuoteSourceDesc,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color:
+                            theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                        height: 1.35,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    RadioGroup<String>(
+                      groupValue: settings.offlineQuoteSource,
+                      onChanged: (selectedValue) {
+                        if (selectedValue != null) {
+                          settings.setOfflineQuoteSource(selectedValue);
+                        }
+                      },
+                      child: Column(
+                        children: [
+                          buildOption(
+                            title: l10n.offlineQuoteSourceTagOnly,
+                            value: 'tagOnly',
+                          ),
+                          buildOption(
+                            title: l10n.offlineQuoteSourceAll,
+                            value: 'allNotes',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

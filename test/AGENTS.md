@@ -15,8 +15,21 @@ timeout 60s flutter test --reporter compact test/unit/models/quote_model_test.da
 # 目录（仅当范围确实需要）
 timeout 180s flutter test --reporter compact test/unit/services/localsend/
 
-# 聚合入口（仅用户明确要求全量验证时）
-timeout 180s flutter test --reporter compact test/all_tests.dart
+# CI 等效的自动发现门禁（unit 分为四片；每片失败都能定位到责任目录）
+timeout 300s flutter test --reporter compact --timeout 90s --concurrency 1 \
+  --shard-index=0 --total-shards=4 test/unit
+
+# Widget 门禁（两片）
+timeout 300s flutter test --reporter compact --timeout 90s --concurrency 1 \
+  --shard-index=0 --total-shards=2 test/widget test/widgets
+
+# 根目录历史测试（两片）
+timeout 300s flutter test --reporter compact --timeout 90s --concurrency 1 \
+  --shard-index=0 --total-shards=2 test/*_test.dart
+
+# 非默认集合：需要显式运行，不能作为普通门禁的隐式副作用
+timeout 300s flutter test --reporter compact --timeout 120s --concurrency 1 test/integration
+timeout 300s flutter test --reporter compact --timeout 180s --concurrency 1 test/performance
 
 # 重新生成 Mockito 文件
 dart run build_runner build --delete-conflicting-outputs
@@ -32,7 +45,7 @@ dart run build_runner build --delete-conflicting-outputs
   “works” 或实现细节。
 - Bug 修复先写能稳定失败的回归测试；覆盖正常路径、边界值、失败/取消和资源释放，而不是追求
   无意义覆盖率数字。
-- 平台插件和文件系统使用 `test_setup.dart` 及已有 mock/fake。测试不能读取真实用户目录、调用
+- 平台插件和文件系统使用 `test_harness.dart` 的 `TestHarness.initialize` 及已有 mock/fake。测试不能读取真实用户目录、调用
   真实 AI/网络服务或依赖真实 API 密钥。
 - 数据库测试使用独立临时库并在 `tearDown` 清理；迁移测试分别验证新建和旧版本升级，避免用
   开发数据库。
@@ -41,5 +54,6 @@ dart run build_runner build --delete-conflicting-outputs
 - 性能测试只在基准任务中运行，断言使用容忍环境波动的指标；集成测试不纳入默认快速验证。
 - `*.mocks.dart` 和其他生成测试文件禁止手动编辑。
 
-`test/all_tests.dart` 是历史聚合入口，不保证自动包含每个新增测试；新增测试是否加入该入口应
-根据其稳定性和运行成本判断，同时单文件必须可独立运行。
+`test/all_tests.dart` 已删除：人工导入清单不能证明完整覆盖。默认门禁按目录自动发现
+`test/unit/`、`test/widget/`、`test/widgets/` 和根目录 `*_test.dart`；真实服务/设备集成和
+性能基准必须分别显式运行。每个测试文件仍必须可独立运行。

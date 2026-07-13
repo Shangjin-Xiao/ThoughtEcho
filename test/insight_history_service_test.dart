@@ -1,15 +1,26 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:thoughtecho/services/insight_history_service.dart';
-import 'package:thoughtecho/services/settings_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:thoughtecho/services/insight_history_service.dart';
+import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
+
+import 'test_harness.dart';
 
 void main() {
   group('InsightHistoryService Tests', () {
     late InsightHistoryService insightHistoryService;
+    late MMKVService mmkvService;
     late SettingsService settingsService;
 
+    setUpAll(() async {
+      await TestHarness.initialize();
+      await MMKVService().init();
+    });
+
     setUp(() async {
-      // 初始化共享首选项
+      mmkvService = MMKVService();
+      await mmkvService.clear();
+      SharedPreferences.resetStatic();
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
 
@@ -18,7 +29,11 @@ void main() {
       insightHistoryService = InsightHistoryService(
         settingsService: settingsService,
       );
+      await Future<void>.delayed(Duration.zero);
     });
+
+    tearDown(SharedPreferences.resetStatic);
+    tearDownAll(TestHarness.tearDown);
 
     test('should add and retrieve insights', () async {
       // 添加一个洞察

@@ -4,11 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:thoughtecho/utils/sentry_helper.dart';
 
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 void main() {
   setUpAll(() async {
-    await setupTestEnvironment();
+    await TestHarness.initialize();
   });
 
   group('Sentry minimal collection options', () {

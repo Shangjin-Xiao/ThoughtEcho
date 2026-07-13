@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/controllers/onboarding_controller.dart';
 import 'package:thoughtecho/services/api_service.dart';
 
-import '../../test_setup.dart';
+import '../../test_harness.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -10,7 +10,7 @@ void main() {
 
   group('OnboardingController locale preference linkage', () {
     setUp(() async {
-      await TestSetup.setupUnitTest();
+      await TestHarness.initialize();
       sut = OnboardingController();
     });
 
