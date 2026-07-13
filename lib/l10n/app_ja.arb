@@ -3588,5 +3588,7 @@
   "agentAnalyzingData": "データを分析中...",
   "agentWebSearching": "ウェブを検索中...",
   "favoriteNotes": "お気に入りノート",
-  "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again."
+  "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again.",
+  "availableCommands": "利用可能なコマンド",
+  "typeSlashToSeeCommands": "/ を入力してコマンドを表示"
 }

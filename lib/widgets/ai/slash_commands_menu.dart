@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/ai_workflow_descriptor.dart';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
 /// Slash Commands菜单项
 class SlashCommandsMenu extends StatefulWidget {
@@ -119,7 +120,7 @@ class _SlashCommandsMenuState extends State<SlashCommandsMenu>
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: Text(
-                  '可用命令',
+                  AppLocalizations.of(context).availableCommands,
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -365,7 +366,8 @@ class _SlashCommandsInputFieldState extends State<SlashCommandsInputField> {
           controller: widget.controller,
           focusNode: widget.focusNode,
           decoration: InputDecoration(
-            hintText: widget.hintText ?? '输入 / 查看命令',
+            hintText: widget.hintText ??
+                AppLocalizations.of(context).typeSlashToSeeCommands,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
             ),

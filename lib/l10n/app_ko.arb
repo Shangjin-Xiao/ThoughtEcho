@@ -3584,5 +3584,7 @@
   "agentAnalyzingData": "데이터 분석 중...",
   "agentWebSearching": "웹 검색 중...",
   "favoriteNotes": "즐겨찾는 노트",
-  "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again."
+  "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again.",
+  "availableCommands": "사용 가능한 명령",
+  "typeSlashToSeeCommands": "/ 를 입력하여 명령 보기"
 }
