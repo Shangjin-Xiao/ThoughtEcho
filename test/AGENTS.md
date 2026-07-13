@@ -23,13 +23,17 @@ timeout 300s flutter test --reporter compact --timeout 90s --concurrency 1 \
 timeout 300s flutter test --reporter compact --timeout 90s --concurrency 1 \
   --shard-index=0 --total-shards=2 test/widget test/widgets
 
-# 根目录历史测试（两片）
+# 根目录与历史回归测试（两片）
 timeout 300s flutter test --reporter compact --timeout 90s --concurrency 1 \
-  --shard-index=0 --total-shards=2 test/*_test.dart
+  --shard-index=0 --total-shards=2 test/bug_fixes test/*_test.dart
 
 # 非默认集合：需要显式运行，不能作为普通门禁的隐式副作用
 timeout 300s flutter test --reporter compact --timeout 120s --concurrency 1 test/integration
 timeout 300s flutter test --reporter compact --timeout 180s --concurrency 1 test/performance
+
+# 设备性能时间线：连接 Android、iOS 或 Windows 目标后显式运行（Ubuntu CI 没有受支持设备）
+timeout 600s flutter test --reporter compact --timeout 300s -d <device-id> \
+  integration_test/note_list_performance_test.dart
 
 # 重新生成 Mockito 文件
 dart run build_runner build --delete-conflicting-outputs
@@ -55,5 +59,8 @@ dart run build_runner build --delete-conflicting-outputs
 - `*.mocks.dart` 和其他生成测试文件禁止手动编辑。
 
 `test/all_tests.dart` 已删除：人工导入清单不能证明完整覆盖。默认门禁按目录自动发现
-`test/unit/`、`test/widget/`、`test/widgets/` 和根目录 `*_test.dart`；真实服务/设备集成和
+`test/unit/`、`test/widget/`、`test/widgets/`、`test/bug_fixes/` 和根目录 `*_test.dart`；真实服务/设备集成和
 性能基准必须分别显式运行。每个测试文件仍必须可独立运行。
+
+不以 `*_test.dart` 结尾的 `test/test_*.dart` 是历史诊断脚本，不属于 `flutter test` 门禁，也不能
+作为测试通过的证据。新增验证必须使用标准测试文件名；真实设备诊断使用受支持设备显式运行。
