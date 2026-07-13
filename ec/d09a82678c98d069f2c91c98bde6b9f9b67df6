@@ -1,0 +1,22 @@
+.github/workflows/test.yml
+  s_8a8ee1afa5f0ab::t_6b1101349bbe70 103,107
+test/AGENTS.md
+  s_8a8ee1afa5f0ab::t_15a96db093b0cb 34-37,64-66
+  s_8a8ee1afa5f0ab::t_6b1101349bbe70 26,28,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "ecd09a82678c98d069f2c91c98bde6b9f9b67df6",
+  "prompts": {},
+  "sessions": {
+    "s_8a8ee1afa5f0ab": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f55ae-0d09-7710-94c5-53fbc0a3da38",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
