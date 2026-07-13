@@ -1,0 +1,158 @@
+test/unified_toolbar_test.dart
+  s_8a8ee1afa5f0ab::t_632c25fa15526e 4,24
+test/unit/utils/motion_photo_utils_test.dart
+  s_8a8ee1afa5f0ab::t_298e1be6c0225e 64-65
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 7,69,72,84,87
+test/unit/models/app_settings_test.dart
+  s_8a8ee1afa5f0ab::t_335adde2947ffe 4,8
+test/unit/services/get_note_detail_tool_test.dart
+  s_8a8ee1afa5f0ab::t_1ba3c39ba35c33 10,42
+test/unit/controllers/onboarding_controller_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 5,13
+AGENTS.md
+  s_8a8ee1afa5f0ab::t_222b488af4f1c8 76
+test/ai_card_prompts_test.dart
+  s_8a8ee1afa5f0ab::t_96e60344480e91 21,27,37-38,41-43,46-47,52-57,60-71
+  s_8a8ee1afa5f0ab::t_bd02e7a0070453 22
+  s_8a8ee1afa5f0ab::t_8b2272395d5e51 10-11,25-26
+test/unit/services/agent_service_loop_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 10,244
+test/unit/services/web_search_tool_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 7,37
+test/widget/pages/trash_page_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 17,204
+test/card_templates_test.dart
+  s_8a8ee1afa5f0ab::t_0806db6d0711df 90,122,166,186
+  s_8a8ee1afa5f0ab::t_adefafdab13849 196
+test/AGENTS.md
+  s_8a8ee1afa5f0ab::t_222b488af4f1c8 18-32,48,57-59
+test/widget/pages/excerpt_preferences_page_test.dart
+  s_8a8ee1afa5f0ab::t_f1ff5ba5d5e382 92-97
+test/widget/add_note_dialog_metadata_readonly_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 16,112
+test/widget/pages/onboarding_preferences_page_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 9,13
+test/log_persistence_test.dart
+  s_8a8ee1afa5f0ab::t_335adde2947ffe 3,10
+test/widget/pages/webdav_sync_page_test.dart
+  s_8a8ee1afa5f0ab::t_335adde2947ffe 13,26
+test/unit/services/chat_session_service_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 10,96
+test/unit/services/draft_service_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 5,14
+test/unit/services/smart_push_security_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 8,12
+test/log_corrupted_entries_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 5,15
+test/unit/models/onboarding_models_test.dart
+  s_8a8ee1afa5f0ab::t_335adde2947ffe 5,9
+.github/workflows/test.yml
+  s_8a8ee1afa5f0ab::t_222b488af4f1c8 21-30,68-185
+test/unit/services/explore_notes_tool_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 10,84
+test/unit/services/smart_push_analytics_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 5,14
+test/unit/utils/streaming_json_parser_test.dart
+  s_8a8ee1afa5f0ab::t_f43bc0788d78ad 2-3,8-9,12-14,17-18,41-42
+test/unit/utils/sentry_helper_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 7,11
+lib/pages/note_editor/editor_build.dart
+  s_8a8ee1afa5f0ab::t_7916dbe9598a07 91
+test/unit/models/ai_skill_test.dart
+  s_8a8ee1afa5f0ab::t_335adde2947ffe 6,10
+test/unit/services/agent_note_tools_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 15,74
+test/widget/pages/hitokoto_settings_page_test.dart
+  s_8a8ee1afa5f0ab::t_335adde2947ffe 12,76
+test/unified_log_service_test.dart
+  s_8a8ee1afa5f0ab::t_335adde2947ffe 8,40
+test/unit/services/settings_service_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 9,17,24
+lib/pages/note_editor/editor_save_and_draft.dart
+  s_8a8ee1afa5f0ab::t_46d30ffd20e66f 284-288,304-307
+  s_8a8ee1afa5f0ab::t_c0b8d5cf883f35 266-277
+  s_8a8ee1afa5f0ab::t_4a7cfc120d38f1 308-309
+test/unit/services/database_schema_manager_poi_name_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 4,8
+test/widget/pages/home_page_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 27,218
+test/widget/pages/theme_settings_page_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 9,16
+test/unit/services/database_optimization_test.dart
+  s_8a8ee1afa5f0ab::t_f43bc0788d78ad 38
+test/unit/models/quote_model_test.dart
+  s_8a8ee1afa5f0ab::t_335adde2947ffe 6,10
+lib/pages/hitokoto_settings_page.dart
+  s_8a8ee1afa5f0ab::t_f1ff5ba5d5e382 417-421,465-466
+  s_8a8ee1afa5f0ab::t_af3071c709d6b4 422-425,427-451,453-460,462-463
+test/unit/services/database_pagination_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 6,18
+test/widget/pages/ai_assistant_page_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 19,349,355
+test/unit/services/agent_service_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 5,9
+test/unit/utils/global_exception_handler_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 4,11
+test/widget/pages/home/daily_prompt_panel_test.dart
+  s_8a8ee1afa5f0ab::t_d74ffe2ccbf68e 19,32,148,159-171
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 13,88
+test/unit/utils/backup_progress_update_gate_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 3,7
+test/unit/utils/content_sanitizer_test.dart
+  s_8a8ee1afa5f0ab::t_f43bc0788d78ad 21,23-25
+test/unit/test_harness_test.dart
+  s_8a8ee1afa5f0ab::t_c2326601bd5219 21-23
+  s_8a8ee1afa5f0ab::t_222b488af4f1c8 3-6,8-19,24-38
+  s_8a8ee1afa5f0ab::t_ba17bcbc683027 20
+test/widget/pages/note_editor_draft_behavior_test.dart
+  s_8a8ee1afa5f0ab::t_335adde2947ffe 18,101
+test/widget/pages/api_ninjas_category_selection_page_test.dart
+  s_8a8ee1afa5f0ab::t_335adde2947ffe 6,10
+lib/constants/ai_card_prompts.dart
+  s_8a8ee1afa5f0ab::t_bd02e7a0070453 83
+test/unit/services/database_trash_flow_test.dart
+  s_8a8ee1afa5f0ab::t_222b488af4f1c8 42
+  s_8a8ee1afa5f0ab::t_1ba3c39ba35c33 7,19
+test/widget/pages/storage_management_page_test.dart
+  s_8a8ee1afa5f0ab::t_335adde2947ffe 10,72
+test/widget/session_history_page_test.dart
+  s_8a8ee1afa5f0ab::t_b137daab868c7c 8,100
+lib/pages/preferences_detail_page.dart
+  s_8a8ee1afa5f0ab::t_d8bebdee575429 521-524,638-642,712
+  s_8a8ee1afa5f0ab::t_2af43b312ffe8d 643-646,648-651,653-676,678-685,687-709,711
+test/test_harness.dart
+  s_8a8ee1afa5f0ab::t_2f744e950ccf66 66,98-99,102
+  s_8a8ee1afa5f0ab::t_68d83ec6d5b376 105-108
+  s_8a8ee1afa5f0ab::t_ba17bcbc683027 40-41,49-50,150-151
+  s_8a8ee1afa5f0ab::t_222b488af4f1c8 1-2,4,6,9-12,14-15,17-23,26,28-30,32-33,35-36,38-39,43-44,46-48,52-53,55-57,59-65,67-72,76-78,80-91,93-96,100-101,103,111-116,118-121,123-125,128-136,139-142,146-149,153
+test/widget/add_note_dialog_focus_timing_test.dart
+  s_8a8ee1afa5f0ab::t_d8bebdee575429 114,134
+  s_8a8ee1afa5f0ab::t_af3071c709d6b4 135-136
+  s_8a8ee1afa5f0ab::t_f1ff5ba5d5e382 64
+  s_8a8ee1afa5f0ab::t_c0b8d5cf883f35 73,107
+test/insight_history_service_test.dart
+  s_8a8ee1afa5f0ab::t_0806db6d0711df 23,32,35
+  s_8a8ee1afa5f0ab::t_bb5b1e4356acfc 2
+  s_8a8ee1afa5f0ab::t_adefafdab13849 4,6-7,12,15-19,21-22,36
+  s_8a8ee1afa5f0ab::t_345b482f0a1f52 37
+lib/widgets/onboarding/preferences_page_view.dart
+  s_8a8ee1afa5f0ab::t_529bb3f4eff7e4 624-631,633-638,640-662
+test/performance/svg_rendering_test.dart
+  s_8a8ee1afa5f0ab::t_3ae88cac7dc332 33-39,48,50-57,60-61,63,65-73,76-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.12",
+  "base_commit_sha": "c9944b9347b2b584775eb240841a67eaa19dba0d",
+  "prompts": {},
+  "sessions": {
+    "s_8a8ee1afa5f0ab": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f55ae-0d09-7710-94c5-53fbc0a3da38",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
