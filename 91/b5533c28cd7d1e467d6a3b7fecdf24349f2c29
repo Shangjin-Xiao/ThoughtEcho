@@ -1,0 +1,22 @@
+lib/controllers/note_editor_states.dart
+  s_a7c89c0097934c::t_2698f3a7b0bb48 268-274,288-292
+test/unit/controllers/note_editor_states_test.dart
+  s_a7c89c0097934c::t_e6378d764d923c 83-119,127-128
+  s_a7c89c0097934c::t_2698f3a7b0bb48 120-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "91b5533c28cd7d1e467d6a3b7fecdf24349f2c29",
+  "prompts": {},
+  "sessions": {
+    "s_a7c89c0097934c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f83-d297-7b00-b8db-d4140f9e0278",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
