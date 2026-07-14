@@ -8,6 +8,10 @@
 - `ai_assistant/`：助手会话、工作流和 UI 拆分
 - `home/`：主页局部面板
 
+主页的刷新、目标笔记定位、功能引导、AI 卡片导出和语音/OCR 捕获分别由 `home/` 下的
+orchestration module 管理；`HomePage` 对这些流程只提供页面 key、路由回调和 Provider 依赖
+适配，不要把它们重新内联回页面 State。笔记增删改流程仍在继续迁移，不能据此扩大父 State。
+
 ## UI 规则
 
 - 所有用户可见文本使用 `AppLocalizations`，包括 Tooltip、SnackBar、Dialog、菜单、空状态和

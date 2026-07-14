@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io' show File;
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -20,9 +19,6 @@ import '../widgets/daily_quote_view.dart';
 import '../widgets/note_list_view.dart';
 import '../widgets/sentry_disclosure_dialog.dart';
 import '../widgets/add_note_dialog.dart';
-import '../widgets/local_ai/ocr_capture_page.dart';
-import '../widgets/local_ai/ocr_result_sheet.dart';
-import '../widgets/local_ai/voice_input_overlay.dart';
 import 'ai_features_page.dart';
 import 'settings_page.dart';
 import 'ai_assistant_page.dart';
@@ -35,21 +31,21 @@ import '../utils/app_logger.dart';
 import '../utils/color_utils.dart';
 import '../services/ai_card_generation_service.dart';
 import '../gen_l10n/app_localizations.dart';
-import '../widgets/svg_card_widget.dart';
-import '../models/generated_card.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
-import '../services/svg_to_image_service.dart';
-import '../utils/feature_guide_helper.dart';
 import '../services/draft_service.dart';
 import '../services/smart_push_service.dart';
 import '../widgets/anniversary_animation_overlay.dart';
 import '../utils/anniversary_display_utils.dart';
 import '../utils/draft_restore_utils.dart';
+import 'home/home_card_actions.dart';
+import 'home/home_capture_actions.dart';
 import 'home/daily_prompt_panel.dart';
+import 'home/home_guide_coordinator.dart';
+import 'home/home_refresh_coordinator.dart';
+import 'home/home_target_navigation.dart';
 
-// TODO(refactor): Continue splitting high-churn home features into smaller
-// widgets or mixins (e.g., home_header, home_content, home_actions).
+// TODO(refactor): Move the remaining note mutation/editor flows into their
+// own module. Refresh, targeting, guides, card export and capture already use
+// state-owned seams under pages/home/.
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
   final String? initialTargetNoteId;
@@ -165,156 +161,70 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final GlobalKey _settingsTabGuideKey = GlobalKey(); // 功能引导：设置标签 Key（用于回收站引导）
   final GlobalKey<SettingsPageState> _settingsPageKey =
       GlobalKey<SettingsPageState>();
-  static const int _maxInitialTargetScrollRetries = 8;
-
   // 通知定位：监听 SmartPushService.pendingTargetNoteId
   SmartPushService? _smartPushService;
 
-  // AI卡片生成服务
-  AICardGenerationService? _aiCardService;
+  late HomeCardActions _cardActions;
+  late final HomeCaptureActions _captureActions;
+  late final HomeGuideCoordinator _guideCoordinator;
+  late final HomeRefreshCoordinator _refreshCoordinator;
+  late final HomeTargetNavigation _targetNavigation;
 
   // 网络恢复监听
   ConnectivityService? _connectivityService;
-
-  // 统一刷新方法 - 先刷新位置天气，再同时刷新每日一言和每日提示
-  Future<void> _handleRefresh() async {
-    try {
-      logDebug('开始刷新：先更新位置和天气信息...');
-
-      // 第一步：重新获取位置和天气信息
-      await _refreshLocationAndWeather();
-
-      // 等待一下确保位置和天气信息已更新
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      logDebug('位置和天气信息更新完成，开始刷新内容...');
-
-      // 第二步：并行刷新每日一言和每日提示（现在有最新的位置天气信息）
-      await Future.wait([
-        // 刷新每日一言
-        if (_dailyQuoteViewKey.currentState != null)
-          _dailyQuoteViewKey.currentState!.refreshQuote(),
-        // 刷新每日提示（现在会使用最新的位置和天气信息）
-        if (_dailyPromptPanelKey.currentState != null)
-          _dailyPromptPanelKey.currentState!.refreshPrompt(),
-      ]);
-
-      logDebug('刷新完成');
-    } catch (e) {
-      logDebug('刷新失败: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context).refreshFailed(e.toString()),
-            ),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
-  // 刷新位置和天气信息
-  Future<void> _refreshLocationAndWeather() async {
-    if (!mounted) return;
-
-    try {
-      logDebug('开始刷新位置和天气信息...');
-
-      final locationService = Provider.of<LocationService>(
-        context,
-        listen: false,
-      );
-      final weatherService = Provider.of<WeatherService>(
-        context,
-        listen: false,
-      );
-      final connectivityService = Provider.of<ConnectivityService>(
-        context,
-        listen: false,
-      );
-
-      // 先刷新网络状态
-      final isConnected = await connectivityService.checkConnectionNow();
-
-      // P4: 动态刷新位置服务和权限状态，防止初始化时的过期值
-      await locationService.refreshServiceStatus();
-
-      // 如果有位置权限，重新获取位置和天气
-      if (locationService.hasLocationPermission &&
-          locationService.isLocationServiceEnabled) {
-        logDebug('重新获取当前位置...');
-        final position = await locationService.getCurrentLocation(
-          skipPermissionRequest: true,
-        );
-
-        if (!mounted) return;
-
-        if (position != null) {
-          // 联网时尝试解析离线坐标的地址
-          if (isConnected && locationService.isOfflineLocation) {
-            logDebug('尝试解析离线位置的地址...');
-            final resolved = await locationService.resolveOfflineLocation();
-
-            // P1: 地址解析成功后，回溯更新近期离线笔记的位置字段
-            if (resolved && mounted) {
-              _retroUpdateOfflineNoteLocations(locationService);
-            }
-          }
-
-          logDebug('位置获取成功，开始刷新天气数据...');
-          // 仅联网时强制刷新天气，离线时使用缓存避免冲掉已有数据
-          await weatherService.getWeatherData(
-            position.latitude,
-            position.longitude,
-            forceRefresh: isConnected,
-          );
-          logDebug('天气数据刷新完成: ${weatherService.currentWeather}');
-        } else {
-          logDebug('位置获取失败');
-        }
-      } else {
-        logDebug('位置权限未授予或位置服务未启用，跳过位置和天气刷新');
-      }
-    } catch (e) {
-      logDebug('刷新位置和天气信息时发生错误: $e');
-      // 不抛出异常，让调用方继续执行
-    }
-  }
-
-  /// P1: 回溯更新近期离线笔记的位置字段
-  /// 当网络恢复并成功解析出地址后，更新最近 24 小时内
-  /// 带有 pending/failed 位置标记的笔记
-  void _retroUpdateOfflineNoteLocations(LocationService locationService) {
-    if (!mounted) return;
-
-    final dbService = Provider.of<DatabaseService>(context, listen: false);
-    final resolvedAddress = locationService.getLocationDisplayText();
-    if (resolvedAddress.isEmpty) return;
-
-    Future.microtask(() async {
-      try {
-        final updatedCount = await dbService.batchUpdatePendingLocations(
-          resolvedAddress: resolvedAddress,
-        );
-
-        if (updatedCount > 0) {
-          logDebug('P1: 回溯更新了 $updatedCount 条离线笔记的位置信息');
-        }
-      } catch (e) {
-        logDebug('回溯更新离线笔记位置失败: $e');
-      }
-    });
-  }
 
   @override
   void initState() {
     super.initState();
     _pageController = HomePageController(initialPage: widget.initialPage)
       ..addListener(_onPageStateChanged);
+    _cardActions = HomeCardActions(
+      context: context,
+      isMounted: () => mounted,
+      cardService: null,
+    );
+    _captureActions = HomeCaptureActions(
+      context: context,
+      isMounted: () => mounted,
+      onInsertText: (text) => _showAddQuoteDialog(prefilledContent: text),
+    );
+    _guideCoordinator = HomeGuideCoordinator(
+      context: context,
+      isMounted: () => mounted,
+      currentPage: () => _pageController.currentIndex,
+      dailyQuoteKey: _dailyQuoteGuideKey,
+      noteListKey: _noteListViewKey,
+      noteFilterKey: _noteFilterGuideKey,
+      noteFavoriteKey: _noteFavoriteGuideKey,
+      noteMoreKey: _noteMoreGuideKey,
+      noteFoldKey: _noteFoldGuideKey,
+      settingsTabKey: _settingsTabGuideKey,
+      settingsPageKey: _settingsPageKey,
+    );
+    _refreshCoordinator = HomeRefreshCoordinator(
+      context: context,
+      isMounted: () => mounted,
+      refreshQuote: () async {
+        await _dailyQuoteViewKey.currentState?.refreshQuote();
+      },
+      refreshPrompt: ({bool initialLoad = false}) async {
+        await _dailyPromptPanelKey.currentState?.refreshPrompt(
+          initialLoad: initialLoad,
+        );
+      },
+    );
+    _targetNavigation = HomeTargetNavigation(
+      initialTargetNoteId: widget.initialTargetNoteId,
+      currentPage: () => _pageController.currentIndex,
+      selectNotesPage: () => _pageController.selectPage(1),
+      isTagsLoading: () => _pageController.isLoadingTags,
+      ensureTagsLoaded: _loadTags,
+      scrollToNote: (noteId) async {
+        context.read<NoteSearchController>().clearSearch();
+        return await _noteListViewKey.currentState?.scrollToQuoteById(noteId) ??
+            false;
+      },
+    );
 
     // 注册生命周期观察器
     WidgetsBinding.instance.addObserver(this);
@@ -336,7 +246,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (widget.initialPage == 1) {
         // 记录页启动时，先加载标签（高优先级）
         await _loadTags();
-        _consumeInitialTargetNote();
+        _targetNavigation.onNotesReady();
       } else {
         // 其他页面启动时，使用预加载方式
         _preloadTags();
@@ -357,7 +267,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       }
 
       // 先初始化位置和天气，然后再获取每日提示
-      _initLocationAndWeatherThenFetchPrompt();
+      unawaited(_refreshCoordinator.initialize());
 
       // 监听网络恢复，自动刷新位置和天气
       if (mounted) {
@@ -388,12 +298,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    // 初始化AI卡片生成服务
-    if (_aiCardService == null) {
-      final aiService = context.read<AIService>();
-      final settingsService = context.read<SettingsService>();
-      _aiCardService = AICardGenerationService(aiService, settingsService);
-    }
+    final aiService = context.read<AIService>();
+    final settingsService = context.read<SettingsService>();
+    _cardActions.configure(
+      AICardGenerationService(aiService, settingsService),
+    );
   }
 
   @override
@@ -402,6 +311,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _connectivityService?.removeListener(_onConnectivityChanged);
     _smartPushService?.removeListener(_onSmartPushServiceChanged);
+    _guideCoordinator.dispose();
+    _targetNavigation.dispose();
     _pageController
       ..removeListener(_onPageStateChanged)
       ..dispose();
@@ -417,31 +328,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (!mounted || _smartPushService == null) return;
     final noteId = _smartPushService!.consumePendingTargetNoteId();
     if (noteId == null || noteId.isEmpty) return;
-
     logDebug('收到通知定位请求（原地导航）: $noteId', source: 'HomePage');
-
-    // 切换到记录页 tab
-    if (_pageController.currentIndex != 1) {
-      _pageController.selectPage(1);
-    }
-
-    // 重置定位状态，触发定位
-    _pageController.hasConsumedInitialTargetNote = false;
-    _pageController.isConsumingInitialTargetNote = false;
-    _pageController.initialTargetScrollRetryCount = 0;
-    _pageController.pendingNotificationNoteId = noteId;
-
-    // 等标签加载完再定位
-    if (_pageController.isLoadingTags) {
-      _loadTags().then((_) {
-        if (mounted) _consumePendingNotificationNote();
-      });
-    } else {
-      // postFrameCallback 确保 tab 切换帧已渲染
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _consumePendingNotificationNote();
-      });
-    }
+    unawaited(_targetNavigation.acceptNotificationTarget(noteId));
   }
 
   /// 网络状态变化回调：恢复联网时自动刷新位置和天气
@@ -449,7 +337,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final isConnected = _connectivityService?.isConnected ?? false;
     if (isConnected && mounted) {
       logDebug('网络已恢复，自动刷新位置和天气...');
-      _refreshLocationAndWeather();
+      unawaited(_refreshCoordinator.refreshEnvironment());
     }
   }
 
@@ -660,7 +548,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     // 当切换到笔记列表页时，重新加载标签
     if (_pageController.currentIndex == 1) {
       _refreshTags();
-      _consumeInitialTargetNote();
+      _targetNavigation.onNotesReady();
     }
 
     _triggerGuideForCurrentIndex();
@@ -698,451 +586,22 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  // 初始化位置和天气服务，然后获取每日提示
-  Future<void> _initLocationAndWeatherThenFetchPrompt() async {
-    try {
-      logDebug('开始初始化位置和天气服务...');
-
-      // 先初始化位置和天气
-      await _initLocationAndWeather();
-
-      // 减少等待时间，因为已经优化了并行初始化
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      logDebug('位置和天气服务初始化完成，开始获取每日提示...');
-
-      // 然后获取每日提示（包含位置和天气信息）
-      await _dailyPromptPanelKey.currentState?.refreshPrompt(
-        initialLoad: true,
-      );
-    } catch (e) {
-      logDebug('初始化位置天气和获取每日提示失败: $e');
-      // 即使初始化失败，也尝试获取默认提示
-      await _dailyPromptPanelKey.currentState?.refreshPrompt(
-        initialLoad: true,
-      );
-    }
-  }
-
-  /// 根据当前选中的标签页触发对应的功能引导
   void _triggerGuideForCurrentIndex() {
-    switch (_pageController.currentIndex) {
-      case 0:
-        _scheduleHomeGuideIfNeeded();
-        break;
-      case 1:
-        _scheduleNoteGuideIfNeeded();
-        break;
-      case 3:
-        _scheduleSettingsGuideIfNeeded();
-        break;
-      default:
-        break;
-    }
-  }
-
-  void _scheduleHomeGuideIfNeeded() {
-    if (_pageController.homeGuidePending) return;
-    if (FeatureGuideHelper.hasShown(context, 'homepage_daily_quote')) {
-      return;
-    }
-
-    _pageController.homeGuidePending = true;
-    // 立即显示，不等待
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) {
-        _pageController.homeGuidePending = false;
-        return;
-      }
-
-      if (_pageController.currentIndex != 0) {
-        _pageController.homeGuidePending = false;
-        return;
-      }
-
-      await _showHomePageGuides();
-      _pageController.homeGuidePending = false;
-    });
-  }
-
-  void _scheduleNoteGuideIfNeeded({Duration delay = Duration.zero}) {
-    if (_pageController.noteGuidePending) return;
-
-    final filterShown = FeatureGuideHelper.hasShown(
-      context,
-      'note_page_filter',
-    );
-    final favoriteShown = FeatureGuideHelper.hasShown(
-      context,
-      'note_page_favorite',
-    );
-    final expandShown = FeatureGuideHelper.hasShown(
-      context,
-      'note_page_expand',
-    );
-
-    if (filterShown && favoriteShown && expandShown) {
-      return;
-    }
-
-    _pageController.noteGuidePending = true;
-    if (delay == Duration.zero) {
-      // 立即显示
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        if (!mounted) {
-          _pageController.noteGuidePending = false;
-          return;
-        }
-
-        if (_pageController.currentIndex != 1) {
-          _pageController.noteGuidePending = false;
-          return;
-        }
-
-        await _showNotePageGuides();
-        _pageController.noteGuidePending = false;
-      });
-    } else {
-      Future.delayed(delay, () async {
-        if (!mounted) {
-          _pageController.noteGuidePending = false;
-          return;
-        }
-
-        if (_pageController.currentIndex != 1) {
-          _pageController.noteGuidePending = false;
-          return;
-        }
-
-        await _showNotePageGuides();
-        _pageController.noteGuidePending = false;
-      });
-    }
+    _guideCoordinator.triggerForCurrentPage();
   }
 
   void _handleNoteGuideTargetsReady() {
-    if (!mounted) return;
-    if (_pageController.currentIndex != 1) {
-      return;
-    }
-
-    _consumeInitialTargetNote();
-    _scheduleNoteGuideIfNeeded(delay: const Duration(milliseconds: 150));
+    _guideCoordinator.onNoteTargetsReady(
+      onConsumeTarget: _targetNavigation.onNotesReady,
+    );
   }
 
   void _releaseNoteSearchFocus() {
-    _noteListViewKey.currentState?.unfocusSearchField();
-  }
-
-  void _consumeInitialTargetNote() {
-    if (!mounted ||
-        _pageController.hasConsumedInitialTargetNote ||
-        _pageController.isConsumingInitialTargetNote ||
-        _pageController.currentIndex != 1) {
-      return;
-    }
-
-    final noteId = widget.initialTargetNoteId;
-    if (noteId == null || noteId.isEmpty) {
-      return;
-    }
-
-    context.read<NoteSearchController>().clearSearch();
-
-    final noteListState = _noteListViewKey.currentState;
-    if (noteListState == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _consumeInitialTargetNote();
-      });
-      return;
-    }
-
-    _pageController.isConsumingInitialTargetNote = true;
-    unawaited(_attemptInitialTargetNote(noteListState, noteId));
-  }
-
-  Future<void> _attemptInitialTargetNote(
-    NoteListViewState noteListState,
-    String noteId,
-  ) async {
-    final success = await noteListState.scrollToQuoteById(noteId);
-    if (!mounted || widget.initialTargetNoteId != noteId) {
-      _pageController.isConsumingInitialTargetNote = false;
-      return;
-    }
-
-    if (success) {
-      _pageController.hasConsumedInitialTargetNote = true;
-      _pageController.initialTargetScrollRetryCount = 0;
-      _pageController.isConsumingInitialTargetNote = false;
-      return;
-    }
-
-    _pageController.isConsumingInitialTargetNote = false;
-    _pageController.initialTargetScrollRetryCount++;
-    if (_pageController.initialTargetScrollRetryCount >=
-        _maxInitialTargetScrollRetries) {
-      logDebug(
-        '初始目标笔记定位失败，已达到最大重试次数: $noteId',
-        source: 'HomePage',
-      );
-      return;
-    }
-
-    Future.delayed(const Duration(milliseconds: 250), () {
-      if (!mounted ||
-          _pageController.currentIndex != 1 ||
-          _pageController.hasConsumedInitialTargetNote) {
-        return;
-      }
-      _consumeInitialTargetNote();
-    });
-  }
-
-  /// 暖启动通知定位：原地滚动到 [_pageController.pendingNotificationNoteId]，不重建页面
-  void _consumePendingNotificationNote() {
-    final noteId = _pageController.pendingNotificationNoteId;
-    if (!mounted ||
-        _pageController.isConsumingInitialTargetNote ||
-        noteId == null ||
-        noteId.isEmpty ||
-        _pageController.currentIndex != 1) {
-      return;
-    }
-
-    context.read<NoteSearchController>().clearSearch();
-
-    final noteListState = _noteListViewKey.currentState;
-    if (noteListState == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _consumePendingNotificationNote();
-      });
-      return;
-    }
-
-    _pageController.isConsumingInitialTargetNote = true;
-    unawaited(_attemptPendingNotificationNote(noteListState, noteId));
-  }
-
-  Future<void> _attemptPendingNotificationNote(
-    NoteListViewState noteListState,
-    String noteId,
-  ) async {
-    final success = await noteListState.scrollToQuoteById(noteId);
-    if (!mounted || _pageController.pendingNotificationNoteId != noteId) {
-      _pageController.isConsumingInitialTargetNote = false;
-      return;
-    }
-
-    if (success) {
-      _pageController.pendingNotificationNoteId = null;
-      _pageController.hasConsumedInitialTargetNote = true;
-      _pageController.initialTargetScrollRetryCount = 0;
-      _pageController.isConsumingInitialTargetNote = false;
-      return;
-    }
-
-    _pageController.isConsumingInitialTargetNote = false;
-    _pageController.initialTargetScrollRetryCount++;
-    if (_pageController.initialTargetScrollRetryCount >=
-        _maxInitialTargetScrollRetries) {
-      logDebug(
-        '通知定位失败，已达到最大重试次数: $noteId',
-        source: 'HomePage',
-      );
-      _pageController.pendingNotificationNoteId = null;
-      return;
-    }
-
-    Future.delayed(const Duration(milliseconds: 250), () {
-      if (!mounted || _pageController.currentIndex != 1) return;
-      _consumePendingNotificationNote();
-    });
-  }
-
-  void _scheduleSettingsGuideIfNeeded() {
-    if (_pageController.settingsGuidePending) return;
-
-    final allShown =
-        FeatureGuideHelper.hasShown(context, 'settings_preferences') &&
-            FeatureGuideHelper.hasShown(context, 'settings_startup') &&
-            FeatureGuideHelper.hasShown(context, 'settings_theme');
-    if (allShown) {
-      return;
-    }
-
-    _pageController.settingsGuidePending = true;
-    // 立即显示
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        _pageController.settingsGuidePending = false;
-        return;
-      }
-
-      if (_pageController.currentIndex != 3) {
-        _pageController.settingsGuidePending = false;
-        return;
-      }
-
-      _settingsPageKey.currentState?.showGuidesIfNeeded(
-        shouldShow: () => mounted && _pageController.currentIndex == 3,
-      );
-      _pageController.settingsGuidePending = false;
-    });
+    _guideCoordinator.unfocusNoteSearch();
   }
 
   void _scheduleTrashLocationGuide() {
-    if (!mounted) return;
-    if (_pageController.trashGuideScheduled) return;
-    if (FeatureGuideHelper.hasShown(context, 'trash_location_guide')) {
-      return;
-    }
-
-    _pageController.trashGuideScheduled = true;
-    Future.delayed(const Duration(milliseconds: 1200), () {
-      if (!mounted) {
-        _pageController.trashGuideScheduled = false;
-        return;
-      }
-      FeatureGuideHelper.show(
-        context: context,
-        guideId: 'trash_location_guide',
-        targetKey: _settingsTabGuideKey,
-        autoDismissDuration: const Duration(milliseconds: 3000),
-        shouldShow: () => mounted,
-      );
-      _pageController.trashGuideScheduled = false;
-    });
-  }
-
-  /// 显示首页功能引导
-  Future<void> _showHomePageGuides() {
-    return FeatureGuideHelper.show(
-      context: context,
-      guideId: 'homepage_daily_quote',
-      targetKey: _dailyQuoteGuideKey,
-      shouldShow: () => mounted && _pageController.currentIndex == 0,
-    );
-  }
-
-  /// 显示记录页功能引导
-  Future<void> _showNotePageGuides() async {
-    final noteListState = _noteListViewKey.currentState;
-    if (noteListState == null) {
-      return;
-    }
-
-    final guides = <(String, GlobalKey?)>[];
-
-    if (!FeatureGuideHelper.hasShown(context, 'note_page_filter') &&
-        noteListState.isFilterGuideReady) {
-      guides.add(('note_page_filter', _noteFilterGuideKey));
-    }
-
-    if (!FeatureGuideHelper.hasShown(context, 'note_page_favorite') &&
-        noteListState.canShowFavoriteGuide) {
-      guides.add(('note_page_favorite', _noteFavoriteGuideKey));
-    }
-
-    if (!FeatureGuideHelper.hasShown(context, 'note_page_expand') &&
-        noteListState.canShowExpandGuide) {
-      guides.add(('note_page_expand', _noteFoldGuideKey));
-    }
-
-    if (!FeatureGuideHelper.hasShown(context, 'note_item_more_share') &&
-        noteListState.hasQuotes) {
-      guides.add(('note_item_more_share', _noteMoreGuideKey));
-    }
-
-    if (guides.isEmpty) {
-      return;
-    }
-
-    await FeatureGuideHelper.showSequence(
-      context: context,
-      guides: guides,
-      shouldShow: () => mounted && _pageController.currentIndex == 1,
-    );
-  }
-
-  // 初始化位置和天气服务 - 简化优化版本
-  Future<void> _initLocationAndWeather() async {
-    if (!mounted) return;
-
-    try {
-      logDebug('开始初始化位置和天气服务...');
-
-      final locationService = Provider.of<LocationService>(
-        context,
-        listen: false,
-      );
-      final weatherService = Provider.of<WeatherService>(
-        context,
-        listen: false,
-      );
-
-      // 并行初始化位置服务（天气服务在WeatherService构造时已经初始化）
-      await locationService.init();
-
-      if (!mounted) return;
-
-      logDebug('位置服务初始化完成，权限状态: ${locationService.hasLocationPermission}');
-
-      // 如果有权限，获取位置和天气
-      if (locationService.hasLocationPermission &&
-          locationService.isLocationServiceEnabled) {
-        logDebug('开始获取位置（低精度模式）...');
-
-        final position = await locationService
-            .getCurrentLocation(
-          highAccuracy: false, // 使用低精度模式，更快
-          skipPermissionRequest: true,
-        )
-            .timeout(
-          const Duration(seconds: 8), // 设置超时
-          onTimeout: () {
-            logDebug('位置获取超时');
-            return null;
-          },
-        );
-
-        if (!mounted) return;
-
-        if (position != null) {
-          logDebug('位置获取成功: ${position.latitude}, ${position.longitude}');
-
-          // P10: 冷启动时检查网络状态，联网则强刷天气获取实时数据
-          final connectivityService = Provider.of<ConnectivityService>(
-            context,
-            listen: false,
-          );
-          final isConnected = connectivityService.isConnected;
-
-          // 异步获取天气，不阻塞主流程（使用事件队列调度，避免 microtask 抢占 UI）
-          unawaited(
-            weatherService
-                .getWeatherData(
-                  position.latitude,
-                  position.longitude,
-                  forceRefresh: isConnected,
-                  timeout: const Duration(seconds: 10),
-                )
-                .then((_) =>
-                    logDebug('天气数据更新完成: ${weatherService.currentWeather}'))
-                .catchError((e) => logDebug('天气数据更新失败: $e')),
-          );
-        } else {
-          logDebug('位置获取失败');
-        }
-      } else {
-        logDebug('位置权限未授予或位置服务未启用');
-      }
-    } catch (e) {
-      logDebug('初始化位置和天气服务时发生错误: $e');
-      // 不抛出异常，让调用方继续执行
-    }
+    _guideCoordinator.scheduleTrashLocationGuide();
   }
 
   // 显示添加笔记对话框（优化性能）
@@ -1393,91 +852,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _showAddQuoteDialog();
   }
 
-  // FAB 长按处理 - 显示语音录制浮层
+  // FAB 长按由捕获模块处理语音与 OCR 的完整交互。
   void _onFABLongPress() {
-    final settingsService = Provider.of<SettingsService>(
-      context,
-      listen: false,
-    );
-    final localAISettings = settingsService.localAISettings;
-
-    // 检查是否启用了本地AI和语音转文字功能，未启用则直接返回无反应
-    if (!localAISettings.enabled || !localAISettings.speechToTextEnabled) {
-      return;
-    }
-
-    _showVoiceInputOverlay();
-  }
-
-  Future<void> _showVoiceInputOverlay() async {
-    if (!mounted) return;
-
-    await showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'voice_input_overlay',
-      barrierColor: Colors.transparent,
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return VoiceInputOverlay(
-          transcribedText: null,
-          onSwipeUpForOCR: () async {
-            Navigator.of(context).pop();
-            await _openOCRFlow();
-          },
-          onRecordComplete: () {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(this.context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(this.context).featureComingSoon,
-                ),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
-        );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOut,
-        );
-        return FadeTransition(opacity: curved, child: child);
-      },
-      transitionDuration: const Duration(milliseconds: 180),
-    );
-  }
-
-  Future<void> _openOCRFlow() async {
-    if (!mounted) return;
-
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (context) => const OCRCapturePage()),
-    );
-
-    if (!mounted) return;
-
-    final l10n = AppLocalizations.of(context);
-    String resultText = l10n.featureComingSoon;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      builder: (context) {
-        return OCRResultSheet(
-          recognizedText: resultText,
-          onTextChanged: (text) {
-            resultText = text;
-          },
-          onInsertToEditor: () {
-            Navigator.of(context).pop();
-            _showAddQuoteDialog(prefilledContent: resultText);
-          },
-          onRecognizeSource: () {},
-        );
-      },
-    );
+    unawaited(_captureActions.startVoiceCapture());
   }
 
   // 显示编辑笔记对话框
@@ -1733,239 +1110,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  // 生成AI卡片
-  void _generateAICard(Quote quote) async {
-    if (_aiCardService == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).aiCardServiceNotInitialized,
-          ),
-          duration: AppConstants.snackBarDurationError,
-        ),
-      );
-      return;
-    }
-
-    // 显示加载对话框
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const CardGenerationLoadingDialog(),
-    );
-
-    try {
-      // 生成卡片
-      final card = await _aiCardService!.generateCard(
-        note: quote,
-        brandName: AppLocalizations.of(context).appTitle,
-      );
-
-      // 关闭加载对话框
-      if (mounted) Navigator.of(context).pop();
-
-      // 显示卡片预览对话框
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => CardPreviewDialog(
-            card: card,
-            onShare: (selected) => _shareCard(selected),
-            onSave: (selected) => _saveCard(selected),
-            onRegenerate: () => _aiCardService!.generateCard(
-              note: quote,
-              isRegeneration: true,
-              brandName: AppLocalizations.of(context).appTitle,
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      // 关闭加载对话框
-      if (mounted) Navigator.of(context).pop();
-
-      // 显示错误信息
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context).generateCardFailed(e.toString()),
-            ),
-            backgroundColor: Colors.red,
-            duration: AppConstants.snackBarDurationError,
-          ),
-        );
-      }
-    }
-  }
-
-  // 分享卡片
-  Future<void> _shareCard(GeneratedCard card) async {
-    try {
-      // 显示加载指示器
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                const SizedBox(width: 16),
-                Text(AppLocalizations.of(context).generatingShareImage),
-              ],
-            ),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-
-      // 生成高质量图片
-      final imageBytes = await card.toImageBytes(
-        width: 800,
-        height: 1200,
-        context: context,
-        scaleFactor: 2.0,
-        renderMode: ExportRenderMode.contain,
-      );
-
-      final tempDir = await getTemporaryDirectory();
-      final fileName = '心迹_Card_${DateTime.now().millisecondsSinceEpoch}.png';
-      final file = File('${tempDir.path}/$fileName');
-      await file.writeAsBytes(imageBytes);
-
-      // 分享文件
-      await SharePlus.instance.share(
-        ShareParams(
-          text:
-              '来自心迹的精美卡片\n\n"${card.originalContent.length > 50 ? '${card.originalContent.substring(0, 50)}...' : card.originalContent}"',
-          files: [XFile(file.path)],
-        ),
-      );
-
-      // 显示成功提示
-      if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Text(AppLocalizations.of(context).cardSharedSuccessfully),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error, color: Colors.white),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    AppLocalizations.of(context).shareFailed(e.toString()),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
-  }
-
-  // 保存卡片
-  Future<void> _saveCard(GeneratedCard card) async {
-    try {
-      // 显示加载指示器
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-                const SizedBox(width: 16),
-                Text(AppLocalizations.of(context).savingCardToGallery),
-              ],
-            ),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-
-      // 保存高质量图片
-      final filePath = await _aiCardService!.saveCardAsImage(
-        card,
-        width: 800,
-        height: 1200,
-        scaleFactor: 2.0,
-        renderMode: ExportRenderMode.contain,
-        context: context,
-        fileNamePrefix: AppLocalizations.of(context).cardFileNamePrefix,
-      );
-
-      if (mounted) {
-        final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Expanded(child: Text(l10n.cardSavedToGallery(filePath))),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-            action: SnackBarAction(
-              label: l10n.view,
-              textColor: Colors.white,
-              onPressed: () {
-                // 这里可以添加打开相册的逻辑
-              },
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error, color: Colors.white),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    AppLocalizations.of(context).saveFailed(e.toString()),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    }
+  // AI 卡片模块隐藏生成、预览、分享和保存的完整流程。
+  void _generateAICard(Quote quote) {
+    unawaited(_cardActions.generateCard(quote));
   }
 
   // 处理排序变更
@@ -2178,7 +1325,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           children: [
             // 首页 - 每日一言和每日提示
             RefreshIndicator(
-              onRefresh: _handleRefresh,
+              onRefresh: _refreshCoordinator.refresh,
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final screenHeight = constraints.maxHeight;

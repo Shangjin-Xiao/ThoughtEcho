@@ -25,16 +25,8 @@ class HomePageController extends ChangeNotifier {
 
   // Transient orchestration state. Keeping it here prevents navigation,
   // guide and intent flows from leaking private flags into the page State.
-  bool homeGuidePending = false;
-  bool noteGuidePending = false;
-  bool settingsGuidePending = false;
-  bool trashGuideScheduled = false;
   String? lastConsumedExcerptText;
   bool isHandlingExcerptIntent = false;
-  bool hasConsumedInitialTargetNote = false;
-  bool isConsumingInitialTargetNote = false;
-  int initialTargetScrollRetryCount = 0;
-  String? pendingNotificationNoteId;
   Timer? trashSnackBarTimer;
 
   int get currentIndex => _currentIndex;
