@@ -2,7 +2,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../gen_l10n/app_localizations.dart';
-import '../../models/ai_workflow_descriptor.dart';
 
 class AIAssistantInputPanel extends StatelessWidget {
   const AIAssistantInputPanel({
@@ -11,8 +10,6 @@ class AIAssistantInputPanel extends StatelessWidget {
     required this.focusNode,
     required this.isLoading,
     required this.isInputFocused,
-    required this.showSlashCommands,
-    required this.filteredWorkflowDescriptors,
     required this.selectedMediaFiles,
     required this.isAgentMode,
     required this.currentModelSupportsThinking,
@@ -23,15 +20,12 @@ class AIAssistantInputPanel extends StatelessWidget {
     required this.onSendOrStop,
     required this.onSubmitText,
     required this.onRemoveMediaFile,
-    required this.onSubmitWorkflowCommand,
   });
 
   final TextEditingController textController;
   final FocusNode focusNode;
   final bool isLoading;
   final bool isInputFocused;
-  final bool showSlashCommands;
-  final List<AIWorkflowDescriptor> filteredWorkflowDescriptors;
   final List<PlatformFile> selectedMediaFiles;
   final bool isAgentMode;
   final bool currentModelSupportsThinking;
@@ -42,7 +36,6 @@ class AIAssistantInputPanel extends StatelessWidget {
   final VoidCallback onSendOrStop;
   final ValueChanged<String> onSubmitText;
   final ValueChanged<int> onRemoveMediaFile;
-  final ValueChanged<String> onSubmitWorkflowCommand;
 
   @override
   Widget build(BuildContext context) {
@@ -79,36 +72,6 @@ class AIAssistantInputPanel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
-              child: showSlashCommands && filteredWorkflowDescriptors.isNotEmpty
-                  ? Padding(
-                      key: const ValueKey('slash_commands_visible'),
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children:
-                              filteredWorkflowDescriptors.map((descriptor) {
-                            return ActionChip(
-                              label: Text(descriptor.command),
-                              onPressed: () {
-                                textController.clear();
-                                onSubmitWorkflowCommand(descriptor.command);
-                              },
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    )
-                  : const SizedBox.shrink(
-                      key: ValueKey('slash_commands_hidden'),
-                    ),
-            ),
             if (selectedMediaFiles.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),

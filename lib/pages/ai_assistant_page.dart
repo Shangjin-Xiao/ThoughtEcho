@@ -96,7 +96,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   late AIAssistantPageMode _currentMode;
   String _selectedInsightType = 'comprehensive';
   String _selectedInsightStyle = 'professional';
-  bool _showSlashCommands = false; // Only show when user types /
+
   bool _enableThinking = true; // 是否启用思考模式（仅支持的模型显示）
 
   bool _isInputFocused = false;

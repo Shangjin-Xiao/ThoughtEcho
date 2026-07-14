@@ -1,16 +1,6 @@
 part of '../ai_assistant_page.dart';
 
 extension _AIAssistantPageUI on _AIAssistantPageState {
-  void _onTextChanged() {
-    final text = _textController.text.trimLeft();
-    final shouldShow = text.startsWith('/');
-    if (shouldShow != _showSlashCommands) {
-      _setState(() {
-        _showSlashCommands = shouldShow;
-      });
-    }
-  }
-
   void _onInputFocusChanged() {
     if (!mounted || _isInputFocused == _inputFocusNode.hasFocus) {
       return;
@@ -567,15 +557,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
   }
 
   Widget _buildInputArea(ThemeData theme, AppLocalizations l10n) {
-    final workflowDescriptors = _buildWorkflowDescriptors(l10n);
-    final inputText = _textController.text.toLowerCase();
-    final filteredWorkflowDescriptors = workflowDescriptors
-        .where(
-          (descriptor) =>
-              inputText.isEmpty ||
-              descriptor.command.toLowerCase().startsWith(inputText),
-        )
-        .toList(growable: false);
     final shellBorderColor = _isInputFocused
         ? theme.colorScheme.primary.withValues(alpha: 0.6)
         : theme.colorScheme.outlineVariant.withValues(alpha: 0.75);
@@ -607,36 +588,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Slash commands
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              child:
-                  _showSlashCommands && filteredWorkflowDescriptors.isNotEmpty
-                      ? Padding(
-                          key: const ValueKey('slash_commands_visible'),
-                          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children:
-                                  filteredWorkflowDescriptors.map((descriptor) {
-                                return ActionChip(
-                                  label: Text(descriptor.command),
-                                  onPressed: () {
-                                    _textController.clear();
-                                    _handleSubmitted(descriptor.command);
-                                  },
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        )
-                      : const SizedBox.shrink(
-                          key: ValueKey('slash_commands_hidden'),
-                        ),
-            ),
             // Selected media files
             if (_selectedMediaFiles.isNotEmpty)
               Padding(
