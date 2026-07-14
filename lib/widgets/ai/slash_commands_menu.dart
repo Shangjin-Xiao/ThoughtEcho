@@ -357,11 +357,14 @@ class _SlashCommandsInputFieldState extends State<SlashCommandsInputField> {
       children: [
         if (_showSlashCommands)
           SlashCommandsMenu(
+            key: const ValueKey('slash_commands_visible'),
             commands: widget.workflows,
             filterText: filterText,
             onCommandSelected: _selectCommand,
             visible: _showSlashCommands,
-          ),
+          )
+        else
+          const SizedBox.shrink(key: ValueKey('slash_commands_hidden')),
         TextField(
           controller: widget.controller,
           focusNode: widget.focusNode,
