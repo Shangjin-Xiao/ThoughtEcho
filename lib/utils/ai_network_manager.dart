@@ -517,15 +517,6 @@ class AINetworkManager {
 
   /// 处理错误
   static Exception _handleError(dynamic error) {
-    if (error is! DioException) {
-      logError(
-        'AI Request Error: Not a DioException',
-        error: error,
-        source: 'AINetworkManager',
-      );
-      return Exception('未知错误: ${error.toString()}');
-    }
-
     final statusCode = error.response?.statusCode;
     final errorBody = error.response?.data?.toString() ?? error.message ?? '';
 
