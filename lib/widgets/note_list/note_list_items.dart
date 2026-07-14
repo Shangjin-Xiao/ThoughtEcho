@@ -532,7 +532,8 @@ extension _NoteListItemsExtension on NoteListViewState {
           addSemanticIndexes: false, // 性能权衡：关闭所有列表项的自动顺序语义索引
           // 性能优化：惯性首帧移动距离远大于拖拽帧，需要更大缓存区预构建 item
           // 避免 drag→ballistic 过渡时集中构建新 item 导致卡顿
-          cacheExtent: MediaQuery.sizeOf(context).height.clamp(400, 900).toDouble(),
+          cacheExtent:
+              MediaQuery.sizeOf(context).height.clamp(400, 900).toDouble(),
           semanticChildCount: _quotes.length + (_hasMore ? 1 : 0),
           itemCount: _quotes.length + (_hasMore ? 1 : 0),
           itemBuilder: (context, index) {
@@ -1322,7 +1323,8 @@ class _NoteDeleteCollapseState extends State<_NoteDeleteCollapse>
       opacity: reverseAnimation,
       child: SizeTransition(
         sizeFactor: reverseAnimation,
-        axisAlignment: -1.0, // Top alignment equivalent in older Flutter versions
+        axisAlignment:
+            -1.0, // Top alignment equivalent in older Flutter versions
         child: widget.child,
       ),
     );
