@@ -1,0 +1,50 @@
+lib/services/database/AGENTS.md
+  s_b4e19e4ea4862f::t_14c643d824b1b2 4-6,10-11
+lib/services/database/schema_lifecycle.dart
+  s_b4e19e4ea4862f::t_46a2a906c4bb19 111
+  s_b4e19e4ea4862f::t_7fb7ceab856492 1-110,112-189
+lib/services/database_service.dart
+  s_b4e19e4ea4862f::t_563e68250e1aa6 57,789,792,824,833,999
+lib/services/database/schema_definitions.dart
+  s_b4e19e4ea4862f::t_262912c820324d 42-49
+  s_b4e19e4ea4862f::t_262a9ceb9f9be3 1-41,50-155,161,165-193,196-240,243-247
+  s_b4e19e4ea4862f::t_46a2a906c4bb19 194-195,241-242
+  s_b4e19e4ea4862f::t_e8d2895eb16e96 156-160,162-164
+lib/services/database_schema_manager.dart
+  s_b4e19e4ea4862f::t_a04ec2ba01db1b 3,9-18,20-23,26-29,37-39,42-43,46,49-50,52-53,58-59,61-62,64-65,68-71,73-74,76-77,79-85
+  s_b4e19e4ea4862f::t_46a2a906c4bb19 35-36,55-56
+lib/services/database/schema_repair_adapter.dart
+  s_b4e19e4ea4862f::t_e00c9f18b48e87 1-32,36-54,57-75,78-144,146-162,164-389,391-395,400-466,468-469
+  s_b4e19e4ea4862f::t_786d147813089b 145,163,390
+  s_b4e19e4ea4862f::t_46a2a906c4bb19 33-35,55-56,76-77,396-399
+  s_b4e19e4ea4862f::t_e8d2895eb16e96 467
+lib/services/database/schema_version_adapters.dart
+  s_b4e19e4ea4862f::t_786d147813089b 198,206,222
+  s_b4e19e4ea4862f::t_46a2a906c4bb19 216-217,283-284,296-297,393-394
+  s_b4e19e4ea4862f::t_8b4cf7526aa4d6 1-197,199-205,207-215,218-221,223-282,285-295,298-392,395-433
+lib/services/database/database_query_helpers_mixin.dart
+  s_b4e19e4ea4862f::t_563e68250e1aa6 183
+test/unit/services/database_schema_lifecycle_test.dart
+  s_b4e19e4ea4862f::t_46a2a906c4bb19 24-25,31-44,86-87,131-132,147-148
+  s_b4e19e4ea4862f::t_886197d5bd8b61 90-123,191-211
+  s_b4e19e4ea4862f::t_fe67ea7e8a44db 1-23,26-30,45-60,63-85,88-89,124-130,133-146,149-190,212-214
+  s_b4e19e4ea4862f::t_505193aa2e9404 61-62
+lib/services/database/database_migration_mixin.dart
+  s_b4e19e4ea4862f::t_563e68250e1aa6 8,14,20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "7ab0a9baff885ea28a61ab9c788ec6d0eb37a1b4",
+  "prompts": {},
+  "sessions": {
+    "s_b4e19e4ea4862f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5ddb-45b8-7660-a8d8-b87a644e214f",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
