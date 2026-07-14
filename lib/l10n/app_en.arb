@@ -1877,6 +1877,19 @@
   "thinkingInProgress": "Thinking...",
   "aiMisunderstoodQuestion": "Sorry, I couldn't understand this question. Please try asking in a different way.",
   "aiResponseError": "Sorry, an error occurred while responding: {error}",
+  "agentErrorNoProvider": "Select an AI provider and try again.",
+  "agentErrorMissingApiKey": "Configure an API key for {providerName}, then try again.",
+  "@agentErrorMissingApiKey": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentErrorUnsupportedProvider": "The current AI provider does not support Agent mode. Choose another provider and try again.",
+  "agentErrorTimeout": "The request timed out. Check your connection and try again.",
+  "agentErrorCancelled": "This request was stopped.",
+  "agentErrorGeneric": "The request could not be completed. Please try again later.",
   "apiKeyDiagnosticsTitle": "API Key Diagnostics",
   "apiKeyDiagnosticsTool": "API Key Diagnostics Tool",
   "apiKeyDiagnosticsDesc": "This tool checks the storage and retrieval of API keys to help diagnose 401 authentication errors.",

@@ -3,6 +3,8 @@ part of '../ai_assistant_page.dart';
 extension _AIAssistantPageAgent on _AIAssistantPageState {
   Future<void> _askAgent(String text) async {
     final l10n = AppLocalizations.of(context);
+    final requestGeneration = ++_agentRequestGeneration;
+    StreamSubscription<AgentEvent>? eventSubscription;
 
     var history = _messages
         .where((m) => m.role != 'system' && m.metaJson == null)
@@ -67,9 +69,13 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     }
 
     try {
-      await _agentEventSubscription?.cancel();
-      _agentEventSubscription = _agentService.events.listen((event) {
-        if (!mounted) return;
+      final previousSubscription = _agentEventSubscription;
+      await previousSubscription?.cancel();
+      if (!mounted || requestGeneration != _agentRequestGeneration) {
+        return;
+      }
+      eventSubscription = _agentService.events.listen((event) {
+        if (!mounted || requestGeneration != _agentRequestGeneration) return;
         switch (event) {
           case AgentThinkingEvent():
             streamingText = '';
@@ -209,6 +215,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             }
         }
       });
+      _agentEventSubscription = eventSubscription;
 
       final response = await _agentService.runAgent(
         userMessage: text,
@@ -216,10 +223,12 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
         noteContext: _hasBoundNote ? widget.quote!.content : null,
       );
 
-      await _agentEventSubscription?.cancel();
-      _agentEventSubscription = null;
+      await eventSubscription.cancel();
+      if (identical(_agentEventSubscription, eventSubscription)) {
+        _agentEventSubscription = null;
+      }
 
-      if (!mounted) return;
+      if (!mounted || requestGeneration != _agentRequestGeneration) return;
 
       final parsed = _parseAgentSmartResult(response, l10n);
 
@@ -311,6 +320,10 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           }
         }
 
+        if (!mounted || requestGeneration != _agentRequestGeneration) {
+          return;
+        }
+
         final cardMsg = app_chat.ChatMessage(
           id: _uuid.v4(),
           role: 'assistant',
@@ -348,17 +361,24 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       }
 
       _scrollToBottom(bypassThrottle: true);
-    } catch (e) {
-      if (!mounted) return;
+    } catch (e, stack) {
+      logError(
+        'AIAssistantPage Agent request failed',
+        error: e is AgentRequestException ? e.failureType : e.runtimeType,
+        stackTrace: stack,
+      );
+      if (!mounted || requestGeneration != _agentRequestGeneration) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.aiResponseError(e.toString()))),
+        SnackBar(content: Text(_agentErrorMessage(l10n, e))),
       );
     } finally {
-      await _agentEventSubscription?.cancel();
-      _agentEventSubscription = null;
-      _cancelStreamUpdate();
-      _cancelToolProgressUpdate();
-      if (mounted) {
+      await eventSubscription?.cancel();
+      if (identical(_agentEventSubscription, eventSubscription)) {
+        _agentEventSubscription = null;
+      }
+      if (mounted && requestGeneration == _agentRequestGeneration) {
+        _cancelStreamUpdate();
+        _cancelToolProgressUpdate();
         if (toolProgressMsgId != null) {
           toolProgressInProgress = false;
           _updateToolProgressMessage(
@@ -371,6 +391,25 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
         _finishLoading();
       }
     }
+  }
+
+  String _agentErrorMessage(AppLocalizations l10n, Object error) {
+    if (error is! AgentRequestException) {
+      return l10n.agentErrorGeneric;
+    }
+
+    return switch (error.failureType) {
+      AgentFailureType.noProvider => l10n.agentErrorNoProvider,
+      AgentFailureType.missingApiKey =>
+        l10n.agentErrorMissingApiKey(error.providerName ?? ''),
+      AgentFailureType.unsupportedProvider =>
+        l10n.agentErrorUnsupportedProvider,
+      AgentFailureType.timeout => l10n.agentErrorTimeout,
+      AgentFailureType.cancelled => l10n.agentErrorCancelled,
+      AgentFailureType.toolExecutionFailed ||
+      AgentFailureType.unknown =>
+        l10n.agentErrorGeneric,
+    };
   }
 
   void _updateToolProgressMessage(
@@ -596,7 +635,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     return null;
   }
 
-  /// 解析 Agent 回复中的 Smart Result 代码块或工具调用结果
+  /// 解析由成功的 Agent 工具调用生成的建议卡片。
   _AgentSmartResultParseResult _parseAgentSmartResult(
     AgentResponse response,
     AppLocalizations l10n,
@@ -653,46 +692,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       return const _AgentSmartResultParseResult(displayText: '');
     }
 
-    // 回退机制：匹配 ```smart_result ... ```
-    final regex = RegExp(
-      r'```(?:smart_result|smart-result)\s*([\s\S]*?)\s*```',
-      caseSensitive: false,
-    );
-
-    final match = regex.firstMatch(trimmed);
-    if (match == null) {
-      return _AgentSmartResultParseResult(displayText: trimmed);
-    }
-
-    final jsonText = match.group(1) ?? '';
-    final displayText = trimmed.replaceRange(match.start, match.end, '').trim();
-
-    try {
-      final data = jsonDecode(jsonText) as Map<String, dynamic>;
-      return _AgentSmartResultParseResult(
-        displayText: displayText,
-        smartResult: _AgentSmartResultPayload(
-          title: data['title']?.toString() ?? 'AI 建议',
-          content: data['content']?.toString() ?? '',
-          noteId: data['note_id']?.toString(),
-          action: data['action']?.toString(),
-          tagIds: _parseStringList(data['tag_ids']),
-          tagNames: _parseStringList(data['tag_names']),
-          author: data['author']?.toString(),
-          source: data['source']?.toString(),
-          includeLocation: _parseOptionalBool(data['include_location']),
-          includeWeather: _parseOptionalBool(data['include_weather']),
-          richEdit: data['rich_edit'] is Map
-              ? Map<String, Object?>.from(data['rich_edit'] as Map)
-              : null,
-          richDocument: data['rich_document'] is List
-              ? List<Object?>.from(data['rich_document'] as List)
-              : null,
-        ),
-      );
-    } catch (e) {
-      return _AgentSmartResultParseResult(displayText: trimmed);
-    }
+    return _AgentSmartResultParseResult(displayText: trimmed);
   }
 
   List<String>? _parseStringList(Object? value) {

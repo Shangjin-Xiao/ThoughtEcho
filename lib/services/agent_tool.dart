@@ -20,6 +20,32 @@ abstract class AgentTool {
   Future<ToolResult> execute(ToolCall toolCall);
 }
 
+/// Stable categories for an Agent request failure that are safe to present in
+/// the UI without exposing provider responses or credentials.
+enum AgentFailureType {
+  noProvider,
+  missingApiKey,
+  unsupportedProvider,
+  timeout,
+  cancelled,
+  toolExecutionFailed,
+  unknown,
+}
+
+/// An Agent failure with only the safe context required for user feedback.
+class AgentRequestException implements Exception {
+  const AgentRequestException(
+    this.failureType, {
+    this.providerName,
+  });
+
+  final AgentFailureType failureType;
+  final String? providerName;
+
+  @override
+  String toString() => 'AgentRequestException($failureType)';
+}
+
 class ToolCall {
   ToolCall({
     required this.id,
@@ -103,30 +129,34 @@ class ToolResult {
     required this.content,
     this.isError = false,
     this.retryable = false,
+    this.failureType,
   });
 
   final String toolCallId;
   final String content;
   final bool isError;
   final bool retryable;
+  final AgentFailureType? failureType;
 
   ToolResult copyWith({
     String? toolCallId,
     String? content,
     bool? isError,
     bool? retryable,
+    AgentFailureType? failureType,
   }) {
     return ToolResult(
       toolCallId: toolCallId ?? this.toolCallId,
       content: content ?? this.content,
       isError: isError ?? this.isError,
       retryable: retryable ?? this.retryable,
+      failureType: failureType ?? this.failureType,
     );
   }
 
   @override
   String toString() {
-    return 'ToolResult(toolCallId: $toolCallId, isError: $isError, retryable: $retryable, content: $content)';
+    return 'ToolResult(toolCallId: $toolCallId, isError: $isError, retryable: $retryable, failureType: $failureType, content: $content)';
   }
 
   @override
@@ -138,12 +168,13 @@ class ToolResult {
         other.toolCallId == toolCallId &&
         other.content == content &&
         other.isError == isError &&
-        other.retryable == retryable;
+        other.retryable == retryable &&
+        other.failureType == failureType;
   }
 
   @override
   int get hashCode {
-    return Object.hash(toolCallId, content, isError, retryable);
+    return Object.hash(toolCallId, content, isError, retryable, failureType);
   }
 }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
@@ -12,12 +14,12 @@ import '../../test_harness.dart';
 class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   _FakeSettingsService(this._provider);
 
-  final AIProviderSettings _provider;
+  final AIProviderSettings? _provider;
 
   @override
   MultiAISettings get multiAISettings => MultiAISettings(
-        providers: [_provider],
-        currentProviderId: _provider.id,
+        providers: [if (_provider case final provider?) provider],
+        currentProviderId: _provider?.id,
       );
 
   @override
@@ -62,10 +64,12 @@ class _FailingTool extends AgentTool {
   _FailingTool({
     required this.toolName,
     required this.resultContent,
+    this.retryable = false,
   });
 
   final String toolName;
   final String resultContent;
+  final bool retryable;
   int executeCount = 0;
 
   @override
@@ -89,6 +93,7 @@ class _FailingTool extends AgentTool {
       toolCallId: toolCall.id,
       content: resultContent,
       isError: true,
+      retryable: retryable,
     );
   }
 }
@@ -541,11 +546,18 @@ void main() {
           return responses.removeAt(0);
         },
       );
-
-      final response = await service.runAgent(userMessage: 'test');
+      await expectLater(
+        () => service.runAgent(userMessage: 'test'),
+        throwsA(
+          isA<AgentRequestException>().having(
+            (error) => error.failureType,
+            'failureType',
+            AgentFailureType.toolExecutionFailed,
+          ),
+        ),
+      );
 
       expect(tool.executeCount, 0);
-      expect(response.content, contains('工具调用参数连续无效'));
     });
 
     test(
@@ -587,13 +599,80 @@ void main() {
           return responses.removeAt(0);
         },
       );
+      final events = <AgentEvent>[];
+      final subscription = service.events.listen(events.add);
 
-      final response = await service.runAgent(userMessage: 'test');
+      await expectLater(
+        () => service.runAgent(userMessage: 'test'),
+        throwsA(
+          isA<AgentRequestException>().having(
+            (error) => error.failureType,
+            'failureType',
+            AgentFailureType.toolExecutionFailed,
+          ),
+        ),
+      );
 
       expect(tool.executeCount, 1);
       expect(requestCount, 1);
-      expect(response.content, contains('保存失败：数据库不可写'));
-      expect(response.content, isNot(contains('smart_result')));
+      final toolResultEvent =
+          events.whereType<AgentToolCallResultEvent>().single;
+      expect(toolResultEvent.isError, isTrue);
+      expect(toolResultEvent.result, isEmpty);
+      await subscription.cancel();
+      service.dispose();
+    });
+
+    test('does not return retryable failed proposal calls as suggestions',
+        () async {
+      const proposalTools = <String>[
+        'propose_edit',
+        'propose_rich_edit',
+        'propose_new_note',
+      ];
+
+      for (final toolName in proposalTools) {
+        final provider = const AIProviderSettings(
+          id: 'openai',
+          name: 'OpenAI',
+          apiUrl: 'https://api.openai.com/v1/chat/completions',
+          model: 'gpt-4.1',
+        );
+        final tool = _FailingTool(
+          toolName: toolName,
+          resultContent: 'proposal failed',
+          retryable: true,
+        );
+        final responses = <openai.ChatCompletion>[
+          _toolCallCompletion(
+            callId: '$toolName-call',
+            toolName: toolName,
+            args: const {'title': 'suggestion', 'content': 'draft'},
+          ),
+          _textCompletion('retry completed without a proposal'),
+        ];
+        final service = AgentService(
+          settingsService: _FakeSettingsService(provider),
+          tools: [tool],
+          apiKeyResolver: (_) async => 'test-key',
+          completionRequester: ({
+            required provider,
+            required messages,
+            required tools,
+            required temperature,
+            required maxTokens,
+          }) async =>
+              responses.removeAt(0),
+        );
+
+        final response = await service.runAgent(userMessage: 'test');
+
+        expect(tool.executeCount, 1, reason: toolName);
+        expect(response.content, 'retry completed without a proposal',
+            reason: toolName);
+        expect(response.toolCalls, isEmpty, reason: toolName);
+        service.dispose();
+      }
     });
 
     test('keeps events stream active across consecutive runs', () async {
@@ -679,8 +758,53 @@ void main() {
       final response = await service.runAgent(userMessage: 'test');
       expect(tool.executeCount, AgentService.maxToolRounds);
       expect(response.reachedMaxRounds, isTrue);
-      expect(response.content, contains('已达到最大执行轮数'));
-      expect(response.content, contains('summary answer'));
+      expect(response.content, 'summary answer');
+    });
+
+    test('reports an empty max-rounds summary as a typed failure', () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final tool = _CountingTool(toolName: 'search_notes', resultContent: 'ok');
+      final responses = <openai.ChatCompletion>[
+        for (var i = 0; i < AgentService.maxToolRounds; i++)
+          _toolCallCompletion(
+            callId: 'call_$i',
+            toolName: 'search_notes',
+            args: {'query': 'q_$i'},
+          ),
+        _textCompletion(''),
+      ];
+      final service = AgentService(
+        settingsService: _FakeSettingsService(provider),
+        tools: [tool],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async =>
+            responses.removeAt(0),
+      );
+
+      await expectLater(
+        () => service.runAgent(userMessage: 'test'),
+        throwsA(
+          isA<AgentRequestException>().having(
+            (error) => error.failureType,
+            'failureType',
+            AgentFailureType.unknown,
+          ),
+        ),
+      );
+
+      expect(tool.executeCount, AgentService.maxToolRounds);
+      service.dispose();
     });
 
     test('emits error event when completion request fails', () async {
@@ -718,7 +842,108 @@ void main() {
       await subscription.cancel();
       service.dispose();
 
-      expect(events.any((e) => e is AgentErrorEvent), isTrue);
+      expect(
+        events.whereType<AgentErrorEvent>().single.failureType,
+        AgentFailureType.unknown,
+      );
+    });
+
+    test('classifies a missing provider without exposing its configuration',
+        () async {
+      final service = AgentService(
+        settingsService: _FakeSettingsService(null),
+        tools: const <AgentTool>[],
+      );
+      final events = <AgentEvent>[];
+      final subscription = service.events.listen(events.add);
+
+      await expectLater(
+        () => service.runAgent(userMessage: 'test'),
+        throwsA(
+          isA<AgentRequestException>().having(
+            (error) => error.failureType,
+            'failureType',
+            AgentFailureType.noProvider,
+          ),
+        ),
+      );
+
+      await subscription.cancel();
+      service.dispose();
+      expect(
+        events.whereType<AgentErrorEvent>().single.failureType,
+        AgentFailureType.noProvider,
+      );
+    });
+
+    test('classifies a missing API key without exposing key details', () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final service = AgentService(
+        settingsService: _FakeSettingsService(provider),
+        tools: const <AgentTool>[],
+        apiKeyResolver: (_) async => '',
+      );
+      final events = <AgentEvent>[];
+      final subscription = service.events.listen(events.add);
+
+      await expectLater(
+        () => service.runAgent(userMessage: 'test'),
+        throwsA(
+          isA<AgentRequestException>().having(
+            (error) => error.failureType,
+            'failureType',
+            AgentFailureType.missingApiKey,
+          ),
+        ),
+      );
+
+      await subscription.cancel();
+      service.dispose();
+      expect(
+        events.whereType<AgentErrorEvent>().single.failureType,
+        AgentFailureType.missingApiKey,
+      );
+    });
+
+    test('classifies an unsupported Agent provider before resolving its key',
+        () async {
+      final provider = const AIProviderSettings(
+        id: 'anthropic',
+        name: 'Anthropic',
+        apiUrl: 'https://api.anthropic.com/v1/messages',
+        model: 'claude-3-5-sonnet',
+      );
+      final service = AgentService(
+        settingsService: _FakeSettingsService(provider),
+        tools: const <AgentTool>[],
+        apiKeyResolver: (_) async =>
+            throw StateError('key resolver should not run'),
+      );
+      final events = <AgentEvent>[];
+      final subscription = service.events.listen(events.add);
+
+      await expectLater(
+        () => service.runAgent(userMessage: 'test'),
+        throwsA(
+          isA<AgentRequestException>().having(
+            (error) => error.failureType,
+            'failureType',
+            AgentFailureType.unsupportedProvider,
+          ),
+        ),
+      );
+
+      await subscription.cancel();
+      service.dispose();
+      expect(
+        events.whereType<AgentErrorEvent>().single.failureType,
+        AgentFailureType.unsupportedProvider,
+      );
     });
 
     test('runs read-only concurrency-safe tools in parallel', () async {
@@ -830,6 +1055,58 @@ void main() {
 
       expect(response.content, isEmpty);
       expect(requestCount, 1);
+    });
+
+    test(
+        'starts a new run after stopping an unresolved request without emitting stale events',
+        () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final firstCompletion = Completer<openai.ChatCompletion>();
+      var requestCount = 0;
+      final service = AgentService(
+        settingsService: _FakeSettingsService(provider),
+        tools: const <AgentTool>[],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) {
+          requestCount++;
+          return requestCount == 1
+              ? firstCompletion.future
+              : Future<openai.ChatCompletion>.value(_textCompletion('new'));
+        },
+      );
+      final responseEvents = <String>[];
+      final subscription = service.events.listen((event) {
+        if (event is AgentResponseEvent) {
+          responseEvents.add(event.content);
+        }
+      });
+
+      final firstRun = service.runAgent(userMessage: 'old');
+      await Future<void>.delayed(Duration.zero);
+      service.requestStop();
+      final secondRun = service.runAgent(userMessage: 'new');
+      firstCompletion.complete(_textCompletion('stale'));
+
+      final responses = await Future.wait([firstRun, secondRun]);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(responses[0].content, isEmpty);
+      expect(responses[1].content, 'new');
+      expect(responseEvents, ['new']);
+
+      await subscription.cancel();
+      service.dispose();
     });
   });
 }

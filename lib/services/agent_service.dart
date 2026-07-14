@@ -64,8 +64,8 @@ class AgentResponseEvent extends AgentEvent {
 
 /// Agent 出错
 class AgentErrorEvent extends AgentEvent {
-  final String message;
-  AgentErrorEvent(this.message);
+  final AgentFailureType failureType;
+  AgentErrorEvent(this.failureType);
 }
 
 /// Agent 文本增量事件（流式输出时逐步推送文本片段）
@@ -101,7 +101,10 @@ class AgentService extends ChangeNotifier {
   /// 实时事件流 — UI 层通过此流获取 Agent 执行过程中的实时更新
   Stream<AgentEvent> get events => _eventController.stream;
 
-  void _emitEvent(AgentEvent event) {
+  void _emitEvent(AgentEvent event, {int? runId}) {
+    if (runId != null && !_isRunActive(runId)) {
+      return;
+    }
     if (!_eventController.isClosed) {
       _eventController.add(event);
     }
@@ -121,6 +124,9 @@ class AgentService extends ChangeNotifier {
   bool _stopRequested = false;
   bool get isStopRequested => _stopRequested;
 
+  int _nextRunId = 0;
+  int? _activeRunId;
+
   String _currentStatusKey = '';
   String get currentStatusKey => _currentStatusKey;
 
@@ -135,12 +141,20 @@ class AgentService extends ChangeNotifier {
         _apiKeyResolver = apiKeyResolver;
 
   void requestStop() {
-    if (!_isRunning) {
+    if (_activeRunId == null) {
       return;
     }
     _stopRequested = true;
-    _setStatus('');
+    _activeRunId = null;
+    _isRunning = false;
+    if (_currentStatusKey.isEmpty) {
+      notifyListeners();
+    } else {
+      _setStatus('');
+    }
   }
+
+  bool _isRunActive(int runId) => _activeRunId == runId;
 
   /// 执行 Agent 任务（流式，基于原生 tool calling 循环）
   Future<AgentResponse> runAgent({
@@ -148,13 +162,15 @@ class AgentService extends ChangeNotifier {
     List<app_chat.ChatMessage>? history,
     String? noteContext,
   }) async {
-    if (_isRunning) {
+    if (_activeRunId != null) {
       throw StateError('AgentService.runAgent 不支持并发调用');
     }
+    final runId = ++_nextRunId;
+    _activeRunId = runId;
     _isRunning = true;
     _stopRequested = false;
-    _setStatus('agentThinking');
-    _emitEvent(AgentThinkingEvent());
+    _setStatus('agentThinking', runId: runId);
+    _emitEvent(AgentThinkingEvent(), runId: runId);
     notifyListeners();
 
     try {
@@ -175,29 +191,34 @@ class AgentService extends ChangeNotifier {
       var round = 0;
 
       while (true) {
-        if (_stopRequested) {
+        if (!_isRunActive(runId)) {
           return AgentResponse(content: '', toolCalls: executedCalls);
         }
         if (round >= maxToolRounds) {
-          _setStatus('');
+          _setStatus('', runId: runId);
           final summary = await _requestFinalSummary(
             provider: provider,
             messages: messages,
           );
-          _emitEvent(AgentResponseEvent(
-            content: '已达到最大执行轮数（$maxToolRounds）。\n\n$summary',
-            toolCalls: executedCalls,
-            reachedMaxRounds: true,
-          ));
+          if (!_isRunActive(runId)) {
+            return AgentResponse(content: '', toolCalls: executedCalls);
+          }
+          _emitEvent(
+              AgentResponseEvent(
+                content: summary,
+                toolCalls: executedCalls,
+                reachedMaxRounds: true,
+              ),
+              runId: runId);
           return AgentResponse(
-            content: '已达到最大执行轮数（$maxToolRounds）。\n\n$summary',
+            content: summary,
             toolCalls: executedCalls,
             reachedMaxRounds: true,
           );
         }
         round++;
-        _setStatus('agentThinking');
-        _emitEvent(AgentThinkingEvent());
+        _setStatus('agentThinking', runId: runId);
+        _emitEvent(AgentThinkingEvent(), runId: runId);
 
         final result = await _streamCompletion(
           provider: provider,
@@ -205,27 +226,29 @@ class AgentService extends ChangeNotifier {
           tools: openAITools,
           temperature: provider.temperature,
           maxTokens: 2000,
+          runId: runId,
         );
 
-        if (_stopRequested) {
+        if (!_isRunActive(runId)) {
           return AgentResponse(content: '', toolCalls: executedCalls);
         }
 
         if (result.content.trim().isEmpty && result.toolCalls.isEmpty) {
-          throw StateError('AI 返回为空响应');
+          throw const AgentRequestException(AgentFailureType.unknown);
         }
 
         final assistantContent = result.content.trim();
         final rawToolCalls = result.toolCalls;
 
         if (rawToolCalls.isEmpty) {
-          _setStatus('');
-          final responseContent =
-              assistantContent.isNotEmpty ? assistantContent : '暂时无法处理，请稍后再试。';
-          _emitEvent(AgentResponseEvent(
-            content: responseContent,
-            toolCalls: executedCalls,
-          ));
+          _setStatus('', runId: runId);
+          final responseContent = assistantContent;
+          _emitEvent(
+              AgentResponseEvent(
+                content: responseContent,
+                toolCalls: executedCalls,
+              ),
+              runId: runId);
           return AgentResponse(
             content: responseContent,
             toolCalls: executedCalls,
@@ -248,13 +271,18 @@ class AgentService extends ChangeNotifier {
             (repeatedRoundPatterns[roundPattern] ?? 0) + 1;
         repeatedRoundPatterns[roundPattern] = currentPatternCount;
         if (currentPatternCount >= _maxRepeatedRoundPattern) {
-          final fallback =
-              assistantContent.isNotEmpty ? assistantContent : '检测到重复操作，已自动停止。';
-          _emitEvent(AgentResponseEvent(
-            content: fallback,
-            toolCalls: executedCalls,
-          ));
-          return AgentResponse(content: fallback, toolCalls: executedCalls);
+          if (assistantContent.isEmpty) {
+            throw const AgentRequestException(
+                AgentFailureType.toolExecutionFailed);
+          }
+          _emitEvent(
+              AgentResponseEvent(
+                content: assistantContent,
+                toolCalls: executedCalls,
+              ),
+              runId: runId);
+          return AgentResponse(
+              content: assistantContent, toolCalls: executedCalls);
         }
 
         final invalidToolNames = <String>[];
@@ -269,12 +297,9 @@ class AgentService extends ChangeNotifier {
             correctionAttempts,
             correctionKey,
           )) {
-            final fallback = '工具调用参数连续无效，已停止。请重试或换一种说法。';
-            _emitEvent(AgentResponseEvent(
-              content: fallback,
-              toolCalls: executedCalls,
-            ));
-            return AgentResponse(content: fallback, toolCalls: executedCalls);
+            throw const AgentRequestException(
+              AgentFailureType.toolExecutionFailed,
+            );
           }
           if (assistantContent.isNotEmpty) {
             messages.add(openai.ChatMessage.assistant(
@@ -349,9 +374,9 @@ class AgentService extends ChangeNotifier {
         if (pendingExecutions.isNotEmpty) {
           repliedAnyToolCall = true;
           final executionResults =
-              await _executePendingToolCalls(pendingExecutions);
+              await _executePendingToolCalls(pendingExecutions, runId: runId);
 
-          if (_stopRequested) {
+          if (!_isRunActive(runId)) {
             return AgentResponse(content: '', toolCalls: executedCalls);
           }
 
@@ -360,15 +385,21 @@ class AgentService extends ChangeNotifier {
             final rawToolCall = execution.pending.rawToolCall;
             final toolResult = execution.result;
 
-            _emitEvent(AgentToolCallResultEvent(
-              toolCallId: parsedToolCall.id,
-              toolName: parsedToolCall.name,
-              result: toolResult.content,
-              isError: toolResult.isError,
-            ));
-            executedCalls.add(parsedToolCall);
+            _emitEvent(
+                AgentToolCallResultEvent(
+                  toolCallId: parsedToolCall.id,
+                  toolName: parsedToolCall.name,
+                  result: toolResult.isError ? '' : toolResult.content,
+                  isError: toolResult.isError,
+                ),
+                runId: runId);
 
             if (toolResult.isError) {
+              logError(
+                'Agent tool returned an error: ${parsedToolCall.name}',
+                error: toolResult.failureType ??
+                    AgentFailureType.toolExecutionFailed,
+              );
               final correctionKey =
                   '${parsedToolCall.name}:${canonicalJsonForArguments(parsedToolCall.arguments)}';
               if (toolResult.retryable &&
@@ -376,30 +407,24 @@ class AgentService extends ChangeNotifier {
                     correctionAttempts,
                     correctionKey,
                   )) {
-                final escapedContent = _escapeToolResult(toolResult.content);
                 messages.add(
                   openai.ChatMessage.tool(
                     toolCallId: rawToolCall.id,
                     content: _truncate(
-                        escapedContent, _defaultMaxSingleMessageChars),
+                      _safeToolErrorForModel(),
+                      _defaultMaxSingleMessageChars,
+                    ),
                   ),
                 );
                 continue;
               }
 
-              final responseContent = toolResult.content.trim().isNotEmpty
-                  ? toolResult.content
-                  : '工具「${parsedToolCall.name}」执行失败。';
-              _setStatus('');
-              _emitEvent(AgentResponseEvent(
-                content: responseContent,
-                toolCalls: executedCalls,
-              ));
-              return AgentResponse(
-                content: responseContent,
-                toolCalls: executedCalls,
+              throw AgentRequestException(
+                toolResult.failureType ?? AgentFailureType.toolExecutionFailed,
               );
             }
+
+            executedCalls.add(parsedToolCall);
 
             // 转义工具返回内容以防止提示注入攻击
             final escapedContent = _escapeToolResult(toolResult.content);
@@ -414,29 +439,47 @@ class AgentService extends ChangeNotifier {
         }
 
         if (!repliedAnyToolCall) {
-          final fallback =
-              assistantContent.isNotEmpty ? assistantContent : '操作未能完成，已停止。';
-          _emitEvent(AgentResponseEvent(
-            content: fallback,
-            toolCalls: executedCalls,
-          ));
-          return AgentResponse(content: fallback, toolCalls: executedCalls);
+          if (assistantContent.isEmpty) {
+            throw const AgentRequestException(AgentFailureType.unknown);
+          }
+          _emitEvent(
+              AgentResponseEvent(
+                content: assistantContent,
+                toolCalls: executedCalls,
+              ),
+              runId: runId);
+          return AgentResponse(
+              content: assistantContent, toolCalls: executedCalls);
         }
       }
     } catch (e, stack) {
-      logError('AgentService.runAgent 失败', error: e, stackTrace: stack);
-      _emitEvent(AgentErrorEvent(e.toString()));
+      logError(
+        'AgentService.runAgent failed',
+        error: _failureTypeFor(e),
+        stackTrace: stack,
+      );
+      if (!_isRunActive(runId)) {
+        return AgentResponse(content: '');
+      }
+      _emitEvent(
+        AgentErrorEvent(_failureTypeFor(e)),
+        runId: runId,
+      );
       rethrow;
     } finally {
-      _isRunning = false;
-      _stopRequested = false;
-      _setStatus('');
-      notifyListeners();
+      if (_isRunActive(runId)) {
+        _activeRunId = null;
+        _isRunning = false;
+        _stopRequested = false;
+        _setStatus('');
+        notifyListeners();
+      }
     }
   }
 
   @override
   void dispose() {
+    requestStop();
     if (!_eventController.isClosed) {
       _eventController.close();
     }
@@ -447,16 +490,22 @@ class AgentService extends ChangeNotifier {
     final multiSettings = _settingsService.multiAISettings;
     final provider = multiSettings.currentProvider;
     if (provider == null) {
-      throw Exception('请先选择 AI 服务商');
+      throw const AgentRequestException(AgentFailureType.noProvider);
     }
     if (!_supportsChatCompletions(provider)) {
-      throw Exception('当前服务商不支持 OpenAI Chat Completions tool calling。');
+      throw AgentRequestException(
+        AgentFailureType.unsupportedProvider,
+        providerName: provider.name,
+      );
     }
 
     final apiKey = await (_apiKeyResolver?.call(provider.id) ??
         _apiKeyManager.getProviderApiKey(provider.id));
     if (apiKey.trim().isEmpty) {
-      throw Exception('请先配置 ${provider.name} 的 API Key');
+      throw AgentRequestException(
+        AgentFailureType.missingApiKey,
+        providerName: provider.name,
+      );
     }
 
     return provider.copyWith(apiKey: apiKey);
@@ -509,6 +558,7 @@ class AgentService extends ChangeNotifier {
     required List<openai.Tool> tools,
     required double temperature,
     required int maxTokens,
+    required int runId,
   }) async {
     // 测试注入路径：将非流式结果转换为流式结果
     if (_completionRequester != null) {
@@ -522,8 +572,8 @@ class AgentService extends ChangeNotifier {
       final content = completion.choices.firstOrNull?.message.content ?? '';
       final toolCalls =
           completion.choices.firstOrNull?.message.toolCalls ?? const [];
-      if (!_stopRequested && content.isNotEmpty) {
-        _emitEvent(AgentTextDeltaEvent(content));
+      if (_isRunActive(runId) && content.isNotEmpty) {
+        _emitEvent(AgentTextDeltaEvent(content), runId: runId);
       }
       return _StreamCompletionResult(content: content, toolCalls: toolCalls);
     }
@@ -547,7 +597,7 @@ class AgentService extends ChangeNotifier {
       final accumulator = openai.ChatStreamAccumulator();
 
       await for (final event in stream) {
-        if (_stopRequested) {
+        if (!_isRunActive(runId)) {
           break;
         }
         accumulator.add(event);
@@ -559,12 +609,12 @@ class AgentService extends ChangeNotifier {
           if (delta?.reasoning?.isNotEmpty == true) delta!.reasoning!,
         ];
         for (final reasoning in reasoningChunks) {
-          _emitEvent(AgentReasoningDeltaEvent(reasoning));
+          _emitEvent(AgentReasoningDeltaEvent(reasoning), runId: runId);
         }
 
         final textDelta = event.textDelta;
-        if (!_stopRequested && textDelta != null && textDelta.isNotEmpty) {
-          _emitEvent(AgentTextDeltaEvent(textDelta));
+        if (_isRunActive(runId) && textDelta != null && textDelta.isNotEmpty) {
+          _emitEvent(AgentTextDeltaEvent(textDelta), runId: runId);
         }
       }
 
@@ -616,9 +666,11 @@ class AgentService extends ChangeNotifier {
       temperature: 0.2,
       maxTokens: 1200,
     );
-    return summary.text?.trim().isNotEmpty == true
-        ? summary.text!.trim()
-        : '未能生成最终摘要。';
+    final content = summary.text?.trim() ?? '';
+    if (content.isEmpty) {
+      throw const AgentRequestException(AgentFailureType.unknown);
+    }
+    return content;
   }
 
   List<openai.ChatMessage> _buildMessages({
@@ -693,43 +745,50 @@ class AgentService extends ChangeNotifier {
     }
   }
 
-  Future<ToolResult> _executeToolSafely(ToolCall toolCall) async {
+  Future<ToolResult> _executeToolSafely(
+    ToolCall toolCall, {
+    required int runId,
+  }) async {
     final tool = _findTool(toolCall.name);
     if (tool == null) {
       return ToolResult(
         toolCallId: toolCall.id,
-        content: '工具「${toolCall.name}」不存在',
+        content: '工具不可用，请调整请求后重试。',
         isError: true,
         retryable: true,
+        failureType: AgentFailureType.toolExecutionFailed,
       );
     }
 
-    _setStatus(_toolStatusText(toolCall.name));
+    _setStatus(_toolStatusText(toolCall.name), runId: runId);
     try {
       return await tool.execute(toolCall).timeout(_singleToolTimeout);
     } on TimeoutException {
       return ToolResult(
         toolCallId: toolCall.id,
-        content: '工具「${toolCall.name}」执行超时，请尝试更小范围的请求。',
+        content: '工具执行超时，请缩小请求范围后重试。',
         isError: true,
+        failureType: AgentFailureType.timeout,
       );
     } catch (e, stack) {
       logError(
         'AgentService 执行工具失败: ${toolCall.name}',
-        error: e,
+        error: e.runtimeType,
         stackTrace: stack,
       );
       return ToolResult(
         toolCallId: toolCall.id,
-        content: '工具「${toolCall.name}」执行失败：$e',
+        content: '工具执行失败，请调整请求后重试。',
         isError: true,
+        failureType: AgentFailureType.toolExecutionFailed,
       );
     }
   }
 
   Future<List<_ToolExecutionResult>> _executePendingToolCalls(
-    List<_PendingToolExecution> pendingExecutions,
-  ) async {
+    List<_PendingToolExecution> pendingExecutions, {
+    required int runId,
+  }) async {
     if (pendingExecutions.isEmpty) {
       return const <_ToolExecutionResult>[];
     }
@@ -741,16 +800,21 @@ class AgentService extends ChangeNotifier {
         });
 
     for (final pending in pendingExecutions) {
-      _emitEvent(AgentToolCallStartEvent(
-        toolCallId: pending.parsedToolCall.id,
-        toolName: pending.parsedToolCall.name,
-        arguments: pending.parsedToolCall.arguments,
-      ));
+      _emitEvent(
+          AgentToolCallStartEvent(
+            toolCallId: pending.parsedToolCall.id,
+            toolName: pending.parsedToolCall.name,
+            arguments: pending.parsedToolCall.arguments,
+          ),
+          runId: runId);
     }
 
     if (executeInParallel) {
       final futures = pendingExecutions.map((pending) async {
-        final result = await _executeToolSafely(pending.parsedToolCall);
+        final result = await _executeToolSafely(
+          pending.parsedToolCall,
+          runId: runId,
+        );
         return _ToolExecutionResult(pending: pending, result: result);
       }).toList(growable: false);
       return Future.wait(futures);
@@ -758,9 +822,12 @@ class AgentService extends ChangeNotifier {
 
     final results = <_ToolExecutionResult>[];
     for (final pending in pendingExecutions) {
-      final result = await _executeToolSafely(pending.parsedToolCall);
+      final result = await _executeToolSafely(
+        pending.parsedToolCall,
+        runId: runId,
+      );
       results.add(_ToolExecutionResult(pending: pending, result: result));
-      if (_stopRequested) {
+      if (!_isRunActive(runId)) {
         break;
       }
     }
@@ -832,7 +899,25 @@ $toolDescriptions
     return true;
   }
 
-  void _setStatus(String status) {
+  AgentFailureType _failureTypeFor(Object error) {
+    return switch (error) {
+      AgentRequestException() => error.failureType,
+      TimeoutException() => AgentFailureType.timeout,
+      _ => AgentFailureType.unknown,
+    };
+  }
+
+  String _safeToolErrorForModel() {
+    return '工具执行失败。请检查参数并使用不同的请求重试。';
+  }
+
+  void _setStatus(String status, {int? runId}) {
+    if (runId != null && !_isRunActive(runId)) {
+      return;
+    }
+    if (_currentStatusKey == status) {
+      return;
+    }
     _currentStatusKey = status;
     notifyListeners();
   }

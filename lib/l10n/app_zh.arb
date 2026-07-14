@@ -1877,6 +1877,19 @@
   "thinkingInProgress": "正在思考中...",
   "aiMisunderstoodQuestion": "抱歉，我没能理解这个问题。请尝试换个方式问我。",
   "aiResponseError": "抱歉，回答时出现了错误：{error}",
+  "agentErrorNoProvider": "请选择 AI 服务商后重试。",
+  "agentErrorMissingApiKey": "请先为 {providerName} 配置 API 密钥，然后重试。",
+  "@agentErrorMissingApiKey": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentErrorUnsupportedProvider": "当前 AI 服务商不支持 Agent 功能。请更换服务商后重试。",
+  "agentErrorTimeout": "请求超时，请检查网络后重试。",
+  "agentErrorCancelled": "已停止本次请求。",
+  "agentErrorGeneric": "暂时无法完成请求，请稍后重试。",
   "apiKeyDiagnosticsTitle": "API密钥诊断",
   "apiKeyDiagnosticsTool": "API密钥诊断工具",
   "apiKeyDiagnosticsDesc": "此工具将检查API密钥的存储和获取情况，帮助诊断401认证错误。",

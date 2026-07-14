@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
@@ -30,7 +28,8 @@ import '../services/agent_service.dart'
         AgentThinkingEvent,
         AgentToolCallResultEvent,
         AgentToolCallStartEvent;
-import '../services/agent_tool.dart' show AgentResponse;
+import '../services/agent_tool.dart'
+    show AgentFailureType, AgentRequestException, AgentResponse;
 import '../services/ai_service.dart';
 import '../services/chat_session_service.dart';
 import '../services/database_service.dart';
@@ -101,8 +100,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
   bool _isInputFocused = false;
   bool _agentListenerAttached = false;
+  int _agentRequestGeneration = 0;
   Timer? _agentStatusDismissTimer;
-  final List<PlatformFile> _selectedMediaFiles = [];
   StreamSubscription<AgentEvent>? _agentEventSubscription;
 
   // ==================== 性能优化：流式 UI 更新节流 ====================
@@ -439,13 +438,23 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
   /// Stop the current generation - cancels the stream subscription
   void _stopGenerating() {
+    _agentRequestGeneration++;
     _agentService.requestStop();
     _agentEventSubscription?.cancel();
     _agentEventSubscription = null;
     _streamSubscription?.cancel();
     _streamSubscription = null;
+    _cancelStreamUpdate();
+    _cancelToolProgressUpdate();
     _agentStatusDismissTimer?.cancel();
     _finishLoading();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).agentErrorCancelled),
+        ),
+      );
+    }
   }
 
   void _onScrollPositionChanged() {

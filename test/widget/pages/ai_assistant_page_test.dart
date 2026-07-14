@@ -5,8 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/ai_assistant_entry.dart';
+import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/chat_message.dart' as app_chat;
 import 'package:thoughtecho/models/chat_session.dart';
+import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/ai_assistant_page.dart';
 import 'package:thoughtecho/services/agent_service.dart';
@@ -168,6 +170,7 @@ class _FakeAgentService extends AgentService {
     this.toolName = 'search_notes',
     Map<String, Object?>? toolArguments,
     this.toolResult = '搜索结果',
+    this.error,
   })  : effectiveToolArguments = Map<String, Object?>.unmodifiable(
           toolArguments ?? const <String, Object?>{},
         ),
@@ -186,9 +189,11 @@ class _FakeAgentService extends AgentService {
   final Duration postToolDelay;
   final String toolName;
   final String toolResult;
+  final Object? error;
   bool _mockIsRunning = false;
   String _mockStatusKey = '';
   bool stopRequested = false;
+  final Set<Timer> _pendingTimers = <Timer>{};
   final StreamController<AgentEvent> _eventController =
       StreamController<AgentEvent>.broadcast(sync: true);
 
@@ -213,7 +218,26 @@ class _FakeAgentService extends AgentService {
   @override
   void requestStop() {
     stopRequested = true;
+    _cancelPendingTimers();
     _setMockState(isRunning: false, statusKey: '');
+  }
+
+  Future<void> _delay(Duration duration) {
+    final completer = Completer<void>();
+    late final Timer timer;
+    timer = Timer(duration, () {
+      _pendingTimers.remove(timer);
+      completer.complete();
+    });
+    _pendingTimers.add(timer);
+    return completer.future;
+  }
+
+  void _cancelPendingTimers() {
+    for (final timer in _pendingTimers) {
+      timer.cancel();
+    }
+    _pendingTimers.clear();
   }
 
   @override
@@ -224,6 +248,11 @@ class _FakeAgentService extends AgentService {
   }) async {
     runCount++;
     _setMockState(isRunning: true, statusKey: 'agentThinking');
+
+    if (error != null) {
+      _setMockState(isRunning: false, statusKey: '');
+      throw error!;
+    }
 
     if (simulateToolProgress) {
       _emitEvent(AgentThinkingEvent());
@@ -240,7 +269,7 @@ class _FakeAgentService extends AgentService {
               : effectiveToolArguments,
         ),
       );
-      await Future<void>.delayed(toolProgressDelay);
+      await _delay(toolProgressDelay);
       if (stopRequested) {
         _setMockState(isRunning: false, statusKey: '');
         return AgentResponse(content: '');
@@ -253,7 +282,7 @@ class _FakeAgentService extends AgentService {
           isError: false,
         ),
       );
-      await Future<void>.delayed(postToolDelay);
+      await _delay(postToolDelay);
     }
 
     final toolCalls = emitSmartResultCard
@@ -274,9 +303,9 @@ class _FakeAgentService extends AgentService {
 
     for (final chunk in responseChunks) {
       _emitEvent(AgentTextDeltaEvent(chunk));
-      await Future<void>.delayed(responseChunkDelay);
+      await _delay(responseChunkDelay);
     }
-    await Future<void>.delayed(const Duration(milliseconds: 12));
+    await _delay(const Duration(milliseconds: 12));
     if (stopRequested) {
       _setMockState(isRunning: false, statusKey: '');
       return AgentResponse(content: '');
@@ -304,7 +333,53 @@ class _FakeAgentService extends AgentService {
 
   @override
   void dispose() {
+    _cancelPendingTimers();
     _eventController.close();
+    super.dispose();
+  }
+}
+
+class _ControllableAgentService extends AgentService {
+  _ControllableAgentService({
+    required super.settingsService,
+    required this.responses,
+  }) : super(tools: const <AgentTool>[]);
+
+  final List<Completer<AgentResponse>> responses;
+  final StreamController<AgentEvent> _eventController =
+      StreamController<AgentEvent>.broadcast();
+  int runCount = 0;
+  bool _mockIsRunning = false;
+
+  @override
+  Stream<AgentEvent> get events => _eventController.stream;
+
+  @override
+  bool get isRunning => _mockIsRunning;
+
+  @override
+  void requestStop() {
+    _mockIsRunning = false;
+    notifyListeners();
+  }
+
+  @override
+  Future<AgentResponse> runAgent({
+    required String userMessage,
+    List<app_chat.ChatMessage>? history,
+    String? noteContext,
+  }) {
+    _mockIsRunning = true;
+    notifyListeners();
+    return responses[runCount++].future.whenComplete(() {
+      _mockIsRunning = false;
+      notifyListeners();
+    });
+  }
+
+  @override
+  void dispose() {
+    unawaited(_eventController.close());
     super.dispose();
   }
 }
@@ -313,7 +388,7 @@ Future<Widget> _buildHarness({
   required SettingsService settingsService,
   required ChatSessionService chatSessionService,
   _FakeAIService? aiService,
-  _FakeAgentService? agentService,
+  AgentService? agentService,
   required Widget child,
 }) async {
   final effectiveAgentService =
@@ -396,6 +471,57 @@ void main() {
       expect(find.text(l10n.aiModeChat), findsNothing);
       expect(find.text(l10n.aiModeAgent), findsNothing);
       expect(find.widgetWithText(ActionChip, '/润色'), findsNothing);
+    });
+
+    testWidgets('does not offer attachments that Agent cannot consume',
+        (tester) async {
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: const AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithIcon(IconButton, Icons.add), findsNothing);
+    });
+
+    testWidgets('hides the unsupported thinking toggle in Agent mode',
+        (tester) async {
+      const provider = AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'o3-mini',
+      );
+      await settingsService.saveMultiAISettings(
+        const MultiAISettings(
+          providers: [provider],
+          currentProviderId: 'openai',
+        ),
+      );
+      await settingsService.setExploreAiAssistantMode(
+        AIAssistantPageMode.agent,
+      );
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: const AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '触发重建');
+      await tester.pump();
+
+      expect(find.byIcon(Icons.psychology), findsNothing);
+      expect(find.byIcon(Icons.psychology_outlined), findsNothing);
     });
 
     testWidgets('note entry keeps note context and defaults to agent',
@@ -990,6 +1116,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      final l10n = _l10n(tester);
 
       await tester.enterText(find.byType(TextField), '帮我看看最近写了什么');
       await tester.pump();
@@ -1007,8 +1134,184 @@ void main() {
       await tester.pump(const Duration(milliseconds: 420));
 
       expect(agentService.stopRequested, isTrue);
+      expect(find.text(l10n.agentErrorCancelled), findsOneWidget);
       expect(find.text('这段回复不应该出现'), findsNothing);
       expect(find.byIcon(Icons.arrow_upward), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('a stopped run cannot clear a newer Agent run', (tester) async {
+      final firstResponse = Completer<AgentResponse>();
+      final secondResponse = Completer<AgentResponse>();
+      final agentService = _ControllableAgentService(
+        settingsService: settingsService,
+        responses: [firstResponse, secondResponse],
+      );
+      await settingsService.setExploreAiAssistantMode(
+        AIAssistantPageMode.agent,
+      );
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'first request');
+      await tester.pump();
+      tester
+          .widget<IconButton>(
+            find.widgetWithIcon(IconButton, Icons.arrow_upward).last,
+          )
+          .onPressed
+          ?.call();
+      await tester.pump(const Duration(milliseconds: 40));
+      await tester.tap(find.byIcon(Icons.stop).last);
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField), 'second request');
+      await tester.pump();
+      tester
+          .widget<IconButton>(
+            find.widgetWithIcon(IconButton, Icons.arrow_upward).last,
+          )
+          .onPressed
+          ?.call();
+      await tester.pump();
+      expect(agentService.runCount, 2);
+
+      firstResponse.complete(AgentResponse(content: 'stale response'));
+      await tester.pump();
+      expect(find.byIcon(Icons.stop), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('disposing an Agent page stops its pending run',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        simulateToolProgress: true,
+        toolProgressDelay: const Duration(milliseconds: 300),
+      );
+      await settingsService.setExploreAiAssistantMode(
+        AIAssistantPageMode.agent,
+      );
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '帮我看看最近写了什么');
+      await tester.pump();
+      tester
+          .widget<IconButton>(
+            find.widgetWithIcon(IconButton, Icons.arrow_upward).last,
+          )
+          .onPressed
+          ?.call();
+      await tester.pump(const Duration(milliseconds: 40));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+
+      expect(agentService.stopRequested, isTrue);
+      await tester.pump(const Duration(milliseconds: 320));
+    });
+
+    testWidgets('Agent failure never displays raw exception details',
+        (tester) async {
+      const secretUrl = 'https://token:secret@example.test/path';
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        error: StateError(secretUrl),
+      );
+      await settingsService.setExploreAiAssistantMode(
+        AIAssistantPageMode.agent,
+      );
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _submitInput(tester, '开始请求');
+
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.textContaining(secretUrl), findsNothing);
+    });
+
+    testWidgets('Agent missing API key gives actionable localized guidance',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        error: const AgentRequestException(
+          AgentFailureType.missingApiKey,
+          providerName: 'OpenAI',
+        ),
+      );
+      await settingsService.setExploreAiAssistantMode(
+        AIAssistantPageMode.agent,
+      );
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _submitInput(tester, '开始请求');
+
+      expect(find.text('请先为 OpenAI 配置 API 密钥，然后重试。'), findsOneWidget);
+    });
+
+    testWidgets('Agent timeout gives localized retry guidance', (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        error: const AgentRequestException(AgentFailureType.timeout),
+      );
+      await settingsService.setExploreAiAssistantMode(
+        AIAssistantPageMode.agent,
+      );
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _submitInput(tester, '开始请求');
+
+      expect(find.text('请求超时，请检查网络后重试。'), findsOneWidget);
     });
 
     testWidgets('agent structured smart result renders apply card',
@@ -1044,16 +1347,47 @@ void main() {
 
       expect(agentService.runCount, 1);
       expect(find.text('这是可应用的新内容', findRichText: true), findsOneWidget);
-      final locationChip = tester.widget<FilterChip>(
-        find.widgetWithText(FilterChip, '位置'),
+      expect(
+        find.byKey(const ValueKey('ai_workflow_result_smart_result')),
+        findsOneWidget,
       );
-      final weatherChip = tester.widget<FilterChip>(
-        find.widgetWithText(FilterChip, '天气'),
+    });
+
+    testWidgets('does not render a suggestion card from text-only smart result',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        responseContent: '''
+```smart_result
+{"title":"未验证建议","content":"不应可应用"}
+```
+''',
       );
-      expect(locationChip.selected, isTrue);
-      expect(weatherChip.selected, isTrue);
-      expect(locationChip.onSelected, isNotNull);
-      expect(weatherChip.onSelected, isNotNull);
+      await settingsService.setNoteAiAssistantMode(AIAssistantPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: AIAssistantPage(
+            entrySource: AIAssistantEntrySource.note,
+            quote: _buildQuote(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _submitInput(tester, '请润色这段文字');
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 220));
+      });
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('ai_workflow_result_smart_result')),
+        findsNothing,
+      );
     });
 
     testWidgets('new smart result card remains visible at the latest extent',

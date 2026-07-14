@@ -10,37 +10,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     });
   }
 
-  /// 选择并附加媒体文件
-  Future<void> _pickAndAttachMedia() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        allowMultiple: true,
-        type: FileType.any,
-        onFileLoading: (FilePickerStatus status) {
-          // Optional: Handle loading state
-        },
-      );
-
-      if (result != null && result.files.isNotEmpty) {
-        _setState(() {
-          _selectedMediaFiles.addAll(result.files);
-        });
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to pick files: $e')),
-      );
-    }
-  }
-
-  /// 移除已选择的媒体文件
-  void _removeMediaFile(int index) {
-    _setState(() {
-      _selectedMediaFiles.removeAt(index);
-    });
-  }
-
   Widget _buildPage(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
@@ -588,85 +557,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Selected media files
-            if (_selectedMediaFiles.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-                child: SizedBox(
-                  height: 64,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _selectedMediaFiles.length,
-                    itemBuilder: (context, index) {
-                      final file = _selectedMediaFiles[index];
-                      final isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif']
-                          .contains(file.extension?.toLowerCase());
-
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: Stack(
-                          children: [
-                            Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                color:
-                                    theme.colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: theme.colorScheme.outlineVariant,
-                                  width: 1,
-                                ),
-                              ),
-                              child: isImage && file.path != null
-                                  ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(11),
-                                      child: Image.file(
-                                        File(file.path!),
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Icon(
-                                          Icons.image_not_supported_outlined,
-                                          color: theme
-                                              .colorScheme.onSurfaceVariant,
-                                        ),
-                                      ),
-                                    )
-                                  : Icon(
-                                      Icons.insert_drive_file_outlined,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                      size: 28,
-                                    ),
-                            ),
-                            Positioned(
-                              top: -4,
-                              right: -4,
-                              child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () => _removeMediaFile(index),
-                                  customBorder: const CircleBorder(),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.inverseSurface,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.close,
-                                      size: 14,
-                                      color: theme.colorScheme.onInverseSurface,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
             // Text field
             TextField(
               controller: _textController,
@@ -684,22 +574,13 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               textInputAction: TextInputAction.send,
               onSubmitted: _handleSubmitted,
             ),
-            // Action row: + | mode toggle | thinking | send
+            // Action row: thinking | send
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 0, 4, 2),
               child: Row(
                 children: [
-                  // Add media
-                  IconButton(
-                    icon: const Icon(Icons.add, size: 20),
-                    onPressed: _isLoading ? null : _pickAndAttachMedia,
-                    style: IconButton.styleFrom(
-                      padding: const EdgeInsets.all(8),
-                      minimumSize: const Size(36, 36),
-                    ),
-                  ),
-                  // Thinking toggle
-                  if (_currentModelSupportsThinking)
+                  // Agent requests do not yet apply provider thinking settings.
+                  if (!_isAgentMode && _currentModelSupportsThinking)
                     IconButton(
                       icon: Icon(
                         _enableThinking

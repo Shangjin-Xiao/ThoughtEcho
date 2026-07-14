@@ -16,9 +16,11 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
   }
 
   void _disposeImpl() {
+    _agentRequestGeneration++;
     _agentStatusDismissTimer?.cancel();
     _agentEventSubscription?.cancel();
     if (_agentListenerAttached) {
+      _agentService.requestStop();
       _agentService.removeListener(_onAgentServiceChanged);
     }
     _streamSubscription?.cancel();
@@ -387,6 +389,7 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
 
   Future<void> _startNewChat() async {
     try {
+      _agentRequestGeneration++;
       // Cancel any ongoing stream and Agent session before starting new chat
       await _streamSubscription?.cancel();
       _streamSubscription = null;
@@ -404,7 +407,6 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
 
       _setState(() {
         _messages.clear();
-        _selectedMediaFiles.clear();
       });
       await _createNewSession();
       _addWelcomeMessage();
