@@ -97,13 +97,16 @@ void main() {
       await tester.pumpAndSettle();
 
       // 默认未选中
-      expect(find.byType(GestureDetector), findsWidgets); // Used to be FilterChip but now it's _MetaToggleChip > GestureDetector
+      expect(find.byType(GestureDetector),
+          findsWidgets); // Used to be FilterChip but now it's _MetaToggleChip > GestureDetector
 
       // 点击位置 chip (find by text in the chip)
-      await tester.tap(find.descendant(
-        of: find.byType(GestureDetector),
-        matching: find.text('位置'),
-      ).first);
+      await tester.tap(find
+          .descendant(
+            of: find.byType(GestureDetector),
+            matching: find.text('位置'),
+          )
+          .first);
       await tester.pumpAndSettle();
 
       // 点击直接保存按钮（通过图标定位）
