@@ -652,7 +652,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       final totalNotes = quotes.length;
       final totalWords = quotes.fold<int>(
         0,
-        (sum, quote) => sum + quote.content.split('').length,
+        (sum, quote) => sum + quote.content.length,
       );
       final averageWordsPerNote =
           totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
