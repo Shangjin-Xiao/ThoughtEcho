@@ -1,0 +1,55 @@
+lib/pages/ai_assistant/ai_assistant_page_ui.dart
+  s_f79417a5a187ad::t_b5a3d4f5515dc5 229-236,249-250
+  s_f79417a5a187ad::t_7bbfaeac7e51b1 1194-1195
+  s_f79417a5a187ad::t_1e86bae5c1637c 1223,1245
+  s_f79417a5a187ad::t_16f3fe3e39c213 1216-1222,1224-1244,1246-1283
+  s_f79417a5a187ad::t_9def8d9a785df2 1308-1313
+lib/pages/ai_assistant/ai_assistant_page_agent.dart
+  s_f79417a5a187ad::t_9def8d9a785df2 78
+  s_f79417a5a187ad::t_3324f6d9c041b9 27,32,87-95,126,166-168,172,183,202,350,363
+lib/models/quote_model.dart
+  s_f79417a5a187ad::t_3324f6d9c041b9 370-372,375-377
+  s_f79417a5a187ad::t_95baf88d08512e 331-336
+  s_f79417a5a187ad::t_9def8d9a785df2 373
+  s_f79417a5a187ad::t_1e86bae5c1637c 366-369,374
+lib/pages/ai_assistant_page.dart
+  s_f79417a5a187ad::t_1528183b1a37a1 508-511,513
+  s_f79417a5a187ad::t_3324f6d9c041b9 480,489-494
+  s_f79417a5a187ad::t_29012927812a87 503,505-507,512,514-522,541
+test/widget/pages/ai_assistant_page_test.dart
+  s_f79417a5a187ad::t_fd28078d5ac610 1111-1112
+  s_f79417a5a187ad::t_3324f6d9c041b9 1115-1118
+  s_f79417a5a187ad::t_7cfbaacfe00cfc 167,186,256,770-797,804-823,1057-1063,1065-1104,1110,1114,1119-1121
+  s_f79417a5a187ad::t_56edc04776b23c 1064
+  s_f79417a5a187ad::t_fda010756bb624 86-91
+  s_f79417a5a187ad::t_9eef27d350f1e9 16,18,331-336
+  s_f79417a5a187ad::t_f62665d7725e45 35-37,85
+  s_f79417a5a187ad::t_2fec6e1d7c5538 1105-1109
+  s_f79417a5a187ad::t_b5a3d4f5515dc5 268-269,1047-1056
+  s_f79417a5a187ad::t_b81db201474de5 798-803
+  s_f79417a5a187ad::t_68d5e61b2fa91c 1113
+test/widget/smart_result_card_test.dart
+  s_f79417a5a187ad::t_7cfbaacfe00cfc 117-118,127-130,149-157
+  s_f79417a5a187ad::t_fd28078d5ac610 114-115
+test/unit/models/quote_model_test.dart
+  s_f79417a5a187ad::t_9def8d9a785df2 186,195,203
+  s_f79417a5a187ad::t_3324f6d9c041b9 179-185,187-194,196-202,204-207
+lib/widgets/ai/smart_result_card.dart
+  s_f79417a5a187ad::t_3324f6d9c041b9 110-114,203,211
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "14810ba993b1b20ef2186704c7229a81118fdb22",
+  "prompts": {},
+  "sessions": {
+    "s_f79417a5a187ad": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5dff-27d1-7011-97d9-a33bf41282f0",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
