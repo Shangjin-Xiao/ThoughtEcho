@@ -147,19 +147,15 @@ void main() {
     });
 
     test('LargeFileManager 应该能够处理延迟取消操作', () async {
-      // 创建一个较大的测试文件以便有足够时间进行取消
+      // 创建一个测试文件
       final testFile = File('${tempDir.path}/delayed_cancel_test.bin');
-      final testData = 'x' * (10 * 1024 * 1024); // 10MB
+      final testData = 'x' *
+          (5 * 1024 * 1024); // 5MB is enough since we cancel deterministically
       await testFile.writeAsString(testData);
 
       try {
         final targetFile = File('${tempDir.path}/delayed_cancel_copy.bin');
         final cancelToken = LargeFileManager.createCancelToken();
-
-        // 延迟取消操作
-        Timer(const Duration(milliseconds: 50), () {
-          cancelToken.cancel();
-        });
 
         // 尝试复制文件，应该被取消
         bool exceptionThrown = false;
@@ -168,7 +164,12 @@ void main() {
             testFile.path,
             targetFile.path,
             cancelToken: cancelToken,
-            chunkSize: 32 * 1024, // 使用较小的块大小确保有多次检查机会
+            onProgress: (current, total) {
+              // 在复制过程中确定性地触发取消，避免由于 CI 环境过快导致的 flaky 测试
+              if (current > 0) {
+                cancelToken.cancel();
+              }
+            },
           );
         } catch (e) {
           if (e is CancelledException) {
