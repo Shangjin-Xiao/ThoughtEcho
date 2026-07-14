@@ -221,6 +221,9 @@ class SchemaVersionAdapters {
       'quotes',
       where: "source IS NOT NULL AND source != ''",
     );
+
+    final updateBatch = transaction.batch();
+
     for (final quote in quotes) {
       final source = quote['source'] as String?;
       if (source == null || source.isEmpty) {
@@ -248,7 +251,7 @@ class SchemaVersionAdapters {
         sourceAuthor = source.trim();
       }
 
-      await transaction.update(
+      updateBatch.update(
         'quotes',
         <String, Object?>{
           'source_author': sourceAuthor,
@@ -258,6 +261,8 @@ class SchemaVersionAdapters {
         whereArgs: <Object?>[quote['id']],
       );
     }
+
+    await updateBatch.commit(noResult: true);
   }
 
   Future<void> _upgradeToV8(Transaction transaction) async {
