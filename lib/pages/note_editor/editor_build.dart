@@ -77,7 +77,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
               onPressed: () => _showAIOptions(context),
             ),
             IconButton(
-              icon: _isLoadingFullQuote
+              icon: _editorState.isLoadingFullQuote
                   ? const SizedBox(
                       width: 24,
                       height: 24,
@@ -88,7 +88,9 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                     )
                   : const Icon(Icons.save),
               tooltip: l10n.save,
-              onPressed: _isLoadingFullQuote || _isSaving ? null : _saveContent,
+              onPressed: _editorState.isLoadingFullQuote || _mediaState.isSaving
+                  ? null
+                  : _saveContent,
             ),
           ],
           automaticallyImplyLeading: true,
@@ -100,17 +102,17 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                 children: [
                   UnifiedQuillToolbar(
                     key: _toolbarGuideKey, // 新增：用于气泡定位
-                    controller: _controller,
+                    controller: _editorState.controller,
                     onMediaImported: (String filePath) {
-                      _sessionImportedMedia.add(filePath);
+                      _mediaState.recordImportedMedia(filePath);
                     },
                   ),
-                  if (_selectedTagIds.isNotEmpty ||
-                      _selectedColorHex != null ||
-                      _showLocation ||
-                      _showWeather ||
-                      (_currentAiAnalysis != null &&
-                          _currentAiAnalysis!.isNotEmpty))
+                  if (_metadataState.selectedTagIds.isNotEmpty ||
+                      _metadataState.selectedColorHex != null ||
+                      _metadataState.showLocation ||
+                      _metadataState.showWeather ||
+                      (_metadataState.currentAiAnalysis != null &&
+                          _metadataState.currentAiAnalysis!.isNotEmpty))
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -128,7 +130,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                       ),
                       child: Row(
                         children: [
-                          if (_selectedTagIds.isNotEmpty)
+                          if (_metadataState.selectedTagIds.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(right: 12),
                               child: Chip(
@@ -136,12 +138,13 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                                 materialTapTargetSize:
                                     MaterialTapTargetSize.shrinkWrap,
                                 label: Text(
-                                  l10n.tagsCount(_selectedTagIds.length),
+                                  l10n.tagsCount(
+                                      _metadataState.selectedTagIds.length),
                                 ),
                                 avatar: const Icon(Icons.tag, size: 16),
                               ),
                             ),
-                          if (_selectedColorHex != null)
+                          if (_metadataState.selectedColorHex != null)
                             Padding(
                               padding: const EdgeInsets.only(right: 12),
                               child: Container(
@@ -150,7 +153,8 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                                 decoration: BoxDecoration(
                                   color: Color(
                                     int.parse(
-                                          _selectedColorHex!.substring(1),
+                                          _metadataState.selectedColorHex!
+                                              .substring(1),
                                           radix: 16,
                                         ) |
                                         0xFF000000,
@@ -163,13 +167,14 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                                   ),
                                 ),
                                 key: ValueKey(
-                                  'color-indicator-$_selectedColorHex',
+                                  'color-indicator-$_metadataState.selectedColorHex',
                                 ),
                               ),
                             ),
-                          if (_showLocation &&
-                              (_location != null ||
-                                  (_latitude != null && _longitude != null)))
+                          if (_metadataState.showLocation &&
+                              (_metadataState.location != null ||
+                                  (_metadataState.latitude != null &&
+                                      _metadataState.longitude != null)))
                             Padding(
                               padding: const EdgeInsets.only(right: 12),
                               child: Icon(
@@ -178,17 +183,18 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                                 color: theme.colorScheme.primary,
                               ),
                             ),
-                          if (_showWeather && _weather != null)
+                          if (_metadataState.showWeather &&
+                              _metadataState.weather != null)
                             Padding(
                               padding: const EdgeInsets.only(right: 12),
                               child: Icon(
-                                _getWeatherIcon(_weather!),
+                                _getWeatherIcon(_metadataState.weather!),
                                 size: 16,
                                 color: theme.colorScheme.primary,
                               ),
                             ),
-                          if (_currentAiAnalysis != null &&
-                              _currentAiAnalysis!.isNotEmpty)
+                          if (_metadataState.currentAiAnalysis != null &&
+                              _metadataState.currentAiAnalysis!.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(right: 12),
                               child: Icon(
@@ -213,7 +219,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                       color: theme.colorScheme.surface,
                       padding: const EdgeInsets.all(16),
                       child: quill.QuillEditor(
-                        controller: _controller,
+                        controller: _editorState.controller,
                         scrollController: ScrollController(),
                         focusNode: FocusNode(),
                         config: quill.QuillEditorConfig(
@@ -238,7 +244,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                   ),
                 ],
               ),
-              if (_isSaving)
+              if (_mediaState.isSaving)
                 Positioned.fill(
                   child: Container(
                     color: theme.colorScheme.surface.withValues(alpha: 0.72),
@@ -271,17 +277,17 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                                     width: 22,
                                     height: 22,
                                     child: CircularProgressIndicator(
-                                      value: _saveProgress >= 0.99
+                                      value: _mediaState.saveProgress >= 0.99
                                           ? 1.0
-                                          : (_saveProgress <= 0
+                                          : (_mediaState.saveProgress <= 0
                                               ? null
-                                              : _saveProgress),
+                                              : _mediaState.saveProgress),
                                       strokeWidth: 3,
                                     ),
                                   ),
                                   const SizedBox(width: 12),
                                   Text(
-                                    _saveProgress < 1.0
+                                    _mediaState.saveProgress < 1.0
                                         ? l10n.savingNote
                                         : l10n.done,
                                     style: theme.textTheme.titleMedium,
@@ -290,14 +296,14 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                               ),
                               const SizedBox(height: 16),
                               LinearProgressIndicator(
-                                value: _saveProgress.clamp(0.0, 1.0),
+                                value: _mediaState.saveProgress.clamp(0.0, 1.0),
                                 minHeight: 6,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               const SizedBox(height: 12),
-                              if (_saveStatus != null)
+                              if (_mediaState.saveStatus != null)
                                 Text(
-                                  _saveStatus!,
+                                  _mediaState.saveStatus!,
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
@@ -305,7 +311,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                                 ),
                               const SizedBox(height: 8),
                               Text(
-                                '${(_saveProgress * 100).clamp(0, 100).toStringAsFixed(0)}%',
+                                '${(_mediaState.saveProgress * 100).clamp(0, 100).toStringAsFixed(0)}%',
                                 style: theme.textTheme.labelMedium,
                               ),
                             ],

@@ -18,7 +18,7 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
   // 分析来源
   Future<void> _analyzeSource() async {
     final plainText = StringUtils.removeObjectReplacementChar(
-      _controller.document.toPlainText(),
+      _editorState.controller.document.toPlainText(),
     ).trim();
     if (plainText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -52,8 +52,8 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
       );
 
       // 调用AI分析来源（传递已有的作者/出处供 AI 验证）
-      final existingAuthor = _authorController.text.trim();
-      final existingWork = _workController.text.trim();
+      final existingAuthor = _metadataState.authorController.text.trim();
+      final existingWork = _metadataState.workController.text.trim();
       final result = await aiService.analyzeSource(
         plainText,
         existingAuthor: existingAuthor.isNotEmpty ? existingAuthor : null,
@@ -71,8 +71,8 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
         SourceAnalysisResultDialog.show(
           context,
           result,
-          authorController: _authorController,
-          workController: _workController,
+          authorController: _metadataState.authorController,
+          workController: _metadataState.workController,
           onError: (error) {
             final l10n = AppLocalizations.of(context);
             ScaffoldMessenger.of(context).showSnackBar(
@@ -115,10 +115,10 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
     await _openAiAssistant('/${l10n.commandContinue}');
   }
 
-  // 深度分析内容 (使用流式传输，保存结果到 _currentAiAnalysis)
+  // 深度分析内容 (使用流式传输，保存结果到 _metadataState.currentAiAnalysis)
   Future<void> _analyzeContent() async {
     final plainText = StringUtils.removeObjectReplacementChar(
-      _controller.document.toPlainText(),
+      _editorState.controller.document.toPlainText(),
     ).trim();
     if (plainText.isEmpty) {
       if (mounted) {
@@ -140,22 +140,23 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
       id: widget.initialQuote?.id ?? const Uuid().v4(),
       content: plainText,
       date: widget.initialQuote?.date ?? DateTime.now().toIso8601String(),
-      sourceAuthor: _authorController.text.trim().isNotEmpty
-          ? _authorController.text.trim()
+      sourceAuthor: _metadataState.authorController.text.trim().isNotEmpty
+          ? _metadataState.authorController.text.trim()
           : null,
-      sourceWork: _workController.text.trim().isNotEmpty
-          ? _workController.text.trim()
+      sourceWork: _metadataState.workController.text.trim().isNotEmpty
+          ? _metadataState.workController.text.trim()
           : null,
-      location: _showLocation ? _location : null,
-      weather: _showWeather ? _weather : null,
-      temperature: _showWeather ? _temperature : null,
+      location: _metadataState.showLocation ? _metadataState.location : null,
+      weather: _metadataState.showWeather ? _metadataState.weather : null,
+      temperature:
+          _metadataState.showWeather ? _metadataState.temperature : null,
       dayPeriod: widget.initialQuote?.dayPeriod,
     );
 
     // 获取选中标签的名称列表
     final List<String> tagNames = [];
-    if (_selectedTagIds.isNotEmpty && widget.allTags != null) {
-      for (final tagId in _selectedTagIds) {
+    if (_metadataState.selectedTagIds.isNotEmpty && widget.allTags != null) {
+      for (final tagId in _metadataState.selectedTagIds) {
         final tag = widget.allTags!.where((t) => t.id == tagId).firstOrNull;
         if (tag != null) {
           tagNames.add(tag.name);
@@ -191,7 +192,7 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
     // 如果用户点击了"应用到笔记"，保存分析结果
     if (analysisResult != null && mounted) {
       _updateState(() {
-        _currentAiAnalysis = analysisResult;
+        _metadataState.currentAiAnalysis = analysisResult;
       });
 
       // 显示提示
@@ -213,7 +214,7 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
 
   Future<void> _openAiAssistant(String? initialQuestion) async {
     final plainText = StringUtils.removeObjectReplacementChar(
-      _controller.document.toPlainText(),
+      _editorState.controller.document.toPlainText(),
     ).trim();
     if (plainText.isEmpty) {
       if (mounted) {
@@ -282,17 +283,21 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
       // 执行应用逻辑
       void applyChanges() {
         if (mode == 'replace') {
-          _controller.document = QuillAiApplyUtils.applyPolishedText(
-            originalDocument: _controller.document,
+          _editorState.controller.document =
+              QuillAiApplyUtils.applyPolishedText(
+            originalDocument: _editorState.controller.document,
             polishedText: text,
           );
         } else if (mode == 'append') {
-          final int insertPosition = _controller.document.length - 1;
+          final int insertPosition =
+              _editorState.controller.document.length - 1;
           if (insertPosition >= 0) {
-            _controller.document.insert(insertPosition, '\n\n$text');
+            _editorState.controller.document
+                .insert(insertPosition, '\n\n$text');
           }
-          _controller.updateSelection(
-            TextSelection.collapsed(offset: _controller.document.length - 1),
+          _editorState.controller.updateSelection(
+            TextSelection.collapsed(
+                offset: _editorState.controller.document.length - 1),
             quill.ChangeSource.local,
           );
         }

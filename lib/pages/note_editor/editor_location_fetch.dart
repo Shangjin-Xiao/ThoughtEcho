@@ -16,8 +16,8 @@ extension _NoteEditorLocationFetch on _NoteFullEditorPageState {
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         _updateState(() {
-          _showLocation = false;
-          _showWeather = false;
+          _metadataState.showLocation = false;
+          _metadataState.showWeather = false;
         });
         showDialog(
           context: context,
@@ -41,9 +41,10 @@ extension _NoteEditorLocationFetch on _NoteFullEditorPageState {
     );
     if (snapshot != null && mounted) {
       _updateState(() {
-        _location = snapshot.location.isNotEmpty ? snapshot.location : null;
-        _latitude = snapshot.position.latitude;
-        _longitude = snapshot.position.longitude;
+        _metadataState.location =
+            snapshot.location.isNotEmpty ? snapshot.location : null;
+        _metadataState.latitude = snapshot.position.latitude;
+        _metadataState.longitude = snapshot.position.longitude;
       });
 
       // 获取天气
@@ -54,14 +55,14 @@ extension _NoteEditorLocationFetch on _NoteFullEditorPageState {
         );
         if (mounted) {
           _updateState(() {
-            _weather = weatherService.currentWeather;
-            _temperature = weatherService.temperature;
+            _metadataState.weather = weatherService.currentWeather;
+            _metadataState.temperature = weatherService.temperature;
           });
           // 天气获取失败（无数据）
-          if (_weather == null && _showWeather) {
+          if (_metadataState.weather == null && _metadataState.showWeather) {
             final l10n = AppLocalizations.of(context);
             _updateState(() {
-              _showWeather = false;
+              _metadataState.showWeather = false;
             });
             showDialog(
               context: context,
@@ -80,10 +81,10 @@ extension _NoteEditorLocationFetch on _NoteFullEditorPageState {
         }
       } catch (e) {
         logError('获取天气数据失败', error: e, source: 'NoteFullEditorPage');
-        if (mounted && _showWeather) {
+        if (mounted && _metadataState.showWeather) {
           final l10n = AppLocalizations.of(context);
           _updateState(() {
-            _showWeather = false;
+            _metadataState.showWeather = false;
           });
           showDialog(
             context: context,
@@ -104,8 +105,8 @@ extension _NoteEditorLocationFetch on _NoteFullEditorPageState {
       // 位置获取失败
       final l10n = AppLocalizations.of(context);
       _updateState(() {
-        _showLocation = false;
-        _showWeather = false;
+        _metadataState.showLocation = false;
+        _metadataState.showWeather = false;
       });
       showDialog(
         context: context,
@@ -161,11 +162,11 @@ extension _NoteEditorLocationFetch on _NoteFullEditorPageState {
       );
       if (mounted) {
         _updateState(() {
-          _weather = weatherService.currentWeather;
-          _temperature = weatherService.temperature;
+          _metadataState.weather = weatherService.currentWeather;
+          _metadataState.temperature = weatherService.temperature;
         });
         // 天气获取失败（无数据）
-        if (_weather == null) {
+        if (_metadataState.weather == null) {
           final l10n = AppLocalizations.of(context);
           onFail();
           showDialog(
@@ -247,9 +248,10 @@ extension _NoteEditorLocationFetch on _NoteFullEditorPageState {
       );
       if (snapshot != null && mounted) {
         _updateState(() {
-          _location = snapshot.location.isNotEmpty ? snapshot.location : null;
-          _latitude = snapshot.position.latitude;
-          _longitude = snapshot.position.longitude;
+          _metadataState.location =
+              snapshot.location.isNotEmpty ? snapshot.location : null;
+          _metadataState.latitude = snapshot.position.latitude;
+          _metadataState.longitude = snapshot.position.longitude;
         });
 
         return (permissionDenied: false, position: snapshot.position);

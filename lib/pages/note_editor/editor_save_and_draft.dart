@@ -11,8 +11,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
                 ? widget.initialQuote!.content
                 : widget.initialContent);
         _updateState(() {
-          _controller.dispose(); // 释放旧控制器
-          _controller = quill.QuillController(
+          _editorState.controller = quill.QuillController(
             document: quill.Document()..insert(0, contentText),
             selection: const TextSelection.collapsed(offset: 0),
           );
@@ -30,8 +29,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     try {
       if (mounted) {
         _updateState(() {
-          _controller.dispose(); // 释放旧控制器
-          _controller = quill.QuillController.basic();
+          _editorState.controller = quill.QuillController.basic();
           _attachDraftListener();
 
           // 尝试安全地添加内容
@@ -49,13 +47,14 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
                 final chunk = content.substring(i, end);
 
                 // 确保插入位置在有效范围内
-                final docLength = _controller.document.length;
+                final docLength = _editorState.controller.document.length;
                 final safeInsertPosition = currentInsertPosition.clamp(
                   0,
                   docLength - 1,
                 );
 
-                _controller.document.insert(safeInsertPosition, chunk);
+                _editorState.controller.document
+                    .insert(safeInsertPosition, chunk);
 
                 // 更新插入位置：当前位置 + 插入的文本长度
                 currentInsertPosition = safeInsertPosition + chunk.length;
@@ -68,7 +67,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
               final errorMessage = AppLocalizations.of(
                 context,
               ).documentLoadFailed;
-              _controller.document.insert(0, errorMessage);
+              _editorState.controller.document.insert(0, errorMessage);
             } catch (_) {
               // 完全失败，保持空文档
             }
@@ -81,40 +80,22 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     }
   }
 
-  String _buildDraftStorageKey() {
-    // 1. 如果明确指定了恢复草稿的ID，优先使用它
-    if (widget.restoredDraftId != null && widget.restoredDraftId!.isNotEmpty) {
-      return widget.restoredDraftId!;
-    }
-    // 2. 如果是编辑现有笔记，使用笔记ID
-    if (widget.initialQuote?.id != null &&
-        widget.initialQuote!.id!.isNotEmpty) {
-      return widget.initialQuote!.id!;
-    }
-    // 3. 新建笔记，使用本次编辑会话的稳定随机ID作为临时ID
-    // 注意：如果是恢复的草稿，应优先使用 restoredDraftId
-    return 'new_note_$_newDraftStorageId';
-  }
-
   void _attachDraftListener() {
-    _controller.removeListener(_onDraftChanged);
-    _controller.addListener(_onDraftChanged);
+    _editorState.setDraftChangeListener(_onDraftChanged);
   }
 
   void _onDraftChanged() {
-    if (_draftLoaded) {
-      _draftSaveTimer?.cancel();
-      _draftSaveTimer = Timer(const Duration(seconds: 2), () {
-        _saveDraft();
-      });
-    }
+    _editorState.scheduleDraftSave(
+      const Duration(seconds: 2),
+      _saveDraft,
+    );
   }
 
   Future<void> _saveDraft() async {
     try {
-      final key = _draftStorageKey;
-      if (key == null || key.isEmpty) return;
-      final plainText = _controller.document.toPlainText().trim();
+      final key = _editorState.draftStorageKey;
+      if (key.isEmpty) return;
+      final plainText = _editorState.controller.document.toPlainText().trim();
 
       // 只有用户实际编写了正文内容才保存草稿
       // 自动添加的天气、位置、标签等不应该触发草稿保存
@@ -131,17 +112,23 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       final payload = {
         'deltaContent': deltaJson,
         'plainText': plainText,
-        'author': _authorController.text,
-        'work': _workController.text,
-        'tagIds': _selectedTagIds,
-        'colorHex': _selectedColorHex,
-        'location': _showLocation ? _location : null,
-        'poiName': _showLocation ? _poiName : null,
-        'latitude': (_showLocation || _showWeather) ? _latitude : null,
-        'longitude': (_showLocation || _showWeather) ? _longitude : null,
-        'weather': _showWeather ? _weather : null,
-        'temperature': _showWeather ? _temperature : null,
-        'aiAnalysis': _currentAiAnalysis,
+        'author': _metadataState.authorController.text,
+        'work': _metadataState.workController.text,
+        'tagIds': _metadataState.selectedTagIds,
+        'colorHex': _metadataState.selectedColorHex,
+        'location':
+            _metadataState.showLocation ? _metadataState.location : null,
+        'poiName': _metadataState.showLocation ? _metadataState.poiName : null,
+        'latitude': (_metadataState.showLocation || _metadataState.showWeather)
+            ? _metadataState.latitude
+            : null,
+        'longitude': (_metadataState.showLocation || _metadataState.showWeather)
+            ? _metadataState.longitude
+            : null,
+        'weather': _metadataState.showWeather ? _metadataState.weather : null,
+        'temperature':
+            _metadataState.showWeather ? _metadataState.temperature : null,
+        'aiAnalysis': _metadataState.currentAiAnalysis,
         'timestamp': DateTime.now().toIso8601String(),
         'hasUserContent': hasUserContent,
       };
@@ -156,22 +143,23 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     if (!mounted) return;
 
     _updateState(() {
-      _saveProgress = 0.0;
-      _isSaving = false;
+      _mediaState.saveProgress = 0.0;
+      _mediaState.isSaving = false;
     });
   }
 
   /// 检查是否有用户实际输入的内容（非自动填充的内容）
   bool _hasActualUserContent() {
     // 检查正文内容是否有变化
-    final currentPlainText = _controller.document.toPlainText().trim();
-    if (currentPlainText != _initialPlainText.trim() &&
+    final currentPlainText =
+        _editorState.controller.document.toPlainText().trim();
+    if (currentPlainText != _editorState.initialPlainText.trim() &&
         currentPlainText.isNotEmpty) {
       return true;
     }
 
     // 如果是恢复的草稿，视为有用户内容
-    if (_isRestoredFromDraft) {
+    if (_editorState.restoredFromDraft) {
       return true;
     }
 
@@ -180,8 +168,8 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
 
   Future<void> _clearDraft() async {
     try {
-      final key = _draftStorageKey;
-      if (key == null || key.isEmpty) return;
+      final key = _editorState.draftStorageKey;
+      if (key.isEmpty) return;
       // 使用 DraftService 删除草稿
       await DraftService().deleteDraft(key);
     } catch (e) {
@@ -195,71 +183,25 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
 
   bool _hasUnsavedChanges() {
     // 如果是从草稿恢复的且尚未保存，则视为有未保存更改
-    if (_isRestoredFromDraft) {
+    if (_editorState.restoredFromDraft) {
       return true;
     }
 
     // 如果是来自每日一言且内容未修改，不提示未保存（双击每日一言快速进入，不需要提示）
-    final currentPlainText = _controller.document.toPlainText().trim();
+    final currentPlainText =
+        _editorState.controller.document.toPlainText().trim();
     if (widget.isFromDailyQuote &&
-        currentPlainText == _initialPlainText.trim()) {
+        currentPlainText == _editorState.initialPlainText.trim()) {
       return false;
     }
 
     // 检查主要内容
-    if (currentPlainText != _initialPlainText.trim()) {
+    if (currentPlainText != _editorState.initialPlainText.trim()) {
       return true;
     }
-
-    // 检查元数据
-    if (_authorController.text != _initialAuthor) {
-      return true;
-    }
-    if (_workController.text != _initialWork) {
-      return true;
-    }
-
-    // 检查标签
-    final selectedTagSet = Set.from(_selectedTagIds);
-    final initialTagSet = Set.from(_initialTagIds);
-    if (!selectedTagSet.containsAll(initialTagSet) ||
-        !initialTagSet.containsAll(selectedTagSet)) {
-      return true;
-    }
-
-    // 检查颜色
-    if (_selectedColorHex != _initialColorHex) {
-      return true;
-    }
-
-    // 对于编辑已有笔记的情况，检查位置和天气变化
-    // 对于新建笔记，位置和天气是自动获取的，不视为用户修改
-    if (widget.initialQuote != null) {
-      // 检查位置
-      if (_location != _initialLocation) {
-        return true;
-      }
-      if (_poiName != _initialPoiName) {
-        return true;
-      }
-      if (_latitude != _initialLatitude) {
-        return true;
-      }
-      if (_longitude != _initialLongitude) {
-        return true;
-      }
-
-      // 检查天气
-      if (_weather != _initialWeather) {
-        return true;
-      }
-      if (_temperature != _initialTemperature) {
-        return true;
-      }
-    }
-
-    // 检查 AI 分析
-    if (_currentAiAnalysis != _initialAiAnalysis) {
+    if (_metadataState.hasChanges(
+      isExistingNote: widget.initialQuote != null,
+    )) {
       return true;
     }
 
@@ -267,10 +209,10 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     // comparison above is the authoritative change signal until the note is
     // saved once in the editor; comparing a generated Delta would otherwise
     // mark an untouched note as edited.
-    final initialDeltaContent = _initialDeltaContent;
+    final initialDeltaContent = _editorState.initialDeltaContent;
     if (initialDeltaContent != null) {
       final currentDeltaContent = jsonEncode(
-        _controller.document.toDelta().toJson(),
+        _editorState.controller.document.toDelta().toJson(),
       );
       if (currentDeltaContent != initialDeltaContent) {
         return true;
@@ -283,11 +225,11 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
   Future<void> _saveContent() async {
     // Set the guard before the first await so every save entry point, including
     // the app-bar action, is protected from rapid repeated taps.
-    if (_isSaving) return;
-    _isSaving = true;
+    if (_mediaState.isSaving) return;
+    _mediaState.isSaving = true;
 
-    _draftSaveTimer?.cancel();
-    _draftLoaded = false;
+    _editorState.cancelDraftSave();
+    _editorState.draftLoaded = false;
 
     final db = Provider.of<DatabaseService>(context, listen: false);
 
@@ -296,8 +238,8 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     logDebug('开始保存笔记内容...');
     if (mounted) {
       _updateState(() {
-        _saveProgress = 0.0;
-        _saveStatus = l10n.preparingProcess;
+        _mediaState.saveProgress = 0.0;
+        _mediaState.saveStatus = l10n.preparingProcess;
       });
     }
 
@@ -315,8 +257,8 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         onProgress: (p, status) {
           if (mounted) {
             _updateState(() {
-              _saveProgress = p.clamp(0.0, 1.0);
-              if (status != null) _saveStatus = status;
+              _mediaState.saveProgress = p.clamp(0.0, 1.0);
+              if (status != null) _mediaState.saveStatus = status;
             });
           }
         },
@@ -343,9 +285,9 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     // 获取纯文本内容
     String plainTextContent = '';
     String deltaJson = '';
-    final baseQuote = _fullInitialQuote ?? widget.initialQuote;
+    final baseQuote = _editorState.fullInitialQuote ?? widget.initialQuote;
 
-    if (_richTextLoadFailed && baseQuote?.deltaContent != null) {
+    if (_editorState.richTextLoadFailed && baseQuote?.deltaContent != null) {
       logDebug('富文本未能无损加载，阻止保存覆盖原始deltaContent');
       await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
       if (mounted) {
@@ -357,13 +299,13 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           ),
         );
       }
-      _draftLoaded = true;
+      _editorState.draftLoaded = true;
       _resetSaveUiAfterFailure();
       return;
     }
 
     try {
-      plainTextContent = _controller.document.toPlainText().trim();
+      plainTextContent = _editorState.controller.document.toPlainText().trim();
       logDebug('获取到纯文本内容: ${plainTextContent.length} 字符');
 
       // 使用内存安全的方法获取富文本内容
@@ -385,7 +327,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           ),
         );
       }
-      _draftLoaded = true;
+      _editorState.draftLoaded = true;
       _resetSaveUiAfterFailure();
       return;
     } catch (e) {
@@ -400,7 +342,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           ),
         );
       }
-      _draftLoaded = true;
+      _editorState.draftLoaded = true;
       _resetSaveUiAfterFailure();
       return;
     }
@@ -412,30 +354,34 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         TimeUtils.getCurrentDayPeriodKey(); // 使用 Key
 
     // 构建笔记对象
-    // 优先使用 _fullInitialQuote 中的数据，以保留未加载的字段（如aiAnalysis等）
+    // 优先使用 _editorState.fullInitialQuote 中的数据，以保留未加载的字段（如aiAnalysis等）
     final quote = Quote(
       id: baseQuote?.id ?? const Uuid().v4(),
       content: plainTextContent,
       date: baseQuote?.date ?? now,
-      aiAnalysis: _currentAiAnalysis ?? baseQuote?.aiAnalysis,
-      source: _formatSource(_authorController.text, _workController.text),
-      sourceAuthor: _authorController.text,
-      sourceWork: _workController.text,
-      tagIds: _selectedTagIds,
+      aiAnalysis: _metadataState.currentAiAnalysis ?? baseQuote?.aiAnalysis,
+      source: _formatSource(_metadataState.authorController.text,
+          _metadataState.workController.text),
+      sourceAuthor: _metadataState.authorController.text,
+      sourceWork: _metadataState.workController.text,
+      tagIds: _metadataState.selectedTagIds,
       sentiment: baseQuote?.sentiment,
       keywords: baseQuote?.keywords,
       summary: baseQuote?.summary,
       categoryId: baseQuote?.categoryId,
-      colorHex: _selectedColorHex,
-      location: _showLocation
-          ? (_location ??
-              (_latitude != null ? LocationService.kAddressPending : null))
+      colorHex: _metadataState.selectedColorHex,
+      location: _metadataState.showLocation
+          ? (_metadataState.location ??
+              (_metadataState.latitude != null
+                  ? LocationService.kAddressPending
+                  : null))
           : null,
-      poiName: _showLocation ? _poiName : null,
-      latitude: _showLocation ? _latitude : null,
-      longitude: _showLocation ? _longitude : null,
-      weather: _showWeather ? _weather : null,
-      temperature: _showWeather ? _temperature : null,
+      poiName: _metadataState.showLocation ? _metadataState.poiName : null,
+      latitude: _metadataState.showLocation ? _metadataState.latitude : null,
+      longitude: _metadataState.showLocation ? _metadataState.longitude : null,
+      weather: _metadataState.showWeather ? _metadataState.weather : null,
+      temperature:
+          _metadataState.showWeather ? _metadataState.temperature : null,
       deltaContent: deltaJson,
       editSource: 'fullscreen',
       dayPeriod: baseQuote?.dayPeriod ?? currentDayPeriodKey, // 保存 Key
@@ -451,8 +397,9 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
 
       if (mounted) {
         _updateState(() {
-          _saveStatus = l10n.writingDatabase;
-          _saveProgress = _saveProgress < 0.9 ? 0.9 : _saveProgress;
+          _mediaState.saveStatus = l10n.writingDatabase;
+          _mediaState.saveProgress =
+              _mediaState.saveProgress < 0.9 ? 0.9 : _mediaState.saveProgress;
         });
       }
 
@@ -462,7 +409,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         final updateResult = await db.updateQuote(quote);
         if (updateResult != QuoteUpdateResult.updated) {
           await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
-          _draftLoaded = true;
+          _editorState.draftLoaded = true;
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -474,10 +421,10 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           }
           return;
         }
-        _draftSaveTimer?.cancel();
+        _editorState.cancelDraftSave();
         await _clearDraft();
-        _didSaveSuccessfully = true;
-        _isRestoredFromDraft = false;
+        _mediaState.markSavedSuccessfully();
+        _editorState.markDraftSaved();
         saveSucceeded = true;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -491,10 +438,10 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       } else {
         logDebug('添加新笔记');
         await db.addQuote(quote);
-        _draftSaveTimer?.cancel();
+        _editorState.cancelDraftSave();
         await _clearDraft();
-        _didSaveSuccessfully = true;
-        _isRestoredFromDraft = false;
+        _mediaState.markSavedSuccessfully();
+        _editorState.markDraftSaved();
         saveSucceeded = true;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -522,16 +469,16 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       if (mounted) {
         _updateState(() {
           if (saveSucceeded) {
-            _saveProgress = 1.0;
-            _saveStatus = l10n.saveComplete;
+            _mediaState.saveProgress = 1.0;
+            _mediaState.saveStatus = l10n.saveComplete;
           } else {
-            _saveProgress = 0.0;
+            _mediaState.saveProgress = 0.0;
           }
         });
         Future.delayed(const Duration(milliseconds: 320), () {
           if (mounted) {
             _updateState(() {
-              _isSaving = false;
+              _mediaState.isSaving = false;
             });
           }
         });

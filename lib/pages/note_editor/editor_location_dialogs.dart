@@ -8,12 +8,15 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
     ThemeData theme,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final hasLocationData = _originalLocation != null ||
-        (_originalLatitude != null && _originalLongitude != null);
-    final hasCoordinates =
-        _originalLatitude != null && _originalLongitude != null;
-    final hasOnlyCoordinates = _originalLocation == null && hasCoordinates;
-    final hasPoiName = _poiName != null && _poiName!.trim().isNotEmpty;
+    final hasLocationData = _metadataState.originalLocation != null ||
+        (_metadataState.originalLatitude != null &&
+            _metadataState.originalLongitude != null);
+    final hasCoordinates = _metadataState.originalLatitude != null &&
+        _metadataState.originalLongitude != null;
+    final hasOnlyCoordinates =
+        _metadataState.originalLocation == null && hasCoordinates;
+    final hasPoiName = _metadataState.poiName != null &&
+        _metadataState.poiName!.trim().isNotEmpty;
 
     String title;
     String content;
@@ -35,20 +38,20 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
       final locationInfoText = hasOnlyCoordinates
           ? l10n.locationUpdateHint(
               LocationService.formatCoordinates(
-                _originalLatitude,
-                _originalLongitude,
+                _metadataState.originalLatitude,
+                _metadataState.originalLongitude,
               ),
             )
           : l10n.locationRemoveHint(
               LocationService.formatLocationForDisplay(
-                _originalLocation ?? _location,
+                _metadataState.originalLocation ?? _metadataState.location,
               ),
             );
       content = hasPoiName
-          ? '${l10n.poiNameLabel}: ${_poiName!.trim()}\n\n$locationInfoText'
+          ? '${l10n.poiNameLabel}: ${_metadataState.poiName!.trim()}\n\n$locationInfoText'
           : locationInfoText;
       actions = [
-        if (_showLocation)
+        if (_metadataState.showLocation)
           TextButton(
             onPressed: () => Navigator.pop(context, 'remove'),
             child: Text(l10n.remove),
@@ -91,8 +94,8 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
         final localeCode = l10n.localeName;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
-          _originalLatitude!,
-          _originalLongitude!,
+          _metadataState.originalLatitude!,
+          _metadataState.originalLongitude!,
           localeCode: localeCode,
         );
         if (addressInfo != null && mounted) {
@@ -108,8 +111,8 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
               country.isNotEmpty || province.isNotEmpty || city.isNotEmpty;
           if (hasAnyField) {
             _updateState(() {
-              _location = standardAddress;
-              _originalLocation = standardAddress;
+              _metadataState.location = standardAddress;
+              _metadataState.originalLocation = standardAddress;
             });
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -171,17 +174,17 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
       }
     } else if (result == 'remove') {
       _updateState(() {
-        _showLocation = false;
-        _location = null;
-        _latitude = null;
-        _longitude = null;
-        _originalLocation = null;
-        _originalLatitude = null;
-        _originalLongitude = null;
+        _metadataState.showLocation = false;
+        _metadataState.location = null;
+        _metadataState.latitude = null;
+        _metadataState.longitude = null;
+        _metadataState.originalLocation = null;
+        _metadataState.originalLatitude = null;
+        _metadataState.originalLongitude = null;
       });
     } else if (result == 'clear_poi') {
       _updateState(() {
-        _poiName = null;
+        _metadataState.poiName = null;
       });
     }
   }
@@ -194,7 +197,7 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
     ThemeData theme,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final hasWeatherData = _originalWeather != null;
+    final hasWeatherData = _metadataState.originalWeather != null;
 
     String title;
     String content;
@@ -214,14 +217,14 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
       // 有天气数据
       final weatherDesc = WeatherService.getLocalizedWeatherDescription(
         AppLocalizations.of(context),
-        _originalWeather!,
+        _metadataState.originalWeather!,
       );
       title = l10n.weatherInfo2;
       content = l10n.weatherRemoveHint(
-        '$weatherDesc${_temperature != null ? " $_temperature" : ""}',
+        '$weatherDesc${_metadataState.temperature != null ? " $_metadataState.temperature" : ""}',
       );
       actions = [
-        if (_showWeather)
+        if (_metadataState.showWeather)
           TextButton(
             onPressed: () => Navigator.pop(context, 'remove'),
             child: Text(l10n.remove),
@@ -244,7 +247,7 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
 
     if (result == 'remove') {
       _updateState(() {
-        _showWeather = false;
+        _metadataState.showWeather = false;
       });
     }
   }
@@ -280,9 +283,10 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
       try {
         // 更新位置信息（包括经纬度）
         _updateState(() {
-          _location = snapshot.location.isNotEmpty ? snapshot.location : null;
-          _latitude = snapshot.position.latitude;
-          _longitude = snapshot.position.longitude;
+          _metadataState.location =
+              snapshot.location.isNotEmpty ? snapshot.location : null;
+          _metadataState.latitude = snapshot.position.latitude;
+          _metadataState.longitude = snapshot.position.longitude;
         });
 
         // 异步获取天气数据，不阻塞UI
@@ -325,8 +329,8 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
       // 优化：仅在组件仍然挂载时更新状态
       if (mounted) {
         _updateState(() {
-          _weather = weatherService.currentWeather;
-          _temperature = weatherService.temperature;
+          _metadataState.weather = weatherService.currentWeather;
+          _metadataState.temperature = weatherService.temperature;
         });
       }
     } catch (e) {

@@ -58,13 +58,13 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                             key: const ValueKey('full_editor_location_chip'),
                             avatar: Icon(
                               Icons.location_on,
-                              color: _showLocation
+                              color: _metadataState.showLocation
                                   ? theme.colorScheme.primary
                                   : Colors.grey,
                               size: 18,
                             ),
                             label: Text(l10n.locationLabel),
-                            selected: _showLocation,
+                            selected: _metadataState.showLocation,
                             onSelected: (value) async {
                               // 编辑模式下统一提示只读
                               if (widget.initialQuote?.id != null) {
@@ -81,25 +81,25 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                               }
                               // 新建模式
                               if (value &&
-                                  _location == null &&
-                                  _latitude == null) {
+                                  _metadataState.location == null &&
+                                  _metadataState.latitude == null) {
                                 // 先设置为选中，获取失败后会在回调中取消
                                 _updateState(() {
-                                  _showLocation = true;
+                                  _metadataState.showLocation = true;
                                 });
                                 setDialogState(() {});
                                 await _fetchLocationForNewNoteWithFailCallback(
                                   () {
                                     // 失败回调：取消选中
                                     _updateState(() {
-                                      _showLocation = false;
+                                      _metadataState.showLocation = false;
                                     });
                                     setDialogState(() {});
                                   },
                                 );
                               } else {
                                 _updateState(() {
-                                  _showLocation = value;
+                                  _metadataState.showLocation = value;
                                 });
                                 setDialogState(() {});
                               }
@@ -108,9 +108,9 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                           ),
                           // 小红点：有坐标但没地址时提示可更新（仅已保存笔记）
                           if (widget.initialQuote?.id != null &&
-                              _originalLocation == null &&
-                              _originalLatitude != null &&
-                              _originalLongitude != null)
+                              _metadataState.originalLocation == null &&
+                              _metadataState.originalLatitude != null &&
+                              _metadataState.originalLongitude != null)
                             Positioned(
                               right: 0,
                               top: 0,
@@ -132,16 +132,16 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                       child: FilterChip(
                         key: const ValueKey('full_editor_weather_chip'),
                         avatar: Icon(
-                          _weather != null
-                              ? _getWeatherIcon(_weather!)
+                          _metadataState.weather != null
+                              ? _getWeatherIcon(_metadataState.weather!)
                               : Icons.cloud,
-                          color: _showWeather
+                          color: _metadataState.showWeather
                               ? theme.colorScheme.primary
                               : Colors.grey,
                           size: 18,
                         ),
                         label: Text(l10n.weatherLabel),
-                        selected: _showWeather,
+                        selected: _metadataState.showWeather,
                         onSelected: (value) async {
                           // 编辑模式下统一只读提示
                           if (widget.initialQuote?.id != null) {
@@ -157,22 +157,22 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                             return;
                           }
                           // 新建模式
-                          if (value && _weather == null) {
+                          if (value && _metadataState.weather == null) {
                             // 先设置为选中，获取失败后会在回调中取消
                             _updateState(() {
-                              _showWeather = true;
+                              _metadataState.showWeather = true;
                             });
                             setDialogState(() {});
                             await _fetchLocationWeatherWithFailCallback(() {
                               // 失败回调：取消选中
                               _updateState(() {
-                                _showWeather = false;
+                                _metadataState.showWeather = false;
                               });
                               setDialogState(() {});
                             });
                           } else {
                             _updateState(() {
-                              _showWeather = value;
+                              _metadataState.showWeather = value;
                             });
                             setDialogState(() {});
                           }
@@ -195,13 +195,14 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
               ),
 
               // 显示位置和天气信息
-              if (_location != null ||
-                  _latitude != null ||
-                  _weather != null) ...[
+              if (_metadataState.location != null ||
+                  _metadataState.latitude != null ||
+                  _metadataState.weather != null) ...[
                 const SizedBox(height: 12),
                 const Divider(height: 1),
                 const SizedBox(height: 12),
-                if (_location != null || _latitude != null)
+                if (_metadataState.location != null ||
+                    _metadataState.latitude != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
@@ -224,11 +225,11 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                       ],
                     ),
                   ),
-                if (_weather != null)
+                if (_metadataState.weather != null)
                   Row(
                     children: [
                       Icon(
-                        _getWeatherIcon(_weather!),
+                        _getWeatherIcon(_metadataState.weather!),
                         size: 16,
                         color: theme.colorScheme.primary,
                       ),
@@ -236,16 +237,16 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                       Text(
                         WeatherService.getLocalizedWeatherDescription(
                           AppLocalizations.of(context),
-                          _weather!,
+                          _metadataState.weather!,
                         ),
                         style: TextStyle(
                           fontSize: 14,
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                      if (_temperature != null)
+                      if (_metadataState.temperature != null)
                         Text(
-                          ' $_temperature',
+                          ' $_metadataState.temperature',
                           style: TextStyle(
                             fontSize: 14,
                             color: theme.colorScheme.onSurfaceVariant,
@@ -258,9 +259,9 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
               // 编辑模式下无数据时的提示（只有真正编辑已保存的笔记时才显示）
               // initialQuote.id 不为空表示是已保存的笔记
               if (widget.initialQuote?.id != null &&
-                  _originalLocation == null &&
-                  _originalLatitude == null &&
-                  _originalWeather == null) ...[
+                  _metadataState.originalLocation == null &&
+                  _metadataState.originalLatitude == null &&
+                  _metadataState.originalWeather == null) ...[
                 const SizedBox(height: 8),
                 Text(
                   l10n.noteNoLocationWeatherInfo,
@@ -279,18 +280,20 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
   }
 
   String _buildLocationDisplayText(AppLocalizations l10n) {
-    if (_poiName != null && _poiName!.trim().isNotEmpty) {
-      return _poiName!.trim();
+    if (_metadataState.poiName != null &&
+        _metadataState.poiName!.trim().isNotEmpty) {
+      return _metadataState.poiName!.trim();
     }
 
     final formattedLocation =
-        LocationService.formatLocationForDisplay(_location);
+        LocationService.formatLocationForDisplay(_metadataState.location);
     if (formattedLocation.isNotEmpty) {
       return formattedLocation;
     }
 
-    if (_latitude != null && _longitude != null) {
-      return LocationService.formatCoordinates(_latitude, _longitude);
+    if (_metadataState.latitude != null && _metadataState.longitude != null) {
+      return LocationService.formatCoordinates(
+          _metadataState.latitude, _metadataState.longitude);
     }
 
     return l10n.gettingLocationHint;

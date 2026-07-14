@@ -11,7 +11,8 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
     StateSetter setDialogState,
   ) {
     // 如果没有 AI 分析结果，不显示此区域
-    if (_currentAiAnalysis == null || _currentAiAnalysis!.isEmpty) {
+    if (_metadataState.currentAiAnalysis == null ||
+        _metadataState.currentAiAnalysis!.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -69,7 +70,7 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
             children: [
               // 分析内容预览（最多显示 3 行）
               Text(
-                _currentAiAnalysis!,
+                _metadataState.currentAiAnalysis!,
                 style: TextStyle(
                   fontSize: 14,
                   color: theme.colorScheme.onSurfaceVariant,
@@ -97,7 +98,7 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
                     label: Text(l10n.copy),
                     onPressed: () {
                       Clipboard.setData(
-                        ClipboardData(text: _currentAiAnalysis!),
+                        ClipboardData(text: _metadataState.currentAiAnalysis!),
                       );
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -190,7 +191,7 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.all(16),
                         child: MarkdownBody(
-                          data: _currentAiAnalysis!,
+                          data: _metadataState.currentAiAnalysis!,
                           selectable: true,
                           styleSheet: MarkdownStyleSheet(
                             p: theme.textTheme.bodyMedium?.copyWith(
@@ -258,7 +259,8 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
                         label: Text(l10n.copy),
                         onPressed: () {
                           Clipboard.setData(
-                            ClipboardData(text: _currentAiAnalysis!),
+                            ClipboardData(
+                                text: _metadataState.currentAiAnalysis!),
                           );
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -310,7 +312,7 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
               onPressed: () {
                 Navigator.of(dialogContext).pop();
                 _updateState(() {
-                  _currentAiAnalysis = null;
+                  _metadataState.currentAiAnalysis = null;
                 });
                 setDialogState(() {});
                 ScaffoldMessenger.of(context).showSnackBar(

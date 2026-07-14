@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../controllers/home_page_controller.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
@@ -14,7 +15,6 @@ import '../services/clipboard_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/excerpt_intent_service.dart';
 import '../controllers/search_controller.dart'; // 导入搜索控制器
-import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import '../widgets/daily_quote_view.dart';
 import '../widgets/note_list_view.dart';
@@ -143,21 +143,8 @@ class HomeLocationWeatherDisplay extends StatelessWidget {
   }
 }
 
-class _HomePageState extends State<HomePage>
-    with TickerProviderStateMixin, WidgetsBindingObserver {
-  int _currentIndex = 0;
-  late TabController _aiTabController; // AI页面的TabController
-  List<NoteCategory> _tags = [];
-  List<String> _selectedTagIds = [];
-  bool _isLoadingTags = true; // 添加标签加载状态标志
-
-  // 排序设置
-  String _sortType = 'time';
-  bool _sortAscending = false;
-
-  // 筛选设置
-  List<String> _selectedWeathers = [];
-  List<String> _selectedDayPeriods = [];
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
+  late final HomePageController _pageController;
 
   // 新增：NoteListView的全局Key
   final GlobalKey<NoteListViewState> _noteListViewKey =
@@ -178,23 +165,10 @@ class _HomePageState extends State<HomePage>
   final GlobalKey _settingsTabGuideKey = GlobalKey(); // 功能引导：设置标签 Key（用于回收站引导）
   final GlobalKey<SettingsPageState> _settingsPageKey =
       GlobalKey<SettingsPageState>();
-  bool _homeGuidePending = false;
-  bool _noteGuidePending = false;
-  Timer? _trashSnackBarTimer;
-  bool _settingsGuidePending = false;
-  bool _trashGuideScheduled = false;
-  String? _lastConsumedExcerptText;
-  bool _isHandlingExcerptIntent = false;
-  bool _hasConsumedInitialTargetNote = false;
-  bool _isConsumingInitialTargetNote = false;
-  int _initialTargetScrollRetryCount = 0;
   static const int _maxInitialTargetScrollRetries = 8;
 
   // 通知定位：监听 SmartPushService.pendingTargetNoteId
   SmartPushService? _smartPushService;
-
-  /// 暖启动通知定位的目标 noteId（与 widget.initialTargetNoteId 隔离）
-  String? _pendingNotificationNoteId;
 
   // AI卡片生成服务
   AICardGenerationService? _aiCardService;
@@ -339,10 +313,8 @@ class _HomePageState extends State<HomePage>
   @override
   void initState() {
     super.initState();
-    _aiTabController = TabController(length: 2, vsync: this);
-
-    // 使用传入的初始页面参数
-    _currentIndex = widget.initialPage;
+    _pageController = HomePageController(initialPage: widget.initialPage)
+      ..addListener(_onPageStateChanged);
 
     // 注册生命周期观察器
     WidgetsBinding.instance.addObserver(this);
@@ -426,13 +398,18 @@ class _HomePageState extends State<HomePage>
 
   @override
   void dispose() {
-    _trashSnackBarTimer?.cancel();
-    _aiTabController.dispose();
     // 移除生命周期观察器
     WidgetsBinding.instance.removeObserver(this);
     _connectivityService?.removeListener(_onConnectivityChanged);
     _smartPushService?.removeListener(_onSmartPushServiceChanged);
+    _pageController
+      ..removeListener(_onPageStateChanged)
+      ..dispose();
     super.dispose();
+  }
+
+  void _onPageStateChanged() {
+    if (mounted) setState(() {});
   }
 
   /// 响应 SmartPushService 的通知定位请求（暖启动路径，无页面重建）
@@ -444,20 +421,18 @@ class _HomePageState extends State<HomePage>
     logDebug('收到通知定位请求（原地导航）: $noteId', source: 'HomePage');
 
     // 切换到记录页 tab
-    if (_currentIndex != 1) {
-      setState(() {
-        _currentIndex = 1;
-      });
+    if (_pageController.currentIndex != 1) {
+      _pageController.selectPage(1);
     }
 
     // 重置定位状态，触发定位
-    _hasConsumedInitialTargetNote = false;
-    _isConsumingInitialTargetNote = false;
-    _initialTargetScrollRetryCount = 0;
-    _pendingNotificationNoteId = noteId;
+    _pageController.hasConsumedInitialTargetNote = false;
+    _pageController.isConsumingInitialTargetNote = false;
+    _pageController.initialTargetScrollRetryCount = 0;
+    _pageController.pendingNotificationNoteId = noteId;
 
     // 等标签加载完再定位
-    if (_isLoadingTags) {
+    if (_pageController.isLoadingTags) {
       _loadTags().then((_) {
         if (mounted) _consumePendingNotificationNote();
       });
@@ -493,7 +468,7 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<void> _consumePendingExcerptIntent() async {
-    if (!mounted || _isHandlingExcerptIntent) {
+    if (!mounted || _pageController.isHandlingExcerptIntent) {
       return;
     }
 
@@ -502,7 +477,7 @@ class _HomePageState extends State<HomePage>
       return;
     }
 
-    _isHandlingExcerptIntent = true;
+    _pageController.isHandlingExcerptIntent = true;
     try {
       const excerptIntentService = ExcerptIntentService();
       final excerptText =
@@ -511,16 +486,16 @@ class _HomePageState extends State<HomePage>
         return;
       }
 
-      if (_lastConsumedExcerptText == excerptText) {
+      if (_pageController.lastConsumedExcerptText == excerptText) {
         return;
       }
 
-      _lastConsumedExcerptText = excerptText;
+      _pageController.lastConsumedExcerptText = excerptText;
       _showAddQuoteDialog(prefilledContent: excerptText);
     } catch (e) {
       logError('消费外部摘录失败', error: e, source: 'HomePage');
     } finally {
-      _isHandlingExcerptIntent = false;
+      _pageController.isHandlingExcerptIntent = false;
     }
   }
 
@@ -680,12 +655,10 @@ class _HomePageState extends State<HomePage>
 
   // 切换到笔记列表时刷新标签
   void _onTabChanged(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
+    _pageController.selectPage(index);
 
     // 当切换到笔记列表页时，重新加载标签
-    if (_currentIndex == 1) {
+    if (_pageController.currentIndex == 1) {
       _refreshTags();
       _consumeInitialTargetNote();
     }
@@ -696,9 +669,6 @@ class _HomePageState extends State<HomePage>
   // 刷新标签列表
   Future<void> _refreshTags() async {
     logDebug('刷新标签列表');
-    setState(() {
-      _isLoadingTags = true;
-    });
     await _loadTags();
   }
 
@@ -707,31 +677,17 @@ class _HomePageState extends State<HomePage>
     try {
       logDebug('加载标签数据...');
       if (!context.mounted) return; // 添加 mounted 检查
-      final categories = await context.read<DatabaseService>().getCategories();
-
-      if (mounted) {
-        setState(() {
-          _tags = categories;
-          _isLoadingTags = false;
-        });
-        logDebug('标签加载完成，共 ${categories.length} 个标签');
-      }
+      await _pageController.loadTags(
+        context.read<DatabaseService>().getCategories,
+      );
+      if (mounted) logDebug('标签加载完成，共 ${_pageController.tags.length} 个标签');
     } catch (e) {
       logDebug('加载标签时出错: $e');
-      if (mounted) {
-        setState(() {
-          _isLoadingTags = false;
-        });
-      }
     }
   }
 
   // 预加载标签数据，确保AddNoteDialog打开时数据已准备好
   Future<void> _preloadTags() async {
-    setState(() {
-      _isLoadingTags = true;
-    });
-
     try {
       // 使用Future.microtask避免阻塞UI初始化
       await Future.microtask(() async {
@@ -739,11 +695,6 @@ class _HomePageState extends State<HomePage>
       });
     } catch (e) {
       logDebug('预加载标签失败: $e');
-      if (mounted) {
-        setState(() {
-          _isLoadingTags = false;
-        });
-      }
     }
   }
 
@@ -775,7 +726,7 @@ class _HomePageState extends State<HomePage>
 
   /// 根据当前选中的标签页触发对应的功能引导
   void _triggerGuideForCurrentIndex() {
-    switch (_currentIndex) {
+    switch (_pageController.currentIndex) {
       case 0:
         _scheduleHomeGuideIfNeeded();
         break;
@@ -791,31 +742,31 @@ class _HomePageState extends State<HomePage>
   }
 
   void _scheduleHomeGuideIfNeeded() {
-    if (_homeGuidePending) return;
+    if (_pageController.homeGuidePending) return;
     if (FeatureGuideHelper.hasShown(context, 'homepage_daily_quote')) {
       return;
     }
 
-    _homeGuidePending = true;
+    _pageController.homeGuidePending = true;
     // 立即显示，不等待
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) {
-        _homeGuidePending = false;
+        _pageController.homeGuidePending = false;
         return;
       }
 
-      if (_currentIndex != 0) {
-        _homeGuidePending = false;
+      if (_pageController.currentIndex != 0) {
+        _pageController.homeGuidePending = false;
         return;
       }
 
       await _showHomePageGuides();
-      _homeGuidePending = false;
+      _pageController.homeGuidePending = false;
     });
   }
 
   void _scheduleNoteGuideIfNeeded({Duration delay = Duration.zero}) {
-    if (_noteGuidePending) return;
+    if (_pageController.noteGuidePending) return;
 
     final filterShown = FeatureGuideHelper.hasShown(
       context,
@@ -834,44 +785,44 @@ class _HomePageState extends State<HomePage>
       return;
     }
 
-    _noteGuidePending = true;
+    _pageController.noteGuidePending = true;
     if (delay == Duration.zero) {
       // 立即显示
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) {
-          _noteGuidePending = false;
+          _pageController.noteGuidePending = false;
           return;
         }
 
-        if (_currentIndex != 1) {
-          _noteGuidePending = false;
+        if (_pageController.currentIndex != 1) {
+          _pageController.noteGuidePending = false;
           return;
         }
 
         await _showNotePageGuides();
-        _noteGuidePending = false;
+        _pageController.noteGuidePending = false;
       });
     } else {
       Future.delayed(delay, () async {
         if (!mounted) {
-          _noteGuidePending = false;
+          _pageController.noteGuidePending = false;
           return;
         }
 
-        if (_currentIndex != 1) {
-          _noteGuidePending = false;
+        if (_pageController.currentIndex != 1) {
+          _pageController.noteGuidePending = false;
           return;
         }
 
         await _showNotePageGuides();
-        _noteGuidePending = false;
+        _pageController.noteGuidePending = false;
       });
     }
   }
 
   void _handleNoteGuideTargetsReady() {
     if (!mounted) return;
-    if (_currentIndex != 1) {
+    if (_pageController.currentIndex != 1) {
       return;
     }
 
@@ -885,9 +836,9 @@ class _HomePageState extends State<HomePage>
 
   void _consumeInitialTargetNote() {
     if (!mounted ||
-        _hasConsumedInitialTargetNote ||
-        _isConsumingInitialTargetNote ||
-        _currentIndex != 1) {
+        _pageController.hasConsumedInitialTargetNote ||
+        _pageController.isConsumingInitialTargetNote ||
+        _pageController.currentIndex != 1) {
       return;
     }
 
@@ -907,7 +858,7 @@ class _HomePageState extends State<HomePage>
       return;
     }
 
-    _isConsumingInitialTargetNote = true;
+    _pageController.isConsumingInitialTargetNote = true;
     unawaited(_attemptInitialTargetNote(noteListState, noteId));
   }
 
@@ -917,20 +868,21 @@ class _HomePageState extends State<HomePage>
   ) async {
     final success = await noteListState.scrollToQuoteById(noteId);
     if (!mounted || widget.initialTargetNoteId != noteId) {
-      _isConsumingInitialTargetNote = false;
+      _pageController.isConsumingInitialTargetNote = false;
       return;
     }
 
     if (success) {
-      _hasConsumedInitialTargetNote = true;
-      _initialTargetScrollRetryCount = 0;
-      _isConsumingInitialTargetNote = false;
+      _pageController.hasConsumedInitialTargetNote = true;
+      _pageController.initialTargetScrollRetryCount = 0;
+      _pageController.isConsumingInitialTargetNote = false;
       return;
     }
 
-    _isConsumingInitialTargetNote = false;
-    _initialTargetScrollRetryCount++;
-    if (_initialTargetScrollRetryCount >= _maxInitialTargetScrollRetries) {
+    _pageController.isConsumingInitialTargetNote = false;
+    _pageController.initialTargetScrollRetryCount++;
+    if (_pageController.initialTargetScrollRetryCount >=
+        _maxInitialTargetScrollRetries) {
       logDebug(
         '初始目标笔记定位失败，已达到最大重试次数: $noteId',
         source: 'HomePage',
@@ -939,21 +891,23 @@ class _HomePageState extends State<HomePage>
     }
 
     Future.delayed(const Duration(milliseconds: 250), () {
-      if (!mounted || _currentIndex != 1 || _hasConsumedInitialTargetNote) {
+      if (!mounted ||
+          _pageController.currentIndex != 1 ||
+          _pageController.hasConsumedInitialTargetNote) {
         return;
       }
       _consumeInitialTargetNote();
     });
   }
 
-  /// 暖启动通知定位：原地滚动到 [_pendingNotificationNoteId]，不重建页面
+  /// 暖启动通知定位：原地滚动到 [_pageController.pendingNotificationNoteId]，不重建页面
   void _consumePendingNotificationNote() {
-    final noteId = _pendingNotificationNoteId;
+    final noteId = _pageController.pendingNotificationNoteId;
     if (!mounted ||
-        _isConsumingInitialTargetNote ||
+        _pageController.isConsumingInitialTargetNote ||
         noteId == null ||
         noteId.isEmpty ||
-        _currentIndex != 1) {
+        _pageController.currentIndex != 1) {
       return;
     }
 
@@ -968,7 +922,7 @@ class _HomePageState extends State<HomePage>
       return;
     }
 
-    _isConsumingInitialTargetNote = true;
+    _pageController.isConsumingInitialTargetNote = true;
     unawaited(_attemptPendingNotificationNote(noteListState, noteId));
   }
 
@@ -977,38 +931,39 @@ class _HomePageState extends State<HomePage>
     String noteId,
   ) async {
     final success = await noteListState.scrollToQuoteById(noteId);
-    if (!mounted || _pendingNotificationNoteId != noteId) {
-      _isConsumingInitialTargetNote = false;
+    if (!mounted || _pageController.pendingNotificationNoteId != noteId) {
+      _pageController.isConsumingInitialTargetNote = false;
       return;
     }
 
     if (success) {
-      _pendingNotificationNoteId = null;
-      _hasConsumedInitialTargetNote = true;
-      _initialTargetScrollRetryCount = 0;
-      _isConsumingInitialTargetNote = false;
+      _pageController.pendingNotificationNoteId = null;
+      _pageController.hasConsumedInitialTargetNote = true;
+      _pageController.initialTargetScrollRetryCount = 0;
+      _pageController.isConsumingInitialTargetNote = false;
       return;
     }
 
-    _isConsumingInitialTargetNote = false;
-    _initialTargetScrollRetryCount++;
-    if (_initialTargetScrollRetryCount >= _maxInitialTargetScrollRetries) {
+    _pageController.isConsumingInitialTargetNote = false;
+    _pageController.initialTargetScrollRetryCount++;
+    if (_pageController.initialTargetScrollRetryCount >=
+        _maxInitialTargetScrollRetries) {
       logDebug(
         '通知定位失败，已达到最大重试次数: $noteId',
         source: 'HomePage',
       );
-      _pendingNotificationNoteId = null;
+      _pageController.pendingNotificationNoteId = null;
       return;
     }
 
     Future.delayed(const Duration(milliseconds: 250), () {
-      if (!mounted || _currentIndex != 1) return;
+      if (!mounted || _pageController.currentIndex != 1) return;
       _consumePendingNotificationNote();
     });
   }
 
   void _scheduleSettingsGuideIfNeeded() {
-    if (_settingsGuidePending) return;
+    if (_pageController.settingsGuidePending) return;
 
     final allShown =
         FeatureGuideHelper.hasShown(context, 'settings_preferences') &&
@@ -1018,37 +973,37 @@ class _HomePageState extends State<HomePage>
       return;
     }
 
-    _settingsGuidePending = true;
+    _pageController.settingsGuidePending = true;
     // 立即显示
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
-        _settingsGuidePending = false;
+        _pageController.settingsGuidePending = false;
         return;
       }
 
-      if (_currentIndex != 3) {
-        _settingsGuidePending = false;
+      if (_pageController.currentIndex != 3) {
+        _pageController.settingsGuidePending = false;
         return;
       }
 
       _settingsPageKey.currentState?.showGuidesIfNeeded(
-        shouldShow: () => mounted && _currentIndex == 3,
+        shouldShow: () => mounted && _pageController.currentIndex == 3,
       );
-      _settingsGuidePending = false;
+      _pageController.settingsGuidePending = false;
     });
   }
 
   void _scheduleTrashLocationGuide() {
     if (!mounted) return;
-    if (_trashGuideScheduled) return;
+    if (_pageController.trashGuideScheduled) return;
     if (FeatureGuideHelper.hasShown(context, 'trash_location_guide')) {
       return;
     }
 
-    _trashGuideScheduled = true;
+    _pageController.trashGuideScheduled = true;
     Future.delayed(const Duration(milliseconds: 1200), () {
       if (!mounted) {
-        _trashGuideScheduled = false;
+        _pageController.trashGuideScheduled = false;
         return;
       }
       FeatureGuideHelper.show(
@@ -1058,7 +1013,7 @@ class _HomePageState extends State<HomePage>
         autoDismissDuration: const Duration(milliseconds: 3000),
         shouldShow: () => mounted,
       );
-      _trashGuideScheduled = false;
+      _pageController.trashGuideScheduled = false;
     });
   }
 
@@ -1068,7 +1023,7 @@ class _HomePageState extends State<HomePage>
       context: context,
       guideId: 'homepage_daily_quote',
       targetKey: _dailyQuoteGuideKey,
-      shouldShow: () => mounted && _currentIndex == 0,
+      shouldShow: () => mounted && _pageController.currentIndex == 0,
     );
   }
 
@@ -1108,7 +1063,7 @@ class _HomePageState extends State<HomePage>
     await FeatureGuideHelper.showSequence(
       context: context,
       guides: guides,
-      shouldShow: () => mounted && _currentIndex == 1,
+      shouldShow: () => mounted && _pageController.currentIndex == 1,
     );
   }
 
@@ -1203,7 +1158,7 @@ class _HomePageState extends State<HomePage>
     if (!mounted) return;
 
     // 确保标签数据已经加载
-    if (_isLoadingTags || _tags.isEmpty) {
+    if (_pageController.isLoadingTags || _pageController.tags.isEmpty) {
       logDebug('标签数据未准备好，重新加载标签数据...');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1216,7 +1171,7 @@ class _HomePageState extends State<HomePage>
       await _loadTags();
 
       // 如果仍然没有标签数据，提示用户
-      if (_tags.isEmpty) {
+      if (_pageController.tags.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1244,7 +1199,7 @@ class _HomePageState extends State<HomePage>
       return;
     }
 
-    logDebug('显示添加笔记对话框，可用标签数: ${_tags.length}');
+    logDebug('显示添加笔记对话框，可用标签数: ${_pageController.tags.length}');
 
     // 使用延迟显示，确保动画流畅
     await Future<void>.delayed(Duration.zero);
@@ -1260,7 +1215,7 @@ class _HomePageState extends State<HomePage>
         prefilledAuthor: prefilledAuthor,
         prefilledWork: prefilledWork,
         hitokotoData: hitokotoData,
-        tags: _tags, // 使用预加载的标签数据
+        tags: _pageController.tags, // 使用预加载的标签数据
         onSave: (quote) => _saveNonFullscreenQuote(
           quote,
           isEditing: false,
@@ -1404,7 +1359,7 @@ class _HomePageState extends State<HomePage>
           builder: (context) => NoteFullEditorPage(
             initialContent: content,
             initialQuote: null, // 新建笔记
-            allTags: _tags,
+            allTags: _pageController.tags,
             initialAuthor: author,
             initialWork: work,
             skipDefaultMetadataAutofill: hasExplicitAuthorOrWork,
@@ -1539,7 +1494,7 @@ class _HomePageState extends State<HomePage>
             builder: (context) => NoteFullEditorPage(
               initialContent: quote.content,
               initialQuote: quote,
-              allTags: _tags,
+              allTags: _pageController.tags,
             ),
           ),
         );
@@ -1574,7 +1529,7 @@ class _HomePageState extends State<HomePage>
         requestFocus: false,
         builder: (context) => AddNoteDialog(
           initialQuote: quote,
-          tags: _tags,
+          tags: _pageController.tags,
           onSave: (updatedQuote) => _saveNonFullscreenQuote(
             updatedQuote,
             isEditing: true,
@@ -1599,7 +1554,7 @@ class _HomePageState extends State<HomePage>
       await db.deleteQuote(quoteId);
       if (!mounted) return;
       // 先清除旧 SnackBar，避免多次删除时堆叠
-      _trashSnackBarTimer?.cancel();
+      _pageController.trashSnackBarTimer?.cancel();
       const trashSnackBarDuration = Duration(seconds: 3);
       messenger.clearSnackBars();
       final snackBarController = messenger.showSnackBar(
@@ -1610,7 +1565,7 @@ class _HomePageState extends State<HomePage>
           action: SnackBarAction(
             label: l10n.undoDelete,
             onPressed: () async {
-              _trashSnackBarTimer?.cancel();
+              _pageController.trashSnackBarTimer?.cancel();
               try {
                 await db.restoreQuote(quoteId);
                 if (!mounted) return;
@@ -1637,7 +1592,7 @@ class _HomePageState extends State<HomePage>
           ),
         ),
       );
-      _trashSnackBarTimer = Timer(trashSnackBarDuration, () {
+      _pageController.trashSnackBarTimer = Timer(trashSnackBarDuration, () {
         if (mounted) {
           snackBarController.close();
         }
@@ -2015,10 +1970,7 @@ class _HomePageState extends State<HomePage>
 
   // 处理排序变更
   void _handleSortChanged(String sortType, bool sortAscending) {
-    setState(() {
-      _sortType = sortType;
-      _sortAscending = sortAscending;
-    });
+    _pageController.setSort(type: sortType, ascending: sortAscending);
   }
 
   /// 构建首页位置天气显示。
@@ -2108,7 +2060,7 @@ class _HomePageState extends State<HomePage>
 
     // 修复：根据当前页面动态设置背景色，确保底部安全区域颜色正确
     // 记录页使用专属背景色，其他页面使用通用页面背景色
-    final scaffoldBackgroundColor = _currentIndex == 1
+    final scaffoldBackgroundColor = _pageController.currentIndex == 1
         ? ColorUtils.getNoteListBackgroundColor(
             theme.colorScheme.surface,
             theme.brightness,
@@ -2129,9 +2081,9 @@ class _HomePageState extends State<HomePage>
         // 避免首页背景（如每日一言）在非全屏编辑器弹出/收起时跟随位移。
         resizeToAvoidBottomInset: false,
         backgroundColor: scaffoldBackgroundColor,
-        appBar: _currentIndex == 1
+        appBar: _pageController.currentIndex == 1
             ? null // 记录页不需要标题栏
-            : _currentIndex == 0
+            : _pageController.currentIndex == 0
                 ? AppBar(
                     automaticallyImplyLeading: false,
                     leadingWidth: NavigationToolbar.kMiddleSpacing,
@@ -2218,11 +2170,11 @@ class _HomePageState extends State<HomePage>
                       */
                     ],
                   )
-                : _currentIndex == 2
+                : _pageController.currentIndex == 2
                     ? null // 探索页自行处理顶部安全区，避免额外 AppBar 形成色带
                     : AppBar(toolbarHeight: 0),
         body: IndexedStack(
-          index: _currentIndex,
+          index: _pageController.currentIndex,
           children: [
             // 首页 - 每日一言和每日提示
             RefreshIndicator(
@@ -2283,16 +2235,14 @@ class _HomePageState extends State<HomePage>
                   builder: (context, searchController, child) {
                     return NoteListView(
                       key: _noteListViewKey, // 绑定全局Key
-                      tags: _tags,
-                      selectedTagIds: _selectedTagIds,
+                      tags: _pageController.tags,
+                      selectedTagIds: _pageController.selectedTagIds,
                       onTagSelectionChanged: (tagIds) {
-                        setState(() {
-                          _selectedTagIds = tagIds;
-                        });
+                        _pageController.setSelectedTagIds(tagIds);
                       },
                       searchQuery: searchController.searchQuery,
-                      sortType: _sortType,
-                      sortAscending: _sortAscending,
+                      sortType: _pageController.sortType,
+                      sortAscending: _pageController.sortAscending,
                       onSortChanged: _handleSortChanged,
                       onSearchChanged: (query) {
                         searchController.updateSearch(query);
@@ -2307,14 +2257,14 @@ class _HomePageState extends State<HomePage>
                       onLongPressFavorite: settingsService.showFavoriteButton
                           ? _handleLongPressFavorite
                           : null, // 长按清除收藏
-                      isLoadingTags: _isLoadingTags, // 传递标签加载状态
-                      selectedWeathers: _selectedWeathers,
-                      selectedDayPeriods: _selectedDayPeriods,
+                      isLoadingTags: _pageController.isLoadingTags, // 传递标签加载状态
+                      selectedWeathers: _pageController.selectedWeathers,
+                      selectedDayPeriods: _pageController.selectedDayPeriods,
                       onFilterChanged: (weathers, dayPeriods) {
-                        setState(() {
-                          _selectedWeathers = weathers;
-                          _selectedDayPeriods = dayPeriods;
-                        });
+                        _pageController.setFilters(
+                          weathers: weathers,
+                          dayPeriods: dayPeriods,
+                        );
                       },
                       filterButtonKey: _noteFilterGuideKey, // 功能引导 key
                       favoriteButtonGuideKey: _noteFavoriteGuideKey,
@@ -2370,7 +2320,7 @@ class _HomePageState extends State<HomePage>
                 ), // 半透明背景
               ),
               child: NavigationBar(
-                selectedIndex: _currentIndex,
+                selectedIndex: _pageController.currentIndex,
                 onDestinationSelected: (index) {
                   _onTabChanged(index);
                 },

@@ -83,7 +83,7 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                             children: [
                               Expanded(
                                 child: TextField(
-                                  controller: _authorController,
+                                  controller: _metadataState.authorController,
                                   decoration: InputDecoration(
                                     hintText: AppLocalizations.of(
                                       context,
@@ -103,7 +103,7 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: TextField(
-                                  controller: _workController,
+                                  controller: _metadataState.workController,
                                   decoration: InputDecoration(
                                     hintText: AppLocalizations.of(
                                       context,
@@ -147,7 +147,7 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                             child: ListTile(
                               title: Text(l10n.selectCardColorLabel),
                               subtitle: Text(
-                                _selectedColorHex == null
+                                _metadataState.selectedColorHex == null
                                     ? l10n.noColor
                                     : l10n.colorSet,
                                 style: TextStyle(
@@ -159,10 +159,11 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                 width: 32,
                                 height: 32,
                                 decoration: BoxDecoration(
-                                  color: _selectedColorHex != null
+                                  color: _metadataState.selectedColorHex != null
                                       ? Color(
                                           int.parse(
-                                                _selectedColorHex!.substring(1),
+                                                _metadataState.selectedColorHex!
+                                                    .substring(1),
                                                 radix: 16,
                                               ) |
                                               0xFF000000,
@@ -170,12 +171,13 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                    color: _selectedColorHex == null
-                                        ? theme.colorScheme.outline
-                                        : Colors.transparent,
+                                    color:
+                                        _metadataState.selectedColorHex == null
+                                            ? theme.colorScheme.outline
+                                            : Colors.transparent,
                                   ),
                                 ),
-                                child: _selectedColorHex == null
+                                child: _metadataState.selectedColorHex == null
                                     ? Icon(
                                         Icons.block,
                                         size: 16,
@@ -217,8 +219,8 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                             l10n,
                             updateMetadataDialogState,
                           ),
-                          if (_currentAiAnalysis != null &&
-                              _currentAiAnalysis!.isNotEmpty)
+                          if (_metadataState.currentAiAnalysis != null &&
+                              _metadataState.currentAiAnalysis!.isNotEmpty)
                             const SizedBox(height: 24),
                           // 标签选择
                           Row(
@@ -232,7 +234,8 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                               ),
                               const Spacer(),
                               Text(
-                                l10n.selectedTagsCount(_selectedTagIds.length),
+                                l10n.selectedTagsCount(
+                                    _metadataState.selectedTagIds.length),
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: theme.colorScheme.onSurfaceVariant,
@@ -273,7 +276,8 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                               children: [
                                 // 搜索框
                                 TextField(
-                                  controller: _tagSearchController,
+                                  controller:
+                                      _metadataState.tagSearchController,
                                   decoration: InputDecoration(
                                     hintText: AppLocalizations.of(
                                       context,
@@ -287,7 +291,8 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                   ),
                                   onChanged: (value) {
                                     updateMetadataDialogState(() {
-                                      _tagSearchQuery = value.toLowerCase();
+                                      _metadataState.tagSearchQuery =
+                                          value.toLowerCase();
                                     });
                                   },
                                 ),
@@ -302,11 +307,13 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                         // 过滤标签
                                         final filteredTags =
                                             (widget.allTags ?? []).where((tag) {
-                                          return _tagSearchQuery.isEmpty ||
+                                          return _metadataState
+                                                  .tagSearchQuery.isEmpty ||
                                               tag
                                                   .localizedName(l10n)
                                                   .toLowerCase()
-                                                  .contains(_tagSearchQuery);
+                                                  .contains(_metadataState
+                                                      .tagSearchQuery);
                                         }).toList();
 
                                         if (filteredTags.isEmpty) {
@@ -328,7 +335,8 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                           spacing: 8.0,
                                           runSpacing: 8.0,
                                           children: filteredTags.map((tag) {
-                                            final selected = _selectedTagIds
+                                            final selected = _metadataState
+                                                .selectedTagIds
                                                 .contains(tag.id);
                                             return FilterChip(
                                               selected: selected,
@@ -340,19 +348,10 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                               ),
                                               onSelected: (bool value) {
                                                 updateMetadataDialogState(() {
-                                                  if (value) {
-                                                    if (!_selectedTagIds
-                                                        .contains(tag.id)) {
-                                                      _selectedTagIds.add(
-                                                        tag.id,
-                                                      );
-                                                    }
-                                                  } else {
-                                                    _selectedTagIds.removeWhere(
-                                                      (tagId) =>
-                                                          tagId == tag.id,
-                                                    );
-                                                  }
+                                                  _metadataState.toggleTag(
+                                                    tag.id,
+                                                    selected: value,
+                                                  );
                                                 });
                                               },
                                               selectedColor: theme
@@ -370,7 +369,7 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                             ),
                           ),
                           // 显示已选标签
-                          if (_selectedTagIds.isNotEmpty)
+                          if (_metadataState.selectedTagIds.isNotEmpty)
                             Container(
                               margin: const EdgeInsets.only(top: 8),
                               padding: const EdgeInsets.all(12),
@@ -393,7 +392,8 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                   Wrap(
                                     spacing: 8.0,
                                     runSpacing: 4.0,
-                                    children: _selectedTagIds.map((tagId) {
+                                    children: _metadataState.selectedTagIds
+                                        .map((tagId) {
                                       final tag =
                                           (widget.allTags ?? []).firstWhere(
                                         (t) => t.id == tagId,
@@ -413,10 +413,7 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                         avatar: _buildTagIcon(tag),
                                         onDeleted: () {
                                           updateMetadataDialogState(() {
-                                            _selectedTagIds.removeWhere(
-                                              (selectedTagId) =>
-                                                  selectedTagId == tagId,
-                                            );
+                                            _metadataState.removeTag(tagId);
                                           });
                                         },
                                       );

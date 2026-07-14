@@ -12,16 +12,9 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       final fullQuote = await db.getQuoteById(widget.initialQuote!.id!);
       if (fullQuote != null && mounted) {
         _updateState(() {
-          _fullInitialQuote = fullQuote;
+          _editorState.fullInitialQuote = fullQuote;
           // 如果列表页传入的是精简版 Quote，这里的补全不应被算作用户修改。
-          if (_currentAiAnalysis == null && fullQuote.aiAnalysis != null) {
-            final shouldSyncInitialAiAnalysis =
-                _currentAiAnalysis == _initialAiAnalysis;
-            _currentAiAnalysis = fullQuote.aiAnalysis;
-            if (shouldSyncInitialAiAnalysis) {
-              _initialAiAnalysis = fullQuote.aiAnalysis;
-            }
-          }
+          _metadataState.hydrateAiAnalysisIfUnchanged(fullQuote.aiAnalysis);
         });
         logDebug('已获取完整笔记数据，ID: ${fullQuote.id}');
       }
@@ -30,7 +23,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
     } finally {
       if (mounted) {
         _updateState(() {
-          _isLoadingFullQuote = false;
+          _editorState.isLoadingFullQuote = false;
         });
       }
     }
@@ -78,15 +71,16 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
         await _initializeFromPlainTextFallback(plainContent);
       } else {
         logDebug('使用纯文本初始化编辑器');
-        _richTextLoadFailed = false;
+        _editorState.richTextLoadFailed = false;
         _initializeAsPlainText();
       }
     } catch (e) {
       logDebug('文档初始化失败: $e，尝试使用纯文本fallback');
-      _richTextLoadFailed = widget.initialQuote?.deltaContent != null;
+      _editorState.richTextLoadFailed =
+          widget.initialQuote?.deltaContent != null;
       try {
-        final plainContent =
-            widget.initialQuote?.content ?? _fullInitialQuote?.content;
+        final plainContent = widget.initialQuote?.content ??
+            _editorState.fullInitialQuote?.content;
         if (plainContent != null && plainContent.isNotEmpty) {
           await _initializeFromPlainTextFallback(plainContent);
         } else {
@@ -97,7 +91,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
         _initializeAsPlainText();
       }
     } finally {
-      _draftLoaded = true;
+      _editorState.draftLoaded = true;
     }
   }
 
@@ -123,8 +117,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
 
       if (mounted) {
         _updateState(() {
-          _controller.dispose();
-          _controller = quill.QuillController(
+          _editorState.controller = quill.QuillController(
             document: quill.Document.fromJson(generatedDelta),
             selection: const TextSelection.collapsed(offset: 0),
           );
@@ -195,9 +188,9 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       if (memoryPressure >= 3) {
         // 临界状态
         logDebug('内存不足，回退到纯文本模式');
-        _richTextLoadFailed = true;
-        final plainContent =
-            widget.initialQuote?.content ?? _fullInitialQuote?.content;
+        _editorState.richTextLoadFailed = true;
+        final plainContent = widget.initialQuote?.content ??
+            _editorState.fullInitialQuote?.content;
         _initializeAsPlainText(plainContent);
         return;
       }
@@ -217,10 +210,10 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       }
     } catch (e) {
       logDebug('富文本初始化失败: $e，回退到纯文本');
-      _richTextLoadFailed = true;
+      _editorState.richTextLoadFailed = true;
       if (!mounted) return;
-      final plainContent =
-          widget.initialQuote?.content ?? _fullInitialQuote?.content;
+      final plainContent = widget.initialQuote?.content ??
+          _editorState.fullInitialQuote?.content;
       _initializeAsPlainText(plainContent);
     }
   }
@@ -244,13 +237,12 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
 
       if (mounted) {
         _updateState(() {
-          _controller.dispose();
-          _controller = quill.QuillController(
+          _editorState.controller = quill.QuillController(
             document: document,
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
-          _richTextLoadFailed = false;
+          _editorState.richTextLoadFailed = false;
         });
         logDebug('富文本内容直接初始化完成');
       }
@@ -308,13 +300,12 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
 
       if (mounted) {
         _updateState(() {
-          _controller.dispose();
-          _controller = quill.QuillController(
+          _editorState.controller = quill.QuillController(
             document: document,
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
-          _richTextLoadFailed = false;
+          _editorState.richTextLoadFailed = false;
         });
         logDebug('富文本内容后台初始化完成');
       }
@@ -337,8 +328,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
 
       if (mounted) {
         _updateState(() {
-          _controller.dispose();
-          _controller = quill.QuillController(
+          _editorState.controller = quill.QuillController(
             document: placeholderDocument,
             selection: const TextSelection.collapsed(offset: 0),
           );
@@ -357,13 +347,12 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       // 替换为实际文档
       if (mounted) {
         _updateState(() {
-          _controller.dispose();
-          _controller = quill.QuillController(
+          _editorState.controller = quill.QuillController(
             document: document,
             selection: const TextSelection.collapsed(offset: 0),
           );
           _attachDraftListener();
-          _richTextLoadFailed = false;
+          _editorState.richTextLoadFailed = false;
         });
         logDebug('超大富文本内容分段加载完成');
       }
@@ -421,7 +410,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
   Future<String> _getDocumentContentSafely() async {
     try {
       final memoryManager = DeviceMemoryManager();
-      final delta = _controller.document.toDelta();
+      final delta = _editorState.controller.document.toDelta();
       final deltaData = delta.toJson();
 
       // 估算内容大小

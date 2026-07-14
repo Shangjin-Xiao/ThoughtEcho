@@ -3,9 +3,11 @@ part of '../note_full_editor_page.dart';
 /// Color picker dialog and media file processing.
 extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
   Future<void> _showCustomColorPicker(BuildContext context) async {
-    final Color initialColor = _selectedColorHex != null
+    final Color initialColor = _metadataState.selectedColorHex != null
         ? Color(
-            int.parse(_selectedColorHex!.substring(1), radix: 16) | 0xFF000000,
+            int.parse(_metadataState.selectedColorHex!.substring(1),
+                    radix: 16) |
+                0xFF000000,
           )
         : Colors.transparent;
 
@@ -80,8 +82,8 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
                         }
 
                         final bool isSelected = color == Colors.transparent
-                            ? _selectedColorHex == null
-                            : _selectedColorHex == colorHex;
+                            ? _metadataState.selectedColorHex == null
+                            : _metadataState.selectedColorHex == colorHex;
 
                         return GestureDetector(
                           onTap: () {
@@ -196,7 +198,8 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
                   if (advancedColor != null && mounted) {
                     // 优化：合并所有状态更新为单次 setState 调用
                     _updateState(() {
-                      _selectedColorHex = advancedColor == Colors.transparent
+                      _metadataState.selectedColorHex = advancedColor ==
+                              Colors.transparent
                           ? null
                           : '#${advancedColor.toARGB32().toRadixString(16).substring(2)}';
                     });
@@ -220,7 +223,7 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
     if (result != null) {
       // 优化：合并所有状态更新为单次 setState 调用
       _updateState(() {
-        _selectedColorHex = result == Colors.transparent
+        _metadataState.selectedColorHex = result == Colors.transparent
             ? null
             : '#${result.toARGB32().toRadixString(16).substring(2)}';
       });
@@ -235,7 +238,7 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
       logDebug('开始处理临时媒体文件...');
 
       // 获取当前文档的Delta内容
-      final deltaData = _controller.document.toDelta().toJson();
+      final deltaData = _editorState.controller.document.toDelta().toJson();
       // 修复：使用深拷贝确保备份数据完全独立，避免嵌套对象的意外修改
       final originalDeltaData = _deepCopy(deltaData) as List;
       bool hasChanges = false;
@@ -368,13 +371,13 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
       if (hasChanges) {
         try {
           final newDocument = quill.Document.fromJson(deltaData);
-          _controller.document = newDocument;
+          _editorState.controller.document = newDocument;
           logDebug('临时媒体文件处理完成，共处理 ${processedFiles.length} 个文件');
         } catch (e) {
           logDebug('更新编辑器内容失败，回滚到原始状态: $e');
           // 回滚到原始状态
           final rollbackDocument = quill.Document.fromJson(originalDeltaData);
-          _controller.document = rollbackDocument;
+          _editorState.controller.document = rollbackDocument;
           rethrow;
         }
       } else {
@@ -423,12 +426,13 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
 
   Future<void> _cleanupSessionImportedMediaIfUnsaved() async {
     try {
-      if (_didSaveSuccessfully || _sessionImportedMedia.isEmpty) return;
+      final importedMedia = _mediaState.unsavedImportedMedia;
+      if (importedMedia.isEmpty) return;
 
       // 获取草稿引用的媒体文件，避免误删
       final draftMediaPaths = await DraftService().getAllMediaPathsInDrafts();
 
-      await Future.wait(_sessionImportedMedia.map((p) async {
+      await Future.wait(importedMedia.map((p) async {
         try {
           // 如果被草稿引用，跳过删除
           if (draftMediaPaths.contains(p)) {
