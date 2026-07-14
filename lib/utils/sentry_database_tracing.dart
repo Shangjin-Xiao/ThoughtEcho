@@ -20,9 +20,6 @@ class SentryDatabaseTracing {
 
   /// 仅在用户明确授权后包装主笔记数据库。
   static Database wrapMainDatabase(Database database) {
-    if (!_enabled || database is SentryDatabase) {
-      return database;
-    }
-    return SentryDatabase(database);
+    return database;
   }
 }

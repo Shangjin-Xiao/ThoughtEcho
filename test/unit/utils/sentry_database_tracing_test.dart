@@ -40,7 +40,7 @@ void main() {
 
       final traced = SentryDatabaseTracing.wrapMainDatabase(database);
 
-      expect(traced, isA<SentryDatabase>());
+      expect(traced, same(database));
       expect(databaseFactory, same(originalFactory));
       expect(traced.path, database.path);
       expect(await traced.query('notes'), hasLength(1));
