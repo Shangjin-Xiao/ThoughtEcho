@@ -19,10 +19,9 @@ void main() {
 
       // Access the private method via dynamic for testing
       final service = ChatSessionService(openOwnDatabase: false);
-      dynamic dynamicService = service;
 
       await expectLater(
-        () async => await dynamicService._addColumnIfMissing(
+        () async => await service.addColumnIfMissing(
           db,
           tableName: 'dummy',
           columnName: 'col1',
@@ -32,7 +31,7 @@ void main() {
       );
 
       await expectLater(
-        () async => await dynamicService._addColumnIfMissing(
+        () async => await service.addColumnIfMissing(
           db,
           tableName: 'dummy',
           columnName: 'col2',
@@ -42,7 +41,7 @@ void main() {
       );
 
       await expectLater(
-        () async => await dynamicService._addColumnIfMissing(
+        () async => await service.addColumnIfMissing(
           db,
           tableName: 'dummy',
           columnName: 'col3',
@@ -60,10 +59,9 @@ void main() {
       await db.execute('CREATE TABLE dummy(id TEXT)');
 
       final service = ChatSessionService(openOwnDatabase: false);
-      dynamic dynamicService = service;
 
       await expectLater(
-        () async => await dynamicService._addColumnIfMissing(
+        () async => await service.addColumnIfMissing(
           db,
           tableName: 'dummy',
           columnName: 'col4',
@@ -74,7 +72,7 @@ void main() {
       );
 
       await expectLater(
-        () async => await dynamicService._addColumnIfMissing(
+        () async => await service.addColumnIfMissing(
           db,
           tableName: 'dummy',
           columnName: 'col5',
@@ -91,10 +89,9 @@ void main() {
       await db.execute('CREATE TABLE dummy(id TEXT)');
 
       final service = ChatSessionService(openOwnDatabase: false);
-      dynamic dynamicService = service;
 
       await expectLater(
-        () async => await dynamicService._addColumnIfMissing(
+        () async => await service.addColumnIfMissing(
           db,
           tableName: 'dummy',
           columnName: 'col6',
@@ -104,7 +101,7 @@ void main() {
       );
 
       await expectLater(
-        () async => await dynamicService._addColumnIfMissing(
+        () async => await service.addColumnIfMissing(
           db,
           tableName: 'dummy',
           columnName: 'col7',

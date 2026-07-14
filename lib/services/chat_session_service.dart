@@ -360,25 +360,25 @@ class ChatSessionService extends ChangeNotifier {
       )
     ''');
 
-    await _addColumnIfMissing(
+    await addColumnIfMissing(
       db,
       tableName: 'chat_sessions',
       columnName: 'session_type',
       definition: "TEXT NOT NULL DEFAULT 'note'",
     );
-    await _addColumnIfMissing(
+    await addColumnIfMissing(
       db,
       tableName: 'chat_sessions',
       columnName: 'note_id',
       definition: 'TEXT',
     );
-    await _addColumnIfMissing(
+    await addColumnIfMissing(
       db,
       tableName: 'chat_sessions',
       columnName: 'title',
       definition: "TEXT NOT NULL DEFAULT ''",
     );
-    await _addColumnIfMissing(
+    await addColumnIfMissing(
       db,
       tableName: 'chat_sessions',
       columnName: 'last_active_at',
@@ -389,31 +389,31 @@ class ChatSessionService extends ChangeNotifier {
       SET last_active_at = COALESCE(NULLIF(last_active_at, ''), created_at)
       WHERE last_active_at IS NULL OR last_active_at = ''
     ''');
-    await _addColumnIfMissing(
+    await addColumnIfMissing(
       db,
       tableName: 'chat_sessions',
       columnName: 'is_pinned',
       definition: 'INTEGER NOT NULL DEFAULT 0',
     );
-    await _addColumnIfMissing(
+    await addColumnIfMissing(
       db,
       tableName: 'chat_messages',
       columnName: 'included_in_context',
       definition: 'INTEGER NOT NULL DEFAULT 1',
     );
-    await _addColumnIfMissing(
+    await addColumnIfMissing(
       db,
       tableName: 'chat_messages',
       columnName: 'meta_json',
       definition: 'TEXT',
     );
-    await _addColumnIfMissing(
+    await addColumnIfMissing(
       db,
       tableName: 'chat_messages',
       columnName: 'content_format',
       definition: 'TEXT',
     );
-    await _addColumnIfMissing(
+    await addColumnIfMissing(
       db,
       tableName: 'chat_messages',
       columnName: 'delta_json',
@@ -437,7 +437,8 @@ class ChatSessionService extends ChangeNotifier {
     );
   }
 
-  Future<void> _addColumnIfMissing(
+  @visibleForTesting
+  Future<void> addColumnIfMissing(
     DatabaseExecutor db, {
     required String tableName,
     required String columnName,
