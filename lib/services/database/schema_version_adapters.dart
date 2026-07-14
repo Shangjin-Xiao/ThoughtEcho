@@ -367,13 +367,15 @@ class SchemaVersionAdapters {
       '🎶': '🎧',
       'psychology': '🤔',
     };
+    final batch = transaction.batch();
     for (final entry in iconMigration.entries) {
-      await transaction.execute(
+      batch.execute(
         'UPDATE categories SET icon_name = ? '
         'WHERE icon_name = ? AND is_default = 1',
         <Object?>[entry.value, entry.key],
       );
     }
+    await batch.commit(noResult: true);
   }
 
   Future<void> _upgradeToV19(Transaction transaction) async {
