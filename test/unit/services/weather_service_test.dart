@@ -267,7 +267,7 @@ void main() {
     });
 
     test(
-        'refreshWeather should throw exception on malformed API response (missing current)',
+        'refreshWeather should enter error state on malformed API response (missing current)',
         () async {
       // Arrange
       const latitude = 39.9042;
