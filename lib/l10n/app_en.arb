@@ -4083,5 +4083,7 @@
   "agentDiffInsertBefore": "Insert before this content",
   "agentDiffInsertAfter": "Insert after this content",
   "agentDiffAppend": "Append content",
-  "agentDiffDelete": "Delete content"
+  "agentDiffDelete": "Delete content",
+  "availableCommands": "Available Commands",
+  "typeSlashToSeeCommands": "Type / to see commands"
 }

@@ -44,3 +44,7 @@
 ## 2024-05-24 - [提取 WebDAV 服务商配置表单硬编码]
 **发现:** WebDAV 同步配置页面存在硬编码的表单提示（如：服务商配置、未填写必填项的错误提示）。
 **规则:** 将表单相关的标题及校验失败文案统一抽取到 `.arb` 文件中，英文翻译采用清晰直接（"Please enter..."）且符合极简主义要求的设计。
+## 2026-07-13 - [提取 SlashCommandsMenu 硬编码中文字符串]
+**发现:** 在 `lib/widgets/ai/slash_commands_menu.dart` 中发现了硬编码的中文提示语：`'可用命令'` 和 `'输入 / 查看命令'`
+**规则:**
+- 采用极简风格进行国际化翻译，分别新增 `availableCommands` 和 `typeSlashToSeeCommands` 到所有 `app_*.arb` 语言包中。

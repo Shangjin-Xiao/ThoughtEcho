@@ -4083,5 +4083,7 @@
   "agentDiffInsertBefore": "在此内容前插入",
   "agentDiffInsertAfter": "在此内容后插入",
   "agentDiffAppend": "追加内容",
-  "agentDiffDelete": "删除内容"
+  "agentDiffDelete": "删除内容",
+  "availableCommands": "可用命令",
+  "typeSlashToSeeCommands": "输入 / 查看命令"
 }

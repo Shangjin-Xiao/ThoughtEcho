@@ -75,5 +75,7 @@
   "agentWebSearching": "Buscando en la web...",
   "favoriteNotes": "Notas favoritas",
   "clear": "Limpiar",
-  "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again."
+  "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again.",
+  "availableCommands": "Comandos disponibles",
+  "typeSlashToSeeCommands": "Escribe / para ver los comandos"
 }
