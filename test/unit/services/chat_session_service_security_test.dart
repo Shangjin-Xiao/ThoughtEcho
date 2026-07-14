@@ -12,48 +12,48 @@ void main() {
   });
 
   group('ChatSessionService definition regex tests', () {
-    test('valid definitions are allowed', () async {
-      final db = await databaseFactory.openDatabase(inMemoryDatabasePath);
+    Database? db;
+    late ChatSessionService service;
+
+    setUp(() async {
+      db = await databaseFactory.openDatabase(inMemoryDatabasePath);
       // Create dummy table to avoid missing table error
-      await db.execute('CREATE TABLE dummy(id TEXT)');
+      await db!.execute('CREATE TABLE dummy(id TEXT)');
+      service = ChatSessionService(openOwnDatabase: false);
+    });
 
-      // Access the private method via dynamic for testing
-      final service = ChatSessionService(openOwnDatabase: false);
+    tearDown(() async {
+      await db?.close();
+    });
 
+    test('valid definitions are allowed', () async {
       await service.addColumnIfMissing(
-        db,
+        db!,
         tableName: 'dummy',
         columnName: 'col1',
         definition: "TEXT NOT NULL DEFAULT 'note'",
       );
 
       await service.addColumnIfMissing(
-        db,
+        db!,
         tableName: 'dummy',
         columnName: 'col2',
         definition: 'INTEGER NOT NULL DEFAULT 0',
       );
 
       await service.addColumnIfMissing(
-        db,
+        db!,
         tableName: 'dummy',
         columnName: 'col3',
         definition: 'TEXT',
       );
-
-      await db.close();
     });
 
     test('invalid definitions with SQL injection payload are rejected',
         () async {
-      final db = await databaseFactory.openDatabase(inMemoryDatabasePath);
-      await db.execute('CREATE TABLE dummy(id TEXT)');
-
-      final service = ChatSessionService(openOwnDatabase: false);
-
       await expectLater(
         () async => await service.addColumnIfMissing(
-          db,
+          db!,
           tableName: 'dummy',
           columnName: 'col4',
           definition: "TEXT; DROP TABLE dummy;",
@@ -64,26 +64,19 @@ void main() {
 
       await expectLater(
         () async => await service.addColumnIfMissing(
-          db,
+          db!,
           tableName: 'dummy',
           columnName: 'col5',
           definition: "TEXT DEFAULT 'a'; --",
         ),
         throwsA(isA<ArgumentError>()),
       );
-
-      await db.close();
     });
 
     test('empty string or blank string definitions are rejected', () async {
-      final db = await databaseFactory.openDatabase(inMemoryDatabasePath);
-      await db.execute('CREATE TABLE dummy(id TEXT)');
-
-      final service = ChatSessionService(openOwnDatabase: false);
-
       await expectLater(
         () async => await service.addColumnIfMissing(
-          db,
+          db!,
           tableName: 'dummy',
           columnName: 'col6',
           definition: "",
@@ -93,15 +86,13 @@ void main() {
 
       await expectLater(
         () async => await service.addColumnIfMissing(
-          db,
+          db!,
           tableName: 'dummy',
           columnName: 'col7',
           definition: "   ",
         ),
         throwsA(isA<ArgumentError>()),
       );
-
-      await db.close();
     });
   });
 }
