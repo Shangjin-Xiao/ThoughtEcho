@@ -206,25 +206,33 @@ class MediaReferenceService {
     try {
       final db = await database;
       final grouped = <String, List<String>>{};
+      final batch = db.batch();
 
       for (var start = 0; start < uniqueIds.length; start += maxChunkSize) {
         final end = math.min(start + maxChunkSize, uniqueIds.length);
         final chunk = uniqueIds.sublist(start, end);
         final placeholders = List.filled(chunk.length, '?').join(',');
-        final result = await db.query(
+        batch.query(
           _tableName,
           columns: ['quote_id', 'file_path'],
           where: 'quote_id IN ($placeholders)',
           whereArgs: chunk,
         );
+      }
 
-        for (final row in result) {
-          final quoteId = row['quote_id'] as String?;
-          final filePath = row['file_path'] as String?;
-          if (quoteId == null || filePath == null) {
-            continue;
+      final results = await batch.commit();
+      for (final result in results) {
+        if (result is List) {
+          for (final row in result) {
+            if (row is Map) {
+              final quoteId = row['quote_id'] as String?;
+              final filePath = row['file_path'] as String?;
+              if (quoteId == null || filePath == null) {
+                continue;
+              }
+              grouped.putIfAbsent(quoteId, () => <String>[]).add(filePath);
+            }
           }
-          grouped.putIfAbsent(quoteId, () => <String>[]).add(filePath);
         }
       }
       return grouped;
