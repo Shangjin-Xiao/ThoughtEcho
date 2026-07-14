@@ -1,0 +1,21 @@
+lib/pages/ai_assistant/session_history_page_content.dart
+  s_6d09a2e02ee8bf::t_2354fd26315e1a 222-223
+  s_6d09a2e02ee8bf::t_4deea6bf847d2f 39-40,102-103,224-250,336-373,376
+  s_6d09a2e02ee8bf::t_a785ad9c6246e9 374-375,377-378
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "f6af9581f0a9d2997cf6312bc3bed8848fe2964f",
+  "prompts": {},
+  "sessions": {
+    "s_6d09a2e02ee8bf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6006-f95b-70c3-a28c-77903abf78aa",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
