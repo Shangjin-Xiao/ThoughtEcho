@@ -56,3 +56,8 @@
 **Vulnerability:** SQL Injection via String Interpolation in `db.rawQuery` (`_directGetQuotes`, `getQuotesForSmartPush`, `getQuotesCount`).
 **Learning:** SAST tools flag `db.rawQuery(query, args)` when the `query` string is constructed using dynamic string interpolation for `WHERE` clauses (e.g., `WHERE $whereClause`). Even if the conditions array itself is strictly controlled, interpolating it directly into the raw SQL string is an anti-pattern.
 **Prevention:** Always use the safer, built-in query builder `db.query` which natively separates the query skeleton (like `WHERE`) from its arguments via `where` and `whereArgs`.
+
+## $(date +%Y-%m-%d) - Fix SQL Injection in PRAGMA table_info
+**Vulnerability:** SQL Injection in `chat_session_service.dart` via direct string interpolation of table names into `PRAGMA table_info($tableName)`.
+**Learning:** `PRAGMA` statements in SQLite generally cannot accept parameter bindings. However, for `table_info`, SQLite provides a table-valued function `pragma_table_info(?)` which CAN be parameterized in a `SELECT` statement. Additionally, for DDL statements (like `ALTER TABLE`) that cannot be parameterized at all, user-supplied or dynamic identifiers must be strictly validated against a safe regex (e.g., `^[a-zA-Z_][a-zA-Z0-9_]*$`).
+**Prevention:** Use parameter bindings wherever possible (e.g., `SELECT * FROM pragma_table_info(?)`). When not possible (DDL), explicitly validate identifiers with strict regular expressions before executing queries.
