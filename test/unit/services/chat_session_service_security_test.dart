@@ -54,7 +54,8 @@ void main() {
       await db.close();
     });
 
-    test('invalid definitions with SQL injection payload are rejected', () async {
+    test('invalid definitions with SQL injection payload are rejected',
+        () async {
       final db = await databaseFactory.openDatabase(inMemoryDatabasePath);
       await db.execute('CREATE TABLE dummy(id TEXT)');
 
@@ -68,7 +69,8 @@ void main() {
           columnName: 'col4',
           definition: "TEXT; DROP TABLE dummy;",
         ),
-        throwsA(isA<ArgumentError>().having((e) => e.message, 'message', 'Invalid column definition')),
+        throwsA(isA<ArgumentError>()
+            .having((e) => e.message, 'message', 'Invalid column definition')),
       );
 
       await expectLater(
