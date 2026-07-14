@@ -20,34 +20,25 @@ void main() {
       // Access the private method via dynamic for testing
       final service = ChatSessionService(openOwnDatabase: false);
 
-      await expectLater(
-        () async => await service.addColumnIfMissing(
-          db,
-          tableName: 'dummy',
-          columnName: 'col1',
-          definition: "TEXT NOT NULL DEFAULT 'note'",
-        ),
-        returnsNormally,
+      await service.addColumnIfMissing(
+        db,
+        tableName: 'dummy',
+        columnName: 'col1',
+        definition: "TEXT NOT NULL DEFAULT 'note'",
       );
 
-      await expectLater(
-        () async => await service.addColumnIfMissing(
-          db,
-          tableName: 'dummy',
-          columnName: 'col2',
-          definition: 'INTEGER NOT NULL DEFAULT 0',
-        ),
-        returnsNormally,
+      await service.addColumnIfMissing(
+        db,
+        tableName: 'dummy',
+        columnName: 'col2',
+        definition: 'INTEGER NOT NULL DEFAULT 0',
       );
 
-      await expectLater(
-        () async => await service.addColumnIfMissing(
-          db,
-          tableName: 'dummy',
-          columnName: 'col3',
-          definition: 'TEXT',
-        ),
-        returnsNormally,
+      await service.addColumnIfMissing(
+        db,
+        tableName: 'dummy',
+        columnName: 'col3',
+        definition: 'TEXT',
       );
 
       await db.close();
