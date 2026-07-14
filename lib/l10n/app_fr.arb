@@ -3571,6 +3571,6 @@
   "agentWebSearching": "Recherche sur le web...",
   "favoriteNotes": "Notes favorites",
   "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again.",
-  "availableCommands": "Commandes Disponibles",
+  "availableCommands": "Commandes disponibles",
   "typeSlashToSeeCommands": "Tapez / pour voir les commandes"
 }
