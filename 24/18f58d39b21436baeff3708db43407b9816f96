@@ -1,0 +1,29 @@
+lib/services/database_service.dart
+  s_b4e19e4ea4862f::t_298906ead9c8d4 699,717-737
+  s_b4e19e4ea4862f::t_fe531a718b42cb 738-739
+lib/services/database/schema_version_adapters.dart
+  s_b4e19e4ea4862f::t_298906ead9c8d4 423-425
+test/unit/services/database_schema_lifecycle_test.dart
+  s_b4e19e4ea4862f::t_659064ce7ff1a1 113-128
+test/unit/services/database_service_initialization_test.dart
+  s_b4e19e4ea4862f::t_659064ce7ff1a1 3-29,31-47,51-61,67-68,71-74,76-79
+  s_b4e19e4ea4862f::t_853b99f610bd80 30
+  s_b4e19e4ea4862f::t_091fb6a6c4a841 48-50,62-63,65-66,69,75
+  s_b4e19e4ea4862f::t_298906ead9c8d4 1-2,64,70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "2418f58d39b21436baeff3708db43407b9816f96",
+  "prompts": {},
+  "sessions": {
+    "s_b4e19e4ea4862f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5ddb-45b8-7660-a8d8-b87a644e214f",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
