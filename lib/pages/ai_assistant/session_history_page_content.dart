@@ -36,6 +36,8 @@ extension _SessionHistoryPageContent on _SessionHistoryPageState {
             context: context,
             session: result.session,
             snippet: result.snippet,
+            snippetMatchStart: result.matchStart,
+            snippetMatchEnd: result.matchEnd,
             theme: theme,
             l10n: l10n,
           );
@@ -97,6 +99,8 @@ extension _SessionHistoryPageContent on _SessionHistoryPageState {
     required String snippet,
     required ThemeData theme,
     required AppLocalizations l10n,
+    int snippetMatchStart = -1,
+    int snippetMatchEnd = -1,
   }) {
     final isCurrent = session.id == widget.currentSessionId;
     final messageCount = _messageCounts[session.id] ?? 0;
@@ -215,20 +219,36 @@ extension _SessionHistoryPageContent on _SessionHistoryPageState {
                     ),
                     if (snippet.isNotEmpty) ...[
                       const SizedBox(height: 6),
-                      _buildHighlightedText(
-                        text: snippet,
-                        query: _searchQuery,
-                        baseStyle: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ) ??
-                            TextStyle(
-                              color: theme.colorScheme.onSurfaceVariant,
+                      (snippetMatchStart >= 0 &&
+                              snippetMatchEnd > snippetMatchStart)
+                          ? _buildHighlightedTextByRange(
+                              text: snippet,
+                              matchStart: snippetMatchStart,
+                              matchEnd: snippetMatchEnd,
+                              baseStyle: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ) ??
+                                  TextStyle(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                              theme: theme,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            )
+                          : _buildHighlightedText(
+                              text: snippet,
+                              query: _searchQuery,
+                              baseStyle: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ) ??
+                                  TextStyle(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                              theme: theme,
+                              useBackground: true,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                        theme: theme,
-                        useBackground: true,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
                     ],
                     const SizedBox(height: 6),
                     Text(
@@ -308,6 +328,49 @@ extension _SessionHistoryPageContent on _SessionHistoryPageState {
         style: baseStyle,
         children: spans,
       ),
+      maxLines: maxLines,
+      overflow: overflow,
+    );
+  }
+
+  /// 使用已知的 [matchStart]/[matchEnd] 精确高亮 snippet 中的匹配词。
+  /// 由服务层 _buildSnippet 计算得出，无需在 UI 层重新搜索。
+  Widget _buildHighlightedTextByRange({
+    required String text,
+    required int matchStart,
+    required int matchEnd,
+    required TextStyle baseStyle,
+    required ThemeData theme,
+    int maxLines = 2,
+    TextOverflow overflow = TextOverflow.ellipsis,
+  }) {
+    final clampedStart = matchStart.clamp(0, text.length);
+    final clampedEnd = matchEnd.clamp(clampedStart, text.length);
+
+    final highlightStyle = baseStyle.copyWith(
+      color: theme.colorScheme.primary,
+      fontWeight: FontWeight.bold,
+      backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.15),
+    );
+
+    final spans = <InlineSpan>[];
+    if (clampedStart > 0) {
+      spans.add(TextSpan(text: text.substring(0, clampedStart)));
+    }
+    if (clampedEnd > clampedStart) {
+      spans.add(
+        TextSpan(
+          text: text.substring(clampedStart, clampedEnd),
+          style: highlightStyle,
+        ),
+      );
+    }
+    if (clampedEnd < text.length) {
+      spans.add(TextSpan(text: text.substring(clampedEnd)));
+    }
+
+    return Text.rich(
+      TextSpan(style: baseStyle, children: spans),
       maxLines: maxLines,
       overflow: overflow,
     );
