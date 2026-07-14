@@ -1,0 +1,24 @@
+test/widgets/tool_progress_panel_test.dart
+  s_9000884b8d43c1::t_52c9fffc3b4653 218
+  s_9000884b8d43c1::t_eebf0e96d6b27a 51,53,124,180,213,235,256
+  s_9000884b8d43c1::t_b208f0c02bb455 129,134,139,154-156,181,193,233,236-237,247,257
+  s_9000884b8d43c1::t_d1e47a418c5df4 64
+lib/widgets/ai/tool_progress_panel.dart
+  s_9000884b8d43c1::t_eebf0e96d6b27a 117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "c80343fdb7bfee65051117dc9d8e429d0336d4dc",
+  "prompts": {},
+  "sessions": {
+    "s_9000884b8d43c1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5fed-1ed3-7893-bcf5-44c7b8e678ce",
+        "model": "gpt-5.6-terra"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
