@@ -115,7 +115,9 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   /// 获取本地化的天气筛选分类标签
   String _getWeatherFilterLabel(BuildContext context, String filterCategory) {
     return WeatherService.getLocalizedFilterCategoryLabel(
-        context, filterCategory);
+      context,
+      filterCategory,
+    );
   }
 
   /// 获取本地化的时间段标签
@@ -141,10 +143,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    l10n.filterAndSort,
-                    style: theme.textTheme.titleMedium,
-                  ),
+                  Text(l10n.filterAndSort, style: theme.textTheme.titleMedium),
                   TextButton(
                     onPressed: () {
                       setState(() {
@@ -246,10 +245,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
           children: [
             Row(
               children: [
-                Text(
-                  title,
-                  style: theme.textTheme.bodyLarge,
-                ),
+                Text(title, style: theme.textTheme.bodyLarge),
                 if (showScrollHint) ...[
                   const SizedBox(width: 8),
                   Icon(
@@ -333,9 +329,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
             if (tag.iconName != null && tag.iconName!.isNotEmpty)
               isEmoji
                   ? Text(tag.iconName!, style: const TextStyle(fontSize: 16))
-                  : (tagIcon is IconData)
-                      ? Icon(tagIcon, size: 16)
-                      : const SizedBox.shrink(),
+                  : Icon(tagIcon, size: 16),
             const SizedBox(width: 4),
             Flexible(
               child: Text(
@@ -384,9 +378,9 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
 
       if (!authenticated) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.biometricAuthFailed)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.biometricAuthFailed)));
         }
         return;
       }
