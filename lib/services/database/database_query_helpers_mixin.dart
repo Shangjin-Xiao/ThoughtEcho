@@ -180,7 +180,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
   /// 修复：检查并修复数据库结构，包括字段和索引
   @override
   Future<void> _checkAndFixDatabaseStructure() async {
-    await _schemaManager.checkAndFixDatabaseStructure(database);
+    await _schemaLifecycle.checkAndFixDatabaseStructure(database);
   }
 
   /// 智能推送专用轻量查询

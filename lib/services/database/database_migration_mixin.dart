@@ -5,19 +5,19 @@ mixin _DatabaseMigrationMixin on _DatabaseServiceBase {
   /// 批量为旧笔记补全 dayPeriod 字段（根据 date 字段推算并写入）
   @override
   Future<void> patchQuotesDayPeriod() async {
-    await _schemaManager.patchQuotesDayPeriod(database);
+    await _schemaLifecycle.patchQuotesDayPeriod(database);
   }
 
   /// 修复：安全迁移旧数据dayPeriod字段为英文key
   @override
   Future<void> migrateDayPeriodToKey() async {
-    await _schemaManager.migrateDayPeriodToKey(database);
+    await _schemaLifecycle.migrateDayPeriodToKey(database);
   }
 
   /// 修复：安全迁移旧数据weather字段为英文key
   @override
   Future<void> migrateWeatherToKey() async {
-    await _schemaManager.migrateWeatherToKey(
+    await _schemaLifecycle.migrateWeatherToKey(
       database,
       memoryStore: _memoryStore,
     );

@@ -54,7 +54,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   @visibleForTesting
   _DatabaseServiceBase.forTesting();
 
-  final DatabaseSchemaManager _schemaManager = DatabaseSchemaManager();
+  final DatabaseSchemaManager _schemaLifecycle = DatabaseSchemaManager();
   final DatabaseBackupService _backupService = DatabaseBackupService();
   final DatabaseHealthService _healthService = DatabaseHealthService();
   VoidCallback? onLocalDataChanged;
@@ -786,10 +786,10 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       path,
       version: DatabaseSchemaManager.schemaVersion,
       onCreate: (db, version) async {
-        await _schemaManager.createTables(db);
+        await _schemaLifecycle.createTables(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        await _schemaManager.upgradeDatabase(db, oldVersion, newVersion);
+        await _schemaLifecycle.upgradeDatabase(db, oldVersion, newVersion);
       },
       onOpen: (db) async {
         // 关键：确保外键约束已启用（必须在事务外执行）
@@ -821,7 +821,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
   /// 验证外键约束是否已启用
   Future<void> _verifyForeignKeysEnabled(Database db) async {
-    await _schemaManager.verifyForeignKeysEnabled(db);
+    await _schemaLifecycle.verifyForeignKeysEnabled(db);
   }
 
   /// 配置数据库安全和性能PRAGMA参数
@@ -830,7 +830,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     Database db, {
     bool inTransaction = false,
   }) async {
-    await _schemaManager.configureDatabasePragmas(
+    await _schemaLifecycle.configureDatabasePragmas(
       db,
       inTransaction: inTransaction,
     );
@@ -996,7 +996,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   /// 优化：在初始化阶段执行所有数据迁移
   /// 兼容性保证：所有迁移都是向后兼容的，不会破坏现有数据
   Future<void> _performAllDataMigrations() async {
-    await _schemaManager.performAllDataMigrations(database);
+    await _schemaLifecycle.performAllDataMigrations(database);
   }
 
   /// 外部调用的统一刷新入口（同步/恢复后使用）

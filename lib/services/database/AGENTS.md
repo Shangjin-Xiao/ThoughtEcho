@@ -1,13 +1,14 @@
 # Database Mixins 子模块
 
 本目录包含 `DatabaseService` 的 12 个 `part`/mixin，覆盖缓存、查询、CRUD、分类、收藏、隐藏标签、
-回收站、分页、导入导出和数据维护。Schema、版本号及 `onUpgrade` 逻辑位于
-`../database_schema_manager.dart`。
+回收站、分页、导入导出和数据维护。Schema 对外入口与版本号位于
+`../database_schema_manager.dart`；当前 SQL 定义、版本适配器、repair/validation 与 backfill
+位于同目录的 `schema_*.dart` parts。
 
 ## 数据安全规则
 
-- Schema 变更同时更新 `createTables`、追加新的 `_performVersionUpgrades` 版本分支并递增
-  `DatabaseSchemaManager.schemaVersion`；不要改写已有版本分支。
+- Schema 变更同时更新当前 schema 定义、追加新的 `SchemaVersionAdapter` 并递增
+  `DatabaseSchemaManager.schemaVersion`；不要改写已有版本适配器。
 - `database_migration_mixin.dart` 主要承载运行期数据迁移/维护，不要把 schema 升级错误地只放
   在该文件。
 - SQL 值一律参数绑定。动态排序字段必须经过父文件的 `sanitizeOrderBy()`；动态标识符必须来自
