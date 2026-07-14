@@ -18,15 +18,11 @@ import '../models/quote_model.dart';
 import '../widgets/daily_quote_view.dart';
 import '../widgets/note_list_view.dart';
 import '../widgets/sentry_disclosure_dialog.dart';
-import '../widgets/add_note_dialog.dart';
 import 'ai_features_page.dart';
 import 'settings_page.dart';
-import 'ai_assistant_page.dart';
-import '../models/ai_assistant_entry.dart';
 import '../theme/app_theme.dart';
-import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
+import 'note_full_editor_page.dart';
 import '../services/settings_service.dart'; // Import SettingsService
-import '../constants/app_constants.dart';
 import '../utils/app_logger.dart';
 import '../utils/color_utils.dart';
 import '../services/ai_card_generation_service.dart';
@@ -40,12 +36,11 @@ import 'home/home_card_actions.dart';
 import 'home/home_capture_actions.dart';
 import 'home/daily_prompt_panel.dart';
 import 'home/home_guide_coordinator.dart';
+import 'home/home_note_editor_actions.dart';
+import 'home/home_note_mutation_actions.dart';
 import 'home/home_refresh_coordinator.dart';
 import 'home/home_target_navigation.dart';
 
-// TODO(refactor): Move the remaining note mutation/editor flows into their
-// own module. Refresh, targeting, guides, card export and capture already use
-// state-owned seams under pages/home/.
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
   final String? initialTargetNoteId;
@@ -169,6 +164,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   late final HomeGuideCoordinator _guideCoordinator;
   late final HomeRefreshCoordinator _refreshCoordinator;
   late final HomeTargetNavigation _targetNavigation;
+  late final HomeNoteMutationActions _noteMutationActions;
+  late final HomeNoteEditorActions _noteEditorActions;
 
   // 网络恢复监听
   ConnectivityService? _connectivityService;
@@ -224,6 +221,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         return await _noteListViewKey.currentState?.scrollToQuoteById(noteId) ??
             false;
       },
+    );
+    _noteMutationActions = HomeNoteMutationActions(
+      context: context,
+      isMounted: () => mounted,
+      noteListKey: _noteListViewKey,
+      onTrashGuideRequested: _guideCoordinator.scheduleTrashLocationGuide,
+    );
+    _noteEditorActions = HomeNoteEditorActions(
+      context: context,
+      isMounted: () => mounted,
+      readTags: () => _pageController.tags,
+      isLoadingTags: () => _pageController.isLoadingTags,
+      loadTags: _loadTags,
+      releaseNoteSearchFocus: _releaseNoteSearchFocus,
+      noteListKey: _noteListViewKey,
     );
 
     // 注册生命周期观察器
@@ -313,6 +325,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _smartPushService?.removeListener(_onSmartPushServiceChanged);
     _guideCoordinator.dispose();
     _targetNavigation.dispose();
+    _noteMutationActions.dispose();
     _pageController
       ..removeListener(_onPageStateChanged)
       ..dispose();
@@ -600,251 +613,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _guideCoordinator.unfocusNoteSearch();
   }
 
-  void _scheduleTrashLocationGuide() {
-    _guideCoordinator.scheduleTrashLocationGuide();
-  }
-
-  // 显示添加笔记对话框（优化性能）
   void _showAddQuoteDialog({
     String? prefilledContent,
     String? prefilledAuthor,
     String? prefilledWork,
-    dynamic hitokotoData,
-  }) async {
-    _releaseNoteSearchFocus();
-    FocusScope.of(context).unfocus();
-    await _loadTags();
-    if (!mounted) return;
-
-    // 确保标签数据已经加载
-    if (_pageController.isLoadingTags || _pageController.tags.isEmpty) {
-      logDebug('标签数据未准备好，重新加载标签数据...');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).loadingDataPleaseWait),
-          duration: const Duration(seconds: 1),
-        ),
-      );
-
-      // 强制重新加载标签数据
-      await _loadTags();
-
-      // 如果仍然没有标签数据，提示用户
-      if (_pageController.tags.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(AppLocalizations.of(context).noTagsAvailable),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-        return;
-      }
-    }
-
-    if (!mounted) return;
-
-    // 检查是否启用跳过非全屏编辑器
-    final settingsService = context.read<SettingsService>();
-    if (settingsService.skipNonFullscreenEditor) {
-      logDebug('跳过非全屏编辑器，直接打开全屏编辑器');
-      await _openFullscreenEditorDirectly(
-        prefilledContent: prefilledContent,
-        prefilledAuthor: prefilledAuthor,
-        prefilledWork: prefilledWork,
-        hitokotoData: hitokotoData,
-      );
-      return;
-    }
-
-    logDebug('显示添加笔记对话框，可用标签数: ${_pageController.tags.length}');
-
-    // 使用延迟显示，确保动画流畅
-    await Future<void>.delayed(Duration.zero);
-    if (!mounted) return;
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
-      requestFocus: false,
-      builder: (context) => AddNoteDialog(
-        prefilledContent: prefilledContent,
-        prefilledAuthor: prefilledAuthor,
-        prefilledWork: prefilledWork,
-        hitokotoData: hitokotoData,
-        tags: _pageController.tags, // 使用预加载的标签数据
-        onSave: (quote) => _saveNonFullscreenQuote(
-          quote,
-          isEditing: false,
-        ),
-      ),
-    );
-    if (!mounted) return;
-    _releaseNoteSearchFocus();
-  }
-
-  Future<void> _saveNonFullscreenQuote(
-    Quote quote, {
-    required bool isEditing,
-  }) async {
-    if (!mounted) return;
-
-    final db = context.read<DatabaseService>();
-    final messenger = ScaffoldMessenger.of(context);
-    final l10n = AppLocalizations.of(context);
-
-    try {
-      if (isEditing) {
-        final result = await db.updateQuote(quote);
-        if (result != QuoteUpdateResult.updated) {
-          if (!mounted) return;
-          _showNonFullscreenSaveFailure(
-            quote,
-            isEditing: true,
-            message: switch (result) {
-              QuoteUpdateResult.notFound => l10n.noteNotFound,
-              QuoteUpdateResult.skippedDeleted => l10n.noteUpdateSkippedDeleted,
-              QuoteUpdateResult.updated => l10n.noteUpdated,
-            },
-          );
-          return;
-        }
-      } else {
-        await db.addQuote(quote);
-      }
-
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(isEditing ? l10n.noteUpdated : l10n.noteSaved),
-          duration: AppConstants.snackBarDurationImportant,
-        ),
-      );
-      _loadTags();
-      // 触发新增/修改笔记卡片的平滑入场动画
-      if (quote.id != null) {
-        _noteListViewKey.currentState?.triggerInsertAnimation(
-          quote.id!,
-          animateListInsertion: !isEditing,
-        );
-      }
-    } catch (e, stack) {
-      logError(
-        '非全屏编辑器保存失败: id=${quote.id}, isEditing=$isEditing',
-        error: e,
-        stackTrace: stack,
-        source: 'HomePage',
-      );
-      if (!mounted) return;
-      _showNonFullscreenSaveFailure(
-        quote,
-        isEditing: isEditing,
-        message: l10n.saveFailedWithError(e.toString()),
-      );
-    }
-  }
-
-  void _showNonFullscreenSaveFailure(
-    Quote quote, {
-    required bool isEditing,
-    required String message,
+    Map<String, dynamic>? hitokotoData,
   }) {
-    if (!mounted) return;
-
-    final messenger = ScaffoldMessenger.of(context);
-    final l10n = AppLocalizations.of(context);
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: AppConstants.snackBarDurationError,
-        backgroundColor: Colors.red,
-        action: SnackBarAction(
-          label: l10n.retry,
-          onPressed: () {
-            unawaited(
-              _saveNonFullscreenQuote(quote, isEditing: isEditing),
-            );
-          },
-        ),
+    unawaited(
+      _noteEditorActions.add(
+        prefilledContent: prefilledContent,
+        prefilledAuthor: prefilledAuthor,
+        prefilledWork: prefilledWork,
+        hitokotoData: hitokotoData,
       ),
     );
-  }
-
-  /// 直接打开全屏编辑器（跳过非全屏编辑器）
-  Future<void> _openFullscreenEditorDirectly({
-    String? prefilledContent,
-    String? prefilledAuthor,
-    String? prefilledWork,
-    dynamic hitokotoData,
-  }) async {
-    try {
-      final settingsService = context.read<SettingsService>();
-      String content = prefilledContent ?? '';
-      String? author = prefilledAuthor;
-      String? work = prefilledWork;
-
-      // 处理一言数据
-      final isHitokotoQuickAdd = hitokotoData is Map<String, dynamic>;
-      if (isHitokotoQuickAdd) {
-        content = hitokotoData['hitokoto'] ?? content;
-        author = hitokotoData['from_who'] ?? author;
-        work = hitokotoData['from'] ?? work;
-      }
-
-      final hasExplicitAuthorOrWork = author != null || work != null;
-
-      // 如果没有指定作者/出处，使用默认值
-      if (author == null &&
-          settingsService.defaultAuthor != null &&
-          settingsService.defaultAuthor!.isNotEmpty) {
-        author = settingsService.defaultAuthor;
-      }
-      if (work == null &&
-          settingsService.defaultSource != null &&
-          settingsService.defaultSource!.isNotEmpty) {
-        work = settingsService.defaultSource;
-      }
-
-      if (!mounted) return;
-
-      // 导航到全屏编辑器
-      // 全屏编辑器会处理自动位置/天气
-      // 如果我们传递了作者/出处，跳过编辑器内的默认元数据自动填充
-      final saved = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute(
-          builder: (context) => NoteFullEditorPage(
-            initialContent: content,
-            initialQuote: null, // 新建笔记
-            allTags: _pageController.tags,
-            initialAuthor: author,
-            initialWork: work,
-            skipDefaultMetadataAutofill: hasExplicitAuthorOrWork,
-            isFromDailyQuote: isHitokotoQuickAdd, // 标记来自每日一言
-          ),
-        ),
-      );
-
-      // 如果保存成功，通过数据流自动刷新列表
-      if (saved == true && mounted) {
-        logDebug('全屏编辑器保存成功返回，触发列表刷新');
-        _loadTags();
-      }
-    } catch (e) {
-      logError('打开全屏编辑器失败', error: e, source: 'HomePage');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                Text(AppLocalizations.of(context).openFullEditorFailedSimple),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    }
   }
 
   // FAB 短按处理
@@ -857,257 +639,24 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     unawaited(_captureActions.startVoiceCapture());
   }
 
-  // 显示编辑笔记对话框
   void _showEditQuoteDialog(Quote quote) {
-    _releaseNoteSearchFocus();
-    FocusScope.of(context).unfocus();
-    // 检查笔记是否来自全屏编辑器
-    if (quote.editSource == 'fullscreen') {
-      // 如果是来自全屏编辑器的笔记，则直接打开全屏编辑页面
-      try {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => NoteFullEditorPage(
-              initialContent: quote.content,
-              initialQuote: quote,
-              allTags: _pageController.tags,
-            ),
-          ),
-        );
-      } catch (e) {
-        // 显示错误信息
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                AppLocalizations.of(context).cannotOpenFullEditor(e.toString()),
-              ),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-              action: SnackBarAction(
-                label: AppLocalizations.of(context).retry,
-                onPressed: () => _showEditQuoteDialog(quote),
-                textColor: Colors.white,
-              ),
-            ),
-          );
-        }
-      }
-    } else {
-      // 否则，打开常规编辑对话框
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Theme.of(context).brightness == Brightness.light
-            ? Colors.white
-            : Theme.of(context).colorScheme.surface,
-        requestFocus: false,
-        builder: (context) => AddNoteDialog(
-          initialQuote: quote,
-          tags: _pageController.tags,
-          onSave: (updatedQuote) => _saveNonFullscreenQuote(
-            updatedQuote,
-            isEditing: true,
-          ),
-        ),
-      ).whenComplete(() {
-        if (mounted) {
-          _releaseNoteSearchFocus();
-        }
-      });
-    }
+    _noteEditorActions.edit(quote);
   }
 
-  // 直接将笔记移入回收站（有回收站保障，无需二次确认）
-  Future<void> _deleteQuote(Quote quote) async {
-    if (!mounted || quote.id == null) return;
-    final l10n = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final db = Provider.of<DatabaseService>(context, listen: false);
-    final quoteId = quote.id!;
-    try {
-      await db.deleteQuote(quoteId);
-      if (!mounted) return;
-      // 先清除旧 SnackBar，避免多次删除时堆叠
-      _pageController.trashSnackBarTimer?.cancel();
-      const trashSnackBarDuration = Duration(seconds: 3);
-      messenger.clearSnackBars();
-      final snackBarController = messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.noteMovedToTrash),
-          duration: trashSnackBarDuration,
-          behavior: SnackBarBehavior.floating,
-          action: SnackBarAction(
-            label: l10n.undoDelete,
-            onPressed: () async {
-              _pageController.trashSnackBarTimer?.cancel();
-              try {
-                await db.restoreQuote(quoteId);
-                if (!mounted) return;
-                _noteListViewKey.currentState?.triggerInsertAnimation(
-                  quoteId,
-                  animateListInsertion: true,
-                );
-              } catch (e, stack) {
-                logError(
-                  '撤销删除失败: $e',
-                  error: e,
-                  stackTrace: stack,
-                  source: 'HomePage',
-                );
-                if (!mounted) return;
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(l10n.restoreFailed),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
-            },
-          ),
-        ),
-      );
-      _pageController.trashSnackBarTimer = Timer(trashSnackBarDuration, () {
-        if (mounted) {
-          snackBarController.close();
-        }
-      });
-      // 显示回收站位置引导（仅第一次删除笔记时）
-      _scheduleTrashLocationGuide();
-    } catch (e, stackTrace) {
-      logError(
-        '移动笔记到回收站失败: $e',
-        error: e,
-        stackTrace: stackTrace,
-        source: 'HomePage',
-      );
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.deleteFailed(e.toString())),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+  Future<void> _deleteQuote(Quote quote) {
+    return _noteMutationActions.delete(quote);
   }
 
-  // 处理心形按钮点击
-  void _handleFavoriteClick(Quote quote) async {
-    try {
-      final db = Provider.of<DatabaseService>(context, listen: false);
-      await db.incrementFavoriteCount(quote.id!);
-
-      // 检查mounted以确保widget还在树中
-      if (!mounted) return;
-
-      final l10n = AppLocalizations.of(context);
-      // 显示简洁的反馈
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.favorite, color: Colors.red, size: 16),
-              const SizedBox(width: 8),
-              Text(l10n.favoriteCountWithNum(quote.favoriteCount + 1)),
-            ],
-          ),
-          duration: const Duration(milliseconds: 1500),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red.shade400,
-        ),
-      );
-    } catch (e) {
-      // 检查mounted以确保widget还在树中
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).favoriteFailed),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+  void _handleFavoriteClick(Quote quote) {
+    unawaited(_noteMutationActions.favorite(quote));
   }
 
-  // 处理心形按钮长按（清除收藏）
-  void _handleLongPressFavorite(Quote quote) async {
-    if (quote.favoriteCount <= 0) return;
-
-    final l10n = AppLocalizations.of(context);
-
-    // 显示确认对话框
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.clearFavoriteTitle),
-        content: Text(l10n.clearFavoriteMessage(quote.favoriteCount)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text(l10n.confirm),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-    if (!mounted) return;
-
-    try {
-      final db = Provider.of<DatabaseService>(context, listen: false);
-      await db.resetFavoriteCount(quote.id!);
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.check_circle_outline,
-                  color: Colors.white, size: 16),
-              const SizedBox(width: 8),
-              Text(l10n.clearFavoriteSuccess),
-            ],
-          ),
-          duration: const Duration(milliseconds: 1500),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.clearFavoriteFailed),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+  void _handleLongPressFavorite(Quote quote) {
+    unawaited(_noteMutationActions.clearFavorite(quote));
   }
 
-  // 显示AI问答聊天界面
   void _showAIQuestionDialog(Quote quote) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => AIAssistantPage(
-          quote: quote,
-          entrySource: AIAssistantEntrySource.note,
-        ),
-      ),
-    );
+    _noteEditorActions.askAi(quote);
   }
 
   // AI 卡片模块隐藏生成、预览、分享和保存的完整流程。

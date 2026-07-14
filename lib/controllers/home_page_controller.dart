@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
@@ -27,7 +26,6 @@ class HomePageController extends ChangeNotifier {
   // guide and intent flows from leaking private flags into the page State.
   String? lastConsumedExcerptText;
   bool isHandlingExcerptIntent = false;
-  Timer? trashSnackBarTimer;
 
   int get currentIndex => _currentIndex;
   UnmodifiableListView<NoteCategory> get tags => UnmodifiableListView(_tags);
@@ -102,7 +100,6 @@ class HomePageController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _tagLoadGeneration++;
-    trashSnackBarTimer?.cancel();
     super.dispose();
   }
 }
