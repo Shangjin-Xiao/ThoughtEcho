@@ -28,5 +28,55 @@ void main() {
       expect(removedCount, 1);
       expect(cache['total'], isNull);
     });
+
+    test('keeps unexpired values', () {
+      var now = DateTime(2026);
+      final cache = ExpiringCache<String, int>(
+        expiration: const Duration(minutes: 5),
+        now: () => now,
+      );
+
+      cache['total'] = 3;
+      now = now.add(const Duration(minutes: 4));
+      final removedCount = cache.removeExpired();
+
+      expect(removedCount, 0);
+      expect(cache['total'], 3);
+    });
+
+    test('handles mixed expired and unexpired values', () {
+      var now = DateTime(2026);
+      final cache = ExpiringCache<String, int>(
+        expiration: const Duration(minutes: 5),
+        now: () => now,
+      );
+
+      cache['old'] = 1;
+      now = now.add(const Duration(minutes: 3));
+      cache['new'] = 2;
+
+      now = now.add(const Duration(minutes: 3));
+
+      final removedCount = cache.removeExpired();
+
+      expect(removedCount, 1);
+      expect(cache['old'], isNull);
+      expect(cache['new'], 2);
+    });
+
+    test('keeps boundary values (exactly at expiration)', () {
+      var now = DateTime(2026);
+      final cache = ExpiringCache<String, int>(
+        expiration: const Duration(minutes: 5),
+        now: () => now,
+      );
+
+      cache['total'] = 3;
+      now = now.add(const Duration(minutes: 5));
+      final removedCount = cache.removeExpired();
+
+      expect(removedCount, 0);
+      expect(cache['total'], 3);
+    });
   });
 }
