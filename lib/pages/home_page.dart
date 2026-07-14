@@ -2219,12 +2219,7 @@ class _HomePageState extends State<HomePage>
                     ],
                   )
                 : _currentIndex == 2
-                    ? AppBar(
-                        toolbarHeight: 0,
-                        elevation: 0,
-                        backgroundColor: scaffoldBackgroundColor,
-                        surfaceTintColor: Colors.transparent,
-                      )
+                    ? null // 探索页自行处理顶部安全区，避免额外 AppBar 形成色带
                     : AppBar(toolbarHeight: 0),
         body: IndexedStack(
           index: _currentIndex,

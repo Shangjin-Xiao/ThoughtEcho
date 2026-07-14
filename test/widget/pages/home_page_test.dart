@@ -322,6 +322,16 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(AIFeaturesPage), findsOneWidget);
+      final homeScaffold = tester.widget<Scaffold>(
+        find
+            .descendant(
+              of: find.byType(HomePage),
+              matching: find.byType(Scaffold),
+            )
+            .first,
+      );
+      expect(homeScaffold.appBar, isNull);
+      expect(find.byType(SafeArea), findsWidgets);
     });
 
     testWidgets('should navigate to SettingsPage when fourth tab is tapped',

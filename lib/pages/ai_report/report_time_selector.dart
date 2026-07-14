@@ -3,47 +3,51 @@ part of '../ai_periodic_report_page.dart';
 extension _AIReportTimeSelector on _AIPeriodicReportPageState {
   Widget _buildReportPage(BuildContext context) {
     return Scaffold(
-      body: NotificationListener<ScrollNotification>(
-        onNotification: (notification) {
-          if (notification is ScrollUpdateNotification) {
-            if (notification.scrollDelta != null) {
-              if (notification.scrollDelta! > 10 && !_isTimeSelectorCollapsed) {
-                _updateState(() {
-                  _isTimeSelectorCollapsed = true;
-                });
-              } else if (notification.scrollDelta! < -10 &&
-                  _isTimeSelectorCollapsed) {
-                _updateState(() {
-                  _isTimeSelectorCollapsed = false;
-                });
+      body: SafeArea(
+        bottom: false,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification is ScrollUpdateNotification) {
+              if (notification.scrollDelta != null) {
+                if (notification.scrollDelta! > 10 &&
+                    !_isTimeSelectorCollapsed) {
+                  _updateState(() {
+                    _isTimeSelectorCollapsed = true;
+                  });
+                } else if (notification.scrollDelta! < -10 &&
+                    _isTimeSelectorCollapsed) {
+                  _updateState(() {
+                    _isTimeSelectorCollapsed = false;
+                  });
+                }
               }
             }
-          }
-          return false;
-        },
-        child: CustomScrollView(
-          slivers: [
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 16),
-            ),
-            SliverToBoxAdapter(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                height: _isTimeSelectorCollapsed ? 60 : null,
-                child: _buildTimeSelector(),
+            return false;
+          },
+          child: CustomScrollView(
+            slivers: [
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 16),
               ),
-            ),
-            if (_isLoadingData)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else
               SliverToBoxAdapter(
-                child: _buildDataOverview(),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  height: _isTimeSelectorCollapsed ? 60 : null,
+                  child: _buildTimeSelector(),
+                ),
               ),
-          ],
+              if (_isLoadingData)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else
+                SliverToBoxAdapter(
+                  child: _buildDataOverview(),
+                ),
+            ],
+          ),
         ),
       ),
     );
