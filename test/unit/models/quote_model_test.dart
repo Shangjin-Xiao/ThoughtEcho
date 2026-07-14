@@ -176,6 +176,35 @@ void main() {
       expect(restored.deletedAt, isNull);
     });
 
+    test('copyWith should allow clearing location and weather explicitly', () {
+      final base = Quote(
+        content: '测试内容',
+        date: '2024-01-01T00:00:00.000Z',
+        location: '北京市',
+        latitude: 39.9,
+        longitude: 116.4,
+        poiName: '故宫博物院',
+        weather: 'clear',
+        temperature: '25°C',
+      );
+
+      final updated = base.copyWith(
+        location: null,
+        latitude: null,
+        longitude: null,
+        poiName: null,
+        weather: null,
+        temperature: null,
+      );
+
+      expect(updated.location, isNull);
+      expect(updated.latitude, isNull);
+      expect(updated.longitude, isNull);
+      expect(updated.poiName, isNull);
+      expect(updated.weather, isNull);
+      expect(updated.temperature, isNull);
+    });
+
     test('should validate data correctly', () {
       // 测试有效数据
       expect(Quote.isValidContent('有效内容'), isTrue);

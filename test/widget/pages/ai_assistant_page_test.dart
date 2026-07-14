@@ -13,7 +13,9 @@ import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/ai_service.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
+import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/widgets/ai/tool_progress_panel.dart';
 
 import '../../test_harness.dart';
@@ -29,6 +31,9 @@ class _InMemoryChatSessionService extends ChatSessionService {
   final Map<String, List<app_chat.ChatMessage>> _messages =
       <String, List<app_chat.ChatMessage>>{};
   int _sessionSeq = 0;
+
+  @override
+  Future<void> init() async {}
 
   void seedSession(
     ChatSession session,
@@ -75,6 +80,13 @@ class _InMemoryChatSessionService extends ChatSessionService {
     _messages
         .putIfAbsent(sessionId, () => <app_chat.ChatMessage>[])
         .add(message);
+  }
+
+  @override
+  Future<void> updateSessionTitle(String sessionId, String title) async {
+    final session = _sessions[sessionId];
+    if (session == null) return;
+    _sessions[sessionId] = session.copyWith(title: title);
   }
 
   @override
@@ -152,6 +164,7 @@ class _FakeAgentService extends AgentService {
     this.responseChunkDelay = const Duration(milliseconds: 12),
     this.preToolText,
     this.toolProgressDelay = const Duration(milliseconds: 12),
+    this.postToolDelay = Duration.zero,
     this.toolName = 'search_notes',
     Map<String, Object?>? toolArguments,
     this.toolResult = '搜索结果',
@@ -170,6 +183,7 @@ class _FakeAgentService extends AgentService {
   final Duration responseChunkDelay;
   final String? preToolText;
   final Duration toolProgressDelay;
+  final Duration postToolDelay;
   final String toolName;
   final String toolResult;
   bool _mockIsRunning = false;
@@ -239,6 +253,7 @@ class _FakeAgentService extends AgentService {
           isError: false,
         ),
       );
+      await Future<void>.delayed(postToolDelay);
     }
 
     final toolCalls = emitSmartResultCard
@@ -250,6 +265,8 @@ class _FakeAgentService extends AgentService {
                 'title': '润色结果',
                 'content': '这是可应用的新内容',
                 'action': 'replace',
+                'include_location': true,
+                'include_weather': true,
               },
             ),
           ]
@@ -311,6 +328,12 @@ Future<Widget> _buildHarness({
           value: chatSessionService),
       ChangeNotifierProvider<AgentService>.value(value: effectiveAgentService),
       ChangeNotifierProvider<AIService>.value(value: effectiveAiService),
+      ChangeNotifierProvider<LocationService>(
+        create: (_) => LocationService(),
+      ),
+      ChangeNotifierProvider<WeatherService>(
+        create: (_) => WeatherService(),
+      ),
     ],
     child: MaterialApp(
       locale: const Locale('zh'),
@@ -744,6 +767,60 @@ void main() {
       expect(completedPanelFinder, findsWidgets);
     });
 
+    testWidgets(
+        'tool spinner stops at result and panel is folded before final answer',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        simulateToolProgress: true,
+        toolProgressDelay: const Duration(milliseconds: 20),
+        postToolDelay: const Duration(milliseconds: 300),
+        responseChunks: const <String>['正式回答开始'],
+        responseChunkDelay: const Duration(milliseconds: 300),
+      );
+      await settingsService
+          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '查询后回答');
+      await tester.pump();
+      final sendButtonFinder =
+          find.byKey(const ValueKey('ai_assistant_send_button'));
+      final effectiveSendFinder = sendButtonFinder.evaluate().isNotEmpty
+          ? sendButtonFinder
+          : find.widgetWithIcon(IconButton, Icons.arrow_upward).last;
+      tester.widget<IconButton>(effectiveSendFinder).onPressed?.call();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+
+      final panel = find.byType(ToolProgressPanel);
+      expect(panel, findsOneWidget);
+      expect(
+        find.descendant(
+          of: panel,
+          matching: find.byType(CircularProgressIndicator),
+        ),
+        findsNothing,
+      );
+      expect(find.text('搜索结果'), findsNothing);
+
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.textContaining('正式回答开始'), findsOneWidget);
+      expect(find.text('搜索结果'), findsNothing);
+      await tester.pump(const Duration(milliseconds: 400));
+    });
+
     testWidgets('agent response renders chunks before generation completes',
         (tester) async {
       final agentService = _FakeAgentService(
@@ -967,6 +1044,81 @@ void main() {
 
       expect(agentService.runCount, 1);
       expect(find.text('这是可应用的新内容', findRichText: true), findsOneWidget);
+      final locationChip = tester.widget<FilterChip>(
+        find.widgetWithText(FilterChip, '位置'),
+      );
+      final weatherChip = tester.widget<FilterChip>(
+        find.widgetWithText(FilterChip, '天气'),
+      );
+      expect(locationChip.selected, isTrue);
+      expect(weatherChip.selected, isTrue);
+      expect(locationChip.onSelected, isNotNull);
+      expect(weatherChip.onSelected, isNotNull);
+    });
+
+    testWidgets('new smart result card remains visible at the latest extent',
+        (tester) async {
+      final now = DateTime.now();
+      final session = ChatSession(
+        id: 'smart-result-scroll-session',
+        sessionType: 'agent',
+        noteId: 'note-1',
+        title: '建议卡片滚动测试',
+        createdAt: now,
+        lastActiveAt: now,
+      );
+      chatSessionService.seedSession(
+        session,
+        List<app_chat.ChatMessage>.generate(
+          24,
+          (index) => app_chat.ChatMessage(
+            id: 'smart-history-$index',
+            role: 'assistant',
+            isUser: false,
+            content: '历史消息 $index：用于填满滚动区域',
+            timestamp: now,
+          ),
+        ),
+      );
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        responseContent: '这是润色建议说明。',
+        emitSmartResultCard: true,
+      );
+      await settingsService.setNoteAiAssistantMode(AIAssistantPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: AIAssistantPage(
+            entrySource: AIAssistantEntrySource.note,
+            quote: _buildQuote(),
+            session: session,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _submitInput(tester, '请润色这段文字');
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 220));
+      });
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      final controller =
+          tester.widget<ListView>(find.byType(ListView)).controller!;
+      expect(agentService.runCount, 1);
+      expect(
+        find.byKey(const ValueKey('ai_workflow_result_smart_result')),
+        findsOneWidget,
+      );
+      expect(
+        controller.position.pixels,
+        moreOrLessEquals(controller.position.maxScrollExtent, epsilon: 1),
+      );
     });
   });
 }

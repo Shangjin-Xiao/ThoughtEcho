@@ -328,12 +328,12 @@ class Quote {
     String? summary,
     String? categoryId,
     String? colorHex,
-    String? location,
-    double? latitude,
-    double? longitude,
-    String? poiName,
-    String? weather,
-    String? temperature,
+    Object? location = _noValue,
+    Object? latitude = _noValue,
+    Object? longitude = _noValue,
+    Object? poiName = _noValue,
+    Object? weather = _noValue,
+    Object? temperature = _noValue,
     String? editSource,
     String? deltaContent, // 新增：Delta JSON
     String? dayPeriod, // 新增：时间段
@@ -363,12 +363,18 @@ class Quote {
       summary: summary ?? this.summary,
       categoryId: categoryId ?? this.categoryId,
       colorHex: colorHex ?? this.colorHex,
-      location: location ?? this.location,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
-      poiName: poiName ?? this.poiName,
-      weather: weather ?? this.weather,
-      temperature: temperature ?? this.temperature,
+      location:
+          identical(location, _noValue) ? this.location : location as String?,
+      latitude:
+          identical(latitude, _noValue) ? this.latitude : latitude as double?,
+      longitude: identical(longitude, _noValue)
+          ? this.longitude
+          : longitude as double?,
+      poiName: identical(poiName, _noValue) ? this.poiName : poiName as String?,
+      weather: identical(weather, _noValue) ? this.weather : weather as String?,
+      temperature: identical(temperature, _noValue)
+          ? this.temperature
+          : temperature as String?,
       editSource: editSource ?? this.editSource,
       deltaContent: deltaContent ?? this.deltaContent, // 新增：Delta JSON
       dayPeriod: dayPeriod ?? this.dayPeriod, // 新增：时间段

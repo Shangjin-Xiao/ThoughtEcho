@@ -111,8 +111,11 @@ void main() {
       expect(savedWeather, isFalse);
     });
 
-    testWidgets('shows location and weather controls for existing-note results',
+    testWidgets(
+        'allows changing location and weather for existing-note results',
         (tester) async {
+      var savedLocation = true;
+      var savedWeather = true;
       await tester.pumpWidget(
         _buildTestWidget(
           SmartResultCard(
@@ -121,7 +124,10 @@ void main() {
             editorSource: 'fullscreen',
             initialIncludeLocation: true,
             initialIncludeWeather: true,
-            onSaveDirectly: (_, __) {},
+            onSaveDirectly: (location, weather) {
+              savedLocation = location;
+              savedWeather = weather;
+            },
             onOpenInEditor: (_, __) {},
           ),
         ),
@@ -140,8 +146,15 @@ void main() {
       final weatherChip = tester.widget<FilterChip>(
         find.widgetWithText(FilterChip, '天气'),
       );
-      expect(locationChip.onSelected, isNull);
-      expect(weatherChip.onSelected, isNull);
+      expect(locationChip.onSelected, isNotNull);
+      expect(weatherChip.onSelected, isNotNull);
+
+      await tester.tap(find.widgetWithText(FilterChip, '位置'));
+      await tester.tap(find.text('直接保存'));
+      await tester.pumpAndSettle();
+
+      expect(savedLocation, isFalse);
+      expect(savedWeather, isFalse);
     });
 
     testWidgets('turning off location preserves weather selection',

@@ -226,6 +226,14 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                         widget.quote?.longitude != null));
             final existingHasWeather = meta['original_has_weather'] == true ||
                 widget.quote?.weather != null;
+            final initialIncludeLocation = isNewNoteProposal
+                ? initialNewNoteMetadata!.includeLocation
+                : (_readOptionalBool(meta, 'include_location') ??
+                    existingHasLocation);
+            final initialIncludeWeather = isNewNoteProposal
+                ? initialNewNoteMetadata!.includeWeather
+                : (_readOptionalBool(meta, 'include_weather') ??
+                    existingHasWeather);
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: SmartResultCard(
@@ -238,11 +246,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 locationPreview: locationPreview,
                 weatherPreview: weatherPreview,
                 editorSource: isNewNoteProposal ? 'new_note' : 'fullscreen',
-                initialIncludeLocation:
-                    initialNewNoteMetadata?.includeLocation ??
-                        existingHasLocation,
-                initialIncludeWeather: initialNewNoteMetadata?.includeWeather ??
-                    existingHasWeather,
+                initialIncludeLocation: initialIncludeLocation,
+                initialIncludeWeather: initialIncludeWeather,
                 initialSavedNoteId: meta['saved_note_id']?.toString(),
                 onOpenDraftInEditor: (draft) async {
                   try {
@@ -842,7 +847,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
             .toList();
         final suggestedAuthor = meta['author']?.toString();
         final suggestedSource = meta['source']?.toString();
-
         // 使用 DeltaBuilder 合并修改并生成新的 deltaContent，保持双存储一致
         final String updatedDeltaContent;
         if (richEditedNote != null) {
@@ -1187,6 +1191,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     if (noteId != null && noteId.isNotEmpty) {
       try {
         final db = context.read<DatabaseService>();
+        final locationService = context.read<LocationService>();
+        final weatherService = context.read<WeatherService>();
         final existingNote = await db.getQuoteById(noteId);
         if (existingNote == null) {
           throw Exception('Note not found');
@@ -1207,6 +1213,74 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
             .toList();
         final suggestedAuthor = meta['author']?.toString();
         final suggestedSource = meta['source']?.toString();
+        var includeLocation = meta['include_location'] == true;
+        var includeWeather = meta['include_weather'] == true;
+        var nextLocation = includeLocation ? existingNote.location : null;
+        var nextLatitude = includeLocation ? existingNote.latitude : null;
+        var nextLongitude = includeLocation ? existingNote.longitude : null;
+        var nextPoiName = includeLocation ? existingNote.poiName : null;
+        var nextWeather = includeWeather ? existingNote.weather : null;
+        var nextTemperature = includeWeather ? existingNote.temperature : null;
+
+        final needsLocation = includeLocation &&
+            (LocationService.isNonDisplayMarker(nextLocation) &&
+                (nextLatitude == null || nextLongitude == null));
+        final needsWeather = includeWeather && nextWeather == null;
+        if (needsLocation || needsWeather) {
+          var hasPermission = locationService.hasLocationPermission;
+          if (!hasPermission) {
+            hasPermission = await locationService.requestLocationPermission();
+          }
+
+          if (hasPermission) {
+            await locationService.getCurrentLocation();
+            final position = locationService.currentPosition;
+            if (needsLocation) {
+              var formattedLocation = locationService.getFormattedLocation();
+              if (formattedLocation.isEmpty) {
+                formattedLocation = locationService.getDisplayLocation();
+              }
+              nextLocation = formattedLocation.isNotEmpty
+                  ? formattedLocation
+                  : (position != null ? LocationService.kAddressPending : null);
+              nextLatitude = position?.latitude;
+              nextLongitude = position?.longitude;
+            }
+            if (needsWeather && position != null) {
+              try {
+                await weatherService.getWeatherData(
+                  position.latitude,
+                  position.longitude,
+                );
+                nextWeather = weatherService.currentWeather;
+                nextTemperature = weatherService.temperature;
+              } catch (e) {
+                logDebug('AI 更新现有笔记获取天气失败: $e');
+              }
+            }
+          }
+
+          if ((needsLocation && nextLocation == null) ||
+              (needsWeather && nextWeather == null)) {
+            includeLocation = includeLocation && nextLocation != null;
+            includeWeather = includeWeather && nextWeather != null;
+            if (mounted) {
+              await showDialog<void>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: Text(l10n.weatherFetchFailedTitle),
+                  content: Text(l10n.locationAndWeatherUnavailable),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text(l10n.iKnow),
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+        }
 
         final String updatedDeltaContent;
         if (richEditedNote != null) {
@@ -1231,6 +1305,12 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           tagIds: suggestedTagIds ?? existingNote.tagIds,
           sourceAuthor: suggestedAuthor ?? existingNote.sourceAuthor,
           sourceWork: suggestedSource ?? existingNote.sourceWork,
+          location: includeLocation ? nextLocation : null,
+          latitude: includeLocation ? nextLatitude : null,
+          longitude: includeLocation ? nextLongitude : null,
+          poiName: includeLocation ? nextPoiName : null,
+          weather: includeWeather ? nextWeather : null,
+          temperature: includeWeather ? nextTemperature : null,
           lastModified: DateTime.now().toIso8601String(),
         );
 

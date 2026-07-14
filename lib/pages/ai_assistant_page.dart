@@ -477,7 +477,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     _scrollToBottom(force: true);
   }
 
-  void _scrollToBottom({bool force = false}) {
+  void _scrollToBottom({bool force = false, bool bypassThrottle = false}) {
     if (!_autoScrollEnabled && !force) {
       if (_isLoading && !_showScrollToBottom) {
         _setState(() {
@@ -486,8 +486,12 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       }
       return;
     }
-    if (!force && (_scrollThrottleTimer?.isActive ?? false)) return;
-    if (force) {
+    if (!force &&
+        !bypassThrottle &&
+        (_scrollThrottleTimer?.isActive ?? false)) {
+      return;
+    }
+    if (force || bypassThrottle) {
       _scrollThrottleTimer?.cancel();
     } else {
       _scrollThrottleTimer = Timer(const Duration(milliseconds: 200), () {});
@@ -496,12 +500,26 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scrollController.hasClients) return;
 
-      void animateToCurrentBottom() {
+      void animateToCurrentBottom({int remainingPasses = 1}) {
         if (!_scrollController.hasClients) return;
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
+        unawaited(
+          _scrollController
+              .animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          )
+              .then((_) {
+            if (!mounted || !_autoScrollEnabled || remainingPasses <= 1) {
+              return;
+            }
+            // A lazily built result card can increase maxScrollExtent only
+            // after the first animation exposes it. Follow the moving bottom
+            // until the newly appended card has participated in layout.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              animateToCurrentBottom(remainingPasses: remainingPasses - 1);
+            });
+          }),
         );
       }
 
@@ -520,7 +538,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
           }
         });
       } else {
-        animateToCurrentBottom();
+        animateToCurrentBottom(remainingPasses: bypassThrottle ? 3 : 1);
       }
     });
   }

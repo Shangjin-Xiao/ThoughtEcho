@@ -104,11 +104,14 @@ class _SmartResultCardState extends State<SmartResultCard> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    final isNewNote = widget.editorSource == 'new_note' ||
-        widget.editorSource == 'addnote_dialog';
     final showSaveDirectly =
         widget.onSaveDirectly != null || widget.onSaveDraftDirectly != null;
     final isSaved = _savedNoteId != null && _savedNoteId!.isNotEmpty;
+    final canChangeMetadata = !isSaved &&
+        !_isSaving &&
+        (showSaveDirectly ||
+            widget.onOpenInEditor != null ||
+            widget.onOpenDraftInEditor != null);
     final displayTags = widget.tags.isNotEmpty
         ? widget.tags
         : widget.tagNames
@@ -197,7 +200,7 @@ class _SmartResultCardState extends State<SmartResultCard> {
                   avatar: const Icon(Icons.location_on_outlined, size: 18),
                   label: Text(widget.locationPreview ?? l10n.location),
                   selected: _includeLocation,
-                  onSelected: isNewNote
+                  onSelected: canChangeMetadata
                       ? (value) => _handleLocationWeatherSelection(value, true)
                       : null,
                 ),
@@ -205,7 +208,7 @@ class _SmartResultCardState extends State<SmartResultCard> {
                   avatar: const Icon(Icons.wb_sunny_outlined, size: 18),
                   label: Text(widget.weatherPreview ?? l10n.weather),
                   selected: _includeWeather,
-                  onSelected: isNewNote
+                  onSelected: canChangeMetadata
                       ? (value) => _handleLocationWeatherSelection(value, false)
                       : null,
                 ),

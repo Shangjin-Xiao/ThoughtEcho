@@ -24,10 +24,12 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     String? streamingMsgId;
     var streamingText = '';
     String? toolThinkingText;
+    var toolProgressInProgress = false;
 
     void ensureToolProgressMessage() {
       if (toolProgressMsgId != null) return;
       toolProgressMsgId = const Uuid().v4();
+      toolProgressInProgress = true;
       final msg = app_chat.ChatMessage(
         id: toolProgressMsgId!,
         role: 'assistant',
@@ -73,6 +75,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             streamingText = '';
           case AgentReasoningDeltaEvent():
             ensureToolProgressMessage();
+            toolProgressInProgress = true;
             toolThinkingText = '${toolThinkingText ?? ''}${event.delta}';
             _scheduleToolProgressUpdate(
               toolProgressMsgId!,
@@ -81,6 +84,15 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
               thinkingText: toolThinkingText,
             );
           case AgentTextDeltaEvent():
+            if (toolProgressMsgId != null && toolProgressInProgress) {
+              toolProgressInProgress = false;
+              _updateToolProgressMessage(
+                toolProgressMsgId!,
+                toolItems,
+                inProgress: false,
+                thinkingText: toolThinkingText,
+              );
+            }
             if (streamingMsgId == null) {
               streamingMsgId = _uuid.v4();
               _setState(() {
@@ -111,6 +123,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
               streamingText = '';
             }
             ensureToolProgressMessage();
+            toolProgressInProgress = true;
 
             final newItem = ToolProgressItem(
               toolCallId: event.toolCallId,
@@ -150,10 +163,13 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
                   isError: event.isError,
                 ),
               );
+              toolProgressInProgress = toolItems.any(
+                (item) => item.status == ToolProgressStatus.running,
+              );
               _updateToolProgressMessage(
                 toolProgressMsgId!,
                 toolItems,
-                inProgress: true,
+                inProgress: toolProgressInProgress,
                 thinkingText: toolThinkingText,
               );
             }
@@ -164,6 +180,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
               _cancelStreamUpdate();
             }
             if (toolProgressMsgId != null) {
+              toolProgressInProgress = false;
               _updateToolProgressMessage(
                 toolProgressMsgId!,
                 toolItems,
@@ -182,6 +199,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
               streamingText = '';
             }
             if (toolProgressMsgId != null) {
+              toolProgressInProgress = false;
               _updateToolProgressMessage(
                 toolProgressMsgId!,
                 toolItems,
@@ -329,7 +347,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
         await _chatSessionService.addMessage(_currentSessionId!, cardMsg);
       }
 
-      _scrollToBottom();
+      _scrollToBottom(bypassThrottle: true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -342,6 +360,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       _cancelToolProgressUpdate();
       if (mounted) {
         if (toolProgressMsgId != null) {
+          toolProgressInProgress = false;
           _updateToolProgressMessage(
             toolProgressMsgId!,
             toolItems,
