@@ -1,6 +1,7 @@
 // ignore_for_file: experimental_member_use
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sentry_sqflite/sentry_sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/utils/sentry_database_tracing.dart';
 
@@ -39,7 +40,7 @@ void main() {
 
       final traced = SentryDatabaseTracing.wrapMainDatabase(database);
 
-      expect(traced, same(database));
+      expect(traced, isA<SentryDatabase>());
       expect(databaseFactory, same(originalFactory));
       expect(traced.path, database.path);
       expect(await traced.query('notes'), hasLength(1));
