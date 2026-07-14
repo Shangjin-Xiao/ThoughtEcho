@@ -80,6 +80,52 @@ void main() {
       expect(state.hasChanges(isExistingNote: false), isFalse);
       state.dispose();
     });
+
+    test('unchanged location and weather do not notify listeners', () {
+      final state = NoteEditorMetadataState();
+      var notifications = 0;
+      state.addListener(() => notifications++);
+
+      state
+        ..updateLocation(
+          location: 'Beijing',
+          latitude: 39.9042,
+          longitude: 116.4074,
+          poiName: 'Dongcheng',
+          show: true,
+        )
+        ..updateWeather(
+          weather: 'sunny',
+          temperature: '26°C',
+          show: true,
+        );
+      expect(notifications, 2);
+
+      notifications = 0;
+      state
+        ..updateLocation(
+          location: 'Beijing',
+          latitude: 39.9042,
+          longitude: 116.4074,
+          poiName: 'Dongcheng',
+          show: true,
+        )
+        ..updateWeather(
+          weather: 'sunny',
+          temperature: '26°C',
+          show: true,
+        );
+
+      expect(notifications, 0);
+
+      state.updateWeather(
+        weather: 'cloudy',
+        temperature: '26°C',
+        show: true,
+      );
+      expect(notifications, 1);
+      state.dispose();
+    });
   });
 
   group('NoteEditorMediaState', () {

@@ -265,6 +265,13 @@ class NoteEditorMetadataState extends ChangeNotifier {
     String? poiName,
     bool? show,
   }) {
+    if (_location == location &&
+        _latitude == latitude &&
+        _longitude == longitude &&
+        _poiName == poiName &&
+        (show == null || _showLocation == show)) {
+      return;
+    }
     _location = location;
     _latitude = latitude;
     _longitude = longitude;
@@ -278,6 +285,11 @@ class NoteEditorMetadataState extends ChangeNotifier {
     required String? temperature,
     bool? show,
   }) {
+    if (_weather == weather &&
+        _temperature == temperature &&
+        (show == null || _showWeather == show)) {
+      return;
+    }
     _weather = weather;
     _temperature = temperature;
     if (show != null) _showWeather = show;
