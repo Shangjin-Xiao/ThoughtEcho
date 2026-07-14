@@ -169,14 +169,35 @@ class _SmartResultCardState extends State<SmartResultCard> {
                 if (_hasSourceInfo) _buildSourceInfo(),
                 if (_hasSourceInfo && displayTags.isNotEmpty)
                   const SizedBox(height: 8),
-                if (displayTags.isNotEmpty)
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
+                if (displayTags.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      for (final tag in displayTags) _TagChip(tag: tag),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 5),
+                        child: Icon(
+                          Icons.label_outline,
+                          size: 14,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withValues(alpha: 0.7),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            for (final tag in displayTags) _TagChip(tag: tag),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
+                ],
               ],
             ),
           ),
@@ -193,23 +214,31 @@ class _SmartResultCardState extends State<SmartResultCard> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 6,
+              runSpacing: 6,
               children: [
-                FilterChip(
-                  avatar: const Icon(Icons.location_on_outlined, size: 18),
-                  label: Text(widget.locationPreview ?? l10n.location),
+                _MetaToggleChip(
+                  icon: Icons.location_on_outlined,
+                  label: widget.locationPreview ?? l10n.location,
                   selected: _includeLocation,
-                  onSelected: canChangeMetadata
-                      ? (value) => _handleLocationWeatherSelection(value, true)
+                  enabled: canChangeMetadata,
+                  onTap: canChangeMetadata
+                      ? () => _handleLocationWeatherSelection(
+                            !_includeLocation,
+                            true,
+                          )
                       : null,
                 ),
-                FilterChip(
-                  avatar: const Icon(Icons.wb_sunny_outlined, size: 18),
-                  label: Text(widget.weatherPreview ?? l10n.weather),
+                _MetaToggleChip(
+                  icon: Icons.wb_sunny_outlined,
+                  label: widget.weatherPreview ?? l10n.weather,
                   selected: _includeWeather,
-                  onSelected: canChangeMetadata
-                      ? (value) => _handleLocationWeatherSelection(value, false)
+                  enabled: canChangeMetadata,
+                  onTap: canChangeMetadata
+                      ? () => _handleLocationWeatherSelection(
+                            !_includeWeather,
+                            false,
+                          )
                       : null,
                 ),
               ],
@@ -384,29 +413,119 @@ class _TagChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final iconName = tag.iconName;
-    final Widget? avatar = switch (iconName) {
-      final value? when value.isNotEmpty && IconUtils.isEmoji(value) => Text(
-          IconUtils.getDisplayIcon(value),
-          style: const TextStyle(fontSize: 12),
-        ),
-      final value? when value.isNotEmpty => Icon(
-          IconUtils.getIconData(value),
-          size: 14,
-          color: theme.colorScheme.onPrimaryContainer,
-        ),
-      _ => null,
-    };
 
-    return Chip(
-      avatar: avatar,
-      label: Text(tag.localizedName(AppLocalizations.of(context))),
-      labelStyle: theme.textTheme.labelSmall?.copyWith(
-        color: theme.colorScheme.onPrimaryContainer,
+    final bool hasEmoji =
+        iconName != null && iconName.isNotEmpty && IconUtils.isEmoji(iconName);
+    final bool hasIcon =
+        iconName != null && iconName.isNotEmpty && !IconUtils.isEmoji(iconName);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.25),
+          width: 0.8,
+        ),
       ),
-      backgroundColor: theme.colorScheme.primaryContainer,
-      side: BorderSide.none,
-      visualDensity: VisualDensity.compact,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (hasEmoji) ...[
+            Text(
+              IconUtils.getDisplayIcon(iconName),
+              style: const TextStyle(fontSize: 13),
+            ),
+            const SizedBox(width: 4),
+          ] else if (hasIcon) ...[
+            Icon(
+              IconUtils.getIconData(iconName),
+              size: 13,
+              color:
+                  theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+            ),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            tag.localizedName(l10n),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onPrimaryContainer,
+              fontWeight: FontWeight.w500,
+              height: 1.1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 紧凑的元数据开关胶囊（位置/天气）
+class _MetaToggleChip extends StatelessWidget {
+  const _MetaToggleChip({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.enabled,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = selected
+        ? theme.colorScheme.primary
+        : theme.colorScheme.onSurfaceVariant;
+    final bgColor = selected
+        ? theme.colorScheme.primary.withValues(alpha: 0.12)
+        : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6);
+    final borderColor = selected
+        ? theme.colorScheme.primary.withValues(alpha: 0.5)
+        : theme.colorScheme.outlineVariant.withValues(alpha: 0.6);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: borderColor, width: 0.8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 13,
+              color: color,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: enabled
+                    ? color
+                    : theme.colorScheme.onSurface.withValues(alpha: 0.38),
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                height: 1.1,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
