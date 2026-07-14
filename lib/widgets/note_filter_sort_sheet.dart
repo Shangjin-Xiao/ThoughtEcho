@@ -23,8 +23,7 @@ class NoteFilterSortSheet extends StatefulWidget {
     bool sortAscending,
     List<String> selectedWeathers,
     List<String> selectedDayPeriods,
-  )
-  onApply;
+  ) onApply;
 
   const NoteFilterSortSheet({
     super.key,
