@@ -265,5 +265,37 @@ void main() {
       expect(weatherService.temperatureValue, equals(15.0));
       expect(weatherService.lastError, isNotNull);
     });
+
+    test(
+        'refreshWeather should throw exception on malformed API response (missing current)',
+        () async {
+      // Arrange
+      const latitude = 39.9042;
+      const longitude = 116.4074;
+
+      when(mockCacheManager.initialize()).thenAnswer((_) async => {});
+
+      // Simulate API success but malformed response
+      when(mockNetworkService.get(
+        any,
+        timeoutSeconds: anyNamed('timeoutSeconds'),
+      )).thenAnswer((_) async =>
+          HttpResponse('{"other_key": "no_current_here"}', 200, headers: {}));
+
+      // In case fallback is triggered, return null (no cache)
+      when(mockCacheManager.loadWeatherDataIgnoreExpiry(
+        latitude: anyNamed('latitude'),
+        longitude: anyNamed('longitude'),
+      )).thenAnswer((_) async => null);
+
+      // Act
+      await weatherService.refreshWeather(latitude, longitude);
+
+      // Assert
+      // Because we returned null from cache, state will be error.
+      expect(weatherService.state, equals(WeatherServiceState.error));
+      expect(weatherService.hasData, isFalse);
+      expect(weatherService.lastError, contains('API响应格式错误: 缺少 current 数据'));
+    });
   });
 }
