@@ -945,6 +945,71 @@ class DatabaseBackupService {
       for (final row in existingTombstoneRows) (row['quote_id'] as String): row,
     };
 
+    // ⚡ Bolt: 提取有效的 quote_id 进行批量查询，避免 N+1
+    final validQuoteIds = <String>[];
+    for (final item in tombstones) {
+      if (item is! Map<String, dynamic>) continue;
+      final quoteId = item['quote_id']?.toString();
+      final incomingDeletedAt = item['deleted_at']?.toString();
+      if (quoteId != null &&
+          quoteId.isNotEmpty &&
+          incomingDeletedAt != null &&
+          incomingDeletedAt.isNotEmpty &&
+          LWWUtils.isValidTimestamp(incomingDeletedAt)) {
+        validQuoteIds.add(quoteId);
+      }
+    }
+
+    final Map<String, Map<String, dynamic>> existingQuotesMap = {};
+    final Map<String, List<String>> existingMediaRefsMap = {};
+
+    if (validQuoteIds.isNotEmpty) {
+      final queryBatch = txn.batch();
+      const int batchSize = 500;
+      for (int i = 0; i < validQuoteIds.length; i += batchSize) {
+        final end = (i + batchSize < validQuoteIds.length)
+            ? i + batchSize
+            : validQuoteIds.length;
+        final batchIds = validQuoteIds.sublist(i, end);
+        final placeholders = List.filled(batchIds.length, '?').join(',');
+
+        queryBatch.query(
+          'quotes',
+          columns: ['id', 'last_modified', 'delta_content', 'content'],
+          where: 'id IN ($placeholders)',
+          whereArgs: batchIds,
+        );
+        queryBatch.query(
+          'media_references',
+          columns: ['quote_id', 'file_path'],
+          where: 'quote_id IN ($placeholders)',
+          whereArgs: batchIds,
+        );
+      }
+
+      final queryResults = await queryBatch.commit();
+      // queryResults contains results for quotes and media_references alternately
+      for (int i = 0; i < queryResults.length; i += 2) {
+        final quotesResult = queryResults[i] as List<Object?>;
+        final refsResult = queryResults[i + 1] as List<Object?>;
+
+        for (final rowObj in quotesResult) {
+          final row = rowObj as Map<String, dynamic>;
+          final id = row['id'] as String;
+          existingQuotesMap[id] = row;
+        }
+
+        for (final rowObj in refsResult) {
+          final row = rowObj as Map<String, dynamic>;
+          final qId = row['quote_id'] as String;
+          final fp = row['file_path']?.toString();
+          if (fp != null && fp.isNotEmpty) {
+            existingMediaRefsMap.putIfAbsent(qId, () => []).add(fp);
+          }
+        }
+      }
+    }
+
     final batch = txn.batch();
 
     for (final item in tombstones) {
@@ -975,16 +1040,9 @@ class DatabaseBackupService {
           }
         }
 
-        final quoteRows = await txn.query(
-          'quotes',
-          columns: ['last_modified', 'delta_content', 'content'],
-          where: 'id = ?',
-          whereArgs: [quoteId],
-          limit: 1,
-        );
+        final quoteRow = existingQuotesMap[quoteId];
 
-        if (quoteRows.isNotEmpty) {
-          final quoteRow = quoteRows.first;
+        if (quoteRow != null) {
           final quoteDeltaContent = quoteRow['delta_content']?.toString();
           final quoteContent = quoteRow['content']?.toString() ?? '';
 
@@ -997,17 +1055,9 @@ class DatabaseBackupService {
               await MediaReferenceService.extractMediaPathsFromQuote(tempQuote);
           mediaCleanupCandidates.addAll(extracted);
 
-          final refRows = await txn.query(
-            'media_references',
-            columns: ['file_path'],
-            where: 'quote_id = ?',
-            whereArgs: [quoteId],
-          );
-          for (final refRow in refRows) {
-            final fp = refRow['file_path']?.toString();
-            if (fp != null && fp.isNotEmpty) {
-              mediaCleanupCandidates.add(fp);
-            }
+          final refs = existingMediaRefsMap[quoteId];
+          if (refs != null) {
+            mediaCleanupCandidates.addAll(refs);
           }
 
           final quoteLastModified = quoteRow['last_modified']?.toString();
