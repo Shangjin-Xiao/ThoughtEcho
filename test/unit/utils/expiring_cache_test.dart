@@ -78,5 +78,49 @@ void main() {
       expect(removedCount, 0);
       expect(cache['total'], 3);
     });
+
+    test('directly removes a specific key', () {
+      final cache = ExpiringCache<String, int>(
+        expiration: const Duration(minutes: 5),
+      );
+
+      cache['key1'] = 1;
+      cache['key2'] = 2;
+
+      cache.remove('key1');
+
+      expect(cache['key1'], isNull);
+      expect(cache['key2'], 2);
+    });
+
+    test('updating an existing key resets its timestamp', () {
+      var now = DateTime(2026);
+      final cache = ExpiringCache<String, int>(
+        expiration: const Duration(minutes: 5),
+        now: () => now,
+      );
+
+      cache['key'] = 1;
+
+      now = now.add(const Duration(minutes: 4));
+      // Update the key, which should reset its timestamp
+      cache['key'] = 2;
+
+      now = now.add(const Duration(minutes: 4));
+      // If it wasn't reset, it would be 8 minutes old and expire.
+      // Since it was reset, it is 4 minutes old and should not expire.
+      final removedCount = cache.removeExpired();
+
+      expect(removedCount, 0);
+      expect(cache['key'], 2);
+    });
+
+    test('getting a non-existent key returns null', () {
+      final cache = ExpiringCache<String, int>(
+        expiration: const Duration(minutes: 5),
+      );
+
+      expect(cache['non_existent'], isNull);
+    });
   });
 }
