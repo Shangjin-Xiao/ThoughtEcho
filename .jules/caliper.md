@@ -44,3 +44,6 @@
 ## 2026-07-14 - 补充 ExpiringCache 的测试
 **盲点:** removeExpired 方法的非过期情况、混合情况以及边界条件未经过测试验证。
 **对策:** 添加非过期、混合和边界情况的测试，保证缓存过期逻辑完全可靠。
+## 2026-07-21 - [补充 AIRequestHelper 的测试]
+**盲点:** `AIRequestHelper` 的 `createMessagesWithHistory` 方法在构建 AI 上下文时，负责历史消息的过滤、单个消息的截断 (`singleMessageCap`) 以及整体上下文的预算限制 (`maxChars`)。这段纯粹的数组操作和字符串计算如果缺少测试覆盖，很容易在后续优化预算算法或添加新属性时导致消息丢失或格式不符合 AI 厂商要求。
+**对策:** 在 `test/unit/utils/ai_request_helper_test.dart` 中为 `createMessagesWithHistory` 编写了纯函数测试，构建了多种场景的模拟 `ChatMessage` 列表（包括被忽略的消息、需要截断的超长消息、超过总预算被丢弃的最早消息等），确保核心参数组装逻辑的稳定和准确，且不依赖任何框架级 Mock。
