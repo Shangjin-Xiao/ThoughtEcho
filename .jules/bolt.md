@@ -71,5 +71,5 @@
 **Action:** 在计算字数等场景，应当直接使用 O(1) 的 `str.length`，或者在需要过滤不可见字符时，使用 `str.characters.length` 配合正则等更高效的方式。
 
 ## 2024-05-24 - Batch Querying with IN clause to eliminate N+1 in data sync
-**Learning:** SQLite has a parameter limit (usually 999) per query. When fetching data using `IN` clauses to prevent N+1 issues in loops, chunk the array into batches (e.g., 500) and use `batch.query` on a single transaction to execute all chunks simultaneously. Collect results by iterating the returned `List<Object?>`.
+**Learning:** SQLite has a parameter limit (usually 999) per query. When fetching data using `IN` clauses to prevent N+1 issues in loops, chunk the array into batches (e.g., 500), queue the queries in one `Batch`, and call `commit()` once to reduce IPC overhead. Collect results by iterating the returned `List<Object?>`.
 **Action:** Replaced `await txn.query` inside `tombstones` sync loop with a pre-loop chunked batch query mechanism to load existing quotes and references into memory maps, achieving O(1) lookups and cutting execution time by >90%.
