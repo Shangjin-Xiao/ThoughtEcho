@@ -696,6 +696,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     } catch (e, stackTrace) {
       AppLogger.e('数据库初始化失败',
           error: e, stackTrace: stackTrace, source: 'DatabaseService');
+      await _clearFailedInitializationConnection();
       _isInitializing = false;
       if (_initCompleter != null && !_initCompleter!.isCompleted) {
         _initCompleter!.completeError(e);
@@ -710,6 +711,29 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       }
 
       rethrow;
+    }
+  }
+
+  /// Prevents a failed startup from being mistaken for a usable connection.
+  Future<void> _clearFailedInitializationConnection() async {
+    final database = _database;
+    _database = null;
+    _isInitialized = false;
+    _isReadOnlyConnection = false;
+
+    if (database == null || !database.isOpen) {
+      return;
+    }
+
+    try {
+      await database.close();
+    } catch (error, stackTrace) {
+      AppLogger.e(
+        '数据库初始化失败后关闭连接失败',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'DatabaseService',
+      );
     }
   }
 

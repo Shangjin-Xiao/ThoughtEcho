@@ -110,6 +110,22 @@ void main() {
       expect(quote['is_deleted'], 0);
     });
 
+    test('restores the coordinate index when upgrading a version 20 database',
+        () async {
+      final manager = DatabaseSchemaManager();
+      await manager.createTables(database);
+      await database.execute('DROP INDEX idx_quotes_coordinates');
+
+      await manager.upgradeDatabase(database, 20, 21);
+      await manager.validateSchema(database);
+
+      final indexes = await database.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type = 'index' "
+        "AND name = 'idx_quotes_coordinates'",
+      );
+      expect(indexes, isNotEmpty);
+    });
+
     test('repairs missing current structure from the shared definition',
         () async {
       final manager = DatabaseSchemaManager();

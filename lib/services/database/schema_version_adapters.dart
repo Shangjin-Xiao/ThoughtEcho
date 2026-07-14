@@ -420,6 +420,9 @@ class SchemaVersionAdapters {
     await transaction.execute(
       'CREATE INDEX IF NOT EXISTS idx_quotes_poi_name ON quotes(poi_name)',
     );
+    await transaction.execute(
+      'CREATE INDEX IF NOT EXISTS idx_quotes_coordinates ON quotes(latitude, longitude)',
+    );
   }
 
   Future<bool> _hasColumn(
