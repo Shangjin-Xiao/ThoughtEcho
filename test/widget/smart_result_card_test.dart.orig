@@ -97,13 +97,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // 默认未选中
-      expect(find.byType(GestureDetector), findsWidgets); // Used to be FilterChip but now it's _MetaToggleChip > GestureDetector
+      expect(find.byType(FilterChip), findsNWidgets(2));
 
-      // 点击位置 chip (find by text in the chip)
-      await tester.tap(find.descendant(
-        of: find.byType(GestureDetector),
-        matching: find.text('位置'),
-      ).first);
+      // 点击位置 chip
+      await tester.tap(find.byType(FilterChip).first);
       await tester.pumpAndSettle();
 
       // 点击直接保存按钮（通过图标定位）
@@ -137,21 +134,22 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Find the GestureDetector widgets that wrap the _MetaToggleChip
-      Finder findMetaToggle(String label) {
-        return find.descendant(
-          of: find.byType(GestureDetector),
-          matching: find.text(label),
-        );
-      }
+      expect(find.widgetWithText(FilterChip, '位置'), findsOneWidget);
+      expect(find.widgetWithText(FilterChip, '天气'), findsOneWidget);
 
-      expect(findMetaToggle('位置'), findsOneWidget);
-      expect(findMetaToggle('天气'), findsOneWidget);
-
-      await tester.tap(findMetaToggle('天气'));
+      await tester.tap(find.widgetWithText(FilterChip, '天气'));
       await tester.pump();
 
-      await tester.tap(findMetaToggle('位置'));
+      final locationChip = tester.widget<FilterChip>(
+        find.widgetWithText(FilterChip, '位置'),
+      );
+      final weatherChip = tester.widget<FilterChip>(
+        find.widgetWithText(FilterChip, '天气'),
+      );
+      expect(locationChip.onSelected, isNotNull);
+      expect(weatherChip.onSelected, isNotNull);
+
+      await tester.tap(find.widgetWithText(FilterChip, '位置'));
       await tester.tap(find.text('直接保存'));
       await tester.pumpAndSettle();
 
@@ -178,14 +176,7 @@ void main() {
         ),
       );
 
-      Finder findMetaToggle(String label) {
-        return find.descendant(
-          of: find.byType(GestureDetector),
-          matching: find.text(label),
-        );
-      }
-
-      await tester.tap(findMetaToggle('位置'));
+      await tester.tap(find.widgetWithText(FilterChip, '位置'));
       await tester.tap(find.text('直接保存'));
       await tester.pumpAndSettle();
 
