@@ -443,7 +443,17 @@ class ChatSessionService extends ChangeNotifier {
     required String columnName,
     required String definition,
   }) async {
-    final columns = await db.rawQuery('PRAGMA table_info($tableName)');
+    final identifierRegex = RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$');
+    if (!identifierRegex.hasMatch(tableName)) {
+      throw ArgumentError.value(tableName, 'tableName', 'Invalid table name');
+    }
+    if (!identifierRegex.hasMatch(columnName)) {
+      throw ArgumentError.value(
+          columnName, 'columnName', 'Invalid column name');
+    }
+
+    final columns =
+        await db.rawQuery('SELECT * FROM pragma_table_info(?)', [tableName]);
     final hasColumn = columns.any((column) => column['name'] == columnName);
     if (!hasColumn) {
       await db.execute(
