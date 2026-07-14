@@ -1,0 +1,64 @@
+test/widget/pages/home/home_refresh_coordinator_test.dart
+  s_a7c89c0097934c::t_a317b31ebc8cc9 1-103
+test/widget/pages/home/home_guide_coordinator_test.dart
+  s_a7c89c0097934c::t_3d35e7d21bb991 1-61
+lib/pages/home/home_guide_coordinator.dart
+  s_a7c89c0097934c::t_fc0f210fe1ee30 1-199
+lib/pages/home/home_card_actions.dart
+  s_a7c89c0097934c::t_36e82590b4149b 1-19,21-22,25-27,33-34,36-59,61-76,78-119,121-130,132-147,149-203,205-227,229-250
+  s_a7c89c0097934c::t_c60b3fd47ba296 120
+  s_a7c89c0097934c::t_92548e14fb3b96 23-24,35
+  s_a7c89c0097934c::t_d674550621efe9 20,28-32
+  s_a7c89c0097934c::t_611f7bf63451a2 60,77,131,148,204,228
+test/widget/pages/home/home_card_actions_test.dart
+  s_a7c89c0097934c::t_ec6a6ed928de2e 1-16,33,38-47
+  s_a7c89c0097934c::t_c854b16a9266c6 17-32,34-37
+lib/pages/home/home_target_navigation.dart
+  s_a7c89c0097934c::t_2d3f83d325608f 1-52,56-72,76-103
+  s_a7c89c0097934c::t_7a3a462f94329c 73-75
+  s_a7c89c0097934c::t_7d66980e7f3742 53-55
+lib/pages/AGENTS.md
+  s_a7c89c0097934c::t_136431b40c2bad 12-13
+  s_a7c89c0097934c::t_39e9728501df58 11,14
+lib/pages/home/home_capture_actions.dart
+  s_a7c89c0097934c::t_c18f190c2fbb53 1-88
+lib/pages/home_page.dart
+  s_a7c89c0097934c::t_bceb8d917e87d3 332
+  s_a7c89c0097934c::t_73060a1b9a7769 551,595
+  s_a7c89c0097934c::t_5d0026d0b0088b 39,167,181-184,190,301-302,305
+  s_a7c89c0097934c::t_b2a09d18e9bf4a 40,168,185-189
+  s_a7c89c0097934c::t_36a970186a4c16 44,171,214-225,249,315
+  s_a7c89c0097934c::t_39e9728501df58 46-48
+  s_a7c89c0097934c::t_d674550621efe9 303-304
+  s_a7c89c0097934c::t_c9f3ac92089d8a 590,594,596,600,604
+  s_a7c89c0097934c::t_6ce8aaaae7f7a3 855,857
+  s_a7c89c0097934c::t_165d880f02cf35 1113-1115
+  s_a7c89c0097934c::t_f786c5104297c1 42,169,191-203,314
+  s_a7c89c0097934c::t_e172cba40db504 43,170,204-213,226-227,270,340,1328
+test/widget/pages/home/home_capture_actions_test.dart
+  s_a7c89c0097934c::t_8236f49790ec5f 1-56
+lib/pages/home/home_refresh_coordinator.dart
+  s_a7c89c0097934c::t_71f8a0bceb8dd3 134
+  s_a7c89c0097934c::t_ed9ea04df98236 124-126,128-133,145
+  s_a7c89c0097934c::t_9a89ba7e1e5194 1-35,37-42,44-90,92-123,127,135-144,146-170
+  s_a7c89c0097934c::t_16b437ab291a96 36,43,91
+test/unit/pages/home/home_target_navigation_test.dart
+  s_a7c89c0097934c::t_113160ba8e4986 1-31,54
+  s_a7c89c0097934c::t_7a3a462f94329c 32-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "a4a61352ad7b4d1be4ed02abb164076a00c2ac44",
+  "prompts": {},
+  "sessions": {
+    "s_a7c89c0097934c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f5f83-d297-7b00-b8db-d4140f9e0278",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
