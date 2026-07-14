@@ -48,9 +48,9 @@ void main() {
         ),
       );
 
-      // 执行中时优先显示当前动作与思考说明
+      // 执行中时标题仍显示当前动作，但详情默认折叠。
       expect(find.text('正在搜索笔记...'), findsAtLeastNWidgets(1));
-      expect(find.text('让我先看看最近的记录。'), findsOneWidget);
+      expect(find.text('让我先看看最近的记录。'), findsNothing);
 
       // 应该显示进度指示器
       expect(find.byType(CircularProgressIndicator), findsWidgets);
@@ -61,6 +61,7 @@ void main() {
       final items = [
         const ToolProgressItem(
           toolName: 'test_tool',
+          description: 'test_description',
           status: ToolProgressStatus.completed,
         ),
       ];
@@ -120,19 +121,22 @@ void main() {
       expect(find.text('test_tool'), findsNothing);
     });
 
-    testWidgets('displays tool items when in progress',
+    testWidgets('keeps tool items collapsed when in progress',
         (WidgetTester tester) async {
       final items = [
         const ToolProgressItem(
           toolName: 'pending_tool',
+          description: 'pending_description',
           status: ToolProgressStatus.pending,
         ),
         const ToolProgressItem(
           toolName: 'completed_tool',
+          description: 'completed_description',
           status: ToolProgressStatus.completed,
         ),
         const ToolProgressItem(
           toolName: 'failed_tool',
+          description: 'failed_description',
           status: ToolProgressStatus.failed,
         ),
       ];
@@ -147,13 +151,9 @@ void main() {
         ),
       );
 
-      // 进行中状态默认展开
-      await tester.pump();
-
-      // 应该显示所有工具名称
-      expect(find.text('pending_tool'), findsAtLeastNWidgets(1));
-      expect(find.text('completed_tool'), findsAtLeastNWidgets(1));
-      expect(find.text('failed_tool'), findsAtLeastNWidgets(1));
+      expect(find.text('pending_description'), findsNothing);
+      expect(find.text('completed_description'), findsNothing);
+      expect(find.text('failed_description'), findsNothing);
     });
 
     testWidgets('displays description and result when provided',
@@ -177,7 +177,8 @@ void main() {
         ),
       );
 
-      await tester.pump();
+      await tester.tap(find.byType(InkWell));
+      await tester.pump(const Duration(milliseconds: 300));
 
       // 应该显示描述和结果
       expect(find.text('参数: query="test"'), findsOneWidget);
@@ -189,6 +190,7 @@ void main() {
       final items = [
         const ToolProgressItem(
           toolName: 'test_tool',
+          description: 'test_description',
           status: ToolProgressStatus.completed,
         ),
       ];
@@ -208,11 +210,12 @@ void main() {
       expect(find.byIcon(Icons.done_all), findsOneWidget);
     });
 
-    testWidgets('collapses when changing from in progress to completed',
+    testWidgets('keeps user expansion when progress state changes',
         (WidgetTester tester) async {
       final items = [
         const ToolProgressItem(
           toolName: 'test_tool',
+          description: 'test_description',
           status: ToolProgressStatus.completed,
         ),
       ];
@@ -227,10 +230,11 @@ void main() {
         ),
       );
 
-      await tester.pump();
+      expect(find.text('test_description'), findsNothing);
 
-      // 进行中时默认展开，应该能看到工具名称
-      expect(find.text('test_tool'), findsAtLeastNWidgets(1));
+      await tester.tap(find.byType(InkWell));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('test_description'), findsOneWidget);
 
       // 更新状态为完成
       await tester.pumpWidget(
@@ -240,6 +244,7 @@ void main() {
             items: [
               const ToolProgressItem(
                 toolName: 'test_tool',
+                description: 'test_description',
                 status: ToolProgressStatus.completed,
               ),
             ],
@@ -248,11 +253,8 @@ void main() {
         ),
       );
 
-      // 等待动画完成
-      await tester.pump(const Duration(milliseconds: 500));
-
-      // 完成后应该自动折叠，看不到工具名称
-      expect(find.text('test_tool'), findsNothing);
+      // 状态更新不应覆盖用户手动展开的选择。
+      expect(find.text('test_description'), findsOneWidget);
     });
   });
 

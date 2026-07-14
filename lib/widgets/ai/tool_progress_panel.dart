@@ -114,31 +114,11 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
   @override
   void initState() {
     super.initState();
-    _isExpanded = widget.inProgress;
+    _isExpanded = false;
     _rotationController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-    if (_isExpanded) {
-      _rotationController.value = 1;
-    }
-  }
-
-  @override
-  void didUpdateWidget(ToolProgressPanel oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.inProgress == widget.inProgress) {
-      return;
-    }
-
-    setState(() {
-      _isExpanded = widget.inProgress;
-      if (_isExpanded) {
-        _rotationController.forward();
-      } else {
-        _rotationController.reverse();
-      }
-    });
   }
 
   @override
