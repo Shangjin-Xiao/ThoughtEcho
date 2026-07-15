@@ -146,8 +146,9 @@ class _InsightsPageState extends State<InsightsPage> {
 
         await _testSaveAnalysis();
       }
-    } catch (e) {
-      logDebug('AI analysis database connection test failed: $e');
+    } catch (e, stack) {
+      logError('AI analysis database connection test failed',
+          error: e, stackTrace: stack, source: 'InsightsPage');
     }
   }
 
@@ -178,8 +179,9 @@ class _InsightsPageState extends State<InsightsPage> {
       } else {
         logDebug('Test verification failed');
       }
-    } catch (e) {
-      logDebug('Test save analysis failed: $e');
+    } catch (e, stack) {
+      logError('Test save analysis failed',
+          error: e, stackTrace: stack, source: 'InsightsPage');
     }
   }
 
@@ -237,8 +239,9 @@ class _InsightsPageState extends State<InsightsPage> {
       try {
         await _aiAnalysisDatabaseService!.database;
         logDebug('Database connection test successful');
-      } catch (dbError) {
-        logDebug('Database connection test failed: $dbError');
+      } catch (dbError, stack) {
+        logError('Database connection test failed',
+            error: dbError, stackTrace: stack, source: 'InsightsPage');
         throw Exception('Database connection failed: $dbError');
       }
 
@@ -278,8 +281,8 @@ class _InsightsPageState extends State<InsightsPage> {
         ),
       );
     } catch (e, stackTrace) {
-      logDebug('Failed to save AI analysis: $e');
-      logDebug('Stack trace: $stackTrace');
+      logError('Failed to save AI analysis',
+          error: e, stackTrace: stackTrace, source: 'InsightsPage');
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -326,7 +329,9 @@ class _InsightsPageState extends State<InsightsPage> {
           duration: AppConstants.snackBarDurationImportant,
         ),
       );
-    } catch (e) {
+    } catch (e, stack) {
+      logError('Save as note failed',
+          error: e, stackTrace: stack, source: 'InsightsPage');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -358,7 +363,9 @@ class _InsightsPageState extends State<InsightsPage> {
 
       // 使用share_plus分享
       await SharePlus.instance.share(ShareParams(text: content));
-    } catch (e) {
+    } catch (e, stack) {
+      logError('Share analysis failed',
+          error: e, stackTrace: stack, source: 'InsightsPage');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -509,8 +516,9 @@ class _InsightsPageState extends State<InsightsPage> {
         },
         cancelOnError: true,
       );
-    } catch (e) {
-      logDebug('Failed to generate insights (setup): $e');
+    } catch (e, stack) {
+      logError('Failed to generate insights (setup)',
+          error: e, stackTrace: stack, source: 'InsightsPage');
       if (mounted) {
         String errorMessage = l10n.generateInsightsSetupError(e.toString());
 

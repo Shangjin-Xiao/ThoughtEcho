@@ -39,3 +39,7 @@
 ## 2025-05-18 - 🗃️ 黑匣: [完善 MediaCleanupService 模块的结构化日志]
 **异常:** [MediaCleanupService 模块在初始化、清理、迁移和统计媒体文件等任务发生错误时，仅使用了 `logDebug` 进行粗糙的字符串拼接打印。这不仅掩盖了底层 `FileSystemException` 或 `StateError` 等导致错误的真实原因，还丢失了完整的异常堆栈轨迹 (stackTrace)，导致排查本地文件系统的读写异常极其困难。]
 **拦截:** [已将上述所有流程中的 `catch (e)` 替换为结构化的 `catch (e, stackTrace)`，并使用 `AppLogger.e` 进行记录。注入了描述信息、具体的错误对象 `error: e`、堆栈轨迹 `stackTrace: stackTrace`，并指定了明确的日志来源模块 `source: 'MediaCleanupService'`。确认所有的错误记录仅涉及本地存储系统与数据库交互时的 IO/状态异常，未记录任何用户笔记的正文或凭证数据。]
+
+## 2025-10-24 - 🗃️ 黑匣: [完善 InsightsPage 模块的结构化日志]
+**异常:** [InsightsPage 模块在数据库连接测试、保存 AI 分析、保存为笔记、分享分析结果以及生成洞察时，如果遇到错误，仅使用了 `logDebug` 进行粗糙的打印或直接未传入堆栈参数 `stack` 进行拦截，这不仅隐藏了关键的错误堆栈信息，也没有统一标记日志的来源模块，从而增加故障排查难度。]
+**拦截:** [已将上述流程中的 `catch (e)` 统一升级为 `catch (e, stack)` 或者利用已有的 `stackTrace`，并用结构化的 `logError('...', error: e, stackTrace: stack, source: 'InsightsPage')` 替换了原有的 `logDebug` 调用。确认所有修改仅记录错误对象和执行阶段描述，没有在日志中记录分析内容正文、API 密钥等用户的隐私数据。]
