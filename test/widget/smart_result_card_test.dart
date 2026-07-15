@@ -96,11 +96,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // 默认未选中
-      expect(find.byType(FilterChip), findsNWidgets(2));
+      // 默认未选中：两个 meta chip 均渲染（用图标定位）
+      expect(find.byIcon(Icons.location_on_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.wb_sunny_outlined), findsOneWidget);
 
-      // 点击位置 chip
-      await tester.tap(find.byType(FilterChip).first);
+      // 点击位置 chip（GestureDetector 包裹，按图标的最近 GestureDetector 祖先触发）
+      await tester.tap(find.byIcon(Icons.location_on_outlined));
       await tester.pumpAndSettle();
 
       // 点击直接保存按钮（通过图标定位）
@@ -134,22 +135,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.widgetWithText(FilterChip, '位置'), findsOneWidget);
-      expect(find.widgetWithText(FilterChip, '天气'), findsOneWidget);
+      // 两个 meta chip 均渲染
+      expect(find.byIcon(Icons.location_on_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.wb_sunny_outlined), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(FilterChip, '天气'));
-      await tester.pump();
+      // 点击天气 chip 取消选中
+      await tester.tap(find.byIcon(Icons.wb_sunny_outlined));
+      await tester.pumpAndSettle();
 
-      final locationChip = tester.widget<FilterChip>(
-        find.widgetWithText(FilterChip, '位置'),
-      );
-      final weatherChip = tester.widget<FilterChip>(
-        find.widgetWithText(FilterChip, '天气'),
-      );
-      expect(locationChip.onSelected, isNotNull);
-      expect(weatherChip.onSelected, isNotNull);
-
-      await tester.tap(find.widgetWithText(FilterChip, '位置'));
+      // 点击位置 chip 取消选中
+      await tester.tap(find.byIcon(Icons.location_on_outlined));
       await tester.tap(find.text('直接保存'));
       await tester.pumpAndSettle();
 
@@ -176,7 +171,8 @@ void main() {
         ),
       );
 
-      await tester.tap(find.widgetWithText(FilterChip, '位置'));
+      // 点击位置 chip 取消选中，天气保持不变
+      await tester.tap(find.byIcon(Icons.location_on_outlined));
       await tester.tap(find.text('直接保存'));
       await tester.pumpAndSettle();
 
