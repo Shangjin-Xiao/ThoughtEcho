@@ -90,7 +90,37 @@ void main() {
       expect(data['tags'], contains('灵感'));
       expect(data['author'], 'Lu Xun');
       expect(data['source'], 'Diary of a Madman');
+      expect(data['document_kind'], 'plain');
+      expect(data.containsKey('document_ops'), isFalse);
       expect(data['document_revision'], matches(RegExp(r'^[a-f0-9]{64}$')));
+    });
+
+    test('returns sanitized rich ops without exposing local media paths',
+        () async {
+      quotes.add(Quote(
+        id: 'rich',
+        content: 'Photo',
+        date: '2026-06-06T12:00:00Z',
+        editSource: 'fullscreen',
+        deltaContent: jsonEncode(const [
+          {'insert': 'Photo '},
+          {
+            'insert': {'image': '/home/user/private.jpg'}
+          },
+          {'insert': '\n'},
+        ]),
+      ));
+
+      final result = await tool.execute(ToolCall(
+        id: 'rich_detail',
+        name: 'get_note_detail',
+        arguments: const {'note_id': 'rich'},
+      ));
+      final data = jsonDecode(result.content) as Map<String, dynamic>;
+
+      expect(data['document_kind'], 'rich');
+      expect(data['document_ops'].toString(), contains('[media]'));
+      expect(data['document_ops'].toString(), isNot(contains('/home/user')));
     });
 
     test('returns error if note_id is empty or missing', () async {

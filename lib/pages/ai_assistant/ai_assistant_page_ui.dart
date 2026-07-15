@@ -130,9 +130,38 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       try {
         final meta = jsonDecode(message.metaJson!) as Map<String, dynamic>;
         switch (meta['type']) {
+          case NoteProposalArtifact.typeName:
+            final rawArtifact = meta['artifact'];
+            if (rawArtifact is! Map) return const SizedBox.shrink();
+            final artifact = NoteProposalArtifact.fromJson(
+              rawArtifact.map(
+                (key, value) => MapEntry(key.toString(), value),
+              ),
+            );
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: NoteProposalCard(
+                key: const ValueKey('ai_workflow_result_note_proposal'),
+                artifact: artifact,
+                plainCreateOpensRich:
+                    artifact.action == NoteProposalAction.create &&
+                        artifact.resultKind == NoteDocumentKind.plain &&
+                        context.read<SettingsService>().skipNonFullscreenEditor,
+                initialCompleted: meta['saved_note_id'] != null,
+                onOpenInEditor: () => _openNoteProposalInEditor(artifact),
+                onApply: () async {
+                  final noteId = await _applyNoteProposal(artifact);
+                  if (noteId == null) return false;
+                  _updateSmartResultSavedNoteId(message.id, noteId);
+                  return true;
+                },
+              ),
+            );
           case 'smart_result':
             final action = meta['action']?.toString();
             final isNewNoteProposal = action == 'create';
+            final legacyReadOnly =
+                !isNewNoteProposal && meta['rich_edit'] == null;
             final initialNewNoteMetadata =
                 isNewNoteProposal ? _resolveInitialNewNoteMetadata(meta) : null;
             final rawTagNames = meta['tag_names'] as List<dynamic>? ?? const [];
@@ -208,6 +237,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 initialIncludeLocation: initialIncludeLocation,
                 initialIncludeWeather: initialIncludeWeather,
                 initialSavedNoteId: meta['saved_note_id']?.toString(),
+                readOnly: legacyReadOnly,
                 onOpenDraftInEditor: (draft) async {
                   try {
                     final updatedMeta =
@@ -736,6 +766,189 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     );
   }
 
+  Future<void> _openNoteProposalInEditor(
+    NoteProposalArtifact artifact,
+  ) async {
+    final db = context.read<DatabaseService>();
+    if (artifact.action == NoteProposalAction.create) {
+      final validatedOps = _validatedArtifactOps(artifact);
+      if (artifact.resultKind == NoteDocumentKind.plain &&
+          !context.read<SettingsService>().skipNonFullscreenEditor) {
+        final tags = await db.getCategories();
+        if (!mounted) return;
+        await showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          builder: (_) => AddNoteDialog(
+            prefilledContent: artifact.content,
+            prefilledTagIds: _extractStringList(
+              artifact.metadata['tag_ids'],
+            ),
+            prefilledAuthor: artifact.metadata['author']?.toString(),
+            prefilledWork: artifact.metadata['source']?.toString(),
+            prefilledIncludeLocation:
+                artifact.metadata['include_location'] == true,
+            prefilledIncludeWeather:
+                artifact.metadata['include_weather'] == true,
+            useAIPrefilledLocationWeather: true,
+            tags: tags,
+            onSave: db.addQuote,
+          ),
+        );
+        return;
+      }
+      final richOps = validatedOps ??
+          [
+            {'insert': '${artifact.content}\n'}
+          ];
+      await _openSmartResultAsNewNote(
+        artifact.content,
+        richDocument: richOps,
+        tagIds: _extractStringList(artifact.metadata['tag_ids']),
+        author: artifact.metadata['author']?.toString(),
+        source: artifact.metadata['source']?.toString(),
+        includeLocation: artifact.metadata['include_location'] == true,
+        includeWeather: artifact.metadata['include_weather'] == true,
+      );
+      return;
+    }
+
+    final note = await db.getQuoteById(artifact.noteId!);
+    if (note == null ||
+        ProposeNoteEditTool.revisionForQuote(note) != artifact.baseRevision) {
+      _showRichEditConflict();
+      return;
+    }
+    final proposed = _quoteFromArtifact(note, artifact);
+    final tags = await db.getCategories();
+    if (!mounted) return;
+    if (artifact.resultKind == NoteDocumentKind.rich) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => NoteFullEditorPage(
+            initialContent: proposed.content,
+            initialQuote: proposed,
+            allTags: tags,
+            skipDefaultMetadataAutofill: true,
+          ),
+        ),
+      );
+    } else {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => AddNoteDialog(
+          initialQuote: proposed,
+          tags: tags,
+          onSave: db.updateQuote,
+        ),
+      );
+    }
+  }
+
+  Future<String?> _applyNoteProposal(NoteProposalArtifact artifact) async {
+    if (artifact.action == NoteProposalAction.create) {
+      final validatedOps = _validatedArtifactOps(artifact);
+      return _saveSmartResultAsNewNote(
+        {
+          ...artifact.metadata,
+          'document_kind': artifact.resultKind.name,
+          if (validatedOps != null) 'rich_document': validatedOps,
+        },
+        artifact.content,
+      );
+    }
+    final db = context.read<DatabaseService>();
+    final note = await db.getQuoteById(artifact.noteId!);
+    if (note == null ||
+        ProposeNoteEditTool.revisionForQuote(note) != artifact.baseRevision) {
+      _showRichEditConflict();
+      return null;
+    }
+    final result = await db.updateQuote(_quoteFromArtifact(note, artifact));
+    if (result != QuoteUpdateResult.updated) {
+      _showRichEditConflict();
+      return null;
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).saveSuccess)),
+      );
+    }
+    return artifact.noteId;
+  }
+
+  Quote _quoteFromArtifact(Quote original, NoteProposalArtifact artifact) {
+    var tagIds = original.tagIds;
+    String? author = original.sourceAuthor;
+    String? source = original.sourceWork;
+    final tagPatch = artifact.metadata['tag_ids'];
+    final authorPatch = artifact.metadata['author'];
+    final sourcePatch = artifact.metadata['source'];
+    if (tagPatch is Map) {
+      tagIds = tagPatch['action'] == 'clear'
+          ? const []
+          : _extractStringList(tagPatch['value']);
+    }
+    if (authorPatch is Map) {
+      author = authorPatch['action'] == 'clear'
+          ? null
+          : authorPatch['value']?.toString();
+    }
+    if (sourcePatch is Map) {
+      source = sourcePatch['action'] == 'clear'
+          ? null
+          : sourcePatch['value']?.toString();
+    }
+    final rich = artifact.resultKind == NoteDocumentKind.rich;
+    final documentOps = _validatedArtifactOps(artifact, original: original);
+    return original.copyWith(
+      content: artifact.content,
+      source: authorPatch is Map || sourcePatch is Map ? null : original.source,
+      deltaContent: rich ? jsonEncode(documentOps) : null,
+      editSource: rich ? 'fullscreen' : null,
+      tagIds: tagIds,
+      sourceAuthor: author,
+      sourceWork: source,
+      lastModified: DateTime.now().toIso8601String(),
+    );
+  }
+
+  List<Map<String, dynamic>>? _validatedArtifactOps(
+    NoteProposalArtifact artifact, {
+    Quote? original,
+  }) {
+    if (artifact.resultKind == NoteDocumentKind.plain) {
+      if (artifact.documentOps != null) {
+        throw const FormatException('plain proposal contains delta');
+      }
+      return null;
+    }
+    final ops = AgentNoteDocumentCodec.validateAndNormalize(
+      NoteDocumentKind.rich,
+      artifact.documentOps,
+      allowExistingEmbeds: original != null,
+    );
+    if (AgentNoteDocumentCodec.plainTextOf(ops) != artifact.content) {
+      throw const FormatException('proposal content and delta differ');
+    }
+    if (original != null) {
+      final originalEmbeds = ProposeNoteEditTool.opsForQuote(original)
+          .where((op) => op['insert'] is! String)
+          .map((op) => jsonEncode(op['insert']))
+          .toSet();
+      final hasNewEmbed = ops
+          .where((op) => op['insert'] is! String)
+          .map((op) => jsonEncode(op['insert']))
+          .any((embed) => !originalEmbeds.contains(embed));
+      if (hasNewEmbed) {
+        throw const FormatException('proposal contains a new media reference');
+      }
+    }
+    return ops;
+  }
+
   Future<Map<String, dynamic>> _buildSmartResultMetaFromDraft(
     Map<String, dynamic> meta,
     SmartResultDraft draft,
@@ -908,7 +1121,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           prefilledIncludeWeather: includeWeather,
           useAIPrefilledLocationWeather: true,
           tags: tags,
-          onSave: (_) {},
+          onSave: db.addQuote,
         ),
       );
       return;
@@ -991,6 +1204,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       weather: includeWeather ? weatherService.currentWeather : null,
       temperature: includeWeather ? weatherService.temperature : null,
       dayPeriod: TimeUtils.getCurrentDayPeriodKey(),
+      editSource: 'fullscreen',
       deltaContent: DeltaBuilder.deltaToJson(
         structuredOps ?? DeltaBuilder.markdownToDelta(content),
       ),
@@ -1230,6 +1444,13 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
 
   List<Map<String, dynamic>>? _opsFromRichDocument(Object? rawBlocks) {
     if (rawBlocks is! List || rawBlocks.isEmpty) return null;
+    if (rawBlocks.first is Map &&
+        (rawBlocks.first as Map).containsKey('insert')) {
+      return rawBlocks
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList(growable: false);
+    }
     final blocks = rawBlocks
         .whereType<Map>()
         .map((item) => RichTextBlock.fromJson(
@@ -1340,9 +1561,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
 
       final noteId = _uuid.v4();
       final structuredOps = _opsFromRichDocument(meta['rich_document']);
-      final plainContent = structuredOps == null
-          ? DeltaBuilder.markdownToPlainText(content)
-          : QuillStructuredEdit.plainTextOf(structuredOps);
+      final isRich = meta['document_kind'] == 'rich' || structuredOps != null;
+      final plainContent =
+          !isRich ? content : QuillStructuredEdit.plainTextOf(structuredOps!);
       final quote = Quote.validated(
         id: noteId,
         content: plainContent,
@@ -1357,9 +1578,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         weather: includeWeather ? weatherService.currentWeather : null,
         temperature: includeWeather ? weatherService.temperature : null,
         dayPeriod: TimeUtils.getCurrentDayPeriodKey(),
-        deltaContent: DeltaBuilder.deltaToJson(
-          structuredOps ?? DeltaBuilder.markdownToDelta(content),
-        ),
+        editSource: isRich ? 'fullscreen' : null,
+        deltaContent: isRich ? DeltaBuilder.deltaToJson(structuredOps!) : null,
       );
 
       await db.addQuote(quote);

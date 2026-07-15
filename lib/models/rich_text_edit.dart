@@ -4,6 +4,7 @@ enum RichTextEditOperationType {
   insertAfter,
   append,
   delete,
+  replaceDocument,
 }
 
 class RichTextRun {
@@ -89,6 +90,7 @@ class RichTextEditOperation {
     this.oldText,
     this.anchorText,
     this.blocks = const [],
+    this.insertOps = const [],
   });
 
   const RichTextEditOperation.replace({
@@ -104,9 +106,11 @@ class RichTextEditOperation {
   final String? oldText;
   final String? anchorText;
   final List<RichTextBlock> blocks;
+  final List<Map<String, dynamic>> insertOps;
 
   factory RichTextEditOperation.fromJson(Map<String, Object?> json) {
     final rawBlocks = json['blocks'];
+    final rawInsertOps = json['insert_ops'];
     final typeName = json['type']?.toString();
     final type = RichTextEditOperationType.values.firstWhere(
       (value) => value.name == typeName,
@@ -124,6 +128,12 @@ class RichTextEditOperation {
                   ))
               .toList(growable: false)
           : const [],
+      insertOps: rawInsertOps is List
+          ? rawInsertOps
+              .whereType<Map>()
+              .map((item) => Map<String, dynamic>.from(item))
+              .toList(growable: false)
+          : const [],
     );
   }
 
@@ -133,6 +143,7 @@ class RichTextEditOperation {
         if (anchorText != null) 'anchor_text': anchorText,
         if (blocks.isNotEmpty)
           'blocks': blocks.map((block) => block.toJson()).toList(),
+        if (insertOps.isNotEmpty) 'insert_ops': insertOps,
       };
 }
 

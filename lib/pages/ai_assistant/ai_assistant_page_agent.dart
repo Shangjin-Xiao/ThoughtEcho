@@ -269,6 +269,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       }
 
       if (parsed.smartResult != null) {
+        final artifact = parsed.smartResult!.artifact;
         // tag_ids 是权威来源；tag_names 只作为旧工具调用的展示回退。
         List<String> tagNames = const <String>[];
         List<String?> tagIconNames = const <String?>[];
@@ -328,31 +329,37 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           id: _uuid.v4(),
           role: 'assistant',
           isUser: false,
-          content: parsed.smartResult!.content,
+          content: artifact == null ? parsed.smartResult!.content : '',
           timestamp: DateTime.now(),
           metaJson: jsonEncode({
-            'type': 'smart_result',
-            'title': parsed.smartResult!.title,
-            'note_id': parsed.smartResult!.noteId,
-            'action': parsed.smartResult!.action,
-            'tag_ids': parsed.smartResult!.tagIds,
-            'tag_names': tagNames,
-            'tag_icon_names': tagIconNames,
-            'author': parsed.smartResult!.author,
-            'source': parsed.smartResult!.source,
-            'include_location': parsed.smartResult!.includeLocation,
-            'include_weather': parsed.smartResult!.includeWeather,
-            'rich_edit': parsed.smartResult!.richEdit,
-            'rich_document': parsed.smartResult!.richDocument,
-            if (originalNote != null) ...{
-              'original_location': originalNote.location,
-              'original_has_location':
-                  !LocationService.isNonDisplayMarker(originalNote.location) ||
-                      (originalNote.latitude != null &&
-                          originalNote.longitude != null),
-              'original_weather': originalNote.weather,
-              'original_temperature': originalNote.temperature,
-              'original_has_weather': originalNote.weather != null,
+            'type': artifact == null
+                ? 'smart_result'
+                : NoteProposalArtifact.typeName,
+            if (artifact != null) 'artifact': artifact.toJson(),
+            if (artifact == null) ...{
+              'title': parsed.smartResult!.title,
+              'note_id': parsed.smartResult!.noteId,
+              'action': parsed.smartResult!.action,
+              'tag_ids': parsed.smartResult!.tagIds,
+              'tag_names': tagNames,
+              'tag_icon_names': tagIconNames,
+              'author': parsed.smartResult!.author,
+              'source': parsed.smartResult!.source,
+              'include_location': parsed.smartResult!.includeLocation,
+              'include_weather': parsed.smartResult!.includeWeather,
+              'rich_edit': parsed.smartResult!.richEdit,
+              'rich_document': parsed.smartResult!.richDocument,
+              if (originalNote != null) ...{
+                'original_location': originalNote.location,
+                'original_has_location': !LocationService.isNonDisplayMarker(
+                      originalNote.location,
+                    ) ||
+                    (originalNote.latitude != null &&
+                        originalNote.longitude != null),
+                'original_weather': originalNote.weather,
+                'original_temperature': originalNote.temperature,
+                'original_has_weather': originalNote.weather != null,
+              },
             },
           }),
         );
@@ -642,6 +649,28 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
   ) {
     final trimmed = response.content.trim();
 
+    final artifacts = response.artifacts.whereType<NoteProposalArtifact>();
+    final artifact = artifacts.isEmpty ? null : artifacts.first;
+    if (artifact != null) {
+      final metadata = artifact.metadata;
+      return _AgentSmartResultParseResult(
+        displayText: trimmed,
+        smartResult: _AgentSmartResultPayload(
+          title: artifact.proposalTitle,
+          content: artifact.content,
+          noteId: artifact.noteId,
+          action: artifact.action.name,
+          tagIds: _parseStringList(metadata['tag_ids']),
+          tagNames: _parseStringList(metadata['tag_names']),
+          author: metadata['author']?.toString(),
+          source: metadata['source']?.toString(),
+          includeLocation: _parseOptionalBool(metadata['include_location']),
+          includeWeather: _parseOptionalBool(metadata['include_weather']),
+          artifact: artifact,
+        ),
+      );
+    }
+
     // 首先检查结构化提议工具调用 (propose_edit 或 propose_new_note)
     final smartResultCalls = response.toolCalls
         .where((c) =>
@@ -783,6 +812,7 @@ class _AgentSmartResultPayload {
     this.includeWeather,
     this.richEdit,
     this.richDocument,
+    this.artifact,
   });
 
   final String title;
@@ -797,4 +827,5 @@ class _AgentSmartResultPayload {
   final bool? includeWeather;
   final Map<String, Object?>? richEdit;
   final List<Object?>? richDocument;
+  final NoteProposalArtifact? artifact;
 }

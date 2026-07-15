@@ -30,7 +30,9 @@ import '../services/agent_service.dart'
         AgentToolCallStartEvent;
 import '../services/agent_tool.dart'
     show AgentFailureType, AgentRequestException, AgentResponse;
+import '../models/note_proposal_artifact.dart';
 import '../services/ai_service.dart';
+import '../services/agent_tools/propose_note_edit_tool.dart';
 import '../services/chat_session_service.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
@@ -38,6 +40,7 @@ import '../services/settings_service.dart';
 import '../services/weather_service.dart';
 import '../utils/ai_command_helpers.dart';
 import '../utils/ai_smart_result_utils.dart';
+import '../utils/agent_note_document_codec.dart';
 import '../utils/app_logger.dart';
 import '../utils/quill_delta_builder.dart';
 import '../utils/quill_structured_edit.dart';

@@ -35,14 +35,25 @@ class QuillStructuredEdit {
     for (final operation in request.operations) {
       final plainText = _plainText(ops);
       switch (operation.type) {
+        case RichTextEditOperationType.replaceDocument:
+          final replacement = _replacementOps(
+            operation,
+            trailingNewline: true,
+          );
+          preview.add(RichTextEditPreview(
+            type: operation.type,
+            oldText: plainText.replaceFirst(RegExp(r'\n$'), ''),
+            newText: _plainText(replacement).replaceFirst(RegExp(r'\n$'), ''),
+          ));
+          ops = replacement;
         case RichTextEditOperationType.replace:
         case RichTextEditOperationType.delete:
           final oldText = operation.oldText ?? '';
           final offset = _uniqueOffset(plainText, oldText);
           final replacement = operation.type == RichTextEditOperationType.delete
               ? const <Map<String, dynamic>>[]
-              : _blocksToOps(
-                  operation.blocks,
+              : _replacementOps(
+                  operation,
                   trailingNewline: oldText.endsWith('\n'),
                 );
           ops = _splice(ops, offset, oldText.length, replacement);
@@ -59,7 +70,7 @@ class QuillStructuredEdit {
               operation.type == RichTextEditOperationType.insertBefore
                   ? anchorOffset
                   : anchorOffset + anchor.length;
-          final insertion = _blocksToOps(operation.blocks);
+          final insertion = _replacementOps(operation);
           ops = _splice(ops, offset, 0, insertion);
           preview.add(RichTextEditPreview(
             type: operation.type,
@@ -67,7 +78,7 @@ class QuillStructuredEdit {
             newText: _plainText(insertion),
           ));
         case RichTextEditOperationType.append:
-          final insertion = _blocksToOps(operation.blocks);
+          final insertion = _replacementOps(operation);
           final offset = plainText.endsWith('\n')
               ? plainText.length - 1
               : plainText.length;
@@ -81,6 +92,16 @@ class QuillStructuredEdit {
     }
 
     return RichTextEditResult(ops: ops, preview: preview);
+  }
+
+  static List<Map<String, dynamic>> _replacementOps(
+    RichTextEditOperation operation, {
+    bool trailingNewline = true,
+  }) {
+    if (operation.insertOps.isNotEmpty) {
+      return operation.insertOps.map(_copyOp).toList(growable: false);
+    }
+    return _blocksToOps(operation.blocks, trailingNewline: trailingNewline);
   }
 
   static int _uniqueOffset(String content, String target) {

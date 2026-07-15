@@ -4098,5 +4098,22 @@
   "agentDiffAppend": "Append content",
   "agentDiffDelete": "Delete content",
   "availableCommands": "Available Commands",
-  "typeSlashToSeeCommands": "Type / to see commands"
+  "typeSlashToSeeCommands": "Type / to see commands",
+  "noteProposalCreate": "Create",
+  "noteProposalEdit": "Edit",
+  "noteProposalPlain": "Plain note",
+  "noteProposalRich": "Rich text note",
+  "noteProposalChangeCount": "{count} changes",
+  "@noteProposalChangeCount": {"placeholders": {"count": {"type": "int"}}},
+  "noteProposalExpand": "Expand document",
+  "noteProposalCollapse": "Collapse document",
+  "noteProposalViewChanges": "View change history",
+  "noteProposalPlainToRichWarning": "After applying, this note will open in the full-screen rich text editor.",
+  "noteProposalBefore": "Original",
+  "noteProposalAfter": "Changed to",
+  "noteProposalCompleted": "Completed",
+  "noteProposalApply": "Apply changes",
+  "noteProposalSave": "Save note",
+  "noteProposalLegacyReadOnly": "This is a legacy suggestion without safe revision data. It is view-only; ask AI to generate a new suggestion before applying it.",
+  "noteProposalPlainEditorPreferenceWarning": "Your editor preference opens this plain draft in the full-screen rich text editor; saving it will create a rich text note."
 }

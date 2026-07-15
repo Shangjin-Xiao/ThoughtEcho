@@ -2,11 +2,14 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_proposal_artifact.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/get_app_context_tool.dart';
 import 'package:thoughtecho/services/agent_tools/propose_edit_tool.dart';
 import 'package:thoughtecho/services/agent_tools/propose_new_note_tool.dart';
+import 'package:thoughtecho/services/agent_tools/propose_note_create_tool.dart';
+import 'package:thoughtecho/services/agent_tools/propose_note_edit_tool.dart';
 import 'package:thoughtecho/services/agent_tools/propose_rich_edit_tool.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
@@ -534,6 +537,166 @@ void main() {
       expect(payload['content'], contains('新段落'));
       expect(payload['rich_edit'], isA<Map<String, dynamic>>());
       expect(quote.deltaContent, jsonEncode(originalOps));
+    });
+  });
+
+  group('new note proposal tools', () {
+    test('plain create returns a typed artifact without persisted delta',
+        () async {
+      final tool = ProposeNoteCreateTool(_TestDatabaseService(const []));
+
+      final result = await tool.execute(ToolCall(
+        id: 'create_plain',
+        name: 'propose_note_create',
+        arguments: const {
+          'proposal_title': 'New note',
+          'reason': 'Capture this',
+          'document_kind': 'plain',
+          'document_ops': [
+            {'insert': 'Plain text'}
+          ],
+        },
+      ));
+
+      final artifact = result.artifact! as NoteProposalArtifact;
+      expect(result.content, isNot(contains('smart_result')));
+      expect(artifact.resultKind, NoteDocumentKind.plain);
+      expect(artifact.content, 'Plain text');
+      expect(artifact.documentOps, isNull);
+    });
+
+    test('edit preserves rich formatting and existing media', () async {
+      final quote = Quote(
+        id: 'rich-note',
+        content: 'Before photo after',
+        date: '2026-07-15T00:00:00.000Z',
+        editSource: 'fullscreen',
+        deltaContent: jsonEncode(const [
+          {'insert': 'Before '},
+          {
+            'insert': {'image': '/private/photo.jpg'}
+          },
+          {'insert': ' photo after\n'},
+        ]),
+      );
+      final tool = ProposeNoteEditTool(
+        _TestDatabaseService(const [], quote: quote),
+      );
+
+      final result = await tool.execute(ToolCall(
+        id: 'edit_rich',
+        name: 'propose_note_edit',
+        arguments: {
+          'proposal_title': 'Polish',
+          'note_id': quote.id,
+          'base_revision': ProposeNoteEditTool.revisionForQuote(quote),
+          'result_kind': 'preserve',
+          'operations': const [
+            {
+              'type': 'replace',
+              'old_text': 'after',
+              'insert_ops': [
+                {
+                  'insert': 'later',
+                  'attributes': {'italic': true}
+                }
+              ],
+            }
+          ],
+        },
+      ));
+
+      final artifact = result.artifact! as NoteProposalArtifact;
+      expect(artifact.resultKind, NoteDocumentKind.rich);
+      expect(artifact.documentOps.toString(), contains('/private/photo.jpg'));
+      expect(artifact.content, contains('later'));
+    });
+
+    test('plain formatting requires an explicit plain-to-rich transition',
+        () async {
+      final quote = Quote(
+        id: 'plain-note',
+        content: 'plain',
+        date: '2026-07-15T00:00:00.000Z',
+      );
+      final tool = ProposeNoteEditTool(
+        _TestDatabaseService(const [], quote: quote),
+      );
+      Map<String, Object?> arguments(String kind) => {
+            'proposal_title': 'Format',
+            'note_id': quote.id,
+            'base_revision': ProposeNoteEditTool.revisionForQuote(quote),
+            'result_kind': kind,
+            'operations': const [
+              {
+                'type': 'replaceDocument',
+                'insert_ops': [
+                  {
+                    'insert': 'Title',
+                    'attributes': {'bold': true}
+                  },
+                  {
+                    'insert': '\n',
+                    'attributes': {'header': 1}
+                  }
+                ],
+              }
+            ],
+          };
+
+      final rejected = await tool.execute(ToolCall(
+        id: 'preserve',
+        name: 'propose_note_edit',
+        arguments: arguments('preserve'),
+      ));
+      final converted = await tool.execute(ToolCall(
+        id: 'convert',
+        name: 'propose_note_edit',
+        arguments: arguments('rich'),
+      ));
+
+      expect(rejected.isError, isTrue);
+      final artifact = converted.artifact! as NoteProposalArtifact;
+      expect(artifact.modeTransition, NoteModeTransition.plainToRich);
+    });
+
+    test('metadata omission preserves values and clearing is explicit',
+        () async {
+      final quote = Quote(
+        id: 'metadata-note',
+        content: 'text',
+        date: '2026-07-15T00:00:00.000Z',
+        sourceAuthor: 'Existing',
+      );
+      final tool = ProposeNoteEditTool(
+        _TestDatabaseService(const [], quote: quote),
+      );
+      final result = await tool.execute(ToolCall(
+        id: 'metadata',
+        name: 'propose_note_edit',
+        arguments: {
+          'proposal_title': 'Edit',
+          'note_id': quote.id,
+          'base_revision': ProposeNoteEditTool.revisionForQuote(quote),
+          'result_kind': 'preserve',
+          'operations': const [
+            {
+              'type': 'replaceDocument',
+              'insert_ops': [
+                {'insert': 'updated'}
+              ],
+            }
+          ],
+          'metadata_patch': const {
+            'author': {'action': 'clear'}
+          },
+        },
+      ));
+
+      final metadata = (result.artifact! as NoteProposalArtifact).metadata;
+      expect(metadata['author'], {'action': 'clear'});
+      expect(metadata.containsKey('source'), isFalse);
+      expect(metadata.containsKey('tag_ids'), isFalse);
     });
   });
 

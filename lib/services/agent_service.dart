@@ -6,6 +6,7 @@ import 'package:openai_dart/openai_dart.dart' as openai;
 
 import '../models/ai_provider_settings.dart';
 import '../models/chat_message.dart' as app_chat;
+import '../models/note_proposal_artifact.dart';
 import '../utils/ai_request_helper.dart';
 import '../utils/app_logger.dart';
 import 'agent_tool.dart';
@@ -185,6 +186,8 @@ class AgentService extends ChangeNotifier {
       final openAITools = _buildOpenAITools();
 
       final executedCalls = <ToolCall>[];
+      final toolExecutions = <ToolExecution>[];
+      var proposalCreated = false;
       final seenCallSignatures = <String>{};
       final repeatedRoundPatterns = <String, int>{};
       final correctionAttempts = <String, int>{};
@@ -213,6 +216,7 @@ class AgentService extends ChangeNotifier {
           return AgentResponse(
             content: summary,
             toolCalls: executedCalls,
+            toolExecutions: toolExecutions,
             reachedMaxRounds: true,
           );
         }
@@ -252,6 +256,7 @@ class AgentService extends ChangeNotifier {
           return AgentResponse(
             content: responseContent,
             toolCalls: executedCalls,
+            toolExecutions: toolExecutions,
           );
         }
 
@@ -282,7 +287,10 @@ class AgentService extends ChangeNotifier {
               ),
               runId: runId);
           return AgentResponse(
-              content: assistantContent, toolCalls: executedCalls);
+            content: assistantContent,
+            toolCalls: executedCalls,
+            toolExecutions: toolExecutions,
+          );
         }
 
         final invalidToolNames = <String>[];
@@ -385,6 +393,17 @@ class AgentService extends ChangeNotifier {
             final rawToolCall = execution.pending.rawToolCall;
             final toolResult = execution.result;
 
+            if (toolResult.artifact is NoteProposalArtifact &&
+                proposalCreated) {
+              messages.add(
+                openai.ChatMessage.tool(
+                  toolCallId: rawToolCall.id,
+                  content: '每轮最多只能生成一个笔记提案，后续提案已忽略。',
+                ),
+              );
+              continue;
+            }
+
             _emitEvent(
                 AgentToolCallResultEvent(
                   toolCallId: parsedToolCall.id,
@@ -425,6 +444,12 @@ class AgentService extends ChangeNotifier {
             }
 
             executedCalls.add(parsedToolCall);
+            toolExecutions.add(
+              ToolExecution(call: parsedToolCall, result: toolResult),
+            );
+            if (toolResult.artifact is NoteProposalArtifact) {
+              proposalCreated = true;
+            }
 
             // 转义工具返回内容以防止提示注入攻击
             final escapedContent = _escapeToolResult(toolResult.content);
@@ -449,7 +474,10 @@ class AgentService extends ChangeNotifier {
               ),
               runId: runId);
           return AgentResponse(
-              content: assistantContent, toolCalls: executedCalls);
+            content: assistantContent,
+            toolCalls: executedCalls,
+            toolExecutions: toolExecutions,
+          );
         }
       }
     } catch (e, stack) {
@@ -851,8 +879,8 @@ $toolDescriptions
 - 使用原生 function calling，不要在文本里伪造 XML/JSON 标签。
 - 对于笔记检索与探索，主要调用 `explore_notes`。**注意：其返回的列表项仅包含前 200 字内容预览。**
 - **当你要对某篇特定笔记进行润色、总结、续写或深度分析时，为了获取其完整全部正文，你必须优先调用 `get_note_detail` 工具传入该笔记的 ID，不可仅凭 200 字预览做修改。**
-- 对已有富文本笔记进行局部润色、插入或删除时，优先调用 `propose_rich_edit`，并原样使用 `get_note_detail` 返回的 `document_revision`。`old_text` 或 `anchor_text` 必须提供足够上下文以唯一匹配。
-- 当你要创建新笔记，必须调用 `propose_new_note`，不要用 `propose_edit` 冒充新建。
+- 修改已有笔记必须调用 `propose_note_edit`，并原样使用 `get_note_detail` 返回的 `document_revision`。`old_text` 或 `anchor_text` 必须提供足够上下文以唯一匹配。
+- 创建新笔记必须调用 `propose_note_create`。默认选择 plain；只有用户明确要求格式或正文确有标题、列表、引用、强调等结构时选择 rich。
 - 当你要为新笔记或编辑建议选择标签，先调用 `get_tags`；工具调用里优先提交 `tag_ids`，避免同名标签歧义。
 - 你可以像用户浏览朋友圈一样使用 `explore_notes`：
   - 如果用户问“我最近写了什么”，不传参数直接调用，查看最新笔记。
@@ -860,15 +888,11 @@ $toolDescriptions
   - 使用 `next_offset` 参数进行翻页，不要重复拉取同一页。
 - 最终回复必须是面向用户的自然语言结论。
 - 默认使用中文回复（除非用户明确使用其他语言）。
-- 不要声称已直接修改笔记。所有改动都必须通过调用 `propose_rich_edit`、`propose_edit` 或 `propose_new_note` 工具向用户提议，由用户确认后应用。
+- 不要声称已直接修改笔记。所有改动都必须通过 `propose_note_create` 或 `propose_note_edit` 向用户提议，由用户确认后应用。每轮最多生成一个笔记提案。
 - **严禁**在回复中手动编写 ` ```smart_result ` 代码块。你必须且只能通过调用工具来产生建议卡片。
-- 调用 `propose_edit` 时：
-  - `action`: 润色或修正现有内容时使用 `replace`；续写、补充或整理到末尾时使用 `append`。
-  - `note_id`: 如果是对已有的特定笔记（通过搜索找到的）提出修改建议，**必须**填入该笔记 ID。
-  - `tag_ids` / `author` / `source`: 如果你认为需要修改标签、作者或出处，可以一并提供。不提供这些字段则保持原笔记不变。
-  - 旧笔记建议不要修改位置/天气。
-- 调用 `propose_new_note` 时：
-  - 需要标题、列表、引用、代码或行内样式时使用 `blocks`，由应用直接生成富文本；不要把 Markdown 符号塞进 `content`。
+- 调用 `propose_note_edit` 时，默认使用 `result_kind: preserve`；只有明确需要将普通笔记转换为富文本时使用 rich。整篇重写使用 replaceDocument，其他修改使用唯一文本锚点。
+- 调用 `propose_note_create` 时：
+  - 正文使用原生 Quill `document_ops`，不要把 Markdown 符号塞进正文。
   - `tag_ids` 只能使用 `get_tags` 返回的现有标签 ID。
   - `author` / `source`: 可以填写建议的作者和出处。
   - `include_location` / `include_weather` 只表示“让程序在保存时附加”，不是让你自己编写位置或天气文本。
@@ -928,7 +952,8 @@ $toolDescriptions
       'get_tags' => 'agentToolCall:get_tags',
       'get_location_weather' => 'agentToolCall:get_location_weather',
       'get_note_detail' => 'agentToolCall:get_note_detail',
-      'propose_new_note' => 'agentToolCall:propose_new_note',
+      'propose_note_create' => 'agentToolCall:propose_note_create',
+      'propose_note_edit' => 'agentToolCall:propose_note_edit',
       'web_search' => 'agentWebSearching',
       'web_fetch' => 'agentFetchingWeb',
       _ => '$agentToolCallPrefix$toolName',

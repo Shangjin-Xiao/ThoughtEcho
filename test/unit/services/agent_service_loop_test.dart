@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
 import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
+import 'package:thoughtecho/models/note_proposal_artifact.dart';
 import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/settings_service.dart';
@@ -30,10 +31,12 @@ class _CountingTool extends AgentTool {
   _CountingTool({
     required this.toolName,
     required this.resultContent,
+    this.artifact,
   });
 
   final String toolName;
   final String resultContent;
+  final AgentArtifact? artifact;
   int executeCount = 0;
 
   @override
@@ -56,6 +59,7 @@ class _CountingTool extends AgentTool {
     return ToolResult(
       toolCallId: toolCall.id,
       content: resultContent,
+      artifact: artifact,
     );
   }
 }
@@ -250,6 +254,115 @@ void main() {
   });
 
   group('AgentService native tool loop', () {
+    test('preserves one typed proposal artifact in the final response',
+        () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final artifact = NoteProposalArtifact(
+        action: NoteProposalAction.create,
+        proposalTitle: 'Draft',
+        reason: '',
+        resultKind: NoteDocumentKind.plain,
+        content: 'Body',
+        documentOps: null,
+        metadata: const {},
+        changes: const [],
+      );
+      final tool = _CountingTool(
+        toolName: 'propose_note_create',
+        resultContent: 'proposal ready',
+        artifact: artifact,
+      );
+      final responses = <openai.ChatCompletion>[
+        _toolCallCompletion(
+          callId: 'proposal',
+          toolName: tool.name,
+          args: const {},
+        ),
+        _textCompletion('Review it'),
+      ];
+      final service = AgentService(
+        settingsService: _FakeSettingsService(provider),
+        tools: [tool],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async =>
+            responses.removeAt(0),
+      );
+
+      final response = await service.runAgent(userMessage: 'draft');
+
+      expect(response.toolExecutions, hasLength(1));
+      expect(response.artifacts.single, same(artifact));
+      expect(response.toolExecutions.single.result.content, 'proposal ready');
+    });
+
+    test('keeps only the first proposal when a round requests two', () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      NoteProposalArtifact artifact(String title) => NoteProposalArtifact(
+            action: NoteProposalAction.create,
+            proposalTitle: title,
+            reason: '',
+            resultKind: NoteDocumentKind.plain,
+            content: title,
+            documentOps: null,
+            metadata: const {},
+            changes: const [],
+          );
+      final first = _CountingTool(
+        toolName: 'proposal_a',
+        resultContent: 'first',
+        artifact: artifact('first'),
+      );
+      final second = _CountingTool(
+        toolName: 'proposal_b',
+        resultContent: 'second',
+        artifact: artifact('second'),
+      );
+      final responses = <openai.ChatCompletion>[
+        _multiToolCallCompletion([
+          _buildToolCall(callId: 'a', toolName: first.name, args: const {}),
+          _buildToolCall(callId: 'b', toolName: second.name, args: const {}),
+        ]),
+        _textCompletion('done'),
+      ];
+      final service = AgentService(
+        settingsService: _FakeSettingsService(provider),
+        tools: [first, second],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async =>
+            responses.removeAt(0),
+      );
+
+      final response = await service.runAgent(userMessage: 'draft');
+
+      expect(response.artifacts, hasLength(1));
+      expect(
+        (response.artifacts.single as NoteProposalArtifact).proposalTitle,
+        'first',
+      );
+    });
+
     test('stops when same tool call is repeated', () async {
       final provider = const AIProviderSettings(
         id: 'openai',

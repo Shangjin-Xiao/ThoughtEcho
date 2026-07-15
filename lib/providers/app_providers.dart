@@ -27,9 +27,8 @@ import '../services/agent_tool.dart';
 import '../services/agent_tools/explore_notes_tool.dart';
 import '../services/agent_tools/get_app_context_tool.dart';
 import '../services/agent_tools/get_note_detail_tool.dart';
-import '../services/agent_tools/propose_edit_tool.dart';
-import '../services/agent_tools/propose_new_note_tool.dart';
-import '../services/agent_tools/propose_rich_edit_tool.dart';
+import '../services/agent_tools/propose_note_create_tool.dart';
+import '../services/agent_tools/propose_note_edit_tool.dart';
 import '../services/agent_tools/web_fetch_tool.dart';
 import '../services/agent_tools/web_search_tool.dart';
 import '../services/web_fetch_service.dart';
@@ -51,9 +50,8 @@ List<AgentTool> _buildAgentTools(
     GetNoteDetailTool(db),
     WebSearchTool(settingsService),
     WebFetchTool(WebFetchService()),
-    ProposeEditTool(db),
-    ProposeRichEditTool(db),
-    ProposeNewNoteTool(db),
+    ProposeNoteCreateTool(db),
+    ProposeNoteEditTool(db),
   ];
 }
 

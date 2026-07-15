@@ -319,9 +319,9 @@ class Quote {
     String? content,
     String? date,
     String? aiAnalysis,
-    String? source,
-    String? sourceAuthor,
-    String? sourceWork,
+    Object? source = _noValue,
+    Object? sourceAuthor = _noValue,
+    Object? sourceWork = _noValue,
     List<String>? tagIds,
     String? sentiment,
     List<String>? keywords,
@@ -334,8 +334,8 @@ class Quote {
     Object? poiName = _noValue,
     Object? weather = _noValue,
     Object? temperature = _noValue,
-    String? editSource,
-    String? deltaContent, // 新增：Delta JSON
+    Object? editSource = _noValue,
+    Object? deltaContent = _noValue, // 新增：Delta JSON
     String? dayPeriod, // 新增：时间段
     String? lastModified,
     int? favoriteCount, // 新增：心形点击次数
@@ -354,9 +354,13 @@ class Quote {
       content: content ?? this.content,
       date: date ?? this.date,
       aiAnalysis: aiAnalysis ?? this.aiAnalysis,
-      source: source ?? this.source,
-      sourceAuthor: sourceAuthor ?? this.sourceAuthor,
-      sourceWork: sourceWork ?? this.sourceWork,
+      source: identical(source, _noValue) ? this.source : source as String?,
+      sourceAuthor: identical(sourceAuthor, _noValue)
+          ? this.sourceAuthor
+          : sourceAuthor as String?,
+      sourceWork: identical(sourceWork, _noValue)
+          ? this.sourceWork
+          : sourceWork as String?,
       tagIds: tagIds ?? this.tagIds,
       sentiment: sentiment ?? this.sentiment,
       keywords: keywords ?? this.keywords,
@@ -375,8 +379,12 @@ class Quote {
       temperature: identical(temperature, _noValue)
           ? this.temperature
           : temperature as String?,
-      editSource: editSource ?? this.editSource,
-      deltaContent: deltaContent ?? this.deltaContent, // 新增：Delta JSON
+      editSource: identical(editSource, _noValue)
+          ? this.editSource
+          : editSource as String?,
+      deltaContent: identical(deltaContent, _noValue)
+          ? this.deltaContent
+          : deltaContent as String?, // 新增：Delta JSON
       dayPeriod: dayPeriod ?? this.dayPeriod, // 新增：时间段
       lastModified: lastModified ?? this.lastModified,
       favoriteCount: favoriteCount ?? this.favoriteCount, // 新增：心形点击次数

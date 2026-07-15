@@ -1,10 +1,305 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
 import '../../extensions/note_category_localization_extension.dart';
 import '../../gen_l10n/app_localizations.dart';
 import '../../models/note_category.dart';
+import '../../models/note_proposal_artifact.dart';
+import '../../models/quote_model.dart';
 import '../../utils/icon_utils.dart';
+import '../quote_content_widget.dart';
+
+class NoteProposalCard extends StatefulWidget {
+  const NoteProposalCard({
+    super.key,
+    required this.artifact,
+    required this.onOpenInEditor,
+    required this.onApply,
+    this.initialCompleted = false,
+    this.plainCreateOpensRich = false,
+  });
+
+  final NoteProposalArtifact artifact;
+  final Future<void> Function() onOpenInEditor;
+  final Future<bool> Function() onApply;
+  final bool initialCompleted;
+  final bool plainCreateOpensRich;
+
+  @override
+  State<NoteProposalCard> createState() => _NoteProposalCardState();
+}
+
+class _NoteProposalCardState extends State<NoteProposalCard> {
+  bool _expanded = false;
+  bool _changesExpanded = false;
+  bool _saving = false;
+  late bool _completed;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _completed = widget.initialCompleted;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final artifact = widget.artifact;
+    final isEdit = artifact.action == NoteProposalAction.edit;
+    return Card(
+      elevation: 0,
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(artifact.proposalTitle,
+                    style: theme.textTheme.titleMedium),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    _ProposalLabel(
+                      text: isEdit
+                          ? l10n.noteProposalEdit
+                          : l10n.noteProposalCreate,
+                    ),
+                    _ProposalLabel(
+                      text: artifact.resultKind == NoteDocumentKind.rich
+                          ? l10n.noteProposalRich
+                          : l10n.noteProposalPlain,
+                    ),
+                    if (isEdit)
+                      _ProposalLabel(
+                        text: l10n.noteProposalChangeCount(
+                          artifact.changes.length,
+                        ),
+                      ),
+                  ],
+                ),
+                if (artifact.reason.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    artifact.reason,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: _expanded ? 520 : 220),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _DocumentPreview(artifact: artifact),
+            ),
+          ),
+          TextButton(
+            onPressed: () => setState(() => _expanded = !_expanded),
+            child: Text(
+              _expanded ? l10n.noteProposalCollapse : l10n.noteProposalExpand,
+            ),
+          ),
+          if (isEdit && artifact.changes.isNotEmpty) ...[
+            const Divider(height: 1),
+            TextButton.icon(
+              onPressed: () =>
+                  setState(() => _changesExpanded = !_changesExpanded),
+              icon: Icon(
+                _changesExpanded ? Icons.expand_less : Icons.history_edu,
+              ),
+              label: Text(l10n.noteProposalViewChanges),
+            ),
+            if (_changesExpanded)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: Column(
+                  children: [
+                    for (final change in artifact.changes)
+                      _ChangeTrack(change: change),
+                  ],
+                ),
+              ),
+          ],
+          if (artifact.modeTransition == NoteModeTransition.plainToRich)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Text(
+                l10n.noteProposalPlainToRichWarning,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.tertiary,
+                ),
+              ),
+            ),
+          if (widget.plainCreateOpensRich)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Text(
+                l10n.noteProposalPlainEditorPreferenceWarning,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.tertiary,
+                ),
+              ),
+            ),
+          if (_failed)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Text(
+                l10n.agentErrorGeneric,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              children: [
+                TextButton.icon(
+                  onPressed: _saving || _completed ? null : _openInEditor,
+                  icon: const Icon(Icons.edit_note),
+                  label: Text(l10n.openInEditor),
+                ),
+                FilledButton.icon(
+                  onPressed: _saving || _completed || artifact.readOnly
+                      ? null
+                      : _apply,
+                  icon: _saving
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(_completed ? Icons.check : Icons.save_outlined),
+                  label: Text(
+                    _completed
+                        ? l10n.noteProposalCompleted
+                        : isEdit
+                            ? l10n.noteProposalApply
+                            : l10n.noteProposalSave,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _apply() async {
+    setState(() {
+      _saving = true;
+      _failed = false;
+    });
+    try {
+      final completed = await widget.onApply();
+      if (mounted && completed) setState(() => _completed = true);
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _openInEditor() async {
+    setState(() => _failed = false);
+    try {
+      await widget.onOpenInEditor();
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+}
+
+class _DocumentPreview extends StatelessWidget {
+  const _DocumentPreview({required this.artifact});
+
+  final NoteProposalArtifact artifact;
+
+  @override
+  Widget build(BuildContext context) {
+    if (artifact.resultKind == NoteDocumentKind.plain) {
+      return SelectableText(artifact.content);
+    }
+    return QuoteContent(
+      quote: Quote(
+        id: 'agent-proposal-${artifact.noteId ?? artifact.proposalTitle}',
+        content: artifact.content,
+        date: DateTime.fromMillisecondsSinceEpoch(0).toIso8601String(),
+        editSource: 'fullscreen',
+        deltaContent: jsonEncode(artifact.documentOps),
+      ),
+      showFullContent: true,
+    );
+  }
+}
+
+class _ProposalLabel extends StatelessWidget {
+  const _ProposalLabel({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Chip(
+        visualDensity: VisualDensity.compact,
+        label: Text(text),
+      );
+}
+
+class _ChangeTrack extends StatelessWidget {
+  const _ChangeTrack({required this.change});
+
+  final NoteProposalChange change;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(left: 12),
+      decoration: BoxDecoration(
+        border: Border(left: BorderSide(color: theme.colorScheme.tertiary)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (change.before.isNotEmpty) ...[
+            Text(l10n.noteProposalBefore, style: theme.textTheme.labelSmall),
+            Text(
+              change.before,
+              style: theme.textTheme.bodySmall?.copyWith(
+                decoration: TextDecoration.lineThrough,
+              ),
+            ),
+          ],
+          if (change.after.isNotEmpty) ...[
+            Text(l10n.noteProposalAfter, style: theme.textTheme.labelSmall),
+            Text(change.after, style: theme.textTheme.bodySmall),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
 class SmartResultDraft {
   const SmartResultDraft({
@@ -44,6 +339,7 @@ class SmartResultCard extends StatefulWidget {
   final bool initialIncludeLocation;
   final bool initialIncludeWeather;
   final String? initialSavedNoteId;
+  final bool readOnly;
 
   const SmartResultCard({
     super.key,
@@ -64,6 +360,7 @@ class SmartResultCard extends StatefulWidget {
     this.initialIncludeLocation = false,
     this.initialIncludeWeather = false,
     this.initialSavedNoteId,
+    this.readOnly = false,
   });
 
   @override
@@ -211,6 +508,16 @@ class _SmartResultCardState extends State<SmartResultCard> {
                 ),
               ),
             ),
+          if (widget.readOnly)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                l10n.noteProposalLegacyReadOnly,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: Wrap(
@@ -254,14 +561,17 @@ class _SmartResultCardState extends State<SmartResultCard> {
                 if (widget.onOpenInEditor != null ||
                     widget.onOpenDraftInEditor != null)
                   TextButton.icon(
-                    onPressed: _isSaving ? null : _handleOpenInEditor,
+                    onPressed: _isSaving || widget.readOnly
+                        ? null
+                        : _handleOpenInEditor,
                     icon: const Icon(Icons.edit_note, size: 18),
                     label: Text(l10n.openInEditor),
                   ),
                 if (showSaveDirectly)
                   FilledButton.icon(
-                    onPressed:
-                        (_isSaving || isSaved) ? null : _handleSaveDirectly,
+                    onPressed: (_isSaving || isSaved || widget.readOnly)
+                        ? null
+                        : _handleSaveDirectly,
                     icon: _isSaving
                         ? const SizedBox(
                             width: 18,

@@ -4098,5 +4098,22 @@
   "agentDiffAppend": "追加内容",
   "agentDiffDelete": "删除内容",
   "availableCommands": "可用命令",
-  "typeSlashToSeeCommands": "输入 / 查看命令"
+  "typeSlashToSeeCommands": "输入 / 查看命令",
+  "noteProposalCreate": "新建",
+  "noteProposalEdit": "编辑",
+  "noteProposalPlain": "普通笔记",
+  "noteProposalRich": "富文本笔记",
+  "noteProposalChangeCount": "修改 {count} 处",
+  "@noteProposalChangeCount": {"placeholders": {"count": {"type": "int"}}},
+  "noteProposalExpand": "展开全文",
+  "noteProposalCollapse": "收起全文",
+  "noteProposalViewChanges": "查看修改记录",
+  "noteProposalPlainToRichWarning": "应用后将使用全屏富文本编辑器打开此笔记。",
+  "noteProposalBefore": "原文",
+  "noteProposalAfter": "改为",
+  "noteProposalCompleted": "已完成",
+  "noteProposalApply": "应用修改",
+  "noteProposalSave": "保存笔记",
+  "noteProposalLegacyReadOnly": "这是旧版建议，缺少安全的版本信息，仅供查看。请让 AI 重新生成后再应用。",
+  "noteProposalPlainEditorPreferenceWarning": "你的设置会在全屏富文本编辑器中打开此普通草稿；保存后它将成为富文本笔记。"
 }

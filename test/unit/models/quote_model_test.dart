@@ -6,6 +6,30 @@ import 'package:thoughtecho/models/quote_model.dart';
 import '../../test_harness.dart';
 
 void main() {
+  test('copyWith can explicitly clear note mode and source fields', () {
+    final rich = Quote(
+      id: 'note',
+      content: 'text',
+      date: '2026-07-15T00:00:00Z',
+      sourceAuthor: 'Author',
+      sourceWork: 'Work',
+      editSource: 'fullscreen',
+      deltaContent: '[{"insert":"text\\n"}]',
+    );
+
+    final plain = rich.copyWith(
+      source: null,
+      sourceAuthor: null,
+      sourceWork: null,
+      editSource: null,
+      deltaContent: null,
+    );
+
+    expect(plain.source, isNull);
+    expect(plain.editSource, isNull);
+    expect(plain.deltaContent, isNull);
+  });
+
   setUpAll(() async {
     await TestHarness.initialize();
   });

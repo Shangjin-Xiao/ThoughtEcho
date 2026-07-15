@@ -2,6 +2,8 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 
+import '../models/note_proposal_artifact.dart';
+
 abstract class AgentTool {
   const AgentTool();
 
@@ -130,6 +132,7 @@ class ToolResult {
     this.isError = false,
     this.retryable = false,
     this.failureType,
+    this.artifact,
   });
 
   final String toolCallId;
@@ -137,6 +140,7 @@ class ToolResult {
   final bool isError;
   final bool retryable;
   final AgentFailureType? failureType;
+  final AgentArtifact? artifact;
 
   ToolResult copyWith({
     String? toolCallId,
@@ -144,6 +148,7 @@ class ToolResult {
     bool? isError,
     bool? retryable,
     AgentFailureType? failureType,
+    AgentArtifact? artifact,
   }) {
     return ToolResult(
       toolCallId: toolCallId ?? this.toolCallId,
@@ -151,6 +156,7 @@ class ToolResult {
       isError: isError ?? this.isError,
       retryable: retryable ?? this.retryable,
       failureType: failureType ?? this.failureType,
+      artifact: artifact ?? this.artifact,
     );
   }
 
@@ -178,25 +184,42 @@ class ToolResult {
   }
 }
 
+class ToolExecution {
+  const ToolExecution({required this.call, required this.result});
+
+  final ToolCall call;
+  final ToolResult result;
+}
+
 class AgentResponse {
   AgentResponse({
     required this.content,
     List<ToolCall> toolCalls = const <ToolCall>[],
+    List<ToolExecution> toolExecutions = const <ToolExecution>[],
     this.reachedMaxRounds = false,
-  }) : toolCalls = List<ToolCall>.unmodifiable(toolCalls);
+  })  : toolCalls = List<ToolCall>.unmodifiable(toolCalls),
+        toolExecutions = List<ToolExecution>.unmodifiable(toolExecutions);
 
   final String content;
   final List<ToolCall> toolCalls;
+  final List<ToolExecution> toolExecutions;
+
+  List<AgentArtifact> get artifacts => toolExecutions
+      .map((execution) => execution.result.artifact)
+      .whereType<AgentArtifact>()
+      .toList(growable: false);
   final bool reachedMaxRounds;
 
   AgentResponse copyWith({
     String? content,
     List<ToolCall>? toolCalls,
+    List<ToolExecution>? toolExecutions,
     bool? reachedMaxRounds,
   }) {
     return AgentResponse(
       content: content ?? this.content,
       toolCalls: toolCalls ?? this.toolCalls,
+      toolExecutions: toolExecutions ?? this.toolExecutions,
       reachedMaxRounds: reachedMaxRounds ?? this.reachedMaxRounds,
     );
   }
