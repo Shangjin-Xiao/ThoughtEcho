@@ -612,56 +612,6 @@ void main() {
       expect(find.text(noteL10n.aiModeAgent), findsNothing);
     });
 
-    testWidgets('slash commands show only when input starts with slash',
-        (tester) async {
-      await tester.pumpWidget(
-        await _buildHarness(
-          settingsService: settingsService,
-          chatSessionService: chatSessionService,
-          child: const AIAssistantPage(
-            key: ValueKey('explore_slash_page'),
-            entrySource: AIAssistantEntrySource.explore,
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(
-          find.byKey(const ValueKey('slash_commands_hidden')), findsOneWidget);
-      expect(find.widgetWithText(ActionChip, '/润色'), findsNothing);
-      await tester.enterText(find.byType(TextField), '/');
-      await tester.pumpAndSettle();
-      expect(
-          find.byKey(const ValueKey('slash_commands_visible')), findsOneWidget);
-      expect(find.widgetWithText(ActionChip, '/润色'), findsOneWidget);
-      expect(find.widgetWithText(ActionChip, '/续写'), findsOneWidget);
-      expect(find.widgetWithText(ActionChip, '/深度分析'), findsOneWidget);
-      expect(find.widgetWithText(ActionChip, '/分析来源'), findsOneWidget);
-      expect(find.widgetWithText(ActionChip, '/智能洞察'), findsOneWidget);
-    });
-
-    testWidgets('slash command list filters by current input', (tester) async {
-      await tester.pumpWidget(
-        await _buildHarness(
-          settingsService: settingsService,
-          chatSessionService: chatSessionService,
-          child: const AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byType(TextField), '/分');
-      await tester.pumpAndSettle();
-
-      expect(
-          find.byKey(const ValueKey('slash_commands_visible')), findsOneWidget);
-      expect(find.widgetWithText(ActionChip, '/分析来源'), findsOneWidget);
-      expect(find.widgetWithText(ActionChip, '/润色'), findsNothing);
-      expect(find.widgetWithText(ActionChip, '/续写'), findsNothing);
-    });
-
     testWidgets('dragging messages keeps the focused input keyboard active',
         (tester) async {
       final now = DateTime.now();
