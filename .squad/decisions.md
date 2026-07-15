@@ -504,3 +504,40 @@
 - 覆盖不同宽度缓存隔离、展开态完整内容、QuoteItem 展开/折叠和 NoteListView 列表回归；
 - 自动化只能证明结构与视觉不回归，最终性能收益仍需同一真机数据复测
   `itemLayout.worst` / `worstBuild` / `frameJank`。
+
+---
+
+## 2026-07-15: 高速滚动期间延后冷 Quill，停止后可见优先逐帧恢复
+
+**决策者**: 上晋 + Codex
+**类型**: 真机复测失败 / 方案调整
+
+### 复测证据
+
+2026-07-12 的宽度感知前缀上线后，用户在同类 102 条数据上冷启动持续下滑，
+`scroll-10` 仍出现明显卡顿：
+
+- `worstBuild=175.7ms`、`worstRaster=13.1ms`，主要瓶颈仍在 UI build/layout；
+- 8 次冷 Document miss 的 `docWorkUs+110739`，说明新前缀的宽度感知
+  `TextPainter` 计算在滚动帧中累计占用约 110.7ms；
+- 冷 `rich`/`rich-image` 首次布局仍为 23.3～38.3ms；
+- `dataΔ=0`、`loadMoreStartΔ=0`，排除数据更新与分页；图片在卡顿段仍被延迟，
+  且 raster 未超过 build 峰值，因此图片解码不是本轮主因。
+
+### 决策
+
+1. 仅对“高速滚动期间新出现、尚无对应 controller 缓存”的折叠富文本延后
+   Quill materialization；已显示、已缓存的 Quill 不随滚动降级。
+2. 滚动期间用同样 160px 高的有界纯文本前缀作为短暂预览，不创建 Document、
+   controller 或 Quill RenderObject；这不是新的持久富文本 renderer。
+3. 滚动停止后每帧最多 materialize 一个冷 Quill，先处理当前视口内卡片，
+   再处理 cache extent/保活区卡片，避免把 8 个任务重新堆到停止后的同一帧。
+4. 静止时、展开时以及缓存命中时仍使用原 Quill，因此最终画面和编辑内容保持
+   100% 同源；只有高速滚动中的冷卡片短暂不做像素级富文本还原。
+
+### 验收
+
+自动化回归要求：滚动期间冷 Quill/controller 创建数为 0；停止后逐帧恢复；
+视口内卡片优先。真机最终验收仍对比 `docWorkUs`、`worstBuild`、`frameJank`
+和 `slowLayouts`；目标是卡顿 session 内冷 Document/Controller delta 趋近 0，且不再出现
+多个 20～40ms 冷 rich layout 扎堆。

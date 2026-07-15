@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/utils/quill_editor_extensions.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
 import 'package:visibility_detector/visibility_detector.dart';
@@ -40,6 +41,11 @@ void main() {
 
   setUp(() {
     QuoteItemWidget.clearExpansionCache();
+    isListScrolling.value = false;
+  });
+
+  tearDown(() {
+    isListScrolling.value = false;
   });
 
   Widget buildTestApp(
@@ -192,6 +198,195 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(QuoteContent.collapsedWrapperKey), findsOneWidget);
+  });
+
+  testWidgets('高速滚动中新出现的折叠富文本会等列表停下再创建 Quill', (tester) async {
+    final longText = '滚动期间只显示轻量预览。' * 80;
+    final quote = Quote(
+      id: 'rich_deferred_while_scrolling',
+      content: longText,
+      date: '2025-01-01T00:00:00.000Z',
+      editSource: 'fullscreen',
+      deltaContent: jsonEncode([
+        {
+          'insert': longText,
+          'attributes': {'bold': true},
+        },
+        {'insert': '\n'},
+      ]),
+    );
+    QuoteContent.clearCacheForTesting();
+    isListScrolling.value = true;
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(quill.QuillEditor), findsNothing);
+    expect(find.byKey(QuoteContent.collapsedWrapperKey), findsOneWidget);
+    final placeholderText = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(QuoteContent.collapsedWrapperKey),
+        matching: find.byType(Text),
+      ),
+    );
+    expect(placeholderText.data!.length, lessThan(longText.length));
+    expect(
+      QuoteContent.debugCacheStats()['controller'],
+      containsPair('createCount', 0),
+    );
+    expect(
+      QuoteContent.debugCacheStats()['document'],
+      allOf(
+        containsPair('missCount', 0),
+        containsPair('workMicros', 0),
+      ),
+    );
+
+    isListScrolling.value = false;
+    await tester.pump();
+
+    expect(find.byType(quill.QuillEditor), findsOneWidget);
+
+    isListScrolling.value = true;
+    await tester.pump();
+
+    expect(find.byType(quill.QuillEditor), findsOneWidget);
+  });
+
+  testWidgets('滚动停止后冷富文本会逐帧恢复而不是同一帧集中创建', (tester) async {
+    final longText = '停止后逐帧恢复富文本。' * 80;
+    final quotes = List<Quote>.generate(
+      3,
+      (index) => Quote(
+        id: 'rich_staggered_$index',
+        content: longText,
+        date: '2025-01-01T00:00:0$index.000Z',
+        editSource: 'fullscreen',
+        deltaContent: jsonEncode([
+          {'insert': '$longText\n'},
+        ]),
+      ),
+    );
+    QuoteContent.clearCacheForTesting();
+    isListScrolling.value = true;
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<SettingsService>.value(
+        value: _TestSettingsService(),
+        child: MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: quotes
+                  .map(
+                    (quote) => SizedBox(
+                      width: 320,
+                      height: QuoteContent.collapsedContentMaxHeight,
+                      child: QuoteContent(
+                        quote: quote,
+                        style: const TextStyle(fontSize: 16, height: 1.5),
+                        needsExpansionOverride: true,
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(quill.QuillEditor), findsNothing);
+
+    isListScrolling.value = false;
+    await tester.pump();
+    expect(find.byType(quill.QuillEditor), findsOneWidget);
+
+    await tester.pump();
+    expect(find.byType(quill.QuillEditor), findsNWidgets(2));
+
+    await tester.pump();
+    expect(find.byType(quill.QuillEditor), findsNWidgets(3));
+  });
+
+  testWidgets('滚动停止后优先恢复屏幕内的冷富文本', (tester) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    final longText = '可见卡片应当先恢复富文本。' * 80;
+    final quotes = List<Quote>.generate(
+      3,
+      (index) => Quote(
+        id: 'rich_visible_first_$index',
+        content: longText,
+        date: '2025-01-01T00:00:0$index.000Z',
+        editSource: 'fullscreen',
+        deltaContent: jsonEncode([
+          {'insert': '$longText\n'},
+        ]),
+      ),
+    );
+    QuoteContent.clearCacheForTesting();
+    isListScrolling.value = true;
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<SettingsService>.value(
+        value: _TestSettingsService(),
+        child: MaterialApp(
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: 320,
+                height: QuoteContent.collapsedContentMaxHeight,
+                child: SingleChildScrollView(
+                  controller: controller,
+                  child: Column(
+                    children: List<Widget>.generate(
+                      quotes.length,
+                      (index) => SizedBox(
+                        key: ValueKey('deferred-rich-$index'),
+                        height: QuoteContent.collapsedContentMaxHeight,
+                        child: QuoteContent(
+                          quote: quotes[index],
+                          style: const TextStyle(fontSize: 16, height: 1.5),
+                          needsExpansionOverride: true,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    controller.jumpTo(controller.position.maxScrollExtent);
+    await tester.pump();
+
+    isListScrolling.value = false;
+    await tester.pump();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('deferred-rich-2')),
+        matching: find.byType(quill.QuillEditor),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('deferred-rich-0')),
+        matching: find.byType(quill.QuillEditor),
+      ),
+      findsNothing,
+    );
   });
 
   testWidgets('折叠态长富文本只给 QuillEditor 截断 Document', (tester) async {

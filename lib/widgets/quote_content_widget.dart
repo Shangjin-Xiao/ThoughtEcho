@@ -5,11 +5,15 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../models/quote_model.dart';
 import '../utils/quill_editor_extensions.dart';
 import 'package:provider/provider.dart';
 import '../services/settings_service.dart';
+
+part 'quote_content_deferred.dart';
 
 /// 统一显示Quote内容的组件，支持富文本和普通文本
 class QuoteContent extends StatelessWidget {
@@ -106,6 +110,7 @@ class QuoteContent extends StatelessWidget {
   // an empty strip at the bottom of the preview.
   static const double _collapsedDocumentHeightGuard = 96.0;
   static const double _collapsedImagePlaceholderHeight = 96.0;
+  static const int _deferredPreviewCodeUnitBudget = 320;
   static const Key collapsedWrapperKey = ValueKey(
     'quote_content.collapsed_wrapper',
   );
@@ -284,6 +289,18 @@ class QuoteContent extends StatelessWidget {
     final currentMicros = currentValue is int ? currentValue : 0;
     final baselineMicros = baselineValue is int ? baselineValue : 0;
     return currentMicros > baselineMicros ? currentMicros : 0;
+  }
+
+  static String _deferredPreviewText(String content) {
+    if (content.length <= _deferredPreviewCodeUnitBudget) {
+      return content;
+    }
+    var end = _deferredPreviewCodeUnitBudget;
+    final lastCodeUnit = content.codeUnitAt(end - 1);
+    if (lastCodeUnit >= 0xD800 && lastCodeUnit <= 0xDBFF) {
+      end--;
+    }
+    return content.substring(0, end);
   }
 
   /// 检查是否为媒体软连接或其他应该过滤的内容
@@ -972,6 +989,45 @@ class QuoteContent extends StatelessWidget {
     final String contentSignature =
         '${quote.deltaContent!.hashCode}_${quote.deltaContent!.length}_$contentVariant';
 
+    // Only fixed-height collapsed cards can use a lightweight stand-in
+    // without changing the list extent. Cache hits keep their real Quill tree.
+    if (truncateForCollapse &&
+        isListScrolling.value &&
+        !_QuoteContentControllerCache.contains(
+          quoteId: cacheQuoteId,
+          contentSignature: contentSignature,
+          variant: contentVariant,
+        )) {
+      Widget placeholder = _CollapsedContentWrapper(
+        key: collapsedWrapperKey,
+        maxHeight: collapsedContentMaxHeight,
+        child: Text(
+          _deferredPreviewText(quote.content),
+          style: style,
+          softWrap: true,
+          maxLines: 8,
+          overflow: TextOverflow.clip,
+        ),
+      );
+      if (collapseRichTextSemantics) {
+        placeholder = Semantics(
+          key: const ValueKey('quote_content.rich_text_semantics'),
+          container: true,
+          label: quote.content,
+          child: ExcludeSemantics(child: placeholder),
+        );
+      }
+      return _DeferredRichTextContent(
+        placeholder: placeholder,
+        richTextBuilder: (context) => _buildRichTextContent(
+          context,
+          needsExpansion: needsExpansion,
+          prioritizeBoldContent: prioritizeBoldContent,
+          maxWidth: maxWidth,
+        ),
+      );
+    }
+
     final _CachedControllerSet controllerSet =
         _QuoteContentControllerCache.getOrCreate(
       quoteId: cacheQuoteId,
@@ -1435,6 +1491,20 @@ class _QuoteContentControllerCache {
   static int _disposeCount = 0;
   static int _workMicros = 0;
   static int _worstWorkMicros = 0;
+
+  static bool contains({
+    required String quoteId,
+    required String contentSignature,
+    required String variant,
+  }) {
+    return _cache.containsKey(
+      _ControllerCacheKey(
+        quoteId: quoteId,
+        contentSignature: contentSignature,
+        variant: variant,
+      ),
+    );
+  }
 
   static _CachedControllerSet getOrCreate({
     required String quoteId,
