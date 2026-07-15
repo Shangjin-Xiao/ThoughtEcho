@@ -1,0 +1,112 @@
+lib/utils/agent_note_document_codec.dart
+  s_0de7e74d4d20ce::t_7174d797399a3a 1-25,30-116,119-128,130-132,196-220
+  s_0de7e74d4d20ce::t_6dfa413704d501 136-144,184
+  s_0de7e74d4d20ce::t_d86202391a0d34 26-29,117-118,129,133-135,145-183,185-195
+lib/pages/ai_assistant_page.dart
+  s_0de7e74d4d20ce::t_f644cd7e4e844d 33
+  s_0de7e74d4d20ce::t_a30ea257e26476 35
+  s_0de7e74d4d20ce::t_8b84acdb53b9a0 43
+lib/pages/ai_assistant/ai_assistant_page_ui.dart
+  s_0de7e74d4d20ce::t_9f3cf4063175db 149
+  s_0de7e74d4d20ce::t_8b84acdb53b9a0 146-148,852,857,869-873,905,909,915-931,933-949
+  s_0de7e74d4d20ce::t_1fcab724c04733 795,1124
+  s_0de7e74d4d20ce::t_41cc33f84a3dea 908
+  s_0de7e74d4d20ce::t_35111d8364df2a 163-164
+  s_0de7e74d4d20ce::t_48c7ec8d2a45ab 240
+  s_0de7e74d4d20ce::t_74420fbb1db6ec 1447-1448,1565,1582
+  s_0de7e74d4d20ce::t_8f0a399c3eb144 774,800
+  s_0de7e74d4d20ce::t_26ea091265bc53 775-794,796-799,801-803,806,1207
+  s_0de7e74d4d20ce::t_eb8017adbde3e2 769-773,804-805,807-851,853-856,858-868,874-904,906-907,910-914,932,950-951,1449-1453,1564,1581
+  s_0de7e74d4d20ce::t_a30ea257e26476 133-145,150-159
+  s_0de7e74d4d20ce::t_9e044a1f4ef680 1566
+test/unit/services/agent_service_loop_test.dart
+  s_0de7e74d4d20ce::t_0f66e0493783b7 298-354
+  s_0de7e74d4d20ce::t_25bf57d47b28fa 8,34,39,62,257-297,355-365
+docs/USER_MANUAL.md
+  s_0de7e74d4d20ce::t_eb961919bf4d77 153,837
+lib/models/quote_model.dart
+  s_0de7e74d4d20ce::t_eb8017adbde3e2 358-363
+  s_0de7e74d4d20ce::t_ea1c61c826da88 322
+  s_0de7e74d4d20ce::t_a30ea257e26476 337-338,382-387
+  s_0de7e74d4d20ce::t_9e5912f897ab24 323-324
+  s_0de7e74d4d20ce::t_35111d8364df2a 357
+lib/services/agent_tools/get_note_detail_tool.dart
+  s_0de7e74d4d20ce::t_0789f29b06e7ea 4,7,78-79,81-85
+lib/providers/app_providers.dart
+  s_0de7e74d4d20ce::t_0789f29b06e7ea 30-31,53-54
+lib/services/agent_tool.dart
+  s_0de7e74d4d20ce::t_d34bf2a661510d 5-6,135,143,151,159,187-193,198,200-201,205-210,216,222
+lib/l10n/app_en.arb
+  s_0de7e74d4d20ce::t_48c7ec8d2a45ab 4116
+  s_0de7e74d4d20ce::t_af93cf847ae7df 4117-4118
+  s_0de7e74d4d20ce::t_316315e9040301 4101-4115
+test/unit/services/get_note_detail_tool_test.dart
+  s_0de7e74d4d20ce::t_fe828f8edfece8 93-94,98-123
+  s_0de7e74d4d20ce::t_25574342997673 124-125
+lib/pages/ai_assistant/ai_assistant_page_agent.dart
+  s_0de7e74d4d20ce::t_f644cd7e4e844d 272,335-338,654-673,815,830
+  s_0de7e74d4d20ce::t_87e400ea22d720 652-653
+  s_0de7e74d4d20ce::t_f5fa83d32e09a1 332,339-362
+lib/services/agent_tools/propose_note_create_tool.dart
+  s_0de7e74d4d20ce::t_67bb3213127964 1-109
+lib/widgets/ai/smart_result_card.dart
+  s_0de7e74d4d20ce::t_9f3cf4063175db 177
+  s_0de7e74d4d20ce::t_0f66e0493783b7 564-566,572-574
+  s_0de7e74d4d20ce::t_af93cf847ae7df 21,28,144-153
+  s_0de7e74d4d20ce::t_3f060acfc21f8c 1-2,9-10,12-20,22-27,29-38,40-68,71-114,116-143,154-158,169-176,178-207,212-214,217-218,228-302
+  s_0de7e74d4d20ce::t_41d1d43bc16000 219-227
+  s_0de7e74d4d20ce::t_48c7ec8d2a45ab 342,363,511-520
+  s_0de7e74d4d20ce::t_e97e6914d80459 39,159-168,208-211,215-216
+  s_0de7e74d4d20ce::t_74420fbb1db6ec 69-70,115
+lib/utils/quill_structured_edit.dart
+  s_0de7e74d4d20ce::t_8508bdd69b6c88 38-48,55-56,73,81,97-104
+  s_0de7e74d4d20ce::t_9def6eaffa69f4 105-106
+lib/models/rich_text_edit.dart
+  s_0de7e74d4d20ce::t_8508bdd69b6c88 7,93,109,113,131-136,146
+lib/models/note_proposal_artifact.dart
+  s_0de7e74d4d20ce::t_7174d797399a3a 1-64,68,70-148,164
+  s_0de7e74d4d20ce::t_63b7416fb50eb5 65-67,69,149-163
+lib/services/agent_tools/propose_note_edit_tool.dart
+  s_0de7e74d4d20ce::t_74420fbb1db6ec 114-115,199-200
+  s_0de7e74d4d20ce::t_63b7416fb50eb5 146-151,163,191,207-223
+  s_0de7e74d4d20ce::t_67bb3213127964 1-113,116-145,152-162,164-190,192-198,201-206,224-236
+test/unit/models/note_proposal_artifact_test.dart
+  s_0de7e74d4d20ce::t_63b7416fb50eb5 21-23,40-43
+  s_0de7e74d4d20ce::t_f66e721369ed36 1-20,24-39,44-47
+lib/l10n/app_zh.arb
+  s_0de7e74d4d20ce::t_48c7ec8d2a45ab 4116
+  s_0de7e74d4d20ce::t_af93cf847ae7df 4117-4118
+  s_0de7e74d4d20ce::t_316315e9040301 4101-4115
+test/unit/services/agent_note_tools_test.dart
+  s_0de7e74d4d20ce::t_42593d0aef74d4 5,11-12
+  s_0de7e74d4d20ce::t_e59e7727efa199 543-661,701-702
+  s_0de7e74d4d20ce::t_e97e6914d80459 662-700
+test/unit/models/quote_model_test.dart
+  s_0de7e74d4d20ce::t_22bbe153010c68 9-32
+lib/services/agent_service.dart
+  s_0de7e74d4d20ce::t_bcb9b65710dd58 9,290-293,477-480
+  s_0de7e74d4d20ce::t_2849a05277c494 882-883,891,893-895,955-956
+  s_0de7e74d4d20ce::t_f55b72184ce887 189-190,219,259,396-406,447-452
+test/widget/widgets/note_proposal_card_test.dart
+  s_0de7e74d4d20ce::t_31300ea33ecd44 22
+  s_0de7e74d4d20ce::t_837a02d4e1f2a8 1-21,23-101
+test/unit/utils/agent_note_document_codec_test.dart
+  s_0de7e74d4d20ce::t_f66e721369ed36 1-86,133-145
+  s_0de7e74d4d20ce::t_d86202391a0d34 87-132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "54a34fba55636d2594639ebe1759416897343c32",
+  "prompts": {},
+  "sessions": {
+    "s_0de7e74d4d20ce": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f6363-2811-7981-92bf-ee096dfb19b4",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
