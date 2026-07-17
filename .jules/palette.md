@@ -31,3 +31,6 @@
 ## 2026-06-26 - Missing Tooltips on Icon-Only Buttons
 **Learning:** Found multiple instances where icon-only `IconButton`s lacked the `tooltip` property, causing accessibility issues for screen readers and missing hover text for desktop users. Examples included the password visibility toggle in `webdav_sync_page.dart` and `_CircleIconButton` wrapper in `motion_photo_preview_page.dart`.
 **Action:** Always verify `tooltip` property presence on `IconButton` usage, especially in custom widget wrappers (`_CircleIconButton`) or inline suffixes (`suffixIcon`). Use standard `MaterialLocalizations` where applicable (e.g., `closeButtonTooltip`).
+## 2026-06-27 - [Fix Missing Tooltips for AI Assistant Action Buttons]
+**Learning:** IconButtons used for core actions in AI feature UIs (like "thinking" toggles, clear search icons, and stop generating buttons) often lack accessibility labels, making them unusable for screen reader users and missing hover cues on desktop.
+**Action:** When implementing or modifying AI chat interfaces and session histories, ensure that all `IconButton`s include dynamic tooltips (e.g. toggling between 'Show/Hide Thinking', or 'Send/Stop') localized via `AppLocalizations`.

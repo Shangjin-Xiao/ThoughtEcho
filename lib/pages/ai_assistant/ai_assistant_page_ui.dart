@@ -621,6 +621,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                             ? theme.colorScheme.secondary
                             : theme.colorScheme.onSurfaceVariant,
                       ),
+                      tooltip: _enableThinking
+                          ? l10n.hideThinking
+                          : l10n.showThinking,
                       onPressed: _isLoading
                           ? null
                           : () {
@@ -640,6 +643,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                       _isLoading ? Icons.stop : Icons.arrow_upward,
                       size: 20,
                     ),
+                    tooltip: _isLoading ? l10n.stopGenerate : l10n.send,
                     onPressed: _isLoading
                         ? _stopGenerating
                         : () {
