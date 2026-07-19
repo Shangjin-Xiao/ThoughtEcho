@@ -1222,9 +1222,9 @@ class AIService extends ChangeNotifier {
 
   /// 高级流式对话方法 - SOTA 实时显示支持
   ///
-  /// 迁移到 OpenAIStreamService：使用 _streamViaOpenAI。
-  /// 注意：原方法返回 Stream<dynamic>，现在返回 Stream<String>，
-  /// 因为 OpenAIStreamService 只产生文本 chunk。
+  /// 迁移到 OpenAIStreamService：使用 `_streamViaOpenAI`。
+  /// 注意：原方法返回 `Stream<dynamic>`，现在返回 `Stream<String>`，
+  /// 因为 `OpenAIStreamService` 只产生文本 chunk。
   /// 调用方式不变（.listen 仍然工作，String 是 dynamic 的子类型）。
   Stream<dynamic> streamMessageChunks(
     String question, {
@@ -1324,7 +1324,7 @@ class AIService extends ChangeNotifier {
         try {
           // 限制消息长度为100字以内
           final truncated = firstUserMessage.length > 100
-              ? firstUserMessage.substring(0, 100) + '...'
+              ? '${firstUserMessage.substring(0, 100)}...'
               : firstUserMessage;
 
           final title = await _chatCompletionViaOpenAI(
@@ -1366,7 +1366,7 @@ class AIService extends ChangeNotifier {
 
       final maxLen = 20;
       final title = cleanMsg.length > maxLen
-          ? cleanMsg.substring(0, maxLen) + '...'
+          ? '${cleanMsg.substring(0, maxLen)}...'
           : cleanMsg;
       return title;
     } catch (e) {

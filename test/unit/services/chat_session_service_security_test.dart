@@ -2,9 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
 
-// ignore: depend_on_referenced_packages
-import 'package:sqflite_common/sqlite_api.dart';
-
 void main() {
   setUpAll(() {
     sqfliteFfiInit();
