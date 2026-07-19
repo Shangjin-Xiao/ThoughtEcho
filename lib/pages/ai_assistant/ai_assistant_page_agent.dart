@@ -220,7 +220,15 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       final response = await _agentService.runAgent(
         userMessage: text,
         history: history,
-        noteContext: _hasBoundNote ? widget.quote!.content : null,
+        noteContext: _hasBoundNote
+            ? AgentNoteContext(
+                noteId: _boundNoteId,
+                content: widget.quote!.content,
+                documentKind: ProposeNoteEditTool.kindForQuote(widget.quote!),
+                documentRevision:
+                    ProposeNoteEditTool.revisionForQuote(widget.quote!),
+              )
+            : null,
       );
 
       await eventSubscription.cancel();

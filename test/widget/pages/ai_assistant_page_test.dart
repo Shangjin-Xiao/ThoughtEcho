@@ -9,6 +9,7 @@ import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/chat_message.dart' as app_chat;
 import 'package:thoughtecho/models/chat_session.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
+import 'package:thoughtecho/models/note_proposal_artifact.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/ai_assistant_page.dart';
 import 'package:thoughtecho/services/agent_service.dart';
@@ -190,6 +191,7 @@ class _FakeAgentService extends AgentService {
   final String toolName;
   final String toolResult;
   final Object? error;
+  AgentNoteContext? lastNoteContext;
   bool _mockIsRunning = false;
   String _mockStatusKey = '';
   bool stopRequested = false;
@@ -244,9 +246,10 @@ class _FakeAgentService extends AgentService {
   Future<AgentResponse> runAgent({
     required String userMessage,
     List<app_chat.ChatMessage>? history,
-    String? noteContext,
+    AgentNoteContext? noteContext,
   }) async {
     runCount++;
+    lastNoteContext = noteContext;
     _setMockState(isRunning: true, statusKey: 'agentThinking');
 
     if (error != null) {
@@ -367,7 +370,7 @@ class _ControllableAgentService extends AgentService {
   Future<AgentResponse> runAgent({
     required String userMessage,
     List<app_chat.ChatMessage>? history,
-    String? noteContext,
+    AgentNoteContext? noteContext,
   }) {
     _mockIsRunning = true;
     notifyListeners();
@@ -543,6 +546,35 @@ void main() {
       expect(find.text(l10n.aiModeChat), findsNothing);
       expect(find.text(l10n.aiModeAgent), findsNothing);
       expect(find.textContaining(l10n.currentNoteContext), findsOneWidget);
+    });
+
+    testWidgets('note entry sends structured note identity to Agent',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+      );
+      await settingsService.setNoteAiAssistantMode(AIAssistantPageMode.agent);
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: AIAssistantPage(
+            entrySource: AIAssistantEntrySource.note,
+            quote: _buildQuote(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _submitInput(tester, '帮我找出表达不清楚的地方');
+
+      expect(agentService.runCount, 1);
+      expect(agentService.lastNoteContext?.noteId, 'note-1');
+      expect(agentService.lastNoteContext?.content, '今天的笔记内容');
+      expect(
+          agentService.lastNoteContext?.documentKind, NoteDocumentKind.plain);
+      expect(agentService.lastNoteContext?.documentRevision, isNotEmpty);
     });
 
     testWidgets(

@@ -21,6 +21,7 @@ import '../services/agent_service.dart'
     show
         AgentErrorEvent,
         AgentEvent,
+        AgentNoteContext,
         AgentReasoningDeltaEvent,
         AgentResponseEvent,
         AgentService,
