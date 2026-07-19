@@ -1,0 +1,19 @@
+test/integration/ai_service_integration_test.dart
+  s_635767a206a100::t_87f3d687cda978 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "44969fb4f5c67e9da79ed5872285c493423650d1",
+  "prompts": {},
+  "sessions": {
+    "s_635767a206a100": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7862-9533-7572-98a6-e9c1ff7352f4",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
