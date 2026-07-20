@@ -1,0 +1,30 @@
+android/app/build.gradle
+  s_7303a93311e654::t_964afb9456a95b 27-28,30-31,42-47
+  s_7303a93311e654::t_f847e1a16aecdb 32,34-37,40
+  s_7303a93311e654::t_a0f58966f7e581 38-39,41
+  s_7303a93311e654::t_1c04587beac20a 29,33
+  s_7303a93311e654::t_b4069768c38857 21-26,118,145
+.github/workflows/flutter-release-build.yml
+  s_7303a93311e654::t_28065cf0f76a44 84-85,87
+  s_7303a93311e654::t_6b40c8d0637cd4 86,106-107
+  s_7303a93311e654::t_b4069768c38857 56-62,64-68,70-83,88-105,108,110-112,115-116
+test/unit/android/file_provider_config_test.dart
+  s_7303a93311e654::t_94a5e03048854d 128-134,137,140-146,152-158
+  s_7303a93311e654::t_1c04587beac20a 135-136,138-139,147-151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "b0553a04da59653b9f66fbb3511c118d45dc6504",
+  "prompts": {},
+  "sessions": {
+    "s_7303a93311e654": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f7e7e-ba87-70b3-b503-68ee64777490",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
