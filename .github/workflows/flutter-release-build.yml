@@ -53,30 +53,67 @@ jobs:
           # 设置Java环境变量用于大内存构建
           echo "GRADLE_OPTS=-Xmx2g -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-opens=java.base/java.nio.charset=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED" >> $GITHUB_ENV
 
-      - name: 创建签名密钥
+      - name: 验证正式签名配置
+        env:
+          BUILD_MODE: ${{ github.event.inputs.build_mode || 'release' }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          # 移除可能的额外字符并解码
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\r' | sed 's/-----BEGIN CERTIFICATE-----//g' | sed 's/-----END CERTIFICATE-----//g' | base64 --decode > android/app/upload-keystore.jks
-          
-          # 验证JKS文件是否正确生成
-          if [ -s android/app/upload-keystore.jks ]; then
-            echo "密钥库文件成功创建"
-            ls -la android/app/upload-keystore.jks
-          else
-            echo "错误：密钥库文件为空或未创建，创建调试密钥库"
-            keytool -genkeypair -v -keystore android/app/upload-keystore.jks -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          set -euo pipefail
+
+          if [[ "$BUILD_MODE" == "debug" ]]; then
+            echo "Debug 构建使用 Android 默认调试签名"
+            exit 0
           fi
-          
-          # 创建key.properties文件
+
+          missing_secrets=()
+          for secret_name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_PASSWORD KEY_ALIAS; do
+            if [[ -z "${!secret_name:-}" ]]; then
+              missing_secrets+=("$secret_name")
+            fi
+          done
+          if (( ${#missing_secrets[@]} > 0 )); then
+            echo "错误：$BUILD_MODE 构建缺少正式签名配置：${missing_secrets[*]}" >&2
+            exit 1
+          fi
+
+          umask 077
+          keystore_path="android/app/upload-keystore.jks"
+          validation_dir="$(mktemp -d)"
+          validation_keystore="$validation_dir/validation.p12"
+          validation_password="$(head -c 24 /dev/urandom | base64 -w0)"
+          trap 'rm -f "$validation_keystore"; rmdir "$validation_dir"' EXIT
+
+          printf '%s' "$KEYSTORE_BASE64" | tr -d '\r\n' | base64 --decode > "$keystore_path"
+          if [[ ! -s "$keystore_path" ]]; then
+            echo "错误：正式签名密钥库为空" >&2
+            exit 1
+          fi
+
+          keytool -list \
+            -keystore "$keystore_path" \
+            -storepass "$KEYSTORE_PASSWORD" \
+            -alias "$KEY_ALIAS" >/dev/null
+          keytool -importkeystore -noprompt \
+            -srckeystore "$keystore_path" \
+            -srcstorepass "$KEYSTORE_PASSWORD" \
+            -srcalias "$KEY_ALIAS" \
+            -srckeypass "$KEY_PASSWORD" \
+            -destkeystore "$validation_keystore" \
+            -deststoretype PKCS12 \
+            -deststorepass "$validation_password" \
+            -destkeypass "$validation_password" >/dev/null
+
           cat > android/key.properties << EOF
-          storePassword=${{ secrets.KEYSTORE_PASSWORD || 'android' }}
-          keyPassword=${{ secrets.KEY_PASSWORD || 'android' }}
-          keyAlias=${{ secrets.KEY_ALIAS || 'androiddebugkey' }}
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
           storeFile=upload-keystore.jks
           EOF
-          
-          # 显示key.properties内容（不显示密码）
-          echo "key.properties文件已创建"
+
+          echo "正式签名配置验证通过"
 
       - name: 安装Flutter依赖
         run: |

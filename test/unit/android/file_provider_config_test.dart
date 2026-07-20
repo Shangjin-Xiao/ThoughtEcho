@@ -125,6 +125,37 @@ void main() {
       );
     });
 
+    test('requires configured release signing for non-debug artifacts', () {
+      final workflow = File(
+        '.github/workflows/flutter-release-build.yml',
+      ).readAsStringSync();
+      final buildGradle = File('android/app/build.gradle').readAsStringSync();
+
+      expect(workflow, contains('验证正式签名配置'));
+      expect(workflow, contains('set -euo pipefail'));
+      expect(workflow, contains('missing_secrets=()'));
+      expect(workflow, contains('keytool -list'));
+      expect(workflow, contains('keytool -importkeystore'));
+      expect(workflow, contains(r'-srckeypass "$KEY_PASSWORD"'));
+      expect(workflow, isNot(contains('keytool -genkeypair')));
+      expect(workflow, isNot(contains("KEYSTORE_PASSWORD || 'android'")));
+      expect(workflow, isNot(contains("KEY_PASSWORD || 'android'")));
+      expect(workflow, isNot(contains("KEY_ALIAS || 'androiddebugkey'")));
+
+      expect(buildGradle, isNot(contains('使用debug签名')));
+      expect(buildGradle, isNot(contains("keyAlias 'androiddebugkey'")));
+      expect(buildGradle, contains('hasReleaseSigningConfig'));
+      expect(
+        buildGradle,
+        contains('Release/profile builds require a complete '),
+      );
+      expect(
+        buildGradle,
+        contains('profile {\n            initWith debug\n'
+            '            signingConfig signingConfigs.release'),
+      );
+    });
+
     test('keeps MMKV native load failures from aborting startup', () {
       final application = File(
         'android/app/src/main/kotlin/com/shangjin/thoughtecho/ThoughtEchoApplication.kt',

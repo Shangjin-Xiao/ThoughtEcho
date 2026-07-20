@@ -18,6 +18,33 @@ def keystorePropertiesFile = rootProject.file('key.properties')
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
+def hasReleaseSigningConfig = [
+    'storeFile',
+    'storePassword',
+    'keyAlias',
+    'keyPassword'
+].every { keystoreProperties.containsKey(it) && keystoreProperties[it] }
+def releaseArtifactTaskRequested = gradle.startParameter.taskNames.any { task ->
+    def taskName = task.toLowerCase()
+    def simpleTaskName = taskName.tokenize(':').last()
+    def packagesArtifact = taskName.contains('assemble') ||
+        taskName.contains('bundle') ||
+        taskName.contains('package')
+    def packagesAllVariants = ['assemble', 'bundle', 'build'].contains(simpleTaskName)
+    def packagesTestOnly = taskName.contains('unittest') ||
+        taskName.contains('androidtest')
+    def packagesDebugOnly = taskName.contains('debug') &&
+        !taskName.contains('release') && !taskName.contains('profile')
+    def signsReleaseArtifact = taskName.contains('sign') &&
+        (taskName.contains('release') || taskName.contains('profile'))
+    packagesAllVariants || (packagesArtifact &&
+        !packagesTestOnly && !packagesDebugOnly) || signsReleaseArtifact
+}
+if (releaseArtifactTaskRequested && !hasReleaseSigningConfig) {
+    throw new GradleException(
+        'Release/profile builds require a complete android/key.properties signing configuration.'
+    )
+}
 
 
 def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
@@ -88,18 +115,11 @@ android {
 
     signingConfigs {
         release {
-            if (keystoreProperties.containsKey('storeFile')) {
+            if (hasReleaseSigningConfig) {
                 keyAlias keystoreProperties['keyAlias']
                 keyPassword keystoreProperties['keyPassword']
                 storeFile file(keystoreProperties['storeFile'])
                 storePassword keystoreProperties['storePassword']
-            } else {
-                // 如果没有找到签名配置，使用debug签名
-                println "警告: 未找到签名配置，将使用debug签名"
-                keyAlias 'androiddebugkey'
-                keyPassword 'android'
-                storeFile file('debug.keystore')
-                storePassword 'android'
             }
         }
     }
@@ -122,6 +142,7 @@ android {
         }
         profile {
             initWith debug
+            signingConfig signingConfigs.release
             applicationIdSuffix ".profile"
             debuggable false
         }
