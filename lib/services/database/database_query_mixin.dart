@@ -285,10 +285,6 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     // 优化：使用单一查询替代两步查询，减少数据库往返
     List<String> conditions = [];
     List<dynamic> args = [];
-    String fromClause = 'FROM quotes q';
-    String joinClause = '';
-    String groupByClause = '';
-    String havingClause = '';
 
     // 排除隐藏笔记（如果需要）
     if (excludeHiddenNotes) {
@@ -376,42 +372,52 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
 
     // 始终使用独立的 LEFT JOIN 来获取所有标签（不受筛选条件影响）
     // 优化：使用标量子查询替代 LEFT JOIN 和 GROUP BY，避免全表聚合开销
-    joinClause = '';
-    groupByClause = '';
-
-    final where =
-        conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
     final correctedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
 
-    /// 修复：始终使用 qt.tag_id 获取所有标签
-    // 优化：指定查询列，排除大文本字段(ai_analysis, summary等)以提升列表加载性能
-    // 注意：delta_content 必须保留！列表卡片通过 QuoteContent 组件渲染富文本（加粗、图片等）
-    // 性能提升：(SELECT GROUP_CONCAT(tag_id) ...) 仅对 LIMIT 返回的数据执行
-    final query = '''
-      SELECT
-        q.id, q.content, q.date, q.source, q.source_author, q.source_work,
-        q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
-        q.weather, q.temperature, q.edit_source, q.delta_content, q.day_period,
-        q.last_modified, q.favorite_count, q.is_deleted, q.deleted_at
-      $fromClause
-      $joinClause
-      $where
-      $groupByClause
-      $havingClause
-      ORDER BY $correctedOrderBy
-      LIMIT ? OFFSET ?
-    ''';
-
-    args.addAll([limit, offset]);
+    final whereStr = conditions.isNotEmpty ? conditions.join(' AND ') : null;
 
     if (kDebugMode) {
-      logDebug('执行优化查询: $query\n参数: [REDACTED]');
+      logDebug(
+          '执行优化查询: quotes q WHERE $whereStr ORDER BY $correctedOrderBy LIMIT $limit OFFSET $offset\n参数: [REDACTED]');
     }
 
     /// 修复：增强查询性能监控和慢查询检测
+    /// 修复：始终使用 qt.tag_id 获取所有标签
+    // 优化：指定查询列，排除大文本字段(ai_analysis, summary等)以提升列表加载性能
+    // 注意：delta_content 必须保留！列表卡片通过 QuoteContent 组件渲染富文本（加粗、图片等）
+    // 安全：避免使用 db.rawQuery 拼接 orderBy 引发潜在 SQL 注入
     final stopwatch = Stopwatch()..start();
-    final maps = await db.rawQuery(query, args);
+    final maps = await db.query(
+      'quotes q',
+      columns: [
+        'q.id',
+        'q.content',
+        'q.date',
+        'q.source',
+        'q.source_author',
+        'q.source_work',
+        'q.category_id',
+        'q.color_hex',
+        'q.location',
+        'q.latitude',
+        'q.longitude',
+        'q.weather',
+        'q.temperature',
+        'q.edit_source',
+        'q.delta_content',
+        'q.day_period',
+        'q.last_modified',
+        'q.favorite_count',
+        'q.is_deleted',
+        'q.deleted_at'
+      ],
+      where: whereStr,
+      whereArgs: args.isNotEmpty ? args : null,
+      orderBy: correctedOrderBy,
+      limit: limit,
+      offset: offset,
+    );
     stopwatch.stop();
 
     final queryTime = stopwatch.elapsedMilliseconds;
@@ -429,7 +435,8 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
       logDebug('$level: 查询耗时 ${queryTime}ms');
 
       if (queryTime > 500) {
-        logDebug('慢查询SQL: $query');
+        logDebug(
+            '慢查询SQL: quotes q WHERE $whereStr ORDER BY $correctedOrderBy LIMIT $limit OFFSET $offset');
         logDebug('查询参数: [REDACTED]');
       }
     }

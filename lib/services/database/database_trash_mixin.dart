@@ -109,15 +109,12 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
 
     final db = await safeDatabase;
     final sanitizedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
-    final maps = await db.rawQuery(
-      '''
-      SELECT q.*
-      FROM quotes q
-      WHERE q.is_deleted = 1
-      ORDER BY $sanitizedOrderBy
-      LIMIT ? OFFSET ?
-      ''',
-      [limit, offset],
+    final maps = await db.query(
+      'quotes q',
+      where: 'q.is_deleted = 1',
+      orderBy: sanitizedOrderBy,
+      limit: limit,
+      offset: offset,
     );
 
     if (maps.isEmpty) return [];
