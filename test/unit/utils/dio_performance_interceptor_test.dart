@@ -114,6 +114,7 @@ void main() {
       final err = DioException(
           requestOptions: options,
           error: "Connection timeout",
+          message: "Connection timeout",
           response: Response(requestOptions: options, statusCode: 500));
       final handler = FakeErrorInterceptorHandler();
 
