@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
 /// Tool调用状态
 enum ToolCallStatus {
@@ -315,7 +316,7 @@ class _ToolCallProgressCardState extends State<ToolCallProgressCard>
                           child: ElevatedButton.icon(
                             onPressed: widget.onRetry,
                             icon: const Icon(Icons.refresh, size: 18),
-                            label: const Text('重试'),
+                            label: Text(AppLocalizations.of(context).retry),
                           ),
                         ),
                     ],

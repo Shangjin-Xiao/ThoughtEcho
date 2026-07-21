@@ -48,3 +48,6 @@
 **发现:** 在 `lib/widgets/ai/slash_commands_menu.dart` 中发现了硬编码的中文提示语：`'可用命令'` 和 `'输入 / 查看命令'`
 **规则:**
 - 采用极简风格进行国际化翻译，分别新增 `availableCommands` 和 `typeSlashToSeeCommands` 到所有 `app_*.arb` 语言包中。
+## 2026-07-20 - [提取 tool_call_card.dart 重试按钮硬编码]
+**发现:** 在 lib/widgets/ai/tool_call_card.dart 中存在硬编码 '重试'
+**规则:** 采用极简风格翻译，复用已存在的 `retry` 键值。
