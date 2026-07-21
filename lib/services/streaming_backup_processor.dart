@@ -111,9 +111,8 @@ class StreamingBackupProcessor {
         throw Exception('备份文件中未找到数据文件 (backup_data.json 或 data.json)');
       }
 
-      final map =
-          json.decode(utf8.decode(dataFile.content as List<int>))
-              as Map<String, dynamic>;
+      final map = json.decode(utf8.decode(dataFile.content as List<int>))
+          as Map<String, dynamic>;
 
       if (extractMediaFiles) {
         for (final file in archive) {
@@ -260,9 +259,7 @@ class StreamingBackupProcessor {
   static bool _zipContainsBackupData(String filePath) {
     final inputStream = InputFileStream(filePath);
     try {
-      return ZipDecoder()
-          .decodeStream(inputStream)
-          .any(
+      return ZipDecoder().decodeStream(inputStream).any(
             (file) =>
                 file.name == 'backup_data.json' || file.name == 'data.json',
           );
