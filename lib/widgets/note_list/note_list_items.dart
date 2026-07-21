@@ -1323,8 +1323,8 @@ class _NoteDeleteCollapseState extends State<_NoteDeleteCollapse>
       opacity: reverseAnimation,
       child: SizeTransition(
         sizeFactor: reverseAnimation,
-        axisAlignment:
-            -1.0, // Equivalant to Alignment.topCenter for SizeTransition
+        // axisAlignment defaults to 0.0 (center), which gives the equivalent cross-axis
+        // centering behavior as the original Alignment.topCenter did.
         child: widget.child,
       ),
     );
