@@ -37,7 +37,9 @@ class StreamingBackupProcessor {
     onStatusUpdate?.call('正在后台解析JSON数据...');
 
     try {
-      final result = await Isolate.run(() => _decodeJsonFile(filePath));
+      final result = await Isolate.run(
+        () async => await _decodeJsonFile(filePath),
+      );
       if (shouldCancel?.call() == true) {
         throw Exception('操作已取消');
       }
@@ -47,8 +49,8 @@ class StreamingBackupProcessor {
     }
   }
 
-  static Map<String, dynamic> _decodeJsonFile(String filePath) {
-    return json.decode(File(filePath).readAsStringSync())
+  static Future<Map<String, dynamic>> _decodeJsonFile(String filePath) async {
+    return json.decode(await File(filePath).readAsString())
         as Map<String, dynamic>;
   }
 
@@ -80,11 +82,7 @@ class StreamingBackupProcessor {
         ? (await getApplicationDocumentsDirectory()).path
         : '';
     final map = await Isolate.run(
-      () => _decodeZipBackup(
-        filePath,
-        appDirectoryPath,
-        extractMediaFiles,
-      ),
+      () => _decodeZipBackup(filePath, appDirectoryPath, extractMediaFiles),
     );
 
     if (shouldCancel?.call() == true) {
@@ -113,8 +111,9 @@ class StreamingBackupProcessor {
         throw Exception('备份文件中未找到数据文件 (backup_data.json 或 data.json)');
       }
 
-      final map = json.decode(utf8.decode(dataFile.content as List<int>))
-          as Map<String, dynamic>;
+      final map =
+          json.decode(utf8.decode(dataFile.content as List<int>))
+              as Map<String, dynamic>;
 
       if (extractMediaFiles) {
         for (final file in archive) {
@@ -222,7 +221,9 @@ class StreamingBackupProcessor {
         final fileSize = await file.length();
         if (fileSize < 10 * 1024 * 1024) {
           // 10MB以下直接验证
-          final isValid = await Isolate.run(() => _isValidJsonBackup(filePath));
+          final isValid = await Isolate.run(
+            () async => await _isValidJsonBackup(filePath),
+          );
           logDebug('JSON备份文件验证${isValid ? '成功' : '失败'}');
           return isValid;
         } else {
@@ -251,15 +252,17 @@ class StreamingBackupProcessor {
     }
   }
 
-  static bool _isValidJsonBackup(String filePath) {
-    return json.decode(File(filePath).readAsStringSync())
+  static Future<bool> _isValidJsonBackup(String filePath) async {
+    return json.decode(await File(filePath).readAsString())
         is Map<String, dynamic>;
   }
 
   static bool _zipContainsBackupData(String filePath) {
     final inputStream = InputFileStream(filePath);
     try {
-      return ZipDecoder().decodeStream(inputStream).any(
+      return ZipDecoder()
+          .decodeStream(inputStream)
+          .any(
             (file) =>
                 file.name == 'backup_data.json' || file.name == 'data.json',
           );
