@@ -588,8 +588,8 @@ class NoteListViewState extends State<NoteListView> {
       }
 
       // 判断是否仅为排序变化（不影响列表内容，只影响顺序）
-      final bool isOnlySortChange =
-          oldWidget.searchQuery == widget.searchQuery &&
+      final bool isOnlySortChange = oldWidget.searchQuery ==
+              widget.searchQuery &&
           _areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) &&
           _areListsEqual(oldWidget.selectedWeathers, widget.selectedWeathers) &&
           _areListsEqual(
@@ -799,14 +799,12 @@ class NoteListViewState extends State<NoteListView> {
       if (_initialDataCompleter == null) {
         const maxWaitMs = 500;
         const stepMs = 50;
-        for (
-          var waited = 0;
-          waited < maxWaitMs &&
-              mounted &&
-              !_initialDataLoaded &&
-              _initialDataCompleter == null;
-          waited += stepMs
-        ) {
+        for (var waited = 0;
+            waited < maxWaitMs &&
+                mounted &&
+                !_initialDataLoaded &&
+                _initialDataCompleter == null;
+            waited += stepMs) {
           await Future<void>.delayed(const Duration(milliseconds: stepMs));
         }
       }
