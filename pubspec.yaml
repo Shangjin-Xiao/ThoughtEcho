@@ -16,7 +16,7 @@ dependencies:
   cupertino_icons: ^1.0.6
   provider: ^6.1.5+1
   sqflite: ^2.3.2
-  sqflite_common_ffi: ^2.3.2
+  sqflite_common_ffi: ^2.4.0+3
   sqlite3_flutter_libs: ^0.5.40
   path: ^1.8.3
   path_provider: ^2.1.2
