@@ -233,9 +233,11 @@ class SchemaDataBackfillAdapter {
         var migratedCount = 0;
         final batch = transaction.batch();
         for (final entry in labelToKey.entries) {
-          batch.rawUpdate(
-            'UPDATE quotes SET day_period = ? WHERE day_period = ?',
-            <Object?>[entry.value, entry.key],
+          batch.update(
+            'quotes',
+            {'day_period': entry.value},
+            where: 'day_period = ?',
+            whereArgs: [entry.key],
           );
         }
         final results = await batch.commit();
@@ -303,9 +305,11 @@ class SchemaDataBackfillAdapter {
         var migratedCount = 0;
         final batch = transaction.batch();
         for (final entry in WeatherService.legacyWeatherKeyToLabel.entries) {
-          batch.rawUpdate(
-            'UPDATE quotes SET weather = ? WHERE weather = ?',
-            <Object?>[entry.key, entry.value],
+          batch.update(
+            'quotes',
+            {'weather': entry.key},
+            where: 'weather = ?',
+            whereArgs: [entry.value],
           );
         }
         final results = await batch.commit();
