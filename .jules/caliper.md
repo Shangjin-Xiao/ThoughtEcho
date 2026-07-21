@@ -44,3 +44,6 @@
 ## 2026-07-14 - 补充 ExpiringCache 的测试
 **盲点:** removeExpired 方法的非过期情况、混合情况以及边界条件未经过测试验证。
 **对策:** 添加非过期、混合和边界情况的测试，保证缓存过期逻辑完全可靠。
+## 2026-07-21 - [补充 AICommandHelpers 的测试]
+**盲点:** `AICommandHelpers` 包含多个核心静态工具类（如 `WebCommandHelper`, `NoteQueryHelper`, `SessionMessageHelper`），负责 AI 助手命令的解析、URL提取、笔记查询参数组装以及工具调用系统消息的生成。这些纯函数由于一直缺乏单元测试覆盖，在调整正则规则或修改字典格式时极易引发 Agent 行为静默异常。
+**对策:** 通过编写隔离测试，覆盖了各工具类方法的输入边界条件。对于 `WebCommandHelper` 验证了多种前缀和自然语言的 URL 提取；对于 `NoteQueryHelper` 验证了 Agent 查询参数的构建和对缺省参数的安全回退；对于 `SessionMessageHelper` 验证了基于 JSON 的工具消息的可靠生成。测试代码同样保持极简且快速执行。
