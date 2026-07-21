@@ -231,11 +231,16 @@ class SchemaDataBackfillAdapter {
           (key, label) => MapEntry(label, key),
         );
         var migratedCount = 0;
+        final batch = transaction.batch();
         for (final entry in labelToKey.entries) {
-          migratedCount += await transaction.rawUpdate(
+          batch.rawUpdate(
             'UPDATE quotes SET day_period = ? WHERE day_period = ?',
             <Object?>[entry.value, entry.key],
           );
+        }
+        final results = await batch.commit();
+        for (final result in results) {
+          migratedCount += (result as int?) ?? 0;
         }
         if (migratedCount == 0) {
           logDebug('没有需要迁移 dayPeriod 字段的记录');
@@ -296,11 +301,16 @@ class SchemaDataBackfillAdapter {
         );
 
         var migratedCount = 0;
+        final batch = transaction.batch();
         for (final entry in WeatherService.legacyWeatherKeyToLabel.entries) {
-          migratedCount += await transaction.rawUpdate(
+          batch.rawUpdate(
             'UPDATE quotes SET weather = ? WHERE weather = ?',
             <Object?>[entry.key, entry.value],
           );
+        }
+        final results = await batch.commit();
+        for (final result in results) {
+          migratedCount += (result as int?) ?? 0;
         }
         if (migratedCount == 0) {
           logDebug('没有需要迁移 weather 字段的记录');
