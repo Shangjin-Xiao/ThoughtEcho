@@ -282,6 +282,11 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     return _instance!;
   }
 
+  @visibleForTesting
+  static set instanceForTesting(UnifiedLogService service) {
+    _instance = service;
+  }
+
   /// 创建统一日志服务实例
   UnifiedLogService._();
 
