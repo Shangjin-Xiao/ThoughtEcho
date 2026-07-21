@@ -137,14 +137,18 @@ class NoteListViewState extends State<NoteListView> {
   final Map<String, int> _animatingQuoteVersions = {};
   final Set<String> _structuralInsertQuoteIds = {};
   final Map<String, Timer> _animationTimers = {};
-  static const Duration _noteInsertAnimationDuration =
-      Duration(milliseconds: 250);
-  static const Duration _noteUpdateAnimationCleanupDelay =
-      Duration(milliseconds: 300);
-  static const Duration _pendingInsertAnimationCleanupDelay =
-      Duration(milliseconds: 1500);
-  static const Duration _noteDeleteAnimationDuration =
-      Duration(milliseconds: 250);
+  static const Duration _noteInsertAnimationDuration = Duration(
+    milliseconds: 250,
+  );
+  static const Duration _noteUpdateAnimationCleanupDelay = Duration(
+    milliseconds: 300,
+  );
+  static const Duration _pendingInsertAnimationCleanupDelay = Duration(
+    milliseconds: 1500,
+  );
+  static const Duration _noteDeleteAnimationDuration = Duration(
+    milliseconds: 250,
+  );
 
   static String _normalizeSearchQuery(String query) {
     return query.trim();
@@ -584,8 +588,8 @@ class NoteListViewState extends State<NoteListView> {
       }
 
       // 判断是否仅为排序变化（不影响列表内容，只影响顺序）
-      final bool isOnlySortChange = oldWidget.searchQuery ==
-              widget.searchQuery &&
+      final bool isOnlySortChange =
+          oldWidget.searchQuery == widget.searchQuery &&
           _areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) &&
           _areListsEqual(oldWidget.selectedWeathers, widget.selectedWeathers) &&
           _areListsEqual(
@@ -597,10 +601,12 @@ class NoteListViewState extends State<NoteListView> {
 
       // 搜索 query 变化时也保留滚动位置，避免删字时列表跳回顶部加剧闪烁感。
       // stream callback 会校验 offset 是否仍在 maxScrollExtent 范围内。
-      final oldEffectiveQuery =
-          NoteListViewState._normalizeSearchQuery(oldWidget.searchQuery);
-      final newEffectiveQuery =
-          NoteListViewState._normalizeSearchQuery(widget.searchQuery);
+      final oldEffectiveQuery = NoteListViewState._normalizeSearchQuery(
+        oldWidget.searchQuery,
+      );
+      final newEffectiveQuery = NoteListViewState._normalizeSearchQuery(
+        widget.searchQuery,
+      );
       final bool isSearchChange = oldEffectiveQuery != newEffectiveQuery;
       final bool shouldAnimateSearchTransition =
           oldEffectiveQuery.isNotEmpty && newEffectiveQuery.isNotEmpty;
@@ -793,12 +799,14 @@ class NoteListViewState extends State<NoteListView> {
       if (_initialDataCompleter == null) {
         const maxWaitMs = 500;
         const stepMs = 50;
-        for (var waited = 0;
-            waited < maxWaitMs &&
-                mounted &&
-                !_initialDataLoaded &&
-                _initialDataCompleter == null;
-            waited += stepMs) {
+        for (
+          var waited = 0;
+          waited < maxWaitMs &&
+              mounted &&
+              !_initialDataLoaded &&
+              _initialDataCompleter == null;
+          waited += stepMs
+        ) {
           await Future<void>.delayed(const Duration(milliseconds: stepMs));
         }
       }
@@ -807,9 +815,7 @@ class NoteListViewState extends State<NoteListView> {
       if (!_initialDataLoaded && completer != null && !completer.isCompleted) {
         try {
           // 超时后返回 false，由 home_page 的重试机制（250ms 间隔）重新尝试。
-          await completer.future.timeout(
-            const Duration(seconds: 5),
-          );
+          await completer.future.timeout(const Duration(seconds: 5));
         } on TimeoutException {
           logDebug(
             'scrollToQuoteById 超时（数据流尚未就绪），将由调用方重试',
@@ -888,17 +894,21 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   void _pruneExpansionControllers() {
-    final activeIds =
-        _quotes.map((quote) => quote.id).whereType<String>().toSet();
-
-    final removableIds = _expansionNotifiers.keys
-        .where((id) => !activeIds.contains(id))
-        .toList();
-
-    for (final id in removableIds) {
-      _expansionNotifiers.remove(id)?.dispose();
-      _expandedItems.remove(id);
+    final activeIds = <String>{};
+    for (final quote in _quotes) {
+      if (quote.id != null) {
+        activeIds.add(quote.id!);
+      }
     }
+
+    _expansionNotifiers.removeWhere((id, notifier) {
+      if (!activeIds.contains(id)) {
+        notifier.dispose();
+        _expandedItems.remove(id);
+        return true;
+      }
+      return false;
+    });
   }
 
   @override
