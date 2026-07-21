@@ -241,7 +241,10 @@ class DatabaseSchemaDefinitions {
       throw ArgumentError.value(
           tableName, 'tableName', 'Unsupported schema table');
     }
-    final tableInfo = await executor.rawQuery('PRAGMA table_info($tableName)');
+    final tableInfo = await executor.rawQuery(
+      'SELECT * FROM pragma_table_info(?)',
+      [tableName],
+    );
     return tableInfo.map((column) => column['name'] as String).toSet();
   }
 }
