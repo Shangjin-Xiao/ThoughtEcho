@@ -201,6 +201,7 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear, size: 18),
+                        tooltip: l10n.clear,
                         onPressed: () {
                           _searchController.clear();
                           setState(() {
