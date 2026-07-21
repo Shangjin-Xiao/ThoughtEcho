@@ -252,7 +252,6 @@ class StreamingBackupProcessor {
   }
 
   static Future<bool> _isValidJsonBackup(String filePath) async {
-    // 异步读取避免阻塞底层文件 I/O 与线程池
     return json.decode(await File(filePath).readAsString())
         is Map<String, dynamic>;
   }

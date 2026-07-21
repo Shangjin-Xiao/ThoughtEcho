@@ -132,7 +132,7 @@ void main() {
     });
 
     test("URL length is truncated if too long", () async {
-      final longPath = "/" + "a" * 100;
+      final longPath = "/${'a' * 100}";
       final options = RequestOptions(path: longPath);
       options.extra["request_start_time"] =
           DateTime.now().millisecondsSinceEpoch - 4000;
@@ -145,7 +145,7 @@ void main() {
       final logMessage = fakeLogService.logRecords.first["message"] as String;
 
       // Expected length: 77 + 3 ("...") = 80 characters from the path
-      final truncatedPath = longPath.substring(0, 77) + "...";
+      final truncatedPath = "${longPath.substring(0, 77)}...";
       expect(logMessage, contains(truncatedPath));
       expect(logMessage.contains(longPath), isFalse);
     });
