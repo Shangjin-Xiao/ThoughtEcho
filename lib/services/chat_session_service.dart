@@ -437,6 +437,10 @@ class ChatSessionService extends ChangeNotifier {
     );
   }
 
+  String _escapeIdentifier(String identifier) {
+    return identifier.replaceAll('"', '""');
+  }
+
   @visibleForTesting
   Future<void> addColumnIfMissing(
     DatabaseExecutor db, {
@@ -463,9 +467,14 @@ class ChatSessionService extends ChangeNotifier {
         await db.rawQuery('SELECT * FROM pragma_table_info(?)', [tableName]);
     final hasColumn = columns.any((column) => column['name'] == columnName);
     if (!hasColumn) {
-      await db.execute(
-        'ALTER TABLE $tableName ADD COLUMN $columnName $definition',
-      );
+      final safeTableName = _escapeIdentifier(tableName);
+      final safeColumnName = _escapeIdentifier(columnName);
+
+      // DDL queries (ALTER TABLE) cannot use parameter bindings in sqlite.
+      // Double quoting identifiers and replacing internal double quotes prevents injection.
+      final query =
+          'ALTER TABLE "$safeTableName" ADD COLUMN "$safeColumnName" $definition';
+      await db.execute(query);
     }
   }
 
