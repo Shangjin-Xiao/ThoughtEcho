@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import '../utils/app_logger.dart';
 import '../utils/mmkv_ffi_fix.dart';
 
 /// 功能引导服务
@@ -13,8 +14,8 @@ class FeatureGuideService extends ChangeNotifier {
   bool hasShown(String guideId) {
     try {
       return _storage.getBool('$_keyPrefix$guideId') ?? false;
-    } catch (e) {
-      debugPrint('读取引导状态失败: $e');
+    } catch (e, stackTrace) {
+      logError('读取引导状态失败', error: e, stackTrace: stackTrace, source: 'FeatureGuideService');
       return false;
     }
   }
@@ -25,8 +26,8 @@ class FeatureGuideService extends ChangeNotifier {
       await _storage.setBool('$_keyPrefix$guideId', true);
       notifyListeners();
       debugPrint('功能引导已标记: $guideId');
-    } catch (e) {
-      debugPrint('保存引导状态失败: $e');
+    } catch (e, stackTrace) {
+      logError('保存引导状态失败', error: e, stackTrace: stackTrace, source: 'FeatureGuideService');
     }
   }
 
@@ -36,8 +37,8 @@ class FeatureGuideService extends ChangeNotifier {
       await _storage.remove('$_keyPrefix$guideId');
       notifyListeners();
       debugPrint('功能引导已重置: $guideId');
-    } catch (e) {
-      debugPrint('重置引导状态失败: $e');
+    } catch (e, stackTrace) {
+      logError('重置引导状态失败', error: e, stackTrace: stackTrace, source: 'FeatureGuideService');
     }
   }
 
@@ -52,8 +53,8 @@ class FeatureGuideService extends ChangeNotifier {
       }
       notifyListeners();
       debugPrint('所有功能引导已重置');
-    } catch (e) {
-      debugPrint('重置所有引导失败: $e');
+    } catch (e, stackTrace) {
+      logError('重置所有引导失败', error: e, stackTrace: stackTrace, source: 'FeatureGuideService');
     }
   }
 
@@ -65,8 +66,8 @@ class FeatureGuideService extends ChangeNotifier {
           .where((key) => key.startsWith(_keyPrefix))
           .map((key) => key.substring(_keyPrefix.length))
           .toList();
-    } catch (e) {
-      debugPrint('获取已显示引导列表失败: $e');
+    } catch (e, stackTrace) {
+      logError('获取已显示引导列表失败', error: e, stackTrace: stackTrace, source: 'FeatureGuideService');
       return [];
     }
   }

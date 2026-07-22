@@ -39,3 +39,6 @@
 ## 2025-05-18 - 🗃️ 黑匣: [完善 MediaCleanupService 模块的结构化日志]
 **异常:** [MediaCleanupService 模块在初始化、清理、迁移和统计媒体文件等任务发生错误时，仅使用了 `logDebug` 进行粗糙的字符串拼接打印。这不仅掩盖了底层 `FileSystemException` 或 `StateError` 等导致错误的真实原因，还丢失了完整的异常堆栈轨迹 (stackTrace)，导致排查本地文件系统的读写异常极其困难。]
 **拦截:** [已将上述所有流程中的 `catch (e)` 替换为结构化的 `catch (e, stackTrace)`，并使用 `AppLogger.e` 进行记录。注入了描述信息、具体的错误对象 `error: e`、堆栈轨迹 `stackTrace: stackTrace`，并指定了明确的日志来源模块 `source: 'MediaCleanupService'`。确认所有的错误记录仅涉及本地存储系统与数据库交互时的 IO/状态异常，未记录任何用户笔记的正文或凭证数据。]
+## 2025-10-25 - 🗃️ 黑匣: [完善 FeatureGuideService 模块的结构化日志]
+**异常:** [MMKV读取/写入抛出异常且只使用了粗糙的debugPrint记录，丢失了错误栈与模块上下文]
+**拦截:** [使用 catch (e, stackTrace) 和 logError 封装 MMKV 异常，附带 error, stackTrace 和 source: 'FeatureGuideService' 参数，保存完整的堆栈上下文信息。]
