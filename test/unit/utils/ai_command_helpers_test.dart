@@ -40,7 +40,9 @@ void main() {
   });
 
   group('NoteQueryHelper', () {
-    test('createSearchNotesToolParams should build correct map with provided parameters and default limit', () {
+    test(
+        'createSearchNotesToolParams should build correct map with provided parameters and default limit',
+        () {
       final dateStart = DateTime(2023, 1, 1);
       final params = NoteQueryHelper.createSearchNotesToolParams(
         query: 'test',
@@ -56,7 +58,9 @@ void main() {
       expect(params['limit'], 10);
     });
 
-    test('formatNotesForAgent should format note map properly with default mapping rules', () {
+    test(
+        'formatNotesForAgent should format note map properly with default mapping rules',
+        () {
       final notes = [
         {
           'id': 'note1',
@@ -103,7 +107,9 @@ void main() {
   });
 
   group('SessionMessageHelper', () {
-    test('createToolCallIndicatorMessage should create valid assistant message with JSON metadata', () {
+    test(
+        'createToolCallIndicatorMessage should create valid assistant message with JSON metadata',
+        () {
       final msg = SessionMessageHelper.createToolCallIndicatorMessage(
         toolName: 'search_notes',
         parameters: {'query': 'test'},
@@ -119,7 +125,9 @@ void main() {
       expect(meta['parameters']['query'], 'test');
     });
 
-    test('createToolResultMessage should create successful tool-result content and metadata without error flag', () {
+    test(
+        'createToolResultMessage should create successful tool-result content and metadata without error flag',
+        () {
       final msg = SessionMessageHelper.createToolResultMessage(
         toolName: 'search_notes',
         result: 'found 2 notes',
@@ -136,7 +144,9 @@ void main() {
       expect(meta['is_error'], isFalse);
     });
 
-    test('createToolResultMessage should create error tool-result content and metadata with error flag', () {
+    test(
+        'createToolResultMessage should create error tool-result content and metadata with error flag',
+        () {
       final msg = SessionMessageHelper.createToolResultMessage(
         toolName: 'search_notes',
         result: 'timeout',
