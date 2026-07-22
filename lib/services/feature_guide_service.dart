@@ -15,7 +15,8 @@ class FeatureGuideService extends ChangeNotifier {
     try {
       return _storage.getBool('$_keyPrefix$guideId') ?? false;
     } catch (e, stackTrace) {
-      logError('读取引导状态失败', error: e, stackTrace: stackTrace, source: 'FeatureGuideService');
+      logError('读取引导状态失败',
+          error: e, stackTrace: stackTrace, source: 'FeatureGuideService');
       return false;
     }
   }
@@ -27,7 +28,8 @@ class FeatureGuideService extends ChangeNotifier {
       notifyListeners();
       debugPrint('功能引导已标记: $guideId');
     } catch (e, stackTrace) {
-      logError('保存引导状态失败', error: e, stackTrace: stackTrace, source: 'FeatureGuideService');
+      logError('保存引导状态失败',
+          error: e, stackTrace: stackTrace, source: 'FeatureGuideService');
     }
   }
 
@@ -38,7 +40,8 @@ class FeatureGuideService extends ChangeNotifier {
       notifyListeners();
       debugPrint('功能引导已重置: $guideId');
     } catch (e, stackTrace) {
-      logError('重置引导状态失败', error: e, stackTrace: stackTrace, source: 'FeatureGuideService');
+      logError('重置引导状态失败',
+          error: e, stackTrace: stackTrace, source: 'FeatureGuideService');
     }
   }
 
@@ -54,7 +57,8 @@ class FeatureGuideService extends ChangeNotifier {
       notifyListeners();
       debugPrint('所有功能引导已重置');
     } catch (e, stackTrace) {
-      logError('重置所有引导失败', error: e, stackTrace: stackTrace, source: 'FeatureGuideService');
+      logError('重置所有引导失败',
+          error: e, stackTrace: stackTrace, source: 'FeatureGuideService');
     }
   }
 
@@ -67,7 +71,8 @@ class FeatureGuideService extends ChangeNotifier {
           .map((key) => key.substring(_keyPrefix.length))
           .toList();
     } catch (e, stackTrace) {
-      logError('获取已显示引导列表失败', error: e, stackTrace: stackTrace, source: 'FeatureGuideService');
+      logError('获取已显示引导列表失败',
+          error: e, stackTrace: stackTrace, source: 'FeatureGuideService');
       return [];
     }
   }
