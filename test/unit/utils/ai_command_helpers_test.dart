@@ -33,14 +33,14 @@ void main() {
       expect(
           WebCommandHelper.extractUrlFromNaturalLanguage(
               'Check https://example.com/path?q=1.'),
-          'https://example.com/path?q=1.');
+          'https://example.com/path?q=1');
       expect(WebCommandHelper.extractUrlFromNaturalLanguage('No url here'),
           isNull);
     });
   });
 
   group('NoteQueryHelper', () {
-    test('createSearchNotesToolParams should build correct map', () {
+    test('createSearchNotesToolParams should build correct map with provided parameters and default limit', () {
       final dateStart = DateTime(2023, 1, 1);
       final params = NoteQueryHelper.createSearchNotesToolParams(
         query: 'test',
@@ -56,7 +56,7 @@ void main() {
       expect(params['limit'], 10);
     });
 
-    test('formatNotesForAgent should format note map properly', () {
+    test('formatNotesForAgent should format note map properly with default mapping rules', () {
       final notes = [
         {
           'id': 'note1',
@@ -103,7 +103,7 @@ void main() {
   });
 
   group('SessionMessageHelper', () {
-    test('createToolCallIndicatorMessage should create valid message', () {
+    test('createToolCallIndicatorMessage should create valid assistant message with JSON metadata', () {
       final msg = SessionMessageHelper.createToolCallIndicatorMessage(
         toolName: 'search_notes',
         parameters: {'query': 'test'},
@@ -119,7 +119,7 @@ void main() {
       expect(meta['parameters']['query'], 'test');
     });
 
-    test('createToolResultMessage should create valid message on success', () {
+    test('createToolResultMessage should create successful tool-result content and metadata without error flag', () {
       final msg = SessionMessageHelper.createToolResultMessage(
         toolName: 'search_notes',
         result: 'found 2 notes',
@@ -136,7 +136,7 @@ void main() {
       expect(meta['is_error'], isFalse);
     });
 
-    test('createToolResultMessage should create valid message on error', () {
+    test('createToolResultMessage should create error tool-result content and metadata with error flag', () {
       final msg = SessionMessageHelper.createToolResultMessage(
         toolName: 'search_notes',
         result: 'timeout',

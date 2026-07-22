@@ -234,7 +234,7 @@ class WebCommandHelper {
     if (match != null) {
       final url = match.group(0) ?? '';
       // 移除末尾的常见标点符号
-      return url.replaceAll(RegExp(r'[,。!！?？;；:：）)]*$'), '').trim();
+      return url.replaceAll(RegExp(r'[.,。!！?？;；:：）)]*$'), '').trim();
     }
     return null;
   }
