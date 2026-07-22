@@ -62,8 +62,8 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   late List<String> _tempSelectedTagIds;
   late String _tempSortType;
   late bool _tempSortAscending;
-  late List<String> _tempSelectedWeathers;
-  late List<String> _tempSelectedDayPeriods;
+  late Set<String> _tempSelectedWeathers;
+  late Set<String> _tempSelectedDayPeriods;
 
   // 性能优化：缓存常用数据
   late final List<String> _weatherCategories;
@@ -84,11 +84,11 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
     _tempSortType = widget.sortType;
     _tempSortAscending = widget.sortAscending;
     _tempSelectedWeathers = widget.selectedWeathers != null
-        ? List.from(widget.selectedWeathers!)
-        : <String>[];
+        ? Set.from(widget.selectedWeathers!)
+        : <String>{};
     _tempSelectedDayPeriods = widget.selectedDayPeriods != null
-        ? List.from(widget.selectedDayPeriods!)
-        : <String>[];
+        ? Set.from(widget.selectedDayPeriods!)
+        : <String>{};
 
     // 性能优化：预计算常用数据和缓存映射
     _weatherCategories = WeatherService.filterCategoryToKeys.keys.toList();
@@ -202,8 +202,8 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                               _tempSelectedTagIds,
                               _tempSortType,
                               _tempSortAscending,
-                              _tempSelectedWeathers,
-                              _tempSelectedDayPeriods,
+                              _tempSelectedWeathers.toList(),
+                              _tempSelectedDayPeriods.toList(),
                             );
                             Navigator.pop(context);
                           }
@@ -530,10 +530,13 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
     return !_areListsEqual(_tempSelectedTagIds, widget.selectedTagIds) ||
         _tempSortType != widget.sortType ||
         _tempSortAscending != widget.sortAscending ||
-        !_areListsEqual(_tempSelectedWeathers, widget.selectedWeathers ?? []) ||
-        !_areListsEqual(
+        !_areSetsEqual(
+          _tempSelectedWeathers,
+          widget.selectedWeathers?.toSet() ?? {},
+        ) ||
+        !_areSetsEqual(
           _tempSelectedDayPeriods,
-          widget.selectedDayPeriods ?? [],
+          widget.selectedDayPeriods?.toSet() ?? {},
         );
   }
 
@@ -544,5 +547,11 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
       if (list1[i] != list2[i]) return false;
     }
     return true;
+  }
+
+  /// 优化：辅助方法：比较两个集合是否相等
+  bool _areSetsEqual(Set<String> set1, Set<String> set2) {
+    if (set1.length != set2.length) return false;
+    return set1.containsAll(set2);
   }
 }
