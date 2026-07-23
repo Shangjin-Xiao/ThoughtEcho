@@ -1037,8 +1037,19 @@ class SettingsService extends ChangeNotifier {
     // 无条件清除明文密钥（Fail-Secure机制）
     // 从内存和 MMKV 中清除
     _aiSettings = _aiSettings.copyWith(apiKey: '');
-    final clearedJsonString = json.encode(_aiSettings.toJson());
-    await _mmkv.setString(_aiSettingsKey, clearedJsonString);
+
+    // 移除 apiKey 字段（不仅是设为空字符串，而是彻底删除）
+    final Map<String, dynamic> settingsMap = _aiSettings.toJson();
+    settingsMap.remove('apiKey');
+    final clearedJsonString = json.encode(settingsMap);
+
+    // 写入 MMKV 增加 try-catch，防止抛错阻断 SharedPreferences 清理
+    try {
+      await _mmkv.setString(_aiSettingsKey, clearedJsonString);
+      logDebug('Legacy plaintext API key cleared from MMKV.');
+    } catch (e) {
+      logDebug('Failed to clear legacy API key from MMKV: $e');
+    }
 
     // 彻底：同时从 SharedPreferences 中彻底清除
     try {
