@@ -463,9 +463,8 @@ class SettingsService extends ChangeNotifier {
   // 默认导出格式配置
   String get exportFormat => _appSettings.exportFormat;
   Future<void> setExportFormat(String format) async {
-    final validatedFormat = const ['card', 'pdf'].contains(format)
-        ? format
-        : 'card';
+    final validatedFormat =
+        const ['card', 'pdf'].contains(format) ? format : 'card';
     _appSettings = _appSettings.copyWith(exportFormat: validatedFormat);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
