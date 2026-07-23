@@ -122,10 +122,7 @@ class SettingsService extends ChangeNotifier {
   String? get trashRetentionLastModified =>
       _appSettings.trashRetentionLastModified;
 
-  Future<void> setTrashRetentionDays(
-    int days, {
-    DateTime? modifiedAt,
-  }) async {
+  Future<void> setTrashRetentionDays(int days, {DateTime? modifiedAt}) async {
     final normalizedDays = AppSettings.normalizeTrashRetentionDays(days);
     final modified = (modifiedAt ?? DateTime.now()).toUtc().toIso8601String();
     _appSettings = _appSettings.copyWith(
@@ -153,10 +150,7 @@ class SettingsService extends ChangeNotifier {
       parsedDays = rawDays;
     } else if (rawDays is num) {
       if (rawDays != rawDays.toInt()) {
-        logWarning(
-          '忽略非整数的回收站保留期: $rawDays',
-          source: 'SettingsService',
-        );
+        logWarning('忽略非整数的回收站保留期: $rawDays', source: 'SettingsService');
         return false;
       }
       parsedDays = rawDays.toInt();
@@ -169,10 +163,7 @@ class SettingsService extends ChangeNotifier {
     }
 
     if (!AppSettings.allowedTrashRetentionDays.contains(parsedDays)) {
-      logWarning(
-        '忽略非法的回收站保留期: $parsedDays',
-        source: 'SettingsService',
-      );
+      logWarning('忽略非法的回收站保留期: $parsedDays', source: 'SettingsService');
       return false;
     }
 
@@ -187,8 +178,9 @@ class SettingsService extends ChangeNotifier {
         );
         return false;
       }
-      normalizedIncomingTimestamp =
-          LWWUtils.normalizeTimestamp(incomingLastModified);
+      normalizedIncomingTimestamp = LWWUtils.normalizeTimestamp(
+        incomingLastModified,
+      );
     } else {
       // 输入无时间戳：只有本地也无时间戳时才接受（直接赋值），否则跳过
       final localLastModified = _appSettings.trashRetentionLastModified;
@@ -201,7 +193,9 @@ class SettingsService extends ChangeNotifier {
       // 本地也无时间戳 → 直接接受输入值，不设置时间戳
       _appSettings = _appSettings.copyWith(trashRetentionDays: incomingDays);
       await _mmkv.setString(
-          _appSettingsKey, json.encode(_appSettings.toJson()));
+        _appSettingsKey,
+        json.encode(_appSettings.toJson()),
+      );
       notifyListeners();
       return true;
     }
@@ -295,8 +289,9 @@ class SettingsService extends ChangeNotifier {
   bool get enableFirstOpenScrollPerfMonitor =>
       _appSettings.enableFirstOpenScrollPerfMonitor;
   Future<void> setEnableFirstOpenScrollPerfMonitor(bool enabled) async {
-    _appSettings =
-        _appSettings.copyWith(enableFirstOpenScrollPerfMonitor: enabled);
+    _appSettings = _appSettings.copyWith(
+      enableFirstOpenScrollPerfMonitor: enabled,
+    );
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }
@@ -331,8 +326,9 @@ class SettingsService extends ChangeNotifier {
   bool get addNoteDialogDeferAutoMetadata =>
       _appSettings.addNoteDialogDeferAutoMetadata;
   Future<void> setAddNoteDialogDeferAutoMetadata(bool enabled) async {
-    _appSettings =
-        _appSettings.copyWith(addNoteDialogDeferAutoMetadata: enabled);
+    _appSettings = _appSettings.copyWith(
+      addNoteDialogDeferAutoMetadata: enabled,
+    );
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }
@@ -467,8 +463,9 @@ class SettingsService extends ChangeNotifier {
   // 默认导出格式配置
   String get exportFormat => _appSettings.exportFormat;
   Future<void> setExportFormat(String format) async {
-    final validatedFormat =
-        const ['card', 'pdf'].contains(format) ? format : 'card';
+    final validatedFormat = const ['card', 'pdf'].contains(format)
+        ? format
+        : 'card';
     _appSettings = _appSettings.copyWith(exportFormat: validatedFormat);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
@@ -990,7 +987,7 @@ class SettingsService extends ChangeNotifier {
           final Map<String, dynamic> settingsMap = json.decode(legacyJson);
           if (settingsMap['apiKey'] != null &&
               settingsMap['apiKey'].toString().isNotEmpty) {
-            settingsMap['apiKey'] = '';
+            settingsMap.remove('apiKey');
             await _prefs.setString(_aiSettingsKey, json.encode(settingsMap));
             logDebug('Cleared residual legacy API key from SharedPreferences.');
           }
@@ -998,8 +995,6 @@ class SettingsService extends ChangeNotifier {
       } catch (_) {}
       return;
     }
-
-    bool shouldClear = false;
 
     // 确定要迁移到的服务商 ID，如果没有选中则回退到 openai 或 default
     String? providerId = _multiAISettings.currentProviderId;
@@ -1013,7 +1008,8 @@ class SettingsService extends ChangeNotifier {
         providerId = nonDefault.isNotEmpty ? nonDefault.first.id : 'openai';
       }
       logDebug(
-          'No current provider selected. Defaulting migration to provider: $providerId');
+        'No current provider selected. Defaulting migration to provider: $providerId',
+      );
     }
 
     final apiKeyManager = APIKeyManager();
@@ -1026,43 +1022,36 @@ class SettingsService extends ChangeNotifier {
 
       if (hasSecureKey) {
         // 安全存储中已有密钥，遗留的明文密钥是冗余的，可以直接清除
-        shouldClear = true;
         logDebug('Found redundant plaintext API key in AISettings. Clearing.');
       } else {
         // 安全存储中没有密钥，尝试迁移
-        await apiKeyManager.saveProviderApiKey(
-          providerId,
-          _aiSettings.apiKey,
-        );
-        shouldClear = true;
+        await apiKeyManager.saveProviderApiKey(providerId, _aiSettings.apiKey);
         logDebug(
           'Migrated legacy plaintext API key to SecureStorage for provider: $providerId',
         );
       }
     } catch (e) {
       logDebug('Error securing legacy API key: $e');
-      // 即使出错，如果是格式错误等不可恢复的错误，为了安全也应该考虑清除，但这里暂保持保守，出错时不清除，避免数据丢失
-      // 除非我们能确定错误类型
+      // 即使出错，也会继续执行清除操作，以保证 fail-secure (安全失败)
     }
 
-    if (shouldClear) {
-      // 从内存和 MMKV 中清除
-      _aiSettings = _aiSettings.copyWith(apiKey: '');
-      final clearedJsonString = json.encode(_aiSettings.toJson());
-      await _mmkv.setString(_aiSettingsKey, clearedJsonString);
+    // 无条件清除明文密钥（Fail-Secure机制）
+    // 从内存和 MMKV 中清除
+    _aiSettings = _aiSettings.copyWith(apiKey: '');
+    final clearedJsonString = json.encode(_aiSettings.toJson());
+    await _mmkv.setString(_aiSettingsKey, clearedJsonString);
 
-      // 彻底：同时从 SharedPreferences 中彻底清除
-      try {
-        // 更新或删除 _prefs 中的 _aiSettingsKey 以彻底消灭明文密钥
-        await _prefs.setString(_aiSettingsKey, clearedJsonString);
-        logDebug(
-            'Legacy plaintext API key also cleared from SharedPreferences.');
-      } catch (e) {
-        logDebug('Failed to clear legacy API key from SharedPreferences: $e');
-      }
-
-      logDebug(
-          'Legacy plaintext API key completely cleared from AISettings storage layers.');
+    // 彻底：同时从 SharedPreferences 中彻底清除
+    try {
+      // 更新或删除 _prefs 中的 _aiSettingsKey 以彻底消灭明文密钥
+      await _prefs.setString(_aiSettingsKey, clearedJsonString);
+      logDebug('Legacy plaintext API key also cleared from SharedPreferences.');
+    } catch (e) {
+      logDebug('Failed to clear legacy API key from SharedPreferences: $e');
     }
+
+    logDebug(
+      'Legacy plaintext API key completely cleared from AISettings storage layers.',
+    );
   }
 }
