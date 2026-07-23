@@ -11,6 +11,8 @@ import 'app_logger.dart';
 /// 支持实时内存监控和压力管理
 class DeviceMemoryManager {
   static final DeviceMemoryManager _instance = DeviceMemoryManager._internal();
+  @visibleForTesting
+  DeviceMemoryManager.forTesting();
   factory DeviceMemoryManager() => _instance;
   DeviceMemoryManager._internal();
 
