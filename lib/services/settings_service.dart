@@ -1043,10 +1043,16 @@ class SettingsService extends ChangeNotifier {
     settingsMap.remove('apiKey');
     final clearedJsonString = json.encode(settingsMap);
 
-    // 写入 MMKV 增加 try-catch，防止抛错阻断 SharedPreferences 清理
+    // 写入 MMKV 增加 try-catch 和结果校验，防止失败或静默失败阻断 SharedPreferences 清理
     try {
-      await _mmkv.setString(_aiSettingsKey, clearedJsonString);
-      logDebug('Legacy plaintext API key cleared from MMKV.');
+      final success = await _mmkv.setString(_aiSettingsKey, clearedJsonString);
+      if (success) {
+        logDebug('Legacy plaintext API key cleared from MMKV.');
+      } else {
+        logDebug(
+            'MMKV setString returned false. Retrying removal via remove().');
+        await _mmkv.remove(_aiSettingsKey);
+      }
     } catch (e) {
       logDebug('Failed to clear legacy API key from MMKV: $e');
     }
