@@ -14,15 +14,7 @@ import 'add_note_controller_test.mocks.dart';
 class FakeBuildContext extends Fake implements BuildContext {}
 
 @GenerateMocks(
-  [LocationService, DatabaseService],
-)
-@GenerateMocks(
-  [],
-  customMocks: [
-    MockSpec<WeatherService>(
-      onMissingStub: OnMissingStub.returnDefault,
-    )
-  ],
+  [LocationService, WeatherService, DatabaseService],
 )
 void main() {
   late MockLocationService mockLocationService;
@@ -154,8 +146,10 @@ void main() {
     });
 
     test('when fetch succeeds', () async {
+      bool fetchEmptyCalled = false;
       final c = AddNoteController(
         context: FakeBuildContext(),
+        onWeatherFetchEmpty: () => fetchEmptyCalled = true,
       )..updateServices(
           locService: mockLocationService, weaService: mockWeatherService);
 
@@ -169,6 +163,7 @@ void main() {
 
       verify(mockWeatherService.getWeatherData(30.0, 40.0)).called(1);
       expect(c.isFetchingWeather, isFalse);
+      expect(fetchEmptyCalled, isFalse);
     });
   });
 

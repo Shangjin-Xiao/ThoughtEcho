@@ -1,0 +1,43 @@
+<<<<<<< SEARCH
+    test('when fetch succeeds', () async {
+      bool fetchEmptyCalled = false;
+      final c = AddNoteController(
+        context: FakeBuildContext(),
+        onWeatherFetchEmpty: () => fetchEmptyCalled = true,
+      )..updateServices(
+          locService: mockLocationService, weaService: mockWeatherService);
+
+      c.setNewLocationData('Loc', 30.0, 40.0);
+
+      when(mockWeatherService.getWeatherData(30.0, 40.0))
+          .thenAnswer((_) async {});
+      when(mockWeatherService.hasData).thenReturn(true);
+
+      await c.fetchWeatherForNewNote();
+
+      verify(mockWeatherService.getWeatherData(30.0, 40.0)).called(1);
+      expect(c.isFetchingWeather, isFalse);
+      expect(fetchEmptyCalled, isFalse);
+    });
+=======
+    test('when fetch succeeds', () async {
+      bool fetchEmptyCalled = false;
+      final c = AddNoteController(
+        context: FakeBuildContext(),
+        onWeatherFetchEmpty: () => fetchEmptyCalled = true,
+      )..updateServices(
+          locService: mockLocationService, weaService: mockWeatherService);
+
+      c.setNewLocationData('Loc', 30.0, 40.0);
+
+      when(mockWeatherService.getWeatherData(30.0, 40.0))
+          .thenAnswer((_) async {});
+      when(mockWeatherService.hasData).thenReturn(true);
+
+      await c.fetchWeatherForNewNote();
+
+      verify(mockWeatherService.getWeatherData(30.0, 40.0)).called(1);
+      expect(c.isFetchingWeather, isFalse);
+      expect(fetchEmptyCalled, isFalse);
+    });
+>>>>>>> REPLACE

@@ -6,19 +6,19 @@
 import 'dart:async' as _i6;
 import 'dart:ui' as _i9;
 
-import 'package:flutter/material.dart' as _i4;
+import 'package:flutter/material.dart' as _i2;
 import 'package:geolocator/geolocator.dart' as _i7;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i8;
-import 'package:sqflite/sqflite.dart' as _i2;
-import 'package:thoughtecho/gen_l10n/app_localizations.dart' as _i15;
-import 'package:thoughtecho/models/merge_report.dart' as _i3;
-import 'package:thoughtecho/models/note_category.dart' as _i12;
-import 'package:thoughtecho/models/quote_model.dart' as _i11;
-import 'package:thoughtecho/services/database_service.dart' as _i10;
+import 'package:sqflite/sqflite.dart' as _i3;
+import 'package:thoughtecho/gen_l10n/app_localizations.dart' as _i12;
+import 'package:thoughtecho/models/merge_report.dart' as _i4;
+import 'package:thoughtecho/models/note_category.dart' as _i15;
+import 'package:thoughtecho/models/quote_model.dart' as _i14;
+import 'package:thoughtecho/services/database_service.dart' as _i13;
 import 'package:thoughtecho/services/location_service.dart' as _i5;
-import 'package:thoughtecho/services/weather_cache_manager.dart' as _i14;
-import 'package:thoughtecho/services/weather_service.dart' as _i13;
+import 'package:thoughtecho/services/weather_cache_manager.dart' as _i11;
+import 'package:thoughtecho/services/weather_service.dart' as _i10;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -35,8 +35,8 @@ import 'package:thoughtecho/services/weather_service.dart' as _i13;
 // ignore_for_file: subtype_of_sealed_class
 // ignore_for_file: invalid_use_of_internal_member
 
-class _FakeDatabase_0 extends _i1.SmartFake implements _i2.Database {
-  _FakeDatabase_0(
+class _FakeIconData_0 extends _i1.SmartFake implements _i2.IconData {
+  _FakeIconData_0(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -45,8 +45,8 @@ class _FakeDatabase_0 extends _i1.SmartFake implements _i2.Database {
         );
 }
 
-class _FakeMergeReport_1 extends _i1.SmartFake implements _i3.MergeReport {
-  _FakeMergeReport_1(
+class _FakeDatabase_1 extends _i1.SmartFake implements _i3.Database {
+  _FakeDatabase_1(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -55,8 +55,8 @@ class _FakeMergeReport_1 extends _i1.SmartFake implements _i3.MergeReport {
         );
 }
 
-class _FakeIconData_2 extends _i1.SmartFake implements _i4.IconData {
-  _FakeIconData_2(
+class _FakeMergeReport_2 extends _i1.SmartFake implements _i4.MergeReport {
+  _FakeMergeReport_2(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -358,10 +358,203 @@ class MockLocationService extends _i1.Mock implements _i5.LocationService {
       );
 }
 
+/// A class which mocks [WeatherService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockWeatherService extends _i1.Mock implements _i10.WeatherService {
+  MockWeatherService() {
+    _i1.throwOnMissingStub(this);
+  }
+
+  @override
+  _i10.WeatherServiceState get state => (super.noSuchMethod(
+        Invocation.getter(#state),
+        returnValue: _i10.WeatherServiceState.idle,
+      ) as _i10.WeatherServiceState);
+
+  @override
+  bool get isLoading => (super.noSuchMethod(
+        Invocation.getter(#isLoading),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  bool get hasData => (super.noSuchMethod(
+        Invocation.getter(#hasData),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  bool get hasValidWeatherData => (super.noSuchMethod(
+        Invocation.getter(#hasValidWeatherData),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  set cacheManagerForTesting(_i11.WeatherCacheManager? manager) =>
+      super.noSuchMethod(
+        Invocation.setter(
+          #cacheManagerForTesting,
+          manager,
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  bool get hasListeners => (super.noSuchMethod(
+        Invocation.getter(#hasListeners),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  _i6.Future<void> getWeatherData(
+    double? latitude,
+    double? longitude, {
+    bool? forceRefresh = false,
+    Duration? timeout,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getWeatherData,
+          [
+            latitude,
+            longitude,
+          ],
+          {
+            #forceRefresh: forceRefresh,
+            #timeout: timeout,
+          },
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> refreshWeather(
+    double? latitude,
+    double? longitude,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #refreshWeather,
+          [
+            latitude,
+            longitude,
+          ],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  void resetWeatherState() => super.noSuchMethod(
+        Invocation.method(
+          #resetWeatherState,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  String getFormattedWeather(_i12.AppLocalizations? l10n) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getFormattedWeather,
+          [l10n],
+        ),
+        returnValue: _i8.dummyValue<String>(
+          this,
+          Invocation.method(
+            #getFormattedWeather,
+            [l10n],
+          ),
+        ),
+      ) as String);
+
+  @override
+  _i2.IconData getWeatherIconData() => (super.noSuchMethod(
+        Invocation.method(
+          #getWeatherIconData,
+          [],
+        ),
+        returnValue: _FakeIconData_0(
+          this,
+          Invocation.method(
+            #getWeatherIconData,
+            [],
+          ),
+        ),
+      ) as _i2.IconData);
+
+  @override
+  _i6.Future<Map<String, dynamic>?> getCacheInfo() => (super.noSuchMethod(
+        Invocation.method(
+          #getCacheInfo,
+          [],
+        ),
+        returnValue: _i6.Future<Map<String, dynamic>?>.value(),
+      ) as _i6.Future<Map<String, dynamic>?>);
+
+  @override
+  _i6.Future<void> clearCache() => (super.noSuchMethod(
+        Invocation.method(
+          #clearCache,
+          [],
+        ),
+        returnValue: _i6.Future<void>.value(),
+        returnValueForMissingStub: _i6.Future<void>.value(),
+      ) as _i6.Future<void>);
+
+  @override
+  void setMockWeatherData() => super.noSuchMethod(
+        Invocation.method(
+          #setMockWeatherData,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void addListener(_i9.VoidCallback? listener) => super.noSuchMethod(
+        Invocation.method(
+          #addListener,
+          [listener],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void removeListener(_i9.VoidCallback? listener) => super.noSuchMethod(
+        Invocation.method(
+          #removeListener,
+          [listener],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void dispose() => super.noSuchMethod(
+        Invocation.method(
+          #dispose,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void notifyListeners() => super.noSuchMethod(
+        Invocation.method(
+          #notifyListeners,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+}
+
 /// A class which mocks [DatabaseService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
+class MockDatabaseService extends _i1.Mock implements _i13.DatabaseService {
   MockDatabaseService() {
     _i1.throwOnMissingStub(this);
   }
@@ -379,22 +572,22 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
       ) as bool);
 
   @override
-  _i2.Database get database => (super.noSuchMethod(
+  _i3.Database get database => (super.noSuchMethod(
         Invocation.getter(#database),
-        returnValue: _FakeDatabase_0(
+        returnValue: _FakeDatabase_1(
           this,
           Invocation.getter(#database),
         ),
-      ) as _i2.Database);
+      ) as _i3.Database);
 
   @override
-  _i6.Future<_i2.Database> get safeDatabase => (super.noSuchMethod(
+  _i6.Future<_i3.Database> get safeDatabase => (super.noSuchMethod(
         Invocation.getter(#safeDatabase),
-        returnValue: _i6.Future<_i2.Database>.value(_FakeDatabase_0(
+        returnValue: _i6.Future<_i3.Database>.value(_FakeDatabase_1(
           this,
           Invocation.getter(#safeDatabase),
         )),
-      ) as _i6.Future<_i2.Database>);
+      ) as _i6.Future<_i3.Database>);
 
   @override
   set onLocalDataChanged(_i9.VoidCallback? value) => super.noSuchMethod(
@@ -412,7 +605,7 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
       ) as bool);
 
   @override
-  _i6.Future<void> addQuote(_i11.Quote? quote) => (super.noSuchMethod(
+  _i6.Future<void> addQuote(_i14.Quote? quote) => (super.noSuchMethod(
         Invocation.method(
           #addQuote,
           [quote],
@@ -422,7 +615,7 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<_i11.Quote?> getQuoteById(
+  _i6.Future<_i14.Quote?> getQuoteById(
     String? id, {
     bool? includeDeleted = false,
   }) =>
@@ -432,11 +625,11 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
           [id],
           {#includeDeleted: includeDeleted},
         ),
-        returnValue: _i6.Future<_i11.Quote?>.value(),
-      ) as _i6.Future<_i11.Quote?>);
+        returnValue: _i6.Future<_i14.Quote?>.value(),
+      ) as _i6.Future<_i14.Quote?>);
 
   @override
-  _i6.Future<List<_i11.Quote>> getAllQuotes({
+  _i6.Future<List<_i14.Quote>> getAllQuotes({
     bool? excludeHiddenNotes = true,
     bool? includeDeleted = false,
   }) =>
@@ -449,11 +642,11 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
             #includeDeleted: includeDeleted,
           },
         ),
-        returnValue: _i6.Future<List<_i11.Quote>>.value(<_i11.Quote>[]),
-      ) as _i6.Future<List<_i11.Quote>>);
+        returnValue: _i6.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
+      ) as _i6.Future<List<_i14.Quote>>);
 
   @override
-  _i6.Future<List<_i11.Quote>> getQuotesForPeriod(
+  _i6.Future<List<_i14.Quote>> getQuotesForPeriod(
     DateTime? start,
     DateTime? end, {
     bool? excludeHiddenNotes = true,
@@ -471,8 +664,8 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
             #includeDeleted: includeDeleted,
           },
         ),
-        returnValue: _i6.Future<List<_i11.Quote>>.value(<_i11.Quote>[]),
-      ) as _i6.Future<List<_i11.Quote>>);
+        returnValue: _i6.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
+      ) as _i6.Future<List<_i14.Quote>>);
 
   @override
   _i6.Future<void> deleteQuote(String? id) => (super.noSuchMethod(
@@ -485,7 +678,7 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<List<_i11.Quote>> searchQuotesByContent(
+  _i6.Future<List<_i14.Quote>> searchQuotesByContent(
     String? query, {
     bool? includeDeleted = false,
   }) =>
@@ -495,19 +688,19 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
           [query],
           {#includeDeleted: includeDeleted},
         ),
-        returnValue: _i6.Future<List<_i11.Quote>>.value(<_i11.Quote>[]),
-      ) as _i6.Future<List<_i11.Quote>>);
+        returnValue: _i6.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
+      ) as _i6.Future<List<_i14.Quote>>);
 
   @override
-  _i6.Future<_i10.QuoteUpdateResult> updateQuote(_i11.Quote? quote) =>
+  _i6.Future<_i13.QuoteUpdateResult> updateQuote(_i14.Quote? quote) =>
       (super.noSuchMethod(
         Invocation.method(
           #updateQuote,
           [quote],
         ),
-        returnValue: _i6.Future<_i10.QuoteUpdateResult>.value(
-            _i10.QuoteUpdateResult.updated),
-      ) as _i6.Future<_i10.QuoteUpdateResult>);
+        returnValue: _i6.Future<_i13.QuoteUpdateResult>.value(
+            _i13.QuoteUpdateResult.updated),
+      ) as _i6.Future<_i13.QuoteUpdateResult>);
 
   @override
   _i6.Future<int> batchUpdatePendingLocations({
@@ -527,7 +720,7 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
       ) as _i6.Future<int>);
 
   @override
-  _i6.Future<List<_i11.Quote>> getUserQuotes({
+  _i6.Future<List<_i14.Quote>> getUserQuotes({
     List<String>? tagIds,
     String? categoryId,
     int? offset = 0,
@@ -560,11 +753,11 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
             #includeDeleted: includeDeleted,
           },
         ),
-        returnValue: _i6.Future<List<_i11.Quote>>.value(<_i11.Quote>[]),
-      ) as _i6.Future<List<_i11.Quote>>);
+        returnValue: _i6.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
+      ) as _i6.Future<List<_i14.Quote>>);
 
   @override
-  _i6.Future<List<_i11.Quote>> getQuotesForSmartPush({
+  _i6.Future<List<_i14.Quote>> getQuotesForSmartPush({
     int? limit = 200,
     String? orderBy = 'q.date DESC',
     bool? includeDeleted = false,
@@ -579,8 +772,8 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
             #includeDeleted: includeDeleted,
           },
         ),
-        returnValue: _i6.Future<List<_i11.Quote>>.value(<_i11.Quote>[]),
-      ) as _i6.Future<List<_i11.Quote>>);
+        returnValue: _i6.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
+      ) as _i6.Future<List<_i14.Quote>>);
 
   @override
   _i6.Future<int> getQuotesCount({
@@ -614,7 +807,7 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
       ) as _i6.Future<int>);
 
   @override
-  _i6.Future<List<_i11.Quote>> getDeletedQuotes({
+  _i6.Future<List<_i14.Quote>> getDeletedQuotes({
     int? offset = 0,
     int? limit = 20,
     String? orderBy = 'deleted_at DESC',
@@ -629,8 +822,8 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
             #orderBy: orderBy,
           },
         ),
-        returnValue: _i6.Future<List<_i11.Quote>>.value(<_i11.Quote>[]),
-      ) as _i6.Future<List<_i11.Quote>>);
+        returnValue: _i6.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
+      ) as _i6.Future<List<_i14.Quote>>);
 
   @override
   _i6.Future<int> getDeletedQuotesCount() => (super.noSuchMethod(
@@ -715,7 +908,7 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<List<_i11.Quote>> getMostFavoritedQuotesThisWeek(
+  _i6.Future<List<_i14.Quote>> getMostFavoritedQuotesThisWeek(
           {int? limit = 5}) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -723,8 +916,8 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
           [],
           {#limit: limit},
         ),
-        returnValue: _i6.Future<List<_i11.Quote>>.value(<_i11.Quote>[]),
-      ) as _i6.Future<List<_i11.Quote>>);
+        returnValue: _i6.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
+      ) as _i6.Future<List<_i14.Quote>>);
 
   @override
   _i6.Future<List<Map<String, dynamic>>> getAllCategories() =>
@@ -738,14 +931,14 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
       ) as _i6.Future<List<Map<String, dynamic>>>);
 
   @override
-  _i6.Future<List<_i12.NoteCategory>> getCategories() => (super.noSuchMethod(
+  _i6.Future<List<_i15.NoteCategory>> getCategories() => (super.noSuchMethod(
         Invocation.method(
           #getCategories,
           [],
         ),
         returnValue:
-            _i6.Future<List<_i12.NoteCategory>>.value(<_i12.NoteCategory>[]),
-      ) as _i6.Future<List<_i12.NoteCategory>>);
+            _i6.Future<List<_i15.NoteCategory>>.value(<_i15.NoteCategory>[]),
+      ) as _i6.Future<List<_i15.NoteCategory>>);
 
   @override
   _i6.Future<void> addCategory(
@@ -782,13 +975,13 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Stream<List<_i12.NoteCategory>> watchCategories() => (super.noSuchMethod(
+  _i6.Stream<List<_i15.NoteCategory>> watchCategories() => (super.noSuchMethod(
         Invocation.method(
           #watchCategories,
           [],
         ),
-        returnValue: _i6.Stream<List<_i12.NoteCategory>>.empty(),
-      ) as _i6.Stream<List<_i12.NoteCategory>>);
+        returnValue: _i6.Stream<List<_i15.NoteCategory>>.empty(),
+      ) as _i6.Stream<List<_i15.NoteCategory>>);
 
   @override
   _i6.Future<void> deleteCategory(String? id) => (super.noSuchMethod(
@@ -820,14 +1013,14 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<_i12.NoteCategory?> getCategoryById(String? id) =>
+  _i6.Future<_i15.NoteCategory?> getCategoryById(String? id) =>
       (super.noSuchMethod(
         Invocation.method(
           #getCategoryById,
           [id],
         ),
-        returnValue: _i6.Future<_i12.NoteCategory?>.value(),
-      ) as _i6.Future<_i12.NoteCategory?>);
+        returnValue: _i6.Future<_i15.NoteCategory?>.value(),
+      ) as _i6.Future<_i15.NoteCategory?>);
 
   @override
   _i6.Future<void> initDefaultHitokotoCategories() => (super.noSuchMethod(
@@ -840,13 +1033,13 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
       ) as _i6.Future<void>);
 
   @override
-  _i6.Future<_i12.NoteCategory?> getOrCreateHiddenTag() => (super.noSuchMethod(
+  _i6.Future<_i15.NoteCategory?> getOrCreateHiddenTag() => (super.noSuchMethod(
         Invocation.method(
           #getOrCreateHiddenTag,
           [],
         ),
-        returnValue: _i6.Future<_i12.NoteCategory?>.value(),
-      ) as _i6.Future<_i12.NoteCategory?>);
+        returnValue: _i6.Future<_i15.NoteCategory?>.value(),
+      ) as _i6.Future<_i15.NoteCategory?>);
 
   @override
   bool isHiddenTag(String? tagId) => (super.noSuchMethod(
@@ -895,7 +1088,7 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
       );
 
   @override
-  _i6.Stream<List<_i11.Quote>> watchQuotes({
+  _i6.Stream<List<_i14.Quote>> watchQuotes({
     List<String>? tagIds,
     String? categoryId,
     int? limit = 20,
@@ -920,8 +1113,8 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
             #includeDeleted: includeDeleted,
           },
         ),
-        returnValue: _i6.Stream<List<_i11.Quote>>.empty(),
-      ) as _i6.Stream<List<_i11.Quote>>);
+        returnValue: _i6.Stream<List<_i14.Quote>>.empty(),
+      ) as _i6.Stream<List<_i14.Quote>>);
 
   @override
   _i6.Future<void> loadMoreQuotes({
@@ -998,7 +1191,7 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
       ) as _i6.Future<bool>);
 
   @override
-  _i6.Future<_i3.MergeReport> importDataWithLWWMerge(
+  _i6.Future<_i4.MergeReport> importDataWithLWWMerge(
     Map<String, dynamic>? data, {
     String? sourceDevice,
   }) =>
@@ -1008,7 +1201,7 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
           [data],
           {#sourceDevice: sourceDevice},
         ),
-        returnValue: _i6.Future<_i3.MergeReport>.value(_FakeMergeReport_1(
+        returnValue: _i6.Future<_i4.MergeReport>.value(_FakeMergeReport_2(
           this,
           Invocation.method(
             #importDataWithLWWMerge,
@@ -1016,7 +1209,7 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
             {#sourceDevice: sourceDevice},
           ),
         )),
-      ) as _i6.Future<_i3.MergeReport>);
+      ) as _i6.Future<_i4.MergeReport>);
 
   @override
   _i6.Future<void> patchQuotesDayPeriod() => (super.noSuchMethod(
@@ -1270,215 +1463,6 @@ class MockDatabaseService extends _i1.Mock implements _i10.DatabaseService {
         Invocation.method(
           #removeListener,
           [listener],
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
-  void notifyListeners() => super.noSuchMethod(
-        Invocation.method(
-          #notifyListeners,
-          [],
-        ),
-        returnValueForMissingStub: null,
-      );
-}
-
-/// A class which mocks [WeatherService].
-///
-/// See the documentation for Mockito's code generation for more information.
-class MockWeatherService extends _i1.Mock implements _i13.WeatherService {
-  @override
-  _i13.WeatherServiceState get state => (super.noSuchMethod(
-        Invocation.getter(#state),
-        returnValue: _i13.WeatherServiceState.idle,
-        returnValueForMissingStub: _i13.WeatherServiceState.idle,
-      ) as _i13.WeatherServiceState);
-
-  @override
-  bool get isLoading => (super.noSuchMethod(
-        Invocation.getter(#isLoading),
-        returnValue: false,
-        returnValueForMissingStub: false,
-      ) as bool);
-
-  @override
-  bool get hasData => (super.noSuchMethod(
-        Invocation.getter(#hasData),
-        returnValue: false,
-        returnValueForMissingStub: false,
-      ) as bool);
-
-  @override
-  bool get hasValidWeatherData => (super.noSuchMethod(
-        Invocation.getter(#hasValidWeatherData),
-        returnValue: false,
-        returnValueForMissingStub: false,
-      ) as bool);
-
-  @override
-  set cacheManagerForTesting(_i14.WeatherCacheManager? manager) =>
-      super.noSuchMethod(
-        Invocation.setter(
-          #cacheManagerForTesting,
-          manager,
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
-  bool get hasListeners => (super.noSuchMethod(
-        Invocation.getter(#hasListeners),
-        returnValue: false,
-        returnValueForMissingStub: false,
-      ) as bool);
-
-  @override
-  _i6.Future<void> getWeatherData(
-    double? latitude,
-    double? longitude, {
-    bool? forceRefresh = false,
-    Duration? timeout,
-  }) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #getWeatherData,
-          [
-            latitude,
-            longitude,
-          ],
-          {
-            #forceRefresh: forceRefresh,
-            #timeout: timeout,
-          },
-        ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
-
-  @override
-  _i6.Future<void> refreshWeather(
-    double? latitude,
-    double? longitude,
-  ) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #refreshWeather,
-          [
-            latitude,
-            longitude,
-          ],
-        ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
-
-  @override
-  void resetWeatherState() => super.noSuchMethod(
-        Invocation.method(
-          #resetWeatherState,
-          [],
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
-  String getFormattedWeather(_i15.AppLocalizations? l10n) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #getFormattedWeather,
-          [l10n],
-        ),
-        returnValue: _i8.dummyValue<String>(
-          this,
-          Invocation.method(
-            #getFormattedWeather,
-            [l10n],
-          ),
-        ),
-        returnValueForMissingStub: _i8.dummyValue<String>(
-          this,
-          Invocation.method(
-            #getFormattedWeather,
-            [l10n],
-          ),
-        ),
-      ) as String);
-
-  @override
-  _i4.IconData getWeatherIconData() => (super.noSuchMethod(
-        Invocation.method(
-          #getWeatherIconData,
-          [],
-        ),
-        returnValue: _FakeIconData_2(
-          this,
-          Invocation.method(
-            #getWeatherIconData,
-            [],
-          ),
-        ),
-        returnValueForMissingStub: _FakeIconData_2(
-          this,
-          Invocation.method(
-            #getWeatherIconData,
-            [],
-          ),
-        ),
-      ) as _i4.IconData);
-
-  @override
-  _i6.Future<Map<String, dynamic>?> getCacheInfo() => (super.noSuchMethod(
-        Invocation.method(
-          #getCacheInfo,
-          [],
-        ),
-        returnValue: _i6.Future<Map<String, dynamic>?>.value(),
-        returnValueForMissingStub: _i6.Future<Map<String, dynamic>?>.value(),
-      ) as _i6.Future<Map<String, dynamic>?>);
-
-  @override
-  _i6.Future<void> clearCache() => (super.noSuchMethod(
-        Invocation.method(
-          #clearCache,
-          [],
-        ),
-        returnValue: _i6.Future<void>.value(),
-        returnValueForMissingStub: _i6.Future<void>.value(),
-      ) as _i6.Future<void>);
-
-  @override
-  void setMockWeatherData() => super.noSuchMethod(
-        Invocation.method(
-          #setMockWeatherData,
-          [],
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
-  void addListener(_i9.VoidCallback? listener) => super.noSuchMethod(
-        Invocation.method(
-          #addListener,
-          [listener],
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
-  void removeListener(_i9.VoidCallback? listener) => super.noSuchMethod(
-        Invocation.method(
-          #removeListener,
-          [listener],
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
-  void dispose() => super.noSuchMethod(
-        Invocation.method(
-          #dispose,
-          [],
         ),
         returnValueForMissingStub: null,
       );
