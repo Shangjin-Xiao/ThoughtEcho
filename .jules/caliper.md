@@ -47,3 +47,14 @@
 ## 2026-07-21 - [补充 AICommandHelpers 的测试]
 **盲点:** `AICommandHelpers` 包含多个核心静态工具类（如 `WebCommandHelper`, `NoteQueryHelper`, `SessionMessageHelper`），负责 AI 助手命令的解析、URL提取、笔记查询参数组装以及工具调用系统消息的生成。这些纯函数由于一直缺乏单元测试覆盖，在调整正则规则或修改字典格式时极易引发 Agent 行为静默异常。
 **对策:** 通过编写隔离测试，覆盖了各工具类方法的输入边界条件。对于 `WebCommandHelper` 验证了多种前缀和自然语言的 URL 提取；对于 `NoteQueryHelper` 验证了 Agent 查询参数的构建和对缺省参数的安全回退；对于 `SessionMessageHelper` 验证了基于 JSON 的工具消息的可靠生成。测试代码同样保持极简且快速执行。
+## 2024-05-24 - 补充 AddNoteController 的测试
+
+**盲点:** `lib/controllers/add_note_controller.dart` 中存在较多逻辑（如位置/天气信息获取、元数据修改、一言状态判断等），但在 `test/unit/controllers/add_note_controller_test.dart` 中只有极少的两个位置清理测试。核心的位置获取（包括权限处理）、天气获取流程、一言工具方法的测试完全缺失。
+
+**对策:**
+1. 引入了 `mockito`，通过 `build_runner` 生成了 `LocationService`、`WeatherService`、`DatabaseService` 的 Mock 类。
+2. 补充了控制器初始状态和基于 `initialQuote` 解析逻辑的测试用例。
+3. 补充了 `fetchLocationForNewNote` 方法中各种边界条件（权限被拒、正常获取）的测试用例。
+4. 补充了 `fetchWeatherForNewNote` 方法中各种边界条件（坐标缺失、正常获取）的测试用例。
+5. 补充了与 `hitokoto` 相关的若干纯工具方法（如 `shouldApplyHitokotoSubtypeTag`、`convertHitokotoTypeToTagName`、`getIconForHitokotoType`）的测试。
+6. 补充了 metadata 状态切换 (`setIncludeLocation`, `hydrateFromQuote` 等) 逻辑的测试用例。
