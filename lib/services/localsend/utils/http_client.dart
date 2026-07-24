@@ -3,7 +3,9 @@ import 'package:http/http.dart' as http;
 
 /// Simplified HTTP client for ThoughtEcho LocalSend integration
 class SimpleHttpClient {
-  final http.Client _client = http.Client();
+  final http.Client _client;
+
+  SimpleHttpClient({http.Client? client}) : _client = client ?? http.Client();
 
   Future<HttpTextResponse> post(
     String url, {
