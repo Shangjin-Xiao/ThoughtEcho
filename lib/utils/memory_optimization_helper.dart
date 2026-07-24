@@ -1,5 +1,6 @@
 import 'device_memory_manager.dart';
 import 'app_logger.dart';
+import 'package:flutter/foundation.dart';
 
 /// 内存优化助手
 ///
@@ -8,9 +9,13 @@ class MemoryOptimizationHelper {
   static final MemoryOptimizationHelper _instance =
       MemoryOptimizationHelper._internal();
   factory MemoryOptimizationHelper() => _instance;
-  MemoryOptimizationHelper._internal();
+  MemoryOptimizationHelper._internal() : _memoryManager = DeviceMemoryManager();
 
-  final DeviceMemoryManager _memoryManager = DeviceMemoryManager();
+  /// 仅用于注入受控的 [DeviceMemoryManager]，以隔离单元测试。
+  `@visibleForTesting`
+  MemoryOptimizationHelper.forTesting(this._memoryManager);
+
+  final DeviceMemoryManager _memoryManager;
 
   /// 根据当前内存状态获取最佳处理策略
   Future<ProcessingStrategy> getOptimalStrategy(int dataSize) async {
