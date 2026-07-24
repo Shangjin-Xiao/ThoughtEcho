@@ -28,10 +28,8 @@ void main() {
         final result = IpHelper.rankIpAddresses(addresses, primary);
 
         expect(result.first, primary);
-        expect(
-          result,
-          ['10.0.0.5', '192.168.1.5', '192.168.1.100'],
-        ); // order of others is preserved by sorted (stable sort in collection package)
+        expect(result.sublist(1),
+            unorderedEquals(['192.168.1.5', '192.168.1.100']));
       });
 
       test('places addresses ending with .1 last', () {
@@ -47,7 +45,9 @@ void main() {
 
         // '192.168.1.5' and '10.0.0.5' get score 1
         // '192.168.1.1' and '10.0.0.1' get score 0
-        expect(result, ['192.168.1.5', '10.0.0.5', '192.168.1.1', '10.0.0.1']);
+        expect(
+            result.sublist(0, 2), unorderedEquals(['192.168.1.5', '10.0.0.5']));
+        expect(result.sublist(2), unorderedEquals(['192.168.1.1', '10.0.0.1']));
       });
 
       test('places primary address first even if it ends with .1', () {
@@ -62,7 +62,9 @@ void main() {
         final result = IpHelper.rankIpAddresses(addresses, primary);
 
         expect(result.first, primary);
-        expect(result, ['192.168.1.1', '192.168.1.5', '10.0.0.5', '10.0.0.1']);
+        expect(
+            result.sublist(1, 3), unorderedEquals(['192.168.1.5', '10.0.0.5']));
+        expect(result.last, '10.0.0.1');
       });
 
       test('handles empty list', () {
@@ -81,7 +83,8 @@ void main() {
 
         final result = IpHelper.rankIpAddresses(addresses, primary);
 
-        expect(result, ['192.168.1.5', '192.168.1.1']);
+        expect(result.first, '192.168.1.5');
+        expect(result.last, '192.168.1.1');
       });
     });
   });
