@@ -610,6 +610,9 @@ class DatabaseBackupService {
         categoryData['is_default'] ??= 0;
         categoryData['last_modified'] ??= DateTime.now().toIso8601String();
 
+        // 过滤未知列名，防止对端版本较新时携带本地 schema 不认识的字段导致 SQLite 报错
+        final filteredCategoryData = _filterKnownCategoryColumns(categoryData);
+
         // 1. 优先按ID匹配
         if (idToRow.containsKey(remoteId)) {
           final existing = idToRow[remoteId]!;
@@ -620,14 +623,14 @@ class DatabaseBackupService {
           if (decision.shouldUseRemote) {
             batch.update(
               'categories',
-              categoryData,
+              filteredCategoryData,
               where: 'id = ?',
               whereArgs: [remoteId],
             );
             reportBuilder.addUpdatedCategory();
             // 更新缓存
-            idToRow[remoteId] = categoryData;
-            nameLowerToRow[remoteName.toLowerCase()] = categoryData;
+            idToRow[remoteId] = filteredCategoryData;
+            nameLowerToRow[remoteName.toLowerCase()] = filteredCategoryData;
           } else {
             reportBuilder.addSkippedCategory();
           }
@@ -645,12 +648,13 @@ class DatabaseBackupService {
             remoteTimestamp: categoryData['last_modified'] as String?,
           );
           if (decision.shouldUseRemote) {
-            // 仅更新可变字段（名称相同无需变更）
+            // 仅更新可变字段（名称相同无需变更）；updateMap 的来源是本地行，字段已合规，
+            // 追加的三个字段均在白名单内，无需再次过滤
             final updateMap = Map<String, dynamic>.from(existing)
               ..addAll({
-                'icon_name': categoryData['icon_name'],
-                'is_default': categoryData['is_default'],
-                'last_modified': categoryData['last_modified'],
+                'icon_name': filteredCategoryData['icon_name'],
+                'is_default': filteredCategoryData['is_default'],
+                'last_modified': filteredCategoryData['last_modified'],
               });
             batch.update(
               'categories',
@@ -669,9 +673,9 @@ class DatabaseBackupService {
         }
 
         // 3. 新分类，直接插入
-        batch.insert('categories', categoryData);
-        idToRow[remoteId] = categoryData;
-        nameLowerToRow[nameKey] = categoryData;
+        batch.insert('categories', filteredCategoryData);
+        idToRow[remoteId] = filteredCategoryData;
+        nameLowerToRow[nameKey] = filteredCategoryData;
         categoryIdRemap[remoteId] = remoteId;
         reportBuilder.addInsertedCategory();
       } catch (e) {
