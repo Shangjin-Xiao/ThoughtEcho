@@ -169,30 +169,35 @@ class DatabaseHealthService {
       if (_requiredMainDatabaseTables.contains(tableName) &&
           !_tableColumnCache.keys
               .any((t) => _requiredMainDatabaseTables.contains(t))) {
-        final placeholders =
-            _requiredMainDatabaseTables.map((_) => '?').join(',');
-        final args = _requiredMainDatabaseTables.toList();
+        try {
+          final placeholders =
+              _requiredMainDatabaseTables.map((_) => '?').join(',');
+          final args = _requiredMainDatabaseTables.toList();
 
-        final batchedResult = await db.rawQuery('''
-          SELECT m.name as table_name, p.name as column_name
-          FROM sqlite_master m, pragma_table_info(m.name) p
-          WHERE m.type = 'table' AND m.name IN ($placeholders)
-        ''', args);
+          final batchedResult = await db.rawQuery('''
+            SELECT m.name as table_name, p.name as column_name
+            FROM sqlite_master m, pragma_table_info(m.name) p
+            WHERE m.type = 'table' AND m.name IN ($placeholders)
+          ''', args);
 
-        // Initialize cache for all main tables to empty sets
-        for (final table in _requiredMainDatabaseTables) {
-          _tableColumnCache[table] = <String>{};
-        }
+          // Initialize cache for all main tables to empty sets
+          for (final table in _requiredMainDatabaseTables) {
+            _tableColumnCache[table] = <String>{};
+          }
 
-        // Populate cache with results
-        for (final row in batchedResult) {
-          final tName = row['table_name'] as String;
-          final cName = row['column_name'] as String;
-          _tableColumnCache[tName]?.add(cName);
-        }
+          // Populate cache with results
+          for (final row in batchedResult) {
+            final tName = row['table_name'] as String;
+            final cName = row['column_name'] as String;
+            _tableColumnCache[tName]?.add(cName);
+          }
 
-        if (_tableColumnCache.containsKey(tableName)) {
-          return _tableColumnCache[tableName]!.contains(columnName);
+          if (_tableColumnCache.containsKey(tableName)) {
+            return _tableColumnCache[tableName]!.contains(columnName);
+          }
+        } catch (e) {
+          logDebug('批量检查列失败，回退到单表查询: $e');
+          // 回退路径：继续执行下面的单表查询
         }
       }
 
