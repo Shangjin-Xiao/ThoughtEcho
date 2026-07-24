@@ -859,13 +859,18 @@ class WebDAVSyncService extends ChangeNotifier {
     // 在循环前提前确保冲突分类存在，避免 N+1 查询
     await _ensureConflictCategoryExists(db);
 
+    final cloneBatch = db.batch();
     for (final quote in conflictingQuotes) {
       conflictsCloned++;
-      await _cloneConflictQuote(
-        db,
+      _cloneConflictQuote(
+        cloneBatch,
         quote,
         tagsMap[quote['id'] as String] ?? [],
       );
+    }
+
+    if (conflictingQuotes.isNotEmpty) {
+      await cloneBatch.commit(continueOnError: true, noResult: true);
     }
 
     return conflictsCloned;
@@ -890,11 +895,11 @@ class WebDAVSyncService extends ChangeNotifier {
   }
 
   /// 克隆冲突的笔记，并将分类设为“同步冲突”
-  Future<void> _cloneConflictQuote(
-    Database db,
+  void _cloneConflictQuote(
+    Batch batch,
     Map<String, dynamic> localQuote,
     List<Map<String, Object?>> tags,
-  ) async {
+  ) {
     try {
       // 分类已在调用方确保存在，无需在此重复查询
 
@@ -919,23 +924,21 @@ class WebDAVSyncService extends ChangeNotifier {
         } catch (_) {}
       }
 
-      await db.insert('quotes', clonedQuote);
+      batch.insert('quotes', clonedQuote);
 
       // 3. 复制对应的标签关联关系
       if (tags.isNotEmpty) {
-        final batch = db.batch();
         for (final tag in tags) {
           batch.insert('quote_tags', {
             'quote_id': clonedId,
             'tag_id': tag['tag_id'],
           });
         }
-        await batch.commit(noResult: true);
       }
 
-      logDebug('已成功为冲突的笔记创建冲突隔离备份: $clonedId');
+      logDebug('已准备为冲突的笔记创建冲突隔离备份: $clonedId');
     } catch (e) {
-      logDebug('克隆冲突笔记失败: $e');
+      logDebug('克隆冲突笔记准备失败: $e');
     }
   }
 
