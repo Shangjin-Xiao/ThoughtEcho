@@ -249,7 +249,8 @@ void main() {
     });
 
     group('monitorAndOptimize', () {
-      test('should trigger performOptimization logic when memory pressure >= 2',
+      test(
+          'should trigger performOptimization logic when memory pressure is critical (>=3)',
           () async {
         mockMemoryManager.mockMemoryPressureLevel = 3;
         await helper.monitorAndOptimize();
@@ -261,6 +262,15 @@ void main() {
           'should not trigger performOptimization logic when memory pressure < 2',
           () async {
         mockMemoryManager.mockMemoryPressureLevel = 1;
+        await helper.monitorAndOptimize();
+        expect(mockMemoryManager.cacheClearCount, 0);
+        expect(mockMemoryManager.gcSuggestCount, 0);
+      });
+
+      test(
+          'should not trigger cache clear or gc suggest when memory pressure is 2',
+          () async {
+        mockMemoryManager.mockMemoryPressureLevel = 2;
         await helper.monitorAndOptimize();
         expect(mockMemoryManager.cacheClearCount, 0);
         expect(mockMemoryManager.gcSuggestCount, 0);
