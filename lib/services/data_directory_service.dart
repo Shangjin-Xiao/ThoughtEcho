@@ -331,48 +331,71 @@ class DataDirectoryService {
 
         // 4. 复制文件到新目录
         int copiedCount = 0;
-        for (final filePath in filesToCopy) {
-          try {
-            final file = File(filePath);
-            final relativePath = path.relative(filePath, from: currentPath);
-            final targetPath = path.join(newPath, relativePath);
-
-            // 路径遍历防护：使用 PathSecurityUtils 深度验证
+        final Map<String, double> inProgressMap = {};
+        const int chunkSize = 5;
+        for (int i = 0; i < filesToCopy.length; i += chunkSize) {
+          final chunk = filesToCopy.sublist(
+              i,
+              i + chunkSize > filesToCopy.length
+                  ? filesToCopy.length
+                  : i + chunkSize);
+          await Future.wait(chunk.map((filePath) async {
             try {
-              PathSecurityUtils.validateExtractionPath(targetPath, newPath);
-            } catch (e) {
-              logError('路径安全检查失败，跳过: $relativePath ($e)');
-              continue;
-            }
+              final file = File(filePath);
+              final relativePath = path.relative(filePath, from: currentPath);
+              final targetPath = path.join(newPath, relativePath);
 
-            onStatusUpdate?.call('正在复制: $relativePath');
+              // 路径遍历防护：使用 PathSecurityUtils 深度验证
+              try {
+                PathSecurityUtils.validateExtractionPath(targetPath, newPath);
+              } catch (e) {
+                logError('路径安全检查失败，跳过: $relativePath ($e)');
+                return;
+              }
 
-            // 确保目标目录存在
-            final targetDir = Directory(path.dirname(targetPath));
-            if (!await targetDir.exists()) {
-              await targetDir.create(recursive: true);
-            }
+              onStatusUpdate?.call('正在复制: $relativePath');
 
-            // 使用 LargeFileManager 复制文件（支持大文件）
-            await LargeFileManager.copyFileInChunks(
-              file.path,
-              targetPath,
-              onProgress: (current, total) {
-                if (onProgress != null && total > 0) {
-                  final fileProgress = current / total;
-                  final totalProgress =
-                      (copiedCount + fileProgress) / filesToCopy.length;
-                  onProgress(totalProgress);
+              // 确保目标目录存在
+              final targetDir = Directory(path.dirname(targetPath));
+              if (!await targetDir.exists()) {
+                try {
+                  await targetDir.create(recursive: true);
+                } catch (_) {
+                  // 忽略并发创建目录时可能抛出的已存在异常
                 }
-              },
-            );
+              }
 
-            copiedCount++;
-            onProgress?.call(copiedCount / filesToCopy.length);
-          } catch (e) {
-            logError('复制文件失败: $filePath, 错误: $e', error: e);
-            // 继续复制其他文件
-          }
+              // 使用 LargeFileManager 复制文件（支持大文件）
+              await LargeFileManager.copyFileInChunks(
+                file.path,
+                targetPath,
+                onProgress: (current, total) {
+                  if (onProgress != null && total > 0) {
+                    final fileProgress = current / total;
+                    inProgressMap[filePath] = fileProgress;
+                    final totalInProgress =
+                        inProgressMap.values.fold(0.0, (a, b) => a + b);
+                    final totalProgress =
+                        (copiedCount + totalInProgress) / filesToCopy.length;
+                    onProgress(totalProgress);
+                  }
+                },
+              );
+
+              copiedCount++;
+              inProgressMap.remove(filePath);
+
+              if (onProgress != null) {
+                final totalInProgress =
+                    inProgressMap.values.fold(0.0, (a, b) => a + b);
+                onProgress(
+                    (copiedCount + totalInProgress) / filesToCopy.length);
+              }
+            } catch (e) {
+              logError('复制文件失败: $filePath, 错误: $e', error: e);
+              // 继续复制其他文件
+            }
+          }));
         }
 
         onStatusUpdate?.call('验证文件完整性...');
