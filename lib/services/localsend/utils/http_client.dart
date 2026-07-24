@@ -3,7 +3,9 @@ import 'package:http/http.dart' as http;
 
 /// Simplified HTTP client for ThoughtEcho LocalSend integration
 class SimpleHttpClient {
-  final http.Client _client = http.Client();
+  final http.Client _client;
+
+  SimpleHttpClient({http.Client? client}) : _client = client ?? http.Client();
 
   Future<HttpTextResponse> post(
     String url, {
@@ -11,6 +13,10 @@ class SimpleHttpClient {
     Map<String, dynamic>? body,
     CancelToken? cancelToken,
   }) async {
+    if (cancelToken?.isCancelled == true) {
+      throw HttpException('Request cancelled');
+    }
+
     final uri = Uri.parse(url).replace(queryParameters: query);
 
     try {
@@ -34,6 +40,10 @@ class SimpleHttpClient {
     Map<String, String>? query,
     CancelToken? cancelToken,
   }) async {
+    if (cancelToken?.isCancelled == true) {
+      throw HttpException('Request cancelled');
+    }
+
     final uri = Uri.parse(url).replace(queryParameters: query);
 
     try {
