@@ -84,11 +84,34 @@ void main() {
     });
 
     test('dispose closes the client', () {
-      // It's hard to verify _client.close() directly on MockClient without a spy,
-      // but we can ensure calling it doesn't throw.
+      final spyClient = _SpyClient();
+      final client = SimpleHttpClient(client: spyClient);
+      client.dispose();
+      expect(spyClient.closeCalled, isTrue);
+    });
+
+    test('post request respects CancelToken', () async {
       final mockClient = MockClient((request) async => http.Response('', 200));
       final client = SimpleHttpClient(client: mockClient);
-      expect(() => client.dispose(), returnsNormally);
+
+      final token = CancelToken()..cancel();
+      expect(
+        () => client.post('https://example.com/api', cancelToken: token),
+        throwsA(isA<HttpException>()
+            .having((e) => e.message, 'message', 'Request cancelled')),
+      );
+    });
+
+    test('get request respects CancelToken', () async {
+      final mockClient = MockClient((request) async => http.Response('', 200));
+      final client = SimpleHttpClient(client: mockClient);
+
+      final token = CancelToken()..cancel();
+      expect(
+        () => client.get('https://example.com/api', cancelToken: token),
+        throwsA(isA<HttpException>()
+            .having((e) => e.message, 'message', 'Request cancelled')),
+      );
     });
   });
 
@@ -140,4 +163,19 @@ void main() {
       expect(HttpBody.json(data), equals(data));
     });
   });
+}
+
+class _SpyClient extends http.BaseClient {
+  bool closeCalled = false;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    throw UnimplementedError();
+  }
+
+  @override
+  void close() {
+    closeCalled = true;
+    super.close();
+  }
 }

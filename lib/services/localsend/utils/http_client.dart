@@ -13,6 +13,10 @@ class SimpleHttpClient {
     Map<String, dynamic>? body,
     CancelToken? cancelToken,
   }) async {
+    if (cancelToken?.isCancelled == true) {
+      throw HttpException('Request cancelled');
+    }
+
     final uri = Uri.parse(url).replace(queryParameters: query);
 
     try {
@@ -36,6 +40,10 @@ class SimpleHttpClient {
     Map<String, String>? query,
     CancelToken? cancelToken,
   }) async {
+    if (cancelToken?.isCancelled == true) {
+      throw HttpException('Request cancelled');
+    }
+
     final uri = Uri.parse(url).replace(queryParameters: query);
 
     try {
