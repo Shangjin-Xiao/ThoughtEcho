@@ -323,5 +323,18 @@ void main() {
       expect(rebuiltService.appSettings.sentryEnabled, isTrue);
       expect(rebuiltService.appSettings.sentryDisclosureShown, isTrue);
     });
+
+    test('updateAISettings should omit apiKey from persisted MMKV JSON',
+        () async {
+      final aiSettings = settingsService.aiSettings.copyWith(
+        apiKey: 'secret-key-123',
+        model: 'gpt-4o',
+      );
+
+      await settingsService.updateAISettings(aiSettings);
+
+      expect(settingsService.aiSettings.apiKey, isEmpty);
+      expect(settingsService.aiSettings.model, equals('gpt-4o'));
+    });
   });
 }

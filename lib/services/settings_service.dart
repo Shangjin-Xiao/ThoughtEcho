@@ -725,7 +725,9 @@ class SettingsService extends ChangeNotifier {
     } else {
       _aiSettings = settings;
     }
-    await _mmkv.setString(_aiSettingsKey, json.encode(_aiSettings.toJson()));
+    final Map<String, dynamic> settingsMap = _aiSettings.toJson();
+    settingsMap.remove('apiKey');
+    await _mmkv.setString(_aiSettingsKey, json.encode(settingsMap));
     notifyListeners();
   }
 
@@ -979,19 +981,32 @@ class SettingsService extends ChangeNotifier {
       // 安全起见，如果在 _prefs 中还残留包含 apiKey 的 json，也要清理
       try {
         final legacyJson = _prefs.getString(_aiSettingsKey);
-        if (legacyJson != null &&
-            legacyJson.contains('"apiKey":') &&
-            !legacyJson.contains('"apiKey":""') &&
-            !legacyJson.contains('"apiKey":" "')) {
+        if (legacyJson != null && legacyJson.contains('"apiKey"')) {
           final Map<String, dynamic> settingsMap = json.decode(legacyJson);
-          if (settingsMap['apiKey'] != null &&
-              settingsMap['apiKey'].toString().isNotEmpty) {
+          if (settingsMap.containsKey('apiKey')) {
             settingsMap.remove('apiKey');
-            await _prefs.setString(_aiSettingsKey, json.encode(settingsMap));
-            logDebug('Cleared residual legacy API key from SharedPreferences.');
+            final success = await _prefs.setString(
+              _aiSettingsKey,
+              json.encode(settingsMap),
+            );
+            if (success) {
+              logDebug(
+                'Cleared residual legacy API key from SharedPreferences.',
+              );
+            } else {
+              logWarning(
+                'Failed to save cleared settings to SharedPreferences: setString returned false',
+                source: 'SettingsService',
+              );
+            }
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        logWarning(
+          'Failed to clear residual legacy API key from SharedPreferences: $e',
+          source: 'SettingsService',
+        );
+      }
       return;
     }
 
@@ -1030,7 +1045,10 @@ class SettingsService extends ChangeNotifier {
         );
       }
     } catch (e) {
-      logDebug('Error securing legacy API key: $e');
+      logWarning(
+        'Error securing legacy API key: $e',
+        source: 'SettingsService',
+      );
       // 即使出错，也会继续执行清除操作，以保证 fail-secure (安全失败)
     }
 
@@ -1043,31 +1061,64 @@ class SettingsService extends ChangeNotifier {
     settingsMap.remove('apiKey');
     final clearedJsonString = json.encode(settingsMap);
 
+    bool mmkvSuccess = false;
     // 写入 MMKV 增加 try-catch 和结果校验，防止失败或静默失败阻断 SharedPreferences 清理
     try {
       final success = await _mmkv.setString(_aiSettingsKey, clearedJsonString);
       if (success) {
+        mmkvSuccess = true;
         logDebug('Legacy plaintext API key cleared from MMKV.');
       } else {
         logDebug(
-            'MMKV setString returned false. Retrying removal via remove().');
-        await _mmkv.remove(_aiSettingsKey);
+          'MMKV setString returned false. Retrying removal via remove().',
+        );
+        mmkvSuccess = await _mmkv.remove(_aiSettingsKey);
+        if (mmkvSuccess) {
+          logDebug('Legacy plaintext API key removed from MMKV.');
+        } else {
+          logWarning(
+            'Failed to remove legacy API key from MMKV: remove returned false',
+            source: 'SettingsService',
+          );
+        }
       }
     } catch (e) {
-      logDebug('Failed to clear legacy API key from MMKV: $e');
+      logWarning(
+        'Failed to clear legacy API key from MMKV: $e',
+        source: 'SettingsService',
+      );
     }
 
+    bool prefsSuccess = false;
     // 彻底：同时从 SharedPreferences 中彻底清除
     try {
       // 更新或删除 _prefs 中的 _aiSettingsKey 以彻底消灭明文密钥
-      await _prefs.setString(_aiSettingsKey, clearedJsonString);
-      logDebug('Legacy plaintext API key also cleared from SharedPreferences.');
+      prefsSuccess = await _prefs.setString(_aiSettingsKey, clearedJsonString);
+      if (prefsSuccess) {
+        logDebug(
+            'Legacy plaintext API key also cleared from SharedPreferences.');
+      } else {
+        logWarning(
+          'Failed to clear legacy API key from SharedPreferences: setString returned false',
+          source: 'SettingsService',
+        );
+      }
     } catch (e) {
-      logDebug('Failed to clear legacy API key from SharedPreferences: $e');
+      logWarning(
+        'Failed to clear legacy API key from SharedPreferences: $e',
+        source: 'SettingsService',
+      );
     }
 
-    logDebug(
-      'Legacy plaintext API key completely cleared from AISettings storage layers.',
-    );
+    if (mmkvSuccess && prefsSuccess) {
+      logDebug(
+        'Legacy plaintext API key completely cleared from AISettings storage layers.',
+      );
+    } else {
+      logWarning(
+        'Legacy plaintext API key was NOT completely cleared from all storage layers.',
+        source: 'SettingsService',
+      );
+    }
   }
 }
