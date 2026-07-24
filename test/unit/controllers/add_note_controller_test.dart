@@ -13,7 +13,9 @@ import 'add_note_controller_test.mocks.dart';
 
 class FakeBuildContext extends Fake implements BuildContext {}
 
-@GenerateMocks([LocationService, WeatherService, DatabaseService])
+@GenerateMocks(
+  [LocationService, WeatherService, DatabaseService],
+)
 void main() {
   late MockLocationService mockLocationService;
   late MockWeatherService mockWeatherService;
