@@ -16,8 +16,8 @@ class ProposeNoteEditTool extends AgentTool {
   String get name => 'propose_note_edit';
 
   @override
-  String get description => '对已有笔记提出 revision 校验的局部或整篇修改。preserve 保持原编辑器模式；'
-      'rich 可显式把普通笔记转换为富文本。';
+  String get description => '对已有笔记提出 revision 校验的局部或整篇修改。普通文本使用 '
+      'insert_text，格式化内容使用 insert_blocks；preserve 保持原编辑器模式，rich 可显式转换为富文本。';
 
   @override
   Map<String, Object?> get parametersSchema => const {
@@ -50,10 +50,8 @@ class ProposeNoteEditTool extends AgentTool {
                 },
                 'old_text': {'type': 'string'},
                 'anchor_text': {'type': 'string'},
-                'insert_ops': {
-                  'type': 'array',
-                  'items': {'type': 'object'},
-                },
+                'insert_text': {'type': 'string'},
+                'insert_blocks': _insertBlocksSchema,
               },
               'required': ['type'],
             },
@@ -121,11 +119,7 @@ class ProposeNoteEditTool extends AgentTool {
         final json = raw.map((key, value) => MapEntry(key.toString(), value));
         final type = json['type']?.toString();
         if (type != 'delete') {
-          json['insert_ops'] = AgentNoteDocumentCodec.validateAndNormalize(
-            resultKind,
-            json['insert_ops'],
-            document: type == 'replaceDocument',
-          );
+          _normalizeInsertion(json, resultKind, type);
         }
         return RichTextEditOperation.fromJson(json);
       }).toList(growable: false);
@@ -143,6 +137,11 @@ class ProposeNoteEditTool extends AgentTool {
         edited.ops,
         allowExistingEmbeds: true,
       );
+      if (!AgentNoteDocumentCodec.hasSameEmbeds(originalOps, finalOps)) {
+        throw const FormatException(
+          '为避免丢失笔记中的媒体，请保留图片、音频和视频，并改用不跨越媒体的局部文本修改。',
+        );
+      }
       final content = AgentNoteDocumentCodec.plainTextOf(finalOps);
       if (content.trim().isEmpty) {
         throw const FormatException('修改后的笔记正文不能为空。');
@@ -227,6 +226,39 @@ class ProposeNoteEditTool extends AgentTool {
     return result;
   }
 
+  void _normalizeInsertion(
+    Map<String, Object?> operation,
+    NoteDocumentKind resultKind,
+    String? type,
+  ) {
+    final rawBlocks = operation.remove('insert_blocks');
+    final insertText = operation.remove('insert_text');
+    if (rawBlocks != null && insertText != null) {
+      throw const FormatException('insert_text 和 insert_blocks 不能同时使用。');
+    }
+    if (rawBlocks != null) {
+      if (resultKind == NoteDocumentKind.plain) {
+        throw const FormatException('普通笔记不能使用 insert_blocks；如需格式请选择 rich。');
+      }
+      if (rawBlocks is! List || rawBlocks.isEmpty) {
+        throw const FormatException('insert_blocks 不能为空。');
+      }
+      operation['blocks'] = rawBlocks;
+      return;
+    }
+    if (insertText is String && insertText.isNotEmpty) {
+      operation['insert_ops'] = AgentNoteDocumentCodec.validateAndNormalize(
+        resultKind,
+        [
+          {'insert': insertText}
+        ],
+        document: type == 'replaceDocument',
+      );
+      return;
+    }
+    throw const FormatException('非删除操作必须提供 insert_text 或 insert_blocks。');
+  }
+
   ToolResult _error(ToolCall call, String message) => ToolResult(
         toolCallId: call.id,
         content: message,
@@ -234,3 +266,36 @@ class ProposeNoteEditTool extends AgentTool {
         retryable: true,
       );
 }
+
+const Map<String, Object?> _insertBlocksSchema = {
+  'type': 'array',
+  'minItems': 1,
+  'items': {
+    'type': 'object',
+    'properties': {
+      'type': {
+        'type': 'string',
+        'enum': ['paragraph', 'heading', 'bullet', 'ordered', 'quote', 'code'],
+      },
+      'level': {'type': 'integer', 'minimum': 1, 'maximum': 6},
+      'children': {
+        'type': 'array',
+        'minItems': 1,
+        'items': {
+          'type': 'object',
+          'properties': {
+            'text': {'type': 'string'},
+            'bold': {'type': 'boolean'},
+            'italic': {'type': 'boolean'},
+            'underline': {'type': 'boolean'},
+            'strike': {'type': 'boolean'},
+            'code': {'type': 'boolean'},
+            'link': {'type': 'string'},
+          },
+          'required': ['text'],
+        },
+      },
+    },
+    'required': ['type', 'children'],
+  },
+};

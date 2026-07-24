@@ -212,6 +212,28 @@ class AgentNoteDocumentCodec {
     }).toList(growable: false);
   }
 
+  static bool hasSameEmbeds(
+    List<Map<String, dynamic>> before,
+    List<Map<String, dynamic>> after,
+  ) {
+    Map<String, int> counts(List<Map<String, dynamic>> ops) {
+      final result = <String, int>{};
+      for (final op in ops) {
+        if (op['insert'] is String) continue;
+        final key = jsonEncode(op['insert']);
+        result[key] = (result[key] ?? 0) + 1;
+      }
+      return result;
+    }
+
+    final beforeCounts = counts(before);
+    final afterCounts = counts(after);
+    if (beforeCounts.length != afterCounts.length) return false;
+    return beforeCounts.entries.every(
+      (entry) => afterCounts[entry.key] == entry.value,
+    );
+  }
+
   static Object? _deepCopy(Object? value) =>
       value == null ? null : jsonDecode(jsonEncode(value));
 

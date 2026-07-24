@@ -1,5 +1,7 @@
 import '../../models/note_proposal_artifact.dart';
+import '../../models/rich_text_edit.dart';
 import '../../utils/agent_note_document_codec.dart';
+import '../../utils/quill_structured_edit.dart';
 import '../agent_tool.dart';
 import '../database_service.dart';
 import 'tag_argument_resolver.dart';
@@ -13,8 +15,8 @@ class ProposeNoteCreateTool extends AgentTool {
   String get name => 'propose_note_create';
 
   @override
-  String get description => '提议创建普通或富文本笔记。正文使用原生 Quill document_ops；'
-      '只有用户要求格式或内容确有结构时才选择 rich。';
+  String get description => '提议创建普通或富文本笔记。普通笔记传 content；富文本传语义化的 '
+      'document_blocks，由应用生成 Quill Delta。只有用户要求格式或内容确有结构时才选择 rich。';
 
   @override
   Map<String, Object?> get parametersSchema => const {
@@ -26,10 +28,8 @@ class ProposeNoteCreateTool extends AgentTool {
             'type': 'string',
             'enum': ['plain', 'rich'],
           },
-          'document_ops': {
-            'type': 'array',
-            'items': {'type': 'object'},
-          },
+          'content': {'type': 'string'},
+          'document_blocks': _documentBlocksSchema,
           'tag_ids': {
             'type': 'array',
             'items': {'type': 'string'},
@@ -39,7 +39,7 @@ class ProposeNoteCreateTool extends AgentTool {
           'include_location': {'type': 'boolean'},
           'include_weather': {'type': 'boolean'},
         },
-        'required': ['proposal_title', 'document_kind', 'document_ops'],
+        'required': ['proposal_title', 'document_kind'],
       };
 
   @override
@@ -52,10 +52,7 @@ class ProposeNoteCreateTool extends AgentTool {
       if (title.isEmpty) {
         throw const FormatException('proposal_title 不能为空。');
       }
-      final ops = AgentNoteDocumentCodec.validateAndNormalize(
-        kind,
-        call.arguments['document_ops'],
-      );
+      final ops = _documentOps(call, kind);
       final content = AgentNoteDocumentCodec.plainTextOf(ops);
       if (content.trim().isEmpty) {
         throw const FormatException('笔记正文不能为空。');
@@ -106,4 +103,74 @@ class ProposeNoteCreateTool extends AgentTool {
         isError: true,
         retryable: true,
       );
+
+  List<Map<String, dynamic>> _documentOps(
+    ToolCall call,
+    NoteDocumentKind kind,
+  ) {
+    if (kind == NoteDocumentKind.plain) {
+      final content = call.getString('content');
+      if (content.isNotEmpty) {
+        return AgentNoteDocumentCodec.validateAndNormalize(
+          kind,
+          [
+            {'insert': content}
+          ],
+        );
+      }
+      throw const FormatException('普通笔记必须提供 content。');
+    } else {
+      final blocks = _parseBlocks(call.arguments['document_blocks']);
+      if (blocks.isNotEmpty) {
+        return AgentNoteDocumentCodec.validateAndNormalize(
+          kind,
+          QuillStructuredEdit.documentFromBlocks(blocks),
+        );
+      }
+      throw const FormatException('富文本笔记必须提供 document_blocks。');
+    }
+  }
+
+  List<RichTextBlock> _parseBlocks(Object? raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map((item) => RichTextBlock.fromJson(
+              item.map((key, value) => MapEntry(key.toString(), value)),
+            ))
+        .toList(growable: false);
+  }
 }
+
+const Map<String, Object?> _documentBlocksSchema = {
+  'type': 'array',
+  'minItems': 1,
+  'items': {
+    'type': 'object',
+    'properties': {
+      'type': {
+        'type': 'string',
+        'enum': ['paragraph', 'heading', 'bullet', 'ordered', 'quote', 'code'],
+      },
+      'level': {'type': 'integer', 'minimum': 1, 'maximum': 6},
+      'children': {
+        'type': 'array',
+        'minItems': 1,
+        'items': {
+          'type': 'object',
+          'properties': {
+            'text': {'type': 'string'},
+            'bold': {'type': 'boolean'},
+            'italic': {'type': 'boolean'},
+            'underline': {'type': 'boolean'},
+            'strike': {'type': 'boolean'},
+            'code': {'type': 'boolean'},
+            'link': {'type': 'string'},
+          },
+          'required': ['text'],
+        },
+      },
+    },
+    'required': ['type', 'children'],
+  },
+};
