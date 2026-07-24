@@ -128,19 +128,12 @@ class AIAssistantInputPanel extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 4),
-                              Tooltip(
-                                message: l10n.remove,
-                                child: InkWell(
-                                  onTap: () => onRemoveMediaFile(index),
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(4.0),
-                                    child: Icon(
-                                      Icons.close,
-                                      size: 16,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
+                              InkWell(
+                                onTap: () => onRemoveMediaFile(index),
+                                child: Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: theme.colorScheme.onSurfaceVariant,
                                 ),
                               ),
                             ],
@@ -194,36 +187,36 @@ class AIAssistantInputPanel extends StatelessWidget {
                       onSubmitted: onSubmitText,
                     ),
                   ),
-                  Material(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
-                    child: InkWell(
-                      key: const ValueKey('ai_assistant_mode_toggle'),
-                      onTap: isLoading ? null : onToggleMode,
-                      borderRadius: BorderRadius.circular(999),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 8),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              isAgentMode
-                                  ? Icons.smart_toy_outlined
-                                  : Icons.chat_outlined,
-                              size: 14,
+                  GestureDetector(
+                    key: const ValueKey('ai_assistant_mode_toggle'),
+                    onTap: isLoading ? null : onToggleMode,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color:
+                            theme.colorScheme.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isAgentMode
+                                ? Icons.smart_toy_outlined
+                                : Icons.chat_outlined,
+                            size: 14,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            isAgentMode ? l10n.aiModeAgent : l10n.aiModeChat,
+                            style: theme.textTheme.labelSmall?.copyWith(
                               color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w600,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              isAgentMode ? l10n.aiModeAgent : l10n.aiModeChat,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

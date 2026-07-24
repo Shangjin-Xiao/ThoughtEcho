@@ -34,6 +34,3 @@
 ## 2026-06-27 - [Fix Missing Tooltips for AI Assistant Action Buttons]
 **Learning:** IconButtons used for core actions in AI feature UIs (like "thinking" toggles, clear search icons, and stop generating buttons) often lack accessibility labels, making them unusable for screen reader users and missing hover cues on desktop.
 **Action:** When implementing or modifying AI chat interfaces and session histories, ensure that all `IconButton`s include dynamic tooltips (e.g. toggling between 'Show/Hide Thinking', or 'Send/Stop') localized via `AppLocalizations`.
-## 2026-07-24 - 添加Tooltips并完善水波纹效果
-**Learning:** 在Flutter的AI对话输入框场景中，纯图标按钮(如移除附件)容易被屏幕阅读器忽略，并且没有足够大的点击热区；一些用于切换模式的容器(如GestureDetector包围的Container)也没有原生的点击水波纹反馈，导致用户体验欠佳。
-**Action:** 始终为图标类按钮包裹Tooltip并提供l10n本地化提示；用Material和InkWell替代GestureDetector以补全系统标准的水波纹(ripple)效果并扩展点击响应区域。
