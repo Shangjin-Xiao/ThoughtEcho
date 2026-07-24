@@ -331,6 +331,7 @@ class DataDirectoryService {
 
         // 4. 复制文件到新目录
         int copiedCount = 0;
+        final Map<String, double> inProgressMap = {};
         const int chunkSize = 5;
         for (int i = 0; i < filesToCopy.length; i += chunkSize) {
           final chunk = filesToCopy.sublist(
@@ -371,15 +372,25 @@ class DataDirectoryService {
                 onProgress: (current, total) {
                   if (onProgress != null && total > 0) {
                     final fileProgress = current / total;
+                    inProgressMap[filePath] = fileProgress;
+                    final totalInProgress =
+                        inProgressMap.values.fold(0.0, (a, b) => a + b);
                     final totalProgress =
-                        (copiedCount + fileProgress) / filesToCopy.length;
+                        (copiedCount + totalInProgress) / filesToCopy.length;
                     onProgress(totalProgress);
                   }
                 },
               );
 
               copiedCount++;
-              onProgress?.call(copiedCount / filesToCopy.length);
+              inProgressMap.remove(filePath);
+
+              if (onProgress != null) {
+                final totalInProgress =
+                    inProgressMap.values.fold(0.0, (a, b) => a + b);
+                onProgress(
+                    (copiedCount + totalInProgress) / filesToCopy.length);
+              }
             } catch (e) {
               logError('复制文件失败: $filePath, 错误: $e', error: e);
               // 继续复制其他文件
