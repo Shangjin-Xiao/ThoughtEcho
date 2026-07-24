@@ -677,17 +677,18 @@ class MediaFileService {
     int largeFileCount = 0;
     const largeFileThreshold = 100 * 1024 * 1024; // 100MB
 
-    for (final filePath in filePaths) {
-      try {
-        final file = File(filePath);
-        final stat = await file.stat();
-        totalSize += stat.size;
+    final stats = await Future.wait(
+      filePaths.map((filePath) => File(filePath).stat().catchError(
+            (_) => FileStat.statSync(''),
+          )),
+    );
 
+    for (final stat in stats) {
+      if (stat.type != FileSystemEntityType.notFound) {
+        totalSize += stat.size;
         if (stat.size > largeFileThreshold) {
           largeFileCount++;
         }
-      } catch (_) {
-        // 忽略无法访问的文件
       }
     }
 
