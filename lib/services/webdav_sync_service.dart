@@ -870,7 +870,7 @@ class WebDAVSyncService extends ChangeNotifier {
     }
 
     if (conflictingQuotes.isNotEmpty) {
-      await cloneBatch.commit(continueOnError: true, noResult: true);
+      await cloneBatch.commit(noResult: true);
     }
 
     return conflictsCloned;
