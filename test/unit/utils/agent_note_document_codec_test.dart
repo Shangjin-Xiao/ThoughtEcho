@@ -141,5 +141,36 @@ void main() {
       expect(sanitized.first, {'insert': '[media]'});
       expect(sanitized.toString(), isNot(contains('/home/user')));
     });
+
+    test('compares media references as a multiset', () {
+      const image = {
+        'insert': {'image': '/private/photo.jpg'}
+      };
+      const audio = {
+        'insert': {'audio': '/private/voice.m4a'}
+      };
+
+      expect(
+        AgentNoteDocumentCodec.hasSameEmbeds(
+          const [image, audio, image],
+          const [image, image, audio],
+        ),
+        isTrue,
+      );
+      expect(
+        AgentNoteDocumentCodec.hasSameEmbeds(
+          const [image, audio, image],
+          const [image, audio],
+        ),
+        isFalse,
+      );
+      expect(
+        AgentNoteDocumentCodec.hasSameEmbeds(
+          const [image],
+          const [audio],
+        ),
+        isFalse,
+      );
+    });
   });
 }

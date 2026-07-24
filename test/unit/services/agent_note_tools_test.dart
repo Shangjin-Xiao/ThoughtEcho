@@ -541,6 +541,59 @@ void main() {
   });
 
   group('new note proposal tools', () {
+    test('rich create accepts semantic blocks and emits canonical Quill ops',
+        () async {
+      final tool = ProposeNoteCreateTool(_TestDatabaseService(const []));
+      final properties =
+          tool.parametersSchema['properties']! as Map<String, Object?>;
+
+      expect(properties, containsPair('document_blocks', isA<Map>()));
+      expect(properties, isNot(contains('document_ops')));
+
+      final result = await tool.execute(ToolCall(
+        id: 'create_rich_blocks',
+        name: 'propose_note_create',
+        arguments: const {
+          'proposal_title': 'Structured note',
+          'document_kind': 'rich',
+          'document_blocks': [
+            {
+              'type': 'heading',
+              'level': 2,
+              'children': [
+                {'text': 'Packing list'}
+              ],
+            },
+            {
+              'type': 'bullet',
+              'children': [
+                {'text': 'Passport', 'bold': true}
+              ],
+            },
+          ],
+        },
+      ));
+
+      expect(result.isError, isFalse);
+      final artifact = result.artifact! as NoteProposalArtifact;
+      expect(artifact.content, 'Packing list\nPassport');
+      expect(artifact.documentOps, [
+        {'insert': 'Packing list'},
+        {
+          'insert': '\n',
+          'attributes': {'header': 2}
+        },
+        {
+          'insert': 'Passport',
+          'attributes': {'bold': true}
+        },
+        {
+          'insert': '\n',
+          'attributes': {'list': 'bullet'}
+        },
+      ]);
+    });
+
     test('plain create returns a typed artifact without persisted delta',
         () async {
       final tool = ProposeNoteCreateTool(_TestDatabaseService(const []));
@@ -552,9 +605,7 @@ void main() {
           'proposal_title': 'New note',
           'reason': 'Capture this',
           'document_kind': 'plain',
-          'document_ops': [
-            {'insert': 'Plain text'}
-          ],
+          'content': 'Plain text',
         },
       ));
 
@@ -563,6 +614,29 @@ void main() {
       expect(artifact.resultKind, NoteDocumentKind.plain);
       expect(artifact.content, 'Plain text');
       expect(artifact.documentOps, isNull);
+    });
+
+    test('create rejects model-authored raw Delta', () async {
+      final tool = ProposeNoteCreateTool(_TestDatabaseService(const []));
+
+      final result = await tool.execute(ToolCall(
+        id: 'create_raw_delta',
+        name: 'propose_note_create',
+        arguments: const {
+          'proposal_title': 'Raw Delta',
+          'document_kind': 'rich',
+          'document_ops': [
+            {
+              'insert': 'Malformed heading\n',
+              'attributes': {'header': 1}
+            }
+          ],
+        },
+      ));
+
+      expect(result.isError, isTrue);
+      expect(result.retryable, isTrue);
+      expect(result.content, contains('document_blocks'));
     });
 
     test('edit preserves rich formatting and existing media', () async {
@@ -582,6 +656,15 @@ void main() {
       final tool = ProposeNoteEditTool(
         _TestDatabaseService(const [], quote: quote),
       );
+      final properties =
+          tool.parametersSchema['properties']! as Map<String, Object?>;
+      final operations = properties['operations']! as Map<String, Object?>;
+      final items = operations['items']! as Map<String, Object?>;
+      final operationProperties = items['properties']! as Map<String, Object?>;
+
+      expect(operationProperties, contains('insert_text'));
+      expect(operationProperties, contains('insert_blocks'));
+      expect(operationProperties, isNot(contains('insert_ops')));
 
       final result = await tool.execute(ToolCall(
         id: 'edit_rich',
@@ -595,10 +678,12 @@ void main() {
             {
               'type': 'replace',
               'old_text': 'after',
-              'insert_ops': [
+              'insert_blocks': [
                 {
-                  'insert': 'later',
-                  'attributes': {'italic': true}
+                  'type': 'paragraph',
+                  'children': [
+                    {'text': 'later', 'italic': true}
+                  ],
                 }
               ],
             }
@@ -610,6 +695,81 @@ void main() {
       expect(artifact.resultKind, NoteDocumentKind.rich);
       expect(artifact.documentOps.toString(), contains('/private/photo.jpg'));
       expect(artifact.content, contains('later'));
+    });
+
+    test('whole-document rich edit cannot silently remove existing media',
+        () async {
+      final quote = Quote(
+        id: 'rich-media-note',
+        content: 'Before photo after',
+        date: '2026-07-15T00:00:00.000Z',
+        editSource: 'fullscreen',
+        deltaContent: jsonEncode(const [
+          {'insert': 'Before '},
+          {
+            'insert': {'image': '/private/photo.jpg'}
+          },
+          {'insert': ' photo after\n'},
+        ]),
+      );
+      final tool = ProposeNoteEditTool(
+        _TestDatabaseService(const [], quote: quote),
+      );
+
+      final result = await tool.execute(ToolCall(
+        id: 'replace_document_with_media',
+        name: 'propose_note_edit',
+        arguments: {
+          'proposal_title': 'Rewrite',
+          'note_id': quote.id,
+          'base_revision': ProposeNoteEditTool.revisionForQuote(quote),
+          'result_kind': 'preserve',
+          'operations': const [
+            {
+              'type': 'replaceDocument',
+              'insert_text': 'Rewritten without the photo',
+            }
+          ],
+        },
+      ));
+
+      expect(result.isError, isTrue);
+      expect(result.retryable, isTrue);
+      expect(result.content, contains('媒体'));
+    });
+
+    test('edit rejects model-authored raw Delta operations', () async {
+      final quote = Quote(
+        id: 'plain-raw-edit',
+        content: 'Before',
+        date: '2026-07-15T00:00:00.000Z',
+      );
+      final tool = ProposeNoteEditTool(
+        _TestDatabaseService(const [], quote: quote),
+      );
+
+      final result = await tool.execute(ToolCall(
+        id: 'edit_raw_delta',
+        name: 'propose_note_edit',
+        arguments: {
+          'proposal_title': 'Raw edit',
+          'note_id': quote.id,
+          'base_revision': ProposeNoteEditTool.revisionForQuote(quote),
+          'result_kind': 'preserve',
+          'operations': const [
+            {
+              'type': 'replaceDocument',
+              'insert_ops': [
+                {'insert': 'After'}
+              ],
+            }
+          ],
+        },
+      ));
+
+      expect(result.isError, isTrue);
+      expect(result.retryable, isTrue);
+      expect(result.content, contains('insert_text'));
     });
 
     test('plain formatting requires an explicit plain-to-rich transition',
@@ -630,14 +790,13 @@ void main() {
             'operations': const [
               {
                 'type': 'replaceDocument',
-                'insert_ops': [
+                'insert_blocks': [
                   {
-                    'insert': 'Title',
-                    'attributes': {'bold': true}
-                  },
-                  {
-                    'insert': '\n',
-                    'attributes': {'header': 1}
+                    'type': 'heading',
+                    'level': 1,
+                    'children': [
+                      {'text': 'Title', 'bold': true}
+                    ],
                   }
                 ],
               }
@@ -682,9 +841,7 @@ void main() {
           'operations': const [
             {
               'type': 'replaceDocument',
-              'insert_ops': [
-                {'insert': 'updated'}
-              ],
+              'insert_text': 'updated',
             }
           ],
           'metadata_patch': const {

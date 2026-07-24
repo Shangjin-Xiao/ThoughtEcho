@@ -938,16 +938,11 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       throw const FormatException('proposal content and delta differ');
     }
     if (original != null) {
-      final originalEmbeds = ProposeNoteEditTool.opsForQuote(original)
-          .where((op) => op['insert'] is! String)
-          .map((op) => jsonEncode(op['insert']))
-          .toSet();
-      final hasNewEmbed = ops
-          .where((op) => op['insert'] is! String)
-          .map((op) => jsonEncode(op['insert']))
-          .any((embed) => !originalEmbeds.contains(embed));
-      if (hasNewEmbed) {
-        throw const FormatException('proposal contains a new media reference');
+      if (!AgentNoteDocumentCodec.hasSameEmbeds(
+        ProposeNoteEditTool.opsForQuote(original),
+        ops,
+      )) {
+        throw const FormatException('proposal changes media references');
       }
     }
     return ops;

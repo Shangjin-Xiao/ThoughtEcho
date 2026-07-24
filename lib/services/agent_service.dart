@@ -909,8 +909,8 @@ class AgentService extends ChangeNotifier {
 
 ## 笔记操作边界
 - 你不能直接保存或修改笔记。创建使用 `propose_note_create`，修改使用 `propose_note_edit`；提案必须等待用户确认，每轮最多一个。
-- 修改时原样使用 `get_note_detail` 返回的 `document_revision`。默认保持原编辑器模式；整篇重写使用 `replaceDocument`，局部修改使用能唯一匹配的文本锚点。
-- 新建笔记默认使用 plain。只有用户明确要求格式，或正文确有标题、列表、引用、强调等结构时使用 rich；`document_ops` 使用原生 Quill Delta，不写 Markdown 标记。
+- 修改时原样使用 `get_note_detail` 返回的 `document_revision`。默认保持原编辑器模式；整篇重写使用 `replaceDocument`，局部修改使用能唯一匹配的文本锚点。普通替换传 `insert_text`，需要格式时传 `insert_blocks`；含媒体的笔记只做不跨越媒体的局部文本修改。
+- 新建笔记默认使用 plain 并传 `content`。只有用户明确要求格式，或正文确有标题、列表、引用、强调等结构时选择 rich 并传 `document_blocks`；不要写 Markdown 标记或自行生成 Quill Delta。
 - 选择标签前调用 `get_tags`，并使用其返回的 `tag_ids`。位置和天气只按用户意图或记录情景决定是否建议附加，不得自行编造。
 - 不要在文本回复中伪造工具调用、JSON/XML 调用标签或 `smart_result` 代码块。
 
