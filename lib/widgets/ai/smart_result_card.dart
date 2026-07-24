@@ -68,28 +68,19 @@ class _NoteProposalCardState extends State<NoteProposalCard> {
               children: [
                 Text(artifact.proposalTitle,
                     style: theme.textTheme.titleMedium),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    _ProposalLabel(
-                      text: isEdit
-                          ? l10n.noteProposalEdit
-                          : l10n.noteProposalCreate,
-                    ),
-                    _ProposalLabel(
-                      text: artifact.resultKind == NoteDocumentKind.rich
-                          ? l10n.noteProposalRich
-                          : l10n.noteProposalPlain,
-                    ),
-                    if (isEdit)
+                if (isEdit) ...[
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    children: [
                       _ProposalLabel(
                         text: l10n.noteProposalChangeCount(
                           artifact.changes.length,
                         ),
                       ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
                 if (artifact.reason.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(

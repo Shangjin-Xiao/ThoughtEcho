@@ -60,6 +60,9 @@ void main() {
     )));
 
     expect(find.byType(QuoteContent), findsOneWidget);
+    expect(find.text('编辑'), findsNothing);
+    expect(find.text('富文本笔记'), findsNothing);
+    expect(find.text('修改 1 处'), findsOneWidget);
     expect(find.text('Old'), findsNothing);
     expect(find.textContaining('全屏富文本编辑器'), findsOneWidget);
 
@@ -87,6 +90,8 @@ void main() {
       onApply: () async => true,
     )));
 
+    expect(find.text('新建'), findsNothing);
+    expect(find.text('普通笔记'), findsNothing);
     final constrained = tester.widgetList<ConstrainedBox>(
       find.byType(ConstrainedBox),
     );
