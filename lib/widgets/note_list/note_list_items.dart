@@ -1077,7 +1077,9 @@ extension _NoteListItemsExtension on NoteListViewState {
     }
     final selectedMonths = <String>{};
     for (final quote in _quotes) {
-      if (quote.id != null && _selectedExportNoteIds.contains(quote.id) && quote.date.length >= 7) {
+      if (quote.id != null &&
+          _selectedExportNoteIds.contains(quote.id) &&
+          quote.date.length >= 7) {
         selectedMonths.add(quote.date.substring(0, 7));
       }
     }
