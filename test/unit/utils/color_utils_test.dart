@@ -38,6 +38,14 @@ void main() {
       expect(opacityColor.r, testColor.r);
       expect(opacityColor.g, testColor.g);
       expect(opacityColor.b, testColor.b);
+
+      // Test 0.0 opacity
+      final zeroOpacity = ColorExtension(testColor).withAlpha(0.0);
+      expect(zeroOpacity.a, 0.0);
+
+      // Test 1.0 opacity
+      final fullOpacity = ColorExtension(testColor).withAlpha(1.0);
+      expect(fullOpacity.a, 1.0);
     });
 
     test('withOpacitySafe clamps opacity and applies correctly', () {
@@ -51,6 +59,14 @@ void main() {
 
       // Clamp above 1
       result = ColorUtils.withOpacitySafe(testColor, 1.5);
+      expect(result.a, 1.0);
+
+      // Exactly 0
+      result = ColorUtils.withOpacitySafe(testColor, 0.0);
+      expect(result.a, 0.0);
+
+      // Exactly 1
+      result = ColorUtils.withOpacitySafe(testColor, 1.0);
       expect(result.a, 1.0);
     });
 
