@@ -178,12 +178,25 @@ class LocalSendProvider {
     if (session == null) return;
 
     try {
-      // 计算总大小
+      // 计算总大小 (分批并发获取，避免 I/O 峰值)
       int totalSize = 0;
-      for (final f in session.files) {
-        if (await f.exists()) {
-          totalSize += await f.length();
-        }
+      const batchSize = 50;
+
+      // 只统计拥有 token 的文件，与后续上传保持一致
+      final filesToUpload = <File>[
+        for (int i = 0; i < session.files.length; i++)
+          if (session.fileTokens?['file_$i'] != null) session.files[i],
+      ];
+
+      for (int i = 0; i < filesToUpload.length; i += batchSize) {
+        final batch = filesToUpload.skip(i).take(batchSize);
+        final sizes = await Future.wait(batch.map((f) async {
+          if (await f.exists()) {
+            return await f.length();
+          }
+          return 0;
+        }));
+        totalSize += sizes.fold<int>(0, (sum, size) => sum + size);
       }
       int sentBytes = 0;
       for (int i = 0; i < session.files.length; i++) {
