@@ -1076,9 +1076,10 @@ extension _NoteListItemsExtension on NoteListViewState {
       return;
     }
     final selectedMonths = <String>{};
-    for (final id in _selectedExportNoteIds) {
-      final quote = _quotes.firstWhereOrNull((q) => q.id == id);
-      if (quote != null && quote.date.length >= 7) {
+    for (final quote in _quotes) {
+      if (quote.id != null &&
+          _selectedExportNoteIds.contains(quote.id) &&
+          quote.date.length >= 7) {
         selectedMonths.add(quote.date.substring(0, 7));
       }
     }
@@ -1102,9 +1103,8 @@ extension _NoteListItemsExtension on NoteListViewState {
       return;
     }
     final selectedTags = <String>{};
-    for (final id in _selectedExportNoteIds) {
-      final quote = _quotes.firstWhereOrNull((q) => q.id == id);
-      if (quote != null) {
+    for (final quote in _quotes) {
+      if (quote.id != null && _selectedExportNoteIds.contains(quote.id)) {
         selectedTags.addAll(quote.tagIds);
       }
     }
