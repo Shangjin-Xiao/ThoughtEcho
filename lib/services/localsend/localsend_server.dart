@@ -19,6 +19,9 @@ class LocalSendServer {
   final Set<String> _preApprovedFingerprints = {}; // 预先批准一次性
   final Set<String> _cancelledIntentIds = {};
   final Map<String, String> _approvedIntentFingerprints = {};
+
+  /// 控制消息请求体最大字节数（不包含文件上传端点）
+  static const int _maxRequestBodyBytes = 64 * 1024; // 64 KB
   Function(String sessionId, int totalBytes, String senderAlias)?
       _onReceiveSessionCreated;
   Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
@@ -199,17 +202,8 @@ class LocalSendServer {
           // payload as /info so the peer can obtain our meta information.
           try {
             if (request.method == 'POST') {
-              // Drain body to avoid socket issues (ignore content for now)
-              final bodyBytes = await request.fold<List<int>>(
-                <int>[],
-                (p, e) => p..addAll(e),
-              );
-              if (bodyBytes.isNotEmpty) {
-                logDebug(
-                  'register_body_len=${bodyBytes.length}',
-                  source: 'LocalSend',
-                );
-              }
+              // Drain body (ignore content, but enforce size limit)
+              await _readLimitedBody(request);
             }
           } catch (e) {
             logWarning('register_body_read_fail error=$e', source: 'LocalSend');
@@ -221,10 +215,7 @@ class LocalSendServer {
           logDebug('register_ok', source: 'LocalSend');
         } else if (path == '/api/thoughtecho/v1/sync-intent/cancel' &&
             request.method == 'POST') {
-          final bodyBytes = await request.fold<List<int>>(
-            <int>[],
-            (p, e) => p..addAll(e),
-          );
+          final bodyBytes = await _readLimitedBody(request);
           final req =
               jsonDecode(utf8.decode(bodyBytes)) as Map<String, dynamic>;
           final intentId = req['intentId'];
@@ -247,10 +238,7 @@ class LocalSendServer {
         } else if (path == '/api/thoughtecho/v1/sync-intent' &&
             request.method == 'POST') {
           // 轻量意向握手：请求体包含 fingerprint, alias, estimatedNotes(optional)
-          final bodyBytes = await request.fold<List<int>>(
-            <int>[],
-            (p, e) => p..addAll(e),
-          );
+          final bodyBytes = await _readLimitedBody(request);
           final bodyString = utf8.decode(bodyBytes);
           Map<String, dynamic> req = {};
           try {
@@ -315,10 +303,7 @@ class LocalSendServer {
                 path == '/api/localsend/v1/send-request') &&
             request.method == 'POST') {
           logDebug('prepare_start', source: 'LocalSend');
-          final bodyBytes = await request.fold<List<int>>(
-            <int>[],
-            (previous, element) => previous..addAll(element),
-          );
+          final bodyBytes = await _readLimitedBody(request);
           final bodyString = utf8.decode(bodyBytes);
           logDebug(
             'prepare_body_len=${bodyString.length}',
@@ -370,10 +355,7 @@ class LocalSendServer {
           // 取消会话接口（简化版）
           if (path == '/api/localsend/v2/cancel' && request.method == 'POST') {
             try {
-              final bodyBytes = await request.fold<List<int>>(
-                <int>[],
-                (p, e) => p..addAll(e),
-              );
+              final bodyBytes = await _readLimitedBody(request);
               final body = utf8.decode(bodyBytes);
               final data = jsonDecode(body) as Map<String, dynamic>;
               final sessionId = data['sessionId'] as String?;
@@ -444,6 +426,27 @@ class LocalSendServer {
         logWarning('fatal_resp_send_fail error=$e', source: 'LocalSend');
       }
     }
+  }
+
+  /// 读取请求体并强制限制大小，超过 [_maxRequestBodyBytes] 时抛出 [HttpException]。
+  /// 仅用于控制消息类接口，文件上传不通过此方法而是直接流式传输。
+  Future<List<int>> _readLimitedBody(HttpRequest request) async {
+    final buffer = <int>[];
+    await for (final chunk in request) {
+      buffer.addAll(chunk);
+      if (buffer.length > _maxRequestBodyBytes) {
+        // 请求过大，拒绝并关闭连接
+        logSecurity(
+          'request_body_too_large path=${request.uri.path} size>${_maxRequestBodyBytes}B',
+          source: 'LocalSend',
+        );
+        throw HttpException(
+          'Request body exceeds limit of $_maxRequestBodyBytes bytes',
+          uri: request.uri,
+        );
+      }
+    }
+    return buffer;
   }
 
   /// Get server info

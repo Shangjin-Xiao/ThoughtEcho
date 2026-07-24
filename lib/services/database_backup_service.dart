@@ -67,11 +67,15 @@ class DatabaseBackupService {
           categoryData['name'] ??= '未命名分类';
           categoryData['is_default'] ??= 0;
 
+          // 白名单过滤：去除本地 schema 不认识的字段，防止恶意备份字段影响 SQL 结构
+          final filteredCategoryData =
+              _filterKnownCategoryColumns(categoryData);
+
           // 添加到batch
-          processedCategories.add(categoryData);
+          processedCategories.add(filteredCategoryData);
           categoryBatch.insert(
             'categories',
-            categoryData,
+            filteredCategoryData,
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
         }
@@ -83,10 +87,10 @@ class DatabaseBackupService {
         } catch (e) {
           logError('批量插入分类失败，降级为逐条插入: $e', error: e, source: 'BackupRestore');
           final fallbackBatch = txn.batch();
-          for (final categoryData in processedCategories) {
+          for (final filteredCategoryData in processedCategories) {
             fallbackBatch.insert(
               'categories',
-              categoryData,
+              filteredCategoryData,
               conflictAlgorithm: ConflictAlgorithm.replace,
             );
           }
@@ -176,11 +180,14 @@ class DatabaseBackupService {
             }
           }
 
+          // 白名单过滤：去除本地 schema 不认识的字段，防止恶意备份字段影响 SQL 结构
+          final filteredQuoteData = _filterKnownQuoteColumns(quoteData);
+
           // 添加到batch
-          processedQuotes.add(quoteData);
+          processedQuotes.add(filteredQuoteData);
           quoteBatch.insert(
             'quotes',
-            quoteData,
+            filteredQuoteData,
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
         }
@@ -192,10 +199,10 @@ class DatabaseBackupService {
         } catch (e) {
           logError('批量插入笔记失败，降级为逐条插入: $e', error: e, source: 'BackupRestore');
           final fallbackQuoteBatch = txn.batch();
-          for (final quoteData in processedQuotes) {
+          for (final filteredQuoteData in processedQuotes) {
             fallbackQuoteBatch.insert(
               'quotes',
-              quoteData,
+              filteredQuoteData,
               conflictAlgorithm: ConflictAlgorithm.replace,
             );
           }
@@ -675,6 +682,16 @@ class DatabaseBackupService {
     await batch.commit(noResult: true);
   }
 
+  /// categories 表中本地 schema 已知的列名白名单。
+  /// 导入/同步时过滤掉此列表之外的字段，防止恶意备份字段影响 SQL 结构。
+  static const Set<String> _knownCategoryColumns = {
+    'id',
+    'name',
+    'is_default',
+    'icon_name',
+    'last_modified',
+  };
+
   /// quotes 表中本地 schema 已知的列名白名单。
   /// 同步时若远端数据包含此列表之外的字段（对端版本更新），
   /// 将静默忽略未知字段以保持向前兼容，而非抛出 SQLite 错误。
@@ -706,6 +723,23 @@ class DatabaseBackupService {
     'is_deleted',
     'deleted_at',
   };
+
+  /// 过滤掉 categoryData 中本地 schema 不认识的字段。
+  Map<String, dynamic> _filterKnownCategoryColumns(
+    Map<String, dynamic> categoryData,
+  ) {
+    final unknown = categoryData.keys
+        .where((k) => !_knownCategoryColumns.contains(k))
+        .toList();
+    if (unknown.isEmpty) return categoryData;
+    logDebug(
+      '导入时忽略 categories 中未知字段: $unknown',
+      source: 'DatabaseBackupService',
+    );
+    return Map.fromEntries(
+      categoryData.entries.where((e) => _knownCategoryColumns.contains(e.key)),
+    );
+  }
 
   /// 过滤掉 quoteData 中本地 schema 不认识的字段，
   /// 记录被忽略的字段名（debug 级别，不含字段值）。

@@ -343,8 +343,26 @@ class MediaFileService {
   }
 
   /// 删除媒体文件
+  ///
+  /// 安全约束：[filePath] 必须位于应用媒体目录下，否则拒绝删除并返回 false，
+  /// 防止调用方传入绝对路径时意外删除媒体目录外的文件。
   static Future<bool> deleteMediaFile(String filePath) async {
     try {
+      // 路径沙箱检查：确保文件位于应用媒体目录内
+      final appDir = await getApplicationDocumentsDirectory();
+      final mediaDir = path.normalize(
+        path.join(appDir.path, _mediaFolder),
+      );
+      final normalizedFilePath = path.normalize(path.absolute(filePath));
+      if (!normalizedFilePath.startsWith('$mediaDir${path.separator}') &&
+          normalizedFilePath != mediaDir) {
+        AppLogger.e(
+          '拒绝删除媒体目录外的文件: $filePath',
+          source: 'MediaFileService',
+        );
+        return false;
+      }
+
       final file = File(filePath);
       if (await file.exists()) {
         await file.delete();
