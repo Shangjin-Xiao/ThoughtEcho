@@ -76,4 +76,4 @@
 
 ## 2024-07-28 - 优化笔记多选操作的时间复杂度
 **Learning:** 在 UI 交互中，如果有针对 `Set` 中多个 ID 进行全量查找的操作（例如在 `List` 中循环使用 `firstWhere` 或者 `firstWhereOrNull`），这会导致 O(M*N) 的时间复杂度（N 是列表长度，M 是选中的 ID 数量）。当列表较大且选中大量项目时，会导致 UI 线程阻塞。
-**Action:** 在 `lib/widgets/note_list/note_list_items.dart` 的 `_selectSameMonthNotes` 和 `_selectSameCategoryNotes` 方法中，将 `for (final id in _selectedExportNoteIds)` 内部的 `_quotes.firstWhereOrNull` 查找逻辑，替换为单次遍历 `_quotes` 并使用 `_selectedExportNoteIds.contains(quote.id)`，将时间复杂度降低为 O(N)。
+**Action:** 在 `lib/widgets/note_list/note_list_items.dart` 的 `_selectSameMonthNotes` 和 `_selectSameCategoryNotes` 方法中，将 `for (final id in _selectedExportNoteIds)` 内部的 `_quotes.firstWhereOrNull` 查找逻辑，替换为先遍历 `_quotes` 并使用 `_selectedExportNoteIds.contains(quote.id)` 收集月份/分类，再遍历 `_quotes` 按收集结果筛选；通过常数次遍历避免 O(M*N) 的嵌套线性查找，分类筛选还会遍历每条笔记的 `tagIds`。
