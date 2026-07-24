@@ -178,13 +178,14 @@ class LocalSendProvider {
     if (session == null) return;
 
     try {
-      // 计算总大小
-      int totalSize = 0;
-      for (final f in session.files) {
+      // 计算总大小 (并发获取)
+      final sizes = await Future.wait(session.files.map((f) async {
         if (await f.exists()) {
-          totalSize += await f.length();
+          return await f.length();
         }
-      }
+        return 0;
+      }));
+      final totalSize = sizes.fold<int>(0, (sum, size) => sum + size);
       int sentBytes = 0;
       for (int i = 0; i < session.files.length; i++) {
         _throwIfCancelled(sessionId);
