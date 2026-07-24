@@ -165,6 +165,37 @@ class DatabaseHealthService {
         return _tableColumnCache[tableName]!.contains(columnName);
       }
 
+      // Batch load required main tables to prevent N+1 queries during health checks
+      if (_requiredMainDatabaseTables.contains(tableName) &&
+          !_tableColumnCache.keys
+              .any((t) => _requiredMainDatabaseTables.contains(t))) {
+        final placeholders =
+            _requiredMainDatabaseTables.map((_) => '?').join(',');
+        final args = _requiredMainDatabaseTables.toList();
+
+        final batchedResult = await db.rawQuery('''
+          SELECT m.name as table_name, p.name as column_name
+          FROM sqlite_master m, pragma_table_info(m.name) p
+          WHERE m.type = 'table' AND m.name IN ($placeholders)
+        ''', args);
+
+        // Initialize cache for all main tables to empty sets
+        for (final table in _requiredMainDatabaseTables) {
+          _tableColumnCache[table] = <String>{};
+        }
+
+        // Populate cache with results
+        for (final row in batchedResult) {
+          final tName = row['table_name'] as String;
+          final cName = row['column_name'] as String;
+          _tableColumnCache[tName]?.add(cName);
+        }
+
+        if (_tableColumnCache.containsKey(tableName)) {
+          return _tableColumnCache[tableName]!.contains(columnName);
+        }
+      }
+
       // Use the parameterised pragma_table_info() table-valued function.
       // It requires SQLite 3.16+ (Android 8 / API 26), which is guaranteed
       // because our minSdkVersion is 28 (Android 9, ships with SQLite 3.22+).
