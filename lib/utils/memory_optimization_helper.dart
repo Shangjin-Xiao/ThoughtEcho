@@ -11,7 +11,8 @@ class MemoryOptimizationHelper {
   factory MemoryOptimizationHelper() => _instance;
   MemoryOptimizationHelper._internal() : _memoryManager = DeviceMemoryManager();
 
-  @visibleForTesting
+  /// 仅用于注入受控的 [DeviceMemoryManager]，以隔离单元测试。
+  `@visibleForTesting`
   MemoryOptimizationHelper.forTesting(this._memoryManager);
 
   final DeviceMemoryManager _memoryManager;
