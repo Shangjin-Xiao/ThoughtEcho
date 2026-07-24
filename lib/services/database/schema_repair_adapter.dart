@@ -63,10 +63,24 @@ class SchemaRepairAdapter {
         for (final entry
             in DatabaseSchemaDefinitions.repairableQuoteColumns.entries) {
           if (!quoteColumns.contains(entry.key)) {
-            await transaction.execute(
-              'ALTER TABLE quotes ADD COLUMN ${entry.key} ${entry.value}',
-            );
-            logDebug('数据库repair添加 quotes.${entry.key}');
+            final colName = entry.key;
+            final colDef = entry.value;
+            // 🛡️ Sentinel: 安全校验，防止 DDL 注入
+            if (!RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$').hasMatch(colName)) {
+              throw StateError('不安全的列名: $colName');
+            }
+            if (!RegExp(
+                    r"^[a-zA-Z0-9_ ]+(?:DEFAULT (?:'[a-zA-Z0-9_]*'|[0-9]+))?$")
+                .hasMatch(colDef)) {
+              throw StateError('不安全的列定义: $colDef');
+            }
+            // ignore: prefer_interpolation_to_compose_strings
+            final safeColName = '"' + colName.replaceAll('"', '""') + '"';
+            // ignore: prefer_interpolation_to_compose_strings
+            final query =
+                'ALTER TABLE quotes ADD COLUMN ' + safeColName + ' ' + colDef;
+            await transaction.execute(query);
+            logDebug('数据库repair添加 quotes.$colName');
           }
         }
 
@@ -354,10 +368,30 @@ class SchemaDataBackfillAdapter {
     if (columns.contains(columnName)) {
       return;
     }
-    await transaction.execute('ALTER TABLE quotes ADD COLUMN $columnName TEXT');
-    await transaction.execute(
-      'UPDATE quotes SET $columnName = $sourceColumn WHERE $sourceColumn IS NOT NULL',
-    );
+    // 🛡️ Sentinel: 安全校验，防止 DDL 注入
+    if (!RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$').hasMatch(columnName) ||
+        !RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$').hasMatch(sourceColumn)) {
+      throw StateError('不安全的列名: $columnName 或 $sourceColumn');
+    }
+    // ignore: prefer_interpolation_to_compose_strings
+    final safeColumnName = '"' + columnName.replaceAll('"', '""') + '"';
+    // ignore: prefer_interpolation_to_compose_strings
+    final safeSourceColumn = '"' + sourceColumn.replaceAll('"', '""') + '"';
+
+    // ignore: prefer_interpolation_to_compose_strings
+    final queryAlter =
+        'ALTER TABLE quotes ADD COLUMN ' + safeColumnName + ' TEXT';
+    await transaction.execute(queryAlter);
+
+    // ignore: prefer_interpolation_to_compose_strings
+    final queryUpdate = 'UPDATE quotes SET ' +
+        safeColumnName +
+        ' = ' +
+        safeSourceColumn +
+        ' WHERE ' +
+        safeSourceColumn +
+        ' IS NOT NULL';
+    await transaction.execute(queryUpdate);
   }
 }
 
