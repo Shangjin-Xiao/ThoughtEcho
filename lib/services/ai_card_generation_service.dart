@@ -127,7 +127,14 @@ class AICardGenerationService extends ChangeNotifier {
 
             final card = await generateCard(note: note, brandName: brandName);
             completedCount++;
-            onProgress?.call(completedCount, notesToProcess.length, null);
+            try {
+              onProgress?.call(completedCount, notesToProcess.length, null);
+            } catch (callbackError) {
+              AppLogger.e(
+                '生成进度回调失败: $callbackError',
+                source: 'AICardGeneration',
+              );
+            }
             return card;
           } catch (e) {
             final errorMsg =
