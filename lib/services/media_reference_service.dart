@@ -365,7 +365,7 @@ class MediaReferenceService {
   /// 迭代式构建清理计划，避免一次性加载所有笔记
   static Future<_CleanupPlan> _planOrphanCleanupStreamed() async {
     final storedIndex = await _fetchStoredReferenceIndex();
-    final quoteIndex = await _collectQuoteReferenceIndexStreamed();
+    final quoteIndex = await _collectQuoteReferenceIndex();
     final snapshot = ReferenceSnapshot(
       storedIndex: storedIndex,
       quoteIndex: quoteIndex,
@@ -494,61 +494,9 @@ class MediaReferenceService {
     return index;
   }
 
+  /// 流式收集引用索引，避免一次性加载全部笔记，防止内存溢出
   static Future<Map<String, Map<String, Set<String>>>>
       _collectQuoteReferenceIndex() async {
-    final databaseService = DatabaseService();
-    // 媒体引用索引需要包含所有笔记（包括隐藏笔记）
-    final quotes = await databaseService.getAllQuotes(
-      excludeHiddenNotes: false,
-      includeDeleted: true,
-    );
-
-    final index = <String, Map<String, Set<String>>>{};
-
-    // 获取应用目录路径缓存，避免循环中多次获取
-    final appDir = await getApplicationDocumentsDirectory();
-    final appPath = path.normalize(appDir.path);
-
-    const int chunkSize = 50;
-    final quotesList = quotes.toList(growable: false);
-    for (var i = 0; i < quotesList.length; i += chunkSize) {
-      final chunk = quotesList.skip(i).take(chunkSize);
-      await Future.wait(
-        chunk.map((quote) async {
-          final quoteId = quote.id;
-          if (quoteId == null || quoteId.isEmpty) {
-            return;
-          }
-
-          final mediaPaths = await extractMediaPathsFromQuote(
-            quote,
-            cachedAppPath: appPath,
-          );
-
-          for (final mediaPath in mediaPaths) {
-            final variantPath = path.normalize(mediaPath);
-            final key = _canonicalComparisonKey(variantPath);
-
-            final variants = index.putIfAbsent(
-              key,
-              () => <String, Set<String>>{},
-            );
-            final quoteSet =
-                variants.putIfAbsent(variantPath, () => <String>{});
-            quoteSet.add(quoteId);
-          }
-        }),
-      );
-      // 让出事件循环，避免长时间阻塞
-      await Future.delayed(Duration.zero);
-    }
-
-    return index;
-  }
-
-  /// 流式收集引用索引，避免一次性加载全部笔记
-  static Future<Map<String, Map<String, Set<String>>>>
-      _collectQuoteReferenceIndexStreamed() async {
     final databaseService = DatabaseService();
     final index = <String, Map<String, Set<String>>>{};
     const int pageSize = 200;
