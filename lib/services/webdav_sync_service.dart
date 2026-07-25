@@ -988,8 +988,7 @@ class WebDAVSyncService extends ChangeNotifier {
       logDebug('已准备为冲突的笔记创建冲突隔离备份: $clonedId');
     } catch (e) {
       // 升级为 Warning：克隆失败会导致用户以为冲突已备份但实际没有，需要明确记录
-      logWarning('克隆冲突笔记准备失败，冲突数据未被备份: $e',
-          source: 'WebDAVSyncService');
+      logWarning('克隆冲突笔记准备失败，冲突数据未被备份: $e', source: 'WebDAVSyncService');
     }
   }
 
