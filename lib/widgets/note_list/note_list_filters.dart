@@ -30,8 +30,8 @@ extension NoteListFiltersExtension on NoteListViewState {
       final tagMap = {for (var t in _effectiveTags) t.id: t};
       allChips.addAll(
         widget.selectedTagIds.map((tagId) {
-          final tag = tagMap[tagId] ??
-              NoteCategory(id: tagId, name: l10n.unknownTag);
+          final tag =
+              tagMap[tagId] ?? NoteCategory(id: tagId, name: l10n.unknownTag);
           return TweenAnimationBuilder<double>(
             key: ValueKey('tag_$tagId'),
             duration: const Duration(milliseconds: 250),
@@ -75,10 +75,8 @@ extension NoteListFiltersExtension on NoteListViewState {
 
       allChips.addAll(
         categorySet.map((cat) {
-          final label = WeatherService.getLocalizedFilterCategoryLabel(
-            context,
-            cat,
-          );
+          final label =
+              WeatherService.getLocalizedFilterCategoryLabel(context, cat);
           final icon = WeatherService.getFilterCategoryIcon(cat);
           return TweenAnimationBuilder<double>(
             key: ValueKey('weather_cat_$cat'),
@@ -328,10 +326,8 @@ extension NoteListFiltersExtension on NoteListViewState {
                 ],
                 Text(
                   label,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: color,
-                    fontSize: 14,
-                  ),
+                  style: theme.textTheme.labelMedium
+                      ?.copyWith(color: color, fontSize: 14),
                 ),
               ],
             ),
