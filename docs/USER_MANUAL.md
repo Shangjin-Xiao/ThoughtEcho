@@ -295,6 +295,52 @@ Agent 会在工具调用后继续处理结果，并将完整回答保留为最�
 
 ## 5. AI 功能
 
+### Thoughter AI 对话助手
+
+> ⚠️ **实验性功能**：Thoughter 目前为实验性 AI Agent 助手，AI 回答可能包含错误，请自行核查；Thoughter 不会直接改写您的笔记，所有创建和修改建议须由您点击「保存」/「应用」后才会生效。
+
+Thoughter 是心迹内置的 AI 对话助手，支持自然语言对话、笔记联动分析与 Agent 工作流，帮助您整理思路、挖掘洞察并快速创作。
+
+**访问路径**：
+
+- **探索 Tab**（底部导航第三项）→ 直接进入 Thoughter Agent 对话
+- **笔记菜单** → 「问 AI」→ 进入与该笔记绑定的对话
+- **编辑器 ✨ 按钮** → 「问笔记」→ 在编辑器内启动针对当前笔记的对话
+
+**三种对话模式**：
+
+| 模式 | 说明 |
+| ---- | ---- |
+| **Agent 模式** | 默认模式。Thoughter 可主动调用工具搜索、分析笔记并提出创建/编辑建议，适合开放性探索与创作任务 |
+| **问笔记** | 绑定到特定笔记，Thoughter 基于该笔记内容回答问题，不会随意扩展 |
+| **自由对话** | 纯对话模式，不绑定笔记内容 |
+
+**Agent 工具能力**：
+
+在 Agent 模式下，Thoughter 可以调用以下工具，工具调用过程会实时展示在对话界面：
+
+| 工具 | 说明 |
+| ---- | ---- |
+| **搜索笔记** | 按关键词、标签、日期、天气、时段等条件检索您的笔记 |
+| **获取笔记详情** | 读取特定笔记的完整内容及元数据 |
+| **获取标签列表** | 查询您已有的全部标签 |
+| **获取位置和天气** | 获取当前位置与天气信息 |
+| **联网搜索** | 通过搜索引擎检索实时信息（只读） |
+| **抓取网页** | 读取指定网址的页面内容（只读） |
+| **提议新建笔记** | 生成新笔记草稿，由您确认后保存 |
+| **提议编辑笔记** | 对已有笔记提出局部或全文修改建议，由您确认后应用 |
+
+**笔记提案卡片**：
+
+当 Thoughter 提议创建或编辑笔记时，会以卡片形式展示最终内容，支持普通文本和原生富文本两种格式。编辑建议卡片可展开「查看修改记录」，确认后只修改匹配段落并保留其余格式与媒体。若笔记在建议生成后被修改，Thoughter 会拒绝覆盖并要求重新生成。
+
+**历史对话**：
+
+- 点击右上角「历史」图标可查看并恢复历史对话记录。
+- 点击右上角「新建对话」图标可开启全新会话。
+
+---
+
 ### 每日灵感
 
 AI 会根据时间、天气、位置等情况，为您生成个性化的写作提示。
@@ -981,6 +1027,52 @@ Clicking "Generate Card" creates SVG format cards based on note content.
 ---
 
 ## 5. AI Features
+
+### Thoughter AI Assistant
+
+> ⚠️ **Experimental Feature**: Thoughter is currently an experimental AI Agent assistant. AI responses may contain errors and should be verified. Thoughter cannot directly modify your notes — all create and edit proposals take effect only after you click Save/Apply.
+
+Thoughter is ThoughtEcho's built-in AI conversation assistant. It supports natural language dialogue, note-linked analysis, and Agent workflows to help you organize ideas, uncover insights, and create content quickly.
+
+**Access Paths**:
+
+- **Explore Tab** (third item in bottom navigation) → Open Thoughter Agent conversation directly
+- **Note menu** → "Ask AI" → Open a conversation linked to that note
+- **Editor ✨ button** → "Ask Note" → Start a note-linked conversation from within the editor
+
+**Three Conversation Modes**:
+
+| Mode | Description |
+| ---- | ----------- |
+| **Agent Mode** | Default mode. Thoughter proactively uses tools to search, analyze notes, and propose create/edit actions. Ideal for open-ended exploration and creative tasks. |
+| **Ask Note** | Bound to a specific note. Thoughter answers questions based solely on that note's content. |
+| **Free Chat** | Pure conversation mode, not bound to any note content. |
+
+**Agent Tool Capabilities**:
+
+In Agent mode, Thoughter can invoke the following tools. Tool calls are shown in real time in the conversation:
+
+| Tool | Description |
+| ---- | ----------- |
+| **Explore Notes** | Search notes by keyword, tag, date, weather, time period, and more |
+| **Get Note Detail** | Read the full content and metadata of a specific note |
+| **Get Tags** | Retrieve your complete tag list |
+| **Get Location & Weather** | Fetch current location and weather information |
+| **Web Search** | Search for real-time information via a search engine (read-only) |
+| **Web Fetch** | Read the content of a specific URL (read-only) |
+| **Propose New Note** | Generate a new note draft for you to review and save |
+| **Propose Note Edit** | Suggest partial or full edits to an existing note for you to review and apply |
+
+**Note Proposal Cards**:
+
+When Thoughter proposes creating or editing a note, it displays the result as a card in plain text or native rich text format. Edit cards include a "View Change History" panel. Once confirmed, only matched passages are updated, leaving other formatting and media intact. If a note is modified after a proposal is generated, Thoughter will refuse to overwrite it and ask for a fresh proposal.
+
+**Conversation History**:
+
+- Tap the "History" icon in the top-right corner to view and restore previous conversations.
+- Tap the "New Chat" icon to start a fresh session.
+
+---
 
 ### Daily Inspiration
 
