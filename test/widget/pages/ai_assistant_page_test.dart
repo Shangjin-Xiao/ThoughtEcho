@@ -19,7 +19,6 @@ import 'package:thoughtecho/services/chat_session_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
-import 'package:thoughtecho/widgets/ai/experimental_badge.dart';
 import 'package:thoughtecho/widgets/ai/tool_progress_panel.dart';
 
 import '../../test_harness.dart';
