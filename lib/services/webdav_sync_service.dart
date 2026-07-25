@@ -931,9 +931,11 @@ class WebDAVSyncService extends ChangeNotifier {
     );
 
     if (catCheck.isEmpty) {
+      // 分类名称使用固定的内部标识符存库，UI 展示时应通过 l10n 映射
+      // 以避免在非中文环境下因数据库存储中文名导致的国际化不一致问题
       await db.insert('categories', {
         'id': conflictCategoryId,
-        'name': '同步冲突',
+        'name': 'sync_conflict',
         'is_default': 0,
         'icon_name': 'warning_amber_rounded',
         'last_modified': DateTime.now().toUtc().toIso8601String(),
@@ -985,7 +987,9 @@ class WebDAVSyncService extends ChangeNotifier {
 
       logDebug('已准备为冲突的笔记创建冲突隔离备份: $clonedId');
     } catch (e) {
-      logDebug('克隆冲突笔记准备失败: $e');
+      // 升级为 Warning：克隆失败会导致用户以为冲突已备份但实际没有，需要明确记录
+      logWarning('克隆冲突笔记准备失败，冲突数据未被备份: $e',
+          source: 'WebDAVSyncService');
     }
   }
 
@@ -1185,6 +1189,9 @@ class WebDAVSyncService extends ChangeNotifier {
     if (!remoteMediaFiles.containsKey(stdPath)) return true;
 
     final remoteSize = remoteMediaFiles[stdPath];
+    // TODO(media-sync): 当前仅以文件大小作为差异判断依据（历史设计）。
+    // 文件大小相同但内容不同的媒体文件（如相同尺寸的不同图片）会漏同步。
+    // 后续可引入 MD5/SHA1 内容哈希或 ETag 校验作为更精确的对比手段。
     return remoteSize != null && remoteSize != localSize;
   }
 

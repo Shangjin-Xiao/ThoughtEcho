@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../gen_l10n/app_localizations.dart';
 import '../../services/settings_service.dart';
+import '../../utils/app_logger.dart';
 
 /// 实验性功能标签 Component
 ///
@@ -88,7 +89,13 @@ Future<void> showExperimentalNoticeDialog(BuildContext context) async {
                 unawaited(
                   settingsService.setDontShowAgentExperimentalNotice(true),
                 );
-              } catch (_) {}
+              } catch (e) {
+                // 失败时不弹窗提示用户，但必须记录日志以便排查偏好写入失败
+                logWarning(
+                  '写入「不再提示」偏好失败: $e',
+                  source: 'ExperimentalNoticeDialog',
+                );
+              }
             }
             Navigator.of(dialogContext).pop();
           }

@@ -141,8 +141,12 @@ class StreamingBackupProcessor {
             } finally {
               outputStream.closeSync();
             }
-          } catch (_) {
-            // 单个媒体文件损坏不应阻止结构化数据还原。
+          } catch (e) {
+            // 单个媒体文件损坏不应阻断结构化数据还原，但必须记录日志以便排查
+            logWarning(
+              '媒体文件解压失败 [${file.name}]: $e',
+              source: 'StreamingBackupProcessor',
+            );
           }
         }
       }
