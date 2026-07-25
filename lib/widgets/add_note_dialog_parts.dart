@@ -11,8 +11,11 @@ class KeyboardInsetPadding extends StatelessWidget {
   final Widget child;
   final ValueChanged<double>? onInsetBuild;
 
-  const KeyboardInsetPadding(
-      {super.key, required this.child, this.onInsetBuild});
+  const KeyboardInsetPadding({
+    super.key,
+    required this.child,
+    this.onInsetBuild,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -91,9 +94,8 @@ class _TagSelectionSectionState extends State<TagSelectionSection> {
         final l10n = AppLocalizations.of(context);
         _filteredTags = widget.tags
             .where(
-              (tag) => tag.localizedName(l10n).toLowerCase().contains(
-                    lowerQuery,
-                  ),
+              (tag) =>
+                  tag.localizedName(l10n).toLowerCase().contains(lowerQuery),
             )
             .toList();
       }
@@ -283,9 +285,7 @@ class _TagListItem extends StatelessWidget {
         children: [
           leading,
           const SizedBox(width: 8),
-          Flexible(
-            child: Text(displayName, overflow: TextOverflow.ellipsis),
-          ),
+          Flexible(child: Text(displayName, overflow: TextOverflow.ellipsis)),
         ],
       ),
       subtitle: isHiddenTag
@@ -346,12 +346,12 @@ class SelectedTagsDisplay extends StatelessWidget {
           Wrap(
             spacing: 4.0,
             runSpacing: 4.0,
-            children: selectedTagIds.map((tagId) {
-              final tag = allTags.firstWhere(
-                (t) => t.id == tagId,
-                orElse: () => NoteCategory(id: tagId, name: l10n.unknownTag),
-              );
-              final String displayName = tag.localizedName(l10n);
+            children: () {
+              final tagMap = {for (var t in allTags) t.id: t};
+              return selectedTagIds.map((tagId) {
+                final tag = tagMap[tagId] ??
+                    NoteCategory(id: tagId, name: l10n.unknownTag);
+                final String displayName = tag.localizedName(l10n);
 
               return Chip(
                 label: IconUtils.isEmoji(tag.iconName)
@@ -363,8 +363,10 @@ class SelectedTagsDisplay extends StatelessWidget {
                             style: const TextStyle(fontSize: 20),
                           ),
                           const SizedBox(width: 4),
-                          Text(displayName,
-                              style: const TextStyle(fontSize: 12)),
+                          Text(
+                            displayName,
+                            style: const TextStyle(fontSize: 12),
+                          ),
                         ],
                       )
                     : Text(displayName),
@@ -374,7 +376,8 @@ class SelectedTagsDisplay extends StatelessWidget {
                 deleteIcon: const Icon(Icons.cancel, size: 18),
                 onDeleted: () => onRemoveTag(tagId),
               );
-            }).toList(),
+              }).toList();
+            }(),
           ),
         ],
       ),
