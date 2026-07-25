@@ -1,14 +1,77 @@
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:mockito/annotations.dart';
+
 import 'package:thoughtecho/controllers/weather_search_controller.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
-import 'weather_search_controller_test.mocks.dart';
+// Since Mockito 5.4.1, trying to generate mocks for methods that return final classes (like IconData in flutter)
+// will result in invalid_use_of_type_outside_library error in flutter analyze.
+// However WeatherSearchController does not use getWeatherIconData, so we can just mock manually or use a custom Mock
+class MockLocationService extends Mock implements LocationService {
+  @override
+  bool get hasLocationPermission => super.noSuchMethod(
+        Invocation.getter(#hasLocationPermission),
+        returnValue: false,
+      ) as bool;
+
+  @override
+  String get city => super.noSuchMethod(
+        Invocation.getter(#city),
+        returnValue: '',
+      ) as String;
+
+  @override
+  Position? get currentPosition => super.noSuchMethod(
+        Invocation.getter(#currentPosition),
+      ) as Position?;
+
+  @override
+  Future<void> setSelectedCity(CityInfo? cityInfo) => super.noSuchMethod(
+        Invocation.method(#setSelectedCity, [cityInfo]),
+        returnValue: Future<void>.value(),
+      ) as Future<void>;
+
+  @override
+  Future<Position?> getCurrentLocation({
+    bool highAccuracy = false,
+    bool skipPermissionRequest = false,
+  }) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #getCurrentLocation,
+          [],
+          {
+            #highAccuracy: highAccuracy,
+            #skipPermissionRequest: skipPermissionRequest,
+          },
+        ),
+        returnValue: Future<Position?>.value(),
+      ) as Future<Position?>;
+}
+
+class MockWeatherService extends Mock implements WeatherService {
+  @override
+  bool get hasValidWeatherData => super.noSuchMethod(
+        Invocation.getter(#hasValidWeatherData),
+        returnValue: false,
+      ) as bool;
+
+  @override
+  Future<void> getWeatherData(double? lat, double? lon,
+          {bool forceRefresh = false, Duration? timeout}) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #getWeatherData,
+          [lat, lon],
+          {#forceRefresh: forceRefresh, #timeout: timeout},
+        ),
+        returnValue: Future<void>.value(),
+      ) as Future<void>;
+}
 
 class FakeAppLocalizations implements AppLocalizations {
   @override
@@ -38,7 +101,6 @@ class FakeAppLocalizations implements AppLocalizations {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-@GenerateMocks([LocationService, WeatherService])
 void main() {
   late WeatherSearchController controller;
   late MockLocationService mockLocationService;
