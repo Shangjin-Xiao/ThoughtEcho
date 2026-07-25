@@ -596,15 +596,25 @@ class MediaReferenceService {
 
       int batchCount = 0;
 
+      // 1. 提取所有唯一的路径
+      final uniquePaths = <String>{};
+      for (final variants in missingIndex.values) {
+        uniquePaths.addAll(variants.keys);
+      }
+      final pathsList = uniquePaths.toList(growable: false);
+
+      // 2. 并发标准化所有路径
+      final normalizedList = await Future.wait(
+        pathsList.map((p) => _normalizeFilePath(p, cachedAppPath: appPath)),
+      );
+      final normalizedPathMap =
+          Map<String, String>.fromIterables(pathsList, normalizedList);
+
+      // 3. 同步构建批处理，避免在循环中等待
       for (final variants in missingIndex.values) {
         for (final entry in variants.entries) {
           final filePath = entry.key;
-
-          // 使用缓存的 appPath 进行标准化
-          final normalizedPath = await _normalizeFilePath(
-            filePath,
-            cachedAppPath: appPath,
-          );
+          final normalizedPath = normalizedPathMap[filePath]!;
 
           for (final quoteId in entry.value) {
             batch.insert(
