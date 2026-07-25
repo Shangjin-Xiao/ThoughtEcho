@@ -131,6 +131,17 @@ void main() {
       expect(logRecord["message"], contains("(错误: Connection timeout)"));
     });
 
+    test("onResponse does not log if start_time is missing", () async {
+      final options = RequestOptions(path: "/missing_start_time");
+      final response = Response(requestOptions: options, statusCode: 200);
+      final handler = FakeResponseInterceptorHandler();
+
+      interceptor.onResponse(response, handler);
+
+      expect(handler.calledResponses.length, 1);
+      expect(fakeLogService.logRecords.length, 0);
+    });
+
     test("URL length is truncated if too long", () async {
       final longPath = "/${'a' * 100}";
       final options = RequestOptions(path: longPath);
