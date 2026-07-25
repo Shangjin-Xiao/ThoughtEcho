@@ -389,14 +389,21 @@ class AddNoteController extends ChangeNotifier {
 
       final List<String> tagIds = [];
       String? subtypeTagId;
+
+      final tagResults = await Future.wait(
+        tagsToEnsure.map((tagInfo) => ensureTagExists(
+              db,
+              tagInfo['name']!,
+              tagInfo['icon']!,
+              fixedId: tagInfo['fixedId'],
+            )),
+      );
+
+      if (_isDisposed) return;
+
+      int index = 0;
       for (final tagInfo in tagsToEnsure) {
-        final tagId = await ensureTagExists(
-          db,
-          tagInfo['name']!,
-          tagInfo['icon']!,
-          fixedId: tagInfo['fixedId'],
-        );
-        if (_isDisposed) return;
+        final tagId = tagResults[index++];
         if (tagId != null) {
           tagIds.add(tagId);
           if (tagInfo['fixedId'] != null &&
