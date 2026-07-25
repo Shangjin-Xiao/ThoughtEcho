@@ -365,7 +365,7 @@ class MediaReferenceService {
   /// 迭代式构建清理计划，避免一次性加载所有笔记
   static Future<_CleanupPlan> _planOrphanCleanupStreamed() async {
     final storedIndex = await _fetchStoredReferenceIndex();
-    final quoteIndex = await _collectQuoteReferenceIndexStreamed();
+    final quoteIndex = await _collectQuoteReferenceIndex();
     final snapshot = ReferenceSnapshot(
       storedIndex: storedIndex,
       quoteIndex: quoteIndex,
@@ -494,53 +494,9 @@ class MediaReferenceService {
     return index;
   }
 
+  /// 流式收集引用索引，避免一次性加载全部笔记，防止内存溢出
   static Future<Map<String, Map<String, Set<String>>>>
       _collectQuoteReferenceIndex() async {
-    final databaseService = DatabaseService();
-    // 媒体引用索引需要包含所有笔记（包括隐藏笔记）
-    final quotes = await databaseService.getAllQuotes(
-      excludeHiddenNotes: false,
-      includeDeleted: true,
-    );
-
-    final index = <String, Map<String, Set<String>>>{};
-
-    // 获取应用目录路径缓存，避免循环中多次获取
-    final appDir = await getApplicationDocumentsDirectory();
-    final appPath = path.normalize(appDir.path);
-
-    await Future.wait(
-      quotes.map((quote) async {
-        final quoteId = quote.id;
-        if (quoteId == null || quoteId.isEmpty) {
-          return;
-        }
-
-        final mediaPaths = await extractMediaPathsFromQuote(
-          quote,
-          cachedAppPath: appPath,
-        );
-
-        for (final mediaPath in mediaPaths) {
-          final variantPath = path.normalize(mediaPath);
-          final key = _canonicalComparisonKey(variantPath);
-
-          final variants = index.putIfAbsent(
-            key,
-            () => <String, Set<String>>{},
-          );
-          final quoteSet = variants.putIfAbsent(variantPath, () => <String>{});
-          quoteSet.add(quoteId);
-        }
-      }),
-    );
-
-    return index;
-  }
-
-  /// 流式收集引用索引，避免一次性加载全部笔记
-  static Future<Map<String, Map<String, Set<String>>>>
-      _collectQuoteReferenceIndexStreamed() async {
     final databaseService = DatabaseService();
     final index = <String, Map<String, Set<String>>>{};
     const int pageSize = 200;
@@ -559,34 +515,41 @@ class MediaReferenceService {
       );
       if (quotes.isEmpty) break;
 
-      await Future.wait(
-        quotes.map((quote) async {
-          final quoteId = quote.id;
-          if (quoteId == null || quoteId.isEmpty) {
-            return;
-          }
+      const int chunkSize = 50;
+      final quotesList = quotes.toList(growable: false);
+      for (var i = 0; i < quotesList.length; i += chunkSize) {
+        final chunk = quotesList.skip(i).take(chunkSize);
+        await Future.wait(
+          chunk.map((quote) async {
+            final quoteId = quote.id;
+            if (quoteId == null || quoteId.isEmpty) {
+              return;
+            }
 
-          final mediaPaths = await extractMediaPathsFromQuote(
-            quote,
-            cachedAppPath: appPath,
-          );
-
-          for (final mediaPath in mediaPaths) {
-            final variantPath = path.normalize(mediaPath);
-            final key = _canonicalComparisonKey(variantPath);
-
-            final variants = index.putIfAbsent(
-              key,
-              () => <String, Set<String>>{},
+            final mediaPaths = await extractMediaPathsFromQuote(
+              quote,
+              cachedAppPath: appPath,
             );
-            final quoteSet = variants.putIfAbsent(
-              variantPath,
-              () => <String>{},
-            );
-            quoteSet.add(quoteId);
-          }
-        }),
-      );
+
+            for (final mediaPath in mediaPaths) {
+              final variantPath = path.normalize(mediaPath);
+              final key = _canonicalComparisonKey(variantPath);
+
+              final variants = index.putIfAbsent(
+                key,
+                () => <String, Set<String>>{},
+              );
+              final quoteSet = variants.putIfAbsent(
+                variantPath,
+                () => <String>{},
+              );
+              quoteSet.add(quoteId);
+            }
+          }),
+        );
+        // 让出事件循环，避免长时间阻塞
+        await Future.delayed(Duration.zero);
+      }
 
       offset += quotes.length;
       if (quotes.length < pageSize) break;
@@ -1291,21 +1254,29 @@ class MediaReferenceService {
         );
         if (quotes.isEmpty) break;
 
-        final results = await Future.wait(
-          quotes.map((quote) async {
-            return await syncQuoteMediaReferences(
-              quote,
-              cachedAppPath: appPath,
-            );
-          }),
-        );
-        migratedCount += results.where((success) => success).length;
+        // 限制并发数量，避免内存溢出和数据库锁定
+        const int chunkSize = 50;
+        final quotesList = quotes.toList(growable: false);
+        int pageMigratedCount = 0;
+        for (var i = 0; i < quotesList.length; i += chunkSize) {
+          final chunk = quotesList.skip(i).take(chunkSize);
+          final results = await Future.wait(
+            chunk.map((quote) async {
+              return await syncQuoteMediaReferences(
+                quote,
+                cachedAppPath: appPath,
+              );
+            }),
+          );
+          pageMigratedCount += results.where((success) => success).length;
+
+          // 让出事件循环，避免长时间阻塞
+          await Future.delayed(Duration.zero);
+        }
+        migratedCount += pageMigratedCount;
 
         offset += quotes.length;
         if (quotes.length < pageSize) break;
-
-        // 让出事件循环，避免长时间阻塞UI
-        await Future.delayed(const Duration(milliseconds: 0));
       }
 
       logDebug('迁移完成，共处理 $migratedCount 个笔记');
