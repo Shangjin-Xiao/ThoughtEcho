@@ -346,35 +346,36 @@ class SelectedTagsDisplay extends StatelessWidget {
           Wrap(
             spacing: 4.0,
             runSpacing: 4.0,
-            children: selectedTagIds.map((tagId) {
-              final tag = allTags.firstWhere(
-                (t) => t.id == tagId,
-                orElse: () => NoteCategory(id: tagId, name: l10n.unknownTag),
-              );
-              final String displayName = tag.localizedName(l10n);
+            children: () {
+              final tagMap = {for (var t in allTags) t.id: t};
+              return selectedTagIds.map((tagId) {
+                final tag = tagMap[tagId] ??
+                    NoteCategory(id: tagId, name: l10n.unknownTag);
+                final String displayName = tag.localizedName(l10n);
 
-              return Chip(
-                label: IconUtils.isEmoji(tag.iconName)
-                    ? Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            IconUtils.getDisplayIcon(tag.iconName),
-                            style: const TextStyle(fontSize: 20),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(displayName,
-                              style: const TextStyle(fontSize: 12)),
-                        ],
-                      )
-                    : Text(displayName),
-                avatar: !IconUtils.isEmoji(tag.iconName)
-                    ? Icon(IconUtils.getIconData(tag.iconName), size: 18)
-                    : null,
-                deleteIcon: const Icon(Icons.cancel, size: 18),
-                onDeleted: () => onRemoveTag(tagId),
-              );
-            }).toList(),
+                return Chip(
+                  label: IconUtils.isEmoji(tag.iconName)
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              IconUtils.getDisplayIcon(tag.iconName),
+                              style: const TextStyle(fontSize: 20),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(displayName,
+                                style: const TextStyle(fontSize: 12)),
+                          ],
+                        )
+                      : Text(displayName),
+                  avatar: !IconUtils.isEmoji(tag.iconName)
+                      ? Icon(IconUtils.getIconData(tag.iconName), size: 18)
+                      : null,
+                  deleteIcon: const Icon(Icons.cancel, size: 18),
+                  onDeleted: () => onRemoveTag(tagId),
+                );
+              }).toList();
+            }(),
           ),
         ],
       ),

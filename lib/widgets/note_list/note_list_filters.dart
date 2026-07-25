@@ -27,12 +27,11 @@ extension NoteListFiltersExtension on NoteListViewState {
 
     // 添加标签chip (带图标支持) - 添加进出场动画
     if (widget.selectedTagIds.isNotEmpty) {
+      final tagMap = {for (var t in _effectiveTags) t.id: t};
       allChips.addAll(
         widget.selectedTagIds.map((tagId) {
-          final tag = _effectiveTags.firstWhere(
-            (tag) => tag.id == tagId,
-            orElse: () => NoteCategory(id: tagId, name: l10n.unknownTag),
-          );
+          final tag =
+              tagMap[tagId] ?? NoteCategory(id: tagId, name: l10n.unknownTag);
           return TweenAnimationBuilder<double>(
             key: ValueKey('tag_$tagId'),
             duration: const Duration(milliseconds: 250),
