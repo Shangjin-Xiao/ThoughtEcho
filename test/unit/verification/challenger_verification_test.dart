@@ -11,8 +11,9 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/services/database_backup_service.dart';
 import 'package:thoughtecho/services/database_schema_manager.dart';
-import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/localsend/models/info_register_dto.dart';
+import 'package:thoughtecho/services/localsend/models/multicast_dto.dart';
 import 'package:thoughtecho/services/localsend/models/prepare_upload_request_dto.dart';
 import 'package:thoughtecho/services/localsend/models/prepare_upload_response_dto.dart';
 import 'package:thoughtecho/services/webdav_sync_service.dart';
@@ -45,8 +46,7 @@ void main() {
       late String extractDir;
 
       setUp(() async {
-        tempDir =
-            await Directory.systemTemp.createTemp('challenger_zip_test_');
+        tempDir = await Directory.systemTemp.createTemp('challenger_zip_test_');
         extractDir = p.join(tempDir.path, 'extract_target');
         await Directory(extractDir).create(recursive: true);
       });
@@ -79,8 +79,7 @@ void main() {
         // POSIX relative traversal
         final posixPath = p.join(extractDir, '..', 'forbidden.txt');
         expect(
-          () =>
-              PathSecurityUtils.validateExtractionPath(posixPath, extractDir),
+          () => PathSecurityUtils.validateExtractionPath(posixPath, extractDir),
           throwsA(isA<Exception>().having(
             (e) => e.toString(),
             'message',
@@ -104,8 +103,7 @@ void main() {
         final mixedSub = mixedEntry.replaceAll('/', p.separator);
         final mixedPath = p.join(extractDir, mixedSub);
         expect(
-          () =>
-              PathSecurityUtils.validateExtractionPath(mixedPath, extractDir),
+          () => PathSecurityUtils.validateExtractionPath(mixedPath, extractDir),
           throwsA(isA<Exception>()),
         );
       });
@@ -237,7 +235,8 @@ void main() {
         expect(tags.first['quote_id'], equals('quote_orig'));
       });
 
-      test('importDataWithLWWMerge invalid payload preserves database integrity',
+      test(
+          'importDataWithLWWMerge invalid payload preserves database integrity',
           () async {
         await db.insert('quotes', {
           'id': 'lww_quote_orig',
@@ -274,7 +273,8 @@ void main() {
         final dioException = DioException(
           requestOptions: RequestOptions(path: 'https://dav.example.com/file'),
           response: Response(
-            requestOptions: RequestOptions(path: 'https://dav.example.com/file'),
+            requestOptions:
+                RequestOptions(path: 'https://dav.example.com/file'),
             statusCode: 507,
           ),
         );
@@ -287,7 +287,8 @@ void main() {
         final dioException401 = DioException(
           requestOptions: RequestOptions(path: 'https://dav.example.com/file'),
           response: Response(
-            requestOptions: RequestOptions(path: 'https://dav.example.com/file'),
+            requestOptions:
+                RequestOptions(path: 'https://dav.example.com/file'),
             statusCode: 401,
           ),
         );
@@ -300,7 +301,8 @@ void main() {
         final dioException404 = DioException(
           requestOptions: RequestOptions(path: 'https://dav.example.com/file'),
           response: Response(
-            requestOptions: RequestOptions(path: 'https://dav.example.com/file'),
+            requestOptions:
+                RequestOptions(path: 'https://dav.example.com/file'),
             statusCode: 404,
           ),
         );
@@ -326,8 +328,8 @@ void main() {
       test('Strips raw URLs and sensitive credentials from error text', () {
         const credentialUrlError =
             'Connection failed to https://myuser:supersecretpass99@dav.jianguoyun.com/dav/thoughtecho/';
-        final sanitized = WebDAVSyncService.sanitizeSyncErrorForTesting(
-            credentialUrlError);
+        final sanitized =
+            WebDAVSyncService.sanitizeSyncErrorForTesting(credentialUrlError);
 
         expect(sanitized, contains('[服务器地址]'));
         expect(sanitized, isNot(contains('supersecretpass99')));
@@ -348,10 +350,10 @@ void main() {
             alias: 'Test Device',
             version: '2.1',
             deviceModel: 'Linux',
-            deviceType: 'desktop',
+            deviceType: DeviceType.desktop,
             fingerprint: 'fp-12345',
             port: 53317,
-            protocol: 'https',
+            protocol: ProtocolType.https,
             download: false,
           ),
           files: {},
@@ -373,16 +375,14 @@ void main() {
         expect(decodedDto.info.fingerprint, equals('fp-12345'));
       });
 
-      test(
-          'Isolate.run handles PrepareUploadResponseDto JSON serialization',
+      test('Isolate.run handles PrepareUploadResponseDto JSON serialization',
           () async {
         final resDto = PrepareUploadResponseDto(
           sessionId: 'session-777',
           files: {'file_0': 'token-abc'},
         );
 
-        final jsonString =
-            await Isolate.run(() => jsonEncode(resDto.toJson()));
+        final jsonString = await Isolate.run(() => jsonEncode(resDto.toJson()));
         expect(jsonString, contains('session-777'));
         expect(jsonString, contains('token-abc'));
 
