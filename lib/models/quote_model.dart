@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import '../utils/quill_delta_builder.dart';
+
 class Quote {
   static const Object _noValue = Object();
 
@@ -475,7 +479,42 @@ class Quote {
     return '未知来源';
   }
 
+  /// 安全解析 deltaContent JSON，防止由于无效/损坏的 JSON 导致异常或编辑器崩溃。
+  /// 如果 deltaContent 为空、格式非法或包含无效 JSON，则降级返回基于 [content] 的合法 Delta ops。
+  List<Map<String, dynamic>> get safeDeltaOps {
+    if (deltaContent == null || deltaContent!.trim().isEmpty) {
+      return DeltaBuilder.textToDelta(content);
+    }
+    try {
+      final decoded = jsonDecode(deltaContent!);
+      List<dynamic>? opsList;
+      if (decoded is List) {
+        opsList = decoded;
+      } else if (decoded is Map && decoded['ops'] is List) {
+        opsList = decoded['ops'] as List;
+      }
+      if (opsList != null) {
+        final result = <Map<String, dynamic>>[];
+        for (final item in opsList) {
+          if (item is Map) {
+            result.add(Map<String, dynamic>.from(item));
+          }
+        }
+        if (result.isNotEmpty) return result;
+      }
+    } catch (_) {
+      // 降级处理
+    }
+    return DeltaBuilder.textToDelta(content);
+  }
+
+  /// 获取经过校验的安全 Delta JSON 字符串。若原字符串损坏，返回由 content 生成的标准 Delta JSON 字符串。
+  String get safeDeltaContent {
+    return DeltaBuilder.deltaToJson(safeDeltaOps);
+  }
+
   /// 验证Quote对象的完整性
+
   bool get isValid {
     try {
       return isValidContent(content) &&

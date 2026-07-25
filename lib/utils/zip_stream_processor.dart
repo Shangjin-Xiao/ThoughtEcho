@@ -4,6 +4,7 @@ import 'dart:isolate';
 
 import 'package:archive/archive_io.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as path;
 import '../services/large_file_manager.dart';
 import '../utils/app_logger.dart';
 import './path_security_utils.dart';
@@ -269,7 +270,9 @@ class ZipStreamProcessor {
 
         int processedCount = 0;
         for (final file in filesToProcess) {
-          final outputPath = '$extractPath/${file.name}';
+          final posixName = PathSecurityUtils.sanitizeZipEntryName(file.name);
+          final platformSubPath = posixName.replaceAll('/', path.separator);
+          final outputPath = path.join(extractPath, platformSubPath);
 
           // 安全检查：防止Zip Slip路径穿越漏洞
           PathSecurityUtils.validateExtractionPath(outputPath, extractPath);
@@ -295,8 +298,8 @@ class ZipStreamProcessor {
         }
 
         inputStream.closeSync();
-      } catch (e) {
-        sendPort.send('解压失败: $e');
+      } catch (e, s) {
+        sendPort.send({'error': e.toString(), 'stackTrace': s.toString()});
         rethrow;
       }
 
@@ -349,7 +352,7 @@ class ZipStreamProcessor {
         for (final file in archive) {
           totalUncompressedSize += file.size;
           fileCount++;
-          fileNames.add(file.name);
+          fileNames.add(PathSecurityUtils.sanitizeZipEntryName(file.name));
         }
 
         inputStream.closeSync();
@@ -392,7 +395,10 @@ class ZipStreamProcessor {
     final inputStream = InputFileStream(args['zipPath']!);
     try {
       final archive = ZipDecoder().decodeStream(inputStream);
-      return archive.any((file) => file.name == args['fileName']);
+      final targetSanitized =
+          PathSecurityUtils.sanitizeZipEntryName(args['fileName']!);
+      return archive.any((file) =>
+          PathSecurityUtils.sanitizeZipEntryName(file.name) == targetSanitized);
     } finally {
       inputStream.closeSync();
     }
@@ -417,8 +423,11 @@ class ZipStreamProcessor {
         final inputStream = InputFileStream(zipPath);
         final archive = ZipDecoder().decodeStream(inputStream);
 
+        final targetSanitized =
+            PathSecurityUtils.sanitizeZipEntryName(fileName);
         for (final file in archive) {
-          if (file.name == fileName) {
+          if (PathSecurityUtils.sanitizeZipEntryName(file.name) ==
+              targetSanitized) {
             // 检查文件大小，避免将超大文件加载到内存
             const largeFileThreshold = 100 * 1024 * 1024; // 100MB
 

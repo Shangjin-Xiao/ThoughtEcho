@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 import '../device_identity_manager.dart';
 import 'package:uuid/uuid.dart';
 
@@ -90,7 +91,9 @@ class ReceiveController {
       if (_cachedFingerprint == null) {
         initializeFingerprint();
       }
-      final prepareRequest = PrepareUploadRequestDto.fromJson(requestData);
+      final prepareRequest = await Isolate.run(
+        () => PrepareUploadRequestDto.fromJson(requestData),
+      );
 
       // Create session
       final sessionId = const Uuid().v4();
@@ -168,7 +171,7 @@ class ReceiveController {
         sessionId: sessionId,
         files: fileTokens,
       );
-      return response.toJson();
+      return await Isolate.run(() => response.toJson());
     } catch (e) {
       throw Exception('Invalid prepare upload request: $e');
     }

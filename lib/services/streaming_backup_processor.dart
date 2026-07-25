@@ -102,7 +102,11 @@ class StreamingBackupProcessor {
       final archive = ZipDecoder().decodeStream(inputStream);
       ArchiveFile? dataFile;
       for (final file in archive) {
-        if (file.name == 'backup_data.json' || file.name == 'data.json') {
+        final posixName = PathSecurityUtils.sanitizeZipEntryName(file.name);
+        if (posixName == 'backup_data.json' ||
+            posixName == 'data.json' ||
+            posixName.endsWith('/backup_data.json') ||
+            posixName.endsWith('/data.json')) {
           dataFile = file;
           break;
         }
@@ -119,8 +123,10 @@ class StreamingBackupProcessor {
           if (!file.isFile || file.name == dataFile.name) continue;
 
           try {
-            final normalizedName = file.name.replaceAll('/', p.separator);
-            final safeRelativePath = _normalizeSafeRelativePath(normalizedName);
+            final posixName = PathSecurityUtils.sanitizeZipEntryName(file.name);
+            final platformRelativePath = posixName.replaceAll('/', p.separator);
+            final safeRelativePath =
+                _normalizeSafeRelativePath(platformRelativePath);
             if (safeRelativePath == null) continue;
 
             final targetPath = p.join(appDirectoryPath, safeRelativePath);
@@ -260,9 +266,14 @@ class StreamingBackupProcessor {
     final inputStream = InputFileStream(filePath);
     try {
       return ZipDecoder().decodeStream(inputStream).any(
-            (file) =>
-                file.name == 'backup_data.json' || file.name == 'data.json',
-          );
+        (file) {
+          final posixName = PathSecurityUtils.sanitizeZipEntryName(file.name);
+          return posixName == 'backup_data.json' ||
+              posixName == 'data.json' ||
+              posixName.endsWith('/backup_data.json') ||
+              posixName.endsWith('/data.json');
+        },
+      );
     } finally {
       inputStream.closeSync();
     }

@@ -251,23 +251,31 @@ class DeltaBuilder {
     return jsonEncode({"ops": ops});
   }
 
-  /// 从JSON字符串解析Delta操作数组
+  /// 从JSON字符串解析Delta操作数组（支持容错防护）
   static List<Map<String, dynamic>>? deltaFromJson(String? json) {
-    if (json == null || json.isEmpty) {
+    if (json == null || json.trim().isEmpty) {
       return null;
     }
     try {
       final decoded = jsonDecode(json);
+      List<dynamic>? opsList;
       if (decoded is List) {
-        return List<Map<String, dynamic>>.from(decoded);
+        opsList = decoded;
+      } else if (decoded is Map && decoded['ops'] is List) {
+        opsList = decoded['ops'] as List;
       }
-      if (decoded is Map && decoded['ops'] is List) {
-        return List<Map<String, dynamic>>.from(decoded['ops']);
+      if (opsList == null) return null;
+
+      final result = <Map<String, dynamic>>[];
+      for (final item in opsList) {
+        if (item is Map) {
+          result.add(Map<String, dynamic>.from(item));
+        }
       }
-    } catch (e) {
+      return result.isEmpty ? null : result;
+    } catch (_) {
       return null;
     }
-    return null;
   }
 
   /// 从Delta提取纯文本内容

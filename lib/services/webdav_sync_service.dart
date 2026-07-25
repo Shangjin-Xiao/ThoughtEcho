@@ -25,11 +25,13 @@ class _RemoteSyncFileMetadata {
     required this.exists,
     this.etag,
     this.contentLength,
+    this.lastModified,
   });
 
   final bool exists;
   final String? etag;
   final int? contentLength;
+  final String? lastModified;
 }
 
 class WebDAVSyncService extends ChangeNotifier {
@@ -49,6 +51,7 @@ class WebDAVSyncService extends ChangeNotifier {
   String _lastSyncTime = '';
   int _lastConflictCount = 0;
   bool _hasPendingSync = false; // 是否有排队中的同步任务
+  bool _isSyncExecuting = false; // 独占同步/上传互斥锁，防止并发重入
   String _lastSyncError = ''; // 最近一次失败的错误摘要（对用户安全）
 
   WebDAVSyncStatus get syncStatus => _syncStatus;
@@ -307,11 +310,12 @@ class WebDAVSyncService extends ChangeNotifier {
   Future<void> triggerSync({bool isBackground = false}) async {
     if (!_enabled) return;
 
-    if (isSyncing) {
+    if (isSyncing || _isSyncExecuting) {
       logDebug('当前正在同步中，将此次同步请求加入排队队列');
       _hasPendingSync = true;
       return;
     }
+    _isSyncExecuting = true;
 
     final password = await getPassword();
     if (_url.isEmpty ||
@@ -319,6 +323,7 @@ class WebDAVSyncService extends ChangeNotifier {
         password == null ||
         password.isEmpty) {
       logDebug('WebDAV 同步未完全配置，跳过同步');
+      _isSyncExecuting = false;
       return;
     }
 
@@ -331,6 +336,7 @@ class WebDAVSyncService extends ChangeNotifier {
         skipMedia = true;
       } else if (!_syncOnCellular) {
         logInfo('当前处于移动数据网络下且未允许流量同步，跳过 WebDAV 同步');
+        _isSyncExecuting = false;
         return;
       }
     }
@@ -465,6 +471,7 @@ class WebDAVSyncService extends ChangeNotifier {
       await _mmkv.setString('webdav_sync_status', 'failed');
       await _mmkv.setString('webdav_last_sync_error', _lastSyncError);
     } finally {
+      _isSyncExecuting = false;
       notifyListeners();
       if (_hasPendingSync) {
         _hasPendingSync = false;
@@ -474,18 +481,36 @@ class WebDAVSyncService extends ChangeNotifier {
     }
   }
 
+  @visibleForTesting
+  static String sanitizeSyncErrorForTesting(Object e) =>
+      _instance._sanitizeSyncError(e);
+
   /// 将异常转换为对用户安全、友好的错误摘要（不含 URL、密码等敏感信息）
   String _sanitizeSyncError(Object e) {
-    final raw = e.toString();
-    // HTTP 状态码识别
-    final statusMatch = RegExp(r'status[Cc]ode[:\s]+(\d+)').firstMatch(raw);
-    if (statusMatch != null) {
-      final code = int.tryParse(statusMatch.group(1) ?? '');
+    if (e is DioException) {
+      final code = e.response?.statusCode;
       if (code == 401 || code == 403) return '认证失败，请检查用户名和密码';
       if (code == 404) return '服务器路径不存在，请检查地址配置';
       if (code == 507) return '服务器存储空间不足';
       if (code != null && code >= 500) return '服务器内部错误 ($code)';
-      if (code != null) return 'HTTP 错误 ($code)';
+      if (code != null && code >= 400) return 'HTTP 错误 ($code)';
+    }
+
+    final raw = e.toString();
+    // HTTP 状态码识别
+    final statusMatch = RegExp(
+            r'status[Cc]ode[:\s]+(\d+)|status code[:\s]+(\d+)|HTTP\s+(\d+)',
+            caseSensitive: false)
+        .firstMatch(raw);
+    if (statusMatch != null) {
+      final matchedStr =
+          statusMatch.group(1) ?? statusMatch.group(2) ?? statusMatch.group(3);
+      final code = int.tryParse(matchedStr ?? '');
+      if (code == 401 || code == 403) return '认证失败，请检查用户名和密码';
+      if (code == 404) return '服务器路径不存在，请检查地址配置';
+      if (code == 507) return '服务器存储空间不足';
+      if (code != null && code >= 500) return '服务器内部错误 ($code)';
+      if (code != null && code >= 400) return 'HTTP 错误 ($code)';
     }
     // 网络类错误
     if (raw.contains('SocketException') ||
@@ -505,8 +530,8 @@ class WebDAVSyncService extends ChangeNotifier {
     if (raw.contains('DioException') || raw.contains('DioError')) {
       return '网络请求失败，请稍后重试';
     }
-    // 截取前 80 个字符，去掉可能含 URL 的部分
-    final safe = raw.replaceAll(RegExp(r'https?://\S+'), '[服务器地址]');
+    // 脱敏替换，包含包含用户名密码的 URL
+    final safe = raw.replaceAll(RegExp(r'https?://[^\s]+'), '[服务器地址]');
     return safe.length > 80 ? '${safe.substring(0, 80)}…' : safe;
   }
 
@@ -538,12 +563,21 @@ class WebDAVSyncService extends ChangeNotifier {
       if (targetResponse == null) {
         return const _RemoteSyncFileMetadata(exists: false);
       }
+      final lastModifiedHeader = response.headers.value('last-modified');
+      final xmlLastModified =
+          _extractFirstXmlTagValue(targetResponse, 'getlastmodified');
+      final lastModified =
+          (xmlLastModified != null && xmlLastModified.isNotEmpty)
+              ? xmlLastModified
+              : lastModifiedHeader;
+
       return _RemoteSyncFileMetadata(
         exists: true,
         etag: _extractFirstXmlTagValue(targetResponse, 'getetag'),
         contentLength: int.tryParse(
           _extractFirstXmlTagValue(targetResponse, 'getcontentlength') ?? '',
         ),
+        lastModified: lastModified,
       );
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
@@ -697,11 +731,24 @@ class WebDAVSyncService extends ChangeNotifier {
     if (remoteSyncFile.exists) {
       if (remoteSyncFile.etag != null && remoteSyncFile.etag!.isNotEmpty) {
         headers['If-Match'] = remoteSyncFile.etag!;
+      } else if (remoteSyncFile.lastModified != null &&
+          remoteSyncFile.lastModified!.isNotEmpty) {
+        headers['If-Unmodified-Since'] = remoteSyncFile.lastModified!;
       } else {
         logWarning(
-          '云端同步文件未提供 ETag，无法启用覆盖冲突保护',
+          '云端同步文件未提供 ETag 与 Last-Modified 标头，执行上传前预检以防止覆盖冲突',
           source: 'WebDAVSyncService',
         );
+        final preflightMeta = await _getRemoteSyncFileMetadata(dio, fileUrl);
+        if (preflightMeta.exists) {
+          if (preflightMeta.etag != null ||
+              (remoteSyncFile.contentLength != null &&
+                  preflightMeta.contentLength !=
+                      remoteSyncFile.contentLength)) {
+            _hasPendingSync = true;
+            throw StateError('云端同步文件在上传前检测到已被更新，将重新拉取合并后再上传');
+          }
+        }
       }
     } else {
       headers['If-None-Match'] = '*';
@@ -1190,64 +1237,63 @@ class WebDAVSyncService extends ChangeNotifier {
   ) async {
     final sink = File(filePath).openWrite(encoding: utf8);
     try {
-      final dbVersion = await db.getVersion();
-      sink.write(
-        '{"metadata":${json.encode({
-              'app': '心迹',
-              'version': dbVersion,
-              'exportTime': DateTime.now().toIso8601String()
-            })},',
-      );
-
-      // categories — 数量有界，直接写入
-      final categories = await db.query('categories');
-      sink.write('"categories":${json.encode(categories)},');
-
-      // quotes — 分页写入，每页批量查询对应 tag_ids（避免 N+1）
-      sink.write('"quotes":[');
-      const pageSize = 50;
-      int offset = 0;
-      bool isFirstQuote = true;
-      while (true) {
-        final page = await db.rawQuery(
-          'SELECT * FROM quotes ORDER BY date DESC LIMIT ? OFFSET ?',
-          [pageSize, offset],
+      await db.transaction((txn) async {
+        final dbVersion = await txn.getVersion();
+        sink.write(
+          '{"metadata":${json.encode({
+                'app': '心迹',
+                'version': dbVersion,
+                'exportTime': DateTime.now().toIso8601String()
+              })},',
         );
-        if (page.isEmpty) break;
 
-        // 批量查 tag 关联，避免逐条查询
-        final ids = page.map((q) => q['id'] as String).toList();
-        final placeholders = List.filled(ids.length, '?').join(',');
-        final tagRows = await db.rawQuery(
-          'SELECT quote_id, tag_id FROM quote_tags WHERE quote_id IN ($placeholders)',
-          ids,
-        );
-        final tagsByQuoteId = <String, List<String>>{};
-        for (final t in tagRows) {
-          tagsByQuoteId
-              .putIfAbsent(t['quote_id'] as String, () => [])
-              .add(t['tag_id'] as String);
+        // categories — 一致性快照读取
+        final categories = await txn.query('categories');
+        sink.write('"categories":${json.encode(categories)},');
+
+        // quotes & quote_tags — 事务内一致性分页读取
+        sink.write('"quotes":[');
+        const pageSize = 50;
+        int offset = 0;
+        bool isFirstQuote = true;
+        while (true) {
+          final page = await txn.rawQuery(
+            'SELECT * FROM quotes ORDER BY date DESC LIMIT ? OFFSET ?',
+            [pageSize, offset],
+          );
+          if (page.isEmpty) break;
+
+          // 批量查 tag 关联，避免逐条查询
+          final ids = page.map((q) => q['id'] as String).toList();
+          final placeholders = List.filled(ids.length, '?').join(',');
+          final tagRows = await txn.rawQuery(
+            'SELECT quote_id, tag_id FROM quote_tags WHERE quote_id IN ($placeholders)',
+            ids,
+          );
+          final tagsByQuoteId = <String, List<String>>{};
+          for (final t in tagRows) {
+            tagsByQuoteId
+                .putIfAbsent(t['quote_id'] as String, () => [])
+                .add(t['tag_id'] as String);
+          }
+
+          for (final q in page) {
+            if (!isFirstQuote) sink.write(',');
+            isFirstQuote = false;
+            final m = Map<String, dynamic>.from(q);
+            m['tag_ids'] = (tagsByQuoteId[q['id'] as String] ?? []).join(',');
+            sink.write(json.encode(m));
+          }
+
+          offset += page.length;
+          if (page.length < pageSize) break;
         }
+        sink.write('],');
 
-        for (final q in page) {
-          if (!isFirstQuote) sink.write(',');
-          isFirstQuote = false;
-          final m = Map<String, dynamic>.from(q);
-          m['tag_ids'] = (tagsByQuoteId[q['id'] as String] ?? []).join(',');
-          sink.write(json.encode(m));
-        }
-
-        await sink.flush();
-        offset += page.length;
-        if (page.length < pageSize) break;
-        // 让出 CPU，避免同步期间 UI 卡顿
-        await Future.delayed(const Duration(milliseconds: 1));
-      }
-      sink.write('],');
-
-      // tombstones — 三列短字符串，数量有界
-      final tombstones = await db.query('quote_tombstones');
-      sink.write('"tombstones":${json.encode(tombstones)}}');
+        // tombstones — 三列短字符串，数量有界
+        final tombstones = await txn.query('quote_tombstones');
+        sink.write('"tombstones":${json.encode(tombstones)}}');
+      });
 
       await sink.flush();
     } finally {

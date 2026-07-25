@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
@@ -246,9 +247,12 @@ class NoteSyncService extends ChangeNotifier {
         onApprovalCancelled: _cancelIncomingApproval,
         onMediaManifestRequested: () async {
           final appDir = await getApplicationDocumentsDirectory();
-          return MediaSyncManifest.scan(
-            Directory(p.join(appDir.path, 'media')),
-          );
+          final mediaDirPath = p.join(appDir.path, 'media');
+          return await Isolate.run(() async {
+            return await MediaSyncManifest.scan(
+              Directory(mediaDirPath),
+            );
+          });
         },
       );
       final actualPort = _localSendServer!.port;
@@ -625,7 +629,8 @@ class NoteSyncService extends ChangeNotifier {
       if (response.statusCode != HttpStatus.ok) {
         throw Exception('目标设备不支持同步审批 (${response.statusCode})');
       }
-      return parseSyncIntentApproval(response.data ?? const {});
+      final responseData = response.data ?? const {};
+      return await Isolate.run(() => parseSyncIntentApproval(responseData));
     } finally {
       dio.close(force: true);
     }

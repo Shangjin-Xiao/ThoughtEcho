@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'constants.dart';
 import 'receive_controller.dart';
@@ -216,8 +217,9 @@ class LocalSendServer {
         } else if (path == '/api/thoughtecho/v1/sync-intent/cancel' &&
             request.method == 'POST') {
           final bodyBytes = await _readLimitedBody(request);
-          final req =
-              jsonDecode(utf8.decode(bodyBytes)) as Map<String, dynamic>;
+          final req = await Isolate.run(
+            () => jsonDecode(utf8.decode(bodyBytes)) as Map<String, dynamic>,
+          );
           final intentId = req['intentId'];
           if (intentId is! String || intentId.isEmpty) {
             statusCode = HttpStatus.badRequest;
@@ -242,7 +244,9 @@ class LocalSendServer {
           final bodyString = utf8.decode(bodyBytes);
           Map<String, dynamic> req = {};
           try {
-            req = jsonDecode(bodyString) as Map<String, dynamic>;
+            req = await Isolate.run(
+              () => jsonDecode(bodyString) as Map<String, dynamic>,
+            );
           } catch (e) {
             logDebug('[LocalSendServer] JSON decode failed: $e');
           }
@@ -310,7 +314,9 @@ class LocalSendServer {
             source: 'LocalSend',
           );
 
-          final requestData = jsonDecode(bodyString) as Map<String, dynamic>;
+          final requestData = await Isolate.run(
+            () => jsonDecode(bodyString) as Map<String, dynamic>,
+          );
           responseData = await _receiveController.handlePrepareUpload(
             requestData,
           );
@@ -357,7 +363,9 @@ class LocalSendServer {
             try {
               final bodyBytes = await _readLimitedBody(request);
               final body = utf8.decode(bodyBytes);
-              final data = jsonDecode(body) as Map<String, dynamic>;
+              final data = await Isolate.run(
+                () => jsonDecode(body) as Map<String, dynamic>,
+              );
               final sessionId = data['sessionId'] as String?;
               if (sessionId != null) {
                 _receiveController.cancelSession(sessionId);
@@ -395,7 +403,7 @@ class LocalSendServer {
       // Send response
       request.response.statusCode = statusCode;
       request.response.headers.contentType = ContentType.json;
-      final body = jsonEncode(responseData);
+      final body = await Isolate.run(() => jsonEncode(responseData));
       request.response.headers.set(
         HttpHeaders.contentLengthHeader,
         utf8.encode(body).length,

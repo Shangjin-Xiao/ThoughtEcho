@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:http/http.dart' as http;
 import 'package:thoughtecho/utils/app_logger.dart';
@@ -88,6 +89,8 @@ class LocalSendProvider {
       final client = http.Client();
       _activeClients[sessionId] = client;
       try {
+        final requestBody =
+            await Isolate.run(() => jsonEncode(requestDto.toJson()));
         http.Response response = await client
             .post(
               Uri.parse(url),
@@ -95,7 +98,7 @@ class LocalSendProvider {
                 'Content-Type': 'application/json',
                 'User-Agent': 'ThoughtEcho/1.0',
               },
-              body: jsonEncode(requestDto.toJson()),
+              body: requestBody,
             )
             .timeout(const Duration(seconds: 30));
 
@@ -116,7 +119,7 @@ class LocalSendProvider {
                   'Content-Type': 'application/json',
                   'User-Agent': 'ThoughtEcho/1.0',
                 },
-                body: jsonEncode(requestDto.toJson()),
+                body: requestBody,
               )
               .timeout(const Duration(seconds: 30));
         }
@@ -127,9 +130,11 @@ class LocalSendProvider {
         );
 
         if (response.statusCode == 200) {
-          final responseDto = PrepareUploadResponseDto.fromJson(
-            jsonDecode(response.body) as Map<String, dynamic>,
-          );
+          final responseBody = response.body;
+          final responseDto = await Isolate.run(() {
+            final map = jsonDecode(responseBody) as Map<String, dynamic>;
+            return PrepareUploadResponseDto.fromJson(map);
+          });
 
           // Update session with response
           _sessions[sessionId] = session.copyWith(

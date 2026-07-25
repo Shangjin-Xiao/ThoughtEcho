@@ -13,11 +13,11 @@ mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
       data,
       clearExisting: clearExisting,
     );
+    await _triggerPostRestoreMigrations();
     await updateCategoriesStreamForParts();
+    clearAllCacheForParts();
     notifyListeners();
-    await patchQuotesDayPeriod();
-    await migrateWeatherToKey();
-    await migrateDayPeriodToKey();
+    refreshQuotesStreamForParts();
   }
 
   /// 从 JSON 文件导入数据
@@ -70,11 +70,41 @@ mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
       data,
       sourceDevice: sourceDevice,
     );
-    await MediaReferenceService.migrateExistingQuotes();
+    if (!report.hasErrors) {
+      await _triggerPostRestoreMigrations();
+    }
     await updateCategoriesStreamForParts();
     clearAllCacheForParts();
     notifyListeners();
     refreshQuotesStreamForParts();
     return report;
+  }
+
+  /// 统一触发恢复/合并后的数据迁移与修补任务
+  Future<void> _triggerPostRestoreMigrations() async {
+    logDebug('开始触发恢复/合并后数据迁移与修补任务...', source: 'DatabaseService');
+    try {
+      await patchQuotesDayPeriod();
+      await migrateWeatherToKey();
+      await migrateDayPeriodToKey();
+      await MediaReferenceService.migrateExistingQuotes();
+      logDebug('恢复/合并后数据迁移触发完成', source: 'DatabaseService');
+    } catch (e, stackTrace) {
+      logError(
+        '恢复/合并后数据迁移触发失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DatabaseService',
+      );
+    }
+  }
+
+  /// 开启 SQLite 单一读取事务以获得一致性快照，防止导出/打包时脏读或数据不一致
+  Future<T> runWithSnapshotTransaction<T>(
+    Future<T> Function(Transaction txn) action,
+  ) async {
+    return await database.transaction((txn) async {
+      return await action(txn);
+    });
   }
 }
