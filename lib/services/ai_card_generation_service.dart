@@ -103,42 +103,82 @@ class AICardGenerationService extends ChangeNotifier {
     final errors = <String>[];
     final notesToProcess = notes.take(maxCards).toList();
 
-    for (int i = 0; i < notesToProcess.length; i++) {
-      final note = notesToProcess[i];
+    // Use a batch size to allow parallel processing while preventing API rate limits
+    const batchSize = 3;
+    int completedCount = 0;
+    bool shouldStop = false;
 
-      try {
-        AppLogger.i(
-          '正在生成第${i + 1}/${notesToProcess.length}张卡片...',
-          source: 'AICardGeneration',
-        );
+    for (int i = 0; i < notesToProcess.length; i += batchSize) {
+      if (shouldStop) break;
 
-        final card = await generateCard(note: note, brandName: brandName);
-        cards.add(card);
+      final chunk = notesToProcess.skip(i).take(batchSize).toList();
+      final chunkFutures = <Future<GeneratedCard?>>[];
 
-        // 报告进度
-        onProgress?.call(i + 1, notesToProcess.length, null);
+      for (int j = 0; j < chunk.length; j++) {
+        final noteIndex = i + j;
+        final note = chunk[j];
 
-        // 添加延迟避免API调用过于频繁
-        if (i < notesToProcess.length - 1) {
-          await Future.delayed(const Duration(milliseconds: 500));
+        chunkFutures.add(() async {
+          try {
+            AppLogger.i(
+              '正在生成第${noteIndex + 1}/${notesToProcess.length}张卡片...',
+              source: 'AICardGeneration',
+            );
+
+            final card = await generateCard(note: note, brandName: brandName);
+            completedCount++;
+            try {
+              onProgress?.call(completedCount, notesToProcess.length, null);
+            } catch (callbackError) {
+              AppLogger.e(
+                '生成进度回调失败: $callbackError',
+                source: 'AICardGeneration',
+              );
+            }
+            return card;
+          } catch (e) {
+            final errorMsg =
+                '生成第${noteIndex + 1}张卡片失败（内容长度: ${note.content.length}）: $e';
+            errors.add(errorMsg);
+            AppLogger.e(errorMsg, source: 'AICardGeneration');
+
+            completedCount++;
+            try {
+              onProgress?.call(
+                completedCount,
+                notesToProcess.length,
+                e.toString(),
+              );
+            } catch (callbackError, stackTrace) {
+              AppLogger.e(
+                '生成进度回调失败: $callbackError',
+                source: 'AICardGeneration',
+                error: callbackError,
+                stackTrace: stackTrace,
+              );
+            }
+            return null; // Return null on failure
+          }
+        }());
+      }
+
+      final results = await Future.wait(chunkFutures);
+
+      for (final result in results) {
+        if (result != null) {
+          cards.add(result);
         }
-      } catch (e) {
-        final errorMsg =
-            '生成第${i + 1}张卡片失败: ${note.content.substring(0, 30)}... - $e';
-        errors.add(errorMsg);
+      }
 
-        AppLogger.e(errorMsg, source: 'AICardGeneration');
+      if (errors.length > maxCards ~/ 2) {
+        logError('批量生成失败率过高，停止生成', source: 'AICardGenerationService');
+        shouldStop = true;
+        break;
+      }
 
-        // 报告错误进度
-        onProgress?.call(i + 1, notesToProcess.length, e.toString());
-
-        // 如果失败卡片太多，停止生成
-        if (errors.length > maxCards ~/ 2) {
-          logError('批量生成失败率过高，停止生成', source: 'AICardGenerationService');
-          break;
-        }
-
-        continue; // 跳过失败的卡片，继续生成其他卡片
+      // Add delay between batches instead of every single card
+      if (i + batchSize < notesToProcess.length && !shouldStop) {
+        await Future.delayed(const Duration(milliseconds: 500));
       }
     }
 
