@@ -117,6 +117,16 @@ void main() {
     });
 
     group('fetchLocation', () {
+      test('should propagate exception if getCurrentLocation throws', () async {
+        when(mockLocationService.getCurrentLocation())
+            .thenThrow(Exception('Location error'));
+
+        expect(
+          () => LocationWeatherHelper.fetchLocation(mockLocationService),
+          throwsException,
+        );
+      });
+
       test('should return null if position is null', () async {
         when(mockLocationService.getCurrentLocation())
             .thenAnswer((_) async => null);
@@ -160,3 +170,4 @@ void main() {
     });
   });
 }
+// Added missing tests for location_weather_helper.dart
