@@ -143,8 +143,20 @@ class AICardGenerationService extends ChangeNotifier {
             AppLogger.e(errorMsg, source: 'AICardGeneration');
 
             completedCount++;
-            onProgress?.call(
-                completedCount, notesToProcess.length, e.toString());
+            try {
+              onProgress?.call(
+                completedCount,
+                notesToProcess.length,
+                e.toString(),
+              );
+            } catch (callbackError, stackTrace) {
+              AppLogger.e(
+                '生成进度回调失败: $callbackError',
+                source: 'AICardGeneration',
+                error: callbackError,
+                stackTrace: stackTrace,
+              );
+            }
             return null; // Return null on failure
           }
         }());
