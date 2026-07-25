@@ -3,6 +3,7 @@ import '../gen_l10n/app_localizations.dart';
 import '../models/ai_assistant_entry.dart';
 import '../models/quote_model.dart';
 import '../pages/ai_assistant_page.dart';
+import 'ai/experimental_badge.dart';
 
 /// 快速问笔记按钮组件
 class QuickAskNoteButton extends StatelessWidget {
@@ -65,7 +66,14 @@ class AskNoteFloatingButton extends StatelessWidget {
         );
       },
       icon: const Icon(Icons.chat),
-      label: Text(AppLocalizations.of(context).askNote),
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(AppLocalizations.of(context).askNote),
+          const SizedBox(width: 6),
+          const ExperimentalBadge(compact: true),
+        ],
+      ),
       backgroundColor: Theme.of(
         context,
       ).colorScheme.secondaryContainer, // 使用浅色系
@@ -87,7 +95,13 @@ class AskNoteListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: const Icon(Icons.chat),
-      title: Text(AppLocalizations.of(context).askNote),
+      title: Row(
+        children: [
+          Text(AppLocalizations.of(context).askNote),
+          const SizedBox(width: 6),
+          const ExperimentalBadge(compact: true),
+        ],
+      ),
       subtitle: Text(AppLocalizations.of(context).chatWithAiAssistant),
       onTap: () {
         Navigator.of(context).push(

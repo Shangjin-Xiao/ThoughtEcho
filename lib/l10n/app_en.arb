@@ -4115,5 +4115,15 @@
   "noteProposalApply": "Apply changes",
   "noteProposalSave": "Save note",
   "noteProposalLegacyReadOnly": "This is a legacy suggestion without safe revision data. It is view-only; ask AI to generate a new suggestion before applying it.",
-  "noteProposalPlainEditorPreferenceWarning": "Your editor preference opens this plain draft in the full-screen rich text editor; saving it will create a rich text note."
+  "noteProposalPlainEditorPreferenceWarning": "Your editor preference opens this plain draft in the full-screen rich text editor; saving it will create a rich text note.",
+  "experimentalTag": "Beta",
+  "agentExperimentalNoticeTitle": "Thoughter Experimental Feature Notice",
+  "agentExperimentalNoticeIntro": "Thoughter is an AI Agent assistant currently in testing. Please review the following before proceeding:",
+  "agentExperimentalNoticePoint1": "AI may generate incorrect or inaccurate responses. Please review all content critically.",
+  "agentExperimentalNoticePoint2": "AI cannot directly edit your notes; all creations and edits take effect only after you click save/apply.",
+  "agentExperimentalNoticePoint3": "This feature is in active testing and refinement, and may encounter instability or bugs.",
+  "agentExperimentalNoticeGotIt": "Understand & Continue",
+  "agentExperimentalBannerText": "Experimental feature: AI answers may be inaccurate. Notes are only modified after clicking save.",
+  "agentExperimentalNoticeAction": "View Notice",
+  "dontShowAgain": "Don't show again"
 }

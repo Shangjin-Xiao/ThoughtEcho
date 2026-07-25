@@ -498,11 +498,19 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
             children: [
               Icon(icon, size: 28, color: iconColor),
               const SizedBox(height: 12),
-              Text(
-                title,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: iconColor,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: iconColor,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const ExperimentalBadge(compact: true),
+                ],
               ),
               const SizedBox(height: 4),
               Text(

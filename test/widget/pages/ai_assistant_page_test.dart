@@ -19,6 +19,7 @@ import 'package:thoughtecho/services/chat_session_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
+import 'package:thoughtecho/widgets/ai/experimental_badge.dart';
 import 'package:thoughtecho/widgets/ai/tool_progress_panel.dart';
 
 import '../../test_harness.dart';
@@ -449,6 +450,7 @@ void main() {
     setUp(() async {
       await TestHarness.initialize();
       settingsService = await SettingsService.create();
+      await settingsService.setDontShowAgentExperimentalNotice(true);
       chatSessionService = _InMemoryChatSessionService();
     });
 
@@ -1435,6 +1437,47 @@ void main() {
         controller.position.pixels,
         moreOrLessEquals(controller.position.maxScrollExtent, epsilon: 1),
       );
+    });
+
+    testWidgets(
+        'auto shows experimental notice dialog when enabled and allows closing with dontShowAgain',
+        (WidgetTester tester) async {
+      await settingsService.setDontShowAgentExperimentalNotice(false);
+      final agentService = _FakeAgentService(settingsService: settingsService);
+
+      final harness = await _buildHarness(
+        settingsService: settingsService,
+        chatSessionService: chatSessionService,
+        agentService: agentService,
+        child: const AIAssistantPage(
+          entrySource: AIAssistantEntrySource.explore,
+        ),
+      );
+
+      await tester.pumpWidget(harness);
+      await tester.pumpAndSettle();
+
+      // Dialog is auto-shown
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(find.text('Thoughter 实验性功能说明'), findsOneWidget);
+
+      // Check "不再自动提示"
+      final checkbox = find.byType(Checkbox);
+      expect(checkbox, findsOneWidget);
+      await tester.tap(checkbox);
+      await tester.pumpAndSettle();
+
+      // Tap close button (Icons.close inside Dialog header)
+      final closeButton = find.descendant(
+        of: find.byType(Dialog),
+        matching: find.byIcon(Icons.close),
+      );
+      expect(closeButton, findsOneWidget);
+      await tester.tap(closeButton);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Dialog), findsNothing);
+      expect(settingsService.dontShowAgentExperimentalNotice, isTrue);
     });
   });
 }

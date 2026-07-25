@@ -70,6 +70,9 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
         _agentListenerAttached = true;
       }
       _settingsReady = true;
+      if (!_settingsService.dontShowAgentExperimentalNotice && mounted) {
+        unawaited(showExperimentalNoticeDialog(context));
+      }
       final restoredMode = _restoreModeFromSettings();
       if (restoredMode != _currentMode && mounted) {
         _setState(() {

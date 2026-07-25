@@ -4115,5 +4115,15 @@
   "noteProposalApply": "应用修改",
   "noteProposalSave": "保存笔记",
   "noteProposalLegacyReadOnly": "这是旧版建议，缺少安全的版本信息，仅供查看。请让 AI 重新生成后再应用。",
-  "noteProposalPlainEditorPreferenceWarning": "你的设置会在全屏富文本编辑器中打开此普通草稿；保存后它将成为富文本笔记。"
+  "noteProposalPlainEditorPreferenceWarning": "你的设置会在全屏富文本编辑器中打开此普通草稿；保存后它将成为富文本笔记。",
+  "experimentalTag": "实验性",
+  "agentExperimentalNoticeTitle": "Thoughter 实验性功能说明",
+  "agentExperimentalNoticeIntro": "Thoughter 是正在测试中的 AI Agent 助手。在开始使用前，请阅读以下注意事项：",
+  "agentExperimentalNoticePoint1": "AI 可能会生成错误或不准确的回答，请对生成内容进行客观核查。",
+  "agentExperimentalNoticePoint2": "AI 不能直接修改你的笔记；所有编辑与新建方案仅在点击保存/应用后生效。",
+  "agentExperimentalNoticePoint3": "功能仍处于实验测试阶段，使用过程中可能会遇到异常或不稳定情况。",
+  "agentExperimentalNoticeGotIt": "理解并继续",
+  "agentExperimentalBannerText": "实验性功能：AI回答可能包含错误；AI不会直接改写笔记，仅在点击保存后生效。",
+  "agentExperimentalNoticeAction": "查看说明",
+  "dontShowAgain": "不再自动提示"
 }

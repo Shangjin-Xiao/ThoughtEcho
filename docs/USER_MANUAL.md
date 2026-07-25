@@ -138,7 +138,9 @@
 - **清除格式** - 移除所有格式
 - **搜索** - 在文档中搜索内容
 
-### Thoughter 辅助功能（✨ 按钮）
+### Thoughter 辅助功能（✨ 按钮，实验性 / Beta）
+
+> ⚠️ **实验性功能说明**：Thoughter 属于实验性 AI Agent 助手。AI 回答可能包含错误或不准确内容，请客观核查；AI 不会直接改写您的笔记，所有的创建与修改建议均必须由您点击保存/应用后才会生效。
 
 点击编辑器顶部的 ✨ 按钮，可使用以下 AI 功能：
 
@@ -822,7 +824,9 @@ The editor provides rich text formatting tools:
 - **Clear Formatting** - Remove all formatting
 - **Search** - Search within document
 
-### Thoughter Features (✨ Button)
+### Thoughter Features (✨ Button, Experimental / Beta)
+
+> ⚠️ **Experimental Feature Notice**: Thoughter is an experimental AI Agent assistant. AI responses may contain errors or inaccuracies and should be verified critically. AI cannot directly edit your notes; all note creations and modification proposals will take effect only after you click Save/Apply.
 
 Click the ✨ button at the top of the editor for:
 

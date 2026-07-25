@@ -48,6 +48,7 @@ import '../utils/quill_structured_edit.dart';
 import '../utils/string_utils.dart';
 import '../utils/time_utils.dart';
 import '../widgets/ai/ai_workflow_cards.dart';
+import '../widgets/ai/experimental_badge.dart';
 import '../widgets/ai/smart_result_card.dart';
 import '../widgets/ai/thinking_widget.dart';
 import '../widgets/ai/tool_progress_panel.dart';
@@ -89,6 +90,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   final Uuid _uuid = const Uuid();
 
   bool _isLoading = false;
+  bool _showExperimentalBanner = true;
   String? _currentSessionId;
   StreamSubscription<String>? _streamSubscription;
   late ChatSessionService _chatSessionService;

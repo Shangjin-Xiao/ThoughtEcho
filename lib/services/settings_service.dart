@@ -57,9 +57,19 @@ class SettingsService extends ChangeNotifier {
   ThemeMode get themeMode => _themeMode;
   MultiAISettings get multiAISettings => _multiAISettings; // 新增getter
   LocalAISettings get localAISettings => _localAISettings; // 新增本地AI设置getter
+  static const String _dontShowAgentExperimentalNoticeKey =
+      'dont_show_agent_experimental_notice';
+
   bool get syncSkipConfirm => _mmkv.getBool(_syncSkipConfirmKey) ?? false;
   bool get syncDefaultIncludeMedia =>
       _mmkv.getBool(_syncDefaultIncludeMediaKey) ?? true;
+  bool get dontShowAgentExperimentalNotice =>
+      _mmkv.getBool(_dontShowAgentExperimentalNoticeKey) ?? false;
+
+  Future<void> setDontShowAgentExperimentalNotice(bool value) async {
+    await _mmkv.setBool(_dontShowAgentExperimentalNoticeKey, value);
+    notifyListeners();
+  }
 
   AIAssistantPageMode get exploreAiAssistantMode =>
       AIAssistantPageModeStorage.fromStorage(

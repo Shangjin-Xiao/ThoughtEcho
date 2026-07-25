@@ -17,6 +17,7 @@ import '../utils/report_period_utils.dart';
 import '../utils/string_utils.dart';
 import '../constants/app_constants.dart'; // 导入应用常量
 import '../gen_l10n/app_localizations.dart';
+import '../widgets/ai/experimental_badge.dart';
 import 'ai_assistant_page.dart';
 
 part 'ai_report/report_data_loading.dart';
