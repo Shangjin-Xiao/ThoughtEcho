@@ -138,7 +138,7 @@ class AICardGenerationService extends ChangeNotifier {
             return card;
           } catch (e) {
             final errorMsg =
-                '生成第${noteIndex + 1}张卡片失败: ${note.content.length > 30 ? note.content.substring(0, 30) : note.content}... - $e';
+                '生成第${noteIndex + 1}张卡片失败（内容长度: ${note.content.length}）: $e';
             errors.add(errorMsg);
             AppLogger.e(errorMsg, source: 'AICardGeneration');
 
