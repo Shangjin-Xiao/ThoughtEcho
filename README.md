@@ -71,7 +71,7 @@
   <table>
     <tr>
       <td align="center" width="33%"><b>✍️ 富文本笔记</b><br>支持富文本、多媒体附件与双格式存储</td>
-      <td align="center" width="33%"><b>✨ AI助手</b><br>笔记上下文问答、润色与每日灵感提示</td>
+      <td align="center" width="33%"><b>✨ Thoughter</b><br>笔记上下文问答、润色与每日灵感提示</td>
       <td align="center" width="33%"><b>📊 洞察与报告</b><br>AI 周期洞察、年度报告与写作趋势分析</td>
     </tr>
     <tr>
@@ -323,7 +323,7 @@
   <table>
     <tr>
       <td align="center" width="33%"><b>✍️ Rich Text Notes</b><br>Rich text, media attachments, dual-format storage</td>
-      <td align="center" width="33%"><b>✨ AI Assistant</b><br>Context-aware Q&A, polishing, daily inspiration prompts</td>
+      <td align="center" width="33%"><b>✨ Thoughter</b><br>Context-aware Q&A, polishing, daily inspiration prompts</td>
       <td align="center" width="33%"><b>📊 Insights & Reports</b><br>AI periodic insights, annual reports, writing trend analysis</td>
     </tr>
     <tr>

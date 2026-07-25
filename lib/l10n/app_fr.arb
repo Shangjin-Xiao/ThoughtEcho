@@ -514,7 +514,7 @@
   "deepAnalysis": "Analyse approfondie",
   "deepAnalysisDesc": "Effectuer une analyse et une interprétation approfondies du contenu de la note",
   "askNote": "Demander à la note",
-  "askNoteDesc": "Discuter avec Thoughter pour explorer le contenu de la note en profondeur",
+  "askNoteDesc": "Discuter avec Thoughter (Assistant IA) pour explorer le contenu de la note en profondeur",
   "pleaseEnterContent": "Veuillez d'abord saisir du contenu",
   "analysisResults": "Résultats de l'analyse",
   "confidence": "Confiance",
@@ -1783,7 +1783,7 @@
   "noteInfoTitle": "Remarque Informations",
   "meUser": "Moi",
   "aiAssistantUser": "Thoughter",
-  "aiAssistantWelcome": "Bonjour! Je suis Thoughter. Vous pouvez me poser toutes les questions sur cette note et je vous fournirai des réponses détaillées en fonction du contenu.\n\n📝 Aperçu du contenu de la note :\n{preview}\n\n💡 Vous pouvez essayer ces questions :\n• Quelle est l'idée centrale de cette note ?\n• Quelle inspiration peut-on tirer de cette note ?\n• Comment appliquer les idées de cette note à la vie réelle ?\n• Quel modèle de pensée cette note reflète-t-elle ?",
+  "aiAssistantWelcome": "Bonjour! Je suis Thoughter, votre assistant de notes IA. Vous pouvez me poser toutes les questions sur cette note et je vous fournirai des réponses détaillées en fonction du contenu.\n\n📝 Aperçu du contenu de la note :\n{preview}\n\n💡 Vous pouvez essayer ces questions :\n• Quelle est l'idée centrale de cette note ?\n• Quelle inspiration peut-on tirer de cette note ?\n• Comment appliquer les idées de cette note à la vie réelle ?\n• Quel modèle de pensée cette note reflète-t-elle ?",
   "thinkingInProgress": "Pensée...",
   "aiMisunderstoodQuestion": "Désolé, je n'ai pas compris cette question. S'il vous plaît, essayez de demander d'une manière différente.",
   "aiResponseError": "Désolé, une erreur s'est produite lors de la réponse : {error}",
@@ -1932,7 +1932,7 @@
     }
   },
   "noProvider": "Aucun",
-  "connectionTestSystemMessage": "Vous êtes Thoughter. Veuillez répondre brièvement par « Test de connexion réussi ».",
+  "connectionTestSystemMessage": "Vous êtes Thoughter, un assistant IA. Veuillez répondre brièvement par « Test de connexion réussi ».",
   "connectionTestUserMessage": "Tester la connexion",
   "apiKeySavedForProvider": "Clé API enregistrée pour {providerName} pour sécuriser le stockage",
   "@apiKeySavedForProvider": {

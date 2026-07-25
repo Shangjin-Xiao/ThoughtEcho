@@ -49,7 +49,7 @@
 
 > ⚠️ **重要**：AI 功能需要配置 API Key 才能使用
 
-**访问路径**：设置 → AI 助手设置
+**访问路径**：设置 → AI 设置
 
 ### 支持的服务商
 
@@ -67,7 +67,7 @@
 
 #### 云服务商配置（以 OpenAI 为例）
 
-1. 打开「设置」→「AI 助手设置」
+1. 打开「设置」→「AI 设置」
 2. 点击「添加服务商」或选择预设服务商
 3. 选择「OpenAI」预设
 4. 在 API Key 输入框中填入您的密钥
@@ -83,7 +83,7 @@
    - 访问 [ollama.ai](https://ollama.ai) 下载安装
 
 2. **在心迹中配置**
-   - 打开「AI 助手设置」
+   - 打开「AI 设置」
    - 选择「Ollama」预设
    - 填写您下载的模型名称
    - 测试连接并保存
@@ -138,7 +138,7 @@
 - **清除格式** - 移除所有格式
 - **搜索** - 在文档中搜索内容
 
-### AI 辅助功能（✨ 按钮）
+### Thoughter 辅助功能（✨ 按钮）
 
 点击编辑器顶部的 ✨ 按钮，可使用以下 AI 功能：
 
@@ -733,7 +733,7 @@ Welcome to ThoughtEcho, your personal AI-powered inspiration notebook. This manu
 
 > ⚠️ **Important**: AI features require API Key configuration
 
-**Access Path**: Settings → AI Assistant Settings
+**Access Path**: Settings → AI Settings
 
 ### Supported Providers
 
@@ -751,7 +751,7 @@ ThoughtEcho supports various mainstream AI services:
 
 #### Cloud Provider Setup (OpenAI Example)
 
-1. Open "Settings" → "AI Assistant Settings"
+1. Open "Settings" → "AI Settings"
 2. Click "Add Provider" or select a preset
 3. Choose "OpenAI" preset
 4. Enter your API Key
@@ -767,7 +767,7 @@ Local AI runs on your own computer for free, no internet or payment required.
    - Visit [ollama.ai](https://ollama.ai) to download
 
 2. **Configure in ThoughtEcho**
-   - Open "AI Assistant Settings"
+   - Open "AI Settings"
    - Select "Ollama" preset
    - Enter your downloaded model name
    - Test connection and save
@@ -822,7 +822,7 @@ The editor provides rich text formatting tools:
 - **Clear Formatting** - Remove all formatting
 - **Search** - Search within document
 
-### AI Assistant Features (✨ Button)
+### Thoughter Features (✨ Button)
 
 Click the ✨ button at the top of the editor for:
 
