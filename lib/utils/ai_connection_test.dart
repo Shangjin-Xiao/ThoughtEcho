@@ -17,7 +17,7 @@ class AIConnectionTest {
 
       // 测试基本请求
       final testMessages = [
-        {'role': 'system', 'content': '你是一个AI助手。请简单回复"连接测试成功"。'},
+        {'role': 'system', 'content': '你是 Thoughter。请简单回复"连接测试成功"。'},
         {'role': 'user', 'content': '测试连接'},
       ];
       final response = await AINetworkManager.makeRequest(
@@ -55,7 +55,7 @@ class AIConnectionTest {
       final multiSettings = settingsService.multiAISettings;
 
       final testMessages = [
-        {'role': 'system', 'content': '你是一个AI助手。请用简单的几句话回复。'},
+        {'role': 'system', 'content': '你是 Thoughter。请用简单的几句话回复。'},
         {'role': 'user', 'content': '请介绍一下自己'},
       ];
       await AINetworkManager.makeStreamRequest(

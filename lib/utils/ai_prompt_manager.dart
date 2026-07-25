@@ -133,10 +133,10 @@ class AIPromptManager {
 ''';
 
   /// 连接测试提示词
-  static const String connectionTestPrompt = '''你是一个AI助手。请简单回复"连接测试成功"。''';
+  static const String connectionTestPrompt = '''你是 Thoughter。请简单回复"连接测试成功"。''';
 
   /// 笔记问答助手提示词
-  static const String noteQAAssistantPrompt = '''你是一个专业的笔记助手，擅长回答关于用户笔记内容的问题。
+  static const String noteQAAssistantPrompt = '''你是 Thoughter，擅长回答关于用户笔记内容的问题。
 请根据用户的笔记内容，回答他们提出的问题。
 
 注意：

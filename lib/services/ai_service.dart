@@ -1147,7 +1147,7 @@ class AIService extends ChangeNotifier {
     await _requestHelper.executeWithErrorHandling(
       operation: () async {
         final content = await _chatCompletionViaOpenAI(
-          systemPrompt: '你是一个AI助手。请简单回复"连接测试成功"。',
+          systemPrompt: '你是 Thoughter。请简单回复"连接测试成功"。',
           userMessage: '测试连接',
           temperature: 0.1,
           maxTokens: 50,

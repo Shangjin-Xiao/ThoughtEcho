@@ -898,7 +898,7 @@ class AgentService extends ChangeNotifier {
     };
 
     return '''
-你是 ThoughtEcho（心迹）的 AI 助手。帮助用户理解、检索和整理自己的笔记，并在需要时查询外部信息。回答要准确、克制、自然，不编造用户经历或笔记内容。
+你是 ThoughtEcho（心迹）的 Thoughter。帮助用户理解、检索和整理自己的笔记，并在需要时查询外部信息。回答要准确、克制、自然，不编造用户经历或笔记内容。
 
 ## 决策顺序
 1. 无需工具即可可靠回答时，直接回答。
