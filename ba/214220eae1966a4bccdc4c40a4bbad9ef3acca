@@ -1,0 +1,46 @@
+lib/services/agent_tools/web_search_tool.dart
+  s_4bfad3a6dca910::t_ebc6efe0d3abf7 134-140
+  s_4bfad3a6dca910::t_cb4bc819cde502 6
+lib/services/agent_tools/get_note_detail_tool.dart
+  s_4bfad3a6dca910::t_c36b9051bec61d 5
+  s_4bfad3a6dca910::t_1570ee745655ee 76-77
+lib/services/agent_service.dart
+  s_4bfad3a6dca910::t_b6eac20ae44c26 1101-1112
+  s_4bfad3a6dca910::t_3329674db635dd 173-175
+  s_4bfad3a6dca910::t_65355d0dd80c3e 1066-1067,1069
+  s_4bfad3a6dca910::t_aadc8b0070044e 527
+  s_4bfad3a6dca910::t_35ef77d9d7c89c 1023-1024
+  s_4bfad3a6dca910::t_6fb72d469e76fc 541-542,546
+  s_4bfad3a6dca910::t_4b317c01f1cc91 858,861,865
+  s_4bfad3a6dca910::t_a82479464cf98e 12,14
+lib/services/agent_tools/truncating_agent_tool.dart
+  s_4bfad3a6dca910::t_b99e7bf2a1bee0 1-107
+test/unit/services/truncating_agent_tool_test.dart
+  s_4bfad3a6dca910::t_d73630846d2e54 1-122
+lib/utils/untrusted_text.dart
+  s_4bfad3a6dca910::t_2452af7776a0b1 1-62
+test/unit/services/get_note_detail_tool_test.dart
+  s_4bfad3a6dca910::t_2e33b60c62d2fb 84-89
+lib/services/agent_tools/explore_notes_tool.dart
+  s_4bfad3a6dca910::t_4ce79312aecb87 134-138,144
+  s_4bfad3a6dca910::t_14cbbb3a112f4b 3
+lib/services/agent_tools/web_fetch_tool.dart
+  s_4bfad3a6dca910::t_d57091f65da8a5 81-84
+  s_4bfad3a6dca910::t_8d26e04728ef29 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "ba214220eae1966a4bccdc4c40a4bbad9ef3acca",
+  "prompts": {},
+  "sessions": {
+    "s_4bfad3a6dca910": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cc365afe-b8d4-4c7e-8320-bbba67fdd1d2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
