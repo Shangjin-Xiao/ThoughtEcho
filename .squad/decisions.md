@@ -541,3 +541,55 @@
 视口内卡片优先。真机最终验收仍对比 `docWorkUs`、`worstBuild`、`frameJank`
 和 `slowLayouts`；目标是卡顿 session 内冷 Document/Controller delta 趋近 0，且不再出现
 多个 20～40ms 冷 rich layout 扎堆。
+
+---
+
+## 2026-07-26: 延后物化真机复测通过 + 首滑新主因（分页级联）+ 空闲预取
+
+**决策者**: 上晋 + Claude Fable 5
+**类型**: 真机复测结论 / 新根因定位 / 实施
+
+### 复测结论：f2f2ca51（07-15 延后物化）生效
+
+用户真机日志 scroll-1（冷启动首滑，100 条，rich=39/media=31），对照 07-15 失败基线：
+
+| 指标 | 07-15 基线 | 本次 scroll-1 |
+|---|---|---|
+| worstBuild | 175.7ms | 60.3ms |
+| 滚动帧 docWork | +110.7ms | +22.5ms |
+| itemLayout.worst | 23.3~38.3ms | 17.8ms |
+| slowLayouts | 多个 20~40ms 冷 rich 扎堆 | 全部 ≤17.8ms |
+
+冷 Quill 布局扎堆问题解除。ctrlCreate+13 属于收尾窗口（停止后 1200ms 内的恢复队列）计入，非滚动帧内创建。
+
+### 首滑剩余卡顿的新主因：分页级联
+
+scroll-1 activity 行钉死：`dataΔ=4, loadMoreStartΔ=4, stateΔ=12, buildΔ=13, built=344@0-35`。
+3 秒首滑触发 4 次分页（每页 20 条），每页数据事件走 `_quotes..clear()..addAll()` 整表替换
++ setState，320ms 后 settle 定时器再一次 setState，合计 13 次整列表重建挤在滚动帧内，
+36 个可见项被重复构建 344 次（媒体卡 100 次）。对照无分页的 scroll-12：`buildΔ=1`，
+eventAvg 25.5ms → 10.3ms。结论：延后物化解决冷 Quill 后，首滑卡顿主体是分页驱动的
+滚动帧内整列表重建。
+
+### 本次实施（零视觉变化）
+
+1. **空闲预取**：首屏就绪 1800ms 后（避开冷启动滚动保护期），趁列表静止逐页预取至
+   120 条或无更多数据；滚动/加载中自动让路（600ms 后重试）；搜索态不预取；
+   筛选/排序切换回第一页后重启预取。首滑不再在滚动帧内撞分页。
+2. **采集修复**：连续滑动（间隔 <1.2s）时上一 session 摘要被静默覆盖丢失——
+   `_startScrollSessionPerfCapture` 现在先立即收尾输出上一 session 再开新的。
+   这就是"有些 log 出不来"的原因。
+
+### 验收标准
+
+同条件冷启动首滑：`loadMoreStartΔ=0`、`buildΔ≈1`、`stateΔ≈0`、eventAvg 向 10ms 靠拢、
+frameJank 显著低于 22。连续滑动时每个 session 摘要都应输出。
+
+### 遗留观察项（未处理，记录在案）
+
+- scroll-11 出现 worstBuild=135.8ms 但 built=1、Δdoc/Δctrl=0、imageCache pending=16：
+  疑似图片解码完成回调或列表外因素，属于 06-09 已记录的"未完全解释 build 尖峰"类，
+  分页修复后若仍复现再专项定位。
+- scroll-12 中 index 81 同卡 h=344→344 重复 relayout 3 次（8~15ms），与 imageEmbed
+  Δcomplete+21 同段：图片 embed 完成态变化触发整 QuillEditor relayout，二阶问题。
+- embed 图片解码无 cacheWidth（2.8~3.3MB/张），内存问题与卡顿无关，待办。

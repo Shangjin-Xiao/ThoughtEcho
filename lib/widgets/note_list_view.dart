@@ -181,6 +181,11 @@ class NoteListViewState extends State<NoteListView> {
   StreamSubscription<List<Quote>>? _quotesSub;
   static const int _plainKeepAliveWindowRadius = 18;
 
+  // 空闲预取：首屏就绪后趁列表静止把后续几页提前取好，
+  // 让首次快速下滑不在滚动帧内触发分页（数据事件→整列表重建的级联）。
+  Timer? _idlePrefetchTimer;
+  static const int _idlePrefetchTargetItems = 120;
+
   // 修复：添加等待服务初始化的标志
   bool _waitingForServices = true;
 
@@ -688,6 +693,7 @@ class NoteListViewState extends State<NoteListView> {
     _loadMoreSettleTimer?.cancel();
     _scrollSessionPerfStopTimer?.cancel();
     _scrollEndSettleTimer?.cancel();
+    _idlePrefetchTimer?.cancel();
     // 清理动画定时器
     for (final timer in _animationTimers.values) {
       timer.cancel();

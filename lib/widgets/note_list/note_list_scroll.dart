@@ -113,6 +113,12 @@ extension _NoteListScrollExtension on NoteListViewState {
       return;
     }
 
+    // 上一个 session 的收尾定时器要等停止滚动 1200ms 才触发；连续滑动会在
+    // 触发前走到这里，直接覆盖会静默丢掉上一个 session 的摘要。先立即收尾输出。
+    if (_scrollSessionPerfRecording) {
+      _finalizeScrollSessionPerfCapture();
+    }
+
     _scrollSessionPerfRecording = true;
     _scrollSessionPerfPendingFinalize = false;
     _scrollSessionPerfFinalizeScheduled = false;
@@ -726,6 +732,37 @@ extension _NoteListScrollExtension on NoteListViewState {
     _loadMoreAwaitingPage = false;
     _loadMoreSettleTimer?.cancel();
     _loadMoreSettleTimer = null;
+  }
+
+  /// 空闲预取：趁列表静止逐页加载后续数据，直到覆盖一次长距离快滑所需的
+  /// 条数（[NoteListViewState._idlePrefetchTargetItems]）。分页产生的数据事件
+  /// 会整表替换 `_quotes` 并触发全列表重建，发生在滚动帧内就是首滑卡顿的
+  /// 主要来源之一；挪到静止期后掉帧对用户不可见。
+  void _scheduleIdlePrefetch({
+    Duration delay = const Duration(milliseconds: 600),
+  }) {
+    _idlePrefetchTimer?.cancel();
+    _idlePrefetchTimer = Timer(delay, _runIdlePrefetchTick);
+  }
+
+  void _runIdlePrefetchTick() {
+    if (!mounted || !_hasMore) return;
+    if (_quotes.length >= NoteListViewState._idlePrefetchTargetItems) return;
+    // 搜索结果集通常短暂且随输入频繁重建，不值得后台预取。
+    if (_effectiveSearchQuery.isNotEmpty) return;
+    if (isListScrolling.value ||
+        _isUserScrolling ||
+        _isAutoScrolling ||
+        _isLoading) {
+      _scheduleIdlePrefetch();
+      return;
+    }
+    unawaited(
+      _loadMore().catchError((Object e) {
+        // _loadMore 已记录错误日志；预取失败静默放弃本轮，下轮定时器再试。
+      }),
+    );
+    _scheduleIdlePrefetch();
   }
 
   /// 修复：检测并修复滚动范围异常

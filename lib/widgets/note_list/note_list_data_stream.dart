@@ -164,6 +164,10 @@ extension _NoteListDataStreamExtension on NoteListViewState {
               }
             });
             logDebug('首次数据加载完成', source: 'NoteListView');
+            // 首屏就绪后启动空闲预取，延迟避开冷启动滚动保护期（1500ms）。
+            _scheduleIdlePrefetch(
+              delay: const Duration(milliseconds: 1800),
+            );
           }
 
           // 修复：同步 _hasMore 状态与数据库服务状态
@@ -402,6 +406,9 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           }
           if (isLoadMorePage) {
             _settleLoadMoreGateAfterPage();
+          } else {
+            // 筛选/排序切换回到第一页后重新预取，让新结果集也覆盖首次快滑。
+            _scheduleIdlePrefetch();
           }
           _scheduleExpandableQuoteCheck();
 
