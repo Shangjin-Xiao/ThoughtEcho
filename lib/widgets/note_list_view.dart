@@ -622,7 +622,8 @@ class NoteListViewState extends State<NoteListView> {
             oldWidget.selectedTagIds,
             widget.selectedTagIds,
           ) ||
-          !_areListsEqual(oldWidget.selectedWeathers, widget.selectedWeathers) ||
+          !_areListsEqual(
+              oldWidget.selectedWeathers, widget.selectedWeathers) ||
           !_areListsEqual(
             oldWidget.selectedDayPeriods,
             widget.selectedDayPeriods,
