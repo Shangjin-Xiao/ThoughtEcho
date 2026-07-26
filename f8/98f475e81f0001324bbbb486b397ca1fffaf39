@@ -1,0 +1,56 @@
+lib/services/agent_tools/web_fetch_tool.dart
+  s_4bfad3a6dca910::t_d035d132406c7b 17-19
+  s_4bfad3a6dca910::t_84134435b1d0c3 33-35
+lib/services/agent_tools/tool_argument_validator.dart
+  s_4bfad3a6dca910::t_f1320cd1167efe 1-65,68-102
+  s_4bfad3a6dca910::t_a8c311c1d45ee3 66-67
+test/unit/services/tool_argument_validator_test.dart
+  s_4bfad3a6dca910::t_d3bf3cc9930400 1-80
+lib/services/agent_tools/propose_note_create_tool.dart
+  s_4bfad3a6dca910::t_4ef54f613ae362 194-195,202-209,214,218-227
+  s_4bfad3a6dca910::t_b659754a409648 85-92
+  s_4bfad3a6dca910::t_9356446a3d2ca1 8
+  s_4bfad3a6dca910::t_81834ddae4c8b5 19-23,29-37,41-47,53-77
+lib/services/agent_tools/web_search_tool.dart
+  s_4bfad3a6dca910::t_c62caa731b9d90 46-48
+  s_4bfad3a6dca910::t_69230c6fa2fbe6 62-63,67,71-83
+lib/services/agent_tools/propose_note_edit_tool.dart
+  s_4bfad3a6dca910::t_e9066aced862d9 135-142
+  s_4bfad3a6dca910::t_5c1889e08b66cf 319-321,328-335,340,344-353,362-414
+  s_4bfad3a6dca910::t_73129f4466b1d0 9
+  s_4bfad3a6dca910::t_10c8d605369245 20-26,32-49,53-55,60,74-90,97
+  s_22d303ac588835::t_48c0480240a0b7 415-416
+lib/services/agent_tools/get_note_detail_tool.dart
+  s_4bfad3a6dca910::t_b357749910abca 36-40
+  s_4bfad3a6dca910::t_3625ce96af1716 21-24
+lib/services/agent_tools/explore_notes_tool.dart
+  s_4bfad3a6dca910::t_282279c24a0321 37,42-49,54-55,59,63,67,71-92,96-108,112-113,117
+  s_4bfad3a6dca910::t_107ae39fc4770a 24-28
+lib/services/agent_tools/get_app_context_tool.dart
+  s_4bfad3a6dca910::t_0460cb006a16c6 21-22
+  s_4bfad3a6dca910::t_08c821dc02dab3 35-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "f898f475e81f0001324bbbb486b397ca1fffaf39",
+  "prompts": {},
+  "sessions": {
+    "s_22d303ac588835": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "badc6ebe-8c26-4588-a67c-720b56cd1a05",
+        "model": "claude-fable-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_4bfad3a6dca910": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cc365afe-b8d4-4c7e-8320-bbba67fdd1d2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
