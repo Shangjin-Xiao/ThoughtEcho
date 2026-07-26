@@ -1,0 +1,19 @@
+docs/agent-reference-patterns-2026-07.md
+  s_3c2b7aa98d1a88::t_c7290cb55d3411 1-217
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "09cec19dd4211d0de7cc69aac8f2848596800dfd",
+  "prompts": {},
+  "sessions": {
+    "s_3c2b7aa98d1a88": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48d9a6b2-6b76-43f7-becc-9744be4a38e4",
+        "model": "claude-fable-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
