@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../../utils/app_logger.dart';
+import '../../utils/untrusted_text.dart';
 import '../agent_tool.dart';
 import '../database_service.dart';
 import 'tag_argument_resolver.dart';
@@ -130,13 +131,17 @@ class ExploreNotesTool extends AgentTool {
         final snippet = _buildMatchSnippet(q.content, query);
         final note = <String, Object?>{
           'id': q.id,
-          'content_preview': _truncate(q.content, 200),
+          // 笔记正文是用户数据：包裹 <note> 标签并在序列化前完成转义。
+          'content_preview': wrapNoteContent(
+            _truncate(q.content, 200),
+            noteId: q.id,
+          ),
           'date': q.date,
           'content_length': q.content.length,
           'is_truncated': q.content.length > 200,
         };
         if (snippet != null) {
-          note['match_snippet'] = snippet.text;
+          note['match_snippet'] = wrapNoteContent(snippet.text, noteId: q.id);
           note['match_start'] = snippet.matchStart;
           note['match_end'] = snippet.matchEnd;
         }

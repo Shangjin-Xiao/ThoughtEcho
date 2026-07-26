@@ -1,3 +1,4 @@
+import '../../utils/untrusted_text.dart';
 import '../agent_tool.dart';
 import '../web_fetch_service.dart';
 
@@ -77,7 +78,10 @@ class WebFetchTool extends AgentTool {
           ? '${text.substring(0, _maxContentLength)}…\n\n[内容已截断，共 ${text.length} 字符]'
           : text;
 
-      return ToolResult(toolCallId: call.id, content: truncated);
+      return ToolResult(
+        toolCallId: call.id,
+        content: wrapWebContent(truncated, source: trimmedUrl),
+      );
     } catch (e, stack) {
       call.logError('WebFetchTool.execute 失败', error: e, stackTrace: stack);
       return ToolResult(

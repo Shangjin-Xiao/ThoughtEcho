@@ -81,8 +81,12 @@ void main() {
       expect(result.isError, isFalse);
       final data = jsonDecode(result.content);
       expect(data['id'], 'note_123');
-      expect(data['content'],
-          'This is a very long note that needs to be fully read by the Agent for polishing.');
+      // 笔记正文是用户数据：包裹 <note> 标签，声明为数据而非指令
+      expect(
+        data['content'],
+        '<note id="note_123">This is a very long note that needs to be '
+        'fully read by the Agent for polishing.</note>',
+      );
       expect(data['location'], 'Tsinghua University');
       expect(data['weather'], 'Sunny');
       expect(data['temperature'], '25°C');

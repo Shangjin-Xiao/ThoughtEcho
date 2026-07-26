@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../../utils/app_logger.dart';
 import '../../utils/agent_note_document_codec.dart';
+import '../../utils/untrusted_text.dart';
 import '../agent_tool.dart';
 import '../database_service.dart';
 import 'propose_note_edit_tool.dart';
@@ -72,7 +73,8 @@ class GetNoteDetailTool extends AgentTool {
 
       final response = <String, Object?>{
         'id': q.id,
-        'content': q.content,
+        // 笔记正文是用户数据：包裹 <note> 标签并在序列化前完成转义。
+        'content': wrapNoteContent(q.content, noteId: q.id),
         'date': q.date,
         'content_length': q.content.length,
         'document_kind': ProposeNoteEditTool.kindForQuote(q).name,

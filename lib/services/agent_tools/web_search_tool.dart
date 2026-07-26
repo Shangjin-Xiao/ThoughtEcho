@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:ddgs/ddgs.dart';
 
 import '../../utils/app_logger.dart';
+import '../../utils/untrusted_text.dart';
 import '../agent_tool.dart';
 import '../settings_service.dart';
 
@@ -130,7 +131,13 @@ class WebSearchTool extends AgentTool {
         buffer.writeln();
       }
 
-      return ToolResult(toolCallId: call.id, content: buffer.toString());
+      return ToolResult(
+        toolCallId: call.id,
+        content: wrapWebContent(
+          buffer.toString(),
+          source: 'web_search:$backend',
+        ),
+      );
     } catch (e, stack) {
       call.logError('WebSearchTool.execute 失败', error: e, stackTrace: stack);
       return ToolResult(
