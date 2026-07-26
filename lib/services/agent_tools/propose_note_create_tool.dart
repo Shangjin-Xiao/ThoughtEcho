@@ -5,6 +5,7 @@ import '../../utils/quill_structured_edit.dart';
 import '../agent_tool.dart';
 import '../database_service.dart';
 import 'tag_argument_resolver.dart';
+import 'tool_argument_validator.dart';
 
 class ProposeNoteCreateTool extends AgentTool {
   const ProposeNoteCreateTool(this._databaseService);
@@ -15,35 +16,80 @@ class ProposeNoteCreateTool extends AgentTool {
   String get name => 'propose_note_create';
 
   @override
-  String get description => '提议创建普通或富文本笔记。普通笔记传 content；富文本传语义化的 '
-      'document_blocks，由应用生成 Quill Delta。只有用户要求格式或内容确有结构时才选择 rich。';
+  String get description => '提议创建普通或富文本笔记（提案需要用户确认，不会直接落库）。\n'
+      'document_kind=plain 时必须提供 content；document_kind=rich 时必须提供 document_blocks，'
+      '缺失会得到「普通笔记必须提供 content。」或「富文本笔记必须提供 document_blocks。」错误。\n'
+      '只有用户明确要求格式，或正文确有标题、列表、引用等结构时才选 rich；'
+      '不要写 Markdown 标记，也不要自行生成 Quill Delta（会被拒绝）。';
 
   @override
   Map<String, Object?> get parametersSchema => const {
         'type': 'object',
         'properties': {
-          'proposal_title': {'type': 'string'},
-          'reason': {'type': 'string'},
+          'proposal_title': {
+            'type': 'string',
+            'description': '提案标题，展示在确认卡片顶部。必填且不能为空，否则返回'
+                '「proposal_title 不能为空。」',
+          },
+          'reason': {
+            'type': 'string',
+            'description': '为什么建议创建这条笔记（一句话）。会展示给用户帮助其判断是否采纳。',
+          },
           'document_kind': {
             'type': 'string',
             'enum': ['plain', 'rich'],
+            'description': '笔记形态。plain=普通文本（默认首选，必须提供 content）；'
+                'rich=富文本（必须提供 document_blocks）。',
           },
-          'content': {'type': 'string'},
+          'content': {
+            'type': 'string',
+            'description': 'document_kind=plain 时的完整正文纯文本。'
+                '不要写 Markdown 标记；rich 模式下会被忽略。',
+          },
           'document_blocks': _documentBlocksSchema,
           'tag_ids': {
             'type': 'array',
             'items': {'type': 'string'},
+            'description': '标签 ID 列表。ID 只能来自 get_tags 的返回，不能编造；'
+                '传入不存在的 ID 会得到「不存在的标签 ID: xxx」错误。',
           },
-          'author': {'type': 'string'},
-          'source': {'type': 'string'},
-          'include_location': {'type': 'boolean'},
-          'include_weather': {'type': 'boolean'},
+          'tag_names': {
+            'type': 'array',
+            'items': {'type': 'string'},
+            'description': '标签名称列表（仅在拿不到 ID 时的回退）。同名标签存在多个时会返回'
+                '「标签名称不唯一，请改用标签 ID」。',
+          },
+          'author': {
+            'type': 'string',
+            'description': '摘录来源的作者（仅当笔记确实是摘录时填写，不要臆造）。',
+          },
+          'source': {
+            'type': 'string',
+            'description': '摘录来源的作品或出处（仅当用户提供时填写）。',
+          },
+          'include_location': {
+            'type': 'boolean',
+            'description': '是否建议附加当前位置。只有用户表达了记录情景的意图时才设为 true，'
+                '设为 true 前应先调用 get_location_weather 确认有可用数据。',
+          },
+          'include_weather': {
+            'type': 'boolean',
+            'description': '是否建议附加当前天气，判断标准同 include_location。',
+          },
         },
         'required': ['proposal_title', 'document_kind'],
       };
 
   @override
   Future<ToolResult> execute(ToolCall call) async {
+    final validationError = validateToolArguments(
+      toolName: name,
+      schema: parametersSchema,
+      arguments: call.arguments,
+    );
+    if (validationError != null) {
+      return _error(call, validationError);
+    }
     try {
       final title = call.getString('proposal_title').trim();
       final kind = NoteDocumentKind.values.byName(
@@ -145,27 +191,40 @@ class ProposeNoteCreateTool extends AgentTool {
 const Map<String, Object?> _documentBlocksSchema = {
   'type': 'array',
   'minItems': 1,
+  'description': '语义化富文本块数组，由应用负责转换成 Quill Delta。'
+      'document_kind=rich（或 result_kind=rich）时必须提供；不要提交原始 Delta。',
   'items': {
     'type': 'object',
     'properties': {
       'type': {
         'type': 'string',
         'enum': ['paragraph', 'heading', 'bullet', 'ordered', 'quote', 'code'],
+        'description': '块类型：paragraph 段落、heading 标题、bullet 无序列表项、'
+            'ordered 有序列表项、quote 引用、code 代码块。',
       },
-      'level': {'type': 'integer', 'minimum': 1, 'maximum': 6},
+      'level': {
+        'type': 'integer',
+        'minimum': 1,
+        'maximum': 6,
+        'description': 'type=heading 时的标题级别 1-6，其他块类型不要提供。',
+      },
       'children': {
         'type': 'array',
         'minItems': 1,
+        'description': '该块内的文本片段，按顺序拼接成整块内容；至少一段。',
         'items': {
           'type': 'object',
           'properties': {
-            'text': {'type': 'string'},
-            'bold': {'type': 'boolean'},
-            'italic': {'type': 'boolean'},
-            'underline': {'type': 'boolean'},
-            'strike': {'type': 'boolean'},
-            'code': {'type': 'boolean'},
-            'link': {'type': 'string'},
+            'text': {
+              'type': 'string',
+              'description': '这一段的纯文本，必填。不要在其中写 Markdown 标记。',
+            },
+            'bold': {'type': 'boolean', 'description': '是否加粗。'},
+            'italic': {'type': 'boolean', 'description': '是否斜体。'},
+            'underline': {'type': 'boolean', 'description': '是否下划线。'},
+            'strike': {'type': 'boolean', 'description': '是否删除线。'},
+            'code': {'type': 'boolean', 'description': '是否行内代码样式。'},
+            'link': {'type': 'string', 'description': '超链接地址（可选）。'},
           },
           'required': ['text'],
         },
