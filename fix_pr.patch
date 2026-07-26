@@ -1,0 +1,22 @@
+--- test/unit/utils/quill_ai_apply_utils_test.dart
++++ test/unit/utils/quill_ai_apply_utils_test.dart
+@@ -172,11 +172,17 @@
+       );
+
+       final mergedOps = mergedDocument.toDelta().toJson();
+-      expect(mergedOps.length, greaterThan(0));
++
++      // When marker count mismatches, _tryApplyWithMarkers returns null.
++      // It falls back to proportional text distribution.
++      // The original document had an embed, so the merged ops should retain the embed
++      // and insert the text (which contains the raw markers).
++      expect(mergedOps.where((op) => op['insert'] is Map), hasLength(1));
++      expect(mergedOps.where((op) => op['insert'] is String && (op['insert'] as String).contains('[[TE_MEDIA_1]]')), isNotEmpty);
+     });
+
+     test(
+-        'applyPolishedText handles trailing newline correctly for empty documents',
++        'applyPolishedText handles trailing newline correctly when polishedText is empty',
+         () {
+       final originalDocument = quill.Document.fromJson([
+         {'insert': 'Text\n'},
