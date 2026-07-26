@@ -1,0 +1,35 @@
+lib/widgets/note_list/note_list_data_stream.dart
+  s_3c2b7aa98d1a88::t_c878694e3d6a2a 167
+  s_b129eaa3941be4::t_475f3815fcf57b 168,170
+lib/constants/app_constants.dart
+  s_3c2b7aa98d1a88::t_f4f1ad2465844d 24-26
+test/unit/constants/app_constants_test.dart
+  s_3c2b7aa98d1a88::t_8ae368982b1006 19-21,23
+lib/widgets/note_list/note_list_scroll.dart
+  s_3c2b7aa98d1a88::t_ba59d8e3181faa 721-730,734,736-739
+  s_3c2b7aa98d1a88::t_473331db849027 731-733,735
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "f25c1cd1897158aef9f28bc378ea6945343d607c",
+  "prompts": {},
+  "sessions": {
+    "s_3c2b7aa98d1a88": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48d9a6b2-6b76-43f7-becc-9744be4a38e4",
+        "model": "claude-fable-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_b129eaa3941be4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "316ee69a-8159-44a8-a608-cc3739eaf22e",
+        "model": "claude-fable-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
