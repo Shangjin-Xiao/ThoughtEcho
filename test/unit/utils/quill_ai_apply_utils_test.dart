@@ -111,5 +111,150 @@ void main() {
         'Polished opening refined middle tightened ending complete.',
       );
     });
+
+    test('applyPolishedText handles documents without embeds', () {
+      final originalDocument = quill.Document.fromJson([
+        {'insert': 'Just some plain text.\n'},
+      ]);
+
+      final mergedDocument = QuillAiApplyUtils.applyPolishedText(
+        originalDocument: originalDocument,
+        polishedText: 'New polished text.',
+      );
+
+      final mergedOps = mergedDocument.toDelta().toJson();
+      expect(mergedOps, hasLength(1));
+      expect(mergedOps[0]['insert'], 'New polished text.\n');
+    });
+
+    test(
+        'applyPolishedText handles missing/altered markers (proportional text splitting)',
+        () {
+      final originalDocument = quill.Document.fromJson([
+        {'insert': 'Start '},
+        {
+          'insert': {'image': 'img.png'}
+        },
+        {'insert': ' middle '},
+        {
+          'insert': {'video': 'vid.mp4'}
+        },
+        {'insert': ' end.\n'},
+      ]);
+
+      final mergedDocument = QuillAiApplyUtils.applyPolishedText(
+        originalDocument: originalDocument,
+        polishedText: 'Completely new text without markers.',
+      );
+
+      final mergedOps = mergedDocument.toDelta().toJson();
+
+      expect(mergedOps.where((op) => op['insert'] is Map), hasLength(2));
+
+      expect(
+        StringUtils.removeObjectReplacementChar(
+          mergedDocument.toPlainText().trim(),
+        ).replaceAll(RegExp(r'\s+'), ''),
+        contains('Completelynewtextwithoutmarkers.'),
+      );
+    });
+
+    test('applyPolishedText handles documents with only embeds and no text',
+        () {
+      final originalOps = [
+        {
+          'insert': {'image': 'img.png'}
+        },
+        {
+          'insert': {'video': 'vid.mp4'}
+        },
+        {'insert': '\n'}
+      ];
+      final originalDocument = quill.Document.fromJson(originalOps);
+
+      final mergedDocument = QuillAiApplyUtils.applyPolishedText(
+        originalDocument: originalDocument,
+        polishedText: 'Some new polished text.',
+      );
+
+      final mergedOps = mergedDocument.toDelta().toJson();
+      expect(mergedOps, isNot(equals(originalOps)));
+      expect(mergedOps.where((op) => op['insert'] is Map), hasLength(2));
+      expect(mergedOps.last['insert'], contains('Some new polished text.'));
+    });
+
+    test('applyPolishedText fallback triggers when marker count mismatches',
+        () {
+      final originalDocument = quill.Document.fromJson([
+        {'insert': 'Text '},
+        {
+          'insert': {'image': 'img.png'}
+        },
+        {'insert': '.\n'},
+      ]);
+
+      final mergedDocument = QuillAiApplyUtils.applyPolishedText(
+        originalDocument: originalDocument,
+        polishedText: 'Polished [[TE_MEDIA_1]] and [[TE_MEDIA_2]]',
+      );
+
+      final mergedOps = mergedDocument.toDelta().toJson();
+      expect(mergedOps.length, greaterThan(0));
+    });
+
+    test(
+        'applyPolishedText handles trailing newline correctly for empty documents',
+        () {
+      final originalDocument = quill.Document.fromJson([
+        {'insert': 'Text\n'},
+      ]);
+
+      final mergedDocument = QuillAiApplyUtils.applyPolishedText(
+        originalDocument: originalDocument,
+        polishedText: '',
+      );
+
+      final mergedOps = mergedDocument.toDelta().toJson();
+      expect(mergedOps.last['insert'], endsWith('\n'));
+    });
+
+    test(
+        'applyPolishedText handles trailing newline correctly for documents ending in embed',
+        () {
+      final originalDocument = quill.Document.fromJson([
+        {'insert': 'Text '},
+        {
+          'insert': {'image': 'img.png'}
+        },
+        {'insert': '\n'}
+      ]);
+
+      final mergedDocument = QuillAiApplyUtils.applyPolishedText(
+        originalDocument: originalDocument,
+        polishedText: '[[TE_MEDIA_1]]',
+      );
+
+      final mergedOps = mergedDocument.toDelta().toJson();
+      expect(mergedOps.last['insert'], '\n');
+    });
+
+    test('applyPolishedText fallback triggers when marker index is invalid',
+        () {
+      final originalDocument = quill.Document.fromJson([
+        {'insert': 'Text '},
+        {
+          'insert': {'image': 'img.png'}
+        },
+        {'insert': '.\n'},
+      ]);
+
+      final mergedDocument = QuillAiApplyUtils.applyPolishedText(
+        originalDocument: originalDocument,
+        polishedText: 'Polished [[TE_MEDIA_999]]',
+      );
+
+      final mergedOps = mergedDocument.toDelta().toJson();
+      expect(mergedOps.length, greaterThan(0));
+    });
   });
 }
