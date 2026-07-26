@@ -1,0 +1,19 @@
+docs/architecture-audit-2026-07-26.md
+  s_22d303ac588835::t_acd76b4288bf0e 1-192
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "be03ecfbd3f5afbbf5e81d264b5b98a137dce276",
+  "prompts": {},
+  "sessions": {
+    "s_22d303ac588835": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "badc6ebe-8c26-4588-a67c-720b56cd1a05",
+        "model": "claude-fable-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
