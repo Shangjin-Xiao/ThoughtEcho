@@ -1368,5 +1368,59 @@ void main() {
       await subscription.cancel();
       service.dispose();
     });
+
+    test('resets run state and stop flag after a stopped run exits', () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final tool = _DelayedTool(
+        toolName: 'search_notes',
+        delay: const Duration(milliseconds: 60),
+      );
+      var requestCount = 0;
+      final service = AgentService(
+        settingsService: _FakeSettingsService(provider),
+        tools: [tool],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          requestCount++;
+          if (requestCount == 1) {
+            return _toolCallCompletion(
+              callId: 'call_1',
+              toolName: 'search_notes',
+              args: const {'query': 'camp'},
+            );
+          }
+          return _textCompletion('second run');
+        },
+      );
+
+      final firstRun = service.runAgent(userMessage: 'first');
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      service.requestStop();
+      expect(service.isStopRequested, isTrue);
+      // 停止后立刻发下一条消息：新 run 会等旧 run 退出，不产生并发
+      final secondRun = service.runAgent(userMessage: 'second');
+
+      final firstResponse = await firstRun;
+      final secondResponse = await secondRun;
+
+      expect(firstResponse.content, isEmpty);
+      expect(secondResponse.content, 'second run');
+      // 停止标志复位，运行状态由 runAgent 的 finally 清理
+      expect(service.isStopRequested, isFalse);
+      expect(service.isRunning, isFalse);
+      expect(service.currentStatusKey, isEmpty);
+      service.dispose();
+    });
   });
 }

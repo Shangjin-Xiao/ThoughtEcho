@@ -119,7 +119,7 @@ class AgentService extends ChangeNotifier {
   Stream<AgentEvent> get events => _eventController.stream;
 
   void _emitEvent(AgentEvent event, {int? runId}) {
-    if (runId != null && !_isRunActive(runId)) {
+    if (runId != null && !_shouldContinue(runId)) {
       return;
     }
     if (!_eventController.isClosed) {
@@ -150,6 +150,15 @@ class AgentService extends ChangeNotifier {
   int _nextRunId = 0;
   int? _activeRunId;
 
+  /// 当前 run 的流式 HTTP 客户端 — 停止时直接关闭以中断底层请求。
+  openai.OpenAIClient? _activeStreamClient;
+
+  /// 当前 run 的完成信号 — 停止后新 run 先等旧 run 退出，避免真并发。
+  Completer<void>? _runCompletion;
+
+  /// 停止后等待旧 run 退出的上限（循环检查点保证秒级退出）。
+  static const Duration _stopHandoverTimeout = Duration(seconds: 10);
+
   String _currentStatusKey = '';
   String get currentStatusKey => _currentStatusKey;
 
@@ -163,13 +172,25 @@ class AgentService extends ChangeNotifier {
         _completionRequester = completionRequester,
         _apiKeyResolver = apiKeyResolver;
 
+  /// 请求停止当前 run。
+  ///
+  /// 只置停止标志并中断底层 HTTP 流；不直接清理运行状态，
+  /// 由 [runAgent] 在检查点退出后走 finally 完成清理。
   void requestStop() {
     if (_activeRunId == null) {
       return;
     }
     _stopRequested = true;
-    _activeRunId = null;
-    _isRunning = false;
+    // 中断正在进行的流式请求，避免继续烧 token 直到超时。
+    final client = _activeStreamClient;
+    _activeStreamClient = null;
+    if (client != null) {
+      try {
+        client.close();
+      } catch (e) {
+        logDebug('AgentService: 关闭流式客户端失败: $e');
+      }
+    }
     if (_currentStatusKey.isEmpty) {
       notifyListeners();
     } else {
@@ -179,6 +200,31 @@ class AgentService extends ChangeNotifier {
 
   bool _isRunActive(int runId) => _activeRunId == runId;
 
+  /// 该 run 是否仍应继续执行（未被取代且未被请求停止）。
+  bool _shouldContinue(int runId) => _isRunActive(runId) && !_stopRequested;
+
+  /// 等待已被请求停止的上一个 run 退出，避免新旧循环真并发。
+  Future<void> _awaitPreviousRun() async {
+    final completion = _runCompletion;
+    if (completion == null || completion.isCompleted) {
+      return;
+    }
+    try {
+      await completion.future.timeout(_stopHandoverTimeout);
+    } on TimeoutException {
+      logError(
+        'AgentService: 等待已停止的 run 退出超时',
+        error: AgentFailureType.timeout,
+      );
+      // 兜底：放弃旧 run 的所有权。旧循环会在下一个检查点自行退出，
+      // 其事件与状态更新因 runId 不再匹配而被静音。
+      _activeRunId = null;
+      _isRunning = false;
+      _stopRequested = false;
+      _activeStreamClient = null;
+    }
+  }
+
   /// 执行 Agent 任务（流式，基于原生 tool calling 循环）
   Future<AgentResponse> runAgent({
     required String userMessage,
@@ -186,12 +232,21 @@ class AgentService extends ChangeNotifier {
     AgentNoteContext? noteContext,
   }) async {
     if (_activeRunId != null) {
-      throw StateError('AgentService.runAgent 不支持并发调用');
+      if (!_stopRequested) {
+        throw StateError('AgentService.runAgent 不支持并发调用');
+      }
+      // 已请求停止：等旧 run 在检查点退出后再启动新 run。
+      await _awaitPreviousRun();
+      if (_activeRunId != null) {
+        throw StateError('AgentService.runAgent 不支持并发调用');
+      }
     }
     final runId = ++_nextRunId;
     _activeRunId = runId;
     _isRunning = true;
     _stopRequested = false;
+    final runCompletion = Completer<void>();
+    _runCompletion = runCompletion;
     _setStatus('agentThinking', runId: runId);
     _emitEvent(AgentThinkingEvent(), runId: runId);
     notifyListeners();
@@ -218,7 +273,7 @@ class AgentService extends ChangeNotifier {
       var round = 0;
 
       while (true) {
-        if (!_isRunActive(runId)) {
+        if (!_shouldContinue(runId)) {
           return AgentResponse(content: '', toolCalls: executedCalls);
         }
         if (round >= maxToolRounds) {
@@ -227,7 +282,7 @@ class AgentService extends ChangeNotifier {
             provider: provider,
             messages: messages,
           );
-          if (!_isRunActive(runId)) {
+          if (!_shouldContinue(runId)) {
             return AgentResponse(content: '', toolCalls: executedCalls);
           }
           _emitEvent(
@@ -257,7 +312,7 @@ class AgentService extends ChangeNotifier {
           runId: runId,
         );
 
-        if (!_isRunActive(runId)) {
+        if (!_shouldContinue(runId)) {
           return AgentResponse(content: '', toolCalls: executedCalls);
         }
 
@@ -408,7 +463,7 @@ class AgentService extends ChangeNotifier {
           final executionResults =
               await _executePendingToolCalls(pendingExecutions, runId: runId);
 
-          if (!_isRunActive(runId)) {
+          if (!_shouldContinue(runId)) {
             return AgentResponse(content: '', toolCalls: executedCalls);
           }
 
@@ -531,7 +586,8 @@ class AgentService extends ChangeNotifier {
         error: _failureTypeFor(e),
         stackTrace: stack,
       );
-      if (!_isRunActive(runId)) {
+      if (!_shouldContinue(runId)) {
+        // 已被停止或取代：不向 UI 抛错，安静收尾。
         return AgentResponse(content: '');
       }
       _emitEvent(
@@ -544,8 +600,12 @@ class AgentService extends ChangeNotifier {
         _activeRunId = null;
         _isRunning = false;
         _stopRequested = false;
+        _activeStreamClient = null;
         _setStatus('');
         notifyListeners();
+      }
+      if (!runCompletion.isCompleted) {
+        runCompletion.complete();
       }
     }
   }
@@ -645,7 +705,7 @@ class AgentService extends ChangeNotifier {
       final content = completion.choices.firstOrNull?.message.content ?? '';
       final toolCalls =
           completion.choices.firstOrNull?.message.toolCalls ?? const [];
-      if (_isRunActive(runId) && content.isNotEmpty) {
+      if (_shouldContinue(runId) && content.isNotEmpty) {
         _emitEvent(AgentTextDeltaEvent(content), runId: runId);
       }
       return _StreamCompletionResult(content: content, toolCalls: toolCalls);
@@ -654,6 +714,8 @@ class AgentService extends ChangeNotifier {
     // 生产环境流式路径
     final config = _buildOpenAIConfig(provider);
     final client = openai.OpenAIClient(config: config);
+    // 暴露给 requestStop，使停止能立即中断底层 HTTP 流
+    _activeStreamClient = client;
 
     try {
       final request = openai.ChatCompletionCreateRequest(
@@ -669,26 +731,36 @@ class AgentService extends ChangeNotifier {
       final stream = client.chat.completions.createStream(request);
       final accumulator = openai.ChatStreamAccumulator();
 
-      await for (final event in stream) {
-        if (!_isRunActive(runId)) {
-          break;
-        }
-        accumulator.add(event);
+      try {
+        await for (final event in stream) {
+          if (!_shouldContinue(runId)) {
+            break;
+          }
+          accumulator.add(event);
 
-        final delta = event.choices?.firstOrNull?.delta;
-        final reasoningChunks = <String>[
-          if (delta?.reasoningContent?.isNotEmpty == true)
-            delta!.reasoningContent!,
-          if (delta?.reasoning?.isNotEmpty == true) delta!.reasoning!,
-        ];
-        for (final reasoning in reasoningChunks) {
-          _emitEvent(AgentReasoningDeltaEvent(reasoning), runId: runId);
-        }
+          final delta = event.choices?.firstOrNull?.delta;
+          final reasoningChunks = <String>[
+            if (delta?.reasoningContent?.isNotEmpty == true)
+              delta!.reasoningContent!,
+            if (delta?.reasoning?.isNotEmpty == true) delta!.reasoning!,
+          ];
+          for (final reasoning in reasoningChunks) {
+            _emitEvent(AgentReasoningDeltaEvent(reasoning), runId: runId);
+          }
 
-        final textDelta = event.textDelta;
-        if (_isRunActive(runId) && textDelta != null && textDelta.isNotEmpty) {
-          _emitEvent(AgentTextDeltaEvent(textDelta), runId: runId);
+          final textDelta = event.textDelta;
+          if (_shouldContinue(runId) &&
+              textDelta != null &&
+              textDelta.isNotEmpty) {
+            _emitEvent(AgentTextDeltaEvent(textDelta), runId: runId);
+          }
         }
+      } catch (e) {
+        // 停止时主动关闭了客户端，由此产生的流异常属于预期，安静返回已收内容。
+        if (_shouldContinue(runId)) {
+          rethrow;
+        }
+        logDebug('AgentService: 流式请求已因停止而中断: $e');
       }
 
       return _StreamCompletionResult(
@@ -696,6 +768,9 @@ class AgentService extends ChangeNotifier {
         toolCalls: accumulator.toolCalls,
       );
     } finally {
+      if (identical(_activeStreamClient, client)) {
+        _activeStreamClient = null;
+      }
       client.close();
     }
   }
@@ -901,12 +976,15 @@ class AgentService extends ChangeNotifier {
 
     final results = <_ToolExecutionResult>[];
     for (final pending in pendingExecutions) {
+      if (!_shouldContinue(runId)) {
+        break;
+      }
       final result = await _executeToolSafely(
         pending.parsedToolCall,
         runId: runId,
       );
       results.add(_ToolExecutionResult(pending: pending, result: result));
-      if (!_isRunActive(runId)) {
+      if (!_shouldContinue(runId)) {
         break;
       }
     }
@@ -995,7 +1073,7 @@ class AgentService extends ChangeNotifier {
   }
 
   void _setStatus(String status, {int? runId}) {
-    if (runId != null && !_isRunActive(runId)) {
+    if (runId != null && status.isNotEmpty && !_shouldContinue(runId)) {
       return;
     }
     if (_currentStatusKey == status) {

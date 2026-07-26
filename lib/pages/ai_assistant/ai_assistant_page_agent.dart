@@ -298,9 +298,14 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           );
         }
       } else if (streamingMsgId != null) {
-        _setState(() {
-          _messages.removeWhere((m) => m.id == streamingMsgId);
-        });
+        if (streamingText.trim().isNotEmpty) {
+          // 被停止等情况下没有最终文本时，保留已经流式输出的内容
+          finalizeNarrationMessage(streamingMsgId!, streamingText);
+        } else {
+          _setState(() {
+            _messages.removeWhere((m) => m.id == streamingMsgId);
+          });
+        }
       }
 
       if (parsed.smartResult != null) {
