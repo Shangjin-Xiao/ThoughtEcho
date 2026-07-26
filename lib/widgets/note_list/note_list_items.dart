@@ -187,28 +187,15 @@ extension _NoteListItemsExtension on NoteListViewState {
                     child: AnimatedOpacity(
                       duration: const Duration(milliseconds: 200),
                       curve: Curves.easeOut,
-                      opacity: _isSearchUpdating ? 0.4 : 1.0,
+                      opacity: _isSearchUpdating ? 0.7 : 1.0,
                       child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 150),
+                        duration: const Duration(milliseconds: 200),
                         switchInCurve: Curves.easeOut,
-                        switchOutCurve: Curves.easeOut,
-                        transitionBuilder: (child, animation) {
-                          return AnimatedBuilder(
-                            animation: animation,
-                            child: child,
-                            builder: (context, builtChild) {
-                              final isOutgoing =
-                                  animation.status == AnimationStatus.reverse;
-                              final opacity = isOutgoing
-                                  ? 0.0
-                                  : Curves.easeOut.transform(animation.value);
-                              return Opacity(
-                                opacity: opacity,
-                                child: builtChild,
-                              );
-                            },
-                          );
-                        },
+                        switchOutCurve: Curves.easeIn,
+                        // 双向交叉淡化：旧结果快速淡出、新结果淡入，
+                        // 避免旧列表被硬切（opacity 直接归零）造成的生硬感。
+                        transitionBuilder: (child, animation) =>
+                            FadeTransition(opacity: animation, child: child),
                         child: _buildNoteList(theme, noteInsertAnimationType),
                       ),
                     ),
@@ -381,9 +368,9 @@ extension _NoteListItemsExtension on NoteListViewState {
   Widget _buildNoteList(ThemeData theme, String noteInsertAnimationType) {
     final l10n = AppLocalizations.of(context);
     final hasEffectiveSearchQuery = _effectiveSearchQuery.isNotEmpty;
-    // key 拆分，避免筛选 chip 变化时 AnimatedSwitcher 销毁整棵列表子树。
-    // 筛选变化应直接更新当前列表内容；只有搜索结果版本变化才触发
-    // results -> results 的淡入切换。
+    // key 拆分：_resultsVersion 仅在搜索词/筛选条件变化后的第一次数据事件递增
+    // （load more 不递增），因此 AnimatedSwitcher 只在结果集真正切换时做一次
+    // results -> results 的淡入切换，不会在分页时销毁列表导致跳回顶部。
     const loadingKey = ValueKey('note_list_loading');
     const emptyKey = ValueKey('note_list_empty');
     const noResultsKey = ValueKey('note_list_no_results');
@@ -637,7 +624,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                           _updateState(() {
                             _deletingQuoteIds.add(quoteId);
                           });
-                          // 等动画播完（250ms）+ 50ms 余量再执行真正的删除。
+                          // 等删除动画播完 + 30ms 余量再执行真正的删除。
                           // 先从本地列表乐观移除，避免 stream 更新时的视觉跳动。
                           Future.delayed(
                             NoteListViewState._noteDeleteAnimationDuration +
@@ -1149,6 +1136,7 @@ extension _NoteListItemsExtension on NoteListViewState {
       tween: Tween<double>(begin: 0.0, end: 1.0),
       duration: NoteListViewState._noteInsertAnimationDuration,
       curve: Curves.easeOutCubic,
+      onEnd: () => _handleInsertAnimationCompleted(quoteId, version),
       builder: (context, value, child) {
         if (value >= 0.99) return child!;
 
@@ -1289,7 +1277,12 @@ class _NoteDeleteCollapse extends StatefulWidget {
 class _NoteDeleteCollapseState extends State<_NoteDeleteCollapse>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _animation;
+
+  /// 透明度先行（easeOut：一开始就快速变淡，给出即时删除反馈）；
+  /// 高度折叠用 easeInOutCubic，让下方卡片平滑上移。
+  /// 此前两者共用 easeInCubic，视觉变化全部挤在最后几帧，体感像动画被吞掉。
+  late final Animation<double> _fadeAnimation;
+  late final Animation<double> _sizeAnimation;
 
   @override
   void initState() {
@@ -1298,9 +1291,13 @@ class _NoteDeleteCollapseState extends State<_NoteDeleteCollapse>
       vsync: this,
       duration: NoteListViewState._noteDeleteAnimationDuration,
     );
-    _animation = CurvedAnimation(
+    _fadeAnimation = CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeInCubic,
+      curve: Curves.easeOut,
+    );
+    _sizeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOutCubic,
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1318,11 +1315,10 @@ class _NoteDeleteCollapseState extends State<_NoteDeleteCollapse>
 
   @override
   Widget build(BuildContext context) {
-    final reverseAnimation = ReverseAnimation(_animation);
     return FadeTransition(
-      opacity: reverseAnimation,
+      opacity: ReverseAnimation(_fadeAnimation),
       child: SizeTransition(
-        sizeFactor: reverseAnimation,
+        sizeFactor: ReverseAnimation(_sizeAnimation),
         // axisAlignment defaults to 0.0 (center), which gives the equivalent cross-axis
         // centering behavior as the original Alignment.topCenter did.
         child: widget.child,

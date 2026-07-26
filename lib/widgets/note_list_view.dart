@@ -139,14 +139,15 @@ class NoteListViewState extends State<NoteListView> {
   static const Duration _noteInsertAnimationDuration = Duration(
     milliseconds: 250,
   );
-  static const Duration _noteUpdateAnimationCleanupDelay = Duration(
-    milliseconds: 300,
-  );
-  static const Duration _pendingInsertAnimationCleanupDelay = Duration(
-    milliseconds: 1500,
+
+  /// 兜底清理窗口：正常路径由入场动画的 onEnd 回调驱动清理，
+  /// 该定时器仅在 item 始终没有 build 出来（数据流一直未回推该笔记）时
+  /// 移除挂起状态，避免状态永久残留。
+  static const Duration _insertAnimationSafetyCleanupDelay = Duration(
+    milliseconds: 3000,
   );
   static const Duration _noteDeleteAnimationDuration = Duration(
-    milliseconds: 250,
+    milliseconds: 280,
   );
 
   static String _normalizeSearchQuery(String query) {
@@ -615,11 +616,24 @@ class NoteListViewState extends State<NoteListView> {
       final bool shouldAnimateSearchTransition =
           oldEffectiveQuery.isNotEmpty && newEffectiveQuery.isNotEmpty;
 
+      // 标签/天气/时间段筛选变化：新结果到达后做一次淡入过渡
+      // （删筛选 chip 后旧结果保持显示，新结果整体淡入替换）。
+      final bool isFilterChange = !_areListsEqual(
+            oldWidget.selectedTagIds,
+            widget.selectedTagIds,
+          ) ||
+          !_areListsEqual(oldWidget.selectedWeathers, widget.selectedWeathers) ||
+          !_areListsEqual(
+            oldWidget.selectedDayPeriods,
+            widget.selectedDayPeriods,
+          );
+
       // 更新流订阅，传入是否仅为排序变化
       _updateStreamSubscription(
         preserveScrollPosition: isOnlySortChange || isSearchChange,
         isSearchUpdate: isSearchChange,
         animateSearchTransition: shouldAnimateSearchTransition,
+        animateFilterTransition: isFilterChange && !isSearchChange,
       );
     } else if (shouldUpdate) {
       logDebug('跳过更新：数据尚未完成首次加载', source: 'NoteListView');
@@ -736,8 +750,9 @@ class NoteListViewState extends State<NoteListView> {
   /// 触发指定 ID 的笔记卡片入场/更新动画（保存/修改/撤销恢复后调用）。
   /// 空闲时递增版本号；同一 ID 的保存动画进行中时忽略重复触发。
   /// 对仍在待入场窗口内的结构性插入，允许重启动画，用于删除后快速撤销。
-  /// 新增笔记可能需要等待数据流返回，保留较长的待入场窗口；更新已有笔记
-  /// 则在动画结束后快速清除状态，保证下一次保存仍可播放。
+  /// 清理由动画自身的 onEnd 回调驱动（见 [_handleInsertAnimationCompleted]），
+  /// 保证无论数据流何时回推、item 何时真正 build，动画都能完整播完；
+  /// 仅当 item 始终未出现时由兜底定时器移除挂起状态。
   void triggerInsertAnimation(String id, {bool? animateListInsertion}) {
     if (!mounted) return;
     final shouldAnimateListInsertion =
@@ -759,10 +774,7 @@ class NoteListViewState extends State<NoteListView> {
         _structuralInsertQuoteIds.remove(id);
       }
     });
-    final cleanupDelay = shouldAnimateListInsertion
-        ? _pendingInsertAnimationCleanupDelay
-        : _noteUpdateAnimationCleanupDelay;
-    _animationTimers[id] = Timer(cleanupDelay, () {
+    _animationTimers[id] = Timer(_insertAnimationSafetyCleanupDelay, () {
       if (mounted) {
         if (_animatingQuoteVersions[id] != nextVersion) {
           return;
@@ -773,6 +785,20 @@ class NoteListViewState extends State<NoteListView> {
           _animationTimers.remove(id);
         });
       }
+    });
+  }
+
+  /// 入场动画播完后的清理（由 TweenAnimationBuilder.onEnd 驱动）。
+  /// 推迟到下一个事件循环执行，避免在动画收尾回调中同步 setState。
+  void _handleInsertAnimationCompleted(String id, int version) {
+    Timer.run(() {
+      if (!mounted || _animatingQuoteVersions[id] != version) return;
+      _animationTimers[id]?.cancel();
+      setState(() {
+        _animatingQuoteVersions.remove(id);
+        _structuralInsertQuoteIds.remove(id);
+        _animationTimers.remove(id);
+      });
     });
   }
 

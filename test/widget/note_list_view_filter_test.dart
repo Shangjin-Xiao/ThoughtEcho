@@ -420,7 +420,7 @@ void main() {
         await tester.pump();
         expect(find.byType(SizeTransition), findsOneWidget);
 
-        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump(const Duration(milliseconds: 350));
 
         expect(deletedQuoteIds, ['quote-1']);
 
@@ -599,7 +599,8 @@ void main() {
           findsOneWidget,
         );
 
-        await tester.pump(const Duration(milliseconds: 700));
+        // 入场动画播放中途笔记再次被删除（列表移除），挂起状态保留
+        await tester.pump(const Duration(milliseconds: 100));
         databaseService.emitQuotes(const []);
         await tester.pump();
 
@@ -622,11 +623,13 @@ void main() {
           findsOneWidget,
         );
 
+        // 动画完整播完后由 onEnd 驱动清理，动画包装层被移除
         await tester.pump(const Duration(milliseconds: 850));
+        await tester.pump(const Duration(milliseconds: 20));
 
         expect(
           find.byKey(const ValueKey('note_list_insert_quote-1_slide_2')),
-          findsOneWidget,
+          findsNothing,
         );
 
         await tester.pumpWidget(const SizedBox.shrink());
