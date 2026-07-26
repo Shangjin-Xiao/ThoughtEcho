@@ -135,6 +135,18 @@ class AgentService extends ChangeNotifier {
   static const int _searchToolMaxSingleMessageChars = 5000;
   static const int _maxRepeatedRoundPattern = 3;
 
+  /// 无法得知模型上下文上限时使用的保守预算（token）。
+  static const int _defaultContextTokenBudget = 80000;
+
+  /// 超过预算的这个比例就触发裁剪。
+  static const double _pruneThresholdRatio = 0.6;
+
+  /// 裁剪时完整保护的最近轮次数量。
+  static const int _protectedToolRounds = 4;
+
+  /// 被裁剪掉的工具结果留下的占位符。
+  static const String prunedToolResultPlaceholder = '[较早的工具结果已清理]';
+
   /// 同一「工具 + 参数签名」允许把错误回喂模型的次数上限。
   static const int _maxToolFailuresPerSignature = 3;
 
@@ -282,6 +294,7 @@ class AgentService extends ChangeNotifier {
         }
         if (round >= maxToolRounds) {
           _setStatus('', runId: runId);
+          pruneMessages(messages);
           final summary = await _requestFinalSummary(
             provider: provider,
             messages: messages,
@@ -306,6 +319,9 @@ class AgentService extends ChangeNotifier {
         round++;
         _setStatus('agentThinking', runId: runId);
         _emitEvent(AgentThinkingEvent(), runId: runId);
+
+        // 每轮请求前裁剪上下文，避免工具结果无上限累积。
+        pruneMessages(messages);
 
         final result = await _streamCompletion(
           provider: provider,
@@ -1031,6 +1047,72 @@ class AgentService extends ChangeNotifier {
 - 先回答用户的核心问题，再补充必要依据或下一步。简单问题简短回答；复杂任务使用清晰的小标题或列表。
 - 工具产生提案后，简要说明提案内容和理由，并提醒用户确认；不要声称修改已经生效。
 ''';
+  }
+
+  /// 粗估 token 数（无 tokenizer）：中文约 2.2 字符/token，再保守上浮 4/3。
+  ///
+  /// 全项目只此一处估算，阈值判断都基于它。
+  @visibleForTesting
+  static int estimateTokens(String text) => (text.length / 2.2 * 4 / 3).ceil();
+
+  static int _estimateMessagesTokens(List<openai.ChatMessage> messages) =>
+      messages.fold<int>(
+        0,
+        (total, message) => total + estimateTokens(jsonEncode(message.toJson())),
+      );
+
+  /// 零 LLM 成本的上下文裁剪：把较早轮次的工具结果替换为一行占位符。
+  ///
+  /// - 只改写 `role:'tool'` 消息的内容，从不删除消息，
+  ///   因此 `assistant(tool_calls)` 与其后的 tool 消息组绝不会被拆散；
+  /// - 保护最近 [_protectedToolRounds] 轮的完整结果；
+  /// - 幂等：已被裁剪过的消息不会重复处理。
+  ///
+  /// 返回是否发生了裁剪。
+  @visibleForTesting
+  static bool pruneMessages(
+    List<openai.ChatMessage> messages, {
+    int contextTokenBudget = _defaultContextTokenBudget,
+  }) {
+    final threshold = (contextTokenBudget * _pruneThresholdRatio).round();
+    if (_estimateMessagesTokens(messages) <= threshold) {
+      return false;
+    }
+
+    // 从后往前定位最近 K 个工具轮次的起点，该起点之后的消息完整保留。
+    var protectedRounds = 0;
+    var protectFromIndex = messages.length;
+    for (var index = messages.length - 1; index >= 0; index--) {
+      final message = messages[index];
+      if (message is openai.AssistantMessage &&
+          (message.toolCalls?.isNotEmpty ?? false)) {
+        protectedRounds++;
+        protectFromIndex = index;
+        if (protectedRounds >= _protectedToolRounds) {
+          break;
+        }
+      }
+    }
+
+    var pruned = false;
+    for (var index = 0; index < protectFromIndex; index++) {
+      final message = messages[index];
+      if (message is! openai.ToolMessage) {
+        continue;
+      }
+      if (message.content == prunedToolResultPlaceholder) {
+        continue;
+      }
+      messages[index] = openai.ChatMessage.tool(
+        toolCallId: message.toolCallId,
+        content: prunedToolResultPlaceholder,
+      );
+      pruned = true;
+    }
+    if (pruned) {
+      logDebug('AgentService: 上下文超过阈值，已清理较早轮次的工具结果');
+    }
+    return pruned;
   }
 
   AgentTool? _findTool(String name) {

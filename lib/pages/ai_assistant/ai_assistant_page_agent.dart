@@ -27,6 +27,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     var streamingText = '';
     String? toolThinkingText;
     var toolProgressInProgress = false;
+    var reachedMaxRounds = false;
 
     void ensureToolProgressMessage() {
       if (toolProgressMsgId != null) return;
@@ -207,6 +208,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             }
 
           case AgentResponseEvent():
+            reachedMaxRounds = event.reachedMaxRounds;
             if (streamingMsgId != null) {
               _flushStreamUpdate();
               _cancelStreamUpdate();
@@ -306,6 +308,21 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             _messages.removeWhere((m) => m.id == streamingMsgId);
           });
         }
+      }
+
+      // 达到轮次上限时给用户可见提示，避免结论看起来"莫名其妙地停了"。
+      if (reachedMaxRounds || response.reachedMaxRounds) {
+        _appendMessage(
+          app_chat.ChatMessage(
+            id: _uuid.v4(),
+            content: l10n.agentReachedMaxRounds,
+            isUser: false,
+            role: 'system',
+            timestamp: DateTime.now(),
+            includedInContext: false,
+          ),
+          persist: false,
+        );
       }
 
       if (parsed.smartResult != null) {
