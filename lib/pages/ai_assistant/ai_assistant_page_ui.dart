@@ -611,6 +611,28 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     styleSheet: _getMarkdownStyleSheet(theme, bubbleTextColor),
                   ),
           ),
+          // 出错时保留正文并显式标记，避免内容被静默删除
+          if (!isUser && message.state == MessageState.error)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 14,
+                    color: theme.colorScheme.error,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    l10n.agentErrorGeneric,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

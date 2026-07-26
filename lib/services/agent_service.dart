@@ -132,6 +132,12 @@ class AgentService extends ChangeNotifier {
   static const int _defaultMaxSingleMessageChars = 1200;
   static const int _searchToolMaxSingleMessageChars = 5000;
   static const int _maxRepeatedRoundPattern = 3;
+
+  /// 同一「工具 + 参数签名」允许把错误回喂模型的次数上限。
+  static const int _maxToolFailuresPerSignature = 3;
+
+  /// 连续多少轮「所有工具全部失败」后终止整轮。
+  static const int _maxConsecutiveFailedToolRounds = 3;
   static const Duration _singleToolTimeout = Duration(seconds: 45);
 
   /// 运行状态
@@ -207,6 +213,8 @@ class AgentService extends ChangeNotifier {
       final seenCallSignatures = <String>{};
       final repeatedRoundPatterns = <String, int>{};
       final correctionAttempts = <String, int>{};
+      final toolFailureCounts = <String, int>{};
+      var consecutiveFailedToolRounds = 0;
       var round = 0;
 
       while (true) {
@@ -404,6 +412,10 @@ class AgentService extends ChangeNotifier {
             return AgentResponse(content: '', toolCalls: executedCalls);
           }
 
+          var executedToolCount = 0;
+          var failedToolCount = 0;
+          AgentFailureType? lastToolFailureType;
+
           for (final execution in executionResults) {
             final parsedToolCall = execution.pending.parsedToolCall;
             final rawToolCall = execution.pending.rawToolCall;
@@ -424,39 +436,42 @@ class AgentService extends ChangeNotifier {
                 AgentToolCallResultEvent(
                   toolCallId: parsedToolCall.id,
                   toolName: parsedToolCall.name,
-                  result: toolResult.isError ? '' : toolResult.content,
+                  result: toolResult.content,
                   isError: toolResult.isError,
                 ),
                 runId: runId);
 
+            executedToolCount++;
+
             if (toolResult.isError) {
+              failedToolCount++;
+              lastToolFailureType = toolResult.failureType ??
+                  AgentFailureType.toolExecutionFailed;
               logError(
                 'Agent tool returned an error: ${parsedToolCall.name}',
-                error: toolResult.failureType ??
-                    AgentFailureType.toolExecutionFailed,
+                error: lastToolFailureType,
               );
-              final correctionKey =
+              final failureKey =
                   '${parsedToolCall.name}:${canonicalJsonForArguments(parsedToolCall.arguments)}';
-              if (toolResult.retryable &&
-                  _tryRegisterCorrectionAttempt(
-                    correctionAttempts,
-                    correctionKey,
-                  )) {
-                messages.add(
-                  openai.ChatMessage.tool(
-                    toolCallId: rawToolCall.id,
-                    content: _truncate(
-                      _safeToolErrorForModel(),
-                      _defaultMaxSingleMessageChars,
-                    ),
-                  ),
-                );
-                continue;
+              final failureCount = (toolFailureCounts[failureKey] ?? 0) + 1;
+              toolFailureCounts[failureKey] = failureCount;
+              if (failureCount > _maxToolFailuresPerSignature) {
+                throw AgentRequestException(lastToolFailureType);
               }
 
-              throw AgentRequestException(
-                toolResult.failureType ?? AgentFailureType.toolExecutionFailed,
+              // 工具错误默认可恢复：把具体错误回喂模型让它自我纠正。
+              // 失败的调用不占用全局去重名额，允许模型原样重试（受签名失败次数限制）。
+              seenCallSignatures.remove(failureKey);
+              messages.add(
+                openai.ChatMessage.tool(
+                  toolCallId: rawToolCall.id,
+                  content: _truncate(
+                    _toolErrorForModel(toolResult.content),
+                    _toolMessageCharLimit(parsedToolCall.name),
+                  ),
+                ),
               );
+              continue;
             }
 
             executedCalls.add(parsedToolCall);
@@ -476,6 +491,20 @@ class AgentService extends ChangeNotifier {
                 content: _truncate(escapedContent, maxMessageChars),
               ),
             );
+          }
+
+          if (executedToolCount > 0) {
+            if (failedToolCount == executedToolCount) {
+              consecutiveFailedToolRounds++;
+              if (consecutiveFailedToolRounds >=
+                  _maxConsecutiveFailedToolRounds) {
+                throw AgentRequestException(
+                  lastToolFailureType ?? AgentFailureType.toolExecutionFailed,
+                );
+              }
+            } else {
+              consecutiveFailedToolRounds = 0;
+            }
           }
         }
 
@@ -956,8 +985,13 @@ class AgentService extends ChangeNotifier {
     };
   }
 
-  String _safeToolErrorForModel() {
-    return '工具执行失败。请检查参数并使用不同的请求重试。';
+  /// 把工具构造的具体错误信息回喂模型（保留细节，仅做防注入转义）。
+  String _toolErrorForModel(String toolErrorContent) {
+    final detail = _escapeToolResult(toolErrorContent).trim();
+    if (detail.isEmpty) {
+      return '工具执行失败。请检查参数并使用不同的请求重试。';
+    }
+    return '工具执行失败：$detail\n请根据以上错误信息调整参数后重试。';
   }
 
   void _setStatus(String status, {int? runId}) {

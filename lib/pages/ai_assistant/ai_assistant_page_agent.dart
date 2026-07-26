@@ -68,6 +68,32 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       _scrollToBottom();
     }
 
+    /// 出错时保留已输出内容并标记为失败状态；完全没有内容时才移除空气泡。
+    void markStreamingMessageFailed(String messageId, String content) {
+      _setState(() {
+        final index =
+            _messages.indexWhere((message) => message.id == messageId);
+        if (index == -1) return;
+        final resolvedContent =
+            content.isNotEmpty ? content : _messages[index].content;
+        if (resolvedContent.trim().isEmpty) {
+          _messages.removeAt(index);
+          return;
+        }
+        final failed = _messages[index].copyWith(
+          content: resolvedContent,
+          isLoading: false,
+          state: app_chat.MessageState.error,
+        );
+        _messages[index] = failed;
+        if (_currentSessionId != null) {
+          unawaited(
+            _chatSessionService.addMessage(_currentSessionId!, failed),
+          );
+        }
+      });
+    }
+
     try {
       final previousSubscription = _agentEventSubscription;
       await previousSubscription?.cancel();
@@ -197,10 +223,11 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
 
           case AgentErrorEvent():
             if (streamingMsgId != null) {
+              // 保留已经流式输出的正文，只在消息上标记错误状态，
+              // 避免用户看到内容凭空消失（历史 bug：整段 removeWhere）。
+              _flushStreamUpdate();
               _cancelStreamUpdate();
-              _setState(() {
-                _messages.removeWhere((m) => m.id == streamingMsgId);
-              });
+              markStreamingMessageFailed(streamingMsgId!, streamingText);
               streamingMsgId = null;
               streamingText = '';
             }
