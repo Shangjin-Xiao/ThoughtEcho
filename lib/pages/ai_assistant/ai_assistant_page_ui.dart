@@ -251,8 +251,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           case 'smart_result':
             final action = meta['action']?.toString();
             final isNewNoteProposal = action == 'create';
-            final legacyReadOnly =
-                !isNewNoteProposal && meta['rich_edit'] == null;
+            // 只读判定改用显式 legacy 标记：历史遗留的不可采纳卡片写
+            // legacy=true，其余（含润色/续写工作流产出）一律可采纳。
+            final legacyReadOnly = meta['legacy'] == true;
             final initialNewNoteMetadata =
                 isNewNoteProposal ? _resolveInitialNewNoteMetadata(meta) : null;
             final rawTagNames = meta['tag_names'] as List<dynamic>? ?? const [];
@@ -819,11 +820,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 : plainContent);
 
         // 合并 Agent 建议的元数据（标签、作者、出处）
-        final rawSuggestedTagIds = meta['tag_ids'] as List<dynamic>?;
-        final suggestedTagIds = rawSuggestedTagIds
-            ?.map((item) => item.toString().trim())
-            .where((item) => item.isNotEmpty)
-            .toList();
+        // 空列表视为「无标签建议」，避免润色/续写把原笔记标签清空
+        final suggestedTagIds = _suggestedTagIdsOrNull(meta['tag_ids']);
         final suggestedAuthor = meta['author']?.toString();
         final suggestedSource = meta['source']?.toString();
         // 使用 DeltaBuilder 合并修改并生成新的 deltaContent，保持双存储一致
@@ -1187,6 +1185,12 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     );
   }
 
+  List<String>? _suggestedTagIdsOrNull(Object? value) {
+    if (value is! List) return null;
+    final ids = _extractStringList(value);
+    return ids.isEmpty ? null : ids;
+  }
+
   List<String> _extractStringList(Object? value) {
     final rawItems = value is List ? value : const [];
     return rawItems
@@ -1364,11 +1368,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 : plainContent);
 
         // 合并 Agent 建议的元数据（标签、作者、出处）
-        final rawSuggestedTagIds = meta['tag_ids'] as List<dynamic>?;
-        final suggestedTagIds = rawSuggestedTagIds
-            ?.map((item) => item.toString().trim())
-            .where((item) => item.isNotEmpty)
-            .toList();
+        // 空列表视为「无标签建议」，避免润色/续写把原笔记标签清空
+        final suggestedTagIds = _suggestedTagIdsOrNull(meta['tag_ids']);
         final suggestedAuthor = meta['author']?.toString();
         final suggestedSource = meta['source']?.toString();
         var includeLocation = meta['include_location'] == true;
