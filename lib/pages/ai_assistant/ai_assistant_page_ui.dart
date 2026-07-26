@@ -341,7 +341,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                         includeLocation: draft.includeLocation,
                         includeWeather: draft.includeWeather,
                       );
-                      await _openSmartResultAsNewNote(
+                      return _openSmartResultAsNewNote(
                         draft.content,
                         richDocument: updatedMeta['rich_document'],
                         tagIds: confirmedMetadata.tagIds,
@@ -351,7 +351,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                         includeWeather: confirmedMetadata.includeWeather,
                       );
                     } else {
-                      await _openSmartResultInEditor(
+                      return _openSmartResultInEditor(
                         updatedMeta,
                         draft.content,
                       );
@@ -374,6 +374,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                       );
                     }
                   }
+                  return null;
                 },
                 onSaveDraftDirectly: (draft) async {
                   final updatedMeta =
@@ -785,7 +786,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     );
   }
 
-  Future<void> _openSmartResultInEditor(
+  /// 打开编辑器采纳建议，返回编辑器内保存成功的笔记 ID（未保存则为 null）。
+  Future<String?> _openSmartResultInEditor(
     Map<String, dynamic> meta,
     String content,
   ) async {
@@ -799,7 +801,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       final note = await db.getQuoteById(noteId);
       final tags = await db.getCategories();
       if (!mounted) {
-        return;
+        return null;
       }
       if (note != null) {
         Quote? richEditedNote;
@@ -807,10 +809,10 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           richEditedNote = _applyStructuredEdit(note, meta);
         } on RichTextEditConflict {
           _showRichEditConflict();
-          return;
+          return null;
         } on RichTextEditMatchFailure {
           _showRichEditConflict();
-          return;
+          return null;
         }
         // 根据润色(replace) / 续写(append) 决定带入编辑器的初始文本
         final plainContent = DeltaBuilder.markdownToPlainText(content);
@@ -849,6 +851,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           sourceAuthor: suggestedAuthor ?? note.sourceAuthor,
           sourceWork: suggestedSource ?? note.sourceWork,
         );
+        String? savedNoteId;
         await Navigator.push(
           context,
           MaterialPageRoute(
@@ -857,10 +860,11 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               initialQuote: noteForEditor,
               allTags: tags,
               skipDefaultMetadataAutofill: true,
+              onSaved: (savedQuote) => savedNoteId = savedQuote.id,
             ),
           ),
         );
-        return;
+        return savedNoteId;
       }
     }
 
@@ -870,7 +874,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         .map((item) => item.toString().trim())
         .where((item) => item.isNotEmpty)
         .toList();
-    await _openSmartResultAsNewNote(
+    return _openSmartResultAsNewNote(
       content,
       richDocument: meta['rich_document'],
       tagIds: tagIds,
@@ -1209,7 +1213,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     return value is bool ? value : null;
   }
 
-  Future<void> _openSmartResultAsNewNote(
+  /// 以新建笔记方式打开编辑器，返回保存成功的笔记 ID（未保存则为 null）。
+  Future<String?> _openSmartResultAsNewNote(
     String content, {
     Object? richDocument,
     List<String>? tagIds,
@@ -1223,7 +1228,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         !DeltaBuilder.hasMarkdownFormatting(content)) {
       final db = context.read<DatabaseService>();
       final tags = await db.getCategories();
-      if (!mounted) return;
+      if (!mounted) return null;
+      String? savedNoteId;
       await showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -1237,10 +1243,13 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           prefilledIncludeWeather: includeWeather,
           useAIPrefilledLocationWeather: true,
           tags: tags,
-          onSave: db.addQuote,
+          onSave: (quote) {
+            savedNoteId = quote.id;
+            return db.addQuote(quote);
+          },
         ),
       );
-      return;
+      return savedNoteId;
     }
 
     final db = context.read<DatabaseService>();
@@ -1326,7 +1335,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       ),
     );
 
-    if (!mounted) return;
+    if (!mounted) return null;
+    String? savedNoteId;
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -1335,9 +1345,11 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           initialQuote: initialQuote,
           allTags: tags,
           skipDefaultMetadataAutofill: true,
+          onSaved: (savedQuote) => savedNoteId = savedQuote.id,
         ),
       ),
     );
+    return savedNoteId;
   }
 
   Future<String?> _saveSmartResultToExistingNote(
