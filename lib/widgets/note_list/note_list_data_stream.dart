@@ -164,9 +164,10 @@ extension _NoteListDataStreamExtension on NoteListViewState {
               }
             });
             logDebug('首次数据加载完成', source: 'NoteListView');
-            // 首屏就绪后启动空闲预取，延迟避开冷启动滚动保护期（1500ms）。
+            // 首屏就绪后尽快启动空闲预取：用户常在冷启动后 1~2 秒内就开始快滑，
+            // 预取必须抢在前面；tick 自带滚动/加载让路，起步早不会挤占滚动帧。
             _scheduleIdlePrefetch(
-              delay: const Duration(milliseconds: 1800),
+              delay: const Duration(milliseconds: 400),
             );
           }
 

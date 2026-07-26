@@ -718,13 +718,25 @@ extension _NoteListScrollExtension on NoteListViewState {
 
     _loadMoreAwaitingPage = false;
     _loadMoreSettleTimer?.cancel();
-    _loadMoreSettleTimer = Timer(const Duration(milliseconds: 320), () {
-      if (!mounted || !_isLoading) {
-        return;
-      }
-      _updateState(() {
-        _isLoading = false;
-      });
+    _loadMoreSettleTimer = Timer(
+      const Duration(milliseconds: 320),
+      _settleLoadMoreLoadingFlag,
+    );
+  }
+
+  void _settleLoadMoreLoadingFlag() {
+    if (!mounted || !_isLoading) {
+      return;
+    }
+    // 滚动中不为收起底部加载指示触发整列表重建：普通赋值即可解除
+    // _loadMore 的并发闸门（长距离连滑还能继续取页）；底部指示只在用户
+    // 停在列表末尾时才可见，那时走 setState 分支正常收起。
+    if (isListScrolling.value) {
+      _isLoading = false;
+      return;
+    }
+    _updateState(() {
+      _isLoading = false;
     });
   }
 

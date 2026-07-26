@@ -16,10 +16,11 @@ void main() {
     });
 
     test('分页加载常量应该有合理的默认值', () {
-      // 验证默认分页大小
-      expect(AppConstants.defaultPageSize, 20);
+      // 验证默认分页大小：50 条约覆盖一次全力快滑，
+      // 冷启动后立即快滑最多只撞到一次分页数据事件
+      expect(AppConstants.defaultPageSize, 50);
 
-      // 验证滚动预加载阈值：记录页单页 20 条，提前补页避免撞到分页边界
+      // 验证滚动预加载阈值：提前补页避免撞到分页边界
       expect(AppConstants.scrollPreloadThreshold, 0.35);
     });
 
