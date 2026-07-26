@@ -1,0 +1,28 @@
+lib/widgets/note_list/note_list_scroll.dart
+  s_3c2b7aa98d1a88::t_aaf4ba2cb376cd 116-121
+  s_3c2b7aa98d1a88::t_9ae9be7180479a 737-767
+lib/widgets/note_list_view.dart
+  s_3c2b7aa98d1a88::t_1185f227036a0f 184-188
+  s_3c2b7aa98d1a88::t_da2d69373fea7c 696
+lib/widgets/note_list/note_list_data_stream.dart
+  s_3c2b7aa98d1a88::t_8118ec1159041c 409-411
+  s_3c2b7aa98d1a88::t_24c2e0580b45d8 167-170
+.squad/decisions.md
+  s_3c2b7aa98d1a88::t_6ae8419a31d13f 544-595
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "38c6e4b0dff557e08d9893e444731d6f448cf75a",
+  "prompts": {},
+  "sessions": {
+    "s_3c2b7aa98d1a88": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48d9a6b2-6b76-43f7-becc-9744be4a38e4",
+        "model": "claude-fable-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
