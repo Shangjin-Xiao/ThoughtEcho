@@ -1,0 +1,22 @@
+lib/pages/ai_assistant/ai_assistant_page_ui.dart
+  s_4bfad3a6dca910::t_51d39bc93fd75c 254-256
+  s_4bfad3a6dca910::t_89bc860230180b 823-824,1188-1193,1371-1372
+lib/pages/ai_assistant/ai_assistant_page_workflow.dart
+  s_4bfad3a6dca910::t_e7e9478f1cf113 137-138,169-172
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "75044c45abe552dc8079238ba07194552f7b2d8b",
+  "prompts": {},
+  "sessions": {
+    "s_4bfad3a6dca910": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cc365afe-b8d4-4c7e-8320-bbba67fdd1d2",
+        "model": "claude-fable-5"
+      },
+      "human_author": null
+    }
+  }
+}
