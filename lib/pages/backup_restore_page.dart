@@ -393,6 +393,18 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           _showSuccessSnackBar('备份已保存到: ${saveLocation.path}');
         }
       }
+
+      // 导出完成后上报富文本路径转换失败（不静默降级）
+      final deltaFailures = backupService.lastExportDeltaConversionFailures;
+      if (backupPath != null && deltaFailures.isNotEmpty && mounted) {
+        _showErrorDialog(
+          '备份已完成，但有警告',
+          '有 ${deltaFailures.length} 条笔记的富文本媒体路径转换失败，'
+              '这些笔记在备份中仍保留本机绝对路径，恢复到其他设备时相关图片可能无法显示。\n\n'
+              '受影响的笔记ID：${deltaFailures.take(10).join('、')}'
+              '${deltaFailures.length > 10 ? ' 等' : ''}',
+        );
+      }
     } catch (e) {
       if (mounted) {
         String errorMessage = '无法完成备份：$e';

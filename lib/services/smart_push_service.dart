@@ -17,7 +17,7 @@ import '../models/app_settings.dart';
 import '../models/smart_push_settings.dart';
 import '../models/quote_model.dart';
 import '../pages/home_page.dart';
-import '../main.dart' show navigatorKey;
+import '../utils/app_navigator_key.dart';
 import 'api_service.dart';
 import 'clipboard_service.dart';
 import 'database_service.dart';

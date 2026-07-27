@@ -16,6 +16,7 @@ import 'package:uuid/uuid.dart';
 import '../utils/app_logger.dart';
 import '../utils/database_platform_init.dart';
 import '../utils/expiring_cache.dart';
+import '../utils/lww_utils.dart';
 import '../utils/sentry_database_tracing.dart';
 import 'large_file_manager.dart';
 import 'media_reference_service.dart';
@@ -23,7 +24,6 @@ import 'mmkv_service.dart';
 import 'unified_log_service.dart';
 import 'location_service.dart';
 import '../models/merge_report.dart';
-import '../widgets/quote_content_widget.dart'; // 用于缓存清理
 import 'database_schema_manager.dart';
 import 'database_backup_service.dart';
 import 'database_health_service.dart';
@@ -548,8 +548,20 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     final completer = Completer<void>();
     _databaseLock[operationId] = completer;
 
+    // 锁必须等 action 真正结束才能释放：Future.timeout 并不会取消底层操作，
+    // 若超时即释放锁，下一个同 operationId 的操作会与仍在执行的旧操作并发写库。
+    final actionFuture = action();
+    unawaited(
+      actionFuture.then<void>((_) {}, onError: (Object _) {}).whenComplete(() {
+        if (!completer.isCompleted) completer.complete();
+        if (identical(_databaseLock[operationId], completer)) {
+          _databaseLock.remove(operationId);
+        }
+      }),
+    );
+
     try {
-      final result = await action().timeout(
+      final result = await actionFuture.timeout(
         const Duration(seconds: 30),
         onTimeout: () {
           throw TimeoutException(
@@ -562,9 +574,6 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     } catch (e) {
       logError('数据库操作失败: $operationId', error: e);
       rethrow;
-    } finally {
-      completer.complete();
-      _databaseLock.remove(operationId);
     }
   }
 
@@ -1225,6 +1234,11 @@ class DatabaseService extends _DatabaseServiceBase
         _DatabaseMigrationMixin {
   static final DatabaseService _instance = DatabaseService._internal();
   factory DatabaseService() => _instance;
+
+  /// 依赖反转：UI 层（QuoteContent 等）在应用启动时注册缓存失效回调。
+  /// 数据层不得 import widgets —— 这里只暴露钩子，未注册时为 no-op。
+  static void Function(String quoteId)? onQuoteCacheInvalidate;
+  static void Function(Set<String> quoteIds)? onQuoteCachesInvalidate;
 
   static const String defaultCategoryIdHitokoto = 'default_hitokoto';
   static const String defaultCategoryIdAnime = 'default_anime';

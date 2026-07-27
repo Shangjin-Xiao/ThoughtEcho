@@ -385,7 +385,8 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       deltaContent: deltaJson,
       editSource: 'fullscreen',
       dayPeriod: baseQuote?.dayPeriod ?? currentDayPeriodKey, // 保存 Key
-      lastModified: now, // 更新最后修改时间
+      // last_modified 参与 LWW 同步比较，必须为 UTC，与数据库层格式一致
+      lastModified: DateTime.now().toUtc().toIso8601String(),
       favoriteCount: baseQuote?.favoriteCount ?? 0, // 保留喜爱计数
     );
 

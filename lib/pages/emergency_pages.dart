@@ -315,7 +315,7 @@ class EmergencyHomePage extends StatelessWidget {
     try {
       // 清理全局状态
       _isEmergencyMode = false;
-      _deferredErrors.clear();
+      getAndClearDeferredErrors();
 
       // 重新运行main函数
       main();

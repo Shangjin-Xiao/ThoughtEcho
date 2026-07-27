@@ -33,6 +33,16 @@ class BackupService {
         _settingsService = settingsService,
         _aiAnalysisDbService = aiAnalysisDbService;
 
+  /// 最近一次导出中富文本媒体路径转换失败的笔记ID列表
+  ///
+  /// 转换失败时会退回写入原始 delta（可能含本机绝对路径），不会中止导出，
+  /// 但失败信息会记录在这里并输出 warning 日志，供调用方在导出完成后提示用户。
+  final List<String> _lastExportDeltaConversionFailures = <String>[];
+
+  /// 只读访问：最近一次导出中富文本路径转换失败的笔记ID
+  List<String> get lastExportDeltaConversionFailures =>
+      List.unmodifiable(_lastExportDeltaConversionFailures);
+
   static const String _backupDataFile = 'backup_data.json';
   static const String _backupVersion = '1.2.0'; // 版本更新，因为数据结构变化
   static const int stageCollectEnd = 15;
@@ -85,6 +95,7 @@ class BackupService {
     Function(int current, int total)? onProgress,
     CancelToken? cancelToken,
   }) async {
+    _lastExportDeltaConversionFailures.clear();
     final tempDir = await getTemporaryDirectory();
     final backupId = DateTime.now().millisecondsSinceEpoch;
     final archivePath = customPath ??
@@ -317,7 +328,14 @@ class BackupService {
               );
               quoteMap['delta_content'] = jsonEncode(convertedDelta);
             } catch (e) {
-              logDebug('导出时处理笔记 ${quote.id} 富文本失败: $e');
+              // 不中止整个导出，但绝不静默：记录 warning 并累计失败笔记ID，
+              // 该笔记的 delta 将以原始内容（可能含本机绝对路径）写入备份。
+              final quoteId = quote.id ?? '(未知ID)';
+              _lastExportDeltaConversionFailures.add(quoteId);
+              AppLogger.w(
+                '导出时笔记 $quoteId 富文本媒体路径转换失败，已回退写入原始delta（可能包含本机绝对路径）: $e',
+                source: 'BackupService',
+              );
             }
           }
 
@@ -385,6 +403,19 @@ class BackupService {
 
       await sink.flush();
       onProgress?.call(1.0);
+
+      // 导出完成后汇总富文本路径转换失败情况（不静默降级）
+      if (_lastExportDeltaConversionFailures.isNotEmpty) {
+        final failedIds = _lastExportDeltaConversionFailures;
+        final preview =
+            failedIds.take(20).join(', ') + (failedIds.length > 20 ? ' …' : '');
+        AppLogger.w(
+          '备份导出完成，但有 ${failedIds.length} 条笔记富文本路径转换失败，'
+          '这些笔记的媒体路径在备份中仍为本机绝对路径，跨设备恢复时可能失效。'
+          '失败笔记ID: $preview',
+          source: 'BackupService',
+        );
+      }
     } finally {
       await sink?.close();
     }

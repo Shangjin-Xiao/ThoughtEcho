@@ -12,7 +12,7 @@ import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/utils/sentry_database_tracing.dart';
 import 'package:thoughtecho/utils/sentry_helper.dart';
 import 'package:thoughtecho/utils/sentry_network_tracing.dart';
-import 'package:thoughtecho/main.dart' show initializeDatabasePlatform;
+import 'package:thoughtecho/services/database_platform_bootstrap.dart';
 
 // WorkManager 任务名称常量
 const String kBackgroundPushTask = 'com.shangjin.thoughtecho.backgroundPush';

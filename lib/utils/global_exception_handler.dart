@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:isolate';
 import 'package:thoughtecho/utils/app_logger.dart';
-import '../main.dart' show getAndClearDeferredErrors;
+import 'deferred_error_buffer.dart';
 
 /// 全局异常处理器
 /// 负责捕获和记录应用中的各种异常

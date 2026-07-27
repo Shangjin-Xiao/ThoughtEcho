@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -600,23 +601,23 @@ class SettingsService extends ChangeNotifier {
           if (!_validateAppSettings(_appSettings)) {
             logDebug('应用设置验证失败，重置为默认设置');
             _appSettings = AppSettings.defaultSettings();
-            _saveAppSettings();
+            unawaited(_saveAppSettings());
           } else {
             // 确保一言类型不为空，如果为空则设置为默认全选
             if (_appSettings.hitokotoType.isEmpty) {
               _appSettings = AppSettings.defaultSettings();
-              _saveAppSettings();
+              unawaited(_saveAppSettings());
               logDebug('检测到一言类型为空，已重置为默认全选值');
             }
           }
         } catch (e) {
           logDebug('解析应用设置JSON失败: $e，使用默认设置');
           _appSettings = AppSettings.defaultSettings();
-          _saveAppSettings();
+          unawaited(_saveAppSettings());
         }
       } else {
         _appSettings = AppSettings.defaultSettings();
-        _saveAppSettings();
+        unawaited(_saveAppSettings());
         logDebug('首次启动，已初始化默认一言类型设置: ${_appSettings.hitokotoType}');
       }
     } catch (e) {
@@ -646,11 +647,28 @@ class SettingsService extends ChangeNotifier {
   }
 
   /// 修复：安全保存应用设置
-  void _saveAppSettings() {
+  ///
+  /// MMKV 写入是异步的且返回是否成功，必须 await 并检查返回值，
+  /// 否则 try/catch 是死代码、写入失败会被静默吞掉。
+  Future<void> _saveAppSettings() async {
     try {
-      _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    } catch (e) {
-      logDebug('保存应用设置失败: $e');
+      final success = await _mmkv.setString(
+        _appSettingsKey,
+        json.encode(_appSettings.toJson()),
+      );
+      if (!success) {
+        AppLogger.e(
+          '保存应用设置失败：MMKV setString 返回 false（key=$_appSettingsKey）',
+          source: 'SettingsService',
+        );
+      }
+    } catch (e, s) {
+      AppLogger.e(
+        '保存应用设置异常',
+        error: e,
+        stackTrace: s,
+        source: 'SettingsService',
+      );
     }
   }
 
@@ -969,8 +987,29 @@ class SettingsService extends ChangeNotifier {
     if (existing != null && existing.isNotEmpty) return existing;
     final newId =
         '${DateTime.now().millisecondsSinceEpoch}_${UniqueKey().hashCode.toRadixString(16)}';
-    _mmkv.setString(_deviceIdKey, newId);
+    // 同步方法内无法 await，使用 unawaited + 内部自处理错误，避免写入失败被静默吞掉
+    unawaited(_persistDeviceId(newId));
     return newId;
+  }
+
+  /// 持久化设备ID，写入失败时明确记录（设备ID丢失会导致同步身份漂移）
+  Future<void> _persistDeviceId(String deviceId) async {
+    try {
+      final success = await _mmkv.setString(_deviceIdKey, deviceId);
+      if (!success) {
+        AppLogger.e(
+          '设备ID持久化失败：MMKV setString 返回 false，下次启动可能生成新的设备ID',
+          source: 'SettingsService',
+        );
+      }
+    } catch (e, s) {
+      AppLogger.e(
+        '设备ID持久化异常',
+        error: e,
+        stackTrace: s,
+        source: 'SettingsService',
+      );
+    }
   }
 
   /// 获取自定义字符串设置

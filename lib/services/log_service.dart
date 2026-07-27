@@ -6,7 +6,7 @@ import 'package:thoughtecho/services/log_database_service.dart';
 import 'package:flutter/scheduler.dart';
 import '../utils/app_logger.dart';
 // 导入main.dart中的全局函数
-import '../main.dart' show getAndClearDeferredErrors;
+import '../utils/deferred_error_buffer.dart';
 
 // 定义日志级别
 enum LogLevel {

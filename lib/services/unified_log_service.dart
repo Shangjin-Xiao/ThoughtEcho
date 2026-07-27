@@ -10,7 +10,7 @@ import 'package:thoughtecho/utils/global_exception_handler.dart';
 import 'package:flutter/widgets.dart';
 
 // 导入main.dart中的全局函数
-import '../main.dart' show getAndClearDeferredErrors;
+import '../utils/deferred_error_buffer.dart';
 
 // 定义日志级别映射
 enum UnifiedLogLevel {

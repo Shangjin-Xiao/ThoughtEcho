@@ -608,7 +608,12 @@ class DatabaseBackupService {
         final remoteName = (categoryData['name'] as String?) ?? '未命名分类';
         categoryData['name'] = remoteName;
         categoryData['is_default'] ??= 0;
-        categoryData['last_modified'] ??= DateTime.now().toIso8601String();
+        // last_modified 参与 LWW 比较，必须统一为 UTC；对端旧版本可能携带本地时区裸时间戳
+        final rawLastModified = categoryData['last_modified']?.toString();
+        categoryData['last_modified'] =
+            (rawLastModified == null || rawLastModified.isEmpty)
+                ? DateTime.now().toUtc().toIso8601String()
+                : LWWUtils.normalizeTimestamp(rawLastModified);
 
         // 过滤未知列名，防止对端版本较新时携带本地 schema 不认识的字段导致 SQLite 报错
         final filteredCategoryData = _filterKnownCategoryColumns(categoryData);

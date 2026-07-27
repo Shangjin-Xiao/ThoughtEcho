@@ -36,6 +36,11 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
           if (quoteMap['last_modified'] == null ||
               quoteMap['last_modified'].toString().isEmpty) {
             quoteMap['last_modified'] = now;
+          } else {
+            // 调用方可能传入本地时区裸时间戳；LWW 比较要求统一 UTC 格式
+            quoteMap['last_modified'] = LWWUtils.normalizeTimestamp(
+              quoteMap['last_modified'].toString(),
+            );
           }
 
           // 自动补全 day_period 字段
@@ -493,7 +498,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         );
       }
       clearAllCacheForParts();
-      QuoteContent.removeCacheForQuote(id);
+      DatabaseService.onQuoteCacheInvalidate?.call(id);
       refreshQuotesStreamForParts();
       notifyListeners();
       notifyLocalDataChangedForParts();
@@ -520,7 +525,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         clearAllCacheForParts();
 
         // 修复问题1：清理富文本控制器缓存
-        QuoteContent.removeCacheForQuote(id);
+        DatabaseService.onQuoteCacheInvalidate?.call(id);
 
         refreshQuotesStreamForParts();
         notifyListeners();
@@ -596,7 +601,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       _memoryStore[index] = quote;
 
       // 修复：Web平台也需要清除缓存并刷新流
-      QuoteContent.removeCacheForQuote(quote.id!);
+      DatabaseService.onQuoteCacheInvalidate?.call(quote.id!);
       clearAllCacheForParts();
       refreshQuotesStreamForParts();
 
@@ -743,7 +748,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         }
 
         // 修复问题1：更新笔记后清理旧缓存，确保显示最新内容
-        QuoteContent.removeCacheForQuote(quote.id!);
+        DatabaseService.onQuoteCacheInvalidate?.call(quote.id!);
 
         if (_quotesController != null && !_quotesController!.isClosed) {
           _quotesController!.add(List.from(_currentQuotes));

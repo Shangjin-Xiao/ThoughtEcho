@@ -157,6 +157,7 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
                   Navigator.pop(context); // 关闭当前对话框
 
                   // 打开高级颜色选择器
+                  Color selectedColor = initialColor;
                   final Color? advancedColor = await showDialog<Color>(
                     context: context,
                     builder: (context) => AlertDialog(
@@ -166,7 +167,9 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
                           color: initialColor != Colors.transparent
                               ? initialColor
                               : const Color(0xFFE1F5FE), // 默认蓝色
-                          onColorChanged: (color) {},
+                          onColorChanged: (color) {
+                            selectedColor = color;
+                          },
                           width: 40,
                           height: 40,
                           spacing: 10,
@@ -188,7 +191,7 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
                         ),
                         FilledButton(
                           onPressed: () =>
-                              Navigator.of(context).pop(initialColor),
+                              Navigator.of(context).pop(selectedColor),
                           child: Text(AppLocalizations.of(context).select),
                         ),
                       ],

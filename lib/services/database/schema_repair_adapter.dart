@@ -74,11 +74,8 @@ class SchemaRepairAdapter {
                 .hasMatch(colDef)) {
               throw StateError('不安全的列定义: $colDef');
             }
-            // ignore: prefer_interpolation_to_compose_strings
-            final safeColName = '"' + colName.replaceAll('"', '""') + '"';
-            // ignore: prefer_interpolation_to_compose_strings
-            final query =
-                'ALTER TABLE quotes ADD COLUMN ' + safeColName + ' ' + colDef;
+            final safeColName = '"${colName.replaceAll('"', '""')}"';
+            final query = 'ALTER TABLE quotes ADD COLUMN $safeColName $colDef';
             await transaction.execute(query);
             logDebug('数据库repair添加 quotes.$colName');
           }
@@ -373,24 +370,14 @@ class SchemaDataBackfillAdapter {
         !RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$').hasMatch(sourceColumn)) {
       throw StateError('不安全的列名: $columnName 或 $sourceColumn');
     }
-    // ignore: prefer_interpolation_to_compose_strings
-    final safeColumnName = '"' + columnName.replaceAll('"', '""') + '"';
-    // ignore: prefer_interpolation_to_compose_strings
-    final safeSourceColumn = '"' + sourceColumn.replaceAll('"', '""') + '"';
+    final safeColumnName = '"${columnName.replaceAll('"', '""')}"';
+    final safeSourceColumn = '"${sourceColumn.replaceAll('"', '""')}"';
 
-    // ignore: prefer_interpolation_to_compose_strings
-    final queryAlter =
-        'ALTER TABLE quotes ADD COLUMN ' + safeColumnName + ' TEXT';
+    final queryAlter = 'ALTER TABLE quotes ADD COLUMN $safeColumnName TEXT';
     await transaction.execute(queryAlter);
 
-    // ignore: prefer_interpolation_to_compose_strings
-    final queryUpdate = 'UPDATE quotes SET ' +
-        safeColumnName +
-        ' = ' +
-        safeSourceColumn +
-        ' WHERE ' +
-        safeSourceColumn +
-        ' IS NOT NULL';
+    final queryUpdate = 'UPDATE quotes SET $safeColumnName = $safeSourceColumn '
+        'WHERE $safeSourceColumn IS NOT NULL';
     await transaction.execute(queryUpdate);
   }
 }
