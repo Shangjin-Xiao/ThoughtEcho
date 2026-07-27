@@ -606,8 +606,8 @@ class NoteListViewState extends State<NoteListView> {
       }
 
       // 判断是否仅为排序变化（不影响列表内容，只影响顺序）
-      final bool isOnlySortChange = oldWidget.searchQuery ==
-              widget.searchQuery &&
+      final bool isOnlySortChange =
+          oldWidget.searchQuery == widget.searchQuery &&
           _areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) &&
           _areListsEqual(oldWidget.selectedWeathers, widget.selectedWeathers) &&
           _areListsEqual(
@@ -631,12 +631,12 @@ class NoteListViewState extends State<NoteListView> {
 
       // 标签/天气/时间段筛选变化：新结果到达后做一次淡入过渡
       // （删筛选 chip 后旧结果保持显示，新结果整体淡入替换）。
-      final bool isFilterChange = !_areListsEqual(
-            oldWidget.selectedTagIds,
-            widget.selectedTagIds,
-          ) ||
+      final bool isFilterChange =
+          !_areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) ||
           !_areListsEqual(
-              oldWidget.selectedWeathers, widget.selectedWeathers) ||
+            oldWidget.selectedWeathers,
+            widget.selectedWeathers,
+          ) ||
           !_areListsEqual(
             oldWidget.selectedDayPeriods,
             widget.selectedDayPeriods,
@@ -847,12 +847,14 @@ class NoteListViewState extends State<NoteListView> {
       if (_initialDataCompleter == null) {
         const maxWaitMs = 500;
         const stepMs = 50;
-        for (var waited = 0;
-            waited < maxWaitMs &&
-                mounted &&
-                !_initialDataLoaded &&
-                _initialDataCompleter == null;
-            waited += stepMs) {
+        for (
+          var waited = 0;
+          waited < maxWaitMs &&
+              mounted &&
+              !_initialDataLoaded &&
+              _initialDataCompleter == null;
+          waited += stepMs
+        ) {
           await Future<void>.delayed(const Duration(milliseconds: stepMs));
         }
       }

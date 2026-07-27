@@ -15,9 +15,9 @@ extension _NoteListDataStreamExtension on NoteListViewState {
         return;
       }
 
-      final bool hasExpandable = _quotes.take(80).any(
-            QuoteItemWidget.needsExpansionFor,
-          );
+      final bool hasExpandable = _quotes
+          .take(80)
+          .any(QuoteItemWidget.needsExpansionFor);
 
       if (!mounted) {
         return;
@@ -52,202 +52,202 @@ extension _NoteListDataStreamExtension on NoteListViewState {
 
     _quotesSub = db
         .watchQuotes(
-      tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
-      limit: NoteListViewState._pageSize,
-      orderBy: widget.sortType == 'time'
-          ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
-          : widget.sortType == 'favorite'
+          tagIds: widget.selectedTagIds.isNotEmpty
+              ? widget.selectedTagIds
+              : null,
+          limit: NoteListViewState._pageSize,
+          orderBy: widget.sortType == 'time'
+              ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
+              : widget.sortType == 'favorite'
               ? 'favorite_count ${widget.sortAscending ? 'ASC' : 'DESC'}'
               : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-      searchQuery:
-          _effectiveSearchQuery.isNotEmpty ? _effectiveSearchQuery : null,
-      selectedWeathers:
-          widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
-      selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
-          ? widget.selectedDayPeriods
-          : null,
-    )
+          searchQuery: _effectiveSearchQuery.isNotEmpty
+              ? _effectiveSearchQuery
+              : null,
+          selectedWeathers: widget.selectedWeathers.isNotEmpty
+              ? widget.selectedWeathers
+              : null,
+          selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
+              ? widget.selectedDayPeriods
+              : null,
+        )
         .listen(
-      (list) {
-        if (mounted) {
-          _dataStreamEventCount++;
-          final isLoadMorePage = _loadMoreAwaitingPage &&
-              (list.length > _loadMoreRequestStartCount ||
-                  list.length < NoteListViewState._pageSize);
-          final isPlaceholderInitialEmission =
-              isFirstLoad && list.isEmpty && db.hasMoreQuotes;
+          (list) {
+            if (mounted) {
+              _dataStreamEventCount++;
+              final isLoadMorePage =
+                  _loadMoreAwaitingPage &&
+                  (list.length > _loadMoreRequestStartCount ||
+                      list.length < NoteListViewState._pageSize);
+              final isPlaceholderInitialEmission =
+                  isFirstLoad && list.isEmpty && db.hasMoreQuotes;
 
-          if (isPlaceholderInitialEmission) {
-            logDebug(
-              '忽略首个占位空列表，继续等待真实首批数据',
-              source: 'NoteListView',
-            );
-            return;
-          }
+              if (isPlaceholderInitialEmission) {
+                logDebug('忽略首个占位空列表，继续等待真实首批数据', source: 'NoteListView');
+                return;
+              }
 
-          // 修复：在首次加载期间保存滚动位置，避免数据刷新时滚动到顶部
-          double? savedScrollOffset;
-          if (isFirstLoad &&
-              _scrollController.hasClients &&
-              _quotes.isNotEmpty) {
-            savedScrollOffset = _safeScrollOffset;
-            logDebug(
-              '首次加载期间保存滚动位置: $savedScrollOffset',
-              source: 'NoteListView',
-            );
-          }
+              // 修复：在首次加载期间保存滚动位置，避免数据刷新时滚动到顶部
+              double? savedScrollOffset;
+              if (isFirstLoad &&
+                  _scrollController.hasClients &&
+                  _quotes.isNotEmpty) {
+                savedScrollOffset = _safeScrollOffset;
+                logDebug(
+                  '首次加载期间保存滚动位置: $savedScrollOffset',
+                  source: 'NoteListView',
+                );
+              }
 
-          _updateState(() {
-            if (isFirstLoad) {
-              _quotes.clear();
-            }
-            _quotes
-              ..clear()
-              ..addAll(
-                list,
-              ); // Simplified: always replace for consistency, but flag prevents extra sets
-            _hasMore = list.length >= NoteListViewState._pageSize;
-            _isLoading = isLoadMorePage;
-            _pruneExpansionControllers();
-            // 注意：此处不递增 _resultsVersion。
-            // _initializeDataStream 的 stream 持续接收事件（含 load more），
-            // 若递增则 resultsKey 变化，AnimatedSwitcher 会销毁旧 ListView 并
-            // 创建从偏移量 0 开始的新 ListView，导致列表跳回顶部。
-            // 搜索/筛选切换动画由 _updateStreamSubscription 的首个数据事件负责递增。
-          });
-          if (_loadMorePerfRecording &&
-              (_quotes.length > _loadMorePerfStartCount || !_hasMore)) {
-            _markLoadMorePerfDataArrived();
-          }
-          if (isLoadMorePage) {
-            _settleLoadMoreGateAfterPage();
-          }
-          _scheduleExpandableQuoteCheck();
-
-          if (widget.onGuideTargetsReady != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              widget.onGuideTargetsReady!.call();
-            });
-          }
-
-          // 修复：在首次加载期间恢复滚动位置
-          if (savedScrollOffset != null &&
-              savedScrollOffset > 0 &&
-              !_isUserScrolling) {
-            final offset = savedScrollOffset; // 捕获非空值
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && _scrollController.hasClients) {
-                final pos = _safeScrollPosition;
-                if (pos != null && offset <= pos.maxScrollExtent) {
-                  _scrollController.jumpTo(offset);
+              _updateState(() {
+                if (isFirstLoad) {
+                  _quotes.clear();
                 }
-                logDebug('首次加载期间恢复滚动位置: $offset', source: 'NoteListView');
+                _quotes
+                  ..clear()
+                  ..addAll(
+                    list,
+                  ); // Simplified: always replace for consistency, but flag prevents extra sets
+                _hasMore = list.length >= NoteListViewState._pageSize;
+                _isLoading = isLoadMorePage;
+                _pruneExpansionControllers();
+                // 注意：此处不递增 _resultsVersion。
+                // _initializeDataStream 的 stream 持续接收事件（含 load more），
+                // 若递增则 resultsKey 变化，AnimatedSwitcher 会销毁旧 ListView 并
+                // 创建从偏移量 0 开始的新 ListView，导致列表跳回顶部。
+                // 搜索/筛选切换动画由 _updateStreamSubscription 的首个数据事件负责递增。
+              });
+              if (_loadMorePerfRecording &&
+                  (_quotes.length > _loadMorePerfStartCount || !_hasMore)) {
+                _markLoadMorePerfDataArrived();
               }
-            });
-          }
+              if (isLoadMorePage) {
+                _settleLoadMoreGateAfterPage();
+              }
+              _scheduleExpandableQuoteCheck();
 
-          if (isFirstLoad) {
-            _initialDataLoaded = true;
-            _initialLoadTimeoutRecoveries = 0;
-            _initialLoadSafetyTimer?.cancel();
-            // 通知 Completer：首批数据已就绪（scrollToQuoteById 事件驱动等待）
-            if (_initialDataCompleter != null &&
-                !_initialDataCompleter!.isCompleted) {
-              _initialDataCompleter!.complete();
+              if (widget.onGuideTargetsReady != null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  widget.onGuideTargetsReady!.call();
+                });
+              }
+
+              // 修复：在首次加载期间恢复滚动位置
+              if (savedScrollOffset != null &&
+                  savedScrollOffset > 0 &&
+                  !_isUserScrolling) {
+                final offset = savedScrollOffset; // 捕获非空值
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _scrollController.hasClients) {
+                    final pos = _safeScrollPosition;
+                    if (pos != null && offset <= pos.maxScrollExtent) {
+                      _scrollController.jumpTo(offset);
+                    }
+                    logDebug('首次加载期间恢复滚动位置: $offset', source: 'NoteListView');
+                  }
+                });
+              }
+
+              if (isFirstLoad) {
+                _initialDataLoaded = true;
+                _initialLoadTimeoutRecoveries = 0;
+                _initialLoadSafetyTimer?.cancel();
+                // 通知 Completer：首批数据已就绪（scrollToQuoteById 事件驱动等待）
+                if (_initialDataCompleter != null &&
+                    !_initialDataCompleter!.isCompleted) {
+                  _initialDataCompleter!.complete();
+                }
+                // 冷启动完成后允许正常记录用户滚动。
+                Future.delayed(const Duration(milliseconds: 1500), () {
+                  if (mounted) {
+                    _isInitializing = false;
+                    logDebug('首次加载完成，结束滚动保护期', source: 'NoteListView');
+                  }
+                });
+                logDebug('首次数据加载完成', source: 'NoteListView');
+                // 首屏就绪后尽快启动空闲预取：用户常在冷启动后 1~2 秒内就开始快滑，
+                // 预取必须抢在前面；tick 自带滚动/加载让路，起步早不会挤占滚动帧。
+                _scheduleIdlePrefetch(delay: const Duration(milliseconds: 400));
+              }
+
+              // 修复：同步 _hasMore 状态与数据库服务状态
+              final dbService = _databaseService ?? _readDatabaseService();
+              if (_hasMore != dbService.hasMoreQuotes) {
+                logDebug(
+                  '同步 _hasMore 状态: $_hasMore -> ${dbService.hasMoreQuotes}',
+                  source: 'NoteListView',
+                );
+                _hasMore = dbService.hasMoreQuotes;
+              }
+              // 重置滚动范围检查计数器
+              _scrollExtentCheckCounter = 0;
+
+              // 通知搜索控制器数据加载完成
+              try {
+                final searchController = Provider.of<NoteSearchController>(
+                  context,
+                  listen: false,
+                );
+                searchController.setSearchState(false);
+              } catch (e) {
+                logDebug('更新搜索控制器状态失败: $e');
+              }
+              // 保险清除搜索过渡状态（首次加载期间用户可能已输入搜索）
+              _setSearchUpdating(false);
+
+              if (isFirstLoad) {
+                isFirstLoad = false;
+              }
             }
-            // 冷启动完成后允许正常记录用户滚动。
-            Future.delayed(const Duration(milliseconds: 1500), () {
-              if (mounted) {
-                _isInitializing = false;
-                logDebug('首次加载完成，结束滚动保护期', source: 'NoteListView');
+          },
+          onError: (error) {
+            if (mounted) {
+              // 出错时也需要 complete completer，避免 scrollToQuoteById 挂起直到超时
+              if (_initialDataCompleter != null &&
+                  !_initialDataCompleter!.isCompleted) {
+                _initialDataCompleter!.complete();
               }
-            });
-            logDebug('首次数据加载完成', source: 'NoteListView');
-            // 首屏就绪后尽快启动空闲预取：用户常在冷启动后 1~2 秒内就开始快滑，
-            // 预取必须抢在前面；tick 自带滚动/加载让路，起步早不会挤占滚动帧。
-            _scheduleIdlePrefetch(
-              delay: const Duration(milliseconds: 400),
-            );
-          }
+              _updateState(() {
+                _isLoading = false;
+              });
+              _setSearchUpdating(false); // 出错时清除搜索过渡状态
 
-          // 修复：同步 _hasMore 状态与数据库服务状态
-          final dbService = _databaseService ?? _readDatabaseService();
-          if (_hasMore != dbService.hasMoreQuotes) {
-            logDebug(
-              '同步 _hasMore 状态: $_hasMore -> ${dbService.hasMoreQuotes}',
-              source: 'NoteListView',
-            );
-            _hasMore = dbService.hasMoreQuotes;
-          }
-          // 重置滚动范围检查计数器
-          _scrollExtentCheckCounter = 0;
+              // 重置搜索控制器状态
+              try {
+                final searchController = Provider.of<NoteSearchController>(
+                  context,
+                  listen: false,
+                );
+                searchController.resetSearchState();
+              } catch (e) {
+                logDebug('重置搜索控制器状态失败: $e');
+              }
 
-          // 通知搜索控制器数据加载完成
-          try {
-            final searchController = Provider.of<NoteSearchController>(
-              context,
-              listen: false,
-            );
-            searchController.setSearchState(false);
-          } catch (e) {
-            logDebug('更新搜索控制器状态失败: $e');
-          }
-          // 保险清除搜索过渡状态（首次加载期间用户可能已输入搜索）
-          _setSearchUpdating(false);
+              logError('加载笔记失败: $error', error: error, source: 'NoteListView');
 
-          if (isFirstLoad) {
-            isFirstLoad = false;
-          }
-        }
-      },
-      onError: (error) {
-        if (mounted) {
-          // 出错时也需要 complete completer，避免 scrollToQuoteById 挂起直到超时
-          if (_initialDataCompleter != null &&
-              !_initialDataCompleter!.isCompleted) {
-            _initialDataCompleter!.complete();
-          }
-          _updateState(() {
-            _isLoading = false;
-          });
-          _setSearchUpdating(false); // 出错时清除搜索过渡状态
-
-          // 重置搜索控制器状态
-          try {
-            final searchController = Provider.of<NoteSearchController>(
-              context,
-              listen: false,
-            );
-            searchController.resetSearchState();
-          } catch (e) {
-            logDebug('重置搜索控制器状态失败: $e');
-          }
-
-          logError('加载笔记失败: $error', error: error, source: 'NoteListView');
-
-          // 显示错误提示
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                error.toString().contains('TimeoutException')
-                    ? AppLocalizations.of(context).queryTimeout
-                    : (kDebugMode
-                        ? error.toString()
-                        : AppLocalizations.of(context).loadFailedGeneric),
-              ),
-              duration: AppConstants.snackBarDurationImportant,
-              backgroundColor: Colors.red,
-              action: SnackBarAction(
-                label: AppLocalizations.of(context).retry,
-                textColor: Colors.white,
-                onPressed: () => _updateStreamSubscription(),
-              ),
-            ),
-          );
-        }
-      },
-    );
+              // 显示错误提示
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    error.toString().contains('TimeoutException')
+                        ? AppLocalizations.of(context).queryTimeout
+                        : (kDebugMode
+                              ? error.toString()
+                              : AppLocalizations.of(context).loadFailedGeneric),
+                  ),
+                  duration: AppConstants.snackBarDurationImportant,
+                  backgroundColor: Colors.red,
+                  action: SnackBarAction(
+                    label: AppLocalizations.of(context).retry,
+                    textColor: Colors.white,
+                    onPressed: () => _updateStreamSubscription(),
+                  ),
+                ),
+              );
+            }
+          },
+        );
     // 安全超时：首次加载若 8 秒仍未收到数据，先区分“确认空数据”
     // 和“分页仍未决”。后者恢复数据流并继续等待，避免把慢查询误判成无笔记。
     if (isFirstLoad) {
@@ -280,10 +280,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
       return;
     }
 
-    logDebug(
-      '首次数据加载安全超时（8s），结束加载状态',
-      source: 'NoteListView',
-    );
+    logDebug('首次数据加载安全超时（8s），结束加载状态', source: 'NoteListView');
     _updateState(() {
       _isLoading = false;
     });
@@ -296,8 +293,9 @@ extension _NoteListDataStreamExtension on NoteListViewState {
 
   /// 优化：判断是否需要更新订阅
   bool _shouldUpdateSubscription(NoteListView oldWidget) {
-    final oldEffectiveQuery =
-        NoteListViewState._normalizeSearchQuery(oldWidget.searchQuery);
+    final oldEffectiveQuery = NoteListViewState._normalizeSearchQuery(
+      oldWidget.searchQuery,
+    );
     return oldEffectiveQuery != _effectiveSearchQuery ||
         !_areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) ||
         oldWidget.sortType != widget.sortType ||
@@ -372,150 +370,156 @@ extension _NoteListDataStreamExtension on NoteListViewState {
 
     _quotesSub = db
         .watchQuotes(
-      tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
-      limit: NoteListViewState._pageSize,
-      orderBy: widget.sortType == 'time'
-          ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
-          : widget.sortType == 'favorite'
+          tagIds: widget.selectedTagIds.isNotEmpty
+              ? widget.selectedTagIds
+              : null,
+          limit: NoteListViewState._pageSize,
+          orderBy: widget.sortType == 'time'
+              ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
+              : widget.sortType == 'favorite'
               ? 'favorite_count ${widget.sortAscending ? 'ASC' : 'DESC'}'
               : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-      searchQuery:
-          _effectiveSearchQuery.isNotEmpty ? _effectiveSearchQuery : null,
-      selectedWeathers:
-          widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
-      selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
-          ? widget.selectedDayPeriods
-          : null,
-    )
+          searchQuery: _effectiveSearchQuery.isNotEmpty
+              ? _effectiveSearchQuery
+              : null,
+          selectedWeathers: widget.selectedWeathers.isNotEmpty
+              ? widget.selectedWeathers
+              : null,
+          selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
+              ? widget.selectedDayPeriods
+              : null,
+        )
         .listen(
-      (list) {
-        if (mounted) {
-          _dataStreamEventCount++;
-          final isLoadMorePage = _loadMoreAwaitingPage &&
-              (list.length > _loadMoreRequestStartCount ||
-                  list.length < NoteListViewState._pageSize);
-          _updateState(() {
-            _quotes.clear();
-            _quotes.addAll(list);
-            _hasMore = list.length >= NoteListViewState._pageSize;
-            _isLoading = isLoadMorePage;
-            _pruneExpansionControllers();
-            // 仅搜索/筛选变化后的第一次事件递增，驱动 AnimatedSwitcher 淡入新结果。
-            // 随后的 load more 不递增，避免 ListView 重建跳回顶部。
-            if (isFirstAnimatedEvent) {
-              _resultsVersion++;
-              isFirstAnimatedEvent = false;
-            }
-          });
-          if (_loadMorePerfRecording &&
-              (_quotes.length > _loadMorePerfStartCount || !_hasMore)) {
-            _markLoadMorePerfDataArrived();
-          }
-          if (isLoadMorePage) {
-            _settleLoadMoreGateAfterPage();
-          } else {
-            // 筛选/排序切换回到第一页后重新预取，让新结果集也覆盖首次快滑。
-            _scheduleIdlePrefetch();
-          }
-          _scheduleExpandableQuoteCheck();
-
-          if (widget.onGuideTargetsReady != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              widget.onGuideTargetsReady!.call();
-            });
-          }
-
-          // Restore scroll position smoothly (only if preserveScrollPosition is true)
-          // 只在第一次数据到达时恢复一次；之后置 null 防止后续 stream 事件
-          // （如 load more）重复 animateTo，导致用户滑动时列表跳回旧位置。
-          if (savedScrollOffset != null &&
-              _scrollController.hasClients &&
-              _initialDataLoaded) {
-            final offsetToRestore = savedScrollOffset;
-            savedScrollOffset = null; // 立即置空，防止后续 stream 事件再次触发
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (offsetToRestore != null && _scrollController.hasClients) {
-                final pos = _safeScrollPosition;
-                if (pos != null && offsetToRestore <= pos.maxScrollExtent) {
-                  _scrollController.animateTo(
-                    offsetToRestore,
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOut,
-                  );
-                  logDebug(
-                    '平滑恢复滚动位置: $offsetToRestore',
-                    source: 'NoteListView',
-                  );
-                } else {
-                  logDebug('滚动位置超出范围或条件不满足，保持当前位置', source: 'NoteListView');
+          (list) {
+            if (mounted) {
+              _dataStreamEventCount++;
+              final isLoadMorePage =
+                  _loadMoreAwaitingPage &&
+                  (list.length > _loadMoreRequestStartCount ||
+                      list.length < NoteListViewState._pageSize);
+              _updateState(() {
+                _quotes.clear();
+                _quotes.addAll(list);
+                _hasMore = list.length >= NoteListViewState._pageSize;
+                _isLoading = isLoadMorePage;
+                _pruneExpansionControllers();
+                // 仅搜索/筛选变化后的第一次事件递增，驱动 AnimatedSwitcher 淡入新结果。
+                // 随后的 load more 不递增，避免 ListView 重建跳回顶部。
+                if (isFirstAnimatedEvent) {
+                  _resultsVersion++;
+                  isFirstAnimatedEvent = false;
                 }
+              });
+              if (_loadMorePerfRecording &&
+                  (_quotes.length > _loadMorePerfStartCount || !_hasMore)) {
+                _markLoadMorePerfDataArrived();
               }
-            });
-          }
+              if (isLoadMorePage) {
+                _settleLoadMoreGateAfterPage();
+              } else {
+                // 筛选/排序切换回到第一页后重新预取，让新结果集也覆盖首次快滑。
+                _scheduleIdlePrefetch();
+              }
+              _scheduleExpandableQuoteCheck();
 
-          // 修复：同步 _hasMore 状态与数据库服务状态
-          final dbServiceForSync = _databaseService ?? _readDatabaseService();
-          if (_hasMore != dbServiceForSync.hasMoreQuotes) {
-            logDebug(
-              '更新订阅后同步 _hasMore 状态: $_hasMore -> ${dbServiceForSync.hasMoreQuotes}',
-              source: 'NoteListView',
-            );
-            _hasMore = dbServiceForSync.hasMoreQuotes;
-          }
-          // 重置滚动范围检查计数器
-          _scrollExtentCheckCounter = 0;
+              if (widget.onGuideTargetsReady != null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  widget.onGuideTargetsReady!.call();
+                });
+              }
 
-          // 通知搜索控制器数据加载完成
-          try {
-            final searchController = Provider.of<NoteSearchController>(
-              context,
-              listen: false,
-            );
-            searchController.setSearchState(false);
-          } catch (e) {
-            logDebug('更新搜索控制器状态失败: $e');
-          }
+              // Restore scroll position smoothly (only if preserveScrollPosition is true)
+              // 只在第一次数据到达时恢复一次；之后置 null 防止后续 stream 事件
+              // （如 load more）重复 animateTo，导致用户滑动时列表跳回旧位置。
+              if (savedScrollOffset != null &&
+                  _scrollController.hasClients &&
+                  _initialDataLoaded) {
+                final offsetToRestore = savedScrollOffset;
+                savedScrollOffset = null; // 立即置空，防止后续 stream 事件再次触发
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (offsetToRestore != null && _scrollController.hasClients) {
+                    final pos = _safeScrollPosition;
+                    if (pos != null && offsetToRestore <= pos.maxScrollExtent) {
+                      _scrollController.animateTo(
+                        offsetToRestore,
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOut,
+                      );
+                      logDebug(
+                        '平滑恢复滚动位置: $offsetToRestore',
+                        source: 'NoteListView',
+                      );
+                    } else {
+                      logDebug('滚动位置超出范围或条件不满足，保持当前位置', source: 'NoteListView');
+                    }
+                  }
+                });
+              }
 
-          // 清除搜索过渡动画状态，让列表从"更新中"淡入恢复到正常透明度
-          _setSearchUpdating(false);
+              // 修复：同步 _hasMore 状态与数据库服务状态
+              final dbServiceForSync =
+                  _databaseService ?? _readDatabaseService();
+              if (_hasMore != dbServiceForSync.hasMoreQuotes) {
+                logDebug(
+                  '更新订阅后同步 _hasMore 状态: $_hasMore -> ${dbServiceForSync.hasMoreQuotes}',
+                  source: 'NoteListView',
+                );
+                _hasMore = dbServiceForSync.hasMoreQuotes;
+              }
+              // 重置滚动范围检查计数器
+              _scrollExtentCheckCounter = 0;
 
-          logDebug(
-            '数据流更新完成，加载了 ${list.length} 条记录',
-            source: 'NoteListView',
-          );
-        }
-      },
-      onError: (error) {
-        if (mounted) {
-          _updateState(() {
-            _isLoading = false; // 出错时停止加载
-          });
-          _setSearchUpdating(false); // 出错时也清除搜索过渡状态
+              // 通知搜索控制器数据加载完成
+              try {
+                final searchController = Provider.of<NoteSearchController>(
+                  context,
+                  listen: false,
+                );
+                searchController.setSearchState(false);
+              } catch (e) {
+                logDebug('更新搜索控制器状态失败: $e');
+              }
 
-          // 重置搜索控制器状态
-          try {
-            final searchController = Provider.of<NoteSearchController>(
-              context,
-              listen: false,
-            );
-            searchController.resetSearchState();
-          } catch (e) {
-            logDebug('重置搜索控制器状态失败: $e');
-          }
+              // 清除搜索过渡动画状态，让列表从"更新中"淡入恢复到正常透明度
+              _setSearchUpdating(false);
 
-          logError('数据流加载失败: $error', error: error, source: 'NoteListView');
+              logDebug(
+                '数据流更新完成，加载了 ${list.length} 条记录',
+                source: 'NoteListView',
+              );
+            }
+          },
+          onError: (error) {
+            if (mounted) {
+              _updateState(() {
+                _isLoading = false; // 出错时停止加载
+              });
+              _setSearchUpdating(false); // 出错时也清除搜索过渡状态
 
-          // 优化：更友好的错误提示
-          String errorMessage = AppLocalizations.of(context).loadNoteFailed;
-          if (error.toString().contains('TimeoutException')) {
-            errorMessage = AppLocalizations.of(context).queryTimeoutRetry;
-          } else if (error.toString().contains('DatabaseException')) {
-            errorMessage = AppLocalizations.of(context).dbQueryError;
-          }
-          _showErrorSnackBar(errorMessage);
-        }
-      },
-    );
+              // 重置搜索控制器状态
+              try {
+                final searchController = Provider.of<NoteSearchController>(
+                  context,
+                  listen: false,
+                );
+                searchController.resetSearchState();
+              } catch (e) {
+                logDebug('重置搜索控制器状态失败: $e');
+              }
+
+              logError('数据流加载失败: $error', error: error, source: 'NoteListView');
+
+              // 优化：更友好的错误提示
+              String errorMessage = AppLocalizations.of(context).loadNoteFailed;
+              if (error.toString().contains('TimeoutException')) {
+                errorMessage = AppLocalizations.of(context).queryTimeoutRetry;
+              } else if (error.toString().contains('DatabaseException')) {
+                errorMessage = AppLocalizations.of(context).dbQueryError;
+              }
+              _showErrorSnackBar(errorMessage);
+            }
+          },
+        );
   }
 }
