@@ -1,0 +1,29 @@
+lib/utils/deferred_error_buffer.dart
+  s_4bfad3a6dca910::t_a92cd420938295 1-23
+lib/utils/app_navigator_key.dart
+  s_3c2b7aa98d1a88::t_4694b67b195888 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "f30f6f70bdb34c03ceef367db30262a75a2f9269",
+  "prompts": {},
+  "sessions": {
+    "s_3c2b7aa98d1a88": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "48d9a6b2-6b76-43f7-becc-9744be4a38e4",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_4bfad3a6dca910": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cc365afe-b8d4-4c7e-8320-bbba67fdd1d2",
+        "model": "claude-fable-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
