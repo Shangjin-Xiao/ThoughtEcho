@@ -239,10 +239,12 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                                 selectable: true,
                                 onTapLink: (text, href, title) async {
                                   if (href == null || href.isEmpty) return;
-                                  final uri = Uri.tryParse(href);
-                                  if (uri != null && await canLaunchUrl(uri)) {
-                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                                  }
+                                  try {
+                                    final uri = Uri.tryParse(href);
+                                    if (uri != null && await canLaunchUrl(uri)) {
+                                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                    }
+                                  } catch (_) {}
                                 },
                                 styleSheet: MarkdownStyleSheet.fromTheme(theme)
                                     .copyWith(

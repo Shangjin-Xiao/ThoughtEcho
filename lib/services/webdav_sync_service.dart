@@ -1204,7 +1204,7 @@ class WebDAVSyncService extends ChangeNotifier {
             }
 
             // 2. 完整哈希与 ETag 比对校验
-            _verifyDownloadedFileHash(
+            await _verifyDownloadedFileHash(
               tmpFile,
               remoteEtag: remoteMediaEtags[stdPath],
               responseHeaders: downloadResponse.headers.map,
@@ -1286,50 +1286,60 @@ class WebDAVSyncService extends ChangeNotifier {
     return files;
   }
 
-  static void _verifyDownloadedFileHash(
+  static String? _getHeaderCaseInsensitive(
+    Map<String, List<String>>? headers,
+    String headerName,
+  ) {
+    if (headers == null) return null;
+    final lowerName = headerName.toLowerCase();
+    for (final entry in headers.entries) {
+      if (entry.key.toLowerCase() == lowerName) {
+        return entry.value.firstOrNull;
+      }
+    }
+    return null;
+  }
+
+  static Future<void> _verifyDownloadedFileHash(
     File file, {
     String? remoteEtag,
     Map<String, List<String>>? responseHeaders,
-  }) {
-    final bytes = file.readAsBytesSync();
-    final localSha256 = sha256.convert(bytes).toString().toLowerCase();
-    final localMd5 = md5.convert(bytes).toString().toLowerCase();
-
-    // 从 HTTP 响应头提取哈希或 ETag
-    String? headerHash;
-    if (responseHeaders != null) {
-      headerHash = responseHeaders['x-checksum-sha256']?.firstOrNull ??
-          responseHeaders['x-amz-meta-sha256']?.firstOrNull ??
-          responseHeaders['content-md5']?.firstOrNull ??
-          responseHeaders['etag']?.firstOrNull;
-    }
+  }) async {
+    // 从 HTTP 响应头大小写不敏感查找哈希或 ETag
+    final headerHash =
+        _getHeaderCaseInsensitive(responseHeaders, 'x-checksum-sha256') ??
+            _getHeaderCaseInsensitive(responseHeaders, 'x-amz-meta-sha256') ??
+            _getHeaderCaseInsensitive(responseHeaders, 'content-md5') ??
+            _getHeaderCaseInsensitive(responseHeaders, 'etag');
 
     final targetCandidate = _cleanHashString(headerHash ?? remoteEtag);
     if (targetCandidate == null || targetCandidate.isEmpty) {
-      if (localSha256.isEmpty) {
-        throw Exception('计算下载附件 SHA-256 哈希失败');
-      }
+      // 远端未提供 Hash/ETag，免去高昂全量哈希计算，降低内存开销与 CPU 占用
       return;
     }
 
     final cleanTarget = targetCandidate.toLowerCase();
     if (cleanTarget.length == 64) {
+      // 64 位 Hex（标准的 SHA-256）：流式计算 SHA-256 避免全量读取载入内存
+      final digest = await sha256.bind(file.openRead()).first;
+      final localSha256 = digest.toString().toLowerCase();
       if (localSha256 != cleanTarget) {
         throw Exception('下载附件 SHA-256 哈希比对失败: 本地=$localSha256, 远端=$cleanTarget');
       }
     } else if (cleanTarget.length == 32) {
+      // 32 位 Hex（标准的 MD5）：流式计算 MD5
+      final digest = await md5.bind(file.openRead()).first;
+      final localMd5 = digest.toString().toLowerCase();
       if (localMd5 != cleanTarget) {
         throw Exception('下载附件 MD5 哈希比对失败: 本地=$localMd5, 远端=$cleanTarget');
       }
     } else {
-      if (responseHeaders != null) {
-        final headerEtag =
-            _cleanHashString(responseHeaders['etag']?.firstOrNull);
-        final dirEtag = _cleanHashString(remoteEtag);
-        if (headerEtag != null && dirEtag != null) {
-          if (headerEtag.toLowerCase() != dirEtag.toLowerCase()) {
-            throw Exception('下载附件 ETag 比对不一致: 响应头=$headerEtag, 目录=$dirEtag');
-          }
+      final headerEtag = _getHeaderCaseInsensitive(responseHeaders, 'etag');
+      final cleanHeaderEtag = _cleanHashString(headerEtag);
+      final dirEtag = _cleanHashString(remoteEtag);
+      if (cleanHeaderEtag != null && dirEtag != null) {
+        if (cleanHeaderEtag.toLowerCase() != dirEtag.toLowerCase()) {
+          throw Exception('下载附件 ETag 比对不一致: 响应头=$cleanHeaderEtag, 目录=$dirEtag');
         }
       }
     }
