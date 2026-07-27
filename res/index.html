@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="心迹 - 你的专属灵感摘录本。让我们一起随心记录，释放AI洞察的力量。"
+      content="心迹 ThoughtEcho - 免费开源的 AI 灵感笔记应用。本地优先、隐私安全，支持富文本、多端同步与 AI 洞察。Free, open-source, local-first AI note-taking app for Windows & Android."
     />
     <meta
       name="keywords"
@@ -32,7 +32,7 @@
       property="og:description"
       content="随心记录每一刻灵感，释放AI洞察的力量。本地优先，安全私密。"
     />
-    <meta property="og:image" content="https://note.shangjinyun.cn/icon.png" />
+    <meta property="og:image" content="https://note.shangjinyun.cn/readme-banner.png" />
     <meta property="og:url" content="https://note.shangjinyun.cn/" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="zh_CN" />
@@ -45,7 +45,7 @@
       name="twitter:description"
       content="随心记录每一刻灵感，释放AI洞察的力量。本地优先，安全私密。"
     />
-    <meta name="twitter:image" content="https://note.shangjinyun.cn/icon.png" />
+    <meta name="twitter:image" content="https://note.shangjinyun.cn/readme-banner.png" />
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -201,34 +201,6 @@
               </span>
             </p>
 
-            <div class="hero-warning">
-              <strong
-                >⚠️ <span class="content-zh">温馨提示：</span
-                ><span class="content-en">Friendly Tip:</span></strong
-              >
-              <span class="content-zh"
-                >这是一个与 AI
-                协作完成的项目，我会持续进行打磨与优化。为保障数据安全，建议定期备份重要文件，欢迎随时反馈建议。</span
-              >
-              <span class="content-en"
-                >Built with AI collaboration. We are continuously refining and
-                optimizing the experience. For data security, periodic backups
-                are recommended. Feel free to share your feedback.</span
-              >
-            </div>
-
-            <div
-              class="hero-warning content-en"
-              style="
-                border-left-color: var(--accent-blue);
-                background: var(--paper-blue);
-              "
-            >
-              <strong>🌍 Localization:</strong>
-              English translation is actively in progress! We're working hard to
-              provide full English support. Contributions are welcome!
-            </div>
-
             <div class="hero-buttons">
               <a href="#download" class="btn-primary">
                 <span class="content-zh">🚀 立即下载</span>
@@ -258,32 +230,23 @@
                   justify-content: center;
                 "
               >
-                <ul class="notebook-list" style="margin-top: 0">
-                  <li>
-                    <a href="#feature-tailored"
-                      ><span class="content-zh">🎨 专为你打造的心迹</span
-                      ><span class="content-en">🎨 Tailored for You</span></a
-                    >
-                  </li>
-                  <li>
-                    <a href="#feature-understanding"
-                      ><span class="content-zh">💡 懂你所想的心迹</span
-                      ><span class="content-en">💡 Understanding You</span></a
-                    >
-                  </li>
-                  <li>
-                    <a href="#feature-secure"
-                      ><span class="content-zh">🛡️ 安全无忧的心迹</span
-                      ><span class="content-en">🛡️ Safe & Secure</span></a
-                    >
-                  </li>
-                  <li>
-                    <a href="#feature-open"
-                      ><span class="content-zh">🚀 开放自由的心迹</span
-                      ><span class="content-en">🚀 Open & Free</span></a
-                    >
-                  </li>
-                </ul>
+                <a
+                  href="#screenshots"
+                  aria-label="查看更多应用截图 / View more screenshots"
+                  style="display: block; line-height: 0"
+                >
+                  <img
+                    src="screenshot/home_page.jpg"
+                    alt="心迹应用主页截图 / ThoughtEcho home screen"
+                    style="
+                      max-width: 250px;
+                      width: 100%;
+                      border-radius: 12px;
+                      border: 2px solid var(--accent-brown);
+                      box-shadow: 0 8px 20px var(--shadow-medium);
+                    "
+                  />
+                </a>
               </div>
             </div>
           </div>
@@ -1276,13 +1239,13 @@
             <span class="content-en">🚀 Quick Start</span>
           </span>
           <h2 class="section-title">
-            <span class="content-zh">五步上手</span>
-            <span class="content-en">Get Started in 5 Steps</span>
+            <span class="content-zh">三步上手</span>
+            <span class="content-en">Get Started in 3 Steps</span>
           </h2>
           <p class="section-description">
-            <span class="content-zh">简单几步，即可开始使用 ThoughtEcho</span>
+            <span class="content-zh">无需注册账号，下载即用</span>
             <span class="content-en"
-              >Simple steps to start using ThoughtEcho</span
+              >No account needed — download and go</span
             >
           </p>
         </div>
@@ -1292,75 +1255,85 @@
             <div class="step">
               <h3>
                 <span class="step-number">1</span>
-                <span class="content-zh">环境准备</span
-                ><span class="content-en">Prerequisites</span>
+                <span class="content-zh">下载安装</span
+                ><span class="content-en">Download & Install</span>
               </h3>
               <p>
                 <span class="content-zh"
-                  >确保已安装 Flutter 3.x+ 环境。运行以下命令检查配置：</span
+                  >从<a href="#download">下载区</a>选择你的平台：Windows
+                  用户推荐微软商店（自动更新），Android 用户可直接下载 APK
+                  安装包。无需注册、无需登录。</span
                 ><span class="content-en"
-                  >Ensure Flutter 3.x+ is installed. Run this command to
-                  check:</span
+                  >Pick your platform in the
+                  <a href="#download">download section</a>: Microsoft Store for
+                  Windows (auto-updates), or grab the APK for Android. No
+                  sign-up, no login.</span
                 >
               </p>
-              <pre><code>flutter doctor</code></pre>
             </div>
 
             <div class="step">
               <h3>
                 <span class="step-number">2</span>
-                <span class="content-zh">获取代码</span
-                ><span class="content-en">Get the Code</span>
+                <span class="content-zh">记下第一条灵感</span
+                ><span class="content-en">Capture Your First Idea</span>
               </h3>
               <p>
-                <span class="content-zh">从 GitHub 克隆项目到本地：</span
-                ><span class="content-en">Clone the project from GitHub:</span>
+                <span class="content-zh"
+                  >打开应用点「+」即可记录。支持富文本、图片、音视频，还会自动附上当时的位置与天气。所有数据只存在你的设备上。</span
+                ><span class="content-en"
+                  >Open the app and tap "+" to start writing. Rich text, images,
+                  audio and video are all supported, with location and weather
+                  attached automatically. Everything stays on your device.</span
+                >
               </p>
-              <pre><code>git clone https://github.com/Shangjin-Xiao/ThoughtEcho.git
-cd ThoughtEcho</code></pre>
             </div>
 
             <div class="step">
               <h3>
                 <span class="step-number">3</span>
-                <span class="content-zh">安装依赖</span
-                ><span class="content-en">Install Dependencies</span>
-              </h3>
-              <p>
-                <span class="content-zh">安装项目所需的所有依赖包：</span
-                ><span class="content-en"
-                  >Install all required dependencies:</span
-                >
-              </p>
-              <pre><code>flutter pub get</code></pre>
-            </div>
-
-            <div class="step">
-              <h3>
-                <span class="step-number">4</span>
-                <span class="content-zh">运行应用</span
-                ><span class="content-en">Run the App</span>
-              </h3>
-              <p>
-                <span class="content-zh">在模拟器或真机上运行应用：</span
-                ><span class="content-en">Run on emulator or real device:</span>
-              </p>
-              <pre><code>flutter run</code></pre>
-            </div>
-
-            <div class="step">
-              <h3>
-                <span class="step-number">5</span>
-                <span class="content-zh">AI 功能配置（可选）</span
-                ><span class="content-en">AI Configuration (Optional)</span>
+                <span class="content-zh">开启 AI 能力（可选）</span
+                ><span class="content-en">Enable AI Features (Optional)</span>
               </h3>
               <p>
                 <span class="content-zh"
-                  >在应用设置中配置 API Key 以启用 AI 功能。支持
-                  OpenAI、Anthropic、DeepSeek 等多种 AI 服务商。</span
+                  >不配置 AI 也能完整使用所有笔记功能。想要 AI
+                  问答与洞察报告时，在设置中填入任意服务商的 API Key（支持
+                  OpenAI、Anthropic、DeepSeek 等，也兼容 Ollama
+                  本地模型，完全免费离线）。</span
                 ><span class="content-en"
-                  >Configure API Key in app settings to enable AI features.
-                  Supports OpenAI, Anthropic, DeepSeek, and more.</span
+                  >All note features work without AI. When you want AI Q&A and
+                  insight reports, add any provider's API Key in settings
+                  (OpenAI, Anthropic, DeepSeek and more — or run Ollama locally,
+                  free and offline).</span
+                >
+              </p>
+            </div>
+
+            <div class="step">
+              <h3>
+                <span class="step-number">💻</span>
+                <span class="content-zh">开发者？</span
+                ><span class="content-en">Developer?</span>
+              </h3>
+              <p>
+                <span class="content-zh"
+                  >项目基于 Flutter 构建并以 MIT 协议开源，欢迎到
+                  <a
+                    href="https://github.com/Shangjin-Xiao/ThoughtEcho"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >GitHub 仓库</a
+                  >查看源码、从源码构建或参与贡献。</span
+                ><span class="content-en"
+                  >Built with Flutter, MIT licensed. Visit the
+                  <a
+                    href="https://github.com/Shangjin-Xiao/ThoughtEcho"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >GitHub repo</a
+                  >
+                  to read the source, build from source, or contribute.</span
                 >
               </p>
             </div>
@@ -1818,6 +1791,37 @@ cd ThoughtEcho</code></pre>
                 >Yes, via LAN sync. Devices on the same Wi-Fi can discover each
                 other and sync data without a central server; media files are
                 transferred incrementally.</span
+              >
+            </div>
+          </div>
+
+          <div class="faq-item fade-in">
+            <button
+              type="button"
+              class="faq-question"
+              id="faq-q5"
+              aria-expanded="false"
+              aria-controls="faq-a5"
+            >
+              <span class="content-zh">这个项目是怎么开发的？</span>
+              <span class="content-en">How is this project developed?</span>
+            </button>
+            <div
+              class="faq-answer"
+              id="faq-a5"
+              role="region"
+              aria-labelledby="faq-q5"
+              hidden
+            >
+              <span class="content-zh"
+                >心迹是一个由独立开发者与 AI
+                协作完成的开源项目，持续高频迭代打磨中。如遇问题欢迎随时反馈，也建议养成定期备份的好习惯（应用内置一键完整备份）。</span
+              >
+              <span class="content-en"
+                >ThoughtEcho is an open-source project built by an indie
+                developer in collaboration with AI, under active and frequent
+                iteration. Feedback is always welcome — and regular backups are
+                a good habit (one-tap full backup is built in).</span
               >
             </div>
           </div>
