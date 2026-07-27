@@ -615,7 +615,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                       try {
                         final uri = Uri.tryParse(href);
                         if (uri != null && await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
                         }
                       } catch (_) {}
                     },

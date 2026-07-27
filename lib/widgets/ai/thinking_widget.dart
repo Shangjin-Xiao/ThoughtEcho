@@ -241,8 +241,10 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                                   if (href == null || href.isEmpty) return;
                                   try {
                                     final uri = Uri.tryParse(href);
-                                    if (uri != null && await canLaunchUrl(uri)) {
-                                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                    if (uri != null &&
+                                        await canLaunchUrl(uri)) {
+                                      await launchUrl(uri,
+                                          mode: LaunchMode.externalApplication);
                                     }
                                   } catch (_) {}
                                 },

@@ -75,7 +75,6 @@ class TimeoutConstants {
   static const Duration uiInitDelayDefault = Duration(milliseconds: 0);
 }
 
-
 // 全局导航key，用于日志服务在无context时获取context
 // 添加一个全局标志，表示是否处于紧急模式（数据库损坏等情况）
 bool _isEmergencyMode = false;

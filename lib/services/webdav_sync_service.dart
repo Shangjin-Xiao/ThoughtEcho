@@ -889,8 +889,7 @@ class WebDAVSyncService extends ChangeNotifier {
     final localQuotes = <Map<String, Object?>>[];
     // 按块查询以避免超过 SQLite 参数数量限制
     for (var i = 0; i < modifiedIds.length; i += 900) {
-      final end =
-          (i + 900 < modifiedIds.length) ? i + 900 : modifiedIds.length;
+      final end = (i + 900 < modifiedIds.length) ? i + 900 : modifiedIds.length;
       final chunk = modifiedIds.sublist(i, end);
       final placeholders = List.filled(chunk.length, '?').join(',');
       localQuotes.addAll(await db.query(
@@ -1324,7 +1323,8 @@ class WebDAVSyncService extends ChangeNotifier {
       final digest = await sha256.bind(file.openRead()).first;
       final localSha256 = digest.toString().toLowerCase();
       if (localSha256 != cleanTarget) {
-        throw Exception('下载附件 SHA-256 哈希比对失败: 本地=$localSha256, 远端=$cleanTarget');
+        throw Exception(
+            '下载附件 SHA-256 哈希比对失败: 本地=$localSha256, 远端=$cleanTarget');
       }
     } else if (cleanTarget.length == 32) {
       // 32 位 Hex（标准的 MD5）：流式计算 MD5
