@@ -51,3 +51,7 @@
 ## 2026-07-20 - [提取 tool_call_card.dart 重试按钮硬编码]
 **发现:** 在 lib/widgets/ai/tool_call_card.dart 中存在硬编码 '重试'
 **规则:** 采用极简风格翻译，复用已存在的 `retry` 键值。
+## 2024-05-24 - [提取 NoteListView 和 NoteListDataStream 错误提示硬编码]
+**发现:** 在 `lib/widgets/note_list/note_list_data_stream.dart` 发现多处硬编码错误提示如 "查询超时"、"加载失败"、"加载笔记失败"、"查询超时，请重试"、"数据库查询出错" 和 `'重试'` 按钮等。
+**规则:**
+- 采用极简风格翻译，分别新增 `queryTimeout`, `loadFailedGeneric`, `loadNoteFailed`, `queryTimeoutRetry`, `dbQueryError` 到各语言 `arb` 文件中，按钮文字复用 `retry`。

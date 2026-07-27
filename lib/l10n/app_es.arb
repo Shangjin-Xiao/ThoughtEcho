@@ -77,5 +77,10 @@
   "clear": "Limpiar",
   "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again.",
   "availableCommands": "Comandos disponibles",
-  "typeSlashToSeeCommands": "Escribe / para ver los comandos"
+  "typeSlashToSeeCommands": "Escribe / para ver los comandos",
+  "queryTimeout": "Tiempo de espera de consulta agotado",
+  "loadFailedGeneric": "Error de carga",
+  "loadNoteFailed": "Error al cargar notas",
+  "queryTimeoutRetry": "Tiempo de espera de consulta, por favor reintente",
+  "dbQueryError": "Error de consulta de base de datos"
 }

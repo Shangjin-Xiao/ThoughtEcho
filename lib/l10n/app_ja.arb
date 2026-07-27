@@ -3590,5 +3590,10 @@
   "favoriteNotes": "お気に入りノート",
   "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again.",
   "availableCommands": "利用可能なコマンド",
-  "typeSlashToSeeCommands": "/ を入力してコマンドを表示"
+  "typeSlashToSeeCommands": "/ を入力してコマンドを表示",
+  "queryTimeout": "クエリタイムアウト",
+  "loadFailedGeneric": "読み込み失敗",
+  "loadNoteFailed": "ノートの読み込みに失敗しました",
+  "queryTimeoutRetry": "クエリがタイムアウトしました。再試行してください",
+  "dbQueryError": "データベースクエリエラー"
 }

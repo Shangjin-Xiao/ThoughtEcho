@@ -4105,7 +4105,13 @@
   "noteProposalPlain": "Plain note",
   "noteProposalRich": "Rich text note",
   "noteProposalChangeCount": "{count} changes",
-  "@noteProposalChangeCount": {"placeholders": {"count": {"type": "int"}}},
+  "@noteProposalChangeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noteProposalExpand": "Expand document",
   "noteProposalCollapse": "Collapse document",
   "noteProposalViewChanges": "View change history",
@@ -4126,5 +4132,10 @@
   "agentExperimentalNoticeGotIt": "Understand & Continue",
   "agentExperimentalBannerText": "Experimental feature: AI answers may be inaccurate. Notes are only modified after clicking save.",
   "agentExperimentalNoticeAction": "View Notice",
-  "dontShowAgain": "Don't show again"
+  "dontShowAgain": "Don't show again",
+  "queryTimeout": "Query timeout",
+  "loadFailedGeneric": "Load failed",
+  "loadNoteFailed": "Failed to load notes",
+  "queryTimeoutRetry": "Query timeout, please retry",
+  "dbQueryError": "Database query error"
 }

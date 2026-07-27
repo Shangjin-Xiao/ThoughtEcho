@@ -662,7 +662,7 @@ class NoteListViewState extends State<NoteListView> {
         duration: AppConstants.snackBarDurationNormal,
         behavior: SnackBarBehavior.floating,
         action: SnackBarAction(
-          label: '重试',
+          label: AppLocalizations.of(context).retry,
           onPressed: () => _updateStreamSubscription(),
         ),
       ),

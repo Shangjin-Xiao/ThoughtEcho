@@ -3586,5 +3586,10 @@
   "favoriteNotes": "즐겨찾는 노트",
   "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again.",
   "availableCommands": "사용 가능한 명령",
-  "typeSlashToSeeCommands": "/를 입력하여 명령 보기"
+  "typeSlashToSeeCommands": "/를 입력하여 명령 보기",
+  "queryTimeout": "쿼리 시간 초과",
+  "loadFailedGeneric": "로드 실패",
+  "loadNoteFailed": "노트 로드 실패",
+  "queryTimeoutRetry": "쿼리 시간 초과, 다시 시도해 주세요",
+  "dbQueryError": "데이터베이스 쿼리 오류"
 }

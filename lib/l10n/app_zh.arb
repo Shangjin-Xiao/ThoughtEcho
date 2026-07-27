@@ -4105,7 +4105,13 @@
   "noteProposalPlain": "普通笔记",
   "noteProposalRich": "富文本笔记",
   "noteProposalChangeCount": "修改 {count} 处",
-  "@noteProposalChangeCount": {"placeholders": {"count": {"type": "int"}}},
+  "@noteProposalChangeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noteProposalExpand": "展开全文",
   "noteProposalCollapse": "收起全文",
   "noteProposalViewChanges": "查看修改记录",
@@ -4126,5 +4132,10 @@
   "agentExperimentalNoticeGotIt": "理解并继续",
   "agentExperimentalBannerText": "实验性功能：AI回答可能包含错误；AI不会直接改写笔记，仅在点击保存后生效。",
   "agentExperimentalNoticeAction": "查看说明",
-  "dontShowAgain": "不再自动提示"
+  "dontShowAgain": "不再自动提示",
+  "queryTimeout": "查询超时",
+  "loadFailedGeneric": "加载失败",
+  "loadNoteFailed": "加载笔记失败",
+  "queryTimeoutRetry": "查询超时，请重试",
+  "dbQueryError": "数据库查询出错"
 }
