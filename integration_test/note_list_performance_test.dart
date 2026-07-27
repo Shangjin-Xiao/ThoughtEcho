@@ -242,7 +242,7 @@ Widget _buildBenchmarkApp(
         body: ListView.builder(
           key: _listKey,
           addSemanticIndexes: false,
-          scrollCacheExtent: const ScrollCacheExtent.pixels(800),
+          cacheExtent: 800,
           itemCount: quotes.length,
           itemBuilder: (BuildContext context, int index) {
             final Widget item = QuoteItemWidget(
