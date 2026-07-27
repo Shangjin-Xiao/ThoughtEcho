@@ -42,10 +42,12 @@ void main() {
   setUp(() {
     QuoteItemWidget.clearExpansionCache();
     isListScrolling.value = false;
+    isListDragActive.value = false;
   });
 
   tearDown(() {
     isListScrolling.value = false;
+    isListDragActive.value = false;
   });
 
   Widget buildTestApp(
@@ -256,6 +258,49 @@ void main() {
     isListScrolling.value = true;
     await tester.pump();
 
+    expect(find.byType(quill.QuillEditor), findsOneWidget);
+  });
+
+  testWidgets('拖拽暂停期间（滚动更新停止但手势未结束）不物化冷 Quill', (tester) async {
+    final longText = '手指按住暂停时也不能物化。' * 80;
+    final quote = Quote(
+      id: 'rich_deferred_while_drag_paused',
+      content: longText,
+      date: '2025-01-01T00:00:00.000Z',
+      editSource: 'fullscreen',
+      deltaContent: jsonEncode([
+        {'insert': '$longText\n'},
+      ]),
+    );
+    QuoteContent.clearCacheForTesting();
+    // 模拟拖拽中：手势开始后滚动更新暂停，isListScrolling 因 32ms 无更新回落，
+    // 但 ScrollEnd 尚未到来，isListDragActive 仍为 true。
+    isListDragActive.value = true;
+    isListScrolling.value = true;
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(quill.QuillEditor), findsNothing);
+
+    // 手指按住不动：滚动信号回落，拖拽信号保持。
+    isListScrolling.value = false;
+    await tester.pump();
+    await tester.pump();
+    expect(find.byType(quill.QuillEditor), findsNothing);
+    expect(
+      QuoteContent.debugCacheStats()['controller'],
+      containsPair('createCount', 0),
+    );
+
+    // 手势结束（ScrollEnd）：恢复队列才开始物化。
+    isListDragActive.value = false;
+    await tester.pump();
     expect(find.byType(quill.QuillEditor), findsOneWidget);
   });
 

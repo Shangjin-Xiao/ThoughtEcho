@@ -29,8 +29,8 @@ import '../services/weather_service.dart'; // 导入天气服务
 import '../utils/time_utils.dart'; // 导入时间工具
 import '../controllers/search_controller.dart';
 import '../constants/app_constants.dart'; // 导入应用常量
-import '../utils/quill_editor_extensions.dart'
-    show QuillImageEmbedPerfStats, isListScrolling;
+import 'package:thoughtecho/utils/quill_editor_extensions.dart'
+    show QuillImageEmbedPerfStats, isListScrolling, isListDragActive;
 import '../services/settings_service.dart'; // 导入设置服务
 import '../services/pdf_export_service.dart';
 import '../services/pdf_font_service.dart';
@@ -251,6 +251,8 @@ class NoteListViewState extends State<NoteListView> {
   int _scrollSessionExtentChangeCount = 0;
   int _scrollSessionStartStateUpdateCount = 0;
   int _scrollSessionStartNoteListBuildCount = 0;
+  int _scrollSessionStartDidUpdateWidgetCount = 0;
+  int _scrollSessionStartDependenciesChangedCount = 0;
   int _scrollSessionStartLoadMoreAttemptCount = 0;
   int _scrollSessionStartLoadMoreStartCount = 0;
   int _scrollSessionStartLoadMoreSkipCount = 0;
@@ -286,6 +288,10 @@ class NoteListViewState extends State<NoteListView> {
   int _loadMoreStartCount = 0;
   int _loadMoreSkipCount = 0;
   int _dataStreamEventCount = 0;
+  // 诊断"stateΔ=0 却出现整列表重建"的无名 build 尖峰：
+  // 区分父组件传新 widget（didUpdateWidget）与 Inherited 依赖变化。
+  int _didUpdateWidgetCount = 0;
+  int _dependenciesChangedCount = 0;
 
   bool _hasExpandableQuoteCached = false;
   bool _hasExpandableQuoteComputed = false;
@@ -565,8 +571,15 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _dependenciesChangedCount++;
+  }
+
+  @override
   void didUpdateWidget(NoteListView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _didUpdateWidgetCount++;
 
     // 更新搜索控制器文本，避免与外部状态不同步
     if (oldWidget.searchQuery != widget.searchQuery) {
@@ -734,6 +747,9 @@ class NoteListViewState extends State<NoteListView> {
 
     // 清理初始化状态
     _isInitializing = false;
+    // 复位全局手势信号：若在拖拽中途离开页面，不能让冷 Quill 恢复队列永久静默
+    isListDragActive.value = false;
+    isListScrolling.value = false;
     // 安全释放 Completer，避免 scrollToQuoteById 永久挂起
     if (_initialDataCompleter != null && !_initialDataCompleter!.isCompleted) {
       _initialDataCompleter!.complete();

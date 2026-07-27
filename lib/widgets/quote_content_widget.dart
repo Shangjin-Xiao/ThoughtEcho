@@ -992,7 +992,7 @@ class QuoteContent extends StatelessWidget {
     // Only fixed-height collapsed cards can use a lightweight stand-in
     // without changing the list extent. Cache hits keep their real Quill tree.
     if (truncateForCollapse &&
-        isListScrolling.value &&
+        (isListScrolling.value || isListDragActive.value) &&
         !_QuoteContentControllerCache.contains(
           quoteId: cacheQuoteId,
           contentSignature: contentSignature,

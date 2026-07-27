@@ -17,6 +17,12 @@ import '../widgets/motion_photo_preview_page.dart';
 /// 从而避免松手后图片立即解码与惯性帧竞争 raster 线程导致的卡顿。
 final ValueNotifier<bool> isListScrolling = ValueNotifier<bool>(false);
 
+/// 全局拖拽手势信号：ScrollStart(带 dragDetails)→true，ScrollEnd→false。
+/// [isListScrolling] 依赖"32ms 内是否有滚动更新"，手指按住但暂停移动时会误判
+/// 为已停止；冷 Quill 恢复队列若在此刻物化（单帧可达 20~100ms），用户继续拖动
+/// 就会撞上。恢复队列必须同时等待两个信号都为 false。
+final ValueNotifier<bool> isListDragActive = ValueNotifier<bool>(false);
+
 /// Lightweight counters for correlating rich-text image loading with list
 /// scroll jank. These counters are only read by developer performance logs.
 class QuillImageEmbedPerfStats {
