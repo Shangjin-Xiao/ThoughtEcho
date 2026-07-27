@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive_io.dart';
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -16,6 +17,7 @@ import '../services/database_service.dart';
 import '../services/media_reference_service.dart';
 import '../services/mmkv_service.dart';
 import '../utils/app_logger.dart';
+import '../utils/lww_utils.dart';
 
 /// WebDAV 同步状态枚举
 enum WebDAVSyncStatus { idle, syncing, success, failed }
@@ -32,6 +34,13 @@ class _RemoteSyncFileMetadata {
   final String? etag;
   final int? contentLength;
   final String? lastModified;
+}
+
+class _RemoteMediaFileInfo {
+  const _RemoteMediaFileInfo({this.length, this.etag});
+
+  final int? length;
+  final String? etag;
 }
 
 class WebDAVSyncService extends ChangeNotifier {
@@ -51,6 +60,8 @@ class WebDAVSyncService extends ChangeNotifier {
   String _lastSyncTime = '';
   int _lastConflictCount = 0;
   bool _hasPendingSync = false; // 是否有排队中的同步任务
+  int _pendingSyncRetryCount = 0; // 失败后追加同步的重试计数（指数退避）
+  static const int _maxPendingSyncRetries = 3;
   bool _isSyncExecuting = false; // 独占同步/上传互斥锁，防止并发重入
   String _lastSyncError = ''; // 最近一次失败的错误摘要（对用户安全）
 
@@ -408,11 +419,12 @@ class WebDAVSyncService extends ChangeNotifier {
       }
 
       // 5. 增量比对并同步大媒体附件 (Images, Videos, Audios)
+      int mediaFailureCount = 0;
       if (skipMedia) {
         logDebug('数据流量下跳过大媒体文件同步');
       } else {
         logDebug('开始同步本地与云端媒体文件...');
-        await _syncMediaFiles(dio);
+        mediaFailureCount = await _syncMediaFiles(dio);
       }
 
       // 6. 流式写入本地数据到临时文件并上传（避免全量数据入内存）
@@ -450,15 +462,28 @@ class WebDAVSyncService extends ChangeNotifier {
         }
       }
 
-      // 7. 更新同步成功状态
+      // 7. 更新同步状态。笔记数据已完整同步，水位线可以前推；
+      // 但媒体附件传输失败绝不能对用户谎报"成功"（下次同步会自动增量重试）
       _lastSyncTime = DateTime.now().toUtc().toIso8601String();
       await _mmkv.setString('webdav_last_sync_time', _lastSyncTime);
-      _syncStatus = WebDAVSyncStatus.success;
-      _lastSyncError = ''; // 成功时清除上次错误
-      await _mmkv.setString('webdav_sync_status', 'success');
-      await _mmkv.setString('webdav_last_sync_error', '');
+      if (mediaFailureCount > 0) {
+        _syncStatus = WebDAVSyncStatus.failed;
+        _lastSyncError = '笔记数据已同步，但 $mediaFailureCount 个媒体附件传输失败，将在下次同步自动重试';
+        await _mmkv.setString('webdav_sync_status', 'failed');
+        await _mmkv.setString('webdav_last_sync_error', _lastSyncError);
+        logWarning(
+          'WebDAV 同步部分完成：$mediaFailureCount 个媒体附件传输失败。冲突数: $_lastConflictCount',
+          source: 'WebDAVSyncService',
+        );
+      } else {
+        _syncStatus = WebDAVSyncStatus.success;
+        _lastSyncError = ''; // 成功时清除上次错误
+        _pendingSyncRetryCount = 0;
+        await _mmkv.setString('webdav_sync_status', 'success');
+        await _mmkv.setString('webdav_last_sync_error', '');
 
-      logInfo('WebDAV 同步成功完成。冲突数: $_lastConflictCount');
+        logInfo('WebDAV 同步成功完成。冲突数: $_lastConflictCount');
+      }
     } catch (e, stack) {
       logError(
         'WebDAV 同步失败',
@@ -475,8 +500,28 @@ class WebDAVSyncService extends ChangeNotifier {
       notifyListeners();
       if (_hasPendingSync) {
         _hasPendingSync = false;
-        logDebug('检测到排队中的同步任务，开始执行追加同步...');
-        Future.microtask(() => triggerSync(isBackground: isBackground));
+        if (_syncStatus == WebDAVSyncStatus.success) {
+          logDebug('检测到排队中的同步任务，开始执行追加同步...');
+          Future.microtask(() => triggerSync(isBackground: isBackground));
+        } else if (_pendingSyncRetryCount < _maxPendingSyncRetries) {
+          // 失败后的追加同步必须退避：立即重试会在 ETag 冲突等场景下
+          // 形成无延迟的无限循环（每轮全量下载+合并+媒体扫描）
+          final delay = Duration(seconds: 5 * (1 << _pendingSyncRetryCount));
+          _pendingSyncRetryCount++;
+          logDebug(
+            '同步未成功，${delay.inSeconds}s 后重试排队任务（第 $_pendingSyncRetryCount/$_maxPendingSyncRetries 次）',
+          );
+          Future.delayed(
+            delay,
+            () => triggerSync(isBackground: isBackground),
+          );
+        } else {
+          _pendingSyncRetryCount = 0;
+          logWarning(
+            '追加同步重试已达上限（$_maxPendingSyncRetries 次），放弃本轮排队任务，等待下次手动或定时同步',
+            source: 'WebDAVSyncService',
+          );
+        }
       }
     }
   }
@@ -821,14 +866,39 @@ class WebDAVSyncService extends ChangeNotifier {
     final remoteQuotes = remoteData['quotes'] as List?;
     if (remoteQuotes == null || remoteQuotes.isEmpty) return 0;
 
-    final lastSync = DateTime.parse(lastSyncTimeStr).toUtc();
+    final lastSync = LWWUtils.parseTimestamp(lastSyncTimeStr);
 
-    // 查询自上次同步后，本地被修改过且没有被软删除的笔记
-    final localQuotes = await db.query(
+    // 查询自上次同步后，本地被修改过且没有被软删除的笔记。
+    // 注意：不能用 SQL 字符串比较 last_modified —— 历史数据中 UTC（带Z）与
+    // 本地时区（无Z）格式混杂，字典序比较会漏检，导致本地编辑未备份即被覆盖。
+    // 因此先取元数据在 Dart 侧用统一的时间戳解析语义过滤。
+    final allLocalMeta = await db.query(
       'quotes',
-      where: 'last_modified > ? AND is_deleted = 0',
-      whereArgs: [lastSyncTimeStr],
+      columns: ['id', 'last_modified'],
+      where: 'is_deleted = 0',
     );
+    final modifiedIds = <String>[];
+    for (final row in allLocalMeta) {
+      final modTime = LWWUtils.parseTimestamp(row['last_modified'] as String?);
+      if (modTime.isAfter(lastSync)) {
+        modifiedIds.add(row['id'] as String);
+      }
+    }
+    if (modifiedIds.isEmpty) return 0;
+
+    final localQuotes = <Map<String, Object?>>[];
+    // 按块查询以避免超过 SQLite 参数数量限制
+    for (var i = 0; i < modifiedIds.length; i += 900) {
+      final end =
+          (i + 900 < modifiedIds.length) ? i + 900 : modifiedIds.length;
+      final chunk = modifiedIds.sublist(i, end);
+      final placeholders = List.filled(chunk.length, '?').join(',');
+      localQuotes.addAll(await db.query(
+        'quotes',
+        where: 'id IN ($placeholders)',
+        whereArgs: chunk,
+      ));
+    }
 
     if (localQuotes.isEmpty) return 0;
 
@@ -854,10 +924,12 @@ class WebDAVSyncService extends ChangeNotifier {
           '';
       if (remoteModStr.isEmpty) continue;
 
-      final remoteModTime = DateTime.parse(remoteModStr).toUtc();
-      final localModTime = DateTime.parse(
-        localQuote['last_modified'] as String,
-      ).toUtc();
+      // 用容错解析：云端单条脏时间戳不应让整个同步流程永久失败
+      // （解析失败返回 Unix 纪元 → isAfter(lastSync) 为 false → 该条跳过冲突判定）
+      final remoteModTime = LWWUtils.parseTimestamp(remoteModStr);
+      final localModTime = LWWUtils.parseTimestamp(
+        localQuote['last_modified'] as String?,
+      );
 
       // 如果两边都有修改，且内容不同，则判定为冲突
       if (localModTime.isAfter(lastSync) && remoteModTime.isAfter(lastSync)) {
@@ -993,7 +1065,11 @@ class WebDAVSyncService extends ChangeNotifier {
   }
 
   /// 增量比对并同步本地与云端媒体文件夹 (Images, Videos, Audios)
-  Future<void> _syncMediaFiles(Dio dio) async {
+  ///
+  /// 返回失败数（目录扫描失败/上传失败/下载失败之和）。调用方必须根据
+  /// 返回值决定同步状态 —— 失败绝不能被静默吞掉后仍报告"同步成功"。
+  Future<int> _syncMediaFiles(Dio dio) async {
+    int failureCount = 0;
     final appDir = await getApplicationDocumentsDirectory();
     final mediaRoot = Directory(p.join(appDir.path, 'media'));
 
@@ -1004,6 +1080,8 @@ class WebDAVSyncService extends ChangeNotifier {
 
     final Map<String, File> localMediaMap = {};
     for (final f in localFiles) {
+      // 跳过中断下载残留的临时文件，避免把残缺内容上传到云端
+      if (f.path.endsWith('.tmp') || f.path.endsWith('.part')) continue;
       final relPath = p.relative(f.path, from: mediaRoot.path);
       // 标准化路径斜杠，防止 Windows 系统的反斜杠导致 WebDAV 匹配失败
       final stdPath = relPath.replaceAll('\\', '/');
@@ -1011,6 +1089,7 @@ class WebDAVSyncService extends ChangeNotifier {
     }
 
     final remoteMediaFiles = <String, int?>{};
+    final remoteMediaEtags = <String, String?>{};
     final failedRemoteMediaFolders = <String>{};
 
     // 2. 并行扫描云端所有媒体子目录的文件列表，减少网络请求等待时间并防限流
@@ -1033,11 +1112,17 @@ class WebDAVSyncService extends ChangeNotifier {
           final String xmlData = rawData is List<int>
               ? utf8.decode(rawData, allowMalformed: true)
               : rawData.toString();
-          remoteMediaFiles.addAll(_extractRemoteMediaFiles(xmlData));
+          final extracted = _extractRemoteMediaDetails(xmlData);
+          for (final entry in extracted.entries) {
+            remoteMediaFiles[entry.key] = entry.value.length;
+            remoteMediaEtags[entry.key] = entry.value.etag;
+          }
         }
       } catch (e) {
         failedRemoteMediaFolders.add(folder);
-        logDebug('获取云端媒体目录 ($folder) 列表失败: $e');
+        failureCount++;
+        logWarning('获取云端媒体目录 ($folder) 列表失败，该目录本轮不同步: $e',
+            source: 'WebDAVSyncService');
       }
     }));
 
@@ -1069,7 +1154,8 @@ class WebDAVSyncService extends ChangeNotifier {
             ),
           );
         } catch (e) {
-          logDebug('上传附件失败 ($stdPath): $e');
+          failureCount++;
+          logWarning('上传附件失败 ($stdPath): $e', source: 'WebDAVSyncService');
         }
       }
     }
@@ -1095,12 +1181,48 @@ class WebDAVSyncService extends ChangeNotifier {
           final downloadUrl = '${_url}thoughtecho/media/$stdPath';
           final localTargetFile = File(localFileFullPath);
 
+          // 先下载到 .tmp 临时文件 + 哈希校验后再原子改名：中断的下载绝不能留下半截文件——
+          // 残缺文件下次同步会因"大小与远端不一致"被误判为本地更新而反向上传，
+          // 覆盖云端完好的原件
+          final tmpFile = File('${localTargetFile.path}.tmp');
           try {
             // 确保父目录存在
             await localTargetFile.parent.create(recursive: true);
-            await dio.download(downloadUrl, localTargetFile.path);
+            final downloadResponse =
+                await dio.download(downloadUrl, tmpFile.path);
+
+            // 1. 校验下载文件长度与远端一致性
+            final downloadedLen = await tmpFile.length();
+            final expectedSize = remoteMediaFiles[stdPath];
+            if (expectedSize != null &&
+                expectedSize > 0 &&
+                downloadedLen != expectedSize) {
+              throw Exception('下载附件长度不一致: 本地=$downloadedLen, 期望=$expectedSize');
+            }
+            if (downloadedLen == 0) {
+              throw Exception('下载附件为空文件');
+            }
+
+            // 2. 完整哈希与 ETag 比对校验
+            _verifyDownloadedFileHash(
+              tmpFile,
+              remoteEtag: remoteMediaEtags[stdPath],
+              responseHeaders: downloadResponse.headers.map,
+            );
+
+            // 3. 原子改名/替换
+            try {
+              await tmpFile.rename(localTargetFile.path);
+            } catch (_) {
+              await tmpFile.copy(localTargetFile.path);
+              await tmpFile.delete();
+            }
           } catch (e) {
-            logDebug('下载附件失败 ($stdPath): $e');
+            failureCount++;
+            logWarning('下载附件失败 ($stdPath): $e', source: 'WebDAVSyncService');
+            try {
+              if (await tmpFile.exists()) await tmpFile.delete();
+            } catch (_) {}
           }
         } else {
           // 远端媒体删除需要完整可信的元数据与引用关系。为避免同步包损坏、
@@ -1109,10 +1231,19 @@ class WebDAVSyncService extends ChangeNotifier {
         }
       }
     }
+
+    return failureCount;
   }
 
   static Map<String, int?> _extractRemoteMediaFiles(String xmlData) {
-    final files = <String, int?>{};
+    final details = _extractRemoteMediaDetails(xmlData);
+    return details.map((key, value) => MapEntry(key, value.length));
+  }
+
+  static Map<String, _RemoteMediaFileInfo> _extractRemoteMediaDetails(
+    String xmlData,
+  ) {
+    final files = <String, _RemoteMediaFileInfo>{};
     final responseRegExp = RegExp(
       r'<(?:[a-zA-Z0-9_.-]+:)?response\b[\s\S]*?<\/(?:[a-zA-Z0-9_.-]+:)?response>',
       caseSensitive: false,
@@ -1123,6 +1254,10 @@ class WebDAVSyncService extends ChangeNotifier {
     );
     final lengthRegExp = RegExp(
       r'<(?:[a-zA-Z0-9_.-]+:)?getcontentlength>(\d+)<\/(?:[a-zA-Z0-9_.-]+:)?getcontentlength>',
+      caseSensitive: false,
+    );
+    final etagRegExp = RegExp(
+      r'<(?:[a-zA-Z0-9_.-]+:)?getetag>([\s\S]*?)<\/(?:[a-zA-Z0-9_.-]+:)?getetag>',
       caseSensitive: false,
     );
 
@@ -1139,11 +1274,75 @@ class WebDAVSyncService extends ChangeNotifier {
       if (relPath == null) continue;
 
       final lengthMatch = lengthRegExp.firstMatch(block);
-      files[relPath] =
-          lengthMatch == null ? null : int.tryParse(lengthMatch.group(1)!);
+      final etagMatch = etagRegExp.firstMatch(block);
+
+      files[relPath] = _RemoteMediaFileInfo(
+        length:
+            lengthMatch == null ? null : int.tryParse(lengthMatch.group(1)!),
+        etag: etagMatch?.group(1),
+      );
     }
 
     return files;
+  }
+
+  static void _verifyDownloadedFileHash(
+    File file, {
+    String? remoteEtag,
+    Map<String, List<String>>? responseHeaders,
+  }) {
+    final bytes = file.readAsBytesSync();
+    final localSha256 = sha256.convert(bytes).toString().toLowerCase();
+    final localMd5 = md5.convert(bytes).toString().toLowerCase();
+
+    // 从 HTTP 响应头提取哈希或 ETag
+    String? headerHash;
+    if (responseHeaders != null) {
+      headerHash = responseHeaders['x-checksum-sha256']?.firstOrNull ??
+          responseHeaders['x-amz-meta-sha256']?.firstOrNull ??
+          responseHeaders['content-md5']?.firstOrNull ??
+          responseHeaders['etag']?.firstOrNull;
+    }
+
+    final targetCandidate = _cleanHashString(headerHash ?? remoteEtag);
+    if (targetCandidate == null || targetCandidate.isEmpty) {
+      if (localSha256.isEmpty) {
+        throw Exception('计算下载附件 SHA-256 哈希失败');
+      }
+      return;
+    }
+
+    final cleanTarget = targetCandidate.toLowerCase();
+    if (cleanTarget.length == 64) {
+      if (localSha256 != cleanTarget) {
+        throw Exception('下载附件 SHA-256 哈希比对失败: 本地=$localSha256, 远端=$cleanTarget');
+      }
+    } else if (cleanTarget.length == 32) {
+      if (localMd5 != cleanTarget) {
+        throw Exception('下载附件 MD5 哈希比对失败: 本地=$localMd5, 远端=$cleanTarget');
+      }
+    } else {
+      if (responseHeaders != null) {
+        final headerEtag =
+            _cleanHashString(responseHeaders['etag']?.firstOrNull);
+        final dirEtag = _cleanHashString(remoteEtag);
+        if (headerEtag != null && dirEtag != null) {
+          if (headerEtag.toLowerCase() != dirEtag.toLowerCase()) {
+            throw Exception('下载附件 ETag 比对不一致: 响应头=$headerEtag, 目录=$dirEtag');
+          }
+        }
+      }
+    }
+  }
+
+  static String? _cleanHashString(String? raw) {
+    if (raw == null) return null;
+    var s = raw.trim();
+    if (s.startsWith('W/')) s = s.substring(2).trim();
+    if (s.startsWith('"') && s.endsWith('"') && s.length >= 2) {
+      s = s.substring(1, s.length - 1);
+    }
+    return s.isEmpty ? null : s;
   }
 
   static String? _mediaRelativePathFromHref(String href) {

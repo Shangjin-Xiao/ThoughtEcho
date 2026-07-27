@@ -20,7 +20,6 @@ void main() {
         SmartResultCard(
           title: '新笔记草稿',
           content: '这是新的笔记内容',
-          editorSource: 'new_note',
           onOpenInEditor: (_, __) {},
           onSaveDirectly: (_, __) {},
         ),
@@ -48,7 +47,6 @@ void main() {
           author: '原作者',
           source: '原出处',
           tagNames: const ['旧标签'],
-          editorSource: 'new_note',
           onOpenDraftInEditor: (_) async => null,
           onSaveDraftDirectly: (draft) async {
             savedDraft = draft;
@@ -85,7 +83,6 @@ void main() {
         SmartResultCard(
           title: '新笔记草稿',
           content: '内容',
-          editorSource: 'new_note',
           onOpenDraftInEditor: (_) async => 'note_from_editor',
           onSaveDraftDirectly: (_) async => null,
           onSavedNoteId: (noteId) {
@@ -117,7 +114,6 @@ void main() {
         SmartResultCard(
           title: '新笔记草稿',
           content: '内容',
-          editorSource: 'new_note',
           initialSavedNoteId: 'existing_note',
           onOpenDraftInEditor: (_) async => null,
           onSaveDraftDirectly: (_) async => null,
@@ -139,7 +135,6 @@ void main() {
         SmartResultCard(
           title: '新笔记草稿',
           content: '内容',
-          editorSource: 'new_note',
           onOpenDraftInEditor: (_) async => null,
           onSaveDraftDirectly: (_) async {
             attempts++;

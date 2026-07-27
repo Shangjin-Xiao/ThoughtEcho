@@ -325,7 +325,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 tags: tags,
                 locationPreview: locationPreview,
                 weatherPreview: weatherPreview,
-                editorSource: isNewNoteProposal ? 'new_note' : 'fullscreen',
                 initialIncludeLocation: initialIncludeLocation,
                 initialIncludeWeather: initialIncludeWeather,
                 initialSavedNoteId: meta['saved_note_id']?.toString(),
@@ -611,6 +610,13 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     selectable: true,
                     // 性能优化：缓存 MarkdownStyleSheet，避免每帧重建
                     styleSheet: _getMarkdownStyleSheet(theme, bubbleTextColor),
+                    onTapLink: (text, href, title) async {
+                      if (href == null || href.isEmpty) return;
+                      final uri = Uri.tryParse(href);
+                      if (uri != null && await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    },
                   ),
           ),
           // 出错时保留正文并显式标记，避免内容被静默删除
@@ -1030,7 +1036,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       tagIds: tagIds,
       sourceAuthor: author,
       sourceWork: source,
-      lastModified: DateTime.now().toIso8601String(),
+      lastModified: DateTime.now().toUtc().toIso8601String(),
     );
   }
 
@@ -1482,7 +1488,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           poiName: includeLocation ? nextPoiName : null,
           weather: includeWeather ? nextWeather : null,
           temperature: includeWeather ? nextTemperature : null,
-          lastModified: DateTime.now().toIso8601String(),
+          lastModified: DateTime.now().toUtc().toIso8601String(),
         );
 
         await db.updateQuote(updatedNote);

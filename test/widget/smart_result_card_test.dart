@@ -31,7 +31,6 @@ void main() {
             weatherPreview: '晴朗 25°C',
             initialIncludeLocation: true,
             initialIncludeWeather: true,
-            editorSource: 'new_note',
             onSaveDirectly: (_, __) {},
             onOpenInEditor: (_, __) {},
           ),
@@ -60,7 +59,6 @@ void main() {
           SmartResultCard(
             title: 'AI 建议',
             content: '建议内容',
-            editorSource: 'new_note',
             onSaveDirectly: (_, __) {},
           ),
         ),
@@ -84,7 +82,6 @@ void main() {
           SmartResultCard(
             title: 'AI 建议',
             content: '建议内容',
-            editorSource: 'new_note',
             initialIncludeLocation: false,
             initialIncludeWeather: false,
             onSaveDirectly: (loc, weather) {
@@ -122,7 +119,6 @@ void main() {
           SmartResultCard(
             title: '润色结果',
             content: '润色后的内容',
-            editorSource: 'fullscreen',
             initialIncludeLocation: true,
             initialIncludeWeather: true,
             onSaveDirectly: (location, weather) {
@@ -160,7 +156,6 @@ void main() {
           SmartResultCard(
             title: 'AI 建议',
             content: '建议内容',
-            editorSource: 'new_note',
             initialIncludeLocation: true,
             initialIncludeWeather: true,
             onSaveDraftDirectly: (draft) async {
@@ -189,7 +184,6 @@ void main() {
             content: '建议内容',
             author: '作者',
             source: '来源',
-            editorSource: 'new_note',
             onOpenDraftInEditor: (_) async => null,
             onSaveDraftDirectly: (_) async => 'saved-note',
           ),

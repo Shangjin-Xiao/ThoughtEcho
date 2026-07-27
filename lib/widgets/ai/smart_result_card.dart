@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../extensions/note_category_localization_extension.dart';
 import '../../gen_l10n/app_localizations.dart';
@@ -329,7 +330,6 @@ class SmartResultCard extends StatefulWidget {
   final Future<String?> Function(SmartResultDraft draft)? onOpenDraftInEditor;
   final Future<String?> Function(SmartResultDraft draft)? onSaveDraftDirectly;
   final void Function(String noteId)? onSavedNoteId;
-  final String editorSource;
   final bool initialIncludeLocation;
   final bool initialIncludeWeather;
   final String? initialSavedNoteId;
@@ -350,7 +350,6 @@ class SmartResultCard extends StatefulWidget {
     this.onOpenDraftInEditor,
     this.onSaveDraftDirectly,
     this.onSavedNoteId,
-    this.editorSource = 'fullscreen',
     this.initialIncludeLocation = false,
     this.initialIncludeWeather = false,
     this.initialSavedNoteId,
@@ -455,6 +454,13 @@ class _SmartResultCardState extends State<SmartResultCard> {
                 MarkdownBody(
                   data: widget.content,
                   selectable: true,
+                  onTapLink: (text, href, title) async {
+                    if (href == null || href.isEmpty) return;
+                    final uri = Uri.tryParse(href);
+                    if (uri != null && await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  },
                 ),
                 const SizedBox(height: 12),
                 if (_hasSourceInfo) _buildSourceInfo(),

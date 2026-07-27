@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AIWorkflowNoticeCard extends StatelessWidget {
   const AIWorkflowNoticeCard({
@@ -84,7 +85,17 @@ class AIWorkflowMarkdownCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            MarkdownBody(data: content, selectable: true),
+            MarkdownBody(
+              data: content,
+              selectable: true,
+              onTapLink: (text, href, title) async {
+                if (href == null || href.isEmpty) return;
+                final uri = Uri.tryParse(href);
+                if (uri != null && await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
           ],
         ),
       ),

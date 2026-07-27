@@ -18,7 +18,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:logging/logging.dart' as logging;
 
 // 项目内部
@@ -37,7 +36,6 @@ import 'package:thoughtecho/services/apk_download_service.dart';
 import 'package:thoughtecho/services/version_check_service.dart';
 import 'package:thoughtecho/services/connectivity_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
-import 'package:thoughtecho/services/data_directory_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/utils/sentry_database_tracing.dart';
 import 'package:thoughtecho/utils/sentry_helper.dart';
@@ -49,6 +47,9 @@ import 'package:thoughtecho/services/webdav_sync_service.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'utils/app_logger.dart';
+import 'utils/app_navigator_key.dart';
+import 'utils/deferred_error_buffer.dart';
+import 'services/database_platform_bootstrap.dart';
 import 'utils/global_exception_handler.dart';
 import 'theme/app_theme.dart';
 import 'providers/app_providers.dart';
@@ -74,69 +75,10 @@ class TimeoutConstants {
   static const Duration uiInitDelayDefault = Duration(milliseconds: 0);
 }
 
-// 全局标志，确保FFI只初始化一次
-bool _ffiInitialized = false;
-
-Future<void> initializeDatabasePlatform() async {
-  if (!kIsWeb) {
-    if (Platform.isWindows && !_ffiInitialized) {
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
-      _ffiInitialized = true;
-      logInfo('Windows FFI数据库工厂已初始化', source: 'DatabaseInit');
-    }
-
-    try {
-      // Windows 平台使用 Documents/ThoughtEcho 作为默认数据目录
-      // 其他平台继续使用 Documents 根目录
-      String basePath;
-      if (Platform.isWindows) {
-        // 检查并执行旧版数据迁移（从 Documents 根目录迁移到 Documents/ThoughtEcho）
-        await DataDirectoryService.checkAndMigrateLegacyData();
-        basePath = await DataDirectoryService.getCurrentDataDirectory();
-      } else {
-        final appDir = await getApplicationDocumentsDirectory();
-        basePath = appDir.path;
-      }
-
-      final dbPath = join(basePath, 'databases');
-
-      await Directory(dbPath).create(recursive: true);
-
-      final path = join(dbPath, 'thoughtecho.db');
-      if (!await Directory(dirname(path)).exists()) {
-        await Directory(dirname(path)).create(recursive: true);
-      }
-
-      await databaseFactory.setDatabasesPath(dbPath);
-      logInfo('数据库路径设置为: $dbPath', source: 'DatabaseInit');
-    } catch (e) {
-      logError('创建数据库目录失败: $e', error: e, source: 'DatabaseInit');
-      rethrow;
-    }
-  } else {
-    logInfo('Web平台：使用内存数据库', source: 'DatabaseInit');
-    // Web平台无需特殊初始化，SQLite会自动使用内存数据库
-  }
-}
 
 // 全局导航key，用于日志服务在无context时获取context
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
 // 添加一个全局标志，表示是否处于紧急模式（数据库损坏等情况）
 bool _isEmergencyMode = false;
-
-// 缓存早期捕获但无法立即记录的错误
-final List<Map<String, dynamic>> _deferredErrors = [];
-const int _maxDeferredErrors = 100; // 修复：设置最大容量防止无限增长
-
-/// 安全添加延迟错误（带容量限制）
-void _addDeferredError(Map<String, dynamic> error) {
-  if (_deferredErrors.length >= _maxDeferredErrors) {
-    _deferredErrors.removeAt(0);
-  }
-  _deferredErrors.add(error);
-}
 
 Future<void> main() async {
   // 立即设置日志级别为INFO，避免早期verbose日志输出
@@ -198,7 +140,7 @@ Future<void> main() async {
           );
           logError('堆栈: $stack', source: 'PlatformDispatcher');
         } // 捕获到错误后再记录到日志系统
-        _addDeferredError({
+        addDeferredError({
           'message': '平台分发器错误',
           'error': error,
           'stackTrace':
@@ -239,7 +181,7 @@ Future<void> main() async {
             );
           } else {
             // 无法通过context获取LogService时，先保存到全局缓存
-            _addDeferredError({
+            addDeferredError({
               'message': 'Flutter异常: ${details.exceptionAsString()}',
               'error': details.exception,
               'stackTrace': details.stack,
@@ -290,6 +232,12 @@ Future<void> main() async {
         final databaseService = DatabaseService();
         databaseService.onLocalDataChanged =
             WebDAVSyncService().handleNoteChanged;
+        // 依赖反转接线：数据层通过钩子通知 UI 层失效渲染缓存，
+        // 避免 services 反向 import widgets 形成循环依赖
+        DatabaseService.onQuoteCacheInvalidate =
+            QuoteContent.removeCacheForQuote;
+        DatabaseService.onQuoteCachesInvalidate =
+            QuoteContent.removeCachesForQuotes;
         final locationService = LocationService();
         final weatherService = WeatherService();
         final clipboardService = ClipboardService(); // 创建统一日志服务
@@ -646,7 +594,7 @@ Future<void> main() async {
             // 记录错误，不使用 BuildContext
             try {
               // 将错误信息添加到延迟处理队列
-              _addDeferredError({
+              addDeferredError({
                 'message': '后台服务初始化失败',
                 'error': e,
                 'stackTrace': stackTrace,
@@ -690,7 +638,7 @@ Future<void> main() async {
       // 使用非 context 相关访问方式记录错误，避免 use_build_context_synchronously 警告
       try {
         // 将错误信息添加到延迟处理队列
-        _addDeferredError({
+        addDeferredError({
           'message': '未捕获异常: $error',
           'error': error,
           'stackTrace': stackTrace,
@@ -828,13 +776,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       },
     );
   }
-}
-
-/// 全局方法，让LogService能够获取并处理缓存的早期错误
-List<Map<String, dynamic>> getAndClearDeferredErrors() {
-  final errors = List<Map<String, dynamic>>.from(_deferredErrors);
-  _deferredErrors.clear();
-  return errors;
 }
 
 // 提取常规数据库初始化为独立函数

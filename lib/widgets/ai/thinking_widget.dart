@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../gen_l10n/app_localizations.dart';
 
@@ -236,6 +237,13 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                               child: MarkdownBody(
                                 data: widget.thinkingText,
                                 selectable: true,
+                                onTapLink: (text, href, title) async {
+                                  if (href == null || href.isEmpty) return;
+                                  final uri = Uri.tryParse(href);
+                                  if (uri != null && await canLaunchUrl(uri)) {
+                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  }
+                                },
                                 styleSheet: MarkdownStyleSheet.fromTheme(theme)
                                     .copyWith(
                                   p: theme.textTheme.bodySmall?.copyWith(
