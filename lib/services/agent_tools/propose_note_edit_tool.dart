@@ -71,8 +71,9 @@ class ProposeNoteEditTool extends AgentTool {
                     'delete',
                     'replaceDocument',
                   ],
-                  'description': 'replace/delete 需要 old_text；insertBefore/insertAfter 需要 '
-                      'anchor_text；append 追加到文末；replaceDocument 整篇替换。',
+                  'description':
+                      'replace/delete 需要 old_text；insertBefore/insertAfter 需要 '
+                          'anchor_text；append 追加到文末；replaceDocument 整篇替换。',
                 },
                 'old_text': {
                   'type': 'string',
@@ -81,13 +82,15 @@ class ProposeNoteEditTool extends AgentTool {
                 },
                 'anchor_text': {
                   'type': 'string',
-                  'description': 'type=insertBefore 或 insertAfter 时必须提供：插入位置的锚点原文，'
-                      '要求同 old_text。',
+                  'description':
+                      'type=insertBefore 或 insertAfter 时必须提供：插入位置的锚点原文，'
+                          '要求同 old_text。',
                 },
                 'insert_text': {
                   'type': 'string',
-                  'description': '除 delete 外必须提供 insert_text 或 insert_blocks 之一：'
-                      '要写入的纯文本。不要写 Markdown 标记。',
+                  'description':
+                      '除 delete 外必须提供 insert_text 或 insert_blocks 之一：'
+                          '要写入的纯文本。不要写 Markdown 标记。',
                 },
                 'insert_blocks': _insertBlocksSchema,
               },

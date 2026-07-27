@@ -318,7 +318,11 @@ class QuillStructuredEdit {
   }
 
   static bool _isWhitespace(String char) =>
-      char == ' ' || char == '\t' || char == '\n' || char == '\r' || char == '　';
+      char == ' ' ||
+      char == '\t' ||
+      char == '\n' ||
+      char == '\r' ||
+      char == '　';
 
   /// 靠归一化才命中时，让写入文本的标点风格跟随原文
   /// （claude-code `preserveQuoteStyle` 的简化版）。

@@ -50,7 +50,8 @@ String? validateToolArguments({
       continue;
     }
     final allowed = definition['enum'];
-    if (allowed is List && !allowed.map((e) => e.toString()).contains('$value')) {
+    if (allowed is List &&
+        !allowed.map((e) => e.toString()).contains('$value')) {
       mismatched.add(
         '${entry.key}（只能是 ${allowed.join('、')} 之一，实际是 $value）',
       );
@@ -73,7 +74,8 @@ String? validateToolArguments({
 
 bool _matchesType(Object? value, String type) => switch (type) {
       'string' => value is String,
-      'integer' => value is int || (value is double && value == value.roundToDouble()),
+      'integer' =>
+        value is int || (value is double && value == value.roundToDouble()),
       'number' => value is num,
       'boolean' => value is bool,
       'array' => value is List,

@@ -2,7 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
 import 'package:thoughtecho/services/agent_service.dart';
 
-openai.ChatMessage _assistantToolCall(String id) => openai.ChatMessage.assistant(
+openai.ChatMessage _assistantToolCall(String id) =>
+    openai.ChatMessage.assistant(
       toolCalls: [
         openai.ToolCall.functionCall(
           id: id,

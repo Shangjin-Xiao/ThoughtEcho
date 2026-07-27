@@ -67,7 +67,8 @@ class TruncatingAgentTool extends AgentTool {
     if (decoded is! Map) {
       return null;
     }
-    final payload = decoded.map((key, value) => MapEntry(key.toString(), value));
+    final payload =
+        decoded.map((key, value) => MapEntry(key.toString(), value));
 
     // 找出最大的列表字段（通常是 notes / available_tags 这类结果集）。
     String? listKey;

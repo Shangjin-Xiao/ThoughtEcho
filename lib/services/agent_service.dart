@@ -1058,7 +1058,8 @@ class AgentService extends ChangeNotifier {
   static int _estimateMessagesTokens(List<openai.ChatMessage> messages) =>
       messages.fold<int>(
         0,
-        (total, message) => total + estimateTokens(jsonEncode(message.toJson())),
+        (total, message) =>
+            total + estimateTokens(jsonEncode(message.toJson())),
       );
 
   /// 零 LLM 成本的上下文裁剪：把较早轮次的工具结果替换为一行占位符。
@@ -1289,7 +1290,6 @@ class AgentService extends ChangeNotifier {
     final canonical = canonicalize(input) as Map<String, Object?>;
     return jsonEncode(canonical);
   }
-
 }
 
 /// 流式补全结果（文本内容 + 工具调用列表）

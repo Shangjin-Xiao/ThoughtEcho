@@ -323,6 +323,7 @@ class SmartResultCard extends StatefulWidget {
       onOpenInEditor;
   final void Function(bool includeLocation, bool includeWeather)?
       onSaveDirectly;
+
   /// 打开编辑器。返回编辑器内保存成功的笔记 ID（未保存时返回 null），
   /// 用于回写采纳状态，避免重复采纳产生重复笔记。
   final Future<String?> Function(SmartResultDraft draft)? onOpenDraftInEditor;

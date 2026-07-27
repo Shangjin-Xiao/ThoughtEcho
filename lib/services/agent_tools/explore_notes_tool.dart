@@ -104,8 +104,9 @@ class ExploreNotesTool extends AgentTool {
                 'midnight',
               ],
             },
-            'description': '时段 key 列表（可选）。dawn=5-8 点，morning=8-12 点，afternoon=12-17 点，'
-                'dusk=17-20 点，evening=20-23 点，midnight=23-5 点。',
+            'description':
+                '时段 key 列表（可选）。dawn=5-8 点，morning=8-12 点，afternoon=12-17 点，'
+                    'dusk=17-20 点，evening=20-23 点，midnight=23-5 点。',
           },
           'offset': {
             'type': 'integer',
