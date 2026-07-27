@@ -456,6 +456,9 @@ extension _NoteListItemsExtension on NoteListViewState {
 
         if (notification is ScrollStartNotification &&
             notification.dragDetails != null) {
+          // 手指按住但暂停移动时 isListScrolling 会因 32ms 无更新而回落，
+          // 单独的拖拽信号让冷 Quill 恢复队列在整个手势期间保持静默。
+          isListDragActive.value = true;
           _cancelScrollEndSettledWork();
           if (_searchFocusNode.hasFocus) {
             _searchFocusNode.unfocus();
@@ -464,6 +467,7 @@ extension _NoteListItemsExtension on NoteListViewState {
         } else if (notification is ScrollUpdateNotification) {
           _recordScrollSessionUpdate(notification.metrics);
         } else if (notification is ScrollEndNotification) {
+          isListDragActive.value = false;
           _scheduleScrollSessionPerfFinalize(notification.metrics);
         }
 

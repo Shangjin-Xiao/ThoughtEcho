@@ -21,13 +21,17 @@ class _DeferredRichTextContentState extends State<_DeferredRichTextContent> {
   void initState() {
     super.initState();
     isListScrolling.addListener(_handleScrollStateChanged);
+    isListDragActive.addListener(_handleScrollStateChanged);
   }
+
+  static bool get _listGestureActive =>
+      isListScrolling.value || isListDragActive.value;
 
   void _handleScrollStateChanged() {
     if (_materialized || !mounted) {
       return;
     }
-    if (isListScrolling.value) {
+    if (_listGestureActive) {
       _DeferredRichTextMaterializationQueue.remove(this);
     } else {
       _DeferredRichTextMaterializationQueue.enqueue(this);
@@ -63,7 +67,7 @@ class _DeferredRichTextContentState extends State<_DeferredRichTextContent> {
   }
 
   void _materializeFromQueue() {
-    if (!mounted || _materialized || isListScrolling.value) {
+    if (!mounted || _materialized || _listGestureActive) {
       return;
     }
     setState(() => _materialized = true);
@@ -73,6 +77,7 @@ class _DeferredRichTextContentState extends State<_DeferredRichTextContent> {
   void dispose() {
     _DeferredRichTextMaterializationQueue.remove(this);
     isListScrolling.removeListener(_handleScrollStateChanged);
+    isListDragActive.removeListener(_handleScrollStateChanged);
     super.dispose();
   }
 
@@ -81,7 +86,7 @@ class _DeferredRichTextContentState extends State<_DeferredRichTextContent> {
     if (_materialized) {
       return widget.richTextBuilder(context);
     }
-    if (!isListScrolling.value) {
+    if (!_listGestureActive) {
       _DeferredRichTextMaterializationQueue.enqueue(this);
     }
     return widget.placeholder;
@@ -106,14 +111,17 @@ class _DeferredRichTextMaterializationQueue {
   }
 
   static void _scheduleNextFrame({bool rescheduling = false}) {
-    if (_frameScheduled || _pending.isEmpty || isListScrolling.value) {
+    if (_frameScheduled ||
+        _pending.isEmpty ||
+        _DeferredRichTextContentState._listGestureActive) {
       return;
     }
     _frameScheduled = true;
     SchedulerBinding.instance.scheduleFrameCallback((_) {
       _frameScheduled = false;
       _pending.removeWhere((state) => !state.mounted || state._materialized);
-      if (_pending.isEmpty || isListScrolling.value) {
+      if (_pending.isEmpty ||
+          _DeferredRichTextContentState._listGestureActive) {
         return;
       }
 
