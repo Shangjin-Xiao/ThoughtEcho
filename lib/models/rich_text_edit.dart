@@ -218,7 +218,10 @@ class RichTextEditMatchFailure implements Exception {
   final String target;
   final int matchCount;
 
+  /// 错误消息 = 发生了什么 + 具体数字 + 明确的下一步动作。
   @override
-  String toString() =>
-      matchCount == 0 ? '找不到要修改的原文。' : '原文匹配到 $matchCount 处，无法确定要修改哪一处。';
+  String toString() => matchCount == 0
+      ? '未找到 old_text，请检查空白与标点是否与原文完全一致'
+          '（建议先用 get_note_detail 复制原文再改）。'
+      : '找到 $matchCount 处匹配，请提供更多上下文使其唯一（例如带上前后相邻的整句）。';
 }
