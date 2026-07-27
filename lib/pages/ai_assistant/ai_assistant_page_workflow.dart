@@ -134,6 +134,8 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
   }) async {
     final l10n = AppLocalizations.of(context);
     final aiMsgId = _uuid.v4();
+    // 润色/续写始终针对当前绑定笔记，写入 note_id 让卡片能直接采纳
+    final boundNoteId = _hasBoundNote ? widget.quote!.id : null;
     _appendMessage(
       app_chat.ChatMessage(
         id: aiMsgId,
@@ -164,6 +166,10 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
             'command': command,
             'title': title,
             'action': action,
+            // 显式标记可采纳，避免被当作历史遗留只读卡片
+            'legacy': false,
+            if (boundNoteId != null && boundNoteId.isNotEmpty)
+              'note_id': boundNoteId,
           }),
         );
       },

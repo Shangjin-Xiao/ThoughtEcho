@@ -49,7 +49,7 @@ void main() {
           source: '原出处',
           tagNames: const ['旧标签'],
           editorSource: 'new_note',
-          onOpenDraftInEditor: (_) async {},
+          onOpenDraftInEditor: (_) async => null,
           onSaveDraftDirectly: (draft) async {
             savedDraft = draft;
             return 'note_saved';
@@ -76,6 +76,61 @@ void main() {
     expect(savedButton.onPressed, isNull);
   });
 
+  testWidgets('writes back the note id saved inside the editor',
+      (tester) async {
+    String? savedNoteId;
+
+    await tester.pumpWidget(
+      harness(
+        SmartResultCard(
+          title: '新笔记草稿',
+          content: '内容',
+          editorSource: 'new_note',
+          onOpenDraftInEditor: (_) async => 'note_from_editor',
+          onSaveDraftDirectly: (_) async => null,
+          onSavedNoteId: (noteId) {
+            savedNoteId = noteId;
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('打开编辑器'));
+    await tester.pumpAndSettle();
+
+    expect(savedNoteId, 'note_from_editor');
+    // 采纳后两个按钮都不可再点，避免重复采纳产生重复笔记
+    final editorButton = tester.widget<TextButton>(
+      find.widgetWithText(TextButton, '打开编辑器'),
+    );
+    expect(editorButton.onPressed, isNull);
+    final savedButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, '笔记已保存'),
+    );
+    expect(savedButton.onPressed, isNull);
+  });
+
+  testWidgets('disables the editor action for an already saved result',
+      (tester) async {
+    await tester.pumpWidget(
+      harness(
+        SmartResultCard(
+          title: '新笔记草稿',
+          content: '内容',
+          editorSource: 'new_note',
+          initialSavedNoteId: 'existing_note',
+          onOpenDraftInEditor: (_) async => null,
+          onSaveDraftDirectly: (_) async => null,
+        ),
+      ),
+    );
+
+    final editorButton = tester.widget<TextButton>(
+      find.widgetWithText(TextButton, '打开编辑器'),
+    );
+    expect(editorButton.onPressed, isNull);
+  });
+
   testWidgets('keeps direct save retryable after failure', (tester) async {
     var attempts = 0;
 
@@ -85,7 +140,7 @@ void main() {
           title: '新笔记草稿',
           content: '内容',
           editorSource: 'new_note',
-          onOpenDraftInEditor: (_) async {},
+          onOpenDraftInEditor: (_) async => null,
           onSaveDraftDirectly: (_) async {
             attempts++;
             throw Exception('db locked');

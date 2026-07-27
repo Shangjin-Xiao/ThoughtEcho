@@ -764,7 +764,7 @@ void main() {
     });
 
     test(
-        'does not continue to suggestion cards after non-retryable tool failure',
+        'feeds a non-retryable tool error back to the model instead of failing the run',
         () async {
       final provider = const AIProviderSettings(
         id: 'openai',
@@ -783,7 +783,70 @@ void main() {
           toolName: 'propose_new_note',
           args: const {'title': 't', 'content': 'c'},
         ),
-        _textCompletion('```smart_result\n{"type":"smart_result"}\n```'),
+        _textCompletion('工具失败了，我先说明情况'),
+      ];
+      var requestCount = 0;
+      String? followUpTranscript;
+
+      final service = AgentService(
+        settingsService: settings,
+        tools: [tool],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          requestCount++;
+          if (requestCount == 2) {
+            followUpTranscript =
+                messages.map(_chatMessageText).join('\n----\n');
+          }
+          return responses.removeAt(0);
+        },
+      );
+      final events = <AgentEvent>[];
+      final subscription = service.events.listen(events.add);
+
+      final response = await service.runAgent(userMessage: 'test');
+
+      expect(tool.executeCount, 1);
+      expect(requestCount, 2);
+      expect(response.content, '工具失败了，我先说明情况');
+      expect(response.toolCalls, isEmpty);
+      // 工具构造的具体错误信息必须回喂模型，而不是恒定的泛化文案
+      expect(followUpTranscript, contains('保存失败：数据库不可写'));
+      final toolResultEvent =
+          events.whereType<AgentToolCallResultEvent>().single;
+      expect(toolResultEvent.isError, isTrue);
+      // 发给 UI 的错误内容不再被清空
+      expect(toolResultEvent.result, '保存失败：数据库不可写');
+      await subscription.cancel();
+      service.dispose();
+    });
+
+    test('stops after consecutive rounds where every tool call fails',
+        () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final settings = _FakeSettingsService(provider);
+      final tool = _FailingTool(
+        toolName: 'search_notes',
+        resultContent: '搜索失败：索引不可用',
+      );
+      final responses = <openai.ChatCompletion>[
+        for (final query in ['a', 'b', 'c', 'd'])
+          _toolCallCompletion(
+            callId: 'call_$query',
+            toolName: 'search_notes',
+            args: {'query': query},
+          ),
       ];
       var requestCount = 0;
 
@@ -802,8 +865,6 @@ void main() {
           return responses.removeAt(0);
         },
       );
-      final events = <AgentEvent>[];
-      final subscription = service.events.listen(events.add);
 
       await expectLater(
         () => service.runAgent(userMessage: 'test'),
@@ -816,13 +877,9 @@ void main() {
         ),
       );
 
-      expect(tool.executeCount, 1);
-      expect(requestCount, 1);
-      final toolResultEvent =
-          events.whereType<AgentToolCallResultEvent>().single;
-      expect(toolResultEvent.isError, isTrue);
-      expect(toolResultEvent.result, isEmpty);
-      await subscription.cancel();
+      // 前两轮回喂错误继续，第三轮全部失败后终止
+      expect(requestCount, 3);
+      expect(tool.executeCount, 3);
       service.dispose();
     });
 
@@ -1309,6 +1366,60 @@ void main() {
       expect(responseEvents, ['new']);
 
       await subscription.cancel();
+      service.dispose();
+    });
+
+    test('resets run state and stop flag after a stopped run exits', () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final tool = _DelayedTool(
+        toolName: 'search_notes',
+        delay: const Duration(milliseconds: 60),
+      );
+      var requestCount = 0;
+      final service = AgentService(
+        settingsService: _FakeSettingsService(provider),
+        tools: [tool],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          requestCount++;
+          if (requestCount == 1) {
+            return _toolCallCompletion(
+              callId: 'call_1',
+              toolName: 'search_notes',
+              args: const {'query': 'camp'},
+            );
+          }
+          return _textCompletion('second run');
+        },
+      );
+
+      final firstRun = service.runAgent(userMessage: 'first');
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      service.requestStop();
+      expect(service.isStopRequested, isTrue);
+      // 停止后立刻发下一条消息：新 run 会等旧 run 退出，不产生并发
+      final secondRun = service.runAgent(userMessage: 'second');
+
+      final firstResponse = await firstRun;
+      final secondResponse = await secondRun;
+
+      expect(firstResponse.content, isEmpty);
+      expect(secondResponse.content, 'second run');
+      // 停止标志复位，运行状态由 runAgent 的 finally 清理
+      expect(service.isStopRequested, isFalse);
+      expect(service.isRunning, isFalse);
+      expect(service.currentStatusKey, isEmpty);
       service.dispose();
     });
   });

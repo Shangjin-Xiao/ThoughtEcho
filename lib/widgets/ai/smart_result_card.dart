@@ -323,7 +323,9 @@ class SmartResultCard extends StatefulWidget {
       onOpenInEditor;
   final void Function(bool includeLocation, bool includeWeather)?
       onSaveDirectly;
-  final Future<void> Function(SmartResultDraft draft)? onOpenDraftInEditor;
+  /// 打开编辑器。返回编辑器内保存成功的笔记 ID（未保存时返回 null），
+  /// 用于回写采纳状态，避免重复采纳产生重复笔记。
+  final Future<String?> Function(SmartResultDraft draft)? onOpenDraftInEditor;
   final Future<String?> Function(SmartResultDraft draft)? onSaveDraftDirectly;
   final void Function(String noteId)? onSavedNoteId;
   final String editorSource;
@@ -552,7 +554,7 @@ class _SmartResultCardState extends State<SmartResultCard> {
                 if (widget.onOpenInEditor != null ||
                     widget.onOpenDraftInEditor != null)
                   TextButton.icon(
-                    onPressed: _isSaving || widget.readOnly
+                    onPressed: _isSaving || isSaved || widget.readOnly
                         ? null
                         : _handleOpenInEditor,
                     icon: const Icon(Icons.edit_note, size: 18),
@@ -640,7 +642,13 @@ class _SmartResultCardState extends State<SmartResultCard> {
   Future<void> _handleOpenInEditor() async {
     final draft = _buildDraft();
     if (widget.onOpenDraftInEditor != null) {
-      await widget.onOpenDraftInEditor!(draft);
+      final noteId = await widget.onOpenDraftInEditor!(draft);
+      if (!mounted || noteId == null || noteId.isEmpty) return;
+      // 编辑器内已保存：回写采纳状态，防止重复采纳产生重复笔记
+      widget.onSavedNoteId?.call(noteId);
+      setState(() {
+        _savedNoteId = noteId;
+      });
       return;
     }
     widget.onOpenInEditor?.call(draft.includeLocation, draft.includeWeather);

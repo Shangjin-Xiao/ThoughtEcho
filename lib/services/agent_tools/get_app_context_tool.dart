@@ -18,7 +18,8 @@ class GetTagsTool extends AgentTool {
   @override
   String get description => '获取用户已有的标签列表（排除系统隐藏标签），支持分页。'
       '当你要为新笔记或编辑建议选择标签时，先调用此工具来获取可选标签 ID 和名称。'
-      '后续工具调用请优先提交标签 ID，避免同名标签歧义。'
+      '后续工具调用请优先提交标签 ID，避免同名标签歧义；'
+      'tag_ids 只能来自本工具的返回，不能编造。'
       '标签较多时可使用 offset 和 limit 分页获取。';
 
   @override
@@ -31,8 +32,14 @@ class GetTagsTool extends AgentTool {
   Map<String, Object?> get parametersSchema => const {
         'type': 'object',
         'properties': {
-          'offset': {'type': 'integer', 'description': '分页偏移量，默认 0'},
-          'limit': {'type': 'integer', 'description': '返回数量 (1-50, 默认 20)'},
+          'offset': {
+            'type': 'integer',
+            'description': '分页偏移量，默认 0。翻页时使用上一次返回的 offset + 已返回条数。',
+          },
+          'limit': {
+            'type': 'integer',
+            'description': '返回数量，1-50，默认 20；超出范围会被自动截取到该区间。',
+          },
         },
       };
 

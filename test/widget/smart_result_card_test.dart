@@ -190,7 +190,7 @@ void main() {
             author: '作者',
             source: '来源',
             editorSource: 'new_note',
-            onOpenDraftInEditor: (_) async {},
+            onOpenDraftInEditor: (_) async => null,
             onSaveDraftDirectly: (_) async => 'saved-note',
           ),
         ),

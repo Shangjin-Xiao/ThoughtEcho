@@ -27,6 +27,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     var streamingText = '';
     String? toolThinkingText;
     var toolProgressInProgress = false;
+    var reachedMaxRounds = false;
 
     void ensureToolProgressMessage() {
       if (toolProgressMsgId != null) return;
@@ -66,6 +67,32 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
         }
       });
       _scrollToBottom();
+    }
+
+    /// 出错时保留已输出内容并标记为失败状态；完全没有内容时才移除空气泡。
+    void markStreamingMessageFailed(String messageId, String content) {
+      _setState(() {
+        final index =
+            _messages.indexWhere((message) => message.id == messageId);
+        if (index == -1) return;
+        final resolvedContent =
+            content.isNotEmpty ? content : _messages[index].content;
+        if (resolvedContent.trim().isEmpty) {
+          _messages.removeAt(index);
+          return;
+        }
+        final failed = _messages[index].copyWith(
+          content: resolvedContent,
+          isLoading: false,
+          state: app_chat.MessageState.error,
+        );
+        _messages[index] = failed;
+        if (_currentSessionId != null) {
+          unawaited(
+            _chatSessionService.addMessage(_currentSessionId!, failed),
+          );
+        }
+      });
     }
 
     try {
@@ -181,6 +208,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             }
 
           case AgentResponseEvent():
+            reachedMaxRounds = event.reachedMaxRounds;
             if (streamingMsgId != null) {
               _flushStreamUpdate();
               _cancelStreamUpdate();
@@ -197,10 +225,11 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
 
           case AgentErrorEvent():
             if (streamingMsgId != null) {
+              // 保留已经流式输出的正文，只在消息上标记错误状态，
+              // 避免用户看到内容凭空消失（历史 bug：整段 removeWhere）。
+              _flushStreamUpdate();
               _cancelStreamUpdate();
-              _setState(() {
-                _messages.removeWhere((m) => m.id == streamingMsgId);
-              });
+              markStreamingMessageFailed(streamingMsgId!, streamingText);
               streamingMsgId = null;
               streamingText = '';
             }
@@ -271,9 +300,29 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           );
         }
       } else if (streamingMsgId != null) {
-        _setState(() {
-          _messages.removeWhere((m) => m.id == streamingMsgId);
-        });
+        if (streamingText.trim().isNotEmpty) {
+          // 被停止等情况下没有最终文本时，保留已经流式输出的内容
+          finalizeNarrationMessage(streamingMsgId!, streamingText);
+        } else {
+          _setState(() {
+            _messages.removeWhere((m) => m.id == streamingMsgId);
+          });
+        }
+      }
+
+      // 达到轮次上限时给用户可见提示，避免结论看起来"莫名其妙地停了"。
+      if (reachedMaxRounds || response.reachedMaxRounds) {
+        _appendMessage(
+          app_chat.ChatMessage(
+            id: _uuid.v4(),
+            content: l10n.agentReachedMaxRounds,
+            isUser: false,
+            role: 'system',
+            timestamp: DateTime.now(),
+            includedInContext: false,
+          ),
+          persist: false,
+        );
       }
 
       if (parsed.smartResult != null) {

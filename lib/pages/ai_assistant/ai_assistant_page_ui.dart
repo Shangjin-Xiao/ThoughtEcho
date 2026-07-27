@@ -251,8 +251,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           case 'smart_result':
             final action = meta['action']?.toString();
             final isNewNoteProposal = action == 'create';
-            final legacyReadOnly =
-                !isNewNoteProposal && meta['rich_edit'] == null;
+            // 只读判定改用显式 legacy 标记：历史遗留的不可采纳卡片写
+            // legacy=true，其余（含润色/续写工作流产出）一律可采纳。
+            final legacyReadOnly = meta['legacy'] == true;
             final initialNewNoteMetadata =
                 isNewNoteProposal ? _resolveInitialNewNoteMetadata(meta) : null;
             final rawTagNames = meta['tag_names'] as List<dynamic>? ?? const [];
@@ -340,7 +341,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                         includeLocation: draft.includeLocation,
                         includeWeather: draft.includeWeather,
                       );
-                      await _openSmartResultAsNewNote(
+                      return _openSmartResultAsNewNote(
                         draft.content,
                         richDocument: updatedMeta['rich_document'],
                         tagIds: confirmedMetadata.tagIds,
@@ -350,7 +351,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                         includeWeather: confirmedMetadata.includeWeather,
                       );
                     } else {
-                      await _openSmartResultInEditor(
+                      return _openSmartResultInEditor(
                         updatedMeta,
                         draft.content,
                       );
@@ -373,6 +374,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                       );
                     }
                   }
+                  return null;
                 },
                 onSaveDraftDirectly: (draft) async {
                   final updatedMeta =
@@ -611,6 +613,28 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     styleSheet: _getMarkdownStyleSheet(theme, bubbleTextColor),
                   ),
           ),
+          // 出错时保留正文并显式标记，避免内容被静默删除
+          if (!isUser && message.state == MessageState.error)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 14,
+                    color: theme.colorScheme.error,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    l10n.agentErrorGeneric,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -762,7 +786,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     );
   }
 
-  Future<void> _openSmartResultInEditor(
+  /// 打开编辑器采纳建议，返回编辑器内保存成功的笔记 ID（未保存则为 null）。
+  Future<String?> _openSmartResultInEditor(
     Map<String, dynamic> meta,
     String content,
   ) async {
@@ -776,7 +801,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       final note = await db.getQuoteById(noteId);
       final tags = await db.getCategories();
       if (!mounted) {
-        return;
+        return null;
       }
       if (note != null) {
         Quote? richEditedNote;
@@ -784,10 +809,10 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           richEditedNote = _applyStructuredEdit(note, meta);
         } on RichTextEditConflict {
           _showRichEditConflict();
-          return;
+          return null;
         } on RichTextEditMatchFailure {
           _showRichEditConflict();
-          return;
+          return null;
         }
         // 根据润色(replace) / 续写(append) 决定带入编辑器的初始文本
         final plainContent = DeltaBuilder.markdownToPlainText(content);
@@ -797,11 +822,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 : plainContent);
 
         // 合并 Agent 建议的元数据（标签、作者、出处）
-        final rawSuggestedTagIds = meta['tag_ids'] as List<dynamic>?;
-        final suggestedTagIds = rawSuggestedTagIds
-            ?.map((item) => item.toString().trim())
-            .where((item) => item.isNotEmpty)
-            .toList();
+        // 空列表视为「无标签建议」，避免润色/续写把原笔记标签清空
+        final suggestedTagIds = _suggestedTagIdsOrNull(meta['tag_ids']);
         final suggestedAuthor = meta['author']?.toString();
         final suggestedSource = meta['source']?.toString();
         // 使用 DeltaBuilder 合并修改并生成新的 deltaContent，保持双存储一致
@@ -829,6 +851,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           sourceAuthor: suggestedAuthor ?? note.sourceAuthor,
           sourceWork: suggestedSource ?? note.sourceWork,
         );
+        String? savedNoteId;
         await Navigator.push(
           context,
           MaterialPageRoute(
@@ -837,10 +860,11 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               initialQuote: noteForEditor,
               allTags: tags,
               skipDefaultMetadataAutofill: true,
+              onSaved: (savedQuote) => savedNoteId = savedQuote.id,
             ),
           ),
         );
-        return;
+        return savedNoteId;
       }
     }
 
@@ -850,7 +874,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         .map((item) => item.toString().trim())
         .where((item) => item.isNotEmpty)
         .toList();
-    await _openSmartResultAsNewNote(
+    return _openSmartResultAsNewNote(
       content,
       richDocument: meta['rich_document'],
       tagIds: tagIds,
@@ -1165,6 +1189,12 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     );
   }
 
+  List<String>? _suggestedTagIdsOrNull(Object? value) {
+    if (value is! List) return null;
+    final ids = _extractStringList(value);
+    return ids.isEmpty ? null : ids;
+  }
+
   List<String> _extractStringList(Object? value) {
     final rawItems = value is List ? value : const [];
     return rawItems
@@ -1183,7 +1213,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     return value is bool ? value : null;
   }
 
-  Future<void> _openSmartResultAsNewNote(
+  /// 以新建笔记方式打开编辑器，返回保存成功的笔记 ID（未保存则为 null）。
+  Future<String?> _openSmartResultAsNewNote(
     String content, {
     Object? richDocument,
     List<String>? tagIds,
@@ -1197,7 +1228,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         !DeltaBuilder.hasMarkdownFormatting(content)) {
       final db = context.read<DatabaseService>();
       final tags = await db.getCategories();
-      if (!mounted) return;
+      if (!mounted) return null;
+      String? savedNoteId;
       await showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -1211,10 +1243,13 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           prefilledIncludeWeather: includeWeather,
           useAIPrefilledLocationWeather: true,
           tags: tags,
-          onSave: db.addQuote,
+          onSave: (quote) {
+            savedNoteId = quote.id;
+            return db.addQuote(quote);
+          },
         ),
       );
-      return;
+      return savedNoteId;
     }
 
     final db = context.read<DatabaseService>();
@@ -1300,7 +1335,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       ),
     );
 
-    if (!mounted) return;
+    if (!mounted) return null;
+    String? savedNoteId;
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -1309,9 +1345,11 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           initialQuote: initialQuote,
           allTags: tags,
           skipDefaultMetadataAutofill: true,
+          onSaved: (savedQuote) => savedNoteId = savedQuote.id,
         ),
       ),
     );
+    return savedNoteId;
   }
 
   Future<String?> _saveSmartResultToExistingNote(
@@ -1342,11 +1380,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 : plainContent);
 
         // 合并 Agent 建议的元数据（标签、作者、出处）
-        final rawSuggestedTagIds = meta['tag_ids'] as List<dynamic>?;
-        final suggestedTagIds = rawSuggestedTagIds
-            ?.map((item) => item.toString().trim())
-            .where((item) => item.isNotEmpty)
-            .toList();
+        // 空列表视为「无标签建议」，避免润色/续写把原笔记标签清空
+        final suggestedTagIds = _suggestedTagIdsOrNull(meta['tag_ids']);
         final suggestedAuthor = meta['author']?.toString();
         final suggestedSource = meta['source']?.toString();
         var includeLocation = meta['include_location'] == true;

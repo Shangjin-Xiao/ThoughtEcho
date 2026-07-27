@@ -426,6 +426,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         _mediaState.markSavedSuccessfully();
         _editorState.markDraftSaved();
         saveSucceeded = true;
+        widget.onSaved?.call(quote);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -443,6 +444,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         _mediaState.markSavedSuccessfully();
         _editorState.markDraftSaved();
         saveSucceeded = true;
+        widget.onSaved?.call(quote);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

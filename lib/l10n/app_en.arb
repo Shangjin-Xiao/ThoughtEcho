@@ -3899,6 +3899,7 @@
   "aiModeAgent": "Agent Mode",
   "aiAgent": "AI Agent",
   "agentThinking": "Thinking...",
+  "agentReachedMaxRounds": "Reached the tool-call limit for this run. The answer above is based on what was gathered so far; ask again with a narrower request for a more complete result.",
   "agentSearchingNotes": "Searching notes...",
   "agentAnalyzingData": "Analyzing data...",
   "agentWebSearching": "Searching the web...",
