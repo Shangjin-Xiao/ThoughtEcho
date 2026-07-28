@@ -32,11 +32,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.info_outline),
-            tooltip: l10n.agentExperimentalNoticeTitle,
-            onPressed: () => unawaited(showExperimentalNoticeDialog(context)),
-          ),
-          IconButton(
             icon: const Icon(Icons.add_comment),
             tooltip: l10n.newChat,
             onPressed: _startNewChat,
@@ -50,7 +45,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       ),
       body: Column(
         children: [
-          _buildExperimentalNoticeBanner(theme, l10n),
           if (_hasBoundNote) _buildNoteContextBanner(theme),
           if (_entrySource == AIAssistantEntrySource.explore &&
               widget.exploreGuideSummary?.trim().isNotEmpty == true)
@@ -119,75 +113,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     ThemeData theme,
     AppLocalizations l10n,
   ) {
-    if (!_showExperimentalBanner) return const SizedBox.shrink();
-
-    final colorScheme = theme.colorScheme;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: colorScheme.tertiaryContainer.withValues(alpha: 0.35),
-        border: Border(
-          bottom: BorderSide(
-            color: colorScheme.tertiary.withValues(alpha: 0.25),
-            width: 0.8,
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.science_outlined,
-            size: 16,
-            color: colorScheme.tertiary,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              l10n.agentExperimentalBannerText,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onTertiaryContainer,
-                fontSize: 11.5,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 4),
-          TextButton(
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            onPressed: () => unawaited(showExperimentalNoticeDialog(context)),
-            child: Text(
-              l10n.agentExperimentalNoticeAction,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.bold,
-                color: colorScheme.tertiary,
-              ),
-            ),
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.close,
-              size: 14,
-              color: colorScheme.onTertiaryContainer.withValues(alpha: 0.7),
-            ),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-            tooltip: l10n.cancel,
-            onPressed: () {
-              _setState(() {
-                _showExperimentalBanner = false;
-              });
-            },
-          ),
-        ],
-      ),
-    );
+    return const SizedBox.shrink();
   }
 
   Widget _buildExploreGuideBanner(ThemeData theme, AppLocalizations l10n) {

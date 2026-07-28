@@ -39,6 +39,15 @@ Finder _smartResultCardKey() => find.byWidgetPredicate(
               .startsWith('ai_workflow_result_smart_result'),
     );
 
+/// 提案卡片同理（ai_workflow_result_note_proposal_<id>）。
+Finder _noteProposalCardKey() => find.byWidgetPredicate(
+      (widget) =>
+          widget.key is ValueKey<String> &&
+          (widget.key! as ValueKey<String>)
+              .value
+              .startsWith('ai_workflow_result_note_proposal'),
+    );
+
 class _InMemoryChatSessionService extends ChatSessionService {
   final Map<String, ChatSession> _sessions = <String, ChatSession>{};
   final Map<String, List<app_chat.ChatMessage>> _messages =
@@ -298,21 +307,36 @@ class _FakeAgentService extends AgentService {
       await _delay(postToolDelay);
     }
 
-    final toolCalls = emitSmartResultCard
-        ? <ToolCall>[
-            ToolCall(
-              id: 'tool-call-2',
-              name: 'propose_edit',
-              arguments: <String, Object?>{
-                'title': '润色结果',
-                'content': '这是可应用的新内容',
-                'action': 'replace',
-                'include_location': true,
-                'include_weather': true,
-              },
+    // 真实协议：agent 通过 propose_note_edit 工具产出 NoteProposalArtifact，
+    // 页面据 response.artifacts 渲染提案卡（死工具 propose_edit 已删除）。
+    final toolExecutions = emitSmartResultCard
+        ? <ToolExecution>[
+            ToolExecution(
+              call: ToolCall(
+                id: 'tool-call-2',
+                name: 'propose_note_edit',
+                arguments: const <String, Object?>{'note_id': 'note-1'},
+              ),
+              result: ToolResult(
+                toolCallId: 'tool-call-2',
+                content: '提案已生成',
+                artifact: NoteProposalArtifact(
+                  action: NoteProposalAction.edit,
+                  proposalTitle: '润色结果',
+                  reason: '',
+                  noteId: 'note-1',
+                  resultKind: NoteDocumentKind.plain,
+                  content: '这是可应用的新内容',
+                  documentOps: null,
+                  metadata: const <String, Object?>{},
+                  changes: const <NoteProposalChange>[],
+                ),
+              ),
             ),
           ]
-        : const <ToolCall>[];
+        : const <ToolExecution>[];
+    final toolCalls =
+        toolExecutions.map((execution) => execution.call).toList();
 
     for (final chunk in responseChunks) {
       _emitEvent(AgentTextDeltaEvent(chunk));
@@ -337,7 +361,11 @@ class _FakeAgentService extends AgentService {
       ),
     );
     _setMockState(isRunning: false, statusKey: '');
-    return AgentResponse(content: responseContent, toolCalls: toolCalls);
+    return AgentResponse(
+      content: responseContent,
+      toolCalls: toolCalls,
+      toolExecutions: toolExecutions,
+    );
   }
 
   void _emitEvent(AgentEvent event) {
@@ -1487,6 +1515,38 @@ void main() {
 
       expect(find.byType(Dialog), findsNothing);
       expect(settingsService.dontShowAgentExperimentalNotice, isTrue);
+    });
+
+    testWidgets(
+        'shows notice dialog when tapping ExperimentalBadge tag in app bar',
+        (WidgetTester tester) async {
+      await settingsService.setDontShowAgentExperimentalNotice(true);
+      final agentService = _FakeAgentService(settingsService: settingsService);
+
+      final harness = await _buildHarness(
+        settingsService: settingsService,
+        chatSessionService: chatSessionService,
+        agentService: agentService,
+        child: const AIAssistantPage(
+          entrySource: AIAssistantEntrySource.explore,
+        ),
+      );
+
+      await tester.pumpWidget(harness);
+      await tester.pumpAndSettle();
+
+      // Initially no dialog because dontShow is true
+      expect(find.byType(Dialog), findsNothing);
+
+      // Tap on ExperimentalBadge tag in AppBar
+      final badgeFinder = find.byType(ExperimentalBadge);
+      expect(badgeFinder, findsOneWidget);
+      await tester.tap(badgeFinder);
+      await tester.pumpAndSettle();
+
+      // Dialog pops up
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(find.text('Thoughter 实验性功能说明'), findsOneWidget);
     });
   });
 }

@@ -94,7 +94,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   final Uuid _uuid = const Uuid();
 
   bool _isLoading = false;
-  bool _showExperimentalBanner = true;
   String? _currentSessionId;
   StreamSubscription<String>? _streamSubscription;
   late ChatSessionService _chatSessionService;

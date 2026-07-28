@@ -14,12 +14,16 @@ class ExperimentalBadge extends StatelessWidget {
   final bool compact;
   final EdgeInsetsGeometry? padding;
   final double? fontSize;
+  final VoidCallback? onTap;
+  final bool enableTapNotice;
 
   const ExperimentalBadge({
     super.key,
     this.compact = false,
     this.padding,
     this.fontSize,
+    this.onTap,
+    this.enableTapNotice = true,
   });
 
   @override
@@ -31,7 +35,9 @@ class ExperimentalBadge extends StatelessWidget {
     final badgeBg = colorScheme.tertiaryContainer.withValues(alpha: 0.85);
     final badgeFg = colorScheme.onTertiaryContainer;
 
-    return Container(
+    final borderRadius = BorderRadius.circular(compact ? 6 : 8);
+
+    final Widget badgeContent = Container(
       padding: padding ??
           EdgeInsets.symmetric(
             horizontal: compact ? 6 : 8,
@@ -39,7 +45,7 @@ class ExperimentalBadge extends StatelessWidget {
           ),
       decoration: BoxDecoration(
         color: badgeBg,
-        borderRadius: BorderRadius.circular(compact ? 6 : 8),
+        borderRadius: borderRadius,
         border: Border.all(
           color: colorScheme.tertiary.withValues(alpha: 0.35),
           width: 0.8,
@@ -67,6 +73,26 @@ class ExperimentalBadge extends StatelessWidget {
         ],
       ),
     );
+
+    final effectiveOnTap = onTap ??
+        (enableTapNotice
+            ? () => unawaited(showExperimentalNoticeDialog(context))
+            : null);
+
+    if (effectiveOnTap != null) {
+      return Material(
+        color: Colors.transparent,
+        borderRadius: borderRadius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: effectiveOnTap,
+          borderRadius: borderRadius,
+          child: badgeContent,
+        ),
+      );
+    }
+
+    return badgeContent;
   }
 }
 
@@ -148,7 +174,10 @@ Future<void> showExperimentalNoticeDialog(BuildContext context) async {
                               ],
                             ),
                             const SizedBox(height: 4),
-                            const ExperimentalBadge(compact: true),
+                            const ExperimentalBadge(
+                              compact: true,
+                              enableTapNotice: false,
+                            ),
                           ],
                         ),
                       ),
