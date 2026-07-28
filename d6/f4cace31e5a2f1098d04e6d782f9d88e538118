@@ -1,0 +1,29 @@
+lib/services/agent_service.dart
+  s_aa7d2b10279f77::t_4687bffb44dcaa 331,416-421,423-424,754,763-768,796,1307,1311,1316
+lib/models/chat_message.dart
+  s_aa7d2b10279f77::t_4687bffb44dcaa 1-2,28-38
+  s_aa7d2b10279f77::t_956275ae2a30be 39
+lib/widgets/ai/smart_result_card.dart
+  s_aa7d2b10279f77::t_4687bffb44dcaa 400-401,804-810
+lib/pages/ai_assistant/ai_assistant_page_ui.dart
+  s_aa7d2b10279f77::t_4687bffb44dcaa 76-80,224-225,239,324,1747-1764,1766
+  s_aa7d2b10279f77::t_9cb2a2b79a5b8d 1765
+lib/theme/app_theme.dart
+  s_aa7d2b10279f77::t_4687bffb44dcaa 325,330,363,382,401,420,478-485,488,529,594,646
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d6f4cace31e5a2f1098d04e6d782f9d88e538118",
+  "prompts": {},
+  "sessions": {
+    "s_aa7d2b10279f77": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05bf16b4fffeZKx0NcJZ00DJTh",
+        "model": "kimi-k3"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
