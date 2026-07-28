@@ -1,0 +1,23 @@
+res/index.html
+  s_4715c26a526174::t_349ef97b68b7ab 195
+  s_4715c26a526174::t_34db097ef2618c 1842-1844,1847-1851
+  s_4715c26a526174::t_6f6187e89843a7 394,397-398,403-427
+  s_4715c26a526174::t_598eed7323a0e7 486-487,491,494-496,501-506,509-513
+  s_4715c26a526174::t_079f4a3aa2a384 428-429
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "27327df64a7cc79c97abfd009f19b36a465ad722",
+  "prompts": {},
+  "sessions": {
+    "s_4715c26a526174": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05927635effejUWAPIsdJb0cbS",
+        "model": "kimi-k3"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
