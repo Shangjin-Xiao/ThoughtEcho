@@ -1223,7 +1223,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                         child: Row(
                           children: [
                             Icon(
-                              Icons.question_answer,
+                              Icons.lightbulb_outline,
                               color: theme.colorScheme.primary,
                             ),
                             const SizedBox(width: 8),

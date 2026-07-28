@@ -464,7 +464,7 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
     final theme = Theme.of(context);
 
     return _buildEntryCard(
-      icon: Icons.smart_toy_outlined,
+      icon: Icons.lightbulb_outline,
       title: l10n.aiChat,
       subtitle: l10n.chatWithAiAssistant,
       color: theme.colorScheme.primaryContainer,

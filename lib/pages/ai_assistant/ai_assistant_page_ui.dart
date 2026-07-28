@@ -175,7 +175,12 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                           current,
                         ),
                 onViewNote: _viewSavedNote,
-                onOpenInEditor: () => _openNoteProposalInEditor(artifact),
+                onOpenInEditor: () async {
+                  final noteId = await _openNoteProposalInEditor(artifact);
+                  if (noteId != null && noteId.isNotEmpty) {
+                    _updateSmartResultSavedNoteId(message.id, noteId);
+                  }
+                },
                 onApply: () async {
                   final noteId = await _applyNoteProposal(artifact);
                   if (noteId != null) {
@@ -842,7 +847,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     );
   }
 
-  Future<void> _openNoteProposalInEditor(
+  Future<String?> _openNoteProposalInEditor(
     NoteProposalArtifact artifact,
   ) async {
     final db = context.read<DatabaseService>();
@@ -851,7 +856,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       if (artifact.resultKind == NoteDocumentKind.plain &&
           !context.read<SettingsService>().skipNonFullscreenEditor) {
         final tags = await db.getCategories();
-        if (!mounted) return;
+        if (!mounted) return null;
+        String? savedId;
         await showModalBottomSheet<void>(
           context: context,
           isScrollControlled: true,
@@ -868,16 +874,19 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 artifact.metadata['include_weather'] == true,
             useAIPrefilledLocationWeather: true,
             tags: tags,
-            onSave: db.addQuote,
+            onSave: (quote) async {
+              await db.addQuote(quote);
+              savedId = quote.id;
+            },
           ),
         );
-        return;
+        return savedId;
       }
       final richOps = validatedOps ??
           [
             {'insert': '${artifact.content}\n'}
           ];
-      await _openSmartResultAsNewNote(
+      return _openSmartResultAsNewNote(
         artifact.content,
         richDocument: richOps,
         tagIds: _extractStringList(artifact.metadata['tag_ids']),
@@ -886,18 +895,18 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         includeLocation: artifact.metadata['include_location'] == true,
         includeWeather: artifact.metadata['include_weather'] == true,
       );
-      return;
     }
 
     final note = await db.getQuoteById(artifact.noteId!);
     if (note == null ||
         ProposeNoteEditTool.revisionForQuote(note) != artifact.baseRevision) {
       _showRichEditConflict();
-      return;
+      return null;
     }
     final proposed = _quoteFromArtifact(note, artifact);
     final tags = await db.getCategories();
-    if (!mounted) return;
+    if (!mounted) return null;
+    String? savedId;
     if (artifact.resultKind == NoteDocumentKind.rich) {
       await Navigator.push(
         context,
@@ -907,6 +916,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
             initialQuote: proposed,
             allTags: tags,
             skipDefaultMetadataAutofill: true,
+            onSaved: (savedQuote) => savedId = savedQuote.id,
           ),
         ),
       );
@@ -917,10 +927,14 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         builder: (_) => AddNoteDialog(
           initialQuote: proposed,
           tags: tags,
-          onSave: db.updateQuote,
+          onSave: (quote) async {
+            await db.updateQuote(quote);
+            savedId = quote.id;
+          },
         ),
       );
     }
+    return savedId;
   }
 
   Future<String?> _applyNoteProposal(NoteProposalArtifact artifact) async {
@@ -1092,6 +1106,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       if (rawMeta == null) return;
       final meta = jsonDecode(rawMeta) as Map<String, dynamic>;
       meta['saved_note_id'] = noteId;
+      meta['applied'] = true;
       final updatedMessage = oldMessage.copyWith(metaJson: jsonEncode(meta));
       _messages[index] = updatedMessage;
       if (_currentSessionId != null) {

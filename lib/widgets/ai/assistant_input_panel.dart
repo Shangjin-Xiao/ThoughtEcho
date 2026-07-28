@@ -203,7 +203,7 @@ class AIAssistantInputPanel extends StatelessWidget {
                         children: [
                           Icon(
                             isAgentMode
-                                ? Icons.smart_toy_outlined
+                                ? Icons.lightbulb_outline
                                 : Icons.chat_outlined,
                             size: 14,
                             color: theme.colorScheme.primary,

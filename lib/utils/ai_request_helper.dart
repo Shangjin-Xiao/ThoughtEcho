@@ -64,13 +64,20 @@ class AIRequestHelper {
     final selected = <Map<String, dynamic>>[];
 
     for (int i = contextMessages.length - 1; i >= 0; i--) {
-      String content = contextMessages[i].content;
+      final msg = contextMessages[i];
+      String content = msg.content;
+      final meta = msg.parsedMeta;
+      if (msg.role == 'assistant' &&
+          meta != null &&
+          (meta['saved_note_id'] != null || meta['applied'] == true)) {
+        content += '\n\n[系统提示：用户已采纳并应用了上述提案/编辑建议]';
+      }
       if (content.length > singleMessageCap) {
         content = '${content.substring(0, singleMessageCap)}...';
       }
       if (usedChars + content.length > budget) break;
       usedChars += content.length;
-      selected.insert(0, {'role': contextMessages[i].role, 'content': content});
+      selected.insert(0, {'role': msg.role, 'content': content});
     }
 
     messages.addAll(selected);
