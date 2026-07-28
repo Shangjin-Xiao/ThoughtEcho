@@ -1,0 +1,66 @@
+lib/l10n/app_en.arb
+  s_aa7d2b10279f77::t_9f6b41d8d8bf09 4120-4126
+lib/widgets/ai/note_proposal_card.dart
+  s_aa7d2b10279f77::t_598b80f61de534 1-298
+lib/pages/ai_assistant/ai_assistant_page_quick_edit.dart
+  s_aa7d2b10279f77::t_a3256d58d4c513 269-298
+  s_aa7d2b10279f77::t_d8e91a09e9d7e6 1-268,299-314
+  s_aa7d2b10279f77::t_66e227258ac08a 315-317
+lib/pages/ai_assistant/ai_assistant_page_ui.dart
+  s_aa7d2b10279f77::t_9af6dc191c59ac 248-258,262-265
+  s_aa7d2b10279f77::t_3e52ecdb2841f1 350-360
+test/widget/pages/ai_assistant_page_test.dart
+  s_aa7d2b10279f77::t_b61f5267bbc7e3 32-41,1344,1381,1442
+lib/pages/ai_assistant_page.dart
+  s_aa7d2b10279f77::t_4d9df6af47ad0c 51
+  s_aa7d2b10279f77::t_7511d147a77643 66
+  s_24c5db3fe390d7::t_5e3c371b2e75cd 54
+test/widgets/smart_result_card_test.dart
+  s_aa7d2b10279f77::t_76c2af5375ac1f 147-149
+  s_aa7d2b10279f77::t_1cf453ed08e8cc 98-101,119-121
+  s_aa7d2b10279f77::t_cb6bedf962b33d 70-73
+  s_aa7d2b10279f77::t_502c78941dca88 118
+lib/widgets/ai/smart_result_card.dart
+  s_aa7d2b10279f77::t_af06c51eab7b37 11,13,32-34,44-53,64-72,88-90,96-97,113,156-157,159,163-167,169-184,186,188,192,214,226,238-242,253-283,292-317,349-358,377,394
+  s_aa7d2b10279f77::t_161dd2a5526968 395
+lib/widgets/ai/ai_card_parts.dart
+  s_aa7d2b10279f77::t_226140b7bcb9e3 4-41,43-48,52-62,76,85,88,91-250,252-273
+  s_aa7d2b10279f77::t_7c66be8ec6456b 1-2
+  s_aa7d2b10279f77::t_2c441ee10cea63 251
+  s_aa7d2b10279f77::t_5db87b3755dcef 42,49-51,63-75,77-84,86-87,89-90
+  s_aa7d2b10279f77::t_b917a9522c0866 3
+lib/l10n/app_zh.arb
+  s_aa7d2b10279f77::t_db7a19240235b1 4120-4126
+test/widget/smart_result_card_test.dart
+  s_aa7d2b10279f77::t_0cf98e0520da75 43-45
+  s_aa7d2b10279f77::t_2a8303268d699a 178-195,197-215,233-234
+  s_aa7d2b10279f77::t_0684e67fb2703a 196
+test/widget/widgets/note_proposal_card_test.dart
+  s_aa7d2b10279f77::t_fe50e294c09369 8,35,59,63-67,72,87,91-92,102-127,129-151
+  s_aa7d2b10279f77::t_0816db58c117d9 128
+  s_aa7d2b10279f77::t_13fb58740e284e 88,101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "072339eb551efcdce416ccfc6dd585f62fffcdbc",
+  "prompts": {},
+  "sessions": {
+    "s_24c5db3fe390d7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05924023dffemPqShuG2xR0Db1",
+        "model": "kimi-k3"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_aa7d2b10279f77": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05bf16b4fffeZKx0NcJZ00DJTh",
+        "model": "kimi-k3"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
