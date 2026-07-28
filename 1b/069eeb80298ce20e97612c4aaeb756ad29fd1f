@@ -1,0 +1,23 @@
+test/widget/pages/ai_assistant_page_test.dart
+  s_aa7d2b10279f77::t_60d3f43d813d63 320-332
+  s_aa7d2b10279f77::t_c2a105915d0445 364-368
+  s_aa7d2b10279f77::t_d3fe17b6b86619 42-50
+  s_aa7d2b10279f77::t_6f95bc7d10ca52 317-319
+  s_aa7d2b10279f77::t_a72033b209e53b 333-334
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "1b069eeb80298ce20e97612c4aaeb756ad29fd1f",
+  "prompts": {},
+  "sessions": {
+    "s_aa7d2b10279f77": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05bf16b4fffeZKx0NcJZ00DJTh",
+        "model": "kimi-k3"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
