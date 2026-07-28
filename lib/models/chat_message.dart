@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// 消息状态枚举 - 追踪消息的生成过程
 enum MessageState {
   pending, // 等待中
@@ -22,6 +24,18 @@ class ChatMessage {
   final bool isLoading;
   final bool includedInContext; // 是否纳入 AI 上下文
   final String? metaJson; // 扩展元数据（Phase 2 tool_call 等）
+
+  Map<String, dynamic>? _parsedMeta;
+
+  /// 缓存反序列化后的元数据 Map，避免列表滚动刷新时重复 jsonDecode
+  Map<String, dynamic>? get parsedMeta {
+    if (_parsedMeta == null && metaJson != null && metaJson!.isNotEmpty) {
+      try {
+        _parsedMeta = jsonDecode(metaJson!) as Map<String, dynamic>;
+      } catch (_) {}
+    }
+    return _parsedMeta;
+  }
 
   // 流式传输相关字段（SOTA 实时显示）
   final MessageState state; // 消息当前状态

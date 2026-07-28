@@ -397,7 +397,8 @@ class _SmartResultCardState extends State<SmartResultCard> {
     final showSaveDirectly =
         widget.onSaveDirectly != null || widget.onSaveDraftDirectly != null;
     final isSaved = _savedNoteId != null && _savedNoteId!.isNotEmpty;
-    final canChangeMetadata = !isSaved &&
+    final canChangeMetadata = !widget.readOnly &&
+        !isSaved &&
         !_isSaving &&
         (showSaveDirectly ||
             widget.onOpenInEditor != null ||
@@ -800,51 +801,13 @@ class _MetaToggleChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = selected
-        ? theme.colorScheme.primary
-        : theme.colorScheme.onSurfaceVariant;
-    final bgColor = selected
-        ? theme.colorScheme.primary.withValues(alpha: 0.12)
-        : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6);
-    final borderColor = selected
-        ? theme.colorScheme.primary.withValues(alpha: 0.5)
-        : theme.colorScheme.outlineVariant.withValues(alpha: 0.6);
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: borderColor, width: 0.8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 13,
-              color: color,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: enabled
-                    ? color
-                    : theme.colorScheme.onSurface.withValues(alpha: 0.38),
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                height: 1.1,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
+    return FilterChip(
+      avatar: Icon(icon, size: 14),
+      label: Text(label),
+      selected: selected,
+      onSelected: enabled && onTap != null ? (_) => onTap!() : null,
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.padded,
     );
   }
 }

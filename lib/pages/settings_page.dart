@@ -248,7 +248,6 @@ class SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final locationService = context.watch<LocationService>();
     final theme = Theme.of(context);
 
     final l10n = AppLocalizations.of(context);
@@ -262,192 +261,195 @@ class SettingsPageState extends State<SettingsPage> {
           _buildAnniversaryBanner(context),
 
           // 位置和天气设置 Card
-          Card(
-            margin: const EdgeInsets.all(8.0),
-            child: Column(
-              children: [
-                ListTile(
-                  title: Text(l10n.settingsLocationWeather),
-                  leading: const Icon(Icons.location_on),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Divider(
-                    color: theme.colorScheme.outline.withAlpha(
-                      (0.2 * 255).round(),
+          Consumer<LocationService>(
+            builder: (context, locationService, _) => Card(
+              margin: const EdgeInsets.all(8.0),
+              child: Column(
+                children: [
+                  ListTile(
+                    title: Text(l10n.settingsLocationWeather),
+                    leading: const Icon(Icons.location_on),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Divider(
+                      color: theme.colorScheme.outline.withAlpha(
+                        (0.2 * 255).round(),
+                      ),
                     ),
                   ),
-                ),
-                SwitchListTile(
-                  title: Text(l10n.settingsUseLocationService),
-                  subtitle: Text(
-                    locationService.hasLocationPermission
-                        ? (locationService.isLocationServiceEnabled
-                            ? l10n.settingsLocationEnabled
-                            : l10n.settingsLocationPermissionOnly)
-                        : l10n.settingsLocationNoPermission,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: locationService.hasLocationPermission &&
-                              locationService.isLocationServiceEnabled
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.error,
+                  SwitchListTile(
+                    title: Text(l10n.settingsUseLocationService),
+                    subtitle: Text(
+                      locationService.hasLocationPermission
+                          ? (locationService.isLocationServiceEnabled
+                              ? l10n.settingsLocationEnabled
+                              : l10n.settingsLocationPermissionOnly)
+                          : l10n.settingsLocationNoPermission,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: locationService.hasLocationPermission &&
+                                locationService.isLocationServiceEnabled
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.error,
+                      ),
                     ),
-                  ),
-                  value: locationService.hasLocationPermission &&
-                      locationService.isLocationServiceEnabled,
-                  onChanged: (value) async {
-                    if (value) {
-                      bool permissionGranted =
-                          await locationService.requestLocationPermission();
-                      if (!permissionGranted) {
+                    value: locationService.hasLocationPermission &&
+                        locationService.isLocationServiceEnabled,
+                    onChanged: (value) async {
+                      if (value) {
+                        bool permissionGranted =
+                            await locationService.requestLocationPermission();
+                        if (!permissionGranted) {
+                          if (mounted && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(l10n.locationPermissionDenied),
+                                duration: AppConstants.snackBarDurationError,
+                              ),
+                            );
+                          }
+                          return;
+                        }
+
+                        bool serviceEnabled =
+                            await Geolocator.isLocationServiceEnabled();
+                        if (!mounted) return; // Add this check
+                        if (!serviceEnabled) {
+                          if (mounted && context.mounted) {
+                            final currentContext =
+                                context; // Capture context before async gap
+                            showDialog(
+                              context: currentContext,
+                              builder: (context) => AlertDialog(
+                                title: Text(l10n.enableLocationService),
+                                content: Text(l10n.enableLocationServiceDesc),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(currentContext),
+                                    child: Text(l10n.cancel),
+                                  ),
+                                  TextButton(
+                                    onPressed: () async {
+                                      if (!currentContext.mounted) {
+                                        return; // Check mounted before pop
+                                      }
+                                      Navigator.pop(currentContext);
+                                      await Geolocator.openLocationSettings();
+                                      if (!mounted) return; // Add this check
+                                    },
+                                    child: Text(l10n.goToSettings),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          return;
+                        }
+
                         if (mounted && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(l10n.locationPermissionDenied),
-                              duration: AppConstants.snackBarDurationError,
+                              content: Text(l10n.gettingLocation),
+                              duration: const Duration(seconds: 2),
                             ),
                           );
                         }
-                        return;
-                      }
-
-                      bool serviceEnabled =
-                          await Geolocator.isLocationServiceEnabled();
-                      if (!mounted) return; // Add this check
-                      if (!serviceEnabled) {
-                        if (mounted && context.mounted) {
-                          final currentContext =
-                              context; // Capture context before async gap
-                          showDialog(
-                            context: currentContext,
-                            builder: (context) => AlertDialog(
-                              title: Text(l10n.enableLocationService),
-                              content: Text(l10n.enableLocationServiceDesc),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(currentContext),
-                                  child: Text(l10n.cancel),
-                                ),
-                                TextButton(
-                                  onPressed: () async {
-                                    if (!currentContext.mounted) {
-                                      return; // Check mounted before pop
-                                    }
-                                    Navigator.pop(currentContext);
-                                    await Geolocator.openLocationSettings();
-                                    if (!mounted) return; // Add this check
-                                  },
-                                  child: Text(l10n.goToSettings),
-                                ),
-                              ],
-                            ),
-                          );
+                        final position =
+                            await locationService.getCurrentLocation();
+                        if (!mounted) return; // Add this check
+                        if (position != null) {
+                          if (context.mounted) {
+                            final scaffoldMessenger = ScaffoldMessenger.of(
+                              context,
+                            );
+                            scaffoldMessenger.removeCurrentSnackBar();
+                            scaffoldMessenger.showSnackBar(
+                              SnackBar(
+                                content: Text(l10n.locationServiceEnabled),
+                                duration:
+                                    AppConstants.snackBarDurationImportant,
+                              ),
+                            );
+                          }
+                          setState(() {
+                            _locationController.text =
+                                locationService.getFormattedLocation();
+                          });
+                        } else {
+                          if (!mounted) return;
+                          if (context.mounted) {
+                            final scaffoldMessenger = ScaffoldMessenger.of(
+                              context,
+                            );
+                            scaffoldMessenger.removeCurrentSnackBar();
+                            scaffoldMessenger.showSnackBar(
+                              SnackBar(
+                                content: Text(l10n.cannotGetLocation),
+                                duration: AppConstants.snackBarDurationError,
+                              ),
+                            );
+                          }
                         }
-                        return;
-                      }
-
-                      if (mounted && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(l10n.gettingLocation),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      }
-                      final position =
-                          await locationService.getCurrentLocation();
-                      if (!mounted) return; // Add this check
-                      if (position != null) {
-                        if (context.mounted) {
-                          final scaffoldMessenger = ScaffoldMessenger.of(
-                            context,
-                          );
-                          scaffoldMessenger.removeCurrentSnackBar();
-                          scaffoldMessenger.showSnackBar(
-                            SnackBar(
-                              content: Text(l10n.locationServiceEnabled),
-                              duration: AppConstants.snackBarDurationImportant,
-                            ),
-                          );
-                        }
-                        setState(() {
-                          _locationController.text =
-                              locationService.getFormattedLocation();
-                        });
                       } else {
                         if (!mounted) return;
                         if (context.mounted) {
-                          final scaffoldMessenger = ScaffoldMessenger.of(
-                            context,
-                          );
-                          scaffoldMessenger.removeCurrentSnackBar();
+                          final scaffoldMessenger =
+                              ScaffoldMessenger.of(context);
                           scaffoldMessenger.showSnackBar(
                             SnackBar(
-                              content: Text(l10n.cannotGetLocation),
-                              duration: AppConstants.snackBarDurationError,
+                              content: Text(l10n.locationServiceDisabled),
+                              duration: AppConstants.snackBarDurationNormal,
                             ),
                           );
                         }
                       }
-                    } else {
-                      if (!mounted) return;
-                      if (context.mounted) {
-                        final scaffoldMessenger = ScaffoldMessenger.of(context);
-                        scaffoldMessenger.showSnackBar(
-                          SnackBar(
-                            content: Text(l10n.locationServiceDisabled),
-                            duration: AppConstants.snackBarDurationNormal,
-                          ),
-                        );
+                      if (mounted) {
+                        setState(() {});
                       }
-                    }
-                    if (mounted) {
-                      setState(() {});
-                    }
-                  },
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 8.0,
+                    },
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.settingsSetLocation,
-                        style: theme.textTheme.titleSmall,
-                      ),
-                      const SizedBox(height: 8.0),
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.search),
-                        label: Text(l10n.settingsSearchCity),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(50),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.settingsSetLocation,
+                          style: theme.textTheme.titleSmall,
                         ),
-                        onPressed: () {
-                          _showCitySearchDialog(context);
-                        },
-                      ),
-                      const SizedBox(height: 8.0),
-                      Text(
-                        '${l10n.settingsCurrentLocation}: ${locationService.currentAddress ?? l10n.settingsNotSet}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.colorScheme.onSurface.withAlpha(
-                            (0.6 * 255).round(),
+                        const SizedBox(height: 8.0),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.search),
+                          label: Text(l10n.settingsSearchCity),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(50),
+                          ),
+                          onPressed: () {
+                            _showCitySearchDialog(context);
+                          },
+                        ),
+                        const SizedBox(height: 8.0),
+                        Text(
+                          '${l10n.settingsCurrentLocation}: ${locationService.currentAddress ?? l10n.settingsNotSet}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.colorScheme.onSurface.withAlpha(
+                              (0.6 * 255).round(),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 8.0),
-                    ],
+                        const SizedBox(height: 8.0),
+                      ],
+                    ),
                   ),
-                ),
-
-                // 当前天气信息已移动到"搜索并选择城市"对话框内
-              ],
+                  // 当前天气信息已移动到"搜索并选择城市"对话框内
+                ],
+              ),
             ),
           ),
 

@@ -322,10 +322,12 @@ class AppTheme with ChangeNotifier {
     // 更新动态颜色方案
     if (_lightDynamicColorScheme != processedLightScheme) {
       _lightDynamicColorScheme = processedLightScheme;
+      _clearThemeCache();
     }
 
     if (_darkDynamicColorScheme != processedDarkScheme) {
       _darkDynamicColorScheme = processedDarkScheme;
+      _clearThemeCache();
     }
 
     // 检查系统是否支持动态取色
@@ -358,6 +360,7 @@ class AppTheme with ChangeNotifier {
   Future<void> setCustomColor(Color color) async {
     if (_customColor == color) return;
     _customColor = color;
+    _clearThemeCache();
     // 先刷新UI，避免持久化卡住导致“怎么点都没反应”
     notifyListeners();
 
@@ -376,6 +379,7 @@ class AppTheme with ChangeNotifier {
   Future<void> setUseCustomColor(bool value) async {
     if (_useCustomColor == value) return;
     _useCustomColor = value;
+    _clearThemeCache();
     // 先刷新UI，避免持久化卡住导致无响应
     notifyListeners();
 
@@ -394,6 +398,7 @@ class AppTheme with ChangeNotifier {
   Future<void> setThemeMode(ThemeMode mode) async {
     if (_themeMode == mode) return;
     _themeMode = mode;
+    _clearThemeCache();
     // 先刷新UI，避免存储层偶发卡顿/异常导致“怎么点都没反应”
     notifyListeners();
 
@@ -412,6 +417,7 @@ class AppTheme with ChangeNotifier {
   Future<void> setUseDynamicColor(bool value) async {
     if (_useDynamicColor == value) return;
     _useDynamicColor = value;
+    _clearThemeCache();
     // 先刷新UI，避免持久化卡住导致无响应
     notifyListeners();
 
@@ -469,8 +475,17 @@ class AppTheme with ChangeNotifier {
     }
   }
 
+  ThemeData? _cachedLightThemeData;
+  ThemeData? _cachedDarkThemeData;
+
+  void _clearThemeCache() {
+    _cachedLightThemeData = null;
+    _cachedDarkThemeData = null;
+  }
+
   // 创建亮色主题数据
   ThemeData createLightThemeData() {
+    if (_cachedLightThemeData != null) return _cachedLightThemeData!;
     final baseTheme = FlexThemeData.light(
       colorScheme: lightColorScheme,
       useMaterial3: true,
@@ -511,7 +526,7 @@ class AppTheme with ChangeNotifier {
     // 使用主题色系的浅色调，确保颜色一致性
     final colorScheme = baseTheme.colorScheme;
 
-    return baseTheme.copyWith(
+    return _cachedLightThemeData = baseTheme.copyWith(
       // 使用主题色系的极浅背景色
       scaffoldBackgroundColor: colorScheme.surface,
 
@@ -576,6 +591,7 @@ class AppTheme with ChangeNotifier {
 
   // 创建暗色主题数据
   ThemeData createDarkThemeData() {
+    if (_cachedDarkThemeData != null) return _cachedDarkThemeData!;
     final colorScheme = darkColorScheme;
 
     final baseTheme = FlexThemeData.dark(
@@ -627,7 +643,7 @@ class AppTheme with ChangeNotifier {
     );
 
     // 返回主题，确保使用原始的colorScheme，并额外配置控件主题
-    return baseTheme.copyWith(
+    return _cachedDarkThemeData = baseTheme.copyWith(
       colorScheme: colorScheme, // 重新应用原始colorScheme，确保自定义颜色不被修改
       // 显式配置 Switch 主题，确保使用自定义主题色
       switchTheme: SwitchThemeData(

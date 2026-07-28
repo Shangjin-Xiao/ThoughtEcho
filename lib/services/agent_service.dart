@@ -328,7 +328,7 @@ class AgentService extends ChangeNotifier {
           messages: messages,
           tools: openAITools,
           temperature: provider.temperature,
-          maxTokens: 2000,
+          maxTokens: provider.maxTokens,
           runId: runId,
         );
 
@@ -413,10 +413,15 @@ class AgentService extends ChangeNotifier {
               content: assistantContent,
             ));
           }
+          final isTruncated = result.finishReason != null &&
+              (result.finishReason!.contains('length') ||
+                  result.finishReason == 'length');
+          final failureAdvice = isTruncated
+              ? '（模型输出因达到 maxTokens [${provider.maxTokens}] 限制而被截断，导致 JSON 不完整。请精简输出）'
+              : '只提交一个合法 JSON 对象，不要把多个 JSON 对象拼接在一起。';
           messages.add(openai.ChatMessage.user(
-            '上一次工具调用失败：参数不是有效的 JSON 对象。'
-            '请重新调用工具 ${invalidToolNames.join(', ')}，'
-            '只提交一个合法 JSON 对象，不要把多个 JSON 对象拼接在一起。',
+            '上一次工具调用失败：参数不是有效的 JSON 对象。$failureAdvice'
+            '请重新调用工具 ${invalidToolNames.join(', ')}。',
           ));
           continue;
         }
@@ -746,6 +751,7 @@ class AgentService extends ChangeNotifier {
 
       final stream = client.chat.completions.createStream(request);
       final accumulator = openai.ChatStreamAccumulator();
+      String? finishReason;
 
       try {
         await for (final event in stream) {
@@ -754,7 +760,12 @@ class AgentService extends ChangeNotifier {
           }
           accumulator.add(event);
 
-          final delta = event.choices?.firstOrNull?.delta;
+          final choice = event.choices?.firstOrNull;
+          if (choice?.finishReason != null) {
+            finishReason = choice!.finishReason.toString();
+          }
+
+          final delta = choice?.delta;
           final reasoningChunks = <String>[
             if (delta?.reasoningContent?.isNotEmpty == true)
               delta!.reasoningContent!,
@@ -782,6 +793,7 @@ class AgentService extends ChangeNotifier {
       return _StreamCompletionResult(
         content: accumulator.content,
         toolCalls: accumulator.toolCalls,
+        finishReason: finishReason,
       );
     } finally {
       if (identical(_activeStreamClient, client)) {
@@ -1292,14 +1304,16 @@ class AgentService extends ChangeNotifier {
   }
 }
 
-/// 流式补全结果（文本内容 + 工具调用列表）
+/// 流式补全结果（文本内容 + 工具调用列表 + 结束原因）
 class _StreamCompletionResult {
   final String content;
   final List<openai.ToolCall> toolCalls;
+  final String? finishReason;
 
   const _StreamCompletionResult({
     required this.content,
     required this.toolCalls,
+    this.finishReason,
   });
 }
 

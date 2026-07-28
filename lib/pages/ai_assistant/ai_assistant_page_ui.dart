@@ -73,7 +73,11 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
-                      return _buildMessageBubble(_messages[index], theme, l10n);
+                      final message = _messages[index];
+                      return _KeepAliveMessageItem(
+                        key: ValueKey('msg_keepalive_${message.id}'),
+                        child: _buildMessageBubble(message, theme, l10n),
+                      );
                     },
                   ),
                 ),
@@ -217,9 +221,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     ThemeData theme,
     AppLocalizations l10n,
   ) {
-    if (message.metaJson != null) {
+    final meta = message.parsedMeta;
+    if (meta != null) {
       try {
-        final meta = jsonDecode(message.metaJson!) as Map<String, dynamic>;
         switch (meta['type']) {
           case NoteProposalArtifact.typeName:
             final rawArtifact = meta['artifact'];
@@ -232,7 +236,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: NoteProposalCard(
-                key: const ValueKey('ai_workflow_result_note_proposal'),
+                key: ValueKey('ai_workflow_result_note_proposal_${message.id}'),
                 artifact: artifact,
                 plainCreateOpensRich:
                     artifact.action == NoteProposalAction.create &&
@@ -317,7 +321,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: SmartResultCard(
-                key: const ValueKey('ai_workflow_result_smart_result'),
+                key: ValueKey('ai_workflow_result_smart_result_${message.id}'),
                 title: meta['title'] as String? ?? l10n.analysisResult,
                 content: message.content,
                 author: meta['author']?.toString(),
@@ -1738,5 +1742,25 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       }
       rethrow;
     }
+  }
+}
+
+class _KeepAliveMessageItem extends StatefulWidget {
+  final Widget child;
+  const _KeepAliveMessageItem({super.key, required this.child});
+
+  @override
+  State<_KeepAliveMessageItem> createState() => _KeepAliveMessageItemState();
+}
+
+class _KeepAliveMessageItemState extends State<_KeepAliveMessageItem>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }

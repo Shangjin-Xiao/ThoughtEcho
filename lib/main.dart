@@ -717,15 +717,19 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    // 获取设置服务实例
-    final settingsService = Provider.of<SettingsService>(context);
+    final hasCompletedOnboarding = context.select<SettingsService, bool>(
+      (s) => s.hasCompletedOnboarding(),
+    );
+    final localeCode = context.select<SettingsService, String?>(
+      (s) => s.localeCode,
+    );
+    final sentryEnabled = context.select<SettingsService, bool>(
+      (s) => s.sentryEnabled,
+    );
+    final defaultStartPage = context.select<SettingsService, int>(
+      (s) => s.appSettings.defaultStartPage,
+    );
     final appTheme = Provider.of<AppTheme>(context);
-    // 检查是否需要显示引导页面
-    final bool hasCompletedOnboarding =
-        settingsService.hasCompletedOnboarding();
-
-    // 获取用户设置的语言，null 表示跟随系统
-    final localeCode = settingsService.localeCode;
     final Locale? locale = localeCode != null ? Locale(localeCode) : null;
 
     // 使用 DynamicColorBuilder 以支持动态取色功能
@@ -737,9 +741,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
         return MaterialApp(
           navigatorKey: widget.navigatorKey,
-          navigatorObservers: settingsService.sentryEnabled
-              ? [SentryHelper.navigatorObserver]
-              : const [],
+          navigatorObservers:
+              sentryEnabled ? [SentryHelper.navigatorObserver] : const [],
           title: '心迹',
           builder: (context, child) {
             final mediaQuery = MediaQuery.of(context);
@@ -760,8 +763,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   : widget.isEmergencyMode
                       ? const EmergencyRecoveryPage()
                       : HomePage(
-                          initialPage:
-                              settingsService.appSettings.defaultStartPage,
+                          initialPage: defaultStartPage,
                         ),
           localizationsDelegates: const [
             AppLocalizations.delegate,

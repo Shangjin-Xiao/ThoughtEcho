@@ -747,8 +747,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final weatherService = Provider.of<WeatherService>(context);
-    final locationService = Provider.of<LocationService>(context);
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     // 直接用context.watch<bool>()获取服务初始化状态（仅变化一次）
@@ -828,10 +826,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                             titleContent,
                             const SizedBox(width: 8),
                             Expanded(
-                              child: _buildLocationWeatherDisplay(
-                                context,
-                                locationService,
-                                weatherService,
+                              child: Consumer2<LocationService, WeatherService>(
+                                builder: (context, locSvc, weaSvc, _) {
+                                  return _buildLocationWeatherDisplay(
+                                    context,
+                                    locSvc,
+                                    weaSvc,
+                                  );
+                                },
                               ),
                             ),
                           ],

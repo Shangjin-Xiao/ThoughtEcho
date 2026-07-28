@@ -1534,6 +1534,25 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     if (mounted) setState(() {});
   }
 
+  Future<void> _waitForMetadata(Duration maxWait) async {
+    if (!_controller.isFetchingMetadata) return;
+    final completer = Completer<void>();
+    void listener() {
+      if (!_controller.isFetchingMetadata && !completer.isCompleted) {
+        completer.complete();
+      }
+    }
+
+    _controller.addListener(listener);
+    try {
+      await completer.future.timeout(maxWait);
+    } catch (_) {
+      // 超时处理
+    } finally {
+      _controller.removeListener(listener);
+    }
+  }
+
   @override
   void dispose() {
     _controller.removeListener(_onControllerChanged);
@@ -1661,14 +1680,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     var metadataTimedOut = false;
     if (_controller.isFetchingMetadata) {
       if (mounted) setState(() => _waitingForFetch = true);
-      const pollInterval = Duration(milliseconds: 100);
-      const maxWait = Duration(seconds: 5);
-      var waited = Duration.zero;
-      while (_controller.isFetchingMetadata && waited < maxWait) {
-        await Future<void>.delayed(pollInterval);
-        waited += pollInterval;
-        if (!mounted) return;
-      }
+      await _waitForMetadata(const Duration(seconds: 5));
+      if (!mounted) return;
       // 仍在获取中说明是超时，需要告知用户
       metadataTimedOut = _controller.isFetchingMetadata;
       if (mounted) setState(() => _waitingForFetch = false);
