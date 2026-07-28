@@ -4,295 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../extensions/note_category_localization_extension.dart';
 import '../../gen_l10n/app_localizations.dart';
 import '../../models/note_category.dart';
-import '../../models/note_proposal_artifact.dart';
 import '../../models/quote_model.dart';
-import '../../utils/icon_utils.dart';
 import '../quote_content_widget.dart';
+import 'ai_card_parts.dart';
 
-class NoteProposalCard extends StatefulWidget {
-  const NoteProposalCard({
-    super.key,
-    required this.artifact,
-    required this.onOpenInEditor,
-    required this.onApply,
-    this.initialCompleted = false,
-    this.plainCreateOpensRich = false,
-  });
-
-  final NoteProposalArtifact artifact;
-  final Future<void> Function() onOpenInEditor;
-  final Future<bool> Function() onApply;
-  final bool initialCompleted;
-  final bool plainCreateOpensRich;
-
-  @override
-  State<NoteProposalCard> createState() => _NoteProposalCardState();
-}
-
-class _NoteProposalCardState extends State<NoteProposalCard> {
-  bool _expanded = false;
-  bool _changesExpanded = false;
-  bool _saving = false;
-  late bool _completed;
-  bool _failed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _completed = widget.initialCompleted;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
-    final artifact = widget.artifact;
-    final isEdit = artifact.action == NoteProposalAction.edit;
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: theme.colorScheme.outlineVariant),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(artifact.proposalTitle,
-                    style: theme.textTheme.titleMedium),
-                if (isEdit) ...[
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      _ProposalLabel(
-                        text: l10n.noteProposalChangeCount(
-                          artifact.changes.length,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-                if (artifact.reason.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    artifact.reason,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: _expanded ? 520 : 220),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _DocumentPreview(artifact: artifact),
-            ),
-          ),
-          TextButton(
-            onPressed: () => setState(() => _expanded = !_expanded),
-            child: Text(
-              _expanded ? l10n.noteProposalCollapse : l10n.noteProposalExpand,
-            ),
-          ),
-          if (isEdit && artifact.changes.isNotEmpty) ...[
-            const Divider(height: 1),
-            TextButton.icon(
-              onPressed: () =>
-                  setState(() => _changesExpanded = !_changesExpanded),
-              icon: Icon(
-                _changesExpanded ? Icons.expand_less : Icons.history_edu,
-              ),
-              label: Text(l10n.noteProposalViewChanges),
-            ),
-            if (_changesExpanded)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Column(
-                  children: [
-                    for (final change in artifact.changes)
-                      _ChangeTrack(change: change),
-                  ],
-                ),
-              ),
-          ],
-          if (artifact.modeTransition == NoteModeTransition.plainToRich)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Text(
-                l10n.noteProposalPlainToRichWarning,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.tertiary,
-                ),
-              ),
-            ),
-          if (widget.plainCreateOpensRich)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Text(
-                l10n.noteProposalPlainEditorPreferenceWarning,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.tertiary,
-                ),
-              ),
-            ),
-          if (_failed)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Text(
-                l10n.agentErrorGeneric,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
-                ),
-              ),
-            ),
-          const Divider(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-            child: Wrap(
-              alignment: WrapAlignment.end,
-              spacing: 8,
-              children: [
-                TextButton.icon(
-                  onPressed: _saving || _completed ? null : _openInEditor,
-                  icon: const Icon(Icons.edit_note),
-                  label: Text(l10n.openInEditor),
-                ),
-                FilledButton.icon(
-                  onPressed: _saving || _completed || artifact.readOnly
-                      ? null
-                      : _apply,
-                  icon: _saving
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(_completed ? Icons.check : Icons.save_outlined),
-                  label: Text(
-                    _completed
-                        ? l10n.noteProposalCompleted
-                        : isEdit
-                            ? l10n.noteProposalApply
-                            : l10n.noteProposalSave,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _apply() async {
-    setState(() {
-      _saving = true;
-      _failed = false;
-    });
-    try {
-      final completed = await widget.onApply();
-      if (mounted && completed) setState(() => _completed = true);
-    } catch (_) {
-      if (mounted) setState(() => _failed = true);
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  Future<void> _openInEditor() async {
-    setState(() => _failed = false);
-    try {
-      await widget.onOpenInEditor();
-    } catch (_) {
-      if (mounted) setState(() => _failed = true);
-    }
-  }
-}
-
-class _DocumentPreview extends StatelessWidget {
-  const _DocumentPreview({required this.artifact});
-
-  final NoteProposalArtifact artifact;
-
-  @override
-  Widget build(BuildContext context) {
-    if (artifact.resultKind == NoteDocumentKind.plain) {
-      return SelectableText(artifact.content);
-    }
-    return QuoteContent(
-      quote: Quote(
-        id: 'agent-proposal-${artifact.noteId ?? artifact.proposalTitle}',
-        content: artifact.content,
-        date: DateTime.fromMillisecondsSinceEpoch(0).toIso8601String(),
-        editSource: 'fullscreen',
-        deltaContent: jsonEncode(artifact.documentOps),
-      ),
-      showFullContent: true,
-    );
-  }
-}
-
-class _ProposalLabel extends StatelessWidget {
-  const _ProposalLabel({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Chip(
-        visualDensity: VisualDensity.compact,
-        label: Text(text),
-      );
-}
-
-class _ChangeTrack extends StatelessWidget {
-  const _ChangeTrack({required this.change});
-
-  final NoteProposalChange change;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.only(left: 12),
-      decoration: BoxDecoration(
-        border: Border(left: BorderSide(color: theme.colorScheme.tertiary)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (change.before.isNotEmpty) ...[
-            Text(l10n.noteProposalBefore, style: theme.textTheme.labelSmall),
-            Text(
-              change.before,
-              style: theme.textTheme.bodySmall?.copyWith(
-                decoration: TextDecoration.lineThrough,
-              ),
-            ),
-          ],
-          if (change.after.isNotEmpty) ...[
-            Text(l10n.noteProposalAfter, style: theme.textTheme.labelSmall),
-            Text(change.after, style: theme.textTheme.bodySmall),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
+/// 快编草稿：卡片与页面之间传递的可编辑字段。
 class SmartResultDraft {
   const SmartResultDraft({
     required this.content,
@@ -311,6 +29,9 @@ class SmartResultDraft {
   final bool includeWeather;
 }
 
+/// 润色/续写/新建等 AI 工作流结果卡片。
+/// 骨架与 NoteProposalCard 统一：卡头徽章 → 限高内容 → 来源/标签 →
+/// 元数据开关与快编 → 底部操作，保存后变为「✓已保存 · 查看笔记」。
 class SmartResultCard extends StatefulWidget {
   final String title;
   final String content;
@@ -320,6 +41,16 @@ class SmartResultCard extends StatefulWidget {
   final List<NoteCategory> tags;
   final String? locationPreview;
   final String? weatherPreview;
+
+  /// 'create' / 'append' / 'replace'，决定卡头动作徽章；为空时不显示徽章。
+  final String? action;
+
+  /// 追加/替换的目标笔记标题，展示在卡头《》中。
+  final String? targetNoteTitle;
+
+  /// 富文本 Quill delta ops；提供时内容区用 Quill 真实渲染，否则按 Markdown 展示。
+  final List<Map<String, dynamic>>? previewDeltaOps;
+
   final void Function(bool includeLocation, bool includeWeather)?
       onOpenInEditor;
   final void Function(bool includeLocation, bool includeWeather)?
@@ -330,6 +61,15 @@ class SmartResultCard extends StatefulWidget {
   final Future<String?> Function(SmartResultDraft draft)? onOpenDraftInEditor;
   final Future<String?> Function(SmartResultDraft draft)? onSaveDraftDirectly;
   final void Function(String noteId)? onSavedNoteId;
+
+  /// 快编入口：页面弹出快速编辑对话框，返回修改后的草稿（取消返回 null），
+  /// 并负责把改动写回 metaJson 持久化。
+  final Future<SmartResultDraft?> Function(SmartResultDraft current)?
+      onQuickEdit;
+
+  /// 保存完成后「查看笔记」出口。
+  final void Function(String noteId)? onViewNote;
+
   final bool initialIncludeLocation;
   final bool initialIncludeWeather;
   final String? initialSavedNoteId;
@@ -345,11 +85,16 @@ class SmartResultCard extends StatefulWidget {
     this.tags = const [],
     this.locationPreview,
     this.weatherPreview,
+    this.action,
+    this.targetNoteTitle,
+    this.previewDeltaOps,
     this.onOpenInEditor,
     this.onSaveDirectly,
     this.onOpenDraftInEditor,
     this.onSaveDraftDirectly,
     this.onSavedNoteId,
+    this.onQuickEdit,
+    this.onViewNote,
     this.initialIncludeLocation = false,
     this.initialIncludeWeather = false,
     this.initialSavedNoteId,
@@ -365,7 +110,7 @@ class _SmartResultCardState extends State<SmartResultCard> {
   late bool _includeWeather;
   bool _isSaving = false;
   String? _savedNoteId;
-  String? _saveError;
+  bool _saveFailed = false;
 
   @override
   void initState() {
@@ -408,105 +153,43 @@ class _SmartResultCardState extends State<SmartResultCard> {
         : widget.tagNames
             .map((name) => NoteCategory(id: name, name: name))
             .toList();
+    final hasSource = (widget.author?.trim().isNotEmpty ?? false) ||
+        (widget.source?.trim().isNotEmpty ?? false);
 
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-        ),
-      ),
+    return AiCardShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color:
-                  theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.auto_awesome,
-                  size: 18,
-                  color: theme.colorScheme.onSecondaryContainer,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  widget.title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: theme.colorScheme.onSecondaryContainer,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
+          AiCardHeader(
+            isCreate: widget.action == 'create',
+            showBadge: widget.action != null,
+            title: widget.title,
+            targetNoteTitle: widget.targetNoteTitle,
           ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                MarkdownBody(
-                  data: widget.content,
-                  selectable: true,
-                  onTapLink: (text, href, title) async {
-                    if (href == null || href.isEmpty) return;
-                    try {
-                      final uri = Uri.tryParse(href);
-                      if (uri != null && await canLaunchUrl(uri)) {
-                        await launchUrl(uri,
-                            mode: LaunchMode.externalApplication);
-                      }
-                    } catch (_) {}
-                  },
-                ),
-                const SizedBox(height: 12),
-                if (_hasSourceInfo) _buildSourceInfo(),
-                if (_hasSourceInfo && displayTags.isNotEmpty)
-                  const SizedBox(height: 8),
-                if (displayTags.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 5),
-                        child: Icon(
-                          Icons.label_outline,
-                          size: 14,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant
-                              .withValues(alpha: 0.7),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: [
-                            for (final tag in displayTags) _TagChip(tag: tag),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+          const SizedBox(height: 8),
+          AiCardExpandableContent(child: _buildContent()),
+          if (hasSource || displayTags.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (hasSource) ...[
+                    AiCardSourceLine(
+                      author: widget.author,
+                      source: widget.source,
+                    ),
+                    if (displayTags.isNotEmpty) const SizedBox(height: 8),
+                  ],
+                  if (displayTags.isNotEmpty) AiCardTagList(tags: displayTags),
                 ],
-              ],
+              ),
             ),
-          ),
-          if (_saveError != null)
+          if (_saveFailed)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Text(
-                l10n.saveFailed(_saveError!),
+                l10n.aiCardSaveFailedGeneric,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.error,
                 ),
@@ -528,7 +211,7 @@ class _SmartResultCardState extends State<SmartResultCard> {
               spacing: 6,
               runSpacing: 6,
               children: [
-                _MetaToggleChip(
+                AiMetaChip(
                   icon: Icons.location_on_outlined,
                   label: widget.locationPreview ?? l10n.location,
                   selected: _includeLocation,
@@ -540,7 +223,7 @@ class _SmartResultCardState extends State<SmartResultCard> {
                           )
                       : null,
                 ),
-                _MetaToggleChip(
+                AiMetaChip(
                   icon: Icons.wb_sunny_outlined,
                   label: widget.weatherPreview ?? l10n.weather,
                   selected: _includeWeather,
@@ -552,6 +235,11 @@ class _SmartResultCardState extends State<SmartResultCard> {
                           )
                       : null,
                 ),
+                if (widget.onQuickEdit != null && !widget.readOnly)
+                  AiQuickEditChip(
+                    enabled: canChangeMetadata,
+                    onTap: canChangeMetadata ? _handleQuickEdit : null,
+                  ),
               ],
             ),
           ),
@@ -562,34 +250,37 @@ class _SmartResultCardState extends State<SmartResultCard> {
               alignment: WrapAlignment.end,
               spacing: 8,
               children: [
-                if (widget.onOpenInEditor != null ||
-                    widget.onOpenDraftInEditor != null)
-                  TextButton.icon(
-                    onPressed: _isSaving || isSaved || widget.readOnly
-                        ? null
-                        : _handleOpenInEditor,
-                    icon: const Icon(Icons.edit_note, size: 18),
-                    label: Text(l10n.openInEditor),
-                  ),
-                if (showSaveDirectly)
-                  FilledButton.icon(
-                    onPressed: (_isSaving || isSaved || widget.readOnly)
-                        ? null
-                        : _handleSaveDirectly,
-                    icon: _isSaving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Icon(
-                            isSaved
-                                ? Icons.check_circle_outline
-                                : Icons.save_outlined,
-                            size: 18,
-                          ),
-                    label: Text(isSaved ? l10n.noteSaved : l10n.saveDirectly),
-                  ),
+                if (isSaved)
+                  AiCardSavedViewButton(
+                    onPressed: widget.onViewNote != null
+                        ? () => widget.onViewNote!(_savedNoteId!)
+                        : null,
+                  )
+                else ...[
+                  if (widget.onOpenInEditor != null ||
+                      widget.onOpenDraftInEditor != null)
+                    TextButton.icon(
+                      onPressed: _isSaving || widget.readOnly
+                          ? null
+                          : _handleOpenInEditor,
+                      icon: const Icon(Icons.edit_note, size: 18),
+                      label: Text(l10n.openInEditor),
+                    ),
+                  if (showSaveDirectly)
+                    FilledButton.icon(
+                      onPressed: (_isSaving || widget.readOnly)
+                          ? null
+                          : _handleSaveDirectly,
+                      icon: _isSaving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.save_outlined, size: 18),
+                      label: Text(l10n.saveDirectly),
+                    ),
+                ],
               ],
             ),
           ),
@@ -598,27 +289,32 @@ class _SmartResultCardState extends State<SmartResultCard> {
     );
   }
 
-  bool get _hasSourceInfo {
-    return (widget.author?.trim().isNotEmpty ?? false) ||
-        (widget.source?.trim().isNotEmpty ?? false);
-  }
-
-  Widget _buildSourceInfo() {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 4,
-      children: [
-        if (widget.author?.trim().isNotEmpty ?? false)
-          _InlineMetadata(
-            icon: Icons.person_outline,
-            label: widget.author!.trim(),
-          ),
-        if (widget.source?.trim().isNotEmpty ?? false)
-          _InlineMetadata(
-            icon: Icons.menu_book_outlined,
-            label: widget.source!.trim(),
-          ),
-      ],
+  Widget _buildContent() {
+    final ops = widget.previewDeltaOps;
+    if (ops != null) {
+      return QuoteContent(
+        quote: Quote(
+          id: 'smart-result-${widget.title}',
+          content: widget.content,
+          date: DateTime.fromMillisecondsSinceEpoch(0).toIso8601String(),
+          editSource: 'fullscreen',
+          deltaContent: jsonEncode(ops),
+        ),
+        showFullContent: true,
+      );
+    }
+    return MarkdownBody(
+      data: widget.content,
+      selectable: true,
+      onTapLink: (text, href, title) async {
+        if (href == null || href.isEmpty) return;
+        try {
+          final uri = Uri.tryParse(href);
+          if (uri != null && await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+        } catch (_) {}
+      },
     );
   }
 
@@ -650,6 +346,16 @@ class _SmartResultCardState extends State<SmartResultCard> {
     return trimmed.isEmpty ? null : trimmed;
   }
 
+  Future<void> _handleQuickEdit() async {
+    final updated = await widget.onQuickEdit!(_buildDraft());
+    // 页面负责把改动写回 metaJson 并触发重建；这里只同步勾选状态
+    if (updated == null || !mounted) return;
+    setState(() {
+      _includeLocation = updated.includeLocation;
+      _includeWeather = updated.includeWeather;
+    });
+  }
+
   Future<void> _handleOpenInEditor() async {
     final draft = _buildDraft();
     if (widget.onOpenDraftInEditor != null) {
@@ -668,7 +374,7 @@ class _SmartResultCardState extends State<SmartResultCard> {
   Future<void> _handleSaveDirectly() async {
     setState(() {
       _isSaving = true;
-      _saveError = null;
+      _saveFailed = false;
     });
     try {
       final draft = _buildDraft();
@@ -685,10 +391,11 @@ class _SmartResultCardState extends State<SmartResultCard> {
           _savedNoteId = noteId;
         });
       }
-    } catch (e) {
+    } catch (_) {
+      // 具体错误已在上游记录日志，卡片只提示可重试的通用文案
       if (!mounted) return;
       setState(() {
-        _saveError = e.toString();
+        _saveFailed = true;
       });
     } finally {
       if (mounted) {
@@ -697,117 +404,5 @@ class _SmartResultCardState extends State<SmartResultCard> {
         });
       }
     }
-  }
-}
-
-class _InlineMetadata extends StatelessWidget {
-  const _InlineMetadata({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 15, color: theme.colorScheme.onSurfaceVariant),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TagChip extends StatelessWidget {
-  const _TagChip({required this.tag});
-
-  final NoteCategory tag;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
-    final iconName = tag.iconName;
-
-    final bool hasEmoji =
-        iconName != null && iconName.isNotEmpty && IconUtils.isEmoji(iconName);
-    final bool hasIcon =
-        iconName != null && iconName.isNotEmpty && !IconUtils.isEmoji(iconName);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.75),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: theme.colorScheme.primary.withValues(alpha: 0.25),
-          width: 0.8,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (hasEmoji) ...[
-            Text(
-              IconUtils.getDisplayIcon(iconName),
-              style: const TextStyle(fontSize: 13),
-            ),
-            const SizedBox(width: 4),
-          ] else if (hasIcon) ...[
-            Icon(
-              IconUtils.getIconData(iconName),
-              size: 13,
-              color:
-                  theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
-            ),
-            const SizedBox(width: 4),
-          ],
-          Text(
-            tag.localizedName(l10n),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onPrimaryContainer,
-              fontWeight: FontWeight.w500,
-              height: 1.1,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 紧凑的元数据开关胶囊（位置/天气）
-class _MetaToggleChip extends StatelessWidget {
-  const _MetaToggleChip({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.enabled,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final bool enabled;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return FilterChip(
-      avatar: Icon(icon, size: 14),
-      label: Text(label),
-      selected: selected,
-      onSelected: enabled && onTap != null ? (_) => onTap!() : null,
-      visualDensity: VisualDensity.compact,
-      materialTapTargetSize: MaterialTapTargetSize.padded,
-    );
   }
 }

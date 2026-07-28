@@ -40,9 +40,9 @@ void main() {
 
       expect(find.text('AI 建议'), findsOneWidget);
       expect(find.text('建议内容'), findsOneWidget);
-      // 作者和出处
-      expect(find.text('鲁迅'), findsOneWidget);
-      expect(find.text('《呐喊》'), findsOneWidget);
+      // 作者和出处：合并为「——作者《出处}」一行展示
+      expect(find.textContaining('鲁迅'), findsOneWidget);
+      expect(find.textContaining('《呐喊》'), findsOneWidget);
       // 标签
       expect(find.text('文学'), findsOneWidget);
       expect(find.text('经典'), findsOneWidget);
@@ -175,7 +175,44 @@ void main() {
       expect(savedDraft?.includeWeather, isTrue);
     });
 
-    testWidgets('does not expose duplicate inline editing controls',
+    testWidgets('quick edit chip invokes callback and hides when readOnly',
+        (tester) async {
+      SmartResultDraft? received;
+      await tester.pumpWidget(
+        _buildTestWidget(
+          SmartResultCard(
+            title: 'AI 建议',
+            content: '建议内容',
+            onSaveDirectly: (_, __) {},
+            onQuickEdit: (current) async {
+              received = current;
+              return null;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ActionChip, '快编'));
+      await tester.pumpAndSettle();
+      expect(received?.content, '建议内容');
+
+      await tester.pumpWidget(
+        _buildTestWidget(
+          SmartResultCard(
+            title: 'AI 建议',
+            content: '建议内容',
+            readOnly: true,
+            onSaveDirectly: (_, __) {},
+            onQuickEdit: (current) async => null,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('快编'), findsNothing);
+    });
+
+    testWidgets('shows saved view-note action after direct save',
         (tester) async {
       await tester.pumpWidget(
         _buildTestWidget(
@@ -190,13 +227,11 @@ void main() {
         ),
       );
 
-      expect(find.byTooltip('编辑'), findsNothing);
-      expect(find.text('编辑元数据'), findsNothing);
-
       await tester.tap(find.text('直接保存'));
       await tester.pumpAndSettle();
 
-      expect(find.text('笔记已保存'), findsOneWidget);
+      expect(find.text('已保存 · 查看笔记'), findsOneWidget);
+      expect(find.text('直接保存'), findsNothing);
     });
   });
 }

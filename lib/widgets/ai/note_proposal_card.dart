@@ -1,0 +1,298 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+
+import '../../gen_l10n/app_localizations.dart';
+import '../../models/note_category.dart';
+import '../../models/note_proposal_artifact.dart';
+import '../../models/quote_model.dart';
+import '../quote_content_widget.dart';
+import 'ai_card_parts.dart';
+
+/// 快编结果：页面弹窗编辑后写回 artifact（纯文本内容 + author/source/tag_ids）。
+class NoteProposalQuickEdit {
+  const NoteProposalQuickEdit({
+    required this.content,
+    required this.author,
+    required this.source,
+    required this.tagIds,
+  });
+
+  final String content;
+  final String? author;
+  final String? source;
+  final List<String> tagIds;
+}
+
+/// Agent 笔记提案卡片（新建/修改）。
+/// 骨架与 SmartResultCard 统一：卡头徽章 → 限高内容 → 来源/标签 →
+/// 快编 → 底部操作，应用后变为「✓已保存 · 查看笔记」。
+class NoteProposalCard extends StatefulWidget {
+  const NoteProposalCard({
+    super.key,
+    required this.artifact,
+    required this.onOpenInEditor,
+    required this.onApply,
+    this.initialCompleted = false,
+    this.initialSavedNoteId,
+    this.plainCreateOpensRich = false,
+    this.tags = const [],
+    this.onQuickEdit,
+    this.onViewNote,
+  });
+
+  final NoteProposalArtifact artifact;
+  final Future<void> Function() onOpenInEditor;
+
+  /// 应用提案。成功返回笔记 ID（用于「查看笔记」出口）；取消或失败返回 null。
+  final Future<String?> Function() onApply;
+
+  final bool initialCompleted;
+
+  /// 历史会话恢复出的已保存笔记 ID。
+  final String? initialSavedNoteId;
+  final bool plainCreateOpensRich;
+
+  /// 展示用标签（页面按 metadata 中的 tag_ids/tag_names 解析）。
+  final List<NoteCategory> tags;
+
+  /// 快编入口：页面弹出快速编辑对话框并写回 metaJson，取消返回 null。
+  final Future<NoteProposalQuickEdit?> Function(NoteProposalQuickEdit current)?
+      onQuickEdit;
+
+  /// 应用完成后「查看笔记」出口。
+  final void Function(String noteId)? onViewNote;
+
+  @override
+  State<NoteProposalCard> createState() => _NoteProposalCardState();
+}
+
+class _NoteProposalCardState extends State<NoteProposalCard> {
+  bool _saving = false;
+  late bool _completed;
+  bool _failed = false;
+  String? _savedNoteId;
+
+  NoteProposalArtifact get artifact => widget.artifact;
+
+  @override
+  void initState() {
+    super.initState();
+    _completed = widget.initialCompleted;
+    _savedNoteId = widget.initialSavedNoteId;
+  }
+
+  @override
+  void didUpdateWidget(NoteProposalCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialCompleted != widget.initialCompleted) {
+      _completed = widget.initialCompleted;
+    }
+    if (oldWidget.initialSavedNoteId != widget.initialSavedNoteId) {
+      _savedNoteId = widget.initialSavedNoteId;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final isCreate = artifact.action == NoteProposalAction.create;
+    final author = artifact.metadata['author']?.toString();
+    final source = artifact.metadata['source']?.toString();
+    final hasSource = (author?.trim().isNotEmpty ?? false) ||
+        (source?.trim().isNotEmpty ?? false);
+    final canEdit = !_completed && !_saving && !artifact.readOnly;
+
+    return AiCardShell(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AiCardHeader(
+            isCreate: isCreate,
+            title: artifact.proposalTitle,
+          ),
+          const SizedBox(height: 8),
+          AiCardExpandableContent(
+            child: _DocumentPreview(artifact: artifact),
+          ),
+          if (hasSource || widget.tags.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (hasSource) ...[
+                    AiCardSourceLine(author: author, source: source),
+                    if (widget.tags.isNotEmpty) const SizedBox(height: 8),
+                  ],
+                  if (widget.tags.isNotEmpty) AiCardTagList(tags: widget.tags),
+                ],
+              ),
+            ),
+          if (artifact.modeTransition == NoteModeTransition.plainToRich)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                l10n.noteProposalPlainToRichWarning,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.tertiary,
+                ),
+              ),
+            ),
+          if (widget.plainCreateOpensRich)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                l10n.noteProposalPlainEditorPreferenceWarning,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.tertiary,
+                ),
+              ),
+            ),
+          if (_failed)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                l10n.agentErrorGeneric,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ),
+          if (artifact.readOnly)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                l10n.noteProposalLegacyReadOnly,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          if (widget.onQuickEdit != null && !artifact.readOnly && !_completed)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: AiQuickEditChip(
+                  enabled: canEdit,
+                  onTap: canEdit ? _handleQuickEdit : null,
+                ),
+              ),
+            ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              children: [
+                if (_completed)
+                  _savedNoteId != null && widget.onViewNote != null
+                      ? AiCardSavedViewButton(
+                          onPressed: () => widget.onViewNote!(_savedNoteId!),
+                        )
+                      : TextButton.icon(
+                          onPressed: null,
+                          icon: const Icon(Icons.check, size: 18),
+                          label: Text(l10n.noteProposalCompleted),
+                        )
+                else ...[
+                  TextButton.icon(
+                    onPressed:
+                        _saving || artifact.readOnly ? null : _openInEditor,
+                    icon: const Icon(Icons.edit_note, size: 18),
+                    label: Text(l10n.openInEditor),
+                  ),
+                  FilledButton.icon(
+                    onPressed: _saving || artifact.readOnly ? null : _apply,
+                    icon: _saving
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.save_outlined, size: 18),
+                    label: Text(
+                      isCreate ? l10n.noteProposalSave : l10n.noteProposalApply,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleQuickEdit() async {
+    final metadata = artifact.metadata;
+    final rawTagIds = metadata['tag_ids'];
+    await widget.onQuickEdit!(
+      NoteProposalQuickEdit(
+        content: artifact.content,
+        author: metadata['author']?.toString(),
+        source: metadata['source']?.toString(),
+        tagIds: rawTagIds is List
+            ? rawTagIds.map((id) => id.toString()).toList()
+            : const [],
+      ),
+    );
+    // 页面负责把改动写回 metaJson 并触发重建，卡片无需本地覆盖
+  }
+
+  Future<void> _apply() async {
+    setState(() {
+      _saving = true;
+      _failed = false;
+    });
+    try {
+      final noteId = await widget.onApply();
+      if (mounted && noteId != null && noteId.isNotEmpty) {
+        setState(() {
+          _completed = true;
+          _savedNoteId = noteId;
+        });
+      }
+    } catch (_) {
+      // 具体错误已在上游记录日志，卡片只提示可重试的通用文案
+      if (mounted) setState(() => _failed = true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _openInEditor() async {
+    setState(() => _failed = false);
+    try {
+      await widget.onOpenInEditor();
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+}
+
+/// 提案内容预览：纯文本用 SelectableText，富文本走 QuoteContent 真实渲染。
+class _DocumentPreview extends StatelessWidget {
+  const _DocumentPreview({required this.artifact});
+
+  final NoteProposalArtifact artifact;
+
+  @override
+  Widget build(BuildContext context) {
+    if (artifact.resultKind == NoteDocumentKind.plain) {
+      return SelectableText(artifact.content);
+    }
+    return QuoteContent(
+      quote: Quote(
+        id: 'agent-proposal-${artifact.noteId ?? artifact.proposalTitle}',
+        content: artifact.content,
+        date: DateTime.fromMillisecondsSinceEpoch(0).toIso8601String(),
+        editSource: 'fullscreen',
+        deltaContent: jsonEncode(artifact.documentOps),
+      ),
+      showFullContent: true,
+    );
+  }
+}

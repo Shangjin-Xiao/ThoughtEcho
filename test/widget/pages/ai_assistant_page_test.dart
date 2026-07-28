@@ -29,6 +29,16 @@ Quote _buildQuote() => Quote(
       date: DateTime(2026, 4, 5).toIso8601String(),
     );
 
+/// 结果卡片的 key 绑定了消息 ID（ai_workflow_result_smart_result_<id>），
+/// 用前缀匹配定位，避免测试依赖具体消息 ID。
+Finder _smartResultCardKey() => find.byWidgetPredicate(
+      (widget) =>
+          widget.key is ValueKey<String> &&
+          (widget.key! as ValueKey<String>)
+              .value
+              .startsWith('ai_workflow_result_smart_result'),
+    );
+
 class _InMemoryChatSessionService extends ChatSessionService {
   final Map<String, ChatSession> _sessions = <String, ChatSession>{};
   final Map<String, List<app_chat.ChatMessage>> _messages =
@@ -1331,7 +1341,7 @@ void main() {
       expect(agentService.runCount, 1);
       expect(find.text('这是可应用的新内容', findRichText: true), findsOneWidget);
       expect(
-        find.byKey(const ValueKey('ai_workflow_result_smart_result')),
+        _smartResultCardKey(),
         findsOneWidget,
       );
     });
@@ -1368,7 +1378,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.byKey(const ValueKey('ai_workflow_result_smart_result')),
+        _smartResultCardKey(),
         findsNothing,
       );
     });
@@ -1429,7 +1439,7 @@ void main() {
           tester.widget<ListView>(find.byType(ListView)).controller!;
       expect(agentService.runCount, 1);
       expect(
-        find.byKey(const ValueKey('ai_workflow_result_smart_result')),
+        _smartResultCardKey(),
         findsOneWidget,
       );
       expect(

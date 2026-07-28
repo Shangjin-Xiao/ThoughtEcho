@@ -48,8 +48,10 @@ import '../utils/quill_delta_builder.dart';
 import '../utils/quill_structured_edit.dart';
 import '../utils/string_utils.dart';
 import '../utils/time_utils.dart';
+import '../widgets/add_note_dialog_parts.dart';
 import '../widgets/ai/ai_workflow_cards.dart';
 import '../widgets/ai/experimental_badge.dart';
+import '../widgets/ai/note_proposal_card.dart';
 import '../widgets/ai/smart_result_card.dart';
 import '../widgets/ai/thinking_widget.dart';
 import '../widgets/ai/tool_progress_panel.dart';
@@ -61,6 +63,7 @@ import 'note_full_editor_page.dart';
 part 'ai_assistant/ai_assistant_page_session.dart';
 part 'ai_assistant/ai_assistant_page_workflow.dart';
 part 'ai_assistant/ai_assistant_page_agent.dart';
+part 'ai_assistant/ai_assistant_page_quick_edit.dart';
 part 'ai_assistant/ai_assistant_page_ui.dart';
 
 class AIAssistantPage extends StatefulWidget {

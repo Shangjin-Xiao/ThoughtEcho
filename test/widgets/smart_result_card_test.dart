@@ -67,11 +67,10 @@ void main() {
     expect(savedDraft?.source, '原出处');
     expect(savedDraft?.tagNames, ['旧标签']);
     expect(savedNoteId, 'note_saved');
-    expect(find.text('笔记已保存'), findsAtLeastNWidgets(1));
-    final savedButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, '笔记已保存'),
-    );
-    expect(savedButton.onPressed, isNull);
+    // 保存后变为「已保存 · 查看笔记」出口，编辑/保存按钮消失，防止重复采纳
+    expect(find.text('已保存 · 查看笔记'), findsOneWidget);
+    expect(find.text('直接保存'), findsNothing);
+    expect(find.text('打开编辑器'), findsNothing);
   });
 
   testWidgets('writes back the note id saved inside the editor',
@@ -96,15 +95,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(savedNoteId, 'note_from_editor');
-    // 采纳后两个按钮都不可再点，避免重复采纳产生重复笔记
-    final editorButton = tester.widget<TextButton>(
-      find.widgetWithText(TextButton, '打开编辑器'),
-    );
-    expect(editorButton.onPressed, isNull);
-    final savedButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, '笔记已保存'),
-    );
-    expect(savedButton.onPressed, isNull);
+    // 采纳后编辑/保存入口消失，只留「已保存 · 查看笔记」，避免重复采纳产生重复笔记
+    expect(find.text('打开编辑器'), findsNothing);
+    expect(find.text('直接保存'), findsNothing);
+    expect(find.text('已保存 · 查看笔记'), findsOneWidget);
   });
 
   testWidgets('disables the editor action for an already saved result',
@@ -121,10 +115,10 @@ void main() {
       ),
     );
 
-    final editorButton = tester.widget<TextButton>(
-      find.widgetWithText(TextButton, '打开编辑器'),
-    );
-    expect(editorButton.onPressed, isNull);
+    // 历史已保存卡片只显示「已保存 · 查看笔记」出口
+    expect(find.text('打开编辑器'), findsNothing);
+    expect(find.text('直接保存'), findsNothing);
+    expect(find.text('已保存 · 查看笔记'), findsOneWidget);
   });
 
   testWidgets('keeps direct save retryable after failure', (tester) async {
@@ -150,7 +144,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(attempts, 2);
-    expect(find.textContaining('db locked'), findsOneWidget);
+    // 不再向用户裸露异常原文，只显示可重试的通用文案
+    expect(find.textContaining('db locked'), findsNothing);
+    expect(find.text('保存失败，请稍后重试。'), findsOneWidget);
     final retryButton = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, '直接保存'),
     );

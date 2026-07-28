@@ -245,12 +245,24 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                         artifact.resultKind == NoteDocumentKind.plain &&
                         context.read<SettingsService>().skipNonFullscreenEditor,
                 initialCompleted: meta['saved_note_id'] != null,
+                initialSavedNoteId: meta['saved_note_id']?.toString(),
+                tags: _resolveProposalDisplayTags(artifact),
+                onQuickEdit: artifact.readOnly
+                    ? null
+                    : (current) => _handleNoteProposalQuickEdit(
+                          message.id,
+                          meta,
+                          artifact,
+                          current,
+                        ),
+                onViewNote: _viewSavedNote,
                 onOpenInEditor: () => _openNoteProposalInEditor(artifact),
                 onApply: () async {
                   final noteId = await _applyNoteProposal(artifact);
-                  if (noteId == null) return false;
-                  _updateSmartResultSavedNoteId(message.id, noteId);
-                  return true;
+                  if (noteId != null) {
+                    _updateSmartResultSavedNoteId(message.id, noteId);
+                  }
+                  return noteId;
                 },
               ),
             );
@@ -335,6 +347,17 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 initialIncludeWeather: initialIncludeWeather,
                 initialSavedNoteId: meta['saved_note_id']?.toString(),
                 readOnly: legacyReadOnly,
+                action: action,
+                targetNoteTitle: isNewNoteProposal ? null : _boundNoteTitle(),
+                previewDeltaOps: _opsFromRichDocument(meta['rich_document']),
+                onQuickEdit: legacyReadOnly
+                    ? null
+                    : (current) => _handleSmartResultQuickEdit(
+                          message.id,
+                          meta,
+                          current,
+                        ),
+                onViewNote: _viewSavedNote,
                 onOpenDraftInEditor: (draft) async {
                   try {
                     final updatedMeta =
