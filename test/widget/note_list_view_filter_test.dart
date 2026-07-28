@@ -760,7 +760,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
 
       final listView = tester.widget<ListView>(find.byType(ListView));
-      final cacheExtent = listView.cacheExtent;
+      // ignore: deprecated_member_use
+      final cacheExtent =
+          listView.scrollCacheExtent?.value ?? listView.cacheExtent;
       expect(cacheExtent, isNotNull);
       expect(
         cacheExtent,
