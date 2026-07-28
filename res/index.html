@@ -192,7 +192,7 @@
 
             <p class="hero-subtitle">
               <span class="content-zh">
-                随心记录每一刻灵感,让 AI 洞察助你发现思维脉络。<br />
+                随心记录每一刻灵感，让 AI 洞察助你发现思维脉络。<br />
                 支持富文本、多媒体附件、智能分析等强大功能。
               </span>
               <span class="content-en">
@@ -391,12 +391,40 @@
               </h3>
               <p class="feature-description">
                 <span class="content-zh"
-                  >剪贴板检测、一言与每日灵感，不错过任何瞬时想法</span
+                  >剪贴板检测与系统级文本摘录，灵感一闪即可入库</span
                 >
                 <span class="content-en"
-                  >Clipboard watcher, Hitokoto quotes, daily prompts</span
+                  >Clipboard watcher & system-wide excerpt, capture ideas the
+                  moment they strike</span
                 >
               </p>
+            </div>
+
+            <div class="sticky-note">
+              <span class="feature-icon">📖</span>
+              <h3 class="feature-title">
+                <span class="content-zh">每日一言</span>
+                <span class="content-en">Daily Quote</span>
+              </h3>
+              <p class="feature-description">
+                <span class="content-zh"
+                  >首页即见的每日一句，多类型来源随心订阅，单击复制、双击即可存为笔记</span
+                >
+                <span class="content-en"
+                  >A daily quote right on the homepage with curated sources —
+                  tap to copy, double-tap to save as a note</span
+                >
+              </p>
+              <ul class="feature-list">
+                <li>
+                  <span class="content-zh">多类型一言源</span
+                  ><span class="content-en">Multiple quote sources</span>
+                </li>
+                <li>
+                  <span class="content-zh">AI 每日灵感提示</span
+                  ><span class="content-en">AI daily writing prompts</span>
+                </li>
+              </ul>
             </div>
 
             <div class="sticky-note">
@@ -455,24 +483,34 @@
             <div class="sticky-note">
               <span class="feature-icon">✨</span>
               <h3 class="feature-title">
-                <span class="content-zh">Thoughter（实验性）</span>
-                <span class="content-en">Thoughter (Beta)</span>
+                <span class="content-zh">Thoughter 智能体（实验性）</span>
+                <span class="content-en">Thoughter Agent (Beta)</span>
               </h3>
               <p class="feature-description">
                 <span class="content-zh"
-                  >基于笔记上下文的智能问答、内容润色、每日灵感提示</span
+                  >住在笔记里的 AI 助手：会主动检索你的笔记、联网查找资料，并在你确认后代为创建或修改笔记</span
                 >
                 <span class="content-en"
-                  >Context-aware Q&A, content polishing, daily inspiration</span
+                  >An AI agent living in your notes: searches your notes and
+                  the web on its own, then creates or edits notes with your
+                  approval</span
                 >
               </p>
               <ul class="feature-list">
                 <li>
-                  <span class="content-zh">笔记上下文问答</span
-                  ><span class="content-en">Context-aware Q&A</span>
+                  <span class="content-zh">笔记问答、润色与续写</span
+                  ><span class="content-en">Q&A, polish & continuation</span>
                 </li>
                 <li>
-                  <span class="content-zh">多AI服务商支持</span
+                  <span class="content-zh">代为创建/修改富文本笔记</span
+                  ><span class="content-en">Creates & edits rich-text notes</span>
+                </li>
+                <li>
+                  <span class="content-zh">联网搜索与网页读取</span
+                  ><span class="content-en">Web search & page reading</span>
+                </li>
+                <li>
+                  <span class="content-zh">多 AI 服务商支持</span
                   ><span class="content-en">Multi-AI provider support</span>
                 </li>
               </ul>
@@ -1801,13 +1839,16 @@
               hidden
             >
               <span class="content-zh"
-                >支持局域网同步。只要设备在同一 Wi-Fi
-                下，即可互相发现并同步数据，无需中央服务器；媒体文件会增量传输。</span
+                >支持局域网同步与 WebDAV 云同步（Beta）。局域网内设备可互相发现并同步数据，无需中央服务器；也可以通过
+                WebDAV 连接到坚果云、Nextcloud
+                等私有云，媒体文件均增量传输。</span
               >
               <span class="content-en"
-                >Yes, via LAN sync. Devices on the same Wi-Fi can discover each
-                other and sync data without a central server; media files are
-                transferred incrementally.</span
+                >Yes — LAN sync and WebDAV cloud sync (Beta). Devices on the
+                same Wi-Fi can discover each other and sync directly with no
+                central server; you can also connect WebDAV services like
+                Nextcloud. Media files are transferred incrementally in both
+                modes.</span
               >
             </div>
           </div>
@@ -1954,26 +1995,6 @@
               >
               </ms-store-badge>
             </div>
-            <!-- APKPure -->
-            <a
-              href="https://apkpure.com/p/com.shangjin.thoughtecho"
-              class="official-badge official-badge--apkpure"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Download from APKPure"
-              style="margin-top: 1rem"
-            >
-              <span class="badge-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" role="img" fill="currentColor">
-                  <path
-                    d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10zM3.5 8C2.67 8 2 8.67 2 9.5v7c0 .83.67 1.5 1.5 1.5S5 17.33 5 16.5v-7C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zm-4.97-5.84l1.3-1.3c.2-.2.2-.51 0-.71-.2-.2-.51-.2-.71 0l-1.48 1.48C13.85 1.23 12.95 1 12 1c-.96 0-1.86.23-2.66.63L7.85.15c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.31 1.31C6.97 3.26 6 5.01 6 7h12c0-1.99-.97-3.75-2.47-4.84zM10 5H9V4h1v1zm5 0h-1V4h1v1z"
-                  />
-                </svg>
-              </span>
-              <span class="badge-label">APKPure</span>
-              <span class="badge-text content-zh">下载 Android 版</span>
-              <span class="badge-text content-en">Get Android App</span>
-            </a>
           </div>
         </div>
 
