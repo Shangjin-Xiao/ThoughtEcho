@@ -57,7 +57,8 @@ class ProposeNoteEditTool extends AgentTool {
           'operations': {
             'type': 'array',
             'minItems': 1,
-            'description': '按顺序应用的修改操作，至少一条。局部修改优先，整篇重写才用 replaceDocument。',
+            'description':
+                '按顺序应用的修改操作，至少一条。默认必须优先使用局部替换/插入/删除操作；仅当整篇重写且局部操作明显不适用时才允许使用 replaceDocument，并必须在 reason 中说明原因。',
             'items': {
               'type': 'object',
               'properties': {
@@ -73,7 +74,7 @@ class ProposeNoteEditTool extends AgentTool {
                   ],
                   'description':
                       'replace/delete 需要 old_text；insertBefore/insertAfter 需要 '
-                          'anchor_text；append 追加到文末；replaceDocument 整篇替换。',
+                          'anchor_text；append 追加到文末；replaceDocument 整篇替换（仅在整篇重构且局部 op 不适用时使用，需在 reason 说明原因）。',
                 },
                 'old_text': {
                   'type': 'string',

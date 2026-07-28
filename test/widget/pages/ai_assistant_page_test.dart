@@ -19,6 +19,7 @@ import 'package:thoughtecho/services/chat_session_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
+import 'package:thoughtecho/widgets/ai/experimental_badge.dart';
 import 'package:thoughtecho/widgets/ai/tool_progress_panel.dart';
 
 import '../../test_harness.dart';
@@ -455,6 +456,7 @@ Future<Widget> _buildHarness({
       locale: const Locale('zh'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      theme: ThemeData(splashFactory: InkRipple.splashFactory),
       home: child,
     ),
   );
@@ -1369,7 +1371,7 @@ void main() {
       expect(agentService.runCount, 1);
       expect(find.text('这是可应用的新内容', findRichText: true), findsOneWidget);
       expect(
-        _smartResultCardKey(),
+        _noteProposalCardKey(),
         findsOneWidget,
       );
     });
@@ -1467,7 +1469,7 @@ void main() {
           tester.widget<ListView>(find.byType(ListView)).controller!;
       expect(agentService.runCount, 1);
       expect(
-        _smartResultCardKey(),
+        _noteProposalCardKey(),
         findsOneWidget,
       );
       expect(

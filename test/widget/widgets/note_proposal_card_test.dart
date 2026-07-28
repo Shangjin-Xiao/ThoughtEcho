@@ -27,6 +27,7 @@ Widget _app(Widget child) => ChangeNotifierProvider<SettingsService>.value(
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: AppLocalizations.supportedLocales,
+        theme: ThemeData(splashFactory: InkRipple.splashFactory),
         home: Scaffold(body: SingleChildScrollView(child: child)),
       ),
     );

@@ -109,12 +109,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     );
   }
 
-  Widget _buildExperimentalNoticeBanner(
-    ThemeData theme,
-    AppLocalizations l10n,
-  ) {
-    return const SizedBox.shrink();
-  }
 
   Widget _buildExploreGuideBanner(ThemeData theme, AppLocalizations l10n) {
     // Removed DataOverview banner - user guidance moved to welcome message only

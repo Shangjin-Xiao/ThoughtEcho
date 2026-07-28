@@ -9,6 +9,7 @@ Widget _buildTestWidget(Widget child) {
     locale: const Locale('zh'),
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    theme: ThemeData(splashFactory: InkRipple.splashFactory),
     home: Scaffold(body: child),
   );
 }
