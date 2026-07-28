@@ -433,21 +433,45 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             final offsetToRestore = savedScrollOffset;
             savedScrollOffset = null; // 立即置空，防止后续 stream 事件再次触发
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (offsetToRestore != null && _scrollController.hasClients) {
-                final pos = _safeScrollPosition;
-                if (pos != null && offsetToRestore <= pos.maxScrollExtent) {
-                  _scrollController.animateTo(
-                    offsetToRestore,
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeOut,
-                  );
-                  logDebug(
-                    '平滑恢复滚动位置: $offsetToRestore',
-                    source: 'NoteListView',
-                  );
-                } else {
-                  logDebug('滚动位置超出范围或条件不满足，保持当前位置', source: 'NoteListView');
+              if (offsetToRestore == null || !_scrollController.hasClients) {
+                return;
+              }
+              // AnimatedSwitcher 交叉淡化期间，旧/新两个 ListView 同时挂载在
+              // 同一个 _scrollController 上，_safeScrollPosition 返回 null，
+              // 恢复会被静默跳过：新列表从顶部淡入、旧的已滚动列表在滚动
+              // 位置处淡出，视口顶部露出的半截卡片（标签行）看起来就像在
+              // 搜索栏下方闪一下。这里直接遍历所有已挂载 position 做对齐：
+              // 旧列表已在该偏移处不受影响，新列表立即对齐到同一偏移，
+              // 淡化期间两者内容保持一致，结束后列表也不会跳回顶部。
+              final positions = List<ScrollPosition>.of(
+                _scrollController.positions,
+              );
+              if (positions.length > 1) {
+                for (final position in positions) {
+                  if ((position.pixels - offsetToRestore).abs() > 0.5 &&
+                      offsetToRestore <= position.maxScrollExtent) {
+                    position.jumpTo(offsetToRestore);
+                  }
                 }
+                logDebug(
+                  '交叉淡化期间对齐滚动位置: $offsetToRestore',
+                  source: 'NoteListView',
+                );
+                return;
+              }
+              final pos = _safeScrollPosition;
+              if (pos != null && offsetToRestore <= pos.maxScrollExtent) {
+                _scrollController.animateTo(
+                  offsetToRestore,
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                );
+                logDebug(
+                  '平滑恢复滚动位置: $offsetToRestore',
+                  source: 'NoteListView',
+                );
+              } else {
+                logDebug('滚动位置超出范围或条件不满足，保持当前位置', source: 'NoteListView');
               }
             });
           }
