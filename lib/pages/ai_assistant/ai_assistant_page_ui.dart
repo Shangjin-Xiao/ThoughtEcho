@@ -74,8 +74,10 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     itemCount: _messages.length,
                     itemBuilder: (context, index) {
                       final message = _messages[index];
+                      final keepAlive = _shouldKeepAliveMessage(message);
                       return _KeepAliveMessageItem(
                         key: ValueKey('msg_keepalive_${message.id}'),
+                        keepAlive: keepAlive,
                         child: _buildMessageBubble(message, theme, l10n),
                       );
                     },
@@ -1743,11 +1745,25 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       rethrow;
     }
   }
+
+  /// 判断消息是否包含交互式卡片（需要保留离屏 Widget 状态）
+  bool _shouldKeepAliveMessage(app_chat.ChatMessage message) {
+    final meta = message.parsedMeta;
+    if (meta == null) return false;
+    final type = meta['type']?.toString();
+    return type == 'smart_result' || type == NoteProposalArtifact.typeName;
+  }
 }
 
 class _KeepAliveMessageItem extends StatefulWidget {
   final Widget child;
-  const _KeepAliveMessageItem({super.key, required this.child});
+  final bool keepAlive;
+
+  const _KeepAliveMessageItem({
+    super.key,
+    required this.child,
+    this.keepAlive = false,
+  });
 
   @override
   State<_KeepAliveMessageItem> createState() => _KeepAliveMessageItemState();
@@ -1756,7 +1772,15 @@ class _KeepAliveMessageItem extends StatefulWidget {
 class _KeepAliveMessageItemState extends State<_KeepAliveMessageItem>
     with AutomaticKeepAliveClientMixin {
   @override
-  bool get wantKeepAlive => true;
+  bool get wantKeepAlive => widget.keepAlive;
+
+  @override
+  void didUpdateWidget(covariant _KeepAliveMessageItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.keepAlive != widget.keepAlive) {
+      updateKeepAlive();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
