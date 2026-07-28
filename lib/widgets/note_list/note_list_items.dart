@@ -196,6 +196,21 @@ extension _NoteListItemsExtension on NoteListViewState {
                         // 避免旧列表被硬切（opacity 直接归零）造成的生硬感。
                         transitionBuilder: (child, animation) =>
                             FadeTransition(opacity: animation, child: child),
+                        // 自定义布局：将旧列表（previousChildren）放在栈顶。
+                        // 搜索删字触发 results→results 交叉淡化时，新 ListView
+                        // 在 addPostFrameCallback 对齐滚动偏移之前会以 offset=0
+                        // 渲染一帧，导致新列表顶部的标签行在搜索栏下方闪烁。
+                        // 旧列表保持在正确的滚动位置，放在栈顶可以完全遮盖新列表
+                        // 这一帧的错误内容；等旧列表透明度足够低时，新列表的滚动
+                        // 位置已由 postFrameCallback 对齐，不会再看到闪烁。
+                        layoutBuilder: (currentChild, previousChildren) {
+                          return Stack(
+                            children: [
+                              if (currentChild != null) currentChild,
+                              ...previousChildren,
+                            ],
+                          );
+                        },
                         child: _buildNoteList(theme, noteInsertAnimationType),
                       ),
                     ),

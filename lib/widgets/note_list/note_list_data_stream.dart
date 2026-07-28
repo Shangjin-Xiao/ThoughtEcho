@@ -345,7 +345,17 @@ extension _NoteListDataStreamExtension on NoteListViewState {
     if (preserveScrollPosition &&
         _scrollController.hasClients &&
         _quotes.isNotEmpty) {
+      // 优先使用 _safeScrollOffset（单 position），不可用时从任一已挂载
+      // position 读取。快速删字时上一次交叉淡化可能仍在进行中（2 个
+      // position 同时挂载），_safeScrollOffset 返回 null 会丢失偏移量，
+      // 导致后续恢复被跳过、新列表从顶部出现并闪烁标签行。
       savedScrollOffset = _safeScrollOffset;
+      if (savedScrollOffset == null) {
+        final positions = _scrollController.positions;
+        if (positions.isNotEmpty) {
+          savedScrollOffset = positions.first.pixels;
+        }
+      }
       logDebug('保存滚动位置: $savedScrollOffset', source: 'NoteListView');
     } else if (!preserveScrollPosition) {
       logDebug('筛选条件变化，不保存滚动位置，将重置到顶部', source: 'NoteListView');
