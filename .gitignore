@@ -314,3 +314,4 @@ agent/
 .agents/sentinel/
 .agents/ORIGINAL_REQUEST.md
 .superdesign/
+*.orig
