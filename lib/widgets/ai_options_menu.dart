@@ -260,7 +260,10 @@ class AiOptionsMenu extends StatelessWidget {
                           ),
                           if (option.isExperimental) ...[
                             const SizedBox(width: 6),
-                            const ExperimentalBadge(compact: true),
+                            const ExperimentalBadge(
+                              compact: true,
+                              enableTapNotice: false,
+                            ),
                           ],
                         ],
                       ),

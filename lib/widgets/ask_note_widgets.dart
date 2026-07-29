@@ -71,7 +71,7 @@ class AskNoteFloatingButton extends StatelessWidget {
         children: [
           Text(AppLocalizations.of(context).askNote),
           const SizedBox(width: 6),
-          const ExperimentalBadge(compact: true),
+          const ExperimentalBadge(compact: true, enableTapNotice: false),
         ],
       ),
       backgroundColor: Theme.of(
@@ -99,7 +99,7 @@ class AskNoteListTile extends StatelessWidget {
         children: [
           Text(AppLocalizations.of(context).askNote),
           const SizedBox(width: 6),
-          const ExperimentalBadge(compact: true),
+          const ExperimentalBadge(compact: true, enableTapNotice: false),
         ],
       ),
       subtitle: Text(AppLocalizations.of(context).chatWithAiAssistant),
