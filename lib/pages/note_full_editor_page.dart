@@ -12,14 +12,11 @@ import '../models/note_category.dart';
 import '../services/location_service.dart';
 import '../services/local_geocoding_service.dart';
 import '../services/weather_service.dart';
-import '../services/ai_service.dart'; // 导入AI服务
 import '../utils/time_utils.dart'; // 导入时间工具类
 import 'package:flex_color_picker/flex_color_picker.dart';
 import '../utils/icon_utils.dart';
 import '../utils/color_utils.dart'; // Import color_utils
 import 'dart:math' show min; // 添加math包导入
-import '../widgets/streaming_text_dialog.dart'; // 导入 StreamingTextDialog
-import '../widgets/source_analysis_result_dialog.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter/services.dart';
 import '../utils/app_logger.dart';
@@ -34,7 +31,6 @@ import '../utils/device_memory_manager.dart';
 import '../widgets/quill_enhanced_toolbar_unified.dart';
 import '../widgets/ai_options_menu.dart';
 import '../utils/quill_editor_extensions.dart'; // 导入自定义embedBuilders
-import '../utils/quill_ai_apply_utils.dart';
 import '../services/temporary_media_service.dart';
 import '../widgets/media_player_widget.dart';
 import '../constants/app_constants.dart';
