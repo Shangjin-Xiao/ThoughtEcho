@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
-import '../extensions/note_category_localization_extension.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/ai_assistant_entry.dart';
 import '../models/ai_insight_workflow_options.dart';
@@ -43,7 +42,6 @@ import '../services/weather_service.dart';
 import '../utils/ai_smart_result_utils.dart';
 import '../utils/agent_note_document_codec.dart';
 import '../utils/app_logger.dart';
-import '../utils/icon_utils.dart';
 import '../utils/quill_delta_builder.dart';
 import '../utils/quill_structured_edit.dart';
 import '../utils/string_utils.dart';
@@ -55,6 +53,7 @@ import '../widgets/ai/thinking_widget.dart';
 import '../widgets/ai/tool_progress_panel.dart';
 import 'ai_assistant/session_history_page.dart';
 import '../widgets/add_note_dialog.dart';
+import '../widgets/add_note_dialog_parts.dart' show TagSelectionSection;
 import 'note_full_editor_page.dart';
 
 part 'ai_assistant/ai_assistant_page_session.dart';

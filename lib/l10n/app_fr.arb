@@ -2562,14 +2562,6 @@
   "tryDifferentKeywords": "Essayez différents mots-clés ou noms de villes",
   "enterCityToSearch": "Entrez le nom de la ville à rechercher",
   "addInfo": "Ajouter des informations",
-  "quickEditMoreTagsHint": "{count} autres balises — utilisez la recherche",
-  "@quickEditMoreTagsHint": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "selectTagsWithCount": "Sélectionnez les balises ({count})",
   "@selectTagsWithCount": {
     "placeholders": {

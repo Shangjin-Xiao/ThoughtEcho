@@ -2569,14 +2569,6 @@
   "tryDifferentKeywords": "キーワードを変更してください",
   "enterCityToSearch": "都市名を入力",
   "addInfo": "情報追加",
-  "quickEditMoreTagsHint": "他に {count} 件のタグがあります。検索してください",
-  "@quickEditMoreTagsHint": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "selectTagsWithCount": "タグ選択 ({count})",
   "@selectTagsWithCount": {
     "placeholders": {

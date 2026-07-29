@@ -24,6 +24,18 @@ class NoteProposalQuickEdit {
   final List<String> tagIds;
 }
 
+/// 新建提案的 author/source 是平铺字符串，修改提案是补丁
+/// （`{'action': 'set', 'value': ...}` / `{'action': 'clear'}`）。
+/// 直接 toString 会把整个 map 印到卡片上，所以统一走这里取显示文本。
+String? _metadataText(Object? raw) {
+  if (raw == null) return null;
+  if (raw is Map) {
+    if (raw['action'] == 'clear') return null;
+    return raw['value']?.toString();
+  }
+  return raw.toString();
+}
+
 /// Agent 笔记提案卡片（新建/修改）。
 /// 骨架与 SmartResultCard 统一：卡头徽章 → 限高内容 → 来源/标签 →
 /// 快编 → 底部操作，应用后变为「✓已保存 · 查看笔记」。
@@ -131,8 +143,8 @@ class _NoteProposalCardState extends State<NoteProposalCard> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final isCreate = artifact.action == NoteProposalAction.create;
-    final author = artifact.metadata['author']?.toString();
-    final source = artifact.metadata['source']?.toString();
+    final author = _metadataText(artifact.metadata['author']);
+    final source = _metadataText(artifact.metadata['source']);
     final hasSource = (author?.trim().isNotEmpty ?? false) ||
         (source?.trim().isNotEmpty ?? false);
     final canEdit = !_completed && !_saving && !artifact.readOnly;
@@ -357,8 +369,8 @@ class _NoteProposalCardState extends State<NoteProposalCard> {
     await widget.onQuickEdit!(
       NoteProposalQuickEdit(
         content: artifact.content,
-        author: metadata['author']?.toString(),
-        source: metadata['source']?.toString(),
+        author: _metadataText(metadata['author']),
+        source: _metadataText(metadata['source']),
         tagIds: rawTagIds is List
             ? rawTagIds.map((id) => id.toString()).toList()
             : const [],

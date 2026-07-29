@@ -17,16 +17,14 @@ class _QuickEditValues {
   final List<String?> tagIconNames;
 }
 
-/// 快编面板里的标签选择。
+/// 快编面板里的标签选择：直接复用新建笔记弹窗的折叠标签区
+/// （[TagSelectionSection]，默认折叠、展开后是懒加载列表 + 搜索），
+/// 保证两处交互一致，也不用在快编里维护第二套标签 UI。
 ///
-/// 两个约束决定了这里的写法：
-/// 1. 标签库可能有几百个，全量铺开既刷屏又要一次性建几百个 [FilterChip]
-///    （每个都带 InkWell + 动画），面板打开和每次勾选都会卡。所以只渲染
-///    「已选 + 最多 [_maxUnselectedChips] 个候选」，其余靠搜索找。
-/// 2. 选中态只在本组件内 setState，不回弹到整个面板重建，
-///    否则勾一个标签会连带重建正文/作者/出处那些 TextField。
-class _QuickEditTagPicker extends StatefulWidget {
-  const _QuickEditTagPicker({
+/// 这里再包一层 StatefulWidget 只为一件事：选中态留在本组件内，
+/// 勾标签不会把整个面板（含作者/出处输入框）一起重建。
+class _QuickEditTagSection extends StatefulWidget {
+  const _QuickEditTagSection({
     required this.tags,
     required this.initialSelectedTagIds,
     required this.onSelectionChanged,
@@ -37,133 +35,21 @@ class _QuickEditTagPicker extends StatefulWidget {
   final ValueChanged<List<String>> onSelectionChanged;
 
   @override
-  State<_QuickEditTagPicker> createState() => _QuickEditTagPickerState();
+  State<_QuickEditTagSection> createState() => _QuickEditTagSectionState();
 }
 
-class _QuickEditTagPickerState extends State<_QuickEditTagPicker> {
-  /// 超过这个数量才给搜索框，标签少时不必占地方。
-  static const int _searchThreshold = 8;
-
-  /// 一次最多渲染多少个未选中的候选胶囊。
-  static const int _maxUnselectedChips = 12;
-
-  final TextEditingController _searchController = TextEditingController();
-  late final List<String> _selected = [...widget.initialSelectedTagIds];
-  String _query = '';
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _toggle(String tagId) {
-    setState(() {
-      if (!_selected.remove(tagId)) _selected.add(tagId);
-    });
-    widget.onSelectionChanged(List<String>.unmodifiable(_selected));
-  }
-
-  Widget _buildChip(NoteCategory tag, AppLocalizations l10n) {
-    return FilterChip(
-      key: ValueKey(tag.id),
-      showCheckmark: false,
-      selected: _selected.contains(tag.id),
-      avatar: IconUtils.isEmoji(tag.iconName)
-          ? Text(
-              IconUtils.getDisplayIcon(tag.iconName),
-              style: const TextStyle(fontSize: 14),
-            )
-          : Icon(IconUtils.getIconData(tag.iconName), size: 18),
-      label: Text(tag.localizedName(l10n)),
-      onSelected: (_) => _toggle(tag.id),
-      visualDensity: VisualDensity.compact,
-    );
-  }
+class _QuickEditTagSectionState extends State<_QuickEditTagSection> {
+  late List<String> _selected = [...widget.initialSelectedTagIds];
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
-    if (widget.tags.isEmpty) {
-      return Text(
-        l10n.noTagsAvailableHint,
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      );
-    }
-
-    final query = _query.trim().toLowerCase();
-    final matched = query.isEmpty
-        ? widget.tags
-        : [
-            for (final tag in widget.tags)
-              if (tag.localizedName(l10n).toLowerCase().contains(query)) tag,
-          ];
-
-    // 已选的永远渲染（不然勾过的标签会被截断规则藏起来，看不到也取消不掉），
-    // 未选的按顺序取前 N 个当候选。
-    final selectedTags = <NoteCategory>[];
-    final candidateTags = <NoteCategory>[];
-    var hiddenCount = 0;
-    for (final tag in matched) {
-      if (_selected.contains(tag.id)) {
-        selectedTags.add(tag);
-      } else if (candidateTags.length < _maxUnselectedChips) {
-        candidateTags.add(tag);
-      } else {
-        hiddenCount++;
-      }
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.selectTagsWithCount(_selected.length),
-          style: theme.textTheme.titleSmall,
-        ),
-        const SizedBox(height: 8),
-        if (widget.tags.length > _searchThreshold) ...[
-          TextField(
-            controller: _searchController,
-            onChanged: (value) => setState(() => _query = value),
-            decoration: InputDecoration(
-              hintText: l10n.searchTags,
-              isDense: true,
-              prefixIcon: const Icon(Icons.search, size: 20),
-              border: const OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-        if (matched.isEmpty)
-          Text(
-            l10n.noMatchingTags,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          )
-        else
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final tag in selectedTags) _buildChip(tag, l10n),
-              for (final tag in candidateTags) _buildChip(tag, l10n),
-            ],
-          ),
-        if (hiddenCount > 0) ...[
-          const SizedBox(height: 8),
-          Text(
-            l10n.quickEditMoreTagsHint(hiddenCount),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ],
+    return TagSelectionSection(
+      tags: widget.tags,
+      selectedTagIds: _selected,
+      onSelectionChanged: (newSelection) {
+        setState(() => _selected = newSelection);
+        widget.onSelectionChanged(newSelection);
+      },
     );
   }
 }
@@ -171,9 +57,9 @@ class _QuickEditTagPickerState extends State<_QuickEditTagPicker> {
 extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
   /// 结果卡与提案卡共用的快编面板：作者/出处/标签。
   /// 「快编」只管这些元信息，改正文请走完整编辑器，别在小面板里塞长文本框。
-  /// 用底部面板而不是 AlertDialog：标签区在弹窗里会被固定高度的嵌套列表
-  /// 顶出可视范围（下面的标签点不到），底部面板可以整页滚动 + 固定操作栏，
-  /// 键盘弹出时也不会盖住输入框。
+  /// 用底部面板而不是 AlertDialog：折叠的标签区展开后要占一屏高度，
+  /// AlertDialog 会把它顶出可视范围（下面的标签点不到），
+  /// 底部面板可以整页滚动 + 固定操作栏，键盘弹出时也不会盖住输入框。
   Future<_QuickEditValues?> _showQuickEditDialog({
     required String? author,
     required String? source,
@@ -259,7 +145,7 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          _QuickEditTagPicker(
+                          _QuickEditTagSection(
                             tags: allTags,
                             initialSelectedTagIds: selected,
                             onSelectionChanged: (newSelection) {
@@ -319,16 +205,38 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
 
   /// 提案卡快编：弹窗 → 写回 artifact。只改 author/source/tag_ids，
   /// 正文交给完整编辑器，避免与 ops 应用结果不一致。
+  ///
+  /// 新建提案的 metadata 是平铺值；修改提案的 metadata 是「补丁」
+  /// （`{'author': {'action': 'set', 'value': ...}}`，没有这个键就表示保持原样）。
+  /// 所以这里要先把补丁盖到原笔记上算出「当前生效值」再回填弹窗，
+  /// 否则改笔记时快编里一片空白；写回也必须按补丁格式来，
+  /// 不然 [_quoteFromArtifact] 认不出来，保存时会把用户的改动丢掉。
   Future<NoteProposalQuickEdit?> _handleNoteProposalQuickEdit(
     String messageId,
     Map<String, dynamic> meta,
     NoteProposalArtifact artifact,
     NoteProposalQuickEdit current,
   ) async {
+    final isEdit = artifact.action == NoteProposalAction.edit;
+    Quote? original;
+    if (isEdit && artifact.noteId != null) {
+      original = await context.read<DatabaseService>().getQuoteById(
+            artifact.noteId!,
+          );
+      if (!mounted) return null;
+    }
+    final effective = isEdit
+        ? _effectiveProposalMeta(artifact, original)
+        : (
+            author: current.author,
+            source: current.source,
+            tagIds: current.tagIds,
+          );
+
     final values = await _showQuickEditDialog(
-      author: current.author,
-      source: current.source,
-      selectedTagIds: current.tagIds,
+      author: effective.author,
+      source: effective.source,
+      selectedTagIds: effective.tagIds,
     );
     if (values == null || !mounted) return null;
 
@@ -348,17 +256,37 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
             ) ??
             const <String, Object?>{},
       );
-      if (values.author == null) {
-        metadata.remove('author');
+      if (isEdit) {
+        // 只给「用户真的改过」的字段写补丁：没动的字段保持原样，
+        // 免得把 AI 原本的补丁或笔记的旧 source 字段无谓地覆盖掉。
+        void writePatch(String key, String? value, String? before) {
+          if (value == before) return;
+          metadata[key] = value == null
+              ? <String, Object?>{'action': 'clear'}
+              : <String, Object?>{'action': 'set', 'value': value};
+        }
+
+        writePatch('author', values.author, effective.author);
+        writePatch('source', values.source, effective.source);
+        if (!_sameTagIds(values.tagIds, effective.tagIds)) {
+          metadata['tag_ids'] = values.tagIds.isEmpty
+              ? <String, Object?>{'action': 'clear'}
+              : <String, Object?>{'action': 'set', 'value': values.tagIds};
+        }
       } else {
-        metadata['author'] = values.author;
+        if (values.author == null) {
+          metadata.remove('author');
+        } else {
+          metadata['author'] = values.author;
+        }
+        if (values.source == null) {
+          metadata.remove('source');
+        } else {
+          metadata['source'] = values.source;
+        }
+        metadata['tag_ids'] = values.tagIds;
       }
-      if (values.source == null) {
-        metadata.remove('source');
-      } else {
-        metadata['source'] = values.source;
-      }
-      metadata['tag_ids'] = values.tagIds;
+      // 卡片上的标签胶囊只认平铺的 tag_names，两种提案都写一份
       metadata['tag_names'] = values.tagNames;
       artifactJson['metadata'] = metadata;
       updatedMeta['artifact'] = artifactJson;
@@ -478,12 +406,49 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
     return description.trim().isEmpty ? null : description;
   }
 
+  /// 修改提案里 metadata 是补丁格式，取「补丁盖到原笔记之后」的生效值，
+  /// 供快编回填用。拿不到原笔记（已被删/查询失败）时就只认补丁里写了的部分。
+  ({String? author, String? source, List<String> tagIds})
+      _effectiveProposalMeta(
+    NoteProposalArtifact artifact,
+    Quote? original,
+  ) {
+    String? readPatch(Object? patch, String? fallback) {
+      if (patch is! Map) return fallback;
+      if (patch['action'] == 'clear') return null;
+      return patch['value']?.toString();
+    }
+
+    final metadata = artifact.metadata;
+    final tagPatch = metadata['tag_ids'];
+    return (
+      author: readPatch(metadata['author'], original?.sourceAuthor),
+      source: readPatch(metadata['source'], original?.sourceWork),
+      tagIds: tagPatch is Map
+          ? (tagPatch['action'] == 'clear'
+              ? const <String>[]
+              : _extractStringList(tagPatch['value']))
+          : (original?.tagIds ?? const <String>[]),
+    );
+  }
+
+  bool _sameTagIds(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    return a.toSet().containsAll(b);
+  }
+
   /// 提案卡的展示标签：优先 metadata 里的 tag_names，缺失时退化为 id。
+  /// 修改提案的 tag_ids 是补丁，取补丁里的 value（没有补丁就是没动过标签）。
   List<NoteCategory> _resolveProposalDisplayTags(
     NoteProposalArtifact artifact,
   ) {
     final metadata = artifact.metadata;
-    final ids = _extractStringList(metadata['tag_ids']);
+    final rawTagIds = metadata['tag_ids'];
+    final ids = rawTagIds is Map
+        ? (rawTagIds['action'] == 'clear'
+            ? const <String>[]
+            : _extractStringList(rawTagIds['value']))
+        : _extractStringList(rawTagIds);
     final rawNames = metadata['tag_names'];
     final names = rawNames is List
         ? rawNames.map((item) => item.toString()).toList()

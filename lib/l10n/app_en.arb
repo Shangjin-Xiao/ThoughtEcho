@@ -2666,14 +2666,6 @@
   "tryDifferentKeywords": "Try different keywords or city names",
   "enterCityToSearch": "Enter city name to search",
   "addInfo": "Add Info",
-  "quickEditMoreTagsHint": "{count} more tags — use search to find them",
-  "@quickEditMoreTagsHint": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "selectTagsWithCount": "Select Tags ({count})",
   "@selectTagsWithCount": {
     "placeholders": {
