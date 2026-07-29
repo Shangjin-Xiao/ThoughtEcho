@@ -1,0 +1,25 @@
+lib/widgets/ai_options_menu.dart
+  s_ef5903301605fd::t_c3932ca2b1defa 141
+  s_ef5903301605fd::t_cb471e1ec153c3 267-276,278
+lib/widgets/note_list/note_list_items.dart
+  s_ef5903301605fd::t_870bd60d5b27a0 519-520
+lib/l10n/app_zh.arb
+  s_ef5903301605fd::t_a41c00eef94b23 554
+  s_ef5903301605fd::t_9adf876a913cbd 2482
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "89be17a890d8703610150912e3af1ca9e03a19de",
+  "prompts": {},
+  "sessions": {
+    "s_ef5903301605fd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9759d6f6-2d57-4fa9-a965-c6601bd8ad4f",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
