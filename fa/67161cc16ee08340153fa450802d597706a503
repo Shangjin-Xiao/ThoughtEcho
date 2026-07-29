@@ -1,0 +1,27 @@
+lib/pages/ai_assistant/ai_assistant_page_ui.dart
+  s_742458ff8e536a::t_1ff7bb6c003660 1144
+lib/utils/ai_smart_result_utils.dart
+  s_742458ff8e536a::t_1ff7bb6c003660 25
+lib/l10n/app_en.arb
+  s_742458ff8e536a::t_468a1b56193210 553-554
+lib/l10n/app_zh.arb
+  s_742458ff8e536a::t_468a1b56193210 553-554
+test/unit/utils/ai_proposal_adoption_test.dart
+  s_742458ff8e536a::t_e870a1d673da95 86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "fa67161cc16ee08340153fa450802d597706a503",
+  "prompts": {},
+  "sessions": {
+    "s_742458ff8e536a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e97cdac8-0e27-4dad-97de-381d058d5e24",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
