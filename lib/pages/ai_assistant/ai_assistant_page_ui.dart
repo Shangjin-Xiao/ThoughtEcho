@@ -5,9 +5,19 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     if (!mounted || _isInputFocused == _inputFocusNode.hasFocus) {
       return;
     }
+    final gainedFocus = _inputFocusNode.hasFocus;
     _setState(() {
-      _isInputFocused = _inputFocusNode.hasFocus;
+      _isInputFocused = gainedFocus;
     });
+    // 键盘弹出后 Scaffold 会 resize，需要等布局完成再滚动到底部，
+    // 否则已有消息会被键盘 + 输入框遮挡。
+    if (gainedFocus) {
+      // 延迟一帧让键盘 resize 生效后再滚动
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _scrollToBottom(force: true);
+      });
+    }
   }
 
   Widget _buildPage(BuildContext context) {
