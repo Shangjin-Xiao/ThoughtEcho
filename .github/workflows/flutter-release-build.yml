@@ -172,11 +172,22 @@ jobs:
             build_flavor arm32Compat android-arm
           fi
 
-      - name: 上传 APK
+      # archive: false 时 upload-artifact 只接受单个文件，
+      # build_variant=both 会产出两个 APK，因此按变体分开上传。
+      - name: 上传 APK (standard64)
+        if: ${{ (github.event.inputs.build_variant || 'both') != 'arm32Compat' }}
         uses: actions/upload-artifact@v7
         with:
-          name: app-${{ github.event.inputs.build_mode || 'release' }}-${{ github.event.inputs.build_variant || 'both' }}-apk
-          path: build/app/outputs/release-artifacts/*.apk
+          name: app-${{ github.event.inputs.build_mode || 'release' }}-standard64-apk
+          path: build/app/outputs/release-artifacts/thoughtecho-standard64-*.apk
+          archive: false
+
+      - name: 上传 APK (arm32Compat)
+        if: ${{ (github.event.inputs.build_variant || 'both') != 'standard64' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-${{ github.event.inputs.build_mode || 'release' }}-arm32Compat-apk
+          path: build/app/outputs/release-artifacts/thoughtecho-arm32Compat-*.apk
           archive: false
           if-no-files-found: error
           retention-days: 30
