@@ -516,8 +516,8 @@ extension _NoteListItemsExtension on NoteListViewState {
       child: BackdropGroup(
         child: ListView.builder(
           controller: _scrollController, // 添加滚动控制器
-          // 首条笔记与搜索框之间的间距缩小 1/3（卡片自身 6px 上边距 -> 视觉上收紧 2px）
-          padding: const EdgeInsets.only(top: -2),
+          // 首条笔记与搜索框之间的间距收紧（卡片自身 6px 上边距 -> 视觉上收紧 1px）
+          padding: const EdgeInsets.only(top: -1),
           findChildIndexCallback: (key) {
             if (key is ValueKey<String>) {
               return rowIndexByKey[key.value];
