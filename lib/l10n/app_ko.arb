@@ -2569,6 +2569,14 @@
   "tryDifferentKeywords": "다른 키워드나 도시 이름을 사용해 보세요.",
   "enterCityToSearch": "검색하려면 도시 이름을 입력하세요.",
   "addInfo": "정보 추가",
+  "quickEditMoreTagsHint": "태그 {count}개 더 있음 — 검색으로 찾으세요",
+  "@quickEditMoreTagsHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "selectTagsWithCount": "Select Tags ({count})",
   "@selectTagsWithCount": {
     "placeholders": {

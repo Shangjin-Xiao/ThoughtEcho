@@ -2672,6 +2672,14 @@
   "tryDifferentKeywords": "尝试使用不同的关键词或城市名称",
   "enterCityToSearch": "输入城市名称开始搜索",
   "addInfo": "添加信息",
+  "quickEditMoreTagsHint": "还有 {count} 个标签，搜索查找",
+  "@quickEditMoreTagsHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "selectTagsWithCount": "选择标签 ({count})",
   "@selectTagsWithCount": {
     "placeholders": {

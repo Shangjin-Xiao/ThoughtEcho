@@ -1,9 +1,8 @@
 part of '../ai_assistant_page.dart';
 
-/// 快编对话框返回的编辑结果。
+/// 快编对话框返回的编辑结果。快编只改元信息，正文一律走完整编辑器。
 class _QuickEditValues {
   const _QuickEditValues({
-    required this.content,
     required this.author,
     required this.source,
     required this.tagIds,
@@ -11,7 +10,6 @@ class _QuickEditValues {
     required this.tagIconNames,
   });
 
-  final String content;
   final String? author;
   final String? source;
   final List<String> tagIds;
@@ -19,17 +17,23 @@ class _QuickEditValues {
   final List<String?> tagIconNames;
 }
 
-/// 快编面板里的标签选择：直接铺开胶囊，不套固定高度的嵌套列表，
-/// 整块跟着面板一起滚动，避免下方标签被面板边界挡住选不到。
+/// 快编面板里的标签选择。
+///
+/// 两个约束决定了这里的写法：
+/// 1. 标签库可能有几百个，全量铺开既刷屏又要一次性建几百个 [FilterChip]
+///    （每个都带 InkWell + 动画），面板打开和每次勾选都会卡。所以只渲染
+///    「已选 + 最多 [_maxUnselectedChips] 个候选」，其余靠搜索找。
+/// 2. 选中态只在本组件内 setState，不回弹到整个面板重建，
+///    否则勾一个标签会连带重建正文/作者/出处那些 TextField。
 class _QuickEditTagPicker extends StatefulWidget {
   const _QuickEditTagPicker({
     required this.tags,
-    required this.selectedTagIds,
+    required this.initialSelectedTagIds,
     required this.onSelectionChanged,
   });
 
   final List<NoteCategory> tags;
-  final List<String> selectedTagIds;
+  final List<String> initialSelectedTagIds;
   final ValueChanged<List<String>> onSelectionChanged;
 
   @override
@@ -40,7 +44,11 @@ class _QuickEditTagPickerState extends State<_QuickEditTagPicker> {
   /// 超过这个数量才给搜索框，标签少时不必占地方。
   static const int _searchThreshold = 8;
 
+  /// 一次最多渲染多少个未选中的候选胶囊。
+  static const int _maxUnselectedChips = 12;
+
   final TextEditingController _searchController = TextEditingController();
+  late final List<String> _selected = [...widget.initialSelectedTagIds];
   String _query = '';
 
   @override
@@ -50,13 +58,27 @@ class _QuickEditTagPickerState extends State<_QuickEditTagPicker> {
   }
 
   void _toggle(String tagId) {
-    final next = List<String>.from(widget.selectedTagIds);
-    if (next.contains(tagId)) {
-      next.remove(tagId);
-    } else {
-      next.add(tagId);
-    }
-    widget.onSelectionChanged(next);
+    setState(() {
+      if (!_selected.remove(tagId)) _selected.add(tagId);
+    });
+    widget.onSelectionChanged(List<String>.unmodifiable(_selected));
+  }
+
+  Widget _buildChip(NoteCategory tag, AppLocalizations l10n) {
+    return FilterChip(
+      key: ValueKey(tag.id),
+      showCheckmark: false,
+      selected: _selected.contains(tag.id),
+      avatar: IconUtils.isEmoji(tag.iconName)
+          ? Text(
+              IconUtils.getDisplayIcon(tag.iconName),
+              style: const TextStyle(fontSize: 14),
+            )
+          : Icon(IconUtils.getIconData(tag.iconName), size: 18),
+      label: Text(tag.localizedName(l10n)),
+      onSelected: (_) => _toggle(tag.id),
+      visualDensity: VisualDensity.compact,
+    );
   }
 
   @override
@@ -73,18 +95,33 @@ class _QuickEditTagPickerState extends State<_QuickEditTagPicker> {
     }
 
     final query = _query.trim().toLowerCase();
-    final visibleTags = query.isEmpty
+    final matched = query.isEmpty
         ? widget.tags
         : [
             for (final tag in widget.tags)
               if (tag.localizedName(l10n).toLowerCase().contains(query)) tag,
           ];
 
+    // 已选的永远渲染（不然勾过的标签会被截断规则藏起来，看不到也取消不掉），
+    // 未选的按顺序取前 N 个当候选。
+    final selectedTags = <NoteCategory>[];
+    final candidateTags = <NoteCategory>[];
+    var hiddenCount = 0;
+    for (final tag in matched) {
+      if (_selected.contains(tag.id)) {
+        selectedTags.add(tag);
+      } else if (candidateTags.length < _maxUnselectedChips) {
+        candidateTags.add(tag);
+      } else {
+        hiddenCount++;
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          l10n.selectTagsWithCount(widget.selectedTagIds.length),
+          l10n.selectTagsWithCount(_selected.length),
           style: theme.textTheme.titleSmall,
         ),
         const SizedBox(height: 8),
@@ -101,7 +138,7 @@ class _QuickEditTagPickerState extends State<_QuickEditTagPicker> {
           ),
           const SizedBox(height: 8),
         ],
-        if (visibleTags.isEmpty)
+        if (matched.isEmpty)
           Text(
             l10n.noMatchingTags,
             style: theme.textTheme.bodySmall?.copyWith(
@@ -113,35 +150,31 @@ class _QuickEditTagPickerState extends State<_QuickEditTagPicker> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final tag in visibleTags)
-                FilterChip(
-                  showCheckmark: false,
-                  selected: widget.selectedTagIds.contains(tag.id),
-                  avatar: IconUtils.isEmoji(tag.iconName)
-                      ? Text(
-                          IconUtils.getDisplayIcon(tag.iconName),
-                          style: const TextStyle(fontSize: 14),
-                        )
-                      : Icon(IconUtils.getIconData(tag.iconName), size: 18),
-                  label: Text(tag.localizedName(l10n)),
-                  onSelected: (_) => _toggle(tag.id),
-                  visualDensity: VisualDensity.compact,
-                ),
+              for (final tag in selectedTags) _buildChip(tag, l10n),
+              for (final tag in candidateTags) _buildChip(tag, l10n),
             ],
           ),
+        if (hiddenCount > 0) ...[
+          const SizedBox(height: 8),
+          Text(
+            l10n.quickEditMoreTagsHint(hiddenCount),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ],
     );
   }
 }
 
 extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
-  /// 结果卡与提案卡共用的快编面板：内容（可选）/作者/出处/标签。
+  /// 结果卡与提案卡共用的快编面板：作者/出处/标签。
+  /// 「快编」只管这些元信息，改正文请走完整编辑器，别在小面板里塞长文本框。
   /// 用底部面板而不是 AlertDialog：标签区在弹窗里会被固定高度的嵌套列表
   /// 顶出可视范围（下面的标签点不到），底部面板可以整页滚动 + 固定操作栏，
   /// 键盘弹出时也不会盖住输入框。
   Future<_QuickEditValues?> _showQuickEditDialog({
-    required bool contentEditable,
-    required String content,
     required String? author,
     required String? source,
     required List<String> selectedTagIds,
@@ -155,7 +188,6 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
         if (category.id != DatabaseService.hiddenTagId) category,
     ];
 
-    final contentController = TextEditingController(text: content);
     final authorController = TextEditingController(text: author ?? '');
     final sourceController = TextEditingController(text: source ?? '');
     final selected = <String>[...selectedTagIds];
@@ -168,117 +200,97 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
         showDragHandle: true,
         builder: (sheetContext) {
           final theme = Theme.of(sheetContext);
-          return StatefulBuilder(
-            builder: (context, setSheetState) => Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.viewInsetsOf(context).bottom,
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.82,
               ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.sizeOf(context).height * 0.82,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                      child: Text(
-                        l10n.aiCardQuickEditTooltip,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                    child: Text(
+                      l10n.aiCardQuickEditTooltip,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Flexible(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (contentEditable) ...[
-                              TextField(
-                                controller: contentController,
-                                minLines: 3,
-                                maxLines: 8,
-                                textCapitalization:
-                                    TextCapitalization.sentences,
-                                decoration: InputDecoration(
-                                  labelText: l10n.aiCardEditContentHint,
-                                  alignLabelWithHint: true,
-                                  border: const OutlineInputBorder(),
+                  ),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: authorController,
+                                  textInputAction: TextInputAction.next,
+                                  decoration: InputDecoration(
+                                    labelText: l10n.author,
+                                    isDense: true,
+                                    prefixIcon: const Icon(Icons.person_outline),
+                                    border: const OutlineInputBorder(),
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TextField(
+                                  controller: sourceController,
+                                  decoration: InputDecoration(
+                                    labelText: l10n.source,
+                                    isDense: true,
+                                    prefixIcon:
+                                        const Icon(Icons.menu_book_outlined),
+                                    border: const OutlineInputBorder(),
+                                  ),
+                                ),
+                              ),
                             ],
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: authorController,
-                                    textInputAction: TextInputAction.next,
-                                    decoration: InputDecoration(
-                                      labelText: l10n.author,
-                                      isDense: true,
-                                      prefixIcon:
-                                          const Icon(Icons.person_outline),
-                                      border: const OutlineInputBorder(),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: TextField(
-                                    controller: sourceController,
-                                    decoration: InputDecoration(
-                                      labelText: l10n.source,
-                                      isDense: true,
-                                      prefixIcon:
-                                          const Icon(Icons.menu_book_outlined),
-                                      border: const OutlineInputBorder(),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            _QuickEditTagPicker(
-                              tags: allTags,
-                              selectedTagIds: selected,
-                              onSelectionChanged: (newSelection) {
-                                setSheetState(() {
-                                  selected
-                                    ..clear()
-                                    ..addAll(newSelection);
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const Divider(height: 1),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(sheetContext, false),
-                            child: Text(l10n.cancel),
                           ),
-                          const SizedBox(width: 8),
-                          FilledButton(
-                            onPressed: () => Navigator.pop(sheetContext, true),
-                            child: Text(l10n.done),
+                          const SizedBox(height: 16),
+                          _QuickEditTagPicker(
+                            tags: allTags,
+                            initialSelectedTagIds: selected,
+                            onSelectionChanged: (newSelection) {
+                              selected
+                                ..clear()
+                                ..addAll(newSelection);
+                            },
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(sheetContext, false),
+                          child: Text(l10n.cancel),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: () => Navigator.pop(sheetContext, true),
+                          child: Text(l10n.done),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           );
@@ -293,7 +305,6 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
       String? trimToNull(String value) =>
           value.trim().isEmpty ? null : value.trim();
       return _QuickEditValues(
-        content: contentEditable ? contentController.text.trim() : content,
         author: trimToNull(authorController.text),
         source: trimToNull(sourceController.text),
         tagIds: [for (final tag in selectedTags) tag.id],
@@ -301,25 +312,20 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
         tagIconNames: [for (final tag in selectedTags) tag.iconName],
       );
     } finally {
-      contentController.dispose();
       authorController.dispose();
       sourceController.dispose();
     }
   }
 
-  /// 提案卡快编：弹窗 → 写回 artifact（纯文本新建可改正文，
-  /// 其余只改 author/source/tag_ids，避免与 ops 应用结果不一致）。
+  /// 提案卡快编：弹窗 → 写回 artifact。只改 author/source/tag_ids，
+  /// 正文交给完整编辑器，避免与 ops 应用结果不一致。
   Future<NoteProposalQuickEdit?> _handleNoteProposalQuickEdit(
     String messageId,
     Map<String, dynamic> meta,
     NoteProposalArtifact artifact,
     NoteProposalQuickEdit current,
   ) async {
-    final contentEditable = artifact.action == NoteProposalAction.create &&
-        artifact.resultKind == NoteDocumentKind.plain;
     final values = await _showQuickEditDialog(
-      contentEditable: contentEditable,
-      content: current.content,
       author: current.author,
       source: current.source,
       selectedTagIds: current.tagIds,
@@ -336,9 +342,6 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
           (key, value) => MapEntry(key.toString(), value),
         ),
       );
-      if (contentEditable) {
-        artifactJson['content'] = values.content;
-      }
       final metadata = Map<String, Object?>.from(
         (artifactJson['metadata'] as Map?)?.map(
               (key, value) => MapEntry(key.toString(), value),
@@ -371,7 +374,7 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
     });
 
     return NoteProposalQuickEdit(
-      content: values.content,
+      content: current.content,
       author: values.author,
       source: values.source,
       tagIds: values.tagIds,
