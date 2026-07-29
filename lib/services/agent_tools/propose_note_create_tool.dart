@@ -61,16 +61,20 @@ class ProposeNoteCreateTool extends AgentTool {
           },
           'author': {
             'type': 'string',
-            'description': '摘录来源的作者（仅当笔记确实是摘录时填写，不要臆造）。',
+            'description': '摘录来源的作者，只填名字本身（如 `苏轼`）。'
+                '显示时应用会自动加上「——」前缀，所以不要自带破折号、书名号或引号。'
+                '仅当笔记确实是摘录他人内容时填写，用户原创内容留空，不要臆造。',
           },
           'source': {
             'type': 'string',
-            'description': '摘录来源的作品或出处（仅当用户提供时填写）。',
+            'description': '摘录来源的作品或出处，只填作品名本身（如 `东坡志林`）。'
+                '显示时应用会自动包上《》，所以不要自带书名号，否则会显示成《《东坡志林》》。',
           },
           'include_location': {
             'type': 'boolean',
-            'description': '是否建议附加当前位置。只有用户表达了记录情景的意图时才设为 true，'
-                '设为 true 前应先调用 get_location_weather 确认有可用数据。',
+            'description': '是否建议附加当前位置。写此刻见闻、心情、日常片段的笔记通常值得附加；'
+                '纯知识整理、待办、摘录通常不需要。不必等用户点名要求，但设为 true 前'
+                '必须先调用 get_location_weather 确认确实拿得到数据，不得编造位置。',
           },
           'include_weather': {
             'type': 'boolean',

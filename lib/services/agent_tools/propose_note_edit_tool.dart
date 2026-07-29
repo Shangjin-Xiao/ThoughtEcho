@@ -392,7 +392,8 @@ const Map<String, Object?> _metadataPatchSchema = {
     },
     'author': {
       'type': 'object',
-      'description': '作者补丁。action=set 时 value 必须是非空字符串。',
+      'description': '作者补丁。action=set 时 value 必须是非空字符串，只填名字本身'
+          '（如 `苏轼`）——显示时应用会自动加「——」前缀，不要自带破折号或书名号。',
       'properties': {
         'action': {
           'type': 'string',
@@ -405,7 +406,8 @@ const Map<String, Object?> _metadataPatchSchema = {
     },
     'source': {
       'type': 'object',
-      'description': '出处补丁。action=set 时 value 必须是非空字符串。',
+      'description': '出处补丁。action=set 时 value 必须是非空字符串，只填作品名本身'
+          '（如 `东坡志林`）——显示时应用会自动包上《》，自带书名号会显示成《《东坡志林》》。',
       'properties': {
         'action': {
           'type': 'string',

@@ -106,8 +106,10 @@ class GetLocationWeatherTool extends AgentTool {
   String get name => 'get_location_weather';
 
   @override
-  String get description => '获取当前位置和天气信息。'
-      '当你要判断是否建议为笔记附加当前位置/天气时，调用此工具。';
+  String get description => '获取此时此地的真实环境信息（城市、天气、气温）。\n'
+      '两种场景都应调用：一是要判断是否为笔记附加位置/天气；'
+      '二是用户让你写"此刻/今天"相关的内容却没给素材时，这是唯一可靠的环境事实来源，'
+      '不调用就只能靠编。位置和天气一律不得凭空捏造。';
 
   @override
   bool get isReadOnly => true;

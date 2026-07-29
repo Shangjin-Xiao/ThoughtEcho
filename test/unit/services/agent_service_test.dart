@@ -88,4 +88,27 @@ void main() {
       expect(a.hashCode, equals(b.hashCode));
     });
   });
+
+  group('AgentService describeNow', () {
+    test('renders date, weekday and day period key for the given time', () {
+      // 2026-07-29 是周三，15:04 落在午后时段。
+      final text = AgentService.describeNow(DateTime(2026, 7, 29, 15, 4));
+
+      expect(text, contains('2026-07-29'));
+      expect(text, contains('周三'));
+      expect(text, contains('15:04'));
+      expect(text, contains('afternoon'));
+    });
+
+    test('maps late night hours to the midnight period', () {
+      expect(
+        AgentService.describeNow(DateTime(2026, 1, 1, 2, 30)),
+        contains('midnight'),
+      );
+      expect(
+        AgentService.describeNow(DateTime(2026, 1, 1, 23, 0)),
+        contains('midnight'),
+      );
+    });
+  });
 }
