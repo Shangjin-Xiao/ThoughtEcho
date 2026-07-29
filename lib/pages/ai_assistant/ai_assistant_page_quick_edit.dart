@@ -140,62 +140,6 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
     }
   }
 
-  /// 结果卡快编：弹窗 → 写回消息 content 与 metaJson（author/source/标签）。
-  Future<SmartResultDraft?> _handleSmartResultQuickEdit(
-    String messageId,
-    Map<String, dynamic> meta,
-    SmartResultDraft current,
-  ) async {
-    final isRich = _opsFromRichDocument(meta['rich_document']) != null;
-    final values = await _showQuickEditDialog(
-      contentEditable: !isRich,
-      content: current.content,
-      author: current.author,
-      source: current.source,
-      selectedTagIds: _extractStringList(meta['tag_ids']),
-    );
-    if (values == null || !mounted) return null;
-    _persistSmartResultQuickEdit(messageId, meta, values,
-        updateContent: !isRich);
-    return SmartResultDraft(
-      content: values.content,
-      author: values.author,
-      source: values.source,
-      tagNames: values.tagNames,
-      includeLocation: current.includeLocation,
-      includeWeather: current.includeWeather,
-    );
-  }
-
-  void _persistSmartResultQuickEdit(
-    String messageId,
-    Map<String, dynamic> meta,
-    _QuickEditValues values, {
-    required bool updateContent,
-  }) {
-    _setState(() {
-      final index = _messages.indexWhere((message) => message.id == messageId);
-      if (index == -1) return;
-      final oldMessage = _messages[index];
-      final updatedMeta = Map<String, dynamic>.from(meta);
-      updatedMeta['author'] = values.author;
-      updatedMeta['source'] = values.source;
-      updatedMeta['tag_names'] = values.tagNames;
-      updatedMeta['tag_ids'] = values.tagIds;
-      updatedMeta['tag_icon_names'] = values.tagIconNames;
-      final updatedMessage = oldMessage.copyWith(
-        content: updateContent ? values.content : oldMessage.content,
-        metaJson: jsonEncode(updatedMeta),
-      );
-      _messages[index] = updatedMessage;
-      if (_currentSessionId != null) {
-        unawaited(
-          _chatSessionService.addMessage(_currentSessionId!, updatedMessage),
-        );
-      }
-    });
-  }
-
   /// 提案卡快编：弹窗 → 写回 artifact（纯文本新建可改正文，
   /// 其余只改 author/source/tag_ids，避免与 ops 应用结果不一致）。
   Future<NoteProposalQuickEdit?> _handleNoteProposalQuickEdit(
@@ -326,17 +270,6 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
               : ids[i],
         ),
     ];
-  }
-
-  /// 追加/替换的目标笔记展示标题：取绑定笔记首行前 20 字。
-  String? _boundNoteTitle() {
-    final content = widget.quote?.content.trim();
-    if (content == null || content.isEmpty) return null;
-    final firstLine = content.split('\n').first.trim();
-    if (firstLine.isEmpty) return null;
-    return firstLine.length <= 20
-        ? firstLine
-        : '${firstLine.substring(0, 20)}…';
   }
 
   /// 「已保存 · 查看笔记」出口：从数据库取出笔记并打开。

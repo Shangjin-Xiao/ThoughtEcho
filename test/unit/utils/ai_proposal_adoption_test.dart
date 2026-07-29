@@ -57,16 +57,6 @@ void main() {
       );
     });
 
-    test('历史遗留的 smart_result 卡片同样识别', () {
-      final messages = [
-        _Msg(_card(type: 'smart_result', savedNoteId: 'legacy-note')),
-      ];
-      expect(
-        AiSmartResultUtils.latestAdoptedProposalNoteId(messages, _metaOf),
-        'legacy-note',
-      );
-    });
-
     test('非卡片类 meta（工具进度等）不参与判定', () {
       final messages = [
         _Msg(_card(savedNoteId: 'note-3')),
@@ -93,15 +83,10 @@ void main() {
     expect(notice, isNot(contains('上述')));
   });
 
-  test('卡片类型集合覆盖 artifact 与历史遗留两种 meta', () {
-    // 与 NoteProposalArtifact.typeName / 工作流产出的 'smart_result' 对齐
+  test('卡片类型集合与 NoteProposalArtifact.typeName 对齐', () {
     final decoded = jsonDecode('{"type":"note_proposal"}') as Map;
     expect(
       AiSmartResultUtils.proposalCardTypes.contains(decoded['type']),
-      isTrue,
-    );
-    expect(
-      AiSmartResultUtils.proposalCardTypes.contains('smart_result'),
       isTrue,
     );
   });

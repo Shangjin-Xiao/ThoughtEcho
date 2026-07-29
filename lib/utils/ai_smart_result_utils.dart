@@ -22,10 +22,7 @@ class AiSmartResultUtils {
   }
 
   /// 建议卡片消息的 meta type，用于在历史里识别卡片。
-  static const Set<String> proposalCardTypes = {
-    'note_proposal',
-    'smart_result',
-  };
+  static const Set<String> proposalCardTypes = {'note_proposal'};
 
   /// 找出最近一张建议卡片已保存成的笔记 id；最近一张还没被采纳时返回 null。
   ///
