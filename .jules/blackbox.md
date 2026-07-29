@@ -42,3 +42,6 @@
 ## 2025-10-25 - 🗃️ 黑匣: [完善 FeatureGuideService 模块的结构化日志]
 **异常:** [MMKV读取/写入抛出异常且只使用了粗糙的debugPrint记录，丢失了错误栈与模块上下文]
 **拦截:** [使用 catch (e, stackTrace) 和 logError 封装 MMKV 异常，附带 error, stackTrace 和 source: 'FeatureGuideService' 参数，保存完整的堆栈上下文信息。]
+## 2024-05-27 - [完善 HomePage 模块的结构化日志]
+**异常:** `HomePage` 中在恢复草稿、加载标签等操作时，异常被直接捕获并仅通过 `logDebug` 记录，丢失了错误的完整堆栈信息 (stackTrace) 和上下文。
+**拦截:** 确立将重要业务流程中的 `catch (e)` 统一升级为 `catch (e, stackTrace)`，使用 `logError('描述', error: e, stackTrace: stackTrace, source: 'ModuleName')` 替换 `logDebug` 进行规范日志记录。
