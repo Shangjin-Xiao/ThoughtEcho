@@ -1,0 +1,19 @@
+.github/workflows/flutter-release-build.yml
+  s_742458ff8e536a::t_6a8591e284d1e4 175-178,181-190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "5e639e24b5d3bc91f2dc92f123e1bd1a03032e8a",
+  "prompts": {},
+  "sessions": {
+    "s_742458ff8e536a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e97cdac8-0e27-4dad-97de-381d058d5e24",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
