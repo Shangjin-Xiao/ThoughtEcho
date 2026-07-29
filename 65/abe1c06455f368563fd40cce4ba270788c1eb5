@@ -1,0 +1,30 @@
+test/unit/services/webdav_sync_zip_packaging_test.dart
+  s_80795c67a257d3::t_232da89024ef47 1-79
+lib/services/webdav_sync_service.dart
+  s_80795c67a257d3::t_389f9808b56e92 744-753,773-793,795-808,810,813-818,820,826-853
+  s_80795c67a257d3::t_fe8e382e60b507 384,404-415,420
+  s_80795c67a257d3::t_a8e1ca1a914e6a 473
+  s_80795c67a257d3::t_f3f64b5c5ffd88 859-861,866,872,878,883
+  s_80795c67a257d3::t_f122652b111f17 754-772
+  s_80795c67a257d3::t_c946633fe7918d 385
+  s_80795c67a257d3::t_e6de3e1f2fe209 416-419
+  s_80795c67a257d3::t_821b64461447f4 39-49
+  s_80795c67a257d3::t_49224af51f7151 509-512
+  s_80795c67a257d3::t_b25af8b624d5b5 854
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "65abe1c06455f368563fd40cce4ba270788c1eb5",
+  "prompts": {},
+  "sessions": {
+    "s_80795c67a257d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7bcde18c-efde-40a1-8c83-8f65ddb5263f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
