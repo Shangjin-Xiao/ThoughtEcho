@@ -138,7 +138,7 @@ class AiOptionsMenu extends StatelessWidget {
       ),
       if (showAskNote && onAskNote != null)
         AiOptionItem(
-          icon: Icons.chat,
+          icon: Icons.lightbulb_outline,
           title: l10n.askNote,
           subtitle: l10n.askNoteDesc,
           onTap: onAskNote!,
@@ -264,16 +264,18 @@ class AiOptionsMenu extends StatelessWidget {
                           ],
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        option.subtitle,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: theme.colorScheme.onSurfaceVariant,
+                      if (option.subtitle.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          option.subtitle,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      ],
                     ],
                   ),
                 ),
