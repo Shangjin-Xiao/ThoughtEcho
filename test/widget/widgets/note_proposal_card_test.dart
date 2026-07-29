@@ -164,6 +164,7 @@ void main() {
     )));
     await tester.pumpAndSettle();
 
+    // 已缓存的位置/天气直接显示（同步读取，不阻塞卡片渲染）
     expect(find.text('杭州市'), findsOneWidget);
     expect(find.text('晴 26℃'), findsOneWidget);
     final locationChip = tester.widget<FilterChip>(
@@ -171,10 +172,89 @@ void main() {
     );
     expect(locationChip.selected, isTrue);
 
+    await tester.ensureVisible(find.text('晴 26℃'));
     await tester.tap(find.text('晴 26℃'));
     await tester.pumpAndSettle();
     expect(location, isTrue);
     expect(weather, isTrue);
+  });
+
+  testWidgets('weather chip fetches on tap and reverts when fetch fails',
+      (tester) async {
+    var resolveCalls = 0;
+    String? resolved;
+    final artifact = NoteProposalArtifact(
+      action: NoteProposalAction.create,
+      proposalTitle: 'Draft',
+      reason: '',
+      resultKind: NoteDocumentKind.plain,
+      content: 'content',
+      documentOps: null,
+      metadata: const {},
+      changes: const [],
+    );
+
+    Widget card() => NoteProposalCard(
+          artifact: artifact,
+          onOpenInEditor: () async {},
+          onApply: () async => 'note-id',
+          onResolveWeather: () async {
+            resolveCalls++;
+            return resolved;
+          },
+        );
+
+    // 获取失败：开关回退为未勾选
+    await tester.pumpWidget(_app(card()));
+    await tester.ensureVisible(find.text('天气'));
+    await tester.tap(find.text('天气'));
+    await tester.pumpAndSettle();
+    expect(resolveCalls, 1);
+    expect(
+      tester.widget<FilterChip>(find.widgetWithText(FilterChip, '天气')).selected,
+      isFalse,
+    );
+
+    // 获取成功：胶囊显示现场获取到的天气
+    resolved = '多云 18℃';
+    await tester.ensureVisible(find.text('天气'));
+    await tester.tap(find.text('天气'));
+    await tester.pumpAndSettle();
+    expect(resolveCalls, 2);
+    expect(find.text('多云 18℃'), findsOneWidget);
+  });
+
+  testWidgets('collapsed content cannot be scrolled, expanded content can',
+      (tester) async {
+    final artifact = NoteProposalArtifact(
+      action: NoteProposalAction.create,
+      proposalTitle: 'Draft',
+      reason: '',
+      resultKind: NoteDocumentKind.plain,
+      content: List.filled(100, '很长的正文').join('\n'),
+      documentOps: null,
+      metadata: const {},
+      changes: const [],
+    );
+    await tester.pumpWidget(_app(NoteProposalCard(
+      artifact: artifact,
+      onOpenInEditor: () async {},
+      onApply: () async => 'note-id',
+    )));
+    await tester.pumpAndSettle();
+
+    SingleChildScrollView contentScrollView() => tester
+        .widgetList<SingleChildScrollView>(find.byType(SingleChildScrollView))
+        .firstWhere((view) => view.controller != null);
+
+    expect(
+      contentScrollView().physics,
+      isA<NeverScrollableScrollPhysics>(),
+    );
+
+    await tester.tap(find.text('展开全文'));
+    await tester.pumpAndSettle();
+    expect(contentScrollView().physics, isA<ClampingScrollPhysics>());
   });
 
   testWidgets('quick edit chip invokes callback and hides when readOnly',

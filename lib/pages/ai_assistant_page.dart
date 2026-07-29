@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
+import '../extensions/note_category_localization_extension.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/ai_assistant_entry.dart';
 import '../models/ai_insight_workflow_options.dart';
@@ -42,11 +43,11 @@ import '../services/weather_service.dart';
 import '../utils/ai_smart_result_utils.dart';
 import '../utils/agent_note_document_codec.dart';
 import '../utils/app_logger.dart';
+import '../utils/icon_utils.dart';
 import '../utils/quill_delta_builder.dart';
 import '../utils/quill_structured_edit.dart';
 import '../utils/string_utils.dart';
 import '../utils/time_utils.dart';
-import '../widgets/add_note_dialog_parts.dart';
 import '../widgets/ai/ai_workflow_cards.dart';
 import '../widgets/ai/experimental_badge.dart';
 import '../widgets/ai/note_proposal_card.dart';
@@ -104,6 +105,10 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   bool _enableThinking = true; // 是否启用思考模式（仅支持的模型显示）
 
   bool _isInputFocused = false;
+
+  /// 上一次布局时消息区的可用高度，用于识别键盘/输入框正在挤压列表
+  /// （见 _onMessageViewportHeightChanged）。
+  double _lastMessageViewportHeight = 0;
   bool _agentListenerAttached = false;
   int _agentRequestGeneration = 0;
   Timer? _agentStatusDismissTimer;

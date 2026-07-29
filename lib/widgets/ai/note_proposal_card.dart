@@ -39,6 +39,8 @@ class NoteProposalCard extends StatefulWidget {
     this.tags = const [],
     this.locationPreview,
     this.weatherPreview,
+    this.onResolveLocation,
+    this.onResolveWeather,
     this.onMetadataChanged,
     this.onQuickEdit,
     this.onViewNote,
@@ -60,8 +62,14 @@ class NoteProposalCard extends StatefulWidget {
   final List<NoteCategory> tags;
 
   /// 位置/天气胶囊上的实际内容预览，为空时退化为「位置」「天气」通用文案。
+  /// 只用已缓存的值，卡片渲染不会为此等待定位/天气请求。
   final String? locationPreview;
   final String? weatherPreview;
+
+  /// 勾选位置/天气时才现场获取（与编辑器一致：不勾就不定位）。
+  /// 返回胶囊上要显示的文本；返回 null 表示获取失败，开关回退为未勾选。
+  final Future<String?> Function()? onResolveLocation;
+  final Future<String?> Function()? onResolveWeather;
 
   /// 位置/天气勾选变化：由页面写回 artifact metadata 并持久化，
   /// 保证「保存」与「打开编辑器」两条路径读到的是同一份开关状态。
@@ -86,6 +94,11 @@ class _NoteProposalCardState extends State<NoteProposalCard> {
   String? _savedNoteId;
   late bool _includeLocation;
   late bool _includeWeather;
+  // 勾选后现场获取到的位置/天气文本（优先于缓存预览显示）
+  String? _resolvedLocation;
+  String? _resolvedWeather;
+  bool _loadingLocation = false;
+  bool _loadingWeather = false;
 
   NoteProposalArtifact get artifact => widget.artifact;
 
@@ -204,20 +217,28 @@ class _NoteProposalCardState extends State<NoteProposalCard> {
                   if (isCreate) ...[
                     AiMetaChip(
                       icon: Icons.location_on_outlined,
-                      label: widget.locationPreview ?? l10n.location,
+                      // 预览取的是已缓存值（同步 getter，不会拖慢卡片渲染），
+                      // 有就直接显示；勾选后现场获取到的值优先。
+                      label: _resolvedLocation ??
+                          widget.locationPreview ??
+                          l10n.location,
                       selected: _includeLocation,
                       enabled: canEdit,
+                      loading: _loadingLocation,
                       onTap: canEdit
-                          ? () => _toggleMetadata(location: !_includeLocation)
+                          ? () => _toggleLocation(!_includeLocation)
                           : null,
                     ),
                     AiMetaChip(
                       icon: Icons.wb_sunny_outlined,
-                      label: widget.weatherPreview ?? l10n.weather,
+                      label: _resolvedWeather ??
+                          widget.weatherPreview ??
+                          l10n.weather,
                       selected: _includeWeather,
                       enabled: canEdit,
+                      loading: _loadingWeather,
                       onTap: canEdit
-                          ? () => _toggleMetadata(weather: !_includeWeather)
+                          ? () => _toggleWeather(!_includeWeather)
                           : null,
                     ),
                   ],
@@ -280,6 +301,54 @@ class _NoteProposalCardState extends State<NoteProposalCard> {
       _includeWeather = weather ?? _includeWeather;
     });
     widget.onMetadataChanged?.call(_includeLocation, _includeWeather);
+  }
+
+  /// 勾选位置：先落开关状态，再现场获取（失败则回退为未勾选）。
+  Future<void> _toggleLocation(bool value) async {
+    _toggleMetadata(location: value);
+    if (!value) {
+      setState(() => _resolvedLocation = null);
+      return;
+    }
+    final resolver = widget.onResolveLocation;
+    if (resolver == null) return;
+    setState(() => _loadingLocation = true);
+    String? label;
+    try {
+      label = await resolver();
+    } catch (_) {
+      label = null;
+    }
+    if (!mounted) return;
+    setState(() {
+      _loadingLocation = false;
+      _resolvedLocation = label;
+    });
+    if (label == null) _toggleMetadata(location: false);
+  }
+
+  /// 勾选天气：同上。天气依赖定位，失败由页面提示，这里只回退开关。
+  Future<void> _toggleWeather(bool value) async {
+    _toggleMetadata(weather: value);
+    if (!value) {
+      setState(() => _resolvedWeather = null);
+      return;
+    }
+    final resolver = widget.onResolveWeather;
+    if (resolver == null) return;
+    setState(() => _loadingWeather = true);
+    String? label;
+    try {
+      label = await resolver();
+    } catch (_) {
+      label = null;
+    }
+    if (!mounted) return;
+    setState(() {
+      _loadingWeather = false;
+      _resolvedWeather = label;
+    });
+    if (label == null) _toggleMetadata(weather: false);
   }
 
   Future<void> _handleQuickEdit() async {

@@ -156,6 +156,8 @@ class AiCardTagList extends StatelessWidget {
 
 /// 内容限高容器：折叠 220 / 展开 520，与重设计稿一致。
 /// 只有内容在折叠高度下真的溢出时才显示展开/收起按钮。
+/// 折叠态一律禁止滚动——否则「能滑」和「展开按钮」是两套重复的翻阅方式，
+/// 还会跟外层消息列表抢手势。展开后内容仍可能超过 520，此时才允许滚动。
 class AiCardExpandableContent extends StatefulWidget {
   const AiCardExpandableContent({super.key, required this.child});
 
@@ -206,7 +208,7 @@ class _AiCardExpandableContentState extends State<AiCardExpandableContent> {
           ),
           child: SingleChildScrollView(
             controller: _scrollController,
-            physics: showToggle
+            physics: _expanded
                 ? const ClampingScrollPhysics()
                 : const NeverScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -231,6 +233,7 @@ class _AiCardExpandableContentState extends State<AiCardExpandableContent> {
 }
 
 /// 位置/天气元数据开关：AddNoteDialog 同款 FilterChip 样式。
+/// [loading] 为真时头像换成进度圈——勾选后才现场获取位置/天气，需要给等待反馈。
 class AiMetaChip extends StatelessWidget {
   const AiMetaChip({
     super.key,
@@ -238,6 +241,7 @@ class AiMetaChip extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.enabled,
+    this.loading = false,
     this.onTap,
   });
 
@@ -245,6 +249,7 @@ class AiMetaChip extends StatelessWidget {
   final String label;
   final bool selected;
   final bool enabled;
+  final bool loading;
   final VoidCallback? onTap;
 
   @override
@@ -252,16 +257,21 @@ class AiMetaChip extends StatelessWidget {
     final theme = Theme.of(context);
     return FilterChip(
       showCheckmark: false,
-      avatar: Icon(
-        icon,
-        size: 18,
-        color: selected
-            ? theme.colorScheme.primary
-            : theme.colorScheme.onSurfaceVariant,
-      ),
+      avatar: loading
+          ? const SizedBox.square(
+              dimension: 14,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Icon(
+              icon,
+              size: 18,
+              color: selected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
       label: Text(label),
       selected: selected,
-      onSelected: enabled && onTap != null ? (_) => onTap!() : null,
+      onSelected: enabled && !loading && onTap != null ? (_) => onTap!() : null,
       selectedColor: theme.colorScheme.primaryContainer,
       visualDensity: VisualDensity.compact,
     );

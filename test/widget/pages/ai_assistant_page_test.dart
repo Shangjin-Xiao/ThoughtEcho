@@ -748,6 +748,62 @@ void main() {
       expect(inputFocusNode.hasFocus, isTrue);
     });
 
+    testWidgets('keyboard animation keeps the last message above the keyboard',
+        (tester) async {
+      final now = DateTime.now();
+      final session = ChatSession(
+        id: 'keyboard-session',
+        sessionType: 'general',
+        title: '键盘遮挡测试',
+        createdAt: now,
+        lastActiveAt: now,
+      );
+      chatSessionService.seedSession(
+        session,
+        List<app_chat.ChatMessage>.generate(
+          30,
+          (index) => app_chat.ChatMessage(
+            id: 'history-$index',
+            role: 'assistant',
+            isUser: false,
+            content: '历史消息 $index：一段足以占据单行高度的内容',
+            timestamp: now,
+          ),
+        ),
+      );
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+            session: session,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(TextField).last);
+      await tester.pump();
+
+      final listController =
+          tester.widget<ListView>(find.byType(ListView)).controller!;
+      // 键盘是逐帧上推的：每一帧长高后都应重新贴底，否则最后一条被吃掉
+      for (final inset in <double>[120, 240, 360]) {
+        tester.view.viewInsets = FakeViewPadding(
+          bottom: inset * tester.view.devicePixelRatio,
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(
+          listController.position.pixels,
+          moreOrLessEquals(listController.position.maxScrollExtent, epsilon: 1),
+          reason: '键盘高度 $inset 时列表没有贴底',
+        );
+      }
+    });
+
     testWidgets(
         'scroll-to-bottom reaches the latest extent while input focused',
         (tester) async {

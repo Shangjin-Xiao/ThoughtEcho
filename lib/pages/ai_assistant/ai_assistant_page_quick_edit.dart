@@ -19,9 +19,126 @@ class _QuickEditValues {
   final List<String?> tagIconNames;
 }
 
+/// 快编面板里的标签选择：直接铺开胶囊，不套固定高度的嵌套列表，
+/// 整块跟着面板一起滚动，避免下方标签被面板边界挡住选不到。
+class _QuickEditTagPicker extends StatefulWidget {
+  const _QuickEditTagPicker({
+    required this.tags,
+    required this.selectedTagIds,
+    required this.onSelectionChanged,
+  });
+
+  final List<NoteCategory> tags;
+  final List<String> selectedTagIds;
+  final ValueChanged<List<String>> onSelectionChanged;
+
+  @override
+  State<_QuickEditTagPicker> createState() => _QuickEditTagPickerState();
+}
+
+class _QuickEditTagPickerState extends State<_QuickEditTagPicker> {
+  /// 超过这个数量才给搜索框，标签少时不必占地方。
+  static const int _searchThreshold = 8;
+
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _toggle(String tagId) {
+    final next = List<String>.from(widget.selectedTagIds);
+    if (next.contains(tagId)) {
+      next.remove(tagId);
+    } else {
+      next.add(tagId);
+    }
+    widget.onSelectionChanged(next);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    if (widget.tags.isEmpty) {
+      return Text(
+        l10n.noTagsAvailableHint,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      );
+    }
+
+    final query = _query.trim().toLowerCase();
+    final visibleTags = query.isEmpty
+        ? widget.tags
+        : [
+            for (final tag in widget.tags)
+              if (tag.localizedName(l10n).toLowerCase().contains(query)) tag,
+          ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.selectTagsWithCount(widget.selectedTagIds.length),
+          style: theme.textTheme.titleSmall,
+        ),
+        const SizedBox(height: 8),
+        if (widget.tags.length > _searchThreshold) ...[
+          TextField(
+            controller: _searchController,
+            onChanged: (value) => setState(() => _query = value),
+            decoration: InputDecoration(
+              hintText: l10n.searchTags,
+              isDense: true,
+              prefixIcon: const Icon(Icons.search, size: 20),
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (visibleTags.isEmpty)
+          Text(
+            l10n.noMatchingTags,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          )
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final tag in visibleTags)
+                FilterChip(
+                  showCheckmark: false,
+                  selected: widget.selectedTagIds.contains(tag.id),
+                  avatar: IconUtils.isEmoji(tag.iconName)
+                      ? Text(
+                          IconUtils.getDisplayIcon(tag.iconName),
+                          style: const TextStyle(fontSize: 14),
+                        )
+                      : Icon(IconUtils.getIconData(tag.iconName), size: 18),
+                  label: Text(tag.localizedName(l10n)),
+                  onSelected: (_) => _toggle(tag.id),
+                  visualDensity: VisualDensity.compact,
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
 extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
-  /// 结果卡与提案卡共用的快编弹窗：内容（可选）/作者/出处/标签。
-  /// 样式对齐 AddNoteDialog：输入框 + TagSelectionSection。
+  /// 结果卡与提案卡共用的快编面板：内容（可选）/作者/出处/标签。
+  /// 用底部面板而不是 AlertDialog：标签区在弹窗里会被固定高度的嵌套列表
+  /// 顶出可视范围（下面的标签点不到），底部面板可以整页滚动 + 固定操作栏，
+  /// 键盘弹出时也不会盖住输入框。
   Future<_QuickEditValues?> _showQuickEditDialog({
     required bool contentEditable,
     required String content,
@@ -44,75 +161,125 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
     final selected = <String>[...selectedTagIds];
 
     try {
-      final confirmed = await showDialog<bool>(
+      final confirmed = await showModalBottomSheet<bool>(
         context: context,
-        builder: (dialogContext) {
+        isScrollControlled: true,
+        useSafeArea: true,
+        showDragHandle: true,
+        builder: (sheetContext) {
+          final theme = Theme.of(sheetContext);
           return StatefulBuilder(
-            builder: (context, setDialogState) => AlertDialog(
-              title: Text(l10n.aiCardQuickEditTooltip),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (contentEditable) ...[
-                        TextField(
-                          controller: contentController,
-                          minLines: 3,
-                          maxLines: 6,
-                          decoration: InputDecoration(
-                            labelText: l10n.aiCardEditContentHint,
-                            border: const OutlineInputBorder(),
+            builder: (context, setSheetState) => Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.viewInsetsOf(context).bottom,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.82,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                      child: Text(
+                        l10n.aiCardQuickEditTooltip,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (contentEditable) ...[
+                              TextField(
+                                controller: contentController,
+                                minLines: 3,
+                                maxLines: 8,
+                                textCapitalization:
+                                    TextCapitalization.sentences,
+                                decoration: InputDecoration(
+                                  labelText: l10n.aiCardEditContentHint,
+                                  alignLabelWithHint: true,
+                                  border: const OutlineInputBorder(),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: authorController,
+                                    textInputAction: TextInputAction.next,
+                                    decoration: InputDecoration(
+                                      labelText: l10n.author,
+                                      isDense: true,
+                                      prefixIcon:
+                                          const Icon(Icons.person_outline),
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextField(
+                                    controller: sourceController,
+                                    decoration: InputDecoration(
+                                      labelText: l10n.source,
+                                      isDense: true,
+                                      prefixIcon:
+                                          const Icon(Icons.menu_book_outlined),
+                                      border: const OutlineInputBorder(),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            _QuickEditTagPicker(
+                              tags: allTags,
+                              selectedTagIds: selected,
+                              onSelectionChanged: (newSelection) {
+                                setSheetState(() {
+                                  selected
+                                    ..clear()
+                                    ..addAll(newSelection);
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(sheetContext, false),
+                            child: Text(l10n.cancel),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                      TextField(
-                        controller: authorController,
-                        decoration: InputDecoration(
-                          labelText: l10n.author,
-                          prefixIcon: const Icon(Icons.person_outline),
-                          border: const OutlineInputBorder(),
-                        ),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            onPressed: () => Navigator.pop(sheetContext, true),
+                            child: Text(l10n.done),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: sourceController,
-                        decoration: InputDecoration(
-                          labelText: l10n.source,
-                          prefixIcon: const Icon(Icons.menu_book_outlined),
-                          border: const OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TagSelectionSection(
-                        tags: allTags,
-                        selectedTagIds: selected,
-                        onSelectionChanged: (newSelection) {
-                          setDialogState(() {
-                            selected
-                              ..clear()
-                              ..addAll(newSelection);
-                          });
-                        },
-                        isLoading: false,
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext, false),
-                  child: Text(l10n.cancel),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(dialogContext, true),
-                  child: Text(l10n.done),
-                ),
-              ],
             ),
           );
         },
@@ -249,6 +416,63 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
         );
       }
     });
+  }
+
+  /// 提案卡勾选「位置」时才现场定位（与编辑器一致：不勾不定位）。
+  /// 返回胶囊上显示的地点文本；权限被拒或取不到时返回 null，由卡片回退开关。
+  Future<String?> _resolveProposalLocation() async {
+    final locationService = context.read<LocationService>();
+    if (!locationService.hasLocationPermission) {
+      final granted = await locationService.requestLocationPermission();
+      if (!granted) {
+        if (mounted) {
+          final l10n = AppLocalizations.of(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.cannotGetLocationPermissionShort)),
+          );
+        }
+        return null;
+      }
+    }
+    await locationService.getCurrentLocation();
+    final display = locationService.getDisplayLocation();
+    return display.trim().isEmpty ? null : display;
+  }
+
+  /// 提案卡勾选「天气」时才现场获取。天气依赖坐标，必要时先定位。
+  Future<String?> _resolveProposalWeather() async {
+    final locationService = context.read<LocationService>();
+    final weatherService = context.read<WeatherService>();
+    var position = locationService.currentPosition;
+    if (position == null) {
+      // 天气必须有坐标，先走一次定位（含权限请求）；地址串取不到不影响天气
+      await _resolveProposalLocation();
+      if (!mounted) return null;
+      position = locationService.currentPosition;
+    }
+    if (position == null) {
+      // 权限被拒时定位那步已经提示过，这里不再叠一条
+      if (mounted && locationService.hasLocationPermission) {
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.locationAndWeatherUnavailable)),
+        );
+      }
+      return null;
+    }
+    try {
+      await weatherService.getWeatherData(
+        position.latitude,
+        position.longitude,
+      );
+    } catch (e) {
+      logDebug('提案卡获取天气失败: $e');
+      return null;
+    }
+    if (!mounted || weatherService.currentWeather == null) return null;
+    final l10n = AppLocalizations.of(context);
+    final description = weatherService.getFormattedWeather(l10n);
+    return description.trim().isEmpty ? null : description;
   }
 
   /// 提案卡的展示标签：优先 metadata 里的 tag_names，缺失时退化为 id。

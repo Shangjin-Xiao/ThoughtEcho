@@ -1,6 +1,24 @@
 part of '../ai_assistant_page.dart';
 
 extension _AIAssistantPageUI on _AIAssistantPageState {
+  /// 消息区可用高度变小（键盘上推、输入框变多行）时跟着贴底，
+  /// 保证最后一条消息不会被顶出可视区。
+  /// 注意不能监听 MediaQuery 的 viewInsets：Scaffold 已经把键盘 inset
+  /// 消费掉了，body 子树里读到的恒为 0，只有布局高度反映真实变化。
+  void _onMessageViewportHeightChanged(double height) {
+    if (height == _lastMessageViewportHeight) return;
+    final shrinking = height < _lastMessageViewportHeight;
+    _lastMessageViewportHeight = height;
+    if (!shrinking || !_autoScrollEnabled) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final position = _scrollController.position;
+      if (position.pixels < position.maxScrollExtent) {
+        _scrollController.jumpTo(position.maxScrollExtent);
+      }
+    });
+  }
+
   void _onInputFocusChanged() {
     if (!mounted || _isInputFocused == _inputFocusNode.hasFocus) {
       return;
@@ -60,57 +78,66 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               widget.exploreGuideSummary?.trim().isNotEmpty == true)
             _buildExploreGuideBanner(theme, l10n),
           Expanded(
-            child: Stack(
-              children: [
-                NotificationListener<ScrollUpdateNotification>(
-                  onNotification: (notification) {
-                    if (notification.scrollDelta != null &&
-                        notification.dragDetails != null) {
-                      if (notification.scrollDelta! < 0) {
-                        _setAutoScrollEnabled(false);
-                      }
-                    }
-                    return false;
-                  },
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      final message = _messages[index];
-                      final keepAlive = _shouldKeepAliveMessage(message);
-                      return _KeepAliveMessageItem(
-                        key: ValueKey('msg_keepalive_${message.id}'),
-                        keepAlive: keepAlive,
-                        child: _buildMessageBubble(message, theme, l10n),
-                      );
-                    },
-                  ),
-                ),
-                if (_showScrollToBottom)
-                  Positioned.fill(
-                    child: Align(
-                      alignment: Alignment.bottomCenter,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Material(
-                          color: theme.colorScheme.surfaceContainerHigh,
-                          elevation: 2,
-                          shape: const CircleBorder(),
-                          child: IconButton(
-                            key: const ValueKey(
-                              'ai_assistant_scroll_to_bottom',
+            // 键盘弹出是一段动画，消息区高度逐帧变矮。只在获得焦点那一帧滚一次
+            // 会停在"当时"的底部，键盘继续上推后消息又被盖住，所以整段动画
+            // 期间每次布局都重新贴底。
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                _onMessageViewportHeightChanged(constraints.maxHeight);
+                return Stack(
+                  children: [
+                    NotificationListener<ScrollUpdateNotification>(
+                      onNotification: (notification) {
+                        if (notification.scrollDelta != null &&
+                            notification.dragDetails != null) {
+                          if (notification.scrollDelta! < 0) {
+                            _setAutoScrollEnabled(false);
+                          }
+                        }
+                        return false;
+                      },
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          final message = _messages[index];
+                          final keepAlive = _shouldKeepAliveMessage(message);
+                          return _KeepAliveMessageItem(
+                            key: ValueKey('msg_keepalive_${message.id}'),
+                            keepAlive: keepAlive,
+                            child: _buildMessageBubble(message, theme, l10n),
+                          );
+                        },
+                      ),
+                    ),
+                    if (_showScrollToBottom)
+                      Positioned.fill(
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Material(
+                              color: theme.colorScheme.surfaceContainerHigh,
+                              elevation: 2,
+                              shape: const CircleBorder(),
+                              child: IconButton(
+                                key: const ValueKey(
+                                  'ai_assistant_scroll_to_bottom',
+                                ),
+                                onPressed: _resumeAutoScroll,
+                                icon:
+                                    const Icon(Icons.arrow_downward, size: 18),
+                                visualDensity: VisualDensity.compact,
+                                tooltip: l10n.scrollToBottom,
+                              ),
                             ),
-                            onPressed: _resumeAutoScroll,
-                            icon: const Icon(Icons.arrow_downward, size: 18),
-                            visualDensity: VisualDensity.compact,
-                            tooltip: l10n.scrollToBottom,
                           ),
                         ),
                       ),
-                    ),
-                  ),
-              ],
+                  ],
+                );
+              },
             ),
           ),
           _buildInputArea(theme, l10n),
@@ -156,6 +183,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 weatherPreview: proposalWeatherKey != null
                     ? '${WeatherCodeMapper.getLocalizedDescription(l10n, proposalWeatherKey)}${proposalTemperature != null ? ' $proposalTemperature' : ''}'
                     : null,
+                onResolveLocation: _resolveProposalLocation,
+                onResolveWeather: _resolveProposalWeather,
                 onMetadataChanged: (includeLocation, includeWeather) =>
                     _persistNoteProposalMetadataFlags(
                   message.id,
