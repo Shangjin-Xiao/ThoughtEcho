@@ -1869,7 +1869,6 @@
   "desktopInstructionsStep3": "3. Double-click the file to open in browser",
   "annualReportHtmlTitle": "ThoughtEcho {year} Annual Report",
   "generationTimeLabel": "Generated at: {time}",
-  "askNoteTitle": "Ask Note",
   "noteInfoTitle": "Note Information",
   "meUser": "Me",
   "aiAssistantUser": "Thoughter",

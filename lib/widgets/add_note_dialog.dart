@@ -10,9 +10,12 @@ import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/utils/app_tracer.dart';
 import 'package:uuid/uuid.dart';
 
+import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../models/ai_assistant_entry.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
+import '../pages/ai_assistant_page.dart';
 import '../pages/note_full_editor_page.dart'; // 导入全屏富文本编辑器
 import '../services/database_service.dart';
 import '../services/location_service.dart';
@@ -1665,15 +1668,16 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   }
 
   /// 保存笔记并退出
-  Future<void> _saveAndExit() async {
-    if (_isSaving || _waitingForFetch) return;
+  /// 保存并关闭对话框。返回落库的笔记（含真实 id），失败或未保存时返回 null。
+  Future<Quote?> _saveAndExit() async {
+    if (_isSaving || _waitingForFetch) return null;
 
     // 如果内容为空，直接返回
     if (_contentController.text.isEmpty) {
       if (mounted) {
         Navigator.pop(context);
       }
-      return;
+      return null;
     }
 
     // 如果位置/天气正在异步获取中，显示 loading 并等待完成（最多 5s）
@@ -1681,7 +1685,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     if (_controller.isFetchingMetadata) {
       if (mounted) setState(() => _waitingForFetch = true);
       await _waitForMetadata(const Duration(seconds: 5));
-      if (!mounted) return;
+      if (!mounted) return null;
       // 仍在获取中说明是超时，需要告知用户
       metadataTimedOut = _controller.isFetchingMetadata;
       if (mounted) setState(() => _waitingForFetch = false);
@@ -1772,10 +1776,75 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         }
       }
       unawaited(Future<void>.sync(() => widget.onSave(quote)));
+      return quote;
     } catch (e) {
       logDebug('创建非全屏笔记保存快照失败: $e');
       _isSaving = false;
     }
+    return null;
+  }
+
+  /// AI 入口：与全屏编辑器 `_NoteEditorAIFeatures._openAiAssistant` 同一套流程——
+  /// 先把内容落库，再关掉本对话框进入 Thoughter。
+  ///
+  /// 必须先保存的原因：Agent 要靠真实笔记 id 才能调用修改笔记的工具。
+  /// 之前这里传的是空 id，Agent 收到的 note_id 是占位串，既没法改这条笔记，
+  /// 又会把「未保存」当成事实汇报给用户。
+  Future<void> _openAiAssistant(String? initialQuestion) async {
+    final l10n = AppLocalizations.of(context);
+
+    if (_contentController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.pleaseEnterContent),
+          duration: AppConstants.snackBarDurationNormal,
+        ),
+      );
+      return;
+    }
+
+    // 保存会 pop 掉本对话框，导航器引用要提前取好
+    final navigator = Navigator.of(context);
+    Quote? noteForAgent = _fullInitialQuote ?? widget.initialQuote;
+
+    if (_hasUnsavedChanges()) {
+      final shouldSave = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.saveRequired),
+          content: Text(l10n.saveBeforeAiAssistant),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(l10n.saveAndContinue),
+            ),
+          ],
+        ),
+      );
+      if (shouldSave != true || !mounted) return;
+      noteForAgent = await _saveAndExit();
+      // 保存失败时 _saveAndExit 已处理提示，这里不再跳转
+      if (noteForAgent == null) return;
+    } else if (navigator.canPop()) {
+      // 没有改动，直接关掉对话框，避免返回后停在过期的编辑态
+      navigator.pop();
+    }
+
+    if (noteForAgent == null) return;
+    await navigator.push(
+      MaterialPageRoute(
+        builder: (_) => AIAssistantPage(
+          entrySource: AIAssistantEntrySource.note,
+          quote: noteForAgent,
+          initialQuestion: initialQuestion,
+        ),
+      ),
+    );
   }
 
   /// 显示未保存内容的确认对话框
@@ -2443,24 +2512,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                       // AI助手按钮
                       if (_deferredControlsVisible)
                         AddNoteAIMenu(
-                          contentController: _contentController,
-                          authorController: _authorController,
-                          workController: _workController,
-                          onAiAnalysisCompleted: (result) {
-                            setState(() {
-                              _aiSummary = result;
-                            });
-                          },
-                          tagNames: _selectedTagIds.isNotEmpty
-                              ? _selectedTagIds
-                                  .map((id) => _availableTags
-                                      .where((t) => t.id == id)
-                                      .map((t) => t.name)
-                                      .firstOrNull)
-                                  .where((name) => name != null)
-                                  .cast<String>()
-                                  .toList()
-                              : null,
+                          onOpenAiAssistant: _openAiAssistant,
                         ),
                       const Spacer(),
                       FilledButton.tonal(

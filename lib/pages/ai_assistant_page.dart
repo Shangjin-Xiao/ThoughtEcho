@@ -10,7 +10,6 @@ import 'package:uuid/uuid.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/ai_assistant_entry.dart';
 import '../models/ai_insight_workflow_options.dart';
-import '../models/ai_workflow_descriptor.dart';
 import '../models/chat_message.dart' as app_chat;
 import '../models/chat_message.dart' show MessageState;
 import '../models/chat_session.dart';
@@ -40,7 +39,6 @@ import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../services/weather_service.dart';
-import '../utils/ai_command_helpers.dart';
 import '../utils/ai_smart_result_utils.dart';
 import '../utils/agent_note_document_codec.dart';
 import '../utils/app_logger.dart';
@@ -56,7 +54,6 @@ import '../widgets/ai/smart_result_card.dart';
 import '../widgets/ai/thinking_widget.dart';
 import '../widgets/ai/tool_progress_panel.dart';
 import 'ai_assistant/session_history_page.dart';
-import '../widgets/source_analysis_result_dialog.dart';
 import '../widgets/add_note_dialog.dart';
 import 'note_full_editor_page.dart';
 
@@ -221,10 +218,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   ThemeData? _cachedMarkdownTheme;
   // ==================== 性能优化结束 ====================
 
-  // ==================== 性能优化：WorkflowDescriptors 缓存 ====================
-  List<AIWorkflowDescriptor>? _cachedWorkflowDescriptors;
-  // ==================== 性能优化结束 ====================
-
   AIAssistantEntrySource get _entrySource =>
       widget.entrySource ??
       (widget.quote != null
@@ -250,79 +243,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     if (!_settingsReady) return false;
     final provider = _settingsService.multiAISettings.currentProvider;
     return provider?.supportsThinking ?? false;
-  }
-
-  List<AIWorkflowDescriptor> _buildWorkflowDescriptors(
-    AppLocalizations l10n,
-  ) {
-    return _cachedWorkflowDescriptors ??= [
-      AIWorkflowDescriptor(
-        id: AIWorkflowId.polish,
-        command: '/润色',
-        displayName: l10n.commandPolish,
-        requiresBoundNote: true,
-        allowedInStandardMode: true,
-        allowAgentNaturalLanguageTrigger: true,
-        producesEditableResult: true,
-      ),
-      AIWorkflowDescriptor(
-        id: AIWorkflowId.continueWriting,
-        command: '/续写',
-        displayName: l10n.commandContinue,
-        requiresBoundNote: true,
-        allowedInStandardMode: true,
-        allowAgentNaturalLanguageTrigger: true,
-        producesEditableResult: true,
-      ),
-      AIWorkflowDescriptor(
-        id: AIWorkflowId.deepAnalysis,
-        command: '/深度分析',
-        displayName: l10n.commandDeepAnalysis,
-        requiresBoundNote: true,
-        allowedInStandardMode: true,
-        allowAgentNaturalLanguageTrigger: true,
-        producesEditableResult: false,
-      ),
-      AIWorkflowDescriptor(
-        id: AIWorkflowId.sourceAnalysis,
-        command: '/分析来源',
-        displayName: l10n.smartAnalyzeSource,
-        requiresBoundNote: true,
-        allowedInStandardMode: true,
-        allowAgentNaturalLanguageTrigger: true,
-        producesEditableResult: false,
-      ),
-      AIWorkflowDescriptor(
-        id: AIWorkflowId.insights,
-        command: '/智能洞察',
-        displayName: l10n.commandInsight,
-        requiresBoundNote: false,
-        allowedInStandardMode: true,
-        allowAgentNaturalLanguageTrigger: true,
-        producesEditableResult: false,
-      ),
-      AIWorkflowDescriptor(
-        id: AIWorkflowId.webFetch,
-        command: '/web',
-        displayName: 'Web Fetch',
-        requiresBoundNote: false,
-        allowedInStandardMode: true,
-        allowAgentNaturalLanguageTrigger: true,
-        producesEditableResult: false,
-      ),
-    ];
-  }
-
-  AIWorkflowDescriptor? _matchWorkflowCommand(
-      String text, AppLocalizations l10n) {
-    final matchedId = AIWorkflowCommandRegistry.match(text);
-    if (matchedId == null) return null;
-    for (final descriptor in _buildWorkflowDescriptors(l10n)) {
-      if (descriptor.id == matchedId) {
-        return descriptor;
-      }
-    }
-    return null;
   }
 
   @override

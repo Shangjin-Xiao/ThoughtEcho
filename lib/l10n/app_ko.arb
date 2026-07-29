@@ -1786,7 +1786,6 @@
   "desktopInstructionsStep3": "3. 파일을 두 번 클릭하여 브라우저에서 엽니다.",
   "annualReportHtmlTitle": "ThoughtEcho {year} Annual Report",
   "generationTimeLabel": "Generated at: {time}",
-  "askNoteTitle": "메모를 요청하세요",
   "noteInfoTitle": "참고 정보",
   "meUser": "나",
   "aiAssistantUser": "Thoughter",

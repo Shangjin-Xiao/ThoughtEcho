@@ -586,7 +586,15 @@ void main() {
       final l10n = _l10n(tester);
       expect(find.text(l10n.aiModeChat), findsNothing);
       expect(find.text(l10n.aiModeAgent), findsNothing);
-      expect(find.textContaining(l10n.currentNoteContext), findsOneWidget);
+      // 笔记上下文横幅已移除，标题也不再按入口分叉显示「问笔记」；
+      // 笔记身份是否真的送到 Agent 由下一条测试覆盖
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text(l10n.aiAssistantLabel),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('note entry sends structured note identity to Agent',
@@ -809,64 +817,6 @@ void main() {
       );
       expect(inputFocusNode.hasFocus, isTrue);
       await tester.pump(const Duration(seconds: 2));
-    });
-
-    testWidgets('agent mode routes deep analysis with extra prompt to workflow',
-        (tester) async {
-      final aiService = _FakeAIService(settingsService: settingsService);
-      final agentService = _FakeAgentService(settingsService: settingsService);
-      await settingsService.setNoteAiAssistantMode(AIAssistantPageMode.agent);
-
-      await tester.pumpWidget(
-        await _buildHarness(
-          settingsService: settingsService,
-          chatSessionService: chatSessionService,
-          aiService: aiService,
-          agentService: agentService,
-          child: AIAssistantPage(
-            entrySource: AIAssistantEntrySource.note,
-            quote: _buildQuote(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await _submitInput(tester, '/深度分析 帮我拆解重点');
-      await tester.pumpAndSettle();
-
-      expect(aiService.summarizeCalls, 1);
-      expect(aiService.askQuestionCalls, 0);
-      expect(aiService.generalConversationCalls, 0);
-      expect(agentService.runCount, 0);
-    });
-
-    testWidgets('explore agent mode deep analysis shows bound note notice',
-        (tester) async {
-      final aiService = _FakeAIService(settingsService: settingsService);
-      final agentService = _FakeAgentService(settingsService: settingsService);
-      await settingsService
-          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
-
-      await tester.pumpWidget(
-        await _buildHarness(
-          settingsService: settingsService,
-          chatSessionService: chatSessionService,
-          aiService: aiService,
-          agentService: agentService,
-          child: const AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await _submitInput(tester, '/深度分析 帮我拆解重点');
-
-      expect(aiService.summarizeCalls, 0);
-      expect(aiService.askQuestionCalls, 0);
-      expect(aiService.generalConversationCalls, 0);
-      expect(agentService.runCount, 0);
-      expect(find.textContaining('此功能需要绑定笔记才能使用'), findsAtLeastNWidgets(1));
     });
 
     testWidgets(

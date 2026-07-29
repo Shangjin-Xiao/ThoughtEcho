@@ -31,8 +31,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           children: [
             Flexible(
               child: Text(
-                // 编辑器的所有 AI 功能都汇入 Thoughter，标题不再按入口分叉；
-                // 绑定的笔记由下方 _buildNoteContextBanner 交代
+                // 编辑器的所有 AI 功能都汇入 Thoughter，标题不再按入口分叉
                 l10n.aiAssistantLabel,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -57,7 +56,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       ),
       body: Column(
         children: [
-          if (_hasBoundNote) _buildNoteContextBanner(theme),
           if (_entrySource == AIAssistantEntrySource.explore &&
               widget.exploreGuideSummary?.trim().isNotEmpty == true)
             _buildExploreGuideBanner(theme, l10n),
@@ -124,29 +122,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
   Widget _buildExploreGuideBanner(ThemeData theme, AppLocalizations l10n) {
     // Removed DataOverview banner - user guidance moved to welcome message only
     return const SizedBox.shrink();
-  }
-
-  Widget _buildNoteContextBanner(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-      child: Row(
-        children: [
-          Icon(Icons.description, size: 16, color: theme.colorScheme.primary),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '${AppLocalizations.of(context).currentNoteContext}: ${_getQuotePreview()}',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildMessageBubble(

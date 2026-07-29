@@ -1869,7 +1869,6 @@
   "desktopInstructionsStep3": "3. 双击文件在浏览器中打开",
   "annualReportHtmlTitle": "心迹 {year} 年度报告",
   "generationTimeLabel": "生成时间: {time}",
-  "askNoteTitle": "问笔记",
   "noteInfoTitle": "笔记信息",
   "meUser": "我",
   "aiAssistantUser": "Thoughter",

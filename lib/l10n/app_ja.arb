@@ -1786,7 +1786,6 @@
   "desktopInstructionsStep3": "3. ファイルをダブルクリックしてブラウザで開く",
   "annualReportHtmlTitle": "ThoughtEcho {year} 年間レポート",
   "generationTimeLabel": "生成時間：{time}",
-  "askNoteTitle": "ノートに質問する",
   "noteInfoTitle": "ノート情報",
   "meUser": "私",
   "aiAssistantUser": "Thoughter",

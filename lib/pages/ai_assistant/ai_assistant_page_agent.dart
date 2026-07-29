@@ -16,6 +16,11 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       history = history.sublist(0, history.length - 1);
     }
 
+    final adoptionNotice = _buildProposalAdoptionNotice();
+    if (adoptionNotice != null) {
+      history = [...history, adoptionNotice];
+    }
+
     _setState(() {
       _isLoading = true;
     });
@@ -327,56 +332,6 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
 
       if (parsed.smartResult != null) {
         final artifact = parsed.smartResult!.artifact;
-        // tag_ids 是权威来源；tag_names 只作为旧工具调用的展示回退。
-        List<String> tagNames = const <String>[];
-        List<String?> tagIconNames = const <String?>[];
-        final tagIds = parsed.smartResult!.tagIds;
-        final noteId = parsed.smartResult!.noteId;
-        DatabaseService? db;
-        if ((tagIds != null && tagIds.isNotEmpty) ||
-            (noteId != null && noteId.isNotEmpty)) {
-          try {
-            db = context.read<DatabaseService>();
-          } catch (_) {
-            db = null;
-          }
-        }
-        final fallbackTagNames =
-            parsed.smartResult!.tagNames ?? const <String>[];
-        if (tagIds != null && tagIds.isNotEmpty && db != null) {
-          try {
-            final allTags = await db.getCategories();
-            final tagMap = <String, NoteCategory>{
-              for (final tag in allTags) tag.id: tag,
-            };
-            tagNames = [
-              for (var i = 0; i < tagIds.length; i++)
-                tagMap[tagIds[i]]?.name ??
-                    (i < fallbackTagNames.length &&
-                            fallbackTagNames[i].isNotEmpty
-                        ? fallbackTagNames[i]
-                        : tagIds[i]),
-            ].where((name) => name.isNotEmpty).toList();
-            tagIconNames = [
-              for (final tagId in tagIds) tagMap[tagId]?.iconName,
-            ];
-          } catch (_) {
-            tagNames = fallbackTagNames.isNotEmpty ? fallbackTagNames : tagIds;
-          }
-        } else {
-          tagNames = fallbackTagNames.isNotEmpty
-              ? fallbackTagNames
-              : (tagIds ?? const <String>[]);
-        }
-
-        Quote? originalNote;
-        if (noteId != null && noteId.isNotEmpty && db != null) {
-          try {
-            originalNote = await db.getQuoteById(noteId);
-          } catch (_) {
-            originalNote = null;
-          }
-        }
 
         if (!mounted || requestGeneration != _agentRequestGeneration) {
           return;
@@ -386,36 +341,11 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           id: _uuid.v4(),
           role: 'assistant',
           isUser: false,
-          content: artifact == null ? parsed.smartResult!.content : '',
+          content: '',
           timestamp: DateTime.now(),
           metaJson: jsonEncode({
-            'type': artifact == null
-                ? 'smart_result'
-                : NoteProposalArtifact.typeName,
+            'type': NoteProposalArtifact.typeName,
             if (artifact != null) 'artifact': artifact.toJson(),
-            if (artifact == null) ...{
-              'title': parsed.smartResult!.title,
-              'note_id': parsed.smartResult!.noteId,
-              'action': parsed.smartResult!.action,
-              'tag_ids': parsed.smartResult!.tagIds,
-              'tag_names': tagNames,
-              'tag_icon_names': tagIconNames,
-              'author': parsed.smartResult!.author,
-              'source': parsed.smartResult!.source,
-              'include_location': parsed.smartResult!.includeLocation,
-              'include_weather': parsed.smartResult!.includeWeather,
-              if (originalNote != null) ...{
-                'original_location': originalNote.location,
-                'original_has_location': !LocationService.isNonDisplayMarker(
-                      originalNote.location,
-                    ) ||
-                    (originalNote.latitude != null &&
-                        originalNote.longitude != null),
-                'original_weather': originalNote.weather,
-                'original_temperature': originalNote.temperature,
-                'original_has_weather': originalNote.weather != null,
-              },
-            },
           }),
         );
         _setState(() => _messages.add(cardMsg));
@@ -697,6 +627,27 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     return null;
   }
 
+  /// 把「用户已采纳建议」这个状态补进历史。
+  ///
+  /// 提案卡消息带 metaJson，会被 [_askAgent] 顶部的历史过滤排除掉，而采纳状态
+  /// （saved_note_id）恰恰记在那份 metaJson 里——模型因此永远看不到自己的建议
+  /// 有没有被接受，会重复提同一条。这里只补一个状态位，不把提案正文塞回历史：
+  /// 模型自己那句叙述（「我帮你起草了…」）本来就是普通消息，一直在历史里。
+  app_chat.ChatMessage? _buildProposalAdoptionNotice() {
+    final savedNoteId = AiSmartResultUtils.latestAdoptedProposalNoteId(
+      _messages,
+      (message) => message.parsedMeta,
+    );
+    if (savedNoteId == null) return null;
+    return app_chat.ChatMessage(
+      id: 'proposal_adoption_notice',
+      role: 'assistant',
+      isUser: false,
+      content: AiSmartResultUtils.proposalAdoptionNotice(savedNoteId),
+      timestamp: DateTime.now(),
+    );
+  }
+
   /// 解析由成功的 Agent 工具调用生成的建议卡片。
   _AgentSmartResultParseResult _parseAgentSmartResult(
     AgentResponse response,
@@ -707,22 +658,9 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     final artifacts = response.artifacts.whereType<NoteProposalArtifact>();
     final artifact = artifacts.isEmpty ? null : artifacts.first;
     if (artifact != null) {
-      final metadata = artifact.metadata;
       return _AgentSmartResultParseResult(
         displayText: trimmed,
-        smartResult: _AgentSmartResultPayload(
-          title: artifact.proposalTitle,
-          content: artifact.content,
-          noteId: artifact.noteId,
-          action: artifact.action.name,
-          tagIds: _parseStringList(metadata['tag_ids']),
-          tagNames: _parseStringList(metadata['tag_names']),
-          author: metadata['author']?.toString(),
-          source: metadata['source']?.toString(),
-          includeLocation: _parseOptionalBool(metadata['include_location']),
-          includeWeather: _parseOptionalBool(metadata['include_weather']),
-          artifact: artifact,
-        ),
+        smartResult: _AgentSmartResultPayload(artifact: artifact),
       );
     }
 
@@ -732,22 +670,6 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
 
     return _AgentSmartResultParseResult(displayText: trimmed);
   }
-
-  List<String>? _parseStringList(Object? value) {
-    if (value == null) return null;
-    final rawItems = switch (value) {
-      List() => value,
-      String() => value.split(RegExp(r'[,，、]')),
-      _ => const <Object?>[],
-    };
-    final items = rawItems
-        .map((item) => item.toString().trim())
-        .where((item) => item.isNotEmpty)
-        .toList();
-    return items.isEmpty ? null : items;
-  }
-
-  bool? _parseOptionalBool(Object? value) => value is bool ? value : null;
 }
 
 class _AgentSmartResultParseResult {
@@ -761,29 +683,7 @@ class _AgentSmartResultParseResult {
 }
 
 class _AgentSmartResultPayload {
-  const _AgentSmartResultPayload({
-    required this.title,
-    required this.content,
-    this.noteId,
-    this.action,
-    this.tagIds,
-    this.tagNames,
-    this.author,
-    this.source,
-    this.includeLocation,
-    this.includeWeather,
-    this.artifact,
-  });
+  const _AgentSmartResultPayload({this.artifact});
 
-  final String title;
-  final String content;
-  final String? noteId;
-  final String? action;
-  final List<String>? tagIds;
-  final List<String>? tagNames;
-  final String? author;
-  final String? source;
-  final bool? includeLocation;
-  final bool? includeWeather;
   final NoteProposalArtifact? artifact;
 }

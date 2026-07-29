@@ -1,44 +1,7 @@
 import 'dart:convert';
 import 'package:uuid/uuid.dart';
 
-import '../models/ai_workflow_descriptor.dart';
 import '../models/chat_message.dart' as app_chat;
-
-/// 自然语言触发检测器
-class NaturalLanguageTriggerDetector {
-  /// 检测输入文本是否包含自然语言命令触发
-  static (AIWorkflowId, double)? detectTrigger(String text) {
-    if (text.isEmpty || text.startsWith('/')) {
-      return null; // 不处理斜杠命令或空文本
-    }
-
-    return AIWorkflowCommandRegistry.detectNaturalLanguageTrigger(text);
-  }
-
-  /// 检测是否应该自动触发命令
-  static AIWorkflowId? shouldAutoTrigger(
-    String text,
-    List<AIWorkflowDescriptor> descriptors,
-  ) {
-    final result = detectTrigger(text);
-    if (result == null) return null;
-
-    final (workflowId, confidence) = result;
-
-    // 只有当匹配度足够高时才自动触发
-    if (confidence >= 0.7) {
-      // 检查该工作流是否允许自然语言触发
-      for (final descriptor in descriptors) {
-        if (descriptor.id == workflowId &&
-            descriptor.allowAgentNaturalLanguageTrigger) {
-          return workflowId;
-        }
-      }
-    }
-
-    return null;
-  }
-}
 
 /// 笔记查询助手（用于Agent调用）
 class NoteQueryHelper {
