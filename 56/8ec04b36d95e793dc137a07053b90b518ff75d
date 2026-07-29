@@ -1,0 +1,33 @@
+lib/services/agent_tools/get_app_context_tool.dart
+  s_66cd5ef7f666be::t_07068d37897726 109-112
+lib/services/agent_tools/propose_note_create_tool.dart
+  s_66cd5ef7f666be::t_25e90f8c63438c 64-66,70-71,75-77
+lib/services/agent_service.dart
+  s_66cd5ef7f666be::t_b8da575d891cbd 1100-1101,1103-1123
+  s_66cd5ef7f666be::t_f6832dcd2b808e 1044-1047,1055-1077,1082
+  s_66cd5ef7f666be::t_c41a245ca643b6 1102
+  s_66cd5ef7f666be::t_2461516a4b2dee 1039-1040
+lib/services/agent_tools/explore_notes_tool.dart
+  s_66cd5ef7f666be::t_6e6c09ffe85e19 25-26
+lib/services/agent_tools/propose_note_edit_tool.dart
+  s_66cd5ef7f666be::t_a31153fc7afc9b 395-396
+  s_66cd5ef7f666be::t_8bb620fe78f6d2 409-410
+test/unit/services/agent_service_test.dart
+  s_66cd5ef7f666be::t_5f4dd1e21402fb 91-113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "568ec04b36d95e793dc137a07053b90b518ff75d",
+  "prompts": {},
+  "sessions": {
+    "s_66cd5ef7f666be": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e045d774-8b3a-4f5e-8c81-d749ac0a23d6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
