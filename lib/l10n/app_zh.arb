@@ -3876,6 +3876,10 @@
   "commandContinue": "续写",
   "commandDeepAnalysis": "深度分析",
   "commandInsight": "智能洞察",
+  "aiPromptPolish": "请帮我润色这段文字",
+  "aiPromptContinue": "请帮我续写这段文字",
+  "aiPromptDeepAnalysis": "请对这段笔记进行深度分析",
+  "aiPromptSourceAnalysis": "请分析这段文字的来源，识别可能的作者和出处",
   "aiAssistantInputHint": "输入问题...",
   "aiAssistantExploreWelcome": "{summary}",
   "@aiAssistantExploreWelcome": {

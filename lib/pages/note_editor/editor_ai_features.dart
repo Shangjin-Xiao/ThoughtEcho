@@ -1,7 +1,8 @@
 part of '../note_full_editor_page.dart';
 
-/// AI assistant features: source analysis, text polishing,
-/// continuation, deep analysis, and note Q&A.
+/// AI assistant features — all actions navigate to Thoughter (AIAssistantPage)
+/// with a natural-language prompt. The editor is replaced in the navigation
+/// stack so that after the agent session the user returns to the note list.
 extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
   void _showAIOptions(BuildContext context) {
     AiOptionsMenu.show(
@@ -15,203 +16,36 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
     );
   }
 
-  // 分析来源
+  // 分析来源 → 跳转 Thoughter
   Future<void> _analyzeSource() async {
-    final plainText = StringUtils.removeObjectReplacementChar(
-      _editorState.controller.document.toPlainText(),
-    ).trim();
-    if (plainText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).pleaseEnterContent),
-          duration: AppConstants.snackBarDurationError,
-        ),
-      );
-      return;
-    }
-
-    final aiService = Provider.of<AIService>(context, listen: false);
-
-    try {
-      // 显示加载对话框
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) {
-          return AlertDialog(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 16),
-                Text(AppLocalizations.of(context).analyzing),
-              ],
-            ),
-          );
-        },
-      );
-
-      // 调用AI分析来源（传递已有的作者/出处供 AI 验证）
-      final existingAuthor = _metadataState.authorController.text.trim();
-      final existingWork = _metadataState.workController.text.trim();
-      final result = await aiService.analyzeSource(
-        plainText,
-        existingAuthor: existingAuthor.isNotEmpty ? existingAuthor : null,
-        existingWork: existingWork.isNotEmpty ? existingWork : null,
-      );
-
-      // 确保组件仍然挂载在widget树上
-      if (!mounted) return;
-
-      // 关闭加载对话框
-      Navigator.of(context).pop();
-
-      // 显示来源分析结果对话框
-      if (mounted) {
-        SourceAnalysisResultDialog.show(
-          context,
-          result,
-          authorController: _metadataState.authorController,
-          workController: _metadataState.workController,
-          onError: (error) {
-            final l10n = AppLocalizations.of(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(l10n.parseResultFailedWithError(error)),
-                duration: AppConstants.snackBarDurationError,
-              ),
-            );
-          },
-        );
-      }
-    } catch (e) {
-      // 确保组件仍然挂载在widget树上
-      if (!mounted) return;
-
-      // 关闭加载对话框
-      Navigator.of(context).pop();
-
-      if (mounted) {
-        final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.analysisFailedWithError(e.toString())),
-            duration: AppConstants.snackBarDurationError,
-          ),
-        );
-      }
-    }
+    final l10n = AppLocalizations.of(context);
+    await _openAiAssistant(l10n.aiPromptSourceAnalysis);
   }
 
-  // 润色文本
+  // 润色文本 → 跳转 Thoughter
   Future<void> _polishText() async {
     final l10n = AppLocalizations.of(context);
-    await _openAiAssistant('/${l10n.commandPolish}');
+    await _openAiAssistant(l10n.aiPromptPolish);
   }
 
-  // 续写文本
+  // 续写文本 → 跳转 Thoughter
   Future<void> _continueText() async {
     final l10n = AppLocalizations.of(context);
-    await _openAiAssistant('/${l10n.commandContinue}');
+    await _openAiAssistant(l10n.aiPromptContinue);
   }
 
-  // 深度分析内容 (使用流式传输，保存结果到 _metadataState.currentAiAnalysis)
+  // 深度分析 → 跳转 Thoughter
   Future<void> _analyzeContent() async {
-    final plainText = StringUtils.removeObjectReplacementChar(
-      _editorState.controller.document.toPlainText(),
-    ).trim();
-    if (plainText.isEmpty) {
-      if (mounted) {
-        final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.pleaseInputContent),
-            duration: AppConstants.snackBarDurationError,
-          ),
-        );
-      }
-      return;
-    }
-
-    final aiService = Provider.of<AIService>(context, listen: false);
-
-    // 创建临时Quote对象进行分析，包含完整元数据
-    final quote = Quote(
-      id: widget.initialQuote?.id ?? const Uuid().v4(),
-      content: plainText,
-      date: widget.initialQuote?.date ?? DateTime.now().toIso8601String(),
-      sourceAuthor: _metadataState.authorController.text.trim().isNotEmpty
-          ? _metadataState.authorController.text.trim()
-          : null,
-      sourceWork: _metadataState.workController.text.trim().isNotEmpty
-          ? _metadataState.workController.text.trim()
-          : null,
-      location: _metadataState.showLocation ? _metadataState.location : null,
-      weather: _metadataState.showWeather ? _metadataState.weather : null,
-      temperature:
-          _metadataState.showWeather ? _metadataState.temperature : null,
-      dayPeriod: widget.initialQuote?.dayPeriod,
-    );
-
-    // 获取选中标签的名称列表
-    final List<String> tagNames = [];
-    if (_metadataState.selectedTagIds.isNotEmpty && widget.allTags != null) {
-      for (final tagId in _metadataState.selectedTagIds) {
-        final tag = widget.allTags!.where((t) => t.id == tagId).firstOrNull;
-        if (tag != null) {
-          tagNames.add(tag.name);
-        }
-      }
-    }
-
-    // 显示流式文本对话框
     final l10n = AppLocalizations.of(context);
-    final String? analysisResult = await showDialog<String?>(
-      context: context,
-      barrierDismissible: false, // 不允许点击外部关闭
-      builder: (dialogContext) {
-        return StreamingTextDialog(
-          title: l10n.analyzingNote,
-          textStream: aiService.streamSummarizeNote(
-            quote,
-            tagNames: tagNames.isNotEmpty ? tagNames : null,
-          ),
-          applyButtonText: l10n.applyToNote, // 应用到笔记
-          onApply: (fullText) {
-            // 返回分析结果
-            Navigator.of(dialogContext).pop(fullText);
-          },
-          onCancel: () {
-            Navigator.of(dialogContext).pop(null);
-          },
-          isMarkdown: true,
-        );
-      },
-    );
-
-    // 如果用户点击了"应用到笔记"，保存分析结果
-    if (analysisResult != null && mounted) {
-      _updateState(() {
-        _metadataState.currentAiAnalysis = analysisResult;
-      });
-
-      // 显示提示
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.aiAnalysisSaved),
-            duration: AppConstants.snackBarDurationImportant,
-          ),
-        );
-      }
-    }
+    await _openAiAssistant(l10n.aiPromptDeepAnalysis);
   }
 
-  // 问笔记功能
+  // 问笔记功能 → 跳转 Thoughter（无初始提示）
   Future<void> _askNoteQuestion() async {
     await _openAiAssistant(null);
   }
 
+  /// 统一入口：保存未提交更改后跳转 Thoughter，并关闭编辑器。
   Future<void> _openAiAssistant(String? initialQuestion) async {
     final plainText = StringUtils.removeObjectReplacementChar(
       _editorState.controller.document.toPlainText(),
@@ -229,6 +63,7 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
       return;
     }
 
+    // 如果有未保存的更改，提示用户先保存
     if (_hasUnsavedChanges()) {
       final l10n = AppLocalizations.of(context);
       final shouldSave = await showDialog<bool>(
@@ -254,14 +89,23 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
       if (!mounted) return;
     }
 
+    // 创建包含元数据的临时 Quote，为 Agent 提供更丰富的上下文
     final tempQuote = Quote(
       id: widget.initialQuote?.id,
       content: plainText,
       date: widget.initialQuote?.date ?? DateTime.now().toIso8601String(),
       dayPeriod: widget.initialQuote?.dayPeriod,
+      sourceAuthor: _metadataState.authorController.text.trim().isNotEmpty
+          ? _metadataState.authorController.text.trim()
+          : null,
+      sourceWork: _metadataState.workController.text.trim().isNotEmpty
+          ? _metadataState.workController.text.trim()
+          : null,
     );
 
-    final result = await Navigator.of(context).push(
+    // 用 pushReplacement 替换编辑器，进入 Agent 后编辑器关闭
+    if (!mounted) return;
+    await Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (context) => AIAssistantPage(
           entrySource: AIAssistantEntrySource.note,
@@ -270,46 +114,5 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
         ),
       ),
     );
-
-    if (result != null && result is Map<String, dynamic> && mounted) {
-      final action = result['action'];
-      final mode =
-          result['mode'] ?? (action == 'append' ? 'append' : 'replace');
-      final text = (result['text'] as Object?)?.toString().trim();
-      if (text == null || text.isEmpty) {
-        return;
-      }
-
-      // 执行应用逻辑
-      void applyChanges() {
-        if (mode == 'replace') {
-          _editorState.controller.document =
-              QuillAiApplyUtils.applyPolishedText(
-            originalDocument: _editorState.controller.document,
-            polishedText: text,
-          );
-        } else if (mode == 'append') {
-          final int insertPosition =
-              _editorState.controller.document.length - 1;
-          if (insertPosition >= 0) {
-            _editorState.controller.document
-                .insert(insertPosition, '\n\n$text');
-          }
-          _editorState.controller.updateSelection(
-            TextSelection.collapsed(
-                offset: _editorState.controller.document.length - 1),
-            quill.ChangeSource.local,
-          );
-        }
-      }
-
-      if (action == 'replace' || action == 'append' || action == 'edit') {
-        _updateState(applyChanges);
-      } else if (action == 'save') {
-        _updateState(applyChanges);
-        // 自动保存到数据库
-        await _saveContent();
-      }
-    }
   }
 }

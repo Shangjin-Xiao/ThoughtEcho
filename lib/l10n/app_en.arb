@@ -3876,6 +3876,10 @@
   "commandContinue": "Continue",
   "commandDeepAnalysis": "Deep Analysis",
   "commandInsight": "Insights",
+  "aiPromptPolish": "Please polish this text for me",
+  "aiPromptContinue": "Please continue writing this text",
+  "aiPromptDeepAnalysis": "Please provide a deep analysis of this note",
+  "aiPromptSourceAnalysis": "Please analyze the source of this text and identify the possible author and work",
   "aiAssistantInputHint": "Enter question...",
   "aiAssistantExploreWelcome": "{summary}",
   "@aiAssistantExploreWelcome": {
