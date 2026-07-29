@@ -36,6 +36,17 @@ class _RemoteSyncFileMetadata {
   final String? lastModified;
 }
 
+/// 云端同步文件无法解析（非法 ZIP、缺少数据条目、JSON 结构损坏）。
+/// 这类文件不含任何可合并的数据，因此允许用本地数据重建，避免同步永久卡死。
+class _CorruptedRemoteSyncFileException implements Exception {
+  const _CorruptedRemoteSyncFileException(this.reason);
+
+  final String reason;
+
+  @override
+  String toString() => '云端同步文件损坏: $reason';
+}
+
 class _RemoteMediaFileInfo {
   const _RemoteMediaFileInfo({this.length, this.etag});
 
@@ -370,7 +381,8 @@ class WebDAVSyncService extends ChangeNotifier {
 
       // 2. 检查云端备份是否存在并下载
       Map<String, dynamic>? remoteData;
-      final remoteSyncFile =
+      bool remoteSyncFileCorrupted = false;
+      var remoteSyncFile =
           await _getRemoteSyncFileMetadata(dio, remoteSyncZipUrl);
 
       if (remoteSyncFile.exists) {
@@ -389,7 +401,23 @@ class WebDAVSyncService extends ChangeNotifier {
               '云端同步文件下载不完整，期望 $expectedLength 字节，实际 ${bytes.length} 字节',
             );
           }
-          remoteData = _decodeAndValidateRemoteSyncZip(bytes);
+          try {
+            remoteData = _decodeAndValidateRemoteSyncZip(bytes);
+          } on _CorruptedRemoteSyncFileException catch (e) {
+            // 损坏的云端文件里没有任何可合并的数据，若继续抛错，每次同步都会
+            // 卡在同一处、永远无法自愈。这里改为归档损坏文件并用本地数据重建。
+            remoteData = null;
+            remoteSyncFileCorrupted = true;
+            logWarning(
+              '云端同步文件无法解析（${e.reason}），将归档损坏文件并用本地数据重建',
+              source: 'WebDAVSyncService',
+            );
+            await _archiveCorruptedRemoteSyncFile(dio, remoteSyncZipUrl);
+            // 归档可能已把原文件移走，重新探测状态，避免上传时用错
+            // If-Match / If-None-Match 前置条件导致 412。
+            remoteSyncFile =
+                await _getRemoteSyncFileMetadata(dio, remoteSyncZipUrl);
+          }
         }
       }
 
@@ -442,11 +470,7 @@ class WebDAVSyncService extends ChangeNotifier {
         // 分页流式写入 JSON 到临时文件
         await _writeLocalDataToTempJson(dbService.database, tempJsonPath);
 
-        // ZipFileEncoder 从磁盘流式打包，不全量入内存
-        final encoder = ZipFileEncoder();
-        encoder.create(tempZipPath);
-        encoder.addFile(File(tempJsonPath), 'backup_data.json');
-        encoder.closeSync();
+        await packSyncZip(tempJsonPath, tempZipPath);
 
         await _uploadSyncZipWithConflictProtection(
           dio,
@@ -482,7 +506,10 @@ class WebDAVSyncService extends ChangeNotifier {
         await _mmkv.setString('webdav_sync_status', 'success');
         await _mmkv.setString('webdav_last_sync_error', '');
 
-        logInfo('WebDAV 同步成功完成。冲突数: $_lastConflictCount');
+        logInfo(
+          'WebDAV 同步成功完成。冲突数: $_lastConflictCount'
+          '${remoteSyncFileCorrupted ? '（本轮已用本地数据重建损坏的云端同步文件）' : ''}',
+        );
       }
     } catch (e, stack) {
       logError(
@@ -714,48 +741,146 @@ class WebDAVSyncService extends ChangeNotifier {
     return normalized;
   }
 
-  Map<String, dynamic> _decodeAndValidateRemoteSyncZip(List<int> bytes) {
-    final archive = ZipDecoder().decodeBytes(bytes);
-    final dataJsonFile = archive.findFile('backup_data.json');
-    if (dataJsonFile == null) {
-      throw const FormatException('云端同步文件缺少 backup_data.json');
+  /// 是否为同步包中的数据条目。兼容旧版本/其他导出路径产生的
+  /// `data.json` 与带目录前缀的条目名。
+  static bool _isBackupDataEntryName(String name) {
+    final posixName = name.replaceAll('\\', '/');
+    return posixName == 'backup_data.json' ||
+        posixName == 'data.json' ||
+        posixName.endsWith('/backup_data.json') ||
+        posixName.endsWith('/data.json');
+  }
+
+  /// 把本地数据 JSON 打包成上传用的同步 ZIP。
+  ///
+  /// ZipFileEncoder.addFile 是异步的：不 await 会在条目真正写入前就 closeSync，
+  /// 产出一个不含 backup_data.json 的空包并推到云端，导致所有设备此后都报
+  /// “云端同步文件缺少 backup_data.json”且无法自愈。
+  @visibleForTesting
+  static Future<void> packSyncZip(String jsonPath, String zipPath) async {
+    final encoder = ZipFileEncoder();
+    encoder.create(zipPath);
+    try {
+      await encoder.addFile(File(jsonPath), 'backup_data.json');
+    } finally {
+      encoder.closeSync();
     }
 
-    final decoded = json.decode(utf8.decode(dataJsonFile.content));
+    // 上传前自检，杜绝把不含数据条目的包推到云端污染其他设备
+    _assertSyncZipContainsBackupData(zipPath);
+  }
+
+  /// 上传前校验本地打好的同步包确实含有数据条目
+  static void _assertSyncZipContainsBackupData(String zipPath) {
+    final inputStream = InputFileStream(zipPath);
+    try {
+      final hasData = ZipDecoder()
+          .decodeStream(inputStream)
+          .any((file) => _isBackupDataEntryName(file.name));
+      if (!hasData) {
+        throw StateError('本地打包的同步文件缺少 backup_data.json，已中止上传');
+      }
+    } finally {
+      inputStream.closeSync();
+    }
+  }
+
+  @visibleForTesting
+  static Map<String, dynamic> decodeAndValidateRemoteSyncZipForTesting(
+    List<int> bytes,
+  ) =>
+      _instance._decodeAndValidateRemoteSyncZip(bytes);
+
+  Map<String, dynamic> _decodeAndValidateRemoteSyncZip(List<int> bytes) {
+    final Archive archive;
+    try {
+      archive = ZipDecoder().decodeBytes(bytes);
+    } catch (e) {
+      throw _CorruptedRemoteSyncFileException('不是有效的 ZIP 文件 ($e)');
+    }
+
+    ArchiveFile? dataJsonFile;
+    for (final file in archive) {
+      if (file.isFile && _isBackupDataEntryName(file.name)) {
+        dataJsonFile = file;
+        break;
+      }
+    }
+    if (dataJsonFile == null) {
+      throw const _CorruptedRemoteSyncFileException('缺少 backup_data.json');
+    }
+
+    final Object? decoded;
+    try {
+      decoded = json.decode(utf8.decode(dataJsonFile.content));
+    } catch (e) {
+      throw _CorruptedRemoteSyncFileException('数据文件不是有效 JSON ($e)');
+    }
     if (decoded is! Map<String, dynamic>) {
-      throw const FormatException('云端同步数据不是有效对象');
+      throw const _CorruptedRemoteSyncFileException('云端同步数据不是有效对象');
     }
     _validateRemoteSyncData(decoded);
     return decoded;
+  }
+
+  /// 把无法解析的云端文件改名归档，避免重建时直接丢弃用户数据。
+  /// 归档失败不阻断同步（本地数据本身才是权威副本）。
+  Future<void> _archiveCorruptedRemoteSyncFile(Dio dio, String fileUrl) async {
+    final stamp = DateTime.now()
+        .toUtc()
+        .toIso8601String()
+        .replaceAll(RegExp(r'[:.]'), '-');
+    final destination = fileUrl.replaceFirst(
+      RegExp(r'thoughtecho_sync\.zip$'),
+      'thoughtecho_sync.corrupted-$stamp.zip',
+    );
+    try {
+      await dio.request(
+        fileUrl,
+        options: Options(
+          method: 'MOVE',
+          headers: {'Destination': destination, 'Overwrite': 'F'},
+          validateStatus: (status) => status != null && status < 500,
+        ),
+      );
+      logInfo('已归档损坏的云端同步文件', source: 'WebDAVSyncService');
+    } catch (e) {
+      logWarning(
+        '归档损坏的云端同步文件失败，将直接以本地数据覆盖: $e',
+        source: 'WebDAVSyncService',
+      );
+    }
   }
 
   void _validateRemoteSyncData(Map<String, dynamic> data) {
     final categories = data['categories'];
     final quotes = data['quotes'];
     if (categories is! List || quotes is! List) {
-      throw const FormatException('云端同步数据缺少 categories 或 quotes 列表');
+      throw const _CorruptedRemoteSyncFileException(
+        '云端同步数据缺少 categories 或 quotes 列表',
+      );
     }
 
     for (final category in categories) {
       if (category is! Map) {
-        throw const FormatException('云端同步分类数据格式无效');
+        throw const _CorruptedRemoteSyncFileException('云端同步分类数据格式无效');
       }
     }
 
     for (final quote in quotes) {
       if (quote is! Map) {
-        throw const FormatException('云端同步笔记数据格式无效');
+        throw const _CorruptedRemoteSyncFileException('云端同步笔记数据格式无效');
       }
     }
 
     final tombstones = data['tombstones'];
     if (tombstones != null && tombstones is! List) {
-      throw const FormatException('云端同步墓碑数据格式无效');
+      throw const _CorruptedRemoteSyncFileException('云端同步墓碑数据格式无效');
     }
     if (tombstones is List) {
       for (final tombstone in tombstones) {
         if (tombstone is! Map) {
-          throw const FormatException('云端同步墓碑记录格式无效');
+          throw const _CorruptedRemoteSyncFileException('云端同步墓碑记录格式无效');
         }
       }
     }
