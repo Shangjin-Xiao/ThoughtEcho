@@ -1,0 +1,44 @@
+lib/utils/ai_smart_result_utils.dart
+  s_742458ff8e536a::t_da7036686b5b10 24-59
+lib/pages/ai_assistant/ai_assistant_page_agent.dart
+  s_742458ff8e536a::t_b2724286081328 637-648
+  s_742458ff8e536a::t_cd0253105c7193 663,686
+  s_742458ff8e536a::t_8810804b66f9fd 19
+  s_742458ff8e536a::t_dbf216638e244a 20-23
+  s_742458ff8e536a::t_1eeeab03fe0aa4 344,347
+  s_742458ff8e536a::t_b98987bd007bb9 630-636,649-650
+lib/widgets/add_note_dialog.dart
+  s_742458ff8e536a::t_79db206459bb33 15,18
+  s_742458ff8e536a::t_3f02158ed5c4bd 1671-1673,1680,1688,1779,1784
+  s_742458ff8e536a::t_d98c310b99a801 2515
+  s_742458ff8e536a::t_3e827b3a116b36 13
+  s_742458ff8e536a::t_85f14dd7d39577 1787-1847
+  s_742458ff8e536a::t_cc1ea2892e8e5b 1785-1786
+test/widget/pages/ai_assistant_page_test.dart
+  s_742458ff8e536a::t_9d7b65ac5cc3ae 589-590
+  s_742458ff8e536a::t_41ee30787b85f6 591-597
+lib/pages/ai_assistant/ai_assistant_page_ui.dart
+  s_742458ff8e536a::t_049f393d153ab0 34
+test/unit/utils/ai_proposal_adoption_test.dart
+  s_742458ff8e536a::t_a9ea0e574f8a1a 1-108
+lib/services/agent_service.dart
+  s_742458ff8e536a::t_360910b7281c4d 886-895,898-900
+lib/widgets/add_note_ai_menu.dart
+  s_742458ff8e536a::t_081f199758794d 7-14,18,22,26-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "226c4b6b2988f752eff7acfc0cbae72eb0c82b3f",
+  "prompts": {},
+  "sessions": {
+    "s_742458ff8e536a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e97cdac8-0e27-4dad-97de-381d058d5e24",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
