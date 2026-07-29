@@ -509,7 +509,8 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const ExperimentalBadge(compact: true, enableTapNotice: false),
+                  const ExperimentalBadge(
+                      compact: true, enableTapNotice: false),
                 ],
               ),
               const SizedBox(height: 4),
