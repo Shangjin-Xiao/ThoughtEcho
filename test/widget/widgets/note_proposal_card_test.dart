@@ -103,6 +103,80 @@ void main() {
     expect(find.text('已保存 · 查看笔记'), findsOneWidget);
   });
 
+  testWidgets('short content hides the expand toggle, long content keeps it',
+      (tester) async {
+    NoteProposalArtifact build(String content) => NoteProposalArtifact(
+          action: NoteProposalAction.create,
+          proposalTitle: 'Draft',
+          reason: '',
+          resultKind: NoteDocumentKind.plain,
+          content: content,
+          documentOps: null,
+          metadata: const {},
+          changes: const [],
+        );
+
+    await tester.pumpWidget(_app(NoteProposalCard(
+      artifact: build('一句话'),
+      onOpenInEditor: () async {},
+      onApply: () async => 'note-id',
+    )));
+    await tester.pumpAndSettle();
+    expect(find.text('展开全文'), findsNothing);
+
+    await tester.pumpWidget(_app(NoteProposalCard(
+      artifact: build(List.filled(100, '很长的正文').join('\n')),
+      onOpenInEditor: () async {},
+      onApply: () async => 'note-id',
+    )));
+    await tester.pumpAndSettle();
+    expect(find.text('展开全文'), findsOneWidget);
+    await tester.tap(find.text('展开全文'));
+    await tester.pumpAndSettle();
+    expect(find.text('收起全文'), findsOneWidget);
+  });
+
+  testWidgets('create proposal shows location/weather chips and reports toggle',
+      (tester) async {
+    bool? location;
+    bool? weather;
+    final artifact = NoteProposalArtifact(
+      action: NoteProposalAction.create,
+      proposalTitle: 'Draft',
+      reason: '',
+      resultKind: NoteDocumentKind.plain,
+      content: 'content',
+      documentOps: null,
+      metadata: const {'include_location': true},
+      changes: const [],
+    );
+
+    await tester.pumpWidget(_app(NoteProposalCard(
+      artifact: artifact,
+      onOpenInEditor: () async {},
+      onApply: () async => 'note-id',
+      locationPreview: '杭州市',
+      weatherPreview: '晴 26℃',
+      onMetadataChanged: (includeLocation, includeWeather) {
+        location = includeLocation;
+        weather = includeWeather;
+      },
+    )));
+    await tester.pumpAndSettle();
+
+    expect(find.text('杭州市'), findsOneWidget);
+    expect(find.text('晴 26℃'), findsOneWidget);
+    final locationChip = tester.widget<FilterChip>(
+      find.widgetWithText(FilterChip, '杭州市'),
+    );
+    expect(locationChip.selected, isTrue);
+
+    await tester.tap(find.text('晴 26℃'));
+    await tester.pumpAndSettle();
+    expect(location, isTrue);
+    expect(weather, isTrue);
+  });
+
   testWidgets('quick edit chip invokes callback and hides when readOnly',
       (tester) async {
     NoteProposalQuickEdit? received;

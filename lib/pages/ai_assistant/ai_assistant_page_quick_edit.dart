@@ -267,6 +267,46 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
     );
   }
 
+  /// 提案卡位置/天气开关变更：写回 artifact.metadata 并持久化，
+  /// 让「保存」与「打开编辑器」两条路径都读到最新开关。
+  void _persistNoteProposalMetadataFlags(
+    String messageId,
+    Map<String, dynamic> meta, {
+    required bool includeLocation,
+    required bool includeWeather,
+  }) {
+    _setState(() {
+      final index = _messages.indexWhere((message) => message.id == messageId);
+      if (index == -1) return;
+      final oldMessage = _messages[index];
+      final updatedMeta = Map<String, dynamic>.from(meta);
+      final artifactJson = Map<String, dynamic>.from(
+        (updatedMeta['artifact'] as Map).map(
+          (key, value) => MapEntry(key.toString(), value),
+        ),
+      );
+      final metadata = Map<String, Object?>.from(
+        (artifactJson['metadata'] as Map?)?.map(
+              (key, value) => MapEntry(key.toString(), value),
+            ) ??
+            const <String, Object?>{},
+      );
+      metadata['include_location'] = includeLocation;
+      metadata['include_weather'] = includeWeather;
+      artifactJson['metadata'] = metadata;
+      updatedMeta['artifact'] = artifactJson;
+      final updatedMessage = oldMessage.copyWith(
+        metaJson: jsonEncode(updatedMeta),
+      );
+      _messages[index] = updatedMessage;
+      if (_currentSessionId != null) {
+        unawaited(
+          _chatSessionService.addMessage(_currentSessionId!, updatedMessage),
+        );
+      }
+    });
+  }
+
   /// 提案卡的展示标签：优先 metadata 里的 tag_names，缺失时退化为 id。
   List<NoteCategory> _resolveProposalDisplayTags(
     NoteProposalArtifact artifact,

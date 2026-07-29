@@ -37,6 +37,9 @@ class NoteProposalCard extends StatefulWidget {
     this.initialSavedNoteId,
     this.plainCreateOpensRich = false,
     this.tags = const [],
+    this.locationPreview,
+    this.weatherPreview,
+    this.onMetadataChanged,
     this.onQuickEdit,
     this.onViewNote,
   });
@@ -56,6 +59,15 @@ class NoteProposalCard extends StatefulWidget {
   /// 展示用标签（页面按 metadata 中的 tag_ids/tag_names 解析）。
   final List<NoteCategory> tags;
 
+  /// 位置/天气胶囊上的实际内容预览，为空时退化为「位置」「天气」通用文案。
+  final String? locationPreview;
+  final String? weatherPreview;
+
+  /// 位置/天气勾选变化：由页面写回 artifact metadata 并持久化，
+  /// 保证「保存」与「打开编辑器」两条路径读到的是同一份开关状态。
+  final void Function(bool includeLocation, bool includeWeather)?
+      onMetadataChanged;
+
   /// 快编入口：页面弹出快速编辑对话框并写回 metaJson，取消返回 null。
   final Future<NoteProposalQuickEdit?> Function(NoteProposalQuickEdit current)?
       onQuickEdit;
@@ -72,6 +84,8 @@ class _NoteProposalCardState extends State<NoteProposalCard> {
   late bool _completed;
   bool _failed = false;
   String? _savedNoteId;
+  late bool _includeLocation;
+  late bool _includeWeather;
 
   NoteProposalArtifact get artifact => widget.artifact;
 
@@ -80,6 +94,8 @@ class _NoteProposalCardState extends State<NoteProposalCard> {
     super.initState();
     _completed = widget.initialCompleted;
     _savedNoteId = widget.initialSavedNoteId;
+    _includeLocation = artifact.metadata['include_location'] == true;
+    _includeWeather = artifact.metadata['include_weather'] == true;
   }
 
   @override
@@ -90,6 +106,10 @@ class _NoteProposalCardState extends State<NoteProposalCard> {
     }
     if (oldWidget.initialSavedNoteId != widget.initialSavedNoteId) {
       _savedNoteId = widget.initialSavedNoteId;
+    }
+    if (!identical(oldWidget.artifact, widget.artifact)) {
+      _includeLocation = artifact.metadata['include_location'] == true;
+      _includeWeather = artifact.metadata['include_weather'] == true;
     }
   }
 
@@ -103,6 +123,10 @@ class _NoteProposalCardState extends State<NoteProposalCard> {
     final hasSource = (author?.trim().isNotEmpty ?? false) ||
         (source?.trim().isNotEmpty ?? false);
     final canEdit = !_completed && !_saving && !artifact.readOnly;
+    final showQuickEdit =
+        widget.onQuickEdit != null && !artifact.readOnly && !_completed;
+    // 位置/天气只在新建提案上有意义（修改提案按 ops 应用，不改元数据）
+    final showMetaRow = showQuickEdit || (isCreate && !artifact.readOnly);
 
     return AiCardShell(
       child: Column(
@@ -170,15 +194,39 @@ class _NoteProposalCardState extends State<NoteProposalCard> {
                 ),
               ),
             ),
-          if (widget.onQuickEdit != null && !artifact.readOnly && !_completed)
+          if (showMetaRow)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: AiQuickEditChip(
-                  enabled: canEdit,
-                  onTap: canEdit ? _handleQuickEdit : null,
-                ),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  if (isCreate) ...[
+                    AiMetaChip(
+                      icon: Icons.location_on_outlined,
+                      label: widget.locationPreview ?? l10n.location,
+                      selected: _includeLocation,
+                      enabled: canEdit,
+                      onTap: canEdit
+                          ? () => _toggleMetadata(location: !_includeLocation)
+                          : null,
+                    ),
+                    AiMetaChip(
+                      icon: Icons.wb_sunny_outlined,
+                      label: widget.weatherPreview ?? l10n.weather,
+                      selected: _includeWeather,
+                      enabled: canEdit,
+                      onTap: canEdit
+                          ? () => _toggleMetadata(weather: !_includeWeather)
+                          : null,
+                    ),
+                  ],
+                  if (showQuickEdit)
+                    AiQuickEditChip(
+                      enabled: canEdit,
+                      onTap: canEdit ? _handleQuickEdit : null,
+                    ),
+                ],
               ),
             ),
           const Divider(height: 1),
@@ -224,6 +272,14 @@ class _NoteProposalCardState extends State<NoteProposalCard> {
         ],
       ),
     );
+  }
+
+  void _toggleMetadata({bool? location, bool? weather}) {
+    setState(() {
+      _includeLocation = location ?? _includeLocation;
+      _includeWeather = weather ?? _includeWeather;
+    });
+    widget.onMetadataChanged?.call(_includeLocation, _includeWeather);
   }
 
   Future<void> _handleQuickEdit() async {

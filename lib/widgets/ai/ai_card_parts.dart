@@ -155,6 +155,7 @@ class AiCardTagList extends StatelessWidget {
 }
 
 /// 内容限高容器：折叠 220 / 展开 520，与重设计稿一致。
+/// 只有内容在折叠高度下真的溢出时才显示展开/收起按钮。
 class AiCardExpandableContent extends StatefulWidget {
   const AiCardExpandableContent({super.key, required this.child});
 
@@ -166,30 +167,64 @@ class AiCardExpandableContent extends StatefulWidget {
 }
 
 class _AiCardExpandableContentState extends State<AiCardExpandableContent> {
+  static const double _collapsedMaxHeight = 220;
+  static const double _expandedMaxHeight = 520;
+
+  final ScrollController _scrollController = ScrollController();
   bool _expanded = false;
+  bool _overflows = false;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// 折叠态下测量是否溢出：maxScrollExtent > 0 说明内容被截断。
+  /// 展开态不测量（能展开就说明折叠时溢出过），保证收起按钮不会消失。
+  void _scheduleOverflowCheck() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _expanded || !_scrollController.hasClients) return;
+      final overflows = _scrollController.position.maxScrollExtent > 0.5;
+      if (overflows != _overflows) {
+        setState(() => _overflows = overflows);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    _scheduleOverflowCheck();
+    final showToggle = _expanded || _overflows;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: _expanded ? 520 : 220),
+          constraints: BoxConstraints(
+            maxHeight: _expanded ? _expandedMaxHeight : _collapsedMaxHeight,
+          ),
           child: SingleChildScrollView(
+            controller: _scrollController,
+            physics: showToggle
+                ? const ClampingScrollPhysics()
+                : const NeverScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: widget.child,
           ),
         ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton(
-            onPressed: () => setState(() => _expanded = !_expanded),
-            child: Text(
-              _expanded ? l10n.noteProposalCollapse : l10n.noteProposalExpand,
+        if (showToggle)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => setState(() => _expanded = !_expanded),
+              child: Text(
+                _expanded ? l10n.noteProposalCollapse : l10n.noteProposalExpand,
+              ),
             ),
-          ),
-        ),
+          )
+        else
+          const SizedBox(height: 8),
       ],
     );
   }

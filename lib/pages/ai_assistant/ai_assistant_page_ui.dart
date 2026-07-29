@@ -31,7 +31,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           children: [
             Flexible(
               child: Text(
-                _hasBoundNote ? l10n.askNoteTitle : l10n.aiAssistantLabel,
+                // 编辑器的所有 AI 功能都汇入 Thoughter，标题不再按入口分叉；
+                // 绑定的笔记由下方 _buildNoteContextBanner 交代
+                l10n.aiAssistantLabel,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -164,14 +166,32 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 (key, value) => MapEntry(key.toString(), value),
               ),
             );
+            final proposalLocation =
+                context.read<LocationService>().getDisplayLocation();
+            final proposalWeatherService = context.read<WeatherService>();
+            final proposalWeatherKey = proposalWeatherService.currentWeather;
+            final proposalTemperature = proposalWeatherService.temperature;
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: NoteProposalCard(
                 key: ValueKey('ai_workflow_result_note_proposal_${message.id}'),
                 artifact: artifact,
+                locationPreview:
+                    proposalLocation.isNotEmpty ? proposalLocation : null,
+                weatherPreview: proposalWeatherKey != null
+                    ? '${WeatherCodeMapper.getLocalizedDescription(l10n, proposalWeatherKey)}${proposalTemperature != null ? ' $proposalTemperature' : ''}'
+                    : null,
+                onMetadataChanged: (includeLocation, includeWeather) =>
+                    _persistNoteProposalMetadataFlags(
+                  message.id,
+                  meta,
+                  includeLocation: includeLocation,
+                  includeWeather: includeWeather,
+                ),
                 plainCreateOpensRich:
                     artifact.action == NoteProposalAction.create &&
-                        artifact.resultKind == NoteDocumentKind.plain &&
+                        (artifact.resultKind == NoteDocumentKind.plain ||
+                            !_opsHaveRichFormatting(artifact.documentOps)) &&
                         context.read<SettingsService>().skipNonFullscreenEditor,
                 initialCompleted: meta['saved_note_id'] != null,
                 initialSavedNoteId: meta['saved_note_id']?.toString(),
@@ -863,7 +883,11 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     final db = context.read<DatabaseService>();
     if (artifact.action == NoteProposalAction.create) {
       final validatedOps = _validatedArtifactOps(artifact);
-      if (artifact.resultKind == NoteDocumentKind.plain &&
+      // 按内容实际形态而不是模型声明的 kind 选编辑器：声明 rich 但
+      // ops 里没有任何格式时也是普通笔记，应走快速编辑弹窗。
+      final effectivelyPlain = artifact.resultKind == NoteDocumentKind.plain ||
+          !_opsHaveRichFormatting(validatedOps);
+      if (effectivelyPlain &&
           !context.read<SettingsService>().skipNonFullscreenEditor) {
         final tags = await db.getCategories();
         if (!mounted) return null;
@@ -1205,6 +1229,11 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     bool includeLocation = false,
     bool includeWeather = false,
   }) async {
+    // 没有真实格式的 delta 等同于纯文本，不应该被当成富文本强推全屏编辑器
+    if (richDocument != null &&
+        !_opsHaveRichFormatting(_opsFromRichDocument(richDocument))) {
+      richDocument = null;
+    }
     if (richDocument == null &&
         _isShortContent(content) &&
         !DeltaBuilder.hasMarkdownFormatting(content)) {
@@ -1567,6 +1596,19 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     return blocks.isEmpty
         ? null
         : QuillStructuredEdit.documentFromBlocks(blocks);
+  }
+
+  /// ops 里是否含真正的富文本格式。全部是无属性的纯文本 insert 时返回 false，
+  /// 这类"名义 rich、实则纯文本"的内容应按普通笔记走快速编辑弹窗。
+  bool _opsHaveRichFormatting(List<Map<String, dynamic>>? ops) {
+    if (ops == null || ops.isEmpty) return false;
+    for (final op in ops) {
+      // 非字符串 insert 表示图片等嵌入对象，必须走全屏编辑器
+      if (op['insert'] is! String) return true;
+      final attributes = op['attributes'];
+      if (attributes is Map && attributes.isNotEmpty) return true;
+    }
+    return false;
   }
 
   Future<String?> _saveSmartResultAsNewNote(
