@@ -207,7 +207,6 @@ class NoteListViewState extends State<NoteListView> {
   Timer? _searchUpdatingTimer;
   Timer? _searchDimTimer; // 延迟变淡，防止快速搜索结果回来之前列表闪烁
   int _searchTimeoutVersion = 0; // 超时 SnackBar 版本号，过期不弹
-  int _resultsVersion = 0; // 结果版本号，results→results 切换时驱动 AnimatedSwitcher 淡入淡出
   // ---- 自动滚动控制新增状态 ----
   bool _initialDataLoaded = false; // 标记是否已收到首批数据（后续用于启用自动滚动）
   bool _isAutoScrolling = false; // 当前是否有程序驱动的滚动动画
@@ -626,11 +625,8 @@ class NoteListViewState extends State<NoteListView> {
         widget.searchQuery,
       );
       final bool isSearchChange = oldEffectiveQuery != newEffectiveQuery;
-      final bool shouldAnimateSearchTransition =
-          oldEffectiveQuery.isNotEmpty && newEffectiveQuery.isNotEmpty;
 
-      // 标签/天气/时间段筛选变化：新结果到达后做一次淡入过渡
-      // （删筛选 chip 后旧结果保持显示，新结果整体淡入替换）。
+      // 标签/天气/时间段筛选变化：新结果到达后回到列表顶部。
       final bool isFilterChange = !_areListsEqual(
             oldWidget.selectedTagIds,
             widget.selectedTagIds,
@@ -646,8 +642,7 @@ class NoteListViewState extends State<NoteListView> {
       _updateStreamSubscription(
         preserveScrollPosition: isOnlySortChange || isSearchChange,
         isSearchUpdate: isSearchChange,
-        animateSearchTransition: shouldAnimateSearchTransition,
-        animateFilterTransition: isFilterChange && !isSearchChange,
+        resetScrollToTop: isFilterChange && !isSearchChange,
       );
     } else if (shouldUpdate) {
       logDebug('跳过更新：数据尚未完成首次加载', source: 'NoteListView');

@@ -321,18 +321,16 @@ extension _NoteListDataStreamExtension on NoteListViewState {
   void _updateStreamSubscription({
     bool preserveScrollPosition = false,
     bool isSearchUpdate = false,
-    bool animateSearchTransition = true,
-    bool animateFilterTransition = false,
+    bool resetScrollToTop = false,
   }) {
     if (!mounted) return; // 确保组件仍然挂载
 
-    // 搜索词或筛选条件变化后的第一次数据事件递增 _resultsVersion，
-    // 驱动 AnimatedSwitcher 淡入新结果；后续 load more 事件不递增。
-    bool isFirstAnimatedEvent =
-        (isSearchUpdate && animateSearchTransition) || animateFilterTransition;
+    // 结果列表 key 固定，新结果原地替换数据源，不再重建 ListView。
+    // 筛选条件变化需要回到顶部时，由 resetScrollToTop 在首个数据事件后显式归零。
+    bool pendingScrollToTop = resetScrollToTop;
 
     logDebug(
-      '更新数据流订阅 (preserveScrollPosition: $preserveScrollPosition, isSearchUpdate: $isSearchUpdate, animateSearchTransition: $animateSearchTransition, animateFilterTransition: $animateFilterTransition)',
+      '更新数据流订阅 (preserveScrollPosition: $preserveScrollPosition, isSearchUpdate: $isSearchUpdate, resetScrollToTop: $resetScrollToTop)',
       source: 'NoteListView',
     );
 
@@ -345,17 +343,9 @@ extension _NoteListDataStreamExtension on NoteListViewState {
     if (preserveScrollPosition &&
         _scrollController.hasClients &&
         _quotes.isNotEmpty) {
-      // 优先使用 _safeScrollOffset（单 position），不可用时从任一已挂载
-      // position 读取。快速删字时上一次交叉淡化可能仍在进行中（2 个
-      // position 同时挂载），_safeScrollOffset 返回 null 会丢失偏移量，
-      // 导致后续恢复被跳过、新列表从顶部出现并闪烁标签行。
+      // ListView 不再重建，position 本身不会丢失偏移；这里保存只是为了在
+      // 数据替换导致内容高度变化时把偏移拉回原处。
       savedScrollOffset = _safeScrollOffset;
-      if (savedScrollOffset == null) {
-        final positions = _scrollController.positions;
-        if (positions.isNotEmpty) {
-          savedScrollOffset = positions.first.pixels;
-        }
-      }
       logDebug('保存滚动位置: $savedScrollOffset', source: 'NoteListView');
     } else if (!preserveScrollPosition) {
       logDebug('筛选条件变化，不保存滚动位置，将重置到顶部', source: 'NoteListView');
@@ -363,7 +353,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
 
     // 搜索/筛选更新时不设 _isLoading：旧内容保持显示直到新结果淡入替换，
     // 避免底部临时闪现加载动画。仅排序等其余变化设 _isLoading = true。
-    if (_initialDataLoaded && !isSearchUpdate && !animateFilterTransition) {
+    if (_initialDataLoaded && !isSearchUpdate && !resetScrollToTop) {
       _updateState(() {
         _isLoading = true;
       });
@@ -408,13 +398,17 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             _hasMore = list.length >= NoteListViewState._pageSize;
             _isLoading = isLoadMorePage;
             _pruneExpansionControllers();
-            // 仅搜索/筛选变化后的第一次事件递增，驱动 AnimatedSwitcher 淡入新结果。
-            // 随后的 load more 不递增，避免 ListView 重建跳回顶部。
-            if (isFirstAnimatedEvent) {
-              _resultsVersion++;
-              isFirstAnimatedEvent = false;
-            }
           });
+
+          // 筛选条件变化：新结果的第一次事件到达后回到顶部。
+          // 之前依赖 ListView 换 key 重建来隐式归零，现在列表常驻，需显式归零。
+          if (pendingScrollToTop) {
+            pendingScrollToTop = false;
+            final pos = _safeScrollPosition;
+            if (pos != null && pos.pixels != 0) {
+              pos.jumpTo(0);
+            }
+          }
           if (_loadMorePerfRecording &&
               (_quotes.length > _loadMorePerfStartCount || !_hasMore)) {
             _markLoadMorePerfDataArrived();
@@ -446,42 +440,14 @@ extension _NoteListDataStreamExtension on NoteListViewState {
               if (offsetToRestore == null || !_scrollController.hasClients) {
                 return;
               }
-              // AnimatedSwitcher 交叉淡化期间，旧/新两个 ListView 同时挂载在
-              // 同一个 _scrollController 上，_safeScrollPosition 返回 null，
-              // 恢复会被静默跳过：新列表从顶部淡入、旧的已滚动列表在滚动
-              // 位置处淡出，视口顶部露出的半截卡片（标签行）看起来就像在
-              // 搜索栏下方闪一下。这里直接遍历所有已挂载 position 做对齐：
-              // 旧列表已在该偏移处不受影响，新列表立即对齐到同一偏移，
-              // 淡化期间两者内容保持一致，结束后列表也不会跳回顶部。
-              final positions = List<ScrollPosition>.of(
-                _scrollController.positions,
-              );
-              if (positions.length > 1) {
-                for (final position in positions) {
-                  if ((position.pixels - offsetToRestore).abs() > 0.5 &&
-                      offsetToRestore <= position.maxScrollExtent) {
-                    position.jumpTo(offsetToRestore);
-                  }
-                }
-                logDebug(
-                  '交叉淡化期间对齐滚动位置: $offsetToRestore',
-                  source: 'NoteListView',
-                );
-                return;
-              }
+              // 列表常驻，position 通常已经停在原偏移；只有新结果集变短被
+              // 夹紧时才会偏离。用 jumpTo 无动画纠正，避免任何可见位移。
               final pos = _safeScrollPosition;
-              if (pos != null && offsetToRestore <= pos.maxScrollExtent) {
-                _scrollController.animateTo(
-                  offsetToRestore,
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOut,
-                );
-                logDebug(
-                  '平滑恢复滚动位置: $offsetToRestore',
-                  source: 'NoteListView',
-                );
-              } else {
-                logDebug('滚动位置超出范围或条件不满足，保持当前位置', source: 'NoteListView');
+              if (pos != null &&
+                  offsetToRestore <= pos.maxScrollExtent &&
+                  (pos.pixels - offsetToRestore).abs() > 0.5) {
+                pos.jumpTo(offsetToRestore);
+                logDebug('恢复滚动位置: $offsetToRestore', source: 'NoteListView');
               }
             });
           }

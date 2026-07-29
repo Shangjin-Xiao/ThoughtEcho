@@ -20,8 +20,8 @@ void main() {
 
   group('NoteListView search transition scroll preservation', () {
     testWidgets(
-      'deleting a search character keeps the scroll offset across the '
-      'results crossfade instead of flashing the scrolled old list at top',
+      'deleting a search character updates the results in place without '
+      'remounting the list or ever showing it at offset 0',
       (tester) async {
         final databaseService = _SearchFakeDatabase();
         final settingsService = _FakeSettingsService();
@@ -49,25 +49,19 @@ void main() {
         // 删掉一个字 -> “你”（单字立即触发）
         await tester.enterText(find.byType(TextField), '你');
 
-        // 交叉淡化期间（200ms）新列表应与旧列表对齐到同一滚动偏移，
-        // 而不是从顶部开始让旧的已滚动列表在搜索栏下方淡出闪烁。
-        var sawIncomingAlignedDuringFade = false;
-        for (var i = 0; i < 15; i++) {
+        // 结果原地替换：整个过程中始终只有一个列表 position（不重建 ListView），
+        // 且每一帧都停在原偏移。任何一帧出现第二个 position 或偏移归零，
+        // 都会让视口顶部露出半截卡片的标签行，在搜索栏下方闪一下。
+        for (var i = 0; i < 30; i++) {
           await tester.pump(const Duration(milliseconds: 16));
           final positions = _noteListScrollPositions(tester);
-          if (positions.length > 1 &&
-              positions.every(
-                (position) => (position.pixels - 600).abs() <= 1,
-              )) {
-            sawIncomingAlignedDuringFade = true;
-          }
+          expect(positions, hasLength(1));
+          expect(positions.single.pixels, closeTo(600, 1));
         }
-
-        expect(sawIncomingAlignedDuringFade, isTrue);
 
         await tester.pump(const Duration(milliseconds: 300));
 
-        // 淡化结束后列表保持删除前的滚动位置，而不是跳回顶部
+        // 结束后列表保持删除前的滚动位置，而不是跳回顶部
         final positions = _noteListScrollPositions(tester);
         expect(positions, hasLength(1));
         expect(positions.single.pixels, closeTo(600, 1));

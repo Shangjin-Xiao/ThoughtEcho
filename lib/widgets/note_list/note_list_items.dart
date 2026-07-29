@@ -192,25 +192,13 @@ extension _NoteListItemsExtension on NoteListViewState {
                         duration: const Duration(milliseconds: 200),
                         switchInCurve: Curves.easeOut,
                         switchOutCurve: Curves.easeIn,
-                        // 双向交叉淡化：旧结果快速淡出、新结果淡入，
-                        // 避免旧列表被硬切（opacity 直接归零）造成的生硬感。
+                        // 双向交叉淡化：旧内容快速淡出、新内容淡入，
+                        // 避免被硬切（opacity 直接归零）造成的生硬感。
+                        // 注意：results→results 不再切换（key 固定），这里只处理
+                        // loading / empty / no_results / results 之间的状态切换，
+                        // 因此不会再出现两个 ListView 同时挂在同一个滚动控制器上。
                         transitionBuilder: (child, animation) =>
                             FadeTransition(opacity: animation, child: child),
-                        // 自定义布局：将旧列表（previousChildren）放在栈顶。
-                        // 搜索删字触发 results→results 交叉淡化时，新 ListView
-                        // 在 addPostFrameCallback 对齐滚动偏移之前会以 offset=0
-                        // 渲染一帧，导致新列表顶部的标签行在搜索栏下方闪烁。
-                        // 旧列表保持在正确的滚动位置，放在栈顶可以完全遮盖新列表
-                        // 这一帧的错误内容；等旧列表透明度足够低时，新列表的滚动
-                        // 位置已由 postFrameCallback 对齐，不会再看到闪烁。
-                        layoutBuilder: (currentChild, previousChildren) {
-                          return Stack(
-                            children: [
-                              if (currentChild != null) currentChild,
-                              ...previousChildren,
-                            ],
-                          );
-                        },
                         child: _buildNoteList(theme, noteInsertAnimationType),
                       ),
                     ),
@@ -383,13 +371,15 @@ extension _NoteListItemsExtension on NoteListViewState {
   Widget _buildNoteList(ThemeData theme, String noteInsertAnimationType) {
     final l10n = AppLocalizations.of(context);
     final hasEffectiveSearchQuery = _effectiveSearchQuery.isNotEmpty;
-    // key 拆分：_resultsVersion 仅在搜索词/筛选条件变化后的第一次数据事件递增
-    // （load more 不递增），因此 AnimatedSwitcher 只在结果集真正切换时做一次
-    // results -> results 的淡入切换，不会在分页时销毁列表导致跳回顶部。
+    // 结果列表使用固定 key：搜索词变化（含删字）时不再重建 ListView，
+    // 而是原地更新数据源。重建会让新 ListView 挂到同一个 _scrollController
+    // 上并以 offset=0 渲染若干帧，视口顶部露出的半截卡片（标签行）就会在
+    // 搜索栏下方闪一下——这正是历次修复都没根治的闪烁来源。
+    // 结果集切换的视觉反馈由外层 AnimatedOpacity（_isSearchUpdating）承担。
     const loadingKey = ValueKey('note_list_loading');
     const emptyKey = ValueKey('note_list_empty');
     const noResultsKey = ValueKey('note_list_no_results');
-    final resultsKey = ValueKey('note_list_results_$_resultsVersion');
+    const resultsKey = ValueKey('note_list_results');
 
     // 仅在服务初始化或首批笔记尚未返回时显示 loading。
     // 本地 SQLite 搜索通常 < 100 ms，不单独显示搜索加载动画；

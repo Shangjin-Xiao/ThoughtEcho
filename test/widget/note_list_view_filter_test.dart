@@ -17,6 +17,24 @@ import 'package:thoughtecho/widgets/app_loading_view.dart';
 import 'package:thoughtecho/widgets/note_list_view.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
 
+/// 取笔记列表自身 Scrollable 的 position（通过 controller 同一性匹配，
+/// 跳过条目内容里的其它 Scrollable）。
+ScrollPosition _noteListScrollPosition(WidgetTester tester) {
+  final listView = tester.widget<ListView>(find.byType(ListView));
+  for (final element in find
+      .descendant(
+        of: find.byWidget(listView),
+        matching: find.byType(Scrollable),
+      )
+      .evaluate()) {
+    final scrollable = element.widget as Scrollable;
+    if (identical(scrollable.controller, listView.controller)) {
+      return ((element as StatefulElement).state as ScrollableState).position;
+    }
+  }
+  throw StateError('未找到笔记列表的 ScrollPosition');
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -122,6 +140,49 @@ void main() {
 
         expect(find.byType(ListView), findsOneWidget);
         expect(find.text('筛选变化前可见的笔记'), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
+
+    testWidgets(
+      'removing a tag filter scrolls the persistent list back to the top',
+      (tester) async {
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = [
+            for (var i = 0; i < 30; i++)
+              Quote(
+                id: 'quote-$i',
+                content: '筛选前的笔记 $i',
+                date: DateTime(2026, 7, 8, 9)
+                    .subtract(Duration(minutes: i))
+                    .toIso8601String(),
+              ),
+          ];
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        // 列表 key 固定后不再靠重建隐式归零，需要显式回到顶部
+        final position = _noteListScrollPosition(tester);
+        position.jumpTo(400);
+        await tester.pump();
+        expect(position.pixels, 400);
+
+        await tester.tap(find.byIcon(Icons.close).first);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(_noteListScrollPosition(tester).pixels, 0);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(seconds: 2));
