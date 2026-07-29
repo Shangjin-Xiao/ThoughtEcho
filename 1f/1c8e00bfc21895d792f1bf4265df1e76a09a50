@@ -1,0 +1,34 @@
+lib/l10n/app_fr.arb
+  s_e29f9a41419861::t_052a6b81ab3e75 2565-2572
+lib/pages/ai_assistant/ai_assistant_page_quick_edit.dart
+  s_e29f9a41419861::t_e3812e3ee950c0 320-321
+  s_e29f9a41419861::t_3e8dd7e7012225 3
+  s_e29f9a41419861::t_dfaf213869f4f3 377
+  s_e29f9a41419861::t_1fc844873ba56b 20-27,31,36,47-49,51,61-81,98,105-119,124,141,153-154,157-165
+  s_e29f9a41419861::t_eaadcdbd68a4ba 172-173
+  s_e29f9a41419861::t_be28a4ea653637 203-209,211-220,223-242,245-255,258-259,261-269,274-293
+lib/l10n/app_en.arb
+  s_e29f9a41419861::t_db7bdceb258bac 2669-2676
+lib/l10n/app_ja.arb
+  s_e29f9a41419861::t_c74b178cbd51d7 2572-2579
+lib/l10n/app_ko.arb
+  s_e29f9a41419861::t_c1acd466bad4e3 2572-2579
+lib/l10n/app_zh.arb
+  s_e29f9a41419861::t_2ef7ec37e08df2 2675-2682
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "1f1c8e00bfc21895d792f1bf4265df1e76a09a50",
+  "prompts": {},
+  "sessions": {
+    "s_e29f9a41419861": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2a379aed-1c69-485f-977c-c13979f863e1",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
