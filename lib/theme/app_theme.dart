@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'app_semantic_colors.dart';
 
 class AppTheme with ChangeNotifier {
   // Windows 平台字体配置
@@ -579,6 +580,18 @@ class AppTheme with ChangeNotifier {
         tileColor: Colors.transparent,
       ),
 
+      // SnackBar 统一为浮动样式和 buttonRadius 圆角。
+      // 过去没有配置这项，导致 46 处调用点各自手写 backgroundColor: Colors.red 兜底。
+      snackBarTheme: baseTheme.snackBarTheme.copyWith(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(buttonRadius),
+        ),
+      ),
+
+      // 状态语义色（M3 的 ColorScheme 只有 error，没有 success / warning）
+      extensions: const <ThemeExtension<dynamic>>[AppSemanticColors.light],
+
       // Windows 平台字体优化
       textTheme: _fixAndroidVariableFontWeight(
         _createPlatformTextTheme(baseTheme.textTheme),
@@ -812,6 +825,17 @@ class AppTheme with ChangeNotifier {
         circularTrackColor: colorScheme.primary.withValues(alpha: 0.2),
         linearTrackColor: colorScheme.primary.withValues(alpha: 0.2),
       ),
+
+      // SnackBar 统一为浮动样式和 buttonRadius 圆角，与亮色主题保持一致
+      snackBarTheme: baseTheme.snackBarTheme.copyWith(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(buttonRadius),
+        ),
+      ),
+
+      // 状态语义色（M3 的 ColorScheme 只有 error，没有 success / warning）
+      extensions: const <ThemeExtension<dynamic>>[AppSemanticColors.dark],
 
       // Windows 平台字体优化
       textTheme: _fixAndroidVariableFontWeight(

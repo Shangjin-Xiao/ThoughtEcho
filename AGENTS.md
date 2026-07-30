@@ -152,6 +152,56 @@ pwsh ./scripts/build_msix_ci.ps1
   或平台明确要求的颜色可集中定义，不在页面散落 `Color(0x...)`。
 - 异步间隔后使用 `context` 或更新 State 前检查 `mounted` / `context.mounted`。
 
+### UI 硬性约束
+
+以下是反复出现过的实际问题，提交前自查。带 ❌ 的写法在 `lib/pages/` 和 `lib/widgets/` 里
+一律不接受，评审会直接打回。
+
+**颜色**
+
+- ❌ `Colors.red` / `green` / `orange` / `grey` / `blue` 等 Material 命名色，包括
+  `Colors.grey[100]`、`Colors.green.shade600`。它们不随 M3 动态取色变化，用户换了主题色后
+  会突兀，`Colors.grey` 当次要文字色还会在暗色模式下对比度不足。
+  - 语义状态色用 `Theme.of(context).extension<AppSemanticColors>()!` 的
+    `success` / `warning` / `danger` / `info`（定义在 `lib/theme/app_semantic_colors.dart`）。
+  - 中性文字用 `colorScheme.onSurfaceVariant`，不是 `Colors.grey`。
+  - 错误用 `colorScheme.error` / `errorContainer`。
+- ❌ 硬编码浅色背景（`Colors.white`、`Colors.grey[100]`、`Colors.grey.shade100`）——
+  暗色模式下会变成刺眼白块。用 `colorScheme.surfaceContainerHighest` 等 surface 层级。
+  - 例外：确定绘制在 `primary`/`error` 等已知深色之上时，用配对的 `onPrimary` / `onError`，
+    仍然不要写 `Colors.white`。
+- ❌ **Tailwind 默认色板**：`0xFF6366F1`（indigo-500）、`0xFF8B5CF6`、`0xFF10B981`、
+  `0xFFF59E0B`、`0xFFEF4444`、`0xFF1E293B`、`0xFF0F172A`、`0xFF94A3B8` 等。这类值是
+  AI 生成前端代码的默认产物，和本项目 M3 主题无关，出现即为 bug。图表/统计配色从
+  `colorScheme` 的 primary / secondary / tertiary / error 及其 container 变体派生。
+
+**尺寸与排版**
+
+- ❌ 手写 `BorderRadius.circular(N)` 造卡片/按钮/输入框。用 `AppTheme.cardRadius`(18)、
+  `buttonRadius`(12)、`inputRadius`(12)、`dialogRadius`(24)。历史代码里有 13 种不同圆角值
+  同屏并存，不要再增加。纯装饰性小元素（徽章、色块）可自行取值。
+- ❌ `fontSize:` 字面量。用 `theme.textTheme.*`，需要微调时 `.copyWith()`。
+- ❌ `fontStyle: FontStyle.italic`。中文字体没有真斜体，Flutter 会做合成倾斜，笔画变形很难看。
+  要弱化层次就用 `onSurfaceVariant` + 字号或字重差。
+- 间距用 4 的倍数（4/8/12/16/24/32）。
+
+**组件复用**
+
+- ❌ 手写 `ScaffoldMessenger.of(context).showSnackBar(...)`。用 `AppSnackBar.info/success/
+  error/warning`（`lib/widgets/app_snackbar.dart`），它统一了时长、`context.mounted` 检查和
+  语义色。
+- ❌ 裸 `CircularProgressIndicator` / 自己拼「居中图标 + 文字」的空态和错误态。用
+  `AppLoadingView`、`AppEmptyView`、`AppErrorView`（`lib/widgets/`）。
+- 卡片用 `Card`（已配好 `cardTheme`），不要用 `Container` + `BoxDecoration` 另搓一套，
+  两者同屏时圆角和高光对不齐。
+
+**审美方向**
+
+- 渐变背景、多层 `RadialGradient` 光晕、「大数字 + 小标签 + 渐变强调色」的统计卡是 AI 生成
+  设计的通用模板，本项目不再新增。需要视觉重点时优先靠留白、字号层级和单一强调色。
+- 新增开发者/实验性开关必须放进设置页的「实验室」卡片（`_buildLabSection`），不要混进
+  「应用设置」；每个开关都要有区别于其它开关的 l10n 标题，不复用别的键。
+
 ## 数据库与批量数据
 
 - Schema 真源位于 `lib/services/database_schema_manager.dart`，版本为

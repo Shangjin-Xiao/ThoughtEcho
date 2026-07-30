@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
+import '../theme/app_semantic_colors.dart';
 
 /// Unified SnackBar wrapper for consistent messaging across the app.
 ///
@@ -19,6 +20,7 @@ class AppSnackBar {
     String message, {
     Duration? duration,
     Color? backgroundColor,
+    Color? foregroundColor,
     SnackBarAction? action,
     SnackBarBehavior behavior = SnackBarBehavior.floating,
   }) {
@@ -27,7 +29,12 @@ class AppSnackBar {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(message),
+          content: Text(
+            message,
+            style: foregroundColor == null
+                ? null
+                : TextStyle(color: foregroundColor),
+          ),
           duration: duration ?? AppConstants.snackBarDurationNormal,
           backgroundColor: backgroundColor,
           behavior: behavior,
@@ -59,40 +66,46 @@ class AppSnackBar {
       );
   }
 
-  /// Informational message — default theme color, normal duration.
+  /// Informational message — inherits the theme's SnackBar colors.
   static void info(BuildContext context, String message,
       {SnackBarAction? action}) {
     show(context, message, action: action);
   }
 
-  /// Success message — green background, important duration.
+  /// Success message — semantic success container, important duration.
   static void success(BuildContext context, String message) {
+    final semantic = AppSemanticColors.of(context);
     show(
       context,
       message,
-      backgroundColor: Colors.green,
+      backgroundColor: semantic.successContainer,
+      foregroundColor: semantic.onSuccessContainer,
       duration: AppConstants.snackBarDurationImportant,
     );
   }
 
-  /// Error message — red background, longer duration.
+  /// Error message — `colorScheme.errorContainer`, longer duration.
   static void error(BuildContext context, String message,
       {SnackBarAction? action}) {
+    final colorScheme = Theme.of(context).colorScheme;
     show(
       context,
       message,
-      backgroundColor: Colors.red,
+      backgroundColor: colorScheme.errorContainer,
+      foregroundColor: colorScheme.onErrorContainer,
       duration: AppConstants.snackBarDurationError,
       action: action,
     );
   }
 
-  /// Warning message — orange background, important duration.
+  /// Warning message — semantic warning container, important duration.
   static void warning(BuildContext context, String message) {
+    final semantic = AppSemanticColors.of(context);
     show(
       context,
       message,
-      backgroundColor: Colors.orange,
+      backgroundColor: semantic.warningContainer,
+      foregroundColor: semantic.onWarningContainer,
       duration: AppConstants.snackBarDurationImportant,
     );
   }
