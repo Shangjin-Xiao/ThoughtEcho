@@ -1,0 +1,69 @@
+test/widget/note_item_motion_test.dart
+  s_269b6113ae07d7::t_fac3cf324f029c 73-74
+  s_269b6113ae07d7::t_818df25af94ec5 92-93
+  s_269b6113ae07d7::t_089bf0bc2d8f2b 1-72,75-91,94-216
+lib/widgets/note_list/note_list_items.dart
+  s_302ee25bc559f6::t_d08dc2f5cf7c6d 637-639
+  s_302ee25bc559f6::t_a567080680ba9b 693-703
+test/widget/note_list_view_filter_test.dart
+  s_269b6113ae07d7::t_4468ee19f1ad0b 698,700,704
+  s_269b6113ae07d7::t_8bca074460dc31 677
+  s_269b6113ae07d7::t_add9ca1090d8ff 501-503
+  s_269b6113ae07d7::t_b739ba5d041d93 486,495,497-500,504-507
+  s_269b6113ae07d7::t_57c03bc1d98d2d 587-590
+  s_269b6113ae07d7::t_bab21263367a40 632-633
+  s_269b6113ae07d7::t_771c2ae70bed3c 545-546,548-551
+  s_269b6113ae07d7::t_b56ffd80a9abde 17,21-22,29,31
+  s_269b6113ae07d7::t_2dce036864a71f 23-28,30
+  s_7741578ecf966f::t_dbf7c5bdeef764 32
+lib/widgets/note_list/note_item_motion.dart
+  s_269b6113ae07d7::t_0a3a765dd71f38 4-8,10-12,16-17,19-20,25,27-44,46-53,55-68,70-71,74-81,83-86,94-139,141-164,166-195,218-222,233-236,245-246,256,259-260,268-272,274,280-282,300,322,324,327-329,341,347-353,355,357-358,360-367,369,371,389-393,431,433,435-439,442-448,450,467,489-493,496,506-507
+  s_269b6113ae07d7::t_573e2e80e94adc 500
+  s_269b6113ae07d7::t_93e6a0a60aaae8 140
+  s_269b6113ae07d7::t_450de774f93d71 3
+  s_269b6113ae07d7::t_229b6fa48f901f 310,317-320
+  s_269b6113ae07d7::t_a08088e554309c 1-2,9,13-15,18,21-24,26,45,54,69,72-73,82,87-93,196-217,223-232,237-244,247-255,257-258,261-267,273,275-279,283-299,301-309,311-316,321,323,325-326,330-340,342-346,354,356,359,368,370,372-388,394-430,432,434,440-441,449,451-466,468-488,494-495,497-499,501-505
+  s_269b6113ae07d7::t_18a8e3480958a2 165
+lib/widgets/note_list_view.dart
+  s_269b6113ae07d7::t_ef28543bfb618c 158
+  s_269b6113ae07d7::t_5005c1f66e9b9f 838-851,853-865,867-875
+  s_269b6113ae07d7::t_ef96445e98510b 141,147-153,156-157
+  s_269b6113ae07d7::t_9ca7ef12a34adc 38
+  s_269b6113ae07d7::t_4a1d3f6e27a23c 732-733,738-745
+  s_269b6113ae07d7::t_2ce5b9c93053cd 734-737
+  s_269b6113ae07d7::t_4526e2d4a81fdb 866
+  s_269b6113ae07d7::t_d4854ca4769324 852
+  s_269b6113ae07d7::t_23fe625a016656 159,876
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "63a5edc2ef0170c884074580bc8c42dfa3de6f5c",
+  "prompts": {},
+  "sessions": {
+    "s_269b6113ae07d7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ba70750e-32f1-42f9-85f2-5339655628d3",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_302ee25bc559f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "75509e53-dc0c-4b3b-8357-9bd24c20ecd9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_7741578ecf966f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "340cc40c-189c-4dca-b529-b61325058eba",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
