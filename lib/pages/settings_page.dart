@@ -1494,151 +1494,76 @@ class SettingsPageState extends State<SettingsPage> {
     }
 
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          colors: isDark
-              ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
-              : [const Color(0xFFF8FAFC), const Color(0xFFEEF2FF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.4)
-                : const Color(0xFF6366F1).withValues(alpha: 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-        border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
-          width: 1.5,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(24),
+    // 用 tertiaryContainer 承载这张庆祝卡片：M3 里 tertiary 正是为点缀性强调
+    // 准备的色槽，既比普通设置卡醒目，又跟着用户的主题色走。
+    // 此前这里是硬编码的 Tailwind indigo/slate 色板加两层 RadialGradient 光晕，
+    // 既无视主题色，浅色模式下几乎全白的底也让白色笔记本插画糊进背景。
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Card(
+        margin: EdgeInsets.zero,
+        color: colorScheme.tertiaryContainer,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => _showAnniversaryAnimationInSettings(context),
-          child: Stack(
-            children: [
-              // 背景装饰 - 柔和的光晕
-              Positioned(
-                right: -30,
-                top: -30,
-                child: Container(
-                  width: 150,
-                  height: 150,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        const Color(
-                          0xFF818CF8,
-                        ).withValues(alpha: isDark ? 0.2 : 0.15),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 20,
-                bottom: -40,
-                child: Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        const Color(
-                          0xFF60A5FA,
-                        ).withValues(alpha: isDark ? 0.15 : 0.1),
-                        Colors.transparent,
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // 主内容区
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    // 左侧：精致的笔记本图标
-                    const AnniversaryNotebookIcon(),
-                    const SizedBox(width: 20),
-                    // 右侧：文本和指示器
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                // 左侧：笔记本插画
+                const AnniversaryNotebookIcon(),
+                const SizedBox(width: 20),
+                // 右侧：文本和指示器
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.anniversaryBannerTitle,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.3,
+                          color: colorScheme.onTertiaryContainer,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        formatAnniversaryBannerSubtitleForTile(
+                          l10n.anniversaryBannerSubtitle,
+                        ),
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: colorScheme.onTertiaryContainer
+                              .withValues(alpha: 0.75),
+                          height: 1.4,
+                        ),
+                        softWrap: true,
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
                         children: [
                           Text(
-                            l10n.anniversaryBannerTitle,
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.3,
-                              color: isDark
-                                  ? const Color(0xFFF8FAFC)
-                                  : const Color(0xFF0F172A),
+                            l10n.anniversaryBannerTap,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: colorScheme.onTertiaryContainer,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            formatAnniversaryBannerSubtitleForTile(
-                              l10n.anniversaryBannerSubtitle,
-                            ),
-                            style: Theme.of(context)
-                                .textTheme
-                                .labelMedium
-                                ?.copyWith(
-                                  color: isDark
-                                      ? const Color(0xFF94A3B8)
-                                      : const Color(0xFF475569),
-                                  height: 1.4,
-                                ),
-                            softWrap: true,
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Text(
-                                l10n.anniversaryBannerTap,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelMedium
-                                    ?.copyWith(
-                                      color: isDark
-                                          ? const Color(0xFF818CF8)
-                                          : const Color(0xFF4F46E5),
-                                    ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.arrow_forward_rounded,
-                                size: 14,
-                                color: isDark
-                                    ? const Color(0xFF818CF8)
-                                    : const Color(0xFF4F46E5),
-                              ),
-                            ],
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 14,
+                            color: colorScheme.onTertiaryContainer,
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
