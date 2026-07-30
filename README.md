@@ -38,10 +38,6 @@
   </p>
 
   <p>
-    <b>⚠️ 友情提示：</b>这是一个与 AI 协作完成的项目，我会持续打磨体验，如遇潜在的小 bug 敬请包涵，也欢迎随时反馈。
-  </p>
-  
-  <p>
     <a href="#-english-version"><b>English</b></a> • 
     <a href="#-中文版本"><b>中文</b></a> •
     <a href="docs/USER_MANUAL.md"><b>用户手册 / User Manual</b></a>
@@ -298,10 +294,6 @@
     Capture ideas effortlessly, unlock insights with AI ✨</b>
   </p>
   
-  <p>
-    <b>⚠️ Heads-up:</b> This project was built in collaboration with AI—we're polishing it in the open, so thanks for your patience with any rough edges.
-  </p>
-
   <p>
     <b>🌍 Localization:</b> Full English and Japanese support available! More languages welcome.
   </p>
