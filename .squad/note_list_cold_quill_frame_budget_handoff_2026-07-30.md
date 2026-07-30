@@ -72,9 +72,22 @@ scroll-1 : ΔdocMiss+13, docWorkUs+22472, ctrlCreate+13,   Δbytes+32.6MB  ← �
 - **`needsExpansion == false` 的富文本卡片仍不受额度约束**：占位依赖固定 160px 高度，
   非折叠卡片高度由内容决定，套占位会引起 extent 跳变。这类卡片按定义内容较短，
   暂不认为是主要成本来源，但它是这套机制的结构性缺口。
-- **`note_list_items.dart:520` 的 `EdgeInsets.only(top: -1)`**：负 padding 触发
-  `RenderSliverPadding` 的 `padding.isNonNegative` 断言，导致
+- ~~**`note_list_items.dart:520` 的 `EdgeInsets.only(top: -1)`**~~：已在同日后续提交修复，
+  见下节。
+
+## 附：ListView 负 padding 断言（2026-07-30 同日修复）
+
+`89be17a8` 为收紧首条笔记与搜索框的间距，给 ListView 加了 `EdgeInsets.only(top: -2)`
+（`7a465c6a` 回调为 `-1`）。ListView 的 padding 会被包成 `SliverPadding`，负值命中
+`RenderSliverPadding` 的 `assert(padding.isNonNegative)`：
+
+- release 关闭断言，真机看不出问题，1px 收紧视觉上是生效的；
+- debug 与测试中 ListView 一挂载就抛异常，导致
   `note_list_view_filter_test.dart`（18 项）、`note_list_scroll_controller_test.dart` 与
-  `note_list_search_transition_test.dart`（共 3 项）在 debug 下全部失败。这是本轮改动
-  之前就存在的问题（已用 stash 前后对比确认），涉及用户明确调过两次的 1px 间距，
-  未擅自改动。
+  `note_list_search_transition_test.dart`（共 3 项）全部失败。
+
+用户确认间距改回卡片自身的 6px（`quote_item_widget.dart` 的 `cardMargin`
+`vertical: 6`），因此直接删除该 padding，负值随之消失。上述 24 项测试全部转绿。
+
+**后续若还要调这个间距**：不要再用负 padding。改 `cardMargin` 的 vertical 值，或给
+ListView 加**非负** padding，否则会再次踩到同一个断言。

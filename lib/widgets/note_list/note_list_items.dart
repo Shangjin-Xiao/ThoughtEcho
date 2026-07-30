@@ -516,8 +516,10 @@ extension _NoteListItemsExtension on NoteListViewState {
       child: BackdropGroup(
         child: ListView.builder(
           controller: _scrollController, // 添加滚动控制器
-          // 首条笔记与搜索框之间的间距收紧（卡片自身 6px 上边距 -> 视觉上收紧 1px）
-          padding: const EdgeInsets.only(top: -1),
+          // 首条笔记与搜索框的间距由卡片自身的 6px 上边距决定，这里不再额外收紧。
+          // ListView 的 padding 会包成 SliverPadding，负值会命中
+          // RenderSliverPadding 的 assert(padding.isNonNegative)：release 关断言
+          // 看不出问题，debug 和测试里 ListView 一挂载就抛异常。
           findChildIndexCallback: (key) {
             if (key is ValueKey<String>) {
               return rowIndexByKey[key.value];
