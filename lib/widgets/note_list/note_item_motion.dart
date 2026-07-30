@@ -122,12 +122,13 @@ class NoteItemMotionState extends State<NoteItemMotion>
 
   void _startInsert(int version) {
     _playingInsertVersion = version;
-    final controller = _insertController ??= AnimationController(
-      vsync: this,
-      duration: NoteItemMotion.insertDuration,
-    )
-      ..addListener(_handleTick)
-      ..addStatusListener(_handleInsertStatus);
+    final controller = _insertController ??=
+        AnimationController(
+            vsync: this,
+            duration: NoteItemMotion.insertDuration,
+          )
+          ..addListener(_handleTick)
+          ..addStatusListener(_handleInsertStatus);
     _insertProgress ??= CurvedAnimation(
       parent: controller,
       curve: Curves.easeOutCubic,
@@ -145,12 +146,13 @@ class NoteItemMotionState extends State<NoteItemMotion>
   }
 
   void _startDelete() {
-    final controller = _deleteController ??= AnimationController(
-      vsync: this,
-      duration: NoteItemMotion.deleteDuration,
-    )
-      ..addListener(_handleTick)
-      ..addStatusListener(_handleDeleteStatus);
+    final controller = _deleteController ??=
+        AnimationController(
+            vsync: this,
+            duration: NoteItemMotion.deleteDuration,
+          )
+          ..addListener(_handleTick)
+          ..addStatusListener(_handleDeleteStatus);
     // 透明度先行（easeOut：一开始就快速变淡，给出即时删除反馈）；
     // 高度折叠用 easeInOutCubic，让下方卡片平滑上移。
     _deleteFade ??= CurvedAnimation(parent: controller, curve: Curves.easeOut);
@@ -197,9 +199,8 @@ class NoteItemMotionState extends State<NoteItemMotion>
 
   bool get _insertPlaying => _playingInsertVersion != null;
 
-  double get _insertProgressValue => _insertPlaying
-      ? (_insertProgress?.value ?? 1.0).clamp(0.0, 1.0)
-      : 1.0;
+  double get _insertProgressValue =>
+      _insertPlaying ? (_insertProgress?.value ?? 1.0).clamp(0.0, 1.0) : 1.0;
 
   double get _deleteFadeValue =>
       widget.isDeleting ? (_deleteFade?.value ?? 0.0).clamp(0.0, 1.0) : 0.0;
@@ -212,8 +213,9 @@ class NoteItemMotionState extends State<NoteItemMotion>
 
   double get _heightFactor {
     final double deleteFactor = 1.0 - _deleteCollapseValue;
-    final double insertFactor =
-        _insertPlaying && widget.animateInsertLayout ? _insertProgressValue : 1.0;
+    final double insertFactor = _insertPlaying && widget.animateInsertLayout
+        ? _insertProgressValue
+        : 1.0;
     return insertFactor < deleteFactor ? insertFactor : deleteFactor;
   }
 
@@ -286,11 +288,11 @@ class _RenderNoteItemMotion extends RenderProxyBox {
     required double heightFactor,
     required double translateY,
     required double scale,
-  })  : _opacity = opacity.clamp(0.0, 1.0),
-        _alpha = ui.Color.getAlphaFromOpacity(opacity),
-        _heightFactor = heightFactor.clamp(0.0, 1.0),
-        _translateY = translateY,
-        _scale = scale;
+  }) : _opacity = opacity.clamp(0.0, 1.0),
+       _alpha = ui.Color.getAlphaFromOpacity(opacity),
+       _heightFactor = heightFactor.clamp(0.0, 1.0),
+       _translateY = translateY,
+       _scale = scale;
 
   double _opacity;
   int _alpha;
@@ -342,7 +344,8 @@ class _RenderNoteItemMotion extends RenderProxyBox {
   bool get _hasTransform => _translateY != 0.0 || _scale != 1.0;
 
   @override
-  bool get alwaysNeedsCompositing => child != null && _alpha > 0 && _alpha < 255;
+  bool get alwaysNeedsCompositing =>
+      child != null && _alpha > 0 && _alpha < 255;
 
   @override
   void performLayout() {

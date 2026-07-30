@@ -66,9 +66,7 @@ void main() {
       tester.getSize(find.byKey(const ValueKey('card'))).width;
 
   testWidgets('结构性入场动画全程保持卡片宽度不变', (tester) async {
-    await tester.pumpWidget(
-      host(insertVersion: 1, animateInsertLayout: true),
-    );
+    await tester.pumpWidget(host(insertVersion: 1, animateInsertLayout: true));
 
     // 宽度约束原样透传给子树：卡片始终撑满 400
     const expectedWidth = 400.0;
@@ -91,7 +89,9 @@ void main() {
     await tester.pumpWidget(host());
     final expectedWidth = cardWidth(tester);
     expect(expectedWidth, 400.0);
-    final fullHeight = tester.getSize(find.byKey(const ValueKey('motion'))).height;
+    final fullHeight = tester
+        .getSize(find.byKey(const ValueKey('motion')))
+        .height;
     expect(fullHeight, greaterThan(0));
 
     await tester.pumpWidget(host(isDeleting: true));
@@ -104,8 +104,9 @@ void main() {
         expectedWidth,
         reason: '删除动画第 ${elapsed + 40}ms 时卡片宽度变了',
       );
-      final height =
-          tester.getSize(find.byKey(const ValueKey('motion'))).height;
+      final height = tester
+          .getSize(find.byKey(const ValueKey('motion')))
+          .height;
       expect(height, lessThanOrEqualTo(previousHeight));
       previousHeight = height;
     }
@@ -115,7 +116,9 @@ void main() {
 
   testWidgets('动画开始和结束都不重挂载卡片子树', (tester) async {
     await tester.pumpWidget(host());
-    final Element idleElement = tester.element(find.byKey(const ValueKey('card')));
+    final Element idleElement = tester.element(
+      find.byKey(const ValueKey('card')),
+    );
 
     // 入场动画开始
     await tester.pumpWidget(host(insertVersion: 1, animateInsertLayout: true));
