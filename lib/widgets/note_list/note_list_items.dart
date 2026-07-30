@@ -634,35 +634,9 @@ extension _NoteListItemsExtension on NoteListViewState {
                         }
                       },
                       onEdit: () => widget.onEdit(quote),
-                      onDelete: () {
-                        if (quoteId.isNotEmpty) {
-                          if (_deletingQuoteIds.contains(quoteId)) {
-                            return;
-                          }
-                          _updateState(() {
-                            _deletingQuoteIds.add(quoteId);
-                          });
-                          // 等删除动画播完 + 30ms 余量再执行真正的删除。
-                          // 先从本地列表乐观移除，避免 stream 更新时的视觉跳动。
-                          Future.delayed(
-                            NoteListViewState._noteDeleteAnimationDuration +
-                                const Duration(milliseconds: 30),
-                            () {
-                              if (mounted) {
-                                _updateState(() {
-                                  _quotes.removeWhere(
-                                    (q) => q.id == quoteId,
-                                  );
-                                  _deletingQuoteIds.remove(quoteId);
-                                });
-                              }
-                              widget.onDelete(quote);
-                            },
-                          );
-                        } else {
-                          widget.onDelete(quote);
-                        }
-                      },
+                      // 折叠动画播完后才真正删除：时序由 [NoteItemMotion] 的完成
+                      // 回调驱动，不再用挂钟定时器猜动画什么时候结束。
+                      onDelete: () => _beginNoteDelete(quote),
                       onAskAI: () => widget.onAskAI(quote),
                       onGenerateCard: widget.onGenerateCard != null
                           ? () => widget.onGenerateCard!(quote)
@@ -716,19 +690,17 @@ extension _NoteListItemsExtension on NoteListViewState {
                     child: itemWidget,
                   );
 
-                  final isDeleting = _deletingQuoteIds.contains(quoteId);
-                  if (isDeleting) {
-                    itemWidget = _NoteDeleteCollapse(
-                      key: ValueKey('note_delete_collapse_$quoteId'),
-                      child: itemWidget,
-                    );
-                  }
-
-                  itemWidget = _wrapNoteInsertAnimation(
-                    quoteId: quoteId,
-                    version: insertAnimationVersion,
-                    animateLayout: isStructuralInsert,
-                    animationType: noteInsertAnimationType,
+                  // 动效层常驻：入场和删除都在这一层里播，动画开始/结束都不改变
+                  // widget 树形状，卡片子树不会因为包装层进出而重新挂载。
+                  itemWidget = NoteItemMotion(
+                    key: ValueKey('note_item_motion_$quoteId'),
+                    insertVersion: insertAnimationVersion,
+                    insertAnimationType: noteInsertAnimationType,
+                    animateInsertLayout: isStructuralInsert,
+                    isDeleting: _deletingQuoteIds.contains(quoteId),
+                    onInsertCompleted: (version) =>
+                        _handleInsertAnimationCompleted(quoteId, version),
+                    onDeleteCompleted: () => _finishNoteDelete(quote),
                     child: itemWidget,
                   );
 
@@ -1137,58 +1109,6 @@ extension _NoteListItemsExtension on NoteListViewState {
     );
   }
 
-  Widget _wrapNoteInsertAnimation({
-    required String quoteId,
-    required int? version,
-    required bool animateLayout,
-    required String animationType,
-    required Widget child,
-  }) {
-    if (version == null) return child;
-    if (animationType == 'none') return child;
-
-    final isScale = animationType == 'scale';
-
-    return TweenAnimationBuilder<double>(
-      key: ValueKey('note_list_insert_${quoteId}_${animationType}_$version'),
-      tween: Tween<double>(begin: 0.0, end: 1.0),
-      duration: NoteListViewState._noteInsertAnimationDuration,
-      curve: Curves.easeOutCubic,
-      onEnd: () => _handleInsertAnimationCompleted(quoteId, version),
-      builder: (context, value, child) {
-        if (value >= 0.99) return child!;
-
-        final progress = value.clamp(0.0, 1.0);
-        Widget animatedChild = Opacity(
-          opacity: progress,
-          child: child,
-        );
-
-        animatedChild = isScale
-            ? Transform.scale(
-                alignment: Alignment.topCenter,
-                scale: 0.98 + 0.02 * progress,
-                child: animatedChild,
-              )
-            : Transform.translate(
-                offset: Offset(0, -16.0 * (1.0 - progress)),
-                child: animatedChild,
-              );
-
-        if (!animateLayout) return animatedChild;
-
-        return ClipRect(
-          child: Align(
-            alignment: Alignment.topCenter,
-            heightFactor: progress,
-            child: animatedChild,
-          ),
-        );
-      },
-      child: child,
-    );
-  }
-
   Future<void> _exportSelectedNotesToPdf() async {
     if (_selectedExportNoteIds.isEmpty) return;
     final l10n = AppLocalizations.of(context);
@@ -1277,71 +1197,6 @@ class _NoteListItemKeepAliveState extends State<_NoteListItemKeepAlive>
   Widget build(BuildContext context) {
     super.build(context);
     return widget.child;
-  }
-}
-
-class _NoteDeleteCollapse extends StatefulWidget {
-  const _NoteDeleteCollapse({
-    super.key,
-    required this.child,
-  });
-
-  final Widget child;
-
-  @override
-  State<_NoteDeleteCollapse> createState() => _NoteDeleteCollapseState();
-}
-
-class _NoteDeleteCollapseState extends State<_NoteDeleteCollapse>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  /// 透明度先行（easeOut：一开始就快速变淡，给出即时删除反馈）；
-  /// 高度折叠用 easeInOutCubic，让下方卡片平滑上移。
-  /// 此前两者共用 easeInCubic，视觉变化全部挤在最后几帧，体感像动画被吞掉。
-  late final Animation<double> _fadeAnimation;
-  late final Animation<double> _sizeAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: NoteListViewState._noteDeleteAnimationDuration,
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    );
-    _sizeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOutCubic,
-    );
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _controller.forward();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: ReverseAnimation(_fadeAnimation),
-      child: SizeTransition(
-        sizeFactor: ReverseAnimation(_sizeAnimation),
-        // axisAlignment defaults to 0.0 (center), which gives the equivalent cross-axis
-        // centering behavior as the original Alignment.topCenter did.
-        child: widget.child,
-      ),
-    );
   }
 }
 

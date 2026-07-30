@@ -14,8 +14,21 @@ import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/widgets/app_loading_view.dart';
+import 'package:thoughtecho/widgets/note_list/note_item_motion.dart';
 import 'package:thoughtecho/widgets/note_list_view.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
+
+/// 取某条笔记常驻的动效层。动效层的 key 不带动画状态：它在列表项整个生命周期里
+/// 都挂载，动画只体现在参数上。
+///
+/// 结果集切换的交叉淡化期间，旧结果列表仍挂在 AnimatedSwitcher 的 Stack 里，
+/// 同一条笔记会出现两次；当前列表始终是 Stack 的最后一个孩子。
+Finder _noteMotionFinder(String quoteId) =>
+    find.byKey(ValueKey('note_item_motion_$quoteId')).last;
+
+NoteItemMotion _noteMotion(WidgetTester tester, String quoteId) {
+  return tester.widget<NoteItemMotion>(_noteMotionFinder(quoteId));
+}
 
 /// 取笔记列表自身 Scrollable 的 position（通过 controller 同一性匹配，
 /// 跳过条目内容里的其它 Scrollable）。
@@ -470,7 +483,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
 
-        expect(find.byType(SizeTransition), findsNothing);
+        expect(_noteMotion(tester, 'quote-1').isDeleting, isFalse);
 
         final item = tester.widget<QuoteItemWidget>(
           find.byType(QuoteItemWidget).first,
@@ -479,9 +492,19 @@ void main() {
         item.onDelete();
 
         await tester.pump();
-        expect(find.byType(SizeTransition), findsOneWidget);
+        expect(_noteMotion(tester, 'quote-1').isDeleting, isTrue);
 
-        await tester.pump(const Duration(milliseconds: 350));
+        // 真正的删除必须等折叠动画播完，中途不能提前执行
+        await tester.pump(const Duration(milliseconds: 150));
+        expect(deletedQuoteIds, isEmpty);
+        expect(
+          tester
+              .state<NoteItemMotionState>(_noteMotionFinder('quote-1'))
+              .debugHeightFactor,
+          lessThan(1.0),
+        );
+
+        await tester.pump(const Duration(milliseconds: 200));
 
         expect(deletedQuoteIds, ['quote-1']);
 
@@ -519,11 +542,13 @@ void main() {
         noteListKey.currentState!.triggerInsertAnimation('quote-1');
         await tester.pump();
 
-        final animation = tester.widget<TweenAnimationBuilder<double>>(
-          find.byKey(const ValueKey('note_list_insert_quote-1_slide_1')),
-        );
+        expect(NoteItemMotion.insertDuration, const Duration(milliseconds: 250));
+        expect(_noteMotion(tester, 'quote-1').insertVersion, 1);
 
-        expect(animation.duration, const Duration(milliseconds: 250));
+        // 播完后挂起状态由动画自身的完成回调清理，动效层本身仍然常驻
+        await tester.pump(const Duration(milliseconds: 260));
+        await tester.pump(const Duration(milliseconds: 1));
+        expect(_noteMotion(tester, 'quote-1').insertVersion, isNull);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(seconds: 2));
@@ -559,10 +584,10 @@ void main() {
         noteListKey.currentState!.triggerInsertAnimation('quote-1');
         await tester.pump();
 
-        expect(
-          find.byKey(const ValueKey('note_list_insert_quote-1_slide_1')),
-          findsOneWidget,
-        );
+        final motion = _noteMotion(tester, 'quote-1');
+        expect(motion.insertVersion, 1);
+        // 原地更新已有笔记只淡入，不撑开高度，避免挤动下方卡片
+        expect(motion.animateInsertLayout, isFalse);
         expect(
           find.byKey(const ValueKey('save_animate_quote-1_slide_1')),
           findsNothing,
@@ -604,14 +629,8 @@ void main() {
         noteListKey.currentState!.triggerInsertAnimation('quote-1');
         await tester.pump();
 
-        expect(
-          find.byKey(const ValueKey('note_list_insert_quote-1_slide_1')),
-          findsOneWidget,
-        );
-        expect(
-          find.byKey(const ValueKey('note_list_insert_quote-1_slide_2')),
-          findsNothing,
-        );
+        // 版本号不递增即动画不重播
+        expect(_noteMotion(tester, 'quote-1').insertVersion, 1);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(seconds: 2));
@@ -655,10 +674,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
 
-        expect(
-          find.byKey(const ValueKey('note_list_insert_quote-1_slide_1')),
-          findsOneWidget,
-        );
+        expect(_noteMotion(tester, 'quote-1').insertVersion, 1);
 
         // 入场动画播放中途笔记再次被删除（列表移除），挂起状态保留
         await tester.pump(const Duration(milliseconds: 100));
@@ -679,19 +695,13 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
 
-        expect(
-          find.byKey(const ValueKey('note_list_insert_quote-1_slide_2')),
-          findsOneWidget,
-        );
+        expect(_noteMotion(tester, 'quote-1').insertVersion, 2);
 
-        // 动画完整播完后由 onEnd 驱动清理，动画包装层被移除
+        // 动画完整播完后由完成回调驱动清理挂起状态
         await tester.pump(const Duration(milliseconds: 850));
         await tester.pump(const Duration(milliseconds: 20));
 
-        expect(
-          find.byKey(const ValueKey('note_list_insert_quote-1_slide_2')),
-          findsNothing,
-        );
+        expect(_noteMotion(tester, 'quote-1').insertVersion, isNull);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(const Duration(seconds: 2));

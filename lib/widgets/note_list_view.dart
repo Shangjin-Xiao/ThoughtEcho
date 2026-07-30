@@ -35,6 +35,7 @@ import '../services/settings_service.dart'; // 导入设置服务
 import '../services/pdf_export_service.dart';
 import '../services/pdf_font_service.dart';
 import '../widgets/pdf_preview_dialog.dart';
+import 'note_list/note_item_motion.dart';
 import 'note_list/scroll_alignment.dart';
 
 part 'note_list/note_list_scroll.dart';
@@ -136,19 +137,25 @@ class NoteListViewState extends State<NoteListView> {
   final Map<String, int> _animatingQuoteVersions = {};
   final Set<String> _structuralInsertQuoteIds = {};
   final Map<String, Timer> _animationTimers = {};
-  static const Duration _noteInsertAnimationDuration = Duration(
-    milliseconds: 250,
-  );
 
-  /// 兜底清理窗口：正常路径由入场动画的 onEnd 回调驱动清理，
+  /// 兜底清理窗口：正常路径由入场动画播完的回调驱动清理，
   /// 该定时器仅在 item 始终没有 build 出来（数据流一直未回推该笔记）时
   /// 移除挂起状态，避免状态永久残留。
   static const Duration _insertAnimationSafetyCleanupDelay = Duration(
     milliseconds: 3000,
   );
-  static const Duration _noteDeleteAnimationDuration = Duration(
-    milliseconds: 280,
+  static const Duration _noteDeleteAnimationDuration =
+      NoteItemMotion.deleteDuration;
+
+  /// 删除动画兜底宽限期：折叠动画所在的 item 若在动画期间被滚出视口而销毁，
+  /// 完成回调不会到达，由该窗口保证删除最终一定执行。
+  static const Duration _deleteAnimationSafetyGrace = Duration(
+    milliseconds: 400,
   );
+
+  /// 正在等待折叠动画播完的删除请求（key = 笔记 ID）。
+  final Map<String, Timer> _deleteSafetyTimers = {};
+  final Map<String, Quote> _pendingDeleteQuotes = {};
 
   static String _normalizeSearchQuery(String query) {
     return query.trim();
@@ -722,6 +729,20 @@ class NoteListViewState extends State<NoteListView> {
       timer.cancel();
     }
     _animationTimers.clear();
+    // 折叠动画期间页面被销毁：删除请求不能丢。定时器作废，但待删除的笔记
+    // 立刻补执行（脱离 dispose 所在的帧，避免在卸载过程中触发上层 setState）。
+    for (final timer in _deleteSafetyTimers.values) {
+      timer.cancel();
+    }
+    _deleteSafetyTimers.clear();
+    if (_pendingDeleteQuotes.isNotEmpty) {
+      final pendingDeletes = _pendingDeleteQuotes.values.toList();
+      _pendingDeleteQuotes.clear();
+      _deletingQuoteIds.clear();
+      for (final quote in pendingDeletes) {
+        Timer.run(() => widget.onDelete(quote));
+      }
+    }
 
     if (_perfTimingsCallbackAttached) {
       WidgetsBinding.instance.removeTimingsCallback(_collectFrameTimings);
@@ -812,6 +833,45 @@ class NoteListViewState extends State<NoteListView> {
         _animationTimers.remove(id);
       });
     });
+  }
+
+  /// 开始删除某条笔记：先播折叠动画，真正的删除等动画播完再执行。
+  /// 折叠动画进行中重复点击删除会被合并。
+  void _beginNoteDelete(Quote quote) {
+    final quoteId = quote.id;
+    if (quoteId == null || quoteId.isEmpty) {
+      widget.onDelete(quote);
+      return;
+    }
+    if (_deletingQuoteIds.contains(quoteId)) return;
+
+    _updateState(() {
+      _deletingQuoteIds.add(quoteId);
+    });
+
+    _pendingDeleteQuotes[quoteId] = quote;
+    _deleteSafetyTimers[quoteId]?.cancel();
+    _deleteSafetyTimers[quoteId] = Timer(
+      _noteDeleteAnimationDuration + _deleteAnimationSafetyGrace,
+      () => _finishNoteDelete(quote),
+    );
+  }
+
+  /// 折叠动画播完（或兜底超时）后：先从本地列表乐观移除，避免数据流回推时的
+  /// 视觉跳动，再执行真正的删除。动画完成回调和兜底定时器谁先到都只生效一次。
+  void _finishNoteDelete(Quote quote) {
+    final quoteId = quote.id;
+    if (quoteId == null) return;
+    _deleteSafetyTimers.remove(quoteId)?.cancel();
+    _pendingDeleteQuotes.remove(quoteId);
+    if (!_deletingQuoteIds.remove(quoteId)) return;
+
+    if (mounted) {
+      _updateState(() {
+        _quotes.removeWhere((q) => q.id == quoteId);
+      });
+    }
+    widget.onDelete(quote);
   }
 
   void _clearPendingInsertAnimations() {
