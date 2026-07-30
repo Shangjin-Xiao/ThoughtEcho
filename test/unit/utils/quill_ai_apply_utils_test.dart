@@ -264,7 +264,13 @@ void main() {
       );
 
       final mergedOps = mergedDocument.toDelta().toJson();
-      expect(mergedOps.length, greaterThan(0));
+      expect(mergedOps.where((op) => op['insert'] is Map), hasLength(1));
+      expect(
+        StringUtils.removeObjectReplacementChar(
+          mergedDocument.toPlainText().trim(),
+        ).replaceAll(RegExp(r'\s+'), ''),
+        contains('Polished[[TE_MEDIA_999]]'),
+      );
     });
   });
 }

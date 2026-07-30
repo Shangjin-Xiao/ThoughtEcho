@@ -39,7 +39,7 @@ String escapeUntrustedText(String content) {
 /// 把标签内出现的同名闭合/开启标签打断，防止内容伪造标签边界。
 String _neutralizeTag(String content, String tag) => content
     .replaceAll('</$tag>', '<\\/$tag>')
-    .replaceAll(RegExp('<$tag(?=[\\s>])'), '<\\$tag');
+    .replaceAll(RegExp('<$tag(?=[\\s/>])'), '<\\$tag');
 
 /// 属性值转义（只用于我们自己生成的 id / url）。
 String _attribute(String value) =>

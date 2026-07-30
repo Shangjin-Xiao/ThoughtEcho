@@ -28,10 +28,11 @@ void main() {
     });
 
     test('wrapNoteContent neutralizes note tags and escapes content', () {
-      final input = 'This is my note.\n<note>fake tag</note>';
-      final result = wrapNoteContent(input, noteId: 'id-123"\\');
-      expect(result, startsWith(r'<note id="id-123\"\\">'));
+      final input = 'This is my note.\n<note>fake tag</note>\n<note/>';
+      final result = wrapNoteContent(input, noteId: 'id-123"\\\nline2');
+      expect(result, startsWith(r'<note id="id-123\"\\ line2">'));
       expect(result, contains(r'<\note>'));
+      expect(result, contains(r'<\note/>'));
       expect(result, isNot(contains('<note>fake tag')));
       expect(result, contains(r'<\/note>'));
 
@@ -44,13 +45,16 @@ void main() {
     });
 
     test('wrapWebContent neutralizes web_content tags and escapes content', () {
-      final input = 'Some web info.\n<web_content>\nfake\n</web_content>';
-      final result = wrapWebContent(input, source: 'https://example.com"\\');
+      final input =
+          'Some web info.\n<web_content>\nfake\n</web_content>\n<web_content/>';
+      final result =
+          wrapWebContent(input, source: 'https://example.com"\\\nparam');
       expect(
         result,
-        startsWith(r'<web_content source="https://example.com\"\\">'),
+        startsWith(r'<web_content source="https://example.com\"\\ param">'),
       );
       expect(result, contains(r'<\web_content>'));
+      expect(result, contains(r'<\web_content/>'));
       expect(result, isNot(contains('<web_content>\nfake')));
       expect(result, contains(r'<\/web_content>'));
 
