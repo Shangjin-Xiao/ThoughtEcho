@@ -110,6 +110,46 @@ void main() {
     expect(find.text(l10n.noDataYet), findsWidgets);
   });
 
+  // 回归：入场动画只留一层。之前七到十个 TweenAnimationBuilder 交错到 1.4 秒，
+  // 数据早就到了用户还得等动画演完。
+  testWidgets('overview uses a single entrance animation', (tester) async {
+    final settings = _ReportSettingsService();
+    final database = _CountingPeriodDatabaseService();
+    final insights = InsightHistoryService(settingsService: settings);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<AIService>(
+            create: (_) => AIService(settingsService: settings),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AIPeriodicReportPage(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      find.byType(TweenAnimationBuilder<double>).evaluate().length,
+      lessThanOrEqualTo(1),
+    );
+
+    // 300ms 之后必须完全落位
+    await tester.pump(const Duration(milliseconds: 320));
+    expect(tester.binding.hasScheduledFrame, isFalse);
+
+    await tester.pumpAndSettle();
+  });
+
   // 回归：数据库在启动/同步期间会连续 notifyListeners 多次。
   // 若每次都重查并把整页切回转圈，进入探索页时就会来回闪。
   testWidgets('database bursts are debounced and refresh silently',

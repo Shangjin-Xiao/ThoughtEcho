@@ -1,302 +1,102 @@
 part of '../ai_periodic_report_page.dart';
 
 extension _AIReportStats on _AIPeriodicReportPageState {
-  /// 构建统计卡片
-  Widget _buildStatCard(
-    String title,
-    String value,
-    String unit, [
-    IconData? icon,
-  ]) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                if (icon != null) ...[
-                  Icon(
-                    icon,
-                    size: 16,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 6),
-                ],
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      value,
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                      maxLines: 1,
-                    ),
-                  ),
-                ),
-                if (unit.isNotEmpty) ...[
-                  const SizedBox(width: 4),
-                  Text(
-                    unit,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 构建带自定义图标的统计卡片
-  Widget _buildStatCardWithCustomIcon(
-    String title,
-    String value,
-    String unit,
-    IconData icon,
-  ) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  icon,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      value,
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                      maxLines: 1,
-                    ),
-                  ),
-                ),
-                if (unit.isNotEmpty) ...[
-                  const SizedBox(width: 4),
-                  Text(
-                    unit,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// 构建带标签图标的统计卡片
-  Widget _buildStatCardWithTagIcon(String title, String value, String unit) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                // 显示标签图标
-                if (_mostTopTagIcon != null) ...[
-                  if (_mostTopTagIcon is IconData)
-                    Icon(
-                      _mostTopTagIcon as IconData,
-                      size: 16,
-                      color: Theme.of(context).colorScheme.primary,
-                    )
-                  else
-                    Text(
-                      _mostTopTagIcon.toString(),
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  const SizedBox(width: 6),
-                ] else ...[
-                  Icon(
-                    Icons.local_offer_outlined,
-                    size: 16,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 6),
-                ],
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      value,
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                      maxLines: 1,
-                    ),
-                  ),
-                ),
-                if (unit.isNotEmpty) ...[
-                  const SizedBox(width: 4),
-                  Text(
-                    unit,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
+  /// 数据摘要带：把四个计数指标压成一条，不再各占一张卡片。
+  ///
+  /// 之前四张 elevation:2 的卡片和下面三个「最多」卡片视觉权重相同，
+  /// 七块同样重的内容并排等于没有重点，也把页面唯一的出口挤到了下方。
+  Widget _buildSummaryBand({
+    required int totalNotes,
+    required int totalWords,
+    required int avgWords,
+    required int activeDays,
+  }) {
     final l10n = AppLocalizations.of(context);
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.all(32),
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+      ),
+      child: Row(
+        children: [
+          _buildSummaryMetric(
+            value: '$totalNotes',
+            unit: l10n.notesUnitPlain,
+            label: l10n.noteCount,
+          ),
+          _buildSummaryDivider(),
+          _buildSummaryMetric(
+            value: '$totalWords',
+            unit: l10n.wordsUnitPlain,
+            label: l10n.totalWordCount,
+          ),
+          _buildSummaryDivider(),
+          _buildSummaryMetric(
+            value: '$activeDays',
+            unit: l10n.daysUnitPlain,
+            label: l10n.activeDays,
+          ),
+          _buildSummaryDivider(),
+          _buildSummaryMetric(
+            value: '$avgWords',
+            unit: l10n.wordsUnitPlain,
+            label: l10n.avgWords,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryMetric({
+    required String value,
+    required String unit,
+    required String label,
+  }) {
+    final theme = Theme.of(context);
+    return Expanded(
+      child: Semantics(
+        label: '$label $value$unit',
+        excludeSemantics: true,
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            TweenAnimationBuilder<double>(
-              key: ValueKey('empty1_$_dataKey'),
-              duration: _shouldAnimateOverview
-                  ? const Duration(milliseconds: 800)
-                  : Duration.zero,
-              tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
-              builder: (context, value, child) {
-                return Transform.scale(
-                  scale: value,
-                  child: Opacity(
-                    opacity: value,
-                    child: Icon(
-                      Icons.note_add_outlined,
-                      size: 64,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    value,
+                    maxLines: 1,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                );
-              },
+                  const SizedBox(width: 2),
+                  Text(
+                    unit,
+                    maxLines: 1,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            TweenAnimationBuilder<double>(
-              key: ValueKey('empty2_$_dataKey'),
-              duration: _shouldAnimateOverview
-                  ? const Duration(milliseconds: 600)
-                  : Duration.zero,
-              tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
-              builder: (context, value, child) {
-                return Transform.translate(
-                  offset: Offset(0, 20 * (1 - value)),
-                  child: Opacity(
-                    opacity: value,
-                    child: Text(
-                      l10n.noNotesInPeriodForPeriod(_getPeriodName(l10n)),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-            TweenAnimationBuilder<double>(
-              key: ValueKey('empty3_$_dataKey'),
-              duration: _shouldAnimateOverview
-                  ? const Duration(milliseconds: 400)
-                  : Duration.zero,
-              tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
-              builder: (context, value, child) {
-                return Transform.translate(
-                  offset: Offset(0, 20 * (1 - value)),
-                  child: Opacity(
-                    opacity: value,
-                    child: Text(
-                      l10n.startRecordingThoughts,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(
-                              context,
-                            )
-                                .colorScheme
-                                .onSurfaceVariant
-                                .withValues(alpha: 0.7),
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                );
-              },
+            const SizedBox(height: 2),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -304,9 +104,127 @@ extension _AIReportStats on _AIPeriodicReportPageState {
     );
   }
 
-  /// 构建笔记预览 - 优化交互效果
-  /// [showExactTime]/[showNoteEditTime] 由调用方在 build 期间读取后传入：
-  /// 本方法会在 TweenAnimationBuilder 的回调里执行，那里不允许 context.select。
+  Widget _buildSummaryDivider() {
+    return Container(
+      width: 1,
+      height: 28,
+      color: Theme.of(context).colorScheme.outlineVariant.withValues(
+            alpha: 0.6,
+          ),
+    );
+  }
+
+  /// 三个「最多」指标：它们的值是分类而不是量，用 chip 比用数字卡片更贴切。
+  Widget _buildHighlightChips() {
+    final l10n = AppLocalizations.of(context);
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _buildHighlightChip(
+          label: l10n.commonPeriod,
+          value: _mostDayPeriodDisplay ?? l10n.noDataYet,
+          icon: _mostDayPeriodIcon ?? Icons.timelapse,
+        ),
+        _buildHighlightChip(
+          label: l10n.commonWeather,
+          value: _mostWeatherDisplay ?? l10n.noDataYet,
+          icon: _mostWeatherIcon ?? Icons.cloud_queue,
+        ),
+        _buildHighlightChip(
+          label: l10n.commonTag,
+          value: _mostTopTag ?? l10n.noDataYet,
+          icon: _mostTopTagIcon is IconData
+              ? _mostTopTagIcon as IconData
+              : (_mostTopTagIcon == null ? Icons.local_offer_outlined : null),
+          emoji:
+              _mostTopTagIcon is IconData ? null : _mostTopTagIcon?.toString(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHighlightChip({
+    required String label,
+    required String value,
+    IconData? icon,
+    String? emoji,
+  }) {
+    final theme = Theme.of(context);
+    return Semantics(
+      label: '$label $value',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (emoji != null)
+              Text(emoji, style: const TextStyle(fontSize: 14))
+            else
+              Icon(
+                icon ?? Icons.local_offer_outlined,
+                size: 15,
+                color: theme.colorScheme.primary,
+              ),
+            const SizedBox(width: 6),
+            Text(
+              value,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 空状态：整页只说一次「没有笔记」，不再叠加七张全 0 的卡片。
+  Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.note_add_outlined,
+              size: 56,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.noNotesInPeriodForPeriod(_getPeriodName(l10n)),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.startRecordingThoughts,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color:
+                    theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 构建笔记预览
+  /// [showExactTime]/[showNoteEditTime] 由调用方在 build 期间读取后传入，
+  /// 避免本方法被放进动画回调时再去 context.select。
   Widget _buildQuotePreview(
     Quote quote, {
     required bool showExactTime,
@@ -339,7 +257,8 @@ extension _AIReportStats on _AIPeriodicReportPageState {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Material(
-        elevation: 1,
+        // 已经有描边了，不再叠阴影；页面统一走扁平分层
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -348,15 +267,14 @@ extension _AIReportStats on _AIPeriodicReportPageState {
             HapticFeedback.lightImpact();
             // 可以添加跳转到笔记详情的逻辑
           },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+          child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: Theme.of(
                   context,
-                ).colorScheme.outline.withValues(alpha: 0.2),
+                ).colorScheme.outlineVariant.withValues(alpha: 0.6),
                 width: 1,
               ),
             ),
@@ -433,7 +351,7 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        '${quote.content.length} 字',
+                        '${quote.content.length}${l10n.wordsUnitPlain}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(
                                 context,

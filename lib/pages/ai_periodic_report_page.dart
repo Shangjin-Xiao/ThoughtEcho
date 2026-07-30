@@ -16,6 +16,7 @@ import '../utils/icon_utils.dart';
 import '../utils/report_period_utils.dart';
 import '../utils/string_utils.dart';
 import '../constants/app_constants.dart'; // 导入应用常量
+import '../theme/app_theme.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../widgets/ai/experimental_badge.dart';
 import 'ai_assistant_page.dart';
