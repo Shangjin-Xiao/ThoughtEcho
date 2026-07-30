@@ -1123,7 +1123,6 @@ class _InsightsPageState extends State<InsightsPage> {
                                 ?.copyWith(color: theme.primaryColor),
                             blockquote: theme.textTheme.bodyMedium?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
-                              fontStyle: FontStyle.italic,
                             ),
                             blockquoteDecoration: BoxDecoration(
                               color: theme.colorScheme.surfaceContainerHighest

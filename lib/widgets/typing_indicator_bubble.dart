@@ -100,10 +100,8 @@ class _TypingIndicatorBubbleState extends State<TypingIndicatorBubble>
                           widget.thinkingText ??
                               AppLocalizations.of(context).thinkingInProgress,
                           style: TextStyle(
-                            color: widget.theme.colorScheme.onSurface
-                                .withValues(alpha: 0.7),
+                            color: widget.theme.colorScheme.onSurfaceVariant,
                             fontSize: 14,
-                            fontStyle: FontStyle.italic,
                           ),
                         ),
                       ],

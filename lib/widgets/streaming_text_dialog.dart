@@ -297,7 +297,6 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
                         ),
                         blockquote: theme.textTheme.bodyMedium?.copyWith(
                           color: colorScheme.onSurfaceVariant,
-                          fontStyle: FontStyle.italic,
                         ),
                         blockquoteDecoration: BoxDecoration(
                           border: Border(

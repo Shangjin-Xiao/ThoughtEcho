@@ -375,7 +375,7 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
                           dailyQuote['from'],
                         ),
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          fontStyle: FontStyle.italic,
+                          color: theme.colorScheme.onSurfaceVariant,
                           fontSize: _getResponsiveSourceFontSize(
                             screenWidth,
                             screenHeight,

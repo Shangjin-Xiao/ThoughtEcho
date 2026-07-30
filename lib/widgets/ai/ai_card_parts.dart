@@ -122,7 +122,6 @@ class AiCardSourceLine extends StatelessWidget {
     return Text(
       text,
       style: theme.textTheme.bodySmall?.copyWith(
-        fontStyle: FontStyle.italic,
         color: theme.colorScheme.onSurfaceVariant,
       ),
     );

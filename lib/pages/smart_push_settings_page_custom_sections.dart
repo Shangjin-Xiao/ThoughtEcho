@@ -413,7 +413,6 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
                       l10n.noTagsAvailable,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
-                        fontStyle: FontStyle.italic,
                       ),
                     )
                   else

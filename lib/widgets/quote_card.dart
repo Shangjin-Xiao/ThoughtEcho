@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/quote_model.dart';
-import '../utils/color_utils.dart'; // Import color_utils
 
 class QuoteCard extends StatelessWidget {
   final Quote quote;
@@ -54,10 +53,7 @@ class QuoteCard extends StatelessWidget {
         sourceText,
         style: TextStyle(
           fontSize: 14,
-          fontStyle: FontStyle.italic,
-          color: Theme.of(
-            context,
-          ).colorScheme.onSurface.applyOpacity(0.6), // MODIFIED
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
         textAlign: TextAlign.right,
       );
@@ -72,10 +68,7 @@ class QuoteCard extends StatelessWidget {
       quote.source!,
       style: TextStyle(
         fontSize: 14,
-        fontStyle: FontStyle.italic,
-        color: Theme.of(
-          context,
-        ).colorScheme.onSurface.applyOpacity(0.6), // MODIFIED
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
       textAlign: TextAlign.right,
     );

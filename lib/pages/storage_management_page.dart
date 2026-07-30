@@ -9,6 +9,7 @@ import '../services/database_service.dart';
 import '../services/data_directory_service.dart';
 import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../theme/app_semantic_colors.dart';
 import 'trash_page.dart';
 
 /// 存储管理页面
@@ -339,7 +340,10 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
           builder: (context) => AlertDialog(
             title: Row(
               children: [
-                const Icon(Icons.check_circle, color: Colors.green),
+                Icon(
+                  Icons.check_circle,
+                  color: AppSemanticColors.of(context).success,
+                ),
                 const SizedBox(width: 12),
                 Flexible(
                   child: Text(
@@ -371,7 +375,9 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                       ? l10n.spaceSavedMb(spaceSaved.toStringAsFixed(2))
                       : l10n.noSpaceSaved,
                   style: TextStyle(
-                    color: spaceSaved > 0 ? Colors.green : Colors.grey,
+                    color: spaceSaved > 0
+                        ? AppSemanticColors.of(context).success
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -482,6 +488,12 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     final aiDbSize = _stats?.aiDatabaseSize ?? 0;
     final mediaSize = _stats?.mediaFilesSize ?? 0;
     final cacheSize = _stats?.cacheSize ?? 0;
+    final palette = _storagePalette(context);
+    final notesDbColor = palette.notesDb;
+    final aiDbColor = palette.aiDb;
+    final logDbColor = palette.logDb;
+    final mediaColor = palette.media;
+    final cacheColor = palette.cache;
 
     return Card(
       elevation: 2,
@@ -534,27 +546,27 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                       if (mainDbSize > 0)
                         Expanded(
                           flex: (mainDbSize * 1000 / totalSize).round(),
-                          child: Container(color: Colors.blue),
+                          child: Container(color: notesDbColor),
                         ),
                       if (aiDbSize > 0)
                         Expanded(
                           flex: (aiDbSize * 1000 / totalSize).round(),
-                          child: Container(color: Colors.purple),
+                          child: Container(color: aiDbColor),
                         ),
                       if (logDbSize > 0)
                         Expanded(
                           flex: (logDbSize * 1000 / totalSize).round(),
-                          child: Container(color: Colors.orange),
+                          child: Container(color: logDbColor),
                         ),
                       if (mediaSize > 0)
                         Expanded(
                           flex: (mediaSize * 1000 / totalSize).round(),
-                          child: Container(color: Colors.green),
+                          child: Container(color: mediaColor),
                         ),
                       if (cacheSize > 0)
                         Expanded(
                           flex: (cacheSize * 1000 / totalSize).round(),
-                          child: Container(color: Colors.grey),
+                          child: Container(color: cacheColor),
                         ),
                     ],
                   ),
@@ -569,25 +581,25 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                   if (mainDbSize > 0)
                     _buildLegendItem(
                       l10n.notesDatabase,
-                      Colors.blue,
+                      notesDbColor,
                       mainDbSize,
                     ),
                   if (aiDbSize > 0)
-                    _buildLegendItem(l10n.aiDatabase, Colors.purple, aiDbSize),
+                    _buildLegendItem(l10n.aiDatabase, aiDbColor, aiDbSize),
                   if (logDbSize > 0)
                     _buildLegendItem(
                       l10n.logDatabase,
-                      Colors.orange,
+                      logDbColor,
                       logDbSize,
                     ),
                   if (mediaSize > 0)
                     _buildLegendItem(
                       l10n.mediaFilesUsage,
-                      Colors.green,
+                      mediaColor,
                       mediaSize,
                     ),
                   if (cacheSize > 0)
-                    _buildLegendItem(l10n.cacheUsage, Colors.grey, cacheSize),
+                    _buildLegendItem(l10n.cacheUsage, cacheColor, cacheSize),
                 ],
               ),
             ],
@@ -619,11 +631,36 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     );
   }
 
+  /// 存储类别配色：占用分段条、图例和下方详细列表三处共用，确保同一类别在
+  /// 页面内颜色一致。此前分段条和详细列表各写一套 Material 命名色，同一个
+  /// 「笔记数据库」在两处颜色不同。
+  ///
+  /// 媒体的三个子项（图片/视频/音频）刻意共用 media 一个色：分段条里「媒体
+  /// 文件」本来就是合并的单个色块，详细列表用三个不同色相会让人误以为它们是
+  /// 三个平级大类，靠图标区分即可。
+  ({
+    Color notesDb,
+    Color aiDb,
+    Color logDb,
+    Color media,
+    Color cache,
+  }) _storagePalette(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return (
+      notesDb: colorScheme.primary,
+      aiDb: colorScheme.tertiary,
+      logDb: colorScheme.secondary,
+      media: AppSemanticColors.of(context).success,
+      cache: colorScheme.outlineVariant,
+    );
+  }
+
   /// 构建数据库存储卡片
   Widget _buildDatabaseStorageCard(
     ColorScheme colorScheme,
     AppLocalizations l10n,
   ) {
+    final palette = _storagePalette(context);
     return Card(
       child: Column(
         children: [
@@ -631,21 +668,21 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
             icon: Icons.sticky_note_2_outlined,
             label: l10n.notesDatabase,
             size: _stats?.mainDatabaseSize ?? 0,
-            color: Colors.blue,
+            color: palette.notesDb,
           ),
           const Divider(height: 1),
           _buildStorageItem(
             icon: Icons.analytics_outlined,
             label: l10n.aiDatabase,
             size: _stats?.aiDatabaseSize ?? 0,
-            color: Colors.purple,
+            color: palette.aiDb,
           ),
           const Divider(height: 1),
           _buildStorageItem(
             icon: Icons.description_outlined,
             label: l10n.logDatabase,
             size: _stats?.logDatabaseSize ?? 0,
-            color: Colors.orange,
+            color: palette.logDb,
           ),
         ],
       ),
@@ -678,6 +715,8 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     AppLocalizations l10n,
   ) {
     final breakdown = _stats?.mediaBreakdown;
+    // 图片/视频/音频共用 media 一个色，见 _storagePalette 的说明
+    final mediaColor = _storagePalette(context).media;
 
     return Card(
       child: Column(
@@ -687,7 +726,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
             label: l10n.images,
             size: breakdown?.imagesSize ?? 0,
             count: breakdown?.imagesCount ?? 0,
-            color: Colors.green,
+            color: mediaColor,
           ),
           const Divider(height: 1),
           _buildStorageItem(
@@ -695,7 +734,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
             label: l10n.videos,
             size: breakdown?.videosSize ?? 0,
             count: breakdown?.videosCount ?? 0,
-            color: Colors.red,
+            color: mediaColor,
           ),
           const Divider(height: 1),
           _buildStorageItem(
@@ -703,7 +742,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
             label: l10n.audios,
             size: breakdown?.audiosSize ?? 0,
             count: breakdown?.audiosCount ?? 0,
-            color: Colors.teal,
+            color: mediaColor,
           ),
         ],
       ),
@@ -720,7 +759,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
         icon: Icons.cleaning_services_outlined,
         label: l10n.tempFilesAndCache,
         size: _stats?.cacheSize ?? 0,
-        color: Colors.grey,
+        color: _storagePalette(context).cache,
       ),
     );
   }

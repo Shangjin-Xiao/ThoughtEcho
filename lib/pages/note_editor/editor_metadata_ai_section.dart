@@ -209,7 +209,6 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
                             ),
                             blockquote: theme.textTheme.bodyMedium?.copyWith(
                               color: colorScheme.onSurfaceVariant,
-                              fontStyle: FontStyle.italic,
                             ),
                             blockquoteDecoration: BoxDecoration(
                               border: Border(

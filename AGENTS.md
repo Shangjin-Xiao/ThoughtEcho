@@ -181,8 +181,15 @@ pwsh ./scripts/build_msix_ci.ps1
   `buttonRadius`(12)、`inputRadius`(12)、`dialogRadius`(24)。历史代码里有 13 种不同圆角值
   同屏并存，不要再增加。纯装饰性小元素（徽章、色块）可自行取值。
 - ❌ `fontSize:` 字面量。用 `theme.textTheme.*`，需要微调时 `.copyWith()`。
-- ❌ `fontStyle: FontStyle.italic`。中文字体没有真斜体，Flutter 会做合成倾斜，笔画变形很难看。
-  要弱化层次就用 `onSurfaceVariant` + 字号或字重差。
+- ❌ `fontStyle: FontStyle.italic` **用作 UI 装饰**（出处、提示、占位、次要说明）。中文字体没有
+  真斜体字形，Flutter 会做合成倾斜（skew），横竖笔画粗细对比被破坏、交接处糊在一起，小字号下
+  明显发虚。要弱化层次就用 `onSurfaceVariant` + 字号或字重差。
+  - **例外，这几类必须保留斜体，不要顺手删**：用户在编辑器里手动标记的富文本斜体
+    （`quote_content_widget.dart` 里判断 `attributes['italic']` 的分支）、PDF 导出时还原用户
+    格式（`pdf_export_service.dart`、`delta_to_pdf_parser.dart` 的 `pw.FontStyle.italic`）。
+    这些是在忠实呈现用户的内容格式，不是 UI 自己的装饰选择。
+  - Markdown 渲染的 `em` 样式（`chat_markdown_styles.dart`、`enhanced_markdown_widgets.dart`）
+    介于两者之间，改动前先确认，不要单方面删。
 - 间距用 4 的倍数（4/8/12/16/24/32）。
 
 **组件复用**

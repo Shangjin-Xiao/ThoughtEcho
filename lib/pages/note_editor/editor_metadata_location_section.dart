@@ -268,7 +268,6 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                   style: TextStyle(
                     fontSize: 12,
                     color: theme.colorScheme.onSurfaceVariant,
-                    fontStyle: FontStyle.italic,
                   ),
                 ),
               ],

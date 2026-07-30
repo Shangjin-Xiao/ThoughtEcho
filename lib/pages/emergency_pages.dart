@@ -96,10 +96,9 @@ class EmergencyRecoveryPage extends StatelessWidget {
                 const SizedBox(height: 32),
                 Text(
                   l10n.emergencyRecoveryHint,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -293,10 +292,9 @@ class EmergencyHomePage extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 emergencyPersistentIssueHint,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  fontStyle: FontStyle.italic,
-                  color: Colors.grey,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -430,9 +428,9 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
               const Spacer(),
               Text(
                 l10n.emergencyExportHint,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  fontStyle: FontStyle.italic,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
               ),

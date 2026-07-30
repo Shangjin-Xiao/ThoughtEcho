@@ -1088,7 +1088,6 @@ class _LogEntryItem extends StatelessWidget {
                   AppLocalizations.of(context).logContainsError,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.error,
-                    fontStyle: FontStyle.italic,
                   ),
                 ),
               ),

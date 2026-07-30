@@ -230,7 +230,6 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                               l10n.thinkingInProgress,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
-                                fontStyle: FontStyle.italic,
                               ),
                             )
                           : SingleChildScrollView(
@@ -272,7 +271,6 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                                   blockquote:
                                       theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
-                                    fontStyle: FontStyle.italic,
                                   ),
                                 ),
                               ),

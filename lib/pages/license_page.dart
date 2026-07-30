@@ -231,10 +231,9 @@ class _LicensePageState extends State<LicensePage> {
         const SizedBox(height: 12),
         Text(
           l10n.thankLottieFiles,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
-            fontStyle: FontStyle.italic,
-            color: Colors.grey,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ],

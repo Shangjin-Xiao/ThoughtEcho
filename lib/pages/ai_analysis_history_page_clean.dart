@@ -348,7 +348,6 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                         h2: Theme.of(context).textTheme.titleLarge,
                         blockquote:
                             Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  fontStyle: FontStyle.italic,
                                   color: Theme.of(context)
                                       .colorScheme
                                       .onSurfaceVariant,

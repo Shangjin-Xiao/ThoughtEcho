@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../gen_l10n/app_localizations.dart';
-import '../utils/color_utils.dart'; // Import color_utils
 
 class HitokotoWidget extends StatelessWidget {
   final Map<String, dynamic> quote;
@@ -37,10 +36,7 @@ class HitokotoWidget extends StatelessWidget {
                   formatSource(quote['author'], quote['source']),
                   style: TextStyle(
                     fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.applyOpacity(0.6), // MODIFIED
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   textAlign: TextAlign.right,
                 ),
