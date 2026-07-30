@@ -124,7 +124,8 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
                                   decoration: InputDecoration(
                                     labelText: l10n.author,
                                     isDense: true,
-                                    prefixIcon: const Icon(Icons.person_outline),
+                                    prefixIcon:
+                                        const Icon(Icons.person_outline),
                                     border: const OutlineInputBorder(),
                                   ),
                                 ),
