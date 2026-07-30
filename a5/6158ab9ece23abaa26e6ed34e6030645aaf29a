@@ -1,0 +1,29 @@
+lib/theme/app_semantic_colors.dart
+  s_7741578ecf966f::t_88291b28f40cd4 1-112
+AGENTS.md
+  s_7741578ecf966f::t_9d4b917e570869 155-204
+lib/theme/app_theme.dart
+  s_7741578ecf966f::t_fa0772f43a16ab 583-594
+  s_7741578ecf966f::t_d29123f6cfd828 7
+  s_7741578ecf966f::t_f9d7b4cf004336 829-839
+lib/widgets/app_snackbar.dart
+  s_7741578ecf966f::t_bb979e4688cba7 3
+  s_7741578ecf966f::t_8063fb16045b9c 69,75,77,81-82,87,90,94-95,101,103,107-108
+  s_7741578ecf966f::t_c57d50c96fab31 23,32-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "a56158ab9ece23abaa26e6ed34e6030645aaf29a",
+  "prompts": {},
+  "sessions": {
+    "s_7741578ecf966f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "340cc40c-189c-4dca-b529-b61325058eba",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
