@@ -1,0 +1,19 @@
+lib/pages/settings_page.dart
+  s_7741578ecf966f::t_01a6a5846c5857 1497-1508,1512-1545,1548-1551,1554-1558,1562-1563,1565-1566
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "f34e1fc80925c12cb34715f8530f9719f2f6038b",
+  "prompts": {},
+  "sessions": {
+    "s_7741578ecf966f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "340cc40c-189c-4dca-b529-b61325058eba",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
