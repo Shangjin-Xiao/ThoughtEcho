@@ -1,0 +1,19 @@
+docs/paper-ink-theme-plan-2026-07-30.md
+  s_7741578ecf966f::t_12511b173b6400 1-116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "099dacf9ead6faf68326067c46051cacea99fcb5",
+  "prompts": {},
+  "sessions": {
+    "s_7741578ecf966f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "340cc40c-189c-4dca-b529-b61325058eba",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
