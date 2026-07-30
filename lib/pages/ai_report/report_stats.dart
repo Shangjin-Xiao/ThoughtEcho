@@ -305,15 +305,15 @@ extension _AIReportStats on _AIPeriodicReportPageState {
   }
 
   /// 构建笔记预览 - 优化交互效果
-  Widget _buildQuotePreview(Quote quote) {
+  /// [showExactTime]/[showNoteEditTime] 由调用方在 build 期间读取后传入：
+  /// 本方法会在 TweenAnimationBuilder 的回调里执行，那里不允许 context.select。
+  Widget _buildQuotePreview(
+    Quote quote, {
+    required bool showExactTime,
+    required bool showNoteEditTime,
+  }) {
     final l10n = AppLocalizations.of(context);
     final date = DateTime.parse(quote.date);
-    final showExactTime = context.select<SettingsService, bool>(
-      (s) => s.showExactTime,
-    );
-    final showNoteEditTime = context.select<SettingsService, bool>(
-      (s) => s.showNoteEditTime,
-    );
     final formattedDate = TimeUtils.formatQuoteDateLocalized(
       context,
       date,

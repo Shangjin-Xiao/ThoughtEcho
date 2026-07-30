@@ -7,20 +7,20 @@ extension _AIReportTimeSelector on _AIPeriodicReportPageState {
         bottom: false,
         child: NotificationListener<ScrollNotification>(
           onNotification: (notification) {
-            if (notification is ScrollUpdateNotification) {
-              if (notification.scrollDelta != null) {
-                if (notification.scrollDelta! > 10 &&
-                    !_isTimeSelectorCollapsed) {
-                  _updateState(() {
-                    _isTimeSelectorCollapsed = true;
-                  });
-                } else if (notification.scrollDelta! < -10 &&
-                    _isTimeSelectorCollapsed) {
-                  _updateState(() {
-                    _isTimeSelectorCollapsed = false;
-                  });
-                }
-              }
+            // 只响应最外层滚动视图的、用户真实拖动/惯性产生的滚动。
+            // 折叠会改变内容高度，进而引发布局修正型的 ScrollUpdateNotification；
+            // 若把这类通知也算进来，就会出现 折叠→修正→展开→修正→折叠 的来回抖动。
+            if (notification is! ScrollUpdateNotification ||
+                notification.depth != 0) {
+              return false;
+            }
+            final delta = notification.scrollDelta;
+            if (delta == null) return false;
+            final pixels = notification.metrics.pixels;
+            if (delta > 10 && !_isTimeSelectorCollapsed && pixels > 24) {
+              _setTimeSelectorCollapsed(true);
+            } else if (delta < -10 && _isTimeSelectorCollapsed) {
+              _setTimeSelectorCollapsed(false);
             }
             return false;
           },
@@ -53,14 +53,33 @@ extension _AIReportTimeSelector on _AIPeriodicReportPageState {
     );
   }
 
+  /// 切换折叠状态，并在动画期间上锁。
+  ///
+  /// 折叠动画本身会改变滚动内容高度，从而再次触发滚动通知；没有这把锁时，
+  /// 一次滚动就可能连续翻转好几次，表现为顶部选择器来回闪。
+  void _setTimeSelectorCollapsed(bool collapsed, {bool force = false}) {
+    if (_isTimeSelectorCollapsed == collapsed) return;
+    final now = DateTime.now();
+    final last = _lastCollapseToggleAt;
+    if (!force &&
+        last != null &&
+        now.difference(last) <
+            _AIPeriodicReportPageState._collapseToggleCooldown) {
+      return;
+    }
+    _lastCollapseToggleAt = now;
+    _updateState(() {
+      _isTimeSelectorCollapsed = collapsed;
+    });
+  }
+
   /// 构建时间选择器
   Widget _buildTimeSelector() {
     return GestureDetector(
-      onTap: () {
-        _updateState(() {
-          _isTimeSelectorCollapsed = !_isTimeSelectorCollapsed;
-        });
-      },
+      onTap: () => _setTimeSelectorCollapsed(
+        !_isTimeSelectorCollapsed,
+        force: true,
+      ),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
         child: AnimatedCrossFade(

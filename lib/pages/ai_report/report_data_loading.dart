@@ -2,10 +2,18 @@ part of '../ai_periodic_report_page.dart';
 
 extension _AIReportDataLoading on _AIPeriodicReportPageState {
   /// 加载周期数据
-  Future<void> _loadPeriodData() async {
-    _updateState(() {
-      _isLoadingData = true;
-    });
+  ///
+  /// [showLoading] 为 false 时做静默刷新：保留当前内容，不把整页换成转圈，
+  /// 这样数据库连续通知时页面不会来回闪。
+  Future<void> _loadPeriodData({bool showLoading = true}) async {
+    final token = ++_loadToken;
+    // 首次加载还没有任何内容可保留，必须显示 loading
+    final shouldShowLoading = showLoading || !_hasLoadedOnce;
+    if (shouldShowLoading && !_isLoadingData) {
+      _updateState(() {
+        _isLoadingData = true;
+      });
+    }
 
     try {
       final databaseService = context.read<DatabaseService>();
@@ -32,11 +40,15 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
       // 根据选择的时间范围筛选笔记 (内存中再次确认筛选，处理可能存在的跨时区或边界情况)
       final filteredQuotes = _filterQuotesByPeriod(quotes);
 
+      // 已有更新的加载在跑，丢弃这次的结果，避免旧数据把新数据顶掉
+      if (token != _loadToken) return;
+
       // 更新数据版本key，触发动画
       final newDataKey =
           '${_selectedPeriod}_${_selectedDate.millisecondsSinceEpoch}';
       final dataChanged = newDataKey != _dataKey;
 
+      _hasLoadedOnce = true;
       _updateState(() {
         _periodQuotes = filteredQuotes;
         _isLoadingData = false;
@@ -46,8 +58,9 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
       });
 
       // 计算“最多”指标并触发洞察
-      await _computeExtrasAndInsight();
+      await _computeExtrasAndInsight(token);
     } catch (e) {
+      if (token != _loadToken) return;
       _updateState(() {
         _isLoadingData = false;
       });
@@ -64,8 +77,8 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
     }
   }
 
-  Future<void> _computeExtrasAndInsight() async {
-    if (!mounted) return;
+  Future<void> _computeExtrasAndInsight(int token) async {
+    if (!mounted || token != _loadToken) return;
     final l10n = AppLocalizations.of(context);
 
     // 计算总字数
@@ -151,7 +164,7 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
       return '- $t';
     }).join('\n');
 
-    if (!mounted) return;
+    if (!mounted || token != _loadToken) return;
 
     // 处理时段显示：转换为本地化标签
     String? dayPeriodDisplay;
@@ -193,7 +206,7 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
         }
       }
     }
-    if (!mounted) return;
+    if (!mounted || token != _loadToken) return;
     _updateState(() {
       _totalWordCount = totalWords;
       _mostDayPeriod = mostPeriod;
@@ -214,6 +227,15 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
 
   void _maybeStartInsight(String dataSignature) async {
     if (!mounted) return;
+
+    // 同一份数据不要重复生成：否则数据库每通知一次，洞察就清空重来，
+    // 文字先消失再重新流出来，看上去就是页面在闪。
+    if (dataSignature == _insightSignature &&
+        (_insightLoading || _insightText.isNotEmpty)) {
+      return;
+    }
+    _insightSignature = dataSignature;
+
     final l10n = AppLocalizations.of(context);
     final settings = context.read<SettingsService>();
     final useAI = settings.reportInsightsUseAI;
@@ -222,6 +244,9 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
     final noteCount = _periodQuotes.length;
 
     _insightSub?.cancel();
+    _insightFlushTimer?.cancel();
+    _insightFlushTimer = null;
+    _insightPending = '';
 
     // 1. 尝试从历史记录中查找缓存
     final insightService = context.read<InsightHistoryService>();
@@ -305,13 +330,16 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
           .listen(
         (chunk) {
           if (!mounted) return;
-          // 直接更新文本，UI会立即显示新内容（真正的流式显示）
-          _updateState(() {
-            _insightText += chunk;
-          });
+          // 按帧率量级节流：逐 chunk setState 会让整页反复重排抖动
+          _insightPending += chunk;
+          _insightFlushTimer ??= Timer(
+              _AIPeriodicReportPageState._insightFlushInterval, _flushInsight);
         },
         onError: (_) {
           if (!mounted) return;
+          _insightFlushTimer?.cancel();
+          _insightFlushTimer = null;
+          _insightPending = '';
           final local = context.read<AIService>().buildLocalReportInsight(
                 periodLabel: periodLabel,
                 mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
@@ -333,7 +361,12 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
         },
         onDone: () {
           if (!mounted) return;
+          _insightFlushTimer?.cancel();
+          _insightFlushTimer = null;
+          final tail = _insightPending;
+          _insightPending = '';
           _updateState(() {
+            if (tail.isNotEmpty) _insightText += tail;
             _insightLoading = false;
           });
 
@@ -369,6 +402,17 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
       // 根据用户需求，这里我们不保存本地生成的洞察到带signature的缓存中，
       // 因为用户明确说 "只有调用ai生成的才保存"
     }
+  }
+
+  /// 把节流缓冲里的流式文本刷进 UI
+  void _flushInsight() {
+    _insightFlushTimer = null;
+    if (!mounted || _insightPending.isEmpty) return;
+    final pending = _insightPending;
+    _insightPending = '';
+    _updateState(() {
+      _insightText += pending;
+    });
   }
 
   List<Quote> _filterQuotesByPeriod(List<Quote> quotes) {

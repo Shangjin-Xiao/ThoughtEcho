@@ -23,9 +23,44 @@ class _EmptyPeriodDatabaseService extends DatabaseService {
   }
 }
 
+/// 返回固定一条笔记，并统计查询次数，用于验证数据库通知的合并与静默刷新。
+class _CountingPeriodDatabaseService extends DatabaseService {
+  _CountingPeriodDatabaseService() : super.forTesting();
+
+  int queryCount = 0;
+
+  @override
+  Future<List<Quote>> getQuotesForPeriod(
+    DateTime start,
+    DateTime end, {
+    bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
+  }) async {
+    queryCount++;
+    return [
+      Quote(
+        id: 'q1',
+        content: '一条测试笔记',
+        date: DateTime.now().toIso8601String(),
+      ),
+    ];
+  }
+
+  void notifyDataChanged() => notifyListeners();
+}
+
 class _ReportSettingsService extends ChangeNotifier implements SettingsService {
   @override
   bool get reportInsightsUseAI => false;
+
+  @override
+  String get localeCode => 'zh';
+
+  @override
+  bool get showExactTime => false;
+
+  @override
+  bool get showNoteEditTime => false;
 
   @override
   Future<String?> getCustomString(String key) async => null;
@@ -73,5 +108,53 @@ void main() {
     expect(find.text(l10n.aiChat), findsOneWidget);
     expect(find.text('0'), findsWidgets);
     expect(find.text(l10n.noDataYet), findsWidgets);
+  });
+
+  // 回归：数据库在启动/同步期间会连续 notifyListeners 多次。
+  // 若每次都重查并把整页切回转圈，进入探索页时就会来回闪。
+  testWidgets('database bursts are debounced and refresh silently',
+      (tester) async {
+    final settings = _ReportSettingsService();
+    final database = _CountingPeriodDatabaseService();
+    final insights = InsightHistoryService(settingsService: settings);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<AIService>(
+            create: (_) => AIService(settingsService: settings),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AIPeriodicReportPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(database.queryCount, 1);
+
+    // 连续 5 次通知只应触发一次重查
+    for (var i = 0; i < 5; i++) {
+      database.notifyDataChanged();
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+
+    // 防抖窗口内不应重查，也不应出现整页转圈
+    expect(database.queryCount, 1);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(database.queryCount, 2);
+
+    // 静默刷新：内容始终在位，不会被整页 loading 顶掉
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    await tester.pumpAndSettle();
+    expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 }

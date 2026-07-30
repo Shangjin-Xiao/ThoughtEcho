@@ -36,6 +36,9 @@ class AIPeriodicReportPage extends StatefulWidget {
 class _AIPeriodicReportPageState extends State<AIPeriodicReportPage> {
   // 折叠状态
   bool _isTimeSelectorCollapsed = false;
+  DateTime? _lastCollapseToggleAt;
+  // 略长于折叠动画（300ms），防止动画引发的布局修正再次翻转状态
+  static const Duration _collapseToggleCooldown = Duration(milliseconds: 350);
 
   // 时间范围选择
   String _selectedPeriod = 'week'; // week, month, year
@@ -63,6 +66,14 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage> {
   bool _insightLoading = false;
   StreamSubscription<String>? _insightSub;
 
+  // 当前洞察对应的数据签名，用于避免同一份数据反复重生成
+  String? _insightSignature;
+
+  // 流式洞察的节流缓冲：避免每个 chunk 都 setState 触发整页重排
+  String _insightPending = '';
+  Timer? _insightFlushTimer;
+  static const Duration _insightFlushInterval = Duration(milliseconds: 120);
+
   // 新增：控制动画是否应该执行的标志
   bool _shouldAnimateOverview = true;
   String _dataKey = ''; // 用于跟踪数据版本
@@ -74,10 +85,21 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage> {
 
   DatabaseService? _databaseService;
 
+  // 并发/重复加载防护：数据库在启动与同步期间会连续 notifyListeners 多次，
+  // 若每次都重新拉数据并把整页切回 loading，页面就会来回闪。
+  int _loadToken = 0;
+  bool _hasLoadedOnce = false;
+  Timer? _reloadDebounce;
+  static const Duration _reloadDebounceInterval = Duration(milliseconds: 300);
+
   void _onDatabaseChanged() {
-    if (mounted) {
-      _loadPeriodData();
-    }
+    if (!mounted) return;
+    // 合并短时间内的多次数据库通知，并且静默刷新（不把已有内容换成整页转圈）
+    _reloadDebounce?.cancel();
+    _reloadDebounce = Timer(_reloadDebounceInterval, () {
+      if (!mounted) return;
+      _loadPeriodData(showLoading: false);
+    });
   }
 
   @override
@@ -95,6 +117,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage> {
   @override
   void dispose() {
     _databaseService?.removeListener(_onDatabaseChanged);
+    _reloadDebounce?.cancel();
+    _insightFlushTimer?.cancel();
     _insightSub?.cancel();
     super.dispose();
   }

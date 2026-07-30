@@ -15,6 +15,15 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
     );
     final avgWords = totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
 
+    // 必须在 build 期间读取；下面的“最近笔记”预览是在动画回调里构建的，
+    // 那里不允许 context.select。没有笔记时不订阅，省掉无谓的重建。
+    final showExactTime = totalNotes > 0
+        ? context.select<SettingsService, bool>((s) => s.showExactTime)
+        : false;
+    final showNoteEditTime = totalNotes > 0
+        ? context.select<SettingsService, bool>((s) => s.showNoteEditTime)
+        : false;
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -253,7 +262,11 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
                                     offset: Offset(0, 15 * (1 - animValue)),
                                     child: Opacity(
                                       opacity: animValue,
-                                      child: _buildQuotePreview(quote),
+                                      child: _buildQuotePreview(
+                                        quote,
+                                        showExactTime: showExactTime,
+                                        showNoteEditTime: showNoteEditTime,
+                                      ),
                                     ),
                                   );
                                 },
