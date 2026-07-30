@@ -1,0 +1,47 @@
+lib/widgets/hitokoto_widget.dart
+  s_7741578ecf966f::t_ef583e9a6f13f9 39
+AGENTS.md
+  s_7741578ecf966f::t_82c0d97aa08d33 184-192
+lib/pages/storage_management_page.dart
+  s_7741578ecf966f::t_4194abe9da5203 491-496
+  s_7741578ecf966f::t_7df74c76047ea2 671,678,685
+  s_7741578ecf966f::t_b83d51348313dc 634-657,663
+  s_7741578ecf966f::t_2e53f442ef630c 718-719,729,737,745,762
+  s_7741578ecf966f::t_e31d686dcc39ff 12,343-346,378-380,549,554,559,564,569,584,588,592,598,602
+lib/pages/emergency_pages.dart
+  s_2f59c3e7561e84::t_894635328b88c7 99,101,295,297,431,433
+lib/pages/license_page.dart
+  s_2f59c3e7561e84::t_7bc6edb578d458 234,236
+lib/widgets/add_note_dialog.dart
+  s_2f59c3e7561e84::t_c28549bcc98852 2190
+lib/widgets/daily_quote_view.dart
+  s_2f59c3e7561e84::t_4e60b9b5ecd6eb 378
+lib/widgets/quote_card.dart
+  s_2f59c3e7561e84::t_11c26ecd4d1673 56,71
+lib/widgets/typing_indicator_bubble.dart
+  s_2f59c3e7561e84::t_257d569ea30245 103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "7e0c8958908f7ef753e584a39a0d5a2cc02c76f8",
+  "prompts": {},
+  "sessions": {
+    "s_2f59c3e7561e84": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-ae1c27f7db7b7d3c6",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_7741578ecf966f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "340cc40c-189c-4dca-b529-b61325058eba",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
