@@ -4136,5 +4136,23 @@
   "agentExperimentalNoticeGotIt": "Understand & Continue",
   "agentExperimentalBannerText": "Experimental feature: AI answers may be inaccurate. Notes are only modified after clicking save.",
   "agentExperimentalNoticeAction": "View Notice",
-  "dontShowAgain": "Don't show again"
+  "dontShowAgain": "Don't show again",
+  "settingsLab": "Lab",
+  "settingsLabDesc": "Debug entries and experimental toggles shown in developer mode. May be unstable",
+  "firstOpenScrollPerfMonitorExperiment": "[Experiment] First-open scroll performance monitor",
+  "firstOpenScrollPerfMonitorExperimentDesc": "Record dropped frames on the first Notes scroll after a cold start (off by default)",
+  "addNoteDeferMetadataExperiment": "[Experiment] AddNote deferred metadata",
+  "addNoteDeferMetadataExperimentDesc": "Defer location and weather lookup until the keyboard animation finishes (off by default)",
+  "noteInsertAnimationExperiment": "[Experiment] Note insert animation",
+  "noteInsertAnimationCurrent": "Current: {name}",
+  "@noteInsertAnimationCurrent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noteInsertAnimationScale": "Bubble scale",
+  "noteInsertAnimationSlide": "Smooth rise",
+  "noteInsertAnimationNone": "No animation"
 }

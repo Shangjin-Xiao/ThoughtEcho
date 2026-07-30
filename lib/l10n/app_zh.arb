@@ -4136,5 +4136,23 @@
   "agentExperimentalNoticeGotIt": "理解并继续",
   "agentExperimentalBannerText": "实验性功能：AI回答可能包含错误；AI不会直接改写笔记，仅在点击保存后生效。",
   "agentExperimentalNoticeAction": "查看说明",
-  "dontShowAgain": "不再自动提示"
+  "dontShowAgain": "不再自动提示",
+  "settingsLab": "实验室",
+  "settingsLabDesc": "开发者模式下的调试入口和实验性开关，可能不稳定",
+  "firstOpenScrollPerfMonitorExperiment": "[实验] 首屏滚动性能监测",
+  "firstOpenScrollPerfMonitorExperimentDesc": "记录冷启动后首次滑动记录页的掉帧数据（默认关）",
+  "addNoteDeferMetadataExperiment": "[实验] AddNote 延迟获取元数据",
+  "addNoteDeferMetadataExperimentDesc": "延迟位置和天气获取至键盘动画结束后（默认关）",
+  "noteInsertAnimationExperiment": "[实验] 记录页添加笔记动画",
+  "noteInsertAnimationCurrent": "当前：{name}",
+  "@noteInsertAnimationCurrent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noteInsertAnimationScale": "气泡缩放",
+  "noteInsertAnimationSlide": "平滑上升",
+  "noteInsertAnimationNone": "无动画"
 }

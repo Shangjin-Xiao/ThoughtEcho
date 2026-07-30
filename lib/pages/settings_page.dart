@@ -18,6 +18,7 @@ import '../constants/app_constants.dart';
 import 'backup_restore_page.dart';
 import 'note_sync_page.dart';
 import 'trash_page.dart';
+import '../widgets/app_snackbar.dart';
 import '../widgets/city_search_widget.dart';
 import '../controllers/weather_search_controller.dart';
 import 'category_settings_page.dart';
@@ -610,232 +611,7 @@ class SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
-                // 移至偏好设置页
-                // Add Logs Settings entry below
-                Consumer<SettingsService>(
-                  builder: (context, settingsService, _) {
-                    // 仅在开发者模式下显示日志设置入口
-                    if (!settingsService.appSettings.developerMode) {
-                      return const SizedBox.shrink();
-                    }
-                    return ListTile(
-                      title: Text(l10n.settingsLogs),
-                      subtitle: Text(l10n.settingsLogsDesc),
-                      leading: const Icon(
-                        Icons.article_outlined,
-                      ), // 或者 Icons.bug_report_outlined
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LogsSettingsPage(),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-                Consumer<SettingsService>(
-                  builder: (context, settingsService, _) {
-                    if (!settingsService.appSettings.developerMode) {
-                      return const SizedBox.shrink();
-                    }
-                    return SwitchListTile(
-                      title: Text(l10n.noteListDisableCardShadowsExperiment),
-                      subtitle:
-                          Text(l10n.noteListDisableCardShadowsExperimentDesc),
-                      secondary: const Icon(Icons.layers_clear_outlined),
-                      value: settingsService.noteListDisableCardShadows,
-                      onChanged: (enabled) {
-                        settingsService.setNoteListDisableCardShadows(enabled);
-                      },
-                    );
-                  },
-                ),
-                Consumer<SettingsService>(
-                  builder: (context, settingsService, _) {
-                    if (!settingsService.appSettings.developerMode) {
-                      return const SizedBox.shrink();
-                    }
-                    return SwitchListTile(
-                      title: Text(l10n.noteListDisableBackdropBlurExperiment),
-                      subtitle:
-                          Text(l10n.noteListDisableBackdropBlurExperimentDesc),
-                      secondary: const Icon(Icons.blur_off_outlined),
-                      value: settingsService.noteListDisableBackdropBlur,
-                      onChanged: (enabled) {
-                        settingsService.setNoteListDisableBackdropBlur(
-                          enabled,
-                        );
-                      },
-                    );
-                  },
-                ),
-                Consumer<SettingsService>(
-                  builder: (context, settingsService, _) {
-                    if (!settingsService.appSettings.developerMode) {
-                      return const SizedBox.shrink();
-                    }
-                    return SwitchListTile(
-                      title: Text(l10n.logDebugInfo),
-                      subtitle: Text(l10n.logDebugInfoDesc),
-                      secondary: const Icon(Icons.speed_outlined),
-                      value: settingsService.enableFirstOpenScrollPerfMonitor,
-                      onChanged: (enabled) {
-                        settingsService.setEnableFirstOpenScrollPerfMonitor(
-                          enabled,
-                        );
-                      },
-                    );
-                  },
-                ),
-                Consumer<SettingsService>(
-                  builder: (context, settingsService, _) {
-                    if (!settingsService.appSettings.developerMode) {
-                      return const SizedBox.shrink();
-                    }
-                    return SwitchListTile(
-                      title: Text(l10n.addNoteAutoFocusExperiment),
-                      subtitle: Text(l10n.addNoteAutoFocusExperimentDesc),
-                      secondary: const Icon(Icons.keyboard_outlined),
-                      value: settingsService.addNoteDialogAutoFocus,
-                      onChanged: (enabled) {
-                        settingsService.setAddNoteDialogAutoFocus(enabled);
-                      },
-                    );
-                  },
-                ),
-                Consumer<SettingsService>(
-                  builder: (context, settingsService, _) {
-                    if (!settingsService.appSettings.developerMode) {
-                      return const SizedBox.shrink();
-                    }
-                    return SwitchListTile(
-                      title: const Text('[实验] AddNote 延迟获取元数据'),
-                      subtitle: const Text('延迟位置/天气获取至键盘动画结束后（默认关）'),
-                      secondary: const Icon(Icons.timer_outlined),
-                      value: settingsService.addNoteDialogDeferAutoMetadata,
-                      onChanged: (enabled) {
-                        settingsService.setAddNoteDialogDeferAutoMetadata(
-                          enabled,
-                        );
-                      },
-                    );
-                  },
-                ),
-                Consumer<SettingsService>(
-                  builder: (context, settingsService, _) {
-                    if (!settingsService.appSettings.developerMode) {
-                      return const SizedBox.shrink();
-                    }
-                    return ListTile(
-                      title: const Text('[实验] 记录页添加笔记动画'),
-                      subtitle: Text(
-                        settingsService.noteInsertAnimationType == 'scale'
-                            ? '当前：方案 1 (气泡缩放)'
-                            : settingsService.noteInsertAnimationType == 'slide'
-                                ? '当前：方案 2 (平滑上升)'
-                                : '当前：无动画',
-                      ),
-                      leading: const Icon(Icons.animation_outlined),
-                      trailing: DropdownButton<String>(
-                        value: settingsService.noteInsertAnimationType,
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'scale',
-                            child: Text('气泡缩放'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'slide',
-                            child: Text('平滑上升'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'none',
-                            child: Text('无动画'),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) {
-                            settingsService.setNoteInsertAnimationType(value);
-                          }
-                        },
-                      ),
-                    );
-                  },
-                ),
-                // 添加日志调试信息显示（仅在Debug模式下显示）
-                if (kDebugMode) ...[
-                  ListTile(
-                    title: Text(l10n.logDebugInfo),
-                    subtitle: Text(l10n.logDebugInfoDesc),
-                    leading: const Icon(Icons.bug_report),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () async {
-                      // 保存context引用以避免async gap问题
-                      final currentContext = context;
-                      final logService = Provider.of<UnifiedLogService>(
-                        currentContext,
-                        listen: false,
-                      );
-
-                      try {
-                        final dbStatus = await logService.getDatabaseStatus();
-                        final logSummary = logService.getLogSummary();
-
-                        if (!currentContext.mounted) return;
-                        showDialog(
-                          context: currentContext,
-                          builder: (context) => AlertDialog(
-                            title: Text(l10n.logDebugInfo),
-                            content: SingleChildScrollView(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    l10n.databaseStatus,
-                                    style:
-                                        Theme.of(context).textTheme.titleSmall,
-                                  ),
-                                  ...dbStatus.entries.map(
-                                    (e) => Text('${e.key}: ${e.value}'),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    l10n.logStatistics,
-                                    style:
-                                        Theme.of(context).textTheme.titleSmall,
-                                  ),
-                                  ...logSummary.entries.map(
-                                    (e) => Text('${e.key}: ${e.value}'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: Text(l10n.close),
-                              ),
-                            ],
-                          ),
-                        );
-                      } catch (e) {
-                        if (!currentContext.mounted) return;
-                        final l10n = AppLocalizations.of(currentContext);
-                        ScaffoldMessenger.of(currentContext).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              l10n.getDebugInfoFailed(e.toString()),
-                            ),
-                            duration: const Duration(seconds: 3),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                ],
+                // 日志和实验性开关已移至「实验室」Card（_buildLabSection）
                 // 存储管理
                 ListTile(
                   title: Text(l10n.settingsStorage),
@@ -1176,6 +952,9 @@ class SettingsPageState extends State<SettingsPage> {
 
           // --- 关于信息 Card 结束 ---
 
+          // 实验室 Card（仅开发者模式可见，放在最后避免干扰普通用户）
+          _buildLabSection(context),
+
           /*
           // --- 一周年开发者调试 Card (仅开发者模式可见) ---
           // 一周年开发者模式控制已临时关闭，保留给两周年复用。
@@ -1306,6 +1085,210 @@ class SettingsPageState extends State<SettingsPage> {
 
       // 关闭对话框
       Navigator.of(context).pop();
+    }
+  }
+
+  /// 实验室：开发者模式下的调试入口和实验性开关。
+  ///
+  /// 这些项过去散落在「应用设置」Card 里，每一项各自包一层
+  /// `Consumer<SettingsService>` 重复判断 `developerMode`，普通用户看到的是一张
+  /// 混了实验开关的设置卡。现在整张 Card 只判断一次，非开发者模式完全不渲染。
+  Widget _buildLabSection(BuildContext context) {
+    return Consumer<SettingsService>(
+      builder: (context, settingsService, _) {
+        if (!settingsService.appSettings.developerMode) {
+          return const SizedBox.shrink();
+        }
+        final l10n = AppLocalizations.of(context);
+        final theme = Theme.of(context);
+
+        return Card(
+          margin: const EdgeInsets.all(8.0),
+          child: Column(
+            children: [
+              ListTile(
+                title: Text(l10n.settingsLab),
+                subtitle: Text(l10n.settingsLabDesc),
+                leading: const Icon(Icons.science_outlined),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Divider(
+                  color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                ),
+              ),
+
+              // 日志设置入口
+              ListTile(
+                title: Text(l10n.settingsLogs),
+                subtitle: Text(l10n.settingsLogsDesc),
+                leading: const Icon(Icons.article_outlined),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const LogsSettingsPage(),
+                    ),
+                  );
+                },
+              ),
+
+              // 记录页禁用卡片阴影
+              SwitchListTile(
+                title: Text(l10n.noteListDisableCardShadowsExperiment),
+                subtitle: Text(l10n.noteListDisableCardShadowsExperimentDesc),
+                secondary: const Icon(Icons.layers_clear_outlined),
+                value: settingsService.noteListDisableCardShadows,
+                onChanged: settingsService.setNoteListDisableCardShadows,
+              ),
+
+              // 记录页禁用折叠模糊
+              SwitchListTile(
+                title: Text(l10n.noteListDisableBackdropBlurExperiment),
+                subtitle: Text(l10n.noteListDisableBackdropBlurExperimentDesc),
+                secondary: const Icon(Icons.blur_off_outlined),
+                value: settingsService.noteListDisableBackdropBlur,
+                onChanged: settingsService.setNoteListDisableBackdropBlur,
+              ),
+
+              // 首屏滚动性能监测
+              // 注意：这一项过去错误复用了 l10n.logDebugInfo（「日志调试信息」），
+              // 和下面真正的调试信息入口标题完全相同，现已改用专属文案。
+              SwitchListTile(
+                title: Text(l10n.firstOpenScrollPerfMonitorExperiment),
+                subtitle: Text(l10n.firstOpenScrollPerfMonitorExperimentDesc),
+                secondary: const Icon(Icons.speed_outlined),
+                value: settingsService.enableFirstOpenScrollPerfMonitor,
+                onChanged: settingsService.setEnableFirstOpenScrollPerfMonitor,
+              ),
+
+              // AddNote 自动聚焦
+              SwitchListTile(
+                title: Text(l10n.addNoteAutoFocusExperiment),
+                subtitle: Text(l10n.addNoteAutoFocusExperimentDesc),
+                secondary: const Icon(Icons.keyboard_outlined),
+                value: settingsService.addNoteDialogAutoFocus,
+                onChanged: settingsService.setAddNoteDialogAutoFocus,
+              ),
+
+              // AddNote 延迟获取元数据
+              SwitchListTile(
+                title: Text(l10n.addNoteDeferMetadataExperiment),
+                subtitle: Text(l10n.addNoteDeferMetadataExperimentDesc),
+                secondary: const Icon(Icons.timer_outlined),
+                value: settingsService.addNoteDialogDeferAutoMetadata,
+                onChanged: settingsService.setAddNoteDialogDeferAutoMetadata,
+              ),
+
+              // 记录页添加笔记动画
+              ListTile(
+                title: Text(l10n.noteInsertAnimationExperiment),
+                subtitle: Text(
+                  l10n.noteInsertAnimationCurrent(
+                    _noteInsertAnimationLabel(
+                      l10n,
+                      settingsService.noteInsertAnimationType,
+                    ),
+                  ),
+                ),
+                leading: const Icon(Icons.animation_outlined),
+                trailing: DropdownButton<String>(
+                  value: settingsService.noteInsertAnimationType,
+                  items: [
+                    DropdownMenuItem(
+                      value: 'scale',
+                      child: Text(l10n.noteInsertAnimationScale),
+                    ),
+                    DropdownMenuItem(
+                      value: 'slide',
+                      child: Text(l10n.noteInsertAnimationSlide),
+                    ),
+                    DropdownMenuItem(
+                      value: 'none',
+                      child: Text(l10n.noteInsertAnimationNone),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      settingsService.setNoteInsertAnimationType(value);
+                    }
+                  },
+                ),
+              ),
+
+              // 日志调试信息（仅 Debug 构建）
+              if (kDebugMode)
+                ListTile(
+                  title: Text(l10n.logDebugInfo),
+                  subtitle: Text(l10n.logDebugInfoDesc),
+                  leading: const Icon(Icons.bug_report),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _showLogDebugInfo(context),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// 记录页插入动画方案的显示名。
+  String _noteInsertAnimationLabel(AppLocalizations l10n, String type) {
+    switch (type) {
+      case 'scale':
+        return l10n.noteInsertAnimationScale;
+      case 'slide':
+        return l10n.noteInsertAnimationSlide;
+      default:
+        return l10n.noteInsertAnimationNone;
+    }
+  }
+
+  /// 展示日志数据库状态和统计信息（Debug 构建的调试入口）。
+  Future<void> _showLogDebugInfo(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
+    final logService = Provider.of<UnifiedLogService>(context, listen: false);
+
+    try {
+      final dbStatus = await logService.getDatabaseStatus();
+      final logSummary = logService.getLogSummary();
+
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(l10n.logDebugInfo),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.databaseStatus,
+                  style: Theme.of(dialogContext).textTheme.titleSmall,
+                ),
+                ...dbStatus.entries.map((e) => Text('${e.key}: ${e.value}')),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.logStatistics,
+                  style: Theme.of(dialogContext).textTheme.titleSmall,
+                ),
+                ...logSummary.entries.map((e) => Text('${e.key}: ${e.value}')),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(l10n.close),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      AppSnackBar.error(context, l10n.getDebugInfoFailed(e.toString()));
     }
   }
 
