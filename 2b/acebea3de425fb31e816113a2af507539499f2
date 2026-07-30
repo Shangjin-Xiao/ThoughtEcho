@@ -1,0 +1,28 @@
+lib/l10n/app_zh.arb
+  s_7741578ecf966f::t_6e5de69253b341 4139-4157
+lib/l10n/app_en.arb
+  s_7741578ecf966f::t_988edbcbc7fdf2 4139-4157
+lib/pages/settings_page.dart
+  s_7741578ecf966f::t_feae5bbbca1067 1091-1159,1161-1293
+  s_7741578ecf966f::t_5daf99dc32dcda 614
+  s_7741578ecf966f::t_539346a084d88f 955-957
+  s_7741578ecf966f::t_e74c31e5c2b9a5 1160
+  s_7741578ecf966f::t_2cb7e4950339db 21
+  s_7741578ecf966f::t_c068c3c80fb3d9 1294
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "2bacebea3de425fb31e816113a2af507539499f2",
+  "prompts": {},
+  "sessions": {
+    "s_7741578ecf966f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "340cc40c-189c-4dca-b529-b61325058eba",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
