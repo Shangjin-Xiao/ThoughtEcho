@@ -93,6 +93,46 @@ class _DeferredRichTextContentState extends State<_DeferredRichTextContent> {
   }
 }
 
+/// 冷 Quill 首布局的每帧额度。
+///
+/// 滚动信号只能覆盖“正在滚动”这段时间。首屏渲染、惯性停止后的补建，以及
+/// `scrollCacheExtent` 在屏幕外预构建的卡片都发生在信号为 false 时，一帧里可能
+/// 同时挂载多张冷卡片，把若干次 20~48ms 的 Quill 首布局叠进同一帧。额度把它压回
+/// 每帧一次，其余卡片走同尺寸轻量占位并交给恢复队列逐帧补齐。
+class _ColdCollapsedQuillFrameBudget {
+  static const int _maxPerFrame = 1;
+
+  static Duration? _frameTimeStamp;
+  static int _used = 0;
+
+  /// 申请本帧的冷 Quill 创建额度；返回 false 表示调用方应改用轻量占位。
+  static bool tryConsume() {
+    final binding = SchedulerBinding.instance;
+    final phase = binding.schedulerPhase;
+    // 帧外构建（如直接调用 build 的测试）没有可归属的帧，不施加额度。
+    if (phase != SchedulerPhase.transientCallbacks &&
+        phase != SchedulerPhase.persistentCallbacks) {
+      return true;
+    }
+
+    final stamp = binding.currentFrameTimeStamp;
+    if (_frameTimeStamp != stamp) {
+      _frameTimeStamp = stamp;
+      _used = 0;
+    }
+    if (_used >= _maxPerFrame) {
+      return false;
+    }
+    _used++;
+    return true;
+  }
+
+  static void reset() {
+    _frameTimeStamp = null;
+    _used = 0;
+  }
+}
+
 class _DeferredRichTextMaterializationQueue {
   static final LinkedHashSet<_DeferredRichTextContentState> _pending =
       LinkedHashSet<_DeferredRichTextContentState>();
@@ -132,6 +172,9 @@ class _DeferredRichTextMaterializationQueue {
         orElse: () => _pending.first,
       );
       _pending.remove(state);
+      // 与新挂载卡片共享同一份每帧额度：本帧额度归恢复队列，同帧新出现的冷卡片
+      // 会退回占位，避免“队列补一张 + 列表新建一张”又凑成两次首布局。
+      _ColdCollapsedQuillFrameBudget.tryConsume();
       state._materializeFromQueue();
       // One cold Quill per vsync prevents idle recovery from recreating the
       // same multi-item build spike that was removed from the scroll frame.

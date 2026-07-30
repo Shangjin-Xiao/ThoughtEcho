@@ -122,6 +122,7 @@ class QuoteContent extends StatelessWidget {
     _QuoteHeightEstimateCache.clear();
     _QuotePlainTextLayoutExpansionCache.clear();
     _QuoteContentControllerCache.clear();
+    _ColdCollapsedQuillFrameBudget.reset();
   }
 
   /// 预热 Document 缓存：只预热首屏附近内容，且滚动中不抢占主线程。
@@ -965,6 +966,7 @@ class QuoteContent extends StatelessWidget {
     required bool needsExpansion,
     required bool prioritizeBoldContent,
     double? maxWidth,
+    bool deferralResolved = false,
   }) {
     final bool usePrioritizedDoc = !showFullContent && prioritizeBoldContent;
     final bool truncateForCollapse = !showFullContent && needsExpansion;
@@ -991,13 +993,21 @@ class QuoteContent extends StatelessWidget {
 
     // Only fixed-height collapsed cards can use a lightweight stand-in
     // without changing the list extent. Cache hits keep their real Quill tree.
-    if (truncateForCollapse &&
-        (isListScrolling.value || isListDragActive.value) &&
+    //
+    // 走占位的两种情形：滚动/拖拽期间一律不建冷 Quill；列表静止时仍受每帧额度
+    // 约束，避免首屏与惯性停止后的补建把多次首布局堆进同一帧。
+    // [deferralResolved] 为 true 表示本次构建来自恢复队列，额度已在队列侧扣除，
+    // 不再重新判定，否则已物化的卡片会被打回占位。
+    if (!deferralResolved &&
+        truncateForCollapse &&
         !_QuoteContentControllerCache.contains(
           quoteId: cacheQuoteId,
           contentSignature: contentSignature,
           variant: contentVariant,
-        )) {
+        ) &&
+        (isListScrolling.value ||
+            isListDragActive.value ||
+            !_ColdCollapsedQuillFrameBudget.tryConsume())) {
       Widget placeholder = _CollapsedContentWrapper(
         key: collapsedWrapperKey,
         maxHeight: collapsedContentMaxHeight,
@@ -1024,6 +1034,7 @@ class QuoteContent extends StatelessWidget {
           needsExpansion: needsExpansion,
           prioritizeBoldContent: prioritizeBoldContent,
           maxWidth: maxWidth,
+          deferralResolved: true,
         ),
       );
     }

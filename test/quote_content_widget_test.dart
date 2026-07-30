@@ -434,6 +434,64 @@ void main() {
     );
   });
 
+  testWidgets('列表静止时一帧内也只创建一个冷 Quill', (tester) async {
+    // 首屏、惯性停止后和 cacheExtent 预构建都没有滚动信号可依赖，
+    // 之前这些场景会把多张冷卡片的首布局叠进同一帧。
+    final longText = '静止时挂载的冷富文本也要分帧。' * 80;
+    final quotes = List<Quote>.generate(
+      3,
+      (index) => Quote(
+        id: 'rich_idle_budget_$index',
+        content: longText,
+        date: '2025-01-01T00:00:0$index.000Z',
+        editSource: 'fullscreen',
+        deltaContent: jsonEncode([
+          {'insert': '$longText\n'},
+        ]),
+      ),
+    );
+    QuoteContent.clearCacheForTesting();
+    isListScrolling.value = false;
+    isListDragActive.value = false;
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider<SettingsService>.value(
+        value: _TestSettingsService(),
+        child: MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: quotes
+                  .map(
+                    (quote) => SizedBox(
+                      width: 320,
+                      height: QuoteContent.collapsedContentMaxHeight,
+                      child: QuoteContent(
+                        quote: quote,
+                        style: const TextStyle(fontSize: 16, height: 1.5),
+                        needsExpansionOverride: true,
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(quill.QuillEditor), findsOneWidget);
+    expect(
+      QuoteContent.debugCacheStats()['controller'],
+      containsPair('createCount', 1),
+    );
+
+    await tester.pump();
+    expect(find.byType(quill.QuillEditor), findsNWidgets(2));
+
+    await tester.pump();
+    expect(find.byType(quill.QuillEditor), findsNWidgets(3));
+  });
+
   testWidgets('折叠态长富文本只给 QuillEditor 截断 Document', (tester) async {
     final longText = '一段很长的富文本内容' * 80;
     final delta = jsonEncode([
