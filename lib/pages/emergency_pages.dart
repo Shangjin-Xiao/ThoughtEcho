@@ -81,12 +81,9 @@ class EmergencyRecoveryPage extends StatelessWidget {
                       if (!context.mounted) return;
 
                       // 如果重新初始化失败，显示错误信息
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.emergencyReinitializeFailed('$e')),
-                          backgroundColor: Colors.red,
-                          duration: const Duration(seconds: 3),
-                        ),
+                      AppSnackBar.error(
+                        context,
+                        l10n.emergencyReinitializeFailed('$e'),
                       );
                     }
                   },
@@ -398,13 +395,9 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
                         try {
                           Navigator.of(context).pushNamed('/backup_restore');
                         } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content:
-                                  Text(l10n.emergencyOpenBackupFailed('$e')),
-                              backgroundColor: Colors.red,
-                              duration: const Duration(seconds: 3),
-                            ),
+                          AppSnackBar.error(
+                            context,
+                            l10n.emergencyOpenBackupFailed('$e'),
                           );
                         }
                       },

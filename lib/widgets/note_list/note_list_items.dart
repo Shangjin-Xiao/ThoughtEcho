@@ -1004,17 +1004,17 @@ extension _NoteListItemsExtension on NoteListViewState {
           // 弹超时提示（版本号匹配才弹）
           if (mounted) {
             final l10n = AppLocalizations.of(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(l10n.noteSearchTimeoutMessage),
-                duration: AppConstants.snackBarDurationImportant,
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: Colors.orange,
-                action: SnackBarAction(
-                  label: l10n.retry,
-                  textColor: Colors.white,
-                  onPressed: () => _performSearch(value),
-                ),
+            final semantic = AppSemanticColors.of(context);
+            AppSnackBar.show(
+              context,
+              l10n.noteSearchTimeoutMessage,
+              duration: AppConstants.snackBarDurationImportant,
+              backgroundColor: semantic.warningContainer,
+              foregroundColor: semantic.onWarningContainer,
+              action: SnackBarAction(
+                label: l10n.retry,
+                textColor: semantic.onWarningContainer,
+                onPressed: () => _performSearch(value),
               ),
             );
           }

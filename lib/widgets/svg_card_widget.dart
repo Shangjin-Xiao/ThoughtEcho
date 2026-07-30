@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/generated_card.dart';
 import '../utils/app_logger.dart';
+import 'app_snackbar.dart';
 
 /// SVG卡片渲染组件
 class SVGCardWidget extends StatelessWidget {
@@ -546,13 +547,7 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
     } catch (e) {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.generateCardFailed(e.toString())),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      AppSnackBar.error(context, l10n.generateCardFailed(e.toString()));
     } finally {
       if (mounted) {
         setState(() {

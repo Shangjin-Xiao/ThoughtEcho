@@ -9,6 +9,8 @@ import '../services/mmkv_service.dart';
 import '../services/webdav_sync_service.dart';
 import '../utils/lww_utils.dart';
 import '../utils/app_logger.dart';
+import '../theme/app_semantic_colors.dart';
+import '../widgets/app_snackbar.dart';
 
 class WebDAVSyncPage extends StatefulWidget {
   const WebDAVSyncPage({super.key});
@@ -270,13 +272,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
         source: 'WebDAVSyncPage',
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.webdavStatusFailed),
-            backgroundColor: Colors.red.shade600,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppSnackBar.error(context, l10n.webdavStatusFailed);
       }
       return;
     }
@@ -295,37 +291,24 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
       if (syncService.syncStatus == WebDAVSyncStatus.success) {
         // 如果同步产生冲突，弹出包含 [查看] 按钮的 SnackBar
         if (syncService.lastConflictCount > 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n
-                  .webdavConflictNotification(syncService.lastConflictCount)),
-              backgroundColor: Colors.amber.shade800,
-              behavior: SnackBarBehavior.floating,
-              action: SnackBarAction(
-                label: l10n.webdavViewNow,
-                textColor: Colors.white,
-                onPressed: _navigateToConflicts,
-              ),
-              duration: const Duration(seconds: 8),
+          final semantic = AppSemanticColors.of(context);
+          AppSnackBar.show(
+            context,
+            l10n.webdavConflictNotification(syncService.lastConflictCount),
+            backgroundColor: semantic.warningContainer,
+            foregroundColor: semantic.onWarningContainer,
+            duration: const Duration(seconds: 8),
+            action: SnackBarAction(
+              label: l10n.webdavViewNow,
+              textColor: semantic.onWarningContainer,
+              onPressed: _navigateToConflicts,
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.webdavStatusSuccess),
-              backgroundColor: Colors.green.shade600,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          AppSnackBar.success(context, l10n.webdavStatusSuccess);
         }
       } else if (syncService.syncStatus == WebDAVSyncStatus.failed) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.webdavStatusFailed),
-            backgroundColor: Colors.red.shade600,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        AppSnackBar.error(context, l10n.webdavStatusFailed);
       }
     }
   }

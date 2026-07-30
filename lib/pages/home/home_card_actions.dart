@@ -10,6 +10,8 @@ import 'package:thoughtecho/models/generated_card.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/ai_card_generation_service.dart';
 import 'package:thoughtecho/services/svg_to_image_service.dart';
+import 'package:thoughtecho/theme/app_semantic_colors.dart';
+import 'package:thoughtecho/widgets/app_snackbar.dart';
 import 'package:thoughtecho/widgets/svg_card_widget.dart';
 
 /// Owns the complete AI-card interaction flow used by the home page.
@@ -76,14 +78,9 @@ class HomeCardActions {
     } catch (error) {
       if (!isMounted() || !context.mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).generateCardFailed(error.toString()),
-          ),
-          backgroundColor: Colors.red,
-          duration: AppConstants.snackBarDurationError,
-        ),
+      AppSnackBar.error(
+        context,
+        AppLocalizations.of(context).generateCardFailed(error.toString()),
       );
     }
   }
@@ -129,42 +126,36 @@ class HomeCardActions {
       );
 
       if (!isMounted() || !context.mounted) return;
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Text(AppLocalizations.of(context).cardSharedSuccessfully),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+      final semantic = AppSemanticColors.of(context);
+      AppSnackBar.showCustom(
+        context,
+        Row(
+          children: [
+            Icon(Icons.check_circle, color: semantic.onSuccessContainer),
+            const SizedBox(width: 8),
+            Text(AppLocalizations.of(context).cardSharedSuccessfully),
+          ],
+        ),
+        backgroundColor: semantic.successContainer,
+      );
     } catch (error) {
       if (!isMounted() || !context.mounted) return;
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error, color: Colors.white),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    AppLocalizations.of(context).shareFailed(error.toString()),
-                  ),
-                ),
-              ],
+      final errorColorScheme = Theme.of(context).colorScheme;
+      AppSnackBar.showCustom(
+        context,
+        Row(
+          children: [
+            Icon(Icons.error, color: errorColorScheme.onErrorContainer),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                AppLocalizations.of(context).shareFailed(error.toString()),
+              ),
             ),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+          ],
+        ),
+        backgroundColor: errorColorScheme.errorContainer,
+      );
     }
   }
 
@@ -204,47 +195,41 @@ class HomeCardActions {
       if (!isMounted() || !context.mounted) return;
 
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 8),
-                Expanded(child: Text(l10n.cardSavedToGallery(filePath))),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-            action: SnackBarAction(
-              label: l10n.view,
-              textColor: Colors.white,
-              onPressed: () {},
-            ),
-          ),
-        );
+      final semantic = AppSemanticColors.of(context);
+      AppSnackBar.showCustom(
+        context,
+        Row(
+          children: [
+            Icon(Icons.check_circle, color: semantic.onSuccessContainer),
+            const SizedBox(width: 8),
+            Expanded(child: Text(l10n.cardSavedToGallery(filePath))),
+          ],
+        ),
+        backgroundColor: semantic.successContainer,
+        action: SnackBarAction(
+          label: l10n.view,
+          textColor: semantic.onSuccessContainer,
+          onPressed: () {},
+        ),
+      );
     } catch (error) {
       if (!isMounted() || !context.mounted) return;
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error, color: Colors.white),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    AppLocalizations.of(context).saveFailed(error.toString()),
-                  ),
-                ),
-              ],
+      final errorColorScheme = Theme.of(context).colorScheme;
+      AppSnackBar.showCustom(
+        context,
+        Row(
+          children: [
+            Icon(Icons.error, color: errorColorScheme.onErrorContainer),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                AppLocalizations.of(context).saveFailed(error.toString()),
+              ),
             ),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+          ],
+        ),
+        backgroundColor: errorColorScheme.errorContainer,
+      );
     }
   }
 }

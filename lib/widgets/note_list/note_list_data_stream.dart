@@ -227,20 +227,15 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           logError('加载笔记失败: $error', error: error, source: 'NoteListView');
 
           // 显示错误提示
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                error.toString().contains('TimeoutException')
-                    ? '查询超时'
-                    : (kDebugMode ? error.toString() : '加载失败'),
-              ),
-              duration: AppConstants.snackBarDurationImportant,
-              backgroundColor: Colors.red,
-              action: SnackBarAction(
-                label: '重试',
-                textColor: Colors.white,
-                onPressed: () => _updateStreamSubscription(),
-              ),
+          AppSnackBar.error(
+            context,
+            error.toString().contains('TimeoutException')
+                ? '查询超时'
+                : (kDebugMode ? error.toString() : '加载失败'),
+            action: SnackBarAction(
+              label: '重试',
+              textColor: Theme.of(context).colorScheme.onErrorContainer,
+              onPressed: () => _updateStreamSubscription(),
             ),
           );
         }

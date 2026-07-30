@@ -8,6 +8,8 @@ import 'package:video_player/video_player.dart';
 import '../constants/app_constants.dart';
 import '../utils/lottie_animation_manager.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../theme/app_semantic_colors.dart';
+import 'app_snackbar.dart';
 
 /// 统一的媒体播放器组件
 /// 支持视频和音频播放，提供丰富的用户体验
@@ -246,28 +248,33 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           suggestion = l10n.checkFileIntegrity;
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(errorMessage),
-                if (suggestion.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    suggestion,
-                    style: const TextStyle(fontSize: 12, color: Colors.white70),
+        final errorColorScheme = Theme.of(context).colorScheme;
+        AppSnackBar.showCustom(
+          context,
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(errorMessage),
+              if (suggestion.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  suggestion,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: errorColorScheme.onErrorContainer.withValues(
+                      alpha: 0.7,
+                    ),
                   ),
-                ],
+                ),
               ],
-            ),
-            duration: AppConstants.snackBarDurationError,
-            backgroundColor: Colors.red,
-            action: SnackBarAction(
-              label: l10n.retry,
-              onPressed: () => _retryVideoInitialization(),
-            ),
+            ],
+          ),
+          duration: AppConstants.snackBarDurationError,
+          backgroundColor: errorColorScheme.errorContainer,
+          action: SnackBarAction(
+            label: l10n.retry,
+            onPressed: () => _retryVideoInitialization(),
           ),
         );
       }
@@ -304,26 +311,29 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         _isInitialized = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(l10n.outOfMemoryVideoLoad),
-              const SizedBox(height: 4),
-              Text(
-                l10n.outOfMemorySuggestions,
-                style: const TextStyle(fontSize: 12, color: Colors.white70),
+      final semantic = AppSemanticColors.of(context);
+      AppSnackBar.showCustom(
+        context,
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.outOfMemoryVideoLoad),
+            const SizedBox(height: 4),
+            Text(
+              l10n.outOfMemorySuggestions,
+              style: TextStyle(
+                fontSize: 12,
+                color: semantic.onWarningContainer.withValues(alpha: 0.7),
               ),
-            ],
-          ),
-          duration: AppConstants.snackBarDurationError,
-          backgroundColor: Colors.orange,
-          action: SnackBarAction(
-            label: l10n.retry,
-            onPressed: () => _retryVideoInitialization(),
-          ),
+            ),
+          ],
+        ),
+        duration: AppConstants.snackBarDurationError,
+        backgroundColor: semantic.warningContainer,
+        action: SnackBarAction(
+          label: l10n.retry,
+          onPressed: () => _retryVideoInitialization(),
         ),
       );
     }

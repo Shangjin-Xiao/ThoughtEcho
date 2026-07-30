@@ -1,5 +1,4 @@
 import 'dart:io';
-import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
 
 import 'package:file_selector/file_selector.dart';
@@ -13,6 +12,7 @@ import '../services/large_file_manager.dart';
 import '../utils/backup_progress_update_gate.dart';
 import '../utils/time_utils.dart';
 import '../utils/stream_file_selector.dart';
+import '../widgets/app_snackbar.dart';
 
 /// 备份与还原页面
 ///
@@ -600,14 +600,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         // 还原成功，回到主页并显示成功消息
         Navigator.of(context).popUntil((route) => route.isFirst);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.restoreSuccess),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            duration: AppConstants.snackBarDurationImportant,
-          ),
-        );
+        AppSnackBar.success(context, l10n.restoreSuccess);
       }
     } catch (e) {
       if (mounted) {
@@ -792,14 +785,7 @@ Details: $e''';
 
   /// 显示成功提示
   void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        duration: AppConstants.snackBarDurationImportant,
-      ),
-    );
+    AppSnackBar.success(context, message);
   }
 
   /// 显示错误对话框

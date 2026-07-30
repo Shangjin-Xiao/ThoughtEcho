@@ -7,6 +7,7 @@ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/widgets/app_snackbar.dart';
 import 'package:thoughtecho/widgets/note_list_view.dart';
 
 /// Owns home-page note deletion and favorite mutations.
@@ -113,20 +114,19 @@ class HomeNoteMutationActions {
       await context.read<DatabaseService>().incrementFavoriteCount(quoteId);
       if (!isMounted() || !context.mounted || _disposed) return;
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.favorite, color: Colors.red, size: 16),
-              const SizedBox(width: 8),
-              Text(l10n.favoriteCountWithNum(quote.favoriteCount + 1)),
-            ],
-          ),
-          duration: const Duration(milliseconds: 1500),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red.shade400,
+      final errorColorScheme = Theme.of(context).colorScheme;
+      AppSnackBar.showCustom(
+        context,
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.favorite, color: Colors.red, size: 16),
+            const SizedBox(width: 8),
+            Text(l10n.favoriteCountWithNum(quote.favoriteCount + 1)),
+          ],
         ),
+        duration: const Duration(milliseconds: 1500),
+        backgroundColor: errorColorScheme.errorContainer,
       );
     } catch (error, stackTrace) {
       logError(
@@ -136,13 +136,9 @@ class HomeNoteMutationActions {
         source: 'HomeNoteMutationActions',
       );
       if (!isMounted() || !context.mounted || _disposed) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).favoriteFailed),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red,
-        ),
+      AppSnackBar.error(
+        context,
+        AppLocalizations.of(context).favoriteFailed,
       );
     }
   }
@@ -202,14 +198,7 @@ class HomeNoteMutationActions {
         source: 'HomeNoteMutationActions',
       );
       if (!isMounted() || !context.mounted || _disposed) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.clearFavoriteFailed),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppSnackBar.error(context, l10n.clearFavoriteFailed);
     }
   }
 

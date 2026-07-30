@@ -7,8 +7,8 @@ import '../models/multi_ai_settings.dart';
 import '../utils/app_logger.dart';
 import '../services/api_key_manager.dart';
 import '../utils/ai_network_manager.dart';
-import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../widgets/app_snackbar.dart';
 
 class AISettingsPage extends StatefulWidget {
   const AISettingsPage({super.key});
@@ -194,13 +194,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.checkFailed(e.toString())),
-          backgroundColor: Colors.red,
-          duration: AppConstants.snackBarDurationError,
-        ),
-      );
+      AppSnackBar.error(context, l10n.checkFailed(e.toString()));
     } finally {
       if (mounted) setState(() => _isCheckingApiKey = false);
     }
@@ -246,15 +240,13 @@ class _AISettingsPageState extends State<AISettingsPage> {
         source: 'AISettingsPage._loadSettings',
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.loadAiSettingsErrorUser),
-          backgroundColor: Colors.red,
-          action: SnackBarAction(
-            label: l10n.retry,
-            textColor: Colors.white,
-            onPressed: () => _loadSettings(),
-          ),
+      AppSnackBar.error(
+        context,
+        l10n.loadAiSettingsErrorUser,
+        action: SnackBarAction(
+          label: l10n.retry,
+          textColor: Theme.of(context).colorScheme.onErrorContainer,
+          onPressed: () => _loadSettings(),
         ),
       );
     }
@@ -263,12 +255,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
   Future<void> _saveSettings() async {
     final l10n = AppLocalizations.of(context);
     if (!_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.fixFormErrors),
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppSnackBar.error(context, l10n.fixFormErrors);
       return;
     }
 
@@ -384,12 +371,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
     // 如果已有当前 provider，直接测试它，不需要先保存/创建新的
     // 如果没有当前 provider，提示用户先保存配置
     if (_currentProvider == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.noAiProviderSelected),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      AppSnackBar.warning(context, l10n.noAiProviderSelected);
       return;
     }
 

@@ -4,6 +4,7 @@ import '../services/media_reference_service.dart';
 import '../services/temporary_media_service.dart';
 import '../utils/app_logger.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../widgets/app_snackbar.dart';
 
 /// 媒体文件管理页面
 ///
@@ -41,13 +42,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
     } catch (e) {
       logDebug('加载媒体统计信息失败: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.loadStatsError(e.toString())),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        AppSnackBar.error(context, l10n.loadStatsError(e.toString()));
       }
     } finally {
       setState(() {
@@ -74,13 +69,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.operationCompleted(operation)),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        AppSnackBar.success(context, l10n.operationCompleted(operation));
       }
 
       // 重新加载统计信息
@@ -88,12 +77,9 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
     } catch (e) {
       logDebug('$operation 失败: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.operationFailed(e.toString(), operation)),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
+        AppSnackBar.error(
+          context,
+          l10n.operationFailed(e.toString(), operation),
         );
       }
     } finally {

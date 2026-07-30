@@ -14,6 +14,7 @@ import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
+import 'package:thoughtecho/widgets/app_snackbar.dart';
 import 'package:thoughtecho/widgets/note_list_view.dart';
 
 /// Owns the add/edit routes and persistence feedback launched by the home page.
@@ -211,15 +212,12 @@ class HomeNoteEditorActions {
   }) {
     if (!_active) return;
     final l10n = AppLocalizations.of(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: AppConstants.snackBarDurationError,
-        backgroundColor: Colors.red,
-        action: SnackBarAction(
-          label: l10n.retry,
-          onPressed: () => unawaited(_save(quote, isEditing: isEditing)),
-        ),
+    AppSnackBar.error(
+      context,
+      message,
+      action: SnackBarAction(
+        label: l10n.retry,
+        onPressed: () => unawaited(_save(quote, isEditing: isEditing)),
       ),
     );
   }
@@ -272,14 +270,9 @@ class HomeNoteEditorActions {
         source: 'HomeNoteEditorActions',
       );
       if (!isMounted() || !context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).openFullEditorFailedSimple,
-          ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 2),
-        ),
+      AppSnackBar.error(
+        context,
+        AppLocalizations.of(context).openFullEditorFailedSimple,
       );
     }
   }
@@ -304,17 +297,13 @@ class HomeNoteEditorActions {
       );
       if (!_active) return;
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.cannotOpenFullEditor(error.toString())),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          action: SnackBarAction(
-            label: l10n.retry,
-            onPressed: () => _openExistingFullscreenEditor(quote),
-            textColor: Colors.white,
-          ),
+      AppSnackBar.error(
+        context,
+        l10n.cannotOpenFullEditor(error.toString()),
+        action: SnackBarAction(
+          label: l10n.retry,
+          onPressed: () => _openExistingFullscreenEditor(quote),
+          textColor: Theme.of(context).colorScheme.onErrorContainer,
         ),
       );
     }

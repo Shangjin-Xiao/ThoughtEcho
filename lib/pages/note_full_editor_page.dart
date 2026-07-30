@@ -41,6 +41,7 @@ import '../utils/feature_guide_helper.dart';
 import '../utils/location_weather_helper.dart';
 import '../services/settings_service.dart';
 import '../controllers/note_editor_states.dart';
+import '../widgets/app_snackbar.dart';
 
 part 'note_editor/editor_document_init.dart';
 part 'note_editor/editor_save_and_draft.dart';

@@ -272,13 +272,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     } catch (e) {
       if (mounted) {
         final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.mediaProcessFailed(e.toString())),
-            backgroundColor: Colors.orange,
-            duration: AppConstants.snackBarDurationError,
-          ),
-        );
+        AppSnackBar.warning(context, l10n.mediaProcessFailed(e.toString()));
       }
     }
 
@@ -291,13 +285,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       logDebug('富文本未能无损加载，阻止保存覆盖原始deltaContent');
       await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.richTextSaveUnavailable),
-            backgroundColor: Colors.red,
-            duration: AppConstants.snackBarDurationError,
-          ),
-        );
+        AppSnackBar.error(context, l10n.richTextSaveUnavailable);
       }
       _editorState.draftLoaded = true;
       _resetSaveUiAfterFailure();
@@ -319,13 +307,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       logDebug('获取文档内容失败: $e');
       await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.richTextSaveUnavailable),
-            backgroundColor: Colors.red,
-            duration: AppConstants.snackBarDurationError,
-          ),
-        );
+        AppSnackBar.error(context, l10n.richTextSaveUnavailable);
       }
       _editorState.draftLoaded = true;
       _resetSaveUiAfterFailure();
@@ -334,13 +316,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       logDebug('获取文档内容失败: $e');
       await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.documentLoadFailed),
-            backgroundColor: Colors.orange,
-            duration: AppConstants.snackBarDurationError,
-          ),
-        );
+        AppSnackBar.warning(context, l10n.documentLoadFailed);
       }
       _editorState.draftLoaded = true;
       _resetSaveUiAfterFailure();
@@ -412,12 +388,9 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
           _editorState.draftLoaded = true;
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(_updateFailureMessage(l10n, updateResult)),
-                backgroundColor: Colors.orange,
-                duration: AppConstants.snackBarDurationError,
-              ),
+            AppSnackBar.warning(
+              context,
+              _updateFailureMessage(l10n, updateResult),
             );
           }
           return;
@@ -460,13 +433,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
       if (mounted) {
         final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.saveFailed(e.toString())),
-            backgroundColor: Colors.red,
-            duration: AppConstants.snackBarDurationError,
-          ),
-        );
+        AppSnackBar.error(context, l10n.saveFailed(e.toString()));
       }
     } finally {
       if (mounted) {

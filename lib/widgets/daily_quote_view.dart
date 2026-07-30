@@ -11,6 +11,7 @@ import 'dart:async'; // Import async for StreamController and StreamSubscription
 import 'package:thoughtecho/utils/app_logger.dart';
 import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
+import 'app_snackbar.dart';
 
 class DailyQuoteView extends StatefulWidget {
   // 修改接口，增加hitokotoData参数，以便传递完整的一言数据
@@ -206,16 +207,13 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
 
         logDebug('获取一言失败: $e');
         final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.fetchHitokotoFailed(e.toString())),
-            duration: AppConstants.snackBarDurationError,
-            backgroundColor: Colors.red,
-            action: SnackBarAction(
-              label: l10n.retry,
-              onPressed: _loadDailyQuote,
-              textColor: Colors.white,
-            ),
+        AppSnackBar.error(
+          context,
+          l10n.fetchHitokotoFailed(e.toString()),
+          action: SnackBarAction(
+            label: l10n.retry,
+            onPressed: _loadDailyQuote,
+            textColor: Theme.of(context).colorScheme.onErrorContainer,
           ),
         );
       }

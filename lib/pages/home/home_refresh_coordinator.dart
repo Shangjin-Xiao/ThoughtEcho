@@ -9,6 +9,7 @@ import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/widgets/app_snackbar.dart';
 
 typedef HomePromptRefresh = Future<void> Function({bool initialLoad});
 
@@ -41,15 +42,9 @@ class HomeRefreshCoordinator {
     } catch (error) {
       logDebug('刷新失败: $error');
       if (!isMounted() || !context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).refreshFailed(error.toString()),
-          ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
+      AppSnackBar.error(
+        context,
+        AppLocalizations.of(context).refreshFailed(error.toString()),
       );
     }
   }

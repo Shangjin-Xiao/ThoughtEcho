@@ -7,6 +7,7 @@ import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/device_identity_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../widgets/app_snackbar.dart';
 
 class _AutoScrollText extends StatefulWidget {
   final String text;
@@ -223,15 +224,12 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           _initializationError = e.toString();
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.syncServiceStartFailed(e.toString())),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-            action: SnackBarAction(
-              label: l10n.retry,
-              onPressed: _initializeSyncService,
-            ),
+        AppSnackBar.error(
+          context,
+          l10n.syncServiceStartFailed(e.toString()),
+          action: SnackBarAction(
+            label: l10n.retry,
+            onPressed: _initializeSyncService,
           ),
         );
       }
@@ -376,13 +374,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           source: 'NoteSyncPage',
         );
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.syncServiceNotReady),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
+          AppSnackBar.error(context, l10n.syncServiceNotReady);
         }
         setState(() {
           _isScanning = false;
@@ -393,13 +385,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       // 首先检查服务是否已初始化
       if (_isInitializing) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.syncServiceInitializing),
-              backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 3),
-            ),
-          );
+          AppSnackBar.warning(context, l10n.syncServiceInitializing);
         }
         setState(() {
           _isScanning = false;
@@ -473,13 +459,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       );
       if (mounted) {
         final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.deviceDiscoveryFailed(e.toString())),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        AppSnackBar.error(context, l10n.deviceDiscoveryFailed(e.toString()));
       }
     } finally {
       // 结束由 onDone 处理；这里不抢先复位
@@ -1327,13 +1307,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         WidgetsBinding.instance.addPostFrameCallback(
           (_) {
             if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(message),
-                backgroundColor: Colors.red,
-                duration: const Duration(seconds: 3),
-              ),
-            );
+            AppSnackBar.error(context, message);
           },
         );
       }

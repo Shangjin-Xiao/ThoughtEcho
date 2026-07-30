@@ -30,6 +30,7 @@ import 'accessible_color_grid.dart'; // Import the new accessible color grid
 import 'add_note_ai_menu.dart'; // 导入 AI 菜单组件
 import '../controllers/add_note_controller.dart';
 import 'add_note_dialog_parts.dart'; // 导入拆分的组件
+import 'app_snackbar.dart';
 
 // TODO(refactor): This file exceeds 2400 lines and contains redundant location/weather logic.
 // Consider extracting core business logic into a separate controller or service.
@@ -2124,15 +2125,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                       }
                                     } catch (e) {
                                       if (mounted && context.mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                                '${l10n.openFullEditorFailedSimple}: $e'),
-                                            backgroundColor: Colors.red,
-                                            duration:
-                                                const Duration(seconds: 3),
-                                          ),
+                                        AppSnackBar.error(
+                                          context,
+                                          '${l10n.openFullEditorFailedSimple}: $e',
                                         );
                                       }
                                     }

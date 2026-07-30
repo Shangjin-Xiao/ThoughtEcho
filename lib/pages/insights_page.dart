@@ -17,6 +17,7 @@ import 'package:flutter/services.dart';
 import '../constants/app_constants.dart';
 import 'dart:async'; // Import for StreamSubscription
 import '../utils/app_logger.dart';
+import '../widgets/app_snackbar.dart';
 
 class InsightsPage extends StatefulWidget {
   const InsightsPage({super.key});
@@ -282,16 +283,13 @@ class _InsightsPageState extends State<InsightsPage> {
       logDebug('Stack trace: $stackTrace');
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.saveAnalysisError(e.toString())),
-          backgroundColor: Colors.red,
-          duration: AppConstants.snackBarDurationError,
-          action: SnackBarAction(
-            label: l10n.retry,
-            textColor: Colors.white,
-            onPressed: () => _saveAnalysis(content),
-          ),
+      AppSnackBar.error(
+        context,
+        l10n.saveAnalysisError(e.toString()),
+        action: SnackBarAction(
+          label: l10n.retry,
+          textColor: Theme.of(context).colorScheme.onErrorContainer,
+          onPressed: () => _saveAnalysis(content),
         ),
       );
     }
@@ -328,13 +326,7 @@ class _InsightsPageState extends State<InsightsPage> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.saveAsNoteError(e.toString())),
-          duration: AppConstants.snackBarDurationError,
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppSnackBar.error(context, l10n.saveAsNoteError(e.toString()));
     }
   }
 
@@ -360,13 +352,7 @@ class _InsightsPageState extends State<InsightsPage> {
       await SharePlus.instance.share(ShareParams(text: content));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.shareError(e.toString())),
-          duration: AppConstants.snackBarDurationError,
-          backgroundColor: Colors.red,
-        ),
-      );
+      AppSnackBar.error(context, l10n.shareError(e.toString()));
     }
   }
 
@@ -472,28 +458,25 @@ class _InsightsPageState extends State<InsightsPage> {
               _isGenerating = false;
             });
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(errorMessage),
-                backgroundColor: Colors.red,
-                duration: const Duration(seconds: 5),
-                action: SnackBarAction(
-                  label: actionText,
-                  textColor: Colors.white,
-                  onPressed: () {
-                    if (actionText == l10n.checkSettings ||
-                        actionText == l10n.checkApiKey) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AISettingsPage(),
-                        ),
-                      );
-                    } else {
-                      _generateInsights();
-                    }
-                  },
-                ),
+            AppSnackBar.error(
+              context,
+              errorMessage,
+              action: SnackBarAction(
+                label: actionText,
+                textColor: Theme.of(context).colorScheme.onErrorContainer,
+                onPressed: () {
+                  if (actionText == l10n.checkSettings ||
+                      actionText == l10n.checkApiKey) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AISettingsPage(),
+                      ),
+                    );
+                  } else {
+                    _generateInsights();
+                  }
+                },
               ),
             );
           }
@@ -528,23 +511,20 @@ class _InsightsPageState extends State<InsightsPage> {
           _isGenerating = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-            action: SnackBarAction(
-              label: l10n.goToSettings,
-              textColor: Colors.white,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AISettingsPage(),
-                  ),
-                );
-              },
-            ),
+        AppSnackBar.error(
+          context,
+          errorMessage,
+          action: SnackBarAction(
+            label: l10n.goToSettings,
+            textColor: Theme.of(context).colorScheme.onErrorContainer,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AISettingsPage(),
+                ),
+              );
+            },
           ),
         );
       }

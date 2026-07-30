@@ -10,6 +10,7 @@ import '../utils/stream_file_selector.dart';
 import '../services/large_file_manager.dart' as lfm;
 import '../utils/app_logger.dart';
 import '../gen_l10n/app_localizations.dart';
+import 'app_snackbar.dart';
 
 /// 统一的媒体导入对话框
 ///
@@ -496,13 +497,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
   /// 显示错误
   void _showError(String message) {
     _resetState();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 4),
-      ),
-    );
+    AppSnackBar.error(context, message);
   }
 
   /// 更新进度
