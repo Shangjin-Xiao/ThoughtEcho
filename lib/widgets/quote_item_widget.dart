@@ -446,6 +446,10 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     return Stack(
       clipBehavior: Clip.none,
       children: [
+        // 撑满可用宽度：纯文本正文在宽松约束下只有最长行那么宽（手动换行的
+        // 短行笔记尤其明显），否则 Stack 会收缩到文字宽度，
+        // 下方渐变遮罩与提示胶囊会跟着变窄、偏离卡片中心。
+        const SizedBox(width: double.infinity, height: 0),
         AnimatedSwitcher(
           duration: QuoteItemWidget._fadeDuration,
           switchInCurve: Curves.easeOut,
@@ -539,9 +543,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             child: Text(
               l10n.doubleTapToViewFull,
               style: innerTheme.textTheme.bodySmall?.copyWith(
-                color: innerTheme.colorScheme.onSurface.withValues(alpha: 0.65),
+                color: innerTheme.colorScheme.onSurfaceVariant,
                 fontSize: 11,
-                fontStyle: FontStyle.italic,
               ),
             ),
           ),
@@ -902,7 +905,6 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: secondaryTextColor.withValues(alpha: 0.82),
                   fontSize: 10,
-                  fontStyle: FontStyle.italic,
                 ),
               ),
             ),
@@ -927,7 +929,6 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                 ),
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: secondaryTextColor,
-                  fontStyle: FontStyle.italic,
                 ),
               ),
             ),
@@ -938,7 +939,6 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                 quote.source!,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: secondaryTextColor,
-                  fontStyle: FontStyle.italic,
                 ),
               ),
             ),

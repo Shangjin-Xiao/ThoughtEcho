@@ -338,6 +338,63 @@ void main() {
       expect(find.text('双击查看全文'), findsOneWidget);
     });
 
+    testWidgets('每行都未占满宽度时折叠提示与遮罩仍横跨整个内容区', (tester) async {
+      // 手动换行的短行笔记：正文自身宽度远小于卡片宽度，
+      // 折叠遮罩与提示胶囊不能跟着正文收缩。
+      final quote = _buildQuote(
+        id: 'short-lines',
+        content: List.filled(12, '短句').join('\n'),
+        editSource: 'inline',
+      );
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _FakeSettingsService(),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Material(
+              child: Center(
+                child: SizedBox(
+                  width: 400,
+                  child: QuoteItemWidget(
+                    quote: quote,
+                    tagMap: const {},
+                    isExpanded: false,
+                    onToggleExpanded: (_) {},
+                    onEdit: () {},
+                    onDelete: () {},
+                    onAskAI: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('双击查看全文'), findsOneWidget);
+
+      final cardRect = tester.getRect(find.byType(QuoteItemWidget));
+      final contentRect = tester.getRect(
+        find.byKey(const ValueKey('quote_item.double_tap_region')),
+      );
+      final hintRect = tester.getRect(find.text('双击查看全文'));
+
+      // 正文自身只有 “短句” 两字宽，但内容区必须撑满卡片，
+      // 否则遮罩与胶囊会一起塌缩到文字宽度上。
+      // 差值只应来自卡片内边距（约 60），而不是塌缩到文字宽度（约 33）。
+      expect(contentRect.width, greaterThan(cardRect.width - 80));
+      expect(hintRect.center.dx, closeTo(cardRect.center.dx, 1.0));
+    });
+
     testWidgets('宽布局下实际未溢出的边界文本不显示展开提示', (tester) async {
       final quote = _buildQuote(
         id: 'wide-boundary',
