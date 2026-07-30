@@ -1,0 +1,29 @@
+test/quote_content_widget_test.dart
+  s_224ba39bd3e6c1::t_a7f1a0fb183554 437-494
+.squad/note_list_cold_quill_frame_budget_handoff_2026-07-30.md
+  s_224ba39bd3e6c1::t_ff7aa7989d1189 1-80
+lib/widgets/quote_content_widget.dart
+  s_224ba39bd3e6c1::t_d3fd7d3826a12d 969
+  s_224ba39bd3e6c1::t_da734a18a3c892 1037
+  s_224ba39bd3e6c1::t_78633c7a2f09bb 996-1002,1007-1010
+  s_224ba39bd3e6c1::t_8156b0936988cc 125
+lib/widgets/quote_content_deferred.dart
+  s_224ba39bd3e6c1::t_a8474414013f57 96-135
+  s_224ba39bd3e6c1::t_6949908eead9af 175-177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "0f88655ea4a6e2d2e4ff88c31f89b8abcc3d2ff6",
+  "prompts": {},
+  "sessions": {
+    "s_224ba39bd3e6c1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7ac46dbf-8755-41a7-80fc-e97189626c7f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
