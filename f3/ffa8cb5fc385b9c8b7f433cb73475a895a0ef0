@@ -1,0 +1,117 @@
+lib/widgets/note_list_view.dart
+  s_7741578ecf966f::t_c110d3f6ec759a 41
+  s_7741578ecf966f::t_01d6c36954a513 40
+lib/pages/emergency_pages.dart
+  s_7741578ecf966f::t_a88a1167c1b18b 398-400
+  s_7741578ecf966f::t_adda2e39b775c6 84-86
+lib/widgets/unified_media_import_dialog.dart
+  s_7741578ecf966f::t_8029712adf4886 500
+  s_7741578ecf966f::t_08e38a00a14af3 13
+lib/widgets/note_list/note_list_items.dart
+  s_302ee25bc559f6::t_165b961b43690e 1007-1017
+lib/widgets/note_list/note_list_data_stream.dart
+  s_7741578ecf966f::t_293031b56bb0bd 230-238
+lib/widgets/daily_quote_view.dart
+  s_7741578ecf966f::t_6b0ecee856a7db 210-216
+  s_7741578ecf966f::t_15a22115c15c48 14
+lib/pages/home/home_note_editor_actions.dart
+  s_7741578ecf966f::t_d57a412756fb79 17
+  s_7741578ecf966f::t_95ae2541de988d 273-275
+  s_7741578ecf966f::t_57ecf203588098 215-220
+  s_7741578ecf966f::t_8a1b0ac5116b24 300-306
+lib/pages/backup_restore_page.dart
+  s_7741578ecf966f::t_06164801461103 788
+  s_7741578ecf966f::t_5f89a50bdda26c 603
+  s_7741578ecf966f::t_06073b934ac0bd 15
+lib/widgets/media_player_widget.dart
+  s_7741578ecf966f::t_3864f3448bb2ed 314-327,329-336
+  s_7741578ecf966f::t_cc94c2f413a997 251-267,269,271-277
+  s_7741578ecf966f::t_841fccdd8c76f7 11-12
+lib/pages/home/home_refresh_coordinator.dart
+  s_7741578ecf966f::t_14ea13f81dc159 45-47
+  s_7741578ecf966f::t_d1a86a73618013 12
+lib/widgets/add_note_dialog.dart
+  s_7741578ecf966f::t_6ff2e7dffdda8a 33
+  s_7741578ecf966f::t_8675b79e4a0fbc 2128-2130
+lib/pages/insights_page.dart
+  s_7741578ecf966f::t_126d70a65fc29a 514-527
+  s_7741578ecf966f::t_fe22d3fb9a1106 329
+  s_7741578ecf966f::t_af4cc5a06ff075 20
+  s_7741578ecf966f::t_93ed70e462dd31 355
+  s_7741578ecf966f::t_def0a04e4505ce 286-292
+  s_7741578ecf966f::t_64382f2721c2f7 461-479
+lib/widgets/svg_card_widget.dart
+  s_7741578ecf966f::t_ade6c1529887ca 550
+  s_7741578ecf966f::t_fdbcbb6c8d014f 7
+lib/pages/note_sync_page.dart
+  s_7741578ecf966f::t_e817aa4f235a2d 462
+  s_7741578ecf966f::t_aa9935b588c646 227-232
+  s_7741578ecf966f::t_efef007d6ae1a3 1310
+  s_7741578ecf966f::t_c5d4c00bc0e611 10
+  s_7741578ecf966f::t_f3aef88f89d6fc 377,388
+lib/pages/home/home_card_actions.dart
+  s_7741578ecf966f::t_b20200b27ad1a7 13-14
+  s_7741578ecf966f::t_6a3fda9e4da2ed 198-214,217-227,229-232
+  s_7741578ecf966f::t_01f3f7131b51da 81-83
+  s_7741578ecf966f::t_f211d44a999338 129-140,143-153,155-158
+lib/pages/note_editor/editor_save_and_draft.dart
+  s_7741578ecf966f::t_6b0f4f44e3d273 391-393
+  s_7741578ecf966f::t_f54520a216fabd 310,319
+  s_7741578ecf966f::t_19cccbf75f731b 436
+  s_7741578ecf966f::t_441095000844fb 288
+  s_7741578ecf966f::t_0890c672576341 275
+lib/main.dart
+  s_7741578ecf966f::t_3675caaddf5e96 60
+lib/pages/home/home_note_mutation_actions.dart
+  s_7741578ecf966f::t_1335fe0b1b03f5 10
+  s_7741578ecf966f::t_d285d1b5c3fe85 117-126,128-129,139-141
+  s_7741578ecf966f::t_bfa8fc2196bc8f 201
+lib/pages/ai_settings_page.dart
+  s_7741578ecf966f::t_22e7388b4f6cb8 243-249
+  s_7741578ecf966f::t_25127e826b9d70 258
+  s_7741578ecf966f::t_bcfb6f80c69cb3 11
+  s_7741578ecf966f::t_6ecaea2576f142 197
+  s_7741578ecf966f::t_75b8b787de538c 374
+lib/pages/webdav_sync_page.dart
+  s_7741578ecf966f::t_ed518ef3a4ef84 275
+  s_7741578ecf966f::t_e426d4d7eb3777 294-304,308,311
+  s_7741578ecf966f::t_9a3a167af371db 12-13
+lib/pages/media_management_page.dart
+  s_7741578ecf966f::t_c7995bf793a97d 7
+  s_7741578ecf966f::t_ca6f63d770bed4 72,80-82
+  s_7741578ecf966f::t_02fcbb795d4669 45
+lib/pages/note_full_editor_page.dart
+  s_e97cb24839ad8b::t_e1c77052b9dbf6 44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "f3ffa8cb5fc385b9c8b7f433cb73475a895a0ef0",
+  "prompts": {},
+  "sessions": {
+    "s_302ee25bc559f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "75509e53-dc0c-4b3b-8357-9bd24c20ecd9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_7741578ecf966f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "340cc40c-189c-4dca-b529-b61325058eba",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_e97cb24839ad8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7daa046c-245f-4fe7-869e-28d54b131068",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
