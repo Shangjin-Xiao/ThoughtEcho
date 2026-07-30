@@ -64,33 +64,47 @@ class APIKeyManager {
     return _isValidApiKeyFormat(apiKey);
   }
 
-  /// 清理API密钥（移除空格和换行符）
+  /// 密钥长度下限——低于这个长度基本只能是误粘贴或被截断的内容。
+  static const int _minApiKeyLength = 8;
+
+  /// 清理API密钥（移除空白字符，并剥掉用户可能粘贴进来的 `Bearer ` 前缀）
+  ///
+  /// 存储中统一保存裸 token：`AIProviderSettings.buildHeaders()` 会自行拼
+  /// `Bearer `，把前缀一起存下来会得到 `Bearer Bearer xxx`。
   String _cleanApiKey(String apiKey) {
-    return apiKey.trim().replaceAll(RegExp(r'\s+'), '');
+    final withoutBearer = _stripBearerPrefix(apiKey.trim());
+    return withoutBearer.replaceAll(RegExp(r'\s+'), '');
+  }
+
+  /// 剥离大小写不敏感的 `Bearer ` 前缀。
+  String _stripBearerPrefix(String key) {
+    const prefix = 'bearer ';
+    if (key.toLowerCase().startsWith(prefix)) {
+      return key.substring(prefix.length).trim();
+    }
+    return key;
+  }
+
+  /// 密钥中是否含空白或控制字符——出现即说明粘贴时带进了换行或多余内容。
+  bool _hasIllegalKeyChars(String key) {
+    for (final codeUnit in key.codeUnits) {
+      if (codeUnit <= 0x20 || codeUnit == 0x7f) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /// 验证API密钥格式
+  ///
+  /// 只做「看起来像一把密钥」的基本体检，**不做服务商前缀白名单**：各服务商的
+  /// 密钥格式差异极大（OpenAI `sk-…`、Gemini `AIza…`、智谱 `id.secret`、
+  /// Ollama Cloud `hex.suffix`、API Ninjas 纯字母数字），前缀白名单会把合法密钥
+  /// 判成非法，让依赖此校验的功能（每日提示、会话标题、卡片生成等）静默降级到
+  /// 本地兜底。密钥真正是否可用由服务端响应决定。
   bool _isValidApiKeyFormat(String apiKey) {
-    if (apiKey.trim().isEmpty) return false;
-
-    final trimmedKey = apiKey.trim();
-
-    // OpenAI格式: sk-...
-    if (trimmedKey.startsWith('sk-') && trimmedKey.length > 20) {
-      return true;
-    }
-
-    // OpenRouter格式: sk_... 或 or_...
-    if ((trimmedKey.startsWith('sk_') || trimmedKey.startsWith('or_')) &&
-        trimmedKey.length > 20) {
-      return true;
-    }
-
-    // Bearer token格式
-    if (trimmedKey.startsWith('Bearer ') && trimmedKey.length > 20) {
-      return true;
-    }
-
-    return false;
+    final key = _stripBearerPrefix(apiKey.trim());
+    if (key.length < _minApiKeyLength) return false;
+    return !_hasIllegalKeyChars(key);
   }
 }

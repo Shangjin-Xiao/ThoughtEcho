@@ -32,6 +32,17 @@ class AIService extends ChangeNotifier {
   AIService({required SettingsService settingsService})
       : _settingsService = settingsService;
 
+  /// 每日提示的输出上限（token）。
+  ///
+  /// 正文只需要一两句话，但推理模型（gpt-oss、minimax、DeepSeek-R1 等）的思考
+  /// token 同样计入 `max_tokens`，上限过小会在 `content` 还没开始输出时就被
+  /// `finish_reason: length` 截断，表现为「每日一言生成不了」。非推理模型会自然
+  /// 提前 stop，不会因为上限抬高而多花 token。
+  static const int _dailyPromptMaxTokens = 800;
+
+  /// 会话标题的输出上限（token）。理由同 [_dailyPromptMaxTokens]。
+  static const int _sessionTitleMaxTokens = 512;
+
   Future<void> _validateSettings({bool testNetwork = false}) async {
     try {
       final multiSettings = _settingsService.multiAISettings;
@@ -512,7 +523,7 @@ class AIService extends ChangeNotifier {
           systemPrompt: systemPromptWithContext,
           userMessage: userMessage,
           temperature: 1.0,
-          maxTokens: 100,
+          maxTokens: _dailyPromptMaxTokens,
           // 传空 onThinking 将 reasoning 内容导向空回调丢弃，
           // 避免 reasoning-only 模型的思考过程被当作普通内容混入每日提示。
           onThinking: (_) {},
@@ -1332,7 +1343,7 @@ class AIService extends ChangeNotifier {
                 'You are a title generator. Generate a SHORT title (max 10 words, in the same language as the message, no quotes) for the following message.',
             userMessage: truncated,
             temperature: 0.3,
-            maxTokens: 30,
+            maxTokens: _sessionTitleMaxTokens,
             enableThinking: false,
           );
 

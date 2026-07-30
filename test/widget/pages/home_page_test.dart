@@ -5,6 +5,7 @@ import 'package:thoughtecho/controllers/search_controller.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/local_ai_settings.dart';
+import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/ai_features_page.dart';
 import 'package:thoughtecho/pages/home/daily_prompt_panel.dart';
@@ -102,6 +103,9 @@ class MockSettingsService extends ChangeNotifier implements SettingsService {
   String? get defaultSource => null;
   @override
   LocalAISettings get localAISettings => LocalAISettings.defaultSettings();
+  // 本用例不配置 AI provider：每日提示面板据此判定"未配置"并走本地提示。
+  @override
+  MultiAISettings get multiAISettings => const MultiAISettings();
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

@@ -9,7 +9,9 @@ import 'package:thoughtecho/services/insight_history_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
+import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/ai_settings.dart';
+import 'package:thoughtecho/models/multi_ai_settings.dart';
 import '../../../test_harness.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
@@ -47,6 +49,22 @@ class MockSettingsService extends ChangeNotifier implements SettingsService {
         apiUrl: 'https://api.test.com',
         model: 'test-model',
         apiKey: 'test-key',
+      );
+
+  /// 面板判断"AI 是否已配置"读的是多 provider 设置（生成链路的真源），
+  /// 不是 legacy 的 [aiSettings]。
+  @override
+  MultiAISettings get multiAISettings => MultiAISettings(
+        providers: [
+          AIProviderSettings(
+            id: 'test-provider',
+            name: 'Test Provider',
+            apiKey: '',
+            apiUrl: 'https://api.test.com',
+            model: 'test-model',
+          ),
+        ],
+        currentProviderId: 'test-provider',
       );
 
   @override
@@ -157,6 +175,35 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(mockAIService.streamGenerateDailyPromptCallCount, 0);
+
+      final promptText = find.descendant(
+        of: find.byType(HomeDailyPromptPanel),
+        matching: find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              widget.textAlign == TextAlign.center &&
+              widget.maxLines == 3,
+        ),
+      );
+      expect(promptText, findsOneWidget);
+      expect(tester.widget<Text>(promptText).data, isNotEmpty);
+    });
+
+    testWidgets(
+        'falls back to a local prompt when the AI stream yields nothing',
+        (WidgetTester tester) async {
+      // 回归：推理模型可能把 token 预算全花在思考上，content 一个字都不返回。
+      // 流正常结束但内容为空时面板必须退回本地提示，而不是停在"等待"状态。
+      mockAIService._mockStream = const Stream<String>.empty();
+
+      await tester.pumpWidget(createWidgetUnderTest());
+
+      final state = tester
+          .state<HomeDailyPromptPanelState>(find.byType(HomeDailyPromptPanel));
+      await state.refreshPrompt();
+      await tester.pumpAndSettle();
+
+      expect(mockAIService.streamGenerateDailyPromptCallCount, 1);
 
       final promptText = find.descendant(
         of: find.byType(HomeDailyPromptPanel),

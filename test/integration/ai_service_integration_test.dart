@@ -22,6 +22,9 @@ import 'package:thoughtecho/services/openai_stream_service.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  // flutter_test 默认注入返回 400 的 mock HttpClient，必须解除才能走真实网络。
+  HttpOverrides.global = null;
+
   final apiKey = Platform.environment['TE_TEST_API_KEY'] ?? '';
   final baseUrl = Platform.environment['TE_TEST_BASE_URL'] ??
       'https://ollama.com/v1/chat/completions';
@@ -58,11 +61,13 @@ void main() {
         openai.ChatMessage.user('How do I implement a B-tree in Dart?'),
       ];
 
+      // 与 AIService 的生产预算保持一致：推理模型的思考 token 计入
+      // max_tokens，上限过小会在 content 输出前就被截断。
       final title = await service.chatCompletion(
-        provider: provider.copyWith(temperature: 0.3, maxTokens: 30),
+        provider: provider.copyWith(temperature: 0.3, maxTokens: 512),
         messages: messages,
         temperature: 0.3,
-        maxTokens: 30,
+        maxTokens: 512,
         enableThinking: false,
       );
 
@@ -101,10 +106,10 @@ void main() {
 
       final chunks = <String>[];
       final stream = service.streamChat(
-        provider: provider.copyWith(temperature: 1.0, maxTokens: 100),
+        provider: provider.copyWith(temperature: 1.0, maxTokens: 800),
         messages: messages,
         temperature: 1.0,
-        maxTokens: 100,
+        maxTokens: 800,
       );
 
       await for (final chunk in stream) {

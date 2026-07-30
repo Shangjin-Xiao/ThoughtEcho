@@ -110,6 +110,17 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
         },
         onDone: () {
           if (!mounted) return;
+          // 流正常结束但没有任何正文（例如推理模型把预算全花在思考上、
+          // 或模型返回空内容）时退回本地提示，避免面板停在"等待"状态。
+          if (_accumulatedPromptText.trim().isEmpty) {
+            logDebug('每日提示流结束但内容为空，使用本地生成的提示');
+            _setLocalPrompt(
+              city: city,
+              weather: weather,
+              temperature: temperature,
+            );
+            return;
+          }
           setState(() {
             _accumulatedPromptText = _accumulatedPromptText.trim();
             _isGeneratingDailyPrompt = false;
@@ -164,9 +175,13 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
     final l10n = AppLocalizations.of(context);
     final aiService = context.watch<AIService>();
     final settingsService = context.watch<SettingsService>();
+    // 以多 provider 设置为准：生成链路读的是 multiAISettings.currentProvider，
+    // 而 legacy aiSettings 只在 AI 设置页保存 provider 时才被镜像写入，
+    // 单纯切换当前 provider 不会同步，用它判断会误报"未配置"。
+    final currentProvider = settingsService.multiAISettings.currentProvider;
     final isAiConfigured = aiService.hasValidApiKey() &&
-        settingsService.aiSettings.apiUrl.isNotEmpty &&
-        settingsService.aiSettings.model.isNotEmpty;
+        (currentProvider?.apiUrl.isNotEmpty ?? false) &&
+        (currentProvider?.model.isNotEmpty ?? false);
 
     return Container(
       width: double.infinity,
