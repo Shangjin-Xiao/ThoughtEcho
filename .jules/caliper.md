@@ -47,3 +47,6 @@
 ## 2026-07-21 - [补充 AICommandHelpers 的测试]
 **盲点:** `AICommandHelpers` 包含多个核心静态工具类（如 `WebCommandHelper`, `NoteQueryHelper`, `SessionMessageHelper`），负责 AI 助手命令的解析、URL提取、笔记查询参数组装以及工具调用系统消息的生成。这些纯函数由于一直缺乏单元测试覆盖，在调整正则规则或修改字典格式时极易引发 Agent 行为静默异常。
 **对策:** 通过编写隔离测试，覆盖了各工具类方法的输入边界条件。对于 `WebCommandHelper` 验证了多种前缀和自然语言的 URL 提取；对于 `NoteQueryHelper` 验证了 Agent 查询参数的构建和对缺省参数的安全回退；对于 `SessionMessageHelper` 验证了基于 JSON 的工具消息的可靠生成。测试代码同样保持极简且快速执行。
+## 2026-07-28 - [补充 UntrustedText 工具的测试]
+**盲点:** `untrusted_text.dart` 作为防止大模型提示注入攻击的核心工具，包含多个处理代码块、角色标记和 HTML 标签中和的正则替换逻辑。由于长期没有单元测试覆盖，修改这些正则时可能会导致安全拦截被绕过或误伤正常文本。
+**对策:** 编写了独立的单元测试覆盖各类边界条件，包括反引号转义、`[SYSTEM]` 角色标记打断、超长连续换行限制、 `<note>` 及 `<web_content>` 标签中和、以及属性中引号等特殊字符的转义等，确保核心防护规则稳定有效。
