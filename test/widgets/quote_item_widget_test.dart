@@ -195,6 +195,73 @@ void main() {
       expect(find.byType(AnimatedContainer), findsNothing);
     });
 
+    testWidgets('卡片外边距非负且首条上边距单独收紧', (tester) async {
+      // 负 margin/padding 会命中 RenderSliverPadding 的 assert(isNonNegative)，
+      // release 关断言看不出来，debug 与测试里 ListView 一挂载就抛异常。
+      Future<EdgeInsets> pumpAndReadMargin(double? topMarginOverride) async {
+        final quote = _buildQuote(editSource: 'inline');
+        await tester.pumpWidget(
+          ChangeNotifierProvider<SettingsService>.value(
+            value: _FakeSettingsService(),
+            child: MaterialApp(
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              locale: const Locale('zh'),
+              home: Material(
+                child: QuoteItemWidget(
+                  quote: quote,
+                  tagMap: const {},
+                  isExpanded: false,
+                  onToggleExpanded: (_) {},
+                  onEdit: () {},
+                  onDelete: () {},
+                  onAskAI: () {},
+                  topMarginOverride: topMarginOverride,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        final container = tester.widget<Container>(
+          find
+              .descendant(
+                of: find.byType(RepaintBoundary),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        return container.margin! as EdgeInsets;
+      }
+
+      final defaultMargin = await pumpAndReadMargin(null);
+      expect(defaultMargin.top, QuoteItemWidget.defaultCardMarginVertical);
+      expect(defaultMargin.bottom, QuoteItemWidget.defaultCardMarginVertical);
+      expect(defaultMargin.isNonNegative, isTrue);
+
+      final firstItemMargin = await pumpAndReadMargin(
+        QuoteItemWidget.firstItemTopMargin,
+      );
+      expect(firstItemMargin.top, QuoteItemWidget.firstItemTopMargin);
+      // 首条上边距是默认值的 2/3，下边距和左右不受影响。
+      expect(
+        firstItemMargin.top,
+        closeTo(QuoteItemWidget.defaultCardMarginVertical * 2 / 3, 0.001),
+      );
+      expect(
+        firstItemMargin.bottom,
+        QuoteItemWidget.defaultCardMarginVertical,
+      );
+      expect(firstItemMargin.left, defaultMargin.left);
+      expect(firstItemMargin.right, defaultMargin.right);
+      expect(firstItemMargin.isNonNegative, isTrue);
+    });
+
     testWidgets('展开卡片保留动画外壳', (tester) async {
       final quote = _buildQuote(
         content: List.filled(6, _longContentChunk).join('\n'),

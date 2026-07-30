@@ -66,6 +66,19 @@ class QuoteItemWidget extends StatefulWidget {
   final bool isSelected;
   final bool selectionMode;
 
+  /// 单独收紧卡片上边距，供列表首条使用。
+  ///
+  /// 搜索框与首条笔记之间只隔着一层卡片上边距，不需要和卡片之间的间距同宽。
+  /// 为 null 时使用默认的 [defaultCardMarginVertical]。收紧只能改这里——给
+  /// ListView 传负 padding 会命中 RenderSliverPadding 的 assert(isNonNegative)。
+  final double? topMarginOverride;
+
+  /// 卡片默认的上下外边距。
+  static const double defaultCardMarginVertical = 6.0;
+
+  /// 列表首条笔记的上边距（默认值的 2/3）。
+  static const double firstItemTopMargin = 4.0;
+
   const QuoteItemWidget({
     super.key,
     required this.quote,
@@ -93,6 +106,7 @@ class QuoteItemWidget extends StatefulWidget {
     this.trashActionsEnabled = true,
     this.isSelected = false,
     this.selectionMode = false,
+    this.topMarginOverride,
   });
 
   @override
@@ -672,7 +686,13 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         QuoteItemWidget.disableBackdropBlurForTesting ||
         disableBackdropBlur;
 
-    final cardMargin = const EdgeInsets.symmetric(horizontal: 12, vertical: 6);
+    final cardMargin = EdgeInsets.only(
+      left: 12,
+      right: 12,
+      top:
+          widget.topMarginOverride ?? QuoteItemWidget.defaultCardMarginVertical,
+      bottom: QuoteItemWidget.defaultCardMarginVertical,
+    );
     final cardDecoration = BoxDecoration(
       borderRadius: BorderRadius.circular(AppTheme.cardRadius),
       border: widget.selectionMode && widget.isSelected

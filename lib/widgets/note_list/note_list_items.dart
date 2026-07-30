@@ -601,6 +601,10 @@ extension _NoteListItemsExtension on NoteListViewState {
                       isExpanded: isExpanded,
                       isSelected: isSelected,
                       selectionMode: _isExportMode,
+                      // 首条与搜索框之间只隔一层卡片上边距，收紧到默认值的 2/3。
+                      topMarginOverride: index == 0
+                          ? QuoteItemWidget.firstItemTopMargin
+                          : null,
                       onToggleExpanded: (expanded) {
                         if (expansionNotifier.value != expanded) {
                           expansionNotifier.value = expanded;
