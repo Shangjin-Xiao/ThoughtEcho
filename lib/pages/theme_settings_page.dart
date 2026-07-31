@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../theme/theme_style.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import '../utils/color_utils.dart'; // 导入颜色工具
 import '../gen_l10n/app_localizations.dart';
@@ -85,6 +86,32 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
+                    l10n.themeStyle,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  for (final style in ThemeStyle.values)
+                    _buildThemeStyleOption(context, appTheme, style, l10n),
+                ],
+              ),
+            ),
+          ),
+          Card(
+            margin: const EdgeInsets.all(16),
+            elevation: 1,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+              side: BorderSide(
+                color: Theme.of(context).colorScheme.outline,
+                width: 1,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
                     l10n.themeMode,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
@@ -116,183 +143,287 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
               ),
             ),
           ),
-          Card(
-            margin: const EdgeInsets.all(16),
-            elevation: 1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-              side: BorderSide(
-                color: Theme.of(context).colorScheme.outline,
-                width: 1,
+          // 自定义色和动态取色只对 material 生效，手工色板下藏起来，
+          // 免得用户以为开关坏了。
+          if (appTheme.themeStyle.isGenerated)
+            Card(
+              margin: const EdgeInsets.all(16),
+              elevation: 1,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.outline,
+                  width: 1,
+                ),
               ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        l10n.useCustomThemeColor,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      Switch(
-                        value: _useCustomColor,
-                        onChanged: (value) {
-                          setState(() {
-                            _useCustomColor = value;
-                          });
-                          appTheme.setUseCustomColor(value);
-                        },
-                      ),
-                    ],
-                  ),
-                  if (_useCustomColor) ...[
-                    const SizedBox(height: 16),
-                    Text(l10n.selectThemeColor),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        for (final color in _presetColors)
-                          _buildColorOption(context, appTheme, color),
-                        _buildCustomColorPicker(context, appTheme),
+                        Text(
+                          l10n.useCustomThemeColor,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        Switch(
+                          value: _useCustomColor,
+                          onChanged: (value) {
+                            setState(() {
+                              _useCustomColor = value;
+                            });
+                            appTheme.setUseCustomColor(value);
+                          },
+                        ),
                       ],
                     ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          Card(
-            margin: const EdgeInsets.all(16),
-            elevation: 1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-              side: BorderSide(
-                color: Theme.of(context).colorScheme.outline,
-                width: 1,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    if (_useCustomColor) ...[
+                      const SizedBox(height: 16),
+                      Text(l10n.selectThemeColor),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
                         children: [
-                          Text(
-                            l10n.dynamicColor,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            l10n.dynamicColorDesc,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
-                            ),
-                          ),
+                          for (final color in _presetColors)
+                            _buildColorOption(context, appTheme, color),
+                          _buildCustomColorPicker(context, appTheme),
                         ],
                       ),
-                      Switch(
-                        value: _useDynamicColor && !_useCustomColor,
-                        onChanged: (value) {
-                          setState(() {
-                            _useDynamicColor = value;
-                            if (value) {
-                              _useCustomColor = false;
-                            }
-                          });
-                          // 如果启用动态取色，需要禁用自定义主题色
-                          if (value) {
-                            appTheme.setUseCustomColor(false);
-                          }
-                          appTheme.setUseDynamicColor(value);
-                        },
-                        // 当使用自定义颜色时禁用此开关
-                        activeThumbColor: _useCustomColor
-                            ? Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerHighest
-                            : null,
-                      ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  if (_useCustomColor)
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.errorContainer.applyOpacity(0.5),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            size: 20,
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              l10n.customColorEnabledHint,
+                  ],
+                ),
+              ),
+            ),
+          if (appTheme.themeStyle.isGenerated)
+            Card(
+              margin: const EdgeInsets.all(16),
+              elevation: 1,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.outline,
+                  width: 1,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.dynamicColor,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              l10n.dynamicColorDesc,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Theme.of(
                                   context,
-                                ).colorScheme.onErrorContainer,
+                                ).colorScheme.onSurfaceVariant,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                        Switch(
+                          value: _useDynamicColor && !_useCustomColor,
+                          onChanged: (value) {
+                            setState(() {
+                              _useDynamicColor = value;
+                              if (value) {
+                                _useCustomColor = false;
+                              }
+                            });
+                            // 如果启用动态取色，需要禁用自定义主题色
+                            if (value) {
+                              appTheme.setUseCustomColor(false);
+                            }
+                            appTheme.setUseDynamicColor(value);
+                          },
+                          // 当使用自定义颜色时禁用此开关
+                          activeThumbColor: _useCustomColor
+                              ? Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest
+                              : null,
+                        ),
+                      ],
                     ),
-                  if (!_useCustomColor && !_useDynamicColor)
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainerHighest.applyOpacity(0.5),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            size: 20,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              l10n.dynamicColorDisabledHint,
-                              style: const TextStyle(fontSize: 12),
+                    const SizedBox(height: 8),
+                    if (_useCustomColor)
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.errorContainer.applyOpacity(0.5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 20,
+                              color: Theme.of(context).colorScheme.error,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                l10n.customColorEnabledHint,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onErrorContainer,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                    if (!_useCustomColor && !_useDynamicColor)
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          )
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .applyOpacity(0.5),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 20,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                l10n.dynamicColorDisabledHint,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// 风格选项：左边一小片色板预览，右边名称和一句说明。
+  ///
+  /// 预览直接取该风格的真实色值（material 没有固定色板，取当前生效的
+  /// ColorScheme），所以加新风格时这里不需要跟着改。
+  Widget _buildThemeStyleOption(
+    BuildContext context,
+    AppTheme appTheme,
+    ThemeStyle style,
+    AppLocalizations l10n,
+  ) {
+    final theme = Theme.of(context);
+    final selected = appTheme.themeStyle == style;
+    final brightness = theme.brightness;
+
+    final (String name, String description) = switch (style) {
+      ThemeStyle.material => (
+          l10n.themeStyleMaterial,
+          l10n.themeStyleMaterialDesc
+        ),
+      ThemeStyle.paper => (l10n.themeStylePaper, l10n.themeStylePaperDesc),
+      ThemeStyle.plain => (l10n.themeStylePlain, l10n.themeStylePlainDesc),
+    };
+
+    final colors = style.palette?.forBrightness(brightness);
+    final swatch = colors == null
+        ? <Color>[
+            theme.colorScheme.surface,
+            theme.colorScheme.primary,
+            theme.colorScheme.secondary,
+          ]
+        : <Color>[colors.card, colors.accent, colors.secondary];
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      // 选中态原本只靠背景色和对勾图标表达，屏幕阅读器读不到。
+      // onTap 也保持可用：置 null 会让选中项被读成「已停用」，语义正好反了；
+      // 重复选中由 setThemeStyle 内部的相等判断吃掉。
+      child: Semantics(
+        selected: selected,
+        button: true,
+        child: Material(
+          color: selected
+              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+            onTap: () => appTheme.setThemeStyle(style),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  // 色板预览：三片纵向叠放的色块，纸、墨、辅助各一片。
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      borderRadius:
+                          BorderRadius.circular(AppTheme.buttonRadius),
+                      border:
+                          Border.all(color: theme.colorScheme.outlineVariant),
                     ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      children: [
+                        for (final color in swatch)
+                          Expanded(child: Container(color: color)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name, style: theme.textTheme.titleSmall),
+                        const SizedBox(height: 2),
+                        Text(
+                          description,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (selected)
+                    Icon(Icons.check_circle, color: theme.colorScheme.primary),
                 ],
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }

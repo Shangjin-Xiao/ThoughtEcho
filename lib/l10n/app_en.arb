@@ -604,6 +604,13 @@
     }
   },
   "themeSettings": "Theme Settings",
+  "themeStyle": "Theme Style",
+  "themeStyleMaterial": "Material",
+  "themeStyleMaterialDesc": "Follows your system colors",
+  "themeStylePaper": "Paper & Ink",
+  "themeStylePaperDesc": "Warm paper, brown ink",
+  "themeStylePlain": "Plain Note",
+  "themeStylePlainDesc": "Cool grey paper, deep teal",
   "themeMode": "Theme Mode",
   "themeModeLight": "Light",
   "themeModeDark": "Dark",
@@ -4170,7 +4177,6 @@
   "exploreFreeChat": "Just chat",
   "exploreRecentChats": "Recent chats",
   "exploreViewAllChats": "All",
-
   "aiProviderZhipu": "Zhipu GLM",
   "aiProviderMoonshot": "Moonshot Kimi",
   "aiProviderDashScope": "Alibaba Bailian",

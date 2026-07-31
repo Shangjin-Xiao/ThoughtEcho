@@ -510,7 +510,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
           border: Border.all(
             color: shellBorderColor,
             width: _isInputFocused ? 1.4 : 1.0,

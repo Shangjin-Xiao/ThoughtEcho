@@ -5,6 +5,7 @@ import 'package:flex_color_scheme/flex_color_scheme.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'app_semantic_colors.dart';
+import 'theme_style.dart';
 
 class AppTheme with ChangeNotifier {
   // Windows 平台字体配置
@@ -121,10 +122,71 @@ class AppTheme with ChangeNotifier {
     );
   }
 
+  /// 给整套 TextTheme 套上风格字体。
+  ///
+  /// 手工风格指向系统自带的中文衬线体，**不打包任何字体文件**：`fontFamily` 命中不了
+  /// 就沿 `fontFamilyFallback` 逐个回退，最后回落到系统默认，不会出现豆腐块。
+  /// material 风格 [ThemeStyleForm.fontFamily] 为 null，原样返回，行为一行不变。
+  ///
+  /// 注意与 `_createPlatformTextTheme` 的顺序：那一层给 Windows 补的是**黑体**回退链，
+  /// 这一层要盖在它上面，否则 Windows 上会被雅黑抢回去。
+  static TextTheme _applyStyleFont(ThemeStyleForm form, TextTheme base) {
+    final family = form.fontFamily;
+    if (family == null) return base;
+    final fallback = form.fontFamilyFallback;
+    TextStyle? apply(TextStyle? style) => style?.copyWith(
+          fontFamily: family,
+          fontFamilyFallback: fallback,
+        );
+    return base.copyWith(
+      displayLarge: apply(base.displayLarge),
+      displayMedium: apply(base.displayMedium),
+      displaySmall: apply(base.displaySmall),
+      headlineLarge: apply(base.headlineLarge),
+      headlineMedium: apply(base.headlineMedium),
+      headlineSmall: apply(base.headlineSmall),
+      titleLarge: apply(base.titleLarge),
+      titleMedium: apply(base.titleMedium),
+      titleSmall: apply(base.titleSmall),
+      bodyLarge: apply(base.bodyLarge),
+      bodyMedium: apply(base.bodyMedium),
+      bodySmall: apply(base.bodySmall),
+      labelLarge: apply(base.labelLarge),
+      labelMedium: apply(base.labelMedium),
+      labelSmall: apply(base.labelSmall),
+    );
+  }
+
+  /// 卡片形状：手工风格用发丝边框 + 零投影来做纸的层次，Material 保持原有投影。
+  ///
+  /// 判据是 `borderWidth > 0` 这个**取值**，不是风格身份——将来加一套
+  /// `borderWidth: 0` 的风格会自动走 Material 那条路，不需要改这里。
+  static CardThemeData _styleCardTheme(
+    CardThemeData base,
+    ThemeStyleForm form,
+    ColorScheme colorScheme,
+  ) {
+    if (form.borderWidth <= 0) {
+      return base.copyWith(color: colorScheme.surfaceContainerLowest);
+    }
+    return base.copyWith(
+      color: colorScheme.surfaceContainerLowest,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(form.cardRadius),
+        side: BorderSide(
+          color: colorScheme.outlineVariant,
+          width: form.borderWidth,
+        ),
+      ),
+    );
+  }
+
   static const String _customColorKey = 'custom_color';
   static const String _useCustomColorKey = 'use_custom_color';
   static const String _themeModeKey = 'theme_mode';
   static const String _useDynamicColorKey = 'use_dynamic_color'; // 添加动态取色设置键
+  static const String _themeStyleKey = 'theme_style';
 
   SafeMMKV? _storage;
   Color? _customColor;
@@ -133,6 +195,7 @@ class AppTheme with ChangeNotifier {
   ColorScheme? _lightDynamicColorScheme;
   ColorScheme? _darkDynamicColorScheme;
   ThemeMode _themeMode = ThemeMode.system;
+  ThemeStyle _themeStyle = ThemeStyle.material;
   bool _hasInitialized = false; // 添加标记，用于追踪是否已初始化
 
   // 全局圆角和阴影参数
@@ -214,6 +277,12 @@ class AppTheme with ChangeNotifier {
 
   // 获取当前亮色主题的颜色方案
   ColorScheme get lightColorScheme {
+    // 手工色板原样落地：不参与动态取色，也不接受自定义 seed——那两项是
+    // material 风格专有的能力，套到手工色板上只会把配好的色值推翻重算。
+    final palette = _themeStyle.palette;
+    if (palette != null) {
+      return palette.light.toColorScheme(Brightness.light);
+    }
     if (_useCustomColor && _customColor != null) {
       // 直接使用用户选择的颜色，减少不必要的调整
       return ColorScheme.fromSeed(
@@ -233,6 +302,10 @@ class AppTheme with ChangeNotifier {
 
   // 获取当前暗色主题的颜色方案
   ColorScheme get darkColorScheme {
+    final palette = _themeStyle.palette;
+    if (palette != null) {
+      return palette.dark.toColorScheme(Brightness.dark);
+    }
     if (_useCustomColor && _customColor != null) {
       // 使用与浅色模式一致的方法，确保自定义颜色正确应用
       return ColorScheme.fromSeed(
@@ -256,6 +329,7 @@ class AppTheme with ChangeNotifier {
     );
   }
 
+  ThemeStyle get themeStyle => _themeStyle;
   bool get useCustomColor => _useCustomColor;
   Color? get customColor => _customColor;
   ThemeMode get themeMode => _themeMode;
@@ -291,6 +365,7 @@ class AppTheme with ChangeNotifier {
       await _storage!.initialize();
       _loadCustomColor();
       _loadThemeMode();
+      _loadThemeStyle();
 
       // 首次运行时，不读取存储的设置，保持默认开启
       if (_storage!.containsKey(_useDynamicColorKey)) {
@@ -418,6 +493,28 @@ class AppTheme with ChangeNotifier {
     }
   }
 
+  /// 设置主题风格（Material / 纸与墨 / 素笺）。
+  ///
+  /// 风格和亮暗、动态取色是并列的维度：切到手工色板时动态取色和自定义 seed
+  /// 不会被清掉，只是暂时不生效，切回 material 时原样恢复。
+  Future<void> setThemeStyle(ThemeStyle style) async {
+    if (_themeStyle == style) return;
+    _themeStyle = style;
+    _clearThemeCache();
+    // 与 setThemeMode 一致：先刷新 UI，再落盘。
+    notifyListeners();
+
+    final storage = _storage;
+    if (storage == null) return;
+    try {
+      await storage
+          .setString(_themeStyleKey, style.name)
+          .timeout(const Duration(seconds: 2));
+    } catch (e) {
+      logWarning('保存主题风格失败: $e', source: 'AppTheme');
+    }
+  }
+
   // 设置是否使用动态取色
   Future<void> setUseDynamicColor(bool value) async {
     if (_useDynamicColor == value) return;
@@ -467,6 +564,16 @@ class AppTheme with ChangeNotifier {
     }
   }
 
+  // 从持久化存储加载主题风格
+  void _loadThemeStyle() {
+    try {
+      _themeStyle = ThemeStyle.fromName(_storage?.getString(_themeStyleKey));
+    } catch (e) {
+      logDebug('加载主题风格失败: $e');
+      _themeStyle = ThemeStyle.material;
+    }
+  }
+
   // 从持久化存储加载动态取色设置
   void _loadDynamicColorSettings() {
     try {
@@ -491,13 +598,17 @@ class AppTheme with ChangeNotifier {
   // 创建亮色主题数据
   ThemeData createLightThemeData() {
     if (_cachedLightThemeData != null) return _cachedLightThemeData!;
+    // 手工色板要原样落地：关掉 keyColors（否则 FlexColorScheme 会拿色板里的
+    // primary 当种子重新推导整套色调）和表面混合（否则纸色会被强调色染上一层）。
+    final generated = _themeStyle.isGenerated;
+    final form = _themeStyle.form;
     final baseTheme = FlexThemeData.light(
       colorScheme: lightColorScheme,
       useMaterial3: true,
       surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
-      blendLevel: 1, // 极低混合级别，使颜色非常接近白色
-      subThemesData: const FlexSubThemesData(
-        blendOnLevel: 2, // 极低表面颜色混合级别
+      blendLevel: generated ? 1 : 0, // 极低混合级别，使颜色非常接近白色
+      subThemesData: FlexSubThemesData(
+        blendOnLevel: generated ? 2 : 0, // 极低表面颜色混合级别
         blendOnColors: true,
         useMaterial3Typography: true,
         useM2StyleDividerInM3: true,
@@ -514,17 +625,19 @@ class AppTheme with ChangeNotifier {
         radioSchemeColor: SchemeColor.primary,
         // 滑块使用主题色
         sliderBaseSchemeColor: SchemeColor.primary,
-        cardRadius: cardRadius,
-        inputDecoratorRadius: inputRadius,
-        dialogRadius: dialogRadius,
-        timePickerDialogRadius: dialogRadius,
-        outlinedButtonRadius: buttonRadius,
-        filledButtonRadius: buttonRadius,
-        textButtonRadius: buttonRadius,
-        fabRadius: buttonRadius,
+        cardRadius: form.cardRadius,
+        inputDecoratorRadius: form.inputRadius,
+        dialogRadius: form.dialogRadius,
+        timePickerDialogRadius: form.dialogRadius,
+        outlinedButtonRadius: form.buttonRadius,
+        filledButtonRadius: form.buttonRadius,
+        textButtonRadius: form.buttonRadius,
+        fabRadius: form.buttonRadius,
       ),
-      keyColors: const FlexKeyColors(useSecondary: true, useTertiary: true),
-      tones: FlexTones.material(Brightness.light),
+      keyColors: generated
+          ? const FlexKeyColors(useSecondary: true, useTertiary: true)
+          : null,
+      tones: generated ? FlexTones.material(Brightness.light) : null,
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
     );
 
@@ -541,9 +654,7 @@ class AppTheme with ChangeNotifier {
       ),
 
       // 卡片使用主题色系
-      cardTheme: baseTheme.cardTheme.copyWith(
-        color: colorScheme.surfaceContainerLowest,
-      ),
+      cardTheme: _styleCardTheme(baseTheme.cardTheme, form, colorScheme),
 
       // 底部表单使用主题色系
       bottomSheetTheme: baseTheme.bottomSheetTheme.copyWith(
@@ -594,14 +705,23 @@ class AppTheme with ChangeNotifier {
       ),
 
       // 状态语义色（M3 的 ColorScheme 只有 error，没有 success / warning）
-      extensions: const <ThemeExtension<dynamic>>[AppSemanticColors.light],
+      extensions: <ThemeExtension<dynamic>>[
+        AppSemanticColors.light,
+        AppShapeTokens.fromForm(form, Brightness.light),
+      ],
 
       // Windows 平台字体优化
-      textTheme: _fixAndroidVariableFontWeight(
-        _createPlatformTextTheme(baseTheme.textTheme),
+      textTheme: _applyStyleFont(
+        form,
+        _fixAndroidVariableFontWeight(
+          _createPlatformTextTheme(baseTheme.textTheme),
+        ),
       ),
-      primaryTextTheme: _fixAndroidVariableFontWeight(
-        _createPlatformTextTheme(baseTheme.primaryTextTheme),
+      primaryTextTheme: _applyStyleFont(
+        form,
+        _fixAndroidVariableFontWeight(
+          _createPlatformTextTheme(baseTheme.primaryTextTheme),
+        ),
       ),
     );
   }
@@ -610,13 +730,14 @@ class AppTheme with ChangeNotifier {
   ThemeData createDarkThemeData() {
     if (_cachedDarkThemeData != null) return _cachedDarkThemeData!;
     final colorScheme = darkColorScheme;
+    final form = _themeStyle.form;
 
     final baseTheme = FlexThemeData.dark(
       colorScheme: colorScheme,
       useMaterial3: true,
       surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
       blendLevel: 0, // 设置为0，避免混合修改自定义颜色
-      subThemesData: const FlexSubThemesData(
+      subThemesData: FlexSubThemesData(
         blendOnLevel: 0, // 设置为0，避免修改自定义颜色
         blendOnColors: false, // 禁用颜色混合
         useMaterial3Typography: true,
@@ -641,14 +762,14 @@ class AppTheme with ChangeNotifier {
         chipSchemeColor: SchemeColor.primary,
         chipSelectedSchemeColor: SchemeColor.primaryContainer,
         // 圆角配置
-        cardRadius: cardRadius,
-        inputDecoratorRadius: inputRadius,
-        dialogRadius: dialogRadius,
-        timePickerDialogRadius: dialogRadius,
-        outlinedButtonRadius: buttonRadius,
-        filledButtonRadius: buttonRadius,
-        textButtonRadius: buttonRadius,
-        fabRadius: buttonRadius,
+        cardRadius: form.cardRadius,
+        inputDecoratorRadius: form.inputRadius,
+        dialogRadius: form.dialogRadius,
+        timePickerDialogRadius: form.dialogRadius,
+        outlinedButtonRadius: form.buttonRadius,
+        filledButtonRadius: form.buttonRadius,
+        textButtonRadius: form.buttonRadius,
+        fabRadius: form.buttonRadius,
       ),
       // 禁用 keyColors 以防止重新生成颜色方案覆盖我们的自定义颜色
       // keyColors: const FlexKeyColors(
@@ -839,14 +960,24 @@ class AppTheme with ChangeNotifier {
       ),
 
       // 状态语义色（M3 的 ColorScheme 只有 error，没有 success / warning）
-      extensions: const <ThemeExtension<dynamic>>[AppSemanticColors.dark],
+      cardTheme: _styleCardTheme(baseTheme.cardTheme, form, colorScheme),
+      extensions: <ThemeExtension<dynamic>>[
+        AppSemanticColors.dark,
+        AppShapeTokens.fromForm(form, Brightness.dark),
+      ],
 
       // Windows 平台字体优化
-      textTheme: _fixAndroidVariableFontWeight(
-        _createPlatformTextTheme(baseTheme.textTheme),
+      textTheme: _applyStyleFont(
+        form,
+        _fixAndroidVariableFontWeight(
+          _createPlatformTextTheme(baseTheme.textTheme),
+        ),
       ),
-      primaryTextTheme: _fixAndroidVariableFontWeight(
-        _createPlatformTextTheme(baseTheme.primaryTextTheme),
+      primaryTextTheme: _applyStyleFont(
+        form,
+        _fixAndroidVariableFontWeight(
+          _createPlatformTextTheme(baseTheme.primaryTextTheme),
+        ),
       ),
     );
   }

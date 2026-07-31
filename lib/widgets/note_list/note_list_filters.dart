@@ -245,7 +245,8 @@ extension NoteListFiltersExtension on NoteListViewState {
         ),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
           border: Border.all(
             color: theme.colorScheme.outline.withValues(alpha: 0.12),
             width: 1,

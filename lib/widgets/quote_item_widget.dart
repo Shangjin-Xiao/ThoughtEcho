@@ -2,6 +2,7 @@ import 'dart:collection';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import '../theme/theme_style.dart';
 import 'package:provider/provider.dart';
 
 import '../extensions/note_category_localization_extension.dart';
@@ -702,7 +703,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       bottom: QuoteItemWidget.defaultCardMarginVertical,
     );
     final cardDecoration = BoxDecoration(
-      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+      borderRadius:
+          BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
       border: widget.selectionMode && widget.isSelected
           ? Border.all(color: theme.colorScheme.primary, width: 2)
           : Border.all(color: Colors.transparent, width: 2),

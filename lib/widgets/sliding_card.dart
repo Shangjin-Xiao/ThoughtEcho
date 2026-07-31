@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/theme_style.dart';
 import '../theme/app_theme.dart';
 import '../utils/color_utils.dart';
 
@@ -153,7 +154,8 @@ class _SlidingCardState extends State<SlidingCard>
                   child: Card(
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                      borderRadius: BorderRadius.circular(
+                          AppShapeTokens.of(context).cardRadius),
                     ),
                     shadowColor: Colors.transparent,
                     child: AnimatedContainer(
@@ -163,7 +165,7 @@ class _SlidingCardState extends State<SlidingCard>
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(
-                          AppTheme.cardRadius,
+                          AppShapeTokens.of(context).cardRadius,
                         ),
                         boxShadow: currentShadow,
                         color: ColorUtils.getCardBackgroundColor(
