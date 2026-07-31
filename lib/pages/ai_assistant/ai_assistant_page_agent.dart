@@ -6,9 +6,9 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     final requestGeneration = ++_agentRequestGeneration;
     StreamSubscription<AgentEvent>? eventSubscription;
 
-    var history = _messages
-        .where((m) => m.role != 'system' && m.metaJson == null)
-        .toList();
+    // 带元数据的消息（工具轨迹、提案卡片）以前被整条排除，导致 agent 完全
+    // 不知道自己上一轮查过什么、提过什么——这里改成压缩后纳入上下文。
+    var history = AgentHistoryBuilder.build(_messages);
 
     if (history.isNotEmpty &&
         history.last.isUser &&

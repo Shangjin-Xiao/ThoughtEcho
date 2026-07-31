@@ -147,6 +147,16 @@ class AgentService extends ChangeNotifier {
   /// 被裁剪掉的工具结果留下的占位符。
   static const String prunedToolResultPlaceholder = '[较早的工具结果已清理]';
 
+  /// 历史上下文的字符预算。
+  ///
+  /// 原来的 4000 字符（中文约五六轮短对话）会让 agent 迅速忘记前面查过什么，
+  /// 表现为"不主动、每轮从头问"。run 内的上下文膨胀由 [pruneMessages] 按 token
+  /// 预算兜底，所以历史这一侧可以给得比普通聊天宽。
+  static const int _historyMaxChars = 12000;
+
+  /// 单条历史消息保留的字符数上限。
+  static const int _historySingleMessageCap = 2000;
+
   /// 同一「工具 + 参数签名」允许把错误回喂模型的次数上限。
   static const int _maxToolFailuresPerSignature = 3;
 
@@ -864,7 +874,8 @@ class AgentService extends ChangeNotifier {
         systemPrompt: systemPrompt,
         history: history,
         currentUserMessageLength: userMessage.length,
-        maxChars: 4000,
+        maxChars: _historyMaxChars,
+        singleMessageCap: _historySingleMessageCap,
       );
 
       for (final item in historyMessages.skip(1)) {
