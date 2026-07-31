@@ -1,0 +1,26 @@
+test/unit/services/openai_stream_service_test.dart
+  s_4554c3c3680c0d::t_a0c006c5628533 298,330
+  s_4554c3c3680c0d::t_fc81ad8b68d13d 263-297,299-329,331-336
+lib/services/ai_service.dart
+  s_4554c3c3680c0d::t_7abd57ccf26142 527-529
+test/integration/ai_service_live_features_test.dart
+  s_4554c3c3680c0d::t_945045c2cc4281 143-182
+lib/services/openai_stream_service.dart
+  s_4554c3c3680c0d::t_a5c7abb6e945d4 254-258,262-266,269,276-279,284-288,293-297,300,302-304
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "23030f4104c3a607cbf5ce2cd5d3ce1574fddd18",
+  "prompts": {},
+  "sessions": {
+    "s_4554c3c3680c0d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "22446fb2-0ff0-4a42-808d-ca0177581d50",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
