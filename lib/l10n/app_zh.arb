@@ -4108,7 +4108,13 @@
   "noteProposalPlain": "普通笔记",
   "noteProposalRich": "富文本笔记",
   "noteProposalChangeCount": "修改 {count} 处",
-  "@noteProposalChangeCount": {"placeholders": {"count": {"type": "int"}}},
+  "@noteProposalChangeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noteProposalExpand": "展开全文",
   "noteProposalCollapse": "收起全文",
   "noteProposalViewChanges": "查看修改记录",
@@ -4154,5 +4160,26 @@
   },
   "noteInsertAnimationScale": "气泡缩放",
   "noteInsertAnimationSlide": "平滑上升",
-  "noteInsertAnimationNone": "无动画"
+  "noteInsertAnimationNone": "无动画",
+  "exploreAskAboutInsight": "追问这条",
+  "exploreAskAboutInsightPrompt": "关于上面这条洞察，能再展开讲讲吗？",
+  "exploreSummarizePeriod": "总结本{period}",
+  "@exploreSummarizePeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreSummarizePeriodPrompt": "帮我总结一下本{period}的记录，有哪些值得注意的地方？",
+  "@exploreSummarizePeriodPrompt": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreFreeChat": "随便聊聊",
+  "exploreRecentChats": "最近对话",
+  "exploreViewAllChats": "全部"
 }

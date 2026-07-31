@@ -4108,7 +4108,13 @@
   "noteProposalPlain": "Plain note",
   "noteProposalRich": "Rich text note",
   "noteProposalChangeCount": "{count} changes",
-  "@noteProposalChangeCount": {"placeholders": {"count": {"type": "int"}}},
+  "@noteProposalChangeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noteProposalExpand": "Expand document",
   "noteProposalCollapse": "Collapse document",
   "noteProposalViewChanges": "View change history",
@@ -4154,5 +4160,12 @@
   },
   "noteInsertAnimationScale": "Bubble scale",
   "noteInsertAnimationSlide": "Smooth rise",
-  "noteInsertAnimationNone": "No animation"
+  "noteInsertAnimationNone": "No animation",
+  "exploreAskAboutInsight": "Ask about this",
+  "exploreAskAboutInsightPrompt": "Could you expand on the insight above?",
+  "exploreSummarizePeriod": "Summarize this {period}",
+  "exploreSummarizePeriodPrompt": "Summarize my notes from this {period} — what stands out?",
+  "exploreFreeChat": "Just chat",
+  "exploreRecentChats": "Recent chats",
+  "exploreViewAllChats": "All"
 }

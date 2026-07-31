@@ -55,11 +55,14 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
             ],
             const SizedBox(height: 20),
 
-            // 洞察 + AI 对话入口
+            // 洞察 + Thoughter 入口：洞察本身就是 Thoughter 生成的，
+            // 让它直接长出追问入口，而不是下面再单独摆一张「与 Thoughter 对话」卡
             _buildInsightBulbBar(),
-            const SizedBox(height: 12),
-            _buildQuickEntries(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 10),
+            _buildThoughterQuickAsks(),
+            const SizedBox(height: 20),
+            _buildRecentSessionsSection(),
+            const SizedBox(height: 4),
 
             if (_periodQuotes.isNotEmpty) ...[
               _buildPeriodTopFavoritesSection(),
@@ -273,95 +276,6 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  /// 构建 AI 对话快捷入口
-  Widget _buildQuickEntries() {
-    final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-
-    return _buildEntryCard(
-      icon: Icons.lightbulb_outline,
-      title: l10n.aiChat,
-      subtitle: l10n.chatWithAiAssistant,
-      color: theme.colorScheme.primaryContainer,
-      iconColor: theme.colorScheme.onPrimaryContainer,
-      onTap: () => _openAIAssistant(),
-    );
-  }
-
-  Widget _buildEntryCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required Color iconColor,
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-    return Card(
-      elevation: 0,
-      color: color,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 28, color: iconColor),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: iconColor,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const ExperimentalBadge(
-                      compact: true, enableTapNotice: false),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: iconColor.withAlpha(180),
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// 打开 AI 助手，传递当前周期数据摘要作为引导
-  Future<void> _openAIAssistant() async {
-    final navigator = Navigator.of(context);
-
-    final summary = _insightText.trim();
-
-    if (!mounted) return;
-
-    await navigator.push(
-      MaterialPageRoute(
-        builder: (_) => AIAssistantPage(
-          entrySource: AIAssistantEntrySource.explore,
-          exploreGuideSummary: summary,
         ),
       ),
     );

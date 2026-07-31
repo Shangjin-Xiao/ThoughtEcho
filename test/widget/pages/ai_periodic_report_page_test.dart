@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/ai_periodic_report_page.dart';
+import 'package:thoughtecho/models/chat_session.dart';
 import 'package:thoughtecho/services/ai_service.dart';
+import 'package:thoughtecho/services/chat_session_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/insight_history_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
@@ -47,6 +49,29 @@ class _CountingPeriodDatabaseService extends DatabaseService {
   }
 
   void notifyDataChanged() => notifyListeners();
+}
+
+/// 假的会话服务：不开数据库，直接返回固定的 agent 会话。
+class _FakeChatSessionService extends ChatSessionService {
+  _FakeChatSessionService(this._sessions) : super(openOwnDatabase: false);
+
+  final List<ChatSession> _sessions;
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<List<ChatSession>> getAgentSessions() async => _sessions;
+
+  @override
+  Future<Map<String, ChatSessionOverview>> getSessionOverviews(
+    List<String> sessionIds,
+  ) async {
+    return {
+      for (final id in sessionIds)
+        id: ChatSessionOverview(messageCount: 2, snippet: '上次聊到的内容 $id'),
+    };
+  }
 }
 
 class _ReportSettingsService extends ChangeNotifier implements SettingsService {
@@ -105,7 +130,13 @@ void main() {
     final context = tester.element(find.byType(AIPeriodicReportPage));
     final l10n = AppLocalizations.of(context);
     expect(find.text(l10n.dataOverview), findsOneWidget);
-    expect(find.text(l10n.aiChat), findsOneWidget);
+    // 旧的独立「与 Thoughter 对话」卡片已被洞察卡下方的快捷追问取代
+    expect(find.text(l10n.aiChat), findsNothing);
+    expect(
+      find.text(l10n.exploreSummarizePeriod(l10n.periodWeek)),
+      findsOneWidget,
+    );
+    expect(find.text(l10n.exploreFreeChat), findsOneWidget);
     // 摘要带保留，四个 0 仍然可见
     expect(find.text('0'), findsWidgets);
     // 但三个「暂无」chip 不再出现——空状态文案已经说过一次了
@@ -114,6 +145,106 @@ void main() {
       find.text(l10n.noNotesInPeriodForPeriod(l10n.periodWeek)),
       findsOneWidget,
     );
+  });
+
+  // 探索页入口每次都开新会话（只有笔记入口会恢复），所以这里列出最近会话，
+  // 点进去能接着上次聊。会话服务不可用时应静默降级，不影响页面其余部分。
+  testWidgets('recent Thoughter sessions are listed and degrade gracefully',
+      (tester) async {
+    final settings = _ReportSettingsService();
+    final database = _CountingPeriodDatabaseService();
+    final insights = InsightHistoryService(settingsService: settings);
+    final now = DateTime.now();
+    final sessions = _FakeChatSessionService([
+      ChatSession(
+        id: 's1',
+        sessionType: 'agent',
+        title: '关于读书的讨论',
+        createdAt: now.subtract(const Duration(days: 1)),
+        lastActiveAt: now.subtract(const Duration(hours: 2)),
+      ),
+      ChatSession(
+        id: 's2',
+        sessionType: 'agent',
+        title: '理一下这周的焦虑',
+        createdAt: now.subtract(const Duration(days: 2)),
+        lastActiveAt: now.subtract(const Duration(days: 1)),
+      ),
+      ChatSession(
+        id: 's3',
+        sessionType: 'agent',
+        title: '更早的一次',
+        createdAt: now.subtract(const Duration(days: 9)),
+        lastActiveAt: now.subtract(const Duration(days: 9)),
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<ChatSessionService>.value(value: sessions),
+          ChangeNotifierProvider<AIService>(
+            create: (_) => AIService(settingsService: settings),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AIPeriodicReportPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final context = tester.element(find.byType(AIPeriodicReportPage));
+    final l10n = AppLocalizations.of(context);
+
+    expect(find.text(l10n.exploreRecentChats), findsOneWidget);
+    // 只列最近两条，第三条不出现
+    expect(find.text('关于读书的讨论'), findsOneWidget);
+    expect(find.text('理一下这周的焦虑'), findsOneWidget);
+    expect(find.text('更早的一次'), findsNothing);
+    // 「全部」通往完整的会话历史
+    expect(find.text(l10n.exploreViewAllChats), findsOneWidget);
+  });
+
+  // 没有注册 ChatSessionService 时不能崩，也不该显示这一块
+  testWidgets('missing session service hides recent chats without crashing',
+      (tester) async {
+    final settings = _ReportSettingsService();
+    final database = _CountingPeriodDatabaseService();
+    final insights = InsightHistoryService(settingsService: settings);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<AIService>(
+            create: (_) => AIService(settingsService: settings),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AIPeriodicReportPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final context = tester.element(find.byType(AIPeriodicReportPage));
+    final l10n = AppLocalizations.of(context);
+    expect(find.text(l10n.exploreRecentChats), findsNothing);
+    // 页面其余部分照常渲染
+    expect(find.text(l10n.dataOverview), findsOneWidget);
+    expect(find.text(l10n.exploreFreeChat), findsOneWidget);
   });
 
   // 回归：入场动画只留一层。之前七到十个 TweenAnimationBuilder 交错到 1.4 秒，

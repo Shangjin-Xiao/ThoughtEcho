@@ -3585,5 +3585,12 @@
   "favoriteNotes": "즐겨찾는 노트",
   "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again.",
   "availableCommands": "사용 가능한 명령",
-  "typeSlashToSeeCommands": "/를 입력하여 명령 보기"
+  "typeSlashToSeeCommands": "/를 입력하여 명령 보기",
+  "exploreAskAboutInsight": "이것에 대해 묻기",
+  "exploreAskAboutInsightPrompt": "위 인사이트에 대해 조금 더 자세히 설명해 주시겠어요?",
+  "exploreSummarizePeriod": "이번 {period} 요약",
+  "exploreSummarizePeriodPrompt": "이번 {period}의 기록을 요약해 주세요. 눈에 띄는 점이 있나요?",
+  "exploreFreeChat": "자유롭게 대화",
+  "exploreRecentChats": "최근 대화",
+  "exploreViewAllChats": "전체"
 }

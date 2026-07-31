@@ -77,5 +77,12 @@
   "clear": "Leeren",
   "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again.",
   "availableCommands": "Verfügbare Befehle",
-  "typeSlashToSeeCommands": "Tippen Sie /, um Befehle zu sehen"
+  "typeSlashToSeeCommands": "Tippen Sie /, um Befehle zu sehen",
+  "exploreAskAboutInsight": "Dazu nachfragen",
+  "exploreAskAboutInsightPrompt": "Kannst du die Erkenntnis oben näher ausführen?",
+  "exploreSummarizePeriod": "Diese {period} zusammenfassen",
+  "exploreSummarizePeriodPrompt": "Fasse meine Notizen aus dieser {period} zusammen — was fällt auf?",
+  "exploreFreeChat": "Einfach plaudern",
+  "exploreRecentChats": "Letzte Chats",
+  "exploreViewAllChats": "Alle"
 }

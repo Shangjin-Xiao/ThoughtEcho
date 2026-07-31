@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
+import 'package:collection/collection.dart';
 import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
 import '../models/weather_data.dart';
 import '../models/ai_assistant_entry.dart';
+import '../models/chat_session.dart';
 import '../services/database_service.dart';
 import '../services/ai_service.dart';
 import '../services/settings_service.dart';
+import '../services/chat_session_service.dart';
 import '../services/insight_history_service.dart';
 import '../services/weather_service.dart';
 import '../utils/app_logger.dart';
@@ -20,11 +23,13 @@ import '../theme/app_theme.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../widgets/ai/experimental_badge.dart';
 import 'ai_assistant_page.dart';
+import 'ai_assistant/session_history_page.dart';
 
 part 'ai_report/report_data_loading.dart';
 part 'ai_report/report_time_selector.dart';
 part 'ai_report/report_overview.dart';
 part 'ai_report/report_stats.dart';
+part 'ai_report/report_thoughter_entry.dart';
 
 /// AI周期报告页面
 class AIPeriodicReportPage extends StatefulWidget {
@@ -70,6 +75,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage> {
   // 当前洞察对应的数据签名，用于避免同一份数据反复重生成
   String? _insightSignature;
 
+  // 最近的 Thoughter 会话。探索页入口每次都开新会话（只有笔记入口会恢复），
+  // 所以这里把最近几条列出来，让对话有连续性而不是每次白纸一张。
+  List<ChatSession> _recentSessions = const [];
+  Map<String, ChatSessionOverview> _recentSessionOverviews = const {};
+  static const int _recentSessionLimit = 2;
+
   // 流式洞察的节流缓冲：避免每个 chunk 都 setState 触发整页重排
   String _insightPending = '';
   Timer? _insightFlushTimer;
@@ -107,6 +118,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage> {
   void initState() {
     super.initState();
     _loadPeriodData();
+    _loadRecentSessions();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _databaseService = context.read<DatabaseService>();

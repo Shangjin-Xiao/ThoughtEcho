@@ -3589,5 +3589,12 @@
   "favoriteNotes": "お気に入りノート",
   "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again.",
   "availableCommands": "利用可能なコマンド",
-  "typeSlashToSeeCommands": "/ を入力してコマンドを表示"
+  "typeSlashToSeeCommands": "/ を入力してコマンドを表示",
+  "exploreAskAboutInsight": "これについて聞く",
+  "exploreAskAboutInsightPrompt": "上のインサイトについて、もう少し詳しく教えてください。",
+  "exploreSummarizePeriod": "この{period}をまとめる",
+  "exploreSummarizePeriodPrompt": "この{period}の記録をまとめてください。注目すべき点はありますか？",
+  "exploreFreeChat": "雑談する",
+  "exploreRecentChats": "最近の会話",
+  "exploreViewAllChats": "すべて"
 }
