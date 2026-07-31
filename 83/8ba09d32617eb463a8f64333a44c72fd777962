@@ -1,0 +1,45 @@
+test/widget/pages/ai_assistant_page_test.dart
+  s_987fd6b9da4dd3::t_68e50476148605 668-716
+lib/pages/ai_assistant/session_history_page.dart
+  s_987fd6b9da4dd3::t_a820287b9252e6 46-51
+  s_987fd6b9da4dd3::t_116c578d981fdc 238-263
+  s_987fd6b9da4dd3::t_74ca85e0b4c309 69
+  s_987fd6b9da4dd3::t_55f89bd212a6d5 237
+  s_987fd6b9da4dd3::t_672340787e46d9 193
+lib/l10n/app_zh.arb
+  s_987fd6b9da4dd3::t_6ee7d3e7353ab4 3838-3839
+lib/l10n/app_es.arb
+  s_987fd6b9da4dd3::t_6ee7d3e7353ab4 50-51
+lib/l10n/app_fr.arb
+  s_987fd6b9da4dd3::t_6ee7d3e7353ab4 3545-3546
+lib/l10n/app_en.arb
+  s_987fd6b9da4dd3::t_6ee7d3e7353ab4 3838-3839
+lib/l10n/app_de.arb
+  s_987fd6b9da4dd3::t_6ee7d3e7353ab4 50-51
+lib/pages/home/daily_prompt_panel.dart
+  s_987fd6b9da4dd3::t_d2d8e83b16ffed 260-265,267-269,297-300
+lib/pages/ai_assistant/ai_assistant_page_session.dart
+  s_987fd6b9da4dd3::t_512a94a7c7c89e 95-97
+lib/l10n/app_ja.arb
+  s_987fd6b9da4dd3::t_6ee7d3e7353ab4 3563-3564
+lib/pages/ai_report/report_thoughter_entry.dart
+  s_987fd6b9da4dd3::t_babb03879a01e7 70-73,79,87-89
+lib/l10n/app_ko.arb
+  s_987fd6b9da4dd3::t_6ee7d3e7353ab4 3559-3560
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "838ba09d32617eb463a8f64333a44c72fd777962",
+  "prompts": {},
+  "sessions": {
+    "s_987fd6b9da4dd3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0396dc62-e58d-4d6b-aacf-ada6ef9a3c3f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
