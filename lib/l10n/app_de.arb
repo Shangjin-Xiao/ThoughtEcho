@@ -79,7 +79,7 @@
   "availableCommands": "Verfügbare Befehle",
   "typeSlashToSeeCommands": "Tippen Sie /, um Befehle zu sehen",
   "exploreAskAboutInsight": "Dazu nachfragen",
-  "exploreAskAboutInsightPrompt": "Kannst du die Erkenntnis oben näher ausführen?",
+  "exploreAskAboutInsightPrompt": "Hier ist die soeben erzeugte Erkenntnis:\n\n„{insight}\"\n\nKannst du sie näher ausführen?",
   "exploreSummarizePeriod": "Diese {period} zusammenfassen",
   "exploreSummarizePeriodPrompt": "Fasse meine Notizen aus dieser {period} zusammen — was fällt auf?",
   "exploreFreeChat": "Einfach plaudern",

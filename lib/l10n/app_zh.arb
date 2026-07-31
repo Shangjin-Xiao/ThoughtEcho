@@ -4162,7 +4162,7 @@
   "noteInsertAnimationSlide": "平滑上升",
   "noteInsertAnimationNone": "无动画",
   "exploreAskAboutInsight": "追问这条",
-  "exploreAskAboutInsightPrompt": "关于上面这条洞察，能再展开讲讲吗？",
+  "exploreAskAboutInsightPrompt": "这是刚才为我生成的洞察：\n\n「{insight}」\n\n能就这段再展开讲讲吗？",
   "exploreSummarizePeriod": "总结本{period}",
   "@exploreSummarizePeriod": {
     "placeholders": {
@@ -4181,5 +4181,12 @@
   },
   "exploreFreeChat": "随便聊聊",
   "exploreRecentChats": "最近对话",
-  "exploreViewAllChats": "全部"
+  "exploreViewAllChats": "全部",
+  "@exploreAskAboutInsightPrompt": {
+    "placeholders": {
+      "insight": {
+        "type": "String"
+      }
+    }
+  }
 }

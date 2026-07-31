@@ -44,7 +44,8 @@ extension _AIReportThoughterEntry on _AIPeriodicReportPageState {
   Widget _buildThoughterQuickAsks() {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final hasInsight = _insightText.trim().isNotEmpty;
+    final insight = _insightText.trim();
+    final hasInsight = insight.isNotEmpty;
 
     return Wrap(
       spacing: 8,
@@ -56,8 +57,11 @@ extension _AIReportThoughterEntry on _AIPeriodicReportPageState {
             icon: Icons.subdirectory_arrow_right,
             label: l10n.exploreAskAboutInsight,
             emphasized: true,
+            // 洞察必须写进问题正文：exploreGuideSummary 那条欢迎消息是
+            // includedInContext: false，只给用户看，模型根本收不到，
+            // 否则「追问这条」发出去时 agent 不知道「这条」是什么。
             onTap: () => _openThoughter(
-              initialQuestion: l10n.exploreAskAboutInsightPrompt,
+              initialQuestion: l10n.exploreAskAboutInsightPrompt(insight),
             ),
           ),
         _buildQuickAskChip(

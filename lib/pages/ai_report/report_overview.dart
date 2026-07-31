@@ -132,6 +132,10 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
             ],
           ),
         ),
+        const SizedBox(width: 8),
+        // 周期选择就挂在这里：日期范围已经由上面的副标题给出，
+        // 不需要再有一个单独的选择器把同一个日期再说一遍
+        _buildPeriodPicker(),
       ],
     );
   }

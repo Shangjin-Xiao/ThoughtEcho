@@ -31,6 +31,8 @@ part 'ai_report/report_overview.dart';
 part 'ai_report/report_stats.dart';
 part 'ai_report/report_thoughter_entry.dart';
 
+const String _kPickDateAction = '__pick_date__';
+
 /// AI周期报告页面
 class AIPeriodicReportPage extends StatefulWidget {
   const AIPeriodicReportPage({super.key});
@@ -40,12 +42,6 @@ class AIPeriodicReportPage extends StatefulWidget {
 }
 
 class _AIPeriodicReportPageState extends State<AIPeriodicReportPage> {
-  // 折叠状态
-  bool _isTimeSelectorCollapsed = false;
-  DateTime? _lastCollapseToggleAt;
-  // 略长于折叠动画（300ms），防止动画引发的布局修正再次翻转状态
-  static const Duration _collapseToggleCooldown = Duration(milliseconds: 350);
-
   // 时间范围选择
   String _selectedPeriod = 'week'; // week, month, year
   DateTime _selectedDate = DateTime.now();

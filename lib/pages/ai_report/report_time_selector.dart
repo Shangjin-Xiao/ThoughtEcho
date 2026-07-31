@@ -5,248 +5,125 @@ extension _AIReportTimeSelector on _AIPeriodicReportPageState {
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: NotificationListener<ScrollNotification>(
-          onNotification: (notification) {
-            // 只响应最外层滚动视图的、用户真实拖动/惯性产生的滚动。
-            // 折叠会改变内容高度，进而引发布局修正型的 ScrollUpdateNotification；
-            // 若把这类通知也算进来，就会出现 折叠→修正→展开→修正→折叠 的来回抖动。
-            if (notification is! ScrollUpdateNotification ||
-                notification.depth != 0) {
-              return false;
-            }
-            final delta = notification.scrollDelta;
-            if (delta == null) return false;
-            final pixels = notification.metrics.pixels;
-            if (delta > 10 && !_isTimeSelectorCollapsed && pixels > 24) {
-              _setTimeSelectorCollapsed(true);
-            } else if (delta < -10 && _isTimeSelectorCollapsed) {
-              _setTimeSelectorCollapsed(false);
-            }
-            return false;
-          },
-          child: CustomScrollView(
-            slivers: [
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 16),
-              ),
+        child: CustomScrollView(
+          slivers: [
+            if (_isLoadingData)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else
               SliverToBoxAdapter(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  height: _isTimeSelectorCollapsed ? 60 : null,
-                  child: _buildTimeSelector(),
-                ),
+                child: _buildDataOverview(),
               ),
-              if (_isLoadingData)
-                const SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else
-                SliverToBoxAdapter(
-                  child: _buildDataOverview(),
-                ),
+            // 底部悬浮的 + 按钮会盖住最后一条内容，留出它的高度
+            const SliverToBoxAdapter(child: SizedBox(height: 88)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 周期选择器：紧凑的一枚 chip，挂在「数据概览」标题右侧。
+  ///
+  /// 原来是页面顶部一整张带标题和边框的卡片（展开态占近 300px），里面还有
+  /// 一个填充底色的日历按钮——是全页最重的元素，却只是个筛选器；折叠态
+  /// 显示的「周 - 7月27日 - 8月2日」又和紧挨着的「数据概览」副标题
+  /// 完全重复。合并之后重复消失，滚动折叠那套机制也一并去掉了。
+  Widget _buildPeriodPicker() {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+
+    return PopupMenuButton<String>(
+      tooltip: l10n.timeRange,
+      position: PopupMenuPosition.under,
+      onSelected: (value) {
+        if (value == _kPickDateAction) {
+          _selectDate();
+          return;
+        }
+        if (value == _selectedPeriod) return;
+        _updateState(() {
+          _selectedPeriod = value;
+        });
+        _loadPeriodData();
+      },
+      itemBuilder: (context) => [
+        _buildPeriodMenuItem('week', l10n.thisWeek, Icons.view_week),
+        _buildPeriodMenuItem(
+            'month', l10n.thisMonth, Icons.calendar_view_month),
+        _buildPeriodMenuItem('year', l10n.thisYear, Icons.today),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: _kPickDateAction,
+          child: Row(
+            children: [
+              Icon(
+                Icons.calendar_today,
+                size: 18,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 12),
+              Text(l10n.selectDate),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  /// 切换折叠状态，并在动画期间上锁。
-  ///
-  /// 折叠动画本身会改变滚动内容高度，从而再次触发滚动通知；没有这把锁时，
-  /// 一次滚动就可能连续翻转好几次，表现为顶部选择器来回闪。
-  void _setTimeSelectorCollapsed(bool collapsed, {bool force = false}) {
-    if (_isTimeSelectorCollapsed == collapsed) return;
-    final now = DateTime.now();
-    final last = _lastCollapseToggleAt;
-    if (!force &&
-        last != null &&
-        now.difference(last) <
-            _AIPeriodicReportPageState._collapseToggleCooldown) {
-      return;
-    }
-    _lastCollapseToggleAt = now;
-    _updateState(() {
-      _isTimeSelectorCollapsed = collapsed;
-    });
-  }
-
-  /// 构建时间选择器
-  Widget _buildTimeSelector() {
-    return GestureDetector(
-      onTap: () => _setTimeSelectorCollapsed(
-        !_isTimeSelectorCollapsed,
-        force: true,
-      ),
+      ],
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        child: AnimatedCrossFade(
-          duration: const Duration(milliseconds: 300),
-          crossFadeState: _isTimeSelectorCollapsed
-              ? CrossFadeState.showFirst
-              : CrossFadeState.showSecond,
-          firstChild: _buildCollapsedTimeSelector(),
-          secondChild: _buildExpandedTimeSelector(),
+        padding: const EdgeInsets.only(left: 12, right: 8, top: 7, bottom: 7),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.secondaryContainer,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _getPeriodName(l10n),
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.onSecondaryContainer,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Icon(
+              Icons.arrow_drop_down,
+              size: 20,
+              color: theme.colorScheme.onSecondaryContainer,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  /// 构建折叠状态的时间选择器
-  Widget _buildCollapsedTimeSelector() {
-    final l10n = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-        ),
-      ),
+  PopupMenuItem<String> _buildPeriodMenuItem(
+    String value,
+    String label,
+    IconData icon,
+  ) {
+    final theme = Theme.of(context);
+    final selected = _selectedPeriod == value;
+    return PopupMenuItem(
+      value: value,
       child: Row(
         children: [
           Icon(
-            Icons.date_range,
-            size: 20,
-            color: Theme.of(context).colorScheme.primary,
+            icon,
+            size: 18,
+            color: selected
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurfaceVariant,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Text(
-            '${_getPeriodName(l10n)} - ${_getDateRangeText(l10n)}',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium,
+            label,
+            style:
+                selected ? TextStyle(color: theme.colorScheme.primary) : null,
           ),
-          const Spacer(),
-          Icon(
-            Icons.expand_more,
-            size: 20,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 构建展开状态的时间选择器
-  Widget _buildExpandedTimeSelector() {
-    final l10n = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.date_range,
-                size: 20,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                l10n.timeRange,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium,
-              ),
-              const Spacer(),
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: IconButton(
-                  onPressed: () => _selectDate(),
-                  icon: Icon(
-                    Icons.calendar_today,
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  ),
-                  tooltip: l10n.selectDate,
-                  iconSize: 20,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.expand_less,
-                size: 20,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SegmentedButton<String>(
-            segments: [
-              ButtonSegment(
-                value: 'week',
-                label: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.view_week, size: 16),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        l10n.thisWeek,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              ButtonSegment(
-                value: 'month',
-                label: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.calendar_view_month, size: 16),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        l10n.thisMonth,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              ButtonSegment(
-                value: 'year',
-                label: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.today, size: 16),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        l10n.thisYear,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            selected: {_selectedPeriod},
-            onSelectionChanged: (Set<String> selection) {
-              _updateState(() {
-                _selectedPeriod = selection.first;
-              });
-              _loadPeriodData();
-            },
-            style: SegmentedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            ),
-          ),
+          if (selected) ...[
+            const Spacer(),
+            Icon(Icons.check, size: 18, color: theme.colorScheme.primary),
+          ],
         ],
       ),
     );

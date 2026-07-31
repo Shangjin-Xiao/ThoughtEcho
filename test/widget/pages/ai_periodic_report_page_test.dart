@@ -130,6 +130,20 @@ void main() {
     final context = tester.element(find.byType(AIPeriodicReportPage));
     final l10n = AppLocalizations.of(context);
     expect(find.text(l10n.dataOverview), findsOneWidget);
+    // 周期选择并进了标题行，顶部那张独立的「时间范围」卡片已经不存在
+    expect(find.text(l10n.timeRange), findsNothing);
+    expect(find.byType(PopupMenuButton<String>), findsOneWidget);
+    // 日期范围只出现一次，不再被顶部选择器重复一遍
+    final weekStart =
+        DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
+    final weekEnd = weekStart.add(const Duration(days: 6));
+    expect(
+      find.text(l10n.dateRange(
+        l10n.formattedDate(weekStart.month, weekStart.day),
+        l10n.formattedDate(weekEnd.month, weekEnd.day),
+      )),
+      findsOneWidget,
+    );
     // 旧的独立「与 Thoughter 对话」卡片已被洞察卡下方的快捷追问取代
     expect(find.text(l10n.aiChat), findsNothing);
     expect(
