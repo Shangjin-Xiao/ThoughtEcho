@@ -4167,5 +4167,57 @@
   "exploreSummarizePeriodPrompt": "Summarize my notes from this {period} — what stands out?",
   "exploreFreeChat": "Just chat",
   "exploreRecentChats": "Recent chats",
-  "exploreViewAllChats": "All"
+  "exploreViewAllChats": "All",
+
+  "aiProviderZhipu": "Zhipu GLM",
+  "aiProviderMoonshot": "Moonshot Kimi",
+  "aiProviderDashScope": "Alibaba Bailian",
+  "aiProviderVolcengine": "Volcengine Ark",
+  "aiProviderGemini": "Google Gemini",
+  "presetDescOllamaCloud": "Generous free tier, works right after sign-up. Best first choice.",
+  "presetDescOpenAI": "Official OpenAI API. Requires an international payment method.",
+  "presetDescOpenRouter": "One key for hundreds of models, including Claude and Gemini.",
+  "presetDescDeepSeek": "Low cost, strong Chinese performance.",
+  "presetDescSiliconFlow": "Aggregator platform; some small models are free.",
+  "presetDescZhipu": "glm-4-flash is free to use.",
+  "presetDescMoonshot": "Strong long-context performance.",
+  "presetDescDashScope": "OpenAI-compatible endpoint for the Qwen family.",
+  "presetDescVolcengine": "Doubao models. Put the inference endpoint ID in the model field.",
+  "presetDescGemini": "Gemini's official OpenAI-compatible endpoint. Has a free tier.",
+  "presetDescOllamaLocal": "Connect to Ollama on this machine. Offline, no key needed.",
+  "presetDescLMStudio": "Connect to LM Studio on this machine. Offline, no key needed.",
+  "presetDescCustom": "Any OpenAI-compatible endpoint. Fill in the URL and model yourself.",
+  "aiServicesSectionTitle": "My AI services",
+  "aiServiceEmptyTitle": "No AI service configured yet",
+  "aiServiceEmptyBody": "AI insights, card generation and the Thoughter assistant need a configured provider.",
+  "addAiService": "Add AI service",
+  "editAiServiceTitle": "Edit AI service",
+  "newAiServiceTitle": "New AI service",
+  "selectProviderTemplate": "Choose a provider",
+  "changeProviderTemplate": "Change",
+  "providerGroupCloud": "Cloud services",
+  "providerGroupLocal": "Runs locally",
+  "providerGroupCustom": "Custom",
+  "recommendedBadge": "Recommended",
+  "inUseBadge": "In use",
+  "getApiKeyLink": "Get an API key",
+  "apiKeyNotNeededHint": "Local services usually need no key — leave this empty.",
+  "suggestedModelsLabel": "Common models",
+  "configNameField": "Configuration name",
+  "statusKeyConfigured": "Key configured",
+  "statusKeyMissing": "Key missing",
+  "aiServiceSaved": "Saved {name}",
+  "@aiServiceSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ollamaCloudTipTitle": "We recommend Ollama Cloud",
+  "ollamaCloudTipBody": "Generous free tier, no card required — sign up and copy the API key.",
+  "ollamaCloudTipAction": "Add it",
+  "aiConfigHelpLink": "Not sure what to fill in? Read the setup guide",
+  "openLinkFailed": "Could not open the link",
+  "testBeforeSaveHint": "You can test as soon as URL, key and model are filled in — no need to save first."
 }

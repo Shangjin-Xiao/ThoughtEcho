@@ -77,24 +77,10 @@ class AIProviderSettings implements AIConfig {
     return apiUrl.toLowerCase().contains('/v1/messages');
   }
 
-  bool get isLikelyOpenAICompatible {
-    if (isAnthropicMessagesApi) {
-      return false;
-    }
-    final lowerUrl = apiUrl.toLowerCase();
-    return id == 'openai' ||
-        id == 'openrouter' ||
-        id == 'deepseek' ||
-        id == 'ollama' ||
-        id == 'lmstudio' ||
-        lowerUrl.contains('openai.com') ||
-        lowerUrl.contains('openrouter.ai') ||
-        lowerUrl.contains('deepseek.com');
-  }
-
   /// 规范化请求 URL，兼容「base URL」与「完整 endpoint」两种输入。
   ///
-  /// OpenAI 兼容接口若只配置到 `/v1`，会自动补全为 `/v1/chat/completions`。
+  /// 服务商文档给出的多半是 base URL（`https://ollama.com/v1`），这里统一补成
+  /// `/chat/completions`，用户少踩一次 404。
   String resolveRequestUrl(String rawUrl) {
     final trimmed = rawUrl.trim();
     if (trimmed.isEmpty) {
@@ -125,21 +111,33 @@ class AIProviderSettings implements AIConfig {
       }
     }
 
-    // OpenAI / Compatible
-    if (isLikelyOpenAICompatible ||
-        id == 'openai' ||
-        id == 'openrouter' ||
-        id == 'deepseek') {
-      if (path.isEmpty) {
-        return uri.replace(path: '/v1/chat/completions').toString();
-      } else if (path.endsWith('/v1')) {
-        return uri.replace(path: '$path/chat/completions').toString();
-      } else if (path.endsWith('/chat/completions')) {
-        return uri.replace(path: path).toString();
-      }
+    // OpenAI 兼容：已经是完整 endpoint 就原样返回。
+    if (path.endsWith('/chat/completions')) {
+      return uri.replace(path: path).toString();
+    }
+
+    // 只填了域名，按 OpenAI 官方布局补全。
+    if (path.isEmpty) {
+      return uri.replace(path: '/v1/chat/completions').toString();
+    }
+
+    // 只填到 base URL（服务商文档里给的通常就是这个）时补上 endpoint。
+    // 覆盖 `/v1`、`/api/paas/v4`、`/api/v3`、`/compatible-mode/v1`、
+    // `/v1beta/openai` 等各家写法：末段是版本号或 `openai` 都算 base URL。
+    if (_looksLikeOpenAIBaseUrl(path)) {
+      return uri.replace(path: '$path/chat/completions').toString();
     }
 
     return uri.replace(path: path).toString();
+  }
+
+  /// 末段是 `v1` / `v4` / `v1beta` / `openai` 这类版本或兼容层标记时，
+  /// 认为用户填的是 base URL 而不是完整 endpoint。
+  static bool _looksLikeOpenAIBaseUrl(String path) {
+    final segments = path.split('/').where((s) => s.isNotEmpty).toList();
+    if (segments.isEmpty) return false;
+    final last = segments.last.toLowerCase();
+    return last == 'openai' || RegExp(r'^v\d+[a-z]*$').hasMatch(last);
   }
 
   Map<String, dynamic> toJson() {
@@ -200,61 +198,6 @@ class AIProviderSettings implements AIConfig {
       enableThinking: identical(enableThinking, _copyWithUnset)
           ? this.enableThinking
           : enableThinking as bool?,
-    );
-  }
-
-  /// 预设的服务商配置
-  static List<AIProviderSettings> getPresetProviders() {
-    return [
-      const AIProviderSettings(
-        id: 'openai',
-        name: 'OpenAI',
-        apiKey: '',
-        apiUrl: 'https://api.openai.com/v1/chat/completions',
-        model: 'gpt-3.5-turbo',
-      ),
-      const AIProviderSettings(
-        id: 'anthropic',
-        name: 'Anthropic Claude',
-        apiKey: '',
-        apiUrl: 'https://api.anthropic.com/v1/messages',
-        model: 'claude-3-haiku-20240307',
-      ),
-      const AIProviderSettings(
-        id: 'openrouter',
-        name: 'OpenRouter',
-        apiKey: '',
-        apiUrl: 'https://openrouter.ai/api/v1/chat/completions',
-        model: 'meta-llama/llama-3.1-8b-instruct:free',
-      ),
-      const AIProviderSettings(
-        id: 'deepseek',
-        name: 'DeepSeek',
-        apiKey: '',
-        apiUrl: 'https://api.deepseek.com/v1/chat/completions',
-        model: 'deepseek-chat',
-      ),
-      const AIProviderSettings(
-        id: 'custom',
-        name: '自定义服务商',
-        apiKey: '',
-        apiUrl: '',
-        model: '',
-      ),
-    ];
-  }
-
-  /// 创建默认设置
-  static AIProviderSettings defaultSettings() {
-    return const AIProviderSettings(
-      id: 'default',
-      name: '默认配置',
-      apiKey: '',
-      apiUrl: '',
-      model: '',
-      temperature: 0.7,
-      maxTokens: 32000,
-      isEnabled: false,
     );
   }
 

@@ -60,6 +60,82 @@ void main() {
       );
     });
 
+    test('completes Ollama Cloud base URL as documented on ollama.com', () {
+      const provider = AIProviderSettings(
+        id: 'provider_1',
+        name: 'Ollama 云端',
+        apiUrl: 'https://ollama.com/v1',
+        model: 'gpt-oss:120b',
+      );
+
+      expect(
+        provider.resolveRequestUrl(provider.apiUrl),
+        'https://ollama.com/v1/chat/completions',
+      );
+    });
+
+    test('completes vendor base URLs that are not plain /v1', () {
+      const zhipu = AIProviderSettings(
+        id: 'provider_2',
+        name: '智谱 GLM',
+        apiUrl: 'https://open.bigmodel.cn/api/paas/v4',
+        model: 'glm-4-flash',
+      );
+      const dashscope = AIProviderSettings(
+        id: 'provider_3',
+        name: '阿里云百炼',
+        apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+        model: 'qwen-plus',
+      );
+      const gemini = AIProviderSettings(
+        id: 'provider_4',
+        name: 'Google Gemini',
+        apiUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+        model: 'gemini-2.5-flash',
+      );
+
+      expect(
+        zhipu.resolveRequestUrl(zhipu.apiUrl),
+        'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+      );
+      expect(
+        dashscope.resolveRequestUrl(dashscope.apiUrl),
+        'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+      );
+      expect(
+        gemini.resolveRequestUrl(gemini.apiUrl),
+        'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+      );
+    });
+
+    test('completes bare host to the OpenAI default layout', () {
+      const provider = AIProviderSettings(
+        id: 'provider_5',
+        name: 'Custom',
+        apiUrl: 'https://example.com',
+        model: 'foo',
+      );
+
+      expect(
+        provider.resolveRequestUrl(provider.apiUrl),
+        'https://example.com/v1/chat/completions',
+      );
+    });
+
+    test('strips trailing slash before completing', () {
+      const provider = AIProviderSettings(
+        id: 'provider_6',
+        name: 'Ollama 云端',
+        apiUrl: 'https://ollama.com/v1/',
+        model: 'gpt-oss:120b',
+      );
+
+      expect(
+        provider.resolveRequestUrl(provider.apiUrl),
+        'https://ollama.com/v1/chat/completions',
+      );
+    });
+
     test('keeps custom non-compatible endpoint unchanged', () {
       const provider = AIProviderSettings(
         id: 'custom',

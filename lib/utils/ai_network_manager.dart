@@ -582,6 +582,13 @@ class AINetworkManager {
   static Future<AIProviderSettings> _loadApiKeyForProvider(
     AIProviderSettings provider,
   ) async {
+    // 调用方已经显式给了 Key（例如设置页在保存前测试连接），直接用它，
+    // 不要被加密存储里的旧值覆盖。
+    if (provider.apiKey.isNotEmpty) {
+      logDebug('Provider ${provider.name} 使用调用方提供的API Key');
+      return provider;
+    }
+
     try {
       final apiKeyManager = APIKeyManager();
       final apiKey = await apiKeyManager.getProviderApiKey(provider.id);

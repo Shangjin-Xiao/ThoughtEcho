@@ -76,10 +76,13 @@ class MultiAISettings {
     );
   }
 
-  // 静态方法：创建默认设置
+  /// 首次启动时的默认值：一个配置都没有。
+  ///
+  /// 以前这里会塞一条 URL、模型、密钥全空的「默认配置」占位，用户在设置页里
+  /// 看到的是一条既不能用也删不掉的假配置。空列表让设置页能正确显示引导态。
   static MultiAISettings defaultSettings() {
-    return MultiAISettings(
-      providers: [AIProviderSettings.defaultSettings()],
+    return const MultiAISettings(
+      providers: [],
       currentProviderId: null,
       enableFailover: true,
     );

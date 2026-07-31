@@ -4181,5 +4181,57 @@
   },
   "exploreFreeChat": "随便聊聊",
   "exploreRecentChats": "最近对话",
-  "exploreViewAllChats": "全部"
+  "exploreViewAllChats": "全部",
+
+  "aiProviderZhipu": "智谱 GLM",
+  "aiProviderMoonshot": "月之暗面 Kimi",
+  "aiProviderDashScope": "阿里云百炼",
+  "aiProviderVolcengine": "火山方舟",
+  "aiProviderGemini": "Google Gemini",
+  "presetDescOllamaCloud": "免费额度充足，注册就能用，推荐第一次配置的用户选它",
+  "presetDescOpenAI": "OpenAI 官方接口，需要海外支付方式",
+  "presetDescOpenRouter": "一个 Key 调用 Claude、Gemini 等上百个模型",
+  "presetDescDeepSeek": "国内直连，价格低，中文表现好",
+  "presetDescSiliconFlow": "国内聚合平台，部分小模型免费",
+  "presetDescZhipu": "国内直连，glm-4-flash 免费",
+  "presetDescMoonshot": "国内直连，长上下文表现好",
+  "presetDescDashScope": "阿里云百炼的 OpenAI 兼容接口，通义千问系列",
+  "presetDescVolcengine": "火山方舟豆包系列，模型名填推理接入点 ID",
+  "presetDescGemini": "Gemini 官方的 OpenAI 兼容接口，有免费额度",
+  "presetDescOllamaLocal": "连接本机运行的 Ollama，不联网、不需要密钥",
+  "presetDescLMStudio": "连接本机运行的 LM Studio，不联网、不需要密钥",
+  "presetDescCustom": "任何 OpenAI 兼容接口，地址和模型全部手填",
+  "aiServicesSectionTitle": "我的 AI 服务",
+  "aiServiceEmptyTitle": "还没有配置 AI 服务",
+  "aiServiceEmptyBody": "配置一个服务商之后，AI 洞察、卡片生成和 Thoughter 助手才能工作。",
+  "addAiService": "添加 AI 服务",
+  "editAiServiceTitle": "编辑 AI 服务",
+  "newAiServiceTitle": "新建 AI 服务",
+  "selectProviderTemplate": "选择服务商",
+  "changeProviderTemplate": "更换",
+  "providerGroupCloud": "云端服务",
+  "providerGroupLocal": "本地运行",
+  "providerGroupCustom": "自定义",
+  "recommendedBadge": "推荐",
+  "inUseBadge": "使用中",
+  "getApiKeyLink": "获取 API Key",
+  "apiKeyNotNeededHint": "本地服务通常不需要密钥，留空即可",
+  "suggestedModelsLabel": "常用模型",
+  "configNameField": "配置名称",
+  "statusKeyConfigured": "密钥已配置",
+  "statusKeyMissing": "缺少密钥",
+  "aiServiceSaved": "已保存 {name}",
+  "@aiServiceSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ollamaCloudTipTitle": "推荐用 Ollama 云端",
+  "ollamaCloudTipBody": "免费额度充足，注册后复制 API Key 就能用，不用绑卡。",
+  "ollamaCloudTipAction": "一键添加",
+  "aiConfigHelpLink": "不知道怎么填？查看配置说明",
+  "openLinkFailed": "无法打开链接",
+  "testBeforeSaveHint": "填好地址、密钥和模型后即可测试，不必先保存"
 }

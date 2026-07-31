@@ -47,73 +47,92 @@
 
 ## 2. AI 服务配置
 
-> ⚠️ **重要**：AI 功能需要配置 API Key 才能使用
+> ⚠️ **重要**：AI 功能需要先配置一个 AI 服务才能使用
 
 **访问路径**：设置 → AI 设置
 
+### 推荐：Ollama 云端（新手首选）
+
+Ollama 云端注册即用，免费额度充足，**不需要绑定支付方式**，是第一次配置 AI 的
+最省事选择。
+
+1. 打开 [ollama.com](https://ollama.com) 注册账号
+2. 进入 [API Keys 页面](https://ollama.com/settings/keys) 创建一个密钥并复制
+3. 回到心迹：「设置」→「AI 设置」→ 点「一键添加」（首次配置时会直接显示在页面上）
+4. 把密钥粘进 API Key 输入框
+5. 点「测试连接」，成功后点「保存」
+
+接口地址是 `https://ollama.com/v1`，模型默认填 `gpt-oss:120b`，也可以换成
+`gpt-oss:20b`、`qwen3-coder:480b`、`deepseek-v3.1:671b` 等云端模型。
+
 ### 支持的服务商
 
-心迹支持多种主流 AI 服务：
+心迹的 AI 接入统一走 **OpenAI 兼容接口**，内置了以下服务商模板：
 
-- **OpenAI** - ChatGPT 背后的官方服务
-- **Anthropic Claude** - 智能对话助手
-- **DeepSeek** - 国产大语言模型
-- **OpenRouter** - 可选择多种模型的聚合平台
-- **SiliconFlow** - 国内 AI 服务
-- **Ollama / LMStudio** - 在您自己的电脑上免费运行 AI（无需联网）
-- **自定义服务** - 支持其他兼容服务
+| 服务商 | 说明 |
+| --- | --- |
+| Ollama 云端 | 免费额度充足，推荐新手 |
+| OpenAI | 官方接口，需要海外支付方式 |
+| OpenRouter | 一个 Key 调用 Claude、Gemini 等上百个模型 |
+| DeepSeek | 国内直连，价格低，中文表现好 |
+| 硅基流动 | 国内聚合平台，部分小模型免费 |
+| 智谱 GLM | 国内直连，glm-4-flash 免费 |
+| 月之暗面 Kimi | 国内直连，长上下文表现好 |
+| 阿里云百炼 | 通义千问系列的 OpenAI 兼容接口 |
+| 火山方舟 | 豆包系列，模型名填推理接入点 ID |
+| Google Gemini | Gemini 官方的 OpenAI 兼容接口，有免费额度 |
+| Ollama（本地） | 连接本机 Ollama，不联网、不需要密钥 |
+| LM Studio | 连接本机 LM Studio，不联网、不需要密钥 |
+| 自定义 | 任何 OpenAI 兼容接口，地址和模型手填 |
 
-### 详细配置步骤
+> 💡 **想用 Claude？** 选 OpenRouter，模型填 `anthropic/claude-sonnet-4.5`。
+> Anthropic 官方的 `/v1/messages` 协议与 OpenAI 格式不兼容，心迹暂未支持直连。
 
-#### 云服务商配置（以 OpenAI 为例）
+### 配置步骤
 
 1. 打开「设置」→「AI 设置」
-2. 点击「添加服务商」或选择预设服务商
-3. 选择「OpenAI」预设
-4. 在 API Key 输入框中填入您的密钥
-5. 可选：选择其他模型
-6. 点击「测试连接」验证配置
-7. 保存设置
+2. 点「添加 AI 服务」
+3. 在「选择服务商」里挑一个模板，接口地址和模型会自动填好
+4. 填入 API Key（模板下方有「获取 API Key」直达链接）
+5. 需要的话改一下模型名，常用模型可以直接点选
+6. 点「测试连接」验证——**不需要先保存也能测**
+7. 点「保存」
 
-#### 本地 AI 配置（Ollama）
+保存后这条配置会出现在「我的 AI 服务」列表里并自动设为当前使用。点击列表中的
+其他配置即可切换，点右侧「⋮」可以编辑、测试、重命名或删除。
 
-本地 AI 可以在您的电脑上免费运行，无需付费，也不需要联网。
+> 💡 **接口地址怎么填**：填服务商文档给的 base URL（例如 `https://ollama.com/v1`）
+> 就行，心迹会自动补成 `/chat/completions`；填完整地址也可以。
 
-1. **安装 Ollama**
-   - 访问 [ollama.ai](https://ollama.ai) 下载安装
+### 本地 AI 配置（Ollama）
 
-2. **在心迹中配置**
-   - 打开「AI 设置」
-   - 选择「Ollama」预设
-   - 填写您下载的模型名称
-   - 测试连接并保存
+本地 AI 在你自己的电脑上运行，免费且不需要联网。
 
-#### 本地 AI 配置（LMStudio）
+1. **安装 Ollama**：访问 [ollama.com](https://ollama.com) 下载安装，并 `ollama pull` 一个模型
+2. **在心迹中配置**：选「Ollama」模板 → 填入你下载的模型名 → 测试连接并保存
 
-1. **安装 LMStudio**
-   - 访问 [lmstudio.ai](https://lmstudio.ai) 下载安装
-   - 下载您需要的模型
-   - 启动本地服务器
+### 本地 AI 配置（LM Studio）
 
-2. **在心迹中配置**
-   - 选择「LMStudio」预设
-   - 填写已加载的模型名称
-   - 测试连接并保存
+1. **安装 LM Studio**：访问 [lmstudio.ai](https://lmstudio.ai) 下载，下载模型后启动本地服务器
+2. **在心迹中配置**：选「LM Studio」模板 → 填入已加载的模型名 → 测试连接并保存
+
+> ⚠️ 手机连本机的 Ollama / LM Studio 时，`localhost` 要改成电脑的局域网 IP，
+> 并确保推理服务允许局域网访问。
 
 ### API Key 安全说明
 
-> 🔐 **您的密钥是安全的**：
+> 🔐 **你的密钥是安全的**：
 >
-> - 您的 API Key 安全地保存在您的设备上。
-> - 密钥不会被包含在备份文件中
-> - 应用会自动验证密钥格式
+> - API Key 加密保存在本机安全存储中，不写进普通配置文件
+> - 密钥不会被包含在备份文件里
+> - 删除一条配置时，对应的密钥会一起删除
 
 ### 多服务商支持
 
-心迹支持同时配置多个 AI 服务商：
+心迹支持同时保存多个 AI 服务配置：
 
-- 当一个服务不可用时，自动切换到其他服务
-- 可设置服务商的使用优先级
+- 随时在列表里一键切换当前使用的服务
+- 当前服务不可用时会自动尝试其他已配置的服务
 
 ---
 
@@ -779,73 +798,96 @@ Welcome to ThoughtEcho, your personal AI-powered inspiration notebook. This manu
 
 ## 2. AI Service Configuration
 
-> ⚠️ **Important**: AI features require API Key configuration
+> ⚠️ **Important**: AI features need a configured AI service first
 
 **Access Path**: Settings → AI Settings
 
+### Recommended: Ollama Cloud (best first choice)
+
+Ollama Cloud works right after sign-up, has a generous free tier and **requires no
+payment method**. It is the easiest way to get AI running.
+
+1. Sign up at [ollama.com](https://ollama.com)
+2. Create and copy a key on the [API Keys page](https://ollama.com/settings/keys)
+3. In ThoughtEcho: Settings → AI Settings → tap "Add it" (shown right on the page
+   before anything is configured)
+4. Paste the key into the API Key field
+5. Tap "Test connection", then "Save"
+
+The endpoint is `https://ollama.com/v1` and the model defaults to `gpt-oss:120b`.
+Other cloud models include `gpt-oss:20b`, `qwen3-coder:480b` and `deepseek-v3.1:671b`.
+
 ### Supported Providers
 
-ThoughtEcho supports various mainstream AI services:
+All AI access goes through the **OpenAI-compatible protocol**. These provider
+templates are built in:
 
-- **OpenAI** - The official service behind ChatGPT
-- **Anthropic Claude** - Intelligent conversation assistant
-- **DeepSeek** - Chinese large language model
-- **OpenRouter** - Multi-model aggregation platform
-- **SiliconFlow** - China-based AI service
-- **Ollama / LMStudio** - Run AI for free on your own computer (no internet needed)
-- **Custom Services** - Supports other compatible services
+| Provider | Notes |
+| --- | --- |
+| Ollama Cloud | Generous free tier, recommended |
+| OpenAI | Official API, needs an international payment method |
+| OpenRouter | One key for hundreds of models, incl. Claude and Gemini |
+| DeepSeek | Low cost, strong Chinese performance |
+| SiliconFlow | Aggregator; some small models are free |
+| Zhipu GLM | glm-4-flash is free |
+| Moonshot Kimi | Strong long-context performance |
+| Alibaba Bailian | OpenAI-compatible endpoint for the Qwen family |
+| Volcengine Ark | Doubao models; use the endpoint ID as model name |
+| Google Gemini | Gemini's OpenAI-compatible endpoint, has a free tier |
+| Ollama (local) | Local Ollama, offline, no key needed |
+| LM Studio | Local LM Studio, offline, no key needed |
+| Custom | Any OpenAI-compatible endpoint, filled in by hand |
+
+> 💡 **Want Claude?** Pick OpenRouter and use the model
+> `anthropic/claude-sonnet-4.5`. Anthropic's official `/v1/messages` protocol is
+> not OpenAI-compatible and is not supported directly yet.
 
 ### Configuration Steps
 
-#### Cloud Provider Setup (OpenAI Example)
-
 1. Open "Settings" → "AI Settings"
-2. Click "Add Provider" or select a preset
-3. Choose "OpenAI" preset
-4. Enter your API Key
-5. Optional: Select a different model
-6. Click "Test Connection" to verify
-7. Save settings
+2. Tap "Add AI service"
+3. Pick a template under "Choose a provider" — URL and model are filled in for you
+4. Enter your API Key ("Get an API key" links straight to the provider's console)
+5. Adjust the model if needed; common models can be tapped to fill in
+6. Tap "Test connection" — **you do not have to save first**
+7. Tap "Save"
 
-#### Local AI Setup (Ollama)
+The saved configuration appears in "My AI services" and becomes the active one.
+Tap another entry to switch; the "⋮" menu offers edit, test, rename and delete.
 
-Local AI runs on your own computer for free, no internet or payment required.
+> 💡 **What to put in the URL field**: the base URL from the provider's docs
+> (e.g. `https://ollama.com/v1`) is enough — `/chat/completions` is appended
+> automatically. Full endpoint URLs work too.
 
-1. **Install Ollama**
-   - Visit [ollama.ai](https://ollama.ai) to download
+### Local AI Setup (Ollama)
 
-2. **Configure in ThoughtEcho**
-   - Open "AI Settings"
-   - Select "Ollama" preset
-   - Enter your downloaded model name
-   - Test connection and save
+Local AI runs on your own computer, free and offline.
 
-#### Local AI Setup (LMStudio)
+1. **Install Ollama**: get it at [ollama.com](https://ollama.com) and `ollama pull` a model
+2. **Configure**: pick the "Ollama" template → enter your model name → test and save
 
-1. **Install LMStudio**
-   - Visit [lmstudio.ai](https://lmstudio.ai) to download
-   - Download your preferred model
-   - Start local server
+### Local AI Setup (LM Studio)
 
-2. **Configure in ThoughtEcho**
-   - Select "LMStudio" preset
-   - Enter loaded model name
-   - Test connection and save
+1. **Install LM Studio**: get it at [lmstudio.ai](https://lmstudio.ai), download a model, start the local server
+2. **Configure**: pick the "LM Studio" template → enter the loaded model name → test and save
+
+> ⚠️ To reach a desktop Ollama / LM Studio from your phone, replace `localhost`
+> with the computer's LAN IP and allow LAN access in the inference server.
 
 ### API Key Security
 
 > 🔐 **Your keys are safe**:
 >
-> - Your API Keys are saved safely on your device.
+> - API Keys are stored encrypted in the device's secure storage, never in plain config files
 > - Keys are not included in backup files
-> - Automatic key format validation
+> - Deleting a configuration also deletes its key
 
 ### Multi-Provider Support
 
-ThoughtEcho supports configuring multiple AI providers:
+ThoughtEcho can keep several AI configurations at once:
 
-- Automatically switches to another service when one is unavailable
-- Provider priority can be configured
+- Switch the active service from the list at any time
+- Other configured services are tried automatically if the active one fails
 
 ---
 
