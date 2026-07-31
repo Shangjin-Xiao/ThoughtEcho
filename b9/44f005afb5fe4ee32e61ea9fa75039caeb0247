@@ -1,0 +1,20 @@
+test/live/agent_probe.dart
+  s_4554c3c3680c0d::t_2b6b6fc1c4562d 33
+  s_4554c3c3680c0d::t_79907590052337 477-479,482-483
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "b944f005afb5fe4ee32e61ea9fa75039caeb0247",
+  "prompts": {},
+  "sessions": {
+    "s_4554c3c3680c0d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "22446fb2-0ff0-4a42-808d-ca0177581d50",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
