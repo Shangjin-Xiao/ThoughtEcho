@@ -113,27 +113,43 @@ explore 分支直接落到「留空，首条消息时再建」。所以从探索
 
 ---
 
+## 二·五、2026-07-31 下午的收尾（三个 commit）
+
+| commit | 内容 |
+|---|---|
+| `0aee0daa` | 开场白不再因会话未建而丢失 |
+| `1324578b` | 笔记预览接上真跳转和「问 Thoughter」 |
+| `f1710303` | 收藏红心收进 `AppSemanticColors.favorite / onFavorite` |
+
+**开场白落库**：没有采用「进页面就预建会话」——那会在「最近对话」里留下用户
+只是打开看看就产生的空条目。改成 `_appendMessage` 在会话为 null 时把待落库的
+消息挂起（`_pendingPersistMessages`），`_ensureSessionCreated` 建完会话按序补写。
+顺序有保证：`_handleSubmitted` 里先 `await _ensureSessionCreated()` 再写用户消息。
+回归测试 `ai_assistant_page_test.dart` 的
+`openingMessage is persisted once the session gets created`。
+
+**笔记预览**：两处假 `onTap`（`report_stats.dart` 的最近笔记、`report_overview.dart`
+的收藏预览）都接到 `_openNoteDetail` → `NoteFullEditorPage`，和记录页点开一条
+笔记是同一个页面。编辑保存触发数据库通知，本页 `_onDatabaseChanged` 静默刷新，
+不需要手动重载。每条最近笔记另加「问 Thoughter」，走 **note 入口**——助手页只有
+note 分支会 `getLatestSessionForNote`，同一条笔记聊过的会接着上次聊。
+
+**红心**：没记成例外，因为例外一旦进规范就会被当先例引用。`AppSemanticColors`
+加 `favorite` / `onFavorite`（primary/onPrimary 那种填充强调对，不是 container
+三元组——红心徽章是实心高饱和小色块）。原来三处其实是 shade400 / shade600 两个
+不同值，本该一致的东西已经不一致了。AGENTS.md 已补规则。
+
+另外：截图里「最近对话」第二条被 FAB 压住，是 `66ecf70c` 之前的旧包；那一版已经
+加了 88px 底部留白。
+
+---
+
 ## 三、待决项
-
-### 收藏红心的 `Colors.red.shade400`（全局）
-
-AGENTS.md 禁 `Colors.*`，但这个色值在三处用着：
-`quote_item_widget.dart:1155`、`home_note_mutation_actions.dart:123`、
-`report_overview.dart` 的 `_favoriteAccent`。单改一处只会造成不一致。
-
-`AppSemanticColors` 目前只有 success/warning，error 复用 `colorScheme.error`——
-但收藏红心不是「错误」语义，没有现成槽位。需要决定：加一组 `favorite` 语义色并
-统一迁移三处，还是把红心明确记为例外。
 
 ### 字数按 UTF-16 码元计数
 
 `quote.content.length` 是既有逻辑。中文没问题，但英文语境下把字符数标成 "words"
 不准。修它要动 l10n 单位词条和统计口径，是独立改动。
-
-### 收藏预览的空 `onTap`
-
-`report_overview.dart` 的 `_buildFavoritePreviewChip`，点了只有 `HapticFeedback`
-没有任何反应，注释写着「可以添加跳转到笔记详情的逻辑」。既有代码，排在下一步。
 
 ---
 
@@ -141,9 +157,7 @@ AGENTS.md 禁 `Colors.*`，但这个色值在三处用着：
 
 ### 探索页剩下的
 
-1. 笔记预览接真跳转（顺带解决上面那个假 `onTap`）
-2. 每条笔记预览加「问 Thoughter」入口——和「追问这条」同一个模式：带具体上下文
-   进去，而不是又一个泛泛的「打开 AI」
+已清空——笔记预览的跳转和「问 Thoughter」都在 2026-07-31 下午做完了（见二·五）。
 
 ### 底部常驻输入条（曾经砍掉，可能要捡回来）
 
@@ -159,8 +173,8 @@ Scaffold 的 `bottomNavigationBar` 上即可，不用碰毛玻璃；但 FAB 冲�
 **尚未开始讨论。** 建议从干净的上下文开始——`AIAssistantPage` + 5 个 part 文件 +
 agent 工作流，比探索页大得多。已知的相关背景：
 
-- `THOUGHTER_ISSUES_REPORT.md`（仓库根，未跟踪）里有 32 个问题，5 个 P0 未修：
-  fail-fast、假取消、死工具、上下文不裁剪、卡片全灰
+- `THOUGHTER_ISSUES_REPORT.md`（仓库根，未跟踪）**已过期**：2026-07-31 用户确认
+  那份报告针对的是旧版代码，5 个 P0 都已修复。别拿它当待办清单。
 - `fullNotesContent` 未裁剪就整个喂给 AI，和上面「上下文不裁剪」是同一个问题，
   年度周期笔记多了会爆 token
 - 洞察卡是纯文本一段，没有重新生成 / 复制 / 反馈；AI 生成和本地兜底两条路径的
