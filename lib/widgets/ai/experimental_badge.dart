@@ -270,7 +270,8 @@ Future<void> showExperimentalNoticeDialog(BuildContext context) async {
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.buttonRadius),
                         ),
                       ),
                     ),

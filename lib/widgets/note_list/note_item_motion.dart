@@ -197,9 +197,8 @@ class NoteItemMotionState extends State<NoteItemMotion>
 
   bool get _insertPlaying => _playingInsertVersion != null;
 
-  double get _insertProgressValue => _insertPlaying
-      ? (_insertProgress?.value ?? 1.0).clamp(0.0, 1.0)
-      : 1.0;
+  double get _insertProgressValue =>
+      _insertPlaying ? (_insertProgress?.value ?? 1.0).clamp(0.0, 1.0) : 1.0;
 
   double get _deleteFadeValue =>
       widget.isDeleting ? (_deleteFade?.value ?? 0.0).clamp(0.0, 1.0) : 0.0;
@@ -212,8 +211,9 @@ class NoteItemMotionState extends State<NoteItemMotion>
 
   double get _heightFactor {
     final double deleteFactor = 1.0 - _deleteCollapseValue;
-    final double insertFactor =
-        _insertPlaying && widget.animateInsertLayout ? _insertProgressValue : 1.0;
+    final double insertFactor = _insertPlaying && widget.animateInsertLayout
+        ? _insertProgressValue
+        : 1.0;
     return insertFactor < deleteFactor ? insertFactor : deleteFactor;
   }
 
@@ -342,7 +342,8 @@ class _RenderNoteItemMotion extends RenderProxyBox {
   bool get _hasTransform => _translateY != 0.0 || _scale != 1.0;
 
   @override
-  bool get alwaysNeedsCompositing => child != null && _alpha > 0 && _alpha < 255;
+  bool get alwaysNeedsCompositing =>
+      child != null && _alpha > 0 && _alpha < 255;
 
   @override
   void performLayout() {

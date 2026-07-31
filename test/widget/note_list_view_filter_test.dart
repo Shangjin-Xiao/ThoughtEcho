@@ -542,7 +542,8 @@ void main() {
         noteListKey.currentState!.triggerInsertAnimation('quote-1');
         await tester.pump();
 
-        expect(NoteItemMotion.insertDuration, const Duration(milliseconds: 250));
+        expect(
+            NoteItemMotion.insertDuration, const Duration(milliseconds: 250));
         expect(_noteMotion(tester, 'quote-1').insertVersion, 1);
 
         // 播完后挂起状态由动画自身的完成回调清理，动效层本身仍然常驻
