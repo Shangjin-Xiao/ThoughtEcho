@@ -136,7 +136,9 @@ class _LogsPageState extends State<LogsPage> {
       });
       showDialog(
         context: context,
-        builder: (context) => AppErrorView(text: l10n.logLoadError),
+        builder: (context) => AlertDialog(
+          content: AppErrorView(text: l10n.logLoadError),
+        ),
       );
     }
   }

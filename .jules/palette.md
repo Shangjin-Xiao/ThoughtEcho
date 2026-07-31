@@ -34,3 +34,6 @@
 ## 2026-06-27 - [Fix Missing Tooltips for AI Assistant Action Buttons]
 **Learning:** IconButtons used for core actions in AI feature UIs (like "thinking" toggles, clear search icons, and stop generating buttons) often lack accessibility labels, making them unusable for screen reader users and missing hover cues on desktop.
 **Action:** When implementing or modifying AI chat interfaces and session histories, ensure that all `IconButton`s include dynamic tooltips (e.g. toggling between 'Show/Hide Thinking', or 'Send/Stop') localized via `AppLocalizations`.
+## 2024-05-18 - [AppEmptyView and AppErrorView improvements]
+**Learning:** Found that basic generic icons were used for common empty and error states across the app, leading to an unpolished user experience. Adding SVG imagery directly mapped to states significantly improved visual fidelity, but required adjusting existing pages (`logs_page.dart`) to wrap these components differently (e.g. `AlertDialog`) due to sizing and layout constraints.
+**Action:** Always prefer localized state assets (like `assets/empty/network_error.svg`) and ensure layout compatibility when transitioning from simple icons to full layout states (using `MainAxisSize.min` to avoid unbounded layout exceptions in dialogs).
