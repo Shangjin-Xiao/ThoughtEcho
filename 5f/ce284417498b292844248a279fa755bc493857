@@ -1,0 +1,88 @@
+lib/pages/ai_report/report_overview.dart
+  s_5bb12335d34cc0::t_1f7955ac469b9a 3-6,199,244
+  s_5bb12335d34cc0::t_4bd417e64e6a45 50-55
+  s_5bb12335d34cc0::t_f76ccf8be9f374 437-438,441
+lib/pages/note_full_editor_page.dart
+  s_7741578ecf966f::t_fb34337e62fad1 45
+lib/pages/note_editor/editor_metadata_dialog.dart
+  s_7741578ecf966f::t_9d39d16f48f9f1 144-145
+  s_7741578ecf966f::t_92c41928fa2243 254-255
+  s_7741578ecf966f::t_d13ca373dd6f5b 195,197
+  s_7741578ecf966f::t_4ed945919f0f4c 265,267
+  s_7741578ecf966f::t_62b238a1118d59 14-16
+  s_7741578ecf966f::t_e87ac20d99a186 383-384
+test/widget/pages/ai_periodic_report_page_test.dart
+  s_5bb12335d34cc0::t_e4dea79697263b 109,111-116
+  s_5bb12335d34cc0::t_966bdab97594f6 144,147-150,152,155
+lib/pages/tag_settings_page.dart
+  s_7741578ecf966f::t_89dca81a4a677c 136
+  s_7741578ecf966f::t_642069ea85c5a6 182-183
+  s_7741578ecf966f::t_5e876f4bd2088a 223-224
+  s_7741578ecf966f::t_3893b07919f45c 313
+  s_7741578ecf966f::t_219edf63e7299c 74
+  s_7741578ecf966f::t_55d7a4b5f9ba06 167-168
+lib/widgets/ai/experimental_badge.dart
+  s_7741578ecf966f::t_8ba9bb653f4255 273
+  s_7741578ecf966f::t_a21755fa64a8f6 308
+  s_7741578ecf966f::t_f420e05b0eac0c 8
+lib/widgets/onboarding/page_views.dart
+  s_7741578ecf966f::t_3c3a8e52fb4ea5 457
+  s_7741578ecf966f::t_a5b5000f64d31d 516
+  s_7741578ecf966f::t_cec9bc55672f24 9
+lib/widgets/svg_card_widget.dart
+  s_7741578ecf966f::t_51cb773740150e 8
+  s_7741578ecf966f::t_88fbda2f114900 472-474
+  s_7741578ecf966f::t_558253194387b9 132
+  s_7741578ecf966f::t_f3df5a533a94a9 614-616
+  s_7741578ecf966f::t_a18d563934c9b4 245
+  s_7741578ecf966f::t_5c5af2e53281a8 47,57
+lib/pages/settings_page.dart
+  s_7741578ecf966f::t_04fa8345f35925 9
+  s_7741578ecf966f::t_87ffe62a4b63c6 1315-1317
+lib/pages/ai_report/report_stats.dart
+  s_5bb12335d34cc0::t_cd180f44af7783 156-185,187-188
+  s_5bb12335d34cc0::t_1f7955ac469b9a 60,120-121,139-140
+  s_5bb12335d34cc0::t_caf762522df8d6 194-196
+lib/pages/ai_periodic_report_page.dart
+  s_5bb12335d34cc0::t_1f7955ac469b9a 64
+lib/pages/preferences_detail_page.dart
+  s_7741578ecf966f::t_78747742a95514 604,606
+  s_7741578ecf966f::t_8aae4fc5aada88 634
+  s_7741578ecf966f::t_53d36d8eb98dce 11
+  s_7741578ecf966f::t_e4c12932c5384d 665-668
+  s_7741578ecf966f::t_5a4720e11bb9bd 82
+  s_7741578ecf966f::t_44b4eac42035d2 508,521
+lib/widgets/media_player_widget.dart
+  s_7741578ecf966f::t_e457762c0fa9c1 518
+  s_7741578ecf966f::t_3e5e2076c0f507 490
+  s_7741578ecf966f::t_1bdeb4a47f1ae1 12
+  s_7741578ecf966f::t_cdbf08311dd13e 557
+  s_7741578ecf966f::t_44a4554878830e 447
+lib/pages/note_editor/editor_metadata_ai_section.dart
+  s_7741578ecf966f::t_8188891624edc5 63
+  s_7741578ecf966f::t_5f515e9d32b931 181,187
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "5fce284417498b292844248a279fa755bc493857",
+  "prompts": {},
+  "sessions": {
+    "s_5bb12335d34cc0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "499d53fb-f4cc-4643-afaa-ac1f711ebbda",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_7741578ecf966f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "340cc40c-189c-4dca-b529-b61325058eba",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
