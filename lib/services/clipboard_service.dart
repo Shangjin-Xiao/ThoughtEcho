@@ -14,6 +14,7 @@ import '../utils/mmkv_ffi_fix.dart'; // 导入安全包装类
 import '../theme/app_theme.dart';
 import '../utils/app_logger.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../theme/theme_style.dart';
 
 class ClipboardService extends ChangeNotifier {
   static const String _keyEnableClipboardMonitoring =
@@ -333,7 +334,8 @@ class ClipboardService extends ChangeNotifier {
                 ),
                 decoration: BoxDecoration(
                   color: Theme.of(overlayContext).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(AppTheme.dialogRadius),
+                  borderRadius: BorderRadius.circular(
+                      AppShapeTokens.of(context).dialogRadius),
                   boxShadow: AppTheme.defaultShadow,
                 ),
                 child: Row(

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
-import 'package:thoughtecho/theme/app_theme.dart';
+import '../theme/theme_style.dart';
 
 /// Data model for a chapter in the user guide
 class GuideChapter {
@@ -494,7 +494,7 @@ class _UserGuidePageState extends State<UserGuidePage> {
                                   color: colorScheme.surfaceContainerLow,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(
-                                        AppTheme.cardRadius),
+                                        AppShapeTokens.of(context).cardRadius),
                                     side: BorderSide(
                                       color: colorScheme.outlineVariant
                                           .withValues(alpha: 0.5),

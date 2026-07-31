@@ -8,11 +8,11 @@ import '../models/multi_ai_settings.dart';
 import '../services/api_key_manager.dart';
 import '../services/settings_service.dart';
 import '../theme/app_semantic_colors.dart';
-import '../theme/app_theme.dart';
 import '../utils/ai_network_manager.dart';
 import '../widgets/app_snackbar.dart';
 import 'ai_provider_edit_page.dart';
 import 'user_guide_page.dart';
+import '../theme/theme_style.dart';
 
 /// AI 设置主页：一个「我的 AI 服务」列表 + 功能开关。
 ///
@@ -107,7 +107,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
           decoration: InputDecoration(
             labelText: l10n.presetName,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+              borderRadius:
+                  BorderRadius.circular(AppShapeTokens.of(context).inputRadius),
             ),
           ),
         ),
@@ -579,7 +580,8 @@ class _Badge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
       ),
       child: Text(
         label,

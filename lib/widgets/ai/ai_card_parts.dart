@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 
 import '../../gen_l10n/app_localizations.dart';
 import '../../models/note_category.dart';
-import '../../theme/app_theme.dart';
 import '../../utils/string_utils.dart';
 import '../quote_card_helpers.dart';
+import '../../theme/theme_style.dart';
 
 /// 统一的卡片外壳：圆角、描边与底色两张卡保持一致。
 class AiCardShell extends StatelessWidget {
@@ -22,7 +22,8 @@ class AiCardShell extends StatelessWidget {
       elevation: 0,
       color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         side: BorderSide(
           color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),

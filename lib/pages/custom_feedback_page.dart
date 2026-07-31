@@ -3,7 +3,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/constants/app_constants.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
-import '../theme/app_theme.dart';
+import '../theme/theme_style.dart';
 
 class CustomFeedbackPage extends StatefulWidget {
   const CustomFeedbackPage({super.key});
@@ -113,7 +113,8 @@ class _CustomFeedbackPageState extends State<CustomFeedbackPage> {
                   decoration: InputDecoration(
                     hintText: l10n.customFeedbackMessageHint,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                      borderRadius: BorderRadius.circular(
+                          AppShapeTokens.of(context).inputRadius),
                     ),
                     filled: true,
                     fillColor:
@@ -143,7 +144,8 @@ class _CustomFeedbackPageState extends State<CustomFeedbackPage> {
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.email_outlined),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                      borderRadius: BorderRadius.circular(
+                          AppShapeTokens.of(context).inputRadius),
                     ),
                     filled: true,
                     fillColor:
@@ -166,7 +168,8 @@ class _CustomFeedbackPageState extends State<CustomFeedbackPage> {
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.person_outline),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                      borderRadius: BorderRadius.circular(
+                          AppShapeTokens.of(context).inputRadius),
                     ),
                     filled: true,
                     fillColor:

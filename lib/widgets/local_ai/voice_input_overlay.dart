@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../gen_l10n/app_localizations.dart';
-import '../../theme/app_theme.dart';
+import '../../theme/theme_style.dart';
 
 /// 语音录制浮层组件
 ///
@@ -219,8 +219,8 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius:
-                            BorderRadius.circular(AppTheme.cardRadius),
+                        borderRadius: BorderRadius.circular(
+                            AppShapeTokens.of(context).cardRadius),
                         border: Border.all(
                           color: Colors.white.withValues(alpha: 0.1),
                         ),

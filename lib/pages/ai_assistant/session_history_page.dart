@@ -4,9 +4,9 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../gen_l10n/app_localizations.dart';
 import '../../models/chat_session.dart';
 import '../../services/chat_session_service.dart';
-import '../../theme/app_theme.dart';
 import '../../utils/app_logger.dart';
 import '../../utils/time_utils.dart';
+import '../../theme/theme_style.dart';
 
 part 'session_history_page_content.dart';
 
@@ -201,7 +201,8 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 8),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                  borderRadius: BorderRadius.circular(
+                      AppShapeTokens.of(context).inputRadius),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,

@@ -40,6 +40,7 @@ import 'home/home_note_editor_actions.dart';
 import 'home/home_note_mutation_actions.dart';
 import 'home/home_refresh_coordinator.dart';
 import 'home/home_target_navigation.dart';
+import '../theme/theme_style.dart';
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
@@ -85,7 +86,8 @@ class HomeLocationWeatherDisplay extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: theme.colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+              borderRadius:
+                  BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
               boxShadow: AppTheme.defaultShadow,
             ),
             child: Row(

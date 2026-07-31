@@ -4,7 +4,7 @@ import 'dart:async';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/utils/color_utils.dart';
-import 'package:thoughtecho/theme/app_theme.dart';
+import '../theme/theme_style.dart';
 
 /// 流式文本对话框
 ///
@@ -129,12 +129,14 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
 
     return Dialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.dialogRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).dialogRadius),
       ),
       elevation: 8,
       backgroundColor: colorScheme.surface,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppTheme.dialogRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).dialogRadius),
         child: Container(
           width: dialogWidth,
           constraints: BoxConstraints(maxHeight: dialogHeight),
@@ -264,13 +266,15 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         border: Border.all(
           color: colorScheme.outlineVariant.applyOpacity(0.3),
         ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         child: SingleChildScrollView(
           controller: _scrollController,
           padding: const EdgeInsets.all(16),
@@ -469,7 +473,8 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
             label: Text(widget.applyButtonText),
             style: FilledButton.styleFrom(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+                borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).buttonRadius),
               ),
             ),
           ),

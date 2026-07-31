@@ -9,6 +9,7 @@ import '../services/api_key_manager.dart';
 import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
+import '../theme/theme_style.dart';
 
 part 'hitokoto_settings_page_layout_sections.dart';
 part 'hitokoto_settings_page_info_sections.dart';
@@ -231,7 +232,8 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
         backgroundColor: Theme.of(context).colorScheme.inverseSurface,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
         ),
         margin: const EdgeInsets.all(16),
         duration: const Duration(seconds: 2),
@@ -408,7 +410,8 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: colorScheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                      borderRadius: BorderRadius.circular(
+                          AppShapeTokens.of(context).cardRadius),
                       border: Border.all(
                         color: colorScheme.outline.withAlpha(50),
                         width: 1,

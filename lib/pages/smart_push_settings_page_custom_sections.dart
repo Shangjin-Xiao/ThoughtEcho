@@ -11,7 +11,8 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.2)),
       ),
       child: Padding(
@@ -177,7 +178,8 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.2)),
       ),
       child: Padding(
@@ -263,14 +265,15 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
           InkWell(
-            borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(AppTheme.cardRadius)),
+            borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppShapeTokens.of(context).cardRadius)),
             onTap: () {
               setState(() {
                 _settings = _settings.copyWith(

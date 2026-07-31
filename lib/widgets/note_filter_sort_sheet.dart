@@ -8,7 +8,7 @@ import '../services/biometric_service.dart'; // Import BiometricService
 import '../services/database_service.dart'; // Import DatabaseService
 import '../utils/time_utils.dart'; // Import TimeUtils
 import '../gen_l10n/app_localizations.dart';
-import '../theme/app_theme.dart';
+import '../theme/theme_style.dart';
 
 class NoteFilterSortSheet extends StatefulWidget {
   final List<NoteCategory> allTags;
@@ -233,7 +233,8 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
           ? Colors.white
           : theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         side: BorderSide(
           color: theme.colorScheme.outline.withValues(alpha: 0.2),
           width: 1,

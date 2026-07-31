@@ -10,8 +10,8 @@ import '../services/webdav_sync_service.dart';
 import '../utils/lww_utils.dart';
 import '../utils/app_logger.dart';
 import '../theme/app_semantic_colors.dart';
-import '../theme/app_theme.dart';
 import '../widgets/app_snackbar.dart';
+import '../theme/theme_style.dart';
 
 class WebDAVSyncPage extends StatefulWidget {
   const WebDAVSyncPage({super.key});
@@ -365,7 +365,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                   Card(
                     elevation: 1,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                      borderRadius: BorderRadius.circular(
+                          AppShapeTokens.of(context).cardRadius),
                       side: BorderSide(
                           color: theme.colorScheme.outlineVariant
                               .withValues(alpha: 0.5)),
@@ -488,7 +489,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                   Card(
                     elevation: 1,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                      borderRadius: BorderRadius.circular(
+                          AppShapeTokens.of(context).cardRadius),
                       side: BorderSide(
                           color: theme.colorScheme.outlineVariant
                               .withValues(alpha: 0.5)),
@@ -705,12 +707,14 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         side: BorderSide(color: accentColor.withValues(alpha: 0.4), width: 1.5),
       ),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
           gradient: LinearGradient(
             colors: [
               accentColor.withValues(alpha: 0.05),

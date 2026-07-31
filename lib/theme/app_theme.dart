@@ -382,11 +382,13 @@ class AppTheme with ChangeNotifier {
       );
     } catch (e) {
       logDebug('初始化主题服务失败: $e');
-      // 初始化失败时使用默认值
+      // 初始化失败时使用默认值。风格也要一并重置：_loadThemeStyle() 可能已经成功、
+      // 后面某一步才抛，那样会留下「风格是纸墨、其余全是默认值」的半新半旧状态。
       _customColor = Colors.blue;
       _useCustomColor = false;
       _useDynamicColor = true;
       _themeMode = ThemeMode.system;
+      _themeStyle = ThemeStyle.material;
     }
   }
 
@@ -629,6 +631,7 @@ class AppTheme with ChangeNotifier {
         inputDecoratorRadius: form.inputRadius,
         dialogRadius: form.dialogRadius,
         timePickerDialogRadius: form.dialogRadius,
+        elevatedButtonRadius: form.buttonRadius,
         outlinedButtonRadius: form.buttonRadius,
         filledButtonRadius: form.buttonRadius,
         textButtonRadius: form.buttonRadius,
@@ -766,6 +769,7 @@ class AppTheme with ChangeNotifier {
         inputDecoratorRadius: form.inputRadius,
         dialogRadius: form.dialogRadius,
         timePickerDialogRadius: form.dialogRadius,
+        elevatedButtonRadius: form.buttonRadius,
         outlinedButtonRadius: form.buttonRadius,
         filledButtonRadius: form.buttonRadius,
         textButtonRadius: form.buttonRadius,

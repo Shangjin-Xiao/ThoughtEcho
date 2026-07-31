@@ -7,8 +7,8 @@ import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/device_identity_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import '../gen_l10n/app_localizations.dart';
-import '../theme/app_theme.dart';
 import '../widgets/app_snackbar.dart';
+import '../theme/theme_style.dart';
 
 class _AutoScrollText extends StatefulWidget {
   final String text;
@@ -790,8 +790,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              borderRadius:
-                                  BorderRadius.circular(AppTheme.cardRadius),
+                              borderRadius: BorderRadius.circular(
+                                  AppShapeTokens.of(context).cardRadius),
                               color: isSendingToThis
                                   ? theme.colorScheme.primaryContainer
                                       .withValues(alpha: 0.35)
@@ -815,8 +815,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                             ),
                             child: Material(
                               color: Colors.transparent,
-                              borderRadius:
-                                  BorderRadius.circular(AppTheme.cardRadius),
+                              borderRadius: BorderRadius.circular(
+                                  AppShapeTokens.of(context).cardRadius),
                               child: ListTile(
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 18,

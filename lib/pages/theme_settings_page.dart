@@ -74,7 +74,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
             margin: const EdgeInsets.all(16),
             elevation: 1,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+              borderRadius:
+                  BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
               side: BorderSide(
                 color: Theme.of(context).colorScheme.outline,
                 width: 1,
@@ -100,7 +101,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
             margin: const EdgeInsets.all(16),
             elevation: 1,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+              borderRadius:
+                  BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
               side: BorderSide(
                 color: Theme.of(context).colorScheme.outline,
                 width: 1,
@@ -150,7 +152,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
               margin: const EdgeInsets.all(16),
               elevation: 1,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).cardRadius),
                 side: BorderSide(
                   color: Theme.of(context).colorScheme.outline,
                   width: 1,
@@ -202,7 +205,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
               margin: const EdgeInsets.all(16),
               elevation: 1,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).cardRadius),
                 side: BorderSide(
                   color: Theme.of(context).colorScheme.outline,
                   width: 1,
@@ -371,13 +375,18 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
       child: Semantics(
         selected: selected,
         button: true,
+        // 三个风格是互斥的单选项。不声明的话屏幕阅读器会把它们读成三个独立按钮，
+        // 用户不知道选了一个就等于取消了另外两个。
+        inMutuallyExclusiveGroup: true,
         child: Material(
           color: selected
               ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
           child: InkWell(
-            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+            borderRadius:
+                BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
             onTap: () => appTheme.setThemeStyle(style),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -388,8 +397,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      borderRadius:
-                          BorderRadius.circular(AppTheme.buttonRadius),
+                      borderRadius: BorderRadius.circular(
+                          AppShapeTokens.of(context).buttonRadius),
                       border:
                           Border.all(color: theme.colorScheme.outlineVariant),
                     ),

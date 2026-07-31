@@ -8,10 +8,10 @@ import '../models/ai_provider_settings.dart';
 import '../models/ai_settings.dart';
 import '../services/api_key_manager.dart';
 import '../services/settings_service.dart';
-import '../theme/app_theme.dart';
 import '../utils/ai_network_manager.dart';
 import '../utils/app_logger.dart';
 import '../widgets/app_snackbar.dart';
+import '../theme/theme_style.dart';
 
 /// 新建或编辑一个 AI 服务配置。
 ///
@@ -412,7 +412,8 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
     final theme = Theme.of(context);
     final preset = _preset;
     final border = OutlineInputBorder(
-      borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+      borderRadius:
+          BorderRadius.circular(AppShapeTokens.of(context).inputRadius),
     );
 
     return Card(
@@ -531,7 +532,8 @@ class _AIProviderEditPageState extends State<AIProviderEditPage> {
               labelText: l10n.hostOverrideField,
               hintText: l10n.hostOverrideHint,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).inputRadius),
               ),
               prefixIcon: const Icon(Icons.dns),
             ),
@@ -652,7 +654,8 @@ class _RecommendedBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: theme.colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
       ),
       child: Text(
         label,

@@ -6,8 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../utils/chat_markdown_styles.dart';
 import '../constants/app_constants.dart';
-import '../theme/app_theme.dart';
 import '../utils/time_utils.dart';
+import '../theme/theme_style.dart';
 
 /// 支持Markdown的聊天消息气泡组件
 class MarkdownMessageBubble extends StatelessWidget {
@@ -137,9 +137,9 @@ class MarkdownMessageBubble extends StatelessWidget {
   void _showMessageOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppTheme.dialogRadius),
+          top: Radius.circular(AppShapeTokens.of(context).dialogRadius),
         ),
       ),
       builder: (context) => SafeArea(

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/local_ai_settings.dart';
 import '../services/settings_service.dart';
-import '../theme/app_theme.dart';
+import '../theme/theme_style.dart';
 
 /// 本地 AI 功能设置页面
 ///
@@ -86,7 +86,8 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                     theme.colorScheme.secondaryContainer.withValues(alpha: 0.3),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).cardRadius),
                 border: Border.all(
                   color: theme.colorScheme.primary.withValues(alpha: 0.2),
                   width: 1.5,
@@ -136,7 +137,8 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
             child: Card(
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).cardRadius),
                 side: BorderSide(
                   color: theme.colorScheme.outline.withValues(alpha: 0.2),
                 ),
@@ -154,7 +156,8 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                           ],
                         )
                       : null,
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                  borderRadius: BorderRadius.circular(
+                      AppShapeTokens.of(context).cardRadius),
                 ),
                 child: SwitchListTile(
                   contentPadding: const EdgeInsets.symmetric(
@@ -407,7 +410,8 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
             elevation: 0,
             margin: EdgeInsets.zero,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+              borderRadius:
+                  BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
               side: BorderSide(
                 color: theme.colorScheme.outline.withValues(alpha: 0.2),
               ),

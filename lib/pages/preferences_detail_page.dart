@@ -8,9 +8,9 @@ import '../services/biometric_service.dart';
 import '../services/clipboard_service.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
-import '../theme/app_theme.dart';
 import '../utils/icon_utils.dart';
 import 'ai_settings_page.dart';
+import '../theme/theme_style.dart';
 
 /// 二级设置页：整合常用偏好与AI快捷开关
 class PreferencesDetailPage extends StatefulWidget {
@@ -79,7 +79,8 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                     colorScheme.primaryContainer.withValues(alpha: 0.8),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).cardRadius),
                 boxShadow: [
                   BoxShadow(
                     color: colorScheme.shadow.withValues(alpha: 0.1),
@@ -505,7 +506,8 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
     return Container(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         border: Border.all(
           color: theme.colorScheme.outline.withValues(alpha: 0.2),
         ),
@@ -518,7 +520,8 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         child: Material(
           type: MaterialType.transparency,
           child: Column(children: children),
@@ -601,9 +604,11 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
           color: isSelected
               ? theme.colorScheme.secondaryContainer
               : theme.colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
           child: InkWell(
-            borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+            borderRadius:
+                BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
             onTap: () => settings.setOfflineQuoteSource(value),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -631,7 +636,8 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
         padding: const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
           border: Border.all(
             color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
           ),
@@ -664,7 +670,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(AppTheme.cardRadius),
+                    top: Radius.circular(AppShapeTokens.of(context).cardRadius),
                   ),
                 ),
               ),
@@ -800,7 +806,8 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
             decoration: InputDecoration(
               hintText: hintText,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).inputRadius),
               ),
             ),
             autofocus: true,
@@ -969,7 +976,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                                 prefixIcon: const Icon(Icons.search),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(
-                                      AppTheme.inputRadius),
+                                      AppShapeTokens.of(context).inputRadius),
                                 ),
                                 isDense: true,
                               ),

@@ -182,6 +182,12 @@ void main() {
         }
         expect(form.fontFamily, isNotNull);
         // 回退链必须以通用族 serif 收尾，否则某个平台三个都没有时会掉进豆腐块。
+        //
+        // 注意这一条**只能保证不出豆腐块，不能保证中文真的变成衬线**：
+        // Android 上 `serif` 映射到 Noto Serif（仅拉丁），中文字形仍回落系统黑体，
+        // 而多数 Android 设备不带 Noto Serif CJK。用户 2026-07-31 真机反馈手机上
+        // 看不到字体变化，根因就在这里。别把这条测试当成「字体已生效」的证据。
+        // 详见 docs/paper-ink-theme-handoff-2026-07-31.md 第二节第 0 条。
         expect(form.fontFamilyFallback, isNotNull);
         expect(form.fontFamilyFallback!.last, 'serif');
       }

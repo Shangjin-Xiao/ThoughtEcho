@@ -259,7 +259,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                           decoration: BoxDecoration(
                             color: theme.colorScheme.surface,
                             borderRadius: BorderRadius.circular(
-                              AppTheme.cardRadius,
+                              AppShapeTokens.of(context).cardRadius,
                             ),
                             boxShadow: [
                               BoxShadow(

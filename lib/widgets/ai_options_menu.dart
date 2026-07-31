@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../gen_l10n/app_localizations.dart';
-import '../theme/app_theme.dart';
 import '../utils/color_utils.dart'; // applyOpacity 扩展方法
 import 'ai/experimental_badge.dart';
+import '../theme/theme_style.dart';
 
 /// AI 功能选项的数据模型
 class AiOptionItem {
@@ -67,9 +67,9 @@ class AiOptionsMenu extends StatelessWidget {
     return showModalBottomSheet(
       context: context,
       backgroundColor: theme.colorScheme.surface,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppTheme.dialogRadius),
+          top: Radius.circular(AppShapeTokens.of(context).dialogRadius),
         ),
       ),
       builder: (BuildContext context) {
@@ -215,7 +215,8 @@ class AiOptionsMenu extends StatelessWidget {
         elevation: 0,
         color: theme.colorScheme.surfaceContainerLow,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
           side: BorderSide(
             color: theme.colorScheme.outlineVariant.applyOpacity(0.5),
             width: 1,
@@ -223,7 +224,8 @@ class AiOptionsMenu extends StatelessWidget {
         ),
         child: InkWell(
           onTap: option.onTap,
-          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(

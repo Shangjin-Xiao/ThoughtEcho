@@ -5,7 +5,7 @@ import '../gen_l10n/app_localizations.dart';
 import '../models/generated_card.dart';
 import '../utils/app_logger.dart';
 import 'app_snackbar.dart';
-import '../theme/app_theme.dart';
+import '../theme/theme_style.dart';
 
 /// SVG卡片渲染组件
 class SVGCardWidget extends StatelessWidget {
@@ -44,7 +44,8 @@ class SVGCardWidget extends StatelessWidget {
         width: width,
         height: height,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
@@ -54,7 +55,8 @@ class SVGCardWidget extends StatelessWidget {
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
           child: _buildSVGWidget(context),
         ),
       ),
@@ -129,7 +131,8 @@ class SVGCardWidget extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.grey[100],
             border: Border.all(color: Colors.grey[300]!, width: 1),
-            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+            borderRadius:
+                BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
           ),
           child: Center(
             child: Padding(
@@ -242,7 +245,8 @@ class SVGCardWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.red[50],
         border: Border.all(color: Colors.red[200]!, width: 2),
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
       ),
       child: Center(
         child: Padding(
@@ -470,7 +474,8 @@ class _ActionButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
         ),
       ),
     );
@@ -612,7 +617,7 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(
-                            AppTheme.dialogRadius,
+                            AppShapeTokens.of(context).dialogRadius,
                           ),
                           boxShadow: [
                             BoxShadow(

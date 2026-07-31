@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 import '../utils/lottie_animation_manager.dart';
+import '../theme/theme_style.dart';
 
 /// 增强的AI加载对话框
 /// 使用高质量的Lottie动画提供更好的用户体验
@@ -82,7 +82,8 @@ class EnhancedAILoadingDialog extends StatelessWidget {
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppTheme.dialogRadius),
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).dialogRadius),
           boxShadow: [
             BoxShadow(
               color: theme.shadowColor.withValues(alpha: 0.15),
@@ -173,7 +174,8 @@ class EnhancedAIProgressDialog extends StatelessWidget {
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(AppTheme.dialogRadius),
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).dialogRadius),
           boxShadow: [
             BoxShadow(
               color: theme.shadowColor.withValues(alpha: 0.15),

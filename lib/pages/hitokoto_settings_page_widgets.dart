@@ -13,10 +13,12 @@ extension _HitokotoSettingsPageWidgets on _HitokotoSettingsPageState {
 
     return Material(
       color: isPrimary ? colorScheme.primary : colorScheme.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+      borderRadius:
+          BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
           child: Row(
@@ -94,10 +96,12 @@ extension _HitokotoSettingsPageWidgets on _HitokotoSettingsPageState {
 
     return Material(
       color: colorScheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+      borderRadius:
+          BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Row(

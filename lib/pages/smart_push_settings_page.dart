@@ -9,7 +9,7 @@ import 'package:thoughtecho/models/smart_push_settings.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
-import 'package:thoughtecho/theme/app_theme.dart';
+import 'package:thoughtecho/theme/theme_style.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
 part 'smart_push_settings_page_basic_sections.dart';

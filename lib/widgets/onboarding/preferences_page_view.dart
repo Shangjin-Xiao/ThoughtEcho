@@ -6,7 +6,7 @@ import '../../models/onboarding_models.dart';
 import '../../config/onboarding_config.dart';
 import '../../services/location_service.dart';
 import '../../services/api_service.dart';
-import '../../theme/app_theme.dart';
+import '../../theme/theme_style.dart';
 
 /// 偏好设置页面组件
 class PreferencesPageView extends StatefulWidget {
@@ -670,7 +670,8 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         border: Border.all(
           color: theme.colorScheme.outline.withValues(alpha: 0.2),
         ),

@@ -13,7 +13,8 @@ extension _HitokotoSettingsPageInfoSections on _HitokotoSettingsPageState {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         border: Border.all(
           color: colorScheme.outline.withAlpha(30),
           width: 1,
@@ -57,7 +58,8 @@ extension _HitokotoSettingsPageInfoSections on _HitokotoSettingsPageState {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         border: Border.all(
           color: colorScheme.outline.withAlpha(30),
           width: 1,

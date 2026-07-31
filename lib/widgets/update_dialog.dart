@@ -6,7 +6,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import '../services/version_check_service.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../services/apk_download_service.dart';
-import '../theme/app_theme.dart';
+import '../theme/theme_style.dart';
 
 /// 更新按钮类型枚举
 enum UpdateButtonType {
@@ -80,7 +80,7 @@ class UpdateBottomSheet extends StatelessWidget {
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppTheme.dialogRadius),
+          top: Radius.circular(AppShapeTokens.of(context).dialogRadius),
         ),
       ),
       child: Column(
@@ -117,7 +117,8 @@ class UpdateBottomSheet extends StatelessWidget {
               padding: EdgeInsets.all(contentPadding),
               decoration: BoxDecoration(
                 color: colorScheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).cardRadius),
                 border: Border.all(color: colorScheme.outline.withAlpha(50)),
               ),
               child: Column(
@@ -191,7 +192,8 @@ class UpdateBottomSheet extends StatelessWidget {
                 padding: EdgeInsets.all(contentPadding),
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                  borderRadius: BorderRadius.circular(
+                      AppShapeTokens.of(context).cardRadius),
                   border: Border.all(color: colorScheme.outline.withAlpha(50)),
                 ),
                 child: SingleChildScrollView(
@@ -261,7 +263,7 @@ class UpdateBottomSheet extends StatelessWidget {
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppTheme.dialogRadius),
+          top: Radius.circular(AppShapeTokens.of(context).dialogRadius),
         ),
       ),
       child: Column(
@@ -298,7 +300,8 @@ class UpdateBottomSheet extends StatelessWidget {
               padding: EdgeInsets.all(contentPadding),
               decoration: BoxDecoration(
                 color: colorScheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).cardRadius),
                 border: Border.all(color: colorScheme.outline.withAlpha(50)),
               ),
               child: Column(

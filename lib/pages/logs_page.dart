@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/unified_log_service.dart';
-import '../theme/app_theme.dart';
 import '../widgets/app_empty_view.dart';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_error_view.dart';
@@ -11,6 +10,7 @@ import '../utils/color_utils.dart'; // Import color_utils.dart
 import '../utils/time_utils.dart';
 import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../theme/theme_style.dart';
 
 class LogsPage extends StatefulWidget {
   const LogsPage({super.key});
@@ -223,8 +223,9 @@ class _LogsPageState extends State<LogsPage> {
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
             borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(AppTheme.dialogRadius),
-              topRight: Radius.circular(AppTheme.dialogRadius),
+              topLeft: Radius.circular(AppShapeTokens.of(context).dialogRadius),
+              topRight:
+                  Radius.circular(AppShapeTokens.of(context).dialogRadius),
             ),
           ),
           child: Column(
@@ -239,8 +240,10 @@ class _LogsPageState extends State<LogsPage> {
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(AppTheme.dialogRadius),
-                    topRight: Radius.circular(AppTheme.dialogRadius),
+                    topLeft: Radius.circular(
+                        AppShapeTokens.of(context).dialogRadius),
+                    topRight: Radius.circular(
+                        AppShapeTokens.of(context).dialogRadius),
                   ),
                 ),
                 child: Column(
@@ -585,7 +588,8 @@ class _LogsPageState extends State<LogsPage> {
                   hintText: l10n.searchLogs,
                   prefixIcon: const Icon(Icons.search),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                    borderRadius: BorderRadius.circular(
+                        AppShapeTokens.of(context).inputRadius),
                   ),
                   suffixIcon: _searchQuery != null && _searchQuery!.isNotEmpty
                       ? IconButton(
@@ -784,8 +788,9 @@ class _LogsPageState extends State<LogsPage> {
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
             borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(AppTheme.dialogRadius),
-              topRight: Radius.circular(AppTheme.dialogRadius),
+              topLeft: Radius.circular(AppShapeTokens.of(context).dialogRadius),
+              topRight:
+                  Radius.circular(AppShapeTokens.of(context).dialogRadius),
             ),
           ),
           child: Column(
@@ -796,8 +801,10 @@ class _LogsPageState extends State<LogsPage> {
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(AppTheme.dialogRadius),
-                    topRight: Radius.circular(AppTheme.dialogRadius),
+                    topLeft: Radius.circular(
+                        AppShapeTokens.of(context).dialogRadius),
+                    topRight: Radius.circular(
+                        AppShapeTokens.of(context).dialogRadius),
                   ),
                 ),
                 child: Row(
@@ -1033,7 +1040,8 @@ class _LogEntryItem extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
           border: Border.all(color: theme.colorScheme.outline),
         ),
         child: Column(

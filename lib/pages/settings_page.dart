@@ -6,7 +6,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/settings_service.dart';
 import '../services/unified_log_service.dart';
-import '../theme/app_theme.dart';
 import 'ai_settings_page.dart';
 import 'hitokoto_settings_page.dart';
 import 'theme_settings_page.dart';
@@ -38,6 +37,7 @@ import '../utils/anniversary_display_utils.dart';
 import 'webdav_sync_page.dart';
 import '../services/webdav_sync_service.dart';
 import '../utils/lww_utils.dart';
+import '../theme/theme_style.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -1313,7 +1313,8 @@ class SettingsPageState extends State<SettingsPage> {
       ElevatedButton.styleFrom(
         minimumSize: const Size.fromHeight(44),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
         ),
       );
 

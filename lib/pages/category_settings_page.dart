@@ -5,9 +5,9 @@ import '../extensions/note_category_localization_extension.dart';
 import '../services/database_service.dart';
 import '../models/note_category.dart';
 import '../utils/icon_utils.dart';
-import '../theme/app_theme.dart';
 import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../theme/theme_style.dart';
 
 class CategorySettingsPage extends StatefulWidget {
   const CategorySettingsPage({super.key});
@@ -50,7 +50,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).cardRadius),
                 border: Border.all(
                   color: Theme.of(context).colorScheme.outlineVariant,
                 ),
@@ -69,8 +70,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                             hintText: l10n.enterTagNameHint,
                             counterText: '',
                             border: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppTheme.inputRadius),
+                              borderRadius: BorderRadius.circular(
+                                  AppShapeTokens.of(context).inputRadius),
                             ),
                           ),
                         ),
@@ -81,7 +82,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                         child: InkWell(
                           onTap: () => _showIconSelector(context),
                           borderRadius: BorderRadius.circular(
-                            AppTheme.cardRadius,
+                            AppShapeTokens.of(context).cardRadius,
                           ),
                           child: Container(
                             padding: const EdgeInsets.all(10),
@@ -92,7 +93,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                 ).colorScheme.outlineVariant,
                               ),
                               borderRadius: BorderRadius.circular(
-                                AppTheme.cardRadius,
+                                AppShapeTokens.of(context).cardRadius,
                               ),
                             ),
                             child: _selectedIconName != null
@@ -241,7 +242,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                   elevation: 0,
                   margin: EdgeInsets.zero,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                    borderRadius: BorderRadius.circular(
+                        AppShapeTokens.of(context).cardRadius),
                     side: BorderSide(
                       color: Theme.of(context).colorScheme.outlineVariant,
                     ),
@@ -333,8 +335,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                             )
                           : null,
                       border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppTheme.inputRadius),
+                        borderRadius: BorderRadius.circular(
+                            AppShapeTokens.of(context).inputRadius),
                       ),
                     ),
                     onChanged: (value) {
@@ -435,7 +437,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                                   : Colors.transparent,
                                               borderRadius:
                                                   BorderRadius.circular(
-                                                AppTheme.cardRadius,
+                                                AppShapeTokens.of(context)
+                                                    .cardRadius,
                                               ),
                                               border: Border.all(
                                                 color: isSelected
@@ -525,7 +528,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                                   : Colors.transparent,
                                               borderRadius:
                                                   BorderRadius.circular(
-                                                AppTheme.cardRadius,
+                                                AppShapeTokens.of(context)
+                                                    .cardRadius,
                                               ),
                                               border: Border.all(
                                                 color: isSelected
@@ -878,7 +882,8 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                       )
                     : null,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                  borderRadius: BorderRadius.circular(
+                      AppShapeTokens.of(context).inputRadius),
                 ),
               ),
               onChanged: (value) {

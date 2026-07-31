@@ -23,7 +23,8 @@ extension _HitokotoSettingsPageLayoutSections on _HitokotoSettingsPageState {
             colorScheme.primaryContainer.withAlpha(200),
           ],
         ),
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         boxShadow: AppTheme.lightShadow,
       ),
       child: Column(
@@ -98,7 +99,8 @@ extension _HitokotoSettingsPageLayoutSections on _HitokotoSettingsPageState {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         border: Border.all(
           color: colorScheme.outline.withAlpha(50),
           width: 1,
@@ -185,7 +187,8 @@ extension _HitokotoSettingsPageLayoutSections on _HitokotoSettingsPageState {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         border: Border.all(
           color: colorScheme.outline.withAlpha(50),
           width: 1,
@@ -238,7 +241,8 @@ extension _HitokotoSettingsPageLayoutSections on _HitokotoSettingsPageState {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         border: Border.all(
           color: colorScheme.outline.withAlpha(30),
           width: 1,

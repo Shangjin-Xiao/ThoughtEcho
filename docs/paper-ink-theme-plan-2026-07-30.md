@@ -1,6 +1,8 @@
 # 纸墨主题（Paper & Ink）落地计划
 
-> 状态：**第一步已实现**（风格维度 + 两套色板 + 设置入口），字体和默认值切换仍未做。
+> **本文档现在是设计参考**：保留最初的推导、色板沿革、以及参考项目的教训。
+> **当前状态和下一步以 `docs/paper-ink-theme-handoff-2026-07-31.md` 为准**，
+> 两者冲突时看那一份。
 > 创建于 2026-07-30，2026-07-31 更新。
 
 ## 当前进度（2026-07-31）
@@ -37,15 +39,17 @@
   `AppTheme.cardRadius` 那组 `static const` 是 material 取值、无法随风格变化，
   自绘卡片要改读 `AppShapeTokens.of(context).cardRadius`。
 
-**迁移进度**：`AppTheme.*Radius` 全项目 167 处 / 57 个文件。已迁移最显眼的一批
-（笔记卡、滑动卡、每日一言、记录页筛选栏与导出条、AI 输入框）。**长尾未迁移**，
-那些地方在手工风格下仍是 18 圆角，和已迁移的部分不一致——这是当前最明显的待办。
-通过 `ThemeData` 继承的组件（Card / Dialog / BottomSheet / 按钮 / 输入框）
-不需要迁移，已经自动跟随。
+### 第三步：圆角长尾迁移完毕（2026-07-31）
 
-尚未做：**默认值切换**（当前默认仍是 material，翻成 paper 是一行改动）、
-**纸张横线纹理**（计划允许 1–2 处的视觉隐喻，是「记得住」的那一下）、
-上面说的圆角长尾迁移。
+`AppTheme.*Radius` 全项目原有 167 处，已全部迁到
+`AppShapeTokens.of(context).*Radius`，只剩年度报告相关的 9 处（产品已废弃，不动）。
+顺带清掉 34 个因此变得多余的 `app_theme.dart` import。
+
+同轮修掉三条审查意见：`elevatedButtonRadius` 漏配（`ElevatedButton` 会保持 M3
+胶囊形状不跟随风格）、初始化失败分支漏重置 `_themeStyle`（会留下半新半旧的主题状态）、
+风格选项缺 `inMutuallyExclusiveGroup`（屏幕阅读器读成三个独立按钮）。
+
+**下一步和遗留问题见 `docs/paper-ink-theme-handoff-2026-07-31.md`。**
 
 ### 实现中发现的、与本文档原计划不同的地方
 

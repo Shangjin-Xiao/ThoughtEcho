@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/ai_workflow_descriptor.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
-import 'package:thoughtecho/theme/app_theme.dart';
+import '../../theme/theme_style.dart';
 
 /// Slash Commands菜单项
 class SlashCommandsMenu extends StatefulWidget {
@@ -104,7 +104,8 @@ class _SlashCommandsMenuState extends State<SlashCommandsMenu>
               color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
               width: 1,
             ),
-            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+            borderRadius:
+                BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(
@@ -370,7 +371,8 @@ class _SlashCommandsInputFieldState extends State<SlashCommandsInputField> {
             hintText: widget.hintText ??
                 AppLocalizations.of(context).typeSlashToSeeCommands,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+              borderRadius:
+                  BorderRadius.circular(AppShapeTokens.of(context).inputRadius),
             ),
             prefixIcon: _showSlashCommands
                 ? Icon(

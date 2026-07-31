@@ -15,6 +15,7 @@ import '../widgets/app_loading_view.dart';
 import '../utils/app_logger.dart';
 import 'ai_annual_report_webview.dart';
 import 'annual_report_page.dart';
+import '../theme/theme_style.dart';
 
 /// AI 分析历史记录页面
 class AIAnalysisHistoryPage extends StatefulWidget {
@@ -237,8 +238,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         height: MediaQuery.of(context).size.height * 0.85, // Slightly taller
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppTheme.dialogRadius), // Use AppTheme
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(
+                AppShapeTokens.of(context).dialogRadius), // Use AppTheme
           ),
           boxShadow: AppTheme.defaultShadow, // Add shadow
         ),
@@ -453,14 +455,16 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+      borderRadius:
+          BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           border: Border.all(
             color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
           ),
-          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         ),
         child: Row(
           children: [
@@ -1034,7 +1038,8 @@ $positiveQuotesText
                         )
                       : null,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                    borderRadius: BorderRadius.circular(
+                        AppShapeTokens.of(context).inputRadius),
                   ),
                 ),
                 onChanged: (value) {
@@ -1075,7 +1080,7 @@ $positiveQuotesText
                                 .withValues(alpha: 0.1),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(
-                                AppTheme.cardRadius,
+                                AppShapeTokens.of(context).cardRadius,
                               ),
                               side: BorderSide(
                                 color: Theme.of(context)
@@ -1087,7 +1092,7 @@ $positiveQuotesText
                             child: InkWell(
                               onTap: () => _viewAnalysisDetails(analysis),
                               borderRadius: BorderRadius.circular(
-                                AppTheme.cardRadius,
+                                AppShapeTokens.of(context).cardRadius,
                               ),
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
