@@ -30,6 +30,7 @@ import 'package:thoughtecho/services/secure_storage_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/services/web_fetch_service.dart';
+import 'package:thoughtecho/utils/agent_history_builder.dart';
 import 'package:thoughtecho/utils/agent_note_document_codec.dart';
 
 import '../test_harness.dart';
@@ -473,9 +474,13 @@ class AgentProbe {
 
     final stopwatch = Stopwatch()..start();
     try {
+      // 与 ai_assistant_page_agent.dart:_askAgent 一致：工具轨迹的压缩发生在
+      // UI 层而不是 AgentService 里，探针必须自己走同一步，否则喂进去的是
+      // 原始消息，AgentService 会把带元数据的消息丢掉，看上去像「记不住」。
       final response = await agent.runAgent(
         userMessage: userMessage,
-        history: carryHistory ? List.of(_history) : const [],
+        history:
+            carryHistory ? AgentHistoryBuilder.build(_history) : const [],
         noteContext: noteContext,
       );
       turn.response = response;
