@@ -268,6 +268,26 @@ extension _AIReportThoughterEntry on _AIPeriodicReportPageState {
     await _loadRecentSessions();
   }
 
+  /// 带着某条笔记进 Thoughter。
+  ///
+  /// 和「追问这条」同一个模式：带具体上下文进去，而不是又一个泛泛的「打开 AI」。
+  /// 走 note 入口而不是 explore——助手页只有 note 分支会
+  /// `getLatestSessionForNote` 恢复会话，同一条笔记聊过的会接着上次聊。
+  Future<void> _openThoughterForNote(Quote quote) async {
+    final navigator = Navigator.of(context);
+
+    await navigator.push(
+      MaterialPageRoute<void>(
+        builder: (_) => AIAssistantPage(
+          entrySource: AIAssistantEntrySource.note,
+          quote: quote,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await _loadRecentSessions();
+  }
+
   Future<void> _openSessionHistory() async {
     final service = context.read<ChatSessionService>();
     final navigator = Navigator.of(context);

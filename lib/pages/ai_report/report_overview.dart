@@ -229,7 +229,7 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
           borderRadius: BorderRadius.circular(12),
           onTap: () {
             HapticFeedback.lightImpact();
-            // 可以添加跳转到笔记详情的逻辑
+            _openNoteDetail(quote);
           },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),

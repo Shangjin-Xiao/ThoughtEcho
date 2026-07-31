@@ -231,6 +231,85 @@ extension _AIReportStats on _AIPeriodicReportPageState {
     );
   }
 
+  /// 打开笔记本身。
+  ///
+  /// 预览块以前点了只有一次震动，等于假的可点区域。改动后走全屏编辑器，
+  /// 和记录页点开一条笔记是同一个页面。编辑保存会触发数据库通知，
+  /// 本页的 `_onDatabaseChanged` 会静默刷新，不需要在这里手动重载。
+  Future<void> _openNoteDetail(Quote quote) async {
+    final navigator = Navigator.of(context);
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    List<NoteCategory> tags = const [];
+    try {
+      tags = await context.read<DatabaseService>().getCategories();
+    } catch (e) {
+      // 标签取不到不该挡住看笔记，编辑器允许 allTags 为空
+      AppLogger.d('Categories unavailable for note detail: $e');
+    }
+    if (!mounted) return;
+
+    try {
+      await navigator.push(
+        MaterialPageRoute<void>(
+          builder: (_) => NoteFullEditorPage(
+            initialContent: quote.content,
+            initialQuote: quote,
+            allTags: tags,
+          ),
+        ),
+      );
+    } catch (e, stack) {
+      AppLogger.e('Failed to open note from report',
+          error: e, stackTrace: stack);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.cannotOpenFullEditor(e.toString())),
+          duration: AppConstants.snackBarDurationError,
+        ),
+      );
+    }
+  }
+
+  /// 每条笔记预览上的「问 Thoughter」。
+  ///
+  /// 和洞察下的「追问这条」同一个模式：带着具体的笔记进去，
+  /// 而不是让用户先打开助手再自己描述一遍要聊哪条。
+  Widget _buildAskThoughterButton(Quote quote, AppLocalizations l10n) {
+    final theme = Theme.of(context);
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(10),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          _openThoughterForNote(quote);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.auto_awesome,
+                size: 14,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                l10n.askNote,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   /// 构建笔记预览
   /// [showExactTime]/[showNoteEditTime] 由调用方在 build 期间读取后传入，
   /// 避免本方法被放进动画回调时再去 context.select。
@@ -272,9 +351,8 @@ extension _AIReportStats on _AIPeriodicReportPageState {
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () {
-            // 添加点击反馈
             HapticFeedback.lightImpact();
-            // 可以添加跳转到笔记详情的逻辑
+            _openNoteDetail(quote);
           },
           child: Container(
             padding: const EdgeInsets.all(16),
@@ -320,6 +398,8 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                               children: [
                                 Text(
                                   formattedDate,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: Theme.of(
                                     context,
                                   ).textTheme.bodySmall?.copyWith(
@@ -368,6 +448,8 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                             ),
                       ),
                     ),
+                    const SizedBox(width: 4),
+                    _buildAskThoughterButton(quote, l10n),
                   ],
                 ),
               ],

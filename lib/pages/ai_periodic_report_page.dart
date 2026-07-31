@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:provider/provider.dart';
+import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import '../models/weather_data.dart';
 import '../models/ai_assistant_entry.dart';
@@ -24,6 +25,7 @@ import '../gen_l10n/app_localizations.dart';
 import '../widgets/ai/experimental_badge.dart';
 import 'ai_assistant_page.dart';
 import 'ai_assistant/session_history_page.dart';
+import 'note_full_editor_page.dart';
 
 part 'ai_report/report_data_loading.dart';
 part 'ai_report/report_time_selector.dart';

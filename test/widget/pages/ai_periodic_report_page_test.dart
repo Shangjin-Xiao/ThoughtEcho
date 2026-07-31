@@ -261,6 +261,40 @@ void main() {
     expect(find.text(l10n.exploreFreeChat), findsOneWidget);
   });
 
+  // 每条笔记预览都带一个「问 Thoughter」：带着具体笔记进对话，
+  // 而不是让用户打开助手后自己描述一遍要聊哪条。
+  testWidgets('each note preview carries its own Thoughter entry',
+      (tester) async {
+    final settings = _ReportSettingsService();
+    final database = _CountingPeriodDatabaseService();
+    final insights = InsightHistoryService(settingsService: settings);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<AIService>(
+            create: (_) => AIService(settingsService: settings),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AIPeriodicReportPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final context = tester.element(find.byType(AIPeriodicReportPage));
+    final l10n = AppLocalizations.of(context);
+    expect(find.text('一条测试笔记'), findsOneWidget);
+    expect(find.text(l10n.askNote), findsOneWidget);
+  });
+
   // 回归：入场动画只留一层。之前七到十个 TweenAnimationBuilder 交错到 1.4 秒，
   // 数据早就到了用户还得等动画演完。
   testWidgets('overview uses a single entrance animation', (tester) async {
