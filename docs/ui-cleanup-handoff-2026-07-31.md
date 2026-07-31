@@ -31,48 +31,44 @@
 
 ## 二、未完成的工作
 
-### 1. 圆角收敛（零进度，优先级最高）
+### 1. 圆角收敛（已完成，`19e033e5`）
 
-**状态：完全没有开始**，五个批次的子代理都在写入文件前撞上 session limit。
+40 个文件，硬编码 `BorderRadius.circular(N)` 从 238 处降到 154 处，剩余的是徽章、图标
+背景、进度条、头像、胶囊形状等按设计本就不该统一的装饰件。年度报告相关页面未动。
 
-问题：`lib/theme/app_theme.dart:138-141` 定义了 `cardRadius=18` / `dialogRadius=24` /
-`buttonRadius=12` / `inputRadius=12`，但页面里手写了 13 种 `BorderRadius.circular(N)`
-（2/4/6/7/8/10/12/14/16/18/20/21/24/28/30/999），最常用的是 12 和 16，**几乎没有一处用
-主题值**。记录页一屏内就有 10/12/14/16/20/24 六种圆角。
+采用的判定规则完整记录在下面「圆角收敛规则」一节，后续新增 UI 沿用同一套判据。
 
-改的边界（这条很重要，放宽了会把小徽章也改成 18 圆角）：
+**这次踩到的坑（重要）**：`Card` / 按钮的 `shape` 覆盖可以直接删掉继承主题，但
+**输入框不行**。项目从未设置 `inputDecoratorBorderType`，FlexColorScheme 该参数默认是
+`FlexInputBorderType.underline`（见 `flex_sub_themes_input_decoration.dart:510`），
+所以主题的 `inputDecorationTheme.border` 是下划线。删掉 `border: OutlineInputBorder()`
+会让描边输入框变成下划线输入框。输入框必须**保留**显式 `OutlineInputBorder`，只把圆角
+换成 `AppTheme.inputRadius`。
 
-- **改**：`Card` 的 `shape`（优先直接删掉让它继承 `cardTheme`）、作为卡片用的
-  `Container`+`BoxDecoration`（判据：有 `boxShadow` 或 `border` 且内含整块内容）、
-  `Dialog`/`BottomSheet` 形状、输入框 border、按钮 `styleFrom(shape:)`、包裹整张卡片的
-  `InkWell`/`ClipRRect`
-- **不改**：Chip / 标签 / 徽章（padding 水平 ≤10、垂直 ≤6）、进度条和分段条、头像和
-  缩略图、图标背景小圆、任何宽高 < 40 的装饰容器
-- `circular(999)` / `circular(30)` 想做胶囊的 → 按钮/Chip 换 `const StadiumBorder()`
+（若将来想让输入框也能安全继承，正解是在两套主题的 `subThemesData` 里显式加
+`inputDecoratorBorderType: FlexInputBorderType.outline`，然后再统一删除覆盖。）
 
-**不要动** `annual_report_page.dart`、`ai_annual_report_webview.dart`、`lib/pages/ai_report/`
-（年度报告已废弃，见下）。
+**留给后续判断的模糊项**（子代理标记，本次一律未改，保持原值）：
 
-### 2. 第二批死代码（已核实零引用，未删）
+- `home_page.dart:988-1003` —— FAB 的阴影 `Container` + `FloatingActionButton.shape`，
+  都是 `circular(16)`。这是刻意做的 squircle FAB，不确定是否要收敛。
+- `anniversary_animation_overlay.dart:205/214/340` —— 周年彩蛋的玻璃拟态卡片，
+  整套用 28/20/999 自定义值，收敛可能破坏其刻意的视觉层次。
+- `ai_assistant_page_ui.dart:350/513`、`assistant_input_panel.dart:57/151` —— 聊天输入
+  框外壳，有 border+shadow 但 TextField 自身是 `InputBorder.none`，介于 `inputRadius`
+  和 `cardRadius` 之间。
+- `tool_progress_panel.dart:174` —— 和 `thinking_widget` 同类的折叠面板，但没有
+  border/shadow，按判据不算卡片；两者目前不一致。
+- `PopupMenuButton` / `DropdownButton` 的 `shape` 与 `borderRadius`（多处）—— 不在四个
+  令牌的语义范围内，全部保持原样。
+- Markdown 的 `codeblockDecoration` / `blockquoteDecoration`（多处）—— 属于排版而非
+  应用结构，全部保持原样。
 
-| 类 | 文件 | 行数 |
-| --- | --- | --- |
-| `InsightsPage` | `lib/pages/insights_page.dart` | 1239 |
-| `TagSettingsPage` | `lib/pages/tag_settings_page.dart` | 995 |
-| `MediaManagementPage` | `lib/pages/media_management_page.dart` | 390 |
+### 2. 第二批死代码（已完成，`267e609f`）
 
-共 2624 行。核实方式：全项目（含 `test/`）grep 类名和文件名，零引用点。
-
-- `InsightsPage`：无人 `import 'insights_page.dart'`。洞察功能现在走
-  `home_page.dart:978` 的 `AIFeaturesPage` → `AIPeriodicReportPage`，这个页面是被替换后
-  的遗留。注意 `annual_report_page.dart` 里有个**恰好同名**的方法 `_buildInsightsPage()`，
-  搜索时容易误判为引用。
-- `TagSettingsPage`：设置页那个「标签」入口（`settings_page.dart:660`，标题是
-  `l10n.settingsTags`）打开的其实是 `CategorySettingsPage` —— UI 上早就改叫标签，代码里
-  还是 category 的旧命名。`TagSettingsPage` 是更早的遗留。
-- `MediaManagementPage`：零入口。
-
-**删之前务必重新 grep 确认**，不要直接信本文档——距离写下这些已经过了一段时间。
+删除 `InsightsPage` / `TagSettingsPage` / `MediaManagementPage` 共 2624 行。删除前
+重新 grep 复核过：类名与文件名在 `lib/` 和 `test/` 均零引用，`InsightsPage` 唯一命中的是
+`annual_report_page.dart` 里那个恰好同名的方法 `_buildInsightsPage()`。
 
 ### 3. 空态（已修正的错误判断，优先级低）
 
@@ -102,13 +98,13 @@
   03「素笺（冷）」。因为确定不止一套，**代码从一开始就要按 N 套设计**，任何
   `if (isPaper)` 式的二元判断都是错的——加第三套时应该只增加一组常量。
 - 每套色板落地前要验证对比度（WCAG AA），手工色板没有 M3 tonal palette 那样的算法保证。
-- **待决策一：字体。** 调研实测（拉 `google/fonts` 仓库真实文件大小）：
-  Noto Serif SC 可变字重 **24.0 MiB**、ZCOOL XiaoWei **6.0 MiB**、Long Cang **4.9 MiB**，
-  全量约 35MB。子集化到 3500 常用字后 Noto Serif SC 约 2.5MB。Flutter 的
-  `--tree-shake-icons` 对正文字体无效，只能用 `fonttools pyftsubset` 做外部构建步骤，
-  产物二进制签入仓库——意味着**文案一改就要重跑并重新提交**。
-  **当前建议：第一版只做颜色，不动字体。**
-- **待决策二：纸墨是默认还是可选。** 倾向默认纸墨、设置里可切回 Material。未定。
+- **字体：已定，第一版不做。** 只做颜色。调研实测（拉 `google/fonts` 仓库真实文件
+  大小）：Noto Serif SC 可变字重 **24.0 MiB**、ZCOOL XiaoWei **6.0 MiB**、Long Cang
+  **4.9 MiB**，全量约 35MB；子集化到 3500 常用字后 Noto Serif SC 约 2.5MB，但
+  `--tree-shake-icons` 对正文字体无效，只能用 `fonttools pyftsubset` 做外部构建步骤、
+  产物二进制签入仓库，文案一改就要重跑并重新提交。收益不抵成本，推迟。
+- **默认值：已定，默认纸墨、设置里可切回 Material。** 意味着需要处理一次老用户升级后
+  外观变化的默认值迁移。
 
 ### 实施纪律（从 Komi Store 源码核实出来的教训）
 
@@ -133,7 +129,7 @@
 - **年度报告已废弃**（用户 2026-07-30 确认）。`annual_report_page.dart` 等仍有 13 处
   Tailwind 硬编码色和模板化统计卡，**但不要改，产品上已放弃**。
 - **测试极慢**：这台机器上 `flutter test` 编译阶段可能 5 分钟无任何输出。不要以为卡死就
-  中断。`test/widget/` 全量基线是 **143 个用例全部通过**，`flutter analyze` 基线是
+  中断。`test/widget/` 全量基线是 **144 个用例全部通过**，`flutter analyze` 基线是
   **4 个 info**（`add_note_dialog_parts.dart` 的 cacheExtent、test/ 下 1 个 cacheExtent、
   test/ 下 2 个 doc comment）。
 - **仓库是公开的**：commit message 只描述改动本身，不要写自我纠正的旁注或内部工作流噪音。
@@ -145,3 +141,34 @@
 - **死代码扫描容易两头出错**：只查跨文件引用会漏掉同文件内使用（`ProgressiveSystemLicensesPage`
   就是这样被误判过）；只查 `ClassName(` 又会被同名方法干扰（`_buildInsightsPage()`）。
   两种都要查，并逐个人工确认。
+- **`part of` 文件加不了 import**：`smart_push_settings_page_*_sections.dart`、
+  `note_list/*.dart`、`note_editor/*.dart` 都是 part 文件，需要的 import 要加在库主文件
+  （`smart_push_settings_page.dart` / `note_list_view.dart` / `note_full_editor_page.dart`）。
+
+## 五、圆角判定规则（后续新增 UI 沿用）
+
+主题令牌在 `lib/theme/app_theme.dart:138-141`，已通过 FlexColorScheme 的 `subThemesData`
+接到 `cardTheme` / `dialogTheme` / `inputDecorationTheme` / 各 buttonTheme：
+
+```dart
+AppTheme.cardRadius   = 18
+AppTheme.dialogRadius = 24
+AppTheme.buttonRadius = 12
+AppTheme.inputRadius  = 12
+```
+
+优先级：**能删就删**（`Card.shape`、`XxxButton.styleFrom(shape:)` 直接删掉继承主题）→
+删不掉（有自定义 `side` / `borderSide`，或是裸 `BoxDecoration`）就写
+`BorderRadius.circular(AppTheme.xxxRadius)`。**输入框例外，见上文，必须保留显式
+`OutlineInputBorder`。**
+
+**改**：`Card` 的 shape；作为卡片用的 `Container`+`BoxDecoration`（判据：**有 `boxShadow`
+或 `border`，且内含整块内容**）；`Dialog`/`BottomSheet` 形状；输入框 border；按钮
+`styleFrom(shape:)`；包裹整张卡片的 `InkWell`/`ClipRRect`（取和卡片相同的值）。
+
+**不改**：Chip/标签/徽章（padding 水平 ≤10 或垂直 ≤6）；进度条、分段条、滑块轨道；
+头像、缩略图、图片圆角；只裹一个 `Icon` 的背景容器；写死宽高 < 40 的装饰容器；
+`circular(999)` 胶囊；分享卡片与 PDF/图片导出的构图代码（那是渲染产物不是应用 UI）；
+`PopupMenuButton`/`DropdownButton`；Markdown 的 codeblock/blockquote 装饰。
+
+拿不准就不改并记录下来——宁可漏改，不可错改。
