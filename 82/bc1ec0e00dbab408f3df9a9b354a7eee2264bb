@@ -1,0 +1,54 @@
+lib/theme/theme_style.dart
+  s_47f1a91bc7edb0::t_a5f20c2320d293 1-249
+docs/paper-ink-theme-plan-2026-07-30.md
+  s_47f1a91bc7edb0::t_def4a0f344928f 3-41
+lib/pages/theme_settings_page.dart
+  s_47f1a91bc7edb0::t_b7e80e56fc8657 146-148,200
+  s_47f1a91bc7edb0::t_fc3891bb6bef08 81,89-98
+  s_47f1a91bc7edb0::t_6c5132e7e4b139 82,334-348,353-421
+  s_47f1a91bc7edb0::t_25c96a304e4934 149-157,159-165,167-179,182-195,197,201-209,211-224,226-228,233,236-260,262-292,294-313,315-323,325-326,349-352
+  s_47f1a91bc7edb0::t_c136fd0d21cc1b 4
+  s_47f1a91bc7edb0::t_a92b9e937622f2 73-80,83-88
+lib/theme/app_theme.dart
+  s_47f1a91bc7edb0::t_4856120596170c 245-248
+  s_47f1a91bc7edb0::t_42becee97f1cc4 507-516
+  s_47f1a91bc7edb0::t_d804fdf5f2dab3 308
+  s_47f1a91bc7edb0::t_3f694ea1cbb677 129,138
+  s_47f1a91bc7edb0::t_00e57d60d307d9 576-579
+  s_47f1a91bc7edb0::t_822193df003052 220-225
+  s_47f1a91bc7edb0::t_a82766b9bd4526 436-457
+  s_47f1a91bc7edb0::t_8b9864d2a5aafb 8,272
+  s_47f1a91bc7edb0::t_1c15a10c251550 541-543,548-550
+docs/ui-cleanup-handoff-2026-07-31.md
+  s_47f1a91bc7edb0::t_49378b5a3782b0 94-98
+test/theme/theme_style_contrast_test.dart
+  s_47f1a91bc7edb0::t_8857b42c2ae9c7 1-25,28,31-46,49,52-71,82-85,109-116,118-158,161-167
+  s_47f1a91bc7edb0::t_25c96a304e4934 26-27,29-30,47-48,50-51,159-160
+  s_47f1a91bc7edb0::t_f192ba81b93b3b 72-81,86-108,117
+lib/l10n/app_fr.arb
+  s_47f1a91bc7edb0::t_ce78de54346f26 570-576
+lib/l10n/app_en.arb
+  s_47f1a91bc7edb0::t_d0edf35504087a 607-613
+lib/l10n/app_ja.arb
+  s_47f1a91bc7edb0::t_1bd6cdf5f16561 570-576
+lib/l10n/app_ko.arb
+  s_47f1a91bc7edb0::t_18c15072c65e87 570-576
+lib/l10n/app_zh.arb
+  s_47f1a91bc7edb0::t_cc2cb3de2a8584 607-613
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "82bc1ec0e00dbab408f3df9a9b354a7eee2264bb",
+  "prompts": {},
+  "sessions": {
+    "s_47f1a91bc7edb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5758900e-5266-4134-88d0-df4e37987180",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
