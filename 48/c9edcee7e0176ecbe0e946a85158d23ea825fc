@@ -1,0 +1,19 @@
+docs/ui-cleanup-handoff-2026-07-31.md
+  s_7741578ecf966f::t_e31b11f7308560 1-131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.18",
+  "base_commit_sha": "48c9edcee7e0176ecbe0e946a85158d23ea825fc",
+  "prompts": {},
+  "sessions": {
+    "s_7741578ecf966f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "340cc40c-189c-4dca-b529-b61325058eba",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
