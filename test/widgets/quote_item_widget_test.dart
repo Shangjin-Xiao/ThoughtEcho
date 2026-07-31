@@ -248,11 +248,13 @@ void main() {
         QuoteItemWidget.firstItemTopMargin,
       );
       expect(firstItemMargin.top, QuoteItemWidget.firstItemTopMargin);
-      // 首条上边距是默认值的 2/3，下边距和左右不受影响。
+      // 不锁死具体比例——这个值按观感反复调过（6.0 → 4.0 → 2.67）。这里只锁
+      // 真正的不变量：比默认小、仍然为正，且下边距和左右都不受影响。
       expect(
-        firstItemMargin.top,
-        closeTo(QuoteItemWidget.defaultCardMarginVertical * 2 / 3, 0.001),
+        QuoteItemWidget.firstItemTopMargin,
+        lessThan(QuoteItemWidget.defaultCardMarginVertical),
       );
+      expect(QuoteItemWidget.firstItemTopMargin, greaterThan(0));
       expect(
         firstItemMargin.bottom,
         QuoteItemWidget.defaultCardMarginVertical,

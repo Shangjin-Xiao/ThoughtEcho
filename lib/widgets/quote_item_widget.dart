@@ -77,8 +77,12 @@ class QuoteItemWidget extends StatefulWidget {
   /// 卡片默认的上下外边距。
   static const double defaultCardMarginVertical = 6.0;
 
-  /// 列表首条笔记的上边距（默认值的 2/3）。
-  static const double firstItemTopMargin = 4.0;
+  /// 列表首条笔记的上边距。
+  ///
+  /// 按用户观感逐步收紧：6.0（= 默认值）→ 4.0 → 2.67，当前是默认值的 4/9。
+  /// 要再调只改这个数，不要动 [defaultCardMarginVertical]（那会连带改变
+  /// 卡片之间的间距）。
+  static const double firstItemTopMargin = 2.67;
 
   const QuoteItemWidget({
     super.key,
