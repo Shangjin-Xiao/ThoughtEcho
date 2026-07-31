@@ -1,0 +1,36 @@
+lib/theme/app_semantic_colors.dart
+  s_65b696d78b7062::t_205b061eb1ab7a 29-30
+  s_65b696d78b7062::t_2ba41444ddf0d2 133-134
+  s_65b696d78b7062::t_bc29e3714a4fdd 51-63,74-75,85-86
+  s_65b696d78b7062::t_3814dbd543ccf7 104-105,114-115
+AGENTS.md
+  s_65b696d78b7062::t_7b6190e8534369 169-171
+lib/pages/ai_periodic_report_page.dart
+  s_65b696d78b7062::t_e4120b3a440838 23
+lib/widgets/quote_item_widget.dart
+  s_65b696d78b7062::t_e4120b3a440838 10
+  s_65b696d78b7062::t_92b411ffca8276 1156
+  s_65b696d78b7062::t_ccfb9ffc5479ca 1168-1169,1192-1194
+lib/pages/ai_report/report_overview.dart
+  s_65b696d78b7062::t_3255626f75bb71 223
+  s_65b696d78b7062::t_8b3accb3b59857 202-206
+  s_65b696d78b7062::t_06b5ccd6faea2d 252,258,260,267
+lib/pages/home/home_note_mutation_actions.dart
+  s_65b696d78b7062::t_07c4b0fef34060 9,124-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "f17103035c86701955086d8cf5f52b246cb57a46",
+  "prompts": {},
+  "sessions": {
+    "s_65b696d78b7062": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "efe064dc-6725-445c-a812-f18ae84bceb3",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
