@@ -106,8 +106,60 @@ void main() {
     final l10n = AppLocalizations.of(context);
     expect(find.text(l10n.dataOverview), findsOneWidget);
     expect(find.text(l10n.aiChat), findsOneWidget);
+    // 摘要带保留，四个 0 仍然可见
     expect(find.text('0'), findsWidgets);
-    expect(find.text(l10n.noDataYet), findsWidgets);
+    // 但三个「暂无」chip 不再出现——空状态文案已经说过一次了
+    expect(find.text(l10n.noDataYet), findsNothing);
+    expect(
+      find.text(l10n.noNotesInPeriodForPeriod(l10n.periodWeek)),
+      findsOneWidget,
+    );
+  });
+
+  // 回归：入场动画只留一层。之前七到十个 TweenAnimationBuilder 交错到 1.4 秒，
+  // 数据早就到了用户还得等动画演完。
+  testWidgets('overview uses a single entrance animation', (tester) async {
+    final settings = _ReportSettingsService();
+    final database = _CountingPeriodDatabaseService();
+    final insights = InsightHistoryService(settingsService: settings);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<AIService>(
+            create: (_) => AIService(settingsService: settings),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AIPeriodicReportPage(),
+        ),
+      ),
+    );
+    // 先确认异步查询已完成、概览已经渲染出来，否则下面数的是空树
+    await tester.pump();
+    await tester.pump();
+    final context = tester.element(find.byType(AIPeriodicReportPage));
+    final l10n = AppLocalizations.of(context);
+    expect(find.text(l10n.dataOverview), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    // 恰好一层：多了是又退回逐块交错，少了是入场动画被整个删掉
+    expect(
+      find.byType(TweenAnimationBuilder<double>).evaluate().length,
+      equals(1),
+    );
+
+    // 300ms 之后必须完全落位
+    await tester.pump(const Duration(milliseconds: 320));
+    expect(tester.binding.hasScheduledFrame, isFalse);
+
+    await tester.pumpAndSettle();
   });
 
   // 回归：数据库在启动/同步期间会连续 notifyListeners 多次。
