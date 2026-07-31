@@ -11,7 +11,9 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
       useSafeArea: true,
       backgroundColor: theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppTheme.dialogRadius),
+        ),
       ),
       builder: (context) {
         return StatefulBuilder(
@@ -139,7 +141,8 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                             color: theme.colorScheme.surfaceContainerLow,
                             clipBehavior: Clip.antiAlias,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius:
+                                  BorderRadius.circular(AppTheme.cardRadius),
                               side: BorderSide(
                                 color: theme.colorScheme.outlineVariant,
                               ),
@@ -189,9 +192,9 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                 Icons.arrow_forward_ios,
                                 size: 16,
                               ),
-                              shape: const RoundedRectangleBorder(
+                              shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
+                                  Radius.circular(AppTheme.cardRadius),
                                 ),
                               ),
                               onTap: () async {
@@ -248,7 +251,8 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                             color: theme.colorScheme.surfaceContainerLow,
                             clipBehavior: Clip.antiAlias,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius:
+                                  BorderRadius.circular(AppTheme.cardRadius),
                               side: BorderSide(
                                 color: theme.colorScheme.outlineVariant,
                               ),
@@ -258,9 +262,9 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                 AppLocalizations.of(context).selectTags,
                               ),
                               leading: const Icon(Icons.sell_outlined),
-                              shape: const RoundedRectangleBorder(
+                              shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
+                                  Radius.circular(AppTheme.cardRadius),
                                 ),
                               ),
                               tilePadding: const EdgeInsets.symmetric(
@@ -376,7 +380,8 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                               decoration: BoxDecoration(
                                 color:
                                     theme.colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius:
+                                    BorderRadius.circular(AppTheme.cardRadius),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,

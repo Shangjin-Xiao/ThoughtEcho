@@ -1,5 +1,9 @@
 part of '../ai_periodic_report_page.dart';
 
+/// 收藏红心色值：记录页 quote_item_widget 用的是同一个色值，两边必须一致。
+/// 是否收进 AppSemanticColors 并统一迁移三处调用，属于全局待决项。
+final Color _favoriteAccent = Colors.red.shade400;
+
 extension _AIReportOverview on _AIPeriodicReportPageState {
   /// 构建数据概览
   Widget _buildDataOverview() {
@@ -43,8 +47,12 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
               avgWords: avgWords,
               activeDays: _getActiveDays(),
             ),
-            const SizedBox(height: 10),
-            _buildHighlightChips(),
+            // 空周期不摆三个「暂无」chip：下面的空状态已经说过一次了。
+            // 摘要带保留——四个 0 是紧凑的事实，也让切换周期时布局不跳。
+            if (totalNotes > 0) ...[
+              const SizedBox(height: 10),
+              _buildHighlightChips(),
+            ],
             const SizedBox(height: 20),
 
             // 洞察 + AI 对话入口
@@ -188,7 +196,7 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
       children: [
         Row(
           children: [
-            Icon(Icons.favorite, size: 20, color: Colors.red.shade400),
+            Icon(Icons.favorite, size: 20, color: _favoriteAccent),
             const SizedBox(width: 8),
             Text(
               l10n.mostFavoritedInPeriod,
@@ -233,9 +241,7 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    // 收藏红心在记录页也是这个色值，这里保持一致；
-                    // 是否统一收进 AppSemanticColors 是全局待决项。
-                    color: Colors.red.shade400,
+                    color: _favoriteAccent,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
@@ -428,9 +434,11 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
+                        // 卡片本身已经是 surfaceContainerHigh，这里必须再深一档，
+                        // 否则内外同色、层次消失
                         color: Theme.of(
                           context,
-                        ).colorScheme.surfaceContainerHigh,
+                        ).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(

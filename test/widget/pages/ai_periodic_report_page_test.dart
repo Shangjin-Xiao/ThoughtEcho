@@ -106,8 +106,14 @@ void main() {
     final l10n = AppLocalizations.of(context);
     expect(find.text(l10n.dataOverview), findsOneWidget);
     expect(find.text(l10n.aiChat), findsOneWidget);
+    // 摘要带保留，四个 0 仍然可见
     expect(find.text('0'), findsWidgets);
-    expect(find.text(l10n.noDataYet), findsWidgets);
+    // 但三个「暂无」chip 不再出现——空状态文案已经说过一次了
+    expect(find.text(l10n.noDataYet), findsNothing);
+    expect(
+      find.text(l10n.noNotesInPeriodForPeriod(l10n.periodWeek)),
+      findsOneWidget,
+    );
   });
 
   // 回归：入场动画只留一层。之前七到十个 TweenAnimationBuilder 交错到 1.4 秒，
@@ -135,12 +141,18 @@ void main() {
         ),
       ),
     );
+    // 先确认异步查询已完成、概览已经渲染出来，否则下面数的是空树
     await tester.pump();
     await tester.pump();
+    final context = tester.element(find.byType(AIPeriodicReportPage));
+    final l10n = AppLocalizations.of(context);
+    expect(find.text(l10n.dataOverview), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
 
+    // 恰好一层：多了是又退回逐块交错，少了是入场动画被整个删掉
     expect(
       find.byType(TweenAnimationBuilder<double>).evaluate().length,
-      lessThanOrEqualTo(1),
+      equals(1),
     );
 
     // 300ms 之后必须完全落位

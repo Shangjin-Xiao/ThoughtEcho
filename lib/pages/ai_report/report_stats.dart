@@ -57,7 +57,7 @@ extension _AIReportStats on _AIPeriodicReportPageState {
     final theme = Theme.of(context);
     return Expanded(
       child: Semantics(
-        label: '$label $value$unit',
+        label: '$label $value $unit',
         excludeSemantics: true,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -117,6 +117,8 @@ extension _AIReportStats on _AIPeriodicReportPageState {
   /// 三个「最多」指标：它们的值是分类而不是量，用 chip 比用数字卡片更贴切。
   Widget _buildHighlightChips() {
     final l10n = AppLocalizations.of(context);
+    // 提到局部变量才能让类型提升生效，省掉重复的 is/as 判断
+    final tagIcon = _mostTopTagIcon;
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -134,11 +136,8 @@ extension _AIReportStats on _AIPeriodicReportPageState {
         _buildHighlightChip(
           label: l10n.commonTag,
           value: _mostTopTag ?? l10n.noDataYet,
-          icon: _mostTopTagIcon is IconData
-              ? _mostTopTagIcon as IconData
-              : (_mostTopTagIcon == null ? Icons.local_offer_outlined : null),
-          emoji:
-              _mostTopTagIcon is IconData ? null : _mostTopTagIcon?.toString(),
+          icon: tagIcon is IconData ? tagIcon : null,
+          emoji: tagIcon is IconData ? null : tagIcon?.toString(),
         ),
       ],
     );
@@ -154,37 +153,47 @@ extension _AIReportStats on _AIPeriodicReportPageState {
     return Semantics(
       label: '$label $value',
       excludeSemantics: true,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (emoji != null)
-              Text(emoji, style: const TextStyle(fontSize: 14))
-            else
-              Icon(
-                icon ?? Icons.local_offer_outlined,
-                size: 15,
-                color: theme.colorScheme.primary,
+      child: ConstrainedBox(
+        // 标签名可以很长，不约束的话单个 chip 会把窄屏撑破
+        constraints: const BoxConstraints(maxWidth: 180),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (emoji != null)
+                Text(emoji, style: const TextStyle(fontSize: 14))
+              else
+                Icon(
+                  icon ?? Icons.local_offer_outlined,
+                  size: 15,
+                  color: theme.colorScheme.primary,
+                ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
               ),
-            const SizedBox(width: 6),
-            Text(
-              value,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  /// 空状态：整页只说一次「没有笔记」，不再叠加七张全 0 的卡片。
+  /// 空状态：整页只说一次「没有笔记」。
+  /// 之前是七张全 0 的卡片 + 三个「暂无」+ 这段文案，同一件事说了三遍；
+  /// 现在只保留紧凑的摘要带（四个 0 是事实，也让切换周期时布局不跳）加这段。
   Widget _buildEmptyState() {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);

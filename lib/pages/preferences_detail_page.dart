@@ -8,6 +8,7 @@ import '../services/biometric_service.dart';
 import '../services/clipboard_service.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
+import '../theme/app_theme.dart';
 import '../utils/icon_utils.dart';
 import 'ai_settings_page.dart';
 
@@ -78,7 +79,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                     colorScheme.primaryContainer.withValues(alpha: 0.8),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                 boxShadow: [
                   BoxShadow(
                     color: colorScheme.shadow.withValues(alpha: 0.1),
@@ -504,7 +505,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
     return Container(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         border: Border.all(
           color: theme.colorScheme.outline.withValues(alpha: 0.2),
         ),
@@ -517,7 +518,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         child: Material(
           type: MaterialType.transparency,
           child: Column(children: children),
@@ -600,9 +601,9 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
           color: isSelected
               ? theme.colorScheme.secondaryContainer
               : theme.colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
           child: InkWell(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
             onTap: () => settings.setOfflineQuoteSource(value),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -630,7 +631,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
         padding: const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
           border: Border.all(
             color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
           ),
@@ -661,8 +662,10 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                   horizontal: 16,
                   vertical: 4,
                 ),
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(AppTheme.cardRadius),
+                  ),
                 ),
               ),
               const Divider(height: 1, indent: 16, endIndent: 16),

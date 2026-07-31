@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/settings_service.dart';
 import '../services/unified_log_service.dart';
+import '../theme/app_theme.dart';
 import 'ai_settings_page.dart';
 import 'hitokoto_settings_page.dart';
 import 'theme_settings_page.dart';
@@ -218,9 +219,6 @@ class SettingsPageState extends State<SettingsPage> {
       builder: (dialogContext) => ChangeNotifierProvider.value(
         value: weatherController,
         child: Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
           child: Container(
             height: MediaQuery.of(context).size.height * 0.7,
             width: MediaQuery.of(context).size.width * 0.9,
@@ -1314,7 +1312,9 @@ class SettingsPageState extends State<SettingsPage> {
   ButtonStyle _primaryButtonStyle(BuildContext context) =>
       ElevatedButton.styleFrom(
         minimumSize: const Size.fromHeight(44),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
+        ),
       );
 
   ButtonStyle _textButtonStyle(BuildContext context) =>
