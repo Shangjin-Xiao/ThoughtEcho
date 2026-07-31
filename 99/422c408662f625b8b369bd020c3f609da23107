@@ -1,0 +1,21 @@
+test/widgets/quote_item_widget_test.dart
+  s_302ee25bc559f6::t_ded9dcb5e51f78 251-252,254-255,257
+lib/widgets/quote_item_widget.dart
+  s_302ee25bc559f6::t_d5b92d80b005d0 80-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "99422c408662f625b8b369bd020c3f609da23107",
+  "prompts": {},
+  "sessions": {
+    "s_302ee25bc559f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "75509e53-dc0c-4b3b-8357-9bd24c20ecd9",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
