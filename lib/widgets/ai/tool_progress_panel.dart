@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../gen_l10n/app_localizations.dart';
+import '../../theme/app_theme.dart';
 
 /// 工具调用进度状态
 enum ToolProgressStatus {
@@ -173,9 +174,9 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
         color: backgroundColor,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.zero,
-          topRight: Radius.circular(24),
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
+          topRight: Radius.circular(AppTheme.chatBubbleRadius),
+          bottomLeft: Radius.circular(AppTheme.chatBubbleRadius),
+          bottomRight: Radius.circular(AppTheme.chatBubbleRadius),
         ),
       ),
       child: Column(

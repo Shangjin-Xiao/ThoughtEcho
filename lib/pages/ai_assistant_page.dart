@@ -56,6 +56,7 @@ import 'ai_assistant/session_history_page.dart';
 import '../widgets/add_note_dialog.dart';
 import '../widgets/add_note_dialog_parts.dart' show TagSelectionSection;
 import 'note_full_editor_page.dart';
+import '../theme/app_theme.dart';
 
 part 'ai_assistant/ai_assistant_page_session.dart';
 part 'ai_assistant/ai_assistant_page_workflow.dart';

@@ -347,7 +347,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     final bubbleTextColor =
         isUser ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface;
 
-    final bubbleRadius = const Radius.circular(24);
+    final bubbleRadius = const Radius.circular(AppTheme.chatBubbleRadius);
     final borderRadius = BorderRadius.only(
       topLeft: isUser ? bubbleRadius : Radius.zero,
       topRight: isUser ? Radius.zero : bubbleRadius,
@@ -503,47 +503,49 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
 
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+      minimum: const EdgeInsets.fromLTRB(12, 4, 12, 8),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
+        padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
           border: Border.all(
             color: shellBorderColor,
             width: _isInputFocused ? 1.4 : 1.0,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(
-                alpha: theme.brightness == Brightness.dark ? 0.26 : 0.07,
+              color: theme.colorScheme.shadow.withValues(
+                alpha: theme.brightness == Brightness.dark ? 0.22 : 0.05,
               ),
-              blurRadius: 18,
-              offset: const Offset(0, 6),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Text field
-            TextField(
-              controller: _textController,
-              focusNode: _inputFocusNode,
-              decoration: InputDecoration(
-                hintText: l10n.aiAssistantInputHint,
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
+            // 输入区默认一行高，随换行增高；超过上限后内部滚动，
+            // 避免长输入把对话内容整个挤出屏幕。
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 148),
+              child: TextField(
+                controller: _textController,
+                focusNode: _inputFocusNode,
+                decoration: InputDecoration(
+                  hintText: l10n.aiAssistantInputHint,
+                  border: InputBorder.none,
+                  isCollapsed: true,
+                  contentPadding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
                 ),
+                maxLines: null,
+                minLines: 1,
+                textInputAction: TextInputAction.send,
+                onSubmitted: _handleSubmitted,
               ),
-              maxLines: null,
-              minLines: 1,
-              textInputAction: TextInputAction.send,
-              onSubmitted: _handleSubmitted,
             ),
             // Action row: thinking | send
             Padding(
@@ -578,30 +580,44 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                       ),
                     ),
                   const Spacer(),
-                  // Send / Stop
-                  IconButton(
-                    icon: Icon(
-                      _isLoading ? Icons.stop : Icons.arrow_upward,
-                      size: 20,
-                    ),
-                    tooltip: _isLoading ? l10n.stopGenerate : l10n.send,
-                    onPressed: _isLoading
-                        ? _stopGenerating
-                        : () {
-                            if (_textController.text.trim().isNotEmpty) {
-                              _handleSubmitted(_textController.text);
-                            }
-                          },
-                    style: IconButton.styleFrom(
-                      backgroundColor: _isLoading
-                          ? theme.colorScheme.error
-                          : theme.colorScheme.primary,
-                      foregroundColor: _isLoading
-                          ? theme.colorScheme.onError
-                          : theme.colorScheme.onPrimary,
-                      padding: const EdgeInsets.all(8),
-                      minimumSize: const Size(36, 36),
-                    ),
+                  // Send / Stop：空输入时按钮置灰，避免点了没反应
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _textController,
+                    builder: (context, value, _) {
+                      final canSend = value.text.trim().isNotEmpty;
+                      final enabled = _isLoading || canSend;
+                      return IconButton(
+                        icon: Icon(
+                          _isLoading ? Icons.stop : Icons.arrow_upward,
+                          size: 20,
+                        ),
+                        tooltip: _isLoading ? l10n.stopGenerate : l10n.send,
+                        onPressed: _isLoading
+                            ? _stopGenerating
+                            : canSend
+                                ? () => _handleSubmitted(_textController.text)
+                                : null,
+                        style: IconButton.styleFrom(
+                          backgroundColor: _isLoading
+                              ? theme.colorScheme.error
+                              : enabled
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.surfaceContainerHighest,
+                          foregroundColor: _isLoading
+                              ? theme.colorScheme.onError
+                              : enabled
+                                  ? theme.colorScheme.onPrimary
+                                  : theme.colorScheme.onSurfaceVariant,
+                          disabledBackgroundColor:
+                              theme.colorScheme.surfaceContainerHighest,
+                          disabledForegroundColor: theme
+                              .colorScheme.onSurfaceVariant
+                              .withValues(alpha: 0.5),
+                          padding: const EdgeInsets.all(8),
+                          minimumSize: const Size(36, 36),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
