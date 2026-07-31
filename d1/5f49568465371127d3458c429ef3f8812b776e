@@ -1,0 +1,65 @@
+lib/pages/home/daily_prompt_panel.dart
+  s_47f1a91bc7edb0::t_76210e06c8cd8f 4,250
+  s_47f1a91bc7edb0::t_4f7ae90abb907b 251
+lib/theme/app_theme.dart
+  s_47f1a91bc7edb0::t_b428ee33536bfb 708-711,714-718,720-724,964-967,970-974,976-980
+  s_47f1a91bc7edb0::t_8a2607bc1528d6 740
+  s_47f1a91bc7edb0::t_2993b8842c50fd 604,628-635,733,765-772
+  s_47f1a91bc7edb0::t_e3680138bfe5ae 160-184
+  s_47f1a91bc7edb0::t_eaed718e43a34b 657,963
+  s_47f1a91bc7edb0::t_79ef1785629eaa 125-159
+lib/theme/theme_style.dart
+  s_47f1a91bc7edb0::t_4ce274826ade22 29-36
+  s_47f1a91bc7edb0::t_1f56177a7d4366 50-231
+lib/pages/ai_assistant_page.dart
+  s_47f1a91bc7edb0::t_447dd2c1ca7bec 60
+lib/widgets/note_list_view.dart
+  s_47f1a91bc7edb0::t_447dd2c1ca7bec 42
+lib/widgets/note_list/note_list_items.dart
+  s_47f1a91bc7edb0::t_76210e06c8cd8f 145,154-155,164-165,235
+  s_47f1a91bc7edb0::t_925f605a35d395 144
+  s_47f1a91bc7edb0::t_e1911baab9488f 236
+  s_987fd6b9da4dd3::t_3ece6fb05901b6 297-298,677-678
+test/theme/theme_style_contrast_test.dart
+  s_47f1a91bc7edb0::t_07d8f7a54b003b 152-153,191-193
+  s_47f1a91bc7edb0::t_d34123782a9b8c 141-151,154-190,194-200
+lib/widgets/quote_item_widget.dart
+  s_47f1a91bc7edb0::t_76210e06c8cd8f 5,706
+  s_47f1a91bc7edb0::t_a18a9b81de8389 707
+lib/widgets/sliding_card.dart
+  s_47f1a91bc7edb0::t_76210e06c8cd8f 2,157
+  s_47f1a91bc7edb0::t_3470712480e53a 158
+  s_987fd6b9da4dd3::t_404e30289f7247 168
+lib/widgets/note_list/note_list_filters.dart
+  s_47f1a91bc7edb0::t_76210e06c8cd8f 248
+  s_47f1a91bc7edb0::t_d14ad64dc7d472 249
+docs/paper-ink-theme-plan-2026-07-30.md
+  s_47f1a91bc7edb0::t_f1ab91809a4602 21-48
+lib/pages/ai_assistant/ai_assistant_page_ui.dart
+  s_47f1a91bc7edb0::t_76210e06c8cd8f 513
+  s_47f1a91bc7edb0::t_2332da04ec76ad 514
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "d15f49568465371127d3458c429ef3f8812b776e",
+  "prompts": {},
+  "sessions": {
+    "s_47f1a91bc7edb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5758900e-5266-4134-88d0-df4e37987180",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_987fd6b9da4dd3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0396dc62-e58d-4d6b-aacf-ada6ef9a3c3f",
+        "model": "unknown"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
