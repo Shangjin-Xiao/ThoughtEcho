@@ -1461,8 +1461,8 @@
     }
   },
   "apiUrlField": "API URL",
-  "apiUrlHint": "例如 https://api.xxx.com/v1/chat/completions",
-  "apiUrlHelper": "必须为 http/https 地址",
+  "apiUrlHint": "例如 https://api.xxx.com/v1",
+  "apiUrlHelper": "填服务商文档给的地址即可，会自动补全 /chat/completions",
   "apiKeyField": "API Key",
   "apiKeyHint": "服务所需的密钥（可留空）",
   "show": "显示",

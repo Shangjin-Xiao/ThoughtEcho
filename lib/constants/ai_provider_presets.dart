@@ -37,7 +37,12 @@ class AIProviderPreset {
   /// 模板标识，仅用于查找和展示，不会成为保存后配置的 id。
   final String id;
 
+  /// 服务商文档里给出的 base URL，例如 `https://ollama.com/v1`。
+  ///
+  /// 这里刻意不写成完整的 `/chat/completions`：用户对着官方文档核对时看到的
+  /// 应该是同一个地址。发请求前由 [AIProviderSettings.resolveRequestUrl] 补全。
   final String apiUrl;
+
   final AIPresetKind kind;
 
   /// 选中模板后预填的模型名，空字符串表示需要用户自己填。
@@ -127,7 +132,7 @@ class AIProviderPresets {
     // 首推：免费额度充足，注册即可用，是普通用户成本最低的入口。
     AIProviderPreset(
       id: 'ollama_cloud',
-      apiUrl: 'https://ollama.com/v1/chat/completions',
+      apiUrl: 'https://ollama.com/v1',
       kind: AIPresetKind.cloud,
       defaultModel: 'gpt-oss:120b',
       suggestedModels: [
@@ -141,7 +146,7 @@ class AIProviderPresets {
     ),
     AIProviderPreset(
       id: 'openai',
-      apiUrl: 'https://api.openai.com/v1/chat/completions',
+      apiUrl: 'https://api.openai.com/v1',
       kind: AIPresetKind.cloud,
       defaultModel: 'gpt-4o-mini',
       suggestedModels: ['gpt-4o-mini', 'gpt-4o'],
@@ -149,7 +154,7 @@ class AIProviderPresets {
     ),
     AIProviderPreset(
       id: 'openrouter',
-      apiUrl: 'https://openrouter.ai/api/v1/chat/completions',
+      apiUrl: 'https://openrouter.ai/api/v1',
       kind: AIPresetKind.cloud,
       defaultModel: 'openai/gpt-4o-mini',
       suggestedModels: [
@@ -161,7 +166,7 @@ class AIProviderPresets {
     ),
     AIProviderPreset(
       id: 'deepseek',
-      apiUrl: 'https://api.deepseek.com/v1/chat/completions',
+      apiUrl: 'https://api.deepseek.com/v1',
       kind: AIPresetKind.cloud,
       defaultModel: 'deepseek-chat',
       suggestedModels: ['deepseek-chat', 'deepseek-reasoner'],
@@ -169,7 +174,7 @@ class AIProviderPresets {
     ),
     AIProviderPreset(
       id: 'siliconflow',
-      apiUrl: 'https://api.siliconflow.cn/v1/chat/completions',
+      apiUrl: 'https://api.siliconflow.cn/v1',
       kind: AIPresetKind.cloud,
       defaultModel: 'Qwen/Qwen2.5-7B-Instruct',
       suggestedModels: [
@@ -180,7 +185,7 @@ class AIProviderPresets {
     ),
     AIProviderPreset(
       id: 'zhipu',
-      apiUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+      apiUrl: 'https://open.bigmodel.cn/api/paas/v4',
       kind: AIPresetKind.cloud,
       defaultModel: 'glm-4-flash',
       suggestedModels: ['glm-4-flash', 'glm-4-plus'],
@@ -188,7 +193,7 @@ class AIProviderPresets {
     ),
     AIProviderPreset(
       id: 'moonshot',
-      apiUrl: 'https://api.moonshot.cn/v1/chat/completions',
+      apiUrl: 'https://api.moonshot.cn/v1',
       kind: AIPresetKind.cloud,
       defaultModel: 'moonshot-v1-8k',
       suggestedModels: ['moonshot-v1-8k', 'moonshot-v1-32k'],
@@ -196,8 +201,7 @@ class AIProviderPresets {
     ),
     AIProviderPreset(
       id: 'dashscope',
-      apiUrl:
-          'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+      apiUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
       kind: AIPresetKind.cloud,
       defaultModel: 'qwen-plus',
       suggestedModels: ['qwen-plus', 'qwen-turbo', 'qwen-max'],
@@ -205,14 +209,13 @@ class AIProviderPresets {
     ),
     AIProviderPreset(
       id: 'volcengine',
-      apiUrl: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
+      apiUrl: 'https://ark.cn-beijing.volces.com/api/v3',
       kind: AIPresetKind.cloud,
       consoleUrl: 'https://console.volcengine.com/ark',
     ),
     AIProviderPreset(
       id: 'gemini',
-      apiUrl:
-          'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+      apiUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
       kind: AIPresetKind.cloud,
       defaultModel: 'gemini-2.5-flash',
       suggestedModels: ['gemini-2.5-flash', 'gemini-2.5-pro'],
@@ -220,13 +223,13 @@ class AIProviderPresets {
     ),
     AIProviderPreset(
       id: 'ollama_local',
-      apiUrl: 'http://localhost:11434/v1/chat/completions',
+      apiUrl: 'http://localhost:11434/v1',
       kind: AIPresetKind.local,
       requiresApiKey: false,
     ),
     AIProviderPreset(
       id: 'lmstudio',
-      apiUrl: 'http://localhost:1234/v1/chat/completions',
+      apiUrl: 'http://localhost:1234/v1',
       kind: AIPresetKind.local,
       requiresApiKey: false,
     ),

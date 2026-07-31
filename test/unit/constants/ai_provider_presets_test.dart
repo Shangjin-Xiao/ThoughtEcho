@@ -36,8 +36,18 @@ void main() {
       }
     });
 
-    test('every preset URL already resolves to a chat/completions endpoint',
-        () {
+    test('every preset stores the vendor base URL, not the full endpoint', () {
+      for (final preset in AIProviderPresets.all) {
+        if (preset.apiUrl.isEmpty) continue;
+        expect(
+          preset.apiUrl,
+          isNot(endsWith('/chat/completions')),
+          reason: '${preset.id} 应当填服务商文档给的 base URL',
+        );
+      }
+    });
+
+    test('every preset base URL completes to a chat/completions endpoint', () {
       for (final preset in AIProviderPresets.all) {
         if (preset.apiUrl.isEmpty) continue;
         final provider = AIProviderSettings(
@@ -48,8 +58,8 @@ void main() {
         );
         expect(
           provider.resolveRequestUrl(preset.apiUrl),
-          preset.apiUrl,
-          reason: '${preset.id} 的模板地址应当已经是完整 endpoint',
+          '${preset.apiUrl}/chat/completions',
+          reason: '${preset.id} 的 base URL 应当能补全成完整 endpoint',
         );
       }
     });

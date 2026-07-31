@@ -1461,8 +1461,8 @@
     }
   },
   "apiUrlField": "API URL",
-  "apiUrlHint": "e.g., https://api.xxx.com/v1/chat/completions",
-  "apiUrlHelper": "Must be an http/https URL",
+  "apiUrlHint": "e.g. https://api.xxx.com/v1",
+  "apiUrlHelper": "The base URL from the provider docs is enough — /chat/completions is added for you",
   "apiKeyField": "API Key",
   "apiKeyHint": "The key required for the service (can be left blank)",
   "show": "Show",
