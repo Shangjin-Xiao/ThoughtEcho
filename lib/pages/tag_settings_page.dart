@@ -71,7 +71,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                     colorScheme.primaryContainer.withAlpha(200),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                 boxShadow: [
                   BoxShadow(
                     color: colorScheme.shadow.withAlpha(50),
@@ -133,7 +133,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: colorScheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                 border: Border.all(
                   color: colorScheme.outline.withAlpha(50),
                   width: 1,
@@ -164,7 +164,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                             hintText: l10n.tagNameHint,
                             prefixIcon: const Icon(Icons.edit_rounded),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius:
+                                  BorderRadius.circular(AppTheme.inputRadius),
                             ),
                             filled: true,
                             fillColor: colorScheme.surface,
@@ -178,7 +179,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                           color: _selectedIconName != null
                               ? colorScheme.primary.withAlpha(20)
                               : colorScheme.surfaceContainerHigh,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.buttonRadius),
                           border: Border.all(
                             color: _selectedIconName != null
                                 ? colorScheme.primary
@@ -218,7 +220,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                               colorScheme.primary.withAlpha(200),
                             ],
                           ),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.buttonRadius),
                         ),
                         child: ElevatedButton(
                           onPressed: _isLoading
@@ -307,7 +310,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
               width: double.infinity,
               decoration: BoxDecoration(
                 color: colorScheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                 border: Border.all(
                   color: colorScheme.outline.withAlpha(50),
                   width: 1,
@@ -558,10 +561,6 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                             await showDialog<bool>(
                                           context: context,
                                           builder: (context) => AlertDialog(
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                            ),
                                             title: Row(
                                               children: [
                                                 Icon(

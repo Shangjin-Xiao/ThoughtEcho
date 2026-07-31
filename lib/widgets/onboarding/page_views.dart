@@ -6,6 +6,7 @@ import '../../config/onboarding_config.dart';
 import '../../controllers/onboarding_controller.dart';
 import '../../services/settings_service.dart';
 import '../../services/location_service.dart';
+import '../../theme/app_theme.dart';
 
 /// 欢迎页面组件
 class WelcomePageView extends StatefulWidget {
@@ -453,7 +454,7 @@ class _FeaturesPageViewState extends State<FeaturesPageView>
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         border: Border.all(
           color: theme.colorScheme.outline.withValues(alpha: 0.2),
         ),
@@ -512,7 +513,7 @@ class _FeatureCard extends StatelessWidget {
       child: Container(
         decoration: isHighlight
             ? BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,

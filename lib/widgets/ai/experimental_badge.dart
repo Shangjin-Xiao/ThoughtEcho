@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../gen_l10n/app_localizations.dart';
 import '../../services/settings_service.dart';
+import '../../theme/app_theme.dart';
 import '../../utils/app_logger.dart';
 
 /// 实验性功能标签 Component
@@ -127,9 +128,6 @@ Future<void> showExperimentalNoticeDialog(BuildContext context) async {
           }
 
           return Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
-            ),
             elevation: 6,
             backgroundColor: colorScheme.surface,
             child: Padding(
@@ -272,7 +270,7 @@ Future<void> showExperimentalNoticeDialog(BuildContext context) async {
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
                         ),
                       ),
                     ),
@@ -307,7 +305,7 @@ class _NoticePointTile extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         border: Border.all(
           color: colorScheme.outlineVariant.withValues(alpha: 0.5),
           width: 0.8,

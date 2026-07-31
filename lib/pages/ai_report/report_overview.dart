@@ -1,5 +1,9 @@
 part of '../ai_periodic_report_page.dart';
 
+/// 收藏红心色值：记录页 quote_item_widget 用的是同一个色值，两边必须一致。
+/// 是否收进 AppSemanticColors 并统一迁移三处调用，属于全局待决项。
+final Color _favoriteAccent = Colors.red.shade400;
+
 extension _AIReportOverview on _AIPeriodicReportPageState {
   /// 构建数据概览
   Widget _buildDataOverview() {
@@ -24,272 +28,143 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
         ? context.select<SettingsService, bool>((s) => s.showNoteEditTime)
         : false;
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 标题优化：添加图标和更好的视觉层次
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.analytics_outlined,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  size: 20,
-                ),
+    // 整页一次入场，不再逐块交错。
+    // 之前七到十个 TweenAnimationBuilder 用 400~1000ms 错开，最后一块要 1.4 秒
+    // 才落位——数据早就到了，用户还得等动画演完才能看清页面。
+    return _buildEntrance(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildOverviewHeader(l10n),
+            const SizedBox(height: 16),
+
+            // 数据摘要带 + 三个「最多」chip
+            _buildSummaryBand(
+              totalNotes: totalNotes,
+              totalWords: totalWords,
+              avgWords: avgWords,
+              activeDays: _getActiveDays(),
+            ),
+            // 空周期不摆三个「暂无」chip：下面的空状态已经说过一次了。
+            // 摘要带保留——四个 0 是紧凑的事实，也让切换周期时布局不跳。
+            if (totalNotes > 0) ...[
+              const SizedBox(height: 10),
+              _buildHighlightChips(),
+            ],
+            const SizedBox(height: 20),
+
+            // 洞察 + AI 对话入口
+            _buildInsightBulbBar(),
+            const SizedBox(height: 12),
+            _buildQuickEntries(),
+            const SizedBox(height: 24),
+
+            if (_periodQuotes.isNotEmpty) ...[
+              _buildPeriodTopFavoritesSection(),
+              const SizedBox(height: 20),
+              _buildRecentNotesSection(
+                l10n,
+                showExactTime: showExactTime,
+                showNoteEditTime: showNoteEditTime,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.dataOverview,
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    Text(
-                      _getDateRangeText(l10n),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                    ),
-                  ],
+            ] else
+              _buildEmptyState(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 统一的入场动画：一层 300ms 的淡入 + 轻微上移。
+  Widget _buildEntrance({required Widget child}) {
+    if (!_shouldAnimateOverview) return child;
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('overview_$_dataKey'),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+      tween: Tween(begin: 0.0, end: 1.0),
+      child: child,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 8 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOverviewHeader(AppLocalizations l10n) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            Icons.analytics_outlined,
+            color: theme.colorScheme.onPrimaryContainer,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.dataOverview, style: theme.textTheme.titleLarge),
+              Text(
+                _getDateRangeText(l10n),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+        ),
+      ],
+    );
+  }
 
-          // 统计卡片网格 - 根据标志决定是否播放动画
-          TweenAnimationBuilder<double>(
-            key: ValueKey('stats1_$_dataKey'), // 添加key确保动画只在数据变化时触发
-            duration: _shouldAnimateOverview
-                ? const Duration(milliseconds: 600)
-                : Duration.zero, // 不动画时立即显示
-            tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
-            builder: (context, value, child) {
-              return Transform.translate(
-                offset: Offset(0, 20 * (1 - value)),
-                child: Opacity(
-                  opacity: value,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          l10n.noteCount,
-                          '$totalNotes',
-                          l10n.notesUnitPlain,
-                          Icons.note_alt_outlined,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          l10n.totalWordCount,
-                          '$totalWords',
-                          l10n.wordsUnitPlain,
-                          Icons.text_fields,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-          TweenAnimationBuilder<double>(
-            key: ValueKey('stats2_$_dataKey'),
-            duration: _shouldAnimateOverview
-                ? const Duration(milliseconds: 800)
-                : Duration.zero,
-            tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
-            builder: (context, value, child) {
-              return Transform.translate(
-                offset: Offset(0, 20 * (1 - value)),
-                child: Opacity(
-                  opacity: value,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          l10n.avgWords,
-                          '$avgWords',
-                          l10n.wordsPerNote,
-                          Icons.calculate_outlined,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          l10n.activeDays,
-                          '${_getActiveDays()}',
-                          l10n.daysUnitPlain,
-                          Icons.calendar_today_outlined,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-
-          // 新增：三个"最多"指标 - 根据标志决定是否播放动画
-          TweenAnimationBuilder<double>(
-            key: ValueKey('stats3_$_dataKey'),
-            duration: _shouldAnimateOverview
-                ? const Duration(milliseconds: 1000)
-                : Duration.zero,
-            tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
-            builder: (context, value, child) {
-              return Transform.translate(
-                offset: Offset(0, 20 * (1 - value)),
-                child: Opacity(
-                  opacity: value,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCardWithCustomIcon(
-                          l10n.commonPeriod,
-                          _mostDayPeriodDisplay ?? l10n.noDataYet,
-                          '',
-                          _mostDayPeriodIcon ?? Icons.timelapse,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCardWithCustomIcon(
-                          l10n.commonWeather,
-                          _mostWeatherDisplay ?? l10n.noDataYet,
-                          '',
-                          _mostWeatherIcon ?? Icons.cloud_queue,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCardWithTagIcon(
-                          l10n.commonTag,
-                          _mostTopTag ?? l10n.noDataYet,
-                          '',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // 洞察小灯泡（移到常用标签下面）
-          _buildInsightBulbBar(),
-          const SizedBox(height: 20),
-
-          // ─── AI 对话入口 ───
-          _buildQuickEntries(),
-          const SizedBox(height: 24),
-
-          // 本周期收藏最多（放在洞察下面，最近笔记上面）- 根据标志决定是否播放动画
-          if (_periodQuotes.isNotEmpty) ...[
-            TweenAnimationBuilder<double>(
-              key: ValueKey('favorites_$_dataKey'),
-              duration: _shouldAnimateOverview
-                  ? const Duration(milliseconds: 800)
-                  : Duration.zero,
-              tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
-              builder: (context, value, child) {
-                return Transform.translate(
-                  offset: Offset(0, 20 * (1 - value)),
-                  child: Opacity(
-                    opacity: value,
-                    child: _buildPeriodTopFavoritesSection(),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
+  Widget _buildRecentNotesSection(
+    AppLocalizations l10n, {
+    required bool showExactTime,
+    required bool showNoteEditTime,
+  }) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.history, size: 20, color: theme.colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(l10n.recentNotes, style: theme.textTheme.titleMedium),
           ],
-
-          // 最近笔记部分 - 根据标志决定是否播放动画
-          if (_periodQuotes.isNotEmpty) ...[
-            TweenAnimationBuilder<double>(
-              key: ValueKey('recent_$_dataKey'),
-              duration: _shouldAnimateOverview
-                  ? const Duration(milliseconds: 1000)
-                  : Duration.zero,
-              tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
-              builder: (context, value, child) {
-                return Transform.translate(
-                  offset: Offset(0, 20 * (1 - value)),
-                  child: Opacity(
-                    opacity: value,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.history,
-                              size: 20,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              l10n.recentNotes,
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        ..._periodQuotes.take(3).map(
-                              (quote) => TweenAnimationBuilder<double>(
-                                duration: Duration(
-                                  milliseconds: 600 +
-                                      (_periodQuotes.indexOf(quote) * 200),
-                                ),
-                                tween: Tween(begin: 0.0, end: 1.0),
-                                builder: (context, animValue, child) {
-                                  return Transform.translate(
-                                    offset: Offset(0, 15 * (1 - animValue)),
-                                    child: Opacity(
-                                      opacity: animValue,
-                                      child: _buildQuotePreview(
-                                        quote,
-                                        showExactTime: showExactTime,
-                                        showNoteEditTime: showNoteEditTime,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+        ),
+        const SizedBox(height: 12),
+        ..._periodQuotes.take(3).map(
+              (quote) => _buildQuotePreview(
+                quote,
+                showExactTime: showExactTime,
+                showNoteEditTime: showNoteEditTime,
+              ),
             ),
-          ] else ...[
-            // 空状态优化
-            _buildEmptyState(),
-          ],
-        ],
-      ),
+      ],
     );
   }
 
   // 构建“本周期收藏最多”的展示区域
   Widget _buildPeriodTopFavoritesSection() {
     final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
     // 过滤出有心形点击的笔记，并按次数排序
     final List<Quote> favorited = _periodQuotes
         .where((q) => q.favoriteCount > 0)
@@ -298,161 +173,93 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
 
     if (favorited.isEmpty) {
       // 若本周期没有心形点击，显示一个轻量提示
-      return TweenAnimationBuilder<double>(
-        key: ValueKey('favorites_empty_$_dataKey'),
-        duration: _shouldAnimateOverview
-            ? const Duration(milliseconds: 600)
-            : Duration.zero,
-        tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
-        builder: (context, value, child) {
-          return Transform.translate(
-            offset: Offset(0, 10 * (1 - value)),
-            child: Opacity(
-              opacity: value,
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.favorite_outline,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      l10n.noFavoritesInPeriod,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
-                ],
-              ),
+      return Row(
+        children: [
+          Icon(
+            Icons.favorite_outline,
+            size: 20,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l10n.noFavoritesInPeriod,
+              style: theme.textTheme.bodyMedium,
             ),
-          );
-        },
+          ),
+        ],
       );
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TweenAnimationBuilder<double>(
-          key: ValueKey('favorites_title_$_dataKey'),
-          duration: _shouldAnimateOverview
-              ? const Duration(milliseconds: 500)
-              : Duration.zero,
-          tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
-          builder: (context, value, child) {
-            return Transform.translate(
-              offset: Offset(0, 10 * (1 - value)),
-              child: Opacity(
-                opacity: value,
-                child: Row(
-                  children: [
-                    Icon(Icons.favorite, size: 20, color: Colors.red.shade400),
-                    const SizedBox(width: 8),
-                    Text(
-                      l10n.mostFavoritedInPeriod,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
+        Row(
+          children: [
+            Icon(Icons.favorite, size: 20, color: _favoriteAccent),
+            const SizedBox(width: 8),
+            Text(
+              l10n.mostFavoritedInPeriod,
+              style: theme.textTheme.titleMedium,
+            ),
+          ],
         ),
         const SizedBox(height: 12),
-        ...favorited.take(3).map(
-              (q) => TweenAnimationBuilder<double>(
-                key: ValueKey('favorite_${q.id}_$_dataKey'),
-                duration: _shouldAnimateOverview
-                    ? Duration(milliseconds: 600 + (favorited.indexOf(q) * 150))
-                    : Duration.zero,
-                tween: Tween(
-                  begin: _shouldAnimateOverview ? 0.0 : 1.0,
-                  end: 1.0,
-                ),
-                builder: (context, value, child) {
-                  return Transform.translate(
-                    offset: Offset(0, 15 * (1 - value)),
-                    child: Opacity(
-                      opacity: value,
-                      child: _buildFavoritePreviewChip(q),
-                    ),
-                  );
-                },
-              ),
-            ),
+        ...favorited.take(3).map(_buildFavoritePreviewChip),
       ],
     );
   }
 
-  // 一个紧凑的收藏预览块 - 优化视觉效果
+  // 一个紧凑的收藏预览块
   Widget _buildFavoritePreviewChip(Quote quote) {
     final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Material(
-        elevation: 1,
-        borderRadius: BorderRadius.circular(8),
+        color: theme.colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12),
         child: InkWell(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           onTap: () {
             HapticFeedback.lightImpact();
             // 可以添加跳转到笔记详情的逻辑
           },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+          child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.red.shade100, width: 1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+              ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TweenAnimationBuilder<double>(
-                  duration: const Duration(milliseconds: 800),
-                  tween: Tween(begin: 0.8, end: 1.0),
-                  builder: (context, value, child) {
-                    return Transform.scale(
-                      scale: value,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade400,
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.red.shade200,
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.favorite,
-                              color: Colors.white,
-                              size: 12,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${quote.favoriteCount}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
-                                  ?.copyWith(color: Colors.white),
-                            ),
-                          ],
-                        ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _favoriteAccent,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.favorite,
+                        color: Colors.white,
+                        size: 12,
                       ),
-                    );
-                  },
+                      const SizedBox(width: 4),
+                      Text(
+                        '${quote.favoriteCount}',
+                        style: theme.textTheme.labelSmall
+                            ?.copyWith(color: Colors.white),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -566,31 +373,25 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
     // 判断是否正在等待首个响应（加载中但还没有文本）
     final isWaitingFirstResponse = _insightLoading && _insightText.isEmpty;
 
+    // 洞察是这一屏的主角：不用阴影抬升，改用比摘要带更高一档的容器色，
+    // 让整页保持同一套扁平的层次语言。
     return Card(
-      elevation: 1,
+      elevation: 0,
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 灯泡图标：流式接收中闪烁，完成后稳定
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              child: TweenAnimationBuilder<double>(
-                duration: const Duration(milliseconds: 1500),
-                tween: Tween(begin: 0.8, end: 1.0),
-                builder: (context, value, child) {
-                  return Transform.scale(
-                    scale: _insightLoading ? value : 1.0,
-                    child: Icon(
-                      Icons.lightbulb,
-                      color: _insightLoading
-                          ? Colors.amber.withValues(alpha: value)
-                          : Theme.of(context).colorScheme.primary,
-                    ),
-                  );
-                },
-              ),
+            // 生成中由下面的进度条表达，图标保持稳定。
+            // 原来那个 0.8→1.0 的 amber 动画只跑一次就停了，本想做的"呼吸"
+            // 效果并没有实现，反而多出一层动画。
+            Icon(
+              Icons.lightbulb,
+              color: Theme.of(context).colorScheme.primary,
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -633,9 +434,11 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
+                        // 卡片本身已经是 surfaceContainerHigh，这里必须再深一档，
+                        // 否则内外同色、层次消失
                         color: Theme.of(
                           context,
-                        ).colorScheme.surfaceContainerHigh,
+                        ).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(

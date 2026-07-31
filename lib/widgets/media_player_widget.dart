@@ -9,6 +9,7 @@ import '../constants/app_constants.dart';
 import '../utils/lottie_animation_manager.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../theme/app_semantic_colors.dart';
+import '../theme/app_theme.dart';
 import 'app_snackbar.dart';
 
 /// 统一的媒体播放器组件
@@ -443,7 +444,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           height: widget.height ?? 200,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainer,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
             border: Border.all(
               color:
                   Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
@@ -486,7 +487,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       width: widget.width ?? 300,
       height: widget.height ?? 200,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
@@ -514,7 +515,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       height: widget.height ?? 200,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         border: Border.all(
           color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
         ),
@@ -553,7 +554,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         border: Border.all(
           color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
         ),

@@ -60,7 +60,7 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
             border: Border.all(
               color: theme.colorScheme.outlineVariant,
             ),
@@ -128,9 +128,6 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
       context: context,
       builder: (dialogContext) {
         return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
             child: Column(
@@ -181,13 +178,13 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
                     margin: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
                       color: colorScheme.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                       border: Border.all(
                         color: colorScheme.outlineVariant.applyOpacity(0.3),
                       ),
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.all(16),
                         child: MarkdownBody(
