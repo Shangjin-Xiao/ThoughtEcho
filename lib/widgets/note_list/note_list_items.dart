@@ -141,8 +141,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                             horizontal: 12,
                           ),
                           border: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.circular(AppTheme.inputRadius),
+                            borderRadius: BorderRadius.circular(
+                                AppShapeTokens.of(context).inputRadius),
                             borderSide: BorderSide(
                               color: Theme.of(
                                 context,
@@ -151,8 +151,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.circular(AppTheme.inputRadius),
+                            borderRadius: BorderRadius.circular(
+                                AppShapeTokens.of(context).inputRadius),
                             borderSide: BorderSide(
                               color: Theme.of(
                                 context,
@@ -161,8 +161,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.circular(AppTheme.inputRadius),
+                            borderRadius: BorderRadius.circular(
+                                AppShapeTokens.of(context).inputRadius),
                             borderSide: BorderSide(
                               color: Theme.of(
                                 context,
@@ -232,7 +232,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surfaceContainerHighest
                           .withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                      borderRadius: BorderRadius.circular(
+                          AppShapeTokens.of(context).cardRadius),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.08),
@@ -293,7 +294,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surfaceContainerHighest
                           .withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                      borderRadius: BorderRadius.circular(
+                          AppShapeTokens.of(context).cardRadius),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.12),
@@ -672,8 +674,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                             color: Colors.transparent,
                             child: InkWell(
                               onTap: () => _toggleExportSelection(quoteId),
-                              borderRadius:
-                                  BorderRadius.circular(AppTheme.cardRadius),
+                              borderRadius: BorderRadius.circular(
+                                  AppShapeTokens.of(context).cardRadius),
                             ),
                           ),
                         ),

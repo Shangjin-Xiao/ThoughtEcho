@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../theme/theme_style.dart';
 import 'package:provider/provider.dart';
 
 import '../../gen_l10n/app_localizations.dart';
@@ -246,7 +247,8 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
       ),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
         boxShadow: AppTheme.defaultShadow,
         border: Border.all(
           color: theme.colorScheme.outline.withAlpha(30),

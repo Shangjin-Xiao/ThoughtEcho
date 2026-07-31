@@ -138,6 +138,66 @@ void main() {
       expect(ThemeStyle.plain.isGenerated, isFalse);
     });
 
+    // 只换颜色的观感就是「换了一套 Material 主题色」。辨识度主要由形状、字体、
+    // 阴影承担，这几条把它们钉住，防止后续无意中把手工风格退化回 Material 长相。
+    test('手工风格的圆角明显小于 Material', () {
+      for (final style in ThemeStyle.values) {
+        if (style.isGenerated) continue;
+        final form = style.form;
+        expect(
+          form.cardRadius,
+          lessThan(ThemeStyleForm.material.cardRadius / 2),
+          reason: '${style.name} 的卡片圆角接近 Material，纸的方正感出不来',
+        );
+        expect(
+            form.buttonRadius, lessThan(ThemeStyleForm.material.buttonRadius));
+        expect(form.inputRadius, lessThan(ThemeStyleForm.material.inputRadius));
+      }
+    });
+
+    test('手工风格用描边而不是投影做层次', () {
+      for (final style in ThemeStyle.values) {
+        final form = style.form;
+        if (style.isGenerated) {
+          expect(form.borderWidth, 0, reason: 'Material 保持原有投影层次');
+          continue;
+        }
+        expect(form.borderWidth, greaterThan(0));
+        for (final brightness in Brightness.values) {
+          expect(
+            form.shadowOpacity(brightness),
+            lessThan(ThemeStyleForm.material.shadowOpacity(brightness)),
+            reason: '${style.name} / ${brightness.name} 投影没有压下去',
+          );
+        }
+      }
+    });
+
+    test('手工风格指向系统衬线体且不打包字体文件', () {
+      for (final style in ThemeStyle.values) {
+        final form = style.form;
+        if (style.isGenerated) {
+          expect(form.fontFamily, isNull, reason: 'Material 保持系统默认字体');
+          continue;
+        }
+        expect(form.fontFamily, isNotNull);
+        // 回退链必须以通用族 serif 收尾，否则某个平台三个都没有时会掉进豆腐块。
+        expect(form.fontFamilyFallback, isNotNull);
+        expect(form.fontFamilyFallback!.last, 'serif');
+      }
+    });
+
+    test('AppShapeTokens 在两端之间插值，切换风格不会瞬跳', () {
+      final a =
+          AppShapeTokens.fromForm(ThemeStyleForm.material, Brightness.light);
+      final b = AppShapeTokens.fromForm(ThemeStyleForm.paper, Brightness.light);
+      final mid = a.lerp(b, 0.5);
+      expect(mid.cardRadius, (a.cardRadius + b.cardRadius) / 2);
+      expect(mid.borderWidth, (a.borderWidth + b.borderWidth) / 2);
+      // 类型不匹配时原样返回，不能抛。
+      expect(a.lerp(null, 0.5), same(a));
+    });
+
     test('未知或缺失的持久化取值回退到 material', () {
       expect(ThemeStyle.fromName(null), ThemeStyle.material);
       expect(ThemeStyle.fromName('nope'), ThemeStyle.material);

@@ -26,6 +26,14 @@ enum ThemeStyle {
         ThemeStyle.plain => ThemeStylePalette.plain,
       };
 
+  /// 形状、字体、阴影令牌。这三样比颜色更能拉开风格辨识度：
+  /// 只换颜色的结果就是「换了一套 Material 主题色」。
+  ThemeStyleForm get form => switch (this) {
+        ThemeStyle.material => ThemeStyleForm.material,
+        ThemeStyle.paper => ThemeStyleForm.paper,
+        ThemeStyle.plain => ThemeStyleForm.plain,
+      };
+
   /// 是否走取色算法。material 之外的风格都要原样保留手工色值，
   /// 不能再喂给 seed 生成器，否则色板会被算法重新推导掉。
   bool get isGenerated => palette == null;
@@ -36,6 +44,188 @@ enum ThemeStyle {
       if (style.name == name) return style;
     }
     return ThemeStyle.material;
+  }
+}
+
+/// 一种风格的形状、字体、阴影令牌。
+///
+/// 这些和颜色一样是纯数值，所以品牌差异全部能通过令牌表达，
+/// widget 里不需要出现任何 `if (style == ...)`。
+@immutable
+class ThemeStyleForm {
+  const ThemeStyleForm({
+    required this.cardRadius,
+    required this.dialogRadius,
+    required this.buttonRadius,
+    required this.inputRadius,
+    required this.borderWidth,
+    required this.shadowOpacityLight,
+    required this.shadowOpacityDark,
+    required this.shadowBlur,
+    required this.fontFamily,
+    required this.fontFamilyFallback,
+  });
+
+  final double cardRadius;
+  final double dialogRadius;
+  final double buttonRadius;
+  final double inputRadius;
+
+  /// 卡片描边宽度。纸的层次靠发丝边框而不是投影，所以手工风格把边框加出来、
+  /// 把投影压下去。
+  final double borderWidth;
+
+  final double shadowOpacityLight;
+  final double shadowOpacityDark;
+  final double shadowBlur;
+
+  /// 首选字体族。null 表示用系统默认（material 风格保持原样）。
+  ///
+  /// 手工风格指向**系统自带**的中文衬线体，不打包任何字体文件——
+  /// 增量 0 字节，缺失时按 [fontFamilyFallback] 逐个回退，最终回落到系统默认。
+  /// 正文从黑体变衬线，是「纸墨」观感里最省成本的一步。
+  final String? fontFamily;
+  final List<String>? fontFamilyFallback;
+
+  double shadowOpacity(Brightness brightness) =>
+      brightness == Brightness.dark ? shadowOpacityDark : shadowOpacityLight;
+
+  /// 各平台自带的中文衬线体，按覆盖面排序。
+  /// Songti SC / STSong 是 iOS 和 macOS，Noto Serif CJK SC 和 Source Han Serif
+  /// 是 Android 与多数 Linux 发行版，SimSun 是 Windows。
+  static const List<String> _systemSerifFallback = [
+    'Songti SC',
+    'STSong',
+    'Noto Serif CJK SC',
+    'Noto Serif SC',
+    'Source Han Serif SC',
+    'SimSun',
+    'serif',
+  ];
+
+  /// 现状：Material 3 默认圆角与投影，系统默认字体。
+  static const material = ThemeStyleForm(
+    cardRadius: 18,
+    dialogRadius: 24,
+    buttonRadius: 12,
+    inputRadius: 12,
+    borderWidth: 0,
+    shadowOpacityLight: 0.06,
+    shadowOpacityDark: 0.24,
+    shadowBlur: 12,
+    fontFamily: null,
+    fontFamilyFallback: null,
+  );
+
+  /// 纸与墨：纸不该有 18 圆角。小圆角 + 发丝边框 + 极淡投影 + 衬线体。
+  static const paper = ThemeStyleForm(
+    cardRadius: 6,
+    dialogRadius: 8,
+    buttonRadius: 4,
+    inputRadius: 4,
+    borderWidth: 1,
+    shadowOpacityLight: 0.03,
+    shadowOpacityDark: 0.14,
+    shadowBlur: 6,
+    fontFamily: 'Songti SC',
+    fontFamilyFallback: _systemSerifFallback,
+  );
+
+  /// 素笺：比纸墨更硬朗，接近方角，几乎不用投影。
+  static const plain = ThemeStyleForm(
+    cardRadius: 3,
+    dialogRadius: 4,
+    buttonRadius: 2,
+    inputRadius: 2,
+    borderWidth: 1,
+    shadowOpacityLight: 0.02,
+    shadowOpacityDark: 0.10,
+    shadowBlur: 4,
+    fontFamily: 'Songti SC',
+    fontFamilyFallback: _systemSerifFallback,
+  );
+}
+
+/// 把当前风格的形状令牌下发给 widget。
+///
+/// `AppTheme.cardRadius` 那组 `static const` 是 material 的取值，无法随风格变化。
+/// 自绘表面的 widget 应该改读这里：`AppShapeTokens.of(context).cardRadius`。
+@immutable
+class AppShapeTokens extends ThemeExtension<AppShapeTokens> {
+  const AppShapeTokens({
+    required this.cardRadius,
+    required this.dialogRadius,
+    required this.buttonRadius,
+    required this.inputRadius,
+    required this.borderWidth,
+    required this.shadowOpacity,
+    required this.shadowBlur,
+  });
+
+  factory AppShapeTokens.fromForm(
+    ThemeStyleForm form,
+    Brightness brightness,
+  ) {
+    return AppShapeTokens(
+      cardRadius: form.cardRadius,
+      dialogRadius: form.dialogRadius,
+      buttonRadius: form.buttonRadius,
+      inputRadius: form.inputRadius,
+      borderWidth: form.borderWidth,
+      shadowOpacity: form.shadowOpacity(brightness),
+      shadowBlur: form.shadowBlur,
+    );
+  }
+
+  final double cardRadius;
+  final double dialogRadius;
+  final double buttonRadius;
+  final double inputRadius;
+  final double borderWidth;
+  final double shadowOpacity;
+  final double shadowBlur;
+
+  /// 主题未注册扩展时回退到 material 取值，避免空断言崩溃。
+  static AppShapeTokens of(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.extension<AppShapeTokens>() ??
+        AppShapeTokens.fromForm(ThemeStyleForm.material, theme.brightness);
+  }
+
+  @override
+  AppShapeTokens copyWith({
+    double? cardRadius,
+    double? dialogRadius,
+    double? buttonRadius,
+    double? inputRadius,
+    double? borderWidth,
+    double? shadowOpacity,
+    double? shadowBlur,
+  }) {
+    return AppShapeTokens(
+      cardRadius: cardRadius ?? this.cardRadius,
+      dialogRadius: dialogRadius ?? this.dialogRadius,
+      buttonRadius: buttonRadius ?? this.buttonRadius,
+      inputRadius: inputRadius ?? this.inputRadius,
+      borderWidth: borderWidth ?? this.borderWidth,
+      shadowOpacity: shadowOpacity ?? this.shadowOpacity,
+      shadowBlur: shadowBlur ?? this.shadowBlur,
+    );
+  }
+
+  @override
+  AppShapeTokens lerp(ThemeExtension<AppShapeTokens>? other, double t) {
+    if (other is! AppShapeTokens) return this;
+    double mix(double a, double b) => a + (b - a) * t;
+    return AppShapeTokens(
+      cardRadius: mix(cardRadius, other.cardRadius),
+      dialogRadius: mix(dialogRadius, other.dialogRadius),
+      buttonRadius: mix(buttonRadius, other.buttonRadius),
+      inputRadius: mix(inputRadius, other.inputRadius),
+      borderWidth: mix(borderWidth, other.borderWidth),
+      shadowOpacity: mix(shadowOpacity, other.shadowOpacity),
+      shadowBlur: mix(shadowBlur, other.shadowBlur),
+    );
   }
 }
 
