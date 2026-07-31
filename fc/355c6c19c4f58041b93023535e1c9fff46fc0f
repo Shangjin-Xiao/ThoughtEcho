@@ -1,0 +1,29 @@
+test/widget/pages/ai_periodic_report_page_test.dart
+  s_987fd6b9da4dd3::t_113448dde3cccd 317-355
+  s_987fd6b9da4dd3::t_ad997adf5336cb 7,13-14
+  s_987fd6b9da4dd3::t_ea5931de989d05 17-32
+lib/services/smart_push_service.dart
+  s_987fd6b9da4dd3::t_3d1c74b8aad64e 108-118
+lib/pages/ai_periodic_report_page.dart
+  s_987fd6b9da4dd3::t_b5811274902204 13
+lib/pages/ai_assistant/ai_assistant_page_session.dart
+  s_987fd6b9da4dd3::t_cbabf561b01605 311-316
+lib/pages/ai_report/report_stats.dart
+  s_987fd6b9da4dd3::t_44ca4e479d3291 234,236-244,247-250
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "fc355c6c19c4f58041b93023535e1c9fff46fc0f",
+  "prompts": {},
+  "sessions": {
+    "s_987fd6b9da4dd3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0396dc62-e58d-4d6b-aacf-ada6ef9a3c3f",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
