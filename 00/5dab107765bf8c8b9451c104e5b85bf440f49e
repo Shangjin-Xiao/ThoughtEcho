@@ -1,0 +1,134 @@
+lib/pages/note_sync_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 11,793-794,818-819
+lib/pages/ai_provider_edit_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 14,415-416,535-536,657-658
+lib/widgets/svg_card_widget.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 8,47-48,58-59,134-135,248-249,477-478,620
+lib/widgets/enhanced_ai_loading_dialog.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 3,85-86,177-178
+lib/pages/ai_assistant/session_history_page_content.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 162-163,169-170
+lib/widgets/onboarding/preferences_page_view.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 9,673-674
+lib/theme/app_theme.dart
+  s_47f1a91bc7edb0::t_c56acfc2b8fb18 385-386,391
+  s_47f1a91bc7edb0::t_26ec4b3e613472 634,772
+docs/paper-ink-theme-handoff-2026-07-31.md
+  s_47f1a91bc7edb0::t_0c33c4f49e73c8 1-42,94-166
+  s_47f1a91bc7edb0::t_7ac974c2d0d520 43-93
+lib/pages/settings_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 40,1316-1317
+lib/widgets/pdf_preview_dialog.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 6,24-25,28-29
+test/theme/theme_style_contrast_test.dart
+  s_47f1a91bc7edb0::t_453a7266e1aca5 185-190
+lib/pages/ai_analysis_history_page_clean.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 18,242-243,458-459,466-467,1041-1042,1083,1095
+  s_47f1a91bc7edb0::t_d2efeb90908ab4 241
+lib/pages/hitokoto_settings_page_widgets.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 16-17,20-21,99-100,103-104
+lib/pages/theme_settings_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 77-78,104-105,155-156,208-209,385-386,388-389,400-401
+  s_47f1a91bc7edb0::t_88bc786dd032fa 378-380
+lib/pages/ai_settings_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 15,110-111,583-584
+lib/widgets/note_filter_sort_sheet.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 11,236-237
+lib/pages/hitokoto_settings_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 12,235-236,413-414
+lib/widgets/markdown_message_bubble.dart
+  s_47f1a91bc7edb0::t_d2efeb90908ab4 140
+  s_47f1a91bc7edb0::t_0a3172272a5349 10,142
+lib/pages/smart_push_settings_page.dart
+  s_47f1a91bc7edb0::t_18df54c5b3d463 12
+lib/widgets/city_search_widget.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 10,246-247,251-252,256-257
+lib/pages/hitokoto_settings_page_layout_sections.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 26-27,102-103,190-191,244-245
+lib/pages/user_guide_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 6,497
+lib/widgets/onboarding/page_views.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 9,457-458,517-518
+lib/pages/ai_assistant/session_history_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 9,204-205
+lib/widgets/ai_options_menu.dart
+  s_47f1a91bc7edb0::t_d2efeb90908ab4 70
+  s_47f1a91bc7edb0::t_0a3172272a5349 5,72,218-219,227-228
+lib/widgets/streaming_text_dialog.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 7,132-133,138-139,269-270,276-277,476-477
+lib/pages/webdav_sync_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 14,368-369,492-493,710-711,716-717
+lib/pages/note_editor/editor_build.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 262
+lib/widgets/media_player_widget.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 13,447-448,491-492,520-521,560-561
+lib/pages/local_ai_settings_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 6,89-90,140-141,159-160,413-414
+lib/pages/preferences_detail_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 13,82-83,509-510,523-524,607-608,610-611,639-640,673,809-810,979
+lib/pages/smart_push_settings_page_basic_sections.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 14-15,153-154,353-354
+lib/pages/hitokoto_settings_page_info_sections.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 16-17,61-62
+docs/paper-ink-theme-plan-2026-07-30.md
+  s_47f1a91bc7edb0::t_0eadb28a2732d4 42,44-52
+  s_47f1a91bc7edb0::t_fc792417530ebf 3-5
+lib/widgets/local_ai/voice_input_overlay.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 5,222-223
+lib/pages/smart_push_settings_page_misc_sections.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 203-204
+lib/pages/category_settings_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 10,53-54,73-74,85,96,245-246,338-339,440-441,531-532,885-886
+lib/widgets/enhanced_loading_widget.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 3,354-355
+lib/widgets/ai/experimental_badge.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 9,273-274,309-310
+lib/pages/custom_feedback_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 6,116-117,147-148,171-172
+lib/pages/note_full_editor_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 45
+lib/pages/license_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 8,576-577,583-584
+lib/pages/smart_push_settings_page_custom_sections.dart
+  s_47f1a91bc7edb0::t_d2efeb90908ab4 275
+  s_47f1a91bc7edb0::t_0a3172272a5349 14-15,181-182,268-269,276
+lib/services/clipboard_service.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 17,337-338
+lib/pages/note_editor/editor_metadata_ai_section.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 63-64,182-183,189-190
+lib/widgets/ai/ai_card_parts.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 10,25-26
+lib/widgets/update_dialog.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 9,83,120-121,195-196,266,303-304
+lib/widgets/feature_guide_popover.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 5,440-441
+lib/pages/note_editor/editor_metadata_location_section.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 43-44
+lib/pages/home_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 43,89-90
+lib/pages/note_editor/editor_metadata_dialog.dart
+  s_47f1a91bc7edb0::t_d2efeb90908ab4 13
+  s_47f1a91bc7edb0::t_0a3172272a5349 15,98-99,122-123,152-153,205-206,263-264,276-277,302-303,397-398
+lib/pages/logs_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 13,226-228,243-246,591-592,791-793,804-807,1043-1044
+lib/pages/onboarding_page.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 20,695-696
+lib/widgets/ai/slash_commands_menu.dart
+  s_47f1a91bc7edb0::t_0a3172272a5349 5,107-108,374-375
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "005dab107765bf8c8b9451c104e5b85bf440f49e",
+  "prompts": {},
+  "sessions": {
+    "s_47f1a91bc7edb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5758900e-5266-4134-88d0-df4e37987180",
+        "model": "claude-opus-5"
+      },
+      "human_author": null
+    }
+  }
+}
