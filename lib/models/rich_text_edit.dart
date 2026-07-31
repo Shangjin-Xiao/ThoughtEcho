@@ -112,9 +112,17 @@ class RichTextEditOperation {
     final rawBlocks = json['blocks'];
     final rawInsertOps = json['insert_ops'];
     final typeName = json['type']?.toString();
+    // 这条错误会原样回喂给模型，必须写清楚少了什么、可选值是什么，
+    // 否则模型只能原样重试直到撞满失败预算。
+    final allowed =
+        RichTextEditOperationType.values.map((value) => value.name).join('、');
+    if (typeName == null || typeName.isEmpty) {
+      throw FormatException('operations 中每一项都必须提供 type 字段（可选值：$allowed）。');
+    }
     final type = RichTextEditOperationType.values.firstWhere(
       (value) => value.name == typeName,
-      orElse: () => throw FormatException('不支持的富文本操作: $typeName'),
+      orElse: () =>
+          throw FormatException('不支持的富文本操作 type：$typeName（可选值：$allowed）。'),
     );
     return RichTextEditOperation(
       type: type,

@@ -87,6 +87,16 @@ typedef AgentCompletionRequester = Future<openai.ChatCompletion> Function({
 
 typedef AgentApiKeyResolver = Future<String> Function(String providerId);
 
+/// 每次向模型发起请求前的只读观察钩子。
+///
+/// 仅供离线跑测台记录请求体，不参与任何生产逻辑；注入方必须视参数为只读。
+typedef AgentRequestObserver = void Function({
+  required List<openai.ChatMessage> messages,
+  required List<openai.Tool> tools,
+  required int maxTokens,
+  required bool streaming,
+});
+
 /// 当前页面绑定的笔记引用。正文属于不可信用户数据，标识与版本用于工具定位。
 @immutable
 class AgentNoteContext {
@@ -113,6 +123,7 @@ class AgentService extends ChangeNotifier {
   final List<AgentTool> _tools;
   final AgentCompletionRequester? _completionRequester;
   final AgentApiKeyResolver? _apiKeyResolver;
+  final AgentRequestObserver? _requestObserver;
 
   final StreamController<AgentEvent> _eventController =
       StreamController<AgentEvent>.broadcast(sync: true);
@@ -191,12 +202,14 @@ class AgentService extends ChangeNotifier {
     required List<AgentTool> tools,
     AgentCompletionRequester? completionRequester,
     AgentApiKeyResolver? apiKeyResolver,
+    AgentRequestObserver? requestObserver,
   })  : _settingsService = settingsService,
         _tools = List<AgentTool>.unmodifiable(
           tools.map(_withTruncation),
         ),
         _completionRequester = completionRequester,
-        _apiKeyResolver = apiKeyResolver;
+        _apiKeyResolver = apiKeyResolver,
+        _requestObserver = requestObserver;
 
   /// 请求停止当前 run。
   ///
@@ -682,6 +695,12 @@ class AgentService extends ChangeNotifier {
     required double temperature,
     required int maxTokens,
   }) async {
+    _requestObserver?.call(
+      messages: messages,
+      tools: tools,
+      maxTokens: maxTokens,
+      streaming: false,
+    );
     if (_completionRequester != null) {
       return _completionRequester(
         provider: provider,
@@ -724,6 +743,12 @@ class AgentService extends ChangeNotifier {
     required int maxTokens,
     required int runId,
   }) async {
+    _requestObserver?.call(
+      messages: messages,
+      tools: tools,
+      maxTokens: maxTokens,
+      streaming: true,
+    );
     // 测试注入路径：将非流式结果转换为流式结果
     if (_completionRequester != null) {
       final completion = await _completionRequester(
