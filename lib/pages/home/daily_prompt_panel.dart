@@ -257,11 +257,16 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
+          // 按钮浮在标题行上而不是并排：32 的点击尺寸并排会把整行（原本只有
+          // 一行标题的高度）撑高近 10px，卡片跟着变高。Positioned 的子节点不
+          // 参与 Stack 尺寸计算，行高回到只由标题决定，标题也仍是整行居中。
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
             children: [
-              // 左侧等宽占位，让标题在有右侧按钮时依然居中
-              SizedBox(width: _askButtonSize),
-              Expanded(
+              Padding(
+                // 给右侧按钮让位，避免长标题压到按钮下面
+                padding: const EdgeInsets.symmetric(horizontal: _askButtonSize),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -289,7 +294,10 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
                   ],
                 ),
               ),
-              _buildAskThoughterButton(theme, l10n),
+              Positioned(
+                right: 0,
+                child: _buildAskThoughterButton(theme, l10n),
+              ),
             ],
           ),
           SizedBox(

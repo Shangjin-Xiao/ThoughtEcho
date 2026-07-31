@@ -3835,6 +3835,8 @@
   "exploreMapMemoryDesc": "Explore your footprints on the map",
   "favoriteNotes": "Favorite Notes",
   "chatHistory": "Chat History",
+  "sessionScopeThisNote": "This note",
+  "sessionScopeAllChats": "All chats",
   "newChat": "New Chat",
   "noChats": "No chats yet",
   "deleteChat": "Delete Chat",

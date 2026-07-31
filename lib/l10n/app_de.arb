@@ -47,6 +47,8 @@
     }
   },
   "chatHistory": "Chatverlauf",
+  "sessionScopeThisNote": "Diese Notiz",
+  "sessionScopeAllChats": "Alle Chats",
   "newChat": "Neuer Chat",
   "deleteChat": "Chat löschen",
   "deleteChatConfirm": "Diese Unterhaltung löschen? Alle Nachrichten werden entfernt.",

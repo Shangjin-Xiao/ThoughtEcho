@@ -67,11 +67,16 @@ extension _AIReportThoughterEntry on _AIPeriodicReportPageState {
               initialQuestion: l10n.exploreAskAboutInsightPrompt,
             ),
           ),
+        // 另外两个入口同样带上已生成的洞察：不传 openingMessage 时助手页会走
+        // _generateAndShowDynamicInsight，用 buildLocalReportInsight 现拼一段
+        // 统计文案——用户刚在这一页读到 AI 写的那段，进去却换成系统拼接的，
+        // 前后对不上。手上有 AI 洞察就一律用它开场。
         _buildQuickAskChip(
           icon: Icons.summarize_outlined,
           label: l10n.exploreSummarizePeriod(_getPeriodName(l10n)),
           emphasized: !hasInsight,
           onTap: () => _openThoughter(
+            openingMessage: hasInsight ? insight : null,
             initialQuestion:
                 l10n.exploreSummarizePeriodPrompt(_getPeriodName(l10n)),
           ),
@@ -79,7 +84,9 @@ extension _AIReportThoughterEntry on _AIPeriodicReportPageState {
         _buildQuickAskChip(
           icon: Icons.chat_bubble_outline,
           label: l10n.exploreFreeChat,
-          onTap: () => _openThoughter(),
+          onTap: () => _openThoughter(
+            openingMessage: hasInsight ? insight : null,
+          ),
         ),
         // 实验性标记跟着入口走，不再单独占一张卡片的位置
         Padding(

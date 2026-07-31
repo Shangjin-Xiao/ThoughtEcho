@@ -43,6 +43,12 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  /// 笔记入口默认只看这条笔记的对话，但用户也要能翻到全部对话。
+  /// 探索入口本来就是全部（noteId 为空），不显示切换。
+  bool _showAllSessions = false;
+
+  bool get _isNoteScoped => widget.noteId.isNotEmpty;
+
   @override
   void initState() {
     super.initState();
@@ -60,7 +66,7 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
     setState(() => _isLoading = true);
     try {
       final List<ChatSession> sessions;
-      if (widget.noteId.isEmpty) {
+      if (!_isNoteScoped || _showAllSessions) {
         sessions = await widget.chatSessionService.getAllSessions();
       } else {
         sessions =
@@ -184,6 +190,7 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
       ),
       body: Column(
         children: [
+          if (_isNoteScoped) _buildScopeSelector(l10n),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
             child: TextField(
@@ -225,6 +232,33 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildScopeSelector(AppLocalizations l10n) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Row(
+        children: [
+          ChoiceChip(
+            label: Text(l10n.sessionScopeThisNote),
+            selected: !_showAllSessions,
+            onSelected: (_) => _setShowAllSessions(false),
+          ),
+          const SizedBox(width: 8),
+          ChoiceChip(
+            label: Text(l10n.sessionScopeAllChats),
+            selected: _showAllSessions,
+            onSelected: (_) => _setShowAllSessions(true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _setShowAllSessions(bool showAll) {
+    if (_showAllSessions == showAll) return;
+    setState(() => _showAllSessions = showAll);
+    _loadSessions();
   }
 
   Widget _buildBody(

@@ -90,9 +90,11 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
       if (widget.session != null) {
         await _loadSession(widget.session!.id);
       } else if (_hasBoundNote &&
-          !_isAgentMode &&
           _boundNoteId != null &&
           _entrySource == AIAssistantEntrySource.note) {
+        // 这里原本还要求 !_isAgentMode，而 AIAssistantEntryConfig 现在只允许
+        // agent 一种模式，条件恒为假——笔记入口每次都从空白开始。默认接着上次
+        // 聊，想重开由标题栏的「新建对话」明确触发。
         final session = await _chatSessionService.getLatestSessionForNote(
           _boundNoteId!,
         );

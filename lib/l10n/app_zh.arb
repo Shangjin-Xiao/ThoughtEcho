@@ -3835,6 +3835,8 @@
   "exploreMapMemoryDesc": "在地图上探索你的足迹",
   "favoriteNotes": "收藏笔记",
   "chatHistory": "对话历史",
+  "sessionScopeThisNote": "本条笔记",
+  "sessionScopeAllChats": "全部对话",
   "newChat": "新建对话",
   "noChats": "暂无对话",
   "deleteChat": "删除对话",

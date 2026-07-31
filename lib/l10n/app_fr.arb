@@ -3542,6 +3542,8 @@
     }
   },
   "chatHistory": "Historique des chats",
+  "sessionScopeThisNote": "Cette note",
+  "sessionScopeAllChats": "Tous les chats",
   "newChat": "Nouveau chat",
   "deleteChat": "Supprimer le chat",
   "deleteChatConfirm": "Supprimer cette conversation ? Tous les messages seront supprimés.",

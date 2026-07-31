@@ -3560,6 +3560,8 @@
     }
   },
   "chatHistory": "チャット履歴",
+  "sessionScopeThisNote": "このメモ",
+  "sessionScopeAllChats": "すべてのチャット",
   "newChat": "新規チャット",
   "deleteChat": "チャットを削除",
   "deleteChatConfirm": "この会話を削除しますか？すべてのメッセージが削除されます。",

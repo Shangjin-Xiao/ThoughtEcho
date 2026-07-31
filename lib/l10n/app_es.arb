@@ -47,6 +47,8 @@
     }
   },
   "chatHistory": "Historial de chat",
+  "sessionScopeThisNote": "Esta nota",
+  "sessionScopeAllChats": "Todos los chats",
   "newChat": "Nuevo chat",
   "deleteChat": "Eliminar chat",
   "deleteChatConfirm": "¿Eliminar esta conversación? Se borrarán todos los mensajes.",

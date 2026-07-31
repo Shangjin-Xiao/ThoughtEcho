@@ -665,6 +665,55 @@ void main() {
       );
     });
 
+    // 笔记入口默认接着上次聊。这条不变量曾经悄悄失效：恢复分支上带着
+    // !_isAgentMode，而入口配置只允许 agent 一种模式，条件恒为假，
+    // 每次点「问 Thoughter」都从白纸开始。
+    testWidgets('note entry resumes the latest session for that note',
+        (tester) async {
+      final now = DateTime(2026, 7, 30, 9);
+      chatSessionService.seedSession(
+        ChatSession(
+          id: 'note-session-1',
+          sessionType: 'agent',
+          noteId: 'note-1',
+          title: '上次聊过的',
+          createdAt: now,
+          lastActiveAt: now,
+        ),
+        <app_chat.ChatMessage>[
+          app_chat.ChatMessage(
+            id: 'm1',
+            content: '上次我们聊到哪儿了',
+            isUser: true,
+            role: 'user',
+            timestamp: now,
+          ),
+          app_chat.ChatMessage(
+            id: 'm2',
+            content: '聊到你想把这条笔记拆成两段',
+            isUser: false,
+            role: 'assistant',
+            timestamp: now,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: AIAssistantPage(
+            key: const ValueKey('note_resume_page'),
+            entrySource: AIAssistantEntrySource.note,
+            quote: _buildQuote(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('聊到你想把这条笔记拆成两段'), findsOneWidget);
+    });
+
     testWidgets('note entry sends structured note identity to Agent',
         (tester) async {
       final agentService = _FakeAgentService(
