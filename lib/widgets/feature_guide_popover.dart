@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../models/feature_guide.dart';
+import '../theme/app_theme.dart';
 
 /// 气泡箭头方向
 enum PopoverArrowDirection {
@@ -436,7 +437,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
       constraints: const BoxConstraints(maxWidth: 220, minWidth: 180),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         border: Border.all(
           color: theme.colorScheme.primary.withValues(alpha: 0.12),
           width: 1,

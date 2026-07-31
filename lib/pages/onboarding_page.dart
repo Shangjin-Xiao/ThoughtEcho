@@ -17,6 +17,7 @@ import '../utils/app_logger.dart';
 import '../constants/app_constants.dart';
 import 'home_page.dart';
 import '../utils/lottie_animation_manager.dart';
+import '../theme/app_theme.dart';
 
 /// 重构后的新用户引导页面
 ///
@@ -691,7 +692,7 @@ class _OnboardingPageState extends State<OnboardingPage>
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
           color: theme.scaffoldBackgroundColor,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
           boxShadow: [
             BoxShadow(
               color: theme.shadowColor.withValues(alpha: 0.1),

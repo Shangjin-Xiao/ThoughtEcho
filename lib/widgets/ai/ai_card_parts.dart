@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../gen_l10n/app_localizations.dart';
 import '../../models/note_category.dart';
+import '../../theme/app_theme.dart';
 import '../../utils/string_utils.dart';
 import '../quote_card_helpers.dart';
 
@@ -21,7 +22,7 @@ class AiCardShell extends StatelessWidget {
       elevation: 0,
       color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         side: BorderSide(
           color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),

@@ -159,13 +159,13 @@ extension _SessionHistoryPageContent on _SessionHistoryPageState {
                   : Colors.transparent,
               width: isCurrent ? 1.5 : 1,
             ),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: isCurrent ? null : () => widget.onSelect(session.id),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
               child: Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

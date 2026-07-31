@@ -11,7 +11,7 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         side: BorderSide(
           color: _settings.enabled
               ? colorScheme.primary.withValues(alpha: 0.3)
@@ -149,7 +149,7 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.2)),
       ),
       child: Padding(
@@ -348,7 +348,7 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
             elevation: 0,
             color: colorScheme.errorContainer.withValues(alpha: 0.3),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
               side: BorderSide(color: colorScheme.error.withValues(alpha: 0.3)),
             ),
             child: Padding(

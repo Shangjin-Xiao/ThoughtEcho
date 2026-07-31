@@ -198,7 +198,7 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
       ),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         boxShadow: AppTheme.defaultShadow,
         border: Border.all(
           color: theme.colorScheme.outline.withAlpha(30),

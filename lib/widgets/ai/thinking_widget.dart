@@ -3,6 +3,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../gen_l10n/app_localizations.dart';
+import '../../theme/app_theme.dart';
 
 /// 思考过程折叠组件 - 展示 AI 的思考过程
 ///
@@ -127,7 +128,7 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
       width: double.infinity,
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         border: Border.all(
           color: borderColor.withValues(alpha: 0.4),
           width: 1,
@@ -141,7 +142,7 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
             color: Colors.transparent,
             child: InkWell(
               onTap: _toggleExpanded,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,

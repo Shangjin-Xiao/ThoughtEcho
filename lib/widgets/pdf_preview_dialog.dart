@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:printing/printing.dart';
 import 'package:pdf/pdf.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/theme/app_theme.dart';
 
 class PdfPreviewDialog extends StatelessWidget {
   final Uint8List pdfBytes;
@@ -19,9 +20,11 @@ class PdfPreviewDialog extends StatelessWidget {
     final theme = Theme.of(context);
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.dialogRadius),
+      ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.dialogRadius),
         child: SizedBox(
           width: double.infinity,
           height: double.infinity,

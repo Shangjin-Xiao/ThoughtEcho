@@ -40,7 +40,7 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
             border: Border.all(color: theme.colorScheme.outlineVariant),
           ),
           child: Column(

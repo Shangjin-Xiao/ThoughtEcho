@@ -9,6 +9,7 @@ import '../services/api_key_manager.dart';
 import '../utils/ai_network_manager.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../widgets/app_snackbar.dart';
+import '../theme/app_theme.dart';
 
 class AISettingsPage extends StatefulWidget {
   const AISettingsPage({super.key});
@@ -528,7 +529,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
           controller: nameController,
           decoration: InputDecoration(
             labelText: l10n.presetName,
-            border: const OutlineInputBorder(),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+            ),
           ),
           autofocus: true,
         ),
@@ -732,7 +735,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         side: BorderSide(color: theme.colorScheme.primary, width: 2),
       ),
       color: theme.colorScheme.surface,
@@ -958,7 +961,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                   decoration: InputDecoration(
                     labelText: l10n.apiUrlField,
                     hintText: l10n.apiUrlHint,
-                    border: const OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                    ),
                     prefixIcon: const Icon(Icons.link),
                     helperText: l10n.apiUrlHelper,
                   ),
@@ -972,7 +977,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                   decoration: InputDecoration(
                     labelText: l10n.apiKeyField,
                     hintText: l10n.apiKeyHint,
-                    border: const OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                    ),
                     prefixIcon: const Icon(Icons.key),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -998,7 +1005,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                   },
                   decoration: InputDecoration(
                     labelText: l10n.modelNameField,
-                    border: const OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                    ),
                     prefixIcon: const Icon(Icons.psychology),
                   ),
                 ),
@@ -1022,7 +1031,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 decoration: InputDecoration(
                   labelText: l10n.hostOverrideField,
                   hintText: l10n.hostOverrideHint,
-                  border: const OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                  ),
                   prefixIcon: const Icon(Icons.dns),
                 ),
               ),

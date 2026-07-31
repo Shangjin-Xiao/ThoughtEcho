@@ -10,6 +10,7 @@ import '../services/webdav_sync_service.dart';
 import '../utils/lww_utils.dart';
 import '../utils/app_logger.dart';
 import '../theme/app_semantic_colors.dart';
+import '../theme/app_theme.dart';
 import '../widgets/app_snackbar.dart';
 
 class WebDAVSyncPage extends StatefulWidget {
@@ -364,7 +365,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                   Card(
                     elevation: 1,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                       side: BorderSide(
                           color: theme.colorScheme.outlineVariant
                               .withValues(alpha: 0.5)),
@@ -487,7 +488,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                   Card(
                     elevation: 1,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                       side: BorderSide(
                           color: theme.colorScheme.outlineVariant
                               .withValues(alpha: 0.5)),
@@ -593,8 +594,6 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                           label: Text(l10n.webdavTestConnection),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
                           ),
                         ),
                       ),
@@ -620,8 +619,6 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                               : l10n.webdavEnableSync),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
                             backgroundColor: theme.colorScheme.primary,
                             foregroundColor: theme.colorScheme.onPrimary,
                           ),
@@ -708,12 +705,12 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         side: BorderSide(color: accentColor.withValues(alpha: 0.4), width: 1.5),
       ),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
           gradient: LinearGradient(
             colors: [
               accentColor.withValues(alpha: 0.05),
@@ -854,8 +851,6 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                   icon: const Icon(Icons.sync_outlined),
                   label: Text(l10n.webdavSyncNow),
                   style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
                     backgroundColor: theme.colorScheme.secondaryContainer,
                     foregroundColor: theme.colorScheme.onSecondaryContainer,
                   ),
@@ -916,8 +911,6 @@ class QuoteListViewByConflict extends StatelessWidget {
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
               elevation: 1,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
               child: ListTile(
                 title: Text(
                   quote.content,

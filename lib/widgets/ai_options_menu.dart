@@ -215,7 +215,7 @@ class AiOptionsMenu extends StatelessWidget {
         elevation: 0,
         color: theme.colorScheme.surfaceContainerLow,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
           side: BorderSide(
             color: theme.colorScheme.outlineVariant.applyOpacity(0.5),
             width: 1,
@@ -223,7 +223,7 @@ class AiOptionsMenu extends StatelessWidget {
         ),
         child: InkWell(
           onTap: option.onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(

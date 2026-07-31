@@ -7,6 +7,7 @@ import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/device_identity_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../theme/app_theme.dart';
 import '../widgets/app_snackbar.dart';
 
 class _AutoScrollText extends StatefulWidget {
@@ -789,7 +790,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(18),
+                              borderRadius:
+                                  BorderRadius.circular(AppTheme.cardRadius),
                               color: isSendingToThis
                                   ? theme.colorScheme.primaryContainer
                                       .withValues(alpha: 0.35)
@@ -813,7 +815,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                             ),
                             child: Material(
                               color: Colors.transparent,
-                              borderRadius: BorderRadius.circular(18),
+                              borderRadius:
+                                  BorderRadius.circular(AppTheme.cardRadius),
                               child: ListTile(
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 18,
@@ -1033,9 +1036,6 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                   }
 
                   final dialog = AlertDialog(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
                     titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
                     contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
                     actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),

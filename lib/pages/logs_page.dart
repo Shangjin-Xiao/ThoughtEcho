@@ -222,9 +222,9 @@ class _LogsPageState extends State<LogsPage> {
         return Container(
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(AppTheme.dialogRadius),
+              topRight: Radius.circular(AppTheme.dialogRadius),
             ),
           ),
           child: Column(
@@ -238,9 +238,9 @@ class _LogsPageState extends State<LogsPage> {
                 ),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(AppTheme.dialogRadius),
+                    topRight: Radius.circular(AppTheme.dialogRadius),
                   ),
                 ),
                 child: Column(
@@ -584,8 +584,8 @@ class _LogsPageState extends State<LogsPage> {
                 decoration: InputDecoration(
                   hintText: l10n.searchLogs,
                   prefixIcon: const Icon(Icons.search),
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(8.0)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppTheme.inputRadius),
                   ),
                   suffixIcon: _searchQuery != null && _searchQuery!.isNotEmpty
                       ? IconButton(
@@ -783,9 +783,9 @@ class _LogsPageState extends State<LogsPage> {
           height: MediaQuery.of(context).size.height * 0.7,
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(AppTheme.dialogRadius),
+              topRight: Radius.circular(AppTheme.dialogRadius),
             ),
           ),
           child: Column(
@@ -795,9 +795,9 @@ class _LogsPageState extends State<LogsPage> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(AppTheme.dialogRadius),
+                    topRight: Radius.circular(AppTheme.dialogRadius),
                   ),
                 ),
                 child: Row(

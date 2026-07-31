@@ -453,14 +453,14 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           border: Border.all(
             color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
           ),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         ),
         child: Row(
           children: [
@@ -515,9 +515,6 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       final choice = await showDialog<String>(
         context: context,
         builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
           title: Row(
             children: [
               Icon(
@@ -1037,7 +1034,7 @@ $positiveQuotesText
                         )
                       : null,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                    borderRadius: BorderRadius.circular(AppTheme.inputRadius),
                   ),
                 ),
                 onChanged: (value) {

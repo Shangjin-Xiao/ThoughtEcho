@@ -264,13 +264,13 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         border: Border.all(
           color: colorScheme.outlineVariant.applyOpacity(0.3),
         ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         child: SingleChildScrollView(
           controller: _scrollController,
           padding: const EdgeInsets.all(16),

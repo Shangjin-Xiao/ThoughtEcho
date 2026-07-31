@@ -149,9 +149,6 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
                 label: Text(AppLocalizations.of(context).customColor),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
                 ),
                 onPressed: () async {
                   Navigator.pop(context); // 关闭当前对话框
@@ -219,7 +216,6 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
           ),
         ],
         actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
 

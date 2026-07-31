@@ -22,7 +22,6 @@ import '../services/location_service.dart';
 import '../services/local_geocoding_service.dart';
 import '../services/settings_service.dart';
 import '../services/weather_service.dart';
-import '../theme/app_theme.dart';
 import '../utils/feature_guide_helper.dart';
 import '../utils/time_utils.dart'; // 导入时间工具类
 import 'accessible_color_grid.dart'; // Import the new accessible color grid
@@ -2507,25 +2506,11 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                         ),
                       const Spacer(),
                       FilledButton.tonal(
-                        style: FilledButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.buttonRadius,
-                            ),
-                          ),
-                        ),
                         onPressed: () => Navigator.pop(context),
                         child: Text(l10n.cancel),
                       ),
                       const SizedBox(width: 8),
                       FilledButton(
-                        style: FilledButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.buttonRadius,
-                            ),
-                          ),
-                        ),
                         onPressed: (_isLoadingFullQuote || _waitingForFetch)
                             ? null
                             : () async {
@@ -2591,9 +2576,6 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                 label: Text(l10n.customColor),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
                 ),
                 onPressed: () async {
                   Navigator.pop(context); // 关闭当前对话框
@@ -2659,7 +2641,6 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           ),
         ],
         actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
     if (result != null) {

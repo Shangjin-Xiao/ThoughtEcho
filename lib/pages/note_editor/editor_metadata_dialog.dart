@@ -93,7 +93,10 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                     prefixIcon: const Icon(
                                       Icons.person_outline,
                                     ),
-                                    border: const OutlineInputBorder(),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(
+                                          AppTheme.inputRadius),
+                                    ),
                                     contentPadding: const EdgeInsets.symmetric(
                                       vertical: 10,
                                       horizontal: 12,
@@ -113,7 +116,10 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                     prefixIcon: const Icon(
                                       Icons.menu_book_outlined,
                                     ),
-                                    border: const OutlineInputBorder(),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(
+                                          AppTheme.inputRadius),
+                                    ),
                                     contentPadding: const EdgeInsets.symmetric(
                                       vertical: 10,
                                       horizontal: 12,
@@ -287,7 +293,10 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                       context,
                                     ).searchTags,
                                     prefixIcon: const Icon(Icons.search),
-                                    border: const OutlineInputBorder(),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(
+                                          AppTheme.inputRadius),
+                                    ),
                                     contentPadding: const EdgeInsets.symmetric(
                                       vertical: 8.0,
                                       horizontal: 12.0,

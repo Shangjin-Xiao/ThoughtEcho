@@ -258,7 +258,9 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                           ),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.cardRadius,
+                            ),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withValues(alpha: 0.08),

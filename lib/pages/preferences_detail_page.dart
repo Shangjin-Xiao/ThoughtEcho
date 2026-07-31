@@ -799,7 +799,9 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
             controller: controller,
             decoration: InputDecoration(
               hintText: hintText,
-              border: const OutlineInputBorder(),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+              ),
             ),
             autofocus: true,
           ),
@@ -965,7 +967,10 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                               decoration: InputDecoration(
                                 hintText: l10n.searchTags,
                                 prefixIcon: const Icon(Icons.search),
-                                border: const OutlineInputBorder(),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                      AppTheme.inputRadius),
+                                ),
                                 isDense: true,
                               ),
                               onChanged: (value) {

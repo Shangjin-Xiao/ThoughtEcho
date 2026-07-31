@@ -7,6 +7,7 @@ import '../services/weather_service.dart';
 import '../services/settings_service.dart';
 import '../controllers/weather_search_controller.dart';
 import '../utils/lottie_animation_manager.dart';
+import '../theme/app_theme.dart';
 
 class CitySearchWidget extends StatefulWidget {
   final WeatherSearchController weatherController;
@@ -242,15 +243,15 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                         )
                       : null,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16.0),
+                    borderRadius: BorderRadius.circular(AppTheme.inputRadius),
                     borderSide: BorderSide(color: theme.colorScheme.primary),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16.0),
+                    borderRadius: BorderRadius.circular(AppTheme.inputRadius),
                     borderSide: BorderSide(color: theme.colorScheme.outline),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16.0),
+                    borderRadius: BorderRadius.circular(AppTheme.inputRadius),
                     borderSide: BorderSide(
                       color: theme.colorScheme.primary,
                       width: 2.0,

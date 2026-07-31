@@ -22,7 +22,6 @@ extension _SmartPushSettingsPageMiscSections on _SmartPushSettingsPageState {
       label: Text(_isTesting ? l10n.pleaseWait : l10n.smartPushTest),
       style: FilledButton.styleFrom(
         minimumSize: const Size.fromHeight(52),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -35,7 +34,6 @@ extension _SmartPushSettingsPageMiscSections on _SmartPushSettingsPageState {
     return Card(
       elevation: 0,
       color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -202,7 +200,7 @@ extension _SmartPushSettingsPageMiscSections on _SmartPushSettingsPageState {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.2)),
       ),
       child: Padding(

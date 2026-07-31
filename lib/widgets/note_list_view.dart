@@ -39,6 +39,7 @@ import 'note_list/note_item_motion.dart';
 import 'note_list/scroll_alignment.dart';
 import 'app_snackbar.dart';
 import '../theme/app_semantic_colors.dart';
+import '../theme/app_theme.dart';
 
 part 'note_list/note_list_scroll.dart';
 part 'note_list/note_list_data_stream.dart';

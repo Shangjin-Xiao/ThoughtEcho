@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import '../utils/lottie_animation_manager.dart';
 
 /// 增强的加载组件
@@ -350,7 +351,7 @@ class LoadingDialog extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.dialogRadius),
         ),
         child: EnhancedLoadingWidget.dialog(
           message: message,

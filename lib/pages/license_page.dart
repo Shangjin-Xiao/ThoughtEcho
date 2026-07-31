@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart';
 
 import '../gen_l10n/app_localizations.dart';
+import '../theme/app_theme.dart';
 
 /// 许可证页面
 /// 显示应用使用的第三方资源许可信息
@@ -572,13 +573,13 @@ class _ProgressiveSystemLicensesPageState
           elevation: 0,
           color: Theme.of(context).colorScheme.surfaceContainerLow,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
             side: BorderSide(
               color: Theme.of(context).colorScheme.outlineVariant,
             ),
           ),
           child: InkWell(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
             onTap: () {
               Navigator.push(
                 context,

@@ -68,7 +68,10 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                             labelText: l10n.newTagName,
                             hintText: l10n.enterTagNameHint,
                             counterText: '',
-                            border: const OutlineInputBorder(),
+                            border: OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppTheme.inputRadius),
+                            ),
                           ),
                         ),
                       ),
@@ -329,7 +332,10 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                               },
                             )
                           : null,
-                      border: const OutlineInputBorder(),
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.inputRadius),
+                      ),
                     ),
                     onChanged: (value) {
                       setState(() => searchQuery = value);
@@ -871,7 +877,9 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                         },
                       )
                     : null,
-                border: const OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppTheme.inputRadius),
+                ),
               ),
               onChanged: (value) {
                 setState(() => _searchQuery = value);
