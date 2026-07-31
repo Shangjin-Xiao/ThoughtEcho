@@ -1,7 +1,44 @@
 # 纸墨主题（Paper & Ink）落地计划
 
-> 状态：**待决策，尚未实现**。本文档描述的功能全部属于路线图，不代表当前行为。
-> 创建于 2026-07-30。
+> 状态：**第一步已实现**（风格维度 + 两套色板 + 设置入口），字体和默认值切换仍未做。
+> 创建于 2026-07-30，2026-07-31 更新。
+
+## 当前进度（2026-07-31）
+
+已实现：
+
+- `lib/theme/theme_style.dart`：`ThemeStyle` 枚举（material / paper / plain）+
+  `ThemeStylePalette` 手工色板 + 到 `ColorScheme` 的映射。加第四套只需新增一组常量并在
+  `ThemeStyle.palette` 里登记，构建逻辑和 widget 都不用碰。
+- `AppTheme`：`themeStyle` 读写 + 持久化（key `theme_style`）+ 切换时清主题缓存。
+  `lightColorScheme` / `darkColorScheme` 在手工色板下直接返回色板值。
+- 亮色构建路径按风格关掉 `keyColors` 和表面混合（暗色路径原本就是关的），
+  否则 FlexColorScheme 会拿色板的 primary 当种子把整套色调重新推导掉。
+- 设置 → 主题设置：顶部新增「主题风格」三选一，带真实色板预览；选中手工色板时
+  自动隐藏「自定义主题色」和「动态取色」两张卡（它们只对 material 生效）。
+- `test/theme/theme_style_contrast_test.dart`：把 WCAG AA 钉成测试，21 个用例。
+
+尚未做：**字体**（已决定第一版不做）、**默认值切换**（当前默认仍是 material，
+翻成 paper 是一行改动，等真机看过效果再定）、**纸张横线纹理**等视觉隐喻。
+
+### 实现中发现的、与本文档原计划不同的地方
+
+1. **不需要「绕开 FlexColorScheme 手搭 ThemeData」**。原计划（见交接文档）以为要在
+   `createLightThemeData` 顶部做 if 分叉。实际上整条构建管线都汇聚在
+   `lightColorScheme` / `darkColorScheme` 两个 getter 上，手工色板只要产出 `ColorScheme`
+   就能复用现有全部 subThemes 和 copyWith，**一个 widget 都不用改**。分叉只剩
+   `keyColors` / `blendLevel` 两个参数，而且是由风格令牌驱动的，不是二元判断。
+2. **缓存不需要扩成 2×2**。`_clearThemeCache()` 在切换风格时清掉即可，效果等价且更简单。
+3. **色板取值按对比度验算做了收紧**。原表是按视觉调的、未验算，实测有几对不过 WCAG AA：
+   - 纸墨亮色：次要墨色 `#8b7355` → `#6b5842`，强调 `#a67c52` → `#8a6440`
+     （原值配 `#fefdfb` 的白字只有 3.1:1）
+   - 素笺亮色：次要墨色 `#71757a` → `#5f6368`
+   - 两套的 `danger` 系列是新配的：原表只有一个 `--accent-red #c66b6b`，
+     饱和度不足以承载 onError 的白字。
+4. **卡片色刻意不落在 M3 的 surfaceContainer 梯度上**。两套色板都让卡片比页面底色更亮
+   （「纸叠在桌面上」，暗色模式同理），而 M3 暗色下期望 `surfaceContainerLowest` 最暗。
+   App 把 `cardTheme` 绑在 `surfaceContainerLowest` 上，所以这一档必须是卡片色。
+   测试里校验的是「卡片比底色亮且可区分」，而不是 M3 的梯度假设。
 
 ## 为什么做这件事
 

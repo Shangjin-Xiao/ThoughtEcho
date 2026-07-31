@@ -604,6 +604,13 @@
     }
   },
   "themeSettings": "主题设置",
+  "themeStyle": "主题风格",
+  "themeStyleMaterial": "Material",
+  "themeStyleMaterialDesc": "跟随系统取色",
+  "themeStylePaper": "纸与墨",
+  "themeStylePaperDesc": "暖色纸面，褐色墨迹",
+  "themeStylePlain": "素笺",
+  "themeStylePlainDesc": "冷灰纸面，深青强调",
   "themeMode": "主题模式",
   "themeModeLight": "浅色",
   "themeModeDark": "深色",
@@ -4182,7 +4189,6 @@
   "exploreFreeChat": "随便聊聊",
   "exploreRecentChats": "最近对话",
   "exploreViewAllChats": "全部",
-
   "aiProviderZhipu": "智谱 GLM",
   "aiProviderMoonshot": "月之暗面 Kimi",
   "aiProviderDashScope": "阿里云百炼",

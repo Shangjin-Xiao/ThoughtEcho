@@ -5,6 +5,7 @@ import 'package:flex_color_scheme/flex_color_scheme.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'app_semantic_colors.dart';
+import 'theme_style.dart';
 
 class AppTheme with ChangeNotifier {
   // Windows 平台字体配置
@@ -125,6 +126,7 @@ class AppTheme with ChangeNotifier {
   static const String _useCustomColorKey = 'use_custom_color';
   static const String _themeModeKey = 'theme_mode';
   static const String _useDynamicColorKey = 'use_dynamic_color'; // 添加动态取色设置键
+  static const String _themeStyleKey = 'theme_style';
 
   SafeMMKV? _storage;
   Color? _customColor;
@@ -133,6 +135,7 @@ class AppTheme with ChangeNotifier {
   ColorScheme? _lightDynamicColorScheme;
   ColorScheme? _darkDynamicColorScheme;
   ThemeMode _themeMode = ThemeMode.system;
+  ThemeStyle _themeStyle = ThemeStyle.material;
   bool _hasInitialized = false; // 添加标记，用于追踪是否已初始化
 
   // 全局圆角和阴影参数
@@ -214,6 +217,12 @@ class AppTheme with ChangeNotifier {
 
   // 获取当前亮色主题的颜色方案
   ColorScheme get lightColorScheme {
+    // 手工色板原样落地：不参与动态取色，也不接受自定义 seed——那两项是
+    // material 风格专有的能力，套到手工色板上只会把配好的色值推翻重算。
+    final palette = _themeStyle.palette;
+    if (palette != null) {
+      return palette.light.toColorScheme(Brightness.light);
+    }
     if (_useCustomColor && _customColor != null) {
       // 直接使用用户选择的颜色，减少不必要的调整
       return ColorScheme.fromSeed(
@@ -233,6 +242,10 @@ class AppTheme with ChangeNotifier {
 
   // 获取当前暗色主题的颜色方案
   ColorScheme get darkColorScheme {
+    final palette = _themeStyle.palette;
+    if (palette != null) {
+      return palette.dark.toColorScheme(Brightness.dark);
+    }
     if (_useCustomColor && _customColor != null) {
       // 使用与浅色模式一致的方法，确保自定义颜色正确应用
       return ColorScheme.fromSeed(
@@ -256,6 +269,7 @@ class AppTheme with ChangeNotifier {
     );
   }
 
+  ThemeStyle get themeStyle => _themeStyle;
   bool get useCustomColor => _useCustomColor;
   Color? get customColor => _customColor;
   ThemeMode get themeMode => _themeMode;
@@ -291,6 +305,7 @@ class AppTheme with ChangeNotifier {
       await _storage!.initialize();
       _loadCustomColor();
       _loadThemeMode();
+      _loadThemeStyle();
 
       // 首次运行时，不读取存储的设置，保持默认开启
       if (_storage!.containsKey(_useDynamicColorKey)) {
@@ -418,6 +433,28 @@ class AppTheme with ChangeNotifier {
     }
   }
 
+  /// 设置主题风格（Material / 纸与墨 / 素笺）。
+  ///
+  /// 风格和亮暗、动态取色是并列的维度：切到手工色板时动态取色和自定义 seed
+  /// 不会被清掉，只是暂时不生效，切回 material 时原样恢复。
+  Future<void> setThemeStyle(ThemeStyle style) async {
+    if (_themeStyle == style) return;
+    _themeStyle = style;
+    _clearThemeCache();
+    // 与 setThemeMode 一致：先刷新 UI，再落盘。
+    notifyListeners();
+
+    final storage = _storage;
+    if (storage == null) return;
+    try {
+      await storage
+          .setString(_themeStyleKey, style.name)
+          .timeout(const Duration(seconds: 2));
+    } catch (e) {
+      logWarning('保存主题风格失败: $e', source: 'AppTheme');
+    }
+  }
+
   // 设置是否使用动态取色
   Future<void> setUseDynamicColor(bool value) async {
     if (_useDynamicColor == value) return;
@@ -467,6 +504,16 @@ class AppTheme with ChangeNotifier {
     }
   }
 
+  // 从持久化存储加载主题风格
+  void _loadThemeStyle() {
+    try {
+      _themeStyle = ThemeStyle.fromName(_storage?.getString(_themeStyleKey));
+    } catch (e) {
+      logDebug('加载主题风格失败: $e');
+      _themeStyle = ThemeStyle.material;
+    }
+  }
+
   // 从持久化存储加载动态取色设置
   void _loadDynamicColorSettings() {
     try {
@@ -491,13 +538,16 @@ class AppTheme with ChangeNotifier {
   // 创建亮色主题数据
   ThemeData createLightThemeData() {
     if (_cachedLightThemeData != null) return _cachedLightThemeData!;
+    // 手工色板要原样落地：关掉 keyColors（否则 FlexColorScheme 会拿色板里的
+    // primary 当种子重新推导整套色调）和表面混合（否则纸色会被强调色染上一层）。
+    final generated = _themeStyle.isGenerated;
     final baseTheme = FlexThemeData.light(
       colorScheme: lightColorScheme,
       useMaterial3: true,
       surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
-      blendLevel: 1, // 极低混合级别，使颜色非常接近白色
-      subThemesData: const FlexSubThemesData(
-        blendOnLevel: 2, // 极低表面颜色混合级别
+      blendLevel: generated ? 1 : 0, // 极低混合级别，使颜色非常接近白色
+      subThemesData: FlexSubThemesData(
+        blendOnLevel: generated ? 2 : 0, // 极低表面颜色混合级别
         blendOnColors: true,
         useMaterial3Typography: true,
         useM2StyleDividerInM3: true,
@@ -523,8 +573,10 @@ class AppTheme with ChangeNotifier {
         textButtonRadius: buttonRadius,
         fabRadius: buttonRadius,
       ),
-      keyColors: const FlexKeyColors(useSecondary: true, useTertiary: true),
-      tones: FlexTones.material(Brightness.light),
+      keyColors: generated
+          ? const FlexKeyColors(useSecondary: true, useTertiary: true)
+          : null,
+      tones: generated ? FlexTones.material(Brightness.light) : null,
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
     );
 

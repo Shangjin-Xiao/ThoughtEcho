@@ -91,6 +91,11 @@
 
 ## 三、主题工作的决策状态
 
+> **2026-07-31 更新：第一步已实现**，见 `docs/paper-ink-theme-plan-2026-07-30.md`
+> 的「当前进度」一节。下面「实施纪律」里第 3 条（需要绕开 FlexColorScheme 手搭
+> `ThemeData`）**已被实践推翻**——整条管线汇聚在 `lightColorScheme` / `darkColorScheme`
+> 两个 getter，手工色板产出 `ColorScheme` 就能复用现有全部构建逻辑。
+
 **完整色板和架构要求见 `docs/paper-ink-theme-plan-2026-07-30.md`**，那里有 02、03 两套
 亮暗齐全的取值表，可直接落地。
 

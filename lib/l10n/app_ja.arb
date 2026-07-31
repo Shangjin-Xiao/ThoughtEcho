@@ -567,6 +567,13 @@
     }
   },
   "themeSettings": "テーマ設定",
+  "themeStyle": "テーマスタイル",
+  "themeStyleMaterial": "Material",
+  "themeStyleMaterialDesc": "システムの配色に追従",
+  "themeStylePaper": "紙と墨",
+  "themeStylePaperDesc": "暖かい紙、茶色の墨",
+  "themeStylePlain": "素箋",
+  "themeStylePlainDesc": "冷たい灰の紙、深い青緑",
   "themeMode": "テーマモード",
   "themeModeLight": "ライト",
   "themeModeDark": "ダーク",

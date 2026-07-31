@@ -567,6 +567,13 @@
     }
   },
   "themeSettings": "테마 설정",
+  "themeStyle": "테마 스타일",
+  "themeStyleMaterial": "Material",
+  "themeStyleMaterialDesc": "시스템 색상 따르기",
+  "themeStylePaper": "종이와 먹",
+  "themeStylePaperDesc": "따뜻한 종이, 갈색 먹",
+  "themeStylePlain": "소전",
+  "themeStylePlainDesc": "차가운 회색 종이, 짙은 청록",
   "themeMode": "테마 모드",
   "themeModeLight": "라이트",
   "themeModeDark": "다크",

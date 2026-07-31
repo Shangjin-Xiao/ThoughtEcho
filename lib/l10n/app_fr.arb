@@ -567,6 +567,13 @@
     }
   },
   "themeSettings": "Paramètres du thème",
+  "themeStyle": "Style du thème",
+  "themeStyleMaterial": "Material",
+  "themeStyleMaterialDesc": "Suit les couleurs du système",
+  "themeStylePaper": "Papier et encre",
+  "themeStylePaperDesc": "Papier chaud, encre brune",
+  "themeStylePlain": "Feuille sobre",
+  "themeStylePlainDesc": "Papier gris froid, sarcelle profond",
   "themeMode": "Mode du thème",
   "themeModeLight": "Clair",
   "themeModeDark": "Sombre",
