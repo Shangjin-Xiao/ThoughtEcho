@@ -260,6 +260,80 @@ void main() {
         expect(result, ['Hello', ' world', '!']);
       });
 
+      test('推理模型先吐 reasoning 再吐正文时，思考过程不得混进正文', () async {
+        // 回归：曾按单个 event 判断 content 是否为空，而推理模型的 reasoning
+        // 总是先于 content 到达，导致思考过程被当成正文流出去——在洞察页里
+        // 表现为洞察正文顶着一大段思考。
+        final events = [
+          const openai.ChatStreamEvent(
+            id: 'chatcmpl-1',
+            choices: [
+              openai.ChatStreamChoice(
+                index: 0,
+                delta: openai.ChatDelta(reasoning: '让我想想用户想要什么……'),
+              ),
+            ],
+          ),
+          const openai.ChatStreamEvent(
+            id: 'chatcmpl-1',
+            choices: [
+              openai.ChatStreamChoice(
+                index: 0,
+                delta: openai.ChatDelta(reasoningContent: '再确认一下语气。'),
+              ),
+            ],
+          ),
+          const openai.ChatStreamEvent(
+            id: 'chatcmpl-1',
+            choices: [
+              openai.ChatStreamChoice(
+                index: 0,
+                delta: openai.ChatDelta(content: '今天想写点什么？'),
+                finishReason: openai.FinishReason.stop,
+              ),
+            ],
+          ),
+        ];
+
+        final result = await OpenAIStreamService.processStreamToText(
+          Stream.fromIterable(events),
+        ).toList();
+
+        expect(result, ['今天想写点什么？']);
+      });
+
+      test('整条流只有 reasoning 时仍兜底输出，避免结果全空', () async {
+        // 某些模型（Ollama 上的 minimax 系列）把全部输出放在 reasoning 里，
+        // 这时必须兜底，否则每日提示会退回默认模板。
+        final events = [
+          const openai.ChatStreamEvent(
+            id: 'chatcmpl-1',
+            choices: [
+              openai.ChatStreamChoice(
+                index: 0,
+                delta: openai.ChatDelta(reasoning: '今天'),
+              ),
+            ],
+          ),
+          const openai.ChatStreamEvent(
+            id: 'chatcmpl-1',
+            choices: [
+              openai.ChatStreamChoice(
+                index: 0,
+                delta: openai.ChatDelta(reasoning: '想写点什么？'),
+                finishReason: openai.FinishReason.stop,
+              ),
+            ],
+          ),
+        ];
+
+        final result = await OpenAIStreamService.processStreamToText(
+          Stream.fromIterable(events),
+        ).toList();
+
+        expect(result, ['今天想写点什么？']);
+      });
+
       test('ignores empty content deltas', () async {
         final events = [
           const openai.ChatStreamEvent(

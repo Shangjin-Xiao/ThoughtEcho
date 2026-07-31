@@ -140,6 +140,46 @@ void main() {
       expect(title.length, lessThanOrEqualTo(50));
     });
 
+    test('streamReportInsight 不把模型的思考过程混进洞察正文', () async {
+      // 回归：洞察路径不传 onThinking，而 processStreamToText 曾按单个 event
+      // 判断 content 是否为空。推理模型的 reasoning 先于 content 到达，于是
+      // 思考过程被当成正文流出去，顶在洞察正文最前面。
+      // 用推理模型跑才有意义：TE_TEST_MODEL=gpt-oss:120b-cloud
+      final chunks = <String>[];
+      await for (final chunk in aiService.streamReportInsight(
+        periodLabel: '2026 年 7 月',
+        mostTimePeriod: '午后',
+        mostWeather: '晴',
+        topTag: '读书',
+        activeDays: 18,
+        noteCount: 42,
+        totalWordCount: 9600,
+        notesPreview: '专注力是一种可以训练的肌肉。\n《深度工作》让我重新定义了「忙碌」。',
+      )) {
+        chunks.add(chunk);
+      }
+
+      final text = chunks.join('').trim();
+      print('洞察（${text.length} 字）: "$text"');
+
+      expect(text, isNotEmpty);
+      // 思考过程的典型自述口吻。正文是「诗意洞察」，不该出现这些。
+      for (final leak in const [
+        'We need to',
+        'The user',
+        'Let me',
+        '用户想要',
+        '我需要先',
+        '让我想想',
+      ]) {
+        expect(
+          text,
+          isNot(contains(leak)),
+          reason: '洞察正文里出现了思考过程的痕迹：$leak',
+        );
+      }
+    });
+
     test('streamGenerateDailyPrompt 流出模型内容而非默认模板', () async {
       final defaultPrompt = DailyPromptGenerator.getDefaultPrompt(l10n);
 

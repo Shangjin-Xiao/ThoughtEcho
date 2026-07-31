@@ -524,9 +524,9 @@ class AIService extends ChangeNotifier {
           userMessage: userMessage,
           temperature: 1.0,
           maxTokens: _dailyPromptMaxTokens,
-          // 传空 onThinking 将 reasoning 内容导向空回调丢弃，
-          // 避免 reasoning-only 模型的思考过程被当作普通内容混入每日提示。
-          onThinking: (_) {},
+          // 不再需要用空 onThinking 丢弃 reasoning：processStreamToText 现在
+          // 只在整条流一个字正文都没有时才把 reasoning 当兜底输出。空回调反而
+          // 会让 reasoning-only 模型的每日提示彻底变空、退回默认模板。
         )) {
           if (controller.isClosed) break;
           controller.add(chunk);

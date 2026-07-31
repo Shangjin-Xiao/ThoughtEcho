@@ -251,48 +251,57 @@ class OpenAIStreamService extends ChangeNotifier {
   ///
   /// 提取每个 delta 中的 content 文本，跳过空内容。
   /// 可选的 [onThinking] 回调接收 reasoning_content delta。
+  ///
+  /// 没有 [onThinking] 时，reasoning 只作为**整条流一个字正文都没有**的兜底
+  /// （某些模型会把全部输出放在 reasoning 里），并且必须攒到流结束才判定：
+  /// 推理模型的 reasoning 总是先于 content 到达，若按单个 event 判空，
+  /// 思考过程会被当成正文吐出去，混进洞察正文和每日提示里。
   static Stream<String> processStreamToText(
     Stream<openai.ChatStreamEvent> stream, {
     void Function(String thinkingContent)? onThinking,
-  }) {
-    return stream.asyncExpand((event) {
-      final chunks = <String>[];
+  }) async* {
+    final pendingReasoning = StringBuffer();
+    var sawContent = false;
+
+    await for (final event in stream) {
       final choices = event.choices;
       if (choices == null || choices.isEmpty) {
-        return Stream.fromIterable(chunks);
+        continue;
       }
 
       for (final choice in choices) {
         final delta = choice.delta;
 
         // 提取普通文本 delta
-        if (delta.content != null && delta.content!.isNotEmpty) {
-          chunks.add(delta.content!);
+        final content = delta.content;
+        if (content != null && content.isNotEmpty) {
+          sawContent = true;
+          yield content;
         }
 
         // 提取思考/推理内容（DeepSeek reasoning_content、
         // OpenRouter reasoning）
-        final reasoningChunks = <String>[];
-        if (delta.reasoningContent != null &&
-            delta.reasoningContent!.isNotEmpty) {
-          reasoningChunks.add(delta.reasoningContent!);
-        }
-        if (delta.reasoning != null && delta.reasoning!.isNotEmpty) {
-          reasoningChunks.add(delta.reasoning!);
-        }
+        final reasoningChunks = <String>[
+          if (delta.reasoningContent?.isNotEmpty ?? false)
+            delta.reasoningContent!,
+          if (delta.reasoning?.isNotEmpty ?? false) delta.reasoning!,
+        ];
         if (onThinking != null) {
           for (final reasoningChunk in reasoningChunks) {
             onThinking(reasoningChunk);
           }
-        } else if (chunks.isEmpty && reasoningChunks.isNotEmpty) {
-          // 没有 onThinking 回调且 content 为空时（如每日提示），
-          // 将 reasoning 作为普通内容输出，避免流完全为空。
-          chunks.addAll(reasoningChunks);
+        } else if (!sawContent) {
+          // 先攒着。一旦出现正文就说明这是真思考过程，直接丢弃。
+          for (final reasoningChunk in reasoningChunks) {
+            pendingReasoning.write(reasoningChunk);
+          }
         }
       }
+    }
 
-      return Stream.fromIterable(chunks);
-    });
+    if (!sawContent && pendingReasoning.isNotEmpty) {
+      yield pendingReasoning.toString();
+    }
   }
 
   /// 从 ChatCompletion 响应中提取文本
