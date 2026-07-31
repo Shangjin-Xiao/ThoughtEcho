@@ -3591,7 +3591,7 @@
   "availableCommands": "利用可能なコマンド",
   "typeSlashToSeeCommands": "/ を入力してコマンドを表示",
   "exploreAskAboutInsight": "これについて聞く",
-  "exploreAskAboutInsightPrompt": "先ほど生成されたインサイトです：\n\n「{insight}」\n\nこれについてもう少し詳しく教えてください。",
+  "exploreAskAboutInsightPrompt": "これについてもう少し詳しく教えてください。",
   "exploreSummarizePeriod": "この{period}をまとめる",
   "exploreSummarizePeriodPrompt": "この{period}の記録をまとめてください。注目すべき点はありますか？",
   "exploreFreeChat": "雑談する",

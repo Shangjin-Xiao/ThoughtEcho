@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../gen_l10n/app_localizations.dart';
+import '../../models/ai_assistant_entry.dart';
 import '../../services/ai_service.dart';
 import '../../services/insight_history_service.dart';
 import '../../services/location_service.dart';
@@ -12,6 +13,7 @@ import '../../services/weather_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/app_logger.dart';
 import '../../utils/daily_prompt_generator.dart';
+import '../ai_assistant_page.dart';
 
 class HomeDailyPromptPanel extends StatefulWidget {
   final double screenWidth;
@@ -163,6 +165,52 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
     });
   }
 
+  /// 提示还在生成时不给点：此时手上只有半截文本，
+  /// 带进对话会让 Thoughter 看到一句没说完的话。
+  /// 生成流由本面板持有，跳走也不会中断，回来就是完整的。
+  bool get _canAskThoughter =>
+      !_isGeneratingDailyPrompt && _accumulatedPromptText.trim().isNotEmpty;
+
+  static const double _askButtonSize = 32;
+
+  Widget _buildAskThoughterButton(ThemeData theme, AppLocalizations l10n) {
+    final enabled = _canAskThoughter;
+    return SizedBox(
+      width: _askButtonSize,
+      height: _askButtonSize,
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        iconSize: widget.isVerySmallScreen ? 16 : 18,
+        tooltip: l10n.askNote,
+        onPressed: enabled ? _openThoughterWithPrompt : null,
+        icon: Icon(
+          Icons.auto_awesome,
+          color: enabled
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+        ),
+      ),
+    );
+  }
+
+  /// 带着今天的提示进入 Thoughter。
+  ///
+  /// 提示本身作为开场白（[AIAssistantPage.openingMessage]），既是对话的
+  /// 第一句，也进入模型上下文——不需要再让 AI 生成一次开场，也不替用户
+  /// 先问一句，接下来说什么由用户决定。
+  void _openThoughterWithPrompt() {
+    final prompt = _accumulatedPromptText.trim();
+    if (prompt.isEmpty) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AIAssistantPage(
+          entrySource: AIAssistantEntrySource.explore,
+          openingMessage: prompt,
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _promptSubscription?.cancel();
@@ -210,25 +258,38 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.lightbulb_outline,
-                color: theme.colorScheme.primary,
-                size: widget.screenWidth > 600
-                    ? 22
-                    : (widget.isVerySmallScreen ? 16 : 18),
-              ),
-              SizedBox(width: widget.isVerySmallScreen ? 4 : 6),
-              Text(
-                l10n.todayThoughts,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontSize: widget.screenWidth > 600
-                      ? 16
-                      : (widget.isVerySmallScreen ? 13 : 15),
+              // 左侧等宽占位，让标题在有右侧按钮时依然居中
+              SizedBox(width: _askButtonSize),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.lightbulb_outline,
+                      color: theme.colorScheme.primary,
+                      size: widget.screenWidth > 600
+                          ? 22
+                          : (widget.isVerySmallScreen ? 16 : 18),
+                    ),
+                    SizedBox(width: widget.isVerySmallScreen ? 4 : 6),
+                    Flexible(
+                      child: Text(
+                        l10n.todayThoughts,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontSize: widget.screenWidth > 600
+                              ? 16
+                              : (widget.isVerySmallScreen ? 13 : 15),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              _buildAskThoughterButton(theme, l10n),
             ],
           ),
           SizedBox(

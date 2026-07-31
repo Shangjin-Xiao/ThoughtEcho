@@ -3573,7 +3573,7 @@
   "availableCommands": "Commandes disponibles",
   "typeSlashToSeeCommands": "Tapez / pour voir les commandes",
   "exploreAskAboutInsight": "En savoir plus",
-  "exploreAskAboutInsightPrompt": "Voici l'analyse qui vient d'être générée :\n\n« {insight} »\n\nPeux-tu la développer ?",
+  "exploreAskAboutInsightPrompt": "Peux-tu développer ce point ?",
   "exploreSummarizePeriod": "Résumer cette {period}",
   "exploreSummarizePeriodPrompt": "Résume mes notes de cette {period} — quels sont les points marquants ?",
   "exploreFreeChat": "Discuter librement",

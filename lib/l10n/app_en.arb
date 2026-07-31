@@ -4162,7 +4162,7 @@
   "noteInsertAnimationSlide": "Smooth rise",
   "noteInsertAnimationNone": "No animation",
   "exploreAskAboutInsight": "Ask about this",
-  "exploreAskAboutInsightPrompt": "Here is the insight just generated for me:\n\n\"{insight}\"\n\nCould you expand on it?",
+  "exploreAskAboutInsightPrompt": "Could you expand on that?",
   "exploreSummarizePeriod": "Summarize this {period}",
   "exploreSummarizePeriodPrompt": "Summarize my notes from this {period} — what stands out?",
   "exploreFreeChat": "Just chat",

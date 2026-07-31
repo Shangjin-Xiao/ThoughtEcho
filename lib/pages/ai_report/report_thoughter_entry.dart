@@ -45,7 +45,9 @@ extension _AIReportThoughterEntry on _AIPeriodicReportPageState {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final insight = _insightText.trim();
-    final hasInsight = insight.isNotEmpty;
+    // 生成中只有半截洞察，带进对话会让 Thoughter 看到一句没说完的话。
+    // 流由本页持有，跳走不会中断，回来就是完整的。
+    final hasInsight = insight.isNotEmpty && !_insightLoading;
 
     return Wrap(
       spacing: 8,
@@ -57,11 +59,12 @@ extension _AIReportThoughterEntry on _AIPeriodicReportPageState {
             icon: Icons.subdirectory_arrow_right,
             label: l10n.exploreAskAboutInsight,
             emphasized: true,
-            // 洞察必须写进问题正文：exploreGuideSummary 那条欢迎消息是
-            // includedInContext: false，只给用户看，模型根本收不到，
-            // 否则「追问这条」发出去时 agent 不知道「这条」是什么。
+            // 洞察走 openingMessage：它是进上下文的开场白。
+            // 不能指望 exploreGuideSummary——那条是 includedInContext: false，
+            // 只显示给用户，模型收不到，agent 会不知道「这条」是什么。
             onTap: () => _openThoughter(
-              initialQuestion: l10n.exploreAskAboutInsightPrompt(insight),
+              openingMessage: insight,
+              initialQuestion: l10n.exploreAskAboutInsightPrompt,
             ),
           ),
         _buildQuickAskChip(
@@ -246,9 +249,9 @@ extension _AIReportThoughterEntry on _AIPeriodicReportPageState {
   Future<void> _openThoughter({
     ChatSession? session,
     String? initialQuestion,
+    String? openingMessage,
   }) async {
     final navigator = Navigator.of(context);
-    final summary = _insightText.trim();
 
     await navigator.push(
       MaterialPageRoute(
@@ -256,7 +259,7 @@ extension _AIReportThoughterEntry on _AIPeriodicReportPageState {
           entrySource: AIAssistantEntrySource.explore,
           session: session,
           initialQuestion: initialQuestion,
-          exploreGuideSummary: session == null ? summary : null,
+          openingMessage: session == null ? openingMessage : null,
         ),
       ),
     );

@@ -517,6 +517,39 @@ void main() {
       expect(find.widgetWithText(ActionChip, '/润色'), findsNothing);
     });
 
+    // 每日提示 / 周期洞察这类「手上已有正文」的入口，用 openingMessage 开场：
+    // 既是对话第一句，也必须进模型上下文——exploreGuideSummary 是
+    // includedInContext: false，只显示不入参，模型收不到。
+    testWidgets('openingMessage opens the chat and enters model context',
+        (tester) async {
+      const opening = '午后多云，适合把最近的焦虑写下来。';
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: const AIAssistantPage(
+            key: ValueKey('opening_message_page'),
+            entrySource: AIAssistantEntrySource.explore,
+            openingMessage: opening,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 第一句就是传进来的正文
+      expect(find.text(opening), findsOneWidget);
+
+      final state = tester.state(find.byType(AIAssistantPage));
+      final messages =
+          (state as dynamic).debugMessagesForTest as List<app_chat.ChatMessage>;
+      expect(messages, isNotEmpty);
+      final first = messages.first;
+      expect(first.content, opening);
+      expect(first.isUser, isFalse);
+      // 关键断言：必须进上下文，否则模型不知道开场说了什么
+      expect(first.includedInContext, isTrue);
+    });
+
     testWidgets('does not offer attachments that Agent cannot consume',
         (tester) async {
       await tester.pumpWidget(

@@ -238,6 +238,23 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context);
 
+    // 调用方给了现成的开场白（每日提示、周期洞察）：直接用它开场，
+    // 并且纳入上下文——否则模型不知道第一句说了什么。
+    final opening = widget.openingMessage?.trim();
+    if (opening != null && opening.isNotEmpty) {
+      _appendMessage(
+        app_chat.ChatMessage(
+          id: _uuid.v4(),
+          content: opening,
+          isUser: false,
+          role: 'assistant',
+          timestamp: DateTime.now(),
+        ),
+        persist: true,
+      );
+      return;
+    }
+
     // 绑定笔记模式：显示笔记欢迎信息
     if (_hasBoundNote) {
       final welcomeContent = l10n.aiAssistantWelcome(_getQuotePreview());

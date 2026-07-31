@@ -70,6 +70,14 @@ class AIAssistantPage extends StatefulWidget {
   final AIAssistantEntrySource? entrySource;
   final String? exploreGuideSummary;
 
+  /// 开场白：作为 Thoughter 的第一句显示，并且**进入模型上下文**。
+  ///
+  /// 和 [exploreGuideSummary] 的区别：后者是 `includedInContext: false` 的
+  /// 系统提示，只给用户看，模型收不到。当调用方手上已经有一段现成的正文
+  /// （每日提示、周期洞察）想让对话从它开始时，用这个参数——既不用再花一次
+  /// 生成，模型也确实知道开场说了什么。
+  final String? openingMessage;
+
   const AIAssistantPage({
     super.key,
     this.quote,
@@ -77,6 +85,7 @@ class AIAssistantPage extends StatefulWidget {
     this.session,
     this.entrySource,
     this.exploreGuideSummary,
+    this.openingMessage,
   });
 
   @override
@@ -282,6 +291,11 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     );
     _appendMessage(message, persist: true);
   }
+
+  /// 仅供测试：读取当前消息列表，用于断言开场白是否进入了上下文。
+  @visibleForTesting
+  List<app_chat.ChatMessage> get debugMessagesForTest =>
+      List.unmodifiable(_messages);
 
   void _appendMessage(app_chat.ChatMessage message, {bool persist = false}) {
     _setState(() {
