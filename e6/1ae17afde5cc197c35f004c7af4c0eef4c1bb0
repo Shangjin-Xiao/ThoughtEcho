@@ -1,0 +1,25 @@
+lib/widgets/ai/experimental_badge.dart
+  s_47f1a91bc7edb0::t_579d16ce53acc8 273-274
+lib/widgets/note_list/note_item_motion.dart
+  s_47f1a91bc7edb0::t_579d16ce53acc8 200-201,214-216,345-346
+test/widget/note_item_motion_test.dart
+  s_47f1a91bc7edb0::t_579d16ce53acc8 94-95,119-120
+test/widget/note_list_view_filter_test.dart
+  s_47f1a91bc7edb0::t_579d16ce53acc8 545-546
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "e61ae17afde5cc197c35f004c7af4c0eef4c1bb0",
+  "prompts": {},
+  "sessions": {
+    "s_47f1a91bc7edb0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5758900e-5266-4134-88d0-df4e37987180",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
