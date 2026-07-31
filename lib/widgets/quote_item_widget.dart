@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../extensions/note_category_localization_extension.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
+import '../theme/app_semantic_colors.dart';
 import '../theme/app_theme.dart';
 import '../widgets/quote_content_widget.dart';
 import '../services/weather_service.dart';
@@ -1152,7 +1153,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                       : Icons.favorite_border,
                                   size: 20,
                                   color: quote.favoriteCount > 0
-                                      ? Colors.red.shade400
+                                      ? AppSemanticColors.of(context).favorite
                                       : iconColor,
                                 ),
                                 if (quote.favoriteCount > 0)
@@ -1164,7 +1165,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 2.5),
                                       decoration: BoxDecoration(
-                                        color: Colors.red.shade600,
+                                        color: AppSemanticColors.of(context)
+                                            .favorite,
                                         borderRadius: BorderRadius.circular(10),
                                         border: Border.all(
                                           color: (quote.colorHex == null ||
@@ -1187,7 +1189,9 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                             .textTheme
                                             .labelSmall
                                             ?.copyWith(
-                                                color: Colors.white,
+                                                color: AppSemanticColors.of(
+                                                        context)
+                                                    .onFavorite,
                                                 fontSize: 9.0,
                                                 fontWeight: FontWeight.bold,
                                                 height: 1.0),

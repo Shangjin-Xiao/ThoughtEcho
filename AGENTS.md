@@ -166,6 +166,9 @@ pwsh ./scripts/build_msix_ci.ps1
     `success` / `warning` / `danger` / `info`（定义在 `lib/theme/app_semantic_colors.dart`）。
   - 中性文字用 `colorScheme.onSurfaceVariant`，不是 `Colors.grey`。
   - 错误用 `colorScheme.error` / `errorContainer`。
+  - 收藏红心用 `AppSemanticColors.of(context).favorite` / `onFavorite`。红心必须是红的，
+    但它不是「错误」，不能借 `colorScheme.error` 的槽位，所以单开了一格；
+    别再写 `Colors.red.shade400`。
 - ❌ 硬编码浅色背景（`Colors.white`、`Colors.grey[100]`、`Colors.grey.shade100`）——
   暗色模式下会变成刺眼白块。用 `colorScheme.surfaceContainerHighest` 等 surface 层级。
   - 例外：确定绘制在 `primary`/`error` 等已知深色之上时，用配对的 `onPrimary` / `onError`，

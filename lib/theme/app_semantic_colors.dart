@@ -26,6 +26,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     required this.warning,
     required this.warningContainer,
     required this.onWarningContainer,
+    required this.favorite,
+    required this.onFavorite,
   });
 
   /// 成功状态的前景色，用于图标和文字直接绘制在 surface 上。
@@ -46,6 +48,19 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
   /// 绘制在 [warningContainer] 之上的文字和图标颜色。
   final Color onWarningContainer;
 
+  /// 收藏（红心）的前景色。
+  ///
+  /// 收藏不是「错误」，不能借 `colorScheme.error` 的槽位，但它又必须是红的——
+  /// 红心换成主题色就不再是红心了。所以单独给一格，而不是记成 `Colors.*` 的例外：
+  /// 例外一旦写进规范就会被当先例引用。
+  ///
+  /// 和 success/warning 的 container 三元组不同，这里是 primary/onPrimary 那种
+  /// 填充强调对：红心徽章是实心的高饱和小色块，不是浅色调容器。
+  final Color favorite;
+
+  /// 绘制在 [favorite] 之上的文字和图标颜色（收藏次数徽章里的数字）。
+  final Color onFavorite;
+
   /// 危险 / 错误状态直接复用 `ColorScheme.error`，不在此重复定义。
   /// 信息状态复用 `ColorScheme.primary`。
 
@@ -56,6 +71,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     warning: Color(0xFF7A5900),
     warningContainer: Color(0xFFFFDF9E),
     onWarningContainer: Color(0xFF261A00),
+    favorite: Color(0xFFB3204A),
+    onFavorite: Color(0xFFFFFFFF),
   );
 
   static const dark = AppSemanticColors(
@@ -65,6 +82,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     warning: Color(0xFFF2C260),
     warningContainer: Color(0xFF5C4200),
     onWarningContainer: Color(0xFFFFDF9E),
+    favorite: Color(0xFFFFB1C2),
+    onFavorite: Color(0xFF5F1130),
   );
 
   /// 从 context 取语义色。主题未注册扩展时回退到亮/暗默认值，避免空断言崩溃。
@@ -82,6 +101,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     Color? warning,
     Color? warningContainer,
     Color? onWarningContainer,
+    Color? favorite,
+    Color? onFavorite,
   }) {
     return AppSemanticColors(
       success: success ?? this.success,
@@ -90,6 +111,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
       warning: warning ?? this.warning,
       warningContainer: warningContainer ?? this.warningContainer,
       onWarningContainer: onWarningContainer ?? this.onWarningContainer,
+      favorite: favorite ?? this.favorite,
+      onFavorite: onFavorite ?? this.onFavorite,
     );
   }
 
@@ -107,6 +130,8 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
           Color.lerp(warningContainer, other.warningContainer, t)!,
       onWarningContainer:
           Color.lerp(onWarningContainer, other.onWarningContainer, t)!,
+      favorite: Color.lerp(favorite, other.favorite, t)!,
+      onFavorite: Color.lerp(onFavorite, other.onFavorite, t)!,
     );
   }
 }

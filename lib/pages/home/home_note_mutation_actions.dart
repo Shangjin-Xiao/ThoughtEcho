@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/theme/app_semantic_colors.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/widgets/app_snackbar.dart';
 import 'package:thoughtecho/widgets/note_list_view.dart';
@@ -120,7 +121,11 @@ class HomeNoteMutationActions {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.favorite, color: Colors.red, size: 16),
+            Icon(
+              Icons.favorite,
+              color: AppSemanticColors.of(context).favorite,
+              size: 16,
+            ),
             const SizedBox(width: 8),
             Text(l10n.favoriteCountWithNum(quote.favoriteCount + 1)),
           ],

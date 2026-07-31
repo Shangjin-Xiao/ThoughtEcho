@@ -1,9 +1,5 @@
 part of '../ai_periodic_report_page.dart';
 
-/// 收藏红心色值：记录页 quote_item_widget 用的是同一个色值，两边必须一致。
-/// 是否收进 AppSemanticColors 并统一迁移三处调用，属于全局待决项。
-final Color _favoriteAccent = Colors.red.shade400;
-
 extension _AIReportOverview on _AIPeriodicReportPageState {
   /// 构建数据概览
   Widget _buildDataOverview() {
@@ -203,7 +199,11 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
       children: [
         Row(
           children: [
-            Icon(Icons.favorite, size: 20, color: _favoriteAccent),
+            Icon(
+              Icons.favorite,
+              size: 20,
+              color: AppSemanticColors.of(context).favorite,
+            ),
             const SizedBox(width: 8),
             Text(
               l10n.mostFavoritedInPeriod,
@@ -220,6 +220,7 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
   // 一个紧凑的收藏预览块
   Widget _buildFavoritePreviewChip(Quote quote) {
     final theme = Theme.of(context);
+    final semantic = AppSemanticColors.of(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Material(
@@ -248,22 +249,22 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
                     vertical: 2,
                   ),
                   decoration: BoxDecoration(
-                    color: _favoriteAccent,
+                    color: semantic.favorite,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.favorite,
-                        color: Colors.white,
+                        color: semantic.onFavorite,
                         size: 12,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '${quote.favoriteCount}',
                         style: theme.textTheme.labelSmall
-                            ?.copyWith(color: Colors.white),
+                            ?.copyWith(color: semantic.onFavorite),
                       ),
                     ],
                   ),
