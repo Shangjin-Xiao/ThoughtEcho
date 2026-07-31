@@ -834,7 +834,7 @@ void main() {
       final listView = tester.widget<ListView>(find.byType(ListView));
       // ignore: deprecated_member_use
       final cacheExtent =
-          listView.scrollCacheExtent?.value ?? listView.cacheExtent;
+          listView.cacheExtent;
       expect(cacheExtent, isNotNull);
       expect(
         cacheExtent,
