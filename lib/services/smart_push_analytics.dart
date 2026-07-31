@@ -45,7 +45,7 @@ class SmartPushAnalytics extends ChangeNotifier {
   };
 
   SmartPushAnalytics({MMKVService? mmkvService})
-      : _mmkv = mmkvService ?? MMKVService();
+    : _mmkv = mmkvService ?? MMKVService();
 
   // ============================================================
   // 1. 响应性热图 - 用户 App 打开时间分析
@@ -138,10 +138,9 @@ class SmartPushAnalytics extends ChangeNotifier {
     final heatmap = await calculateResponsivenessHeatmap();
 
     // 过滤并排序
-    final validWindows = heatmap.entries
-        .where((e) => e.value >= minScore)
-        .toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final validWindows =
+        heatmap.entries.where((e) => e.value >= minScore).toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
 
     // 确保时间间隔至少 3 小时
     final selected = <MapEntry<int, double>>[];
@@ -242,10 +241,22 @@ class SmartPushAnalytics extends ChangeNotifier {
       final jsonStr = _mmkv.getString(_appOpenTimesKey);
       if (jsonStr == null || jsonStr.isEmpty) return [];
 
-      final List<dynamic> list = List<dynamic>.from(
-        (jsonStr.split(',').where((s) => s.isNotEmpty)),
-      );
-      return list.cast<String>();
+      final List<String> list = [];
+      int start = 0;
+      while (start < jsonStr.length) {
+        int end = jsonStr.indexOf(',', start);
+        if (end == -1) {
+          if (start < jsonStr.length) {
+            list.add(jsonStr.substring(start));
+          }
+          break;
+        }
+        if (end > start) {
+          list.add(jsonStr.substring(start, end));
+        }
+        start = end + 1;
+      }
+      return list;
     } catch (e, stack) {
       AppLogger.e(
         '获取应用打开记录异常',
@@ -353,11 +364,12 @@ class SmartPushAnalytics extends ChangeNotifier {
       final data = _mmkv.getString(_fatigueBudgetKey);
       if (data == null || data.isEmpty) return dailyFatigueBudget;
 
-      final parts = data.split('|');
-      if (parts.length != 2) return dailyFatigueBudget;
+      final int idx = data.indexOf('|');
+      if (idx == -1) return dailyFatigueBudget;
 
-      final date = parts[0];
-      final budget = double.tryParse(parts[1]) ?? dailyFatigueBudget;
+      final date = data.substring(0, idx);
+      final budget =
+          double.tryParse(data.substring(idx + 1)) ?? dailyFatigueBudget;
 
       // 检查是否是新的一天
       final today = DateTime.now().toIso8601String().substring(0, 10);
