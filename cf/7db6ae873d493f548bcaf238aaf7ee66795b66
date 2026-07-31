@@ -1,0 +1,45 @@
+lib/l10n/app_en.arb
+  s_5bb12335d34cc0::t_021c0a3819279f 4165
+lib/l10n/app_ko.arb
+  s_5bb12335d34cc0::t_021c0a3819279f 3590
+lib/pages/ai_assistant_page.dart
+  s_5bb12335d34cc0::t_ee25a01158c2f8 295-299
+  s_5bb12335d34cc0::t_9ef5c73b0eb98d 73-80,88
+lib/l10n/app_de.arb
+  s_5bb12335d34cc0::t_021c0a3819279f 82
+test/widget/pages/ai_assistant_page_test.dart
+  s_5bb12335d34cc0::t_7f46514dfeb1f4 520-542,545-552
+  s_5bb12335d34cc0::t_e33e8ca7bb62a0 543-544
+lib/pages/ai_report/report_thoughter_entry.dart
+  s_5bb12335d34cc0::t_021c0a3819279f 48-50,62-64,66-67,252,262
+lib/l10n/app_zh.arb
+  s_5bb12335d34cc0::t_021c0a3819279f 4165,4184
+lib/l10n/app_es.arb
+  s_5bb12335d34cc0::t_021c0a3819279f 82
+lib/l10n/app_fr.arb
+  s_5bb12335d34cc0::t_021c0a3819279f 3576
+lib/l10n/app_ja.arb
+  s_5bb12335d34cc0::t_021c0a3819279f 3594
+lib/pages/ai_assistant/ai_assistant_page_session.dart
+  s_5bb12335d34cc0::t_9ef5c73b0eb98d 241-257
+docs/explore-thoughter-handoff-2026-07-31.md
+  s_5bb12335d34cc0::t_e2eb5498f3a5fa 1-189
+lib/pages/home/daily_prompt_panel.dart
+  s_5bb12335d34cc0::t_4a46f0b6c88bc2 7,16,168-213,262-289,292
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "cf7db6ae873d493f548bcaf238aaf7ee66795b66",
+  "prompts": {},
+  "sessions": {
+    "s_5bb12335d34cc0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "499d53fb-f4cc-4643-afaa-ac1f711ebbda",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
