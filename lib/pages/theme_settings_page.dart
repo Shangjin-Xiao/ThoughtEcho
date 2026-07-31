@@ -365,53 +365,62 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: selected
-            ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        child: InkWell(
+      // 选中态原本只靠背景色和对勾图标表达，屏幕阅读器读不到。
+      // onTap 也保持可用：置 null 会让选中项被读成「已停用」，语义正好反了；
+      // 重复选中由 setThemeStyle 内部的相等判断吃掉。
+      child: Semantics(
+        selected: selected,
+        button: true,
+        child: Material(
+          color: selected
+              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-          onTap: selected ? null : () => appTheme.setThemeStyle(style),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                // 色板预览：三片纵向叠放的色块，纸、墨、辅助各一片。
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
-                    border: Border.all(color: theme.colorScheme.outlineVariant),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+            onTap: () => appTheme.setThemeStyle(style),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  // 色板预览：三片纵向叠放的色块，纸、墨、辅助各一片。
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      borderRadius:
+                          BorderRadius.circular(AppTheme.buttonRadius),
+                      border:
+                          Border.all(color: theme.colorScheme.outlineVariant),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      children: [
+                        for (final color in swatch)
+                          Expanded(child: Container(color: color)),
+                      ],
+                    ),
                   ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Column(
-                    children: [
-                      for (final color in swatch)
-                        Expanded(child: Container(color: color)),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(name, style: theme.textTheme.titleSmall),
-                      const SizedBox(height: 2),
-                      Text(
-                        description,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name, style: theme.textTheme.titleSmall),
+                        const SizedBox(height: 2),
+                        Text(
+                          description,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                if (selected)
-                  Icon(Icons.check_circle, color: theme.colorScheme.primary),
-              ],
+                  if (selected)
+                    Icon(Icons.check_circle, color: theme.colorScheme.primary),
+                ],
+              ),
             ),
           ),
         ),

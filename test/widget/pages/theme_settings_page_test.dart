@@ -131,10 +131,18 @@ void main() {
       await tester.pumpWidget(buildTestApp(appTheme));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(Switch).first);
+      // 顶部多了「主题风格」卡片后，自定义色开关落在测试视口的折叠线以下，
+      // 直接 tap 会打空，先滚动到可见处。
+      final customColorSwitch = find.byType(Switch).first;
+      await tester.ensureVisible(customColorSwitch);
+      await tester.pumpAndSettle();
+      await tester.tap(customColorSwitch);
       await tester.pumpAndSettle();
 
-      await tester.tap(findColorSwatch(Colors.red).first);
+      final redSwatch = findColorSwatch(Colors.red).first;
+      await tester.ensureVisible(redSwatch);
+      await tester.pumpAndSettle();
+      await tester.tap(redSwatch);
       await tester.pumpAndSettle();
 
       final probe = tester.widget<Container>(find.byKey(primaryColorKey));
