@@ -242,22 +242,10 @@ class SmartPushAnalytics extends ChangeNotifier {
       final jsonStr = _mmkv.getString(_appOpenTimesKey);
       if (jsonStr == null || jsonStr.isEmpty) return [];
 
-      final List<String> list = [];
-      int start = 0;
-      while (start < jsonStr.length) {
-        int end = jsonStr.indexOf(',', start);
-        if (end == -1) {
-          if (start < jsonStr.length) {
-            list.add(jsonStr.substring(start));
-          }
-          break;
-        }
-        if (end > start) {
-          list.add(jsonStr.substring(start, end));
-        }
-        start = end + 1;
-      }
-      return list;
+      final List<dynamic> list = List<dynamic>.from(
+        (jsonStr.split(',').where((s) => s.isNotEmpty)),
+      );
+      return list.cast<String>();
     } catch (e, stack) {
       AppLogger.e(
         '获取应用打开记录异常',
@@ -365,12 +353,11 @@ class SmartPushAnalytics extends ChangeNotifier {
       final data = _mmkv.getString(_fatigueBudgetKey);
       if (data == null || data.isEmpty) return dailyFatigueBudget;
 
-      final int idx = data.indexOf('|');
-      if (idx == -1) return dailyFatigueBudget;
+      final parts = data.split('|');
+      if (parts.length != 2) return dailyFatigueBudget;
 
-      final date = data.substring(0, idx);
-      final budget =
-          double.tryParse(data.substring(idx + 1)) ?? dailyFatigueBudget;
+      final date = parts[0];
+      final budget = double.tryParse(parts[1]) ?? dailyFatigueBudget;
 
       // 检查是否是新的一天
       final today = DateTime.now().toIso8601String().substring(0, 10);
