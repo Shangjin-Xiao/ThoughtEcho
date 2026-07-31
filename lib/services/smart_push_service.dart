@@ -105,6 +105,17 @@ class SmartPushService extends ChangeNotifier {
   String? _pendingTargetNoteId;
   String? get pendingTargetNoteId => _pendingTargetNoteId;
 
+  /// 请求把记录页定位到某条笔记（App 已在前台）。
+  ///
+  /// 不只是通知点击才需要定位：探索页的笔记预览点开也走这里。
+  /// [HomePage] 已经在监听这个字段并交给 HomeTargetNavigation
+  /// （切 tab → 等标签就绪 → 带重试地滚动定位），不必再铺第二条通路。
+  void requestNoteLocation(String noteId) {
+    if (noteId.isEmpty) return;
+    _pendingTargetNoteId = noteId;
+    notifyListeners();
+  }
+
   /// 消费并清除待定位的笔记 ID，返回 ID 值（调用方应立即处理）
   String? consumePendingTargetNoteId() {
     final id = _pendingTargetNoteId;

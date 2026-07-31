@@ -308,8 +308,12 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
         includedInContext: false,
       );
       _appendMessage(welcomeMsg, persist: false);
-    } else if (_entrySource == AIAssistantEntrySource.explore) {
-      // 无显式总结时，跳过"输入问题"提示，直接生成动态洞察
+    } else if (_entrySource == AIAssistantEntrySource.explore &&
+        widget.initialQuestion?.trim().isNotEmpty != true) {
+      // 无显式总结时，跳过"输入问题"提示，直接生成动态洞察。
+      // 但调用方已经替用户问出第一句（「总结本周」这类）时不显示：
+      // 这段是 buildLocalReportInsight 现拼的统计文案，既不进模型上下文，
+      // 又会抢在用户的问题前面冒出来，等于答非所问。
       _generateAndShowDynamicInsight();
     }
   }

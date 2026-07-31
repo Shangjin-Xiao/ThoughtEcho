@@ -231,43 +231,23 @@ extension _AIReportStats on _AIPeriodicReportPageState {
     );
   }
 
-  /// 打开笔记本身。
+  /// 点开一条笔记：跳回记录页并定位到它。
   ///
-  /// 预览块以前点了只有一次震动，等于假的可点区域。改动后走全屏编辑器，
-  /// 和记录页点开一条笔记是同一个页面。编辑保存会触发数据库通知，
-  /// 本页的 `_onDatabaseChanged` 会静默刷新，不需要在这里手动重载。
-  Future<void> _openNoteDetail(Quote quote) async {
-    final navigator = Navigator.of(context);
-    final l10n = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    List<NoteCategory> tags = const [];
-    try {
-      tags = await context.read<DatabaseService>().getCategories();
-    } catch (e) {
-      // 标签取不到不该挡住看笔记，编辑器允许 allTags 为空
-      AppLogger.d('Categories unavailable for note detail: $e');
+  /// 以前是直接 push 全屏编辑器。但记录页自己开笔记是按 `editSource` 分流的
+  /// （fullscreen 走全屏编辑器，其余走底部弹窗），探索页硬走一种就跟应用其余
+  /// 地方对不上；而预览只截 120 字，用户点它多半是想看全文而不是就地编辑。
+  /// 所以这里不开编辑器，交回记录页——想编辑再在那儿点开，类型分流由它负责。
+  void _openNoteDetail(Quote quote) {
+    final noteId = quote.id?.trim();
+    if (noteId == null || noteId.isEmpty) {
+      AppLogger.d('Note without id cannot be located in the list');
+      return;
     }
-    if (!mounted) return;
-
     try {
-      await navigator.push(
-        MaterialPageRoute<void>(
-          builder: (_) => NoteFullEditorPage(
-            initialContent: quote.content,
-            initialQuote: quote,
-            allTags: tags,
-          ),
-        ),
-      );
-    } catch (e, stack) {
-      AppLogger.e('Failed to open note from report',
-          error: e, stackTrace: stack);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.cannotOpenFullEditor(e.toString())),
-          duration: AppConstants.snackBarDurationError,
-        ),
-      );
+      context.read<SmartPushService>().requestNoteLocation(noteId);
+    } catch (e) {
+      // 服务未注册（测试/裁剪构建）时不该让点击崩掉页面
+      AppLogger.d('SmartPushService unavailable for note location: $e');
     }
   }
 

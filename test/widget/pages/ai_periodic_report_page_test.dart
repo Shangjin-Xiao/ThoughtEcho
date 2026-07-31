@@ -4,12 +4,31 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/ai_periodic_report_page.dart';
+import 'package:thoughtecho/pages/note_full_editor_page.dart';
 import 'package:thoughtecho/models/chat_session.dart';
 import 'package:thoughtecho/services/ai_service.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/insight_history_service.dart';
+import 'package:thoughtecho/services/location_service.dart';
+import 'package:thoughtecho/services/smart_push_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+
+/// 只记录定位请求，不碰通知插件和 MMKV。
+class _RecordingSmartPushService extends SmartPushService {
+  _RecordingSmartPushService(DatabaseService database)
+      : super(
+          databaseService: database,
+          locationService: LocationService(),
+        );
+
+  String? requestedNoteId;
+
+  @override
+  void requestNoteLocation(String noteId) {
+    requestedNoteId = noteId;
+  }
+}
 
 class _EmptyPeriodDatabaseService extends DatabaseService {
   _EmptyPeriodDatabaseService() : super.forTesting();
@@ -293,6 +312,45 @@ void main() {
     final l10n = AppLocalizations.of(context);
     expect(find.text('一条测试笔记'), findsOneWidget);
     expect(find.text(l10n.askNote), findsOneWidget);
+  });
+
+  // 点笔记预览不再 push 全屏编辑器：记录页自己开笔记是按 editSource 分流的，
+  // 探索页硬走一种跟应用其余地方对不上，而且预览只截 120 字，用户点它是想
+  // 看全文。改成把定位请求交回记录页。
+  testWidgets('tapping a note preview asks the note list to locate it',
+      (tester) async {
+    final settings = _ReportSettingsService();
+    final database = _CountingPeriodDatabaseService();
+    final insights = InsightHistoryService(settingsService: settings);
+    final smartPush = _RecordingSmartPushService(database);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(value: settings),
+          ChangeNotifierProvider<DatabaseService>.value(value: database),
+          ChangeNotifierProvider<InsightHistoryService>.value(value: insights),
+          ChangeNotifierProvider<SmartPushService>.value(value: smartPush),
+          ChangeNotifierProvider<AIService>(
+            create: (_) => AIService(settingsService: settings),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AIPeriodicReportPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('一条测试笔记'));
+    await tester.pumpAndSettle();
+
+    expect(smartPush.requestedNoteId, 'q1');
+    // 没有把用户丢进编辑器
+    expect(find.byType(NoteFullEditorPage), findsNothing);
   });
 
   // 回归：入场动画只留一层。之前七到十个 TweenAnimationBuilder 交错到 1.4 秒，
