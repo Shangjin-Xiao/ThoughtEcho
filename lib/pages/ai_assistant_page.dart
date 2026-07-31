@@ -101,6 +101,9 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
   bool _isLoading = false;
   String? _currentSessionId;
+
+  /// 会话建立前就已产生、但需要落库的消息（开场白、卡片消息）。
+  final List<app_chat.ChatMessage> _pendingPersistMessages = [];
   StreamSubscription<String>? _streamSubscription;
   late ChatSessionService _chatSessionService;
   late AgentService _agentService;
@@ -301,8 +304,14 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     _setState(() {
       _messages.add(message);
     });
-    if (persist && _currentSessionId != null) {
-      unawaited(_chatSessionService.addMessage(_currentSessionId!, message));
+    if (persist) {
+      if (_currentSessionId != null) {
+        unawaited(_chatSessionService.addMessage(_currentSessionId!, message));
+      } else {
+        // 会话要到首条用户消息才建。挂起等 _ensureSessionCreated 补写，
+        // 否则开场白这类先于会话出现的消息会被静默丢掉。
+        _pendingPersistMessages.add(message);
+      }
     }
     _scrollToBottom();
   }

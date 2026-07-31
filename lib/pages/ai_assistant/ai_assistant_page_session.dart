@@ -183,6 +183,23 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
   Future<void> _ensureSessionCreated() async {
     if (_currentSessionId != null) return;
     await _createNewSession();
+    await _flushPendingPersistMessages();
+  }
+
+  /// 补写会话建立前挂起的消息，保持它们在用户首条消息之前的顺序。
+  Future<void> _flushPendingPersistMessages() async {
+    if (_pendingPersistMessages.isEmpty) return;
+    final sessionId = _currentSessionId;
+    if (sessionId == null) return;
+    final pending = List<app_chat.ChatMessage>.from(_pendingPersistMessages);
+    _pendingPersistMessages.clear();
+    for (final message in pending) {
+      try {
+        await _chatSessionService.addMessage(sessionId, message);
+      } catch (e) {
+        logDebug('补写挂起消息失败: ${message.id} - $e');
+      }
+    }
   }
 
   Future<bool> _sessionHasUserMessages(String sessionId) async {

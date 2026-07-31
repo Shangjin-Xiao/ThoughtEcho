@@ -118,6 +118,9 @@ class _InMemoryChatSessionService extends ChatSessionService {
       _messages[sessionId] ?? const <app_chat.ChatMessage>[],
     );
   }
+
+  /// 落库消息（按会话），用于断言开场白确实写进了库。
+  Map<String, List<app_chat.ChatMessage>> get storedMessages => _messages;
 }
 
 class _FakeAIService extends AIService {
@@ -548,6 +551,38 @@ void main() {
       expect(first.isUser, isFalse);
       // 关键断言：必须进上下文，否则模型不知道开场说了什么
       expect(first.includedInContext, isTrue);
+    });
+
+    // 会话是延迟创建的（首条用户消息才建），开场白比会话早出生。
+    // 它必须被补写进库，否则用户杀掉重进这个会话，第一句连同上下文一起消失。
+    testWidgets('openingMessage is persisted once the session gets created',
+        (tester) async {
+      const opening = '午后多云，适合把最近的焦虑写下来。';
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: const AIAssistantPage(
+            key: ValueKey('opening_message_persist_page'),
+            entrySource: AIAssistantEntrySource.explore,
+            openingMessage: opening,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 还没说话：不该凭空建出一个空会话来占「最近对话」的位置
+      expect(chatSessionService.storedMessages, isEmpty);
+
+      await _submitInput(tester, '那我从哪儿写起？');
+
+      expect(chatSessionService.storedMessages, hasLength(1));
+      final persisted = chatSessionService.storedMessages.values.single;
+      expect(persisted.first.content, opening);
+      expect(persisted.first.includedInContext, isTrue);
+      // 顺序不能倒：开场白必须排在用户第一句之前
+      expect(persisted[1].content, '那我从哪儿写起？');
+      expect(persisted[1].isUser, isTrue);
     });
 
     testWidgets('does not offer attachments that Agent cannot consume',
