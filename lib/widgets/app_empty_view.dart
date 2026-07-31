@@ -63,7 +63,7 @@ class AppEmptyView extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onRefresh,
                 icon: const Icon(Icons.refresh),
-                label: Text(AppLocalizations.of(context).refresh),
+                label: Text(AppLocalizations.of(context)?.refresh ?? 'Refresh'),
               ),
             ],
           ],
