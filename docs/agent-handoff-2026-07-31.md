@@ -138,20 +138,25 @@ tool_calls、工具入参出参、事件流全部落到 transcript 文件，供�
 
 ## 4. 已确认仍然存在的问题（可以直接开工）
 
-- **跨轮记忆没生效**（`75f7d9d4` 的验证结果）。跑测台里第一轮 `explore_notes`
-  查完，第二轮追问「你刚才查到的那几条里哪条最长」，gemma4 和 gpt-oss 都**又调了一次
-  `explore_notes`**。轨迹确实进了历史（请求体里有），但模型没在用。
-  下一轮要查的是 `agent_history_builder.dart` 压出来的摘要够不够用——
-  很可能只有工具名没有结果正文，模型只好重查。transcript 在
-  `build/agent-probe/02-改已有笔记-*.md`。
-- **思考过程的展示不一致**（用户报的，未查证）：
-  `gemma4:31b-cloud` 不显示思考过程；`gpt-oss:120b-cloud` 会把思考内容
-  **直接显示在洞察页的洞察正文里**——后者是明显的串档，优先级高。
-  相关：`AgentReasoningDeltaEvent` 只该进折叠的执行过程面板。
-- **预设 provider 加 Ollama**：用户现在要求把 `gemma4:31b-cloud` /
+- **预设 provider 加 Ollama**：用户要求把 `gemma4:31b-cloud` /
   `minimax-m3:cloud` 这档普通用户能用到的模型加进预设
-  （`lib/constants/ai_provider_presets.dart`）。注意这和 §4 末尾「先不用管」
-  那条是用户后来改的口径，以这条为准。
+  （`lib/constants/ai_provider_presets.dart`）。用户说已经加了一部分，
+  接手前先看现状。注意这和本节末尾「先不用管」那条是用户后来改的口径，
+  以这条为准。
+
+### 已查证结案的（别再当待办）
+
+- **跨轮记忆是好的**（`75f7d9d4` 生效）。曾一度误判为失效，原因是跑测台没走
+  UI 层：`AgentHistoryBuilder.build` 在 `ai_assistant_page_agent.dart:_askAgent`
+  里调用，**不在 `AgentService` 内部**。探针直接喂原始消息给 `runAgent`，
+  轨迹从没被构造出来。补上后第二轮追问 1 个模型轮次、0 次工具调用，直接依据
+  `[已执行的工具轨迹]` 作答。见 `b944f005`。
+- **思考过程混进洞察正文**（`23030f41` 已修）。根因在
+  `processStreamToText`：没有 `onThinking` 时把 reasoning 当正文的兜底，
+  `chunks.isEmpty` 判的是单个 event 而不是整条流，而推理模型的 reasoning
+  总是先于 content 到达。已改成攒到流末再判。真实 API A/B 验证过。
+- **gemma4 不显示思考过程不是 bug**：它三个场景 0 次 reasoning delta，
+  gpt-oss:20b 有 765 次——gemma4 根本不吐 reasoning 字段。
 
 - **每次运行最多一个提案，但提示词说的是「每轮」**。`proposalCreated` 声明在
   `agent_service.dart:283`，`while` 在 `:291` —— 作用域是整次运行。而喂给模型的
