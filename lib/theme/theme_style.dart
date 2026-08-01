@@ -38,12 +38,21 @@ enum ThemeStyle {
   /// 不能再喂给 seed 生成器，否则色板会被算法重新推导掉。
   bool get isGenerated => palette == null;
 
+  /// 新装与未做过选择的用户拿到的风格。
+  ///
+  /// 2026-08-01 从 [ThemeStyle.material] 翻成 [ThemeStyle.paper]：纸墨是心迹的
+  /// 品牌外观，Material 是「想要系统观感」时的退路，不该是默认。
+  /// **没有迁移逻辑**——老用户升级后外观会直接变，由升级引导页告知可以切回去。
+  ///
+  /// 默认值只写在这里一处，其它地方（字段初值、异常兜底）都引用它。
+  static const ThemeStyle defaultStyle = ThemeStyle.paper;
+
   static ThemeStyle fromName(String? name) {
-    if (name == null) return ThemeStyle.material;
+    if (name == null) return defaultStyle;
     for (final style in ThemeStyle.values) {
       if (style.name == name) return style;
     }
-    return ThemeStyle.material;
+    return defaultStyle;
   }
 }
 
@@ -58,6 +67,7 @@ class ThemeStyleForm {
     required this.dialogRadius,
     required this.buttonRadius,
     required this.inputRadius,
+    required this.fabRadius,
     required this.borderWidth,
     required this.shadowOpacityLight,
     required this.shadowOpacityDark,
@@ -72,6 +82,11 @@ class ThemeStyleForm {
   final double dialogRadius;
   final double buttonRadius;
   final double inputRadius;
+
+  /// 悬浮按钮圆角。**它有自己的令牌不是遗漏**：M3 规范里 FAB 的圆角本来就独立于
+  /// 卡片和按钮（默认 16），硬映射到 cardRadius(18) 或 buttonRadius(12)
+  /// 都会让 material 风格出现可见的像素变化。
+  final double fabRadius;
 
   /// 卡片描边宽度。纸的层次靠发丝边框而不是投影，所以手工风格把边框加出来、
   /// 把投影压下去。
@@ -121,6 +136,7 @@ class ThemeStyleForm {
     dialogRadius: 24,
     buttonRadius: 12,
     inputRadius: 12,
+    fabRadius: 16,
     borderWidth: 0,
     shadowOpacityLight: 0.06,
     shadowOpacityDark: 0.24,
@@ -137,6 +153,7 @@ class ThemeStyleForm {
     dialogRadius: 8,
     buttonRadius: 4,
     inputRadius: 4,
+    fabRadius: 6,
     borderWidth: 1,
     shadowOpacityLight: 0.03,
     shadowOpacityDark: 0.14,
@@ -153,6 +170,7 @@ class ThemeStyleForm {
     dialogRadius: 4,
     buttonRadius: 2,
     inputRadius: 2,
+    fabRadius: 3,
     borderWidth: 1,
     shadowOpacityLight: 0.02,
     shadowOpacityDark: 0.10,
@@ -176,6 +194,7 @@ class AppShapeTokens extends ThemeExtension<AppShapeTokens> {
     required this.dialogRadius,
     required this.buttonRadius,
     required this.inputRadius,
+    required this.fabRadius,
     required this.borderWidth,
     required this.shadowOpacity,
     required this.shadowBlur,
@@ -192,6 +211,7 @@ class AppShapeTokens extends ThemeExtension<AppShapeTokens> {
       dialogRadius: form.dialogRadius,
       buttonRadius: form.buttonRadius,
       inputRadius: form.inputRadius,
+      fabRadius: form.fabRadius,
       borderWidth: form.borderWidth,
       shadowOpacity: form.shadowOpacity(brightness),
       shadowBlur: form.shadowBlur,
@@ -204,6 +224,7 @@ class AppShapeTokens extends ThemeExtension<AppShapeTokens> {
   final double dialogRadius;
   final double buttonRadius;
   final double inputRadius;
+  final double fabRadius;
   final double borderWidth;
   final double shadowOpacity;
   final double shadowBlur;
@@ -271,6 +292,7 @@ class AppShapeTokens extends ThemeExtension<AppShapeTokens> {
     double? dialogRadius,
     double? buttonRadius,
     double? inputRadius,
+    double? fabRadius,
     double? borderWidth,
     double? shadowOpacity,
     double? shadowBlur,
@@ -282,6 +304,7 @@ class AppShapeTokens extends ThemeExtension<AppShapeTokens> {
       dialogRadius: dialogRadius ?? this.dialogRadius,
       buttonRadius: buttonRadius ?? this.buttonRadius,
       inputRadius: inputRadius ?? this.inputRadius,
+      fabRadius: fabRadius ?? this.fabRadius,
       borderWidth: borderWidth ?? this.borderWidth,
       shadowOpacity: shadowOpacity ?? this.shadowOpacity,
       shadowBlur: shadowBlur ?? this.shadowBlur,
@@ -299,6 +322,7 @@ class AppShapeTokens extends ThemeExtension<AppShapeTokens> {
       dialogRadius: mix(dialogRadius, other.dialogRadius),
       buttonRadius: mix(buttonRadius, other.buttonRadius),
       inputRadius: mix(inputRadius, other.inputRadius),
+      fabRadius: mix(fabRadius, other.fabRadius),
       borderWidth: mix(borderWidth, other.borderWidth),
       shadowOpacity: mix(shadowOpacity, other.shadowOpacity),
       shadowBlur: mix(shadowBlur, other.shadowBlur),

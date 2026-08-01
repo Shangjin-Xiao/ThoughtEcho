@@ -749,6 +749,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final shape = AppShapeTokens.of(context);
     final l10n = AppLocalizations.of(context);
     // 直接用context.watch<bool>()获取服务初始化状态（仅变化一次）
     final bool servicesInitialized = context.watch<bool>();
@@ -988,8 +989,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             onLongPressStart: (_) => _onFABLongPress(),
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: AppShapeTokens.of(context).accentShadow,
+                borderRadius: BorderRadius.circular(shape.fabRadius),
+                boxShadow: shape.accentShadow,
               ),
               child: FloatingActionButton(
                 heroTag: 'homePageFAB',
@@ -1001,7 +1002,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 foregroundColor: theme
                     .floatingActionButtonTheme.foregroundColor, // 使用主题定义的颜色
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(shape.fabRadius),
                 ),
                 child: const Icon(Icons.add, size: 28),
               ),

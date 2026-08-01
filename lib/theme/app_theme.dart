@@ -195,7 +195,7 @@ class AppTheme with ChangeNotifier {
   ColorScheme? _lightDynamicColorScheme;
   ColorScheme? _darkDynamicColorScheme;
   ThemeMode _themeMode = ThemeMode.system;
-  ThemeStyle _themeStyle = ThemeStyle.material;
+  ThemeStyle _themeStyle = ThemeStyle.defaultStyle;
   bool _hasInitialized = false; // 添加标记，用于追踪是否已初始化
 
   // 全局圆角和阴影参数
@@ -387,7 +387,7 @@ class AppTheme with ChangeNotifier {
       _useCustomColor = false;
       _useDynamicColor = true;
       _themeMode = ThemeMode.system;
-      _themeStyle = ThemeStyle.material;
+      _themeStyle = ThemeStyle.defaultStyle;
     }
   }
 
@@ -571,7 +571,7 @@ class AppTheme with ChangeNotifier {
       _themeStyle = ThemeStyle.fromName(_storage?.getString(_themeStyleKey));
     } catch (e) {
       logDebug('加载主题风格失败: $e');
-      _themeStyle = ThemeStyle.material;
+      _themeStyle = ThemeStyle.defaultStyle;
     }
   }
 

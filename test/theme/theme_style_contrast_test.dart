@@ -142,6 +142,20 @@ void main() {
 
     // 只换颜色的观感就是「换了一套 Material 主题色」。辨识度主要由形状、字体、
     // 阴影承担，这几条把它们钉住，防止后续无意中把手工风格退化回 Material 长相。
+    test('FAB 有自己的圆角令牌，material 下保持 M3 的 16', () {
+      // 16 不等于 cardRadius(18) 也不等于 buttonRadius(12)：M3 规范里 FAB 本来
+      // 就独立，硬映射到别的令牌会让 material 出现可见的像素变化。
+      expect(ThemeStyleForm.material.fabRadius, 16);
+      for (final style in ThemeStyle.values) {
+        if (style.isGenerated) continue;
+        expect(
+          style.form.fabRadius,
+          lessThan(ThemeStyleForm.material.fabRadius),
+          reason: '${style.name} 的 FAB 没有跟着方下来',
+        );
+      }
+    });
+
     test('手工风格的圆角明显小于 Material', () {
       for (final style in ThemeStyle.values) {
         if (style.isGenerated) continue;
@@ -281,9 +295,11 @@ void main() {
       expect(a.lerp(b, 0.5).ruleOpacity, (a.ruleOpacity + b.ruleOpacity) / 2);
     });
 
-    test('未知或缺失的持久化取值回退到 material', () {
-      expect(ThemeStyle.fromName(null), ThemeStyle.material);
-      expect(ThemeStyle.fromName('nope'), ThemeStyle.material);
+    test('默认风格是纸与墨，未知或缺失的持久化取值回退到它', () {
+      // 默认值只应写在 ThemeStyle.defaultStyle 一处。
+      expect(ThemeStyle.defaultStyle, ThemeStyle.paper);
+      expect(ThemeStyle.fromName(null), ThemeStyle.defaultStyle);
+      expect(ThemeStyle.fromName('nope'), ThemeStyle.defaultStyle);
       expect(ThemeStyle.fromName('paper'), ThemeStyle.paper);
       expect(ThemeStyle.fromName('plain'), ThemeStyle.plain);
     });
