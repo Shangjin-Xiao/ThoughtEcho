@@ -1,0 +1,25 @@
+lib/services/version_check_service.dart
+  s_6493713b0b0a81::t_89d6ca3cfb0050 2,4,9-73
+  s_6493713b0b0a81::t_20530174d6d424 166-189
+  s_6493713b0b0a81::t_f242361b3bcc5a 95-96,99-101,106-109
+  s_6493713b0b0a81::t_46e08c499d06a5 252-256
+  s_6493713b0b0a81::t_eaa1caf9314b42 74
+test/version_check_test.dart
+  s_6493713b0b0a81::t_3462dba583b306 130-227
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "c52bdab4f89d08873986e99bb9910c22855c7e09",
+  "prompts": {},
+  "sessions": {
+    "s_6493713b0b0a81": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9eca5b3a-ed46-4ae7-8fc3-9b9510242e49",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
