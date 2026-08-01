@@ -29,21 +29,17 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
     }
   }
 
-  /// 显示编辑器功能引导
+  /// 显示编辑器功能引导：元数据和工具栏两个候选里只放一个。
+  ///
+  /// 原来是两个 `show` 前后脚调用，谁也没等谁——两个气泡会同时插进 Overlay
+  /// 叠在屏幕上。现在一次只弹靠前的那个，另一个留到下次打开编辑器。
   void _showEditorGuide() {
-    FeatureGuideHelper.show(
+    FeatureGuideHelper.showFirstAvailable(
       context: context,
-      guideId: 'editor_metadata',
-      targetKey: _metadataButtonKey,
-    );
-  }
-
-  /// 新增：显示工具栏操作气泡引导
-  void _showToolbarGuide() {
-    FeatureGuideHelper.show(
-      context: context,
-      guideId: 'editor_toolbar_usage',
-      targetKey: _toolbarGuideKey,
+      guides: [
+        ('editor_metadata', _metadataButtonKey),
+        ('editor_toolbar_usage', _toolbarGuideKey),
+      ],
       autoDismissDuration: const Duration(milliseconds: 3200),
     );
   }

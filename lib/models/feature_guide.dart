@@ -88,6 +88,11 @@ class FeatureGuide {
       placement: FeatureGuidePlacement.above,
       offset: Offset(0, -10), // 上方偏移一点
     ),
+    // 和回收站引导一样指向设置 tab，所以用同一套位置参数。
+    'smart_push_entry': FeatureGuideConfig(
+      placement: FeatureGuidePlacement.above,
+      offset: Offset(0, -10),
+    ),
   };
 
   /// 获取指定 guideId 的本地化标题
@@ -120,6 +125,8 @@ class FeatureGuide {
         return l10n.guideSettingsThemeTitle;
       case 'trash_location_guide':
         return l10n.guideTrashLocationTitle;
+      case 'smart_push_entry':
+        return l10n.guideSmartPushTitle;
       default:
         return '';
     }
@@ -155,6 +162,8 @@ class FeatureGuide {
         return l10n.guideSettingsThemeDesc;
       case 'trash_location_guide':
         return l10n.guideTrashLocationDesc;
+      case 'smart_push_entry':
+        return l10n.guideSmartPushDesc;
       default:
         return '';
     }

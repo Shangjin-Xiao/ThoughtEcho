@@ -213,7 +213,6 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
           _showEditorGuide();
-          _showToolbarGuide();
         }
       });
     });

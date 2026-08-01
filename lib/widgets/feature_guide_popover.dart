@@ -134,7 +134,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
   /// 构建居中的气泡（无箭头）
   Widget _buildCenteredPopover(BuildContext context) {
     return Material(
-      color: Colors.black.withValues(alpha: 0.3),
+      color: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.3),
       child: Semantics(
         label: MaterialLocalizations.of(context).closeButtonTooltip,
         button: true,
@@ -143,11 +143,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
           child: Center(
             child: FadeTransition(
               opacity: _fadeAnimation,
-              child: _buildPopoverCard(
-                context,
-                PopoverArrowDirection.top,
-                arrowOffset: 110,
-              ),
+              child: _buildPopoverCard(context, null),
             ),
           ),
         ),
@@ -423,34 +419,38 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     };
   }
 
-  /// 构建气泡卡片
+  /// 构建气泡卡片。
+  ///
+  /// [arrowDirection] 传 null 表示不画箭头——没有目标元素可指的居中气泡走这条路。
+  /// 箭头是 `LayoutBuilder`，而带箭头的几种排布用了 `IntrinsicWidth`/`IntrinsicHeight`，
+  /// 两者放在一起会直接触发「LayoutBuilder does not support returning intrinsic
+  /// dimensions」的布局断言。目标元素在渲染检查之后消失就会落到这条分支上，
+  /// 所以这不是理论情况。
   Widget _buildPopoverCard(
     BuildContext context,
-    PopoverArrowDirection arrowDirection, {
+    PopoverArrowDirection? arrowDirection, {
     double arrowOffset = 0,
   }) {
     const arrowSize = 14.0;
     final theme = Theme.of(context);
+    final shape = AppShapeTokens.of(context);
     final cardColor = theme.cardColor;
+    // 和气泡本体同一档投影强度，箭头才不会看起来是「贴上去的」。
+    final arrowShadowColor =
+        theme.shadowColor.withValues(alpha: shape.shadowOpacity * 3);
 
     final popoverContent = Container(
       constraints: const BoxConstraints(maxWidth: 220, minWidth: 180),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius:
-            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+        borderRadius: BorderRadius.circular(shape.cardRadius),
         border: Border.all(
-          color: theme.colorScheme.primary.withValues(alpha: 0.12),
-          width: 1,
+          color: theme.colorScheme.outlineVariant,
+          width: shape.borderWidth > 0 ? shape.borderWidth : 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 14,
-            spreadRadius: 1,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        // 气泡浮在所有内容之上，用最高的一档投影；具体数值跟着风格走，
+        // 纸墨下会自动压扁，不会出现「方角卡片却飘着一团模糊阴影」。
+        boxShadow: shape.raisedShadow,
       ),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Column(
@@ -468,8 +468,9 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
               Expanded(
                 child: Text(
                   widget.guide.title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                      fontSize: 13, color: theme.colorScheme.primary),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
               ),
               Semantics(
@@ -482,9 +483,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
                     child: Icon(
                       Icons.close,
                       size: 14,
-                      color: theme.textTheme.bodySmall?.color?.withValues(
-                        alpha: 0.7,
-                      ),
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -495,7 +494,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
           Text(
             widget.guide.description,
             style: theme.textTheme.bodySmall?.copyWith(
-              fontSize: 12,
+              color: theme.colorScheme.onSurfaceVariant,
               height: 1.35,
             ),
           ),
@@ -515,6 +514,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
             child: CustomPaint(
               painter: _ArrowPainter(
                 color: cardColor,
+                shadowColor: arrowShadowColor,
                 direction: isTop
                     ? PopoverArrowDirection.top
                     : PopoverArrowDirection.bottom,
@@ -538,6 +538,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
             child: CustomPaint(
               painter: _ArrowPainter(
                 color: cardColor,
+                shadowColor: arrowShadowColor,
                 direction: isLeft
                     ? PopoverArrowDirection.left
                     : PopoverArrowDirection.right,
@@ -550,6 +551,8 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     }
 
     switch (arrowDirection) {
+      case null:
+        return popoverContent;
       case PopoverArrowDirection.top:
         return IntrinsicWidth(
           child: Column(
@@ -591,7 +594,15 @@ class _ArrowPainter extends CustomPainter {
   final Color color;
   final PopoverArrowDirection direction;
 
-  _ArrowPainter({required this.color, required this.direction});
+  /// 箭头自己画投影（它在气泡的 BoxShadow 之外），颜色由调用方从主题取，
+  /// 不能写死黑色：暗色模式下纯黑投影会在深色面上糊成一块。
+  final Color shadowColor;
+
+  _ArrowPainter({
+    required this.color,
+    required this.direction,
+    required this.shadowColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -632,12 +643,14 @@ class _ArrowPainter extends CustomPainter {
     }
 
     path.close();
-    canvas.drawShadow(path, Colors.black.withValues(alpha: 0.18), 4, false);
+    canvas.drawShadow(path, shadowColor, 4, false);
     canvas.drawPath(path, paint);
   }
 
   @override
   bool shouldRepaint(_ArrowPainter oldDelegate) {
-    return oldDelegate.color != color || oldDelegate.direction != direction;
+    return oldDelegate.color != color ||
+        oldDelegate.direction != direction ||
+        oldDelegate.shadowColor != shadowColor;
   }
 }

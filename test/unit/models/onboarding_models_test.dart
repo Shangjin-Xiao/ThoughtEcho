@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/onboarding_models.dart';
 
@@ -21,57 +20,21 @@ void main() {
         expect(pageData.title, 'Welcome');
         expect(pageData.subtitle, 'Subtitle');
         expect(pageData.description, isNull);
-        expect(pageData.features, isNull);
         expect(pageData.type, OnboardingPageType.welcome);
       });
 
       test('should correctly assign all optional properties', () {
-        const feature = OnboardingFeature(
-          title: 'Feature',
-          description: 'Desc',
-          icon: Icons.star,
-        );
         const pageData = OnboardingPageData(
-          title: 'Features',
-          subtitle: 'Features Subtitle',
+          title: 'Appearance',
+          subtitle: 'Appearance Subtitle',
           description: 'Description',
-          features: [feature],
-          type: OnboardingPageType.features,
+          type: OnboardingPageType.appearance,
         );
 
-        expect(pageData.title, 'Features');
-        expect(pageData.subtitle, 'Features Subtitle');
+        expect(pageData.title, 'Appearance');
+        expect(pageData.subtitle, 'Appearance Subtitle');
         expect(pageData.description, 'Description');
-        expect(pageData.features, isNotNull);
-        expect(pageData.features!.length, 1);
-        expect(pageData.features!.first, feature);
-        expect(pageData.type, OnboardingPageType.features);
-      });
-    });
-
-    group('OnboardingFeature', () {
-      test('should correctly assign all properties with default values', () {
-        const feature = OnboardingFeature(
-          title: 'Feature',
-          description: 'Desc',
-          icon: Icons.star,
-        );
-
-        expect(feature.title, 'Feature');
-        expect(feature.description, 'Desc');
-        expect(feature.icon, Icons.star);
-        expect(feature.isHighlight, isFalse);
-      });
-
-      test('should correctly override default value', () {
-        const feature = OnboardingFeature(
-          title: 'Feature',
-          description: 'Desc',
-          icon: Icons.star,
-          isHighlight: true,
-        );
-
-        expect(feature.isHighlight, isTrue);
+        expect(pageData.type, OnboardingPageType.appearance);
       });
     });
 

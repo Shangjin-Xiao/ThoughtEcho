@@ -1,43 +1,32 @@
-import 'package:flutter/material.dart';
-
 /// 引导页面配置模型
 class OnboardingPageData {
   final String title;
   final String subtitle;
   final String? description;
-  final List<OnboardingFeature>? features;
   final OnboardingPageType type;
 
   const OnboardingPageData({
     required this.title,
     required this.subtitle,
     this.description,
-    this.features,
     required this.type,
   });
 }
 
 /// 引导页面类型
+///
+/// 每种类型对应一个页面组件，顺序由 `OnboardingConfig.getPages` 决定。
+/// 曾经还有 `features`（功能罗列页）和 `complete`（完成页）：前者讲的四件事
+/// 在后两屏里用户都会亲手摸到一遍，后者从来没有被 `getPages` 生成过（是死分支）。
 enum OnboardingPageType {
-  welcome, // 欢迎页面
-  features, // 功能展示页面
-  preferences, // 偏好设置页面
-  complete, // 完成页面
-}
+  /// 欢迎与语言选择。
+  welcome,
 
-/// 引导功能展示项
-class OnboardingFeature {
-  final String title;
-  final String description;
-  final IconData icon;
-  final bool isHighlight;
+  /// 外观风格与每日一言来源。
+  appearance,
 
-  const OnboardingFeature({
-    required this.title,
-    required this.description,
-    required this.icon,
-    this.isHighlight = false,
-  });
+  /// 使用习惯、隐私开关与 AI 配置引导。
+  preferences,
 }
 
 /// 用户偏好设置项

@@ -6,8 +6,11 @@ import '../gen_l10n/app_localizations.dart';
 import '../controllers/onboarding_controller.dart';
 import '../config/onboarding_config.dart';
 import '../models/onboarding_models.dart';
+import '../widgets/onboarding/appearance_page_view.dart';
 import '../widgets/onboarding/page_views.dart';
 import '../widgets/onboarding/preferences_page_view.dart';
+import '../utils/app_navigator_key.dart';
+import 'ai_settings_page.dart';
 import '../services/migration_service.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
@@ -515,343 +518,133 @@ class _OnboardingPageState extends State<OnboardingPage>
     switch (pageData.type) {
       case OnboardingPageType.welcome:
         return WelcomePageView(pageData: pageData);
-      case OnboardingPageType.features:
-        return FeaturesPageView(pageData: pageData);
+      case OnboardingPageType.appearance:
+        return AppearancePageView(
+          pageData: pageData,
+          state: state,
+          onPreferenceChanged: controller.updatePreference,
+        );
       case OnboardingPageType.preferences:
         return PreferencesPageView(
           pageData: pageData,
           state: state,
           onPreferenceChanged: controller.updatePreference,
         );
-      case OnboardingPageType.complete:
-        return _buildCompletePage();
     }
   }
 
-  /// 完成页面
-  Widget _buildCompletePage() {
-    final theme = Theme.of(context);
+  /// 完成引导。
+  ///
+  /// 完成后 `SettingsService.hasCompletedOnboarding` 变化会让 `MyApp` 重建成
+  /// `HomePage`，本页的 context 随之失效——所以想在「之后」做任何导航，都只能走
+  /// 全局 [navigatorKey]，而且要等新树立起来。
+  Future<void> _completeOnboarding(OnboardingController controller) async {
+    final openAiSettings =
+        controller.state.getPreference<bool>('openAiSettingsAfter') ?? false;
 
-    return Consumer<OnboardingController>(
-      builder: (context, controller, child) {
-        final preferences = OnboardingConfig.getPreferences(context);
-        final hitokotoPreference = preferences.firstWhere(
-          (p) => p.key == 'hitokotoTypes',
-        );
-        final currentValue =
-            controller.state.getPreference<String>('hitokotoTypes') ??
-                hitokotoPreference.defaultValue as String;
-        final selectedValues =
-            currentValue.split(',').where((v) => v.isNotEmpty).toSet();
-        final options = hitokotoPreference.options ?? [];
+    await controller.completeOnboarding();
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 每日一言类型选择 - 放在最上方
-              Card(
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.format_quote_rounded,
-                            color: theme.colorScheme.primary,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  hitokotoPreference.title,
-                                  style: theme.textTheme.titleLarge,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  AppLocalizations.of(
-                                    context,
-                                  ).selectedCount(selectedValues.length),
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: theme.colorScheme.onSurface
-                                        .withValues(alpha: 0.7),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        hitokotoPreference.description,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(
-                            alpha: 0.6,
-                          ),
-                          height: 1.5,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
+    if (!openAiSettings) return;
 
-                      // 快速操作按钮
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                final allValues = options
-                                    .map((o) => o.value as String)
-                                    .join(',');
-                                controller.updatePreference(
-                                  'hitokotoTypes',
-                                  allValues,
-                                );
-                              },
-                              icon: const Icon(Icons.select_all, size: 16),
-                              label: Text(
-                                AppLocalizations.of(context).prefSelectAll,
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () {
-                                // 至少保留一个选项
-                                final firstValue = options.isNotEmpty
-                                    ? options.first.value as String
-                                    : 'a';
-                                controller.updatePreference(
-                                  'hitokotoTypes',
-                                  firstValue,
-                                );
-                              },
-                              icon: const Icon(Icons.clear_all, size: 16),
-                              label: Text(
-                                AppLocalizations.of(context).prefClearAll,
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: options.map((option) {
-                          final isSelected = selectedValues.contains(
-                            option.value as String,
-                          );
-                          return FilterChip(
-                            label: Text(option.label),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              final newSelectedValues = Set<String>.from(
-                                selectedValues,
-                              );
-                              if (selected) {
-                                newSelectedValues.add(option.value as String);
-                              } else {
-                                newSelectedValues.remove(
-                                  option.value as String,
-                                );
-                                // 确保至少有一个选项被选中
-                                if (newSelectedValues.isEmpty) {
-                                  newSelectedValues.add(
-                                    options.first.value as String,
-                                  );
-                                }
-                              }
-                              final newValue = newSelectedValues.join(',');
-                              controller.updatePreference(
-                                'hitokotoTypes',
-                                newValue,
-                              );
-                            },
-                            backgroundColor: theme.colorScheme.surface,
-                            selectedColor: Colors.transparent,
-                            checkmarkColor: theme.colorScheme.primary,
-                            labelStyle: Theme.of(context)
-                                .textTheme
-                                .labelLarge
-                                ?.copyWith(
-                                  color: isSelected
-                                      ? theme.colorScheme.primary
-                                      : theme.colorScheme.onSurface,
-                                  fontWeight: isSelected
-                                      ? FontWeight.w500
-                                      : FontWeight.normal,
-                                ),
-                            side: BorderSide(
-                              color: isSelected
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.outline.withValues(
-                                      alpha: 0.3,
-                                    ),
-                              width: isSelected ? 2.0 : 1.0,
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              // 完成信息 - 放在下方
-              Center(
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      size: 80,
-                      color: theme.colorScheme.primary,
-                    ),
-                    const SizedBox(height: 32),
-                    Text(
-                      AppLocalizations.of(context).onboardingComplete,
-                      style: theme.textTheme.headlineMedium,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      AppLocalizations.of(context).onboardingAllSet,
-                      style: theme.textTheme.titleLarge,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            theme.colorScheme.primaryContainer,
-                            theme.colorScheme.secondaryContainer,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        AppLocalizations.of(context).onboardingStartJourney,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                            color: theme.colorScheme.onPrimaryContainer),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+    await Future.delayed(const Duration(milliseconds: 400));
+    final navigator = navigatorKey.currentState;
+    if (navigator == null) return;
+    await navigator.push(
+      MaterialPageRoute<void>(builder: (_) => const AISettingsPage()),
     );
   }
 
   /// 底部导航
   Widget _buildBottomNavigation(OnboardingController controller) {
     final theme = Theme.of(context);
+    final shape = AppShapeTokens.of(context);
+    final l10n = AppLocalizations.of(context);
     final state = controller.state;
+    final isLastPage = OnboardingConfig.isLastPage(state.currentPageIndex);
 
     return Positioned(
       bottom: 20,
       left: 20,
       right: 20,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: theme.scaffoldBackgroundColor,
-          borderRadius:
-              BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
-          boxShadow: [
-            BoxShadow(
-              color: theme.shadowColor.withValues(alpha: 0.1),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
-            ),
-          ],
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(shape.cardRadius),
+          border: Border.all(
+            color: theme.colorScheme.outlineVariant,
+            width: shape.borderWidth > 0 ? shape.borderWidth : 1,
+          ),
+          boxShadow: shape.raisedShadow,
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // 后退按钮
-            if (state.canGoPrevious)
-              TextButton.icon(
-                onPressed: state.isCompleting ? null : controller.previousPage,
-                icon: const Icon(Icons.arrow_back),
-                label: Text(AppLocalizations.of(context).onboardingPrevious),
-              )
-            else
-              const SizedBox(width: 90),
-
-            // 页面指示器
-            Row(
-              children: List.generate(OnboardingConfig.totalPages, (index) {
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: state.currentPageIndex == index ? 12 : 8,
-                  height: state.currentPageIndex == index ? 12 : 8,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: state.currentPageIndex == index
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.primary.withValues(alpha: 0.3),
-                  ),
-                );
-              }),
+            // 后退按钮。占位宽度和它自身宽度对齐，避免第一页时页码指示器偏心。
+            SizedBox(
+              width: 88,
+              child: state.canGoPrevious
+                  ? Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed:
+                            state.isCompleting ? null : controller.previousPage,
+                        icon: const Icon(Icons.arrow_back, size: 18),
+                        label: Text(l10n.onboardingPrevious),
+                      ),
+                    )
+                  : null,
             ),
 
-            // 下一步/完成按钮
-            if (OnboardingConfig.isLastPage(state.currentPageIndex))
-              FilledButton.icon(
-                onPressed:
-                    state.isCompleting ? null : controller.completeOnboarding,
-                icon: state.isCompleting
-                    ? const SizedBox(
+            // 页面指示器：当前页拉成一小段，其余是点。
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(OnboardingConfig.totalPages, (index) {
+                  final active = state.currentPageIndex == index;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOut,
+                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    width: active ? 18 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(3),
+                      color: active
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.outlineVariant,
+                    ),
+                  );
+                }),
+              ),
+            ),
+
+            // 下一步 / 完成
+            FilledButton.icon(
+              onPressed: state.isCompleting
+                  ? null
+                  : (isLastPage
+                      ? () => _completeOnboarding(controller)
+                      : controller.nextPage),
+              icon: state.isCompleting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: EnhancedLottieAnimation(
+                        type: LottieAnimationType.loading,
                         width: 18,
                         height: 18,
-                        child: EnhancedLottieAnimation(
-                          type: LottieAnimationType.loading,
-                          width: 18,
-                          height: 18,
-                        ),
-                      )
-                    : const Icon(Icons.check),
-                label: Text(
-                  state.isCompleting
-                      ? AppLocalizations.of(context).pleaseWait
-                      : AppLocalizations.of(context).onboardingStart,
-                ),
-              )
-            else
-              FilledButton.icon(
-                onPressed: state.isCompleting ? null : controller.nextPage,
-                icon: const Icon(Icons.arrow_forward),
-                label: Text(AppLocalizations.of(context).onboardingNext),
+                      ),
+                    )
+                  : Icon(
+                      isLastPage ? Icons.check : Icons.arrow_forward,
+                      size: 18,
+                    ),
+              label: Text(
+                state.isCompleting
+                    ? l10n.pleaseWait
+                    : (isLastPage ? l10n.onboardingStart : l10n.onboardingNext),
               ),
+            ),
           ],
         ),
       ),
@@ -861,14 +654,13 @@ class _OnboardingPageState extends State<OnboardingPage>
   /// 跳过按钮
   Widget _buildSkipButton(OnboardingController controller) {
     return Positioned(
-      top: 20,
-      right: 20,
-      child: TextButton.icon(
+      top: 12,
+      right: 12,
+      child: TextButton(
         onPressed: controller.state.isCompleting
             ? null
             : () => _showSkipDialog(controller),
-        icon: const Icon(Icons.skip_next),
-        label: Text(AppLocalizations.of(context).onboardingSkip),
+        child: Text(AppLocalizations.of(context).onboardingSkip),
       ),
     );
   }

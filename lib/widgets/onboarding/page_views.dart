@@ -8,12 +8,15 @@ import '../../services/settings_service.dart';
 import '../../services/location_service.dart';
 import '../../theme/theme_style.dart';
 
-/// 欢迎页面组件
+/// 欢迎页面：应用图标、一句话定位，和唯一一个要在这一屏做的决定——语言。
+///
+/// 语言不铺成选项列表：8 个选项里绝大多数人用「跟随系统」，摊开只会让第一屏变吵。
+/// 收成一行「语言 · 当前值 ›」，点开才是完整列表；当前值用母语原文
+/// （[OnboardingConfig.nativeLanguageLabel]），这样界面语言看不懂的人也能认出自己那一项。
 class WelcomePageView extends StatefulWidget {
   final OnboardingPageData pageData;
-  final VoidCallback? onGetStarted;
 
-  const WelcomePageView({super.key, required this.pageData, this.onGetStarted});
+  const WelcomePageView({super.key, required this.pageData});
 
   @override
   State<WelcomePageView> createState() => _WelcomePageViewState();
@@ -25,583 +28,285 @@ class _WelcomePageViewState extends State<WelcomePageView>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // 语言选择
-  late FixedExtentScrollController _languageScrollController;
-  int _selectedLanguageIndex = 0;
-
-  // 语言选项: 空字符串表示跟随系统
-  static const List<String> _languageCodes = [
-    '',
-    'zh',
-    'en',
-    'ja',
-    'ko',
-    'es',
-    'fr',
-    'de'
-  ];
-
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 700),
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-      ),
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: const Interval(0.0, 0.7, curve: Curves.easeOut),
     );
 
+    // 入场不用 easeOutBack：回弹的活泼感和纸墨的克制冲突，平移到位即可。
     _slideAnimation =
-        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.3, 1.0, curve: Curves.easeOutBack),
-      ),
+        Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
-
-    // 初始化语言选择控制器
-    _languageScrollController = FixedExtentScrollController(initialItem: 0);
 
     _animationController.forward();
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // 从控制器获取当前语言设置
-    final controller = context.read<OnboardingController>();
-    final currentLocale =
-        controller.state.getPreference<String>('localeCode') ?? '';
-    final index = _languageCodes.indexOf(currentLocale);
-    if (index >= 0 && index != _selectedLanguageIndex) {
-      _selectedLanguageIndex = index;
-      if (_languageScrollController.hasClients) {
-        _languageScrollController.jumpToItem(index);
-      }
-    }
-  }
-
-  @override
   void dispose() {
     _animationController.dispose();
-    _languageScrollController.dispose();
     super.dispose();
   }
 
-  String _getLanguageLabel(String code) {
-    switch (code) {
-      case '':
-        return OnboardingConfig.languageDisplayLabel(
-          AppLocalizations.of(context),
-          code,
-        );
-      default:
-        return OnboardingConfig.languageDisplayLabel(
-          AppLocalizations.of(context),
-          code,
-        );
-    }
-  }
+  String get _currentLanguageCode =>
+      context.read<OnboardingController>().state.getPreference<String>(
+            'localeCode',
+          ) ??
+      '';
 
-  void _onLanguageChanged(int index) {
-    setState(() {
-      _selectedLanguageIndex = index;
-    });
+  void _selectLanguage(String code) {
     final controller = context.read<OnboardingController>();
-    final selectedCode = _languageCodes[index];
-    controller.updatePreference('localeCode', selectedCode);
+    controller.updatePreference('localeCode', code);
 
-    // 立即应用语言设置
-    final settingsService = context.read<SettingsService>();
-    final locationService = context.read<LocationService>();
-    settingsService.setLocale(selectedCode.isEmpty ? null : selectedCode);
-    // 同步更新位置服务的语言设置
-    locationService.currentLocaleCode =
-        selectedCode.isEmpty ? null : selectedCode;
+    // 立即生效：这一屏之后的所有文案都应该已经是新语言。
+    context.read<SettingsService>().setLocale(code.isEmpty ? null : code);
+    context.read<LocationService>().currentLocaleCode =
+        code.isEmpty ? null : code;
   }
+
+  Future<void> _openLanguageSheet() async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (sheetContext) => _LanguageSheet(
+        selectedCode: _currentLanguageCode,
+      ),
+    );
+
+    if (selected == null || !mounted) return;
+    _selectLanguage(selected);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildAppIcon(theme),
+                const SizedBox(height: 32),
+                Text(
+                  widget.pageData.title,
+                  style: theme.textTheme.headlineMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  widget.pageData.subtitle,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 48),
+                _buildLanguageTile(theme),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 语言行：整行可点，右侧是当前值和一个指示可展开的箭头。
+  Widget _buildLanguageTile(ThemeData theme) {
+    final shape = AppShapeTokens.of(context);
+    final l10n = AppLocalizations.of(context);
+    // 语言变了这一行要跟着变，所以这里要 watch 而不是 read。
+    final code = context
+            .watch<OnboardingController>()
+            .state
+            .getPreference<String>('localeCode') ??
+        '';
+
+    return Semantics(
+      button: true,
+      label: l10n.prefLanguage,
+      value: OnboardingConfig.languageDisplayLabel(l10n, code),
+      child: Material(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(shape.cardRadius),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(shape.cardRadius),
+          onTap: _openLanguageSheet,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(shape.cardRadius),
+              border: shape.borderWidth > 0
+                  ? Border.all(
+                      color: theme.colorScheme.outlineVariant,
+                      width: shape.borderWidth,
+                    )
+                  : null,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.translate_rounded,
+                  size: 20,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 14),
+                Text(
+                  l10n.prefLanguage,
+                  style: theme.textTheme.bodyLarge,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    OnboardingConfig.languageDisplayLabel(l10n, code),
+                    textAlign: TextAlign.end,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppIcon(ThemeData theme) {
+    final shape = AppShapeTokens.of(context);
+    final radius = BorderRadius.circular(shape.cardRadius);
+
+    return Container(
+      width: 112,
+      height: 112,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: shape.lowShadow,
+        border: shape.borderWidth > 0
+            ? Border.all(
+                color: theme.colorScheme.outlineVariant,
+                width: shape.borderWidth,
+              )
+            : null,
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Image.asset(
+          'assets/icon.png',
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return ColoredBox(
+              color: theme.colorScheme.primaryContainer,
+              child: Icon(
+                Icons.auto_stories,
+                size: 56,
+                color: theme.colorScheme.onPrimaryContainer,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// 语言选择底部弹窗。选中项走 pop 返回，由调用方落地，弹窗本身不碰服务。
+class _LanguageSheet extends StatelessWidget {
+  const _LanguageSheet({required this.selectedCode});
+
+  final String selectedCode;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(40.0),
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // 应用图标
-                    _buildAppIcon(theme),
-                    const SizedBox(height: 40),
-
-                    // 标题
-                    Text(
-                      widget.pageData.title,
-                      style: theme.textTheme.headlineMedium
-                          ?.copyWith(color: theme.colorScheme.primary),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // 副标题 + 条带底座（不覆盖文字）
-                    Column(
-                      children: [
-                        Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // 条带底座，稍微下移
-                            Positioned(
-                              top: 18,
-                              left: 0,
-                              right: 0,
-                              child: FractionallySizedBox(
-                                widthFactor: 0.82,
-                                child: Container(
-                                  height: 22,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        theme.colorScheme.primary.withValues(
-                                          alpha: 0.18,
-                                        ),
-                                        theme.colorScheme.secondary.withValues(
-                                          alpha: 0.13,
-                                        ),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(
-                                        AppShapeTokens.of(context).cardRadius),
-                                    boxShadow:
-                                        AppShapeTokens.of(context).lowShadow,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // 副标题文字悬浮于条带之上
-                            Text(
-                              widget.pageData.subtitle,
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontSize: 23,
-                                letterSpacing: 1.1,
-                                shadows: [
-                                  Shadow(
-                                    color: theme.colorScheme.primary.withValues(
-                                      alpha: 0.18,
-                                    ),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 18),
-                      ],
-                    ),
-
-                    // 语言选择器（简洁版）
-                    const SizedBox(height: 32),
-                    _buildCompactLanguageSelector(theme, l10n),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  /// 构建简洁的语言选择器（滚轮样式）
-  Widget _buildCompactLanguageSelector(ThemeData theme, AppLocalizations l10n) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Icon(
-          Icons.translate_rounded,
-          color: theme.colorScheme.primary,
-          size: 24,
-        ),
-        const SizedBox(width: 16),
-        // 语言滚轮选择器
-        SizedBox(
-          width: 200,
-          height: 120,
-          child: ListWheelScrollView.useDelegate(
-            controller: _languageScrollController,
-            itemExtent: 40,
-            perspective: 0.003,
-            diameterRatio: 1.5,
-            physics: const FixedExtentScrollPhysics(),
-            onSelectedItemChanged: _onLanguageChanged,
-            childDelegate: ListWheelChildBuilderDelegate(
-              childCount: _languageCodes.length,
-              builder: (context, index) {
-                final isSelected = index == _selectedLanguageIndex;
-                return Center(
-                  child: AnimatedDefaultTextStyle(
-                    duration: const Duration(milliseconds: 200),
-                    style: (theme.textTheme.titleMedium ?? const TextStyle())
-                        .copyWith(
-                      fontSize: isSelected ? 18 : 15,
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.normal,
-                      color: isSelected
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurface.withValues(alpha: 0.45),
-                    ),
-                    child: Text(
-                      _getLanguageLabel(_languageCodes[index]),
-                      maxLines: 1,
-                      overflow: TextOverflow.visible,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAppIcon(ThemeData theme) {
-    return Container(
-      width: 120,
-      height: 120,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(30),
-        child: Image.asset(
-          'assets/icon.png',
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    theme.colorScheme.primary,
-                    theme.colorScheme.secondary,
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: Icon(
-                Icons.auto_stories,
-                size: 64,
-                color: theme.colorScheme.onPrimary,
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-/// 功能展示页面组件
-class FeaturesPageView extends StatefulWidget {
-  final OnboardingPageData pageData;
-
-  const FeaturesPageView({super.key, required this.pageData});
-
-  @override
-  State<FeaturesPageView> createState() => _FeaturesPageViewState();
-}
-
-class _FeaturesPageViewState extends State<FeaturesPageView>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late List<Animation<double>> _featureAnimations;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    );
-
-    final features = widget.pageData.features ?? [];
-    _featureAnimations = List.generate(features.length, (index) {
-      // Calculate intervals that ensure end values don't exceed 1.0
-      final startDelay = index * 0.1; // Reduced from 0.15 to 0.1
-      const animationDuration = 0.4; // Fixed duration for each animation
-      final endTime = (startDelay + animationDuration).clamp(0.0, 1.0);
-
-      return Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(
-          parent: _animationController,
-          curve: Interval(startDelay, endTime, curve: Curves.easeOutCubic),
-        ),
-      );
-    });
-
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        _animationController.forward();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final features = widget.pageData.features ?? [];
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
+    return SafeArea(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 页面标题
-          Text(
-            widget.pageData.title,
-            style: theme.textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            widget.pageData.subtitle,
-            style: theme.textTheme.titleLarge?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 12),
+            child: Text(
+              l10n.onboardingSelectLanguage,
+              style: theme.textTheme.titleMedium,
             ),
           ),
-          const SizedBox(height: 32),
-
-          // 功能列表
-          ...features.asMap().entries.map((entry) {
-            final index = entry.key;
-            final feature = entry.value;
-
-            return AnimatedBuilder(
-              animation: _featureAnimations[index],
-              builder: (context, child) {
-                // Clamp animation values to valid ranges
-                final animationValue = _featureAnimations[index].value;
-                final clampedOpacity = animationValue.clamp(0.0, 1.0);
-                final clampedScale = animationValue.clamp(0.0, double.infinity);
-
-                return Transform.scale(
-                  scale: clampedScale,
-                  child: Opacity(
-                    opacity: clampedOpacity,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: _FeatureCard(
-                        feature: feature,
-                        isHighlight: feature.isHighlight,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            );
-          }),
-
-          const SizedBox(height: 24),
-
-          // 快速提示
-          _buildQuickTips(theme),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickTips(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius:
-            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
-        border: Border.all(
-          color: theme.colorScheme.outline.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.lightbulb_outline,
-                color: theme.colorScheme.primary,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                AppLocalizations.of(context).quickTips,
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(color: theme.colorScheme.primary),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ...OnboardingConfig.getQuickTips(context).map(
-            (tip) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text(
-                tip,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 功能卡片组件
-class _FeatureCard extends StatelessWidget {
-  final OnboardingFeature feature;
-  final bool isHighlight;
-
-  const _FeatureCard({required this.feature, this.isHighlight = false});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius:
-            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
-        boxShadow: isHighlight
-            ? AppShapeTokens.of(context).accentShadow
-            : AppShapeTokens.of(context).lowShadow,
-      ),
-      child: Card(
-        shape: RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
-        ),
-        child: Container(
-          decoration: isHighlight
-              ? BoxDecoration(
-                  borderRadius: BorderRadius.circular(
-                      AppShapeTokens.of(context).cardRadius),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      theme.colorScheme.primaryContainer,
-                      theme.colorScheme.secondaryContainer,
-                    ],
-                  ),
-                )
-              : null,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
+          Divider(height: 1, color: theme.colorScheme.outlineVariant),
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
-                // 图标
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isHighlight
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    feature.icon,
-                    color: isHighlight
-                        ? theme.colorScheme.onPrimary
-                        : theme.colorScheme.primary,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-
-                // 文本内容
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        feature.title,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                            color: isHighlight
-                                ? theme.colorScheme.onPrimaryContainer
-                                : null),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        feature.description,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: isHighlight
-                              ? theme.colorScheme.onPrimaryContainer.withValues(
-                                  alpha: 0.8,
-                                )
-                              : theme.colorScheme.onSurface.withValues(
-                                  alpha: 0.7,
-                                ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // 高亮标识
-                if (isHighlight)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      AppLocalizations.of(context).coreFeature,
-                      style: theme.textTheme.labelSmall
-                          ?.copyWith(color: theme.colorScheme.onPrimary),
-                    ),
+                for (final code in OnboardingConfig.languageCodes)
+                  _LanguageOptionTile(
+                    code: code,
+                    selected: code == selectedCode,
+                    onTap: () => Navigator.of(context).pop(code),
                   ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LanguageOptionTile extends StatelessWidget {
+  const _LanguageOptionTile({
+    required this.code,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String code;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+
+    return Semantics(
+      selected: selected,
+      inMutuallyExclusiveGroup: true,
+      child: ListTile(
+        onTap: onTap,
+        title: Text(
+          OnboardingConfig.languageDisplayLabel(l10n, code),
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: selected ? theme.colorScheme.primary : null,
+            fontWeight: selected ? FontWeight.w600 : null,
+          ),
         ),
+        trailing: selected
+            ? Icon(Icons.check_rounded, color: theme.colorScheme.primary)
+            : null,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 24),
       ),
     );
   }

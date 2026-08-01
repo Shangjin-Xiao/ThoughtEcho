@@ -4,6 +4,14 @@ import '../services/api_service.dart';
 import '../gen_l10n/app_localizations.dart';
 
 /// 引导页面配置
+///
+/// 三屏，顺序即用户看到的顺序：
+/// 0. [OnboardingPageType.welcome] 欢迎与语言
+/// 1. [OnboardingPageType.appearance] 外观风格与每日一言来源
+/// 2. [OnboardingPageType.preferences] 使用习惯、隐私与 AI 引导
+///
+/// 偏好项由 [getPreferences] 统一定义（控制器据此播种默认值），但页面**不再**
+/// 盲目遍历渲染：每屏按 key 取自己那几项。这样加一个偏好不会莫名其妙多出一张卡片。
 class OnboardingConfig {
   static const Map<String, String> _nativeLanguageLabels = {
     'zh': '简体中文',
@@ -14,6 +22,18 @@ class OnboardingConfig {
     'fr': 'Français',
     'de': 'Deutsch',
   };
+
+  /// 语言选项。空字符串表示跟随系统，排在首位。
+  static const List<String> languageCodes = [
+    '',
+    'zh',
+    'en',
+    'ja',
+    'ko',
+    'es',
+    'fr',
+    'de',
+  ];
 
   static String nativeLanguageLabel(String languageCode) {
     return _nativeLanguageLabels[languageCode] ?? languageCode;
@@ -34,79 +54,29 @@ class OnboardingConfig {
   static List<OnboardingPageData> getPages(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return [
-      // 第1页：欢迎页面
       OnboardingPageData(
         title: l10n.onboardingWelcome,
         subtitle: l10n.onboardingSubtitle,
         description: l10n.onboardingDescription,
         type: OnboardingPageType.welcome,
       ),
-
-      // 第2页：核心功能展示
       OnboardingPageData(
-        title: l10n.onboardingCoreFeatures,
-        subtitle: l10n.onboardingDiscoverFeatures,
-        features: getCoreFeatures(context),
-        type: OnboardingPageType.features,
+        title: l10n.onboardingAppearanceTitle,
+        subtitle: l10n.onboardingAppearanceSubtitle,
+        type: OnboardingPageType.appearance,
       ),
-
-      // 第3页：个性化设置
       OnboardingPageData(
-        title: l10n.onboardingPersonalization,
-        subtitle: l10n.onboardingCustomizeExperience,
+        title: l10n.onboardingHabitsTitle,
+        subtitle: l10n.onboardingHabitsSubtitle,
         description: l10n.onboardingModifyLater,
         type: OnboardingPageType.preferences,
       ),
     ];
   }
 
-  // 兼容旧代码的静态访问器（使用占位符，实际使用时应通过getPages获取）
-  static List<OnboardingPageData> get pages => [
-        const OnboardingPageData(
-          title: '',
-          subtitle: '',
-          type: OnboardingPageType.welcome,
-        ),
-        const OnboardingPageData(
-          title: '',
-          subtitle: '',
-          type: OnboardingPageType.features,
-        ),
-        const OnboardingPageData(
-          title: '',
-          subtitle: '',
-          type: OnboardingPageType.preferences,
-        ),
-      ];
-
-  /// 获取核心功能列表（动态国际化）
-  static List<OnboardingFeature> getCoreFeatures(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return [
-      OnboardingFeature(
-        title: l10n.featureSmartNotes,
-        description: l10n.featureSmartNotesDesc,
-        icon: Icons.edit_note,
-      ),
-      OnboardingFeature(
-        title: l10n.featureDailyQuote,
-        description: l10n.featureDailyQuoteDesc,
-        icon: Icons.format_quote,
-      ),
-      OnboardingFeature(
-        title: l10n.featureAiInsight,
-        description: l10n.featureAiInsightDesc,
-        icon: Icons.auto_awesome,
-      ),
-      OnboardingFeature(
-        title: l10n.featureLocalFirst,
-        description: l10n.featureLocalFirstDesc,
-        icon: Icons.security,
-      ),
-    ];
-  }
-
   /// 获取偏好设置列表（动态国际化）
+  ///
+  /// 顺序按所属屏排列：前两项在外观屏，后三项在习惯屏。
   static List<OnboardingPreference<dynamic>> getPreferences(
     BuildContext context,
   ) {
@@ -118,16 +88,7 @@ class OnboardingConfig {
     );
 
     return [
-      // 0. 位置服务（放在最前面）
-      OnboardingPreference<bool>(
-        key: 'locationService',
-        title: l10n.prefLocationService,
-        description: l10n.prefLocationServiceDesc,
-        defaultValue: false,
-        type: OnboardingPreferenceType.toggle,
-      ),
-
-      // 1. 每日一言 provider
+      // ── 外观屏 ──
       OnboardingPreference<String>(
         key: 'dailyQuoteProvider',
         title: l10n.dailyQuoteApi,
@@ -144,18 +105,16 @@ class OnboardingConfig {
             )
             .toList(),
       ),
-
-      // 2. 每日一言类型选择
       OnboardingPreference<String>(
         key: 'hitokotoTypes',
         title: l10n.prefDailyQuoteType,
         description: l10n.prefDailyQuoteTypeDesc,
-        defaultValue: 'a,b,c,d,e,f,g,h,i,j,k',
+        defaultValue: allHitokotoTypeValue,
         type: OnboardingPreferenceType.multiSelect,
         options: getHitokotoTypeOptions(context),
       ),
 
-      // 3. 默认启动页面
+      // ── 习惯与隐私屏 ──
       OnboardingPreference<int>(
         key: 'defaultStartPage',
         title: l10n.prefDefaultStartPage,
@@ -175,8 +134,13 @@ class OnboardingConfig {
           ),
         ],
       ),
-
-      // 4. Sentry 诊断与性能上报 (帮助改进应用)
+      OnboardingPreference<bool>(
+        key: 'locationService',
+        title: l10n.prefLocationService,
+        description: l10n.prefLocationServiceDesc,
+        defaultValue: false,
+        type: OnboardingPreferenceType.toggle,
+      ),
       OnboardingPreference<bool>(
         key: 'sentryEnabled',
         title: l10n.settingsSentryTitle,
@@ -186,6 +150,22 @@ class OnboardingConfig {
       ),
     ];
   }
+
+  /// 按 key 取单个偏好定义，取不到返回 null。
+  static OnboardingPreference<dynamic>? preferenceByKey(
+    BuildContext context,
+    String key,
+  ) {
+    for (final preference in getPreferences(context)) {
+      if (preference.key == key) return preference;
+    }
+    return null;
+  }
+
+  /// 一言类型全选时的取值。默认就是全选——新用户没有偏好，先给最丰富的内容，
+  /// 想收窄再去折叠区里改。
+  static String get allHitokotoTypeValue =>
+      ApiService.hitokotoTypeKeys.keys.join(',');
 
   /// 获取每日一言类型选项（动态国际化）
   static List<OnboardingPreferenceOption<String>> getHitokotoTypeOptions(
@@ -217,24 +197,7 @@ class OnboardingConfig {
         .toList();
   }
 
-  // 兼容旧代码的静态访问器
-  static final List<OnboardingPreference<dynamic>> preferences = [];
-
-  /// 获取快速操作提示（动态国际化）
-  static List<String> getQuickTips(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return [
-      '💡 ${l10n.onboardingQuickTip1}',
-      '✨ ${l10n.onboardingQuickTip2}',
-      '🏷️ ${l10n.onboardingQuickTip3}',
-      '🔍 ${l10n.onboardingQuickTip4}',
-    ];
-  }
-
-  // 兼容旧代码的静态访问器
-  static const List<String> quickTips = [];
-
-  // 获取总页数（固定为3页）
+  // 获取总页数
   static int get totalPages => 3;
 
   // 检查是否为最后一页
@@ -247,14 +210,6 @@ class OnboardingConfig {
   ) {
     final pages = getPages(context);
     if (pageIndex < 0 || pageIndex >= pages.length) {
-      throw ArgumentError('Invalid page index: $pageIndex');
-    }
-    return pages[pageIndex];
-  }
-
-  // 获取页面数据（兼容旧代码，返回占位符数据）
-  static OnboardingPageData getPageData(int pageIndex) {
-    if (pageIndex < 0 || pageIndex >= totalPages) {
       throw ArgumentError('Invalid page index: $pageIndex');
     }
     return pages[pageIndex];

@@ -75,9 +75,12 @@ class SettingsPageState extends State<SettingsPage> {
     _initLocationController();
   }
 
-  /// 当设置页真正可见时触发功能引导
-  void showGuidesIfNeeded({bool Function()? shouldShow}) {
-    if (_guidesTriggered) return;
+  /// 当设置页真正可见时触发功能引导。
+  ///
+  /// 返回是否真的弹了一个气泡——调用方（`HomeGuideCoordinator`）用它来记账，
+  /// 保证一次会话里全应用只打扰用户一次。
+  Future<bool> showGuidesIfNeeded({bool Function()? shouldShow}) async {
+    if (_guidesTriggered) return false;
 
     final allShown =
         FeatureGuideHelper.hasShown(context, 'settings_preferences') &&
@@ -86,20 +89,18 @@ class SettingsPageState extends State<SettingsPage> {
 
     if (allShown) {
       _guidesTriggered = true;
-      return;
+      return false;
     }
 
     _guidesTriggered = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _showSettingsGuides(shouldShow: shouldShow);
-    });
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return false;
+    return _showSettingsGuides(shouldShow: shouldShow);
   }
 
-  /// 显示设置页功能引导
-  void _showSettingsGuides({bool Function()? shouldShow}) {
-    // 依次显示多个引导，等待前一个消失再显示下一个
-    FeatureGuideHelper.showSequence(
+  /// 显示设置页功能引导：三个候选里只放最靠前的那个，其余留到下次进设置页。
+  Future<bool> _showSettingsGuides({bool Function()? shouldShow}) {
+    return FeatureGuideHelper.showFirstAvailable(
       context: context,
       guides: [
         ('settings_preferences', _preferencesGuideKey),

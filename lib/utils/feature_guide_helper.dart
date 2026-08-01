@@ -34,7 +34,9 @@ class FeatureGuideHelper {
   ///   });
   /// }
   /// ```
-  static Future<void> show({
+  /// 返回值表示这个气泡**有没有真的显示出来**。调用方靠它做限流：
+  /// 目标没渲染、条件不满足、已经显示过时都会返回 false，这时候不该算进配额。
+  static Future<bool> show({
     required BuildContext context,
     required String guideId,
     GlobalKey? targetKey,
@@ -47,30 +49,30 @@ class FeatureGuideHelper {
 
       if (guideService.hasShown(guideId)) {
         debugPrint('功能引导 $guideId 已显示过，跳过');
-        return;
+        return false;
       }
 
       final config = FeatureGuide.configs[guideId];
       if (config == null) {
         debugPrint('未找到引导配置: $guideId');
-        return;
+        return false;
       }
 
       final overlayState = Overlay.maybeOf(context);
       if (overlayState == null) {
         debugPrint('未找到 Overlay，无法显示功能引导: $guideId');
-        return;
+        return false;
       }
 
       await WidgetsBinding.instance.endOfFrame;
 
       if (!context.mounted) {
-        return;
+        return false;
       }
 
       if (shouldShow != null && !shouldShow()) {
         debugPrint('功能引导 $guideId 已取消，条件不满足');
-        return;
+        return false;
       }
 
       if (targetKey != null) {
@@ -80,27 +82,27 @@ class FeatureGuideHelper {
         );
         if (renderBox == null) {
           debugPrint('目标元素尚未渲染或已离开视图: $guideId');
-          return;
+          return false;
         }
       }
 
       if (shouldShow != null && !shouldShow()) {
         debugPrint('功能引导 $guideId 在显示前被取消');
-        return;
+        return false;
       }
 
       if (route != null && !route.isCurrent) {
         debugPrint('功能引导 $guideId 所属页面已切换，取消显示');
-        return;
+        return false;
       }
 
       if (!overlayState.mounted) {
         debugPrint('Overlay 已卸载，无法显示功能引导: $guideId');
-        return;
+        return false;
       }
 
       if (!context.mounted) {
-        return;
+        return false;
       }
 
       final guide = FeatureGuide(
@@ -137,76 +139,40 @@ class FeatureGuideHelper {
 
       overlayState.insert(overlayEntry);
       await completer.future;
+      return true;
     } catch (e) {
       debugPrint('显示功能引导失败: $e');
+      return false;
     }
   }
 
-  /// 批量显示多个引导（按顺序）
+  /// 按优先级显示**其中一个**引导，成功显示后立刻停止。
   ///
-  /// 参数:
-  /// - context: BuildContext
-  /// - guides: 引导列表 [(guideId, targetKey), ...]
-  /// - shouldShow: 可选条件判断（返回false则取消后续气泡）
-  /// - delayBetween: 每个引导之间的延迟时间
+  /// 这里原本是 `showSequence`：把候选气泡一个接一个全弹完。记录页最多能排到 4 个，
+  /// 用户刚进页面就要连点四次「知道了」，等于劝退。现在一次只放一个，剩下的留到
+  /// 下次进这个页面——引导本身有价值，密度没有。
   ///
-  /// 使用示例:
-  /// ```dart
-  /// FeatureGuideHelper.showSequence(
-  ///   context: context,
-  ///   guides: [
-  ///     ('note_page_filter', _filterKey),
-  ///     ('note_page_favorite', _favoriteKey),
-  ///   ],
-  /// );
-  /// ```
-  static Future<void> showSequence({
+  /// 返回是否真的显示了一个。前面的候选如果目标没渲染出来，会顺延到下一个。
+  static Future<bool> showFirstAvailable({
     required BuildContext context,
     required List<(String, GlobalKey?)> guides,
     bool Function()? shouldShow,
-    Duration delayBetween = const Duration(milliseconds: 180),
     Duration autoDismissDuration = const Duration(milliseconds: 2200),
   }) async {
-    if (guides.isEmpty) {
-      return;
-    }
+    for (final (guideId, targetKey) in guides) {
+      if (!context.mounted) return false;
+      if (shouldShow != null && !shouldShow()) return false;
 
-    for (var i = 0; i < guides.length; i++) {
-      final (guideId, targetKey) = guides[i];
-
-      // 每个气泡独立等待条件满足,无超时限制
-      // 只要页面还在(context mounted),就一直等待用户切回来
-      while (shouldShow != null && !shouldShow()) {
-        // Context 已销毁,整个序列终止
-        if (!context.mounted) {
-          debugPrint('功能引导序列终止: context 已销毁');
-          return;
-        }
-        // 等待用户切回对应页面
-        await Future.delayed(const Duration(milliseconds: 200));
-      }
-
-      // 条件满足,显示当前引导
-      if (!context.mounted) {
-        return;
-      }
-      await show(
+      final shown = await show(
         context: context,
         guideId: guideId,
         targetKey: targetKey,
         autoDismissDuration: autoDismissDuration,
         shouldShow: shouldShow,
       );
-
-      if (!context.mounted) {
-        break;
-      }
-
-      final isLast = i == guides.length - 1;
-      if (!isLast) {
-        await Future.delayed(delayBetween);
-      }
+      if (shown) return true;
     }
+    return false;
   }
 
   /// 重置某个引导（用于测试或重新显示）

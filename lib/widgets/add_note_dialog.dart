@@ -684,9 +684,12 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     });
   }
 
-  /// 显示功能引导序列
+  /// 显示功能引导：两个候选里只弹靠前的那个。
+  ///
+  /// 这里是用户正要写东西的时刻，连弹两个气泡会直接挡在编辑区前面；
+  /// 没弹到的那个留到下次打开对话框。
   void _showGuides() {
-    FeatureGuideHelper.showSequence(
+    FeatureGuideHelper.showFirstAvailable(
       context: context,
       guides: [
         ('add_note_fullscreen_button', _fullscreenButtonKey),
