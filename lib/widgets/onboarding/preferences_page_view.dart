@@ -222,7 +222,10 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
         preference.defaultValue as bool;
 
     return Card(
-      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+      ),
       child: SwitchListTile(
         value: value,
         onChanged: (newValue) async {
@@ -344,7 +347,10 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
     List<OnboardingPreferenceOption<dynamic>> options,
   ) {
     return Card(
-      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -403,7 +409,10 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
     List<OnboardingPreferenceOption<dynamic>> options,
   ) {
     return Card(
-      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -476,7 +485,10 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
 
     if (preference.key == 'hitokotoTypes' && !showTypeSelection) {
       return Card(
-        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+        ),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: _buildDailyQuoteProviderSelector(theme),
@@ -485,7 +497,10 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
     }
 
     return Card(
-      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -620,7 +635,8 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
       ),
       child: Material(
         type: MaterialType.transparency,

@@ -229,9 +229,6 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   }) {
     return Card(
       elevation: 0,
-      color: theme.brightness == Brightness.light
-          ? Colors.white
-          : theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius:
             BorderRadius.circular(AppShapeTokens.of(context).cardRadius),

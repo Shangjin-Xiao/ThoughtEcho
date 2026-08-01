@@ -10,6 +10,7 @@ import '../services/data_directory_service.dart';
 import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../theme/app_semantic_colors.dart';
+import '../theme/theme_style.dart';
 import 'trash_page.dart';
 
 /// 存储管理页面
@@ -496,7 +497,10 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     final cacheColor = palette.cache;
 
     return Card(
-      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(

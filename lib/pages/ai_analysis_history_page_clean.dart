@@ -9,7 +9,6 @@ import '../services/ai_analysis_database_service.dart';
 import '../services/database_service.dart';
 import '../services/ai_service.dart';
 import '../models/quote_model.dart';
-import '../theme/app_theme.dart';
 import '../widgets/app_empty_view.dart';
 import '../widgets/app_loading_view.dart';
 import '../utils/app_logger.dart';
@@ -239,10 +238,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.vertical(
-            top: Radius.circular(
-                AppShapeTokens.of(context).dialogRadius), // Use AppTheme
+            top: Radius.circular(AppShapeTokens.of(context).dialogRadius),
           ),
-          boxShadow: AppTheme.defaultShadow, // Add shadow
+          boxShadow: AppShapeTokens.of(context).raisedShadow,
         ),
         child: Column(
           children: [
@@ -1073,11 +1071,6 @@ $positiveQuotesText
                           final analysis = filteredAnalyses[index];
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12),
-                            elevation: 2,
-                            shadowColor: Theme.of(context)
-                                .colorScheme
-                                .shadow
-                                .withValues(alpha: 0.1),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(
                                 AppShapeTokens.of(context).cardRadius,

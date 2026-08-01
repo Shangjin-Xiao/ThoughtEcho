@@ -7,6 +7,7 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 
 import '../gen_l10n/app_localizations.dart';
+import '../theme/theme_style.dart';
 import '../utils/app_logger.dart';
 import '../utils/optimized_image_loader.dart';
 import '../widgets/media_player_widget.dart';
@@ -351,7 +352,9 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: displayWidth),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(
+                AppShapeTokens.of(context).cardRadius,
+              ),
               child: _buildImageContent(
                 context,
                 displayWidth,
@@ -547,7 +550,8 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
       constraints: const BoxConstraints(minHeight: 80),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
       ),
       alignment: Alignment.center,
       child: Icon(

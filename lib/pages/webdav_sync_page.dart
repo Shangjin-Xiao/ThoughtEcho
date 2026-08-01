@@ -363,7 +363,6 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                   ),
                   const SizedBox(height: 12),
                   Card(
-                    elevation: 1,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(
                           AppShapeTokens.of(context).cardRadius),
@@ -487,7 +486,6 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                   ),
                   const SizedBox(height: 12),
                   Card(
-                    elevation: 1,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(
                           AppShapeTokens.of(context).cardRadius),
@@ -705,7 +703,6 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     }
 
     return Card(
-      elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius:
             BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
@@ -914,7 +911,10 @@ class QuoteListViewByConflict extends StatelessWidget {
             final quote = quotes[index];
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
-              elevation: 1,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).cardRadius),
+              ),
               child: ListTile(
                 title: Text(
                   quote.content,

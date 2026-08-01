@@ -46,13 +46,7 @@ class SVGCardWidget extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius:
               BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: AppShapeTokens.of(context).restShadow,
         ),
         child: ClipRRect(
           borderRadius:
@@ -619,13 +613,7 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                           borderRadius: BorderRadius.circular(
                             AppShapeTokens.of(context).dialogRadius,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
+                          boxShadow: AppShapeTokens.of(context).accentShadow,
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(20),

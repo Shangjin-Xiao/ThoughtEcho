@@ -4,6 +4,7 @@ import '../extensions/note_category_localization_extension.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/note_category.dart';
 import '../services/database_service.dart';
+import '../theme/theme_style.dart';
 import '../utils/icon_utils.dart';
 
 /// 只让外层边距响应键盘 inset，避免键盘动画驱动整个弹窗内容重建。
@@ -333,7 +334,8 @@ class SelectedTagsDisplay extends StatelessWidget {
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

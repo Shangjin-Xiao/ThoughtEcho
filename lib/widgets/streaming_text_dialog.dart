@@ -128,28 +128,34 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
     final dialogHeight = screenSize.height * 0.7;
 
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.circular(AppShapeTokens.of(context).dialogRadius),
-      ),
-      elevation: 8,
-      backgroundColor: colorScheme.surface,
-      child: ClipRRect(
-        borderRadius:
-            BorderRadius.circular(AppShapeTokens.of(context).dialogRadius),
-        child: Container(
-          width: dialogWidth,
-          constraints: BoxConstraints(maxHeight: dialogHeight),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 标题栏
-              _buildHeader(theme, colorScheme),
-              // 内容区域
-              Flexible(child: _buildContent(theme, colorScheme)),
-              // 底部操作栏
-              _buildActions(theme, colorScheme),
-            ],
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).dialogRadius),
+          boxShadow: AppShapeTokens.of(context).raisedShadow,
+        ),
+        child: ClipRRect(
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).dialogRadius),
+          child: SizedBox(
+            width: dialogWidth,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: dialogHeight),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 标题栏
+                  _buildHeader(theme, colorScheme),
+                  // 内容区域
+                  Flexible(child: _buildContent(theme, colorScheme)),
+                  // 底部操作栏
+                  _buildActions(theme, colorScheme),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -427,7 +433,8 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: colorScheme.tertiaryContainer.applyOpacity(0.5),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).cardRadius),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,

@@ -128,9 +128,15 @@ Future<void> showExperimentalNoticeDialog(BuildContext context) async {
           }
 
           return Dialog(
-            elevation: 6,
-            backgroundColor: colorScheme.surface,
-            child: Padding(
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            child: Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).dialogRadius),
+                boxShadow: AppShapeTokens.of(context).raisedShadow,
+              ),
               padding: const EdgeInsets.all(24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,

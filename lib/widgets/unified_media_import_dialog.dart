@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path/path.dart' as path;
 import '../services/media_file_service.dart';
+import '../theme/theme_style.dart';
 import '../utils/stream_file_selector.dart';
 import '../services/large_file_manager.dart' as lfm;
 import '../utils/app_logger.dart';
@@ -96,7 +97,8 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius:
+                BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,7 +159,8 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius:
+                  BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
             ),
             child: Text(
               _statusMessage,

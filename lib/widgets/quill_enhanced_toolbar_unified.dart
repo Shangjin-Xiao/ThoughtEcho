@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../gen_l10n/app_localizations.dart';
+import '../theme/theme_style.dart';
 import 'unified_media_import_dialog.dart';
 
 /// 统一的增强工具栏组件
@@ -255,6 +256,7 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
     required VoidCallback onPressed,
   }) {
     final theme = Theme.of(context);
+    final buttonRadius = AppShapeTokens.of(context).buttonRadius;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 1),
@@ -265,15 +267,15 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
           label: tooltip,
           child: Material(
             color: Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(buttonRadius),
             child: InkWell(
               onTap: onPressed,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(buttonRadius),
               child: Container(
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(buttonRadius),
                 ),
                 child: Icon(icon, size: 18, color: theme.colorScheme.onSurface),
               ),

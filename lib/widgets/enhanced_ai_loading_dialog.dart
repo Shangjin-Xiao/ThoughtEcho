@@ -84,13 +84,7 @@ class EnhancedAILoadingDialog extends StatelessWidget {
           color: theme.colorScheme.surface,
           borderRadius:
               BorderRadius.circular(AppShapeTokens.of(context).dialogRadius),
-          boxShadow: [
-            BoxShadow(
-              color: theme.shadowColor.withValues(alpha: 0.15),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          boxShadow: AppShapeTokens.of(context).raisedShadow,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -176,13 +170,7 @@ class EnhancedAIProgressDialog extends StatelessWidget {
           color: theme.colorScheme.surface,
           borderRadius:
               BorderRadius.circular(AppShapeTokens.of(context).dialogRadius),
-          boxShadow: [
-            BoxShadow(
-              color: theme.shadowColor.withValues(alpha: 0.15),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          boxShadow: AppShapeTokens.of(context).raisedShadow,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

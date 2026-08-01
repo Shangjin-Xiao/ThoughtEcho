@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../theme/theme_style.dart';
 import '../utils/color_utils.dart';
 
 class AccessibleColorGrid extends StatelessWidget {
@@ -51,7 +52,8 @@ class AccessibleColorGrid extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

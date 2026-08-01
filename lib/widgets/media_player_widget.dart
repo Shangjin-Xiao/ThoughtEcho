@@ -490,13 +490,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       decoration: BoxDecoration(
         borderRadius:
             BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: AppShapeTokens.of(context).restShadow,
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
@@ -562,13 +556,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         border: Border.all(
           color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: AppShapeTokens.of(context).lowShadow,
       ),
       child: Column(
         children: [

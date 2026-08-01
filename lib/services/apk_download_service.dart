@@ -6,6 +6,7 @@ import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../theme/theme_style.dart';
 import '../utils/app_logger.dart';
 
 /// 下载状态枚举
@@ -649,7 +650,8 @@ class _DownloadProgressDialog extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(
+                      AppShapeTokens.of(context).cardRadius),
                 ),
                 child: Row(
                   children: [

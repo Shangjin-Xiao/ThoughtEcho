@@ -261,13 +261,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                             borderRadius: BorderRadius.circular(
                               AppShapeTokens.of(context).cardRadius,
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.08),
-                                blurRadius: 18,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+                            boxShadow: AppShapeTokens.of(context).raisedShadow,
                           ),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,

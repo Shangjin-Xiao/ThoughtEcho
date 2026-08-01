@@ -22,6 +22,7 @@ import '../services/location_service.dart';
 import '../services/local_geocoding_service.dart';
 import '../services/settings_service.dart';
 import '../services/weather_service.dart';
+import '../theme/theme_style.dart';
 import '../utils/feature_guide_helper.dart';
 import '../utils/time_utils.dart'; // 导入时间工具类
 import 'accessible_color_grid.dart'; // Import the new accessible color grid
@@ -2443,7 +2444,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surface,
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(
+                            AppShapeTokens.of(context).cardRadius,
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2468,7 +2471,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                 Tooltip(
                                   message: AppLocalizations.of(context).close,
                                   child: InkWell(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(
+                                      AppShapeTokens.of(context).buttonRadius,
+                                    ),
                                     onTap: () {
                                       setState(() {
                                         _aiSummary = null;

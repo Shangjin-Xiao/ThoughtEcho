@@ -11,7 +11,6 @@ import '../services/database_service.dart';
 import '../widgets/add_note_dialog.dart'; // 导入AddNoteDialog
 import 'package:provider/provider.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 导入安全包装类
-import '../theme/app_theme.dart';
 import '../utils/app_logger.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../theme/theme_style.dart';
@@ -336,7 +335,7 @@ class ClipboardService extends ChangeNotifier {
                   color: Theme.of(overlayContext).colorScheme.surface,
                   borderRadius: BorderRadius.circular(
                       AppShapeTokens.of(context).dialogRadius),
-                  boxShadow: AppTheme.defaultShadow,
+                  boxShadow: AppShapeTokens.of(context).restShadow,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

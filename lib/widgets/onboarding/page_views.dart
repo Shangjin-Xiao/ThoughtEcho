@@ -184,16 +184,10 @@ class _WelcomePageViewState extends State<WelcomePageView>
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
-                                    borderRadius: BorderRadius.circular(14),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: theme.colorScheme.primary
-                                            .withValues(alpha: 0.13),
-                                        blurRadius: 12,
-                                        spreadRadius: 1,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
+                                    borderRadius: BorderRadius.circular(
+                                        AppShapeTokens.of(context).cardRadius),
+                                    boxShadow:
+                                        AppShapeTokens.of(context).lowShadow,
                                   ),
                                 ),
                               ),
@@ -507,95 +501,105 @@ class _FeatureCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Card(
-      elevation: isHighlight ? 8 : 2,
-      shadowColor:
-          isHighlight ? theme.colorScheme.primary.withValues(alpha: 0.3) : null,
-      child: Container(
-        decoration: isHighlight
-            ? BoxDecoration(
-                borderRadius: BorderRadius.circular(
-                    AppShapeTokens.of(context).cardRadius),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    theme.colorScheme.primaryContainer,
-                    theme.colorScheme.secondaryContainer,
-                  ],
-                ),
-              )
-            : null,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              // 图标
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isHighlight
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  feature.icon,
-                  color: isHighlight
-                      ? theme.colorScheme.onPrimary
-                      : theme.colorScheme.primary,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-
-              // 文本内容
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      feature.title,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                          color: isHighlight
-                              ? theme.colorScheme.onPrimaryContainer
-                              : null),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      feature.description,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: isHighlight
-                            ? theme.colorScheme.onPrimaryContainer.withValues(
-                                alpha: 0.8,
-                              )
-                            : theme.colorScheme.onSurface.withValues(
-                                alpha: 0.7,
-                              ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // 高亮标识
-              if (isHighlight)
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+        boxShadow: isHighlight
+            ? AppShapeTokens.of(context).accentShadow
+            : AppShapeTokens.of(context).lowShadow,
+      ),
+      child: Card(
+        shape: RoundedRectangleBorder(
+          borderRadius:
+              BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+        ),
+        child: Container(
+          decoration: isHighlight
+              ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(
+                      AppShapeTokens.of(context).cardRadius),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      theme.colorScheme.primaryContainer,
+                      theme.colorScheme.secondaryContainer,
+                    ],
+                  ),
+                )
+              : null,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                // 图标
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    borderRadius: BorderRadius.circular(8),
+                    color: isHighlight
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    AppLocalizations.of(context).coreFeature,
-                    style: theme.textTheme.labelSmall
-                        ?.copyWith(color: theme.colorScheme.onPrimary),
+                  child: Icon(
+                    feature.icon,
+                    color: isHighlight
+                        ? theme.colorScheme.onPrimary
+                        : theme.colorScheme.primary,
+                    size: 24,
                   ),
                 ),
-            ],
+                const SizedBox(width: 16),
+
+                // 文本内容
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        feature.title,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                            color: isHighlight
+                                ? theme.colorScheme.onPrimaryContainer
+                                : null),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        feature.description,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: isHighlight
+                              ? theme.colorScheme.onPrimaryContainer.withValues(
+                                  alpha: 0.8,
+                                )
+                              : theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.7,
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 高亮标识
+                if (isHighlight)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      AppLocalizations.of(context).coreFeature,
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: theme.colorScheme.onPrimary),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

@@ -106,15 +106,7 @@ class _SlashCommandsMenuState extends State<SlashCommandsMenu>
             ),
             borderRadius:
                 BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(
-                  alpha: theme.brightness == Brightness.dark ? 0.2 : 0.08,
-                ),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            boxShadow: AppShapeTokens.of(context).raisedShadow,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
