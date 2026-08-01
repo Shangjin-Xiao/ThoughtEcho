@@ -29,7 +29,14 @@
 > **进度（2026-08-01）**：第 1 批、第 5 批**已完成**；第 6 节的「阴影令牌缺口」**已补上**
 > （`AppShapeTokens` 现有 `restShadow` / `lowShadow` / `raisedShadow` / `accentShadow`
 > 四个 getter，一一对应 `AppTheme` 那四组静态常量，material 下 alpha 差 < 0.002）。
-> 剩余：第 2、3、4、6 批。
+> **2026-08-01 全部六批已完成。** 本文档转为存档，剩下的只有两类刻意未做的：
+> - **`Border.all` 的宽度**：`borderWidth` 在 material 下是 0，接过去会让默认风格的
+>   描边整体消失，属观感变更而非迁移。
+> - **`Chip` 的 elevation**：不在 `CardThemeData` 覆盖范围内，也没有对应令牌路径。
+>   要做得先补 `ChipThemeData`，别临时糊。
+>
+> 另外 `svg_card_widget.dart` 有一片硬编码颜色（`Colors.grey[*]` / `Colors.red[*]` /
+> 预览画布的 `Colors.white`）违反 AGENTS.md，属另一类问题，未处理。
 >
 > 另外，第三节列的「疑似死代码集群」已确认是死代码并**删除**
 > （`markdown_message_bubble.dart`、`typing_indicator_bubble.dart`、
