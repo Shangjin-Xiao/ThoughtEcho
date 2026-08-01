@@ -62,6 +62,8 @@ class ThemeStyleForm {
     required this.shadowOpacityLight,
     required this.shadowOpacityDark,
     required this.shadowBlur,
+    required this.ruleSpacing,
+    required this.ruleOpacity,
     required this.fontFamily,
     required this.fontFamilyFallback,
   });
@@ -78,6 +80,16 @@ class ThemeStyleForm {
   final double shadowOpacityLight;
   final double shadowOpacityDark;
   final double shadowBlur;
+
+  /// 纸张横线的行距，逻辑像素。**0 表示不画**——这是「要不要纹理」的唯一判据，
+  /// 不是风格身份。将来任何一套风格把它设成 0 都会自动没有纹理，不用改 widget。
+  ///
+  /// 纹理是计划文档里唯一允许的视觉隐喻破例（令牌表达不了纹理本身），
+  /// 但「画不画、画多密、多淡」仍然是令牌取值。
+  final double ruleSpacing;
+
+  /// 横线相对 `colorScheme.outlineVariant` 的不透明度。
+  final double ruleOpacity;
 
   /// 首选字体族。null 表示用系统默认（material 风格保持原样）。
   ///
@@ -113,6 +125,8 @@ class ThemeStyleForm {
     shadowOpacityLight: 0.06,
     shadowOpacityDark: 0.24,
     shadowBlur: 12,
+    ruleSpacing: 0,
+    ruleOpacity: 0,
     fontFamily: null,
     fontFamilyFallback: null,
   );
@@ -127,6 +141,8 @@ class ThemeStyleForm {
     shadowOpacityLight: 0.03,
     shadowOpacityDark: 0.14,
     shadowBlur: 6,
+    ruleSpacing: 26,
+    ruleOpacity: 0.55,
     fontFamily: 'Songti SC',
     fontFamilyFallback: _systemSerifFallback,
   );
@@ -141,6 +157,9 @@ class ThemeStyleForm {
     shadowOpacityLight: 0.02,
     shadowOpacityDark: 0.10,
     shadowBlur: 4,
+    // 素笺是「素」的：不画横线。这也让两套手工风格除了颜色和圆角之外有了真正的差别。
+    ruleSpacing: 0,
+    ruleOpacity: 0,
     fontFamily: 'Songti SC',
     fontFamilyFallback: _systemSerifFallback,
   );
@@ -160,6 +179,8 @@ class AppShapeTokens extends ThemeExtension<AppShapeTokens> {
     required this.borderWidth,
     required this.shadowOpacity,
     required this.shadowBlur,
+    required this.ruleSpacing,
+    required this.ruleOpacity,
   });
 
   factory AppShapeTokens.fromForm(
@@ -174,6 +195,8 @@ class AppShapeTokens extends ThemeExtension<AppShapeTokens> {
       borderWidth: form.borderWidth,
       shadowOpacity: form.shadowOpacity(brightness),
       shadowBlur: form.shadowBlur,
+      ruleSpacing: form.ruleSpacing,
+      ruleOpacity: form.ruleOpacity,
     );
   }
 
@@ -184,6 +207,56 @@ class AppShapeTokens extends ThemeExtension<AppShapeTokens> {
   final double borderWidth;
   final double shadowOpacity;
   final double shadowBlur;
+
+  /// 纸张横线行距，0 表示不画。见 [ThemeStyleForm.ruleSpacing]。
+  final double ruleSpacing;
+  final double ruleOpacity;
+
+  /// 四档投影，对应 `AppTheme` 里那四组 `static const`：
+  /// [restShadow]≈defaultShadow、[lowShadow]≈lightShadow、
+  /// [raisedShadow]≈hoverShadow、[accentShadow]≈accentShadow。
+  ///
+  /// 静态常量没法随风格变化，导致「圆角迁移了、投影忘了」——纸墨下卡片方了但还浮着。
+  /// 这四个 getter 由 [shadowOpacity] / [shadowBlur] 按固定比例推导，
+  /// material 取值下与原静态常量在肉眼无差的范围内（alpha 差 < 0.002），
+  /// 手工风格下自动跟着压扁。
+  ///
+  /// 自绘表面用这些，不要再引用 `AppTheme.*Shadow`。
+  List<BoxShadow> get restShadow => _shadow(const [
+        (4 / 3, 1.0, 4.0, -2.0),
+        (2 / 3, 2.0, 8.0, -4.0),
+      ]);
+
+  List<BoxShadow> get lowShadow => _shadow(const [
+        (1.0, 2 / 3, 2.0, -1.0),
+      ]);
+
+  List<BoxShadow> get raisedShadow => _shadow(const [
+        (5 / 3, 4 / 3, 6.0, -2.0),
+        (5 / 6, 8 / 3, 12.0, -6.0),
+      ]);
+
+  List<BoxShadow> get accentShadow => _shadow(const [
+        (2.0, 5 / 3, 8.0, -4.0),
+        (4 / 3, 10 / 3, 16.0, -8.0),
+      ]);
+
+  /// `(alpha 倍率, blur 倍率, dy, spread)` → 一层投影。
+  List<BoxShadow> _shadow(
+    List<(double, double, double, double)> layers,
+  ) {
+    if (shadowOpacity <= 0) return const <BoxShadow>[];
+    return [
+      for (final (alphaScale, blurScale, dy, spread) in layers)
+        BoxShadow(
+          color: const Color(0xFF000000)
+              .withValues(alpha: (shadowOpacity * alphaScale).clamp(0.0, 1.0)),
+          blurRadius: shadowBlur * blurScale,
+          offset: Offset(0, dy),
+          spreadRadius: spread,
+        ),
+    ];
+  }
 
   /// 主题未注册扩展时回退到 material 取值，避免空断言崩溃。
   static AppShapeTokens of(BuildContext context) {
@@ -201,6 +274,8 @@ class AppShapeTokens extends ThemeExtension<AppShapeTokens> {
     double? borderWidth,
     double? shadowOpacity,
     double? shadowBlur,
+    double? ruleSpacing,
+    double? ruleOpacity,
   }) {
     return AppShapeTokens(
       cardRadius: cardRadius ?? this.cardRadius,
@@ -210,6 +285,8 @@ class AppShapeTokens extends ThemeExtension<AppShapeTokens> {
       borderWidth: borderWidth ?? this.borderWidth,
       shadowOpacity: shadowOpacity ?? this.shadowOpacity,
       shadowBlur: shadowBlur ?? this.shadowBlur,
+      ruleSpacing: ruleSpacing ?? this.ruleSpacing,
+      ruleOpacity: ruleOpacity ?? this.ruleOpacity,
     );
   }
 
@@ -225,6 +302,10 @@ class AppShapeTokens extends ThemeExtension<AppShapeTokens> {
       borderWidth: mix(borderWidth, other.borderWidth),
       shadowOpacity: mix(shadowOpacity, other.shadowOpacity),
       shadowBlur: mix(shadowBlur, other.shadowBlur),
+      // 行距**不能**插值：从 0（无纹理）过渡到 26 会经过 0 附近的极小值，
+      // 绘制循环的次数按 1/spacing 爆炸。改成离散切换，淡入淡出交给 ruleOpacity。
+      ruleSpacing: t < 0.5 ? ruleSpacing : other.ruleSpacing,
+      ruleOpacity: mix(ruleOpacity, other.ruleOpacity),
     );
   }
 }

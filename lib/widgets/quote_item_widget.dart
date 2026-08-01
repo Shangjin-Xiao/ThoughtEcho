@@ -9,7 +9,7 @@ import '../extensions/note_category_localization_extension.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../theme/app_semantic_colors.dart';
-import '../theme/app_theme.dart';
+import '../widgets/common/paper_rule_background.dart';
 import '../widgets/quote_content_widget.dart';
 import '../services/weather_service.dart';
 import '../services/location_service.dart';
@@ -702,9 +702,10 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
           widget.topMarginOverride ?? QuoteItemWidget.defaultCardMarginVertical,
       bottom: QuoteItemWidget.defaultCardMarginVertical,
     );
+    final shapeTokens = AppShapeTokens.of(context);
+    final cardRadius = BorderRadius.circular(shapeTokens.cardRadius);
     final cardDecoration = BoxDecoration(
-      borderRadius:
-          BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+      borderRadius: cardRadius,
       border: widget.selectionMode && widget.isSelected
           ? Border.all(color: theme.colorScheme.primary, width: 2)
           : Border.all(color: Colors.transparent, width: 2),
@@ -719,14 +720,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                   )
                 ]
               : (isExpanded
-                  ? [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ]
-                  : AppTheme.defaultShadow),
+                  ? shapeTokens.raisedShadow
+                  : shapeTokens.restShadow),
       gradient: quote.colorHex != null && quote.colorHex!.isNotEmpty
           ? LinearGradient(
               begin: Alignment.topLeft,
@@ -1310,6 +1305,14 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         ],
       ),
     );
+    // 纸张横线纹理：ruleSpacing 为 0 的风格（material / 素笺）下这层会原样返回 child，
+    // 不产生额外的绘制层，所以折叠态卡片的 RepaintBoundary 缓存收益不受影响。
+    final Widget ruledChild = visualEffectsDisabled
+        ? cardChild
+        : PaperRuleBackground(
+            borderRadius: cardRadius,
+            child: cardChild,
+          );
     final shouldAnimateCardShell = widget.selectionMode || isExpanded;
     final Widget card;
     if (shouldAnimateCardShell) {
@@ -1317,7 +1320,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         duration: const Duration(milliseconds: 200),
         margin: cardMargin,
         decoration: cardDecoration,
-        child: cardChild,
+        child: ruledChild,
       );
     } else {
       // 性能优化（第一步）：折叠态静态卡片用 RepaintBoundary 隔离绘制。
@@ -1329,7 +1332,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         child: Container(
           margin: cardMargin,
           decoration: cardDecoration,
-          child: cardChild,
+          child: ruledChild,
         ),
       );
     }

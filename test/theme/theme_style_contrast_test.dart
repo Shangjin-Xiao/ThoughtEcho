@@ -1,6 +1,8 @@
 import 'dart:ui';
 
+import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
 
 /// 手工色板没有 M3 tonal palette 那样的算法保证，任何一次手改色值都可能把
@@ -202,6 +204,81 @@ void main() {
       expect(mid.borderWidth, (a.borderWidth + b.borderWidth) / 2);
       // 类型不匹配时原样返回，不能抛。
       expect(a.lerp(null, 0.5), same(a));
+    });
+
+    test('material 的令牌投影与原静态常量肉眼无差', () {
+      // 这一条保护的是「迁移不改变 material 观感」：把 AppTheme.*Shadow 换成
+      // AppShapeTokens 的 getter 之后，material 风格下不能有可见变化。
+      final tokens =
+          AppShapeTokens.fromForm(ThemeStyleForm.material, Brightness.light);
+      final pairs = <String, (List<BoxShadow>, List<BoxShadow>)>{
+        'rest': (tokens.restShadow, AppTheme.defaultShadow),
+        'low': (tokens.lowShadow, AppTheme.lightShadow),
+        'raised': (tokens.raisedShadow, AppTheme.hoverShadow),
+        'accent': (tokens.accentShadow, AppTheme.accentShadow),
+      };
+      pairs.forEach((label, pair) {
+        final (derived, legacy) = pair;
+        expect(derived.length, legacy.length, reason: '$label 层数不一致');
+        for (var i = 0; i < derived.length; i++) {
+          expect(derived[i].color.a, closeTo(legacy[i].color.a, 0.002),
+              reason: '$label 第 $i 层 alpha 偏离');
+          expect(derived[i].blurRadius, closeTo(legacy[i].blurRadius, 0.01),
+              reason: '$label 第 $i 层 blur 偏离');
+          expect(derived[i].offset, legacy[i].offset);
+          expect(derived[i].spreadRadius, legacy[i].spreadRadius);
+        }
+      });
+    });
+
+    test('手工风格的投影明显比 material 淡', () {
+      for (final style in ThemeStyle.values) {
+        if (style.isGenerated) continue;
+        for (final brightness in Brightness.values) {
+          final tokens = AppShapeTokens.fromForm(style.form, brightness);
+          final baseline =
+              AppShapeTokens.fromForm(ThemeStyleForm.material, brightness);
+          expect(
+            tokens.restShadow.first.color.a,
+            lessThan(baseline.restShadow.first.color.a),
+            reason: '${style.name} / ${brightness.name} 投影没压下去',
+          );
+          expect(tokens.restShadow.first.blurRadius,
+              lessThan(baseline.restShadow.first.blurRadius));
+        }
+      }
+    });
+
+    test('纹理开关是令牌取值，只有纸与墨画横线', () {
+      expect(ThemeStyleForm.material.ruleSpacing, 0, reason: 'Material 不该有纸纹');
+      expect(ThemeStyleForm.plain.ruleSpacing, 0, reason: '素笺是素的');
+      expect(ThemeStyleForm.paper.ruleSpacing, greaterThan(0));
+      expect(ThemeStyleForm.paper.ruleOpacity, greaterThan(0));
+      // opacity 是 alpha，越界会在 withValues 里断言。
+      expect(ThemeStyleForm.paper.ruleOpacity, lessThanOrEqualTo(1));
+      // spacing 为 0 的风格必须同时把 opacity 归零，两个判据不能打架。
+      for (final style in ThemeStyle.values) {
+        final form = style.form;
+        if (form.ruleSpacing == 0) expect(form.ruleOpacity, 0);
+      }
+    });
+
+    test('行距不插值，避免过渡中途出现极密的横线', () {
+      final a =
+          AppShapeTokens.fromForm(ThemeStyleForm.material, Brightness.light);
+      final b = AppShapeTokens.fromForm(ThemeStyleForm.paper, Brightness.light);
+      // 若行距参与线性插值，t 稍大于 0 时会得到接近 0 的行距，
+      // 绘制循环次数按 1/spacing 爆炸。这里要求它始终等于某一端的取值。
+      for (final t in const [0.01, 0.25, 0.49, 0.5, 0.75, 0.99]) {
+        final spacing = a.lerp(b, t).ruleSpacing;
+        expect(
+          spacing == a.ruleSpacing || spacing == b.ruleSpacing,
+          isTrue,
+          reason: 't=$t 时行距被插值成了 $spacing',
+        );
+      }
+      // 淡入淡出仍然交给 opacity，所以它必须是连续的。
+      expect(a.lerp(b, 0.5).ruleOpacity, (a.ruleOpacity + b.ruleOpacity) / 2);
     });
 
     test('未知或缺失的持久化取值回退到 material', () {

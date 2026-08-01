@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/theme_style.dart';
-import '../theme/app_theme.dart';
+import 'common/paper_rule_background.dart';
 import '../utils/color_utils.dart';
 
 class SlidingCard extends StatefulWidget {
@@ -127,13 +127,14 @@ class _SlidingCardState extends State<SlidingCard>
             _scaleAnimation.value * _hoverScaleAnimation.value;
 
         // 根据状态选择阴影
+        final shapeTokens = AppShapeTokens.of(context);
         List<BoxShadow> currentShadow;
         if (_isPressed) {
-          currentShadow = AppTheme.lightShadow;
+          currentShadow = shapeTokens.lowShadow;
         } else if (_isHovered) {
-          currentShadow = AppTheme.hoverShadow;
+          currentShadow = shapeTokens.raisedShadow;
         } else {
-          currentShadow = AppTheme.defaultShadow;
+          currentShadow = shapeTokens.restShadow;
         }
 
         return Transform.scale(
@@ -158,63 +159,70 @@ class _SlidingCardState extends State<SlidingCard>
                           AppShapeTokens.of(context).cardRadius),
                     ),
                     shadowColor: Colors.transparent,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOutCubic,
-                      padding: EdgeInsets.all(cardPadding), // 使用动态padding
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(
-                          AppShapeTokens.of(context).cardRadius,
-                        ),
-                        boxShadow: currentShadow,
-                        color: ColorUtils.getCardBackgroundColor(
-                          theme.colorScheme.surface,
-                          theme.brightness,
-                        ),
-                        // 微妙的边框效果（Material Design）
-                        border: Border.all(
-                          color: _isHovered
-                              ? theme.colorScheme.primary.withValues(
-                                  alpha: 0.12,
-                                )
-                              : theme.colorScheme.outline.withValues(
-                                  alpha: 0.08,
-                                ),
-                          width: 1,
-                        ),
+                    // 纹理画在卡片整宽上，所以包在 AnimatedContainer 外层——
+                    // 包在里面会被它的 padding 缩进去。
+                    child: PaperRuleBackground(
+                      borderRadius: BorderRadius.circular(
+                        AppShapeTokens.of(context).cardRadius,
                       ),
-                      child: SingleChildScrollView(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // 引用图标增强效果
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: EdgeInsets.all(_isHovered ? 4 : 0),
-                              decoration: BoxDecoration(
-                                color: _isHovered
-                                    ? theme.colorScheme.primary.withValues(
-                                        alpha: 0.08,
-                                      )
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(24),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOutCubic,
+                        padding: EdgeInsets.all(cardPadding), // 使用动态padding
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(
+                            AppShapeTokens.of(context).cardRadius,
+                          ),
+                          boxShadow: currentShadow,
+                          color: ColorUtils.getCardBackgroundColor(
+                            theme.colorScheme.surface,
+                            theme.brightness,
+                          ),
+                          // 微妙的边框效果（Material Design）
+                          border: Border.all(
+                            color: _isHovered
+                                ? theme.colorScheme.primary.withValues(
+                                    alpha: 0.12,
+                                  )
+                                : theme.colorScheme.outline.withValues(
+                                    alpha: 0.08,
+                                  ),
+                            width: 1,
+                          ),
+                        ),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // 引用图标增强效果
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: EdgeInsets.all(_isHovered ? 4 : 0),
+                                decoration: BoxDecoration(
+                                  color: _isHovered
+                                      ? theme.colorScheme.primary.withValues(
+                                          alpha: 0.08,
+                                        )
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                child: Icon(
+                                  Icons.format_quote,
+                                  size: 40,
+                                  color: _isHovered
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.onSurface.withValues(
+                                          alpha: 0.7,
+                                        ),
+                                ),
                               ),
-                              child: Icon(
-                                Icons.format_quote,
-                                size: 40,
-                                color: _isHovered
-                                    ? theme.colorScheme.primary
-                                    : theme.colorScheme.onSurface.withValues(
-                                        alpha: 0.7,
-                                      ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            widget.child,
-                            const SizedBox(height: 16),
-                          ],
+                              const SizedBox(height: 16),
+                              widget.child,
+                              const SizedBox(height: 16),
+                            ],
+                          ),
                         ),
                       ),
                     ),
