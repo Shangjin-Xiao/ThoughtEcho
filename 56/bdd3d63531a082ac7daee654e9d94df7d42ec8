@@ -1,0 +1,68 @@
+lib/pages/theme_settings_page.dart
+  s_b30c19c3380407::t_a126d36c37dd3d 94-110
+  s_b30c19c3380407::t_8a174594b7a4ff 418
+  s_b30c19c3380407::t_1b52614731311e 395
+  s_b30c19c3380407::t_aa9b42d575aa7b 7
+  s_b30c19c3380407::t_f1658f4197fd39 350-377
+  s_b30c19c3380407::t_c4a13acbdaee4c 378-380
+lib/l10n/app_ko.arb
+  s_b30c19c3380407::t_ffcdfbaa8a9d64 62
+  s_b30c19c3380407::t_f8bd3ce47729a6 578-579
+lib/utils/theme_style_labels.dart
+  s_b30c19c3380407::t_b75add8ea89e43 1-19
+lib/pages/onboarding_page.dart
+  s_b30c19c3380407::t_7e6645ab2db44d 153-157,160-165,168-177
+  s_b30c19c3380407::t_5b63f994aa8d41 158-159,166-167,178-181,454
+  s_b30c19c3380407::t_a0896851501920 20,22
+  s_b30c19c3380407::t_c8685dd54b2a10 418-452
+  s_b30c19c3380407::t_5f9be51e81167f 225-226,233,235
+  s_b30c19c3380407::t_d3f471f49643ba 388-391,393-395
+  s_b30c19c3380407::t_f5270a62280f2d 227,229-231
+  s_b30c19c3380407::t_e734d99b14a794 357
+  s_b30c19c3380407::t_d2d0cf28538d99 221-224,228,234
+  s_b30c19c3380407::t_70931e05442198 232,453,455
+lib/l10n/app_de.arb
+  s_b30c19c3380407::t_34b5f12df43afd 89-98
+test/widget/pages/theme_settings_page_test.dart
+  s_b30c19c3380407::t_b9f57e0b5bd29c 8
+  s_b30c19c3380407::t_0bf00fc846f971 9
+  s_b30c19c3380407::t_86f646a8c2edae 165-167
+  s_b30c19c3380407::t_5e3d14edb6473e 172-181
+  s_b30c19c3380407::t_dddf92551daf39 111-143,182
+  s_b30c19c3380407::t_5e2c79022b30c2 183
+lib/l10n/app_en.arb
+  s_b30c19c3380407::t_8aab19174b7753 74
+  s_b30c19c3380407::t_1651cdabfe074f 615-616
+lib/l10n/app_zh.arb
+  s_b30c19c3380407::t_2698fe6071300c 74-82
+  s_b30c19c3380407::t_750da15507e47d 623-624
+lib/services/settings_service.dart
+  s_b30c19c3380407::t_743f81406b2bde 81-85
+  s_b30c19c3380407::t_2835a75d3aca1d 64-69
+  s_b30c19c3380407::t_1bec8ef1ca813c 535-537
+  s_b30c19c3380407::t_38d4ce5a587194 86-88
+lib/l10n/app_fr.arb
+  s_b30c19c3380407::t_faff051d430e73 578-579
+  s_b30c19c3380407::t_2c983329035f00 62
+lib/l10n/app_es.arb
+  s_b30c19c3380407::t_29c31cbd79518f 89-98
+lib/l10n/app_ja.arb
+  s_b30c19c3380407::t_d29b6047cb6edd 578-579
+  s_b30c19c3380407::t_81bfd535e493c6 62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "56bdd3d63531a082ac7daee654e9d94df7d42ec8",
+  "prompts": {},
+  "sessions": {
+    "s_b30c19c3380407": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b182edc-dee4-40a3-af09-d846808804e8",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
