@@ -33,7 +33,8 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                 color: _settings.enabled
                     ? colorScheme.primary.withValues(alpha: 0.15)
                     : colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius:
+                    BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
               ),
               child: Icon(
                 _settings.enabled
@@ -227,13 +228,14 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
     required VoidCallback onTap,
     bool isRecommended = false,
   }) {
+    final cardRadius = AppShapeTokens.of(context).cardRadius;
     return Material(
       color: isSelected
           ? colorScheme.primaryContainer.withValues(alpha: 0.5)
           : Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(cardRadius),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(cardRadius),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -497,7 +499,8 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           child: Row(
@@ -551,7 +554,8 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
             colorScheme: colorScheme,
           );
         },
-        borderRadius: BorderRadius.circular(8),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           child: Row(

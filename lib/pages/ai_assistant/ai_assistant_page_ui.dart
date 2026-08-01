@@ -347,7 +347,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     final bubbleTextColor =
         isUser ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface;
 
-    final bubbleRadius = const Radius.circular(AppTheme.chatBubbleRadius);
+    // 气泡圆角随主题风格变化，不能是 const。
+    final bubbleRadius =
+        Radius.circular(AppShapeTokens.of(context).dialogRadius);
     final borderRadius = BorderRadius.only(
       topLeft: isUser ? bubbleRadius : Radius.zero,
       topRight: isUser ? Radius.zero : bubbleRadius,

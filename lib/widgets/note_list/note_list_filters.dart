@@ -21,6 +21,7 @@ extension NoteListFiltersExtension on NoteListViewState {
   /// 构建筛选条件的实际内容
   Widget _buildFilterContent(ThemeData theme, double horizontalPadding) {
     final l10n = AppLocalizations.of(context);
+    final shape = AppShapeTokens.of(context);
 
     // 收集所有筛选chip
     final List<Widget> allChips = [];
@@ -192,7 +193,7 @@ extension NoteListFiltersExtension on NoteListViewState {
       height: 32,
       decoration: BoxDecoration(
         color: theme.colorScheme.error.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(shape.buttonRadius),
         border: Border.all(
           color: theme.colorScheme.error.withValues(alpha: 0.2),
           width: 1,
@@ -205,7 +206,7 @@ extension NoteListFiltersExtension on NoteListViewState {
             widget.onTagSelectionChanged([]);
             widget.onFilterChanged([], []);
           },
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(shape.buttonRadius),
           child: Container(
             height: 32,
             padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -245,8 +246,7 @@ extension NoteListFiltersExtension on NoteListViewState {
         ),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerLowest,
-          borderRadius:
-              BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+          borderRadius: BorderRadius.circular(shape.cardRadius),
           border: Border.all(
             color: theme.colorScheme.outline.withValues(alpha: 0.12),
             width: 1,
@@ -263,7 +263,7 @@ extension NoteListFiltersExtension on NoteListViewState {
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(shape.buttonRadius),
                 ),
                 child: Center(
                   child: Icon(
@@ -302,11 +302,12 @@ extension NoteListFiltersExtension on NoteListViewState {
     dynamic icon,
     bool isIconEmoji = false,
   }) {
+    final shape = AppShapeTokens.of(context);
     return Container(
       height: 32,
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(shape.buttonRadius),
         border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
       ),
       child: Row(
@@ -337,9 +338,9 @@ extension NoteListFiltersExtension on NoteListViewState {
             color: Colors.transparent,
             child: InkWell(
               onTap: onDeleted,
-              borderRadius: const BorderRadius.only(
-                topRight: Radius.circular(10),
-                bottomRight: Radius.circular(10),
+              borderRadius: BorderRadius.only(
+                topRight: Radius.circular(shape.buttonRadius),
+                bottomRight: Radius.circular(shape.buttonRadius),
               ),
               child: Container(
                 height: 32,

@@ -805,7 +805,10 @@ class SettingsPageState extends State<SettingsPage> {
                                         color: Theme.of(
                                           context,
                                         ).colorScheme.primary,
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(
+                                          AppShapeTokens.of(context)
+                                              .buttonRadius,
+                                        ),
                                       ),
                                       child: const Center(
                                         child: Icon(

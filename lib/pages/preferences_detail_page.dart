@@ -81,13 +81,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                 ),
                 borderRadius: BorderRadius.circular(
                     AppShapeTokens.of(context).cardRadius),
-                boxShadow: [
-                  BoxShadow(
-                    color: colorScheme.shadow.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                boxShadow: AppShapeTokens.of(context).restShadow,
               ),
               child: Row(
                 children: [
@@ -95,7 +89,8 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: colorScheme.primary,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(
+                          AppShapeTokens.of(context).buttonRadius),
                     ),
                     child: Icon(
                       Icons.tune,
@@ -273,7 +268,8 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                               ? settings.exportFormat
                               : 'card',
                       dropdownColor: theme.colorScheme.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(
+                          AppShapeTokens.of(context).inputRadius),
                       style: theme.textTheme.bodyMedium
                           ?.copyWith(color: theme.colorScheme.onSurface),
                       onChanged: (String? newValue) {
@@ -511,13 +507,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
         border: Border.all(
           color: theme.colorScheme.outline.withValues(alpha: 0.2),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: theme.colorScheme.shadow.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: AppShapeTokens.of(context).lowShadow,
       ),
       child: ClipRRect(
         borderRadius:

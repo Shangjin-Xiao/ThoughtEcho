@@ -72,7 +72,6 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
         children: [
           Card(
             margin: const EdgeInsets.all(16),
-            elevation: 1,
             shape: RoundedRectangleBorder(
               borderRadius:
                   BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
@@ -99,7 +98,6 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
           ),
           Card(
             margin: const EdgeInsets.all(16),
-            elevation: 1,
             shape: RoundedRectangleBorder(
               borderRadius:
                   BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
@@ -150,7 +148,6 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
           if (appTheme.themeStyle.isGenerated)
             Card(
               margin: const EdgeInsets.all(16),
-              elevation: 1,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(
                     AppShapeTokens.of(context).cardRadius),
@@ -203,7 +200,6 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
           if (appTheme.themeStyle.isGenerated)
             Card(
               margin: const EdgeInsets.all(16),
-              elevation: 1,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(
                     AppShapeTokens.of(context).cardRadius),
@@ -366,6 +362,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
             theme.colorScheme.secondary,
           ]
         : <Color>[colors.card, colors.accent, colors.secondary];
+    // 色板预览展示的是「style 这个风格长什么样」，不是当前生效的风格，
+    // 所以圆角要按 style.form 取值，不能读 AppShapeTokens.of(context)
+    // （那个是当前主题的令牌，会导致纸墨/素笺的预览卡片在 material 主题下显示成圆角）。
+    final previewTokens = AppShapeTokens.fromForm(style.form, brightness);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -397,8 +397,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(
-                          AppShapeTokens.of(context).buttonRadius),
+                      borderRadius:
+                          BorderRadius.circular(previewTokens.buttonRadius),
                       border:
                           Border.all(color: theme.colorScheme.outlineVariant),
                     ),
@@ -445,9 +445,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
   ) {
     final isSelected = _themeMode == mode;
     final colorScheme = Theme.of(context).colorScheme;
+    final buttonRadius = AppShapeTokens.of(context).buttonRadius;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(buttonRadius),
       onTap: () {
         setState(() {
           _themeMode = mode;
@@ -459,7 +460,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: isSelected ? colorScheme.primaryContainer : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(buttonRadius),
           border: Border.all(
             color: isSelected ? colorScheme.primary : colorScheme.outline,
             width: 1,
@@ -497,7 +498,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius:
+          BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
       onTap: () async {
         setState(() {
           _customColor = color;
@@ -542,7 +544,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
 
   Widget _buildCustomColorPicker(BuildContext context, AppTheme appTheme) {
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius:
+          BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
       onTap: () => _showColorPicker(context, appTheme),
       child: Container(
         width: 48,

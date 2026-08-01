@@ -25,7 +25,7 @@ extension _HitokotoSettingsPageLayoutSections on _HitokotoSettingsPageState {
         ),
         borderRadius:
             BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
-        boxShadow: AppTheme.lightShadow,
+        boxShadow: AppShapeTokens.of(context).lowShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

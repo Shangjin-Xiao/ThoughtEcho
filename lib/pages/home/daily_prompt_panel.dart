@@ -11,7 +11,6 @@ import '../../services/insight_history_service.dart';
 import '../../services/location_service.dart';
 import '../../services/settings_service.dart';
 import '../../services/weather_service.dart';
-import '../../theme/app_theme.dart';
 import '../../utils/app_logger.dart';
 import '../../utils/daily_prompt_generator.dart';
 import '../ai_assistant_page.dart';
@@ -221,6 +220,7 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final shape = AppShapeTokens.of(context);
     final l10n = AppLocalizations.of(context);
     final aiService = context.watch<AIService>();
     final settingsService = context.watch<SettingsService>();
@@ -247,9 +247,8 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
       ),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius:
-            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
-        boxShadow: AppTheme.defaultShadow,
+        borderRadius: BorderRadius.circular(shape.cardRadius),
+        boxShadow: shape.restShadow,
         border: Border.all(
           color: theme.colorScheme.outline.withAlpha(30),
           width: 1,

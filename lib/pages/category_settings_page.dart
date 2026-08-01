@@ -677,7 +677,9 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
               height: 40,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(
+                  AppShapeTokens.of(context).cardRadius,
+                ),
               ),
               child: Center(
                 child: IconUtils.getCategoryIcon(category.iconName),

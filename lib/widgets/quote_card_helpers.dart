@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/note_category.dart';
+import '../theme/theme_style.dart';
 import '../utils/icon_utils.dart';
 
 class QuoteCardColors {
@@ -66,7 +67,8 @@ class QuoteTagChip extends StatelessWidget {
         color: baseContentColor.withValues(
           alpha: highlighted ? 0.15 : 0.08,
         ),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
         border: Border.all(
           color: baseContentColor.withValues(
             alpha: highlighted ? 0.4 : 0.15,

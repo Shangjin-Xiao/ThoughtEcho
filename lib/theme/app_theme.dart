@@ -204,9 +204,8 @@ class AppTheme with ChangeNotifier {
   static const double buttonRadius = 12;
   static const double inputRadius = 12;
 
-  // 聊天气泡自成一族：AI 侧统一左上直角、其余圆角，消息气泡、思考面板、
-  // 工具进度面板共用，避免三处各写一份而逐渐走形。
-  static const double chatBubbleRadius = 24;
+  // 聊天气泡（消息气泡、思考面板、工具进度面板）不再有独立常量：
+  // 三处共用 `AppShapeTokens.of(context).dialogRadius`，随主题风格变化。
 
   // 多层次阴影效果
   static const List<BoxShadow> defaultShadow = [

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../gen_l10n/app_localizations.dart';
-import '../../theme/app_theme.dart';
+import '../../theme/theme_style.dart';
 
 /// 工具调用进度状态
 enum ToolProgressStatus {
@@ -167,17 +167,21 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final backgroundColor = theme.colorScheme.surfaceContainerHigh;
+    // 与消息气泡、思考面板同一形状：左上直角，其余取随风格变化的对话圆角。
+    final bubbleRadius =
+        Radius.circular(AppShapeTokens.of(context).dialogRadius);
+    final bubbleShape = BorderRadius.only(
+      topLeft: Radius.zero,
+      topRight: bubbleRadius,
+      bottomLeft: bubbleRadius,
+      bottomRight: bubbleRadius,
+    );
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.zero,
-          topRight: Radius.circular(AppTheme.chatBubbleRadius),
-          bottomLeft: Radius.circular(AppTheme.chatBubbleRadius),
-          bottomRight: Radius.circular(AppTheme.chatBubbleRadius),
-        ),
+        borderRadius: bubbleShape,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,12 +189,7 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
           // Header Row
           InkWell(
             onTap: _toggleExpanded,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.zero,
-              topRight: Radius.circular(24),
-              bottomLeft: Radius.circular(24),
-              bottomRight: Radius.circular(24),
-            ),
+            borderRadius: bubbleShape,
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -261,7 +260,7 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: theme.colorScheme.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
                             ),
                             child: Text(
                               widget.thinkingText!.trim(),
@@ -292,7 +291,7 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
                                     decoration: BoxDecoration(
                                       color:
                                           theme.colorScheme.surfaceContainerLow,
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
                                     ),
                                     child: Text(
                                       item.narrationText!.trim(),
@@ -326,7 +325,7 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: itemBackgroundColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

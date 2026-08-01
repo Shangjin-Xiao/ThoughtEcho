@@ -77,8 +77,8 @@ extension _HitokotoSettingsPageWidgets on _HitokotoSettingsPageState {
             : colorScheme.outline.withAlpha(80),
         width: 1,
       ),
-      elevation: isSelected ? 2 : 0,
-      shadowColor: colorScheme.shadow.withAlpha(100),
+      // 选中态不再用 elevation 强调投影——纸墨/素笺下几乎不投影，会显得选中态消失；
+      // 选中已经由 selectedColor 背景色、primary 描边色和对勾图标共同表达，足够清楚。
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       onSelected: onSelected,
     );

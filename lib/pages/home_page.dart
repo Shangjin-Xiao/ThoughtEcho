@@ -20,7 +20,6 @@ import '../widgets/note_list_view.dart';
 import '../widgets/sentry_disclosure_dialog.dart';
 import 'ai_features_page.dart';
 import 'settings_page.dart';
-import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart';
 import '../services/settings_service.dart'; // Import SettingsService
 import '../utils/app_logger.dart';
@@ -74,6 +73,7 @@ class HomeLocationWeatherDisplay extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = theme.colorScheme.onPrimaryContainer;
+    final shape = AppShapeTokens.of(context);
 
     return Padding(
       padding: const EdgeInsets.only(right: 8.0),
@@ -86,9 +86,8 @@ class HomeLocationWeatherDisplay extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: theme.colorScheme.primaryContainer,
-              borderRadius:
-                  BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
-              boxShadow: AppTheme.defaultShadow,
+              borderRadius: BorderRadius.circular(shape.cardRadius),
+              boxShadow: shape.restShadow,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -990,7 +989,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: AppTheme.accentShadow,
+                boxShadow: AppShapeTokens.of(context).accentShadow,
               ),
               child: FloatingActionButton(
                 heroTag: 'homePageFAB',

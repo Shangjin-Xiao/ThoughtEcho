@@ -7,6 +7,7 @@ extension _NoteListItemsExtension on NoteListViewState {
       (controller) => controller.searchError,
     );
     final theme = Theme.of(context);
+    final shape = AppShapeTokens.of(context);
     final l10n = AppLocalizations.of(context);
     _firstOpenScrollPerfEnabled = context.select<SettingsService, bool>(
       (s) => s.appSettings.developerMode && s.enableFirstOpenScrollPerfMonitor,
@@ -98,9 +99,12 @@ extension _NoteListItemsExtension on NoteListViewState {
                                     backgroundColor: Theme.of(
                                       context,
                                     ).colorScheme.surfaceContainerLowest,
-                                    shape: const RoundedRectangleBorder(
+                                    shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(16),
+                                        top: Radius.circular(
+                                          AppShapeTokens.of(context)
+                                              .dialogRadius,
+                                        ),
                                       ),
                                     ),
                                     builder: (context) => NoteFilterSortSheet(
@@ -141,8 +145,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                             horizontal: 12,
                           ),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                                AppShapeTokens.of(context).inputRadius),
+                            borderRadius:
+                                BorderRadius.circular(shape.inputRadius),
                             borderSide: BorderSide(
                               color: Theme.of(
                                 context,
@@ -151,8 +155,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                                AppShapeTokens.of(context).inputRadius),
+                            borderRadius:
+                                BorderRadius.circular(shape.inputRadius),
                             borderSide: BorderSide(
                               color: Theme.of(
                                 context,
@@ -161,8 +165,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(
-                                AppShapeTokens.of(context).inputRadius),
+                            borderRadius:
+                                BorderRadius.circular(shape.inputRadius),
                             borderSide: BorderSide(
                               color: Theme.of(
                                 context,
@@ -232,15 +236,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surfaceContainerHighest
                           .withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(
-                          AppShapeTokens.of(context).cardRadius),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
+                      borderRadius: BorderRadius.circular(shape.cardRadius),
+                      boxShadow: shape.restShadow,
                     ),
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
@@ -294,15 +291,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surfaceContainerHighest
                           .withValues(alpha: 0.95),
-                      borderRadius: BorderRadius.circular(
-                          AppShapeTokens.of(context).cardRadius),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      borderRadius: BorderRadius.circular(shape.cardRadius),
+                      boxShadow: shape.raisedShadow,
                     ),
                     child: Row(
                       children: [

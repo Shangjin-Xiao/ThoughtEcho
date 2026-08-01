@@ -241,7 +241,8 @@ extension _SmartPushSettingsPageMiscSections on _SmartPushSettingsPageState {
               const SizedBox(height: 16),
               InkWell(
                 onTap: _editDailyQuoteTime,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius:
+                    BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -251,7 +252,8 @@ extension _SmartPushSettingsPageMiscSections on _SmartPushSettingsPageState {
                     color: colorScheme.surfaceContainerHighest.withValues(
                       alpha: 0.5,
                     ),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius:
+                        BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
                     border: Border.all(
                       color: colorScheme.outline.withValues(alpha: 0.1),
                     ),
