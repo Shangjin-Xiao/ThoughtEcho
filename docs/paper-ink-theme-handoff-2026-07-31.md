@@ -40,12 +40,22 @@
 
 ## 二、下一步（按优先级）
 
-### 0. 字体在 Android 上根本没生效 —— 先解决这个
+### 0. 字体：已决定不打包，接受平台差异（2026-08-01 结案）
 
-**用户 2026-07-31 真机反馈：手机上看不到字体变化。**
+**用户 2026-08-01 决定：不打包字体。** 下面 (a)(b) 两条不再是待办，保留作为背景。
 
-原因（待代码验证，但基本可以确定）：**「指向系统自带衬线体」这条零字节路线在 Android
-上不成立。**
+现状因此是确定的、可接受的：Android 上**只有拉丁字形变衬线，中文不变**——
+用户观察到的「笔记卡片日期数字有点变化」正是这个，说明回退链本身生效了，
+只是中文那一环在 Android 上没有字体可落。iOS / macOS 上中文也是衬线。
+
+**不要再重开这个话题**，除非用户主动提出要吞 2.5MB 的子集化字体。
+`test/theme/theme_style_contrast_test.dart` 里那条字体测试的注释已经写明
+它只保证「不出豆腐块」，不是「字体已生效」的证据。
+
+<details>
+<summary>背景：为什么零字节路线在 Android 上走不通</summary>
+
+**「指向系统自带衬线体」这条零字节路线在 Android 上不成立。**
 
 - 多数 Android 设备只带 **Noto Sans CJK，不带 Noto Serif CJK**。国内 OEM ROM
   （MIUI / ColorOS / OriginOS 等）各有各的字体集，不能假定有衬线中文。
@@ -84,34 +94,47 @@ final resolved = _width('Songti SC') != _width('__definitely_missing__');
 1. **打包子集化字体**（回到最初被推迟的方案）：`Noto Serif SC` 子集到 3500 常用字
    约 2.5MB，需要 `fonttools pyftsubset` 外部构建步骤、产物二进制签入仓库，
    文案一改要重跑。这是唯一能保证「所有设备都是衬线」的路。
-2. **接受平台差异**：iOS 有衬线、Android 没有。不推荐——Android 是主力平台，
-   等于这个特性对多数用户不存在。
+2. **接受平台差异**：iOS 有衬线、Android 没有。← **用户选了这条。**
 
-**在解决之前，不要把默认值翻成 paper**：Android 用户拿到的会是「换了套颜色和圆角」，
-正是上一轮被反馈「感觉一般般」的那个观感。
+</details>
 
-### 1. 纸张横线纹理 —— 签名元素
+### 1. 纸张横线纹理 —— 签名元素（2026-08-01 已完成）
 
-用户真机反馈过一轮「感觉一般般，就像只是改了一套 Material 主题色」。补上形状和字体后
-方向确认对了，但**还缺一个「记得住」的东西**。计划文档点名允许 1–2 处视觉隐喻，
-建议放在每日一言卡和笔记卡背景。
+`lib/widgets/common/paper_rule_background.dart`：`PaperRuleBackground` 包住卡片内容，
+在背景上画等距横线。已接到**两处**（计划文档的上限）：
 
-这是**唯一允许破例**的地方（令牌表达不了纹理）。实现时：
+- `lib/widgets/quote_item_widget.dart` —— 笔记卡片
+- `lib/widgets/sliding_card.dart` —— 每日一言卡
 
-- 做成一个独立的装饰 widget，由令牌开关控制是否绘制，而不是在卡片里写风格判断
-- 限制在 1–2 处，不许铺开；新增任何风格分支都要说明为什么令牌无法表达
+**开关仍然是令牌取值，不是风格身份**：`ThemeStyleForm.ruleSpacing` 为 0 时
+widget 原样返回 child，**不插入任何绘制层**（记录页滚动性能敏感，每张卡多一个
+CustomPaint 是实打实的开销）。取值：纸墨 26 / 0.55，material 与素笺都是 0。
+
+**素笺故意不画横线**——「素」就是素的，同时这让两套手工风格除了颜色和圆角之外
+终于有了真正的差别，也给用户留了一个「要纸感但不要横线」的选项。
+
+坑（已在代码和测试里固化）：
+
+- **行距不能参与 lerp**。0 → 26 插值会经过 0 附近的极小值，绘制循环次数按 1/spacing
+  爆炸。`AppShapeTokens.lerp` 里行距是离散切换，淡入淡出交给 `ruleOpacity`。
+- 线宽设 0 让 Canvas 画物理一像素，不随 devicePixelRatio 变粗；关抗锯齿。
+- 纹理要包在有 padding 的容器**外面**，否则线会被 padding 缩进去，不满宽。
+- 测试：`test/widget/paper_rule_background_test.dart`（核心断言是「没纹理的风格不多一层」）
+  + `test/theme/theme_style_contrast_test.dart` 里两条令牌不变量。
 
 ### 2. 默认值翻成 `paper`
 
 `app_theme.dart` 的 `_themeStyle = ThemeStyle.material` 改一行即可。
-产品意向早已定为「默认纸墨、可切回 Material」，卡在真机验证。**翻之前要处理老用户**：
-现在没有迁移逻辑，老用户升级后会直接变外观。至少要确认这是想要的行为。
+产品意向早已定为「默认纸墨、可切回 Material」，卡在真机验证。
 
-### 3. 便签纸色（计划里提过，一直没做）
+**2026-08-01 用户决定：这轮先不翻。** 将来翻的时候的处理方式也定了——
+不做迁移逻辑，直接用新默认值，但**要给老用户一个提示**告诉他们外观变了、可以切回去。
 
-官网有四种便签纸色（`--paper-yellow #fff9e6`、`--paper-pink #fff0f5`、
-`--paper-blue #f0f8ff`、`--paper-green #f0fff4`），App 完全没用上。
-按标签给笔记卡片上不同纸色——那才是「纸」的感觉。
+### 3. ~~便签纸色~~（2026-08-01 否决，不要再提）
+
+官网那四种便签纸色（`--paper-yellow` 等）**不做**。
+理由：用户本来就能给单条笔记选卡片颜色（`quote.colorHex`），
+再按标签自动上纸色会和用户的手动选择打架。
 
 ### 4. 字重与间距令牌
 
@@ -120,9 +143,11 @@ Komi Store 值得学的一点：把字重、间距也做成主题令牌。衬线
 
 ## 三、已知的不一致与遗留
 
-- **聊天气泡不随风格**：`AppTheme.chatBubbleRadius`（24）仍是静态常量，AI 对话页的
-  消息气泡、思考面板、工具进度面板在纸墨下还是圆的。它有 `const` 依赖
-  （`thinking_widget.dart` 顶层的 `const BorderRadius _bubbleShape`），迁移要先拆掉那个常量。
+- ~~聊天气泡不随风格~~ **2026-08-01 已迁移**：`AppTheme.chatBubbleRadius` 已删除，
+  消息气泡、思考面板、工具进度面板改读 `AppShapeTokens.of(context).dialogRadius`
+  （原值 24 与 material 的 dialogRadius 精确相等，material 下像素不变）。
+  `thinking_widget.dart` 顶层那个 `const BorderRadius _bubbleShape` 已改成取 context 的函数。
+  面板内部三处 12 圆角一并迁到 `buttonRadius`，否则 paper 下会出现内圆大于外圆的破相。
 - **纸墨和素笺的字体相同**，只靠颜色和圆角区分。如果两套要拉开更多差距，字体是下一个抓手。
 - **年度报告未迁移**：`annual_report_page.dart`、`lib/pages/ai_report/` 下仍用
   `AppTheme.*Radius` 静态值（9 处）。产品上已废弃，**不要动**。
@@ -149,6 +174,9 @@ Komi Store 值得学的一点：把字重、间距也做成主题令牌。衬线
   测试校验的是「卡片比底色亮且可区分」，不是 M3 的梯度假设。
 - **切换风格时字体会瞬跳**：`TextStyle.lerp` 里 `fontFamily` 是 `t < 0.5 ? a : b` 的离散
   切换，动画播到一半会跳变、文字重排。目前没做处理，如果观感不能接受，用 `Duration.zero` 瞬切。
+- **`lib/gen_l10n/` 是生成产物，不在仓库里**：拉下来直接 `flutter analyze` 会看到
+  一堆 `themeStyle* isn't defined for the type 'AppLocalizations'`。
+  这不是代码问题，跑一次 `flutter gen-l10n` 就没了。别去手改生成文件。
 - **测试很慢**：这台机器上编译阶段可能几分钟无输出，不要以为卡死。
 - **`flutter test | tail` 会吞掉退出码**：`tail` 的状态覆盖了 `flutter test` 的，
   必须 grep `All tests passed` / `Some tests failed` 判断，不能看 exit code。上一轮踩过。
