@@ -71,6 +71,15 @@
   "onboardingUpdateComplete": "更新完成",
   "onboardingUpdateSuccess": "心迹已成功更新到新版本\n数据已自动迁移，无需手动操作",
   "onboardingEnterApp": "进入应用",
+  "onboardingThemeStyleNotice": "外观已更新为「{style}」。想用系统配色，可在「设置 → 主题设置」里选 Material。",
+  "@onboardingThemeStyleNotice": {
+    "description": "升级后告知用户默认主题风格变了、可以切回去",
+    "placeholders": {
+      "style": {
+        "type": "String"
+      }
+    }
+  },
   "onboardingQuickTip1": "单击「每日一言」可复制内容",
   "onboardingQuickTip2": "双击「每日一言」可快速添加到笔记",
   "onboardingQuickTip3": "使用标签来组织您的笔记",
@@ -611,6 +620,8 @@
   "themeStylePaperDesc": "暖色纸面，褐色墨迹",
   "themeStylePlain": "素笺",
   "themeStylePlainDesc": "冷灰纸面，深青强调",
+  "themeStyleGroupSignature": "心迹笔调",
+  "themeStyleGroupSystem": "系统配色",
   "themeMode": "主题模式",
   "themeModeLight": "浅色",
   "themeModeDark": "深色",

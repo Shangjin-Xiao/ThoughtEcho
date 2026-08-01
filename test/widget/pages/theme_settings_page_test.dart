@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/pages/theme_settings_page.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
+import 'package:thoughtecho/theme/theme_style.dart';
+import 'package:thoughtecho/utils/theme_style_labels.dart';
 
 import '../../test_harness.dart';
 
@@ -106,6 +108,39 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('groups handmade styles apart from generated ones',
+        (tester) async {
+      final appTheme = AppTheme();
+
+      await tester.pumpWidget(buildTestApp(appTheme));
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(ThemeSettingsPage)),
+      );
+      final signatureHeader = find.text(l10n.themeStyleGroupSignature);
+      final systemHeader = find.text(l10n.themeStyleGroupSystem);
+      expect(signatureHeader, findsOneWidget);
+      expect(systemHeader, findsOneWidget);
+
+      double top(Finder finder) => tester.getTopLeft(finder).dy;
+
+      // 分组判据是 isGenerated 这个取值，不是硬编码的风格名单：
+      // 手工色板必须全部落在「心迹特色」组里，取色风格全部落在「系统配色」组里。
+      for (final style in ThemeStyle.values) {
+        final name = find.text(themeStyleLabel(l10n, style).$1);
+        expect(name, findsOneWidget, reason: '${style.name} 没有渲染出来');
+        if (style.isGenerated) {
+          expect(top(name), greaterThan(top(systemHeader)),
+              reason: '${style.name} 应该在系统配色组里');
+        } else {
+          expect(top(name), greaterThan(top(signatureHeader)));
+          expect(top(name), lessThan(top(systemHeader)),
+              reason: '${style.name} 应该在心迹特色组里');
+        }
+      }
+    });
+
     testWidgets('switches app theme mode to dark when dark option is tapped', (
       tester,
     ) async {
@@ -127,12 +162,25 @@ void main() {
       tester,
     ) async {
       final appTheme = AppTheme();
+      // 默认风格是手工色板，自定义色和动态取色卡片会被藏起来（只对取色风格生效），
+      // 所以先切回 material 再测自定义色。
+      await appTheme.setThemeStyle(ThemeStyle.material);
 
       await tester.pumpWidget(buildTestApp(appTheme));
       await tester.pumpAndSettle();
 
-      // 顶部多了「主题风格」卡片后，自定义色开关落在测试视口的折叠线以下，
-      // 直接 tap 会打空，先滚动到可见处。
+      // 顶部多了「主题风格」卡片（还带分组标题）后，自定义色卡片落在测试视口之外，
+      // ListView 根本不会构建它，ensureVisible 会因为找不到 widget 而报错，
+      // 必须先把列表滚过去。
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(ThemeSettingsPage)),
+      );
+      await tester.scrollUntilVisible(
+        find.text(l10n.useCustomThemeColor),
+        200,
+      );
+      await tester.pumpAndSettle();
+
       final customColorSwitch = find.byType(Switch).first;
       await tester.ensureVisible(customColorSwitch);
       await tester.pumpAndSettle();

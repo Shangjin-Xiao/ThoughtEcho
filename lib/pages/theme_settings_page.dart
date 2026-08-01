@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../theme/theme_style.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import '../utils/color_utils.dart'; // 导入颜色工具
+import '../utils/theme_style_labels.dart';
 import '../gen_l10n/app_localizations.dart';
 
 class ThemeSettingsPage extends StatefulWidget {
@@ -90,8 +91,23 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 12),
-                  for (final style in ThemeStyle.values)
-                    _buildThemeStyleOption(context, appTheme, style, l10n),
+                  // 分组判据是 isGenerated 这个**取值**，不是风格名单：
+                  // 手工色板归「心迹笔调」，走取色算法的归「系统配色」。
+                  // 将来加第四套手工风格会自动落进第一组，这里不用改。
+                  _buildThemeStyleGroup(
+                    context,
+                    appTheme,
+                    l10n,
+                    l10n.themeStyleGroupSignature,
+                    ThemeStyle.values.where((s) => !s.isGenerated),
+                  ),
+                  _buildThemeStyleGroup(
+                    context,
+                    appTheme,
+                    l10n,
+                    l10n.themeStyleGroupSystem,
+                    ThemeStyle.values.where((s) => s.isGenerated),
+                  ),
                 ],
               ),
             ),
@@ -331,6 +347,37 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
     );
   }
 
+  /// 一组风格：一行组名，下面是这组里的选项。组为空时整组不渲染。
+  Widget _buildThemeStyleGroup(
+    BuildContext context,
+    AppTheme appTheme,
+    AppLocalizations l10n,
+    String label,
+    Iterable<ThemeStyle> styles,
+  ) {
+    final list = styles.toList(growable: false);
+    if (list.isEmpty) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 6),
+          child: Text(
+            label,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        for (final style in list)
+          _buildThemeStyleOption(context, appTheme, style, l10n),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
   /// 风格选项：左边一小片色板预览，右边名称和一句说明。
   ///
   /// 预览直接取该风格的真实色值（material 没有固定色板，取当前生效的
@@ -345,14 +392,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
     final selected = appTheme.themeStyle == style;
     final brightness = theme.brightness;
 
-    final (String name, String description) = switch (style) {
-      ThemeStyle.material => (
-          l10n.themeStyleMaterial,
-          l10n.themeStyleMaterialDesc
-        ),
-      ThemeStyle.paper => (l10n.themeStylePaper, l10n.themeStylePaperDesc),
-      ThemeStyle.plain => (l10n.themeStylePlain, l10n.themeStylePlainDesc),
-    };
+    final (String name, String description) = themeStyleLabel(l10n, style);
 
     final colors = style.palette?.forBrightness(brightness);
     final swatch = colors == null
@@ -375,7 +415,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
       child: Semantics(
         selected: selected,
         button: true,
-        // 三个风格是互斥的单选项。不声明的话屏幕阅读器会把它们读成三个独立按钮，
+        // 所有风格（跨分组）是同一组互斥的单选项。不声明的话屏幕阅读器会把它们读成独立按钮，
         // 用户不知道选了一个就等于取消了另外两个。
         inMutuallyExclusiveGroup: true,
         child: Material(

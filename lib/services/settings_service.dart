@@ -61,6 +61,12 @@ class SettingsService extends ChangeNotifier {
   static const String _dontShowAgentExperimentalNoticeKey =
       'dont_show_agent_experimental_notice';
 
+  /// 「默认主题风格已换成纸与墨」这条升级提示是否显示过。
+  ///
+  /// 只能提示一次：升级路径（`showUpdateReady`）在**任何**版本变化时都会走，
+  /// 而外观只在换默认值的那一版真的变了，以后再提示就是错的。
+  static const String _themeStyleNoticeShownKey = 'theme_style_notice_shown';
+
   bool get syncSkipConfirm => _mmkv.getBool(_syncSkipConfirmKey) ?? false;
   bool get syncDefaultIncludeMedia =>
       _mmkv.getBool(_syncDefaultIncludeMediaKey) ?? true;
@@ -69,6 +75,14 @@ class SettingsService extends ChangeNotifier {
 
   Future<void> setDontShowAgentExperimentalNotice(bool value) async {
     await _mmkv.setBool(_dontShowAgentExperimentalNoticeKey, value);
+    notifyListeners();
+  }
+
+  bool get themeStyleNoticeShown =>
+      _mmkv.getBool(_themeStyleNoticeShownKey) ?? false;
+
+  Future<void> setThemeStyleNoticeShown(bool value) async {
+    await _mmkv.setBool(_themeStyleNoticeShownKey, value);
     notifyListeners();
   }
 
@@ -518,6 +532,9 @@ class SettingsService extends ChangeNotifier {
     if (!wasInstalledBefore) {
       logDebug('检测到首次安装，将重置引导页面状态');
       await _mmkv.setBool(_appInstalledKey, true);
+      // 新装用户拿到的就是新默认外观，外观从没变过：别在他将来第一次升级时
+      // 弹「外观已更新」。
+      await _mmkv.setBool(_themeStyleNoticeShownKey, true);
 
       // 首次安装时，载入应用默认设置
       _loadAppSettings();

@@ -86,5 +86,14 @@
   "exploreSummarizePeriodPrompt": "Resume mis notas de esta {period}: ¿qué destaca?",
   "exploreFreeChat": "Charlar sin más",
   "exploreRecentChats": "Conversaciones recientes",
-  "exploreViewAllChats": "Todo"
+  "exploreViewAllChats": "Todo",
+  "themeStyleMaterial": "Material",
+  "themeStyleMaterialDesc": "Sigue los colores del sistema",
+  "themeStylePaper": "Papel y tinta",
+  "themeStylePaperDesc": "Papel cálido, tinta marrón",
+  "themeStylePlain": "Hoja sobria",
+  "themeStylePlainDesc": "Papel gris frío, verde azulado profundo",
+  "themeStyleGroupSignature": "Estilos de ThoughtEcho",
+  "themeStyleGroupSystem": "Colores del sistema",
+  "onboardingThemeStyleNotice": "La apariencia ahora es «{style}». Para usar los colores del sistema, elige Material en Ajustes → Ajustes de tema."
 }

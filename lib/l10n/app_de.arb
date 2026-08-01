@@ -86,5 +86,14 @@
   "exploreSummarizePeriodPrompt": "Fasse meine Notizen aus dieser {period} zusammen — was fällt auf?",
   "exploreFreeChat": "Einfach plaudern",
   "exploreRecentChats": "Letzte Chats",
-  "exploreViewAllChats": "Alle"
+  "exploreViewAllChats": "Alle",
+  "themeStyleMaterial": "Material",
+  "themeStyleMaterialDesc": "Folgt den Systemfarben",
+  "themeStylePaper": "Papier & Tinte",
+  "themeStylePaperDesc": "Warmes Papier, braune Tinte",
+  "themeStylePlain": "Schlichtes Blatt",
+  "themeStylePlainDesc": "Kühlgraues Papier, tiefes Petrol",
+  "themeStyleGroupSignature": "ThoughtEcho-Stile",
+  "themeStyleGroupSystem": "Systemfarben",
+  "onboardingThemeStyleNotice": "Das Erscheinungsbild ist jetzt „{style}“. Für Systemfarben wähle Material unter Einstellungen → Themeneinstellungen."
 }
