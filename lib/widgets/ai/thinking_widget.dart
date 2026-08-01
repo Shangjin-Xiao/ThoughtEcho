@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../gen_l10n/app_localizations.dart';
-import '../../theme/app_theme.dart';
+import '../../theme/theme_style.dart';
 
 /// AI 侧气泡轮廓：左上直角，与消息气泡和工具进度面板保持同一形状。
-const BorderRadius _bubbleShape = BorderRadius.only(
-  topLeft: Radius.zero,
-  topRight: Radius.circular(AppTheme.chatBubbleRadius),
-  bottomLeft: Radius.circular(AppTheme.chatBubbleRadius),
-  bottomRight: Radius.circular(AppTheme.chatBubbleRadius),
-);
+///
+/// 圆角取 [AppShapeTokens.dialogRadius]，随主题风格变化——不能做成 const。
+BorderRadius _bubbleShape(BuildContext context) {
+  final radius = Radius.circular(AppShapeTokens.of(context).dialogRadius);
+  return BorderRadius.only(
+    topLeft: Radius.zero,
+    topRight: radius,
+    bottomLeft: radius,
+    bottomRight: radius,
+  );
+}
 
 /// 思考过程折叠组件 - 展示 AI 的思考过程
 ///
@@ -130,13 +135,14 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
         ? theme.colorScheme.primary
         : theme.colorScheme.outlineVariant;
     const borderWidth = 2.0;
+    final bubbleShape = _bubbleShape(context);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       width: double.infinity,
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: _bubbleShape,
+        borderRadius: bubbleShape,
         border: Border.all(
           color: borderColor.withValues(alpha: 0.4),
           width: 1,
@@ -150,7 +156,7 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
             color: Colors.transparent,
             child: InkWell(
               onTap: _toggleExpanded,
-              borderRadius: _bubbleShape,
+              borderRadius: bubbleShape,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,

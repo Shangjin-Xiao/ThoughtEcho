@@ -23,7 +23,7 @@ dependencies:
   dio: ^5.4.0
   uuid: ^4.5.1 # UUID生成器
   shared_preferences: ^2.2.2
-  flutter_markdown: ^0.7.1
+  flutter_markdown_plus: ^1.0.12
   intl: ^0.20.2
   url_launcher: ^6.2.6 # URL启动器
   file_picker: ^10.3.3 # 更安全的文件选择器，支持 withData: false 参数
@@ -55,8 +55,6 @@ dependencies:
   visibility_detector: ^0.4.0 # 可见性检测，实现懒加载  
   audioplayers: ^6.5.1
   archive: ^4.0.7
-  flutter_chat_ui: ^2.9.1
-  flutter_chat_types: ^3.6.2
   image: ^4.1.3 # 图片处理库
   gal: ^2.3.0 # 替换image_gallery_saver，保存图片到相册，支持最新Android
   vector_graphics: ^1.1.19
@@ -71,7 +69,6 @@ dependencies:
   collection: ^1.18.0
   open_file: ^3.5.10 # 用于打开文件，包括APK安装
   flutter_local_notifications: ^19.5.0 # 下载进度通知
-  flutter_chat_core: ^2.8.0
   local_auth: ^2.3.0 # 生物识别验证（指纹、面容识别等）
   android_alarm_manager_plus: ^4.0.0
   timezone: ^0.10.0

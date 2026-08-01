@@ -17,7 +17,7 @@ import 'package:flex_color_picker/flex_color_picker.dart';
 import '../utils/icon_utils.dart';
 import '../utils/color_utils.dart'; // Import color_utils
 import 'dart:math' show min; // 添加math包导入
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter/services.dart';
 import '../utils/app_logger.dart';
 import '../utils/string_utils.dart';

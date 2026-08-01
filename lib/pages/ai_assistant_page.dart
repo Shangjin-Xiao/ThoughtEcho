@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
@@ -56,7 +56,6 @@ import 'ai_assistant/session_history_page.dart';
 import '../widgets/add_note_dialog.dart';
 import '../widgets/add_note_dialog_parts.dart' show TagSelectionSection;
 import 'note_full_editor_page.dart';
-import '../theme/app_theme.dart';
 import '../theme/theme_style.dart';
 
 part 'ai_assistant/ai_assistant_page_session.dart';
