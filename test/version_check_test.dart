@@ -127,4 +127,102 @@ void main() {
       expect(versionInfo.apkDownloadUrl, isNull);
     });
   });
+
+  group('按 ABI 选包', () {
+    const arm64 = ['arm64-v8a', 'armeabi-v7a', 'armeabi'];
+    const arm32 = ['armeabi-v7a', 'armeabi'];
+
+    List<Map<String, String>> assets(List<String> names) => [
+          for (final name in names)
+            {
+              'name': name,
+              'browser_download_url': 'https://example.com/$name',
+            },
+        ];
+
+    // 当前 workflow 的产物名，以及建议的新命名，都必须能被正确识别。
+    final splitAssets = assets([
+      'thoughtecho-arm32Compat-release.apk',
+      'thoughtecho-standard64-release.apk',
+    ]);
+    final renamedAssets = assets([
+      'ThoughtEcho-3.8.0-arm32.apk',
+      'ThoughtEcho-3.8.0-arm64.apk',
+    ]);
+
+    test('arm64 设备拿 64 位包，即使 32 位包排在前面', () {
+      expect(
+        selectApkAssetUrl(splitAssets, arm64),
+        'https://example.com/thoughtecho-standard64-release.apk',
+      );
+      expect(
+        selectApkAssetUrl(renamedAssets, arm64),
+        'https://example.com/ThoughtEcho-3.8.0-arm64.apk',
+      );
+    });
+
+    test('arm32 设备拿 32 位包', () {
+      expect(
+        selectApkAssetUrl(splitAssets, arm32),
+        'https://example.com/thoughtecho-arm32Compat-release.apk',
+      );
+      expect(
+        selectApkAssetUrl(renamedAssets, arm32),
+        'https://example.com/ThoughtEcho-3.8.0-arm32.apk',
+      );
+    });
+
+    test('32 位设备遇到只有 64 位包的 Release 时不给下载链接', () {
+      // 装上只含 arm64-v8a 的包会因为找不到 native 库崩溃，
+      // 返回 null 让 UI 回退到浏览器打开 Release 页面。
+      final only64 = assets(['ThoughtEcho-3.8.0-arm64.apk']);
+      expect(selectApkAssetUrl(only64, arm32), isNull);
+      expect(
+        selectApkAssetUrl(only64, arm64),
+        'https://example.com/ThoughtEcho-3.8.0-arm64.apk',
+      );
+    });
+
+    test('无架构标记的通用包对两种设备都可用', () {
+      // 3.7.0 及更早发布的 fat APK。
+      final legacy = assets(['app-release.apk']);
+      expect(
+        selectApkAssetUrl(legacy, arm32),
+        'https://example.com/app-release.apk',
+      );
+      expect(
+        selectApkAssetUrl(legacy, arm64),
+        'https://example.com/app-release.apk',
+      );
+    });
+
+    test('设备 ABI 未知时退回第一个 APK', () {
+      expect(
+        selectApkAssetUrl(splitAssets, const []),
+        'https://example.com/thoughtecho-arm32Compat-release.apk',
+      );
+    });
+
+    test('arm64 设备在只有 32 位包时仍可下载', () {
+      final only32 = assets(['ThoughtEcho-3.8.0-arm32.apk']);
+      expect(
+        selectApkAssetUrl(only32, arm64),
+        'https://example.com/ThoughtEcho-3.8.0-arm32.apk',
+      );
+    });
+
+    test('忽略非 APK 资产', () {
+      final mixed = assets([
+        'thoughtecho-windows-x64-v3.8.0-release.msix',
+        'ThoughtEcho-unsigned.ipa',
+        'ThoughtEcho-3.8.0-arm64.apk',
+      ]);
+      expect(
+        selectApkAssetUrl(mixed, arm64),
+        'https://example.com/ThoughtEcho-3.8.0-arm64.apk',
+      );
+      // Windows 的 x64 资产不是 APK，不该被 32 位设备当成候选。
+      expect(selectApkAssetUrl(mixed, arm32), isNull);
+    });
+  });
 }

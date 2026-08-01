@@ -1,8 +1,76 @@
 import 'dart:async';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/app_logger.dart';
+
+/// Release 资产里标识 32 位包的命名片段（arm32 / armeabi-v7a / arm32Compat 等）。
+final RegExp _arm32AssetPattern = RegExp(
+  r'arm32|armeabi|v7a',
+  caseSensitive: false,
+);
+
+/// Release 资产里标识 64 位包的命名片段（arm64 / arm64-v8a / standard64 等）。
+final RegExp _arm64AssetPattern = RegExp(
+  r'arm64|v8a|standard64',
+  caseSensitive: false,
+);
+
+/// 从 Release 资产列表里挑出与设备 ABI 匹配的 APK。
+///
+/// [deviceAbis] 为设备支持的 ABI 列表（`Build.SUPPORTED_ABIS`）。传空列表表示
+/// 无法确定架构（非 Android 平台或读取失败），此时退回"第一个 APK"的旧行为。
+///
+/// 选择优先级：
+/// 1. 文件名标记与设备架构一致的包；
+/// 2. 没有任何架构标记的通用包（兼容 3.7.0 及更早的 `app-release.apk`）；
+/// 3. 设备支持 arm64 时可退而使用 32 位包（arm64 设备能跑 armeabi-v7a）。
+///
+/// 注意第 3 条不可反向：**32 位设备绝不能拿到只含 arm64-v8a 的包**，装上会因为
+/// 找不到 native 库而崩溃，此时返回 null，让 UI 回退到浏览器打开 Release 页面。
+String? selectApkAssetUrl(
+  List<dynamic>? assets,
+  List<String> deviceAbis,
+) {
+  if (assets == null) return null;
+
+  final supportsArm64 = deviceAbis.any((abi) => abi.contains('arm64'));
+  final abiKnown = deviceAbis.isNotEmpty;
+
+  String? arm64Url;
+  String? arm32Url;
+  String? genericUrl;
+  String? firstApkUrl;
+
+  for (final asset in assets) {
+    if (asset is! Map) continue;
+    final name = asset['name'] as String?;
+    final url = asset['browser_download_url'] as String?;
+    if (name == null || url == null) continue;
+    if (!name.toLowerCase().endsWith('.apk')) continue;
+
+    firstApkUrl ??= url;
+
+    if (_arm32AssetPattern.hasMatch(name)) {
+      arm32Url ??= url;
+    } else if (_arm64AssetPattern.hasMatch(name)) {
+      arm64Url ??= url;
+    } else {
+      genericUrl ??= url;
+    }
+  }
+
+  // 无法判断设备架构时保持旧行为，避免误判导致拿不到更新。
+  if (!abiKnown) return firstApkUrl;
+
+  if (supportsArm64) {
+    return arm64Url ?? genericUrl ?? arm32Url;
+  }
+  // 32 位设备：只接受 32 位包或无标记的通用包。
+  return arm32Url ?? genericUrl;
+}
 
 /// 版本信息模型
 class VersionInfo {
@@ -24,29 +92,21 @@ class VersionInfo {
     required this.hasUpdate,
   });
 
+  /// [deviceAbis] 传入设备支持的 ABI 列表以挑选架构匹配的 APK；
+  /// 省略时退回"第一个 APK"的旧行为。
   factory VersionInfo.fromJson(
     Map<String, dynamic> json,
-    String currentVersion,
-  ) {
+    String currentVersion, {
+    List<String> deviceAbis = const [],
+  }) {
     final latestVersion = json['tag_name'] as String? ?? '';
     final hasUpdate =
         VersionInfo._compareVersions(currentVersion, latestVersion) < 0;
 
-    // 解析assets以找到APK文件
-    String? apkDownloadUrl;
-    final assets = json['assets'] as List<dynamic>?;
-    if (assets != null) {
-      for (final asset in assets) {
-        final name = asset['name'] as String?;
-        final downloadUrl = asset['browser_download_url'] as String?;
-        if (name != null &&
-            downloadUrl != null &&
-            name.toLowerCase().endsWith('.apk')) {
-          apkDownloadUrl = downloadUrl;
-          break; // 找到第一个APK文件就使用
-        }
-      }
-    }
+    final apkDownloadUrl = selectApkAssetUrl(
+      json['assets'] as List<dynamic>?,
+      deviceAbis,
+    );
 
     return VersionInfo(
       currentVersion: currentVersion,
@@ -103,6 +163,30 @@ class VersionCheckService {
   static DateTime? _lastCheckTime;
   static VersionInfo? _cachedVersionInfo;
   static const Duration _cacheValidDuration = Duration(hours: 1);
+  static List<String>? _cachedDeviceAbis;
+
+  /// 读取设备支持的 ABI，用于挑选架构匹配的 APK。
+  ///
+  /// 非 Android 平台或读取失败时返回空列表，调用方据此退回旧的选包行为。
+  /// 结果在进程内缓存——设备架构不会变。
+  static Future<List<String>> getDeviceAbis() async {
+    if (_cachedDeviceAbis != null) return _cachedDeviceAbis!;
+
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      return _cachedDeviceAbis = const [];
+    }
+
+    try {
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      final abis = List<String>.unmodifiable(androidInfo.supportedAbis);
+      logDebug('设备支持的 ABI: ${abis.join(", ")}');
+      return _cachedDeviceAbis = abis;
+    } catch (e) {
+      // 读不到就当作未知架构，走旧逻辑，不要因此阻断更新检查。
+      logDebug('读取设备 ABI 失败，回退到默认选包逻辑: $e');
+      return _cachedDeviceAbis = const [];
+    }
+  }
 
   /// 获取Dio实例
   static Dio get dio {
@@ -165,7 +249,11 @@ class VersionCheckService {
       logDebug('GitHub API响应状态码: ${response.statusCode}');
 
       if (response.statusCode == 200 && response.data != null) {
-        final versionInfo = VersionInfo.fromJson(response.data, currentVersion);
+        final versionInfo = VersionInfo.fromJson(
+          response.data,
+          currentVersion,
+          deviceAbis: await getDeviceAbis(),
+        );
 
         // 更新缓存
         _cachedVersionInfo = versionInfo;
