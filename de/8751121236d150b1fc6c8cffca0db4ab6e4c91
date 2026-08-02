@@ -1,0 +1,54 @@
+lib/widgets/add_note_dialog_parts.dart
+  s_a530a9fb45b510::t_6e05841968d6f0 354-355
+test/widget/pages/trash_page_test.dart
+  s_a530a9fb45b510::t_6e05841968d6f0 122
+lib/pages/explore/explore_data_loading.dart
+  s_a530a9fb45b510::t_6e05841968d6f0 335-336
+test/AGENTS.md
+  s_a530a9fb45b510::t_f141dc81e2113e 6-8
+test/sync_integration_test.mocks.dart
+  s_a530a9fb45b510::t_79cee32d9a48d4 623,699
+test/widget/pages/thoughter_page_test.dart
+  s_a530a9fb45b510::t_6e05841968d6f0 937,1002,1052,1102,1143,1194,1365
+lib/services/ai_card_generation_strategies/fallback_card_generation_strategy.dart
+  s_a530a9fb45b510::t_6e05841968d6f0 103
+lib/models/thoughter_entry.dart
+  s_a530a9fb45b510::t_6e05841968d6f0 12
+lib/pages/tag_settings_page.dart
+  s_a530a9fb45b510::t_6e05841968d6f0 404,486
+lib/pages/smart_push_settings_page_misc_sections.dart
+  s_a530a9fb45b510::t_79cee32d9a48d4 244-245,255-256
+test/widget/paper_rule_background_test.dart
+  s_a530a9fb45b510::t_79cee32d9a48d4 27-29
+lib/services/agent_tools/tool_argument_validator.dart
+  s_a530a9fb45b510::t_79cee32d9a48d4 36,99-100
+lib/pages/smart_push_settings_page_basic_sections.dart
+  s_a530a9fb45b510::t_79cee32d9a48d4 36-37
+AGENTS.md
+  s_a530a9fb45b510::t_3bc44619ecf5e6 111-114
+  s_a530a9fb45b510::t_ba1834a5e365ab 233-236
+lib/pages/explore/explore_thoughter_entry.dart
+  s_a530a9fb45b510::t_6e05841968d6f0 20-21
+lib/pages/AGENTS.md
+  s_a530a9fb45b510::t_7f5a3112473ffd 11-12
+lib/pages/thoughter/thoughter_ui.dart
+  s_a530a9fb45b510::t_6e05841968d6f0 613,621-622
+test/live/agent_probe.dart
+  s_a530a9fb45b510::t_6e05841968d6f0 482,561-565
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "de8751121236d150b1fc6c8cffca0db4ab6e4c91",
+  "prompts": {},
+  "sessions": {
+    "s_a530a9fb45b510": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a2040a4b-5090-4684-b0be-7578bf2a59ba",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
