@@ -88,7 +88,11 @@ Future<ResolvedTagArguments> resolveTagArguments(
       unknownIds.isNotEmpty) {
     final parts = <String>[
       if (ambiguousNames.isNotEmpty)
-        '标签名称不唯一，请改用标签 ID：${ambiguousNames.join(', ')}',
+        // 同名标签对应多个 ID，而多个 tag_ids 是「同时具备」关系，一次全传会得到
+        // 空结果——必须明说要分别查询，否则模型会照做然后回答「没有这样的笔记」。
+        '标签名称不唯一，请改用标签 ID：${ambiguousNames.join(', ')}'
+            '（同名标签对应多个 ID，请分别用单个 ID 各查一次再合并，'
+            '不要把多个 ID 一次传入——多个 ID 表示「同时具备」）',
       if (unknownNames.isNotEmpty) '不存在的标签名称：${unknownNames.join(', ')}',
       if (unknownIds.isNotEmpty) '不存在的标签 ID：${unknownIds.join(', ')}',
     ];

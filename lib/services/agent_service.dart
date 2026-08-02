@@ -565,6 +565,15 @@ class AgentService extends ChangeNotifier {
               // 工具错误默认可恢复：把具体错误回喂模型让它自我纠正。
               // 失败的调用不占用全局去重名额，允许模型原样重试（受签名失败次数限制）。
               seenCallSignatures.remove(failureKey);
+              // 出错往往意味着「手上的状态已经不对了」——最典型的是 revision 冲突，
+              // 错误信息本身就要求重新读取。而重新读取必然是和之前完全相同的只读
+              // 调用，会被去重与轮次重复两道守卫一起挡掉，模型于是无路可走、整轮
+              // 失败。所以工具一旦出错，就把只读调用的历史记录清掉，让它能重新取
+              // 一遍最新状态。写操作不清，避免重复落库。
+              _forgetReadOnlyCallHistory(
+                seenCallSignatures: seenCallSignatures,
+                repeatedRoundPatterns: repeatedRoundPatterns,
+              );
               messages.add(
                 openai.ChatMessage.tool(
                   toolCallId: rawToolCall.id,
@@ -1007,6 +1016,30 @@ class AgentService extends ChangeNotifier {
     }
   }
 
+  /// 工具出错后，把只读调用从两道重复守卫里摘出去。
+  ///
+  /// 只读调用重取一遍最新状态是自我纠正的必经之路（`propose_note_edit` 撞
+  /// revision 冲突时，错误信息就明写「请重新读取后再修改」），而它天然会和
+  /// 之前的调用一模一样。不摘掉的话，模型照做反而会拿到「该调用与历史完全
+  /// 相同，已忽略」，接着撞 [_maxRepeatedRoundPattern] 整轮失败。
+  ///
+  /// 写操作保留在守卫里，避免同一个写调用被重复执行。整体循环仍受
+  /// [maxToolRounds] 与 [_maxToolFailuresPerSignature] 兜底。
+  void _forgetReadOnlyCallHistory({
+    required Set<String> seenCallSignatures,
+    required Map<String, int> repeatedRoundPatterns,
+  }) {
+    bool isReadOnlySignature(String signature) {
+      final name = signature.split(':').first;
+      return _findTool(name)?.isReadOnly ?? false;
+    }
+
+    seenCallSignatures.removeWhere(isReadOnlySignature);
+    repeatedRoundPatterns.removeWhere(
+      (pattern, _) => pattern.split('|').every(isReadOnlySignature),
+    );
+  }
+
   Future<List<_ToolExecutionResult>> _executePendingToolCalls(
     List<_PendingToolExecution> pendingExecutions, {
     required int runId,
@@ -1261,7 +1294,10 @@ class AgentService extends ChangeNotifier {
     if (detail.isEmpty) {
       return '工具执行失败。请检查参数并使用不同的请求重试。';
     }
-    return '工具执行失败：$detail\n请根据以上错误信息调整参数后重试。';
+    // 措辞不能只说「调整参数」：有的错误（如 revision 冲突）要求的是先重新读取
+    // 最新状态，只盯着参数改的模型会原样重试到撞满预算。
+    return '工具执行失败：$detail\n请按以上错误信息处理后重试；'
+        '错误信息要求重新读取或改用其他工具时，请照做，不要原样重试。';
   }
 
   void _setStatus(String status, {int? runId}) {

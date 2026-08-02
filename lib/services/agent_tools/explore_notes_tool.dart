@@ -48,7 +48,10 @@ class ExploreNotesTool extends AgentTool {
             'type': 'array',
             'items': {'type': 'string'},
             'description': '标签 ID 列表（可选，优先使用）。ID 只能来自 get_tags 的返回，不能编造；'
-                '传入不存在的 ID 会得到「不存在的标签 ID: xxx」错误。',
+                '传入不存在的 ID 会得到「不存在的标签 ID: xxx」错误。\n'
+                '多个 ID 是「同时具备」关系：只返回同时打了这些标签的笔记，不是并集。'
+                '要找「打了 A 或 B」的笔记（例如两个同名标签），请分别调用后自行合并，'
+                '不要一次传多个 ID。',
           },
           'tag_names': {
             'type': 'array',

@@ -144,7 +144,7 @@ tool_calls、工具入参出参、事件流全部落到 transcript 文件，供�
 跑测台已就绪，加场景不需要再动地基。以下按用户定的优先级排。
 **节奏是用户明确要求的：跑一轮 → 停下汇报 → 提交一轮 → 更新文档。**
 
-### 先做：模型对照，定下默认模型
+### ~~先做：模型对照，定下默认模型~~（用户 2026-08-02 决定跳过，直接用 gemma4:31b-cloud）
 
 `minimax-m3:cloud` 还没跑过。用同一套高频场景对照 `gemma4:31b-cloud`：
 
@@ -158,7 +158,50 @@ transcript 文件名带模型名，两份并存可直接 diff。看三件事：*
 生成笔记 3 轮 6s 出 rich 提案；改已有笔记 5 轮 12s；编辑器润色 3 轮 8s。
 结论出来后改 `AgentProbeConfig.recommendedModel`，并同步 `test/live/README.md`。
 
-### 批次二：自我纠正（A 组，价值最高）
+### ✅ 批次二：自我纠正（已跑完，2026-08-02）
+
+场景在 `test/live/agent_self_correction_live_test.dart`，五条全部「走出来了」。
+用户已决定**跳过模型对照**，默认就用 `gemma4:31b-cloud`。
+
+| 场景 | 结果 |
+|---|---|
+| 查无此题 | ✅ 换了三个关键词后如实说没找到，没编造 |
+| note_id 不存在 | ✅ 说明笔记已不存在，改用用户给的正文给出几版润色 |
+| 同名标签歧义 | ❌ 答错 → **已修复** ✅ |
+| web_fetch 404 | ✅ 一次失败即如实告知，没重试、没编内容 |
+| revision 冲突 | ❌ 整轮失败 → **已修复** ✅ |
+
+修掉的两个真 bug：
+
+1. **revision 冲突根本走不出来（最严重）**。`propose_note_edit` 撞冲突后，
+   错误信息叫模型「重新读取后再修改」，模型照做去调 `get_note_detail`——
+   却被 `seenCallSignatures` 拦下「该调用与历史完全相同，已忽略」，因为它
+   第一次读取是成功的、签名永久占位。模型无路可走，再重复两轮就撞
+   `_maxRepeatedRoundPattern` 抛 `toolExecutionFailed`，**用户拿到 0 字**。
+   生产上只要用户在别处动过这条笔记就会复现。
+   已修：工具一旦出错就调 `_forgetReadOnlyCallHistory`，把**只读**调用从去重
+   与轮次重复两道守卫里摘掉（写操作不摘，避免重复落库），循环仍由
+   `maxToolRounds` 兜底。回喂话术也从「调整参数后重试」改成允许重新读取。
+   不变量落在 `agent_service_loop_test.dart` 的
+   `lets a read-only call repeat after another tool failed`。
+2. **多个 `tag_ids` 是交集不是并集**。同名标签歧义时，resolver 让模型「改用
+   标签 ID」，模型很自然地把两个同名标签的 ID 一起传进 `explore_notes`——
+   SQL 是多个 `EXISTS` 串 `AND`，于是 0 条，模型回答「没有这样的笔记」，
+   **用户拿到的是错的答案**。DB 层语义是笔记列表筛选共用的，没动；
+   只在工具契约层说清楚：`tag_ids` 描述里写明是「同时具备」、同名标签要分别
+   查再合并，歧义错误信息里也补上同一句。修后模型分两次查、答对了。
+   （附带：`kIsWeb` 的内存分支用的是 `.any` 即并集，和原生 SQL 的交集语义
+   不一致，web 不是发布目标，只做记录。）
+
+踩到并修掉的探针自身问题：只读工具并行执行时 `tool_start` 会先全部发出，
+按工具名配对会把出参挂到同名的另一次调用上，transcript 里出现「入参 A 配出参 B」
+的假象——差点当成标签串号的产品 bug 报出去。已改成按 `toolCallId` 配对。
+**这是第三次「探针自己漏一层」了，下结论前务必先怀疑跑测台。**
+
+跑测台新增两个能力：`seedTagsWithIds`（播种同名标签，`addTag` 拒绝重名）、
+`mutateAfterTool`（某工具返回后立刻改库，用来造 revision 冲突这类竞态）。
+
+### 批次二原始设计（保留备查）
 
 第一批已经证明**错误信息质量直接决定模型能不能自我纠正**（见 `2031880f`），
 这条要系统性铺开。新建 `test/live/agent_self_correction_live_test.dart`：

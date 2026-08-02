@@ -357,12 +357,24 @@ class AgentProbe {
   ProbeTurn? _currentTurn;
   StreamSubscription<AgentEvent>? _subscription;
 
+  /// 某个工具返回后立刻在库里搞点事情，用来模拟「用户在另一个入口同时改了笔记」。
+  ///
+  /// 只在该工具第一次返回时触发一次。事件是流式的、agent 不会等它，所以这里
+  /// 记下 Future 由 [finish] 兜底 await，避免测试结束时还有悬空写入。
+  void mutateAfterTool(String toolName, Future<void> Function() mutation) {
+    _pendingMutations[toolName] = mutation;
+  }
+
+  final Map<String, Future<void> Function()> _pendingMutations = {};
+  final List<Future<void>> _mutationFutures = [];
+
   /// 启动探针：装好插件替身、真实 SQLite、真实工具与真实 API 凭据。
   static Future<AgentProbe> start({
     required String scenario,
     required AgentProbeConfig config,
     List<Quote> seedNotes = const [],
     List<String> seedTags = const [],
+    List<({String id, String name})> seedTagsWithIds = const [],
   }) async {
     // flutter_test 默认注入返回 400 的 mock HttpClient，必须解除才能走真实网络。
     HttpOverrides.global = null;
@@ -402,6 +414,10 @@ class AgentProbe {
       } catch (_) {
         // 与系统标签重名时沿用已有的即可。
       }
+    }
+    // addTag 会拒绝重名，addTagWithId 只记日志不拦——同名标签歧义场景要靠后者播种。
+    for (final tag in seedTagsWithIds) {
+      await database.addTagWithId(tag.id, tag.name);
     }
     for (final note in seedNotes) {
       await database.addQuote(note);
@@ -497,6 +513,7 @@ class AgentProbe {
 
   /// 关闭探针并落盘 transcript，返回文件路径。
   Future<File> finish() async {
+    await Future.wait(_mutationFutures);
     await _subscription?.cancel();
     agent.dispose();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -550,23 +567,40 @@ class AgentProbe {
         turn.events.add('reasoning_delta(${delta.length})');
       case AgentTextDeltaEvent(:final delta):
         turn.events.add('text_delta(${delta.length})');
-      case AgentToolCallStartEvent(:final toolName, :final arguments):
+      case AgentToolCallStartEvent(
+          :final toolCallId,
+          :final toolName,
+          :final arguments
+        ):
         turn.events.add('tool_start($toolName)');
         turn.toolCalls.add({
+          'id': toolCallId,
           'tool': toolName,
           'arguments': arguments,
           'result': null,
           'isError': false,
         });
       case AgentToolCallResultEvent(
+          :final toolCallId,
           :final toolName,
           :final result,
           :final isError
         ):
         turn.events.add('tool_result($toolName, error=$isError)');
-        final pending = turn.toolCalls.lastWhere(
-          (call) => call['tool'] == toolName && call['result'] == null,
-          orElse: () => <String, Object?>{},
+        final mutation = _pendingMutations.remove(toolName);
+        if (mutation != null) {
+          turn.events.add('probe_mutation(after $toolName)');
+          _mutationFutures.add(mutation());
+        }
+        // 只读工具会并行执行：tool_start 先全部发出，结果再陆续回来。按工具名
+        // 匹配会把结果挂到同名的另一次调用上，transcript 里就出现「入参 A 配出参
+        // B」的假象——必须按 toolCallId 配对。
+        final pending = turn.toolCalls.firstWhere(
+          (call) => call['id'] == toolCallId,
+          orElse: () => turn.toolCalls.lastWhere(
+            (call) => call['tool'] == toolName && call['result'] == null,
+            orElse: () => <String, Object?>{},
+          ),
         );
         if (pending.isNotEmpty) {
           pending['result'] = result;
@@ -691,4 +725,77 @@ class ProposalCheck {
     }
     return ProposalCheck._(problems, ops);
   }
+}
+
+// ---------------------------------------------------------------------------
+// 场景文件共用的输出与校验
+// ---------------------------------------------------------------------------
+
+/// 把一轮的概况打到控制台，跑的时候能直接看出轮次、工具和耗时。
+void reportTurn(String label, ProbeTurn turn) {
+  print('── $label ──');
+  print('  轮次 ${turn.roundCount} · 工具 ${turn.toolNames} · '
+      '${turn.elapsed.inSeconds}s');
+  if (turn.error != null) print('  ❌ ${turn.error}');
+  final content = turn.response?.content ?? '';
+  print('  回复 ${content.length} 字');
+}
+
+/// 对提案做落库前的确定性校验——这是模型行为之外真正该断言的部分。
+void checkProposals(ProbeTurn turn, {Quote? original}) {
+  final proposals =
+      turn.response?.artifacts.whereType<NoteProposalArtifact>().toList() ??
+          const <NoteProposalArtifact>[];
+
+  if (proposals.isEmpty) {
+    turn.findings.add('这一轮没有产出任何提案卡片。');
+    return;
+  }
+  print('  提案 ${proposals.length} 个');
+
+  for (final proposal in proposals) {
+    final check = ProposalCheck.of(
+      proposal,
+      original: proposal.action == NoteProposalAction.edit ? original : null,
+    );
+    print('  · ${proposal.action.name}/${proposal.resultKind.name} '
+        '${check.isValid ? "✅" : "❌ ${check.problems}"}');
+    for (final problem in check.problems) {
+      turn.findings.add('提案「${proposal.proposalTitle}」$problem');
+    }
+    expect(
+      check.isValid,
+      isTrue,
+      reason: '提案无法通过采纳前校验，用户点「采纳」会失败：${check.problems}',
+    );
+  }
+}
+
+/// 自我纠正类场景的统一判据：**有没有走出来**，而不是第一次就填对。
+///
+/// 模型第一次填错参很正常；真正的问题是错误信息说不清楚、它原样重试撞满
+/// `_maxToolFailuresPerSignature`，整轮 `toolExecutionFailed`，用户拿到 0 字。
+void reportRecovery(ProbeTurn turn) {
+  final failed = turn.toolCalls.where((call) => call['isError'] == true);
+  final content = turn.response?.content ?? '';
+  print('  失败工具调用 ${failed.length} 次');
+  for (final call in failed) {
+    print('    ↳ ${call['tool']}: ${_firstLine(call['result']?.toString())}');
+  }
+  if (turn.error != null) {
+    turn.findings.add('没能走出来：整轮抛异常，用户拿不到任何回复。');
+  } else if (content.trim().isEmpty) {
+    turn.findings.add('没能走出来：没抛异常但最终回复是空的。');
+  } else if (failed.isNotEmpty) {
+    turn.findings.add(
+      '走出来了：${failed.length} 次工具失败后仍给出了 ${content.length} 字回复。'
+      '回喂给模型的错误信息见上方工具出参，需人工判断是否说人话。',
+    );
+  }
+}
+
+String _firstLine(String? value) {
+  if (value == null || value.isEmpty) return '(空)';
+  final line = value.split('\n').first;
+  return line.length <= 120 ? line : '${line.substring(0, 120)}…';
 }

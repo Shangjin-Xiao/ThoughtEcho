@@ -68,8 +68,8 @@ void main() {
         '而不是天生的性格。你帮我整理成一条笔记吧，格式好看点。',
       );
 
-      _reportTurn('生成笔记', turn);
-      _checkProposals(turn, probe);
+      reportTurn('生成笔记', turn);
+      checkProposals(turn);
 
       await probe.finish();
 
@@ -119,11 +119,11 @@ void main() {
         '我之前记过一条关于专注力的笔记，你帮我把它扩写一下，'
         '把周末破功那部分展开说说可能的原因。',
       );
-      _reportTurn('改已有笔记', first);
-      _checkProposals(first, probe);
+      reportTurn('改已有笔记', first);
+      checkProposals(first);
 
       final second = await probe.ask('你刚才查到的那几条笔记里，哪一条最长？');
-      _reportTurn('追问（跨轮记忆）', second);
+      reportTurn('追问（跨轮记忆）', second);
 
       final firstExplored = first.toolNames.contains('explore_notes');
       final secondExplored = second.toolNames.contains('explore_notes');
@@ -174,8 +174,8 @@ void main() {
         ),
       );
 
-      _reportTurn('编辑器润色', turn);
-      _checkProposals(turn, probe, original: stored);
+      reportTurn('编辑器润色', turn);
+      checkProposals(turn, original: stored);
 
       if (turn.toolNames.contains('explore_notes')) {
         turn.findings.add(
@@ -189,43 +189,4 @@ void main() {
       expect(turn.error, isNull, reason: '高频路径不应整轮抛异常');
     }, timeout: const Timeout(Duration(minutes: 5)));
   });
-}
-
-void _reportTurn(String label, ProbeTurn turn) {
-  print('── $label ──');
-  print('  轮次 ${turn.roundCount} · 工具 ${turn.toolNames} · '
-      '${turn.elapsed.inSeconds}s');
-  if (turn.error != null) print('  ❌ ${turn.error}');
-  final content = turn.response?.content ?? '';
-  print('  回复 ${content.length} 字');
-}
-
-/// 对提案做落库前的确定性校验——这是模型行为之外真正该断言的部分。
-void _checkProposals(ProbeTurn turn, AgentProbe probe, {Quote? original}) {
-  final proposals =
-      turn.response?.artifacts.whereType<NoteProposalArtifact>().toList() ??
-          const <NoteProposalArtifact>[];
-
-  if (proposals.isEmpty) {
-    turn.findings.add('这一轮没有产出任何提案卡片。');
-    return;
-  }
-  print('  提案 ${proposals.length} 个');
-
-  for (final proposal in proposals) {
-    final check = ProposalCheck.of(
-      proposal,
-      original: proposal.action == NoteProposalAction.edit ? original : null,
-    );
-    print('  · ${proposal.action.name}/${proposal.resultKind.name} '
-        '${check.isValid ? "✅" : "❌ ${check.problems}"}');
-    for (final problem in check.problems) {
-      turn.findings.add('提案「${proposal.proposalTitle}」$problem');
-    }
-    expect(
-      check.isValid,
-      isTrue,
-      reason: '提案无法通过采纳前校验，用户点「采纳」会失败：${check.problems}',
-    );
-  }
 }

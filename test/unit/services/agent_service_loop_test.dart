@@ -36,12 +36,17 @@ class _CountingTool extends AgentTool {
     required this.toolName,
     required this.resultContent,
     this.artifact,
+    this.readOnly = false,
   });
 
   final String toolName;
   final String resultContent;
   final AgentArtifact? artifact;
+  final bool readOnly;
   int executeCount = 0;
+
+  @override
+  bool get isReadOnly => readOnly;
 
   @override
   String get name => toolName;
@@ -497,6 +502,67 @@ void main() {
       expect(response.toolCalls.length, 1);
       expect(response.content, isNotEmpty);
       expect(response.reachedMaxRounds, isFalse);
+    });
+
+    test('lets a read-only call repeat after another tool failed', () async {
+      // revision 冲突这类错误要求「重新读取后再修改」，而重新读取必然是和之前
+      // 一模一样的只读调用。去重守卫如果照旧拦下来，模型就无路可走、整轮失败。
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final settings = _FakeSettingsService(provider);
+      final readTool = _CountingTool(
+        toolName: 'get_note_detail',
+        resultContent: '{"document_revision":"r1"}',
+        readOnly: true,
+      );
+      final writeTool = _FailingTool(
+        toolName: 'propose_note_edit',
+        resultContent: '笔记已发生变化，请重新读取后再修改。',
+        retryable: true,
+      );
+
+      final responses = <openai.ChatCompletion>[
+        _toolCallCompletion(
+          callId: 'call_1',
+          toolName: 'get_note_detail',
+          args: const {'query': 'note-1'},
+        ),
+        _toolCallCompletion(
+          callId: 'call_2',
+          toolName: 'propose_note_edit',
+          args: const {'query': 'note-1'},
+        ),
+        // 与 call_1 完全相同的重新读取。
+        _toolCallCompletion(
+          callId: 'call_3',
+          toolName: 'get_note_detail',
+          args: const {'query': 'note-1'},
+        ),
+        _textCompletion('已按最新内容重新提出修改'),
+      ];
+
+      final service = AgentService(
+        settingsService: settings,
+        tools: [readTool, writeTool],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          return responses.removeAt(0);
+        },
+      );
+
+      final response = await service.runAgent(userMessage: 'test');
+      expect(readTool.executeCount, 2, reason: '重新读取必须真的执行，不能被去重挡掉');
+      expect(response.content, '已按最新内容重新提出修改');
     });
 
     test('returns final text after tool execution', () async {
