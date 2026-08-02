@@ -386,7 +386,9 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         backgroundColor: theme.colorScheme.surfaceContainerHighest,
       ),
       codeblockDecoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
+        // 回复正文已经直接铺在 surface 上，代码块要用更高一级的容器色
+        // 才分得出层次；surfaceContainerLow 在浅色下几乎和背景同色。
+        color: theme.colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(8),
       ),
     );

@@ -25,33 +25,76 @@ class AIProviderSettings implements AIConfig {
   /// null: 自动推断；true: 强制开启；false: 强制关闭
   final bool? enableThinking;
 
-  /// 判断当前模型是否支持思考/推理模式
+  /// Claude 里**不**支持 extended thinking 的老型号。
+  ///
+  /// 用「排除旧的」而不是「列举新的」：Anthropic 从 3.7 起每一代都带思考，
+  /// 正向白名单会在每次发新模型时悄悄失效（`claude-sonnet-4-5` 这种命名
+  /// 根本匹配不上 `claude-3`）。
+  static const _legacyClaudeModels = <String>[
+    'claude-instant',
+    'claude-1',
+    'claude-2',
+    'claude-3-opus',
+    'claude-3-sonnet',
+    'claude-3-haiku',
+    'claude-3.5',
+    'claude-3-5',
+  ];
+
+  /// 判断当前模型是否支持思考/推理模式。
+  ///
+  /// 只用来决定「深度思考」开关是否出现、以及未显式配置时的默认值；
+  /// 用户在 provider 上写死 [enableThinking] 时以用户的为准。
   bool get supportsThinking {
     final m = model.toLowerCase();
-    if (m.startsWith('anthropic/')) {
+
+    // 通用标记：各家普遍把推理能力直接写进模型名
+    // （kimi-k2-thinking、doubao-seed-thinking、gemini-2.0-flash-thinking…）
+    if (m.contains('thinking') ||
+        m.contains('reasoner') ||
+        m.contains('reasoning')) {
       return true;
     }
-    // Claude 3.5+ 支持 extended thinking
-    if (m.contains('claude-3') &&
-        (m.contains('sonnet') || m.contains('opus'))) {
+
+    // Anthropic：3.7 起全系支持
+    if ((m.contains('claude') || m.startsWith('anthropic/')) &&
+        !_legacyClaudeModels.any(m.contains)) {
       return true;
     }
-    // DeepSeek Reasoner / R1 系列
+
+    // OpenAI o 系列（允许 azure/o1、openai/o3 这类命名空间前缀）与 GPT-5 起的推理模型
+    if (RegExp(r'(^|[/\-_])(o1|o3|o4)\b').hasMatch(m)) {
+      return true;
+    }
+    if (RegExp(r'gpt-?[5-9]').hasMatch(m)) {
+      return true;
+    }
+
+    // Gemini：2.5 起默认带 thinking，1.5/2.0 不带
+    if (m.contains('gemini') &&
+        RegExp(r'gemini[-_.]?(2[-.]5|[3-9])').hasMatch(m)) {
+      return true;
+    }
+
+    // DeepSeek：R1 / Reasoner，以及 V3.1 起的混合推理
     if (m.contains('deepseek') &&
-        (m.contains('reasoner') || m.contains('r1'))) {
+        (m.contains('r1') || RegExp(r'v3[-.][1-9]').hasMatch(m))) {
       return true;
     }
-    // OpenAI o-series models (supports namespace prefixes like azure/o1, /o3)
-    final isOSeries = RegExp(r'(^|/)(o1|o3|o4)\b').hasMatch(m);
-    if (isOSeries) {
+
+    // Qwen QwQ / Qwen3 起的推理系列
+    if (m.contains('qwq') || RegExp(r'qwen[-_]?[3-9]').hasMatch(m)) {
       return true;
     }
-    // Qwen QwQ / reasoning 系列
-    if (m.contains('qwq') ||
-        m.contains('qwen3') ||
-        m.contains('qwen') && m.contains('reason')) {
+
+    // 智谱 GLM-4.5 起、MiniMax M 系列
+    if (RegExp(r'glm-?(4[-.][5-9]|[5-9])').hasMatch(m)) {
       return true;
     }
+    if (RegExp(r'minimax[-_.]?m[1-9]').hasMatch(m)) {
+      return true;
+    }
+
     // 兜底：用户手动强制开启时，显示支持思考能力
     return enableThinking == true;
   }

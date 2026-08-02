@@ -257,6 +257,53 @@ void main() {
       expect(openRouterAnthropicProvider.supportsThinking, isTrue);
     });
 
+    // 这个白名单曾经冻结在 2024 年的型号上：`claude-3` 的子串匹配对
+    // `claude-sonnet-4-5` 完全失效，GPT-5 / Gemini 2.5 也整代漏掉，
+    // 结果是绝大多数用户根本看不到「深度思考」开关。
+    test('supportsThinking covers current reasoning model families', () {
+      AIProviderSettings withModel(String model) => AIProviderSettings(
+            id: 'p',
+            name: 'P',
+            apiUrl: 'https://example.com/v1/chat/completions',
+            model: model,
+          );
+
+      for (final model in const [
+        'claude-sonnet-4-5-20250929',
+        'claude-opus-4-1',
+        'anthropic/claude-3.7-sonnet',
+        'gpt-5.1',
+        'openai/o3-mini',
+        'gemini-2.5-pro',
+        'gemini-3-pro-preview',
+        'deepseek-chat-v3.1',
+        'kimi-k2-thinking',
+        'glm-4.6',
+        'MiniMax-M2',
+      ]) {
+        expect(
+          withModel(model).supportsThinking,
+          isTrue,
+          reason: '$model 应被识别为支持思考',
+        );
+      }
+
+      for (final model in const [
+        'claude-3-5-sonnet-20241022',
+        'claude-3-haiku-20240307',
+        'gpt-4o-mini',
+        'gemini-1.5-flash',
+        'gemini-2.0-flash',
+        'llama-3.3-70b',
+      ]) {
+        expect(
+          withModel(model).supportsThinking,
+          isFalse,
+          reason: '$model 不支持思考，不应显示开关',
+        );
+      }
+    });
+
     test('supportsThinking falls back to enableThinking=true', () {
       const provider = AIProviderSettings(
         id: 'custom',

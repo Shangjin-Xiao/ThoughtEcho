@@ -1,5 +1,13 @@
 part of '../ai_assistant_page.dart';
 
+/// 用户气泡最宽占可用宽度的比例。留出左侧空白，让"谁在说话"靠位置而不是
+/// 靠标签来表达。
+const double _kUserBubbleWidthFactor = 0.78;
+
+/// 流式生成时接在正文末尾的光标。用字符而不是独立 widget，是为了让它跟着
+/// markdown 的排版落在最后一个字后面，而不是另起一行。
+const String _kStreamingCursor = '▌';
+
 extension _AIAssistantPageUI on _AIAssistantPageState {
   /// 消息区可用高度变小（键盘上推、输入框变多行）时跟着贴底，
   /// 保证最后一条消息不会被顶出可视区。
@@ -98,7 +106,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                       },
                       child: ListView.builder(
                         controller: _scrollController,
-                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                        // 水平留白下放给每条消息自己——AI 回复要铺满可读宽度，
+                        // 用户气泡要贴右边缘，两者的左右边距不一样。
+                        padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
                         itemCount: _messages.length,
                         itemBuilder: (context, index) {
                           final message = _messages[index];
@@ -174,7 +184,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
             final proposalWeatherKey = proposalWeatherService.currentWeather;
             final proposalTemperature = proposalWeatherService.temperature;
             return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: NoteProposalCard(
                 key: ValueKey('ai_workflow_result_note_proposal_${message.id}'),
                 artifact: artifact,
@@ -226,7 +236,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
             );
           case 'notice':
             return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: AIWorkflowNoticeCard(
                 title: meta['title'] as String? ?? l10n.notice,
                 message: message.content,
@@ -235,7 +245,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
             );
           case 'source_analysis_result':
             return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: AISourceAnalysisResultCard(
                 title: meta['title'] as String? ?? l10n.analysisResult,
                 author: meta['author'] as String?,
@@ -251,7 +261,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
             );
           case 'insight_config':
             return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: AIInsightWorkflowCard(
                 title: l10n.commandInsight,
                 analysisTypes: _buildInsightTypeLabels(l10n),
@@ -295,35 +305,13 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               );
             }).toList();
             return Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: 6,
-                horizontal: 12,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      bottom: 4,
-                      left: 4,
-                      right: 4,
-                    ),
-                    child: Text(
-                      l10n.aiAssistantUser,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                  ToolProgressPanel(
-                    title: l10n.toolExecutionProgress,
-                    items: progressItems,
-                    inProgress: inProgress,
-                    accentColor: theme.colorScheme.primary,
-                    thinkingText: meta['thinkingText'] as String?,
-                  ),
-                ],
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+              child: ToolProgressPanel(
+                title: l10n.toolExecutionProgress,
+                items: progressItems,
+                inProgress: inProgress,
+                accentColor: theme.colorScheme.primary,
+                thinkingText: meta['thinkingText'] as String?,
               ),
             );
         }
@@ -337,67 +325,72 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       }
     }
 
-    final isUser = message.isUser;
+    return message.isUser
+        ? _buildUserMessage(message, theme)
+        : _buildAgentMessage(message, theme, l10n);
+  }
 
-    // Material 3 semantic colors
-    final userBubbleColor = theme.colorScheme.primary;
-    final agentBubbleColor = theme.colorScheme.surfaceContainerHigh;
-    final bubbleColor = isUser ? userBubbleColor : agentBubbleColor;
-
-    final bubbleTextColor =
-        isUser ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface;
-
-    // 气泡圆角随主题风格变化，不能是 const。
-    final bubbleRadius =
-        Radius.circular(AppShapeTokens.of(context).dialogRadius);
-    final borderRadius = BorderRadius.only(
-      topLeft: isUser ? bubbleRadius : Radius.zero,
-      topRight: isUser ? Radius.zero : bubbleRadius,
-      bottomLeft: bubbleRadius,
-      bottomRight: bubbleRadius,
+  /// 用户消息：右对齐药丸，限宽后随内容收缩。
+  /// 不带发送者标签和时间戳——只有两个说话人的界面里那两行是纯噪音。
+  Widget _buildUserMessage(app_chat.ChatMessage message, ThemeData theme) {
+    // 圆角随主题风格变化，不能是 const。
+    final radius = BorderRadius.circular(
+      AppShapeTokens.of(context).dialogRadius,
     );
-
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-      child: Column(
-        crossAxisAlignment:
-            isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          // Sender Label with Timestamp
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment:
-                  isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-              children: [
-                Text(
-                  isUser ? l10n.meUser : l10n.aiAssistantUser,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  TimeUtils.formatRelativeDateTimeLocalized(
-                      context, message.timestamp),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      // FractionallySizedBox 给出 78% 宽的紧约束，内层 Align 再放松成松约束，
+      // 于是气泡短时贴着内容收缩、长时在 78% 处换行。
+      child: FractionallySizedBox(
+        alignment: Alignment.centerRight,
+        widthFactor: _kUserBubbleWidthFactor,
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary,
+              borderRadius: radius,
+            ),
+            child: Text(
+              message.content,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onPrimary,
+                height: 1.5,
+              ),
             ),
           ),
-          // 思考内容显示（仅当有思考且非用户消息时）
+        ),
+      ),
+    );
+  }
+
+  /// AI 回复：不套气泡，正文直接铺在页面背景上占满可读宽度。
+  /// markdown 里的标题、列表、代码块套气泡会被挤窄，长文阅读体验差。
+  Widget _buildAgentMessage(
+    app_chat.ChatMessage message,
+    ThemeData theme,
+    AppLocalizations l10n,
+  ) {
+    // 已经收到内容但仍在生成：正文末尾接一个光标，位置准确且随文字增长。
+    final isStreaming = message.state == MessageState.responding ||
+        (message.isLoading && message.state != MessageState.error);
+    final hasContent = message.content.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 思考内容显示（仅当有思考时）
           // 性能优化：只 join 一次，避免重复字符串拼接
-          if (!isUser && message.thinkingChunks.isNotEmpty)
+          if (message.thinkingChunks.isNotEmpty)
             Builder(
               builder: (context) {
                 final thinkingText = message.thinkingChunks.join('');
                 if (thinkingText.isEmpty) return const SizedBox.shrink();
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.only(bottom: 10),
                   child: ThinkingWidget(
                     key: ValueKey('thinking_${message.id}'),
                     thinkingText: thinkingText,
@@ -407,44 +400,34 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 );
               },
             ),
-          // Main Content Bubble
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: bubbleColor,
-              borderRadius: borderRadius,
+          // 还没有首个 token：正文是空的，静态光标看着像卡住，用呼吸点代替
+          if (!hasContent && isStreaming)
+            _StreamingDots(color: theme.colorScheme.onSurfaceVariant)
+          else if (hasContent)
+            MarkdownBody(
+              data: isStreaming
+                  ? '${message.content}$_kStreamingCursor'
+                  : message.content,
+              selectable: true,
+              // 性能优化：缓存 MarkdownStyleSheet，避免每帧重建
+              styleSheet: _getMarkdownStyleSheet(
+                theme,
+                theme.colorScheme.onSurface,
+              ),
+              onTapLink: (text, href, title) async {
+                if (href == null || href.isEmpty) return;
+                try {
+                  final uri = Uri.tryParse(href);
+                  if (uri != null && await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                } catch (_) {}
+              },
             ),
-            child: isUser
-                ? Text(
-                    message.content,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: bubbleTextColor,
-                      height: 1.5,
-                    ),
-                  )
-                : MarkdownBody(
-                    data: message.content.isEmpty
-                        ? l10n.thinkingInProgress
-                        : message.content,
-                    selectable: true,
-                    // 性能优化：缓存 MarkdownStyleSheet，避免每帧重建
-                    styleSheet: _getMarkdownStyleSheet(theme, bubbleTextColor),
-                    onTapLink: (text, href, title) async {
-                      if (href == null || href.isEmpty) return;
-                      try {
-                        final uri = Uri.tryParse(href);
-                        if (uri != null && await canLaunchUrl(uri)) {
-                          await launchUrl(uri,
-                              mode: LaunchMode.externalApplication);
-                        }
-                      } catch (_) {}
-                    },
-                  ),
-          ),
           // 出错时保留正文并显式标记，避免内容被静默删除
-          if (!isUser && message.state == MessageState.error)
+          if (message.state == MessageState.error)
             Padding(
-              padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
+              padding: const EdgeInsets.only(top: 8),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -496,6 +479,58 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
 
   void _onAgentServiceChanged() {
     if (!mounted) return;
+  }
+
+  /// 深度思考开关。带文字的 chip 而不是一枚图标按钮：图标按钮在这一行里
+  /// 左边一大片空白，且"大脑图标亮着"表达不出它是个可切换的模式。
+  Widget _buildThinkingChip(ThemeData theme, AppLocalizations l10n) {
+    final on = _enableThinking;
+    final foreground = on
+        ? theme.colorScheme.onSecondaryContainer
+        : theme.colorScheme.onSurfaceVariant;
+    return Semantics(
+      toggled: on,
+      child: Tooltip(
+        message: on ? l10n.hideThinking : l10n.showThinking,
+        child: Material(
+          color: on
+              ? theme.colorScheme.secondaryContainer
+              : Colors.transparent,
+          shape: StadiumBorder(
+            side: on
+                ? BorderSide.none
+                : BorderSide(color: theme.colorScheme.outlineVariant),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: _isLoading
+                ? null
+                : () => unawaited(_setThinkingEnabled(!on)),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(10, 6, 12, 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    on ? Icons.psychology : Icons.psychology_outlined,
+                    size: 16,
+                    color: foreground,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    l10n.thinkingMode,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: foreground,
+                      fontWeight: on ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildInputArea(ThemeData theme, AppLocalizations l10n) {
@@ -557,31 +592,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 children: [
                   // Agent requests do not yet apply provider thinking settings.
                   if (!_isAgentMode && _currentModelSupportsThinking)
-                    IconButton(
-                      icon: Icon(
-                        _enableThinking
-                            ? Icons.psychology
-                            : Icons.psychology_outlined,
-                        size: 20,
-                        color: _enableThinking
-                            ? theme.colorScheme.secondary
-                            : theme.colorScheme.onSurfaceVariant,
-                      ),
-                      tooltip: _enableThinking
-                          ? l10n.hideThinking
-                          : l10n.showThinking,
-                      onPressed: _isLoading
-                          ? null
-                          : () {
-                              unawaited(
-                                _setThinkingEnabled(!_enableThinking),
-                              );
-                            },
-                      style: IconButton.styleFrom(
-                        padding: const EdgeInsets.all(8),
-                        minimumSize: const Size(36, 36),
-                      ),
-                    ),
+                    _buildThinkingChip(theme, l10n),
                   const Spacer(),
                   // Send / Stop：空输入时按钮置灰，避免点了没反应
                   ValueListenableBuilder<TextEditingValue>(
@@ -1190,6 +1201,61 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     if (meta == null) return false;
     final type = meta['type']?.toString();
     return type == NoteProposalArtifact.typeName;
+  }
+}
+
+/// 等待首个 token 时的呼吸点。此时正文还是空的，静态光标会像卡住。
+class _StreamingDots extends StatefulWidget {
+  final Color color;
+
+  const _StreamingDots({required this.color});
+
+  @override
+  State<_StreamingDots> createState() => _StreamingDotsState();
+}
+
+class _StreamingDotsState extends State<_StreamingDots>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 20,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(3, (index) {
+              // 三个点错开 1/3 周期，形成从左到右的波
+              final phase = (_controller.value - index / 3) % 1.0;
+              final opacity = 0.25 + 0.75 * (1 - (phase * 2 - 1).abs());
+              return Padding(
+                padding: EdgeInsets.only(right: index == 2 ? 0 : 5),
+                child: Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: widget.color.withValues(alpha: opacity),
+                  ),
+                ),
+              );
+            }),
+          );
+        },
+      ),
+    );
   }
 }
 
