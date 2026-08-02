@@ -1,0 +1,37 @@
+docs/paper-ink-theme-handoff-2026-07-31.md
+  s_dcd3d418897a01::t_2e5f612230df50 43-73
+lib/theme/theme_style.dart
+  s_dcd3d418897a01::t_9d2039022e5b90 174
+  s_dcd3d418897a01::t_1962299f3e30d7 120-134
+  s_dcd3d418897a01::t_e5de1f9ff5fb92 192
+lib/widgets/theme_style_preview.dart
+  s_dcd3d418897a01::t_d1e45bfec14b43 43-46,51
+  s_dcd3d418897a01::t_1c63e0a14ab062 1-42,47-50,52-146
+lib/theme/app_theme.dart
+  s_dcd3d418897a01::t_1d7048bf050e1f 278-290,293,295,297,300-302,304,307,310-314,316-321
+test/theme/theme_style_contrast_test.dart
+  s_dcd3d418897a01::t_af7885ca932b94 199,201-206,208-215
+lib/pages/theme_settings_page.dart
+  s_dcd3d418897a01::t_07dcf0b1b4410f 8
+  s_dcd3d418897a01::t_661ab146695906 382,384-387
+  s_dcd3d418897a01::t_7baa00e1b0061d 425-428
+test/widget/pages/theme_settings_page_test.dart
+  s_dcd3d418897a01::t_5ae57e4f7a6f84 145-182
+  s_dcd3d418897a01::t_9247d3b72ad135 10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "111683bb130f23af39cdebb717c46f6f112d90ec",
+  "prompts": {},
+  "sessions": {
+    "s_dcd3d418897a01": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7f47a047-ac93-4d4e-9cbc-54dbd357348c",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
