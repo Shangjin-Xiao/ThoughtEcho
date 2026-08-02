@@ -420,43 +420,46 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
       AppShapeTokens.of(context).buttonRadius,
     );
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: shape,
-      ),
-      clipBehavior: Clip.antiAlias,
+    // 底色和整宽都撤掉：工具调用是过程不是内容，它在对话流里应该是一行
+    // 顺着正文左边缘走的状态文字，而不是一块和回答抢注意力的卡片。
+    final foreground = theme.colorScheme.onSurfaceVariant.withValues(
+      alpha: 0.85,
+    );
+
+    return Align(
+      alignment: Alignment.centerLeft,
       child: InkWell(
         onTap: () => showToolProgressSheet(context, _snapshot),
+        borderRadius: shape,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+          // 左边不留内边距，让图标和上下文的正文起始位置对齐
+          padding: const EdgeInsets.fromLTRB(0, 6, 6, 6),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(
-                width: 18,
-                height: 18,
+                width: 16,
+                height: 16,
                 child: Center(
                   child: widget.inProgress
                       ? SizedBox(
-                          width: 14,
-                          height: 14,
+                          width: 12,
+                          height: 12,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2.0,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              theme.colorScheme.onSurfaceVariant,
-                            ),
+                            strokeWidth: 1.8,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(foreground),
                           ),
                         )
                       : Icon(
-                          widget.doneIcon ?? Icons.check_circle_outline,
-                          size: 18,
-                          color: theme.colorScheme.onSurfaceVariant,
+                          widget.doneIcon ?? Icons.check,
+                          size: 15,
+                          color: foreground,
                         ),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
+              const SizedBox(width: 8),
+              Flexible(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 250),
                   child: Text(
@@ -464,9 +467,8 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
                     // 执行中标题会随当前工具变化，key 要跟着文案走，
                     // 否则中途换名字是硬切、只有最后完成那一下有动画
                     key: ValueKey(title),
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: foreground,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -474,8 +476,8 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
               ),
               Icon(
                 Icons.chevron_right,
-                size: 18,
-                color: theme.colorScheme.onSurfaceVariant,
+                size: 16,
+                color: foreground.withValues(alpha: 0.6),
               ),
             ],
           ),

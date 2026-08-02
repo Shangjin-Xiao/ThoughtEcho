@@ -27,6 +27,13 @@ void main() {
     );
   }
 
+  // 折叠行贴着左边缘、按内容收缩，点面板正中会落在空白上，
+  // 要点它内部那一行。
+  Finder collapsedRow() => find.descendant(
+        of: find.byType(ToolProgressPanel),
+        matching: find.byType(InkWell),
+      );
+
   group('ToolProgressPanel', () {
     testWidgets('displays title and progress indicator when in progress',
         (WidgetTester tester) async {
@@ -80,7 +87,7 @@ void main() {
       expect(find.text('执行了 1 个操作'), findsOneWidget);
 
       // 应该显示完成图标
-      expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+      expect(find.byIcon(Icons.check), findsOneWidget);
     });
 
     testWidgets('opens the detail sheet on tap', (WidgetTester tester) async {
@@ -105,7 +112,7 @@ void main() {
       // 折叠行只有摘要，细节不在对话流里
       expect(find.text('test_tool'), findsNothing);
 
-      await tester.tap(find.byType(ToolProgressPanel));
+      await tester.tap(collapsedRow());
       await tester.pumpAndSettle();
 
       // 细节在抽屉里
@@ -142,7 +149,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(ToolProgressPanel));
+      await tester.tap(collapsedRow());
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       // 执行中折叠行的标题就是当前工具名，工具名会同时出现在行和抽屉里；
@@ -199,11 +206,16 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(ToolProgressPanel));
+      await tester.tap(collapsedRow());
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.check), findsOneWidget);
-      expect(find.byIcon(Icons.close), findsOneWidget);
+      // 折叠行自己也带一枚完成勾，断言只看抽屉里的那份
+      Finder inSheet(Finder matching) => find.descendant(
+            of: find.byType(BottomSheet),
+            matching: matching,
+          );
+      expect(inSheet(find.byIcon(Icons.check)), findsOneWidget);
+      expect(inSheet(find.byIcon(Icons.close)), findsOneWidget);
 
       final theme = Theme.of(tester.element(find.text('broken_tool')));
       final failedLabel = tester.widget<Text>(find.text('broken_tool'));
@@ -266,7 +278,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(ToolProgressPanel));
+      await tester.tap(collapsedRow());
       // inProgress 的转圈是无限动画，pumpAndSettle 永远等不到静止
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
@@ -321,7 +333,7 @@ void main() {
 
       expect(find.text('test_description'), findsNothing);
 
-      await tester.tap(find.byType(ToolProgressPanel));
+      await tester.tap(collapsedRow());
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('test_description'), findsOneWidget);

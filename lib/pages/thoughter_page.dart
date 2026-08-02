@@ -369,19 +369,32 @@ class _ThoughterPageState extends State<ThoughterPage> {
       return _cachedMarkdownStyleSheet!;
     }
     _cachedMarkdownTheme = theme;
+    // 正文按 bodyLarge 排，长回复才读得下去。标题跟着往上抬一档但收窄跨度：
+    // fromTheme 的 h1/h2 是 headline 系列，配 14 号正文时大得像海报标题，
+    // 而 h3 只有 16，和正文几乎分不开。
+    final body = theme.textTheme.bodyLarge?.copyWith(
+      color: bubbleTextColor,
+      height: 1.65,
+    );
+    TextStyle heading(double size) =>
+        (theme.textTheme.titleMedium ?? const TextStyle()).copyWith(
+          color: bubbleTextColor,
+          fontSize: size,
+          fontWeight: FontWeight.w600,
+          height: 1.35,
+        );
     _cachedMarkdownStyleSheet = MarkdownStyleSheet.fromTheme(theme).copyWith(
-      p: theme.textTheme.bodyMedium?.copyWith(
-        color: bubbleTextColor,
-        height: 1.6,
-      ),
-      listBullet: theme.textTheme.bodyMedium?.copyWith(
-        color: bubbleTextColor,
-      ),
-      strong: theme.textTheme.bodyMedium?.copyWith(
-        color: bubbleTextColor,
-        fontWeight: FontWeight.w600,
-      ),
-      code: theme.textTheme.bodySmall?.copyWith(
+      p: body,
+      h1: heading(22),
+      h2: heading(20),
+      h3: heading(18),
+      h4: heading(17),
+      h5: heading(16),
+      h6: heading(16),
+      blockquote: body?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+      listBullet: body,
+      strong: body?.copyWith(fontWeight: FontWeight.w600),
+      code: theme.textTheme.bodyMedium?.copyWith(
         color: theme.colorScheme.onSurfaceVariant,
         fontFamily: 'monospace',
         backgroundColor: theme.colorScheme.surfaceContainerHighest,

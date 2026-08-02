@@ -46,6 +46,19 @@ extension _ThoughterUI on _ThoughterPageState {
     }
   }
 
+  /// 列表末尾要不要补一个等待光标。
+  ///
+  /// 流式消息要收到第一个 token 才建出来，在那之前（刚发出提问、正在调工具）
+  /// 对话流末尾什么都没有，看着像没反应。正文已经在流的时候不补：那种情况下
+  /// 光标接在最后一个字后面，补一个会出现两个。
+  bool get _showWaitingCursor {
+    if (!_isLoading) return false;
+    final last = _messages.isEmpty ? null : _messages.last;
+    if (last == null) return true;
+    if (!last.isUser && last.parsedMeta == null && last.isLoading) return false;
+    return true;
+  }
+
   Widget _buildPage(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
@@ -109,8 +122,19 @@ extension _ThoughterUI on _ThoughterPageState {
                         // 水平留白下放给每条消息自己——AI 回复要铺满可读宽度，
                         // 用户气泡要贴右边缘，两者的左右边距不一样。
                         padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
-                        itemCount: _messages.length,
+                        itemCount:
+                            _messages.length + (_showWaitingCursor ? 1 : 0),
                         itemBuilder: (context, index) {
+                          if (index >= _messages.length) {
+                            return Padding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                              child: _BlinkingCursor(
+                                key: const ValueKey('ai_assistant_waiting'),
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            );
+                          }
                           final message = _messages[index];
                           final keepAlive = _shouldKeepAliveMessage(message);
                           return _KeepAliveMessageItem(
@@ -325,9 +349,60 @@ extension _ThoughterUI on _ThoughterPageState {
       }
     }
 
-    return message.isUser
-        ? _buildUserMessage(message, theme)
-        : _buildAgentMessage(message, theme, l10n);
+    if (message.isUser) {
+      return _buildUserMessage(message, theme);
+    }
+    if (_isOpeningMessage(message)) {
+      return _buildOpeningMessage(message, theme);
+    }
+    return _buildAgentMessage(message, theme, l10n);
+  }
+
+  /// 会话的第一句话——每日提示、探索洞察、笔记欢迎语。
+  ///
+  /// 它是被调用方塞进来的引子，不是模型对着用户说的一轮回答，所以既不该带
+  /// 复制/重试（重试无从谈起：它前面没有提问），也不该长得和 AI 回复一样。
+  bool _isOpeningMessage(app_chat.ChatMessage message) {
+    if (_messages.isEmpty) return false;
+    final first = _messages.first;
+    return !first.isUser && first.id == message.id;
+  }
+
+  /// 开场白：左侧一条细竖线的引言块，正文弱一档，不带任何操作。
+  Widget _buildOpeningMessage(app_chat.ChatMessage message, ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 2,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.45),
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+            Expanded(
+              child: MarkdownBody(
+                data: message.content,
+                selectable: true,
+                styleSheet: _getMarkdownStyleSheet(
+                  theme,
+                  theme.colorScheme.onSurface,
+                ).copyWith(
+                  p: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.6,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// 用户消息：右对齐药丸，限宽后随内容收缩。
@@ -354,7 +429,9 @@ extension _ThoughterUI on _ThoughterPageState {
             ),
             child: Text(
               message.content,
-              style: theme.textTheme.bodyMedium?.copyWith(
+              // 和 AI 正文同字号：两侧字号不一样时，用户会觉得自己说的话
+              // 和 AI 说的话不在一个层级上
+              style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.onPrimary,
                 height: 1.5,
               ),
@@ -400,9 +477,9 @@ extension _ThoughterUI on _ThoughterPageState {
                 );
               },
             ),
-          // 还没有首个 token：正文是空的，静态光标看着像卡住，用呼吸点代替
+          // 还没有首个 token：正文是空的，光标先自己闪着占住位置
           if (!hasContent && isStreaming)
-            _StreamingDots(color: theme.colorScheme.onSurfaceVariant)
+            _BlinkingCursor(color: theme.colorScheme.onSurfaceVariant)
           else if (hasContent)
             MarkdownBody(
               data: isStreaming
@@ -424,8 +501,9 @@ extension _ThoughterUI on _ThoughterPageState {
                 } catch (_) {}
               },
             ),
-          // 生成完成后才给操作行：流式过程中正文还在长，复制到的是半截
-          if (!isStreaming && hasContent)
+          // 生成完成后才给操作行：流式过程中正文还在长，复制到的是半截；
+          // 一轮里只有收尾那条挂操作行（见 _isTurnClosingMessage）
+          if (!isStreaming && hasContent && _isTurnClosingMessage(message))
             _buildMessageActions(message, theme, l10n),
           // 出错时保留正文并显式标记，避免内容被静默删除
           if (message.state == MessageState.error)
@@ -452,6 +530,28 @@ extension _ThoughterUI on _ThoughterPageState {
         ],
       ),
     );
+  }
+
+  /// 这条回复是不是这一轮的收尾。
+  ///
+  /// AI 常常先说一句「我看看你最近写了什么」，调完工具再给结论——那是一轮，
+  /// 不是两轮。每段正文各挂一行复制/重试会把一轮切成两半，所以操作行只跟在
+  /// 这一轮最后一段正文后面。工具进度和提案卡不算"话"，跨过去继续找。
+  bool _isTurnClosingMessage(app_chat.ChatMessage message) {
+    final index = _messages.indexWhere((m) => m.id == message.id);
+    if (index == -1) return false;
+    // 本轮还在跑：后面随时可能再接一段正文，先不挂
+    if (_isLoading && index > _messages.lastIndexWhere((m) => m.isUser)) {
+      return false;
+    }
+    for (var i = index + 1; i < _messages.length; i++) {
+      final next = _messages[i];
+      if (next.isUser) return true; // 下一轮开始了
+      if (next.role == 'system') continue; // 轮次上限之类的提示不是回答
+      if (next.parsedMeta != null) continue; // 工具进度、提案卡
+      if (next.content.trim().isNotEmpty) return false;
+    }
+    return true;
   }
 
   /// AI 回复下方的操作行：复制 / 重新生成 / 查看过程。
@@ -1369,22 +1469,44 @@ class _MessageAction extends StatelessWidget {
   }
 }
 
-/// 等待首个 token 时的呼吸点。此时正文还是空的，静态光标会像卡住。
-class _StreamingDots extends StatefulWidget {
+/// 等待中的光标。正文流式输出时光标是接在文字末尾的字符（[_kStreamingCursor]），
+/// 还没有正文可接的那段时间——刚发出提问、正在调工具——由它顶上，用的是同一个
+/// 字形，于是从"等着"到"开始说"是同一个光标在延续，而不是换了个动画。
+class _BlinkingCursor extends StatefulWidget {
   final Color color;
 
-  const _StreamingDots({required this.color});
+  const _BlinkingCursor({super.key, required this.color});
 
   @override
-  State<_StreamingDots> createState() => _StreamingDotsState();
+  State<_BlinkingCursor> createState() => _BlinkingCursorState();
 }
 
-class _StreamingDotsState extends State<_StreamingDots>
+class _BlinkingCursorState extends State<_BlinkingCursor>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 1200),
-  )..repeat();
+    duration: const Duration(milliseconds: 620),
+  );
+
+  late final Animation<double> _opacity = Tween<double>(
+    // 不闪到全透明：完全消失一拍会让人以为断了
+    begin: 0.25,
+    end: 1.0,
+  ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 系统开了"减弱动态效果"就定住不闪——一个持续跳动的光标正是这项设置
+    // 想要屏蔽的东西。
+    final reduceMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    if (reduceMotion) {
+      _controller.stop();
+      _controller.value = 1.0;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    }
+  }
 
   @override
   void dispose() {
@@ -1394,31 +1516,15 @@ class _StreamingDotsState extends State<_StreamingDots>
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 20,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: List.generate(3, (index) {
-              // 三个点错开 1/3 周期，形成从左到右的波
-              final phase = (_controller.value - index / 3) % 1.0;
-              final opacity = 0.25 + 0.75 * (1 - (phase * 2 - 1).abs());
-              return Padding(
-                padding: EdgeInsets.only(right: index == 2 ? 0 : 5),
-                child: Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: widget.color.withValues(alpha: opacity),
-                  ),
-                ),
-              );
-            }),
-          );
-        },
+    final theme = Theme.of(context);
+    return FadeTransition(
+      opacity: _opacity,
+      child: Text(
+        _kStreamingCursor,
+        style: theme.textTheme.bodyLarge?.copyWith(
+          color: widget.color,
+          height: 1.65,
+        ),
       ),
     );
   }

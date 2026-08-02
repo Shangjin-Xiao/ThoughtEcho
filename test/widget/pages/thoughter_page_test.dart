@@ -481,6 +481,17 @@ Future<void> _submitInput(WidgetTester tester, String text) async {
   await tester.pumpAndSettle();
 }
 
+/// 推完一轮 Agent。事件订阅的 cancel 要在真实事件循环里才会完成，光靠 pump
+/// 推不动这一轮的收尾（最终回答、操作行都排在它后面）。
+Future<void> _settleAgentTurn(WidgetTester tester) async {
+  for (var i = 0; i < 3; i++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 10)),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
 AppLocalizations _l10n(WidgetTester tester) {
   return AppLocalizations.of(tester.element(find.byType(ThoughterPage)));
 }
@@ -495,9 +506,16 @@ void main() {
       settingsService = await SettingsService.create();
       await settingsService.setDontShowAgentExperimentalNotice(true);
       chatSessionService = _InMemoryChatSessionService();
+      // 等待 AI 响应时列表末尾有一枚一直闪的光标，pumpAndSettle 永远等不到
+      // 静止。打开"减弱动态效果"把它定住——真机上这项设置本来也该定住它。
+      TestWidgetsFlutterBinding
+              .instance.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
     });
 
     tearDown(() async {
+      TestWidgetsFlutterBinding.instance.platformDispatcher
+          .clearAccessibilityFeaturesTestValue();
       await TestHarness.tearDown();
     });
 
@@ -1178,6 +1196,98 @@ void main() {
         find.ancestor(of: narration, matching: find.byType(ToolProgressPanel)),
         findsNothing,
       );
+    });
+
+    // AI 先说一句、再调工具、最后给结论，是一轮不是两轮。每段正文各挂一行
+    // 复制/重试会把一轮从中间切开。
+    testWidgets('one agent turn shows a single action row', (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        simulateToolProgress: true,
+        preToolText: '让我先看看最近的记录。',
+        responseContent: '你最近写的多是深夜的自省。',
+        toolProgressDelay: const Duration(milliseconds: 40),
+      );
+      await settingsService.setExploreAiAssistantMode(ThoughterPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _submitInput(tester, '帮我看看我最近都写了什么内容');
+      await _settleAgentTurn(tester);
+
+      // 两段正文都在
+      expect(find.textContaining('让我先看看最近的记录。'), findsOneWidget);
+      expect(find.textContaining('你最近写的多是深夜的自省。'), findsOneWidget);
+      // 但操作行只有一行，且挂在收尾那条后面
+      expect(find.byIcon(Icons.content_copy_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.refresh), findsOneWidget);
+    });
+
+    // 开场白是调用方塞进来的引子，不是模型对着用户说的一轮回答：
+    // 重试无从谈起（它前面没有提问），也不该长得和 AI 回复一样。
+    testWidgets('opening message carries no copy or regenerate actions',
+        (tester) async {
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
+            openingMessage: '午后多云，适合把最近的焦虑写下来。',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('午后多云'), findsOneWidget);
+      expect(find.byIcon(Icons.content_copy_outlined), findsNothing);
+      expect(find.byIcon(Icons.refresh), findsNothing);
+    });
+
+    // 流式消息要收到第一个 token 才建出来。在那之前（发出提问、工具在跑）
+    // 对话流末尾必须有光标顶着，否则看起来像没反应。
+    testWidgets('waiting for the first token shows a cursor', (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        simulateToolProgress: true,
+        toolProgressDelay: const Duration(milliseconds: 400),
+      );
+      await settingsService.setExploreAiAssistantMode(ThoughterPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _submitInput(tester, '帮我看看我最近都写了什么内容');
+      await tester.pump(const Duration(milliseconds: 40));
+
+      // 工具还在跑，一个 token 都没到：末尾得有光标顶着
+      expect(
+        find.byKey(const ValueKey('ai_assistant_waiting')),
+        findsOneWidget,
+      );
+
+      await _settleAgentTurn(tester);
+      // 回答落定后不该还留着光标
+      expect(find.byKey(const ValueKey('ai_assistant_waiting')), findsNothing);
     });
 
     testWidgets('agent tool panel shows human summary instead of raw payload',
