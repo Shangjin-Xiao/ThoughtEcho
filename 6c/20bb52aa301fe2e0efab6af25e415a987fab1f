@@ -1,0 +1,20 @@
+docs/agent-handoff-2026-07-31.md
+  s_4554c3c3680c0d::t_2161be3bcb843d 142-231
+  s_4554c3c3680c0d::t_ed022e8fc0f786 102-104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "6c20bb52aa301fe2e0efab6af25e415a987fab1f",
+  "prompts": {},
+  "sessions": {
+    "s_4554c3c3680c0d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "22446fb2-0ff0-4a42-808d-ca0177581d50",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
