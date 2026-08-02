@@ -15,7 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/local_ai_settings.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/controllers/search_controller.dart';
 import 'package:thoughtecho/services/database_service.dart';
@@ -122,7 +122,7 @@ class _PerformanceDatabaseService extends DatabaseService {
   bool get hasMoreQuotes => false;
 
   @override
-  Future<List<NoteCategory>> getCategories() async => const <NoteCategory>[];
+  Future<List<NoteTag>> getTags() async => const <NoteTag>[];
 
   @override
   Future<void> loadMoreQuotes({
@@ -248,7 +248,7 @@ Widget _buildBenchmarkApp(
             final Widget item = QuoteItemWidget(
               key: ValueKey<String>('benchmark-quote-$index'),
               quote: quotes[index],
-              tagMap: const <String, NoteCategory>{},
+              tagMap: const <String, NoteTag>{},
               isExpanded: false,
               onToggleExpanded: (_) {},
               onEdit: () {},
@@ -294,7 +294,7 @@ Widget _buildRealNoteListBenchmarkApp(List<Quote> quotes) {
       home: Scaffold(
         body: NoteListView(
           key: _listKey,
-          tags: const <NoteCategory>[],
+          tags: const <NoteTag>[],
           selectedTagIds: const <String>[],
           onTagSelectionChanged: (_) {},
           searchQuery: '',
@@ -315,9 +315,9 @@ Widget _buildRealNoteListBenchmarkApp(List<Quote> quotes) {
 }
 
 Widget _buildAddNoteBenchmarkApp() {
-  final List<NoteCategory> tags = List<NoteCategory>.generate(
+  final List<NoteTag> tags = List<NoteTag>.generate(
     100,
-    (int index) => NoteCategory(
+    (int index) => NoteTag(
       id: 'tag-$index',
       name: '性能标签 $index',
       iconName: index.isEven ? 'tag' : 'star',

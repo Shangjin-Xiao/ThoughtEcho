@@ -21,7 +21,7 @@ void main() {
 
     test('remote tag_ids are mapped and linked without duplication', () async {
       // 准备本地已有分类: name = "工作" (不同ID)
-      await db.addCategoryWithId('local-cat-1', '工作');
+      await db.addTagWithId('local-cat-1', '工作');
 
       final remoteData = {
         'categories': [
@@ -60,7 +60,7 @@ void main() {
       );
       expect(report.errors, isEmpty, reason: '合并不应产生错误: ${report.errors}');
 
-      final categories = await db.getCategories();
+      final categories = await db.getTags();
       final workCats = categories.where((c) => c.name == '工作').toList();
       expect(workCats.length, 1, reason: '同名分类应被去重');
       final lifeCats = categories.where((c) => c.name == '生活').toList();
@@ -91,10 +91,10 @@ void main() {
     test('hidden tag is always returned at the end of category list', () async {
       await db.getOrCreateHiddenTag();
       final suffix = DateTime.now().microsecondsSinceEpoch;
-      await db.addCategory('隐藏排序测试A_$suffix');
-      await db.addCategory('隐藏排序测试B_$suffix');
+      await db.addTag('隐藏排序测试A_$suffix');
+      await db.addTag('隐藏排序测试B_$suffix');
 
-      final categories = await db.getCategories();
+      final categories = await db.getTags();
 
       expect(
         categories.where((c) => c.id == DatabaseService.hiddenTagId).length,

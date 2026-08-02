@@ -5,14 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
-import 'package:thoughtecho/models/ai_assistant_entry.dart';
+import 'package:thoughtecho/models/thoughter_entry.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/chat_message.dart' as app_chat;
 import 'package:thoughtecho/models/chat_session.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/models/note_proposal_artifact.dart';
 import 'package:thoughtecho/models/quote_model.dart';
-import 'package:thoughtecho/pages/ai_assistant_page.dart';
+import 'package:thoughtecho/pages/thoughter_page.dart';
 import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/ai_service.dart';
@@ -482,11 +482,11 @@ Future<void> _submitInput(WidgetTester tester, String text) async {
 }
 
 AppLocalizations _l10n(WidgetTester tester) {
-  return AppLocalizations.of(tester.element(find.byType(AIAssistantPage)));
+  return AppLocalizations.of(tester.element(find.byType(ThoughterPage)));
 }
 
 void main() {
-  group('AIAssistantPage', () {
+  group('ThoughterPage', () {
     late SettingsService settingsService;
     late _InMemoryChatSessionService chatSessionService;
 
@@ -507,9 +507,9 @@ void main() {
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
-          child: const AIAssistantPage(
+          child: const ThoughterPage(
             key: ValueKey('explore_default_page'),
-            entrySource: AIAssistantEntrySource.explore,
+            entrySource: ThoughterEntrySource.explore,
           ),
         ),
       );
@@ -531,9 +531,9 @@ void main() {
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
-          child: const AIAssistantPage(
+          child: const ThoughterPage(
             key: ValueKey('opening_message_page'),
-            entrySource: AIAssistantEntrySource.explore,
+            entrySource: ThoughterEntrySource.explore,
             openingMessage: opening,
           ),
         ),
@@ -543,7 +543,7 @@ void main() {
       // 第一句就是传进来的正文
       expect(find.text(opening), findsOneWidget);
 
-      final state = tester.state(find.byType(AIAssistantPage));
+      final state = tester.state(find.byType(ThoughterPage));
       final messages =
           (state as dynamic).debugMessagesForTest as List<app_chat.ChatMessage>;
       expect(messages, isNotEmpty);
@@ -563,9 +563,9 @@ void main() {
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
-          child: const AIAssistantPage(
+          child: const ThoughterPage(
             key: ValueKey('opening_message_persist_page'),
-            entrySource: AIAssistantEntrySource.explore,
+            entrySource: ThoughterEntrySource.explore,
             openingMessage: opening,
           ),
         ),
@@ -592,8 +592,8 @@ void main() {
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
-          child: const AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
           ),
         ),
       );
@@ -617,15 +617,15 @@ void main() {
         ),
       );
       await settingsService.setExploreAiAssistantMode(
-        AIAssistantPageMode.agent,
+        ThoughterPageMode.agent,
       );
 
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
-          child: const AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
           ),
         ),
       );
@@ -643,9 +643,9 @@ void main() {
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
-          child: AIAssistantPage(
+          child: ThoughterPage(
             key: const ValueKey('note_default_page'),
-            entrySource: AIAssistantEntrySource.note,
+            entrySource: ThoughterEntrySource.note,
             quote: _buildQuote(),
           ),
         ),
@@ -703,9 +703,9 @@ void main() {
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
-          child: AIAssistantPage(
+          child: ThoughterPage(
             key: const ValueKey('note_resume_page'),
-            entrySource: AIAssistantEntrySource.note,
+            entrySource: ThoughterEntrySource.note,
             quote: _buildQuote(),
           ),
         ),
@@ -720,14 +720,14 @@ void main() {
       final agentService = _FakeAgentService(
         settingsService: settingsService,
       );
-      await settingsService.setNoteAiAssistantMode(AIAssistantPageMode.agent);
+      await settingsService.setNoteAiAssistantMode(ThoughterPageMode.agent);
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: agentService,
-          child: AIAssistantPage(
-            entrySource: AIAssistantEntrySource.note,
+          child: ThoughterPage(
+            entrySource: ThoughterEntrySource.note,
             quote: _buildQuote(),
           ),
         ),
@@ -753,8 +753,8 @@ void main() {
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
-          child: const AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
             exploreGuideSummary: insight,
           ),
         ),
@@ -771,19 +771,19 @@ void main() {
     testWidgets('remembered mode is isolated between explore and note entry',
         (tester) async {
       await settingsService.setExploreAiAssistantMode(
-        AIAssistantPageMode.agent,
+        ThoughterPageMode.agent,
       );
       await settingsService.setNoteAiAssistantMode(
-        AIAssistantPageMode.noteChat,
+        ThoughterPageMode.noteChat,
       );
 
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
-          child: const AIAssistantPage(
+          child: const ThoughterPage(
             key: ValueKey('explore_memory_page'),
-            entrySource: AIAssistantEntrySource.explore,
+            entrySource: ThoughterEntrySource.explore,
           ),
         ),
       );
@@ -797,9 +797,9 @@ void main() {
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
-          child: AIAssistantPage(
+          child: ThoughterPage(
             key: const ValueKey('note_memory_page'),
-            entrySource: AIAssistantEntrySource.note,
+            entrySource: ThoughterEntrySource.note,
             quote: _buildQuote(),
           ),
         ),
@@ -838,8 +838,8 @@ void main() {
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
-          child: AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
+          child: ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
             session: session,
           ),
         ),
@@ -894,8 +894,8 @@ void main() {
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
-          child: AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
+          child: ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
             session: session,
           ),
         ),
@@ -935,14 +935,14 @@ void main() {
         responseChunkDelay: const Duration(milliseconds: 1000),
       );
       await settingsService
-          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
+          .setExploreAiAssistantMode(ThoughterPageMode.agent);
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: agentService,
-          child: const AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
           ),
         ),
       );
@@ -1001,15 +1001,15 @@ void main() {
         simulateToolProgress: true,
       );
       await settingsService
-          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
+          .setExploreAiAssistantMode(ThoughterPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: agentService,
-          child: const AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
           ),
         ),
       );
@@ -1052,15 +1052,15 @@ void main() {
         responseChunkDelay: const Duration(milliseconds: 300),
       );
       await settingsService
-          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
+          .setExploreAiAssistantMode(ThoughterPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: agentService,
-          child: const AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
           ),
         ),
       );
@@ -1103,15 +1103,15 @@ void main() {
         responseChunkDelay: const Duration(milliseconds: 200),
       );
       await settingsService
-          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
+          .setExploreAiAssistantMode(ThoughterPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: agentService,
-          child: const AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
           ),
         ),
       );
@@ -1145,15 +1145,15 @@ void main() {
         toolProgressDelay: const Duration(milliseconds: 160),
       );
       await settingsService
-          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
+          .setExploreAiAssistantMode(ThoughterPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: agentService,
-          child: const AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
           ),
         ),
       );
@@ -1197,15 +1197,15 @@ void main() {
             '{"notes":[{"id":"n1","content_preview":"周末去露营"}],"pagination":{"offset":0,"limit":10,"next_offset":1,"has_more":true,"total_count":2},"summary":"找到 1 条匹配笔记（总计 2 条，可分页查看）"}',
       );
       await settingsService
-          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
+          .setExploreAiAssistantMode(ThoughterPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: agentService,
-          child: const AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
           ),
         ),
       );
@@ -1294,15 +1294,15 @@ void main() {
     testWidgets('completed reply offers copy, regenerate and process actions',
         (tester) async {
       seedAnsweredSession(chatSessionService);
-      await settingsService.setNoteAiAssistantMode(AIAssistantPageMode.agent);
+      await settingsService.setNoteAiAssistantMode(ThoughterPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: _FakeAgentService(settingsService: settingsService),
-          child: AIAssistantPage(
-            entrySource: AIAssistantEntrySource.note,
+          child: ThoughterPage(
+            entrySource: ThoughterEntrySource.note,
             quote: _buildQuote(),
           ),
         ),
@@ -1324,7 +1324,7 @@ void main() {
     testWidgets('regenerating drops the old answer and re-asks the question',
         (tester) async {
       seedAnsweredSession(chatSessionService);
-      await settingsService.setNoteAiAssistantMode(AIAssistantPageMode.agent);
+      await settingsService.setNoteAiAssistantMode(ThoughterPageMode.agent);
       final agentService = _FakeAgentService(
         settingsService: settingsService,
         responseChunks: const <String>['第二次回答'],
@@ -1335,8 +1335,8 @@ void main() {
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: agentService,
-          child: AIAssistantPage(
-            entrySource: AIAssistantEntrySource.note,
+          child: ThoughterPage(
+            entrySource: ThoughterEntrySource.note,
             quote: _buildQuote(),
           ),
         ),
@@ -1369,15 +1369,15 @@ void main() {
         responseContent: '这段回复不应该出现',
       );
       await settingsService
-          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
+          .setExploreAiAssistantMode(ThoughterPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: agentService,
-          child: const AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
           ),
         ),
       );
@@ -1413,7 +1413,7 @@ void main() {
         responses: [firstResponse, secondResponse],
       );
       await settingsService.setExploreAiAssistantMode(
-        AIAssistantPageMode.agent,
+        ThoughterPageMode.agent,
       );
 
       await tester.pumpWidget(
@@ -1421,8 +1421,8 @@ void main() {
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: agentService,
-          child: const AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
           ),
         ),
       );
@@ -1464,7 +1464,7 @@ void main() {
         toolProgressDelay: const Duration(milliseconds: 300),
       );
       await settingsService.setExploreAiAssistantMode(
-        AIAssistantPageMode.agent,
+        ThoughterPageMode.agent,
       );
 
       await tester.pumpWidget(
@@ -1472,8 +1472,8 @@ void main() {
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: agentService,
-          child: const AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
           ),
         ),
       );
@@ -1503,7 +1503,7 @@ void main() {
         error: StateError(secretUrl),
       );
       await settingsService.setExploreAiAssistantMode(
-        AIAssistantPageMode.agent,
+        ThoughterPageMode.agent,
       );
 
       await tester.pumpWidget(
@@ -1511,8 +1511,8 @@ void main() {
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: agentService,
-          child: const AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
           ),
         ),
       );
@@ -1534,7 +1534,7 @@ void main() {
         ),
       );
       await settingsService.setExploreAiAssistantMode(
-        AIAssistantPageMode.agent,
+        ThoughterPageMode.agent,
       );
 
       await tester.pumpWidget(
@@ -1542,8 +1542,8 @@ void main() {
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: agentService,
-          child: const AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
           ),
         ),
       );
@@ -1560,7 +1560,7 @@ void main() {
         error: const AgentRequestException(AgentFailureType.timeout),
       );
       await settingsService.setExploreAiAssistantMode(
-        AIAssistantPageMode.agent,
+        ThoughterPageMode.agent,
       );
 
       await tester.pumpWidget(
@@ -1568,8 +1568,8 @@ void main() {
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: agentService,
-          child: const AIAssistantPage(
-            entrySource: AIAssistantEntrySource.explore,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
           ),
         ),
       );
@@ -1589,15 +1589,15 @@ void main() {
 ''',
         emitSmartResultCard: true,
       );
-      await settingsService.setNoteAiAssistantMode(AIAssistantPageMode.agent);
+      await settingsService.setNoteAiAssistantMode(ThoughterPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: agentService,
-          child: AIAssistantPage(
-            entrySource: AIAssistantEntrySource.note,
+          child: ThoughterPage(
+            entrySource: ThoughterEntrySource.note,
             quote: _buildQuote(),
           ),
         ),
@@ -1629,15 +1629,15 @@ void main() {
 ```
 ''',
       );
-      await settingsService.setNoteAiAssistantMode(AIAssistantPageMode.agent);
+      await settingsService.setNoteAiAssistantMode(ThoughterPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: agentService,
-          child: AIAssistantPage(
-            entrySource: AIAssistantEntrySource.note,
+          child: ThoughterPage(
+            entrySource: ThoughterEntrySource.note,
             quote: _buildQuote(),
           ),
         ),
@@ -1685,15 +1685,15 @@ void main() {
         responseContent: '这是润色建议说明。',
         emitSmartResultCard: true,
       );
-      await settingsService.setNoteAiAssistantMode(AIAssistantPageMode.agent);
+      await settingsService.setNoteAiAssistantMode(ThoughterPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
           agentService: agentService,
-          child: AIAssistantPage(
-            entrySource: AIAssistantEntrySource.note,
+          child: ThoughterPage(
+            entrySource: ThoughterEntrySource.note,
             quote: _buildQuote(),
             session: session,
           ),
@@ -1731,8 +1731,8 @@ void main() {
         settingsService: settingsService,
         chatSessionService: chatSessionService,
         agentService: agentService,
-        child: const AIAssistantPage(
-          entrySource: AIAssistantEntrySource.explore,
+        child: const ThoughterPage(
+          entrySource: ThoughterEntrySource.explore,
         ),
       );
 
@@ -1772,8 +1772,8 @@ void main() {
         settingsService: settingsService,
         chatSessionService: chatSessionService,
         agentService: agentService,
-        child: const AIAssistantPage(
-          entrySource: AIAssistantEntrySource.explore,
+        child: const ThoughterPage(
+          entrySource: ThoughterEntrySource.explore,
         ),
       );
 

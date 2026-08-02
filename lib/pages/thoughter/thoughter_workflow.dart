@@ -1,6 +1,6 @@
-part of '../ai_assistant_page.dart';
+part of '../thoughter_page.dart';
 
-extension _AIAssistantPageWorkflow on _AIAssistantPageState {
+extension _ThoughterWorkflow on _ThoughterPageState {
   Future<void> _handleSubmitted(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty || _isLoading) return;

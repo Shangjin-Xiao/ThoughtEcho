@@ -1,24 +1,24 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:thoughtecho/extensions/note_category_localization_extension.dart';
+import 'package:thoughtecho/extensions/note_tag_localization_extension.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations_en.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/services/database_service.dart';
 
 void main() {
   final l10n = AppLocalizationsEn();
 
-  group('NoteCategoryLocalizationExtension', () {
+  group('NoteTagLocalizationExtension', () {
     test('localizes built-in non-deletable categories by fixed id', () {
-      final quoteCategory = NoteCategory(
-        id: DatabaseService.defaultCategoryIdHitokoto,
+      final quoteCategory = NoteTag(
+        id: DatabaseService.defaultTagIdHitokoto,
         name: '每日一言',
       );
-      final animeCategory = NoteCategory(
-        id: DatabaseService.defaultCategoryIdAnime,
+      final animeCategory = NoteTag(
+        id: DatabaseService.defaultTagIdAnime,
         name: '动画',
       );
-      final jokeCategory = NoteCategory(
-        id: DatabaseService.defaultCategoryIdJoke,
+      final jokeCategory = NoteTag(
+        id: DatabaseService.defaultTagIdJoke,
         name: '抖机灵',
       );
 
@@ -28,7 +28,7 @@ void main() {
     });
 
     test('localizes hidden system tag', () {
-      final hiddenTag = NoteCategory(
+      final hiddenTag = NoteTag(
         id: DatabaseService.hiddenTagId,
         name: '隐藏',
       );
@@ -37,7 +37,7 @@ void main() {
     });
 
     test('keeps custom tag name untouched', () {
-      final customTag = NoteCategory(id: 'custom_tag', name: 'My Custom Tag');
+      final customTag = NoteTag(id: 'custom_tag', name: 'My Custom Tag');
 
       expect(customTag.localizedName(l10n), 'My Custom Tag');
     });

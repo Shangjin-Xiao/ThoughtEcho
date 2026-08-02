@@ -416,7 +416,7 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                       final tag =
                                           (widget.allTags ?? []).firstWhere(
                                         (t) => t.id == tagId,
-                                        orElse: () => NoteCategory(
+                                        orElse: () => NoteTag(
                                           id: tagId,
                                           name: l10n.unknownTagWithId(
                                             tagId.substring(

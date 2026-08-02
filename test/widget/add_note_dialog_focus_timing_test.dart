@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/local_ai_settings.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
@@ -282,7 +282,7 @@ void main() {
       colorHex: '#336699',
     );
     final tags = [
-      NoteCategory(id: 'tag-1', name: '标签', iconName: 'tag'),
+      NoteTag(id: 'tag-1', name: '标签', iconName: 'tag'),
     ];
 
     await tester.pumpWidget(
@@ -358,7 +358,7 @@ class _SlowDatabaseService extends DatabaseService {
   }
 
   @override
-  Future<List<NoteCategory>> getCategories() async => const [];
+  Future<List<NoteTag>> getTags() async => const [];
 
   @override
   Future<void> addQuote(Quote quote) async {

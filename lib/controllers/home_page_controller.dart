@@ -2,7 +2,7 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 
 /// Owns the observable navigation and note-list state composed by [HomePage].
 ///
@@ -12,7 +12,7 @@ class HomePageController extends ChangeNotifier {
   HomePageController({required int initialPage}) : _currentIndex = initialPage;
 
   int _currentIndex;
-  List<NoteCategory> _tags = const [];
+  List<NoteTag> _tags = const [];
   List<String> _selectedTagIds = const [];
   bool _isLoadingTags = true;
   String _sortType = 'time';
@@ -28,7 +28,7 @@ class HomePageController extends ChangeNotifier {
   bool isHandlingExcerptIntent = false;
 
   int get currentIndex => _currentIndex;
-  UnmodifiableListView<NoteCategory> get tags => UnmodifiableListView(_tags);
+  UnmodifiableListView<NoteTag> get tags => UnmodifiableListView(_tags);
   UnmodifiableListView<String> get selectedTagIds =>
       UnmodifiableListView(_selectedTagIds);
   bool get isLoadingTags => _isLoadingTags;
@@ -76,7 +76,7 @@ class HomePageController extends ChangeNotifier {
 
   /// Loads tags as one state transition and ignores an older overlapping load.
   Future<void> loadTags(
-    Future<List<NoteCategory>> Function() fetchTags,
+    Future<List<NoteTag>> Function() fetchTags,
   ) async {
     final generation = ++_tagLoadGeneration;
     if (!_isLoadingTags) {
@@ -87,7 +87,7 @@ class HomePageController extends ChangeNotifier {
     try {
       final tags = await fetchTags();
       if (_disposed || generation != _tagLoadGeneration) return;
-      _tags = List<NoteCategory>.unmodifiable(tags);
+      _tags = List<NoteTag>.unmodifiable(tags);
     } finally {
       if (!_disposed && generation == _tagLoadGeneration) {
         _isLoadingTags = false;

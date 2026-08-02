@@ -21,7 +21,7 @@ import 'trash_page.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/city_search_widget.dart';
 import '../controllers/weather_search_controller.dart';
-import 'category_settings_page.dart';
+import 'tag_settings_page.dart';
 import 'license_page.dart' as license;
 import 'preferences_detail_page.dart';
 import 'user_guide_page.dart';
@@ -656,7 +656,7 @@ class SettingsPageState extends State<SettingsPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const CategorySettingsPage(),
+                        builder: (context) => const TagSettingsPage(),
                       ),
                     );
                   },

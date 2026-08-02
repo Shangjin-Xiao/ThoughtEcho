@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
-import '../models/note_category.dart';
+import '../models/note_tag.dart';
 import '../models/quote_model.dart';
 import '../services/api_service.dart';
 import '../services/database_service.dart';
@@ -46,26 +46,26 @@ class AddNoteController extends ChangeNotifier {
   bool isLoadingHitokotoTags = false;
 
   // 分类选择
-  NoteCategory? selectedCategory;
+  NoteTag? selectedCategory;
 
   // 一言类型到固定分类 ID 的映射
   static final Map<String, String> hitokotoTypeToCategoryIdMap = {
-    'a': DatabaseService.defaultCategoryIdAnime, // 动画
-    'b': DatabaseService.defaultCategoryIdComic, // 漫画
-    'c': DatabaseService.defaultCategoryIdGame, // 游戏
-    'd': DatabaseService.defaultCategoryIdNovel, // 文学
-    'e': DatabaseService.defaultCategoryIdOriginal, // 原创
-    'f': DatabaseService.defaultCategoryIdInternet, // 来自网络
-    'g': DatabaseService.defaultCategoryIdOther, // 其他
-    'h': DatabaseService.defaultCategoryIdMovie, // 影视
-    'i': DatabaseService.defaultCategoryIdPoem, // 诗词
-    'j': DatabaseService.defaultCategoryIdMusic, // 网易云
-    'k': DatabaseService.defaultCategoryIdPhilosophy, // 哲学
-    'l': DatabaseService.defaultCategoryIdJoke, // 抖机灵
+    'a': DatabaseService.defaultTagIdAnime, // 动画
+    'b': DatabaseService.defaultTagIdComic, // 漫画
+    'c': DatabaseService.defaultTagIdGame, // 游戏
+    'd': DatabaseService.defaultTagIdNovel, // 文学
+    'e': DatabaseService.defaultTagIdOriginal, // 原创
+    'f': DatabaseService.defaultTagIdInternet, // 来自网络
+    'g': DatabaseService.defaultTagIdOther, // 其他
+    'h': DatabaseService.defaultTagIdMovie, // 影视
+    'i': DatabaseService.defaultTagIdPoem, // 诗词
+    'j': DatabaseService.defaultTagIdMusic, // 网易云
+    'k': DatabaseService.defaultTagIdPhilosophy, // 哲学
+    'l': DatabaseService.defaultTagIdJoke, // 抖机灵
   };
 
   // 缓存所有标签，避免重复查询
-  List<NoteCategory>? allCategoriesCache;
+  List<NoteTag>? allCategoriesCache;
 
   // 外界可以通过回调或直接获取 selectedTagIds
   final List<String> _selectedTagIds;
@@ -348,7 +348,7 @@ class AddNoteController extends ChangeNotifier {
 
   // 添加默认的一言相关标签
   Future<void> addDefaultHitokotoTagsAsync(
-      void Function(NoteCategory?) onCategoryUpdated) async {
+      void Function(NoteTag?) onCategoryUpdated) async {
     isLoadingHitokotoTags = true;
     notifyListeners();
 
@@ -364,7 +364,7 @@ class AddNoteController extends ChangeNotifier {
       tagsToEnsure.add({
         'name': '每日一言',
         'icon': '💭',
-        'fixedId': DatabaseService.defaultCategoryIdHitokoto,
+        'fixedId': DatabaseService.defaultTagIdHitokoto,
       });
 
       String? hitokotoType;
@@ -400,7 +400,7 @@ class AddNoteController extends ChangeNotifier {
         if (tagId != null) {
           tagIds.add(tagId);
           if (tagInfo['fixedId'] != null &&
-              tagInfo['fixedId'] != DatabaseService.defaultCategoryIdHitokoto) {
+              tagInfo['fixedId'] != DatabaseService.defaultTagIdHitokoto) {
             subtypeTagId = tagId;
           }
         }
@@ -413,7 +413,7 @@ class AddNoteController extends ChangeNotifier {
       }
 
       if (subtypeTagId != null) {
-        final category = await db.getCategoryById(subtypeTagId);
+        final category = await db.getTagById(subtypeTagId);
         if (_isDisposed) return;
         selectedCategory = category;
         onCategoryUpdated(category);
@@ -444,12 +444,12 @@ class AddNoteController extends ChangeNotifier {
           }
         }
         if (name == '每日一言') {
-          fixedId = DatabaseService.defaultCategoryIdHitokoto;
+          fixedId = DatabaseService.defaultTagIdHitokoto;
         }
       }
 
       if (fixedId != null) {
-        final category = await db.getCategoryById(fixedId);
+        final category = await db.getTagById(fixedId);
         if (_isDisposed) return null;
         if (category != null) {
           return category.id;
@@ -457,7 +457,7 @@ class AddNoteController extends ChangeNotifier {
       }
 
       if (allCategoriesCache == null) {
-        final fetchedCategories = await db.getCategories();
+        final fetchedCategories = await db.getTags();
         if (_isDisposed) return null;
         allCategoriesCache = fetchedCategories;
       }
@@ -465,7 +465,7 @@ class AddNoteController extends ChangeNotifier {
 
       final existingTag = categories.firstWhere(
         (tag) => tag.name.toLowerCase() == name.toLowerCase(),
-        orElse: () => NoteCategory(id: '', name: ''),
+        orElse: () => NoteTag(id: '', name: ''),
       );
 
       if (existingTag.id.isNotEmpty) {
@@ -474,27 +474,27 @@ class AddNoteController extends ChangeNotifier {
 
       if (fixedId != null) {
         try {
-          await db.addCategoryWithId(fixedId, name, iconName: iconName);
+          await db.addTagWithId(fixedId, name, iconName: iconName);
           if (_isDisposed) return null;
           allCategoriesCache = null;
           return fixedId;
         } catch (e) {
           logDebug('使用固定ID创建标签失败: $e');
           if (_isDisposed) return null;
-          await db.addCategory(name, iconName: iconName);
+          await db.addTag(name, iconName: iconName);
           if (_isDisposed) return null;
         }
       } else {
-        await db.addCategory(name, iconName: iconName);
+        await db.addTag(name, iconName: iconName);
         if (_isDisposed) return null;
       }
 
       allCategoriesCache = null;
-      final updatedCategories = await db.getCategories();
+      final updatedCategories = await db.getTags();
       if (_isDisposed) return null;
       final newTag = updatedCategories.firstWhere(
         (tag) => tag.name.toLowerCase() == name.toLowerCase(),
-        orElse: () => NoteCategory(id: '', name: ''),
+        orElse: () => NoteTag(id: '', name: ''),
       );
 
       return newTag.id.isNotEmpty ? newTag.id : null;

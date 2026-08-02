@@ -51,7 +51,7 @@ class GetTagsTool extends AgentTool {
       final limit =
           toolCall.getInt('limit', defaultValue: 20).clamp(1, 50).toInt();
 
-      final categories = await _databaseService.getCategories();
+      final categories = await _databaseService.getTags();
       final visibleCategories =
           categories.where((c) => c.id != DatabaseService.hiddenTagId).toList();
       final totalCount = visibleCategories.length;

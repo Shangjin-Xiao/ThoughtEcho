@@ -76,38 +76,38 @@ class FallbackCardGenerationStrategy implements CardGenerationStrategy {
     if (note.categoryId != null) {
       CardType? candidate;
       switch (note.categoryId) {
-        case DatabaseService.defaultCategoryIdAnime: // 动画 -> 几何/视觉
+        case DatabaseService.defaultTagIdAnime: // 动画 -> 几何/视觉
           candidate = CardType.geometric;
           break;
-        case DatabaseService.defaultCategoryIdComic: // 漫画 -> 几何/视觉
+        case DatabaseService.defaultTagIdComic: // 漫画 -> 几何/视觉
           candidate = CardType.geometric;
           break;
-        case DatabaseService.defaultCategoryIdGame: // 游戏 -> 赛博/科技
+        case DatabaseService.defaultTagIdGame: // 游戏 -> 赛博/科技
           candidate = CardType.cyberpunk;
           break;
-        case DatabaseService.defaultCategoryIdNovel: // 小说 -> 复古/纸张
+        case DatabaseService.defaultTagIdNovel: // 小说 -> 复古/纸张
           candidate = CardType.retro;
           break;
-        case DatabaseService.defaultCategoryIdPoem: // 诗词 -> 水墨/禅意
+        case DatabaseService.defaultTagIdPoem: // 诗词 -> 水墨/禅意
           candidate = CardType.ink;
           break;
-        case DatabaseService.defaultCategoryIdPhilosophy: // 哲学 -> 哲学/深邃
+        case DatabaseService.defaultTagIdPhilosophy: // 哲学 -> 哲学/深邃
           candidate = CardType.philosophical;
           break;
-        case DatabaseService.defaultCategoryIdOriginal: // 原创 -> 情感/日记
+        case DatabaseService.defaultTagIdOriginal: // 原创 -> 情感/日记
           candidate = CardType.emotional;
           break;
-        case DatabaseService.defaultCategoryIdMusic: // 音乐 -> 情感/日记
+        case DatabaseService.defaultTagIdMusic: // 音乐 -> 情感/日记
           candidate = CardType.emotional;
           break;
         case DatabaseService
-              .defaultCategoryIdInternet: // 网络 -> 开发者/代码 (通常是网络段子或技术梗)
+              .defaultTagIdInternet: // 网络 -> 开发者/代码 (通常是网络段子或技术梗)
           candidate = CardType.dev;
           break;
-        case DatabaseService.defaultCategoryIdMovie: // 影视 -> 引用/剧照感
+        case DatabaseService.defaultTagIdMovie: // 影视 -> 引用/剧照感
           candidate = CardType.quote;
           break;
-        case DatabaseService.defaultCategoryIdJoke: // 抖机灵 -> 极简/留白 (突出笑点)
+        case DatabaseService.defaultTagIdJoke: // 抖机灵 -> 极简/留白 (突出笑点)
           candidate = CardType.minimalist;
           break;
       }

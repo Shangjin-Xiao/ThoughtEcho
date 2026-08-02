@@ -262,7 +262,7 @@ class ProposeNoteEditTool extends AgentTool {
               '设置标签必须提供非空 tag_ids；清除请使用 clear。',
             );
           }
-          final available = await _databaseService.getCategories();
+          final available = await _databaseService.getTags();
           final ids = available.map((tag) => tag.id).toSet();
           if (value.any((id) => !ids.contains(id.toString()))) {
             throw const FormatException('metadata_patch 包含不存在的标签。');

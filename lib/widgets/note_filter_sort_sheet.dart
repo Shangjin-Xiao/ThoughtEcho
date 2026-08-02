@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../extensions/note_category_localization_extension.dart';
-import '../models/note_category.dart';
+import '../extensions/note_tag_localization_extension.dart';
+import '../models/note_tag.dart';
 import '../utils/icon_utils.dart'; // Import IconUtils
 import '../services/weather_service.dart'; // Import WeatherService
 import '../services/biometric_service.dart'; // Import BiometricService
@@ -11,7 +11,7 @@ import '../gen_l10n/app_localizations.dart';
 import '../theme/theme_style.dart';
 
 class NoteFilterSortSheet extends StatefulWidget {
-  final List<NoteCategory> allTags;
+  final List<NoteTag> allTags;
   final List<String> selectedTagIds;
   final String sortType;
   final bool sortAscending;
@@ -299,7 +299,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
     }
 
     // 对标签进行排序，隐藏标签始终显示在最后
-    final sortedTags = List<NoteCategory>.from(widget.allTags);
+    final sortedTags = List<NoteTag>.from(widget.allTags);
     sortedTags.sort((a, b) {
       final aIsHidden = a.id == DatabaseService.hiddenTagId;
       final bIsHidden = b.id == DatabaseService.hiddenTagId;
@@ -359,7 +359,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
 
   /// 处理标签选择，隐藏标签需要特殊处理
   Future<void> _handleTagSelection(
-    NoteCategory tag,
+    NoteTag tag,
     bool selected,
     AppLocalizations l10n,
   ) async {

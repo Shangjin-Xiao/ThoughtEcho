@@ -14,7 +14,7 @@ mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
       clearExisting: clearExisting,
     );
     await _triggerPostRestoreMigrations();
-    await updateCategoriesStreamForParts();
+    await updateTagsStreamForParts();
     clearAllCacheForParts();
     notifyListeners();
     refreshQuotesStreamForParts();
@@ -73,7 +73,7 @@ mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
     if (!report.hasErrors) {
       await _triggerPostRestoreMigrations();
     }
-    await updateCategoriesStreamForParts();
+    await updateTagsStreamForParts();
     clearAllCacheForParts();
     notifyListeners();
     refreshQuotesStreamForParts();

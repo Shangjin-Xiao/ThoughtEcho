@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
@@ -15,7 +15,7 @@ import 'package:thoughtecho/widgets/add_note_dialog.dart';
 /// 测试点击加号按钮弹出笔记编辑框的性能
 void main() {
   group('AddNoteDialog Performance Tests', () {
-    late List<NoteCategory> mockTags;
+    late List<NoteTag> mockTags;
     late MockLocationService mockLocationService;
     late MockWeatherService mockWeatherService;
     late MockDatabaseService mockDatabaseService;
@@ -24,7 +24,7 @@ void main() {
       // 模拟大量标签数据来测试性能
       mockTags = List.generate(
         100,
-        (index) => NoteCategory(
+        (index) => NoteTag(
           id: 'tag_$index',
           name: '标签 $index',
           iconName: index % 2 == 0 ? '😀' : 'star',
@@ -175,11 +175,11 @@ class MockDatabaseService extends DatabaseService {
   MockDatabaseService() : super.forTesting();
 
   @override
-  Future<List<NoteCategory>> getCategories() async {
+  Future<List<NoteTag>> getTags() async {
     // 返回模拟的分类数据
     return List.generate(
       10,
-      (index) => NoteCategory(
+      (index) => NoteTag(
         id: 'mock_category_$index',
         name: '模拟分类 $index',
         iconName: 'star',

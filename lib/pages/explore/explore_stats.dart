@@ -1,6 +1,6 @@
-part of '../ai_periodic_report_page.dart';
+part of '../explore_page.dart';
 
-extension _AIReportStats on _AIPeriodicReportPageState {
+extension _ExploreStats on _ExplorePageState {
   /// 数据摘要带：把四个计数指标压成一条，不再各占一张卡片。
   ///
   /// 之前四张 elevation:2 的卡片和下面三个「最多」卡片视觉权重相同，

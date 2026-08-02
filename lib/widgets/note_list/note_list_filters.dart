@@ -32,7 +32,7 @@ extension NoteListFiltersExtension on NoteListViewState {
       allChips.addAll(
         widget.selectedTagIds.map((tagId) {
           final tag =
-              tagMap[tagId] ?? NoteCategory(id: tagId, name: l10n.unknownTag);
+              tagMap[tagId] ?? NoteTag(id: tagId, name: l10n.unknownTag);
           return TweenAnimationBuilder<double>(
             key: ValueKey('tag_$tagId'),
             duration: const Duration(milliseconds: 250),

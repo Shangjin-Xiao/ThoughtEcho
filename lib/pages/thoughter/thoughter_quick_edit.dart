@@ -1,4 +1,4 @@
-part of '../ai_assistant_page.dart';
+part of '../thoughter_page.dart';
 
 /// 快编对话框返回的编辑结果。快编只改元信息，正文一律走完整编辑器。
 class _QuickEditValues {
@@ -30,7 +30,7 @@ class _QuickEditTagSection extends StatefulWidget {
     required this.onSelectionChanged,
   });
 
-  final List<NoteCategory> tags;
+  final List<NoteTag> tags;
   final List<String> initialSelectedTagIds;
   final ValueChanged<List<String>> onSelectionChanged;
 
@@ -54,7 +54,7 @@ class _QuickEditTagSectionState extends State<_QuickEditTagSection> {
   }
 }
 
-extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
+extension _ThoughterQuickEdit on _ThoughterPageState {
   /// 结果卡与提案卡共用的快编面板：作者/出处/标签。
   /// 「快编」只管这些元信息，改正文请走完整编辑器，别在小面板里塞长文本框。
   /// 用底部面板而不是 AlertDialog：折叠的标签区展开后要占一屏高度，
@@ -66,7 +66,7 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
     required List<String> selectedTagIds,
   }) async {
     final db = context.read<DatabaseService>();
-    final categories = await db.getCategories();
+    final categories = await db.getTags();
     if (!mounted) return null;
     final l10n = AppLocalizations.of(context);
     final allTags = [
@@ -440,7 +440,7 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
 
   /// 提案卡的展示标签：优先 metadata 里的 tag_names，缺失时退化为 id。
   /// 修改提案的 tag_ids 是补丁，取补丁里的 value（没有补丁就是没动过标签）。
-  List<NoteCategory> _resolveProposalDisplayTags(
+  List<NoteTag> _resolveProposalDisplayTags(
     NoteProposalArtifact artifact,
   ) {
     final metadata = artifact.metadata;
@@ -456,7 +456,7 @@ extension _AIAssistantPageQuickEdit on _AIAssistantPageState {
         : const <String>[];
     return [
       for (var i = 0; i < ids.length; i++)
-        NoteCategory(
+        NoteTag(
           id: ids[i],
           name: i < names.length && names[i].trim().isNotEmpty
               ? names[i]

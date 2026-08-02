@@ -1,7 +1,7 @@
-part of '../ai_periodic_report_page.dart';
+part of '../explore_page.dart';
 
-extension _AIReportTimeSelector on _AIPeriodicReportPageState {
-  Widget _buildReportPage(BuildContext context) {
+extension _ExploreTimeSelector on _ExplorePageState {
+  Widget _buildExplorePage(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         bottom: false,

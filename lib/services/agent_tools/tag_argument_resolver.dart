@@ -18,7 +18,7 @@ Future<ResolvedTagArguments> resolveTagArguments(
   DatabaseService databaseService,
   Map<String, Object?> arguments,
 ) async {
-  final categories = await databaseService.getCategories();
+  final categories = await databaseService.getTags();
   final visibleCategories =
       categories.where((tag) => tag.id != DatabaseService.hiddenTagId).toList();
 

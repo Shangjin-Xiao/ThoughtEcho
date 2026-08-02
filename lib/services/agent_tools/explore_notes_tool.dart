@@ -169,7 +169,7 @@ class ExploreNotesTool extends AgentTool {
         selectedDayPeriods: dayPeriods,
       );
 
-      final categories = await _db.getCategories();
+      final categories = await _db.getTags();
       final tagNameMap = <String, String>{
         for (final category in categories) category.id: category.name,
       };

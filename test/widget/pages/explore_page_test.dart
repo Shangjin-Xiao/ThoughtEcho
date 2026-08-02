@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/quote_model.dart';
-import 'package:thoughtecho/pages/ai_periodic_report_page.dart';
+import 'package:thoughtecho/pages/explore_page.dart';
 import 'package:thoughtecho/pages/note_full_editor_page.dart';
 import 'package:thoughtecho/models/chat_session.dart';
 import 'package:thoughtecho/services/ai_service.dart';
@@ -140,13 +140,13 @@ void main() {
           locale: Locale('zh'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: AIPeriodicReportPage(),
+          home: ExplorePage(),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    final context = tester.element(find.byType(AIPeriodicReportPage));
+    final context = tester.element(find.byType(ExplorePage));
     final l10n = AppLocalizations.of(context);
     expect(find.text(l10n.dataOverview), findsOneWidget);
     // 周期选择并进了标题行，顶部那张独立的「时间范围」卡片已经不存在
@@ -227,13 +227,13 @@ void main() {
           locale: Locale('zh'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: AIPeriodicReportPage(),
+          home: ExplorePage(),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    final context = tester.element(find.byType(AIPeriodicReportPage));
+    final context = tester.element(find.byType(ExplorePage));
     final l10n = AppLocalizations.of(context);
 
     expect(find.text(l10n.exploreRecentChats), findsOneWidget);
@@ -266,13 +266,13 @@ void main() {
           locale: Locale('zh'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: AIPeriodicReportPage(),
+          home: ExplorePage(),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    final context = tester.element(find.byType(AIPeriodicReportPage));
+    final context = tester.element(find.byType(ExplorePage));
     final l10n = AppLocalizations.of(context);
     expect(find.text(l10n.exploreRecentChats), findsNothing);
     // 页面其余部分照常渲染
@@ -302,13 +302,13 @@ void main() {
           locale: Locale('zh'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: AIPeriodicReportPage(),
+          home: ExplorePage(),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    final context = tester.element(find.byType(AIPeriodicReportPage));
+    final context = tester.element(find.byType(ExplorePage));
     final l10n = AppLocalizations.of(context);
     expect(find.text('一条测试笔记'), findsOneWidget);
     expect(find.text(l10n.askNote), findsOneWidget);
@@ -339,7 +339,7 @@ void main() {
           locale: Locale('zh'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: AIPeriodicReportPage(),
+          home: ExplorePage(),
         ),
       ),
     );
@@ -374,14 +374,14 @@ void main() {
           locale: Locale('zh'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: AIPeriodicReportPage(),
+          home: ExplorePage(),
         ),
       ),
     );
     // 先确认异步查询已完成、概览已经渲染出来，否则下面数的是空树
     await tester.pump();
     await tester.pump();
-    final context = tester.element(find.byType(AIPeriodicReportPage));
+    final context = tester.element(find.byType(ExplorePage));
     final l10n = AppLocalizations.of(context);
     expect(find.text(l10n.dataOverview), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
@@ -421,7 +421,7 @@ void main() {
           locale: Locale('zh'),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: AIPeriodicReportPage(),
+          home: ExplorePage(),
         ),
       ),
     );

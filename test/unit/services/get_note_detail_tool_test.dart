@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/get_note_detail_tool.dart';
@@ -25,12 +25,12 @@ class _TestDatabaseService extends DatabaseService {
   }
 
   @override
-  Future<NoteCategory?> getCategoryById(String id) async {
+  Future<NoteTag?> getTagById(String id) async {
     if (id == 'cat_work') {
-      return NoteCategory(id: 'cat_work', name: '工作', isDefault: false);
+      return NoteTag(id: 'cat_work', name: '工作', isDefault: false);
     }
     if (id == 'tag_idea') {
-      return NoteCategory(id: 'tag_idea', name: '灵感', isDefault: false);
+      return NoteTag(id: 'tag_idea', name: '灵感', isDefault: false);
     }
     return null;
   }

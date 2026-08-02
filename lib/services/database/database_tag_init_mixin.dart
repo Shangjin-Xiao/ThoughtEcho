@@ -1,23 +1,23 @@
 part of '../database_service.dart';
 
 /// Mixin providing default category initialization for DatabaseService.
-mixin _DatabaseCategoryInitMixin on _DatabaseServiceBase {
-  /// 初始化默认一言分类标签
+mixin _DatabaseTagInitMixin on _DatabaseServiceBase {
+  /// 初始化默认一言标签标签
   @override
-  Future<void> initDefaultHitokotoCategories() async {
+  Future<void> initDefaultHitokotoTags() async {
     if (kIsWeb) {
-      // Web 平台逻辑：检查内存中的 _categoryStore
-      final defaultCategories = _getDefaultHitokotoCategories();
+      // Web 平台逻辑：检查内存中的 _tagStore
+      final defaultCategories = _getDefaultHitokotoTags();
       final existingNamesLower =
-          _categoryStore.map((c) => c.name.toLowerCase()).toSet();
+          _tagStore.map((c) => c.name.toLowerCase()).toSet();
       for (final category in defaultCategories) {
         if (!existingNamesLower.contains(category.name.toLowerCase())) {
-          _categoryStore.add(category);
+          _tagStore.add(category);
         }
       }
       // 确保流更新
-      if (!_categoriesController.isClosed) {
-        _categoriesController.add(List.unmodifiable(_categoryStore));
+      if (!_tagsController.isClosed) {
+        _tagsController.add(List.unmodifiable(_tagStore));
       }
       return;
     }
@@ -40,9 +40,9 @@ mixin _DatabaseCategoryInitMixin on _DatabaseServiceBase {
       }
 
       final db = database;
-      final defaultCategories = _getDefaultHitokotoCategories();
+      final defaultCategories = _getDefaultHitokotoTags();
 
-      // 1. 一次性查询所有现有分类名称（小写）
+      // 1. 一次性查询所有现有标签名称（小写）
       final existingCategories = await db.query(
         'categories',
         columns: ['name', 'id'],
@@ -57,7 +57,7 @@ mixin _DatabaseCategoryInitMixin on _DatabaseServiceBase {
         for (var row in existingCategories)
           row['id'] as String: row['name'] as String,
       };
-      // 2. 筛选出数据库中尚不存在的默认分类
+      // 2. 筛选出数据库中尚不存在的默认标签
       final categoriesToAdd = defaultCategories
           .where(
             (category) =>
@@ -75,7 +75,7 @@ mixin _DatabaseCategoryInitMixin on _DatabaseServiceBase {
           idsToUpdate[category.id] = category.name;
         }
       }
-      // 4. 如果有需要添加的分类，则使用批处理插入
+      // 4. 如果有需要添加的标签，则使用批处理插入
       final batch = db.batch();
 
       // 先处理更新
@@ -86,7 +86,7 @@ mixin _DatabaseCategoryInitMixin on _DatabaseServiceBase {
           where: 'id = ?',
           whereArgs: [entry.key],
         );
-        logDebug('更新ID为${entry.key}的分类名称为: ${entry.value}');
+        logDebug('更新ID为${entry.key}的标签名称为: ${entry.value}');
       }
       // 再处理新增
       for (final category in categoriesToAdd) {
@@ -103,97 +103,97 @@ mixin _DatabaseCategoryInitMixin on _DatabaseServiceBase {
               'icon_name': category.iconName,
             },
             conflictAlgorithm: ConflictAlgorithm.ignore);
-        logDebug('添加默认一言分类: ${category.name}');
+        logDebug('添加默认一言标签: ${category.name}');
       }
 
       // 提交批处理
       if (categoriesToAdd.isNotEmpty || idsToUpdate.isNotEmpty) {
         await batch.commit(noResult: true);
         logDebug(
-          '批量处理了 ${categoriesToAdd.length} 个新分类和 ${idsToUpdate.length} 个更新',
+          '批量处理了 ${categoriesToAdd.length} 个新标签和 ${idsToUpdate.length} 个更新',
         );
       } else {
-        logDebug('所有默认分类已存在，无需添加');
+        logDebug('所有默认标签已存在，无需添加');
       }
 
-      // 更新分类流
-      await updateCategoriesStreamForParts();
+      // 更新标签流
+      await updateTagsStreamForParts();
     } catch (e) {
-      logDebug('初始化默认一言分类出错: $e');
+      logDebug('初始化默认一言标签出错: $e');
     }
   }
 
-  /// 获取默认一言分类列表
-  List<NoteCategory> _getDefaultHitokotoCategories() {
+  /// 获取默认一言标签列表
+  List<NoteTag> _getDefaultHitokotoTags() {
     return [
-      NoteCategory(
-        id: _DatabaseServiceBase.defaultCategoryIdHitokoto, // 使用固定 ID
+      NoteTag(
+        id: _DatabaseServiceBase.defaultTagIdHitokoto, // 使用固定 ID
         name: '每日一言',
         isDefault: true,
         iconName: 'format_quote',
       ),
-      NoteCategory(
-        id: _DatabaseServiceBase.defaultCategoryIdAnime, // 使用固定 ID
+      NoteTag(
+        id: _DatabaseServiceBase.defaultTagIdAnime, // 使用固定 ID
         name: '动画',
         isDefault: true,
         iconName: '🎬',
       ),
-      NoteCategory(
-        id: _DatabaseServiceBase.defaultCategoryIdComic, // 使用固定 ID
+      NoteTag(
+        id: _DatabaseServiceBase.defaultTagIdComic, // 使用固定 ID
         name: '漫画',
         isDefault: true,
         iconName: '📚',
       ),
-      NoteCategory(
-        id: _DatabaseServiceBase.defaultCategoryIdGame, // 使用固定 ID
+      NoteTag(
+        id: _DatabaseServiceBase.defaultTagIdGame, // 使用固定 ID
         name: '游戏',
         isDefault: true,
         iconName: '🎮',
       ),
-      NoteCategory(
-        id: _DatabaseServiceBase.defaultCategoryIdNovel, // 使用固定 ID
+      NoteTag(
+        id: _DatabaseServiceBase.defaultTagIdNovel, // 使用固定 ID
         name: '文学',
         isDefault: true,
         iconName: '📖',
       ),
-      NoteCategory(
-        id: _DatabaseServiceBase.defaultCategoryIdOriginal, // 使用固定 ID
+      NoteTag(
+        id: _DatabaseServiceBase.defaultTagIdOriginal, // 使用固定 ID
         name: '原创',
         isDefault: true,
         iconName: '✨',
       ),
-      NoteCategory(
-        id: _DatabaseServiceBase.defaultCategoryIdInternet, // 使用固定 ID
+      NoteTag(
+        id: _DatabaseServiceBase.defaultTagIdInternet, // 使用固定 ID
         name: '来自网络',
         isDefault: true,
         iconName: '🌐',
       ),
-      NoteCategory(
-        id: _DatabaseServiceBase.defaultCategoryIdOther, // 使用固定 ID
+      NoteTag(
+        id: _DatabaseServiceBase.defaultTagIdOther, // 使用固定 ID
         name: '其他',
         isDefault: true,
         iconName: '📦',
       ),
-      NoteCategory(
-        id: _DatabaseServiceBase.defaultCategoryIdMovie, // 使用固定 ID
+      NoteTag(
+        id: _DatabaseServiceBase.defaultTagIdMovie, // 使用固定 ID
         name: '影视',
         isDefault: true,
         iconName: '🎞️',
       ),
-      NoteCategory(
-        id: _DatabaseServiceBase.defaultCategoryIdPoem, // 使用固定 ID
+      NoteTag(
+        id: _DatabaseServiceBase.defaultTagIdPoem, // 使用固定 ID
         name: '诗词',
         isDefault: true,
         iconName: '🪶',
       ),
-      NoteCategory(
-        id: _DatabaseServiceBase.defaultCategoryIdMusic, // 使用固定 ID
+      NoteTag(
+        id: _DatabaseServiceBase.defaultTagIdMusic, // 使用固定 ID
         name: '网易云',
         isDefault: true,
         iconName: '🎧',
       ),
-      NoteCategory(
-        id: _DatabaseServiceBase.defaultCategoryIdPhilosophy, // 使用固定 ID
+      NoteTag(
+        id: _DatabaseServiceBase.defaultTagIdPhilosophy, // 使用固定 ID
         name: '哲学',
         isDefault: true,
         iconName: '🤔',

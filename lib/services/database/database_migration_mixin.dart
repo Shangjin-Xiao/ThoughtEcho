@@ -106,7 +106,7 @@ mixin _DatabaseMigrationMixin on _DatabaseServiceBase {
       database,
       offlineQuoteSource: offlineQuoteSource,
       memoryStore: _memoryStore,
-      categoryStore: _categoryStore,
+      categoryStore: _tagStore,
     );
   }
 
@@ -134,7 +134,7 @@ mixin _DatabaseMigrationMixin on _DatabaseServiceBase {
     return _healthService.getDatabaseHealthInfo(
       await safeDatabase,
       webQuoteCount: _memoryStore.length,
-      webCategoryCount: _categoryStore.length,
+      webCategoryCount: _tagStore.length,
     );
   }
 }

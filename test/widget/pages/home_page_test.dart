@@ -7,7 +7,7 @@ import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/local_ai_settings.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/models/quote_model.dart';
-import 'package:thoughtecho/pages/ai_features_page.dart';
+import 'package:thoughtecho/pages/explore_page.dart';
 import 'package:thoughtecho/pages/home/daily_prompt_panel.dart';
 import 'package:thoughtecho/pages/home_page.dart';
 import 'package:thoughtecho/pages/settings_page.dart';
@@ -317,7 +317,7 @@ void main() {
       expect(find.byType(NoteListView), findsOneWidget);
     });
 
-    testWidgets('should navigate to AIFeaturesPage when third tab is tapped',
+    testWidgets('should navigate to ExplorePage when third tab is tapped',
         (WidgetTester tester) async {
       await pumpHomePage(tester);
 
@@ -325,7 +325,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.auto_awesome_outlined));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AIFeaturesPage), findsOneWidget);
+      expect(find.byType(ExplorePage), findsOneWidget);
       final homeScaffold = tester.widget<Scaffold>(
         find
             .descendant(

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../extensions/note_category_localization_extension.dart';
+import '../extensions/note_tag_localization_extension.dart';
 import '../gen_l10n/app_localizations.dart';
-import '../models/note_category.dart';
+import '../models/note_tag.dart';
 import '../services/biometric_service.dart';
 import '../services/clipboard_service.dart';
 import '../services/database_service.dart';
@@ -899,7 +899,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
     AppLocalizations l10n,
   ) async {
     final db = Provider.of<DatabaseService>(context, listen: false);
-    final categories = await db.getCategories();
+    final categories = await db.getTags();
     final selectedIds = List<String>.from(settings.defaultTagIds);
     String searchQuery = '';
 
@@ -910,7 +910,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setDialogState) {
-            final List<NoteCategory> filteredCategories = categories
+            final List<NoteTag> filteredCategories = categories
                 .where(
                   (tag) => tag
                       .localizedName(l10n)

@@ -270,7 +270,7 @@ class BackupService {
 
       // 1. 导出分类
       logDebug('正在导出分类数据...');
-      final categories = await _databaseService.getAllCategories(); // 假设分类数据量不大
+      final categories = await _databaseService.getAllTagMaps(); // 假设分类数据量不大
       sink.write('"categories":${jsonEncode(categories)},');
       sink.write('"quotes":[');
 

@@ -9,12 +9,12 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
 import '../gen_l10n/app_localizations.dart';
-import '../models/ai_assistant_entry.dart';
+import '../models/thoughter_entry.dart';
 import '../models/ai_insight_workflow_options.dart';
 import '../models/chat_message.dart' as app_chat;
 import '../models/chat_message.dart' show MessageState;
 import '../models/chat_session.dart';
-import '../models/note_category.dart';
+import '../models/note_tag.dart';
 import '../models/quote_model.dart';
 import '../models/rich_text_edit.dart';
 import '../models/weather_data.dart' show WeatherCodeMapper;
@@ -53,23 +53,23 @@ import '../widgets/ai/experimental_badge.dart';
 import '../widgets/ai/note_proposal_card.dart';
 import '../widgets/ai/thinking_widget.dart';
 import '../widgets/ai/tool_progress_panel.dart';
-import 'ai_assistant/session_history_page.dart';
+import 'thoughter/session_history_page.dart';
 import '../widgets/add_note_dialog.dart';
 import '../widgets/add_note_dialog_parts.dart' show TagSelectionSection;
 import 'note_full_editor_page.dart';
 import '../theme/theme_style.dart';
 
-part 'ai_assistant/ai_assistant_page_session.dart';
-part 'ai_assistant/ai_assistant_page_workflow.dart';
-part 'ai_assistant/ai_assistant_page_agent.dart';
-part 'ai_assistant/ai_assistant_page_quick_edit.dart';
-part 'ai_assistant/ai_assistant_page_ui.dart';
+part 'thoughter/thoughter_session.dart';
+part 'thoughter/thoughter_workflow.dart';
+part 'thoughter/thoughter_agent.dart';
+part 'thoughter/thoughter_quick_edit.dart';
+part 'thoughter/thoughter_ui.dart';
 
-class AIAssistantPage extends StatefulWidget {
+class ThoughterPage extends StatefulWidget {
   final Quote? quote;
   final String? initialQuestion;
   final ChatSession? session;
-  final AIAssistantEntrySource? entrySource;
+  final ThoughterEntrySource? entrySource;
   final String? exploreGuideSummary;
 
   /// 开场白：作为 Thoughter 的第一句显示，并且**进入模型上下文**。
@@ -80,7 +80,7 @@ class AIAssistantPage extends StatefulWidget {
   /// 生成，模型也确实知道开场说了什么。
   final String? openingMessage;
 
-  const AIAssistantPage({
+  const ThoughterPage({
     super.key,
     this.quote,
     this.initialQuestion,
@@ -91,10 +91,10 @@ class AIAssistantPage extends StatefulWidget {
   });
 
   @override
-  State<AIAssistantPage> createState() => _AIAssistantPageState();
+  State<ThoughterPage> createState() => _ThoughterPageState();
 }
 
-class _AIAssistantPageState extends State<AIAssistantPage> {
+class _ThoughterPageState extends State<ThoughterPage> {
   final TextEditingController _textController = TextEditingController();
   final FocusNode _inputFocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
@@ -112,7 +112,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   late AIService _aiService;
   late SettingsService _settingsService;
   bool _settingsReady = false;
-  late AIAssistantPageMode _currentMode;
+  late ThoughterPageMode _currentMode;
   String _selectedInsightType = 'comprehensive';
   String _selectedInsightStyle = 'professional';
 
@@ -236,14 +236,14 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   ThemeData? _cachedMarkdownTheme;
   // ==================== 性能优化结束 ====================
 
-  AIAssistantEntrySource get _entrySource =>
+  ThoughterEntrySource get _entrySource =>
       widget.entrySource ??
       (widget.quote != null
-          ? AIAssistantEntrySource.note
-          : AIAssistantEntrySource.explore);
+          ? ThoughterEntrySource.note
+          : ThoughterEntrySource.explore);
 
-  AIAssistantEntryConfig get _entryConfig =>
-      AIAssistantEntryConfig(source: _entrySource);
+  ThoughterEntryConfig get _entryConfig =>
+      ThoughterEntryConfig(source: _entrySource);
 
   bool get _hasBoundNote => widget.quote != null;
   String? get _boundNoteId {
@@ -254,7 +254,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     return id;
   }
 
-  bool get _isAgentMode => _currentMode == AIAssistantPageMode.agent;
+  bool get _isAgentMode => _currentMode == ThoughterPageMode.agent;
 
   /// 检查当前模型是否支持思考/推理模式
   bool get _currentModelSupportsThinking {

@@ -9,7 +9,7 @@ import 'package:thoughtecho/controllers/search_controller.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/local_ai_settings.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
@@ -142,7 +142,7 @@ class _TestAppState extends State<_TestApp> {
             animation: _searchController,
             builder: (context, _) {
               return NoteListView(
-                tags: [NoteCategory(id: 'tag-1', name: '标签一', iconName: '🏷️')],
+                tags: [NoteTag(id: 'tag-1', name: '标签一', iconName: '🏷️')],
                 selectedTagIds: const [],
                 onTagSelectionChanged: (_) {},
                 searchQuery: _searchController.searchQuery,
@@ -272,7 +272,7 @@ class _SearchFakeDatabase extends DatabaseService {
   }) async {}
 
   @override
-  Future<List<NoteCategory>> getCategories() async => const [];
+  Future<List<NoteTag>> getTags() async => const [];
 
   Future<void> disposeStream() async {
     for (final timer in _pendingTimers) {

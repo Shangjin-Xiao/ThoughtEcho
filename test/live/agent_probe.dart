@@ -398,7 +398,7 @@ class AgentProbe {
     await _resetDatabase(database);
     for (final tag in seedTags) {
       try {
-        await database.addCategory(tag);
+        await database.addTag(tag);
       } catch (_) {
         // 与系统标签重名时沿用已有的即可。
       }
@@ -515,9 +515,9 @@ class AgentProbe {
         await database.permanentlyDeleteQuote(id);
       }
     }
-    for (final category in await database.getCategories()) {
+    for (final category in await database.getTags()) {
       try {
-        await database.deleteCategory(category.id);
+        await database.deleteTag(category.id);
       } catch (_) {
         // 系统标签删不掉，留着即可——它在真机上本来也存在。
       }
@@ -643,7 +643,7 @@ class AgentProbe {
 
 /// 提案落库前的确定性校验结果。
 ///
-/// 采纳逻辑长在 `_AIAssistantPageState` 里，无头跑不动；这里复刻它的
+/// 采纳逻辑长在 `_ThoughterPageState` 里，无头跑不动；这里复刻它的
 /// `_validatedArtifactOps` 不变量，这几条是模型行为之外真正该断言的东西。
 class ProposalCheck {
   ProposalCheck._(this.problems, this.ops);

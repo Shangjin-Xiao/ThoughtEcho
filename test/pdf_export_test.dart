@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/delta_to_pdf_parser.dart';
 import 'package:thoughtecho/services/pdf_export_service.dart';
@@ -275,7 +275,7 @@ void main() {
 
       expect(
         PdfExportService.buildTagIcon(
-          NoteCategory(id: 'book', name: 'Book', iconName: 'book'),
+          NoteTag(id: 'book', name: 'Book', iconName: 'book'),
           fontSet,
           color: PdfColors.grey700,
         ),
@@ -283,21 +283,21 @@ void main() {
       );
       expect(
         PdfExportService.buildTagIcon(
-          NoteCategory(id: 'emoji', name: 'Emoji', iconName: '📚'),
+          NoteTag(id: 'emoji', name: 'Emoji', iconName: '📚'),
           fontSet,
           color: PdfColors.grey700,
         ),
         isA<pw.Text>(),
       );
       final skinToneEmoji = PdfExportService.buildTagIcon(
-        NoteCategory(id: 'skin-tone', name: 'Skin tone', iconName: '👍🏽'),
+        NoteTag(id: 'skin-tone', name: 'Skin tone', iconName: '👍🏽'),
         fontSet,
         color: PdfColors.grey700,
       ) as pw.Text;
       expect((skinToneEmoji.text as pw.TextSpan).text, isNot(contains('🏽')));
 
       final keycapEmoji = PdfExportService.buildTagIcon(
-        NoteCategory(id: 'keycap', name: 'Keycap', iconName: '#️⃣'),
+        NoteTag(id: 'keycap', name: 'Keycap', iconName: '#️⃣'),
         fontSet,
         color: PdfColors.grey700,
       ) as pw.Text;
@@ -305,7 +305,7 @@ void main() {
 
       expect(
         PdfExportService.buildTagIcon(
-          NoteCategory(id: 'unknown', name: 'Unknown', iconName: 'not-an-icon'),
+          NoteTag(id: 'unknown', name: 'Unknown', iconName: 'not-an-icon'),
           fontSet,
           color: PdfColors.grey700,
         ),

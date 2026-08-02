@@ -4,9 +4,13 @@
 `part` 文件拆分：
 
 - `note_editor/`：富文本编辑器，10 个 part，另见该目录 `AGENTS.md`
-- `ai_report/`：AI 周期报告，4 个 part
-- `ai_assistant/`：助手会话、工作流和 UI 拆分
+- `explore/`：探索页（底部导航第三个 tab），5 个 part
+- `thoughter/`：Thoughter 对话页的会话、工作流和 UI 拆分，另含会话历史页
 - `home/`：主页局部面板
+
+页面文件名必须与它在 UI 上的身份一致，术语对照见根 `AGENTS.md` 的「命名与领域词汇」。
+特别注意：管理**标签**的页面是 `tag_settings_page.dart`；`api_ninjas_category_selection_page.dart`
+管的才是名言 API 的**分类**，两者无关。
 
 主页的刷新、目标笔记定位、功能引导、AI 卡片导出、语音/OCR 捕获、笔记增删改和编辑器路由
 分别由 `home/` 下的 orchestration module 管理；`HomePage` 对这些流程只提供页面 key、窄回调
@@ -26,8 +30,8 @@
 
 ## 复杂页面
 
-`home_page.dart`、`settings_page.dart`、`note_sync_page.dart`、`annual_report_page.dart`、
-`smart_push_settings_page.dart`、`tag_settings_page.dart` 和 `category_settings_page.dart` 均有较多
+`home_page.dart`、`settings_page.dart`、`note_sync_page.dart`、`thoughter_page.dart`、
+`smart_push_settings_page.dart` 和 `tag_settings_page.dart` 均有较多
 状态或交互。修改前先搜索关联 Service、part/辅助文件、路由入口和 Widget 测试。新增功能优先
 放入现有职责对应的子组件，不继续扩大父页面。
 

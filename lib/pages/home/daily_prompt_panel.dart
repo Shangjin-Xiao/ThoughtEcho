@@ -5,7 +5,7 @@ import '../../theme/theme_style.dart';
 import 'package:provider/provider.dart';
 
 import '../../gen_l10n/app_localizations.dart';
-import '../../models/ai_assistant_entry.dart';
+import '../../models/thoughter_entry.dart';
 import '../../services/ai_service.dart';
 import '../../services/insight_history_service.dart';
 import '../../services/location_service.dart';
@@ -13,7 +13,7 @@ import '../../services/settings_service.dart';
 import '../../services/weather_service.dart';
 import '../../utils/app_logger.dart';
 import '../../utils/daily_prompt_generator.dart';
-import '../ai_assistant_page.dart';
+import '../thoughter_page.dart';
 
 class HomeDailyPromptPanel extends StatefulWidget {
   final double screenWidth;
@@ -195,7 +195,7 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
 
   /// 带着今天的提示进入 Thoughter。
   ///
-  /// 提示本身作为开场白（[AIAssistantPage.openingMessage]），既是对话的
+  /// 提示本身作为开场白（[ThoughterPage.openingMessage]），既是对话的
   /// 第一句，也进入模型上下文——不需要再让 AI 生成一次开场，也不替用户
   /// 先问一句，接下来说什么由用户决定。
   void _openThoughterWithPrompt() {
@@ -203,8 +203,8 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
     if (prompt.isEmpty) return;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => AIAssistantPage(
-          entrySource: AIAssistantEntrySource.explore,
+        builder: (_) => ThoughterPage(
+          entrySource: ThoughterEntrySource.explore,
           openingMessage: prompt,
         ),
       ),

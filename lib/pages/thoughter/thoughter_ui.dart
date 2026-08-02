@@ -1,4 +1,4 @@
-part of '../ai_assistant_page.dart';
+part of '../thoughter_page.dart';
 
 /// 用户气泡最宽占可用宽度的比例。留出左侧空白，让"谁在说话"靠位置而不是
 /// 靠标签来表达。
@@ -8,7 +8,7 @@ const double _kUserBubbleWidthFactor = 0.78;
 /// markdown 的排版落在最后一个字后面，而不是另起一行。
 const String _kStreamingCursor = '▌';
 
-extension _AIAssistantPageUI on _AIAssistantPageState {
+extension _ThoughterUI on _ThoughterPageState {
   /// 消息区可用高度变小（键盘上推、输入框变多行）时跟着贴底，
   /// 保证最后一条消息不会被顶出可视区。
   /// 注意不能监听 MediaQuery 的 viewInsets：Scaffold 已经把键盘 inset
@@ -82,7 +82,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       ),
       body: Column(
         children: [
-          if (_entrySource == AIAssistantEntrySource.explore &&
+          if (_entrySource == ThoughterEntrySource.explore &&
               widget.exploreGuideSummary?.trim().isNotEmpty == true)
             _buildExploreGuideBanner(theme, l10n),
           Expanded(
@@ -320,7 +320,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           'Failed to render AI workflow message',
           error: e,
           stackTrace: stack,
-          source: 'ai_assistant_page_ui',
+          source: 'thoughter_ui',
         );
       }
     }
@@ -771,7 +771,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           !_opsHaveRichFormatting(validatedOps);
       if (effectivelyPlain &&
           !context.read<SettingsService>().skipNonFullscreenEditor) {
-        final tags = await db.getCategories();
+        final tags = await db.getTags();
         if (!mounted) return null;
         String? savedId;
         await showModalBottomSheet<void>(
@@ -820,7 +820,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       return null;
     }
     final proposed = _quoteFromArtifact(note, artifact);
-    final tags = await db.getCategories();
+    final tags = await db.getTags();
     if (!mounted) return null;
     String? savedId;
     if (artifact.resultKind == NoteDocumentKind.rich) {
@@ -1001,7 +1001,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         _isShortContent(content) &&
         !DeltaBuilder.hasMarkdownFormatting(content)) {
       final db = context.read<DatabaseService>();
-      final tags = await db.getCategories();
+      final tags = await db.getTags();
       if (!mounted) return null;
       String? savedNoteId;
       await showModalBottomSheet(
@@ -1030,7 +1030,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     final locationService = context.read<LocationService>();
     final weatherService = context.read<WeatherService>();
     final l10n = AppLocalizations.of(context);
-    final tags = await db.getCategories();
+    final tags = await db.getTags();
 
     // 预获取位置/天气数据，确保传入编辑器的 initialQuote 包含真实数据
     if (includeLocation) {
@@ -1298,10 +1298,10 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       return noteId;
     } catch (e, stack) {
       logError(
-        'AIAssistantPage._saveSmartResultAsNewNote 失败',
+        'ThoughterPage._saveSmartResultAsNewNote 失败',
         error: e,
         stackTrace: stack,
-        source: 'AIAssistantPage',
+        source: 'ThoughterPage',
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

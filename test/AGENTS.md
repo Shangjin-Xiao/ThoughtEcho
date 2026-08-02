@@ -1,7 +1,18 @@
 # Test 模块
 
-本目录包含 unit、widget、integration、performance 以及少量历史根级测试。新增测试优先镜像
-`lib/` 路径放入 `test/unit/` 或 `test/widget/`；不要继续无理由增加根级测试文件。
+本目录包含 unit、widget、integration、performance 以及少量历史根级测试。不要继续无理由增加
+根级测试文件。
+
+新增测试的落点由两步决定，先选根再镜像路径：
+
+1. **选根**：用到 `testWidgets` / `WidgetTester` 渲染的进 `test/widget/`，纯逻辑断言的进
+   `test/unit/`。
+2. **镜像 `lib/` 路径**：被测文件是 `lib/widgets/ai/tool_progress_panel.dart`，widget 测试就放
+   `test/widget/widgets/ai/tool_progress_panel_test.dart`。
+
+同一个被测文件同时有渲染测试和纯逻辑测试时，两个根下各放一个是正常的；但**同一类测试只能
+有一个落点**，不要新建 `test/widgets/`、`test/bug_fixes/` 这类平行目录（前者已合并，后者是
+历史遗留，只减不增）。
 
 ## 运行命令
 
@@ -21,7 +32,7 @@ timeout 300s flutter test --reporter compact --timeout 90s --concurrency 1 \
 
 # Widget 门禁（两片）
 timeout 300s flutter test --reporter compact --timeout 90s --concurrency 1 \
-  --shard-index=0 --total-shards=2 test/widget test/widgets
+  --shard-index=0 --total-shards=2 test/widget
 
 # 根目录与历史回归测试（两片）
 timeout 300s flutter test --reporter compact --timeout 90s --concurrency 1 \
@@ -59,7 +70,7 @@ dart run build_runner build --delete-conflicting-outputs
 - `*.mocks.dart` 和其他生成测试文件禁止手动编辑。
 
 `test/all_tests.dart` 已删除：人工导入清单不能证明完整覆盖。默认门禁按目录自动发现
-`test/unit/`、`test/widget/`、`test/widgets/`、`test/bug_fixes/` 和根目录 `*_test.dart`；真实服务/设备集成和
+`test/unit/`、`test/widget/`、`test/bug_fixes/` 和根目录 `*_test.dart`；真实服务/设备集成和
 性能基准必须分别显式运行。每个测试文件仍必须可独立运行。
 
 不以 `*_test.dart` 结尾的 `test/test_*.dart` 是历史诊断脚本，不属于 `flutter test` 门禁，也不能

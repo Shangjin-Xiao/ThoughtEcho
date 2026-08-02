@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../extensions/note_category_localization_extension.dart';
+import '../extensions/note_tag_localization_extension.dart';
 import '../gen_l10n/app_localizations.dart';
-import '../models/note_category.dart';
+import '../models/note_tag.dart';
 import '../services/database_service.dart';
 import '../theme/theme_style.dart';
 import '../utils/icon_utils.dart';
@@ -33,7 +33,7 @@ class KeyboardInsetPadding extends StatelessWidget {
 
 /// 标签选择区域 - 独立组件，避免AddNoteDialog重建时重复构建
 class TagSelectionSection extends StatefulWidget {
-  final List<NoteCategory> tags;
+  final List<NoteTag> tags;
   final List<String> selectedTagIds;
   final ValueChanged<List<String>> onSelectionChanged;
   final bool isLoading;
@@ -53,7 +53,7 @@ class TagSelectionSection extends StatefulWidget {
 class _TagSelectionSectionState extends State<TagSelectionSection> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  List<NoteCategory> _filteredTags = [];
+  List<NoteTag> _filteredTags = [];
   bool _isExpanded = false;
 
   @override
@@ -171,7 +171,7 @@ class _TagSelectionSectionState extends State<TagSelectionSection> {
 class _TagSelectionContent extends StatelessWidget {
   final TextEditingController searchController;
   final ScrollController scrollController;
-  final List<NoteCategory> filteredTags;
+  final List<NoteTag> filteredTags;
   final List<String> selectedTagIds;
   final void Function(String tagId, bool selected) onToggleTag;
 
@@ -255,7 +255,7 @@ class _TagSelectionContent extends StatelessWidget {
 
 /// 单个标签项 - 使用const构造函数
 class _TagListItem extends StatelessWidget {
-  final NoteCategory tag;
+  final NoteTag tag;
   final bool isSelected;
   final ValueChanged<bool?> onChanged;
 
@@ -310,7 +310,7 @@ class _TagListItem extends StatelessWidget {
 /// 已选标签展示 - 独立组件
 class SelectedTagsDisplay extends StatelessWidget {
   final List<String> selectedTagIds;
-  final List<NoteCategory> allTags;
+  final List<NoteTag> allTags;
   final ValueChanged<String> onRemoveTag;
 
   const SelectedTagsDisplay({
@@ -352,7 +352,7 @@ class SelectedTagsDisplay extends StatelessWidget {
               final tagMap = {for (var t in allTags) t.id: t};
               return selectedTagIds.map((tagId) {
                 final tag = tagMap[tagId] ??
-                    NoteCategory(id: tagId, name: l10n.unknownTag);
+                    NoteTag(id: tagId, name: l10n.unknownTag);
                 final String displayName = tag.localizedName(l10n);
 
                 return Chip(

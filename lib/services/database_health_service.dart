@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../models/note_category.dart';
+import '../models/note_tag.dart';
 import '../models/quote_model.dart';
 import '../utils/app_logger.dart';
 
@@ -504,7 +504,7 @@ class DatabaseHealthService {
     Database db, {
     String offlineQuoteSource = 'tagOnly',
     List<Quote>? memoryStore,
-    List<NoteCategory>? categoryStore,
+    List<NoteTag>? categoryStore,
   }) async {
     try {
       if (kIsWeb) {
@@ -743,7 +743,7 @@ class DatabaseHealthService {
   /// Web平台从内存中获取本地一言
   Map<String, dynamic>? _getLocalQuoteFromMemory(
     List<Quote> memoryStore,
-    List<NoteCategory> categoryStore,
+    List<NoteTag> categoryStore,
     String offlineQuoteSource,
   ) {
     try {

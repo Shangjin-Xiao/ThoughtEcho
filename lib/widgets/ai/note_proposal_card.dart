@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../../gen_l10n/app_localizations.dart';
-import '../../models/note_category.dart';
+import '../../models/note_tag.dart';
 import '../../models/note_proposal_artifact.dart';
 import '../../models/quote_model.dart';
 import '../quote_content_widget.dart';
@@ -71,7 +71,7 @@ class NoteProposalCard extends StatefulWidget {
   final bool plainCreateOpensRich;
 
   /// 展示用标签（页面按 metadata 中的 tag_ids/tag_names 解析）。
-  final List<NoteCategory> tags;
+  final List<NoteTag> tags;
 
   /// 位置/天气胶囊上的实际内容预览，为空时退化为「位置」「天气」通用文案。
   /// 只用已缓存的值，卡片渲染不会为此等待定位/天气请求。

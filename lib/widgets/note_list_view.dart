@@ -9,10 +9,10 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../extensions/note_category_localization_extension.dart';
+import '../extensions/note_tag_localization_extension.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/quote_model.dart';
-import '../models/note_category.dart';
+import '../models/note_tag.dart';
 import '../services/database_service.dart';
 import '../utils/icon_utils.dart';
 import '../utils/jank_detector.dart';
@@ -47,7 +47,7 @@ part 'note_list/note_list_items.dart';
 part 'note_list/note_list_filters.dart';
 
 class NoteListView extends StatefulWidget {
-  final List<NoteCategory> tags;
+  final List<NoteTag> tags;
   final List<String> selectedTagIds;
   final Function(List<String>) onTagSelectionChanged;
   final String searchQuery;
@@ -201,7 +201,7 @@ class NoteListViewState extends State<NoteListView> {
   bool _waitingForServices = true;
 
   // 修复：本地标签缓存，用于在外部标签为空时自己加载
-  List<NoteCategory> _localTagsCache = [];
+  List<NoteTag> _localTagsCache = [];
 
   // 修复：用于检测和恢复滚动范围异常的计数器
   int _scrollExtentCheckCounter = 0;
@@ -317,7 +317,7 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   /// 获取有效的标签列表：优先使用外部传入的，若为空则使用本地缓存
-  List<NoteCategory> get _effectiveTags =>
+  List<NoteTag> get _effectiveTags =>
       widget.tags.isNotEmpty ? widget.tags : _localTagsCache;
 
   bool get hasQuotes => _quotes.isNotEmpty;
@@ -455,7 +455,7 @@ class NoteListViewState extends State<NoteListView> {
     if (widget.tags.isEmpty && _localTagsCache.isEmpty) {
       try {
         final db = _databaseService ?? _readDatabaseService();
-        final categories = await db.getCategories();
+        final categories = await db.getTags();
         if (mounted && categories.isNotEmpty) {
           setState(() {
             _localTagsCache = categories;

@@ -4,7 +4,7 @@
 import 'package:flutter/material.dart';
 
 import '../../gen_l10n/app_localizations.dart';
-import '../../models/note_category.dart';
+import '../../models/note_tag.dart';
 import '../../utils/string_utils.dart';
 import '../quote_card_helpers.dart';
 import '../../theme/theme_style.dart';
@@ -134,7 +134,7 @@ class AiCardSourceLine extends StatelessWidget {
 class AiCardTagList extends StatelessWidget {
   const AiCardTagList({super.key, required this.tags});
 
-  final List<NoteCategory> tags;
+  final List<NoteTag> tags;
 
   @override
   Widget build(BuildContext context) {

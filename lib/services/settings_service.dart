@@ -7,7 +7,7 @@ import '../models/ai_settings.dart';
 import '../models/app_settings.dart';
 import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
 import '../models/local_ai_settings.dart'; // 新增 LocalAISettings 导入
-import '../models/ai_assistant_entry.dart'; // 新增 AIAssistantPageMode
+import '../models/thoughter_entry.dart'; // 新增 ThoughterPageMode
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
 import 'package:thoughtecho/utils/sentry_database_tracing.dart';
@@ -86,17 +86,17 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  AIAssistantPageMode get exploreAiAssistantMode =>
+  ThoughterPageMode get exploreAiAssistantMode =>
       AIAssistantPageModeStorage.fromStorage(
         _mmkv.getString(_exploreAiAssistantModeKey),
       ) ??
-      AIAssistantPageMode.chat;
+      ThoughterPageMode.chat;
 
-  AIAssistantPageMode get noteAiAssistantMode =>
+  ThoughterPageMode get noteAiAssistantMode =>
       AIAssistantPageModeStorage.fromStorage(
         _mmkv.getString(_noteAiAssistantModeKey),
       ) ??
-      AIAssistantPageMode.noteChat;
+      ThoughterPageMode.noteChat;
 
   // 周期报告洞察是否使用AI（流式）
   bool get reportInsightsUseAI => _appSettings.reportInsightsUseAI;
@@ -114,12 +114,12 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setExploreAiAssistantMode(AIAssistantPageMode mode) async {
+  Future<void> setExploreAiAssistantMode(ThoughterPageMode mode) async {
     await _mmkv.setString(_exploreAiAssistantModeKey, mode.storageValue);
     notifyListeners();
   }
 
-  Future<void> setNoteAiAssistantMode(AIAssistantPageMode mode) async {
+  Future<void> setNoteAiAssistantMode(ThoughterPageMode mode) async {
     await _mmkv.setString(_noteAiAssistantModeKey, mode.storageValue);
     notifyListeners();
   }

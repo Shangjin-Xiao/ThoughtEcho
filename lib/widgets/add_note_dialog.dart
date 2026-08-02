@@ -12,10 +12,10 @@ import 'package:uuid/uuid.dart';
 
 import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
-import '../models/ai_assistant_entry.dart';
-import '../models/note_category.dart';
+import '../models/thoughter_entry.dart';
+import '../models/note_tag.dart';
 import '../models/quote_model.dart';
-import '../pages/ai_assistant_page.dart';
+import '../pages/thoughter_page.dart';
 import '../pages/note_full_editor_page.dart'; // 导入全屏富文本编辑器
 import '../services/database_service.dart';
 import '../services/location_service.dart';
@@ -39,7 +39,7 @@ class AddNoteDialog extends StatefulWidget {
   final String? prefilledAuthor; // 预填充的作者
   final String? prefilledWork; // 预填充的作品
   final Map<String, dynamic>? hitokotoData; // 添加一言API返回的完整数据
-  final List<NoteCategory> tags;
+  final List<NoteTag> tags;
   final FutureOr<void> Function(Quote) onSave; // 关闭后由外层执行保存
   /// 预填充的标签 ID 列表
   final List<String>? prefilledTagIds;
@@ -85,7 +85,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   bool _isLoadingFullQuote = false;
 
   // 优化：内部维护标签列表，支持动态更新
-  List<NoteCategory> _availableTags = [];
+  List<NoteTag> _availableTags = [];
   DatabaseService? _databaseService;
 
   // 分类选择 (Now in Controller, except for early init use but we'll adapt)
@@ -585,7 +585,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
             }
           });
           if (!mounted || db == null) return;
-          final updatedTags = await db.getCategories();
+          final updatedTags = await db.getTags();
           if (!mounted) return;
           setState(() {
             _availableTags = updatedTags;
@@ -619,7 +619,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         _recordDialogPerfStateChange('fullQuoteLoaded');
         _controller.hydrateFromQuote(fullQuote);
         if (fullQuote.categoryId != null) {
-          final category = await db.getCategoryById(fullQuote.categoryId!);
+          final category = await db.getTagById(fullQuote.categoryId!);
           if (category != null && mounted) {
             setState(() {
               _controller.selectedCategory = category;
@@ -651,7 +651,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
       try {
         // 重新获取最新的标签列表
-        final updatedTags = await _databaseService!.getCategories();
+        final updatedTags = await _databaseService!.getTags();
 
         if (!mounted) return;
 
@@ -1841,8 +1841,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     if (noteForAgent == null) return;
     await navigator.push(
       MaterialPageRoute(
-        builder: (_) => AIAssistantPage(
-          entrySource: AIAssistantEntrySource.note,
+        builder: (_) => ThoughterPage(
+          entrySource: ThoughterEntrySource.note,
           quote: noteForAgent,
           initialQuestion: initialQuestion,
         ),
@@ -1992,7 +1992,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                         listen: false,
                                       );
                                       final allTags =
-                                          await databaseService.getCategories();
+                                          await databaseService.getTags();
 
                                       // 修复内存泄露：在异步操作后检查mounted状态
                                       if (!mounted) return;

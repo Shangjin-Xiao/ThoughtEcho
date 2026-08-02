@@ -1,6 +1,6 @@
-part of '../ai_assistant_page.dart';
+part of '../thoughter_page.dart';
 
-extension _AIAssistantPageAgent on _AIAssistantPageState {
+extension _ThoughterAgent on _ThoughterPageState {
   Future<void> _askAgent(String text) async {
     final l10n = AppLocalizations.of(context);
     final requestGeneration = ++_agentRequestGeneration;
@@ -355,7 +355,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       _scrollToBottom(bypassThrottle: true);
     } catch (e, stack) {
       logError(
-        'AIAssistantPage Agent request failed',
+        'ThoughterPage Agent request failed',
         error: e is AgentRequestException ? e.failureType : e.runtimeType,
         stackTrace: stack,
       );

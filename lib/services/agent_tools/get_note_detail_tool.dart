@@ -72,7 +72,7 @@ class GetNoteDetailTool extends AgentTool {
 
       final nameMap = <String, String>{};
       for (final id in idsToFetch) {
-        final cat = await _db.getCategoryById(id);
+        final cat = await _db.getTagById(id);
         if (cat != null) {
           nameMap[id] = cat.name;
         }

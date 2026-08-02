@@ -7,7 +7,7 @@ import 'package:thoughtecho/controllers/search_controller.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/local_ai_settings.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
@@ -232,7 +232,7 @@ class _FakeDatabaseService extends DatabaseService {
   }
 
   @override
-  Future<List<NoteCategory>> getCategories() async => const [];
+  Future<List<NoteTag>> getTags() async => const [];
 }
 
 List<Quote> _makeQuotes(int count) {

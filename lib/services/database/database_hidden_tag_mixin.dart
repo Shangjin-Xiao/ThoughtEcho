@@ -6,10 +6,10 @@ mixin _DatabaseHiddenTagMixin on _DatabaseServiceBase {
   /// 当启用隐藏笔记功能时，确保隐藏标签存在
   /// 隐藏标签是系统标签，不可编辑或删除
   @override
-  Future<NoteCategory?> getOrCreateHiddenTag() async {
+  Future<NoteTag?> getOrCreateHiddenTag() async {
     try {
       // 先尝试获取现有的隐藏标签
-      final categories = await getCategories();
+      final categories = await getTags();
       final existingHiddenTag = categories.where(
         (c) => c.id == _DatabaseServiceBase.hiddenTagId,
       );
@@ -21,7 +21,7 @@ mixin _DatabaseHiddenTagMixin on _DatabaseServiceBase {
           // 更新为新的系统标签格式
           await _updateHiddenTagFormat();
           // 返回更新后的标签
-          return NoteCategory(
+          return NoteTag(
             id: _DatabaseServiceBase.hiddenTagId,
             name: '隐藏',
             isDefault: true,
@@ -33,14 +33,14 @@ mixin _DatabaseHiddenTagMixin on _DatabaseServiceBase {
 
       // 如果不存在，创建隐藏标签（系统标签，使用锁图标）
       if (kIsWeb) {
-        final hiddenTag = NoteCategory(
+        final hiddenTag = NoteTag(
           id: _DatabaseServiceBase.hiddenTagId,
           name: '隐藏', // UI层会根据语言显示本地化名称
           isDefault: true, // 系统标签，不可删除/编辑
           iconName: _DatabaseServiceBase.hiddenTagIconName, // 使用 emoji 小锁
         );
-        _categoryStore.add(hiddenTag);
-        _categoriesController.add(_categoryStore);
+        _tagStore.add(hiddenTag);
+        _tagsController.add(_tagStore);
         notifyListeners();
         return hiddenTag;
       }
@@ -59,10 +59,10 @@ mixin _DatabaseHiddenTagMixin on _DatabaseServiceBase {
         categoryMap,
         conflictAlgorithm: ConflictAlgorithm.ignore,
       );
-      await updateCategoriesStreamForParts();
+      await updateTagsStreamForParts();
       notifyListeners();
 
-      return NoteCategory(
+      return NoteTag(
         id: _DatabaseServiceBase.hiddenTagId,
         name: '隐藏',
         isDefault: true,
@@ -78,17 +78,17 @@ mixin _DatabaseHiddenTagMixin on _DatabaseServiceBase {
   Future<void> _updateHiddenTagFormat() async {
     try {
       if (kIsWeb) {
-        final index = _categoryStore.indexWhere(
+        final index = _tagStore.indexWhere(
           (c) => c.id == _DatabaseServiceBase.hiddenTagId,
         );
         if (index >= 0) {
-          _categoryStore[index] = NoteCategory(
+          _tagStore[index] = NoteTag(
             id: _DatabaseServiceBase.hiddenTagId,
             name: '隐藏',
             isDefault: true,
             iconName: _DatabaseServiceBase.hiddenTagIconName,
           );
-          _categoriesController.add(_categoryStore);
+          _tagsController.add(_tagStore);
           notifyListeners();
         }
         return;
@@ -105,7 +105,7 @@ mixin _DatabaseHiddenTagMixin on _DatabaseServiceBase {
         where: 'id = ?',
         whereArgs: [_DatabaseServiceBase.hiddenTagId],
       );
-      await updateCategoriesStreamForParts();
+      await updateTagsStreamForParts();
       notifyListeners();
     } catch (e) {
       logDebug('更新隐藏标签格式错误: $e');
@@ -123,10 +123,10 @@ mixin _DatabaseHiddenTagMixin on _DatabaseServiceBase {
   Future<void> removeHiddenTag() async {
     try {
       if (kIsWeb) {
-        _categoryStore.removeWhere(
+        _tagStore.removeWhere(
           (c) => c.id == _DatabaseServiceBase.hiddenTagId,
         );
-        _categoriesController.add(_categoryStore);
+        _tagsController.add(_tagStore);
         notifyListeners();
         return;
       }
@@ -144,7 +144,7 @@ mixin _DatabaseHiddenTagMixin on _DatabaseServiceBase {
         where: 'id = ?',
         whereArgs: [_DatabaseServiceBase.hiddenTagId],
       );
-      await updateCategoriesStreamForParts();
+      await updateTagsStreamForParts();
       notifyListeners();
     } catch (e) {
       logDebug('删除隐藏标签错误: $e');

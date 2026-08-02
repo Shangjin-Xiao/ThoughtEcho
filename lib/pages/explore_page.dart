@@ -5,7 +5,7 @@ import 'package:collection/collection.dart';
 import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
 import '../models/weather_data.dart';
-import '../models/ai_assistant_entry.dart';
+import '../models/thoughter_entry.dart';
 import '../models/chat_session.dart';
 import '../services/database_service.dart';
 import '../services/ai_service.dart';
@@ -24,26 +24,26 @@ import '../theme/app_semantic_colors.dart';
 import '../theme/theme_style.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../widgets/ai/experimental_badge.dart';
-import 'ai_assistant_page.dart';
-import 'ai_assistant/session_history_page.dart';
+import 'thoughter_page.dart';
+import 'thoughter/session_history_page.dart';
 
-part 'ai_report/report_data_loading.dart';
-part 'ai_report/report_time_selector.dart';
-part 'ai_report/report_overview.dart';
-part 'ai_report/report_stats.dart';
-part 'ai_report/report_thoughter_entry.dart';
+part 'explore/explore_data_loading.dart';
+part 'explore/explore_time_selector.dart';
+part 'explore/explore_overview.dart';
+part 'explore/explore_stats.dart';
+part 'explore/explore_thoughter_entry.dart';
 
 const String _kPickDateAction = '__pick_date__';
 
-/// AI周期报告页面
-class AIPeriodicReportPage extends StatefulWidget {
-  const AIPeriodicReportPage({super.key});
+/// 探索页：底部导航第三个 tab，聚合周期洞察与 Thoughter 入口。
+class ExplorePage extends StatefulWidget {
+  const ExplorePage({super.key});
 
   @override
-  State<AIPeriodicReportPage> createState() => _AIPeriodicReportPageState();
+  State<ExplorePage> createState() => _ExplorePageState();
 }
 
-class _AIPeriodicReportPageState extends State<AIPeriodicReportPage> {
+class _ExplorePageState extends State<ExplorePage> {
   // 时间范围选择
   String _selectedPeriod = 'week'; // week, month, year
   DateTime _selectedDate = DateTime.now();
@@ -177,5 +177,5 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage> {
   }
 
   @override
-  Widget build(BuildContext context) => _buildReportPage(context);
+  Widget build(BuildContext context) => _buildExplorePage(context);
 }

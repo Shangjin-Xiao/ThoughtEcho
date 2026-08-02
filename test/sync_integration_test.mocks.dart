@@ -12,13 +12,13 @@ import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i13;
 import 'package:sqflite/sqflite.dart' as _i3;
 import 'package:thoughtecho/models/ai_analysis_model.dart' as _i8;
-import 'package:thoughtecho/models/ai_assistant_entry.dart' as _i20;
+import 'package:thoughtecho/models/thoughter_entry.dart' as _i20;
 import 'package:thoughtecho/models/ai_settings.dart' as _i4;
 import 'package:thoughtecho/models/app_settings.dart' as _i5;
 import 'package:thoughtecho/models/local_ai_settings.dart' as _i7;
 import 'package:thoughtecho/models/merge_report.dart' as _i2;
 import 'package:thoughtecho/models/multi_ai_settings.dart' as _i6;
-import 'package:thoughtecho/models/note_category.dart' as _i17;
+import 'package:thoughtecho/models/note_tag.dart' as _i17;
 import 'package:thoughtecho/models/quote_model.dart' as _i16;
 import 'package:thoughtecho/services/ai_analysis_database_service.dart' as _i21;
 import 'package:thoughtecho/services/backup_service.dart' as _i9;
@@ -604,10 +604,10 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       ) as _i10.Future<List<_i16.Quote>>);
 
   @override
-  _i10.Future<List<Map<String, dynamic>>> getAllCategories() =>
+  _i10.Future<List<Map<String, dynamic>>> getAllTagMaps() =>
       (super.noSuchMethod(
         Invocation.method(
-          #getAllCategories,
+          #getAllTagMaps,
           [],
         ),
         returnValue: _i10.Future<List<Map<String, dynamic>>>.value(
@@ -615,23 +615,23 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       ) as _i10.Future<List<Map<String, dynamic>>>);
 
   @override
-  _i10.Future<List<_i17.NoteCategory>> getCategories() => (super.noSuchMethod(
+  _i10.Future<List<_i17.NoteTag>> getTags() => (super.noSuchMethod(
         Invocation.method(
-          #getCategories,
+          #getTags,
           [],
         ),
         returnValue:
-            _i10.Future<List<_i17.NoteCategory>>.value(<_i17.NoteCategory>[]),
-      ) as _i10.Future<List<_i17.NoteCategory>>);
+            _i10.Future<List<_i17.NoteTag>>.value(<_i17.NoteTag>[]),
+      ) as _i10.Future<List<_i17.NoteTag>>);
 
   @override
-  _i10.Future<void> addCategory(
+  _i10.Future<void> addTag(
     String? name, {
     String? iconName,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
-          #addCategory,
+          #addTag,
           [name],
           {#iconName: iconName},
         ),
@@ -640,14 +640,14 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<void> addCategoryWithId(
+  _i10.Future<void> addTagWithId(
     String? id,
     String? name, {
     String? iconName,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
-          #addCategoryWithId,
+          #addTagWithId,
           [
             id,
             name,
@@ -659,18 +659,18 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Stream<List<_i17.NoteCategory>> watchCategories() => (super.noSuchMethod(
+  _i10.Stream<List<_i17.NoteTag>> watchTags() => (super.noSuchMethod(
         Invocation.method(
-          #watchCategories,
+          #watchTags,
           [],
         ),
-        returnValue: _i10.Stream<List<_i17.NoteCategory>>.empty(),
-      ) as _i10.Stream<List<_i17.NoteCategory>>);
+        returnValue: _i10.Stream<List<_i17.NoteTag>>.empty(),
+      ) as _i10.Stream<List<_i17.NoteTag>>);
 
   @override
-  _i10.Future<void> deleteCategory(String? id) => (super.noSuchMethod(
+  _i10.Future<void> deleteTag(String? id) => (super.noSuchMethod(
         Invocation.method(
-          #deleteCategory,
+          #deleteTag,
           [id],
         ),
         returnValue: _i10.Future<void>.value(),
@@ -678,14 +678,14 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<void> updateCategory(
+  _i10.Future<void> updateTag(
     String? id,
     String? name, {
     String? iconName,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
-          #updateCategory,
+          #updateTag,
           [
             id,
             name,
@@ -697,19 +697,19 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<_i17.NoteCategory?> getCategoryById(String? id) =>
+  _i10.Future<_i17.NoteTag?> getTagById(String? id) =>
       (super.noSuchMethod(
         Invocation.method(
-          #getCategoryById,
+          #getTagById,
           [id],
         ),
-        returnValue: _i10.Future<_i17.NoteCategory?>.value(),
-      ) as _i10.Future<_i17.NoteCategory?>);
+        returnValue: _i10.Future<_i17.NoteTag?>.value(),
+      ) as _i10.Future<_i17.NoteTag?>);
 
   @override
-  _i10.Future<void> initDefaultHitokotoCategories() => (super.noSuchMethod(
+  _i10.Future<void> initDefaultHitokotoTags() => (super.noSuchMethod(
         Invocation.method(
-          #initDefaultHitokotoCategories,
+          #initDefaultHitokotoTags,
           [],
         ),
         returnValue: _i10.Future<void>.value(),
@@ -717,13 +717,13 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<_i17.NoteCategory?> getOrCreateHiddenTag() => (super.noSuchMethod(
+  _i10.Future<_i17.NoteTag?> getOrCreateHiddenTag() => (super.noSuchMethod(
         Invocation.method(
           #getOrCreateHiddenTag,
           [],
         ),
-        returnValue: _i10.Future<_i17.NoteCategory?>.value(),
-      ) as _i10.Future<_i17.NoteCategory?>);
+        returnValue: _i10.Future<_i17.NoteTag?>.value(),
+      ) as _i10.Future<_i17.NoteTag?>);
 
   @override
   bool isHiddenTag(String? tagId) => (super.noSuchMethod(
@@ -1049,9 +1049,9 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       );
 
   @override
-  _i10.Future<void> updateCategoriesStreamForParts() => (super.noSuchMethod(
+  _i10.Future<void> updateTagsStreamForParts() => (super.noSuchMethod(
         Invocation.method(
-          #updateCategoriesStreamForParts,
+          #updateTagsStreamForParts,
           [],
         ),
         returnValue: _i10.Future<void>.value(),
@@ -1224,16 +1224,16 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
       ) as bool);
 
   @override
-  _i20.AIAssistantPageMode get exploreAiAssistantMode => (super.noSuchMethod(
+  _i20.ThoughterPageMode get exploreAiAssistantMode => (super.noSuchMethod(
         Invocation.getter(#exploreAiAssistantMode),
-        returnValue: _i20.AIAssistantPageMode.chat,
-      ) as _i20.AIAssistantPageMode);
+        returnValue: _i20.ThoughterPageMode.chat,
+      ) as _i20.ThoughterPageMode);
 
   @override
-  _i20.AIAssistantPageMode get noteAiAssistantMode => (super.noSuchMethod(
+  _i20.ThoughterPageMode get noteAiAssistantMode => (super.noSuchMethod(
         Invocation.getter(#noteAiAssistantMode),
-        returnValue: _i20.AIAssistantPageMode.chat,
-      ) as _i20.AIAssistantPageMode);
+        returnValue: _i20.ThoughterPageMode.chat,
+      ) as _i20.ThoughterPageMode);
 
   @override
   bool get reportInsightsUseAI => (super.noSuchMethod(
@@ -1455,7 +1455,7 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<void> setExploreAiAssistantMode(_i20.AIAssistantPageMode? mode) =>
+  _i10.Future<void> setExploreAiAssistantMode(_i20.ThoughterPageMode? mode) =>
       (super.noSuchMethod(
         Invocation.method(
           #setExploreAiAssistantMode,
@@ -1466,7 +1466,7 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<void> setNoteAiAssistantMode(_i20.AIAssistantPageMode? mode) =>
+  _i10.Future<void> setNoteAiAssistantMode(_i20.ThoughterPageMode? mode) =>
       (super.noSuchMethod(
         Invocation.method(
           #setNoteAiAssistantMode,

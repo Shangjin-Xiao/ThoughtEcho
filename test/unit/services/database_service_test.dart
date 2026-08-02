@@ -4,7 +4,7 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/models/quote_model.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 
 void main() {
   group('DatabaseService Tests', () {
@@ -28,8 +28,8 @@ void main() {
       expect(quote.date, isNotEmpty);
     });
 
-    test('should create NoteCategory model correctly', () {
-      final category = NoteCategory(id: 'test-id', name: '测试分类');
+    test('should create NoteTag model correctly', () {
+      final category = NoteTag(id: 'test-id', name: '测试分类');
 
       expect(category.id, equals('test-id'));
       expect(category.name, equals('测试分类'));

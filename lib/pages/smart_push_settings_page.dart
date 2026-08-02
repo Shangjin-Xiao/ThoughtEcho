@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:thoughtecho/constants/app_constants.dart';
-import 'package:thoughtecho/extensions/note_category_localization_extension.dart';
+import 'package:thoughtecho/extensions/note_tag_localization_extension.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/smart_push_settings.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
@@ -29,7 +29,7 @@ class SmartPushSettingsPage extends StatefulWidget {
 class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
     with SingleTickerProviderStateMixin {
   SmartPushSettings _settings = SmartPushSettings.defaultSettings();
-  List<NoteCategory> _availableTags = [];
+  List<NoteTag> _availableTags = [];
   bool _isLoading = true;
   bool _isTesting = false;
   late AnimationController _animationController;
@@ -60,7 +60,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
       final smartPushService = context.read<SmartPushService>();
       final databaseService = context.read<DatabaseService>();
 
-      final tags = await databaseService.getCategories();
+      final tags = await databaseService.getTags();
       final loadedSettings = smartPushService.settings;
 
       if (mounted) {

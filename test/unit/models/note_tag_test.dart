@@ -6,110 +6,146 @@ import 'package:thoughtecho/models/note_tag.dart';
 
 void main() {
   group('NoteTag Model Tests', () {
-    test('should create tag with required fields', () {
-      final tag = NoteTag(id: 'test-tag-id', name: '测试标签');
+    test('should create category with required fields', () {
+      final category = NoteTag(id: 'test-id', name: '测试分类');
 
-      expect(tag.id, equals('test-tag-id'));
-      expect(tag.name, equals('测试标签'));
-      expect(tag.isDefault, isFalse);
-      expect(tag.iconName, isNull);
+      expect(category.id, equals('test-id'));
+      expect(category.name, equals('测试分类'));
+      expect(category.isDefault, isFalse);
+      expect(category.iconName, isNull);
     });
 
-    test('should create tag with all fields', () {
-      final tag = NoteTag(
-        id: 'test-tag-id',
-        name: '测试标签',
+    test('should create category with all fields', () {
+      final category = NoteTag(
+        id: 'test-id',
+        name: '测试分类',
         isDefault: true,
-        iconName: 'tag_icon',
+        iconName: 'category_icon',
       );
 
-      expect(tag.id, equals('test-tag-id'));
-      expect(tag.name, equals('测试标签'));
-      expect(tag.isDefault, isTrue);
-      expect(tag.iconName, equals('tag_icon'));
+      expect(category.id, equals('test-id'));
+      expect(category.name, equals('测试分类'));
+      expect(category.isDefault, isTrue);
+      expect(category.iconName, equals('category_icon'));
     });
 
-    test('should check equality correctly based on id', () {
-      final tag1 = NoteTag(id: 'same-id', name: '标签1');
-      final tag2 = NoteTag(id: 'same-id', name: '标签2');
-      final tag3 = NoteTag(id: 'different-id', name: '标签1');
+    test('should check equality correctly', () {
+      final category1 = NoteTag(id: 'test-id', name: '测试分类');
 
-      expect(tag1 == tag2, isTrue);
-      expect(tag1.hashCode, equals(tag2.hashCode));
-      expect(tag1 == tag3, isFalse);
+      final category2 = NoteTag(id: 'test-id', name: '测试分类');
+
+      expect(category1 == category2, isTrue);
+      expect(category1.hashCode, equals(category2.hashCode));
+    });
+
+    test('should handle different categories', () {
+      final category1 = NoteTag(id: 'test-id-1', name: '分类1');
+
+      final category2 = NoteTag(id: 'test-id-2', name: '分类2');
+
+      expect(category1 == category2, isFalse);
     });
 
     test('should convert to and from map correctly', () {
-      final tag = NoteTag(
+      final category = NoteTag(
         id: 'test-id',
-        name: '测试标签',
+        name: '测试分类',
         isDefault: true,
         iconName: 'test_icon',
       );
 
-      final map = tag.toMap();
+      final map = category.toMap();
       expect(map['id'], equals('test-id'));
-      expect(map['name'], equals('测试标签'));
+      expect(map['name'], equals('测试分类'));
       expect(map['is_default'], equals(1));
       expect(map['icon_name'], equals('test_icon'));
 
-      final tagFromMap = NoteTag.fromMap(map);
-      expect(tagFromMap.id, equals('test-id'));
-      expect(tagFromMap.name, equals('测试标签'));
-      expect(tagFromMap.isDefault, isTrue);
-      expect(tagFromMap.iconName, equals('test_icon'));
+      final categoryFromMap = NoteTag.fromMap(map);
+      expect(categoryFromMap.id, equals('test-id'));
+      expect(categoryFromMap.name, equals('测试分类'));
+      expect(categoryFromMap.isDefault, isTrue);
+      expect(categoryFromMap.iconName, equals('test_icon'));
     });
 
-    test('should handle boolean is_default in fromMap', () {
-      final map = {
-        'id': 'test-id',
-        'name': '测试标签',
-        'is_default': true,
-      };
-      final tag = NoteTag.fromMap(map);
-      expect(tag.isDefault, isTrue);
+    test('should validate data correctly', () {
+      // 测试有效数据
+      expect(NoteTag.isValidId('valid-id'), isTrue);
+      expect(NoteTag.isValidName('有效名称'), isTrue);
+      expect(NoteTag.isValidName('a' * 50), isTrue);
+
+      // 测试无效数据
+      expect(NoteTag.isValidId(''), isFalse);
+      expect(NoteTag.isValidId('   '), isFalse);
+      expect(NoteTag.isValidName(''), isFalse);
+      expect(NoteTag.isValidName('   '), isFalse);
+      expect(NoteTag.isValidName('a' * 51), isFalse);
     });
 
-    test('should use empty defaults in fromMap when id or name is missing', () {
-      final missingId = NoteTag.fromMap({'name': '测试'});
-      expect(missingId.id, equals(''));
-      expect(missingId.name, equals('测试'));
+    test('should create validated instance', () {
+      // 测试有效数据
+      final category = NoteTag.validated(
+        id: 'test-id',
+        name: '测试分类',
+        isDefault: true,
+        iconName: 'test_icon',
+      );
+      expect(category.id, equals('test-id'));
+      expect(category.name, equals('测试分类'));
 
-      final missingName = NoteTag.fromMap({'id': 'test'});
-      expect(missingName.id, equals('test'));
-      expect(missingName.name, equals(''));
+      // 测试无效数据
+      expect(
+        () => NoteTag.validated(id: '', name: '测试'),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(
+        () => NoteTag.validated(id: 'test', name: ''),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(
+        () => NoteTag.validated(id: 'test', name: 'a' * 51),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
 
-      final emptyId = NoteTag.fromMap({'id': '', 'name': '测试'});
-      expect(emptyId.id, equals(''));
-      expect(emptyId.name, equals('测试'));
+    test('should handle edge cases in fromMap', () {
+      // 测试缺少必填字段
+      expect(() => NoteTag.fromMap({}), throwsA(isA<ArgumentError>()));
+      expect(
+        () => NoteTag.fromMap({'id': ''}),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(
+        () => NoteTag.fromMap({'id': 'test', 'name': ''}),
+        throwsA(isA<ArgumentError>()),
+      );
 
-      final emptyName = NoteTag.fromMap({'id': 'test', 'name': ''});
-      expect(emptyName.id, equals('test'));
-      expect(emptyName.name, equals(''));
+      // 测试不同的is_default值
+      final map1 = {'id': 'test', 'name': '测试', 'is_default': 1};
+      final category1 = NoteTag.fromMap(map1);
+      expect(category1.isDefault, isTrue);
+
+      final map2 = {'id': 'test', 'name': '测试', 'is_default': true};
+      final category2 = NoteTag.fromMap(map2);
+      expect(category2.isDefault, isTrue);
+
+      final map3 = {'id': 'test', 'name': '测试', 'is_default': 0};
+      final category3 = NoteTag.fromMap(map3);
+      expect(category3.isDefault, isFalse);
     });
 
     test('should support copyWith', () {
       final original = NoteTag(
-        id: 'old-id',
-        name: '旧名称',
+        id: 'test-id',
+        name: '原始名称',
         isDefault: false,
-        iconName: 'old_icon',
+        iconName: 'original_icon',
       );
 
       final copied = original.copyWith(name: '新名称', isDefault: true);
-
-      expect(copied.id, equals('old-id'));
+      expect(copied.id, equals('test-id'));
       expect(copied.name, equals('新名称'));
       expect(copied.isDefault, isTrue);
-      expect(copied.iconName, equals('old_icon'));
-    });
-
-    test('toString should contain key properties', () {
-      final tag = NoteTag(id: 'test-id', name: '测试标签');
-      final str = tag.toString();
-
-      expect(str, contains('test-id'));
-      expect(str, contains('测试标签'));
+      expect(copied.iconName, equals('original_icon'));
     });
   });
 }

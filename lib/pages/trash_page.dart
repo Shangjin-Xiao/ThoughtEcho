@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../gen_l10n/app_localizations.dart';
-import '../models/note_category.dart'; // Added
+import '../models/note_tag.dart'; // Added
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
@@ -31,8 +31,8 @@ class _TrashPageState extends State<TrashPage> {
   int _loadRequestToken = 0;
   int _trashTotalCount = 0;
   List<Quote> _trashQuotes = const [];
-  Map<String, NoteCategory> _tagMap = const {}; // Added
-  StreamSubscription<List<NoteCategory>>? _categoriesSubscription;
+  Map<String, NoteTag> _tagMap = const {}; // Added
+  StreamSubscription<List<NoteTag>>? _categoriesSubscription;
   final ScrollController _scrollController = ScrollController();
 
   int get _displayTrashCount =>
@@ -43,7 +43,7 @@ class _TrashPageState extends State<TrashPage> {
     super.initState();
     _scrollController.addListener(_handleScroll);
     _categoriesSubscription =
-        context.read<DatabaseService>().watchCategories().listen(
+        context.read<DatabaseService>().watchTags().listen(
       (tags) {
         if (!mounted) {
           return;

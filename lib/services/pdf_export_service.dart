@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:thoughtecho/models/quote_model.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/delta_to_pdf_parser.dart';
 import 'package:thoughtecho/services/pdf_font_service.dart';
@@ -65,10 +65,10 @@ class PdfExportService {
     );
 
     // 1. 获取全局标签分类映射，用来还原标签名字
-    Map<String, NoteCategory> tagMap = {};
+    Map<String, NoteTag> tagMap = {};
     try {
       final db = Provider.of<DatabaseService>(context, listen: false);
-      final categories = await db.getCategories();
+      final categories = await db.getTags();
       tagMap = {for (var c in categories) c.id: c};
     } catch (e) {
       logDebug("PdfExportService 获取标签映射失败: $e", source: "PdfExportService");
@@ -326,7 +326,7 @@ class PdfExportService {
   }
 
   static pw.Widget _tagText(
-    NoteCategory? tag,
+    NoteTag? tag,
     String text,
     PdfFontSet fontSet,
     pw.TextStyle style,
@@ -347,7 +347,7 @@ class PdfExportService {
   }
 
   static pw.Widget buildTagIcon(
-    NoteCategory? tag,
+    NoteTag? tag,
     PdfFontSet fontSet, {
     double size = 9,
     PdfColor color = PdfColors.grey700,

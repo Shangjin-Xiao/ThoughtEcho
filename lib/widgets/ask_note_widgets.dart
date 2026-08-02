@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../gen_l10n/app_localizations.dart';
-import '../models/ai_assistant_entry.dart';
+import '../models/thoughter_entry.dart';
 import '../models/quote_model.dart';
-import '../pages/ai_assistant_page.dart';
+import '../pages/thoughter_page.dart';
 import 'ai/experimental_badge.dart';
 
 /// 快速问笔记按钮组件
@@ -28,8 +28,8 @@ class QuickAskNoteButton extends StatelessWidget {
       onPressed: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => AIAssistantPage(
-              entrySource: AIAssistantEntrySource.note,
+            builder: (context) => ThoughterPage(
+              entrySource: ThoughterEntrySource.note,
               quote: quote,
               initialQuestion: initialQuestion,
             ),
@@ -57,8 +57,8 @@ class AskNoteFloatingButton extends StatelessWidget {
       onPressed: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => AIAssistantPage(
-              entrySource: AIAssistantEntrySource.note,
+            builder: (context) => ThoughterPage(
+              entrySource: ThoughterEntrySource.note,
               quote: quote,
               initialQuestion: initialQuestion,
             ),
@@ -106,8 +106,8 @@ class AskNoteListTile extends StatelessWidget {
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => AIAssistantPage(
-              entrySource: AIAssistantEntrySource.note,
+            builder: (context) => ThoughterPage(
+              entrySource: ThoughterEntrySource.note,
               quote: quote,
               initialQuestion: initialQuestion,
             ),

@@ -92,11 +92,11 @@ jobs:
             shard_index: 3
             total_shards: 4
           - name: widget 1/2
-            paths: test/widget test/widgets
+            paths: test/widget
             shard_index: 0
             total_shards: 2
           - name: widget 2/2
-            paths: test/widget test/widgets
+            paths: test/widget
             shard_index: 1
             total_shards: 2
           - name: legacy 1/2

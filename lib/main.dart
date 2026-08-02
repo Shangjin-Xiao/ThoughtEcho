@@ -800,7 +800,7 @@ Future<void> _initializeDatabaseNormally(
 
     // 尝试恢复：即使数据库初始化失败，也尝试创建默认标签
     try {
-      await databaseService.initDefaultHitokotoCategories();
+      await databaseService.initDefaultHitokotoTags();
       logDebug('尝试恢复：虽然数据库初始化可能有问题，但已尝试创建默认标签');
     } catch (tagError) {
       logDebug('创建默认标签也失败: $tagError');

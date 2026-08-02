@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/note_category.dart';
+import '../models/note_tag.dart';
 import '../theme/theme_style.dart';
 import '../utils/icon_utils.dart';
 
@@ -46,7 +46,7 @@ class QuoteCardColors {
 }
 
 class QuoteTagChip extends StatelessWidget {
-  final NoteCategory tag;
+  final NoteTag tag;
   final Color secondaryTextColor;
   final Color baseContentColor;
   final bool highlighted;

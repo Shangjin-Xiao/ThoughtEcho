@@ -1,6 +1,6 @@
-part of '../ai_assistant_page.dart';
+part of '../thoughter_page.dart';
 
-extension _AIAssistantPageSession on _AIAssistantPageState {
+extension _ThoughterSession on _ThoughterPageState {
   void _initStateImpl() {
     _currentMode = _entryConfig.defaultMode;
     _inputFocusNode.addListener(_onInputFocusChanged);
@@ -91,8 +91,8 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
         await _loadSession(widget.session!.id);
       } else if (_hasBoundNote &&
           _boundNoteId != null &&
-          _entrySource == AIAssistantEntrySource.note) {
-        // 这里原本还要求 !_isAgentMode，而 AIAssistantEntryConfig 现在只允许
+          _entrySource == ThoughterEntrySource.note) {
+        // 这里原本还要求 !_isAgentMode，而 ThoughterEntryConfig 现在只允许
         // agent 一种模式，条件恒为假——笔记入口每次都从空白开始。默认接着上次
         // 聊，想重开由标题栏的「新建对话」明确触发。
         final session = await _chatSessionService.getLatestSessionForNote(
@@ -121,10 +121,10 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
     }
   }
 
-  AIAssistantPageMode _restoreModeFromSettings() {
+  ThoughterPageMode _restoreModeFromSettings() {
     final restored = switch (_entrySource) {
-      AIAssistantEntrySource.explore => _settingsService.exploreAiAssistantMode,
-      AIAssistantEntrySource.note => _settingsService.noteAiAssistantMode,
+      ThoughterEntrySource.explore => _settingsService.exploreAiAssistantMode,
+      ThoughterEntrySource.note => _settingsService.noteAiAssistantMode,
     };
     return _entryConfig.resolveRestoredMode(restored);
   }
@@ -173,11 +173,11 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
     _currentSessionId = session.id;
   }
 
-  String _sessionTypeForMode(AIAssistantPageMode mode) {
+  String _sessionTypeForMode(ThoughterPageMode mode) {
     return switch (mode) {
-      AIAssistantPageMode.chat => 'chat',
-      AIAssistantPageMode.noteChat => 'note',
-      AIAssistantPageMode.agent => 'agent',
+      ThoughterPageMode.chat => 'chat',
+      ThoughterPageMode.noteChat => 'note',
+      ThoughterPageMode.agent => 'agent',
     };
   }
 
@@ -308,7 +308,7 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
         includedInContext: false,
       );
       _appendMessage(welcomeMsg, persist: false);
-    } else if (_entrySource == AIAssistantEntrySource.explore &&
+    } else if (_entrySource == ThoughterEntrySource.explore &&
         widget.initialQuestion?.trim().isNotEmpty != true) {
       // 无显式总结时，跳过"输入问题"提示，直接生成动态洞察。
       // 但调用方已经替用户问出第一句（「总结本周」这类）时不显示：
@@ -397,7 +397,7 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
       if (tagCounts.isNotEmpty) {
         final topTagId =
             tagCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
-        final cat = await databaseService.getCategoryById(topTagId);
+        final cat = await databaseService.getTagById(topTagId);
         topTag = cat?.name;
       }
 

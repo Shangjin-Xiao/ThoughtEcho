@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/controllers/home_page_controller.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 
 void main() {
   group('HomePageController', () {
@@ -31,13 +31,13 @@ void main() {
 
     test('tag loading owns its loading and result lifecycle', () async {
       final controller = HomePageController(initialPage: 0);
-      final pending = Completer<List<NoteCategory>>();
+      final pending = Completer<List<NoteTag>>();
 
       final load = controller.loadTags(() => pending.future);
 
       expect(controller.isLoadingTags, isTrue);
       pending.complete([
-        NoteCategory(id: 'tag-1', name: 'Tag 1'),
+        NoteTag(id: 'tag-1', name: 'Tag 1'),
       ]);
       await load;
 
@@ -48,14 +48,14 @@ void main() {
     test('an older overlapping tag load cannot replace the latest result',
         () async {
       final controller = HomePageController(initialPage: 0);
-      final older = Completer<List<NoteCategory>>();
-      final latest = Completer<List<NoteCategory>>();
+      final older = Completer<List<NoteTag>>();
+      final latest = Completer<List<NoteTag>>();
 
       final olderLoad = controller.loadTags(() => older.future);
       final latestLoad = controller.loadTags(() => latest.future);
-      latest.complete([NoteCategory(id: 'latest', name: 'Latest')]);
+      latest.complete([NoteTag(id: 'latest', name: 'Latest')]);
       await latestLoad;
-      older.complete([NoteCategory(id: 'older', name: 'Older')]);
+      older.complete([NoteTag(id: 'older', name: 'Older')]);
       await olderLoad;
 
       expect(controller.tags.map((tag) => tag.id), ['latest']);
@@ -107,12 +107,12 @@ void main() {
 
     test('dispose increments generation and prevents state updates', () async {
       final controller = HomePageController(initialPage: 0);
-      final pending = Completer<List<NoteCategory>>();
+      final pending = Completer<List<NoteTag>>();
 
       final load = controller.loadTags(() => pending.future);
       controller.dispose();
 
-      pending.complete([NoteCategory(id: 'tag-1', name: 'Tag 1')]);
+      pending.complete([NoteTag(id: 'tag-1', name: 'Tag 1')]);
       await load;
 
       expect(controller.tags, isEmpty);

@@ -1,6 +1,6 @@
-part of '../ai_periodic_report_page.dart';
+part of '../explore_page.dart';
 
-extension _AIReportDataLoading on _AIPeriodicReportPageState {
+extension _ExploreDataLoading on _ExplorePageState {
   /// 加载周期数据
   ///
   /// [showLoading] 为 false 时做静默刷新：保留当前内容，不把整页换成转圈，
@@ -145,7 +145,7 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
         topTagId =
             tagCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
         final db = context.read<DatabaseService>();
-        final cats = await db.getCategories();
+        final cats = await db.getTags();
         final category = cats.firstWhere(
           (c) => c.id == topTagId,
           orElse: () => cats.first,
@@ -333,7 +333,7 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
           // 按帧率量级节流：逐 chunk setState 会让整页反复重排抖动
           _insightPending += chunk;
           _insightFlushTimer ??= Timer(
-              _AIPeriodicReportPageState._insightFlushInterval, _flushInsight);
+              _ExplorePageState._insightFlushInterval, _flushInsight);
         },
         onError: (_) {
           if (!mounted) return;
@@ -470,13 +470,13 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
 
       logDebug(
         'Saved insight to history: ${_insightText.substring(0, _insightText.length > 50 ? 50 : _insightText.length)}...',
-        source: 'AIPeriodicReportPage',
+        source: 'ExplorePage',
       );
     } catch (e) {
       logError(
         'Failed to save insight to history: $e',
         error: e,
-        source: 'AIPeriodicReportPage',
+        source: 'ExplorePage',
       );
     }
   }

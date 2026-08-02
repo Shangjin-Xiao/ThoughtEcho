@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../extensions/note_category_localization_extension.dart';
+import '../extensions/note_tag_localization_extension.dart';
 import '../services/database_service.dart';
-import '../models/note_category.dart';
+import '../models/note_tag.dart';
 import '../utils/icon_utils.dart';
 import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../theme/theme_style.dart';
 
-class CategorySettingsPage extends StatefulWidget {
-  const CategorySettingsPage({super.key});
+class TagSettingsPage extends StatefulWidget {
+  const TagSettingsPage({super.key});
 
   @override
-  State<CategorySettingsPage> createState() => _CategorySettingsPageState();
+  State<TagSettingsPage> createState() => _CategorySettingsPageState();
 }
 
-class _CategorySettingsPageState extends State<CategorySettingsPage> {
+class _CategorySettingsPageState extends State<TagSettingsPage> {
   final _categoryController = TextEditingController();
   final _categoryNameController = TextEditingController();
   bool _isLoading = false;
@@ -143,7 +143,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                 setState(() => _isLoading = true);
                                 try {
                                   final db = context.read<DatabaseService>();
-                                  await db.addCategory(
+                                  await db.addTag(
                                     text,
                                     iconName: _selectedIconName,
                                   );
@@ -220,8 +220,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
               ),
             ),
             const SizedBox(height: 16),
-            StreamBuilder<List<NoteCategory>>(
-              stream: context.read<DatabaseService>().watchCategories(),
+            StreamBuilder<List<NoteTag>>(
+              stream: context.read<DatabaseService>().watchTags(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -279,7 +279,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
     final TextEditingController emojiSearchController = TextEditingController();
     String searchQuery = '';
     final l10n = AppLocalizations.of(context);
-    Map<String, bool> expandedCategories = {
+    Map<String, bool> expandedTags = {
       l10n.emotion: true,
       l10n.thinking: false,
       l10n.nature: false,
@@ -394,21 +394,21 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                         Theme.of(context).textTheme.titleSmall,
                                   ),
                                   trailing: Icon(
-                                    expandedCategories[category] ?? false
+                                    expandedTags[category] ?? false
                                         ? Icons.expand_less
                                         : Icons.expand_more,
                                   ),
                                   onTap: () {
                                     setState(() {
-                                      expandedCategories[category] =
-                                          !(expandedCategories[category] ??
+                                      expandedTags[category] =
+                                          !(expandedTags[category] ??
                                               false);
                                     });
                                   },
                                 ),
 
-                                // 分类内的emoji
-                                if (expandedCategories[category] ?? false)
+                                // 分类内的 emoji
+                                if (expandedTags[category] ?? false)
                                   Padding(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8.0,
@@ -477,20 +477,20 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                               style: Theme.of(context).textTheme.titleSmall,
                             ),
                             trailing: Icon(
-                              expandedCategories[l10n.systemIcons] ?? false
+                              expandedTags[l10n.systemIcons] ?? false
                                   ? Icons.expand_less
                                   : Icons.expand_more,
                             ),
                             onTap: () {
                               setState(() {
-                                expandedCategories[l10n.systemIcons] =
-                                    !(expandedCategories[l10n.systemIcons] ??
+                                expandedTags[l10n.systemIcons] =
+                                    !(expandedTags[l10n.systemIcons] ??
                                         false);
                               });
                             },
                           ),
 
-                          if (expandedCategories[l10n.systemIcons] ?? false)
+                          if (expandedTags[l10n.systemIcons] ?? false)
                             Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8.0,
@@ -579,7 +579,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
     );
   }
 
-  void _editCategory(BuildContext context, NoteCategory category) {
+  void _editCategory(BuildContext context, NoteTag category) {
     final nameController = TextEditingController(text: category.name);
     String? selectedIcon = category.iconName;
     final l10n = AppLocalizations.of(context);
@@ -587,14 +587,12 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          // 修正：此处应为“编辑分类”而非“编辑标签”
           title: Text(l10n.editTagTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameController,
-                // 改为“标签名称”以匹配统一用语
                 decoration: InputDecoration(labelText: l10n.tagNameLabel),
               ),
               const SizedBox(height: 12),
@@ -636,7 +634,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                   context,
                   listen: false,
                 );
-                await dbService.updateCategory(
+                await dbService.updateTag(
                   category.id,
                   newName,
                   iconName: selectedIcon,
@@ -656,7 +654,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
     );
   }
 
-  Widget _buildCategoryItem(NoteCategory category, int index, int total) {
+  Widget _buildCategoryItem(NoteTag category, int index, int total) {
     final isDefault = category.isDefault;
     final l10n = AppLocalizations.of(context);
     // 检查是否是隐藏标签
@@ -761,7 +759,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
     );
   }
 
-  void _deleteCategory(BuildContext context, NoteCategory category) {
+  void _deleteCategory(BuildContext context, NoteTag category) {
     final l10n = AppLocalizations.of(context);
     showDialog<bool>(
       context: context,
@@ -783,7 +781,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
       if (confirmed == true && mounted && context.mounted) {
         try {
           final dbService = context.read<DatabaseService>();
-          await dbService.deleteCategory(category.id);
+          await dbService.deleteTag(category.id);
 
           // 修复内存泄露：在异步操作后检查mounted状态
           if (!mounted) return;
@@ -824,13 +822,13 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
   late String? _selectedIcon;
   final TextEditingController _emojiSearchController = TextEditingController();
   String _searchQuery = '';
-  late Map<String, bool> expandedCategories;
+  late Map<String, bool> expandedTags;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final l10n = AppLocalizations.of(context);
-    expandedCategories = {
+    expandedTags = {
       l10n.emotion: true,
       l10n.thinking: false,
       l10n.nature: false,
@@ -930,18 +928,18 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                               style: Theme.of(context).textTheme.titleSmall,
                             ),
                             trailing: Icon(
-                              expandedCategories[category] ?? false
+                              expandedTags[category] ?? false
                                   ? Icons.expand_less
                                   : Icons.expand_more,
                             ),
                             onTap: () {
                               setState(() {
-                                expandedCategories[category] =
-                                    !(expandedCategories[category] ?? false);
+                                expandedTags[category] =
+                                    !(expandedTags[category] ?? false);
                               });
                             },
                           ),
-                          if (expandedCategories[category] ?? false)
+                          if (expandedTags[category] ?? false)
                             Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8.0,
@@ -992,18 +990,18 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                         style: Theme.of(context).textTheme.titleSmall,
                       ),
                       trailing: Icon(
-                        expandedCategories[l10n.systemIcons] ?? false
+                        expandedTags[l10n.systemIcons] ?? false
                             ? Icons.expand_less
                             : Icons.expand_more,
                       ),
                       onTap: () {
                         setState(() {
-                          expandedCategories[l10n.systemIcons] =
-                              !(expandedCategories[l10n.systemIcons] ?? false);
+                          expandedTags[l10n.systemIcons] =
+                              !(expandedTags[l10n.systemIcons] ?? false);
                         });
                       },
                     ),
-                    if (expandedCategories[l10n.systemIcons] ?? false)
+                    if (expandedTags[l10n.systemIcons] ?? false)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
                         child: Wrap(

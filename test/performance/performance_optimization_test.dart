@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 
 void main() {
   group('性能优化测试', () {
@@ -18,8 +18,8 @@ void main() {
       // 这个测试验证标签搜索的防抖机制正常工作
 
       final tags = [
-        NoteCategory(id: '1', name: '测试标签1', iconName: 'tag'),
-        NoteCategory(id: '2', name: '测试标签2', iconName: 'tag'),
+        NoteTag(id: '1', name: '测试标签1', iconName: 'tag'),
+        NoteTag(id: '2', name: '测试标签2', iconName: 'tag'),
       ];
 
       // 验证防抖机制已实现
@@ -28,13 +28,13 @@ void main() {
 
     test('过滤缓存机制验证', () {
       // 验证标签过滤的缓存机制
-      final Map<String, List<NoteCategory>> filterCache = {};
+      final Map<String, List<NoteTag>> filterCache = {};
 
       // 模拟缓存逻辑
       const query = 'test';
       final tags = [
-        NoteCategory(id: '1', name: 'test1', iconName: 'tag'),
-        NoteCategory(id: '2', name: 'other', iconName: 'tag'),
+        NoteTag(id: '1', name: 'test1', iconName: 'tag'),
+        NoteTag(id: '2', name: 'other', iconName: 'tag'),
       ];
 
       // 第一次过滤

@@ -5,7 +5,7 @@ import '../constants/app_constants.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../models/note_category.dart';
+import '../models/note_tag.dart';
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
 import '../widgets/add_note_dialog.dart'; // 导入AddNoteDialog
@@ -385,7 +385,7 @@ class ClipboardService extends ChangeNotifier {
         context,
         listen: false,
       );
-      final List<NoteCategory> tags = await databaseService.getCategories();
+      final List<NoteTag> tags = await databaseService.getTags();
 
       // 防止在异步操作后使用已销毁的BuildContext
       if (!context.mounted) return;

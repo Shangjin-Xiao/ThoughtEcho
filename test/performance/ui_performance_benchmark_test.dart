@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 
 /// 简单的性能基准测试，不依赖复杂的Provider设置
 void main() {
@@ -9,7 +9,7 @@ void main() {
       // 创建大量标签数据
       final tags = List.generate(
         1000,
-        (index) => NoteCategory(
+        (index) => NoteTag(
           id: 'tag_$index',
           name: '标签 $index',
           iconName: index % 2 == 0 ? '😀' : 'star',

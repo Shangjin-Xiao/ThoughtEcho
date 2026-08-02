@@ -5,9 +5,9 @@ import 'package:flutter/material.dart';
 import '../theme/theme_style.dart';
 import 'package:provider/provider.dart';
 
-import '../extensions/note_category_localization_extension.dart';
+import '../extensions/note_tag_localization_extension.dart';
 import '../models/quote_model.dart';
-import '../models/note_category.dart';
+import '../models/note_tag.dart';
 import '../theme/app_semantic_colors.dart';
 import '../widgets/common/paper_rule_background.dart';
 import '../widgets/quote_content_widget.dart';
@@ -39,7 +39,7 @@ class QuoteItemWidget extends StatefulWidget {
   }
 
   final Quote quote;
-  final Map<String, NoteCategory> tagMap;
+  final Map<String, NoteTag> tagMap;
   final bool isExpanded;
   final Function(bool) onToggleExpanded;
   final Function() onEdit;
@@ -52,7 +52,7 @@ class QuoteItemWidget extends StatefulWidget {
   final String? searchQuery;
 
   /// 自定义标签显示的构建器函数，接收一个标签对象，返回一个Widget
-  final Widget Function(NoteCategory)? tagBuilder;
+  final Widget Function(NoteTag)? tagBuilder;
   final GlobalKey? favoriteButtonGuideKey;
   final GlobalKey? foldToggleGuideKey;
   final GlobalKey? moreButtonGuideKey; // 功能引导：更多按钮 Key
@@ -982,7 +982,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                   () {
                                     final tagId = sortedTagIds[index];
                                     final tag = widget.tagMap[tagId] ??
-                                        NoteCategory(
+                                        NoteTag(
                                           id: tagId,
                                           name: l10n.unknownTag,
                                         );

@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/explore_notes_tool.dart';
@@ -73,8 +73,8 @@ class _TestDatabaseService extends DatabaseService {
   }
 
   @override
-  Future<List<NoteCategory>> getCategories() async {
-    return const <NoteCategory>[];
+  Future<List<NoteTag>> getTags() async {
+    return const <NoteTag>[];
   }
 }
 

@@ -65,7 +65,7 @@ class MigrationService {
       logDebug('数据库初始化完成');
 
       // 2. 初始化默认分类
-      await _databaseService.initDefaultHitokotoCategories();
+      await _databaseService.initDefaultHitokotoTags();
       logDebug('默认一言分类初始化完成');
 
       // 3. 执行数据迁移任务

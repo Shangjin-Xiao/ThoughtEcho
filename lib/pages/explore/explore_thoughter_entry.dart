@@ -1,4 +1,4 @@
-part of '../ai_periodic_report_page.dart';
+part of '../explore_page.dart';
 
 /// 探索页通往 Thoughter 的入口。
 ///
@@ -6,7 +6,7 @@ part of '../ai_periodic_report_page.dart';
 /// `_initServicesAndLoad` 里只有笔记入口会 `getLatestSessionForNote` 恢复，
 /// explore 分支直接落到「留空，首条消息时再建」。所以问题不只是入口不好找，
 /// 而是没有连续性。这里同时给出三个快捷追问和最近会话列表。
-extension _AIReportThoughterEntry on _AIPeriodicReportPageState {
+extension _ExploreThoughterEntry on _ExplorePageState {
   /// 加载最近的 agent 会话。
   ///
   /// 会话库和笔记库是分开的，取不到时静默降级为不展示，不影响页面其余部分。
@@ -18,7 +18,7 @@ extension _AIReportThoughterEntry on _AIPeriodicReportPageState {
       final sessions = await service.getAgentSessions();
       if (!mounted) return;
       final recent = sessions
-          .take(_AIPeriodicReportPageState._recentSessionLimit)
+          .take(_ExplorePageState._recentSessionLimit)
           .toList();
       final overviews = recent.isEmpty
           ? <String, ChatSessionOverview>{}
@@ -38,7 +38,7 @@ extension _AIReportThoughterEntry on _AIPeriodicReportPageState {
 
   /// 洞察下方的快捷追问。
   ///
-  /// 三个入口都走 `AIAssistantPage.initialQuestion`——它在
+  /// 三个入口都走 `ThoughterPage.initialQuestion`——它在
   /// `_initServicesAndLoad` 里会直接 `_handleSubmitted`，所以传进去就等于替
   /// 用户问出第一句，不需要改助手页。
   Widget _buildThoughterQuickAsks() {
@@ -263,8 +263,8 @@ extension _AIReportThoughterEntry on _AIPeriodicReportPageState {
 
     await navigator.push(
       MaterialPageRoute(
-        builder: (_) => AIAssistantPage(
-          entrySource: AIAssistantEntrySource.explore,
+        builder: (_) => ThoughterPage(
+          entrySource: ThoughterEntrySource.explore,
           session: session,
           initialQuestion: initialQuestion,
           openingMessage: session == null ? openingMessage : null,
@@ -286,8 +286,8 @@ extension _AIReportThoughterEntry on _AIPeriodicReportPageState {
 
     await navigator.push(
       MaterialPageRoute<void>(
-        builder: (_) => AIAssistantPage(
-          entrySource: AIAssistantEntrySource.note,
+        builder: (_) => ThoughterPage(
+          entrySource: ThoughterEntrySource.note,
           quote: quote,
         ),
       ),

@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/chat_session.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
-import 'package:thoughtecho/pages/ai_assistant/session_history_page.dart';
+import 'package:thoughtecho/pages/thoughter/session_history_page.dart';
 
 import '../test_harness.dart';
 

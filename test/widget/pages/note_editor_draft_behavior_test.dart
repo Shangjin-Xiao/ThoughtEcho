@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/note_full_editor_page.dart';
 import 'package:thoughtecho/services/database_service.dart';
@@ -309,7 +309,7 @@ void main() {
         home: NoteFullEditorPage(
           initialContent: '',
           allTags: [
-            NoteCategory(
+            NoteTag(
               id: 'tag-1',
               name: 'Mood',
               iconName: 'label',

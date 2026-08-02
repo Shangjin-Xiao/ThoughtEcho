@@ -9,7 +9,7 @@ import 'package:thoughtecho/controllers/search_controller.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/local_ai_settings.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
@@ -944,7 +944,7 @@ void main() {
 class _TestApp extends StatefulWidget {
   final _FakeDatabaseService databaseService;
   final _FakeSettingsService settingsService;
-  final List<NoteCategory> tags;
+  final List<NoteTag> tags;
   final GlobalKey<NoteListViewState>? noteListKey;
   final ValueChanged<Quote>? onDelete;
 
@@ -952,13 +952,13 @@ class _TestApp extends StatefulWidget {
     super.key,
     required this.databaseService,
     required this.settingsService,
-    List<NoteCategory>? tags,
+    List<NoteTag>? tags,
     this.noteListKey,
     this.onDelete,
   }) : tags = tags ?? _defaultTags;
 
-  static final List<NoteCategory> _defaultTags = [
-    NoteCategory(id: 'tag-1', name: '标签一', iconName: '🏷️'),
+  static final List<NoteTag> _defaultTags = [
+    NoteTag(id: 'tag-1', name: '标签一', iconName: '🏷️'),
   ];
 
   @override
@@ -1078,7 +1078,7 @@ class _WatchQuotesCall {
 class _FakeDatabaseService extends DatabaseService {
   final List<_WatchQuotesCall> watchCalls = [];
   List<Quote> quotesToEmit = const [];
-  List<NoteCategory> categoriesToReturn = const [];
+  List<NoteTag> categoriesToReturn = const [];
 
   _FakeDatabaseService() : super.forTesting();
 
@@ -1125,7 +1125,7 @@ class _FakeDatabaseService extends DatabaseService {
   }) async {}
 
   @override
-  Future<List<NoteCategory>> getCategories() async => categoriesToReturn;
+  Future<List<NoteTag>> getTags() async => categoriesToReturn;
 }
 
 class _DelayedFakeDatabaseService extends _FakeDatabaseService {

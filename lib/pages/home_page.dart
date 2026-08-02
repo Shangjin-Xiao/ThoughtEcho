@@ -18,7 +18,7 @@ import '../models/quote_model.dart';
 import '../widgets/daily_quote_view.dart';
 import '../widgets/note_list_view.dart';
 import '../widgets/sentry_disclosure_dialog.dart';
-import 'ai_features_page.dart';
+import 'explore_page.dart';
 import 'settings_page.dart';
 import 'note_full_editor_page.dart';
 import '../services/settings_service.dart'; // Import SettingsService
@@ -580,7 +580,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       logDebug('加载标签数据...');
       if (!context.mounted) return; // 添加 mounted 检查
       await _pageController.loadTags(
-        context.read<DatabaseService>().getCategories,
+        context.read<DatabaseService>().getTags,
       );
       if (mounted) logDebug('标签加载完成，共 ${_pageController.tags.length} 个标签');
     } catch (e) {
@@ -976,8 +976,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 );
               },
             ),
-            // AI页
-            const AIFeaturesPage(),
+            // 探索页
+            const ExplorePage(),
             // 设置页
             SettingsPage(key: _settingsPageKey),
           ],

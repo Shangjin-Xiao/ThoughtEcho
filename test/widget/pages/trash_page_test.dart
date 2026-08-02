@@ -6,7 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/trash_page.dart';
 import 'package:thoughtecho/services/database_service.dart';
@@ -119,8 +119,8 @@ class _FakeDatabaseService extends ChangeNotifier implements DatabaseService {
   }
 
   @override
-  Stream<List<NoteCategory>> watchCategories() =>
-      Stream<List<NoteCategory>>.value(
+  Stream<List<NoteTag>> watchTags() =>
+      Stream<List<NoteTag>>.value(
         const [],
       );
 

@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
@@ -13,7 +13,7 @@ import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 /// 优化后的添加笔记对话框性能测试
 void main() {
   group('Optimized AddNoteDialog Performance Tests', () {
-    late List<NoteCategory> mockTags;
+    late List<NoteTag> mockTags;
     late DatabaseService mockDatabaseService;
     late LocationService mockLocationService;
     late WeatherService mockWeatherService;
@@ -48,7 +48,7 @@ void main() {
       // 模拟大量标签数据来测试性能
       mockTags = List.generate(
         100,
-        (index) => NoteCategory(
+        (index) => NoteTag(
           id: 'tag_$index',
           name: '标签 $index',
           iconName: index % 2 == 0 ? '😀' : 'star',
@@ -155,7 +155,7 @@ class MockDatabaseService extends DatabaseService {
   MockDatabaseService() : super.forTesting();
 
   @override
-  Future<List<NoteCategory>> getCategories() async {
+  Future<List<NoteTag>> getTags() async {
     return [];
   }
 

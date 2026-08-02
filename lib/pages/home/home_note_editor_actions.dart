@@ -5,10 +5,10 @@ import 'package:provider/provider.dart';
 
 import 'package:thoughtecho/constants/app_constants.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
-import 'package:thoughtecho/models/ai_assistant_entry.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/thoughter_entry.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
-import 'package:thoughtecho/pages/ai_assistant_page.dart';
+import 'package:thoughtecho/pages/thoughter_page.dart';
 import 'package:thoughtecho/pages/note_full_editor_page.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
@@ -35,7 +35,7 @@ class HomeNoteEditorActions {
 
   final BuildContext context;
   final bool Function() isMounted;
-  final List<NoteCategory> Function() readTags;
+  final List<NoteTag> Function() readTags;
   final bool Function() isLoadingTags;
   final Future<void> Function() loadTags;
   final VoidCallback releaseNoteSearchFocus;
@@ -140,9 +140,9 @@ class HomeNoteEditorActions {
     if (!_active) return;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (routeContext) => AIAssistantPage(
+        builder: (routeContext) => ThoughterPage(
           quote: quote,
-          entrySource: AIAssistantEntrySource.note,
+          entrySource: ThoughterEntrySource.note,
         ),
       ),
     );

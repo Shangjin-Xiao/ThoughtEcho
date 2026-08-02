@@ -1,6 +1,6 @@
 part of '../note_full_editor_page.dart';
 
-/// AI assistant features — all actions navigate to Thoughter (AIAssistantPage)
+/// AI assistant features — all actions navigate to Thoughter (ThoughterPage)
 /// with a natural-language prompt. The editor is replaced in the navigation
 /// stack so that after the agent session the user returns to the note list.
 extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
@@ -107,8 +107,8 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
     if (!mounted) return;
     await Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (context) => AIAssistantPage(
-          entrySource: AIAssistantEntrySource.note,
+        builder: (context) => ThoughterPage(
+          entrySource: ThoughterEntrySource.note,
           quote: tempQuote,
           initialQuestion: initialQuestion,
         ),

@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:thoughtecho/models/note_category.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/note_proposal_artifact.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
@@ -17,7 +17,7 @@ import '../../test_harness.dart';
 class _TestDatabaseService extends DatabaseService {
   _TestDatabaseService(this._categories, {this.quote}) : super.forTesting();
 
-  final List<NoteCategory> _categories;
+  final List<NoteTag> _categories;
   final Quote? quote;
 
   @override
@@ -25,8 +25,8 @@ class _TestDatabaseService extends DatabaseService {
       quote?.id == id ? quote : null;
 
   @override
-  Future<List<NoteCategory>> getCategories() async {
-    return List<NoteCategory>.from(_categories);
+  Future<List<NoteTag>> getTags() async {
+    return List<NoteTag>.from(_categories);
   }
 }
 
@@ -79,9 +79,9 @@ void main() {
       final tool = GetTagsTool(
         _TestDatabaseService(
           [
-            NoteCategory(id: 'tag_work', name: '工作'),
-            NoteCategory(id: 'tag_life', name: '生活'),
-            NoteCategory(
+            NoteTag(id: 'tag_work', name: '工作'),
+            NoteTag(id: 'tag_life', name: '生活'),
+            NoteTag(
               id: 'system_hidden_tag',
               name: '隐藏',
               isDefault: true,
@@ -112,7 +112,7 @@ void main() {
     test('supports pagination', () async {
       final tags = List.generate(
         5,
-        (i) => NoteCategory(id: 'tag_$i', name: '标签$i'),
+        (i) => NoteTag(id: 'tag_$i', name: '标签$i'),
       );
       final tool = GetTagsTool(_TestDatabaseService(tags));
 

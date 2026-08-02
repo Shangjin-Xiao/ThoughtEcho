@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../models/note_category.dart';
+import '../models/note_tag.dart';
 import '../models/quote_model.dart';
 import 'quote_item_widget.dart';
 
@@ -12,7 +12,7 @@ class TrashQuoteCard extends StatefulWidget {
   final String remainingDaysText;
   final bool actionsEnabled;
   final ValueChanged<TrashQuoteCardAction>? onActionSelected;
-  final Map<String, NoteCategory> tagMap;
+  final Map<String, NoteTag> tagMap;
 
   const TrashQuoteCard({
     super.key,

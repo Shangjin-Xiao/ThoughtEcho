@@ -534,7 +534,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     return Icon(IconUtils.getIconData(iconName), size: 16);
   }
 
-  Widget _buildTagIcon(NoteCategory tag) {
+  Widget _buildTagIcon(NoteTag tag) {
     return _tagAvatarSmall(tag.iconName);
   }
 }

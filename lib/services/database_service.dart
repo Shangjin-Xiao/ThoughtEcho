@@ -9,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
-import '../models/note_category.dart';
+import '../models/note_tag.dart';
 import '../models/quote_model.dart';
 import '../models/app_settings.dart';
 import 'package:uuid/uuid.dart';
@@ -34,8 +34,8 @@ part 'database/database_query_mixin.dart';
 part 'database/database_query_helpers_mixin.dart';
 part 'database/database_quote_crud_mixin.dart';
 part 'database/database_favorite_mixin.dart';
-part 'database/database_category_mixin.dart';
-part 'database/database_category_init_mixin.dart';
+part 'database/database_tag_mixin.dart';
+part 'database/database_tag_init_mixin.dart';
 part 'database/database_hidden_tag_mixin.dart';
 part 'database/database_trash_mixin.dart';
 part 'database/database_pagination_mixin.dart';
@@ -58,19 +58,19 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   final DatabaseBackupService _backupService = DatabaseBackupService();
   final DatabaseHealthService _healthService = DatabaseHealthService();
   VoidCallback? onLocalDataChanged;
-  static const String defaultCategoryIdHitokoto = 'default_hitokoto';
-  static const String defaultCategoryIdAnime = 'default_anime';
-  static const String defaultCategoryIdComic = 'default_comic';
-  static const String defaultCategoryIdGame = 'default_game';
-  static const String defaultCategoryIdNovel = 'default_novel';
-  static const String defaultCategoryIdOriginal = 'default_original';
-  static const String defaultCategoryIdInternet = 'default_internet';
-  static const String defaultCategoryIdOther = 'default_other';
-  static const String defaultCategoryIdMovie = 'default_movie';
-  static const String defaultCategoryIdPoem = 'default_poem';
-  static const String defaultCategoryIdMusic = 'default_music';
-  static const String defaultCategoryIdPhilosophy = 'default_philosophy';
-  static const String defaultCategoryIdJoke = 'default_joke';
+  static const String defaultTagIdHitokoto = 'default_hitokoto';
+  static const String defaultTagIdAnime = 'default_anime';
+  static const String defaultTagIdComic = 'default_comic';
+  static const String defaultTagIdGame = 'default_game';
+  static const String defaultTagIdNovel = 'default_novel';
+  static const String defaultTagIdOriginal = 'default_original';
+  static const String defaultTagIdInternet = 'default_internet';
+  static const String defaultTagIdOther = 'default_other';
+  static const String defaultTagIdMovie = 'default_movie';
+  static const String defaultTagIdPoem = 'default_poem';
+  static const String defaultTagIdMusic = 'default_music';
+  static const String defaultTagIdPhilosophy = 'default_philosophy';
+  static const String defaultTagIdJoke = 'default_joke';
   static const String hiddenTagId = 'system_hidden_tag';
   static const String hiddenTagIconName = '🔒';
 
@@ -157,17 +157,17 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   Future<void> resetFavoriteCount(String quoteId);
   Future<List<Quote>> getMostFavoritedQuotesThisWeek({int limit = 5});
 
-  Future<List<Map<String, dynamic>>> getAllCategories();
-  Future<List<NoteCategory>> getCategories();
-  Future<void> addCategory(String name, {String? iconName});
-  Future<void> addCategoryWithId(String id, String name, {String? iconName});
-  Stream<List<NoteCategory>> watchCategories();
-  Future<void> deleteCategory(String id);
-  Future<void> updateCategory(String id, String name, {String? iconName});
-  Future<NoteCategory?> getCategoryById(String id);
+  Future<List<Map<String, dynamic>>> getAllTagMaps();
+  Future<List<NoteTag>> getTags();
+  Future<void> addTag(String name, {String? iconName});
+  Future<void> addTagWithId(String id, String name, {String? iconName});
+  Stream<List<NoteTag>> watchTags();
+  Future<void> deleteTag(String id);
+  Future<void> updateTag(String id, String name, {String? iconName});
+  Future<NoteTag?> getTagById(String id);
 
-  Future<void> initDefaultHitokotoCategories();
-  Future<NoteCategory?> getOrCreateHiddenTag();
+  Future<void> initDefaultHitokotoTags();
+  Future<NoteTag?> getOrCreateHiddenTag();
   bool isHiddenTag(String tagId);
   Future<void> removeHiddenTag();
   Future<bool> isQuoteHidden(String quoteId);
@@ -305,7 +305,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   void _clearAllCache();
   void _safeNotifyQuotesStream();
   void _refreshQuotesStream();
-  Future<void> _updateCategoriesStream();
+  Future<void> _updateTagsStream();
 
   /// 应用搜索查询条件
   void _applySearchQuery(
@@ -382,13 +382,13 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   }
 
   static Database? _database;
-  StreamController<List<NoteCategory>> _categoriesController =
-      StreamController<List<NoteCategory>>.broadcast();
+  StreamController<List<NoteTag>> _tagsController =
+      StreamController<List<NoteTag>>.broadcast();
   final _uuid = const Uuid();
   // 内存存储，用于 Web 平台或调试存储，与原有业务流程保持一致
   final List<Quote> _memoryStore = [];
   // 内存存储分类数据
-  final List<NoteCategory> _categoryStore = [];
+  final List<NoteTag> _tagStore = [];
 
   // 标记是否已经dispose，避免重复操作
   bool _isDisposed = false;
@@ -465,7 +465,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   void scheduleCacheCleanupForParts() => _scheduleCacheCleanup();
 
   @protected
-  Future<void> updateCategoriesStreamForParts() => _updateCategoriesStream();
+  Future<void> updateTagsStreamForParts() => _updateTagsStream();
 
   @protected
   void safeNotifyQuotesStreamForParts() => _safeNotifyQuotesStream();
@@ -495,7 +495,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     }
 
     // 修复：如果数据库已经打开，直接返回，避免在 init() 内部调用时死锁
-    // 这允许 init() 内部的方法（如 _updateCategoriesStream）正常工作
+    // 这允许 init() 内部的方法（如 _updateTagsStream）正常工作
     if (_database != null && _database!.isOpen) {
       return _database!;
     }
@@ -664,14 +664,14 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       await _performAllDataMigrations();
 
       // 初始化默认分类/标签
-      await initDefaultHitokotoCategories();
+      await initDefaultHitokotoTags();
       logDebug('默认分类初始化检查完成');
 
       // 隐藏标签：系统标签，始终确保存在
       await getOrCreateHiddenTag();
 
       // 更新分类流数据
-      await _updateCategoriesStream();
+      await _updateTagsStream();
 
       // 修复：确保笔记流控制器在预加载前被正确初始化
       if (_quotesController == null || _quotesController!.isClosed) {
@@ -903,7 +903,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       _database = await _initDatabase(path);
 
       // 创建默认分类
-      await initDefaultHitokotoCategories();
+      await initDefaultHitokotoTags();
 
       _isInitialized = true;
 
@@ -1049,8 +1049,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     _isDisposed = true;
 
     // 关闭所有StreamController
-    if (!_categoriesController.isClosed) {
-      _categoriesController.close();
+    if (!_tagsController.isClosed) {
+      _tagsController.close();
     }
 
     if (_quotesController != null && !_quotesController!.isClosed) {
@@ -1070,7 +1070,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
     // 清理内存存储
     _memoryStore.clear();
-    _categoryStore.clear();
+    _tagStore.clear();
 
     logDebug('DatabaseService资源已释放');
 
@@ -1090,8 +1090,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     _databaseLock.clear();
 
     // 重新创建已关闭的 StreamController（dispose 后需要可恢复）。
-    if (_categoriesController.isClosed) {
-      _categoriesController = StreamController<List<NoteCategory>>.broadcast();
+    if (_tagsController.isClosed) {
+      _tagsController = StreamController<List<NoteTag>>.broadcast();
     }
     if (_quotesController == null || _quotesController!.isClosed) {
       _quotesController = StreamController<List<Quote>>.broadcast();
@@ -1225,8 +1225,8 @@ class DatabaseService extends _DatabaseServiceBase
         _DatabaseQueryMixin,
         _DatabaseQuoteCrudMixin,
         _DatabaseFavoriteMixin,
-        _DatabaseCategoryMixin,
-        _DatabaseCategoryInitMixin,
+        _DatabaseTagMixin,
+        _DatabaseTagInitMixin,
         _DatabaseHiddenTagMixin,
         _DatabaseTrashMixin,
         _DatabasePaginationMixin,
@@ -1240,19 +1240,19 @@ class DatabaseService extends _DatabaseServiceBase
   static void Function(String quoteId)? onQuoteCacheInvalidate;
   static void Function(Set<String> quoteIds)? onQuoteCachesInvalidate;
 
-  static const String defaultCategoryIdHitokoto = 'default_hitokoto';
-  static const String defaultCategoryIdAnime = 'default_anime';
-  static const String defaultCategoryIdComic = 'default_comic';
-  static const String defaultCategoryIdGame = 'default_game';
-  static const String defaultCategoryIdNovel = 'default_novel';
-  static const String defaultCategoryIdOriginal = 'default_original';
-  static const String defaultCategoryIdInternet = 'default_internet';
-  static const String defaultCategoryIdOther = 'default_other';
-  static const String defaultCategoryIdMovie = 'default_movie';
-  static const String defaultCategoryIdPoem = 'default_poem';
-  static const String defaultCategoryIdMusic = 'default_music';
-  static const String defaultCategoryIdPhilosophy = 'default_philosophy';
-  static const String defaultCategoryIdJoke = 'default_joke';
+  static const String defaultTagIdHitokoto = 'default_hitokoto';
+  static const String defaultTagIdAnime = 'default_anime';
+  static const String defaultTagIdComic = 'default_comic';
+  static const String defaultTagIdGame = 'default_game';
+  static const String defaultTagIdNovel = 'default_novel';
+  static const String defaultTagIdOriginal = 'default_original';
+  static const String defaultTagIdInternet = 'default_internet';
+  static const String defaultTagIdOther = 'default_other';
+  static const String defaultTagIdMovie = 'default_movie';
+  static const String defaultTagIdPoem = 'default_poem';
+  static const String defaultTagIdMusic = 'default_music';
+  static const String defaultTagIdPhilosophy = 'default_philosophy';
+  static const String defaultTagIdJoke = 'default_joke';
   static const String hiddenTagId = 'system_hidden_tag';
   static const String hiddenTagIconName = '🔒';
 
