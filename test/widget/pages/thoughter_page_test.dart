@@ -934,8 +934,7 @@ void main() {
         ],
         responseChunkDelay: const Duration(milliseconds: 1000),
       );
-      await settingsService
-          .setExploreAiAssistantMode(ThoughterPageMode.agent);
+      await settingsService.setExploreAiAssistantMode(ThoughterPageMode.agent);
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
@@ -1000,8 +999,7 @@ void main() {
         settingsService: settingsService,
         simulateToolProgress: true,
       );
-      await settingsService
-          .setExploreAiAssistantMode(ThoughterPageMode.agent);
+      await settingsService.setExploreAiAssistantMode(ThoughterPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
@@ -1051,8 +1049,7 @@ void main() {
         responseChunks: const <String>['正式回答开始'],
         responseChunkDelay: const Duration(milliseconds: 300),
       );
-      await settingsService
-          .setExploreAiAssistantMode(ThoughterPageMode.agent);
+      await settingsService.setExploreAiAssistantMode(ThoughterPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
@@ -1102,8 +1099,7 @@ void main() {
         responseChunks: const <String>['第一段', '第二段'],
         responseChunkDelay: const Duration(milliseconds: 200),
       );
-      await settingsService
-          .setExploreAiAssistantMode(ThoughterPageMode.agent);
+      await settingsService.setExploreAiAssistantMode(ThoughterPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
@@ -1144,8 +1140,7 @@ void main() {
         preToolText: '让我先看看最近的记录。',
         toolProgressDelay: const Duration(milliseconds: 160),
       );
-      await settingsService
-          .setExploreAiAssistantMode(ThoughterPageMode.agent);
+      await settingsService.setExploreAiAssistantMode(ThoughterPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
@@ -1196,8 +1191,7 @@ void main() {
         toolResult:
             '{"notes":[{"id":"n1","content_preview":"周末去露营"}],"pagination":{"offset":0,"limit":10,"next_offset":1,"has_more":true,"total_count":2},"summary":"找到 1 条匹配笔记（总计 2 条，可分页查看）"}',
       );
-      await settingsService
-          .setExploreAiAssistantMode(ThoughterPageMode.agent);
+      await settingsService.setExploreAiAssistantMode(ThoughterPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(
@@ -1368,8 +1362,7 @@ void main() {
         toolProgressDelay: const Duration(milliseconds: 300),
         responseContent: '这段回复不应该出现',
       );
-      await settingsService
-          .setExploreAiAssistantMode(ThoughterPageMode.agent);
+      await settingsService.setExploreAiAssistantMode(ThoughterPageMode.agent);
 
       await tester.pumpWidget(
         await _buildHarness(

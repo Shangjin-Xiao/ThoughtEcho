@@ -479,8 +479,7 @@ class AgentProbe {
       // 原始消息，AgentService 会把带元数据的消息丢掉，看上去像「记不住」。
       final response = await agent.runAgent(
         userMessage: userMessage,
-        history:
-            carryHistory ? AgentHistoryBuilder.build(_history) : const [],
+        history: carryHistory ? AgentHistoryBuilder.build(_history) : const [],
         noteContext: noteContext,
       );
       turn.response = response;
@@ -559,7 +558,11 @@ class AgentProbe {
           'result': null,
           'isError': false,
         });
-      case AgentToolCallResultEvent(:final toolName, :final result, :final isError):
+      case AgentToolCallResultEvent(
+          :final toolName,
+          :final result,
+          :final isError
+        ):
         turn.events.add('tool_result($toolName, error=$isError)');
         final pending = turn.toolCalls.lastWhere(
           (call) => call['tool'] == toolName && call['result'] == null,

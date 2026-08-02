@@ -33,8 +33,7 @@ class _Problems {
   final List<String> mismatched = [];
   String? rootAllowedKeys;
 
-  bool get isEmpty =>
-      missing.isEmpty && unknown.isEmpty && mismatched.isEmpty;
+  bool get isEmpty => missing.isEmpty && unknown.isEmpty && mismatched.isEmpty;
 
   String render(String toolName) {
     final parts = <String>[
@@ -97,7 +96,8 @@ void _validateObject({
     if (definition is Map && entry.value != null) {
       _validateValue(
         schema: definition.map(
-          (schemaKey, schemaValue) => MapEntry(schemaKey.toString(), schemaValue),
+          (schemaKey, schemaValue) =>
+              MapEntry(schemaKey.toString(), schemaValue),
         ),
         value: entry.value,
         path: _join(path, key),

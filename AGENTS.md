@@ -108,42 +108,15 @@ pwsh ./scripts/build_msix_ci.ps1
 - 使用具体类型和 null safety，避免无边界的 `dynamic`、不必要的 `!` 和宽泛类型转换。
 - 类/枚举使用 `UpperCamelCase`，成员使用 `lowerCamelCase`，私有成员加 `_`，文件使用
   `snake_case.dart`，测试使用 `*_test.dart`。
+- 文件名要指向它现在是什么，不是曾经是什么。禁止 `_clean`、`_new`、`_v2`、`_fixed`、
+  `_optimized` 这类状态词后缀，也不要留只做转发的 `_wrapper` 页面。改名一次改到底：文件、
+  类、`part` 路径、目录、对应测试一起改。废弃的页面/服务直接删，不要留"已弃用"注释躺在
+  `lib/` 里 —— 注释拦不住检索。
 - 公共 API 使用 `///`；注释解释原因、约束或不直观行为，不复述代码。提交前删除临时日志和
   调试注释。
 - 新增或重构时避免继续扩大超大文件；优先按职责抽取 Widget、helper、mixin 或子目录。
   “500 行”是需要评估拆分的信号，不是为了达标而机械切文件的硬门槛。
 - 重复逻辑达到三处时评估抽取；只有在共享概念确实稳定时才抽象。
-
-## 命名与领域词汇
-
-文件名和类名必须指向它当前是什么，而不是它曾经是什么。改名要一次改到底：文件、类、
-`part` / `part of` 路径、目录、对应测试文件一起改，不留转发壳层。
-
-- 禁止用状态词做后缀区分同类文件：`_clean`、`_new`、`_old`、`_v2`、`_fixed`、`_final`、
-  `_optimized`、`_improved`、`_temp`、`_backup`。要区分就用职责命名。
-- 禁止只做转发的 `_wrapper` 页面。需要换实现就直接改引用方的 import。
-- 废弃的页面/服务直接删除，不要留"⚠️ 已弃用"注释继续躺在 `lib/` 里 —— 注释拦不住检索。
-- 多类聚合文件用 `_parts` / `_widgets` / `_helpers` 后缀（如 `add_note_dialog_parts.dart`），
-  这是允许的例外：此时文件名不需要与某个类同名。
-
-领域词汇表（同一概念只用一个词，改代码前先对照）：
-
-| 概念 | Dart 侧用词 | 说明 |
-| --- | --- | --- |
-| 用户给笔记打的标签 | `tag` / `NoteTag` | **不要写 `category`**。见下方数据库说明 |
-| 一言 / API Ninjas 的名言分类 | `category` | 真的是分类，与标签无关 |
-| emoji 图标选择器的分组 | `category` | 真的是分类，与标签无关 |
-| 底部导航第三个 tab | `explore` / `ExplorePage` | `lib/pages/explore_page.dart` + `lib/pages/explore/` |
-| AI 对话页 | `thoughter` / `ThoughterPage` | `lib/pages/thoughter_page.dart` + `lib/pages/thoughter/` |
-
-两处历史遗留，**不要"顺手统一"**：
-
-- 数据库表 `categories`、列 `category_id`、备份 JSON 的 `categories` 键存的都是标签
-  （`quote_tags.tag_id REFERENCES categories(id)`）。改这些要写迁移，且会破坏备份、
-  WebDAV 同步和 LWW 合并的跨版本兼容。SQL 字符串保持原样，Dart 标识符一律用 tag。
-- l10n key 仍是 `aiAssistant*`（显示值已是 "Thoughter"）、SharedPreferences key 仍是
-  `explore_ai_assistant_mode` / `note_ai_assistant_mode`。前者改动要同步 7 个 ARB 并重新生成，
-  后者是已落盘的用户设置。
 
 ## 架构约定
 
@@ -257,8 +230,10 @@ pwsh ./scripts/build_msix_ci.ps1
 - 大文件和大 JSON 使用流式工具（如 `LargeFileManager`），不要用一次性
   `File.writeAsString` / 全量内存编码。
 - 删除 SQL 查询字段前全局检查模型、UI、导入导出和同步依赖，避免运行期缺列或类型错误。
-- `categories` 表存的是**标签**，不是分类。Dart 侧用 `NoteTag` / `getTags()` / `addTag()`，
-  只有 SQL 字符串和备份 JSON 的键保留 `categories` / `category_id`。详见「命名与领域词汇」。
+- `categories` 表、`category_id` 列和备份 JSON 的 `categories` 键存的是**标签**
+  （`quote_tags.tag_id REFERENCES categories(id)`）。Dart 侧一律 `NoteTag` / `getTags()`，
+  只有 SQL 和备份键保留旧名 —— 改它们要写迁移且破坏同步兼容，不要"顺手统一"。
+  注意 API Ninjas 名言分类和 emoji 分组是真的 `category`，与标签无关。
 
 ## AI 服务
 

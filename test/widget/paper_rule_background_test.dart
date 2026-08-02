@@ -24,7 +24,9 @@ void main() {
   }
 
   Finder ruleLayer() => find.byWidgetPredicate(
-        (w) => w is CustomPaint && w.painter.runtimeType.toString().contains('PaperRule'),
+        (w) =>
+            w is CustomPaint &&
+            w.painter.runtimeType.toString().contains('PaperRule'),
       );
 
   testWidgets('material 风格下不插入任何绘制层', (tester) async {

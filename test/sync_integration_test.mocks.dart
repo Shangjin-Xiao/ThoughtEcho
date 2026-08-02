@@ -620,8 +620,7 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
           #getTags,
           [],
         ),
-        returnValue:
-            _i10.Future<List<_i17.NoteTag>>.value(<_i17.NoteTag>[]),
+        returnValue: _i10.Future<List<_i17.NoteTag>>.value(<_i17.NoteTag>[]),
       ) as _i10.Future<List<_i17.NoteTag>>);
 
   @override
@@ -697,8 +696,7 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<_i17.NoteTag?> getTagById(String? id) =>
-      (super.noSuchMethod(
+  _i10.Future<_i17.NoteTag?> getTagById(String? id) => (super.noSuchMethod(
         Invocation.method(
           #getTagById,
           [id],

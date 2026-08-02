@@ -8,9 +8,8 @@
 - `thoughter/`：Thoughter 对话页的会话、工作流和 UI 拆分，另含会话历史页
 - `home/`：主页局部面板
 
-页面文件名必须与它在 UI 上的身份一致，术语对照见根 `AGENTS.md` 的「命名与领域词汇」。
-特别注意：管理**标签**的页面是 `tag_settings_page.dart`；`api_ninjas_category_selection_page.dart`
-管的才是名言 API 的**分类**，两者无关。
+页面文件名与它在 UI 上的身份一致。管理**标签**的是 `tag_settings_page.dart`；
+`api_ninjas_category_selection_page.dart` 管的才是名言 API 的**分类**，两者无关。
 
 主页的刷新、目标笔记定位、功能引导、AI 卡片导出、语音/OCR 捕获、笔记增删改和编辑器路由
 分别由 `home/` 下的 orchestration module 管理；`HomePage` 对这些流程只提供页面 key、窄回调

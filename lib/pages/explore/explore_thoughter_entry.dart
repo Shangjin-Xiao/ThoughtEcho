@@ -17,9 +17,8 @@ extension _ExploreThoughterEntry on _ExplorePageState {
       await service.init();
       final sessions = await service.getAgentSessions();
       if (!mounted) return;
-      final recent = sessions
-          .take(_ExplorePageState._recentSessionLimit)
-          .toList();
+      final recent =
+          sessions.take(_ExplorePageState._recentSessionLimit).toList();
       final overviews = recent.isEmpty
           ? <String, ChatSessionOverview>{}
           : await service.getSessionOverviews(

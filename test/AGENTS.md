@@ -3,16 +3,9 @@
 本目录包含 unit、widget、integration、performance 以及少量历史根级测试。不要继续无理由增加
 根级测试文件。
 
-新增测试的落点由两步决定，先选根再镜像路径：
-
-1. **选根**：用到 `testWidgets` / `WidgetTester` 渲染的进 `test/widget/`，纯逻辑断言的进
-   `test/unit/`。
-2. **镜像 `lib/` 路径**：被测文件是 `lib/widgets/ai/tool_progress_panel.dart`，widget 测试就放
-   `test/widget/widgets/ai/tool_progress_panel_test.dart`。
-
-同一个被测文件同时有渲染测试和纯逻辑测试时，两个根下各放一个是正常的；但**同一类测试只能
-有一个落点**，不要新建 `test/widgets/`、`test/bug_fixes/` 这类平行目录（前者已合并，后者是
-历史遗留，只减不增）。
+新增测试先选根再镜像 `lib/` 路径：用 `testWidgets` 渲染的进 `test/widget/`，纯逻辑的进
+`test/unit/`。例如 `lib/widgets/ai/tool_progress_panel.dart` 的 widget 测试放
+`test/widget/widgets/ai/tool_progress_panel_test.dart`。不要新建平行目录。
 
 ## 运行命令
 

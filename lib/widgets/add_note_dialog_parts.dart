@@ -351,8 +351,8 @@ class SelectedTagsDisplay extends StatelessWidget {
             children: () {
               final tagMap = {for (var t in allTags) t.id: t};
               return selectedTagIds.map((tagId) {
-                final tag = tagMap[tagId] ??
-                    NoteTag(id: tagId, name: l10n.unknownTag);
+                final tag =
+                    tagMap[tagId] ?? NoteTag(id: tagId, name: l10n.unknownTag);
                 final String displayName = tag.localizedName(l10n);
 
                 return Chip(

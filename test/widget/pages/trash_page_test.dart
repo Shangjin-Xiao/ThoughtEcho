@@ -119,8 +119,7 @@ class _FakeDatabaseService extends ChangeNotifier implements DatabaseService {
   }
 
   @override
-  Stream<List<NoteTag>> watchTags() =>
-      Stream<List<NoteTag>>.value(
+  Stream<List<NoteTag>> watchTags() => Stream<List<NoteTag>>.value(
         const [],
       );
 

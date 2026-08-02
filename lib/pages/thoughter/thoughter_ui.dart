@@ -610,9 +610,7 @@ extension _ThoughterUI on _ThoughterPageState {
       child: Tooltip(
         message: on ? l10n.hideThinking : l10n.showThinking,
         child: Material(
-          color: on
-              ? theme.colorScheme.secondaryContainer
-              : Colors.transparent,
+          color: on ? theme.colorScheme.secondaryContainer : Colors.transparent,
           shape: StadiumBorder(
             side: on
                 ? BorderSide.none
@@ -620,9 +618,8 @@ extension _ThoughterUI on _ThoughterPageState {
           ),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: _isLoading
-                ? null
-                : () => unawaited(_setThinkingEnabled(!on)),
+            onTap:
+                _isLoading ? null : () => unawaited(_setThinkingEnabled(!on)),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(10, 6, 12, 6),
               child: Row(

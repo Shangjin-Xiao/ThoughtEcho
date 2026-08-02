@@ -401,8 +401,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                                   onTap: () {
                                     setState(() {
                                       expandedTags[category] =
-                                          !(expandedTags[category] ??
-                                              false);
+                                          !(expandedTags[category] ?? false);
                                     });
                                   },
                                 ),
@@ -484,8 +483,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                             onTap: () {
                               setState(() {
                                 expandedTags[l10n.systemIcons] =
-                                    !(expandedTags[l10n.systemIcons] ??
-                                        false);
+                                    !(expandedTags[l10n.systemIcons] ?? false);
                               });
                             },
                           ),

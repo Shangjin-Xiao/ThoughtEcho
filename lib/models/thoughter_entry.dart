@@ -9,8 +9,7 @@ class ThoughterEntryConfig {
 
   ThoughterPageMode get defaultMode => ThoughterPageMode.agent;
 
-  bool allowsMode(ThoughterPageMode mode) =>
-      mode == ThoughterPageMode.agent;
+  bool allowsMode(ThoughterPageMode mode) => mode == ThoughterPageMode.agent;
 
   ThoughterPageMode resolveRestoredMode(ThoughterPageMode? restoredMode) {
     if (restoredMode != null && allowsMode(restoredMode)) {

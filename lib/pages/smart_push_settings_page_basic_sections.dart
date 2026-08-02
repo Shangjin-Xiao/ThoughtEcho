@@ -33,8 +33,8 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                 color: _settings.enabled
                     ? colorScheme.primary.withValues(alpha: 0.15)
                     : colorScheme.surfaceContainerHighest,
-                borderRadius:
-                    BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+                borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).cardRadius),
               ),
               child: Icon(
                 _settings.enabled

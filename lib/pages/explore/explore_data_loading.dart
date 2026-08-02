@@ -332,8 +332,8 @@ extension _ExploreDataLoading on _ExplorePageState {
           if (!mounted) return;
           // 按帧率量级节流：逐 chunk setState 会让整页反复重排抖动
           _insightPending += chunk;
-          _insightFlushTimer ??= Timer(
-              _ExplorePageState._insightFlushInterval, _flushInsight);
+          _insightFlushTimer ??=
+              Timer(_ExplorePageState._insightFlushInterval, _flushInsight);
         },
         onError: (_) {
           if (!mounted) return;
