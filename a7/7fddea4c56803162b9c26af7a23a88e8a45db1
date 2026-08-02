@@ -1,0 +1,207 @@
+lib/controllers/home_page_controller.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 5,15,31,79,90
+lib/pages/preferences_detail_page.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 4,6,902,913
+lib/widgets/add_note_dialog_parts.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 3,5,36,56,174,258,313,355
+test/unit/extensions/note_tag_localization_extension_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-45
+lib/controllers/add_note_controller.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 4,49,53-64,68,351,367,403,416,447,452,460,468,477,484,488,493,497
+lib/pages/explore/explore_overview.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-398
+lib/models/note_tag.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 6-7,14-55,62-63,70-92,102-103,107,109-114,118-127
+  s_a530a9fb45b510::t_fcbbe6906c419c 128
+lib/pages/note_full_editor_page.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 11,24-25,28,61
+lib/widgets/note_list/note_list_filters.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 35
+lib/widgets/quote_card_helpers.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 2,49
+lib/pages/explore/explore_time_selector.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-148
+test/widget/note_list_search_transition_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 12,145,275
+lib/models/thoughter_entry.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-38
+test/widget/add_note_dialog_focus_timing_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 9,285,361
+lib/services/clipboard_service.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 8,388
+lib/widgets/ai/note_proposal_card.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 6,74
+lib/pages/explore/explore_data_loading.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-483
+lib/services/database/database_tag_init_mixin.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-203
+lib/widgets/ask_note_widgets.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 3,5,31-32,60-61,109-110
+lib/widgets/note_list_view.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 12,15,50,204,320,458
+test/performance/add_note_dialog_optimized_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 6,16,51,158
+test/widget/pages/trash_page_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 9,122-123
+lib/services/settings_service.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 10,89,93,95,99,117,122
+test/unit/services/agent_note_tools_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 4,20,28-29,82-84,115
+test/widget/session_history_page_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 6
+lib/services/agent_tools/propose_note_edit_tool.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 265
+lib/services/agent_tools/get_app_context_tool.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 54
+lib/services/database_service.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 12,37-38,61-73,160-170,308,385-386,391,468,498,667,674,906,1052-1053,1073,1093-1094,1228-1229,1243-1255
+test/unit/models/note_tag_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 9-10,12-15,18-21,23,26-38,41-44,46,50,52,57,59,63-67,70-81,84-93,95-125,127-129,131-133,138-139,141,145,148
+test/unit/services/database_service_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 7,31-32
+lib/pages/home/daily_prompt_panel.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 8,16,198,206-207
+lib/pages/note_editor/editor_ai_features.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 3,110-111
+lib/services/pdf_export_service.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 8,68,71,329,350
+integration_test/note_list_performance_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 18,125,251,297,318,320
+lib/pages/tag_settings_page.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-1068
+test/live/agent_probe.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 401,518,520,646
+test/widget/pages/home_page_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 10,320,328
+lib/pages/settings_page.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 24,659
+lib/services/database/database_import_export_mixin.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 17,76
+lib/pages/trash_page.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 7,34-35,46
+lib/pages/thoughter/thoughter_quick_edit.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-483
+test/widget/note_list_scroll_controller_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 10,235
+lib/services/migration_service.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 68
+lib/services/agent_tools/tag_argument_resolver.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 21
+test/performance/ui_performance_benchmark_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 3,12
+test/performance/add_note_dialog_performance_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 5,18,27,178,182
+test/widget/note_list_view_filter_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 12,947,955,960-961,1081,1128
+test/AGENTS.md
+  s_a530a9fb45b510::t_d01bc969e933b8 3-15
+  s_a530a9fb45b510::t_5bd7cf2df98691 35,73
+lib/services/database/database_tag_mixin.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-489
+lib/pages/explore_page.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-181
+lib/pages/thoughter/session_history_page.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-288
+lib/widgets/note_filter_sort_sheet.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 3-4,14,302,362
+AGENTS.md
+  s_a530a9fb45b510::t_fe424a23946c99 260-261
+  s_a530a9fb45b510::t_f2e804bb9bd486 49,309,311
+  s_a530a9fb45b510::t_562dff58aed2de 117-147
+.github/workflows/test.yml
+  s_a530a9fb45b510::t_5bd7cf2df98691 95,99
+lib/services/agent_tools/explore_notes_tool.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 172
+lib/pages/note_editor/editor_save_and_draft.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 537
+lib/pages/smart_push_settings_page.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 5,7,32,63
+lib/widgets/add_note_dialog.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 15-16,18,42,88,588,622,654,1844-1845,1995
+lib/pages/home_page.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 21,583,979-980
+lib/pages/thoughter/thoughter_agent.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-689
+lib/pages/thoughter/thoughter_session.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-497
+lib/main.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 803
+lib/widgets/quote_item_widget.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 8,10,42,55,985
+lib/pages/explore/explore_thoughter_entry.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-346
+lib/extensions/note_tag_localization_extension.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-40
+lib/services/agent_tools/get_note_detail_tool.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 75
+lib/services/database/database_hidden_tag_mixin.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 9,12,24,36,42-43,62,65,81,85,91,108,126,129,147
+test/sync_integration_test.mocks.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 15,21,607,610,618,620,624-625,628,634,643,650,662,664,667-668,671,673,681,688,700,703,706-707,710,712,720,725-726,1052,1054,1227,1229-1230,1233,1235-1236,1458,1469
+test/tag_lww_merge_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 24,63,94-95,97
+test/unit/services/get_note_detail_tool_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 4,28,30,33
+test/unit/controllers/home_page_controller_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 5,34,40,51-52,56,58,110,115
+test/unit/services/explore_notes_tool_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 4,76-77
+lib/pages/note_editor/editor_metadata_dialog.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 419
+test/unit/models/thoughter_entry_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-39
+lib/pages/thoughter/thoughter_workflow.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-122
+test/pdf_export_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 7,278,286,293,300,308
+test/widget/pages/note_editor_draft_behavior_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 8,312
+lib/pages/thoughter/thoughter_ui.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-1462
+lib/pages/explore/explore_stats.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-446
+lib/widgets/trash_quote_card.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 3,15
+test/widget/pages/explore_page_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-449
+lib/services/ai_card_generation_strategies/fallback_card_generation_strategy.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 79,82,85,88,91,94,97,100,104,107,110
+lib/pages/AGENTS.md
+  s_a530a9fb45b510::t_07ed4d8764f939 33-34
+  s_a530a9fb45b510::t_0fbba1076a8771 7-8,11-13
+  s_a530a9fb45b510::t_a4a9850aeee36b 14
+lib/services/database_health_service.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 9,507,746
+lib/services/database/database_migration_mixin.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 109,137
+lib/services/backup_service.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 273
+lib/pages/home/home_note_editor_actions.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 8-9,11,38,143,145
+lib/widgets/ai/ai_card_parts.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 7,137
+lib/pages/thoughter_page.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-514
+test/performance/performance_optimization_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 3,21-22,31,36-37
+lib/pages/thoughter/session_history_page_content.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-417
+test/widget/pages/thoughter_page_test.dart
+  s_a530a9fb45b510::t_0a5df431ca67f8 1-1797
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "a77fddea4c56803162b9c26af7a23a88e8a45db1",
+  "prompts": {},
+  "sessions": {
+    "s_a530a9fb45b510": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a2040a4b-5090-4684-b0be-7578bf2a59ba",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
