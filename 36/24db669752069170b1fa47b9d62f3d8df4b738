@@ -1,0 +1,23 @@
+lib/constants/ai_provider_presets.dart
+  s_a75b13577ecbdc::t_a4179a7be4707d 137,139-142
+docs/USER_MANUAL.md
+  s_a75b13577ecbdc::t_4b8ac86704919a 66
+  s_a75b13577ecbdc::t_86dedc00af3630 817-818
+  s_a75b13577ecbdc::t_1ae8a849f12c1f 65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "3624db669752069170b1fa47b9d62f3d8df4b738",
+  "prompts": {},
+  "sessions": {
+    "s_a75b13577ecbdc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0c0a4c80-386f-4228-b452-bdc3c9b508c8",
+        "model": "claude-sonnet-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
