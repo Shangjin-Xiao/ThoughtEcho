@@ -62,8 +62,8 @@ Ollama 云端注册即用，免费额度充足，**不需要绑定支付方式**
 4. 把密钥粘进 API Key 输入框
 5. 点「测试连接」，成功后点「保存」
 
-接口地址是 `https://ollama.com/v1`，模型默认填 `gpt-oss:120b`，也可以换成
-`gpt-oss:20b`、`qwen3-coder:480b`、`deepseek-v3.1:671b` 等云端模型。
+接口地址是 `https://ollama.com/v1`，模型默认填 `gemma4:31b-cloud`，也可以换成
+`gpt-oss:120b-cloud`、`gpt-oss:20b-cloud`、`minimax-m3:cloud` 等云端模型。
 
 ### 支持的服务商
 
@@ -814,8 +814,8 @@ payment method**. It is the easiest way to get AI running.
 4. Paste the key into the API Key field
 5. Tap "Test connection", then "Save"
 
-The endpoint is `https://ollama.com/v1` and the model defaults to `gpt-oss:120b`.
-Other cloud models include `gpt-oss:20b`, `qwen3-coder:480b` and `deepseek-v3.1:671b`.
+The endpoint is `https://ollama.com/v1` and the model defaults to `gemma4:31b-cloud`.
+Other cloud models include `gpt-oss:120b-cloud`, `gpt-oss:20b-cloud` and `minimax-m3:cloud`.
 
 ### Supported Providers
 
