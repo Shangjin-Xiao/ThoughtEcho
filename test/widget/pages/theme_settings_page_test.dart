@@ -7,6 +7,7 @@ import 'package:thoughtecho/pages/theme_settings_page.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
 import 'package:thoughtecho/utils/theme_style_labels.dart';
+import 'package:thoughtecho/widgets/theme_style_preview.dart';
 
 import '../../test_harness.dart';
 
@@ -139,6 +140,44 @@ void main() {
               reason: '${style.name} 应该在心迹特色组里');
         }
       }
+    });
+
+    testWidgets('style previews keep their own colors when selection changes', (
+      tester,
+    ) async {
+      final appTheme = AppTheme();
+      await appTheme.setThemeStyle(ThemeStyle.material);
+
+      await tester.pumpWidget(buildTestApp(appTheme));
+      await tester.pumpAndSettle();
+
+      ColorScheme schemeOf(ThemeStyle style) {
+        return tester
+            .widget<ThemeStylePreview>(
+              find.byWidgetPredicate(
+                (w) => w is ThemeStylePreview && w.style == style,
+              ),
+            )
+            .colorScheme;
+      }
+
+      final materialBefore = schemeOf(ThemeStyle.material);
+      final paperBefore = schemeOf(ThemeStyle.paper);
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(ThemeSettingsPage)),
+      );
+      await tester.tap(find.text(themeStyleLabel(l10n, ThemeStyle.paper).$1));
+      await tester.pumpAndSettle();
+
+      expect(appTheme.themeStyle, ThemeStyle.paper);
+      // 生效的主题确实换了色。
+      expect(appTheme.lightColorScheme.primary, paperBefore.primary);
+      // 但每一项预览画的仍是它自己那套风格——material 没有固定色板，一旦退回读
+      // Theme.of(context).colorScheme，它就会跟着选中的纸墨一起变色（「点一下颜色乱跳」）。
+      expect(schemeOf(ThemeStyle.material).primary, materialBefore.primary);
+      expect(schemeOf(ThemeStyle.material).surface, materialBefore.surface);
+      expect(schemeOf(ThemeStyle.paper).primary, paperBefore.primary);
     });
 
     testWidgets('switches app theme mode to dark when dark option is tapped', (

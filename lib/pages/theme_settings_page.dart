@@ -5,6 +5,7 @@ import '../theme/theme_style.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import '../utils/color_utils.dart'; // 导入颜色工具
 import '../utils/theme_style_labels.dart';
+import '../widgets/theme_style_preview.dart';
 import '../gen_l10n/app_localizations.dart';
 
 class ThemeSettingsPage extends StatefulWidget {
@@ -378,10 +379,12 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
     );
   }
 
-  /// 风格选项：左边一小片色板预览，右边名称和一句说明。
+  /// 风格选项：左边一张迷你笔记卡片预览，右边名称和一句说明。
   ///
-  /// 预览直接取该风格的真实色值（material 没有固定色板，取当前生效的
-  /// ColorScheme），所以加新风格时这里不需要跟着改。
+  /// 预览的颜色一律走 [AppTheme.colorSchemeFor]——它给出「这个风格应有的配色」，
+  /// 和当前生效的风格无关。**不要退回读 `theme.colorScheme`**：material 没有固定
+  /// 色板，那样读到的是当前生效风格的颜色，选中纸墨后 material 那一项会跟着变色，
+  /// 表现为「点一下颜色就乱跳」。形状同理，见 [ThemeStylePreview]。
   Widget _buildThemeStyleOption(
     BuildContext context,
     AppTheme appTheme,
@@ -393,19 +396,6 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
     final brightness = theme.brightness;
 
     final (String name, String description) = themeStyleLabel(l10n, style);
-
-    final colors = style.palette?.forBrightness(brightness);
-    final swatch = colors == null
-        ? <Color>[
-            theme.colorScheme.surface,
-            theme.colorScheme.primary,
-            theme.colorScheme.secondary,
-          ]
-        : <Color>[colors.card, colors.accent, colors.secondary];
-    // 色板预览展示的是「style 这个风格长什么样」，不是当前生效的风格，
-    // 所以圆角要按 style.form 取值，不能读 AppShapeTokens.of(context)
-    // （那个是当前主题的令牌，会导致纸墨/素笺的预览卡片在 material 主题下显示成圆角）。
-    final previewTokens = AppShapeTokens.fromForm(style.form, brightness);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -432,23 +422,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
                 children: [
-                  // 色板预览：三片纵向叠放的色块，纸、墨、辅助各一片。
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      borderRadius:
-                          BorderRadius.circular(previewTokens.buttonRadius),
-                      border:
-                          Border.all(color: theme.colorScheme.outlineVariant),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Column(
-                      children: [
-                        for (final color in swatch)
-                          Expanded(child: Container(color: color)),
-                      ],
-                    ),
+                  ThemeStylePreview(
+                    style: style,
+                    brightness: brightness,
+                    colorScheme: appTheme.colorSchemeFor(style, brightness),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

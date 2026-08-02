@@ -117,9 +117,21 @@ class ThemeStyleForm {
   double shadowOpacity(Brightness brightness) =>
       brightness == Brightness.dark ? shadowOpacityDark : shadowOpacityLight;
 
-  /// 各平台自带的中文衬线体，按覆盖面排序。
-  /// Songti SC / STSong 是 iOS 和 macOS，Noto Serif CJK SC 和 Source Han Serif
-  /// 是 Android 与多数 Linux 发行版，SimSun 是 Windows。
+  /// 首选族名：**通用族 `serif`，不是具名字体**。这个顺序是实测得来的，别调回去。
+  ///
+  /// 曾经首选 `Songti SC`、把 `serif` 放在回退链末尾，结果 Android 上中文不变衬线。
+  /// 原因是 Flutter 的 [TextStyle.fontFamilyFallback] 不是 CSS 的 font-family：
+  /// 首选族名解析不到时，CJK 字符走的是引擎默认字体通道，回退链里排在后面的
+  /// `serif` 拿不到「这次要衬线」这个上下文。而 AOSP 的 fonts.xml 从 Android 9 起
+  /// 给 NotoSerifCJK 标了 `fallbackFor="serif"`——**只有首选族名就是 `serif` 时**
+  /// 才会命中它。（富文本编辑器里选 "Serif" 直接写入 `fontFamily: 'serif'`，
+  /// 中文确实变了衬线，这是首选位置有效的现场证据。）
+  ///
+  /// iOS / macOS / Windows 的字体管理器基本不解析通用族名，会跳过 `serif`
+  /// 落到下面的具名字体上，所以这个顺序对三端都成立。
+  ///
+  /// 代价是**不可控**：国内 OEM ROM 各改各的字体集，不能保证都带中文衬线体，
+  /// 各家衬线体长相也不一致。要做到统一必须打包子集化字体（见交接文档）。
   static const List<String> _systemSerifFallback = [
     'Songti SC',
     'STSong',
@@ -127,7 +139,6 @@ class ThemeStyleForm {
     'Noto Serif SC',
     'Source Han Serif SC',
     'SimSun',
-    'serif',
   ];
 
   /// 现状：Material 3 默认圆角与投影，系统默认字体。
@@ -160,7 +171,7 @@ class ThemeStyleForm {
     shadowBlur: 6,
     ruleSpacing: 26,
     ruleOpacity: 0.55,
-    fontFamily: 'Songti SC',
+    fontFamily: 'serif',
     fontFamilyFallback: _systemSerifFallback,
   );
 
@@ -178,7 +189,7 @@ class ThemeStyleForm {
     // 素笺是「素」的：不画横线。这也让两套手工风格除了颜色和圆角之外有了真正的差别。
     ruleSpacing: 0,
     ruleOpacity: 0,
-    fontFamily: 'Songti SC',
+    fontFamily: 'serif',
     fontFamilyFallback: _systemSerifFallback,
   );
 }

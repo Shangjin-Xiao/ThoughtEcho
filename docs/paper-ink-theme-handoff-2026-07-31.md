@@ -40,63 +40,37 @@
 
 ## 二、下一步（按优先级）
 
-### 0. 字体：已决定不打包，接受平台差异（2026-08-01 结案）
+### 0. 字体：首选族名改成 `serif`，零字节路线成立（2026-08-02 修正）
 
-**用户 2026-08-01 决定：不打包字体。** 下面 (a)(b) 两条不再是待办，保留作为背景。
+**2026-08-01 那条「Android 上 serif 只有拉丁字形、零字节路线走不通」的结论是错的，
+已推翻。** 推翻它的证据是用户的现场观察：**在富文本编辑器里选 "Serif"，中文变了衬线。**
+编辑器那条路径写进 delta 的就是通用族名 `serif`（`flutter_quill` 的默认项），
+渲染时直接 `fontFamily: 'serif'`（`lib/widgets/quote_content_widget.dart`）。
 
-现状因此是确定的、可接受的：Android 上**只有拉丁字形变衬线，中文不变**——
-用户观察到的「笔记卡片日期数字有点变化」正是这个，说明回退链本身生效了，
-只是中文那一环在 Android 上没有字体可落。iOS / macOS 上中文也是衬线。
+差别只在**首选族名的位置**：
 
-**不要再重开这个话题**，除非用户主动提出要吞 2.5MB 的子集化字体。
-`test/theme/theme_style_contrast_test.dart` 里那条字体测试的注释已经写明
-它只保证「不出豆腐块」，不是「字体已生效」的证据。
+- 原来：`fontFamily: 'Songti SC'`，`serif` 排在 `fontFamilyFallback` 末尾 → Android 中文不变
+- 现在：`fontFamily: 'serif'`，具名字体（Songti SC / SimSun 等）留在回退链里 → 生效
 
-<details>
-<summary>背景：为什么零字节路线在 Android 上走不通</summary>
+原因是 Flutter 的 `fontFamilyFallback` 不是 CSS 的 font-family。首选族名解析不到时，
+CJK 字符走的是引擎默认字体通道，回退链里排在后面的 `serif` 拿不到「这次要衬线」这个
+上下文，也就命中不了 AOSP 从 Android 9 起给 `NotoSerifCJK` 标的 `fallbackFor="serif"`。
+**只有首选族名就是 `serif` 时才会命中。**
 
-**「指向系统自带衬线体」这条零字节路线在 Android 上不成立。**
+iOS / macOS / Windows 的字体管理器基本不解析通用族名，会跳过 `serif` 落到后面的具名
+字体上，所以这个顺序对三端都成立。取值和理由固化在 `ThemeStyleForm._systemSerifFallback`
+的文档注释与 `test/theme/theme_style_contrast_test.dart`（锁「首选必须是 serif」）。
 
-- 多数 Android 设备只带 **Noto Sans CJK，不带 Noto Serif CJK**。国内 OEM ROM
-  （MIUI / ColorOS / OriginOS 等）各有各的字体集，不能假定有衬线中文。
-- 通用族 `serif` 在 Android 映射到 **Noto Serif，只有拉丁字形**；中文字形仍旧
-  回落到系统黑体。所以英文可能变了衬线，中文没变——观感上等于没变。
-- `Songti SC` / `STSong` 是 iOS 和 macOS 的系统字体，Android 上必然落空。
-- Flutter 的 `fontFamilyFallback` **不是 CSS 的 font-family**：它走 Flutter 自己的
-  字体管理去解析，解析不到就静默跳过，不会报错，所以问题很难被发现。
+**遗留的代价：不可控。** 国内 OEM ROM 各改各的字体集，不保证都带中文衬线体，各家衬线体
+长相也不一致。要做到「所有设备一个样」仍然只有打包子集化字体一条路：
 
-**下一轮要做两件事：**
+- `NotoSerifSC[wght].ttf`（OFL）原始 25MB / 31058 字形，**可变字体，wght 200–900**
+- `pyftsubset` 子集到 GB2312 全量 6763 汉字 + 拉丁 + 中西文标点（约 7569 字符），
+  **保留 wght 轴**，一个文件覆盖全部字重（项目用了 350/450 这种非常规字重，正好需要）
+- 子集外的生僻字回落系统黑体，不会出豆腐块
+- 需要签入字体产物 + `OFL.txt` + 可复现的子集化脚本
 
-**(a) 加诊断，让「字体没生效」可见。** Flutter 没有「查询字体是否存在」的 API，
-但可以用排版结果反推：用 `TextPainter` 把同一段中文分别以目标字族和一个**肯定不存在**的
-字族（如 `__definitely_missing__`）排版，比较宽高。完全相同说明目标字族没解析到，
-落到了同一个回退字体上。启动时或主题切换时跑一次，`logWarning` 出来。
-
-```dart
-// 思路示意，不是最终代码
-double _width(String? family) {
-  final tp = TextPainter(
-    text: TextSpan(text: '测试中文字形宽度', style: TextStyle(fontFamily: family)),
-    textDirection: TextDirection.ltr,
-  )..layout();
-  return tp.width;
-}
-final resolved = _width('Songti SC') != _width('__definitely_missing__');
-```
-
-注意这个探针有假阴性：如果目标字族和回退字体宽度恰好一致（等宽中文很常见），
-会误判成没生效。中文字形宽度普遍相同，**所以宽度比较对中文很可能不可靠**，
-更稳的做法是比较**拉丁字符**的排版宽度，或者直接改用光栅化后的像素差异比较。
-这一点要实测确认，别照抄。
-
-**(b) 决定真正的解法。** 零字节路线在 Android 上走不通，剩下两条：
-
-1. **打包子集化字体**（回到最初被推迟的方案）：`Noto Serif SC` 子集到 3500 常用字
-   约 2.5MB，需要 `fonttools pyftsubset` 外部构建步骤、产物二进制签入仓库，
-   文案一改要重跑。这是唯一能保证「所有设备都是衬线」的路。
-2. **接受平台差异**：iOS 有衬线、Android 没有。← **用户选了这条。**
-
-</details>
+**先按零字节方案观察真机效果，不满意再打包。**
 
 ### 1. 纸张横线纹理 —— 签名元素（2026-08-01 已完成）
 

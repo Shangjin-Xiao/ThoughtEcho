@@ -275,49 +275,50 @@ class AppTheme with ChangeNotifier {
   }
 
   // 获取当前亮色主题的颜色方案
-  ColorScheme get lightColorScheme {
+  ColorScheme get lightColorScheme =>
+      colorSchemeFor(_themeStyle, Brightness.light);
+
+  // 获取当前暗色主题的颜色方案
+  ColorScheme get darkColorScheme =>
+      colorSchemeFor(_themeStyle, Brightness.dark);
+
+  /// 任意风格在任意亮度下**应该**产出的配色，和当前生效的风格无关。
+  ///
+  /// 主题设置页的风格预览必须用这个，不能读 `Theme.of(context).colorScheme`：
+  /// 那读到的是当前生效风格的颜色，会让 material 那一项的预览跟着已选中的
+  /// 纸墨/素笺一起变色——看上去像「点一下颜色就乱跳」。
+  ColorScheme colorSchemeFor(ThemeStyle style, Brightness brightness) {
     // 手工色板原样落地：不参与动态取色，也不接受自定义 seed——那两项是
     // material 风格专有的能力，套到手工色板上只会把配好的色值推翻重算。
-    final palette = _themeStyle.palette;
+    final palette = style.palette;
     if (palette != null) {
-      return palette.light.toColorScheme(Brightness.light);
+      return palette.forBrightness(brightness).toColorScheme(brightness);
     }
+    return _generatedColorScheme(brightness);
+  }
+
+  /// 取色算法那条路：自定义 seed > 系统动态取色 > 默认蓝。
+  ColorScheme _generatedColorScheme(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
     if (_useCustomColor && _customColor != null) {
       // 直接使用用户选择的颜色，减少不必要的调整
       return ColorScheme.fromSeed(
         seedColor: _customColor!,
-        brightness: Brightness.light,
+        brightness: brightness,
       );
     }
     // 只有在启用动态取色且有可用的动态颜色方案时才使用
-    if (_useDynamicColor && _lightDynamicColorScheme != null) {
-      return _lightDynamicColorScheme!;
+    final dynamicScheme =
+        isDark ? _darkDynamicColorScheme : _lightDynamicColorScheme;
+    if (_useDynamicColor && dynamicScheme != null) {
+      return dynamicScheme;
     }
-    return ColorScheme.fromSeed(
-      seedColor: Colors.blue,
-      brightness: Brightness.light,
-    );
-  }
-
-  // 获取当前暗色主题的颜色方案
-  ColorScheme get darkColorScheme {
-    final palette = _themeStyle.palette;
-    if (palette != null) {
-      return palette.dark.toColorScheme(Brightness.dark);
-    }
-    if (_useCustomColor && _customColor != null) {
-      // 使用与浅色模式一致的方法，确保自定义颜色正确应用
-      return ColorScheme.fromSeed(
-        seedColor: _customColor!,
-        brightness: Brightness.dark,
-      );
-    }
-
-    if (_useDynamicColor && _darkDynamicColorScheme != null) {
-      return _darkDynamicColorScheme!;
-    }
-
-    return _buildModernDarkScheme();
+    return isDark
+        ? _buildModernDarkScheme()
+        : ColorScheme.fromSeed(
+            seedColor: Colors.blue,
+            brightness: Brightness.light,
+          );
   }
 
   // 默认的现代深色方案

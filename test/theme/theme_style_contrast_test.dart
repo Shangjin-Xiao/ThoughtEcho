@@ -196,16 +196,23 @@ void main() {
           expect(form.fontFamily, isNull, reason: 'Material 保持系统默认字体');
           continue;
         }
-        expect(form.fontFamily, isNotNull);
-        // 回退链必须以通用族 serif 收尾，否则某个平台三个都没有时会掉进豆腐块。
+        // 首选族名必须是通用族 `serif`，具名字体只能待在回退链里。
         //
-        // 注意这一条**只能保证不出豆腐块，不能保证中文真的变成衬线**：
-        // Android 上 `serif` 映射到 Noto Serif（仅拉丁），中文字形仍回落系统黑体，
-        // 而多数 Android 设备不带 Noto Serif CJK。用户 2026-07-31 真机反馈手机上
-        // 看不到字体变化，根因就在这里。别把这条测试当成「字体已生效」的证据。
-        // 详见 docs/paper-ink-theme-handoff-2026-07-31.md 第二节第 0 条。
+        // 反过来写（首选 Songti SC、serif 垫底）在 Android 上中文不会变衬线：
+        // Flutter 的 fontFamilyFallback 不是 CSS 的 font-family，首选族名解析不到时
+        // CJK 字符走引擎默认字体通道，排在后面的 serif 拿不到「要衬线」这个上下文，
+        // 也就命中不了 AOSP 给 NotoSerifCJK 标的 fallbackFor="serif"。
+        // 这是 2026-08-02 真机实测的结论，别把顺序调回去。
+        expect(form.fontFamily, 'serif');
         expect(form.fontFamilyFallback, isNotNull);
-        expect(form.fontFamilyFallback!.last, 'serif');
+        // 具名字体给不解析通用族名的平台兜底：iOS/macOS 的 Songti SC、Windows 的 SimSun。
+        expect(form.fontFamilyFallback, contains('Songti SC'));
+        expect(form.fontFamilyFallback, contains('SimSun'));
+        expect(
+          form.fontFamilyFallback,
+          isNot(contains('serif')),
+          reason: 'serif 已经是首选族名，回退链里重复一次没有意义',
+        );
       }
     });
 
