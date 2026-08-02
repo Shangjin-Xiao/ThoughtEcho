@@ -1,0 +1,44 @@
+lib/pages/thoughter/thoughter_ui.dart
+  s_73a0c1816ff43c::t_b281c8fdab3620 49-61
+  s_73a0c1816ff43c::t_5a0bb1f4902349 125-126,128-137
+  s_73a0c1816ff43c::t_89e631acf4234f 1472-1475,1481,1484,1488-1490,1519-1520,1522-1527
+  s_73a0c1816ff43c::t_4dd6f510f6eaf2 1491-1509,1521
+  s_73a0c1816ff43c::t_7a9a2ef056ef6b 352-405
+  s_73a0c1816ff43c::t_321d0e72f023df 432-434
+  s_73a0c1816ff43c::t_865729e6b21d45 504-506
+  s_73a0c1816ff43c::t_9060fc96997972 1478
+  s_73a0c1816ff43c::t_321036ed1ba5e7 535-556
+  s_73a0c1816ff43c::t_799233f15b14e5 480,482
+lib/pages/thoughter_page.dart
+  s_73a0c1816ff43c::t_0b4c8591b90e26 372-378,387-396
+  s_73a0c1816ff43c::t_7b3b8bc06c0926 379-385
+  s_73a0c1816ff43c::t_0e3bdcbbe080be 397
+lib/widgets/ai/tool_progress_panel.dart
+  s_73a0c1816ff43c::t_37120e75832f6e 423-430,433,435-436,438,441-442,446-447,449-451,455-457,461-462,470-471,479-480
+test/widget/widgets/ai/tool_progress_panel_test.dart
+  s_73a0c1816ff43c::t_a039e8cbeb50a9 30-36,115,152,209,281,336
+  s_73a0c1816ff43c::t_3526e059caf3e9 90
+  s_73a0c1816ff43c::t_9eec3d2113ba11 212-218
+test/widget/pages/thoughter_page_test.dart
+  s_73a0c1816ff43c::t_4d73f8c6171a1b 509-510,513,517-518
+  s_73a0c1816ff43c::t_d3ecd52d8dfe77 1279,1282,1288
+  s_73a0c1816ff43c::t_7b3b8bc06c0926 511-512
+  s_73a0c1816ff43c::t_d04f06030f4864 1201-1225,1227-1278,1280-1281,1283-1287,1289-1292
+  s_73a0c1816ff43c::t_afe12aaca07d7a 484-494,1226
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "99a398c8c65080aa9fd6e17cb62fd01a58de35b1",
+  "prompts": {},
+  "sessions": {
+    "s_73a0c1816ff43c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3ff1f173-9c22-4bab-89db-f7417c6f8b48",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
