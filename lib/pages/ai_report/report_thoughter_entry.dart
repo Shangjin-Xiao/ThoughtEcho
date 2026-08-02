@@ -193,7 +193,8 @@ extension _AIReportThoughterEntry on _AIPeriodicReportPageState {
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
         color: theme.colorScheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => _openThoughter(session: session),

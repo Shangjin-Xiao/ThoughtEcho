@@ -221,13 +221,15 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
   Widget _buildFavoritePreviewChip(Quote quote) {
     final theme = Theme.of(context);
     final semantic = AppSemanticColors.of(context);
+    final blockRadius =
+        BorderRadius.circular(AppShapeTokens.of(context).buttonRadius);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Material(
         color: theme.colorScheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: blockRadius,
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: blockRadius,
           onTap: () {
             HapticFeedback.lightImpact();
             _openNoteDetail(quote);
@@ -235,7 +237,7 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: blockRadius,
               border: Border.all(
                 color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
               ),
@@ -298,7 +300,8 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
       elevation: 0,
       color: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),

@@ -17,7 +17,8 @@ extension _AIReportStats on _AIPeriodicReportPageState {
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
       ),
       child: Row(
         children: [
@@ -322,14 +323,17 @@ extension _AIReportStats on _AIPeriodicReportPageState {
           )
         : null;
 
+    final blockRadius =
+        BorderRadius.circular(AppShapeTokens.of(context).buttonRadius);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Material(
         // 已经有描边了，不再叠阴影；页面统一走扁平分层
         color: Theme.of(context).colorScheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: blockRadius,
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: blockRadius,
           onTap: () {
             HapticFeedback.lightImpact();
             _openNoteDetail(quote);
@@ -337,7 +341,7 @@ extension _AIReportStats on _AIPeriodicReportPageState {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: blockRadius,
               border: Border.all(
                 color: Theme.of(
                   context,

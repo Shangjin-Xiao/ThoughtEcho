@@ -149,8 +149,14 @@ Komi Store 值得学的一点：把字重、间距也做成主题令牌。衬线
   `thinking_widget.dart` 顶层那个 `const BorderRadius _bubbleShape` 已改成取 context 的函数。
   面板内部三处 12 圆角一并迁到 `buttonRadius`，否则 paper 下会出现内圆大于外圆的破相。
 - **纸墨和素笺的字体相同**，只靠颜色和圆角区分。如果两套要拉开更多差距，字体是下一个抓手。
-- **年度报告未迁移**：`annual_report_page.dart`、`lib/pages/ai_report/` 下仍用
-  `AppTheme.*Radius` 静态值（9 处）。产品上已废弃，**不要动**。
+- **年度报告未迁移**：`annual_report_page.dart` 仍用 `AppTheme.*Radius` 静态值。
+  产品上已废弃，**不要动**。
+
+  > ⚠️ 这条原本还写着 `lib/pages/ai_report/`，**是错的**。那个目录全是
+  > `part of '../ai_periodic_report_page.dart'`，是**探索页**（周期报告），
+  > 和年度报告没有关系。这个错误让后续每一批迁移都把探索页排除在外，
+  > 直到 2026-08-02 用户发现探索页没跟着主题走才补上。
+  > 排除清单要按「谁 part of 谁」判断归属，不要按目录名猜。
 - **`AppTheme.cardRadius` 那组静态常量仍然保留**，作为 material 取值和上面年度报告的依赖。
   自绘表面的新代码应该用 `AppShapeTokens.of(context).cardRadius`。
 
