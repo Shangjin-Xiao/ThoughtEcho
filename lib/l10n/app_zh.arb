@@ -1250,6 +1250,7 @@
   "invalidApiKeyUpdate": "API密钥无效，请在设置中更新API密钥",
   "configureValidApiKey": "请先在设置中配置有效的API密钥",
   "regenerate": "重新生成",
+  "viewToolProcess": "查看过程",
   "selectAnalysisMethod": "选择分析方式",
   "advancedOptions": "高级选项",
   "customPromptHint": "例如：分析我的笔记中提到的人物和地点",

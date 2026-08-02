@@ -83,7 +83,7 @@ void main() {
       expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
     });
 
-    testWidgets('can toggle expansion', (WidgetTester tester) async {
+    testWidgets('opens the detail sheet on tap', (WidgetTester tester) async {
       final items = [
         const ToolProgressItem(
           toolName: 'test_tool',
@@ -102,23 +102,112 @@ void main() {
         ),
       );
 
-      // 初始状态应该是折叠的（完成状态默认折叠）
+      // 折叠行只有摘要，细节不在对话流里
       expect(find.text('test_tool'), findsNothing);
 
-      // 点击标题栏展开
-      await tester.tap(find.byType(InkWell));
+      await tester.tap(find.byType(ToolProgressPanel));
       await tester.pumpAndSettle();
 
-      // 现在应该能看到工具名称
+      // 细节在抽屉里
       expect(find.text('test_tool'), findsOneWidget);
       expect(find.text('测试描述'), findsOneWidget);
 
-      // 再次点击折叠
-      await tester.tap(find.byType(InkWell));
+      // 关掉抽屉后回到只有摘要的状态
+      Navigator.of(tester.element(find.text('test_tool'))).pop();
+      await tester.pumpAndSettle();
+      expect(find.text('test_tool'), findsNothing);
+    });
+
+    testWidgets('detail sheet follows live progress while it stays open',
+        (WidgetTester tester) async {
+      Widget panelWith(List<ToolProgressItem> items, {required bool running}) {
+        return buildTestApp(
+          ToolProgressPanel(
+            title: '测试标题',
+            items: items,
+            inProgress: running,
+          ),
+        );
+      }
+
+      await tester.pumpWidget(
+        panelWith(
+          const [
+            ToolProgressItem(
+              toolName: 'search_notes',
+              status: ToolProgressStatus.running,
+            ),
+          ],
+          running: true,
+        ),
+      );
+
+      await tester.tap(find.byType(ToolProgressPanel));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      // 执行中折叠行的标题就是当前工具名，工具名会同时出现在行和抽屉里；
+      // 用只存在于抽屉的结果文本做判据。
+      expect(find.text('search_notes'), findsAtLeastNWidgets(1));
+      expect(find.text('get_weather'), findsNothing);
+      expect(find.text('找到 5 条结果'), findsNothing);
+
+      // Agent 在抽屉开着的时候继续跑：抽屉是独立路由，父组件重建不会
+      // 带着它刷新，必须靠快照通知。
+      await tester.pumpWidget(
+        panelWith(
+          const [
+            ToolProgressItem(
+              toolName: 'search_notes',
+              status: ToolProgressStatus.completed,
+              result: '找到 5 条结果',
+            ),
+            ToolProgressItem(
+              toolName: 'get_weather',
+              status: ToolProgressStatus.running,
+            ),
+          ],
+          running: true,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.text('get_weather'), findsAtLeastNWidgets(1));
+      expect(find.text('找到 5 条结果'), findsOneWidget);
+    });
+
+    testWidgets('detail sheet distinguishes failed calls from completed ones',
+        (WidgetTester tester) async {
+      // 每项曾经都是一个恒定 secondaryContainer 的圆点，四个状态在界面上
+      // 完全无法区分——工具调用失败看起来和成功一样。
+      await tester.pumpWidget(
+        buildTestApp(
+          const ToolProgressPanel(
+            title: '测试标题',
+            items: [
+              ToolProgressItem(
+                toolName: 'ok_tool',
+                status: ToolProgressStatus.completed,
+              ),
+              ToolProgressItem(
+                toolName: 'broken_tool',
+                status: ToolProgressStatus.failed,
+              ),
+            ],
+            inProgress: false,
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(ToolProgressPanel));
       await tester.pumpAndSettle();
 
-      // 应该又看不到了
-      expect(find.text('test_tool'), findsNothing);
+      expect(find.byIcon(Icons.check), findsOneWidget);
+      expect(find.byIcon(Icons.close), findsOneWidget);
+
+      final theme = Theme.of(tester.element(find.text('broken_tool')));
+      final failedLabel = tester.widget<Text>(find.text('broken_tool'));
+      expect(failedLabel.style?.color, theme.colorScheme.error);
     });
 
     testWidgets('keeps tool items collapsed when in progress',
@@ -177,8 +266,10 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(InkWell));
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.byType(ToolProgressPanel));
+      // inProgress 的转圈是无限动画，pumpAndSettle 永远等不到静止
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
 
       // 应该显示描述和结果
       expect(find.text('参数: query="test"'), findsOneWidget);
@@ -210,21 +301,19 @@ void main() {
       expect(find.byIcon(Icons.done_all), findsOneWidget);
     });
 
-    testWidgets('keeps user expansion when progress state changes',
+    testWidgets('keeps the sheet open when progress state changes',
         (WidgetTester tester) async {
-      final items = [
-        const ToolProgressItem(
-          toolName: 'test_tool',
-          description: 'test_description',
-          status: ToolProgressStatus.completed,
-        ),
-      ];
-
       await tester.pumpWidget(
         buildTestApp(
-          ToolProgressPanel(
+          const ToolProgressPanel(
             title: '测试标题',
-            items: items,
+            items: [
+              ToolProgressItem(
+                toolName: 'test_tool',
+                description: 'test_description',
+                status: ToolProgressStatus.completed,
+              ),
+            ],
             inProgress: true,
           ),
         ),
@@ -232,17 +321,18 @@ void main() {
 
       expect(find.text('test_description'), findsNothing);
 
-      await tester.tap(find.byType(InkWell));
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.byType(ToolProgressPanel));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('test_description'), findsOneWidget);
 
       // 更新状态为完成
       await tester.pumpWidget(
         buildTestApp(
-          ToolProgressPanel(
+          const ToolProgressPanel(
             title: '测试标题',
             items: [
-              const ToolProgressItem(
+              ToolProgressItem(
                 toolName: 'test_tool',
                 description: 'test_description',
                 status: ToolProgressStatus.completed,
@@ -252,8 +342,10 @@ void main() {
           ),
         ),
       );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
 
-      // 状态更新不应覆盖用户手动展开的选择。
+      // 运行结束不该把用户正在看的抽屉关掉。
       expect(find.text('test_description'), findsOneWidget);
     });
   });

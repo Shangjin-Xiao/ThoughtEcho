@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -1238,6 +1239,125 @@ void main() {
           find.text(l10n.agentFoundMatchingNotesWithMore(2)), findsOneWidget);
       expect(find.textContaining('"notes":['), findsNothing);
       expect(find.textContaining('content_preview'), findsNothing);
+    });
+
+    // 从历史恢复的消息本来就是完成态，不必把一整轮 agent 跑到底。
+    void seedAnsweredSession(_InMemoryChatSessionService service) {
+      final now = DateTime(2026, 8, 1, 10);
+      service.seedSession(
+        ChatSession(
+          id: 'note-session-actions',
+          sessionType: 'agent',
+          noteId: 'note-1',
+          title: '聊过的',
+          createdAt: now,
+          lastActiveAt: now,
+        ),
+        <app_chat.ChatMessage>[
+          app_chat.ChatMessage(
+            id: 'm-user',
+            content: '帮我做一次分析',
+            isUser: true,
+            role: 'user',
+            timestamp: now,
+          ),
+          app_chat.ChatMessage(
+            id: 'm-tools',
+            content: '',
+            isUser: false,
+            role: 'assistant',
+            timestamp: now,
+            metaJson: jsonEncode(<String, Object?>{
+              'type': 'tool_progress',
+              'inProgress': false,
+              'items': <Map<String, Object?>>[
+                <String, Object?>{
+                  'toolCallId': 'tc-1',
+                  'toolName': 'search_notes',
+                  'status': 'completed',
+                  'result': '找到 2 条笔记',
+                },
+              ],
+            }),
+          ),
+          app_chat.ChatMessage(
+            id: 'm-answer',
+            content: '第一次回答',
+            isUser: false,
+            role: 'assistant',
+            timestamp: now,
+          ),
+        ],
+      );
+    }
+
+    testWidgets('completed reply offers copy, regenerate and process actions',
+        (tester) async {
+      seedAnsweredSession(chatSessionService);
+      await settingsService.setNoteAiAssistantMode(AIAssistantPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: _FakeAgentService(settingsService: settingsService),
+          child: AIAssistantPage(
+            entrySource: AIAssistantEntrySource.note,
+            quote: _buildQuote(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+      expect(find.byTooltip(l10n.copy), findsOneWidget);
+      expect(find.byTooltip(l10n.regenerate), findsOneWidget);
+
+      // 「查看过程」走的是折叠行同一个抽屉
+      final processAction = find.byTooltip(l10n.viewToolProcess);
+      expect(processAction, findsOneWidget);
+      await tester.tap(processAction);
+      await tester.pumpAndSettle();
+      expect(find.text('找到 2 条笔记'), findsOneWidget);
+    });
+
+    testWidgets('regenerating drops the old answer and re-asks the question',
+        (tester) async {
+      seedAnsweredSession(chatSessionService);
+      await settingsService.setNoteAiAssistantMode(AIAssistantPageMode.agent);
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        responseChunks: const <String>['第二次回答'],
+      );
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: AIAssistantPage(
+            entrySource: AIAssistantEntrySource.note,
+            quote: _buildQuote(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(agentService.runCount, 0);
+      expect(find.textContaining('第一次回答'), findsOneWidget);
+
+      final l10n = _l10n(tester);
+      await tester.tap(find.byTooltip(l10n.regenerate));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // 用户那条提问必须留着——removeRange 差一位就会把问题一起删掉
+      expect(agentService.runCount, 1);
+      expect(find.text('帮我做一次分析'), findsOneWidget);
+      // 旧回答和它那一轮的工具进度一起被清掉，换成新生成的
+      expect(find.textContaining('第一次回答'), findsNothing);
+      expect(find.textContaining('第二次回答'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 1));
     });
 
     testWidgets('agent stop button interrupts pending tool run',

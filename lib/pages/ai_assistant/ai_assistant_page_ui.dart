@@ -424,6 +424,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 } catch (_) {}
               },
             ),
+          // 生成完成后才给操作行：流式过程中正文还在长，复制到的是半截
+          if (!isStreaming && hasContent)
+            _buildMessageActions(message, theme, l10n),
           // 出错时保留正文并显式标记，避免内容被静默删除
           if (message.state == MessageState.error)
             Padding(
@@ -449,6 +452,120 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         ],
       ),
     );
+  }
+
+  /// AI 回复下方的操作行：复制 / 重新生成 / 查看过程。
+  Widget _buildMessageActions(
+    app_chat.ChatMessage message,
+    ThemeData theme,
+    AppLocalizations l10n,
+  ) {
+    final toolSnapshot = _toolProcessBefore(message);
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          _MessageAction(
+            icon: Icons.content_copy_outlined,
+            tooltip: l10n.copy,
+            onTap: () => _copyMessage(message, l10n),
+          ),
+          _MessageAction(
+            icon: Icons.refresh,
+            tooltip: l10n.regenerate,
+            // 生成中重来会和进行中的请求打架
+            onTap: _isLoading ? null : () => _regenerateFrom(message),
+          ),
+          if (toolSnapshot != null)
+            _MessageAction(
+              icon: Icons.account_tree_outlined,
+              tooltip: l10n.viewToolProcess,
+              label: l10n.viewToolProcess,
+              onTap: () => showToolProgressSheet(
+                context,
+                ValueNotifier(toolSnapshot),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _copyMessage(
+    app_chat.ChatMessage message,
+    AppLocalizations l10n,
+  ) async {
+    await Clipboard.setData(ClipboardData(text: message.content));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.copiedToClipboard)),
+    );
+  }
+
+  /// 重新生成：删掉这条回复以及它和上一条用户提问之间的工具进度，
+  /// 然后拿那条提问重问一次。
+  Future<void> _regenerateFrom(app_chat.ChatMessage message) async {
+    if (_isLoading) return;
+    final index = _messages.indexWhere((m) => m.id == message.id);
+    if (index == -1) return;
+
+    final userIndex =
+        _messages.sublist(0, index).lastIndexWhere((m) => m.isUser);
+    if (userIndex == -1) return;
+    final question = _messages[userIndex].content.trim();
+    if (question.isEmpty) return;
+
+    // 这一轮产生的所有助手侧消息（回复 + 工具进度）一起清掉，
+    // 只留下用户那条提问
+    final doomed = _messages.sublist(userIndex + 1, index + 1).toList();
+    _setState(() {
+      _messages.removeRange(userIndex + 1, index + 1);
+    });
+    for (final removed in doomed) {
+      unawaited(_chatSessionService.deleteMessage(removed.id));
+    }
+
+    _setAutoScrollEnabled(true);
+    _agentStatusDismissTimer?.cancel();
+    _setState(() {
+      _isLoading = true;
+    });
+    await _askAgent(question);
+  }
+
+  /// 找出这条回复之前、同一轮里的工具调用进度，用来喂「查看过程」抽屉。
+  ToolProgressSnapshot? _toolProcessBefore(app_chat.ChatMessage message) {
+    final index = _messages.indexWhere((m) => m.id == message.id);
+    if (index <= 0) return null;
+    for (var i = index - 1; i >= 0; i--) {
+      final candidate = _messages[i];
+      // 回到上一条用户提问就说明这一轮没有工具调用
+      if (candidate.isUser) return null;
+      final meta = candidate.parsedMeta;
+      if (meta == null || meta['type'] != 'tool_progress') continue;
+      final rawItems = meta['items'] as List<dynamic>? ?? const [];
+      if (rawItems.isEmpty) return null;
+      final items = rawItems.map((item) {
+        final map = item as Map<String, dynamic>;
+        return ToolProgressItem(
+          toolCallId: map['toolCallId'] as String?,
+          toolName: map['toolName'] as String? ?? '',
+          description: map['description'] as String?,
+          status: ToolProgressStatus.values.firstWhere(
+            (s) => s.name == (map['status'] as String? ?? 'pending'),
+            orElse: () => ToolProgressStatus.pending,
+          ),
+          result: map['result'] as String?,
+          narrationText: map['narrationText'] as String?,
+        );
+      }).toList();
+      return ToolProgressSnapshot(
+        title: AppLocalizations.of(context).executedNOperations(items.length),
+        items: items,
+        thinkingText: meta['thinkingText'] as String?,
+      );
+    }
+    return null;
   }
 
   Map<String, String> _buildInsightTypeLabels(AppLocalizations l10n) {
@@ -1201,6 +1318,57 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     if (meta == null) return false;
     final type = meta['type']?.toString();
     return type == NoteProposalArtifact.typeName;
+  }
+}
+
+/// 回复下方的一枚操作按钮。默认只有图标（复制/重新生成的图标是通用语汇），
+/// 传了 [label] 的会带上文字——「查看过程」没有约定俗成的图标，光一个图标
+/// 没人知道点了会发生什么。
+class _MessageAction extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final String? label;
+  final VoidCallback? onTap;
+
+  const _MessageAction({
+    required this.icon,
+    required this.tooltip,
+    this.onTap,
+    this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final enabled = onTap != null;
+    final foreground = theme.colorScheme.onSurfaceVariant
+        .withValues(alpha: enabled ? 1.0 : 0.38);
+
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(6, 6, label == null ? 6 : 8, 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: foreground),
+              if (label != null) ...[
+                const SizedBox(width: 5),
+                Text(
+                  label!,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: foreground,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

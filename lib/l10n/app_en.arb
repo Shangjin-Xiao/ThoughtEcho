@@ -1242,6 +1242,7 @@
   "invalidApiKeyUpdate": "Invalid API key, please update the API key in the settings",
   "configureValidApiKey": "Please configure a valid API key in the settings first",
   "regenerate": "Regenerate",
+  "viewToolProcess": "View process",
   "selectAnalysisMethod": "Select Analysis Method",
   "advancedOptions": "Advanced Options",
   "customPromptHint": "e.g., Analyze the characters and locations mentioned in my notes",

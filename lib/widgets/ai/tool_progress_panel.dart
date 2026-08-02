@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../gen_l10n/app_localizations.dart';
@@ -67,13 +68,244 @@ class ToolProgressItem {
   }
 }
 
-/// 工具调用折叠进度面板组件
+/// 一次工具调用过程的完整快照。
 ///
-/// 参考 Google AI Gallery MessageBodyCollapsableProgressPanel 设计：
-/// - 显示 Agent 执行的工具调用列表
-/// - 可折叠展开查看详情
-/// - 进行中时显示进度指示器
-/// - 完成后显示执行摘要
+/// 抽屉是独立路由，父组件重建不会带着它一起刷新；用可监听的快照传进去，
+/// 用户在 Agent 还在跑的时候拉开抽屉才能看到进度继续走。
+@immutable
+class ToolProgressSnapshot {
+  final String title;
+  final List<ToolProgressItem> items;
+  final bool inProgress;
+  final String? thinkingText;
+
+  const ToolProgressSnapshot({
+    required this.title,
+    required this.items,
+    this.inProgress = false,
+    this.thinkingText,
+  });
+}
+
+/// 按状态给出图标。
+///
+/// 这里曾经是一个恒定 `secondaryContainer` 的圆点：四个状态长得完全一样，
+/// 工具调用失败和成功在界面上无法区分。
+Widget _statusIcon(BuildContext context, ToolProgressStatus status) {
+  final theme = Theme.of(context);
+  switch (status) {
+    case ToolProgressStatus.pending:
+      return Icon(
+        Icons.radio_button_unchecked,
+        size: 16,
+        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+      );
+    case ToolProgressStatus.running:
+      return SizedBox(
+        width: 14,
+        height: 14,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor:
+              AlwaysStoppedAnimation<Color>(theme.colorScheme.onSurfaceVariant),
+        ),
+      );
+    case ToolProgressStatus.completed:
+      return Icon(
+        Icons.check,
+        size: 16,
+        color: theme.colorScheme.primary,
+      );
+    case ToolProgressStatus.failed:
+      return Icon(
+        Icons.close,
+        size: 16,
+        color: theme.colorScheme.error,
+      );
+  }
+}
+
+String _statusLabel(AppLocalizations l10n, ToolProgressStatus status) {
+  switch (status) {
+    case ToolProgressStatus.pending:
+      return l10n.toolCallStatusPending;
+    case ToolProgressStatus.running:
+      return l10n.toolCallStatusExecuting;
+    case ToolProgressStatus.completed:
+      return l10n.toolCallStatusCompleted;
+    case ToolProgressStatus.failed:
+      return l10n.toolCallStatusError;
+  }
+}
+
+/// 打开工具调用过程抽屉。
+///
+/// 消息里的折叠行和 AI 回复下方的「查看过程」按钮走的是同一个入口。
+Future<void> showToolProgressSheet(
+  BuildContext context,
+  ValueListenable<ToolProgressSnapshot> snapshot,
+) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+    builder: (sheetContext) => ValueListenableBuilder<ToolProgressSnapshot>(
+      valueListenable: snapshot,
+      builder: (context, data, _) => _ToolProgressSheetBody(data: data),
+    ),
+  );
+}
+
+class _ToolProgressSheetBody extends StatelessWidget {
+  final ToolProgressSnapshot data;
+
+  const _ToolProgressSheetBody({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final thinking = data.thinkingText?.trim();
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.75,
+      ),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      data.title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (data.inProgress)
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              if (thinking != null && thinking.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text(
+                  thinking,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              // 细节靠一条竖线归组，不再是卡里套卡里套卡
+              for (final item in data.items)
+                _ToolProgressDetailItem(item: item, l10n: l10n),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ToolProgressDetailItem extends StatelessWidget {
+  final ToolProgressItem item;
+  final AppLocalizations l10n;
+
+  const _ToolProgressDetailItem({required this.item, required this.l10n});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final detailStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+      height: 1.5,
+    );
+    final narration = item.narrationText?.trim();
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            width: 1,
+            margin: const EdgeInsets.only(right: 16, left: 7),
+            color: theme.colorScheme.outlineVariant,
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Tooltip(
+                        message: _statusLabel(l10n, item.status),
+                        child: _statusIcon(context, item.status),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          item.toolName,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: item.status == ToolProgressStatus.failed
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (item.description?.isNotEmpty == true)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6, left: 24),
+                      child: Text(item.description!, style: detailStyle),
+                    ),
+                  // 抽屉里空间管够，结果不再截断到 5 行
+                  if (item.result?.isNotEmpty == true)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6, left: 24),
+                      child: Text(item.result!, style: detailStyle),
+                    ),
+                  if (narration != null && narration.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Text(narration, style: detailStyle),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 工具调用折叠行。
+///
+/// 折叠态是一行轻填充的元数据，详情走底部抽屉——工具调用不是内容，
+/// 它不该在正文旁边立一块比回答本身还重的卡片，也不该把三层填充容器
+/// 直接展开在对话流里。
 class ToolProgressPanel extends StatefulWidget {
   /// 面板标题
   final String title;
@@ -107,44 +339,48 @@ class ToolProgressPanel extends StatefulWidget {
   State<ToolProgressPanel> createState() => _ToolProgressPanelState();
 }
 
-class _ToolProgressPanelState extends State<ToolProgressPanel>
-    with SingleTickerProviderStateMixin {
-  late bool _isExpanded;
-  late AnimationController _rotationController;
+class _ToolProgressPanelState extends State<ToolProgressPanel> {
+  late final ValueNotifier<ToolProgressSnapshot> _snapshot =
+      ValueNotifier(_snapshotWith(_rawDisplayTitle()));
+
+  ToolProgressSnapshot _snapshotWith(String title) => ToolProgressSnapshot(
+        title: title,
+        items: widget.items,
+        inProgress: widget.inProgress,
+        thinkingText: widget.thinkingText,
+      );
+
+  /// 抽屉开着的时候 Agent 还在跑，快照要跟着走。
+  ///
+  /// 推到帧后再发通知：抽屉是另一条路由上的 ValueListenableBuilder，在本
+  /// widget 的 build 阶段直接改值等于在 build 里把别人标脏。
+  void _syncSnapshot() {
+    final next = _snapshotWith(_getDisplayTitle(context));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _snapshot.value = next;
+    });
+  }
 
   @override
-  void initState() {
-    super.initState();
-    _isExpanded = false;
-    _rotationController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncSnapshot();
+  }
+
+  @override
+  void didUpdateWidget(covariant ToolProgressPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncSnapshot();
   }
 
   @override
   void dispose() {
-    _rotationController.dispose();
+    _snapshot.dispose();
     super.dispose();
   }
 
-  void _toggleExpanded() {
-    setState(() {
-      _isExpanded = !_isExpanded;
-      if (_isExpanded) {
-        _rotationController.forward();
-      } else {
-        _rotationController.reverse();
-      }
-    });
-  }
-
-  String _getDisplayTitle(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    if (widget.items.isEmpty &&
-        widget.thinkingText?.trim().isNotEmpty == true) {
-      return widget.inProgress ? l10n.thinking : l10n.showThinking;
-    }
+  /// 标题的原始形态，不依赖 context（供 didUpdateWidget 使用）。
+  String _rawDisplayTitle() {
     if (widget.inProgress) {
       final runningItem = widget.items.lastWhere(
         (item) => item.status == ToolProgressStatus.running,
@@ -157,232 +393,93 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
       );
       final activeTitle = runningItem.toolName.trim();
       return activeTitle.isNotEmpty ? activeTitle : widget.title;
-    } else {
-      // 完成后显示"已执行 N 个操作"
-      return l10n.executedNOperations(widget.items.length);
     }
+    return widget.title;
+  }
+
+  String _getDisplayTitle(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    if (widget.items.isEmpty &&
+        widget.thinkingText?.trim().isNotEmpty == true) {
+      // 折叠态标题是个名词标签，不是按钮文案。showThinking（"查看思考过程"）
+      // 是祈使句，放在这里读起来像用户在对自己下指令。
+      return l10n.thinking;
+    }
+    if (widget.inProgress) {
+      return _rawDisplayTitle();
+    }
+    // 完成后显示"已执行 N 个操作"
+    return l10n.executedNOperations(widget.items.length);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final backgroundColor = theme.colorScheme.surfaceContainerHigh;
-    // 与消息气泡、思考面板同一形状：左上直角，其余取随风格变化的对话圆角。
-    final bubbleRadius =
-        Radius.circular(AppShapeTokens.of(context).dialogRadius);
-    final bubbleShape = BorderRadius.only(
-      topLeft: Radius.zero,
-      topRight: bubbleRadius,
-      bottomLeft: bubbleRadius,
-      bottomRight: bubbleRadius,
+    final title = _getDisplayTitle(context);
+    final shape = BorderRadius.circular(
+      AppShapeTokens.of(context).buttonRadius,
     );
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: bubbleShape,
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: shape,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Row
-          InkWell(
-            onTap: _toggleExpanded,
-            borderRadius: bubbleShape,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  // Progress indicator or done icon
-                  SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: Center(
-                      child: widget.inProgress
-                          ? SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.0,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            )
-                          : Icon(
-                              widget.doneIcon ?? Icons.check_circle_outline,
-                              size: 24,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Title
-                  Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 250),
-                      child: Text(
-                        _getDisplayTitle(context),
-                        key: ValueKey(widget.inProgress),
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: theme.colorScheme.onSurface,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Expand/Collapse Icon
-                  Icon(
-                    _isExpanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Collapsable Content
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOutCubic,
-            child: _isExpanded
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (widget.thinkingText != null &&
-                          widget.thinkingText!.trim().isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
-                            ),
-                            child: Text(
-                              widget.thinkingText!.trim(),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => showToolProgressSheet(context, _snapshot),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: Center(
+                  child: widget.inProgress
+                      ? SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.0,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
+                        )
+                      : Icon(
+                          widget.doneIcon ?? Icons.check_circle_outline,
+                          size: 18,
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          left: 16,
-                          right: 16,
-                          bottom: 12,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            for (final item in widget.items) ...[
-                              _buildToolItem(context, item),
-                              if (item.narrationText != null &&
-                                  item.narrationText!.trim().isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          theme.colorScheme.surfaceContainerLow,
-                                      borderRadius: BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
-                                    ),
-                                    child: Text(
-                                      item.narrationText!.trim(),
-                                      style:
-                                          theme.textTheme.bodySmall?.copyWith(
-                                        color:
-                                            theme.colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToolItem(BuildContext context, ToolProgressItem item) {
-    final theme = Theme.of(context);
-    final itemBackgroundColor = theme.colorScheme.surfaceContainerLow;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: itemBackgroundColor,
-        borderRadius: BorderRadius.circular(AppShapeTokens.of(context).buttonRadius),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Dot
-          Container(
-            margin: const EdgeInsets.only(top: 4, right: 12),
-            width: 12,
-            height: 12,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: theme.colorScheme.secondaryContainer,
-            ),
-          ),
-          // Content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title
-                Text(
-                  item.toolName,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: Text(
+                    title,
+                    // 执行中标题会随当前工具变化，key 要跟着文案走，
+                    // 否则中途换名字是硬切、只有最后完成那一下有动画
+                    key: ValueKey(title),
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                // Description
-                if (item.description != null && item.description!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      item.description!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      maxLines: 5,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                // Result
-                if (item.result != null && item.result!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      item.result!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      maxLines: 5,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
-            ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
