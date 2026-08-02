@@ -1,0 +1,35 @@
+lib/pages/ai_assistant_page.dart
+  s_f21fe315fcfffe::t_e49b1fa3acea95 389-391
+lib/models/ai_provider_settings.dart
+  s_f21fe315fcfffe::t_0b4ec158543dce 60-61
+  s_f21fe315fcfffe::t_e56ec7e031d2b8 28-47,50-55,58-59,64-73,77-79,83-86,89-91,94,97
+  s_f21fe315fcfffe::t_927ddf71436628 74-76,81-82
+test/unit/models/ai_provider_settings_test.dart
+  s_f21fe315fcfffe::t_827f728bd408aa 260-306
+lib/pages/ai_assistant/ai_assistant_page_ui.dart
+  s_f21fe315fcfffe::t_b5d2808149929a 3-10
+  s_f21fe315fcfffe::t_4f90f8d7c877d6 308-314
+  s_f21fe315fcfffe::t_f3fce097b2aee2 342-344,346-347,349-359
+  s_f21fe315fcfffe::t_fc34ebcce5322d 1207-1261
+  s_f21fe315fcfffe::t_912849dc1a7535 109-111
+  s_f21fe315fcfffe::t_5c1783e43ccca8 187,239,248,264
+  s_f21fe315fcfffe::t_e3857ae73ff843 484-535
+  s_f21fe315fcfffe::t_b01fc8c3236c0b 595
+  s_f21fe315fcfffe::t_4028305b80f38e 328-331,333-338,340-341,345,348,360-378,381,383,385,387,393,403-425,428,430
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.19",
+  "base_commit_sha": "8184c46e5cd2184ab7d628de2993308da0b82b6a",
+  "prompts": {},
+  "sessions": {
+    "s_f21fe315fcfffe": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "632819b6-e82e-4257-bf3d-b9203efb8688",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
