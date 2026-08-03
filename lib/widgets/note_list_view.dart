@@ -615,8 +615,8 @@ class NoteListViewState extends State<NoteListView> {
       }
 
       // 判断是否仅为排序变化（不影响列表内容，只影响顺序）
-      final bool isOnlySortChange =
-          oldWidget.searchQuery == widget.searchQuery &&
+      final bool isOnlySortChange = oldWidget.searchQuery ==
+              widget.searchQuery &&
           _areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) &&
           _areListsEqual(oldWidget.selectedWeathers, widget.selectedWeathers) &&
           _areListsEqual(
@@ -639,14 +639,14 @@ class NoteListViewState extends State<NoteListView> {
       // 标签/天气/时间段筛选变化：新结果到达后回到列表顶部。
       final bool isFilterChange =
           !_areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) ||
-          !_areListsEqual(
-            oldWidget.selectedWeathers,
-            widget.selectedWeathers,
-          ) ||
-          !_areListsEqual(
-            oldWidget.selectedDayPeriods,
-            widget.selectedDayPeriods,
-          );
+              !_areListsEqual(
+                oldWidget.selectedWeathers,
+                widget.selectedWeathers,
+              ) ||
+              !_areListsEqual(
+                oldWidget.selectedDayPeriods,
+                widget.selectedDayPeriods,
+              );
 
       // 更新流订阅，传入是否仅为排序变化
       _updateStreamSubscription(
@@ -667,7 +667,7 @@ class NoteListViewState extends State<NoteListView> {
         duration: AppConstants.snackBarDurationNormal,
         behavior: SnackBarBehavior.floating,
         action: SnackBarAction(
-          label: AppLocalizations.of(context)!.retry,
+          label: AppLocalizations.of(context).retry,
           onPressed: () => _updateStreamSubscription(),
         ),
       ),
@@ -905,14 +905,12 @@ class NoteListViewState extends State<NoteListView> {
       if (_initialDataCompleter == null) {
         const maxWaitMs = 500;
         const stepMs = 50;
-        for (
-          var waited = 0;
-          waited < maxWaitMs &&
-              mounted &&
-              !_initialDataLoaded &&
-              _initialDataCompleter == null;
-          waited += stepMs
-        ) {
+        for (var waited = 0;
+            waited < maxWaitMs &&
+                mounted &&
+                !_initialDataLoaded &&
+                _initialDataCompleter == null;
+            waited += stepMs) {
           await Future<void>.delayed(const Duration(milliseconds: stepMs));
         }
       }
