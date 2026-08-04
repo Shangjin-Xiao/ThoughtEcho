@@ -320,16 +320,7 @@ transcript 文件名带模型名，两份并存可直接 diff。看三件事：*
   总是先于 content 到达。已改成攒到流末再判。真实 API A/B 验证过。
 - ~~**gemma4 不显示思考过程不是 bug**：它三个场景 0 次 reasoning delta，
   gpt-oss:20b 有 765 次——gemma4 根本不吐 reasoning 字段。~~
-  **这条结论是错的，2026-08-04 推翻。** gemma4 是思考模型，只是默认不吐：
-  `/v1` 请求里带上 `reasoning_effort` 就会返回 `reasoning` 字段，流式一次简单
-  问答有 81 个 reasoning delta；`/api/chat` 带 `think:true` 则返回 `thinking`。
-  而 `agent_service.dart:820` 本来就在读 `delta.reasoning`——**缺的只是没发这个
-  参数**。gpt-oss:20b 是默认就吐，所以当初的对照看着像模型差异。
-  没有直接打开，因为两个代价：思考 token 照样吃 `max_tokens`（实测
-  `max_tokens:300` 时 content delta 直接为 0），且 OpenAI 对非推理模型收到
-  `reasoning_effort` 会 400。要做就做成**按 provider 的开关**（默认关，
-  打开时同步抬高 max_tokens），等用户定。
-  `openai_dart` 4.3.0 的 `CreateChatCompletionRequest.reasoningEffort` 可直接用。
+  **这条结论是错的，2026-08-04 推翻并已修复。** 详见下面「§6 思考过程」。
 
 - **每次运行最多一个提案，但提示词说的是「每轮」**。`proposalCreated` 声明在
   `agent_service.dart:283`，`while` 在 `:291` —— 作用域是整次运行。而喂给模型的
@@ -358,7 +349,72 @@ transcript 文件名带模型名，两份并存可直接 diff。看三件事：*
   chatbox 是 **GPLv3**，ThoughtEcho 是 MIT，**不能抄它的代码**。
   本地参考源码在 `~/ai-reference/`（含 pi、opencode、gemini-cli）。
 
-## 6. 用户偏好
+## 6. 思考过程（2026-08-04 结案）
+
+用户问「gemma4 是思考模型，怎么不显示思考过程」，查下来是三层都断了：
+
+1. `AIProviderSettings.supportsThinking` 靠模型名正则，**认不出 gemma4**；
+2. `AgentService` 自己拼请求，**从不带任何 reasoning 参数**，也不看 `enableThinking`；
+3. `openai_stream_service.dart` 的 `think:true` 注入只认本地 ollama，
+   注释明写「远程服务如 ollama.com 不应被误判」——而用户用的正是 ollama.com。
+
+**思考模型分两派，这是关键**（ollama.com 实测）：
+
+| 模型 | 不带参数 | 带 `reasoning_effort=medium` |
+|---|---|---|
+| gemma4:31b-cloud | 不思考（completion_tokens=150，正文 227 字） | 思考 1034 字 |
+| minimax-m3:cloud | 思考 105 字 | 思考 164 字 |
+| gpt-oss:20b-cloud | 思考 200 字 | 思考 445 字 |
+
+gemma4 是**不问就不思考**（token 用量验证过，不是「思考了没返回」）。
+Ollama 文档说 `/v1` 不传参数会为支持的模型自动开启，**但 ollama.com 上不是这样**。
+
+已修：`supportsThinking` 认 `gemma[4-9]`；`AgentService._reasoningEffortFor`
+给「会思考但默认不吐」的模型补 `reasoning_effort: medium`，
+**本来就吐的（gpt-oss / minimax / kimi-k2-thinking）不补**——补了只会让它想得
+更久、多花钱，用户看到的东西一样。非推理模型一个字都不多发（OpenAI 会 400）。
+验证：gemma4 从 0 个 reasoning delta 变成 356 个，gpt-oss 不带参数仍有 809 个。
+
+**用户明确的产品口径**：不为此加开关。「心迹本来就是笔记应用，搞那么多开关
+像个 AI 应用也不好」。顺带发现 `thoughter_ui.dart` 里那个「深度思考」chip 的
+渲染条件是 `!_isAgentMode`，而 Thoughter 现在只剩 agent 模式，**它是画不出来的
+死代码**——要不要删还没定。
+
+## 7. 待办：接 models.dev（用户 2026-08-04 拍板要做）
+
+用户的理由：模型名正则一定会腐烂，新模型层出不穷，不能一个个抠。
+gemma4 就是活证据——名单写于它发布之前，漏了也没人发现，只表现成
+「怎么没思考过程」。
+
+[models.dev](https://models.dev)（MIT，`sst/models.dev`，社区 PR 维护）
+`api.json` 收录 178 家 provider、6039 个模型，含 `reasoning` / `tool_call` /
+价格 / 上下文与输出上限。**有 `ollama-cloud` 条目**（api 正是
+`https://ollama.com/v1`），20 个模型。
+
+动手前必须知道的三件事（都已核实）：
+
+1. **它给不了「默认吐不吐」**，只有 `reasoning: true/false`，而 ollama-cloud
+   20 个里 19 个是 true——这个字段几乎不区分任何东西。上面 §6 那张名单还是得
+   自己维护。opencode 同样处理：`provider/transform.ts` 里给 Google /
+   gpt-5 / DashScope 一家家手写特判，并把 `kimi-k2-thinking` 从
+   `enable_thinking` 名单里排除，理由和我们一模一样。
+2. **模型 ID 对不上**：表里是 `gemma4:31b`、`minimax-m3`、`gpt-oss:20b`，
+   用户实际填的是 `gemma4:31b-cloud`。要做名字归一化，且用户能手填任意名字，
+   查不到时仍需回落到现在的正则。
+3. **`api.json` 3.4MB**。要么运行时拉 + 缓存 + 离线兜底 + 首次启动空窗，
+   要么打包进 APK。opencode 的做法是两者都有：运行时拉、5 分钟 TTL 缓存、
+   构建期打快照兜底。
+
+**真正的价值点不在 reasoning，而在这些我们现在全靠猜的数**（做的时候按这个
+设计，reasoning 判断顺手换掉）：
+
+- `AIProviderSettings.maxTokens` 默认写死 32000，不管模型实际能输出多少；
+- `AgentService._defaultContextTokenBudget = 80000`，注释自己写着「无法得知
+  模型上下文上限时使用的保守预算」，**而上下文裁剪阈值就建立在这个猜测上**
+  ——猜小了白裁剪，猜大了直接 400；
+- 价格未知，所以没法告诉用户这轮对话花了多少钱。
+
+## 8. 用户偏好
 
 - 交流用中文。
 - 只跑相关测试，不跑全量，不编译 APK，输出精简。

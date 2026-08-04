@@ -87,6 +87,12 @@ class AIProviderSettings implements AIConfig {
       return true;
     }
 
+    // Gemma 4 起带思考。它和上面几家不同：默认不吐 reasoning，要在请求里
+    // 明确要（见 AgentService 的 reasoning_effort），所以更要认出来。
+    if (RegExp(r'gemma[-_.]?[4-9]').hasMatch(m)) {
+      return true;
+    }
+
     // 智谱 GLM-4.5 起、MiniMax M 系列
     if (RegExp(r'glm-?(4[-.][5-9]|[5-9])').hasMatch(m)) {
       return true;

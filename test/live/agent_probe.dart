@@ -459,8 +459,15 @@ class AgentProbe {
         required tools,
         required maxTokens,
         required streaming,
+        required reasoningEffort,
       }) {
-        probe._recordRequest(messages, tools, maxTokens, streaming);
+        probe._recordRequest(
+          messages,
+          tools,
+          maxTokens,
+          streaming,
+          reasoningEffort,
+        );
       },
     );
 
@@ -548,11 +555,13 @@ class AgentProbe {
     List<openai.Tool> tools,
     int maxTokens,
     bool streaming,
+    openai.ReasoningEffort? reasoningEffort,
   ) {
     _currentTurn?.requests.add({
       'round': (_currentTurn?.requests.length ?? 0) + 1,
       'streaming': streaming,
       'max_tokens': maxTokens,
+      'reasoning_effort': reasoningEffort?.name,
       'tools': tools.map((tool) => tool.function.name).toList(),
       'messages': messages.map((message) => message.toJson()).toList(),
     });

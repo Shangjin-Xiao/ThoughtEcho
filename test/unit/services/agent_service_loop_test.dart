@@ -504,6 +504,57 @@ void main() {
       expect(response.reachedMaxRounds, isFalse);
     });
 
+    test('asks for reasoning only when the model can think', () async {
+      // 心迹不为此长开关：会思考的模型自动要思考过程，不会的一个字都不多发
+      // ——非推理模型收到 reasoning_effort 是会 400 的。
+      Future<openai.ReasoningEffort?> effortFor(String model) async {
+        final settings = _FakeSettingsService(
+          AIProviderSettings(
+            id: 'p',
+            name: 'P',
+            apiUrl: 'https://example.com/v1/chat/completions',
+            model: model,
+          ),
+        );
+        openai.ReasoningEffort? seen;
+        final service = AgentService(
+          settingsService: settings,
+          tools: const [],
+          apiKeyResolver: (_) async => 'test-key',
+          requestObserver: ({
+            required messages,
+            required tools,
+            required maxTokens,
+            required streaming,
+            required reasoningEffort,
+          }) {
+            seen = reasoningEffort;
+          },
+          completionRequester: ({
+            required provider,
+            required messages,
+            required tools,
+            required temperature,
+            required maxTokens,
+          }) async =>
+              _textCompletion('答完了'),
+        );
+        await service.runAgent(userMessage: 'test');
+        return seen;
+      }
+
+      // 不问就不思考的，补一句。
+      expect(
+          await effortFor('gemma4:31b-cloud'), openai.ReasoningEffort.medium);
+      expect(await effortFor('gpt-5.1'), openai.ReasoningEffort.medium);
+      // 本来就吐思考的不补——补了只会想得更久、多花钱，用户看到的东西一样。
+      expect(await effortFor('gpt-oss:20b-cloud'), isNull);
+      expect(await effortFor('minimax-m3:cloud'), isNull);
+      // 压根不会思考的一个字都不能多发，否则 OpenAI 会 400。
+      expect(await effortFor('gpt-4o-mini'), isNull);
+      expect(await effortFor('llama-3.3-70b'), isNull);
+    });
+
     test('retries an empty model response instead of failing the run',
         () async {
       // 实测同一个场景连着跑，模型偶尔返回既没正文也没 tool_calls 的空响应。

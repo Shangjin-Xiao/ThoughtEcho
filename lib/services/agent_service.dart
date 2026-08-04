@@ -95,6 +95,7 @@ typedef AgentRequestObserver = void Function({
   required List<openai.Tool> tools,
   required int maxTokens,
   required bool streaming,
+  required openai.ReasoningEffort? reasoningEffort,
 });
 
 /// 当前页面绑定的笔记引用。正文属于不可信用户数据，标识与版本用于工具定位。
@@ -727,6 +728,7 @@ class AgentService extends ChangeNotifier {
       tools: tools,
       maxTokens: maxTokens,
       streaming: false,
+      reasoningEffort: _reasoningEffortFor(provider),
     );
     if (_completionRequester != null) {
       return _completionRequester(
@@ -775,6 +777,7 @@ class AgentService extends ChangeNotifier {
       tools: tools,
       maxTokens: maxTokens,
       streaming: true,
+      reasoningEffort: _reasoningEffortFor(provider),
     );
     // 测试注入路径：将非流式结果转换为流式结果
     if (_completionRequester != null) {
@@ -809,6 +812,7 @@ class AgentService extends ChangeNotifier {
         parallelToolCalls: true,
         temperature: temperature,
         maxTokens: maxTokens,
+        reasoningEffort: _reasoningEffortFor(provider),
       );
 
       final stream = client.chat.completions.createStream(request);
@@ -1319,6 +1323,39 @@ class AgentService extends ChangeNotifier {
     }
     correctionAttempts[key] = count + 1;
     return true;
+  }
+
+  /// 「不问就不思考」的模型才带上 `reasoning_effort`。
+  ///
+  /// 会思考的模型分两派：gpt-oss、minimax 这些默认就吐 reasoning；gemma4 这些
+  /// 不问就一个思考 token 都不烧（实测 ollama.com：不带参数 completion_tokens=150、
+  /// 正文 227 字，带 medium 变 527、多出 1034 字思考）。结果就是用户换个模型，
+  /// 思考过程会莫名其妙地消失——他会当成坏了。
+  ///
+  /// 所以这里替用户抹平：默认不吐的补一句，本来就吐的不动（补了只会让它想得更久、
+  /// 多花钱，看到的东西却一样）。心迹是笔记应用，不该为这点模型差异长出一个开关。
+  ///
+  /// 非推理模型收到这个参数是会报 400 的（OpenAI 就会），所以先按
+  /// [AIProviderSettings.supportsThinking] 收窄；用户在 provider 上写死
+  /// `enableThinking` 时以用户的为准。
+  openai.ReasoningEffort? _reasoningEffortFor(AIProviderSettings provider) {
+    final thinking = provider.enableThinking ?? provider.supportsThinking;
+    if (!thinking || _alreadyEmitsReasoning(provider.model)) {
+      return null;
+    }
+    return openai.ReasoningEffort.medium;
+  }
+
+  /// 默认就返回思考内容、不需要我们额外要的模型。
+  ///
+  /// 名单靠实测维护，宁可漏也不要错：漏了只是多花一点 token，错了用户就看不到
+  /// 思考过程。opencode 也是这么干的（`transform.ts` 里把 `kimi-k2-thinking`
+  /// 从 DashScope 的 `enable_thinking` 名单里排除，理由一模一样）。
+  static bool _alreadyEmitsReasoning(String model) {
+    final m = model.toLowerCase();
+    return m.contains('gpt-oss') ||
+        m.contains('minimax') ||
+        m.contains('kimi-k2-thinking');
   }
 
   AgentFailureType _failureTypeFor(Object error) {

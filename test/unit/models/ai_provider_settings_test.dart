@@ -280,6 +280,10 @@ void main() {
         'kimi-k2-thinking',
         'glm-4.6',
         'MiniMax-M2',
+        // gemma4 会思考，只是不主动吐 reasoning，要在请求里明确要。
+        // 认不出来的话 agent 不会带上 reasoning_effort，用户就看不到思考过程。
+        'gemma4:31b-cloud',
+        'gemma-4-27b',
       ]) {
         expect(
           withModel(model).supportsThinking,
@@ -295,6 +299,8 @@ void main() {
         'gemini-1.5-flash',
         'gemini-2.0-flash',
         'llama-3.3-70b',
+        'gemma2:9b',
+        'gemma-3-12b',
       ]) {
         expect(
           withModel(model).supportsThinking,
