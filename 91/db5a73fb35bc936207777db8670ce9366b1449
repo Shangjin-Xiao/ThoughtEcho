@@ -1,0 +1,24 @@
+test/widget/add_note_dialog_metadata_timeout_test.dart
+  s_e7052d68614cc0::t_c14c5ac22d3fe5 1-176,183-210
+  s_e7052d68614cc0::t_055087f6edb310 177-182
+lib/widgets/add_note_dialog.dart
+  s_e7052d68614cc0::t_bf771d7e16e6c7 1676-1688
+  s_e7052d68614cc0::t_5be1e582f993c5 1553-1555
+  s_e7052d68614cc0::t_05064a098d164c 1787-1790
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "91db5a73fb35bc936207777db8670ce9366b1449",
+  "prompts": {},
+  "sessions": {
+    "s_e7052d68614cc0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b3f3a9f0-9a32-4fc2-88c7-292216017643",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
