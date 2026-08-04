@@ -163,7 +163,8 @@ class AppTheme with ChangeNotifier {
     TextStyle? body(TextStyle? style, double m3Height) {
       final styled = font(style);
       if (heightScale == 1) return styled;
-      return styled?.copyWith(height: (styled.height ?? m3Height) * heightScale);
+      return styled?.copyWith(
+          height: (styled.height ?? m3Height) * heightScale);
     }
 
     return base.copyWith(

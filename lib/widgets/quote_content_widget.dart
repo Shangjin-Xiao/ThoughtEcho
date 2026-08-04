@@ -57,7 +57,9 @@ class QuoteContent extends StatelessWidget {
           );
     // Android 之外只需要段落行高这一项。
     if (kIsWeb || !Platform.isAndroid) {
-      return paragraph == null ? null : quill.DefaultStyles(paragraph: paragraph);
+      return paragraph == null
+          ? null
+          : quill.DefaultStyles(paragraph: paragraph);
     }
     // Flutter 3.41+ Android (Impeller + 精准 wght 轴) 下 FontWeight.bold (w700)
     // 渲染明显偏粗。在 Android 上注入 customStyles 将 bold 降为 w600，
@@ -140,6 +142,7 @@ class QuoteContent extends StatelessWidget {
   }
 
   static const double collapsedContentMaxHeight = 160.0;
+
   /// 富文本折叠估算用的行高（逻辑像素）。
   ///
   /// 纯文本走 `TextPainter` 实测，自动跟着 `style` 走；富文本只能静态估算，
