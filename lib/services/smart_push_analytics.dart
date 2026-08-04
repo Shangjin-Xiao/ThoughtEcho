@@ -39,8 +39,7 @@ class PushAllowance {
   ///
   /// 当天第一条没有门槛；第 2 条起要过 [PushQuotaProfile.extraQualityFloor]，
   /// 这就是「宁可不推也不推垃圾」的落点。
-  double get qualityFloor =>
-      todayCount == 0 ? 0 : profile.extraQualityFloor;
+  double get qualityFloor => todayCount == 0 ? 0 : profile.extraQualityFloor;
 }
 
 /// SOTA 智能推送分析服务

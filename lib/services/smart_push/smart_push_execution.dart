@@ -382,4 +382,5 @@ extension SmartPushExecution on SmartPushService {
       AppLogger.e('智能推送失败', error: e, stackTrace: stack);
       if (isTest) rethrow; // 测试模式抛出异常以便 UI 显示错误
     }
-  }}
+  }
+}

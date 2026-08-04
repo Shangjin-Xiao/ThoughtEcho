@@ -241,13 +241,13 @@ void main() {
       await analytics.markSent('monthAgoToday');
       await analytics.settlePendingSend();
       expect(await analytics.getUnengagedStreak(), 1);
-      expect(await analytics.getHabituationCooldown(),
-          const Duration(hours: 2));
+      expect(
+          await analytics.getHabituationCooldown(), const Duration(hours: 2));
 
       await analytics.markSent('monthAgoToday');
       await analytics.settlePendingSend();
-      expect(await analytics.getHabituationCooldown(),
-          const Duration(hours: 8));
+      expect(
+          await analytics.getHabituationCooldown(), const Duration(hours: 8));
     });
 
     test('点一次立刻复位', () async {
