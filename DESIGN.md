@@ -338,6 +338,11 @@ AI分析流程
 
 ## 5. 设计指南
 
+> **取值真源在代码里，不在这份文档里。** 下面出现的数值是为了讲清设计意图，
+> 真正生效的是 `lib/theme/theme_style.dart` 的常量。两者冲突时以代码为准，
+> 并回来修这份文档。禁止把这里的数值抄成 widget 里的字面量——具体禁令见
+> `AGENTS.md` 的「UI 硬性约束」。
+
 ### 5.1 设计原则
 
 - **简洁至上**：减少视觉噪音，专注于内容展示
@@ -345,59 +350,125 @@ AI分析流程
 - **反馈性**：所有操作提供及时明确的反馈
 - **可访问性**：支持辅助功能，确保多样性用户可用
 - **沉浸感**：提供沉浸式的内容创作和阅读体验
+- **纸感优先于拟物**：品牌观感靠色温、行高、发丝边框这些**排版层面**的选择建立，
+  不靠贴纸纹图片、翻页动效或投影堆叠。唯一的纹理破例是纸张横线（见 5.4）。
 
-### 5.2 色彩系统
+### 5.2 主题风格维度
 
-#### 5.2.1 浅色主题
-```
---primary-color: #1976D2;
---primary-light: #BBDEFB;
---primary-dark: #0D47A1;
---accent-color: #FF4081;
---secondary-color: #49454F;
---background-color: #F8FAFD;
---surface-color: #FFFFFF;
---error-color: #B3261E;
---text-primary: #1C1B1F;
---text-secondary: #49454F;
---border-color: #E7E0EC;
-```
+主题风格是**和亮暗、动态取色并列的第三个维度**，不是配色预设。三选一：
 
-#### 5.2.2 深色主题
-```
---primary-color: #90CAF9;
---primary-light: #E3F2FD;
---primary-dark: #42A5F5;
---accent-color: #FF80AB;
---secondary-color: #CCC2DC;
---background-color: #121212;
---surface-color: #1E1E1E;
---error-color: #F2B8B5;
---text-primary: #E6E1E5;
---text-secondary: #CAC4D0;
---border-color: #49454F;
-```
+| 风格 | 气质 | 色板来源 | 卡片圆角 | 层次手段 | 正文字体 | 正文行高 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `material` | 系统观感 | 动态取色 / 用户 seed | 18 | 投影 | 系统默认（黑体） | 1.5 |
+| `paper` 纸与墨 | 暖、温润 | 手工色板 | 6 | 发丝边框 + 极淡投影 | 系统衬线 | 1.75 |
+| `plain` 素笺 | 冷、硬朗 | 手工色板 | 3 | 同上，更硬 | 系统衬线 | 1.6 |
 
-### 5.3 组件规范
+**默认是 `paper`**（`ThemeStyle.defaultStyle`）。Material 是"想要系统观感"时的退路，
+不是基准。老用户升级后外观直接变，由升级引导页告知可切回。
 
-#### 5.3.1 笔记卡片
-- 圆角: 16px
-- 内边距: 16px
-- 阴影: 小型浮动阴影
-- 展开/折叠动画: 300ms缓动
+架构上只有一条铁律：**品牌差异全部通过令牌取值表达，widget 里绝不写
+`if (style == ThemeStyle.paper)`。** 连"用边框还是用投影"的判据都是 `borderWidth > 0`
+这个取值，不是风格身份。加第四套风格 = 新增两组常量并登记，不碰构建逻辑、不碰任何 widget。
 
-#### 5.3.2 按钮样式
-- 主按钮: 填充背景+白色文字
-- 次按钮: 轮廓边框+主色文字
-- 文本按钮: 仅文字无背景
-- 按钮高度: 48px
-- 圆角: 24px
+### 5.3 色彩系统
 
-#### 5.3.3 输入框
-- 样式: Material 3 轮廓输入框
-- 高度: 56px
-- 标签: 浮动标签
-- 错误提示: 底部红色文字
+**不存在一张全局色值表**——Material 风格的颜色由取色算法运行时生成，写死任何十六进制
+色值都会和它冲突。页面取色一律走 `Theme.of(context).colorScheme`。
+
+手工色板（`ThemeStylePalette`）按**纸与墨的语汇**定义角色，再映射到 `ColorScheme`：
+
+| 角色 | 含义 | 映射到 |
+| --- | --- | --- |
+| `background` | 页面底色（纸） | `surface`、`surfaceContainer` |
+| `card` | 卡片底色，比页面**更亮** | `surfaceContainerLowest`、`surfaceBright` |
+| `ink` / `inkMuted` | 正文墨色 / 次要墨色 | `onSurface` / `onSurfaceVariant` |
+| `outline` | 常规发丝边框，也是**纸张横线的颜色** | `outlineVariant` |
+| `outlineStrong` | 强调边框 | `outline` |
+| `accent` | 强调色 | `primary`、`surfaceTint` |
+
+注意最后两行是**交叉映射**：色板里叫 `outline` 的角色落到 `ColorScheme.outlineVariant`，
+`outlineStrong` 才是 `ColorScheme.outline`（M3 的 outline 比 outlineVariant 更重）。
+画纸张横线时取的是 `colorScheme.outlineVariant`。
+
+两处刻意偏离 M3 规范，改动前先读注释：
+
+- **卡片色不落在 M3 的 surfaceContainer 梯度上**：两套手工色板都让卡片比页面底色更亮
+  （纸叠在桌面上，暗色模式同理），而 M3 暗色下期望 `surfaceContainerLowest` 最暗。
+  测试校验的是"卡片比底色亮且可区分"，不是 M3 的梯度假设。
+- **手工色板不能喂给 seed 生成器**：亮色路径必须按风格关掉 `keyColors` 和表面混合，
+  否则 FlexColorScheme 会拿 primary 当种子把整套色调重新推导掉。
+
+语义状态色（成功/警告/收藏）走 `AppSemanticColors` 这个 `ThemeExtension`，
+不用 `Colors.green` 一类的 Material 命名色——它们不随取色变化，换主题色后会突兀。
+
+**改色板必须先过 `test/theme/theme_style_contrast_test.dart`**（WCAG AA + 令牌不变量）。
+原始设计稿有多处不达 AA，已按验算收紧。
+
+### 5.4 形状、层次与纹理
+
+形状令牌由 `AppShapeTokens` 这个 `ThemeExtension` 下发，widget 读
+`AppShapeTokens.of(context).cardRadius`：
+
+- 圆角五档：`cardRadius` / `dialogRadius` / `buttonRadius` / `inputRadius` / `fabRadius`。
+  FAB 单独一档不是遗漏——M3 里 FAB 圆角本就独立于卡片和按钮。
+- **层次二选一，由 `borderWidth` 决定**：Material 用投影，手工风格用发丝边框 +
+  近乎为零的投影。纸是叠在桌上的，不是浮起来的。
+- 投影四档（`restShadow` / `lowShadow` / `raisedShadow` / `accentShadow`）由
+  `shadowOpacity` 和 `shadowBlur` 按固定比例推导，风格一变自动跟着压扁。
+- **纸张横线**是唯一的纹理破例（令牌表达不了纹理本身），但"画不画、多密、多淡"仍是
+  令牌取值：`ruleSpacing` 为 0 就不插入任何绘制层。只用在笔记卡片和每日一言卡两处，
+  不要铺开。**素笺刻意不画横线**——"素"就是素的。
+
+### 5.5 排版
+
+字体、行高、字重是这套主题里辨识度最高的部分，比颜色更能拉开风格差距。
+
+- **字体走零字节路线**：手工风格的首选族名是**通用族 `serif`**，具名字体
+  （Songti SC / SimSun 等）留在回退链里。顺序不能调换——Flutter 的
+  `fontFamilyFallback` 不是 CSS 的 font-family，只有首选族名就是 `serif` 时，
+  Android 才会命中 AOSP 给 NotoSerifCJK 标的 `fallbackFor="serif"`。
+  代价是各家 ROM 的衬线体长相不一致，要统一只能打包子集化字体。
+- **行高由 `bodyLineHeight` 令牌下发**，只作用于 `body*` 三级。中文衬线体字面率高、
+  笔画密，M3 给黑体调的 1.5 偏挤。**纸张横线间距是从正文行高推导的**——写死会让
+  文字逐行相对横线漂移，卡片看起来像背了一张格子图。
+- **字重补偿是给黑体的**：Android 上 Impeller 精准映射 wght 轴后 Roboto 偏粗，
+  正文压到 350 还原视觉。衬线体横画本就细，再减就发灰发虚，所以手工风格用
+  `variableWeightCompensation: 0` 关掉它。
+- **富文本是独立的一条路**：quill 的段落基准样式不继承 `textTheme`
+  （`fontSize` / `height` 被硬写成 16 / 1.15），需要在
+  `quote_content_widget.dart` 单独注入，才能和纯文本、横线间距对齐。
+- ❌ **不用斜体做 UI 装饰**：中文字体没有真斜体字形，Flutter 会做合成倾斜，
+  小字号下明显发虚。要弱化层次用 `onSurfaceVariant` + 字号或字重差。
+  用户在编辑器里手动标记的斜体是内容格式，必须保留。
+- 间距用 4 的倍数（4/8/12/16/24/32）。
+
+### 5.6 组件规范
+
+**一律优先复用现成组件**，不要另搓一套——同屏时圆角和高光会对不齐：
+`Card`（已配好 `cardTheme`）、`AppSnackBar`、`AppLoadingView` / `AppEmptyView` /
+`AppErrorView`。
+
+- **笔记卡片**：圆角随风格（18 / 6 / 3），展开折叠 170ms、淡入 130ms。
+  卡片增删动画的不变量锁在 `test/widget/note_item_motion_test.dart`——
+  反复复发的问题是"包装层进出树 + `Align` 放松宽度约束"，不是曲线时长。
+- **按钮**：主按钮填充、次按钮轮廓、文本按钮无背景；圆角读 `buttonRadius`。
+- **输入框**：M3 轮廓输入框 + 浮动标签，圆角读 `inputRadius`。
+  **`OutlineInputBorder` 不能删**——项目未设置 `inputDecoratorBorderType`，
+  FlexColorScheme 该参数默认是 `underline`，删掉会变成下划线输入框。
+
+### 5.7 明确否决过的方向
+
+不要重新提案，除非有新的理由：
+
+- **渐变背景、多层 `RadialGradient` 光晕、"大数字 + 小标签 + 渐变强调色"的统计卡**——
+  AI 生成设计的通用模板，与本项目气质无关。视觉重点靠留白、字号层级和单一强调色。
+- **便签纸色**（按标签给卡片自动上色）——和用户已有的单条笔记手动配色
+  （`quote.colorHex`）打架。
+- **打包字体**——目前走零字节路线；真机观察到各 ROM 差异不可接受时才启用，
+  方案（Noto Serif SC 可变字体子集，保留 wght 轴）已写在交接文档里。
+
+> 主题相关的完整设计推导、色板沿革和踩过的坑见
+> `docs/paper-ink-theme-handoff-2026-07-31.md`，那是**唯一事实来源**，动主题前先读。
 
 ## 6. 项目文件结构
 
