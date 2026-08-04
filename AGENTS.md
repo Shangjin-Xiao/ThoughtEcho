@@ -156,6 +156,21 @@ pwsh ./scripts/build_msix_ci.ps1
   或平台明确要求的颜色可集中定义，不在页面散落 `Color(0x...)`。
 - 异步间隔后使用 `context` 或更新 State 前检查 `mounted` / `context.mounted`。
 
+**主题风格是和亮暗、动态取色并列的第三个维度**，三选一：`material`（M3 动态取色）、
+`paper` 纸与墨（暖，手工色板 + 衬线体 + 纸张横线）、`plain` 素笺（冷，更硬朗）。
+默认是 `paper`，写在 `ThemeStyle.defaultStyle` 一处。
+
+- 🔒 **绝不在 widget 里写 `if (style == ThemeStyle.paper)`。** 品牌差异**全部**通过
+  `ThemeStyleForm` 的令牌取值表达，由 `AppShapeTokens` 这个 `ThemeExtension` 下发。
+  连开关判据都用取值而不是风格身份：`borderWidth > 0` 决定用边框还是投影，
+  `ruleSpacing > 0` 决定画不画纸纹。这样加第四套风格 = 新增两组常量并登记，
+  不碰构建逻辑、不碰任何 widget。参考项目里 90 处风格分支散在 150 个文件的教训不要重演。
+- 改色板必须先过 `test/theme/theme_style_contrast_test.dart`（WCAG AA + 令牌不变量）。
+- 手工色板**不能喂给 seed 生成器**：亮色路径要按风格关掉 `keyColors` 和表面混合，
+  否则 FlexColorScheme 会拿 primary 当种子把整套色调重新推导掉。
+- 完整设计推导、已结案的决定（字体不打包、便签纸色否决、素笺不画横线）和踩过的坑
+  见 `docs/paper-ink-theme-handoff-2026-07-31.md`，**那是唯一事实来源**，动主题前先读。
+
 ### UI 硬性约束
 
 以下是反复出现过的实际问题，提交前自查。带 ❌ 的写法在 `lib/pages/` 和 `lib/widgets/` 里
@@ -184,10 +199,23 @@ pwsh ./scripts/build_msix_ci.ps1
 
 **尺寸与排版**
 
-- ❌ 手写 `BorderRadius.circular(N)` 造卡片/按钮/输入框。用 `AppTheme.cardRadius`(18)、
-  `buttonRadius`(12)、`inputRadius`(12)、`dialogRadius`(24)。历史代码里有 13 种不同圆角值
-  同屏并存，不要再增加。纯装饰性小元素（徽章、色块）可自行取值。
+- ❌ 手写 `BorderRadius.circular(N)` 造卡片/按钮/输入框。用
+  `AppShapeTokens.of(context)` 的 `cardRadius` / `buttonRadius` / `inputRadius` /
+  `dialogRadius` / `fabRadius`——**圆角随主题风格变**（Material 18、纸墨 6、素笺 3），
+  写死会让手工风格下的新组件仍然是圆的。历史代码里有 13 种不同圆角值同屏并存，
+  不要再增加。纯装饰性小元素（徽章、色块）可自行取值。
+  - `AppTheme.cardRadius` 那组 `static const` 是 material 的取值，**不随风格变化**，
+    只为老代码保留，新代码不要引用。
+  - `AppShapeTokens.of(context)` 是方法调用，不能出现在 `const` 表达式里。
+    遇到 `const RoundedRectangleBorder(...)` 是去掉 `const`，不是退回静态常量。
 - ❌ `fontSize:` 字面量。用 `theme.textTheme.*`，需要微调时 `.copyWith()`。
+- ❌ 写死正文 `height:`（行高）或 `fontWeight:` 来「调得好看点」。行高由
+  `ThemeStyleForm.bodyLineHeight` 下发到 `textTheme.body*`（Material 1.5、纸墨 1.75、
+  素笺 1.6），在 widget 里 `copyWith(height: ...)` 会盖掉它。
+  - 纸墨的**纸张横线间距是从正文行高推导的**，覆盖行高会让文字逐行相对横线漂移，
+    卡片看起来像背了一张格子图。见 `theme_style_contrast_test.dart` 的不变量。
+  - Android 的可变字重补偿（w400→350）是为**黑体**做的，衬线风格靠
+    `variableWeightCompensation: 0` 关掉。别在 widget 里给手工风格另外补字重。
 - ❌ `fontStyle: FontStyle.italic` **用作 UI 装饰**（出处、提示、占位、次要说明）。中文字体没有
   真斜体字形，Flutter 会做合成倾斜（skew），横竖笔画粗细对比被破坏、交接处糊在一起，小字号下
   明显发虚。要弱化层次就用 `onSurfaceVariant` + 字号或字重差。
