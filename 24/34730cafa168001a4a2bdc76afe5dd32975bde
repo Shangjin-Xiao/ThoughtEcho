@@ -1,0 +1,31 @@
+lib/widgets/ai/tool_progress_panel.dart
+  s_57f159a75395df::t_715f5b4f8047c7 148-151
+lib/pages/thoughter/thoughter_ui.dart
+  s_57f159a75395df::t_32366a00c14e44 30-39,891
+  s_57f159a75395df::t_799b19e2272254 896
+  s_57f159a75395df::t_c385b41824340a 1127
+  s_57f159a75395df::t_1417aaf3d29513 860-868,870-886
+  s_57f159a75395df::t_b5d15e37be7dee 761-769,773,775-776,778-781,784-785,787-788,792-826,829-841,843-844,850-859,869,887-889
+  s_57f159a75395df::t_11bf0886459576 890
+  s_57f159a75395df::t_34ce7389f7f527 892
+test/widget/pages/thoughter_page_test.dart
+  s_57f159a75395df::t_35620849cdad22 1501,1543,1559
+lib/pages/thoughter/thoughter_session.dart
+  s_57f159a75395df::t_f2162733243759 463
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "2434730cafa168001a4a2bdc76afe5dd32975bde",
+  "prompts": {},
+  "sessions": {
+    "s_57f159a75395df": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8deb6f68-0bad-45f6-b6a1-b8f4462a0653",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
