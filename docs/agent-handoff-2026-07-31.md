@@ -219,7 +219,37 @@ transcript 文件名带模型名，两份并存可直接 diff。看三件事：*
 就对」**——第一次填错很正常，撞满预算整轮失败才是问题。
 每条都要看 transcript 里回喂给模型的那句话说人话没有。
 
-### 批次三：富文本三种模式 + 提案采纳（B / C 组）
+### ✅ 批次三：富文本三种模式 + 提案采纳（已跑完，2026-08-04）
+
+场景在 `test/live/agent_richtext_live_test.dart`，五条全绿。
+
+| 场景 | 模型实际走法 | 结果 |
+|---|---|---|
+| insert_text 局部替换 | `replace/insert_text`，保持 plain | ✅ |
+| insert_blocks 带格式替换 | `replace/insert_blocks`，产出 list 属性 | ✅ |
+| replaceDocument 整篇重写 | `replaceDocument/insert_text` | ✅ |
+| 含媒体笔记局部改写 | 局部 replace，embed 1→1 | ✅ |
+| 采纳落库 + 重复采纳 | 第一次 applied，第二次 conflict | ✅ |
+
+**采纳链路已经能无头驱动了**：`_applyNoteProposal` / `_quoteFromArtifact` /
+`_validatedArtifactOps` 抽到 `lib/utils/note_proposal_applier.dart`，UI 只剩弹窗
+与提示。跑测台的 `ProposalCheck` 现在直接调生产的
+`NoteProposalApplier.validatedArtifactOps`，**第二份真相没有了**。
+「重复采纳会不会产生重复笔记」的答案是**不会**：第一次采纳改变了笔记 revision，
+第二次就对不上，走 conflict 分支不写库。确定性部分锁在
+`test/unit/utils/note_proposal_applier_test.dart`。
+
+修掉的 bug：**模型返回空响应会直接把整轮打死**。同一个场景连跑三次有一次
+第 1 轮就返回既没正文也没 tool_calls 的空响应，`agent_service.dart` 原地抛
+`AgentFailureType.unknown`，用户拿到一次莫名其妙的报错。是抖动不是必然，
+已改成原样重发，`_maxEmptyResponseRetries = 2` 之后才放弃。
+
+一条只记录不改的观察：**gemma4 第一次填 `operations` 参数经常出错**（五个场景
+里三个），`operations[0].type` 缺失、`insert_blocks[].type` 填成 `list-bullet`、
+把 `replaceDocument` 当成参数名而不是 `type` 的值。但**每次都靠错误信息一次改对**，
+代价是多一个轮次。这正是 `2031880f` 那个递归校验器在起作用，不要为此再调提示词。
+
+### 批次三原始设计（保留备查）
 
 - `propose_note_edit` 三种模式各造一条：`replaceDocument` 整篇重写、
   `insert_text` 普通替换、`insert_blocks` 带格式替换。
@@ -227,11 +257,8 @@ transcript 文件名带模型名，两份并存可直接 diff。看三件事：*
   `ai_assistant_page_ui.dart:_validatedArtifactOps` 的全部不变量。
 - 含媒体的笔记：种一条带图片 embed 的富文本笔记，让它改文字部分，
   确认 `hasSameEmbeds` 不被破坏。
-- **采纳落库目前跑测台覆盖不到**：`_applyNoteProposal` / `_quoteFromArtifact`
-  长在 `_AIAssistantPageState` 里，无头驱动不了。两条路子——
-  把这两个方法提到一个无状态的 `NoteProposalApplier` 里（推荐，顺手解掉
-  UI 与落库耦合），或者在探针里再复刻一遍（会有第二份真相，不推荐）。
-  重复采纳会不会产生重复笔记，必须落库才能验。
+- ~~**采纳落库目前跑测台覆盖不到**~~：已按推荐方案抽出 `NoteProposalApplier`，
+  见上面批次三的结论。
 
 ### 批次四：停止 / 轮次上限 / 上下文裁剪（A 组尾段）
 
@@ -291,8 +318,18 @@ transcript 文件名带模型名，两份并存可直接 diff。看三件事：*
   `processStreamToText`：没有 `onThinking` 时把 reasoning 当正文的兜底，
   `chunks.isEmpty` 判的是单个 event 而不是整条流，而推理模型的 reasoning
   总是先于 content 到达。已改成攒到流末再判。真实 API A/B 验证过。
-- **gemma4 不显示思考过程不是 bug**：它三个场景 0 次 reasoning delta，
-  gpt-oss:20b 有 765 次——gemma4 根本不吐 reasoning 字段。
+- ~~**gemma4 不显示思考过程不是 bug**：它三个场景 0 次 reasoning delta，
+  gpt-oss:20b 有 765 次——gemma4 根本不吐 reasoning 字段。~~
+  **这条结论是错的，2026-08-04 推翻。** gemma4 是思考模型，只是默认不吐：
+  `/v1` 请求里带上 `reasoning_effort` 就会返回 `reasoning` 字段，流式一次简单
+  问答有 81 个 reasoning delta；`/api/chat` 带 `think:true` 则返回 `thinking`。
+  而 `agent_service.dart:820` 本来就在读 `delta.reasoning`——**缺的只是没发这个
+  参数**。gpt-oss:20b 是默认就吐，所以当初的对照看着像模型差异。
+  没有直接打开，因为两个代价：思考 token 照样吃 `max_tokens`（实测
+  `max_tokens:300` 时 content delta 直接为 0），且 OpenAI 对非推理模型收到
+  `reasoning_effort` 会 400。要做就做成**按 provider 的开关**（默认关，
+  打开时同步抬高 max_tokens），等用户定。
+  `openai_dart` 4.3.0 的 `CreateChatCompletionRequest.reasoningEffort` 可直接用。
 
 - **每次运行最多一个提案，但提示词说的是「每轮」**。`proposalCreated` 声明在
   `agent_service.dart:283`，`while` 在 `:291` —— 作用域是整次运行。而喂给模型的

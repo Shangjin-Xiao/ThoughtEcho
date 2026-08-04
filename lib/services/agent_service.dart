@@ -173,6 +173,9 @@ class AgentService extends ChangeNotifier {
 
   /// 连续多少轮「所有工具全部失败」后终止整轮。
   static const int _maxConsecutiveFailedToolRounds = 3;
+
+  /// 模型返回完全空响应时原样重发的次数上限（超过才算整轮失败）。
+  static const int _maxEmptyResponseRetries = 2;
   static const Duration _singleToolTimeout = Duration(seconds: 45);
 
   /// 运行状态
@@ -293,9 +296,8 @@ class AgentService extends ChangeNotifier {
     try {
       final provider = await _getProvider();
       final systemPrompt = _buildSystemPrompt(
-        lastHistoryAt: history?.isNotEmpty == true
-            ? history!.last.timestamp
-            : null,
+        lastHistoryAt:
+            history?.isNotEmpty == true ? history!.last.timestamp : null,
       );
       final messages = _buildMessages(
         systemPrompt: systemPrompt,
@@ -313,6 +315,7 @@ class AgentService extends ChangeNotifier {
       final correctionAttempts = <String, int>{};
       final toolFailureCounts = <String, int>{};
       var consecutiveFailedToolRounds = 0;
+      var emptyResponseRetries = 0;
       var round = 0;
 
       while (true) {
@@ -364,7 +367,18 @@ class AgentService extends ChangeNotifier {
         }
 
         if (result.content.trim().isEmpty && result.toolCalls.isEmpty) {
-          throw const AgentRequestException(AgentFailureType.unknown);
+          // 模型偶尔会返回一整个空响应（既没正文也没 tool_calls）。实测同一个
+          // 场景连着跑，有时空、有时正常，是抖动而不是必然失败。以前这里直接
+          // 抛，用户就拿到一次莫名其妙的报错；改成原样重发几次再放弃。
+          emptyResponseRetries++;
+          if (emptyResponseRetries > _maxEmptyResponseRetries) {
+            throw const AgentRequestException(AgentFailureType.unknown);
+          }
+          logDebug(
+            'Agent 收到空响应，重发第 $emptyResponseRetries 次',
+            source: 'AgentService',
+          );
+          continue;
         }
 
         final assistantContent = result.content.trim();
@@ -1114,9 +1128,8 @@ class AgentService extends ChangeNotifier {
 
     final now = DateTime.now();
     final nowDescription = describeNow(now);
-    final historyGap = lastHistoryAt == null
-        ? null
-        : describeHistoryGap(lastHistoryAt, now);
+    final historyGap =
+        lastHistoryAt == null ? null : describeHistoryGap(lastHistoryAt, now);
 
     return '''
 你叫 Thoughter，是笔记应用 ThoughtEcho（心迹）里的 AI 助手——ThoughtEcho 是这个应用的名字，不是你的名字，被问起时说自己是 Thoughter。你帮助用户理解、检索和整理自己的笔记，并在需要时查询外部信息。回答要准确、克制、自然，不编造用户经历或笔记内容。

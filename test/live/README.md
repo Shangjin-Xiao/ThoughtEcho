@@ -55,9 +55,12 @@ TE_PROBE_MODEL=minimax-m3:cloud timeout 900s flutter test --timeout none \
     （只有定位与天气换成确定性替身）
   - `AgentProbe.ask(...)`：发一轮，历史按 `ai_assistant_page_agent.dart` 的形状
     构造（含 `tool_progress` 元数据），所以「记不记得住」的结论对生产有效
-  - `ProposalCheck`：复刻 `ai_assistant_page_ui.dart:_validatedArtifactOps`
-    的采纳前校验——采纳逻辑长在 UI 里无头跑不动，这里保住同一组不变量
-- `agent_high_frequency_live_test.dart` — 用户高频场景
+  - `ProposalCheck`：直接调生产的 `NoteProposalApplier.validatedArtifactOps`，
+    也就是用户点「采纳」时走的那段校验；只把异常翻成人话写进 transcript
+  - `mutateAfterTool`：某个工具返回后立刻改库，用来造 revision 冲突这类竞态
+- `agent_high_frequency_live_test.dart` — 第一批：用户高频场景
+- `agent_self_correction_live_test.dart` — 第二批：出错后能不能自我纠正
+- `agent_richtext_live_test.dart` — 第三批：富文本三种修改模式与采纳落库
 
 ## 两个必踩的坑（已经踩过）
 

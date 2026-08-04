@@ -504,6 +504,77 @@ void main() {
       expect(response.reachedMaxRounds, isFalse);
     });
 
+    test('retries an empty model response instead of failing the run',
+        () async {
+      // 实测同一个场景连着跑，模型偶尔返回既没正文也没 tool_calls 的空响应。
+      // 以前这里直接抛，用户拿到一次莫名其妙的报错。
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final settings = _FakeSettingsService(provider);
+
+      final responses = <openai.ChatCompletion>[
+        _textCompletion(''),
+        _textCompletion('这是最终回答'),
+      ];
+
+      final service = AgentService(
+        settingsService: settings,
+        tools: const [],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          return responses.removeAt(0);
+        },
+      );
+
+      final response = await service.runAgent(userMessage: 'test');
+      expect(response.content, '这是最终回答');
+      expect(responses, isEmpty, reason: '空响应之后必须真的重发了一次');
+    });
+
+    test('still fails when the model keeps returning empty responses',
+        () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final settings = _FakeSettingsService(provider);
+      var requestCount = 0;
+
+      final service = AgentService(
+        settingsService: settings,
+        tools: const [],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          requestCount++;
+          return _textCompletion('');
+        },
+      );
+
+      await expectLater(
+        service.runAgent(userMessage: 'test'),
+        throwsA(isA<AgentRequestException>()),
+      );
+      expect(requestCount, 3, reason: '首次 + 两次重发后放弃');
+    });
+
     test('lets a read-only call repeat after another tool failed', () async {
       // revision 冲突这类错误要求「重新读取后再修改」，而重新读取必然是和之前
       // 一模一样的只读调用。去重守卫如果照旧拦下来，模型就无路可走、整轮失败。

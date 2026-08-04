@@ -32,6 +32,7 @@ import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/services/web_fetch_service.dart';
 import 'package:thoughtecho/utils/agent_history_builder.dart';
 import 'package:thoughtecho/utils/agent_note_document_codec.dart';
+import 'package:thoughtecho/utils/note_proposal_applier.dart';
 
 import '../test_harness.dart';
 
@@ -680,8 +681,12 @@ class AgentProbe {
 
 /// 提案落库前的确定性校验结果。
 ///
-/// 采纳逻辑长在 `_ThoughterPageState` 里，无头跑不动；这里复刻它的
-/// `_validatedArtifactOps` 不变量，这几条是模型行为之外真正该断言的东西。
+/// 直接调生产的 [NoteProposalApplier.validatedArtifactOps]——这正是采纳按钮走的
+/// 那一条校验。以前这里复刻了一份，等于有两份真相；`NoteProposalApplier` 把它
+/// 从 `_ThoughterPageState` 里抽出来之后就不需要了。
+///
+/// 生产那边校验不过是抛 [FormatException]（UI 捕获后提示冲突），跑测台要的是
+/// 把问题写进 transcript，所以这里把异常翻成人话。
 class ProposalCheck {
   ProposalCheck._(this.problems, this.ops);
 
@@ -691,39 +696,34 @@ class ProposalCheck {
   bool get isValid => problems.isEmpty;
 
   static ProposalCheck of(NoteProposalArtifact artifact, {Quote? original}) {
-    final problems = <String>[];
-    if (artifact.resultKind == NoteDocumentKind.plain) {
-      if (artifact.documentOps != null) {
-        problems.add('plain 提案却带了 Delta');
-      }
-      return ProposalCheck._(problems, null);
-    }
-    List<Map<String, dynamic>>? ops;
     try {
-      ops = AgentNoteDocumentCodec.validateAndNormalize(
-        NoteDocumentKind.rich,
-        artifact.documentOps,
-        allowExistingEmbeds: original != null,
+      final ops = NoteProposalApplier.validatedArtifactOps(
+        artifact,
+        original: original,
       );
+      return ProposalCheck._(const [], ops);
+    } on FormatException catch (error) {
+      return ProposalCheck._([_explain(error.message, artifact)], null);
     } catch (error) {
-      problems.add('Delta 非法：$error');
-      return ProposalCheck._(problems, null);
+      return ProposalCheck._(['Delta 非法：$error'], null);
     }
-    final plain = AgentNoteDocumentCodec.plainTextOf(ops);
-    if (plain != artifact.content) {
-      problems.add(
-        'content 与 deltaContent 不一致：'
-        'content ${artifact.content.length} 字 / delta 还原 ${plain.length} 字',
-      );
+  }
+
+  static String _explain(String code, NoteProposalArtifact artifact) {
+    switch (code) {
+      case 'plain proposal contains delta':
+        return 'plain 提案却带了 Delta';
+      case 'proposal content and delta differ':
+        final plain = AgentNoteDocumentCodec.plainTextOf(
+          artifact.documentOps!.cast<Map<String, dynamic>>(),
+        );
+        return 'content 与 deltaContent 不一致：'
+            'content ${artifact.content.length} 字 / delta 还原 ${plain.length} 字';
+      case 'proposal changes media references':
+        return '提案改动了媒体引用';
+      default:
+        return code;
     }
-    if (original != null &&
-        !AgentNoteDocumentCodec.hasSameEmbeds(
-          ProposeNoteEditTool.opsForQuote(original),
-          ops,
-        )) {
-      problems.add('提案改动了媒体引用');
-    }
-    return ProposalCheck._(problems, ops);
   }
 }
 

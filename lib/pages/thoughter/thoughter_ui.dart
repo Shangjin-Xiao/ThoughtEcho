@@ -1030,14 +1030,8 @@ extension _ThoughterUI on _ThoughterPageState {
       );
     }
     final db = context.read<DatabaseService>();
-    final note = await db.getQuoteById(artifact.noteId!);
-    if (note == null ||
-        ProposeNoteEditTool.revisionForQuote(note) != artifact.baseRevision) {
-      _showRichEditConflict();
-      return null;
-    }
-    final result = await db.updateQuote(_quoteFromArtifact(note, artifact));
-    if (result != QuoteUpdateResult.updated) {
+    final result = await NoteProposalApplier(db).applyEdit(artifact);
+    if (!result.isApplied) {
       _showRichEditConflict();
       return null;
     }
@@ -1049,70 +1043,14 @@ extension _ThoughterUI on _ThoughterPageState {
     return artifact.noteId;
   }
 
-  Quote _quoteFromArtifact(Quote original, NoteProposalArtifact artifact) {
-    var tagIds = original.tagIds;
-    String? author = original.sourceAuthor;
-    String? source = original.sourceWork;
-    final tagPatch = artifact.metadata['tag_ids'];
-    final authorPatch = artifact.metadata['author'];
-    final sourcePatch = artifact.metadata['source'];
-    if (tagPatch is Map) {
-      tagIds = tagPatch['action'] == 'clear'
-          ? const []
-          : _extractStringList(tagPatch['value']);
-    }
-    if (authorPatch is Map) {
-      author = authorPatch['action'] == 'clear'
-          ? null
-          : authorPatch['value']?.toString();
-    }
-    if (sourcePatch is Map) {
-      source = sourcePatch['action'] == 'clear'
-          ? null
-          : sourcePatch['value']?.toString();
-    }
-    final rich = artifact.resultKind == NoteDocumentKind.rich;
-    final documentOps = _validatedArtifactOps(artifact, original: original);
-    return original.copyWith(
-      content: artifact.content,
-      source: authorPatch is Map || sourcePatch is Map ? null : original.source,
-      deltaContent: rich ? jsonEncode(documentOps) : null,
-      editSource: rich ? 'fullscreen' : null,
-      tagIds: tagIds,
-      sourceAuthor: author,
-      sourceWork: source,
-      lastModified: DateTime.now().toUtc().toIso8601String(),
-    );
-  }
+  Quote _quoteFromArtifact(Quote original, NoteProposalArtifact artifact) =>
+      NoteProposalApplier.quoteFromArtifact(original, artifact);
 
   List<Map<String, dynamic>>? _validatedArtifactOps(
     NoteProposalArtifact artifact, {
     Quote? original,
-  }) {
-    if (artifact.resultKind == NoteDocumentKind.plain) {
-      if (artifact.documentOps != null) {
-        throw const FormatException('plain proposal contains delta');
-      }
-      return null;
-    }
-    final ops = AgentNoteDocumentCodec.validateAndNormalize(
-      NoteDocumentKind.rich,
-      artifact.documentOps,
-      allowExistingEmbeds: original != null,
-    );
-    if (AgentNoteDocumentCodec.plainTextOf(ops) != artifact.content) {
-      throw const FormatException('proposal content and delta differ');
-    }
-    if (original != null) {
-      if (!AgentNoteDocumentCodec.hasSameEmbeds(
-        ProposeNoteEditTool.opsForQuote(original),
-        ops,
-      )) {
-        throw const FormatException('proposal changes media references');
-      }
-    }
-    return ops;
-  }
+  }) =>
+      NoteProposalApplier.validatedArtifactOps(artifact, original: original);
 
   void _updateSmartResultSavedNoteId(String messageId, String noteId) {
     _setState(() {
@@ -1138,13 +1076,8 @@ extension _ThoughterUI on _ThoughterPageState {
     return !AiSmartResultUtils.shouldOpenFullEditor(content);
   }
 
-  List<String> _extractStringList(Object? value) {
-    final rawItems = value is List ? value : const [];
-    return rawItems
-        .map((item) => item.toString().trim())
-        .where((item) => item.isNotEmpty)
-        .toList();
-  }
+  List<String> _extractStringList(Object? value) =>
+      NoteProposalApplier.extractStringList(value);
 
   /// 以新建笔记方式打开编辑器，返回保存成功的笔记 ID（未保存则为 null）。
   Future<String?> _openSmartResultAsNewNote(
