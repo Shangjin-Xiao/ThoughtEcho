@@ -247,7 +247,7 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                       ),
                       if (_metadataState.temperature != null)
                         Text(
-                          ' $_metadataState.temperature',
+                          ' ${_metadataState.temperature}',
                           style: TextStyle(
                             fontSize: 14,
                             color: theme.colorScheme.onSurfaceVariant,

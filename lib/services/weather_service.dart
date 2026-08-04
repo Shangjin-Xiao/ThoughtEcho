@@ -39,11 +39,18 @@ class WeatherService extends ChangeNotifier {
       _currentWeatherData != null && _currentWeatherData!.isValid;
 
   // 兼容性Getters（保持与旧版本的兼容性）
-  String? get currentWeather => _currentWeatherData?.key;
-  String? get temperature => _currentWeatherData?.temperatureText;
-  String? get weatherDescription => _currentWeatherData?.description;
-  String? get weatherIcon => _currentWeatherData?.iconCode;
-  double? get temperatureValue => _currentWeatherData?.temperature;
+  //
+  // 无效数据（key 为 'error' / 'unknown'）一律返回 null。调用点普遍只做 null
+  // 判断，如果这里把 'error' 当成天气交出去，笔记会被存成 weather: 'error'，
+  // 失败提示也不会触发（判据是 == null）。
+  String? get currentWeather => hasData ? _currentWeatherData?.key : null;
+  String? get temperature =>
+      hasData ? _currentWeatherData?.temperatureText : null;
+  String? get weatherDescription =>
+      hasData ? _currentWeatherData?.description : null;
+  String? get weatherIcon => hasData ? _currentWeatherData?.iconCode : null;
+  double? get temperatureValue =>
+      hasData ? _currentWeatherData?.temperature : null;
 
   /// 确保服务已初始化（失败后允许重试，与 LocationService 行为一致）
   Future<void> _ensureInitialized() async {

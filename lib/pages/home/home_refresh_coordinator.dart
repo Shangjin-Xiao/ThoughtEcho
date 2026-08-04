@@ -147,7 +147,10 @@ class HomeRefreshCoordinator {
 
   void _retroUpdateOfflineNotes(LocationService locationService) {
     if (!_active) return;
-    final resolvedAddress = locationService.getLocationDisplayText();
+    // 必须写存储格式「国家,省份,城市,区县」：quotes.location 全链路按逗号分段
+    // 解析（智能推送的同地点筛选取第 4 段），写显示串会让这些笔记再也匹配不上，
+    // 地址还没解析出来时 getLocationDisplayText() 甚至会回退成「📍 坐标」。
+    final resolvedAddress = locationService.getFormattedLocation();
     if (resolvedAddress.isEmpty) return;
     final database = context.read<DatabaseService>();
 

@@ -291,8 +291,8 @@ extension _ExploreDataLoading on _ExplorePageState {
         final dateStr = l10n.formattedDate(date.month, date.day);
         var content = quote.content.trim();
 
-        // 添加位置信息
-        if (quote.location != null && quote.location!.isNotEmpty) {
+        // 添加位置信息（`__address_pending__` 这类内部标记不能喂给模型）
+        if (!LocationService.isNonDisplayMarker(quote.location)) {
           content = l10n.noteMetaWithLocation(
             dateStr,
             quote.location!,
@@ -302,8 +302,11 @@ extension _ExploreDataLoading on _ExplorePageState {
           content = l10n.noteMeta(dateStr, content);
         }
 
-        // 添加天气信息
-        if (quote.weather != null && quote.weather!.isNotEmpty) {
+        // 添加天气信息（历史数据里可能残留 error/unknown，跳过）
+        if (quote.weather != null &&
+            quote.weather!.isNotEmpty &&
+            quote.weather!.trim() != 'error' &&
+            quote.weather!.trim() != 'unknown') {
           final w = quote.weather!.trim();
           // 优先把英文key映射为国际化描述
           final wDesc = WeatherCodeMapper.getLocalizedDescription(l10n, w);

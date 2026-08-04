@@ -13,6 +13,7 @@ import '../services/settings_service.dart';
 import '../services/smart_push_service.dart';
 import '../services/chat_session_service.dart';
 import '../services/insight_history_service.dart';
+import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import '../utils/app_logger.dart';
 import '../utils/time_utils.dart';

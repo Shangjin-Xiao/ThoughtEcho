@@ -297,5 +297,31 @@ void main() {
       expect(weatherService.hasData, isFalse);
       expect(weatherService.lastError, contains('API响应格式错误: 缺少 current 数据'));
     });
+
+    test('失败状态下兼容性 getter 必须返回 null，不能把 error 当天气交出去', () async {
+      const latitude = 39.9042;
+      const longitude = 116.4074;
+
+      when(mockCacheManager.initialize()).thenAnswer((_) async => {});
+      when(mockNetworkService.get(
+        any,
+        timeoutSeconds: anyNamed('timeoutSeconds'),
+      )).thenThrow(Exception('no network'));
+      when(mockCacheManager.loadWeatherDataIgnoreExpiry(
+        latitude: anyNamed('latitude'),
+        longitude: anyNamed('longitude'),
+      )).thenAnswer((_) async => null);
+
+      await weatherService.refreshWeather(latitude, longitude);
+
+      expect(weatherService.state, equals(WeatherServiceState.error));
+      expect(weatherService.hasData, isFalse);
+      // 笔记保存链路只做 null 判断，返回 'error' 会被存进 quotes.weather
+      expect(weatherService.currentWeather, isNull);
+      expect(weatherService.temperature, isNull);
+      expect(weatherService.weatherDescription, isNull);
+      expect(weatherService.weatherIcon, isNull);
+      expect(weatherService.temperatureValue, isNull);
+    });
   });
 }

@@ -221,7 +221,7 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
       );
       title = l10n.weatherInfo2;
       content = l10n.weatherRemoveHint(
-        '$weatherDesc${_metadataState.temperature != null ? " $_metadataState.temperature" : ""}',
+        '$weatherDesc${_metadataState.temperature != null ? " ${_metadataState.temperature}" : ""}',
       );
       actions = [
         if (_metadataState.showWeather)
