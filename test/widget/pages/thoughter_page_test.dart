@@ -11,12 +11,14 @@ import 'package:thoughtecho/models/chat_message.dart' as app_chat;
 import 'package:thoughtecho/models/chat_session.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/models/note_proposal_artifact.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/thoughter_page.dart';
 import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/ai_service.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
+import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
@@ -186,6 +188,7 @@ class _FakeAgentService extends AgentService {
     required super.settingsService,
     this.simulateToolProgress = false,
     this.emitSmartResultCard = false,
+    this.proposalMetadata = const <String, Object?>{},
     this.responseContent = 'Agent 响应',
     this.responseChunks = const <String>[],
     this.responseChunkDelay = const Duration(milliseconds: 12),
@@ -206,6 +209,9 @@ class _FakeAgentService extends AgentService {
   int runCount = 0;
   final bool simulateToolProgress;
   final bool emitSmartResultCard;
+
+  /// 提案 artifact 的 metadata，用来构造带标签的提案。
+  final Map<String, Object?> proposalMetadata;
   final String responseContent;
   final List<String> responseChunks;
   final Duration responseChunkDelay;
@@ -333,7 +339,7 @@ class _FakeAgentService extends AgentService {
                   resultKind: NoteDocumentKind.plain,
                   content: '这是可应用的新内容',
                   documentOps: null,
-                  metadata: const <String, Object?>{},
+                  metadata: proposalMetadata,
                   changes: const <NoteProposalChange>[],
                 ),
               ),
@@ -430,11 +436,25 @@ class _ControllableAgentService extends AgentService {
   }
 }
 
+/// 只提供标签流的假数据库：提案卡要靠它把 tag_ids 还原成带图标的标签。
+class _TagOnlyDatabaseService extends DatabaseService {
+  _TagOnlyDatabaseService(this._tags) : super.forTesting();
+
+  final List<NoteTag> _tags;
+
+  @override
+  Stream<List<NoteTag>> watchTags() => Stream<List<NoteTag>>.value(_tags);
+
+  @override
+  Future<List<NoteTag>> getTags() async => _tags;
+}
+
 Future<Widget> _buildHarness({
   required SettingsService settingsService,
   required ChatSessionService chatSessionService,
   _FakeAIService? aiService,
   AgentService? agentService,
+  DatabaseService? databaseService,
   required Widget child,
 }) async {
   final effectiveAgentService =
@@ -455,6 +475,8 @@ Future<Widget> _buildHarness({
       ChangeNotifierProvider<WeatherService>(
         create: (_) => WeatherService(),
       ),
+      if (databaseService != null)
+        ChangeNotifierProvider<DatabaseService>.value(value: databaseService),
     ],
     child: MaterialApp(
       locale: const Locale('zh'),
@@ -1720,6 +1742,49 @@ void main() {
         _noteProposalCardKey(),
         findsOneWidget,
       );
+    });
+
+    testWidgets('proposal card tags carry the icon from the tag table',
+        (tester) async {
+      // artifact 里只有 id 和一个过时的名字，图标和最新名字都得从标签表来。
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        responseContent: '这是提案说明。',
+        emitSmartResultCard: true,
+        proposalMetadata: const <String, Object?>{
+          'tag_ids': <String>['tag-1'],
+          'tag_names': <String>['旧名字'],
+        },
+      );
+      await settingsService.setNoteAiAssistantMode(ThoughterPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          databaseService: _TagOnlyDatabaseService([
+            NoteTag(id: 'tag-1', name: '读书', iconName: '📚'),
+          ]),
+          child: ThoughterPage(
+            entrySource: ThoughterEntrySource.note,
+            quote: _buildQuote(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _submitInput(tester, '请润色这段文字');
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 220));
+      });
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(_noteProposalCardKey(), findsOneWidget);
+      expect(find.text('📚'), findsOneWidget);
+      expect(find.text('读书'), findsOneWidget);
+      expect(find.text('旧名字'), findsNothing);
     });
 
     testWidgets('does not render a suggestion card from text-only smart result',

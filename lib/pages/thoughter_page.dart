@@ -120,6 +120,11 @@ class _ThoughterPageState extends State<ThoughterPage> {
 
   bool _isInputFocused = false;
 
+  /// 标签表的 id → NoteTag 映射。提案卡里的 artifact 只带 id 和名字，
+  /// 图标要从这里取——和笔记卡片用的是同一份数据（见 quote_item_widget 的 tagMap）。
+  Map<String, NoteTag> _tagMap = const <String, NoteTag>{};
+  StreamSubscription<List<NoteTag>>? _tagSubscription;
+
   /// 上一次布局时消息区的可用高度，用于识别键盘/输入框正在挤压列表
   /// （见 _onMessageViewportHeightChanged）。
   double _lastMessageViewportHeight = 0;

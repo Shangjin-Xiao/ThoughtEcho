@@ -438,7 +438,8 @@ extension _ThoughterQuickEdit on _ThoughterPageState {
     return a.toSet().containsAll(b);
   }
 
-  /// 提案卡的展示标签：优先 metadata 里的 tag_names，缺失时退化为 id。
+  /// 提案卡的展示标签：优先取标签表里的真标签，这样胶囊上有图标、名字也是最新的；
+  /// 标签表还没到（或标签已被删）时退回 metadata 里的 tag_names，再退回 id。
   /// 修改提案的 tag_ids 是补丁，取补丁里的 value（没有补丁就是没动过标签）。
   List<NoteTag> _resolveProposalDisplayTags(
     NoteProposalArtifact artifact,
@@ -456,12 +457,13 @@ extension _ThoughterQuickEdit on _ThoughterPageState {
         : const <String>[];
     return [
       for (var i = 0; i < ids.length; i++)
-        NoteTag(
-          id: ids[i],
-          name: i < names.length && names[i].trim().isNotEmpty
-              ? names[i]
-              : ids[i],
-        ),
+        _tagMap[ids[i]] ??
+            NoteTag(
+              id: ids[i],
+              name: i < names.length && names[i].trim().isNotEmpty
+                  ? names[i]
+                  : ids[i],
+            ),
     ];
   }
 

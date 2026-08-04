@@ -11,8 +11,28 @@ extension _ThoughterSession on _ThoughterPageState {
           widget.exploreGuideSummary?.trim().isNotEmpty == true) {
         _addWelcomeMessage();
       }
+      _subscribeTagMap();
       _initServicesAndLoad();
     });
+  }
+
+  /// 订阅标签表，供提案卡把 tag_ids 还原成带图标的标签。
+  /// 用流而不是一次性 getTags：会话中途新建/改名/换图标的标签也能跟上。
+  void _subscribeTagMap() {
+    try {
+      _tagSubscription = context.read<DatabaseService>().watchTags().listen(
+        (tags) {
+          if (!mounted) return;
+          _setState(() {
+            _tagMap = {for (final tag in tags) tag.id: tag};
+          });
+        },
+        onError: (Object e) => logDebug('标签流出错，提案卡标签退回纯文字: $e'),
+      );
+    } catch (e) {
+      // 拿不到 DatabaseService 时退回 artifact 自带的名字，不影响对话本身。
+      logDebug('订阅标签表失败，提案卡标签退回纯文字: $e');
+    }
   }
 
   void _disposeImpl() {
@@ -24,6 +44,7 @@ extension _ThoughterSession on _ThoughterPageState {
       _agentService.removeListener(_onAgentServiceChanged);
     }
     _streamSubscription?.cancel();
+    _tagSubscription?.cancel();
     _inputFocusNode.removeListener(_onInputFocusChanged);
     _scrollController.removeListener(_onScrollPositionChanged);
     _inputFocusNode.dispose();
