@@ -1550,6 +1550,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     }
 
     _controller.addListener(listener);
+    // 挂监听前的一瞬间可能刚好抓取完成（那次 notifyListeners 收不到），
+    // 这里补一次检查，否则会白等满 maxWait 并误报超时。
+    listener();
     try {
       await completer.future.timeout(maxWait);
     } catch (_) {
@@ -1670,6 +1673,19 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     return false;
   }
 
+  /// 用户想要的位置/天气是否确实没写进这条笔记。
+  ///
+  /// 位置只要有坐标就算附上了——地址可能还在后台反查（`kAddressPending`），
+  /// 笔记本身并不缺信息。
+  bool _metadataMissingIn(Quote quote) {
+    final locationMissing = _controller.includeLocation &&
+        quote.latitude == null &&
+        (quote.location == null || quote.location!.isEmpty);
+    final weatherMissing = _controller.includeWeather &&
+        (quote.weather == null || quote.weather!.isEmpty);
+    return locationMissing || weatherMissing;
+  }
+
   /// 保存笔记并退出
   /// 保存并关闭对话框。返回落库的笔记（含真实 id），失败或未保存时返回 null。
   Future<Quote?> _saveAndExit() async {
@@ -1768,8 +1784,10 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         final messenger = ScaffoldMessenger.of(context);
         final l10n = AppLocalizations.of(context);
         navigator.pop();
-        // 超时：位置/天气未能在规定时间内获取，已直接保存，通过 SnackBar 告知
-        if (metadataTimedOut) {
+        // 超时不等于没附上：等待期间位置可能已拿到坐标，天气也可能命中
+        // WeatherService 已有的数据。只有真的落了空才提示，否则用户会看到
+        // 「未能附加」但笔记上明明有天气/位置。
+        if (metadataTimedOut && _metadataMissingIn(quote)) {
           messenger.showSnackBar(
             SnackBar(
               content: Text(l10n.autoAttachMetadataUnavailable),
