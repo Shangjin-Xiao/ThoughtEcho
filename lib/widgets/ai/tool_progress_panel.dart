@@ -145,6 +145,10 @@ Future<void> showToolProgressSheet(
   BuildContext context,
   ValueListenable<ToolProgressSnapshot> snapshot,
 ) {
+  // 抽屉一开，输入框的焦点被让给抽屉、键盘收起；抽屉 pop 时 Flutter 会把
+  // 焦点还回去，键盘二次弹出，输入框跟着从底部窜上来一次。开之前主动清掉
+  // 焦点，pop 时就没有可恢复的目标。
+  FocusManager.instance.primaryFocus?.unfocus();
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,

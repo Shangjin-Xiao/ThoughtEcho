@@ -1498,7 +1498,7 @@ void main() {
 
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 40));
-      await tester.tap(find.byIcon(Icons.stop).last);
+      await tester.tap(find.byIcon(Icons.stop_rounded).last);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 420));
 
@@ -1540,7 +1540,7 @@ void main() {
           .onPressed
           ?.call();
       await tester.pump(const Duration(milliseconds: 40));
-      await tester.tap(find.byIcon(Icons.stop).last);
+      await tester.tap(find.byIcon(Icons.stop_rounded).last);
       await tester.pump();
 
       await tester.enterText(find.byType(TextField), 'second request');
@@ -1556,7 +1556,7 @@ void main() {
 
       firstResponse.complete(AgentResponse(content: 'stale response'));
       await tester.pump();
-      expect(find.byIcon(Icons.stop), findsAtLeastNWidgets(1));
+      expect(find.byIcon(Icons.stop_rounded), findsAtLeastNWidgets(1));
     });
 
     testWidgets('disposing an Agent page stops its pending run',

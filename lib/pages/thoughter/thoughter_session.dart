@@ -460,6 +460,7 @@ extension _ThoughterSession on _ThoughterPageState {
   }
 
   void _showSessionHistory() {
+    _dropInputFocus();
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (ctx) => SessionHistoryPage(

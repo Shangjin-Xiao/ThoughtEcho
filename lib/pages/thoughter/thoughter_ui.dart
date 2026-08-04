@@ -27,6 +27,16 @@ extension _ThoughterUI on _ThoughterPageState {
     });
   }
 
+  /// 弹浮层（抽屉 / 编辑器 / 历史页）前先丢掉输入焦点。
+  ///
+  /// 不丢的话：浮层拿走焦点、键盘收起，浮层关掉时 Flutter 把焦点还给输入框，
+  /// 键盘二次弹出，输入框在底部窜一下。
+  void _dropInputFocus() {
+    if (_inputFocusNode.hasFocus) {
+      _inputFocusNode.unfocus();
+    }
+  }
+
   void _onInputFocusChanged() {
     if (!mounted || _isInputFocused == _inputFocusNode.hasFocus) {
       return;
@@ -748,117 +758,142 @@ extension _ThoughterUI on _ThoughterPageState {
   }
 
   Widget _buildInputArea(ThemeData theme, AppLocalizations l10n) {
-    final shellBorderColor = _isInputFocused
-        ? theme.colorScheme.primary.withValues(alpha: 0.6)
-        : theme.colorScheme.outlineVariant.withValues(alpha: 0.75);
+    final scheme = theme.colorScheme;
+    final shape = AppShapeTokens.of(context);
+    // 输入壳比卡片再圆一档：它是一个会长高的容器，方角在多行时显得笨重。
+    // 仍然跟着主题的 cardRadius 走，纸/素笺的方正不会被这里拉圆。
+    final shellRadius = (shape.cardRadius * 1.4).clamp(0.0, 26.0).toDouble();
+    // 描边宽度恒定：聚焦时改宽会让内部文字横跳半个像素。只换颜色。
+    final borderColor = _isInputFocused
+        ? scheme.primary.withValues(alpha: 0.55)
+        : scheme.outlineVariant.withValues(alpha: 0.7);
 
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      minimum: const EdgeInsets.fromLTRB(12, 4, 12, 10),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
         decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius:
-              BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
-          border: Border.all(
-            color: shellBorderColor,
-            width: _isInputFocused ? 1.4 : 1.0,
-          ),
+          // 壳比对话背景高一层，靠明度自己划出边界，不用重描边和重投影。
+          color: scheme.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(shellRadius),
+          border: Border.all(color: borderColor),
           boxShadow: [
             BoxShadow(
-              color: theme.colorScheme.shadow.withValues(
-                alpha: theme.brightness == Brightness.dark ? 0.22 : 0.05,
+              color: scheme.shadow.withValues(
+                alpha: theme.brightness == Brightness.dark ? 0.16 : 0.04,
               ),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 输入区默认一行高，随换行增高；超过上限后内部滚动，
-            // 避免长输入把对话内容整个挤出屏幕。
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 148),
-              child: TextField(
-                controller: _textController,
-                focusNode: _inputFocusNode,
-                decoration: InputDecoration(
-                  hintText: l10n.aiAssistantInputHint,
-                  border: InputBorder.none,
-                  isCollapsed: true,
-                  contentPadding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-                ),
-                maxLines: null,
-                minLines: 1,
-                textInputAction: TextInputAction.send,
-                onSubmitted: _handleSubmitted,
-              ),
-            ),
-            // Action row: thinking | send
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 0, 4, 2),
-              child: Row(
-                children: [
-                  // Agent requests do not yet apply provider thinking settings.
-                  if (!_isAgentMode && _currentModelSupportsThinking)
-                    _buildThinkingChip(theme, l10n),
-                  const Spacer(),
-                  // Send / Stop：空输入时按钮置灰，避免点了没反应
-                  ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: _textController,
-                    builder: (context, value, _) {
-                      final canSend = value.text.trim().isNotEmpty;
-                      final enabled = _isLoading || canSend;
-                      return IconButton(
-                        icon: Icon(
-                          _isLoading ? Icons.stop : Icons.arrow_upward,
-                          size: 20,
-                        ),
-                        tooltip: _isLoading ? l10n.stopGenerate : l10n.send,
-                        onPressed: _isLoading
-                            ? _stopGenerating
-                            : canSend
-                                ? () => _handleSubmitted(_textController.text)
-                                : null,
-                        style: IconButton.styleFrom(
-                          backgroundColor: _isLoading
-                              ? theme.colorScheme.error
-                              : enabled
-                                  ? theme.colorScheme.primary
-                                  : theme.colorScheme.surfaceContainerHighest,
-                          foregroundColor: _isLoading
-                              ? theme.colorScheme.onError
-                              : enabled
-                                  ? theme.colorScheme.onPrimary
-                                  : theme.colorScheme.onSurfaceVariant,
-                          disabledBackgroundColor:
-                              theme.colorScheme.surfaceContainerHighest,
-                          disabledForegroundColor: theme
-                              .colorScheme.onSurfaceVariant
-                              .withValues(alpha: 0.5),
-                          padding: const EdgeInsets.all(8),
-                          minimumSize: const Size(36, 36),
-                        ),
-                      );
-                    },
+        // 整个壳都是输入热区：只有细细一行文字能点，在手机上太难命中。
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            if (!_inputFocusNode.hasFocus) {
+              _inputFocusNode.requestFocus();
+            }
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 输入区默认一行高，随换行增高；超过上限后内部滚动，
+              // 避免长输入把对话内容整个挤出屏幕。
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 148),
+                child: TextField(
+                  controller: _textController,
+                  focusNode: _inputFocusNode,
+                  style: theme.textTheme.bodyLarge?.copyWith(height: 1.35),
+                  decoration: InputDecoration(
+                    hintText: l10n.aiAssistantInputHint,
+                    hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                      height: 1.35,
+                      color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    ),
+                    border: InputBorder.none,
+                    isCollapsed: true,
+                    contentPadding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
                   ),
-                ],
+                  maxLines: null,
+                  minLines: 1,
+                  keyboardType: TextInputType.multiline,
+                  textCapitalization: TextCapitalization.sentences,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: _handleSubmitted,
+                ),
               ),
-            ),
-          ],
+              // 动作行：左边是模式开关，右边是发送。和主流 AI 输入框一致，
+              // 让「写什么」和「怎么发」分成上下两层。
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 2, 8, 8),
+                child: Row(
+                  children: [
+                    // Agent requests do not yet apply provider thinking settings.
+                    if (!_isAgentMode && _currentModelSupportsThinking)
+                      _buildThinkingChip(theme, l10n),
+                    const Spacer(),
+                    _buildSendButton(theme, l10n),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  /// 发送 / 停止按钮。
+  ///
+  /// 一枚固定尺寸的圆：位置不随图标和状态变，眼睛不用重新找。停止态不用错误
+  /// 红——中止生成不是出错，红色会把一个日常操作说成事故。
+  Widget _buildSendButton(ThemeData theme, AppLocalizations l10n) {
+    final scheme = theme.colorScheme;
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: _textController,
+      builder: (context, value, _) {
+        final canSend = value.text.trim().isNotEmpty;
+        return IconButton(
+          key: const ValueKey('ai_assistant_send_button'),
+          // 发送→停止的切换做个淡入淡出，避免图标硬跳。
+          icon: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 140),
+            child: Icon(
+              _isLoading ? Icons.stop_rounded : Icons.arrow_upward,
+              key: ValueKey(_isLoading),
+              size: 20,
+            ),
+          ),
+          tooltip: _isLoading ? l10n.stopGenerate : l10n.send,
+          onPressed: _isLoading
+              ? _stopGenerating
+              : canSend
+                  ? () => _handleSubmitted(_textController.text)
+                  : null,
+          style: IconButton.styleFrom(
+            backgroundColor: scheme.primary,
+            foregroundColor: scheme.onPrimary,
+            disabledBackgroundColor: scheme.surfaceContainerHighest,
+            disabledForegroundColor:
+                scheme.onSurfaceVariant.withValues(alpha: 0.55),
+            shape: const CircleBorder(),
+            padding: EdgeInsets.zero,
+            fixedSize: const Size(38, 38),
+            minimumSize: const Size(38, 38),
+          ),
+        );
+      },
     );
   }
 
   Future<String?> _openNoteProposalInEditor(
     NoteProposalArtifact artifact,
   ) async {
+    _dropInputFocus();
     final db = context.read<DatabaseService>();
     if (artifact.action == NoteProposalAction.create) {
       final validatedOps = _validatedArtifactOps(artifact);
@@ -1089,6 +1124,7 @@ extension _ThoughterUI on _ThoughterPageState {
     bool includeLocation = false,
     bool includeWeather = false,
   }) async {
+    _dropInputFocus();
     // 没有真实格式的 delta 等同于纯文本，不应该被当成富文本强推全屏编辑器
     if (richDocument != null &&
         !_opsHaveRichFormatting(_opsFromRichDocument(richDocument))) {
