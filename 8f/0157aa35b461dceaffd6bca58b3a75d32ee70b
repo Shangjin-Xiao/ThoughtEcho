@@ -1,0 +1,48 @@
+lib/pages/thoughter/thoughter_ui.dart
+  s_d6302ce902d470::t_1d86787e362900 1046-1047,1052-1053
+  s_d6302ce902d470::t_d89ffbb444d6e9 1079-1080
+  s_d6302ce902d470::t_8bc26f25becf9a 1033-1034
+test/live/agent_probe.dart
+  s_d6302ce902d470::t_fd52e13e80e530 684-689,700-702,704-706,708,710-725
+  s_d6302ce902d470::t_7419d13be35c60 35
+lib/pages/thoughter_page.dart
+  s_d6302ce902d470::t_ddd58f1e6d3c54 47
+lib/utils/note_proposal_applier.dart
+  s_d6302ce902d470::t_b93bb2e317e9d1 1-147
+docs/agent-handoff-2026-07-31.md
+  s_d6302ce902d470::t_bd618369886282 321-332
+  s_d6302ce902d470::t_6b8b75d5f62a21 260-261
+  s_d6302ce902d470::t_6f2e1fcb2ed953 222-252
+test/live/agent_richtext_live_test.dart
+  s_d6302ce902d470::t_f517bb5283e7d2 1-129,132-229,232-290,293-367
+  s_d6302ce902d470::t_02d2b3192846e8 130-131,230-231,291-292
+lib/services/agent_service.dart
+  s_d6302ce902d470::t_756f06e18b0624 318
+  s_d6302ce902d470::t_17273b4402c0a9 176-178
+  s_d6302ce902d470::t_0003598d72398b 370-381
+  s_d6302ce902d470::t_02d2b3192846e8 299-300,1131-1132
+test/live/README.md
+  s_d6302ce902d470::t_0c742f4e688bbc 61-63
+  s_d6302ce902d470::t_09ad49270fce70 58-60
+test/unit/utils/note_proposal_applier_test.dart
+  s_d6302ce902d470::t_9dc160572e4a5a 1-121,123-129,135-187
+  s_d6302ce902d470::t_b49a302415dfa0 122,130-134
+test/unit/services/agent_service_loop_test.dart
+  s_d6302ce902d470::t_a83d61fd0a3f6e 507-577
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "8f0157aa35b461dceaffd6bca58b3a75d32ee70b",
+  "prompts": {},
+  "sessions": {
+    "s_d6302ce902d470": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "85ed5eb2-4d1e-40f3-a86e-8508a20b47f6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
