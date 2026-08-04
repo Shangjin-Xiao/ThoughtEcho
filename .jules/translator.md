@@ -51,3 +51,6 @@
 ## 2026-07-20 - [提取 tool_call_card.dart 重试按钮硬编码]
 **发现:** 在 lib/widgets/ai/tool_call_card.dart 中存在硬编码 '重试'
 **规则:** 采用极简风格翻译，复用已存在的 `retry` 键值。
+## 2023-10-24 - [提取 '重试' 硬编码]
+**发现:** `NoteListView` 中 `SnackBarAction` 标签硬编码为中文 `'重试'`
+**规则:** 将 `'重试'` 统一替换为 `AppLocalizations.of(context)!.retry`

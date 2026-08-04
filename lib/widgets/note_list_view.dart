@@ -637,16 +637,16 @@ class NoteListViewState extends State<NoteListView> {
       final bool isSearchChange = oldEffectiveQuery != newEffectiveQuery;
 
       // 标签/天气/时间段筛选变化：新结果到达后回到列表顶部。
-      final bool isFilterChange = !_areListsEqual(
-            oldWidget.selectedTagIds,
-            widget.selectedTagIds,
-          ) ||
-          !_areListsEqual(
-              oldWidget.selectedWeathers, widget.selectedWeathers) ||
-          !_areListsEqual(
-            oldWidget.selectedDayPeriods,
-            widget.selectedDayPeriods,
-          );
+      final bool isFilterChange =
+          !_areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) ||
+              !_areListsEqual(
+                oldWidget.selectedWeathers,
+                widget.selectedWeathers,
+              ) ||
+              !_areListsEqual(
+                oldWidget.selectedDayPeriods,
+                widget.selectedDayPeriods,
+              );
 
       // 更新流订阅，传入是否仅为排序变化
       _updateStreamSubscription(
@@ -667,7 +667,7 @@ class NoteListViewState extends State<NoteListView> {
         duration: AppConstants.snackBarDurationNormal,
         behavior: SnackBarBehavior.floating,
         action: SnackBarAction(
-          label: '重试',
+          label: AppLocalizations.of(context).retry,
           onPressed: () => _updateStreamSubscription(),
         ),
       ),
