@@ -1,0 +1,20 @@
+DESIGN.md
+  s_0a862328397a13::t_570fe9c73f629f 341-345,353-381,384,392-471
+  s_0a862328397a13::t_9d6a4494ed5553 382-383,385-391
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "f908f6da4c5a92379d45014f3f530eb3c74530b2",
+  "prompts": {},
+  "sessions": {
+    "s_0a862328397a13": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6b848d39-810f-4a50-b104-ce942251f9b3",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
