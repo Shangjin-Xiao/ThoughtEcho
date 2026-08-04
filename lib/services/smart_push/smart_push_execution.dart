@@ -172,6 +172,9 @@ extension SmartPushExecution on SmartPushService {
     bool isBackground = false,
   }) async {
     try {
+      // 配额裁定结果 —— 测试模式不做裁定，一路放行
+      PushAllowance? allowance;
+
       // 测试模式不检查 enabled 和频率
       if (!isTest) {
         if (!_settings.enabled) return;
@@ -180,16 +183,20 @@ extension SmartPushExecution on SmartPushService {
           return;
         }
 
-        // SOTA: 疲劳预防检查
-        // 使用 'monthAgoToday'（成本 2.5）作为预检类型，这是智能推送中
-        // 较高成本的内容类型，确保预算检查保守一致。
-        // 实际内容类型在内容选择后确定，用于 consumeBudget。
-        final preCheckType = _settings.pushMode == PushMode.dailyQuote
-            ? 'dailyQuote'
-            : 'monthAgoToday';
-        final smartSkipReason = await _analytics.getSkipReason(preCheckType);
-        if (smartSkipReason != null) {
-          AppLogger.w('智能推送被跳过: $smartSkipReason');
+        // 先结算上一条推送（用户到底点没点），再决定这一条推不推。
+        // 顺序不能反：结算会推进/复位连续未点击计数，配额裁定要读它。
+        await _analytics.settlePendingSend();
+
+        allowance = await _analytics.checkPushAllowance(
+          intensity: _settings.pushIntensity,
+          lastPushTime: _settings.lastPushTime,
+        );
+
+        if (!allowance.allowed) {
+          AppLogger.w(
+            '智能推送被跳过 [${allowance.tier.name}/${_settings.pushIntensity.name}]: '
+            '${allowance.reason}',
+          );
           // 仍然重新调度下次推送
           if (!isBackground) {
             await scheduleNextPush();
@@ -203,6 +210,7 @@ extension SmartPushExecution on SmartPushService {
       String title = '💭 心迹';
       bool isDailyQuote = false;
       String contentType = 'dailyQuote';
+      double candidatePriority = 0;
 
       AppLogger.w('执行智能推送，模式: ${_settings.pushMode.name}');
 
@@ -214,6 +222,7 @@ extension SmartPushExecution on SmartPushService {
           title = result.title;
           isDailyQuote = result.isDailyQuote;
           contentType = result.contentType;
+          candidatePriority = result.priority;
           break;
 
         case PushMode.dailyQuote:
@@ -240,6 +249,7 @@ extension SmartPushExecution on SmartPushService {
             noteToShow = candidate.note;
             title = candidate.title;
             contentType = candidate.contentType;
+            candidatePriority = candidate.priority.toDouble();
           }
           break;
 
@@ -274,9 +284,27 @@ extension SmartPushExecution on SmartPushService {
             noteToShow = candidate.note;
             title = candidate.title;
             contentType = candidate.contentType;
+            candidatePriority = candidate.priority.toDouble();
           }
           // 自定义模式不主动回退到每日一言 — 用户选了自定义就只推自定义内容
           break;
+      }
+
+      // 质量门槛：当天第 2 条起，内容不够好就宁可不推。
+      // 用户关掉推送功能通常不是因为条数多，是因为推的东西没价值 ——
+      // 「去年今日」值得打断，「三天前的随手记」不值得。
+      if (noteToShow != null && allowance != null) {
+        final floor = allowance.qualityFloor;
+        if (floor > 0 && candidatePriority < floor) {
+          AppLogger.w(
+            '智能推送被跳过：今日第 ${allowance.todayCount + 1} 条未过质量门槛 '
+            '($contentType 价值分 ${candidatePriority.toStringAsFixed(1)} < $floor)',
+          );
+          if (!isBackground) {
+            await scheduleNextPush();
+          }
+          return;
+        }
       }
 
       if (noteToShow != null) {
@@ -332,10 +360,10 @@ extension SmartPushExecution on SmartPushService {
           await _saveSettingsQuietly(updatedSettings);
         }
 
-        // SOTA: 消费疲劳预算并记录推送（用于效果追踪）
+        // 登记这一条推送：占掉今日配额，并挂起等待下次结算。
+        // 分数更新交给 settlePendingSend —— 发出去的瞬间还不知道用户点不点。
         if (!isTest && contentType.isNotEmpty) {
-          await _analytics.consumeBudget(contentType);
-          await _analytics.updateContentScore(contentType, false);
+          await _analytics.markSent(contentType);
         }
 
         AppLogger.i(
@@ -346,11 +374,6 @@ extension SmartPushExecution on SmartPushService {
         AppLogger.w('智能推送：没有内容可推送 (模式: ${_settings.pushMode.name})');
       }
 
-      // 7天无新笔记额外触发一次每日一言（与每日一言独立开关无关）
-      if (!isTest) {
-        await _checkAndPushInactivityQuote(isBackground: isBackground);
-      }
-
       // 重新调度下一次推送
       if (!isBackground && !isTest) {
         await scheduleNextPush();
@@ -359,42 +382,4 @@ extension SmartPushExecution on SmartPushService {
       AppLogger.e('智能推送失败', error: e, stackTrace: stack);
       if (isTest) rethrow; // 测试模式抛出异常以便 UI 显示错误
     }
-  }
-
-  /// 检查是否满足「7天无新笔记」条件，满足则额外推送一次每日一言。
-  ///
-  /// 使用 [_inactivityQuoteDateKey] MMKV 键记录当天是否已因此触发，
-  /// 避免同一天重复推送。
-  /// [isBackground] 透传给 _performDailyQuotePush，防止产生额外的 scheduleNextPush。
-  Future<void> _checkAndPushInactivityQuote({
-    bool isBackground = false,
-  }) async {
-    try {
-      final today = DateTime.now().toIso8601String().substring(0, 10);
-      final lastTriggered =
-          _mmkv.getString(SmartPushService._inactivityQuoteDateKey);
-      if (lastTriggered == today) {
-        // 今天已经因无新笔记触发过一言，跳过
-        return;
-      }
-
-      // 查询最近一条笔记的创建时间
-      final recentNotes =
-          await _databaseService.getQuotesForSmartPush(limit: 1);
-      if (recentNotes.isEmpty) return;
-      final recentNote = recentNotes.first;
-
-      final noteDate = DateTime.tryParse(recentNote.date);
-      if (noteDate == null) return;
-
-      final daysSinceLastNote = DateTime.now().difference(noteDate).inDays;
-      if (daysSinceLastNote < 7) return;
-
-      AppLogger.i('7天无新笔记（最近笔记: ${recentNote.date}），额外推送每日一言');
-      _mmkv.setString(SmartPushService._inactivityQuoteDateKey, today);
-      await _performDailyQuotePush(isBackground: isBackground);
-    } catch (e) {
-      AppLogger.w('_checkAndPushInactivityQuote 失败', error: e);
-    }
-  }
-}
+  }}

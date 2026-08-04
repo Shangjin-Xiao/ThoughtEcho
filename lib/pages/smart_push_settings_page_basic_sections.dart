@@ -137,6 +137,109 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
     );
   }
 
+  /// 推送频率拨盘卡片
+  ///
+  /// 拨盘定的是**上限**：向右只是放宽天花板，不会突破连续未点击的降级逻辑。
+  /// 所以文案只说体感（"大约每天 1 条"），不暴露内部数字，免得用户
+  /// 拨到最右却没天天收到、以为坏了。
+  Widget _buildIntensityCard(
+    AppLocalizations l10n,
+    ThemeData theme,
+    ColorScheme colorScheme,
+  ) {
+    final values = PushIntensity.values;
+    final currentIndex = values.indexOf(_settings.pushIntensity);
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.circular(AppShapeTokens.of(context).cardRadius),
+        side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.2)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.tune_outlined,
+                  color: colorScheme.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '推送频率',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: colorScheme.primary,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  _settings.pushIntensity.label,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Slider(
+              value: currentIndex.toDouble(),
+              min: 0,
+              max: (values.length - 1).toDouble(),
+              divisions: values.length - 1,
+              label: _settings.pushIntensity.label,
+              onChanged: (value) {
+                final next = values[value.round()];
+                if (next == _settings.pushIntensity) return;
+                setState(() {
+                  _settings = _settings.copyWith(pushIntensity: next);
+                });
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    values.first.label,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  Text(
+                    values.last.label,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _settings.pushIntensity.description,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '长期不打开时会自动减少，一直不理会时会进一步放缓。',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// 推送模式选择卡片 - 简化为智能/自定义两个选项
   Widget _buildModeSelectionCard(
     AppLocalizations l10n,

@@ -240,6 +240,7 @@ extension SmartPushContentSelection on SmartPushService {
         title: bestCandidate.title,
         isDailyQuote: bestCandidate.isDailyQuote,
         contentType: bestType,
+        priority: bestCandidate.priority.toDouble(),
       );
     }
 

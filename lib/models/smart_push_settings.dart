@@ -32,6 +32,129 @@ enum WeatherFilterType {
   fog, // 雾
 }
 
+/// 推送频率拨盘档位（从少到多）
+///
+/// 拨盘定的是**天花板**，不是承诺：疲劳系统只会在这个上限内做减法，
+/// 永远不会因为拨到最右就突破降级逻辑硬推。
+enum PushIntensity {
+  rare, // 很少
+  restrained, // 克制
+  balanced, // 适中（默认）
+  frequent, // 多一些
+}
+
+/// 用户参与度分档 —— 由最近 7 天打开 App 的天数推出
+enum EngagementTier {
+  active, // 活跃：7 天内打开过 ≥4 天
+  light, // 轻度：打开过 1-3 天
+  dormant, // 沉睡：7 天内一次都没打开
+}
+
+/// 拨盘档位 × 参与度分档 决定出的推送配额
+class PushQuotaProfile {
+  /// 当天最多推几条
+  final int dailyCap;
+
+  /// 两次推送之间的最小间隔天数（0 = 同一天内还能再推）
+  final int minGapDays;
+
+  /// 当天第 2 条起所需的最低候选价值分
+  ///
+  /// 候选价值分来自 `scoreSmartPushCandidate`：那年今日基线 100、
+  /// 同地点 70+、往月今日 55、随机回忆 40、此时此刻 20。
+  final double extraQualityFloor;
+
+  const PushQuotaProfile({
+    required this.dailyCap,
+    required this.minGapDays,
+    this.extraQualityFloor = double.infinity,
+  });
+}
+
+extension PushIntensityX on PushIntensity {
+  String get label {
+    switch (this) {
+      case PushIntensity.rare:
+        return '很少';
+      case PushIntensity.restrained:
+        return '克制';
+      case PushIntensity.balanced:
+        return '适中';
+      case PushIntensity.frequent:
+        return '多一些';
+    }
+  }
+
+  /// 拨盘底下那行实时文案 —— 只说体感，不暴露内部上限数字
+  String get description {
+    switch (this) {
+      case PushIntensity.rare:
+        return '大约每周 2-3 条，安静时更少';
+      case PushIntensity.restrained:
+        return '大约每天 1 条，安静时更少';
+      case PushIntensity.balanced:
+        return '每天 1-2 条，安静时更少';
+      case PushIntensity.frequent:
+        return '每天最多 3 条，安静时更少';
+    }
+  }
+
+  /// 查配额矩阵：拨盘档位在行，参与度分档在列
+  PushQuotaProfile quotaFor(EngagementTier tier) {
+    switch (this) {
+      case PushIntensity.rare:
+        switch (tier) {
+          case EngagementTier.active:
+            return const PushQuotaProfile(dailyCap: 1, minGapDays: 2);
+          case EngagementTier.light:
+            return const PushQuotaProfile(dailyCap: 1, minGapDays: 3);
+          case EngagementTier.dormant:
+            return const PushQuotaProfile(dailyCap: 1, minGapDays: 7);
+        }
+      case PushIntensity.restrained:
+        switch (tier) {
+          case EngagementTier.active:
+            return const PushQuotaProfile(dailyCap: 1, minGapDays: 0);
+          case EngagementTier.light:
+            return const PushQuotaProfile(dailyCap: 1, minGapDays: 1);
+          case EngagementTier.dormant:
+            return const PushQuotaProfile(dailyCap: 1, minGapDays: 5);
+        }
+      case PushIntensity.balanced:
+        switch (tier) {
+          case EngagementTier.active:
+            // 第二条要过质量门槛：只有那年今日/同地点这类才放行
+            return const PushQuotaProfile(
+              dailyCap: 2,
+              minGapDays: 0,
+              extraQualityFloor: 85,
+            );
+          case EngagementTier.light:
+            return const PushQuotaProfile(dailyCap: 1, minGapDays: 0);
+          case EngagementTier.dormant:
+            return const PushQuotaProfile(dailyCap: 1, minGapDays: 3);
+        }
+      case PushIntensity.frequent:
+        switch (tier) {
+          case EngagementTier.active:
+            return const PushQuotaProfile(
+              dailyCap: 3,
+              minGapDays: 0,
+              extraQualityFloor: 55,
+            );
+          case EngagementTier.light:
+            return const PushQuotaProfile(
+              dailyCap: 2,
+              minGapDays: 0,
+              extraQualityFloor: 70,
+            );
+          case EngagementTier.dormant:
+            return const PushQuotaProfile(dailyCap: 1, minGapDays: 2);
+        }
+    }
+  }
+}
+
 /// 推送频率
 enum PushFrequency {
   daily, // 每天
@@ -158,6 +281,9 @@ class SmartPushSettings {
   /// 推送频率
   final PushFrequency frequency;
 
+  /// 推送频率拨盘 —— 决定各参与度分档下的推送上限
+  final PushIntensity pushIntensity;
+
   /// 启用的过去笔记类型（智能模式自动选择，自定义模式手动选择）
   final Set<PastNoteType> enabledPastNoteTypes;
 
@@ -195,6 +321,7 @@ class SmartPushSettings {
     this.enabled = false,
     this.pushMode = PushMode.smart,
     this.frequency = PushFrequency.daily,
+    this.pushIntensity = PushIntensity.balanced,
     this.enabledPastNoteTypes = const {
       PastNoteType.yearAgoToday,
       PastNoteType.monthAgoToday,
@@ -283,6 +410,12 @@ class SmartPushSettings {
               orElse: () => PushFrequency.daily,
             )
           : PushFrequency.daily,
+      pushIntensity: json['pushIntensity'] != null
+          ? PushIntensity.values.firstWhere(
+              (i) => i.name == json['pushIntensity'],
+              orElse: () => PushIntensity.balanced,
+            )
+          : PushIntensity.balanced,
       enabledPastNoteTypes: pastNoteTypes,
       filterTagIds: (json['filterTagIds'] as List<dynamic>?)
               ?.map((e) => e.toString())
@@ -325,6 +458,7 @@ class SmartPushSettings {
       'enabled': enabled,
       'pushMode': pushMode.name,
       'frequency': frequency.name,
+      'pushIntensity': pushIntensity.name,
       'enabledPastNoteTypes': enabledPastNoteTypes.map((e) => e.name).toList(),
       'filterTagIds': filterTagIds,
       'filterWeatherTypes': filterWeatherTypes.map((e) => e.name).toList(),
@@ -342,6 +476,7 @@ class SmartPushSettings {
     bool? enabled,
     PushMode? pushMode,
     PushFrequency? frequency,
+    PushIntensity? pushIntensity,
     Set<PastNoteType>? enabledPastNoteTypes,
     List<String>? filterTagIds,
     Set<WeatherFilterType>? filterWeatherTypes,
@@ -357,6 +492,7 @@ class SmartPushSettings {
       enabled: enabled ?? this.enabled,
       pushMode: pushMode ?? this.pushMode,
       frequency: frequency ?? this.frequency,
+      pushIntensity: pushIntensity ?? this.pushIntensity,
       enabledPastNoteTypes: enabledPastNoteTypes ?? this.enabledPastNoteTypes,
       filterTagIds: filterTagIds ?? this.filterTagIds,
       filterWeatherTypes: filterWeatherTypes ?? this.filterWeatherTypes,
@@ -431,6 +567,7 @@ class SmartPushSettings {
           enabled == other.enabled &&
           pushMode == other.pushMode &&
           frequency == other.frequency &&
+          pushIntensity == other.pushIntensity &&
           enabledPastNoteTypes == other.enabledPastNoteTypes &&
           filterTagIds == other.filterTagIds &&
           filterWeatherTypes == other.filterWeatherTypes &&
@@ -445,6 +582,7 @@ class SmartPushSettings {
       enabled.hashCode ^
       pushMode.hashCode ^
       frequency.hashCode ^
+      pushIntensity.hashCode ^
       enabledPastNoteTypes.hashCode ^
       filterTagIds.hashCode ^
       filterWeatherTypes.hashCode ^

@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import '../models/smart_push_settings.dart';
 import '../utils/app_logger.dart';
 import 'mmkv_service.dart';
 
@@ -13,6 +14,35 @@ class PushCheckResult {
   static const PushCheckResult ok = PushCheckResult(allowed: true);
 }
 
+/// 一次推送尝试的配额裁定结果
+///
+/// 由 [SmartPushAnalytics.checkPushAllowance] 产出，把「能不能推」和
+/// 「这一条要多好才配推」一次算清，避免调用方各自拼判断。
+class PushAllowance {
+  final bool allowed;
+  final String? reason;
+  final EngagementTier tier;
+  final PushQuotaProfile profile;
+
+  /// 今天已经推了几条
+  final int todayCount;
+
+  const PushAllowance({
+    required this.allowed,
+    required this.tier,
+    required this.profile,
+    required this.todayCount,
+    this.reason,
+  });
+
+  /// 这一条需要跨过的最低价值分。
+  ///
+  /// 当天第一条没有门槛；第 2 条起要过 [PushQuotaProfile.extraQualityFloor]，
+  /// 这就是「宁可不推也不推垃圾」的落点。
+  double get qualityFloor =>
+      todayCount == 0 ? 0 : profile.extraQualityFloor;
+}
+
 /// SOTA 智能推送分析服务
 class SmartPushAnalytics extends ChangeNotifier {
   final MMKVService _mmkv;
@@ -23,26 +53,42 @@ class SmartPushAnalytics extends ChangeNotifier {
   static const String _notificationMetricsKey =
       'smart_push_notification_metrics';
   static const String _contentScoresKey = 'smart_push_content_scores';
-  static const String _fatigueBudgetKey = 'smart_push_fatigue_budget';
   static const String _lastDismissalKey = 'smart_push_last_dismissal';
+  static const String _unengagedStreakKey = 'smart_push_unengaged_streak';
+  static const String _pendingSendKey = 'smart_push_pending_send';
+  static const String _dailyCountKey = 'smart_push_daily_count';
 
   // 配置常量
   static const int maxAppOpenRecords = 200; // 保留最近 200 条打开记录
-  static const double dailyFatigueBudget = 10.0; // 每日疲劳预算
   static const int cooldownHoursAfterDismiss = 8; // 忽略后冷却小时数
   static const double explorationRate = 0.1; // ε-Greedy 探索率 (10%)
 
-  // 内容类型成本
-  static const Map<String, double> contentTypeCosts = {
-    'yearAgoToday': 1.0, // 纪念日，高价值低成本
-    'sameLocation': 2.0,
-    'monthAgoToday': 2.5,
-    'weekAgoToday': 2.0,
-    'sameWeather': 2.0,
-    'dailyQuote': 1.5, // 每日一言，低优先级但仍有价值
-    'sameTimeOfDay': 3.0, // 此时此刻，最低优先级兜底，成本较高
-    'pastNote': 2.0, // PushMode.both 随机历史笔记
-  };
+  /// 参与度分档的观察窗口
+  static const int engagementWindowDays = 7;
+
+  /// 活跃档门槛：窗口内打开过多少天算活跃
+  static const int activeOpenDaysThreshold = 4;
+
+  /// 刚打开过 App 就别推了 —— 他已经想起来了，再推就是打扰
+  static const int recentOpenSuppressHours = 4;
+
+  /// 连续未点击 → 冷却时长阶梯（小时）
+  ///
+  /// 索引即连续未点击次数，超出末尾一律按最后一档。点一次立刻复位到 0。
+  /// 这是整套防轰炸里性价比最高的单点：用户不理你，你自己就该退。
+  static const List<int> habituationCooldownHours = [0, 2, 8, 24, 72];
+
+  /// 参与效果统计的内容类型
+  static const List<String> _trackedContentTypes = [
+    'yearAgoToday',
+    'monthAgoToday',
+    'weekAgoToday',
+    'sameLocation',
+    'sameWeather',
+    'sameTimeOfDay',
+    'dailyQuote',
+    'pastNote',
+  ];
 
   SmartPushAnalytics({MMKVService? mmkvService})
       : _mmkv = mmkvService ?? MMKVService();
@@ -265,48 +311,9 @@ class SmartPushAnalytics extends ChangeNotifier {
   // 2. 疲劳预防系统
   // ============================================================
 
-  /// 获取推送被跳过的原因（如果可以发送则返回 null）
-  Future<String?> getSkipReason(String contentType) async {
-    // 1. 检查冷却期
-    if (await _isInCooldown()) {
-      return '用户处于冷却期 (Dismissal Cooldown)';
-    }
-
-    // 2. 检查疲劳预算
-    final budget = await _getCurrentBudget();
-    final cost = contentTypeCosts[contentType] ?? 3.0;
-
-    if (budget < cost) {
-      return '疲劳预算不足 (Budget: ${budget.toStringAsFixed(1)} < Cost: $cost)';
-    }
-
-    return null;
-  }
-
-  /// 检查是否可以发送推送（基于疲劳预算）
-  Future<bool> canSendNotification(String contentType) async {
-    final skipReason = await getSkipReason(contentType);
-    if (skipReason != null) {
-      // 保留一个 debug 日志，但主要的告警日志将由调用方记录
-      AppLogger.d('SOTA 疲劳预防：跳过推送，原因: $skipReason');
-      return false;
-    }
-    return true;
-  }
-
   /// 获取内容类型点击学习得分快照，供候选排序使用。
   Future<Map<String, double>> getContentTypeScores() async {
     return Map.unmodifiable(await _getContentScores());
-  }
-
-  /// 消费疲劳预算（发送推送后调用）
-  Future<void> consumeBudget(String contentType) async {
-    final cost = contentTypeCosts[contentType] ?? 3.0;
-    final currentBudget = await _getCurrentBudget();
-    final newBudget = (currentBudget - cost).clamp(0.0, dailyFatigueBudget);
-
-    await _saveBudget(newBudget);
-    AppLogger.d('消费疲劳预算: $cost, 剩余: $newBudget');
   }
 
   /// 记录用户忽略/关闭通知（触发冷却期）
@@ -316,14 +323,23 @@ class SmartPushAnalytics extends ChangeNotifier {
   }
 
   /// 记录用户点击通知（正向反馈）
+  ///
+  /// 只在待结算记录上打个「已点击」标记，真正的分数更新和连续未点击复位
+  /// 交给下一次推送前的 [settlePendingSend]。这样点击与未点击走同一条
+  /// 结算路径，不会出现「点击加了 success 计数但分数没动」的断裂。
   Future<void> recordInteraction(String contentType) async {
-    // 增加该内容类型的成功计数
-    final metrics = await _getNotificationMetrics();
-    final key = '${contentType}_success';
-    metrics[key] = (metrics[key] ?? 0) + 1;
-    await _saveNotificationMetrics(metrics);
+    final raw = _mmkv.getString(_pendingSendKey);
+    if (raw != null && raw.isNotEmpty && raw.startsWith('$contentType|')) {
+      await _mmkv.setString(_pendingSendKey, '$contentType|1');
+      AppLogger.d('记录通知交互: $contentType（已标记待结算为已点击）');
+      return;
+    }
 
-    AppLogger.d('记录通知交互: $contentType');
+    // 待结算记录已被清掉或类型对不上（如冷启动后点击旧通知）：
+    // 至少把连续未点击计数复位 —— 用户明确回应了，不该继续降级。
+    await _setUnengagedStreak(0);
+    await updateContentScore(contentType, true);
+    AppLogger.d('记录通知交互: $contentType（无匹配待结算，直接复位）');
   }
 
   Future<bool> _isInCooldown() async {
@@ -348,40 +364,189 @@ class SmartPushAnalytics extends ChangeNotifier {
     }
   }
 
-  Future<double> _getCurrentBudget() async {
-    try {
-      final data = _mmkv.getString(_fatigueBudgetKey);
-      if (data == null || data.isEmpty) return dailyFatigueBudget;
+  // ============================================================
+  // 2b. 参与度分档 + 配额闸门
+  //
+  // 设计原则：拨盘定天花板，这里只做减法，永远不做加法。
+  // 用户拨到最右也不会突破连续未点击的降级 —— 拨盘是上限，不是承诺。
+  // ============================================================
 
-      final parts = data.split('|');
-      if (parts.length != 2) return dailyFatigueBudget;
-
-      final date = parts[0];
-      final budget = double.tryParse(parts[1]) ?? dailyFatigueBudget;
-
-      // 检查是否是新的一天
-      final today = DateTime.now().toIso8601String().substring(0, 10);
-      if (date != today) {
-        // 新的一天，重置预算
-        await _saveBudget(dailyFatigueBudget);
-        return dailyFatigueBudget;
-      }
-
-      return budget;
-    } catch (e, stack) {
-      AppLogger.e(
-        '解析每日疲劳预算失败',
-        error: e,
-        stackTrace: stack,
-        source: 'SmartPushAnalytics',
-      );
-      return dailyFatigueBudget;
+  /// 最近一次打开 App 的时间
+  Future<DateTime?> getLastAppOpen() async {
+    final records = await _getAppOpenRecords();
+    for (int i = records.length - 1; i >= 0; i--) {
+      final dt = DateTime.tryParse(records[i]);
+      if (dt != null) return dt;
     }
+    return null;
   }
 
-  Future<void> _saveBudget(double budget) async {
+  /// 按最近 [engagementWindowDays] 天打开 App 的**天数**分档
+  ///
+  /// 用天数而不是次数：一天疯狂开 20 次的人和连开 4 天的人，
+  /// 后者才是真的把它当日常，前者可能只是在找某条笔记。
+  Future<EngagementTier> getEngagementTier() async {
+    final records = await _getAppOpenRecords();
+    final now = DateTime.now();
+    final cutoff = now.subtract(const Duration(days: engagementWindowDays));
+
+    final openDays = <String>{};
+    for (final record in records) {
+      final dt = DateTime.tryParse(record);
+      if (dt == null || dt.isBefore(cutoff)) continue;
+      openDays.add(dt.toIso8601String().substring(0, 10));
+    }
+
+    if (openDays.length >= activeOpenDaysThreshold) {
+      return EngagementTier.active;
+    }
+    if (openDays.isNotEmpty) return EngagementTier.light;
+    return EngagementTier.dormant;
+  }
+
+  /// 连续未点击次数
+  Future<int> getUnengagedStreak() async {
+    final raw = _mmkv.getString(_unengagedStreakKey);
+    if (raw == null || raw.isEmpty) return 0;
+    return int.tryParse(raw) ?? 0;
+  }
+
+  Future<void> _setUnengagedStreak(int value) async {
+    await _mmkv.setString(_unengagedStreakKey, value.toString());
+  }
+
+  /// 当前连续未点击次数对应的冷却时长
+  Future<Duration> getHabituationCooldown() async {
+    final streak = await getUnengagedStreak();
+    final index = streak.clamp(0, habituationCooldownHours.length - 1);
+    return Duration(hours: habituationCooldownHours[index]);
+  }
+
+  /// 今日已推送条数
+  Future<int> getTodayPushCount() async {
+    final raw = _mmkv.getString(_dailyCountKey);
+    if (raw == null || raw.isEmpty) return 0;
+
+    final parts = raw.split('|');
+    if (parts.length != 2) return 0;
+
     final today = DateTime.now().toIso8601String().substring(0, 10);
-    await _mmkv.setString(_fatigueBudgetKey, '$today|$budget');
+    if (parts[0] != today) return 0; // 跨天自动归零
+
+    return int.tryParse(parts[1]) ?? 0;
+  }
+
+  Future<void> _incrementTodayPushCount() async {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final count = await getTodayPushCount();
+    await _mmkv.setString(_dailyCountKey, '$today|${count + 1}');
+  }
+
+  /// 结算上一条推送的效果，并推进/复位连续未点击计数。
+  ///
+  /// 必须在**下一次推送发出前**调用：只有到这时才知道用户到底点没点。
+  /// 老代码在发送瞬间就 `updateContentScore(type, false)` 记一次失败，
+  /// 点击时又只加 `_success` 计数不重算分数，导致所有内容分单调趋近 0、
+  /// Thompson Sampling 退化成纯随机 —— 这里把闭环接回来。
+  Future<void> settlePendingSend() async {
+    final raw = _mmkv.getString(_pendingSendKey);
+    if (raw == null || raw.isEmpty) return;
+
+    final parts = raw.split('|');
+    if (parts.length != 2) {
+      await _mmkv.setString(_pendingSendKey, '');
+      return;
+    }
+
+    final contentType = parts[0];
+    final engaged = parts[1] == '1';
+
+    await updateContentScore(contentType, engaged);
+
+    if (engaged) {
+      await _setUnengagedStreak(0);
+      AppLogger.d('结算上一条推送: $contentType 已点击，连续未点击计数复位');
+    } else {
+      final streak = await getUnengagedStreak();
+      await _setUnengagedStreak(streak + 1);
+      AppLogger.d('结算上一条推送: $contentType 未点击，连续未点击 ${streak + 1} 次');
+    }
+
+    await _mmkv.setString(_pendingSendKey, '');
+  }
+
+  /// 登记一条刚发出的推送（等待下次结算）
+  Future<void> markSent(String contentType) async {
+    await _mmkv.setString(_pendingSendKey, '$contentType|0');
+    await _incrementTodayPushCount();
+  }
+
+  /// 裁定这次推送能不能发，以及要多好才配发。
+  ///
+  /// [lastPushTime] 来自 SmartPushSettings，用于最小间隔天数判定。
+  Future<PushAllowance> checkPushAllowance({
+    required PushIntensity intensity,
+    DateTime? lastPushTime,
+  }) async {
+    final tier = await getEngagementTier();
+    final profile = intensity.quotaFor(tier);
+    final todayCount = await getTodayPushCount();
+
+    PushAllowance deny(String reason) => PushAllowance(
+          allowed: false,
+          reason: reason,
+          tier: tier,
+          profile: profile,
+          todayCount: todayCount,
+        );
+
+    // 1. 今日配额
+    if (todayCount >= profile.dailyCap) {
+      return deny(
+        '今日配额已用尽 (${tier.name}/${intensity.name}: $todayCount/${profile.dailyCap})',
+      );
+    }
+
+    // 2. 最小间隔天数（沉睡档靠这个把节奏拉到 3 天/周/更长）
+    if (profile.minGapDays > 0 && lastPushTime != null) {
+      final gap = DateTime.now().difference(lastPushTime).inDays;
+      if (gap < profile.minGapDays) {
+        return deny('未到最小间隔 ($gap 天 < ${profile.minGapDays} 天)');
+      }
+    }
+
+    // 3. 连续未点击衰减
+    final habituation = await getHabituationCooldown();
+    if (habituation > Duration.zero && lastPushTime != null) {
+      final since = DateTime.now().difference(lastPushTime);
+      if (since < habituation) {
+        final streak = await getUnengagedStreak();
+        return deny(
+          '连续 $streak 次未点击，冷却中 (${habituation.inHours}h，已过 ${since.inHours}h)',
+        );
+      }
+    }
+
+    // 4. 刚打开过 App —— 他已经想起来了
+    final lastOpen = await getLastAppOpen();
+    if (lastOpen != null) {
+      final sinceOpen = DateTime.now().difference(lastOpen);
+      if (sinceOpen < const Duration(hours: recentOpenSuppressHours)) {
+        return deny('${sinceOpen.inMinutes} 分钟前刚用过 App，跳过本次推送');
+      }
+    }
+
+    // 5. 被手动忽略后的冷却
+    if (await _isInCooldown()) {
+      return deny('用户处于忽略冷却期');
+    }
+
+    return PushAllowance(
+      allowed: true,
+      tier: tier,
+      profile: profile,
+      todayCount: todayCount,
+    );
   }
 
   // ============================================================
@@ -535,7 +700,7 @@ class SmartPushAnalytics extends ChangeNotifier {
     // 计算整体点击率
     int totalSent = 0;
     int totalEngaged = 0;
-    for (final type in contentTypeCosts.keys) {
+    for (final type in _trackedContentTypes) {
       totalSent += metrics['${type}_total'] ?? 0;
       totalEngaged += metrics['${type}_success'] ?? 0;
     }
@@ -548,7 +713,10 @@ class SmartPushAnalytics extends ChangeNotifier {
       'overallClickRate': (overallCtr * 100).toStringAsFixed(1),
       'contentTypeScores': scores,
       'optimalHours': optimalWindows.map((e) => e.key).toList(),
-      'currentBudget': await _getCurrentBudget(),
+      'engagementTier': (await getEngagementTier()).name,
+      'todayPushCount': await getTodayPushCount(),
+      'unengagedStreak': await getUnengagedStreak(),
+      'habituationCooldownHours': (await getHabituationCooldown()).inHours,
       'isInCooldown': await _isInCooldown(),
     };
   }
@@ -558,7 +726,9 @@ class SmartPushAnalytics extends ChangeNotifier {
     await _mmkv.remove(_appOpenTimesKey);
     await _mmkv.remove(_notificationMetricsKey);
     await _mmkv.remove(_contentScoresKey);
-    await _mmkv.remove(_fatigueBudgetKey);
+    await _mmkv.remove(_unengagedStreakKey);
+    await _mmkv.remove(_pendingSendKey);
+    await _mmkv.remove(_dailyCountKey);
     await _mmkv.remove(_lastDismissalKey);
     AppLogger.i('智能推送分析数据已重置');
     notifyListeners();

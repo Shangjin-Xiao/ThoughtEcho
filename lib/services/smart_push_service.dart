@@ -77,8 +77,6 @@ class SmartPushService extends ChangeNotifier {
       'smart_push_pending_home_daily_quote';
   static const String _dailyQuotePushedDateKey =
       'smart_push_daily_quote_pushed_date';
-  static const String _inactivityQuoteDateKey =
-      'smart_push_inactivity_quote_date';
   static const String _appSettingsKey = 'app_settings';
 
   /// 今日智能推送是否已执行过（任意内容类型）
@@ -602,11 +600,17 @@ class _SmartSelectResult {
   final bool isDailyQuote;
   final String contentType; // 用于 SOTA 效果追踪
 
+  /// 候选价值分（来自 scoreSmartPushCandidate），供当日第 2 条起的质量门槛判定。
+  ///
+  /// 每日一言等非笔记内容为 0 —— 它们永远过不了门槛，只能当天第一条推。
+  final double priority;
+
   _SmartSelectResult({
     required this.note,
     required this.title,
     required this.isDailyQuote,
     this.contentType = 'dailyQuote',
+    this.priority = 0,
   });
 
   factory _SmartSelectResult.empty() => _SmartSelectResult(
