@@ -37,6 +37,30 @@ extension _ThoughterUI on _ThoughterPageState {
     }
   }
 
+  /// 实体键盘上的回车：Enter 发送，Shift+Enter 换行——键盘用户的肌肉记忆。
+  ///
+  /// 只在桌面生效。手机上按下软键盘的回车走的是 textInputAction（已设成换行），
+  /// 不产生按键事件；但个别输入法会补一个 Enter 键码，桌面之外一律不接，
+  /// 免得刚改成换行的回车又变回发送。
+  KeyEventResult _handleComposerKey(FocusNode node, KeyEvent event) {
+    const desktop = {
+      TargetPlatform.linux,
+      TargetPlatform.macOS,
+      TargetPlatform.windows,
+    };
+    if (!desktop.contains(defaultTargetPlatform)) return KeyEventResult.ignored;
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey != LogicalKeyboardKey.enter &&
+        event.logicalKey != LogicalKeyboardKey.numpadEnter) {
+      return KeyEventResult.ignored;
+    }
+    if (HardwareKeyboard.instance.isShiftPressed) return KeyEventResult.ignored;
+    final text = _textController.text;
+    if (_isLoading || text.trim().isEmpty) return KeyEventResult.ignored;
+    unawaited(_handleSubmitted(text));
+    return KeyEventResult.handled;
+  }
+
   void _onInputFocusChanged() {
     if (!mounted || _isInputFocused == _inputFocusNode.hasFocus) {
       return;
@@ -572,31 +596,36 @@ extension _ThoughterUI on _ThoughterPageState {
   ) {
     final toolSnapshot = _toolProcessBefore(message);
     return Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: Row(
-        children: [
-          _MessageAction(
-            icon: Icons.content_copy_outlined,
-            tooltip: l10n.copy,
-            onTap: () => _copyMessage(message, l10n),
-          ),
-          _MessageAction(
-            icon: Icons.refresh,
-            tooltip: l10n.regenerate,
-            // 生成中重来会和进行中的请求打架
-            onTap: _isLoading ? null : () => _regenerateFrom(message),
-          ),
-          if (toolSnapshot != null)
+      padding: const EdgeInsets.only(top: 2),
+      // 按钮的热区自带 8 的横向留白，整行往左挪回去，第一枚图标才和正文
+      // 左边缘对齐——否则这一行看起来比正文缩进了一点。
+      child: Transform.translate(
+        offset: const Offset(-8, 0),
+        child: Row(
+          children: [
             _MessageAction(
-              icon: Icons.account_tree_outlined,
-              tooltip: l10n.viewToolProcess,
-              label: l10n.viewToolProcess,
-              onTap: () => showToolProgressSheet(
-                context,
-                ValueNotifier(toolSnapshot),
-              ),
+              icon: Icons.content_copy_outlined,
+              tooltip: l10n.copy,
+              onTap: () => _copyMessage(message, l10n),
             ),
-        ],
+            _MessageAction(
+              icon: Icons.refresh,
+              tooltip: l10n.regenerate,
+              // 生成中重来会和进行中的请求打架
+              onTap: _isLoading ? null : () => _regenerateFrom(message),
+            ),
+            if (toolSnapshot != null)
+              _MessageAction(
+                icon: Icons.account_tree_outlined,
+                tooltip: l10n.viewToolProcess,
+                label: l10n.viewToolProcess,
+                onTap: () => showToolProgressSheet(
+                  context,
+                  ValueNotifier(toolSnapshot),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -822,8 +851,11 @@ extension _ThoughterUI on _ThoughterPageState {
                   minLines: 1,
                   keyboardType: TextInputType.multiline,
                   textCapitalization: TextCapitalization.sentences,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: _handleSubmitted,
+                  // 软键盘的回车是换行，不是发送：手机上问长一点的问题要分段，
+                  // 回车即发会把半句话打出去，且没有撤回。发送只走右下角那枚键。
+                  // 接了实体键盘（桌面/平板）的场景由 _handleComposerKey 兜底：
+                  // 那里 Enter 发送、Shift+Enter 换行，符合键盘用户的肌肉记忆。
+                  textInputAction: TextInputAction.newline,
                 ),
               ),
               // 动作行：左边是模式开关，右边是发送。和主流 AI 输入框一致，
@@ -1481,23 +1513,29 @@ class _MessageAction extends StatelessWidget {
       message: tooltip,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(6, 6, label == null ? 6 : 8, 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: foreground),
-              if (label != null) ...[
-                const SizedBox(width: 5),
-                Text(
-                  label!,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: foreground,
+        borderRadius: BorderRadius.circular(10),
+        // 手指按的是这块 40×40，不是那枚 16 的图标——原来整个可点区域只有
+        // 28 见方，复制和重来挨在一起，很容易点成隔壁那个。
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: label == null ? 8 : 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 18, color: foreground),
+                if (label != null) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    label!,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: foreground,
+                    ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

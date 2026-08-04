@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -347,9 +348,10 @@ class _ThoughterPageState extends State<ThoughterPage> {
         unawaited(
             _chatSessionService.addMessage(_currentSessionId!, updatedMsg));
       }
-      if (!isLoading) {
-        _isLoading = false;
-      }
+      // 这里不碰 _isLoading：单条消息定稿 ≠ 这一轮结束。Agent 一轮里可能定稿
+      // 多条消息（旁白、工具面板、最终回答），任何一条把整页判成「不在生成」，
+      // 等待光标就会灭掉、停止键变回发送，而后面还有内容要等。一轮的开关归
+      // 发起方管：_finishLoading。
     });
     _scrollToBottom();
   }

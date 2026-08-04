@@ -71,12 +71,14 @@ extension _ThoughterWorkflow on _ThoughterPageState {
             'title': title,
           }),
         );
+        _finishLoading();
       },
       onError: (error) {
         _flushStreamUpdate();
         _cancelStreamUpdate();
         _updateMessage(aiMsgId, l10n.aiResponseError(error.toString()),
             isLoading: false);
+        _finishLoading();
       },
     );
   }

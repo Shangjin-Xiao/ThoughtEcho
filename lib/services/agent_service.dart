@@ -292,7 +292,11 @@ class AgentService extends ChangeNotifier {
 
     try {
       final provider = await _getProvider();
-      final systemPrompt = _buildSystemPrompt();
+      final systemPrompt = _buildSystemPrompt(
+        lastHistoryAt: history?.isNotEmpty == true
+            ? history!.last.timestamp
+            : null,
+      );
       final messages = _buildMessages(
         systemPrompt: systemPrompt,
         history: history,
@@ -1092,8 +1096,11 @@ class AgentService extends ChangeNotifier {
     return results;
   }
 
-  /// 构建系统提示词（不包含用户数据）
-  String _buildSystemPrompt() {
+  /// 构建系统提示词（不包含用户数据）。
+  ///
+  /// [lastHistoryAt] 是历史里最后一条消息的时间，用来判断这是不是一个隔了很久
+  /// 才被重新打开的旧会话。
+  String _buildSystemPrompt({DateTime? lastHistoryAt}) {
     final localeCode = _settingsService.localeCode?.trim().toLowerCase();
     final languageGuidance = switch (localeCode) {
       String code when code.startsWith('en') =>
@@ -1105,14 +1112,18 @@ class AgentService extends ChangeNotifier {
       _ => '应用语言跟随系统。优先跟随用户本轮使用的语言；语言不明确时使用中文。',
     };
 
-    final nowDescription = describeNow(DateTime.now());
+    final now = DateTime.now();
+    final nowDescription = describeNow(now);
+    final historyGap = lastHistoryAt == null
+        ? null
+        : describeHistoryGap(lastHistoryAt, now);
 
     return '''
-你是 ThoughtEcho（心迹）的 Thoughter。帮助用户理解、检索和整理自己的笔记，并在需要时查询外部信息。回答要准确、克制、自然，不编造用户经历或笔记内容。
+你叫 Thoughter，是笔记应用 ThoughtEcho（心迹）里的 AI 助手——ThoughtEcho 是这个应用的名字，不是你的名字，被问起时说自己是 Thoughter。你帮助用户理解、检索和整理自己的笔记，并在需要时查询外部信息。回答要准确、克制、自然，不编造用户经历或笔记内容。
 
 ## 当前运行环境
 - 现在是 $nowDescription。涉及"今天""最近""上周""去年"等相对时间时，以此为基准换算成具体日期再调用工具，不要向用户反问今天几号。
-- 你运行在用户自己的笔记应用里，能看到的只有工具返回的内容。
+- 你运行在用户自己的笔记应用里，能看到的只有工具返回的内容。${historyGap == null ? '' : '\n- $historyGap'}
 
 ## 决策顺序
 1. 无需工具即可可靠回答时，直接回答。
@@ -1186,6 +1197,25 @@ class AgentService extends ChangeNotifier {
     final time = '${_twoDigits(now.hour)}:${_twoDigits(now.minute)}';
     return '$date（${weekdayLabels[now.weekday - 1]}）$time，'
         '当前时段 $periodKey（$periodLabel），设备本地时间';
+  }
+
+  /// 旧会话被重新打开时，说明"上面那些话不是刚刚说的"。
+  ///
+  /// 历史消息喂给模型时只剩角色和正文，时间戳丢了，模型默认整段对话发生在同一
+  /// 时刻，于是把上次的"今天"当成今天。隔了大半天以上才补这一句，当天接着聊
+  /// 不啰嗦。
+  ///
+  /// 返回 null 表示间隔不值得提。
+  @visibleForTesting
+  static String? describeHistoryGap(DateTime lastMessageAt, DateTime now) {
+    final gap = now.difference(lastMessageAt);
+    if (gap.inHours < 8) return null;
+    final span = gap.inDays >= 1 ? '${gap.inDays} 天前' : '${gap.inHours} 小时前';
+    final date = '${lastMessageAt.year}-${_twoDigits(lastMessageAt.month)}-'
+        '${_twoDigits(lastMessageAt.day)} '
+        '${_twoDigits(lastMessageAt.hour)}:${_twoDigits(lastMessageAt.minute)}';
+    return '这是一段被重新打开的旧对话：上一条消息是 $date（$span）留下的，不是刚刚。'
+        '历史里的"今天""刚才"指的是当时，涉及时间时一律以上面的当前时间重新换算。';
   }
 
   static String _twoDigits(int value) => value.toString().padLeft(2, '0');

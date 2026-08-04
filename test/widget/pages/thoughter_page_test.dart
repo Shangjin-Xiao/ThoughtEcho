@@ -1312,6 +1312,46 @@ void main() {
       expect(find.byKey(const ValueKey('ai_assistant_waiting')), findsNothing);
     });
 
+    // 一轮里 AI 常常先说一句旁白、再调工具，工具跑完到最终回答之间还要等很久。
+    // 这段等待期一样不能空着，光标要一直顶到最终回答的第一个字。
+    testWidgets('cursor stays through the wait after tools finish',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        simulateToolProgress: true,
+        preToolText: '我看看你最近写了什么。',
+        toolProgressDelay: const Duration(milliseconds: 20),
+        postToolDelay: const Duration(milliseconds: 400),
+      );
+      await settingsService.setExploreAiAssistantMode(ThoughterPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _submitInput(tester, '帮我看看我最近都写了什么内容');
+      // 工具已经跑完、最终回答还没开始的那段空窗
+      await tester.pump(const Duration(milliseconds: 120));
+
+      expect(
+        find.byKey(const ValueKey('ai_assistant_waiting')),
+        findsOneWidget,
+      );
+      // 这一轮还没结束，按钮得还是「停止」
+      expect(find.byIcon(Icons.stop_rounded), findsOneWidget);
+
+      await _settleAgentTurn(tester);
+      expect(find.byKey(const ValueKey('ai_assistant_waiting')), findsNothing);
+    });
+
     testWidgets('agent tool panel shows human summary instead of raw payload',
         (tester) async {
       final agentService = _FakeAgentService(

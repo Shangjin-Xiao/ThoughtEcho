@@ -4,6 +4,7 @@ extension _ThoughterSession on _ThoughterPageState {
   void _initStateImpl() {
     _currentMode = _entryConfig.defaultMode;
     _inputFocusNode.addListener(_onInputFocusChanged);
+    _inputFocusNode.onKeyEvent = _handleComposerKey;
     _scrollController.addListener(_onScrollPositionChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // 探索摘要不依赖数据库或 AI 服务，先显示，避免初始化异常吞掉首条消息。

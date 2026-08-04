@@ -100,6 +100,28 @@ void main() {
       expect(text, contains('afternoon'));
     });
 
+    // 旧会话被重新打开时，历史里的"今天"不是现在的今天。
+    test('flags a reopened session with the elapsed gap', () {
+      final text = AgentService.describeHistoryGap(
+        DateTime(2026, 7, 20, 9, 30),
+        DateTime(2026, 7, 29, 15, 4),
+      );
+
+      expect(text, isNotNull);
+      expect(text, contains('2026-07-20 09:30'));
+      expect(text, contains('9 天前'));
+    });
+
+    test('stays quiet when the conversation is still fresh', () {
+      expect(
+        AgentService.describeHistoryGap(
+          DateTime(2026, 7, 29, 12, 0),
+          DateTime(2026, 7, 29, 15, 4),
+        ),
+        isNull,
+      );
+    });
+
     test('maps late night hours to the midnight period', () {
       expect(
         AgentService.describeNow(DateTime(2026, 1, 1, 2, 30)),
