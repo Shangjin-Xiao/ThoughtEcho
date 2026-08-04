@@ -42,10 +42,10 @@ void main() {
 
       // 应该只有最后 100 条
       expect(errors.length, 100);
-      // 第一条应该是 index = 5 (最老的 0-4 被移除了)
-      expect(errors.first['index'], 5);
-      // 最后一条应该是 index = 104
-      expect(errors.last['index'], 104);
+      expect(
+        errors.map((error) => error['index']),
+        orderedEquals(List<int>.generate(100, (index) => index + 5)),
+      );
     });
   });
 }
