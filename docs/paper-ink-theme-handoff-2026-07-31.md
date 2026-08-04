@@ -110,10 +110,61 @@ CustomPaint 是实打实的开销）。取值：纸墨 26 / 0.55，material 与�
 理由：用户本来就能给单条笔记选卡片颜色（`quote.colorHex`），
 再按标签自动上纸色会和用户的手动选择打架。
 
-### 4. 字重与间距令牌
+### 4. 排版令牌（2026-08-04 已完成）
 
-Komi Store 值得学的一点：把字重、间距也做成主题令牌。衬线体在小字号下偏细，
-纸墨风格可能需要比 Material 稍重的正文字重。目前 `ThemeStyleForm` 没有这两项。
+用户真机反馈「可读性差、缺点味道」，定位到三个互相独立的根因，一并修掉。
+新增两个令牌 `ThemeStyleForm.bodyLineHeight` / `variableWeightCompensation`。
+
+**根因一：字重补偿打在了错的字体上。** `AppTheme._fixAndroidVariableFontWeight`
+把 Android 正文从 w400 压到 350，那是为**黑体**（Impeller 精准映射 wght 轴后
+Roboto 变粗）做的补偿，却跑在换字体**之前**，衬线体照单全收 → 发灰发虚。
+现在补偿强度是令牌：material 为 1（全额，像素不变），两套手工风格为 0
+（保留 M3 原生 400）。设 0 后 Android 与 iOS/桌面（本来就不跑补偿）字重才一致。
+
+**根因二：行高是给黑体调的。** 中文衬线字面率高、笔画密，M3 的 1.5 偏挤。
+`bodyLineHeight`：material 1.5（M3 原值）、纸墨 1.75、素笺 1.6。
+只作用于 `body*` 三级，`bodyLarge` 直接取值，另两级按同比例缩放 M3 默认值。
+
+**根因三（味道）：横线和文字压根没对齐。** `ruleSpacing` 曾写死 26，而正文行高是
+16×1.5=24，每往下一行文字就相对横线漂 2px，四五行后完全骑到线上——看起来是
+「卡片背了一张格子图」而不是「字写在纸上」。现在 `ruleSpacing` 从
+`_bodyLargeFontSize * _paperLineHeight` 推导（= 28），不允许再各写各的。
+不变量固化在 `theme_style_contrast_test.dart`。
+
+#### 富文本这条路要单独处理（重要）
+
+**quill 的段落样式不继承 `textTheme`。** `DefaultStyles.getInstance` 的 `baseStyle`
+是从 `DefaultTextStyle` 拷的（所以**字体族、颜色确实跟着主题走**——用户观察正确），
+但 `fontSize` 和 `height` 被**硬写成 16 / 1.15**。1.15 比 Material 的 1.5 还挤得多，
+是可读性问题里最大的一块，且与主题无关（Material 下同样挤，只是黑体扛得住）。
+
+修法在 `quote_content_widget.dart`：build 时复刻 quill 的 baseStyle
+（`DefaultTextStyle.of(context).style.merge(style)`），只把 height 换成主题下发的值，
+经 `customStyles.paragraph` 注入。两个坑：
+
+- **paragraph 必须给全 color/fontSize**：`TextLine` 用 `RichText` 渲染，它**不继承**
+  `DefaultTextStyle`。整体替换 paragraph 后缺 color 会在暗色模式下渲染成黑字。
+  所以是「拿到等效 base 再 copyWith」，不能凭空构造 `TextStyle(height: x)`。
+- **`_staticEditorConfig` 不能再全静态**：customStyles 随主题和笔记颜色变。
+  改成静态基底（`embedBuilders` 是唯一贵的东西，不随主题变）+ 一条 memo。
+  用 memo 而不是 Map 是因为同屏卡片正文样式几乎总是同一个，命中率极高，
+  又不会像按颜色做键的 Map 那样无界增长。
+
+另外 `QuoteContent.estimatedLineHeight`（富文本折叠估算）原本是 `const 24.0`。
+纯文本走 `TextPainter` 实测会自动跟上，**富文本拿不到 context 只能静态估算**，
+所以它改成全局值、由 build 回填，并且**进了 `_HeightEstimateCacheKey`**——
+否则换主题后会读到上一套风格算出来的高度，把展开按钮判错。
+
+#### 没做的部分
+
+- **横线只做了间距对齐，没做相位对齐。** 间距等于行高后，文字与横线的相对偏移
+  已经恒定（不再逐行漂），这是绝大部分收益。要让文字精确「坐」在线上还需要给
+  `PaperRuleBackground` 传 `topInset`，而卡片顶部结构随展开/选择模式变化，
+  算不准反而更糟，先不做。
+- **每日一言卡（`sliding_card.dart`）的横线对不齐是设计使然**：正文是外部传入的
+  居中大字，相位随内容长度变，做不到对齐。不要试图在那里对齐。
+- **富文本字号仍硬写 16**，没跟着 `bodyLarge` 走。改它会动到所有富文本笔记的
+  视觉和高度估算缓存，风险大于收益，留着。
 
 ## 三、已知的不一致与遗留
 
@@ -122,7 +173,8 @@ Komi Store 值得学的一点：把字重、间距也做成主题令牌。衬线
   （原值 24 与 material 的 dialogRadius 精确相等，material 下像素不变）。
   `thinking_widget.dart` 顶层那个 `const BorderRadius _bubbleShape` 已改成取 context 的函数。
   面板内部三处 12 圆角一并迁到 `buttonRadius`，否则 paper 下会出现内圆大于外圆的破相。
-- **纸墨和素笺的字体相同**，只靠颜色和圆角区分。如果两套要拉开更多差距，字体是下一个抓手。
+- **纸墨和素笺的字体族仍然相同**，但 2026-08-04 起行高不同了（1.75 / 1.6），
+  加上纸墨独有的横线，两套风格终于不只是颜色和圆角的差别。
 - **年度报告未迁移**：`annual_report_page.dart` 仍用 `AppTheme.*Radius` 静态值。
   产品上已废弃，**不要动**。
 

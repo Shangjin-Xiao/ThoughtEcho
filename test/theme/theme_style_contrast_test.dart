@@ -284,6 +284,43 @@ void main() {
       }
     });
 
+    test('纸张横线间距必须等于正文行高，否则文字会逐行漂移', () {
+      // 曾经 ruleSpacing 写死 26 而正文行高是 16×1.5=24，每行漂 2px，
+      // 几行之后文字就骑到线上，看起来像「卡片背了一张格子图」。
+      // 横线间距只能从行高推导，不能各写各的。
+      for (final style in ThemeStyle.values) {
+        final form = style.form;
+        if (form.ruleSpacing == 0) continue;
+        expect(
+          form.ruleSpacing,
+          closeTo(16.0 * form.bodyLineHeight, 0.01),
+          reason: '${style.name} 的横线间距和正文行高对不上',
+        );
+      }
+    });
+
+    test('衬线风格不吃黑体的减重补偿，且正文行高比 Material 松', () {
+      // 减重补偿是为黑体在 Impeller 下变粗做的；衬线体横画本来就细，
+      // 再减 50 就发灰发虚——这是手工风格「可读性差」的直接原因。
+      for (final style in ThemeStyle.values) {
+        final form = style.form;
+        if (form.fontFamily == null) continue;
+        expect(
+          form.variableWeightCompensation,
+          0,
+          reason: '${style.name} 用了衬线体却仍在减重',
+        );
+        expect(
+          form.bodyLineHeight,
+          greaterThan(ThemeStyleForm.material.bodyLineHeight),
+          reason: '${style.name} 用衬线体就得比黑体的行高松',
+        );
+      }
+      // Material 保持全额补偿，行为一行不变。
+      expect(ThemeStyleForm.material.variableWeightCompensation, 1);
+      expect(ThemeStyleForm.material.bodyLineHeight, 1.5);
+    });
+
     test('行距不插值，避免过渡中途出现极密的横线', () {
       final a =
           AppShapeTokens.fromForm(ThemeStyleForm.material, Brightness.light);

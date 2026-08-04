@@ -34,12 +34,36 @@ class QuoteContent extends StatelessWidget {
     this.needsExpansionOverride,
   });
 
-  // Flutter 3.41+ Android (Impeller + 精准 wght 轴) 下 FontWeight.bold (w700)
-  // 渲染明显偏粗。在 Android 上注入 customStyles 将 bold 降为 w600，
-  // 标题按比例降档，使视觉接近升级前效果。
-  static quill.DefaultStyles? _buildAndroidCustomStyles() {
-    if (kIsWeb || !Platform.isAndroid) return null;
+  /// quill 的段落基准样式**不继承** `textTheme`：`DefaultStyles.getInstance` 里
+  /// `baseStyle` 虽然是从 `DefaultTextStyle` 拷出来的（所以字体族、颜色跟着主题走），
+  /// 但 `fontSize` 和 `height` 被硬写成 16 / **1.15**。
+  ///
+  /// 1.15 对中文正文太挤，换成衬线体后尤其闷。这里把行高换成 [paragraphStyle] 带的值
+  /// （它来自 `textTheme.bodyLarge`，即 `ThemeStyleForm.bodyLineHeight` 令牌），
+  /// 让富文本笔记和纯文本笔记、以及纸张横线间距，全部由同一个令牌决定。
+  ///
+  /// **必须给全 color/fontSize**：`TextLine` 用的是 `RichText`，它不继承
+  /// `DefaultTextStyle`，paragraph 整体替换后缺 color 会在暗色模式下渲染成黑字。
+  /// 所以这里是「拿到等效 base 再 copyWith」，不是凭空构造。
+  static quill.DefaultStyles? _buildCustomStyles(TextStyle? paragraphStyle) {
+    final paragraph = paragraphStyle == null
+        ? null
+        : quill.DefaultTextBlockStyle(
+            paragraphStyle,
+            const quill.HorizontalSpacing(0, 0),
+            quill.VerticalSpacing.zero,
+            quill.VerticalSpacing.zero,
+            null,
+          );
+    // Android 之外只需要段落行高这一项。
+    if (kIsWeb || !Platform.isAndroid) {
+      return paragraph == null ? null : quill.DefaultStyles(paragraph: paragraph);
+    }
+    // Flutter 3.41+ Android (Impeller + 精准 wght 轴) 下 FontWeight.bold (w700)
+    // 渲染明显偏粗。在 Android 上注入 customStyles 将 bold 降为 w600，
+    // 标题按比例降档，使视觉接近升级前效果。
     return quill.DefaultStyles(
+      paragraph: paragraph,
       bold: const TextStyle(fontWeight: FontWeight.w500),
       h1: quill.DefaultTextBlockStyle(
         const TextStyle(
@@ -83,7 +107,8 @@ class QuoteContent extends StatelessWidget {
     );
   }
 
-  // 性能优化：静态缓存 config，避免每次 build 创建
+  // 性能优化：静态缓存 config，避免每次 build 创建。
+  // embedBuilders 是这里唯一贵的东西，它不随主题变化，所以留在静态基底上。
   static final quill.QuillEditorConfig _staticEditorConfig =
       quill.QuillEditorConfig(
     enableInteractiveSelection: false,
@@ -95,11 +120,34 @@ class QuoteContent extends StatelessWidget {
     padding: EdgeInsets.zero,
     expands: false,
     scrollable: false,
-    customStyles: _buildAndroidCustomStyles(),
   );
 
+  // 段落样式随主题（行高）和笔记颜色变化，没法再全静态。
+  // 用一条 memo 而不是 Map：同屏卡片的正文样式几乎总是同一个，命中率极高，
+  // 又不会像按颜色做键的 Map 那样无界增长。
+  static TextStyle? _memoParagraphStyle;
+  static quill.QuillEditorConfig? _memoEditorConfig;
+
+  static quill.QuillEditorConfig _editorConfigFor(TextStyle? paragraphStyle) {
+    final cached = _memoEditorConfig;
+    if (cached != null && _memoParagraphStyle == paragraphStyle) return cached;
+    final config = _staticEditorConfig.copyWith(
+      customStyles: _buildCustomStyles(paragraphStyle),
+    );
+    _memoParagraphStyle = paragraphStyle;
+    _memoEditorConfig = config;
+    return config;
+  }
+
   static const double collapsedContentMaxHeight = 160.0;
-  static const double _estimatedLineHeight = 24.0;
+  /// 富文本折叠估算用的行高（逻辑像素）。
+  ///
+  /// 纯文本走 `TextPainter` 实测，自动跟着 `style` 走；富文本只能静态估算，
+  /// 拿不到 context，所以行高在这里以全局值的形式跟随主题——由 [build] 用
+  /// 实际段落样式回填。初值是 Material 下的 16×1.5。
+  ///
+  /// 它进了 `_HeightEstimateCacheKey`，所以换主题后旧估算不会被复用。
+  static double estimatedLineHeight = 24.0;
   static const double _lineSpacing = 4.0;
   static const int _averageCharsPerLine = 28;
   static const double _estimatedImageHeight = 200.0;
@@ -445,7 +493,7 @@ class QuoteContent extends StatelessWidget {
 
   static double _estimatePlainTextHeight(String content) {
     if (content.trim().isEmpty) {
-      return _estimatedLineHeight;
+      return estimatedLineHeight;
     }
 
     final lines = content.split('\n');
@@ -454,7 +502,7 @@ class QuoteContent extends StatelessWidget {
     for (final rawLine in lines) {
       final line = rawLine.trim();
       if (line.isEmpty) {
-        height += _estimatedLineHeight * 0.5;
+        height += estimatedLineHeight * 0.5;
         continue;
       }
 
@@ -466,7 +514,7 @@ class QuoteContent extends StatelessWidget {
         approxLines = 1;
       }
 
-      height += approxLines * _estimatedLineHeight;
+      height += approxLines * estimatedLineHeight;
     }
 
     if (lines.length > 1) {
@@ -494,7 +542,7 @@ class QuoteContent extends StatelessWidget {
             } else if (insert.containsKey('audio')) {
               height += _estimatedAudioHeight;
             } else {
-              height += _estimatedLineHeight;
+              height += estimatedLineHeight;
             }
             continue;
           }
@@ -737,7 +785,7 @@ class QuoteContent extends StatelessWidget {
         } else if (insert.containsKey('audio')) {
           height += _estimatedAudioHeight;
         } else {
-          height += _estimatedLineHeight;
+          height += estimatedLineHeight;
         }
       }
     }
@@ -843,7 +891,7 @@ class QuoteContent extends StatelessWidget {
       if (insert.containsKey('audio')) {
         return _estimatedAudioHeight;
       }
-      return _estimatedLineHeight;
+      return estimatedLineHeight;
     }
     if (insert == null) {
       return 0;
@@ -859,7 +907,7 @@ class QuoteContent extends StatelessWidget {
       return '';
     }
 
-    final approxLines = (remainingHeight / _estimatedLineHeight).floor();
+    final approxLines = (remainingHeight / estimatedLineHeight).floor();
     final charLimit =
         (approxLines.clamp(1, 12) * _averageCharsPerLine).clamp(1, text.length);
     return String.fromCharCodes(text.runes.take(charLimit));
@@ -1062,11 +1110,23 @@ class QuoteContent extends StatelessWidget {
       ),
     );
 
+    // 复刻 quill 的 baseStyle（DefaultTextStyle + 硬写的 fontSize 16），
+    // 但行高改用主题下发的值——见 _buildCustomStyles 的注释。
+    // decoration 必须显式清掉，否则 DefaultTextStyle 里的下划线会漏进正文。
+    final quillBaseStyle = DefaultTextStyle.of(context).style.merge(style);
+    final paragraphStyle = quillBaseStyle.copyWith(
+      fontSize: 16,
+      height: quillBaseStyle.height ?? 1.15,
+      decoration: TextDecoration.none,
+    );
+    // 富文本的折叠估算拿不到 context，只能靠这里把当前行高回填给静态估算器。
+    estimatedLineHeight = paragraphStyle.fontSize! * paragraphStyle.height!;
+
     Widget richTextEditor = quill.QuillEditor(
       controller: controllerSet.quillController,
       scrollController: controllerSet.scrollController,
       focusNode: controllerSet.focusNode,
-      config: _staticEditorConfig,
+      config: _editorConfigFor(paragraphStyle),
     );
 
     if (style != null) {
@@ -1200,6 +1260,7 @@ class _HeightEstimateCacheKey {
   const _HeightEstimateCacheKey({
     required this.contentSignature,
     required this.isRichText,
+    required this.lineHeight,
   });
 
   factory _HeightEstimateCacheKey.fromQuote(Quote quote) {
@@ -1209,22 +1270,27 @@ class _HeightEstimateCacheKey {
     return _HeightEstimateCacheKey(
       contentSignature: Object.hash(content.hashCode, content.length),
       isRichText: richContent,
+      // 估算行高随主题变化，切换风格后同一条笔记的估算结果不同，
+      // 必须进键，否则会读到上一套风格算出来的高度、把展开按钮判错。
+      lineHeight: QuoteContent.estimatedLineHeight,
     );
   }
 
   final int contentSignature;
   final bool isRichText;
+  final double lineHeight;
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is _HeightEstimateCacheKey &&
         other.contentSignature == contentSignature &&
-        other.isRichText == isRichText;
+        other.isRichText == isRichText &&
+        other.lineHeight == lineHeight;
   }
 
   @override
-  int get hashCode => Object.hash(contentSignature, isRichText);
+  int get hashCode => Object.hash(contentSignature, isRichText, lineHeight);
 }
 
 class _HeightEstimateCacheEntry {

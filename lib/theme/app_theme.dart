@@ -92,68 +92,96 @@ class AppTheme with ChangeNotifier {
   //   详见 squad/font_issue_handoff.md。
   //
   // 平台字体优化入口（目前仅 Windows 生效）
-  static TextTheme _fixAndroidVariableFontWeight(TextTheme base) {
+  static TextTheme _fixAndroidVariableFontWeight(
+    ThemeStyleForm form,
+    TextTheme base,
+  ) {
     if (kIsWeb) return base;
     if (!Platform.isAndroid) return base;
+    // 补偿针对的是**黑体**变粗。用衬线体的风格把 variableWeightCompensation 设 0，
+    // 走这里直接返回，保留 M3 原生字重——衬线体再减重就发灰发虚了。
+    // 判据是令牌取值，不是风格身份。
+    if (form.variableWeightCompensation <= 0) return base;
     // Flutter 3.41+ Impeller + FontWeight 精准映射 wght 轴，Android 字体视觉变粗。
-    // M3 默认字重与补偿：
-    //   body*       → w400 → FontWeight(350)：正文/设置项偏重，降至 350 还原旧视觉
-    //   titleMedium/Small → w500 → w400
-    //   label*      → w500 → w400
-    //   display*/headline*/titleLarge → w400 → FontWeight(350)（大字号同样偏重）
+    // M3 默认字重与补偿量（补偿满强度时的取值就是括号里的结果）：
+    //   body*       → w400 −50 → 350：正文/设置项偏重，降至 350 还原旧视觉
+    //   titleMedium/Small → w500 −50 → 450
+    //   labelLarge  → w500 −50 → 450；labelMedium/Small → w500 −100 → 400
+    //   display*/headline*/titleLarge → w400 −50 → 350（大字号同样偏重）
     // FontWeight(350) 是 Flutter 3.44 支持的任意整数值，引擎映射到 wght=350。
+    final strength = form.variableWeightCompensation.clamp(0.0, 1.0);
+    FontWeight w(int m3Default, int delta) =>
+        FontWeight((m3Default + delta * strength).round());
+    final large = w(400, -50);
+    final medium = w(500, -50);
     return base.copyWith(
-      displayLarge: base.displayLarge?.copyWith(fontWeight: FontWeight(350)),
-      displayMedium: base.displayMedium?.copyWith(fontWeight: FontWeight(350)),
-      displaySmall: base.displaySmall?.copyWith(fontWeight: FontWeight(350)),
-      headlineLarge: base.headlineLarge?.copyWith(fontWeight: FontWeight(350)),
-      headlineMedium:
-          base.headlineMedium?.copyWith(fontWeight: FontWeight(350)),
-      headlineSmall: base.headlineSmall?.copyWith(fontWeight: FontWeight(350)),
-      titleLarge: base.titleLarge?.copyWith(fontWeight: FontWeight(350)),
-      titleMedium: base.titleMedium?.copyWith(fontWeight: FontWeight(450)),
-      titleSmall: base.titleSmall?.copyWith(fontWeight: FontWeight(450)),
-      bodyLarge: base.bodyLarge?.copyWith(fontWeight: FontWeight(350)),
-      bodyMedium: base.bodyMedium?.copyWith(fontWeight: FontWeight(350)),
-      bodySmall: base.bodySmall?.copyWith(fontWeight: FontWeight(350)),
-      labelLarge: base.labelLarge?.copyWith(fontWeight: FontWeight(450)),
-      labelMedium: base.labelMedium?.copyWith(fontWeight: FontWeight(400)),
-      labelSmall: base.labelSmall?.copyWith(fontWeight: FontWeight(400)),
+      displayLarge: base.displayLarge?.copyWith(fontWeight: large),
+      displayMedium: base.displayMedium?.copyWith(fontWeight: large),
+      displaySmall: base.displaySmall?.copyWith(fontWeight: large),
+      headlineLarge: base.headlineLarge?.copyWith(fontWeight: large),
+      headlineMedium: base.headlineMedium?.copyWith(fontWeight: large),
+      headlineSmall: base.headlineSmall?.copyWith(fontWeight: large),
+      titleLarge: base.titleLarge?.copyWith(fontWeight: large),
+      titleMedium: base.titleMedium?.copyWith(fontWeight: medium),
+      titleSmall: base.titleSmall?.copyWith(fontWeight: medium),
+      bodyLarge: base.bodyLarge?.copyWith(fontWeight: large),
+      bodyMedium: base.bodyMedium?.copyWith(fontWeight: large),
+      bodySmall: base.bodySmall?.copyWith(fontWeight: large),
+      labelLarge: base.labelLarge?.copyWith(fontWeight: medium),
+      labelMedium: base.labelMedium?.copyWith(fontWeight: w(500, -100)),
+      labelSmall: base.labelSmall?.copyWith(fontWeight: w(500, -100)),
     );
   }
 
-  /// 给整套 TextTheme 套上风格字体。
+  /// 给整套 TextTheme 套上风格的字体族与正文行高。
   ///
   /// 手工风格指向系统自带的中文衬线体，**不打包任何字体文件**：`fontFamily` 命中不了
   /// 就沿 `fontFamilyFallback` 逐个回退，最后回落到系统默认，不会出现豆腐块。
-  /// material 风格 [ThemeStyleForm.fontFamily] 为 null，原样返回，行为一行不变。
+  ///
+  /// 行高只改 `body*` 三级——标题和标签用的是紧排，跟着放松会显得散。
+  /// `bodyLarge` 直接取 [ThemeStyleForm.bodyLineHeight]，另外两级按同一比例缩放
+  /// 各自的 M3 默认值，避免三级正文被压成同一个行高。
+  ///
+  /// material 风格两项都是恒等取值（`fontFamily` 为 null、行高比例为 1），像素不变。
   ///
   /// 注意与 `_createPlatformTextTheme` 的顺序：那一层给 Windows 补的是**黑体**回退链，
   /// 这一层要盖在它上面，否则 Windows 上会被雅黑抢回去。
-  static TextTheme _applyStyleFont(ThemeStyleForm form, TextTheme base) {
+  static TextTheme _applyStyleTypography(ThemeStyleForm form, TextTheme base) {
     final family = form.fontFamily;
-    if (family == null) return base;
     final fallback = form.fontFamilyFallback;
-    TextStyle? apply(TextStyle? style) => style?.copyWith(
-          fontFamily: family,
-          fontFamilyFallback: fallback,
-        );
+    final heightScale =
+        form.bodyLineHeight / ThemeStyleForm.material.bodyLineHeight;
+    if (family == null && heightScale == 1) return base;
+
+    // 字体族：全级别统一换。
+    TextStyle? font(TextStyle? style) => family == null
+        ? style
+        : style?.copyWith(fontFamily: family, fontFamilyFallback: fallback);
+
+    // 正文：换字体族之外还要按比例放松行高。fallback 是 M3 的默认值，
+    // 用于 base 没带 height 的情况。
+    TextStyle? body(TextStyle? style, double m3Height) {
+      final styled = font(style);
+      if (heightScale == 1) return styled;
+      return styled?.copyWith(height: (styled.height ?? m3Height) * heightScale);
+    }
+
     return base.copyWith(
-      displayLarge: apply(base.displayLarge),
-      displayMedium: apply(base.displayMedium),
-      displaySmall: apply(base.displaySmall),
-      headlineLarge: apply(base.headlineLarge),
-      headlineMedium: apply(base.headlineMedium),
-      headlineSmall: apply(base.headlineSmall),
-      titleLarge: apply(base.titleLarge),
-      titleMedium: apply(base.titleMedium),
-      titleSmall: apply(base.titleSmall),
-      bodyLarge: apply(base.bodyLarge),
-      bodyMedium: apply(base.bodyMedium),
-      bodySmall: apply(base.bodySmall),
-      labelLarge: apply(base.labelLarge),
-      labelMedium: apply(base.labelMedium),
-      labelSmall: apply(base.labelSmall),
+      displayLarge: font(base.displayLarge),
+      displayMedium: font(base.displayMedium),
+      displaySmall: font(base.displaySmall),
+      headlineLarge: font(base.headlineLarge),
+      headlineMedium: font(base.headlineMedium),
+      headlineSmall: font(base.headlineSmall),
+      titleLarge: font(base.titleLarge),
+      titleMedium: font(base.titleMedium),
+      titleSmall: font(base.titleSmall),
+      bodyLarge: body(base.bodyLarge, 24 / 16),
+      bodyMedium: body(base.bodyMedium, 20 / 14),
+      bodySmall: body(base.bodySmall, 16 / 12),
+      labelLarge: font(base.labelLarge),
+      labelMedium: font(base.labelMedium),
+      labelSmall: font(base.labelSmall),
     );
   }
 
@@ -714,15 +742,17 @@ class AppTheme with ChangeNotifier {
       ],
 
       // Windows 平台字体优化
-      textTheme: _applyStyleFont(
+      textTheme: _applyStyleTypography(
         form,
         _fixAndroidVariableFontWeight(
+          form,
           _createPlatformTextTheme(baseTheme.textTheme),
         ),
       ),
-      primaryTextTheme: _applyStyleFont(
+      primaryTextTheme: _applyStyleTypography(
         form,
         _fixAndroidVariableFontWeight(
+          form,
           _createPlatformTextTheme(baseTheme.primaryTextTheme),
         ),
       ),
@@ -971,15 +1001,17 @@ class AppTheme with ChangeNotifier {
       ],
 
       // Windows 平台字体优化
-      textTheme: _applyStyleFont(
+      textTheme: _applyStyleTypography(
         form,
         _fixAndroidVariableFontWeight(
+          form,
           _createPlatformTextTheme(baseTheme.textTheme),
         ),
       ),
-      primaryTextTheme: _applyStyleFont(
+      primaryTextTheme: _applyStyleTypography(
         form,
         _fixAndroidVariableFontWeight(
+          form,
           _createPlatformTextTheme(baseTheme.primaryTextTheme),
         ),
       ),

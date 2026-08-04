@@ -397,9 +397,11 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       child: LayoutBuilder(
         builder: (context, constraints) {
           final innerTheme = Theme.of(context);
+          // 行高**不在这里写死**：它由 ThemeStyleForm.bodyLineHeight 下发到
+          // textTheme.bodyLarge，纸墨风格的横线间距也是从同一个值推导的。
+          // 一旦在这里 copyWith 覆盖，文字就会和纸张横线错位。
           final contentStyle = innerTheme.textTheme.bodyLarge?.copyWith(
             color: primaryTextColor,
-            height: 1.5,
           );
           final needsExpansion = _needsExpansionForLayout(
             context,

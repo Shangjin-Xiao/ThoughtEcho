@@ -76,6 +76,8 @@ class ThemeStyleForm {
     required this.ruleOpacity,
     required this.fontFamily,
     required this.fontFamilyFallback,
+    required this.bodyLineHeight,
+    required this.variableWeightCompensation,
   });
 
   final double cardRadius;
@@ -114,6 +116,28 @@ class ThemeStyleForm {
   final String? fontFamily;
   final List<String>? fontFamilyFallback;
 
+  /// 正文行高倍数，直接作用于 `bodyLarge`；`bodyMedium` / `bodySmall` 按
+  /// `bodyLineHeight / material.bodyLineHeight` 这个**比例**缩放各自的 M3 默认值，
+  /// 所以一个令牌就能整体调松紧，而不会把三级正文压成同一个行高。
+  ///
+  /// 中文衬线体字面率高、笔画密，M3 给黑体调的 1.5 偏挤，读起来发闷。
+  /// 手工风格放到 1.6–1.75 —— 这是「读着舒服」贡献最大的一项，比字重还明显。
+  ///
+  /// 它同时是 [ruleSpacing] 的来源：横线间距必须等于正文行高，否则文字会逐行
+  /// 相对横线漂移。见 [ruleSpacing] 的注释。
+  final double bodyLineHeight;
+
+  /// Android 可变字重补偿的强度，0 = 不补偿，1 = 全额补偿。
+  ///
+  /// `AppTheme._fixAndroidVariableFontWeight` 那套 400→350 的减重，是为了抵消
+  /// **黑体**（Roboto / Noto Sans CJK）在 Impeller 精准映射 wght 轴后视觉变粗。
+  /// 衬线体横画本来就细，再吃这个减重就会发灰发虚——这正是手工风格「可读性差」
+  /// 的一个根因：补偿写在换字体之前，没有随字体族走。
+  ///
+  /// 所以补偿强度是**令牌取值**而不是风格身份：任何用衬线体的风格设 0 即可，
+  /// 且设 0 后 Android 与 iOS/桌面（本来就不跑补偿）的字重终于一致。
+  final double variableWeightCompensation;
+
   double shadowOpacity(Brightness brightness) =>
       brightness == Brightness.dark ? shadowOpacityDark : shadowOpacityLight;
 
@@ -141,6 +165,10 @@ class ThemeStyleForm {
     'SimSun',
   ];
 
+  /// M3 `bodyLarge` 的字号。[ruleSpacing] 由它乘 [bodyLineHeight] 推导，
+  /// 因为笔记卡片的正文用的就是 `bodyLarge`（`quote_item_widget.dart`）。
+  static const _bodyLargeFontSize = 16.0;
+
   /// 现状：Material 3 默认圆角与投影，系统默认字体。
   static const material = ThemeStyleForm(
     cardRadius: 18,
@@ -156,7 +184,13 @@ class ThemeStyleForm {
     ruleOpacity: 0,
     fontFamily: null,
     fontFamilyFallback: null,
+    // M3 bodyLarge 的默认行高（24/16），写在这里是为了让 material 成为其他风格
+    // 缩放 bodyMedium/bodySmall 的基准，取值本身不改变 material 的任何像素。
+    bodyLineHeight: 1.5,
+    variableWeightCompensation: 1,
   );
+
+  static const _paperLineHeight = 1.75;
 
   /// 纸与墨：纸不该有 18 圆角。小圆角 + 发丝边框 + 极淡投影 + 衬线体。
   static const paper = ThemeStyleForm(
@@ -169,10 +203,17 @@ class ThemeStyleForm {
     shadowOpacityLight: 0.03,
     shadowOpacityDark: 0.14,
     shadowBlur: 6,
-    ruleSpacing: 26,
+    // **必须等于正文行高**，不是随手挑的密度。曾经写死 26，而正文行高是 16×1.5=24，
+    // 每往下一行文字就相对横线漂 2px，四五行后完全骑到线上——看起来是「卡片背了一张
+    // 格子图」而不是「字写在纸上」。间距等于行高时，文字与横线的相对偏移恒定，
+    // 纸感才立得住。
+    ruleSpacing: _bodyLargeFontSize * _paperLineHeight,
     ruleOpacity: 0.55,
     fontFamily: 'serif',
     fontFamilyFallback: _systemSerifFallback,
+    bodyLineHeight: _paperLineHeight,
+    // 衬线体不吃黑体的减重补偿，否则中文正文发灰发虚。
+    variableWeightCompensation: 0,
   );
 
   /// 素笺：比纸墨更硬朗，接近方角，几乎不用投影。
@@ -191,6 +232,10 @@ class ThemeStyleForm {
     ruleOpacity: 0,
     fontFamily: 'serif',
     fontFamilyFallback: _systemSerifFallback,
+    // 比纸墨紧一档：素笺的性格是硬朗、密实。有了行高令牌，两套手工风格终于不只是
+    // 颜色和圆角的差别。仍然比 material 的 1.5 松，因为字体是衬线。
+    bodyLineHeight: 1.6,
+    variableWeightCompensation: 0,
   );
 }
 
