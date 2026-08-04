@@ -1,0 +1,21 @@
+lib/widgets/quote_content_widget.dart
+  s_0a862328397a13::t_28c09d019291df 60-62,145
+lib/theme/app_theme.dart
+  s_0a862328397a13::t_28c09d019291df 166-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "8c5fa4ba4fb3bb38d580cd778700802cebb6e379",
+  "prompts": {},
+  "sessions": {
+    "s_0a862328397a13": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6b848d39-810f-4a50-b104-ce942251f9b3",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
