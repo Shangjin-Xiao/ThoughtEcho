@@ -1,0 +1,36 @@
+docs/agent-handoff-2026-07-31.md
+  s_d6302ce902d470::t_33b1fdac78fc24 323
+  s_d6302ce902d470::t_315bacec8f3857 352-417
+test/unit/services/agent_service_loop_test.dart
+  s_d6302ce902d470::t_8490dedf48ce33 547-548
+  s_d6302ce902d470::t_caa079cf2527e4 507-545,549,554-557
+  s_d6302ce902d470::t_4318ab24a9e49b 546,550-553
+lib/services/agent_service.dart
+  s_d6302ce902d470::t_c1f771fe583325 1328,1330-1333,1335-1338,1343-1359
+  s_d6302ce902d470::t_3e519192ac7de6 815
+  s_d6302ce902d470::t_c9721a8ad1f837 1329,1334,1339-1342
+  s_d6302ce902d470::t_81c574880edd31 98,731,780
+  s_d6302ce902d470::t_a4afbe5b9be115 1360
+test/live/agent_probe.dart
+  s_d6302ce902d470::t_2e1b84b363c19b 462,464-470,558,564
+lib/models/ai_provider_settings.dart
+  s_d6302ce902d470::t_f89f609fc67dd9 90-95
+test/unit/models/ai_provider_settings_test.dart
+  s_d6302ce902d470::t_483d4e2566d217 283-286,302-303
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "cb50fdf1405461b97f17fa759f7fcff54cfd0e0d",
+  "prompts": {},
+  "sessions": {
+    "s_d6302ce902d470": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "85ed5eb2-4d1e-40f3-a86e-8508a20b47f6",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
