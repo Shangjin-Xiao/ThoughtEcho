@@ -1,0 +1,31 @@
+lib/services/weather_service.dart
+  s_e7052d68614cc0::t_3e8dcd59c52d2d 42-53
+lib/pages/note_editor/editor_metadata_location_section.dart
+  s_e7052d68614cc0::t_46d9d41d4405f4 250
+lib/pages/note_editor/editor_location_dialogs.dart
+  s_e7052d68614cc0::t_7a06f5debe0f00 224
+lib/pages/explore/explore_data_loading.dart
+  s_e7052d68614cc0::t_41772d967166a8 294-295,305-309
+lib/pages/explore_page.dart
+  s_e7052d68614cc0::t_0279da45271ded 16
+test/unit/services/weather_service_test.dart
+  s_e7052d68614cc0::t_c95f0e5964cdaa 300-325
+lib/pages/home/home_refresh_coordinator.dart
+  s_e7052d68614cc0::t_86b5d6cb6e4b55 150-153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "eea30bd7562682a507623f3f3813ac4e906b763f",
+  "prompts": {},
+  "sessions": {
+    "s_e7052d68614cc0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b3f3a9f0-9a32-4fc2-88c7-292216017643",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
