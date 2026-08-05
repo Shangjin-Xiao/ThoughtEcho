@@ -44,6 +44,10 @@ extension _ThoughterAgent on _ThoughterPageState {
         isUser: false,
         content: '',
         timestamp: DateTime.now(),
+        // 渲染时 inProgress = isLoading && meta.inProgress，两个标志缺一不可。
+        // 漏掉这个的话，面板建出来的头 50ms（第一次节流更新之前）是静止的，
+        // 明明已经在思考了却显示成一条已完成的记录。
+        isLoading: true,
         metaJson: jsonEncode({
           'type': 'tool_progress',
           'items': [],
@@ -410,6 +414,10 @@ extension _ThoughterAgent on _ThoughterPageState {
     required bool inProgress,
     String? thinkingText,
   }) {
+    // 思考增量走的是 50ms 节流，工具开始/结束和「已经开始回答了」走的是直接写。
+    // 不作废队列里那条旧的思考快照，它会在直接写之后才落地，把 inProgress 顶回
+    // true——现象就是思考早就结束了，转圈却一直转到整段回答生成完。
+    _cancelToolProgressUpdate();
     _setState(() {
       final idx = _messages.indexWhere((m) => m.id == msgId);
       if (idx == -1) return;

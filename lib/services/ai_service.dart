@@ -3,6 +3,7 @@ import 'package:openai_dart/openai_dart.dart' as openai;
 import '../models/quote_model.dart';
 import '../models/chat_message.dart';
 import '../models/ai_provider_settings.dart';
+import '../models/weather_data.dart' show WeatherCodeMapper;
 import '../services/settings_service.dart' show SettingsService;
 import '../services/api_key_manager.dart';
 import '../services/openai_stream_service.dart';
@@ -11,7 +12,9 @@ import '../utils/daily_prompt_generator.dart';
 import '../utils/ai_prompt_manager.dart';
 import '../utils/ai_request_helper.dart';
 import '../utils/app_logger.dart';
+import '../utils/localization_resolver.dart';
 import '../utils/string_utils.dart';
+import '../utils/time_utils.dart';
 import '../gen_l10n/app_localizations.dart';
 import 'web_fetch_service.dart';
 
@@ -42,6 +45,25 @@ class AIService extends ChangeNotifier {
 
   /// 会话标题的输出上限（token）。理由同 [_dailyPromptMaxTokens]。
   static const int _sessionTitleMaxTokens = 512;
+
+  /// 笔记的天气和时间段在库里存的是 key（`partly_cloudy` / `morning`）。
+  /// 那是给筛选和图标用的标识符，不是给人读的文案——原样写进提示词，模型只能
+  /// 照抄英文 key 回来，用户看到的界面却是「多云」。交给模型前先按用户语言翻好。
+  String? _localizedWeather(String? weatherKey) {
+    if (weatherKey == null || weatherKey.isEmpty) return null;
+    return WeatherCodeMapper.getLocalizedDescription(
+      resolveAppLocalizations(_settingsService.localeCode),
+      weatherKey,
+    );
+  }
+
+  String? _localizedDayPeriod(String? dayPeriodKey) {
+    if (dayPeriodKey == null || dayPeriodKey.isEmpty) return null;
+    return TimeUtils.localizedDayPeriodLabel(
+      resolveAppLocalizations(_settingsService.localeCode),
+      dayPeriodKey,
+    );
+  }
 
   Future<void> _validateSettings({bool testNetwork = false}) async {
     try {
@@ -391,9 +413,9 @@ class AIService extends ChangeNotifier {
       sourceAuthor: quote.sourceAuthor,
       sourceWork: quote.sourceWork,
       location: quote.location,
-      weather: quote.weather,
+      weather: _localizedWeather(quote.weather),
       temperature: quote.temperature,
-      dayPeriod: quote.dayPeriod,
+      dayPeriod: _localizedDayPeriod(quote.dayPeriod),
       tagNames: tagNames,
     );
 
@@ -1107,9 +1129,9 @@ class AIService extends ChangeNotifier {
       sourceAuthor: quote.sourceAuthor,
       sourceWork: quote.sourceWork,
       location: quote.location,
-      weather: quote.weather,
+      weather: _localizedWeather(quote.weather),
       temperature: quote.temperature,
-      dayPeriod: quote.dayPeriod,
+      dayPeriod: _localizedDayPeriod(quote.dayPeriod),
     );
 
     return _streamViaOpenAI(

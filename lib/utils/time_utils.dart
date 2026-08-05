@@ -32,7 +32,12 @@ class TimeUtils {
 
   /// 根据时间段 Key 获取本地化标签（新方法，支持国际化）
   static String getLocalizedDayPeriodLabel(BuildContext context, String key) {
-    final l10n = AppLocalizations.of(context);
+    return localizedDayPeriodLabel(AppLocalizations.of(context), key);
+  }
+
+  /// 同 [getLocalizedDayPeriodLabel]，但直接收 [AppLocalizations]。
+  /// Service 和 Agent 工具没有 context，喂给模型的时间段同样要翻译。
+  static String localizedDayPeriodLabel(AppLocalizations l10n, String key) {
     switch (key) {
       case 'dawn':
         return l10n.dayPeriodDawn;
@@ -50,7 +55,7 @@ class TimeUtils {
         // 如果是旧的中文标签，尝试转换
         final reverseMap = dayPeriodKeyToLabel.map((k, v) => MapEntry(v, k));
         if (reverseMap.containsKey(key)) {
-          return getLocalizedDayPeriodLabel(context, reverseMap[key]!);
+          return localizedDayPeriodLabel(l10n, reverseMap[key]!);
         }
         return key;
     }

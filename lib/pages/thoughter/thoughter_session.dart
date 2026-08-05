@@ -426,10 +426,15 @@ extension _ThoughterSession on _ThoughterPageState {
       if (!mounted) return;
 
       final l10n = AppLocalizations.of(context);
+      // dayPeriod / weather 存的是 key，直接拼进开场白会显示成 morning、clear。
       final insightText = _aiService.buildLocalReportInsight(
         periodLabel: l10n.thisWeek,
-        mostTimePeriod: topPeriod,
-        mostWeather: topWeather,
+        mostTimePeriod: topPeriod == null
+            ? null
+            : TimeUtils.localizedDayPeriodLabel(l10n, topPeriod),
+        mostWeather: topWeather == null
+            ? null
+            : WeatherCodeMapper.getLocalizedDescription(l10n, topWeather),
         topTag: topTag,
         activeDays: activeDays,
         noteCount: noteCount,

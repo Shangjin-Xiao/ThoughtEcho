@@ -190,6 +190,7 @@ class _FakeAgentService extends AgentService {
     this.emitSmartResultCard = false,
     this.proposalMetadata = const <String, Object?>{},
     this.responseContent = 'Agent 响应',
+    this.reasoningChunks = const <String>[],
     this.responseChunks = const <String>[],
     this.responseChunkDelay = const Duration(milliseconds: 12),
     this.preToolText,
@@ -213,6 +214,9 @@ class _FakeAgentService extends AgentService {
   /// 提案 artifact 的 metadata，用来构造带标签的提案。
   final Map<String, Object?> proposalMetadata;
   final String responseContent;
+
+  /// 正文之前的推理增量，用来复现「思考完了转圈不停」那条时序。
+  final List<String> reasoningChunks;
   final List<String> responseChunks;
   final Duration responseChunkDelay;
   final String? preToolText;
@@ -316,6 +320,11 @@ class _FakeAgentService extends AgentService {
         ),
       );
       await _delay(postToolDelay);
+    }
+
+    for (final chunk in reasoningChunks) {
+      _emitEvent(AgentReasoningDeltaEvent(chunk));
+      await _delay(const Duration(milliseconds: 12));
     }
 
     // 真实协议：agent 通过 propose_note_edit 工具产出 NoteProposalArtifact，
@@ -1352,6 +1361,70 @@ void main() {
       expect(find.byKey(const ValueKey('ai_assistant_waiting')), findsNothing);
     });
 
+    testWidgets('thinking spinner stops once the answer starts streaming',
+        (tester) async {
+      // 回归：推理增量走 50ms 节流，正文第一个 token 走直接写。直接写没有作废
+      // 队列里那条旧快照时，它会晚一步落地把 inProgress 顶回 true——思考早就
+      // 结束了，转圈却一直转到整段回答生成完。
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        reasoningChunks: const <String>['先想', '一下'],
+        responseChunks: const <String>['开始回答'],
+        responseChunkDelay: const Duration(milliseconds: 600),
+      );
+      await settingsService.setExploreAiAssistantMode(ThoughterPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 不能用 _submitInput：它以 pumpAndSettle 收尾，而转圈是个永不停的动画。
+      await tester.enterText(find.byType(TextField).last, '你怎么看');
+      await tester.pump();
+      tester
+          .widget<IconButton>(
+            find.byKey(const ValueKey('ai_assistant_send_button')),
+          )
+          .onPressed
+          ?.call();
+      await tester.pump();
+
+      // 推理阶段：面板出现且在转
+      for (var i = 0;
+          i < 20 && find.byType(ToolProgressPanel).evaluate().isEmpty;
+          i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(
+        tester
+            .widget<ToolProgressPanel>(find.byType(ToolProgressPanel))
+            .inProgress,
+        isTrue,
+      );
+
+      // 正文已经开始流，且已越过 50ms 节流窗口。这一轮还没结束（回答的下一段
+      // 要 600ms 后才来），但思考已经结束了，面板不该还在转。
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.textContaining('开始回答'), findsOneWidget);
+      expect(find.byIcon(Icons.stop_rounded), findsOneWidget);
+      expect(
+        tester
+            .widget<ToolProgressPanel>(find.byType(ToolProgressPanel))
+            .inProgress,
+        isFalse,
+      );
+
+      await _settleAgentTurn(tester);
+    });
+
     testWidgets('agent tool panel shows human summary instead of raw payload',
         (tester) async {
       final agentService = _FakeAgentService(
@@ -1485,6 +1558,81 @@ void main() {
       await tester.tap(processAction);
       await tester.pumpAndSettle();
       expect(find.text('找到 2 条笔记'), findsOneWidget);
+    });
+
+    // 只思考、一个工具都没调的那一轮：过程记录里只有推理文本
+    void seedThinkingOnlySession(_InMemoryChatSessionService service) {
+      final now = DateTime(2026, 8, 1, 10);
+      service.seedSession(
+        ChatSession(
+          id: 'note-session-thinking-only',
+          sessionType: 'agent',
+          noteId: 'note-1',
+          title: '只想了想',
+          createdAt: now,
+          lastActiveAt: now,
+        ),
+        <app_chat.ChatMessage>[
+          app_chat.ChatMessage(
+            id: 'm-user',
+            content: '你怎么看',
+            isUser: true,
+            role: 'user',
+            timestamp: now,
+          ),
+          app_chat.ChatMessage(
+            id: 'm-thinking',
+            content: '',
+            isUser: false,
+            role: 'assistant',
+            timestamp: now,
+            metaJson: jsonEncode(<String, Object?>{
+              'type': 'tool_progress',
+              'inProgress': false,
+              'items': <Map<String, Object?>>[],
+              'thinkingText': '先想清楚再回答',
+            }),
+          ),
+          app_chat.ChatMessage(
+            id: 'm-answer',
+            content: '我的看法是这样',
+            isUser: false,
+            role: 'assistant',
+            timestamp: now,
+          ),
+        ],
+      );
+    }
+
+    testWidgets('thinking-only turn still exposes its process under the reply',
+        (tester) async {
+      seedThinkingOnlySession(chatSessionService);
+      await settingsService.setNoteAiAssistantMode(ThoughterPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: _FakeAgentService(settingsService: settingsService),
+          child: ThoughterPage(
+            entrySource: ThoughterEntrySource.note,
+            quote: _buildQuote(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+      // 没有工具就别说「查看过程」，那一轮里能看的只有思考
+      final processAction = find.byTooltip(l10n.showThinking);
+      expect(processAction, findsOneWidget);
+      expect(find.byTooltip(l10n.viewToolProcess), findsNothing);
+
+      await tester.tap(processAction);
+      await tester.pumpAndSettle();
+      expect(find.text('先想清楚再回答'), findsOneWidget);
+      // 一个工具都没调，不该报「执行了 0 个操作」
+      expect(find.text(l10n.executedNOperations(0)), findsNothing);
     });
 
     testWidgets('regenerating drops the old answer and re-asks the question',

@@ -46,6 +46,7 @@ List<AgentTool> _buildAgentTools(
     GetLocationWeatherTool(
       locationService: locationService,
       weatherService: weatherService,
+      settingsService: settingsService,
     ),
     GetNoteDetailTool(db),
     WebSearchTool(settingsService),

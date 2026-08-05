@@ -168,16 +168,26 @@ class _ThoughterPageState extends State<ThoughterPage> {
 
   void _flushStreamUpdate() {
     final id = _pendingUpdateId;
-    if (id == null) return;
+    if (id == null) {
+      _cancelStreamUpdate();
+      return;
+    }
+    final content = _pendingContent;
+    final isLoading = _pendingIsLoading;
+    final metaJson = _pendingMetaJson;
+    final state = _pendingState;
+    final thinkingChunks = _pendingThinkingChunks;
+    // 先清空待写内容再落盘：_updateMessage 会把还没落地的节流写作废，
+    // 而这次 flush 正是在落地它，不能被自己清掉又当成"还没写"。
+    _cancelStreamUpdate();
     _updateMessage(
       id,
-      _pendingContent,
-      isLoading: _pendingIsLoading,
-      metaJson: _pendingMetaJson,
-      state: _pendingState,
-      thinkingChunks: _pendingThinkingChunks,
+      content,
+      isLoading: isLoading,
+      metaJson: metaJson,
+      state: state,
+      thinkingChunks: thinkingChunks,
     );
-    _streamThrottleTimer = null;
   }
 
   void _cancelStreamUpdate() {
@@ -214,14 +224,21 @@ class _ThoughterPageState extends State<ThoughterPage> {
 
   void _flushToolProgressUpdate() {
     final msgId = _pendingToolProgressMsgId;
-    if (msgId == null || _pendingToolItems == null) return;
+    final items = _pendingToolItems;
+    if (msgId == null || items == null) {
+      _cancelToolProgressUpdate();
+      return;
+    }
+    final inProgress = _pendingToolProgressInProgress;
+    final thinkingText = _pendingToolProgressThinkingText;
+    // 同 _flushStreamUpdate：落地前先摘掉待写状态。
+    _cancelToolProgressUpdate();
     _updateToolProgressMessage(
       msgId,
-      _pendingToolItems!,
-      inProgress: _pendingToolProgressInProgress,
-      thinkingText: _pendingToolProgressThinkingText,
+      items,
+      inProgress: inProgress,
+      thinkingText: thinkingText,
     );
-    _toolProgressThrottleTimer = null;
   }
 
   void _cancelToolProgressUpdate() {
@@ -332,6 +349,10 @@ class _ThoughterPageState extends State<ThoughterPage> {
     app_chat.MessageState? state,
     List<String>? thinkingChunks,
   }) {
+    // 直接写覆盖节流队列里还没落地的那次更新。否则一次「定稿」写完 isLoading=false
+    // 之后，50ms 内攒下的旧快照会晚一步落地，把 isLoading 又推回 true——正文末尾
+    // 的流式光标从此不灭，操作行也不出现。
+    _cancelStreamUpdate();
     _setState(() {
       final idx = _messages.indexWhere((m) => m.id == id);
       if (idx == -1) return;
