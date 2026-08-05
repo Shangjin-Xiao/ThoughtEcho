@@ -1162,8 +1162,13 @@ extension _ThoughterUI on _ThoughterPageState {
       if (pos != null) {
         try {
           await weatherService.getWeatherData(pos.latitude, pos.longitude);
-        } catch (e) {
-          logDebug('AI 打开编辑器获取天气失败: $e');
+        } catch (e, stack) {
+          logError(
+            'AI 打开编辑器获取天气失败',
+            error: e,
+            stackTrace: stack,
+            source: 'ThoughterUI',
+          );
         }
       }
     }
@@ -1323,8 +1328,13 @@ extension _ThoughterUI on _ThoughterPageState {
               pos.latitude,
               pos.longitude,
             );
-          } catch (e) {
-            logDebug('AI 直接保存获取天气失败: $e');
+          } catch (e, stack) {
+            logError(
+              'AI 直接保存获取天气失败',
+              error: e,
+              stackTrace: stack,
+              source: 'ThoughterUI',
+            );
             includeWeather = false;
           }
         } else {

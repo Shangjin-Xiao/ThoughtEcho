@@ -42,3 +42,7 @@
 ## 2025-10-25 - 🗃️ 黑匣: [完善 FeatureGuideService 模块的结构化日志]
 **异常:** [MMKV读取/写入抛出异常且只使用了粗糙的debugPrint记录，丢失了错误栈与模块上下文]
 **拦截:** [使用 catch (e, stackTrace) 和 logError 封装 MMKV 异常，附带 error, stackTrace 和 source: 'FeatureGuideService' 参数，保存完整的堆栈上下文信息。]
+
+## 2025-10-25 - 🗃️ 黑匣: [完善 UI 及主题模块的结构化日志]
+**异常:** [HomePage 在恢复草稿和加载标签时、AppTheme 在加载各项持久化配置时、以及 ThoughterUI 在请求天气时遇到异常，仅使用了 catch (e) 进行了空捕获或粗糙的 logDebug，丢失了错误堆栈信息以及模块来源标识，使得排查相关功能失效的根因变得困难。]
+**拦截:** [已将上述流程中的 catch (e) 替换为 catch (e, stack)，并使用结构化的 AppLogger.e/logError 进行记录。注入了对应的描述信息、具体的错误对象 error: e、堆栈轨迹 stackTrace: stack，并指定了明确的日志来源模块 source (如 'HomePage', 'AppTheme', 'ThoughterUI')。确认不包含任何隐私数据。]
