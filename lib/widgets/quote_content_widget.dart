@@ -9,6 +9,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../models/quote_model.dart';
+import '../theme/theme_style.dart';
 import '../utils/quill_editor_extensions.dart';
 import 'package:provider/provider.dart';
 import '../services/settings_service.dart';
@@ -34,33 +35,32 @@ class QuoteContent extends StatelessWidget {
     this.needsExpansionOverride,
   });
 
-  /// quill 的段落基准样式**不继承** `textTheme`：`DefaultStyles.getInstance` 里
-  /// `baseStyle` 虽然是从 `DefaultTextStyle` 拷出来的（所以字体族、颜色跟着主题走），
-  /// 但 `fontSize` 和 `height` 被硬写成 16 / **1.15**。
-  ///
-  /// 1.15 对中文正文太挤，换成衬线体后尤其闷。这里把行高换成 [paragraphStyle] 带的值
-  /// （它来自 `textTheme.bodyLarge`，即 `ThemeStyleForm.bodyLineHeight` 令牌），
-  /// 让富文本笔记和纯文本笔记、以及纸张横线间距，全部由同一个令牌决定。
+  /// [paragraphStyle] 由 [QuillThemeTypography.paragraphStyle] 算出：quill 的段落
+  /// 基准样式**不继承** `textTheme`，字号和行高被硬写成 16 / 1.15，必须按令牌纠正，
+  /// 好让富文本笔记、纯文本笔记和纸张横线间距全部由同一组令牌决定。
   ///
   /// **必须给全 color/fontSize**：`TextLine` 用的是 `RichText`，它不继承
   /// `DefaultTextStyle`，paragraph 整体替换后缺 color 会在暗色模式下渲染成黑字。
-  /// 所以这里是「拿到等效 base 再 copyWith」，不是凭空构造。
-  static quill.DefaultStyles? _buildCustomStyles(TextStyle? paragraphStyle) {
-    final paragraph = paragraphStyle == null
-        ? null
-        : quill.DefaultTextBlockStyle(
-            paragraphStyle,
-            const quill.HorizontalSpacing(0, 0),
-            quill.VerticalSpacing.zero,
-            quill.VerticalSpacing.zero,
-            null,
-          );
-    // Android 之外只需要段落行高这一项。
-    if (kIsWeb || !Platform.isAndroid) {
-      return paragraph == null
-          ? null
-          : quill.DefaultStyles(paragraph: paragraph);
+  /// 所以那个方法是「拿到等效 base 再 copyWith」，不是凭空构造。
+  ///
+  /// [weightCompensation] 来自 `AppTypographyTokens`，为 0 时下面那套加粗降档
+  /// **必须整段跳过**：降档是给黑体做的，而系统中文衬线体常常只有 Regular / Bold
+  /// 两档，把 w700 降到 w500 会匹配回 Regular——用户标的粗体直接消失。
+  static quill.DefaultStyles _buildCustomStyles(
+    TextStyle paragraphStyle,
+    double weightCompensation,
+  ) {
+    // Android 之外、以及不做黑体减重的风格，只需要段落这一项。
+    if (kIsWeb || !Platform.isAndroid || weightCompensation <= 0) {
+      return QuillThemeTypography.paragraphOnly(paragraphStyle);
     }
+    final paragraph = quill.DefaultTextBlockStyle(
+      paragraphStyle,
+      const quill.HorizontalSpacing(0, 0),
+      quill.VerticalSpacing.zero,
+      quill.VerticalSpacing.zero,
+      null,
+    );
     // Flutter 3.41+ Android (Impeller + 精准 wght 轴) 下 FontWeight.bold (w700)
     // 渲染明显偏粗。在 Android 上注入 customStyles 将 bold 降为 w600，
     // 标题按比例降档，使视觉接近升级前效果。
@@ -124,19 +124,29 @@ class QuoteContent extends StatelessWidget {
     scrollable: false,
   );
 
-  // 段落样式随主题（行高）和笔记颜色变化，没法再全静态。
+  // 段落样式随主题（字号、行高）和笔记颜色变化，没法再全静态。
   // 用一条 memo 而不是 Map：同屏卡片的正文样式几乎总是同一个，命中率极高，
   // 又不会像按颜色做键的 Map 那样无界增长。
+  // 字重补偿也要进 memo 的比较，否则切换主题风格后会拿到上一套风格的加粗规则。
   static TextStyle? _memoParagraphStyle;
+  static double? _memoWeightCompensation;
   static quill.QuillEditorConfig? _memoEditorConfig;
 
-  static quill.QuillEditorConfig _editorConfigFor(TextStyle? paragraphStyle) {
+  static quill.QuillEditorConfig _editorConfigFor(
+    TextStyle paragraphStyle,
+    double weightCompensation,
+  ) {
     final cached = _memoEditorConfig;
-    if (cached != null && _memoParagraphStyle == paragraphStyle) return cached;
+    if (cached != null &&
+        _memoParagraphStyle == paragraphStyle &&
+        _memoWeightCompensation == weightCompensation) {
+      return cached;
+    }
     final config = _staticEditorConfig.copyWith(
-      customStyles: _buildCustomStyles(paragraphStyle),
+      customStyles: _buildCustomStyles(paragraphStyle, weightCompensation),
     );
     _memoParagraphStyle = paragraphStyle;
+    _memoWeightCompensation = weightCompensation;
     _memoEditorConfig = config;
     return config;
   }
@@ -1113,15 +1123,13 @@ class QuoteContent extends StatelessWidget {
       ),
     );
 
-    // 复刻 quill 的 baseStyle（DefaultTextStyle + 硬写的 fontSize 16），
-    // 但行高改用主题下发的值——见 _buildCustomStyles 的注释。
-    // decoration 必须显式清掉，否则 DefaultTextStyle 里的下划线会漏进正文。
-    final quillBaseStyle = DefaultTextStyle.of(context).style.merge(style);
-    final paragraphStyle = quillBaseStyle.copyWith(
-      fontSize: 16,
-      height: quillBaseStyle.height ?? 1.15,
-      decoration: TextDecoration.none,
-    );
+    // quill 把段落的 fontSize/height 硬写成 16 / 1.15，两样都得按主题令牌纠正。
+    // 字号原本也硬写 16：material 下 bodyLarge 正好是 16 所以看不出问题，
+    // 衬线风格把正文放大到 17（ThemeStyleForm.bodyFontScale）之后就露馅了——
+    // 同一个列表里富文本笔记比纯文本笔记小一号，纸张横线也只跟纯文本对齐。
+    // 纠正规则和全屏编辑器共用一处，见 QuillThemeTypography。
+    final paragraphStyle =
+        QuillThemeTypography.paragraphStyle(context, base: style);
     // 富文本的折叠估算拿不到 context，只能靠这里把当前行高回填给静态估算器。
     estimatedLineHeight = paragraphStyle.fontSize! * paragraphStyle.height!;
 
@@ -1129,7 +1137,10 @@ class QuoteContent extends StatelessWidget {
       controller: controllerSet.quillController,
       scrollController: controllerSet.scrollController,
       focusNode: controllerSet.focusNode,
-      config: _editorConfigFor(paragraphStyle),
+      config: _editorConfigFor(
+        paragraphStyle,
+        AppTypographyTokens.of(context).variableWeightCompensation,
+      ),
     );
 
     if (style != null) {

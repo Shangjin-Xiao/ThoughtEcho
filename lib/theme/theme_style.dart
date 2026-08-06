@@ -77,6 +77,8 @@ class ThemeStyleForm {
     required this.fontFamily,
     required this.fontFamilyFallback,
     required this.bodyLineHeight,
+    required this.bodyFontScale,
+    required this.readingWeightFloor,
     required this.variableWeightCompensation,
   });
 
@@ -108,11 +110,17 @@ class ThemeStyleForm {
   /// 横线相对 `colorScheme.outlineVariant` 的不透明度。
   final double ruleOpacity;
 
-  /// 首选字体族。null 表示用系统默认（material 风格保持原样）。
+  /// 阅读文本（display / headline / title / body）的首选字体族。
+  /// null 表示用系统默认（material 风格保持原样）。
   ///
   /// 手工风格指向**系统自带**的中文衬线体，不打包任何字体文件——
   /// 增量 0 字节，缺失时按 [fontFamilyFallback] 逐个回退，最终回落到系统默认。
   /// 正文从黑体变衬线，是「纸墨」观感里最省成本的一步。
+  ///
+  /// **它不覆盖 `label*`。** 那三级是按钮、胶囊、导航栏这类 11–14sp 的界面标签，
+  /// 中文衬线体在这个字号下笔画糊成一团，而且没有人会从一个按钮标签上感知字体风格——
+  /// 付出全部可读性代价换不到任何风格辨识度。风格的字体识别度由正文和标题承担。
+  /// 见 `AppTheme._applyStyleTypography`。
   final String? fontFamily;
   final List<String>? fontFamilyFallback;
 
@@ -127,6 +135,42 @@ class ThemeStyleForm {
   /// 相对横线漂移。见 [ruleSpacing] 的注释。
   final double bodyLineHeight;
 
+  /// 正文字号缩放，只作用于 `body*` 三级（16 / 14 / 12 各自乘上它）。
+  ///
+  /// 中文衬线体的横画只有竖画三分之一粗。16sp 配 2x 屏时，一根横画落到大约半个
+  /// 物理像素上，抗锯齿后只剩一条浅灰线——**同样的墨色，衬线读起来就是比黑体虚**，
+  /// 这跟对比度无关（现有色板全部在 WCAG AA 以上），是笔画物理宽度的问题。
+  /// 字号是唯一在所有平台、所有 ROM 上都一定生效的补偿手段：字号涨 6%，
+  /// 横画宽度跟着涨 6%，跨过半像素这道坎之后灰度会明显变实。
+  ///
+  /// 取 1.0625（16 → 17）：整数字号、够到阈值，又不至于让列表和设置项换行。
+  /// 标题和标签不缩放——标题字号本来就在横画不失真的区间，标签是黑体。
+  ///
+  /// 它和 [bodyLineHeight] 一起决定 [ruleSpacing]：横线间距必须等于
+  /// 「字号 × 行高」，字号变了横线也得跟着变，否则文字会逐行相对横线漂移。
+  final double bodyFontScale;
+
+  /// 阅读文本（`title*` / `body*`）的**最低字重**，0 表示不设下限。所有平台生效。
+  ///
+  /// 和 [variableWeightCompensation] 是两码事，方向也相反：那个是给**黑体**在
+  /// Android Impeller 下变粗做的减重（只跑在 Android），这个是给**衬线体**横画过细
+  /// 做的加重（哪儿都跑）。上一轮只是把减重关掉，回到 M3 原生 w400——而 w400 的
+  /// 中文衬线本来就偏虚，「不减重」不等于「够粗」。
+  ///
+  /// 取 500。三种落地情况都不会比现在差：
+  /// - 系统衬线是可变字体（wght 轴连续）：精确落到 500，横画实打实变粗，收益最大；
+  /// - 系统只有 Regular / Bold 两档：匹配到最近的 400，等于现状，**不是回退，是不变**；
+  /// - 具名回退字体（Songti SC 等）多档字重：落到最接近的一档，同样只增不减。
+  ///
+  /// **是下限不是增量**，这个区别很要紧：M3 的 `titleMedium` / `titleSmall` 本来就是
+  /// w500，加增量会把它们顶到 w600，而只有 Regular / Bold 两档的衬线体会把 600
+  /// 匹配成 Bold——列表标题会集体变成粗体。抬下限则对它们完全无影响。
+  ///
+  /// **只作用于 `title*` 和 `body*`**，这是光学尺寸的判断而不是省事：
+  /// display / headline 是 24–57sp，横画在那个尺寸上根本不会掉进半像素，
+  /// 再加重只会让大标题显得笨重。
+  final int readingWeightFloor;
+
   /// Android 可变字重补偿的强度，0 = 不补偿，1 = 全额补偿。
   ///
   /// `AppTheme._fixAndroidVariableFontWeight` 那套 400→350 的减重，是为了抵消
@@ -140,6 +184,15 @@ class ThemeStyleForm {
 
   double shadowOpacity(Brightness brightness) =>
       brightness == Brightness.dark ? shadowOpacityDark : shadowOpacityLight;
+
+  /// 把一个字重抬到 [readingWeightFloor] 之上：低于下限的抬上来，已经达标的原样返回。
+  ///
+  /// 抬字重这条规则不止 `textTheme` 一处要用——AppBar 的 `titleTextStyle` 一旦非空
+  /// 就不再回落到 `textTheme`，得自己算一遍。规则写在这里，两边就不会走岔。
+  FontWeight readingWeight(FontWeight m3Default) =>
+      m3Default.value >= readingWeightFloor
+          ? m3Default
+          : FontWeight(readingWeightFloor);
 
   /// 首选族名：**通用族 `serif`，不是具名字体**。这个顺序是实测得来的，别调回去。
   ///
@@ -165,8 +218,9 @@ class ThemeStyleForm {
     'SimSun',
   ];
 
-  /// M3 `bodyLarge` 的字号。[ruleSpacing] 由它乘 [bodyLineHeight] 推导，
-  /// 因为笔记卡片的正文用的就是 `bodyLarge`（`quote_item_widget.dart`）。
+  /// M3 `bodyLarge` 的字号。[ruleSpacing] 由它乘 [bodyFontScale] 再乘
+  /// [bodyLineHeight] 推导，因为笔记卡片的正文用的就是 `bodyLarge`
+  /// （`quote_item_widget.dart`）。
   static const _bodyLargeFontSize = 16.0;
 
   /// 现状：Material 3 默认圆角与投影，系统默认字体。
@@ -187,8 +241,15 @@ class ThemeStyleForm {
     // M3 bodyLarge 的默认行高（24/16），写在这里是为了让 material 成为其他风格
     // 缩放 bodyMedium/bodySmall 的基准，取值本身不改变 material 的任何像素。
     bodyLineHeight: 1.5,
+    bodyFontScale: 1,
+    readingWeightFloor: 0,
     variableWeightCompensation: 1,
   );
+
+  /// 衬线风格共用的排版补偿。两套风格的字体族相同，笔画细的问题也就相同，
+  /// 补偿量没有理由不同——风格差异由行高、圆角、纹理、色板承担。
+  static const _serifFontScale = 1.0625; // 16 → 17
+  static const _serifWeightFloor = 500; // 抬起 w400 的那几级，w500 的不动
 
   static const _paperLineHeight = 1.75;
 
@@ -207,11 +268,13 @@ class ThemeStyleForm {
     // 每往下一行文字就相对横线漂 2px，四五行后完全骑到线上——看起来是「卡片背了一张
     // 格子图」而不是「字写在纸上」。间距等于行高时，文字与横线的相对偏移恒定，
     // 纸感才立得住。
-    ruleSpacing: _bodyLargeFontSize * _paperLineHeight,
+    ruleSpacing: _bodyLargeFontSize * _serifFontScale * _paperLineHeight,
     ruleOpacity: 0.55,
     fontFamily: 'serif',
     fontFamilyFallback: _systemSerifFallback,
     bodyLineHeight: _paperLineHeight,
+    bodyFontScale: _serifFontScale,
+    readingWeightFloor: _serifWeightFloor,
     // 衬线体不吃黑体的减重补偿，否则中文正文发灰发虚。
     variableWeightCompensation: 0,
   );
@@ -235,6 +298,8 @@ class ThemeStyleForm {
     // 比纸墨紧一档：素笺的性格是硬朗、密实。有了行高令牌，两套手工风格终于不只是
     // 颜色和圆角的差别。仍然比 material 的 1.5 松，因为字体是衬线。
     bodyLineHeight: 1.6,
+    bodyFontScale: _serifFontScale,
+    readingWeightFloor: _serifWeightFloor,
     variableWeightCompensation: 0,
   );
 }
@@ -390,6 +455,53 @@ class AppShapeTokens extends ThemeExtension<AppShapeTokens> {
   }
 }
 
+/// 把当前风格的排版令牌下发给 widget。
+///
+/// 绝大多数排版已经由 `textTheme` 承载，widget 直接读 `theme.textTheme.*` 就够了。
+/// 这里只放**够不着 `textTheme` 的那条路**：`flutter_quill` 的 `DefaultStyles`
+/// 不继承 `textTheme`，富文本的加粗、标题字重必须单独喂进去
+/// （见 `quote_content_widget.dart`）。
+///
+/// 判据仍然是令牌取值而不是风格身份：widget 里不允许出现 `if (style == ...)`。
+@immutable
+class AppTypographyTokens extends ThemeExtension<AppTypographyTokens> {
+  const AppTypographyTokens({
+    required this.variableWeightCompensation,
+  });
+
+  factory AppTypographyTokens.fromForm(ThemeStyleForm form) =>
+      AppTypographyTokens(
+        variableWeightCompensation: form.variableWeightCompensation,
+      );
+
+  /// 见 [ThemeStyleForm.variableWeightCompensation]。
+  ///
+  /// 富文本里的用法：为 0 时**不能**再把加粗降档。那套降档是给黑体做的，
+  /// 而系统中文衬线体常常只有 Regular / Bold 两档，把 w700 降到 w500 会匹配回
+  /// Regular——用户标的粗体直接消失，正文里再也分不出重点。
+  final double variableWeightCompensation;
+
+  static AppTypographyTokens of(BuildContext context) =>
+      Theme.of(context).extension<AppTypographyTokens>() ??
+      AppTypographyTokens.fromForm(ThemeStyleForm.material);
+
+  @override
+  AppTypographyTokens copyWith({double? variableWeightCompensation}) =>
+      AppTypographyTokens(
+        variableWeightCompensation:
+            variableWeightCompensation ?? this.variableWeightCompensation,
+      );
+
+  @override
+  AppTypographyTokens lerp(
+      ThemeExtension<AppTypographyTokens>? other, double t) {
+    if (other is! AppTypographyTokens) return this;
+    // 字重降档是个开关而不是连续量，中途插值出来的 0.5 没有意义，
+    // 只会让过渡动画里粗体闪一下。跟 ruleSpacing 一样走离散切换。
+    return t < 0.5 ? this : other;
+  }
+}
+
 /// 一种风格在一个亮度下的语义角色取值。
 ///
 /// 角色名按「纸墨」的语汇取，而不是 Material 的槽位名——色板是先按纸和墨设计的，
@@ -431,6 +543,11 @@ class ThemeStyleColors {
   final Color ink;
 
   /// 次要墨色，用于辅助文字和图标。
+  ///
+  /// 取值比「过了 WCAG AA 就行」要保守一档（现在四套都在 7:1 以上）。
+  /// WCAG 只算前景背景两个色值，不看笔画有多宽；同样 6:1 的灰，落在衬线体
+  /// 半像素粗的横画上，看到的实际反差要打对折。手工风格用衬线体，
+  /// 次要文字就得比黑体的同位色更实一点，读起来才对得上。
   final Color inkMuted;
 
   /// 强调色。
@@ -526,7 +643,7 @@ class ThemeStylePalette {
       outline: Color(0xFFE3D9CC),
       outlineStrong: Color(0xFFD4C5B9),
       ink: Color(0xFF2C2416),
-      inkMuted: Color(0xFF6B5842),
+      inkMuted: Color(0xFF5E4C37),
       accent: Color(0xFF8A6440),
       onAccent: Color(0xFFFEFDFB),
       accentContainer: Color(0xFFEFE4D6),
@@ -544,7 +661,7 @@ class ThemeStylePalette {
       outline: Color(0xFF4A4037),
       outlineStrong: Color(0xFF5D5147),
       ink: Color(0xFFE8DFD5),
-      inkMuted: Color(0xFFB8A99A),
+      inkMuted: Color(0xFFC4B6A8),
       accent: Color(0xFFC9A077),
       onAccent: Color(0xFF2A2520),
       accentContainer: Color(0xFF423931),
@@ -566,7 +683,7 @@ class ThemeStylePalette {
       outline: Color(0xFFDCDCD8),
       outlineStrong: Color(0xFFC4C4BF),
       ink: Color(0xFF1F2124),
-      inkMuted: Color(0xFF5F6368),
+      inkMuted: Color(0xFF4C5054),
       accent: Color(0xFF3F5D5B),
       onAccent: Color(0xFFFBFBFA),
       accentContainer: Color(0xFFE3EAE9),
@@ -584,7 +701,7 @@ class ThemeStylePalette {
       outline: Color(0xFF313436),
       outlineStrong: Color(0xFF454A4D),
       ink: Color(0xFFE6E7E8),
-      inkMuted: Color(0xFF9DA2A7),
+      inkMuted: Color(0xFFAAB0B5),
       accent: Color(0xFF8FB5B0),
       onAccent: Color(0xFF17191A),
       accentContainer: Color(0xFF26302F),
