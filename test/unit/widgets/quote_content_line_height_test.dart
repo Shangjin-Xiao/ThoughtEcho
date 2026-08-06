@@ -16,9 +16,23 @@ import 'package:thoughtecho/widgets/quote_content_widget.dart';
 /// 修法是在判定入口前先按传入的 style 对齐行高。这里钉住两件事：对齐本身，
 /// 以及**换风格后不会命中上一套风格的缓存**。
 void main() {
-  /// 5 个短行的富文本。估算高度 = 5×行高 + 4×行间距(4)：
-  /// material 24 → 136，不超过 160 的折叠阈值；
-  /// 纸墨 29.75 → 168.75，超过。刚好卡在阈值两侧，风格一换答案就得翻。
+  /// 5 个短行的富文本，**末尾带 `\n`**（Quill 的 delta 总是这样收尾，照抄真实数据）。
+  ///
+  /// 按 `_estimatePlainTextHeight` 的实际算法算：`split('\n')` 出来是 6 段——
+  /// 5 段非空各计 1 行（每行都短于 `_averageCharsPerLine` = 28），第 6 段是空串
+  /// （`rawLine.trim()` 后为空）另计 0.5 行；行间距按段数算 `(6-1) × 4 = 20`。
+  /// 所以估算高度 = **5.5 × 行高 + 20**：
+  ///
+  /// | 风格 | 行高 | 估算高度 | 对 160 的折叠阈值 |
+  /// | --- | --- | --- | --- |
+  /// | material | 24    | 152.0 | 低 8，不折叠 |
+  /// | 纸墨      | 29.75 | 183.6 | 高 23.6，要折叠 |
+  /// | 素笺      | 27.2  | 169.6 | 高 9.6，要折叠 |
+  ///
+  /// 5 行是唯一能卡在阈值两侧的行数：4 行时纸墨也只有 149.9 不折叠，6 行时
+  /// material 已经 180 要折叠，两边都翻不过来。**margin 只有 8–24px**，
+  /// 所以改动 `_lineSpacing`、`_averageCharsPerLine` 或 `collapsedContentMaxHeight`
+  /// 会让这里失败——那不是误报，是这些常量真的动了折叠行为，需要重新挑行数。
   String fiveShortLinesDelta(String marker) => jsonEncode([
         {'insert': '$marker\n第二行\n第三行\n第四行\n第五行\n'}
       ]);
@@ -72,16 +86,33 @@ void main() {
     expect(
       decideExpansion(quote, ThemeStyle.material),
       isFalse,
-      reason: 'material 下 5×24+16=136，没到 160 的折叠阈值',
+      reason: 'material 下 5.5×24+20=152，没到 160 的折叠阈值',
     );
     expect(
       decideExpansion(quote, ThemeStyle.paper),
       isTrue,
-      reason: '纸墨下 5×29.75+16≈165 已经超过阈值，'
+      reason: '纸墨下 5.5×29.75+20≈183.6 已经超过阈值，'
           '若仍返回 false 说明命中了 material 那次的缓存，展开入口会消失',
     );
     // 再切回去也要跟着翻，不能被纸墨那次的结果粘住。
     expect(decideExpansion(quote, ThemeStyle.material), isFalse);
+  });
+
+  test('估算公式确实是 5.5×行高 + 20（上面注释里的算式不是拍脑袋）', () {
+    // 注释写错过一次（漏了末尾 '\n' 拆出的空段和第 6 段行间距），所以这里不靠
+    // 心算、直接把公式测出来：解 5.5×行高 + 20 > 160 得翻转点 行高 = 25.4545…，
+    // 在它两侧各取一个值，答案必须刚好翻过去。公式一变这条就失败。
+    bool decideAtLineHeight(double lineHeight) =>
+        QuoteContent.exceedsCollapsedHeightForLayout(
+          quote: richQuote('probe-$lineHeight'),
+          style: TextStyle(fontSize: 10, height: lineHeight / 10),
+          maxWidth: 400,
+          textDirection: TextDirection.ltr,
+          textScaler: TextScaler.noScaling,
+        );
+
+    expect(decideAtLineHeight(25.45), isFalse, reason: '159.975 不该超阈值');
+    expect(decideAtLineHeight(25.46), isTrue, reason: '160.03 该超阈值');
   });
 
   test('style 缺字号或行高时不动全局值，交给 build 回填', () {
