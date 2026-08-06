@@ -33,6 +33,16 @@ void main() {
           expectContrast(colors.inkMuted, colors.card, 4.5, '$label 次要墨色 / 卡片');
         });
 
+        // 手工风格用衬线体，横画细，同一个对比度看着比黑体虚。所以次要文字
+        // 单独加一条比 AA 更严的线，而且**纸和卡片两种底色都要过**——次要文字
+        // 大量渲染在卡片上，只按页面底色验算会漏（纸墨暗色就漏过一次：
+        // 底色 7.66 达标、卡片只有 6.76）。
+        test('$label 次要文字在两种底色上都达到 7:1', () {
+          expectContrast(
+              colors.inkMuted, colors.background, 7.0, '$label 次要墨色 / 背景');
+          expectContrast(colors.inkMuted, colors.card, 7.0, '$label 次要墨色 / 卡片');
+        });
+
         test('$label 强调色与容器上的文字可读', () {
           expectContrast(colors.onAccent, colors.accent, 4.5, '$label 强调上的文字');
           expectContrast(colors.onAccentContainer, colors.accentContainer, 4.5,
@@ -284,16 +294,17 @@ void main() {
       }
     });
 
-    test('纸张横线间距必须等于正文行高，否则文字会逐行漂移', () {
+    test('纸张横线间距必须等于正文字号乘行高，否则文字会逐行漂移', () {
       // 曾经 ruleSpacing 写死 26 而正文行高是 16×1.5=24，每行漂 2px，
       // 几行之后文字就骑到线上，看起来像「卡片背了一张格子图」。
-      // 横线间距只能从行高推导，不能各写各的。
+      // 横线间距只能从「字号 × 行高」推导，不能各写各的——字号也进了这个乘积，
+      // 因为衬线风格把正文放大了（bodyFontScale），只跟行高走会重新漂起来。
       for (final style in ThemeStyle.values) {
         final form = style.form;
         if (form.ruleSpacing == 0) continue;
         expect(
           form.ruleSpacing,
-          closeTo(16.0 * form.bodyLineHeight, 0.01),
+          closeTo(16.0 * form.bodyFontScale * form.bodyLineHeight, 0.01),
           reason: '${style.name} 的横线间距和正文行高对不上',
         );
       }
@@ -319,6 +330,88 @@ void main() {
       // Material 保持全额补偿，行为一行不变。
       expect(ThemeStyleForm.material.variableWeightCompensation, 1);
       expect(ThemeStyleForm.material.bodyLineHeight, 1.5);
+    });
+
+    test('衬线风格要同时加字重和字号，光关掉减重不够', () {
+      // 「不减重」只是回到 M3 原生 w400，而 w400 的中文衬线横画本来就细到
+      // 半个物理像素，抗锯齿后发灰——这正是用户说「比 Material 差很多」的地方。
+      // 两个补偿的分工：字重在支持多档字重的设备上收益最大，字号是所有平台
+      // 都一定生效的兜底，缺一个都不够。
+      for (final style in ThemeStyle.values) {
+        final form = style.form;
+        if (form.fontFamily == null) continue;
+        expect(
+          form.readingWeightFloor,
+          greaterThan(FontWeight.w400.value),
+          reason: '${style.name} 用衬线体却没有抬字重下限',
+        );
+        expect(
+          form.bodyFontScale,
+          greaterThan(1),
+          reason: '${style.name} 用衬线体却没有放大正文',
+        );
+      }
+      // Material 两项都是恒等取值，像素一点不变。
+      expect(ThemeStyleForm.material.readingWeightFloor, 0);
+      expect(ThemeStyleForm.material.bodyFontScale, 1);
+    });
+
+    test('字重是下限不是增量：M3 已经 w500 的标题不会被顶成粗体', () {
+      // 只有 Regular / Bold 两档的中文衬线体会把 w600 匹配成 Bold，
+      // 列表标题会集体变粗。下限必须落在 w500——正好等于 titleMedium /
+      // titleSmall 的 M3 默认值，对它们零影响。
+      for (final style in ThemeStyle.values) {
+        final floor = style.form.readingWeightFloor;
+        if (floor == 0) continue;
+        expect(
+          floor,
+          lessThanOrEqualTo(FontWeight.w500.value),
+          reason: '${style.name} 的字重下限高过 M3 标题字重，标题会变粗体',
+        );
+      }
+
+      // readingWeight 是这条规则的唯一实现，textTheme 和 AppBar 都走它。
+      const paper = ThemeStyleForm.paper;
+      expect(paper.readingWeight(FontWeight.w400), FontWeight.w500); // 抬起来
+      expect(paper.readingWeight(FontWeight.w500), FontWeight.w500); // 不动
+      expect(paper.readingWeight(FontWeight.w700), FontWeight.w700); // 不降
+      // material 没有下限，任何输入原样返回——AppBar 标题一个像素不变。
+      const material = ThemeStyleForm.material;
+      for (final w in FontWeight.values) {
+        expect(material.readingWeight(w), w);
+      }
+    });
+
+    test('正文放大幅度有上限，不能靠字号硬堆可读性', () {
+      // 字号是最好使的一根杠杆，也最容易滥用：正文一旦超过 Material 的 1.15 倍，
+      // 列表密度、设置项、卡片折叠阈值全要跟着崩。
+      for (final style in ThemeStyle.values) {
+        expect(style.form.bodyFontScale, inInclusiveRange(1.0, 1.15));
+      }
+    });
+
+    test('富文本的加粗降档跟着字重补偿走，不会在衬线风格下把粗体抹平', () {
+      // quill 的 DefaultStyles 不继承 textTheme，加粗规则要单独喂。
+      // 那套 w700→w500 的降档是给黑体做的；系统中文衬线常常只有 Regular/Bold
+      // 两档，降到 w500 会匹配回 Regular，用户标的粗体直接消失。
+      // 判据是这个令牌的取值，widget 里不允许出现 if (style == ...)。
+      for (final style in ThemeStyle.values) {
+        final tokens = AppTypographyTokens.fromForm(style.form);
+        expect(
+          tokens.variableWeightCompensation,
+          style.form.variableWeightCompensation,
+        );
+      }
+      // 过渡动画里粗体不能闪，所以走离散切换而不是插值。
+      final material = AppTypographyTokens.fromForm(ThemeStyleForm.material);
+      final paper = AppTypographyTokens.fromForm(ThemeStyleForm.paper);
+      for (final t in const [0.0, 0.25, 0.49]) {
+        expect(material.lerp(paper, t), same(material));
+      }
+      for (final t in const [0.5, 0.75, 1.0]) {
+        expect(material.lerp(paper, t), same(paper));
+      }
+      expect(material.lerp(null, 0.5), same(material));
     });
 
     test('行距不插值，避免过渡中途出现极密的横线', () {

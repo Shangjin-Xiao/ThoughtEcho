@@ -114,6 +114,9 @@ class ThemeStylePreview extends StatelessWidget {
               color: colorScheme.onSurface,
               fontFamily: style.form.fontFamily,
               fontFamilyFallback: style.form.fontFamilyFallback,
+              // 样张要和正文一致，字重也得过一遍风格的下限，
+              // 否则预览里的「永」比真正的正文细一档。
+              fontWeight: style.form.readingWeight(FontWeight.w400),
             ),
           ),
           Row(

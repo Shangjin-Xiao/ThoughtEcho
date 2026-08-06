@@ -104,6 +104,50 @@ class QuillEditorExtensions {
   }
 }
 
+/// quill 段落基准样式的**唯一**纠正入口。
+///
+/// `DefaultStyles.getInstance` 的 baseStyle 是从 `DefaultTextStyle` 拷的
+/// （颜色、字体族确实跟着主题走），但 `fontSize` 和 `height` 被硬写成 16 / 1.15。
+/// 1.15 对中文正文太挤，换成衬线体之后尤其闷；16 则在衬线风格把正文放大到 17
+/// （[ThemeStyleForm.bodyFontScale]）之后跟纯文本笔记对不上。
+///
+/// 两个用到 `QuillEditor` 的地方——笔记卡片正文和全屏编辑器——必须按同一套令牌
+/// 纠正，否则「写的时候」和「读的时候」行距不一样。规则因此放在这里一处。
+class QuillThemeTypography {
+  /// [base] 是调用方已有的正文样式（卡片会传 `bodyLarge` + 笔记颜色）。
+  ///
+  /// 字号和行高**不从 [DefaultTextStyle] 取**：调用方可能没传 [base]，而那里
+  /// 往往是 `bodyMedium`(14)，直接用会把正文缩一号。规则统一成「富文本正文 =
+  /// `bodyLarge`」，兜底才轮到 quill 的硬编码值。
+  ///
+  /// `decoration` 必须显式清掉，否则 [DefaultTextStyle] 里的下划线会漏进正文。
+  static TextStyle paragraphStyle(BuildContext context, {TextStyle? base}) {
+    final bodyLarge = Theme.of(context).textTheme.bodyLarge;
+    final inherited = DefaultTextStyle.of(context).style.merge(base);
+    return inherited.copyWith(
+      fontSize: base?.fontSize ?? bodyLarge?.fontSize ?? 16,
+      height: base?.height ?? bodyLarge?.height ?? 1.15,
+      decoration: TextDecoration.none,
+    );
+  }
+
+  /// 只替换段落样式、其余沿用 quill 默认的 [quill.DefaultStyles]。
+  ///
+  /// 卡片正文那条路还要额外处理 Android 的加粗降档，所以自己拼 `DefaultStyles`；
+  /// 编辑器只需要这一项。
+  static quill.DefaultStyles paragraphOnly(TextStyle paragraphStyle) {
+    return quill.DefaultStyles(
+      paragraph: quill.DefaultTextBlockStyle(
+        paragraphStyle,
+        const quill.HorizontalSpacing(0, 0),
+        quill.VerticalSpacing.zero,
+        quill.VerticalSpacing.zero,
+        null,
+      ),
+    );
+  }
+}
+
 /// 自定义视频嵌入构建器
 class _CustomVideoEmbedBuilder extends quill.EmbedBuilder {
   @override

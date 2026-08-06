@@ -157,14 +157,107 @@ Roboto 变粗）做的补偿，却跑在换字体**之前**，衬线体照单全
 
 #### 没做的部分
 
+- **富文本折叠估算的行高是个全局静态值**，由 `QuoteContent.build` 回填。但折叠判定
+  发生在**父组件**（`quote_item_widget._needsExpansionForLayout`），比子组件 build
+  早一帧，首帧和刚切风格那一帧会读到上一套的行高。已经在两个判定入口前面加了
+  `_syncEstimatedLineHeight(style)` 对齐（口径和 `QuillThemeTypography.paragraphStyle`
+  一致，都只认传进来的 style）。**根治要把行高做成参数传进估算接口**，
+  不再依赖全局静态值——那要改一串静态方法的签名，这轮没做。
+
 - **横线只做了间距对齐，没做相位对齐。** 间距等于行高后，文字与横线的相对偏移
   已经恒定（不再逐行漂），这是绝大部分收益。要让文字精确「坐」在线上还需要给
   `PaperRuleBackground` 传 `topInset`，而卡片顶部结构随展开/选择模式变化，
   算不准反而更糟，先不做。
 - **每日一言卡（`sliding_card.dart`）的横线对不齐是设计使然**：正文是外部传入的
   居中大字，相位随内容长度变，做不到对齐。不要试图在那里对齐。
-- **富文本字号仍硬写 16**，没跟着 `bodyLarge` 走。改它会动到所有富文本笔记的
-  视觉和高度估算缓存，风险大于收益，留着。
+- ~~**富文本字号仍硬写 16**~~ **2026-08-06 已修**，见下一节。
+
+### 5. 字重、字号与标签字体（2026-08-06 已完成）
+
+用户再次反馈「可读性还是比 Material 差很多，主要是粗细」。上一轮（第 4 节）只把
+**减重**关掉，回到 M3 原生 w400——**「不减重」不等于「够粗」**。这一轮补齐。
+
+**根因：中文衬线的横画只有竖画三分之一粗。** 16sp 配 2x 屏时，一根横画落到大约
+半个物理像素上，抗锯齿后只剩一条浅灰线。这跟对比度无关——四套色板的正文/次要文字
+全部在 WCAG AA 以上（正文 14:1 以上），是笔画物理宽度的问题，WCAG 也不看这个。
+所以补偿必须落在**笔画宽度**上，一共三根杠杆，按「在多少设备上一定生效」排序：
+
+| 杠杆 | 令牌 | 取值 | 生效范围 |
+| --- | --- | --- | --- |
+| 字号 | `bodyFontScale` | 1.0625（16 → 17） | **所有平台一定生效** |
+| 字重 | `readingWeightFloor` | w500 | 设备的衬线体有多档字重才生效 |
+| 墨色 | 色板 `inkMuted` | 四套在纸和卡片上都抬到 7:1（有测试钉死） | 所有平台 |
+
+字重之所以不能单打，是因为**它可能是个空操作**：AOSP 的 `fonts.xml` 里
+`NotoSerifCJK` 只有 weight 400 一档，请求 w500 会匹配回 400。三种落地情况分别是
+「精确落位（可变字体）/ 匹配到最近档（等于现状，不是回退）/ 落到最接近的一档」，
+**只增不减**，所以加它没有风险，但不能指望它一个人扛。字号则一定生效。
+
+**字重是下限不是增量**（`ThemeStyleForm.readingWeight`）。M3 的 `titleMedium` /
+`titleSmall` 本来就是 w500，若写成「+100」会把它们顶到 w600，而只有 Regular / Bold
+两档的衬线体会把 600 匹配成 **Bold**——列表标题会集体变粗。抬下限对它们零影响。
+
+**排版分三档，依据是光学尺寸**（`AppTheme._applyStyleTypography`）：
+
+- `display*` / `headline*`（24–57sp）：只换字体族。这个尺寸横画不会掉进半像素。
+- `title*` / `body*`（11–22sp）：换族 + 抬字重下限；`body*` 另吃字号与行高缩放。
+- `label*`：**什么都不改，保持系统黑体**。按钮、胶囊、导航栏标签是功能性文字，
+  中文衬线在 11–14sp 下糊成一团，而它们不承担任何风格识别——付出全部可读性代价
+  换不到辨识度。这是全局规则，写死在方法里，不做成令牌。
+
+**顺带修掉的三处，每一处都是「主题走到一半断了」：**
+
+1. **AppBar 那条分支一直是空转**（不是「标题没跟风格」——先入为主写成那样是错的，
+   实测推翻了）。FlexColorScheme 根本不设 `appBarTheme.titleTextStyle`，
+   `?.copyWith(...)` 求值成 null，里面硬写的 `fontSize: 20` 和 `fontWeight: w400`
+   **从来没生效过**；M3 的 AppBar 在它为 null 时回落 `textTheme.titleLarge`，
+   顶栏标题本来就跟着风格走。现在把这条分支改成跟风格取值（字体族 +
+   `form.readingWeight(FontWeight.w400)`）并留下警示注释，为的是它某天非空时不会
+   把风格丢掉，**不是修好了什么可见的东西**。
+2. **富文本的加粗在衬线风格下会消失**。`quote_content_widget` 那套
+   `bold: w500` 的降档是给黑体做的，而系统中文衬线常常只有 Regular / Bold 两档，
+   w500 匹配回 Regular——用户标的粗体直接没了。判据改成
+   `AppTypographyTokens.variableWeightCompensation <= 0` 时整段跳过。
+   这是新加的 `ThemeExtension`，只放**够不着 `textTheme` 的那条路**。
+3. **全屏编辑器还吃着 quill 硬写的 16 / 1.15**，比笔记卡片挤得多——同一条笔记
+   「写的时候」和「读的时候」行距不一样。纠正规则抽到
+   `QuillThemeTypography`（`quill_editor_extensions.dart`），两处共用。
+
+**富文本字号终于跟着 `bodyLarge` 走了。** 上一轮判定「风险大于收益」，这一轮不改
+不行：衬线风格把正文放大到 17 之后，同一个列表里富文本笔记会比纯文本笔记小一号，
+纸张横线也只跟纯文本对齐。高度估算缓存的键里已经有 `estimatedLineHeight`
+（= 字号 × 行高），字号一变键就变，不会读到旧值。
+
+**`ruleSpacing` 的推导公式跟着改成「字号 × 行高」**，不再是「16 × 行高」。
+不变量在 `theme_style_contrast_test.dart` 里更新过了。
+
+#### 一个接手必读的坑：`ThemeData.textTheme` 里大部分字段是 null
+
+排查这一轮时才确认：`createLightThemeData()` 产出的 `textTheme` 里，**字号、行高、
+字重绝大多数是 null**，它们由 `Theme` widget 在 build 时按 locale 的字形几何补齐
+（`ThemeData.localize` + `Typography.dense`，中文走 dense）。所以：
+
+- 想读「正文多大」不能直接看 `theme.textTheme.bodyLarge!.fontSize`，主题层拿到的是
+  null；只有在 widget 树里 `Theme.of(context)` 之后才是完整值。
+- `_applyStyleTypography` 里那些 `?? m3Size` / `?? m3Height` 兜底**不是防御性代码，
+  是主路径**——base 就是 null，全靠它们把 M3 默认值填进来。填错就会静默偏一档。
+- 反过来，**一旦写进具体值就等于把这一级从几何里摘出来了**。这就是为什么字号缩放
+  只给 `body*`：给 `title*` 也钉上会连带压掉 dense 几何在标题上的取值。
+- 字重下限取 w500 还有一层没写在设计里的运气成分：base 字重是 null，代码按 w400 算，
+  而 `titleMedium` / `titleSmall` 的真实 M3 值正好也是 w500，两边撞上了才没出错。
+  **下限要是取得更高，会连标题一起顶粗，而 base 是 null 这件事会让人看不出来。**
+
+这些不变量钉在 `test/theme/theme_style_typography_test.dart`——它断言的是
+`createLightThemeData()` 的产物，和只断言令牌取值的 `theme_style_contrast_test.dart`
+是两回事，不要合并。
+
+#### 这一轮没做的部分
+
+- **没有打包字体**。零字节路线仍然成立，代价（各 ROM 衬线体长相不一）也仍然在。
+  如果真机上字重杠杆被证实是空操作、字号杠杆又不够，下一步就是打包
+  `NotoSerifSC[wght]` 子集（方案见第 0 节），那时字重下限才能确定生效。
+- **`bodyFontScale` 只作用于 `body*`**。标题没跟着放大，因为标题字号本来就在
+  横画不失真的区间，放大只会挤掉列表密度。
 
 ## 三、已知的不一致与遗留
 

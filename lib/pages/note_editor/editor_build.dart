@@ -223,6 +223,12 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                         scrollController: ScrollController(),
                         focusNode: FocusNode(),
                         config: quill.QuillEditorConfig(
+                          // 编辑器过去吃的是 quill 硬写的 16 / 行高 1.15，比笔记
+                          // 卡片里的正文挤得多——同一条笔记「写的时候」和
+                          // 「读的时候」行距不一样。两边共用同一套令牌纠正。
+                          customStyles: QuillThemeTypography.paragraphOnly(
+                            QuillThemeTypography.paragraphStyle(context),
+                          ),
                           embedBuilders: kIsWeb
                               ? FlutterQuillEmbeds.editorWebBuilders()
                               : QuillEditorExtensions.getEmbedBuilders(
