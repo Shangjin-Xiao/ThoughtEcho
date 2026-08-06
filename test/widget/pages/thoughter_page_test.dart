@@ -407,11 +407,18 @@ class _FakeAgentService extends AgentService {
   }
 
   void _emitEvent(AgentEvent event) {
+    // 关掉之后还 add 会抛 "Cannot add event after closing"。放行等待方之后
+    // runAgent 会从 await 处继续跑，谁先到达这里并不由本类决定，所以这里兜一道。
+    if (_eventController.isClosed) return;
     _eventController.add(event);
   }
 
   @override
   void dispose() {
+    // 顺序和语义都要和 requestStop 对齐：先立起停止标志，再放行等待方。
+    // 只 cancel 不置标志的话，恢复执行的 runAgent 会一路穿过所有
+    // `if (stopRequested)` 守卫，然后往已经关闭的控制器里发事件。
+    stopRequested = true;
     _cancelPendingTimers();
     _eventController.close();
     super.dispose();
