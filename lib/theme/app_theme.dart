@@ -451,8 +451,13 @@ class AppTheme with ChangeNotifier {
       logDebug(
         '主题服务初始化完成: 使用自定义颜色=$_useCustomColor, 使用动态取色=$_useDynamicColor, 主题模式=$_themeMode',
       );
-    } catch (e) {
-      logDebug('初始化主题服务失败: $e');
+    } catch (e, stack) {
+      logError(
+        '初始化主题服务失败',
+        error: e,
+        stackTrace: stack,
+        source: 'AppTheme',
+      );
       // 初始化失败时使用默认值。风格也要一并重置：_loadThemeStyle() 可能已经成功、
       // 后面某一步才抛，那样会留下「风格是纸墨、其余全是默认值」的半新半旧状态。
       _customColor = Colors.blue;
@@ -617,8 +622,13 @@ class AppTheme with ChangeNotifier {
         ); // This is correct for reconstructing Color from ARGB int
       }
       _useCustomColor = _storage?.getBool(_useCustomColorKey) ?? false;
-    } catch (e) {
-      logDebug('加载自定义颜色失败: $e');
+    } catch (e, stack) {
+      logError(
+        '加载自定义颜色失败',
+        error: e,
+        stackTrace: stack,
+        source: 'AppTheme',
+      );
       _customColor = Colors.blue;
       _useCustomColor = false;
     }
@@ -631,8 +641,13 @@ class AppTheme with ChangeNotifier {
       if (modeString != null) {
         _themeMode = ThemeMode.values.byName(modeString);
       }
-    } catch (e) {
-      logDebug('加载主题模式失败: $e');
+    } catch (e, stack) {
+      logError(
+        '加载主题模式失败',
+        error: e,
+        stackTrace: stack,
+        source: 'AppTheme',
+      );
       _themeMode = ThemeMode.system;
     }
   }
@@ -641,8 +656,13 @@ class AppTheme with ChangeNotifier {
   void _loadThemeStyle() {
     try {
       _themeStyle = ThemeStyle.fromName(_storage?.getString(_themeStyleKey));
-    } catch (e) {
-      logDebug('加载主题风格失败: $e');
+    } catch (e, stack) {
+      logError(
+        '加载主题风格失败',
+        error: e,
+        stackTrace: stack,
+        source: 'AppTheme',
+      );
       _themeStyle = ThemeStyle.defaultStyle;
     }
   }
@@ -654,8 +674,13 @@ class AppTheme with ChangeNotifier {
       if (useDynamic != null) {
         _useDynamicColor = useDynamic;
       }
-    } catch (e) {
-      logDebug('加载动态取色设置失败: $e');
+    } catch (e, stack) {
+      logError(
+        '加载动态取色设置失败',
+        error: e,
+        stackTrace: stack,
+        source: 'AppTheme',
+      );
       _useDynamicColor = true; // 默认启用
     }
   }
