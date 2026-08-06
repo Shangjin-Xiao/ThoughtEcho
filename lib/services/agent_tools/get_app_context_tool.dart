@@ -1,9 +1,12 @@
 import 'dart:convert';
 
+import 'package:thoughtecho/models/weather_data.dart' show WeatherCodeMapper;
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/localization_resolver.dart';
 
 import '../agent_tool.dart';
 
@@ -96,11 +99,16 @@ class GetLocationWeatherTool extends AgentTool {
   const GetLocationWeatherTool({
     required LocationService locationService,
     required WeatherService weatherService,
+    required SettingsService settingsService,
   })  : _locationService = locationService,
-        _weatherService = weatherService;
+        _weatherService = weatherService,
+        _settingsService = settingsService;
 
   final LocationService _locationService;
   final WeatherService _weatherService;
+
+  /// 只用来读语言设置：天气 key 要按用户的语言翻好再交给模型。
+  final SettingsService _settingsService;
 
   @override
   String get name => 'get_location_weather';
@@ -128,7 +136,13 @@ class GetLocationWeatherTool extends AgentTool {
     try {
       final locationDisplay = _locationService.getLocationDisplayText();
       final locationStorage = _locationService.getFormattedLocation();
-      final weatherDescription = _weatherService.weatherDescription;
+      final weatherKey = _weatherService.currentWeather;
+      // WeatherService.weatherDescription 给的是 'partly_cloudy' 这种存储 key，
+      // 直接交给模型等于让它照抄一个英文标识符；这里按用户语言翻成人话。
+      final l10n = resolveAppLocalizations(_settingsService.localeCode);
+      final weatherDescription = weatherKey == null
+          ? null
+          : WeatherCodeMapper.getLocalizedDescription(l10n, weatherKey);
       final temperature = _weatherService.temperature;
 
       final weatherDisplayParts = <String>[
@@ -140,7 +154,7 @@ class GetLocationWeatherTool extends AgentTool {
       final payload = <String, Object?>{
         'location_display': locationDisplay.isNotEmpty ? locationDisplay : null,
         'location_storage': locationStorage.isNotEmpty ? locationStorage : null,
-        'weather_key': _weatherService.currentWeather,
+        'weather_key': weatherKey,
         'weather_description': weatherDescription,
         'temperature': temperature,
         'weather_display': weatherDisplayParts.isNotEmpty

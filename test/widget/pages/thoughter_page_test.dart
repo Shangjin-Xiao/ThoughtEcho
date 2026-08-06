@@ -190,6 +190,7 @@ class _FakeAgentService extends AgentService {
     this.emitSmartResultCard = false,
     this.proposalMetadata = const <String, Object?>{},
     this.responseContent = 'Agent 响应',
+    this.reasoningChunks = const <String>[],
     this.responseChunks = const <String>[],
     this.responseChunkDelay = const Duration(milliseconds: 12),
     this.preToolText,
@@ -213,6 +214,9 @@ class _FakeAgentService extends AgentService {
   /// 提案 artifact 的 metadata，用来构造带标签的提案。
   final Map<String, Object?> proposalMetadata;
   final String responseContent;
+
+  /// 正文之前的推理增量，用来复现「思考完了转圈不停」那条时序。
+  final List<String> reasoningChunks;
   final List<String> responseChunks;
   final Duration responseChunkDelay;
   final String? preToolText;
@@ -226,6 +230,7 @@ class _FakeAgentService extends AgentService {
   String _mockStatusKey = '';
   bool stopRequested = false;
   final Set<Timer> _pendingTimers = <Timer>{};
+  final Set<Completer<void>> _pendingWaits = <Completer<void>>{};
   final StreamController<AgentEvent> _eventController =
       StreamController<AgentEvent>.broadcast(sync: true);
 
@@ -255,21 +260,34 @@ class _FakeAgentService extends AgentService {
   }
 
   Future<void> _delay(Duration duration) {
+    // 已经停了就不要再排新的定时器：取消放行等待方之后，runAgent 会从
+    // await 处继续往下跑到下一个 _delay，那个 Timer 建在 widget 树销毁之后，
+    // flutter_test 会以 "A Timer is still pending" 报错。
+    if (stopRequested) return Future<void>.value();
     final completer = Completer<void>();
     late final Timer timer;
     timer = Timer(duration, () {
       _pendingTimers.remove(timer);
+      _pendingWaits.remove(completer);
       completer.complete();
     });
     _pendingTimers.add(timer);
+    _pendingWaits.add(completer);
     return completer.future;
   }
 
+  /// 取消要把等待方也放出来：只 cancel 掉 Timer 的话，`await _delay(...)` 的
+  /// Completer 永远不完成，runAgent 停在 await 上不返回，stopRequested 之后
+  /// 的那些提前返回分支一个都跑不到。
   void _cancelPendingTimers() {
     for (final timer in _pendingTimers) {
       timer.cancel();
     }
     _pendingTimers.clear();
+    for (final completer in _pendingWaits) {
+      if (!completer.isCompleted) completer.complete();
+    }
+    _pendingWaits.clear();
   }
 
   @override
@@ -316,6 +334,15 @@ class _FakeAgentService extends AgentService {
         ),
       );
       await _delay(postToolDelay);
+    }
+
+    for (final chunk in reasoningChunks) {
+      _emitEvent(AgentReasoningDeltaEvent(chunk));
+      await _delay(const Duration(milliseconds: 12));
+      if (stopRequested) {
+        _setMockState(isRunning: false, statusKey: '');
+        return AgentResponse(content: '');
+      }
     }
 
     // 真实协议：agent 通过 propose_note_edit 工具产出 NoteProposalArtifact，
@@ -380,11 +407,18 @@ class _FakeAgentService extends AgentService {
   }
 
   void _emitEvent(AgentEvent event) {
+    // 关掉之后还 add 会抛 "Cannot add event after closing"。放行等待方之后
+    // runAgent 会从 await 处继续跑，谁先到达这里并不由本类决定，所以这里兜一道。
+    if (_eventController.isClosed) return;
     _eventController.add(event);
   }
 
   @override
   void dispose() {
+    // 顺序和语义都要和 requestStop 对齐：先立起停止标志，再放行等待方。
+    // 只 cancel 不置标志的话，恢复执行的 runAgent 会一路穿过所有
+    // `if (stopRequested)` 守卫，然后往已经关闭的控制器里发事件。
+    stopRequested = true;
     _cancelPendingTimers();
     _eventController.close();
     super.dispose();
@@ -1352,6 +1386,70 @@ void main() {
       expect(find.byKey(const ValueKey('ai_assistant_waiting')), findsNothing);
     });
 
+    testWidgets('thinking spinner stops once the answer starts streaming',
+        (tester) async {
+      // 回归：推理增量走 50ms 节流，正文第一个 token 走直接写。直接写没有作废
+      // 队列里那条旧快照时，它会晚一步落地把 inProgress 顶回 true——思考早就
+      // 结束了，转圈却一直转到整段回答生成完。
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        reasoningChunks: const <String>['先想', '一下'],
+        responseChunks: const <String>['开始回答'],
+        responseChunkDelay: const Duration(milliseconds: 600),
+      );
+      await settingsService.setExploreAiAssistantMode(ThoughterPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 不能用 _submitInput：它以 pumpAndSettle 收尾，而转圈是个永不停的动画。
+      await tester.enterText(find.byType(TextField).last, '你怎么看');
+      await tester.pump();
+      tester
+          .widget<IconButton>(
+            find.byKey(const ValueKey('ai_assistant_send_button')),
+          )
+          .onPressed
+          ?.call();
+      await tester.pump();
+
+      // 推理阶段：面板出现且在转
+      for (var i = 0;
+          i < 20 && find.byType(ToolProgressPanel).evaluate().isEmpty;
+          i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+      expect(
+        tester
+            .widget<ToolProgressPanel>(find.byType(ToolProgressPanel))
+            .inProgress,
+        isTrue,
+      );
+
+      // 正文已经开始流，且已越过 50ms 节流窗口。这一轮还没结束（回答的下一段
+      // 要 600ms 后才来），但思考已经结束了，面板不该还在转。
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(find.textContaining('开始回答'), findsOneWidget);
+      expect(find.byIcon(Icons.stop_rounded), findsOneWidget);
+      expect(
+        tester
+            .widget<ToolProgressPanel>(find.byType(ToolProgressPanel))
+            .inProgress,
+        isFalse,
+      );
+
+      await _settleAgentTurn(tester);
+    });
+
     testWidgets('agent tool panel shows human summary instead of raw payload',
         (tester) async {
       final agentService = _FakeAgentService(
@@ -1485,6 +1583,81 @@ void main() {
       await tester.tap(processAction);
       await tester.pumpAndSettle();
       expect(find.text('找到 2 条笔记'), findsOneWidget);
+    });
+
+    // 只思考、一个工具都没调的那一轮：过程记录里只有推理文本
+    void seedThinkingOnlySession(_InMemoryChatSessionService service) {
+      final now = DateTime(2026, 8, 1, 10);
+      service.seedSession(
+        ChatSession(
+          id: 'note-session-thinking-only',
+          sessionType: 'agent',
+          noteId: 'note-1',
+          title: '只想了想',
+          createdAt: now,
+          lastActiveAt: now,
+        ),
+        <app_chat.ChatMessage>[
+          app_chat.ChatMessage(
+            id: 'm-user',
+            content: '你怎么看',
+            isUser: true,
+            role: 'user',
+            timestamp: now,
+          ),
+          app_chat.ChatMessage(
+            id: 'm-thinking',
+            content: '',
+            isUser: false,
+            role: 'assistant',
+            timestamp: now,
+            metaJson: jsonEncode(<String, Object?>{
+              'type': 'tool_progress',
+              'inProgress': false,
+              'items': <Map<String, Object?>>[],
+              'thinkingText': '先想清楚再回答',
+            }),
+          ),
+          app_chat.ChatMessage(
+            id: 'm-answer',
+            content: '我的看法是这样',
+            isUser: false,
+            role: 'assistant',
+            timestamp: now,
+          ),
+        ],
+      );
+    }
+
+    testWidgets('thinking-only turn still exposes its process under the reply',
+        (tester) async {
+      seedThinkingOnlySession(chatSessionService);
+      await settingsService.setNoteAiAssistantMode(ThoughterPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: _FakeAgentService(settingsService: settingsService),
+          child: ThoughterPage(
+            entrySource: ThoughterEntrySource.note,
+            quote: _buildQuote(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+      // 没有工具就别说「查看过程」，那一轮里能看的只有思考
+      final processAction = find.byTooltip(l10n.showThinking);
+      expect(processAction, findsOneWidget);
+      expect(find.byTooltip(l10n.viewToolProcess), findsNothing);
+
+      await tester.tap(processAction);
+      await tester.pumpAndSettle();
+      expect(find.text('先想清楚再回答'), findsOneWidget);
+      // 一个工具都没调，不该报「执行了 0 个操作」
+      expect(find.text(l10n.executedNOperations(0)), findsNothing);
     });
 
     testWidgets('regenerating drops the old answer and re-asks the question',

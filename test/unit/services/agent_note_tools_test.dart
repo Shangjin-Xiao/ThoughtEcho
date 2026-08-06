@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/note_proposal_artifact.dart';
@@ -10,6 +11,7 @@ import 'package:thoughtecho/services/agent_tools/propose_note_create_tool.dart';
 import 'package:thoughtecho/services/agent_tools/propose_note_edit_tool.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 
 import '../../test_harness.dart';
@@ -47,24 +49,26 @@ class _TestLocationService extends LocationService {
 }
 
 class _TestWeatherService extends WeatherService {
-  _TestWeatherService({
-    this.weatherKey,
-    this.temperatureText,
-    this.descriptionText,
-  });
+  _TestWeatherService({this.weatherKey, this.temperatureText});
 
   final String? weatherKey;
   final String? temperatureText;
-  final String? descriptionText;
 
   @override
   String? get currentWeather => weatherKey;
 
   @override
   String? get temperature => temperatureText;
+}
+
+class _TestSettingsService extends ChangeNotifier implements SettingsService {
+  _TestSettingsService({this.localeCode});
 
   @override
-  String? get weatherDescription => descriptionText;
+  final String? localeCode;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
 }
 
 void main() {
@@ -454,7 +458,7 @@ void main() {
   });
 
   group('GetLocationWeatherTool', () {
-    test('returns current location and weather snapshot', () async {
+    Future<Map<String, dynamic>> runTool({required String? localeCode}) async {
       final tool = GetLocationWeatherTool(
         locationService: _TestLocationService(
           locationDisplay: '广州市·天河区',
@@ -463,8 +467,8 @@ void main() {
         weatherService: _TestWeatherService(
           weatherKey: 'clear',
           temperatureText: '27°C',
-          descriptionText: '晴',
         ),
+        settingsService: _TestSettingsService(localeCode: localeCode),
       );
 
       final result = await tool.execute(
@@ -476,12 +480,26 @@ void main() {
       );
 
       expect(result.isError, isFalse);
-      final payload = jsonDecode(result.content) as Map<String, dynamic>;
+      return jsonDecode(result.content) as Map<String, dynamic>;
+    }
+
+    test('returns current location and weather snapshot', () async {
+      final payload = await runTool(localeCode: 'zh');
       expect(payload['location_display'], '广州市·天河区');
       expect(payload['location_storage'], '中国,广东省,广州市,天河区');
       expect(payload['weather_key'], 'clear');
       expect(payload['temperature'], '27°C');
       expect(payload['weather_display'], '晴 27°C');
+    });
+
+    test('describes the weather in the user language, not the storage key',
+        () async {
+      // 回归：以前这里交给模型的是 WeatherService 里的存储 key（'clear'），
+      // 界面显示「晴」，模型读到的却是一个英文标识符。
+      final payload = await runTool(localeCode: 'en');
+      expect(payload['weather_key'], 'clear');
+      expect(payload['weather_description'], 'Clear');
+      expect(payload['weather_display'], 'Clear 27°C');
     });
   });
 }

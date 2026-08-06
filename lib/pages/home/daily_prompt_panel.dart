@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../gen_l10n/app_localizations.dart';
 import '../../models/thoughter_entry.dart';
+import '../../models/weather_data.dart' show WeatherCodeMapper;
 import '../../services/ai_service.dart';
 import '../../services/insight_history_service.dart';
 import '../../services/location_service.dart';
@@ -60,14 +61,15 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
       final settingsService = context.read<SettingsService>();
 
       final city = locationService.city;
-      final weather = weatherService.currentWeather;
+      // 本地模板按 key 选句子，AI 那条链路要的是人能读的天气名，两者不能混用。
+      final weatherKey = weatherService.currentWeather;
       final temperature = weatherService.temperature;
       final aiEnabledForToday = settingsService.todayThoughtsUseAI;
 
       if (!aiEnabledForToday || !aiService.hasValidApiKey()) {
         _setLocalPrompt(
           city: city,
-          weather: weather,
+          weather: weatherKey,
           temperature: temperature,
         );
         return;
@@ -87,7 +89,9 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
       final promptStream = aiService.streamGenerateDailyPrompt(
         l10n,
         city: city,
-        weather: weather,
+        weather: weatherKey == null
+            ? null
+            : WeatherCodeMapper.getLocalizedDescription(l10n, weatherKey),
         temperature: temperature,
         historicalInsights: recentInsights,
       );
@@ -106,7 +110,7 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
           if (!mounted) return;
           _setLocalPrompt(
             city: city,
-            weather: weather,
+            weather: weatherKey,
             temperature: temperature,
           );
         },
@@ -118,7 +122,7 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
             logDebug('每日提示流结束但内容为空，使用本地生成的提示');
             _setLocalPrompt(
               city: city,
-              weather: weather,
+              weather: weatherKey,
               temperature: temperature,
             );
             return;

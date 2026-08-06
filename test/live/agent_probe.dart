@@ -447,6 +447,7 @@ class AgentProbe {
         GetLocationWeatherTool(
           locationService: _ProbeLocationService(),
           weatherService: _ProbeWeatherService(),
+          settingsService: settings,
         ),
         GetNoteDetailTool(database),
         WebSearchTool(settings),

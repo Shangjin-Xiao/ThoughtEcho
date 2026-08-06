@@ -25,6 +25,7 @@ import 'mmkv_service.dart';
 import 'location_service.dart';
 import 'weather_service.dart';
 import '../utils/app_logger.dart';
+import '../utils/localization_resolver.dart';
 import '../utils/platform_helper.dart';
 import '../utils/string_utils.dart';
 import 'background_push_handler.dart';

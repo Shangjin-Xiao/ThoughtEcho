@@ -595,6 +595,11 @@ extension _ThoughterUI on _ThoughterPageState {
     AppLocalizations l10n,
   ) {
     final toolSnapshot = _toolProcessBefore(message);
+    // 只思考的那轮说「查看思考过程」，调了工具才说「查看过程」——按钮文案
+    // 得对得上点开后看到的东西。
+    final thinkingOnly = toolSnapshot != null && toolSnapshot.items.isEmpty;
+    final processLabel =
+        thinkingOnly ? l10n.showThinking : l10n.viewToolProcess;
     return Padding(
       padding: const EdgeInsets.only(top: 2),
       // 按钮的热区自带 8 的横向留白，整行往左挪回去，第一枚图标才和正文
@@ -616,9 +621,11 @@ extension _ThoughterUI on _ThoughterPageState {
             ),
             if (toolSnapshot != null)
               _MessageAction(
-                icon: Icons.account_tree_outlined,
-                tooltip: l10n.viewToolProcess,
-                label: l10n.viewToolProcess,
+                icon: thinkingOnly
+                    ? Icons.psychology_outlined
+                    : Icons.account_tree_outlined,
+                tooltip: processLabel,
+                label: processLabel,
                 onTap: () => showToolProgressSheet(
                   context,
                   ValueNotifier(toolSnapshot),
@@ -672,18 +679,23 @@ extension _ThoughterUI on _ThoughterPageState {
     await _askAgent(question);
   }
 
-  /// 找出这条回复之前、同一轮里的工具调用进度，用来喂「查看过程」抽屉。
+  /// 找出这条回复之前、同一轮里的过程记录，用来喂「查看过程」抽屉。
+  ///
+  /// 过程不只有工具调用：模型可能这一轮什么都没查，只是想了一会儿再回答。
+  /// 那一样是过程，一样该能翻回去看——否则「只思考」的那轮，回答定稿后正文上方
+  /// 只剩一行折叠标题，下面的操作行却什么都不给，看着像思考被吞了。
   ToolProgressSnapshot? _toolProcessBefore(app_chat.ChatMessage message) {
     final index = _messages.indexWhere((m) => m.id == message.id);
     if (index <= 0) return null;
     for (var i = index - 1; i >= 0; i--) {
       final candidate = _messages[i];
-      // 回到上一条用户提问就说明这一轮没有工具调用
+      // 回到上一条用户提问就说明这一轮没有过程可看
       if (candidate.isUser) return null;
       final meta = candidate.parsedMeta;
       if (meta == null || meta['type'] != 'tool_progress') continue;
       final rawItems = meta['items'] as List<dynamic>? ?? const [];
-      if (rawItems.isEmpty) return null;
+      final thinkingText = meta['thinkingText']?.toString().trim() ?? '';
+      if (rawItems.isEmpty && thinkingText.isEmpty) return null;
       final items = rawItems.map((item) {
         final map = item as Map<String, dynamic>;
         return ToolProgressItem(
@@ -698,10 +710,14 @@ extension _ThoughterUI on _ThoughterPageState {
           narrationText: map['narrationText'] as String?,
         );
       }).toList();
+      final l10n = AppLocalizations.of(context);
       return ToolProgressSnapshot(
-        title: AppLocalizations.of(context).executedNOperations(items.length),
+        // 标题按这一轮实际发生的事说：没调工具就别报「执行了 0 个操作」。
+        title: items.isEmpty
+            ? l10n.thinking
+            : l10n.executedNOperations(items.length),
         items: items,
-        thinkingText: meta['thinkingText'] as String?,
+        thinkingText: thinkingText.isEmpty ? null : thinkingText,
       );
     }
     return null;
@@ -792,8 +808,9 @@ extension _ThoughterUI on _ThoughterPageState {
     // 输入壳比卡片再圆一档：它是一个会长高的容器，方角在多行时显得笨重。
     // 仍然跟着主题的 cardRadius 走，纸/素笺的方正不会被这里拉圆。
     final shellRadius = (shape.cardRadius * 1.4).clamp(0.0, 26.0).toDouble();
+    final focused = _isInputFocused;
     // 描边宽度恒定：聚焦时改宽会让内部文字横跳半个像素。只换颜色。
-    final borderColor = _isInputFocused
+    final borderColor = focused
         ? scheme.primary.withValues(alpha: 0.55)
         : scheme.outlineVariant.withValues(alpha: 0.7);
 
@@ -804,17 +821,21 @@ extension _ThoughterUI on _ThoughterPageState {
         duration: const Duration(milliseconds: 160),
         curve: Curves.easeOut,
         decoration: BoxDecoration(
-          // 壳比对话背景高一层，靠明度自己划出边界，不用重描边和重投影。
-          color: scheme.surfaceContainerHigh,
+          // 壳比对话背景高一层，靠明度自己划出边界；聚焦时再抬一层，
+          // 「正在输入」是被点亮的，不是被托起来的。
+          color: focused
+              ? scheme.surfaceContainerHighest
+              : scheme.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(shellRadius),
           border: Border.all(color: borderColor),
+          // 不投影：输入框不是浮在对话上的一张卡，一圈落地的阴影反而把它和
+          // 消息流割开。聚焦时改画一圈贴边的强调色高光——ChatGPT / Claude /
+          // Gemini 都是这个路子，而且它在纸墨这类零投影的风格下同样成立。
           boxShadow: [
             BoxShadow(
-              color: scheme.shadow.withValues(
-                alpha: theme.brightness == Brightness.dark ? 0.16 : 0.04,
-              ),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: scheme.primary.withValues(alpha: focused ? 0.14 : 0.0),
+              blurRadius: 0,
+              spreadRadius: focused ? 3 : 0,
             ),
           ],
         ),
