@@ -230,6 +230,7 @@ class _FakeAgentService extends AgentService {
   String _mockStatusKey = '';
   bool stopRequested = false;
   final Set<Timer> _pendingTimers = <Timer>{};
+  final Set<Completer<void>> _pendingWaits = <Completer<void>>{};
   final StreamController<AgentEvent> _eventController =
       StreamController<AgentEvent>.broadcast(sync: true);
 
@@ -259,21 +260,34 @@ class _FakeAgentService extends AgentService {
   }
 
   Future<void> _delay(Duration duration) {
+    // 已经停了就不要再排新的定时器：取消放行等待方之后，runAgent 会从
+    // await 处继续往下跑到下一个 _delay，那个 Timer 建在 widget 树销毁之后，
+    // flutter_test 会以 "A Timer is still pending" 报错。
+    if (stopRequested) return Future<void>.value();
     final completer = Completer<void>();
     late final Timer timer;
     timer = Timer(duration, () {
       _pendingTimers.remove(timer);
+      _pendingWaits.remove(completer);
       completer.complete();
     });
     _pendingTimers.add(timer);
+    _pendingWaits.add(completer);
     return completer.future;
   }
 
+  /// 取消要把等待方也放出来：只 cancel 掉 Timer 的话，`await _delay(...)` 的
+  /// Completer 永远不完成，runAgent 停在 await 上不返回，stopRequested 之后
+  /// 的那些提前返回分支一个都跑不到。
   void _cancelPendingTimers() {
     for (final timer in _pendingTimers) {
       timer.cancel();
     }
     _pendingTimers.clear();
+    for (final completer in _pendingWaits) {
+      if (!completer.isCompleted) completer.complete();
+    }
+    _pendingWaits.clear();
   }
 
   @override
@@ -325,6 +339,10 @@ class _FakeAgentService extends AgentService {
     for (final chunk in reasoningChunks) {
       _emitEvent(AgentReasoningDeltaEvent(chunk));
       await _delay(const Duration(milliseconds: 12));
+      if (stopRequested) {
+        _setMockState(isRunning: false, statusKey: '');
+        return AgentResponse(content: '');
+      }
     }
 
     // 真实协议：agent 通过 propose_note_edit 工具产出 NoteProposalArtifact，
