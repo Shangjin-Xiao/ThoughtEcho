@@ -200,10 +200,13 @@ Roboto 变粗）做的补偿，却跑在换字体**之前**，衬线体照单全
 
 **顺带修掉的三处，每一处都是「主题走到一半断了」：**
 
-1. **AppBar 标题不跟风格**。`appBarTheme.titleTextStyle` 一旦非空就不再回落到
-   `textTheme`，所以纸墨风格下正文是衬线、顶栏标题还是黑体。现在显式接上字体族，
-   字重过一遍 `form.readingWeight(FontWeight.w400)`（material 下下限为 0，
-   原样还是 w400，一个像素不变）。
+1. **AppBar 那条分支一直是空转**（不是「标题没跟风格」——先入为主写成那样是错的，
+   实测推翻了）。FlexColorScheme 根本不设 `appBarTheme.titleTextStyle`，
+   `?.copyWith(...)` 求值成 null，里面硬写的 `fontSize: 20` 和 `fontWeight: w400`
+   **从来没生效过**；M3 的 AppBar 在它为 null 时回落 `textTheme.titleLarge`，
+   顶栏标题本来就跟着风格走。现在把这条分支改成跟风格取值（字体族 +
+   `form.readingWeight(FontWeight.w400)`）并留下警示注释，为的是它某天非空时不会
+   把风格丢掉，**不是修好了什么可见的东西**。
 2. **富文本的加粗在衬线风格下会消失**。`quote_content_widget` 那套
    `bold: w500` 的降档是给黑体做的，而系统中文衬线常常只有 Regular / Bold 两档，
    w500 匹配回 Regular——用户标的粗体直接没了。判据改成
@@ -220,6 +223,26 @@ Roboto 变粗）做的补偿，却跑在换字体**之前**，衬线体照单全
 
 **`ruleSpacing` 的推导公式跟着改成「字号 × 行高」**，不再是「16 × 行高」。
 不变量在 `theme_style_contrast_test.dart` 里更新过了。
+
+#### 一个接手必读的坑：`ThemeData.textTheme` 里大部分字段是 null
+
+排查这一轮时才确认：`createLightThemeData()` 产出的 `textTheme` 里，**字号、行高、
+字重绝大多数是 null**，它们由 `Theme` widget 在 build 时按 locale 的字形几何补齐
+（`ThemeData.localize` + `Typography.dense`，中文走 dense）。所以：
+
+- 想读「正文多大」不能直接看 `theme.textTheme.bodyLarge!.fontSize`，主题层拿到的是
+  null；只有在 widget 树里 `Theme.of(context)` 之后才是完整值。
+- `_applyStyleTypography` 里那些 `?? m3Size` / `?? m3Height` 兜底**不是防御性代码，
+  是主路径**——base 就是 null，全靠它们把 M3 默认值填进来。填错就会静默偏一档。
+- 反过来，**一旦写进具体值就等于把这一级从几何里摘出来了**。这就是为什么字号缩放
+  只给 `body*`：给 `title*` 也钉上会连带压掉 dense 几何在标题上的取值。
+- 字重下限取 w500 还有一层没写在设计里的运气成分：base 字重是 null，代码按 w400 算，
+  而 `titleMedium` / `titleSmall` 的真实 M3 值正好也是 w500，两边撞上了才没出错。
+  **下限要是取得更高，会连标题一起顶粗，而 base 是 null 这件事会让人看不出来。**
+
+这些不变量钉在 `test/theme/theme_style_typography_test.dart`——它断言的是
+`createLightThemeData()` 的产物，和只断言令牌取值的 `theme_style_contrast_test.dart`
+是两回事，不要合并。
 
 #### 这一轮没做的部分
 

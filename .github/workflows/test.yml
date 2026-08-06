@@ -107,6 +107,12 @@ jobs:
             paths: test/bug_fixes test/*_test.dart
             shard_index: 1
             total_shards: 2
+          # test/theme 之前不在任何一个分片里：test/*_test.dart 只匹配顶层文件，
+          # 主题的对比度和排版不变量因此从来没在 CI 上跑过。整目录不到一秒，单独一片。
+          - name: theme
+            paths: test/theme
+            shard_index: 0
+            total_shards: 1
 
     steps:
     - name: Checkout repository

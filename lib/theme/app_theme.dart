@@ -747,10 +747,15 @@ class AppTheme with ChangeNotifier {
         foregroundColor: colorScheme.onSurface,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        // AppBar 的 titleTextStyle 一旦非空就**不再**回落到 textTheme，
-        // 所以风格的字体族和字重必须在这里显式接上——否则纸墨风格下正文是衬线、
-        // 顶栏标题还是黑体。fontFamily 传 null 时 copyWith 保持原值，
-        // material 下等于什么都没改。
+        // ⚠️ **这一整条目前是空转**：FlexColorScheme 不设 appBarTheme.titleTextStyle，
+        // 所以 `?.copyWith` 求值成 null，下面的 fontSize 20 / 字重 / 颜色一个都没生效
+        // （实测见 `theme_style_typography_test.dart`）。M3 的 AppBar 在
+        // titleTextStyle 为 null 时回落到 `textTheme.titleLarge`，风格是从那条路
+        // 跟上的——**顶栏标题本来就是衬线，不要以为这里修好了什么**。
+        //
+        // 保留而不是删掉，是因为它某天非空时（换 FlexColorScheme 版本、或有人加了
+        // appBarTheme 配置）必须跟着风格走，而不是像原来那样硬写 w400 + 系统字体。
+        // fontFamily 传 null 时 copyWith 保持原值，material 下等于什么都没改。
         titleTextStyle: baseTheme.appBarTheme.titleTextStyle?.copyWith(
           color: colorScheme.onSurface,
           fontFamily: form.fontFamily,
