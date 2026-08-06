@@ -33,20 +33,22 @@ colors:
   onDanger: "#FEFDFB"
 
 typography:
+  # 正文字号 = 16 × bodyFontScale。衬线风格 1.0625 → 17，material 1 → 16。
+  # label* 不在此表：它永远是系统黑体、永远不缩放，见 Typography 一节。
   body:
     fontFamily: serif
-    fontSize: 16px
-    fontWeight: 400
+    fontSize: 17px
+    fontWeight: 500
     lineHeight: 1.75
   bodyMaterial:
     fontFamily: system-ui
     fontSize: 16px
-    fontWeight: 350
+    fontWeight: 350   # Android 减重后的取值；其余平台是 M3 原生 400
     lineHeight: 1.5
   bodyPlain:
     fontFamily: serif
-    fontSize: 16px
-    fontWeight: 400
+    fontSize: 17px
+    fontWeight: 500
     lineHeight: 1.6
 
 rounded:
@@ -172,8 +174,10 @@ components:
   就是比黑体虚**，跟对比度无关（色板全部在 AA 以上）。字号是唯一在所有平台、所有
   ROM 上都一定生效的补偿（字重要看设备有几档字体），手工风格取 1.0625（16 → 17）。
   上限 1.15，再高列表密度就崩了。
-- **次要墨色比 AA 再保守一档**（四套都在 7:1 以上）。WCAG 只算两个色值，不看笔画
-  多宽；同样 6:1 的灰落在衬线的半像素横画上，看到的反差要打对折。
+- **次要墨色比 AA 再保守一档**：四套色板在**纸和卡片两种底色上**都要达到 7:1，
+  由 `theme_style_contrast_test.dart` 钉死。WCAG 只算两个色值，不看笔画多宽；
+  同样 6:1 的灰落在衬线的半像素横画上，看到的反差要打对折。两种底色都要验，
+  是因为次要文字大量渲染在卡片上——只按页面底色算会漏。
 - **富文本是独立的一条路**：`flutter_quill` 的段落基准样式不继承 `textTheme`
   （`fontSize` / `height` 被硬写成 16 / 1.15），字号和行高都要按令牌纠正，才能和
   纯文本、横线间距对齐。纠正规则只有 `QuillThemeTypography` 一处，笔记卡片和全屏

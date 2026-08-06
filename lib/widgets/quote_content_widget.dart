@@ -456,6 +456,25 @@ class QuoteContent extends StatelessWidget {
         collapsedContentMaxHeight;
   }
 
+  /// 把 [estimatedLineHeight] 对齐到 [style] 代表的正文行高，**必须在任何一次
+  /// 富文本折叠判定之前调用**。
+  ///
+  /// [build] 里也会回填一次，但那太晚了：折叠判定发生在**父组件**
+  /// （`quote_item_widget` 的 `_needsExpansionForLayout`），比子组件 build 早一帧。
+  /// 首帧、以及刚切换主题风格的那一帧，全局值还停在上一套风格上——纸墨下真实行高
+  /// 是 17×1.75≈29.75，而初值是 material 的 24，差 24%，足以让一条实际超过 160px
+  /// 的笔记被判成「不需要展开」，展开入口直接不出现。
+  ///
+  /// 取值口径必须和 [QuillThemeTypography.paragraphStyle] 一致：那边 [style] 非空时
+  /// 用的就是它自己的 fontSize / height，所以这里同样只认 [style]，两边不会漂。
+  /// [style] 缺字号或行高时保持原值不动，交给 build 回填。
+  static void _syncEstimatedLineHeight(TextStyle? style) {
+    final fontSize = style?.fontSize;
+    final height = style?.height;
+    if (fontSize == null || height == null) return;
+    estimatedLineHeight = fontSize * height;
+  }
+
   /// Returns whether [quote] should be collapsed for the current layout.
   ///
   /// Plain text is measured with [TextPainter] using the actual [style],
@@ -471,6 +490,10 @@ class QuoteContent extends StatelessWidget {
     required TextScaler textScaler,
     Locale? locale,
   }) {
+    // 富文本走的是静态估算，读的是全局 estimatedLineHeight。父组件比子组件 build
+    // 早一帧，不先对齐就会拿上一套风格的行高判折叠。见 _syncEstimatedLineHeight。
+    _syncEstimatedLineHeight(style);
+
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
       return exceedsCollapsedHeight(quote);
     }
@@ -983,6 +1006,8 @@ class QuoteContent extends StatelessWidget {
     final prioritizeBoldContent = context.select<SettingsService, bool>(
       (s) => s.prioritizeBoldContentInCollapse,
     );
+    // 同上：这条路径也可能在富文本 build 回填之前就判折叠。
+    _syncEstimatedLineHeight(style);
     final bool needsExpansion =
         needsExpansionOverride ?? exceedsCollapsedHeight(quote);
 

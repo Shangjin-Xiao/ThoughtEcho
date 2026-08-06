@@ -33,6 +33,16 @@ void main() {
           expectContrast(colors.inkMuted, colors.card, 4.5, '$label 次要墨色 / 卡片');
         });
 
+        // 手工风格用衬线体，横画细，同一个对比度看着比黑体虚。所以次要文字
+        // 单独加一条比 AA 更严的线，而且**纸和卡片两种底色都要过**——次要文字
+        // 大量渲染在卡片上，只按页面底色验算会漏（纸墨暗色就漏过一次：
+        // 底色 7.66 达标、卡片只有 6.76）。
+        test('$label 次要文字在两种底色上都达到 7:1', () {
+          expectContrast(
+              colors.inkMuted, colors.background, 7.0, '$label 次要墨色 / 背景');
+          expectContrast(colors.inkMuted, colors.card, 7.0, '$label 次要墨色 / 卡片');
+        });
+
         test('$label 强调色与容器上的文字可读', () {
           expectContrast(colors.onAccent, colors.accent, 4.5, '$label 强调上的文字');
           expectContrast(colors.onAccentContainer, colors.accentContainer, 4.5,

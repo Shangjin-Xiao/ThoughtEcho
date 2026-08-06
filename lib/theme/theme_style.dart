@@ -544,10 +544,15 @@ class ThemeStyleColors {
 
   /// 次要墨色，用于辅助文字和图标。
   ///
-  /// 取值比「过了 WCAG AA 就行」要保守一档（现在四套都在 7:1 以上）。
+  /// 取值比「过了 WCAG AA 就行」要保守一档：**四套色板在纸和卡片两种底色上都要
+  /// 达到 7:1**，由 `theme_style_contrast_test.dart` 钉死，不是一句口号。
   /// WCAG 只算前景背景两个色值，不看笔画有多宽；同样 6:1 的灰，落在衬线体
   /// 半像素粗的横画上，看到的实际反差要打对折。手工风格用衬线体，
   /// 次要文字就得比黑体的同位色更实一点，读起来才对得上。
+  ///
+  /// **两种底色都要过**：次要文字大量渲染在卡片上而不是页面底色上，只按底色
+  /// 验算会漏。纸墨暗色就是这么漏的——曾取 `0xFFC4B6A8`，底色上 7.66 达标，
+  /// 卡片上只有 6.76。
   final Color inkMuted;
 
   /// 强调色。
@@ -661,7 +666,7 @@ class ThemeStylePalette {
       outline: Color(0xFF4A4037),
       outlineStrong: Color(0xFF5D5147),
       ink: Color(0xFFE8DFD5),
-      inkMuted: Color(0xFFC4B6A8),
+      inkMuted: Color(0xFFCBBEB0),
       accent: Color(0xFFC9A077),
       onAccent: Color(0xFF2A2520),
       accentContainer: Color(0xFF423931),

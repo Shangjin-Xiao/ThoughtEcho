@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
 
-import '../test_harness.dart';
+import '../../test_harness.dart';
 
 /// `theme_style_contrast_test.dart` 校验的是**令牌取值**，这里校验**落地结果**。
 ///
