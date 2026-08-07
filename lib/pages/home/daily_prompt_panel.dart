@@ -169,16 +169,9 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
     });
   }
 
-  /// 提示还在生成时不给点：此时手上只有半截文本，
-  /// 带进对话会让 Thoughter 看到一句没说完的话。
-  /// 生成流由本面板持有，跳走也不会中断，回来就是完整的。
-  bool get _canAskThoughter =>
-      !_isGeneratingDailyPrompt && _accumulatedPromptText.trim().isNotEmpty;
-
   static const double _askButtonSize = 32;
 
   Widget _buildAskThoughterButton(ThemeData theme, AppLocalizations l10n) {
-    final enabled = _canAskThoughter;
     return SizedBox(
       width: _askButtonSize,
       height: _askButtonSize,
@@ -186,14 +179,30 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
         padding: EdgeInsets.zero,
         iconSize: widget.isVerySmallScreen ? 16 : 18,
         tooltip: l10n.askNote,
-        onPressed: enabled ? _openThoughterWithPrompt : null,
+        onPressed: _openThoughterWithPrompt,
         icon: Icon(
           Icons.auto_awesome,
-          color: enabled
-              ? theme.colorScheme.primary
-              : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+          color: theme.colorScheme.primary,
         ),
       ),
+    );
+  }
+
+  /// 进对话时用的开场白。
+  ///
+  /// 面板上那句话生成完了就用它；还在流式生成（手上只有半截话）或者压根
+  /// 没生成时，用本地模板按当前时段/天气/城市现拼一句——入口任何时候都
+  /// 能点，不会因为提示没加载出来就变灰。
+  String _openingMessage() {
+    final prompt = _accumulatedPromptText.trim();
+    if (!_isGeneratingDailyPrompt && prompt.isNotEmpty) return prompt;
+
+    final weatherService = context.read<WeatherService>();
+    return DailyPromptGenerator.generatePromptBasedOnContext(
+      AppLocalizations.of(context),
+      city: context.read<LocationService>().city,
+      weather: weatherService.currentWeather,
+      temperature: weatherService.temperature,
     );
   }
 
@@ -203,13 +212,11 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
   /// 第一句，也进入模型上下文——不需要再让 AI 生成一次开场，也不替用户
   /// 先问一句，接下来说什么由用户决定。
   void _openThoughterWithPrompt() {
-    final prompt = _accumulatedPromptText.trim();
-    if (prompt.isEmpty) return;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ThoughterPage(
           entrySource: ThoughterEntrySource.explore,
-          openingMessage: prompt,
+          openingMessage: _openingMessage(),
         ),
       ),
     );

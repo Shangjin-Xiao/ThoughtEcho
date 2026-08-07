@@ -217,5 +217,27 @@ void main() {
       expect(promptText, findsOneWidget);
       expect(tester.widget<Text>(promptText).data, isNotEmpty);
     });
+
+    testWidgets('Thoughter 入口在提示还没生成完时也能点', (WidgetTester tester) async {
+      // 提示加载不出来（或还在流式生成）时入口不该变灰：开场白改用本地
+      // 模板现拼一句，点得动才是关键。
+      final controller = StreamController<String>();
+      addTearDown(controller.close);
+      mockAIService._mockStream = controller.stream;
+
+      await tester.pumpWidget(createWidgetUnderTest());
+
+      final state = tester
+          .state<HomeDailyPromptPanelState>(find.byType(HomeDailyPromptPanel));
+      unawaited(state.refreshPrompt());
+      await tester.pump();
+
+      final askButton = find.ancestor(
+        of: find.byIcon(Icons.auto_awesome),
+        matching: find.byType(IconButton),
+      );
+      expect(askButton, findsOneWidget);
+      expect(tester.widget<IconButton>(askButton).onPressed, isNotNull);
+    });
   });
 }

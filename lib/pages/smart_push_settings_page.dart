@@ -264,13 +264,12 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
 
             const SizedBox(height: 16),
 
-            // 推送频率拨盘（上限，疲劳系统在其内做减法）
-            _buildIntensityCard(l10n, theme, colorScheme),
-
-            // 自定义模式：显示完整高级选项
-            if (_settings.pushMode == PushMode.custom) ...[
-              const SizedBox(height: 16),
-
+            // 智能模式：推送频率拨盘（上限，疲劳系统在其内做减法）
+            // 自定义模式不显示——时段和频率都由用户自己排，再叠一层上限
+            // 只会让用户排的东西推不出来
+            if (_settings.pushMode == PushMode.smart)
+              _buildIntensityCard(l10n, theme, colorScheme)
+            else ...[
               // 推送时间设置
               _buildTimeSettingsCard(l10n, theme, colorScheme),
 

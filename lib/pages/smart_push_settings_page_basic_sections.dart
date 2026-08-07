@@ -137,11 +137,11 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
     );
   }
 
-  /// 推送频率拨盘卡片
+  /// 推送频率拨盘卡片（仅智能模式）
   ///
   /// 拨盘定的是**上限**：向右只是放宽天花板，不会突破连续未点击的降级逻辑。
-  /// 所以文案只说体感（"大约每天 1 条"），不暴露内部数字，免得用户
-  /// 拨到最右却没天天收到、以为坏了。
+  /// 正因为给不出准数，这里不写"大约每天几条"之类的承诺，只留一个
+  /// 少↔多的滑块，免得用户拨到最右却没天天收到、以为坏了。
   Widget _buildIntensityCard(
     AppLocalizations l10n,
     ThemeData theme,
@@ -171,15 +171,8 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '推送频率',
+                  l10n.smartPushFrequency,
                   style: theme.textTheme.titleSmall?.copyWith(
-                    color: colorScheme.primary,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  _settings.pushIntensity.label,
-                  style: theme.textTheme.labelLarge?.copyWith(
                     color: colorScheme.primary,
                   ),
                 ),
@@ -191,7 +184,6 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
               min: 0,
               max: (values.length - 1).toDouble(),
               divisions: values.length - 1,
-              label: _settings.pushIntensity.label,
               onChanged: (value) {
                 final next = values[value.round()];
                 if (next == _settings.pushIntensity) return;
@@ -206,32 +198,18 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    values.first.label,
+                    l10n.smartPushIntensityFewer,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
                   Text(
-                    values.last.label,
+                    l10n.smartPushIntensityMore,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              _settings.pushIntensity.description,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '长期不打开时会自动减少，一直不理会时会进一步放缓。',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
               ),
             ),
           ],

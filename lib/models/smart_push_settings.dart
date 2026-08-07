@@ -72,33 +72,6 @@ class PushQuotaProfile {
 }
 
 extension PushIntensityX on PushIntensity {
-  String get label {
-    switch (this) {
-      case PushIntensity.rare:
-        return '很少';
-      case PushIntensity.restrained:
-        return '克制';
-      case PushIntensity.balanced:
-        return '适中';
-      case PushIntensity.frequent:
-        return '多一些';
-    }
-  }
-
-  /// 拨盘底下那行实时文案 —— 只说体感，不暴露内部上限数字
-  String get description {
-    switch (this) {
-      case PushIntensity.rare:
-        return '大约每周 2-3 条，安静时更少';
-      case PushIntensity.restrained:
-        return '大约每天 1 条，安静时更少';
-      case PushIntensity.balanced:
-        return '每天 1-2 条，安静时更少';
-      case PushIntensity.frequent:
-        return '每天最多 3 条，安静时更少';
-    }
-  }
-
   /// 查配额矩阵：拨盘档位在行，参与度分档在列
   PushQuotaProfile quotaFor(EngagementTier tier) {
     switch (this) {
