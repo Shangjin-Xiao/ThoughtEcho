@@ -1250,8 +1250,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   }
 
   void _detachDialogPerfHooks() {
-    // 自动附加那一段还在采样时先别摘，否则它一帧都收不到。
-    if (_autoMetadataRecording) {
+    // 两段采样共用同一个帧回调，任意一段还在跑就先别摘：
+    // 自动附加可能被保存提前触发并先结束，这时打开阶段还在录，摘早了后面的帧全丢。
+    if (_autoMetadataRecording || _dialogPerfRecording) {
       return;
     }
     if (_dialogPerfTimingsCallbackAttached) {
@@ -1738,8 +1739,11 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     _autoFocusTimer?.cancel();
     _autoMetadataFallbackTimer?.cancel();
     _databaseListenerTimer?.cancel();
+    // 两个采样标志都要在摘钩子前清掉，否则 _detachDialogPerfHooks 会以为还在录，
+    // 帧回调就留在 binding 上了。
     _autoMetadataRecording = false;
     _autoMetadataStopwatch.stop();
+    _dialogPerfRecording = false;
     _detachDialogPerfHooks();
     _dbChangeDebounceTimer?.cancel();
     _routeAnimation?.removeListener(_onRouteAnimationProgress);
@@ -2449,15 +2453,22 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                           return;
                                         }
                                         // 新建模式：首次勾选，获取位置
-                                        if (value &&
-                                            _controller.newLocation == null &&
-                                            _controller.newLatitude == null) {
-                                          _ensureMetadataServices();
-                                          _controller.fetchLocationForNewNote();
+                                        if (value) {
+                                          if (_controller.newLocation == null &&
+                                              _controller.newLatitude == null) {
+                                            _ensureMetadataServices();
+                                            _controller
+                                                .fetchLocationForNewNote();
+                                          }
+                                          setState(() {
+                                            _controller.includeLocation = true;
+                                          });
+                                          return;
                                         }
-                                        setState(() {
-                                          _controller.includeLocation = value;
-                                        });
+                                        // 取消勾选：走 removeNewLocation 一并放掉在途标志。
+                                        // 定位还没回来时（上面的弹窗分支进不去）只改勾选，
+                                        // 保存会继续等一个结果已经不要了的请求，最多转 5 秒。
+                                        _controller.removeNewLocation();
                                       },
                                       selectedColor:
                                           theme.colorScheme.primaryContainer,
@@ -2551,10 +2562,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                       _ensureMetadataServices();
                                       _controller.fetchWeatherForNewNote();
                                     } else {
+                                      // 同位置：取消勾选要连在途标志一起放掉
                                       _cancelAutoAttachPlan(weather: true);
-                                      setState(() {
-                                        _controller.includeWeather = false;
-                                      });
+                                      _controller.removeNewWeather();
                                     }
                                   },
                                   selectedColor:

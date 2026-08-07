@@ -14,7 +14,7 @@ import 'package:thoughtecho/services/unified_log_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
 
-import '../test_harness.dart';
+import '../../test_harness.dart';
 
 Position _beijingPosition() => Position(
       longitude: 116.4074,
@@ -342,6 +342,45 @@ void main() {
     expect(saved, isNotNull);
     expect(saved!.weather, isNull, reason: '用户明确移除的天气不该在保存时被静默加回');
     expect(weather.fetchCount, 1, reason: '不该为已取消的附加再发一次请求');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 600));
+  });
+
+  testWidgets('定位途中取消勾选位置：保存不再空等这次已经不要的请求', (WidgetTester tester) async {
+    Quote? saved;
+
+    await tester.pumpWidget(
+      _buildApp(
+        settings: _TestSettingsService(),
+        location: _SlowLocationService(),
+        weather: _SlowWeatherService(),
+        onSave: (quote) => saved = quote,
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // 手动勾上位置，定位要 200ms 才回来
+    final locationChip = find.byKey(const ValueKey('add_note_location_chip'));
+    await tester.tap(locationChip);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // 还没拿到坐标就取消勾选：此时弹窗分支进不去，只会改勾选状态
+    await tester.tap(locationChip);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 20));
+
+    await tester.tap(find.byType(FilledButton).last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 20));
+
+    expect(saved, isNotNull, reason: '取消掉的定位不该再把保存拖住');
+    expect(saved!.latitude, isNull);
+    expect(saved!.location, isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 600));
