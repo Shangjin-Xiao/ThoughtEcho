@@ -67,16 +67,22 @@ void main() {
       expect(notified, 0);
     });
 
-    test('服务缺失时抓取会放掉预约标志，避免保存白等', () async {
+    test('服务缺失时按失败处理：放掉标志并取消勾选，不留虚假的已附加状态', () async {
       final controller = AddNoteController(context: FakeBuildContext())
+        ..includeLocation = true
+        ..includeWeather = true
         ..armAutoMetadataFetch(location: true, weather: true);
 
       await controller.fetchLocationForNewNote();
       expect(controller.isFetchingLocation, isFalse);
+      expect(controller.includeLocation, isFalse,
+          reason: '拿不到位置服务就不该保留「已附加位置」的勾');
       expect(controller.isFetchingWeather, isTrue);
 
       await controller.fetchWeatherForNewNote();
       expect(controller.isFetchingWeather, isFalse);
+      expect(controller.includeWeather, isFalse,
+          reason: '拿不到天气服务时保留勾选，保存会把上一次的天气写进这条笔记');
       expect(controller.isFetchingMetadata, isFalse);
     });
 

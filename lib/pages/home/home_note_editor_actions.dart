@@ -55,12 +55,10 @@ class HomeNoteEditorActions {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context);
 
-    // 标签已经在内存里就直接开窗：这里 await 一次数据库查询会把整个开窗动作往后推，
-    // 而 edit() 一直是直接用缓存的，保存后也会重新加载。
-    if (isLoadingTags() || readTags().isEmpty) {
-      await loadTags();
-      if (!isMounted() || !context.mounted) return;
-    }
+    // 这次查询必须等：标签只在启动和切到笔记页时刷新，设置页里新增/改名/删除标签后
+    // 直接回来点新增笔记，缓存就是旧的。省这一次查询换来的开窗提前量没有实测支撑。
+    await loadTags();
+    if (!isMounted() || !context.mounted) return;
 
     if (isLoadingTags() || readTags().isEmpty) {
       logDebug('标签数据未准备好，重新加载标签数据...');

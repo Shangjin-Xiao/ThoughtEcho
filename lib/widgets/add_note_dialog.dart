@@ -118,6 +118,18 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   int? _dialogPerfKeyboardSettledMs;
   final Stopwatch _dialogPerfStopwatch = Stopwatch();
   final List<FrameTiming> _dialogPerfFrameTimings = <FrameTiming>[];
+  // 主体 Widget 树的构造耗时。首帧的 buildDuration 里既有它，也有路由/弹窗自身的
+  // element 挂载和布局；分开记一笔才知道该砍谁。
+  int _dialogPerfBodyBuildCount = 0;
+  double _dialogPerfBodyBuildWorstMs = 0;
+  double? _dialogPerfFirstBodyBuildMs;
+  // 自动附加阶段：抓取被挪到键盘稳定之后，已经落在上面那个采样窗口之外了，
+  // 单独记一段，否则这段的耗时和掉帧完全看不见。
+  final List<FrameTiming> _autoMetadataFrameTimings = <FrameTiming>[];
+  final Stopwatch _autoMetadataStopwatch = Stopwatch();
+  bool _autoMetadataRecording = false;
+  int? _autoMetadataLocationDoneMs;
+  int? _autoMetadataWeatherDoneMs;
   final Map<String, int> _dialogPerfStateChanges = <String, int>{};
   late final AppTracer _dialogOpenTimelineTask;
   bool _dialogOpenTimelineFinished = false;
@@ -540,6 +552,17 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     }
   }
 
+  /// 用户主动关掉位置/天气后，作废对应的自动附加计划。
+  ///
+  /// 计划是在 initState 定下的，而抓取要等 UI 稳定（或用户点保存）才执行。
+  /// 中间这段时间里用户把开关关掉，计划却还留着的话，
+  /// `_startAutoMetadataFetch` 会把它重新打开并再抓一次——用户明确移除的东西
+  /// 在保存时又被静默加回来。
+  void _cancelAutoAttachPlan({bool location = false, bool weather = false}) {
+    if (location) _autoAttachLocationPlanned = false;
+    if (weather) _autoAttachWeatherPlanned = false;
+  }
+
   /// 缓存位置/天气/数据库服务引用。
   ///
   /// 自动附加的抓取推迟到 UI 稳定后才跑，但用户可能更早点位置/天气按钮，
@@ -571,6 +594,13 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       'ThoughtEcho.AddNoteDialog.deferredMetadata.start',
       arguments: <String, Object>{'reason': reason},
     );
+    if (_dialogPerfEnabled) {
+      _autoMetadataRecording = true;
+      _autoMetadataFrameTimings.clear();
+      _autoMetadataStopwatch
+        ..reset()
+        ..start();
+    }
     _ensureMetadataServices();
 
     // 延迟注册监听器，避免初始化时触发不必要的查询
@@ -598,27 +628,79 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       // 否则位置刚抓完的那一瞬间点保存，会被当成元数据已就绪，天气就丢了。
       if (autoLocation) {
         await _controller.fetchLocationForNewNote();
-        if (!mounted) return;
+        _autoMetadataLocationDoneMs =
+            _autoMetadataStopwatch.elapsedMilliseconds;
+        if (!mounted) {
+          _finalizeAutoMetadataCapture('unmounted');
+          return;
+        }
       }
 
       if (autoWeather) {
         final hasCoordinates = _controller.newLatitude != null ||
             _cachedLocationService?.currentPosition != null;
-        if (!autoLocation || (_controller.includeLocation && hasCoordinates)) {
+        if (!_controller.includeWeather) {
+          // 定位还没回来的时候用户就把天气去掉了，尊重它，别再发一次已取消的请求。
+          _recordDialogPerfStateChange('autoWeatherCancelled');
+          _controller.clearPendingWeatherFetch();
+        } else if (!autoLocation ||
+            (_controller.includeLocation && hasCoordinates)) {
           await _controller.fetchWeatherForNewNote();
         } else {
-          // 位置没拿到，天气也无从获取：放掉预约标志，别让保存白等到超时。
-          _controller.clearPendingWeatherFetch();
-          if (!_controller.includeLocation) {
-            _recordDialogPerfStateChange('autoWeatherDisabled');
-            _controller.setIncludeWeather(false);
-          }
+          // 位置没拿到，天气也无从获取：取消这次附加并放掉标志。
+          // 只清标志不清勾选的话，保存会把 WeatherService 里上一次的天气
+          // 写进一条根本没有坐标的笔记。
+          _recordDialogPerfStateChange('autoWeatherDisabled');
+          _controller.removeNewWeather();
         }
+        _autoMetadataWeatherDoneMs = _autoMetadataStopwatch.elapsedMilliseconds;
       }
     }
 
     _dialogOpenTimelineTask
         .instant('ThoughtEcho.AddNoteDialog.deferredMetadata.complete');
+    _finalizeAutoMetadataCapture(reason);
+  }
+
+  /// 自动附加阶段的采样收尾。
+  ///
+  /// 这段现在跑在键盘稳定之后，已经在「打开性能结果」的采样窗口之外——
+  /// 之前那份 log 里 `stateChanges={}` 就是因为它整段发生在窗口关闭以后。
+  void _finalizeAutoMetadataCapture(String trigger) {
+    if (!_autoMetadataRecording) {
+      return;
+    }
+    _autoMetadataRecording = false;
+    _autoMetadataStopwatch.stop();
+    _detachDialogPerfHooks();
+
+    final summary = _summarizeFrames(_autoMetadataFrameTimings);
+    final locationOutcome = !_autoAttachLocationPlanned
+        ? 'skip'
+        : (_controller.includeLocation && _controller.newLatitude != null
+            ? 'ok'
+            : 'failed');
+    final weatherOutcome = !_autoAttachWeatherPlanned
+        ? 'skip'
+        : (_controller.includeWeather &&
+                (_cachedWeatherService?.hasData ?? false)
+            ? 'ok'
+            : 'failed');
+
+    logDebug(
+      '自动附加耗时: trigger=$trigger, '
+      'total=${_autoMetadataStopwatch.elapsedMilliseconds}ms, '
+      'locationDone=${_autoMetadataLocationDoneMs ?? -1}ms, '
+      'weatherDone=${_autoMetadataWeatherDoneMs ?? -1}ms, '
+      'location=$locationOutcome, weather=$weatherOutcome, '
+      'frames=${summary.frames}, jank16=${summary.jank16}, '
+      'jank32=${summary.jank32}, jank50=${summary.jank50}, '
+      'avg=${summary.avgMs.toStringAsFixed(1)}ms, '
+      'worst=${summary.worstMs.toStringAsFixed(1)}ms, '
+      'buildWorst=${summary.buildWorstMs.toStringAsFixed(1)}ms, '
+      'rasterWorst=${summary.rasterWorstMs.toStringAsFixed(1)}ms',
+      source: 'AddNoteDialog.Perf',
+    );
   }
 
   void _captureInitialState() {
@@ -754,6 +836,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     _dialogPerfStateChanges.clear();
     _dialogPerfBuildCount = 0;
     _dialogPerfBodyReuseCount = 0;
+    _dialogPerfBodyBuildCount = 0;
+    _dialogPerfBodyBuildWorstMs = 0;
+    _dialogPerfFirstBodyBuildMs = null;
     _dialogPerfInsetBuildCount = 0;
     _dialogPerfInsetChangeCount = 0;
     _dialogPerfMetricsChangeCount = 0;
@@ -797,6 +882,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   void _collectDialogPerfTimings(List<FrameTiming> timings) {
     if (_dialogPerfRecording) {
       _dialogPerfFrameTimings.addAll(timings);
+    }
+    if (_autoMetadataRecording) {
+      _autoMetadataFrameTimings.addAll(timings);
     }
   }
 
@@ -884,7 +972,22 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       return _cachedDialogBody!;
     }
 
+    if (!_dialogPerfRecording) {
+      final body = buildBody();
+      _cachedDialogBody = body;
+      return body;
+    }
+
+    // 只测 Widget 树的构造，不含 element 挂载、布局和光栅化——
+    // 拿它和帧的 buildDuration 对比，才知道首帧那一下重在我们这棵树还是框架侧。
+    final stopwatch = Stopwatch()..start();
     final body = buildBody();
+    final elapsedMs = stopwatch.elapsedMicroseconds / 1000.0;
+    _dialogPerfBodyBuildCount++;
+    _dialogPerfFirstBodyBuildMs ??= elapsedMs;
+    if (elapsedMs > _dialogPerfBodyBuildWorstMs) {
+      _dialogPerfBodyBuildWorstMs = elapsedMs;
+    }
     _cachedDialogBody = body;
     return body;
   }
@@ -1007,17 +1110,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     _dialogPerfMetricsChangeCount++;
   }
 
-  void _finalizeDialogPerfCapture(String reason) {
-    if (!_dialogPerfRecording) {
-      return;
-    }
-
-    _dialogPerfRecording = false;
-    _dialogPerfStopwatch.stop();
-    _dialogPerfFinalizeTimer?.cancel();
-    _dialogPerfKeyboardSettleTimer?.cancel();
-    _detachDialogPerfHooks();
-
+  _FramePhaseSummary _summarizeFrames(List<FrameTiming> timings) {
     int jankyFrames = 0;
     int jankyFrames32 = 0;
     int jankyFrames50 = 0;
@@ -1028,7 +1121,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     double worstBuildMs = 0;
     double worstRasterMs = 0;
 
-    for (final timing in _dialogPerfFrameTimings) {
+    for (final timing in timings) {
       final buildMicros = timing.buildDuration.inMicroseconds;
       final rasterMicros = timing.rasterDuration.inMicroseconds;
       final totalMicros = buildMicros + rasterMicros;
@@ -1059,13 +1152,45 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       }
     }
 
-    final totalFrames = _dialogPerfFrameTimings.length;
-    final avgFrameMs =
-        totalFrames == 0 ? 0.0 : (totalFrameMicros / totalFrames) / 1000.0;
-    final avgBuildMs =
-        totalFrames == 0 ? 0.0 : (totalBuildMicros / totalFrames) / 1000.0;
-    final avgRasterMs =
-        totalFrames == 0 ? 0.0 : (totalRasterMicros / totalFrames) / 1000.0;
+    final totalFrames = timings.length;
+    return _FramePhaseSummary(
+      frames: totalFrames,
+      jank16: jankyFrames,
+      jank32: jankyFrames32,
+      jank50: jankyFrames50,
+      avgMs: totalFrames == 0 ? 0.0 : (totalFrameMicros / totalFrames) / 1000.0,
+      worstMs: worstFrameMs,
+      buildAvgMs:
+          totalFrames == 0 ? 0.0 : (totalBuildMicros / totalFrames) / 1000.0,
+      buildWorstMs: worstBuildMs,
+      rasterAvgMs:
+          totalFrames == 0 ? 0.0 : (totalRasterMicros / totalFrames) / 1000.0,
+      rasterWorstMs: worstRasterMs,
+    );
+  }
+
+  void _finalizeDialogPerfCapture(String reason) {
+    if (!_dialogPerfRecording) {
+      return;
+    }
+
+    _dialogPerfRecording = false;
+    _dialogPerfStopwatch.stop();
+    _dialogPerfFinalizeTimer?.cancel();
+    _dialogPerfKeyboardSettleTimer?.cancel();
+    _detachDialogPerfHooks();
+
+    final summary = _summarizeFrames(_dialogPerfFrameTimings);
+    final jankyFrames = summary.jank16;
+    final jankyFrames32 = summary.jank32;
+    final jankyFrames50 = summary.jank50;
+    final worstFrameMs = summary.worstMs;
+    final worstBuildMs = summary.buildWorstMs;
+    final worstRasterMs = summary.rasterWorstMs;
+    final totalFrames = summary.frames;
+    final avgFrameMs = summary.avgMs;
+    final avgBuildMs = summary.buildAvgMs;
+    final avgRasterMs = summary.rasterAvgMs;
     final keyboardDurationMs = _dialogPerfKeyboardStartMs == null ||
             _dialogPerfKeyboardSettledMs == null
         ? null
@@ -1090,6 +1215,10 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       'keyboardSettled=${_dialogPerfKeyboardSettledMs ?? -1}ms, '
       'keyboardDuration=${keyboardDurationMs ?? -1}ms, '
       'widgetBuilds=$_dialogPerfBuildCount, '
+      'bodyBuilds=$_dialogPerfBodyBuildCount, '
+      'bodyBuildFirst='
+      '${_dialogPerfFirstBodyBuildMs?.toStringAsFixed(1) ?? "-1"}ms, '
+      'bodyBuildWorst=${_dialogPerfBodyBuildWorstMs.toStringAsFixed(1)}ms, '
       'bodyReuses=$_dialogPerfBodyReuseCount, '
       'insetBuilds=$_dialogPerfInsetBuildCount, '
       'insetChanges=$_dialogPerfInsetChangeCount, '
@@ -1121,6 +1250,10 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   }
 
   void _detachDialogPerfHooks() {
+    // 自动附加那一段还在采样时先别摘，否则它一帧都收不到。
+    if (_autoMetadataRecording) {
+      return;
+    }
     if (_dialogPerfTimingsCallbackAttached) {
       WidgetsBinding.instance.removeTimingsCallback(_collectDialogPerfTimings);
       _dialogPerfTimingsCallbackAttached = false;
@@ -1488,6 +1621,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         }
       }
     } else if (result == 'remove') {
+      _cancelAutoAttachPlan(location: true);
       _controller.removeNewLocation();
       setState(() {});
     }
@@ -1557,6 +1691,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     );
 
     if (result == 'remove') {
+      _cancelAutoAttachPlan(weather: true);
       _controller.removeNewWeather();
     } else if (result == 'retry') {
       _ensureMetadataServices();
@@ -1603,6 +1738,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     _autoFocusTimer?.cancel();
     _autoMetadataFallbackTimer?.cancel();
     _databaseListenerTimer?.cancel();
+    _autoMetadataRecording = false;
+    _autoMetadataStopwatch.stop();
     _detachDialogPerfHooks();
     _dbChangeDebounceTimer?.cancel();
     _routeAnimation?.removeListener(_onRouteAnimationProgress);
@@ -2293,6 +2430,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                       label: Text(l10n.location),
                                       selected: _controller.includeLocation,
                                       onSelected: (value) async {
+                                        if (!value) {
+                                          _cancelAutoAttachPlan(location: true);
+                                        }
                                         // 编辑模式下统一弹对话框
                                         if (widget.initialQuote != null) {
                                           await _showLocationDialog(
@@ -2411,6 +2551,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                       _ensureMetadataServices();
                                       _controller.fetchWeatherForNewNote();
                                     } else {
+                                      _cancelAutoAttachPlan(weather: true);
                                       setState(() {
                                         _controller.includeWeather = false;
                                       });
@@ -2719,4 +2860,31 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       });
     }
   }
+}
+
+/// 一段时间窗口内的帧耗时统计。打开阶段和自动附加阶段各算一份。
+class _FramePhaseSummary {
+  const _FramePhaseSummary({
+    required this.frames,
+    required this.jank16,
+    required this.jank32,
+    required this.jank50,
+    required this.avgMs,
+    required this.worstMs,
+    required this.buildAvgMs,
+    required this.buildWorstMs,
+    required this.rasterAvgMs,
+    required this.rasterWorstMs,
+  });
+
+  final int frames;
+  final int jank16;
+  final int jank32;
+  final int jank50;
+  final double avgMs;
+  final double worstMs;
+  final double buildAvgMs;
+  final double buildWorstMs;
+  final double rasterAvgMs;
+  final double rasterWorstMs;
 }

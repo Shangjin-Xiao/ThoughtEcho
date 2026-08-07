@@ -30,8 +30,10 @@ Position _beijingPosition() => Position(
     );
 
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
+  _TestSettingsService({this.autoAttachLocation = true});
+
   @override
-  bool get autoAttachLocation => true;
+  final bool autoAttachLocation;
 
   @override
   bool get autoAttachWeather => true;
@@ -66,6 +68,9 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
 
 /// 定位要 200ms 才回来——用户完全可能在这之前就点保存。
 class _SlowLocationService extends ChangeNotifier implements LocationService {
+  _SlowLocationService({Position? initialPosition})
+      : _position = initialPosition;
+
   Position? _position;
 
   @override
@@ -118,6 +123,39 @@ class _SlowWeatherService extends ChangeNotifier implements WeatherService {
 
   @override
   String get temperature => _hasData ? '25°C' : '';
+
+  @override
+  String getFormattedWeather(AppLocalizations l10n) => 'clear 25°C';
+
+  @override
+  IconData getWeatherIconData() => Icons.wb_sunny;
+
+  @override
+  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// 天气立刻就有数据，用来构造「用户手动勾上又移除」的场景。
+class _InstantWeatherService extends ChangeNotifier implements WeatherService {
+  var fetchCount = 0;
+
+  @override
+  Future<void> getWeatherData(
+    double latitude,
+    double longitude, {
+    bool forceRefresh = false,
+    Duration? timeout,
+  }) async {
+    fetchCount++;
+  }
+
+  @override
+  bool get hasData => true;
+
+  @override
+  String get currentWeather => 'clear';
+
+  @override
+  String get temperature => '25°C';
 
   @override
   String getFormattedWeather(AppLocalizations l10n) => 'clear 25°C';
@@ -203,7 +241,9 @@ void main() {
     await TestHarness.initialize();
   });
 
-  tearDown(() {
+  // 用 tearDownAll：UnifiedLogService 是单例，逐个用例 dispose 会让后面的用例
+  // 用到一个已经销毁的实例。
+  tearDownAll(() {
     UnifiedLogService.instance.dispose();
   });
 
@@ -254,6 +294,54 @@ void main() {
     expect(saved!.temperature, '25°C');
     expect(saved!.latitude, 39.9042);
     expect(saved!.location, '中国,北京市,北京市,朝阳区');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 600));
+  });
+
+  testWidgets('抓取开始前用户移除天气：保存时不会被自动附加计划加回来', (WidgetTester tester) async {
+    Quote? saved;
+    final weather = _InstantWeatherService();
+
+    await tester.pumpWidget(
+      _buildApp(
+        // 只预约天气，把变量收敛到一条线上
+        settings: _TestSettingsService(autoAttachLocation: false),
+        // 天气要有坐标才抓得动，这里给一个已缓存的位置
+        location: _SlowLocationService(initialPosition: _beijingPosition()),
+        weather: weather,
+        onSave: (quote) => saved = quote,
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // 兜底定时器还没到，自动附加一次都没跑；用户自己先勾上天气
+    final weatherChip = find.byKey(const ValueKey('add_note_weather_chip'));
+    await tester.tap(weatherChip);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(weather.fetchCount, 1);
+
+    // 再点一次打开详情对话框，明确移除。
+    // 这里用固定小步 pump 而不是 pumpAndSettle：整段必须压在兜底定时器（900ms）之前，
+    // 否则自动附加会先跑起来，测的就不是「抓取开始前移除」这个场景了。
+    await tester.tap(weatherChip);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.tap(find.text('移除'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    await tester.tap(find.byType(FilledButton).last);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(saved, isNotNull);
+    expect(saved!.weather, isNull, reason: '用户明确移除的天气不该在保存时被静默加回');
+    expect(weather.fetchCount, 1, reason: '不该为已取消的附加再发一次请求');
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 600));

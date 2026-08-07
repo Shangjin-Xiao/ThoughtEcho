@@ -234,8 +234,12 @@ class AddNoteController extends ChangeNotifier {
   Future<void> fetchLocationForNewNote() async {
     final locService = locationService;
     if (locService == null) {
-      // 服务拿不到就抓不了，标志必须放掉：保存正等着它。
-      clearPendingLocationFetch();
+      // 服务拿不到就抓不了，按失败处理：既放掉标志（保存正等着它），
+      // 也取消这次附加，别让笔记带着「已附加位置」的勾却什么都没有。
+      includeLocation = false;
+      _clearNewLocation();
+      isFetchingLocation = false;
+      notifyListeners();
       return;
     }
 
@@ -288,7 +292,10 @@ class AddNoteController extends ChangeNotifier {
     final weaService = weatherService;
     final locService = locationService;
     if (weaService == null) {
-      clearPendingWeatherFetch();
+      // 同上：抓不了就别让 WeatherService 的旧数据在保存时冒充这条笔记的天气。
+      includeWeather = false;
+      isFetchingWeather = false;
+      notifyListeners();
       return;
     }
 
