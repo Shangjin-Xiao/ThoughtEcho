@@ -6,6 +6,41 @@ import 'package:thoughtecho/utils/optimized_image_loader_base.dart';
 
 void main() {
   group('OptimizedImageLoaderBase', () {
+    group('decodeDimensionFor', () {
+      test('按逻辑尺寸乘以像素比换算成设备像素', () {
+        expect(decodeDimensionFor(344, 2.0), 688);
+      });
+
+      test('尺寸过小时抬到下限，避免解成马赛克', () {
+        expect(decodeDimensionFor(10, 2.0), minDecodeDimension);
+      });
+
+      test('尺寸过大时压到上限，避免单张解码撑爆内存', () {
+        expect(decodeDimensionFor(4000, 3.0), maxDecodeDimension);
+      });
+
+      test('非法尺寸返回 null，表示不设解码上限', () {
+        expect(decodeDimensionFor(0, 2.0), isNull);
+        expect(decodeDimensionFor(-1, 2.0), isNull);
+        expect(decodeDimensionFor(double.infinity, 2.0), isNull);
+        expect(decodeDimensionFor(double.nan, 2.0), isNull);
+      });
+
+      test('像素比封顶后的解码宽度不会超过屏幕宽度 × 该上限', () {
+        // 卡片宽度不会超过屏幕宽度；旗舰机的 dpr 会被调用方钳到 2.0。
+        const screenWidth = 430.0;
+        const cappedRatio = 2.0;
+        final ceiling = (screenWidth * cappedRatio).round();
+
+        for (final width in <double>[120, 344, 400, screenWidth]) {
+          final decoded = decodeDimensionFor(width, cappedRatio);
+
+          expect(decoded, isNotNull);
+          expect(decoded! <= ceiling, isTrue, reason: 'width=$width');
+        }
+      });
+    });
+
     group('wrapWithDecodeLimit', () {
       final base = MemoryImage(Uint8List.fromList(const [1, 2, 3]));
 

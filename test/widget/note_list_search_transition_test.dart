@@ -270,7 +270,7 @@ class _SearchFakeDatabase extends DatabaseService {
     List<String>? selectedDayPeriods,
     bool? includeDeleted,
     int? refillCount,
-    List<Quote>? skipNotifyIfSameAs,
+    bool suppressNotify = false,
   }) async {}
 
   @override

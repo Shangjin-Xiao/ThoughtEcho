@@ -2,30 +2,83 @@ part of '../database_service.dart';
 
 /// Mixin providing pagination and stream operations for DatabaseService.
 mixin _DatabasePaginationMixin on _DatabaseServiceBase {
-  /// 刷新回填单次查询的条数上限：超过这个量级的列表极少见，
-  /// 与其把一次刷新变成慢查询，不如让它退回按页加载。
-  static const int _maxRefillCount = 500;
+  /// 刷新回填单次查询的条数上限。超过这个量级会分多次查询，
+  /// 既不把一次刷新拖成慢查询，也不会让列表停在更短的中间态
+  /// （全部取回后才推送，见 [_refillAfterRefresh]）。
+  static const int _maxRefillChunk = 500;
 
-  /// 判断刷新前后的可见列表是否完全一致（顺序、条目、内容都没变）。
+  /// 判断刷新前后的可见列表是否逐条完全一致。
   ///
-  /// 只要有一条 `lastModified` 为空就直接判为「不确定」，宁可多推一次也不漏掉
-  /// 真实更新——早期数据可能没有这个字段，缺了它就没法判断内容有没有动过。
+  /// 用 [Quote.toJson] 逐字段比较而不是挑几个字段：挑字段的写法一旦漏掉展示用
+  /// 的列（weather、day_period、location……）就会把真实更新误判成"没变"从而
+  /// 吞掉推送，而且新增字段时没人会记得同步这里。`toJson` 覆盖所有持久化字段，
+  /// 天然不会漏；`tagIds` 不在 `toJson` 里，单独比。
+  ///
+  /// 只在刷新路径上跑一次，不在滚动帧里，这点比较开销远小于一次整表重建。
   bool _quoteListsEquivalent(List<Quote> previous, List<Quote> current) {
     // 空列表不参与去重：首屏/清空后的刷新必须让 UI 收到事件。
     if (previous.isEmpty) return false;
     if (previous.length != current.length) return false;
     for (var i = 0; i < previous.length; i++) {
-      final a = previous[i];
-      final b = current[i];
-      if (a.lastModified == null || b.lastModified == null) return false;
-      if (a.id != b.id ||
-          a.lastModified != b.lastModified ||
-          a.favoriteCount != b.favoriteCount ||
-          a.isDeleted != b.isDeleted) {
-        return false;
-      }
+      if (!_quoteEquivalent(previous[i], current[i])) return false;
     }
     return true;
+  }
+
+  bool _quoteEquivalent(Quote a, Quote b) {
+    if (identical(a, b)) return true;
+
+    final aTags = a.tagIds;
+    final bTags = b.tagIds;
+    if (aTags.length != bTags.length) return false;
+    for (var i = 0; i < aTags.length; i++) {
+      if (aTags[i] != bTags[i]) return false;
+    }
+
+    final aJson = a.toJson();
+    final bJson = b.toJson();
+    if (aJson.length != bJson.length) return false;
+    for (final entry in aJson.entries) {
+      if (!bJson.containsKey(entry.key)) return false;
+      if (bJson[entry.key] != entry.value) return false;
+    }
+    return true;
+  }
+
+  /// 刷新后的回填：分块把原有条数全部取回，**全部到位后才推送一次**。
+  ///
+  /// 中途不推送是关键——只要推出去一个比原来短的列表，用户正滑到的位置就会被
+  /// maxScrollExtent 夹紧，也就是这个 PR 要修的"列表突然飞走"。
+  Future<void> _refillAfterRefresh({
+    required int targetCount,
+    required List<Quote> previousQuotes,
+  }) async {
+    final generation = _quotesLoadGeneration;
+
+    while (_currentQuotes.length < targetCount &&
+        _watchHasMore &&
+        !_isDisposed &&
+        generation == _quotesLoadGeneration) {
+      final before = _currentQuotes.length;
+      await loadMoreQuotes(
+        refillCount: targetCount - before,
+        suppressNotify: true,
+      );
+      // 没有新增说明查询失败或结果被去重光了，再循环就是死循环。
+      if (_currentQuotes.length <= before) break;
+    }
+
+    // 期间又来了一次刷新：由那一次负责推送，这里直接退场。
+    if (_isDisposed || generation != _quotesLoadGeneration) return;
+
+    _pendingRefillTarget = 0;
+
+    if (_quoteListsEquivalent(previousQuotes, _currentQuotes)) {
+      logDebug('刷新后可见列表无变化，跳过整表推送');
+      return;
+    }
+
+    _safeNotifyQuotesStream();
   }
 
   /// 修复：安全地通知笔记流订阅者
@@ -57,7 +110,16 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       // 已经滑到深处的列表会瞬间从 N 条塌回一页，maxScrollExtent 随之骤减，
       // 滚动位置被夹紧 —— 表现就是「列表突然飞走/弹回顶部 + 底部转圈 + 大片空白」。
       // 所以刷新必须一次把原有页数全部取回，列表长度保持不变。
-      final int reloadCount = _currentQuotes.length;
+      //
+      // 上一次刷新可能还在回填途中（那时 _currentQuotes 已被清空），
+      // 此时按当时的长度 0 算目标会退化成只取一页，等于把这个 bug 放回来。
+      // 沿用在途目标即可。
+      final int loadedCount = _currentQuotes.isNotEmpty
+          ? _currentQuotes.length
+          : _pendingRefillTarget;
+      // 列表本来就是空的（首屏前的刷新）：照旧取一页。
+      final int reloadCount = loadedCount > 0 ? loadedCount : _watchLimit;
+      _pendingRefillTarget = reloadCount;
       // 回填结果和刷新前一模一样时不再向 UI 推送：整表推送会让列表页
       // 重建全部已加载 item（上百次 build + 首次布局），发生在滚动帧里
       // 就是一次明显的卡顿。回收站过期清理、同步后的例行刷新等场景，
@@ -77,9 +139,11 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       _isLoading = false;
 
       // 触发重新加载
-      loadMoreQuotes(
-        refillCount: reloadCount,
-        skipNotifyIfSameAs: previousQuotes,
+      unawaited(
+        _refillAfterRefresh(
+          targetCount: reloadCount,
+          previousQuotes: previousQuotes,
+        ),
       );
     } else {
       logDebug('笔记流无监听器或已关闭，跳过刷新');
@@ -351,7 +415,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     List<String>? selectedDayPeriods,
     bool? includeDeleted,
     int? refillCount,
-    List<Quote>? skipNotifyIfSameAs,
+    bool suppressNotify = false,
   }) async {
     // 使用当前观察的参数作为默认值
     tagIds ??= _watchTagIds;
@@ -370,10 +434,10 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     _isLoading = true;
     final loadGeneration = _quotesLoadGeneration;
     final requestOffset = _watchOffset;
-    // 刷新回填：一次取回原有的全部页数，避免列表在用户滚动途中变短。
-    // 上限保护，防止极深列表把单次查询拖成慢查询。
+    // 刷新回填：一次尽量多取，避免列表在用户滚动途中变短。
+    // 单次查询封顶，超出的部分由 _refillAfterRefresh 继续分块取。
     final int requestLimit = refillCount != null && refillCount > _watchLimit
-        ? (refillCount > _maxRefillCount ? _maxRefillCount : refillCount)
+        ? (refillCount > _maxRefillChunk ? _maxRefillChunk : refillCount)
         : _watchLimit;
     logDebug(
       '开始加载更多笔记，当前已有 ${_currentQuotes.length} 条，offset=$requestOffset，limit=$requestLimit',
@@ -436,11 +500,9 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       // 通知状态变化
       notifyListeners();
 
-      if (skipNotifyIfSameAs != null &&
-          _quoteListsEquivalent(skipNotifyIfSameAs, _currentQuotes)) {
-        logDebug('刷新后可见列表无变化，跳过整表推送');
-        return;
-      }
+      // 回填分块进行时由 _refillAfterRefresh 在全部到位后统一推送：
+      // 中途推出去的短列表会把用户的滚动位置夹紧。
+      if (suppressNotify) return;
 
       // 修复：使用安全的方式通知订阅者
       _safeNotifyQuotesStream();

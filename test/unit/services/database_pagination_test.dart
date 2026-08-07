@@ -22,41 +22,7 @@ void main() {
       service = _DuplicatePageDatabaseService();
 
       db = await databaseFactory.openDatabase(inMemoryDatabasePath);
-      await db.execute('''
-          CREATE TABLE quotes(
-            id TEXT PRIMARY KEY,
-            content TEXT NOT NULL,
-            date TEXT NOT NULL,
-            source TEXT,
-            source_author TEXT,
-            source_work TEXT,
-            ai_analysis TEXT,
-            sentiment TEXT,
-            keywords TEXT,
-            summary TEXT,
-            category_id TEXT DEFAULT '',
-            color_hex TEXT,
-            location TEXT,
-            latitude REAL,
-            longitude REAL,
-            weather TEXT,
-            temperature TEXT,
-            edit_source TEXT,
-            delta_content TEXT,
-            day_period TEXT,
-            last_modified TEXT,
-            favorite_count INTEGER DEFAULT 0,
-            is_deleted INTEGER DEFAULT 0,
-            deleted_at TEXT
-          )
-        ''');
-      await db.execute('''
-          CREATE TABLE quote_tags (
-            quote_id TEXT NOT NULL,
-            tag_id TEXT NOT NULL,
-            PRIMARY KEY (quote_id, tag_id)
-          )
-        ''');
+      await _createQuoteTables(db);
 
       DatabaseService.setTestDatabase(db);
       await service.init();
@@ -156,6 +122,8 @@ void main() {
 
         final eventsBeforeRefresh = events.length;
         service.requestedPages.clear();
+        // 内容确实变了，这次刷新应当推送（去重只针对完全没变的刷新）。
+        service.contentRevision++;
 
         service.refreshQuotes();
 
@@ -194,7 +162,8 @@ void main() {
 
         // 相同筛选条件再次订阅：复用已有流，不应重建分页状态。
         final secondEvents = <List<Quote>>[];
-        final secondSub = service.watchQuotes(limit: 2).listen(secondEvents.add);
+        final secondSub =
+            service.watchQuotes(limit: 2).listen(secondEvents.add);
         addTearDown(secondSub.cancel);
         await _waitForEvent(secondEvents, (quotes) => quotes.length, equals(6));
 
@@ -216,20 +185,57 @@ void main() {
     );
 
     test(
-      '刷新结果与刷新前完全一致时不再整表推送',
+      '第一次刷新还在回填途中又来一次刷新，仍然回填全部条数',
       () async {
-        service.stampLastModified = true;
         final events = <List<Quote>>[];
         final sub = await loadThreePages(events);
         addTearDown(sub.cancel);
 
         final eventsBeforeRefresh = events.length;
         service.requestedPages.clear();
+        service.contentRevision++;
+
+        // 连续两次刷新：第二次进来时 _currentQuotes 已被第一次清空。
+        // 若按"当时的列表长度"算回填目标就会退化成只取一页，
+        // 列表塌回第一页——正是这个 PR 要修的 bug。
+        service.refreshQuotes();
+        service.refreshQuotes();
+
+        await _waitForEvent(
+          events,
+          (quotes) => quotes.length,
+          equals(6),
+          startIndex: eventsBeforeRefresh,
+        );
+
+        for (var i = eventsBeforeRefresh; i < events.length; i++) {
+          expect(
+            events[i].length,
+            6,
+            reason: '并发刷新期间第 ${i - eventsBeforeRefresh} 个事件把列表截短了',
+          );
+        }
+      },
+    );
+
+    test(
+      '刷新结果与刷新前完全一致时不再整表推送',
+      () async {
+        final events = <List<Quote>>[];
+        final sub = await loadThreePages(events);
+        addTearDown(sub.cancel);
+
+        final eventsBeforeRefresh = events.length;
+        final queriesBeforeRefresh = service.completedQueries;
+        service.requestedPages.clear();
 
         service.refreshQuotes();
-        await _waitUntil(() => service.requestedPages.isNotEmpty);
-        // 给推送留出足够的调度时间，确认它确实没有发生。
-        await Future<void>.delayed(const Duration(milliseconds: 120));
+        // 等回填查询真正**完成**（而不是刚被记录），再把事件循环排空：
+        // 推送若会发生，此时必定已经发生，不需要靠固定延时赌时序。
+        await _waitUntil(
+          () => service.completedQueries > queriesBeforeRefresh,
+        );
+        await _drainEventLoop();
 
         // 整表推送会让列表页重建上百个 item，在滚动帧里就是一次可见卡顿。
         expect(
@@ -240,6 +246,13 @@ void main() {
       },
     );
   });
+}
+
+/// 排空事件循环：用于"某件事不应该发生"的负向断言。
+Future<void> _drainEventLoop() async {
+  for (var i = 0; i < 8; i++) {
+    await Future<void>.delayed(Duration.zero);
+  }
 }
 
 Future<void> _waitUntil(bool Function() condition) async {
@@ -299,8 +312,12 @@ class _PagedDatabaseService extends DatabaseService {
   final int totalQuotes;
   final requestedPages = <({int offset, int limit})>[];
 
-  /// 是否给假数据带上 lastModified：刷新去重需要靠它判断内容有没有变。
-  bool stampLastModified = false;
+  /// 已经**返回结果**的查询数。负向断言要等查询真的跑完，
+  /// 只看 requestedPages 会在查询还在飞的时候就放行。
+  int completedQueries = 0;
+
+  /// 模拟"笔记内容真的变了"：改这个值，刷新回填就会拿到不同的数据。
+  int contentRevision = 0;
 
   @override
   Future<List<Quote>> getUserQuotes({
@@ -319,16 +336,17 @@ class _PagedDatabaseService extends DatabaseService {
   }) async {
     requestedPages.add((offset: offset, limit: limit));
     final end = (offset + limit) < totalQuotes ? offset + limit : totalQuotes;
-    return [
+    final quotes = [
       for (var i = offset; i < end; i++)
         Quote(
           id: 'quote-$i',
-          content: '分页测试 quote-$i',
+          content: '分页测试 quote-$i rev$contentRevision',
           date: DateTime(2026, 6, 29).toIso8601String(),
-          lastModified:
-              stampLastModified ? '2026-06-29T00:00:00.000Z' : null,
+          lastModified: '2026-06-29T00:00:00.000Z',
         ),
     ];
+    completedQueries++;
+    return quotes;
   }
 }
 

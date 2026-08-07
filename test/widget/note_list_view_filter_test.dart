@@ -808,6 +808,47 @@ void main() {
     );
 
     testWidgets(
+      '分页结束后底部加载指示器一定会收起（即使列表仍被标记为滚动中）',
+      (tester) async {
+        // 用极短的分页，保证底部那一格落在 cacheExtent 内、确实被构建出来。
+        final databaseService = _ShortPageFakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+          ),
+        );
+
+        await tester.pump();
+        databaseService.emitInitialPage();
+        await tester.pump();
+        // 等 AnimatedSwitcher 把首屏 loading 完全淡出，避免误判。
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.byType(AppLoadingView), findsNothing);
+
+        final listViewContext = tester.element(find.byType(ListView));
+        _dispatchPreloadScrollUpdate(listViewContext);
+        await tester.pump();
+
+        // 分页进行中：底部那一格显示加载动画。
+        expect(find.byType(AppLoadingView), findsOneWidget);
+
+        // 收尾闸门（320ms）走完后必须收起。此前这一步在"列表仍在滚动"时
+        // 只改字段、不触发重建，若之后恰好没有别的 setState，
+        // 转圈就会一直挂在列表底部收不回去。
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.byType(AppLoadingView), findsNothing);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+        await databaseService.disposeStream();
+      },
+    );
+
+    testWidgets(
         'uses an extended cache extent to preload variable-height items', (
       tester,
     ) async {
@@ -1123,7 +1164,7 @@ class _FakeDatabaseService extends DatabaseService {
     List<String>? selectedDayPeriods,
     bool? includeDeleted,
     int? refillCount,
-    List<Quote>? skipNotifyIfSameAs,
+    bool suppressNotify = false,
   }) async {}
 
   @override
@@ -1192,7 +1233,7 @@ class _PagingFakeDatabaseService extends _DelayedFakeDatabaseService {
     List<String>? selectedDayPeriods,
     bool? includeDeleted,
     int? refillCount,
-    List<Quote>? skipNotifyIfSameAs,
+    bool suppressNotify = false,
   }) async {
     loadMoreCallCount++;
     _hasMoreQuotes = true;
@@ -1202,6 +1243,29 @@ class _PagingFakeDatabaseService extends _DelayedFakeDatabaseService {
   void emitInitialPage() {
     _hasMoreQuotes = true;
     _controller.add(_makeQuotes(20));
+  }
+}
+
+/// 每页只给两三条的假数据源：列表足够短，底部那一格才会真的被构建。
+class _ShortPageFakeDatabaseService extends _DelayedFakeDatabaseService {
+  @override
+  Future<void> loadMoreQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool? includeDeleted,
+    int? refillCount,
+    bool suppressNotify = false,
+  }) async {
+    _hasMoreQuotes = true;
+    _controller.add(_makeQuotes(3));
+  }
+
+  void emitInitialPage() {
+    _hasMoreQuotes = true;
+    _controller.add(_makeQuotes(2));
   }
 }
 

@@ -26,6 +26,30 @@ ImageProvider wrapWithDecodeLimit(
   );
 }
 
+/// 解码尺寸的下限与上限（设备像素）。
+///
+/// 下限避免极窄容器把图解成马赛克；上限避免超大图把单张解码撑爆。
+const int minDecodeDimension = 160;
+const int maxDecodeDimension = 2048;
+
+/// 把「逻辑显示尺寸 × 像素比」换算成解码用的设备像素尺寸。
+///
+/// 尺寸非法（0、负数、NaN、无穷）时返回 null，表示不设解码上限、按原图解。
+int? decodeDimensionFor(double logicalSize, double pixelRatio) {
+  if (!logicalSize.isFinite || logicalSize <= 0) {
+    return null;
+  }
+
+  final double devicePixels = logicalSize * pixelRatio;
+  if (!devicePixels.isFinite || devicePixels <= 0) {
+    return null;
+  }
+
+  if (devicePixels < minDecodeDimension) return minDecodeDimension;
+  if (devicePixels > maxDecodeDimension) return maxDecodeDimension;
+  return devicePixels.round();
+}
+
 bool isDataUrl(String source) => source.startsWith('data:');
 
 Uint8List? tryDecodeDataUrl(String source) {

@@ -403,6 +403,8 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           // 之前依赖 ListView 换 key 重建来隐式归零，现在列表常驻，需显式归零。
           if (pendingScrollToTop) {
             pendingScrollToTop = false;
+            // 结果集换了，旧的还原目标作废，否则回到顶部后又被拽回旧位置。
+            _cancelPendingScrollRestore();
             final pos = _safeScrollPosition;
             if (pos != null && pos.pixels != 0) {
               pos.jumpTo(0);

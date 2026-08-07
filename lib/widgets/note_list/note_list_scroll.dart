@@ -746,60 +746,62 @@ extension _NoteListScrollExtension on NoteListViewState {
 
   /// 数据事件把 `_quotes` 整表替换之后调用的滚动锚点兜底。
   ///
-  /// 只处理一种情况：**新内容比原来短，短到够不着用户当前的偏移**。
-  /// 这时 maxScrollExtent 骤减，滚动位置被夹紧，用户看到的就是"列表突然飞走"。
-  /// 兜底分两步——先把够不着的偏移记下来，等后续事件把列表补长再无动画还原。
+  /// 判断逻辑全在纯函数 [resolveScrollAnchorAction] 里（含各种边界与单测），
+  /// 这里只负责取状态、执行结果。
   ///
-  /// 刻意不比较 `position.pixels`：数据事件常常发生在惯性滑动中，偏移每帧都在
-  /// 合法地变化，按偏移差纠正等于和惯性打架。只有 maxScrollExtent 装不下原偏移
-  /// 才是真正的"被夹掉"。
-  ///
-  /// [previousOffset] 为数据应用之前的偏移量。
+  /// [previousOffset] 为数据应用之前的偏移量；为 null 表示这次只是「再试一次
+  /// 之前挂起的还原」（例如滚动停止后的回调）。
   void _guardScrollAnchorAfterDataEvent(double? previousOffset) {
-    if (previousOffset == null || previousOffset <= 0) {
+    // 既没有新偏移可记，也没有挂起的目标，就没必要多排一次帧回调。
+    if ((previousOffset == null || previousOffset <= 0) &&
+        _pendingScrollRestoreOffset == null) {
       return;
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final position = _safeScrollPosition;
-      if (position == null) return;
-
-      const tolerance = NoteListViewState._dataEventScrollShiftTolerance;
-      final maxExtent = position.maxScrollExtent;
-      final pending = _consumePendingScrollRestoreOffset();
-
-      // 内容装不下原偏移：记住目标，等列表补长。取更深的那个，
-      // 避免连续多次变短时把目标越记越浅。
-      if (maxExtent + tolerance < previousOffset) {
-        final target = (pending != null && pending > previousOffset)
-            ? pending
-            : previousOffset;
-        _pendingScrollRestoreOffset = target;
-        _pendingScrollRestoreAt = DateTime.now();
-        logDebug(
-          '数据事件使列表变短，暂存待还原偏移: ${target.round()} '
-          '(max=${maxExtent.round()}, quotes=${_quotes.length})',
-          source: 'NoteListView',
-        );
-        return;
-      }
-
-      // 之前被夹掉的偏移现在够得着了，还原回去。只向下（更深处）还原，
-      // 不会把用户往回拽。
-      if (pending != null &&
-          pending <= maxExtent &&
-          position.pixels < pending - tolerance) {
-        position.jumpTo(pending);
-        logDebug(
-          '列表已补长，还原被夹掉的滚动位置: ${pending.round()}',
-          source: 'NoteListView',
-        );
-      }
+      _reconcileScrollAnchor(previousOffset);
     });
   }
 
+  void _reconcileScrollAnchor(double? previousOffset) {
+    final position = _safeScrollPosition;
+    if (position == null) return;
+
+    final decision = resolveScrollAnchorAction(
+      previousOffset: previousOffset,
+      pendingOffset: _consumePendingScrollRestoreOffset(),
+      currentPixels: position.pixels,
+      maxScrollExtent: position.maxScrollExtent,
+      isDragging: isListDragActive.value,
+      tolerance: NoteListViewState._dataEventScrollShiftTolerance,
+    );
+
+    switch (decision.action) {
+      case ScrollAnchorAction.none:
+        return;
+      case ScrollAnchorAction.remember:
+        _pendingScrollRestoreOffset = decision.targetOffset;
+        _pendingScrollRestoreAt = DateTime.now();
+        logDebug(
+          '滚动锚点暂存待还原: ${decision.targetOffset?.round()} '
+          '(max=${position.maxScrollExtent.round()}, '
+          'dragging=${isListDragActive.value}, quotes=${_quotes.length})',
+          source: 'NoteListView',
+        );
+        return;
+      case ScrollAnchorAction.restore:
+        position.jumpTo(decision.targetOffset!);
+        logDebug(
+          '还原被夹掉的滚动位置: ${decision.targetOffset!.round()}',
+          source: 'NoteListView',
+        );
+        return;
+    }
+  }
+
   /// 取出仍在有效期内的待还原偏移；过期或不存在返回 null。
+  /// 无论是否过期都会清空字段，由调用方按 [resolveScrollAnchorAction] 的结论重写。
   double? _consumePendingScrollRestoreOffset() {
     final pending = _pendingScrollRestoreOffset;
     final at = _pendingScrollRestoreAt;
@@ -813,7 +815,8 @@ extension _NoteListScrollExtension on NoteListViewState {
     return pending;
   }
 
-  /// 用户重新按住列表说明他已经接受了当前位置，不再回拉。
+  /// 用户重新按住列表、或筛选变化要求回到顶部时调用：
+  /// 这两种情况下旧的还原目标都已经作废，不能再把用户拽回去。
   void _cancelPendingScrollRestore() {
     _pendingScrollRestoreOffset = null;
     _pendingScrollRestoreAt = null;

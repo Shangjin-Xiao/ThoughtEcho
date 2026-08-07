@@ -751,6 +751,8 @@ extension _NoteListItemsExtension on NoteListViewState {
 
       // 延迟放行图片解码和异常检测，避免与 ScrollEnd 帧的 loadMore 挤在同一帧。
       isListScrolling.value = false;
+      // 拖拽期间不跟手势抢位置，挂起的还原留到这里补做。
+      _reconcileScrollAnchor(null);
       _checkAndFixScrollExtentAnomaly();
     });
   }

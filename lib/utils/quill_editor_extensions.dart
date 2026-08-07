@@ -402,16 +402,12 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
           1.0,
           _previewMaxPixelRatio,
         );
-        final int? targetCacheWidth = _computeCacheSize(
+        // 只按显示宽度封顶，**不要**再给高度单独封顶。
+        // 等比缩放不是裁剪：给长图加高度上限会把解码宽度一起压下去，而卡片
+        // 仍按完整宽度显示，结果是整张图（包括当前可见的那一截）被放大变糊。
+        // 长图的内存占用只能靠宽度这一个维度控制。
+        final int? targetCacheWidth = decodeSizeFor(
           displayWidth,
-          devicePixelRatio,
-        );
-        // 高度上限：一屏高就够了。卡片里的长图（长截图、拼接图）是滚过去看的，
-        // 超出一屏的部分不需要按屏幕精度解码。只给宽度封顶时，一张 1:4 的长图
-        // 会解成 1030×4120 ≈ 400 万像素、单张 16MB，几张就把整个图片缓存挤爆。
-        // 常规横竖图的自然高度远在这个框内，不受影响。
-        final int? targetCacheHeight = _computeCacheSize(
-          mediaQuery.size.height,
           devicePixelRatio,
         );
 
@@ -426,7 +422,6 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
                 context,
                 displayWidth,
                 targetCacheWidth,
-                targetCacheHeight,
               ),
             ),
           ),
@@ -447,7 +442,6 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     BuildContext context,
     double width,
     int? cacheWidth,
-    int? cacheHeight,
   ) {
     if (!_shouldLoad) {
       return _buildImagePlaceholder(context, width);
@@ -460,7 +454,6 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     final provider = createOptimizedImageProvider(
       widget.source,
       cacheWidth: cacheWidth,
-      cacheHeight: cacheHeight,
     );
 
     if (provider == null) {
@@ -481,8 +474,8 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
           image: provider,
           width: width,
           fit: BoxFit.contain,
-          // 解码尺寸已按 displayWidth × devicePixelRatio 精确匹配显示尺寸
-          // （见 _computeCacheSize），绘制时基本是 1:1 采样，medium 的
+          // 解码尺寸已按 displayWidth × devicePixelRatio 匹配显示尺寸
+          // （见 decodeDimensionFor），绘制时基本是 1:1 采样，medium 的
           // mipmap 生成属于纯浪费：多一份 GPU 内存和一趟缩略链构建，
           // 画面却和 low 没有区别。
           filterQuality: FilterQuality.low,
@@ -601,20 +594,6 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
         builder: (_) => MotionPhotoPreviewPage(imageUrl: widget.source),
       ),
     );
-  }
-
-  int? _computeCacheSize(double dimension, double devicePixelRatio) {
-    if (!dimension.isFinite || dimension <= 0) {
-      return null;
-    }
-
-    final double logicalPixels = dimension * devicePixelRatio;
-    if (!logicalPixels.isFinite || logicalPixels <= 0) {
-      return null;
-    }
-
-    final double bounded = logicalPixels.clamp(160.0, 2048.0);
-    return bounded.round();
   }
 
   Widget _buildImagePlaceholder(BuildContext context, double width) {

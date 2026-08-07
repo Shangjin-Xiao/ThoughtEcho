@@ -18,6 +18,10 @@ ImageProvider? createOptimizedImageProvider(
   );
 }
 
+/// 把逻辑显示尺寸换算成解码用的设备像素尺寸，见 [decodeDimensionFor]。
+int? decodeSizeFor(double logicalSize, double pixelRatio) =>
+    decodeDimensionFor(logicalSize, pixelRatio);
+
 bool isInlineDataImage(String source) => isDataUrl(source);
 
 Uint8List? decodeInlineImageBytes(String source) => tryDecodeDataUrl(source);

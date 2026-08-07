@@ -192,7 +192,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     List<String>? selectedDayPeriods,
     bool? includeDeleted,
     int? refillCount,
-    List<Quote>? skipNotifyIfSameAs,
+    bool suppressNotify = false,
   });
 
   Future<void> importDataFromMap(
@@ -408,6 +408,11 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   int _watchOffset = 0;
   bool _watchHasMore = true;
   String? _watchSearchQuery;
+
+  /// 刷新回填的目标条数。刷新会先清空 `_currentQuotes`，若此时又来一次刷新，
+  /// 按当时的列表长度（0）算目标就会退化成只取一页，正是要修的列表塌陷。
+  /// 记住在途目标，让后来的刷新沿用它。
+  int _pendingRefillTarget = 0;
 
   /// 查询缓存，统一管理过期清理逻辑。
   final ExpiringCache<String, List<Quote>> _filterCache = ExpiringCache(
