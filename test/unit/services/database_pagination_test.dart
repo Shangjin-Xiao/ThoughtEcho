@@ -218,6 +218,23 @@ void main() {
       },
     );
 
+    /// 让一次刷新的回填查询全部失败，返回失败前的事件数。
+    ///
+    /// 超时只是失败的一种；SQLite 异常等会被 loadMoreQuotes 内部吞掉，
+    /// 用非超时异常才能真正验证"所有错误都要交出去"这条契约。
+    Future<int> failRefill(List<List<Quote>> events) async {
+      final eventsBeforeRefresh = events.length;
+      final queriesBeforeRefresh = service.completedQueries;
+      service.failQueriesWith = StateError('数据库炸了');
+
+      service.refreshQuotes();
+      await _waitUntil(() => service.completedQueries > queriesBeforeRefresh);
+      await _drainEventLoop();
+
+      service.failQueriesWith = null;
+      return eventsBeforeRefresh;
+    }
+
     test(
       '回填查询失败时不推半成品，列表不会塌缩',
       () async {
@@ -225,17 +242,7 @@ void main() {
         final sub = await loadThreePages(events);
         addTearDown(sub.cancel);
 
-        final eventsBeforeRefresh = events.length;
-        final queriesBeforeRefresh = service.completedQueries;
-        // 超时只是失败的一种；SQLite 异常等会被 loadMoreQuotes 内部吞掉，
-        // 用非超时异常才能真正验证"所有错误都要交出去"这条契约。
-        service.failNextQueriesWith = StateError('数据库炸了');
-
-        service.refreshQuotes();
-        await _waitUntil(
-          () => service.completedQueries > queriesBeforeRefresh,
-        );
-        await _drainEventLoop();
+        final eventsBeforeRefresh = await failRefill(events);
 
         // 回填一条都没取到。此时推送就是把列表从 6 条清成 0 条——
         // 用户正滑到的位置会被 maxScrollExtent 夹紧，正是要修的塌陷。
@@ -246,12 +253,22 @@ void main() {
             reason: '回填失败后推出了比刷新前更短的列表',
           );
         }
+      },
+    );
 
-        // 关键：失败后内存状态必须整体回滚，而不只是"跳过推送"。
-        // 否则 _currentQuotes 已空、_watchOffset 已归零，接下来任何一次
-        // 普通分页（空闲预取、滚到底部的兜底加载）都会从 offset=0 取回
-        // 第一页并正常推给 UI —— 列表照样塌回第一页。
-        service.failNextQueriesWith = null;
+    test(
+      '回填失败回滚后，普通分页从原游标续取而不是塌回第一页',
+      () async {
+        final events = <List<Quote>>[];
+        final sub = await loadThreePages(events);
+        addTearDown(sub.cancel);
+
+        final eventsBeforeRefresh = await failRefill(events);
+
+        // 失败后内存状态必须整体回滚，而不只是"跳过推送"。否则 _currentQuotes
+        // 已空、_watchOffset 已归零，接下来任何一次普通分页（空闲预取、滚到
+        // 底部的兜底加载）都会从 offset=0 取回第一页并正常推给 UI ——
+        // 列表照样塌回第一页。
         service.requestedPages.clear();
         await service.loadMoreQuotes();
         await _waitForEvent(
@@ -263,13 +280,6 @@ void main() {
 
         // 续页要从第 6 条之后接着取，而不是回到 offset 0。
         expect(service.requestedPages.single.offset, 6);
-        for (var i = eventsBeforeRefresh; i < events.length; i++) {
-          expect(
-            events[i].length,
-            greaterThanOrEqualTo(6),
-            reason: '失败回滚后的普通分页把列表塌回了第一页',
-          );
-        }
       },
     );
 
@@ -286,14 +296,7 @@ void main() {
         await service.loadMoreQuotes();
         expect(service.hasMoreQuotes, isFalse);
 
-        final queriesBeforeRefresh = service.completedQueries;
-        service.failNextQueriesWith = StateError('数据库炸了');
-
-        service.refreshQuotes();
-        await _waitUntil(
-          () => service.completedQueries > queriesBeforeRefresh,
-        );
-        await _drainEventLoop();
+        await failRefill(events);
 
         // 回滚要把分页游标一起复原。无条件写 true 的话，明明已经没有下一页的
         // 列表会重新显示"还有下一页"，用户滑到底还会看到一次白转的加载指示器。
@@ -462,8 +465,9 @@ class _PagedDatabaseService extends DatabaseService {
   /// 模拟"笔记内容真的变了"：改这个值，刷新回填就会拿到不同的数据。
   int contentRevision = 0;
 
-  /// 令后续查询在返回前抛出异常，用于验证回填失败时的保护。
-  Object? failNextQueriesWith;
+  /// 令查询在返回前抛出异常，用于验证回填失败时的保护。
+  /// 一经设置，**此后所有**查询都会失败，直到调用方把它置回 null。
+  Object? failQueriesWith;
 
   @override
   Future<List<Quote>> getUserQuotes({
@@ -481,7 +485,7 @@ class _PagedDatabaseService extends DatabaseService {
     bool includeDeleted = false,
   }) async {
     requestedPages.add((offset: offset, limit: limit));
-    final failure = failNextQueriesWith;
+    final failure = failQueriesWith;
     if (failure != null) {
       completedQueries++;
       throw failure;

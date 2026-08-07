@@ -170,6 +170,17 @@ void main() {
       expect(tracker.peek(t0.add(const Duration(milliseconds: 900))), 800);
     });
 
+    test('恰好卡在有效期上时目标仍然有效', () {
+      final tracker = newTracker();
+
+      tracker.remember(800, t0);
+
+      // 判定用的是 `> retention`，等于有效期这一刻还算数。
+      expect(tracker.peek(t0.add(const Duration(milliseconds: 1500))), 800);
+      expect(tracker.isExpired, isFalse);
+      expect(tracker.peek(t0.add(const Duration(milliseconds: 1501))), isNull);
+    });
+
     test('超过有效期的目标不再拽用户，并就地丢弃', () {
       final tracker = newTracker();
 

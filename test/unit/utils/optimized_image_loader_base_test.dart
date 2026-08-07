@@ -26,8 +26,21 @@ void main() {
         expect(decodeDimensionFor(double.nan, 2.0), isNull);
       });
 
-      test('像素比封顶后的解码宽度不会超过屏幕宽度 × 该上限', () {
-        // 卡片宽度不会超过屏幕宽度；旗舰机的 dpr 会被调用方钳到 2.0。
+      test('非法像素比同样返回 null，不能当成"尺寸没问题"照解', () {
+        // 尺寸合法但像素比非法时，把关的是 devicePixels 那道校验。
+        // 少了它，pixelRatio=0 会退化成"抬到下限 160"，静悄悄解出一张错图。
+        for (final pixelRatio in <double>[0, -1, double.infinity, double.nan]) {
+          expect(
+            decodeDimensionFor(344, pixelRatio),
+            isNull,
+            reason: 'pixelRatio=$pixelRatio',
+          );
+        }
+      });
+
+      test('像素比封顶到 2.0 后，解码宽度不会超过屏幕宽度 × 2', () {
+        // 卡片宽度不会超过屏幕宽度；dpr 由调用方（quill_editor_extensions
+        // 的 _previewMaxPixelRatio）钳到 2.0，这里验证钳完之后的内存上界。
         const screenWidth = 430.0;
         const cappedRatio = 2.0;
         final ceiling = (screenWidth * cappedRatio).round();
@@ -38,6 +51,9 @@ void main() {
           expect(decoded, isNotNull);
           expect(decoded! <= ceiling, isTrue, reason: 'width=$width');
         }
+
+        // 不封顶的话这条上界就守不住——这正是调用方要钳 dpr 的原因。
+        expect(decodeDimensionFor(screenWidth, 3.0)! > ceiling, isTrue);
       });
     });
 
