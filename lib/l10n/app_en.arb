@@ -3486,6 +3486,8 @@
   "smartPushTimeSettings": "Push Time",
   "smartPushAddTime": "Add Push Time",
   "smartPushFrequency": "Push Frequency",
+  "smartPushIntensityFewer": "Fewer",
+  "smartPushIntensityMore": "More",
   "smartPushFrequencyDaily": "Daily",
   "smartPushFrequencyWeekdays": "Weekdays",
   "smartPushFrequencyWeekends": "Weekends",

@@ -3370,6 +3370,8 @@
   "smartPushTimeSettings": "푸시 시간",
   "smartPushAddTime": "푸시 시간 추가",
   "smartPushFrequency": "푸시 빈도",
+  "smartPushIntensityFewer": "적게",
+  "smartPushIntensityMore": "많게",
   "smartPushFrequencyDaily": "일일",
   "smartPushFrequencyWeekdays": "평일",
   "smartPushFrequencyWeekends": "주말",

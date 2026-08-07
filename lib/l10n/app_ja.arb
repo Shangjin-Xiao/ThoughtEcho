@@ -3370,6 +3370,8 @@
   "smartPushTimeSettings": "時間設定",
   "smartPushAddTime": "時間追加",
   "smartPushFrequency": "頻度",
+  "smartPushIntensityFewer": "少なめ",
+  "smartPushIntensityMore": "多め",
   "smartPushFrequencyDaily": "毎日",
   "smartPushFrequencyWeekdays": "平日",
   "smartPushFrequencyWeekends": "週末",

@@ -3356,6 +3356,8 @@
   "smartPushTimeSettings": "Temps de poussée",
   "smartPushAddTime": "Ajouter un temps de poussée",
   "smartPushFrequency": "Fréquence de poussée",
+  "smartPushIntensityFewer": "Moins",
+  "smartPushIntensityMore": "Plus",
   "smartPushFrequencyDaily": "Tous les jours",
   "smartPushFrequencyWeekdays": "Jours de la semaine",
   "smartPushFrequencyWeekends": "Week-ends",

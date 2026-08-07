@@ -3485,6 +3485,8 @@
   "smartPushTimeSettings": "推送时间",
   "smartPushAddTime": "添加推送时间",
   "smartPushFrequency": "推送频率",
+  "smartPushIntensityFewer": "更少",
+  "smartPushIntensityMore": "更多",
   "smartPushFrequencyDaily": "每天",
   "smartPushFrequencyWeekdays": "工作日",
   "smartPushFrequencyWeekends": "周末",
