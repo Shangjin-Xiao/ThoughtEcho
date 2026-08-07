@@ -1,8 +1,35 @@
+import 'dart:typed_data';
+
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/utils/optimized_image_loader_base.dart';
 
 void main() {
   group('OptimizedImageLoaderBase', () {
+    group('wrapWithDecodeLimit', () {
+      final base = MemoryImage(Uint8List.fromList(const [1, 2, 3]));
+
+      test('没有解码上限时原样返回', () {
+        expect(identical(wrapWithDecodeLimit(base, null, null), base), isTrue);
+      });
+
+      test('只给宽度时保持默认策略，高度按比例推算', () {
+        final resized = wrapWithDecodeLimit(base, 800, null) as ResizeImage;
+
+        expect(resized.width, 800);
+        expect(resized.height, isNull);
+        expect(resized.policy, ResizeImagePolicy.exact);
+      });
+
+      test('同时给宽高时必须用 fit 策略，否则长图会被拉变形', () {
+        final resized = wrapWithDecodeLimit(base, 800, 1600) as ResizeImage;
+
+        expect(resized.width, 800);
+        expect(resized.height, 1600);
+        expect(resized.policy, ResizeImagePolicy.fit);
+      });
+    });
+
     group('isDataUrl', () {
       test('returns true for valid data URL', () {
         const source =

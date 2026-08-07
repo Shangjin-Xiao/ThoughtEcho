@@ -273,6 +273,21 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
   static final LinkedHashSet<String> _loadedSources = LinkedHashSet<String>();
   static const int _maxCachedSources = 200;
 
+  /// 卡片内预览图的解码倍率上限。
+  ///
+  /// 这条路径只服务笔记卡片（全屏编辑器用 `optimizedImages: false` 的原生
+  /// builder，点开的大图预览页不传解码上限，都拿全分辨率），所以这里只需要
+  /// 满足"滑过去看一眼"的清晰度。
+  ///
+  /// 按屏幕最高精度（dpr 3）解码，单张常规照片就要 2.8MB，二十几张即可占满
+  /// Flutter 默认 100MB 的图片缓存；之后每次上下滑都在淘汰和重新解码，
+  /// 正是滑过图片时卡顿的来源。降到 2 倍后单张约 1.2MB，占用降到三分之一，
+  /// 常规滚动不再触发淘汰。
+  ///
+  /// 注意这个上限只是封顶：真实倍率仍取设备的 devicePixelRatio，
+  /// 低分屏机型本来就低于 2，画质按屏幕自适应这件事没有变。
+  static const double _previewMaxPixelRatio = 2.0;
+
   bool _shouldLoad = false;
   bool _hasError = false;
   bool _isLoaded = false;
@@ -385,10 +400,18 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
 
         final double devicePixelRatio = mediaQuery.devicePixelRatio.clamp(
           1.0,
-          3.0,
+          _previewMaxPixelRatio,
         );
         final int? targetCacheWidth = _computeCacheSize(
           displayWidth,
+          devicePixelRatio,
+        );
+        // 高度上限：一屏高就够了。卡片里的长图（长截图、拼接图）是滚过去看的，
+        // 超出一屏的部分不需要按屏幕精度解码。只给宽度封顶时，一张 1:4 的长图
+        // 会解成 1030×4120 ≈ 400 万像素、单张 16MB，几张就把整个图片缓存挤爆。
+        // 常规横竖图的自然高度远在这个框内，不受影响。
+        final int? targetCacheHeight = _computeCacheSize(
+          mediaQuery.size.height,
           devicePixelRatio,
         );
 
@@ -403,6 +426,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
                 context,
                 displayWidth,
                 targetCacheWidth,
+                targetCacheHeight,
               ),
             ),
           ),
@@ -423,6 +447,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     BuildContext context,
     double width,
     int? cacheWidth,
+    int? cacheHeight,
   ) {
     if (!_shouldLoad) {
       return _buildImagePlaceholder(context, width);
@@ -434,7 +459,8 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
 
     final provider = createOptimizedImageProvider(
       widget.source,
-      cacheWidth: _shouldLoad ? cacheWidth : null,
+      cacheWidth: cacheWidth,
+      cacheHeight: cacheHeight,
     );
 
     if (provider == null) {

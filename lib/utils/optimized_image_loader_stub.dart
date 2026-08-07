@@ -23,9 +23,5 @@ ImageProvider? createOptimizedImageProvider(
     provider = NetworkImage(source);
   }
 
-  if (cacheWidth != null || cacheHeight != null) {
-    provider = ResizeImage(provider, width: cacheWidth, height: cacheHeight);
-  }
-
-  return provider;
+  return wrapWithDecodeLimit(provider, cacheWidth, cacheHeight);
 }
