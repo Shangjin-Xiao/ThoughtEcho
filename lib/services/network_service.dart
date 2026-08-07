@@ -120,8 +120,12 @@ class NetworkService {
 
       return _convertDioResponseToHttpResponse(response);
     } on DioException catch (e, stack) {
-      AppLogger.e('GET请求失败: $url',
-          error: e, stackTrace: stack, source: 'NetworkService');
+      AppLogger.e(
+        'GET请求失败: $url',
+        error: e,
+        stackTrace: stack,
+        source: 'NetworkService',
+      );
       return HttpResponse(
         '{"error": "${e.message}"}',
         e.response?.statusCode ?? 500,
@@ -152,8 +156,12 @@ class NetworkService {
 
       return _convertDioResponseToHttpResponse(response);
     } on DioException catch (e, stack) {
-      AppLogger.e('POST请求失败: $url',
-          error: e, stackTrace: stack, source: 'NetworkService');
+      AppLogger.e(
+        'POST请求失败: $url',
+        error: e,
+        stackTrace: stack,
+        source: 'NetworkService',
+      );
       return HttpResponse(
         '{"error": "${e.message}"}',
         e.response?.statusCode ?? 500,
@@ -189,8 +197,12 @@ class NetworkService {
 
       return response;
     } catch (e, stack) {
-      AppLogger.e('AI请求失败',
-          error: e, stackTrace: stack, source: 'NetworkService');
+      AppLogger.e(
+        'AI请求失败',
+        error: e,
+        stackTrace: stack,
+        source: 'NetworkService',
+      );
       rethrow;
     }
   }
@@ -231,8 +243,12 @@ class NetworkService {
         onError,
       );
     } catch (e, stack) {
-      AppLogger.e('AI流式请求失败',
-          error: e, stackTrace: stack, source: 'NetworkService');
+      AppLogger.e(
+        'AI流式请求失败',
+        error: e,
+        stackTrace: stack,
+        source: 'NetworkService',
+      );
       onError(Exception('AI流式请求失败: $e'));
     }
   }
@@ -360,10 +376,16 @@ class NetworkService {
     try {
       await for (final data in stream) {
         final chunk = String.fromCharCodes(data);
-        final lines = (partialLine + chunk).split('\n');
-        partialLine = lines.removeLast();
+        final text = partialLine + chunk;
 
-        for (final line in lines) {
+        // 使用 indexOf 和 substring 手动解析代替 split 以降低频繁创建 String 对象的内存与 GC 压力
+        int startIndex = 0;
+        int newlineIndex;
+
+        while ((newlineIndex = text.indexOf('\n', startIndex)) != -1) {
+          final line = text.substring(startIndex, newlineIndex);
+          startIndex = newlineIndex + 1;
+
           if (line.startsWith('data:')) {
             final jsonStr = line.substring(5).trim();
             if (jsonStr == '[DONE]') {
@@ -392,17 +414,26 @@ class NetworkService {
                 continue;
               }
             } catch (e, stack) {
-              AppLogger.e('解析流式响应JSON错误',
-                  error: e, stackTrace: stack, source: 'NetworkService');
+              AppLogger.e(
+                '解析流式响应JSON错误',
+                error: e,
+                stackTrace: stack,
+                source: 'NetworkService',
+              );
             }
           }
         }
+        partialLine = text.substring(startIndex);
       }
 
       onComplete(buffer.toString());
     } catch (e, stack) {
-      AppLogger.e('流式响应处理错误',
-          error: e, stackTrace: stack, source: 'NetworkService');
+      AppLogger.e(
+        '流式响应处理错误',
+        error: e,
+        stackTrace: stack,
+        source: 'NetworkService',
+      );
       onError(Exception('流式响应处理错误: $e'));
     }
   }
@@ -444,8 +475,12 @@ class RetryInterceptor extends Interceptor {
         handler.resolve(response);
         return;
       } catch (e, stack) {
-        AppLogger.e('重试请求失败: ${err.requestOptions.uri}',
-            error: e, stackTrace: stack, source: 'NetworkService_Retry');
+        AppLogger.e(
+          '重试请求失败: ${err.requestOptions.uri}',
+          error: e,
+          stackTrace: stack,
+          source: 'NetworkService_Retry',
+        );
         // 继续到下一个重试或失败
       }
     }
