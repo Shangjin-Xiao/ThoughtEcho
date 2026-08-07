@@ -191,6 +191,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool? includeDeleted,
+    int? refillCount,
+    List<Quote>? skipNotifyIfSameAs,
   });
 
   Future<void> importDataFromMap(

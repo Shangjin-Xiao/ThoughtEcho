@@ -132,6 +132,8 @@ class _PerformanceDatabaseService extends DatabaseService {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool? includeDeleted,
+    int? refillCount,
+    List<Quote>? skipNotifyIfSameAs,
   }) async {}
 
   @override

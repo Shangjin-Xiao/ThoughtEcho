@@ -227,6 +227,8 @@ class _FakeDatabaseService extends DatabaseService {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool? includeDeleted,
+    int? refillCount,
+    List<Quote>? skipNotifyIfSameAs,
   }) async {
     loadMoreCallCount++;
   }

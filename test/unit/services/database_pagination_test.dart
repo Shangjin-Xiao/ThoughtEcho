@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/models/quote_model.dart';
@@ -97,6 +99,237 @@ void main() {
       },
     );
   });
+
+  group('Database pagination refresh', () {
+    late _PagedDatabaseService service;
+    late Database db;
+
+    setUp(() async {
+      await TestHarness.initialize();
+      DatabaseService.clearTestDatabase();
+      service = _PagedDatabaseService(totalQuotes: 7);
+
+      db = await databaseFactory.openDatabase(inMemoryDatabasePath);
+      await _createQuoteTables(db);
+      DatabaseService.setTestDatabase(db);
+      await service.init();
+    });
+
+    tearDown(() async {
+      DatabaseService.clearTestDatabase();
+      await db.close();
+    });
+
+    Future<StreamSubscription<List<Quote>>> loadThreePages(
+      List<List<Quote>> events,
+    ) async {
+      final sub = service.watchQuotes(limit: 2).listen(events.add);
+      await _waitForEvent(events, _ids, equals(['quote-0', 'quote-1']));
+      await service.loadMoreQuotes();
+      await _waitForEvent(
+        events,
+        _ids,
+        equals(['quote-0', 'quote-1', 'quote-2', 'quote-3']),
+      );
+      await service.loadMoreQuotes();
+      await _waitForEvent(
+        events,
+        _ids,
+        equals([
+          'quote-0',
+          'quote-1',
+          'quote-2',
+          'quote-3',
+          'quote-4',
+          'quote-5',
+        ]),
+      );
+      return sub;
+    }
+
+    test(
+      '刷新按已加载条数一次性回填，列表不会塌回第一页',
+      () async {
+        final events = <List<Quote>>[];
+        final sub = await loadThreePages(events);
+        addTearDown(sub.cancel);
+
+        final eventsBeforeRefresh = events.length;
+        service.requestedPages.clear();
+
+        service.refreshQuotes();
+
+        await _waitForEvent(
+          events,
+          (quotes) => quotes.length,
+          equals(6),
+          startIndex: eventsBeforeRefresh,
+        );
+
+        // 关键：刷新期间一条都不能变短。列表在用户滚动途中缩短会让
+        // maxScrollExtent 骤减、滚动位置被夹紧，视觉上就是"列表突然飞走"。
+        for (var i = eventsBeforeRefresh; i < events.length; i++) {
+          expect(
+            events[i].length,
+            6,
+            reason: '刷新过程中第 ${i - eventsBeforeRefresh} 个事件把列表截短了',
+          );
+        }
+
+        // 回填只查一次，limit 等于原有条数。
+        expect(service.requestedPages, hasLength(1));
+        expect(service.requestedPages.single.offset, 0);
+        expect(service.requestedPages.single.limit, 6);
+      },
+    );
+
+    test(
+      '筛选条件未变时重新订阅不会把分页偏移重置回 0',
+      () async {
+        final events = <List<Quote>>[];
+        final sub = await loadThreePages(events);
+        addTearDown(sub.cancel);
+
+        service.requestedPages.clear();
+
+        // 相同筛选条件再次订阅：复用已有流，不应重建分页状态。
+        final secondEvents = <List<Quote>>[];
+        final secondSub = service.watchQuotes(limit: 2).listen(secondEvents.add);
+        addTearDown(secondSub.cancel);
+        await _waitForEvent(secondEvents, (quotes) => quotes.length, equals(6));
+
+        await service.loadMoreQuotes();
+        await _waitForEvent(
+          secondEvents,
+          (quotes) => quotes.length,
+          equals(7),
+        );
+
+        // 偏移若被重置为 0，这一页取回的全是重复数据：列表一条都不增长，
+        // 底部加载指示器却会一直转。
+        expect(
+          service.requestedPages.map((page) => page.offset),
+          isNot(contains(0)),
+        );
+        expect(service.requestedPages.single.offset, 6);
+      },
+    );
+
+    test(
+      '刷新结果与刷新前完全一致时不再整表推送',
+      () async {
+        service.stampLastModified = true;
+        final events = <List<Quote>>[];
+        final sub = await loadThreePages(events);
+        addTearDown(sub.cancel);
+
+        final eventsBeforeRefresh = events.length;
+        service.requestedPages.clear();
+
+        service.refreshQuotes();
+        await _waitUntil(() => service.requestedPages.isNotEmpty);
+        // 给推送留出足够的调度时间，确认它确实没有发生。
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+
+        // 整表推送会让列表页重建上百个 item，在滚动帧里就是一次可见卡顿。
+        expect(
+          events.length,
+          eventsBeforeRefresh,
+          reason: '可见列表毫无变化的刷新不应触发整表推送',
+        );
+      },
+    );
+  });
+}
+
+Future<void> _waitUntil(bool Function() condition) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 3));
+  while (DateTime.now().isBefore(deadline)) {
+    if (condition()) return;
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  }
+  fail('Timed out waiting for condition');
+}
+
+List<String?> _ids(List<Quote> quotes) =>
+    quotes.map((quote) => quote.id).toList();
+
+Future<void> _createQuoteTables(Database db) async {
+  await db.execute('''
+      CREATE TABLE quotes(
+        id TEXT PRIMARY KEY,
+        content TEXT NOT NULL,
+        date TEXT NOT NULL,
+        source TEXT,
+        source_author TEXT,
+        source_work TEXT,
+        ai_analysis TEXT,
+        sentiment TEXT,
+        keywords TEXT,
+        summary TEXT,
+        category_id TEXT DEFAULT '',
+        color_hex TEXT,
+        location TEXT,
+        latitude REAL,
+        longitude REAL,
+        weather TEXT,
+        temperature TEXT,
+        edit_source TEXT,
+        delta_content TEXT,
+        day_period TEXT,
+        last_modified TEXT,
+        favorite_count INTEGER DEFAULT 0,
+        is_deleted INTEGER DEFAULT 0,
+        deleted_at TEXT
+      )
+    ''');
+  await db.execute('''
+      CREATE TABLE quote_tags (
+        quote_id TEXT NOT NULL,
+        tag_id TEXT NOT NULL,
+        PRIMARY KEY (quote_id, tag_id)
+      )
+    ''');
+}
+
+/// 按 offset/limit 老实分页的假数据源，用于观察真实的取页请求。
+class _PagedDatabaseService extends DatabaseService {
+  _PagedDatabaseService({required this.totalQuotes}) : super.forTesting();
+
+  final int totalQuotes;
+  final requestedPages = <({int offset, int limit})>[];
+
+  /// 是否给假数据带上 lastModified：刷新去重需要靠它判断内容有没有变。
+  bool stampLastModified = false;
+
+  @override
+  Future<List<Quote>> getUserQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    int offset = 0,
+    int limit = 20,
+    String orderBy = 'date DESC',
+    String? searchQuery,
+    String? dateStart,
+    String? dateEnd,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
+  }) async {
+    requestedPages.add((offset: offset, limit: limit));
+    final end = (offset + limit) < totalQuotes ? offset + limit : totalQuotes;
+    return [
+      for (var i = offset; i < end; i++)
+        Quote(
+          id: 'quote-$i',
+          content: '分页测试 quote-$i',
+          date: DateTime(2026, 6, 29).toIso8601String(),
+          lastModified:
+              stampLastModified ? '2026-06-29T00:00:00.000Z' : null,
+        ),
+    ];
+  }
 }
 
 Future<void> _waitForEvent<T>(

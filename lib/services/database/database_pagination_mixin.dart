@@ -2,6 +2,32 @@ part of '../database_service.dart';
 
 /// Mixin providing pagination and stream operations for DatabaseService.
 mixin _DatabasePaginationMixin on _DatabaseServiceBase {
+  /// 刷新回填单次查询的条数上限：超过这个量级的列表极少见，
+  /// 与其把一次刷新变成慢查询，不如让它退回按页加载。
+  static const int _maxRefillCount = 500;
+
+  /// 判断刷新前后的可见列表是否完全一致（顺序、条目、内容都没变）。
+  ///
+  /// 只要有一条 `lastModified` 为空就直接判为「不确定」，宁可多推一次也不漏掉
+  /// 真实更新——早期数据可能没有这个字段，缺了它就没法判断内容有没有动过。
+  bool _quoteListsEquivalent(List<Quote> previous, List<Quote> current) {
+    // 空列表不参与去重：首屏/清空后的刷新必须让 UI 收到事件。
+    if (previous.isEmpty) return false;
+    if (previous.length != current.length) return false;
+    for (var i = 0; i < previous.length; i++) {
+      final a = previous[i];
+      final b = current[i];
+      if (a.lastModified == null || b.lastModified == null) return false;
+      if (a.id != b.id ||
+          a.lastModified != b.lastModified ||
+          a.favoriteCount != b.favoriteCount ||
+          a.isDeleted != b.isDeleted) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /// 修复：安全地通知笔记流订阅者
   /// 性能优化：由于 _currentQuotes 已通过 _currentQuoteIds 保证唯一性，
   /// 此处直接发送，无需再次遍历去重
@@ -26,7 +52,18 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
   @override
   void _refreshQuotesStream() {
     if (_quotesController != null && !_quotesController!.isClosed) {
-      logDebug('刷新笔记流数据');
+      // 刷新前记住已经加载出来的条数：任何一次数据变更（保存笔记、收藏、
+      // 位置回填、回收站清理、同步导入……）都会走到这里，若只重新取回第一页，
+      // 已经滑到深处的列表会瞬间从 N 条塌回一页，maxScrollExtent 随之骤减，
+      // 滚动位置被夹紧 —— 表现就是「列表突然飞走/弹回顶部 + 底部转圈 + 大片空白」。
+      // 所以刷新必须一次把原有页数全部取回，列表长度保持不变。
+      final int reloadCount = _currentQuotes.length;
+      // 回填结果和刷新前一模一样时不再向 UI 推送：整表推送会让列表页
+      // 重建全部已加载 item（上百次 build + 首次布局），发生在滚动帧里
+      // 就是一次明显的卡顿。回收站过期清理、同步后的例行刷新等场景，
+      // 可见列表其实一条都没变。
+      final List<Quote> previousQuotes = List<Quote>.from(_currentQuotes);
+      logDebug('刷新笔记流数据，需回填 $reloadCount 条');
       // 优化：清除所有缓存，确保获取最新数据
       clearAllCacheForParts();
 
@@ -40,7 +77,10 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       _isLoading = false;
 
       // 触发重新加载
-      loadMoreQuotes();
+      loadMoreQuotes(
+        refillCount: reloadCount,
+        skipNotifyIfSameAs: previousQuotes,
+      );
     } else {
       logDebug('笔记流无监听器或已关闭，跳过刷新');
     }
@@ -206,7 +246,6 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     }
 
     // 更新当前的筛选参数
-    _watchOffset = 0;
     _watchLimit = limit;
     _watchTagIds = tagIds;
     _watchCategoryId = categoryId;
@@ -238,6 +277,11 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       _quotesController = StreamController<List<Quote>>.broadcast();
 
       // 修复：在重置状态时确保原子性操作，避免竞态条件
+      // 注意：_watchOffset 只能在这里（真正重建流、清空 _currentQuotes 时）归零。
+      // 复用已有流的分支若也归零，下一次 loadMoreQuotes 会重新查第一页，
+      // 结果全是重复数据被去重掉——列表一条都不增长，_watchHasMore 却被
+      // 重新置回 true，底部加载指示器就此常驻并反复触发无效分页。
+      _watchOffset = 0;
       _currentQuotes = [];
       _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set
       _isLoading = false;
@@ -306,6 +350,8 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool? includeDeleted,
+    int? refillCount,
+    List<Quote>? skipNotifyIfSameAs,
   }) async {
     // 使用当前观察的参数作为默认值
     tagIds ??= _watchTagIds;
@@ -324,8 +370,13 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     _isLoading = true;
     final loadGeneration = _quotesLoadGeneration;
     final requestOffset = _watchOffset;
+    // 刷新回填：一次取回原有的全部页数，避免列表在用户滚动途中变短。
+    // 上限保护，防止极深列表把单次查询拖成慢查询。
+    final int requestLimit = refillCount != null && refillCount > _watchLimit
+        ? (refillCount > _maxRefillCount ? _maxRefillCount : refillCount)
+        : _watchLimit;
     logDebug(
-      '开始加载更多笔记，当前已有 ${_currentQuotes.length} 条，offset=$requestOffset，limit=$_watchLimit',
+      '开始加载更多笔记，当前已有 ${_currentQuotes.length} 条，offset=$requestOffset，limit=$requestLimit',
     );
 
     try {
@@ -333,7 +384,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
         tagIds: tagIds,
         categoryId: categoryId,
         offset: requestOffset,
-        limit: _watchLimit,
+        limit: requestLimit,
         orderBy: _watchOrderBy,
         searchQuery: searchQuery,
         selectedWeathers: selectedWeathers,
@@ -379,11 +430,17 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
         }
 
         // 简化：统一的_watchHasMore判断逻辑
-        _watchHasMore = quotes.length >= _watchLimit;
+        _watchHasMore = quotes.length >= requestLimit;
       }
 
       // 通知状态变化
       notifyListeners();
+
+      if (skipNotifyIfSameAs != null &&
+          _quoteListsEquivalent(skipNotifyIfSameAs, _currentQuotes)) {
+        logDebug('刷新后可见列表无变化，跳过整表推送');
+        return;
+      }
 
       // 修复：使用安全的方式通知订阅者
       _safeNotifyQuotesStream();

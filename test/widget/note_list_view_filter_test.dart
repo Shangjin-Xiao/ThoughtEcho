@@ -1122,6 +1122,8 @@ class _FakeDatabaseService extends DatabaseService {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool? includeDeleted,
+    int? refillCount,
+    List<Quote>? skipNotifyIfSameAs,
   }) async {}
 
   @override
@@ -1189,6 +1191,8 @@ class _PagingFakeDatabaseService extends _DelayedFakeDatabaseService {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool? includeDeleted,
+    int? refillCount,
+    List<Quote>? skipNotifyIfSameAs,
   }) async {
     loadMoreCallCount++;
     _hasMoreQuotes = true;

@@ -806,6 +806,8 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool? includeDeleted,
+    int? refillCount,
+    List<_i16.Quote>? skipNotifyIfSameAs,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -818,6 +820,8 @@ class MockDatabaseService extends _i1.Mock implements _i14.DatabaseService {
             #selectedWeathers: selectedWeathers,
             #selectedDayPeriods: selectedDayPeriods,
             #includeDeleted: includeDeleted,
+            #refillCount: refillCount,
+            #skipNotifyIfSameAs: skipNotifyIfSameAs,
           },
         ),
         returnValue: _i10.Future<void>.value(),

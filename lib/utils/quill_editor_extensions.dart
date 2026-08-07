@@ -455,7 +455,11 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
           image: provider,
           width: width,
           fit: BoxFit.contain,
-          filterQuality: FilterQuality.medium,
+          // 解码尺寸已按 displayWidth × devicePixelRatio 精确匹配显示尺寸
+          // （见 _computeCacheSize），绘制时基本是 1:1 采样，medium 的
+          // mipmap 生成属于纯浪费：多一份 GPU 内存和一趟缩略链构建，
+          // 画面却和 low 没有区别。
+          filterQuality: FilterQuality.low,
           isAntiAlias: true,
           gaplessPlayback: true,
           frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
