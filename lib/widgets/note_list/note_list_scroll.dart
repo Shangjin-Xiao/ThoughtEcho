@@ -744,6 +744,76 @@ extension _NoteListScrollExtension on NoteListViewState {
     });
   }
 
+  /// 数据事件把 `_quotes` 整表替换之后调用的滚动锚点兜底。
+  ///
+  /// 判断逻辑全在纯函数 [resolveScrollAnchorAction] 里（含各种边界与单测），
+  /// 这里只负责取状态、执行结果。
+  ///
+  /// [previousOffset] 为数据应用之前的偏移量；为 null 表示这次只是「再试一次
+  /// 之前挂起的还原」（例如滚动停止后的回调）。
+  void _guardScrollAnchorAfterDataEvent(double? previousOffset) {
+    // 既没有新偏移可记，也没有挂起的目标，就没必要多排一次帧回调。
+    if ((previousOffset == null || previousOffset <= 0) &&
+        !_scrollAnchor.hasPending) {
+      return;
+    }
+
+    final generation = _scrollAnchor.generation;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollAnchor.isCurrent(generation)) return;
+      _reconcileScrollAnchor(previousOffset);
+    });
+  }
+
+  void _reconcileScrollAnchor(double? previousOffset) {
+    final position = _safeScrollPosition;
+    if (position == null) return;
+
+    final now = DateTime.now();
+    final decision = resolveScrollAnchorAction(
+      previousOffset: previousOffset,
+      pendingOffset: _scrollAnchor.peek(now),
+      currentPixels: position.pixels,
+      maxScrollExtent: position.maxScrollExtent,
+      isDragging: isListDragActive.value,
+      tolerance: NoteListViewState._dataEventScrollShiftTolerance,
+    );
+
+    switch (decision.action) {
+      case ScrollAnchorAction.none:
+        _scrollAnchor.clear();
+        return;
+      case ScrollAnchorAction.remember:
+        if (!_scrollAnchor.remember(decision.targetOffset!, now)) {
+          // 本轮夹紧已经超过有效期：用户早就滑到别处了，不能再拽他。
+          logDebug(
+            '滚动锚点已过期，放弃还原: ${decision.targetOffset!.round()}',
+            source: 'NoteListView',
+          );
+          return;
+        }
+        logDebug(
+          '滚动锚点暂存待还原: ${decision.targetOffset?.round()} '
+          '(max=${position.maxScrollExtent.round()}, '
+          'dragging=${isListDragActive.value}, quotes=${_quotes.length})',
+          source: 'NoteListView',
+        );
+        return;
+      case ScrollAnchorAction.restore:
+        _scrollAnchor.clear();
+        position.jumpTo(decision.targetOffset!);
+        logDebug(
+          '还原被夹掉的滚动位置: ${decision.targetOffset!.round()}',
+          source: 'NoteListView',
+        );
+        return;
+    }
+  }
+
+  /// 用户重新按住列表、或筛选变化要求回到顶部时调用：
+  /// 这两种情况下旧的还原目标都已经作废，不能再把用户拽回去。
+  void _cancelPendingScrollRestore() => _scrollAnchor.cancel();
+
   void _resetLoadMoreGate() {
     _loadMoreAwaitingPage = false;
     _loadMoreSettleTimer?.cancel();

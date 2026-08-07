@@ -1,5 +1,10 @@
 part of '../note_list_view.dart';
 
+/// 列表底部"还有下一页"占位格的高度。空闲占位与加载动画共用，
+/// 保证 `_isLoading` 翻转不会改变列表总高度。
+/// 取值对齐 [AppLoadingView] 内部 Lottie 的最小尺寸（80），动画正好填满不溢出。
+const double _loadMoreFooterHeight = 80.0;
+
 /// List building, search, and item rendering for NoteListViewState.
 extension _NoteListItemsExtension on NoteListViewState {
   Widget _buildNoteListView(BuildContext context) {
@@ -451,6 +456,8 @@ extension _NoteListItemsExtension on NoteListViewState {
           // 单独的拖拽信号让冷 Quill 恢复队列在整个手势期间保持静默。
           isListDragActive.value = true;
           _cancelScrollEndSettledWork();
+          // 用户重新接管列表：放弃尚未执行的数据事件位置还原，避免回拉手感。
+          _cancelPendingScrollRestore();
           if (_searchFocusNode.hasFocus) {
             _searchFocusNode.unfocus();
           }
@@ -704,13 +711,23 @@ extension _NoteListItemsExtension on NoteListViewState {
             }
             // 底部加载指示器：仅在主动加载时显示动画，
             // 空闲态用透明占位确保 itemCount 正确以触发自动加载。
-            if (_isLoading) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: AppLoadingView(size: 32),
-              );
-            }
-            return const SizedBox(height: 48);
+            //
+            // 由 _loadMoreIndicator 驱动，切换只重建这一格，不牵动整列表；
+            // 也保证加载结束后指示器一定会收起（不再依赖别处恰好有 setState）。
+            //
+            // 两种状态必须同高。此前空闲占位 48、加载态是 80 的 Lottie 外加
+            // 上下各 16 的内边距（合计 112）——每翻转一次列表总高就跳 64 像素，
+            // 正在底部附近滑动时就是肉眼可见的"列表抖一下/飞一下"。
+            // 这一格永远处在"还有下一页"的过渡区，等高之后用户察觉不到差异。
+            return ValueListenableBuilder<bool>(
+              valueListenable: _loadMoreIndicator,
+              builder: (context, loading, _) => SizedBox(
+                height: _loadMoreFooterHeight,
+                child: loading
+                    ? const AppLoadingView(size: _loadMoreFooterHeight)
+                    : null,
+              ),
+            );
           },
         ),
       ),
@@ -734,6 +751,8 @@ extension _NoteListItemsExtension on NoteListViewState {
 
       // 延迟放行图片解码和异常检测，避免与 ScrollEnd 帧的 loadMore 挤在同一帧。
       isListScrolling.value = false;
+      // 拖拽期间不跟手势抢位置，挂起的还原留到这里补做。
+      _reconcileScrollAnchor(null);
       _checkAndFixScrollExtentAnomaly();
     });
   }

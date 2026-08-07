@@ -273,6 +273,21 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
   static final LinkedHashSet<String> _loadedSources = LinkedHashSet<String>();
   static const int _maxCachedSources = 200;
 
+  /// 卡片内预览图的解码倍率上限。
+  ///
+  /// 这条路径只服务笔记卡片（全屏编辑器用 `optimizedImages: false` 的原生
+  /// builder，点开的大图预览页不传解码上限，都拿全分辨率），所以这里只需要
+  /// 满足"滑过去看一眼"的清晰度。
+  ///
+  /// 按屏幕最高精度（dpr 3）解码，单张常规照片就要 2.8MB，二十几张即可占满
+  /// Flutter 默认 100MB 的图片缓存；之后每次上下滑都在淘汰和重新解码，
+  /// 正是滑过图片时卡顿的来源。降到 2 倍后单张约 1.2MB，占用降到三分之一，
+  /// 常规滚动不再触发淘汰。
+  ///
+  /// 注意这个上限只是封顶：真实倍率仍取设备的 devicePixelRatio，
+  /// 低分屏机型本来就低于 2，画质按屏幕自适应这件事没有变。
+  static const double _previewMaxPixelRatio = 2.0;
+
   bool _shouldLoad = false;
   bool _hasError = false;
   bool _isLoaded = false;
@@ -385,11 +400,22 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
 
         final double devicePixelRatio = mediaQuery.devicePixelRatio.clamp(
           1.0,
-          3.0,
+          _previewMaxPixelRatio,
         );
-        final int? targetCacheWidth = _computeCacheSize(
+        // 只按显示宽度封顶，**不要**再给高度单独封顶。
+        // 等比缩放不是裁剪：给长图加高度上限会把解码宽度一起压下去，而卡片
+        // 仍按完整宽度显示，结果是整张图（包括当前可见的那一截）被放大变糊。
+        // 长图的内存占用只能靠宽度这一个维度控制。
+        final int? targetCacheWidth = decodeSizeFor(
           displayWidth,
           devicePixelRatio,
+        );
+        // 唯一的高度约束是总像素预算这条防炸保险：只给宽度封顶时高度按原图
+        // 比例展开，1080×100000 这种超长拼接图会解成上千万像素直接压垮进程。
+        // 常规照片和长截图都在预算之内，不会被它改变尺寸（fit 策略只在超框时
+        // 才缩放），因此不会重新引入长图变糊的问题。
+        final int? decodePixelBudgetHeight = decodeHeightBudget(
+          targetCacheWidth,
         );
 
         return RepaintBoundary(
@@ -403,6 +429,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
                 context,
                 displayWidth,
                 targetCacheWidth,
+                decodePixelBudgetHeight,
               ),
             ),
           ),
@@ -423,6 +450,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     BuildContext context,
     double width,
     int? cacheWidth,
+    int? cacheHeight,
   ) {
     if (!_shouldLoad) {
       return _buildImagePlaceholder(context, width);
@@ -434,7 +462,8 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
 
     final provider = createOptimizedImageProvider(
       widget.source,
-      cacheWidth: _shouldLoad ? cacheWidth : null,
+      cacheWidth: cacheWidth,
+      cacheHeight: cacheHeight,
     );
 
     if (provider == null) {
@@ -455,7 +484,11 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
           image: provider,
           width: width,
           fit: BoxFit.contain,
-          filterQuality: FilterQuality.medium,
+          // 解码尺寸已按 displayWidth × devicePixelRatio 匹配显示尺寸
+          // （见 decodeDimensionFor），绘制时基本是 1:1 采样，medium 的
+          // mipmap 生成属于纯浪费：多一份 GPU 内存和一趟缩略链构建，
+          // 画面却和 low 没有区别。
+          filterQuality: FilterQuality.low,
           isAntiAlias: true,
           gaplessPlayback: true,
           frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
@@ -571,20 +604,6 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
         builder: (_) => MotionPhotoPreviewPage(imageUrl: widget.source),
       ),
     );
-  }
-
-  int? _computeCacheSize(double dimension, double devicePixelRatio) {
-    if (!dimension.isFinite || dimension <= 0) {
-      return null;
-    }
-
-    final double logicalPixels = dimension * devicePixelRatio;
-    if (!logicalPixels.isFinite || logicalPixels <= 0) {
-      return null;
-    }
-
-    final double bounded = logicalPixels.clamp(160.0, 2048.0);
-    return bounded.round();
   }
 
   Widget _buildImagePlaceholder(BuildContext context, double width) {

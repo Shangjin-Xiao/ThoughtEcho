@@ -97,6 +97,14 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             );
           }
 
+          // _hasMore 必须在 setState 内就取数据库的真实分页状态。
+          // 早先用 `list.length >= _pageSize` 推断、事后再普通赋值纠正，
+          // 会让每个数据事件都先渲染一帧多出来的尾部占位/转圈，
+          // 表现就是"加载图标闪一下"，同时 itemCount 变化还会抖动列表高度。
+          final bool dbHasMore = db.hasMoreQuotes;
+          // 列表被整表替换前的偏移，用于事件后校正被夹紧的滚动位置。
+          final double? offsetBeforeUpdate = _safeScrollOffset;
+
           _updateState(() {
             if (isFirstLoad) {
               _quotes.clear();
@@ -106,7 +114,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
               ..addAll(
                 list,
               ); // Simplified: always replace for consistency, but flag prevents extra sets
-            _hasMore = list.length >= NoteListViewState._pageSize;
+            _hasMore = dbHasMore;
             _isLoading = isLoadMorePage;
             _pruneExpansionControllers();
             // 注意：此处不递增 _resultsVersion。
@@ -115,6 +123,8 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             // 创建从偏移量 0 开始的新 ListView，导致列表跳回顶部。
             // 搜索/筛选切换动画由 _updateStreamSubscription 的首个数据事件负责递增。
           });
+          _guardScrollAnchorAfterDataEvent(offsetBeforeUpdate);
+
           if (_loadMorePerfRecording &&
               (_quotes.length > _loadMorePerfStartCount || !_hasMore)) {
             _markLoadMorePerfDataArrived();
@@ -171,15 +181,6 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             );
           }
 
-          // 修复：同步 _hasMore 状态与数据库服务状态
-          final dbService = _databaseService ?? _readDatabaseService();
-          if (_hasMore != dbService.hasMoreQuotes) {
-            logDebug(
-              '同步 _hasMore 状态: $_hasMore -> ${dbService.hasMoreQuotes}',
-              source: 'NoteListView',
-            );
-            _hasMore = dbService.hasMoreQuotes;
-          }
           // 重置滚动范围检查计数器
           _scrollExtentCheckCounter = 0;
 
@@ -387,10 +388,13 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           final isLoadMorePage = _loadMoreAwaitingPage &&
               (list.length > _loadMoreRequestStartCount ||
                   list.length < NoteListViewState._pageSize);
+          final bool dbHasMore = db.hasMoreQuotes;
+          final double? offsetBeforeUpdate =
+              pendingScrollToTop ? null : _safeScrollOffset;
           _updateState(() {
             _quotes.clear();
             _quotes.addAll(list);
-            _hasMore = list.length >= NoteListViewState._pageSize;
+            _hasMore = dbHasMore;
             _isLoading = isLoadMorePage;
             _pruneExpansionControllers();
           });
@@ -399,6 +403,8 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           // 之前依赖 ListView 换 key 重建来隐式归零，现在列表常驻，需显式归零。
           if (pendingScrollToTop) {
             pendingScrollToTop = false;
+            // 结果集换了，旧的还原目标作废，否则回到顶部后又被拽回旧位置。
+            _cancelPendingScrollRestore();
             final pos = _safeScrollPosition;
             if (pos != null && pos.pixels != 0) {
               pos.jumpTo(0);
@@ -421,6 +427,11 @@ extension _NoteListDataStreamExtension on NoteListViewState {
               if (!mounted) return;
               widget.onGuideTargetsReady!.call();
             });
+          }
+
+          // 没有走"保留滚动位置"分支时，由通用锚点保护兜住列表变短造成的位移。
+          if (savedScrollOffset == null) {
+            _guardScrollAnchorAfterDataEvent(offsetBeforeUpdate);
           }
 
           // Restore scroll position smoothly (only if preserveScrollPosition is true)
@@ -447,15 +458,6 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             });
           }
 
-          // 修复：同步 _hasMore 状态与数据库服务状态
-          final dbServiceForSync = _databaseService ?? _readDatabaseService();
-          if (_hasMore != dbServiceForSync.hasMoreQuotes) {
-            logDebug(
-              '更新订阅后同步 _hasMore 状态: $_hasMore -> ${dbServiceForSync.hasMoreQuotes}',
-              source: 'NoteListView',
-            );
-            _hasMore = dbServiceForSync.hasMoreQuotes;
-          }
           // 重置滚动范围检查计数器
           _scrollExtentCheckCounter = 0;
 

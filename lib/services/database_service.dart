@@ -184,6 +184,14 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     List<String>? selectedDayPeriods,
     bool includeDeleted = false,
   });
+
+  /// 取下一页笔记并追加到当前列表。
+  ///
+  /// [refillCount] 覆盖本次查询的条数（仅受单次分块上限约束），供刷新回填按
+  /// 「刷新前已加载多少」一次取回，避免列表在用户滚动途中变短。不传则按页大小取。
+  ///
+  /// [suppressNotify] 抑制本次的列表流推送，供分块回填在全部到位后再统一推送
+  /// ——中途推出去的短列表会把滚动位置夹紧。抑制期间调用方必须自行负责最终推送。
   Future<void> loadMoreQuotes({
     List<String>? tagIds,
     String? categoryId,
@@ -191,6 +199,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool? includeDeleted,
+    int? refillCount,
+    bool suppressNotify = false,
   });
 
   Future<void> importDataFromMap(
@@ -406,6 +416,11 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   int _watchOffset = 0;
   bool _watchHasMore = true;
   String? _watchSearchQuery;
+
+  /// 刷新回填的目标条数。刷新会先清空 `_currentQuotes`，若此时又来一次刷新，
+  /// 按当时的列表长度（0）算目标就会退化成只取一页，正是要修的列表塌陷。
+  /// 记住在途目标，让后来的刷新沿用它。
+  int _pendingRefillTarget = 0;
 
   /// 查询缓存，统一管理过期清理逻辑。
   final ExpiringCache<String, List<Quote>> _filterCache = ExpiringCache(
