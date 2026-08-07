@@ -596,6 +596,10 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     );
     if (_dialogPerfEnabled) {
       _autoMetadataRecording = true;
+      if (!_dialogPerfTimingsCallbackAttached) {
+        WidgetsBinding.instance.addTimingsCallback(_collectDialogPerfTimings);
+        _dialogPerfTimingsCallbackAttached = true;
+      }
       _autoMetadataFrameTimings.clear();
       _autoMetadataStopwatch
         ..reset()
