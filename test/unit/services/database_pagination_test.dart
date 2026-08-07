@@ -290,10 +290,11 @@ void main() {
         final sub = await loadThreePages(events);
         addTearDown(sub.cancel);
 
-        // 一路翻到底：7 条全部取回，再取一次拿到空页，hasMore 变 false。
+        // 一路翻到底：第 4 页（offset 6, limit 2）只取到 1 条，不足一页，
+        // hasMore 就在这时翻成 false（判据是 quotes.length >= requestLimit，
+        // 不需要再多取一次空页）。
         await service.loadMoreQuotes();
         await _waitForEvent(events, (quotes) => quotes.length, equals(7));
-        await service.loadMoreQuotes();
         expect(service.hasMoreQuotes, isFalse);
 
         await failRefill(events);
