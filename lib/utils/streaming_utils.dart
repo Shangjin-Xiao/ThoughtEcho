@@ -356,12 +356,13 @@ class StreamingUtils {
         final chunkString = utf8.decode(chunk);
         currentChunk += chunkString;
 
-        // 按行处理数据
-        final lines = currentChunk.split('\n');
-        currentChunk = lines.last; // 保留最后一行（可能是不完整的）
+        // 使用 indexOf 和 substring 手动解析代替 split 以降低频繁创建 String 对象的内存与 GC 压力，按行处理数据
+        int startIndex = 0;
+        int newlineIndex;
 
-        for (int i = 0; i < lines.length - 1; i++) {
-          final line = lines[i].trim();
+        while ((newlineIndex = currentChunk.indexOf('\n', startIndex)) != -1) {
+          final line = currentChunk.substring(startIndex, newlineIndex).trim();
+          startIndex = newlineIndex + 1;
           if (line.isEmpty || !line.startsWith('data: ')) continue;
 
           if (line == 'data: [DONE]') {
@@ -376,6 +377,8 @@ class StreamingUtils {
             onResponse(content);
           }
         }
+
+        currentChunk = currentChunk.substring(startIndex);
       }
 
       logDebug('流式响应接收完毕');
