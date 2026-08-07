@@ -153,4 +153,68 @@ void main() {
       expect(decision.action, ScrollAnchorAction.none);
     });
   });
+
+  group('ScrollAnchorTracker', () {
+    ScrollAnchorTracker newTracker() =>
+        ScrollAnchorTracker(retention: const Duration(milliseconds: 1500));
+
+    test('记住的目标可以在有效期内取出，取出后即清空', () {
+      final tracker = newTracker();
+      final now = DateTime(2026, 8, 7, 12);
+
+      tracker.remember(800, now);
+      expect(tracker.hasPending, isTrue);
+
+      expect(tracker.consume(now.add(const Duration(milliseconds: 500))), 800);
+      // consume 是一次性的，调用方要按决策结果决定是否重新 remember。
+      expect(tracker.hasPending, isFalse);
+      expect(tracker.consume(now), isNull);
+    });
+
+    test('超过有效期的目标不再拽用户', () {
+      final tracker = newTracker();
+      final now = DateTime(2026, 8, 7, 12);
+
+      tracker.remember(800, now);
+
+      expect(tracker.consume(now.add(const Duration(seconds: 2))), isNull);
+    });
+
+    test('cancel 清空目标', () {
+      final tracker = newTracker();
+      final now = DateTime(2026, 8, 7, 12);
+
+      tracker.remember(800, now);
+      tracker.cancel();
+
+      expect(tracker.hasPending, isFalse);
+      expect(tracker.consume(now), isNull);
+    });
+
+    test('cancel 让已排队的帧回调作废——只清字段拦不住在途回调', () {
+      final tracker = newTracker();
+      final now = DateTime(2026, 8, 7, 12);
+      tracker.remember(800, now);
+
+      // 模拟排 post-frame 回调时取版本号。
+      final queued = tracker.generation;
+      expect(tracker.isCurrent(queued), isTrue);
+
+      // 用户重新拖拽 / 筛选回顶。
+      tracker.cancel();
+
+      // 回调这时才执行，必须自行退出。
+      expect(tracker.isCurrent(queued), isFalse);
+    });
+
+    test('没有 cancel 时排队的回调仍然有效', () {
+      final tracker = newTracker();
+      final now = DateTime(2026, 8, 7, 12);
+
+      final queued = tracker.generation;
+      tracker.remember(800, now);
+
+      expect(tracker.isCurrent(queued), isTrue);
+    });
+  });
 }

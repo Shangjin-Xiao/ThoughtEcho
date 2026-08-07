@@ -754,13 +754,13 @@ extension _NoteListScrollExtension on NoteListViewState {
   void _guardScrollAnchorAfterDataEvent(double? previousOffset) {
     // 既没有新偏移可记，也没有挂起的目标，就没必要多排一次帧回调。
     if ((previousOffset == null || previousOffset <= 0) &&
-        _pendingScrollRestoreOffset == null) {
+        !_scrollAnchor.hasPending) {
       return;
     }
 
-    final generation = _scrollAnchorGeneration;
+    final generation = _scrollAnchor.generation;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || generation != _scrollAnchorGeneration) return;
+      if (!mounted || !_scrollAnchor.isCurrent(generation)) return;
       _reconcileScrollAnchor(previousOffset);
     });
   }
@@ -771,7 +771,7 @@ extension _NoteListScrollExtension on NoteListViewState {
 
     final decision = resolveScrollAnchorAction(
       previousOffset: previousOffset,
-      pendingOffset: _consumePendingScrollRestoreOffset(),
+      pendingOffset: _scrollAnchor.consume(DateTime.now()),
       currentPixels: position.pixels,
       maxScrollExtent: position.maxScrollExtent,
       isDragging: isListDragActive.value,
@@ -782,8 +782,7 @@ extension _NoteListScrollExtension on NoteListViewState {
       case ScrollAnchorAction.none:
         return;
       case ScrollAnchorAction.remember:
-        _pendingScrollRestoreOffset = decision.targetOffset;
-        _pendingScrollRestoreAt = DateTime.now();
+        _scrollAnchor.remember(decision.targetOffset!, DateTime.now());
         logDebug(
           '滚动锚点暂存待还原: ${decision.targetOffset?.round()} '
           '(max=${position.maxScrollExtent.round()}, '
@@ -801,29 +800,9 @@ extension _NoteListScrollExtension on NoteListViewState {
     }
   }
 
-  /// 取出仍在有效期内的待还原偏移；过期或不存在返回 null。
-  /// 无论是否过期都会清空字段，由调用方按 [resolveScrollAnchorAction] 的结论重写。
-  double? _consumePendingScrollRestoreOffset() {
-    final pending = _pendingScrollRestoreOffset;
-    final at = _pendingScrollRestoreAt;
-    _pendingScrollRestoreOffset = null;
-    _pendingScrollRestoreAt = null;
-    if (pending == null || at == null) return null;
-    if (DateTime.now().difference(at) >
-        NoteListViewState._pendingScrollRestoreWindow) {
-      return null;
-    }
-    return pending;
-  }
-
   /// 用户重新按住列表、或筛选变化要求回到顶部时调用：
   /// 这两种情况下旧的还原目标都已经作废，不能再把用户拽回去。
-  void _cancelPendingScrollRestore() {
-    _pendingScrollRestoreOffset = null;
-    _pendingScrollRestoreAt = null;
-    // 递增版本，让已排队但还没执行的锚点回调直接作废。
-    _scrollAnchorGeneration++;
-  }
+  void _cancelPendingScrollRestore() => _scrollAnchor.cancel();
 
   void _resetLoadMoreGate() {
     _loadMoreAwaitingPage = false;

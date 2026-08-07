@@ -219,6 +219,48 @@ void main() {
     );
 
     test(
+      '回填查询失败时不推半成品，列表不会塌缩',
+      () async {
+        final events = <List<Quote>>[];
+        final sub = await loadThreePages(events);
+        addTearDown(sub.cancel);
+
+        final eventsBeforeRefresh = events.length;
+        final queriesBeforeRefresh = service.completedQueries;
+        // 超时只是失败的一种；SQLite 异常等会被 loadMoreQuotes 内部吞掉，
+        // 用非超时异常才能真正验证"所有错误都要交出去"这条契约。
+        service.failNextQueriesWith = StateError('数据库炸了');
+
+        service.refreshQuotes();
+        await _waitUntil(
+          () => service.completedQueries > queriesBeforeRefresh,
+        );
+        await _drainEventLoop();
+
+        // 回填一条都没取到。此时推送就是把列表从 6 条清成 0 条——
+        // 用户正滑到的位置会被 maxScrollExtent 夹紧，正是要修的塌陷。
+        for (var i = eventsBeforeRefresh; i < events.length; i++) {
+          expect(
+            events[i].length,
+            greaterThanOrEqualTo(6),
+            reason: '回填失败后推出了比刷新前更短的列表',
+          );
+        }
+
+        // 恢复正常后的下一次刷新要能把 6 条补回来（回填目标没丢）。
+        service.failNextQueriesWith = null;
+        service.contentRevision++;
+        service.refreshQuotes();
+        await _waitForEvent(
+          events,
+          (quotes) => quotes.length,
+          equals(6),
+          startIndex: eventsBeforeRefresh,
+        );
+      },
+    );
+
+    test(
       '刷新结果与刷新前完全一致时不再整表推送',
       () async {
         final events = <List<Quote>>[];
@@ -375,6 +417,9 @@ class _PagedDatabaseService extends DatabaseService {
   /// 模拟"笔记内容真的变了"：改这个值，刷新回填就会拿到不同的数据。
   int contentRevision = 0;
 
+  /// 令后续查询在返回前抛出异常，用于验证回填失败时的保护。
+  Object? failNextQueriesWith;
+
   @override
   Future<List<Quote>> getUserQuotes({
     List<String>? tagIds,
@@ -391,6 +436,11 @@ class _PagedDatabaseService extends DatabaseService {
     bool includeDeleted = false,
   }) async {
     requestedPages.add((offset: offset, limit: limit));
+    final failure = failNextQueriesWith;
+    if (failure != null) {
+      completedQueries++;
+      throw failure;
+    }
     final end = (offset + limit) < totalQuotes ? offset + limit : totalQuotes;
     final quotes = [
       for (var i = offset; i < end; i++)

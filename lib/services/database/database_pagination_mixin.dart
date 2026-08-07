@@ -89,6 +89,8 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     // 位置夹紧，正是这个 PR 要修的塌陷。保留 UI 上那份更长（略旧）的列表，
     // 并保住回填目标，等下一次刷新继续补齐。
     // 注意只在失败时这么做：正常取完发现变短是真实的删除，必须如实推送。
+    // 这条保护依赖 loadMoreQuotes 在 suppressNotify 时把所有错误都抛出来，
+    // 否则被吞掉的错误会伪装成"取完了"，仍然推出截断列表。
     if (failed && _currentQuotes.length < previousQuotes.length) {
       logDebug(
         '刷新回填未取满（${_currentQuotes.length}/${previousQuotes.length}），'
@@ -550,8 +552,11 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
         _safeNotifyQuotesStream();
       }
 
-      // 如果是超时错误，重新抛出让UI处理
-      if (e is TimeoutException) {
+      // 回填期间必须把**所有**错误交出去：_refillAfterRefresh 要靠异常判断
+      // 「保留旧列表」还是「如实推送」。只 rethrow 超时的话，SQLite 异常、
+      // 反序列化失败等会被这里吞掉、正常返回，回填便误以为成功，
+      // 截断后的列表照样推给 UI —— 列表塌缩的保护就形同虚设。
+      if (suppressNotify || e is TimeoutException) {
         rethrow;
       }
     } finally {

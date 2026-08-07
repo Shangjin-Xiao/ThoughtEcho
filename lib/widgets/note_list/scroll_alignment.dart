@@ -12,6 +12,56 @@ bool shouldSkipVisibleTargetAlignment({
       targetOffset < currentOffset + viewportExtent;
 }
 
+/// 在数据事件之间保存「被内容变短夹掉的滚动偏移」。
+///
+/// 单独抽出来是因为它有两条容易悄悄回归的规则：
+/// - **有效期**：过老的目标不能再去拽用户，他早就滑到别处了；
+/// - **作废版本**：用户重新拖拽、或筛选切换要回到顶部时，目标必须整体作废。
+///   光清字段挡不住**已经排进帧回调队列**的那次还原，所以还要递增版本号，
+///   让在途回调自己退出。
+class ScrollAnchorTracker {
+  ScrollAnchorTracker({required this.retention});
+
+  /// 待还原目标的有效期。超过就丢弃。
+  final Duration retention;
+
+  double? _offset;
+  DateTime? _rememberedAt;
+  int _generation = 0;
+
+  /// 当前版本号。排帧回调前取一次，回调执行时用 [isCurrent] 比对。
+  int get generation => _generation;
+
+  /// 排队时取的版本是否仍然有效。
+  bool isCurrent(int capturedGeneration) => capturedGeneration == _generation;
+
+  bool get hasPending => _offset != null;
+
+  void remember(double offset, DateTime now) {
+    _offset = offset;
+    _rememberedAt = now;
+  }
+
+  /// 取出仍在有效期内的目标**并清空**；过期或不存在返回 null。
+  /// 调用方按决策结果决定要不要重新 [remember]。
+  double? consume(DateTime now) {
+    final offset = _offset;
+    final rememberedAt = _rememberedAt;
+    _offset = null;
+    _rememberedAt = null;
+    if (offset == null || rememberedAt == null) return null;
+    if (now.difference(rememberedAt) > retention) return null;
+    return offset;
+  }
+
+  /// 作废：清空目标并递增版本，让已排队的回调直接退出。
+  void cancel() {
+    _offset = null;
+    _rememberedAt = null;
+    _generation++;
+  }
+}
+
 /// 数据事件（整表替换 `_quotes`）之后对滚动锚点的处置方式。
 enum ScrollAnchorAction {
   /// 什么都不用做。

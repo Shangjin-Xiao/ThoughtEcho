@@ -234,14 +234,8 @@ class NoteListViewState extends State<NoteListView> {
   // 列表在用户滑动途中被换成更短的数据时，maxScrollExtent 会骤减并把当前
   // 偏移夹紧，视觉上就是"列表突然飞走/弹回顶部"。这里记住被夹掉的偏移，
   // 等后续事件把列表补长后无动画还原。
-  double? _pendingScrollRestoreOffset;
-  DateTime? _pendingScrollRestoreAt;
-
-  /// 锚点回调的版本号。作废挂起目标（用户重新拖拽、筛选回顶）时递增，
-  /// 已排队的 post-frame 回调据此直接退出——只清字段挡不住在途回调。
-  int _scrollAnchorGeneration = 0;
-  static const Duration _pendingScrollRestoreWindow = Duration(
-    milliseconds: 1500,
+  final ScrollAnchorTracker _scrollAnchor = ScrollAnchorTracker(
+    retention: const Duration(milliseconds: 1500),
   );
   static const double _dataEventScrollShiftTolerance = 1.0;
 
