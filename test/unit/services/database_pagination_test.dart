@@ -246,6 +246,62 @@ void main() {
       },
     );
   });
+
+  group('Database pagination chunked refill', () {
+    late _PagedDatabaseService service;
+    late Database db;
+
+    setUp(() async {
+      await TestHarness.initialize();
+      DatabaseService.clearTestDatabase();
+      service = _PagedDatabaseService(totalQuotes: 600);
+
+      db = await databaseFactory.openDatabase(inMemoryDatabasePath);
+      await _createQuoteTables(db);
+      DatabaseService.setTestDatabase(db);
+      await service.init();
+    });
+
+    tearDown(() async {
+      DatabaseService.clearTestDatabase();
+      await db.close();
+    });
+
+    test(
+      '超过单次分块上限时分多次回填，最后一块只取剩余条数',
+      () async {
+        // 单次查询上限 500：501 条要分成 500 + 1 两次取回。
+        final events = <List<Quote>>[];
+        final sub = service.watchQuotes(limit: 501).listen(events.add);
+        addTearDown(sub.cancel);
+        await _waitForEvent(events, (quotes) => quotes.length, equals(501));
+
+        final eventsBeforeRefresh = events.length;
+        service.requestedPages.clear();
+        service.contentRevision++;
+
+        service.refreshQuotes();
+
+        await _waitForEvent(
+          events,
+          (quotes) => quotes.length,
+          equals(501),
+          startIndex: eventsBeforeRefresh,
+        );
+
+        // 中途一条都不许推短列表。
+        for (var i = eventsBeforeRefresh; i < events.length; i++) {
+          expect(events[i].length, 501);
+        }
+
+        // 最后一块若退回整页大小，会多取回一整页、列表比刷新前更长。
+        expect(
+          service.requestedPages.map((page) => (page.offset, page.limit)),
+          containsAllInOrder([(0, 500), (500, 1)]),
+        );
+      },
+    );
+  });
 }
 
 /// 排空事件循环：用于"某件事不应该发生"的负向断言。

@@ -41,6 +41,45 @@ void main() {
       });
     });
 
+    group('decodeHeightBudgetFor', () {
+      test('高度上限乘以解码宽度不超过总像素预算', () {
+        for (final width in <int>[160, 688, 1032, 2048]) {
+          final budget = decodeHeightBudgetFor(width);
+
+          expect(budget, isNotNull);
+          expect(
+            budget! * width <= maxDecodePixels,
+            isTrue,
+            reason: 'width=$width',
+          );
+        }
+      });
+
+      test('常规照片与长截图的自然高度都在预算之内，不会被缩', () {
+        // 卡片解码宽度约 688（344 逻辑宽 × 2 倍率）。
+        const decodeWidth = 688;
+        final budget = decodeHeightBudgetFor(decodeWidth)!;
+
+        // 4:3 竖图
+        expect(decodeWidth * 4 ~/ 3 < budget, isTrue);
+        // 1080×24000 的十屏拼接长截图，等比到 688 宽后的高度
+        expect((decodeWidth * 24000 / 1080).round() < budget, isTrue);
+      });
+
+      test('病态超长图会被预算挡住', () {
+        const decodeWidth = 688;
+        final budget = decodeHeightBudgetFor(decodeWidth)!;
+
+        // 1080×100000：等比到 688 宽后约 63700 高，必须超出预算
+        expect((decodeWidth * 100000 / 1080).round() > budget, isTrue);
+      });
+
+      test('没有宽度上限时也不设高度上限', () {
+        expect(decodeHeightBudgetFor(null), isNull);
+        expect(decodeHeightBudgetFor(0), isNull);
+      });
+    });
+
     group('wrapWithDecodeLimit', () {
       final base = MemoryImage(Uint8List.fromList(const [1, 2, 3]));
 

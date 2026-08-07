@@ -436,9 +436,11 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     final requestOffset = _watchOffset;
     // 刷新回填：一次尽量多取，避免列表在用户滚动途中变短。
     // 单次查询封顶，超出的部分由 _refillAfterRefresh 继续分块取。
-    final int requestLimit = refillCount != null && refillCount > _watchLimit
-        ? (refillCount > _maxRefillChunk ? _maxRefillChunk : refillCount)
-        : _watchLimit;
+    // refillCount 一给就照它来（只受分块上限约束）：最后一块往往小于一页，
+    // 若这时退回 _watchLimit 就会多取一整页，回填出比刷新前更长的列表。
+    final int requestLimit = refillCount == null
+        ? _watchLimit
+        : (refillCount > _maxRefillChunk ? _maxRefillChunk : refillCount);
     logDebug(
       '开始加载更多笔记，当前已有 ${_currentQuotes.length} 条，offset=$requestOffset，limit=$requestLimit',
     );

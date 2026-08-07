@@ -22,6 +22,9 @@ ImageProvider? createOptimizedImageProvider(
 int? decodeSizeFor(double logicalSize, double pixelRatio) =>
     decodeDimensionFor(logicalSize, pixelRatio);
 
+/// 由解码宽度推出总像素预算下的高度上限，见 [decodeHeightBudgetFor]。
+int? decodeHeightBudget(int? decodeWidth) => decodeHeightBudgetFor(decodeWidth);
+
 bool isInlineDataImage(String source) => isDataUrl(source);
 
 Uint8List? decodeInlineImageBytes(String source) => tryDecodeDataUrl(source);

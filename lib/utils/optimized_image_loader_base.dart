@@ -50,6 +50,30 @@ int? decodeDimensionFor(double logicalSize, double pixelRatio) {
   return devicePixels.round();
 }
 
+/// 单张图片的解码总像素预算（宽 × 高）。
+///
+/// 这是**防炸保险，不是画质旋钮**。只给解码宽度封顶时，高度会按原图比例推算：
+/// 一张 1080×100000 的超长拼接图在 688 的解码宽度下会展开成 688×63703
+/// ≈ 4400 万像素、单张约 175MB，足以直接压垮图片缓存乃至进程。
+///
+/// 取值刻意留得很宽（12M 像素，约 48MB）：常规照片、甚至十来屏拼接的长截图
+/// 都远在预算之内，不会被这条保险碰到。**不要**拿它当"长图省内存"的手段——
+/// 等比缩放不是裁剪，压低总像素会连带压低解码宽度，而卡片仍按完整宽度显示，
+/// 结果是整张图（含当前可见的那一截）被放大变糊。
+const int maxDecodePixels = 12 * 1000 * 1000;
+
+/// 由解码宽度推出满足 [maxDecodePixels] 的高度上限，配合
+/// [ResizeImagePolicy.fit] 使用：没超预算的图片不会被这个框改变尺寸。
+///
+/// [decodeWidth] 为 null（不限制宽度）时返回 null，此时也不设高度上限。
+int? decodeHeightBudgetFor(int? decodeWidth) {
+  if (decodeWidth == null || decodeWidth <= 0) {
+    return null;
+  }
+  final budget = maxDecodePixels ~/ decodeWidth;
+  return budget > 0 ? budget : null;
+}
+
 bool isDataUrl(String source) => source.startsWith('data:');
 
 Uint8List? tryDecodeDataUrl(String source) {

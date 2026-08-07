@@ -410,6 +410,13 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
           displayWidth,
           devicePixelRatio,
         );
+        // 唯一的高度约束是总像素预算这条防炸保险：只给宽度封顶时高度按原图
+        // 比例展开，1080×100000 这种超长拼接图会解成上千万像素直接压垮进程。
+        // 常规照片和长截图都在预算之内，不会被它改变尺寸（fit 策略只在超框时
+        // 才缩放），因此不会重新引入长图变糊的问题。
+        final int? decodePixelBudgetHeight = decodeHeightBudget(
+          targetCacheWidth,
+        );
 
         return RepaintBoundary(
           child: ConstrainedBox(
@@ -422,6 +429,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
                 context,
                 displayWidth,
                 targetCacheWidth,
+                decodePixelBudgetHeight,
               ),
             ),
           ),
@@ -442,6 +450,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     BuildContext context,
     double width,
     int? cacheWidth,
+    int? cacheHeight,
   ) {
     if (!_shouldLoad) {
       return _buildImagePlaceholder(context, width);
@@ -454,6 +463,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     final provider = createOptimizedImageProvider(
       widget.source,
       cacheWidth: cacheWidth,
+      cacheHeight: cacheHeight,
     );
 
     if (provider == null) {
