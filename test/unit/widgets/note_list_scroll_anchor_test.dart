@@ -158,43 +158,62 @@ void main() {
     ScrollAnchorTracker newTracker() =>
         ScrollAnchorTracker(retention: const Duration(milliseconds: 1500));
 
-    test('记住的目标可以在有效期内取出，取出后即清空', () {
-      final tracker = newTracker();
-      final now = DateTime(2026, 8, 7, 12);
+    final t0 = DateTime(2026, 8, 7, 12);
 
-      tracker.remember(800, now);
+    test('记住的目标在有效期内可以反复读取', () {
+      final tracker = newTracker();
+
+      tracker.remember(800, t0);
       expect(tracker.hasPending, isTrue);
-
-      expect(tracker.consume(now.add(const Duration(milliseconds: 500))), 800);
-      // consume 是一次性的，调用方要按决策结果决定是否重新 remember。
-      expect(tracker.hasPending, isFalse);
-      expect(tracker.consume(now), isNull);
+      expect(tracker.peek(t0.add(const Duration(milliseconds: 500))), 800);
+      // peek 不清空：调用方按决策结果再决定 remember 还是 clear。
+      expect(tracker.peek(t0.add(const Duration(milliseconds: 900))), 800);
     });
 
-    test('超过有效期的目标不再拽用户', () {
+    test('超过有效期的目标不再拽用户，并就地丢弃', () {
       final tracker = newTracker();
-      final now = DateTime(2026, 8, 7, 12);
 
-      tracker.remember(800, now);
+      tracker.remember(800, t0);
 
-      expect(tracker.consume(now.add(const Duration(seconds: 2))), isNull);
+      expect(tracker.peek(t0.add(const Duration(seconds: 2))), isNull);
+      expect(tracker.hasPending, isFalse);
     });
 
-    test('cancel 清空目标', () {
+    test('同一目标反复顺延时保留最初时刻，有效期不会被无限续期', () {
       final tracker = newTracker();
-      final now = DateTime(2026, 8, 7, 12);
 
-      tracker.remember(800, now);
-      tracker.cancel();
+      // 数据事件一个接一个地来，每次都重新挂起同一个目标。
+      tracker.remember(800, t0);
+      tracker.remember(800, t0.add(const Duration(milliseconds: 600)));
+      tracker.remember(800, t0.add(const Duration(milliseconds: 1200)));
+
+      // 若每次都重新计时，这里还在有效期内，用户会在很久后被忽然拽回去。
+      expect(tracker.peek(t0.add(const Duration(milliseconds: 1600))), isNull);
+    });
+
+    test('目标本身变了算新的夹紧事件，重新计时', () {
+      final tracker = newTracker();
+
+      tracker.remember(800, t0);
+      tracker.remember(1200, t0.add(const Duration(milliseconds: 1400)));
+
+      expect(tracker.peek(t0.add(const Duration(milliseconds: 2000))), 1200);
+    });
+
+    test('clear 清空目标但不影响版本号', () {
+      final tracker = newTracker();
+      final queued = tracker.generation;
+
+      tracker.remember(800, t0);
+      tracker.clear();
 
       expect(tracker.hasPending, isFalse);
-      expect(tracker.consume(now), isNull);
+      expect(tracker.isCurrent(queued), isTrue);
     });
 
     test('cancel 让已排队的帧回调作废——只清字段拦不住在途回调', () {
       final tracker = newTracker();
-      final now = DateTime(2026, 8, 7, 12);
-      tracker.remember(800, now);
+      tracker.remember(800, t0);
 
       // 模拟排 post-frame 回调时取版本号。
       final queued = tracker.generation;
@@ -205,16 +224,7 @@ void main() {
 
       // 回调这时才执行，必须自行退出。
       expect(tracker.isCurrent(queued), isFalse);
-    });
-
-    test('没有 cancel 时排队的回调仍然有效', () {
-      final tracker = newTracker();
-      final now = DateTime(2026, 8, 7, 12);
-
-      final queued = tracker.generation;
-      tracker.remember(800, now);
-
-      expect(tracker.isCurrent(queued), isTrue);
+      expect(tracker.hasPending, isFalse);
     });
   });
 }

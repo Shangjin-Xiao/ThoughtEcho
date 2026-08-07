@@ -769,9 +769,10 @@ extension _NoteListScrollExtension on NoteListViewState {
     final position = _safeScrollPosition;
     if (position == null) return;
 
+    final now = DateTime.now();
     final decision = resolveScrollAnchorAction(
       previousOffset: previousOffset,
-      pendingOffset: _scrollAnchor.consume(DateTime.now()),
+      pendingOffset: _scrollAnchor.peek(now),
       currentPixels: position.pixels,
       maxScrollExtent: position.maxScrollExtent,
       isDragging: isListDragActive.value,
@@ -780,9 +781,10 @@ extension _NoteListScrollExtension on NoteListViewState {
 
     switch (decision.action) {
       case ScrollAnchorAction.none:
+        _scrollAnchor.clear();
         return;
       case ScrollAnchorAction.remember:
-        _scrollAnchor.remember(decision.targetOffset!, DateTime.now());
+        _scrollAnchor.remember(decision.targetOffset!, now);
         logDebug(
           '滚动锚点暂存待还原: ${decision.targetOffset?.round()} '
           '(max=${position.maxScrollExtent.round()}, '
@@ -791,6 +793,7 @@ extension _NoteListScrollExtension on NoteListViewState {
         );
         return;
       case ScrollAnchorAction.restore:
+        _scrollAnchor.clear();
         position.jumpTo(decision.targetOffset!);
         logDebug(
           '还原被夹掉的滚动位置: ${decision.targetOffset!.round()}',

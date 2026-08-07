@@ -26,7 +26,7 @@ class ScrollAnchorTracker {
   final Duration retention;
 
   double? _offset;
-  DateTime? _rememberedAt;
+  DateTime? _since;
   int _generation = 0;
 
   /// 当前版本号。排帧回调前取一次，回调执行时用 [isCurrent] 比对。
@@ -37,27 +37,44 @@ class ScrollAnchorTracker {
 
   bool get hasPending => _offset != null;
 
-  void remember(double offset, DateTime now) {
-    _offset = offset;
-    _rememberedAt = now;
+  /// 读取仍在有效期内的目标；过期会就地丢弃并返回 null。
+  ///
+  /// **不清空**：调用方拿到决策结果后再显式 [remember] 或 [clear]，
+  /// 这样同一个目标跨多次数据事件顺延时能保住它最初挂起的时刻。
+  double? peek(DateTime now) {
+    final offset = _offset;
+    final since = _since;
+    if (offset == null || since == null) return null;
+    if (now.difference(since) > retention) {
+      _offset = null;
+      _since = null;
+      return null;
+    }
+    return offset;
   }
 
-  /// 取出仍在有效期内的目标**并清空**；过期或不存在返回 null。
-  /// 调用方按决策结果决定要不要重新 [remember]。
-  double? consume(DateTime now) {
-    final offset = _offset;
-    final rememberedAt = _rememberedAt;
+  /// 挂起（或顺延）一个还原目标。
+  ///
+  /// 同一个目标反复顺延时**保留最初的时刻**：数据事件可能一个接一个地来，
+  /// 每次都重新计时的话有效期会被无限续期，用户可能在很久之后忽然被拽回去。
+  /// 目标本身变了才算新的夹紧事件，这时才重新计时。
+  void remember(double offset, DateTime now) {
+    if (_offset != offset) {
+      _since = now;
+    }
+    _since ??= now;
+    _offset = offset;
+  }
+
+  /// 清空目标（已还原到位、或已无需还原）。不影响版本号。
+  void clear() {
     _offset = null;
-    _rememberedAt = null;
-    if (offset == null || rememberedAt == null) return null;
-    if (now.difference(rememberedAt) > retention) return null;
-    return offset;
+    _since = null;
   }
 
   /// 作废：清空目标并递增版本，让已排队的回调直接退出。
   void cancel() {
-    _offset = null;
-    _rememberedAt = null;
+    clear();
     _generation++;
   }
 }

@@ -247,16 +247,29 @@ void main() {
           );
         }
 
-        // 恢复正常后的下一次刷新要能把 6 条补回来（回填目标没丢）。
+        // 关键：失败后内存状态必须整体回滚，而不只是"跳过推送"。
+        // 否则 _currentQuotes 已空、_watchOffset 已归零，接下来任何一次
+        // 普通分页（空闲预取、滚到底部的兜底加载）都会从 offset=0 取回
+        // 第一页并正常推给 UI —— 列表照样塌回第一页。
         service.failNextQueriesWith = null;
-        service.contentRevision++;
-        service.refreshQuotes();
+        service.requestedPages.clear();
+        await service.loadMoreQuotes();
         await _waitForEvent(
           events,
           (quotes) => quotes.length,
-          equals(6),
+          equals(7),
           startIndex: eventsBeforeRefresh,
         );
+
+        // 续页要从第 6 条之后接着取，而不是回到 offset 0。
+        expect(service.requestedPages.single.offset, 6);
+        for (var i = eventsBeforeRefresh; i < events.length; i++) {
+          expect(
+            events[i].length,
+            greaterThanOrEqualTo(6),
+            reason: '失败回滚后的普通分页把列表塌回了第一页',
+          );
+        }
       },
     );
 

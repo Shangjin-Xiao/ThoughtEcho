@@ -85,17 +85,30 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     // 期间又来了一次刷新：由那一次负责推送，这里直接退场。
     if (_isDisposed || generation != _quotesLoadGeneration) return;
 
-    // 回填因失败中断且没取够：**不要推**。推出去的短列表会把用户正滑到的
-    // 位置夹紧，正是这个 PR 要修的塌陷。保留 UI 上那份更长（略旧）的列表，
-    // 并保住回填目标，等下一次刷新继续补齐。
+    // 回填因失败中断且没取够：**整体回滚到刷新前的状态**。
+    //
+    // 只"跳过推送"是不够的：那样 UI 还显示着 N 条，内存里的 _currentQuotes
+    // 却已被清空、_watchOffset 也归零了。接下来任何一次普通分页（空闲预取、
+    // 滚到底部的兜底加载）都会从 offset=0 取回第一页并正常推给 UI，
+    // 列表照样塌回第一页 —— 这个 PR 要修的塌陷又从后门绕了回来。
+    // 所以必须把列表、ID 集合和分页游标一起复原，让内存状态和 UI 重新一致。
+    //
     // 注意只在失败时这么做：正常取完发现变短是真实的删除，必须如实推送。
     // 这条保护依赖 loadMoreQuotes 在 suppressNotify 时把所有错误都抛出来，
     // 否则被吞掉的错误会伪装成"取完了"，仍然推出截断列表。
     if (failed && _currentQuotes.length < previousQuotes.length) {
       logDebug(
         '刷新回填未取满（${_currentQuotes.length}/${previousQuotes.length}），'
-        '跳过推送以免列表塌缩',
+        '回滚到刷新前的状态以免列表塌缩',
       );
+      _currentQuotes = List<Quote>.from(previousQuotes);
+      _currentQuoteIds
+        ..clear()
+        ..addAll(previousQuotes.map((quote) => quote.id).whereType<String>());
+      _watchOffset = _currentQuotes.length;
+      _watchHasMore = true;
+      // 状态已经复原，下一次刷新可以直接按 _currentQuotes.length 算目标。
+      _pendingRefillTarget = 0;
       return;
     }
 
