@@ -55,6 +55,8 @@ class HomeNoteEditorActions {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context);
 
+    // 这次查询必须等：标签只在启动和切到笔记页时刷新，设置页里新增/改名/删除标签后
+    // 直接回来点新增笔记，缓存就是旧的。省这一次查询换来的开窗提前量没有实测支撑。
     await loadTags();
     if (!isMounted() || !context.mounted) return;
 
