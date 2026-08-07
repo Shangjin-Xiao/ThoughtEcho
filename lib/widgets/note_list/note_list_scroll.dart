@@ -758,8 +758,9 @@ extension _NoteListScrollExtension on NoteListViewState {
       return;
     }
 
+    final generation = _scrollAnchorGeneration;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted || generation != _scrollAnchorGeneration) return;
       _reconcileScrollAnchor(previousOffset);
     });
   }
@@ -820,6 +821,8 @@ extension _NoteListScrollExtension on NoteListViewState {
   void _cancelPendingScrollRestore() {
     _pendingScrollRestoreOffset = null;
     _pendingScrollRestoreAt = null;
+    // 递增版本，让已排队但还没执行的锚点回调直接作废。
+    _scrollAnchorGeneration++;
   }
 
   void _resetLoadMoreGate() {

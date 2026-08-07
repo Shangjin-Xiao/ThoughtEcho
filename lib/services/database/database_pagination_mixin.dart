@@ -54,22 +54,48 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     required List<Quote> previousQuotes,
   }) async {
     final generation = _quotesLoadGeneration;
+    var failed = false;
 
     while (_currentQuotes.length < targetCount &&
         _watchHasMore &&
         !_isDisposed &&
         generation == _quotesLoadGeneration) {
       final before = _currentQuotes.length;
-      await loadMoreQuotes(
-        refillCount: targetCount - before,
-        suppressNotify: true,
-      );
-      // 没有新增说明查询失败或结果被去重光了，再循环就是死循环。
+      try {
+        await loadMoreQuotes(
+          refillCount: targetCount - before,
+          suppressNotify: true,
+        );
+      } catch (e, stackTrace) {
+        // 查询失败/超时。loadMoreQuotes 对超时会 rethrow，这里必须接住，
+        // 否则 unawaited 的回填会变成未处理的异步异常。
+        failed = true;
+        logError(
+          '刷新回填失败: $e',
+          error: e,
+          stackTrace: stackTrace,
+          source: 'DatabaseService',
+        );
+        break;
+      }
+      // 没有新增说明结果被去重光了，再循环就是死循环。
       if (_currentQuotes.length <= before) break;
     }
 
     // 期间又来了一次刷新：由那一次负责推送，这里直接退场。
     if (_isDisposed || generation != _quotesLoadGeneration) return;
+
+    // 回填因失败中断且没取够：**不要推**。推出去的短列表会把用户正滑到的
+    // 位置夹紧，正是这个 PR 要修的塌陷。保留 UI 上那份更长（略旧）的列表，
+    // 并保住回填目标，等下一次刷新继续补齐。
+    // 注意只在失败时这么做：正常取完发现变短是真实的删除，必须如实推送。
+    if (failed && _currentQuotes.length < previousQuotes.length) {
+      logDebug(
+        '刷新回填未取满（${_currentQuotes.length}/${previousQuotes.length}），'
+        '跳过推送以免列表塌缩',
+      );
+      return;
+    }
 
     _pendingRefillTarget = 0;
 
@@ -348,6 +374,9 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       _watchOffset = 0;
       _currentQuotes = [];
       _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set
+      // 换了筛选条件，旧结果集的回填目标不再适用，留着会让下一次刷新
+      // 按旧条数超量加载。
+      _pendingRefillTarget = 0;
       _isLoading = false;
       _quotesLoadGeneration++;
       _watchHasMore = true; // 重置分页状态
@@ -514,8 +543,12 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
         return;
       }
       logError('加载更多笔记失败: $e', error: e, source: 'DatabaseService');
-      // 确保即使出错也通知UI，避免无限加载状态
-      _safeNotifyQuotesStream();
+      // 确保即使出错也通知UI，避免无限加载状态。
+      // 但分块回填期间不推：半成品比原列表更短，推出去就是一次列表塌缩，
+      // 失败后的最终状态由 _refillAfterRefresh 统一决定。
+      if (!suppressNotify) {
+        _safeNotifyQuotesStream();
+      }
 
       // 如果是超时错误，重新抛出让UI处理
       if (e is TimeoutException) {

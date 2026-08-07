@@ -36,6 +36,18 @@ void main() {
       expect(decision.action, ScrollAnchorAction.none);
     });
 
+    test('普通分页事件中用户正向上滑，绝不能被拽回事件发生前的位置', () {
+      // 分页追加数据时用户还在惯性上滑：内容装得下原偏移，说明没被夹掉，
+      // 这只是用户自己滑走了。若把原偏移当还原目标就会打断惯性。
+      final decision = _resolve(
+        previousOffset: 5000,
+        currentPixels: 4800,
+        maxScrollExtent: 20000,
+      );
+
+      expect(decision.action, ScrollAnchorAction.none);
+    });
+
     test('内容变短装不下原偏移时记住目标', () {
       final decision = _resolve(
         previousOffset: 800,

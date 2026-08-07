@@ -41,14 +41,18 @@ class ScrollAnchorDecision {
 /// 夹紧，视觉上就是「列表突然飞走 / 弹回顶部」。这里把「记住目标」和「择机还原」
 /// 的判断抽成纯函数，方便覆盖各种边界。
 ///
-/// - [previousOffset]：本次数据应用之前的偏移量。
+/// - [previousOffset]：本次数据应用之前的偏移量。**只在内容已经装不下它时**
+///   才会成为锚点候选，见下方说明。
 /// - [pendingOffset]：之前被夹掉、仍在有效期内的待还原偏移。
 /// - [currentPixels] / [maxScrollExtent]：数据应用后的实际滚动状态。
 /// - [isDragging]：用户此刻是否正按住列表。拖拽期间跳位置会打断手势，
 ///   所以只记不跳，等松手后的事件或滚动停止再还原。
 ///
-/// 刻意不比较「偏移变了多少」：数据事件常发生在惯性滑动中，偏移每帧都在合法地
-/// 变化，按偏移差纠正等于和惯性打架。只有 maxScrollExtent 装不下目标才算被夹掉。
+/// **[previousOffset] 绝不能直接当作还原目标。** 数据事件（分页追加等）绝大多数
+/// 发生在惯性滑动中，`currentPixels` 每帧都在合法变化；若把"事件发生前的偏移"
+/// 当目标去比 `currentPixels`，普通的一次分页就会把正在上滑的用户拽回事件发生前
+/// 的位置，惯性也被打断。真正需要兜底的只有一种情况：内容变短到
+/// `maxScrollExtent` 已经装不下原偏移——那才是被夹掉，而不是用户自己滑走的。
 ScrollAnchorDecision resolveScrollAnchorAction({
   required double? previousOffset,
   required double? pendingOffset,
@@ -57,11 +61,14 @@ ScrollAnchorDecision resolveScrollAnchorAction({
   required bool isDragging,
   required double tolerance,
 }) {
+  // 原偏移是否被内容变短夹掉了。没被夹掉就完全不参与决策。
+  final wasClampedAway = previousOffset != null &&
+      previousOffset > 0 &&
+      previousOffset > maxScrollExtent + tolerance;
+
   // 目标取两者中更深的那个：连续多次变短时不能把目标越记越浅。
   double? target = pendingOffset;
-  if (previousOffset != null &&
-      previousOffset > 0 &&
-      (target == null || previousOffset > target)) {
+  if (wasClampedAway && (target == null || previousOffset > target)) {
     target = previousOffset;
   }
 

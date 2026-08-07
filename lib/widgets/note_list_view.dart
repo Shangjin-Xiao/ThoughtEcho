@@ -236,6 +236,10 @@ class NoteListViewState extends State<NoteListView> {
   // 等后续事件把列表补长后无动画还原。
   double? _pendingScrollRestoreOffset;
   DateTime? _pendingScrollRestoreAt;
+
+  /// 锚点回调的版本号。作废挂起目标（用户重新拖拽、筛选回顶）时递增，
+  /// 已排队的 post-frame 回调据此直接退出——只清字段挡不住在途回调。
+  int _scrollAnchorGeneration = 0;
   static const Duration _pendingScrollRestoreWindow = Duration(
     milliseconds: 1500,
   );
