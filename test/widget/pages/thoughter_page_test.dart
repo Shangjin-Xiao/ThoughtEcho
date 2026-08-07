@@ -1206,6 +1206,92 @@ void main() {
       expect(find.textContaining('第一段第二段'), findsOneWidget);
     });
 
+    // 工具跑完之后模型继续想，是一轮里很常见的一段。这段时间没有工具在跑：
+    // 折叠行不能还顶着刚跑完那枚工具的名字，思考也该记在那枚工具下面而不是
+    // 并进开头那坨。
+    testWidgets('post-tool thinking is labelled and filed under its tool',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        simulateToolProgress: true,
+        toolProgressDelay: const Duration(milliseconds: 20),
+        // 推理增量走 50ms 节流，够长才等得到那一帧落地
+        reasoningChunks: const <String>[
+          '结果',
+          '有点',
+          '意外，',
+          '再',
+          '想',
+          '想。',
+        ],
+        responseChunks: const <String>['我的结论是'],
+      );
+      await settingsService.setExploreAiAssistantMode(ThoughterPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const ThoughterPage(
+            entrySource: ThoughterEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 不能用 _submitInput：它以 pumpAndSettle 收尾，而转圈是个永不停的动画。
+      await tester.enterText(find.byType(TextField).last, '帮我看看');
+      await tester.pump();
+      tester
+          .widget<IconButton>(
+            find.byKey(const ValueKey('ai_assistant_send_button')),
+          )
+          .onPressed
+          ?.call();
+      await tester.pump();
+
+      bool panelInProgress() {
+        final panel = find.byType(ToolProgressPanel);
+        return panel.evaluate().isNotEmpty &&
+            tester.widget<ToolProgressPanel>(panel).inProgress;
+      }
+
+      // 先等工具跑完（转圈停下）
+      var toolDone = false;
+      for (var i = 0; i < 12 && !toolDone; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+        toolDone = find.byType(ToolProgressPanel).evaluate().isNotEmpty &&
+            !panelInProgress();
+      }
+      expect(toolDone, isTrue);
+
+      // 再等推理增量把它重新点亮：这就是"工具调用完 AI 又想了一轮"
+      var thinkingAfterTool = false;
+      for (var i = 0; i < 12 && !thinkingAfterTool; i++) {
+        await tester.pump(const Duration(milliseconds: 10));
+        thinkingAfterTool = panelInProgress();
+      }
+      expect(thinkingAfterTool, isTrue);
+
+      final l10n = _l10n(tester);
+      expect(find.text(l10n.aiThinking), findsOneWidget);
+      expect(find.textContaining(l10n.agentSearchingNotesForQuery('')),
+          findsNothing);
+
+      await _settleAgentTurn(tester);
+
+      // 抽屉里这段思考跟在那枚工具后面
+      await tester.tap(
+        find.descendant(
+          of: find.byType(ToolProgressPanel),
+          matching: find.byType(InkWell),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('结果有点意外，再想想。'), findsOneWidget);
+    });
+
     testWidgets('agent keeps pre-tool narration as a normal message',
         (tester) async {
       final agentService = _FakeAgentService(
@@ -1648,10 +1734,10 @@ void main() {
       await tester.pumpAndSettle();
 
       final l10n = _l10n(tester);
-      // 没有工具就别说「查看过程」，那一轮里能看的只有思考
-      final processAction = find.byTooltip(l10n.showThinking);
+      // 思考和工具调用是同一段过程，入口只有「查看过程」一个：这一轮只想了想，
+      // 一样从这里翻回去看。
+      final processAction = find.byTooltip(l10n.viewToolProcess);
       expect(processAction, findsOneWidget);
-      expect(find.byTooltip(l10n.viewToolProcess), findsNothing);
 
       await tester.tap(processAction);
       await tester.pumpAndSettle();

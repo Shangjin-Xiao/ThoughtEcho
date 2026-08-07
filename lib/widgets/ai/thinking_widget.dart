@@ -5,24 +5,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../gen_l10n/app_localizations.dart';
 import '../../theme/theme_style.dart';
 
-/// AI 侧气泡轮廓：左上直角，与消息气泡和工具进度面板保持同一形状。
-///
-/// 圆角取 [AppShapeTokens.dialogRadius]，随主题风格变化——不能做成 const。
-BorderRadius _bubbleShape(BuildContext context) {
-  final radius = Radius.circular(AppShapeTokens.of(context).dialogRadius);
-  return BorderRadius.only(
-    topLeft: Radius.zero,
-    topRight: radius,
-    bottomLeft: radius,
-    bottomRight: radius,
-  );
-}
-
 /// 思考过程折叠组件 - 展示 AI 的思考过程
 ///
-/// 参考 Google AI Gallery MessageBodyThinking 设计：
 /// - 进行中时自动展开，完成后默认折叠
-/// - 左侧竖线标识，带脉冲动画
+/// - 折叠态是一行状态文字，展开后内容靠左侧竖线归组
 /// - 可点击标题栏切换展开/折叠
 /// - 使用 Markdown 渲染思考内容
 /// - 支持流式增量内容更新
@@ -125,47 +111,32 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    // 根据主题调整背景色
-    final backgroundColor = isDark
-        ? theme.colorScheme.surfaceContainerLow
-        : theme.colorScheme.surfaceContainerLowest;
-    final borderColor = widget.inProgress
-        ? theme.colorScheme.primary
-        : theme.colorScheme.outlineVariant;
-    const borderWidth = 2.0;
-    final bubbleShape = _bubbleShape(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.only(bottom: 6),
       width: double.infinity,
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: bubbleShape,
-        border: Border.all(
-          color: borderColor.withValues(alpha: 0.4),
-          width: 1,
-        ),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 标题栏（可点击切换展开）
+          // 折叠标题：一行状态文字，不是一块卡片。
+          //
+          // 这里原来是填充底色 + 整圈描边 + 气泡形状的一张卡，思考——模型的
+          // 草稿——因此在对话流里比回答本身还重。现在只留图标、一行字和箭头，
+          // 靠内容区左边那条竖线表示"这段是引下来的过程"。
           Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: _toggleExpanded,
-              borderRadius: bubbleShape,
+              borderRadius: BorderRadius.circular(
+                AppShapeTokens.of(context).buttonRadius,
+              ),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
+                padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Row(
-                  mainAxisSize: MainAxisSize.max,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // 动画脉冲指示器（仅在进行中时显示）
+                    // 进行中是脉冲圆点，结束后换成静态图标
                     if (widget.inProgress)
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
@@ -187,22 +158,20 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                         padding: const EdgeInsets.only(right: 8),
                         child: Icon(
                           Icons.psychology_outlined,
-                          size: 20,
-                          color: theme.colorScheme.onSurfaceVariant,
+                          size: 16,
+                          color: muted,
                         ),
                       ),
-                    // 标题文本
-                    Expanded(
+                    // 标题文本。收起时是个名词标签（「思考」），不是
+                    // showThinking（「查看思考过程」）那种祈使句——它读起来
+                    // 像用户在对自己下指令。
+                    Flexible(
                       child: Text(
-                        widget.inProgress
-                            ? l10n.aiThinking
-                            : (_isExpanded
-                                ? l10n.hideThinking
-                                : l10n.showThinking),
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                          color: theme.colorScheme.onSurface,
+                        widget.inProgress ? l10n.aiThinking : l10n.thinking,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: muted,
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     // 旋转箭头
@@ -211,8 +180,8 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                           .animate(_rotationController),
                       child: Icon(
                         Icons.expand_more,
-                        size: 24,
-                        color: theme.colorScheme.onSurfaceVariant,
+                        size: 18,
+                        color: muted.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -226,17 +195,13 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
             curve: Curves.easeInOutCubic,
             child: _isExpanded
                 ? Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
+                    padding: const EdgeInsets.only(top: 2, bottom: 6),
                     child: Container(
                       padding: const EdgeInsets.only(left: 12),
                       decoration: BoxDecoration(
                         border: Border(
                           left: BorderSide(
-                            color: borderColor,
-                            width: borderWidth,
+                            color: theme.colorScheme.outlineVariant,
                           ),
                         ),
                       ),
