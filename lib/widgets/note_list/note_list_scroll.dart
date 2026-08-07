@@ -784,7 +784,14 @@ extension _NoteListScrollExtension on NoteListViewState {
         _scrollAnchor.clear();
         return;
       case ScrollAnchorAction.remember:
-        _scrollAnchor.remember(decision.targetOffset!, now);
+        if (!_scrollAnchor.remember(decision.targetOffset!, now)) {
+          // 本轮夹紧已经超过有效期：用户早就滑到别处了，不能再拽他。
+          logDebug(
+            '滚动锚点已过期，放弃还原: ${decision.targetOffset!.round()}',
+            source: 'NoteListView',
+          );
+          return;
+        }
         logDebug(
           '滚动锚点暂存待还原: ${decision.targetOffset?.round()} '
           '(max=${position.maxScrollExtent.round()}, '

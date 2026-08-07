@@ -14,8 +14,13 @@ bool shouldSkipVisibleTargetAlignment({
 
 /// 在数据事件之间保存「被内容变短夹掉的滚动偏移」。
 ///
-/// 单独抽出来是因为它有两条容易悄悄回归的规则：
+/// 单独抽出来是因为它有几条容易悄悄回归的规则：
 /// - **有效期**：过老的目标不能再去拽用户，他早就滑到别处了；
+/// - **一轮夹紧只有一个有效期**：从这一轮**第一次**挂起开始计时，中途目标
+///   变深也不重新计时，否则连绵不断的数据事件能把有效期无限续下去；
+/// - **过期即封锁**：过期之后本轮夹紧彻底作废，在下一次 [clear] / [cancel]
+///   之前不再接受任何新目标。否则同一次决策里 `peek` 刚把目标判过期，
+///   紧接着又用仍被夹紧的 previousOffset 挂一个新的，等于换个名字重新计时；
 /// - **作废版本**：用户重新拖拽、或筛选切换要回到顶部时，目标必须整体作废。
 ///   光清字段挡不住**已经排进帧回调队列**的那次还原，所以还要递增版本号，
 ///   让在途回调自己退出。
@@ -27,6 +32,7 @@ class ScrollAnchorTracker {
 
   double? _offset;
   DateTime? _since;
+  bool _expired = false;
   int _generation = 0;
 
   /// 当前版本号。排帧回调前取一次，回调执行时用 [isCurrent] 比对。
@@ -36,6 +42,9 @@ class ScrollAnchorTracker {
   bool isCurrent(int capturedGeneration) => capturedGeneration == _generation;
 
   bool get hasPending => _offset != null;
+
+  /// 本轮夹紧是否已过期作废。为 true 时 [remember] 一律不受理。
+  bool get isExpired => _expired;
 
   /// 读取仍在有效期内的目标；过期会就地丢弃并返回 null。
   ///
@@ -48,28 +57,30 @@ class ScrollAnchorTracker {
     if (now.difference(since) > retention) {
       _offset = null;
       _since = null;
+      _expired = true;
       return null;
     }
     return offset;
   }
 
-  /// 挂起（或顺延）一个还原目标。
+  /// 挂起（或顺延）一个还原目标，返回是否受理。
   ///
-  /// 同一个目标反复顺延时**保留最初的时刻**：数据事件可能一个接一个地来，
-  /// 每次都重新计时的话有效期会被无限续期，用户可能在很久之后忽然被拽回去。
-  /// 目标本身变了才算新的夹紧事件，这时才重新计时。
-  void remember(double offset, DateTime now) {
-    if (_offset != offset) {
-      _since = now;
-    }
+  /// 计时只在本轮夹紧的**第一次**挂起时开始：数据事件可能一个接一个地来，
+  /// 每次（哪怕目标变深了）都重新计时的话有效期会被无限续期，用户可能在很久
+  /// 之后忽然被拽回去。本轮已过期时返回 false，不再受理，直到调用方通过
+  /// [clear]（这次事件确认无需还原）或 [cancel]（用户重新操作）翻篇。
+  bool remember(double offset, DateTime now) {
+    if (_expired) return false;
     _since ??= now;
     _offset = offset;
+    return true;
   }
 
-  /// 清空目标（已还原到位、或已无需还原）。不影响版本号。
+  /// 清空目标（已还原到位、或已无需还原），并结束本轮夹紧。不影响版本号。
   void clear() {
     _offset = null;
     _since = null;
+    _expired = false;
   }
 
   /// 作废：清空目标并递增版本，让已排队的回调直接退出。

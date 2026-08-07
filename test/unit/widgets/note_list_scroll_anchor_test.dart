@@ -191,13 +191,71 @@ void main() {
       expect(tracker.peek(t0.add(const Duration(milliseconds: 1600))), isNull);
     });
 
-    test('目标本身变了算新的夹紧事件，重新计时', () {
+    test('同一轮夹紧里目标越记越深也不重新计时', () {
+      final tracker = newTracker();
+
+      // 内容一次比一次短，挂起的目标随之变深，但仍是同一轮夹紧。
+      tracker.remember(800, t0);
+      tracker.remember(1200, t0.add(const Duration(milliseconds: 700)));
+      tracker.remember(1500, t0.add(const Duration(milliseconds: 1400)));
+
+      // 计时从第一次挂起算起，到这里已经超时。
+      expect(tracker.peek(t0.add(const Duration(milliseconds: 1600))), isNull);
+    });
+
+    test('过期之后本轮夹紧彻底作废，同一次决策里不能换个目标重新计时', () {
       final tracker = newTracker();
 
       tracker.remember(800, t0);
-      tracker.remember(1200, t0.add(const Duration(milliseconds: 1400)));
 
-      expect(tracker.peek(t0.add(const Duration(milliseconds: 2000))), 1200);
+      // peek 判定过期。紧接着决策又拿仍被夹紧的 previousOffset 来挂新目标 ——
+      // 这正是"有效期被无限续期"的入口，必须挡住。
+      final now = t0.add(const Duration(seconds: 2));
+      expect(tracker.peek(now), isNull);
+      expect(tracker.isExpired, isTrue);
+      expect(tracker.remember(1200, now), isFalse);
+      expect(tracker.hasPending, isFalse);
+      expect(tracker.peek(now), isNull);
+    });
+
+    test('连续刷新超过有效期后不再挂起，直到一次「无需还原」的事件翻篇', () {
+      final tracker = newTracker();
+      var now = t0;
+
+      tracker.remember(800, now);
+
+      // 数据事件每 300ms 来一次，每次都想挂起一个（可能更深的）目标。
+      var pending = 800.0;
+      for (var i = 0; i < 10; i++) {
+        now = now.add(const Duration(milliseconds: 300));
+        tracker.peek(now);
+        pending += 10;
+        tracker.remember(pending, now);
+      }
+
+      // 无论刷新多密集，1.5s 之后都不该还剩下任何待还原目标。
+      expect(tracker.peek(now), isNull);
+      expect(tracker.hasPending, isFalse);
+
+      // 列表恢复正常（决策为 none → clear）后才重新开张。
+      tracker.clear();
+      expect(tracker.isExpired, isFalse);
+      expect(tracker.remember(900, now), isTrue);
+      expect(tracker.peek(now.add(const Duration(milliseconds: 500))), 900);
+    });
+
+    test('cancel 同样解除过期封锁', () {
+      final tracker = newTracker();
+
+      tracker.remember(800, t0);
+      final now = t0.add(const Duration(seconds: 2));
+      expect(tracker.peek(now), isNull);
+
+      tracker.cancel();
+
+      expect(tracker.isExpired, isFalse);
+      expect(tracker.remember(1200, now), isTrue);
+      expect(tracker.peek(now.add(const Duration(milliseconds: 500))), 1200);
     });
 
     test('clear 清空目标但不影响版本号', () {

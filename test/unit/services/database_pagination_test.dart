@@ -274,6 +274,38 @@ void main() {
     );
 
     test(
+      '回填失败回滚时，已经翻到底的分页状态不会被重新标记为还有下一页',
+      () async {
+        final events = <List<Quote>>[];
+        final sub = await loadThreePages(events);
+        addTearDown(sub.cancel);
+
+        // 一路翻到底：7 条全部取回，再取一次拿到空页，hasMore 变 false。
+        await service.loadMoreQuotes();
+        await _waitForEvent(events, (quotes) => quotes.length, equals(7));
+        await service.loadMoreQuotes();
+        expect(service.hasMoreQuotes, isFalse);
+
+        final queriesBeforeRefresh = service.completedQueries;
+        service.failNextQueriesWith = StateError('数据库炸了');
+
+        service.refreshQuotes();
+        await _waitUntil(
+          () => service.completedQueries > queriesBeforeRefresh,
+        );
+        await _drainEventLoop();
+
+        // 回滚要把分页游标一起复原。无条件写 true 的话，明明已经没有下一页的
+        // 列表会重新显示"还有下一页"，用户滑到底还会看到一次白转的加载指示器。
+        expect(
+          service.hasMoreQuotes,
+          isFalse,
+          reason: '回填失败回滚后，已翻到底的列表被错误标记为仍可分页',
+        );
+      },
+    );
+
+    test(
       '刷新结果与刷新前完全一致时不再整表推送',
       () async {
         final events = <List<Quote>>[];

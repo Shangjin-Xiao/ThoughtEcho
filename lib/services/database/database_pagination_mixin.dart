@@ -52,6 +52,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
   Future<void> _refillAfterRefresh({
     required int targetCount,
     required List<Quote> previousQuotes,
+    required bool previousHasMore,
   }) async {
     final generation = _quotesLoadGeneration;
     var failed = false;
@@ -106,7 +107,10 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
         ..clear()
         ..addAll(previousQuotes.map((quote) => quote.id).whereType<String>());
       _watchOffset = _currentQuotes.length;
-      _watchHasMore = true;
+      // 连分页游标一起复原：刷新前如果已经翻到底（_watchHasMore == false），
+      // 无条件写 true 会让列表重新显示"还有下一页"，用户滑到底还会看到
+      // 一次注定取不到东西的转圈。
+      _watchHasMore = previousHasMore;
       // 状态已经复原，下一次刷新可以直接按 _currentQuotes.length 算目标。
       _pendingRefillTarget = 0;
       return;
@@ -166,6 +170,8 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       // 就是一次明显的卡顿。回收站过期清理、同步后的例行刷新等场景，
       // 可见列表其实一条都没变。
       final List<Quote> previousQuotes = List<Quote>.from(_currentQuotes);
+      // 回填失败要整体回滚时，分页游标也得跟着回到刷新前的样子。
+      final bool previousHasMore = _watchHasMore;
       logDebug('刷新笔记流数据，需回填 $reloadCount 条');
       // 优化：清除所有缓存，确保获取最新数据
       clearAllCacheForParts();
@@ -184,6 +190,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
         _refillAfterRefresh(
           targetCount: reloadCount,
           previousQuotes: previousQuotes,
+          previousHasMore: previousHasMore,
         ),
       );
     } else {
