@@ -184,6 +184,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     List<String>? selectedDayPeriods,
     bool includeDeleted = false,
   });
+
   /// 取下一页笔记并追加到当前列表。
   ///
   /// [refillCount] 覆盖本次查询的条数（仅受单次分块上限约束），供刷新回填按
