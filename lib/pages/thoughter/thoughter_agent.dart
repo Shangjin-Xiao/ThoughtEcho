@@ -118,7 +118,16 @@ extension _ThoughterAgent on _ThoughterPageState {
           case AgentReasoningDeltaEvent():
             ensureToolProgressMessage();
             toolProgressInProgress = true;
-            toolThinkingText = '${toolThinkingText ?? ''}${event.delta}';
+            // 已经调过工具的话，这段思考是"查完之后又想的"，挂到那枚工具下面。
+            // 全部并进开头那一坨的话，抽屉里会读成模型动手之前就知道了结果。
+            if (toolItems.isEmpty) {
+              toolThinkingText = '${toolThinkingText ?? ''}${event.delta}';
+            } else {
+              final last = toolItems.last;
+              toolItems[toolItems.length - 1] = last.copyWith(
+                thinkingText: '${last.thinkingText ?? ''}${event.delta}',
+              );
+            }
             _scheduleToolProgressUpdate(
               toolProgressMsgId!,
               toolItems,
@@ -433,6 +442,7 @@ extension _ThoughterAgent on _ThoughterPageState {
                     'status': i.status.name,
                     'result': i.result ?? '',
                     'narrationText': i.narrationText ?? '',
+                    'thinkingText': i.thinkingText ?? '',
                   })
               .toList(),
           'inProgress': inProgress,
