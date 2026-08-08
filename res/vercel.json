@@ -1,5 +1,7 @@
 {
   "routes": [
+    { "src": "/dl", "dest": "/dl.html" },
+    { "src": "/download", "dest": "/dl.html" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "status": 301, "headers": { "Location": "/" } }
   ]
