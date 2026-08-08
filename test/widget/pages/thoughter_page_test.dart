@@ -561,6 +561,9 @@ void main() {
       await TestHarness.initialize();
       settingsService = await SettingsService.create();
       await settingsService.setDontShowAgentExperimentalNotice(true);
+      // 记忆提示同理：这些用例测的是会话行为，不是首次进入的引导。留着它会挡住
+      // 自动发起的首轮请求（那一轮刻意要等提示关掉）。
+      await settingsService.setAgentMemoryNoticeShown(true);
       chatSessionService = _InMemoryChatSessionService();
       // 等待 AI 响应时列表末尾有一枚一直闪的光标，pumpAndSettle 永远等不到
       // 静止。打开"减弱动态效果"把它定住——真机上这项设置本来也该定住它。

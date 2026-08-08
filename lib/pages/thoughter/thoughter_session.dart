@@ -79,6 +79,26 @@ extension _ThoughterSession on _ThoughterPageState {
     }
   }
 
+  /// 进入 Thoughter 时的一次性提示，按顺序弹完为止。
+  Future<void> _showEntryNotices() async {
+    if (!_settingsService.dontShowAgentExperimentalNotice && mounted) {
+      await showExperimentalNoticeDialog(context);
+    }
+    if (!_settingsService.agentMemoryNoticeShown && mounted) {
+      await showAgentMemoryNoticeDialog(context);
+    }
+  }
+
+  /// 自动发起首轮请求前先等一次性提示关掉。
+  ///
+  /// 这一轮没人按发送键，用户还没机会表态。抢在提示前跑，用户在提示里点
+  /// 「先不要记」就已经晚了——记忆在这一轮已经读写完了。
+  Future<void> _sendInitialQuestion(String question) async {
+    await _entryNoticesDone;
+    if (!mounted) return;
+    await _handleSubmitted(question);
+  }
+
   Future<void> _initServicesAndLoad() async {
     try {
       _chatSessionService = context.read<ChatSessionService>();
@@ -92,9 +112,13 @@ extension _ThoughterSession on _ThoughterPageState {
         _agentListenerAttached = true;
       }
       _settingsReady = true;
-      if (!_settingsService.dontShowAgentExperimentalNotice && mounted) {
-        unawaited(showExperimentalNoticeDialog(context));
-      }
+      // 两条一次性提示串行弹，别叠在一起：实验性说明讲的是「AI 会出错」，
+      // 记忆说明讲的是「它会记住你」，同屏出现用户一条都读不进去。
+      //
+      // 这里不 await：弹窗期间历史会话照常加载，用户关掉就能看到内容。只有
+      // 自动发起的首轮请求需要等（见下面的 initialQuestion 分支），否则
+      // 「先不要记」在首轮不生效——那一轮已经把记忆读写完了。
+      _entryNoticesDone = _showEntryNotices();
       final restoredMode = _restoreModeFromSettings();
       if (restoredMode != _currentMode && mounted) {
         _setState(() {
@@ -133,7 +157,7 @@ extension _ThoughterSession on _ThoughterPageState {
       }
 
       if (widget.initialQuestion?.trim().isNotEmpty == true) {
-        unawaited(_handleSubmitted(widget.initialQuestion!.trim()));
+        unawaited(_sendInitialQuestion(widget.initialQuestion!.trim()));
       }
 
       _onAgentServiceChanged();

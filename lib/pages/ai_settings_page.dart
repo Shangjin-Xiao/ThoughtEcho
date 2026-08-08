@@ -5,10 +5,12 @@ import '../constants/ai_provider_presets.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/multi_ai_settings.dart';
+import '../services/agent_memory_service.dart';
 import '../services/api_key_manager.dart';
 import '../services/settings_service.dart';
 import '../theme/app_semantic_colors.dart';
 import '../utils/ai_network_manager.dart';
+import '../utils/app_logger.dart';
 import '../widgets/app_snackbar.dart';
 import 'ai_provider_edit_page.dart';
 import 'user_guide_page.dart';
@@ -276,6 +278,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
           _buildSectionTitle(context, l10n.aiEnhancedGeneration),
           const SizedBox(height: 8),
           _buildFeatureToggles(context),
+          const SizedBox(height: 24),
+          _buildSectionTitle(context, l10n.agentMemorySectionTitle),
+          const SizedBox(height: 8),
+          const _AgentMemorySection(),
           const SizedBox(height: 16),
           Align(
             alignment: AlignmentDirectional.centerStart,
@@ -558,6 +564,145 @@ class _AISettingsPageState extends State<AISettingsPage> {
         ],
       ),
     );
+  }
+}
+
+/// Thoughter 记忆的开关与清空入口。
+///
+/// 开关和清空刻意是两件事：关开关只是暂时不再读写，随时能开回来；删数据不可逆，
+/// 必须显式确认。
+///
+/// 单独拆成 StatefulWidget 是为了把计数的 Future 存住——放在页面的 build 里，
+/// 任何一次重建都会重新发起查询，副标题会闪一下空状态。
+class _AgentMemorySection extends StatefulWidget {
+  const _AgentMemorySection();
+
+  @override
+  State<_AgentMemorySection> createState() => _AgentMemorySectionState();
+}
+
+class _AgentMemorySectionState extends State<_AgentMemorySection> {
+  Future<({int profileCount, int factCount})>? _countsFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _countsFuture ??= context.read<AgentMemoryService>().counts();
+  }
+
+  void _refreshCounts() {
+    setState(() {
+      _countsFuture = context.read<AgentMemoryService>().counts();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final settingsService = context.watch<SettingsService>();
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          SwitchListTile(
+            title: Text(l10n.agentMemoryEnableTitle),
+            subtitle: Text(l10n.agentMemoryEnableDesc),
+            value: settingsService.agentMemoryEnabled,
+            onChanged: _setMemoryEnabled,
+            secondary: const Icon(Icons.psychology_outlined),
+            isThreeLine: true,
+          ),
+          const Divider(height: 1),
+          FutureBuilder<({int profileCount, int factCount})>(
+            future: _countsFuture,
+            builder: (context, snapshot) {
+              // 读计数失败不能当成「没有记忆」：那会把清空入口禁用掉，
+              // 而库里可能正躺着一堆条目。失败时保持可点，让用户还能清。
+              final failed = snapshot.hasError;
+              final counts = snapshot.data;
+              final total =
+                  (counts?.profileCount ?? 0) + (counts?.factCount ?? 0);
+              final enabled = failed || total > 0;
+              final subtitle = failed
+                  ? l10n.agentMemoryClearFailed
+                  : (counts != null && total > 0
+                      ? l10n.agentMemoryClearSummary(
+                          counts.profileCount,
+                          counts.factCount,
+                        )
+                      : l10n.agentMemoryClearEmpty);
+              return ListTile(
+                leading: const Icon(Icons.delete_sweep_outlined),
+                title: Text(l10n.agentMemoryClearTitle),
+                subtitle: Text(subtitle),
+                enabled: enabled,
+                onTap: enabled ? _confirmClear : null,
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _setMemoryEnabled(bool value) async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      await context.read<SettingsService>().setAgentMemoryEnabled(value);
+    } catch (e, stack) {
+      logError(
+        'Thoughter 记忆开关保存失败（value=$value）',
+        error: e,
+        stackTrace: stack,
+        source: 'AISettingsPage',
+      );
+      if (!mounted) return;
+      AppSnackBar.error(context, l10n.agentMemorySwitchFailed);
+    }
+  }
+
+  Future<void> _confirmClear() async {
+    final l10n = AppLocalizations.of(context);
+    final memoryService = context.read<AgentMemoryService>();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.agentMemoryClearConfirmTitle),
+        content: Text(l10n.agentMemoryClearConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.agentMemoryClearConfirmAction),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    try {
+      await memoryService.clearAll();
+      if (!mounted) return;
+      _refreshCounts();
+      AppSnackBar.success(context, l10n.agentMemoryCleared);
+    } catch (e, stack) {
+      logError(
+        '清空 Thoughter 记忆失败',
+        error: e,
+        stackTrace: stack,
+        source: 'AISettingsPage',
+      );
+      if (!mounted) return;
+      AppSnackBar.error(context, l10n.agentMemoryClearFailed);
+    }
   }
 }
 
