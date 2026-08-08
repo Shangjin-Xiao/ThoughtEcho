@@ -871,15 +871,18 @@ extension _ThoughterUI on _ThoughterPageState {
                   children: [
                     Expanded(child: _buildComposerField(theme, l10n)),
                     Padding(
-                      // 底边距不是间距，是算出来的居中量：单行时正好把按钮摆在
-                      // 那一行的中线上，换行长高后它自然落在最后一行边上。跟着
-                      // 字号和内边距算，主题换了字号（纸墨 17、Material 16）也
-                      // 不会偏。
-                      padding: EdgeInsets.only(
-                        right: 8,
-                        bottom: _sendButtonBottomInset(theme),
+                      padding: const EdgeInsets.only(right: 8),
+                      // 按钮装在一个"正好一行高"的盒子里再居中：盒子被 end
+                      // 对齐压在最后一行上，于是单行时按钮坐在那一行的中线，
+                      // 换行长高后自动跟到最后一行。
+                      //
+                      // 不去算按钮该往上抬多少——IconButton 的渲染盒会被撑到
+                      // 48 的点击区（tapTargetSize.padded），按直径 36 算出来
+                      // 的居中量会差 6 像素。让 Center 去对付按钮的真实尺寸。
+                      child: SizedBox(
+                        height: _composerLineBoxHeight(theme),
+                        child: Center(child: _buildSendButton(theme, l10n)),
                       ),
-                      child: _buildSendButton(theme, l10n),
                     ),
                   ],
                 ),
@@ -888,17 +891,15 @@ extension _ThoughterUI on _ThoughterPageState {
     );
   }
 
-  /// 发送键距输入框底边的距离。
+  /// 输入框单行时的高度：一行文字加上下内边距。
   ///
-  /// 单行时把这枚圆按钮摆在文字那一行的中线上：(单行内容高 - 按钮直径) / 2。
-  /// 三个参数（字号、行高、上下内边距）都是现算的，主题换字号或以后调内边距
-  /// 时按钮不会悄悄偏出这一行；换行长高后 `CrossAxisAlignment.end` 让它自然
-  /// 落在最后一行边上。
-  double _sendButtonBottomInset(ThemeData theme) {
+  /// 字号要过一遍 textScaler：系统开了大字体，输入行跟着变高而按钮不变，
+  /// 拿未放大的字号算，字越大按钮偏得越远。
+  double _composerLineBoxHeight(ThemeData theme) {
     final fontSize = theme.textTheme.bodyLarge?.fontSize ?? 16;
-    final lineHeight = fontSize * _kComposerLineHeight;
-    final fieldHeight = lineHeight + _kComposerVerticalPadding * 2;
-    return ((fieldHeight - _kSendButtonDiameter) / 2).clamp(0.0, 16.0);
+    final scaledFontSize = MediaQuery.textScalerOf(context).scale(fontSize);
+    return scaledFontSize * _kComposerLineHeight +
+        _kComposerVerticalPadding * 2;
   }
 
   /// 输入框本体。默认一行高，随换行增高；超过上限后内部滚动，

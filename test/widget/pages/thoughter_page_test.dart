@@ -1206,6 +1206,36 @@ void main() {
       expect(find.textContaining('第一段第二段'), findsOneWidget);
     });
 
+    // 发送键贴在文字右边，单行时要坐在那一行的中线上。系统大字体会把输入行
+    // 撑高而按钮不变，居中量得跟着 textScaler 走，否则字越大偏得越远。
+    testWidgets('send button stays centred on the input line at any text scale',
+        (tester) async {
+      Future<double> centreOffsetAt(double scale) async {
+        await tester.pumpWidget(
+          MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: await _buildHarness(
+              settingsService: settingsService,
+              chatSessionService: chatSessionService,
+              child: const ThoughterPage(
+                entrySource: ThoughterEntrySource.explore,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final field = tester.getRect(find.byType(TextField).last);
+        final button = tester.getRect(
+          find.byKey(const ValueKey('ai_assistant_send_button')),
+        );
+        return (button.center.dy - field.center.dy).abs();
+      }
+
+      // 1 像素的余量留给行高取整
+      expect(await centreOffsetAt(1.0), lessThan(1.0));
+      expect(await centreOffsetAt(2.0), lessThan(1.0));
+    });
+
     // 工具跑完之后模型继续想，是一轮里很常见的一段。这段时间没有工具在跑：
     // 折叠行不能还顶着刚跑完那枚工具的名字，思考也该记在那枚工具下面而不是
     // 并进开头那坨。
