@@ -10,6 +10,7 @@ import '../models/note_proposal_artifact.dart';
 import '../utils/ai_request_helper.dart';
 import '../utils/app_logger.dart';
 import '../utils/untrusted_text.dart';
+import 'agent_memory_service.dart';
 import 'agent_tool.dart';
 import 'agent_tools/truncating_agent_tool.dart';
 import 'api_key_manager.dart';
@@ -122,6 +123,7 @@ class AgentService extends ChangeNotifier {
   final APIKeyManager _apiKeyManager = APIKeyManager();
   final AIRequestHelper _requestHelper = AIRequestHelper();
   final List<AgentTool> _tools;
+  final AgentMemoryService? _memoryService;
   final AgentCompletionRequester? _completionRequester;
   final AgentApiKeyResolver? _apiKeyResolver;
   final AgentRequestObserver? _requestObserver;
@@ -204,6 +206,7 @@ class AgentService extends ChangeNotifier {
   AgentService({
     required SettingsService settingsService,
     required List<AgentTool> tools,
+    AgentMemoryService? memoryService,
     AgentCompletionRequester? completionRequester,
     AgentApiKeyResolver? apiKeyResolver,
     AgentRequestObserver? requestObserver,
@@ -211,6 +214,7 @@ class AgentService extends ChangeNotifier {
         _tools = List<AgentTool>.unmodifiable(
           tools.map(_withTruncation),
         ),
+        _memoryService = memoryService,
         _completionRequester = completionRequester,
         _apiKeyResolver = apiKeyResolver,
         _requestObserver = requestObserver;
@@ -296,15 +300,21 @@ class AgentService extends ChangeNotifier {
 
     try {
       final provider = await _getProvider();
+      final memoryEnabled = _memoryService?.isEnabled ?? false;
       final systemPrompt = _buildSystemPrompt(
         lastHistoryAt:
             history?.isNotEmpty == true ? history!.last.timestamp : null,
+        memoryEnabled: memoryEnabled,
       );
+      // 画像层在整轮开始时取一次快照：轮内 remember 的写入下一轮才生效，
+      // 免得同一次对话里前后两半看到的画像不一致。
+      final profileBlock = await _loadProfileBlock();
       final messages = _buildMessages(
         systemPrompt: systemPrompt,
         history: history,
         userMessage: userMessage,
         noteContext: noteContext,
+        profileBlock: profileBlock,
       );
       final openAITools = _buildOpenAITools();
 
@@ -915,15 +925,42 @@ class AgentService extends ChangeNotifier {
     return content;
   }
 
+  /// 取画像层注入块。记忆关闭、为空或读取失败都返回 null——记忆是增益，
+  /// 拿不到就当没有，不能让一次数据库异常把整轮对话打掉。
+  Future<String?> _loadProfileBlock() async {
+    final memory = _memoryService;
+    if (memory == null) {
+      return null;
+    }
+    try {
+      return await memory.buildProfileBlock();
+    } catch (error, stackTrace) {
+      logError(
+        'Agent 读取用户画像失败，本轮不注入记忆',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'AgentService',
+      );
+      return null;
+    }
+  }
+
   List<openai.ChatMessage> _buildMessages({
     required String systemPrompt,
     required String userMessage,
     List<app_chat.ChatMessage>? history,
     AgentNoteContext? noteContext,
+    String? profileBlock,
   }) {
     final messages = <openai.ChatMessage>[
       openai.ChatMessage.system(systemPrompt),
     ];
+
+    // 画像作为独立数据消息，和绑定笔记同一处理方式：它是模型自己从对话里提炼的，
+    // 不该和系统提示词享有同一层权限。
+    if (profileBlock != null && profileBlock.isNotEmpty) {
+      messages.add(openai.ChatMessage.user(profileBlock));
+    }
 
     if (history != null && history.isNotEmpty) {
       final historyMessages = _requestHelper.createMessagesWithHistory(
@@ -1118,7 +1155,10 @@ class AgentService extends ChangeNotifier {
   ///
   /// [lastHistoryAt] 是历史里最后一条消息的时间，用来判断这是不是一个隔了很久
   /// 才被重新打开的旧会话。
-  String _buildSystemPrompt({DateTime? lastHistoryAt}) {
+  String _buildSystemPrompt({
+    DateTime? lastHistoryAt,
+    bool memoryEnabled = false,
+  }) {
     final localeCode = _settingsService.localeCode?.trim().toLowerCase();
     final languageGuidance = switch (localeCode) {
       String code when code.startsWith('en') =>
@@ -1134,6 +1174,7 @@ class AgentService extends ChangeNotifier {
     final nowDescription = describeNow(now);
     final historyGap =
         lastHistoryAt == null ? null : describeHistoryGap(lastHistoryAt, now);
+    final memoryGuidance = memoryEnabled ? _memorySection : '';
 
     return '''
 你叫 Thoughter，是笔记应用 ThoughtEcho（心迹）里的 AI 助手——ThoughtEcho 是这个应用的名字，不是你的名字，被问起时说自己是 Thoughter。你帮助用户理解、检索和整理自己的笔记，并在需要时查询外部信息。回答要准确、克制、自然，不编造用户经历或笔记内容。
@@ -1166,7 +1207,7 @@ class AgentService extends ChangeNotifier {
 - 标签先看 `get_tags` 的返回，优先复用他已有的标签，而不是每次都造新词；确实没有合适的再考虑不加。
 - 拿不准就不加。宁缺勿滥，但"用户没明说"本身不是不加的理由——提案卡片上这些字段用户都能改。
 
-## 应用特性（避免重复劳动）
+$memoryGuidance## 应用特性（避免重复劳动）
 - **出处和作者在显示时会自动加修饰**：作者前面自动加"——"，出处自动包在《》里。所以 `author` 只填名字（`苏轼`），`source` 只填作品名（`东坡志林`）。不要写成 `——苏轼`、`《东坡志林》` 或加引号，否则用户会看到 `——《《东坡志林》》` 这样的重复。
 - 位置和天气是保存那一刻的快照，会以图标形式显示在笔记卡片上。正文里不必再写一遍"今天晴，25℃，在杭州"，除非用户就想把它写进正文。
 - 标签是全局共享的，新建标签会进入用户的标签体系，所以不要为一条笔记随手造一批一次性标签。
@@ -1193,6 +1234,24 @@ class AgentService extends ChangeNotifier {
 - 工具产生提案后，简要说明提案内容和理由，并提醒用户确认；不要声称修改已经生效。
 ''';
   }
+
+  /// 长期记忆的行为准则。只在用户开启记忆时拼进系统提示。
+  ///
+  /// 记忆和 `explore_notes` 的边界必须写死在这里：用户写过的内容归笔记检索，
+  /// 记忆只放笔记里推导不出来的东西。两套检索一旦职责重叠，模型就会在同一个
+  /// 问题上一会儿翻笔记一会儿翻记忆，还互相打架。
+  static const String _memorySection = '''
+## 长期记忆
+你能跨会话记住这个用户。`<user_profile>` 里是你此前记下的偏好，每轮自动带来；更细的内容用 `recall` 检索。
+
+- **记什么**：身份与长期在做的事、表达偏好（篇幅、语气、格式）、用户对你做法的纠正、他反复提到的地点/项目/人。判据是"下次对话没有它，我会做得更差"。
+- **不记什么**：用户笔记里写过的内容——那是 `explore_notes` 的职责，记进记忆会变成两套互相打架的检索；本轮的临时信息；你自己的推测；已经记过的同一件事。**不要给用户建档案**，只记能让你回应得更好的东西。
+- **纠正优先**：用户说"别写这么长""以后别加天气"这类话时立刻 `remember`，这是最有价值的一类记忆。用户确认你做对了同样值得记——只记纠正会让你越做越保守。
+- 偏好变了用 `remember` 的 `update` 改同一条，不要追加一条相反的。
+- 画像条目标了观察时间，是当时的观察不是当前事实；与用户本轮所说冲突时以本轮为准，并顺手更新。
+- 记了就简短说一句你记下了什么，别闷声记；用户要求忘记时用 `delete` 并确认。
+
+''';
 
   /// 把"现在"描述成模型可直接换算相对时间的一行文本。
   ///

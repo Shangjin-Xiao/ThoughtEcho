@@ -78,6 +78,30 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Thoughter 长期记忆开关。默认开启。
+  ///
+  /// 关闭只停止读写，**不清空已有记忆**——关开关和删数据是两件事，清空必须由
+  /// 用户在设置页显式触发。
+  static const String _agentMemoryEnabledKey = 'agent_memory_enabled';
+
+  /// 「Thoughter 会记住你的偏好」这条一次性说明是否显示过。
+  static const String _agentMemoryNoticeShownKey = 'agent_memory_notice_shown';
+
+  bool get agentMemoryEnabled => _mmkv.getBool(_agentMemoryEnabledKey) ?? true;
+
+  Future<void> setAgentMemoryEnabled(bool value) async {
+    await _mmkv.setBool(_agentMemoryEnabledKey, value);
+    notifyListeners();
+  }
+
+  bool get agentMemoryNoticeShown =>
+      _mmkv.getBool(_agentMemoryNoticeShownKey) ?? false;
+
+  Future<void> setAgentMemoryNoticeShown(bool value) async {
+    await _mmkv.setBool(_agentMemoryNoticeShownKey, value);
+    notifyListeners();
+  }
+
   bool get themeStyleNoticeShown =>
       _mmkv.getBool(_themeStyleNoticeShownKey) ?? false;
 

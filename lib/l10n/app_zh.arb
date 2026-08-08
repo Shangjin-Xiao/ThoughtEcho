@@ -4242,5 +4242,22 @@
   "ollamaCloudTipAction": "一键添加",
   "aiConfigHelpLink": "不知道怎么填？查看配置说明",
   "openLinkFailed": "无法打开链接",
-  "testBeforeSaveHint": "填好地址、密钥和模型后即可测试，不必先保存"
+  "testBeforeSaveHint": "填好地址、密钥和模型后即可测试，不必先保存",
+  "agentMemorySectionTitle": "Thoughter 记忆",
+  "agentMemoryEnableTitle": "长期记忆",
+  "agentMemoryEnableDesc": "让 Thoughter 跨对话记住你的身份和表达偏好，每日提示与周期洞察也会更贴近你。关闭只停止读写，已经记下的内容不会被删除。",
+  "agentMemoryClearTitle": "清空记忆",
+  "agentMemoryClearSummary": "当前记着 {profileCount} 条偏好、{factCount} 条细节",
+  "@agentMemoryClearSummary": {"placeholders": {"profileCount": {"type": "int"}, "factCount": {"type": "int"}}},
+  "agentMemoryClearEmpty": "还没有记下任何内容",
+  "agentMemoryClearConfirmTitle": "清空 Thoughter 记忆？",
+  "agentMemoryClearConfirmBody": "记下的偏好和细节会被全部删除，无法恢复。这不会影响你的笔记。",
+  "agentMemoryClearConfirmAction": "清空",
+  "agentMemoryCleared": "已清空 Thoughter 记忆",
+  "agentMemoryClearFailed": "清空记忆失败",
+  "agentMemoryNoticeTitle": "Thoughter 会记住你",
+  "agentMemoryNoticeBody": "为了不用每次都重新认识你，Thoughter 会把你的身份和表达偏好记下来，之后的对话、每日提示和周期洞察都会用上。记忆只保存在这台设备上，不会上传。",
+  "agentMemoryNoticeHint": "你可以随时让 Thoughter 修改或忘掉某条记忆，也可以在「AI 设置」里关闭或清空。",
+  "agentMemoryNoticeGotIt": "知道了",
+  "agentMemoryNoticeDisable": "先不要记"
 }

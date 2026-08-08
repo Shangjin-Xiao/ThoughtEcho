@@ -79,6 +79,16 @@ extension _ThoughterSession on _ThoughterPageState {
     }
   }
 
+  /// 进入 Thoughter 时的一次性提示，按顺序弹完为止。
+  Future<void> _showEntryNotices() async {
+    if (!_settingsService.dontShowAgentExperimentalNotice && mounted) {
+      await showExperimentalNoticeDialog(context);
+    }
+    if (!_settingsService.agentMemoryNoticeShown && mounted) {
+      await showAgentMemoryNoticeDialog(context);
+    }
+  }
+
   Future<void> _initServicesAndLoad() async {
     try {
       _chatSessionService = context.read<ChatSessionService>();
@@ -92,9 +102,9 @@ extension _ThoughterSession on _ThoughterPageState {
         _agentListenerAttached = true;
       }
       _settingsReady = true;
-      if (!_settingsService.dontShowAgentExperimentalNotice && mounted) {
-        unawaited(showExperimentalNoticeDialog(context));
-      }
+      // 两条一次性提示串行弹，别叠在一起：实验性说明讲的是「AI 会出错」，
+      // 记忆说明讲的是「它会记住你」，同屏出现用户一条都读不进去。
+      unawaited(_showEntryNotices());
       final restoredMode = _restoreModeFromSettings();
       if (restoredMode != _currentMode && mounted) {
         _setState(() {

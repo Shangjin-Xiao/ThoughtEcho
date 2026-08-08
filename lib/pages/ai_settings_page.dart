@@ -5,6 +5,7 @@ import '../constants/ai_provider_presets.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/multi_ai_settings.dart';
+import '../services/agent_memory_service.dart';
 import '../services/api_key_manager.dart';
 import '../services/settings_service.dart';
 import '../theme/app_semantic_colors.dart';
@@ -276,6 +277,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
           _buildSectionTitle(context, l10n.aiEnhancedGeneration),
           const SizedBox(height: 8),
           _buildFeatureToggles(context),
+          const SizedBox(height: 24),
+          _buildSectionTitle(context, l10n.agentMemorySectionTitle),
+          const SizedBox(height: 8),
+          const _AgentMemorySection(),
           const SizedBox(height: 16),
           Align(
             alignment: AlignmentDirectional.centerStart,
@@ -558,6 +563,120 @@ class _AISettingsPageState extends State<AISettingsPage> {
         ],
       ),
     );
+  }
+}
+
+/// Thoughter 记忆的开关与清空入口。
+///
+/// 开关和清空刻意是两件事：关开关只是暂时不再读写，随时能开回来；删数据不可逆，
+/// 必须显式确认。
+///
+/// 单独拆成 StatefulWidget 是为了把计数的 Future 存住——放在页面的 build 里，
+/// 任何一次重建都会重新发起查询，副标题会闪一下空状态。
+class _AgentMemorySection extends StatefulWidget {
+  const _AgentMemorySection();
+
+  @override
+  State<_AgentMemorySection> createState() => _AgentMemorySectionState();
+}
+
+class _AgentMemorySectionState extends State<_AgentMemorySection> {
+  Future<({int profileCount, int factCount})>? _countsFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _countsFuture ??= context.read<AgentMemoryService>().counts();
+  }
+
+  void _refreshCounts() {
+    setState(() {
+      _countsFuture = context.read<AgentMemoryService>().counts();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final settingsService = context.watch<SettingsService>();
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          SwitchListTile(
+            title: Text(l10n.agentMemoryEnableTitle),
+            subtitle: Text(l10n.agentMemoryEnableDesc),
+            value: settingsService.agentMemoryEnabled,
+            onChanged: settingsService.setAgentMemoryEnabled,
+            secondary: const Icon(Icons.psychology_outlined),
+            isThreeLine: true,
+          ),
+          const Divider(height: 1),
+          FutureBuilder<({int profileCount, int factCount})>(
+            // 计数只影响副标题；读不到就退回空状态文案，不为此给用户报错。
+            future: _countsFuture,
+            builder: (context, snapshot) {
+              final counts = snapshot.data;
+              final total =
+                  (counts?.profileCount ?? 0) + (counts?.factCount ?? 0);
+              final hasMemories = counts != null && total > 0;
+              return ListTile(
+                leading: const Icon(Icons.delete_sweep_outlined),
+                title: Text(l10n.agentMemoryClearTitle),
+                subtitle: Text(
+                  hasMemories
+                      ? l10n.agentMemoryClearSummary(
+                          counts.profileCount,
+                          counts.factCount,
+                        )
+                      : l10n.agentMemoryClearEmpty,
+                ),
+                enabled: hasMemories,
+                onTap: hasMemories ? _confirmClear : null,
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmClear() async {
+    final l10n = AppLocalizations.of(context);
+    final memoryService = context.read<AgentMemoryService>();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.agentMemoryClearConfirmTitle),
+        content: Text(l10n.agentMemoryClearConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.agentMemoryClearConfirmAction),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    try {
+      await memoryService.clearAll();
+      if (!mounted) return;
+      _refreshCounts();
+      AppSnackBar.success(context, l10n.agentMemoryCleared);
+    } catch (e) {
+      if (!mounted) return;
+      AppSnackBar.error(context, l10n.agentMemoryClearFailed);
+    }
   }
 }
 

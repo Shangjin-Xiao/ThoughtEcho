@@ -49,6 +49,7 @@ import '../utils/quill_delta_builder.dart';
 import '../utils/quill_structured_edit.dart';
 import '../utils/string_utils.dart';
 import '../utils/time_utils.dart';
+import '../widgets/ai/agent_memory_notice.dart';
 import '../widgets/ai/ai_workflow_cards.dart';
 import '../widgets/ai/experimental_badge.dart';
 import '../widgets/ai/note_proposal_card.dart';

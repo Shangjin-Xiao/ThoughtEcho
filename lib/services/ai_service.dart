@@ -3,6 +3,7 @@ import 'package:openai_dart/openai_dart.dart' as openai;
 import '../models/quote_model.dart';
 import '../models/chat_message.dart';
 import '../models/ai_provider_settings.dart';
+import '../services/agent_memory_service.dart';
 import '../services/settings_service.dart' show SettingsService;
 import '../services/api_key_manager.dart';
 import '../services/openai_stream_service.dart';
@@ -29,8 +30,34 @@ class AIService extends ChangeNotifier {
   final AIRequestHelper _requestHelper = AIRequestHelper();
   final OpenAIStreamService _openAIStreamService = OpenAIStreamService();
 
-  AIService({required SettingsService settingsService})
-      : _settingsService = settingsService;
+  /// 用户画像来源。每日提示与周期洞察共用 Thoughter 的同一份记忆，
+  /// 可为 null（测试或未接入记忆时降级为无画像）。
+  final AgentMemoryService? _memoryService;
+
+  AIService({
+    required SettingsService settingsService,
+    AgentMemoryService? memoryService,
+  })  : _settingsService = settingsService,
+        _memoryService = memoryService;
+
+  /// 取画像层文本。读取失败一律当作没有画像——记忆是增益，
+  /// 不能让它把每日提示或洞察整个打掉。
+  Future<String?> _userProfileContext() async {
+    final memory = _memoryService;
+    if (memory == null) {
+      return null;
+    }
+    try {
+      return await memory.buildProfileBlock();
+    } catch (error, stack) {
+      logError(
+        'AIService 读取用户画像失败，本次不注入',
+        error: error,
+        stackTrace: stack,
+      );
+      return null;
+    }
+  }
 
   /// 每日提示的输出上限（token）。
   ///
@@ -415,13 +442,14 @@ class AIService extends ChangeNotifier {
     String? notesPreview,
     String? fullNotesContent, // 新增：完整笔记内容用于深度分析
     String? previousInsights, // 新增：历史洞察上下文
-  }) {
+  }) async* {
     // 获取用户设置的语言代码
     final languageCode = _settingsService.localeCode;
 
     final prompt = _promptManager.getReportInsightSystemPrompt(
       'poetic',
       languageCode: languageCode,
+      userProfile: await _userProfileContext(),
     );
     final user = _promptManager.buildReportInsightUserMessage(
       periodLabel: periodLabel,
@@ -436,7 +464,7 @@ class AIService extends ChangeNotifier {
       previousInsights: previousInsights,
     );
 
-    return _streamViaOpenAI(
+    yield* _streamViaOpenAI(
       systemPrompt: prompt,
       userMessage: user,
     );
@@ -510,6 +538,7 @@ class AIService extends ChangeNotifier {
           weather: weather,
           temperature: temperature,
           historicalInsights: historicalInsights,
+          userProfile: await _userProfileContext(),
           languageCode: languageCode,
         );
 

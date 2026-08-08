@@ -192,6 +192,11 @@ class SchemaVersionAdapters {
       description: 'add quotes.poi_name',
       apply: _upgradeToV21,
     ),
+    SchemaVersionAdapter(
+      version: 22,
+      description: 'add Thoughter agent memory tables',
+      apply: _upgradeToV22,
+    ),
   ];
 
   Future<void> _upgradeToV2(Transaction transaction) => transaction.execute(
@@ -431,6 +436,9 @@ class SchemaVersionAdapters {
       'CREATE INDEX IF NOT EXISTS idx_quotes_coordinates ON quotes(latitude, longitude)',
     );
   }
+
+  Future<void> _upgradeToV22(Transaction transaction) =>
+      _definitions.ensureAgentMemoryTables(transaction);
 
   Future<bool> _hasColumn(
     DatabaseExecutor executor,

@@ -281,6 +281,22 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
 - 使用现有流式 API。已删除的 `AIService.generateDailyPrompt` 不得恢复，使用
   `streamGenerateDailyPrompt`。
 
+### Thoughter 长期记忆
+
+`AgentMemoryService` 两层：画像层每轮注入（硬预算），事实层靠 `recall` 检索。
+默认开启，开关在 AI 设置页，**关开关只停读写不删数据**，清空是单独的显式操作。
+
+- **只存笔记里推导不出来的东西**：身份、表达偏好、用户对 Thoughter 的纠正。用户写过
+  什么归 `explore_notes` —— 两套检索职责一旦重叠，模型会在同一个问题上反复横跳。
+- 偏好变化**原位 supersede**，不允许两条矛盾的 active 画像条目并存。
+- 画像注入走**独立 user 数据消息**，不进系统提示；内容先过 `wrapUserProfile`
+  （`untrusted_text.dart`）—— 一条被"记住"的提示注入会在之后每轮都生效。
+- 检索是 `LIKE` + Dart 内打分，**不是 FTS5**：FTS5 默认分词器对中文等于不分词，
+  `trigram` 又要 SQLite 3.34+，Android 上跟随系统版本不可控。要换实现只动
+  `searchFacts`，别在调用方拼 SQL。
+- 记忆**不进备份也不进设备同步**，是有意的取舍，改之前先读
+  `docs/agent-memory-research-2026-08-08.md` 第七节。
+
 ## 平台与文件组织
 
 | 平台 | 约定 |

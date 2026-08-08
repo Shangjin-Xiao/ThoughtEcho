@@ -2,7 +2,7 @@ part of '../database_schema_manager.dart';
 
 /// The authoritative SQL definitions for the current main notes schema.
 class DatabaseSchemaDefinitions {
-  static const int schemaVersion = 21;
+  static const int schemaVersion = 22;
 
   static const String poiNameColumn = 'poi_name';
 
@@ -104,6 +104,12 @@ class DatabaseSchemaDefinitions {
     'CREATE INDEX IF NOT EXISTS idx_media_references_quote_id ON media_references(quote_id)',
   ];
 
+  static const List<String> agentMemoryIndexStatements = <String>[
+    'CREATE INDEX IF NOT EXISTS idx_agent_memory_profile_status ON agent_memory_profile(status)',
+    'CREATE INDEX IF NOT EXISTS idx_agent_memory_facts_importance ON agent_memory_facts(importance)',
+    'CREATE INDEX IF NOT EXISTS idx_agent_memory_facts_created_at ON agent_memory_facts(created_at)',
+  ];
+
   static const String categoriesTableSql = '''
     CREATE TABLE categories(
       id TEXT PRIMARY KEY,
@@ -143,6 +149,38 @@ class DatabaseSchemaDefinitions {
     )
   ''';
 
+  /// Thoughter 画像层。每次对话注入，因此条目少、有硬预算。
+  static const String agentMemoryProfileTableSql = '''
+    CREATE TABLE IF NOT EXISTS agent_memory_profile(
+      id TEXT PRIMARY KEY,
+      kind TEXT NOT NULL,
+      directive TEXT NOT NULL,
+      observed_at TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      superseded_by TEXT,
+      source TEXT
+    )
+  ''';
+
+  /// Thoughter 事实层。不默认注入，由 `recall` 工具按需检索。
+  ///
+  /// `embedding` 目前恒为 NULL，为将来换向量检索预留列位——现在留着，
+  /// 免得二期为了加一列再写一次迁移。
+  static const String agentMemoryFactsTableSql = '''
+    CREATE TABLE IF NOT EXISTS agent_memory_facts(
+      id TEXT PRIMARY KEY,
+      category TEXT,
+      content TEXT NOT NULL,
+      importance INTEGER NOT NULL DEFAULT 5,
+      trigger_phrases TEXT,
+      created_at TEXT NOT NULL,
+      last_recalled_at TEXT,
+      recall_count INTEGER NOT NULL DEFAULT 0,
+      source_ref TEXT,
+      embedding BLOB
+    )
+  ''';
+
   Future<void> createCurrentSchema(Database database) async {
     await database.execute(categoriesTableSql);
     await database.execute(quotesTableSql('quotes'));
@@ -150,6 +188,7 @@ class DatabaseSchemaDefinitions {
     await ensureQuoteTagsTable(database);
     await ensureQuoteTombstonesTable(database);
     await ensureMediaReferencesTable(database);
+    await ensureAgentMemoryTables(database);
   }
 
   Future<void> ensureCurrentIndexes(DatabaseExecutor executor) async {
@@ -178,6 +217,12 @@ class DatabaseSchemaDefinitions {
   Future<void> ensureMediaReferencesTable(DatabaseExecutor executor) async {
     await executor.execute(mediaReferencesTableSql);
     await _executeAll(executor, mediaReferenceIndexStatements);
+  }
+
+  Future<void> ensureAgentMemoryTables(DatabaseExecutor executor) async {
+    await executor.execute(agentMemoryProfileTableSql);
+    await executor.execute(agentMemoryFactsTableSql);
+    await _executeAll(executor, agentMemoryIndexStatements);
   }
 
   Future<void> _executeAll(
