@@ -1,0 +1,106 @@
+lib/services/database/schema_definitions.dart
+  s_3c181b1b3300ea::t_6856fd0b35580c 107-112
+  s_3c181b1b3300ea::t_0671175298fede 152-183
+  s_3c181b1b3300ea::t_65a5b92f747923 222-227
+  s_3c181b1b3300ea::t_93d71f5fe7e6c2 191
+  s_3c181b1b3300ea::t_e59275fe4715d3 5
+lib/models/agent_memory.dart
+  s_3c181b1b3300ea::t_4e65807a0c3443 1-117,120-205,208-233
+  s_3c181b1b3300ea::t_49d4e6c79c7268 118-119,206-207
+lib/services/ai_service.dart
+  s_3c181b1b3300ea::t_d244a348f4f72f 6
+  s_3c181b1b3300ea::t_ba26de4a4a04e9 445,452
+  s_3c181b1b3300ea::t_c936cd22951ddc 33-60
+  s_3c181b1b3300ea::t_419956769531ab 541
+  s_3c181b1b3300ea::t_4d61ba9720b14c 467
+lib/services/agent_tools/remember_tool.dart
+  s_3c181b1b3300ea::t_49d4e6c79c7268 20
+  s_3c181b1b3300ea::t_0a722c4f94049f 1-19,21-259
+lib/pages/thoughter/thoughter_session.dart
+  s_3c181b1b3300ea::t_36d798d4158233 105-107
+  s_3c181b1b3300ea::t_850980329fd295 82-91
+docs/agent-memory-research-2026-08-08.md
+  s_3c181b1b3300ea::t_f2c0f650ec148d 244-286
+  s_ce89ee12488f28::t_033de4947c20d4 1-2,4-5,7-243
+  s_3c181b1b3300ea::t_aeaa1b2ceaddbf 3,6
+lib/services/settings_service.dart
+  s_3c181b1b3300ea::t_49d4e6c79c7268 90
+  s_3c181b1b3300ea::t_d9df6ab7a28b7b 81-89,91-104
+lib/services/agent_tools/recall_tool.dart
+  s_3c181b1b3300ea::t_49d4e6c79c7268 20
+  s_3c181b1b3300ea::t_061155686d8af0 1-19,21-111
+lib/services/agent_memory_service.dart
+  s_3c181b1b3300ea::t_bf0d336c83a5b0 1-79,82-415,417-436,438-485,489-492,495-534
+  s_3c181b1b3300ea::t_49d4e6c79c7268 80-81,416,437,486-488,493-494
+lib/services/agent_service.dart
+  s_3c181b1b3300ea::t_f0de563e6ded37 928-947,953,959-963
+  s_3c181b1b3300ea::t_ab7a9881e962f7 303,307,309-311,317
+  s_3c181b1b3300ea::t_e0d9e1ce87d4c9 209,217
+  s_3c181b1b3300ea::t_073ced92fb5eae 1158-1161
+  s_3c181b1b3300ea::t_0219d450fae311 1238-1255
+  s_3c181b1b3300ea::t_356ed257f48217 13
+  s_3c181b1b3300ea::t_42c1d6d58d9918 1177
+  s_3c181b1b3300ea::t_5674272a8e3a1c 126
+  s_3c181b1b3300ea::t_6f917058e532f4 1210
+  s_3c181b1b3300ea::t_17846738cd548b 964
+lib/l10n/app_en.arb
+  s_3c181b1b3300ea::t_d4fd673c86cd29 4223-4240
+lib/l10n/app_zh.arb
+  s_3c181b1b3300ea::t_d4fd673c86cd29 4245-4262
+lib/pages/thoughter_page.dart
+  s_3c181b1b3300ea::t_a88b09575ad2a2 52
+lib/providers/app_providers.dart
+  s_3c181b1b3300ea::t_2f6dd7ce8be4ac 59-60
+  s_3c181b1b3300ea::t_a523c73d037b46 45
+  s_3c181b1b3300ea::t_2b7c822ffa6e44 64-83,143
+  s_3c181b1b3300ea::t_48eb5366bc9d87 25,33-34
+  s_3c181b1b3300ea::t_6434224112c09c 158-166
+  s_3c181b1b3300ea::t_ad9a419c37d231 118-121,124,126-127,131-142
+lib/pages/ai_settings_page.dart
+  s_3c181b1b3300ea::t_e4876bb87be5e1 8
+  s_3c181b1b3300ea::t_10078df6d3a15f 280-282
+  s_3c181b1b3300ea::t_f436ff991d02ce 569-682
+  s_3c181b1b3300ea::t_a450e92bc7b6be 283
+lib/utils/untrusted_text.dart
+  s_3c181b1b3300ea::t_7fc1b7bab3bca4 55-72
+AGENTS.md
+  s_3c181b1b3300ea::t_df1a560b756164 284-299
+lib/utils/ai_prompt_manager.dart
+  s_3c181b1b3300ea::t_2e72a89337ec8d 791-795
+  s_3c181b1b3300ea::t_e5c6f426c33946 828,830,834-846,848-851
+  s_3c181b1b3300ea::t_49d4e6c79c7268 829
+  s_3c181b1b3300ea::t_1fbcba61e5bd03 688
+  s_3c181b1b3300ea::t_6049d8b2e59eea 749-750
+lib/widgets/ai/agent_memory_notice.dart
+  s_3c181b1b3300ea::t_1d1f6b836dc49a 1-5,7-68
+  s_3c181b1b3300ea::t_f6071c53175059 6
+test/unit/services/agent_memory_service_test.dart
+  s_3c181b1b3300ea::t_cc57b85ef05394 1-311
+lib/services/database/schema_version_adapters.dart
+  s_3c181b1b3300ea::t_6e42240b04abf4 195-199
+  s_3c181b1b3300ea::t_c2373702578539 440-442
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "4dd9b00f78afc557758f5643f1fb093e1d667189",
+  "prompts": {},
+  "sessions": {
+    "s_3c181b1b3300ea": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ab0dda70-6cd5-45be-bb07-3022cfec6260",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    },
+    "s_ce89ee12488f28": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_01fa5ca6cffelLe1QQlIruWWEJ",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
