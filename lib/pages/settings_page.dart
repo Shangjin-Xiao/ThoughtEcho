@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
+import '../models/app_settings.dart';
 import '../services/settings_service.dart';
 import '../services/unified_log_service.dart';
 import 'ai_settings_page.dart';
@@ -1183,6 +1184,41 @@ class SettingsPageState extends State<SettingsPage> {
                 onChanged: settingsService.setAddNoteDialogDeferAutoMetadata,
               ),
 
+              // 记录页图片显示方式
+              ListTile(
+                isThreeLine: true,
+                title: Text(l10n.noteCardMediaStyleExperiment),
+                subtitle: Text(
+                  _noteCardMediaStyleDesc(
+                    l10n,
+                    settingsService.noteCardMediaStyle,
+                  ),
+                ),
+                leading: const Icon(Icons.photo_size_select_large_outlined),
+                trailing: DropdownButton<String>(
+                  value: settingsService.noteCardMediaStyle,
+                  items: [
+                    DropdownMenuItem(
+                      value: NoteCardMediaStyle.thumbnail,
+                      child: Text(l10n.noteCardMediaStyleThumbnail),
+                    ),
+                    DropdownMenuItem(
+                      value: NoteCardMediaStyle.inline,
+                      child: Text(l10n.noteCardMediaStyleInline),
+                    ),
+                    DropdownMenuItem(
+                      value: NoteCardMediaStyle.banner,
+                      child: Text(l10n.noteCardMediaStyleBanner),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      settingsService.setNoteCardMediaStyle(value);
+                    }
+                  },
+                ),
+              ),
+
               // 记录页添加笔记动画
               ListTile(
                 title: Text(l10n.noteInsertAnimationExperiment),
@@ -1233,6 +1269,19 @@ class SettingsPageState extends State<SettingsPage> {
         );
       },
     );
+  }
+
+  /// 记录页媒体版式的说明文案。三种版式的取舍差别较大，直接把代价写在副标题上，
+  /// 省得每次都要回去翻代码注释。
+  String _noteCardMediaStyleDesc(AppLocalizations l10n, String style) {
+    switch (style) {
+      case NoteCardMediaStyle.inline:
+        return l10n.noteCardMediaStyleInlineDesc;
+      case NoteCardMediaStyle.banner:
+        return l10n.noteCardMediaStyleBannerDesc;
+      default:
+        return l10n.noteCardMediaStyleThumbnailDesc;
+    }
   }
 
   /// 记录页插入动画方案的显示名。

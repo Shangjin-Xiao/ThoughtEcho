@@ -4,6 +4,7 @@ import '../../gen_l10n/app_localizations.dart';
 import '../../theme/theme_style.dart';
 import '../../utils/delta_media_extractor.dart';
 import '../../utils/optimized_image_loader.dart';
+import 'collapsed_media_image.dart';
 
 /// 折叠卡片右侧的媒体缩略图。
 ///
@@ -24,6 +25,7 @@ class CollapsedMediaThumbnail extends StatelessWidget {
   const CollapsedMediaThumbnail({
     super.key,
     required this.media,
+    this.onTap,
     this.size = defaultSize,
   });
 
@@ -37,6 +39,10 @@ class CollapsedMediaThumbnail extends StatelessWidget {
   static double reservedWidth({double size = defaultSize}) => size + gap;
 
   final DeltaMediaSummary media;
+
+  /// 点击缩略图的回调，一般是打开大图预览。为 null 时不可点。
+  final VoidCallback? onTap;
+
   final double size;
 
   @override
@@ -50,7 +56,7 @@ class CollapsedMediaThumbnail extends StatelessWidget {
     final String? imageSource = media.firstImageSource;
     final int extraCount = media.totalCount - 1;
 
-    return SizedBox(
+    final Widget thumbnail = SizedBox(
       width: size,
       height: size,
       child: ClipRRect(
@@ -61,11 +67,11 @@ class CollapsedMediaThumbnail extends StatelessWidget {
             // 语义标签放在图片分支内部：加载失败时读屏应当播报「图片加载失败」，
             // 而不是继续说「查看图片」——失败态只有 _ThumbnailImage 自己知道。
             if (imageSource != null)
-              _ThumbnailImage(source: imageSource, size: size)
+              _ThumbnailImage(size: size, source: imageSource)
             else
               Semantics(
                 label: media.videoCount > 0 ? l10n.video : l10n.audio,
-                child: _MediaKindPlaceholder(
+                child: CollapsedMediaPlaceholder(
                   icon: media.videoCount > 0
                       ? Icons.videocam_outlined
                       : Icons.audiotrack_outlined,
@@ -104,142 +110,43 @@ class CollapsedMediaThumbnail extends StatelessWidget {
         ),
       ),
     );
+
+    if (onTap == null) return thumbnail;
+
+    // 卡片本身的双击是「展开」，这里的单击是「看这张图」，两个手势各管各的。
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: thumbnail,
+    );
   }
 }
 
-/// 缩略图本体。
+/// 方形缩略图本体：按自身边长解码，`cover` 居中裁切。
 ///
-/// 直接构建 `Image`，**不加任何自建的"滚动时先别加载"门控**——`Image` 内部的
-/// `ScrollAwareImageProvider` 已经实现了「快滚时延迟解码、但缓存命中永不延迟」，
-/// 自己再加一层只会把命中路径也拖慢一帧加上百毫秒。
-class _ThumbnailImage extends StatefulWidget {
-  const _ThumbnailImage({required this.source, required this.size});
+/// 方形不是随手挑的——`BoxFit.cover` 要求解码尺寸在两个维度上都不小于显示尺寸，
+/// 只有近方形时这个要求才有界。宽扁的条带要同时满足宽和高，反而会解到比原来
+/// 整宽渲染还大。通栏版式因此走另一套解码策略，见 [CollapsedMediaBanner]。
+class _ThumbnailImage extends StatelessWidget {
+  const _ThumbnailImage({required this.size, required this.source});
 
-  final String source;
   final double size;
+  final String source;
+
+  /// 卡片内预览图的解码倍率上限，沿用富文本嵌入那条路的取值。
+  static const double _maxPixelRatio = 2.0;
 
   @override
-  State<_ThumbnailImage> createState() => _ThumbnailImageState();
-}
-
-class _ThumbnailImageState extends State<_ThumbnailImage> {
-  bool _hasError = false;
-
-  ImageProvider? _provider;
-  String? _providerSource;
-  int? _providerDecodeSize;
-
-  @override
-  void didUpdateWidget(covariant _ThumbnailImage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.source != widget.source) {
-      _hasError = false;
-      _provider = null;
-      _providerSource = null;
-      _providerDecodeSize = null;
-    }
-  }
-
-  ImageProvider? _resolveProvider(int? decodeSize) {
-    // 命中条件**不能**带上 `_provider != null`：source 非法时
-    // createOptimizedImageProvider 返回 null，带上这个条件就永远命不中，
-    // 每一帧都要重新解析一次来源。
-    if (_providerSource == widget.source && _providerDecodeSize == decodeSize) {
-      return _provider;
-    }
-    final provider = createOptimizedImageProvider(
-      widget.source,
+  Widget build(BuildContext context) {
+    // 72pt × dpr2 = 144px，单张约 83KB；相比按卡片全宽解码的 ~1.2MB 小一个量级。
+    final decodeSize = decodeSizeFor(
+      size,
+      MediaQuery.devicePixelRatioOf(context).clamp(1.0, _maxPixelRatio),
+    );
+    return CollapsedMediaImage(
+      source: source,
       cacheWidth: decodeSize,
       cacheHeight: decodeSize,
-    );
-    _provider = provider;
-    _providerSource = widget.source;
-    _providerDecodeSize = decodeSize;
-    return provider;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_hasError) {
-      return Semantics(
-        label: AppLocalizations.of(context).imageLoadFailed,
-        child: const _MediaKindPlaceholder(icon: Icons.broken_image_outlined),
-      );
-    }
-
-    // 缩略图按自己的边长解码，不再按卡片全宽：72pt × dpr3 ≈ 216px，
-    // 单张约 190KB，相比原来整宽解码的 ~1.2MB 少一个数量级，
-    // 滚动时也就不再逼近图片缓存上限、不再触发淘汰重解。
-    final decodeSize = decodeSizeFor(
-      widget.size,
-      MediaQuery.devicePixelRatioOf(context),
-    );
-    final provider = _resolveProvider(decodeSize);
-    if (provider == null) {
-      return Semantics(
-        label: AppLocalizations.of(context).imageLoadFailed,
-        child: const _MediaKindPlaceholder(icon: Icons.broken_image_outlined),
-      );
-    }
-
-    // 失败回调是异步的（postFrame），期间这张图可能已经被换掉。回调里必须确认
-    // 失败的还是当前这张，否则旧请求的失败会把新缩略图永久钉在 broken-image 上。
-    //
-    // 只比 source 不够：尺寸或 devicePixelRatio 变化时 source 不变、provider 却
-    // 换了新的，旧 provider 的失败照样会污染新解码。所以连 provider 身份一起比。
-    final failedSource = widget.source;
-    final failedProvider = provider;
-
-    return Semantics(
-      image: true,
-      label: AppLocalizations.of(context).viewImage,
-      child: Image(
-        image: provider,
-        fit: BoxFit.cover,
-        filterQuality: FilterQuality.low,
-        isAntiAlias: true,
-        gaplessPlayback: true,
-        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-          if (wasSynchronouslyLoaded || frame != null) {
-            return child;
-          }
-          return const _MediaKindPlaceholder(icon: Icons.image_outlined);
-        },
-        errorBuilder: (context, error, stackTrace) {
-          if (!_hasError) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted &&
-                  widget.source == failedSource &&
-                  identical(_provider, failedProvider)) {
-                setState(() => _hasError = true);
-              }
-            });
-          }
-          return const _MediaKindPlaceholder(icon: Icons.broken_image_outlined);
-        },
-      ),
-    );
-  }
-}
-
-/// 占位与非图片媒体共用的同尺寸底板：和成图完全同尺寸，切换时不改变布局。
-class _MediaKindPlaceholder extends StatelessWidget {
-  const _MediaKindPlaceholder({required this.icon});
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return ColoredBox(
-      color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.5),
-      child: Center(
-        child: Icon(
-          icon,
-          size: 24,
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-        ),
-      ),
     );
   }
 }

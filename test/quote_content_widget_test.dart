@@ -8,9 +8,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/quill_editor_extensions.dart';
+import 'package:thoughtecho/widgets/motion_photo_preview_page.dart';
+import 'package:thoughtecho/widgets/note_list/collapsed_media_banner.dart';
 import 'package:thoughtecho/widgets/note_list/collapsed_media_thumbnail.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
@@ -18,9 +21,13 @@ import 'package:visibility_detector/visibility_detector.dart';
 
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
   bool _prioritizeBold;
+  String _mediaStyle;
 
-  _TestSettingsService({bool prioritizeBold = false})
-      : _prioritizeBold = prioritizeBold;
+  _TestSettingsService({
+    bool prioritizeBold = false,
+    String mediaStyle = NoteCardMediaStyle.thumbnail,
+  })  : _prioritizeBold = prioritizeBold,
+        _mediaStyle = mediaStyle;
 
   @override
   bool get prioritizeBoldContentInCollapse => _prioritizeBold;
@@ -28,6 +35,15 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
   @override
   Future<void> setPrioritizeBoldContentInCollapse(bool enabled) async {
     _prioritizeBold = enabled;
+    notifyListeners();
+  }
+
+  @override
+  String get noteCardMediaStyle => _mediaStyle;
+
+  @override
+  Future<void> setNoteCardMediaStyle(String style) async {
+    _mediaStyle = style;
     notifyListeners();
   }
 
@@ -41,6 +57,10 @@ void main() {
   });
 
   setUp(() {
+    // QuoteContent 的 Document / Controller 缓存是静态的，用例之间会通过它耦合：
+    // 下面几条只有版式不同、笔记完全相同，不统一清就会读到上一个版式的缓存文档，
+    // 而且这种耦合会随着新增用例或调整顺序悄悄失效。
+    QuoteContent.clearCacheForTesting();
     QuoteItemWidget.clearExpansionCache();
     isListScrolling.value = false;
     isListDragActive.value = false;
@@ -57,9 +77,13 @@ void main() {
     bool showFullContent = false,
     bool? needsExpansionOverride,
     double? contentWidth,
+    String mediaStyle = NoteCardMediaStyle.thumbnail,
   }) {
     return ChangeNotifierProvider<SettingsService>.value(
-      value: _TestSettingsService(prioritizeBold: prioritizeBold),
+      value: _TestSettingsService(
+        prioritizeBold: prioritizeBold,
+        mediaStyle: mediaStyle,
+      ),
       child: MaterialApp(
         localizationsDelegates: const [
           AppLocalizations.delegate,
@@ -185,13 +209,201 @@ void main() {
     expect(find.byType(CollapsedMediaThumbnail), findsOneWidget);
   });
 
+  testWidgets('inline 版式把媒体留在正文原位交给 Quill', (tester) async {
+    final quote = createDeltaQuoteWithImage();
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+        mediaStyle: NoteCardMediaStyle.inline,
+      ),
+    );
+    await tester.pump();
+
+    final editor = tester.widget<quill.QuillEditor>(
+      find.byType(quill.QuillEditor),
+    );
+    final embedCount = editor.controller.document
+        .toDelta()
+        .toJson()
+        .where((op) => op['insert'] is Map)
+        .length;
+    expect(embedCount, 1, reason: 'inline 版式不得剥离嵌入');
+
+    expect(find.byType(CollapsedMediaThumbnail), findsNothing);
+    expect(find.byType(CollapsedMediaBanner), findsNothing);
+  });
+
+  testWidgets('banner 版式把媒体画在卡片顶部且剥离嵌入', (tester) async {
+    final quote = createDeltaQuoteWithImage();
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+        mediaStyle: NoteCardMediaStyle.banner,
+      ),
+    );
+    await tester.pump();
+
+    final editor = tester.widget<quill.QuillEditor>(
+      find.byType(quill.QuillEditor),
+    );
+    final embedCount = editor.controller.document
+        .toDelta()
+        .toJson()
+        .where((op) => op['insert'] is Map)
+        .length;
+    expect(embedCount, 0);
+
+    expect(find.byType(CollapsedMediaBanner), findsOneWidget);
+    expect(find.byType(CollapsedMediaThumbnail), findsNothing);
+
+    // 通栏在正文上方。
+    final bannerY = tester.getTopLeft(find.byType(CollapsedMediaBanner)).dy;
+    final contentY =
+        tester.getTopLeft(find.byKey(QuoteContent.collapsedWrapperKey)).dy;
+    expect(bannerY, lessThan(contentY));
+  });
+
+  testWidgets('切换版式不会复用上一版式缓存的折叠文档', (tester) async {
+    // mediaSignature 这个缓存键存在的全部理由。**中途不清缓存**：先用
+    // thumbnail 渲染一次（文档里的嵌入被剥离并缓存），再用同一条笔记切到
+    // inline。如果缓存键没区分版式，inline 会拿到剥离过的文档、embedCount 变 0。
+    final quote = createDeltaQuoteWithImage();
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(CollapsedMediaThumbnail), findsOneWidget);
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+        mediaStyle: NoteCardMediaStyle.inline,
+      ),
+    );
+    await tester.pump();
+
+    final editor = tester.widget<quill.QuillEditor>(
+      find.byType(quill.QuillEditor),
+    );
+    final embedCount = editor.controller.document
+        .toDelta()
+        .toJson()
+        .where((op) => op['insert'] is Map)
+        .length;
+    expect(
+      embedCount,
+      1,
+      reason: 'inline 拿到了 thumbnail 版式剥离过的文档，说明缓存键没区分版式',
+    );
+  });
+
+  testWidgets('点击缩略图打开大图预览', (tester) async {
+    final quote = createDeltaQuoteWithImage();
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byType(CollapsedMediaThumbnail));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(MotionPhotoPreviewPage), findsOneWidget);
+  });
+
+  testWidgets('只有音视频时不安装点击手势，避免空操作吞掉卡片交互', (tester) async {
+    final quote = Quote(
+      id: 'rich_audio_only',
+      content: '只有音频的笔记',
+      date: '2025-01-01T00:00:00.000Z',
+      editSource: 'fullscreen',
+      deltaContent: jsonEncode([
+        {
+          'insert': {
+            'custom': {'audio': '/path/rec.m4a'},
+          },
+        },
+        {'insert': '\n'},
+        {'insert': '音频说明'},
+        {'insert': '\n'},
+      ]),
+    );
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+      ),
+    );
+    await tester.pump();
+
+    final thumbnail = tester.widget<CollapsedMediaThumbnail>(
+      find.byType(CollapsedMediaThumbnail),
+    );
+    expect(thumbnail.onTap, isNull);
+  });
+
+  testWidgets('媒体被摘走后折叠盒按内容收缩，不再留一大块空白', (tester) async {
+    // 带图笔记必然折叠（高度估算里一张图算 200px > 160px），但摘掉图之后正文
+    // 可能只剩一两行。折叠盒若维持定高 160px，差额就是卡片里那块突兀的空白。
+    final quote = createDeltaQuoteWithImage();
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+      ),
+    );
+    await tester.pump();
+
+    final wrapperHeight =
+        tester.getSize(find.byKey(QuoteContent.collapsedWrapperKey)).height;
+    expect(
+      wrapperHeight,
+      lessThan(QuoteContent.collapsedContentMaxHeight),
+      reason: '短正文不该被撑到折叠上限',
+    );
+    expect(wrapperHeight, greaterThan(0));
+  });
+
+  testWidgets('纯文本长笔记的折叠盒仍然定高，不受收缩逻辑影响', (tester) async {
+    final quote = createPlainQuote('A' * 400);
+
+    await tester.pumpWidget(buildTestApp(quote, contentWidth: 320));
+    await tester.pump();
+
+    expect(
+      tester.getSize(find.byKey(QuoteContent.collapsedWrapperKey)).height,
+      QuoteContent.collapsedContentMaxHeight,
+    );
+  });
+
   testWidgets('折叠缩略图与卡片同时挂载，不等富文本物化', (tester) async {
     // 这是整套改动的核心不变量：滚动中 Quill 走占位不物化，但缩略图必须已经在树里。
     // 「空白 → 灰框 → 图片」三段式的前两段就是图片被挡在富文本物化时序后面造成的。
     //
-    // 必须先清缓存：控制器缓存命中时按设计会跳过延迟物化（见 _buildRichTextContent
-    // 里的 contains 判断），而这里要复现的正是「卡片第一次滚进视野」的冷启动场景。
-    QuoteContent.clearCacheForTesting();
+    // 冷启动场景由 setUp 里的统一清缓存保证：控制器缓存命中时按设计会跳过延迟
+    // 物化（见 _buildRichTextContent 里的 contains 判断）。
     isListScrolling.value = true;
     addTearDown(() => isListScrolling.value = false);
 
@@ -211,9 +423,6 @@ void main() {
   });
 
   testWidgets('展开态仍由 Quill 渲染完整图文混排', (tester) async {
-    // 显式清缓存，不去依赖「showFullContent 会生成不同 contentVariant 所以撞不上
-    // 上一条用例的折叠态缓存」这个内部实现细节。
-    QuoteContent.clearCacheForTesting();
     final quote = createDeltaQuoteWithImage();
 
     await tester.pumpWidget(
