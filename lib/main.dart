@@ -94,6 +94,8 @@ Future<void> main() async {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
+      _configureImageCache();
+
       // 加上这一行启动卡顿监控
       JankDetector.init();
 
@@ -648,6 +650,32 @@ Future<void> main() async {
         debugPrint('[main] deferred error recording failed: $e');
       }
     },
+  );
+}
+
+/// 显式设定 Flutter 图片缓存上限。
+///
+/// 之前全仓没有任何地方碰过它，一直吃框架默认的 1000 条 / 100MB——排查"滑回来
+/// 图片重新加载"时，这就成了一个没人设过、也没法在日志里对上号的隐含变量。
+///
+/// 现在把它写死在这里，理由是记录页的解码规模已经变了：折叠卡片的媒体走
+/// [CollapsedMediaThumbnail]，单张约 80KB（原来按卡片全宽解码约 1.2MB），
+/// 列表侧再也吃不到 100MB。留 64MB 仍可容纳约 50 张全分辨率解码（展开态和
+/// 全屏预览那条路），同时给低内存机型留出余量。
+///
+/// 条数保持 1000：缩略图单价低，长列表里限制条数比限制字节更早生效，
+/// 压低条数反而会让来回滚动重新解码。
+void _configureImageCache() {
+  const int maxBytes = 64 * 1024 * 1024;
+  const int maxEntries = 1000;
+
+  final imageCache = PaintingBinding.instance.imageCache;
+  imageCache.maximumSizeBytes = maxBytes;
+  imageCache.maximumSize = maxEntries;
+
+  logInfo(
+    '图片缓存上限: ${maxBytes ~/ (1024 * 1024)}MB / $maxEntries 条',
+    source: 'Main',
   );
 }
 

@@ -436,6 +436,7 @@
   },
   "view": "View",
   "viewImage": "View image",
+  "imageLoadFailed": "Failed to load image",
   "todayThoughts": "Today's Thoughts",
   "loadingTodayThoughts": "Loading today's thoughts...",
   "fetchingDefaultPrompt": "Fetching default prompt...",

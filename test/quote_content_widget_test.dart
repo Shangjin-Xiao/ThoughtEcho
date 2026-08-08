@@ -11,6 +11,7 @@ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/quill_editor_extensions.dart';
+import 'package:thoughtecho/widgets/note_list/collapsed_media_thumbnail.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
 import 'package:visibility_detector/visibility_detector.dart';
@@ -157,7 +158,7 @@ void main() {
     expect(QuoteItemWidget.needsExpansionFor(quote), isTrue);
   });
 
-  testWidgets('折叠前缀保留与可见区域相交的图片', (tester) async {
+  testWidgets('折叠文档不含嵌入媒体，图片改由独立缩略图渲染', (tester) async {
     final quote = createDeltaQuoteWithImage();
 
     await tester.pumpWidget(
@@ -169,15 +170,64 @@ void main() {
     );
     await tester.pump();
 
+    // 折叠态的媒体走 CollapsedMediaThumbnail，Quill 文档里必须一个嵌入节点都不剩：
+    // 留着就等于在 160px 的窗口里再解一遍整宽图，还会被裁掉大半。
     final editor = tester.widget<quill.QuillEditor>(
       find.byType(quill.QuillEditor),
     );
-    final imageCount = editor.controller.document
+    final embedCount = editor.controller.document
         .toDelta()
         .toJson()
         .where((op) => op['insert'] is Map)
         .length;
-    expect(imageCount, 1);
+    expect(embedCount, 0);
+
+    expect(find.byType(CollapsedMediaThumbnail), findsOneWidget);
+  });
+
+  testWidgets('折叠缩略图与卡片同时挂载，不等富文本物化', (tester) async {
+    // 这是整套改动的核心不变量：滚动中 Quill 走占位不物化，但缩略图必须已经在树里。
+    // 「空白 → 灰框 → 图片」三段式的前两段就是图片被挡在富文本物化时序后面造成的。
+    //
+    // 必须先清缓存：控制器缓存命中时按设计会跳过延迟物化（见 _buildRichTextContent
+    // 里的 contains 判断），而这里要复现的正是「卡片第一次滚进视野」的冷启动场景。
+    QuoteContent.clearCacheForTesting();
+    isListScrolling.value = true;
+    addTearDown(() => isListScrolling.value = false);
+
+    final quote = createDeltaQuoteWithImage();
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(quill.QuillEditor), findsNothing);
+    expect(find.byType(CollapsedMediaThumbnail), findsOneWidget);
+  });
+
+  testWidgets('展开态仍由 Quill 渲染完整图文混排', (tester) async {
+    final quote = createDeltaQuoteWithImage();
+
+    await tester.pumpWidget(
+      buildTestApp(quote, showFullContent: true, contentWidth: 320),
+    );
+    await tester.pump();
+
+    final editor = tester.widget<quill.QuillEditor>(
+      find.byType(quill.QuillEditor),
+    );
+    final embedCount = editor.controller.document
+        .toDelta()
+        .toJson()
+        .where((op) => op['insert'] is Map)
+        .length;
+    expect(embedCount, 1);
+    expect(find.byType(CollapsedMediaThumbnail), findsNothing);
   });
 
   testWidgets('折叠状态下长富文本仍使用裁剪包装器', (tester) async {

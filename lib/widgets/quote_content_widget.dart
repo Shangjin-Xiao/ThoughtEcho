@@ -10,9 +10,11 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../models/quote_model.dart';
 import '../theme/theme_style.dart';
+import '../utils/delta_media_extractor.dart';
 import '../utils/quill_editor_extensions.dart';
 import 'package:provider/provider.dart';
 import '../services/settings_service.dart';
+import 'note_list/collapsed_media_thumbnail.dart';
 
 part 'quote_content_deferred.dart';
 
@@ -184,6 +186,7 @@ class QuoteContent extends StatelessWidget {
     _QuotePlainTextLayoutExpansionCache.clear();
     _QuoteContentControllerCache.clear();
     _ColdCollapsedQuillFrameBudget.reset();
+    DeltaMediaCache.clear();
   }
 
   /// 预热 Document 缓存：只预热首屏附近内容，且滚动中不抢占主线程。
@@ -673,15 +676,26 @@ class QuoteContent extends StatelessWidget {
       ];
     }
 
+    // 折叠态的媒体由 [CollapsedMediaThumbnail] 单独渲染，这里必须把嵌入节点摘掉：
+    // 留着它们等于让 Quill 在 160px 的窗口里再解一遍整宽图（还会被裁掉大半），
+    // 而且 video/audio 会在滚动列表里实例化播放器。摘掉之后折叠文档是纯文本，
+    // 构建和布局都便宜得多。
+    final textOps = _stripMediaOps(ops);
+    if (textOps.isEmpty) {
+      return const [
+        {'insert': '\n'},
+      ];
+    }
+
     if (maxWidth == null || !maxWidth.isFinite || maxWidth <= 0) {
-      return _truncateDeltaOpsWithLegacyBudget(ops);
+      return _truncateDeltaOpsWithLegacyBudget(textOps);
     }
 
     final truncatedOps = <Map<String, dynamic>>[];
     final targetHeight =
         collapsedContentMaxHeight + _collapsedDocumentHeightGuard;
 
-    for (final op in ops) {
+    for (final op in textOps) {
       if (!op.containsKey('insert')) continue;
 
       final insert = op['insert'];
@@ -727,19 +741,34 @@ class QuoteContent extends StatelessWidget {
                 locale: locale,
               ) <
               targetHeight) {
-        // Preserve the first embed/block crossing the preview boundary. Quill
-        // remains the renderer for every pixel that can become visible.
+        // Preserve the first non-text block crossing the preview boundary.
+        // Quill remains the renderer for every pixel that can become visible.
         truncatedOps.add(candidate);
       }
       break;
     }
 
     if (truncatedOps.isEmpty) {
-      truncatedOps.add(Map<String, dynamic>.from(ops.first));
+      truncatedOps.add(Map<String, dynamic>.from(textOps.first));
     }
 
     _ensureDocumentOpsEndWithNewline(truncatedOps);
     return truncatedOps;
+  }
+
+  /// 去掉图片/视频/音频嵌入节点，保留其余全部 op。
+  ///
+  /// 仅用于**折叠态**文档：展开态和全屏编辑器仍然拿完整 ops，媒体照常由 Quill
+  /// 渲染在原本的位置上。
+  static List<Map<String, dynamic>> _stripMediaOps(
+    List<Map<String, dynamic>> ops,
+  ) {
+    if (!ops.any((op) => isDeltaMediaInsert(op['insert']))) {
+      return ops;
+    }
+    return ops
+        .where((op) => !isDeltaMediaInsert(op['insert']))
+        .toList(growable: false);
   }
 
   static List<Map<String, dynamic>> _truncateDeltaOpsWithLegacyBudget(
@@ -1013,13 +1042,42 @@ class QuoteContent extends StatelessWidget {
 
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
       if (!showFullContent && needsExpansion) {
+        // 折叠态：媒体走卡片右侧的独立缩略图，不再经由 Quill 的 embedBuilder。
+        // 缩略图因此和卡片同时挂载，不用排在富文本物化队列后面——「空白 → 灰框
+        // → 图片」的前两段就是这样来的。详见 CollapsedMediaThumbnail 的说明。
+        final media = DeltaMediaCache.of(quote.deltaContent);
         return LayoutBuilder(
-          builder: (context, constraints) => _buildRichTextContent(
-            context,
-            needsExpansion: needsExpansion,
-            prioritizeBoldContent: prioritizeBoldContent,
-            maxWidth: constraints.maxWidth,
-          ),
+          builder: (context, constraints) {
+            final double reserved =
+                media.hasMedia ? CollapsedMediaThumbnail.reservedWidth() : 0.0;
+            // 文字宽度要先扣掉缩略图占的位，否则折叠高度会按整宽估算而截少内容。
+            final double textMaxWidth = constraints.maxWidth.isFinite
+                ? (constraints.maxWidth - reserved).clamp(
+                    0.0,
+                    constraints.maxWidth,
+                  )
+                : constraints.maxWidth;
+
+            final Widget content = _buildRichTextContent(
+              context,
+              needsExpansion: needsExpansion,
+              prioritizeBoldContent: prioritizeBoldContent,
+              maxWidth: textMaxWidth,
+            );
+
+            if (!media.hasMedia) {
+              return content;
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: content),
+                const SizedBox(width: CollapsedMediaThumbnail.gap),
+                CollapsedMediaThumbnail(media: media),
+              ],
+            );
+          },
         );
       }
       return _buildRichTextContent(

@@ -2,11 +2,20 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
-/// 图片缓存服务
-class ImageCacheService {
-  static final ImageCacheService _instance = ImageCacheService._internal();
-  factory ImageCacheService() => _instance;
-  ImageCacheService._internal();
+/// SVG 光栅化结果的字节缓存。
+///
+/// **和 Flutter 的图片缓存没有任何关系**——它不碰
+/// `PaintingBinding.instance.imageCache`，只缓存 [SvgToImageService] 把 SVG 渲染成
+/// PNG/位图后的字节，键是「SVG 内容哈希 + 目标宽高 + 编码格式」。
+///
+/// 旧名字叫 `ImageCacheService`，排查记录页图片反复重解码时很容易先翻到这里，
+/// 白绕一圈——真正管解码结果淘汰的是 `PaintingBinding.instance.imageCache`，
+/// 上限在 `main.dart` 的 `_configureImageCache` 里设定。
+class SvgRasterCacheService {
+  static final SvgRasterCacheService _instance =
+      SvgRasterCacheService._internal();
+  factory SvgRasterCacheService() => _instance;
+  SvgRasterCacheService._internal();
 
   // 内存缓存
   final Map<String, Uint8List> _memoryCache = {};
@@ -110,7 +119,7 @@ class ImageCacheService {
     if (oldestKey != null) {
       _removeCacheEntry(oldestKey);
       if (kDebugMode) {
-        AppLogger.d('移除最旧缓存条目: $oldestKey', source: 'ImageCacheService');
+        AppLogger.d('移除最旧缓存条目: $oldestKey', source: 'SvgRasterCacheService');
       }
     }
   }
@@ -126,7 +135,7 @@ class ImageCacheService {
     _memoryCache.clear();
     _cacheTimestamps.clear();
     if (kDebugMode) {
-      AppLogger.d('已清空所有图片缓存', source: 'ImageCacheService');
+      AppLogger.d('已清空所有图片缓存', source: 'SvgRasterCacheService');
     }
   }
 
@@ -150,7 +159,7 @@ class ImageCacheService {
   Future<void> preloadImages(List<String> svgContents) async {
     AppLogger.i(
       '开始预热图片缓存: ${svgContents.length} 个SVG',
-      source: 'ImageCacheService',
+      source: 'SvgRasterCacheService',
     );
 
     for (int i = 0; i < svgContents.length && i < maxCacheSize; i++) {
@@ -170,7 +179,7 @@ class ImageCacheService {
         // 这里可以添加预加载逻辑
         // 由于需要异步转换，暂时跳过实际预加载
       } catch (e) {
-        AppLogger.e('预热缓存失败: $e', error: e, source: 'ImageCacheService');
+        AppLogger.e('预热缓存失败: $e', error: e, source: 'SvgRasterCacheService');
       }
     }
   }
@@ -205,7 +214,7 @@ class ImageCacheService {
 
       AppLogger.i(
         '智能清理缓存: 移除 ${keysToRemove.length} 个条目',
-        source: 'ImageCacheService',
+        source: 'SvgRasterCacheService',
       );
     }
   }
