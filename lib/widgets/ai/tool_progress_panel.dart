@@ -222,7 +222,13 @@ class _ToolProgressSheetBody extends StatelessWidget {
               // 思考和工具共用同一条竖线和同一个左边距，读下来是一串顺序发生
               // 的事，而不是"一坨思考"外加"一列工具"两块拼在一起。
               if (thinking != null && thinking.isNotEmpty)
-                _ProcessThinkingBlock(text: thinking),
+                _ProcessThinkingBlock(
+                  text: thinking,
+                  // 只思考、没调工具的那轮，抽屉标题本身就是「思考」，块上再挂
+                  // 一个同名小标题就是把同一个词说两遍。有工具项时才需要它，
+                  // 那时候「思考」是用来和工具名区分的。
+                  showLabel: data.items.isNotEmpty,
+                ),
               for (final item in data.items) ...[
                 _ToolProgressDetailItem(item: item, l10n: l10n),
                 if (item.thinkingText?.trim().isNotEmpty == true)
@@ -243,7 +249,10 @@ class _ToolProgressSheetBody extends StatelessWidget {
 class _ProcessThinkingBlock extends StatelessWidget {
   final String text;
 
-  const _ProcessThinkingBlock({required this.text});
+  /// 挂不挂「思考」小标题。抽屉标题已经是「思考」时挂上就是重复。
+  final bool showLabel;
+
+  const _ProcessThinkingBlock({required this.text, this.showLabel = true});
 
   @override
   Widget build(BuildContext context) {
@@ -266,21 +275,22 @@ class _ProcessThinkingBlock extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.psychology_outlined, size: 16, color: muted),
-                      const SizedBox(width: 8),
-                      Text(
-                        l10n.thinking,
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: muted,
+                  if (showLabel)
+                    Row(
+                      children: [
+                        Icon(Icons.psychology_outlined, size: 16, color: muted),
+                        const SizedBox(width: 8),
+                        Text(
+                          l10n.thinking,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: muted,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                   Padding(
-                    padding: const EdgeInsets.only(top: 6, left: 24),
+                    padding: EdgeInsets.only(top: showLabel ? 6 : 0, left: 24),
                     child: SelectableText(
                       text,
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -414,8 +424,11 @@ class ToolProgressPanel extends StatefulWidget {
 }
 
 class _ToolProgressPanelState extends State<ToolProgressPanel> {
+  /// 抽屉的数据源。标题只有 [_getDisplayTitle] 一个出处，而它要 context；
+  /// 这里先拿原始标题占位，`didChangeDependencies` 会在任何一次 build 之前
+  /// （抽屉更是要等用户点开）同步成真正的标题。
   late final ValueNotifier<ToolProgressSnapshot> _snapshot =
-      ValueNotifier(_snapshotWith(_rawDisplayTitle()));
+      ValueNotifier(_snapshotWith(widget.title));
 
   ToolProgressSnapshot _snapshotWith(String title) => ToolProgressSnapshot(
         title: title,
@@ -465,13 +478,6 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
       }
     }
     return null;
-  }
-
-  /// 标题的原始形态，不依赖 context（供 snapshot 初值使用）。
-  String _rawDisplayTitle() {
-    if (!widget.inProgress) return widget.title;
-    final activeTitle = _runningItem?.toolName.trim() ?? '';
-    return activeTitle.isNotEmpty ? activeTitle : widget.title;
   }
 
   String _getDisplayTitle(BuildContext context) {

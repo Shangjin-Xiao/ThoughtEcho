@@ -117,6 +117,28 @@ void main() {
       expect(find.text('思考'), findsNWidgets(2));
     });
 
+    // 抽屉标题本身就是「思考」，块上再挂一个同名小标题就是把同一个词说两遍
+    testWidgets('thinking-only sheet says 思考 once',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const ToolProgressPanel(
+            title: '思考',
+            items: [],
+            inProgress: false,
+            thinkingText: '先想清楚再回答。',
+          ),
+        ),
+      );
+
+      await tester.tap(collapsedRow());
+      await tester.pumpAndSettle();
+
+      expect(find.text('先想清楚再回答。'), findsOneWidget);
+      // 折叠行和抽屉标题各一个，块上不再多出第三个
+      expect(find.text('思考'), findsNWidgets(2));
+    });
+
     testWidgets('displays completed state with done icon',
         (WidgetTester tester) async {
       final items = [

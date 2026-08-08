@@ -8,6 +8,12 @@ const double _kUserBubbleWidthFactor = 0.78;
 /// markdown 的排版落在最后一个字后面，而不是另起一行。
 const String _kStreamingCursor = '▌';
 
+/// 输入框的排版参数。发送键的居中量是从这三者算出来的
+/// （见 [_ThoughterUI._sendButtonBottomInset]），改任何一个都不用手动补偿。
+const double _kComposerLineHeight = 1.35;
+const double _kComposerVerticalPadding = 12;
+const double _kSendButtonDiameter = 36;
+
 extension _ThoughterUI on _ThoughterPageState {
   /// 消息区可用高度变小（键盘上推、输入框变多行）时跟着贴底，
   /// 保证最后一条消息不会被顶出可视区。
@@ -865,10 +871,14 @@ extension _ThoughterUI on _ThoughterPageState {
                   children: [
                     Expanded(child: _buildComposerField(theme, l10n)),
                     Padding(
-                      // 底部这 5 不是间距而是算出来的居中量：单行时输入框内
-                      // 容高 46，(46 - 36) / 2 正好把按钮摆在这一行的中线上；
-                      // 换行长高后它自然落在最后一行边上。
-                      padding: const EdgeInsets.only(right: 8, bottom: 5),
+                      // 底边距不是间距，是算出来的居中量：单行时正好把按钮摆在
+                      // 那一行的中线上，换行长高后它自然落在最后一行边上。跟着
+                      // 字号和内边距算，主题换了字号（纸墨 17、Material 16）也
+                      // 不会偏。
+                      padding: EdgeInsets.only(
+                        right: 8,
+                        bottom: _sendButtonBottomInset(theme),
+                      ),
                       child: _buildSendButton(theme, l10n),
                     ),
                   ],
@@ -876,6 +886,19 @@ extension _ThoughterUI on _ThoughterPageState {
         ),
       ),
     );
+  }
+
+  /// 发送键距输入框底边的距离。
+  ///
+  /// 单行时把这枚圆按钮摆在文字那一行的中线上：(单行内容高 - 按钮直径) / 2。
+  /// 三个参数（字号、行高、上下内边距）都是现算的，主题换字号或以后调内边距
+  /// 时按钮不会悄悄偏出这一行；换行长高后 `CrossAxisAlignment.end` 让它自然
+  /// 落在最后一行边上。
+  double _sendButtonBottomInset(ThemeData theme) {
+    final fontSize = theme.textTheme.bodyLarge?.fontSize ?? 16;
+    final lineHeight = fontSize * _kComposerLineHeight;
+    final fieldHeight = lineHeight + _kComposerVerticalPadding * 2;
+    return ((fieldHeight - _kSendButtonDiameter) / 2).clamp(0.0, 16.0);
   }
 
   /// 输入框本体。默认一行高，随换行增高；超过上限后内部滚动，
@@ -887,16 +910,23 @@ extension _ThoughterUI on _ThoughterPageState {
       child: TextField(
         controller: _textController,
         focusNode: _inputFocusNode,
-        style: theme.textTheme.bodyLarge?.copyWith(height: 1.35),
+        style: theme.textTheme.bodyLarge?.copyWith(
+          height: _kComposerLineHeight,
+        ),
         decoration: InputDecoration(
           hintText: l10n.aiAssistantInputHint,
           hintStyle: theme.textTheme.bodyLarge?.copyWith(
-            height: 1.35,
+            height: _kComposerLineHeight,
             color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
           ),
           border: InputBorder.none,
           isCollapsed: true,
-          contentPadding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+          contentPadding: const EdgeInsets.fromLTRB(
+            16,
+            _kComposerVerticalPadding,
+            8,
+            _kComposerVerticalPadding,
+          ),
         ),
         maxLines: null,
         minLines: 1,
@@ -949,8 +979,8 @@ extension _ThoughterUI on _ThoughterPageState {
                 scheme.onSurfaceVariant.withValues(alpha: 0.5),
             shape: const CircleBorder(),
             padding: EdgeInsets.zero,
-            fixedSize: const Size(36, 36),
-            minimumSize: const Size(36, 36),
+            fixedSize: const Size(_kSendButtonDiameter, _kSendButtonDiameter),
+            minimumSize: const Size(_kSendButtonDiameter, _kSendButtonDiameter),
           ),
         );
       },
