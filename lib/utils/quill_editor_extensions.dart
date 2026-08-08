@@ -510,11 +510,17 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
 
             if (!_hasError && mounted) {
               QuillImageEmbedPerfStats.recordError();
-              // 回调是异步的，期间 source 可能已经换掉。不校验的话，旧图的失败
-              // 会把新图永久钉在错误占位上。
+              // 回调是异步的，期间这张图可能已经被换掉。不校验的话，旧请求的
+              // 失败会把新图永久钉在错误占位上。
+              //
+              // 只比 source 不够：布局宽度或 dpr 变化时 source 不变、provider 却
+              // 换了新的，旧 provider 的失败照样会污染新解码。连身份一起比。
               final failedSource = widget.source;
+              final failedProvider = provider;
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted && widget.source == failedSource) {
+                if (mounted &&
+                    widget.source == failedSource &&
+                    identical(_provider, failedProvider)) {
                   setState(() {
                     _hasError = true;
                   });

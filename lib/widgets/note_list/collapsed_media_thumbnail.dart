@@ -182,9 +182,13 @@ class _ThumbnailImageState extends State<_ThumbnailImage> {
       );
     }
 
-    // 失败回调是异步的（postFrame），期间 source 可能已经换掉。回调里必须确认
-    // 失败的还是当前这张，否则旧图的失败会把新缩略图永久钉在 broken-image 上。
+    // 失败回调是异步的（postFrame），期间这张图可能已经被换掉。回调里必须确认
+    // 失败的还是当前这张，否则旧请求的失败会把新缩略图永久钉在 broken-image 上。
+    //
+    // 只比 source 不够：尺寸或 devicePixelRatio 变化时 source 不变、provider 却
+    // 换了新的，旧 provider 的失败照样会污染新解码。所以连 provider 身份一起比。
     final failedSource = widget.source;
+    final failedProvider = provider;
 
     return Semantics(
       image: true,
@@ -204,7 +208,9 @@ class _ThumbnailImageState extends State<_ThumbnailImage> {
         errorBuilder: (context, error, stackTrace) {
           if (!_hasError) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted && widget.source == failedSource) {
+              if (mounted &&
+                  widget.source == failedSource &&
+                  identical(_provider, failedProvider)) {
                 setState(() => _hasError = true);
               }
             });

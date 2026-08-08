@@ -173,6 +173,10 @@ class QuoteContent extends StatelessWidget {
   // an empty strip at the bottom of the preview.
   static const double _collapsedDocumentHeightGuard = 96.0;
   static const double _collapsedImagePlaceholderHeight = 96.0;
+
+  /// 折叠卡片挂缩略图所需的最小容器宽度：缩略图连间距占 84px，再给正文留
+  /// 至少 96px，低于这个宽度就不画缩略图，避免 Row 溢出（见 build 中的说明）。
+  static const double _minWidthForCollapsedThumbnail = 180.0;
   static const int _deferredPreviewCodeUnitBudget = 320;
   static const Key collapsedWrapperKey = ValueKey(
     'quote_content.collapsed_wrapper',
@@ -1050,21 +1054,20 @@ class QuoteContent extends StatelessWidget {
         final media = DeltaMediaCache.of(quote.deltaContent);
         return LayoutBuilder(
           builder: (context, constraints) {
-            // 窄到放不下缩略图时把预留宽度压回半宽：否则 textMaxWidth 被 clamp
-            // 到 0，而 Row 里的 Expanded 会分到负空间直接溢出。折叠正文区正常
-            // 不会窄到这个程度，这里纯粹是防御。
-            final double reserved = media.hasMedia
-                ? (constraints.maxWidth.isFinite
-                    ? CollapsedMediaThumbnail.reservedWidth()
-                        .clamp(0.0, constraints.maxWidth / 2)
-                    : CollapsedMediaThumbnail.reservedWidth())
-                : 0.0;
+            // 容器窄到放不下「缩略图 + 一段能读的正文」时**整个不画缩略图**。
+            //
+            // 只把预留宽度 clamp 小是没用的：Row 的固定子项（gap + 缩略图）恒占
+            // 84px，与 reserved 取什么值无关；`constraints.maxWidth` 一旦小于 84，
+            // `Expanded` 照样分到负空间、RenderFlex 照样溢出。只有不挂这两个子项
+            // 才真的不溢出。折叠正文区正常不会窄到这个程度，这里纯粹是防御。
+            final bool showThumbnail = media.hasMedia &&
+                (!constraints.maxWidth.isFinite ||
+                    constraints.maxWidth >= _minWidthForCollapsedThumbnail);
+            final double reserved =
+                showThumbnail ? CollapsedMediaThumbnail.reservedWidth() : 0.0;
             // 文字宽度要先扣掉缩略图占的位，否则折叠高度会按整宽估算而截少内容。
             final double textMaxWidth = constraints.maxWidth.isFinite
-                ? (constraints.maxWidth - reserved).clamp(
-                    0.0,
-                    constraints.maxWidth,
-                  )
+                ? constraints.maxWidth - reserved
                 : constraints.maxWidth;
 
             final Widget content = _buildRichTextContent(
@@ -1074,7 +1077,7 @@ class QuoteContent extends StatelessWidget {
               maxWidth: textMaxWidth,
             );
 
-            if (!media.hasMedia) {
+            if (!showThumbnail) {
               return content;
             }
 

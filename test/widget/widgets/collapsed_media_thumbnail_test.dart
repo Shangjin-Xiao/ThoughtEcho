@@ -41,13 +41,19 @@ Widget _wrap(Widget child) {
   );
 }
 
-/// 有界地等真实解码完成：占位图标消失即到位。
+/// 有界地等真实解码**成功**：占位图标消失、且没有落到失败占位。
 ///
 /// 不用固定时长的 `Future.delayed`（CI 上是不稳定来源），也不用 `pumpAndSettle`
 /// ——真实解码走 dart:ui 的异步 codec，不随假时钟推进，`pumpAndSettle` 只会在
 /// 占位态上空转。必须包在 `tester.runAsync` 里调用。
+///
+/// 必须同时检查 broken-image：解码失败时 `image_outlined` 同样会消失（换成
+/// `broken_image_outlined`），只等它消失的话失败会被当成成功放过去。
 Future<void> _pumpUntilDecoded(WidgetTester tester) async {
   for (var i = 0; i < 100; i++) {
+    if (find.byIcon(Icons.broken_image_outlined).evaluate().isNotEmpty) {
+      fail('图片解码失败，落到了 broken-image 占位');
+    }
     if (find.byIcon(Icons.image_outlined).evaluate().isEmpty) return;
     await Future<void>.delayed(const Duration(milliseconds: 10));
     await tester.pump();
@@ -55,13 +61,25 @@ Future<void> _pumpUntilDecoded(WidgetTester tester) async {
   fail('图片在 1s 内没有完成解码');
 }
 
+/// 有界地等失败占位出现，用于错误路径的用例。
+Future<void> _pumpUntilFailed(WidgetTester tester) async {
+  for (var i = 0; i < 100; i++) {
+    if (find.byIcon(Icons.broken_image_outlined).evaluate().isNotEmpty) return;
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await tester.pump();
+  }
+  fail('图片在 1s 内没有落到失败占位');
+}
+
 void main() {
   late String pngPath;
+  late String tempDirPath;
 
   setUpAll(() async {
     // 平台插件和文件系统一律走 test_harness 的 mock 目录，
     // 不碰真实用户目录（test/AGENTS.md）。
     final tempDir = await TestHarness.createTempDirectory('collapsed_thumb');
+    tempDirPath = tempDir.path;
     pngPath = '${tempDir.path}/tiny.png';
     File(pngPath).writeAsBytesSync(
       Uint8List.fromList(base64Decode(_tinyPngBase64)),
@@ -137,6 +155,66 @@ void main() {
     await tester.pump();
 
     expect(find.textContaining('+'), findsNothing);
+  });
+
+  testWidgets('加载失败时读屏播报的是「图片加载失败」而不是「查看图片」', (tester) async {
+    // 必须在测试体内 dispose：addTearDown 跑在 flutter_test 的
+    // "SemanticsHandle 是否已释放" 校验之后，会被判成泄漏。
+    final handle = tester.ensureSemantics();
+
+    // 不存在的文件 → FileImage 读取失败 → errorBuilder。
+    final media = _mediaWithImage('$tempDirPath/does_not_exist.png');
+
+    await tester.runAsync(() async {
+      await tester.pumpWidget(_wrap(CollapsedMediaThumbnail(media: media)));
+      await tester.pump();
+      await _pumpUntilFailed(tester);
+    });
+    await tester.pump();
+
+    expect(find.bySemanticsLabel('图片加载失败'), findsOneWidget);
+    expect(find.bySemanticsLabel('查看图片'), findsNothing);
+
+    handle.dispose();
+  });
+
+  testWidgets('旧图的失败回调不会把换上来的新图钉在失败态', (tester) async {
+    // 竞态：errorBuilder 的 postFrame 回调是异步的，期间 source 已经换成好图。
+    // 回调必须确认失败的还是当前这张，否则新缩略图会永久停在 broken-image。
+    final broken = _mediaWithImage('$tempDirPath/does_not_exist.png');
+    final good = _mediaWithImage(pngPath);
+
+    await tester.runAsync(() async {
+      await tester.pumpWidget(_wrap(CollapsedMediaThumbnail(media: broken)));
+      await tester.pump();
+      // 不等失败落地，立刻换成好图——让旧图的失败回调在换源之后才触发。
+      await tester.pumpWidget(_wrap(CollapsedMediaThumbnail(media: good)));
+      await tester.pump();
+      await _pumpUntilDecoded(tester);
+    });
+
+    expect(find.byIcon(Icons.broken_image_outlined), findsNothing);
+    expect(find.byType(Image), findsOneWidget);
+  });
+
+  testWidgets('source 非法时不反复解析，且渲染失败占位', (tester) async {
+    // 空 source 会让 createOptimizedImageProvider 返回 null。
+    // 记忆化条件不带 `_provider != null`，所以 null 结果也会被缓存住，
+    // 重建不会每帧重新解析一次来源。
+    const media = DeltaMediaSummary(
+      firstImageSource: '',
+      imageCount: 1,
+      videoCount: 0,
+      audioCount: 0,
+    );
+
+    await tester.pumpWidget(_wrap(const CollapsedMediaThumbnail(media: media)));
+    await tester.pump();
+    await tester.pumpWidget(_wrap(const CollapsedMediaThumbnail(media: media)));
+    await tester.pump();
+
+    expect(find.byIcon(Icons.broken_image_outlined), findsOneWidget);
+    expect(find.byType(Image), findsNothing);
   });
 
   testWidgets('只有视频时显示视频图标而不是图片', (tester) async {
