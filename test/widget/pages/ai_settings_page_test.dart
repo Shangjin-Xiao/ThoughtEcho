@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/models/agent_memory.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/pages/ai_settings_page.dart';
+import 'package:thoughtecho/services/agent_memory_service.dart';
+import 'package:thoughtecho/services/database_schema_manager.dart';
+import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 
 import '../../test_harness.dart';
@@ -46,9 +51,15 @@ void _installSecureStorageFake() {
   });
 }
 
-Widget _wrap(SettingsService settingsService) {
-  return ChangeNotifierProvider<SettingsService>.value(
-    value: settingsService,
+Widget _wrap(
+  SettingsService settingsService,
+  AgentMemoryService memoryService,
+) {
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider<SettingsService>.value(value: settingsService),
+      ChangeNotifierProvider<AgentMemoryService>.value(value: memoryService),
+    ],
     child: MaterialApp(
       locale: const Locale('zh'),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -64,14 +75,28 @@ AppLocalizations _l10n(WidgetTester tester) =>
 void main() {
   group('AISettingsPage', () {
     late SettingsService settingsService;
+    late AgentMemoryService memoryService;
+    late Database memoryDb;
 
     setUp(() async {
       await TestHarness.initialize();
       _installSecureStorageFake();
       settingsService = await SettingsService.create();
+
+      // 记忆卡片会去查条目数，给它一个真实的内存库，别让页面测试依赖异常路径。
+      DatabaseService.clearTestDatabase();
+      memoryDb = await databaseFactory.openDatabase(inMemoryDatabasePath);
+      await DatabaseSchemaDefinitions().ensureAgentMemoryTables(memoryDb);
+      DatabaseService.setTestDatabase(memoryDb);
+      memoryService = AgentMemoryService(
+        databaseService: DatabaseService(),
+        settingsService: settingsService,
+      );
     });
 
     tearDown(() async {
+      DatabaseService.clearTestDatabase();
+      await memoryDb.close();
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(_secureStorageChannel, null);
       await TestHarness.tearDown();
@@ -79,7 +104,7 @@ void main() {
 
     testWidgets('shows the empty state and the recommended Ollama Cloud entry',
         (tester) async {
-      await tester.pumpWidget(_wrap(settingsService));
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
 
       final l10n = _l10n(tester);
@@ -105,7 +130,7 @@ void main() {
         ),
       );
 
-      await tester.pumpWidget(_wrap(settingsService));
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
 
       final l10n = _l10n(tester);
@@ -160,7 +185,7 @@ void main() {
         ),
       );
 
-      await tester.pumpWidget(_wrap(settingsService));
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
 
       final l10n = _l10n(tester);
@@ -183,6 +208,35 @@ void main() {
       expect(providers, hasLength(1));
       expect(providers.single.id, 'local');
       expect(providers.single.model, 'new-model');
+    });
+
+    testWidgets('memory switch defaults on and does not clear entries',
+        (tester) async {
+      await memoryService.rememberProfile(
+        kind: AgentMemoryKind.style,
+        directive: '回复保持碎句',
+      );
+
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+      final switchTile = find.widgetWithText(
+        SwitchListTile,
+        l10n.agentMemoryEnableTitle,
+      );
+      await tester.scrollUntilVisible(switchTile, 200);
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<SwitchListTile>(switchTile).value, isTrue);
+
+      await tester.tap(switchTile);
+      await tester.pumpAndSettle();
+
+      // 关开关只停读写：条目还在，注入才停。
+      expect(settingsService.agentMemoryEnabled, isFalse);
+      expect((await memoryService.counts()).profileCount, 1);
+      expect(await memoryService.buildProfileBlock(), isNull);
     });
   });
 }
