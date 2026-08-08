@@ -1,0 +1,20 @@
+test/widget/pages/ai_settings_page_test.dart
+  s_3c181b1b3300ea::t_612613f3461bab 208-216,234-240
+  s_3c181b1b3300ea::t_d194dba1517661 88-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "f4e3dfd77abd59348418f6f11f9092c0d7a0af68",
+  "prompts": {},
+  "sessions": {
+    "s_3c181b1b3300ea": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ab0dda70-6cd5-45be-bb07-3022cfec6260",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
