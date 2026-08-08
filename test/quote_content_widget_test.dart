@@ -56,6 +56,10 @@ void main() {
   });
 
   setUp(() {
+    // QuoteContent 的 Document / Controller 缓存是静态的，用例之间会通过它耦合：
+    // 下面几条只有版式不同、笔记完全相同，不统一清就会读到上一个版式的缓存文档，
+    // 而且这种耦合会随着新增用例或调整顺序悄悄失效。
+    QuoteContent.clearCacheForTesting();
     QuoteItemWidget.clearExpansionCache();
     isListScrolling.value = false;
     isListDragActive.value = false;
@@ -205,7 +209,6 @@ void main() {
   });
 
   testWidgets('inline 版式把媒体留在正文原位交给 Quill', (tester) async {
-    QuoteContent.clearCacheForTesting();
     final quote = createDeltaQuoteWithImage();
 
     await tester.pumpWidget(
@@ -233,7 +236,6 @@ void main() {
   });
 
   testWidgets('banner 版式把媒体画在卡片顶部且剥离嵌入', (tester) async {
-    QuoteContent.clearCacheForTesting();
     final quote = createDeltaQuoteWithImage();
 
     await tester.pumpWidget(
@@ -269,7 +271,6 @@ void main() {
   testWidgets('媒体被摘走后折叠盒按内容收缩，不再留一大块空白', (tester) async {
     // 带图笔记必然折叠（高度估算里一张图算 200px > 160px），但摘掉图之后正文
     // 可能只剩一两行。折叠盒若维持定高 160px，差额就是卡片里那块突兀的空白。
-    QuoteContent.clearCacheForTesting();
     final quote = createDeltaQuoteWithImage();
 
     await tester.pumpWidget(
@@ -292,7 +293,6 @@ void main() {
   });
 
   testWidgets('纯文本长笔记的折叠盒仍然定高，不受收缩逻辑影响', (tester) async {
-    QuoteContent.clearCacheForTesting();
     final quote = createPlainQuote('A' * 400);
 
     await tester.pumpWidget(buildTestApp(quote, contentWidth: 320));
@@ -308,9 +308,8 @@ void main() {
     // 这是整套改动的核心不变量：滚动中 Quill 走占位不物化，但缩略图必须已经在树里。
     // 「空白 → 灰框 → 图片」三段式的前两段就是图片被挡在富文本物化时序后面造成的。
     //
-    // 必须先清缓存：控制器缓存命中时按设计会跳过延迟物化（见 _buildRichTextContent
-    // 里的 contains 判断），而这里要复现的正是「卡片第一次滚进视野」的冷启动场景。
-    QuoteContent.clearCacheForTesting();
+    // 冷启动场景由 setUp 里的统一清缓存保证：控制器缓存命中时按设计会跳过延迟
+    // 物化（见 _buildRichTextContent 里的 contains 判断）。
     isListScrolling.value = true;
     addTearDown(() => isListScrolling.value = false);
 
@@ -330,9 +329,6 @@ void main() {
   });
 
   testWidgets('展开态仍由 Quill 渲染完整图文混排', (tester) async {
-    // 显式清缓存，不去依赖「showFullContent 会生成不同 contentVariant 所以撞不上
-    // 上一条用例的折叠态缓存」这个内部实现细节。
-    QuoteContent.clearCacheForTesting();
     final quote = createDeltaQuoteWithImage();
 
     await tester.pumpWidget(

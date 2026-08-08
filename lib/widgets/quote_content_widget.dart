@@ -1097,8 +1097,12 @@ class QuoteContent extends StatelessWidget {
               prioritizeBoldContent: prioritizeBoldContent,
               stripMedia: stripMedia,
               // 媒体被摘走之后正文可能只剩一两行，而折叠盒默认是定高 160px 的，
-              // 差额就成了卡片里那块突兀的空白。摘走媒体时一律改为按内容收缩。
-              fitCollapsedHeightToContent: stripMedia,
+              // 差额就成了卡片里那块突兀的空白。
+              //
+              // 必须同时要求「确实有媒体可摘」：无媒体的富文本笔记只有真超过
+              // 160px 才会折叠，盒子天然是满的，维持定高让列表高度估算更稳。
+              // 只看 stripMedia 的话会把所有富文本折叠卡片一起改成收缩。
+              fitCollapsedHeightToContent: stripMedia && media.hasMedia,
               maxWidth: textMaxWidth,
             );
 

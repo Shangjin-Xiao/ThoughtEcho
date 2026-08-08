@@ -31,7 +31,7 @@ class CollapsedMediaBanner extends StatelessWidget {
   static const double defaultHeight = 150.0;
 
   /// 通栏条与下方正文的间距。
-  static const double gap = 10.0;
+  static const double gap = 12.0;
 
   final DeltaMediaSummary media;
 
@@ -83,7 +83,7 @@ class CollapsedMediaBanner extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
-                      vertical: 2,
+                      vertical: 4,
                     ),
                     child: Text(
                       '+$extraCount',

@@ -114,8 +114,13 @@ class AppSettings {
     this.sentryEnabled = false, // 默认不启用 Sentry 诊断与性能上报
     this.sentryDisclosureShown = false, // 默认未显示提示
     this.noteInsertAnimationType = 'slide', // 默认平滑上升
-    this.noteCardMediaStyle = NoteCardMediaStyle.thumbnail,
-  }) : trashRetentionDays = normalizeTrashRetentionDays(trashRetentionDays);
+    String noteCardMediaStyle = NoteCardMediaStyle.thumbnail,
+  })  : trashRetentionDays = normalizeTrashRetentionDays(trashRetentionDays),
+        // 在构造函数里统一兜底，default / copyWith / fromJson 三条路径就都覆盖了。
+        // 只在 fromJson 里兜的话，绕过 setNoteCardMediaStyle 的写法
+        // （updateAppSettings(appSettings.copyWith(noteCardMediaStyle: x))）
+        // 会把非法值写进持久化 JSON。
+        noteCardMediaStyle = NoteCardMediaStyle.normalize(noteCardMediaStyle);
 
   static int normalizeTrashRetentionDays(int? days) {
     if (days == null) {

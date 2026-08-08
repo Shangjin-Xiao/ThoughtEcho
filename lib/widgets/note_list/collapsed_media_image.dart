@@ -48,7 +48,12 @@ class _CollapsedMediaImageState extends State<CollapsedMediaImage> {
   @override
   void didUpdateWidget(covariant CollapsedMediaImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.source != widget.source) {
+    // 解码尺寸变化（旋屏、dpr 变化、通栏宽度变化）也要重置。
+    // 只比 source 的话 _hasError 会一直挂着，而 build 第一行就因它提前返回失败
+    // 占位——新建出来的 provider 永远没机会被试，这张图就永久停在 broken-image。
+    if (oldWidget.source != widget.source ||
+        oldWidget.cacheWidth != widget.cacheWidth ||
+        oldWidget.cacheHeight != widget.cacheHeight) {
       _hasError = false;
       _provider = null;
       _providerSource = null;
