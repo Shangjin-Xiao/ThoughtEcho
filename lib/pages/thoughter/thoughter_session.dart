@@ -377,31 +377,36 @@ extension _ThoughterSession on _ThoughterPageState {
       if (quotes.isEmpty) return;
 
       final noteCount = quotes.length;
-      final totalWords =
-          quotes.fold<int>(0, (sum, q) => sum + q.content.length);
-      final activeDays =
-          quotes.map((q) => q.date.substring(0, 10)).toSet().length;
-
-      // 最常用时段
+      var totalWords = 0;
+      final activeDayKeys = <String>{};
       final periodCounts = <String, int>{};
+      final weatherCounts = <String, int>{};
+      final tagCounts = <String, int>{};
       for (final q in quotes) {
-        if (q.dayPeriod != null && q.dayPeriod!.isNotEmpty) {
-          periodCounts[q.dayPeriod!] = (periodCounts[q.dayPeriod!] ?? 0) + 1;
+        totalWords += q.content.length;
+        activeDayKeys.add(q.date.substring(0, 10));
+
+        final period = q.dayPeriod;
+        if (period != null && period.isNotEmpty) {
+          periodCounts[period] = (periodCounts[period] ?? 0) + 1;
+        }
+
+        final weather = q.weather;
+        if (weather != null && weather.isNotEmpty) {
+          weatherCounts[weather] = (weatherCounts[weather] ?? 0) + 1;
+        }
+
+        for (final tagId in q.tagIds) {
+          tagCounts[tagId] = (tagCounts[tagId] ?? 0) + 1;
         }
       }
+
       final topPeriod = periodCounts.entries.isNotEmpty
           ? periodCounts.entries
               .reduce((a, b) => a.value >= b.value ? a : b)
               .key
           : null;
 
-      // 最常用天气
-      final weatherCounts = <String, int>{};
-      for (final q in quotes) {
-        if (q.weather != null && q.weather!.isNotEmpty) {
-          weatherCounts[q.weather!] = (weatherCounts[q.weather!] ?? 0) + 1;
-        }
-      }
       final topWeather = weatherCounts.entries.isNotEmpty
           ? weatherCounts.entries
               .reduce((a, b) => a.value >= b.value ? a : b)
@@ -410,12 +415,6 @@ extension _ThoughterSession on _ThoughterPageState {
 
       // 最常用标签（解析为名称）
       String? topTag;
-      final tagCounts = <String, int>{};
-      for (final q in quotes) {
-        for (final tagId in q.tagIds) {
-          tagCounts[tagId] = (tagCounts[tagId] ?? 0) + 1;
-        }
-      }
       if (tagCounts.isNotEmpty) {
         final topTagId =
             tagCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
@@ -431,7 +430,7 @@ extension _ThoughterSession on _ThoughterPageState {
         mostTimePeriod: topPeriod,
         mostWeather: topWeather,
         topTag: topTag,
-        activeDays: activeDays,
+        activeDays: activeDayKeys.length,
         noteCount: noteCount,
         totalWordCount: totalWords,
       );
