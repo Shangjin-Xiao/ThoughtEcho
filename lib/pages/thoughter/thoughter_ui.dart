@@ -8,10 +8,13 @@ const double _kUserBubbleWidthFactor = 0.78;
 /// markdown 的排版落在最后一个字后面，而不是另起一行。
 const String _kStreamingCursor = '▌';
 
-/// 输入框的排版参数。发送键的居中量是从这三者算出来的
-/// （见 [_ThoughterUI._sendButtonBottomInset]），改任何一个都不用手动补偿。
+/// 输入框单行的排版参数：字号 × 行高 + 上下内边距 = 一行的盒子高度
+/// （见 [_ThoughterUI._composerLineBoxHeight]），发送键就在那个盒子里居中，
+/// 所以改这两个值不用手动补偿按钮位置。
 const double _kComposerLineHeight = 1.35;
 const double _kComposerVerticalPadding = 12;
+
+/// 发送键的视觉直径。点击区由 IconButton 自己撑到 48，不参与定位。
 const double _kSendButtonDiameter = 36;
 
 extension _ThoughterUI on _ThoughterPageState {
