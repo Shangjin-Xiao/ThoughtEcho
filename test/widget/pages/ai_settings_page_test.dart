@@ -85,6 +85,9 @@ void main() {
         settingsService: settingsService,
         databasePath: inMemoryDatabasePath,
       );
+      // 先在 fake-async 之外把库打开：否则首次打开会发生在 widget build 里，
+      // 那条 Future 在 testWidgets 的时钟下永远不完成。
+      await memoryService.counts();
     });
 
     tearDown(() async {
@@ -202,12 +205,15 @@ void main() {
       expect(providers.single.model, 'new-model');
     });
 
-    testWidgets('memory switch defaults on and does not clear entries',
-        (tester) async {
-      await memoryService.rememberProfile(
-        kind: AgentMemoryKind.style,
-        directive: '回复保持碎句',
-      );
+    testWidgets('memory switch defaults on and toggles off', (tester) async {
+      // sqflite 是真实的异步 I/O，在 testWidgets 的 fake-async 区里 await 它
+      // 永远不会返回；碰数据库的部分一律走 runAsync。
+      await tester.runAsync(() async {
+        await memoryService.rememberProfile(
+          kind: AgentMemoryKind.style,
+          directive: '回复保持碎句',
+        );
+      });
 
       await tester.pumpWidget(_wrap(settingsService, memoryService));
       await tester.pumpAndSettle();
@@ -224,11 +230,14 @@ void main() {
 
       await tester.tap(switchTile);
       await tester.pumpAndSettle();
-
-      // 关开关只停读写：条目还在，注入才停。
       expect(settingsService.agentMemoryEnabled, isFalse);
-      expect((await memoryService.counts()).profileCount, 1);
-      expect(await memoryService.buildProfileBlock(), isNull);
+
+      // 关开关只停读写，条目不删——数据侧的不变量在单元测试里断言，
+      // 这里只确认 UI 和设置对得上。
+      await tester.runAsync(() async {
+        expect((await memoryService.counts()).profileCount, 1);
+        expect(await memoryService.buildProfileBlock(), isNull);
+      });
     });
   });
 }
