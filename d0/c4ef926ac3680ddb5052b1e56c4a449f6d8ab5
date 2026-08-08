@@ -1,0 +1,24 @@
+lib/pages/explore/explore_data_loading.dart
+  s_5338c8854369a0::t_6511b37192f66e 84-85,87-88,90-91,112-115,117-127
+lib/pages/thoughter/thoughter_session.dart
+  s_5338c8854369a0::t_22e73435cf08b3 387
+  s_5338c8854369a0::t_1f7694386821fe 381
+  s_5338c8854369a0::t_d89d67de35ead7 380,383-384,386,388-400,403
+  s_5338c8854369a0::t_95405de5349e00 433
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.20",
+  "base_commit_sha": "d0c4ef926ac3680ddb5052b1e56c4a449f6d8ab5",
+  "prompts": {},
+  "sessions": {
+    "s_5338c8854369a0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_020ad74d9ffeEYupsKApWY2JVV",
+        "model": "deepseek-v4-flash"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
