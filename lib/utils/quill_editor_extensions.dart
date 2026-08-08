@@ -307,6 +307,8 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
       _frameRecorded = false;
       _provider = null;
       _providerSource = null;
+      _providerCacheWidth = null;
+      _providerCacheHeight = null;
     }
   }
 
@@ -329,8 +331,10 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
   /// 大多不是真的重解码，而是这道门控自己造出来的。它还配了一个 `_loadedSources`
   /// 影子集合去猜缓存状态，和真实的 `imageCache` 会各自失效、互相说谎。
   ImageProvider? _resolveProvider(int? cacheWidth, int? cacheHeight) {
-    if (_provider != null &&
-        _providerSource == widget.source &&
+    // 命中条件**不能**带上 `_provider != null`：source 非法时
+    // createOptimizedImageProvider 返回 null，带上这个条件就永远命不中，
+    // 每一帧都要重新解析一次来源。已存的三个字段本身就足以标识缓存键。
+    if (_providerSource == widget.source &&
         _providerCacheWidth == cacheWidth &&
         _providerCacheHeight == cacheHeight) {
       return _provider;

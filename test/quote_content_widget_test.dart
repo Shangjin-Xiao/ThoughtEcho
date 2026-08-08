@@ -211,6 +211,9 @@ void main() {
   });
 
   testWidgets('展开态仍由 Quill 渲染完整图文混排', (tester) async {
+    // 显式清缓存，不去依赖「showFullContent 会生成不同 contentVariant 所以撞不上
+    // 上一条用例的折叠态缓存」这个内部实现细节。
+    QuoteContent.clearCacheForTesting();
     final quote = createDeltaQuoteWithImage();
 
     await tester.pumpWidget(

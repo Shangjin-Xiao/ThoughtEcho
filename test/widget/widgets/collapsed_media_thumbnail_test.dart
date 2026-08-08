@@ -9,6 +9,8 @@ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/utils/delta_media_extractor.dart';
 import 'package:thoughtecho/widgets/note_list/collapsed_media_thumbnail.dart';
 
+import '../../test_harness.dart';
+
 /// 1×1 的合法 PNG。测试把它写进临时文件，走 FileImage——和真实笔记一致。
 const String _tinyPngBase64 =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk'
@@ -39,25 +41,37 @@ Widget _wrap(Widget child) {
   );
 }
 
+/// 有界地等真实解码完成：占位图标消失即到位。
+///
+/// 不用固定时长的 `Future.delayed`（CI 上是不稳定来源），也不用 `pumpAndSettle`
+/// ——真实解码走 dart:ui 的异步 codec，不随假时钟推进，`pumpAndSettle` 只会在
+/// 占位态上空转。必须包在 `tester.runAsync` 里调用。
+Future<void> _pumpUntilDecoded(WidgetTester tester) async {
+  for (var i = 0; i < 100; i++) {
+    if (find.byIcon(Icons.image_outlined).evaluate().isEmpty) return;
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    await tester.pump();
+  }
+  fail('图片在 1s 内没有完成解码');
+}
+
 void main() {
-  late Directory tempDir;
   late String pngPath;
 
-  setUpAll(() {
-    tempDir = Directory.systemTemp.createTempSync('thumb_test');
+  setUpAll(() async {
+    // 平台插件和文件系统一律走 test_harness 的 mock 目录，
+    // 不碰真实用户目录（test/AGENTS.md）。
+    final tempDir = await TestHarness.createTempDirectory('collapsed_thumb');
     pngPath = '${tempDir.path}/tiny.png';
     File(pngPath).writeAsBytesSync(
       Uint8List.fromList(base64Decode(_tinyPngBase64)),
     );
   });
 
-  tearDownAll(() {
-    if (tempDir.existsSync()) {
-      tempDir.deleteSync(recursive: true);
-    }
-  });
-
   setUp(() {
+    // 每条用例都从冷缓存开始。这不是"覆盖组件的缓存复用行为"——恰恰相反，
+    // 下面那条命中测试是**自己**先把图预热进缓存再断言命中的，
+    // 不清就会依赖用例执行顺序，命中断言也就失去意义。
     imageCache.clear();
     imageCache.clearLiveImages();
   });
@@ -76,8 +90,7 @@ void main() {
     await tester.runAsync(() async {
       await tester.pumpWidget(_wrap(CollapsedMediaThumbnail(media: media)));
       await tester.pump();
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      await tester.pump();
+      await _pumpUntilDecoded(tester);
     });
 
     expect(imageCache.currentSize, greaterThan(0));
@@ -142,19 +155,23 @@ void main() {
   });
 
   testWidgets('缩略图尺寸固定，占位与成图不改变布局', (tester) async {
-    final media = _mediaWithImage();
+    final media = _mediaWithImage(pngPath);
 
-    await tester.pumpWidget(_wrap(CollapsedMediaThumbnail(media: media)));
-    await tester.pump();
-    final sizeBeforeDecode = tester.getSize(
-      find.byType(CollapsedMediaThumbnail),
-    );
+    late Size sizeBeforeDecode;
+    late Size sizeAfterDecode;
 
-    await tester.pumpAndSettle();
-    final sizeAfterDecode = tester.getSize(
-      find.byType(CollapsedMediaThumbnail),
-    );
+    await tester.runAsync(() async {
+      await tester.pumpWidget(_wrap(CollapsedMediaThumbnail(media: media)));
+      await tester.pump();
+      // 断言此刻确实还在占位态，否则下面的"前后尺寸一致"是废话。
+      expect(find.byIcon(Icons.image_outlined), findsOneWidget);
+      sizeBeforeDecode = tester.getSize(find.byType(CollapsedMediaThumbnail));
 
+      await _pumpUntilDecoded(tester);
+      sizeAfterDecode = tester.getSize(find.byType(CollapsedMediaThumbnail));
+    });
+
+    expect(find.byIcon(Icons.image_outlined), findsNothing);
     expect(sizeBeforeDecode, sizeAfterDecode);
     expect(
       sizeAfterDecode,

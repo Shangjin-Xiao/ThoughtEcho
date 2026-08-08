@@ -742,7 +742,9 @@ class QuoteContent extends StatelessWidget {
               ) <
               targetHeight) {
         // Preserve the first non-text block crossing the preview boundary.
-        // Quill remains the renderer for every pixel that can become visible.
+        // Quill still renders every visible non-media pixel; collapsed media
+        // was already lifted out to [CollapsedMediaThumbnail] by _stripMediaOps,
+        // so this path only ever sees non-media embeds (e.g. formula).
         truncatedOps.add(candidate);
       }
       break;
@@ -1048,8 +1050,15 @@ class QuoteContent extends StatelessWidget {
         final media = DeltaMediaCache.of(quote.deltaContent);
         return LayoutBuilder(
           builder: (context, constraints) {
-            final double reserved =
-                media.hasMedia ? CollapsedMediaThumbnail.reservedWidth() : 0.0;
+            // 窄到放不下缩略图时把预留宽度压回半宽：否则 textMaxWidth 被 clamp
+            // 到 0，而 Row 里的 Expanded 会分到负空间直接溢出。折叠正文区正常
+            // 不会窄到这个程度，这里纯粹是防御。
+            final double reserved = media.hasMedia
+                ? (constraints.maxWidth.isFinite
+                    ? CollapsedMediaThumbnail.reservedWidth()
+                        .clamp(0.0, constraints.maxWidth / 2)
+                    : CollapsedMediaThumbnail.reservedWidth())
+                : 0.0;
             // 文字宽度要先扣掉缩略图占的位，否则折叠高度会按整宽估算而截少内容。
             final double textMaxWidth = constraints.maxWidth.isFinite
                 ? (constraints.maxWidth - reserved).clamp(

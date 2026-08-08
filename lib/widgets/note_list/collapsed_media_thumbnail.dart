@@ -90,6 +90,9 @@ class CollapsedMediaThumbnail extends StatelessWidget {
                       child: Text(
                         '+$extraCount',
                         style: theme.textTheme.labelSmall?.copyWith(
+                          // 底板是 scrim（任何主题下都是半透明黑），所以这里刻意
+                          // 用固定白色而不是跟随主题的 onSurface 一类令牌——
+                          // 跟随主题会在浅色模式下变成黑字压在黑底上。
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
                         ),
@@ -134,13 +137,15 @@ class _ThumbnailImageState extends State<_ThumbnailImage> {
       _hasError = false;
       _provider = null;
       _providerSource = null;
+      _providerDecodeSize = null;
     }
   }
 
   ImageProvider? _resolveProvider(int? decodeSize) {
-    if (_provider != null &&
-        _providerSource == widget.source &&
-        _providerDecodeSize == decodeSize) {
+    // 命中条件**不能**带上 `_provider != null`：source 非法时
+    // createOptimizedImageProvider 返回 null，带上这个条件就永远命不中，
+    // 每一帧都要重新解析一次来源。
+    if (_providerSource == widget.source && _providerDecodeSize == decodeSize) {
       return _provider;
     }
     final provider = createOptimizedImageProvider(

@@ -184,6 +184,9 @@ void main() {
         ]));
       }
       expect(DeltaMediaCache.stats['cacheSize'], lessThanOrEqualTo(maxSize));
+      // 下界断言：只有上界的话，"of() 因回归完全不写缓存"（cacheSize 恒为 0）
+      // 也会让这条测试通过。
+      expect(DeltaMediaCache.stats['cacheSize'], greaterThan(0));
     });
 
     test('空 delta 不进缓存', () {
