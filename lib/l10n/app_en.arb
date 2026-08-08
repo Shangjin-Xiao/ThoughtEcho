@@ -4154,6 +4154,13 @@
   "firstOpenScrollPerfMonitorExperimentDesc": "Record dropped frames on the first Notes scroll after a cold start (off by default)",
   "addNoteDeferMetadataExperiment": "[Experiment] AddNote deferred metadata",
   "addNoteDeferMetadataExperimentDesc": "Defer location and weather lookup until the keyboard animation finishes (off by default)",
+  "noteCardMediaStyleExperiment": "[Experiment] Note card media layout",
+  "noteCardMediaStyleThumbnail": "Side thumbnail",
+  "noteCardMediaStyleThumbnailDesc": "Media is drawn as a square thumbnail on the right. Always visible when present, center-cropped for recognisability, cheapest to decode.",
+  "noteCardMediaStyleInline": "Inline (legacy)",
+  "noteCardMediaStyleInlineDesc": "Images stay at their original position in the body, order fully preserved. Trade-off: images after the visible text get clipped away, and audio/video instantiate players in the list.",
+  "noteCardMediaStyleBanner": "Top banner",
+  "noteCardMediaStyleBannerDesc": "Media is drawn as a full-width banner at the top of the card, photo first. Position is normalised but decoding costs the most.",
   "noteInsertAnimationExperiment": "[Experiment] Note insert animation",
   "noteInsertAnimationCurrent": "Current: {name}",
   "@noteInsertAnimationCurrent": {

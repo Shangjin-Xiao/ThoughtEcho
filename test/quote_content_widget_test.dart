@@ -8,9 +8,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/quill_editor_extensions.dart';
+import 'package:thoughtecho/widgets/note_list/collapsed_media_banner.dart';
 import 'package:thoughtecho/widgets/note_list/collapsed_media_thumbnail.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
@@ -18,9 +20,13 @@ import 'package:visibility_detector/visibility_detector.dart';
 
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
   bool _prioritizeBold;
+  String _mediaStyle;
 
-  _TestSettingsService({bool prioritizeBold = false})
-      : _prioritizeBold = prioritizeBold;
+  _TestSettingsService({
+    bool prioritizeBold = false,
+    String mediaStyle = NoteCardMediaStyle.thumbnail,
+  })  : _prioritizeBold = prioritizeBold,
+        _mediaStyle = mediaStyle;
 
   @override
   bool get prioritizeBoldContentInCollapse => _prioritizeBold;
@@ -28,6 +34,15 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
   @override
   Future<void> setPrioritizeBoldContentInCollapse(bool enabled) async {
     _prioritizeBold = enabled;
+    notifyListeners();
+  }
+
+  @override
+  String get noteCardMediaStyle => _mediaStyle;
+
+  @override
+  Future<void> setNoteCardMediaStyle(String style) async {
+    _mediaStyle = style;
     notifyListeners();
   }
 
@@ -57,9 +72,13 @@ void main() {
     bool showFullContent = false,
     bool? needsExpansionOverride,
     double? contentWidth,
+    String mediaStyle = NoteCardMediaStyle.thumbnail,
   }) {
     return ChangeNotifierProvider<SettingsService>.value(
-      value: _TestSettingsService(prioritizeBold: prioritizeBold),
+      value: _TestSettingsService(
+        prioritizeBold: prioritizeBold,
+        mediaStyle: mediaStyle,
+      ),
       child: MaterialApp(
         localizationsDelegates: const [
           AppLocalizations.delegate,
@@ -183,6 +202,106 @@ void main() {
     expect(embedCount, 0);
 
     expect(find.byType(CollapsedMediaThumbnail), findsOneWidget);
+  });
+
+  testWidgets('inline 版式把媒体留在正文原位交给 Quill', (tester) async {
+    QuoteContent.clearCacheForTesting();
+    final quote = createDeltaQuoteWithImage();
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+        mediaStyle: NoteCardMediaStyle.inline,
+      ),
+    );
+    await tester.pump();
+
+    final editor = tester.widget<quill.QuillEditor>(
+      find.byType(quill.QuillEditor),
+    );
+    final embedCount = editor.controller.document
+        .toDelta()
+        .toJson()
+        .where((op) => op['insert'] is Map)
+        .length;
+    expect(embedCount, 1, reason: 'inline 版式不得剥离嵌入');
+
+    expect(find.byType(CollapsedMediaThumbnail), findsNothing);
+    expect(find.byType(CollapsedMediaBanner), findsNothing);
+  });
+
+  testWidgets('banner 版式把媒体画在卡片顶部且剥离嵌入', (tester) async {
+    QuoteContent.clearCacheForTesting();
+    final quote = createDeltaQuoteWithImage();
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+        mediaStyle: NoteCardMediaStyle.banner,
+      ),
+    );
+    await tester.pump();
+
+    final editor = tester.widget<quill.QuillEditor>(
+      find.byType(quill.QuillEditor),
+    );
+    final embedCount = editor.controller.document
+        .toDelta()
+        .toJson()
+        .where((op) => op['insert'] is Map)
+        .length;
+    expect(embedCount, 0);
+
+    expect(find.byType(CollapsedMediaBanner), findsOneWidget);
+    expect(find.byType(CollapsedMediaThumbnail), findsNothing);
+
+    // 通栏在正文上方。
+    final bannerY = tester.getTopLeft(find.byType(CollapsedMediaBanner)).dy;
+    final contentY =
+        tester.getTopLeft(find.byKey(QuoteContent.collapsedWrapperKey)).dy;
+    expect(bannerY, lessThan(contentY));
+  });
+
+  testWidgets('媒体被摘走后折叠盒按内容收缩，不再留一大块空白', (tester) async {
+    // 带图笔记必然折叠（高度估算里一张图算 200px > 160px），但摘掉图之后正文
+    // 可能只剩一两行。折叠盒若维持定高 160px，差额就是卡片里那块突兀的空白。
+    QuoteContent.clearCacheForTesting();
+    final quote = createDeltaQuoteWithImage();
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+      ),
+    );
+    await tester.pump();
+
+    final wrapperHeight =
+        tester.getSize(find.byKey(QuoteContent.collapsedWrapperKey)).height;
+    expect(
+      wrapperHeight,
+      lessThan(QuoteContent.collapsedContentMaxHeight),
+      reason: '短正文不该被撑到折叠上限',
+    );
+    expect(wrapperHeight, greaterThan(0));
+  });
+
+  testWidgets('纯文本长笔记的折叠盒仍然定高，不受收缩逻辑影响', (tester) async {
+    QuoteContent.clearCacheForTesting();
+    final quote = createPlainQuote('A' * 400);
+
+    await tester.pumpWidget(buildTestApp(quote, contentWidth: 320));
+    await tester.pump();
+
+    expect(
+      tester.getSize(find.byKey(QuoteContent.collapsedWrapperKey)).height,
+      QuoteContent.collapsedContentMaxHeight,
+    );
   });
 
   testWidgets('折叠缩略图与卡片同时挂载，不等富文本物化', (tester) async {

@@ -71,6 +71,9 @@ class AppSettings {
   final String
       noteInsertAnimationType; // 记录页卡片增加/修改动画类型: 'scale'、'slide' 或 'none'
 
+  /// 记录页折叠卡片里媒体的显示方式，取值见 [NoteCardMediaStyle]。
+  final String noteCardMediaStyle;
+
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
     this.dailyQuoteProvider = 'hitokoto',
@@ -111,6 +114,7 @@ class AppSettings {
     this.sentryEnabled = false, // 默认不启用 Sentry 诊断与性能上报
     this.sentryDisclosureShown = false, // 默认未显示提示
     this.noteInsertAnimationType = 'slide', // 默认平滑上升
+    this.noteCardMediaStyle = NoteCardMediaStyle.thumbnail,
   }) : trashRetentionDays = normalizeTrashRetentionDays(trashRetentionDays);
 
   static int normalizeTrashRetentionDays(int? days) {
@@ -161,6 +165,7 @@ class AppSettings {
       'sentryEnabled': sentryEnabled,
       'sentryDisclosureShown': sentryDisclosureShown,
       'noteInsertAnimationType': noteInsertAnimationType,
+      'noteCardMediaStyle': noteCardMediaStyle,
     };
   }
 
@@ -243,6 +248,9 @@ class AppSettings {
       sentryDisclosureShown: map['sentryDisclosureShown'] ?? false,
       noteInsertAnimationType:
           _readString(map['noteInsertAnimationType'], 'scale'),
+      noteCardMediaStyle: NoteCardMediaStyle.normalize(
+        map['noteCardMediaStyle'],
+      ),
     );
   }
 
@@ -286,6 +294,7 @@ class AppSettings {
         sentryEnabled: false,
         sentryDisclosureShown: false,
         noteInsertAnimationType: 'slide',
+        noteCardMediaStyle: NoteCardMediaStyle.thumbnail,
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
@@ -333,6 +342,7 @@ class AppSettings {
     bool? sentryEnabled,
     bool? sentryDisclosureShown,
     String? noteInsertAnimationType,
+    String? noteCardMediaStyle,
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
@@ -394,6 +404,34 @@ class AppSettings {
           sentryDisclosureShown ?? this.sentryDisclosureShown,
       noteInsertAnimationType:
           noteInsertAnimationType ?? this.noteInsertAnimationType,
+      noteCardMediaStyle: noteCardMediaStyle ?? this.noteCardMediaStyle,
     );
+  }
+}
+
+/// 记录页折叠卡片里媒体的显示方式。
+///
+/// 三种版式换的只是「媒体画在哪、画多大」，正文渲染路径完全一致。开发者模式下
+/// 可切换，用来对着真实笔记比较取舍：
+///
+/// - [thumbnail]：媒体摘出正文，画成卡片右侧的方形缩略图。**只有它能保证
+///   「有媒体就一定看得见」**——另外两种在正文较长时媒体会被折叠高度截掉。
+///   `BoxFit.cover` 居中裁切，辨识度也最高。
+/// - [inline]：媒体留在正文原位，由 Quill 按 delta 顺序渲染（旧版式）。图文顺序
+///   完全保真，代价是媒体重新受制于富文本物化时序，且音视频会在滚动列表里
+///   实例化播放器。
+/// - [banner]：媒体摘出正文，画成卡片顶部的通栏图。位置归一化、照片是主角，
+///   适合「一张图 + 一句话」为主的用法；单张解码开销也最大。
+abstract final class NoteCardMediaStyle {
+  static const String thumbnail = 'thumbnail';
+  static const String inline = 'inline';
+  static const String banner = 'banner';
+
+  static const List<String> values = [thumbnail, inline, banner];
+
+  /// 读设置时兜底：历史数据、手改配置或未来删掉的取值一律回落到 [thumbnail]。
+  static String normalize(Object? raw) {
+    final value = raw?.toString();
+    return values.contains(value) ? value! : thumbnail;
   }
 }
