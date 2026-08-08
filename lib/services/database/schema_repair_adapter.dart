@@ -1,5 +1,18 @@
 part of '../database_schema_manager.dart';
 
+/// Quotes an SQLite identifier (table/column name) for use in DDL/DML.
+///
+/// SQLite identifiers cannot be bound as query parameters, so the name is
+/// validated against a strict identifier whitelist and then double-quoted.
+/// The whitelist excludes quotes and whitespace entirely, which both blocks
+/// injection and protects reserved words (e.g. `date`, `order`).
+String _quoteIdentifier(String identifier) {
+  if (!RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$').hasMatch(identifier)) {
+    throw StateError('不安全的列名: $identifier');
+  }
+  return '"$identifier"';
+}
+
 /// Validates the full current schema after creation, upgrade and repair.
 class SchemaValidationAdapter {
   SchemaValidationAdapter(this._definitions);
@@ -65,16 +78,13 @@ class SchemaRepairAdapter {
           if (!quoteColumns.contains(entry.key)) {
             final colName = entry.key;
             final colDef = entry.value;
-            // 🛡️ Sentinel: 安全校验，防止 DDL 注入
-            if (!RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$').hasMatch(colName)) {
-              throw StateError('不安全的列名: $colName');
-            }
+            // colDef 不是标识符且不可参数化，用白名单校验后拼入 DDL
             if (!RegExp(
                     r"^[a-zA-Z0-9_ ]+(?:DEFAULT (?:'[a-zA-Z0-9_]*'|[0-9]+))?$")
                 .hasMatch(colDef)) {
               throw StateError('不安全的列定义: $colDef');
             }
-            final safeColName = '"${colName.replaceAll('"', '""')}"';
+            final safeColName = _quoteIdentifier(colName);
             final query = 'ALTER TABLE quotes ADD COLUMN $safeColName $colDef';
             await transaction.execute(query);
             logDebug('数据库repair添加 quotes.$colName');
@@ -365,13 +375,8 @@ class SchemaDataBackfillAdapter {
     if (columns.contains(columnName)) {
       return;
     }
-    // 🛡️ Sentinel: 安全校验，防止 DDL 注入
-    if (!RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$').hasMatch(columnName) ||
-        !RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$').hasMatch(sourceColumn)) {
-      throw StateError('不安全的列名: $columnName 或 $sourceColumn');
-    }
-    final safeColumnName = '"${columnName.replaceAll('"', '""')}"';
-    final safeSourceColumn = '"${sourceColumn.replaceAll('"', '""')}"';
+    final safeColumnName = _quoteIdentifier(columnName);
+    final safeSourceColumn = _quoteIdentifier(sourceColumn);
 
     final queryAlter = 'ALTER TABLE quotes ADD COLUMN $safeColumnName TEXT';
     await transaction.execute(queryAlter);

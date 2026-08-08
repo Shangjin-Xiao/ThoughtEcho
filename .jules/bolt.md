@@ -84,3 +84,6 @@
 ## 2026-08-07 - [String splitting memory optimization in SSE parsers]
 **Learning:** Dart's `String.split('\n')` creates numerous intermediate string lists and string objects, putting significant pressure on the Garbage Collector, especially during real-time Server-Sent Events (SSE) processing where partial chunks are frequently accumulated and parsed.
 **Action:** Replace `String.split` with manual `String.indexOf('\n')` and `String.substring` in high-frequency string parsing paths like AI stream parsers and network managers to reduce memory allocations and GC pauses.
+## 2024-05-24 - [优化流式响应解析性能]
+**Learning:** 在高频流式数据处理（如大语言模型流式输出）中，使用 `String.split('\n')` 会产生大量短生命周期的列表和字符串对象，从而显著增加垃圾回收（GC）压力并导致可能的性能卡顿。
+**Action:** 在此类场景中，应始终采用手动寻找分隔符（如 `String.indexOf` 和 `String.substring`）的方法来遍历文本。

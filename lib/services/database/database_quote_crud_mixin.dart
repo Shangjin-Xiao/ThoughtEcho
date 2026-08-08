@@ -224,9 +224,11 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         final batchIds = quoteIds.sublist(i, end);
         final placeholders = List.filled(batchIds.length, '?').join(',');
 
-        batch.rawQuery(
-          'SELECT quote_id, tag_id FROM quote_tags WHERE quote_id IN ($placeholders)',
-          batchIds,
+        batch.query(
+          'quote_tags',
+          columns: ['quote_id', 'tag_id'],
+          where: 'quote_id IN ($placeholders)',
+          whereArgs: batchIds,
         );
       }
 
@@ -352,9 +354,11 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         final batchIds = quoteIds.sublist(i, endIdx);
         final placeholders = List.filled(batchIds.length, '?').join(',');
 
-        batch.rawQuery(
-          'SELECT quote_id, tag_id FROM quote_tags WHERE quote_id IN ($placeholders)',
-          batchIds,
+        batch.query(
+          'quote_tags',
+          columns: ['quote_id', 'tag_id'],
+          where: 'quote_id IN ($placeholders)',
+          whereArgs: batchIds,
         );
       }
 
