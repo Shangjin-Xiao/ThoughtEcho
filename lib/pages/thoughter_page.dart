@@ -114,6 +114,9 @@ class _ThoughterPageState extends State<ThoughterPage> {
   late AIService _aiService;
   late SettingsService _settingsService;
   bool _settingsReady = false;
+
+  /// 进入页面的一次性提示是否已经走完。自动发起的首轮请求要等它。
+  Future<void> _entryNoticesDone = Future<void>.value();
   late ThoughterPageMode _currentMode;
   String _selectedInsightType = 'comprehensive';
   String _selectedInsightStyle = 'professional';
