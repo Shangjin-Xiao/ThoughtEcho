@@ -762,7 +762,7 @@ extension _ThoughterUI on _ThoughterPageState {
   }
 
   /// 深度思考开关。带文字的 chip 而不是一枚图标按钮：图标按钮在这一行里
-  /// 左边一大片空白，且"大脑图标亮着"表达不出它是个可切换的模式。
+  /// 左边一大片空白，且"灯泡图标亮着"表达不出它是个可切换的模式。
   Widget _buildThinkingChip(ThemeData theme, AppLocalizations l10n) {
     final on = _enableThinking;
     final foreground = on
@@ -787,7 +787,7 @@ extension _ThoughterUI on _ThoughterPageState {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    on ? Icons.psychology : Icons.psychology_outlined,
+                    on ? Icons.lightbulb : Icons.lightbulb_outline,
                     size: 16,
                     color: foreground,
                   ),
