@@ -349,6 +349,9 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     _providerSource = widget.source;
     _providerCacheWidth = cacheWidth;
     _providerCacheHeight = cacheHeight;
+    // 换了缓存键就是一次新的加载，首帧统计要重新记一次，
+    // 否则布局宽度变化后的那次解析在 sync/complete 里查无此人。
+    _frameRecorded = false;
     if (provider != null) {
       QuillImageEmbedPerfStats.recordStartLoad();
     }
@@ -507,8 +510,11 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
 
             if (!_hasError && mounted) {
               QuillImageEmbedPerfStats.recordError();
+              // 回调是异步的，期间 source 可能已经换掉。不校验的话，旧图的失败
+              // 会把新图永久钉在错误占位上。
+              final failedSource = widget.source;
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
+                if (mounted && widget.source == failedSource) {
                   setState(() {
                     _hasError = true;
                   });

@@ -29,7 +29,7 @@ void main() {
       expect(summary.totalCount, 0);
     });
 
-    test('按出现顺序抽出多张图片', () {
+    test('多图只保留首图 source，其余计数', () {
       final delta = jsonEncode([
         {'insert': '前言'},
         {
@@ -42,12 +42,12 @@ void main() {
         {'insert': '\n'},
       ]);
       final summary = parseDeltaMedia(delta);
-      expect(summary.imageSources, ['a.png', 'b.png']);
       expect(summary.firstImageSource, 'a.png');
+      expect(summary.imageCount, 2);
       expect(summary.totalCount, 2);
     });
 
-    test('视频和音频只计数，不进 imageSources', () {
+    test('视频和音频只计数，不占 firstImageSource', () {
       final delta = jsonEncode([
         {
           'insert': {'video': 'v.mp4'},
@@ -58,12 +58,52 @@ void main() {
         {'insert': '\n'},
       ]);
       final summary = parseDeltaMedia(delta);
-      expect(summary.imageSources, isEmpty);
+      expect(summary.firstImageSource, isNull);
       expect(summary.hasImage, isFalse);
       expect(summary.hasMedia, isTrue);
       expect(summary.videoCount, 1);
       expect(summary.audioCount, 1);
       expect(summary.totalCount, 2);
+    });
+
+    test('音频走 custom 嵌入也要认出来', () {
+      // 本项目的音频是 CustomBlockEmbed，序列化成 insert.custom.audio，
+      // 不在顶层。只认顶层会让折叠态漏掉音频：既不计角标，也不会被剥离，
+      // 于是滚动列表里照旧实例化 MediaPlayerWidget。
+      final delta = jsonEncode([
+        {
+          'insert': {
+            'custom': {'audio': '/path/rec.m4a'},
+          },
+        },
+        {'insert': '\n'},
+      ]);
+      final summary = parseDeltaMedia(delta);
+      expect(summary.audioCount, 1);
+      expect(summary.hasMedia, isTrue);
+      expect(summary.totalCount, 1);
+    });
+
+    test('custom 被序列化成 JSON 字符串时同样认', () {
+      final delta = jsonEncode([
+        {
+          'insert': {'custom': '{"audio":"/path/rec.m4a"}'},
+        },
+        {'insert': '\n'},
+      ]);
+      expect(parseDeltaMedia(delta).audioCount, 1);
+    });
+
+    test('custom 里放的不是媒体则不计入', () {
+      final delta = jsonEncode([
+        {
+          'insert': {
+            'custom': {'formula': 'x^2'},
+          },
+        },
+        {'insert': '\n'},
+      ]);
+      expect(parseDeltaMedia(delta).hasMedia, isFalse);
     });
 
     test('认 {ops: [...]} 包裹格式', () {
@@ -75,7 +115,7 @@ void main() {
           {'insert': '\n'},
         ],
       });
-      expect(parseDeltaMedia(delta).imageSources, ['wrapped.png']);
+      expect(parseDeltaMedia(delta).firstImageSource, 'wrapped.png');
     });
 
     test('image 值是 Map 时按 source/image/url 取', () {
@@ -92,10 +132,9 @@ void main() {
         },
         {'insert': '\n'},
       ]);
-      expect(
-        parseDeltaMedia(delta).imageSources,
-        ['from-source.png', 'from-url.png'],
-      );
+      final summary = parseDeltaMedia(delta);
+      expect(summary.firstImageSource, 'from-source.png');
+      expect(summary.imageCount, 2);
     });
 
     test('空 source 的图片被跳过，不产生空字符串条目', () {
@@ -108,18 +147,9 @@ void main() {
         },
         {'insert': '\n'},
       ]);
-      expect(parseDeltaMedia(delta).imageSources, ['real.png']);
-    });
-
-    test('imageSources 不可变，调用方改不动缓存里的结果', () {
-      final delta = jsonEncode([
-        {
-          'insert': {'image': 'a.png'},
-        },
-        {'insert': '\n'},
-      ]);
       final summary = parseDeltaMedia(delta);
-      expect(() => summary.imageSources.add('b.png'), throwsUnsupportedError);
+      expect(summary.firstImageSource, 'real.png');
+      expect(summary.imageCount, 1);
     });
   });
 
@@ -130,10 +160,30 @@ void main() {
       expect(isDeltaMediaInsert({'audio': 'a.m4a'}), isTrue);
     });
 
+    test('custom 下的音频同样算媒体（本项目音频的真实形状）', () {
+      expect(
+        isDeltaMediaInsert({
+          'custom': {'audio': '/path/rec.m4a'},
+        }),
+        isTrue,
+      );
+      expect(
+        isDeltaMediaInsert({'custom': '{"audio":"/path/rec.m4a"}'}),
+        isTrue,
+      );
+    });
+
     test('文本和其他嵌入不算媒体', () {
       expect(isDeltaMediaInsert('纯文本'), isFalse);
       expect(isDeltaMediaInsert(null), isFalse);
       expect(isDeltaMediaInsert({'formula': 'x^2'}), isFalse);
+      expect(
+        isDeltaMediaInsert({
+          'custom': {'formula': 'x^2'},
+        }),
+        isFalse,
+      );
+      expect(isDeltaMediaInsert({'custom': '不是 JSON'}), isFalse);
     });
   });
 
@@ -193,6 +243,44 @@ void main() {
       DeltaMediaCache.of(null);
       DeltaMediaCache.of('');
       expect(DeltaMediaCache.stats['cacheSize'], 0);
+    });
+
+    test('首图是 data: URL 时不进缓存，避免把整段 base64 长期钉在堆上', () {
+      final delta = jsonEncode([
+        {
+          'insert': {'image': 'data:image/png;base64,AAAABBBBCCCC'},
+        },
+        {'insert': '\n'},
+      ]);
+
+      final summary = DeltaMediaCache.of(delta);
+      // 结果照常返回，只是不留在缓存里。
+      expect(summary.imageCount, 1);
+      expect(DeltaMediaCache.stats['cacheSize'], 0);
+
+      DeltaMediaCache.of(delta);
+      expect(DeltaMediaCache.stats['missCount'], 2);
+      expect(DeltaMediaCache.stats['hitCount'], 0);
+    });
+
+    test('内容不同但长度相同的 delta 不会串味', () {
+      // 键除了整串 hashCode 和长度，还带首尾切片的哈希，
+      // 单靠前两者相等已不足以命中。
+      final a = jsonEncode([
+        {
+          'insert': {'image': 'aaa.png'},
+        },
+        {'insert': '\n'},
+      ]);
+      final b = jsonEncode([
+        {
+          'insert': {'image': 'bbb.png'},
+        },
+        {'insert': '\n'},
+      ]);
+      expect(a.length, b.length);
+      expect(DeltaMediaCache.of(a).firstImageSource, 'aaa.png');
+      expect(DeltaMediaCache.of(b).firstImageSource, 'bbb.png');
     });
   });
 }

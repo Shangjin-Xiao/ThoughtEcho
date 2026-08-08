@@ -50,58 +50,57 @@ class CollapsedMediaThumbnail extends StatelessWidget {
     final String? imageSource = media.firstImageSource;
     final int extraCount = media.totalCount - 1;
 
-    return Semantics(
-      image: imageSource != null,
-      label: imageSource != null
-          ? l10n.viewImage
-          : (media.videoCount > 0 ? l10n.video : l10n.audio),
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: ClipRRect(
-          borderRadius: radius,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              if (imageSource != null)
-                _ThumbnailImage(source: imageSource, size: size)
-              else
-                _MediaKindPlaceholder(
+    return SizedBox(
+      width: size,
+      height: size,
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // 语义标签放在图片分支内部：加载失败时读屏应当播报「图片加载失败」，
+            // 而不是继续说「查看图片」——失败态只有 _ThumbnailImage 自己知道。
+            if (imageSource != null)
+              _ThumbnailImage(source: imageSource, size: size)
+            else
+              Semantics(
+                label: media.videoCount > 0 ? l10n.video : l10n.audio,
+                child: _MediaKindPlaceholder(
                   icon: media.videoCount > 0
                       ? Icons.videocam_outlined
                       : Icons.audiotrack_outlined,
                 ),
-              if (extraCount > 0)
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.scrim.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.only(
-                        topLeft: radius.topLeft,
-                      ),
+              ),
+            if (extraCount > 0)
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.scrim.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.only(
+                      topLeft: radius.topLeft,
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 1,
-                      ),
-                      child: Text(
-                        '+$extraCount',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          // 底板是 scrim（任何主题下都是半透明黑），所以这里刻意
-                          // 用固定白色而不是跟随主题的 onSurface 一类令牌——
-                          // 跟随主题会在浅色模式下变成黑字压在黑底上。
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 1,
+                    ),
+                    child: Text(
+                      '+$extraCount',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        // 底板是 scrim（任何主题下都是半透明黑），所以这里刻意
+                        // 用固定白色而不是跟随主题的 onSurface 一类令牌——
+                        // 跟随主题会在浅色模式下变成黑字压在黑底上。
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );
@@ -162,7 +161,10 @@ class _ThumbnailImageState extends State<_ThumbnailImage> {
   @override
   Widget build(BuildContext context) {
     if (_hasError) {
-      return const _MediaKindPlaceholder(icon: Icons.broken_image_outlined);
+      return Semantics(
+        label: AppLocalizations.of(context).imageLoadFailed,
+        child: const _MediaKindPlaceholder(icon: Icons.broken_image_outlined),
+      );
     }
 
     // 缩略图按自己的边长解码，不再按卡片全宽：72pt × dpr3 ≈ 216px，
@@ -174,31 +176,42 @@ class _ThumbnailImageState extends State<_ThumbnailImage> {
     );
     final provider = _resolveProvider(decodeSize);
     if (provider == null) {
-      return const _MediaKindPlaceholder(icon: Icons.broken_image_outlined);
+      return Semantics(
+        label: AppLocalizations.of(context).imageLoadFailed,
+        child: const _MediaKindPlaceholder(icon: Icons.broken_image_outlined),
+      );
     }
 
-    return Image(
-      image: provider,
-      fit: BoxFit.cover,
-      filterQuality: FilterQuality.low,
-      isAntiAlias: true,
-      gaplessPlayback: true,
-      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-        if (wasSynchronouslyLoaded || frame != null) {
-          return child;
-        }
-        return const _MediaKindPlaceholder(icon: Icons.image_outlined);
-      },
-      errorBuilder: (context, error, stackTrace) {
-        if (!_hasError) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              setState(() => _hasError = true);
-            }
-          });
-        }
-        return const _MediaKindPlaceholder(icon: Icons.broken_image_outlined);
-      },
+    // 失败回调是异步的（postFrame），期间 source 可能已经换掉。回调里必须确认
+    // 失败的还是当前这张，否则旧图的失败会把新缩略图永久钉在 broken-image 上。
+    final failedSource = widget.source;
+
+    return Semantics(
+      image: true,
+      label: AppLocalizations.of(context).viewImage,
+      child: Image(
+        image: provider,
+        fit: BoxFit.cover,
+        filterQuality: FilterQuality.low,
+        isAntiAlias: true,
+        gaplessPlayback: true,
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (wasSynchronouslyLoaded || frame != null) {
+            return child;
+          }
+          return const _MediaKindPlaceholder(icon: Icons.image_outlined);
+        },
+        errorBuilder: (context, error, stackTrace) {
+          if (!_hasError) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && widget.source == failedSource) {
+                setState(() => _hasError = true);
+              }
+            });
+          }
+          return const _MediaKindPlaceholder(icon: Icons.broken_image_outlined);
+        },
+      ),
     );
   }
 }
