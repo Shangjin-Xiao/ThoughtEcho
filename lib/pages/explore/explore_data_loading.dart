@@ -81,33 +81,19 @@ extension _ExploreDataLoading on _ExplorePageState {
     if (!mounted || token != _loadToken) return;
     final l10n = AppLocalizations.of(context);
 
-    // 计算总字数
-    final totalWords = _periodQuotes.fold<int>(
-      0,
-      (sum, q) => sum + q.content.length,
-    );
-
-    // 生成数据签名 (用于判断数据是否发生变化)
-    // 签名组成: 周期类型_开始日期_结束日期_笔记数量_总字数
-    final rangeText = _getDateRangeText(l10n);
-    final dataSignature =
-        '${_selectedPeriod}_${rangeText}_${_periodQuotes.length}_$totalWords';
-
-    // 最常见时间段
+    // 计算总字数、最常见时间段、最常见天气和标签，单遍遍历完成
+    var totalWords = 0;
     final Map<String, int> periodCounts = {};
+    final Map<String, int> weatherCategoryCounts = {};
+    final Map<String, int> tagCounts = {};
     for (final q in _periodQuotes) {
+      totalWords += q.content.length;
+
       final p = q.dayPeriod?.trim();
       if (p != null && p.isNotEmpty) {
         periodCounts[p] = (periodCounts[p] ?? 0) + 1;
       }
-    }
-    final mostPeriod = periodCounts.entries.isNotEmpty
-        ? periodCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key
-        : null;
 
-    // 最常见天气 - 按分类统计（小雨、大雨、雷雨归为"雨"类）
-    final Map<String, int> weatherCategoryCounts = {};
-    for (final q in _periodQuotes) {
       final w = q.weather?.trim();
       if (w != null && w.isNotEmpty) {
         // 先尝试通过key获取分类，如果失败则直接用原值
@@ -123,7 +109,22 @@ extension _ExploreDataLoading on _ExplorePageState {
         weatherCategoryCounts[finalCategory] =
             (weatherCategoryCounts[finalCategory] ?? 0) + 1;
       }
+
+      for (final tagId in q.tagIds) {
+        tagCounts[tagId] = (tagCounts[tagId] ?? 0) + 1;
+      }
     }
+
+    // 生成数据签名 (用于判断数据是否发生变化)
+    // 签名组成: 周期类型_开始日期_结束日期_笔记数量_总字数
+    final rangeText = _getDateRangeText(l10n);
+    final dataSignature =
+        '${_selectedPeriod}_${rangeText}_${_periodQuotes.length}_$totalWords';
+
+    final mostPeriod = periodCounts.entries.isNotEmpty
+        ? periodCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key
+        : null;
+
     final mostWeather = weatherCategoryCounts.entries.isNotEmpty
         ? weatherCategoryCounts.entries
             .reduce((a, b) => a.value >= b.value ? a : b)
@@ -135,12 +136,6 @@ extension _ExploreDataLoading on _ExplorePageState {
     String? topTagId;
     dynamic topTagIcon;
     try {
-      final Map<String, int> tagCounts = {};
-      for (final q in _periodQuotes) {
-        for (final tagId in q.tagIds) {
-          tagCounts[tagId] = (tagCounts[tagId] ?? 0) + 1;
-        }
-      }
       if (tagCounts.isNotEmpty) {
         topTagId =
             tagCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
