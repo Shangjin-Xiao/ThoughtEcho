@@ -12,6 +12,7 @@ import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/quill_editor_extensions.dart';
+import 'package:thoughtecho/widgets/motion_photo_preview_page.dart';
 import 'package:thoughtecho/widgets/note_list/collapsed_media_banner.dart';
 import 'package:thoughtecho/widgets/note_list/collapsed_media_thumbnail.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
@@ -266,6 +267,99 @@ void main() {
     final contentY =
         tester.getTopLeft(find.byKey(QuoteContent.collapsedWrapperKey)).dy;
     expect(bannerY, lessThan(contentY));
+  });
+
+  testWidgets('切换版式不会复用上一版式缓存的折叠文档', (tester) async {
+    // mediaSignature 这个缓存键存在的全部理由。**中途不清缓存**：先用
+    // thumbnail 渲染一次（文档里的嵌入被剥离并缓存），再用同一条笔记切到
+    // inline。如果缓存键没区分版式，inline 会拿到剥离过的文档、embedCount 变 0。
+    final quote = createDeltaQuoteWithImage();
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(CollapsedMediaThumbnail), findsOneWidget);
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+        mediaStyle: NoteCardMediaStyle.inline,
+      ),
+    );
+    await tester.pump();
+
+    final editor = tester.widget<quill.QuillEditor>(
+      find.byType(quill.QuillEditor),
+    );
+    final embedCount = editor.controller.document
+        .toDelta()
+        .toJson()
+        .where((op) => op['insert'] is Map)
+        .length;
+    expect(
+      embedCount,
+      1,
+      reason: 'inline 拿到了 thumbnail 版式剥离过的文档，说明缓存键没区分版式',
+    );
+  });
+
+  testWidgets('点击缩略图打开大图预览', (tester) async {
+    final quote = createDeltaQuoteWithImage();
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byType(CollapsedMediaThumbnail));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(MotionPhotoPreviewPage), findsOneWidget);
+  });
+
+  testWidgets('只有音视频时不安装点击手势，避免空操作吞掉卡片交互', (tester) async {
+    final quote = Quote(
+      id: 'rich_audio_only',
+      content: '只有音频的笔记',
+      date: '2025-01-01T00:00:00.000Z',
+      editSource: 'fullscreen',
+      deltaContent: jsonEncode([
+        {
+          'insert': {
+            'custom': {'audio': '/path/rec.m4a'},
+          },
+        },
+        {'insert': '\n'},
+        {'insert': '音频说明'},
+        {'insert': '\n'},
+      ]),
+    );
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+      ),
+    );
+    await tester.pump();
+
+    final thumbnail = tester.widget<CollapsedMediaThumbnail>(
+      find.byType(CollapsedMediaThumbnail),
+    );
+    expect(thumbnail.onTap, isNull);
   });
 
   testWidgets('媒体被摘走后折叠盒按内容收缩，不再留一大块空白', (tester) async {

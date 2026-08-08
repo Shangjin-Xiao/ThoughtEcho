@@ -570,7 +570,12 @@ class QuoteContent extends StatelessWidget {
     return height;
   }
 
-  static double _estimateDeltaHeight(String deltaContent) {
+  /// [stripMedia] 为 true 时按「媒体已被摘出正文」估算，嵌入节点一律不计高度。
+  /// 折叠盒在 thumbnail / banner 版式下用这个口径决定自己该多高。
+  static double _estimateDeltaHeight(
+    String deltaContent, {
+    bool stripMedia = false,
+  }) {
     double height = 0;
 
     try {
@@ -581,6 +586,9 @@ class QuoteContent extends StatelessWidget {
           final insert = node['insert'];
 
           if (insert is Map) {
+            if (stripMedia && isDeltaMediaInsert(insert)) {
+              continue;
+            }
             if (insert.containsKey('image')) {
               height += _estimatedImageHeight;
             } else if (insert.containsKey('video')) {
@@ -599,7 +607,10 @@ class QuoteContent extends StatelessWidget {
         }
       } else if (decoded is Map && decoded.containsKey('ops')) {
         // 某些备份格式可能包含 ops 包裹
-        return _estimateDeltaHeight(jsonEncode(decoded['ops']));
+        return _estimateDeltaHeight(
+          jsonEncode(decoded['ops']),
+          stripMedia: stripMedia,
+        );
       } else {
         height += _estimatePlainTextHeight(deltaContent);
       }
@@ -608,6 +619,36 @@ class QuoteContent extends StatelessWidget {
     }
 
     return height;
+  }
+
+  /// 折叠盒在当前版式下应该多高。
+  ///
+  /// 定高（而不是按内容收缩）是刻意的：滚动期间折叠卡片显示的是
+  /// `Text(quote.content)` 轻量占位，停下后才换成 Quill 文档，两者高度并不相同。
+  /// 一旦盒子跟着内容走，物化的那一刻卡片高度就会跳——这正是这一整轮要消除的
+  /// 「内容会动」。所以盒子始终固定，只是**固定到哪个值**随版式变化。
+  ///
+  /// - inline：媒体还在正文里，沿用 [collapsedContentMaxHeight]
+  /// - thumbnail / banner：媒体被摘走，正文可能只剩一两行，按剥离后的估算取值，
+  ///   避免定高 160px 在卡片里留下一大块空白
+  ///
+  /// 估算偏小可能多裁掉一点点正文，这与 [_collapsedDocumentHeightGuard] 处理的是
+  /// 同一类误差；这里再留一行余量，让常见情形偏向「宁可多留一点」。
+  @visibleForTesting
+  static double collapsedBoxHeightFor(
+    Quote quote, {
+    required bool stripMedia,
+  }) {
+    final deltaContent = quote.deltaContent;
+    if (!stripMedia || deltaContent == null) {
+      return collapsedContentMaxHeight;
+    }
+    final textOnly = _estimateDeltaHeight(deltaContent, stripMedia: true);
+    if (textOnly <= 0) {
+      return 0;
+    }
+    return (textOnly + estimatedLineHeight)
+        .clamp(estimatedLineHeight, collapsedContentMaxHeight);
   }
 
   List<Map<String, dynamic>>? _createBoldPriorityOps(String deltaContent) {
@@ -672,6 +713,7 @@ class QuoteContent extends StatelessWidget {
   static List<Map<String, dynamic>> _truncateDeltaOpsForCollapsedDocument(
     List<Map<String, dynamic>> ops, {
     bool stripMedia = true,
+    double? collapsedHeight,
     double? maxWidth,
     TextStyle? textStyle,
     TextDirection? textDirection,
@@ -700,8 +742,10 @@ class QuoteContent extends StatelessWidget {
     }
 
     final truncatedOps = <Map<String, dynamic>>[];
-    final targetHeight =
-        collapsedContentMaxHeight + _collapsedDocumentHeightGuard;
+    // 截断目标必须跟着盒子的实际高度走：盒子在 thumbnail / banner 版式下会小于
+    // collapsedContentMaxHeight，仍按 160 截就会多留一大截看不见的内容。
+    final targetHeight = (collapsedHeight ?? collapsedContentMaxHeight) +
+        _collapsedDocumentHeightGuard;
 
     for (final op in textOps) {
       if (!op.containsKey('insert')) continue;
@@ -993,6 +1037,7 @@ class QuoteContent extends StatelessWidget {
     bool prioritizeBold,
     bool truncateForCollapse, {
     bool stripMedia = true,
+    double? collapsedHeight,
     double? maxWidth,
     TextStyle? textStyle,
     TextDirection? textDirection,
@@ -1010,6 +1055,7 @@ class QuoteContent extends StatelessWidget {
           ? _truncateDeltaOpsForCollapsedDocument(
               ops,
               stripMedia: stripMedia,
+              collapsedHeight: collapsedHeight,
               maxWidth: maxWidth,
               textStyle: textStyle,
               textDirection: textDirection,
@@ -1091,32 +1137,47 @@ class QuoteContent extends StatelessWidget {
                 ? constraints.maxWidth - reserved
                 : constraints.maxWidth;
 
-            final Widget content = _buildRichTextContent(
-              context,
-              needsExpansion: needsExpansion,
-              prioritizeBoldContent: prioritizeBoldContent,
-              stripMedia: stripMedia,
-              // 媒体被摘走之后正文可能只剩一两行，而折叠盒默认是定高 160px 的，
-              // 差额就成了卡片里那块突兀的空白。
-              //
-              // 必须同时要求「确实有媒体可摘」：无媒体的富文本笔记只有真超过
-              // 160px 才会折叠，盒子天然是满的，维持定高让列表高度估算更稳。
-              // 只看 stripMedia 的话会把所有富文本折叠卡片一起改成收缩。
-              fitCollapsedHeightToContent: stripMedia && media.hasMedia,
-              maxWidth: textMaxWidth,
-            );
+            // 媒体被摘走后正文可能只剩一两行，定高 160px 就成了卡片里的空白。
+            // 盒子仍然定高（占位与 Quill 高度不同，跟着内容走会在物化时跳），
+            // 只是**固定到按剥离后估算算出的那个值**。
+            //
+            // 必须同时要求「确实有媒体可摘」：无媒体的富文本笔记只有真超过 160px
+            // 才会折叠，盒子天然是满的。
+            final double boxHeight = (stripMedia && media.hasMedia)
+                ? collapsedBoxHeightFor(quote, stripMedia: true)
+                : collapsedContentMaxHeight;
+
+            // 纯媒体笔记（摘掉媒体后一个字都不剩）连正文和间距一起省掉，
+            // 否则 banner 下面会挂一行空 Quill。
+            final bool hasTextContent = boxHeight > 0;
+
+            final Widget content = hasTextContent
+                ? _buildRichTextContent(
+                    context,
+                    needsExpansion: needsExpansion,
+                    prioritizeBoldContent: prioritizeBoldContent,
+                    stripMedia: stripMedia,
+                    collapsedBoxHeight: boxHeight,
+                    maxWidth: textMaxWidth,
+                  )
+                : const SizedBox.shrink();
+
+            // 只有音视频、没有可预览的图片时不装点击手势：否则是个空操作，
+            // 既吞掉卡片自身的交互，又把不可预览的媒体伪装成可点。
+            final VoidCallback? onMediaTap = media.firstImageSource != null
+                ? () => _openMediaPreview(context, media)
+                : null;
 
             if (showBanner) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CollapsedMediaBanner(
-                    media: media,
-                    onTap: () => _openMediaPreview(context, media),
-                  ),
-                  const SizedBox(height: CollapsedMediaBanner.gap),
-                  content,
+                  CollapsedMediaBanner(media: media, onTap: onMediaTap),
+                  if (hasTextContent) ...[
+                    const SizedBox(height: CollapsedMediaBanner.gap),
+                    content,
+                  ],
                 ],
               );
             }
@@ -1130,10 +1191,7 @@ class QuoteContent extends StatelessWidget {
               children: [
                 Expanded(child: content),
                 const SizedBox(width: CollapsedMediaThumbnail.gap),
-                CollapsedMediaThumbnail(
-                  media: media,
-                  onTap: () => _openMediaPreview(context, media),
-                ),
+                CollapsedMediaThumbnail(media: media, onTap: onMediaTap),
               ],
             );
           },
@@ -1187,13 +1245,15 @@ class QuoteContent extends StatelessWidget {
     /// inline 版式为 false（媒体留在原位交给 Quill，即旧版式）。
     bool stripMedia = true,
 
-    /// 折叠盒是否按内容高度收缩。见 [_CollapsedContentWrapper.fitToContent]。
-    bool fitCollapsedHeightToContent = false,
+    /// 折叠盒的固定高度，见 [collapsedBoxHeightFor]。null 时用
+    /// [collapsedContentMaxHeight]。
+    double? collapsedBoxHeight,
     double? maxWidth,
     bool deferralResolved = false,
   }) {
     final bool usePrioritizedDoc = !showFullContent && prioritizeBoldContent;
     final bool truncateForCollapse = !showFullContent && needsExpansion;
+    final double boxHeight = collapsedBoxHeight ?? collapsedContentMaxHeight;
     final textDirection = Directionality.of(context);
     final textScaler = MediaQuery.textScalerOf(context);
     final locale = Localizations.maybeLocaleOf(context);
@@ -1201,7 +1261,8 @@ class QuoteContent extends StatelessWidget {
         maxWidth != null && maxWidth.isFinite && maxWidth > 0 ? maxWidth : null;
     // 版式必须进签名：inline 与另外两种的折叠 Document 内容不同（前者保留嵌入、
     // 后者摘掉），不区分的话切换设置后会拿到上一版式缓存好的文档。
-    final mediaSignature = stripMedia ? 'mstrip' : 'minline';
+    final mediaSignature =
+        '${stripMedia ? 'mstrip' : 'minline'}_h${boxHeight.round()}';
     final layoutSignature = truncateForCollapse && measuredMaxWidth != null
         ? 'w${(measuredMaxWidth * 100).round()}_s${style.hashCode}_'
             'd${textDirection.name}_t${textScaler.hashCode}_'
@@ -1237,8 +1298,7 @@ class QuoteContent extends StatelessWidget {
             !_ColdCollapsedQuillFrameBudget.tryConsume())) {
       Widget placeholder = _CollapsedContentWrapper(
         key: collapsedWrapperKey,
-        maxHeight: collapsedContentMaxHeight,
-        fitToContent: fitCollapsedHeightToContent,
+        maxHeight: boxHeight,
         child: Text(
           _deferredPreviewText(quote.content),
           style: style,
@@ -1262,7 +1322,7 @@ class QuoteContent extends StatelessWidget {
           needsExpansion: needsExpansion,
           prioritizeBoldContent: prioritizeBoldContent,
           stripMedia: stripMedia,
-          fitCollapsedHeightToContent: fitCollapsedHeightToContent,
+          collapsedBoxHeight: collapsedBoxHeight,
           maxWidth: maxWidth,
           deferralResolved: true,
         ),
@@ -1284,6 +1344,7 @@ class QuoteContent extends StatelessWidget {
           usePrioritizedDoc,
           truncateForCollapse,
           stripMedia: stripMedia,
+          collapsedHeight: boxHeight,
           maxWidth: measuredMaxWidth,
           textStyle: style,
           textDirection: textDirection,
@@ -1323,8 +1384,7 @@ class QuoteContent extends StatelessWidget {
     if (!showFullContent && needsExpansion) {
       richTextEditor = _CollapsedContentWrapper(
         key: collapsedWrapperKey,
-        maxHeight: collapsedContentMaxHeight,
-        fitToContent: fitCollapsedHeightToContent,
+        maxHeight: boxHeight,
         child: richTextEditor,
       );
     }
@@ -1346,35 +1406,22 @@ class _CollapsedContentWrapper extends StatelessWidget {
   final Widget child;
   final double maxHeight;
 
-  /// true 时按内容高度收缩（以 [maxHeight] 封顶），false 时固定占满 [maxHeight]。
-  ///
-  /// 默认固定：纯文本笔记只有真的超过 [maxHeight] 才会走折叠，盒子天然是满的，
-  /// 固定高度让列表的高度估算更稳。
-  ///
-  /// 媒体被摘出正文的版式（thumbnail / banner）是例外——摘掉之后正文可能只剩
-  /// 一两行，固定高度会在卡片里留下一大块空白（带图笔记必然折叠，因为高度估算
-  /// 里一张图算 200px，而摘掉后的正文可能只有一行）。那种情况必须收缩。
-  final bool fitToContent;
-
   const _CollapsedContentWrapper({
     super.key,
     required this.child,
     required this.maxHeight,
-    this.fitToContent = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    // 恒定高度。占位文本和 Quill 文档的自然高度并不相同，一旦盒子跟着内容走，
+    // 物化的那一刻卡片就会跳——高度该取多少由 [QuoteContent.collapsedBoxHeightFor]
+    // 按版式算好后传进来。
     return ClipRect(
-      child: fitToContent
-          ? ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: maxHeight),
-              child: child,
-            )
-          : SizedBox(
-              height: maxHeight,
-              child: child,
-            ),
+      child: SizedBox(
+        height: maxHeight,
+        child: child,
+      ),
     );
   }
 }
