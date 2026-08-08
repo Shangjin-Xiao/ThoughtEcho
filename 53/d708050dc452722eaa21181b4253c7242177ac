@@ -1,0 +1,25 @@
+lib/pages/thoughter_page.dart
+  s_3c181b1b3300ea::t_fd75bdda78fb00 117-119
+test/widget/pages/thoughter_page_test.dart
+  s_3c181b1b3300ea::t_1f2b2fbf6767d9 564-566
+lib/pages/thoughter/thoughter_session.dart
+  s_3c181b1b3300ea::t_62a0322a549f3e 92-101
+  s_3c181b1b3300ea::t_3e93839c09738b 118-121
+  s_3c181b1b3300ea::t_1effc93a912894 160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "53d708050dc452722eaa21181b4253c7242177ac",
+  "prompts": {},
+  "sessions": {
+    "s_3c181b1b3300ea": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ab0dda70-6cd5-45be-bb07-3022cfec6260",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
