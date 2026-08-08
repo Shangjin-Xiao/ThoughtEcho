@@ -4269,5 +4269,6 @@
   "agentMemoryNoticeBody": "为了不用每次都重新认识你，Thoughter 会把你的身份和表达偏好记下来，之后的对话、每日提示和周期洞察都会用上。记忆只保存在这台设备上，不会上传。",
   "agentMemoryNoticeHint": "你可以随时让 Thoughter 修改或忘掉某条记忆，也可以在「AI 设置」里关闭或清空。",
   "agentMemoryNoticeGotIt": "知道了",
-  "agentMemoryNoticeDisable": "先不要记"
+  "agentMemoryNoticeDisable": "先不要记",
+  "agentMemorySwitchFailed": "记忆开关没能保存，请重试"
 }

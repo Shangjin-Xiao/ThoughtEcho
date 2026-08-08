@@ -18,11 +18,11 @@
 
 | # | 来源 | 类型 | 出处 |
 |---|---|---|---|
-| 1 | Gemini CLI | 实现源码 | 本地 `/home/azureuser/ai-reference/gemini-cli`，远端 `https://github.com/google-gemini/gemini-cli`。关键文件：`docs/tools/memory.md`、`docs/cli/auto-memory.md`、`docs/cli/tutorials/memory-management.md`、`evals/hierarchical_memory.eval.ts`、`packages/core/src/services/memoryService.ts` |
-| 2 | Claude Code（fork 源码参考） | 实现源码 | 本地 `/home/azureuser/ai-reference/claude-code`，远端 `https://github.com/jarmuine/claude-code`。关键文件：`src/memdir/memoryTypes.ts`（记忆类型与写读准则）、`src/memdir/memoryAge.ts`（时效标注）、`src/memdir/memoryScan.ts` |
-| 3 | OpenClaw | 实现源码 | 调研时克隆至 `/tmp/opencode/openclaw`，远端 `https://github.com/openclaw/openclaw`。关键文件：`docs/concepts/memory.md`、`docs/concepts/dreaming.md`、`docs/concepts/memory-search.md`、`docs/concepts/user-model.md`、`docs/concepts/active-memory.md`、`docs/cli/memory.md`、`extensions/memory-core/` |
-| 4 | Hermes Agent（Nous Research） | 实现源码 | 调研时克隆至 `/tmp/opencode/hermes-agent`，远端 `https://github.com/NousResearch/hermes-agent`。关键文件：`website/docs/user-guide/features/memory.md`、`tools/memory_tool.py`、`agent/memory_manager.py` |
-| 5 | Honcho（Plastic Labs） | 实现源码 | 调研时克隆至 `/tmp/opencode/honcho`，远端 `https://github.com/plastic-labs/honcho` |
+| 1 | Gemini CLI | 实现源码 | `https://github.com/google-gemini/gemini-cli`。关键文件：`docs/tools/memory.md`、`docs/cli/auto-memory.md`、`docs/cli/tutorials/memory-management.md`、`evals/hierarchical_memory.eval.ts`、`packages/core/src/services/memoryService.ts` |
+| 2 | Claude Code（fork 源码参考） | 实现源码 | `https://github.com/jarmuine/claude-code`。关键文件：`src/memdir/memoryTypes.ts`（记忆类型与写读准则）、`src/memdir/memoryAge.ts`（时效标注）、`src/memdir/memoryScan.ts` |
+| 3 | OpenClaw | 实现源码 | `https://github.com/openclaw/openclaw`。关键文件：`docs/concepts/memory.md`、`docs/concepts/dreaming.md`、`docs/concepts/memory-search.md`、`docs/concepts/user-model.md`、`docs/concepts/active-memory.md`、`docs/cli/memory.md`、`extensions/memory-core/` |
+| 4 | Hermes Agent（Nous Research） | 实现源码 | `https://github.com/NousResearch/hermes-agent`。关键文件：`website/docs/user-guide/features/memory.md`、`tools/memory_tool.py`、`agent/memory_manager.py` |
+| 5 | Honcho（Plastic Labs） | 实现源码 | `https://github.com/plastic-labs/honcho` |
 | 6 | Mem0 | 论文 | arXiv:2504.19413《Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory》 |
 | 7 | Generative Agents | 论文 | arXiv:2304.03442《Generative Agents: Interactive Simulacra of Human Behavior》 |
 | 8 | Sleep-time Compute | 论文 | arXiv:2504.13171《Sleep-time Compute: Beyond Inference Scaling at Test-time》 |
@@ -172,7 +172,13 @@ persona grounding 在四个骨干模型上均提升（+42% 相对），是最贴
 推导的内容"（身份、表达偏好、沟通风格、用户对 thoughter 的纠正反馈），与
 现有 `explore_notes` 检索职责分离，避免两套检索打架（#2 的"什么不记"判据）。
 
-## 五、ThoughtEcho 落地建议（供后续实施参考）
+## 五、ThoughtEcho 落地建议（**历史方案，已被第七节取代**）
+
+> ⚠️ 本节是实现之前写的草案，**不是当前契约**。实际落地在几个关键处偏离了它：
+> 表名是 `agent_memory_profile` / `agent_memory_facts`，预算是 24 条 / 1200 字符而不是
+> 500-800 token，画像走**独立 user 数据消息**而不是系统提示，检索工具叫 `recall`
+> 而不是 `memory_search`，实现是 `LIKE` + Dart 打分而不是 FTS5。
+> 要改代码请以第七节和 `AGENTS.md` 为准，本节只用来回溯当初为什么这么设计。
 
 ### 数据模型（本地 SQLite，新增表）
 
@@ -248,7 +254,7 @@ consolidation_runs    整理日志
 
 | 能力 | 位置 |
 |---|---|
-| 画像层 + 事实层两张表（schema v22） | `lib/services/database/schema_definitions.dart`、`schema_version_adapters.dart` |
+| 独立数据库 `agent_memory.db`（画像层 + 事实层两张表） | `lib/services/agent_memory_service.dart` |
 | 领域模型 | `lib/models/agent_memory.dart` |
 | 读写、检索、预算渲染、容量淘汰 | `lib/services/agent_memory_service.dart` |
 | `remember`（add/update/delete × profile/fact） | `lib/services/agent_tools/remember_tool.dart` |
@@ -272,6 +278,9 @@ consolidation_runs    整理日志
   免得那时再写一次迁移。
 - **不进备份、不进设备同步**：记忆是设备级的行为画像，跨设备合并会产生互相矛盾的
   条目，收益小风险大。换机即失忆是这一版接受的代价。
+- **独立数据库文件而不是主库新增两张表**：仓库里聊天记录、日志、AI 分析都各自
+  开库，记忆属于同一类附属数据。物理隔离还让上一条从"备份代码恰好没导出这两张表"
+  的隐式约定变成文件层面的事实，主库的 schema 版本也不用为记忆往上走。
 
 ### 待办（按优先级）
 

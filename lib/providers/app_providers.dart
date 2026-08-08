@@ -116,18 +116,13 @@ List<SingleChildWidget> buildAppProviders({
     ChangeNotifierProvider<OpenAIStreamService>(
       create: (_) => OpenAIStreamService(),
     ),
-    ChangeNotifierProxyProvider2<DatabaseService, SettingsService,
-        AgentMemoryService>(
+    // 记忆有自己的数据库文件，只依赖 SettingsService 的开关。
+    ChangeNotifierProxyProvider<SettingsService, AgentMemoryService>(
       create: (context) => AgentMemoryService(
-        databaseService: context.read<DatabaseService>(),
         settingsService: context.read<SettingsService>(),
       ),
-      update: (context, db, settings, previous) =>
-          previous ??
-          AgentMemoryService(
-            databaseService: db,
-            settingsService: settings,
-          ),
+      update: (context, settings, previous) =>
+          previous ?? AgentMemoryService(settingsService: settings),
     ),
     ChangeNotifierProxyProvider5<SettingsService, DatabaseService,
         LocationService, WeatherService, AgentMemoryService, AgentService>(

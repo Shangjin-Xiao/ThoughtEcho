@@ -89,8 +89,17 @@ class SettingsService extends ChangeNotifier {
 
   bool get agentMemoryEnabled => _mmkv.getBool(_agentMemoryEnabledKey) ?? true;
 
+  /// 写入失败时抛出：这个开关的默认值是 true，静默失败会让用户以为已经关掉，
+  /// 下次启动却发现记忆还在读写——隐私开关不能糊弄过去。
   Future<void> setAgentMemoryEnabled(bool value) async {
-    await _mmkv.setBool(_agentMemoryEnabledKey, value);
+    final success = await _mmkv.setBool(_agentMemoryEnabledKey, value);
+    if (!success) {
+      AppLogger.e(
+        'Thoughter 记忆开关保存失败：MMKV setBool 返回 false（value=$value）',
+        source: 'SettingsService',
+      );
+      throw StateError('保存 Thoughter 记忆开关失败');
+    }
     notifyListeners();
   }
 

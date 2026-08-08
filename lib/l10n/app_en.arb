@@ -4235,7 +4235,7 @@
   "agentMemoryEnableTitle": "Long-term memory",
   "agentMemoryEnableDesc": "Let Thoughter remember who you are and how you like things phrased across conversations. Daily prompts and periodic insights use it too. Turning this off only stops reading and writing — nothing already remembered is deleted.",
   "agentMemoryClearTitle": "Clear memory",
-  "agentMemoryClearSummary": "Currently remembering {profileCount} preferences and {factCount} details",
+  "agentMemoryClearSummary": "Currently remembering {profileCount, plural, =1{1 preference} other{{profileCount} preferences}} and {factCount, plural, =1{1 detail} other{{factCount} details}}",
   "@agentMemoryClearSummary": {"placeholders": {"profileCount": {"type": "int"}, "factCount": {"type": "int"}}},
   "agentMemoryClearEmpty": "Nothing remembered yet",
   "agentMemoryClearConfirmTitle": "Clear Thoughter's memory?",
@@ -4247,5 +4247,6 @@
   "agentMemoryNoticeBody": "So it doesn't have to get to know you from scratch every time, Thoughter records who you are and how you like things phrased, and uses that in later conversations, daily prompts, and periodic insights. Memory stays on this device and is never uploaded.",
   "agentMemoryNoticeHint": "You can ask Thoughter to change or forget any entry at any time, or turn memory off and clear it in AI settings.",
   "agentMemoryNoticeGotIt": "Got it",
-  "agentMemoryNoticeDisable": "Don't remember"
+  "agentMemoryNoticeDisable": "Don't remember",
+  "agentMemorySwitchFailed": "Could not save the memory switch. Please try again."
 }

@@ -37,9 +37,18 @@ String escapeUntrustedText(String content) {
 }
 
 /// 把标签内出现的同名闭合/开启标签打断，防止内容伪造标签边界。
+///
+/// 闭合标签允许 `>` 前有空白（`</note >` 同样会被解析器当成闭合），大小写也
+/// 一并放宽——只要能跳出包裹，后面的反注入声明就管不住了。
 String _neutralizeTag(String content, String tag) => content
-    .replaceAll('</$tag>', '<\\/$tag>')
-    .replaceAll(RegExp('<$tag(?=[\\s/>])'), '<\\$tag');
+    .replaceAllMapped(
+      RegExp('</\\s*$tag\\s*>', caseSensitive: false),
+      (match) => '<\\${match[0]!.substring(1)}',
+    )
+    .replaceAll(
+      RegExp('<$tag(?=[\\s/>])', caseSensitive: false),
+      '<\\$tag',
+    );
 
 /// 属性值转义（只用于我们自己生成的 id / url）。
 String _attribute(String value) =>

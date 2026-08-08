@@ -9,8 +9,6 @@ import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/pages/ai_settings_page.dart';
 import 'package:thoughtecho/services/agent_memory_service.dart';
-import 'package:thoughtecho/services/database_schema_manager.dart';
-import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 
 import '../../test_harness.dart';
@@ -76,7 +74,6 @@ void main() {
   group('AISettingsPage', () {
     late SettingsService settingsService;
     late AgentMemoryService memoryService;
-    late Database memoryDb;
 
     setUp(() async {
       await TestHarness.initialize();
@@ -84,19 +81,14 @@ void main() {
       settingsService = await SettingsService.create();
 
       // 记忆卡片会去查条目数，给它一个真实的内存库，别让页面测试依赖异常路径。
-      DatabaseService.clearTestDatabase();
-      memoryDb = await databaseFactory.openDatabase(inMemoryDatabasePath);
-      await DatabaseSchemaDefinitions().ensureAgentMemoryTables(memoryDb);
-      DatabaseService.setTestDatabase(memoryDb);
       memoryService = AgentMemoryService(
-        databaseService: DatabaseService(),
         settingsService: settingsService,
+        databasePath: inMemoryDatabasePath,
       );
     });
 
     tearDown(() async {
-      DatabaseService.clearTestDatabase();
-      await memoryDb.close();
+      memoryService.dispose();
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(_secureStorageChannel, null);
       await TestHarness.tearDown();

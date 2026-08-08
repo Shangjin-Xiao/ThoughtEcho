@@ -308,7 +308,8 @@ class AgentService extends ChangeNotifier {
       );
       // 画像层在整轮开始时取一次快照：轮内 remember 的写入下一轮才生效，
       // 免得同一次对话里前后两半看到的画像不一致。
-      final profileBlock = await _loadProfileBlock();
+      final profileBlock =
+          await _memoryService?.safeProfileBlock(source: 'AgentService');
       final messages = _buildMessages(
         systemPrompt: systemPrompt,
         history: history,
@@ -923,26 +924,6 @@ class AgentService extends ChangeNotifier {
       throw const AgentRequestException(AgentFailureType.unknown);
     }
     return content;
-  }
-
-  /// 取画像层注入块。记忆关闭、为空或读取失败都返回 null——记忆是增益，
-  /// 拿不到就当没有，不能让一次数据库异常把整轮对话打掉。
-  Future<String?> _loadProfileBlock() async {
-    final memory = _memoryService;
-    if (memory == null) {
-      return null;
-    }
-    try {
-      return await memory.buildProfileBlock();
-    } catch (error, stackTrace) {
-      logError(
-        'Agent 读取用户画像失败，本轮不注入记忆',
-        error: error,
-        stackTrace: stackTrace,
-        source: 'AgentService',
-      );
-      return null;
-    }
   }
 
   List<openai.ChatMessage> _buildMessages({

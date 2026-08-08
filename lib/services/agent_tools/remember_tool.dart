@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import '../../models/agent_memory.dart';
+import '../../utils/app_logger.dart';
+import '../../utils/untrusted_text.dart';
 import '../agent_memory_service.dart';
 import '../agent_tool.dart';
 
@@ -84,7 +86,10 @@ class RememberTool extends AgentTool {
             'description': 'fact 层的额外检索词：内容里没出现、但用户可能拿来提问的说法。',
           },
         },
-        'required': <String>['content'],
+        // content 不在这里声明必填：delete 只需要 id，强制必填会让严格按
+        // JSON Schema 校验入参的服务商拒掉合法的删除调用，或逼模型编一个 content。
+        // add / update 的非空校验在 execute 里。
+        'required': <String>[],
       };
 
   @override
@@ -105,14 +110,23 @@ class RememberTool extends AgentTool {
 
     try {
       return switch (action) {
+        'add' || '' => await _add(call, layer: layer, content: content),
         'delete' => await _delete(call, layer: layer, id: id),
         'update' => await _update(call, layer: layer, id: id, content: content),
-        _ => await _add(call, layer: layer, content: content),
+        // 拼错的 action 不能默默当成 add：那会让一次格式错误写进持久化数据。
+        _ => _invalid(call, 'action 只能是 add、update 或 delete'),
       };
-    } catch (error) {
+    } catch (error, stackTrace) {
+      logError(
+        'remember 工具写入失败（action=$action, layer=$layer）',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'RememberTool',
+      );
+      // 只回一句降级说明：把原始异常喂回模型既暴露实现细节，也没法排查。
       return ToolResult(
         toolCallId: call.id,
-        content: '写入记忆失败：$error',
+        content: '记忆写入失败，本次没有保存。不要重试，直接告诉用户没记下来。',
         isError: true,
         retryable: false,
       );
@@ -141,7 +155,7 @@ class RememberTool extends AgentTool {
         'action': 'add',
         'layer': 'fact',
         'id': fact.id,
-        'content': fact.content,
+        'content': escapeUntrustedText(fact.content),
         'importance': fact.importance,
       });
     }
@@ -157,7 +171,9 @@ class RememberTool extends AgentTool {
       'layer': 'profile',
       'id': entry.id,
       'kind': entry.kind.storageValue,
-      'directive': entry.directive,
+      // 逐字段转义：写回模型的正文和 recall 走同一套处理，别让一条记忆
+      // 在回执里伪装成指令。绝不能对整段 jsonEncode 后的结果再转义。
+      'directive': escapeUntrustedText(entry.directive),
     });
   }
 
@@ -175,12 +191,10 @@ class RememberTool extends AgentTool {
     }
 
     if (layer == 'fact') {
-      // 事实层没有原位改写：内容变了就是另一条事实，旧的删掉更干净。
-      final removed = await _memory.forgetFact(id);
-      if (!removed) {
-        return _invalid(call, '没有找到 id 为 $id 的事实');
-      }
-      final fact = await _memory.addFact(
+      // 事实层没有原位改写，内容变了就是另一条事实；但删旧和写新必须在一个
+      // 事务里完成，否则写新失败会让旧事实凭空消失。
+      final fact = await _memory.replaceFact(
+        id: id,
         content: content,
         category: call.getString('category').trim().isEmpty
             ? null
@@ -188,11 +202,14 @@ class RememberTool extends AgentTool {
         importance: call.getInt('importance', defaultValue: 5),
         triggerPhrases: _stringList(call.arguments['trigger_phrases']),
       );
+      if (fact == null) {
+        return _invalid(call, '没有找到 id 为 $id 的事实');
+      }
       return _ok(call, <String, Object?>{
         'action': 'update',
         'layer': 'fact',
         'id': fact.id,
-        'content': fact.content,
+        'content': escapeUntrustedText(fact.content),
       });
     }
 
@@ -211,7 +228,7 @@ class RememberTool extends AgentTool {
       'action': 'update',
       'layer': 'profile',
       'id': id,
-      'directive': content,
+      'directive': escapeUntrustedText(content),
     });
   }
 

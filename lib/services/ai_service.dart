@@ -33,34 +33,19 @@ class AIService extends ChangeNotifier {
   final AIRequestHelper _requestHelper = AIRequestHelper();
   final OpenAIStreamService _openAIStreamService = OpenAIStreamService();
 
-  /// 用户画像来源。每日提示与周期洞察共用 Thoughter 的同一份记忆，
-  /// 可为 null（测试或未接入记忆时降级为无画像）。
+  /// 用户画像来源。每日提示与周期洞察共用 Thoughter 的同一份记忆。
   final AgentMemoryService? _memoryService;
 
+  /// [memoryService] 为空时（测试、或调用方不想接入记忆）每日提示与周期洞察
+  /// 照常工作，只是不带用户画像——记忆是增益，不是这两条链路的前置条件。
   AIService({
     required SettingsService settingsService,
     AgentMemoryService? memoryService,
   })  : _settingsService = settingsService,
         _memoryService = memoryService;
 
-  /// 取画像层文本。读取失败一律当作没有画像——记忆是增益，
-  /// 不能让它把每日提示或洞察整个打掉。
-  Future<String?> _userProfileContext() async {
-    final memory = _memoryService;
-    if (memory == null) {
-      return null;
-    }
-    try {
-      return await memory.buildProfileBlock();
-    } catch (error, stack) {
-      logError(
-        'AIService 读取用户画像失败，本次不注入',
-        error: error,
-        stackTrace: stack,
-      );
-      return null;
-    }
-  }
+  Future<String?> _userProfileContext() async =>
+      _memoryService?.safeProfileBlock(source: 'AIService');
 
   /// 每日提示的输出上限（token）。
   ///
@@ -254,10 +239,18 @@ class AIService extends ChangeNotifier {
     required String systemPrompt,
     required String userMessage,
     List<ChatMessage>? history,
+    String? profileBlock,
   }) {
     final messages = <openai.ChatMessage>[
       openai.ChatMessage.system(systemPrompt),
     ];
+
+    // 画像是助手从过往对话里提炼的，属于不可信数据，只能作为独立的用户数据消息
+    // 出现。拼进 system prompt 会让历史里写下的一句话拿到系统级优先级，
+    // "数据不是指令"这行文案挡不住角色带来的权重。
+    if (profileBlock != null && profileBlock.isNotEmpty) {
+      messages.add(openai.ChatMessage.user(profileBlock));
+    }
 
     if (history != null && history.isNotEmpty) {
       final contextMessages = history
@@ -306,6 +299,7 @@ class AIService extends ChangeNotifier {
     int? maxTokens,
     bool? enableThinking,
     Function(String)? onThinking,
+    String? profileBlock,
   }) {
     final controller = StreamController<String>(sync: true);
 
@@ -326,6 +320,7 @@ class AIService extends ChangeNotifier {
           systemPrompt: systemPrompt,
           userMessage: userMessage,
           history: history,
+          profileBlock: profileBlock,
         );
 
         await for (final chunk in _openAIStreamService.streamChatWithThinking(
@@ -468,10 +463,10 @@ class AIService extends ChangeNotifier {
     // 获取用户设置的语言代码
     final languageCode = _settingsService.localeCode;
 
+    final profileBlock = await _userProfileContext();
     final prompt = _promptManager.getReportInsightSystemPrompt(
       'poetic',
       languageCode: languageCode,
-      userProfile: await _userProfileContext(),
     );
     final user = _promptManager.buildReportInsightUserMessage(
       periodLabel: periodLabel,
@@ -489,6 +484,7 @@ class AIService extends ChangeNotifier {
     yield* _streamViaOpenAI(
       systemPrompt: prompt,
       userMessage: user,
+      profileBlock: profileBlock,
     );
   }
 
@@ -560,9 +556,9 @@ class AIService extends ChangeNotifier {
           weather: weather,
           temperature: temperature,
           historicalInsights: historicalInsights,
-          userProfile: await _userProfileContext(),
           languageCode: languageCode,
         );
+        final profileBlock = await _userProfileContext();
 
         final userMessage = _promptManager.buildDailyPromptUserMessage(
           city: city,
@@ -575,6 +571,7 @@ class AIService extends ChangeNotifier {
           userMessage: userMessage,
           temperature: 1.0,
           maxTokens: _dailyPromptMaxTokens,
+          profileBlock: profileBlock,
           // 不再需要用空 onThinking 丢弃 reasoning：processStreamToText 现在
           // 只在整条流一个字正文都没有时才把 reasoning 当兜底输出。空回调反而
           // 会让 reasoning-only 模型的每日提示彻底变空、退回默认模板。

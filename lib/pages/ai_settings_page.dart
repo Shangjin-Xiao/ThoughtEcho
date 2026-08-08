@@ -10,6 +10,7 @@ import '../services/api_key_manager.dart';
 import '../services/settings_service.dart';
 import '../theme/app_semantic_colors.dart';
 import '../utils/ai_network_manager.dart';
+import '../utils/app_logger.dart';
 import '../widgets/app_snackbar.dart';
 import 'ai_provider_edit_page.dart';
 import 'user_guide_page.dart';
@@ -608,38 +609,57 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
             title: Text(l10n.agentMemoryEnableTitle),
             subtitle: Text(l10n.agentMemoryEnableDesc),
             value: settingsService.agentMemoryEnabled,
-            onChanged: settingsService.setAgentMemoryEnabled,
+            onChanged: _setMemoryEnabled,
             secondary: const Icon(Icons.psychology_outlined),
             isThreeLine: true,
           ),
           const Divider(height: 1),
           FutureBuilder<({int profileCount, int factCount})>(
-            // 计数只影响副标题；读不到就退回空状态文案，不为此给用户报错。
             future: _countsFuture,
             builder: (context, snapshot) {
+              // 读计数失败不能当成「没有记忆」：那会把清空入口禁用掉，
+              // 而库里可能正躺着一堆条目。失败时保持可点，让用户还能清。
+              final failed = snapshot.hasError;
               final counts = snapshot.data;
               final total =
                   (counts?.profileCount ?? 0) + (counts?.factCount ?? 0);
-              final hasMemories = counts != null && total > 0;
-              return ListTile(
-                leading: const Icon(Icons.delete_sweep_outlined),
-                title: Text(l10n.agentMemoryClearTitle),
-                subtitle: Text(
-                  hasMemories
+              final enabled = failed || total > 0;
+              final subtitle = failed
+                  ? l10n.agentMemoryClearFailed
+                  : (counts != null && total > 0
                       ? l10n.agentMemoryClearSummary(
                           counts.profileCount,
                           counts.factCount,
                         )
-                      : l10n.agentMemoryClearEmpty,
-                ),
-                enabled: hasMemories,
-                onTap: hasMemories ? _confirmClear : null,
+                      : l10n.agentMemoryClearEmpty);
+              return ListTile(
+                leading: const Icon(Icons.delete_sweep_outlined),
+                title: Text(l10n.agentMemoryClearTitle),
+                subtitle: Text(subtitle),
+                enabled: enabled,
+                onTap: enabled ? _confirmClear : null,
               );
             },
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _setMemoryEnabled(bool value) async {
+    final l10n = AppLocalizations.of(context);
+    try {
+      await context.read<SettingsService>().setAgentMemoryEnabled(value);
+    } catch (e, stack) {
+      logError(
+        'Thoughter 记忆开关保存失败（value=$value）',
+        error: e,
+        stackTrace: stack,
+        source: 'AISettingsPage',
+      );
+      if (!mounted) return;
+      AppSnackBar.error(context, l10n.agentMemorySwitchFailed);
+    }
   }
 
   Future<void> _confirmClear() async {
@@ -673,7 +693,13 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
       if (!mounted) return;
       _refreshCounts();
       AppSnackBar.success(context, l10n.agentMemoryCleared);
-    } catch (e) {
+    } catch (e, stack) {
+      logError(
+        '清空 Thoughter 记忆失败',
+        error: e,
+        stackTrace: stack,
+        source: 'AISettingsPage',
+      );
       if (!mounted) return;
       AppSnackBar.error(context, l10n.agentMemoryClearFailed);
     }

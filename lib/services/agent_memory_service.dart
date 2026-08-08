@@ -1,13 +1,17 @@
+import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/agent_memory.dart';
 import '../utils/app_logger.dart';
 import '../utils/untrusted_text.dart';
-import 'database_service.dart';
+import 'data_directory_service.dart';
 import 'settings_service.dart';
 
 /// Thoughter 的长期记忆。
@@ -19,20 +23,34 @@ import 'settings_service.dart';
 /// 边界：记忆只存**从笔记里推导不出来**的东西。用户写过什么归 `explore_notes`，
 /// 两套检索各管一摊，否则模型会在两个来源之间反复横跳。
 ///
+/// **独立数据库文件 `agent_memory.db`**，和聊天记录、日志、AI 分析一样不进主库：
+/// 记忆是对用户的行为画像，物理隔离让"不进备份、不跨设备同步、一键清干净"变成
+/// 文件层面的事实，而不是"备份代码恰好没导出这两张表"的隐式约定。主库的 schema
+/// 版本号也不必为了记忆往上走。
+///
 /// 检索用 `LIKE` 而不是 FTS5：条目量级是几十到几百条，`LIKE` 取候选再在 Dart 里
 /// 按 relevance × recency × importance 打分完全够用；而 FTS5 的默认分词器对中文
 /// 等于不分词，要中文可用得靠 `trigram`（SQLite 3.34+），Android 上跟随系统
 /// SQLite 版本，不可控。检索封在 [searchFacts] 后面，将来换实现不动调用方。
 class AgentMemoryService extends ChangeNotifier {
+  /// [databasePath] 仅供测试注入（可传 `inMemoryDatabasePath`）。
   AgentMemoryService({
-    required DatabaseService databaseService,
     required SettingsService settingsService,
-  })  : _databaseService = databaseService,
-        _settingsService = settingsService;
+    String? databasePath,
+  })  : _settingsService = settingsService,
+        _databasePath = databasePath;
 
-  final DatabaseService _databaseService;
   final SettingsService _settingsService;
+  final String? _databasePath;
   final Uuid _uuid = const Uuid();
+
+  Database? _database;
+  Completer<Database>? _opening;
+
+  static const String databaseFileName = 'agent_memory.db';
+
+  /// 记忆库自己的 schema 版本，与主库的 `schemaVersion` 无关。
+  static const int schemaVersion = 1;
 
   static const String profileTable = 'agent_memory_profile';
   static const String factsTable = 'agent_memory_facts';
@@ -60,7 +78,100 @@ class AgentMemoryService extends ChangeNotifier {
 
   bool get isEnabled => _settingsService.agentMemoryEnabled;
 
-  Future<Database> get _db => _databaseService.safeDatabase;
+  Future<Database> get _db async {
+    final current = _database;
+    if (current != null && current.isOpen) {
+      return current;
+    }
+    final opening = _opening;
+    if (opening != null) {
+      return opening.future;
+    }
+
+    final completer = Completer<Database>();
+    _opening = completer;
+    try {
+      final dbPath = _databasePath ?? await _defaultDatabasePath();
+      if (dbPath != inMemoryDatabasePath) {
+        await DataDirectoryService.ensureParentDirectoryForFile(dbPath);
+      }
+      final db = await openDatabase(
+        dbPath,
+        version: schemaVersion,
+        onCreate: (db, version) => _ensureSchema(db),
+        // 建表语句都是 IF NOT EXISTS，升级和打开都跑一遍即可自愈：
+        // 记忆丢一条不致命，但表不在会让每次 Thoughter 调用都炸。
+        onUpgrade: (db, oldVersion, newVersion) => _ensureSchema(db),
+        onOpen: _ensureSchema,
+      );
+      _database = db;
+      completer.complete(db);
+      return db;
+    } catch (error, stackTrace) {
+      completer.completeError(error, stackTrace);
+      rethrow;
+    } finally {
+      _opening = null;
+    }
+  }
+
+  static Future<String> _defaultDatabasePath() async {
+    final basePath = Platform.isWindows
+        ? await DataDirectoryService.getCurrentDataDirectory()
+        : (await getApplicationDocumentsDirectory()).path;
+    return path.join(basePath, databaseFileName);
+  }
+
+  static Future<void> _ensureSchema(DatabaseExecutor db) async {
+    // 画像层：每次对话注入，因此条目少、有硬预算。
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $profileTable(
+        id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL,
+        directive TEXT NOT NULL,
+        observed_at TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',
+        superseded_by TEXT,
+        source TEXT
+      )
+    ''');
+    // 事实层：不默认注入，由 `recall` 按需检索。
+    // `embedding` 恒为 NULL，为将来换向量检索预留列位——现在留着，
+    // 免得二期为了加一列再写一次迁移。
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $factsTable(
+        id TEXT PRIMARY KEY,
+        category TEXT,
+        content TEXT NOT NULL,
+        importance INTEGER NOT NULL DEFAULT 5,
+        trigger_phrases TEXT,
+        created_at TEXT NOT NULL,
+        last_recalled_at TEXT,
+        recall_count INTEGER NOT NULL DEFAULT 0,
+        source_ref TEXT,
+        embedding BLOB
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_agent_memory_profile_status '
+      'ON $profileTable(status)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_agent_memory_facts_importance '
+      'ON $factsTable(importance)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_agent_memory_facts_created_at '
+      'ON $factsTable(created_at)',
+    );
+  }
+
+  @override
+  void dispose() {
+    unawaited(_database?.close());
+    _database = null;
+    super.dispose();
+  }
 
   // ======================== 画像层 ========================
 
@@ -197,6 +308,24 @@ class AgentMemoryService extends ChangeNotifier {
     return renderProfileBlock(entries, now: DateTime.now());
   }
 
+  /// [buildProfileBlock] 的降级包装：读不到就当没有画像。
+  ///
+  /// Agent 和每日提示/洞察都走这一个入口——记忆是增益，一次数据库异常不能把
+  /// 整轮对话或每日提示打掉；降级策略只有一份，以后要加缓存或限流也只改这里。
+  Future<String?> safeProfileBlock({required String source}) async {
+    try {
+      return await buildProfileBlock();
+    } catch (error, stackTrace) {
+      logError(
+        '读取用户画像失败，本次不注入记忆',
+        error: error,
+        stackTrace: stackTrace,
+        source: source,
+      );
+      return null;
+    }
+  }
+
   /// 纯函数形式的画像块渲染，便于测试预算与时效标注。
   @visibleForTesting
   static String? renderProfileBlock(
@@ -246,26 +375,13 @@ class AgentMemoryService extends ChangeNotifier {
     String? sourceRef,
     DateTime? createdAt,
   }) async {
-    final normalized = _normalizeText(content, factMaxChars);
-    if (normalized.isEmpty) {
-      throw ArgumentError.value(content, 'content', '事实内容为空');
-    }
-
-    final fact = AgentMemoryFact(
-      id: _uuid.v4(),
-      content: normalized,
-      createdAt: createdAt ?? DateTime.now(),
-      category: category?.trim().isEmpty ?? true ? null : category!.trim(),
-      importance: importance.clamp(
-        AgentMemoryFact.minImportance,
-        AgentMemoryFact.maxImportance,
-      ),
-      triggerPhrases: triggerPhrases
-          .map((phrase) => phrase.trim())
-          .where((phrase) => phrase.isNotEmpty)
-          .take(8)
-          .toList(growable: false),
+    final fact = _buildFact(
+      content: content,
+      category: category,
+      importance: importance,
+      triggerPhrases: triggerPhrases,
       sourceRef: sourceRef,
+      createdAt: createdAt,
     );
 
     final db = await _db;
@@ -277,6 +393,88 @@ class AgentMemoryService extends ChangeNotifier {
     await _evictOverflowFacts();
     notifyListeners();
     return fact;
+  }
+
+  /// 用新内容替换一条事实。
+  ///
+  /// 删旧和写新在同一个事务里：分两次写的话，写新失败会让旧事实凭空消失，
+  /// 而模型只看到"写入失败"，无从得知记忆已经掉了一条。
+  ///
+  /// 返回 null 表示 [id] 不存在。
+  Future<AgentMemoryFact?> replaceFact({
+    required String id,
+    required String content,
+    String? category,
+    int importance = 5,
+    List<String> triggerPhrases = const <String>[],
+    String? sourceRef,
+  }) async {
+    final fact = _buildFact(
+      content: content,
+      category: category,
+      importance: importance,
+      triggerPhrases: triggerPhrases,
+      sourceRef: sourceRef,
+    );
+
+    final db = await _db;
+    final replaced = await db.transaction<bool>((txn) async {
+      final deleted = await txn.delete(
+        factsTable,
+        where: 'id = ?',
+        whereArgs: <Object?>[id],
+      );
+      if (deleted == 0) {
+        return false;
+      }
+      await txn.insert(
+        factsTable,
+        fact.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      return true;
+    });
+
+    if (!replaced) {
+      return null;
+    }
+    notifyListeners();
+    return fact;
+  }
+
+  AgentMemoryFact _buildFact({
+    required String content,
+    String? category,
+    int importance = 5,
+    List<String> triggerPhrases = const <String>[],
+    String? sourceRef,
+    DateTime? createdAt,
+  }) {
+    final normalized = _normalizeText(content, factMaxChars);
+    if (normalized.isEmpty) {
+      throw ArgumentError.value(content, 'content', '事实内容为空');
+    }
+
+    final trimmedCategory = category?.trim() ?? '';
+
+    return AgentMemoryFact(
+      id: _uuid.v4(),
+      content: normalized,
+      createdAt: createdAt ?? DateTime.now(),
+      category: trimmedCategory.isEmpty ? null : trimmedCategory,
+      importance: importance.clamp(
+        AgentMemoryFact.minImportance,
+        AgentMemoryFact.maxImportance,
+      ),
+      // 逐条折叠内部空白：trigger_phrases 在库里是换行分隔的一列，
+      // 留着内部换行会让一条 phrase 在往返后裂成好几条，还绕过 take(8)。
+      triggerPhrases: triggerPhrases
+          .map((phrase) => phrase.replaceAll(RegExp(r'\s+'), ' ').trim())
+          .where((phrase) => phrase.isNotEmpty)
+          .take(8)
+          .toList(growable: false),
+      sourceRef: sourceRef,
+    );
   }
 
   Future<bool> forgetFact(String id) async {
@@ -303,12 +501,15 @@ class AgentMemoryService extends ChangeNotifier {
     final keywords = extractKeywords(query);
     final now = DateTime.now();
 
+    // 候选窗口取整个 [factsCapacity]：候选截断发生在 SQL 层，而排序在 Dart 层，
+    // 两者一旦不一致，就会按 SQLite 未定义的返回顺序丢掉本该排前面的记忆。
+    // 事实层本来就有 400 条硬上限，全捞出来再打分是可负担的。
     List<Map<String, Object?>> rows;
     if (keywords.isEmpty) {
       rows = await db.query(
         factsTable,
         orderBy: 'importance DESC, created_at DESC',
-        limit: math.max(limit * 4, 40),
+        limit: factsCapacity,
       );
     } else {
       // 参数绑定，关键词只作为 LIKE 的值出现，不参与 SQL 拼接。
@@ -324,7 +525,7 @@ class AgentMemoryService extends ChangeNotifier {
         factsTable,
         where: clauses.join(' OR '),
         whereArgs: args,
-        limit: math.max(limit * 8, 80),
+        limit: factsCapacity,
       );
     }
 
@@ -419,11 +620,21 @@ class AgentMemoryService extends ChangeNotifier {
 
   /// 清空全部记忆。**开关关闭不会走到这里**——关开关只停读写，不删数据。
   Future<void> clearAll() async {
-    final db = await _db;
-    await db.transaction((txn) async {
-      await txn.delete(profileTable);
-      await txn.delete(factsTable);
-    });
+    try {
+      final db = await _db;
+      await db.transaction((txn) async {
+        await txn.delete(profileTable);
+        await txn.delete(factsTable);
+      });
+    } catch (error, stackTrace) {
+      logError(
+        '清空 Thoughter 记忆失败',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'AgentMemoryService',
+      );
+      rethrow;
+    }
     _invalidateProfile();
     logDebug('已清空 Thoughter 记忆', source: 'AgentMemoryService');
   }
@@ -520,7 +731,16 @@ class AgentMemoryService extends ChangeNotifier {
     if (collapsed.length <= maxChars) {
       return collapsed;
     }
-    return collapsed.substring(0, maxChars).trimRight();
+    var truncated = collapsed.substring(0, maxChars);
+    // substring 按 UTF-16 code unit 切，正好切在代理对中间会留下一个孤立的
+    // 高代理码位，写进 SQLite 时无法合法编码成 UTF-8。丢掉这半个字符。
+    if (truncated.isNotEmpty) {
+      final last = truncated.codeUnitAt(truncated.length - 1);
+      if (last >= 0xD800 && last <= 0xDBFF) {
+        truncated = truncated.substring(0, truncated.length - 1);
+      }
+    }
+    return truncated.trimRight();
   }
 
   static String _kindLabel(AgentMemoryKind kind) {

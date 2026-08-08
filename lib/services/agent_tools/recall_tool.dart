@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../models/agent_memory.dart';
+import '../../utils/app_logger.dart';
 import '../../utils/untrusted_text.dart';
 import '../agent_memory_service.dart';
 import '../agent_tool.dart';
@@ -100,10 +101,17 @@ class RecallTool extends AgentTool {
       };
 
       return ToolResult(toolCallId: call.id, content: jsonEncode(payload));
-    } catch (error) {
+    } catch (error, stackTrace) {
+      logError(
+        'recall 工具检索失败（query 长度 ${query.length}）',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'RecallTool',
+      );
+      // query 本身是用户数据，不进日志；异常原文也不回喂模型。
       return ToolResult(
         toolCallId: call.id,
-        content: '检索记忆失败：$error',
+        content: '记忆检索失败，这一轮拿不到记忆。不要重试，按没有记忆继续。',
         isError: true,
       );
     }

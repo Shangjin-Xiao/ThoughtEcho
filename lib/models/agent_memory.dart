@@ -115,8 +115,10 @@ class AgentMemoryProfileEntry {
       id: map['id'] as String,
       kind: AgentMemoryKindStorage.fromStorage(map['kind'] as String?),
       directive: (map['directive'] as String?) ?? '',
+      // 时间戳解析不出来就回退到最早：既然只能猜，宁可让坏行排在最后被淘汰，
+      // 也不要让它伪装成"刚刚观察到"、抢占每轮注入的名额。
       observedAt: DateTime.tryParse((map['observed_at'] as String?) ?? '') ??
-          DateTime.now(),
+          DateTime.fromMillisecondsSinceEpoch(0),
       status: AgentMemoryStatusStorage.fromStorage(map['status'] as String?),
       supersededBy: map['superseded_by'] as String?,
       source: map['source'] as String?,
@@ -203,8 +205,9 @@ class AgentMemoryFact {
     return AgentMemoryFact(
       id: map['id'] as String,
       content: (map['content'] as String?) ?? '',
+      // 同 [AgentMemoryProfileEntry.fromMap]：坏时间戳排最后，不排最前。
       createdAt: DateTime.tryParse((map['created_at'] as String?) ?? '') ??
-          DateTime.now(),
+          DateTime.fromMillisecondsSinceEpoch(0),
       category: map['category'] as String?,
       importance: (map['importance'] as int?) ?? 5,
       triggerPhrases: rawPhrases.isEmpty

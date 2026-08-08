@@ -104,7 +104,11 @@ extension _ThoughterSession on _ThoughterPageState {
       _settingsReady = true;
       // 两条一次性提示串行弹，别叠在一起：实验性说明讲的是「AI 会出错」，
       // 记忆说明讲的是「它会记住你」，同屏出现用户一条都读不进去。
-      unawaited(_showEntryNotices());
+      //
+      // 必须 await：带 initialQuestion 的快捷入口会在初始化末尾直接发起请求，
+      // 不等提示关掉的话，那一轮已经读写完记忆了，「先不要记」在首轮不生效。
+      await _showEntryNotices();
+      if (!mounted) return;
       final restoredMode = _restoreModeFromSettings();
       if (restoredMode != _currentMode && mounted) {
         _setState(() {
