@@ -76,14 +76,81 @@
             "name": "ThoughtEcho",
             "alternateName": "心迹",
             "applicationCategory": "ProductivityApplication",
-            "operatingSystem": "Android, iOS, Windows",
+            "applicationSubCategory": "Note-taking",
+            "operatingSystem": "Windows, Android",
             "url": "https://note.shangjinyun.cn/",
-            "downloadUrl": "https://github.com/Shangjin-Xiao/ThoughtEcho/releases",
+            "downloadUrl": "https://note.shangjinyun.cn/dl.html",
+            "installUrl": "https://apps.microsoft.com/detail/9NC7GDG6KFMC",
+            "softwareHelp": "https://note.shangjinyun.cn/user-guide.html",
+            "license": "https://github.com/Shangjin-Xiao/ThoughtEcho/blob/main/LICENSE",
+            "isAccessibleForFree": true,
+            "inLanguage": [
+              "zh-CN",
+              "en"
+            ],
+            "description": "免费开源的摘录笔记应用。在任何应用里划词即可存下句子，自动附带出处、时间与地点；每日一言作为入口，AI 可主动提议整理你的笔记。无需注册账号，数据只存本地。",
+            "featureList": [
+              "在任何应用中划词摘录，自动附带出处、时间与地点",
+              "每日一言，支持一言、ZenQuotes 等多个来源",
+              "AI 助手主动提议创建与修改笔记，采纳与否由你决定",
+              "富文本编辑，支持图片、音频与视频附件",
+              "无需注册账号，数据完全存储在本地设备",
+              "局域网直传同步与 WebDAV 云同步",
+              "隐藏笔记并以生物识别解锁",
+              "PDF 导出与系统打印预览",
+              "纸与墨、素笺、跟随系统三套主题"
+            ],
             "offers": {
               "@type": "Offer",
               "price": "0",
-              "priceCurrency": "USD"
+              "priceCurrency": "USD",
+              "availability": "https://schema.org/InStock"
             }
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "心迹是免费的吗？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "是的，心迹 ThoughtEcho 完全免费且开源，没有广告与内购，所有本地功能均可免费使用。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "如何使用 AI 功能？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "需要自行申请 AI 服务商（如 OpenAI、DeepSeek）的 API Key 并在设置中填入，费用直接由服务商收取。应用内置十余个服务商模板，其中推荐项有免费额度。不配置 API Key 也可以正常使用摘录、每日一言、编辑与同步等功能。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "我的数据安全吗？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "所有数据存储在你的设备本地，不会上传云端。API Key 采用系统级加密存储。错误上报默认关闭，需要主动同意才会启用。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "支持多设备同步吗？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "支持两种方式：同一局域网内的设备可直接互相发现并传输，不经过任何服务器；也可以通过 WebDAV 连接坚果云、Nextcloud 等私有云（Beta），媒体文件均为增量传输。"
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "心迹支持哪些平台？",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "目前支持 Windows 与 Android。Windows 可从 Microsoft Store 安装，Android 可下载 APK 安装包。iOS 版尚未上架 App Store。"
+                }
+              }
+            ]
           }
         ]
       }
