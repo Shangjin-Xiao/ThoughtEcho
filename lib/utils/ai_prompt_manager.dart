@@ -1,6 +1,5 @@
 import 'package:meta/meta.dart';
 import 'dart:math' as math;
-import '../models/weather_data.dart';
 
 /// AI提示词管理器
 ///
@@ -722,10 +721,9 @@ $content''';
         envDetails += '地点：$city ';
       }
       if (weather != null && weather.isNotEmpty) {
-        // 将英文天气key转换为中文描述
-        final weatherDesc = WeatherCodeMapper.getDescription(weather);
-        final displayWeather = weatherDesc == '未知' ? weather : weatherDesc;
-        envDetails += '天气：$displayWeather ';
+        // 调用方负责把天气 key 翻成用户语言的描述再传进来：这里拿不到 l10n，
+        // 曾经的 WeatherCodeMapper.getDescription 只会把 key 原样还回来。
+        envDetails += '天气：$weather ';
       }
       if (temperature != null && temperature.isNotEmpty) {
         envDetails += '温度：$temperature°C';

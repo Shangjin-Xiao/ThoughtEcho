@@ -390,6 +390,20 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 记录页折叠卡片里媒体的显示方式，取值见 [NoteCardMediaStyle]。
+  ///
+  /// 三种版式的折叠 Document 不同（inline 保留嵌入、另两种摘掉），缓存失效由
+  /// `QuoteContent` 把版式并进 Document / Controller 的缓存键来保证——服务层
+  /// 不反向依赖 widget 层去清缓存。
+  String get noteCardMediaStyle => _appSettings.noteCardMediaStyle;
+  Future<void> setNoteCardMediaStyle(String style) async {
+    _appSettings = _appSettings.copyWith(
+      noteCardMediaStyle: NoteCardMediaStyle.normalize(style),
+    );
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   // 语言设置：获取当前语言代码（null 表示跟随系统）
   String? get localeCode => _appSettings.localeCode;
 

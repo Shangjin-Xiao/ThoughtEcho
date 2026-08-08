@@ -33,20 +33,22 @@ colors:
   onDanger: "#FEFDFB"
 
 typography:
+  # 正文字号 = 16 × bodyFontScale。衬线风格 1.0625 → 17，material 1 → 16。
+  # label* 不在此表：它永远是系统黑体、永远不缩放，见 Typography 一节。
   body:
     fontFamily: serif
-    fontSize: 16px
-    fontWeight: 400
+    fontSize: 17px
+    fontWeight: 500
     lineHeight: 1.75
   bodyMaterial:
     fontFamily: system-ui
     fontSize: 16px
-    fontWeight: 350
+    fontWeight: 350   # Android 减重后的取值；其余平台是 M3 原生 400
     lineHeight: 1.5
   bodyPlain:
     fontFamily: serif
-    fontSize: 16px
-    fontWeight: 400
+    fontSize: 17px
+    fontWeight: 500
     lineHeight: 1.6
 
 rounded:
@@ -98,11 +100,11 @@ components:
 
 主题风格与亮暗、动态取色**正交**，三选一：
 
-| 风格 | 气质 | 色板来源 | 卡片圆角 | 层次手段 | 正文字体 | 正文行高 |
-| --- | --- | --- | --- | --- | --- | --- |
-| `material` | 系统观感 | 动态取色 / 用户 seed | 18 | 投影 | 系统默认（黑体） | 1.5 |
-| `paper` 纸与墨 | 暖、温润 | 手工色板 | 6 | 发丝边框 + 极淡投影 | 系统衬线 | 1.75 |
-| `plain` 素笺 | 冷、硬朗 | 手工色板 | 3 | 同上，更硬 | 系统衬线 | 1.6 |
+| 风格 | 气质 | 色板来源 | 卡片圆角 | 层次手段 | 正文字体 | 正文字号 | 正文行高 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `material` | 系统观感 | 动态取色 / 用户 seed | 18 | 投影 | 系统默认（黑体） | 16 | 1.5 |
+| `paper` 纸与墨 | 暖、温润 | 手工色板 | 6 | 发丝边框 + 极淡投影 | 系统衬线 | 17 | 1.75 |
+| `plain` 素笺 | 冷、硬朗 | 手工色板 | 3 | 同上，更硬 | 系统衬线 | 17 | 1.6 |
 
 **默认是 `paper`**（`ThemeStyle.defaultStyle`）。Material 是「想要系统观感」时的退路，
 不是基准。
@@ -154,14 +156,35 @@ components:
   Android 才会命中 AOSP 给 NotoSerifCJK 标的 `fallbackFor="serif"`。
   代价是各家 ROM 的衬线体长相不一致；要统一只能打包子集化字体。
 - **行高由 `bodyLineHeight` 令牌下发**，只作用于 `body*` 三级。中文衬线体字面率高、
-  笔画密，M3 给黑体调的 1.5 偏挤。**纸张横线间距是从正文行高推导的**——写死会让
-  文字逐行相对横线漂移，卡片看起来像背了一张格子图。
-- **字重补偿是给黑体的**：Android 上 Impeller 精准映射 wght 轴后 Roboto 偏粗，正文压到
-  350 还原视觉。衬线体横画本就细，再减就发灰发虚，所以手工风格用
-  `variableWeightCompensation: 0` 关掉它。
+  笔画密，M3 给黑体调的 1.5 偏挤。**纸张横线间距是从「正文字号 × 行高」推导的**——
+  两项里写死任何一项都会让文字逐行相对横线漂移，卡片看起来像背了一张格子图。
+- **衬线只给阅读文本，`label*` 永远是黑体**。按钮、胶囊、导航栏标签是 11–14sp 的
+  功能性文字，中文衬线在这个尺寸下糊成一团，而它们又不承担任何风格识别。
+  这是全局排版规则，不是某套风格的选择，所以写死在 `_applyStyleTypography` 里。
+- **字重有两个反向的补偿，别混为一谈**：
+  - `variableWeightCompensation` 是给**黑体**的**减重**，只跑在 Android——
+    Impeller 精准映射 wght 轴后 Roboto 偏粗，正文压到 350 还原视觉。
+    衬线体横画本就细，再减就发灰发虚，所以手工风格设 0 关掉它。
+  - `readingWeightFloor` 是给**衬线体**的**加重**，所有平台生效，作用于
+    `title*` / `body*`。是**下限不是增量**：M3 的 `titleMedium` / `titleSmall`
+    本来就是 w500，加增量会把它们顶到 w600，而只有 Regular / Bold 两档的衬线体
+    会把 600 匹配成 Bold，列表标题会集体变粗。
+- **`bodyFontScale` 是可读性的兜底杠杆**。中文衬线的横画只有竖画三分之一粗，16sp
+  配 2x 屏时落到半个物理像素上，抗锯齿后只剩一条浅灰线——**同样的墨色，衬线读起来
+  就是比黑体虚**，跟对比度无关（色板全部在 AA 以上）。字号是唯一在所有平台、所有
+  ROM 上都一定生效的补偿（字重要看设备有几档字体），手工风格取 1.0625（16 → 17）。
+  上限 1.15，再高列表密度就崩了。
+- **次要墨色比 AA 再保守一档**：四套色板在**纸和卡片两种底色上**都要达到 7:1，
+  由 `theme_style_contrast_test.dart` 钉死。WCAG 只算两个色值，不看笔画多宽；
+  同样 6:1 的灰落在衬线的半像素横画上，看到的反差要打对折。两种底色都要验，
+  是因为次要文字大量渲染在卡片上——只按页面底色算会漏。
 - **富文本是独立的一条路**：`flutter_quill` 的段落基准样式不继承 `textTheme`
-  （`fontSize` / `height` 被硬写成 16 / 1.15），需要在 `quote_content_widget.dart`
-  单独注入，才能和纯文本、横线间距对齐。
+  （`fontSize` / `height` 被硬写成 16 / 1.15），字号和行高都要按令牌纠正，才能和
+  纯文本、横线间距对齐。纠正规则只有 `QuillThemeTypography` 一处，笔记卡片和全屏
+  编辑器共用——否则同一条笔记「写的时候」和「读的时候」行距不一样。
+  加粗降档也走这条路：它是给黑体做的，衬线风格必须整段跳过
+  （`AppTypographyTokens.variableWeightCompensation` 为 0），否则 w700 降到 w500
+  会在只有 Regular / Bold 两档的衬线体上匹配回 Regular，用户标的粗体直接消失。
 
 ## Layout
 

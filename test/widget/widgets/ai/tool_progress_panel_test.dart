@@ -63,6 +63,82 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsWidgets);
     });
 
+    // 回归：工具跑完之后模型常常再想一轮，那段时间一枚工具都没在跑。标题
+    // 以前会把最后一枚工具顶上来，界面就一直说"正在搜索笔记"——而它早就
+    // 搜完了。
+    testWidgets('says thinking when the model keeps going after a tool call',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const ToolProgressPanel(
+            title: '测试标题',
+            items: [
+              ToolProgressItem(
+                toolName: '正在搜索笔记...',
+                status: ToolProgressStatus.completed,
+                thinkingText: '结果有点意外，再想想。',
+              ),
+            ],
+            inProgress: true,
+          ),
+        ),
+      );
+
+      expect(find.text('正在搜索笔记...'), findsNothing);
+      expect(find.text('正在思考...'), findsOneWidget);
+    });
+
+    // 查完东西再想的那一轮属于那枚工具，不该并进开头那坨思考里
+    testWidgets('detail sheet shows thinking that follows a tool call',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const ToolProgressPanel(
+            title: '测试标题',
+            items: [
+              ToolProgressItem(
+                toolName: 'search_notes',
+                status: ToolProgressStatus.completed,
+                thinkingText: '结果有点意外，再想想。',
+              ),
+            ],
+            inProgress: false,
+            thinkingText: '先看看最近写了什么。',
+          ),
+        ),
+      );
+
+      await tester.tap(collapsedRow());
+      await tester.pumpAndSettle();
+
+      expect(find.text('先看看最近写了什么。'), findsOneWidget);
+      expect(find.text('结果有点意外，再想想。'), findsOneWidget);
+      // 两段思考各自带一个「思考」小标题，工具名夹在中间
+      expect(find.text('思考'), findsNWidgets(2));
+    });
+
+    // 抽屉标题本身就是「思考」，块上再挂一个同名小标题就是把同一个词说两遍
+    testWidgets('thinking-only sheet says 思考 once',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const ToolProgressPanel(
+            title: '思考',
+            items: [],
+            inProgress: false,
+            thinkingText: '先想清楚再回答。',
+          ),
+        ),
+      );
+
+      await tester.tap(collapsedRow());
+      await tester.pumpAndSettle();
+
+      expect(find.text('先想清楚再回答。'), findsOneWidget);
+      // 折叠行和抽屉标题各一个，块上不再多出第三个
+      expect(find.text('思考'), findsNWidgets(2));
+    });
+
     testWidgets('displays completed state with done icon',
         (WidgetTester tester) async {
       final items = [

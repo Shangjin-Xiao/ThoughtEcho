@@ -129,13 +129,15 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
     for (int i = 0; i < quoteIds.length; i += 900) {
       final end = (i + 900 < quoteIds.length) ? i + 900 : quoteIds.length;
       final batchIds = quoteIds.sublist(i, end);
+      // 占位符只包含字面量 '?'，实际值始终经 whereArgs 参数绑定
       final placeholders = List.filled(batchIds.length, '?').join(',');
 
-      batch.rawQuery('''
-        SELECT quote_id, tag_id
-        FROM quote_tags
-        WHERE quote_id IN ($placeholders)
-        ''', batchIds);
+      batch.query(
+        'quote_tags',
+        columns: ['quote_id', 'tag_id'],
+        where: 'quote_id IN ($placeholders)',
+        whereArgs: batchIds,
+      );
     }
 
     final allTagMaps = await batch.commit();
@@ -418,9 +420,11 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
         for (final idBatch in _chunkIds(uniqueIds)) {
           final placeholders = List.filled(idBatch.length, '?').join(',');
 
-          final fullRows = await txn.rawQuery(
-            'SELECT id, delta_content, content, date FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
-            idBatch,
+          final fullRows = await txn.query(
+            'quotes',
+            columns: ['id', 'delta_content', 'content', 'date'],
+            where: 'is_deleted = 1 AND id IN ($placeholders)',
+            whereArgs: idBatch,
           );
 
           if (fullRows.isEmpty) {
@@ -481,9 +485,10 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
                 conflictAlgorithm: ConflictAlgorithm.replace);
           }
 
-          await txn.rawDelete(
-            'DELETE FROM quotes WHERE is_deleted = 1 AND id IN ($actualPlaceholders)',
-            batchDeletedIds,
+          await txn.delete(
+            'quotes',
+            where: 'is_deleted = 1 AND id IN ($actualPlaceholders)',
+            whereArgs: batchDeletedIds,
           );
         }
 

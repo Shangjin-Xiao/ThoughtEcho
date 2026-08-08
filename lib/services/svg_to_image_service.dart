@@ -5,7 +5,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart' as flutter_svg;
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'svg_offscreen_renderer.dart';
-import 'image_cache_service.dart';
+import 'svg_raster_cache_service.dart';
 
 /// 导出渲染模式
 enum ExportRenderMode {
@@ -16,7 +16,7 @@ enum ExportRenderMode {
 
 /// SVG到图片转换服务
 class SvgToImageService {
-  static final ImageCacheService _cacheService = ImageCacheService();
+  static final SvgRasterCacheService _cacheService = SvgRasterCacheService();
 
   // 预编译正则表达式以提升性能
   static final RegExp _viewBoxRegex = RegExp(r'viewBox="([^"]+)"');
@@ -81,7 +81,7 @@ class SvgToImageService {
 
       // 生成缓存键
       final cacheKey = useCache
-          ? ImageCacheService.generateCacheKey(
+          ? SvgRasterCacheService.generateCacheKey(
               svgContent,
               width,
               height,

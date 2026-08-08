@@ -42,6 +42,33 @@ class AddNoteController extends ChangeNotifier {
   /// 是否有任何元数据正在后台获取中
   bool get isFetchingMetadata => isFetchingLocation || isFetchingWeather;
 
+  /// 「预约」自动附加：抓取真正开始之前就把标志立起来。
+  ///
+  /// 保存流程靠这两个标志决定要不要转圈等待。只要中间出现一段标志为 false 的空窗
+  /// （等待延迟启动、位置抓完但天气还没开始），这期间点保存就会以为元数据已经齐了，
+  /// 直接落库，把用户在偏好里要的位置/天气丢掉。
+  void armAutoMetadataFetch({required bool location, required bool weather}) {
+    if (isFetchingLocation == location && isFetchingWeather == weather) return;
+    isFetchingLocation = location;
+    isFetchingWeather = weather;
+    notifyListeners();
+  }
+
+  /// 预约的位置抓取不会发生了（服务缺失、用户移除），放掉标志。
+  void clearPendingLocationFetch() {
+    if (!isFetchingLocation) return;
+    isFetchingLocation = false;
+    notifyListeners();
+  }
+
+  /// 预约的天气抓取不会发生了（服务缺失、没有坐标、用户移除），放掉标志，
+  /// 否则保存会一直转到超时。
+  void clearPendingWeatherFetch() {
+    if (!isFetchingWeather) return;
+    isFetchingWeather = false;
+    notifyListeners();
+  }
+
   // 一言标签加载状态
   bool isLoadingHitokotoTags = false;
 
@@ -143,6 +170,15 @@ class AddNoteController extends ChangeNotifier {
   void removeNewLocation() {
     includeLocation = false;
     _clearNewLocation();
+    // 用户主动移除，在途/预约的抓取就没有意义了，别让保存继续等它。
+    isFetchingLocation = false;
+    notifyListeners();
+  }
+
+  /// 新建笔记时用户主动移除天气。
+  void removeNewWeather() {
+    includeWeather = false;
+    isFetchingWeather = false;
     notifyListeners();
   }
 
@@ -197,7 +233,15 @@ class AddNoteController extends ChangeNotifier {
   /// 获取新建笔记的实时位置
   Future<void> fetchLocationForNewNote() async {
     final locService = locationService;
-    if (locService == null) return;
+    if (locService == null) {
+      // 服务拿不到就抓不了，按失败处理：既放掉标志（保存正等着它），
+      // 也取消这次附加，别让笔记带着「已附加位置」的勾却什么都没有。
+      includeLocation = false;
+      _clearNewLocation();
+      isFetchingLocation = false;
+      notifyListeners();
+      return;
+    }
 
     isFetchingLocation = true;
     notifyListeners();
@@ -247,7 +291,13 @@ class AddNoteController extends ChangeNotifier {
   Future<void> fetchWeatherForNewNote() async {
     final weaService = weatherService;
     final locService = locationService;
-    if (weaService == null) return;
+    if (weaService == null) {
+      // 同上：抓不了就别让 WeatherService 的旧数据在保存时冒充这条笔记的天气。
+      includeWeather = false;
+      isFetchingWeather = false;
+      notifyListeners();
+      return;
+    }
 
     isFetchingWeather = true;
     notifyListeners();

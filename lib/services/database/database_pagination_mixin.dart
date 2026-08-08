@@ -2,6 +2,130 @@ part of '../database_service.dart';
 
 /// Mixin providing pagination and stream operations for DatabaseService.
 mixin _DatabasePaginationMixin on _DatabaseServiceBase {
+  /// 刷新回填单次查询的条数上限。超过这个量级会分多次查询，
+  /// 既不把一次刷新拖成慢查询，也不会让列表停在更短的中间态
+  /// （全部取回后才推送，见 [_refillAfterRefresh]）。
+  static const int _maxRefillChunk = 500;
+
+  /// 判断刷新前后的可见列表是否逐条完全一致。
+  ///
+  /// 用 [Quote.toJson] 逐字段比较而不是挑几个字段：挑字段的写法一旦漏掉展示用
+  /// 的列（weather、day_period、location……）就会把真实更新误判成"没变"从而
+  /// 吞掉推送，而且新增字段时没人会记得同步这里。`toJson` 覆盖所有持久化字段，
+  /// 天然不会漏；`tagIds` 不在 `toJson` 里，单独比。
+  ///
+  /// 只在刷新路径上跑一次，不在滚动帧里，这点比较开销远小于一次整表重建。
+  bool _quoteListsEquivalent(List<Quote> previous, List<Quote> current) {
+    // 空列表不参与去重：首屏/清空后的刷新必须让 UI 收到事件。
+    if (previous.isEmpty) return false;
+    if (previous.length != current.length) return false;
+    for (var i = 0; i < previous.length; i++) {
+      if (!_quoteEquivalent(previous[i], current[i])) return false;
+    }
+    return true;
+  }
+
+  bool _quoteEquivalent(Quote a, Quote b) {
+    if (identical(a, b)) return true;
+
+    final aTags = a.tagIds;
+    final bTags = b.tagIds;
+    if (aTags.length != bTags.length) return false;
+    for (var i = 0; i < aTags.length; i++) {
+      if (aTags[i] != bTags[i]) return false;
+    }
+
+    final aJson = a.toJson();
+    final bJson = b.toJson();
+    if (aJson.length != bJson.length) return false;
+    for (final entry in aJson.entries) {
+      if (!bJson.containsKey(entry.key)) return false;
+      if (bJson[entry.key] != entry.value) return false;
+    }
+    return true;
+  }
+
+  /// 刷新后的回填：分块把原有条数全部取回，**全部到位后才推送一次**。
+  ///
+  /// 中途不推送是关键——只要推出去一个比原来短的列表，用户正滑到的位置就会被
+  /// maxScrollExtent 夹紧，也就是这个 PR 要修的"列表突然飞走"。
+  Future<void> _refillAfterRefresh({
+    required int targetCount,
+    required List<Quote> previousQuotes,
+    required bool previousHasMore,
+  }) async {
+    final generation = _quotesLoadGeneration;
+    var failed = false;
+
+    while (_currentQuotes.length < targetCount &&
+        _watchHasMore &&
+        !_isDisposed &&
+        generation == _quotesLoadGeneration) {
+      final before = _currentQuotes.length;
+      try {
+        await loadMoreQuotes(
+          refillCount: targetCount - before,
+          suppressNotify: true,
+        );
+      } catch (e, stackTrace) {
+        // 查询失败/超时。loadMoreQuotes 对超时会 rethrow，这里必须接住，
+        // 否则 unawaited 的回填会变成未处理的异步异常。
+        failed = true;
+        logError(
+          '刷新回填失败: $e',
+          error: e,
+          stackTrace: stackTrace,
+          source: 'DatabaseService',
+        );
+        break;
+      }
+      // 没有新增说明结果被去重光了，再循环就是死循环。
+      if (_currentQuotes.length <= before) break;
+    }
+
+    // 期间又来了一次刷新：由那一次负责推送，这里直接退场。
+    if (_isDisposed || generation != _quotesLoadGeneration) return;
+
+    // 回填因失败中断且没取够：**整体回滚到刷新前的状态**。
+    //
+    // 只"跳过推送"是不够的：那样 UI 还显示着 N 条，内存里的 _currentQuotes
+    // 却已被清空、_watchOffset 也归零了。接下来任何一次普通分页（空闲预取、
+    // 滚到底部的兜底加载）都会从 offset=0 取回第一页并正常推给 UI，
+    // 列表照样塌回第一页 —— 这个 PR 要修的塌陷又从后门绕了回来。
+    // 所以必须把列表、ID 集合和分页游标一起复原，让内存状态和 UI 重新一致。
+    //
+    // 注意只在失败时这么做：正常取完发现变短是真实的删除，必须如实推送。
+    // 这条保护依赖 loadMoreQuotes 在 suppressNotify 时把所有错误都抛出来，
+    // 否则被吞掉的错误会伪装成"取完了"，仍然推出截断列表。
+    if (failed && _currentQuotes.length < previousQuotes.length) {
+      logDebug(
+        '刷新回填未取满（${_currentQuotes.length}/${previousQuotes.length}），'
+        '回滚到刷新前的状态以免列表塌缩',
+      );
+      _currentQuotes = List<Quote>.from(previousQuotes);
+      _currentQuoteIds
+        ..clear()
+        ..addAll(previousQuotes.map((quote) => quote.id).whereType<String>());
+      _watchOffset = _currentQuotes.length;
+      // 连分页游标一起复原：刷新前如果已经翻到底（_watchHasMore == false），
+      // 无条件写 true 会让列表重新显示"还有下一页"，用户滑到底还会看到
+      // 一次注定取不到东西的转圈。
+      _watchHasMore = previousHasMore;
+      // 状态已经复原，下一次刷新可以直接按 _currentQuotes.length 算目标。
+      _pendingRefillTarget = 0;
+      return;
+    }
+
+    _pendingRefillTarget = 0;
+
+    if (_quoteListsEquivalent(previousQuotes, _currentQuotes)) {
+      logDebug('刷新后可见列表无变化，跳过整表推送');
+      return;
+    }
+
+    _safeNotifyQuotesStream();
+  }
+
   /// 修复：安全地通知笔记流订阅者
   /// 性能优化：由于 _currentQuotes 已通过 _currentQuoteIds 保证唯一性，
   /// 此处直接发送，无需再次遍历去重
@@ -26,7 +150,29 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
   @override
   void _refreshQuotesStream() {
     if (_quotesController != null && !_quotesController!.isClosed) {
-      logDebug('刷新笔记流数据');
+      // 刷新前记住已经加载出来的条数：任何一次数据变更（保存笔记、收藏、
+      // 位置回填、回收站清理、同步导入……）都会走到这里，若只重新取回第一页，
+      // 已经滑到深处的列表会瞬间从 N 条塌回一页，maxScrollExtent 随之骤减，
+      // 滚动位置被夹紧 —— 表现就是「列表突然飞走/弹回顶部 + 底部转圈 + 大片空白」。
+      // 所以刷新必须一次把原有页数全部取回，列表长度保持不变。
+      //
+      // 上一次刷新可能还在回填途中（那时 _currentQuotes 已被清空），
+      // 此时按当时的长度 0 算目标会退化成只取一页，等于把这个 bug 放回来。
+      // 沿用在途目标即可。
+      final int loadedCount = _currentQuotes.isNotEmpty
+          ? _currentQuotes.length
+          : _pendingRefillTarget;
+      // 列表本来就是空的（首屏前的刷新）：照旧取一页。
+      final int reloadCount = loadedCount > 0 ? loadedCount : _watchLimit;
+      _pendingRefillTarget = reloadCount;
+      // 回填结果和刷新前一模一样时不再向 UI 推送：整表推送会让列表页
+      // 重建全部已加载 item（上百次 build + 首次布局），发生在滚动帧里
+      // 就是一次明显的卡顿。回收站过期清理、同步后的例行刷新等场景，
+      // 可见列表其实一条都没变。
+      final List<Quote> previousQuotes = List<Quote>.from(_currentQuotes);
+      // 回填失败要整体回滚时，分页游标也得跟着回到刷新前的样子。
+      final bool previousHasMore = _watchHasMore;
+      logDebug('刷新笔记流数据，需回填 $reloadCount 条');
       // 优化：清除所有缓存，确保获取最新数据
       clearAllCacheForParts();
 
@@ -40,7 +186,13 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       _isLoading = false;
 
       // 触发重新加载
-      loadMoreQuotes();
+      unawaited(
+        _refillAfterRefresh(
+          targetCount: reloadCount,
+          previousQuotes: previousQuotes,
+          previousHasMore: previousHasMore,
+        ),
+      );
     } else {
       logDebug('笔记流无监听器或已关闭，跳过刷新');
     }
@@ -206,7 +358,6 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     }
 
     // 更新当前的筛选参数
-    _watchOffset = 0;
     _watchLimit = limit;
     _watchTagIds = tagIds;
     _watchCategoryId = categoryId;
@@ -238,8 +389,16 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       _quotesController = StreamController<List<Quote>>.broadcast();
 
       // 修复：在重置状态时确保原子性操作，避免竞态条件
+      // 注意：_watchOffset 只能在这里（真正重建流、清空 _currentQuotes 时）归零。
+      // 复用已有流的分支若也归零，下一次 loadMoreQuotes 会重新查第一页，
+      // 结果全是重复数据被去重掉——列表一条都不增长，_watchHasMore 却被
+      // 重新置回 true，底部加载指示器就此常驻并反复触发无效分页。
+      _watchOffset = 0;
       _currentQuotes = [];
       _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set
+      // 换了筛选条件，旧结果集的回填目标不再适用，留着会让下一次刷新
+      // 按旧条数超量加载。
+      _pendingRefillTarget = 0;
       _isLoading = false;
       _quotesLoadGeneration++;
       _watchHasMore = true; // 重置分页状态
@@ -306,6 +465,8 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool? includeDeleted,
+    int? refillCount,
+    bool suppressNotify = false,
   }) async {
     // 使用当前观察的参数作为默认值
     tagIds ??= _watchTagIds;
@@ -324,8 +485,15 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     _isLoading = true;
     final loadGeneration = _quotesLoadGeneration;
     final requestOffset = _watchOffset;
+    // 刷新回填：一次尽量多取，避免列表在用户滚动途中变短。
+    // 单次查询封顶，超出的部分由 _refillAfterRefresh 继续分块取。
+    // refillCount 一给就照它来（只受分块上限约束）：最后一块往往小于一页，
+    // 若这时退回 _watchLimit 就会多取一整页，回填出比刷新前更长的列表。
+    final int requestLimit = refillCount == null
+        ? _watchLimit
+        : (refillCount > _maxRefillChunk ? _maxRefillChunk : refillCount);
     logDebug(
-      '开始加载更多笔记，当前已有 ${_currentQuotes.length} 条，offset=$requestOffset，limit=$_watchLimit',
+      '开始加载更多笔记，当前已有 ${_currentQuotes.length} 条，offset=$requestOffset，limit=$requestLimit',
     );
 
     try {
@@ -333,7 +501,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
         tagIds: tagIds,
         categoryId: categoryId,
         offset: requestOffset,
-        limit: _watchLimit,
+        limit: requestLimit,
         orderBy: _watchOrderBy,
         searchQuery: searchQuery,
         selectedWeathers: selectedWeathers,
@@ -379,11 +547,15 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
         }
 
         // 简化：统一的_watchHasMore判断逻辑
-        _watchHasMore = quotes.length >= _watchLimit;
+        _watchHasMore = quotes.length >= requestLimit;
       }
 
       // 通知状态变化
       notifyListeners();
+
+      // 回填分块进行时由 _refillAfterRefresh 在全部到位后统一推送：
+      // 中途推出去的短列表会把用户的滚动位置夹紧。
+      if (suppressNotify) return;
 
       // 修复：使用安全的方式通知订阅者
       _safeNotifyQuotesStream();
@@ -393,11 +565,18 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
         return;
       }
       logError('加载更多笔记失败: $e', error: e, source: 'DatabaseService');
-      // 确保即使出错也通知UI，避免无限加载状态
-      _safeNotifyQuotesStream();
+      // 确保即使出错也通知UI，避免无限加载状态。
+      // 但分块回填期间不推：半成品比原列表更短，推出去就是一次列表塌缩，
+      // 失败后的最终状态由 _refillAfterRefresh 统一决定。
+      if (!suppressNotify) {
+        _safeNotifyQuotesStream();
+      }
 
-      // 如果是超时错误，重新抛出让UI处理
-      if (e is TimeoutException) {
+      // 回填期间必须把**所有**错误交出去：_refillAfterRefresh 要靠异常判断
+      // 「保留旧列表」还是「如实推送」。只 rethrow 超时的话，SQLite 异常、
+      // 反序列化失败等会被这里吞掉、正常返回，回填便误以为成功，
+      // 截断后的列表照样推给 UI —— 列表塌缩的保护就形同虚设。
+      if (suppressNotify || e is TimeoutException) {
         rethrow;
       }
     } finally {

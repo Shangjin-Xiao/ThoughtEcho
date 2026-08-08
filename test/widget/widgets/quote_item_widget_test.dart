@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
@@ -46,6 +47,9 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
 
   @override
   String get exportFormat => 'card';
+
+  @override
+  String get noteCardMediaStyle => NoteCardMediaStyle.thumbnail;
 
   set showNoteEditTime(bool value) {
     if (_showNoteEditTime != value) {

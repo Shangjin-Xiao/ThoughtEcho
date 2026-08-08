@@ -187,21 +187,25 @@ extension SmartPushExecution on SmartPushService {
         // 顺序不能反：结算会推进/复位连续未点击计数，配额裁定要读它。
         await _analytics.settlePendingSend();
 
-        allowance = await _analytics.checkPushAllowance(
-          intensity: _settings.pushIntensity,
-          lastPushTime: _settings.lastPushTime,
-        );
-
-        if (!allowance.allowed) {
-          AppLogger.w(
-            '智能推送被跳过 [${allowance.tier.name}/${_settings.pushIntensity.name}]: '
-            '${allowance.reason}',
+        // 配额拨盘只管智能模式。自定义模式下时段和频率都是用户自己排的，
+        // 设置页里也没有这个拨盘，这里再拿它做减法就成了看不见的克扣。
+        if (_settings.pushMode == PushMode.smart) {
+          allowance = await _analytics.checkPushAllowance(
+            intensity: _settings.pushIntensity,
+            lastPushTime: _settings.lastPushTime,
           );
-          // 仍然重新调度下次推送
-          if (!isBackground) {
-            await scheduleNextPush();
+
+          if (!allowance.allowed) {
+            AppLogger.w(
+              '智能推送被跳过 [${allowance.tier.name}/${_settings.pushIntensity.name}]: '
+              '${allowance.reason}',
+            );
+            // 仍然重新调度下次推送
+            if (!isBackground) {
+              await scheduleNextPush();
+            }
+            return;
           }
-          return;
         }
       }
 

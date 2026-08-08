@@ -209,13 +209,19 @@ pwsh ./scripts/build_msix_ci.ps1
   - `AppShapeTokens.of(context)` 是方法调用，不能出现在 `const` 表达式里。
     遇到 `const RoundedRectangleBorder(...)` 是去掉 `const`，不是退回静态常量。
 - ❌ `fontSize:` 字面量。用 `theme.textTheme.*`，需要微调时 `.copyWith()`。
-- ❌ 写死正文 `height:`（行高）或 `fontWeight:` 来「调得好看点」。行高由
-  `ThemeStyleForm.bodyLineHeight` 下发到 `textTheme.body*`（Material 1.5、纸墨 1.75、
-  素笺 1.6），在 widget 里 `copyWith(height: ...)` 会盖掉它。
-  - 纸墨的**纸张横线间距是从正文行高推导的**，覆盖行高会让文字逐行相对横线漂移，
-    卡片看起来像背了一张格子图。见 `theme_style_contrast_test.dart` 的不变量。
-  - Android 的可变字重补偿（w400→350）是为**黑体**做的，衬线风格靠
-    `variableWeightCompensation: 0` 关掉。别在 widget 里给手工风格另外补字重。
+- ❌ 写死正文 `height:`（行高）、`fontSize:` 或 `fontWeight:` 来「调得好看点」。
+  这三样都由 `ThemeStyleForm` 下发到 `textTheme.body*`：行高 `bodyLineHeight`
+  （Material 1.5、纸墨 1.75、素笺 1.6）、字号 `bodyFontScale`（Material 16、
+  手工风格 17）、字重下限 `readingWeightFloor`（Material 无、手工风格 w500）。
+  在 widget 里 `copyWith` 任何一项都会盖掉令牌。
+  - 纸墨的**纸张横线间距是从「正文字号 × 行高」推导的**，覆盖任一项都会让文字逐行
+    相对横线漂移，卡片看起来像背了一张格子图。见 `theme_style_contrast_test.dart`
+    的不变量。
+  - 字重有两个**方向相反**的补偿，别搞混：Android 的可变字重补偿（w400→350）是给
+    **黑体**减重，衬线风格靠 `variableWeightCompensation: 0` 关掉；
+    `readingWeightFloor` 是给**衬线体**加重，所有平台生效。别在 widget 里另外补。
+  - `label*`（按钮、胶囊、导航栏标签）**不换字体族、不缩放**，永远是系统黑体。
+    这是全局规则，不要给它加风格字体。
 - ❌ `fontStyle: FontStyle.italic` **用作 UI 装饰**（出处、提示、占位、次要说明）。中文字体没有
   真斜体字形，Flutter 会做合成倾斜（skew），横竖笔画粗细对比被破坏、交接处糊在一起，小字号下
   明显发虚。要弱化层次就用 `onSurfaceVariant` + 字号或字重差。

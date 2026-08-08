@@ -133,58 +133,100 @@ class AppTheme with ChangeNotifier {
     );
   }
 
-  /// 给整套 TextTheme 套上风格的字体族与正文行高。
+  /// 给整套 TextTheme 套上风格的字体族、字号、字重与正文行高。
   ///
   /// 手工风格指向系统自带的中文衬线体，**不打包任何字体文件**：`fontFamily` 命中不了
   /// 就沿 `fontFamilyFallback` 逐个回退，最后回落到系统默认，不会出现豆腐块。
   ///
-  /// 行高只改 `body*` 三级——标题和标签用的是紧排，跟着放松会显得散。
+  /// 分成三档处理，分档依据是**光学尺寸**，不是省事：
+  ///
+  /// - `display*` / `headline*`（24–57sp）：只换字体族。这个尺寸上衬线的横画怎么都
+  ///   落在整像素以上，不需要补偿，再加重反而笨。
+  /// - `title*` / `body*`（11–22sp）：换字体族 + 抬到 [ThemeStyleForm.readingWeightFloor]。
+  ///   横画掉进半像素是「衬线读起来比黑体虚」的物理原因，字重是直接的补偿手段。
+  ///   抬下限而不是加增量：M3 的 `titleMedium` / `titleSmall` 本来就是 w500，
+  ///   加增量会把它们顶成粗体。`body*` 另外还吃字号缩放和行高缩放。
+  /// - `label*`：**什么都不改，保持系统黑体**。按钮、胶囊、导航栏标签是 11–14sp
+  ///   的功能性文字，中文衬线在这个尺寸下糊成一团，而它们又不承担任何风格识别——
+  ///   没有人从一个按钮标签上看出「这是纸墨风格」。这是全局排版规则，
+  ///   不是某套风格的选择，所以直接写在这里而不是做成令牌。
+  ///
+  /// 行高只改 `body*` 三级——标题用的是紧排，跟着放松会显得散。
   /// `bodyLarge` 直接取 [ThemeStyleForm.bodyLineHeight]，另外两级按同一比例缩放
   /// 各自的 M3 默认值，避免三级正文被压成同一个行高。
   ///
-  /// material 风格两项都是恒等取值（`fontFamily` 为 null、行高比例为 1），像素不变。
+  /// material 风格四项全是恒等取值（`fontFamily` 为 null、字号/行高比例为 1、
+  /// 字重下限为 0），像素不变。
   ///
   /// 注意与 `_createPlatformTextTheme` 的顺序：那一层给 Windows 补的是**黑体**回退链，
-  /// 这一层要盖在它上面，否则 Windows 上会被雅黑抢回去。
+  /// 这一层要盖在它上面，否则 Windows 上会被雅黑抢回去。反过来 `label*` 不换族，
+  /// 正好继续用那一层补好的黑体回退链。
   static TextTheme _applyStyleTypography(ThemeStyleForm form, TextTheme base) {
     final family = form.fontFamily;
     final fallback = form.fontFamilyFallback;
     final heightScale =
         form.bodyLineHeight / ThemeStyleForm.material.bodyLineHeight;
-    if (family == null && heightScale == 1) return base;
+    final sizeScale = form.bodyFontScale;
+    final weightFloor = form.readingWeightFloor;
+    if (family == null &&
+        heightScale == 1 &&
+        sizeScale == 1 &&
+        weightFloor == 0) {
+      return base;
+    }
 
-    // 字体族：全级别统一换。
-    TextStyle? font(TextStyle? style) => family == null
+    // 大字：只换字体族。
+    TextStyle? display(TextStyle? style) => family == null
         ? style
         : style?.copyWith(fontFamily: family, fontFamilyFallback: fallback);
 
-    // 正文：换字体族之外还要按比例放松行高。fallback 是 M3 的默认值，
-    // 用于 base 没带 height 的情况。
-    TextStyle? body(TextStyle? style, double m3Height) {
-      final styled = font(style);
-      if (heightScale == 1) return styled;
-      return styled?.copyWith(
-          height: (styled.height ?? m3Height) * heightScale);
+    // 阅读用小字：换族之外还要把字重抬到下限。M3 没给字重的按 w400 算。
+    // 已经达标的（titleMedium / titleSmall 是 w500）原样放过。
+    TextStyle? reading(TextStyle? style) {
+      final styled = display(style);
+      if (weightFloor == 0 || styled == null) return styled;
+      final current = styled.fontWeight ?? FontWeight.w400;
+      final floored = form.readingWeight(current);
+      return floored == current ? styled : styled.copyWith(fontWeight: floored);
+    }
+
+    // 正文：再加上字号与行高缩放。两个 m3 参数是 base 没带对应值时的兜底。
+    TextStyle? body(TextStyle? style, double m3Size, double m3Height) {
+      final styled = reading(style);
+      if (styled == null || (sizeScale == 1 && heightScale == 1)) return styled;
+      return styled.copyWith(
+        fontSize: (styled.fontSize ?? m3Size) * sizeScale,
+        height: (styled.height ?? m3Height) * heightScale,
+      );
     }
 
     return base.copyWith(
-      displayLarge: font(base.displayLarge),
-      displayMedium: font(base.displayMedium),
-      displaySmall: font(base.displaySmall),
-      headlineLarge: font(base.headlineLarge),
-      headlineMedium: font(base.headlineMedium),
-      headlineSmall: font(base.headlineSmall),
-      titleLarge: font(base.titleLarge),
-      titleMedium: font(base.titleMedium),
-      titleSmall: font(base.titleSmall),
-      bodyLarge: body(base.bodyLarge, 24 / 16),
-      bodyMedium: body(base.bodyMedium, 20 / 14),
-      bodySmall: body(base.bodySmall, 16 / 12),
-      labelLarge: font(base.labelLarge),
-      labelMedium: font(base.labelMedium),
-      labelSmall: font(base.labelSmall),
+      displayLarge: display(base.displayLarge),
+      displayMedium: display(base.displayMedium),
+      displaySmall: display(base.displaySmall),
+      headlineLarge: display(base.headlineLarge),
+      headlineMedium: display(base.headlineMedium),
+      headlineSmall: display(base.headlineSmall),
+      titleLarge: reading(base.titleLarge),
+      titleMedium: reading(base.titleMedium),
+      titleSmall: reading(base.titleSmall),
+      bodyLarge: body(base.bodyLarge, 16, 24 / 16),
+      bodyMedium: body(base.bodyMedium, 14, 20 / 14),
+      bodySmall: body(base.bodySmall, 12, 16 / 12),
+      // label* 刻意不动，见方法注释。
     );
   }
+
+  /// 三层排版加工的固定顺序，亮暗两套主题共用。
+  ///
+  /// 顺序不能调换：平台回退链在最里（给 Windows 补黑体），黑体减重在中间
+  /// （它算的是 M3 默认字重，必须在字重被风格改动之前跑），风格排版在最外
+  /// （字体族要盖过平台回退链，字重下限要叠在减重之后）。
+  static TextTheme _styledTextTheme(ThemeStyleForm form, TextTheme base) =>
+      _applyStyleTypography(
+        form,
+        _fixAndroidVariableFontWeight(form, _createPlatformTextTheme(base)),
+      );
 
   /// 卡片形状：手工风格用发丝边框 + 零投影来做纸的层次，Material 保持原有投影。
   ///
@@ -409,8 +451,13 @@ class AppTheme with ChangeNotifier {
       logDebug(
         '主题服务初始化完成: 使用自定义颜色=$_useCustomColor, 使用动态取色=$_useDynamicColor, 主题模式=$_themeMode',
       );
-    } catch (e) {
-      logDebug('初始化主题服务失败: $e');
+    } catch (e, stack) {
+      logError(
+        '初始化主题服务失败',
+        error: e,
+        stackTrace: stack,
+        source: 'AppTheme',
+      );
       // 初始化失败时使用默认值。风格也要一并重置：_loadThemeStyle() 可能已经成功、
       // 后面某一步才抛，那样会留下「风格是纸墨、其余全是默认值」的半新半旧状态。
       _customColor = Colors.blue;
@@ -575,8 +622,13 @@ class AppTheme with ChangeNotifier {
         ); // This is correct for reconstructing Color from ARGB int
       }
       _useCustomColor = _storage?.getBool(_useCustomColorKey) ?? false;
-    } catch (e) {
-      logDebug('加载自定义颜色失败: $e');
+    } catch (e, stack) {
+      logError(
+        '加载自定义颜色失败',
+        error: e,
+        stackTrace: stack,
+        source: 'AppTheme',
+      );
       _customColor = Colors.blue;
       _useCustomColor = false;
     }
@@ -589,8 +641,13 @@ class AppTheme with ChangeNotifier {
       if (modeString != null) {
         _themeMode = ThemeMode.values.byName(modeString);
       }
-    } catch (e) {
-      logDebug('加载主题模式失败: $e');
+    } catch (e, stack) {
+      logError(
+        '加载主题模式失败',
+        error: e,
+        stackTrace: stack,
+        source: 'AppTheme',
+      );
       _themeMode = ThemeMode.system;
     }
   }
@@ -599,8 +656,13 @@ class AppTheme with ChangeNotifier {
   void _loadThemeStyle() {
     try {
       _themeStyle = ThemeStyle.fromName(_storage?.getString(_themeStyleKey));
-    } catch (e) {
-      logDebug('加载主题风格失败: $e');
+    } catch (e, stack) {
+      logError(
+        '加载主题风格失败',
+        error: e,
+        stackTrace: stack,
+        source: 'AppTheme',
+      );
       _themeStyle = ThemeStyle.defaultStyle;
     }
   }
@@ -612,8 +674,13 @@ class AppTheme with ChangeNotifier {
       if (useDynamic != null) {
         _useDynamicColor = useDynamic;
       }
-    } catch (e) {
-      logDebug('加载动态取色设置失败: $e');
+    } catch (e, stack) {
+      logError(
+        '加载动态取色设置失败',
+        error: e,
+        stackTrace: stack,
+        source: 'AppTheme',
+      );
       _useDynamicColor = true; // 默认启用
     }
   }
@@ -675,6 +742,7 @@ class AppTheme with ChangeNotifier {
 
     // 使用主题色系的浅色调，确保颜色一致性
     final colorScheme = baseTheme.colorScheme;
+    final textTheme = _styledTextTheme(form, baseTheme.textTheme);
 
     return _cachedLightThemeData = baseTheme.copyWith(
       // 使用主题色系的极浅背景色
@@ -704,9 +772,22 @@ class AppTheme with ChangeNotifier {
         foregroundColor: colorScheme.onSurface,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
+        // ⚠️ **这一整条目前是空转**：FlexColorScheme 不设 appBarTheme.titleTextStyle，
+        // 所以 `?.copyWith` 求值成 null，下面的 fontSize 20 / 字重 / 颜色一个都没生效
+        // （实测见 `theme_style_typography_test.dart`）。M3 的 AppBar 在
+        // titleTextStyle 为 null 时回落到 `textTheme.titleLarge`，风格是从那条路
+        // 跟上的——**顶栏标题本来就是衬线，不要以为这里修好了什么**。
+        //
+        // 保留而不是删掉，是因为它某天非空时（换 FlexColorScheme 版本、或有人加了
+        // appBarTheme 配置）必须跟着风格走，而不是像原来那样硬写 w400 + 系统字体。
+        // fontFamily 传 null 时 copyWith 保持原值，material 下等于什么都没改。
         titleTextStyle: baseTheme.appBarTheme.titleTextStyle?.copyWith(
           color: colorScheme.onSurface,
-          fontWeight: FontWeight.w400, // M3 titleLarge 默认 w400，与 textTheme 补偿一致
+          fontFamily: form.fontFamily,
+          fontFamilyFallback: form.fontFamilyFallback,
+          // M3 titleLarge 默认 w400，再过一遍风格的字重下限：
+          // material 下下限是 0，原样还是 w400，一个像素不变。
+          fontWeight: form.readingWeight(FontWeight.w400),
           fontSize: 20,
         ),
       ),
@@ -740,23 +821,12 @@ class AppTheme with ChangeNotifier {
       extensions: <ThemeExtension<dynamic>>[
         AppSemanticColors.light,
         AppShapeTokens.fromForm(form, Brightness.light),
+        AppTypographyTokens.fromForm(form),
       ],
 
       // Windows 平台字体优化
-      textTheme: _applyStyleTypography(
-        form,
-        _fixAndroidVariableFontWeight(
-          form,
-          _createPlatformTextTheme(baseTheme.textTheme),
-        ),
-      ),
-      primaryTextTheme: _applyStyleTypography(
-        form,
-        _fixAndroidVariableFontWeight(
-          form,
-          _createPlatformTextTheme(baseTheme.primaryTextTheme),
-        ),
-      ),
+      textTheme: textTheme,
+      primaryTextTheme: _styledTextTheme(form, baseTheme.primaryTextTheme),
     );
   }
 
@@ -999,23 +1069,12 @@ class AppTheme with ChangeNotifier {
       extensions: <ThemeExtension<dynamic>>[
         AppSemanticColors.dark,
         AppShapeTokens.fromForm(form, Brightness.dark),
+        AppTypographyTokens.fromForm(form),
       ],
 
       // Windows 平台字体优化
-      textTheme: _applyStyleTypography(
-        form,
-        _fixAndroidVariableFontWeight(
-          form,
-          _createPlatformTextTheme(baseTheme.textTheme),
-        ),
-      ),
-      primaryTextTheme: _applyStyleTypography(
-        form,
-        _fixAndroidVariableFontWeight(
-          form,
-          _createPlatformTextTheme(baseTheme.primaryTextTheme),
-        ),
-      ),
+      textTheme: _styledTextTheme(form, baseTheme.textTheme),
+      primaryTextTheme: _styledTextTheme(form, baseTheme.primaryTextTheme),
     );
   }
 }

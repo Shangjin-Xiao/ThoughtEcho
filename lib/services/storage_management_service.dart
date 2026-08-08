@@ -4,7 +4,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import '../utils/app_logger.dart';
 import 'database_service.dart';
-import 'image_cache_service.dart';
+import 'svg_raster_cache_service.dart';
 import 'weather_service.dart';
 import 'version_check_service.dart';
 import 'media_reference_service.dart';
@@ -362,7 +362,7 @@ class StorageManagementService {
 
       // 1. 清理图片缓存（内存缓存）
       try {
-        ImageCacheService().clearCache();
+        SvgRasterCacheService().clearCache();
         logDebug('图片缓存已清除');
       } catch (e) {
         logDebug('清理图片缓存失败: $e');

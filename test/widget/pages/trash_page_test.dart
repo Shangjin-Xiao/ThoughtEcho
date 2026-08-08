@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/note_tag.dart';
+import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/trash_page.dart';
 import 'package:thoughtecho/services/database_service.dart';
@@ -47,6 +48,9 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
 
   @override
   String get exportFormat => 'image';
+
+  @override
+  String get noteCardMediaStyle => NoteCardMediaStyle.thumbnail;
 
   @override
   bool get noteListDisableCardShadows => false;

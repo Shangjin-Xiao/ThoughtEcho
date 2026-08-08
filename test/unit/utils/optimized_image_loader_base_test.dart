@@ -1,8 +1,125 @@
+import 'dart:typed_data';
+
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/utils/optimized_image_loader_base.dart';
 
 void main() {
   group('OptimizedImageLoaderBase', () {
+    group('decodeDimensionFor', () {
+      test('按逻辑尺寸乘以像素比换算成设备像素', () {
+        expect(decodeDimensionFor(344, 2.0), 688);
+      });
+
+      test('尺寸过小时抬到下限，避免解成马赛克', () {
+        expect(decodeDimensionFor(10, 2.0), minDecodeDimension);
+      });
+
+      test('尺寸过大时压到上限，避免单张解码撑爆内存', () {
+        expect(decodeDimensionFor(4000, 3.0), maxDecodeDimension);
+      });
+
+      test('非法尺寸返回 null，表示不设解码上限', () {
+        expect(decodeDimensionFor(0, 2.0), isNull);
+        expect(decodeDimensionFor(-1, 2.0), isNull);
+        expect(decodeDimensionFor(double.infinity, 2.0), isNull);
+        expect(decodeDimensionFor(double.nan, 2.0), isNull);
+      });
+
+      test('非法像素比同样返回 null，不能当成"尺寸没问题"照解', () {
+        // 尺寸合法但像素比非法时，把关的是 devicePixels 那道校验。
+        // 少了它，pixelRatio=0 会退化成"抬到下限 160"，静悄悄解出一张错图。
+        for (final pixelRatio in <double>[0, -1, double.infinity, double.nan]) {
+          expect(
+            decodeDimensionFor(344, pixelRatio),
+            isNull,
+            reason: 'pixelRatio=$pixelRatio',
+          );
+        }
+      });
+
+      test('像素比封顶到 2.0 后，解码宽度不会超过屏幕宽度 × 2', () {
+        // 卡片宽度不会超过屏幕宽度；dpr 由调用方（quill_editor_extensions
+        // 的 _previewMaxPixelRatio）钳到 2.0，这里验证钳完之后的内存上界。
+        const screenWidth = 430.0;
+        const cappedRatio = 2.0;
+        final ceiling = (screenWidth * cappedRatio).round();
+
+        for (final width in <double>[120, 344, 400, screenWidth]) {
+          final decoded = decodeDimensionFor(width, cappedRatio);
+
+          expect(decoded, isNotNull);
+          expect(decoded! <= ceiling, isTrue, reason: 'width=$width');
+        }
+
+        // 不封顶的话这条上界就守不住——这正是调用方要钳 dpr 的原因。
+        expect(decodeDimensionFor(screenWidth, 3.0)! > ceiling, isTrue);
+      });
+    });
+
+    group('decodeHeightBudgetFor', () {
+      test('高度上限乘以解码宽度不超过总像素预算', () {
+        for (final width in <int>[160, 688, 1032, 2048]) {
+          final budget = decodeHeightBudgetFor(width);
+
+          expect(budget, isNotNull);
+          expect(
+            budget! * width <= maxDecodePixels,
+            isTrue,
+            reason: 'width=$width',
+          );
+        }
+      });
+
+      test('常规照片与长截图的自然高度都在预算之内，不会被缩', () {
+        // 卡片解码宽度约 688（344 逻辑宽 × 2 倍率）。
+        const decodeWidth = 688;
+        final budget = decodeHeightBudgetFor(decodeWidth)!;
+
+        // 4:3 竖图
+        expect(decodeWidth * 4 ~/ 3 < budget, isTrue);
+        // 1080×24000 的十屏拼接长截图，等比到 688 宽后的高度
+        expect((decodeWidth * 24000 / 1080).round() < budget, isTrue);
+      });
+
+      test('病态超长图会被预算挡住', () {
+        const decodeWidth = 688;
+        final budget = decodeHeightBudgetFor(decodeWidth)!;
+
+        // 1080×100000：等比到 688 宽后约 63700 高，必须超出预算
+        expect((decodeWidth * 100000 / 1080).round() > budget, isTrue);
+      });
+
+      test('没有宽度上限时也不设高度上限', () {
+        expect(decodeHeightBudgetFor(null), isNull);
+        expect(decodeHeightBudgetFor(0), isNull);
+      });
+    });
+
+    group('wrapWithDecodeLimit', () {
+      final base = MemoryImage(Uint8List.fromList(const [1, 2, 3]));
+
+      test('没有解码上限时原样返回', () {
+        expect(identical(wrapWithDecodeLimit(base, null, null), base), isTrue);
+      });
+
+      test('只给宽度时保持默认策略，高度按比例推算', () {
+        final resized = wrapWithDecodeLimit(base, 800, null) as ResizeImage;
+
+        expect(resized.width, 800);
+        expect(resized.height, isNull);
+        expect(resized.policy, ResizeImagePolicy.exact);
+      });
+
+      test('同时给宽高时必须用 fit 策略，否则长图会被拉变形', () {
+        final resized = wrapWithDecodeLimit(base, 800, 1600) as ResizeImage;
+
+        expect(resized.width, 800);
+        expect(resized.height, 1600);
+        expect(resized.policy, ResizeImagePolicy.fit);
+      });
+    });
+
     group('isDataUrl', () {
       test('returns true for valid data URL', () {
         const source =

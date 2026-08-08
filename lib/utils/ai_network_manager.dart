@@ -428,10 +428,16 @@ class AINetworkManager {
       (data) {
         try {
           final chunk = utf8.decode(data, allowMalformed: true);
-          final lines = (partialLine + chunk).split('\n');
-          partialLine = lines.removeLast();
+          final text = partialLine + chunk;
 
-          for (final line in lines) {
+          // 使用 indexOf 和 substring 手动解析代替 split 以降低频繁创建 String 对象的内存与 GC 压力
+          int startIndex = 0;
+          int newlineIndex;
+
+          while ((newlineIndex = text.indexOf('\n', startIndex)) != -1) {
+            final line = text.substring(startIndex, newlineIndex);
+            startIndex = newlineIndex + 1;
+
             if (line.startsWith('data:')) {
               final jsonStr = line.substring(5).trim();
               if (jsonStr == '[DONE]') {
@@ -468,6 +474,8 @@ class AINetworkManager {
               logDebug('未知流式响应格式: $line');
             }
           }
+
+          partialLine = text.substring(startIndex);
         } catch (e) {
           logDebug('处理流式数据块错误: $e');
           onError(Exception('流式数据处理错误: $e'));
@@ -521,16 +529,10 @@ class AINetworkManager {
     final errorBody = error.response?.data?.toString() ?? error.message ?? '';
 
     if (statusCode == 401) {
-      logError(
-        'AI Request Error: 401 Unauthorized',
-        error: error,
-      );
+      logError('AI Request Error: 401 Unauthorized', error: error);
       return Exception('API密钥无效或已过期 (401)，请检查API密钥设置');
     } else if (statusCode == 429) {
-      logError(
-        'AI Request Error: 429 Too Many Requests',
-        error: error,
-      );
+      logError('AI Request Error: 429 Too Many Requests', error: error);
       return Exception('API调用频率超限 (429)，请稍后重试');
     } else if (statusCode == 500) {
       String errorMessage = 'AI服务器内部错误 (500)';
@@ -547,16 +549,10 @@ class AINetworkManager {
         if (errorBody.contains('model')) {
           errorMessage += '：可能是模型不存在或不可用';
         }
-        logError(
-          'Failed to parse 500 error body JSON',
-          error: e,
-        );
+        logError('Failed to parse 500 error body JSON', error: e);
       }
 
-      logError(
-        'AI Request Error: 500 Internal Server Error',
-        error: error,
-      );
+      logError('AI Request Error: 500 Internal Server Error', error: error);
       return Exception(
         '$errorMessage\n\n建议：\n1. 检查选择的AI模型是否正确\n2. 稍后重试\n3. 如果问题持续，请检查API服务状态',
       );
@@ -571,10 +567,7 @@ class AINetworkManager {
       return Exception('网络连接超时，请检查网络设置或稍后重试');
     }
 
-    logError(
-      'AI Request Error: Unknown DioException',
-      error: error,
-    );
+    logError('AI Request Error: Unknown DioException', error: error);
     return Exception('AI请求未知错误: ${error.message ?? error.toString()}');
   }
 

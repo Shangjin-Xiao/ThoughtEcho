@@ -8,6 +8,15 @@ const double _kUserBubbleWidthFactor = 0.78;
 /// markdown 的排版落在最后一个字后面，而不是另起一行。
 const String _kStreamingCursor = '▌';
 
+/// 输入框单行的排版参数：字号 × 行高 + 上下内边距 = 一行的盒子高度
+/// （见 [_ThoughterUI._composerLineBoxHeight]），发送键就在那个盒子里居中，
+/// 所以改这两个值不用手动补偿按钮位置。
+const double _kComposerLineHeight = 1.35;
+const double _kComposerVerticalPadding = 12;
+
+/// 发送键的视觉直径。点击区由 IconButton 自己撑到 48，不参与定位。
+const double _kSendButtonDiameter = 36;
+
 extension _ThoughterUI on _ThoughterPageState {
   /// 消息区可用高度变小（键盘上推、输入框变多行）时跟着贴底，
   /// 保证最后一条消息不会被顶出可视区。
@@ -360,6 +369,7 @@ extension _ThoughterUI on _ThoughterPageState {
                 ),
                 result: map['result'] as String?,
                 narrationText: map['narrationText'] as String?,
+                thinkingText: map['thinkingText'] as String?,
               );
             }).toList();
             return Padding(
@@ -595,6 +605,10 @@ extension _ThoughterUI on _ThoughterPageState {
     AppLocalizations l10n,
   ) {
     final toolSnapshot = _toolProcessBefore(message);
+    // 思考和工具调用是同一段过程的两半，入口只有一个：「查看过程」。按有没有
+    // 调工具分成两种文案，等于让用户在点开之前先分清"思考"和"过程"是不是一
+    // 回事——而它们本来就是一回事。
+    final processLabel = l10n.viewToolProcess;
     return Padding(
       padding: const EdgeInsets.only(top: 2),
       // 按钮的热区自带 8 的横向留白，整行往左挪回去，第一枚图标才和正文
@@ -617,8 +631,8 @@ extension _ThoughterUI on _ThoughterPageState {
             if (toolSnapshot != null)
               _MessageAction(
                 icon: Icons.account_tree_outlined,
-                tooltip: l10n.viewToolProcess,
-                label: l10n.viewToolProcess,
+                tooltip: processLabel,
+                label: processLabel,
                 onTap: () => showToolProgressSheet(
                   context,
                   ValueNotifier(toolSnapshot),
@@ -672,18 +686,23 @@ extension _ThoughterUI on _ThoughterPageState {
     await _askAgent(question);
   }
 
-  /// 找出这条回复之前、同一轮里的工具调用进度，用来喂「查看过程」抽屉。
+  /// 找出这条回复之前、同一轮里的过程记录，用来喂「查看过程」抽屉。
+  ///
+  /// 过程不只有工具调用：模型可能这一轮什么都没查，只是想了一会儿再回答。
+  /// 那一样是过程，一样该能翻回去看——否则「只思考」的那轮，回答定稿后正文上方
+  /// 只剩一行折叠标题，下面的操作行却什么都不给，看着像思考被吞了。
   ToolProgressSnapshot? _toolProcessBefore(app_chat.ChatMessage message) {
     final index = _messages.indexWhere((m) => m.id == message.id);
     if (index <= 0) return null;
     for (var i = index - 1; i >= 0; i--) {
       final candidate = _messages[i];
-      // 回到上一条用户提问就说明这一轮没有工具调用
+      // 回到上一条用户提问就说明这一轮没有过程可看
       if (candidate.isUser) return null;
       final meta = candidate.parsedMeta;
       if (meta == null || meta['type'] != 'tool_progress') continue;
       final rawItems = meta['items'] as List<dynamic>? ?? const [];
-      if (rawItems.isEmpty) return null;
+      final thinkingText = meta['thinkingText']?.toString().trim() ?? '';
+      if (rawItems.isEmpty && thinkingText.isEmpty) return null;
       final items = rawItems.map((item) {
         final map = item as Map<String, dynamic>;
         return ToolProgressItem(
@@ -696,12 +715,17 @@ extension _ThoughterUI on _ThoughterPageState {
           ),
           result: map['result'] as String?,
           narrationText: map['narrationText'] as String?,
+          thinkingText: map['thinkingText'] as String?,
         );
       }).toList();
+      final l10n = AppLocalizations.of(context);
       return ToolProgressSnapshot(
-        title: AppLocalizations.of(context).executedNOperations(items.length),
+        // 标题按这一轮实际发生的事说：没调工具就别报「执行了 0 个操作」。
+        title: items.isEmpty
+            ? l10n.thinking
+            : l10n.executedNOperations(items.length),
         items: items,
-        thinkingText: meta['thinkingText'] as String?,
+        thinkingText: thinkingText.isEmpty ? null : thinkingText,
       );
     }
     return null;
@@ -738,7 +762,7 @@ extension _ThoughterUI on _ThoughterPageState {
   }
 
   /// 深度思考开关。带文字的 chip 而不是一枚图标按钮：图标按钮在这一行里
-  /// 左边一大片空白，且"大脑图标亮着"表达不出它是个可切换的模式。
+  /// 左边一大片空白，且"灯泡图标亮着"表达不出它是个可切换的模式。
   Widget _buildThinkingChip(ThemeData theme, AppLocalizations l10n) {
     final on = _enableThinking;
     final foreground = on
@@ -750,11 +774,9 @@ extension _ThoughterUI on _ThoughterPageState {
         message: on ? l10n.hideThinking : l10n.showThinking,
         child: Material(
           color: on ? theme.colorScheme.secondaryContainer : Colors.transparent,
-          shape: StadiumBorder(
-            side: on
-                ? BorderSide.none
-                : BorderSide(color: theme.colorScheme.outlineVariant),
-          ),
+          // 关着的时候不描边：输入框自己已经有一圈边了，里面再套一枚带框的
+          // 小药丸就是框里画框。开着时靠填充色表达"这个模式正生效"。
+          shape: const StadiumBorder(),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap:
@@ -765,7 +787,7 @@ extension _ThoughterUI on _ThoughterPageState {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    on ? Icons.psychology : Icons.psychology_outlined,
+                    on ? Icons.lightbulb : Icons.lightbulb_outline,
                     size: 16,
                     color: foreground,
                   ),
@@ -792,10 +814,13 @@ extension _ThoughterUI on _ThoughterPageState {
     // 输入壳比卡片再圆一档：它是一个会长高的容器，方角在多行时显得笨重。
     // 仍然跟着主题的 cardRadius 走，纸/素笺的方正不会被这里拉圆。
     final shellRadius = (shape.cardRadius * 1.4).clamp(0.0, 26.0).toDouble();
+    final focused = _isInputFocused;
     // 描边宽度恒定：聚焦时改宽会让内部文字横跳半个像素。只换颜色。
-    final borderColor = _isInputFocused
+    final borderColor = focused
         ? scheme.primary.withValues(alpha: 0.55)
-        : scheme.outlineVariant.withValues(alpha: 0.7);
+        : scheme.outlineVariant;
+    // Agent 请求还没有接 provider 的 thinking 开关，那种模式下这一行是空的。
+    final showThinkingChip = !_isAgentMode && _currentModelSupportsThinking;
 
     return SafeArea(
       top: false,
@@ -804,19 +829,16 @@ extension _ThoughterUI on _ThoughterPageState {
         duration: const Duration(milliseconds: 160),
         curve: Curves.easeOut,
         decoration: BoxDecoration(
-          // 壳比对话背景高一层，靠明度自己划出边界，不用重描边和重投影。
-          color: scheme.surfaceContainerHigh,
+          // 和对话区同底色，只用一圈细描边划出输入范围。
+          //
+          // 这里以前是 surfaceContainerHigh/Highest 加一圈聚焦时张开的强调色
+          // 高光：浅色下是白纸上扣着一块灰盒子，深色下是一块比页面更闷的深板，
+          // 外面还罩着一层散不掉的光晕。输入框不需要靠色块和光把自己顶出来——
+          // 它固定在屏幕底部，位置本身已经说明了它是什么；一条描边划出边界，
+          // 聚焦时换个颜色，就够了。
+          color: scheme.surface,
           borderRadius: BorderRadius.circular(shellRadius),
           border: Border.all(color: borderColor),
-          boxShadow: [
-            BoxShadow(
-              color: scheme.shadow.withValues(
-                alpha: theme.brightness == Brightness.dark ? 0.16 : 0.04,
-              ),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         // 整个壳都是输入热区：只有细细一行文字能点，在手机上太难命中。
         child: GestureDetector(
@@ -826,55 +848,99 @@ extension _ThoughterUI on _ThoughterPageState {
               _inputFocusNode.requestFocus();
             }
           },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 输入区默认一行高，随换行增高；超过上限后内部滚动，
-              // 避免长输入把对话内容整个挤出屏幕。
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 148),
-                child: TextField(
-                  controller: _textController,
-                  focusNode: _inputFocusNode,
-                  style: theme.textTheme.bodyLarge?.copyWith(height: 1.35),
-                  decoration: InputDecoration(
-                    hintText: l10n.aiAssistantInputHint,
-                    hintStyle: theme.textTheme.bodyLarge?.copyWith(
-                      height: 1.35,
-                      color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
-                    ),
-                    border: InputBorder.none,
-                    isCollapsed: true,
-                    contentPadding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-                  ),
-                  maxLines: null,
-                  minLines: 1,
-                  keyboardType: TextInputType.multiline,
-                  textCapitalization: TextCapitalization.sentences,
-                  // 软键盘的回车是换行，不是发送：手机上问长一点的问题要分段，
-                  // 回车即发会把半句话打出去，且没有撤回。发送只走右下角那枚键。
-                  // 接了实体键盘（桌面/平板）的场景由 _handleComposerKey 兜底：
-                  // 那里 Enter 发送、Shift+Enter 换行，符合键盘用户的肌肉记忆。
-                  textInputAction: TextInputAction.newline,
-                ),
-              ),
-              // 动作行：左边是模式开关，右边是发送。和主流 AI 输入框一致，
-              // 让「写什么」和「怎么发」分成上下两层。
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 2, 8, 8),
-                child: Row(
+          // 没有模式开关要摆时（Agent 模式，也就是绝大多数时候），发送键就贴在
+          // 文字右边，输入框只有一行高。为一枚按钮单开一行会让空着的左半边
+          // 撑出一块无意义的高度——这是之前那个框显得笨重的另一半原因。
+          child: showThinkingChip
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Agent requests do not yet apply provider thinking settings.
-                    if (!_isAgentMode && _currentModelSupportsThinking)
-                      _buildThinkingChip(theme, l10n),
-                    const Spacer(),
-                    _buildSendButton(theme, l10n),
+                    _buildComposerField(theme, l10n),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                      child: Row(
+                        children: [
+                          _buildThinkingChip(theme, l10n),
+                          const Spacer(),
+                          _buildSendButton(theme, l10n),
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              : Row(
+                  // 输入长到换行时发送键留在底部，跟着最后一行走。
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(child: _buildComposerField(theme, l10n)),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      // 按钮装在一个"正好一行高"的盒子里再居中：盒子被 end
+                      // 对齐压在最后一行上，于是单行时按钮坐在那一行的中线，
+                      // 换行长高后自动跟到最后一行。
+                      //
+                      // 不去算按钮该往上抬多少——IconButton 的渲染盒会被撑到
+                      // 48 的点击区（tapTargetSize.padded），按直径 36 算出来
+                      // 的居中量会差 6 像素。让 Center 去对付按钮的真实尺寸。
+                      child: SizedBox(
+                        height: _composerLineBoxHeight(theme),
+                        child: Center(child: _buildSendButton(theme, l10n)),
+                      ),
+                    ),
                   ],
                 ),
-              ),
-            ],
+        ),
+      ),
+    );
+  }
+
+  /// 输入框单行时的高度：一行文字加上下内边距。
+  ///
+  /// 字号要过一遍 textScaler：系统开了大字体，输入行跟着变高而按钮不变，
+  /// 拿未放大的字号算，字越大按钮偏得越远。
+  double _composerLineBoxHeight(ThemeData theme) {
+    final fontSize = theme.textTheme.bodyLarge?.fontSize ?? 16;
+    final scaledFontSize = MediaQuery.textScalerOf(context).scale(fontSize);
+    return scaledFontSize * _kComposerLineHeight +
+        _kComposerVerticalPadding * 2;
+  }
+
+  /// 输入框本体。默认一行高，随换行增高；超过上限后内部滚动，
+  /// 避免长输入把对话内容整个挤出屏幕。
+  Widget _buildComposerField(ThemeData theme, AppLocalizations l10n) {
+    final scheme = theme.colorScheme;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 148),
+      child: TextField(
+        controller: _textController,
+        focusNode: _inputFocusNode,
+        style: theme.textTheme.bodyLarge?.copyWith(
+          height: _kComposerLineHeight,
+        ),
+        decoration: InputDecoration(
+          hintText: l10n.aiAssistantInputHint,
+          hintStyle: theme.textTheme.bodyLarge?.copyWith(
+            height: _kComposerLineHeight,
+            color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+          ),
+          border: InputBorder.none,
+          isCollapsed: true,
+          contentPadding: const EdgeInsets.fromLTRB(
+            16,
+            _kComposerVerticalPadding,
+            8,
+            _kComposerVerticalPadding,
           ),
         ),
+        maxLines: null,
+        minLines: 1,
+        keyboardType: TextInputType.multiline,
+        textCapitalization: TextCapitalization.sentences,
+        // 软键盘的回车是换行，不是发送：手机上问长一点的问题要分段，
+        // 回车即发会把半句话打出去，且没有撤回。发送只走右下角那枚键。
+        // 接了实体键盘（桌面/平板）的场景由 _handleComposerKey 兜底：
+        // 那里 Enter 发送、Shift+Enter 换行，符合键盘用户的肌肉记忆。
+        textInputAction: TextInputAction.newline,
       ),
     );
   }
@@ -897,7 +963,7 @@ extension _ThoughterUI on _ThoughterPageState {
             child: Icon(
               _isLoading ? Icons.stop_rounded : Icons.arrow_upward,
               key: ValueKey(_isLoading),
-              size: 20,
+              size: 19,
             ),
           ),
           tooltip: _isLoading ? l10n.stopGenerate : l10n.send,
@@ -909,13 +975,16 @@ extension _ThoughterUI on _ThoughterPageState {
           style: IconButton.styleFrom(
             backgroundColor: scheme.primary,
             foregroundColor: scheme.onPrimary,
-            disabledBackgroundColor: scheme.surfaceContainerHighest,
+            // 空输入时是一枚淡淡的灰盘：用 onSurface 调出来而不是取
+            // surfaceContainerHighest，后者在浅色主题下是块显眼的灰疙瘩，
+            // 而这时候它只需要占住位置。
+            disabledBackgroundColor: scheme.onSurface.withValues(alpha: 0.07),
             disabledForegroundColor:
-                scheme.onSurfaceVariant.withValues(alpha: 0.55),
+                scheme.onSurfaceVariant.withValues(alpha: 0.5),
             shape: const CircleBorder(),
             padding: EdgeInsets.zero,
-            fixedSize: const Size(38, 38),
-            minimumSize: const Size(38, 38),
+            fixedSize: const Size(_kSendButtonDiameter, _kSendButtonDiameter),
+            minimumSize: const Size(_kSendButtonDiameter, _kSendButtonDiameter),
           ),
         );
       },
@@ -1162,8 +1231,13 @@ extension _ThoughterUI on _ThoughterPageState {
       if (pos != null) {
         try {
           await weatherService.getWeatherData(pos.latitude, pos.longitude);
-        } catch (e) {
-          logDebug('AI 打开编辑器获取天气失败: $e');
+        } catch (e, stack) {
+          logError(
+            'AI 打开编辑器获取天气失败',
+            error: e,
+            stackTrace: stack,
+            source: 'ThoughterUI',
+          );
         }
       }
     }
@@ -1323,8 +1397,13 @@ extension _ThoughterUI on _ThoughterPageState {
               pos.latitude,
               pos.longitude,
             );
-          } catch (e) {
-            logDebug('AI 直接保存获取天气失败: $e');
+          } catch (e, stack) {
+            logError(
+              'AI 直接保存获取天气失败',
+              error: e,
+              stackTrace: stack,
+              source: 'ThoughterUI',
+            );
             includeWeather = false;
           }
         } else {

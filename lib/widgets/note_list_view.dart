@@ -186,7 +186,30 @@ class NoteListViewState extends State<NoteListView> {
 
   // 分页和懒加载状态
   final List<Quote> _quotes = [];
-  bool _isLoading = true; // 初始化为 true，避免闪现"无笔记"
+
+  bool _isLoadingBacking = true; // 初始化为 true，避免闪现"无笔记"
+
+  /// 分页加载中标志。既是 `_loadMore` 的并发闸门，也决定底部指示器是否可见。
+  ///
+  /// 通过 setter 把可见性同步给 [_loadMoreIndicator]：底部指示器因此不再依赖
+  /// 整列表 setState 才能收起。此前 [_settleLoadMoreLoadingFlag] 在滚动中会
+  /// 只改字段、不触发重建（为了不在滚动帧里重建整列表），若之后恰好没有别的
+  /// setState，加载动画就会一直挂在列表底部转下去。
+  bool get _isLoading => _isLoadingBacking;
+
+  set _isLoading(bool value) {
+    if (_isLoadingBacking == value) return;
+    _isLoadingBacking = value;
+    // dispose 之后仍可能有在途回调改写闸门，此时 notifier 已释放。
+    if (mounted) {
+      _loadMoreIndicator.value = value;
+    }
+  }
+
+  /// 底部加载指示器的可见性。单独用 ValueNotifier 驱动，
+  /// 切换时只重建那一格，不会牵动已加载的上百个 item。
+  final ValueNotifier<bool> _loadMoreIndicator = ValueNotifier<bool>(true);
+
   bool _hasMore = true;
   static const int _pageSize = AppConstants.defaultPageSize;
   StreamSubscription<List<Quote>>? _quotesSub;
@@ -206,6 +229,15 @@ class NoteListViewState extends State<NoteListView> {
   // 修复：用于检测和恢复滚动范围异常的计数器
   int _scrollExtentCheckCounter = 0;
   static const int _maxScrollExtentChecks = 3;
+
+  // 数据事件（整表替换）后的滚动锚点保护：
+  // 列表在用户滑动途中被换成更短的数据时，maxScrollExtent 会骤减并把当前
+  // 偏移夹紧，视觉上就是"列表突然飞走/弹回顶部"。这里记住被夹掉的偏移，
+  // 等后续事件把列表补长后无动画还原。
+  final ScrollAnchorTracker _scrollAnchor = ScrollAnchorTracker(
+    retention: const Duration(milliseconds: 1500),
+  );
+  static const double _dataEventScrollShiftTolerance = 1.0;
 
   // 修复：添加防抖定时器和性能优化
   Timer? _searchDebounceTimer;
@@ -637,16 +669,16 @@ class NoteListViewState extends State<NoteListView> {
       final bool isSearchChange = oldEffectiveQuery != newEffectiveQuery;
 
       // 标签/天气/时间段筛选变化：新结果到达后回到列表顶部。
-      final bool isFilterChange = !_areListsEqual(
-            oldWidget.selectedTagIds,
-            widget.selectedTagIds,
-          ) ||
-          !_areListsEqual(
-              oldWidget.selectedWeathers, widget.selectedWeathers) ||
-          !_areListsEqual(
-            oldWidget.selectedDayPeriods,
-            widget.selectedDayPeriods,
-          );
+      final bool isFilterChange =
+          !_areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) ||
+              !_areListsEqual(
+                oldWidget.selectedWeathers,
+                widget.selectedWeathers,
+              ) ||
+              !_areListsEqual(
+                oldWidget.selectedDayPeriods,
+                widget.selectedDayPeriods,
+              );
 
       // 更新流订阅，传入是否仅为排序变化
       _updateStreamSubscription(
@@ -667,7 +699,7 @@ class NoteListViewState extends State<NoteListView> {
         duration: AppConstants.snackBarDurationNormal,
         behavior: SnackBarBehavior.floating,
         action: SnackBarAction(
-          label: '重试',
+          label: AppLocalizations.of(context).retry,
           onPressed: () => _updateStreamSubscription(),
         ),
       ),
@@ -760,6 +792,7 @@ class NoteListViewState extends State<NoteListView> {
       notifier.dispose();
     }
     _expansionNotifiers.clear();
+    _loadMoreIndicator.dispose();
 
     // 修复问题3：移除页面切换时的缓存清空，保留缓存以提升返回体验
     // QuoteContent.resetCaches(); // 缓存将由 LRU 自动管理

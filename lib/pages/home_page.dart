@@ -492,8 +492,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             } else {
               logDebug('恢复草稿时发现原始笔记已删除，将作为新笔记处理');
             }
-          } catch (e) {
-            logDebug('恢复草稿时获取原始笔记失败: $e');
+          } catch (e, stack) {
+            logError(
+              '恢复草稿时获取原始笔记失败',
+              error: e,
+              stackTrace: stack,
+              source: 'HomePage',
+            );
           }
         }
 
@@ -583,8 +588,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         context.read<DatabaseService>().getTags,
       );
       if (mounted) logDebug('标签加载完成，共 ${_pageController.tags.length} 个标签');
-    } catch (e) {
-      logDebug('加载标签时出错: $e');
+    } catch (e, stack) {
+      logError(
+        '加载标签时出错',
+        error: e,
+        stackTrace: stack,
+        source: 'HomePage',
+      );
     }
   }
 
@@ -595,8 +605,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       await Future.microtask(() async {
         await _loadTags();
       });
-    } catch (e) {
-      logDebug('预加载标签失败: $e');
+    } catch (e, stack) {
+      logError(
+        '预加载标签失败',
+        error: e,
+        stackTrace: stack,
+        source: 'HomePage',
+      );
     }
   }
 

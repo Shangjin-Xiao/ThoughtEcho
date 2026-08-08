@@ -1,6 +1,3 @@
-import 'dart:async';
-import 'dart:collection';
-
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
@@ -26,45 +23,43 @@ final ValueNotifier<bool> isListDragActive = ValueNotifier<bool>(false);
 
 /// Lightweight counters for correlating rich-text image loading with list
 /// scroll jank. These counters are only read by developer performance logs.
+///
+/// `sync` 是这里最重要的一个指标：它统计有多少张图在**首帧就同步画出来**
+/// （`wasSynchronouslyLoaded`），也就是命中了 `PaintingBinding.imageCache`。
+/// `sync / complete` 偏低说明图片真的在被反复重解码；偏高则说明滑回来时看到的
+/// 灰框来自别处，不是解码。
 class QuillImageEmbedPerfStats {
   static int _startLoadCount = 0;
-  static int _deferForScrollCount = 0;
+  static int _syncHitCount = 0;
   static int _frameCompleteCount = 0;
-  static int _stateUpdateCount = 0;
   static int _errorCount = 0;
 
   static void recordStartLoad() => _startLoadCount++;
 
-  static void recordDeferForScroll() => _deferForScrollCount++;
+  static void recordSyncHit() => _syncHitCount++;
 
   static void recordFrameComplete() => _frameCompleteCount++;
-
-  static void recordStateUpdate() => _stateUpdateCount++;
 
   static void recordError() => _errorCount++;
 
   static Map<String, int> snapshot() => {
         'start': _startLoadCount,
-        'defer': _deferForScrollCount,
+        'sync': _syncHitCount,
         'complete': _frameCompleteCount,
-        'state': _stateUpdateCount,
         'error': _errorCount,
       };
 
   static String compact({Map<String, int>? baseline}) {
     final stats = snapshot();
     final start = stats['start']!;
-    final defer = stats['defer']!;
+    final sync = stats['sync']!;
     final complete = stats['complete']!;
-    final state = stats['state']!;
     final error = stats['error']!;
 
-    return 'start=$start,defer=$defer,complete=$complete,'
-        'state=$state,error=$error'
+    return 'start=$start,sync=$sync,complete=$complete,error=$error'
         '${baseline == null ? '' : ',Δstart+${start - (baseline['start'] ?? 0)}'}'
-        '${baseline == null ? '' : ',Δdefer+${defer - (baseline['defer'] ?? 0)}'}'
+        '${baseline == null ? '' : ',Δsync+${sync - (baseline['sync'] ?? 0)}'}'
         '${baseline == null ? '' : ',Δcomplete+${complete - (baseline['complete'] ?? 0)}'}'
-        '${baseline == null ? '' : ',Δstate+${state - (baseline['state'] ?? 0)}'}'
         '${baseline == null ? '' : ',Δerror+${error - (baseline['error'] ?? 0)}'}';
   }
 }
@@ -101,6 +96,50 @@ class QuillEditorExtensions {
   /// 获取工具栏的嵌入按钮构建器
   static List<quill.EmbedButtonBuilder> getToolbarBuilders() {
     return FlutterQuillEmbeds.toolbarButtons();
+  }
+}
+
+/// quill 段落基准样式的**唯一**纠正入口。
+///
+/// `DefaultStyles.getInstance` 的 baseStyle 是从 `DefaultTextStyle` 拷的
+/// （颜色、字体族确实跟着主题走），但 `fontSize` 和 `height` 被硬写成 16 / 1.15。
+/// 1.15 对中文正文太挤，换成衬线体之后尤其闷；16 则在衬线风格把正文放大到 17
+/// （[ThemeStyleForm.bodyFontScale]）之后跟纯文本笔记对不上。
+///
+/// 两个用到 `QuillEditor` 的地方——笔记卡片正文和全屏编辑器——必须按同一套令牌
+/// 纠正，否则「写的时候」和「读的时候」行距不一样。规则因此放在这里一处。
+class QuillThemeTypography {
+  /// [base] 是调用方已有的正文样式（卡片会传 `bodyLarge` + 笔记颜色）。
+  ///
+  /// 字号和行高**不从 [DefaultTextStyle] 取**：调用方可能没传 [base]，而那里
+  /// 往往是 `bodyMedium`(14)，直接用会把正文缩一号。规则统一成「富文本正文 =
+  /// `bodyLarge`」，兜底才轮到 quill 的硬编码值。
+  ///
+  /// `decoration` 必须显式清掉，否则 [DefaultTextStyle] 里的下划线会漏进正文。
+  static TextStyle paragraphStyle(BuildContext context, {TextStyle? base}) {
+    final bodyLarge = Theme.of(context).textTheme.bodyLarge;
+    final inherited = DefaultTextStyle.of(context).style.merge(base);
+    return inherited.copyWith(
+      fontSize: base?.fontSize ?? bodyLarge?.fontSize ?? 16,
+      height: base?.height ?? bodyLarge?.height ?? 1.15,
+      decoration: TextDecoration.none,
+    );
+  }
+
+  /// 只替换段落样式、其余沿用 quill 默认的 [quill.DefaultStyles]。
+  ///
+  /// 卡片正文那条路还要额外处理 Android 的加粗降档，所以自己拼 `DefaultStyles`；
+  /// 编辑器只需要这一项。
+  static quill.DefaultStyles paragraphOnly(TextStyle paragraphStyle) {
+    return quill.DefaultStyles(
+      paragraph: quill.DefaultTextBlockStyle(
+        paragraphStyle,
+        const quill.HorizontalSpacing(0, 0),
+        quill.VerticalSpacing.zero,
+        quill.VerticalSpacing.zero,
+        null,
+      ),
+    );
   }
 }
 
@@ -226,87 +265,97 @@ class _LazyQuillImage extends StatefulWidget {
 
 class _LazyQuillImageState extends State<_LazyQuillImage>
     with AutomaticKeepAliveClientMixin {
-  static final LinkedHashSet<String> _loadedSources = LinkedHashSet<String>();
-  static const int _maxCachedSources = 200;
+  /// 卡片内预览图的解码倍率上限。
+  ///
+  /// 这条路径只服务笔记卡片（全屏编辑器用 `optimizedImages: false` 的原生
+  /// builder，点开的大图预览页不传解码上限，都拿全分辨率），所以这里只需要
+  /// 满足"滑过去看一眼"的清晰度。
+  ///
+  /// 按屏幕最高精度（dpr 3）解码，单张常规照片就要 2.8MB，二十几张即可占满
+  /// Flutter 默认 100MB 的图片缓存；之后每次上下滑都在淘汰和重新解码，
+  /// 正是滑过图片时卡顿的来源。降到 2 倍后单张约 1.2MB，占用降到三分之一，
+  /// 常规滚动不再触发淘汰。
+  ///
+  /// 注意这个上限只是封顶：真实倍率仍取设备的 devicePixelRatio，
+  /// 低分屏机型本来就低于 2，画质按屏幕自适应这件事没有变。
+  static const double _previewMaxPixelRatio = 2.0;
 
-  bool _shouldLoad = false;
   bool _hasError = false;
-  bool _isLoaded = false;
-  Timer? _deferredLoadTimer;
+
+  /// 首帧是否已记过一次统计。只用于开发者性能日志，不参与渲染，
+  /// 所以不走 `setState`——每张图片一次 `setState` 就是一次滚动帧内的额外重建。
+  bool _frameRecorded = false;
+
+  /// `ImageProvider` 按 `(source, cacheWidth, cacheHeight)` 记忆化。
+  ///
+  /// [build] 跑在 `LayoutBuilder` 里，每帧都会执行；provider 本身的 `==` 虽然稳定
+  /// （`ResizeImage` / `FileImage` 都按值比较），但没必要每帧重新分配对象再算一次
+  /// 缓存键。
+  ImageProvider? _provider;
+  String? _providerSource;
+  int? _providerCacheWidth;
+  int? _providerCacheHeight;
 
   @override
   bool get wantKeepAlive => true;
-
-  @override
-  void initState() {
-    super.initState();
-    if (_loadedSources.contains(widget.source)) {
-      _shouldLoad = true;
-      _isLoaded = true;
-    } else {
-      // 依赖 ListView 的 cacheExtent 提前加载，放弃会导致高度跳变的 VisibilityDetector
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _tryStartLoading();
-      });
-    }
-  }
 
   @override
   void didUpdateWidget(covariant _LazyQuillImage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.source != widget.source) {
       _hasError = false;
-      final bool previouslyLoaded = _loadedSources.contains(widget.source);
-      _shouldLoad = previouslyLoaded;
-      _isLoaded = previouslyLoaded;
-      _deferredLoadTimer?.cancel();
-      if (!_shouldLoad) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _tryStartLoading();
-        });
-      }
+      _frameRecorded = false;
+      _provider = null;
+      _providerSource = null;
+      _providerCacheWidth = null;
+      _providerCacheHeight = null;
     }
   }
 
-  void _tryStartLoading() {
-    if (!mounted || _shouldLoad) {
-      return;
+  /// **不要**在这里重新引入"滚动时先别加载"的门控。
+  ///
+  /// `Image` 内部已经把 provider 包了一层 `ScrollAwareImageProvider`，它的
+  /// `resolveStreamForKey` 是：
+  ///
+  /// ```
+  /// if (stream.completer != null || imageCache.containsKey(key)) → 立即解析
+  /// else if (Scrollable.recommendDeferredLoadingForContext(ctx)) → 延到下一帧
+  /// else → 立即解析
+  /// ```
+  ///
+  /// 即「快速滚动时延迟解码，但缓存命中永不延迟」这件事 Flutter 本来就做对了，
+  /// 命中时在同一帧同步完成、`wasSynchronouslyLoaded == true`、零闪烁。
+  ///
+  /// 历史实现在 `Image` **被创建之前**加了一道 `_shouldLoad` 门控（postFrame +
+  /// 80~120ms Timer），对命中和未命中一视同仁地砍掉一帧加百来毫秒——"滑回来又变灰"
+  /// 大多不是真的重解码，而是这道门控自己造出来的。它还配了一个 `_loadedSources`
+  /// 影子集合去猜缓存状态，和真实的 `imageCache` 会各自失效、互相说谎。
+  ImageProvider? _resolveProvider(int? cacheWidth, int? cacheHeight) {
+    // 命中条件**不能**带上 `_provider != null`：source 非法时
+    // createOptimizedImageProvider 返回 null，带上这个条件就永远命不中，
+    // 每一帧都要重新解析一次来源。已存的三个字段本身就足以标识缓存键。
+    if (_providerSource == widget.source &&
+        _providerCacheWidth == cacheWidth &&
+        _providerCacheHeight == cacheHeight) {
+      return _provider;
     }
 
-    // 检查 Flutter 滚动系统是否建议推迟加载（drag 阶段）
-    if (Scrollable.recommendDeferredLoadingForContext(context)) {
-      QuillImageEmbedPerfStats.recordDeferForScroll();
-      _deferredLoadTimer?.cancel();
-      _deferredLoadTimer = Timer(const Duration(milliseconds: 120), () {
-        if (!mounted || _shouldLoad) {
-          return;
-        }
-        _tryStartLoading();
-      });
-      return;
-    }
-
-    // 额外检查：通过全局信号判断是否处于 ballistic 阶段
-    if (isListScrolling.value) {
-      QuillImageEmbedPerfStats.recordDeferForScroll();
-      _deferredLoadTimer?.cancel();
-      _deferredLoadTimer = Timer(const Duration(milliseconds: 80), () {
-        if (!mounted || _shouldLoad) return;
-        _tryStartLoading();
-      });
-      return;
-    }
-
-    setState(() {
+    final provider = createOptimizedImageProvider(
+      widget.source,
+      cacheWidth: cacheWidth,
+      cacheHeight: cacheHeight,
+    );
+    _provider = provider;
+    _providerSource = widget.source;
+    _providerCacheWidth = cacheWidth;
+    _providerCacheHeight = cacheHeight;
+    // 换了缓存键就是一次新的加载，首帧统计要重新记一次，
+    // 否则布局宽度变化后的那次解析在 sync/complete 里查无此人。
+    _frameRecorded = false;
+    if (provider != null) {
       QuillImageEmbedPerfStats.recordStartLoad();
-      _shouldLoad = true;
-    });
-  }
-
-  @override
-  void dispose() {
-    _deferredLoadTimer?.cancel();
-    super.dispose();
+    }
+    return provider;
   }
 
   @override
@@ -341,11 +390,22 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
 
         final double devicePixelRatio = mediaQuery.devicePixelRatio.clamp(
           1.0,
-          3.0,
+          _previewMaxPixelRatio,
         );
-        final int? targetCacheWidth = _computeCacheSize(
+        // 只按显示宽度封顶，**不要**再给高度单独封顶。
+        // 等比缩放不是裁剪：给长图加高度上限会把解码宽度一起压下去，而卡片
+        // 仍按完整宽度显示，结果是整张图（包括当前可见的那一截）被放大变糊。
+        // 长图的内存占用只能靠宽度这一个维度控制。
+        final int? targetCacheWidth = decodeSizeFor(
           displayWidth,
           devicePixelRatio,
+        );
+        // 唯一的高度约束是总像素预算这条防炸保险：只给宽度封顶时高度按原图
+        // 比例展开，1080×100000 这种超长拼接图会解成上千万像素直接压垮进程。
+        // 常规照片和长截图都在预算之内，不会被它改变尺寸（fit 策略只在超框时
+        // 才缩放），因此不会重新引入长图变糊的问题。
+        final int? decodePixelBudgetHeight = decodeHeightBudget(
+          targetCacheWidth,
         );
 
         return RepaintBoundary(
@@ -359,6 +419,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
                 context,
                 displayWidth,
                 targetCacheWidth,
+                decodePixelBudgetHeight,
               ),
             ),
           ),
@@ -379,19 +440,13 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     BuildContext context,
     double width,
     int? cacheWidth,
+    int? cacheHeight,
   ) {
-    if (!_shouldLoad) {
-      return _buildImagePlaceholder(context, width);
-    }
-
     if (_hasError) {
       return _buildErrorPlaceholder(context, width);
     }
 
-    final provider = createOptimizedImageProvider(
-      widget.source,
-      cacheWidth: _shouldLoad ? cacheWidth : null,
-    );
+    final provider = _resolveProvider(cacheWidth, cacheHeight);
 
     if (provider == null) {
       logDebug(
@@ -411,74 +466,39 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
           image: provider,
           width: width,
           fit: BoxFit.contain,
-          filterQuality: FilterQuality.medium,
+          // 解码尺寸已按 displayWidth × devicePixelRatio 匹配显示尺寸
+          // （见 decodeDimensionFor），绘制时基本是 1:1 采样，medium 的
+          // mipmap 生成属于纯浪费：多一份 GPU 内存和一趟缩略链构建，
+          // 画面却和 low 没有区别。
+          filterQuality: FilterQuality.low,
           isAntiAlias: true,
           gaplessPlayback: true,
           frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+            // 缓存命中：provider 在同一帧就解析完了，直接交出 child。
+            // 这里**不能**插入任何过渡包装——插一层就等于把"零闪烁"重新变成
+            // "闪一下"。
             if (wasSynchronouslyLoaded) {
-              _rememberSource(widget.source);
-              _isLoaded = true;
-              QuillImageEmbedPerfStats.recordFrameComplete();
-              return child;
-            }
-
-            if (frame != null && !_isLoaded) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted || _isLoaded) {
-                  return;
-                }
-                setState(() {
-                  _isLoaded = true;
-                  _rememberSource(widget.source);
-                  QuillImageEmbedPerfStats.recordFrameComplete();
-                  QuillImageEmbedPerfStats.recordStateUpdate();
-                });
-              });
-            }
-
-            if (_isLoaded) {
+              if (!_frameRecorded) {
+                _frameRecorded = true;
+                QuillImageEmbedPerfStats.recordSyncHit();
+                QuillImageEmbedPerfStats.recordFrameComplete();
+              }
               return child;
             }
 
             if (frame == null) {
-              // 图片未加载时显示占位符
               return _buildImagePlaceholder(context, width);
             }
 
-            return AnimatedOpacity(
-              opacity: 1.0,
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              child: child,
-            );
-          },
-          loadingBuilder: (context, child, progress) {
-            // 如果不应该加载或已加载完成，直接显示图片
-            if (!_shouldLoad || progress == null || _isLoaded) {
-              return child;
+            if (!_frameRecorded) {
+              _frameRecorded = true;
+              QuillImageEmbedPerfStats.recordFrameComplete();
             }
 
-            // 加载中：在图片上叠加半透明背景和进度指示器
-            return Stack(
-              alignment: Alignment.center,
-              children: [
-                child, // 图片本身占据空间
-                Container(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.surfaceContainerHigh.withValues(alpha: 0.7),
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      value: progress.expectedTotalBytes != null
-                          ? progress.cumulativeBytesLoaded /
-                              progress.expectedTotalBytes!
-                          : null,
-                      strokeWidth: 2,
-                    ),
-                  ),
-                ),
-              ],
-            );
+            // 冷加载才淡入，而且只淡这一次：`TweenAnimationBuilder` 在挂载时跑完
+            // 0→1 就停在 1，之后 `Opacity` 的 alpha 为 255，`RenderOpacity.paint`
+            // 直接透传子节点，不留常驻图层。
+            return _FadeInOnce(child: child);
           },
           errorBuilder: (context, error, stackTrace) {
             logError(
@@ -490,8 +510,17 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
 
             if (!_hasError && mounted) {
               QuillImageEmbedPerfStats.recordError();
+              // 回调是异步的，期间这张图可能已经被换掉。不校验的话，旧请求的
+              // 失败会把新图永久钉在错误占位上。
+              //
+              // 只比 source 不够：布局宽度或 dpr 变化时 source 不变、provider 却
+              // 换了新的，旧 provider 的失败照样会污染新解码。连身份一起比。
+              final failedSource = widget.source;
+              final failedProvider = provider;
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted) {
+                if (mounted &&
+                    widget.source == failedSource &&
+                    identical(_provider, failedProvider)) {
                   setState(() {
                     _hasError = true;
                   });
@@ -506,17 +535,6 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     );
   }
 
-  void _rememberSource(String source) {
-    if (_loadedSources.contains(source)) {
-      _loadedSources.remove(source);
-    }
-    _loadedSources.add(source);
-    if (_loadedSources.length > _maxCachedSources) {
-      final oldest = _loadedSources.first;
-      _loadedSources.remove(oldest);
-    }
-  }
-
   Future<void> _openImagePreview(BuildContext context) async {
     if (!mounted) {
       return;
@@ -527,20 +545,6 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
         builder: (_) => MotionPhotoPreviewPage(imageUrl: widget.source),
       ),
     );
-  }
-
-  int? _computeCacheSize(double dimension, double devicePixelRatio) {
-    if (!dimension.isFinite || dimension <= 0) {
-      return null;
-    }
-
-    final double logicalPixels = dimension * devicePixelRatio;
-    if (!logicalPixels.isFinite || logicalPixels <= 0) {
-      return null;
-    }
-
-    final double bounded = logicalPixels.clamp(160.0, 2048.0);
-    return bounded.round();
   }
 
   Widget _buildImagePlaceholder(BuildContext context, double width) {
@@ -579,13 +583,35 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
           ),
           const SizedBox(height: 4),
           Text(
-            '图片加载失败',
+            AppLocalizations.of(context).imageLoadFailed,
             style: theme.textTheme.labelMedium?.copyWith(
               color: theme.colorScheme.error,
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 挂载时播一次 0→1 淡入，之后永久停在 1。
+///
+/// 停在 1 之后 `Opacity` 的 alpha 是 255，`RenderOpacity.paint` 会直接
+/// `context.paintChild(...)` 透传，`alwaysNeedsCompositing` 也为 false，
+/// 所以不会给每张图留一个常驻的 `OpacityLayer`。
+class _FadeInOnce extends StatelessWidget {
+  const _FadeInOnce({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) => Opacity(opacity: value, child: child),
+      child: child,
     );
   }
 }

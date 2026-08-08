@@ -189,10 +189,19 @@ void main() {
           testNow: date,
         );
         expect(prompt, contains('地点：Beijing'));
-        // WeatherCodeMapper might transform 'Sunny', assuming it returns same or mapped.
-        // Since we didn't mock WeatherCodeMapper, we test that at least environment section is present.
         expect(prompt, contains('当前环境信息：'));
         expect(prompt, contains('温度：25°C'));
+      });
+
+      test('writes the weather text through verbatim', () {
+        // 调用方负责本地化。这里曾经再做一次 key→描述 映射，把已经翻好的
+        // 「多云」当成未知 key 换成了 'unknown'。
+        final prompt = manager.getDailyPromptSystemPromptWithContext(
+          weather: '多云',
+          testNow: date,
+        );
+        expect(prompt, contains('天气：多云'));
+        expect(prompt, isNot(contains('unknown')));
       });
 
       test('includes historical insights', () {

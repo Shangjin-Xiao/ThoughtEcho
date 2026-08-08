@@ -40,6 +40,13 @@ class ToolProgressItem {
   /// 用于让"让我看看…"这类描述与工具调用按时间顺序穿插展示。
   final String? narrationText;
 
+  /// 这次工具调用**之后**模型继续想的那段思考。
+  ///
+  /// 查完东西再想一轮是常态，而思考只有一个字段时那段会被并进开头那坨，
+  /// 读起来像模型在动手之前就已经知道了查询结果。挂在各自的工具下面，
+  /// 抽屉里才是一条按时间走的线。
+  final String? thinkingText;
+
   const ToolProgressItem({
     this.toolCallId,
     required this.toolName,
@@ -47,6 +54,7 @@ class ToolProgressItem {
     required this.status,
     this.result,
     this.narrationText,
+    this.thinkingText,
   });
 
   ToolProgressItem copyWith({
@@ -56,6 +64,7 @@ class ToolProgressItem {
     ToolProgressStatus? status,
     String? result,
     String? narrationText,
+    String? thinkingText,
   }) {
     return ToolProgressItem(
       toolCallId: toolCallId ?? this.toolCallId,
@@ -64,6 +73,7 @@ class ToolProgressItem {
       status: status ?? this.status,
       result: result ?? this.result,
       narrationText: narrationText ?? this.narrationText,
+      thinkingText: thinkingText ?? this.thinkingText,
     );
   }
 }
@@ -207,23 +217,93 @@ class _ToolProgressSheetBody extends StatelessWidget {
                     ),
                 ],
               ),
-              if (thinking != null && thinking.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text(
-                  thinking,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    height: 1.5,
-                  ),
-                ),
-              ],
               const SizedBox(height: 8),
-              // 细节靠一条竖线归组，不再是卡里套卡里套卡
-              for (final item in data.items)
+              // 抽屉是一条时间线：动手前想的 → 查了什么 → 查完又想的。
+              // 思考和工具共用同一条竖线和同一个左边距，读下来是一串顺序发生
+              // 的事，而不是"一坨思考"外加"一列工具"两块拼在一起。
+              if (thinking != null && thinking.isNotEmpty)
+                _ProcessThinkingBlock(
+                  text: thinking,
+                  // 只思考、没调工具的那轮，抽屉标题本身就是「思考」，块上再挂
+                  // 一个同名小标题就是把同一个词说两遍。有工具项时才需要它，
+                  // 那时候「思考」是用来和工具名区分的。
+                  showLabel: data.items.isNotEmpty,
+                ),
+              for (final item in data.items) ...[
                 _ToolProgressDetailItem(item: item, l10n: l10n),
+                if (item.thinkingText?.trim().isNotEmpty == true)
+                  _ProcessThinkingBlock(text: item.thinkingText!.trim()),
+              ],
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 过程里的一段思考。
+///
+/// 带标题的一段引文，不是正文：思考是模型的草稿，字号比工具名小一档、颜色
+/// 退到 onSurfaceVariant，和上下的工具项共用左侧那条竖线。
+class _ProcessThinkingBlock extends StatelessWidget {
+  final String text;
+
+  /// 挂不挂「思考」小标题。抽屉标题已经是「思考」时挂上就是重复。
+  final bool showLabel;
+
+  const _ProcessThinkingBlock({required this.text, this.showLabel = true});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            width: 1,
+            margin: const EdgeInsets.only(right: 16, left: 7),
+            color: theme.colorScheme.outlineVariant,
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (showLabel)
+                    Row(
+                      children: [
+                        Icon(Icons.lightbulb_outline, size: 16, color: muted),
+                        const SizedBox(width: 8),
+                        Text(
+                          l10n.thinking,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  Padding(
+                    padding: EdgeInsets.only(top: showLabel ? 6 : 0, left: 24),
+                    child: SelectableText(
+                      text,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: muted,
+                        height: 1.55,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -344,8 +424,11 @@ class ToolProgressPanel extends StatefulWidget {
 }
 
 class _ToolProgressPanelState extends State<ToolProgressPanel> {
+  /// 抽屉的数据源。标题只有 [_getDisplayTitle] 一个出处，而它要 context；
+  /// 这里先拿原始标题占位，`didChangeDependencies` 会在任何一次 build 之前
+  /// （抽屉更是要等用户点开）同步成真正的标题。
   late final ValueNotifier<ToolProgressSnapshot> _snapshot =
-      ValueNotifier(_snapshotWith(_rawDisplayTitle()));
+      ValueNotifier(_snapshotWith(widget.title));
 
   ToolProgressSnapshot _snapshotWith(String title) => ToolProgressSnapshot(
         title: title,
@@ -383,36 +466,36 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
     super.dispose();
   }
 
-  /// 标题的原始形态，不依赖 context（供 didUpdateWidget 使用）。
-  String _rawDisplayTitle() {
-    if (widget.inProgress) {
-      final runningItem = widget.items.lastWhere(
-        (item) => item.status == ToolProgressStatus.running,
-        orElse: () => widget.items.isNotEmpty
-            ? widget.items.last
-            : const ToolProgressItem(
-                toolName: '',
-                status: ToolProgressStatus.pending,
-              ),
-      );
-      final activeTitle = runningItem.toolName.trim();
-      return activeTitle.isNotEmpty ? activeTitle : widget.title;
+  /// 当前正在跑的那枚工具，没有就是 null。
+  ///
+  /// 「没有工具在跑」和「最后一枚工具」是两回事：模型查完东西常常再想一轮，
+  /// 那段时间一枚工具都没在跑。把最后那枚顶上来，界面就会一直说"正在搜索
+  /// 笔记"，而它早就搜完了。
+  ToolProgressItem? get _runningItem {
+    for (var i = widget.items.length - 1; i >= 0; i--) {
+      if (widget.items[i].status == ToolProgressStatus.running) {
+        return widget.items[i];
+      }
     }
-    return widget.title;
+    return null;
   }
 
   String _getDisplayTitle(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    if (widget.items.isEmpty &&
-        widget.thinkingText?.trim().isNotEmpty == true) {
-      // 折叠态标题是个名词标签，不是按钮文案。showThinking（"查看思考过程"）
-      // 是祈使句，放在这里读起来像用户在对自己下指令。
+    if (widget.inProgress) {
+      final activeTitle = _runningItem?.toolName.trim() ?? '';
+      if (activeTitle.isNotEmpty) return activeTitle;
+      // 还在进行中却没有工具在跑：模型在想——可能是开口之前，也可能是工具
+      // 跑完之后又想了一轮。两种都该说"正在思考"。
+      return l10n.aiThinking;
+    }
+    if (widget.items.isEmpty) {
+      // 这一轮只有思考没有工具。折叠态标题是个名词标签，不是按钮文案：
+      // showThinking（"查看思考过程"）是祈使句，放在这里读起来像用户在对
+      // 自己下指令；executedNOperations(0)（"执行了 0 个操作"）则是在报
+      // 一件没发生的事。
       return l10n.thinking;
     }
-    if (widget.inProgress) {
-      return _rawDisplayTitle();
-    }
-    // 完成后显示"已执行 N 个操作"
     return l10n.executedNOperations(widget.items.length);
   }
 
@@ -456,7 +539,12 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
                           ),
                         )
                       : Icon(
-                          widget.doneIcon ?? Icons.check,
+                          // 只思考没调工具的那轮不打勾：勾是"做完了几件事"的
+                          // 收条，而这一轮什么都没做，只是想了想。
+                          widget.doneIcon ??
+                              (widget.items.isEmpty
+                                  ? Icons.lightbulb_outline
+                                  : Icons.check),
                           size: 15,
                           color: foreground,
                         ),
@@ -471,7 +559,7 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
                     // 执行中标题会随当前工具变化，key 要跟着文案走，
                     // 否则中途换名字是硬切、只有最后完成那一下有动画
                     key: ValueKey(title),
-                    style: theme.textTheme.bodySmall?.copyWith(
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       color: foreground,
                     ),
                     overflow: TextOverflow.ellipsis,

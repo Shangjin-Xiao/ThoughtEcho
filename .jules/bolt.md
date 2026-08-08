@@ -81,3 +81,9 @@
 ## 2026-07-25 - [避免 O(M*N) 的嵌套循环查找]
 **Learning:** 在 Flutter UI 渲染循环中，对 `List<T>` 数组调用 `.map()` 并内部嵌套 `List.firstWhere()` 查找对象时，会导致 O(M*N) 复杂度。在涉及重绘动画的地方，这种隐式的线性查找会积少成多，进而带来不必要的卡顿和 GC。
 **Action:** 在执行对一组 ID 进行列表元素的映射操作之前，提前将 `List` 转化为基于 ID 为键的哈希映射表（即 `final map = { for(var item in list) item.id: item };`），然后在循环体中使用 `map[id]` 进行 O(1) 取值。
+## 2026-08-07 - [String splitting memory optimization in SSE parsers]
+**Learning:** Dart's `String.split('\n')` creates numerous intermediate string lists and string objects, putting significant pressure on the Garbage Collector, especially during real-time Server-Sent Events (SSE) processing where partial chunks are frequently accumulated and parsed.
+**Action:** Replace `String.split` with manual `String.indexOf('\n')` and `String.substring` in high-frequency string parsing paths like AI stream parsers and network managers to reduce memory allocations and GC pauses.
+## 2024-05-24 - [优化流式响应解析性能]
+**Learning:** 在高频流式数据处理（如大语言模型流式输出）中，使用 `String.split('\n')` 会产生大量短生命周期的列表和字符串对象，从而显著增加垃圾回收（GC）压力并导致可能的性能卡顿。
+**Action:** 在此类场景中，应始终采用手动寻找分隔符（如 `String.indexOf` 和 `String.substring`）的方法来遍历文本。
