@@ -160,22 +160,26 @@ void main() {
   testWidgets('加载失败时读屏播报的是「图片加载失败」而不是「查看图片」', (tester) async {
     // 必须在测试体内 dispose：addTearDown 跑在 flutter_test 的
     // "SemanticsHandle 是否已释放" 校验之后，会被判成泄漏。
+    //
+    // 而且必须走 finally：任何一条断言先抛错时若跳过 dispose，flutter_test 会改报
+    // 「SemanticsHandle 未释放」，把真正的失败原因盖掉。
     final handle = tester.ensureSemantics();
+    try {
+      // 不存在的文件 → FileImage 读取失败 → errorBuilder。
+      final media = _mediaWithImage('$tempDirPath/does_not_exist.png');
 
-    // 不存在的文件 → FileImage 读取失败 → errorBuilder。
-    final media = _mediaWithImage('$tempDirPath/does_not_exist.png');
-
-    await tester.runAsync(() async {
-      await tester.pumpWidget(_wrap(CollapsedMediaThumbnail(media: media)));
+      await tester.runAsync(() async {
+        await tester.pumpWidget(_wrap(CollapsedMediaThumbnail(media: media)));
+        await tester.pump();
+        await _pumpUntilFailed(tester);
+      });
       await tester.pump();
-      await _pumpUntilFailed(tester);
-    });
-    await tester.pump();
 
-    expect(find.bySemanticsLabel('图片加载失败'), findsOneWidget);
-    expect(find.bySemanticsLabel('查看图片'), findsNothing);
-
-    handle.dispose();
+      expect(find.bySemanticsLabel('图片加载失败'), findsOneWidget);
+      expect(find.bySemanticsLabel('查看图片'), findsNothing);
+    } finally {
+      handle.dispose();
+    }
   });
 
   testWidgets('旧图的失败回调不会把换上来的新图钉在失败态', (tester) async {
