@@ -707,8 +707,8 @@ void main() {
       await tester.enterText(find.byType(TextField), '触发重建');
       await tester.pump();
 
-      expect(find.byIcon(Icons.psychology), findsNothing);
-      expect(find.byIcon(Icons.psychology_outlined), findsNothing);
+      expect(find.byIcon(Icons.lightbulb), findsNothing);
+      expect(find.byIcon(Icons.lightbulb_outline), findsNothing);
     });
 
     testWidgets('note entry keeps note context and defaults to agent',

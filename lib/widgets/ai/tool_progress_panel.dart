@@ -278,7 +278,7 @@ class _ProcessThinkingBlock extends StatelessWidget {
                   if (showLabel)
                     Row(
                       children: [
-                        Icon(Icons.psychology_outlined, size: 16, color: muted),
+                        Icon(Icons.lightbulb_outline, size: 16, color: muted),
                         const SizedBox(width: 8),
                         Text(
                           l10n.thinking,
@@ -543,7 +543,7 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
                           // 收条，而这一轮什么都没做，只是想了想。
                           widget.doneIcon ??
                               (widget.items.isEmpty
-                                  ? Icons.psychology_outlined
+                                  ? Icons.lightbulb_outline
                                   : Icons.check),
                           size: 15,
                           color: foreground,
@@ -559,7 +559,7 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
                     // 执行中标题会随当前工具变化，key 要跟着文案走，
                     // 否则中途换名字是硬切、只有最后完成那一下有动画
                     key: ValueKey(title),
-                    style: theme.textTheme.bodySmall?.copyWith(
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       color: foreground,
                     ),
                     overflow: TextOverflow.ellipsis,
