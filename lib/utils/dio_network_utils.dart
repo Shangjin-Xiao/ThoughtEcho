@@ -168,11 +168,20 @@ class DioNetworkUtils {
     try {
       await for (final chunk in stream) {
         final text = utf8.decode(chunk);
-        final lines = (partialLine + text).split('\n');
+        final currentChunk = partialLine + text;
 
-        partialLine = lines.removeLast(); // 保存最后一个可能不完整的行
+        int startIndex = 0;
+        while (true) {
+          final newlineIndex = currentChunk.indexOf('\n', startIndex);
+          if (newlineIndex == -1) {
+            // 保存最后一个可能不完整的行
+            partialLine = currentChunk.substring(startIndex);
+            break;
+          }
 
-        for (final line in lines) {
+          final line = currentChunk.substring(startIndex, newlineIndex);
+          startIndex = newlineIndex + 1;
+
           if (line.trim().isEmpty) continue;
 
           if (line.startsWith('data: ')) {
