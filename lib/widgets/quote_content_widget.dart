@@ -10,9 +10,11 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../models/quote_model.dart';
 import '../theme/theme_style.dart';
+import '../utils/delta_media_extractor.dart';
 import '../utils/quill_editor_extensions.dart';
 import 'package:provider/provider.dart';
 import '../services/settings_service.dart';
+import 'note_list/collapsed_media_thumbnail.dart';
 
 part 'quote_content_deferred.dart';
 
@@ -171,6 +173,10 @@ class QuoteContent extends StatelessWidget {
   // an empty strip at the bottom of the preview.
   static const double _collapsedDocumentHeightGuard = 96.0;
   static const double _collapsedImagePlaceholderHeight = 96.0;
+
+  /// 折叠卡片挂缩略图所需的最小容器宽度：缩略图连间距占 84px，再给正文留
+  /// 至少 96px，低于这个宽度就不画缩略图，避免 Row 溢出（见 build 中的说明）。
+  static const double _minWidthForCollapsedThumbnail = 180.0;
   static const int _deferredPreviewCodeUnitBudget = 320;
   static const Key collapsedWrapperKey = ValueKey(
     'quote_content.collapsed_wrapper',
@@ -184,6 +190,7 @@ class QuoteContent extends StatelessWidget {
     _QuotePlainTextLayoutExpansionCache.clear();
     _QuoteContentControllerCache.clear();
     _ColdCollapsedQuillFrameBudget.reset();
+    DeltaMediaCache.clear();
   }
 
   /// 预热 Document 缓存：只预热首屏附近内容，且滚动中不抢占主线程。
@@ -673,15 +680,26 @@ class QuoteContent extends StatelessWidget {
       ];
     }
 
+    // 折叠态的媒体由 [CollapsedMediaThumbnail] 单独渲染，这里必须把嵌入节点摘掉：
+    // 留着它们等于让 Quill 在 160px 的窗口里再解一遍整宽图（还会被裁掉大半），
+    // 而且 video/audio 会在滚动列表里实例化播放器。摘掉之后折叠文档是纯文本，
+    // 构建和布局都便宜得多。
+    final textOps = _stripMediaOps(ops);
+    if (textOps.isEmpty) {
+      return const [
+        {'insert': '\n'},
+      ];
+    }
+
     if (maxWidth == null || !maxWidth.isFinite || maxWidth <= 0) {
-      return _truncateDeltaOpsWithLegacyBudget(ops);
+      return _truncateDeltaOpsWithLegacyBudget(textOps);
     }
 
     final truncatedOps = <Map<String, dynamic>>[];
     final targetHeight =
         collapsedContentMaxHeight + _collapsedDocumentHeightGuard;
 
-    for (final op in ops) {
+    for (final op in textOps) {
       if (!op.containsKey('insert')) continue;
 
       final insert = op['insert'];
@@ -727,19 +745,36 @@ class QuoteContent extends StatelessWidget {
                 locale: locale,
               ) <
               targetHeight) {
-        // Preserve the first embed/block crossing the preview boundary. Quill
-        // remains the renderer for every pixel that can become visible.
+        // Preserve the first non-text block crossing the preview boundary.
+        // Quill still renders every visible non-media pixel; collapsed media
+        // was already lifted out to [CollapsedMediaThumbnail] by _stripMediaOps,
+        // so this path only ever sees non-media embeds (e.g. formula).
         truncatedOps.add(candidate);
       }
       break;
     }
 
     if (truncatedOps.isEmpty) {
-      truncatedOps.add(Map<String, dynamic>.from(ops.first));
+      truncatedOps.add(Map<String, dynamic>.from(textOps.first));
     }
 
     _ensureDocumentOpsEndWithNewline(truncatedOps);
     return truncatedOps;
+  }
+
+  /// 去掉图片/视频/音频嵌入节点，保留其余全部 op。
+  ///
+  /// 仅用于**折叠态**文档：展开态和全屏编辑器仍然拿完整 ops，媒体照常由 Quill
+  /// 渲染在原本的位置上。
+  static List<Map<String, dynamic>> _stripMediaOps(
+    List<Map<String, dynamic>> ops,
+  ) {
+    if (!ops.any((op) => isDeltaMediaInsert(op['insert']))) {
+      return ops;
+    }
+    return ops
+        .where((op) => !isDeltaMediaInsert(op['insert']))
+        .toList(growable: false);
   }
 
   static List<Map<String, dynamic>> _truncateDeltaOpsWithLegacyBudget(
@@ -1013,13 +1048,48 @@ class QuoteContent extends StatelessWidget {
 
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
       if (!showFullContent && needsExpansion) {
+        // 折叠态：媒体走卡片右侧的独立缩略图，不再经由 Quill 的 embedBuilder。
+        // 缩略图因此和卡片同时挂载，不用排在富文本物化队列后面——「空白 → 灰框
+        // → 图片」的前两段就是这样来的。详见 CollapsedMediaThumbnail 的说明。
+        final media = DeltaMediaCache.of(quote.deltaContent);
         return LayoutBuilder(
-          builder: (context, constraints) => _buildRichTextContent(
-            context,
-            needsExpansion: needsExpansion,
-            prioritizeBoldContent: prioritizeBoldContent,
-            maxWidth: constraints.maxWidth,
-          ),
+          builder: (context, constraints) {
+            // 容器窄到放不下「缩略图 + 一段能读的正文」时**整个不画缩略图**。
+            //
+            // 只把预留宽度 clamp 小是没用的：Row 的固定子项（gap + 缩略图）恒占
+            // 84px，与 reserved 取什么值无关；`constraints.maxWidth` 一旦小于 84，
+            // `Expanded` 照样分到负空间、RenderFlex 照样溢出。只有不挂这两个子项
+            // 才真的不溢出。折叠正文区正常不会窄到这个程度，这里纯粹是防御。
+            final bool showThumbnail = media.hasMedia &&
+                (!constraints.maxWidth.isFinite ||
+                    constraints.maxWidth >= _minWidthForCollapsedThumbnail);
+            final double reserved =
+                showThumbnail ? CollapsedMediaThumbnail.reservedWidth() : 0.0;
+            // 文字宽度要先扣掉缩略图占的位，否则折叠高度会按整宽估算而截少内容。
+            final double textMaxWidth = constraints.maxWidth.isFinite
+                ? constraints.maxWidth - reserved
+                : constraints.maxWidth;
+
+            final Widget content = _buildRichTextContent(
+              context,
+              needsExpansion: needsExpansion,
+              prioritizeBoldContent: prioritizeBoldContent,
+              maxWidth: textMaxWidth,
+            );
+
+            if (!showThumbnail) {
+              return content;
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: content),
+                const SizedBox(width: CollapsedMediaThumbnail.gap),
+                CollapsedMediaThumbnail(media: media),
+              ],
+            );
+          },
         );
       }
       return _buildRichTextContent(

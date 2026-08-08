@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:thoughtecho/services/svg_to_image_service.dart';
-import 'package:thoughtecho/services/image_cache_service.dart';
+import 'package:thoughtecho/services/svg_raster_cache_service.dart';
 
 void main() {
   group('SVG到图片转换测试', () {
@@ -77,7 +77,7 @@ void main() {
     }, timeout: const Timeout(Duration(seconds: 15)));
 
     test('缓存功能测试', () async {
-      final cacheService = ImageCacheService();
+      final cacheService = SvgRasterCacheService();
 
       // 清空缓存
       cacheService.clearCache();
@@ -126,21 +126,21 @@ void main() {
     });
 
     test('缓存键生成', () {
-      final key1 = ImageCacheService.generateCacheKey(
+      final key1 = SvgRasterCacheService.generateCacheKey(
         testSvg,
         400,
         600,
         ui.ImageByteFormat.png,
       );
 
-      final key2 = ImageCacheService.generateCacheKey(
+      final key2 = SvgRasterCacheService.generateCacheKey(
         testSvg,
         400,
         600,
         ui.ImageByteFormat.png,
       );
 
-      final key3 = ImageCacheService.generateCacheKey(
+      final key3 = SvgRasterCacheService.generateCacheKey(
         testSvg,
         800,
         1200,
@@ -169,10 +169,10 @@ void main() {
   });
 
   group('图片缓存服务测试', () {
-    late ImageCacheService cacheService;
+    late SvgRasterCacheService cacheService;
 
     setUp(() {
-      cacheService = ImageCacheService();
+      cacheService = SvgRasterCacheService();
       cacheService.clearCache();
     });
 
