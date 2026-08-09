@@ -98,6 +98,38 @@ void main() {
       expect(files, isNot(contains('nested_target/deep/inner.bin')));
     });
 
+    test('excludePath 是数据目录的祖先时，不排除任何文件', () async {
+      // 场景：Documents/ThoughtEcho -> Documents（新目录是当前目录的父级）。
+      // 祖先目录不是"目标复制进自身"，不应把所有文件误判为目标内文件。
+      final dataDir = Directory(abs('ThoughtEcho'))..createSync();
+      createFile('ThoughtEcho/databases/thoughtecho.db');
+      createFile('ThoughtEcho/media/photo.jpg');
+
+      final result = await DataDirectoryService.collectFilesForMigration(
+        dataDir.path,
+        excludePath: tempDir.path,
+      );
+
+      final files = relativeFiles(result);
+      expect(files, contains('ThoughtEcho/databases/thoughtecho.db'));
+      expect(files, contains('ThoughtEcho/media/photo.jpg'));
+    });
+
+    test('excludePath 与数据目录无关时，不排除任何文件', () async {
+      createFile('databases/thoughtecho.db');
+      createFile('media/photo.jpg');
+      final unrelated = Directory(abs('unrelated'))..createSync();
+
+      final result = await DataDirectoryService.collectFilesForMigration(
+        tempDir.path,
+        excludePath: unrelated.path,
+      );
+
+      final files = relativeFiles(result);
+      expect(files, contains('databases/thoughtecho.db'));
+      expect(files, contains('media/photo.jpg'));
+    });
+
     test('数据目录不存在时返回空列表和错误', () async {
       final missing = path.join(tempDir.path, 'does_not_exist');
       final result = await DataDirectoryService.collectFilesForMigration(

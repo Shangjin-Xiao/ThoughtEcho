@@ -305,6 +305,11 @@ class DataDirectoryService {
       if (currentPath == newPath) {
         throw Exception('新目录与当前目录相同');
       }
+      // 拒绝把数据迁移到当前目录的祖先目录：复制会把应用数据重新摊在
+      // 祖先目录（如文档根目录）下与用户文件混放，既不安全也难清理。
+      if (path.isWithin(newPath, currentPath)) {
+        throw Exception('新目录不能是当前数据目录的上级目录');
+      }
 
       onStatusUpdate?.call('正在准备迁移...');
 
@@ -462,9 +467,10 @@ class DataDirectoryService {
   /// 收集数据目录下所有待迁移的文件（纯逻辑，供测试直接调用）。
   ///
   /// 跳过系统文件（`desktop.ini`、`thumbs.db` 等）和 SQLite 共享内存临时
-  /// 文件（`-shm`）；WAL 日志保留。若 [excludePath] 位于 [currentPath]
-  /// 内部（用户把新目录选在数据目录内），其中的文件不参与收集，避免把
-  /// 目标目录复制进自身。
+  /// 文件（`-shm`）；WAL 日志保留。仅当 [excludePath] 位于 [currentPath]
+  /// 内部（用户把新目录选在数据目录内）时，才排除其中的文件，避免把
+  /// 目标目录复制进自身。若 [excludePath] 是 [currentPath] 的祖先或与其
+  /// 无关，不做排除——否则祖先目录会把所有文件误判为"目标内文件"。
   @visibleForTesting
   static Future<Map<String, dynamic>> collectFilesForMigration(
     String currentPath, {
@@ -483,7 +489,9 @@ class DataDirectoryService {
           if (_isWindowsSystemFile(fileName) || fileName.endsWith('-shm')) {
             continue;
           }
-          if (excludePath != null && path.isWithin(excludePath, entity.path)) {
+          if (excludePath != null &&
+              path.isWithin(currentPath, excludePath) &&
+              path.isWithin(excludePath, entity.path)) {
             continue;
           }
           filesToCopy.add(entity.path);
