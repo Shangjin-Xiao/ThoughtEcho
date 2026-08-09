@@ -631,6 +631,41 @@ void main() {
       expect(first.includedInContext, isTrue);
     });
 
+    // 首次进入时的一次性提示会告知「Thoughter 会记住你」，并给一个当场关掉的
+    // 出口。自动发起的首轮请求必须等它——那一轮没人按发送键，抢在提示前跑的话，
+    // 用户点「先不要记」时记忆已经读写完了。
+    testWidgets('initialQuestion waits for the entry notice before running',
+        (tester) async {
+      await settingsService.setAgentMemoryNoticeShown(false);
+      final agentService = _FakeAgentService(settingsService: settingsService);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const ThoughterPage(
+            key: ValueKey('initial_question_notice_page'),
+            entrySource: ThoughterEntrySource.explore,
+            initialQuestion: '帮我看看最近写了什么',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+      // 提示还开着：一轮都不许跑
+      expect(find.text(l10n.agentMemoryNoticeTitle), findsOneWidget);
+      expect(agentService.runCount, 0);
+
+      await tester.tap(find.text(l10n.agentMemoryNoticeGotIt));
+      await tester.pumpAndSettle();
+      await _settleAgentTurn(tester);
+
+      expect(find.text(l10n.agentMemoryNoticeTitle), findsNothing);
+      expect(agentService.runCount, 1);
+    });
+
     // 会话是延迟创建的（首条用户消息才建），开场白比会话早出生。
     // 它必须被补写进库，否则用户杀掉重进这个会话，第一句连同上下文一起消失。
     testWidgets('openingMessage is persisted once the session gets created',

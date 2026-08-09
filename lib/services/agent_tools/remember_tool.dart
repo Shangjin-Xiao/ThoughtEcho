@@ -117,9 +117,12 @@ class RememberTool extends AgentTool {
         _ => _invalid(call, 'action 只能是 add、update 或 delete'),
       };
     } catch (error, stackTrace) {
+      // 只记异常类型：sqflite 的异常原文会带上 SQL 和绑定参数，而参数就是
+      // 用户的记忆正文——那是最私密的一类内容，不该躺进应用日志。
       logError(
-        'remember 工具写入失败（action=$action, layer=$layer）',
-        error: error,
+        'remember 工具写入失败（action=$action, layer=$layer, '
+        '${error.runtimeType}）',
+        error: error.runtimeType,
         stackTrace: stackTrace,
         source: 'RememberTool',
       );

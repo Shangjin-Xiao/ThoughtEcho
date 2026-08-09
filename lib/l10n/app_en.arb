@@ -4248,5 +4248,6 @@
   "agentMemoryNoticeHint": "You can ask Thoughter to change or forget any entry at any time, or turn memory off and clear it in AI settings.",
   "agentMemoryNoticeGotIt": "Got it",
   "agentMemoryNoticeDisable": "Don't remember",
-  "agentMemorySwitchFailed": "Could not save the memory switch. Please try again."
+  "agentMemorySwitchFailed": "Could not save the memory switch. Please try again.",
+  "agentMemoryCountsUnavailable": "Could not read the memory count. You can still try clearing."
 }

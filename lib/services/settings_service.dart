@@ -106,8 +106,13 @@ class SettingsService extends ChangeNotifier {
   bool get agentMemoryNoticeShown =>
       _mmkv.getBool(_agentMemoryNoticeShownKey) ?? false;
 
+  /// 写入失败时抛出，让调用方能记一笔——否则用户每次进 Thoughter 都会被同一条
+  /// 提示拦住，而没有任何线索。
   Future<void> setAgentMemoryNoticeShown(bool value) async {
-    await _mmkv.setBool(_agentMemoryNoticeShownKey, value);
+    final success = await _mmkv.setBool(_agentMemoryNoticeShownKey, value);
+    if (!success) {
+      throw StateError('保存 Thoughter 记忆提示已读标记失败');
+    }
     notifyListeners();
   }
 

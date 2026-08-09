@@ -235,7 +235,11 @@ class AIService extends ChangeNotifier {
   ///
   /// 将系统提示词和用户消息转换为 openai_dart 的
   /// ChatMessage 格式，支持可选的历史对话上下文。
-  List<openai.ChatMessage> _buildChatMessages({
+  /// 组装一次请求的消息序列：system → 用户画像（如有）→ 历史 → 本轮提问。
+  ///
+  /// 画像必须留在自己的 user 消息里，别并进 system——见下方注释。
+  @visibleForTesting
+  static List<openai.ChatMessage> buildChatMessages({
     required String systemPrompt,
     required String userMessage,
     List<ChatMessage>? history,
@@ -316,7 +320,7 @@ class AIService extends ChangeNotifier {
           provider = provider.copyWith(enableThinking: enableThinking);
         }
 
-        final messages = _buildChatMessages(
+        final messages = buildChatMessages(
           systemPrompt: systemPrompt,
           userMessage: userMessage,
           history: history,

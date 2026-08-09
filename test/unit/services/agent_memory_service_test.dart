@@ -320,14 +320,32 @@ void main() {
         directive: '啊${'😀' * 400}',
       );
 
-      // runes 能完整遍历 = 没有落单的代理码位；能读回来 = SQLite 收下了。
-      expect(() => entry.directive.runes.toList(), returnsNormally);
+      // Dart 的 Runes 遇到落单的代理码位不会抛异常，只会原样产出它——
+      // 所以只能直接查末尾码位，不能靠 returnsNormally。
+      final lastUnit = entry.directive.codeUnitAt(entry.directive.length - 1);
+      expect(
+        lastUnit >= 0xD800 && lastUnit <= 0xDBFF,
+        isFalse,
+        reason: '末尾不能留半个代理对，否则写 SQLite 时无法编码成 UTF-8',
+      );
+      // 上限是奇数（201 = 1 个「啊」+ 100 个 emoji），切在代理对中间，
+      // 于是要丢掉那半个字符。
+      expect(
+        entry.directive.length,
+        AgentMemoryService.directiveMaxChars - 1,
+      );
+
+      // 能原样读回来 = SQLite 确实收下了。
       final stored = (await memory.activeProfile()).single;
       expect(stored.directive, entry.directive);
     });
 
-    test('replaceFact 换内容但不留下孤儿，id 不存在时返回 null', () async {
-      final original = await memory.addFact(content: '用户在学法语');
+    test('replaceFact 改内容但保留 id 与履历', () async {
+      final original = await memory.addFact(
+        content: '用户在学法语',
+        createdAt: DateTime(2025, 1, 1),
+      );
+      await memory.searchFacts('法语'); // 攒一次召回记录
 
       final replaced = await memory.replaceFact(
         id: original.id,
@@ -335,11 +353,24 @@ void main() {
       );
 
       expect(replaced, isNotNull);
-      expect((await memory.counts()).factCount, 1);
-      expect((await memory.searchFacts('西班牙')).single.fact.content, '用户在学西班牙语');
-      expect(await memory.searchFacts('法语'), isEmpty);
+      // id 不变：模型刚从 recall 拿到的引用不该因为一次改写就作废。
+      expect(replaced!.id, original.id);
+      // createdAt 不重置，否则一条老记忆的 recency 分被凭空拉满。
+      expect(replaced.createdAt, original.createdAt);
+      // 召回计数不归零，那等于抹掉它被用过几次。
+      expect(replaced.recallCount, 1);
 
+      expect((await memory.counts()).factCount, 1);
+      expect(
+        (await memory.searchFacts('西班牙')).single.fact.content,
+        '用户在学西班牙语',
+      );
+      expect(await memory.searchFacts('法语'), isEmpty);
+    });
+
+    test('replaceFact 对不存在的 id 返回 null，且不凭空造一条', () async {
       expect(await memory.replaceFact(id: '不存在', content: 'x'), isNull);
+      expect((await memory.counts()).factCount, 0);
     });
 
     test('trigger_phrases 里的换行不会让一条裂成多条', () async {

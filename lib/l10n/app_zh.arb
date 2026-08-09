@@ -4270,5 +4270,6 @@
   "agentMemoryNoticeHint": "你可以随时让 Thoughter 修改或忘掉某条记忆，也可以在「AI 设置」里关闭或清空。",
   "agentMemoryNoticeGotIt": "知道了",
   "agentMemoryNoticeDisable": "先不要记",
-  "agentMemorySwitchFailed": "记忆开关没能保存，请重试"
+  "agentMemorySwitchFailed": "记忆开关没能保存，请重试",
+  "agentMemoryCountsUnavailable": "读取记忆数量失败，仍可尝试清空"
 }

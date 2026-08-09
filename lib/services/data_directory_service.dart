@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/app_logger.dart';
 import '../utils/path_security_utils.dart';
+import 'agent_memory_service.dart';
 import 'ai_analysis_database_service.dart';
 import 'chat_session_service.dart';
 import 'database_service.dart';
@@ -124,6 +125,8 @@ class DataDirectoryService {
         'ai_analyses.db-wal',
         'chat.db',
         'chat.db-wal',
+        'agent_memory.db',
+        'agent_memory.db-wal',
       ];
 
       for (final item in itemsToMigrate) {
@@ -183,6 +186,13 @@ class DataDirectoryService {
     } catch (e, stack) {
       logError('关闭 ChatSessionService 失败', error: e, stackTrace: stack);
       failures.add('ChatSessionService: $e');
+    }
+
+    try {
+      await AgentMemoryService.activeInstance?.close();
+    } catch (e, stack) {
+      logError('关闭 AgentMemoryService 失败', error: e, stackTrace: stack);
+      failures.add('AgentMemoryService: $e');
     }
 
     if (failures.isNotEmpty) {
@@ -458,6 +468,8 @@ class DataDirectoryService {
       'ai_analyses.db-wal',
       'chat.db',
       'chat.db-wal',
+      'agent_memory.db', // Thoughter 长期记忆
+      'agent_memory.db-wal',
       'backups', // 备份目录
     ];
 

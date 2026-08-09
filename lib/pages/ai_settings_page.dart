@@ -625,7 +625,9 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
                   (counts?.profileCount ?? 0) + (counts?.factCount ?? 0);
               final enabled = failed || total > 0;
               final subtitle = failed
-                  ? l10n.agentMemoryClearFailed
+                  // 这里失败的是"读数量"，不是"清空"——复用清空失败的文案会让
+                  // 用户以为自己刚删了什么。
+                  ? l10n.agentMemoryCountsUnavailable
                   : (counts != null && total > 0
                       ? l10n.agentMemoryClearSummary(
                           counts.profileCount,

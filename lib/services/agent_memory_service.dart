@@ -38,7 +38,13 @@ class AgentMemoryService extends ChangeNotifier {
     required SettingsService settingsService,
     String? databasePath,
   })  : _settingsService = settingsService,
-        _databasePath = databasePath;
+        _databasePath = databasePath {
+    activeInstance = this;
+  }
+
+  /// 当前活跃实例，供 `DataDirectoryService` 在迁移数据目录前关闭连接。
+  /// 与 `ChatSessionService.activeInstance` 同一模式。
+  static AgentMemoryService? activeInstance;
 
   final SettingsService _settingsService;
   final String? _databasePath;
@@ -46,6 +52,7 @@ class AgentMemoryService extends ChangeNotifier {
 
   Database? _database;
   Completer<Database>? _opening;
+  bool _closed = false;
 
   static const String databaseFileName = 'agent_memory.db';
 
@@ -88,8 +95,16 @@ class AgentMemoryService extends ChangeNotifier {
       return opening.future;
     }
 
+    if (_closed) {
+      throw StateError('AgentMemoryService 已关闭');
+    }
+
     final completer = Completer<Database>();
     _opening = completer;
+    // 发起打开的这个调用方直接 await openDatabase 并 rethrow，不听
+    // completer.future。没有并发调用方时这条 future 就没人听，打开失败会多出
+    // 一个未捕获的异步错误。ignore() 只是兜底，不影响真正在等它的调用方。
+    completer.future.ignore();
     try {
       final dbPath = _databasePath ?? await _defaultDatabasePath();
       if (dbPath != inMemoryDatabasePath) {
@@ -104,6 +119,12 @@ class AgentMemoryService extends ChangeNotifier {
         onUpgrade: (db, oldVersion, newVersion) => _ensureSchema(db),
         onOpen: _ensureSchema,
       );
+      // dispose/close 可能发生在打开过程中：那时 _database 还是 null，
+      // 关不到任何东西，而这个连接一旦落到 _database 上就再没人管了。
+      if (_closed) {
+        await db.close();
+        throw StateError('AgentMemoryService 已关闭');
+      }
       _database = db;
       completer.complete(db);
       return db;
@@ -112,6 +133,48 @@ class AgentMemoryService extends ChangeNotifier {
       rethrow;
     } finally {
       _opening = null;
+    }
+  }
+
+  /// 关闭连接并冲刷 WAL。
+  ///
+  /// 迁移数据目录前必须调用：复制的是 SQLite 文件本体，没 checkpoint 的话
+  /// 最近的写入会留在旧目录的 WAL 里。
+  Future<void> close() async {
+    _closed = true;
+    final opening = _opening;
+    if (opening != null) {
+      // 等打开流程走完，否则它会在我们关完之后再把连接装回 _database。
+      try {
+        await opening.future;
+      } catch (_) {
+        // 打开本身失败就没有连接要关。
+      }
+    }
+    final db = _database;
+    _database = null;
+    if (db == null || !db.isOpen) {
+      return;
+    }
+    try {
+      await db.execute('PRAGMA wal_checkpoint(FULL);');
+    } catch (error, stackTrace) {
+      logError(
+        '记忆库 WAL checkpoint 失败',
+        error: error.runtimeType,
+        stackTrace: stackTrace,
+        source: 'AgentMemoryService',
+      );
+    }
+    try {
+      await db.close();
+    } catch (error, stackTrace) {
+      logError(
+        '关闭记忆库失败',
+        error: error.runtimeType,
+        stackTrace: stackTrace,
+        source: 'AgentMemoryService',
+      );
     }
   }
 
@@ -168,8 +231,10 @@ class AgentMemoryService extends ChangeNotifier {
 
   @override
   void dispose() {
-    unawaited(_database?.close());
-    _database = null;
+    if (identical(activeInstance, this)) {
+      activeInstance = null;
+    }
+    unawaited(close());
     super.dispose();
   }
 
@@ -409,46 +474,59 @@ class AgentMemoryService extends ChangeNotifier {
     List<String> triggerPhrases = const <String>[],
     String? sourceRef,
   }) async {
-    final fact = _buildFact(
-      content: content,
-      category: category,
-      importance: importance,
-      triggerPhrases: triggerPhrases,
-      sourceRef: sourceRef,
-    );
-
     final db = await _db;
-    final replaced = await db.transaction<bool>((txn) async {
-      final deleted = await txn.delete(
+    final updated = await db.transaction<AgentMemoryFact?>((txn) async {
+      final rows = await txn.query(
         factsTable,
         where: 'id = ?',
         whereArgs: <Object?>[id],
+        limit: 1,
       );
-      if (deleted == 0) {
-        return false;
+      if (rows.isEmpty) {
+        return null;
       }
+      final previous = AgentMemoryFact.fromMap(rows.first);
+
+      // 保留 id 和这条记忆的"履历"：id 变了，模型刚从 recall 拿到的引用当场作废；
+      // createdAt 重置会让一条老记忆的 recency 分被拉满；召回计数归零则等于
+      // 抹掉它被用过几次。改的是内容，不是换一条新记忆。
+      final next = _buildFact(
+        id: previous.id,
+        content: content,
+        category: category,
+        importance: importance,
+        triggerPhrases: triggerPhrases,
+        sourceRef: sourceRef ?? previous.sourceRef,
+        createdAt: previous.createdAt,
+        lastRecalledAt: previous.lastRecalledAt,
+        recallCount: previous.recallCount,
+      );
+
       await txn.insert(
         factsTable,
-        fact.toMap(),
+        next.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
-      return true;
+      return next;
     });
 
-    if (!replaced) {
+    if (updated == null) {
       return null;
     }
     notifyListeners();
-    return fact;
+    return updated;
   }
 
   AgentMemoryFact _buildFact({
     required String content,
+    String? id,
     String? category,
     int importance = 5,
     List<String> triggerPhrases = const <String>[],
     String? sourceRef,
     DateTime? createdAt,
+    DateTime? lastRecalledAt,
+    int recallCount = 0,
   }) {
     final normalized = _normalizeText(content, factMaxChars);
     if (normalized.isEmpty) {
@@ -458,9 +536,11 @@ class AgentMemoryService extends ChangeNotifier {
     final trimmedCategory = category?.trim() ?? '';
 
     return AgentMemoryFact(
-      id: _uuid.v4(),
+      id: id ?? _uuid.v4(),
       content: normalized,
       createdAt: createdAt ?? DateTime.now(),
+      lastRecalledAt: lastRecalledAt,
+      recallCount: recallCount,
       category: trimmedCategory.isEmpty ? null : trimmedCategory,
       importance: importance.clamp(
         AgentMemoryFact.minImportance,

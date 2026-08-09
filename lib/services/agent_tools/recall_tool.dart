@@ -102,13 +102,14 @@ class RecallTool extends AgentTool {
 
       return ToolResult(toolCallId: call.id, content: jsonEncode(payload));
     } catch (error, stackTrace) {
+      // query 是用户数据，异常原文里会带 SQL 和绑定参数（也就是记忆正文），
+      // 两者都不进日志：只留长度和异常类型。
       logError(
-        'recall 工具检索失败（query 长度 ${query.length}）',
-        error: error,
+        'recall 工具检索失败（query 长度 ${query.length}, ${error.runtimeType}）',
+        error: error.runtimeType,
         stackTrace: stackTrace,
         source: 'RecallTool',
       );
-      // query 本身是用户数据，不进日志；异常原文也不回喂模型。
       return ToolResult(
         toolCallId: call.id,
         content: '记忆检索失败，这一轮拿不到记忆。不要重试，按没有记忆继续。',
