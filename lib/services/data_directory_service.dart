@@ -273,8 +273,11 @@ class DataDirectoryService {
     }
   }
 
-  /// 迁移数据到新目录
-  /// 返回是否成功
+  /// 迁移整个数据目录到 [newPath]。
+  ///
+  /// 数据目录是应用专属文件夹，直接整目录复制（仅排除系统文件和 SQLite
+  /// `-shm` 临时文件），因此未来新增任何数据源都无需维护迁移清单。
+  /// 返回是否成功；成功后新路径写入配置，需要重启应用生效。
   static Future<bool> migrateDataDirectory(
     String newPath, {
     Function(double progress)? onProgress,
@@ -313,9 +316,9 @@ class DataDirectoryService {
         throw Exception('当前数据目录不存在');
       }
 
-      // 3. 只迁移应用相关的文件和目录
-      // 使用 isolate 避免阻塞 UI
-      final result = await compute(_collectAppFiles, currentPath);
+      // 3. 整目录收集应用文件（数据已收敛在专属文件夹，无需维护白名单）
+      // 使用 isolate 避免阻塞 UI；同时传入新目录以排除自身嵌套。
+      final result = await compute(_collectAppFiles, (currentPath, newPath));
       final filesToCopy = result['files'] as List<String>;
       final errors = result['errors'] as List<String>;
 
@@ -444,63 +447,55 @@ class DataDirectoryService {
     }
   }
 
-  /// 在 isolate 中收集应用相关的文件（避免阻塞 UI）
+  /// isolate 入口：收集数据目录下所有待迁移的文件（避免阻塞 UI）。
+  ///
+  /// 数据目录已是应用专属文件夹，直接整目录递归收集，不再维护
+  /// `databases / media / ai_analyses.db ...` 白名单，未来新增任何数据源
+  /// 都会被自动迁移。
   static Future<Map<String, dynamic>> _collectAppFiles(
-      String currentPath) async {
+    (String, String) args,
+  ) async {
+    final (currentPath, excludePath) = args;
+    return collectFilesForMigration(currentPath, excludePath: excludePath);
+  }
+
+  /// 收集数据目录下所有待迁移的文件（纯逻辑，供测试直接调用）。
+  ///
+  /// 跳过系统文件（`desktop.ini`、`thumbs.db` 等）和 SQLite 共享内存临时
+  /// 文件（`-shm`）；WAL 日志保留。若 [excludePath] 位于 [currentPath]
+  /// 内部（用户把新目录选在数据目录内），其中的文件不参与收集，避免把
+  /// 目标目录复制进自身。
+  @visibleForTesting
+  static Future<Map<String, dynamic>> collectFilesForMigration(
+    String currentPath, {
+    String? excludePath,
+  }) async {
     final filesToCopy = <String>[];
     final errors = <String>[];
 
-    // 只迁移应用相关的目录和文件
-    final appItems = [
-      'databases', // 数据库目录
-      'media', // 媒体文件目录
-      'ai_analyses.db', // AI 分析数据库
-      'ai_analyses.db-wal',
-      'chat.db',
-      'chat.db-wal',
-      'backups', // 备份目录
-    ];
+    try {
+      await for (final entity
+          in Directory(currentPath).list(recursive: true, followLinks: false)) {
+        try {
+          if (entity is! File) continue;
 
-    for (final item in appItems) {
-      final itemPath = path.join(currentPath, item);
-      final itemDir = Directory(itemPath);
-      final itemFile = File(itemPath);
-
-      try {
-        if (await itemDir.exists()) {
-          // 遍历目录中的文件
-          await for (final entity in itemDir.list(
-            recursive: true,
-            followLinks: false,
-          )) {
-            try {
-              if (entity is File) {
-                final fileName = path.basename(entity.path).toLowerCase();
-                // 跳过系统文件和 SQLite shm 临时文件
-                if (!_isWindowsSystemFile(fileName) &&
-                    !fileName.endsWith('-shm')) {
-                  filesToCopy.add(entity.path);
-                }
-              }
-            } catch (e) {
-              errors.add('无法访问: ${entity.path}');
-            }
+          final fileName = path.basename(entity.path).toLowerCase();
+          if (_isWindowsSystemFile(fileName) || fileName.endsWith('-shm')) {
+            continue;
           }
-        } else if (await itemFile.exists()) {
-          final fileName = path.basename(itemFile.path).toLowerCase();
-          if (!fileName.endsWith('-shm')) {
-            filesToCopy.add(itemFile.path);
+          if (excludePath != null && path.isWithin(excludePath, entity.path)) {
+            continue;
           }
+          filesToCopy.add(entity.path);
+        } catch (e) {
+          errors.add('无法访问: ${entity.path}');
         }
-      } catch (e) {
-        errors.add('无法访问目录: $itemPath');
       }
+    } catch (e) {
+      errors.add('无法访问目录: $currentPath');
     }
 
-    return {
-      'files': filesToCopy,
-      'errors': errors,
-    };
+    return {'files': filesToCopy, 'errors': errors};
   }
 
   /// 检查是否是 Windows 系统文件
