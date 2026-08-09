@@ -189,6 +189,35 @@ void main() {
     });
   });
 
+  group('DataDirectoryService.validateMigrationTarget', () {
+    test('与当前目录相同返回错误', () async {
+      final current = await DataDirectoryService.getCurrentDataDirectory();
+      expect(
+        await DataDirectoryService.validateMigrationTarget(current),
+        isNotNull,
+      );
+    });
+
+    test('目标是当前目录的祖先时返回错误', () async {
+      final current = await DataDirectoryService.getCurrentDataDirectory();
+      final ancestor = path.dirname(current);
+      expect(
+        await DataDirectoryService.validateMigrationTarget(ancestor),
+        isNotNull,
+      );
+    });
+
+    test('无关目录返回 null', () async {
+      final unrelated = await TestHarness.createTempDirectory('target_test');
+      addTearDown(() => TestHarness.deleteTempDirectory(unrelated));
+
+      expect(
+        await DataDirectoryService.validateMigrationTarget(unrelated.path),
+        isNull,
+      );
+    });
+  });
+
   group('DataDirectoryService.canonicalizePath', () {
     test('普通存在的目录原样返回', () async {
       final real = Directory(abs('real'))..createSync();

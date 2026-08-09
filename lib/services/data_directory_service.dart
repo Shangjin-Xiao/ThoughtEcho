@@ -291,6 +291,7 @@ class DataDirectoryService {
       throw UnsupportedError('仅支持桌面平台');
     }
 
+    var databasesClosed = false;
     try {
       onStatusUpdate?.call('正在验证新目录...');
       logDebug('开始迁移数据到: $newPath');
@@ -318,6 +319,7 @@ class DataDirectoryService {
 
       // 迁移前确保关闭并冲刷所有数据库连接
       await _closeAllDatabases();
+      databasesClosed = true;
 
       final currentDir = Directory(currentPath);
       if (!await currentDir.exists()) {
@@ -454,9 +456,27 @@ class DataDirectoryService {
 
       return true;
     } catch (e, stackTrace) {
+      // 迁移在关闭数据库之后失败时，恢复数据库服务，否则用户不重启应用
+      // 后续数据库操作会持续失败。
+      if (databasesClosed) {
+        await _restoreDatabasesAfterFailedMigration();
+      }
       logError('数据迁移失败: $e', error: e, stackTrace: stackTrace);
       onStatusUpdate?.call('迁移失败: $e');
       return false;
+    }
+  }
+
+  /// 迁移失败后恢复数据库服务。
+  ///
+  /// `DatabaseService.closeDatabase(forMigration: true)` 会保持已销毁状态
+  /// （迁移成功后本就需要重启），失败时必须重置以便后续按需重新初始化。
+  /// AI 分析与会话数据库关闭后会在下次访问时惰性重开，无需额外恢复。
+  static Future<void> _restoreDatabasesAfterFailedMigration() async {
+    try {
+      await DatabaseService.closeDatabase(forMigration: false);
+    } catch (e, stackTrace) {
+      logError('迁移失败后恢复 DatabaseService 失败', error: e, stackTrace: stackTrace);
     }
   }
 
@@ -554,6 +574,24 @@ class DataDirectoryService {
       return '新目录不能位于当前数据目录内部';
     }
     return null;
+  }
+
+  /// 校验 [newPath] 是否可作为迁移目标（按真实路径比较）。
+  ///
+  /// 返回错误原因；合法时返回 null。供目录选择页在写权限探针
+  /// （[validateDirectory]）之前调用，让被拒绝的路径（相同/祖先/嵌套）
+  /// 不产生目录创建和写探针等副作用。
+  static Future<String?> validateMigrationTarget(String newPath) async {
+    if (kIsWeb) {
+      return 'Web平台不支持数据目录迁移';
+    }
+    if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) {
+      return '仅支持桌面平台';
+    }
+    final currentPath = await getCurrentDataDirectory();
+    final resolvedCurrent = await canonicalizePath(currentPath);
+    final resolvedNew = await canonicalizePath(newPath);
+    return validateDataDirectoryPath(resolvedCurrent, resolvedNew);
   }
 
   /// 检查是否是 Windows 系统文件

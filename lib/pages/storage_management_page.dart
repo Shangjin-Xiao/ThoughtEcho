@@ -837,6 +837,21 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
 
       if (result == null || !mounted) return;
 
+      // 先按真实路径检查（相同/祖先/嵌套），再验证目录写权限：被拒绝的
+      // 路径不应先触发目录创建和写探针等副作用。
+      final targetError =
+          await DataDirectoryService.validateMigrationTarget(result);
+      if (targetError != null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(targetError),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
+        return;
+      }
+
       // 验证目录
       final isValid = await DataDirectoryService.validateDirectory(result);
       if (!isValid) {
