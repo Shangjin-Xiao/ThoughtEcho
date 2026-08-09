@@ -87,6 +87,10 @@ class SettingsService extends ChangeNotifier {
   /// 「Thoughter 会记住你的偏好」这条一次性说明是否显示过。
   static const String _agentMemoryNoticeShownKey = 'agent_memory_notice_shown';
 
+  /// 用户希望 Thoughter 称呼自己的名字。用户在设置里显式填写，
+  /// 作为画像块里的 identity 行注入；只存本机，不进备份与同步。
+  static const String _userNicknameKey = 'user_nickname';
+
   bool get agentMemoryEnabled => _mmkv.getBool(_agentMemoryEnabledKey) ?? true;
 
   /// 写入失败时抛出：这个开关的默认值是 true，静默失败会让用户以为已经关掉，
@@ -100,6 +104,13 @@ class SettingsService extends ChangeNotifier {
       );
       throw StateError('保存 Thoughter 记忆开关失败');
     }
+    notifyListeners();
+  }
+
+  String get userNickname => _mmkv.getString(_userNicknameKey) ?? '';
+
+  Future<void> setUserNickname(String value) async {
+    await _mmkv.setString(_userNicknameKey, value.trim());
     notifyListeners();
   }
 

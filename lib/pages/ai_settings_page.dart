@@ -583,11 +583,26 @@ class _AgentMemorySection extends StatefulWidget {
 
 class _AgentMemorySectionState extends State<_AgentMemorySection> {
   Future<({int profileCount, int factCount})>? _countsFuture;
+  late final TextEditingController _nicknameController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nicknameController = TextEditingController(
+      text: Provider.of<SettingsService>(context, listen: false).userNickname,
+    );
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _countsFuture ??= context.read<AgentMemoryService>().counts();
+  }
+
+  @override
+  void dispose() {
+    _nicknameController.dispose();
+    super.dispose();
   }
 
   void _refreshCounts() {
@@ -612,6 +627,22 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
             onChanged: _setMemoryEnabled,
             secondary: const Icon(Icons.psychology_outlined),
             isThreeLine: true,
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: TextField(
+              controller: _nicknameController,
+              decoration: InputDecoration(
+                icon: const Icon(Icons.badge_outlined),
+                labelText: l10n.agentMemoryNicknameTitle,
+                hintText: l10n.agentMemoryNicknameHint,
+                helperText: l10n.agentMemoryNicknameDesc,
+              ),
+              textInputAction: TextInputAction.done,
+              onChanged: (value) =>
+                  context.read<SettingsService>().setUserNickname(value),
+            ),
           ),
           const Divider(height: 1),
           FutureBuilder<({int profileCount, int factCount})>(
