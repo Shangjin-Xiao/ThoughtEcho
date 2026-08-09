@@ -789,6 +789,33 @@ void main() {
       expect(find.text('聊到你想把这条笔记拆成两段'), findsOneWidget);
     });
 
+    // 开场白过去用单个换行 +「•」手写列表：Markdown 会把相邻行并进同一段，
+    // 四条问题在窄屏上挤成一坨。必须用空行 + `- ` 列表让它们各自成行。
+    testWidgets(
+        'note entry welcome keeps suggested questions as separate lines',
+        (tester) async {
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: ThoughterPage(
+            entrySource: ThoughterEntrySource.note,
+            quote: _buildQuote(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+      final lines = l10n.aiAssistantWelcome.split('\n');
+      final bulletLines = lines.where((line) => line.startsWith('- '));
+      expect(bulletLines.length, 4);
+      // 列表前必须有空行与段落分开，否则 Markdown 仍会把列表并进上一段。
+      final questionsIndex = lines.indexOf(bulletLines.first);
+      expect(questionsIndex, greaterThan(0));
+      expect(lines[questionsIndex - 1], isEmpty);
+    });
+
     testWidgets('note entry sends structured note identity to Agent',
         (tester) async {
       final agentService = _FakeAgentService(
