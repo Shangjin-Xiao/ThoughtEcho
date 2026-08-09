@@ -298,7 +298,7 @@ extension _ThoughterSession on _ThoughterPageState {
 
     // 绑定笔记模式：显示笔记欢迎信息
     if (_hasBoundNote) {
-      final welcomeContent = l10n.aiAssistantWelcome(_getQuotePreview());
+      final welcomeContent = l10n.aiAssistantWelcome;
       final welcomeMsg = app_chat.ChatMessage(
         id: _uuid.v4(),
         content: welcomeContent,
