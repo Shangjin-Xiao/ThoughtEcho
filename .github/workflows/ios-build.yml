@@ -8,6 +8,14 @@ on:
         required: true
         default: '1.0.0'
 
+  # 供 release.yml 复用
+  workflow_call:
+    inputs:
+      version_name:
+        description: '版本名称 (例如: 1.0.0)'
+        required: true
+        type: string
+
 jobs:
   build-ios:
     runs-on: macos-latest
@@ -41,7 +49,7 @@ jobs:
         
       - name: 构建 iOS 应用包 (无签名)
         env:
-          VERSION_NAME: ${{ github.event.inputs.version_name }}
+          VERSION_NAME: ${{ inputs.version_name }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           # 如果是手动触发，使用输入的版本号；否则使用默认版本
@@ -80,7 +88,7 @@ jobs:
           
       - name: 创建构建信息
         env:
-          VERSION_NAME: ${{ github.event.inputs.version_name || '1.0.0' }}
+          VERSION_NAME: ${{ inputs.version_name || '1.0.0' }}
         run: |
           if [[ ! "$VERSION_NAME" =~ ^[0-9]+(\.[0-9]+)*(-[a-zA-Z0-9.-]+)?$ ]]; then
             echo "Error: Invalid version_name format: $VERSION_NAME"
