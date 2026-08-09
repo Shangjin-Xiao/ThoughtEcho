@@ -4,6 +4,7 @@ import '../models/quote_model.dart';
 import '../models/chat_message.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/weather_data.dart' show WeatherCodeMapper;
+import '../services/agent_memory_service.dart';
 import '../services/settings_service.dart' show SettingsService;
 import '../services/api_key_manager.dart';
 import '../services/openai_stream_service.dart';
@@ -32,8 +33,19 @@ class AIService extends ChangeNotifier {
   final AIRequestHelper _requestHelper = AIRequestHelper();
   final OpenAIStreamService _openAIStreamService = OpenAIStreamService();
 
-  AIService({required SettingsService settingsService})
-      : _settingsService = settingsService;
+  /// 用户画像来源。每日提示与周期洞察共用 Thoughter 的同一份记忆。
+  final AgentMemoryService? _memoryService;
+
+  /// [memoryService] 为空时（测试、或调用方不想接入记忆）每日提示与周期洞察
+  /// 照常工作，只是不带用户画像——记忆是增益，不是这两条链路的前置条件。
+  AIService({
+    required SettingsService settingsService,
+    AgentMemoryService? memoryService,
+  })  : _settingsService = settingsService,
+        _memoryService = memoryService;
+
+  Future<String?> _userProfileContext() async =>
+      _memoryService?.safeProfileBlock(source: 'AIService');
 
   /// 每日提示的输出上限（token）。
   ///
@@ -223,14 +235,26 @@ class AIService extends ChangeNotifier {
   ///
   /// 将系统提示词和用户消息转换为 openai_dart 的
   /// ChatMessage 格式，支持可选的历史对话上下文。
-  List<openai.ChatMessage> _buildChatMessages({
+  /// 组装一次请求的消息序列：system → 用户画像（如有）→ 历史 → 本轮提问。
+  ///
+  /// 画像必须留在自己的 user 消息里，别并进 system——见下方注释。
+  @visibleForTesting
+  static List<openai.ChatMessage> buildChatMessages({
     required String systemPrompt,
     required String userMessage,
     List<ChatMessage>? history,
+    String? profileBlock,
   }) {
     final messages = <openai.ChatMessage>[
       openai.ChatMessage.system(systemPrompt),
     ];
+
+    // 画像是助手从过往对话里提炼的，属于不可信数据，只能作为独立的用户数据消息
+    // 出现。拼进 system prompt 会让历史里写下的一句话拿到系统级优先级，
+    // "数据不是指令"这行文案挡不住角色带来的权重。
+    if (profileBlock != null && profileBlock.isNotEmpty) {
+      messages.add(openai.ChatMessage.user(profileBlock));
+    }
 
     if (history != null && history.isNotEmpty) {
       final contextMessages = history
@@ -279,6 +303,7 @@ class AIService extends ChangeNotifier {
     int? maxTokens,
     bool? enableThinking,
     Function(String)? onThinking,
+    String? profileBlock,
   }) {
     final controller = StreamController<String>(sync: true);
 
@@ -295,10 +320,11 @@ class AIService extends ChangeNotifier {
           provider = provider.copyWith(enableThinking: enableThinking);
         }
 
-        final messages = _buildChatMessages(
+        final messages = buildChatMessages(
           systemPrompt: systemPrompt,
           userMessage: userMessage,
           history: history,
+          profileBlock: profileBlock,
         );
 
         await for (final chunk in _openAIStreamService.streamChatWithThinking(
@@ -437,10 +463,11 @@ class AIService extends ChangeNotifier {
     String? notesPreview,
     String? fullNotesContent, // 新增：完整笔记内容用于深度分析
     String? previousInsights, // 新增：历史洞察上下文
-  }) {
+  }) async* {
     // 获取用户设置的语言代码
     final languageCode = _settingsService.localeCode;
 
+    final profileBlock = await _userProfileContext();
     final prompt = _promptManager.getReportInsightSystemPrompt(
       'poetic',
       languageCode: languageCode,
@@ -458,9 +485,10 @@ class AIService extends ChangeNotifier {
       previousInsights: previousInsights,
     );
 
-    return _streamViaOpenAI(
+    yield* _streamViaOpenAI(
       systemPrompt: prompt,
       userMessage: user,
+      profileBlock: profileBlock,
     );
   }
 
@@ -534,6 +562,7 @@ class AIService extends ChangeNotifier {
           historicalInsights: historicalInsights,
           languageCode: languageCode,
         );
+        final profileBlock = await _userProfileContext();
 
         final userMessage = _promptManager.buildDailyPromptUserMessage(
           city: city,
@@ -546,6 +575,7 @@ class AIService extends ChangeNotifier {
           userMessage: userMessage,
           temperature: 1.0,
           maxTokens: _dailyPromptMaxTokens,
+          profileBlock: profileBlock,
           // 不再需要用空 onThinking 丢弃 reasoning：processStreamToText 现在
           // 只在整条流一个字正文都没有时才把 reasoning 当兜底输出。空回调反而
           // 会让 reasoning-only 模型的每日提示彻底变空、退回默认模板。

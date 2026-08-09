@@ -78,6 +78,44 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Thoughter 长期记忆开关。默认开启。
+  ///
+  /// 关闭只停止读写，**不清空已有记忆**——关开关和删数据是两件事，清空必须由
+  /// 用户在设置页显式触发。
+  static const String _agentMemoryEnabledKey = 'agent_memory_enabled';
+
+  /// 「Thoughter 会记住你的偏好」这条一次性说明是否显示过。
+  static const String _agentMemoryNoticeShownKey = 'agent_memory_notice_shown';
+
+  bool get agentMemoryEnabled => _mmkv.getBool(_agentMemoryEnabledKey) ?? true;
+
+  /// 写入失败时抛出：这个开关的默认值是 true，静默失败会让用户以为已经关掉，
+  /// 下次启动却发现记忆还在读写——隐私开关不能糊弄过去。
+  Future<void> setAgentMemoryEnabled(bool value) async {
+    final success = await _mmkv.setBool(_agentMemoryEnabledKey, value);
+    if (!success) {
+      AppLogger.e(
+        'Thoughter 记忆开关保存失败：MMKV setBool 返回 false（value=$value）',
+        source: 'SettingsService',
+      );
+      throw StateError('保存 Thoughter 记忆开关失败');
+    }
+    notifyListeners();
+  }
+
+  bool get agentMemoryNoticeShown =>
+      _mmkv.getBool(_agentMemoryNoticeShownKey) ?? false;
+
+  /// 写入失败时抛出，让调用方能记一笔——否则用户每次进 Thoughter 都会被同一条
+  /// 提示拦住，而没有任何线索。
+  Future<void> setAgentMemoryNoticeShown(bool value) async {
+    final success = await _mmkv.setBool(_agentMemoryNoticeShownKey, value);
+    if (!success) {
+      throw StateError('保存 Thoughter 记忆提示已读标记失败');
+    }
+    notifyListeners();
+  }
+
   bool get themeStyleNoticeShown =>
       _mmkv.getBool(_themeStyleNoticeShownKey) ?? false;
 

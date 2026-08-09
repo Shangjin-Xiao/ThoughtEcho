@@ -287,6 +287,18 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
 - 使用现有流式 API。已删除的 `AIService.generateDailyPrompt` 不得恢复，使用
   `streamGenerateDailyPrompt`。
 
+### Thoughter 长期记忆（`AgentMemoryService`）
+
+- 独立数据库 `agent_memory.db`（同聊天记录、日志、AI 分析），**不在主库**，有自己的
+  `schemaVersion`。物理隔离让"不进备份、不跨设备同步、能整个删掉"成为事实而非约定。
+- 只存**笔记里推导不出来**的东西（身份、表达偏好、对 Thoughter 的纠正）；用户写过什么
+  归 `explore_notes`，两套检索职责重叠模型会反复横跳。
+- 画像走**独立 user 数据消息**并先过 `wrapUserProfile`，不得拼进 system prompt。
+- 偏好变化**原位 supersede**，不允许两条矛盾的 active 画像条目并存。
+- 检索是 `LIKE` + Dart 内打分，不是 FTS5；换实现只动 `searchFacts`。
+- 设计取舍（不进备份/不进同步、不用 FTS5、未做定期整理）见
+  `docs/agent-memory-research-2026-08-08.md` 第七节，改之前先读。
+
 ## 平台与文件组织
 
 | 平台 | 约定 |

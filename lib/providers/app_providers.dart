@@ -22,6 +22,7 @@ import '../theme/app_theme.dart';
 import '../controllers/search_controller.dart';
 import '../services/chat_session_service.dart';
 import '../services/openai_stream_service.dart';
+import '../services/agent_memory_service.dart';
 import '../services/agent_service.dart';
 import '../services/agent_tool.dart';
 import '../services/agent_tools/explore_notes_tool.dart';
@@ -29,6 +30,8 @@ import '../services/agent_tools/get_app_context_tool.dart';
 import '../services/agent_tools/get_note_detail_tool.dart';
 import '../services/agent_tools/propose_note_create_tool.dart';
 import '../services/agent_tools/propose_note_edit_tool.dart';
+import '../services/agent_tools/recall_tool.dart';
+import '../services/agent_tools/remember_tool.dart';
 import '../services/agent_tools/web_fetch_tool.dart';
 import '../services/agent_tools/web_search_tool.dart';
 import '../services/web_fetch_service.dart';
@@ -39,6 +42,7 @@ List<AgentTool> _buildAgentTools(
   DatabaseService db,
   LocationService locationService,
   WeatherService weatherService,
+  AgentMemoryService memoryService,
 ) {
   return [
     ExploreNotesTool(db),
@@ -53,7 +57,29 @@ List<AgentTool> _buildAgentTools(
     WebFetchTool(WebFetchService()),
     ProposeNoteCreateTool(db),
     ProposeNoteEditTool(db),
+    RememberTool(memoryService),
+    RecallTool(memoryService),
   ];
+}
+
+AgentService _createAgentService(
+  SettingsService settingsService,
+  DatabaseService db,
+  LocationService locationService,
+  WeatherService weatherService,
+  AgentMemoryService memoryService,
+) {
+  return AgentService(
+    settingsService: settingsService,
+    memoryService: memoryService,
+    tools: _buildAgentTools(
+      settingsService,
+      db,
+      locationService,
+      weatherService,
+      memoryService,
+    ),
+  );
 }
 
 /// 构建应用级别的所有 Provider
@@ -90,23 +116,26 @@ List<SingleChildWidget> buildAppProviders({
     ChangeNotifierProvider<OpenAIStreamService>(
       create: (_) => OpenAIStreamService(),
     ),
-    ChangeNotifierProxyProvider4<SettingsService, DatabaseService,
-        LocationService, WeatherService, AgentService>(
-      create: (context) => AgentService(
+    // 记忆有自己的数据库文件，只依赖 SettingsService 的开关。
+    ChangeNotifierProxyProvider<SettingsService, AgentMemoryService>(
+      create: (context) => AgentMemoryService(
         settingsService: context.read<SettingsService>(),
-        tools: _buildAgentTools(
-          context.read<SettingsService>(),
-          context.read<DatabaseService>(),
-          context.read<LocationService>(),
-          context.read<WeatherService>(),
-        ),
       ),
-      update: (context, settings, db, location, weather, previous) =>
+      update: (context, settings, previous) =>
+          previous ?? AgentMemoryService(settingsService: settings),
+    ),
+    ChangeNotifierProxyProvider5<SettingsService, DatabaseService,
+        LocationService, WeatherService, AgentMemoryService, AgentService>(
+      create: (context) => _createAgentService(
+        context.read<SettingsService>(),
+        context.read<DatabaseService>(),
+        context.read<LocationService>(),
+        context.read<WeatherService>(),
+        context.read<AgentMemoryService>(),
+      ),
+      update: (context, settings, db, location, weather, memory, previous) =>
           previous ??
-          AgentService(
-            settingsService: settings,
-            tools: _buildAgentTools(settings, db, location, weather),
-          ),
+          _createAgentService(settings, db, location, weather, memory),
     ),
     ChangeNotifierProvider(create: (_) => NoteSearchController()),
     ChangeNotifierProvider(create: (_) => WebDAVSyncService()),
@@ -122,11 +151,15 @@ List<SingleChildWidget> buildAppProviders({
     // 提供初始化状态的值（debug 下必须使用 ListenableProvider）
     ListenableProvider<ValueNotifier<bool>>.value(value: servicesInitialized),
     ValueListenableProvider<bool>.value(value: servicesInitialized),
-    ChangeNotifierProxyProvider<SettingsService, AIService>(
-      create: (context) =>
-          AIService(settingsService: context.read<SettingsService>()),
-      update: (context, settings, previous) =>
-          previous ?? AIService(settingsService: settings),
+    ChangeNotifierProxyProvider2<SettingsService, AgentMemoryService,
+        AIService>(
+      create: (context) => AIService(
+        settingsService: context.read<SettingsService>(),
+        memoryService: context.read<AgentMemoryService>(),
+      ),
+      update: (context, settings, memory, previous) =>
+          previous ??
+          AIService(settingsService: settings, memoryService: memory),
     ),
     ProxyProvider3<DatabaseService, SettingsService, AIAnalysisDatabaseService,
         BackupService>(

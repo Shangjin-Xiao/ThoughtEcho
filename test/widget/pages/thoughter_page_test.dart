@@ -561,6 +561,9 @@ void main() {
       await TestHarness.initialize();
       settingsService = await SettingsService.create();
       await settingsService.setDontShowAgentExperimentalNotice(true);
+      // 记忆提示同理：这些用例测的是会话行为，不是首次进入的引导。留着它会挡住
+      // 自动发起的首轮请求（那一轮刻意要等提示关掉）。
+      await settingsService.setAgentMemoryNoticeShown(true);
       chatSessionService = _InMemoryChatSessionService();
       // 等待 AI 响应时列表末尾有一枚一直闪的光标，pumpAndSettle 永远等不到
       // 静止。打开"减弱动态效果"把它定住——真机上这项设置本来也该定住它。
@@ -626,6 +629,41 @@ void main() {
       expect(first.isUser, isFalse);
       // 关键断言：必须进上下文，否则模型不知道开场说了什么
       expect(first.includedInContext, isTrue);
+    });
+
+    // 首次进入时的一次性提示会告知「Thoughter 会记住你」，并给一个当场关掉的
+    // 出口。自动发起的首轮请求必须等它——那一轮没人按发送键，抢在提示前跑的话，
+    // 用户点「先不要记」时记忆已经读写完了。
+    testWidgets('initialQuestion waits for the entry notice before running',
+        (tester) async {
+      await settingsService.setAgentMemoryNoticeShown(false);
+      final agentService = _FakeAgentService(settingsService: settingsService);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const ThoughterPage(
+            key: ValueKey('initial_question_notice_page'),
+            entrySource: ThoughterEntrySource.explore,
+            initialQuestion: '帮我看看最近写了什么',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+      // 提示还开着：一轮都不许跑
+      expect(find.text(l10n.agentMemoryNoticeTitle), findsOneWidget);
+      expect(agentService.runCount, 0);
+
+      await tester.tap(find.text(l10n.agentMemoryNoticeGotIt));
+      await tester.pumpAndSettle();
+      await _settleAgentTurn(tester);
+
+      expect(find.text(l10n.agentMemoryNoticeTitle), findsNothing);
+      expect(agentService.runCount, 1);
     });
 
     // 会话是延迟创建的（首条用户消息才建），开场白比会话早出生。
