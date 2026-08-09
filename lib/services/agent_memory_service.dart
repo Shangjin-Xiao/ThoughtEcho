@@ -53,8 +53,11 @@ class AgentMemoryService extends ChangeNotifier {
   Database? _database;
   Completer<Database>? _opening;
 
-  /// 只有 [dispose] 会置位。[close] 之后允许重新打开——见 [close] 的说明。
+  /// 只有 [dispose] 会置位，之后这个实例彻底不可用。
   bool _disposed = false;
+
+  /// 迁移数据目录期间置位，见 [suspend]。
+  bool _suspended = false;
 
   static const String databaseFileName = 'agent_memory.db';
 
@@ -100,6 +103,9 @@ class AgentMemoryService extends ChangeNotifier {
     if (_disposed) {
       throw StateError('AgentMemoryService 已销毁');
     }
+    if (_suspended) {
+      throw StateError('AgentMemoryService 已挂起（数据目录迁移中）');
+    }
 
     final completer = Completer<Database>();
     _opening = completer;
@@ -121,11 +127,12 @@ class AgentMemoryService extends ChangeNotifier {
         onUpgrade: (db, oldVersion, newVersion) => _ensureSchema(db),
         onOpen: _ensureSchema,
       );
-      // dispose 可能发生在打开过程中：那时 _database 还是 null，dispose 关不到
-      // 任何东西，而这个连接一旦落到 _database 上就再没人管了。
-      if (_disposed) {
+      // dispose / suspend 可能发生在打开过程中：那时 _database 还是 null，
+      // 它们关不到任何东西，而这个连接一旦落到 _database 上就再没人管了。
+      // suspend 期间尤其不能放行——那会是一个指向旧目录的连接。
+      if (_disposed || _suspended) {
         await db.close();
-        throw StateError('AgentMemoryService 已销毁');
+        throw StateError('AgentMemoryService 已停止服务');
       }
       _database = db;
       completer.complete(db);
@@ -138,14 +145,29 @@ class AgentMemoryService extends ChangeNotifier {
     }
   }
 
+  /// 挂起服务：关闭连接并在 [resume] 之前拒绝一切读写。
+  ///
+  /// 迁移数据目录必须用这个，不能只 [close]。迁移是在应用运行中做的，
+  /// 光关连接的话，复制文件的这段时间里任何一次 `remember` 都会把库重新打开
+  /// ——打开的还是**旧路径**（新路径要等配置写完才生效），于是这段时间写下的
+  /// 记忆留在旧目录，复制早已跑过它，重启后就凭空消失了。
+  ///
+  /// 挂起期间读写抛异常，工具和画像注入各自走已有的降级路径：用户看到的是
+  /// 「这一轮没有记忆」，而不是数据被悄悄写丢。
+  Future<void> suspend() async {
+    _suspended = true;
+    await close();
+  }
+
+  /// 解除挂起。调用方必须**先把新路径写进配置**再调它，否则重开的依然是旧库。
+  void resume() {
+    _suspended = false;
+  }
+
   /// 关闭连接并冲刷 WAL。
   ///
-  /// 迁移数据目录前必须调用：复制的是 SQLite 文件本体，没 checkpoint 的话
-  /// 最近的写入会留在旧目录的 WAL 里。
-  ///
-  /// **关完还能再打开**：迁移是在应用运行中做的，用户不会立刻重启。把实例
-  /// 标成永久不可用的话，迁移完到重启之间，画像读取和 remember/recall 会一直
-  /// 失败。永久失效只发生在 [dispose]。
+  /// 复制的是 SQLite 文件本体，没 checkpoint 的话最近的写入会留在 WAL 里。
+  /// 单独调用它只是关连接，**不阻止重新打开**——需要挡住写入用 [suspend]。
   Future<void> close() async {
     final opening = _opening;
     if (opening != null) {

@@ -155,6 +155,10 @@ class DataDirectoryService {
     } catch (e, stackTrace) {
       logError('旧版数据迁移失败: $e', error: e, stackTrace: stackTrace);
       return false;
+    } finally {
+      // 这条路径走的是默认目录（Documents/ThoughtEcho），不写自定义路径配置，
+      // 所以解除挂起后重开的就是正确位置。失败也要解除，否则记忆一直不可用。
+      AgentMemoryService.activeInstance?.resume();
     }
   }
 
@@ -189,9 +193,11 @@ class DataDirectoryService {
     }
 
     try {
-      await AgentMemoryService.activeInstance?.close();
+      // suspend 而不是 close：迁移期间必须挡住写入，否则复制文件的这段时间里
+      // 一次 remember 就会把库按旧路径重新打开，那条记忆随后被留在旧目录。
+      await AgentMemoryService.activeInstance?.suspend();
     } catch (e, stack) {
-      logError('关闭 AgentMemoryService 失败', error: e, stackTrace: stack);
+      logError('挂起 AgentMemoryService 失败', error: e, stackTrace: stack);
       failures.add('AgentMemoryService: $e');
     }
 
@@ -454,6 +460,10 @@ class DataDirectoryService {
       logError('数据迁移失败: $e', error: e, stackTrace: stackTrace);
       onStatusUpdate?.call('迁移失败: $e');
       return false;
+    } finally {
+      // 解除挂起必须排在配置写入之后：提前放行的话，重新打开的还是旧路径。
+      // 失败路径同样要解除，否则用户不重启就再也用不了记忆。
+      AgentMemoryService.activeInstance?.resume();
     }
   }
 
