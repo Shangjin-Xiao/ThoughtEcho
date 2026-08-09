@@ -1,0 +1,30 @@
+lib/services/agent_memory_service.dart
+  s_3c181b1b3300ea::t_82af3bcddde83c 148,150-167,169-170
+  s_3c181b1b3300ea::t_68afc4de7c394f 56,59
+  s_3c181b1b3300ea::t_0c16223aef0231 60
+  s_3c181b1b3300ea::t_84e26b1d3bf26f 106-108
+  s_3c181b1b3300ea::t_835dc65702b816 130-133,135
+  s_3c181b1b3300ea::t_eaca0a1f281767 61
+test/unit/services/agent_memory_service_test.dart
+  s_3c181b1b3300ea::t_9b98723eb12ec7 389-415
+lib/services/data_directory_service.dart
+  s_3c181b1b3300ea::t_3a886ce723df33 158-161
+  s_3c181b1b3300ea::t_ac9f5423bd48ce 196-198,200
+  s_3c181b1b3300ea::t_f0ba1ebad6926e 463-466
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "6eac9430b3f6ec64e1b653f7a10fa33f13a25bc9",
+  "prompts": {},
+  "sessions": {
+    "s_3c181b1b3300ea": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ab0dda70-6cd5-45be-bb07-3022cfec6260",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
