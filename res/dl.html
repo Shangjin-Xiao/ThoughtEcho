@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>下载心迹 ThoughtEcho</title>
+    <meta
+      name="description"
+      content="下载心迹 ThoughtEcho —— 免费开源的摘录笔记应用。Windows 从 Microsoft Store 安装，Android 直接下载 APK。无需注册账号，数据默认只存本地，可选 WebDAV 云同步。"
+    />
+    <link rel="canonical" href="https://note.shangjinyun.cn/dl.html" />
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <style>
+      :root {
+        --paper: #f9f6f0;
+        --card: #fefdfb;
+        --line: #d4c5b9;
+        --ink: #2c2416;
+        --ink-mid: #5a4a3a;
+        --ink-light: #8b7355;
+        --accent: #a67c52;
+        --shadow: rgba(0, 0, 0, 0.08);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #2a2520;
+          --card: #342e28;
+          --line: #4a4037;
+          --ink: #e8dfd5;
+          --ink-mid: #d4c5b9;
+          --ink-light: #b8a99a;
+          --accent: #c89b6e;
+          --shadow: rgba(0, 0, 0, 0.3);
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 2rem 1.25rem 4rem;
+        background: var(--paper);
+        color: var(--ink);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
+          "Helvetica Neue", sans-serif;
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+      }
+      main {
+        max-width: 460px;
+        margin: 0 auto;
+      }
+      .logo {
+        display: block;
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 1rem;
+        border-radius: 18px;
+      }
+      h1 {
+        font-size: 1.5rem;
+        text-align: center;
+        margin: 0 0 0.35rem;
+        letter-spacing: 0.02em;
+      }
+      .tagline {
+        text-align: center;
+        color: var(--ink-mid);
+        font-size: 0.95rem;
+        margin: 0 0 2rem;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 1px 3px var(--shadow);
+      }
+      .card.primary {
+        border-color: var(--accent);
+        border-width: 1.5px;
+      }
+      .card h2 {
+        font-size: 1.05rem;
+        margin: 0 0 0.35rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .card p {
+        margin: 0 0 1rem;
+        font-size: 0.88rem;
+        color: var(--ink-mid);
+      }
+      .card p:last-child {
+        margin-bottom: 0;
+      }
+      .btn {
+        display: block;
+        width: 100%;
+        padding: 0.85rem 1rem;
+        border-radius: 10px;
+        background: var(--accent);
+        color: #fff;
+        text-align: center;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.98rem;
+        border: none;
+        transition: opacity 0.15s;
+      }
+      .btn:hover {
+        opacity: 0.88;
+      }
+      .btn.ghost {
+        background: transparent;
+        color: var(--accent);
+        border: 1px solid var(--line);
+      }
+      .badge {
+        display: inline-block;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.12rem 0.5rem;
+        border-radius: 99px;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        color: var(--ink-light);
+        vertical-align: middle;
+      }
+      details {
+        margin-top: 1.75rem;
+        font-size: 0.85rem;
+        color: var(--ink-light);
+      }
+      details summary {
+        cursor: pointer;
+        color: var(--ink-mid);
+        padding: 0.4rem 0;
+      }
+      details ul {
+        padding-left: 1.2rem;
+        margin: 0.5rem 0 0;
+      }
+      details li {
+        margin-bottom: 0.4rem;
+      }
+      details a {
+        color: var(--accent);
+      }
+      footer {
+        margin-top: 2.5rem;
+        text-align: center;
+        font-size: 0.8rem;
+        color: var(--ink-light);
+      }
+      footer a {
+        color: var(--ink-light);
+      }
+      .note {
+        font-size: 0.78rem;
+        color: var(--ink-light);
+        margin-top: 0.6rem;
+        text-align: center;
+      }
+      /* 未检测到平台时全部展示；JS 会按需隐藏 */
+      .platform[hidden] {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img class="logo" src="icon.png" alt="心迹" width="72" height="72" />
+      <h1>下载心迹</h1>
+      <p class="tagline">想到就记，读到就摘，剩下的交给 AI。</p>
+
+      <section class="platform" id="p-android">
+        <div class="card primary">
+          <h2>🤖 Android</h2>
+          <p>下载后直接安装即可。首次安装需在系统提示中允许「安装未知来源应用」。</p>
+          <a
+            class="btn"
+            id="apk-link"
+            href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest/download/app-release.apk"
+            >下载 APK（64 位）</a
+          >
+          <p class="note">免费 · 无需注册 · 无广告</p>
+        </div>
+      </section>
+
+      <section class="platform" id="p-windows">
+        <div class="card primary">
+          <h2>🪟 Windows</h2>
+          <p>从 Microsoft Store 安装，可自动更新，推荐这种方式。</p>
+          <a
+            class="btn"
+            href="https://apps.microsoft.com/detail/9NC7GDG6KFMC"
+            >从 Microsoft Store 获取</a
+          >
+          <p class="note">免费 · 无需注册 · 无广告</p>
+        </div>
+      </section>
+
+      <section class="platform" id="p-ios">
+        <div class="card">
+          <h2>🍎 iPhone / iPad <span class="badge">暂未上架</span></h2>
+          <p>
+            iOS 版目前还没有上架 App Store，正在计划中。可以先在 GitHub 上点
+            Watch 关注发布通知，上架后第一时间会同步到这里。
+          </p>
+          <a
+            class="btn ghost"
+            href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases"
+            >关注发布动态</a
+          >
+        </div>
+      </section>
+
+      <details>
+        <summary>其他版本与安装方式</summary>
+        <ul>
+          <li>
+            <a
+              href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest"
+              >GitHub Releases</a
+            >
+            —— 全部安装包，含 Windows 离线 MSIX 安装包
+          </li>
+          <li>
+            Windows 也可下载 MSIX 手动安装，但不会自动更新，仍建议走 Microsoft
+            Store
+          </li>
+          <li>
+            <a href="user-guide.html">用户指南</a> ——
+            安装后怎么用，含划词摘录、AI 配置等说明
+          </li>
+          <li>
+            <a href="privacy.html">隐私政策</a> ——
+            数据存在哪、收集了什么，都写在这里
+          </li>
+        </ul>
+      </details>
+
+      <footer>
+        <p>
+          心迹 ThoughtEcho · 免费开源 ·
+          <a href="https://github.com/Shangjin-Xiao/ThoughtEcho">GitHub</a> ·
+          <a href="./">回到首页</a>
+        </p>
+      </footer>
+    </main>
+
+    <script>
+      (function () {
+        var ua = navigator.userAgent || "";
+        var isAndroid = /Android/i.test(ua);
+        // iPadOS 13+ 在 UA 里伪装成 Mac，靠触摸点数区分
+        var isIOS =
+          /iPhone|iPad|iPod/i.test(ua) ||
+          (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+        var isWindows = /Windows NT/i.test(ua);
+
+        var detected = isAndroid || isIOS || isWindows;
+        if (!detected) return; // 认不出来就三个都显示，别把人挡在外面
+
+        var show = {
+          "p-android": isAndroid,
+          "p-windows": isWindows,
+          "p-ios": isIOS,
+        };
+        Object.keys(show).forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el && !show[id]) el.hidden = true;
+        });
+      })();
+    </script>
+  </body>
+</html>
