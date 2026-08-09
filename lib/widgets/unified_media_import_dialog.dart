@@ -212,8 +212,9 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
               description: 'Audio Files',
             );
           default:
-            throw Exception(l10n.unsupportedMediaTypeWithName(
-                _getMediaTypeName(widget.mediaType)));
+            // 未知类型保留原始值以便定位；已知类型不会进入该分支
+            throw Exception(
+                l10n.unsupportedMediaTypeWithName(widget.mediaType));
         }
       }, operationName: '选择${_getMediaTypeName(widget.mediaType)}文件');
 
@@ -307,8 +308,9 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
                 cancelToken: _cancelToken,
               );
             default:
-              throw Exception(l10n.unsupportedMediaTypeWithName(
-                  _getMediaTypeName(widget.mediaType)));
+              // 未知类型保留原始值以便定位；已知类型不会进入该分支
+              throw Exception(
+                  l10n.unsupportedMediaTypeWithName(widget.mediaType));
           }
         },
         operationName: '保存${_getMediaTypeName(widget.mediaType)}文件',
