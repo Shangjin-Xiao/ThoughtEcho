@@ -1,0 +1,56 @@
+test/unit/services/agent_memory_service_test.dart
+  s_3c181b1b3300ea::t_68385dbee12097 323-338
+  s_3c181b1b3300ea::t_87654dd62538a7 343-348,356-362,364-367,369,371,373
+test/widget/pages/thoughter_page_test.dart
+  s_3c181b1b3300ea::t_580d5b5790c90b 634-668
+lib/l10n/app_zh.arb
+  s_3c181b1b3300ea::t_8b01c6e7654253 4273-4274
+lib/services/settings_service.dart
+  s_3c181b1b3300ea::t_b250cdd71003a5 109-110,112-115
+lib/services/data_directory_service.dart
+  s_3c181b1b3300ea::t_c978a7272a73a7 8
+  s_3c181b1b3300ea::t_d5a59ebe525aad 128-129,191-197,471-472
+lib/services/agent_tools/remember_tool.dart
+  s_3c181b1b3300ea::t_b0605071e0d235 120-121,123-125
+lib/services/agent_memory_service.dart
+  s_3c181b1b3300ea::t_161642dc261e24 41-47,55,179
+  s_3c181b1b3300ea::t_c075e17a4847dd 178,234-237
+  s_3c181b1b3300ea::t_5195685d3f7d46 98-101,122-127,139-177
+  s_3c181b1b3300ea::t_71bc3f68bca62d 478-479,483,485-486,488-504,507,510,513,517,522,528-529
+  s_3c181b1b3300ea::t_13ce8df11c1f80 539,542-543
+  s_3c181b1b3300ea::t_3e12ef50744b13 104-107
+  s_3c181b1b3300ea::t_adc59e5ad0e27d 180
+test/unit/services/ai_service_profile_injection_test.dart
+  s_3c181b1b3300ea::t_c9b1860d545459 81
+  s_3c181b1b3300ea::t_3c3167526c27f4 21-24
+  s_3c181b1b3300ea::t_0e2898fc1219ee 3-20,25-37,40-41,44,47-80,82-84
+  s_3c181b1b3300ea::t_7100fc47e5872b 38-39,42-43,45-46
+  s_3c181b1b3300ea::t_3ef559d2032a96 1-2
+lib/l10n/app_en.arb
+  s_3c181b1b3300ea::t_8b01c6e7654253 4251-4252
+lib/pages/ai_settings_page.dart
+  s_3c181b1b3300ea::t_138f97f36ede3c 628-630
+lib/services/agent_tools/recall_tool.dart
+  s_3c181b1b3300ea::t_c5683c0ec34e3a 105-106,108-109
+lib/services/ai_service.dart
+  s_3c181b1b3300ea::t_eaa5353e38301c 323
+  s_3c181b1b3300ea::t_445c496e863cc7 238-242
+test/unit/services/agent_memory_tools_test.dart
+  s_3c181b1b3300ea::t_a09d43c7c26605 1-160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "0b575c15e4d02f3926b636ef06f75303fca5b7c1",
+  "prompts": {},
+  "sessions": {
+    "s_3c181b1b3300ea": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ab0dda70-6cd5-45be-bb07-3022cfec6260",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
