@@ -386,33 +386,6 @@ void main() {
       expect(reloaded.single.fact.triggerPhrases, hasLength(1));
     });
 
-    test('挂起期间拒绝读写，resume 后照常可用', () async {
-      await memory.rememberProfile(
-        kind: AgentMemoryKind.style,
-        directive: '回复保持碎句',
-      );
-
-      await memory.suspend();
-
-      // 迁移正在复制文件：这时候放行写入，那条记忆会落在旧目录里，
-      // 复制早已跑过它，重启后就没了。
-      expect(
-        () => memory.rememberProfile(
-          kind: AgentMemoryKind.style,
-          directive: '迁移中写入',
-        ),
-        throwsStateError,
-      );
-      expect(() => memory.counts(), throwsStateError);
-      // 画像注入走降级路径，不把异常抛给调用方。
-      expect(await memory.safeProfileBlock(source: 'test'), isNull);
-
-      memory.resume();
-
-      expect((await memory.counts()).profileCount, 1);
-      expect(await memory.buildProfileBlock(), contains('回复保持碎句'));
-    });
-
     test('空白指令拒绝写入', () async {
       expect(
         () => memory.rememberProfile(

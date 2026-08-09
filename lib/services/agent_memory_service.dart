@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -38,13 +37,7 @@ class AgentMemoryService extends ChangeNotifier {
     required SettingsService settingsService,
     String? databasePath,
   })  : _settingsService = settingsService,
-        _databasePath = databasePath {
-    activeInstance = this;
-  }
-
-  /// 当前活跃实例，供 `DataDirectoryService` 在迁移数据目录前关闭连接。
-  /// 与 `ChatSessionService.activeInstance` 同一模式。
-  static AgentMemoryService? activeInstance;
+        _databasePath = databasePath;
 
   final SettingsService _settingsService;
   final String? _databasePath;
@@ -55,9 +48,6 @@ class AgentMemoryService extends ChangeNotifier {
 
   /// 只有 [dispose] 会置位，之后这个实例彻底不可用。
   bool _disposed = false;
-
-  /// 迁移数据目录期间置位，见 [suspend]。
-  bool _suspended = false;
 
   static const String databaseFileName = 'agent_memory.db';
 
@@ -103,10 +93,6 @@ class AgentMemoryService extends ChangeNotifier {
     if (_disposed) {
       throw StateError('AgentMemoryService 已销毁');
     }
-    if (_suspended) {
-      throw StateError('AgentMemoryService 已挂起（数据目录迁移中）');
-    }
-
     final completer = Completer<Database>();
     _opening = completer;
     // 发起打开的这个调用方直接 await openDatabase 并 rethrow，不听
@@ -127,12 +113,11 @@ class AgentMemoryService extends ChangeNotifier {
         onUpgrade: (db, oldVersion, newVersion) => _ensureSchema(db),
         onOpen: _ensureSchema,
       );
-      // dispose / suspend 可能发生在打开过程中：那时 _database 还是 null，
-      // 它们关不到任何东西，而这个连接一旦落到 _database 上就再没人管了。
-      // suspend 期间尤其不能放行——那会是一个指向旧目录的连接。
-      if (_disposed || _suspended) {
+      // dispose 可能发生在打开过程中：那时 _database 还是 null，dispose 关不到
+      // 任何东西，而这个连接一旦落到 _database 上就再没人管了。
+      if (_disposed) {
         await db.close();
-        throw StateError('AgentMemoryService 已停止服务');
+        throw StateError('AgentMemoryService 已销毁');
       }
       _database = db;
       completer.complete(db);
@@ -145,30 +130,8 @@ class AgentMemoryService extends ChangeNotifier {
     }
   }
 
-  /// 挂起服务：关闭连接并在 [resume] 之前拒绝一切读写。
-  ///
-  /// 迁移数据目录必须用这个，不能只 [close]。迁移是在应用运行中做的，
-  /// 光关连接的话，复制文件的这段时间里任何一次 `remember` 都会把库重新打开
-  /// ——打开的还是**旧路径**（新路径要等配置写完才生效），于是这段时间写下的
-  /// 记忆留在旧目录，复制早已跑过它，重启后就凭空消失了。
-  ///
-  /// 挂起期间读写抛异常，工具和画像注入各自走已有的降级路径：用户看到的是
-  /// 「这一轮没有记忆」，而不是数据被悄悄写丢。
-  Future<void> suspend() async {
-    _suspended = true;
-    await close();
-  }
-
-  /// 解除挂起。调用方必须**先把新路径写进配置**再调它，否则重开的依然是旧库。
-  void resume() {
-    _suspended = false;
-  }
-
-  /// 关闭连接并冲刷 WAL。
-  ///
-  /// 复制的是 SQLite 文件本体，没 checkpoint 的话最近的写入会留在 WAL 里。
-  /// 单独调用它只是关连接，**不阻止重新打开**——需要挡住写入用 [suspend]。
-  Future<void> close() async {
+  /// 关闭连接。仅供 [dispose]。
+  Future<void> _close() async {
     final opening = _opening;
     if (opening != null) {
       // 等打开流程走完，否则它会在我们关完之后再把连接装回 _database。
@@ -184,16 +147,6 @@ class AgentMemoryService extends ChangeNotifier {
       return;
     }
     try {
-      await db.execute('PRAGMA wal_checkpoint(FULL);');
-    } catch (error, stackTrace) {
-      logError(
-        '记忆库 WAL checkpoint 失败',
-        error: error.runtimeType,
-        stackTrace: stackTrace,
-        source: 'AgentMemoryService',
-      );
-    }
-    try {
       await db.close();
     } catch (error, stackTrace) {
       logError(
@@ -205,17 +158,13 @@ class AgentMemoryService extends ChangeNotifier {
     }
   }
 
-  /// 桌面三端都能改数据目录（见 `StorageManagementPage`），所以这三端一律跟着
-  /// [DataDirectoryService.getCurrentDataDirectory] 走——否则迁移会把记忆库复制
-  /// 到一个应用根本不读的位置，用户看到的还是旧目录里那份。
+  /// 记忆库固定放 documents，**不跟随可自定义的数据目录**。
   ///
-  /// 移动端没有自定义目录，用 documents 即可。
+  /// 它不进备份、不进设备同步，本来就是纯本地的几百 KB；用户改数据目录是为了
+  /// 挪主库和媒体这些大件。让它待在原地，就不必接入目录迁移的挂起/复制/校验，
+  /// 也不会在旧目录留下一份没人管的画像。
   static Future<String> _defaultDatabasePath() async {
-    final isDesktop =
-        Platform.isWindows || Platform.isLinux || Platform.isMacOS;
-    final basePath = isDesktop
-        ? await DataDirectoryService.getCurrentDataDirectory()
-        : (await getApplicationDocumentsDirectory()).path;
+    final basePath = (await getApplicationDocumentsDirectory()).path;
     return path.join(basePath, databaseFileName);
   }
 
@@ -266,10 +215,7 @@ class AgentMemoryService extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    if (identical(activeInstance, this)) {
-      activeInstance = null;
-    }
-    unawaited(close());
+    unawaited(_close());
     super.dispose();
   }
 
