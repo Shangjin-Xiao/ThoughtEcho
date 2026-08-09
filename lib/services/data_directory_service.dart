@@ -10,6 +10,21 @@ import 'chat_session_service.dart';
 import 'database_service.dart';
 import 'large_file_manager.dart';
 
+/// 迁移目标被拒绝的原因。
+///
+/// 供目录选择页映射为本地化文案，避免把服务内部的原始中文串直接展示给用户。
+enum DataDirectoryTargetRejection {
+  /// 新目录与当前数据目录相同，迁移无意义。
+  sameDirectory,
+
+  /// 新目录是当前数据目录的祖先（如 Documents 根目录），会把应用数据
+  /// 重新摊在祖先目录下与用户文件混放。
+  ancestorDirectory,
+
+  /// 新目录位于当前数据目录内部，复制会把目标目录装进自己。
+  nestedDirectory,
+}
+
 /// 数据目录管理服务（桌面平台专用）
 /// 允许用户自定义应用数据存储位置，并处理数据迁移
 class DataDirectoryService {
@@ -291,7 +306,7 @@ class DataDirectoryService {
       throw UnsupportedError('仅支持桌面平台');
     }
 
-    var databasesClosed = false;
+    var databasesCloseAttempted = false;
     try {
       onStatusUpdate?.call('正在验证新目录...');
       logDebug('开始迁移数据到: $newPath');
@@ -317,9 +332,11 @@ class DataDirectoryService {
 
       onStatusUpdate?.call('正在准备迁移...');
 
-      // 迁移前确保关闭并冲刷所有数据库连接
+      // 迁移前确保关闭并冲刷所有数据库连接。
+      // 先标记"已尝试关闭"再调用：_closeAllDatabases 可能中途失败（如
+      // DatabaseService 已销毁后 AI/会话库关闭失败），此时也需要恢复。
+      databasesCloseAttempted = true;
       await _closeAllDatabases();
-      databasesClosed = true;
 
       final currentDir = Directory(currentPath);
       if (!await currentDir.exists()) {
@@ -329,7 +346,7 @@ class DataDirectoryService {
       // 3. 整目录收集应用文件（数据已收敛在专属文件夹，无需维护白名单）
       // 使用 isolate 避免阻塞 UI；同时传入新目录以排除自身嵌套。
       final result = await compute(_collectAppFiles, (currentPath, newPath));
-      final filesToCopy = result['files'] as List<String>;
+      final fileEntries = (result['files'] as List).cast<(String, String)>();
       final errors = result['errors'] as List<String>;
 
       if (errors.isNotEmpty) {
@@ -341,26 +358,26 @@ class DataDirectoryService {
         );
       }
 
-      if (filesToCopy.isEmpty) {
+      if (fileEntries.isEmpty) {
         logDebug('没有需要迁移的文件');
         // 即使没有文件，也继续设置新目录
       } else {
-        logDebug('需要迁移 ${filesToCopy.length} 个文件');
+        logDebug('需要迁移 ${fileEntries.length} 个文件');
 
         // 4. 复制文件到新目录
         int copiedCount = 0;
         final Map<String, double> inProgressMap = {};
         const int chunkSize = 5;
-        for (int i = 0; i < filesToCopy.length; i += chunkSize) {
-          final chunk = filesToCopy.sublist(
+        for (int i = 0; i < fileEntries.length; i += chunkSize) {
+          final chunk = fileEntries.sublist(
               i,
-              i + chunkSize > filesToCopy.length
-                  ? filesToCopy.length
+              i + chunkSize > fileEntries.length
+                  ? fileEntries.length
                   : i + chunkSize);
-          await Future.wait(chunk.map((filePath) async {
+          await Future.wait(chunk.map((entry) async {
+            final (filePath, relativePath) = entry;
             try {
               final file = File(filePath);
-              final relativePath = path.relative(filePath, from: currentPath);
               final targetPath = path.join(newPath, relativePath);
 
               // 路径遍历防护：使用 PathSecurityUtils 深度验证
@@ -394,7 +411,7 @@ class DataDirectoryService {
                     final totalInProgress =
                         inProgressMap.values.fold(0.0, (a, b) => a + b);
                     final totalProgress =
-                        (copiedCount + totalInProgress) / filesToCopy.length;
+                        (copiedCount + totalInProgress) / fileEntries.length;
                     onProgress(totalProgress);
                   }
                 },
@@ -407,7 +424,7 @@ class DataDirectoryService {
                 final totalInProgress =
                     inProgressMap.values.fold(0.0, (a, b) => a + b);
                 onProgress(
-                    (copiedCount + totalInProgress) / filesToCopy.length);
+                    (copiedCount + totalInProgress) / fileEntries.length);
               }
             } catch (e) {
               logError('复制文件失败: $filePath, 错误: $e', error: e);
@@ -458,7 +475,7 @@ class DataDirectoryService {
     } catch (e, stackTrace) {
       // 迁移在关闭数据库之后失败时，恢复数据库服务，否则用户不重启应用
       // 后续数据库操作会持续失败。
-      if (databasesClosed) {
+      if (databasesCloseAttempted) {
         await _restoreDatabasesAfterFailedMigration();
       }
       logError('数据迁移失败: $e', error: e, stackTrace: stackTrace);
@@ -494,44 +511,156 @@ class DataDirectoryService {
 
   /// 收集数据目录下所有待迁移的文件（纯逻辑，供测试直接调用）。
   ///
-  /// 跳过系统文件（`desktop.ini`、`thumbs.db` 等）和 SQLite 共享内存临时
-  /// 文件（`-shm`）；WAL 日志保留。仅当 [excludePath] 位于 [currentPath]
-  /// 内部（用户把新目录选在数据目录内）时，才排除其中的文件，避免把
-  /// 目标目录复制进自身。若 [excludePath] 是 [currentPath] 的祖先或与其
-  /// 无关，不做排除——否则祖先目录会把所有文件误判为"目标内文件"。
+  /// 返回 `(源路径, 目标相对路径)` 列表，目标相对路径在复制时保持目录
+  /// 结构。跳过系统文件（`desktop.ini`、`thumbs.db` 等）和 SQLite 共享
+  /// 内存临时文件（`-shm`）；WAL 日志保留。
+  ///
+  /// 数据目录内的 junction/symlink 子目录会被展开收集（文件落在链接名
+  /// 对应的相对路径下）；链接指向数据目录内部时跳过，因为真实位置的文件
+  /// 会被正常收集，避免重复或错误的目标路径。
+  ///
+  /// 仅当 [excludePath] 位于 [currentPath] 内部（用户把新目录选在数据
+  /// 目录内）时才排除其中的文件，避免把目标目录复制进自身。若
+  /// [excludePath] 是 [currentPath] 的祖先或与其无关，不做排除。
   @visibleForTesting
   static Future<Map<String, dynamic>> collectFilesForMigration(
     String currentPath, {
     String? excludePath,
   }) async {
-    final filesToCopy = <String>[];
+    final filesToCopy = <(String, String)>[];
     final errors = <String>[];
 
-    try {
-      await for (final entity
-          in Directory(currentPath).list(recursive: true, followLinks: false)) {
-        try {
-          if (entity is! File) continue;
+    final dataDirReal = _resolveRealPathSync(currentPath);
+    final excludeReal =
+        excludePath == null ? null : _resolveRealPathSync(excludePath);
+    // 排除只在目标目录位于数据目录内部时生效。
+    final excludeApplied =
+        excludeReal != null && path.isWithin(dataDirReal, excludeReal);
 
-          final fileName = path.basename(entity.path).toLowerCase();
-          if (_isWindowsSystemFile(fileName) || fileName.endsWith('-shm')) {
-            continue;
+    await _collectMigrationEntries(
+      Directory(currentPath),
+      prefix: '',
+      dataDirReal: dataDirReal,
+      excludeReal: excludeApplied ? excludeReal : null,
+      visitedRealDirs: <String>{},
+      filesToCopy: filesToCopy,
+      errors: errors,
+    );
+
+    return {'files': filesToCopy, 'errors': errors};
+  }
+
+  /// 递归收集目录下的迁移文件（含展开外部链接）。
+  ///
+  /// [prefix] 是当前目录在数据目录内的相对前缀（数据目录根为 ''，外部
+  /// 链接展开后为链接相对路径）。[visitedRealDirs] 记录已展开过的真实目录，
+  /// 防止链接环导致无限递归。
+  static Future<void> _collectMigrationEntries(
+    Directory dir, {
+    required String prefix,
+    required String dataDirReal,
+    required String? excludeReal,
+    required Set<String> visitedRealDirs,
+    required List<(String, String)> filesToCopy,
+    required List<String> errors,
+  }) async {
+    final dirReal = _resolveRealPathSync(dir.path);
+    if (!visitedRealDirs.add(dirReal)) {
+      return; // 已展开过，防止链接环
+    }
+
+    try {
+      await for (final entity in dir.list(followLinks: false)) {
+        try {
+          final relative = prefix.isEmpty
+              ? path.basename(entity.path)
+              : path.join(prefix, path.basename(entity.path));
+
+          if (entity is File) {
+            final fileName = path.basename(entity.path).toLowerCase();
+            if (_isWindowsSystemFile(fileName) || fileName.endsWith('-shm')) {
+              continue;
+            }
+            if (excludeReal != null &&
+                _isUnderOrEqual(
+                    excludeReal, _resolveRealPathSync(entity.path))) {
+              continue;
+            }
+            filesToCopy.add((entity.path, relative));
+          } else if (entity is Link) {
+            final targetReal = _resolveRealPathSync(entity.path);
+            if (path.equals(targetReal, dataDirReal) ||
+                path.isWithin(dataDirReal, targetReal)) {
+              // 指向数据目录内部：真实位置的文件会被正常收集，跳过链接。
+              continue;
+            }
+            if (excludeReal != null &&
+                _isUnderOrEqual(excludeReal, targetReal)) {
+              continue;
+            }
+            final targetType =
+                FileSystemEntity.typeSync(entity.path, followLinks: true);
+            if (targetType == FileSystemEntityType.file) {
+              final fileName = path.basename(entity.path).toLowerCase();
+              if (!_isWindowsSystemFile(fileName) &&
+                  !fileName.endsWith('-shm')) {
+                filesToCopy.add((entity.path, relative));
+              }
+            } else if (targetType == FileSystemEntityType.directory) {
+              await _collectMigrationEntries(
+                Directory(entity.path), // 列出链接时 OS 会跟随到目标
+                prefix: relative,
+                dataDirReal: dataDirReal,
+                excludeReal: excludeReal,
+                visitedRealDirs: visitedRealDirs,
+                filesToCopy: filesToCopy,
+                errors: errors,
+              );
+            }
+            // 其余目标类型（悬空链接、特殊文件等）无法迁移，跳过。
+          } else if (entity is Directory) {
+            final dirRealPath = _resolveRealPathSync(entity.path);
+            if (excludeReal != null &&
+                _isUnderOrEqual(excludeReal, dirRealPath)) {
+              continue;
+            }
+            await _collectMigrationEntries(
+              entity,
+              prefix: relative,
+              dataDirReal: dataDirReal,
+              excludeReal: excludeReal,
+              visitedRealDirs: visitedRealDirs,
+              filesToCopy: filesToCopy,
+              errors: errors,
+            );
           }
-          if (excludePath != null &&
-              path.isWithin(currentPath, excludePath) &&
-              path.isWithin(excludePath, entity.path)) {
-            continue;
-          }
-          filesToCopy.add(entity.path);
         } catch (e) {
           errors.add('无法访问: ${entity.path}');
         }
       }
     } catch (e) {
-      errors.add('无法访问目录: $currentPath');
+      errors.add('无法访问目录: ${dir.path}');
     }
+  }
 
-    return {'files': filesToCopy, 'errors': errors};
+  /// 判断 [target] 是否等于 [parent] 或位于其内部。
+  static bool _isUnderOrEqual(String parent, String target) =>
+      path.equals(parent, target) || path.isWithin(parent, target);
+
+  /// 解析路径的真实位置（跟随 junction/symlink）；目录不存在时逐级向上
+  /// 解析已存在的祖先，剩余部分原样拼接。
+  static String _resolveRealPathSync(String p) {
+    final normalized = path.normalize(p);
+    try {
+      return path.normalize(Directory(normalized).resolveSymbolicLinksSync());
+    } on FileSystemException {
+      final parent = path.dirname(normalized);
+      if (parent == normalized) return normalized; // 已到根目录
+      return path.join(
+        _resolveRealPathSync(parent),
+        path.basename(normalized),
+      );
+    }
   }
 
   /// 解析路径的真实位置（跟随 Windows junction/symlink）。
@@ -556,7 +685,7 @@ class DataDirectoryService {
     }
   }
 
-  /// 校验迁移目标与当前数据目录的关系，返回错误原因；合法时返回 null。
+  /// 校验迁移目标与当前数据目录的关系，返回拒绝原因；合法时返回 null。
   ///
   /// [currentPath] 与 [newPath] 必须是 [canonicalizePath] 解析后的真实
   /// 路径。拒绝三种情况：同一目录（无意义）、目标位于当前目录内部（复制
@@ -564,34 +693,42 @@ class DataDirectoryService {
   /// 祖先目录下与用户文件混放）。
   @visibleForTesting
   static String? validateDataDirectoryPath(String currentPath, String newPath) {
-    if (currentPath == newPath) {
-      return '新目录与当前目录相同';
-    }
-    if (path.isWithin(newPath, currentPath)) {
-      return '新目录不能是当前数据目录的上级目录';
-    }
-    if (path.isWithin(currentPath, newPath)) {
-      return '新目录不能位于当前数据目录内部';
-    }
-    return null;
+    return switch (_rejectDataDirectoryTarget(currentPath, newPath)) {
+      DataDirectoryTargetRejection.sameDirectory => '新目录与当前数据目录相同',
+      DataDirectoryTargetRejection.ancestorDirectory => '新目录不能是当前数据目录的上级目录',
+      DataDirectoryTargetRejection.nestedDirectory => '新目录不能位于当前数据目录内部',
+      null => null,
+    };
   }
 
   /// 校验 [newPath] 是否可作为迁移目标（按真实路径比较）。
   ///
-  /// 返回错误原因；合法时返回 null。供目录选择页在写权限探针
+  /// 返回拒绝原因；合法时返回 null。供目录选择页在写权限探针
   /// （[validateDirectory]）之前调用，让被拒绝的路径（相同/祖先/嵌套）
-  /// 不产生目录创建和写探针等副作用。
-  static Future<String?> validateMigrationTarget(String newPath) async {
-    if (kIsWeb) {
-      return 'Web平台不支持数据目录迁移';
-    }
-    if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) {
-      return '仅支持桌面平台';
-    }
+  /// 不产生目录创建和写探针等副作用。页面负责把拒绝原因映射为本地化文案。
+  static Future<DataDirectoryTargetRejection?> validateMigrationTarget(
+    String newPath,
+  ) async {
     final currentPath = await getCurrentDataDirectory();
     final resolvedCurrent = await canonicalizePath(currentPath);
     final resolvedNew = await canonicalizePath(newPath);
-    return validateDataDirectoryPath(resolvedCurrent, resolvedNew);
+    return _rejectDataDirectoryTarget(resolvedCurrent, resolvedNew);
+  }
+
+  static DataDirectoryTargetRejection? _rejectDataDirectoryTarget(
+    String currentPath,
+    String newPath,
+  ) {
+    if (currentPath == newPath) {
+      return DataDirectoryTargetRejection.sameDirectory;
+    }
+    if (path.isWithin(newPath, currentPath)) {
+      return DataDirectoryTargetRejection.ancestorDirectory;
+    }
+    if (path.isWithin(currentPath, newPath)) {
+      return DataDirectoryTargetRejection.nestedDirectory;
+    }
+    return null;
   }
 
   /// 检查是否是 Windows 系统文件

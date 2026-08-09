@@ -909,6 +909,9 @@
       }
     }
   },
+  "migrationTargetSameAsCurrent": "新目录与当前数据目录相同",
+  "migrationTargetAncestor": "新目录不能是当前数据目录的上级目录",
+  "migrationTargetNested": "新目录不能位于当前数据目录内部",
   "logsViewer": "日志查看",
   "logFilter": "日志过滤",
   "clearLogs": "清除日志",

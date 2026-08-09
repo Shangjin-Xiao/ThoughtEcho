@@ -32,8 +32,9 @@ void main() {
   }
 
   Set<String> relativeFiles(Map<String, dynamic> result) {
-    return (result['files'] as List<String>)
-        .map((f) => path.relative(f, from: tempDir.path))
+    return (result['files'] as List)
+        .cast<(String, String)>()
+        .map((e) => e.$2)
         .toSet();
   }
 
@@ -116,9 +117,10 @@ void main() {
         excludePath: tempDir.path,
       );
 
+      // 相对路径以数据目录为基准，文件不应被排除。
       final files = relativeFiles(result);
-      expect(files, contains('ThoughtEcho/databases/thoughtecho.db'));
-      expect(files, contains('ThoughtEcho/media/photo.jpg'));
+      expect(files, contains('databases/thoughtecho.db'));
+      expect(files, contains('media/photo.jpg'));
     });
 
     test('excludePath 与数据目录无关时，不排除任何文件', () async {
@@ -144,6 +146,78 @@ void main() {
 
       expect(result['files'], isEmpty);
       expect(result['errors'], isNotEmpty);
+    });
+
+    test('指向外部的目录链接被展开，文件落在链接名相对路径下', () async {
+      // 外部目录必须是数据目录（tempDir）之外的兄弟目录，链接才属于"外部"。
+      final external = await TestHarness.createTempDirectory('external_media');
+      addTearDown(() => TestHarness.deleteTempDirectory(external));
+      final externalFile = File(path.join(external.path, 'a.jpg'));
+      externalFile.createSync();
+      externalFile.writeAsStringSync('content');
+
+      createFile('databases/thoughtecho.db');
+      final link = Link(abs('media'));
+      try {
+        link.createSync(external.path);
+      } on FileSystemException {
+        markTestSkipped('当前环境无法创建符号链接');
+        return;
+      }
+
+      final result = await DataDirectoryService.collectFilesForMigration(
+        tempDir.path,
+      );
+
+      final files = relativeFiles(result);
+      expect(files, contains('databases/thoughtecho.db'));
+      expect(files, contains('media/a.jpg'));
+      expect(result['errors'], isEmpty);
+    });
+
+    test('指向数据目录内部的链接被跳过，不产生重复或错误路径', () async {
+      createFile('databases/thoughtecho.db');
+      final link = Link(abs('dup'));
+      try {
+        link.createSync(abs('databases'));
+      } on FileSystemException {
+        markTestSkipped('当前环境无法创建符号链接');
+        return;
+      }
+
+      final result = await DataDirectoryService.collectFilesForMigration(
+        tempDir.path,
+      );
+
+      final files = relativeFiles(result);
+      expect(files, contains('databases/thoughtecho.db'));
+      expect(files, isNot(contains('dup/thoughtecho.db')));
+    });
+
+    test('指向外部的文件链接作为文件收集', () async {
+      // 外部文件放在数据目录之外的兄弟目录，链接才属于"外部"。
+      final externalDir =
+          await TestHarness.createTempDirectory('external_files');
+      addTearDown(() => TestHarness.deleteTempDirectory(externalDir));
+      final externalFile = File(path.join(externalDir.path, 'external.dat'));
+      externalFile.createSync();
+      externalFile.writeAsStringSync('content');
+
+      final link = Link(abs('linked.dat'));
+      try {
+        link.createSync(externalFile.path);
+      } on FileSystemException {
+        markTestSkipped('当前环境无法创建符号链接');
+        return;
+      }
+
+      final result = await DataDirectoryService.collectFilesForMigration(
+        tempDir.path,
+      );
+
+      final files = relativeFiles(result);
+      expect(files, contains('linked.dat'));
+      expect(result['errors'], isEmpty);
     });
   });
 

@@ -901,6 +901,9 @@
       }
     }
   },
+  "migrationTargetSameAsCurrent": "The selected directory is the same as the current data directory",
+  "migrationTargetAncestor": "The selected directory cannot be a parent of the current data directory",
+  "migrationTargetNested": "The selected directory cannot be inside the current data directory",
   "logsViewer": "Log Viewer",
   "logFilter": "Log Filter",
   "clearLogs": "Clear Logs",

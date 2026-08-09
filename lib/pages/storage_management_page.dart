@@ -13,6 +13,24 @@ import '../theme/app_semantic_colors.dart';
 import '../theme/theme_style.dart';
 import 'trash_page.dart';
 
+/// 把迁移目标被拒绝的原因映射为本地化文案。
+///
+/// 拒绝原因由 [DataDirectoryService.validateMigrationTarget] 返回，页面只做
+/// 展示，不把服务内部的原始字符串直接暴露给用户。
+@visibleForTesting
+String dataDirectoryRejectionMessage(
+  AppLocalizations l10n,
+  DataDirectoryTargetRejection rejection,
+) =>
+    switch (rejection) {
+      DataDirectoryTargetRejection.sameDirectory =>
+        l10n.migrationTargetSameAsCurrent,
+      DataDirectoryTargetRejection.ancestorDirectory =>
+        l10n.migrationTargetAncestor,
+      DataDirectoryTargetRejection.nestedDirectory =>
+        l10n.migrationTargetNested,
+    };
+
 /// 存储管理页面
 /// 展示应用存储占用详情，提供缓存清理和数据目录管理功能
 class StorageManagementPage extends StatefulWidget {
@@ -839,13 +857,14 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
 
       // 先按真实路径检查（相同/祖先/嵌套），再验证目录写权限：被拒绝的
       // 路径不应先触发目录创建和写探针等副作用。
-      final targetError =
+      final targetRejection =
           await DataDirectoryService.validateMigrationTarget(result);
-      if (targetError != null) {
+      if (targetRejection != null) {
         if (!mounted) return;
+        final message = dataDirectoryRejectionMessage(l10n, targetRejection);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(targetError),
+            content: Text(message),
             duration: AppConstants.snackBarDurationError,
           ),
         );
