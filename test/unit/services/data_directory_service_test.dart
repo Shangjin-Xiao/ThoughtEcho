@@ -4,11 +4,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as path;
 import 'package:thoughtecho/services/data_directory_service.dart';
 
+import '../../test_harness.dart';
+
 void main() {
   late Directory tempDir;
 
-  setUp(() {
-    tempDir = Directory.systemTemp.createTempSync('thoughtecho_migration_test');
+  setUpAll(() async {
+    await TestHarness.initialize();
+  });
+
+  setUp(() async {
+    tempDir = await TestHarness.createTempDirectory('migration_test');
   });
 
   tearDown(() {
@@ -138,6 +144,78 @@ void main() {
 
       expect(result['files'], isEmpty);
       expect(result['errors'], isNotEmpty);
+    });
+  });
+
+  group('DataDirectoryService.validateDataDirectoryPath', () {
+    test('相同目录返回错误', () {
+      expect(
+        DataDirectoryService.validateDataDirectoryPath(
+          path.join(tempDir.path, 'a'),
+          path.join(tempDir.path, 'a'),
+        ),
+        isNotNull,
+      );
+    });
+
+    test('目标是当前目录的祖先时返回错误', () {
+      expect(
+        DataDirectoryService.validateDataDirectoryPath(
+          path.join(tempDir.path, 'a', 'b'),
+          tempDir.path,
+        ),
+        isNotNull,
+      );
+    });
+
+    test('目标位于当前目录内部时返回错误', () {
+      expect(
+        DataDirectoryService.validateDataDirectoryPath(
+          tempDir.path,
+          path.join(tempDir.path, 'a', 'b'),
+        ),
+        isNotNull,
+      );
+    });
+
+    test('无关目录返回 null', () {
+      expect(
+        DataDirectoryService.validateDataDirectoryPath(
+          path.join(tempDir.path, 'a'),
+          path.join(tempDir.path, 'other'),
+        ),
+        isNull,
+      );
+    });
+  });
+
+  group('DataDirectoryService.canonicalizePath', () {
+    test('普通存在的目录原样返回', () async {
+      final real = Directory(abs('real'))..createSync();
+      final resolved = await DataDirectoryService.canonicalizePath(real.path);
+      expect(path.equals(resolved, real.path), isTrue);
+    });
+
+    test('指向当前目录的符号链接被解析成同一真实路径', () async {
+      final real = Directory(abs('real'))..createSync();
+      final link = Link(abs('link'));
+      try {
+        link.createSync(real.path);
+      } on FileSystemException {
+        markTestSkipped('当前环境无法创建符号链接');
+        return;
+      }
+
+      final resolved = await DataDirectoryService.canonicalizePath(link.path);
+      expect(path.equals(resolved, real.path), isTrue);
+    });
+
+    test('不存在的目标目录解析为规范化路径（逐级向上解析存在的祖先）', () async {
+      final parent = Directory(abs('parent'))..createSync();
+      final target = path.join(parent.path, 'sub', 'new');
+
+      final resolved = await DataDirectoryService.canonicalizePath(target);
+      expect(path.equals(resolved, target), isTrue);
     });
   });
 }

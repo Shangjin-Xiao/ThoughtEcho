@@ -295,20 +295,23 @@ class DataDirectoryService {
       onStatusUpdate?.call('正在验证新目录...');
       logDebug('开始迁移数据到: $newPath');
 
-      // 1. 验证新目录
-      if (!await validateDirectory(newPath)) {
-        throw Exception('新目录不可用或没有写权限');
+      // 1. 获取当前目录，并解析两个目录的真实路径（跟随 junction/symlink）。
+      //    不解析直接比较字符串，会放过指向当前目录自身的链接，导致文件
+      //    被复制进自己并截断。
+      final currentPath = await getCurrentDataDirectory();
+      final resolvedCurrent = await canonicalizePath(currentPath);
+      final resolvedNew = await canonicalizePath(newPath);
+
+      // 2. 相同/祖先检查必须发生在 validateDirectory 之前：被拒绝的路径
+      //    不应先触发目录创建和写权限探针等副作用。
+      final pathError = validateDataDirectoryPath(resolvedCurrent, resolvedNew);
+      if (pathError != null) {
+        throw Exception(pathError);
       }
 
-      // 2. 获取当前目录
-      final currentPath = await getCurrentDataDirectory();
-      if (currentPath == newPath) {
-        throw Exception('新目录与当前目录相同');
-      }
-      // 拒绝把数据迁移到当前目录的祖先目录：复制会把应用数据重新摊在
-      // 祖先目录（如文档根目录）下与用户文件混放，既不安全也难清理。
-      if (path.isWithin(newPath, currentPath)) {
-        throw Exception('新目录不能是当前数据目录的上级目录');
+      // 3. 验证新目录
+      if (!await validateDirectory(newPath)) {
+        throw Exception('新目录不可用或没有写权限');
       }
 
       onStatusUpdate?.call('正在准备迁移...');
@@ -328,7 +331,12 @@ class DataDirectoryService {
       final errors = result['errors'] as List<String>;
 
       if (errors.isNotEmpty) {
-        logDebug('收集文件时遇到 ${errors.length} 个错误');
+        // 收集阶段有文件访问失败：继续迁移会让部分数据在新目录缺失，
+        // 且配置已切换导致旧目录被"遗弃"，因此必须中止。
+        throw FileSystemException(
+          '收集迁移文件失败: ${errors.join('; ')}',
+          currentPath,
+        );
       }
 
       if (filesToCopy.isEmpty) {
@@ -504,6 +512,48 @@ class DataDirectoryService {
     }
 
     return {'files': filesToCopy, 'errors': errors};
+  }
+
+  /// 解析路径的真实位置（跟随 Windows junction/symlink）。
+  ///
+  /// 迁移目标是尚未创建的目录时，逐级解析最近已存在的祖先，剩余部分原样
+  /// 拼接。这样指向当前数据目录自身的链接会被解析成同一真实路径，从而被
+  /// 相同目录检查拦截，避免文件被复制进自身并截断。
+  @visibleForTesting
+  static Future<String> canonicalizePath(String p) async {
+    final normalized = path.normalize(p);
+    try {
+      return path.normalize(
+        await Directory(normalized).resolveSymbolicLinks(),
+      );
+    } on FileSystemException {
+      final parent = path.dirname(normalized);
+      if (parent == normalized) return normalized; // 已到根目录
+      return path.join(
+        await canonicalizePath(parent),
+        path.basename(normalized),
+      );
+    }
+  }
+
+  /// 校验迁移目标与当前数据目录的关系，返回错误原因；合法时返回 null。
+  ///
+  /// [currentPath] 与 [newPath] 必须是 [canonicalizePath] 解析后的真实
+  /// 路径。拒绝三种情况：同一目录（无意义）、目标位于当前目录内部（复制
+  /// 会把目标目录装进自己）、目标是当前目录的祖先（会把应用数据重新摊在
+  /// 祖先目录下与用户文件混放）。
+  @visibleForTesting
+  static String? validateDataDirectoryPath(String currentPath, String newPath) {
+    if (currentPath == newPath) {
+      return '新目录与当前目录相同';
+    }
+    if (path.isWithin(newPath, currentPath)) {
+      return '新目录不能是当前数据目录的上级目录';
+    }
+    if (path.isWithin(currentPath, newPath)) {
+      return '新目录不能位于当前数据目录内部';
+    }
+    return null;
   }
 
   /// 检查是否是 Windows 系统文件
