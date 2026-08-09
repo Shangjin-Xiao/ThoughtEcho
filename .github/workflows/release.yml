@@ -26,8 +26,9 @@ on:
         default: false
         type: boolean
 
+# 默认只读；只有归集产物、创建 Release 的 release 作业需要写权限
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -37,6 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.v.outputs.version }}
+      ios_version: ${{ steps.v.outputs.core }}
       msix_version: ${{ steps.v.outputs.msix_version }}
       prerelease: ${{ steps.v.outputs.prerelease }}
       notes_file: ${{ steps.v.outputs.notes_file }}
@@ -83,6 +85,7 @@ jobs:
 
           {
             echo "version=$version"
+            echo "core=$core"
             echo "msix_version=$msix_version"
             echo "prerelease=$prerelease"
             echo "notes_file=$notes_file"
@@ -94,6 +97,7 @@ jobs:
             echo "| 项 | 值 |"
             echo "| --- | --- |"
             echo "| 版本号 | \`$version\` |"
+            echo "| iOS 版本 | \`$core\` |"
             echo "| MSIX 版本 | \`$msix_version\` |"
             echo "| 预发布 | \`$prerelease\` |"
             echo "| 发布说明 | \`$notes_file\` |"
@@ -113,7 +117,12 @@ jobs:
   android:
     needs: prepare
     uses: ./.github/workflows/flutter-release-build.yml
-    secrets: inherit
+    secrets:
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
     with:
       version_name: ${{ needs.prepare.outputs.version }}
       build_mode: release
@@ -122,18 +131,22 @@ jobs:
   windows:
     needs: prepare
     uses: ./.github/workflows/build-windows.yml
-    secrets: inherit
+    secrets:
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
     with:
       app_version: ${{ needs.prepare.outputs.msix_version }}
       flutter_version: '3.44.x'
       build_type: release
+      require_msix: true
 
   ios:
     needs: prepare
     uses: ./.github/workflows/ios-build.yml
-    secrets: inherit
+    secrets:
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
     with:
-      version_name: ${{ needs.prepare.outputs.version }}
+      # iOS 只接受三段式数字版本，预发布后缀会破坏 --build-name
+      version_name: ${{ needs.prepare.outputs.ios_version }}
 
   # ---------------------------------------------------------------------------
   # 收集全部产物并创建 Release
@@ -143,6 +156,8 @@ jobs:
     # 任一平台构建失败就不要发半截的 Release
     if: ${{ !cancelled() && needs.android.result == 'success' && needs.windows.result == 'success' && needs.ios.result == 'success' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -164,9 +179,17 @@ jobs:
           find artifacts -type f \( -name '*.apk' -o -name '*.msix' -o -name '*.ipa' \) \
             -exec cp -v {} dist/ \;
 
-          if [[ -z "$(ls -A dist)" ]]; then
-            echo "::error::没有收集到任何可发布的产物"
-            exit 1
+          # 三个平台都必须有可发布产物，缺任何一个就不创建 Release
+          for ext in apk msix ipa; do
+            if ! find dist -type f -name "*.${ext}" | grep -q .; then
+              echo "::error::缺少 ${ext} 产物，不会创建 Release"
+              exit 1
+            fi
+          done
+
+          # 兼容历史下载链接：官网 dl.html 与 README 长期使用 app-release.apk
+          if [[ -f dist/thoughtecho-standard64-release.apk && ! -f dist/app-release.apk ]]; then
+            cp -v dist/thoughtecho-standard64-release.apk dist/app-release.apk
           fi
 
           echo "### 待发布产物" >> "$GITHUB_STEP_SUMMARY"
@@ -248,7 +271,13 @@ jobs:
           fi
 
           if gh release view "$tag_name" >/dev/null 2>&1; then
-            echo "::notice::Release $tag_name 已存在，改为上传/覆盖产物"
+            echo "::notice::Release $tag_name 已存在，更新元数据并上传/覆盖产物"
+            gh release edit "$tag_name" \
+              --title "心迹 ThoughtEcho v${VERSION}" \
+              --notes-file "$BODY_FILE"
+            if [[ "$PRERELEASE" == "true" ]]; then
+              gh release edit "$tag_name" --prerelease
+            fi
             gh release upload "$tag_name" dist/* --clobber
           else
             gh release create "${args[@]}"

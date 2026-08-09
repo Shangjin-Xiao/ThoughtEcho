@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="心迹 ThoughtEcho - 免费开源的摘录笔记应用。想到就记，读到就摘，剩下的交给 AI。在任何应用里划词即可存下句子并自动附带出处，无需注册账号，数据只存本地。支持 Windows 与 Android。Free, open-source, local-first note-taking app with AI."
+      content="心迹 ThoughtEcho - 免费开源的摘录笔记应用。想到就记，读到就摘，剩下的交给 AI。在任何应用里划词即可存下句子并自动附带出处，无需注册账号，数据默认只存本地，可选 WebDAV 云同步。支持 Windows 与 Android。Free, open-source, local-first note-taking app with AI."
     />
     <meta
       name="keywords"
@@ -30,7 +30,7 @@
     <meta property="og:title" content="心迹 ThoughtEcho - 你的专属灵感摘录本" />
     <meta
       property="og:description"
-      content="随心记录每一刻灵感，释放AI洞察的力量。本地优先，安全私密。"
+      content="心迹 ThoughtEcho - 免费开源的摘录笔记应用。想到就记，读到就摘，剩下的交给 AI。划词即可存下句子并自动附带出处，无需注册账号，数据默认只存本地。支持 Windows 与 Android。"
     />
     <meta property="og:image" content="https://note.shangjinyun.cn/readme-banner.png" />
     <meta property="og:url" content="https://note.shangjinyun.cn/" />
@@ -43,7 +43,7 @@
     />
     <meta
       name="twitter:description"
-      content="随心记录每一刻灵感，释放AI洞察的力量。本地优先，安全私密。"
+      content="心迹 ThoughtEcho - 免费开源的摘录笔记应用。想到就记，读到就摘，剩下的交给 AI。划词即可存下句子并自动附带出处，无需注册账号，数据默认只存本地。支持 Windows 与 Android。"
     />
     <meta name="twitter:image" content="https://note.shangjinyun.cn/readme-banner.png" />
 
@@ -88,13 +88,13 @@
               "zh-CN",
               "en"
             ],
-            "description": "免费开源的摘录笔记应用。在任何应用里划词即可存下句子，自动附带出处、时间与地点；每日一言作为入口，AI 可主动提议整理你的笔记。无需注册账号，数据只存本地。",
+            "description": "免费开源的摘录笔记应用。在任何应用里划词即可存下句子，自动附带出处、时间与地点；每日一言作为入口，AI 可主动提议整理你的笔记。无需注册账号，数据默认只存本地，可选 WebDAV 云同步。",
             "featureList": [
               "在任何应用中划词摘录，自动附带出处、时间与地点",
               "每日一言，支持一言、ZenQuotes 等多个来源",
               "AI 助手主动提议创建与修改笔记，采纳与否由你决定",
               "富文本编辑，支持图片、音频与视频附件",
-              "无需注册账号，数据完全存储在本地设备",
+              "无需注册账号，数据默认只存本地设备",
               "局域网直传同步与 WebDAV 云同步",
               "隐藏笔记并以生物识别解锁",
               "PDF 导出与系统打印预览",
@@ -131,7 +131,7 @@
                 "name": "我的数据安全吗？",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "所有数据存储在你的设备本地，不会上传云端。API Key 采用系统级加密存储。错误上报默认关闭，需要主动同意才会启用。"
+                  "text": "所有数据默认存储在你的设备本地；若启用 WebDAV 同步，数据会传输到你配置的远程服务。API Key 采用系统级加密存储。错误上报默认关闭，需要主动同意才会启用。"
                 }
               },
               {
@@ -676,12 +676,12 @@
               </h3>
               <p class="feature-description">
                 <span class="content-zh"
-                  >所有数据存储在本地 SQLite
-                  数据库，不上传云端，无隐私泄露风险</span
+                  >数据默认存储在本地 SQLite
+                  数据库，可选用局域网直传与 WebDAV 云同步</span
                 >
                 <span class="content-en"
-                  >All data stored locally in SQLite. No cloud upload, no
-                  privacy risks</span
+                  >Data stored locally in SQLite by default, with optional LAN
+                  direct transfer and WebDAV cloud sync</span
                 >
               </p>
             </div>
@@ -845,10 +845,10 @@
               </h3>
               <p class="feature-description">
                 <span class="content-zh"
-                  >Windows, Android, iOS 全覆盖，随时随地记录</span
+                  >Windows, Android 双端支持，随时随地记录</span
                 >
                 <span class="content-en"
-                  >Windows, Android, iOS supported. Record anywhere</span
+                  >Windows and Android supported. Record anywhere</span
                 >
               </p>
             </div>
@@ -1368,7 +1368,7 @@
                 <span class="content-zh">全平台支持</span
                 ><span class="content-en">All Platforms</span>
               </h4>
-              <p>Windows, Android, iOS</p>
+              <p>Windows, Android</p>
             </div>
           </div>
         </div>
@@ -1900,13 +1900,16 @@
               hidden
             >
               <span class="content-zh"
-                >绝对安全。所有数据存储在你的设备本地，不上传云端。API Key
-                采用系统级加密存储。</span
+                >数据默认存储在你的设备本地，不上传云端；若启用
+                WebDAV
+                同步，数据会传输到你配置的远程服务。API
+                Key 采用系统级加密存储。</span
               >
               <span class="content-en"
-                >Absolutely. All data is stored locally on your device, not
-                uploaded to the cloud. API Keys are stored with system-level
-                encryption.</span
+                >Data is stored locally on your device by default and not
+                uploaded to the cloud; if you enable WebDAV sync, data is
+                transferred to the remote service you configure. API Keys are
+                stored with system-level encryption.</span
               >
             </div>
           </div>
@@ -1971,6 +1974,37 @@
                 developer in collaboration with AI, under active and frequent
                 iteration. Feedback is always welcome — and regular backups are
                 a good habit (one-tap full backup is built in).</span
+              >
+            </div>
+          </div>
+
+          <div class="faq-item fade-in">
+            <button
+              type="button"
+              class="faq-question"
+              id="faq-q6"
+              aria-expanded="false"
+              aria-controls="faq-a6"
+            >
+              <span class="content-zh">支持哪些平台？</span>
+              <span class="content-en">Which platforms are supported?</span>
+            </button>
+            <div
+              class="faq-answer"
+              id="faq-a6"
+              role="region"
+              aria-labelledby="faq-q6"
+              hidden
+            >
+              <span class="content-zh"
+                >目前支持 Windows 与 Android。Windows
+                可从 Microsoft Store 安装，Android 可下载 APK
+                安装包。iOS 版尚未上架 App Store。</span
+              >
+              <span class="content-en"
+                >Currently Windows and Android are supported. Windows can be
+                installed from Microsoft Store, and Android via APK. The iOS
+                version is not yet on the App Store.</span
               >
             </div>
           </div>

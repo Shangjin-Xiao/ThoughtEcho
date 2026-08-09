@@ -46,6 +46,14 @@ on:
         required: false
         default: 'release'
         type: string
+      require_msix:
+        description: '发布流水线要求必须包含 MSIX 安装包，缺失时视为失败'
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      SENTRY_DSN:
+        required: false
 
 jobs:
   build-windows:
@@ -408,3 +416,14 @@ jobs:
         Write-Output "- 首次启动可能需要等待数秒" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "- 确保系统已安装 Visual C++ Redistributable" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "- 建议将应用文件夹添加到杀毒软件白名单" >> $env:GITHUB_STEP_SUMMARY
+
+    # 发布流水线要求 MSIX 必须存在；手动构建时 MSIX 失败仍可用文件夹中的应用
+    - name: 发布模式校验 MSIX 产物
+      if: ${{ inputs.require_msix == true }}
+      shell: pwsh
+      run: |
+        if ("${{ steps.artifacts.outputs.has_msix }}" -ne "true") {
+          Write-Error "MSIX 构建失败，发布流水线要求必须包含 MSIX 安装包"
+          exit 1
+        }
+        Write-Host "✅ MSIX 产物齐全，满足发布要求" -ForegroundColor Green
