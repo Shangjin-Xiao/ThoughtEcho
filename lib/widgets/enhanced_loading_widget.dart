@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../utils/lottie_animation_manager.dart';
 import '../theme/theme_style.dart';
 
@@ -41,7 +42,7 @@ class EnhancedLoadingWidget extends StatelessWidget {
   /// 创建全屏加载页面
   const EnhancedLoadingWidget.fullScreen({
     super.key,
-    this.message = '正在加载...',
+    this.message,
     this.animationType = LottieAnimationType.pulseLoading,
     this.textColor,
     this.textStyle,
@@ -53,7 +54,7 @@ class EnhancedLoadingWidget extends StatelessWidget {
   /// 创建对话框加载组件
   const EnhancedLoadingWidget.dialog({
     super.key,
-    this.message = '请稍候...',
+    this.message,
     this.animationType = LottieAnimationType.customLoading,
   })  : size = 80,
         textColor = null,
@@ -63,7 +64,7 @@ class EnhancedLoadingWidget extends StatelessWidget {
         customMessage = null;
 
   /// EnhancedLoadingWidget.thinking 改为原生思考动画
-  const EnhancedLoadingWidget.thinking({super.key, this.message = 'AI正在思考...'})
+  const EnhancedLoadingWidget.thinking({super.key, this.message})
       : animationType = LottieAnimationType.aiThinking,
         size = 80,
         textColor = null,
@@ -75,6 +76,8 @@ class EnhancedLoadingWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final effectiveMessage = message ?? _defaultMessage(l10n);
     final effectiveTextColor = textColor ?? theme.colorScheme.onSurface;
     final effectiveTextStyle = textStyle ??
         theme.textTheme.bodyMedium?.copyWith(color: effectiveTextColor);
@@ -90,11 +93,12 @@ class EnhancedLoadingWidget extends StatelessWidget {
               height: size ?? 80,
               child: const CircularProgressIndicator(strokeWidth: 4),
             ),
-            if (showMessage && (message != null || customMessage != null)) ...[
+            if (showMessage &&
+                (effectiveMessage != null || customMessage != null)) ...[
               const SizedBox(height: 16),
               customMessage ??
                   Text(
-                    message!,
+                    effectiveMessage!,
                     style: effectiveTextStyle,
                     textAlign: TextAlign.center,
                   ),
@@ -120,15 +124,16 @@ class EnhancedLoadingWidget extends StatelessWidget {
                 type: animationType,
                 width: s,
                 height: s,
-                semanticLabel: _getSemanticLabel(),
+                semanticLabel: _getSemanticLabel(l10n),
               );
             },
           ),
-          if (showMessage && (message != null || customMessage != null)) ...[
+          if (showMessage &&
+              (effectiveMessage != null || customMessage != null)) ...[
             const SizedBox(height: 16),
             customMessage ??
                 Text(
-                  message!,
+                  effectiveMessage!,
                   style: effectiveTextStyle,
                   textAlign: TextAlign.center,
                 ),
@@ -138,16 +143,28 @@ class EnhancedLoadingWidget extends StatelessWidget {
     );
   }
 
-  String _getSemanticLabel() {
+  String? _defaultMessage(AppLocalizations l10n) {
+    switch (animationType) {
+      case LottieAnimationType.aiThinking:
+        return l10n.aiThinkingProgress;
+      case LottieAnimationType.loading:
+      case LottieAnimationType.pulseLoading:
+        return l10n.loadingInProgress;
+      default:
+        return l10n.pleaseWait;
+    }
+  }
+
+  String _getSemanticLabel(AppLocalizations l10n) {
     if (message != null) return message!;
     switch (animationType) {
       case LottieAnimationType.aiThinking:
-        return 'AI正在思考';
+        return l10n.aiThinkingProgress;
       case LottieAnimationType.loading:
       case LottieAnimationType.pulseLoading:
-        return '正在加载';
+        return l10n.loadingInProgress;
       default:
-        return '请稍候';
+        return l10n.pleaseWait;
     }
   }
 }
@@ -165,7 +182,7 @@ class StatusAnimationWidget extends StatefulWidget {
 
   const StatusAnimationWidget.success({
     super.key,
-    this.message = '操作成功！',
+    this.message,
     this.displayDuration = const Duration(seconds: 2),
     this.onCompleted,
     this.size = 100,
@@ -176,7 +193,7 @@ class StatusAnimationWidget extends StatefulWidget {
 
   const StatusAnimationWidget.error({
     super.key,
-    this.message = '操作失败',
+    this.message,
     this.displayDuration = const Duration(seconds: 2),
     this.onCompleted,
     this.size = 100,
@@ -219,6 +236,9 @@ class _StatusAnimationWidgetState extends State<StatusAnimationWidget>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final effectiveMessage = widget.message ??
+        (widget.isSuccess ? l10n.operationSuccess : l10n.operationFailedSimple);
     final effectiveTextColor = widget.textColor ??
         (widget.isSuccess ? Colors.green : theme.colorScheme.error);
     final effectiveTextStyle = widget.textStyle ??
@@ -239,10 +259,10 @@ class _StatusAnimationWidgetState extends State<StatusAnimationWidget>
               size: widget.size ?? 100,
             ),
           ),
-          if (widget.message != null) ...[
+          if (effectiveMessage.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text(
-              widget.message!,
+              effectiveMessage,
               style: effectiveTextStyle,
               textAlign: TextAlign.center,
             ),

@@ -119,7 +119,7 @@ class HomeCardActions {
       await file.writeAsBytes(imageBytes);
       await SharePlus.instance.share(
         ShareParams(
-          text: '来自心迹的精美卡片\n\n'
+          text: AppLocalizations.of(context).cardSharePrefix +
               '"${card.originalContent.length > 50 ? '${card.originalContent.substring(0, 50)}...' : card.originalContent}"',
           files: [XFile(file.path)],
         ),

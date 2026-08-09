@@ -24,8 +24,9 @@ class DailyQuoteView extends StatefulWidget {
 }
 
 class DailyQuoteViewState extends State<DailyQuoteView> {
+  bool _isInitialQuote = true;
   Map<String, dynamic> dailyQuote = {
-    'content': '加载中...',
+    'content': '',
     'source': '',
     'author': '',
     'type': 'a',
@@ -46,6 +47,10 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_isInitialQuote) {
+      _isInitialQuote = false;
+      dailyQuote['content'] = AppLocalizations.of(context).dailyQuoteLoading;
+    }
     final nextSmartPushService = Provider.of<SmartPushService>(
       context,
       listen: false,
@@ -121,25 +126,26 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
       final useLocalOnly = settingsService.appSettings.useLocalQuotesOnly;
       final offlineQuoteSource = settingsService.offlineQuoteSource;
       final isConnected = connectivityService.isConnected;
+      final l10n = AppLocalizations.of(context);
 
       setState(() {
         if (useLocalOnly) {
           dailyQuote = {
-            'content': '从本地记录加载中...',
+            'content': l10n.dailyQuoteLoadingLocal,
             'source': '',
             'author': '',
             'type': 'local',
           };
         } else if (!isConnected) {
           dailyQuote = {
-            'content': '网络未连接，从本地记录加载中...',
+            'content': l10n.dailyQuoteLoadingOffline,
             'source': '',
             'author': '',
             'type': 'offline',
           };
         } else {
           dailyQuote = {
-            'content': '加载中...',
+            'content': l10n.dailyQuoteLoading,
             'source': '',
             'author': '',
             'type': 'a',
@@ -153,7 +159,6 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
       }
 
       if (!mounted) return;
-      final l10n = AppLocalizations.of(context);
       final quote = await ApiService.getDailyQuote(
         l10n,
         hitokotoType,
@@ -180,17 +185,18 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
           listen: false,
         ).isConnected;
 
+        final l10n = AppLocalizations.of(context);
         setState(() {
           if (!isConnected) {
             dailyQuote = {
-              'content': '无网络连接且无本地记录，点击重试',
+              'content': l10n.dailyQuoteNoNetworkRetry,
               'source': '',
               'author': '',
               'type': 'error',
             };
           } else {
             dailyQuote = {
-              'content': '获取一言失败，点击重试',
+              'content': l10n.dailyQuoteFetchFailedRetry,
               'source': '',
               'author': '',
               'type': 'error',
@@ -206,7 +212,6 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
         });
 
         logDebug('获取一言失败: $e');
-        final l10n = AppLocalizations.of(context);
         AppSnackBar.error(
           context,
           l10n.fetchHitokotoFailed(e.toString()),

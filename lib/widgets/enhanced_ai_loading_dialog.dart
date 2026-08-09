@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../utils/lottie_animation_manager.dart';
 import '../theme/theme_style.dart';
 
@@ -19,14 +20,15 @@ class EnhancedAILoadingDialog extends StatelessWidget {
   /// 显示AI思考对话框
   static Future<void> showThinking(
     BuildContext context, {
-    String message = 'AI正在思考...',
+    String? message,
     bool barrierDismissible = false,
   }) {
+    final l10n = AppLocalizations.of(context);
     return showDialog(
       context: context,
       barrierDismissible: barrierDismissible,
       builder: (context) => EnhancedAILoadingDialog(
-        message: message,
+        message: message ?? l10n.aiThinkingProgress,
         animationType: LottieAnimationType.aiThinking,
         barrierDismissible: barrierDismissible,
       ),
@@ -36,14 +38,15 @@ class EnhancedAILoadingDialog extends StatelessWidget {
   /// 显示数据处理对话框
   static Future<void> showProcessing(
     BuildContext context, {
-    String message = '正在处理数据...',
+    String? message,
     bool barrierDismissible = false,
   }) {
+    final l10n = AppLocalizations.of(context);
     return showDialog(
       context: context,
       barrierDismissible: barrierDismissible,
       builder: (context) => EnhancedAILoadingDialog(
-        message: message,
+        message: message ?? l10n.processingData,
         animationType: LottieAnimationType.modernLoading,
         barrierDismissible: barrierDismissible,
       ),
@@ -53,14 +56,15 @@ class EnhancedAILoadingDialog extends StatelessWidget {
   /// 显示分析对话框
   static Future<void> showAnalyzing(
     BuildContext context, {
-    String message = '正在分析内容...',
+    String? message,
     bool barrierDismissible = false,
   }) {
+    final l10n = AppLocalizations.of(context);
     return showDialog(
       context: context,
       barrierDismissible: barrierDismissible,
       builder: (context) => EnhancedAILoadingDialog(
-        message: message,
+        message: message ?? l10n.analyzingContent,
         animationType: LottieAnimationType.aiThinking,
         barrierDismissible: barrierDismissible,
       ),

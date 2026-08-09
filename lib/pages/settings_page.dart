@@ -751,11 +751,12 @@ class SettingsPageState extends State<SettingsPage> {
 
                       final timeStr = webdavSync.lastSyncTime.isNotEmpty
                           ? LWWUtils.formatTimestamp(webdavSync.lastSyncTime)
-                          : '从未同步';
+                          : l10n.webdavNeverSynced;
 
                       return Text(statusStr.isNotEmpty
-                          ? '$statusStr (上次：$timeStr)'
-                          : '已启用 (上次：$timeStr)');
+                          ? l10n.settingsWebdavStatusWithTime(
+                              statusStr, timeStr)
+                          : l10n.settingsWebdavEnabledWithTime(timeStr));
                     },
                   ),
                   leading: const Icon(Icons.cloud_sync_outlined),

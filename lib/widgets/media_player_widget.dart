@@ -781,11 +781,11 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
               _formatDuration(_videoController!.value.duration),
             ),
             _buildInfoRow(
-              '分辨率',
+              l10n.resolution,
               '${_videoController!.value.size.width.toInt()}x${_videoController!.value.size.height.toInt()}',
             ),
             _buildInfoRow(
-              '长宽比',
+              l10n.aspectRatio,
               _videoController!.value.aspectRatio.toStringAsFixed(2),
             ),
           ],
@@ -827,7 +827,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           children: [
             _buildInfoRow(l10n.fileName, _getFileName(widget.filePath)),
             _buildInfoRow(l10n.duration, _formatDuration(_duration)),
-            _buildInfoRow('路径', widget.filePath),
+            _buildInfoRow(l10n.path, widget.filePath),
           ],
         ),
         actions: [

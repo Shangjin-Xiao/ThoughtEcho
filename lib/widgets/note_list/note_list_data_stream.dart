@@ -228,13 +228,14 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           logError('加载笔记失败: $error', error: error, source: 'NoteListView');
 
           // 显示错误提示
+          final l10n = AppLocalizations.of(context);
           AppSnackBar.error(
             context,
             error.toString().contains('TimeoutException')
-                ? '查询超时'
-                : (kDebugMode ? error.toString() : '加载失败'),
+                ? l10n.queryTimeoutShort
+                : (kDebugMode ? error.toString() : l10n.loadFailedSimple),
             action: SnackBarAction(
-              label: '重试',
+              label: l10n.retry,
               textColor: Theme.of(context).colorScheme.onErrorContainer,
               onPressed: () => _updateStreamSubscription(),
             ),
@@ -502,11 +503,12 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           logError('数据流加载失败: $error', error: error, source: 'NoteListView');
 
           // 优化：更友好的错误提示
-          String errorMessage = '加载笔记失败';
+          final l10n = AppLocalizations.of(context);
+          String errorMessage = l10n.loadNoteFailed;
           if (error.toString().contains('TimeoutException')) {
-            errorMessage = '查询超时，请重试';
+            errorMessage = l10n.queryTimeoutRetry;
           } else if (error.toString().contains('DatabaseException')) {
-            errorMessage = '数据库查询出错';
+            errorMessage = l10n.databaseQueryError;
           }
           _showErrorSnackBar(errorMessage);
         }

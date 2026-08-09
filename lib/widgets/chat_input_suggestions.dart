@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../gen_l10n/app_localizations.dart';
+
 /// 聊天输入建议组件
 class ChatInputSuggestions extends StatelessWidget {
   final List<String> suggestions;
@@ -51,38 +53,45 @@ class ChatInputSuggestions extends StatelessWidget {
   }
 
   /// 根据笔记内容生成智能建议
-  static List<String> generateSuggestions(String noteContent) {
+  static List<String> generateSuggestions(
+    AppLocalizations l10n,
+    String noteContent,
+  ) {
     final suggestions = <String>[];
 
     // 基础问题
-    suggestions.addAll(['这篇笔记的核心思想是什么？', '从中能得到什么启发？']);
+    suggestions
+        .addAll([l10n.aiSuggestionCoreIdea, l10n.aiSuggestionInspiration]);
 
     // 根据内容长度调整建议
     if (noteContent.length > 200) {
-      suggestions.add('能否总结一下要点？');
+      suggestions.add(l10n.aiSuggestionSummarize);
     }
 
     // 检测关键词并提供相关建议
     final lowerContent = noteContent.toLowerCase();
 
     if (lowerContent.contains('问题') || lowerContent.contains('困难')) {
-      suggestions.add('有什么解决方案吗？');
+      suggestions.add(l10n.aiSuggestionSolution);
     }
 
     if (lowerContent.contains('学习') || lowerContent.contains('知识')) {
-      suggestions.add('如何更好地理解这个概念？');
+      suggestions.add(l10n.aiSuggestionUnderstandConcept);
     }
 
     if (lowerContent.contains('计划') || lowerContent.contains('目标')) {
-      suggestions.add('如何制定行动计划？');
+      suggestions.add(l10n.aiSuggestionActionPlan);
     }
 
     if (lowerContent.contains('感受') || lowerContent.contains('情感')) {
-      suggestions.add('这反映了什么心理状态？');
+      suggestions.add(l10n.aiSuggestionPsychology);
     }
 
     // 通用建议
-    suggestions.addAll(['如何应用到实际生活中？', '反映了什么思维模式？']);
+    suggestions.addAll([
+      l10n.aiSuggestionRealLife,
+      l10n.aiSuggestionThinkingPattern,
+    ]);
 
     // 限制建议数量并去重
     return suggestions.toSet().take(6).toList();

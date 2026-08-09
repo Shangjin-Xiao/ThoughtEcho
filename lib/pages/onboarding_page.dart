@@ -145,8 +145,9 @@ class _OnboardingPageState extends State<OnboardingPage>
         source: 'OnboardingPage',
       );
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         setState(() {
-          _errorMessage = '初始化失败，请重试';
+          _errorMessage = l10n.onboardingInitFailed;
           _isLoaded = true;
         });
       }
@@ -244,16 +245,18 @@ class _OnboardingPageState extends State<OnboardingPage>
       } else {
         logError('更新迁移失败: ${result.errorMessage}');
         if (mounted) {
+          final l10n = AppLocalizations.of(context);
           setState(() {
-            _errorMessage = '数据更新失败，但您仍可继续使用应用';
+            _errorMessage = l10n.onboardingUpdateFailed;
           });
         }
       }
     } catch (e) {
       logError('处理更新迁移失败', error: e, source: 'OnboardingPage');
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         setState(() {
-          _errorMessage = '更新处理失败，请重启应用';
+          _errorMessage = l10n.onboardingUpdateProcessFailed;
         });
       }
     }

@@ -524,7 +524,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
         final savedPath =
             await MediaFileService.saveTempHtmlFile(contentToWrite, fileName);
 
-        if (savedPath == null) throw Exception('保存临时文件失败');
+        if (savedPath == null) throw Exception(l10n.saveTempFileFailed);
 
         // 尝试直接打开文件URL
         final uri = Uri.file(savedPath);
@@ -667,7 +667,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
       final savedPath =
           await MediaFileService.saveTempHtmlFile(htmlContent, fileName);
 
-      if (savedPath == null) throw Exception('保存临时文件失败');
+      if (savedPath == null) throw Exception(l10n.saveTempFileFailed);
 
       // 尝试使用不同的LaunchMode来打开文件
       final uri = Uri.file(savedPath);
@@ -720,7 +720,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
         );
       }
     } catch (e) {
-      throw Exception('打开浏览器失败: $e');
+      throw Exception('${l10n.openBrowserFailed}: $e');
     }
   }
 
@@ -950,7 +950,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
       final savedPath =
           await MediaFileService.saveTempHtmlFile(contentToShare, fileName);
 
-      if (savedPath == null) throw Exception('创建分享文件失败');
+      if (savedPath == null) throw Exception(l10n.createShareFileFailed);
 
       // 使用系统分享功能
       await SharePlus.instance.share(
