@@ -77,7 +77,7 @@ class EnhancedLoadingWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final effectiveMessage = message ?? _defaultMessage(l10n);
+    final effectiveMessage = _localizedMessage(l10n);
     final effectiveTextColor = textColor ?? theme.colorScheme.onSurface;
     final effectiveTextStyle = textStyle ??
         theme.textTheme.bodyMedium?.copyWith(color: effectiveTextColor);
@@ -93,12 +93,11 @@ class EnhancedLoadingWidget extends StatelessWidget {
               height: size ?? 80,
               child: const CircularProgressIndicator(strokeWidth: 4),
             ),
-            if (showMessage &&
-                (effectiveMessage != null || customMessage != null)) ...[
+            if (showMessage) ...[
               const SizedBox(height: 16),
               customMessage ??
                   Text(
-                    effectiveMessage!,
+                    effectiveMessage,
                     style: effectiveTextStyle,
                     textAlign: TextAlign.center,
                   ),
@@ -124,16 +123,15 @@ class EnhancedLoadingWidget extends StatelessWidget {
                 type: animationType,
                 width: s,
                 height: s,
-                semanticLabel: _getSemanticLabel(l10n),
+                semanticLabel: effectiveMessage,
               );
             },
           ),
-          if (showMessage &&
-              (effectiveMessage != null || customMessage != null)) ...[
+          if (showMessage) ...[
             const SizedBox(height: 16),
             customMessage ??
                 Text(
-                  effectiveMessage!,
+                  effectiveMessage,
                   style: effectiveTextStyle,
                   textAlign: TextAlign.center,
                 ),
@@ -143,19 +141,8 @@ class EnhancedLoadingWidget extends StatelessWidget {
     );
   }
 
-  String? _defaultMessage(AppLocalizations l10n) {
-    switch (animationType) {
-      case LottieAnimationType.aiThinking:
-        return l10n.aiThinkingProgress;
-      case LottieAnimationType.loading:
-      case LottieAnimationType.pulseLoading:
-        return l10n.loadingInProgress;
-      default:
-        return l10n.pleaseWait;
-    }
-  }
-
-  String _getSemanticLabel(AppLocalizations l10n) {
+  /// 可见文案与无障碍标签共用的本地化回退文案
+  String _localizedMessage(AppLocalizations l10n) {
     if (message != null) return message!;
     switch (animationType) {
       case LottieAnimationType.aiThinking:

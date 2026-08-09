@@ -3077,7 +3077,7 @@
     }
   },
   "backupCompleteWithWarnings": "备份已完成，但有警告",
-  "backupDeltaFailuresMessage": "有 {count} 条笔记的富文本媒体路径转换失败，这些笔记在备份中仍保留本机绝对路径，恢复到其他设备时相关图片可能无法显示。\n\n受影响的笔记ID：{ids}",
+  "backupDeltaFailuresMessage": "{count, plural, other{有 # 条笔记的富文本媒体路径转换失败，这些笔记在备份中仍保留本机绝对路径，恢复到其他设备时相关图片可能无法显示。\n\n受影响的笔记ID：{ids}}}",
   "@backupDeltaFailuresMessage": {
     "placeholders": {
       "count": {
@@ -3090,13 +3090,9 @@
   },
   "backupDeltaFailuresIdJoiner": "、",
   "backupDeltaFailuresMoreSuffix": " 等",
-  "backupFailedGeneric": "无法完成备份：{error}",
+  "backupFailedGeneric": "无法完成备份，请稍后重试",
   "@backupFailedGeneric": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
+    "description": "Generic backup failure message shown when the error type is not classified"
   },
   "backupFailedOutOfMemory": "备份失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 尝试不包含媒体文件的备份\n• 重启应用后再试",
   "backupFailedNoSpace": "备份失败：存储空间不足\n\n请清理设备存储空间后重试。",
@@ -3143,6 +3139,11 @@
   "cardRegeneratePrompt": "请尝试重新生成卡片",
   "svgContentParseFailed": "内容解析失败",
   "svgContentExtractFailed": "无法提取内容",
+  "svgContentEmpty": "SVG内容为空",
+  "svgContentInvalidFormat": "无效的SVG格式",
+  "svgFallbackTitle": "SVG生成失败",
+  "svgFallbackHint": "请尝试重新生成或检查AI配置",
+  "svgFallbackIdentifier": "心迹 - 备用模板",
   "cardGenerating": "正在生成卡片...",
   "generatingCards": "正在生成卡片...",
   "loadMoreCards": "加载更多卡片",
@@ -3228,7 +3229,7 @@
   "mediaTypeAudio": "音频",
   "mediaTypeMedia": "媒体",
   "mediaProcessingNone": "无需处理媒体文件",
-  "mediaProcessingFound": "发现 {total} 个媒体文件",
+  "mediaProcessingFound": "{total, plural, other{发现 # 个媒体文件}}",
   "@mediaProcessingFound": {
     "placeholders": {
       "total": {

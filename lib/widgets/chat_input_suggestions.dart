@@ -70,20 +70,39 @@ class ChatInputSuggestions extends StatelessWidget {
 
     // 检测关键词并提供相关建议
     final lowerContent = noteContent.toLowerCase();
+    // 中文笔记匹配中文关键词；其余语言（默认英文回退）匹配英文关键词，
+    // 避免英文用户因关键词不匹配而收不到针对性建议。
+    final isChinese = l10n.localeName.startsWith('zh');
 
-    if (lowerContent.contains('问题') || lowerContent.contains('困难')) {
+    if (isChinese
+        ? (lowerContent.contains('问题') || lowerContent.contains('困难'))
+        : (lowerContent.contains('problem') ||
+            lowerContent.contains('difficult') ||
+            lowerContent.contains('trouble'))) {
       suggestions.add(l10n.aiSuggestionSolution);
     }
 
-    if (lowerContent.contains('学习') || lowerContent.contains('知识')) {
+    if (isChinese
+        ? (lowerContent.contains('学习') || lowerContent.contains('知识'))
+        : (lowerContent.contains('learn') ||
+            lowerContent.contains('study') ||
+            lowerContent.contains('knowledge'))) {
       suggestions.add(l10n.aiSuggestionUnderstandConcept);
     }
 
-    if (lowerContent.contains('计划') || lowerContent.contains('目标')) {
+    if (isChinese
+        ? (lowerContent.contains('计划') || lowerContent.contains('目标'))
+        : (lowerContent.contains('plan') ||
+            lowerContent.contains('goal') ||
+            lowerContent.contains('objective'))) {
       suggestions.add(l10n.aiSuggestionActionPlan);
     }
 
-    if (lowerContent.contains('感受') || lowerContent.contains('情感')) {
+    if (isChinese
+        ? (lowerContent.contains('感受') || lowerContent.contains('情感'))
+        : (lowerContent.contains('feel') ||
+            lowerContent.contains('feeling') ||
+            lowerContent.contains('emotion'))) {
       suggestions.add(l10n.aiSuggestionPsychology);
     }
 

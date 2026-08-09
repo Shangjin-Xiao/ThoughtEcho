@@ -3063,7 +3063,7 @@
     }
   },
   "backupCompleteWithWarnings": "Backup completed, but with warnings",
-  "backupDeltaFailuresMessage": "{count} notes had rich-text media path conversion failures. These notes still contain local absolute paths in the backup; images may not display when restored on another device.\n\nAffected note IDs: {ids}",
+  "backupDeltaFailuresMessage": "{count, plural, =1{1 note had rich-text media path conversion failures. This note still contains a local absolute path in the backup; images may not display when restored on another device.\n\nAffected note ID: {ids}} other{# notes had rich-text media path conversion failures. These notes still contain local absolute paths in the backup; images may not display when restored on another device.\n\nAffected note IDs: {ids}}}",
   "@backupDeltaFailuresMessage": {
     "placeholders": {
       "count": {
@@ -3076,13 +3076,9 @@
   },
   "backupDeltaFailuresIdJoiner": ", ",
   "backupDeltaFailuresMoreSuffix": " etc.",
-  "backupFailedGeneric": "Unable to complete backup: {error}",
+  "backupFailedGeneric": "Unable to complete backup. Please try again later.",
   "@backupFailedGeneric": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
+    "description": "Generic backup failure message shown when the error type is not classified"
   },
   "backupFailedOutOfMemory": "Backup failed: Out of memory\n\nSuggestions:\n• Close other apps to free up memory\n• Try a backup without media files\n• Restart the app and try again",
   "backupFailedNoSpace": "Backup failed: Not enough storage space\n\nPlease free up device storage and try again.",
@@ -3129,6 +3125,11 @@
   "cardRegeneratePrompt": "Please try regenerating the card",
   "svgContentParseFailed": "Content parse failed",
   "svgContentExtractFailed": "Unable to extract content",
+  "svgContentEmpty": "SVG content is empty",
+  "svgContentInvalidFormat": "Invalid SVG format",
+  "svgFallbackTitle": "SVG generation failed",
+  "svgFallbackHint": "Please try regenerating the card or check your AI configuration",
+  "svgFallbackIdentifier": "ThoughtEcho - Fallback Template",
   "cardGenerating": "Generating card...",
   "generatingCards": "Generating cards...",
   "loadMoreCards": "Load more cards",
@@ -3214,7 +3215,7 @@
   "mediaTypeAudio": "Audio",
   "mediaTypeMedia": "Media",
   "mediaProcessingNone": "No media files to process",
-  "mediaProcessingFound": "Found {total} media files",
+  "mediaProcessingFound": "{total, plural, =1{Found 1 media file} other{Found # media files}}",
   "@mediaProcessingFound": {
     "placeholders": {
       "total": {

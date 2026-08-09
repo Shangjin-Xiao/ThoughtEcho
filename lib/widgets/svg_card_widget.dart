@@ -61,11 +61,17 @@ class SVGCardWidget extends StatelessWidget {
     try {
       // 验证SVG内容
       if (svgContent.trim().isEmpty) {
-        return _buildErrorWidget(context, 'SVG内容为空');
+        return _buildErrorWidget(
+          context,
+          AppLocalizations.of(context).svgContentEmpty,
+        );
       }
 
       if (!svgContent.contains('<svg') || !svgContent.contains('</svg>')) {
-        return _buildErrorWidget(context, '无效的SVG格式');
+        return _buildErrorWidget(
+          context,
+          AppLocalizations.of(context).svgContentInvalidFormat,
+        );
       }
 
       // 使用与导出完全一致的渲染配置
@@ -191,7 +197,12 @@ class SVGCardWidget extends StatelessWidget {
       String extractedContent = _extractContentFromSVG(context, svgContent);
 
       // 生成回退SVG
-      final fallbackSVG = _generateFallbackSVGContent(extractedContent);
+      final fallbackSVG = _generateFallbackSVGContent(
+        extractedContent,
+        fallbackTitle: AppLocalizations.of(context).svgFallbackTitle,
+        fallbackHint: AppLocalizations.of(context).svgFallbackHint,
+        fallbackIdentifier: AppLocalizations.of(context).svgFallbackIdentifier,
+      );
 
       AppLogger.i(
         '使用回退SVG模板，内容长度: ${fallbackSVG.length}',
@@ -309,7 +320,12 @@ class SVGCardWidget extends StatelessWidget {
   }
 
   /// 生成回退SVG内容
-  String _generateFallbackSVGContent(String content) {
+  String _generateFallbackSVGContent(
+    String content, {
+    required String fallbackTitle,
+    required String fallbackHint,
+    required String fallbackIdentifier,
+  }) {
     // 限制内容长度
     final displayContent =
         content.length > 50 ? '${content.substring(0, 50)}...' : content;
@@ -332,7 +348,7 @@ class SVGCardWidget extends StatelessWidget {
 
   <!-- 标题 -->
   <text x="200" y="180" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="16" font-weight="bold">
-    SVG生成失败
+    $fallbackTitle
   </text>
 
   <!-- 内容区域 -->
@@ -347,12 +363,12 @@ class SVGCardWidget extends StatelessWidget {
 
   <!-- 底部提示 -->
   <text x="200" y="540" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12">
-    请尝试重新生成或检查AI配置
+    $fallbackHint
   </text>
 
   <!-- 心迹标识 -->
   <text x="200" y="570" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-family="Arial, sans-serif" font-size="10">
-    心迹 - 备用模板
+    $fallbackIdentifier
   </text>
 </svg>
 ''';

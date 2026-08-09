@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../services/backup_service.dart';
 import '../services/large_file_manager.dart';
+import '../utils/app_logger.dart';
 import '../utils/backup_progress_update_gate.dart';
 import '../utils/time_utils.dart';
 import '../utils/stream_file_selector.dart';
@@ -383,6 +384,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         );
 
         if (saveLocation != null && mounted) {
+          final savedToPathMessage = l10n.backupSavedToPath(saveLocation.path);
           backupPath = await backupService.exportAllData(
             includeMediaFiles: _includeMediaFiles,
             customPath: saveLocation.path,
@@ -390,7 +392,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             cancelToken: _cancelToken,
           );
 
-          _showSuccessSnackBar(l10n.backupSavedToPath(saveLocation.path));
+          _showSuccessSnackBar(savedToPathMessage);
         }
       }
 
@@ -410,9 +412,15 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           ),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        '执行备份失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'BackupRestorePage',
+      );
       if (mounted) {
-        String errorMessage = l10n.backupFailedGeneric(e.toString());
+        String errorMessage = l10n.backupFailedGeneric;
 
         // 针对不同类型的错误提供更友好的提示
         if (e.toString().contains('OutOfMemoryError') ||
