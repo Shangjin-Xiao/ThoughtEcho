@@ -328,7 +328,8 @@ void main() {
         isFalse,
         reason: '末尾不能留半个代理对，否则写 SQLite 时无法编码成 UTF-8',
       );
-      // 上限是奇数（201 = 1 个「啊」+ 100 个 emoji），切在代理对中间，
+      // 上限 200 是偶数，但前缀「啊」占 1 个 code unit，把后面每个 emoji 的
+      // 代理对推到了奇数偏移：切点落在 index 199，正好是一个高代理，
       // 于是要丢掉那半个字符。
       expect(
         entry.directive.length,

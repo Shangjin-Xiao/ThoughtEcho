@@ -52,7 +52,9 @@ class AgentMemoryService extends ChangeNotifier {
 
   Database? _database;
   Completer<Database>? _opening;
-  bool _closed = false;
+
+  /// 只有 [dispose] 会置位。[close] 之后允许重新打开——见 [close] 的说明。
+  bool _disposed = false;
 
   static const String databaseFileName = 'agent_memory.db';
 
@@ -95,8 +97,8 @@ class AgentMemoryService extends ChangeNotifier {
       return opening.future;
     }
 
-    if (_closed) {
-      throw StateError('AgentMemoryService 已关闭');
+    if (_disposed) {
+      throw StateError('AgentMemoryService 已销毁');
     }
 
     final completer = Completer<Database>();
@@ -119,11 +121,11 @@ class AgentMemoryService extends ChangeNotifier {
         onUpgrade: (db, oldVersion, newVersion) => _ensureSchema(db),
         onOpen: _ensureSchema,
       );
-      // dispose/close 可能发生在打开过程中：那时 _database 还是 null，
-      // 关不到任何东西，而这个连接一旦落到 _database 上就再没人管了。
-      if (_closed) {
+      // dispose 可能发生在打开过程中：那时 _database 还是 null，dispose 关不到
+      // 任何东西，而这个连接一旦落到 _database 上就再没人管了。
+      if (_disposed) {
         await db.close();
-        throw StateError('AgentMemoryService 已关闭');
+        throw StateError('AgentMemoryService 已销毁');
       }
       _database = db;
       completer.complete(db);
@@ -140,8 +142,11 @@ class AgentMemoryService extends ChangeNotifier {
   ///
   /// 迁移数据目录前必须调用：复制的是 SQLite 文件本体，没 checkpoint 的话
   /// 最近的写入会留在旧目录的 WAL 里。
+  ///
+  /// **关完还能再打开**：迁移是在应用运行中做的，用户不会立刻重启。把实例
+  /// 标成永久不可用的话，迁移完到重启之间，画像读取和 remember/recall 会一直
+  /// 失败。永久失效只发生在 [dispose]。
   Future<void> close() async {
-    _closed = true;
     final opening = _opening;
     if (opening != null) {
       // 等打开流程走完，否则它会在我们关完之后再把连接装回 _database。
@@ -178,8 +183,15 @@ class AgentMemoryService extends ChangeNotifier {
     }
   }
 
+  /// 桌面三端都能改数据目录（见 `StorageManagementPage`），所以这三端一律跟着
+  /// [DataDirectoryService.getCurrentDataDirectory] 走——否则迁移会把记忆库复制
+  /// 到一个应用根本不读的位置，用户看到的还是旧目录里那份。
+  ///
+  /// 移动端没有自定义目录，用 documents 即可。
   static Future<String> _defaultDatabasePath() async {
-    final basePath = Platform.isWindows
+    final isDesktop =
+        Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+    final basePath = isDesktop
         ? await DataDirectoryService.getCurrentDataDirectory()
         : (await getApplicationDocumentsDirectory()).path;
     return path.join(basePath, databaseFileName);
@@ -231,6 +243,7 @@ class AgentMemoryService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     if (identical(activeInstance, this)) {
       activeInstance = null;
     }

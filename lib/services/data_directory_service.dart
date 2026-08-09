@@ -413,6 +413,9 @@ class DataDirectoryService {
         // 5. 验证关键文件是否复制成功
         final criticalFiles = [
           'databases/thoughtecho.db',
+          // 记忆库复制失败必须让整个迁移失败：静默放过的话，用户重启后
+          // 新目录里没有长期记忆，而旧目录那份已经不会再被读到。
+          'agent_memory.db',
         ];
 
         for (final relPath in criticalFiles) {
