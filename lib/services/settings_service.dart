@@ -109,8 +109,16 @@ class SettingsService extends ChangeNotifier {
 
   String get userNickname => _mmkv.getString(_userNicknameKey) ?? '';
 
+  /// 写入失败时抛出：静默失败会让用户以为称呼已生效，对话里却一直没有。
   Future<void> setUserNickname(String value) async {
-    await _mmkv.setString(_userNicknameKey, value.trim());
+    final success = await _mmkv.setString(_userNicknameKey, value.trim());
+    if (!success) {
+      AppLogger.e(
+        '用户称呼保存失败：MMKV setString 返回 false',
+        source: 'SettingsService',
+      );
+      throw StateError('保存用户称呼失败');
+    }
     notifyListeners();
   }
 

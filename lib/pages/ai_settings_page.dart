@@ -611,6 +611,49 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
     });
   }
 
+  String? _pendingNickname;
+  bool _nicknameSaving = false;
+
+  /// 串行保存称呼：击键连续触发，写入期间只保留最新值——较早输入不得在
+  /// 较新输入之后落盘把它盖回去；只有最后一次写入失败才提示一次。
+  Future<void> _saveNickname(String value) async {
+    _pendingNickname = value;
+    if (_nicknameSaving) {
+      return;
+    }
+    _nicknameSaving = true;
+    var failed = false;
+    try {
+      while (mounted) {
+        final next = _pendingNickname;
+        if (next == null) {
+          break;
+        }
+        _pendingNickname = null;
+        try {
+          await context.read<SettingsService>().setUserNickname(next);
+          failed = false;
+        } catch (e, stack) {
+          failed = true;
+          logError(
+            '保存用户称呼失败',
+            error: e,
+            stackTrace: stack,
+            source: 'AISettingsPage',
+          );
+        }
+      }
+    } finally {
+      _nicknameSaving = false;
+    }
+    if (failed && mounted) {
+      AppSnackBar.error(
+        context,
+        AppLocalizations.of(context).agentMemoryNicknameSaveFailed,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -633,15 +676,17 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: TextField(
               controller: _nicknameController,
+              // 与注入侧的上限对齐，避免超长称呼在画像块里被静默截断。
+              maxLength: AgentMemoryService.nicknameMaxChars,
               decoration: InputDecoration(
                 icon: const Icon(Icons.badge_outlined),
                 labelText: l10n.agentMemoryNicknameTitle,
                 hintText: l10n.agentMemoryNicknameHint,
                 helperText: l10n.agentMemoryNicknameDesc,
+                counterText: '',
               ),
               textInputAction: TextInputAction.done,
-              onChanged: (value) =>
-                  context.read<SettingsService>().setUserNickname(value),
+              onChanged: _saveNickname,
             ),
           ),
           const Divider(height: 1),

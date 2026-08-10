@@ -4259,6 +4259,7 @@
   "agentMemoryNicknameTitle": "称呼",
   "agentMemoryNicknameHint": "Thoughter 该怎么称呼你？",
   "agentMemoryNicknameDesc": "每次对话开始时告诉 Thoughter，只保存在这台设备上。留空则不提。",
+  "agentMemoryNicknameSaveFailed": "称呼没能保存，请重试",
   "agentMemoryClearTitle": "清空记忆",
   "agentMemoryClearSummary": "当前记着 {profileCount} 条偏好、{factCount} 条细节",
   "@agentMemoryClearSummary": {"placeholders": {"profileCount": {"type": "int"}, "factCount": {"type": "int"}}},
