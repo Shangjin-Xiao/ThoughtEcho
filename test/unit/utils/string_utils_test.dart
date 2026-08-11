@@ -54,10 +54,6 @@ void main() {
       test(
           'should parse formatted source with missing author prefix if source is present',
           () {
-        // The regex for author expects "——" prefix.
-        // If the string is just "Author 《Source》" (without ——), author extraction might fail based on implementation.
-        // Let's check implementation behavior: RegExp(r'——([^《]+)').firstMatch(source);
-        // So "Author 《Source》" -> no match for author.
         final result = StringUtils.parseSource('Author 《Source》');
         expect(result, ['', 'Source']);
       });
@@ -75,8 +71,6 @@ void main() {
       test(
           'should handle source without closing bracket gracefully (or as implemented)',
           () {
-        // Regex: RegExp(r'《(.+?)》')
-        // If "《My Book", it won't match.
         final result = StringUtils.parseSource('《My Book');
         expect(result[1], '');
         expect(result[0], '');
@@ -152,20 +146,31 @@ void main() {
     });
 
     group('removeObjectReplacementChar', () {
-      test('should remove U+FFFC characters from string', () {
-        expect(StringUtils.removeObjectReplacementChar('Hello\u{FFFC}World'),
-            'HelloWorld');
-        expect(
-            StringUtils.removeObjectReplacementChar('\u{FFFC}Start'), 'Start');
-        expect(StringUtils.removeObjectReplacementChar('End\u{FFFC}'), 'End');
-        expect(
-            StringUtils.removeObjectReplacementChar('\u{FFFC}\u{FFFC}\u{FFFC}'),
-            '');
+      test('removes single Object Replacement Character', () {
+        final textWithObj = 'Hello \u{FFFC} World';
+        expect(StringUtils.removeObjectReplacementChar(textWithObj),
+            'Hello  World');
       });
 
-      test('should return same string if no U+FFFC is present', () {
-        expect(StringUtils.removeObjectReplacementChar('Normal String'),
-            'Normal String');
+      test('removes multiple Object Replacement Characters', () {
+        final textWithObjs = 'Image 1\u{FFFC} and Image 2\u{FFFC}';
+        expect(StringUtils.removeObjectReplacementChar(textWithObjs),
+            'Image 1 and Image 2');
+      });
+
+      test('returns original string if no Object Replacement Character exists',
+          () {
+        final normalText = 'This is a normal text without any special objects.';
+        expect(StringUtils.removeObjectReplacementChar(normalText), normalText);
+      });
+
+      test('handles string consisting only of Object Replacement Characters',
+          () {
+        final onlyObjs = '\u{FFFC}\u{FFFC}\u{FFFC}';
+        expect(StringUtils.removeObjectReplacementChar(onlyObjs), '');
+      });
+
+      test('handles empty string', () {
         expect(StringUtils.removeObjectReplacementChar(''), '');
       });
     });
