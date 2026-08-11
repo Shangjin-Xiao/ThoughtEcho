@@ -64,6 +64,9 @@ class AgentMemoryService extends ChangeNotifier {
   /// 单条指令长度上限，防止模型把一整段对话当成一条偏好塞进来。
   static const int directiveMaxChars = 200;
 
+  /// 称呼长度上限。它是画像块里的一行，不是签名档。
+  static const int nicknameMaxChars = 50;
+
   /// 单条事实长度上限。
   static const int factMaxChars = 600;
 
@@ -339,7 +342,7 @@ class AgentMemoryService extends ChangeNotifier {
     return deleted > 0;
   }
 
-  /// 渲染注入模型的画像块。记忆关闭或没有条目时返回 null。
+  /// 渲染注入模型的画像块。记忆关闭，或没有条目且用户也未填写称呼时返回 null。
   ///
   /// 输出是一条独立的用户数据消息，不进系统提示——和绑定笔记的做法一致，
   /// 避免把「用户偏好」和「行为准则」混成同一层权限。
@@ -348,10 +351,15 @@ class AgentMemoryService extends ChangeNotifier {
       return null;
     }
     final entries = await activeProfile();
-    if (entries.isEmpty) {
+    final nickname = _settingsService.userNickname;
+    if (entries.isEmpty && nickname.trim().isEmpty) {
       return null;
     }
-    return renderProfileBlock(entries, now: DateTime.now());
+    return renderProfileBlock(
+      entries,
+      now: DateTime.now(),
+      userNickname: nickname,
+    );
   }
 
   /// [buildProfileBlock] 的降级包装：读不到就当没有画像。
@@ -373,19 +381,29 @@ class AgentMemoryService extends ChangeNotifier {
   }
 
   /// 纯函数形式的画像块渲染，便于测试预算与时效标注。
+  ///
+  /// [userNickname] 是用户在设置里填的称呼，钉在画像块最前：它是用户显式
+  /// 声明的身份，比模型观察出的条目更权威，不参加排序、也不能被预算挤掉。
   @visibleForTesting
   static String? renderProfileBlock(
     List<AgentMemoryProfileEntry> entries, {
     required DateTime now,
+    String? userNickname,
   }) {
-    if (entries.isEmpty) {
-      return null;
-    }
     final sorted = List<AgentMemoryProfileEntry>.of(entries)
       ..sort((left, right) => right.observedAt.compareTo(left.observedAt));
 
     final lines = <String>[];
     var usedChars = 0;
+
+    final nickname = normalizeMemoryText(userNickname ?? '', nicknameMaxChars);
+    if (nickname.isNotEmpty) {
+      final line = '- [${_kindLabel(AgentMemoryKind.identity)}·用户填写] '
+          '称呼用户为「${escapeUntrustedText(nickname)}」';
+      lines.add(line);
+      usedChars += line.length;
+    }
+
     for (final entry in sorted) {
       if (lines.length >= profileInjectionMaxEntries) {
         break;
@@ -509,7 +527,7 @@ class AgentMemoryService extends ChangeNotifier {
     DateTime? lastRecalledAt,
     int recallCount = 0,
   }) {
-    final normalized = _normalizeText(content, factMaxChars);
+    final normalized = normalizeMemoryText(content, factMaxChars);
     if (normalized.isEmpty) {
       throw ArgumentError.value(content, 'content', '事实内容为空');
     }
@@ -785,9 +803,10 @@ class AgentMemoryService extends ChangeNotifier {
   }
 
   String _normalizeDirective(String value) =>
-      _normalizeText(value, directiveMaxChars);
+      normalizeMemoryText(value, directiveMaxChars);
 
-  String _normalizeText(String value, int maxChars) {
+  /// 折叠空白并截断到 [maxChars]。静态方法：画像块渲染（纯函数）也要用。
+  static String normalizeMemoryText(String value, int maxChars) {
     final collapsed = value.replaceAll(RegExp(r'\s+'), ' ').trim();
     if (collapsed.length <= maxChars) {
       return collapsed;

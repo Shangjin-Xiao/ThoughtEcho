@@ -96,6 +96,16 @@ void main() {
       expect(settingsService.appSettings.excerptIntentEnabled, isFalse);
     });
 
+    test('should persist and trim user nickname', () async {
+      expect(settingsService.userNickname, isEmpty);
+
+      await settingsService.setUserNickname('  阿澈  ');
+      expect(settingsService.userNickname, '阿澈');
+
+      await settingsService.setUserNickname('');
+      expect(settingsService.userNickname, isEmpty);
+    });
+
     test('should persist add note dialog experiment toggles', () async {
       expect(settingsService.addNoteDialogAutoFocus, isTrue);
       expect(settingsService.addNoteDialogDeferAutoMetadata, isFalse);
