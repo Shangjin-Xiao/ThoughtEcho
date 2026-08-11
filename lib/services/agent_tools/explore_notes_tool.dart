@@ -262,6 +262,17 @@ class ExploreNotesTool extends AgentTool {
         'summary':
             '找到 ${formattedNotes.length} 条匹配笔记${total > offset + formattedNotes.length ? '（总计 $total 条，可分页查看）' : ''}',
       };
+      // 关键词零命中时把「下一步该怎么做」直接写进结果。这里是模型最容易
+      // 就地下「你没写过 X」结论的位置：query 是子串匹配，同义词和主题都不会
+      // 命中，而用户笔记里的说法几乎不会和提问用词一致。
+      final emptyHint = _emptyResultHint(
+        matched: formattedNotes.length,
+        query: query,
+        offset: offset,
+      );
+      if (emptyHint != null) {
+        response['hint'] = emptyHint;
+      }
 
       return ToolResult(
         toolCallId: call.id,
@@ -276,6 +287,28 @@ class ExploreNotesTool extends AgentTool {
         isError: true,
       );
     }
+  }
+
+  /// 零命中时回给模型的下一步建议，命中了就返回 null。
+  ///
+  /// 分两种零命中：带关键词的（多半是用词对不上，该改成浏览）和不带关键词的
+  /// （筛选条件太窄，或者库里这段时间本来就是空的）。翻页翻到尾巴上的空页
+  /// 不算零命中，那只是没有下一页。
+  static String? _emptyResultHint({
+    required int matched,
+    required String query,
+    required int offset,
+  }) {
+    if (matched > 0 || offset > 0) {
+      return null;
+    }
+    if (query.trim().isEmpty) {
+      return '这组筛选条件下没有笔记。放宽或去掉条件再试，不要据此断定用户"从没写过"。';
+    }
+    return 'query 是对正文、作者、出处做的子串匹配，不认同义词也不认主题——'
+        '用户笔记里的说法通常和提问用词不一样，零命中不等于没写过。'
+        '换一两个更可能出现在正文里的词，或者干脆去掉 query、'
+        '用日期范围或 tag_ids 浏览一遍自己判断，再下结论。';
   }
 
   static String _truncate(String text, int maxLength) {

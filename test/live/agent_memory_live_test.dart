@@ -166,7 +166,34 @@ void main() {
       expect(askSelf.error, isNull);
     }, timeout: const Timeout(Duration(minutes: 8)));
 
-    // -- 场景 3：偏好改了要改同一条，不能追加一条相反的 --------------------
+    // -- 场景 3：正文没命中 ≠ 没写过 ---------------------------------------
+    test('全称结论：正文关键词没命中时，不能直接说"你没写过"', () async {
+      final probe = await AgentProbe.start(
+        scenario: '08-元数据线索-$tag',
+        config: config,
+        seedTagsWithIds: seedTags,
+        seedNotes: seedNotes(),
+      );
+      probe.transcript.notes.addAll([
+        '"读书"两个字不在任何一条正文里，只存在于标签上；'
+            '"专注"同样不在正文里，但两条原创笔记讲的就是进入状态这件事。',
+        '期望：先看标签/元数据或换个词再检索，而不是一次没命中就下"你从没写过"。',
+      ]);
+
+      final byTag = await probe.ask('我有读书相关的笔记吗？');
+      reportTurn('标签线索', byTag);
+      _flagOverreach(byTag, label: '读书');
+
+      final byTopic = await probe.ask('我写过关于专注力的东西吗？');
+      reportTurn('近义词', byTopic);
+      _flagOverreach(byTopic, label: '专注力');
+
+      await probe.finish();
+      expect(byTag.error, isNull);
+      expect(byTopic.error, isNull);
+    }, timeout: const Timeout(Duration(minutes: 8)));
+
+    // -- 场景 4：偏好改了要改同一条，不能追加一条相反的 --------------------
     test('偏好翻转：改同一条，而不是并存两条互相矛盾的画像', () async {
       final probe = await AgentProbe.start(
         scenario: '07-偏好翻转-$tag',
@@ -207,7 +234,7 @@ void main() {
       expect(flipped.error, isNull);
     }, timeout: const Timeout(Duration(minutes: 8)));
 
-    // -- 场景 4：用户填写的称呼 -------------------------------------------
+    // -- 场景 5：用户填写的称呼 -------------------------------------------
     test('称呼：设置里填了就直接用，不再问一遍', () async {
       final probe = await AgentProbe.start(
         scenario: '06-用户称呼-$tag',
@@ -235,6 +262,40 @@ void main() {
       expect(greeting.error, isNull);
     }, timeout: const Timeout(Duration(minutes: 6)));
   });
+}
+
+/// 全称结论的粗筛。
+///
+/// 两个判据。一是只检索一次就否定；二是通篇都在堆同义词 `query`，从没退回去
+/// 按元数据浏览过——`explore_notes` 的 query 是子串匹配，同义词堆到第五个也
+/// 只是在同一个匹配方式上打转，而用户的说法本来就和提问用词对不上。
+void _flagOverreach(ProbeTurn turn, {required String label}) {
+  const denials = ['没有写过', '没写过', '没有相关', '没有找到', '没有任何', '没有发现'];
+  final content = turn.response?.content ?? '';
+  if (!denials.any(content.contains)) {
+    return;
+  }
+
+  if (turn.toolCalls.length <= 1) {
+    turn.findings.add(
+      '$label：只检索了一次就下了否定结论。正文关键词没命中不等于没写过，'
+      '标签和元数据里可能还有线索。',
+    );
+    return;
+  }
+
+  final browsed = turn.toolCalls.where((call) {
+    if (call['tool'] != 'explore_notes') return false;
+    final arguments = call['arguments'];
+    if (arguments is! Map) return false;
+    return (arguments['query']?.toString().trim() ?? '').isEmpty;
+  }).isNotEmpty;
+  if (!browsed) {
+    turn.findings.add(
+      '$label：${turn.toolCalls.length} 次检索全部带着 query，'
+      '从没不带关键词浏览过就下了否定结论。同义词换多少个都还是子串匹配。',
+    );
+  }
 }
 
 /// 记忆边界的粗筛：笔记正文里的特征词不该出现在记忆库里。

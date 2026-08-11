@@ -142,6 +142,49 @@ void main() {
       expect(data['notes'], hasLength(10));
     });
 
+    test('零命中的关键词检索回带下一步提示，命中的不带', () async {
+      final miss = await tool.execute(
+        ToolCall(
+          id: 'call_miss',
+          name: 'explore_notes',
+          arguments: const {'query': '这个词库里绝对没有'},
+        ),
+      );
+      expect(miss.isError, isFalse);
+      final missData = jsonDecode(miss.content) as Map<String, dynamic>;
+      expect(missData['notes'], isEmpty);
+      // 零命中是模型最容易就地下「你没写过 X」结论的地方，结果里必须说明
+      // query 只是子串匹配，并给出改成浏览的出路。
+      expect(missData['hint'], contains('子串匹配'));
+      expect(missData['hint'], contains('浏览'));
+
+      final hit = await tool.execute(
+        ToolCall(
+          id: 'call_hit',
+          name: 'explore_notes',
+          arguments: const {'query': 'keyword', 'limit': 5},
+        ),
+      );
+      expect(
+        (jsonDecode(hit.content) as Map<String, dynamic>).containsKey('hint'),
+        isFalse,
+      );
+    });
+
+    test('翻页翻过尾巴的空页不算零命中，不回带提示', () async {
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_past_end',
+          name: 'explore_notes',
+          arguments: const {'query': 'keyword', 'limit': 5, 'offset': 999},
+        ),
+      );
+
+      final data = jsonDecode(result.content) as Map<String, dynamic>;
+      expect(data['notes'], isEmpty);
+      expect(data.containsKey('hint'), isFalse);
+    });
+
     test('returns author and source as separate fields', () async {
       quotes
         ..clear()
