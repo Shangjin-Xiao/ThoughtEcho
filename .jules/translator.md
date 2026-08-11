@@ -54,3 +54,7 @@
 ## 2023-10-24 - [提取 '重试' 硬编码]
 **发现:** `NoteListView` 中 `SnackBarAction` 标签硬编码为中文 `'重试'`
 **规则:** 将 `'重试'` 统一替换为 `AppLocalizations.of(context)!.retry`
+
+## 2024-05-18 - [WebDAV 云同步状态]
+**发现:** '从未同步', '已启用', '(上次：$timeStr)' 等硬编码字符串。
+**规则:** 复用了已存在的 `webdavNeverSynced`, `webdavStatusEnabled`, `webdavLastSync` 等国际化键，确保多语言支持。
