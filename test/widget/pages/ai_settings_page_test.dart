@@ -75,6 +75,31 @@ AppLocalizations _l10n(WidgetTester tester) =>
 /// 不能用 `tester.scrollUntilVisible` 的默认 scrollable：页面上的 `TextField`
 /// 自带一个 `EditableText` 滚动视图，默认查找会同时匹配到两个 `Scrollable`
 /// 而抛「Too many elements」。
+/// 在真实时间里等 [condition] 成立，带上界。
+///
+/// 用于等真实异步 I/O：`pumpAndSettle` 推的是 fake-async 的时钟，推不动它，
+/// 而固定延时在慢机器上只是把偶发失败的概率调小。超时即断言失败。
+Future<void> _waitFor(
+  WidgetTester tester,
+  bool Function() condition, {
+  required String describe,
+  Duration timeout = const Duration(seconds: 5),
+}) async {
+  var satisfied = false;
+  await tester.runAsync(() async {
+    final deadline = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      if (condition()) {
+        satisfied = true;
+        return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+    satisfied = condition();
+  });
+  expect(satisfied, isTrue, reason: '等待「$describe」超时（${timeout.inSeconds}s）');
+}
+
 Future<void> _scrollTo(WidgetTester tester, Finder target) async {
   await tester.scrollUntilVisible(
     target,
@@ -278,9 +303,13 @@ void main() {
 
       await tester.enterText(field, '小澈  ');
       await tester.pumpAndSettle();
-      // 落盘是真实异步 I/O，fake-async 的时钟推不动它，必须回到真实时间里等。
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      // 落盘是真实异步 I/O，fake-async 的时钟推不动它，得回到真实时间里等。
+      // 等的是「值真的变了」这个信号本身，不是一个拍脑袋的固定延时——
+      // 固定延时在慢机器上必然偶发失败，而这里超时了就是真的没写进去。
+      await _waitFor(
+        tester,
+        () => settingsService.userNickname == '小澈',
+        describe: '称呼落盘',
       );
 
       // 服务侧会 trim。

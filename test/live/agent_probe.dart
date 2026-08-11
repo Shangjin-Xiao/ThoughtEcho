@@ -327,6 +327,9 @@ class _ProbeSettingsService extends ChangeNotifier implements SettingsService {
 
   @override
   Future<void> setAgentMemoryEnabled(bool value) async {
+    if (_memoryEnabled == value) {
+      return;
+    }
     _memoryEnabled = value;
     notifyListeners();
   }
@@ -336,7 +339,12 @@ class _ProbeSettingsService extends ChangeNotifier implements SettingsService {
 
   @override
   Future<void> setUserNickname(String value) async {
-    _nickname = value.trim();
+    // 先归一再比：写回同一个称呼不该惊动监听器。
+    final normalized = value.trim();
+    if (_nickname == normalized) {
+      return;
+    }
+    _nickname = normalized;
     notifyListeners();
   }
 
