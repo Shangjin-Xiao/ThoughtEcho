@@ -142,6 +142,109 @@ void main() {
       expect(data['notes'], hasLength(10));
     });
 
+    test('零命中的关键词检索回带下一步提示', () async {
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_miss',
+          name: 'explore_notes',
+          arguments: const {'query': '这个词库里绝对没有'},
+        ),
+      );
+
+      expect(result.isError, isFalse);
+      final data = jsonDecode(result.content) as Map<String, Object?>;
+      expect(data['notes'], isEmpty);
+      // 零命中是模型最容易就地下「你没写过 X」结论的地方，结果里必须说明
+      // query 只是子串匹配，并给出改成浏览的出路。
+      expect(data['hint'], contains('子串匹配'));
+      expect(data['hint'], contains('浏览'));
+    });
+
+    test('命中的检索不回带提示', () async {
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_hit',
+          name: 'explore_notes',
+          arguments: const {'query': 'keyword', 'limit': 5},
+        ),
+      );
+
+      final data = jsonDecode(result.content) as Map<String, Object?>;
+      expect(data['notes'], isNotEmpty);
+      expect(data.containsKey('hint'), isFalse);
+    });
+
+    test('翻页翻过尾巴的空页不算零命中，不回带提示', () async {
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_past_end',
+          name: 'explore_notes',
+          arguments: const {'query': 'keyword', 'limit': 5, 'offset': 999},
+        ),
+      );
+
+      final data = jsonDecode(result.content) as Map<String, Object?>;
+      expect(data['notes'], isEmpty);
+      expect(data.containsKey('hint'), isFalse);
+    });
+
+    test('returns author and source as separate fields', () async {
+      quotes
+        ..clear()
+        ..add(
+          Quote(
+            id: 'excerpt',
+            content: '一段话',
+            date: DateTime(2026, 1, 1).toIso8601String(),
+            sourceAuthor: '作者甲',
+            sourceWork: '作品乙',
+          ),
+        )
+        ..add(
+          Quote(
+            id: 'legacy',
+            content: '旧数据',
+            date: DateTime(2026, 1, 2).toIso8601String(),
+            source: '作者丙 - 作品丁',
+          ),
+        )
+        ..add(
+          Quote(
+            id: 'plain',
+            content: '无归属',
+            date: DateTime(2026, 1, 3).toIso8601String(),
+          ),
+        );
+
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_meta',
+          name: 'explore_notes',
+          arguments: const {'limit': 10},
+        ),
+      );
+
+      expect(result.isError, isFalse);
+      final notes =
+          (jsonDecode(result.content) as Map<String, dynamic>)['notes'] as List;
+      final byId = <String, Map<String, dynamic>>{
+        for (final n in notes) (n as Map<String, dynamic>)['id'] as String: n,
+      };
+
+      final excerpt = byId['excerpt']!;
+      expect(excerpt['author'], '作者甲');
+      expect(excerpt['source'], '作品乙');
+
+      // 只有合并 source 串的旧数据回退到 source，不重复填 author。
+      final legacy = byId['legacy']!;
+      expect(legacy['author'], isNull);
+      expect(legacy['source'], '作者丙 - 作品丁');
+
+      final plain = byId['plain']!;
+      expect(plain.containsKey('author'), isFalse);
+      expect(plain.containsKey('source'), isFalse);
+    });
+
     test('returns snippet around query match in long content', () async {
       final prefix = List<String>.filled(260, '前').join();
       final suffix = List<String>.filled(260, '后').join();

@@ -61,6 +61,10 @@ TE_PROBE_MODEL=minimax-m3:cloud timeout 900s flutter test --timeout none \
 - `agent_high_frequency_live_test.dart` — 第一批：用户高频场景
 - `agent_self_correction_live_test.dart` — 第二批：出错后能不能自我纠正
 - `agent_richtext_live_test.dart` — 第三批：富文本三种修改模式与采纳落库
+- `agent_memory_live_test.dart` — 第四批：长期记忆跨会话、摘录与原创的归属判断、
+  用户填写的称呼。跑测台默认开着记忆并挂上 `remember` / `recall`，
+  `AgentProbe.start(nickname: …, memoryEnabled: …)` 可以改这两项；
+  `reportMemory(probe, …)` 把记忆库当时的内容写进 transcript
 
 ## 两个必踩的坑（已经踩过）
 
