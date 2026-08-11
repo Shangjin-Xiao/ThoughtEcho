@@ -7,7 +7,8 @@
   
   <p>
     <b>📝 你的专属灵感摘录本 / Your Personal AI-Powered Inspiration Notebook</b><br>
-    让我们一起随心记录，释放 AI 洞察的力量 ✨
+    <b>想到就记，读到就摘，剩下的交给 AI。</b><br>
+    <sub>Jot it down, clip what you read — let AI sort out the rest.</sub>
   </p>
 
   <p>
@@ -32,10 +33,10 @@
   <p>
     <a href="https://www.microsoft.com/store/apps/9NC7GDG6KFMC"><img src="https://get.microsoft.com/images/zh-cn%20dark.svg" width="160" alt="从 Microsoft Store 获取"></a>
     &nbsp;&nbsp;&nbsp;
-    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases"><img src="https://img.shields.io/badge/GitHub_Releases-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Releases"></a>
-    &nbsp;&nbsp;&nbsp;
-    <a href="https://apkpure.com/p/com.shangjin.thoughtecho"><img src="https://img.shields.io/badge/APKPure-00A86B?style=for-the-badge&logo=android&logoColor=white" alt="APKPure"></a>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest"><img src="https://img.shields.io/badge/Android_APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android APK"></a>
   </p>
+
+  <p><sub>Windows 推荐从 Microsoft Store 安装（自动更新）· Android 请下载 64 位 APK</sub></p>
 
   <p>
     <a href="#-english-version"><b>English</b></a> • 
@@ -97,7 +98,7 @@
 ### 编辑与AI功能
 | 富文本编辑器 | AI问答对话 | 筛选与排序 |
 |:---:|:---:|:---:|
-| ![富文本编辑器](res/screenshot/note_full_editor_page.dart.jpg) | ![AI问答对话](res/screenshot/note_qa_chat_page.jpg) | ![筛选与排序](res/screenshot/note_filter_sort_sheet.dart.jpg) |
+| ![富文本编辑器](res/screenshot/note_full_editor_page.jpg) | ![AI问答对话](res/screenshot/note_qa_chat_page.jpg) | ![筛选与排序](res/screenshot/note_filter_sort_sheet.jpg) |
 
 ### 洞察与报告
 | 洞察分析 | 周期报告 | 笔记同步 |
@@ -233,7 +234,7 @@
   </table>
 </div>
 
-> 📝 详细技术分析请查看 [技术分析报告](docs/TECHNOLOGY_ANALYSIS.md)
+> 📝 详细技术说明请查看 [项目概览](docs/project-overview.md)
 
 ## 🤝 如何贡献
 
@@ -345,7 +346,7 @@
 ### Editing & AI Features
 | Rich Text Editor | AI Q&A Chat | Filter & Sort |
 |:---:|:---:|:---:|
-| ![Rich Text Editor](res/screenshot/note_full_editor_page.dart.jpg) | ![AI Q&A Chat](res/screenshot/note_qa_chat_page.jpg) | ![Filter & Sort](res/screenshot/note_filter_sort_sheet.dart.jpg) |
+| ![Rich Text Editor](res/screenshot/note_full_editor_page.jpg) | ![AI Q&A Chat](res/screenshot/note_qa_chat_page.jpg) | ![Filter & Sort](res/screenshot/note_filter_sort_sheet.jpg) |
 
 ### Insights & Reports
 | Insights Analysis | Period Report | Note Sync |

@@ -1,0 +1,290 @@
+name: 发布版本
+
+# 推一个版本 tag 即可完成：三平台构建 → 收集产物 → 生成发布说明 → 创建 Release
+#
+#   git tag 4.0.0 && git push origin 4.0.0
+#
+# tag 里带连字符（如 4.0.0-test、4.1.0-beta.1）会被标记为预发布，
+# 可以用来安全地试跑整条流水线而不影响正式版本。
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+-*'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: '版本号（例如 4.0.0），不含 v 前缀'
+        required: true
+        type: string
+      prerelease:
+        description: '标记为预发布'
+        required: false
+        default: false
+        type: boolean
+
+# 默认只读；只有归集产物、创建 Release 的 release 作业需要写权限
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 解析版本号。APK/iOS 用三段式，MSIX 需要四段式。
+  # ---------------------------------------------------------------------------
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      ios_version: ${{ steps.v.outputs.core }}
+      msix_version: ${{ steps.v.outputs.msix_version }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+      notes_file: ${{ steps.v.outputs.notes_file }}
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 解析版本号
+        id: v
+        env:
+          DISPATCH_VERSION: ${{ inputs.version_name }}
+          DISPATCH_PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_REF_TYPE:-}" == "tag" ]]; then
+            raw="${GITHUB_REF_NAME}"
+          else
+            raw="${DISPATCH_VERSION}"
+          fi
+
+          # 去掉可选的 v 前缀
+          version="${raw#v}"
+
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]; then
+            echo "::error::版本号格式不合法：$version（期望 X.Y.Z 或 X.Y.Z-suffix）"
+            exit 1
+          fi
+
+          # MSIX 只接受纯数字四段式，需剥掉预发布后缀
+          core="${version%%-*}"
+          msix_version="${core}.0"
+
+          # 带连字符的一律视为预发布；手动触发时以勾选项为准
+          if [[ "$version" == *-* ]]; then
+            prerelease=true
+          elif [[ "${GITHUB_REF_TYPE:-}" != "tag" && "$DISPATCH_PRERELEASE" == "true" ]]; then
+            prerelease=true
+          else
+            prerelease=false
+          fi
+
+          notes_file="docs/Release_${core}.md"
+
+          {
+            echo "version=$version"
+            echo "core=$core"
+            echo "msix_version=$msix_version"
+            echo "prerelease=$prerelease"
+            echo "notes_file=$notes_file"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### 版本信息"
+            echo ""
+            echo "| 项 | 值 |"
+            echo "| --- | --- |"
+            echo "| 版本号 | \`$version\` |"
+            echo "| iOS 版本 | \`$core\` |"
+            echo "| MSIX 版本 | \`$msix_version\` |"
+            echo "| 预发布 | \`$prerelease\` |"
+            echo "| 发布说明 | \`$notes_file\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 检查发布说明是否存在
+        run: |
+          if [[ -f "${{ steps.v.outputs.notes_file }}" ]]; then
+            echo "✅ 找到发布说明：${{ steps.v.outputs.notes_file }}"
+          else
+            echo "::warning::未找到 ${{ steps.v.outputs.notes_file }}，Release 正文将使用自动生成的变更记录"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # 三平台并行构建，复用现有 workflow，不重复维护构建逻辑
+  # ---------------------------------------------------------------------------
+  android:
+    needs: prepare
+    uses: ./.github/workflows/flutter-release-build.yml
+    secrets:
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+    with:
+      version_name: ${{ needs.prepare.outputs.version }}
+      build_mode: release
+      build_variant: both
+
+  windows:
+    needs: prepare
+    uses: ./.github/workflows/build-windows.yml
+    secrets:
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+    with:
+      app_version: ${{ needs.prepare.outputs.msix_version }}
+      flutter_version: '3.44.x'
+      build_type: release
+      require_msix: true
+
+  ios:
+    needs: prepare
+    uses: ./.github/workflows/ios-build.yml
+    secrets:
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+    with:
+      # iOS 只接受三段式数字版本，预发布后缀会破坏 --build-name
+      version_name: ${{ needs.prepare.outputs.ios_version }}
+
+  # ---------------------------------------------------------------------------
+  # 收集全部产物并创建 Release
+  # ---------------------------------------------------------------------------
+  release:
+    needs: [prepare, android, windows, ios]
+    # 任一平台构建失败就不要发半截的 Release
+    if: ${{ !cancelled() && needs.android.result == 'success' && needs.windows.result == 'success' && needs.ios.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 下载全部构建产物
+        uses: actions/download-artifact@v5
+        with:
+          path: artifacts
+
+      - name: 归集待发布文件
+        id: collect
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+
+          # 产物散落在各 artifact 子目录中，按扩展名收拢到一处
+          find artifacts -type f \( -name '*.apk' -o -name '*.msix' -o -name '*.ipa' \) \
+            -exec cp -v {} dist/ \;
+
+          # 三个平台都必须有可发布产物，缺任何一个就不创建 Release
+          for ext in apk msix ipa; do
+            if ! find dist -type f -name "*.${ext}" | grep -q .; then
+              echo "::error::缺少 ${ext} 产物，不会创建 Release"
+              exit 1
+            fi
+          done
+
+          # 兼容历史下载链接：官网 dl.html 与 README 长期使用 app-release.apk
+          if [[ -f dist/thoughtecho-standard64-release.apk && ! -f dist/app-release.apk ]]; then
+            cp -v dist/thoughtecho-standard64-release.apk dist/app-release.apk
+          fi
+
+          echo "### 待发布产物" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 文件 | 大小 |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | --- |" >> "$GITHUB_STEP_SUMMARY"
+          for f in dist/*; do
+            printf '| `%s` | %s |\n' "$(basename "$f")" "$(du -h "$f" | cut -f1)" \
+              >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: 生成 Release 正文
+        id: notes
+        env:
+          NOTES_FILE: ${{ needs.prepare.outputs.notes_file }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          out="release-body.md"
+
+          if [[ -f "$NOTES_FILE" ]]; then
+            # 维护一份发布说明，这里直接复用，避免同一段内容手工抄写多处
+            cp "$NOTES_FILE" "$out"
+            echo "使用仓库内的发布说明：$NOTES_FILE"
+          else
+            {
+              echo "## 心迹 ThoughtEcho v${VERSION}"
+              echo ""
+              echo "本次发布尚未撰写发布说明。"
+            } > "$out"
+            echo "::warning::$NOTES_FILE 不存在，已生成占位正文"
+          fi
+
+          # 统一在正文末尾补上下载指引
+          {
+            echo ""
+            echo "---"
+            echo ""
+            echo "### 下载"
+            echo ""
+            echo "- **Windows**：建议从 [Microsoft Store](https://apps.microsoft.com/detail/9NC7GDG6KFMC) 安装，可自动更新"
+            echo "- **Android**：下载 \`thoughtecho-standard64-release.apk\`（64 位，绝大多数设备）；老设备用 \`thoughtecho-arm32Compat-release.apk\`"
+            echo "- **iOS**：\`ThoughtEcho-unsigned.ipa\` 未签名，需自行签名侧载，尚未上架 App Store"
+            echo ""
+            echo "完整下载指引：https://note.shangjinyun.cn/dl"
+          } >> "$out"
+
+          echo "body_file=$out" >> "$GITHUB_OUTPUT"
+
+      - name: 创建 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+          BODY_FILE: ${{ steps.notes.outputs.body_file }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_REF_TYPE:-}" == "tag" ]]; then
+            tag_name="${GITHUB_REF_NAME}"
+          else
+            tag_name="${VERSION}"
+          fi
+
+          args=(
+            "$tag_name"
+            dist/*
+            --title "心迹 ThoughtEcho v${VERSION}"
+            --notes-file "$BODY_FILE"
+          )
+
+          if [[ "$PRERELEASE" == "true" ]]; then
+            args+=(--prerelease)
+          fi
+
+          # 手动触发时 tag 可能尚不存在，交给 gh 依据当前提交创建
+          if [[ "${GITHUB_REF_TYPE:-}" != "tag" ]]; then
+            args+=(--target "${GITHUB_SHA}")
+          fi
+
+          if gh release view "$tag_name" >/dev/null 2>&1; then
+            echo "::notice::Release $tag_name 已存在，更新元数据并上传/覆盖产物"
+            gh release edit "$tag_name" \
+              --title "心迹 ThoughtEcho v${VERSION}" \
+              --notes-file "$BODY_FILE"
+            if [[ "$PRERELEASE" == "true" ]]; then
+              gh release edit "$tag_name" --prerelease
+            fi
+            gh release upload "$tag_name" dist/* --clobber
+          else
+            gh release create "${args[@]}"
+          fi
+
+          {
+            echo "### Release"
+            echo ""
+            gh release view "$tag_name" --json url --jq .url
+          } >> "$GITHUB_STEP_SUMMARY"

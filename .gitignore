@@ -315,3 +315,6 @@ agent/
 .agents/ORIGINAL_REQUEST.md
 .superdesign/
 *.orig
+
+# 推广素材与运营数据：含未公开的商店/流量数据，不进公开仓库
+docs/promo/

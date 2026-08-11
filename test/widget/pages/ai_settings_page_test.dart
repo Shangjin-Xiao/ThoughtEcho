@@ -70,6 +70,50 @@ Widget _wrap(
 AppLocalizations _l10n(WidgetTester tester) =>
     AppLocalizations.of(tester.element(find.byType(AISettingsPage)));
 
+/// 滚到目标为止，滚的是页面本身那个列表。
+///
+/// 不能用 `tester.scrollUntilVisible` 的默认 scrollable：页面上的 `TextField`
+/// 自带一个 `EditableText` 滚动视图，默认查找会同时匹配到两个 `Scrollable`
+/// 而抛「Too many elements」。
+/// 在真实时间里等 [condition] 成立，带上界。
+///
+/// 用于等真实异步 I/O：`pumpAndSettle` 推的是 fake-async 的时钟，推不动它，
+/// 而固定延时在慢机器上只是把偶发失败的概率调小。超时即断言失败。
+Future<void> _waitFor(
+  WidgetTester tester,
+  bool Function() condition, {
+  required String describe,
+  Duration timeout = const Duration(seconds: 5),
+}) async {
+  var satisfied = false;
+  await tester.runAsync(() async {
+    final deadline = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      if (condition()) {
+        satisfied = true;
+        return;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+    satisfied = condition();
+  });
+  expect(satisfied, isTrue, reason: '等待「$describe」超时（${timeout.inSeconds}s）');
+}
+
+Future<void> _scrollTo(WidgetTester tester, Finder target) async {
+  await tester.scrollUntilVisible(
+    target,
+    200,
+    scrollable: find
+        .descendant(
+          of: find.byType(AISettingsPage),
+          matching: find.byType(Scrollable),
+        )
+        .first,
+  );
+  await tester.pumpAndSettle();
+}
+
 void main() {
   group('AISettingsPage', () {
     late SettingsService settingsService;
@@ -223,8 +267,7 @@ void main() {
         SwitchListTile,
         l10n.agentMemoryEnableTitle,
       );
-      await tester.scrollUntilVisible(switchTile, 200);
-      await tester.pumpAndSettle();
+      await _scrollTo(tester, switchTile);
 
       expect(tester.widget<SwitchListTile>(switchTile).value, isTrue);
 
@@ -238,6 +281,58 @@ void main() {
         expect((await memoryService.counts()).profileCount, 1);
         expect(await memoryService.buildProfileBlock(), isNull);
       });
+    });
+
+    testWidgets('nickname field loads the stored value and saves edits',
+        (tester) async {
+      // 本地存储在同一个文件的用例之间是共享的，上一个用例把记忆关掉了就会
+      // 让这里的输入框处于禁用状态。显式置位，别依赖用例顺序。
+      await settingsService.setAgentMemoryEnabled(true);
+      await settingsService.setUserNickname('阿澈');
+
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+      final field = find.widgetWithText(TextField, '阿澈');
+      await _scrollTo(tester, field);
+      expect(
+        tester.widget<TextField>(field).decoration?.labelText,
+        l10n.agentMemoryNicknameTitle,
+      );
+
+      await tester.enterText(field, '小澈  ');
+      await tester.pumpAndSettle();
+      // 落盘是真实异步 I/O，fake-async 的时钟推不动它，得回到真实时间里等。
+      // 等的是「值真的变了」这个信号本身，不是一个拍脑袋的固定延时——
+      // 固定延时在慢机器上必然偶发失败，而这里超时了就是真的没写进去。
+      await _waitFor(
+        tester,
+        () => settingsService.userNickname == '小澈',
+        describe: '称呼落盘',
+      );
+
+      // 服务侧会 trim。
+      expect(settingsService.userNickname, '小澈');
+    });
+
+    testWidgets('nickname field is disabled while memory is off',
+        (tester) async {
+      await settingsService.setAgentMemoryEnabled(false);
+
+      await tester.pumpWidget(_wrap(settingsService, memoryService));
+      await tester.pumpAndSettle();
+
+      final l10n = _l10n(tester);
+      final field = find.widgetWithText(
+        TextField,
+        l10n.agentMemoryNicknameDisabled,
+      );
+      await _scrollTo(tester, field);
+
+      // 关掉记忆后画像块整块不注入，称呼也就不会生效——输入框必须跟着禁用，
+      // 否则用户填了却没反应。
+      expect(tester.widget<TextField>(field).enabled, isFalse);
     });
   });
 }
