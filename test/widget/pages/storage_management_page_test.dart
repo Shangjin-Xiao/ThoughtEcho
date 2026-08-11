@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/pages/storage_management_page.dart';
+import 'package:thoughtecho/services/data_directory_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
 
@@ -104,6 +105,70 @@ void main() {
 
       expect(find.textContaining('回收站中有'), findsNothing);
       expect(find.widgetWithText(OutlinedButton, '查看回收站'), findsNothing);
+
+      await _disposeApp(tester);
+      _disposeLogServiceOnce();
+    });
+
+    testWidgets('迁移目标被拒绝时显示对应的本地化提示', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
+        home: Builder(
+          builder: (context) {
+            final l10n = AppLocalizations.of(context);
+            return Scaffold(
+              body: Column(
+                children: [
+                  for (final rejection in DataDirectoryTargetRejection.values)
+                    TextButton(
+                      onPressed: () {
+                        final messenger = ScaffoldMessenger.of(context);
+                        messenger.clearSnackBars();
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              dataDirectoryRejectionMessage(l10n, rejection),
+                            ),
+                          ),
+                        );
+                      },
+                      child: Text(rejection.name),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ));
+
+      Future<void> expectRejectionMessage(
+        DataDirectoryTargetRejection rejection,
+        String expected,
+      ) async {
+        await tester.tap(find.text(rejection.name));
+        await tester.pump();
+        expect(find.text(expected), findsOneWidget);
+      }
+
+      await expectRejectionMessage(
+        DataDirectoryTargetRejection.sameDirectory,
+        '新目录与当前数据目录相同',
+      );
+      await expectRejectionMessage(
+        DataDirectoryTargetRejection.ancestorDirectory,
+        '新目录不能是当前数据目录的上级目录',
+      );
+      await expectRejectionMessage(
+        DataDirectoryTargetRejection.nestedDirectory,
+        '新目录不能位于当前数据目录内部',
+      );
 
       await _disposeApp(tester);
       _disposeLogServiceOnce();
