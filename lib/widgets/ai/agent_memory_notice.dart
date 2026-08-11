@@ -26,7 +26,9 @@ Future<void> showAgentMemoryNoticeDialog(BuildContext context) async {
             AppShapeTokens.of(dialogContext).dialogRadius,
           ),
         ),
-        icon: const Icon(Icons.psychology_outlined),
+        // 记忆不用脑袋图标：这里发生的是「把你说过的记下来」，不是「它在思考」，
+        // 而灯泡已经代表思考。卷轴加笔更贴近实际行为，也和设置页的开关一致。
+        icon: const Icon(Icons.history_edu_outlined),
         title: Text(l10n.agentMemoryNoticeTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,

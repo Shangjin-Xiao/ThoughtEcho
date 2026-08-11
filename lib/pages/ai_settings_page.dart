@@ -616,7 +616,12 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
 
   /// 串行保存称呼：击键连续触发，写入期间只保留最新值——较早输入不得在
   /// 较新输入之后落盘把它盖回去；只有最后一次写入失败才提示一次。
+  ///
+  /// 循环不看 `mounted`：写入途中用户返回上一页时，排队中的最新称呼仍然要落盘，
+  /// 否则用户看到的最后一次输入会被之前那次写入盖掉。`mounted` 只用来挡 UI 反馈。
   Future<void> _saveNickname(String value) async {
+    // 先取出 service：await 之后再摸 context 可能页面已经销毁。
+    final settingsService = context.read<SettingsService>();
     _pendingNickname = value;
     if (_nicknameSaving) {
       return;
@@ -624,14 +629,14 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
     _nicknameSaving = true;
     var failed = false;
     try {
-      while (mounted) {
+      while (true) {
         final next = _pendingNickname;
         if (next == null) {
           break;
         }
         _pendingNickname = null;
         try {
-          await context.read<SettingsService>().setUserNickname(next);
+          await settingsService.setUserNickname(next);
           failed = false;
         } catch (e, stack) {
           failed = true;
@@ -668,7 +673,8 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
             subtitle: Text(l10n.agentMemoryEnableDesc),
             value: settingsService.agentMemoryEnabled,
             onChanged: _setMemoryEnabled,
-            secondary: const Icon(Icons.psychology_outlined),
+            // 与首次进入的记忆提示弹窗共用同一个图标，见 agent_memory_notice.dart。
+            secondary: const Icon(Icons.history_edu_outlined),
             isThreeLine: true,
           ),
           const Divider(height: 1),
@@ -676,13 +682,18 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: TextField(
               controller: _nicknameController,
+              // 称呼走的是画像块，记忆关掉就整块不注入。让输入框跟着禁用，
+              // 否则用户填了称呼、对话里却一直不用，看上去像坏了。
+              enabled: settingsService.agentMemoryEnabled,
               // 与注入侧的上限对齐，避免超长称呼在画像块里被静默截断。
               maxLength: AgentMemoryService.nicknameMaxChars,
               decoration: InputDecoration(
                 icon: const Icon(Icons.badge_outlined),
                 labelText: l10n.agentMemoryNicknameTitle,
                 hintText: l10n.agentMemoryNicknameHint,
-                helperText: l10n.agentMemoryNicknameDesc,
+                helperText: settingsService.agentMemoryEnabled
+                    ? l10n.agentMemoryNicknameDesc
+                    : l10n.agentMemoryNicknameDisabled,
                 counterText: '',
               ),
               textInputAction: TextInputAction.done,

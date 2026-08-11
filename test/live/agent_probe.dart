@@ -9,11 +9,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openai_dart/openai_dart.dart' as openai;
 import 'package:path/path.dart' as p;
+import 'package:sqflite/sqflite.dart' show inMemoryDatabasePath;
 import 'package:thoughtecho/models/ai_provider_settings.dart';
+import 'package:thoughtecho/models/agent_memory.dart';
 import 'package:thoughtecho/models/chat_message.dart' as app_chat;
 import 'package:thoughtecho/models/multi_ai_settings.dart';
 import 'package:thoughtecho/models/note_proposal_artifact.dart';
 import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/services/agent_memory_service.dart';
 import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/explore_notes_tool.dart';
@@ -21,6 +24,8 @@ import 'package:thoughtecho/services/agent_tools/get_app_context_tool.dart';
 import 'package:thoughtecho/services/agent_tools/get_note_detail_tool.dart';
 import 'package:thoughtecho/services/agent_tools/propose_note_create_tool.dart';
 import 'package:thoughtecho/services/agent_tools/propose_note_edit_tool.dart';
+import 'package:thoughtecho/services/agent_tools/recall_tool.dart';
+import 'package:thoughtecho/services/agent_tools/remember_tool.dart';
 import 'package:thoughtecho/services/agent_tools/web_fetch_tool.dart';
 import 'package:thoughtecho/services/agent_tools/web_search_tool.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
@@ -295,9 +300,16 @@ class ProbeTranscript {
 // ---------------------------------------------------------------------------
 
 class _ProbeSettingsService extends ChangeNotifier implements SettingsService {
-  _ProbeSettingsService(this._provider);
+  _ProbeSettingsService(
+    this._provider, {
+    required bool memoryEnabled,
+    required String nickname,
+  })  : _memoryEnabled = memoryEnabled,
+        _nickname = nickname;
 
   final AIProviderSettings _provider;
+  bool _memoryEnabled;
+  String _nickname;
 
   @override
   String? get localeCode => 'zh';
@@ -307,6 +319,26 @@ class _ProbeSettingsService extends ChangeNotifier implements SettingsService {
         providers: [_provider],
         currentProviderId: _provider.id,
       );
+
+  // noSuchMethod 会把这两个 getter 变成 null，long-term memory 于是永远处于
+  // 关闭状态、画像块也永远不注入——记忆相关的场景必须真的实现它们。
+  @override
+  bool get agentMemoryEnabled => _memoryEnabled;
+
+  @override
+  Future<void> setAgentMemoryEnabled(bool value) async {
+    _memoryEnabled = value;
+    notifyListeners();
+  }
+
+  @override
+  String get userNickname => _nickname;
+
+  @override
+  Future<void> setUserNickname(String value) async {
+    _nickname = value.trim();
+    notifyListeners();
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => null;
@@ -339,12 +371,20 @@ class AgentProbe {
     required this.transcript,
     required this.database,
     required this.agent,
+    required this.memory,
+    required this.settings,
   });
 
   final AgentProbeConfig config;
   final ProbeTranscript transcript;
   final DatabaseService database;
   final AgentService agent;
+
+  /// 记忆库（内存 SQLite）。场景可以直接读它，断言"到底记下了什么"。
+  final AgentMemoryService memory;
+
+  /// 设置替身。场景可以中途改称呼或关掉记忆开关。
+  final SettingsService settings;
 
   static const String _providerId = 'agent-probe-provider';
   static const MethodChannel _secureStorageChannel =
@@ -376,6 +416,8 @@ class AgentProbe {
     List<Quote> seedNotes = const [],
     List<String> seedTags = const [],
     List<({String id, String name})> seedTagsWithIds = const [],
+    bool memoryEnabled = true,
+    String nickname = '',
   }) async {
     // flutter_test 默认注入返回 400 的 mock HttpClient，必须解除才能走真实网络。
     HttpOverrides.global = null;
@@ -432,6 +474,14 @@ class AgentProbe {
         apiUrl: config.baseUrl,
         model: config.model,
       ),
+      memoryEnabled: memoryEnabled,
+      nickname: nickname,
+    );
+
+    // 内存库：记忆本来就存在独立文件里，探针不需要落盘，也不该在场景之间串味。
+    final memory = AgentMemoryService(
+      settingsService: settings,
+      databasePath: inMemoryDatabasePath,
     );
 
     final transcript = ProbeTranscript(scenario, config);
@@ -439,6 +489,7 @@ class AgentProbe {
 
     final agent = AgentService(
       settingsService: settings,
+      memoryService: memory,
       // 与 app_providers.dart:_buildAgentTools 保持一致，只把定位与天气换成
       // 确定性替身——它们依赖平台插件，且不是本次要观察的对象。
       tools: [
@@ -454,6 +505,8 @@ class AgentProbe {
         WebFetchTool(WebFetchService()),
         ProposeNoteCreateTool(database),
         ProposeNoteEditTool(database),
+        RememberTool(memory),
+        RecallTool(memory),
       ],
       requestObserver: ({
         required messages,
@@ -477,6 +530,8 @@ class AgentProbe {
       transcript: transcript,
       database: database,
       agent: agent,
+      memory: memory,
+      settings: settings,
     );
     probe._subscription = agent.events.listen(probe._recordEvent);
     return probe;
@@ -525,6 +580,7 @@ class AgentProbe {
     await Future.wait(_mutationFutures);
     await _subscription?.cancel();
     agent.dispose();
+    memory.dispose();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_secureStorageChannel, null);
     final file = transcript.write();
@@ -749,6 +805,27 @@ void reportTurn(String label, ProbeTurn turn) {
   if (turn.error != null) print('  ❌ ${turn.error}');
   final content = turn.response?.content ?? '';
   print('  回复 ${content.length} 字');
+}
+
+/// 把当前记忆库的内容打到控制台并写进 transcript。
+///
+/// 记忆场景真正要看的不是"模型说它记住了"，而是**库里到底躺着什么**：
+/// 是不是把用户笔记里的内容抄进了记忆、是不是同一件事记了两条互相矛盾的。
+Future<void> reportMemory(AgentProbe probe, String label) async {
+  final profile = await probe.memory.activeProfile();
+  final facts = await probe.memory.searchFacts('', limit: 20);
+  final lines = <String>[
+    '**$label** · 画像 ${profile.length} 条 / 事实 ${facts.length} 条',
+    for (final entry in profile)
+      '  - [画像·${entry.kind.storageValue}] ${entry.directive}',
+    for (final hit in facts)
+      '  - [事实·${hit.fact.category ?? '未归类'}·'
+          'importance=${hit.fact.importance}] ${hit.fact.content}',
+  ];
+  for (final line in lines) {
+    print(line.replaceFirst('**', '  ').replaceFirst('**', ''));
+  }
+  probe.transcript.notes.addAll(lines);
 }
 
 /// 对提案做落库前的确定性校验——这是模型行为之外真正该断言的部分。

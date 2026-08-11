@@ -4238,6 +4238,7 @@
   "agentMemoryNicknameHint": "How should Thoughter address you?",
   "agentMemoryNicknameDesc": "Shared with Thoughter at the start of every conversation and stored only on this device. Leave empty to skip.",
   "agentMemoryNicknameSaveFailed": "Couldn't save your nickname. Please try again.",
+  "agentMemoryNicknameDisabled": "Long-term memory is off, so this nickname is not shared with Thoughter.",
   "agentMemoryClearTitle": "Clear memory",
   "agentMemoryClearSummary": "Currently remembering {profileCount, plural, =1{1 preference} other{{profileCount} preferences}} and {factCount, plural, =1{1 detail} other{{factCount} details}}",
   "@agentMemoryClearSummary": {"placeholders": {"profileCount": {"type": "int"}, "factCount": {"type": "int"}}},
