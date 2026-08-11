@@ -424,6 +424,18 @@ class _ThoughterPageState extends State<ThoughterPage> {
       h5: heading(16),
       h6: heading(16),
       blockquote: body?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+      // AI 回过头来引用你写过的句子时，那几行得看得出是引文。默认的引用块
+      // 只是缩进一点、颜色淡一点，混在正文里读起来像作者突然换了个语气；
+      // 左边一条细线把它划出来，和开场白用的是同一个记号。
+      blockquoteDecoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: theme.colorScheme.primary.withValues(alpha: 0.45),
+            width: 2,
+          ),
+        ),
+      ),
+      blockquotePadding: const EdgeInsets.fromLTRB(14, 2, 0, 2),
       listBullet: body,
       strong: body?.copyWith(fontWeight: FontWeight.w600),
       code: theme.textTheme.bodyMedium?.copyWith(

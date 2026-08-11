@@ -17,6 +17,14 @@ const double _kComposerVerticalPadding = 12;
 /// 发送键的视觉直径。点击区由 IconButton 自己撑到 48，不参与定位。
 const double _kSendButtonDiameter = 36;
 
+/// 输入壳到屏幕边缘的留白：闲置一档、聚焦一档，之间是一段动画
+/// （见 [_ThoughterUI._buildInputArea]）。下方的值是加在系统安全区之上的，
+/// 手势条那一条不用在这里重复算。
+const double _kComposerMarginIdle = 20;
+const double _kComposerMarginFocused = 10;
+const double _kComposerBottomIdle = 12;
+const double _kComposerBottomFocused = 6;
+
 extension _ThoughterUI on _ThoughterPageState {
   /// 消息区可用高度变小（键盘上推、输入框变多行）时跟着贴底，
   /// 保证最后一条消息不会被顶出可视区。
@@ -164,7 +172,10 @@ extension _ThoughterUI on _ThoughterPageState {
                         controller: _scrollController,
                         // 水平留白下放给每条消息自己——AI 回复要铺满可读宽度，
                         // 用户气泡要贴右边缘，两者的左右边距不一样。
-                        padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+                        //
+                        // 底部比顶部多留一点：输入框现在是浮在底部的一颗胶囊，
+                        // 最后一行字紧贴着它会显得对话被框推着走。
+                        padding: const EdgeInsets.fromLTRB(0, 8, 0, 14),
                         itemCount:
                             _messages.length + (_showWaitingCursor ? 1 : 0),
                         itemBuilder: (context, index) {
@@ -812,8 +823,12 @@ extension _ThoughterUI on _ThoughterPageState {
     final scheme = theme.colorScheme;
     final shape = AppShapeTokens.of(context);
     // 输入壳比卡片再圆一档：它是一个会长高的容器，方角在多行时显得笨重。
-    // 仍然跟着主题的 cardRadius 走，纸/素笺的方正不会被这里拉圆。
-    final shellRadius = (shape.cardRadius * 1.4).clamp(0.0, 26.0).toDouble();
+    // 上限取"单行时正好是个药丸"的半径，让闲置态的输入框读起来是一颗胶囊，
+    // 而不是一块带圆角的板子。仍然跟着主题的 cardRadius 走，纸/素笺的方正
+    // 不会被这里拉圆。
+    final pillRadius = _composerLineBoxHeight(theme) / 2;
+    final shellRadius =
+        (shape.cardRadius * 1.4).clamp(0.0, pillRadius).toDouble();
     final focused = _isInputFocused;
     // 描边宽度恒定：聚焦时改宽会让内部文字横跳半个像素。只换颜色。
     final borderColor = focused
@@ -824,71 +839,85 @@ extension _ThoughterUI on _ThoughterPageState {
 
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.fromLTRB(12, 4, 12, 10),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        curve: Curves.easeOut,
-        decoration: BoxDecoration(
-          // 和对话区同底色，只用一圈细描边划出输入范围。
-          //
-          // 这里以前是 surfaceContainerHigh/Highest 加一圈聚焦时张开的强调色
-          // 高光：浅色下是白纸上扣着一块灰盒子，深色下是一块比页面更闷的深板，
-          // 外面还罩着一层散不掉的光晕。输入框不需要靠色块和光把自己顶出来——
-          // 它固定在屏幕底部，位置本身已经说明了它是什么；一条描边划出边界，
-          // 聚焦时换个颜色，就够了。
-          color: scheme.surface,
-          borderRadius: BorderRadius.circular(shellRadius),
-          border: Border.all(color: borderColor),
+      // 外边距离屏幕边缘留白，聚焦时再向左右和下方各撑开一截。
+      //
+      // 闲置时它是页面底部的一颗胶囊，四周都有空气，不和屏幕边框粘在一起；
+      // 一旦开始打字，它就把可写的横向空间要回来——长句子少换一次行。撑开的
+      // 那一下也顺便回答了"我点中了吗"，不用再靠描边变色单独说这件事。
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.fromLTRB(
+          focused ? _kComposerMarginFocused : _kComposerMarginIdle,
+          4,
+          focused ? _kComposerMarginFocused : _kComposerMarginIdle,
+          focused ? _kComposerBottomFocused : _kComposerBottomIdle,
         ),
-        // 整个壳都是输入热区：只有细细一行文字能点，在手机上太难命中。
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            if (!_inputFocusNode.hasFocus) {
-              _inputFocusNode.requestFocus();
-            }
-          },
-          // 没有模式开关要摆时（Agent 模式，也就是绝大多数时候），发送键就贴在
-          // 文字右边，输入框只有一行高。为一枚按钮单开一行会让空着的左半边
-          // 撑出一块无意义的高度——这是之前那个框显得笨重的另一半原因。
-          child: showThinkingChip
-              ? Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildComposerField(theme, l10n),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                      child: Row(
-                        children: [
-                          _buildThinkingChip(theme, l10n),
-                          const Spacer(),
-                          _buildSendButton(theme, l10n),
-                        ],
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOut,
+          decoration: BoxDecoration(
+            // 和对话区同底色，只用一圈细描边划出输入范围。
+            //
+            // 这里以前是 surfaceContainerHigh/Highest 加一圈聚焦时张开的强调色
+            // 高光：浅色下是白纸上扣着一块灰盒子，深色下是一块比页面更闷的深板，
+            // 外面还罩着一层散不掉的光晕。输入框不需要靠色块和光把自己顶出来——
+            // 它固定在屏幕底部，位置本身已经说明了它是什么；一条描边划出边界，
+            // 聚焦时换个颜色，就够了。
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(shellRadius),
+            border: Border.all(color: borderColor),
+          ),
+          // 整个壳都是输入热区：只有细细一行文字能点，在手机上太难命中。
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              if (!_inputFocusNode.hasFocus) {
+                _inputFocusNode.requestFocus();
+              }
+            },
+            // 没有模式开关要摆时（Agent 模式，也就是绝大多数时候），发送键就贴在
+            // 文字右边，输入框只有一行高。为一枚按钮单开一行会让空着的左半边
+            // 撑出一块无意义的高度——这是之前那个框显得笨重的另一半原因。
+            child: showThinkingChip
+                ? Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildComposerField(theme, l10n),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                        child: Row(
+                          children: [
+                            _buildThinkingChip(theme, l10n),
+                            const Spacer(),
+                            _buildSendButton(theme, l10n),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                )
-              : Row(
-                  // 输入长到换行时发送键留在底部，跟着最后一行走。
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(child: _buildComposerField(theme, l10n)),
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      // 按钮装在一个"正好一行高"的盒子里再居中：盒子被 end
-                      // 对齐压在最后一行上，于是单行时按钮坐在那一行的中线，
-                      // 换行长高后自动跟到最后一行。
-                      //
-                      // 不去算按钮该往上抬多少——IconButton 的渲染盒会被撑到
-                      // 48 的点击区（tapTargetSize.padded），按直径 36 算出来
-                      // 的居中量会差 6 像素。让 Center 去对付按钮的真实尺寸。
-                      child: SizedBox(
-                        height: _composerLineBoxHeight(theme),
-                        child: Center(child: _buildSendButton(theme, l10n)),
+                    ],
+                  )
+                : Row(
+                    // 输入长到换行时发送键留在底部，跟着最后一行走。
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(child: _buildComposerField(theme, l10n)),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        // 按钮装在一个"正好一行高"的盒子里再居中：盒子被 end
+                        // 对齐压在最后一行上，于是单行时按钮坐在那一行的中线，
+                        // 换行长高后自动跟到最后一行。
+                        //
+                        // 不去算按钮该往上抬多少——IconButton 的渲染盒会被撑到
+                        // 48 的点击区（tapTargetSize.padded），按直径 36 算出来
+                        // 的居中量会差 6 像素。让 Center 去对付按钮的真实尺寸。
+                        child: SizedBox(
+                          height: _composerLineBoxHeight(theme),
+                          child: Center(child: _buildSendButton(theme, l10n)),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+          ),
         ),
       ),
     );
