@@ -94,9 +94,10 @@ Flutter 默认的 `ZoomPageTransitionsBuilder`。**它本身是有转场动画�
 `targetSdkVersion 35`，版本条件早就满足了。
 
 **返回逻辑本身不用动。** 仓库里没有 `WillPopScope`，已有 9 处 `PopScope`；
-`note_sync_page.dart` 的 `_onWillPop()` 是自定义的异步确认逻辑，外面由
-`PopScope(canPop: false, onPopInvokedWithResult: ...)` 承载，正是 Flutter
-文档给的异步确认写法。这一条只涉及 Manifest 开关和转场 builder 两处，
+`note_sync_page.dart:607` 的 `_onWillPop()` 是自定义的异步确认逻辑，外面由
+`PopScope(canPop: _allowPagePop, onPopInvokedWithResult: ...)` 承载——
+`_allowPagePop` 初值 false，确认通过后置成 true 再真的 pop（同文件 148 / 613 行），
+正是 Flutter 文档给的异步确认写法。这一条只涉及 Manifest 开关和转场 builder 两处，
 不需要迁移任何返回处理代码。
 
 ---
