@@ -49,6 +49,7 @@ import '../utils/quill_delta_builder.dart';
 import '../utils/quill_structured_edit.dart';
 import '../utils/string_utils.dart';
 import '../utils/time_utils.dart';
+import '../widgets/ai/agent_memory_notice.dart';
 import '../widgets/ai/ai_workflow_cards.dart';
 import '../widgets/ai/experimental_badge.dart';
 import '../widgets/ai/note_proposal_card.dart';
@@ -113,6 +114,9 @@ class _ThoughterPageState extends State<ThoughterPage> {
   late AIService _aiService;
   late SettingsService _settingsService;
   bool _settingsReady = false;
+
+  /// 进入页面的一次性提示是否已经走完。自动发起的首轮请求要等它。
+  Future<void> _entryNoticesDone = Future<void>.value();
   late ThoughterPageMode _currentMode;
   String _selectedInsightType = 'comprehensive';
   String _selectedInsightStyle = 'professional';

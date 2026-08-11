@@ -1787,7 +1787,7 @@
   "noteInfoTitle": "참고 정보",
   "meUser": "나",
   "aiAssistantUser": "Thoughter",
-  "aiAssistantWelcome": "Hello! I am Thoughter, your AI note assistant. You can ask me any questions about this note, and I will provide in-depth answers based on the content.\n\n📝 Note content overview:\n{preview}\n\n💡 You can try these questions:\n• What is the core idea of this note?\n• What inspiration can be gained from this note?\n• How to apply the ideas in this note to real life?\n• What thinking pattern does this note reflect?",
+  "aiAssistantWelcome": "Hello! I am Thoughter, your AI note assistant. You can ask me any questions about this note, and I will provide in-depth answers based on the content.\n\n💡 You can try these questions:\n\n- What is the core idea of this note?\n- What inspiration can be gained from this note?\n- How can the ideas in this note be applied to real life?\n- What thinking pattern does this note reflect?",
   "thinkingInProgress": "생각...",
   "aiMisunderstoodQuestion": "죄송합니다. 이 질문을 이해하지 못했습니다. 다른 방법으로 질문해 보세요.",
   "aiResponseError": "Sorry, an error occurred while responding: {error}",

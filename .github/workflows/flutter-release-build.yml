@@ -27,6 +27,35 @@ on:
           - standard64
           - arm32Compat
 
+  # 供 release.yml 复用；inputs 上下文对两种触发方式通用，构建逻辑无需区分
+  workflow_call:
+    inputs:
+      version_name:
+        description: '版本名称 (例如: 1.0.0)'
+        required: true
+        type: string
+      build_mode:
+        description: '构建模式 (debug, profile, release)'
+        required: false
+        default: 'release'
+        type: string
+      build_variant:
+        description: 'Android ABI 变体 (standard64, arm32Compat, both)'
+        required: false
+        default: 'both'
+        type: string
+    secrets:
+      SENTRY_DSN:
+        required: false
+      KEYSTORE_BASE64:
+        required: false
+      KEYSTORE_PASSWORD:
+        required: false
+      KEY_PASSWORD:
+        required: false
+      KEY_ALIAS:
+        required: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -55,7 +84,7 @@ jobs:
 
       - name: 验证正式签名配置
         env:
-          BUILD_MODE: ${{ github.event.inputs.build_mode || 'release' }}
+          BUILD_MODE: ${{ inputs.build_mode || 'release' }}
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -126,9 +155,9 @@ jobs:
 
       - name: 构建 APK
         env:
-          BUILD_MODE: ${{ github.event.inputs.build_mode || 'release' }}
-          BUILD_VARIANT: ${{ github.event.inputs.build_variant || 'both' }}
-          VERSION_NAME: ${{ github.event.inputs.version_name }}
+          BUILD_MODE: ${{ inputs.build_mode || 'release' }}
+          BUILD_VARIANT: ${{ inputs.build_variant || 'both' }}
+          VERSION_NAME: ${{ inputs.version_name }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
           # 验证 BUILD_MODE 是否合法
@@ -175,18 +204,18 @@ jobs:
       # archive: false 时 upload-artifact 只接受单个文件，
       # build_variant=both 会产出两个 APK，因此按变体分开上传。
       - name: 上传 APK (standard64)
-        if: ${{ (github.event.inputs.build_variant || 'both') != 'arm32Compat' }}
+        if: ${{ (inputs.build_variant || 'both') != 'arm32Compat' }}
         uses: actions/upload-artifact@v7
         with:
-          name: app-${{ github.event.inputs.build_mode || 'release' }}-standard64-apk
+          name: app-${{ inputs.build_mode || 'release' }}-standard64-apk
           path: build/app/outputs/release-artifacts/thoughtecho-standard64-*.apk
           archive: false
 
       - name: 上传 APK (arm32Compat)
-        if: ${{ (github.event.inputs.build_variant || 'both') != 'standard64' }}
+        if: ${{ (inputs.build_variant || 'both') != 'standard64' }}
         uses: actions/upload-artifact@v7
         with:
-          name: app-${{ github.event.inputs.build_mode || 'release' }}-arm32Compat-apk
+          name: app-${{ inputs.build_mode || 'release' }}-arm32Compat-apk
           path: build/app/outputs/release-artifacts/thoughtecho-arm32Compat-*.apk
           archive: false
           if-no-files-found: error

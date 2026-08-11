@@ -157,7 +157,7 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: Icon(
-                          Icons.psychology_outlined,
+                          Icons.lightbulb_outline,
                           size: 16,
                           color: muted,
                         ),
@@ -168,7 +168,7 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                     Flexible(
                       child: Text(
                         widget.inProgress ? l10n.aiThinking : l10n.thinking,
-                        style: theme.textTheme.bodySmall?.copyWith(
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           color: muted,
                         ),
                         overflow: TextOverflow.ellipsis,
