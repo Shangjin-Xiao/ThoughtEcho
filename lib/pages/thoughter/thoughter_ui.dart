@@ -17,6 +17,18 @@ const double _kComposerVerticalPadding = 12;
 /// 发送键的视觉直径。点击区由 IconButton 自己撑到 48，不参与定位。
 const double _kSendButtonDiameter = 36;
 
+/// 一条消息在对话流里的四周留白。
+///
+/// 左右恒定 16；上下分两档：说话的（用户气泡、AI 正文、开场白、等待光标）用
+/// [_kMessageInsets]，卡片类的（提案、工具进度、洞察配置、提示）用
+/// [_kCardMessageInsets] —— 卡片自己带边框和内边距，外面再给一样的留白会显得散。
+///
+/// 这两个常量之前是每处各写各的：正文 (16,10,16,14)、卡片 (16,8,16,8)、
+/// 工具进度 (16,6,16,6)、开场白 (16,12,16,14)。一轮回答里这几种块交替出现，
+/// 间距就忽宽忽窄。
+const EdgeInsets _kMessageInsets = EdgeInsets.fromLTRB(16, 10, 16, 10);
+const EdgeInsets _kCardMessageInsets = EdgeInsets.fromLTRB(16, 8, 16, 8);
+
 /// 输入壳到屏幕边缘的留白：闲置一档、聚焦一档，之间是一段动画
 /// （见 [_ThoughterUI._buildInputArea]）。下方的值是加在系统安全区之上的，
 /// 手势条那一条不用在这里重复算。
@@ -41,6 +53,26 @@ extension _ThoughterUI on _ThoughterPageState {
       if (position.pixels < position.maxScrollExtent) {
         _scrollController.jumpTo(position.maxScrollExtent);
       }
+    });
+  }
+
+  /// 上下缘渐隐的开关：跟着"这个方向上还有没有没露出来的内容"走。
+  void _updateEdgeFades(ScrollMetrics metrics) {
+    if (!mounted) return;
+    // 一点余量：贴到头时的浮点误差会让开关在两个状态之间反复横跳。
+    const epsilon = 2.0;
+    final above = metrics.extentBefore > epsilon;
+    final below = metrics.extentAfter > epsilon;
+    if (above == _contentHiddenAbove && below == _contentHiddenBelow) return;
+    // 滚动通知有可能在布局途中派发（贴底那次 jumpTo 就会走到这条路），
+    // 那一刻 setState 会抛。一律推到帧末再改，渐隐晚一帧亮起，看不出来。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (above == _contentHiddenAbove && below == _contentHiddenBelow) return;
+      _setState(() {
+        _contentHiddenAbove = above;
+        _contentHiddenBelow = below;
+      });
     });
   }
 
@@ -114,8 +146,21 @@ extension _ThoughterUI on _ThoughterPageState {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
+    // 这一轮已经有人说过话——「新建对话」才有事可做。
+    final canStartNewChat = _messages.any((message) => message.isUser);
+
     return Scaffold(
       appBar: AppBar(
+        // 顶栏和页面同底色。
+        //
+        // 主题里顶栏是 surfaceContainerLow 而页面是 surface，两个色只差一点点，
+        // 交界处留着一条说不清是什么的浅缝。它本来该由 M3 的 scrolledUnder
+        // 染色来表达"上面还有内容"，但主题把 surfaceTintColor 设成了透明，
+        // 那套机制在全 app 都是空转的
+        // （见 docs/m3-modernization-audit-2026-08-11.md）。
+        // 与其留一条不说话的缝，不如让顶栏融进页面，边界交给对话区上缘的
+        // 渐隐——它只在真的有内容被盖住时才出现，正是那条缝想说没说清的事。
+        backgroundColor: theme.colorScheme.surface,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -133,9 +178,13 @@ extension _ThoughterUI on _ThoughterPageState {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_comment),
+            // 描边字形，和旁边的 history 同一套。实心的 add_comment 在这一行里
+            // 是唯一一块涂满的图形，两枚图标本该是一对，看起来却像来自两套图标集。
+            icon: const Icon(Icons.add_comment_outlined),
             tooltip: l10n.newChat,
-            onPressed: _startNewChat,
+            // 已经是一段没开口的新对话时按下去什么都不会发生（会话都还没建）。
+            // 与其让它按了没反应，不如明说现在没得可新建。
+            onPressed: canStartNewChat ? _startNewChat : null,
           ),
           IconButton(
             icon: const Icon(Icons.history),
@@ -146,9 +195,6 @@ extension _ThoughterUI on _ThoughterPageState {
       ),
       body: Column(
         children: [
-          if (_entrySource == ThoughterEntrySource.explore &&
-              widget.exploreGuideSummary?.trim().isNotEmpty == true)
-            _buildExploreGuideBanner(theme, l10n),
           Expanded(
             // 键盘弹出是一段动画，消息区高度逐帧变矮。只在获得焦点那一帧滚一次
             // 会停在"当时"的底部，键盘继续上推后消息又被盖住，所以整段动画
@@ -158,81 +204,124 @@ extension _ThoughterUI on _ThoughterPageState {
                 _onMessageViewportHeightChanged(constraints.maxHeight);
                 return Stack(
                   children: [
-                    NotificationListener<ScrollUpdateNotification>(
+                    // 内层听滚动，外层听尺寸：内容变长变短（流式回复每来一段
+                    // 就长一点）不产生滚动事件，但上下还有没有藏着的内容变了，
+                    // 渐隐要跟着变。
+                    NotificationListener<ScrollMetricsNotification>(
                       onNotification: (notification) {
-                        if (notification.scrollDelta != null &&
-                            notification.dragDetails != null) {
-                          if (notification.scrollDelta! < 0) {
-                            _setAutoScrollEnabled(false);
-                          }
-                        }
+                        _updateEdgeFades(notification.metrics);
                         return false;
                       },
-                      child: ListView.builder(
-                        controller: _scrollController,
-                        // 水平留白下放给每条消息自己——AI 回复要铺满可读宽度，
-                        // 用户气泡要贴右边缘，两者的左右边距不一样。
-                        //
-                        // 底部比顶部多留一点：输入框现在是浮在底部的一颗胶囊，
-                        // 最后一行字紧贴着它会显得对话被框推着走。
-                        padding: const EdgeInsets.fromLTRB(0, 8, 0, 14),
-                        itemCount:
-                            _messages.length + (_showWaitingCursor ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index >= _messages.length) {
-                            return Padding(
-                              padding:
-                                  const EdgeInsets.fromLTRB(16, 10, 16, 14),
-                              child: _BlinkingCursor(
-                                key: const ValueKey('ai_assistant_waiting'),
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            );
+                      child: NotificationListener<ScrollUpdateNotification>(
+                        onNotification: (notification) {
+                          _updateEdgeFades(notification.metrics);
+                          if (notification.scrollDelta != null &&
+                              notification.dragDetails != null) {
+                            if (notification.scrollDelta! < 0) {
+                              _setAutoScrollEnabled(false);
+                            }
                           }
-                          final message = _messages[index];
-                          final keepAlive = _shouldKeepAliveMessage(message);
-                          return _KeepAliveMessageItem(
-                            key: ValueKey('msg_keepalive_${message.id}'),
-                            keepAlive: keepAlive,
-                            child: _buildMessageBubble(message, theme, l10n),
-                          );
+                          return false;
                         },
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          // 水平留白下放给每条消息自己——AI 回复要铺满可读宽度，
+                          // 用户气泡要贴右边缘，两者的左右边距不一样。
+                          //
+                          // 底部比顶部多留一点：输入框现在是浮在底部的一颗胶囊，
+                          // 最后一行字紧贴着它会显得对话被框推着走。
+                          padding: const EdgeInsets.fromLTRB(0, 8, 0, 14),
+                          itemCount:
+                              _messages.length + (_showWaitingCursor ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index >= _messages.length) {
+                              return Padding(
+                                padding: _kMessageInsets,
+                                child: _BlinkingCursor(
+                                  key: const ValueKey('ai_assistant_waiting'),
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              );
+                            }
+                            final message = _messages[index];
+                            final keepAlive = _shouldKeepAliveMessage(message);
+                            return _KeepAliveMessageItem(
+                              key: ValueKey('msg_keepalive_${message.id}'),
+                              keepAlive: keepAlive,
+                              child: _buildMessageBubble(message, theme, l10n),
+                            );
+                          },
+                        ),
                       ),
                     ),
                     // 渐隐压在列表上、回到底部那枚按钮下面：按钮要一直看得清，
                     // 它是个操作，不该跟着正文一起淡掉。
-                    const _EdgeFade(
+                    //
+                    // 只在那个方向上真的藏着内容时才显示。一直挂着的话，内容
+                    // 顶到头时这层渐变正好压在第一行字上——会话开头那句是最该
+                    // 看清的，反倒被自己弄淡了。这也正是 M3 scrolledUnder
+                    // 想表达的意思：有东西滚到底下去了，才需要说一声。
+                    _EdgeFade(
                       height: 24,
                       alignment: Alignment.topCenter,
+                      visible: _contentHiddenAbove,
                     ),
-                    const _EdgeFade(
+                    _EdgeFade(
                       height: 20,
                       alignment: Alignment.bottomCenter,
+                      visible: _contentHiddenBelow,
                     ),
-                    if (_showScrollToBottom)
-                      Positioned.fill(
-                        child: Align(
-                          alignment: Alignment.bottomCenter,
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Material(
-                              color: theme.colorScheme.surfaceContainerHigh,
-                              elevation: 2,
-                              shape: const CircleBorder(),
-                              child: IconButton(
-                                key: const ValueKey(
-                                  'ai_assistant_scroll_to_bottom',
-                                ),
-                                onPressed: _resumeAutoScroll,
-                                icon:
-                                    const Icon(Icons.arrow_downward, size: 18),
-                                visualDensity: VisualDensity.compact,
-                                tooltip: l10n.scrollToBottom,
+                    Positioned.fill(
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          // 冒出来和消失都走一小段淡入 + 缩放。它出现的时机
+                          // （正文正在往下长、用户手动往上翻了）本来就带点
+                          // 突然，硬闪一枚圆钮会让人以为自己按错了什么。
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 180),
+                            transitionBuilder: (child, animation) =>
+                                FadeTransition(
+                              opacity: animation,
+                              child: ScaleTransition(
+                                scale: Tween<double>(begin: 0.85, end: 1)
+                                    .animate(animation),
+                                child: child,
                               ),
                             ),
+                            child: _showScrollToBottom
+                                ? Material(
+                                    // 描边而不是实心加投影：和输入框、引用块
+                                    // 是同一套记号，而且描边在深浅两个主题下
+                                    // 都稳——原来那枚 surfaceContainerHigh
+                                    // 实心圆浅色下是块灰疙瘩，深色下几乎看不见。
+                                    color: theme
+                                        .colorScheme.surfaceContainerLowest,
+                                    shape: CircleBorder(
+                                      side: BorderSide(
+                                        color: theme.colorScheme.outlineVariant,
+                                      ),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: IconButton(
+                                      key: const ValueKey(
+                                        'ai_assistant_scroll_to_bottom',
+                                      ),
+                                      onPressed: _resumeAutoScroll,
+                                      icon: const Icon(
+                                        Icons.arrow_downward,
+                                        size: 18,
+                                      ),
+                                      visualDensity: VisualDensity.compact,
+                                      tooltip: l10n.scrollToBottom,
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
                           ),
                         ),
                       ),
+                    ),
                   ],
                 );
               },
@@ -242,11 +331,6 @@ extension _ThoughterUI on _ThoughterPageState {
         ],
       ),
     );
-  }
-
-  Widget _buildExploreGuideBanner(ThemeData theme, AppLocalizations l10n) {
-    // Removed DataOverview banner - user guidance moved to welcome message only
-    return const SizedBox.shrink();
   }
 
   Widget _buildMessageBubble(
@@ -272,7 +356,7 @@ extension _ThoughterUI on _ThoughterPageState {
             final proposalWeatherKey = proposalWeatherService.currentWeather;
             final proposalTemperature = proposalWeatherService.temperature;
             return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              padding: _kCardMessageInsets,
               child: NoteProposalCard(
                 key: ValueKey('ai_workflow_result_note_proposal_${message.id}'),
                 artifact: artifact,
@@ -324,7 +408,7 @@ extension _ThoughterUI on _ThoughterPageState {
             );
           case 'notice':
             return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              padding: _kCardMessageInsets,
               child: AIWorkflowNoticeCard(
                 title: meta['title'] as String? ?? l10n.notice,
                 message: message.content,
@@ -333,7 +417,7 @@ extension _ThoughterUI on _ThoughterPageState {
             );
           case 'source_analysis_result':
             return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              padding: _kCardMessageInsets,
               child: AISourceAnalysisResultCard(
                 title: meta['title'] as String? ?? l10n.analysisResult,
                 author: meta['author'] as String?,
@@ -349,7 +433,7 @@ extension _ThoughterUI on _ThoughterPageState {
             );
           case 'insight_config':
             return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              padding: _kCardMessageInsets,
               child: AIInsightWorkflowCard(
                 title: l10n.commandInsight,
                 analysisTypes: _buildInsightTypeLabels(l10n),
@@ -394,7 +478,7 @@ extension _ThoughterUI on _ThoughterPageState {
               );
             }).toList();
             return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+              padding: _kCardMessageInsets,
               child: ToolProgressPanel(
                 title: l10n.toolExecutionProgress,
                 items: progressItems,
@@ -436,7 +520,7 @@ extension _ThoughterUI on _ThoughterPageState {
   /// 开场白：左侧一条细竖线的引言块，正文弱一档，不带任何操作。
   Widget _buildOpeningMessage(app_chat.ChatMessage message, ThemeData theme) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      padding: _kMessageInsets,
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -478,7 +562,7 @@ extension _ThoughterUI on _ThoughterPageState {
       AppShapeTokens.of(context).dialogRadius,
     );
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      padding: _kMessageInsets,
       // FractionallySizedBox 给出 78% 宽的紧约束，内层 Align 再放松成松约束，
       // 于是气泡短时贴着内容收缩、长时在 78% 处换行。
       child: FractionallySizedBox(
@@ -530,7 +614,7 @@ extension _ThoughterUI on _ThoughterPageState {
     final hasContent = message.content.isNotEmpty;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+      padding: _kMessageInsets,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -583,22 +667,44 @@ extension _ThoughterUI on _ThoughterPageState {
           // 出错时保留正文并显式标记，避免内容被静默删除
           if (message.state == MessageState.error)
             Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: EdgeInsets.only(top: hasContent ? 8 : 0),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     Icons.error_outline,
-                    size: 14,
+                    size: 16,
                     color: theme.colorScheme.error,
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    l10n.agentErrorGeneric,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.error,
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      l10n.agentErrorGeneric,
+                      // 原来是 labelSmall + 14 的图标，小得像脚注。回答断在
+                      // 半截是要用户做决定的事，不该比正文还小声。
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
                     ),
                   ),
+                  // 一个字都没吐出来就失败时，下面那行复制 / 重试不会出现
+                  // （它要求 hasContent），错误提示就是这一轮的全部内容——
+                  // 不在这里给个重试，用户只能把问题重新打一遍。
+                  if (!hasContent) ...[
+                    const SizedBox(width: 4),
+                    TextButton(
+                      key: const ValueKey('ai_assistant_error_retry'),
+                      onPressed:
+                          _isLoading ? null : () => _regenerateFrom(message),
+                      style: TextButton.styleFrom(
+                        foregroundColor: theme.colorScheme.error,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        minimumSize: const Size(0, 32),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      child: Text(l10n.regenerate),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1694,12 +1800,16 @@ class _EdgeFade extends StatelessWidget {
   const _EdgeFade({
     required this.height,
     required this.alignment,
+    required this.visible,
   });
 
   final double height;
 
   /// [Alignment.topCenter] 贴顶栏，[Alignment.bottomCenter] 贴输入框。
   final Alignment alignment;
+
+  /// 这个方向上是不是真的藏着内容。false 时整层淡出，不占任何视觉重量。
+  final bool visible;
 
   @override
   Widget build(BuildContext context) {
@@ -1708,13 +1818,18 @@ class _EdgeFade extends StatelessWidget {
     return Align(
       alignment: alignment,
       child: IgnorePointer(
-        child: Container(
-          height: height,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: fromTop ? Alignment.topCenter : Alignment.bottomCenter,
-              end: fromTop ? Alignment.bottomCenter : Alignment.topCenter,
-              colors: [surface, surface.withValues(alpha: 0)],
+        child: AnimatedOpacity(
+          opacity: visible ? 1 : 0,
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOut,
+          child: Container(
+            height: height,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: fromTop ? Alignment.topCenter : Alignment.bottomCenter,
+                end: fromTop ? Alignment.bottomCenter : Alignment.topCenter,
+                colors: [surface, surface.withValues(alpha: 0)],
+              ),
             ),
           ),
         ),

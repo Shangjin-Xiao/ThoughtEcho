@@ -64,6 +64,10 @@ extension _ThoughterSession on _ThoughterPageState {
   /// 删除空的会话（没有用户消息）
   void _cleanupEmptySession() {
     if (_currentSessionId == null) return;
+    // _messages 还没跟上 _currentSessionId 时不能下判断：那份列表属于上一个
+    // 会话，拿它去问"当前这个会话有没有人说过话"，答案是别人的。
+    // 连着点两下历史就会走到这里——第二次点进来时第一次的读库还没回来。
+    if (_messagesSessionId != _currentSessionId) return;
 
     // 检查是否有任何非系统消息
     final hasUserMessages = _messages.any((msg) => msg.isUser);
@@ -217,6 +221,8 @@ extension _ThoughterSession on _ThoughterPageState {
       title: _hasBoundNote ? _getQuotePreview() : l10n.aiChat,
     );
     _currentSessionId = session.id;
+    // 会话是给手里这批消息现建的，两者天然对得上。
+    _messagesSessionId = session.id;
   }
 
   String _sessionTypeForMode(ThoughterPageMode mode) {
@@ -277,6 +283,7 @@ extension _ThoughterSession on _ThoughterPageState {
   }
 
   Future<void> _loadSession(String sessionId) async {
+    final generation = ++_sessionLoadGeneration;
     try {
       // 从一个还没说过话的会话跳到历史里的另一段：同上，那一段不留。
       // 初始化时 _currentSessionId 还是 null，_cleanupEmptySession 会直接返回。
@@ -285,13 +292,18 @@ extension _ThoughterSession on _ThoughterPageState {
         _pendingPersistMessages.clear();
       }
       _currentSessionId = sessionId;
+      // 读库这段时间里 _messages 还是上一个会话的，先声明"对不上号"，
+      // 免得这期间又有人来切会话、拿这份旧列表去删新会话。
+      _messagesSessionId = null;
       final messages = await _chatSessionService.getMessages(sessionId);
-      if (!mounted) return;
+      // 读的过程中又切走了：这次的结果已经过期，写回去会盖掉新的那次。
+      if (!mounted || generation != _sessionLoadGeneration) return;
       _setState(() {
         _messages
           ..clear()
           ..addAll(messages);
       });
+      _messagesSessionId = sessionId;
       _scrollToBottom();
     } catch (e, stack) {
       AppLogger.e('Failed to load chat session', error: e, stackTrace: stack);
@@ -507,6 +519,9 @@ extension _ThoughterSession on _ThoughterPageState {
       // 上一段挂起的开场白跟着那个会话一起作废，留着会补写进新会话，
       // 变成开头两句一模一样的问候。
       _pendingPersistMessages.clear();
+      // 有正在读库的历史会话就让它作废，否则它晚一步返回会把刚清空的
+      // 对话区又填回去。
+      _sessionLoadGeneration++;
 
       _setState(() {
         _messages.clear();
@@ -516,6 +531,7 @@ extension _ThoughterSession on _ThoughterPageState {
       // 改成跟入口那条路一样留 null，等首条用户消息发出去时由
       // _ensureSessionCreated 顺手建；开场白先挂起，建完按原顺序补写。
       _currentSessionId = null;
+      _messagesSessionId = null;
       _addWelcomeMessage();
     } catch (e, stack) {
       AppLogger.e('Failed to start a new chat session',
