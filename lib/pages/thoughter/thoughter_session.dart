@@ -278,6 +278,12 @@ extension _ThoughterSession on _ThoughterPageState {
 
   Future<void> _loadSession(String sessionId) async {
     try {
+      // 从一个还没说过话的会话跳到历史里的另一段：同上，那一段不留。
+      // 初始化时 _currentSessionId 还是 null，_cleanupEmptySession 会直接返回。
+      if (_currentSessionId != sessionId) {
+        _cleanupEmptySession();
+        _pendingPersistMessages.clear();
+      }
       _currentSessionId = sessionId;
       final messages = await _chatSessionService.getMessages(sessionId);
       if (!mounted) return;
@@ -496,10 +502,20 @@ extension _ThoughterSession on _ThoughterPageState {
       _isLoading = false;
       _agentStatusDismissTimer?.cancel();
 
+      // 走之前先把上一段收拾掉：一直没说过话的会话不该留在历史里。
+      _cleanupEmptySession();
+      // 上一段挂起的开场白跟着那个会话一起作废，留着会补写进新会话，
+      // 变成开头两句一模一样的问候。
+      _pendingPersistMessages.clear();
+
       _setState(() {
         _messages.clear();
       });
-      await _createNewSession();
+      // 这里原来直接建会话——于是"点一下新建对话"本身就往历史里写了一条空
+      // 记录，用户只是想开个新话题、结果还没开口就已经被记了一笔。
+      // 改成跟入口那条路一样留 null，等首条用户消息发出去时由
+      // _ensureSessionCreated 顺手建；开场白先挂起，建完按原顺序补写。
+      _currentSessionId = null;
       _addWelcomeMessage();
     } catch (e, stack) {
       AppLogger.e('Failed to start a new chat session',

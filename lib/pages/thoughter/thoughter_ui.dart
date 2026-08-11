@@ -199,6 +199,16 @@ extension _ThoughterUI on _ThoughterPageState {
                         },
                       ),
                     ),
+                    // 渐隐压在列表上、回到底部那枚按钮下面：按钮要一直看得清，
+                    // 它是个操作，不该跟着正文一起淡掉。
+                    const _EdgeFade(
+                      height: 24,
+                      alignment: Alignment.topCenter,
+                    ),
+                    const _EdgeFade(
+                      height: 20,
+                      alignment: Alignment.bottomCenter,
+                    ),
                     if (_showScrollToBottom)
                       Positioned.fill(
                         child: Align(
@@ -479,7 +489,17 @@ extension _ThoughterUI on _ThoughterPageState {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary,
+              // 中性容器色，不是实心 primary。
+              //
+              // 这一页已经把强调色派了不少活：开场白的竖线、引用块的竖线、
+              // 深度思考的药丸、发送键、聚焦时的输入框描边——强调色在这里的
+              // 意思是"应用在对你说话"。用户自己说的那句话不该也染成同一个色，
+              // 何况实心 primary 配 onPrimary 是全页对比度最高的一块，眼睛
+              // 会先看到自己刚打的字，再去找 AI 的回答，顺序反了。
+              //
+              // 换成中性色之后分工清楚：有颜色的是应用给的东西，
+              // 这块灰的是你自己留下的。
+              color: theme.colorScheme.surfaceContainerHigh,
               borderRadius: radius,
             ),
             child: Text(
@@ -487,7 +507,7 @@ extension _ThoughterUI on _ThoughterPageState {
               // 和 AI 正文同字号：两侧字号不一样时，用户会觉得自己说的话
               // 和 AI 说的话不在一个层级上
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onPrimary,
+                color: theme.colorScheme.onSurface,
                 height: 1.5,
               ),
             ),
@@ -1657,6 +1677,50 @@ class _KeepAliveMessageItem extends StatefulWidget {
 
   @override
   State<_KeepAliveMessageItem> createState() => _KeepAliveMessageItemState();
+}
+
+/// 对话区上下缘的渐隐，让滚动的正文化进背景，而不是被顶栏和输入框
+/// 用一条硬边切断。
+///
+/// 用一层同色渐变盖在列表上，而不是 [ShaderMask]：页面背景是纯色的
+/// `scheme.surface`（主题里没有背景图，`scaffoldBackgroundColor` 就是它），
+/// 盖一层"从背景色到全透明"的渐变和真的把内容抠出透明度看起来完全一样，
+/// 但省掉每帧一次 saveLayer——这块区域正在跑流式 markdown，那一层离屏
+/// 合成是要还的。
+///
+/// 渐变的终点必须是 `surface` 的零透明度而不是 [Colors.transparent]：后者
+/// 是"透明的黑"，浅色主题下这条渐变会先灰一道再消失，边缘反倒更脏。
+class _EdgeFade extends StatelessWidget {
+  const _EdgeFade({
+    required this.height,
+    required this.alignment,
+  });
+
+  final double height;
+
+  /// [Alignment.topCenter] 贴顶栏，[Alignment.bottomCenter] 贴输入框。
+  final Alignment alignment;
+
+  @override
+  Widget build(BuildContext context) {
+    final surface = Theme.of(context).colorScheme.surface;
+    final fromTop = alignment == Alignment.topCenter;
+    return Align(
+      alignment: alignment,
+      child: IgnorePointer(
+        child: Container(
+          height: height,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: fromTop ? Alignment.topCenter : Alignment.bottomCenter,
+              end: fromTop ? Alignment.bottomCenter : Alignment.topCenter,
+              colors: [surface, surface.withValues(alpha: 0)],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _KeepAliveMessageItemState extends State<_KeepAliveMessageItem>
