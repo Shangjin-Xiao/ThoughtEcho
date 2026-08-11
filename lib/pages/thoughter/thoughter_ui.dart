@@ -702,18 +702,29 @@ extension _ThoughterUI on _ThoughterPageState {
                   // 不在这里给个重试，用户只能把问题重新打一遍。
                   if (!hasContent) ...[
                     const SizedBox(width: 4),
-                    TextButton(
-                      key: const ValueKey('ai_assistant_error_retry'),
-                      onPressed:
-                          _isLoading ? null : () => _regenerateFrom(message),
-                      style: TextButton.styleFrom(
-                        foregroundColor: theme.colorScheme.error,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        minimumSize: const Size(0, 32),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: VisualDensity.compact,
+                    // 也要能被压缩：窄屏或系统大字号下，错误文案 + 按钮文字
+                    // 会超出一行，非弹性子级会直接溢出。
+                    Flexible(
+                      child: TextButton(
+                        key: const ValueKey('ai_assistant_error_retry'),
+                        onPressed:
+                            _isLoading ? null : () => _regenerateFrom(message),
+                        style: TextButton.styleFrom(
+                          foregroundColor: theme.colorScheme.error,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          // 视觉上仍然紧凑，但点击区留够 40：这一轮失败时它是
+                          // 用户唯一的恢复入口，不该配全页最小的触摸目标。
+                          // 不用 shrinkWrap —— 那会连 Material 默认的
+                          // 48 点击区扩展一起去掉。
+                          minimumSize: const Size(0, 40),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        child: Text(
+                          l10n.regenerate,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      child: Text(l10n.regenerate),
                     ),
                   ],
                 ],
@@ -1008,6 +1019,10 @@ extension _ThoughterUI on _ThoughterPageState {
           // 整个壳都是输入热区：只有细细一行文字能点，在手机上太难命中。
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
+            // 这层只补视觉命中，语义由里面的 TextField 承载。默认会往语义树
+            // 加一个没有标签的可点击节点，读屏用户在同一块地方会遇到两个可操作
+            // 项，外面那个还说不出自己是干什么的。
+            excludeFromSemantics: true,
             onTap: () {
               if (!_inputFocusNode.hasFocus) {
                 _inputFocusNode.requestFocus();

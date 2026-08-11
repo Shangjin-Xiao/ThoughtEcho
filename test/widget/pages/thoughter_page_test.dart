@@ -119,6 +119,9 @@ class _InMemoryChatSessionService extends ChatSessionService {
   Future<List<app_chat.ChatMessage>> getMessages(String sessionId) async {
     final gate = loadGates[sessionId];
     if (gate != null) await gate.future;
+    // 真实实现读失败时把异常吞掉、返回空列表——这正是"读不出来"会被误当成
+    // "空会话"的根源，替身必须照做，否则复现不出那个 bug。
+    if (simulateReadFailure) return <app_chat.ChatMessage>[];
     return List<app_chat.ChatMessage>.from(
       _messages[sessionId] ?? const <app_chat.ChatMessage>[],
     );
@@ -143,14 +146,35 @@ class _InMemoryChatSessionService extends ChatSessionService {
     _messages.remove(sessionId);
   }
 
+  /// 模拟数据库临时读不出来。
+  ///
+  /// 要跟真实实现的降级方式一致才有意义：`getMessages` 读失败时**返回空列表**
+  /// （它把异常吞了），而 `sessionHasUserMessages` 返回 null。两者一起模拟，
+  /// "读失败"和"真的是空的"在 getMessages 那条路上才真正长得一模一样——
+  /// 只让新方法失败的话，旧实现照样能从 getMessages 拿到数据，测试就废了。
+  bool simulateReadFailure = false;
+
+  @override
+  Future<bool?> sessionHasUserMessages(String sessionId) async {
+    if (simulateReadFailure) return null;
+    final gate = loadGates[sessionId];
+    if (gate != null) await gate.future;
+    return _messages[sessionId]?.any((msg) => msg.isUser) ?? false;
+  }
+
   @override
   Future<List<ChatSession>> getAllSessions({
     int limit = 50,
     int offset = 0,
   }) async {
+    // 排序和分页都对齐真实实现（`is_pinned DESC, last_active_at DESC`
+    // 加 limit/offset），否则将来有人写分页或置顶的断言会在替身上假通过。
     final all = _sessions.values.toList()
-      ..sort((a, b) => b.lastActiveAt.compareTo(a.lastActiveAt));
-    return all.take(limit).toList();
+      ..sort((a, b) {
+        if (a.isPinned != b.isPinned) return a.isPinned ? -1 : 1;
+        return b.lastActiveAt.compareTo(a.lastActiveAt);
+      });
+    return all.skip(offset).take(limit).toList();
   }
 
   @override
@@ -2439,7 +2463,8 @@ void main() {
     // 切会话时 id 先换、消息要等一次异步读库才跟上，中间这段两者是错位的。
     // _cleanupEmptySession 靠"_messages 里有没有用户消息"判断当前会话空不空，
     // 错位期间那份列表还是上一个会话的，拿它去决定删谁会删错人。
-    testWidgets('rapid session switching does not delete the loaded session',
+    testWidgets(
+        'rapid session switching keeps both sessions and discards the stale load',
         (tester) async {
       final older = ChatSession(
         id: 'session-older',
@@ -2504,6 +2529,66 @@ void main() {
       final messages = state.debugMessagesForTest as List<app_chat.ChatMessage>;
       expect(messages.map((m) => m.content), contains('后来说的话'));
       expect(messages.map((m) => m.content), isNot(contains('早先说的话')));
+    });
+
+    // getMessages 在读失败时返回空列表，和"这个会话真的是空的"长得一模一样。
+    // 清理逻辑必须走 sessionHasUserMessages —— 它读不出来时返回 null，
+    // 那种情况下宁可把会话留着（服务层清扫会兜底），也不能删掉一整段对话。
+    testWidgets('a failed lookup never deletes the session it could not read',
+        (tester) async {
+      final existing = ChatSession(
+        id: 'session-unreadable',
+        sessionType: 'agent',
+        title: '读不出来的一段',
+        createdAt: DateTime(2026, 8, 1),
+        lastActiveAt: DateTime(2026, 8, 1),
+      );
+      chatSessionService.seedSession(existing, [
+        app_chat.ChatMessage(
+          id: 'm-1',
+          content: '这段话不能丢',
+          isUser: true,
+          role: 'user',
+          timestamp: DateTime(2026, 8, 1),
+        ),
+      ]);
+      // 让"有没有用户消息"这一问读不出来
+      chatSessionService.simulateReadFailure = true;
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: const ThoughterPage(
+            key: ValueKey('unreadable_session_page'),
+            entrySource: ThoughterEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final state = tester.state(find.byType(ThoughterPage)) as dynamic;
+      // 走进"_messages 和 _currentSessionId 对不上号"那条分支：
+      // 加载卡住时再切走，清理只能靠读库确认。
+      final gate = Completer<void>();
+      chatSessionService.loadGates[existing.id] = gate;
+      final pending =
+          state.debugLoadSessionForTest(existing.id) as Future<void>;
+      await tester.pump();
+      final second = state.debugLoadSessionForTest('session-does-not-exist')
+          as Future<void>;
+      await tester.pump();
+
+      gate.complete();
+      await tester.runAsync(() => Future.wait<void>([pending, second]));
+      await tester.pumpAndSettle();
+
+      expect(
+        chatSessionService.deletedSessionIds,
+        isNot(contains(existing.id)),
+        reason: '读不出来 ≠ 里面是空的，不能凭一次读库失败删掉整段对话',
+      );
+      expect(chatSessionService.storedMessages[existing.id], isNotNull);
     });
   });
 }

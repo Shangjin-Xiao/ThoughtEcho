@@ -896,6 +896,36 @@ class ChatSessionService extends ChangeNotifier {
     }
   }
 
+  /// 这个会话里有没有用户消息。
+  ///
+  /// **返回 `null` 表示没能确认**（数据库还没就绪，或者查询失败），必须和
+  /// "确认里面没有"分开看：调用方拿这个结果决定要不要删会话，而 [getMessages]
+  /// 在读失败时返回的是空列表——把读不出来当成空会话，一次临时的读库失败
+  /// 就会删掉用户一整段对话。
+  ///
+  /// 只查一行：这里要的是"有没有"，不是把整段对话读进内存。
+  Future<bool?> sessionHasUserMessages(String sessionId) async {
+    final db = await _getDatabaseForRead();
+    if (db == null) return null;
+    try {
+      final rows = await db.query(
+        'chat_messages',
+        columns: ['id'],
+        where: 'session_id = ? AND role = ?',
+        whereArgs: [sessionId, 'user'],
+        limit: 1,
+      );
+      return rows.isNotEmpty;
+    } catch (e) {
+      logError(
+        'ChatSessionService.sessionHasUserMessages 失败',
+        error: e,
+        source: 'ChatSessionService',
+      );
+      return null;
+    }
+  }
+
   Future<int> getMessageCount(String sessionId) async {
     final db = await _getDatabaseForRead();
     if (db == null) return 0;

@@ -86,9 +86,18 @@ Android 13+ 的手势返回本该是"当前页缩小、露出后面那页"，跟
   `PredictiveBackPageTransitionsBuilder`
 
 全项目 `PredictiveBack` 0 处，`pageTransitionsTheme` 0 处——现在走的是
-Flutter 默认的 `ZoomPageTransitionsBuilder`，返回是硬切。
+Flutter 默认的 `ZoomPageTransitionsBuilder`。**它本身是有转场动画的**（Android 10
+那套缩放），只是不支持预测式返回手势：返回不跟手、松手前看不到目标页、也没法反悔。
+`PredictiveBackPageTransitionsBuilder` 只负责这段视觉转场，手势能力由 Manifest
+那个系统回调开关决定，两者要一起配才完整。
 
-`targetSdkVersion 35` / `compileSdk 36`，版本条件早就满足了。
+`targetSdkVersion 35`，版本条件早就满足了。
+
+**返回逻辑本身不用动。** 仓库里没有 `WillPopScope`，已有 9 处 `PopScope`；
+`note_sync_page.dart` 的 `_onWillPop()` 是自定义的异步确认逻辑，外面由
+`PopScope(canPop: false, onPopInvokedWithResult: ...)` 承载，正是 Flutter
+文档给的异步确认写法。这一条只涉及 Manifest 开关和转场 builder 两处，
+不需要迁移任何返回处理代码。
 
 ---
 
@@ -106,13 +115,26 @@ Flutter 默认的 `ZoomPageTransitionsBuilder`，返回是硬切。
 
 ---
 
-## 四、系统栏 / edge-to-edge 没人管
+## 四、系统栏 / edge-to-edge 只覆盖了两个页面
 
-全项目 **0 处** `SystemChrome`、0 处 `SystemUiMode`。
+系统栏样式**不是没人管，是只管了两处**：
 
-而 `targetSdkVersion 35`：**Android 15 起系统强制 edge-to-edge**，
-`compileSdk 36` 下连 `windowOptOutEdgeToEdgeEnforcement` 那个退出开关都没了。
-也就是说这个 app 已经在 edge-to-edge 模式下跑，只是没人显式处理过。
+- `lib/pages/home_page.dart:788` —— `AnnotatedRegion<SystemUiOverlayStyle>`，
+  样式由 `_buildSystemUiOverlayStyle()`（同文件 1088 行）按主题算出来
+- `lib/widgets/anniversary_animation_overlay.dart:159` —— 沉浸式覆盖层，
+  用的是写死的 `_immersiveOverlayStyle`
+
+其余页面没有任何 `AnnotatedRegion` / `SystemUiOverlayStyle`，靠 `AppBar` 自己按
+背景亮度推的 `systemOverlayStyle` 兜着——**底部导航栏那条它管不到**。
+`SystemChrome.setEnabledSystemUIMode` 只出现在测试里
+（`test/widget/widgets/anniversary_animation_overlay_test.dart:113`），生产代码 0 处。
+
+版本这块要说准：`targetSdkVersion 35` 意味着**在 Android 15（API 35）上受
+edge-to-edge 强制约束**；`compileSdk 36` 只决定编译时能用哪些 API，不等于
+target 了 Android 16。退出开关 `windowOptOutEdgeToEdgeEnforcement` 在
+Android 15 上仍然可用，只有 target 36 的应用在 Android 16 设备上才被禁用。
+而 `android/app/src/main/res/values/styles.xml` 和 `values-night/styles.xml`
+两处都没有配这个属性——**也就是没有退出，应用确实在 edge-to-edge 下跑。**
 
 Flutter 的 `SafeArea` 挡住了大部分问题，但状态栏 / 导航栏的图标颜色
 （`SystemUiOverlayStyle`）在主题切换时是否跟着走，需要真机验一下——
@@ -130,6 +152,7 @@ Flutter 的 `SafeArea` 挡住了大部分问题，但状态栏 / 导航栏的图
 | 弹出菜单 | 5 处 `PopupMenuButton`，0 处 `MenuAnchor` | M3 用 `MenuAnchor` 取代 `PopupMenuButton`。数量少，收益也小 |
 | `Card` 变体 | 177 处 `Card(`，0 处 `Card.filled` / `Card.outlined` | **基本可以不管**：`_styleCardTheme` 已经统一压成 elevation 0 + 描边，视觉上已经是 outlined 的效果，只是没用新 API |
 | `ElevatedButton` | 32 处，与 81 处 `FilledButton` 混用 | M3 里 `ElevatedButton` 是"低强调但需要和背景分离"的特殊场景。32 : 81 这个比例更像是没统一，而不是有意区分。值得逐个看一眼该不该换成 `FilledButton` / `FilledButton.tonal` |
+| `chat_input_suggestions.dart` | `lib/` 里没有任何地方 import 它 | 一个横向滚动的 `ActionChip` 列表，看着像当初为 Thoughter 空状态写的、写完忘了接上。**先别删**：PR #463 正在给它加 `generateSuggestions()` 和单元测试，删掉会和那个 PR 硬冲突。等 #463 落地后再决定是接上（比如首条回答之后给两三个追问）还是删掉 |
 
 ---
 

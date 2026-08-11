@@ -88,10 +88,19 @@ extension _ThoughterSession on _ThoughterPageState {
   ///
   /// 只在内存状态不可信时走这条路。会话是 [_ensureSessionCreated] 现建的时候
   /// id 和消息一起落地，不会走到这里，所以不存在"首条消息还没写完就被删"。
+  ///
+  /// 这是「先读、再删」的两段异步操作，中间那段窗口要防两件事，见下面两处 return。
   Future<void> _deleteSessionIfEmpty(String sessionId) async {
+    final hasUserMessages =
+        await _chatSessionService.sessionHasUserMessages(sessionId);
+    // null = 没读出来。读不出来不等于里面是空的——不能凭一次临时的读库失败
+    // 删掉用户整段对话。留着，服务层那轮清扫会兜底。
+    if (hasUserMessages != false) return;
+    // 读库这段时间里用户可能又切回了这个会话并且说了话：那条消息在我们这份
+    // 快照之后才落库，删下去就是刚写的第一句话跟着整段一起没。
+    // 回到当前会话就不删。
+    if (!mounted || _currentSessionId == sessionId) return;
     try {
-      final messages = await _chatSessionService.getMessages(sessionId);
-      if (messages.any((msg) => msg.isUser)) return;
       await _chatSessionService.deleteSession(sessionId);
     } catch (e) {
       logDebug('清理空会话失败: $sessionId - $e');
@@ -322,6 +331,17 @@ extension _ThoughterSession on _ThoughterPageState {
       _scrollToBottom();
     } catch (e, stack) {
       AppLogger.e('Failed to load chat session', error: e, stackTrace: stack);
+      // 读库失败时不能就这么走开：id 已经换成新会话，_messages 还停在上一个，
+      // _messagesSessionId 停在 null。那之后界面显示的是旧会话的对话，用户
+      // 接着说的话却写进新会话——看到的和落库的是两回事。
+      //
+      // 只有这次加载还是最新一代时才收拾，否则会踩掉后来那次正在进行的加载。
+      if (mounted && generation == _sessionLoadGeneration) {
+        _setState(() {
+          _messages.clear();
+        });
+        _messagesSessionId = sessionId;
+      }
     }
   }
 
