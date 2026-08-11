@@ -1,0 +1,679 @@
+<title>Thoughter · 玻璃箱（风格 E）</title>
+<style>
+  /* ============ E · 玻璃箱 / 可操作的现场 ============
+     整页就是 Thoughter 本身。左边是你看到的对话，右边是同一时刻
+     机器那侧发生的事：调了哪把工具、拿回什么、往记忆里写了什么。
+     论点即形式——“透明”这件事只能演，不能讲。 */
+
+  :root {
+    --app: #fbfaf7;
+    --app-2: #ffffff;
+    --app-3: #f2efe9;
+    --line: #e3ded4;
+    --line-2: #cfc7b8;
+    --ink: #211c14;
+    --ink-2: #5c5346;
+    --ink-3: #8d8271;
+    --brand: #a67c52;
+    --brand-soft: #f3e9dd;
+    --ok: #4a8560;
+    --warn: #b5622f;
+
+    --box: #10130f;
+    --box-2: #171b16;
+    --box-line: #262c25;
+    --box-fg: #d6ded2;
+    --box-fg-2: #8b968a;
+    --box-green: #7dc98f;
+    --box-amber: #d7a45c;
+    --box-blue: #79aecb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --app: #16150f;
+      --app-2: #1d1c15;
+      --app-3: #24221a;
+      --line: #302d24;
+      --line-2: #443f33;
+      --ink: #ece7dc;
+      --ink-2: #b6ae9f;
+      --ink-3: #857d6e;
+      --brand: #cb9f74;
+      --brand-soft: #2c2418;
+      --ok: #7bbf93;
+      --warn: #dd925f;
+      --box: #0a0c09;
+      --box-2: #111410;
+    }
+  }
+  :root[data-theme="dark"] {
+    --app: #16150f;
+    --app-2: #1d1c15;
+    --app-3: #24221a;
+    --line: #302d24;
+    --line-2: #443f33;
+    --ink: #ece7dc;
+    --ink-2: #b6ae9f;
+    --ink-3: #857d6e;
+    --brand: #cb9f74;
+    --brand-soft: #2c2418;
+    --ok: #7bbf93;
+    --warn: #dd925f;
+    --box: #0a0c09;
+    --box-2: #111410;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--app); color: var(--ink);
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    font-size: 15px; line-height: 1.75; -webkit-font-smoothing: antialiased;
+  }
+  .mono {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 22px; }
+
+  /* —— 顶栏 —— */
+  header {
+    border-bottom: 1px solid var(--line); background: var(--app);
+    position: sticky; top: 0; z-index: 40;
+  }
+  .hd { display: flex; align-items: center; gap: 13px; height: 52px; }
+  .hd .b { font-weight: 600; text-decoration: none; color: var(--ink); }
+  .hd .s { color: var(--line-2); }
+  .hd .c { color: var(--ink-2); font-size: 14px; }
+  .hd .live {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 7px;
+    font-size: 11.5px; letter-spacing: 0.12em; color: var(--ink-3);
+  }
+  .hd .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); font-style: normal; }
+  .hd .back { font-size: 13px; color: var(--ink-2); text-decoration: none; margin-left: 16px; }
+  .hd .back:hover { color: var(--brand); }
+
+  /* —— 引子 —— */
+  .intro { padding: 46px 0 26px; }
+  .tagline { font-size: 12px; letter-spacing: 0.2em; color: var(--brand); }
+  h1 {
+    font-size: clamp(30px, 4.6vw, 46px); line-height: 1.22; margin: 14px 0 0;
+    font-weight: 650; letter-spacing: -0.015em; max-width: 15em; text-wrap: balance;
+  }
+  .intro p { color: var(--ink-2); max-width: 40em; margin: 16px 0 0; font-size: 16.5px; }
+  .intro p b { color: var(--ink); font-weight: 600; }
+
+  /* —— 玻璃箱主体 —— */
+  .box {
+    display: grid; grid-template-columns: minmax(0, 1.06fr) minmax(0, 1fr);
+    border: 1px solid var(--line-2); border-radius: 10px; overflow: hidden;
+    margin-top: 30px; box-shadow: 0 18px 44px rgba(40, 30, 15, 0.08);
+    min-height: 560px;
+  }
+  @media (max-width: 900px) { .box { grid-template-columns: 1fr; } }
+
+  /* 左：对话 */
+  .side-app { background: var(--app-2); display: flex; flex-direction: column; }
+  .pane-bar {
+    display: flex; align-items: center; gap: 9px; padding: 10px 16px;
+    border-bottom: 1px solid var(--line); font-size: 11.5px;
+    letter-spacing: 0.13em; color: var(--ink-3); background: var(--app-3);
+  }
+  .pane-bar .r { margin-left: auto; }
+  .stream { padding: 18px 18px 8px; flex: 1; overflow-y: auto; max-height: 500px; }
+  .msg { margin-bottom: 16px; animation: pop 0.32s cubic-bezier(0.2,0.8,0.3,1); }
+  @keyframes pop { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .msg.u { display: flex; justify-content: flex-end; }
+  .msg.u .bub {
+    background: var(--brand); color: #fff; border-radius: 14px 14px 3px 14px;
+    padding: 9px 14px; max-width: 82%; font-size: 15px;
+  }
+  .msg.a .who {
+    font-size: 11px; letter-spacing: 0.14em; color: var(--ink-3); margin-bottom: 5px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .msg.a .who b { color: var(--brand); font-weight: 600; letter-spacing: 0.06em; }
+  .msg.a .bub { font-size: 15px; color: var(--ink); }
+  .msg.a .bub em { font-style: normal; color: var(--ink-2); }
+
+  .thinking { display: inline-flex; gap: 4px; align-items: center; padding: 4px 0; }
+  .thinking i {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--line-2);
+    animation: bl 1.1s infinite ease-in-out;
+  }
+  .thinking i:nth-child(2) { animation-delay: 0.15s; }
+  .thinking i:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bl { 0%,80%,100% { opacity: 0.3; } 40% { opacity: 1; } }
+
+  .toolchip {
+    display: inline-flex; align-items: center; gap: 7px; font-size: 12px;
+    border: 1px solid var(--line); border-radius: 20px; padding: 2px 11px;
+    color: var(--ink-2); background: var(--app-3); margin: 0 5px 5px 0;
+  }
+  .toolchip .d { width: 5px; height: 5px; border-radius: 50%; background: var(--ok); }
+  .toolchip.rw .d { background: var(--warn); }
+
+  /* 提案卡 */
+  .prop {
+    border: 1px solid var(--brand); border-radius: 10px; overflow: hidden;
+    margin-top: 10px; background: var(--app-2);
+  }
+  .prop .ph {
+    background: var(--brand-soft); color: var(--brand); font-size: 11px;
+    letter-spacing: 0.13em; padding: 6px 13px; display: flex;
+  }
+  .prop .ph span:last-child { margin-left: auto; opacity: 0.75; }
+  .prop .pb { padding: 13px 14px 12px; font-size: 15px; line-height: 1.8; }
+  .prop del { color: var(--ink-3); }
+  .prop ins { text-decoration: none; background: color-mix(in srgb, var(--ok) 20%, transparent); border-radius: 3px; padding: 0 2px; }
+  .prop .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 11px; }
+  .prop .tags i {
+    font-style: normal; font-size: 11.5px; border: 1px solid var(--line);
+    border-radius: 20px; padding: 1px 9px; color: var(--ink-2);
+  }
+  .prop .pa { display: flex; border-top: 1px solid var(--line); }
+  .prop .pa button {
+    font: inherit; font-size: 13.5px; flex: 1; padding: 9px 0; cursor: pointer;
+    border: 0; border-right: 1px solid var(--line); background: transparent; color: var(--ink-2);
+  }
+  .prop .pa button:last-child { border-right: 0; }
+  .prop .pa button.take { color: var(--brand); font-weight: 600; }
+  .prop .pa button:hover { background: var(--app-3); }
+  .applied {
+    font-size: 12.5px; color: var(--ok); padding: 9px 13px; border-top: 1px solid var(--line);
+    display: flex; align-items: center; gap: 7px;
+  }
+
+  /* 提问区 */
+  .asks { border-top: 1px solid var(--line); padding: 13px 16px 16px; background: var(--app-3); }
+  .asks .lb { font-size: 11.5px; letter-spacing: 0.1em; color: var(--ink-3); margin-bottom: 9px; }
+  .asks .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ask {
+    font: inherit; font-size: 13.5px; cursor: pointer; text-align: left;
+    border: 1px solid var(--line-2); background: var(--app-2); color: var(--ink);
+    border-radius: 20px; padding: 6px 14px; transition: border-color 0.15s, transform 0.1s;
+  }
+  .ask:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
+  .ask:active:not(:disabled) { transform: translateY(1px); }
+  .ask:disabled { opacity: 0.42; cursor: default; }
+  .reset { margin-left: auto; border-style: dashed; color: var(--ink-3); }
+
+  /* 右：机器视角 */
+  .side-box {
+    background: var(--box); color: var(--box-fg); border-left: 1px solid var(--line-2);
+    display: flex; flex-direction: column;
+  }
+  @media (max-width: 900px) { .side-box { border-left: 0; border-top: 1px solid var(--line-2); } }
+  .box-bar {
+    display: flex; align-items: center; gap: 9px; padding: 10px 16px;
+    border-bottom: 1px solid var(--box-line); font-size: 11.5px;
+    letter-spacing: 0.13em; color: var(--box-fg-2); background: var(--box-2);
+  }
+  .box-bar .r { margin-left: auto; }
+  .box-scroll { flex: 1; overflow-y: auto; max-height: 500px; padding: 14px 16px 18px; }
+  .grp { margin-bottom: 20px; }
+  .grp > .gl {
+    font-size: 10.5px; letter-spacing: 0.16em; color: var(--box-fg-2);
+    border-bottom: 1px solid var(--box-line); padding-bottom: 6px; margin-bottom: 10px;
+    display: flex;
+  }
+  .grp > .gl span { margin-left: auto; opacity: 0.7; }
+  .ctxline { font-size: 12.5px; color: var(--box-fg); padding: 3px 0 3px 12px; border-left: 2px solid var(--box-line); }
+  .ctxline b { color: var(--box-blue); font-weight: 500; }
+  .empty { font-size: 12.5px; color: var(--box-fg-2); opacity: 0.7; }
+
+  .call {
+    border-left: 2px solid var(--box-green); padding: 5px 0 7px 11px; margin-bottom: 9px;
+    animation: slide 0.3s ease;
+  }
+  @keyframes slide { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+  .call.rw { border-left-color: var(--box-amber); }
+  .call .n { font-size: 12.5px; color: var(--box-fg); }
+  .call .n b { color: var(--box-green); font-weight: 500; }
+  .call.rw .n b { color: var(--box-amber); }
+  .call .a { font-size: 11.5px; color: var(--box-fg-2); word-break: break-all; }
+  .call .r { font-size: 11.5px; color: var(--box-fg); opacity: 0.86; margin-top: 3px; }
+  .call .r::before { content: "→ "; color: var(--box-fg-2); }
+  .call .t { font-size: 10.5px; color: var(--box-fg-2); opacity: 0.6; float: right; }
+
+  .memrow {
+    font-size: 12px; padding: 6px 0 6px 11px; border-left: 2px solid var(--box-line);
+    margin-bottom: 6px; color: var(--box-fg);
+  }
+  .memrow .k { font-size: 10px; letter-spacing: 0.12em; color: var(--box-amber); display: block; }
+  .memrow.fresh { border-left-color: var(--box-amber); animation: slide 0.3s ease; }
+
+  /* —— 说明条 —— */
+  .legend {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 22px 0 0;
+  }
+  @media (max-width: 780px) { .legend { grid-template-columns: 1fr; } }
+  .lg { border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; background: var(--app-2); }
+  .lg b { display: block; font-size: 14px; margin-bottom: 4px; }
+  .lg span { font-size: 13px; color: var(--ink-2); }
+
+  /* —— 下方章节 —— */
+  section { padding: 60px 0 0; }
+  .sh { display: flex; align-items: baseline; gap: 12px; border-top: 1px solid var(--line-2); padding-top: 13px; margin-bottom: 22px; }
+  .sh .n { font-size: 11.5px; color: var(--brand); letter-spacing: 0.12em; }
+  .sh h2 { font-size: 21px; font-weight: 650; margin: 0; }
+  .sh .t { margin-left: auto; font-size: 12px; color: var(--ink-3); }
+  @media (max-width: 620px) { .sh .t { display: none; } }
+  .copy { color: var(--ink-2); max-width: 42em; margin: 0 0 20px; }
+  .copy b { color: var(--ink); font-weight: 600; }
+
+  .toolgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+  .tg { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; background: var(--app-2); }
+  .tg code { font-size: 12.5px; color: var(--ink); }
+  .tg i { font-style: normal; font-size: 10.5px; letter-spacing: 0.12em; color: var(--ok); }
+  .tg.rw i { color: var(--warn); }
+  .tg p { font-size: 12.5px; color: var(--ink-2); margin: 6px 0 0; line-height: 1.6; }
+
+  .rules { list-style: none; padding: 0; margin: 0; }
+  .rules li {
+    display: grid; grid-template-columns: 62px 1fr; gap: 14px; padding: 11px 0;
+    border-bottom: 1px solid var(--line); font-size: 14.5px; color: var(--ink-2);
+  }
+  .rules .t { font-size: 10.5px; letter-spacing: 0.1em; padding-top: 4px; }
+  .rules .t.no { color: var(--warn); }
+  .rules .t.yes { color: var(--ok); }
+  .rules b { color: var(--ink); font-weight: 600; }
+
+  .endcta {
+    margin-top: 60px; border: 1px solid var(--line-2); border-radius: 10px;
+    background: var(--app-2); padding: 26px 28px; display: flex; gap: 24px;
+    align-items: center; flex-wrap: wrap;
+  }
+  .endcta h3 { margin: 0 0 5px; font-size: 18px; font-weight: 650; }
+  .endcta p { margin: 0; color: var(--ink-2); font-size: 14px; max-width: 32em; }
+  .endcta .a { margin-left: auto; display: flex; gap: 10px; }
+  .btn {
+    text-decoration: none; font-size: 14px; padding: 9px 20px; border-radius: 22px;
+    border: 1px solid var(--line-2); color: var(--ink);
+  }
+  .btn.pri { background: var(--brand); border-color: var(--brand); color: #fff; }
+  footer {
+    margin-top: 40px; border-top: 1px solid var(--line); padding: 18px 0 56px;
+    font-size: 12.5px; color: var(--ink-3); display: flex; gap: 18px; flex-wrap: wrap;
+  }
+  footer a { color: var(--ink-3); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+
+<header>
+  <div class="wrap hd">
+    <a class="b" href="#">心迹</a><span class="s mono">/</span><span class="c">Thoughter</span>
+    <span class="live"><i></i>可操作的演示</span>
+    <a class="back" href="#">← 回主站</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="intro">
+    <div class="tagline mono">心迹里的 AI 助手 · BETA</div>
+    <h1>别听它说自己怎么工作，<br />自己按一下看看。</h1>
+    <p>
+      左边是你在心迹里会看到的对话。右边是<b>同一时刻机器那侧发生的事</b>——
+      它调了哪把工具、拿回了什么、往长期记忆里写了什么。挑一句话按下去。
+    </p>
+  </div>
+
+  <!-- ============ 玻璃箱 ============ -->
+  <div class="box">
+    <!-- 左 -->
+    <div class="side-app">
+      <div class="pane-bar mono"><span>你看到的</span><span class="r" id="turnCount">会话 · 0 轮</span></div>
+      <div class="stream" id="stream">
+        <div class="msg a">
+          <div class="who mono"><b>THOUGHTER</b></div>
+          <div class="bub">
+            今天写了三条，最近的一条在河堤。想聊哪条，还是先随便说点什么？
+            <em>（我改不了你的笔记，只能递提案给你点。）</em>
+          </div>
+        </div>
+      </div>
+      <div class="asks">
+        <div class="lb mono">挑一句发给它</div>
+        <div class="row" id="askRow">
+          <button class="ask" data-s="0" type="button">把今早河堤那条润一下，别太文艺</button>
+          <button class="ask" data-s="1" type="button">帮我记一下现在</button>
+          <button class="ask" data-s="2" type="button">我这半年是不是一直在写同一件事？</button>
+          <button class="ask" data-s="3" type="button">以后回复别这么长</button>
+          <button class="ask reset" id="resetBtn" type="button">重来</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右 -->
+    <div class="side-box">
+      <div class="box-bar mono"><span>机器那侧</span><span class="r" id="callCount">0 次调用</span></div>
+      <div class="box-scroll" id="boxScroll">
+        <div class="grp">
+          <div class="gl mono">本轮注入的上下文<span>自动</span></div>
+          <div class="ctxline mono">现在是 <b>2026-08-11 周二 上午 09:14</b></div>
+          <div class="ctxline mono">画像层 <b>2 条</b>已随本轮带上</div>
+          <div class="ctxline mono">笔记正文按 <b>不可信数据</b> 处理</div>
+        </div>
+        <div class="grp">
+          <div class="gl mono">工具调用<span id="callHint">等待</span></div>
+          <div id="calls"><div class="empty mono">// 还没有调用</div></div>
+        </div>
+        <div class="grp">
+          <div class="gl mono">长期记忆<span id="memCount">2 条</span></div>
+          <div id="mems">
+            <div class="memrow mono"><span class="k">PROFILE · 表达偏好</span>回复保持碎句，不要展开成段</div>
+            <div class="memrow mono"><span class="k">PROFILE · 身份</span>叫他“阿槐”（用户在设置里填写）</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="lg"><b>七把只读工具</b><span>翻笔记、读原文、取标签、问天气、回忆、搜索、抓网页。碰不到你的数据。</span></div>
+    <div class="lg"><b>三把需你点头</b><span>新建、修改、写记忆。前两把只出提案，每轮最多一张。</span></div>
+    <div class="lg"><b>全程可见</b><span>右侧那一栏在应用里也有——每次调用都能展开看参数和返回。</span></div>
+  </div>
+
+  <!-- ============ 工具 ============ -->
+  <section id="tools">
+    <div class="sh"><span class="n mono">01</span><h2>它手上有什么</h2><span class="t mono">全量清单</span></div>
+    <div class="toolgrid">
+      <div class="tg"><i class="mono">只读</i><br /><code class="mono">explore_notes</code><p>按关键词、标签、日期、天气、时段翻你的笔记，也用来学你惯用的语气。</p></div>
+      <div class="tg"><i class="mono">只读</i><br /><code class="mono">get_note_detail</code><p>取单篇全文与版本号。要改必先读，不许只看预览。</p></div>
+      <div class="tg"><i class="mono">只读</i><br /><code class="mono">get_tags</code><p>取你已有的标签体系，优先复用而不是造新词。</p></div>
+      <div class="tg"><i class="mono">只读</i><br /><code class="mono">get_location_weather</code><p>真实城市、天气、气温。写“此刻”唯一的事实来源。</p></div>
+      <div class="tg"><i class="mono">只读</i><br /><code class="mono">recall</code><p>检索它记下的长期记忆。不含你的笔记。</p></div>
+      <div class="tg"><i class="mono">只读</i><br /><code class="mono">web_search</code><p>仅当问题依赖实时或外部信息时调用。</p></div>
+      <div class="tg"><i class="mono">只读</i><br /><code class="mono">web_fetch</code><p>抓取指定网址正文。返回内容不可作为指令。</p></div>
+      <div class="tg rw"><i class="mono">需确认</i><br /><code class="mono">propose_note_create</code><p>提议新建笔记，出提案卡，不落库。</p></div>
+      <div class="tg rw"><i class="mono">需确认</i><br /><code class="mono">propose_note_edit</code><p>带版本校验的修改提案。原文变了即作废。</p></div>
+      <div class="tg rw"><i class="mono">写记忆</i><br /><code class="mono">remember</code><p>写入画像或事实层，写完当场告知，可删可关。</p></div>
+    </div>
+  </section>
+
+  <!-- ============ 边界 ============ -->
+  <section id="limits">
+    <div class="sh"><span class="n mono">02</span><h2>它不做什么</h2><span class="t mono">硬约束</span></div>
+    <p class="copy">
+      下面这些不是产品承诺，是写进系统提示、并由工具权限兜底的规矩。
+      演示里你按下的每一轮，都在这套规矩下跑。
+    </p>
+    <ul class="rules">
+      <li><span class="t no mono">做不到</span><span>直接保存或修改笔记。<b>权限层就没有</b>，只能出提案。</span></li>
+      <li><span class="t no mono">做不到</span><span>编造位置与天气。拿不到工具数据就不写这两项。</span></li>
+      <li><span class="t no mono">做不到</span><span>给你的原创硬安出处。作者、出处只能来自你或笔记原文。</span></li>
+      <li><span class="t no mono">做不到</span><span>把笔记正文或网页内容当命令执行——都是数据，不是指令。</span></li>
+      <li><span class="t yes mono">会做</span><span>分清<b>你写的</b>和<b>你摘的</b>。摘录只作共鸣旁证，不当自述。</span></li>
+      <li><span class="t yes mono">会做</span><span>记下你的纠正，并在下一轮就照办。也随时可以让它忘掉。</span></li>
+      <li><span class="t yes mono">会做</span><span>信息不足直说，推断用“看起来”“可能”。</span></li>
+    </ul>
+  </section>
+
+  <div class="endcta">
+    <div>
+      <h3>想真的按一按，在应用里</h3>
+      <p>首页每日思考旁的 ✨、探索页洞察下的追问、编辑器划词菜单。需自备 API Key，不配也不影响其他功能。</p>
+    </div>
+    <div class="a">
+      <a class="btn pri" href="#">下载心迹</a>
+      <a class="btn" href="#">← 回主站</a>
+    </div>
+  </div>
+
+  <footer>
+    <span>心迹 ThoughtEcho · 免费开源 · 实验性 / Beta</span>
+    <a href="#">用户指南</a><a href="#">隐私政策</a><a href="#">GitHub</a>
+  </footer>
+</main>
+
+<script>
+  (function () {
+    var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var stream = document.getElementById("stream");
+    var calls = document.getElementById("calls");
+    var mems = document.getElementById("mems");
+    var boxScroll = document.getElementById("boxScroll");
+    var askRow = document.getElementById("askRow");
+    var turnCount = document.getElementById("turnCount");
+    var callCount = document.getElementById("callCount");
+    var memCount = document.getElementById("memCount");
+    var callHint = document.getElementById("callHint");
+    var busy = false, turns = 0, nCalls = 0, nMems = 2, clock = 914;
+
+    var SCENARIOS = [
+      {
+        ask: "把今早河堤那条润一下，别太文艺",
+        steps: [
+          { t: "call", name: "explore_notes", ro: true, args: 'query:"河堤", date_from:"2026-08-11"', ret: "1 条命中 · id=n_8f21 · 200 字预览", ms: 620 },
+          { t: "call", name: "get_note_detail", ro: true, args: 'id:"n_8f21"', ret: "全文 · revision=7 · author=∅ source=∅（原创）", ms: 560 },
+          { t: "call", name: "recall", ro: true, args: 'query:"文字偏好"', ret: 'profile: "回复保持碎句，不要展开成段"', ms: 480 },
+          { t: "call", name: "propose_note_edit", ro: false, args: 'id:"n_8f21", revision:7, old_text:"人很多"', ret: "提案已生成，等待用户确认", ms: 700 },
+          {
+            t: "say",
+            text: "改了一处，把“人很多”换成看得见的画面。原文没动，采纳才写进去。",
+            chips: [["explore_notes", true], ["get_note_detail", true], ["recall", true], ["propose_note_edit", false]],
+            prop: {
+              head: "修改提案 · n_8f21 · rev 7",
+              html: '清晨六点半的河堤，<del>人很多</del><ins>遛狗的比跑步的多</ins>，水面上有一层刚要散掉的雾。',
+              tags: ["#晨间", "#随笔", "原创 · 未署名"],
+              done: "已写入笔记 · 版本 7 → 8"
+            }
+          }
+        ]
+      },
+      {
+        ask: "帮我记一下现在",
+        steps: [
+          { t: "call", name: "get_location_weather", ro: true, args: "—", ret: "杭州 · 多云 · 21℃ · 上午", ms: 560 },
+          { t: "call", name: "explore_notes", ro: true, args: "limit:5（取样语气）", ret: "5 条 · 平均 47 字 · 多为碎句、第一人称", ms: 620 },
+          { t: "call", name: "get_tags", ro: true, args: "limit:40", ret: "已有 23 个标签 · 命中 #晨间 #随笔", ms: 420 },
+          { t: "call", name: "propose_note_create", ro: false, args: 'kind:"plain", include_weather:true', ret: "提案已生成，等待用户确认", ms: 680 },
+          {
+            t: "say",
+            text: "你没给素材，我先看了此刻的天气，又翻了最近五条学你的写法——碎句、不铺陈。照这个样子拟了一条。",
+            chips: [["get_location_weather", true], ["explore_notes", true], ["get_tags", true], ["propose_note_create", false]],
+            prop: {
+              head: "新建提案 · 普通笔记",
+              head2: "位置天气来自工具",
+              html: "上午九点多，云压得低。楼下那棵樟树昨夜掉了一地叶子，还没人扫。",
+              tags: ["#晨间", "#随笔", "📍 杭州 · 多云 21℃"],
+              done: "已保存 · 新笔记 n_9a04"
+            }
+          }
+        ]
+      },
+      {
+        ask: "我这半年是不是一直在写同一件事？",
+        steps: [
+          { t: "call", name: "explore_notes", ro: true, args: 'date_from:"2026-02-11", limit:20', ret: "第 1 页 · 20/63 条", ms: 640 },
+          { t: "call", name: "explore_notes", ro: true, args: "offset:20, limit:20", ret: "第 2 页 · 20/63 条", ms: 470 },
+          { t: "call", name: "explore_notes", ro: true, args: "offset:40, limit:23", ret: "第 3 页 · 23/63 条 · 其中 19 条带 author/source", ms: 470 },
+          {
+            t: "say",
+            text: "六个月 63 条，其中 19 条是摘录不是你写的——那部分我只当作“这句击中过你”，不算你的自述。剩下 44 条原创里，有 26 条绕着“要不要换个城市”。三月密集，五月停了一个月，七月又回来了，而且措辞从“想”变成了“什么时候”。<em>这是我从措辞看出来的倾向，不是结论。</em>",
+            chips: [["explore_notes ×3", true]]
+          }
+        ]
+      },
+      {
+        ask: "以后回复别这么长",
+        steps: [
+          { t: "call", name: "recall", ro: true, args: 'query:"回复长度"', ret: "命中同类条目 1 条，将原位更新", ms: 430 },
+          { t: "call", name: "remember", ro: false, args: 'layer:"profile", op:"update"', ret: "已更新画像条目 · 立即生效", ms: 520 },
+          {
+            t: "say",
+            text: "记下了：<em>回复控制在三句以内，不展开。</em>没有新增一条相反的，是把原来那条改掉了。想让我忘就说一声。",
+            chips: [["recall", true], ["remember", false]],
+            mem: { k: "PROFILE · 表达偏好（刚更新）", v: "回复控制在三句以内，不展开" }
+          }
+        ]
+      }
+    ];
+
+    function el(html) {
+      var d = document.createElement("div");
+      d.innerHTML = html.trim();
+      return d.firstChild;
+    }
+    function scrollBoth() {
+      stream.scrollTop = stream.scrollHeight;
+      boxScroll.scrollTop = boxScroll.scrollHeight;
+    }
+    function wait(ms) {
+      return new Promise(function (r) { setTimeout(r, reduce ? 0 : ms); });
+    }
+    function stamp() {
+      clock += 1;
+      var h = String(Math.floor(clock / 100)).padStart(2, "0");
+      var m = String(clock % 100).padStart(2, "0");
+      return h + ":" + m;
+    }
+    function setBusy(v) {
+      busy = v;
+      var bs = askRow.querySelectorAll(".ask");
+      for (var i = 0; i < bs.length; i++) bs[i].disabled = v;
+    }
+
+    function addCall(s) {
+      if (nCalls === 0) calls.innerHTML = "";
+      var node = el(
+        '<div class="call ' + (s.ro ? "" : "rw") + ' mono">' +
+          '<div class="t">' + stamp() + "</div>" +
+          '<div class="n"><b>' + s.name + "</b></div>" +
+          '<div class="a">' + s.args + "</div>" +
+          '<div class="r">' + s.ret + "</div>" +
+        "</div>"
+      );
+      calls.appendChild(node);
+      nCalls++;
+      callCount.textContent = nCalls + " 次调用";
+      callHint.textContent = "进行中";
+      scrollBoth();
+    }
+
+    function addMem(m) {
+      var node = el(
+        '<div class="memrow fresh mono"><span class="k">' + m.k + "</span>" + m.v + "</div>"
+      );
+      mems.appendChild(node);
+      nMems++;
+      memCount.textContent = nMems + " 条";
+      scrollBoth();
+    }
+
+    async function typeInto(node, html) {
+      if (reduce) { node.innerHTML = html; scrollBoth(); return; }
+      var i = 0;
+      while (i < html.length) {
+        if (html[i] === "<") { i = html.indexOf(">", i) + 1; }
+        else { i++; }
+        node.innerHTML = html.slice(0, i);
+        scrollBoth();
+        await wait(12);
+      }
+      node.innerHTML = html;
+    }
+
+    async function run(idx) {
+      if (busy) return;
+      setBusy(true);
+      var sc = SCENARIOS[idx];
+      turns++;
+      turnCount.textContent = "会话 · " + turns + " 轮";
+
+      stream.appendChild(el('<div class="msg u"><div class="bub">' + sc.ask + "</div></div>"));
+      scrollBoth();
+      await wait(340);
+
+      var think = el(
+        '<div class="msg a"><div class="who mono"><b>THOUGHTER</b></div>' +
+        '<div class="thinking"><i></i><i></i><i></i></div></div>'
+      );
+      stream.appendChild(think);
+      scrollBoth();
+
+      for (var i = 0; i < sc.steps.length; i++) {
+        var s = sc.steps[i];
+        if (s.t === "call") { await wait(s.ms); addCall(s); continue; }
+
+        await wait(420);
+        think.remove();
+        callHint.textContent = "完成";
+
+        var chips = "";
+        if (s.chips) {
+          for (var c = 0; c < s.chips.length; c++) {
+            chips +=
+              '<span class="toolchip ' + (s.chips[c][1] ? "" : "rw") + ' mono">' +
+              '<span class="d"></span>' + s.chips[c][0] + "</span>";
+          }
+          chips = '<div style="margin-bottom:8px">' + chips + "</div>";
+        }
+        var msg = el(
+          '<div class="msg a"><div class="who mono"><b>THOUGHTER</b></div>' +
+          chips + '<div class="bub"></div></div>'
+        );
+        stream.appendChild(msg);
+        await typeInto(msg.querySelector(".bub"), s.text);
+
+        if (s.prop) {
+          var p = s.prop;
+          var card = el(
+            '<div class="prop">' +
+              '<div class="ph mono"><span>' + p.head + "</span><span>" +
+              (p.head2 || "待确认") + "</span></div>" +
+              '<div class="pb">' + p.html +
+              '<div class="tags">' + p.tags.map(function (t) { return "<i>" + t + "</i>"; }).join("") + "</div>" +
+              "</div>" +
+              '<div class="pa">' +
+                '<button class="take" type="button">采纳</button>' +
+                '<button type="button">再改改</button>' +
+                '<button type="button">丢弃</button>' +
+              "</div>" +
+            "</div>"
+          );
+          msg.appendChild(card);
+          scrollBoth();
+          var acts = card.querySelector(".pa");
+          acts.addEventListener("click", function (e) {
+            if (e.target.tagName !== "BUTTON") return;
+            var took = e.target.classList.contains("take");
+            acts.remove();
+            card.appendChild(
+              el('<div class="applied mono">' + (took ? "✓ " + p.done : "○ 已丢弃，笔记未改动") + "</div>")
+            );
+            if (!took) card.style.borderColor = "var(--line-2)";
+            scrollBoth();
+          });
+        }
+        if (s.mem) addMem(s.mem);
+      }
+      setBusy(false);
+      scrollBoth();
+    }
+
+    askRow.addEventListener("click", function (e) {
+      var b = e.target.closest(".ask");
+      if (!b || b.id === "resetBtn") return;
+      run(parseInt(b.getAttribute("data-s"), 10));
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", function () {
+      if (busy) return;
+      turns = 0; nCalls = 0; nMems = 2; clock = 914;
+      turnCount.textContent = "会话 · 0 轮";
+      callCount.textContent = "0 次调用";
+      memCount.textContent = "2 条";
+      callHint.textContent = "等待";
+      calls.innerHTML = '<div class="empty mono">// 还没有调用</div>';
+      mems.innerHTML =
+        '<div class="memrow mono"><span class="k">PROFILE · 表达偏好</span>回复保持碎句，不要展开成段</div>' +
+        '<div class="memrow mono"><span class="k">PROFILE · 身份</span>叫他“阿槐”（用户在设置里填写）</div>';
+      stream.innerHTML =
+        '<div class="msg a"><div class="who mono"><b>THOUGHTER</b></div>' +
+        '<div class="bub">今天写了三条，最近的一条在河堤。想聊哪条，还是先随便说点什么？' +
+        '<em>（我改不了你的笔记，只能递提案给你点。）</em></div></div>';
+    });
+  })();
+</script>

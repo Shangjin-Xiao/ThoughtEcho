@@ -1,0 +1,680 @@
+<title>Thoughter · 纸与墨（风格 A）</title>
+<style>
+  /* ============ A · 纸与墨：与主站同源 ============
+     概念：Thoughter 写在页边，不写在你的行里。
+     整页是一张横格纸，正文占左栏，Thoughter 的话永远退到右侧页边空白。 */
+
+  :root {
+    --paper: #f9f6f0;
+    --paper-sheet: #fefdfb;
+    --paper-yellow: #fff9e6;
+    --rule: #d9cbbe;
+    --rule-soft: #e7ddd2;
+    --ink: #2c2416;
+    --ink-mid: #5a4a3a;
+    --ink-soft: #8b7355;
+    --brown: #a67c52;
+    --orange: #d4895b;
+    --blue: #5d94b8;
+    --green: #7ca982;
+    --red: #c66b6b;
+    --shadow: rgba(60, 45, 30, 0.13);
+    --shadow-hard: rgba(60, 45, 30, 0.22);
+    --tape: rgba(214, 197, 160, 0.55);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #262119;
+      --paper-sheet: #2f2921;
+      --paper-yellow: #3a332a;
+      --rule: #4a4037;
+      --rule-soft: #3d362d;
+      --ink: #ece3d8;
+      --ink-mid: #cbbcab;
+      --ink-soft: #a8977f;
+      --brown: #c99f74;
+      --orange: #e0a077;
+      --blue: #86b4d4;
+      --green: #96c39c;
+      --red: #dd8f8f;
+      --shadow: rgba(0, 0, 0, 0.4);
+      --shadow-hard: rgba(0, 0, 0, 0.55);
+      --tape: rgba(120, 104, 78, 0.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #262119;
+    --paper-sheet: #2f2921;
+    --paper-yellow: #3a332a;
+    --rule: #4a4037;
+    --rule-soft: #3d362d;
+    --ink: #ece3d8;
+    --ink-mid: #cbbcab;
+    --ink-soft: #a8977f;
+    --brown: #c99f74;
+    --orange: #e0a077;
+    --blue: #86b4d4;
+    --green: #96c39c;
+    --red: #dd8f8f;
+    --shadow: rgba(0, 0, 0, 0.4);
+    --shadow-hard: rgba(0, 0, 0, 0.55);
+    --tape: rgba(120, 104, 78, 0.5);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+      "Noto Sans CJK SC", system-ui, sans-serif;
+    line-height: 1.9;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .serif {
+    font-family: "Songti SC", "STSong", "Noto Serif CJK SC",
+      "Source Han Serif SC", SimSun, serif;
+  }
+  .kai {
+    font-family: "Kaiti SC", "STKaiti", KaiTi, "楷体", "Songti SC", serif;
+  }
+
+  /* —— 纸张 —— */
+  .sheet {
+    max-width: 1080px;
+    margin: 0 auto;
+    background: var(--paper-sheet);
+    border-left: 1px solid var(--rule-soft);
+    border-right: 1px solid var(--rule-soft);
+    box-shadow: 0 0 60px var(--shadow);
+    background-image: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 35px,
+      var(--rule-soft) 35px,
+      var(--rule-soft) 36px
+    );
+    background-position: 0 8px;
+  }
+
+  /* 装订孔 */
+  .holes {
+    position: fixed;
+    left: max(12px, calc(50vw - 540px + 18px));
+    top: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    padding: 90px 0;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .holes i {
+    display: block;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: var(--paper);
+    box-shadow: inset 1px 1px 3px var(--shadow-hard);
+  }
+  @media (max-width: 1180px) { .holes { display: none; } }
+
+  /* —— 双栏：正文 + 页边 —— */
+  .spread {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 0 40px;
+    padding: 0 56px 0 76px;
+    align-items: start;
+  }
+  .margin-rule {
+    grid-column: 2;
+  }
+
+  section { padding: 72px 0 8px; }
+
+  /* —— 页眉 —— */
+  header.top {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: color-mix(in srgb, var(--paper-sheet) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--rule);
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  .top-in {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 56px 14px 76px;
+    font-size: 14px;
+  }
+  .crumb {
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+  }
+  .crumb:hover { color: var(--brown); border-bottom-color: var(--brown); }
+  .crumb-sep { color: var(--rule); }
+  .here { color: var(--ink); font-weight: 600; }
+  .top-in .grow { flex: 1; }
+  .back {
+    text-decoration: none;
+    color: var(--ink);
+    border: 1.5px solid var(--ink);
+    border-radius: 3px;
+    padding: 5px 13px;
+    font-size: 13px;
+    box-shadow: 3px 3px 0 var(--brown);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    display: inline-block;
+  }
+  .back:hover { transform: translate(1px, 1px); box-shadow: 2px 2px 0 var(--brown); }
+
+  /* —— Hero —— */
+  .eyebrow {
+    font-size: 13px;
+    letter-spacing: 0.22em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+  h1 {
+    font-family: "Songti SC", "STSong", "Noto Serif CJK SC", SimSun, serif;
+    font-size: clamp(44px, 7vw, 78px);
+    line-height: 1.22;
+    margin: 18px 0 0;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-wrap: balance;
+  }
+  h1 em {
+    font-style: normal;
+    color: var(--brown);
+    position: relative;
+  }
+  h1 em::after {
+    content: "";
+    position: absolute;
+    left: -2%;
+    right: -2%;
+    bottom: 0.1em;
+    height: 0.16em;
+    background: var(--orange);
+    opacity: 0.32;
+    border-radius: 40% 60% 55% 45%;
+  }
+  .lede {
+    font-size: 19px;
+    color: var(--ink-mid);
+    max-width: 34em;
+    margin: 26px 0 0;
+  }
+  .beta {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 30px;
+    font-size: 13px;
+    color: var(--ink-mid);
+    background: var(--paper-yellow);
+    border: 1px dashed var(--brown);
+    padding: 5px 12px;
+    border-radius: 3px;
+  }
+  .beta b { color: var(--brown); font-weight: 600; }
+
+  /* —— 页边批注 —— */
+  .note {
+    font-family: "Kaiti SC", "STKaiti", KaiTi, "楷体", serif;
+    color: var(--brown);
+    font-size: 17px;
+    line-height: 1.75;
+    padding-left: 20px;
+    border-left: 2px solid var(--rule);
+    margin: 0 0 34px;
+    position: relative;
+  }
+  .note::before {
+    content: "";
+    position: absolute;
+    left: -5px;
+    top: 12px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--orange);
+  }
+  .note .who {
+    display: block;
+    font-family: "PingFang SC", system-ui, sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: var(--ink-soft);
+    margin-bottom: 5px;
+  }
+
+  h2 {
+    font-family: "Songti SC", "STSong", "Noto Serif CJK SC", SimSun, serif;
+    font-size: clamp(27px, 3.6vw, 36px);
+    font-weight: 600;
+    margin: 0 0 8px;
+    letter-spacing: 0.01em;
+  }
+  .h2num {
+    font-family: "Songti SC", serif;
+    color: var(--orange);
+    margin-right: 12px;
+  }
+  .sub { color: var(--ink-soft); margin: 0 0 34px; font-size: 15px; }
+  p { margin: 0 0 20px; max-width: 36em; }
+  p strong { color: var(--ink); font-weight: 600; }
+
+  /* —— 卡片纸条 —— */
+  .slip {
+    background: var(--paper-yellow);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 20px 22px;
+    box-shadow: 4px 4px 0 var(--shadow);
+    position: relative;
+  }
+  .slip::before {
+    content: "";
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    transform: translateX(-50%) rotate(-1.5deg);
+    width: 78px;
+    height: 21px;
+    background: var(--tape);
+    border-left: 1px dashed rgba(255, 255, 255, 0.4);
+    border-right: 1px dashed rgba(255, 255, 255, 0.4);
+  }
+
+  /* 提案卡 */
+  .proposal {
+    max-width: 560px;
+    margin: 8px 0 40px;
+  }
+  .proposal .ptitle {
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+  .proposal .body {
+    font-family: "Songti SC", serif;
+    font-size: 17px;
+    line-height: 1.85;
+    color: var(--ink);
+    border-left: 3px solid var(--orange);
+    padding-left: 14px;
+    margin-bottom: 6px;
+  }
+  .del { color: var(--red); text-decoration: line-through; opacity: 0.65; }
+  .ins { color: var(--green); background: color-mix(in srgb, var(--green) 16%, transparent); }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin: 14px 0 18px;
+  }
+  .chip {
+    font-size: 12px;
+    border: 1px solid var(--rule);
+    border-radius: 20px;
+    padding: 2px 10px;
+    color: var(--ink-mid);
+    background: var(--paper-sheet);
+  }
+  .acts { display: flex; gap: 10px; }
+  .btn {
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 7px 18px;
+    border: 1.5px solid var(--ink);
+    background: var(--paper-sheet);
+    color: var(--ink);
+    box-shadow: 3px 3px 0 var(--shadow-hard);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .btn:hover { transform: translate(1px, 1px); box-shadow: 2px 2px 0 var(--shadow-hard); }
+  .btn.take { background: var(--brown); color: var(--paper-sheet); border-color: var(--brown); }
+
+  /* —— 工具索引卡 —— */
+  .tools {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+    gap: 14px;
+    margin: 0 0 12px;
+  }
+  .tool {
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--brown);
+    background: var(--paper-sheet);
+    padding: 13px 15px 15px;
+    box-shadow: 3px 3px 0 var(--shadow);
+  }
+  .tool.ro { border-top-color: var(--blue); }
+  .tool code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .tool span {
+    display: block;
+    font-size: 13px;
+    color: var(--ink-mid);
+    line-height: 1.65;
+    margin-top: 5px;
+  }
+  .tool i {
+    font-style: normal;
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    color: var(--blue);
+  }
+  .tool.rw i { color: var(--brown); }
+
+  /* —— 记忆两层 —— */
+  .layers { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; margin-bottom: 24px; }
+  @media (max-width: 720px) { .layers { grid-template-columns: 1fr; } }
+  .layer {
+    border: 1px solid var(--rule);
+    padding: 18px 20px;
+    background: var(--paper-sheet);
+    box-shadow: 3px 3px 0 var(--shadow);
+  }
+  .layer h3 { margin: 0 0 4px; font-size: 17px; font-family: "Songti SC", serif; }
+  .layer .tag { font-size: 11px; letter-spacing: 0.14em; color: var(--ink-soft); }
+  .layer ul { margin: 12px 0 0; padding-left: 18px; }
+  .layer li { font-size: 14px; color: var(--ink-mid); margin-bottom: 6px; }
+  .layer .quote {
+    font-family: "Kaiti SC", KaiTi, serif;
+    color: var(--brown);
+    font-size: 15px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--rule);
+  }
+
+  /* —— 边界清单 —— */
+  .bounds { list-style: none; padding: 0; margin: 0 0 28px; max-width: 40em; }
+  .bounds li {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px dashed var(--rule);
+    font-size: 15px;
+    color: var(--ink-mid);
+  }
+  .bounds .mk { font-size: 15px; line-height: 1.6; }
+  .bounds .no .mk { color: var(--red); }
+  .bounds .yes .mk { color: var(--green); }
+  .bounds b { color: var(--ink); font-weight: 600; }
+
+  /* —— 结尾 —— */
+  .end {
+    border-top: 2px solid var(--ink);
+    margin-top: 60px;
+    padding: 40px 0 70px;
+  }
+  .end h2 { margin-bottom: 14px; }
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
+  footer {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 22px 56px 46px 76px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  footer a { color: var(--ink-soft); }
+
+  @media (max-width: 900px) {
+    .spread { grid-template-columns: 1fr; padding: 0 26px; gap: 0; }
+    .note { margin: 4px 0 30px; }
+    .top-in { padding: 12px 26px; }
+    footer { padding: 22px 26px 40px; }
+  }
+  a:focus-visible, button:focus-visible {
+    outline: 3px solid var(--blue);
+    outline-offset: 3px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: 0.001ms !important; }
+  }
+</style>
+
+<div class="holes"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+
+<div class="sheet">
+  <header class="top">
+    <div class="top-in">
+      <a class="crumb" href="#">心迹</a>
+      <span class="crumb-sep">/</span>
+      <span class="here">Thoughter</span>
+      <span class="grow"></span>
+      <a class="back" href="#">← 回主站</a>
+    </div>
+  </header>
+
+  <div class="spread">
+    <!-- ============ HERO ============ -->
+    <section>
+      <div class="eyebrow">心迹里的 AI 助手</div>
+      <h1>它把话写在<br /><em>页边</em>，不写在你的行里。</h1>
+      <p class="lede">
+        Thoughter 读得到你写下的每一条笔记，也能查今天的天气、翻外面的网页。
+        但它改不了你的本子——它只能递一张纸条过来，采纳与否，你说了算。
+      </p>
+      <div class="beta"><b>实验性 / Beta</b>· 需自备 AI 服务商 API Key</div>
+    </section>
+    <aside class="margin-rule" style="padding-top: 150px">
+      <div class="note">
+        <span class="who">THOUGHTER 批注</span>
+        我叫 Thoughter。ThoughtEcho 是这个应用的名字，不是我的。
+      </div>
+      <div class="note">
+        <span class="who">THOUGHTER 批注</span>
+        不配 Key 也能用摘录、每日一言、编辑和同步——我只是缺席，不是拦路。
+      </div>
+    </aside>
+
+    <!-- ============ 提案制 ============ -->
+    <section>
+      <h2><span class="h2num">一</span>它递纸条，你落笔</h2>
+      <p class="sub">propose_note_create · propose_note_edit</p>
+      <p>
+        Thoughter <strong>没有直接写库的权限</strong>。想帮你改一句、记一条，
+        它只能生成一张提案卡：改动逐字标出来，标签、作者、出处、位置天气都摆在明面上，
+        每一项你都能当场改。每轮最多递一张。
+      </p>
+    </section>
+    <aside class="margin-rule" style="padding-top: 116px">
+      <div class="note">
+        <span class="who">为什么这么设计</span>
+        笔记是你的原话。一个能悄悄改你原话的助手，用一次就再也不敢信它。
+      </div>
+    </aside>
+
+    <section style="padding-top: 0">
+      <div class="slip proposal">
+        <div class="ptitle">修改提案 · 待确认</div>
+        <div class="body">
+          清晨六点半的河堤，<span class="del">人很多</span
+          ><span class="ins">遛狗的比跑步的多</span>，
+          水面上有一层刚要散掉的雾。
+        </div>
+        <div class="meta-row">
+          <span class="chip">#晨间</span>
+          <span class="chip">#随笔</span>
+          <span class="chip">📍 杭州 · 多云 21℃</span>
+          <span class="chip">原创 · 未署名</span>
+        </div>
+        <div class="acts">
+          <button class="btn take" type="button">采纳</button>
+          <button class="btn" type="button">再改改</button>
+          <button class="btn" type="button">丢弃</button>
+        </div>
+      </div>
+    </section>
+    <aside class="margin-rule" style="padding-top: 30px">
+      <div class="note">
+        <span class="who">THOUGHTER 批注</span>
+        位置和天气我不敢编——那是刚才调 get_location_weather 拿回来的真数。
+      </div>
+    </aside>
+
+    <!-- ============ 工具 ============ -->
+    <section>
+      <h2><span class="h2num">二</span>十把工具，都摊在桌上</h2>
+      <p class="sub">蓝色为只读 · 棕色会动到你的东西（且必须经你确认）</p>
+      <div class="tools">
+        <div class="tool ro">
+          <i>只读</i><code>explore_notes</code>
+          <span>按关键词、标签、日期、天气、时段翻你的笔记。也用来学你惯用的篇幅和语气。</span>
+        </div>
+        <div class="tool ro">
+          <i>只读</i><code>get_note_detail</code>
+          <span>取某一篇的完整正文与版本号。要改之前必须先读，读的是原文不是摘要。</span>
+        </div>
+        <div class="tool ro">
+          <i>只读</i><code>get_tags</code>
+          <span>取你已有的标签体系，优先复用，而不是每次都造新词。</span>
+        </div>
+        <div class="tool ro">
+          <i>只读</i><code>get_location_weather</code>
+          <span>此时此地的真实城市、天气、气温。写“此刻”类笔记唯一的事实来源。</span>
+        </div>
+        <div class="tool ro">
+          <i>只读</i><code>recall</code>
+          <span>检索它记下的关于你的长期记忆。只有它记的，不含你的笔记。</span>
+        </div>
+        <div class="tool ro">
+          <i>只读</i><code>web_search</code>
+          <span>只在问题依赖实时或外部信息时才用。你写过的东西一律走笔记检索。</span>
+        </div>
+        <div class="tool ro">
+          <i>只读</i><code>web_fetch</code>
+          <span>抓取指定网址正文转 Markdown。返回内容按不可信数据处理。</span>
+        </div>
+        <div class="tool rw">
+          <i>需确认</i><code>propose_note_create</code>
+          <span>提议新建一条笔记。普通文本或富文本，落不落库由你点。</span>
+        </div>
+        <div class="tool rw">
+          <i>需确认</i><code>propose_note_edit</code>
+          <span>带版本校验的局部或整篇修改。原文变了就得重读，不许硬改。</span>
+        </div>
+        <div class="tool rw">
+          <i>写记忆</i><code>remember</code>
+          <span>记下你的偏好与纠正。记完会告诉你记了什么，你也可以让它忘掉。</span>
+        </div>
+      </div>
+    </section>
+    <aside class="margin-rule" style="padding-top: 116px">
+      <div class="note">
+        <span class="who">THOUGHTER 批注</span>
+        七把只读，三把要你点头。没有第十一把。
+      </div>
+      <div class="note">
+        <span class="who">一个小规矩</span>
+        笔记正文和网页内容一律当“数据”读，不当“命令”执行——别人写在网页里的字，指挥不动我。
+      </div>
+    </aside>
+
+    <!-- ============ 记忆 ============ -->
+    <section>
+      <h2><span class="h2num">三</span>它记得住，也忘得掉</h2>
+      <p class="sub">跨会话长期记忆 · 分两层 · 可随时关闭</p>
+      <div class="layers">
+        <div class="layer">
+          <span class="tag">画像层 · 每轮自动带上</span>
+          <h3>该一直影响它的事</h3>
+          <ul>
+            <li>你是谁、长期在做什么</li>
+            <li>表达偏好：篇幅、语气、格式</li>
+            <li>你对它做法的纠正</li>
+          </ul>
+          <div class="quote">“回复保持碎句，不要展开成段。”</div>
+        </div>
+        <div class="layer">
+          <span class="tag">事实层 · 用时才检索</span>
+          <h3>需要时才翻出来的事</h3>
+          <ul>
+            <li>常去的地方、在做的项目</li>
+            <li>习惯，他反复提到的人和事</li>
+            <li>不自动注入，靠 recall 取</li>
+          </ul>
+          <div class="quote">“每周三晚上在城西的读书会。”</div>
+        </div>
+      </div>
+      <p>
+        判据只有一条：<strong>下次对话没有它，我会做得更差</strong>。
+        你写过的内容不进记忆——那归笔记检索；它自己的推测也不进。
+        你说“别写这么长”，它当场记下；你说忘了吧，它就删掉，并告诉你删了哪条。
+      </p>
+    </section>
+    <aside class="margin-rule" style="padding-top: 116px">
+      <div class="note">
+        <span class="who">不建档案</span>
+        它不给你建卷宗。只记能让它回应得更好的那几行。
+      </div>
+    </aside>
+
+    <!-- ============ 边界 ============ -->
+    <section>
+      <h2><span class="h2num">四</span>说清楚它不做什么</h2>
+      <p class="sub">写进系统提示的硬规矩，不是宣传语</p>
+      <ul class="bounds">
+        <li class="no"><span class="mk">✗</span><span>不编造位置和天气。<b>只能来自 get_location_weather</b>，拿不到就不写。</span></li>
+        <li class="no"><span class="mk">✗</span><span>不给你的原创硬安一个出处。作者、出处只能来自你提供或笔记原文。</span></li>
+        <li class="no"><span class="mk">✗</span><span>不假装改完了。工具失败就说哪一步没成，不谎报已应用。</span></li>
+        <li class="no"><span class="mk">✗</span><span>不把网页里的文字当命令执行。外部内容一律是证据，不是指令。</span></li>
+        <li class="yes"><span class="mk">✓</span><span>分得清<b>你写的</b>和<b>你摘的</b>。摘录只作“这句击中过你”的旁证，不当成你的自白。</span></li>
+        <li class="yes"><span class="mk">✓</span><span>信息不足就直说，推断用“看起来”“可能”，不把猜测讲成事实。</span></li>
+        <li class="yes"><span class="mk">✓</span><span>API Key 系统级加密存放，笔记默认只在你自己的设备上。</span></li>
+      </ul>
+    </section>
+    <aside class="margin-rule" style="padding-top: 116px">
+      <div class="note">
+        <span class="who">出处这件事</span>
+        author 只填名字，source 只填作品名——显示时应用会自动补上「——」和《》。
+      </div>
+    </aside>
+
+    <!-- ============ 结尾 ============ -->
+    <section class="end">
+      <h2>三个门，都在你顺手的地方</h2>
+      <p>
+        首页每日思考旁边那枚 ✨、探索页洞察下面的追问、笔记编辑器里的划词——
+        进去就是 Thoughter，上次聊到一半的会话还在。
+      </p>
+      <div class="cta-row">
+        <a class="back" href="#" style="padding: 9px 20px; font-size: 14px">下载心迹</a>
+        <a class="back" href="#" style="padding: 9px 20px; font-size: 14px; box-shadow: 3px 3px 0 var(--blue); border-color: var(--blue); color: var(--blue)">回主站看看别的</a>
+      </div>
+    </section>
+    <aside class="margin-rule"></aside>
+  </div>
+
+  <footer>
+    <span>心迹 ThoughtEcho · 免费开源</span>
+    <a href="#">用户指南</a>
+    <a href="#">隐私政策</a>
+    <a href="#">GitHub</a>
+  </footer>
+</div>

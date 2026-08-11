@@ -1,0 +1,475 @@
+<title>Thoughter · 活字（风格 D）</title>
+<style>
+  /* ============ D · 活字 / 版画排印 ============
+     一份关于 Thoughter 的杂志内页。竖排标题、朱砂印、巨型宋体、
+     大块墨版反白。冒的险：中文竖排作为真正的版式骨架而非装饰。 */
+
+  :root {
+    --paper: #ebe8e1;
+    --paper-2: #f4f2ec;
+    --ink: #17140f;
+    --ink-2: #45403a;
+    --ink-3: #7b746a;
+    --rule: #cdc7bc;
+    --cinnabar: #b23a2e;
+    --mineral: #2e5e6e;
+    --knock: #f4f2ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #16150f;
+      --paper-2: #1e1d16;
+      --ink: #ece8dd;
+      --ink-2: #b8b2a4;
+      --ink-3: #837d70;
+      --rule: #35322a;
+      --cinnabar: #d1584a;
+      --mineral: #6ea3b4;
+      --knock: #16150f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #16150f;
+    --paper-2: #1e1d16;
+    --ink: #ece8dd;
+    --ink-2: #b8b2a4;
+    --ink-3: #837d70;
+    --rule: #35322a;
+    --cinnabar: #d1584a;
+    --mineral: #6ea3b4;
+    --knock: #16150f;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    font-size: 15px; line-height: 1.95;
+    -webkit-font-smoothing: antialiased;
+  }
+  .song {
+    font-family: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC",
+      SimSun, serif;
+  }
+  .kai { font-family: "Kaiti SC", "STKaiti", KaiTi, "楷体", "Songti SC", serif; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
+
+  .page { max-width: 1120px; margin: 0 auto; padding: 0 32px; }
+  @media (max-width: 640px) { .page { padding: 0 20px; } }
+
+  /* —— 报头 —— */
+  .masthead {
+    border-bottom: 3px double var(--ink);
+    display: flex; align-items: flex-end; gap: 18px; padding: 18px 0 10px;
+    flex-wrap: wrap;
+  }
+  .masthead .logo { font-size: 21px; font-weight: 600; letter-spacing: 0.08em; text-decoration: none; color: var(--ink); }
+  .masthead .issue { font-size: 11.5px; letter-spacing: 0.2em; color: var(--ink-3); }
+  .masthead .back {
+    margin-left: auto; font-size: 12.5px; color: var(--ink); text-decoration: none;
+    border-bottom: 1px solid var(--cinnabar); padding-bottom: 1px;
+  }
+
+  /* —— 首屏：竖排 + 巨型宋体 —— */
+  .opening {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    gap: 40px; padding: 54px 0 30px; align-items: start;
+  }
+  .huge {
+    font-size: clamp(52px, 10.6vw, 138px); line-height: 1.02; margin: 0;
+    font-weight: 600; letter-spacing: 0.005em;
+  }
+  .huge .rev {
+    background: var(--ink); color: var(--knock);
+    padding: 0 0.12em 0.06em; display: inline-block; margin: 0.04em 0;
+  }
+  .huge .red { color: var(--cinnabar); }
+  .kicker-line {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 22px;
+  }
+  .kicker-line .lbl { font-size: 11.5px; letter-spacing: 0.24em; color: var(--cinnabar); white-space: nowrap; }
+  .kicker-line .ln { height: 1px; background: var(--rule); flex: 1; }
+
+  .deck {
+    font-size: 17.5px; color: var(--ink-2); max-width: 30em; margin: 34px 0 0;
+    border-top: 1px solid var(--rule); padding-top: 22px;
+  }
+  .deck b { color: var(--ink); font-weight: 600; }
+  .byline { font-size: 12px; letter-spacing: 0.14em; color: var(--ink-3); margin-top: 20px; }
+
+  /* 竖排栏：块轴变横向，子元素自右向左排成两列 */
+  .vcol { display: flex; flex-direction: column; align-items: flex-end; gap: 20px; }
+  .vrail {
+    writing-mode: vertical-rl; text-orientation: upright;
+    font-size: clamp(19px, 2.3vw, 26px); letter-spacing: 0.3em;
+    line-height: 2.3; height: 430px; padding-left: 24px;
+    border-left: 1px solid var(--rule);
+  }
+  .vrail > div + div { margin-block-start: 20px; }
+  .vrail .main { font-weight: 600; }
+  .vrail .sm { font-size: 15px; letter-spacing: 0.36em; color: var(--ink-3); }
+  .seal {
+    width: 56px; height: 56px; border: 2.5px solid var(--cinnabar);
+    color: var(--cinnabar); display: grid; place-items: center;
+    font-size: 14px; line-height: 1.2; text-align: center;
+    border-radius: 3px; transform: rotate(-4deg); font-weight: 600;
+  }
+  @media (max-width: 860px) {
+    .opening { grid-template-columns: 1fr; }
+    .vcol { flex-direction: row; align-items: center; gap: 18px; }
+    .vrail {
+      height: auto; writing-mode: horizontal-tb; border-left: 0; padding-left: 0;
+      border-top: 1px solid var(--rule); padding-top: 18px; letter-spacing: 0.16em;
+      font-size: 19px; flex: 1;
+    }
+    .vrail > div + div { margin-block-start: 6px; }
+    .vrail .sm { letter-spacing: 0.16em; }
+  }
+
+  /* —— 折栏统计 —— */
+  .figures {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    border-top: 3px solid var(--ink); border-bottom: 1px solid var(--rule);
+    margin-top: 30px;
+  }
+  .fig { padding: 16px 18px 18px; border-right: 1px solid var(--rule); }
+  .fig:last-child { border-right: 0; }
+  .fig .n { font-size: 40px; line-height: 1; font-weight: 600; }
+  .fig .n.red { color: var(--cinnabar); }
+  .fig .c { font-size: 12px; color: var(--ink-3); letter-spacing: 0.08em; margin-top: 8px; }
+  @media (max-width: 660px) {
+    .figures { grid-template-columns: 1fr 1fr; }
+    .fig:nth-child(2) { border-right: 0; }
+    .fig:nth-child(-n+2) { border-bottom: 1px solid var(--rule); }
+  }
+
+  /* —— 章节 —— */
+  article { padding: 70px 0 0; }
+  .folio {
+    display: flex; align-items: baseline; gap: 16px;
+    border-bottom: 1px solid var(--ink); padding-bottom: 10px; margin-bottom: 30px;
+  }
+  .folio .no { font-size: 46px; line-height: 0.9; color: var(--cinnabar); font-weight: 600; }
+  .folio h2 { font-size: clamp(24px, 3.4vw, 34px); font-weight: 600; margin: 0; letter-spacing: 0.02em; }
+  .folio .tail { margin-left: auto; font-size: 11.5px; letter-spacing: 0.18em; color: var(--ink-3); }
+  @media (max-width: 620px) { .folio .tail { display: none; } }
+
+  .cols { column-count: 2; column-gap: 42px; column-rule: 1px solid var(--rule); }
+  @media (max-width: 740px) { .cols { column-count: 1; } }
+  .cols p { margin: 0 0 18px; color: var(--ink-2); }
+  .cols p:first-child::first-letter {
+    font-family: "Songti SC", serif; font-size: 3.1em; float: left;
+    line-height: 0.86; padding: 0.06em 0.1em 0 0; color: var(--cinnabar); font-weight: 600;
+  }
+  .cols strong { color: var(--ink); font-weight: 600; }
+
+  /* —— 墨版引文 —— */
+  .inkblock {
+    background: var(--ink); color: var(--knock); padding: 34px 36px 30px;
+    margin: 34px 0 0; position: relative;
+  }
+  .inkblock .q {
+    font-size: clamp(19px, 2.6vw, 26px); line-height: 1.75; margin: 0; font-weight: 500;
+  }
+  .inkblock .src { font-size: 11.5px; letter-spacing: 0.16em; opacity: 0.62; margin-top: 18px; }
+  .inkblock::after {
+    content: "印"; position: absolute; right: 22px; bottom: 18px;
+    width: 40px; height: 40px; border: 2px solid var(--cinnabar); color: var(--cinnabar);
+    display: grid; place-items: center; font-size: 17px; transform: rotate(6deg);
+  }
+
+  /* —— 工具：活字盘 —— */
+  .typecase {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+    border-top: 1px solid var(--rule); border-left: 1px solid var(--rule);
+  }
+  .slot {
+    border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+    padding: 16px 17px 18px; background: var(--paper-2); min-height: 148px;
+    display: flex; flex-direction: column;
+  }
+  .slot .idx { font-size: 11px; color: var(--ink-3); letter-spacing: 0.1em; }
+  .slot .zh { font-size: 19px; font-weight: 600; margin: 6px 0 0; letter-spacing: 0.04em; }
+  .slot .en { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; word-break: break-all; }
+  .slot p { font-size: 13px; color: var(--ink-2); margin: 10px 0 0; line-height: 1.7; }
+  .slot .mark {
+    margin-top: auto; padding-top: 10px; font-size: 11px; letter-spacing: 0.14em;
+    color: var(--mineral);
+  }
+  .slot.act { background: var(--paper); }
+  .slot.act .mark { color: var(--cinnabar); }
+  .slot.act .zh { color: var(--cinnabar); }
+
+  /* —— 提案：校样 —— */
+  .proof {
+    border: 1px solid var(--ink); background: var(--paper-2); padding: 0; margin-top: 32px;
+    max-width: 640px;
+  }
+  .proof .hd {
+    background: var(--ink); color: var(--knock); font-size: 11.5px;
+    letter-spacing: 0.18em; padding: 7px 16px; display: flex;
+  }
+  .proof .hd span:last-child { margin-left: auto; opacity: 0.7; }
+  .proof .bd { padding: 22px 24px 20px; }
+  .proof .line { font-size: 19px; line-height: 1.95; }
+  .proof del { color: var(--ink-3); text-decoration-color: var(--cinnabar); text-decoration-thickness: 2px; }
+  .proof ins {
+    text-decoration: none; border-bottom: 3px solid var(--cinnabar); padding-bottom: 1px;
+  }
+  .proof .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+  .proof .meta i {
+    font-style: normal; font-size: 12px; border: 1px solid var(--rule);
+    padding: 2px 10px; color: var(--ink-2);
+  }
+  .proof .acts { display: flex; gap: 0; border-top: 1px solid var(--rule); margin-top: 20px; }
+  .proof .acts button {
+    font: inherit; font-size: 14px; flex: 1; padding: 11px 0; cursor: pointer;
+    border: 0; border-right: 1px solid var(--rule); background: transparent; color: var(--ink);
+  }
+  .proof .acts button:last-child { border-right: 0; }
+  .proof .acts button.take { background: var(--cinnabar); color: var(--knock); font-weight: 600; }
+  .proof .acts button:hover { background: var(--rule); }
+  .proof .acts button.take:hover { opacity: 0.9; background: var(--cinnabar); }
+
+  /* —— 记忆：两栏对照 —— */
+  .ledger { border-top: 3px solid var(--ink); margin-top: 30px; }
+  .lrow {
+    display: grid; grid-template-columns: 150px 1fr 1fr; gap: 26px;
+    padding: 18px 0; border-bottom: 1px solid var(--rule);
+  }
+  .lrow .lb { font-size: 12px; letter-spacing: 0.14em; color: var(--ink-3); padding-top: 3px; }
+  .lrow .c1, .lrow .c2 { font-size: 14.5px; color: var(--ink-2); }
+  .lrow.head { border-bottom: 1px solid var(--ink); padding: 10px 0; }
+  .lrow.head div { font-size: 12px; letter-spacing: 0.16em; color: var(--ink); }
+  .lrow .c1 b, .lrow .c2 b { color: var(--ink); font-weight: 600; }
+  @media (max-width: 720px) {
+    .lrow { grid-template-columns: 1fr; gap: 6px; }
+    .lrow.head { display: none; }
+    .lrow .c1::before { content: "画像层 · "; color: var(--cinnabar); }
+    .lrow .c2::before { content: "事实层 · "; color: var(--mineral); }
+  }
+
+  /* —— 否定清单 —— */
+  .nots { margin-top: 30px; }
+  .not {
+    display: grid; grid-template-columns: 30px 1fr; gap: 16px; align-items: start;
+    padding: 13px 0; border-bottom: 1px dotted var(--rule); font-size: 15px; color: var(--ink-2);
+  }
+  .not .x { color: var(--cinnabar); font-size: 20px; line-height: 1.4; }
+  .not .o { color: var(--mineral); font-size: 20px; line-height: 1.4; }
+  .not b { color: var(--ink); font-weight: 600; }
+
+  /* —— 结尾 —— */
+  .colophon {
+    margin-top: 74px; border-top: 3px double var(--ink); padding: 28px 0 0;
+    display: grid; grid-template-columns: 1fr auto; gap: 28px; align-items: center;
+  }
+  @media (max-width: 700px) { .colophon { grid-template-columns: 1fr; } }
+  .colophon h3 { font-size: 26px; font-weight: 600; margin: 0 0 8px; }
+  .colophon p { color: var(--ink-2); margin: 0; max-width: 34em; font-size: 14.5px; }
+  .cta { display: flex; gap: 12px; flex-wrap: wrap; }
+  .cta a {
+    text-decoration: none; font-size: 14.5px; padding: 10px 22px;
+    border: 1.5px solid var(--ink); color: var(--ink); white-space: nowrap;
+  }
+  .cta a.red { background: var(--cinnabar); border-color: var(--cinnabar); color: var(--knock); }
+  .cta a:hover { background: var(--ink); color: var(--knock); }
+  .cta a.red:hover { opacity: 0.9; background: var(--cinnabar); color: var(--knock); }
+  .fine {
+    font-size: 12px; color: var(--ink-3); border-top: 1px solid var(--rule);
+    margin-top: 34px; padding: 16px 0 60px; display: flex; gap: 18px; flex-wrap: wrap;
+  }
+  .fine a { color: var(--ink-3); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--mineral); outline-offset: 3px; }
+</style>
+
+<div class="page">
+  <div class="masthead">
+    <a class="logo song" href="#">心迹</a>
+    <span class="issue mono">THOUGHTER 专号 · BETA</span>
+    <a class="back" href="#">← 回主站</a>
+  </div>
+
+  <!-- ============ 首屏 ============ -->
+  <div class="opening">
+    <div>
+      <div class="kicker-line">
+        <span class="lbl mono">心迹里的 AI 助手</span><span class="ln"></span>
+      </div>
+      <h1 class="huge song">
+        它读你<br />
+        <span class="rev">所写</span><br />
+        却不动你<span class="red">一字</span>
+      </h1>
+      <p class="deck">
+        Thoughter 能翻遍你写过的每一条笔记，能查此刻的天气，能上网找答案。
+        但它<b>没有落笔的权限</b>——想改一个字，也得先递上一份校样，等你盖章。
+      </p>
+      <div class="byline mono">十把工具 · 七把只读 · 两层记忆 · 零台服务器</div>
+    </div>
+
+    <div class="vcol">
+      <div class="vrail song">
+        <div class="main">读得多，动手少</div>
+        <div class="sm kai">凡所改动　皆待你允</div>
+      </div>
+      <div class="seal song">心迹<br />校样</div>
+    </div>
+  </div>
+
+  <div class="figures song">
+    <div class="fig"><div class="n">10</div><div class="c">可调用工具</div></div>
+    <div class="fig"><div class="n">7</div><div class="c">其中只读</div></div>
+    <div class="fig"><div class="n red">1</div><div class="c">每轮提案上限</div></div>
+    <div class="fig"><div class="n">0</div><div class="c">经手的服务器</div></div>
+  </div>
+
+  <!-- ============ 一 ============ -->
+  <article>
+    <div class="folio">
+      <span class="no song">一</span>
+      <h2 class="song">校样制</h2>
+      <span class="tail mono">PROPOSE · NEVER WRITE</span>
+    </div>
+    <div class="cols">
+      <p>
+        大多数 AI 笔记助手的做法是：你说改，它就改完给你看。听起来省事，
+        代价是你再也不知道本子里哪句是自己写的。
+      </p>
+      <p>
+        Thoughter 走的是另一条路。它<strong>在数据库这一层就没有写权限</strong>：
+        想新建，只能调 propose_note_create；想修改，只能调 propose_note_edit。
+        两者产出的都是一张待确认的卡片，不是一次已完成的写入。
+      </p>
+      <p>
+        改动逐字标出，附带的标签、作者、出处、位置、天气全部摊开，
+        每一项你都能当场改掉。每一轮对话最多递一张——不许连着塞。
+      </p>
+      <p>
+        修改还要过版本校验：它必须先读到那篇笔记的当前版本号。
+        若你在此期间动过原文，这张校样就作废，它得重读再来。
+      </p>
+    </div>
+
+    <div class="proof">
+      <div class="hd mono"><span>校样 · 待盖章</span><span>n_8f21 · REV 7</span></div>
+      <div class="bd">
+        <div class="line song">
+          清晨六点半的河堤，<del>人很多</del><ins>遛狗的比跑步的多</ins>，水面上有一层刚要散掉的雾。
+        </div>
+        <div class="meta">
+          <i>#晨间</i><i>#随笔</i><i>📍 杭州 · 多云 21℃</i><i>原创 · 未署名</i>
+        </div>
+      </div>
+      <div class="acts">
+        <button class="take" type="button">盖章采纳</button>
+        <button type="button">再改改</button>
+        <button type="button">丢弃</button>
+      </div>
+    </div>
+
+    <div class="inkblock">
+      <p class="q song">
+        “位置和天气一律不得凭空捏造。作者出处只能来自用户提供或笔记原文本身。”
+      </p>
+      <div class="src mono">系统提示原文 · AGENT_SERVICE.DART</div>
+    </div>
+  </article>
+
+  <!-- ============ 二 ============ -->
+  <article>
+    <div class="folio">
+      <span class="no song">二</span>
+      <h2 class="song">活字盘</h2>
+      <span class="tail mono">十把工具，全部列出</span>
+    </div>
+    <div class="typecase">
+      <div class="slot"><div class="idx mono">01</div><div class="zh song">翻笔记</div><div class="en mono">explore_notes</div><p>关键词、标签、日期、天气、时段组合筛选并翻页。也用来取样你的语气。</p><div class="mark mono">只读</div></div>
+      <div class="slot"><div class="idx mono">02</div><div class="zh song">读全文</div><div class="en mono">get_note_detail</div><p>取单篇完整正文与版本号。要改必先读，不许只看预览。</p><div class="mark mono">只读</div></div>
+      <div class="slot"><div class="idx mono">03</div><div class="zh song">取标签</div><div class="en mono">get_tags</div><p>取你已有的分类体系，优先复用，不造一次性新词。</p><div class="mark mono">只读</div></div>
+      <div class="slot"><div class="idx mono">04</div><div class="zh song">问天时</div><div class="en mono">get_location_weather</div><p>真实的城市、天气、气温。写“此刻”唯一的事实来源。</p><div class="mark mono">只读</div></div>
+      <div class="slot"><div class="idx mono">05</div><div class="zh song">忆旧事</div><div class="en mono">recall</div><p>检索它记下的长期记忆。不含你的笔记——那归第一把。</p><div class="mark mono">只读</div></div>
+      <div class="slot"><div class="idx mono">06</div><div class="zh song">求外闻</div><div class="en mono">web_search</div><p>只在问题依赖实时信息时才动用。</p><div class="mark mono">只读</div></div>
+      <div class="slot"><div class="idx mono">07</div><div class="zh song">取网页</div><div class="en mono">web_fetch</div><p>抓指定网址正文。抓回来的是材料，不是命令。</p><div class="mark mono">只读</div></div>
+      <div class="slot act"><div class="idx mono">08</div><div class="zh song">拟新篇</div><div class="en mono">propose_note_create</div><p>提议新建一条笔记。出校样，不落库。</p><div class="mark mono">待你盖章</div></div>
+      <div class="slot act"><div class="idx mono">09</div><div class="zh song">拟改动</div><div class="en mono">propose_note_edit</div><p>带版本校验的局部或整篇修改。原文变了即作废。</p><div class="mark mono">待你盖章</div></div>
+      <div class="slot act"><div class="idx mono">10</div><div class="zh song">记于心</div><div class="en mono">remember</div><p>写入长期记忆。记完当场告知，可删可关。</p><div class="mark mono">写记忆</div></div>
+    </div>
+  </article>
+
+  <!-- ============ 三 ============ -->
+  <article>
+    <div class="folio">
+      <span class="no song">三</span>
+      <h2 class="song">两层记忆</h2>
+      <span class="tail mono">跨会话 · 可随时关闭</span>
+    </div>
+    <div class="ledger">
+      <div class="lrow head"><div>项</div><div>画像层</div><div>事实层</div></div>
+      <div class="lrow">
+        <div class="lb mono">装载方式</div>
+        <div class="c1"><b>每轮自动带上</b>，占固定预算</div>
+        <div class="c2"><b>用时才检索</b>，平时不占上下文</div>
+      </div>
+      <div class="lrow">
+        <div class="lb mono">放什么</div>
+        <div class="c1">身份、表达偏好、你对它的纠正</div>
+        <div class="c2">常去的地方、在做的项目、反复提到的人</div>
+      </div>
+      <div class="lrow">
+        <div class="lb mono">写成什么样</div>
+        <div class="c1">指令句：“回复保持碎句，不要展开成段”</div>
+        <div class="c2">事实句：“每周三晚上在城西的读书会”</div>
+      </div>
+      <div class="lrow">
+        <div class="lb mono">偏好变了</div>
+        <div class="c1">原位改同一条，<b>不追加相反的一条</b></div>
+        <div class="c2">同上；冲突时以你本轮所说为准</div>
+      </div>
+      <div class="lrow">
+        <div class="lb mono">绝不写入</div>
+        <div class="c1" style="grid-column: span 2">
+          你笔记里写过的内容（那归笔记检索）、本轮临时信息、它自己的推测。
+          <b>不给你建档案</b>——只记能让它回应得更好的那几行。
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ============ 四 ============ -->
+  <article>
+    <div class="folio">
+      <span class="no song">四</span>
+      <h2 class="song">它不做什么</h2>
+      <span class="tail mono">硬约束，不是宣传语</span>
+    </div>
+    <div class="nots">
+      <div class="not"><span class="x">✕</span><span>不直接保存或修改笔记。<b>权限层就没有</b>，不是靠自觉。</span></div>
+      <div class="not"><span class="x">✕</span><span>不编造位置与天气。拿不到工具数据，就<b>不写这两项</b>。</span></div>
+      <div class="not"><span class="x">✕</span><span>不给你的原创硬安出处。作者、出处只能来自你或笔记原文。</span></div>
+      <div class="not"><span class="x">✕</span><span>不把笔记正文与网页内容当命令执行。二者都是<b>不可信数据</b>。</span></div>
+      <div class="not"><span class="x">✕</span><span>工具失败时不假装成功，会说明哪一步没完成。</span></div>
+      <div class="not"><span class="o">○</span><span>分得清<b>你写的</b>与<b>你摘的</b>。摘录只作共鸣旁证，不当成你的自述。</span></div>
+      <div class="not"><span class="o">○</span><span>信息不足直说。推断用“看起来”“可能”，不把猜测讲成事实。</span></div>
+    </div>
+  </article>
+
+  <!-- ============ 版权页 ============ -->
+  <div class="colophon">
+    <div>
+      <h3 class="song">三个门，都在顺手的地方</h3>
+      <p>首页每日思考旁的 ✨、探索页洞察下的追问、编辑器里的划词菜单。推门进去，上次聊到一半的会话还在。</p>
+    </div>
+    <div class="cta">
+      <a class="red" href="#">下载心迹</a>
+      <a href="#">← 回主站</a>
+    </div>
+  </div>
+
+  <div class="fine">
+    <span>实验性 / Beta · 需自备 AI 服务商 API Key，费用由服务商收取</span>
+    <a href="#">用户指南</a><a href="#">隐私政策</a><a href="#">GitHub</a>
+  </div>
+</div>
