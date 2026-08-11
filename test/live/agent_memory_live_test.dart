@@ -266,9 +266,10 @@ void main() {
 
 /// 全称结论的粗筛。
 ///
-/// 两个判据。一是只检索一次就否定；二是通篇都在堆同义词 `query`，从没退回去
-/// 按元数据浏览过——`explore_notes` 的 query 是子串匹配，同义词堆到第五个也
-/// 只是在同一个匹配方式上打转，而用户的说法本来就和提问用词对不上。
+/// 判据只有一条：下否定结论之前，有没有不带 `query` 地浏览过一次。
+/// `explore_notes` 的 query 是子串匹配，同义词堆到第五个也只是在同一个匹配
+/// 方式上打转，而用户的说法本来就和提问用词对不上；反过来，只要真的浏览过
+/// 一次，哪怕只调了这一次工具就否定，也是照系统提示做的，不算越界。
 void _flagOverreach(ProbeTurn turn, {required String label}) {
   const denials = ['没有写过', '没写过', '没有相关', '没有找到', '没有任何', '没有发现'];
   final content = turn.response?.content ?? '';
@@ -276,26 +277,21 @@ void _flagOverreach(ProbeTurn turn, {required String label}) {
     return;
   }
 
-  if (turn.toolCalls.length <= 1) {
-    turn.findings.add(
-      '$label：只检索了一次就下了否定结论。正文关键词没命中不等于没写过，'
-      '标签和元数据里可能还有线索。',
-    );
-    return;
-  }
-
-  final browsed = turn.toolCalls.where((call) {
+  final browsed = turn.toolCalls.any((call) {
     if (call['tool'] != 'explore_notes') return false;
     final arguments = call['arguments'];
     if (arguments is! Map) return false;
     return (arguments['query']?.toString().trim() ?? '').isEmpty;
-  }).isNotEmpty;
-  if (!browsed) {
-    turn.findings.add(
-      '$label：${turn.toolCalls.length} 次检索全部带着 query，'
-      '从没不带关键词浏览过就下了否定结论。同义词换多少个都还是子串匹配。',
-    );
+  });
+  if (browsed) {
+    return;
   }
+
+  turn.findings.add(
+    '$label：${turn.toolCalls.length} 次检索都没有不带关键词浏览过，'
+    '就下了否定结论。同义词换多少个都还是子串匹配，'
+    '标签和元数据里可能还有线索。',
+  );
 }
 
 /// 记忆边界的粗筛：笔记正文里的特征词不该出现在记忆库里。
