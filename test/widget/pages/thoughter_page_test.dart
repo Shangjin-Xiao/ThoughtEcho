@@ -619,6 +619,41 @@ AppLocalizations _l10n(WidgetTester tester) {
   return AppLocalizations.of(tester.element(find.byType(ThoughterPage)));
 }
 
+/// 读出对话区上下缘渐隐当前的不透明度。
+///
+/// 渐隐是私有 widget，按它渲染出的 `Align` 对齐方向区分上下，比依赖它们在
+/// Stack 里的先后顺序稳——那个顺序改一下测试就悄悄测错对象了。
+({double top, double bottom}) _edgeFadeOpacities(WidgetTester tester) {
+  double? top;
+  double? bottom;
+  final fades = find
+      .byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == '_EdgeFade')
+      .evaluate()
+      .toList();
+  for (final element in fades) {
+    final scope = find.byWidget(element.widget);
+    final alignment = tester
+        .widget<Align>(
+          find.descendant(of: scope, matching: find.byType(Align)).first,
+        )
+        .alignment;
+    final opacity = tester
+        .widget<AnimatedOpacity>(
+          find
+              .descendant(of: scope, matching: find.byType(AnimatedOpacity))
+              .first,
+        )
+        .opacity;
+    if (alignment == Alignment.topCenter) {
+      top = opacity;
+    } else {
+      bottom = opacity;
+    }
+  }
+  return (top: top ?? -1, bottom: bottom ?? -1);
+}
+
 void main() {
   group('ThoughterPage', () {
     late SettingsService settingsService;
@@ -2589,6 +2624,116 @@ void main() {
         reason: '读不出来 ≠ 里面是空的，不能凭一次读库失败删掉整段对话',
       );
       expect(chatSessionService.storedMessages[existing.id], isNotNull);
+    });
+
+    // 渐隐只在那个方向真的藏着内容时才出现。一直挂着的话，内容顶到头时
+    // 上缘那层正好压在第一行字上——会话开头那句最该看清，反倒被弄淡了。
+    testWidgets('edge fades only show on the side that has hidden content',
+        (tester) async {
+      final now = DateTime(2026, 8, 1);
+      final session = ChatSession(
+        id: 'edge-fade-session',
+        sessionType: 'agent',
+        title: '够长的一段',
+        createdAt: now,
+        lastActiveAt: now,
+      );
+      chatSessionService.seedSession(
+        session,
+        List<app_chat.ChatMessage>.generate(
+          30,
+          (index) => app_chat.ChatMessage(
+            id: 'fade-$index',
+            role: 'assistant',
+            isUser: false,
+            content: '历史消息 $index：一段足以占据单行高度的内容',
+            timestamp: now,
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: ThoughterPage(
+            key: const ValueKey('edge_fade_page'),
+            entrySource: ThoughterEntrySource.explore,
+            session: session,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final controller =
+          tester.widget<ListView>(find.byType(ListView)).controller!;
+      expect(
+        controller.position.maxScrollExtent,
+        greaterThan(0),
+        reason: '这个用例要的是内容超出一屏，否则两侧都不该有渐隐，测不到东西',
+      );
+
+      // 显式滚到底再断言：打开会话时的自动贴底会差几十像素（ListView.builder
+      // 懒构建，跳过去之后 maxScrollExtent 又长了一截），那时底部渐隐亮着本来
+      // 就是对的。这个用例要测的是渐隐跟不跟得住位置，不是自动贴底准不准。
+      controller.jumpTo(controller.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      expect(controller.position.extentAfter, lessThanOrEqualTo(2));
+
+      var opacities = _edgeFadeOpacities(tester);
+      expect(opacities.top, 1, reason: '上面还有内容被顶栏盖住');
+      expect(opacities.bottom, 0, reason: '已经到底，下面没有东西可藏');
+
+      // 滚到最顶：反过来
+      controller.jumpTo(0);
+      await tester.pumpAndSettle();
+      opacities = _edgeFadeOpacities(tester);
+      expect(opacities.top, 0, reason: '第一行字不该被自己的渐隐弄淡');
+      expect(opacities.bottom, 1, reason: '下面还有没露出来的内容');
+    });
+
+    // 内容没超出一屏时两侧都不该出现——这是上一个用例的边界情形，
+    // 也是最容易被"渐隐一直挂着"的实现蒙混过去的一种。
+    testWidgets('edge fades stay hidden when the conversation fits on screen',
+        (tester) async {
+      final now = DateTime(2026, 8, 1);
+      final session = ChatSession(
+        id: 'short-session',
+        sessionType: 'agent',
+        title: '很短的一段',
+        createdAt: now,
+        lastActiveAt: now,
+      );
+      chatSessionService.seedSession(session, [
+        app_chat.ChatMessage(
+          id: 'short-1',
+          role: 'assistant',
+          isUser: false,
+          content: '就一句话',
+          timestamp: now,
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: ThoughterPage(
+            key: const ValueKey('short_conversation_page'),
+            entrySource: ThoughterEntrySource.explore,
+            session: session,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final controller =
+          tester.widget<ListView>(find.byType(ListView)).controller!;
+      expect(controller.position.maxScrollExtent, 0);
+
+      final opacities = _edgeFadeOpacities(tester);
+      expect(opacities.top, 0);
+      expect(opacities.bottom, 0);
     });
   });
 }
