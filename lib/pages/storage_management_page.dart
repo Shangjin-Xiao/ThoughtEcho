@@ -11,6 +11,7 @@ import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../theme/app_semantic_colors.dart';
 import '../theme/theme_style.dart';
+import '../widgets/app_snackbar.dart';
 import 'trash_page.dart';
 
 /// 把迁移目标被拒绝的原因映射为本地化文案。
@@ -861,12 +862,9 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
           await DataDirectoryService.validateMigrationTarget(result);
       if (targetRejection != null) {
         if (!mounted) return;
-        final message = dataDirectoryRejectionMessage(l10n, targetRejection);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            duration: AppConstants.snackBarDurationError,
-          ),
+        AppSnackBar.error(
+          context,
+          dataDirectoryRejectionMessage(l10n, targetRejection),
         );
         return;
       }
@@ -946,34 +944,45 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       _isMigrating = true;
     });
 
-    String? statusMessage;
-    double progress = 0.0;
+    // 进度对话框只推一次，靠 ValueNotifier 刷新内容：迁移期间进度回调非常
+    // 频繁，每次都 pop/push 路由会闪烁，还可能误关别的路由。
+    final migrationProgress =
+        ValueNotifier<({double progress, String? status})>(
+      (progress: 0.0, status: null),
+    );
+    var dialogVisible = false;
+
+    void closeProgressDialog() {
+      if (!dialogVisible || !mounted) return;
+      dialogVisible = false;
+      Navigator.of(context, rootNavigator: true).pop();
+    }
 
     try {
       // 显示进度对话框
       if (!mounted) return;
+      dialogVisible = true;
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => PopScope(
           canPop: false,
-          child: StatefulBuilder(
-            builder: (context, setDialogState) {
-              return AlertDialog(
-                title: Text(l10n.migratingData),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    LinearProgressIndicator(value: progress),
-                    const SizedBox(height: 16),
-                    Text(
-                      statusMessage ?? l10n.preparingProgress,
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                  ],
-                ),
-              );
-            },
+          child: ValueListenableBuilder(
+            valueListenable: migrationProgress,
+            builder: (context, value, _) => AlertDialog(
+              title: Text(l10n.migratingData),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LinearProgressIndicator(value: value.progress),
+                  const SizedBox(height: 16),
+                  Text(
+                    value.status ?? l10n.preparingProgress,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       );
@@ -981,41 +990,14 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
       // 执行迁移
       final success = await DataDirectoryService.migrateDataDirectory(
         newPath,
-        onProgress: (p) {
-          if (mounted) {
-            // 更新进度（通过重新构建对话框）
-            Navigator.of(context).pop();
-            progress = p;
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) => PopScope(
-                canPop: false,
-                child: AlertDialog(
-                  title: Text(l10n.migratingData),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      LinearProgressIndicator(value: progress),
-                      const SizedBox(height: 16),
-                      Text(
-                        statusMessage ?? '${(progress * 100).toInt()}%',
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }
-        },
-        onStatusUpdate: (status) {
-          statusMessage = status;
-        },
+        onProgress: (p) => migrationProgress.value =
+            (progress: p, status: migrationProgress.value.status),
+        onStatusUpdate: (status) => migrationProgress.value =
+            (progress: migrationProgress.value.progress, status: status),
       );
 
       if (!mounted) return;
-      Navigator.of(context).pop(); // 关闭进度对话框
+      closeProgressDialog();
 
       if (success) {
         // 迁移成功，提示重启
@@ -1041,23 +1023,14 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
         await _loadAppDataPath();
       } else {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.migrationFailed),
-            duration: AppConstants.snackBarDurationError,
-          ),
-        );
+        AppSnackBar.error(context, l10n.migrationFailed);
       }
     } catch (e) {
       if (!mounted) return;
-      Navigator.of(context).pop(); // 关闭进度对话框
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.migrationFailedWithError(e.toString())),
-          duration: AppConstants.snackBarDurationError,
-        ),
-      );
+      closeProgressDialog();
+      AppSnackBar.error(context, l10n.migrationFailedWithError(e.toString()));
     } finally {
+      migrationProgress.dispose();
       if (mounted) {
         setState(() {
           _isMigrating = false;

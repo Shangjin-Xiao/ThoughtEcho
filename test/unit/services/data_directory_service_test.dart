@@ -31,12 +31,8 @@ void main() {
     file.writeAsStringSync('content');
   }
 
-  Set<String> relativeFiles(Map<String, dynamic> result) {
-    return (result['files'] as List)
-        .cast<(String, String)>()
-        .map((e) => e.$2)
-        .toSet();
-  }
+  Set<String> relativeFiles(MigrationFileScan scan) =>
+      scan.files.map((e) => e.$2).toSet();
 
   group('DataDirectoryService.collectFilesForMigration', () {
     test('整目录收集应用数据，包括未来新增的数据源', () async {
@@ -47,12 +43,12 @@ void main() {
       createFile('backups/backup.zip');
       createFile('feature_cache/data.bin'); // 模拟未来新增数据源
 
-      final result = await DataDirectoryService.collectFilesForMigration(
+      final scan = await DataDirectoryService.collectFilesForMigration(
         tempDir.path,
       );
 
-      expect(result['errors'], isEmpty);
-      final files = relativeFiles(result);
+      expect(scan.errors, isEmpty);
+      final files = relativeFiles(scan);
       expect(
         files,
         containsAll([
@@ -75,11 +71,11 @@ void main() {
       createFile('ntuser.dat');
       createFile('.ds_store');
 
-      final result = await DataDirectoryService.collectFilesForMigration(
+      final scan = await DataDirectoryService.collectFilesForMigration(
         tempDir.path,
       );
 
-      final files = relativeFiles(result);
+      final files = relativeFiles(scan);
       expect(files, contains('databases/thoughtecho.db'));
       expect(files, contains('databases/thoughtecho.db-wal'));
       expect(files, isNot(contains('databases/thoughtecho.db-shm')));
@@ -89,63 +85,32 @@ void main() {
       expect(files, isNot(contains('.ds_store')));
     });
 
-    test('excludePath 位于数据目录内时，其中的文件不参与收集', () async {
-      createFile('databases/thoughtecho.db');
-      createFile('nested_target/data.bin');
-      createFile('nested_target/deep/inner.bin');
-
-      final result = await DataDirectoryService.collectFilesForMigration(
-        tempDir.path,
-        excludePath: abs('nested_target'),
-      );
-
-      final files = relativeFiles(result);
-      expect(files, contains('databases/thoughtecho.db'));
-      expect(files, isNot(contains('nested_target/data.bin')));
-      expect(files, isNot(contains('nested_target/deep/inner.bin')));
-    });
-
-    test('excludePath 是数据目录的祖先时，不排除任何文件', () async {
-      // 场景：Documents/ThoughtEcho -> Documents（新目录是当前目录的父级）。
-      // 祖先目录不是"目标复制进自身"，不应把所有文件误判为目标内文件。
+    test('相对路径以数据目录为基准，保持子目录结构', () async {
       final dataDir = Directory(abs('ThoughtEcho'))..createSync();
       createFile('ThoughtEcho/databases/thoughtecho.db');
-      createFile('ThoughtEcho/media/photo.jpg');
+      createFile('ThoughtEcho/media/sub/photo.jpg');
 
-      final result = await DataDirectoryService.collectFilesForMigration(
+      final scan = await DataDirectoryService.collectFilesForMigration(
         dataDir.path,
-        excludePath: tempDir.path,
       );
 
-      // 相对路径以数据目录为基准，文件不应被排除。
-      final files = relativeFiles(result);
-      expect(files, contains('databases/thoughtecho.db'));
-      expect(files, contains('media/photo.jpg'));
-    });
-
-    test('excludePath 与数据目录无关时，不排除任何文件', () async {
-      createFile('databases/thoughtecho.db');
-      createFile('media/photo.jpg');
-      final unrelated = Directory(abs('unrelated'))..createSync();
-
-      final result = await DataDirectoryService.collectFilesForMigration(
-        tempDir.path,
-        excludePath: unrelated.path,
+      expect(
+        relativeFiles(scan),
+        equals({'databases/thoughtecho.db', 'media/sub/photo.jpg'}),
       );
-
-      final files = relativeFiles(result);
-      expect(files, contains('databases/thoughtecho.db'));
-      expect(files, contains('media/photo.jpg'));
     });
 
-    test('数据目录不存在时返回空列表和错误', () async {
+    test('数据目录不存在时返回空列表和带原因的错误', () async {
       final missing = path.join(tempDir.path, 'does_not_exist');
-      final result = await DataDirectoryService.collectFilesForMigration(
+      final scan = await DataDirectoryService.collectFilesForMigration(
         missing,
       );
 
-      expect(result['files'], isEmpty);
-      expect(result['errors'], isNotEmpty);
+      expect(scan.files, isEmpty);
+      expect(scan.errors, hasLength(1));
+      // 错误里要带上失败原因，否则用户只看到路径无法排障。
+      expect(scan.errors.single, contains(missing));
+      expect(scan.errors.single.length, greaterThan(missing.length + 8));
     });
 
     test('指向外部的目录链接被展开，文件落在链接名相对路径下', () async {
@@ -165,14 +130,14 @@ void main() {
         return;
       }
 
-      final result = await DataDirectoryService.collectFilesForMigration(
+      final scan = await DataDirectoryService.collectFilesForMigration(
         tempDir.path,
       );
 
-      final files = relativeFiles(result);
+      final files = relativeFiles(scan);
       expect(files, contains('databases/thoughtecho.db'));
       expect(files, contains('media/a.jpg'));
-      expect(result['errors'], isEmpty);
+      expect(scan.errors, isEmpty);
     });
 
     test('指向数据目录内部的链接被跳过，不产生重复或错误路径', () async {
@@ -185,11 +150,11 @@ void main() {
         return;
       }
 
-      final result = await DataDirectoryService.collectFilesForMigration(
+      final scan = await DataDirectoryService.collectFilesForMigration(
         tempDir.path,
       );
 
-      final files = relativeFiles(result);
+      final files = relativeFiles(scan);
       expect(files, contains('databases/thoughtecho.db'));
       expect(files, isNot(contains('dup/thoughtecho.db')));
     });
@@ -211,13 +176,60 @@ void main() {
         return;
       }
 
-      final result = await DataDirectoryService.collectFilesForMigration(
+      final scan = await DataDirectoryService.collectFilesForMigration(
         tempDir.path,
       );
 
-      final files = relativeFiles(result);
+      final files = relativeFiles(scan);
       expect(files, contains('linked.dat'));
-      expect(result['errors'], isEmpty);
+      expect(scan.errors, isEmpty);
+    });
+  });
+
+  group('DataDirectoryService.copyFilesForMigration', () {
+    test('保持目录结构复制所有文件，并回报进度', () async {
+      createFile('databases/thoughtecho.db');
+      createFile('media/sub/photo.jpg');
+      final target = await TestHarness.createTempDirectory('copy_target');
+      addTearDown(() => TestHarness.deleteTempDirectory(target));
+
+      final scan = await DataDirectoryService.collectFilesForMigration(
+        tempDir.path,
+      );
+      final progressValues = <double>[];
+      await DataDirectoryService.copyFilesForMigration(
+        scan.files,
+        target.path,
+        onProgress: progressValues.add,
+      );
+
+      expect(
+        File(path.join(target.path, 'databases', 'thoughtecho.db'))
+            .existsSync(),
+        isTrue,
+      );
+      expect(
+        File(path.join(target.path, 'media', 'sub', 'photo.jpg')).existsSync(),
+        isTrue,
+      );
+      expect(progressValues.last, closeTo(1.0, 0.001));
+    });
+
+    test('任一文件复制失败即抛出，不静默跳过', () async {
+      // 收集之后源文件消失，模拟被占用/无权限等复制期失败。
+      createFile('databases/thoughtecho.db');
+      final target = await TestHarness.createTempDirectory('copy_fail_target');
+      addTearDown(() => TestHarness.deleteTempDirectory(target));
+
+      final scan = await DataDirectoryService.collectFilesForMigration(
+        tempDir.path,
+      );
+      File(abs('databases/thoughtecho.db')).deleteSync();
+
+      await expectLater(
+        DataDirectoryService.copyFilesForMigration(scan.files, target.path),
+        throwsA(isA<Exception>()),
+      );
     });
   });
 
@@ -261,6 +273,25 @@ void main() {
         isNull,
       );
     });
+
+    test('Windows 下大小写不同的同一目录被判为相同', () {
+      // 用 Windows 风格路径直接验证，不依赖宿主平台。
+      final windows = path.Context(style: path.Style.windows);
+      expect(
+        windows.equals(r'C:\Users\Me\Documents\ThoughtEcho',
+            r'c:\users\me\documents\thoughtecho'),
+        isTrue,
+      );
+    });
+
+    test('不同盘符的目标不会被误判为祖先或嵌套', () {
+      // package:path 的 Windows 风格把盘符作为第一段比较，跨盘迁移不应被拦。
+      final windows = path.Context(style: path.Style.windows);
+      const current = r'C:\Users\Me\Documents\ThoughtEcho';
+      const target = r'D:\ThoughtEcho';
+      expect(windows.isWithin(target, current), isFalse);
+      expect(windows.isWithin(current, target), isFalse);
+    });
   });
 
   group('DataDirectoryService.validateMigrationTarget', () {
@@ -293,13 +324,13 @@ void main() {
   });
 
   group('DataDirectoryService.canonicalizePath', () {
-    test('普通存在的目录原样返回', () async {
+    test('普通存在的目录原样返回', () {
       final real = Directory(abs('real'))..createSync();
-      final resolved = await DataDirectoryService.canonicalizePath(real.path);
+      final resolved = DataDirectoryService.canonicalizePath(real.path);
       expect(path.equals(resolved, real.path), isTrue);
     });
 
-    test('指向当前目录的符号链接被解析成同一真实路径', () async {
+    test('指向当前目录的符号链接被解析成同一真实路径', () {
       final real = Directory(abs('real'))..createSync();
       final link = Link(abs('link'));
       try {
@@ -309,15 +340,15 @@ void main() {
         return;
       }
 
-      final resolved = await DataDirectoryService.canonicalizePath(link.path);
+      final resolved = DataDirectoryService.canonicalizePath(link.path);
       expect(path.equals(resolved, real.path), isTrue);
     });
 
-    test('不存在的目标目录解析为规范化路径（逐级向上解析存在的祖先）', () async {
+    test('不存在的目标目录解析为规范化路径（逐级向上解析存在的祖先）', () {
       final parent = Directory(abs('parent'))..createSync();
       final target = path.join(parent.path, 'sub', 'new');
 
-      final resolved = await DataDirectoryService.canonicalizePath(target);
+      final resolved = DataDirectoryService.canonicalizePath(target);
       expect(path.equals(resolved, target), isTrue);
     });
   });
