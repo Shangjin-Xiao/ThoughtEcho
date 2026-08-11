@@ -271,9 +271,13 @@ class _ThoughterPageState extends State<ThoughterPage> {
   bool _showScrollToBottom = false;
 
   /// 对话区上 / 下缘有没有内容被盖住。渐隐只在真的遮住东西时才出现，
-  /// 见 [_ThoughterUI._updateEdgeFades]。
+  /// 见 [_ThoughterUI._scheduleEdgeFadeUpdate]。
   bool _contentHiddenAbove = false;
   bool _contentHiddenBelow = false;
+
+  /// 帧末那次渐隐复算有没有排上队。滚动和内容变长会在同一帧里各打一次通知，
+  /// 靠它合成一次。
+  bool _edgeFadeUpdateScheduled = false;
   // ==================== 性能优化结束 ====================
 
   // ==================== 性能优化：MarkdownStyleSheet 缓存 ====================
@@ -346,6 +350,14 @@ class _ThoughterPageState extends State<ThoughterPage> {
   @visibleForTesting
   List<app_chat.ChatMessage> get debugMessagesForTest =>
       List.unmodifiable(_messages);
+
+  /// 仅供测试：直接发起一次会话切换。
+  ///
+  /// 切会话的竞态（读库还没回来又切走）只在两次调用重叠时才出现，走历史页
+  /// 那条 UI 路径没法把两次切换叠在一起。
+  @visibleForTesting
+  Future<void> debugLoadSessionForTest(String sessionId) =>
+      _loadSession(sessionId);
 
   void _appendMessage(app_chat.ChatMessage message, {bool persist = false}) {
     _setState(() {

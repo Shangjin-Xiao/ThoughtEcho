@@ -25,17 +25,18 @@ const double _kSendButtonDiameter = 36;
 ///
 /// 这两个常量之前是每处各写各的：正文 (16,10,16,14)、卡片 (16,8,16,8)、
 /// 工具进度 (16,6,16,6)、开场白 (16,12,16,14)。一轮回答里这几种块交替出现，
-/// 间距就忽宽忽窄。
-const EdgeInsets _kMessageInsets = EdgeInsets.fromLTRB(16, 10, 16, 10);
+/// 间距就忽宽忽窄，而且 10 / 14 / 6 都不在 4 的倍数上
+/// （AGENTS.md「间距用 4 的倍数」）。
+const EdgeInsets _kMessageInsets = EdgeInsets.fromLTRB(16, 12, 16, 12);
 const EdgeInsets _kCardMessageInsets = EdgeInsets.fromLTRB(16, 8, 16, 8);
 
 /// 输入壳到屏幕边缘的留白：闲置一档、聚焦一档，之间是一段动画
 /// （见 [_ThoughterUI._buildInputArea]）。下方的值是加在系统安全区之上的，
 /// 手势条那一条不用在这里重复算。
 const double _kComposerMarginIdle = 20;
-const double _kComposerMarginFocused = 10;
+const double _kComposerMarginFocused = 12;
 const double _kComposerBottomIdle = 12;
-const double _kComposerBottomFocused = 6;
+const double _kComposerBottomFocused = 4;
 
 extension _ThoughterUI on _ThoughterPageState {
   /// 消息区可用高度变小（键盘上推、输入框变多行）时跟着贴底，
@@ -57,17 +58,27 @@ extension _ThoughterUI on _ThoughterPageState {
   }
 
   /// 上下缘渐隐的开关：跟着"这个方向上还有没有没露出来的内容"走。
-  void _updateEdgeFades(ScrollMetrics metrics) {
-    if (!mounted) return;
-    // 一点余量：贴到头时的浮点误差会让开关在两个状态之间反复横跳。
-    const epsilon = 2.0;
-    final above = metrics.extentBefore > epsilon;
-    final below = metrics.extentAfter > epsilon;
-    if (above == _contentHiddenAbove && below == _contentHiddenBelow) return;
-    // 滚动通知有可能在布局途中派发（贴底那次 jumpTo 就会走到这条路），
-    // 那一刻 setState 会抛。一律推到帧末再改，渐隐晚一帧亮起，看不出来。
+  ///
+  /// 触发点有两个——滚动（`ScrollUpdateNotification`）和内容长短变化
+  /// （`ScrollMetricsNotification`，流式回复每来一段就长一点，那一下不产生
+  /// 滚动事件）。两者在一次拖动里可能都会打过来，所以这里只登记一次回调，
+  /// 真正的判断推到帧末去做：
+  ///
+  /// - 帧末从 `ScrollPosition` 现读，而不是用通知里那份 metrics —— 同一帧内
+  ///   来回滚或者程序化跳转时，先到的那份已经过期，用它会把渐隐定在旧状态；
+  /// - 滚动通知有可能在布局途中派发（贴底那次 jumpTo 就会），那一刻
+  ///   setState 会抛，推到帧末就没这问题。渐隐晚一帧亮起，看不出来。
+  void _scheduleEdgeFadeUpdate() {
+    if (!mounted || _edgeFadeUpdateScheduled) return;
+    _edgeFadeUpdateScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      _edgeFadeUpdateScheduled = false;
+      if (!mounted || !_scrollController.hasClients) return;
+      final position = _scrollController.position;
+      // 一点余量：贴到头时的浮点误差会让开关在两个状态之间反复横跳。
+      const epsilon = 2.0;
+      final above = position.extentBefore > epsilon;
+      final below = position.extentAfter > epsilon;
       if (above == _contentHiddenAbove && below == _contentHiddenBelow) return;
       _setState(() {
         _contentHiddenAbove = above;
@@ -209,12 +220,12 @@ extension _ThoughterUI on _ThoughterPageState {
                     // 渐隐要跟着变。
                     NotificationListener<ScrollMetricsNotification>(
                       onNotification: (notification) {
-                        _updateEdgeFades(notification.metrics);
+                        _scheduleEdgeFadeUpdate();
                         return false;
                       },
                       child: NotificationListener<ScrollUpdateNotification>(
                         onNotification: (notification) {
-                          _updateEdgeFades(notification.metrics);
+                          _scheduleEdgeFadeUpdate();
                           if (notification.scrollDelta != null &&
                               notification.dragDetails != null) {
                             if (notification.scrollDelta! < 0) {
@@ -230,7 +241,7 @@ extension _ThoughterUI on _ThoughterPageState {
                           //
                           // 底部比顶部多留一点：输入框现在是浮在底部的一颗胶囊，
                           // 最后一行字紧贴着它会显得对话被框推着走。
-                          padding: const EdgeInsets.fromLTRB(0, 8, 0, 14),
+                          padding: const EdgeInsets.fromLTRB(0, 8, 0, 16),
                           itemCount:
                               _messages.length + (_showWaitingCursor ? 1 : 0),
                           itemBuilder: (context, index) {
@@ -675,7 +686,7 @@ extension _ThoughterUI on _ThoughterPageState {
                     size: 16,
                     color: theme.colorScheme.error,
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   Flexible(
                     child: Text(
                       l10n.agentErrorGeneric,
@@ -697,7 +708,7 @@ extension _ThoughterUI on _ThoughterPageState {
                           _isLoading ? null : () => _regenerateFrom(message),
                       style: TextButton.styleFrom(
                         foregroundColor: theme.colorScheme.error,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
                         minimumSize: const Size(0, 32),
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         visualDensity: VisualDensity.compact,

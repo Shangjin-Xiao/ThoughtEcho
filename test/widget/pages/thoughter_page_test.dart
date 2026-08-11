@@ -117,6 +117,8 @@ class _InMemoryChatSessionService extends ChatSessionService {
 
   @override
   Future<List<app_chat.ChatMessage>> getMessages(String sessionId) async {
+    final gate = loadGates[sessionId];
+    if (gate != null) await gate.future;
     return List<app_chat.ChatMessage>.from(
       _messages[sessionId] ?? const <app_chat.ChatMessage>[],
     );
@@ -124,6 +126,47 @@ class _InMemoryChatSessionService extends ChatSessionService {
 
   /// 落库消息（按会话），用于断言开场白确实写进了库。
   Map<String, List<app_chat.ChatMessage>> get storedMessages => _messages;
+
+  /// 现存会话，用于断言"没说过话的会话不该被记一笔"。
+  List<ChatSession> get sessions => _sessions.values.toList(growable: false);
+
+  /// 被删掉的会话 id，按删除顺序。竞态用例靠它确认删的是哪一个。
+  final List<String> deletedSessionIds = <String>[];
+
+  /// 读某个会话消息前先卡住，用来把"读库还没回来"这段时间拉长。
+  final Map<String, Completer<void>> loadGates = <String, Completer<void>>{};
+
+  @override
+  Future<void> deleteSession(String sessionId) async {
+    deletedSessionIds.add(sessionId);
+    _sessions.remove(sessionId);
+    _messages.remove(sessionId);
+  }
+
+  @override
+  Future<List<ChatSession>> getAllSessions({
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final all = _sessions.values.toList()
+      ..sort((a, b) => b.lastActiveAt.compareTo(a.lastActiveAt));
+    return all.take(limit).toList();
+  }
+
+  @override
+  Future<Map<String, ChatSessionOverview>> getSessionOverviews(
+    List<String> sessionIds,
+  ) async {
+    return <String, ChatSessionOverview>{
+      for (final id in sessionIds)
+        id: ChatSessionOverview(
+          messageCount: _messages[id]?.length ?? 0,
+          snippet: _messages[id]?.isNotEmpty == true
+              ? _messages[id]!.last.content
+              : '',
+        ),
+    };
+  }
 }
 
 class _FakeAIService extends AIService {
@@ -2354,6 +2397,113 @@ void main() {
       // Dialog pops up
       expect(find.byType(Dialog), findsOneWidget);
       expect(find.text('Thoughter 实验性功能说明'), findsOneWidget);
+    });
+
+    // 「新建对话」以前直接调 _createNewSession，于是按钮本身就往 chat_sessions
+    // 写了一条没有任何消息的记录。服务层的清扫会跳过 5 分钟内新建的会话，
+    // 而用户点完新建马上翻历史，看到的正是这 5 分钟。
+    testWidgets('new chat button does not persist an empty session',
+        (tester) async {
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: const ThoughterPage(
+            key: ValueKey('new_chat_empty_session_page'),
+            entrySource: ThoughterEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 说过一句话，会话才建出来
+      await _submitInput(tester, '第一段对话');
+      await _settleAgentTurn(tester);
+      expect(chatSessionService.sessions, hasLength(1));
+
+      // 点「新建对话」：这一下本身不该再写一条记录
+      await tester.tap(find.byIcon(Icons.add_comment_outlined));
+      await tester.pumpAndSettle();
+      expect(
+        chatSessionService.sessions,
+        hasLength(1),
+        reason: '按钮本身不该建会话，要等首条用户消息',
+      );
+
+      // 开口之后才记第二笔
+      await _submitInput(tester, '第二段对话');
+      await _settleAgentTurn(tester);
+      expect(chatSessionService.sessions, hasLength(2));
+    });
+
+    // 切会话时 id 先换、消息要等一次异步读库才跟上，中间这段两者是错位的。
+    // _cleanupEmptySession 靠"_messages 里有没有用户消息"判断当前会话空不空，
+    // 错位期间那份列表还是上一个会话的，拿它去决定删谁会删错人。
+    testWidgets('rapid session switching does not delete the loaded session',
+        (tester) async {
+      final older = ChatSession(
+        id: 'session-older',
+        sessionType: 'agent',
+        title: '更早的一段',
+        createdAt: DateTime(2026, 8, 1),
+        lastActiveAt: DateTime(2026, 8, 1),
+      );
+      final newer = ChatSession(
+        id: 'session-newer',
+        sessionType: 'agent',
+        title: '较新的一段',
+        createdAt: DateTime(2026, 8, 2),
+        lastActiveAt: DateTime(2026, 8, 2),
+      );
+      app_chat.ChatMessage userMessage(String id, String content) =>
+          app_chat.ChatMessage(
+            id: id,
+            content: content,
+            isUser: true,
+            role: 'user',
+            timestamp: DateTime(2026, 8, 2),
+          );
+      chatSessionService.seedSession(older, [userMessage('m-1', '早先说的话')]);
+      chatSessionService.seedSession(newer, [userMessage('m-2', '后来说的话')]);
+
+      // 卡住第一次读库，制造"id 已经换了、消息还没跟上"的那段窗口
+      final gate = Completer<void>();
+      chatSessionService.loadGates[older.id] = gate;
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: const ThoughterPage(
+            key: ValueKey('session_switch_race_page'),
+            entrySource: ThoughterEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final state = tester.state(find.byType(ThoughterPage)) as dynamic;
+      // 第一次切换卡在读库里
+      final firstLoad = state.debugLoadSessionForTest(older.id) as Future<void>;
+      await tester.pump();
+      // 还没等它回来就切到另一段
+      final secondLoad =
+          state.debugLoadSessionForTest(newer.id) as Future<void>;
+      await tester.pump();
+
+      gate.complete();
+      await tester.runAsync(() => Future.wait<void>([firstLoad, secondLoad]));
+      await tester.pumpAndSettle();
+
+      expect(
+        chatSessionService.deletedSessionIds,
+        isEmpty,
+        reason: '两段都有用户消息，一条都不该被当成空会话删掉',
+      );
+      // 慢的那次读库回来时已经过期，不该把内容盖回去
+      final messages = state.debugMessagesForTest as List<app_chat.ChatMessage>;
+      expect(messages.map((m) => m.content), contains('后来说的话'));
+      expect(messages.map((m) => m.content), isNot(contains('早先说的话')));
     });
   });
 }

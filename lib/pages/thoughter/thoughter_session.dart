@@ -63,23 +63,38 @@ extension _ThoughterSession on _ThoughterPageState {
 
   /// 删除空的会话（没有用户消息）
   void _cleanupEmptySession() {
-    if (_currentSessionId == null) return;
-    // _messages 还没跟上 _currentSessionId 时不能下判断：那份列表属于上一个
-    // 会话，拿它去问"当前这个会话有没有人说过话"，答案是别人的。
-    // 连着点两下历史就会走到这里——第二次点进来时第一次的读库还没回来。
-    if (_messagesSessionId != _currentSessionId) return;
+    final sessionId = _currentSessionId;
+    if (sessionId == null) return;
 
-    // 检查是否有任何非系统消息
-    final hasUserMessages = _messages.any((msg) => msg.isUser);
-
-    if (!hasUserMessages) {
+    // _messages 跟得上 _currentSessionId 时，它就是最新的真相，直接用。
+    if (_messagesSessionId == sessionId) {
+      if (_messages.any((msg) => msg.isUser)) return;
       unawaited(
-        _chatSessionService.deleteSession(_currentSessionId!).catchError(
-          (e) {
-            logDebug('清理空会话失败: $_currentSessionId - $e');
-          },
-        ),
+        _chatSessionService.deleteSession(sessionId).catchError((e) {
+          logDebug('清理空会话失败: $sessionId - $e');
+        }),
       );
+      return;
+    }
+
+    // 对不上号：切会话途中，_messages 还是上一个会话的。拿别人的列表去问
+    // "这个会话有没有人说过话"，答案是别人的——连着点两下历史就会走到这里。
+    // 但也不能就这么放过：那一段要是真空着，跳过清理它就留在历史里了
+    // （服务层的清扫要等 5 分钟，而用户翻历史就在这几秒内）。去库里问一次。
+    unawaited(_deleteSessionIfEmpty(sessionId));
+  }
+
+  /// 去库里确认这个会话确实没有用户消息，然后再删。
+  ///
+  /// 只在内存状态不可信时走这条路。会话是 [_ensureSessionCreated] 现建的时候
+  /// id 和消息一起落地，不会走到这里，所以不存在"首条消息还没写完就被删"。
+  Future<void> _deleteSessionIfEmpty(String sessionId) async {
+    try {
+      final messages = await _chatSessionService.getMessages(sessionId);
+      if (messages.any((msg) => msg.isUser)) return;
+      await _chatSessionService.deleteSession(sessionId);
+    } catch (e) {
+      logDebug('清理空会话失败: $sessionId - $e');
     }
   }
 
