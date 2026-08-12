@@ -221,6 +221,9 @@ class QuoteContent extends StatelessWidget {
     final richText = Map<String, dynamic>.from(
       stats['richText'] as Map<String, dynamic>,
     );
+    final media = Map<String, dynamic>.from(
+      stats['media'] as Map<String, dynamic>,
+    );
 
     final buffer = StringBuffer()
       ..write('doc=${document['cacheSize']}')
@@ -233,7 +236,10 @@ class QuoteContent extends StatelessWidget {
       ..write(',ctrlDispose=${controller['disposeCount']}')
       ..write(',ir=${richText['cacheSize']}')
       ..write('/${richText['maxSize']}')
-      ..write(',irWorstUs=${richText['worstWorkMicros']}');
+      ..write(',irWorstUs=${richText['worstWorkMicros']}')
+      ..write(',media=${media['cacheSize']}')
+      ..write('/${media['maxSize']}')
+      ..write(',mediaMiss=${media['missCount']}');
 
     if (baseline != null) {
       final baselineDocument = Map<String, dynamic>.from(
@@ -420,6 +426,7 @@ class QuoteContent extends StatelessWidget {
     required TextDirection textDirection,
     required TextScaler textScaler,
     Locale? locale,
+    FontWeight boldWeight = FontWeight.bold,
   }) {
     _syncEstimatedLineHeight(style);
 
@@ -438,12 +445,20 @@ class QuoteContent extends StatelessWidget {
       // 新加的图片永远等不到展开入口。
       contentSignatureSalt: quote.deltaContent?.hashCode,
       style: style,
+      // 字重进键：Android + material 下渲染用的是降档后的 w500，判定也得用同一档，
+      // 否则贴着 160px 阈值的加粗卡片会「判定说要折叠、画出来其实没超」。
+      boldWeight: boldWeight,
       maxWidth: maxWidth,
       textDirection: textDirection,
       textScaler: textScaler,
       locale: locale,
       builder: () {
-        if (isRichText) {
+        // IR 为空说明 delta 解不出来，渲染侧会退回纯文本（见 build）。判定必须跟着
+        // 退回同一份内容去量，否则一条正文很长的坏笔记会被判成「不需要折叠」——
+        // 纯文本兜底照着这个答案不加裁剪地铺开，整篇糊在列表里，还没有展开入口。
+        final blocks =
+            isRichText ? DeltaRichTextCache.of(quote.deltaContent) : null;
+        if (blocks != null && blocks.isNotEmpty) {
           // 带媒体一律可展开，见 [_hasCollapsibleMedia]。
           if (DeltaMediaCache.of(quote.deltaContent).hasMedia) {
             return true;
@@ -451,11 +466,12 @@ class QuoteContent extends StatelessWidget {
           // 判定用的是「媒体还在正文里」的口径：折叠盒是否需要展开入口，取决于
           // 完整内容放不放得下，而不是某个版式摘掉媒体之后剩多少。
           final plan = CollapsedRichTextMetrics.plan(
-            blocks: DeltaRichTextCache.of(quote.deltaContent),
+            blocks: blocks,
             baseStyle: _measurementBaseStyle(style),
             maxWidth: maxWidth,
             limit: collapsedContentMaxHeight,
             showMedia: true,
+            boldWeight: boldWeight,
             textDirection: textDirection,
             textScaler: textScaler,
             locale: locale,
@@ -639,7 +655,7 @@ class QuoteContent extends StatelessWidget {
         // 折叠预览的加粗必须和展开态用同一档字重，见 `_buildCustomStyles`：
         // Android + material 下 quill 把 bold 降到 w500，这里不跟着降的话，
         // 同一条笔记折叠时比展开后更粗。
-        final boldWeight = _collapsedBoldWeight(context);
+        final boldWeight = collapsedBoldWeight(context);
         final textDirection = Directionality.of(context);
         final textScaler = MediaQuery.textScalerOf(context);
         final locale = Localizations.maybeLocaleOf(context);
@@ -780,7 +796,9 @@ class QuoteContent extends StatelessWidget {
   }
 
   /// 折叠预览里「粗体」该用哪一档字重，规则与 [_buildCustomStyles] 一致。
-  static FontWeight _collapsedBoldWeight(BuildContext context) {
+  ///
+  /// 判定侧（`quote_item_widget`）也要拿它，好和渲染侧量同一件事。
+  static FontWeight collapsedBoldWeight(BuildContext context) {
     final weightCompensation =
         AppTypographyTokens.of(context).variableWeightCompensation;
     if (kIsWeb || !Platform.isAndroid || weightCompensation <= 0) {
@@ -1040,6 +1058,7 @@ class _QuotePlainTextLayoutExpansionCache {
     required Locale? locale,
     required bool Function() builder,
     int? contentSignatureSalt,
+    FontWeight boldWeight = FontWeight.bold,
   }) {
     final key = _PlainTextLayoutExpansionCacheKey(
       contentSignature: Object.hash(
@@ -1048,7 +1067,7 @@ class _QuotePlainTextLayoutExpansionCache {
         contentSignatureSalt,
       ),
       maxWidthKey: (maxWidth * 100).round(),
-      styleHash: style.hashCode,
+      styleHash: Object.hash(style.hashCode, boldWeight.value),
       textDirection: textDirection,
       textScalerHash: textScaler.hashCode,
       localeTag: locale?.toLanguageTag(),

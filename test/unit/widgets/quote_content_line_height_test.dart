@@ -113,6 +113,25 @@ void main() {
     expect(decideAtLineHeight(30.0), isTrue, reason: '166 该超阈值');
   });
 
+  test('无宽度兜底走的仍是估算公式，不是实测', () {
+    // maxWidth 非有限 / <= 0 时判定退回 `_estimatePlainTextHeight`。那条公式还活着
+    // （末尾空段算 0.5 行、段间距 `_lineSpacing`），但已经没有别的用例覆盖它了，
+    // 改动它不会被上面那条实测翻转用例捕获。这里按翻转点两侧各取一个行高钉住。
+    bool decideWithoutWidth(double lineHeight) =>
+        QuoteContent.exceedsCollapsedHeightForLayout(
+          quote: richQuote('nowidth-$lineHeight'),
+          style: TextStyle(fontSize: 10, height: lineHeight / 10),
+          maxWidth: double.infinity,
+          textDirection: TextDirection.ltr,
+          textScaler: TextScaler.noScaling,
+        );
+
+    // 兜底口径：5 个非空块各 1 行 + 4 个 blockGap(4px) = 5×行高 + 16。
+    // 解 5×行高 + 16 > 160 得翻转点 行高 = 28.8。
+    expect(decideWithoutWidth(28.0), isFalse);
+    expect(decideWithoutWidth(30.0), isTrue);
+  });
+
   test('style 缺字号或行高时不动全局值，交给 build 回填', () {
     decideExpansion(richQuote('seed'), ThemeStyle.paper);
     final seeded = QuoteContent.estimatedLineHeight;

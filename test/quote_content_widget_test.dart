@@ -312,6 +312,36 @@ void main() {
     expect(find.textContaining('这段纯文本必须还在'), findsOneWidget);
   });
 
+  test('delta 解不出来时，折叠判定也按纯文本量，长笔记仍然可展开', () {
+    // 判定和渲染必须退回**同一份内容**。判定还按空 IR 量的话结果是「不需要折叠」，
+    // 纯文本兜底就照着这个答案不加裁剪地铺开——整篇糊在列表里，还没有展开入口。
+    final longBroken = Quote(
+      id: 'rich_broken_long',
+      content: '这段纯文本很长，长到必须折叠。' * 40,
+      date: '2025-01-01T00:00:00.000Z',
+      editSource: 'fullscreen',
+      deltaContent: '{这不是合法的 delta JSON',
+    );
+    final shortBroken = Quote(
+      id: 'rich_broken_short',
+      content: '短的',
+      date: '2025-01-01T00:00:00.000Z',
+      editSource: 'fullscreen',
+      deltaContent: '{这不是合法的 delta JSON',
+    );
+
+    bool decide(Quote quote) => QuoteContent.exceedsCollapsedHeightForLayout(
+          quote: quote,
+          style: const TextStyle(fontSize: 16, height: 1.5),
+          maxWidth: 320,
+          textDirection: TextDirection.ltr,
+          textScaler: TextScaler.noScaling,
+        );
+
+    expect(decide(longBroken), isTrue);
+    expect(decide(shortBroken), isFalse);
+  });
+
   testWidgets('小字号正文不会在盒子没填满时被静默截断', (tester) async {
     // 行数预算按正文基准行高算的话，`small`（10px）的行只有基准的一半多，
     // 盒子还没满就把后面的内容丢了——而且量出来不到 160px，卡片连展开入口都没有。

@@ -625,8 +625,7 @@ class DeltaRichTextCache {
 
   static bool _holdsInlineDataMedia(List<RichTextBlock> blocks) {
     for (final block in blocks) {
-      final source = block.media?.source;
-      if (source != null && source.startsWith('data:')) return true;
+      if (isInlineDataUri(block.media?.source)) return true;
     }
     return false;
   }

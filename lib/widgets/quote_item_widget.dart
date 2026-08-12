@@ -382,6 +382,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
       textScaler: MediaQuery.textScalerOf(context),
       locale: Localizations.maybeLocaleOf(context),
+      // 判定和渲染必须量同一件事：Android + material 下折叠预览的加粗是降档过的。
+      boldWeight: QuoteContent.collapsedBoldWeight(context),
     );
   }
 

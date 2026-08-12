@@ -462,6 +462,18 @@ void main() {
       expect(DeltaRichTextCache.stats['cacheSize'], 0);
     });
 
+    test('大写 scheme 的 data URI 同样跳过缓存', () {
+      // scheme 按 RFC 2397 大小写不敏感，只认小写会让 `DATA:` 绕过豁免。
+      final delta = deltaOf([
+        {
+          'insert': {'image': 'DATA:image/png;base64,AAAA'},
+        },
+        {'insert': '说明\n'},
+      ]);
+      DeltaRichTextCache.of(delta);
+      expect(DeltaRichTextCache.stats['cacheSize'], 0);
+    });
+
     test('缓存结果不可变，调用方改不动共享的表', () {
       final blocks = DeltaRichTextCache.of(deltaOf([
         {'insert': '只读\n'},

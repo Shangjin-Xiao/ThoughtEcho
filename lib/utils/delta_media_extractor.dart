@@ -128,6 +128,15 @@ Map<Object?, Object?>? _asCustomMap(Object? raw) {
   return null;
 }
 
+/// source 是不是内嵌的 `data:` URI。
+///
+/// 这类 source 本身就是整段 base64，缓存住等于把若干 MB 长期钉在堆上，所以按内容
+/// 做键的缓存都要跳过它们。scheme 按 RFC 2397 大小写不敏感，`DATA:` 也算。
+bool isInlineDataUri(String? source) {
+  if (source == null || source.length < 5) return false;
+  return source.substring(0, 5).toLowerCase() == 'data:';
+}
+
 String? _readEmbedSource(Object? raw) {
   if (raw is String) {
     return raw.isEmpty ? null : raw;
@@ -241,8 +250,7 @@ class DeltaMediaCache {
 
     // 首图是 data: URL 时不进缓存：那个 source 就是整段 base64，缓存住等于把
     // 若干 MB 长期钉在堆上，而这类笔记本来就少，重解一次的代价远小于常驻内存。
-    final firstSource = summary.firstImageSource;
-    if (firstSource != null && firstSource.startsWith('data:')) {
+    if (isInlineDataUri(summary.firstImageSource)) {
       return summary;
     }
 
