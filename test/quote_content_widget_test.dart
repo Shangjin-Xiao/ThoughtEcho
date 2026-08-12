@@ -1,8 +1,6 @@
 import 'dart:convert';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
@@ -14,7 +12,9 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/utils/quill_editor_extensions.dart';
 import 'package:thoughtecho/widgets/motion_photo_preview_page.dart';
 import 'package:thoughtecho/widgets/note_list/collapsed_media_banner.dart';
+import 'package:thoughtecho/widgets/note_list/collapsed_media_image.dart';
 import 'package:thoughtecho/widgets/note_list/collapsed_media_thumbnail.dart';
+import 'package:thoughtecho/widgets/note_list/collapsed_rich_text.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
 import 'package:visibility_detector/visibility_detector.dart';
@@ -182,34 +182,28 @@ void main() {
     expect(QuoteItemWidget.needsExpansionFor(quote), isTrue);
   });
 
-  testWidgets('折叠文档不含嵌入媒体，图片改由独立缩略图渲染', (tester) async {
+  testWidgets('thumbnail 版式：折叠卡片不建 QuillEditor，媒体走独立缩略图', (tester) async {
     final quote = createDeltaQuoteWithImage();
 
     await tester.pumpWidget(
-      buildTestApp(
-        quote,
-        needsExpansionOverride: true,
-        contentWidth: 320,
-      ),
+      buildTestApp(quote, needsExpansionOverride: true, contentWidth: 320),
     );
     await tester.pump();
 
-    // 折叠态的媒体走 CollapsedMediaThumbnail，Quill 文档里必须一个嵌入节点都不剩：
-    // 留着就等于在 160px 的窗口里再解一遍整宽图，还会被裁掉大半。
-    final editor = tester.widget<quill.QuillEditor>(
-      find.byType(quill.QuillEditor),
-    );
-    final embedCount = editor.controller.document
-        .toDelta()
-        .toJson()
-        .where((op) => op['insert'] is Map)
-        .length;
-    expect(embedCount, 0);
-
+    // 这是阶段 D 的核心断言：折叠态**一个 QuillEditor 都不建**。没有编辑器就没有
+    // 20~48ms 的冷首布局，也就不需要占位、每帧额度和恢复队列那一整套时序机制。
+    expect(find.byType(quill.QuillEditor), findsNothing);
+    expect(find.byType(CollapsedRichText), findsOneWidget);
     expect(find.byType(CollapsedMediaThumbnail), findsOneWidget);
+
+    // 媒体摘出正文之后，正文本身不该再画任何媒体。
+    final richText = tester.widget<CollapsedRichText>(
+      find.byType(CollapsedRichText),
+    );
+    expect(richText.showMedia, isFalse);
   });
 
-  testWidgets('inline 版式把媒体留在正文原位交给 Quill', (tester) async {
+  testWidgets('inline 版式把媒体留在正文原位，且不实例化播放器', (tester) async {
     final quote = createDeltaQuoteWithImage();
 
     await tester.pumpWidget(
@@ -222,21 +216,21 @@ void main() {
     );
     await tester.pump();
 
-    final editor = tester.widget<quill.QuillEditor>(
-      find.byType(quill.QuillEditor),
-    );
-    final embedCount = editor.controller.document
-        .toDelta()
-        .toJson()
-        .where((op) => op['insert'] is Map)
-        .length;
-    expect(embedCount, 1, reason: 'inline 版式不得剥离嵌入');
-
+    expect(find.byType(quill.QuillEditor), findsNothing);
     expect(find.byType(CollapsedMediaThumbnail), findsNothing);
-    expect(find.byType(CollapsedMediaBanner), findsNothing);
+
+    final richText = tester.widget<CollapsedRichText>(
+      find.byType(CollapsedRichText),
+    );
+    expect(richText.showMedia, isTrue);
+    // 媒体块按原位留在块序列里，正文因此是「文字段, 媒体, 文字段…」的交错。
+    expect(
+      richText.blocks.any((block) => block.isMedia),
+      isTrue,
+    );
   });
 
-  testWidgets('banner 版式把媒体画在卡片顶部且剥离嵌入', (tester) async {
+  testWidgets('banner 版式把媒体画在卡片顶部且正文不含媒体', (tester) async {
     final quote = createDeltaQuoteWithImage();
 
     await tester.pumpWidget(
@@ -249,41 +243,18 @@ void main() {
     );
     await tester.pump();
 
-    final editor = tester.widget<quill.QuillEditor>(
-      find.byType(quill.QuillEditor),
-    );
-    final embedCount = editor.controller.document
-        .toDelta()
-        .toJson()
-        .where((op) => op['insert'] is Map)
-        .length;
-    expect(embedCount, 0);
-
+    expect(find.byType(quill.QuillEditor), findsNothing);
     expect(find.byType(CollapsedMediaBanner), findsOneWidget);
     expect(find.byType(CollapsedMediaThumbnail), findsNothing);
 
-    // 通栏在正文上方。
-    final bannerY = tester.getTopLeft(find.byType(CollapsedMediaBanner)).dy;
-    final contentY =
-        tester.getTopLeft(find.byKey(QuoteContent.collapsedWrapperKey)).dy;
-    expect(bannerY, lessThan(contentY));
+    final richText = tester.widget<CollapsedRichText>(
+      find.byType(CollapsedRichText),
+    );
+    expect(richText.showMedia, isFalse);
   });
 
-  testWidgets('切换版式不会复用上一版式缓存的折叠文档', (tester) async {
-    // mediaSignature 这个缓存键存在的全部理由。**中途不清缓存**：先用
-    // thumbnail 渲染一次（文档里的嵌入被剥离并缓存），再用同一条笔记切到
-    // inline。如果缓存键没区分版式，inline 会拿到剥离过的文档、embedCount 变 0。
+  testWidgets('切换版式立刻改变正文渲染，不会读到上一版式的结果', (tester) async {
     final quote = createDeltaQuoteWithImage();
-
-    await tester.pumpWidget(
-      buildTestApp(
-        quote,
-        needsExpansionOverride: true,
-        contentWidth: 320,
-      ),
-    );
-    await tester.pump();
-    expect(find.byType(CollapsedMediaThumbnail), findsOneWidget);
 
     await tester.pumpWidget(
       buildTestApp(
@@ -294,20 +265,29 @@ void main() {
       ),
     );
     await tester.pump();
-
-    final editor = tester.widget<quill.QuillEditor>(
-      find.byType(quill.QuillEditor),
-    );
-    final embedCount = editor.controller.document
-        .toDelta()
-        .toJson()
-        .where((op) => op['insert'] is Map)
-        .length;
     expect(
-      embedCount,
-      1,
-      reason: 'inline 拿到了 thumbnail 版式剥离过的文档，说明缓存键没区分版式',
+      tester
+          .widget<CollapsedRichText>(find.byType(CollapsedRichText))
+          .showMedia,
+      isTrue,
     );
+
+    await tester.pumpWidget(
+      buildTestApp(
+        quote,
+        needsExpansionOverride: true,
+        contentWidth: 320,
+        mediaStyle: NoteCardMediaStyle.thumbnail,
+      ),
+    );
+    await tester.pump();
+    expect(
+      tester
+          .widget<CollapsedRichText>(find.byType(CollapsedRichText))
+          .showMedia,
+      isFalse,
+    );
+    expect(find.byType(CollapsedMediaThumbnail), findsOneWidget);
   });
 
   testWidgets('点击缩略图打开大图预览', (tester) async {
@@ -464,351 +444,78 @@ void main() {
     expect(find.byKey(QuoteContent.collapsedWrapperKey), findsOneWidget);
   });
 
-  testWidgets('高速滚动中新出现的折叠富文本会等列表停下再创建 Quill', (tester) async {
-    final longText = '滚动期间只显示轻量预览。' * 80;
+  testWidgets('滚动期间折叠卡片照常渲染正文，不再有占位→富文本两段式', (tester) async {
+    // 阶段 D 之前，滚动中的折叠卡片显示的是 `Text(quote.content)` 轻量占位，停下
+    // 才换成 Quill 文档——「停下闪一下」就是这么来的。现在正文从第一帧起就是最终
+    // 形态，滚动信号对它不再有任何影响。
+    final longText = '滚动期间也要看到真正的正文。' * 40;
     final quote = Quote(
-      id: 'rich_deferred_while_scrolling',
+      id: 'rich_no_deferral',
       content: longText,
       date: '2025-01-01T00:00:00.000Z',
       editSource: 'fullscreen',
       deltaContent: jsonEncode([
-        {
-          'insert': longText,
-          'attributes': {'bold': true},
-        },
+        {'insert': longText},
         {'insert': '\n'},
       ]),
     );
-    QuoteContent.clearCacheForTesting();
+
     isListScrolling.value = true;
+    isListDragActive.value = true;
 
     await tester.pumpWidget(
-      buildTestApp(
-        quote,
-        needsExpansionOverride: true,
-        contentWidth: 320,
-      ),
+      buildTestApp(quote, needsExpansionOverride: true, contentWidth: 320),
     );
     await tester.pump();
 
+    expect(find.byType(CollapsedRichText), findsOneWidget);
     expect(find.byType(quill.QuillEditor), findsNothing);
-    expect(find.byKey(QuoteContent.collapsedWrapperKey), findsOneWidget);
-    final placeholderText = tester.widget<Text>(
-      find.descendant(
-        of: find.byKey(QuoteContent.collapsedWrapperKey),
-        matching: find.byType(Text),
-      ),
-    );
-    expect(placeholderText.data!.length, lessThan(longText.length));
-    expect(
-      QuoteContent.debugCacheStats()['controller'],
-      containsPair('createCount', 0),
-    );
-    expect(
-      QuoteContent.debugCacheStats()['document'],
-      allOf(
-        containsPair('missCount', 0),
-        containsPair('workMicros', 0),
-      ),
-    );
 
+    // 滚动停止不改变任何东西：没有需要「恢复」的东西了。
+    final duringScroll = tester.widget<CollapsedRichText>(
+      find.byType(CollapsedRichText),
+    );
     isListScrolling.value = false;
+    isListDragActive.value = false;
     await tester.pump();
-
-    expect(find.byType(quill.QuillEditor), findsOneWidget);
-
-    isListScrolling.value = true;
-    await tester.pump();
-
-    expect(find.byType(quill.QuillEditor), findsOneWidget);
+    final afterScroll = tester.widget<CollapsedRichText>(
+      find.byType(CollapsedRichText),
+    );
+    expect(afterScroll.plan.entries.length, duringScroll.plan.entries.length);
+    expect(afterScroll.plan.height, duringScroll.plan.height);
   });
 
-  testWidgets('拖拽暂停期间（滚动更新停止但手势未结束）不物化冷 Quill', (tester) async {
-    final longText = '手指按住暂停时也不能物化。' * 80;
+  testWidgets('排版工作量有上界：超长笔记也只排折叠盒装得下的那几行', (tester) async {
+    // 旧实现每加一个 op 就把已累积的全部 span 重新 layout 一次（O(n²)，单次最坏
+    // 实测 14.5ms，且发生在滚动帧内）。现在改成给每个块一个行数预算，预算和正文
+    // 长度无关。
+    final hugeText = '这段正文非常长，长到远远超过折叠盒能显示的范围。' * 400;
     final quote = Quote(
-      id: 'rich_deferred_while_drag_paused',
-      content: longText,
+      id: 'rich_huge',
+      content: hugeText,
       date: '2025-01-01T00:00:00.000Z',
       editSource: 'fullscreen',
       deltaContent: jsonEncode([
-        {'insert': '$longText\n'},
+        {'insert': hugeText},
+        {'insert': '\n'},
       ]),
     );
-    QuoteContent.clearCacheForTesting();
-    // 模拟拖拽中：手势开始后滚动更新暂停，isListScrolling 因 32ms 无更新回落，
-    // 但 ScrollEnd 尚未到来，isListDragActive 仍为 true。
-    isListDragActive.value = true;
-    isListScrolling.value = true;
 
     await tester.pumpWidget(
-      buildTestApp(
-        quote,
-        needsExpansionOverride: true,
-        contentWidth: 320,
-      ),
+      buildTestApp(quote, needsExpansionOverride: true, contentWidth: 320),
     );
     await tester.pump();
-    expect(find.byType(quill.QuillEditor), findsNothing);
 
-    // 手指按住不动：滚动信号回落，拖拽信号保持。
-    isListScrolling.value = false;
-    await tester.pump();
-    await tester.pump();
-    expect(find.byType(quill.QuillEditor), findsNothing);
-    expect(
-      QuoteContent.debugCacheStats()['controller'],
-      containsPair('createCount', 0),
+    final richText = tester.widget<CollapsedRichText>(
+      find.byType(CollapsedRichText),
     );
-
-    // 手势结束（ScrollEnd）：恢复队列才开始物化。
-    isListDragActive.value = false;
-    await tester.pump();
-    expect(find.byType(quill.QuillEditor), findsOneWidget);
+    // 160px 的盒子按 16×1.5 的行高最多 11 行；预算再宽也不该到两位数以上。
+    expect(richText.plan.entries, hasLength(1));
+    expect(richText.plan.entries.single.maxLines, lessThanOrEqualTo(12));
+    expect(richText.plan.entries.single.maxLines, greaterThan(0));
   });
 
-  testWidgets('滚动停止后冷富文本会逐帧恢复而不是同一帧集中创建', (tester) async {
-    final longText = '停止后逐帧恢复富文本。' * 80;
-    final quotes = List<Quote>.generate(
-      3,
-      (index) => Quote(
-        id: 'rich_staggered_$index',
-        content: longText,
-        date: '2025-01-01T00:00:0$index.000Z',
-        editSource: 'fullscreen',
-        deltaContent: jsonEncode([
-          {'insert': '$longText\n'},
-        ]),
-      ),
-    );
-    QuoteContent.clearCacheForTesting();
-    isListScrolling.value = true;
-
-    await tester.pumpWidget(
-      ChangeNotifierProvider<SettingsService>.value(
-        value: _TestSettingsService(),
-        child: MaterialApp(
-          home: Scaffold(
-            body: Column(
-              children: quotes
-                  .map(
-                    (quote) => SizedBox(
-                      width: 320,
-                      height: QuoteContent.collapsedContentMaxHeight,
-                      child: QuoteContent(
-                        quote: quote,
-                        style: const TextStyle(fontSize: 16, height: 1.5),
-                        needsExpansionOverride: true,
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pump();
-    expect(find.byType(quill.QuillEditor), findsNothing);
-
-    isListScrolling.value = false;
-    await tester.pump();
-    expect(find.byType(quill.QuillEditor), findsOneWidget);
-
-    await tester.pump();
-    expect(find.byType(quill.QuillEditor), findsNWidgets(2));
-
-    await tester.pump();
-    expect(find.byType(quill.QuillEditor), findsNWidgets(3));
-  });
-
-  testWidgets('滚动停止后优先恢复屏幕内的冷富文本', (tester) async {
-    final controller = ScrollController();
-    addTearDown(controller.dispose);
-    final longText = '可见卡片应当先恢复富文本。' * 80;
-    final quotes = List<Quote>.generate(
-      3,
-      (index) => Quote(
-        id: 'rich_visible_first_$index',
-        content: longText,
-        date: '2025-01-01T00:00:0$index.000Z',
-        editSource: 'fullscreen',
-        deltaContent: jsonEncode([
-          {'insert': '$longText\n'},
-        ]),
-      ),
-    );
-    QuoteContent.clearCacheForTesting();
-    isListScrolling.value = true;
-
-    await tester.pumpWidget(
-      ChangeNotifierProvider<SettingsService>.value(
-        value: _TestSettingsService(),
-        child: MaterialApp(
-          home: Scaffold(
-            body: Align(
-              alignment: Alignment.topCenter,
-              child: SizedBox(
-                width: 320,
-                height: QuoteContent.collapsedContentMaxHeight,
-                child: SingleChildScrollView(
-                  controller: controller,
-                  child: Column(
-                    children: List<Widget>.generate(
-                      quotes.length,
-                      (index) => SizedBox(
-                        key: ValueKey('deferred-rich-$index'),
-                        height: QuoteContent.collapsedContentMaxHeight,
-                        child: QuoteContent(
-                          quote: quotes[index],
-                          style: const TextStyle(fontSize: 16, height: 1.5),
-                          needsExpansionOverride: true,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pump();
-    controller.jumpTo(controller.position.maxScrollExtent);
-    await tester.pump();
-
-    isListScrolling.value = false;
-    await tester.pump();
-
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('deferred-rich-2')),
-        matching: find.byType(quill.QuillEditor),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('deferred-rich-0')),
-        matching: find.byType(quill.QuillEditor),
-      ),
-      findsNothing,
-    );
-  });
-
-  testWidgets('列表静止时一帧内也只创建一个冷 Quill', (tester) async {
-    // 首屏、惯性停止后和 cacheExtent 预构建都没有滚动信号可依赖，
-    // 之前这些场景会把多张冷卡片的首布局叠进同一帧。
-    final longText = '静止时挂载的冷富文本也要分帧。' * 80;
-    final quotes = List<Quote>.generate(
-      3,
-      (index) => Quote(
-        id: 'rich_idle_budget_$index',
-        content: longText,
-        date: '2025-01-01T00:00:0$index.000Z',
-        editSource: 'fullscreen',
-        deltaContent: jsonEncode([
-          {'insert': '$longText\n'},
-        ]),
-      ),
-    );
-    QuoteContent.clearCacheForTesting();
-    isListScrolling.value = false;
-    isListDragActive.value = false;
-
-    await tester.pumpWidget(
-      ChangeNotifierProvider<SettingsService>.value(
-        value: _TestSettingsService(),
-        child: MaterialApp(
-          home: Scaffold(
-            body: Column(
-              children: quotes
-                  .map(
-                    (quote) => SizedBox(
-                      width: 320,
-                      height: QuoteContent.collapsedContentMaxHeight,
-                      child: QuoteContent(
-                        quote: quote,
-                        style: const TextStyle(fontSize: 16, height: 1.5),
-                        needsExpansionOverride: true,
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    expect(find.byType(quill.QuillEditor), findsOneWidget);
-    expect(
-      QuoteContent.debugCacheStats()['controller'],
-      containsPair('createCount', 1),
-    );
-
-    await tester.pump();
-    expect(find.byType(quill.QuillEditor), findsNWidgets(2));
-
-    await tester.pump();
-    expect(find.byType(quill.QuillEditor), findsNWidgets(3));
-  });
-
-  testWidgets('折叠态长富文本只给 QuillEditor 截断 Document', (tester) async {
-    final longText = '一段很长的富文本内容' * 80;
-    final delta = jsonEncode([
-      {
-        'insert': longText,
-        'attributes': {'bold': true},
-      },
-      {'insert': '\n后续不可见内容' * 40},
-    ]);
-    final quote = Quote(
-      id: 'rich_truncated_document',
-      content: '$longText${'后续不可见内容' * 40}',
-      date: '2025-01-01T00:00:00.000Z',
-      editSource: 'fullscreen',
-      deltaContent: delta,
-    );
-
-    await tester.pumpWidget(
-      buildTestApp(quote, needsExpansionOverride: true),
-    );
-    await tester.pump();
-
-    final collapsedEditor = tester.widget<quill.QuillEditor>(
-      find.byType(quill.QuillEditor),
-    );
-    final collapsedDelta =
-        collapsedEditor.controller.document.toDelta().toJson();
-    final collapsedText =
-        collapsedDelta.map((op) => op['insert']).whereType<String>().join();
-
-    expect(find.byKey(QuoteContent.collapsedWrapperKey), findsOneWidget);
-    expect(collapsedText.length, lessThan(quote.content.length));
-
-    QuoteContent.clearCacheForTesting();
-    await tester.pumpWidget(
-      buildTestApp(
-        quote,
-        showFullContent: true,
-        needsExpansionOverride: true,
-      ),
-    );
-    await tester.pump();
-
-    final fullEditor = tester.widget<quill.QuillEditor>(
-      find.byType(quill.QuillEditor),
-    );
-    final fullDelta = fullEditor.controller.document.toDelta().toJson();
-    final fullText =
-        fullDelta.map((op) => op['insert']).whereType<String>().join();
-
-    expect(find.byKey(QuoteContent.collapsedWrapperKey), findsNothing);
-    expect(fullText.length, greaterThan(collapsedText.length));
-  });
-
-  testWidgets('折叠态不会把可见正文之后的图片交给 Quill 布局', (tester) async {
+  testWidgets('折叠态不会为看不见的媒体建图片组件', (tester) async {
     final longText = '这段正文足以填满折叠预览。' * 25;
     final delta = jsonEncode([
       {'insert': longText},
@@ -835,20 +542,15 @@ void main() {
         quote,
         needsExpansionOverride: true,
         contentWidth: 320,
+        mediaStyle: NoteCardMediaStyle.inline,
       ),
     );
     await tester.pump();
 
-    final collapsedEditor = tester.widget<quill.QuillEditor>(
-      find.byType(quill.QuillEditor),
-    );
-    final collapsedImages = collapsedEditor.controller.document
-        .toDelta()
-        .toJson()
-        .where((op) => op['insert'] is Map)
-        .length;
-    expect(collapsedImages, 0);
+    // 正文已经把行数预算用完，后面两张图根本不该进 widget 树。
+    expect(find.byType(CollapsedMediaImage), findsNothing);
 
+    // 展开态仍然由 Quill 渲染完整图文混排，两张图一张不少。
     QuoteContent.clearCacheForTesting();
     await tester.pumpWidget(
       buildTestApp(
@@ -871,138 +573,36 @@ void main() {
     expect(expandedImages, 2);
   });
 
-  testWidgets('折叠前缀与完整 Quill 的可见区域像素一致', (tester) async {
+  testWidgets('折叠盒宽度变化会重新测量，不会沿用上一次宽度的高度', (tester) async {
     final delta = jsonEncode([
-      {
-        'insert': '粗体开头',
-        'attributes': {'bold': true},
-      },
-      {
-        'insert': '和小字号正文共同组成第一段。' * 35,
-        'attributes': {'size': 'small'},
-      },
-      {'insert': '\n'},
-      {
-        'insert': '不可见的后续内容',
-        'attributes': {'italic': true},
-      },
+      {'insert': '中等长度的一段正文，窄一点就会多折几行。' * 6},
       {'insert': '\n'},
     ]);
     final quote = Quote(
-      id: 'rich_visible_pixels',
-      content: '粗体开头和普通正文共同组成第一段。',
+      id: 'rich_width_sensitive',
+      content: '中等长度的一段正文',
       date: '2025-01-01T00:00:00.000Z',
       editSource: 'fullscreen',
       deltaContent: delta,
     );
-    final collapsedKey = GlobalKey();
-    final fullKey = GlobalKey();
 
-    await tester.pumpWidget(
-      ChangeNotifierProvider<SettingsService>.value(
-        value: _TestSettingsService(),
-        child: MaterialApp(
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('zh'),
-          home: Scaffold(
-            body: Column(
-              children: [
-                RepaintBoundary(
-                  key: collapsedKey,
-                  child: SizedBox(
-                    width: 320,
-                    height: QuoteContent.collapsedContentMaxHeight,
-                    child: QuoteContent(
-                      quote: quote,
-                      style: const TextStyle(fontSize: 16, height: 1.5),
-                      needsExpansionOverride: true,
-                    ),
-                  ),
-                ),
-                RepaintBoundary(
-                  key: fullKey,
-                  child: ClipRect(
-                    child: SizedBox(
-                      width: 320,
-                      height: QuoteContent.collapsedContentMaxHeight,
-                      child: QuoteContent(
-                        quote: quote,
-                        style: const TextStyle(fontSize: 16, height: 1.5),
-                        needsExpansionOverride: false,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pump();
-
-    Future<List<int>> pixelsFor(GlobalKey key) async {
-      final boundary =
-          key.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-      final image = await boundary.toImage(pixelRatio: 1);
-      final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
-      image.dispose();
-      return data!.buffer.asUint8List();
-    }
-
-    final collapsedPixels = await tester.runAsync(
-      () => pixelsFor(collapsedKey),
-    );
-    final fullPixels = await tester.runAsync(
-      () => pixelsFor(fullKey),
-    );
-    expect(collapsedPixels, fullPixels);
-  });
-
-  testWidgets('折叠前缀缓存按实际宽度区分', (tester) async {
-    final longText = '宽屏应当保留更多可见正文。' * 50;
-    final quote = Quote(
-      id: 'rich_width_cache',
-      content: longText,
-      date: '2025-01-01T00:00:00.000Z',
-      editSource: 'fullscreen',
-      deltaContent: jsonEncode([
-        {'insert': longText},
-        {'insert': '\n'},
-      ]),
-    );
-
-    Future<int> collapsedTextLength(double width) async {
+    Future<double> boxHeightAt(double width) async {
+      QuoteContent.clearCacheForTesting();
       await tester.pumpWidget(
-        buildTestApp(
-          quote,
-          needsExpansionOverride: true,
-          contentWidth: width,
-        ),
+        buildTestApp(quote, needsExpansionOverride: true, contentWidth: width),
       );
       await tester.pump();
-      final editor = tester.widget<quill.QuillEditor>(
-        find.byType(quill.QuillEditor),
-      );
-      return editor.controller.document
-          .toDelta()
-          .toJson()
-          .map((op) => op['insert'])
-          .whereType<String>()
-          .join()
-          .length;
+      return tester
+          .getSize(find.byKey(QuoteContent.collapsedWrapperKey))
+          .height;
     }
 
-    final narrowLength = await collapsedTextLength(280);
-    final wideLength = await collapsedTextLength(560);
+    final wide = await boxHeightAt(480);
+    final narrow = await boxHeightAt(200);
 
-    expect(wideLength, greaterThan(narrowLength));
+    // 同一段正文变窄会折更多行，盒子只会更高（封顶 160）。
+    expect(narrow, greaterThanOrEqualTo(wide));
+    expect(narrow, lessThanOrEqualTo(QuoteContent.collapsedContentMaxHeight));
   });
 
   test('纯文本与富文本高度判定保持一致', () {

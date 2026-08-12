@@ -409,7 +409,10 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             contentStyle,
             constraints.maxWidth,
           );
-          final showFullContent = isExpanded || !needsExpansion;
+          // 「短到不用折叠」不等于「展开」：短卡片仍然是列表卡片，应该走
+          // QuoteContent 的轻量预览而不是 QuillEditor。只有用户真的双击展开了，
+          // 才需要完整的富文本渲染。
+          final showFullContent = isExpanded;
           final contentChild = _buildQuoteContentStack(
             quote: quote,
             showFullContent: showFullContent,

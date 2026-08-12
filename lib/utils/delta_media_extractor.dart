@@ -47,7 +47,23 @@ class DeltaMediaSummary {
       'video=$videoCount, audio=$audioCount)';
 }
 
-/// 判断一个 delta op 的 insert 是不是嵌入媒体。
+/// 嵌入媒体的三种类型。
+enum DeltaMediaKind { image, video, audio }
+
+/// 一个嵌入媒体节点解出来的类型和来源。
+///
+/// [source] 允许为 null：`{'image': ''}` 这类畸形节点**仍然是**媒体嵌入（必须被
+/// 折叠态摘掉），只是没有可渲染的来源。判断「是不是媒体」用 [isDeltaMediaInsert]，
+/// 判断「能不能画出来」才看 [source]。
+@immutable
+class DeltaMediaRef {
+  const DeltaMediaRef({required this.kind, required this.source});
+
+  final DeltaMediaKind kind;
+  final String? source;
+}
+
+/// 读出一个 delta op 的 insert 所代表的嵌入媒体，不是媒体时返回 null。
 ///
 /// 本项目里三种媒体的序列化形状**并不统一**，这里必须全认（可对照
 /// `draft_service.dart`、`media_reference_service.dart`、`editor_color_and_media.dart`
@@ -57,20 +73,45 @@ class DeltaMediaSummary {
 /// - 视频：`{'insert': {'video': ...}}`
 /// - 音频：`{'insert': {'custom': {'audio': ...}}}` —— 走 `CustomBlockEmbed`，
 ///   **不在顶层**。只认顶层 `audio` 会让折叠态漏掉音频：既不计入角标，也不会被
-///   `_stripMediaOps` 摘掉，于是滚动列表里照旧实例化 `MediaPlayerWidget`。
-bool isDeltaMediaInsert(Object? insert) {
-  if (insert is! Map) return false;
-  if (insert.containsKey('image') ||
-      insert.containsKey('video') ||
-      insert.containsKey('audio')) {
-    return true;
+///   摘除逻辑摘掉，于是滚动列表里照旧实例化 `MediaPlayerWidget`。
+///
+/// 这三段形状的知识**只在这里有一份**：[isDeltaMediaInsert]、[parseDeltaMedia]
+/// 和折叠预览的 IR 解析都从这里取，改动媒体序列化时不用再去别处找同样的判断。
+DeltaMediaRef? readDeltaMediaEmbed(Object? insert) {
+  if (insert is! Map) return null;
+
+  for (final entry in const [
+    ('image', DeltaMediaKind.image),
+    ('video', DeltaMediaKind.video),
+    ('audio', DeltaMediaKind.audio),
+  ]) {
+    if (insert.containsKey(entry.$1)) {
+      return DeltaMediaRef(
+        kind: entry.$2,
+        source: _readEmbedSource(insert[entry.$1]),
+      );
+    }
   }
+
   final custom = _asCustomMap(insert['custom']);
-  if (custom == null) return false;
-  return custom.containsKey('image') ||
-      custom.containsKey('video') ||
-      custom.containsKey('audio');
+  if (custom == null) return null;
+  for (final entry in const [
+    ('image', DeltaMediaKind.image),
+    ('video', DeltaMediaKind.video),
+    ('audio', DeltaMediaKind.audio),
+  ]) {
+    if (custom.containsKey(entry.$1)) {
+      return DeltaMediaRef(
+        kind: entry.$2,
+        source: _readEmbedSource(custom[entry.$1]),
+      );
+    }
+  }
+  return null;
 }
+
+/// 判断一个 delta op 的 insert 是不是嵌入媒体。见 [readDeltaMediaEmbed]。
+bool isDeltaMediaInsert(Object? insert) => readDeltaMediaEmbed(insert) != null;
 
 /// `custom` 在本项目里解出来是 Map；但 flutter_quill 的 `CustomBlockEmbed`
 /// 也可能把它序列化成 JSON 字符串，这里两种都认。
@@ -118,40 +159,22 @@ DeltaMediaSummary parseDeltaMedia(String? deltaContent) {
   var videoCount = 0;
   var audioCount = 0;
 
-  void countImage(Object? raw) {
-    final source = _readEmbedSource(raw);
-    if (source == null) return;
-    imageCount++;
-    firstImageSource ??= source;
-  }
-
   for (final op in ops) {
     if (op is! Map) continue;
-    final insert = op['insert'];
-    if (insert is! Map) continue;
+    final media = readDeltaMediaEmbed(op['insert']);
+    if (media == null) continue;
 
-    if (insert.containsKey('image')) {
-      countImage(insert['image']);
-      continue;
-    }
-    if (insert.containsKey('video')) {
-      videoCount++;
-      continue;
-    }
-    if (insert.containsKey('audio')) {
-      audioCount++;
-      continue;
-    }
-
-    // 自定义嵌入：本项目的音频走这条路。
-    final custom = _asCustomMap(insert['custom']);
-    if (custom == null) continue;
-    if (custom.containsKey('image')) {
-      countImage(custom['image']);
-    } else if (custom.containsKey('video')) {
-      videoCount++;
-    } else if (custom.containsKey('audio')) {
-      audioCount++;
+    switch (media.kind) {
+      case DeltaMediaKind.image:
+        // 没有可用来源的图片不计数：角标数得和真能画出来的张数对得上。
+        final source = media.source;
+        if (source == null) break;
+        imageCount++;
+        firstImageSource ??= source;
+      case DeltaMediaKind.video:
+        videoCount++;
+      case DeltaMediaKind.audio:
+        audioCount++;
     }
   }
 
@@ -190,8 +213,8 @@ List<Object?>? _decodeOps(String deltaContent) {
 class DeltaMediaCache {
   DeltaMediaCache._();
 
-  static final LinkedHashMap<_DeltaMediaCacheKey, DeltaMediaSummary> _cache =
-      LinkedHashMap<_DeltaMediaCacheKey, DeltaMediaSummary>();
+  static final LinkedHashMap<DeltaContentFingerprint, DeltaMediaSummary>
+      _cache = LinkedHashMap<DeltaContentFingerprint, DeltaMediaSummary>();
 
   static const int _maxCacheSize = 300;
   static const int _pruneBatchSize = 50;
@@ -204,7 +227,7 @@ class DeltaMediaCache {
       return DeltaMediaSummary.empty;
     }
 
-    final key = _DeltaMediaCacheKey.of(deltaContent);
+    final key = DeltaContentFingerprint.of(deltaContent);
 
     final existing = _cache.remove(key);
     if (existing != null) {
@@ -256,27 +279,27 @@ class DeltaMediaCache {
   }
 }
 
-/// delta 的内容指纹。
+/// delta 的内容指纹，供所有「按 delta 内容做键」的缓存共用。
 ///
 /// 除了整串的 `hashCode` 和长度，再补两段边缘切片的哈希：单靠
 /// `hashCode + length` 时，两条不同笔记只要这两个值同时相等就会串味——概率极低，
 /// 但后果是 A 笔记的缩略图出现在 B 笔记上。多两个 O(1) 内存、O(256) 计算的字段
 /// 就能把这种巧合的要求提高到四个值同时相等，而且**依然不持有 delta 本身**。
 @immutable
-class _DeltaMediaCacheKey {
-  const _DeltaMediaCacheKey({
+class DeltaContentFingerprint {
+  const DeltaContentFingerprint({
     required this.contentHash,
     required this.length,
     required this.headHash,
     required this.tailHash,
   });
 
-  factory _DeltaMediaCacheKey.of(String deltaContent) {
+  factory DeltaContentFingerprint.of(String deltaContent) {
     const sliceLength = 128;
     final length = deltaContent.length;
     final head = deltaContent.substring(0, math.min(sliceLength, length));
     final tail = deltaContent.substring(math.max(0, length - sliceLength));
-    return _DeltaMediaCacheKey(
+    return DeltaContentFingerprint(
       contentHash: deltaContent.hashCode,
       length: length,
       headHash: head.hashCode,
@@ -292,7 +315,7 @@ class _DeltaMediaCacheKey {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is _DeltaMediaCacheKey &&
+    return other is DeltaContentFingerprint &&
         other.contentHash == contentHash &&
         other.length == length &&
         other.headHash == headHash &&
