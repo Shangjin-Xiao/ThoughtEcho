@@ -494,9 +494,14 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         _respondToAnnouncement(device);
       }
     } catch (e, stack) {
+      logError(
+        '解析组播消息失败',
+        error: e,
+        stackTrace: stack,
+        source: 'ThoughtEchoDiscoveryService',
+      );
       if (kDebugMode) {
         debugPrint('解析组播消息失败: $e');
-        debugPrint('堆栈: $stack');
         debugPrint('原始消息: ${utf8.decode(datagram.data, allowMalformed: true)}');
       }
     }
@@ -545,10 +550,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     debugPrint('可用套接字数: ${_sockets.length}');
 
     if (_sockets.isEmpty) {
-      logWarning(
-        'discovery_broadcast_no_sockets',
-        source: 'LocalSend',
-      );
+      logWarning('discovery_broadcast_no_sockets', source: 'LocalSend');
       return;
     }
 
@@ -609,10 +611,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         } else if (errorCode == 1) {
           // errno = 1: Operation not permitted
           _lastSendError = '网络操作被拒绝 (errno=1)，请检查网络权限';
-          logError(
-            'discovery_send_not_permitted errno=1',
-            source: 'LocalSend',
-          );
+          logError('discovery_send_not_permitted errno=1', source: 'LocalSend');
           debugPrint('❌ 网络操作被拒绝 (errno=1)');
         } else {
           _lastSendError = 'Socket 错误: ${e.message}';
@@ -622,8 +621,14 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
           'discovery_socket_exception sock=$i errno=$errorCode msg=${e.message}',
           source: 'LocalSend',
         );
-      } catch (e) {
+      } catch (e, stackTrace) {
         debugPrint('❌ 套接字 $i 发送异常: $e');
+        logError(
+          '套接字 $i 发送异常',
+          error: e,
+          stackTrace: stackTrace,
+          source: 'ThoughtEchoDiscoveryService',
+        );
       }
     }
 
@@ -663,11 +668,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     for (final socket in _sockets) {
       try {
         if (peer.ip != null) {
-          socket.send(
-            message,
-            InternetAddress(peer.ip!),
-            defaultMulticastPort,
-          );
+          socket.send(message, InternetAddress(peer.ip!), defaultMulticastPort);
         }
         socket.send(
           message,
@@ -774,7 +775,12 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       }
     } catch (e, stack) {
       debugPrint('创建设备公告失败: $e');
-      debugPrint('堆栈: $stack');
+      logError(
+        '创建设备公告失败',
+        error: e,
+        stackTrace: stack,
+        source: 'ThoughtEchoDiscoveryService',
+      );
     }
   }
 
