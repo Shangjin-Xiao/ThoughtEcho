@@ -435,6 +435,9 @@ class QuoteContent extends StatelessWidget {
       // 字重进键：Android + material 下渲染用的是降档后的 w500，判定也得用同一档，
       // 否则贴着 160px 阈值的加粗卡片会「判定说要折叠、画出来其实没超」。
       boldWeight: boldWeight,
+      // 富文本实际是按这个样式量的，它必须跟着进键。只把参数加到 getOrCreate 的
+      // 签名和键里、忘了从这里传，等于键里永远是 null——参数看着在，其实是死的。
+      richTextBaseStyle: richTextBaseStyle,
       maxWidth: maxWidth,
       textDirection: textDirection,
       textScaler: textScaler,

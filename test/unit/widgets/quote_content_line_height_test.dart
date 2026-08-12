@@ -113,6 +113,37 @@ void main() {
     expect(decideAtLineHeight(30.0), isTrue, reason: '166 该超阈值');
   });
 
+  test('富文本基准样式变化会重新判定，不会命中上一份样式的缓存', () {
+    // richTextBaseStyle 是富文本真正拿去量的那份样式。它只加进 getOrCreate 的签名
+    // 和缓存键、却忘了从调用点传，参数看着在、其实恒为 null——键不随它变，换了排版
+    // 样式仍会拿到旧答案。这条用同一个 quote、同一个 style，只改 richTextBaseStyle，
+    // 逼着判定翻转。
+    final quote = richQuote('base-style');
+
+    bool decideWith(TextStyle richTextBaseStyle) =>
+        QuoteContent.exceedsCollapsedHeightForLayout(
+          quote: quote,
+          // style 保持不变，差异全部来自 richTextBaseStyle。
+          style: const TextStyle(fontSize: 10, height: 1.0),
+          maxWidth: 400,
+          textDirection: TextDirection.ltr,
+          textScaler: TextScaler.noScaling,
+          richTextBaseStyle: richTextBaseStyle,
+        );
+
+    // 5 行 × 行高 + 4 个 blockGap(4px)：翻转点在行高 28.8。
+    expect(
+      decideWith(const TextStyle(fontSize: 10, height: 2.8)),
+      isFalse,
+      reason: '5×28+16=156，没到 160',
+    );
+    expect(
+      decideWith(const TextStyle(fontSize: 10, height: 3.0)),
+      isTrue,
+      reason: '5×30+16=166，已超过；仍返回 false 说明键没认 richTextBaseStyle',
+    );
+  });
+
   test('无宽度兜底走的仍是估算公式，不是实测', () {
     // maxWidth 非有限 / <= 0 时判定退回 `_estimatePlainTextHeight`。那条公式还活着
     // （末尾空段算 0.5 行、段间距 `_lineSpacing`），但已经没有别的用例覆盖它了，
