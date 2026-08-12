@@ -1338,7 +1338,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         final received = parts[2];
         final total = parts[3];
         final extra = parts.length > 4 ? parts[4] : '';
-        final fromDisplay = from.isNotEmpty ? '（来自$from）' : '';
+        final fromDisplay = from.isNotEmpty ? l10n.syncFromSuffix(from) : '';
         return l10n.receivingProgressMessage(
           fromDisplay,
           received,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../utils/lottie_animation_manager.dart';
 
 class AppLoadingView extends StatelessWidget {
@@ -28,7 +29,7 @@ class AppLoadingView extends StatelessWidget {
                 type: animationType,
                 width: s,
                 height: s,
-                semanticLabel: message ?? '加载中',
+                semanticLabel: message ?? AppLocalizations.of(context).loading,
               );
             },
           ),

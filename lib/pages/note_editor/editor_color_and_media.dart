@@ -246,21 +246,28 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
       final processedFiles = <String, String>{}; // 记录已处理的文件映射
 
       // 预扫描：统计需要处理的临时媒体文件
+      final l10n = AppLocalizations.of(context);
       final mediaEntries = <Map<String, dynamic>>[];
       for (final op in deltaData) {
         if (op.containsKey('insert')) {
           final insert = op['insert'];
           if (insert is Map) {
             if (insert.containsKey('image')) {
-              mediaEntries.add({'ref': insert, 'key': 'image', 'type': '图片'});
+              mediaEntries.add(
+                  {'ref': insert, 'key': 'image', 'type': l10n.mediaTypeImage});
             }
             if (insert.containsKey('video')) {
-              mediaEntries.add({'ref': insert, 'key': 'video', 'type': '视频'});
+              mediaEntries.add(
+                  {'ref': insert, 'key': 'video', 'type': l10n.mediaTypeVideo});
             }
             if (insert.containsKey('custom')) {
               final custom = insert['custom'];
               if (custom is Map && custom.containsKey('audio')) {
-                mediaEntries.add({'ref': custom, 'key': 'audio', 'type': '音频'});
+                mediaEntries.add({
+                  'ref': custom,
+                  'key': 'audio',
+                  'type': l10n.mediaTypeAudio
+                });
               }
             }
           }
@@ -269,9 +276,9 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
       final total = mediaEntries.length;
       var done = 0;
       if (total == 0) {
-        onProgress?.call(1.0, '无需处理媒体文件');
+        onProgress?.call(1.0, l10n.mediaProcessingNone);
       } else {
-        onProgress?.call(0.0, '发现 $total 个媒体文件');
+        onProgress?.call(0.0, l10n.mediaProcessingFound(total));
       }
 
       for (final entry in mediaEntries) {
@@ -287,7 +294,10 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
             onFileProgress: (fileProg) {
               if (total > 0) {
                 final overall = (done + fileProg) / total;
-                onProgress?.call(overall, '复制$typeLabel ${done + 1}/$total');
+                onProgress?.call(
+                  overall,
+                  l10n.mediaProcessingCopying(typeLabel, done + 1, total),
+                );
               }
             },
           );
@@ -299,7 +309,8 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
         }
         done++;
         if (total > 0) {
-          onProgress?.call(done / total, '已处理 $done / $total');
+          onProgress?.call(
+              done / total, l10n.mediaProcessingProgress(done, total));
         }
       }
 

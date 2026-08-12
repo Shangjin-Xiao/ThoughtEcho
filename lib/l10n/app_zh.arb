@@ -73,6 +73,8 @@
   "onboardingError": "出现问题",
   "onboardingUpdateComplete": "更新完成",
   "onboardingUpdateSuccess": "心迹已成功更新到新版本\n数据已自动迁移，无需手动操作",
+  "onboardingUpdateFailed": "数据更新失败，但您仍可继续使用应用",
+  "onboardingUpdateProcessFailed": "更新处理失败，请重启应用",
   "onboardingEnterApp": "进入应用",
   "onboardingThemeStyleNotice": "外观已更新为「{style}」。想用系统配色，可在「设置 → 主题设置」里选 Material。",
   "@onboardingThemeStyleNotice": {
@@ -1794,6 +1796,7 @@
   "noFeaturedCards": "暂无精选卡片",
   "featuredCardGenerationTip": "可根据笔记内容生成精美分享卡片：开启AI=智能设计，关闭AI=使用内置模板",
   "cardFromReport": "来自心迹周期报告的精美卡片",
+  "cardSharePrefix": "来自心迹的精美卡片\n\n",
   "loadDataFailed": "加载数据失败: {error}",
   "@loadDataFailed": {
     "placeholders": {
@@ -1948,6 +1951,51 @@
   "importingFile": "正在导入文件...",
   "importComplete": "导入完成！",
   "fileSaveFailed": "文件保存失败",
+  "unsupportedMediaType": "不支持的媒体类型",
+  "unsupportedMediaTypeWithName": "不支持的媒体类型: {mediaType}",
+  "@unsupportedMediaTypeWithName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "fileNotExistOrMoved": "选择的文件不存在或已被移动删除\n路径: {path}",
+  "@fileNotExistOrMoved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedFileEmpty": "选择的文件为空\n路径: {path}",
+  "@selectedFileEmpty": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "unsupportedFileFormat": "不支持的文件格式: .{extension}\n支持的格式: {formats}",
+  "@unsupportedFileFormat": {
+    "placeholders": {
+      "extension": {
+        "type": "String"
+      },
+      "formats": {
+        "type": "String"
+      }
+    }
+  },
+  "fileUnreadable": "文件无法读取，可能原因：\n• 文件已损坏\n• 文件被其他程序占用\n• 权限不足\n请检查文件状态后重试",
+  "mediaTypeNoCameraImport": "{mediaType}不支持相机导入",
+  "@mediaTypeNoCameraImport": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
   "processingMedia": "正在处理{mediaType}...",
   "@processingMedia": {
     "placeholders": {
@@ -2089,6 +2137,11 @@
       }
     }
   },
+  "loadFailedSimple": "加载失败",
+  "loadNoteFailed": "加载笔记失败",
+  "queryTimeoutShort": "查询超时",
+  "queryTimeoutRetry": "查询超时，请重试",
+  "databaseQueryError": "数据库查询出错",
   "deleteConfirmTitle": "删除确认",
   "deleteRecordConfirm": "确定要删除这条分析记录吗？",
   "confirmDeleteAll": "确认删除",
@@ -2366,6 +2419,14 @@
         "type": "String"
       },
       "extra": {
+        "type": "String"
+      }
+    }
+  },
+  "syncFromSuffix": "（来自{from}）",
+  "@syncFromSuffix": {
+    "placeholders": {
+      "from": {
         "type": "String"
       }
     }
@@ -3010,6 +3071,35 @@
   "permissionText": "权限",
   "backupCancelled": "备份已取消",
   "backupFailedText": "备份失败",
+  "backupSavedToPath": "备份已保存到: {path}",
+  "@backupSavedToPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "backupCompleteWithWarnings": "备份已完成，但有警告",
+  "backupDeltaFailuresMessage": "{count, plural, other{有 # 条笔记的富文本媒体路径转换失败，这些笔记在备份中仍保留本机绝对路径，恢复到其他设备时相关图片可能无法显示。\n\n受影响的笔记ID：{ids}}}",
+  "@backupDeltaFailuresMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "ids": {
+        "type": "String"
+      }
+    }
+  },
+  "backupDeltaFailuresIdJoiner": "、",
+  "backupDeltaFailuresMoreSuffix": " 等",
+  "backupFailedGeneric": "无法完成备份，请稍后重试",
+  "@backupFailedGeneric": {
+    "description": "Generic backup failure message shown when the error type is not classified"
+  },
+  "backupFailedOutOfMemory": "备份失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 尝试不包含媒体文件的备份\n• 重启应用后再试",
+  "backupFailedNoSpace": "备份失败：存储空间不足\n\n请清理设备存储空间后重试。",
+  "backupFailedPermission": "备份失败：权限不足\n\n请检查应用的存储权限设置。",
   "selectFileError": "选择文件失败",
   "mergingDataProgress": "正在合并数据...",
   "yearAIAnnualReport": "{year} AI年度报告",
@@ -3022,6 +3112,9 @@
   },
   "openInBrowser": "在浏览器中打开",
   "shareReport": "分享报告",
+  "saveTempFileFailed": "保存临时文件失败",
+  "openBrowserFailed": "打开浏览器失败",
+  "createShareFileFailed": "创建分享文件失败",
   "saveReport": "保存报告",
   "processingReport": "正在处理报告...",
   "personalizedSummaryByAI": "基于AI分析的个性化总结",
@@ -3032,6 +3125,28 @@
   "shareBtn": "分享",
   "regenerateCard": "重新生成",
   "regeneratingCard": "正在重新生成...",
+  "aiSuggestionCoreIdea": "这篇笔记的核心思想是什么？",
+  "aiSuggestionInspiration": "从中能得到什么启发？",
+  "aiSuggestionSummarize": "能否总结一下要点？",
+  "aiSuggestionSolution": "有什么解决方案吗？",
+  "aiSuggestionUnderstandConcept": "如何更好地理解这个概念？",
+  "aiSuggestionActionPlan": "如何制定行动计划？",
+  "aiSuggestionPsychology": "这反映了什么心理状态？",
+  "aiSuggestionRealLife": "如何应用到实际生活中？",
+  "aiSuggestionThinkingPattern": "反映了什么思维模式？",
+  "svgLoading": "正在加载SVG...",
+  "svgLoadingFallback": "正在加载备用模板...",
+  "svgRenderFailed": "SVG渲染失败",
+  "svgTryingFallback": "正在尝试使用备用模板...",
+  "cardRenderFailed": "卡片渲染失败",
+  "cardRegeneratePrompt": "请尝试重新生成卡片",
+  "svgContentParseFailed": "内容解析失败",
+  "svgContentExtractFailed": "无法提取内容",
+  "svgContentEmpty": "SVG内容为空",
+  "svgContentInvalidFormat": "无效的SVG格式",
+  "svgFallbackTitle": "SVG生成失败",
+  "svgFallbackHint": "请尝试重新生成或检查AI配置",
+  "svgFallbackIdentifier": "心迹 - 备用模板",
   "cardGenerating": "正在生成卡片...",
   "generatingCards": "正在生成卡片...",
   "loadMoreCards": "加载更多卡片",
@@ -3116,6 +3231,40 @@
   "mediaTypeVideo": "视频",
   "mediaTypeAudio": "音频",
   "mediaTypeMedia": "媒体",
+  "mediaProcessingNone": "无需处理媒体文件",
+  "mediaProcessingFound": "{total, plural, other{发现 # 个媒体文件}}",
+  "@mediaProcessingFound": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingCopying": "复制{typeLabel} {done}/{total}",
+  "@mediaProcessingCopying": {
+    "placeholders": {
+      "typeLabel": {
+        "type": "String"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingProgress": "已处理 {done} / {total}",
+  "@mediaProcessingProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "takePhoto": "拍照",
   "recordVideo": "录制视频",
   "recordAudio": "录制音频",
@@ -3273,6 +3422,11 @@
   "documentLoadFailedRetry": "文档加载失败，请重新打开编辑器",
   "contentCopiedToClipboard": "已复制到剪贴板",
   "messageCopiedToClipboard": "消息已复制到剪贴板",
+  "dailyQuoteLoading": "加载中...",
+  "dailyQuoteLoadingLocal": "从本地记录加载中...",
+  "dailyQuoteLoadingOffline": "网络未连接，从本地记录加载中...",
+  "dailyQuoteNoNetworkRetry": "无网络连接且无本地记录，点击重试",
+  "dailyQuoteFetchFailedRetry": "获取一言失败，点击重试",
   "fetchHitokotoFailed": "获取一言失败: {error}",
   "@fetchHitokotoFailed": {
     "placeholders": {
@@ -3713,6 +3867,11 @@
   "mediaPlayerPause": "暂停",
   "clipboardFoundHint": "发现剪贴板内容，点击添加为笔记",
   "operationFailedSimple": "操作失败",
+  "operationSuccess": "操作成功！",
+  "loadingInProgress": "正在加载...",
+  "aiThinkingProgress": "AI正在思考...",
+  "processingData": "正在处理数据...",
+  "analyzingContent": "正在分析内容...",
   "skipNonFullscreenEditor": "直接进入全屏编辑器",
   "skipNonFullscreenEditorDesc": "点击添加笔记时跳过快速编辑，直接打开全屏富文本编辑器",
   "offlineQuoteSourceTitle": "无网络时展示",
@@ -3751,6 +3910,25 @@
   "webdavStatusSyncing": "正在同步...",
   "webdavStatusSuccess": "同步成功",
   "webdavStatusFailed": "同步失败",
+  "settingsWebdavStatusWithTime": "{status} (上次：{time})",
+  "@settingsWebdavStatusWithTime": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWebdavEnabledWithTime": "已启用 (上次：{time})",
+  "@settingsWebdavEnabledWithTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "webdavSyncNow": "立即同步",
   "webdavEnableSync": "启用云同步",
   "webdavSaveAndSync": "保存并同步",

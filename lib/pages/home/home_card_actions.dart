@@ -87,6 +87,7 @@ class HomeCardActions {
 
   Future<void> _shareCard(GeneratedCard card) async {
     try {
+      final sharePrefix = AppLocalizations.of(context).cardSharePrefix;
       if (isMounted()) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -119,7 +120,7 @@ class HomeCardActions {
       await file.writeAsBytes(imageBytes);
       await SharePlus.instance.share(
         ShareParams(
-          text: '来自心迹的精美卡片\n\n'
+          text: sharePrefix +
               '"${card.originalContent.length > 50 ? '${card.originalContent.substring(0, 50)}...' : card.originalContent}"',
           files: [XFile(file.path)],
         ),

@@ -73,6 +73,8 @@
   "onboardingError": "Something went wrong",
   "onboardingUpdateComplete": "Update Complete",
   "onboardingUpdateSuccess": "ThoughtEcho has been successfully updated\nYour data has been automatically migrated",
+  "onboardingUpdateFailed": "Update failed, but you can still continue using the app",
+  "onboardingUpdateProcessFailed": "Update processing failed, please restart the app",
   "onboardingEnterApp": "Enter App",
   "onboardingThemeStyleNotice": "The appearance is now “{style}”. To use system colors, pick Material in Settings → Theme settings.",
   "featureDailyQuote": "Daily Quote",
@@ -1786,6 +1788,7 @@
   "noFeaturedCards": "No Featured Cards Yet",
   "featuredCardGenerationTip": "Generate beautiful sharing cards from your notes: AI On = Smart Design, AI Off = Built-in Templates.",
   "cardFromReport": "A beautiful card from ThoughtEcho Periodic Report",
+  "cardSharePrefix": "A beautiful card from ThoughtEcho\n\n",
   "loadDataFailed": "Failed to load data: {error}",
   "@loadDataFailed": {
     "placeholders": {
@@ -1940,6 +1943,51 @@
   "importingFile": "Importing file...",
   "importComplete": "Import complete!",
   "fileSaveFailed": "File save failed",
+  "unsupportedMediaType": "Unsupported media type",
+  "unsupportedMediaTypeWithName": "Unsupported media type: {mediaType}",
+  "@unsupportedMediaTypeWithName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "fileNotExistOrMoved": "The selected file does not exist or has been moved or deleted\nPath: {path}",
+  "@fileNotExistOrMoved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedFileEmpty": "The selected file is empty\nPath: {path}",
+  "@selectedFileEmpty": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "unsupportedFileFormat": "Unsupported file format: .{extension}\nSupported formats: {formats}",
+  "@unsupportedFileFormat": {
+    "placeholders": {
+      "extension": {
+        "type": "String"
+      },
+      "formats": {
+        "type": "String"
+      }
+    }
+  },
+  "fileUnreadable": "The file cannot be read. Possible reasons:\n• The file is corrupted\n• The file is being used by another program\n• Insufficient permissions\nPlease check the file and try again",
+  "mediaTypeNoCameraImport": "{mediaType} does not support camera import",
+  "@mediaTypeNoCameraImport": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
   "processingMedia": "Processing {mediaType}...",
   "@processingMedia": {
     "placeholders": {
@@ -2075,6 +2123,11 @@
       }
     }
   },
+  "loadFailedSimple": "Load failed",
+  "loadNoteFailed": "Failed to load notes",
+  "queryTimeoutShort": "Query timed out",
+  "queryTimeoutRetry": "Query timed out, please retry",
+  "databaseQueryError": "Database query error",
   "deleteConfirmTitle": "Delete Confirmation",
   "deleteRecordConfirm": "Are you sure you want to delete this analysis record?",
   "confirmDeleteAll": "Confirm Delete All",
@@ -2352,6 +2405,14 @@
         "type": "String"
       },
       "extra": {
+        "type": "String"
+      }
+    }
+  },
+  "syncFromSuffix": " (from {from})",
+  "@syncFromSuffix": {
+    "placeholders": {
+      "from": {
         "type": "String"
       }
     }
@@ -2996,6 +3057,35 @@
   "permissionText": "Permission",
   "backupCancelled": "Backup cancelled",
   "backupFailedText": "Backup failed",
+  "backupSavedToPath": "Backup saved to: {path}",
+  "@backupSavedToPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "backupCompleteWithWarnings": "Backup completed, but with warnings",
+  "backupDeltaFailuresMessage": "{count, plural, =1{1 note had rich-text media path conversion failures. This note still contains a local absolute path in the backup; images may not display when restored on another device.\n\nAffected note ID: {ids}} other{# notes had rich-text media path conversion failures. These notes still contain local absolute paths in the backup; images may not display when restored on another device.\n\nAffected note IDs: {ids}}}",
+  "@backupDeltaFailuresMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "ids": {
+        "type": "String"
+      }
+    }
+  },
+  "backupDeltaFailuresIdJoiner": ", ",
+  "backupDeltaFailuresMoreSuffix": " etc.",
+  "backupFailedGeneric": "Unable to complete backup. Please try again later.",
+  "@backupFailedGeneric": {
+    "description": "Generic backup failure message shown when the error type is not classified"
+  },
+  "backupFailedOutOfMemory": "Backup failed: Out of memory\n\nSuggestions:\n• Close other apps to free up memory\n• Try a backup without media files\n• Restart the app and try again",
+  "backupFailedNoSpace": "Backup failed: Not enough storage space\n\nPlease free up device storage and try again.",
+  "backupFailedPermission": "Backup failed: Insufficient permission\n\nPlease check the app's storage permission settings.",
   "selectFileError": "Failed to select file",
   "mergingDataProgress": "Merging data...",
   "yearAIAnnualReport": "{year} AI Annual Report",
@@ -3008,6 +3098,9 @@
   },
   "openInBrowser": "Open in Browser",
   "shareReport": "Share Report",
+  "saveTempFileFailed": "Failed to save temporary file",
+  "openBrowserFailed": "Failed to open browser",
+  "createShareFileFailed": "Failed to create share file",
   "saveReport": "Save Report",
   "processingReport": "Processing report...",
   "personalizedSummaryByAI": "Personalized summary based on AI analysis",
@@ -3018,6 +3111,28 @@
   "shareBtn": "Share",
   "regenerateCard": "Regenerate",
   "regeneratingCard": "Regenerating...",
+  "aiSuggestionCoreIdea": "What is the core idea of this note?",
+  "aiSuggestionInspiration": "What inspiration can we draw from it?",
+  "aiSuggestionSummarize": "Can you summarize the key points?",
+  "aiSuggestionSolution": "What solutions are there?",
+  "aiSuggestionUnderstandConcept": "How can I better understand this concept?",
+  "aiSuggestionActionPlan": "How do I create an action plan?",
+  "aiSuggestionPsychology": "What psychological state does this reflect?",
+  "aiSuggestionRealLife": "How can this be applied to real life?",
+  "aiSuggestionThinkingPattern": "What thinking pattern does this reflect?",
+  "svgLoading": "Loading SVG...",
+  "svgLoadingFallback": "Loading fallback template...",
+  "svgRenderFailed": "SVG render failed",
+  "svgTryingFallback": "Trying fallback template...",
+  "cardRenderFailed": "Card render failed",
+  "cardRegeneratePrompt": "Please try regenerating the card",
+  "svgContentParseFailed": "Content parse failed",
+  "svgContentExtractFailed": "Unable to extract content",
+  "svgContentEmpty": "SVG content is empty",
+  "svgContentInvalidFormat": "Invalid SVG format",
+  "svgFallbackTitle": "SVG generation failed",
+  "svgFallbackHint": "Please try regenerating the card or check your AI configuration",
+  "svgFallbackIdentifier": "ThoughtEcho - Fallback Template",
   "cardGenerating": "Generating card...",
   "generatingCards": "Generating cards...",
   "loadMoreCards": "Load more cards",
@@ -3102,6 +3217,40 @@
   "mediaTypeVideo": "Video",
   "mediaTypeAudio": "Audio",
   "mediaTypeMedia": "Media",
+  "mediaProcessingNone": "No media files to process",
+  "mediaProcessingFound": "{total, plural, =1{Found 1 media file} other{Found # media files}}",
+  "@mediaProcessingFound": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingCopying": "Copying {typeLabel} {done}/{total}",
+  "@mediaProcessingCopying": {
+    "placeholders": {
+      "typeLabel": {
+        "type": "String"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingProgress": "Processed {done} / {total}",
+  "@mediaProcessingProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "takePhoto": "Take Photo",
   "recordVideo": "Record Video",
   "recordAudio": "Record Audio",
@@ -3259,6 +3408,11 @@
   "documentLoadFailedRetry": "Document load failed, please reopen the editor",
   "contentCopiedToClipboard": "Copied to clipboard",
   "messageCopiedToClipboard": "Message copied to clipboard",
+  "dailyQuoteLoading": "Loading...",
+  "dailyQuoteLoadingLocal": "Loading from local records...",
+  "dailyQuoteLoadingOffline": "No network, loading from local records...",
+  "dailyQuoteNoNetworkRetry": "No network and no local records, tap to retry",
+  "dailyQuoteFetchFailedRetry": "Failed to fetch quote, tap to retry",
   "fetchHitokotoFailed": "Failed to fetch quote: {error}",
   "@fetchHitokotoFailed": {
     "placeholders": {
@@ -3705,6 +3859,11 @@
   "mediaPlayerPause": "Pause",
   "clipboardFoundHint": "Clipboard content found, tap to add as note",
   "operationFailedSimple": "Operation failed",
+  "operationSuccess": "Operation successful!",
+  "loadingInProgress": "Loading...",
+  "aiThinkingProgress": "AI is thinking...",
+  "processingData": "Processing data...",
+  "analyzingContent": "Analyzing content...",
   "skipNonFullscreenEditor": "Open fullscreen editor directly",
   "skipNonFullscreenEditorDesc": "Skip quick edit and open fullscreen rich text editor when adding notes",
   "offlineQuoteSourceTitle": "When Offline, Show",
@@ -3743,6 +3902,25 @@
   "webdavStatusSyncing": "Syncing...",
   "webdavStatusSuccess": "Sync Successful",
   "webdavStatusFailed": "Sync Failed",
+  "settingsWebdavStatusWithTime": "{status} (Last: {time})",
+  "@settingsWebdavStatusWithTime": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWebdavEnabledWithTime": "Enabled (Last: {time})",
+  "@settingsWebdavEnabledWithTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "webdavSyncNow": "Sync Now",
   "webdavEnableSync": "Enable Cloud Sync",
   "webdavSaveAndSync": "Save and Sync",

@@ -754,8 +754,9 @@ class SettingsPageState extends State<SettingsPage> {
                           : l10n.webdavNeverSynced;
 
                       return Text(statusStr.isNotEmpty
-                          ? '$statusStr (${l10n.webdavLastSync(timeStr)})'
-                          : '${l10n.webdavStatusEnabled} (${l10n.webdavLastSync(timeStr)})');
+                          ? l10n.settingsWebdavStatusWithTime(
+                              statusStr, timeStr)
+                          : l10n.settingsWebdavEnabledWithTime(timeStr));
                     },
                   ),
                   leading: const Icon(Icons.cloud_sync_outlined),

@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../services/backup_service.dart';
 import '../services/large_file_manager.dart';
+import '../utils/app_logger.dart';
 import '../utils/backup_progress_update_gate.dart';
 import '../utils/time_utils.dart';
 import '../utils/stream_file_selector.dart';
@@ -383,6 +384,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         );
 
         if (saveLocation != null && mounted) {
+          final savedToPathMessage = l10n.backupSavedToPath(saveLocation.path);
           backupPath = await backupService.exportAllData(
             includeMediaFiles: _includeMediaFiles,
             customPath: saveLocation.path,
@@ -390,39 +392,49 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             cancelToken: _cancelToken,
           );
 
-          _showSuccessSnackBar('备份已保存到: ${saveLocation.path}');
+          _showSuccessSnackBar(savedToPathMessage);
         }
       }
 
       // 导出完成后上报富文本路径转换失败（不静默降级）
       final deltaFailures = backupService.lastExportDeltaConversionFailures;
       if (backupPath != null && deltaFailures.isNotEmpty && mounted) {
+        final affectedIds =
+            deltaFailures.take(10).join(l10n.backupDeltaFailuresIdJoiner) +
+                (deltaFailures.length > 10
+                    ? l10n.backupDeltaFailuresMoreSuffix
+                    : '');
         _showErrorDialog(
-          '备份已完成，但有警告',
-          '有 ${deltaFailures.length} 条笔记的富文本媒体路径转换失败，'
-              '这些笔记在备份中仍保留本机绝对路径，恢复到其他设备时相关图片可能无法显示。\n\n'
-              '受影响的笔记ID：${deltaFailures.take(10).join('、')}'
-              '${deltaFailures.length > 10 ? ' 等' : ''}',
+          l10n.backupCompleteWithWarnings,
+          l10n.backupDeltaFailuresMessage(
+            deltaFailures.length,
+            affectedIds,
+          ),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        '执行备份失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'BackupRestorePage',
+      );
       if (mounted) {
-        String errorMessage = '无法完成备份：$e';
+        String errorMessage = l10n.backupFailedGeneric;
 
         // 针对不同类型的错误提供更友好的提示
         if (e.toString().contains('OutOfMemoryError') ||
             e.toString().contains('内存不足')) {
-          errorMessage =
-              '备份失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 尝试不包含媒体文件的备份\n• 重启应用后再试';
+          errorMessage = l10n.backupFailedOutOfMemory;
         } else if (e.toString().contains('存储空间') ||
             e.toString().contains('No space left')) {
-          errorMessage = '备份失败：存储空间不足\n\n请清理设备存储空间后重试。';
+          errorMessage = l10n.backupFailedNoSpace;
         } else if (e.toString().contains('权限') ||
             e.toString().contains('Permission')) {
-          errorMessage = '备份失败：权限不足\n\n请检查应用的存储权限设置。';
+          errorMessage = l10n.backupFailedPermission;
         } else if (e.toString().contains('cancelled') ||
             e.toString().contains('取消')) {
-          errorMessage = '备份已取消';
+          errorMessage = l10n.backupCancelled;
         }
 
         _showErrorDialog(l10n.backupFailedText, errorMessage);

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
+import '../gen_l10n/app_localizations.dart';
+
 /// Lottie 加载动画组件
 class LottieLoadingWidget extends StatelessWidget {
   final double size;
@@ -99,7 +101,7 @@ class LottieLoadingOverlay extends StatelessWidget {
       child: Center(
         child: LottieLoadingWidget(
           size: 120,
-          text: text ?? '加载中...',
+          text: text ?? AppLocalizations.of(context).loading,
           showText: true,
         ),
       ),

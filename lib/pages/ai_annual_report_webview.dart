@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import '../services/large_file_manager.dart';
 import '../services/media_file_service.dart';
 import '../constants/app_constants.dart';
+import '../utils/app_logger.dart';
 import '../utils/content_sanitizer.dart';
 import '../gen_l10n/app_localizations.dart';
 
@@ -519,12 +520,13 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
 
       // 方法2：尝试文件URL方式（优先用于桌面端和支持的移动端）
       try {
+        final saveTempFileFailedMessage = l10n.saveTempFileFailed;
         final uniqueId = const Uuid().v4();
         final fileName = 'annual_report_${widget.year}_$uniqueId.html';
         final savedPath =
             await MediaFileService.saveTempHtmlFile(contentToWrite, fileName);
 
-        if (savedPath == null) throw Exception('保存临时文件失败');
+        if (savedPath == null) throw Exception(saveTempFileFailedMessage);
 
         // 尝试直接打开文件URL
         final uri = Uri.file(savedPath);
@@ -569,11 +571,17 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
       if (mounted) {
         _showCopyInstructions();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        '打开年度报告失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'AIAnnualReportWebView',
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${l10n.cannotGetFilePath}: $e'),
+            content: Text(l10n.cannotGetFilePath),
             backgroundColor: Theme.of(context).colorScheme.error,
             duration: AppConstants.snackBarDurationError,
           ),
@@ -662,12 +670,13 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
     // 2. Fallback: 原有的文件方式 (对于某些Android设备可能有效，或者作为失败后的各种尝试)
     try {
       // 创建临时文件
+      final saveTempFileFailedMessage = l10n.saveTempFileFailed;
       final uniqueId = const Uuid().v4();
       final fileName = 'annual_report_${widget.year}_$uniqueId.html';
       final savedPath =
           await MediaFileService.saveTempHtmlFile(htmlContent, fileName);
 
-      if (savedPath == null) throw Exception('保存临时文件失败');
+      if (savedPath == null) throw Exception(saveTempFileFailedMessage);
 
       // 尝试使用不同的LaunchMode来打开文件
       final uri = Uri.file(savedPath);
@@ -719,8 +728,14 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
           ),
         );
       }
-    } catch (e) {
-      throw Exception('打开浏览器失败: $e');
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        '浏览器打开年度报告失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'AIAnnualReportWebView',
+      );
+      throw Exception(l10n.openBrowserFailed);
     }
   }
 
@@ -945,12 +960,13 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
       // Note: contentToShare already has CSP - from either the wrapper template above or _sanitizedHtmlContent (which was sanitized in initState)
 
       // 创建临时HTML文件用于分享
+      final createShareFileFailedMessage = l10n.createShareFileFailed;
       final uniqueId = const Uuid().v4();
       final fileName = 'annual_report_${widget.year}_$uniqueId.html';
       final savedPath =
           await MediaFileService.saveTempHtmlFile(contentToShare, fileName);
 
-      if (savedPath == null) throw Exception('创建分享文件失败');
+      if (savedPath == null) throw Exception(createShareFileFailedMessage);
 
       // 使用系统分享功能
       await SharePlus.instance.share(

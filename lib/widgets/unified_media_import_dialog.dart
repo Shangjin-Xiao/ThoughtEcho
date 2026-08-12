@@ -212,7 +212,9 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
               description: 'Audio Files',
             );
           default:
-            throw Exception('不支持的媒体类型: ${widget.mediaType}');
+            // 未知类型保留原始值以便定位；已知类型不会进入该分支
+            throw Exception(
+                l10n.unsupportedMediaTypeWithName(widget.mediaType));
         }
       }, operationName: '选择${_getMediaTypeName(widget.mediaType)}文件');
 
@@ -223,7 +225,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
 
       final file = result.files.first;
       if (file.path == null) {
-        throw Exception('无法获取文件路径');
+        throw Exception(l10n.cannotGetFilePath);
       }
 
       // 立即验证选择的文件
@@ -240,14 +242,14 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       final fileExists = await File(filePath).exists();
       if (!fileExists) {
         logDebug('文件不存在: $filePath');
-        throw Exception('选择的文件不存在或已被移动删除\n路径: $filePath');
+        throw Exception(l10n.fileNotExistOrMoved(filePath));
       }
 
       // 获取文件大小
       final fileSize = await lfm.LargeFileManager.getFileSizeSecurely(filePath);
       if (fileSize == 0) {
         logDebug('文件大小为0: $filePath');
-        throw Exception('选择的文件为空\n路径: $filePath');
+        throw Exception(l10n.selectedFileEmpty(filePath));
       }
 
       logDebug('文件验证通过，大小: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB');
@@ -257,7 +259,10 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       final supportedExtensions = _getSupportedExtensions();
       if (!supportedExtensions.contains(extension)) {
         throw Exception(
-          '不支持的文件格式: .$extension\n支持的格式: ${supportedExtensions.join(', ')}',
+          l10n.unsupportedFileFormat(
+            extension,
+            supportedExtensions.join(', '),
+          ),
         );
       }
 
@@ -270,9 +275,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       final canProcess = await lfm.LargeFileManager.canProcessFile(filePath);
       if (!canProcess) {
         logDebug('文件无法处理: $filePath');
-        throw Exception(
-          '文件无法读取，可能原因：\n• 文件已损坏\n• 文件被其他程序占用\n• 权限不足\n请检查文件状态后重试',
-        );
+        throw Exception(l10n.fileUnreadable);
       }
 
       setState(() {
@@ -305,7 +308,9 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
                 cancelToken: _cancelToken,
               );
             default:
-              throw Exception('不支持的媒体类型: ${widget.mediaType}');
+              // 未知类型保留原始值以便定位；已知类型不会进入该分支
+              throw Exception(
+                  l10n.unsupportedMediaTypeWithName(widget.mediaType));
           }
         },
         operationName: '保存${_getMediaTypeName(widget.mediaType)}文件',
@@ -357,7 +362,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
           );
           break;
         default:
-          throw Exception('${widget.mediaType}不支持相机导入');
+          throw Exception(l10n.mediaTypeNoCameraImport(widget.mediaType));
       }
 
       if (file == null) {
@@ -381,7 +386,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
             case 'video':
               return await MediaFileService.saveVideo(file!.path);
             default:
-              throw Exception('不支持的媒体类型');
+              throw Exception(l10n.unsupportedMediaType);
           }
         },
         operationName: '保存${_getMediaTypeName(widget.mediaType)}',

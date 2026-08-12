@@ -61,11 +61,17 @@ class SVGCardWidget extends StatelessWidget {
     try {
       // 验证SVG内容
       if (svgContent.trim().isEmpty) {
-        return _buildErrorWidget(context, 'SVG内容为空');
+        return _buildErrorWidget(
+          context,
+          AppLocalizations.of(context).svgContentEmpty,
+        );
       }
 
       if (!svgContent.contains('<svg') || !svgContent.contains('</svg>')) {
-        return _buildErrorWidget(context, '无效的SVG格式');
+        return _buildErrorWidget(
+          context,
+          AppLocalizations.of(context).svgContentInvalidFormat,
+        );
       }
 
       // 使用与导出完全一致的渲染配置
@@ -78,15 +84,18 @@ class SVGCardWidget extends StatelessWidget {
         placeholderBuilder: showLoadingIndicator
             ? (context) => Container(
                   color: Colors.grey[200],
-                  child: const Center(
+                  child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 8),
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 8),
                         Text(
-                          '正在加载SVG...',
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                          AppLocalizations.of(context).svgLoading,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -141,7 +150,7 @@ class SVGCardWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'SVG渲染失败',
+                    AppLocalizations.of(context).svgRenderFailed,
                     style: Theme.of(context)
                         .textTheme
                         .titleMedium
@@ -149,7 +158,7 @@ class SVGCardWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '正在尝试使用备用模板...',
+                    AppLocalizations.of(context).svgTryingFallback,
                     style: TextStyle(color: Colors.grey[600], fontSize: 12),
                     textAlign: TextAlign.center,
                   ),
@@ -185,10 +194,15 @@ class SVGCardWidget extends StatelessWidget {
   Widget _buildFallbackSVG(BuildContext context) {
     try {
       // 尝试从原始SVG内容中提取文本内容
-      String extractedContent = _extractContentFromSVG(svgContent);
+      String extractedContent = _extractContentFromSVG(context, svgContent);
 
       // 生成回退SVG
-      final fallbackSVG = _generateFallbackSVGContent(extractedContent);
+      final fallbackSVG = _generateFallbackSVGContent(
+        extractedContent,
+        fallbackTitle: AppLocalizations.of(context).svgFallbackTitle,
+        fallbackHint: AppLocalizations.of(context).svgFallbackHint,
+        fallbackIdentifier: AppLocalizations.of(context).svgFallbackIdentifier,
+      );
 
       AppLogger.i(
         '使用回退SVG模板，内容长度: ${fallbackSVG.length}',
@@ -201,15 +215,18 @@ class SVGCardWidget extends StatelessWidget {
         placeholderBuilder: showLoadingIndicator
             ? (context) => Container(
                   color: Colors.grey[100],
-                  child: const Center(
+                  child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 8),
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 8),
                         Text(
-                          '正在加载备用模板...',
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                          AppLocalizations.of(context).svgLoadingFallback,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -251,7 +268,7 @@ class SVGCardWidget extends StatelessWidget {
               Icon(Icons.error_outline, size: 48, color: Colors.red[400]),
               const SizedBox(height: 12),
               Text(
-                '卡片渲染失败',
+                AppLocalizations.of(context).cardRenderFailed,
                 style: Theme.of(context)
                     .textTheme
                     .titleMedium
@@ -259,7 +276,7 @@ class SVGCardWidget extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                '请尝试重新生成卡片',
+                AppLocalizations.of(context).cardRegeneratePrompt,
                 style: TextStyle(color: Colors.red[600], fontSize: 12),
                 textAlign: TextAlign.center,
               ),
@@ -271,7 +288,7 @@ class SVGCardWidget extends StatelessWidget {
   }
 
   /// 从SVG内容中提取文本
-  String _extractContentFromSVG(String svg) {
+  String _extractContentFromSVG(BuildContext context, String svg) {
     try {
       // 尝试提取text标签中的内容
       final textMatches = RegExp(r'<text[^>]*>([^<]+)</text>').allMatches(svg);
@@ -296,14 +313,19 @@ class SVGCardWidget extends StatelessWidget {
         }
       }
 
-      return '内容解析失败';
+      return AppLocalizations.of(context).svgContentParseFailed;
     } catch (e) {
-      return '无法提取内容';
+      return AppLocalizations.of(context).svgContentExtractFailed;
     }
   }
 
   /// 生成回退SVG内容
-  String _generateFallbackSVGContent(String content) {
+  String _generateFallbackSVGContent(
+    String content, {
+    required String fallbackTitle,
+    required String fallbackHint,
+    required String fallbackIdentifier,
+  }) {
     // 限制内容长度
     final displayContent =
         content.length > 50 ? '${content.substring(0, 50)}...' : content;
@@ -326,7 +348,7 @@ class SVGCardWidget extends StatelessWidget {
 
   <!-- 标题 -->
   <text x="200" y="180" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="16" font-weight="bold">
-    SVG生成失败
+    $fallbackTitle
   </text>
 
   <!-- 内容区域 -->
@@ -341,12 +363,12 @@ class SVGCardWidget extends StatelessWidget {
 
   <!-- 底部提示 -->
   <text x="200" y="540" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12">
-    请尝试重新生成或检查AI配置
+    $fallbackHint
   </text>
 
   <!-- 心迹标识 -->
   <text x="200" y="570" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-family="Arial, sans-serif" font-size="10">
-    心迹 - 备用模板
+    $fallbackIdentifier
   </text>
 </svg>
 ''';
