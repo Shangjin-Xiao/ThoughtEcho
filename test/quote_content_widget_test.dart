@@ -290,6 +290,38 @@ void main() {
     expect(find.byType(CollapsedMediaThumbnail), findsOneWidget);
   });
 
+  test('展开提示遮罩要给缩略图让位，且判据与是否真的画缩略图同源', () {
+    final withMedia = createDeltaQuoteWithImage();
+    final plainRich = Quote(
+      id: 'rich_no_media',
+      content: '没有媒体',
+      date: '2025-01-01T00:00:00.000Z',
+      editSource: 'fullscreen',
+      deltaContent: jsonEncode([
+        {'insert': '没有媒体\n'},
+      ]),
+    );
+
+    double insetFor(Quote quote, String style, double width) =>
+        QuoteContent.collapsedThumbnailInset(
+          quote: quote,
+          mediaStyle: style,
+          maxWidth: width,
+        );
+
+    expect(
+      insetFor(withMedia, NoteCardMediaStyle.thumbnail, 320),
+      CollapsedMediaThumbnail.reservedWidth(),
+    );
+    // 另外两种版式不在右侧挂缩略图，遮罩不用内缩。
+    expect(insetFor(withMedia, NoteCardMediaStyle.banner, 320), 0);
+    expect(insetFor(withMedia, NoteCardMediaStyle.inline, 320), 0);
+    // 没有媒体就没有缩略图。
+    expect(insetFor(plainRich, NoteCardMediaStyle.thumbnail, 320), 0);
+    // 窄到不画缩略图时也不能内缩，否则遮罩会凭空缺一块。
+    expect(insetFor(withMedia, NoteCardMediaStyle.thumbnail, 120), 0);
+  });
+
   testWidgets('点击缩略图打开大图预览', (tester) async {
     final quote = createDeltaQuoteWithImage();
 

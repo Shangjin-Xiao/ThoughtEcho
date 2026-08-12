@@ -49,8 +49,11 @@ class CollapsedRichText extends StatelessWidget {
   static const double blockGap = 4.0;
 
   /// 列表符号列的宽度与它到正文的间距。
-  static const double markerWidth = 20.0;
-  static const double markerGap = 6.0;
+  ///
+  /// 序号可能是两位数（`12.`），列宽给够才不会挤。真挤不下时符号整体缩放，
+  /// **绝不换行**：换行的符号会自己多占一行，把整个列表项的高度顶成两倍。
+  static const double markerWidth = 24.0;
+  static const double markerGap = 8.0;
 
   /// 引用左线宽度与线到正文的间距。
   static const double quoteBarWidth = 4.0;
@@ -528,10 +531,17 @@ class _CollapsedRichTextBlock extends StatelessWidget {
         ),
       );
     }
-    return Text(
-      marker ?? '',
-      textAlign: TextAlign.right,
-      style: baseStyle.copyWith(color: palette.marker),
+    // FittedBox + softWrap:false：列宽放不下时缩小，而不是折行。折行的 `1.` 会让
+    // 这一项高出一整行，列表看起来忽宽忽窄。
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.topRight,
+      child: Text(
+        marker ?? '',
+        maxLines: 1,
+        softWrap: false,
+        style: baseStyle.copyWith(color: palette.marker),
+      ),
     );
   }
 }

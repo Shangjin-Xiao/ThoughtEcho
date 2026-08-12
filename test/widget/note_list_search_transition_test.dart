@@ -175,6 +175,11 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   @override
   bool get requireBiometricForHidden => false;
 
+  // 折叠卡片每次 build 都要问版式；这个 fake 的 noSuchMethod 是显式抛异常的，
+  // 不补就会在渲染笔记卡片时炸掉。
+  @override
+  String get noteCardMediaStyle => NoteCardMediaStyle.thumbnail;
+
   @override
   bool get showFavoriteButton => true;
 

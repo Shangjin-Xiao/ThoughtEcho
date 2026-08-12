@@ -299,6 +299,28 @@ class QuoteContent extends StatelessWidget {
         collapsedContentMaxHeight;
   }
 
+  /// 折叠卡片右侧缩略图占掉的宽度（含间距），不画缩略图时为 0。
+  ///
+  /// 展开提示遮罩要按这个值内缩，否则渐变和胶囊会横跨整个内容区、把缩略图压在
+  /// 底下。判断逻辑和 [build] 里决定画不画缩略图的那段**共用这一处**——两边各写
+  /// 一份的话，宽度阈值一改就会错位。
+  static double collapsedThumbnailInset({
+    required Quote quote,
+    required String mediaStyle,
+    required double maxWidth,
+  }) {
+    if (mediaStyle != NoteCardMediaStyle.thumbnail) return 0;
+    if (quote.deltaContent == null || quote.editSource != 'fullscreen') {
+      return 0;
+    }
+    if (!DeltaMediaCache.of(quote.deltaContent).hasMedia) return 0;
+    // 容器窄到放不下「缩略图 + 一段能读的正文」时整个不画缩略图，见 build。
+    if (maxWidth.isFinite && maxWidth < _minWidthForCollapsedThumbnail) {
+      return 0;
+    }
+    return CollapsedMediaThumbnail.reservedWidth();
+  }
+
   /// 带媒体的笔记**一律可展开**。
   ///
   /// 折叠卡片无论哪种版式都不会把媒体按原尺寸画出来：thumbnail 摘成 72px 方图、
@@ -573,16 +595,14 @@ class QuoteContent extends StatelessWidget {
             // 84px，与 reserved 取什么值无关；`constraints.maxWidth` 一旦小于 84，
             // `Expanded` 照样分到负空间、RenderFlex 照样溢出。只有不挂这两个子项
             // 才真的不溢出。折叠正文区正常不会窄到这个程度，这里纯粹是防御。
-            final bool showThumbnail =
-                mediaStyle == NoteCardMediaStyle.thumbnail &&
-                    media.hasMedia &&
-                    (!constraints.maxWidth.isFinite ||
-                        constraints.maxWidth >= _minWidthForCollapsedThumbnail);
+            final double reserved = collapsedThumbnailInset(
+              quote: quote,
+              mediaStyle: mediaStyle,
+              maxWidth: constraints.maxWidth,
+            );
+            final bool showThumbnail = reserved > 0;
             final bool showBanner =
                 mediaStyle == NoteCardMediaStyle.banner && media.hasMedia;
-
-            final double reserved =
-                showThumbnail ? CollapsedMediaThumbnail.reservedWidth() : 0.0;
             // 文字宽度要先扣掉缩略图占的位，否则排版会按整宽算而少排内容。
             final double textMaxWidth = constraints.maxWidth.isFinite
                 ? constraints.maxWidth - reserved

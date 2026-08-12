@@ -422,6 +422,13 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             innerTheme: innerTheme,
             backdropBlurDisabled: backdropBlurDisabled,
             l10n: l10n,
+            thumbnailInset: QuoteContent.collapsedThumbnailInset(
+              quote: quote,
+              mediaStyle: context.select<SettingsService, String>(
+                (s) => s.noteCardMediaStyle,
+              ),
+              maxWidth: constraints.maxWidth,
+            ),
           );
 
           return GestureDetector(
@@ -453,6 +460,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     required ThemeData innerTheme,
     required bool backdropBlurDisabled,
     required AppLocalizations l10n,
+    required double thumbnailInset,
   }) {
     return Stack(
       clipBehavior: Clip.none,
@@ -485,7 +493,9 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         ),
         Positioned(
           left: 0,
-          right: 0,
+          // 遮罩要给右侧缩略图让位。横跨整个内容区的话，渐变和「展开」胶囊会压在
+          // 缩略图上，图的下缘看起来像蒙了一层脏。
+          right: thumbnailInset,
           bottom: 0,
           height: 30,
           child: IgnorePointer(
