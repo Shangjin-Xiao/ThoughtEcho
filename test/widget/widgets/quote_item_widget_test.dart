@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/widgets/note_list/collapsed_rich_text.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
@@ -751,11 +752,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // 列表卡片走 `Text.rich` 预览而不是 QuillEditor（阶段 D：折叠态彻底不跑
+      // Quill）。展示的是 delta 的富文本内容，不是 content 兜底串。
       expect(find.text('fallback content'), findsNothing);
-      expect(find.byType(quill.QuillEditor), findsOneWidget);
+      expect(find.byType(quill.QuillEditor), findsNothing);
+      expect(find.byType(CollapsedRichText), findsOneWidget);
     });
 
-    testWidgets('列表富文本正文压平为单一摘要语义节点且保留Quill渲染', (tester) async {
+    testWidgets('列表富文本正文压平为单一摘要语义节点，且由 Text.rich 渲染', (tester) async {
       final delta = jsonEncode([
         {'insert': '第一段\n'},
         {'insert': '第二段\n'},
@@ -811,8 +815,13 @@ void main() {
       );
       expect(
         find.descendant(
-            of: semantics, matching: find.byType(quill.QuillEditor)),
+            of: semantics, matching: find.byType(CollapsedRichText)),
         findsOneWidget,
+      );
+      expect(
+        find.descendant(
+            of: semantics, matching: find.byType(quill.QuillEditor)),
+        findsNothing,
       );
     });
 

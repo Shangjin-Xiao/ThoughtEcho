@@ -112,6 +112,13 @@ class _CollapsedMediaImageState extends State<CollapsedMediaImage> {
       child: Image(
         image: provider,
         fit: BoxFit.cover,
+        // 非方形图裁掉的是下半截，不是上下各一半。长截图、竖版照片的信息几乎都
+        // 在顶部，居中裁会把标题和人脸切掉。
+        //
+        // ⚠️ 不要改成「按原图比例的非方形缩略图」来避免裁切：方形是唯一能让
+        // `cover` 的解码尺寸有上界的形状（见 CollapsedMediaThumbnail 的说明），
+        // 改了会把已经解决的内存问题重新引进来。
+        alignment: Alignment.topCenter,
         filterQuality: FilterQuality.low,
         isAntiAlias: true,
         gaplessPlayback: true,

@@ -109,6 +109,22 @@ class QuillEditorExtensions {
 /// 两个用到 `QuillEditor` 的地方——笔记卡片正文和全屏编辑器——必须按同一套令牌
 /// 纠正，否则「写的时候」和「读的时候」行距不一样。规则因此放在这里一处。
 class QuillThemeTypography {
+  /// 标题字号，取值与 `flutter_quill` 的 `DefaultStyles` 一致。
+  ///
+  /// **折叠预览和展开态必须从这一处取**：同一条笔记折叠时走 `Text.rich`、展开后
+  /// 走 `QuillEditor`，两边各写一份字面量的话，改了一处就会在展开的那一刻看见
+  /// 标题跳一下。quill 那边是绝对值、不随主题正文字号缩放，这里照搬。
+  static const double headerFontSize1 = 34.0;
+  static const double headerFontSize2 = 30.0;
+  static const double headerFontSize3 = 24.0;
+
+  /// 1~3 级标题的字号；超出范围按 3 级处理。
+  static double headerFontSize(int level) => switch (level) {
+        1 => headerFontSize1,
+        2 => headerFontSize2,
+        _ => headerFontSize3,
+      };
+
   /// [base] 是调用方已有的正文样式（卡片会传 `bodyLarge` + 笔记颜色）。
   ///
   /// 字号和行高**不从 [DefaultTextStyle] 取**：调用方可能没传 [base]，而那里

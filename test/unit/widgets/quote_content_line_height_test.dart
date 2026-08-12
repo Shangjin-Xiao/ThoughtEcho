@@ -6,33 +6,32 @@ import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
 
-/// 富文本的折叠判定读的是全局 [QuoteContent.estimatedLineHeight]，而这个值由
-/// `QuoteContent.build` 回填——比**父组件**（`quote_item_widget`）的折叠判定晚一帧。
+/// 折叠判定必须跟着主题风格的行高走。
 ///
-/// 结果就是首帧、以及刚切换主题风格的那一帧，判定会用上一套风格的行高：
-/// 纸墨真实行高 17×1.75≈29.75，初值却是 material 的 24，差 24%，足以让一条实际
-/// 超过 160px 的笔记被判成「不需要展开」，展开入口直接不出现。
+/// 历史背景：富文本的判定曾经读全局 [QuoteContent.estimatedLineHeight]，而这个值
+/// 由 `QuoteContent.build` 回填——比**父组件**（`quote_item_widget`）的判定晚一帧。
+/// 首帧和刚切换风格的那一帧于是会用上一套风格的行高：纸墨真实行高 17×1.75≈29.75，
+/// 初值却是 material 的 24，差 24%，足以让一条实际超过 160px 的笔记被判成
+/// 「不需要展开」，展开入口直接不出现。
 ///
-/// 修法是在判定入口前先按传入的 style 对齐行高。这里钉住两件事：对齐本身，
-/// 以及**换风格后不会命中上一套风格的缓存**。
+/// 现在判定改成按传入的 style 用 `TextPainter` 实测（见
+/// [QuoteContent.exceedsCollapsedHeightForLayout]），行高天然跟着 style 走。全局值
+/// 只剩无宽度兜底那条路在用。这里钉住三件事：全局值仍然跟着 style 对齐、
+/// **换风格后不会命中上一套风格的缓存**、以及判定确实随行高翻转。
 void main() {
   /// 5 个短行的富文本，**末尾带 `\n`**（Quill 的 delta 总是这样收尾，照抄真实数据）。
   ///
-  /// 按 `_estimatePlainTextHeight` 的实际算法算：`split('\n')` 出来是 6 段——
-  /// 5 段非空各计 1 行（每行都短于 `_averageCharsPerLine` = 28），第 6 段是空串
-  /// （`rawLine.trim()` 后为空）另计 0.5 行；行间距按段数算 `(6-1) × 4 = 20`。
-  /// 所以估算高度 = **5.5 × 行高 + 20**：
+  /// 实测口径：5 个非空块各占 1 行（每行都短到不会再折），块间 4 个
+  /// `CollapsedRichText.blockGap`，所以高度 = **5 × 行高 + 16**：
   ///
-  /// | 风格 | 行高 | 估算高度 | 对 160 的折叠阈值 |
+  /// | 风格 | 行高 | 实测高度 | 对 160 的折叠阈值 |
   /// | --- | --- | --- | --- |
-  /// | material | 24    | 152.0 | 低 8，不折叠 |
-  /// | 纸墨      | 29.75 | 183.6 | 高 23.6，要折叠 |
-  /// | 素笺      | 27.2  | 169.6 | 高 9.6，要折叠 |
+  /// | material | 24    | 136.0  | 低 24，不折叠 |
+  /// | 纸墨      | 29.75 | 164.75 | 高 4.75，要折叠 |
   ///
-  /// 5 行是唯一能卡在阈值两侧的行数：4 行时纸墨也只有 149.9 不折叠，6 行时
-  /// material 已经 180 要折叠，两边都翻不过来。**margin 只有 8–24px**，
-  /// 所以改动 `_lineSpacing`、`_averageCharsPerLine` 或 `collapsedContentMaxHeight`
-  /// 会让这里失败——那不是误报，是这些常量真的动了折叠行为，需要重新挑行数。
+  /// 5 行是能卡在阈值两侧的行数。**纸墨那侧 margin 只有 4.75px**，所以改动
+  /// `CollapsedRichText.blockGap` 或 `collapsedContentMaxHeight` 会让这里失败——
+  /// 那不是误报，是这些常量真的动了折叠行为，需要重新挑行数。
   String fiveShortLinesDelta(String marker) => jsonEncode([
         {'insert': '$marker\n第二行\n第三行\n第四行\n第五行\n'}
       ]);
@@ -59,7 +58,7 @@ void main() {
     return QuoteContent.exceedsCollapsedHeightForLayout(
       quote: quote,
       style: bodyLargeFor(style),
-      // 富文本不看宽度，走静态估算；给个有限值让它不提前短路。
+      // 富文本现在按这个宽度实测；400 足够宽，5 个短行都不会再折。
       maxWidth: 400,
       textDirection: TextDirection.ltr,
       textScaler: TextScaler.noScaling,
@@ -86,22 +85,21 @@ void main() {
     expect(
       decideExpansion(quote, ThemeStyle.material),
       isFalse,
-      reason: 'material 下 5.5×24+20=152，没到 160 的折叠阈值',
+      reason: 'material 下 5×24+16=136，没到 160 的折叠阈值',
     );
     expect(
       decideExpansion(quote, ThemeStyle.paper),
       isTrue,
-      reason: '纸墨下 5.5×29.75+20≈183.6 已经超过阈值，'
+      reason: '纸墨下 5×29.75+16≈164.75 已经超过阈值，'
           '若仍返回 false 说明命中了 material 那次的缓存，展开入口会消失',
     );
     // 再切回去也要跟着翻，不能被纸墨那次的结果粘住。
     expect(decideExpansion(quote, ThemeStyle.material), isFalse);
   });
 
-  test('估算公式确实是 5.5×行高 + 20（上面注释里的算式不是拍脑袋）', () {
-    // 注释写错过一次（漏了末尾 '\n' 拆出的空段和第 6 段行间距），所以这里不靠
-    // 心算、直接把公式测出来：解 5.5×行高 + 20 > 160 得翻转点 行高 = 25.4545…，
-    // 在它两侧各取一个值，答案必须刚好翻过去。公式一变这条就失败。
+  test('判定确实随行高翻转（上面注释里的算式不是拍脑袋）', () {
+    // 不靠心算：直接在翻转点两侧各取一个行高，答案必须刚好翻过去。
+    // 解 5×行高 + 16 > 160 得翻转点 行高 = 28.8。
     bool decideAtLineHeight(double lineHeight) =>
         QuoteContent.exceedsCollapsedHeightForLayout(
           quote: richQuote('probe-$lineHeight'),
@@ -111,8 +109,58 @@ void main() {
           textScaler: TextScaler.noScaling,
         );
 
-    expect(decideAtLineHeight(25.45), isFalse, reason: '159.975 不该超阈值');
-    expect(decideAtLineHeight(25.46), isTrue, reason: '160.03 该超阈值');
+    expect(decideAtLineHeight(28.0), isFalse, reason: '156 不该超阈值');
+    expect(decideAtLineHeight(30.0), isTrue, reason: '166 该超阈值');
+  });
+
+  test('富文本基准样式变化会重新判定，不会命中上一份样式的缓存', () {
+    // richTextBaseStyle 是富文本真正拿去量的那份样式。它只加进 getOrCreate 的签名
+    // 和缓存键、却忘了从调用点传，参数看着在、其实恒为 null——键不随它变，换了排版
+    // 样式仍会拿到旧答案。这条用同一个 quote、同一个 style，只改 richTextBaseStyle，
+    // 逼着判定翻转。
+    final quote = richQuote('base-style');
+
+    bool decideWith(TextStyle richTextBaseStyle) =>
+        QuoteContent.exceedsCollapsedHeightForLayout(
+          quote: quote,
+          // style 保持不变，差异全部来自 richTextBaseStyle。
+          style: const TextStyle(fontSize: 10, height: 1.0),
+          maxWidth: 400,
+          textDirection: TextDirection.ltr,
+          textScaler: TextScaler.noScaling,
+          richTextBaseStyle: richTextBaseStyle,
+        );
+
+    // 5 行 × 行高 + 4 个 blockGap(4px)：翻转点在行高 28.8。
+    expect(
+      decideWith(const TextStyle(fontSize: 10, height: 2.8)),
+      isFalse,
+      reason: '5×28+16=156，没到 160',
+    );
+    expect(
+      decideWith(const TextStyle(fontSize: 10, height: 3.0)),
+      isTrue,
+      reason: '5×30+16=166，已超过；仍返回 false 说明键没认 richTextBaseStyle',
+    );
+  });
+
+  test('无宽度兜底走的仍是估算公式，不是实测', () {
+    // maxWidth 非有限 / <= 0 时判定退回 `_estimatePlainTextHeight`。那条公式还活着
+    // （末尾空段算 0.5 行、段间距 `_lineSpacing`），但已经没有别的用例覆盖它了，
+    // 改动它不会被上面那条实测翻转用例捕获。这里按翻转点两侧各取一个行高钉住。
+    bool decideWithoutWidth(double lineHeight) =>
+        QuoteContent.exceedsCollapsedHeightForLayout(
+          quote: richQuote('nowidth-$lineHeight'),
+          style: TextStyle(fontSize: 10, height: lineHeight / 10),
+          maxWidth: double.infinity,
+          textDirection: TextDirection.ltr,
+          textScaler: TextScaler.noScaling,
+        );
+
+    // 兜底口径：5 个非空块各 1 行 + 4 个 blockGap(4px) = 5×行高 + 16。
+    // 解 5×行高 + 16 > 160 得翻转点 行高 = 28.8。
+    expect(decideWithoutWidth(28.0), isFalse);
+    expect(decideWithoutWidth(30.0), isTrue);
   });
 
   test('style 缺字号或行高时不动全局值，交给 build 回填', () {

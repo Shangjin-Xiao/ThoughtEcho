@@ -1,25 +1,22 @@
-import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../models/app_settings.dart';
 import '../models/quote_model.dart';
 import '../theme/theme_style.dart';
 import '../utils/delta_media_extractor.dart';
+import '../utils/delta_rich_text_parser.dart';
 import '../utils/quill_editor_extensions.dart';
 import 'package:provider/provider.dart';
 import '../services/settings_service.dart';
 import 'motion_photo_preview_page.dart';
 import 'note_list/collapsed_media_banner.dart';
 import 'note_list/collapsed_media_thumbnail.dart';
-
-part 'quote_content_deferred.dart';
+import 'note_list/collapsed_rich_text.dart';
 
 /// 统一显示Quote内容的组件，支持富文本和普通文本
 class QuoteContent extends StatelessWidget {
@@ -73,8 +70,8 @@ class QuoteContent extends StatelessWidget {
       paragraph: paragraph,
       bold: const TextStyle(fontWeight: FontWeight.w500),
       h1: quill.DefaultTextBlockStyle(
-        const TextStyle(
-          fontSize: 34,
+        TextStyle(
+          fontSize: QuillThemeTypography.headerFontSize1,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.5,
           height: 1.083,
@@ -86,8 +83,8 @@ class QuoteContent extends StatelessWidget {
         null,
       ),
       h2: quill.DefaultTextBlockStyle(
-        const TextStyle(
-          fontSize: 30,
+        TextStyle(
+          fontSize: QuillThemeTypography.headerFontSize2,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.8,
           height: 1.067,
@@ -99,8 +96,8 @@ class QuoteContent extends StatelessWidget {
         null,
       ),
       h3: quill.DefaultTextBlockStyle(
-        const TextStyle(
-          fontSize: 24,
+        TextStyle(
+          fontSize: QuillThemeTypography.headerFontSize3,
           fontWeight: FontWeight.w500,
           letterSpacing: -0.5,
           height: 1.083,
@@ -158,104 +155,30 @@ class QuoteContent extends StatelessWidget {
 
   static const double collapsedContentMaxHeight = 160.0;
 
-  /// 富文本折叠估算用的行高（逻辑像素）。
+  /// 无宽度兜底判定用的行高（逻辑像素）。
   ///
-  /// 纯文本走 `TextPainter` 实测，自动跟着 `style` 走；富文本只能静态估算，
-  /// 拿不到 context，所以行高在这里以全局值的形式跟随主题——由 [build] 用
-  /// 实际段落样式回填。初值是 Material 下的 16×1.5。
+  /// 真正的折叠判定已经是实测的（见 [exceedsCollapsedHeightForLayout]），这个全局
+  /// 值只服务于拿不到布局宽度的兜底路径，由 [_syncEstimatedLineHeight] 跟随主题
+  /// 回填。初值是 Material 下的 16×1.5。
   ///
   /// 它进了 `_HeightEstimateCacheKey`，所以换主题后旧估算不会被复用。
   static double estimatedLineHeight = 24.0;
   static const double _lineSpacing = 4.0;
   static const int _averageCharsPerLine = 28;
-  static const double _estimatedImageHeight = 200.0;
-  static const double _estimatedVideoHeight = 240.0;
-  static const double _estimatedAudioHeight = 140.0;
-  // Keep a small guard below the clipped viewport so differences between the
-  // conservative TextPainter estimate and Quill's block styles cannot expose
-  // an empty strip at the bottom of the preview.
-  static const double _collapsedDocumentHeightGuard = 96.0;
-  static const double _collapsedImagePlaceholderHeight = 96.0;
 
   /// 折叠卡片挂缩略图所需的最小容器宽度：缩略图连间距占 84px，再给正文留
   /// 至少 96px，低于这个宽度就不画缩略图，避免 Row 溢出（见 build 中的说明）。
   static const double _minWidthForCollapsedThumbnail = 180.0;
-  static const int _deferredPreviewCodeUnitBudget = 320;
   static const Key collapsedWrapperKey = ValueKey(
     'quote_content.collapsed_wrapper',
   );
-  static int _cacheGeneration = 0;
-
   static void resetCaches() {
-    _cacheGeneration++;
     _QuoteDocumentCache.clear();
     _QuoteHeightEstimateCache.clear();
     _QuotePlainTextLayoutExpansionCache.clear();
     _QuoteContentControllerCache.clear();
-    _ColdCollapsedQuillFrameBudget.reset();
     DeltaMediaCache.clear();
-  }
-
-  /// 预热 Document 缓存：只预热首屏附近内容，且滚动中不抢占主线程。
-  static void prewarmDocumentCache(
-    List<Quote> quotes, {
-    int maxItems = 6,
-    Duration delay = const Duration(milliseconds: 500),
-  }) {
-    final richQuotes = quotes
-        .where((q) => q.deltaContent != null && q.editSource == 'fullscreen')
-        .take(maxItems)
-        .toList();
-    if (richQuotes.isEmpty) return;
-
-    const batchSize = 1;
-    final generation = _cacheGeneration;
-    void processBatch(int startIndex) {
-      if (generation != _cacheGeneration) return;
-      if (startIndex >= richQuotes.length) return;
-      if (isListScrolling.value) {
-        Timer(
-          const Duration(milliseconds: 240),
-          () => processBatch(startIndex),
-        );
-        return;
-      }
-
-      final end = (startIndex + batchSize).clamp(0, richQuotes.length);
-      for (int i = startIndex; i < end; i++) {
-        final deltaContent = richQuotes[i].deltaContent!;
-        _QuoteDocumentCache.getOrCreate(
-          deltaContent: deltaContent,
-          prioritizeBold: false,
-          truncateForCollapse: false,
-          builder: () => _buildDocumentFromDelta(deltaContent),
-        );
-      }
-      if (end < richQuotes.length) {
-        Timer.run(() => processBatch(end));
-      }
-    }
-
-    Timer(delay, () => processBatch(0));
-  }
-
-  /// 静态版本的 Document 构建，供预热缓存使用
-  static quill.Document _buildDocumentFromDelta(String deltaContent) {
-    try {
-      final decoded = jsonDecode(deltaContent);
-      if (decoded is List) {
-        return quill.Document.fromJson(decoded);
-      }
-      if (decoded is Map && decoded.containsKey('ops')) {
-        final ops = decoded['ops'];
-        if (ops is List) {
-          return quill.Document.fromJson(ops);
-        }
-      }
-    } catch (e) {
-      debugPrint('[QuoteContent] delta content parse failed: $e');
-    }
-    return quill.Document()..insert(0, '');
+    DeltaRichTextCache.clear();
   }
 
   /// 修复问题1：清理特定笔记的缓存（用于笔记删除/更新）
@@ -277,6 +200,10 @@ class QuoteContent extends StatelessWidget {
         'document': _QuoteDocumentCache.stats,
         'heightEstimate': _QuoteHeightEstimateCache.stats,
         'controller': _QuoteContentControllerCache.stats,
+        // 折叠态的成本现在全在这两项里（document / controller 只剩展开态在用），
+        // 性能日志要一行拿全就得带上它们。
+        'richText': DeltaRichTextCache.stats,
+        'media': DeltaMediaCache.stats,
       };
 
   /// Returns a compact one-line summary suitable for copy/paste performance logs.
@@ -291,6 +218,12 @@ class QuoteContent extends StatelessWidget {
     final controller = Map<String, dynamic>.from(
       stats['controller'] as Map<String, dynamic>,
     );
+    final richText = Map<String, dynamic>.from(
+      stats['richText'] as Map<String, dynamic>,
+    );
+    final media = Map<String, dynamic>.from(
+      stats['media'] as Map<String, dynamic>,
+    );
 
     final buffer = StringBuffer()
       ..write('doc=${document['cacheSize']}')
@@ -300,7 +233,13 @@ class QuoteContent extends StatelessWidget {
       ..write(',ctrl=${controller['cacheSize']}')
       ..write('/${controller['maxSize']}')
       ..write(',ctrlCreate=${controller['createCount']}')
-      ..write(',ctrlDispose=${controller['disposeCount']}');
+      ..write(',ctrlDispose=${controller['disposeCount']}')
+      ..write(',ir=${richText['cacheSize']}')
+      ..write('/${richText['maxSize']}')
+      ..write(',irWorstUs=${richText['worstWorkMicros']}')
+      ..write(',media=${media['cacheSize']}')
+      ..write('/${media['maxSize']}')
+      ..write(',mediaMiss=${media['missCount']}');
 
     if (baseline != null) {
       final baselineDocument = Map<String, dynamic>.from(
@@ -363,102 +302,12 @@ class QuoteContent extends StatelessWidget {
     return currentMicros > baselineMicros ? currentMicros : 0;
   }
 
-  static String _deferredPreviewText(String content) {
-    if (content.length <= _deferredPreviewCodeUnitBudget) {
-      return content;
-    }
-    var end = _deferredPreviewCodeUnitBudget;
-    final lastCodeUnit = content.codeUnitAt(end - 1);
-    if (lastCodeUnit >= 0xD800 && lastCodeUnit <= 0xDBFF) {
-      end--;
-    }
-    return content.substring(0, end);
-  }
-
-  /// 检查是否为媒体软连接或其他应该过滤的内容
-  bool _shouldFilterBoldContent(String content) {
-    // 去除空白字符进行检查
-    final trimmed = content.trim();
-
-    // 过滤空内容
-    if (trimmed.isEmpty) return true;
-
-    // 过滤只包含换行符的内容
-    if (trimmed == '\n' || trimmed.replaceAll('\n', '').isEmpty) return true;
-
-    // 过滤媒体软连接模式 (通常是特殊字符或占位符)
-    if (trimmed.length == 1 && trimmed.codeUnitAt(0) > 127) return true;
-
-    // 过滤包含媒体占位符的内容
-    if (trimmed.contains('�') || trimmed.contains('\uFFFC')) return true;
-
-    return false;
-  }
-
-  /// 提取有效的加粗文本内容，过滤媒体软连接
-  List<Map<String, dynamic>> _extractValidBoldOps(String deltaContent) {
-    try {
-      final decoded = jsonDecode(deltaContent);
-      if (decoded is List) {
-        List<Map<String, dynamic>> validBoldOps = [];
-
-        for (var op in decoded) {
-          if (op is Map && op['insert'] != null) {
-            final String insert = op['insert'].toString();
-            final Map<String, dynamic>? attributes = op['attributes'];
-
-            // 检查是否有加粗属性且内容有效
-            if (attributes != null &&
-                attributes['bold'] == true &&
-                !_shouldFilterBoldContent(insert)) {
-              validBoldOps.add(Map<String, dynamic>.from(op));
-            }
-          }
-        }
-        return validBoldOps;
-      }
-    } catch (_) {
-      // 解析失败，返回空列表
-    }
-    return [];
-  }
-
-  /// 获取非加粗的正文内容（包括媒体嵌入）
-  List<Map<String, dynamic>> _extractNonBoldOps(String deltaContent) {
-    try {
-      final decoded = jsonDecode(deltaContent);
-      if (decoded is List) {
-        List<Map<String, dynamic>> nonBoldOps = [];
-
-        for (var op in decoded) {
-          if (op is Map && op['insert'] != null) {
-            // 如果是嵌入内容（图片、视频等），直接保留
-            if (op['insert'] is Map) {
-              nonBoldOps.add(Map<String, dynamic>.from(op));
-              continue;
-            }
-
-            final String insert = op['insert'].toString();
-            final Map<String, dynamic>? attributes = op['attributes'];
-
-            // 非加粗内容或没有加粗属性的内容
-            if (attributes == null || attributes['bold'] != true) {
-              // 跳过空内容
-              if (insert.trim().isNotEmpty) {
-                nonBoldOps.add(Map<String, dynamic>.from(op));
-              }
-            }
-          }
-        }
-        return nonBoldOps;
-      }
-    } catch (_) {
-      // 解析失败，返回空列表
-    }
-    return [];
-  }
-
+  /// 没有布局宽度时的折叠判定兜底。
+  ///
+  /// 只在拿不到 `constraints.maxWidth` 的调用点用；真正的判定走
+  /// [exceedsCollapsedHeightForLayout]，那条路是实测的。
   static bool exceedsCollapsedHeight(Quote quote) {
+    if (_hasCollapsibleMedia(quote)) return true;
     return _QuoteHeightEstimateCache.getOrCreate(
           quote: quote,
           builder: () => _estimateRenderedHeight(quote),
@@ -466,18 +315,74 @@ class QuoteContent extends StatelessWidget {
         collapsedContentMaxHeight;
   }
 
-  /// 把 [estimatedLineHeight] 对齐到 [style] 代表的正文行高，**必须在任何一次
-  /// 富文本折叠判定之前调用**。
+  /// 折叠卡片右侧缩略图占掉的宽度（含间距），不画缩略图时为 0。
   ///
-  /// [build] 里也会回填一次，但那太晚了：折叠判定发生在**父组件**
-  /// （`quote_item_widget` 的 `_needsExpansionForLayout`），比子组件 build 早一帧。
-  /// 首帧、以及刚切换主题风格的那一帧，全局值还停在上一套风格上——纸墨下真实行高
-  /// 是 17×1.75≈29.75，而初值是 material 的 24，差 24%，足以让一条实际超过 160px
-  /// 的笔记被判成「不需要展开」，展开入口直接不出现。
+  /// 展开提示遮罩要按这个值内缩，否则渐变和胶囊会横跨整个内容区、把缩略图压在
+  /// 底下。判断逻辑和 [build] 里决定画不画缩略图的那段**共用这一处**——两边各写
+  /// 一份的话，宽度阈值一改就会错位。
+  static double collapsedThumbnailInset({
+    required Quote quote,
+    required String mediaStyle,
+    required double maxWidth,
+  }) {
+    if (mediaStyle != NoteCardMediaStyle.thumbnail) return 0;
+    if (quote.deltaContent == null || quote.editSource != 'fullscreen') {
+      return 0;
+    }
+    if (!DeltaMediaCache.of(quote.deltaContent).hasMedia) return 0;
+    // 容器窄到放不下「缩略图 + 一段能读的正文」时整个不画缩略图，见 build。
+    if (maxWidth.isFinite && maxWidth < _minWidthForCollapsedThumbnail) {
+      return 0;
+    }
+    return CollapsedMediaThumbnail.reservedWidth();
+  }
+
+  /// 带媒体的笔记**一律可展开**。
   ///
-  /// 取值口径必须和 [QuillThemeTypography.paragraphStyle] 一致：那边 [style] 非空时
-  /// 用的就是它自己的 fontSize / height，所以这里同样只认 [style]，两边不会漂。
-  /// [style] 缺字号或行高时保持原值不动，交给 build 回填。
+  /// 折叠卡片无论哪种版式都不会把媒体按原尺寸画出来：thumbnail 摘成 72px 方图、
+  /// banner 压成通栏条、inline 也封顶到
+  /// [CollapsedRichText.inlineMediaHeight]。既然折叠态永远看不全，「还有没有更多
+  /// 可看」的答案就是肯定的，不该再交给高度阈值去猜——按排版高度算的话，「一张图
+  /// 配一句话」会因为算出来不到 160px 而失去展开入口，图片就再也放不大了。
+  static bool _hasCollapsibleMedia(Quote quote) {
+    if (quote.deltaContent == null || quote.editSource != 'fullscreen') {
+      return false;
+    }
+    return DeltaMediaCache.of(quote.deltaContent).hasMedia;
+  }
+
+  /// 无宽度兜底用的粗略高度。
+  ///
+  /// 富文本按 IR 的块逐段估，而不是拿 [Quote.content] 一把估：测试夹具和历史数据
+  /// 里 `content` 未必是 delta 的完整纯文本镜像，拿它估会把长正文的富文本笔记判成
+  /// 不需要展开。
+  static double _estimateRenderedHeight(Quote quote) {
+    if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
+      // 口径要和渲染侧一致：同样丢掉尾部空块（delta 结尾总有一个 '\n'），
+      // 同样算上块间距。差一个块就是 24px，差 4 个间距就是 16px，
+      // 足以让兜底判定和实测判定对同一条笔记给出相反的答案。
+      final blocks = CollapsedRichText.visibleBlocks(
+        DeltaRichTextCache.of(quote.deltaContent),
+        showMedia: true,
+      );
+      if (blocks.isEmpty) {
+        return _estimatePlainTextHeight(quote.content);
+      }
+      var height = 0.0;
+      for (final block in blocks) {
+        if (height > 0) height += CollapsedRichText.blockGap;
+        height += block.isMedia
+            ? CollapsedRichText.inlineMediaHeight
+            : _estimatePlainTextHeight(block.plainText);
+      }
+      return height;
+    }
+    return _estimatePlainTextHeight(quote.content);
+  }
+
+  /// 把 [estimatedLineHeight] 对齐到 [style] 代表的正文行高。
+  ///
+  /// 只剩无宽度兜底那条路在用它。真正的判定已经改成实测，不再依赖这个全局值。
   static void _syncEstimatedLineHeight(TextStyle? style) {
     final fontSize = style?.fontSize;
     final height = style?.height;
@@ -485,13 +390,15 @@ class QuoteContent extends StatelessWidget {
     estimatedLineHeight = fontSize * height;
   }
 
-  /// Returns whether [quote] should be collapsed for the current layout.
+  /// 当前布局下 [quote] 是否需要折叠。
   ///
-  /// Plain text is measured with [TextPainter] using the actual [style],
-  /// [maxWidth], [textDirection], [textScaler], and optional [locale]. Rich text
-  /// and non-positive or infinite [maxWidth] values fall back to the lightweight
-  /// estimation path used by [exceedsCollapsedHeight]. Callers should pass a
-  /// finite content width from layout constraints when available.
+  /// 纯文本和富文本现在是**同一个口径**：都用 [TextPainter] 按真实 [style]、
+  /// [maxWidth]、[textDirection]、[textScaler] 和 [locale] 实测。
+  ///
+  /// 富文本以前只能退回「28 个字符算一行」的静态估算——那个数字对中英文混排、
+  /// 标题、列表和字号属性全都不准，足以让一条实际超过 160px 的笔记被判成
+  /// 「不需要展开」，展开入口直接不出现。折叠预览改用 `Text.rich` 之后，富文本
+  /// 也有 span 可以量了，两条路才终于对齐。
   static bool exceedsCollapsedHeightForLayout({
     required Quote quote,
     required TextStyle? style,
@@ -499,42 +406,80 @@ class QuoteContent extends StatelessWidget {
     required TextDirection textDirection,
     required TextScaler textScaler,
     Locale? locale,
+    FontWeight boldWeight = FontWeight.bold,
+
+    /// 富文本折叠预览的基准样式，应当是调用方用
+    /// [QuillThemeTypography.paragraphStyle] 解析好的那一份——**和渲染同一个对象**。
+    ///
+    /// 不传时退回 [style]。纯文本分支始终用 [style]，因为它渲染时用的就是 [style]：
+    /// 两条路各自和自己的渲染对齐，不能混用同一个样式。
+    TextStyle? richTextBaseStyle,
   }) {
-    // 富文本走的是静态估算，读的是全局 estimatedLineHeight。父组件比子组件 build
-    // 早一帧，不先对齐就会拿上一套风格的行高判折叠。见 _syncEstimatedLineHeight。
     _syncEstimatedLineHeight(style);
 
-    if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
-      return exceedsCollapsedHeight(quote);
-    }
     if (!maxWidth.isFinite || maxWidth <= 0) {
       return exceedsCollapsedHeight(quote);
     }
 
+    final isRichText =
+        quote.deltaContent != null && quote.editSource == 'fullscreen';
+
     return _QuotePlainTextLayoutExpansionCache.getOrCreate(
       quote: quote,
+      // 富文本的判定读的是 deltaContent，而缓存键原本只认 content。给笔记加一张
+      // 图、把一段标成标题这类**只改格式不改纯文本**的编辑，content 一个字都不变，
+      // 判定却应该翻转——不把 deltaContent 编进键，卡片就会一直沿用旧答案，
+      // 新加的图片永远等不到展开入口。
+      contentSignatureSalt: quote.deltaContent?.hashCode,
       style: style,
+      // 字重进键：Android + material 下渲染用的是降档后的 w500，判定也得用同一档，
+      // 否则贴着 160px 阈值的加粗卡片会「判定说要折叠、画出来其实没超」。
+      boldWeight: boldWeight,
+      // 富文本实际是按这个样式量的，它必须跟着进键。只把参数加到 getOrCreate 的
+      // 签名和键里、忘了从这里传，等于键里永远是 null——参数看着在，其实是死的。
+      richTextBaseStyle: richTextBaseStyle,
       maxWidth: maxWidth,
       textDirection: textDirection,
       textScaler: textScaler,
       locale: locale,
       builder: () {
+        // IR 为空说明 delta 解不出来，渲染侧会退回纯文本（见 build）。判定必须跟着
+        // 退回同一份内容去量，否则一条正文很长的坏笔记会被判成「不需要折叠」——
+        // 纯文本兜底照着这个答案不加裁剪地铺开，整篇糊在列表里，还没有展开入口。
+        final blocks =
+            isRichText ? DeltaRichTextCache.of(quote.deltaContent) : null;
+        if (blocks != null && blocks.isNotEmpty) {
+          // 带媒体一律可展开，见 [_hasCollapsibleMedia]。
+          if (DeltaMediaCache.of(quote.deltaContent).hasMedia) {
+            return true;
+          }
+          // 判定用的是「媒体还在正文里」的口径：折叠盒是否需要展开入口，取决于
+          // 完整内容放不放得下，而不是某个版式摘掉媒体之后剩多少。
+          final plan = CollapsedRichTextMetrics.plan(
+            blocks: blocks,
+            baseStyle: richTextBaseStyle ?? style ?? const TextStyle(),
+            maxWidth: maxWidth,
+            limit: collapsedContentMaxHeight,
+            showMedia: true,
+            boldWeight: boldWeight,
+            textDirection: textDirection,
+            textScaler: textScaler,
+            locale: locale,
+          );
+          return plan.height > collapsedContentMaxHeight + 0.5;
+        }
+
         final painter = TextPainter(
           text: TextSpan(text: quote.content, style: style),
           textDirection: textDirection,
           textScaler: textScaler,
           locale: locale,
         )..layout(maxWidth: maxWidth);
-        return painter.height > collapsedContentMaxHeight + 0.5;
+        final exceeds = painter.height > collapsedContentMaxHeight + 0.5;
+        painter.dispose();
+        return exceeds;
       },
     );
-  }
-
-  static double _estimateRenderedHeight(Quote quote) {
-    if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
-      return _estimateDeltaHeight(quote.deltaContent!);
-    }
-    return _estimatePlainTextHeight(quote.content);
   }
 
   static double _estimatePlainTextHeight(String content) {
@@ -570,122 +515,6 @@ class QuoteContent extends StatelessWidget {
     return height;
   }
 
-  /// [stripMedia] 为 true 时按「媒体已被摘出正文」估算，嵌入节点一律不计高度。
-  /// 折叠盒在 thumbnail / banner 版式下用这个口径决定自己该多高。
-  static double _estimateDeltaHeight(
-    String deltaContent, {
-    bool stripMedia = false,
-  }) {
-    double height = 0;
-
-    try {
-      final decoded = jsonDecode(deltaContent);
-      if (decoded is List) {
-        for (final node in decoded) {
-          if (node is! Map || !node.containsKey('insert')) continue;
-          final insert = node['insert'];
-
-          if (insert is Map) {
-            if (stripMedia && isDeltaMediaInsert(insert)) {
-              continue;
-            }
-            if (insert.containsKey('image')) {
-              height += _estimatedImageHeight;
-            } else if (insert.containsKey('video')) {
-              height += _estimatedVideoHeight;
-            } else if (insert.containsKey('audio')) {
-              height += _estimatedAudioHeight;
-            } else {
-              height += estimatedLineHeight;
-            }
-            continue;
-          }
-
-          if (insert != null) {
-            height += _estimatePlainTextHeight(insert.toString());
-          }
-        }
-      } else if (decoded is Map && decoded.containsKey('ops')) {
-        // 某些备份格式可能包含 ops 包裹
-        return _estimateDeltaHeight(
-          jsonEncode(decoded['ops']),
-          stripMedia: stripMedia,
-        );
-      } else {
-        height += _estimatePlainTextHeight(deltaContent);
-      }
-    } catch (_) {
-      height += _estimatePlainTextHeight(deltaContent);
-    }
-
-    return height;
-  }
-
-  /// 折叠盒在当前版式下应该多高。
-  ///
-  /// 定高（而不是按内容收缩）是刻意的：滚动期间折叠卡片显示的是
-  /// `Text(quote.content)` 轻量占位，停下后才换成 Quill 文档，两者高度并不相同。
-  /// 一旦盒子跟着内容走，物化的那一刻卡片高度就会跳——这正是这一整轮要消除的
-  /// 「内容会动」。所以盒子始终固定，只是**固定到哪个值**随版式变化。
-  ///
-  /// - inline：媒体还在正文里，沿用 [collapsedContentMaxHeight]
-  /// - thumbnail / banner：媒体被摘走，正文可能只剩一两行，按剥离后的估算取值，
-  ///   避免定高 160px 在卡片里留下一大块空白
-  ///
-  /// 估算偏小可能多裁掉一点点正文，这与 [_collapsedDocumentHeightGuard] 处理的是
-  /// 同一类误差；这里再留一行余量，让常见情形偏向「宁可多留一点」。
-  @visibleForTesting
-  static double collapsedBoxHeightFor(
-    Quote quote, {
-    required bool stripMedia,
-  }) {
-    final deltaContent = quote.deltaContent;
-    if (!stripMedia || deltaContent == null) {
-      return collapsedContentMaxHeight;
-    }
-    final textOnly = _estimateDeltaHeight(deltaContent, stripMedia: true);
-    if (textOnly <= 0) {
-      return 0;
-    }
-    return (textOnly + estimatedLineHeight)
-        .clamp(estimatedLineHeight, collapsedContentMaxHeight);
-  }
-
-  List<Map<String, dynamic>>? _createBoldPriorityOps(String deltaContent) {
-    try {
-      final boldOps = _extractValidBoldOps(deltaContent);
-      if (boldOps.isEmpty) {
-        return null;
-      }
-
-      final nonBoldOps = _extractNonBoldOps(deltaContent);
-      final List<Map<String, dynamic>> orderedOps = [];
-
-      orderedOps.addAll(boldOps);
-
-      if (nonBoldOps.isNotEmpty) {
-        if (orderedOps.isNotEmpty &&
-            !(orderedOps.last['insert']?.toString() ?? '').endsWith('\n')) {
-          orderedOps.add({'insert': '\n'});
-        }
-        orderedOps.add({'insert': '\n'});
-        orderedOps.addAll(nonBoldOps);
-      }
-
-      if (orderedOps.isNotEmpty) {
-        final last = orderedOps.last;
-        if (last['insert'] is String &&
-            !last['insert'].toString().endsWith('\n')) {
-          orderedOps.add({'insert': '\n'});
-        }
-      }
-
-      return orderedOps;
-    } catch (_) {
-      return null;
-    }
-  }
-
   static List<Map<String, dynamic>>? _decodeDeltaOps(String deltaContent) {
     try {
       final decoded = jsonDecode(deltaContent);
@@ -708,272 +537,6 @@ class QuoteContent extends StatelessWidget {
       // ignore and fall back to plain text content
     }
     return null;
-  }
-
-  static List<Map<String, dynamic>> _truncateDeltaOpsForCollapsedDocument(
-    List<Map<String, dynamic>> ops, {
-    bool stripMedia = true,
-    double? collapsedHeight,
-    double? maxWidth,
-    TextStyle? textStyle,
-    TextDirection? textDirection,
-    TextScaler textScaler = TextScaler.noScaling,
-    Locale? locale,
-  }) {
-    if (ops.isEmpty) {
-      return const [
-        {'insert': '\n'},
-      ];
-    }
-
-    // 折叠态的媒体由 [CollapsedMediaThumbnail] 单独渲染，这里必须把嵌入节点摘掉：
-    // 留着它们等于让 Quill 在 160px 的窗口里再解一遍整宽图（还会被裁掉大半），
-    // 而且 video/audio 会在滚动列表里实例化播放器。摘掉之后折叠文档是纯文本，
-    // 构建和布局都便宜得多。
-    final textOps = stripMedia ? _stripMediaOps(ops) : ops;
-    if (textOps.isEmpty) {
-      return const [
-        {'insert': '\n'},
-      ];
-    }
-
-    if (maxWidth == null || !maxWidth.isFinite || maxWidth <= 0) {
-      return _truncateDeltaOpsWithLegacyBudget(textOps);
-    }
-
-    final truncatedOps = <Map<String, dynamic>>[];
-    // 截断目标必须跟着盒子的实际高度走：盒子在 thumbnail / banner 版式下会小于
-    // collapsedContentMaxHeight，仍按 160 截就会多留一大截看不见的内容。
-    final targetHeight = (collapsedHeight ?? collapsedContentMaxHeight) +
-        _collapsedDocumentHeightGuard;
-
-    for (final op in textOps) {
-      if (!op.containsKey('insert')) continue;
-
-      final insert = op['insert'];
-      final candidate = Map<String, dynamic>.from(op);
-      final candidateOps = [...truncatedOps, candidate];
-      final candidateHeight = _estimateCollapsedPrefixHeight(
-        candidateOps,
-        maxWidth: maxWidth,
-        textStyle: textStyle,
-        textDirection: textDirection ?? TextDirection.ltr,
-        textScaler: textScaler,
-        locale: locale,
-      );
-      if (candidateHeight <= targetHeight) {
-        truncatedOps.add(candidate);
-        continue;
-      }
-
-      if (insert is String) {
-        final textPrefix = _longestVisibleTextPrefix(
-          existingOps: truncatedOps,
-          op: candidate,
-          text: insert,
-          targetHeight: targetHeight,
-          maxWidth: maxWidth,
-          textStyle: textStyle,
-          textDirection: textDirection ?? TextDirection.ltr,
-          textScaler: textScaler,
-          locale: locale,
-        );
-        if (textPrefix.isNotEmpty) {
-          final truncatedOp = Map<String, dynamic>.from(candidate);
-          truncatedOp['insert'] = textPrefix;
-          truncatedOps.add(truncatedOp);
-        }
-      } else if (truncatedOps.isEmpty ||
-          _estimateCollapsedPrefixHeight(
-                truncatedOps,
-                maxWidth: maxWidth,
-                textStyle: textStyle,
-                textDirection: textDirection ?? TextDirection.ltr,
-                textScaler: textScaler,
-                locale: locale,
-              ) <
-              targetHeight) {
-        // Preserve the first non-text block crossing the preview boundary.
-        // Quill still renders every visible non-media pixel; collapsed media
-        // was already lifted out to [CollapsedMediaThumbnail] by _stripMediaOps,
-        // so this path only ever sees non-media embeds (e.g. formula).
-        truncatedOps.add(candidate);
-      }
-      break;
-    }
-
-    if (truncatedOps.isEmpty) {
-      truncatedOps.add(Map<String, dynamic>.from(textOps.first));
-    }
-
-    _ensureDocumentOpsEndWithNewline(truncatedOps);
-    return truncatedOps;
-  }
-
-  /// 去掉图片/视频/音频嵌入节点，保留其余全部 op。
-  ///
-  /// 仅用于**折叠态**文档：展开态和全屏编辑器仍然拿完整 ops，媒体照常由 Quill
-  /// 渲染在原本的位置上。
-  static List<Map<String, dynamic>> _stripMediaOps(
-    List<Map<String, dynamic>> ops,
-  ) {
-    if (!ops.any((op) => isDeltaMediaInsert(op['insert']))) {
-      return ops;
-    }
-    return ops
-        .where((op) => !isDeltaMediaInsert(op['insert']))
-        .toList(growable: false);
-  }
-
-  static List<Map<String, dynamic>> _truncateDeltaOpsWithLegacyBudget(
-    List<Map<String, dynamic>> ops,
-  ) {
-    final truncatedOps = <Map<String, dynamic>>[];
-    var usedHeight = 0.0;
-    final budget = collapsedContentMaxHeight * 4;
-
-    for (final op in ops) {
-      if (!op.containsKey('insert')) continue;
-      final insert = op['insert'];
-      final opHeight = _estimateDeltaOpHeight(insert);
-      if (usedHeight + opHeight <= budget) {
-        truncatedOps.add(Map<String, dynamic>.from(op));
-        usedHeight += opHeight;
-        continue;
-      }
-      if (insert is String && usedHeight < budget) {
-        final prefix = _truncateTextForEstimatedHeight(
-          insert,
-          budget - usedHeight,
-        );
-        if (prefix.isNotEmpty) {
-          truncatedOps.add({...op, 'insert': prefix});
-        }
-      }
-      break;
-    }
-
-    if (truncatedOps.isEmpty) {
-      truncatedOps.add(Map<String, dynamic>.from(ops.first));
-    }
-    _ensureDocumentOpsEndWithNewline(truncatedOps);
-    return truncatedOps;
-  }
-
-  static double _estimateCollapsedPrefixHeight(
-    List<Map<String, dynamic>> ops, {
-    required double maxWidth,
-    required TextStyle? textStyle,
-    required TextDirection textDirection,
-    required TextScaler textScaler,
-    required Locale? locale,
-  }) {
-    var height = 0.0;
-    final textSpans = <InlineSpan>[];
-
-    void flushText() {
-      if (textSpans.isEmpty) return;
-      final painter = TextPainter(
-        text: TextSpan(style: textStyle, children: [...textSpans]),
-        textDirection: textDirection,
-        textScaler: textScaler,
-        locale: locale,
-      )..layout(maxWidth: maxWidth);
-      height += painter.height;
-      textSpans.clear();
-    }
-
-    for (final op in ops) {
-      final insert = op['insert'];
-      if (insert is String) {
-        textSpans.add(
-          TextSpan(
-            text: insert,
-            style: _measurementStyleForAttributes(op['attributes']),
-          ),
-        );
-        continue;
-      }
-
-      flushText();
-      if (insert is Map) {
-        if (insert.containsKey('image')) {
-          height += _collapsedImagePlaceholderHeight;
-        } else if (insert.containsKey('video')) {
-          height += _estimatedVideoHeight;
-        } else if (insert.containsKey('audio')) {
-          height += _estimatedAudioHeight;
-        } else {
-          height += estimatedLineHeight;
-        }
-      }
-    }
-    flushText();
-    return height;
-  }
-
-  static TextStyle? _measurementStyleForAttributes(dynamic rawAttributes) {
-    if (rawAttributes is! Map) return null;
-
-    final attributes = Map<String, dynamic>.from(rawAttributes);
-    TextStyle style = const TextStyle();
-    final fontSize = switch (attributes['size']) {
-      'small' => 10.0,
-      'large' => 18.0,
-      'huge' => 22.0,
-      _ => null,
-    };
-    if (fontSize != null) {
-      style = style.copyWith(fontSize: fontSize);
-    }
-    if (attributes['bold'] == true) {
-      style = style.copyWith(fontWeight: FontWeight.bold);
-    }
-    if (attributes['italic'] == true) {
-      style = style.copyWith(fontStyle: FontStyle.italic);
-    }
-    final fontFamily = attributes['font'];
-    if (fontFamily is String && fontFamily.isNotEmpty) {
-      style = style.copyWith(fontFamily: fontFamily);
-    }
-    return style;
-  }
-
-  static String _longestVisibleTextPrefix({
-    required List<Map<String, dynamic>> existingOps,
-    required Map<String, dynamic> op,
-    required String text,
-    required double targetHeight,
-    required double maxWidth,
-    required TextStyle? textStyle,
-    required TextDirection textDirection,
-    required TextScaler textScaler,
-    required Locale? locale,
-  }) {
-    final codePoints = text.runes.toList(growable: false);
-    var low = 0;
-    var high = codePoints.length;
-
-    while (low < high) {
-      final mid = (low + high + 1) ~/ 2;
-      final candidate = Map<String, dynamic>.from(op)
-        ..['insert'] = String.fromCharCodes(codePoints.take(mid));
-      final height = _estimateCollapsedPrefixHeight(
-        [...existingOps, candidate],
-        maxWidth: maxWidth,
-        textStyle: textStyle,
-        textDirection: textDirection,
-        textScaler: textScaler,
-        locale: locale,
-      );
-      if (height <= targetHeight) {
-        low = mid;
-      } else {
-        high = mid - 1;
-      }
-    }
-
-    return String.fromCharCodes(codePoints.take(low));
   }
 
   static List<Map<String, dynamic>> _normalizedDocumentOps(
@@ -999,73 +562,16 @@ class QuoteContent extends StatelessWidget {
     }
   }
 
-  static double _estimateDeltaOpHeight(dynamic insert) {
-    if (insert is Map) {
-      if (insert.containsKey('image')) {
-        return _estimatedImageHeight;
-      }
-      if (insert.containsKey('video')) {
-        return _estimatedVideoHeight;
-      }
-      if (insert.containsKey('audio')) {
-        return _estimatedAudioHeight;
-      }
-      return estimatedLineHeight;
-    }
-    if (insert == null) {
-      return 0;
-    }
-    return _estimatePlainTextHeight(insert.toString());
-  }
-
-  static String _truncateTextForEstimatedHeight(
-    String text,
-    double remainingHeight,
-  ) {
-    if (text.isEmpty || remainingHeight <= 0) {
-      return '';
-    }
-
-    final approxLines = (remainingHeight / estimatedLineHeight).floor();
-    final charLimit =
-        (approxLines.clamp(1, 12) * _averageCharsPerLine).clamp(1, text.length);
-    return String.fromCharCodes(text.runes.take(charLimit));
-  }
-
-  quill.Document _buildRichTextDocument(
-    String deltaContent,
-    bool prioritizeBold,
-    bool truncateForCollapse, {
-    bool stripMedia = true,
-    double? collapsedHeight,
-    double? maxWidth,
-    TextStyle? textStyle,
-    TextDirection? textDirection,
-    TextScaler textScaler = TextScaler.noScaling,
-    Locale? locale,
-  }) {
-    List<Map<String, dynamic>>? ops;
-    if (prioritizeBold) {
-      ops = _createBoldPriorityOps(deltaContent);
-    }
-
-    ops ??= _decodeDeltaOps(deltaContent);
+  /// 展开态和全屏编辑器用的完整 Document。
+  ///
+  /// 折叠态**不再走这里**：它由 [CollapsedRichText] 直接排 `Text.rich`，既不建
+  /// Document 也不建 `QuillEditor`。所以这里没有截断分支了——需要截断的那条路
+  /// 已经整个不存在。
+  quill.Document _buildRichTextDocument(String deltaContent) {
+    final ops = _decodeDeltaOps(deltaContent);
     if (ops != null) {
-      final documentOps = truncateForCollapse
-          ? _truncateDeltaOpsForCollapsedDocument(
-              ops,
-              stripMedia: stripMedia,
-              collapsedHeight: collapsedHeight,
-              maxWidth: maxWidth,
-              textStyle: textStyle,
-              textDirection: textDirection,
-              textScaler: textScaler,
-              locale: locale,
-            )
-          : _normalizedDocumentOps(ops);
-      return quill.Document.fromJson(documentOps);
+      return quill.Document.fromJson(_normalizedDocumentOps(ops));
     }
-
     return _documentFromDelta(deltaContent);
   }
 
@@ -1090,29 +596,59 @@ class QuoteContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final prioritizeBoldContent = context.select<SettingsService, bool>(
-      (s) => s.prioritizeBoldContentInCollapse,
-    );
-    // 同上：这条路径也可能在富文本 build 回填之前就判折叠。
+    // 这条路径也可能在富文本 build 回填之前就走到无宽度兜底。
     _syncEstimatedLineHeight(style);
     final bool needsExpansion =
         needsExpansionOverride ?? exceedsCollapsedHeight(quote);
 
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
-      if (!showFullContent && needsExpansion) {
+      // 只要不是展开态，列表里的富文本卡片**一律**走 `Text.rich` 预览，长短都一样。
+      //
+      // 以前这里还要求 `needsExpansion`：短到不用折叠的富文本笔记会落进下面的
+      // Quill 分支，于是列表里最常见的那类卡片反而每张都建一棵编辑器树——阶段 D
+      // 想去掉的冷首布局有相当一部分就在这里。短卡片没有折叠盒（下面按
+      // [needsExpansion] 决定要不要定高裁剪），但渲染路径和长卡片是同一条。
+      if (!showFullContent) {
         // 折叠态的媒体有三种版式，开发者模式下可切换，见 [NoteCardMediaStyle]。
         //
-        // thumbnail / banner 把媒体摘出正文单独渲染，媒体因此和卡片同时挂载，
-        // 不用排在富文本物化队列后面——「空白 → 灰框 → 图片」三段式的前两段就是
-        // 被那个队列挡出来的。inline 把媒体留在原位交给 Quill，版式保真但重新
-        // 受制于物化时序。
+        // thumbnail / banner 把媒体摘出正文单独渲染；inline 把媒体留在原位，由
+        // [CollapsedRichText] 按「文字段, 媒体, 文字段…」的顺序交错排出来。三种
+        // 版式现在都不建 `QuillEditor`，媒体也就都和卡片同时挂载，不再有
+        // 「空白 → 灰框 → 图片」的三段式。
         final String mediaStyle = context.select<SettingsService, String>(
           (s) => s.noteCardMediaStyle,
+        );
+        final bool prioritizeBoldContent =
+            context.select<SettingsService, bool>(
+          (s) => s.prioritizeBoldContentInCollapse,
         );
         final bool stripMedia = mediaStyle != NoteCardMediaStyle.inline;
         final media = stripMedia
             ? DeltaMediaCache.of(quote.deltaContent)
             : DeltaMediaSummary.empty;
+
+        var blocks = DeltaRichTextCache.of(quote.deltaContent);
+        if (blocks.isEmpty) {
+          // delta 解不出来（损坏、导入了别家的格式、同步冲突写坏了）时**退回纯
+          // 文本**。旧实现在 `_documentFromDelta` 里也有这条兜底；直接画空的话，
+          // 卡片正文整个消失，而且因为量出来是 0 高，连双击展开都进不去——用户会
+          // 以为笔记内容丢了。
+          return _buildPlainTextContent(needsExpansion: needsExpansion);
+        }
+        if (prioritizeBoldContent) {
+          blocks = prioritizeBoldBlocks(blocks);
+        }
+        final baseStyle = QuillThemeTypography.paragraphStyle(
+          context,
+          base: style,
+        );
+        // 折叠预览的加粗必须和展开态用同一档字重，见 `_buildCustomStyles`：
+        // Android + material 下 quill 把 bold 降到 w500，这里不跟着降的话，
+        // 同一条笔记折叠时比展开后更粗。
+        final boldWeight = collapsedBoldWeight(context);
+        final textDirection = Directionality.of(context);
+        final textScaler = MediaQuery.textScalerOf(context);
+        final locale = Localizations.maybeLocaleOf(context);
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -1122,51 +658,72 @@ class QuoteContent extends StatelessWidget {
             // 84px，与 reserved 取什么值无关；`constraints.maxWidth` 一旦小于 84，
             // `Expanded` 照样分到负空间、RenderFlex 照样溢出。只有不挂这两个子项
             // 才真的不溢出。折叠正文区正常不会窄到这个程度，这里纯粹是防御。
-            final bool showThumbnail =
-                mediaStyle == NoteCardMediaStyle.thumbnail &&
-                    media.hasMedia &&
-                    (!constraints.maxWidth.isFinite ||
-                        constraints.maxWidth >= _minWidthForCollapsedThumbnail);
+            final double reserved = collapsedThumbnailInset(
+              quote: quote,
+              mediaStyle: mediaStyle,
+              maxWidth: constraints.maxWidth,
+            );
+            final bool showThumbnail = reserved > 0;
             final bool showBanner =
                 mediaStyle == NoteCardMediaStyle.banner && media.hasMedia;
-
-            final double reserved =
-                showThumbnail ? CollapsedMediaThumbnail.reservedWidth() : 0.0;
-            // 文字宽度要先扣掉缩略图占的位，否则折叠高度会按整宽估算而截少内容。
+            // 文字宽度要先扣掉缩略图占的位，否则排版会按整宽算而少排内容。
             final double textMaxWidth = constraints.maxWidth.isFinite
                 ? constraints.maxWidth - reserved
                 : constraints.maxWidth;
 
-            // 媒体被摘走后正文可能只剩一两行，定高 160px 就成了卡片里的空白。
-            // 盒子仍然定高（占位与 Quill 高度不同，跟着内容走会在物化时跳），
-            // 只是**固定到按剥离后估算算出的那个值**。
-            //
-            // 必须同时要求「确实有媒体可摘」：无媒体的富文本笔记只有真超过 160px
-            // 才会折叠，盒子天然是满的。
-            final double boxHeight = (stripMedia && media.hasMedia)
-                ? collapsedBoxHeightFor(quote, stripMedia: true)
-                : collapsedContentMaxHeight;
+            // 量一次，盒高和要画的内容都从这一次的结果来。上限 160：内容排满就是
+            // 160，媒体被摘走后只剩一两行就取那几行的高度，卡片里不会留一块空白。
+            final plan = CollapsedRichTextMetrics.plan(
+              blocks: blocks,
+              baseStyle: baseStyle,
+              maxWidth: textMaxWidth,
+              limit: collapsedContentMaxHeight,
+              showMedia: !stripMedia,
+              boldWeight: boldWeight,
+              textDirection: textDirection,
+              textScaler: textScaler,
+              locale: locale,
+            );
+            final double boxHeight =
+                plan.height.clamp(0.0, collapsedContentMaxHeight);
 
-            // 纯媒体笔记（摘掉媒体后一个字都不剩）连正文和间距一起省掉，
-            // 否则 banner 下面会挂一行空 Quill。
-            final bool hasTextContent = boxHeight > 0;
-
-            final Widget content = hasTextContent
-                ? _buildRichTextContent(
-                    context,
-                    needsExpansion: needsExpansion,
-                    prioritizeBoldContent: prioritizeBoldContent,
-                    stripMedia: stripMedia,
-                    collapsedBoxHeight: boxHeight,
-                    maxWidth: textMaxWidth,
-                  )
-                : const SizedBox.shrink();
+            // 纯媒体笔记（摘掉媒体后一个字都不剩）连正文和间距一起省掉。
+            final bool hasTextContent = !plan.isEmpty && boxHeight > 0;
 
             // 只有音视频、没有可预览的图片时不装点击手势：否则是个空操作，
             // 既吞掉卡片自身的交互，又把不可预览的媒体伪装成可点。
             final VoidCallback? onMediaTap = media.firstImageSource != null
                 ? () => _openMediaPreview(context, media)
                 : null;
+
+            Widget content = hasTextContent
+                ? CollapsedRichText(
+                    plan: plan,
+                    baseStyle: baseStyle,
+                    boldWeight: boldWeight,
+                    onMediaTap: (ref) => _openMediaSource(context, ref.source),
+                  )
+                : const SizedBox.shrink();
+
+            if (hasTextContent) {
+              // 定高裁剪只给真正需要折叠的卡片。短卡片让 `Text.rich` 自然定高：
+              // 测量与渲染之间哪怕只差半个像素，套在短卡片上也会啃掉一截下伸部。
+              if (needsExpansion) {
+                content = _CollapsedContentWrapper(
+                  key: collapsedWrapperKey,
+                  maxHeight: boxHeight,
+                  child: content,
+                );
+              }
+              if (collapseRichTextSemantics) {
+                content = Semantics(
+                  key: const ValueKey('quote_content.rich_text_semantics'),
+                  container: true,
+                  label: quote.content,
+                  child: ExcludeSemantics(child: content),
+                );
+              }
+            }
 
             if (showBanner) {
               return Column(
@@ -1187,7 +744,12 @@ class QuoteContent extends StatelessWidget {
             }
 
             return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              // 正文比缩略图矮时（媒体摘走后只剩一两行）顶部对齐会在文字下方留出
+              // 一大块空白，这时改成居中；正文更高时仍然顶部对齐。
+              crossAxisAlignment:
+                  boxHeight <= CollapsedMediaThumbnail.defaultSize
+                      ? CrossAxisAlignment.center
+                      : CrossAxisAlignment.start,
               children: [
                 Expanded(child: content),
                 const SizedBox(width: CollapsedMediaThumbnail.gap),
@@ -1197,13 +759,14 @@ class QuoteContent extends StatelessWidget {
           },
         );
       }
-      return _buildRichTextContent(
-        context,
-        needsExpansion: needsExpansion,
-        prioritizeBoldContent: prioritizeBoldContent,
-      );
+      return _buildRichTextContent(context);
     }
 
+    return _buildPlainTextContent(needsExpansion: needsExpansion);
+  }
+
+  /// 纯文本正文。富文本的 delta 解不出来时也走这里兜底。
+  Widget _buildPlainTextContent({required bool needsExpansion}) {
     Widget plainText = Text(
       quote.content,
       style: style,
@@ -1222,12 +785,29 @@ class QuoteContent extends StatelessWidget {
     return plainText;
   }
 
+  /// 折叠预览里「粗体」该用哪一档字重，规则与 [_buildCustomStyles] 一致。
+  ///
+  /// 判定侧（`quote_item_widget`）也要拿它，好和渲染侧量同一件事。
+  static FontWeight collapsedBoldWeight(BuildContext context) {
+    final weightCompensation =
+        AppTypographyTokens.of(context).variableWeightCompensation;
+    if (kIsWeb || !Platform.isAndroid || weightCompensation <= 0) {
+      return FontWeight.bold;
+    }
+    return FontWeight.w500;
+  }
+
   /// 点击折叠卡片上的媒体：打开首图的大图预览。
   ///
   /// 和「双击卡片展开」是两件事，不冲突：展开看的是完整正文，预览看的是这一张图。
   /// 没有图片（只有音视频）时不做任何事——那两类的播放入口在展开态里。
   void _openMediaPreview(BuildContext context, DeltaMediaSummary media) {
-    final source = media.firstImageSource;
+    _openMediaSource(context, media.firstImageSource);
+  }
+
+  /// 打开某一张图的大图预览。inline 版式点的是正文里那一张，所以按 source 走，
+  /// 不走「首图」。
+  void _openMediaSource(BuildContext context, String? source) {
     if (source == null || source.isEmpty) return;
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -1236,98 +816,17 @@ class QuoteContent extends StatelessWidget {
     );
   }
 
-  Widget _buildRichTextContent(
-    BuildContext context, {
-    required bool needsExpansion,
-    required bool prioritizeBoldContent,
-
-    /// 折叠文档是否摘掉媒体嵌入。thumbnail / banner 版式为 true（媒体单独画），
-    /// inline 版式为 false（媒体留在原位交给 Quill，即旧版式）。
-    bool stripMedia = true,
-
-    /// 折叠盒的固定高度，见 [collapsedBoxHeightFor]。null 时用
-    /// [collapsedContentMaxHeight]。
-    double? collapsedBoxHeight,
-    double? maxWidth,
-    bool deferralResolved = false,
-  }) {
-    final bool usePrioritizedDoc = !showFullContent && prioritizeBoldContent;
-    final bool truncateForCollapse = !showFullContent && needsExpansion;
-    final double boxHeight = collapsedBoxHeight ?? collapsedContentMaxHeight;
-    final textDirection = Directionality.of(context);
-    final textScaler = MediaQuery.textScalerOf(context);
-    final locale = Localizations.maybeLocaleOf(context);
-    final measuredMaxWidth =
-        maxWidth != null && maxWidth.isFinite && maxWidth > 0 ? maxWidth : null;
-    // 版式必须进签名：inline 与另外两种的折叠 Document 内容不同（前者保留嵌入、
-    // 后者摘掉），不区分的话切换设置后会拿到上一版式缓存好的文档。
-    final mediaSignature =
-        '${stripMedia ? 'mstrip' : 'minline'}_h${boxHeight.round()}';
-    final layoutSignature = truncateForCollapse && measuredMaxWidth != null
-        ? 'w${(measuredMaxWidth * 100).round()}_s${style.hashCode}_'
-            'd${textDirection.name}_t${textScaler.hashCode}_'
-            'l${locale?.toLanguageTag()}_$mediaSignature'
-        : 'full_$mediaSignature';
+  /// 展开态与全屏预览的富文本：仍然由真正的 `QuillEditor` 渲染，一个字没动。
+  ///
+  /// 折叠态已经完全不走这里——它由 [CollapsedRichText] 排 `Text.rich`。所以这个
+  /// 方法不再需要截断、占位、每帧额度和恢复队列那一整套时序参数：展开是用户主动
+  /// 双击触发的单张卡片，本来就不在滚动热路径上。
+  Widget _buildRichTextContent(BuildContext context) {
     final String cacheQuoteId =
         quote.id ?? 'local_${quote.date}_${quote.content.hashCode}';
-    final baseVariant = _QuoteContentControllerCache.resolveVariant(
-      showFullContent: showFullContent,
-      usePrioritizedDoc: usePrioritizedDoc,
-      needsExpansion: needsExpansion,
-    );
-    final contentVariant = '${baseVariant}_$layoutSignature';
+    const String contentVariant = 'full';
     final String contentSignature =
         '${quote.deltaContent!.hashCode}_${quote.deltaContent!.length}_$contentVariant';
-
-    // Only fixed-height collapsed cards can use a lightweight stand-in
-    // without changing the list extent. Cache hits keep their real Quill tree.
-    //
-    // 走占位的两种情形：滚动/拖拽期间一律不建冷 Quill；列表静止时仍受每帧额度
-    // 约束，避免首屏与惯性停止后的补建把多次首布局堆进同一帧。
-    // [deferralResolved] 为 true 表示本次构建来自恢复队列，额度已在队列侧扣除，
-    // 不再重新判定，否则已物化的卡片会被打回占位。
-    if (!deferralResolved &&
-        truncateForCollapse &&
-        !_QuoteContentControllerCache.contains(
-          quoteId: cacheQuoteId,
-          contentSignature: contentSignature,
-          variant: contentVariant,
-        ) &&
-        (isListScrolling.value ||
-            isListDragActive.value ||
-            !_ColdCollapsedQuillFrameBudget.tryConsume())) {
-      Widget placeholder = _CollapsedContentWrapper(
-        key: collapsedWrapperKey,
-        maxHeight: boxHeight,
-        child: Text(
-          _deferredPreviewText(quote.content),
-          style: style,
-          softWrap: true,
-          maxLines: 8,
-          overflow: TextOverflow.clip,
-        ),
-      );
-      if (collapseRichTextSemantics) {
-        placeholder = Semantics(
-          key: const ValueKey('quote_content.rich_text_semantics'),
-          container: true,
-          label: quote.content,
-          child: ExcludeSemantics(child: placeholder),
-        );
-      }
-      return _DeferredRichTextContent(
-        placeholder: placeholder,
-        richTextBuilder: (context) => _buildRichTextContent(
-          context,
-          needsExpansion: needsExpansion,
-          prioritizeBoldContent: prioritizeBoldContent,
-          stripMedia: stripMedia,
-          collapsedBoxHeight: collapsedBoxHeight,
-          maxWidth: maxWidth,
-          deferralResolved: true,
-        ),
-      );
-    }
 
     final _CachedControllerSet controllerSet =
         _QuoteContentControllerCache.getOrCreate(
@@ -1336,21 +835,9 @@ class QuoteContent extends StatelessWidget {
       variant: contentVariant,
       documentBuilder: () => _QuoteDocumentCache.getOrCreate(
         deltaContent: quote.deltaContent!,
-        prioritizeBold: usePrioritizedDoc,
-        truncateForCollapse: truncateForCollapse,
-        layoutSignature: layoutSignature,
-        builder: () => _buildRichTextDocument(
-          quote.deltaContent!,
-          usePrioritizedDoc,
-          truncateForCollapse,
-          stripMedia: stripMedia,
-          collapsedHeight: boxHeight,
-          maxWidth: measuredMaxWidth,
-          textStyle: style,
-          textDirection: textDirection,
-          textScaler: textScaler,
-          locale: locale,
-        ),
+        prioritizeBold: false,
+        truncateForCollapse: false,
+        builder: () => _buildRichTextDocument(quote.deltaContent!),
       ),
     );
 
@@ -1361,8 +848,6 @@ class QuoteContent extends StatelessWidget {
     // 纠正规则和全屏编辑器共用一处，见 QuillThemeTypography。
     final paragraphStyle =
         QuillThemeTypography.paragraphStyle(context, base: style);
-    // 富文本的折叠估算拿不到 context，只能靠这里把当前行高回填给静态估算器。
-    estimatedLineHeight = paragraphStyle.fontSize! * paragraphStyle.height!;
 
     Widget richTextEditor = quill.QuillEditor(
       controller: controllerSet.quillController,
@@ -1377,14 +862,6 @@ class QuoteContent extends StatelessWidget {
     if (style != null) {
       richTextEditor = DefaultTextStyle.merge(
         style: style!,
-        child: richTextEditor,
-      );
-    }
-
-    if (!showFullContent && needsExpansion) {
-      richTextEditor = _CollapsedContentWrapper(
-        key: collapsedWrapperKey,
-        maxHeight: boxHeight,
         child: richTextEditor,
       );
     }
@@ -1570,12 +1047,22 @@ class _QuotePlainTextLayoutExpansionCache {
     required TextScaler textScaler,
     required Locale? locale,
     required bool Function() builder,
+    int? contentSignatureSalt,
+    FontWeight boldWeight = FontWeight.bold,
+    TextStyle? richTextBaseStyle,
   }) {
     final key = _PlainTextLayoutExpansionCacheKey(
-      contentSignature:
-          Object.hash(quote.content.hashCode, quote.content.length),
+      contentSignature: Object.hash(
+        quote.content.hashCode,
+        quote.content.length,
+        contentSignatureSalt,
+      ),
       maxWidthKey: (maxWidth * 100).round(),
-      styleHash: style.hashCode,
+      styleHash: Object.hash(
+        style.hashCode,
+        richTextBaseStyle.hashCode,
+        boldWeight.value,
+      ),
       textDirection: textDirection,
       textScalerHash: textScaler.hashCode,
       localeTag: locale?.toLanguageTag(),
@@ -1817,20 +1304,6 @@ class _QuoteContentControllerCache {
   static int _workMicros = 0;
   static int _worstWorkMicros = 0;
 
-  static bool contains({
-    required String quoteId,
-    required String contentSignature,
-    required String variant,
-  }) {
-    return _cache.containsKey(
-      _ControllerCacheKey(
-        quoteId: quoteId,
-        contentSignature: contentSignature,
-        variant: variant,
-      ),
-    );
-  }
-
   static _CachedControllerSet getOrCreate({
     required String quoteId,
     required String contentSignature,
@@ -1910,18 +1383,6 @@ class _QuoteContentControllerCache {
       'worstWorkMicros': _worstWorkMicros,
       'hitRate': hitRate,
     };
-  }
-
-  static String resolveVariant({
-    required bool showFullContent,
-    required bool usePrioritizedDoc,
-    required bool needsExpansion,
-  }) {
-    final buffer = StringBuffer()
-      ..write(showFullContent ? 'full' : 'collapsed')
-      ..write(usePrioritizedDoc ? '_bold' : '_plain')
-      ..write(needsExpansion ? '_expandable' : '_static');
-    return buffer.toString();
   }
 
   static void _pruneOldest() {

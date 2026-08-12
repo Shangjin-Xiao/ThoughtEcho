@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
@@ -21,6 +22,19 @@ class _StubSettingsService extends SettingsService {
   @override
   Future<void> setPrioritizeBoldContentInCollapse(bool enabled) async {
     _prioritizeBold = enabled;
+    notifyListeners();
+  }
+
+  // 真正的 getter 会读 _appSettings，这个 stub 没初始化它。折叠预览每次 build 都
+  // 要问版式，不覆盖会在 build 里抛异常。
+  String _mediaStyle = NoteCardMediaStyle.thumbnail;
+
+  @override
+  String get noteCardMediaStyle => _mediaStyle;
+
+  @override
+  Future<void> setNoteCardMediaStyle(String style) async {
+    _mediaStyle = style;
     notifyListeners();
   }
 }
@@ -85,6 +99,9 @@ Map<String, dynamic> _documentStats() {
   return Map<String, dynamic>.from(stats['document'] as Map<String, dynamic>);
 }
 
+/// Document / Controller 缓存现在**只服务展开态和全屏预览**——折叠列表卡片走
+/// `Text.rich`，一个 QuillController 都不建（见「折叠态不建 controller」那条）。
+/// 所以除那一条之外，这里全部用 `showFullContent: true` 来驱动缓存。
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -111,7 +128,7 @@ void main() {
       tester,
       settings: settings,
       quote: quote,
-      showFullContent: false,
+      showFullContent: true,
     );
 
     var controllerStats = _controllerStats();
@@ -121,7 +138,7 @@ void main() {
       tester,
       settings: settings,
       quote: quote,
-      showFullContent: false,
+      showFullContent: true,
     );
 
     controllerStats = _controllerStats();
@@ -151,14 +168,14 @@ void main() {
       tester,
       settings: settings,
       quote: quoteA,
-      showFullContent: false,
+      showFullContent: true,
     );
 
     await _pumpQuoteContent(
       tester,
       settings: settings,
       quote: quoteB,
-      showFullContent: false,
+      showFullContent: true,
     );
 
     final documentStats = _documentStats();
@@ -192,7 +209,7 @@ void main() {
       tester,
       settings: settings,
       quote: quote,
-      showFullContent: false,
+      showFullContent: true,
     );
 
     final compactStats = QuoteContent.debugCompactCacheStats(
@@ -205,9 +222,10 @@ void main() {
     expect(compactStats, contains('docMiss+1'));
   });
 
-  testWidgets('creates distinct controller variants when view changes', (
-    tester,
-  ) async {
+  testWidgets('折叠态不建 controller，只有展开态才建', (tester) async {
+    // 阶段 D 之后折叠卡片走 `Text.rich`，不再有 QuillController / Document。
+    // controller 缓存于是只服务展开态和全屏预览——那是用户主动双击触发的单张
+    // 卡片，本来就不在滚动热路径上。
     final quote = _buildRichQuote(id: 'q2', content: 'Variant test');
 
     await _pumpQuoteContent(
@@ -215,6 +233,12 @@ void main() {
       settings: settings,
       quote: quote,
       showFullContent: false,
+    );
+
+    expect(
+      _controllerStats()['createCount'],
+      0,
+      reason: 'controller stats: ${_controllerStats()}',
     );
 
     await _pumpQuoteContent(
@@ -227,7 +251,7 @@ void main() {
     final controllerStats = _controllerStats();
     final documentStats = _documentStats();
 
-    expect(controllerStats['createCount'], 2);
+    expect(controllerStats['createCount'], 1);
     expect(controllerStats['hitCount'], 0);
     expect(
       documentStats['cacheSize'],
@@ -244,14 +268,14 @@ void main() {
       tester,
       settings: settings,
       quote: quoteA,
-      showFullContent: false,
+      showFullContent: true,
     );
 
     await _pumpQuoteContent(
       tester,
       settings: settings,
       quote: quoteB,
-      showFullContent: false,
+      showFullContent: true,
     );
 
     final controllerStats = _controllerStats();

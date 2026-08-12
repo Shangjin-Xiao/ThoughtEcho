@@ -14,6 +14,7 @@ import '../widgets/quote_content_widget.dart';
 import '../services/weather_service.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
+import '../utils/quill_editor_extensions.dart';
 import '../utils/time_utils.dart';
 import '../utils/icon_utils.dart';
 
@@ -382,6 +383,14 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
       textScaler: MediaQuery.textScalerOf(context),
       locale: Localizations.maybeLocaleOf(context),
+      // 判定和渲染必须量同一件事：Android + material 下折叠预览的加粗是降档过的，
+      // 富文本的基准样式也要用渲染侧那份解析好的 paragraphStyle，而不是另找一个
+      // 字号/行高兜底——`bodyLarge` 和 quill 硬编码的 16/1.15 并不总是一致。
+      boldWeight: QuoteContent.collapsedBoldWeight(context),
+      richTextBaseStyle: QuillThemeTypography.paragraphStyle(
+        context,
+        base: contentStyle,
+      ),
     );
   }
 
@@ -409,7 +418,10 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             contentStyle,
             constraints.maxWidth,
           );
-          final showFullContent = isExpanded || !needsExpansion;
+          // 「短到不用折叠」不等于「展开」：短卡片仍然是列表卡片，应该走
+          // QuoteContent 的轻量预览而不是 QuillEditor。只有用户真的双击展开了，
+          // 才需要完整的富文本渲染。
+          final showFullContent = isExpanded;
           final contentChild = _buildQuoteContentStack(
             quote: quote,
             showFullContent: showFullContent,
@@ -419,6 +431,13 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             innerTheme: innerTheme,
             backdropBlurDisabled: backdropBlurDisabled,
             l10n: l10n,
+            thumbnailInset: QuoteContent.collapsedThumbnailInset(
+              quote: quote,
+              mediaStyle: context.select<SettingsService, String>(
+                (s) => s.noteCardMediaStyle,
+              ),
+              maxWidth: constraints.maxWidth,
+            ),
           );
 
           return GestureDetector(
@@ -450,6 +469,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     required ThemeData innerTheme,
     required bool backdropBlurDisabled,
     required AppLocalizations l10n,
+    required double thumbnailInset,
   }) {
     return Stack(
       clipBehavior: Clip.none,
@@ -482,7 +502,9 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         ),
         Positioned(
           left: 0,
-          right: 0,
+          // 遮罩要给右侧缩略图让位。横跨整个内容区的话，渐变和「展开」胶囊会压在
+          // 缩略图上，图的下缘看起来像蒙了一层脏。
+          right: thumbnailInset,
           bottom: 0,
           height: 30,
           child: IgnorePointer(
