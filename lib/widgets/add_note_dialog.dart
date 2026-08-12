@@ -104,7 +104,6 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   bool _dialogPerfFirstFrameLogged = false;
   bool _dialogPerfFocusLogged = false;
   bool _dialogPerfKeyboardStartLogged = false;
-  double _dialogPerfLastKeyboardInset = 0;
   double? _dialogPerfLastInsetBuildValue;
   int _dialogPerfBuildCount = 0;
   int _dialogPerfBodyReuseCount = 0;
@@ -137,12 +136,17 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   Timer? _dialogPerfKeyboardSettleTimer;
   Timer? _dialogPerfFinalizeTimer;
 
-  // 键盘弹出期间 showModalBottomSheet 会随 viewInsets 连续重建 builder。
-  // 临时复用主体 Widget，避免每一帧都重新构建完整表单内容。
-  bool _keyboardRebuildDeferralActive = false;
-  bool _keyboardRebuildWasDeferred = false;
+  // 键盘 inset 的依赖只挂在 KeyboardInsetPadding 上，本 State 不再订阅 MediaQuery，
+  // 否则键盘每动一帧都会把整个弹窗标脏。这个值由 KeyboardInsetPadding 回传。
+  double _lastKeyboardInset = 0;
+
+  // 键盘弹出期间 showModalBottomSheet 会随 viewInsets 连续重跑 builder，可那几帧里
+  // 弹窗自己的状态一点没变。按修订号复用上一次的 Widget 实例——Flutter 见到同一个
+  // 实例会整棵子树跳过 diff。状态真的变了（setState / 依赖变化 / 入参变化）修订号
+  // 就往前走，缓存立刻作废，不会像按定时器冻结那样把 setState 吞掉。
   Widget? _cachedDialogBody;
-  Timer? _keyboardRebuildResumeTimer;
+  int _dialogBodyRevision = 0;
+  int? _cachedDialogBodyRevision;
 
   // 性能优化：缓存Provider引用，避免重复查找
   LocationService? _cachedLocationService;
@@ -893,7 +897,6 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   }
 
   void _requestContentFocus(String reason) {
-    _beginKeyboardRebuildDeferral();
     _dialogOpenTimelineTask.instant(
       'ThoughtEcho.AddNoteDialog.focus.requested',
       arguments: <String, Object>{'reason': reason},
@@ -934,52 +937,50 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     });
   }
 
-  void _beginKeyboardRebuildDeferral() {
-    if (_keyboardRebuildDeferralActive) {
-      return;
-    }
-
-    _keyboardRebuildDeferralActive = true;
-    _keyboardRebuildWasDeferred = false;
-    _keyboardRebuildResumeTimer?.cancel();
-    _keyboardRebuildResumeTimer = Timer(
-      const Duration(milliseconds: 1800),
-      _endKeyboardRebuildDeferral,
-    );
+  @override
+  void setState(VoidCallback fn) {
+    _dialogBodyRevision++;
+    super.setState(fn);
   }
 
-  void _endKeyboardRebuildDeferral() {
-    if (!_keyboardRebuildDeferralActive) {
-      return;
-    }
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 主题/语言等继承数据变了，缓存里那棵树是拿旧值构造的，必须重建。
+    _dialogBodyRevision++;
+  }
 
-    _keyboardRebuildResumeTimer?.cancel();
-    _keyboardRebuildResumeTimer = null;
-    _keyboardRebuildDeferralActive = false;
-    _cachedDialogBody = null;
-
-    if (mounted && _keyboardRebuildWasDeferred) {
-      setState(() {
-        _keyboardRebuildWasDeferred = false;
-      });
-    } else {
-      _keyboardRebuildWasDeferred = false;
+  @override
+  void didUpdateWidget(AddNoteDialog oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // onSave 每次都是新闭包，不能拿它判断；只看主体真正渲染的入参。
+    if (!identical(oldWidget.tags, widget.tags) ||
+        oldWidget.initialQuote != widget.initialQuote ||
+        oldWidget.prefilledContent != widget.prefilledContent ||
+        oldWidget.prefilledAuthor != widget.prefilledAuthor ||
+        oldWidget.prefilledWork != widget.prefilledWork) {
+      _dialogBodyRevision++;
     }
   }
 
-  Widget _buildKeyboardDeferredDialogBody(Widget Function() buildBody) {
-    if (_keyboardRebuildDeferralActive && _cachedDialogBody != null) {
+  Widget _buildCachedDialogBody(Widget Function() buildBody) {
+    final cached = _cachedDialogBody;
+    if (cached != null && _cachedDialogBodyRevision == _dialogBodyRevision) {
       if (_dialogPerfRecording) {
         _dialogPerfBodyReuseCount++;
       }
-      _keyboardRebuildWasDeferred = true;
-      return _cachedDialogBody!;
+      return cached;
     }
 
+    final body = _buildMeasuredDialogBody(buildBody);
+    _cachedDialogBody = body;
+    _cachedDialogBodyRevision = _dialogBodyRevision;
+    return body;
+  }
+
+  Widget _buildMeasuredDialogBody(Widget Function() buildBody) {
     if (!_dialogPerfRecording) {
-      final body = buildBody();
-      _cachedDialogBody = body;
-      return body;
+      return buildBody();
     }
 
     // 只测 Widget 树的构造，不含 element 挂载、布局和光栅化——
@@ -992,7 +993,6 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     if (elapsedMs > _dialogPerfBodyBuildWorstMs) {
       _dialogPerfBodyBuildWorstMs = elapsedMs;
     }
-    _cachedDialogBody = body;
     return body;
   }
 
@@ -1022,7 +1022,10 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         (_dialogPerfStateChanges[source] ?? 0) + 1;
   }
 
-  void _recordDialogPerfInsetBuild(double keyboardInset) {
+  /// KeyboardInsetPadding 每次按 inset 重排都回调这里。
+  /// 弹窗自己不订阅 MediaQuery，键盘的实时值只能从这条路进来。
+  void _onKeyboardInsetBuild(double keyboardInset) {
+    _lastKeyboardInset = keyboardInset;
     if (!_dialogPerfEnabled || !_dialogPerfRecording) {
       return;
     }
@@ -1038,24 +1041,15 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   void didChangeMetrics() {
     super.didChangeMetrics();
 
-    // 键盘弹出和收起都会连续改变 viewInsets；两种方向都暂停主体重建。
-    _beginKeyboardRebuildDeferral();
-
-    if (_keyboardRebuildDeferralActive) {
-      _keyboardRebuildResumeTimer?.cancel();
-      _keyboardRebuildResumeTimer = Timer(
-        const Duration(milliseconds: 220),
-        _endKeyboardRebuildDeferral,
-      );
-    }
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
       }
 
-      final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-      _dialogPerfLastKeyboardInset = keyboardInset;
+      // 注意：这里不能读 MediaQuery.viewInsetsOf(context)。即使在帧回调里读，
+      // 也会给本 State 挂上 viewInsets 依赖，键盘每动一帧都把整个弹窗标脏。
+      // 值改由 KeyboardInsetPadding 在自己的 build 里回传。
+      final keyboardInset = _lastKeyboardInset;
       if (keyboardInset <= 0) {
         return;
       }
@@ -1091,7 +1085,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
           _dialogOpenTimelineTask.instant(
             'ThoughtEcho.AddNoteDialog.keyboardInset.settled',
             arguments: <String, Object>{
-              'inset': _dialogPerfLastKeyboardInset.round(),
+              'inset': _lastKeyboardInset.round(),
             },
           );
           _finishDialogOpenTimeline('keyboardSettled');
@@ -1099,7 +1093,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
             return;
           }
           logDebug(
-            '键盘 inset 稳定: inset=${_dialogPerfLastKeyboardInset.round()}, '
+            '键盘 inset 稳定: inset=${_lastKeyboardInset.round()}, '
             'elapsed=${_dialogPerfKeyboardSettledMs}ms',
             source: 'AddNoteDialog.Perf',
           );
@@ -1207,7 +1201,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
       'avg=${avgFrameMs.toStringAsFixed(1)}ms, '
       'worst=${worstFrameMs.toStringAsFixed(1)}ms, '
       'focus=$_dialogPerfFocusLogged, '
-      'keyboardInset=${_dialogPerfLastKeyboardInset.round()}',
+      'keyboardInset=${_lastKeyboardInset.round()}',
       source: 'AddNoteDialog.Perf',
     );
 
@@ -1738,7 +1732,6 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     _dialogOpenTimelineTimeout?.cancel();
     _dialogPerfFinalizeTimer?.cancel();
     _dialogPerfKeyboardSettleTimer?.cancel();
-    _keyboardRebuildResumeTimer?.cancel();
     _deferredControlsTimer?.cancel();
     _autoFocusTimer?.cancel();
     _autoMetadataFallbackTimer?.cancel();
@@ -2118,8 +2111,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
         // dialogResult == null: 继续编辑，不做任何操作
       },
       child: KeyboardInsetPadding(
-        onInsetBuild: _recordDialogPerfInsetBuild,
-        child: _buildKeyboardDeferredDialogBody(() => SingleChildScrollView(
+        onInsetBuild: _onKeyboardInsetBuild,
+        child: _buildCachedDialogBody(() => SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [

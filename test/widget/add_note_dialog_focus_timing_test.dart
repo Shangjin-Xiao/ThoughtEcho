@@ -270,6 +270,65 @@ void main() {
     databaseService.completeSave();
   });
 
+  testWidgets('applies state changes right after the entrance settles',
+      (tester) async {
+    final initialQuote = Quote(
+      id: 'quote-color',
+      content: '已有内容',
+      date: DateTime(2026).toIso8601String(),
+      colorHex: '#336699',
+    );
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<FeatureGuideService>(
+            create: (_) => _MockFeatureGuideService(),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => AddNoteDialog(
+                      initialQuote: initialQuote,
+                      tags: const [],
+                      onSave: (_) {},
+                    ),
+                  );
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    const colorChipKey = ValueKey('add_note_color_chip');
+    expect(
+        tester.widget<FilterChip>(find.byKey(colorChipKey)).selected, isTrue);
+
+    // 焦点请求之后主体一度被按定时器冻住，这一下 setState 会被吞掉直到冻结到期。
+    await tester.tap(find.byKey(colorChipKey));
+    await tester.pump();
+
+    expect(
+        tester.widget<FilterChip>(find.byKey(colorChipKey)).selected, isFalse);
+
+    await tester.pump(const Duration(seconds: 2));
+  });
+
   testWidgets('does not warn about unsaved changes when editing unchanged note',
       (tester) async {
     final initialQuote = Quote(
