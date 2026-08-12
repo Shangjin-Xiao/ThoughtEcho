@@ -106,6 +106,19 @@ class _ThoughterPageState extends State<ThoughterPage> {
   bool _isLoading = false;
   String? _currentSessionId;
 
+  /// [_messages] 当前反映的是哪个会话。
+  ///
+  /// 和 [_currentSessionId] 不是一回事：切会话时先把 id 换掉，消息要等
+  /// 一次异步读库才跟上，中间这段两者是错位的。清理空会话靠"这个会话有没有
+  /// 用户消息"来判断，读的正是 [_messages]——错位期间那份列表还是上一个会话的，
+  /// 拿它去决定删谁会删错人（连点两下历史就能复现）。
+  /// 只有两者相等时那个判断才成立，见 [_ThoughterSession._cleanupEmptySession]。
+  String? _messagesSessionId;
+
+  /// 会话加载的代次。异步读库返回时如果已经不是最新一次加载，结果直接丢掉，
+  /// 否则慢的那次会覆盖快的那次。
+  int _sessionLoadGeneration = 0;
+
   /// 会话建立前就已产生、但需要落库的消息（开场白、卡片消息）。
   final List<app_chat.ChatMessage> _pendingPersistMessages = [];
   StreamSubscription<String>? _streamSubscription;
@@ -256,6 +269,15 @@ class _ThoughterPageState extends State<ThoughterPage> {
   Timer? _scrollThrottleTimer;
   bool _autoScrollEnabled = true;
   bool _showScrollToBottom = false;
+
+  /// 对话区上 / 下缘有没有内容被盖住。渐隐只在真的遮住东西时才出现，
+  /// 见 [_ThoughterUI._scheduleEdgeFadeUpdate]。
+  bool _contentHiddenAbove = false;
+  bool _contentHiddenBelow = false;
+
+  /// 帧末那次渐隐复算有没有排上队。滚动和内容变长会在同一帧里各打一次通知，
+  /// 靠它合成一次。
+  bool _edgeFadeUpdateScheduled = false;
   // ==================== 性能优化结束 ====================
 
   // ==================== 性能优化：MarkdownStyleSheet 缓存 ====================
@@ -328,6 +350,14 @@ class _ThoughterPageState extends State<ThoughterPage> {
   @visibleForTesting
   List<app_chat.ChatMessage> get debugMessagesForTest =>
       List.unmodifiable(_messages);
+
+  /// 仅供测试：直接发起一次会话切换。
+  ///
+  /// 切会话的竞态（读库还没回来又切走）只在两次调用重叠时才出现，走历史页
+  /// 那条 UI 路径没法把两次切换叠在一起。
+  @visibleForTesting
+  Future<void> debugLoadSessionForTest(String sessionId) =>
+      _loadSession(sessionId);
 
   void _appendMessage(app_chat.ChatMessage message, {bool persist = false}) {
     _setState(() {
@@ -424,6 +454,20 @@ class _ThoughterPageState extends State<ThoughterPage> {
       h5: heading(16),
       h6: heading(16),
       blockquote: body?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+      // AI 回过头来引用你写过的句子时，那几行得看得出是引文。默认的引用块
+      // 只是缩进一点、颜色淡一点，混在正文里读起来像作者突然换了个语气；
+      // 左边一条细线把它划出来，和开场白用的是同一个记号。
+      blockquoteDecoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: theme.colorScheme.primary.withValues(alpha: 0.45),
+            width: 2,
+          ),
+        ),
+      ),
+      // 竖线宽 2 + 间隔 12，和开场白那条竖线到正文的距离对齐
+      // （见 _buildOpeningMessage：Container(width: 2) + margin right 12）。
+      blockquotePadding: const EdgeInsets.fromLTRB(12, 4, 0, 4),
       listBullet: body,
       strong: body?.copyWith(fontWeight: FontWeight.w600),
       code: theme.textTheme.bodyMedium?.copyWith(

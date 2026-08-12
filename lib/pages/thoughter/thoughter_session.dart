@@ -63,19 +63,47 @@ extension _ThoughterSession on _ThoughterPageState {
 
   /// 删除空的会话（没有用户消息）
   void _cleanupEmptySession() {
-    if (_currentSessionId == null) return;
+    final sessionId = _currentSessionId;
+    if (sessionId == null) return;
 
-    // 检查是否有任何非系统消息
-    final hasUserMessages = _messages.any((msg) => msg.isUser);
-
-    if (!hasUserMessages) {
+    // _messages 跟得上 _currentSessionId 时，它就是最新的真相，直接用。
+    if (_messagesSessionId == sessionId) {
+      if (_messages.any((msg) => msg.isUser)) return;
       unawaited(
-        _chatSessionService.deleteSession(_currentSessionId!).catchError(
-          (e) {
-            logDebug('清理空会话失败: $_currentSessionId - $e');
-          },
-        ),
+        _chatSessionService.deleteSession(sessionId).catchError((e) {
+          logDebug('清理空会话失败: $sessionId - $e');
+        }),
       );
+      return;
+    }
+
+    // 对不上号：切会话途中，_messages 还是上一个会话的。拿别人的列表去问
+    // "这个会话有没有人说过话"，答案是别人的——连着点两下历史就会走到这里。
+    // 但也不能就这么放过：那一段要是真空着，跳过清理它就留在历史里了
+    // （服务层的清扫要等 5 分钟，而用户翻历史就在这几秒内）。去库里问一次。
+    unawaited(_deleteSessionIfEmpty(sessionId));
+  }
+
+  /// 去库里确认这个会话确实没有用户消息，然后再删。
+  ///
+  /// 只在内存状态不可信时走这条路。会话是 [_ensureSessionCreated] 现建的时候
+  /// id 和消息一起落地，不会走到这里，所以不存在"首条消息还没写完就被删"。
+  ///
+  /// 这是「先读、再删」的两段异步操作，中间那段窗口要防两件事，见下面两处 return。
+  Future<void> _deleteSessionIfEmpty(String sessionId) async {
+    final hasUserMessages =
+        await _chatSessionService.sessionHasUserMessages(sessionId);
+    // null = 没读出来。读不出来不等于里面是空的——不能凭一次临时的读库失败
+    // 删掉用户整段对话。留着，服务层那轮清扫会兜底。
+    if (hasUserMessages != false) return;
+    // 读库这段时间里用户可能又切回了这个会话并且说了话：那条消息在我们这份
+    // 快照之后才落库，删下去就是刚写的第一句话跟着整段一起没。
+    // 回到当前会话就不删。
+    if (!mounted || _currentSessionId == sessionId) return;
+    try {
+      await _chatSessionService.deleteSession(sessionId);
+    } catch (e) {
+      logDebug('清理空会话失败: $sessionId - $e');
     }
   }
 
@@ -217,6 +245,8 @@ extension _ThoughterSession on _ThoughterPageState {
       title: _hasBoundNote ? _getQuotePreview() : l10n.aiChat,
     );
     _currentSessionId = session.id;
+    // 会话是给手里这批消息现建的，两者天然对得上。
+    _messagesSessionId = session.id;
   }
 
   String _sessionTypeForMode(ThoughterPageMode mode) {
@@ -277,18 +307,41 @@ extension _ThoughterSession on _ThoughterPageState {
   }
 
   Future<void> _loadSession(String sessionId) async {
+    final generation = ++_sessionLoadGeneration;
     try {
+      // 从一个还没说过话的会话跳到历史里的另一段：同上，那一段不留。
+      // 初始化时 _currentSessionId 还是 null，_cleanupEmptySession 会直接返回。
+      if (_currentSessionId != sessionId) {
+        _cleanupEmptySession();
+        _pendingPersistMessages.clear();
+      }
       _currentSessionId = sessionId;
+      // 读库这段时间里 _messages 还是上一个会话的，先声明"对不上号"，
+      // 免得这期间又有人来切会话、拿这份旧列表去删新会话。
+      _messagesSessionId = null;
       final messages = await _chatSessionService.getMessages(sessionId);
-      if (!mounted) return;
+      // 读的过程中又切走了：这次的结果已经过期，写回去会盖掉新的那次。
+      if (!mounted || generation != _sessionLoadGeneration) return;
       _setState(() {
         _messages
           ..clear()
           ..addAll(messages);
       });
+      _messagesSessionId = sessionId;
       _scrollToBottom();
     } catch (e, stack) {
       AppLogger.e('Failed to load chat session', error: e, stackTrace: stack);
+      // 读库失败时不能就这么走开：id 已经换成新会话，_messages 还停在上一个，
+      // _messagesSessionId 停在 null。那之后界面显示的是旧会话的对话，用户
+      // 接着说的话却写进新会话——看到的和落库的是两回事。
+      //
+      // 只有这次加载还是最新一代时才收拾，否则会踩掉后来那次正在进行的加载。
+      if (mounted && generation == _sessionLoadGeneration) {
+        _setState(() {
+          _messages.clear();
+        });
+        _messagesSessionId = sessionId;
+      }
     }
   }
 
@@ -496,10 +549,24 @@ extension _ThoughterSession on _ThoughterPageState {
       _isLoading = false;
       _agentStatusDismissTimer?.cancel();
 
+      // 走之前先把上一段收拾掉：一直没说过话的会话不该留在历史里。
+      _cleanupEmptySession();
+      // 上一段挂起的开场白跟着那个会话一起作废，留着会补写进新会话，
+      // 变成开头两句一模一样的问候。
+      _pendingPersistMessages.clear();
+      // 有正在读库的历史会话就让它作废，否则它晚一步返回会把刚清空的
+      // 对话区又填回去。
+      _sessionLoadGeneration++;
+
       _setState(() {
         _messages.clear();
       });
-      await _createNewSession();
+      // 这里原来直接建会话——于是"点一下新建对话"本身就往历史里写了一条空
+      // 记录，用户只是想开个新话题、结果还没开口就已经被记了一笔。
+      // 改成跟入口那条路一样留 null，等首条用户消息发出去时由
+      // _ensureSessionCreated 顺手建；开场白先挂起，建完按原顺序补写。
+      _currentSessionId = null;
+      _messagesSessionId = null;
       _addWelcomeMessage();
     } catch (e, stack) {
       AppLogger.e('Failed to start a new chat session',
