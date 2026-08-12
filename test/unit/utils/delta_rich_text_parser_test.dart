@@ -357,6 +357,72 @@ void main() {
     });
   });
 
+  group('加粗内容优先', () {
+    test('带加粗的整行提到前面，其余保持原序', () {
+      // 块（行）粒度，不是 op 粒度：一行里只加粗半句时，整行一起提前，句子不断。
+      final blocks = parseDeltaRichText(deltaOf([
+        {'insert': '普通一\n'},
+        {'insert': '前半'},
+        {
+          'insert': '加粗半句',
+          'attributes': {'bold': true},
+        },
+        {'insert': '后半\n'},
+        {'insert': '普通二\n'},
+      ]));
+
+      final ordered = prioritizeBoldBlocks(blocks);
+      expect(ordered.first.plainText, '前半加粗半句后半');
+      expect(
+        ordered.map((b) => b.plainText),
+        ['前半加粗半句后半', '普通一', '普通二'],
+      );
+    });
+
+    test('没有加粗时内容原样，且返回值不可修改', () {
+      final blocks = parseDeltaRichText(deltaOf([
+        {'insert': '甲\n乙\n'},
+      ]));
+      final ordered = prioritizeBoldBlocks(blocks);
+      expect(ordered.map((b) => b.plainText), ['甲', '乙']);
+      expect(
+        () => ordered.add(
+          const RichTextBlock(kind: RichTextBlockKind.paragraph),
+        ),
+        throwsUnsupportedError,
+      );
+    });
+
+    test('空行不参与提前，否则预览顶部会堆出一段空白', () {
+      final blocks = parseDeltaRichText(deltaOf([
+        {'insert': '\n'},
+        {
+          'insert': '加粗',
+          'attributes': {'bold': true},
+        },
+        {'insert': '\n'},
+      ]));
+      final ordered = prioritizeBoldBlocks(blocks);
+      expect(ordered.first.plainText, '加粗');
+    });
+
+    test('媒体块不参与提前，保持在文字之后的原有相对位置', () {
+      final blocks = parseDeltaRichText(deltaOf([
+        {
+          'insert': {'image': '/tmp/a.png'},
+        },
+        {
+          'insert': '加粗',
+          'attributes': {'bold': true},
+        },
+        {'insert': '\n'},
+      ]));
+      final ordered = prioritizeBoldBlocks(blocks);
+      expect(ordered.first.plainText, '加粗');
+      expect(ordered.last.isMedia, isTrue);
+    });
+  });
+
   group('缓存', () {
     test('同一份内容第二次命中缓存', () {
       final delta = deltaOf([
@@ -378,6 +444,22 @@ void main() {
       ]));
       expect(a.single.plainText, '甲');
       expect(b.single.plainText, '乙');
+    });
+
+    test('带 data: 内嵌媒体的笔记不进缓存，避免把 base64 钉在堆上', () {
+      final delta = deltaOf([
+        {
+          'insert': {'image': 'data:image/png;base64,AAAA'},
+        },
+        {'insert': '说明\n'},
+      ]);
+      final first = DeltaRichTextCache.of(delta);
+      final second = DeltaRichTextCache.of(delta);
+
+      // 内容照常解析出来，只是不留在缓存里。
+      expect(first.any((b) => b.isMedia), isTrue);
+      expect(identical(first, second), isFalse);
+      expect(DeltaRichTextCache.stats['cacheSize'], 0);
     });
 
     test('缓存结果不可变，调用方改不动共享的表', () {

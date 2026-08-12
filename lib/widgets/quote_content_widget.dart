@@ -70,8 +70,8 @@ class QuoteContent extends StatelessWidget {
       paragraph: paragraph,
       bold: const TextStyle(fontWeight: FontWeight.w500),
       h1: quill.DefaultTextBlockStyle(
-        const TextStyle(
-          fontSize: 34,
+        TextStyle(
+          fontSize: QuillThemeTypography.headerFontSize1,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.5,
           height: 1.083,
@@ -83,8 +83,8 @@ class QuoteContent extends StatelessWidget {
         null,
       ),
       h2: quill.DefaultTextBlockStyle(
-        const TextStyle(
-          fontSize: 30,
+        TextStyle(
+          fontSize: QuillThemeTypography.headerFontSize2,
           fontWeight: FontWeight.w600,
           letterSpacing: -0.8,
           height: 1.067,
@@ -96,8 +96,8 @@ class QuoteContent extends StatelessWidget {
         null,
       ),
       h3: quill.DefaultTextBlockStyle(
-        const TextStyle(
-          fontSize: 24,
+        TextStyle(
+          fontSize: QuillThemeTypography.headerFontSize3,
           fontWeight: FontWeight.w500,
           letterSpacing: -0.5,
           height: 1.083,
@@ -200,6 +200,10 @@ class QuoteContent extends StatelessWidget {
         'document': _QuoteDocumentCache.stats,
         'heightEstimate': _QuoteHeightEstimateCache.stats,
         'controller': _QuoteContentControllerCache.stats,
+        // 折叠态的成本现在全在这两项里（document / controller 只剩展开态在用），
+        // 性能日志要一行拿全就得带上它们。
+        'richText': DeltaRichTextCache.stats,
+        'media': DeltaMediaCache.stats,
       };
 
   /// Returns a compact one-line summary suitable for copy/paste performance logs.
@@ -214,6 +218,9 @@ class QuoteContent extends StatelessWidget {
     final controller = Map<String, dynamic>.from(
       stats['controller'] as Map<String, dynamic>,
     );
+    final richText = Map<String, dynamic>.from(
+      stats['richText'] as Map<String, dynamic>,
+    );
 
     final buffer = StringBuffer()
       ..write('doc=${document['cacheSize']}')
@@ -223,7 +230,10 @@ class QuoteContent extends StatelessWidget {
       ..write(',ctrl=${controller['cacheSize']}')
       ..write('/${controller['maxSize']}')
       ..write(',ctrlCreate=${controller['createCount']}')
-      ..write(',ctrlDispose=${controller['disposeCount']}');
+      ..write(',ctrlDispose=${controller['disposeCount']}')
+      ..write(',ir=${richText['cacheSize']}')
+      ..write('/${richText['maxSize']}')
+      ..write(',irWorstUs=${richText['worstWorkMicros']}');
 
     if (baseline != null) {
       final baselineDocument = Map<String, dynamic>.from(
@@ -342,8 +352,19 @@ class QuoteContent extends StatelessWidget {
   /// 不需要展开。
   static double _estimateRenderedHeight(Quote quote) {
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
+      // 口径要和渲染侧一致：同样丢掉尾部空块（delta 结尾总有一个 '\n'），
+      // 同样算上块间距。差一个块就是 24px，差 4 个间距就是 16px，
+      // 足以让兜底判定和实测判定对同一条笔记给出相反的答案。
+      final blocks = CollapsedRichText.visibleBlocks(
+        DeltaRichTextCache.of(quote.deltaContent),
+        showMedia: true,
+      );
+      if (blocks.isEmpty) {
+        return _estimatePlainTextHeight(quote.content);
+      }
       var height = 0.0;
-      for (final block in DeltaRichTextCache.of(quote.deltaContent)) {
+      for (final block in blocks) {
+        if (height > 0) height += CollapsedRichText.blockGap;
         height += block.isMedia
             ? CollapsedRichText.inlineMediaHeight
             : _estimatePlainTextHeight(block.plainText);
@@ -361,6 +382,26 @@ class QuoteContent extends StatelessWidget {
     final height = style?.height;
     if (fontSize == null || height == null) return;
     estimatedLineHeight = fontSize * height;
+  }
+
+  /// 判定用的基准样式，口径要和 [build] 里渲染用的
+  /// [QuillThemeTypography.paragraphStyle] 对齐。
+  ///
+  /// 判定发生在**父组件**（`quote_item_widget`），拿不到子组件那份 `paragraphStyle`。
+  /// 好在两边的差别只在「[style] 没给字号/行高时拿什么兜底」——`paragraphStyle`
+  /// 依次退到 `bodyLarge` 和 quill 的硬编码 16 / 1.15，这里退到同样的 16 / 1.15。
+  /// `quote_item_widget` 传的是带字号和行高的 `bodyLarge`，两边因此完全一致；
+  /// 真有调用方不传时，也不会再出现「判定说不用折叠、渲染却超出 160px」这种
+  /// 两边打架的情况。
+  ///
+  /// 字重补偿没有并进来：它只在 Android + material 下把加粗降一档，对行高没有
+  /// 影响，对字宽的影响也远小于一行的余量。
+  static TextStyle _measurementBaseStyle(TextStyle? style) {
+    final base = style ?? const TextStyle();
+    return base.copyWith(
+      fontSize: base.fontSize ?? 16.0,
+      height: base.height ?? 1.15,
+    );
   }
 
   /// 当前布局下 [quote] 是否需要折叠。
@@ -391,6 +432,11 @@ class QuoteContent extends StatelessWidget {
 
     return _QuotePlainTextLayoutExpansionCache.getOrCreate(
       quote: quote,
+      // 富文本的判定读的是 deltaContent，而缓存键原本只认 content。给笔记加一张
+      // 图、把一段标成标题这类**只改格式不改纯文本**的编辑，content 一个字都不变，
+      // 判定却应该翻转——不把 deltaContent 编进键，卡片就会一直沿用旧答案，
+      // 新加的图片永远等不到展开入口。
+      contentSignatureSalt: quote.deltaContent?.hashCode,
       style: style,
       maxWidth: maxWidth,
       textDirection: textDirection,
@@ -406,7 +452,7 @@ class QuoteContent extends StatelessWidget {
           // 完整内容放不放得下，而不是某个版式摘掉媒体之后剩多少。
           final plan = CollapsedRichTextMetrics.plan(
             blocks: DeltaRichTextCache.of(quote.deltaContent),
-            baseStyle: style ?? const TextStyle(),
+            baseStyle: _measurementBaseStyle(style),
             maxWidth: maxWidth,
             limit: collapsedContentMaxHeight,
             showMedia: true,
@@ -576,6 +622,13 @@ class QuoteContent extends StatelessWidget {
             : DeltaMediaSummary.empty;
 
         var blocks = DeltaRichTextCache.of(quote.deltaContent);
+        if (blocks.isEmpty) {
+          // delta 解不出来（损坏、导入了别家的格式、同步冲突写坏了）时**退回纯
+          // 文本**。旧实现在 `_documentFromDelta` 里也有这条兜底；直接画空的话，
+          // 卡片正文整个消失，而且因为量出来是 0 高，连双击展开都进不去——用户会
+          // 以为笔记内容丢了。
+          return _buildPlainTextContent(needsExpansion: needsExpansion);
+        }
         if (prioritizeBoldContent) {
           blocks = prioritizeBoldBlocks(blocks);
         }
@@ -583,6 +636,10 @@ class QuoteContent extends StatelessWidget {
           context,
           base: style,
         );
+        // 折叠预览的加粗必须和展开态用同一档字重，见 `_buildCustomStyles`：
+        // Android + material 下 quill 把 bold 降到 w500，这里不跟着降的话，
+        // 同一条笔记折叠时比展开后更粗。
+        final boldWeight = _collapsedBoldWeight(context);
         final textDirection = Directionality.of(context);
         final textScaler = MediaQuery.textScalerOf(context);
         final locale = Localizations.maybeLocaleOf(context);
@@ -616,6 +673,7 @@ class QuoteContent extends StatelessWidget {
               maxWidth: textMaxWidth,
               limit: collapsedContentMaxHeight,
               showMedia: !stripMedia,
+              boldWeight: boldWeight,
               textDirection: textDirection,
               textScaler: textScaler,
               locale: locale,
@@ -636,6 +694,7 @@ class QuoteContent extends StatelessWidget {
                 ? CollapsedRichText(
                     plan: plan,
                     baseStyle: baseStyle,
+                    boldWeight: boldWeight,
                     onMediaTap: (ref) => _openMediaSource(context, ref.source),
                   )
                 : const SizedBox.shrink();
@@ -697,6 +756,11 @@ class QuoteContent extends StatelessWidget {
       return _buildRichTextContent(context);
     }
 
+    return _buildPlainTextContent(needsExpansion: needsExpansion);
+  }
+
+  /// 纯文本正文。富文本的 delta 解不出来时也走这里兜底。
+  Widget _buildPlainTextContent({required bool needsExpansion}) {
     Widget plainText = Text(
       quote.content,
       style: style,
@@ -713,6 +777,16 @@ class QuoteContent extends StatelessWidget {
     }
 
     return plainText;
+  }
+
+  /// 折叠预览里「粗体」该用哪一档字重，规则与 [_buildCustomStyles] 一致。
+  static FontWeight _collapsedBoldWeight(BuildContext context) {
+    final weightCompensation =
+        AppTypographyTokens.of(context).variableWeightCompensation;
+    if (kIsWeb || !Platform.isAndroid || weightCompensation <= 0) {
+      return FontWeight.bold;
+    }
+    return FontWeight.w500;
   }
 
   /// 点击折叠卡片上的媒体：打开首图的大图预览。
@@ -965,10 +1039,14 @@ class _QuotePlainTextLayoutExpansionCache {
     required TextScaler textScaler,
     required Locale? locale,
     required bool Function() builder,
+    int? contentSignatureSalt,
   }) {
     final key = _PlainTextLayoutExpansionCacheKey(
-      contentSignature:
-          Object.hash(quote.content.hashCode, quote.content.length),
+      contentSignature: Object.hash(
+        quote.content.hashCode,
+        quote.content.length,
+        contentSignatureSalt,
+      ),
       maxWidthKey: (maxWidth * 100).round(),
       styleHash: style.hashCode,
       textDirection: textDirection,

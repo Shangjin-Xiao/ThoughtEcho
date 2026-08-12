@@ -290,6 +290,64 @@ void main() {
     expect(find.byType(CollapsedMediaThumbnail), findsOneWidget);
   });
 
+  testWidgets('delta 解不出来时退回纯文本，正文不能整个消失', (tester) async {
+    // 损坏、导入了别家格式、同步冲突写坏了都可能出现。直接画空的话卡片正文消失，
+    // 而且量出来 0 高、双击也进不去展开态，用户会以为笔记内容丢了。
+    final quote = Quote(
+      id: 'rich_broken_delta',
+      content: '这段纯文本必须还在' * 20,
+      date: '2025-01-01T00:00:00.000Z',
+      editSource: 'fullscreen',
+      deltaContent: '{这不是合法的 delta JSON',
+    );
+
+    await tester.pumpWidget(
+      buildTestApp(quote, needsExpansionOverride: true, contentWidth: 320),
+    );
+    await tester.pump();
+
+    expect(find.byType(CollapsedRichText), findsNothing);
+    expect(find.byType(quill.QuillEditor), findsNothing);
+    expect(find.byKey(QuoteContent.collapsedWrapperKey), findsOneWidget);
+    expect(find.textContaining('这段纯文本必须还在'), findsOneWidget);
+  });
+
+  testWidgets('小字号正文不会在盒子没填满时被静默截断', (tester) async {
+    // 行数预算按正文基准行高算的话，`small`（10px）的行只有基准的一半多，
+    // 盒子还没满就把后面的内容丢了——而且量出来不到 160px，卡片连展开入口都没有。
+    final delta = jsonEncode([
+      {
+        'insert': '${'小字正文。' * 200}\n',
+        'attributes': {'size': 'small'},
+      },
+    ]);
+    final quote = Quote(
+      id: 'rich_small_font',
+      content: '小字正文',
+      date: '2025-01-01T00:00:00.000Z',
+      editSource: 'fullscreen',
+      deltaContent: delta,
+    );
+
+    await tester.pumpWidget(
+      buildTestApp(quote, needsExpansionOverride: true, contentWidth: 320),
+    );
+    await tester.pump();
+
+    final richText = tester.widget<CollapsedRichText>(
+      find.byType(CollapsedRichText),
+    );
+    final entry = richText.plan.entries.single;
+    // 10px 字号、行高 1.5 → 15px 一行，160px 的盒子装得下 10 行以上。
+    // 按 24px 的基准行高算只会给 8 行，那就是静默丢内容。
+    expect(entry.maxLines, greaterThanOrEqualTo(11));
+    // 盒子仍然被填满，说明确实排够了。
+    expect(
+      richText.plan.height,
+      greaterThanOrEqualTo(QuoteContent.collapsedContentMaxHeight),
+    );
+  });
+
   test('展开提示遮罩要给缩略图让位，且判据与是否真的画缩略图同源', () {
     final withMedia = createDeltaQuoteWithImage();
     final plainRich = Quote(

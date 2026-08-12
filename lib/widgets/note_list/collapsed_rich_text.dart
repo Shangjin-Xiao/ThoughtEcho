@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../gen_l10n/app_localizations.dart';
 import '../../utils/delta_media_extractor.dart';
 import '../../utils/delta_rich_text_parser.dart';
+import '../../utils/quill_editor_extensions.dart';
 import 'collapsed_media_image.dart';
 
 /// 折叠卡片的富文本正文，用 `Text.rich` 渲染 [RichTextBlock] 序列。
@@ -13,9 +14,8 @@ import 'collapsed_media_image.dart';
 ///
 /// **布局工作量必须有上界**。折叠盒只有 160px，可是笔记正文可以有几千字，直接把
 /// 整篇丢给 `Text.rich` 再靠 `ClipRect` 裁掉，等于每帧为看不见的像素做全文换行。
-/// 所以每个块都带 [maxLines] 预算：预算从总行数出发，每落一个块至少扣 1 行（任何
-/// 块都至少占一行），扣完即停。最坏情况的排版量是 N²/2 行（N≈7 时约 25 行），
-/// 与正文长度无关。
+/// 所以每个块都带 `maxLines`，由 [CollapsedRichTextMetrics.plan] 按**剩余像素**
+/// 算出来，排版量与正文长度无关。
 ///
 /// 这一点也是旧实现最贵的地方消失的原因：原来的
 /// `_truncateDeltaOpsForCollapsedDocument` 每加一个 op 就把已累积的全部 span 重新
@@ -25,6 +25,7 @@ class CollapsedRichText extends StatelessWidget {
     super.key,
     required this.plan,
     required this.baseStyle,
+    this.boldWeight = FontWeight.bold,
     this.onMediaTap,
   });
 
@@ -39,6 +40,10 @@ class CollapsedRichText extends StatelessWidget {
   /// 正文基准样式。字号、行高、字重下限全由主题令牌下发，这里只做叠加，
   /// 不自己写死任何一项。
   final TextStyle baseStyle;
+
+  /// 「粗体」实际用哪一档字重，见 [RichTextRun.styleOn]。必须和传给
+  /// [CollapsedRichTextMetrics.plan] 的值一致，否则量出来的宽度和画出来的不一样。
+  final FontWeight boldWeight;
 
   final ValueChanged<DeltaMediaRef>? onMediaTap;
 
@@ -89,6 +94,7 @@ class CollapsedRichText extends StatelessWidget {
             baseStyle: baseStyle,
             palette: palette,
             maxLines: entry.maxLines,
+            boldWeight: boldWeight,
           ),
     ];
 
@@ -112,13 +118,23 @@ class CollapsedRichText extends StatelessWidget {
     final media = block.media!;
     final source = media.source;
 
+    final l10n = AppLocalizations.of(context);
+
     Widget child;
-    if (media.kind == DeltaMediaKind.image && source != null) {
-      child = CollapsedMediaImage(source: source);
+    if (media.kind == DeltaMediaKind.image) {
+      // 图片没有可用来源时画「加载失败」，**不能掉进音频分支**——否则一个畸形的
+      // 图片节点会被读屏播报成「音频」，还配一个音符图标。
+      child = source == null
+          ? Semantics(
+              label: l10n.imageLoadFailed,
+              child: const CollapsedMediaPlaceholder(
+                icon: Icons.broken_image_outlined,
+              ),
+            )
+          : CollapsedMediaImage(source: source);
     } else {
       // 视频和音频在折叠态**只画一个占位**，不实例化 `MediaPlayerWidget`——
       // 在滚动列表里建播放器正是这一轮要去掉的开销。播放入口在展开态里。
-      final l10n = AppLocalizations.of(context);
       child = Semantics(
         label: media.kind == DeltaMediaKind.video ? l10n.video : l10n.audio,
         child: CollapsedMediaPlaceholder(
@@ -263,6 +279,7 @@ class CollapsedBlockLayout {
     required this.span,
     required this.leadingInset,
     required this.marker,
+    required this.minLineHeight,
   });
 
   final InlineSpan span;
@@ -272,16 +289,26 @@ class CollapsedBlockLayout {
 
   /// 列表符号的文字，没有符号时为 null（待办框另行绘制）。
   final String? marker;
+
+  /// 本块可能出现的**最矮**一行有多高。
+  ///
+  /// 行数预算要按它换算，不能按正文基准行高：用户把一段文字标成 `small`（10px）
+  /// 之后，那几行只有基准行高的一半多，按基准行高算预算会在盒子还没填满时就把
+  /// 后面的内容丢掉——而且因为量出来的高度不到 160px，卡片连展开入口都不会有，
+  /// 内容就这么静悄悄地少了一截。
+  final double minLineHeight;
 }
 
 /// 把一个文字块翻成 `Text.rich` 能吃的 span 和块级样式。
 ///
-/// 标题字号取 `flutter_quill` 的 `DefaultStyles` 默认值（h1=34、h2=30、h3=24），
-/// 不按主题正文字号缩放——quill 那边也是绝对值，跟着缩放反而会和展开态对不上。
+/// 标题字号从 [QuillThemeTypography.headerFontSize] 取，和展开态的 `QuillEditor`
+/// 共用同一组常量——两边各写一份字面量的话，改了一处就会在展开的那一刻看见标题
+/// 跳一下。
 CollapsedBlockLayout buildCollapsedBlockLayout({
   required RichTextBlock block,
   required TextStyle baseStyle,
   required CollapsedRichTextPalette palette,
+  FontWeight boldWeight = FontWeight.bold,
 }) {
   var blockStyle = baseStyle;
   var leadingInset = 0.0;
@@ -290,12 +317,8 @@ CollapsedBlockLayout buildCollapsedBlockLayout({
   switch (block.kind) {
     case RichTextBlockKind.header:
       blockStyle = blockStyle.copyWith(
-        fontSize: switch (block.headerLevel) {
-          1 => 34.0,
-          2 => 30.0,
-          _ => 24.0,
-        },
-        fontWeight: FontWeight.bold,
+        fontSize: QuillThemeTypography.headerFontSize(block.headerLevel),
+        fontWeight: boldWeight,
         height: 1.15,
       );
     case RichTextBlockKind.quote:
@@ -338,15 +361,30 @@ CollapsedBlockLayout buildCollapsedBlockLayout({
         text: run.text,
         style: run.isPlain
             ? null
-            : run.styleOn(blockStyle, inlineCodeStyle: inlineCodeStyle),
+            : run.styleOn(
+                blockStyle,
+                inlineCodeStyle: inlineCodeStyle,
+                boldWeight: boldWeight,
+              ),
       ),
     if (block.runs.isEmpty) const TextSpan(text: ''),
   ];
+
+  // 块内可能有 `small` 等更小的字号，取最小值算预算才不会少排。
+  var minFontSize = blockStyle.fontSize ?? 16.0;
+  for (final run in block.runs) {
+    final runFontSize = run.fontSize;
+    if (runFontSize != null && runFontSize > 0 && runFontSize < minFontSize) {
+      minFontSize = runFontSize;
+    }
+  }
+  final lineHeightFactor = blockStyle.height ?? 1.2;
 
   return CollapsedBlockLayout(
     span: TextSpan(style: blockStyle, children: children),
     leadingInset: leadingInset,
     marker: marker,
+    minLineHeight: minFontSize * lineHeightFactor,
   );
 }
 
@@ -372,6 +410,7 @@ class CollapsedRichTextMetrics {
     required double maxWidth,
     required double limit,
     required bool showMedia,
+    FontWeight boldWeight = FontWeight.bold,
     TextDirection textDirection = TextDirection.ltr,
     TextScaler textScaler = TextScaler.noScaling,
     Locale? locale,
@@ -384,24 +423,21 @@ class CollapsedRichTextMetrics {
       return CollapsedRichTextPlan.empty;
     }
 
-    final lineHeight = CollapsedRichText.effectiveLineHeight(baseStyle);
-    var remaining = lineHeight > 0 ? (limit / lineHeight).ceil() + 1 : 1;
-
     final entries = <CollapsedPlannedBlock>[];
     var height = 0.0;
 
     for (final block in visible) {
-      if (remaining <= 0 || height > limit) break;
-
+      // 预算是**像素**，不是行数。按行数算就得挑一个行高当尺子，而块与块、
+      // 甚至同一块里的不同 run 行高都可能不同（标题 34px、`small` 10px），
+      // 挑哪个都会在另一头算错。
       final gap = entries.isEmpty ? 0.0 : CollapsedRichText.blockGap;
+      final remainingHeight = limit - height - gap;
+      // 第一个块无论多高都要画，否则纯标题笔记会得到一个空计划。
+      if (remainingHeight <= 0 && entries.isNotEmpty) break;
 
       if (block.isMedia) {
         entries.add(CollapsedPlannedBlock(block: block, maxLines: 1));
         height += gap + CollapsedRichText.inlineMediaHeight;
-        // 媒体按它占的高度折算成行数扣预算，一张图后面不该还排满整屏文字。
-        remaining -= (CollapsedRichText.inlineMediaHeight / lineHeight)
-            .ceil()
-            .clamp(1, 99);
         continue;
       }
 
@@ -409,33 +445,34 @@ class CollapsedRichTextMetrics {
         block: block,
         baseStyle: baseStyle,
         palette: CollapsedRichTextPalette.measurement,
+        boldWeight: boldWeight,
       );
       final textWidth = maxWidth - layout.leadingInset;
       if (textWidth <= 0) {
         entries.add(CollapsedPlannedBlock(block: block, maxLines: 1));
-        height += gap + lineHeight;
-        remaining -= 1;
+        height += gap + layout.minLineHeight;
         continue;
       }
+
+      // 用本块**最矮**的一行换算行数上限：宁可多排一两行（`ClipRect` 会裁掉），
+      // 也不能少排——少排的内容是静悄悄消失的，没有任何提示。
+      final maxLines = (remainingHeight <= 0
+              ? 1
+              : (remainingHeight / layout.minLineHeight).ceil() + 1)
+          .clamp(1, _maxLinesPerBlock);
 
       final painter = TextPainter(
         text: layout.span,
         textDirection: textDirection,
         textScaler: textScaler,
         locale: locale,
-        maxLines: remaining,
+        maxLines: maxLines,
       )..layout(maxWidth: textWidth);
-      final usedLines = painter.computeLineMetrics().length;
       final blockHeight = painter.height;
       painter.dispose();
 
-      entries.add(
-        CollapsedPlannedBlock(block: block, maxLines: remaining),
-      );
+      entries.add(CollapsedPlannedBlock(block: block, maxLines: maxLines));
       height += gap + blockHeight;
-      // **按实际用掉的行数扣**，不是每块固定扣 1。一个填满整屏的长段落必须把预算
-      // 一次吃光，否则它后面的块（尤其是媒体）会被当成还放得下而建出来。
-      remaining -= usedLines < 1 ? 1 : usedLines;
     }
 
     return CollapsedRichTextPlan(
@@ -444,6 +481,12 @@ class CollapsedRichTextMetrics {
       showMedia: showMedia,
     );
   }
+
+  /// 单个块的排版行数硬上限。
+  ///
+  /// 折叠盒 160px 配最小的 `small`（10px × 1.2 ≈ 12px）也就十几行，这个值只是
+  /// 防止畸形样式（比如 `size: "0.1"`）把预算算成天文数字。
+  static const int _maxLinesPerBlock = 32;
 }
 
 class _CollapsedRichTextBlock extends StatelessWidget {
@@ -452,12 +495,14 @@ class _CollapsedRichTextBlock extends StatelessWidget {
     required this.baseStyle,
     required this.palette,
     required this.maxLines,
+    required this.boldWeight,
   });
 
   final RichTextBlock block;
   final TextStyle baseStyle;
   final CollapsedRichTextPalette palette;
   final int maxLines;
+  final FontWeight boldWeight;
 
   @override
   Widget build(BuildContext context) {
@@ -465,6 +510,7 @@ class _CollapsedRichTextBlock extends StatelessWidget {
       block: block,
       baseStyle: baseStyle,
       palette: palette,
+      boldWeight: boldWeight,
     );
 
     final Widget text = Text.rich(

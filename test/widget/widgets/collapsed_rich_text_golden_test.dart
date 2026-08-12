@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/utils/delta_rich_text_parser.dart';
 import 'package:thoughtecho/widgets/note_list/collapsed_rich_text.dart';
 
@@ -20,6 +22,13 @@ import 'package:thoughtecho/widgets/note_list/collapsed_rich_text.dart';
 void main() {
   /// 折叠盒的典型宽度，取自卡片正文区。
   const double contentWidth = 320;
+
+  /// golden 的截取目标。
+  ///
+  /// **不能用 `find.byType(RepaintBoundary).last`**：`MaterialApp`、`Scaffold`
+  /// 都会在内部插 `RepaintBoundary`，媒体块将来也可能引入自己的。按类型取「最后
+  /// 一个」会在某天悄悄改成只截一小块子树，而基线照旧存在、测试照旧通过。
+  const Key goldenBoundaryKey = ValueKey('collapsed_rich_text_golden');
   const TextStyle baseStyle = TextStyle(fontSize: 16, height: 1.5);
 
   Widget wrap(String delta, {bool showMedia = false, Brightness? brightness}) {
@@ -34,6 +43,15 @@ void main() {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      // 媒体块要读 l10n（占位的读屏标签），缺了 delegate 会在 build 里炸。
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('zh'),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF6750A4),
@@ -45,6 +63,7 @@ void main() {
           child: SizedBox(
             width: contentWidth,
             child: RepaintBoundary(
+              key: goldenBoundaryKey,
               child: CollapsedRichText(plan: plan, baseStyle: baseStyle),
             ),
           ),
@@ -61,7 +80,7 @@ void main() {
     await tester.pumpWidget(app);
     await tester.pump();
     await expectLater(
-      find.byType(RepaintBoundary).last,
+      find.byKey(goldenBoundaryKey),
       matchesGoldenFile('goldens/$name.png'),
     );
   }
@@ -187,6 +206,25 @@ void main() {
       {'insert': '${'这段正文很长，长到远远超过折叠盒能显示的范围。' * 20}\n'},
     ]);
     await expectGolden(tester, wrap(delta), 'collapsed_rich_text_overflow');
+  });
+
+  testWidgets('inline 版式：媒体按原位交错，且高度固定', (tester) async {
+    // 音视频走占位图标路径，不需要真实资源，出图稳定。这里钉住的是媒体块的固定
+    // 高度和它与文字块之间的间距——都属于本文件声明要管的「几何」。
+    final delta = jsonEncode([
+      {'insert': '图前一行\n'},
+      {
+        'insert': {
+          'custom': {'audio': '/tmp/a.m4a'},
+        },
+      },
+      {'insert': '图后一行\n'},
+    ]);
+    await expectGolden(
+      tester,
+      wrap(delta, showMedia: true),
+      'collapsed_rich_text_inline_media',
+    );
   });
 
   testWidgets('暗色模式下引用左线与代码块底色仍然可读', (tester) async {

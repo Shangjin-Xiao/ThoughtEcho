@@ -88,7 +88,14 @@ class RichTextRun {
   ///
   /// 斜体在这里是**忠实呈现用户手动标记的富文本格式**，不是 UI 自己的装饰选择，
   /// 属于项目里明确保留斜体的那一类（见 AGENTS.md 的例外说明）。
-  TextStyle styleOn(TextStyle? base, {TextStyle? inlineCodeStyle}) {
+  /// [boldWeight] 是「粗体」实际用哪一档字重。Android + material 风格下 quill 会把
+  /// 加粗降到 w500（`_buildCustomStyles` 里的可变字重补偿），折叠预览必须跟着降，
+  /// 否则同一条笔记折叠时的粗体比展开后更重。
+  TextStyle styleOn(
+    TextStyle? base, {
+    TextStyle? inlineCodeStyle,
+    FontWeight boldWeight = FontWeight.bold,
+  }) {
     var style = base ?? const TextStyle();
     if (inlineCode && inlineCodeStyle != null) {
       style = style.merge(inlineCodeStyle);
@@ -98,7 +105,7 @@ class RichTextRun {
       if (strikethrough) TextDecoration.lineThrough,
     ];
     return style.copyWith(
-      fontWeight: bold ? FontWeight.bold : null,
+      fontWeight: bold ? boldWeight : null,
       fontStyle: italic ? FontStyle.italic : null,
       decoration:
           decorations.isEmpty ? null : TextDecoration.combine(decorations),
@@ -283,7 +290,8 @@ List<RichTextBlock> parseDeltaRichText(String? deltaContent) {
 
 /// 「折叠时加粗内容优先」设置下的块排序：带加粗的块提到前面，其余保持原序。
 ///
-/// 没有加粗内容时原样返回（连同原对象一起），调用方可以据此跳过重建。
+/// 没有加粗内容时内容原样返回。返回值一律不可修改——调用方拿到的是共享缓存里的
+/// 块序列，能写就意味着一次误改会污染所有复用这份内容的卡片。
 ///
 /// 和旧实现的差别：原来是在 **op** 粒度上把加粗片段拼到前面，一行里只加粗了半句
 /// 时会把那半句单独拽出来，读起来是断的。这里改成 **块**（行）粒度——加粗所在的
@@ -309,7 +317,7 @@ List<RichTextBlock> prioritizeBoldBlocks(List<RichTextBlock> blocks) {
     }
   }
 
-  if (bold.isEmpty) return blocks;
+  if (bold.isEmpty) return List<RichTextBlock>.unmodifiable(blocks);
   return List<RichTextBlock>.unmodifiable([...bold, ...rest]);
 }
 
@@ -601,11 +609,26 @@ class DeltaRichTextCache {
       _worstWorkMicros = micros;
     }
 
+    // 带 `data:` 内嵌媒体的笔记不进缓存：那种 source 就是整段 base64，200 条缓存
+    // 全是这种笔记时能把若干十 MB 长期钉在堆上。这类笔记本来就少，重解一次远比
+    // 常驻内存便宜。`DeltaMediaCache` 出于同样的理由也跳过它们。
+    if (_holdsInlineDataMedia(blocks)) {
+      return blocks;
+    }
+
     if (_cache.length >= _maxCacheSize) {
       _pruneOldest();
     }
     _cache[key] = blocks;
     return blocks;
+  }
+
+  static bool _holdsInlineDataMedia(List<RichTextBlock> blocks) {
+    for (final block in blocks) {
+      final source = block.media?.source;
+      if (source != null && source.startsWith('data:')) return true;
+    }
+    return false;
   }
 
   /// LinkedHashMap 的迭代顺序就是最近使用顺序，取前 N 个即最旧。
