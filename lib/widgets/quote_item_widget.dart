@@ -14,6 +14,7 @@ import '../widgets/quote_content_widget.dart';
 import '../services/weather_service.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
+import '../utils/quill_editor_extensions.dart';
 import '../utils/time_utils.dart';
 import '../utils/icon_utils.dart';
 
@@ -382,8 +383,14 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
       textScaler: MediaQuery.textScalerOf(context),
       locale: Localizations.maybeLocaleOf(context),
-      // 判定和渲染必须量同一件事：Android + material 下折叠预览的加粗是降档过的。
+      // 判定和渲染必须量同一件事：Android + material 下折叠预览的加粗是降档过的，
+      // 富文本的基准样式也要用渲染侧那份解析好的 paragraphStyle，而不是另找一个
+      // 字号/行高兜底——`bodyLarge` 和 quill 硬编码的 16/1.15 并不总是一致。
       boldWeight: QuoteContent.collapsedBoldWeight(context),
+      richTextBaseStyle: QuillThemeTypography.paragraphStyle(
+        context,
+        base: contentStyle,
+      ),
     );
   }
 

@@ -390,26 +390,6 @@ class QuoteContent extends StatelessWidget {
     estimatedLineHeight = fontSize * height;
   }
 
-  /// 判定用的基准样式，口径要和 [build] 里渲染用的
-  /// [QuillThemeTypography.paragraphStyle] 对齐。
-  ///
-  /// 判定发生在**父组件**（`quote_item_widget`），拿不到子组件那份 `paragraphStyle`。
-  /// 好在两边的差别只在「[style] 没给字号/行高时拿什么兜底」——`paragraphStyle`
-  /// 依次退到 `bodyLarge` 和 quill 的硬编码 16 / 1.15，这里退到同样的 16 / 1.15。
-  /// `quote_item_widget` 传的是带字号和行高的 `bodyLarge`，两边因此完全一致；
-  /// 真有调用方不传时，也不会再出现「判定说不用折叠、渲染却超出 160px」这种
-  /// 两边打架的情况。
-  ///
-  /// 字重补偿没有并进来：它只在 Android + material 下把加粗降一档，对行高没有
-  /// 影响，对字宽的影响也远小于一行的余量。
-  static TextStyle _measurementBaseStyle(TextStyle? style) {
-    final base = style ?? const TextStyle();
-    return base.copyWith(
-      fontSize: base.fontSize ?? 16.0,
-      height: base.height ?? 1.15,
-    );
-  }
-
   /// 当前布局下 [quote] 是否需要折叠。
   ///
   /// 纯文本和富文本现在是**同一个口径**：都用 [TextPainter] 按真实 [style]、
@@ -427,6 +407,13 @@ class QuoteContent extends StatelessWidget {
     required TextScaler textScaler,
     Locale? locale,
     FontWeight boldWeight = FontWeight.bold,
+
+    /// 富文本折叠预览的基准样式，应当是调用方用
+    /// [QuillThemeTypography.paragraphStyle] 解析好的那一份——**和渲染同一个对象**。
+    ///
+    /// 不传时退回 [style]。纯文本分支始终用 [style]，因为它渲染时用的就是 [style]：
+    /// 两条路各自和自己的渲染对齐，不能混用同一个样式。
+    TextStyle? richTextBaseStyle,
   }) {
     _syncEstimatedLineHeight(style);
 
@@ -467,7 +454,7 @@ class QuoteContent extends StatelessWidget {
           // 完整内容放不放得下，而不是某个版式摘掉媒体之后剩多少。
           final plan = CollapsedRichTextMetrics.plan(
             blocks: blocks,
-            baseStyle: _measurementBaseStyle(style),
+            baseStyle: richTextBaseStyle ?? style ?? const TextStyle(),
             maxWidth: maxWidth,
             limit: collapsedContentMaxHeight,
             showMedia: true,
@@ -1059,6 +1046,7 @@ class _QuotePlainTextLayoutExpansionCache {
     required bool Function() builder,
     int? contentSignatureSalt,
     FontWeight boldWeight = FontWeight.bold,
+    TextStyle? richTextBaseStyle,
   }) {
     final key = _PlainTextLayoutExpansionCacheKey(
       contentSignature: Object.hash(
@@ -1067,7 +1055,11 @@ class _QuotePlainTextLayoutExpansionCache {
         contentSignatureSalt,
       ),
       maxWidthKey: (maxWidth * 100).round(),
-      styleHash: Object.hash(style.hashCode, boldWeight.value),
+      styleHash: Object.hash(
+        style.hashCode,
+        richTextBaseStyle.hashCode,
+        boldWeight.value,
+      ),
       textDirection: textDirection,
       textScalerHash: textScaler.hashCode,
       localeTag: locale?.toLanguageTag(),
