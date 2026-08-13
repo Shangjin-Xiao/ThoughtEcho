@@ -270,6 +270,236 @@ void main() {
     databaseService.completeSave();
   });
 
+  testWidgets('applies state changes right after the entrance settles',
+      (tester) async {
+    final initialQuote = Quote(
+      id: 'quote-color',
+      content: '已有内容',
+      date: DateTime(2026).toIso8601String(),
+      colorHex: '#336699',
+    );
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<FeatureGuideService>(
+            create: (_) => _MockFeatureGuideService(),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => AddNoteDialog(
+                      initialQuote: initialQuote,
+                      tags: const [],
+                      onSave: (_) {},
+                    ),
+                  );
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    const colorChipKey = ValueKey('add_note_color_chip');
+    expect(
+        tester.widget<FilterChip>(find.byKey(colorChipKey)).selected, isTrue);
+
+    // 焦点请求之后主体一度被按定时器冻住，这一下 setState 会被吞掉直到冻结到期。
+    await tester.tap(find.byKey(colorChipKey));
+    await tester.pump();
+
+    expect(
+        tester.widget<FilterChip>(find.byKey(colorChipKey)).selected, isFalse);
+
+    await tester.pump(const Duration(seconds: 2));
+  });
+
+  testWidgets('cancel button warns about unsaved changes', (tester) async {
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<FeatureGuideService>(
+            create: (_) => _MockFeatureGuideService(),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => AddNoteDialog(
+                      tags: const [],
+                      onSave: (_) {},
+                    ),
+                  );
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, '还没保存的内容');
+    await tester.pump();
+
+    // 「取消」以前直接 Navigator.pop，绕过 PopScope 的未保存确认，内容当场丢掉。
+    await tester.tap(find.widgetWithText(FilledButton, '取消'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('未保存的内容'), findsOneWidget);
+    expect(find.byType(AddNoteDialog), findsOneWidget);
+
+    // 选「继续编辑」应该留在弹窗里，内容还在。
+    await tester.tap(find.widgetWithText(TextButton, '继续编辑'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AddNoteDialog), findsOneWidget);
+    expect(find.text('还没保存的内容'), findsOneWidget);
+
+    // 再点一次取消并放弃，弹窗才关闭。
+    await tester.tap(find.widgetWithText(FilledButton, '取消'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, '放弃更改'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AddNoteDialog), findsNothing);
+  });
+
+  testWidgets('repeated cancel taps stack only one confirmation',
+      (tester) async {
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<FeatureGuideService>(
+            create: (_) => _MockFeatureGuideService(),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => AddNoteDialog(
+                      tags: const [],
+                      onSave: (_) {},
+                    ),
+                  );
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, '连点取消的内容');
+    await tester.pump();
+
+    // 确认框还没盖上来之前「取消」仍可点，连点两下不能叠出两个确认框。
+    final cancelButton =
+        tester.widget<FilledButton>(find.widgetWithText(FilledButton, '取消'));
+    cancelButton.onPressed!();
+    cancelButton.onPressed!();
+    await tester.pumpAndSettle();
+
+    expect(find.text('未保存的内容'), findsOneWidget);
+
+    // 关掉唯一那个确认框后就该回到弹窗，而不是露出第二个确认框。
+    await tester.tap(find.widgetWithText(TextButton, '继续编辑'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('未保存的内容'), findsNothing);
+    expect(find.byType(AddNoteDialog), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 2));
+  });
+
+  testWidgets('cancel then save-and-exit saves once and closes',
+      (tester) async {
+    final savedQuotes = <Quote>[];
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<FeatureGuideService>(
+            create: (_) => _MockFeatureGuideService(),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => AddNoteDialog(
+                      tags: const [],
+                      onSave: savedQuotes.add,
+                    ),
+                  );
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, '保存并退出的内容');
+    await tester.pump();
+
+    await tester.tap(find.widgetWithText(FilledButton, '取消'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, '保存并退出'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AddNoteDialog), findsNothing);
+    expect(savedQuotes, hasLength(1));
+    expect(savedQuotes.single.content, '保存并退出的内容');
+  });
+
   testWidgets('does not warn about unsaved changes when editing unchanged note',
       (tester) async {
     final initialQuote = Quote(

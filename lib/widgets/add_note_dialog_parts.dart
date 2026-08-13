@@ -8,7 +8,11 @@ import '../theme/theme_style.dart';
 import '../utils/icon_utils.dart';
 
 /// 只让外层边距响应键盘 inset，避免键盘动画驱动整个弹窗内容重建。
-class KeyboardInsetPadding extends StatelessWidget {
+///
+/// 退场期间（路由动画走 reverse）改用最后一次的 inset：弹窗下滑和键盘收起是两段
+/// 各自独立的动画，而键盘在不少机型上是一帧收完的。底部内边距跟着塌掉的话，
+/// 弹窗会先瞬间掉下去一个键盘的高度，剩下那点位移根本看不出是动画。
+class KeyboardInsetPadding extends StatefulWidget {
   final Widget child;
   final ValueChanged<double>? onInsetBuild;
 
@@ -16,9 +20,29 @@ class KeyboardInsetPadding extends StatelessWidget {
       {super.key, required this.child, this.onInsetBuild});
 
   @override
+  State<KeyboardInsetPadding> createState() => _KeyboardInsetPaddingState();
+}
+
+class _KeyboardInsetPaddingState extends State<KeyboardInsetPadding> {
+  double _lastInset = 0;
+  bool _wasPresented = false;
+
+  @override
   Widget build(BuildContext context) {
-    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
-    onInsetBuild?.call(keyboardInset);
+    final liveInset = MediaQuery.viewInsetsOf(context).bottom;
+    final status = ModalRoute.of(context)?.animation?.status;
+    if (status != null && status != AnimationStatus.dismissed) {
+      _wasPresented = true;
+    }
+    // dismissed 也要冻结，但只在弹过一次之后：首帧的 dismissed 是入场前的状态，
+    // 那时候冻结会把编辑已有笔记（进来时键盘还开着）的初始内边距顶掉。
+    final isLeaving = status == AnimationStatus.reverse ||
+        (status == AnimationStatus.dismissed && _wasPresented);
+    final keyboardInset = isLeaving ? _lastInset : liveInset;
+    if (!isLeaving) {
+      _lastInset = liveInset;
+    }
+    widget.onInsetBuild?.call(keyboardInset);
     return Padding(
       padding: EdgeInsets.only(
         bottom: keyboardInset,
@@ -26,7 +50,7 @@ class KeyboardInsetPadding extends StatelessWidget {
         right: 16,
         top: 16,
       ),
-      child: child,
+      child: widget.child,
     );
   }
 }
