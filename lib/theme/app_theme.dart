@@ -253,11 +253,36 @@ class AppTheme with ChangeNotifier {
     );
   }
 
+  /// 亮暗两套主题共用的扩展清单。
+  ///
+  /// 状态语义色和自绘表面色**跟着色板走**：手工风格有自己的纸色和状态色，
+  /// 生成色板（material）保持原来的固定取值与 `ColorUtils` 算法，像素不变。
+  /// 判据是「有没有色板」这个取值，不是风格身份。
+  List<ThemeExtension<dynamic>> _extensionsFor(
+    ThemeStyleForm form,
+    ColorScheme colorScheme,
+    Brightness brightness,
+  ) {
+    final colors = _themeStyle.palette?.forBrightness(brightness);
+    return <ThemeExtension<dynamic>>[
+      colors?.toSemanticColors() ??
+          (brightness == Brightness.dark
+              ? AppSemanticColors.dark
+              : AppSemanticColors.light),
+      colors == null
+          ? AppSurfaceTokens.fromScheme(colorScheme, brightness)
+          : AppSurfaceTokens.fromPalette(colors),
+      AppShapeTokens.fromForm(form, brightness),
+      AppTypographyTokens.fromForm(form),
+    ];
+  }
+
   static const String _customColorKey = 'custom_color';
   static const String _useCustomColorKey = 'use_custom_color';
   static const String _themeModeKey = 'theme_mode';
   static const String _useDynamicColorKey = 'use_dynamic_color'; // 添加动态取色设置键
   static const String _themeStyleKey = 'theme_style';
+  static const String _themeAccentKey = 'theme_accent';
 
   SafeMMKV? _storage;
   Color? _customColor;
@@ -267,6 +292,10 @@ class AppTheme with ChangeNotifier {
   ColorScheme? _darkDynamicColorScheme;
   ThemeMode _themeMode = ThemeMode.system;
   ThemeStyle _themeStyle = ThemeStyle.defaultStyle;
+
+  /// null = 用户没选过墨色，跟随风格默认（见 [accentFor]）。
+  /// **不要在这里填默认值**：填了之后「跟随风格」就没法表达，切到素笺还会拿到赭石。
+  ThemeAccent? _themeAccent;
   bool _hasInitialized = false; // 添加标记，用于追踪是否已初始化
 
   // 全局圆角和阴影参数
@@ -358,15 +387,41 @@ class AppTheme with ChangeNotifier {
   /// 主题设置页的风格预览必须用这个，不能读 `Theme.of(context).colorScheme`：
   /// 那读到的是当前生效风格的颜色，会让 material 那一项的预览跟着已选中的
   /// 纸墨/素笺一起变色——看上去像「点一下颜色就乱跳」。
-  ColorScheme colorSchemeFor(ThemeStyle style, Brightness brightness) {
+  ///
+  /// [accent] 只对手工风格有意义，不传时用当前生效的墨色（见 [accentFor]）。
+  /// 墨色选择器的色块预览要传具体值，好让四支墨各自显示自己的颜色。
+  ColorScheme colorSchemeFor(
+    ThemeStyle style,
+    Brightness brightness, {
+    ThemeAccent? accent,
+  }) {
     // 手工色板原样落地：不参与动态取色，也不接受自定义 seed——那两项是
     // material 风格专有的能力，套到手工色板上只会把配好的色值推翻重算。
+    // 墨色不属于「取色算法」那一路：它换的是色板里的强调族，纸色一个不动。
     final palette = style.palette;
     if (palette != null) {
-      return palette.forBrightness(brightness).toColorScheme(brightness);
+      final colors = palette.forBrightness(brightness);
+      return colors.toColorScheme(
+        brightness,
+        ThemeAccentColors.resolve(
+          accent ?? accentFor(style),
+          colors,
+          brightness,
+        ),
+      );
     }
     return _generatedColorScheme(brightness);
   }
+
+  /// 某套风格当前生效的墨色：用户选过就用用户选的，没选过用这套风格的默认支。
+  ///
+  /// 墨色是**跨风格共享的一个设置**：在纸墨下选了靛蓝，切到素笺仍然是靛蓝。
+  /// 两套纸各自的容器色会自动贴合自己的底色，不需要按风格分开记。
+  ThemeAccent accentFor(ThemeStyle style) =>
+      _themeAccent ?? style.defaultAccent;
+
+  /// 当前风格生效的墨色，供设置页显示选中态。
+  ThemeAccent get themeAccent => accentFor(_themeStyle);
 
   /// 取色算法那条路：自定义 seed > 系统动态取色 > 默认蓝。
   ColorScheme _generatedColorScheme(Brightness brightness) {
@@ -436,7 +491,9 @@ class AppTheme with ChangeNotifier {
       await _storage!.initialize();
       _loadCustomColor();
       _loadThemeMode();
+      // 墨色的兜底解析要用到已加载的风格，顺序不能调换。
       _loadThemeStyle();
+      _loadThemeAccent();
 
       // 首次运行时，不读取存储的设置，保持默认开启
       if (_storage!.containsKey(_useDynamicColorKey)) {
@@ -465,6 +522,7 @@ class AppTheme with ChangeNotifier {
       _useDynamicColor = true;
       _themeMode = ThemeMode.system;
       _themeStyle = ThemeStyle.defaultStyle;
+      _themeAccent = null;
     }
   }
 
@@ -593,6 +651,29 @@ class AppTheme with ChangeNotifier {
     }
   }
 
+  /// 设置墨色（手工风格的强调色）。
+  ///
+  /// 和 [setThemeStyle] 并列的一个维度：只换强调族，纸色、字体、圆角、纹理全不动。
+  /// material 风格下这个设置不生效（它走取色算法），但会照常记住，
+  /// 切回手工风格时原样恢复——和动态取色在手工风格下的处理是对称的。
+  Future<void> setThemeAccent(ThemeAccent accent) async {
+    if (_themeAccent == accent) return;
+    _themeAccent = accent;
+    _clearThemeCache();
+    // 与 setThemeMode 一致：先刷新 UI，再落盘。
+    notifyListeners();
+
+    final storage = _storage;
+    if (storage == null) return;
+    try {
+      await storage
+          .setString(_themeAccentKey, accent.name)
+          .timeout(const Duration(seconds: 2));
+    } catch (e) {
+      logWarning('保存墨色失败: $e', source: 'AppTheme');
+    }
+  }
+
   // 设置是否使用动态取色
   Future<void> setUseDynamicColor(bool value) async {
     if (_useDynamicColor == value) return;
@@ -664,6 +745,25 @@ class AppTheme with ChangeNotifier {
         source: 'AppTheme',
       );
       _themeStyle = ThemeStyle.defaultStyle;
+    }
+  }
+
+  // 从持久化存储加载墨色
+  void _loadThemeAccent() {
+    try {
+      final name = _storage?.getString(_themeAccentKey);
+      // 没存过就保持 null（跟随风格默认），不要在这里落到某一支具体的墨。
+      _themeAccent = name == null
+          ? null
+          : ThemeAccent.fromName(name, _themeStyle.defaultAccent);
+    } catch (e, stack) {
+      logError(
+        '加载墨色失败',
+        error: e,
+        stackTrace: stack,
+        source: 'AppTheme',
+      );
+      _themeAccent = null;
     }
   }
 
@@ -818,11 +918,7 @@ class AppTheme with ChangeNotifier {
       ),
 
       // 状态语义色（M3 的 ColorScheme 只有 error，没有 success / warning）
-      extensions: <ThemeExtension<dynamic>>[
-        AppSemanticColors.light,
-        AppShapeTokens.fromForm(form, Brightness.light),
-        AppTypographyTokens.fromForm(form),
-      ],
+      extensions: _extensionsFor(form, colorScheme, Brightness.light),
 
       // Windows 平台字体优化
       textTheme: textTheme,
@@ -1066,11 +1162,7 @@ class AppTheme with ChangeNotifier {
 
       // 状态语义色（M3 的 ColorScheme 只有 error，没有 success / warning）
       cardTheme: _styleCardTheme(baseTheme.cardTheme, form, colorScheme),
-      extensions: <ThemeExtension<dynamic>>[
-        AppSemanticColors.dark,
-        AppShapeTokens.fromForm(form, Brightness.dark),
-        AppTypographyTokens.fromForm(form),
-      ],
+      extensions: _extensionsFor(form, colorScheme, Brightness.dark),
 
       // Windows 平台字体优化
       textTheme: _styledTextTheme(form, baseTheme.textTheme),

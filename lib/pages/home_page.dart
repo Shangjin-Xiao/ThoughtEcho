@@ -23,7 +23,6 @@ import 'settings_page.dart';
 import 'note_full_editor_page.dart';
 import '../services/settings_service.dart'; // Import SettingsService
 import '../utils/app_logger.dart';
-import '../utils/color_utils.dart';
 import '../services/ai_card_generation_service.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../services/draft_service.dart';
@@ -771,15 +770,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     // 修复：根据当前页面动态设置背景色，确保底部安全区域颜色正确
     // 记录页使用专属背景色，其他页面使用通用页面背景色
-    final scaffoldBackgroundColor = _pageController.currentIndex == 1
-        ? ColorUtils.getNoteListBackgroundColor(
-            theme.colorScheme.surface,
-            theme.brightness,
-          )
-        : ColorUtils.getPageBackgroundColor(
-            theme.colorScheme.surface,
-            theme.brightness,
-          );
+    final surfaces = AppSurfaceTokens.of(context);
+    final scaffoldBackgroundColor =
+        _pageController.currentIndex == 1 ? surfaces.noteList : surfaces.page;
 
     final systemUiOverlayStyle = _buildSystemUiOverlayStyle(
       theme,

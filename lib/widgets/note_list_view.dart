@@ -24,7 +24,6 @@ import '../widgets/app_empty_view.dart';
 import 'note_filter_sort_sheet.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import '../utils/app_tracer.dart';
-import '../utils/color_utils.dart';
 import '../services/weather_service.dart'; // 导入天气服务
 import '../utils/time_utils.dart'; // 导入时间工具
 import '../controllers/search_controller.dart';

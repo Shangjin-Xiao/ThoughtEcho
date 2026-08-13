@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/theme_style.dart';
 import 'common/paper_rule_background.dart';
-import '../utils/color_utils.dart';
 
 class SlidingCard extends StatefulWidget {
   final Widget child;
@@ -175,19 +174,21 @@ class _SlidingCardState extends State<SlidingCard>
                             AppShapeTokens.of(context).cardRadius,
                           ),
                           boxShadow: currentShadow,
-                          color: ColorUtils.getCardBackgroundColor(
-                            theme.colorScheme.surface,
-                            theme.brightness,
-                          ),
-                          // 微妙的边框效果（Material Design）
+                          color: AppSurfaceTokens.of(context).card,
+                          // 边框：material 保持原来那道几乎看不见的 8% 描边（它靠投影
+                          // 分层），手工风格用发丝边框实打实描一道——纸的层次本来就
+                          // 由描边承担，投影已经被令牌压到最低。判据是 borderWidth
+                          // 这个**取值**，不是风格身份。
                           border: Border.all(
                             color: _isHovered
                                 ? theme.colorScheme.primary.withValues(
                                     alpha: 0.12,
                                   )
-                                : theme.colorScheme.outline.withValues(
-                                    alpha: 0.08,
-                                  ),
+                                : (AppShapeTokens.of(context).borderWidth > 0
+                                    ? theme.colorScheme.outlineVariant
+                                    : theme.colorScheme.outline.withValues(
+                                        alpha: 0.08,
+                                      )),
                             width: 1,
                           ),
                         ),

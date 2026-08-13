@@ -69,81 +69,12 @@ class ColorUtils {
     return color.withValues(alpha: opacity);
   }
 
-  /// 获取页面背景色
+  /// 页面 / 卡片 / 记录页 / 搜索框这四张自绘表面的取值**已经搬到
+  /// `AppSurfaceTokens`**（`lib/theme/theme_style.dart`），不要在这里重新加回来。
   ///
-  /// 根据主题亮度返回合适的背景色：
-  /// - 浅色模式：82%不透明度的surface叠加到白色上（更深一点）
-  /// - 深色模式：使用原始surface颜色
-  ///
-  /// [surfaceColor] 主题的surface颜色
-  /// [brightness] 当前主题亮度
-  static Color getPageBackgroundColor(
-    Color surfaceColor,
-    Brightness brightness,
-  ) {
-    if (brightness == Brightness.dark) {
-      return surfaceColor;
-    }
-    // 浅色模式：82%不透明的surface叠加到白色上，让背景更接近主题色
-    return Color.alphaBlend(withOpacitySafe(surfaceColor, 0.82), Colors.white);
-  }
-
-  /// 获取卡片背景色（用于一言框等卡片）
-  ///
-  /// 根据主题亮度返回合适的卡片背景色：
-  /// - 浅色模式：surface向白色方向混合8%，同步加深与页面背景保持配合
-  /// - 深色模式：使用原始surface颜色
-  ///
-  /// [surfaceColor] 主题的surface颜色
-  /// [brightness] 当前主题亮度
-  static Color getCardBackgroundColor(
-    Color surfaceColor,
-    Brightness brightness,
-  ) {
-    if (brightness == Brightness.dark) {
-      return surfaceColor;
-    }
-    // 浅色模式：surface向白色偏移8%，比页面背景稍深形成突出层次
-    return Color.lerp(surfaceColor, Colors.white, 0.08) ?? surfaceColor;
-  }
-
-  /// 获取记录列表背景色
-  ///
-  /// 根据主题亮度返回合适的记录列表背景色：
-  /// - 浅色模式：30%不透明度的surface叠加到白色上
-  /// - 深色模式：使用较浅的灰色（提升可读性）
-  ///
-  /// [surfaceColor] 主题的surface颜色
-  /// [brightness] 当前主题亮度
-  static Color getNoteListBackgroundColor(
-    Color surfaceColor,
-    Brightness brightness,
-  ) {
-    if (brightness == Brightness.dark) {
-      // 深色模式：使用较浅的灰色作为背景，与深色记录项形成对比
-      return const Color(0xFF2A2A2A);
-    }
-    // 浅色模式：30%不透明的surface叠加到白色上，产生极浅的主题色背景
-    return Color.alphaBlend(withOpacitySafe(surfaceColor, 0.3), Colors.white);
-  }
-
-  /// 获取搜索框背景色（比卡片更浅）
-  ///
-  /// 根据主题亮度返回合适的搜索框背景色：
-  /// - 浅色模式：surface向白色方向混合4%，比一言框更浅与背景搭配
-  /// - 深色模式：使用比surface稍浅的颜色
-  ///
-  /// [surfaceColor] 主题的surface颜色
-  /// [brightness] 当前主题亮度
-  static Color getSearchBoxBackgroundColor(
-    Color surfaceColor,
-    Brightness brightness,
-  ) {
-    if (brightness == Brightness.dark) {
-      // 深色模式：比surface稍浅一点
-      return Color.lerp(surfaceColor, Colors.white, 0.05) ?? surfaceColor;
-    }
-    // 浅色模式：surface向白色偏移4%，比一言框更浅，更好融入背景
-    return Color.lerp(surfaceColor, Colors.white, 0.04) ?? surfaceColor;
-  }
+  /// 原因：这里的算法是围绕 M3 生成色板写的（拿 surface 往白色兑、暗色写死一块
+  /// 中性灰），手工色板本来就把「纸」和「卡片」两档色值给全了，兑出来的结果既不
+  /// 等于色板的卡片色，暗色下更是把整套纸色换成了与色板无关的灰。表面色必须随
+  /// 色板下发，两处各算一遍一定会再次走岔。material 的那套算法原样保留在
+  /// `AppSurfaceTokens.fromScheme` 里，像素不变。
 }

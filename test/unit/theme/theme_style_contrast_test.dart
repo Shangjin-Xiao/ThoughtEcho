@@ -1,7 +1,6 @@
-import 'dart:ui';
-
-import 'package:flutter/painting.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thoughtecho/theme/app_semantic_colors.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
 
@@ -43,24 +42,56 @@ void main() {
           expectContrast(colors.inkMuted, colors.card, 7.0, '$label 次要墨色 / 卡片');
         });
 
-        test('$label 强调色与容器上的文字可读', () {
-          expectContrast(colors.onAccent, colors.accent, 4.5, '$label 强调上的文字');
-          expectContrast(colors.onAccentContainer, colors.accentContainer, 4.5,
-              '$label 强调容器上的文字');
-        });
+        // 墨色是和风格正交的一维，所以「风格 × 墨色 × 亮暗」每一格都要单独验算：
+        // 容器色是由墨色和纸色调出来的，只验默认那一支等于没验。
+        for (final option in ThemeAccent.values) {
+          final accent = ThemeAccentColors.resolve(option, colors, brightness);
+          final accentLabel = '$label / ${option.name}';
+
+          test('$accentLabel 强调色与容器上的文字可读', () {
+            expectContrast(
+                accent.onAccent, accent.accent, 4.5, '$accentLabel 强调上的文字');
+            expectContrast(accent.onContainer, accent.container, 4.5,
+                '$accentLabel 强调容器上的文字');
+          });
+
+          // 强调色不只做大色块：它还是链接文字、小图标和 12sp 的标签色
+          // （首页「今日思考」、探索页「全部」都是），按图形的 3:1 配会糊掉。
+          // 这条要求它在纸和卡片两种底色上都达到正文的 4.5:1。
+          test('$accentLabel 强调色当小字用也够实', () {
+            expectContrast(
+                accent.accent, colors.background, 4.5, '$accentLabel 强调 / 背景');
+            expectContrast(
+                accent.accent, colors.card, 4.5, '$accentLabel 强调 / 卡片');
+          });
+        }
 
         test('$label 危险状态可读', () {
           expectContrast(colors.onDanger, colors.danger, 4.5, '$label 危险上的文字');
           expectContrast(colors.onDangerContainer, colors.dangerContainer, 4.5,
               '$label 危险容器上的文字');
-        });
-
-        test('$label 强调色本身作为图标和大字可辨', () {
-          expectContrast(
-              colors.accent, colors.background, 3.0, '$label 强调 / 背景');
-          expectContrast(colors.accent, colors.card, 3.0, '$label 强调 / 卡片');
           expectContrast(
               colors.danger, colors.background, 3.0, '$label 危险 / 背景');
+        });
+
+        // 状态色过去是全局固定的 M3 取值，落在暖色纸面上是三块外来色。
+        // 现在它们进了色板，就得和色板里其它颜色一样接受验算。
+        test('$label 状态色在纸和卡片上都可辨', () {
+          for (final (name, fg) in <(String, Color)>[
+            ('成功', colors.success),
+            ('警告', colors.warning),
+            ('收藏', colors.favorite),
+          ]) {
+            expectContrast(fg, colors.background, 3.0, '$label $name / 背景');
+            expectContrast(fg, colors.card, 3.0, '$label $name / 卡片');
+          }
+          expectContrast(colors.onSuccessContainer, colors.successContainer,
+              4.5, '$label 成功容器上的文字');
+          expectContrast(colors.onWarningContainer, colors.warningContainer,
+              4.5, '$label 警告容器上的文字');
+          // 收藏是实心小色块（红心徽章里的数字），不是浅色容器。
+          expectContrast(
+              colors.onFavorite, colors.favorite, 4.5, '$label 收藏徽章上的数字');
         });
       }
     }
@@ -72,13 +103,106 @@ void main() {
         final palette = style.palette;
         if (palette == null) continue;
         for (final brightness in Brightness.values) {
-          final scheme =
-              palette.forBrightness(brightness).toColorScheme(brightness);
+          final colors = palette.forBrightness(brightness);
+          final scheme = colors.toColorScheme(
+            brightness,
+            ThemeAccentColors.resolve(style.defaultAccent, colors, brightness),
+          );
           expect(scheme.brightness, brightness);
-          expect(scheme.surface, palette.forBrightness(brightness).background);
-          expect(scheme.onSurface, palette.forBrightness(brightness).ink);
+          expect(scheme.surface, colors.background);
+          expect(scheme.onSurface, colors.ink);
         }
       }
+    });
+
+    test('换墨色只换强调族，纸色一格不动', () {
+      // 这是「墨色」这一维成立的前提：如果换墨顺带把 surface 或 outline 改了，
+      // 那它就不是强调色维度，而是第四套、第五套风格。
+      for (final style in ThemeStyle.values) {
+        final palette = style.palette;
+        if (palette == null) continue;
+        for (final brightness in Brightness.values) {
+          final colors = palette.forBrightness(brightness);
+          final schemes = [
+            for (final accent in ThemeAccent.values)
+              colors.toColorScheme(
+                brightness,
+                ThemeAccentColors.resolve(accent, colors, brightness),
+              ),
+          ];
+          for (final scheme in schemes) {
+            expect(scheme.surface, schemes.first.surface);
+            expect(scheme.surfaceContainerLowest,
+                schemes.first.surfaceContainerLowest);
+            expect(scheme.onSurface, schemes.first.onSurface);
+            expect(scheme.onSurfaceVariant, schemes.first.onSurfaceVariant);
+            expect(scheme.outline, schemes.first.outline);
+            expect(scheme.outlineVariant, schemes.first.outlineVariant);
+            expect(scheme.error, schemes.first.error);
+          }
+          // 而强调色本身必须真的各不相同，否则这个设置就是个摆设。
+          final primaries = schemes.map((s) => s.primary).toSet();
+          expect(primaries.length, ThemeAccent.values.length,
+              reason: '${style.name} / ${brightness.name} 有两支墨色长得一样');
+        }
+      }
+    });
+
+    test('墨色默认值：纸墨是赭石，素笺是黛青，认不出的取值回退到传入的兜底', () {
+      expect(ThemeStyle.paper.defaultAccent, ThemeAccent.umber);
+      expect(ThemeStyle.plain.defaultAccent, ThemeAccent.celadon);
+      expect(
+          ThemeAccent.fromName(null, ThemeAccent.celadon), ThemeAccent.celadon);
+      expect(
+          ThemeAccent.fromName('nope', ThemeAccent.umber), ThemeAccent.umber);
+      expect(ThemeAccent.fromName('indigo', ThemeAccent.umber),
+          ThemeAccent.indigo);
+    });
+
+    test('状态色随色板下发，手工风格不再借用 Material 的那套', () {
+      for (final style in ThemeStyle.values) {
+        final palette = style.palette;
+        if (palette == null) continue;
+        for (final brightness in Brightness.values) {
+          final colors = palette.forBrightness(brightness);
+          final semantic = colors.toSemanticColors();
+          expect(semantic.success, colors.success);
+          expect(semantic.favorite, colors.favorite);
+          // 借用 M3 那套固定值正是这次要修的问题，逐项对一遍防止有人改回去。
+          final m3 = brightness == Brightness.dark
+              ? AppSemanticColors.dark
+              : AppSemanticColors.light;
+          expect(semantic.favorite, isNot(m3.favorite),
+              reason: '${style.name} / ${brightness.name} 的收藏色还是 M3 那支');
+        }
+      }
+    });
+
+    test('自绘表面跟着色板走：手工风格用纸色，material 保持原算法', () {
+      for (final style in ThemeStyle.values) {
+        final palette = style.palette;
+        if (palette == null) continue;
+        for (final brightness in Brightness.values) {
+          final colors = palette.forBrightness(brightness);
+          final surfaces = AppSurfaceTokens.fromPalette(colors);
+          expect(surfaces.card, colors.card);
+          expect(surfaces.page, colors.background);
+          // 暗色下曾经写死 0xFF2A2A2A，把整套暖色纸换成一块与色板无关的灰。
+          expect(surfaces.noteList, colors.background);
+        }
+      }
+
+      // material 那条路仍然是迁移前 ColorUtils 的算法，逐值对一遍。
+      const surface = Color(0xFF102030);
+      final dark = AppSurfaceTokens.fromScheme(
+        const ColorScheme.dark(surface: surface),
+        Brightness.dark,
+      );
+      expect(dark.page, surface);
+      expect(dark.card, surface);
+      expect(dark.noteList, const Color(0xFF2A2A2A));
+      expect(
+          dark.searchBox, Color.lerp(surface, const Color(0xFFFFFFFF), 0.05));
     });
 
     // 卡片色刻意不落在 M3 的 surfaceContainer 梯度上。
@@ -104,9 +228,11 @@ void main() {
             greaterThan(bgLum),
             reason: '$label 卡片没有比页面底色亮，纸张层次会塌掉',
           );
+          // 门槛从 1.03 抬到 1.12：纸墨曾经是 1.06，配上被压到 0.03 的投影，
+          // 首页那张大卡在真机上就是一个「空框」——过了旧门槛，但层次实际是塌的。
           expect(
             contrastRatio(colors.card, colors.background),
-            greaterThan(1.03),
+            greaterThan(1.12),
             reason: '$label 卡片和页面底色几乎一样，看不出卡片边界',
           );
         }
@@ -118,8 +244,11 @@ void main() {
         final palette = style.palette;
         if (palette == null) continue;
         for (final brightness in Brightness.values) {
-          final scheme =
-              palette.forBrightness(brightness).toColorScheme(brightness);
+          final colors = palette.forBrightness(brightness);
+          final scheme = colors.toColorScheme(
+            brightness,
+            ThemeAccentColors.resolve(style.defaultAccent, colors, brightness),
+          );
           final ramp = <Color>[
             scheme.surfaceContainer,
             scheme.surfaceContainerHigh,
@@ -278,6 +407,13 @@ void main() {
               lessThan(baseline.restShadow.first.blurRadius));
         }
       }
+    });
+
+    test('横线是底纹不是表格线：透明度收着给', () {
+      // 横线曾经铺满整张笔记卡（穿过日期行、图片、标签胶囊和按钮行），
+      // 那时 0.55 的浓度看着就是一张糊在卡片上的格子图。现在它只画在正文块里
+      // （见 quote_item_widget 的 _buildQuoteContentSection），要收着画。
+      expect(ThemeStyleForm.paper.ruleOpacity, lessThanOrEqualTo(0.45));
     });
 
     test('纹理开关是令牌取值，只有纸与墨画横线', () {

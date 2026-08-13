@@ -168,7 +168,11 @@ class _ThemeStylePreview extends StatelessWidget {
     final card = colors?.card ?? scheme.surfaceContainerLowest;
     final ink = colors?.ink ?? scheme.onSurface;
     final inkMuted = colors?.inkMuted ?? scheme.onSurfaceVariant;
-    final accent = colors?.accent ?? scheme.primary;
+    // 引导页只介绍风格，不介绍墨色，所以取这套风格的默认那支墨。
+    final accent = colors == null
+        ? scheme.primary
+        : ThemeAccentColors.resolve(style.defaultAccent, colors, brightness)
+            .accent;
     final outline = colors?.outline ?? scheme.outlineVariant;
 
     return AnimatedContainer(

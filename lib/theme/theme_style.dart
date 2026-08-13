@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'app_semantic_colors.dart';
+
 /// 主题风格维度。和亮暗（[ThemeMode]）正交：每种风格都要给全亮暗两套取值。
 ///
 /// [ThemeStyle.material] 保持原有行为不变——真动态取色（`dynamic_color`）、
@@ -38,6 +40,20 @@ enum ThemeStyle {
   /// 不能再喂给 seed 生成器，否则色板会被算法重新推导掉。
   bool get isGenerated => palette == null;
 
+  /// 用户没选过墨色时这套风格用哪一支。
+  ///
+  /// 手工风格过去完全没有个性化维度：选了纸墨就等于放弃动态取色和自定义主色，
+  /// 「选它反而少功能」。墨色（[ThemeAccent]）就是补上的那一维——纸色和墨色分开，
+  /// 换墨不换纸，风格身份不会因为换了强调色就散掉。
+  ///
+  /// material 也要给一个值（它不用，但 [ThemeAccent] 的解析路径要有兜底），
+  /// 取纸墨的默认支即可。
+  ThemeAccent get defaultAccent => switch (this) {
+        ThemeStyle.material => ThemeAccent.umber,
+        ThemeStyle.paper => ThemeAccent.umber,
+        ThemeStyle.plain => ThemeAccent.celadon,
+      };
+
   /// 新装与未做过选择的用户拿到的风格。
   ///
   /// 2026-08-01 从 [ThemeStyle.material] 翻成 [ThemeStyle.paper]：纸墨是心迹的
@@ -54,6 +70,108 @@ enum ThemeStyle {
     }
     return defaultStyle;
   }
+}
+
+/// 墨色：手工风格的强调色维度，和风格（纸）、亮暗正交。
+///
+/// 这是手工风格的**个性化入口**。动态取色和自定义 seed 是 material 专有的能力，
+/// 套到手工色板上会把配好的纸色一起推翻重算；墨色则只换强调族，纸色、层次、
+/// 字体、纹理全部不动——「换一支笔，不换一叠纸」。
+///
+/// 每支墨只需要给亮暗两个色值，容器色由 [ThemeAccentColors.resolve] 用**当前风格的
+/// 纸色**调出来，所以同一支墨在纸墨（暖）和素笺（冷）下的容器会各自贴合底色，
+/// 不需要按风格再写一遍。加第五支墨只要在这里加一个枚举项。
+enum ThemeAccent {
+  /// 赭石：纸与墨的原色，也是老用户升级前看到的那支。
+  umber(light: Color(0xFF7A5530), dark: Color(0xFFC9A077)),
+
+  /// 黛青：素笺的原色。
+  celadon(light: Color(0xFF38534F), dark: Color(0xFF8FB5B0)),
+
+  /// 靛蓝。
+  indigo(light: Color(0xFF3C4E78), dark: Color(0xFFA3B6E0)),
+
+  /// 朱砂。
+  cinnabar(light: Color(0xFF8E3A2C), dark: Color(0xFFE09B84));
+
+  const ThemeAccent({required this.light, required this.dark});
+
+  /// 亮色模式下的墨色。取值全部满足「对纸和卡片两种底色都 ≥ 4.5:1」——
+  /// 强调色不只做大色块，它还要当链接文字、图标和小标签用（首页的「今日思考」、
+  /// 探索页的「全部」都是），按图形的 3:1 配会糊掉。由 `theme_style_contrast_test`
+  /// 对所有「风格 × 墨色 × 亮暗」的组合逐一钉死。
+  final Color light;
+
+  /// 暗色模式下的墨色。
+  final Color dark;
+
+  Color forBrightness(Brightness brightness) =>
+      brightness == Brightness.dark ? dark : light;
+
+  /// 持久化取值解析。认不出来时回退到 [fallback]（调用方传当前风格的
+  /// [ThemeStyle.defaultAccent]），不要在这里写死某一支。
+  static ThemeAccent fromName(String? name, ThemeAccent fallback) {
+    if (name == null) return fallback;
+    for (final accent in ThemeAccent.values) {
+      if (accent.name == name) return accent;
+    }
+    return fallback;
+  }
+}
+
+/// 一支墨在某套纸上的完整强调族。
+///
+/// 容器色是**调出来的**而不是逐个手写：`accent × 纸色` 的组合有
+/// 风格数 × 墨数 × 亮暗 这么多，手写一定会漏配、也一定会有人只改一半。
+/// 混合比例是两个常量，落地结果由测试逐组合验算。
+@immutable
+class ThemeAccentColors {
+  const ThemeAccentColors({
+    required this.accent,
+    required this.onAccent,
+    required this.container,
+    required this.onContainer,
+  });
+
+  /// 把一支墨落到一套纸上。
+  factory ThemeAccentColors.resolve(
+    ThemeAccent accent,
+    ThemeStyleColors colors,
+    Brightness brightness,
+  ) {
+    final isDark = brightness == Brightness.dark;
+    final base = accent.forBrightness(brightness);
+    return ThemeAccentColors(
+      accent: base,
+      // 强调色上的文字用纸色：亮色下是卡片（最白的那张纸），暗色下是页面底色。
+      onAccent: isDark ? colors.background : colors.card,
+      container: Color.lerp(
+        base,
+        colors.background,
+        isDark ? _containerMixDark : _containerMixLight,
+      )!,
+      onContainer: Color.lerp(
+        base,
+        colors.ink,
+        isDark ? _onContainerMixDark : _onContainerMixLight,
+      )!,
+    );
+  }
+
+  /// 容器 = 墨色往纸色里兑。比例是「还看得出是哪支墨」和「不喧宾夺主」之间的平衡：
+  /// 曾经试过 0.86，四支墨的容器色互相之间只差几个色阶，换墨等于没换。
+  static const _containerMixLight = 0.78;
+  static const _containerMixDark = 0.76;
+
+  /// 容器上的文字 = 墨色往正文墨里兑。暗色下容器本身已经很深，
+  /// 文字只需要往亮处挪一点点，兑太多会失去墨的颜色。
+  static const _onContainerMixLight = 0.55;
+  static const _onContainerMixDark = 0.32;
+
+  final Color accent;
+  final Color onAccent;
+  final Color container;
+  final Color onContainer;
 }
 
 /// 一种风格的形状、字体、阴影令牌。
@@ -261,7 +379,11 @@ class ThemeStyleForm {
     inputRadius: 4,
     fabRadius: 6,
     borderWidth: 1,
-    shadowOpacityLight: 0.03,
+    // 0.03 等于没有：纸墨的卡片和页面底色本来就只差一点点，投影再压到看不见，
+    // 首页那张大卡就成了一个「空框」。0.05 仍然明显比 material(0.06) 淡，
+    // 但足够让卡片从纸面上浮起来一层。层次的另一半由色板承担（card / background
+    // 的明度差已经从 1.06 拉到 1.14）。
+    shadowOpacityLight: 0.05,
     shadowOpacityDark: 0.14,
     shadowBlur: 6,
     // **必须等于正文行高**，不是随手挑的密度。曾经写死 26，而正文行高是 16×1.5=24，
@@ -269,7 +391,10 @@ class ThemeStyleForm {
     // 格子图」而不是「字写在纸上」。间距等于行高时，文字与横线的相对偏移恒定，
     // 纸感才立得住。
     ruleSpacing: _bodyLargeFontSize * _serifFontScale * _paperLineHeight,
-    ruleOpacity: 0.55,
+    // 0.55 是横线只画在正文块之前的取值。那时横线铺满整张卡（穿过日期行、图片、
+    // 标签胶囊和按钮行），画得淡一点也压不住乱；现在横线只画在正文那一块里，
+    // 反而要收着画——它是纸的底纹，不是表格线。
+    ruleOpacity: 0.4,
     fontFamily: 'serif',
     fontFamilyFallback: _systemSerifFallback,
     bodyLineHeight: _paperLineHeight,
@@ -287,7 +412,8 @@ class ThemeStyleForm {
     inputRadius: 2,
     fabRadius: 3,
     borderWidth: 1,
-    shadowOpacityLight: 0.02,
+    // 同纸墨：抬到肉眼能分辨卡片边界的最低档，仍然远淡于 material。
+    shadowOpacityLight: 0.035,
     shadowOpacityDark: 0.10,
     shadowBlur: 4,
     // 素笺是「素」的：不画横线。这也让两套手工风格除了颜色和圆角之外有了真正的差别。
@@ -455,6 +581,103 @@ class AppShapeTokens extends ThemeExtension<AppShapeTokens> {
   }
 }
 
+/// 把「页面底色 / 卡片底色 / 记录页底色 / 搜索框底色」四张自绘表面下发给 widget。
+///
+/// 这四处过去各自调 `ColorUtils.get*BackgroundColor(colorScheme.surface, brightness)`，
+/// 那套算法是围绕 **M3 生成色板** 写的：拿 surface 往白色兑一点当卡片、
+/// 暗色下直接写死一个中性灰当记录页底色。手工色板里「纸」和「卡片」是色板明确
+/// 给出的两档，兑出来的结果既不等于 `card`，暗色下更是把整套暖色纸换成了
+/// `0xFF2A2A2A` 这块与色板无关的灰——纸墨暗色下卡片和底色因此完全同色，层次直接塌掉。
+///
+/// 所以判据仍然是**取值**而不是风格身份：色板给了纸色就用纸色（[fromPalette]），
+/// 没给色板的走原来那套算法（[fromScheme]，material 的像素一个不变）。
+@immutable
+class AppSurfaceTokens extends ThemeExtension<AppSurfaceTokens> {
+  const AppSurfaceTokens({
+    required this.page,
+    required this.card,
+    required this.noteList,
+    required this.searchBox,
+  });
+
+  /// 手工色板：四张表面全部落在色板给的两档纸上。
+  ///
+  /// 记录页底色刻意等于页面底色——「卡片浮在纸面上」这个关系在亮暗两种模式下
+  /// 都由 [ThemeStyleColors.card] 比 [ThemeStyleColors.background] 亮来表达，
+  /// 不需要再单独给记录页配一层。
+  factory AppSurfaceTokens.fromPalette(ThemeStyleColors colors) =>
+      AppSurfaceTokens(
+        page: colors.background,
+        card: colors.card,
+        noteList: colors.background,
+        searchBox: Color.lerp(colors.card, colors.background, 0.5)!,
+      );
+
+  /// 生成色板（material）：保持迁移前 `ColorUtils` 的算法，逐字搬过来，
+  /// 所以 material 风格下这四张表面的像素与迁移前完全一致。
+  factory AppSurfaceTokens.fromScheme(
+    ColorScheme scheme,
+    Brightness brightness,
+  ) {
+    final surface = scheme.surface;
+    final isDark = brightness == Brightness.dark;
+    return AppSurfaceTokens(
+      page: isDark
+          ? surface
+          : Color.alphaBlend(surface.withValues(alpha: 0.82), Colors.white),
+      card: isDark ? surface : Color.lerp(surface, Colors.white, 0.08)!,
+      noteList: isDark
+          ? const Color(0xFF2A2A2A)
+          : Color.alphaBlend(surface.withValues(alpha: 0.3), Colors.white),
+      searchBox: Color.lerp(surface, Colors.white, isDark ? 0.05 : 0.04)!,
+    );
+  }
+
+  /// 页面通用底色（Scaffold）。
+  final Color page;
+
+  /// 自绘卡片底色（首页每日一言卡等）。
+  final Color card;
+
+  /// 记录页底色。
+  final Color noteList;
+
+  /// 搜索框底色。
+  final Color searchBox;
+
+  /// 主题未注册扩展时回退到 material 的取值，避免空断言崩溃。
+  static AppSurfaceTokens of(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.extension<AppSurfaceTokens>() ??
+        AppSurfaceTokens.fromScheme(theme.colorScheme, theme.brightness);
+  }
+
+  @override
+  AppSurfaceTokens copyWith({
+    Color? page,
+    Color? card,
+    Color? noteList,
+    Color? searchBox,
+  }) =>
+      AppSurfaceTokens(
+        page: page ?? this.page,
+        card: card ?? this.card,
+        noteList: noteList ?? this.noteList,
+        searchBox: searchBox ?? this.searchBox,
+      );
+
+  @override
+  AppSurfaceTokens lerp(ThemeExtension<AppSurfaceTokens>? other, double t) {
+    if (other is! AppSurfaceTokens) return this;
+    return AppSurfaceTokens(
+      page: Color.lerp(page, other.page, t)!,
+      card: Color.lerp(card, other.card, t)!,
+      noteList: Color.lerp(noteList, other.noteList, t)!,
+      searchBox: Color.lerp(searchBox, other.searchBox, t)!,
+    );
+  }
+}
+
 /// 把当前风格的排版令牌下发给 widget。
 ///
 /// 绝大多数排版已经由 `textTheme` 承载，widget 直接读 `theme.textTheme.*` 就够了。
@@ -515,16 +738,20 @@ class ThemeStyleColors {
     required this.outlineStrong,
     required this.ink,
     required this.inkMuted,
-    required this.accent,
-    required this.onAccent,
-    required this.accentContainer,
-    required this.onAccentContainer,
     required this.secondary,
     required this.tertiary,
     required this.danger,
     required this.onDanger,
     required this.dangerContainer,
     required this.onDangerContainer,
+    required this.success,
+    required this.successContainer,
+    required this.onSuccessContainer,
+    required this.warning,
+    required this.warningContainer,
+    required this.onWarningContainer,
+    required this.favorite,
+    required this.onFavorite,
   });
 
   /// 页面底色（纸）。
@@ -555,19 +782,10 @@ class ThemeStyleColors {
   /// 卡片上只有 6.76。
   final Color inkMuted;
 
-  /// 强调色。
-  final Color accent;
-
-  /// 绘制在 [accent] 之上的文字。
-  final Color onAccent;
-
-  /// 强调色的浅色容器。
-  final Color accentContainer;
-
-  /// 绘制在 [accentContainer] 之上的文字。
-  final Color onAccentContainer;
-
   /// 第二、第三辅助色，用于图表和分类标识。
+  ///
+  /// **不随墨色变**：它们的职责是「在一张图里彼此分得开」，跟着强调色一起转
+  /// 会让换墨顺带把图表配色也换掉，而且四支墨各自的第二三色还要再配一遍。
   final Color secondary;
   final Color tertiary;
 
@@ -578,28 +796,59 @@ class ThemeStyleColors {
   final Color dangerContainer;
   final Color onDangerContainer;
 
+  /// 状态语义色（成功 / 警告 / 收藏）。
+  ///
+  /// 过去这三组是**全局固定**的：`AppTheme` 无论什么风格都注册
+  /// `AppSemanticColors.light/dark`，那套值按 M3 的 tonal palette 配，
+  /// 落在暖色纸面上就是三块外来色——最扎眼的是笔记卡右下角那颗高饱和红心。
+  /// 它们和 [danger] 一样属于色板，不属于 Material。
+  ///
+  /// 收藏色仍然必须是红的（红心换成主题色就不是红心了），但可以是**这套纸上的**
+  /// 那支红：饱和度和明度跟着色板走，而不是照搬 M3 的 tone 40。
+  final Color success;
+  final Color successContainer;
+  final Color onSuccessContainer;
+  final Color warning;
+  final Color warningContainer;
+  final Color onWarningContainer;
+  final Color favorite;
+  final Color onFavorite;
+
+  /// 把色板里的状态色下发成主题扩展。material 风格没有色板，仍然用
+  /// [AppSemanticColors.light] / [AppSemanticColors.dark]，取值一个不变。
+  AppSemanticColors toSemanticColors() => AppSemanticColors(
+        success: success,
+        successContainer: successContainer,
+        onSuccessContainer: onSuccessContainer,
+        warning: warning,
+        warningContainer: warningContainer,
+        onWarningContainer: onWarningContainer,
+        favorite: favorite,
+        onFavorite: onFavorite,
+      );
+
   /// 映射到 Material 的 [ColorScheme]。
   ///
   /// surfaceContainer 那一族 M3 期望是一条由浅到深的连续梯度，手工色板只给了
   /// 「纸」和「卡片」两档，所以中间档按 [card] → [background] → [outline]
   /// 线性插值补齐，保证组件拿到的层次关系和 M3 一致。
-  ColorScheme toColorScheme(Brightness brightness) {
+  ColorScheme toColorScheme(Brightness brightness, ThemeAccentColors accent) {
     Color mix(Color a, Color b, double t) => Color.lerp(a, b, t)!;
 
     return ColorScheme(
       brightness: brightness,
-      primary: accent,
-      onPrimary: onAccent,
-      primaryContainer: accentContainer,
-      onPrimaryContainer: onAccentContainer,
+      primary: accent.accent,
+      onPrimary: accent.onAccent,
+      primaryContainer: accent.container,
+      onPrimaryContainer: accent.onContainer,
       secondary: secondary,
-      onSecondary: onAccent,
-      secondaryContainer: accentContainer,
-      onSecondaryContainer: onAccentContainer,
+      onSecondary: accent.onAccent,
+      secondaryContainer: accent.container,
+      onSecondaryContainer: accent.onContainer,
       tertiary: tertiary,
-      onTertiary: onAccent,
-      tertiaryContainer: accentContainer,
-      onTertiaryContainer: onAccentContainer,
+      onTertiary: accent.onAccent,
+      tertiaryContainer: accent.container,
+      onTertiaryContainer: accent.onContainer,
       error: danger,
       onError: onDanger,
       errorContainer: dangerContainer,
@@ -620,8 +869,8 @@ class ThemeStyleColors {
       scrim: const Color(0xFF000000),
       inverseSurface: ink,
       onInverseSurface: background,
-      inversePrimary: accentContainer,
-      surfaceTint: accent,
+      inversePrimary: accent.container,
+      surfaceTint: accent.accent,
     );
   }
 }
@@ -641,82 +890,104 @@ class ThemeStylePalette {
       brightness == Brightness.dark ? dark : light;
 
   /// 02 · 纸与墨（暖）。取值移植自官网 `res/style.css`。
+  ///
+  /// 页面底色比官网的 `#F9F6F0` 深了一档：那个值和卡片色（近白）只差
+  /// 1.06:1，卡片边界在真机上基本看不见，首页那张大卡看着像个空框。
+  /// 现在是 1.14:1——仍然是暖白纸，但「纸叠在桌面上」立得住了。
   static const paper = ThemeStylePalette(
     light: ThemeStyleColors(
-      background: Color(0xFFF9F6F0),
+      background: Color(0xFFF3EEE4),
       card: Color(0xFFFEFDFB),
-      outline: Color(0xFFE3D9CC),
-      outlineStrong: Color(0xFFD4C5B9),
+      outline: Color(0xFFDFD3C2),
+      outlineStrong: Color(0xFFCBBBA8),
       ink: Color(0xFF2C2416),
       inkMuted: Color(0xFF5E4C37),
-      accent: Color(0xFF8A6440),
-      onAccent: Color(0xFFFEFDFB),
-      accentContainer: Color(0xFFEFE4D6),
-      onAccentContainer: Color(0xFF4A3722),
       secondary: Color(0xFF9C5F35),
       tertiary: Color(0xFF4F7355),
       danger: Color(0xFF9B3B3B),
       onDanger: Color(0xFFFEFDFB),
-      dangerContainer: Color(0xFFF5DCDC),
+      dangerContainer: Color(0xFFF0DBD5),
       onDangerContainer: Color(0xFF5B1F1F),
+      success: Color(0xFF3D6B3F),
+      successContainer: Color(0xFFDFE7D5),
+      onSuccessContainer: Color(0xFF1E3520),
+      warning: Color(0xFF8A5A16),
+      warningContainer: Color(0xFFF2E3C8),
+      onWarningContainer: Color(0xFF4A2F05),
+      // 比 M3 的 0xFFB3204A 暗一档、饱和低一档：仍然一眼是红心，
+      // 但不再像贴在纸上的一块荧光。
+      favorite: Color(0xFFA8324A),
+      onFavorite: Color(0xFFFEFDFB),
     ),
     dark: ThemeStyleColors(
-      background: Color(0xFF2A2520),
-      card: Color(0xFF342E28),
+      background: Color(0xFF231F1A),
+      card: Color(0xFF332D27),
       outline: Color(0xFF4A4037),
       outlineStrong: Color(0xFF5D5147),
       ink: Color(0xFFE8DFD5),
       inkMuted: Color(0xFFCBBEB0),
-      accent: Color(0xFFC9A077),
-      onAccent: Color(0xFF2A2520),
-      accentContainer: Color(0xFF423931),
-      onAccentContainer: Color(0xFFE0C9AE),
       secondary: Color(0xFFD4895B),
       tertiary: Color(0xFF7CA982),
       danger: Color(0xFFE49595),
-      onDanger: Color(0xFF2A2520),
+      onDanger: Color(0xFF231F1A),
       dangerContainer: Color(0xFF4E2C2C),
       onDangerContainer: Color(0xFFF2C7C7),
+      success: Color(0xFF9CC59A),
+      successContainer: Color(0xFF2F3A2C),
+      onSuccessContainer: Color(0xFFCDE3C7),
+      warning: Color(0xFFDFB273),
+      warningContainer: Color(0xFF40331E),
+      onWarningContainer: Color(0xFFF2DCB8),
+      favorite: Color(0xFFE79AA6),
+      onFavorite: Color(0xFF231F1A),
     ),
   );
 
   /// 03 · 素笺（冷）。为避开暖调而专门配的一套。
   static const plain = ThemeStylePalette(
     light: ThemeStyleColors(
-      background: Color(0xFFF4F4F2),
+      background: Color(0xFFEDEDEA),
       card: Color(0xFFFBFBFA),
-      outline: Color(0xFFDCDCD8),
-      outlineStrong: Color(0xFFC4C4BF),
+      outline: Color(0xFFD8D8D3),
+      outlineStrong: Color(0xFFBEBEB8),
       ink: Color(0xFF1F2124),
-      inkMuted: Color(0xFF4C5054),
-      accent: Color(0xFF3F5D5B),
-      onAccent: Color(0xFFFBFBFA),
-      accentContainer: Color(0xFFE3EAE9),
-      onAccentContainer: Color(0xFF233937),
+      inkMuted: Color(0xFF484C50),
       secondary: Color(0xFF56646F),
       tertiary: Color(0xFF6B664F),
       danger: Color(0xFF8F3A3A),
       onDanger: Color(0xFFFBFBFA),
-      dangerContainer: Color(0xFFF2DDDD),
+      dangerContainer: Color(0xFFEEDBDB),
       onDangerContainer: Color(0xFF541E1E),
+      success: Color(0xFF2F6047),
+      successContainer: Color(0xFFD9E6DE),
+      onSuccessContainer: Color(0xFF163427),
+      warning: Color(0xFF7A5720),
+      warningContainer: Color(0xFFEFE2CB),
+      onWarningContainer: Color(0xFF42300C),
+      favorite: Color(0xFF9C3350),
+      onFavorite: Color(0xFFFBFBFA),
     ),
     dark: ThemeStyleColors(
-      background: Color(0xFF17191A),
+      background: Color(0xFF131516),
       card: Color(0xFF1F2224),
       outline: Color(0xFF313436),
       outlineStrong: Color(0xFF454A4D),
       ink: Color(0xFFE6E7E8),
       inkMuted: Color(0xFFAAB0B5),
-      accent: Color(0xFF8FB5B0),
-      onAccent: Color(0xFF17191A),
-      accentContainer: Color(0xFF26302F),
-      onAccentContainer: Color(0xFFB3D1CD),
       secondary: Color(0xFF9AA8B4),
       tertiary: Color(0xFFB0A98F),
       danger: Color(0xFFE09A9A),
-      onDanger: Color(0xFF17191A),
+      onDanger: Color(0xFF131516),
       dangerContainer: Color(0xFF452626),
       onDangerContainer: Color(0xFFF0C9C9),
+      success: Color(0xFF93C7AC),
+      successContainer: Color(0xFF23332B),
+      onSuccessContainer: Color(0xFFC6E3D4),
+      warning: Color(0xFFD8B57F),
+      warningContainer: Color(0xFF38301F),
+      onWarningContainer: Color(0xFFEEDCBC),
+      favorite: Color(0xFFE39BAA),
+      onFavorite: Color(0xFF131516),
     ),
   );
 }

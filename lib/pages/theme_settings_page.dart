@@ -160,6 +160,50 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
               ),
             ),
           ),
+          // 墨色只对手工色板生效：material 走取色算法，强调色由动态取色或
+          // 自定义 seed 决定。两组设置互补，任何一种风格下都有一块可调的东西，
+          // 不会出现「选了这个风格就少两块设置」。
+          if (!appTheme.themeStyle.isGenerated)
+            Card(
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).cardRadius),
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.outline,
+                  width: 1,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.themeAccent,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.themeAccentDesc,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        for (final accent in ThemeAccent.values)
+                          _buildAccentOption(context, appTheme, accent, l10n),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           // 自定义色和动态取色只对 material 生效，手工色板下藏起来，
           // 免得用户以为开关坏了。
           if (appTheme.themeStyle.isGenerated)
@@ -448,6 +492,71 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 墨色色块。
+  ///
+  /// 色块颜色走 [AppTheme.colorSchemeFor] 并显式传入这一支墨——和风格预览同一个道理：
+  /// 读 `theme.colorScheme.primary` 只能拿到当前生效的那支，四个色块会全长一样。
+  Widget _buildAccentOption(
+    BuildContext context,
+    AppTheme appTheme,
+    ThemeAccent accent,
+    AppLocalizations l10n,
+  ) {
+    final theme = Theme.of(context);
+    final selected = appTheme.themeAccent == accent;
+    final color = appTheme
+        .colorSchemeFor(appTheme.themeStyle, theme.brightness, accent: accent)
+        .primary;
+    final label = themeAccentLabel(l10n, accent);
+
+    return Semantics(
+      selected: selected,
+      button: true,
+      inMutuallyExclusiveGroup: true,
+      label: label,
+      child: Tooltip(
+        message: label,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(
+            AppShapeTokens.of(context).buttonRadius,
+          ),
+          onTap: () => appTheme.setThemeAccent(accent),
+          child: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(
+                AppShapeTokens.of(context).buttonRadius,
+              ),
+              border: Border.all(
+                color: selected
+                    ? theme.colorScheme.onSurface
+                    : theme.colorScheme.outlineVariant,
+                width: selected ? 3 : 1,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: selected
+                ? Icon(
+                    Icons.check,
+                    // 色块本身就是强调色，勾用「强调色上的文字」那一档，
+                    // 对比度由色板测试保证。
+                    color: appTheme
+                        .colorSchemeFor(
+                          appTheme.themeStyle,
+                          theme.brightness,
+                          accent: accent,
+                        )
+                        .onPrimary,
+                  )
+                : null,
           ),
         ),
       ),

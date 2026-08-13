@@ -399,6 +399,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     required bool isExpanded,
     required Color primaryTextColor,
     required bool backdropBlurDisabled,
+    required bool paperRulesDisabled,
     required AppLocalizations l10n,
   }) {
     return Padding(
@@ -440,6 +441,11 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             ),
           );
 
+          final animatedContent = _buildAnimatedQuoteContent(
+            innerTheme: innerTheme,
+            child: contentChild,
+          );
+
           return GestureDetector(
             key: widget.foldToggleGuideKey ??
                 const ValueKey('quote_item.double_tap_region'),
@@ -450,10 +456,23 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                       canExpand: needsExpansion,
                     )
                 : null,
-            child: _buildAnimatedQuoteContent(
-              innerTheme: innerTheme,
-              child: contentChild,
-            ),
+            // 纸张横线**只画在正文这一块**，不铺满整张卡片。
+            //
+            // 铺满整卡时横线会穿过日期天气行、图片、标签胶囊和按钮行，而且相位对不上：
+            // 线从卡片顶边开始等距排，正文却从头部行下面才开始，于是每一行字都骑在
+            // 线的中腰上——看着就是「卡片背了一张格子图」。间距等于行高只解决了
+            // 行与行之间不漂移，解决不了整体相位。
+            //
+            // 画在正文块上，横线第一条正好落在第一行的行底（painter 从
+            // topInset + spacing 起画，而正文首行的行盒顶就是 y=0），后面每一条都
+            // 落在行与行之间。圆角传 zero：这里已经在卡片的圆角裁切之内了。
+            // 正文里的图片和展开蒙层都画在 painter 之上，会自然盖住横线。
+            child: paperRulesDisabled
+                ? animatedContent
+                : PaperRuleBackground(
+                    borderRadius: BorderRadius.zero,
+                    child: animatedContent,
+                  ),
           );
         },
       ),
@@ -940,6 +959,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             isExpanded: isExpanded,
             primaryTextColor: primaryTextColor,
             backdropBlurDisabled: backdropBlurDisabled,
+            paperRulesDisabled: visualEffectsDisabled,
             l10n: l10n,
           ),
 
@@ -1329,14 +1349,9 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         ],
       ),
     );
-    // 纸张横线纹理：ruleSpacing 为 0 的风格（material / 素笺）下这层会原样返回 child，
-    // 不产生额外的绘制层，所以折叠态卡片的 RepaintBoundary 缓存收益不受影响。
-    final Widget ruledChild = visualEffectsDisabled
-        ? cardChild
-        : PaperRuleBackground(
-            borderRadius: cardRadius,
-            child: cardChild,
-          );
+    // 纸张横线纹理**不在这一层**：它只画在正文块上（见 _buildQuoteContentSection），
+    // 铺满整张卡会穿过头部元信息、图片和按钮行。这层保持纯壳，
+    // 折叠态卡片的 RepaintBoundary 缓存收益也就不受影响。
     final shouldAnimateCardShell = widget.selectionMode || isExpanded;
     final Widget card;
     if (shouldAnimateCardShell) {
@@ -1344,7 +1359,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         duration: const Duration(milliseconds: 200),
         margin: cardMargin,
         decoration: cardDecoration,
-        child: ruledChild,
+        child: cardChild,
       );
     } else {
       // 性能优化（第一步）：折叠态静态卡片用 RepaintBoundary 隔离绘制。
@@ -1356,7 +1371,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         child: Container(
           margin: cardMargin,
           decoration: cardDecoration,
-          child: ruledChild,
+          child: cardChild,
         ),
       );
     }
