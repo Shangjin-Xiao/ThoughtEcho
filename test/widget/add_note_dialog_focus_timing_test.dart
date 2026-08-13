@@ -329,6 +329,67 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
   });
 
+  testWidgets('cancel button warns about unsaved changes', (tester) async {
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<FeatureGuideService>(
+            create: (_) => _MockFeatureGuideService(),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => AddNoteDialog(
+                      tags: const [],
+                      onSave: (_) {},
+                    ),
+                  );
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, '还没保存的内容');
+    await tester.pump();
+
+    // 「取消」以前直接 Navigator.pop，绕过 PopScope 的未保存确认，内容当场丢掉。
+    await tester.tap(find.widgetWithText(FilledButton, '取消'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('未保存的内容'), findsOneWidget);
+    expect(find.byType(AddNoteDialog), findsOneWidget);
+
+    // 选「继续编辑」应该留在弹窗里，内容还在。
+    await tester.tap(find.widgetWithText(TextButton, '继续编辑'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AddNoteDialog), findsOneWidget);
+    expect(find.text('还没保存的内容'), findsOneWidget);
+
+    // 再点一次取消并放弃，弹窗才关闭。
+    await tester.tap(find.widgetWithText(FilledButton, '取消'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, '放弃更改'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AddNoteDialog), findsNothing);
+  });
+
   testWidgets('does not warn about unsaved changes when editing unchanged note',
       (tester) async {
     final initialQuote = Quote(

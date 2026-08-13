@@ -2077,6 +2077,33 @@ class _AddNoteDialogState extends State<AddNoteDialog>
     return result;
   }
 
+  /// 关闭弹窗的统一入口。
+  ///
+  /// PopScope 只拦得住系统返回键：`Navigator.pop` 不走 popDisposition，
+  /// 所以「取消」按钮以前是直接把路由弹掉的，未保存确认整个被绕过去。
+  /// 两条路都改走这里。
+  Future<void> _handleCloseRequest() async {
+    if (!mounted) return;
+
+    // 检查是否有未保存的更改
+    if (!_hasUnsavedChanges()) {
+      Navigator.pop(context);
+      return;
+    }
+
+    // 显示确认对话框
+    final dialogResult = await _showUnsavedChangesDialog();
+    if (!mounted) return;
+    if (dialogResult == true) {
+      // 用户选择放弃更改
+      Navigator.pop(context);
+    } else if (dialogResult == 'save') {
+      // 用户选择保存并退出
+      await _saveAndExit();
+    }
+    // dialogResult == null: 继续编辑，不做任何操作
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_dialogPerfRecording) {
@@ -2088,27 +2115,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
 
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-
-        // 检查是否有未保存的更改
-        if (!_hasUnsavedChanges()) {
-          if (context.mounted) {
-            Navigator.pop(context);
-          }
-          return;
-        }
-
-        // 显示确认对话框
-        final dialogResult = await _showUnsavedChangesDialog();
-        if (dialogResult == true && context.mounted) {
-          // 用户选择放弃更改
-          Navigator.pop(context);
-        } else if (dialogResult == 'save') {
-          // 用户选择保存并退出
-          await _saveAndExit();
-        }
-        // dialogResult == null: 继续编辑，不做任何操作
+        unawaited(_handleCloseRequest());
       },
       child: KeyboardInsetPadding(
         onInsetBuild: _onKeyboardInsetBuild,
@@ -2722,7 +2731,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                         ),
                       const Spacer(),
                       FilledButton.tonal(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => unawaited(_handleCloseRequest()),
                         child: Text(l10n.cancel),
                       ),
                       const SizedBox(width: 8),
