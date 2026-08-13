@@ -46,11 +46,8 @@ extension _NoteListItemsExtension on NoteListViewState {
     // 布局构建
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 主体内容 - 使用极浅主题色背景，适配深色模式
-        final backgroundColor = ColorUtils.getNoteListBackgroundColor(
-          theme.colorScheme.surface,
-          theme.brightness,
-        );
+        // 主体内容 - 底色由主题下发：手工色板用自己的纸色，material 保持原算法。
+        final backgroundColor = AppSurfaceTokens.of(context).noteList;
 
         Widget mainContent = Center(
           child: ConstrainedBox(
@@ -82,10 +79,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                           hintText: l10n.searchNotes,
                           isDense: true,
                           filled: true,
-                          fillColor: ColorUtils.getSearchBoxBackgroundColor(
-                            theme.colorScheme.surface,
-                            theme.brightness,
-                          ),
+                          fillColor: AppSurfaceTokens.of(context).searchBox,
                           prefixIcon: const Icon(Icons.search),
                           suffixIcon: Row(
                             mainAxisSize: MainAxisSize.min,

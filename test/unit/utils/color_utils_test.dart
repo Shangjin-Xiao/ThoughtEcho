@@ -70,76 +70,7 @@ void main() {
       expect(result.a, 1.0);
     });
 
-    group('Theme-based colors', () {
-      const surfaceColor = Colors.white;
-
-      test('getPageBackgroundColor handles brightness', () {
-        // Dark mode
-        expect(
-          ColorUtils.getPageBackgroundColor(surfaceColor, Brightness.dark),
-          surfaceColor,
-        );
-
-        // Light mode
-        final expectedLight = Color.alphaBlend(
-          ColorUtils.withOpacitySafe(surfaceColor, 0.82),
-          Colors.white,
-        );
-        expect(
-          ColorUtils.getPageBackgroundColor(surfaceColor, Brightness.light),
-          expectedLight,
-        );
-      });
-
-      test('getCardBackgroundColor handles brightness', () {
-        // Dark mode
-        expect(
-          ColorUtils.getCardBackgroundColor(surfaceColor, Brightness.dark),
-          surfaceColor,
-        );
-
-        // Light mode
-        final expectedLight = Color.lerp(surfaceColor, Colors.white, 0.08)!;
-        expect(
-          ColorUtils.getCardBackgroundColor(surfaceColor, Brightness.light),
-          expectedLight,
-        );
-      });
-
-      test('getNoteListBackgroundColor handles brightness', () {
-        // Dark mode
-        expect(
-          ColorUtils.getNoteListBackgroundColor(surfaceColor, Brightness.dark),
-          const Color(0xFF2A2A2A),
-        );
-
-        // Light mode
-        final expectedLight = Color.alphaBlend(
-          ColorUtils.withOpacitySafe(surfaceColor, 0.3),
-          Colors.white,
-        );
-        expect(
-          ColorUtils.getNoteListBackgroundColor(surfaceColor, Brightness.light),
-          expectedLight,
-        );
-      });
-
-      test('getSearchBoxBackgroundColor handles brightness', () {
-        // Dark mode
-        final expectedDark = Color.lerp(surfaceColor, Colors.white, 0.05)!;
-        expect(
-          ColorUtils.getSearchBoxBackgroundColor(surfaceColor, Brightness.dark),
-          expectedDark,
-        );
-
-        // Light mode
-        final expectedLight = Color.lerp(surfaceColor, Colors.white, 0.04)!;
-        expect(
-          ColorUtils.getSearchBoxBackgroundColor(
-              surfaceColor, Brightness.light),
-          expectedLight,
-        );
-      });
-    });
+    // 页面/卡片/记录页/搜索框四张表面的取值已经搬到 AppSurfaceTokens，
+    // 对应的断言在 test/unit/theme/theme_style_contrast_test.dart。
   });
 }

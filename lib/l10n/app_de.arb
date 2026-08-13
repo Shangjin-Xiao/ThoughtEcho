@@ -95,5 +95,11 @@
   "themeStylePlainDesc": "Kühlgraues Papier, tiefes Petrol",
   "themeStyleGroupSignature": "ThoughtEcho-Stile",
   "themeStyleGroupSystem": "Systemfarben",
+  "themeAccent": "Tintenfarbe",
+  "themeAccentDesc": "Anderer Stift, gleiches Papier",
+  "themeAccentUmber": "Umbra",
+  "themeAccentCeladon": "Seladon",
+  "themeAccentIndigo": "Indigo",
+  "themeAccentCinnabar": "Zinnober",
   "onboardingThemeStyleNotice": "Das Erscheinungsbild ist jetzt „{style}“. Für Systemfarben wähle Material unter Einstellungen → Themeneinstellungen."
 }

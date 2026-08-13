@@ -242,5 +242,60 @@ void main() {
       expect(appTheme.customColor, Colors.red);
       expect(probe.color, expected);
     });
+
+    testWidgets('handmade styles get an ink picker instead of nothing', (
+      tester,
+    ) async {
+      final appTheme = AppTheme();
+      await appTheme.setThemeStyle(ThemeStyle.paper);
+
+      await tester.pumpWidget(buildTestApp(appTheme));
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(ThemeSettingsPage)),
+      );
+
+      // 手工风格过去一块可调的设置都没有：动态取色和自定义主色都被 isGenerated
+      // 挡掉了，「选它就等于少功能」。墨色补的正是这一格。
+      await tester.scrollUntilVisible(find.text(l10n.themeAccent), 200);
+      await tester.pumpAndSettle();
+
+      expect(appTheme.themeAccent, ThemeStyle.paper.defaultAccent);
+      final surfaceBefore = appTheme.lightColorScheme.surface;
+      final primaryBefore = appTheme.lightColorScheme.primary;
+
+      final indigo = find.byTooltip(
+        themeAccentLabel(l10n, ThemeAccent.indigo),
+      );
+      expect(indigo, findsOneWidget);
+      await tester.ensureVisible(indigo);
+      await tester.pumpAndSettle();
+      await tester.tap(indigo);
+      await tester.pumpAndSettle();
+
+      expect(appTheme.themeAccent, ThemeAccent.indigo);
+      // 换的是墨，不是纸：强调色变了，底色一格不动。
+      expect(appTheme.lightColorScheme.primary, isNot(primaryBefore));
+      expect(appTheme.lightColorScheme.surface, surfaceBefore);
+
+      final probe = tester.widget<Container>(find.byKey(primaryColorKey));
+      expect(probe.color, appTheme.lightColorScheme.primary);
+    });
+
+    testWidgets('ink picker stays hidden for generated styles', (tester) async {
+      final appTheme = AppTheme();
+      await appTheme.setThemeStyle(ThemeStyle.material);
+
+      await tester.pumpWidget(buildTestApp(appTheme));
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(ThemeSettingsPage)),
+      );
+      // material 的强调色由取色算法决定，墨色对它没有意义——两组设置互补，
+      // 不是叠加。
+      expect(find.text(l10n.themeAccent), findsNothing);
+    });
   });
 }

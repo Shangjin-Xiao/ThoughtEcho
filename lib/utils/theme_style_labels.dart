@@ -17,3 +17,12 @@ import '../theme/theme_style.dart';
       ThemeStyle.paper => (l10n.themeStylePaper, l10n.themeStylePaperDesc),
       ThemeStyle.plain => (l10n.themeStylePlain, l10n.themeStylePlainDesc),
     };
+
+/// 墨色的显示名。同上：switch 穷尽，加新墨色时这里会编译报错。
+String themeAccentLabel(AppLocalizations l10n, ThemeAccent accent) =>
+    switch (accent) {
+      ThemeAccent.umber => l10n.themeAccentUmber,
+      ThemeAccent.celadon => l10n.themeAccentCeladon,
+      ThemeAccent.indigo => l10n.themeAccentIndigo,
+      ThemeAccent.cinnabar => l10n.themeAccentCinnabar,
+    };
