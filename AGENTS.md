@@ -342,13 +342,31 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
 
 ## 文档维护
 
-- 开发者文档：`AGENTS.md`、各子目录 `AGENTS.md`、`README.md`
+- 开发者文档：`AGENTS.md`（本文件即旧 `CLAUDE.md` 的替代，不要另建 `CLAUDE.md`）、
+  各子目录 `AGENTS.md`、`README.md`
 - 双语用户手册：`docs/USER_MANUAL.md`
 - 应用内手册：`assets/docs/user_manual_zh.md`、`assets/docs/user_manual_en.md`
 - 网站：`res/index.html`、`res/user-guide.html`
 
 只有用户可见行为变化时才同步用户文档，并同时维护中英文内容；纯内部重构只更新确实受影响
 的开发者文档。禁止描述尚未实现的功能，除非明确标为路线图。
+
+### 历史记录去哪里找
+
+动手改一块**已经被优化过或返工过**的代码之前，先翻这两处，别从零推一遍别人踩过的坑：
+
+- `docs/` —— 按主题的交接与审计文档，文件名带日期。性能、主题、同步、Thoughter
+  各有一串，例如 `docs/note-list-perf-handoff-2026-08-12.md` →
+  `docs/note-list-perf-analysis-2026-08-13.md` 是同一条线的连续两份。
+- `.squad/` —— **AI 团队的过程记录**，比 `docs/` 更细也更早：
+  - `.squad/decisions.md`：所有重要决策的权威记录，带日期和决策人；
+  - `.squad/*_handoff.md`：单轮任务的交接（字体重构、记录页冷启动、
+    新增笔记弹窗性能等）；
+  - `.squad/agents/<name>/history.md`：各角色的工作历史；
+  - `.squad/log/`、`.squad/casting/`：会话日志与角色分派记录。
+
+  这些是**过程档案**，不是规范：与本文件冲突时以本文件为准，但「为什么当初这么做」
+  基本只在 `.squad/` 里写着。
 
 ## Git、隐私与提交
 
