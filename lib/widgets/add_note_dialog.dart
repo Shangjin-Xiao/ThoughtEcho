@@ -2140,6 +2140,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                   Stack(
                     children: [
                       TextField(
+                        key: const ValueKey('add_note_content_field'),
                         controller: _contentController,
                         focusNode: _contentFocusNode,
                         maxLength: 10000,
