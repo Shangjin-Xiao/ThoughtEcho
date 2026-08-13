@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
@@ -5,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/local_ai_settings.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
@@ -381,6 +384,77 @@ void main() {
     expect(saved, isNotNull, reason: '取消掉的定位不该再把保存拖住');
     expect(saved!.latitude, isNull);
     expect(saved!.location, isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 600));
+  });
+
+  testWidgets('键盘 inset 逐帧变化时复用同一棵主体', (WidgetTester tester) async {
+    addTearDown(tester.view.reset);
+
+    // 真实调用方传的是 `UnmodifiableListView get tags` 这种 getter，
+    // 每次取值都是新的包装对象，不能拿它的 identity 当入参变化的判据。
+    final sourceTags = <NoteTag>[
+      NoteTag(id: 'tag-1', name: '标签一', iconName: 'tag'),
+    ];
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(
+            value: _TestSettingsService(autoAttachLocation: false),
+          ),
+          ChangeNotifierProvider<DatabaseService>.value(
+            value: _TestDatabaseService(),
+          ),
+          ChangeNotifierProvider<FeatureGuideService>.value(
+            value: _TestFeatureGuideService(),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => AddNoteDialog(
+                    tags: UnmodifiableListView(sourceTags),
+                    onSave: (_) {},
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    // 缓存命中就还是原来那个 Widget 实例，Flutter 才会整棵子树跳过 diff；
+    // 失效的话每帧都会换成新构造的对象。
+    const contentField = ValueKey('add_note_content_field');
+    final before = tester.widget<TextField>(find.byKey(contentField));
+
+    // 模拟键盘弹起的中间几帧：inset 在变，弹窗自身状态没有任何变化。
+    for (final inset in <double>[60, 140, 220, 300]) {
+      tester.view.viewInsets = FakeViewPadding(bottom: inset);
+      await tester.pump();
+    }
+
+    final after = tester.widget<TextField>(find.byKey(contentField));
+
+    expect(
+      identical(before, after),
+      isTrue,
+      reason: '键盘每动一帧都重建整棵主体，缓存没命中',
+    );
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 600));
