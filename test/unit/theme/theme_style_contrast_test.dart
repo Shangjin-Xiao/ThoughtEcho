@@ -66,6 +66,17 @@ void main() {
           });
         }
 
+        // 第二三辅助色不随墨色变，但 `toColorScheme` 把 onSecondary / onTertiary
+        // 映射到了强调族的 onAccent（也就是纸色）。那一对过去没有任何断言覆盖，
+        // 改 secondary 的色值时不会有人发现文字已经压在底下了。
+        test('$label 辅助色上的文字可读', () {
+          final onAuxiliary =
+              brightness == Brightness.dark ? colors.background : colors.card;
+          expectContrast(
+              onAuxiliary, colors.secondary, 4.5, '$label 第二辅助色上的文字');
+          expectContrast(onAuxiliary, colors.tertiary, 4.5, '$label 第三辅助色上的文字');
+        });
+
         test('$label 危险状态可读', () {
           expectContrast(colors.onDanger, colors.danger, 4.5, '$label 危险上的文字');
           expectContrast(colors.onDangerContainer, colors.dangerContainer, 4.5,
@@ -166,19 +177,37 @@ void main() {
         for (final brightness in Brightness.values) {
           final colors = palette.forBrightness(brightness);
           final semantic = colors.toSemanticColors();
-          expect(semantic.success, colors.success);
-          expect(semantic.favorite, colors.favorite);
-          // 借用 M3 那套固定值正是这次要修的问题，逐项对一遍防止有人改回去。
+          final label = '${style.name} / ${brightness.name}';
+          // 八个字段全部对一遍：漏掉任何一个，那一项悄悄改回 M3 取值都测不出来。
+          expect(semantic.success, colors.success, reason: '$label success');
+          expect(semantic.successContainer, colors.successContainer,
+              reason: '$label successContainer');
+          expect(semantic.onSuccessContainer, colors.onSuccessContainer,
+              reason: '$label onSuccessContainer');
+          expect(semantic.warning, colors.warning, reason: '$label warning');
+          expect(semantic.warningContainer, colors.warningContainer,
+              reason: '$label warningContainer');
+          expect(semantic.onWarningContainer, colors.onWarningContainer,
+              reason: '$label onWarningContainer');
+          expect(semantic.favorite, colors.favorite, reason: '$label favorite');
+          expect(semantic.onFavorite, colors.onFavorite,
+              reason: '$label onFavorite');
+
+          // 借用 M3 那套固定值正是这次要修的问题：三个前景色都不能等于它。
           final m3 = brightness == Brightness.dark
               ? AppSemanticColors.dark
               : AppSemanticColors.light;
           expect(semantic.favorite, isNot(m3.favorite),
-              reason: '${style.name} / ${brightness.name} 的收藏色还是 M3 那支');
+              reason: '$label 的收藏色还是 M3 那支');
+          expect(semantic.success, isNot(m3.success),
+              reason: '$label 的成功色还是 M3 那支');
+          expect(semantic.warning, isNot(m3.warning),
+              reason: '$label 的警告色还是 M3 那支');
         }
       }
     });
 
-    test('自绘表面跟着色板走：手工风格用纸色，material 保持原算法', () {
+    test('手工风格的自绘表面全部落在色板给的纸上', () {
       for (final style in ThemeStyle.values) {
         final palette = style.palette;
         if (palette == null) continue;
@@ -189,11 +218,18 @@ void main() {
           expect(surfaces.page, colors.background);
           // 暗色下曾经写死 0xFF2A2A2A，把整套暖色纸换成一块与色板无关的灰。
           expect(surfaces.noteList, colors.background);
+          expect(surfaces.searchBox,
+              Color.lerp(colors.card, colors.background, 0.5));
         }
       }
+    });
 
-      // material 那条路仍然是迁移前 ColorUtils 的算法，逐值对一遍。
+    test('material 的自绘表面保持迁移前 ColorUtils 的算法', () {
+      // 这一条保护的是「迁移不改变 material 观感」：四个系数都是从
+      // ColorUtils 逐字搬过来的，改动其中任何一个都会让 material 的页面变色。
       const surface = Color(0xFF102030);
+      const white = Color(0xFFFFFFFF);
+
       final dark = AppSurfaceTokens.fromScheme(
         const ColorScheme.dark(surface: surface),
         Brightness.dark,
@@ -201,8 +237,18 @@ void main() {
       expect(dark.page, surface);
       expect(dark.card, surface);
       expect(dark.noteList, const Color(0xFF2A2A2A));
-      expect(
-          dark.searchBox, Color.lerp(surface, const Color(0xFFFFFFFF), 0.05));
+      expect(dark.searchBox, Color.lerp(surface, white, 0.05));
+
+      final light = AppSurfaceTokens.fromScheme(
+        const ColorScheme.light(surface: surface),
+        Brightness.light,
+      );
+      expect(light.page,
+          Color.alphaBlend(surface.withValues(alpha: 0.82), Colors.white));
+      expect(light.card, Color.lerp(surface, white, 0.08));
+      expect(light.noteList,
+          Color.alphaBlend(surface.withValues(alpha: 0.3), Colors.white));
+      expect(light.searchBox, Color.lerp(surface, white, 0.04));
     });
 
     // 卡片色刻意不落在 M3 的 surfaceContainer 梯度上。
