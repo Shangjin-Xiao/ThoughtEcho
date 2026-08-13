@@ -77,18 +77,21 @@ void main() {
       expect(NoteListView.shouldKeepAliveQuoteItem(quote), isTrue);
     });
 
-    test('正文里写了 "image" 这串字的短笔记不保活', () {
-      // 判定改走 DeltaMediaCache 之前，这里是 `deltaContent.contains('"image"')`，
-      // 于是一条只是在讨论 JSON 字段名的短笔记会被误判成「有媒体」而永久保活——
-      // 白白钉在 element 树上，每次 setState 陪着重建一遍。
+    test('保活口径由媒体解析决定，不由子串扫描决定', () {
+      // 判定原本是三次 `deltaContent.contains(...)`，现在走 DeltaMediaCache。
+      // 这里钉住「子串出现 ≠ 有媒体」：`image` 只是某个 op 的属性名时，
+      // 子串扫描会当成有媒体而永久保活，解析不会。
       final delta = jsonEncode([
-        {'insert': '这个 {"image": "..."} 字段该怎么存\n'},
+        {
+          'insert': '短笔记\n',
+          'attributes': {'image': 'not-an-embed'},
+        },
       ]);
       expect(delta.contains('"image"'), isTrue);
 
       final quote = _quote(
-        id: 'talks-about-image',
-        content: '这个 {"image": "..."} 字段该怎么存',
+        id: 'image-attribute-only',
+        content: '短笔记',
         deltaContent: delta,
         editSource: 'fullscreen',
       );

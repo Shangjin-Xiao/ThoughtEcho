@@ -364,8 +364,10 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
   - `.squad/agents/<name>/history.md`：各角色的工作历史；
   - `.squad/log/`、`.squad/casting/`：会话日志与角色分派记录。
 
-  这些是**过程档案**，不是规范：与本文件冲突时以本文件为准，但「为什么当初这么做」
-  基本只在 `.squad/` 里写着。
+  这些是**过程档案**，不是规范，也不能直接当实现依据——里面有大量后来被推翻的中间
+  判断。只用来追溯「为什么当初这么做」，那个信息基本只在 `.squad/` 里写着。
+  与当前代码、本文件或 `docs/` 下的最终交接文档冲突时，一律以当前实现和最终交接
+  文档为准（`.squad/decisions.md` 说的「权威」是指它在 `.squad/` 内部权威）。
 
 ## Git、隐私与提交
 

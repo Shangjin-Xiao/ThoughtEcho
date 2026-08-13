@@ -116,9 +116,9 @@ class NoteListView extends StatefulWidget {
     }
 
     // 走缓存，**不要**退回 `deltaContent.contains('"image"')` 那一套。
-    // 这个方法在 `_shouldKeepAliveNoteListItem` 里被每次条目构建各调一次，
-    // 三次 `contains` 就是三次全量扫描整份 delta JSON，正文越长越贵；
-    // 而且口径也不对——正文里正好写了 `"image"` 这串字的笔记会被误判成有媒体。
+    // 这个方法在 `_shouldKeepAliveNoteListItem` 里被每次条目构建调一次，
+    // 三次 `contains` 就是三次全量扫描整份 delta JSON，正文越长越贵，
+    // 而且每次构建都要重扫一遍——结果一次都不复用。
     if (DeltaMediaCache.hasMediaOf(deltaContent)) {
       return true;
     }

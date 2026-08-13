@@ -166,7 +166,10 @@ class QuoteContent extends StatelessWidget {
   static const double _lineSpacing = 4.0;
   static const int _averageCharsPerLine = 28;
 
-  /// 纯文本折叠预览的行数硬上限，防畸形字号（`fontSize: 0.1`）把预算算成天文数字。
+  /// 纯文本折叠预览的行数上限。
+  ///
+  /// 折叠盒 160px 配一个正常字号也就十几行，这个值只防畸形样式（`fontSize: 0.1`）
+  /// 把预算算成天文数字。**超过它不是夹到它**——见 [collapsedPlainTextMaxLines]。
   static const int _maxCollapsedPlainTextLines = 64;
 
   /// 拿不到字号时的兜底，取 Material `bodyLarge` 的默认值。
@@ -181,11 +184,19 @@ class QuoteContent extends StatelessWidget {
   /// 真实行高由字体的 ascent/descent 决定，普遍是字号的 1.2~1.4 倍，恒不小于这里
   /// 算的值；于是 `ceil(limit / 下界) + 1` 行的真实高度恒 > limit。
   ///
+  /// 返回 null 表示**不要设 `maxLines`**。算不出可信预算时只能退回「整篇都排」：
+  /// 那只是慢，而夹一个盖不住盒子的行数会真的截断正文。两种情况会退回 null：
+  ///
+  /// - 行高非有限或 ≤ 0（畸形样式）；
+  /// - 预算超过 [_maxCollapsedPlainTextLines]。字号和行高同时极小时，
+  ///   **夹到上限的那 64 行仍然填不满 160px 的盒子**，照样会截断——所以上限是
+  ///   「超过就放弃截断」，不是「超过就取上限」。
+  ///
   /// 存在的理由是性能：`RenderParagraph` **不看高度约束**，不设 `maxLines` 的话
   /// 一条几千字的笔记会把整篇断行整形完，再被 `ClipRect` 裁到只剩五六行——折叠卡片
   /// 为看不见的像素付了全文排版的钱。富文本那条路阶段 D 已经按剩余像素算好了行数
   /// 预算（见 [CollapsedRichTextMetrics.plan]），纯文本这条一直漏着。
-  static int collapsedPlainTextMaxLines({
+  static int? collapsedPlainTextMaxLines({
     required TextStyle? style,
     required TextScaler textScaler,
     double limit = collapsedContentMaxHeight,
@@ -193,10 +204,13 @@ class QuoteContent extends StatelessWidget {
     final fontSize = style?.fontSize ?? _fallbackFontSize;
     final lineHeight = textScaler.scale(fontSize) * (style?.height ?? 1.0);
     if (!lineHeight.isFinite || lineHeight <= 0) {
-      return _maxCollapsedPlainTextLines;
+      return null;
     }
-    return ((limit / lineHeight).ceil() + 1)
-        .clamp(1, _maxCollapsedPlainTextLines);
+    final budget = (limit / lineHeight).ceil() + 1;
+    if (budget > _maxCollapsedPlainTextLines) {
+      return null;
+    }
+    return budget < 1 ? 1 : budget;
   }
 
   /// 折叠卡片挂缩略图所需的最小容器宽度：缩略图连间距占 84px，再给正文留
@@ -694,7 +708,8 @@ class QuoteContent extends StatelessWidget {
           // 文本**。旧实现在 `_documentFromDelta` 里也有这条兜底；直接画空的话，
           // 卡片正文整个消失，而且因为量出来是 0 高，连双击展开都进不去——用户会
           // 以为笔记内容丢了。
-          return _buildPlainTextContent(context, needsExpansion: needsExpansion);
+          return _buildPlainTextContent(context,
+              needsExpansion: needsExpansion);
         }
         if (prioritizeBoldContent) {
           blocks = prioritizeBoldBlocks(blocks);

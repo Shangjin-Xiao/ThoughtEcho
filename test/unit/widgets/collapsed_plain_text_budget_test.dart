@@ -31,8 +31,10 @@ void main() {
       style: style,
       textScaler: textScaler,
     );
-    final lineHeight = realLineHeight(style, textScaler);
+    // null 表示放弃截断（整篇都排），永远不会少排内容。
+    if (maxLines == null) return;
 
+    final lineHeight = realLineHeight(style, textScaler);
     expect(
       maxLines * lineHeight,
       greaterThanOrEqualTo(boxHeight),
@@ -72,25 +74,51 @@ void main() {
         textScaler: TextScaler.noScaling,
       );
       // 兜底字号 16、行高按 1.0 估，真实行高只会更大，所以 11 行足够盖住 160px。
-      expect(maxLines * 16.0, greaterThanOrEqualTo(boxHeight));
+      expect(maxLines, isNotNull);
+      expect(maxLines! * 16.0, greaterThanOrEqualTo(boxHeight));
     });
+  });
 
-    test('畸形字号不会把行数算成天文数字', () {
-      final maxLines = QuoteContent.collapsedPlainTextMaxLines(
-        style: const TextStyle(fontSize: 0.01, height: 0.01),
-        textScaler: TextScaler.noScaling,
+  group('算不出可信预算时放弃截断，而不是夹一个盖不住盒子的行数', () {
+    test('字号和行高同时极小 → 不设 maxLines', () {
+      // 预算会超过 64 行的硬上限。夹到 64 的话，64 × 0.0001px 远远盖不住 160px，
+      // 正文会被真的截断——放弃截断只是慢，截断是丢内容。
+      expect(
+        QuoteContent.collapsedPlainTextMaxLines(
+          style: const TextStyle(fontSize: 0.01, height: 0.01),
+          textScaler: TextScaler.noScaling,
+        ),
+        isNull,
       );
-      expect(maxLines, lessThanOrEqualTo(64));
-      expect(maxLines, greaterThan(0));
     });
 
-    test('字号为 0 / 非法时退到硬上限而不是 0 行', () {
+    test('字号为 0 → 不设 maxLines', () {
       expect(
         QuoteContent.collapsedPlainTextMaxLines(
           style: const TextStyle(fontSize: 0),
           textScaler: TextScaler.noScaling,
         ),
-        64,
+        isNull,
+      );
+    });
+
+    test('行高非有限 → 不设 maxLines', () {
+      expect(
+        QuoteContent.collapsedPlainTextMaxLines(
+          style: const TextStyle(fontSize: 16, height: double.infinity),
+          textScaler: TextScaler.noScaling,
+        ),
+        isNull,
+      );
+    });
+
+    test('正常样式仍然给出预算，没有被兜底吞掉', () {
+      expect(
+        QuoteContent.collapsedPlainTextMaxLines(
+          style: const TextStyle(fontSize: 16, height: 1.5),
+          textScaler: TextScaler.noScaling,
+        ),
+        isNotNull,
       );
     });
   });
@@ -102,6 +130,7 @@ void main() {
         style: style,
         textScaler: TextScaler.noScaling,
       );
+      expect(maxLines, isNotNull);
 
       // 这是整个改动的目的：`RenderParagraph` 不看高度约束，不封顶的话
       // 一条几千字的笔记会把整篇断行整形完，再被 ClipRect 裁到只剩五六行。

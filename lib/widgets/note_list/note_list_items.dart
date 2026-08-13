@@ -865,15 +865,13 @@ extension _NoteListItemsExtension on NoteListViewState {
   /// 走 [DeltaMediaCache]，不再自己 `contains`：这个方法每次条目构建要被调两次
   /// （记账一次、探针一次），全量扫描整份 delta 的话**监控本身**就会把它想测的
   /// 帧撑大，测出来的绝对值全部偏高。
+  ///
+  /// 只问一次 `of`：`hasMediaOf` 会顺手填好摘要缓存，但在这里先问 bool 再问摘要
+  /// 是白跑一趟——分类本来就要用到三个计数。
   String _noteListPerfKindFor(Quote quote) {
     final deltaContent = quote.deltaContent;
     if (deltaContent == null || quote.editSource != 'fullscreen') {
       return 'plain';
-    }
-    // 先用只存 bool 的那张表挡一道：绝大多数富文本笔记没有媒体，走到这里就结束了。
-    // `of` 对带 `data:` 内嵌媒体的笔记是不缓存的，能少问一次就少问一次。
-    if (!DeltaMediaCache.hasMediaOf(deltaContent)) {
-      return 'rich';
     }
     final media = DeltaMediaCache.of(deltaContent);
     if (media.imageCount > 0) {

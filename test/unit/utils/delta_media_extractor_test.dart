@@ -287,71 +287,98 @@ void main() {
   group('DeltaMediaCache.hasMediaOf', () {
     setUp(DeltaMediaCache.clear);
 
-    test('三种媒体都认，纯文本不认', () {
-      String wrap(Object embed) => jsonEncode([
-            {'insert': embed},
-            {'insert': '\n'},
-          ]);
+    String wrap(Object embed) => jsonEncode([
+          {'insert': embed},
+          {'insert': '\n'},
+        ]);
 
+    test('认图片', () {
       expect(DeltaMediaCache.hasMediaOf(wrap({'image': 'a.png'})), isTrue);
+    });
+
+    test('认视频', () {
       expect(DeltaMediaCache.hasMediaOf(wrap({'video': 'a.mp4'})), isTrue);
-      expect(
-        DeltaMediaCache.hasMediaOf(
-          wrap({
-            'custom': jsonEncode({'audio': 'a.m4a'}),
-          }),
-        ),
-        isTrue,
-      );
-      expect(
-        DeltaMediaCache.hasMediaOf(
-          jsonEncode([
-            {'insert': '只有文字\n'},
-          ]),
-        ),
-        isFalse,
-      );
     });
 
-    test('正文里出现 "image" 这串字不算有媒体', () {
-      // 旧的 `deltaContent.contains('"image"')` 会在这里误判成有媒体，
-      // 于是这条笔记被永久 keepAlive，白白钉在树上每次 setState 重建一遍。
-      final delta = jsonEncode([
-        {'insert': '讨论一下 {"image": ...} 这个字段该怎么存\n'},
-      ]);
-      expect(delta.contains('"image"'), isTrue);
-      expect(DeltaMediaCache.hasMediaOf(delta), isFalse);
-    });
-
-    test('null / 空串安全', () {
-      expect(DeltaMediaCache.hasMediaOf(null), isFalse);
-      expect(DeltaMediaCache.hasMediaOf(''), isFalse);
-    });
-
-    test('答案与 parseDeltaMedia 一致，且第二次走缓存', () {
-      final delta = jsonEncode([
-        {
-          'insert': {'image': 'a.png'},
-        },
-        {'insert': '\n'},
-      ]);
-      expect(DeltaMediaCache.hasMediaOf(delta), parseDeltaMedia(delta).hasMedia);
+    test('认 custom 里的音频（本项目音频的真实形状）', () {
+      final delta = wrap({
+        'custom': jsonEncode({'audio': 'a.m4a'}),
+      });
       expect(DeltaMediaCache.hasMediaOf(delta), isTrue);
     });
 
-    test('data: 内嵌媒体也缓存布尔结果（摘要缓存跳过它们）', () {
+    test('纯文字不算有媒体', () {
+      final delta = jsonEncode([
+        {'insert': '只有文字\n'},
+      ]);
+      expect(DeltaMediaCache.hasMediaOf(delta), isFalse);
+    });
+
+    test('null 安全', () {
+      expect(DeltaMediaCache.hasMediaOf(null), isFalse);
+    });
+
+    test('空串安全', () {
+      expect(DeltaMediaCache.hasMediaOf(''), isFalse);
+    });
+
+    test('口径由解析决定，不由子串决定', () {
+      // 判定从三次 `deltaContent.contains(...)` 换成了 `readDeltaMediaEmbed`
+      // 那一份唯一真源。这里钉住「子串出现 ≠ 有媒体」：`image` 只是某个 op 的
+      // 属性名时，子串扫描会当成有媒体，解析不会。
+      //
+      // （用户在正文里打出 `"image"` **不会**触发这种分歧：jsonEncode 会把正文
+      // 里的引号转义成 `\"image\"`，子串扫描本来就匹配不上。）
       final delta = jsonEncode([
         {
-          'insert': {'image': 'data:image/png;base64,AAAA'},
+          'insert': '一段文字\n',
+          'attributes': {'image': 'not-an-embed'},
         },
-        {'insert': '\n'},
       ]);
+      expect(delta.contains('"image"'), isTrue);
+      expect(DeltaMediaCache.hasMediaOf(delta), isFalse);
+      expect(
+          DeltaMediaCache.hasMediaOf(delta), parseDeltaMedia(delta).hasMedia);
+    });
+
+    test('答案与 parseDeltaMedia 一致', () {
+      final delta = wrap({'image': 'a.png'});
+      expect(
+          DeltaMediaCache.hasMediaOf(delta), parseDeltaMedia(delta).hasMedia);
+    });
+
+    test('第二次走缓存，不再解析', () {
+      final delta = wrap({'image': 'a.png'});
+      DeltaMediaCache.hasMediaOf(delta);
+      final missesAfterFirst = DeltaMediaCache.stats['missCount'];
+
+      DeltaMediaCache.hasMediaOf(delta);
+      expect(DeltaMediaCache.stats['missCount'], missesAfterFirst);
+    });
+
+    test('顺手填好摘要缓存，紧接着的 of 不会再解析一遍', () {
+      final delta = wrap({'image': 'a.png'});
+      DeltaMediaCache.hasMediaOf(delta);
+      final missesAfterBool = DeltaMediaCache.stats['missCount'];
+
+      expect(DeltaMediaCache.of(delta).firstImageSource, 'a.png');
+      expect(DeltaMediaCache.stats['missCount'], missesAfterBool);
+    });
+
+    test('data: 内嵌媒体也缓存布尔结果（摘要缓存跳过它们）', () {
+      final delta = wrap({'image': 'data:image/png;base64,AAAA'});
 
       expect(DeltaMediaCache.hasMediaOf(delta), isTrue);
       // 摘要缓存故意不收 data: 笔记，布尔缓存必须自己扛住，
       // 否则 keepAlive 判定每次条目构建都要重解一遍整段 base64。
       expect(DeltaMediaCache.stats['cacheSize'], 0);
+      expect(DeltaMediaCache.stats['hasMediaCacheSize'], 1);
+
+      // 第二次不能再解析：`missCount` 只在真的解析时才涨，所以它不涨就证明
+      // 布尔缓存生效了。只断言返回值仍是 true 是抓不住回归的——去掉缓存也成立。
+      final missesAfterFirst = DeltaMediaCache.stats['missCount'];
       expect(DeltaMediaCache.hasMediaOf(delta), isTrue);
+      expect(DeltaMediaCache.stats['missCount'], missesAfterFirst);
     });
   });
 }

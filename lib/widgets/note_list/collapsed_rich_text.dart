@@ -428,15 +428,23 @@ class CollapsedRichTextMetrics {
     bool cacheBoldPrioritized = false,
   }) {
     _CollapsedRichTextPlanCacheKey? cacheKey;
-    if (cacheContent != null && cacheContent.isNotEmpty) {
+    // 宽度必须是有限的才建键：`double.infinity.round()` 会直接抛
+    // `UnsupportedError`，那会赶在 [_computePlan] 自己的非有限宽度兜底之前炸掉。
+    // 无界横向约束下直接走计算分支，由那条兜底返回空计划。
+    if (cacheContent != null &&
+        cacheContent.isNotEmpty &&
+        maxWidth.isFinite &&
+        limit.isFinite) {
       cacheKey = _CollapsedRichTextPlanCacheKey(
         fingerprint: DeltaContentFingerprint.of(cacheContent),
         boldPrioritized: cacheBoldPrioritized,
         showMedia: showMedia,
-        // 宽度是连续量，直接进键几乎不会命中；量化到 0.01px 之后同一次布局里
-        // 的重复调用才落在同一个桶里。
-        maxWidthKey: (maxWidth * 100).round(),
-        limitKey: (limit * 100).round(),
+        // 宽度**按原值进键，不做量化**。同一张卡片在同一次布局里拿到的约束逐位
+        // 相同，精确相等本来就命中；而量化成 0.01px 的桶会让两个相差不到 0.01px、
+        // 却恰好跨过 `TextPainter` 换行阈值的宽度共用一份计划——那是按另一个宽度
+        // 算出来的行数和盒高，内容会被多裁一行。省那点命中率不值得。
+        maxWidth: maxWidth,
+        limit: limit,
         styleHash: baseStyle.hashCode,
         boldWeightValue: boldWeight.value,
         textDirection: textDirection,
@@ -468,13 +476,15 @@ class CollapsedRichTextMetrics {
     //
     // 判据是**计划自己排到的块**，不是整篇 blocks：折叠盒只有 160px，正文长的
     // 笔记根本排不到后面那张内嵌图，那种计划不持有 base64，可以照常缓存。
-    if (cacheKey != null && !_holdsInlineDataMedia(computed)) {
+    if (cacheKey != null) {
       stopwatch!.stop();
-      CollapsedRichTextPlanCache._put(
-        cacheKey,
-        computed,
-        stopwatch.elapsedMicroseconds,
-      );
+      // miss 和耗时**先记**，再决定要不要存。跳过存储的那些计划照样是真金白银
+      // 算出来的；不记的话性能日志会漏掉它们，`planWorstUs` 恰好把最贵的一类
+      // （带内嵌媒体的）系统性地漏没。
+      CollapsedRichTextPlanCache._recordMiss(stopwatch.elapsedMicroseconds);
+      if (!_holdsInlineDataMedia(computed)) {
+        CollapsedRichTextPlanCache._put(cacheKey, computed);
+      }
     }
     return computed;
   }
@@ -601,16 +611,18 @@ class CollapsedRichTextPlanCache {
     return existing;
   }
 
-  static void _put(
-    _CollapsedRichTextPlanCacheKey key,
-    CollapsedRichTextPlan plan,
-    int workMicros,
-  ) {
+  static void _recordMiss(int workMicros) {
     _missCount++;
     _workMicros += workMicros;
     if (workMicros > _worstWorkMicros) {
       _worstWorkMicros = workMicros;
     }
+  }
+
+  static void _put(
+    _CollapsedRichTextPlanCacheKey key,
+    CollapsedRichTextPlan plan,
+  ) {
     if (_cache.length >= _maxCacheSize) {
       final victims = _cache.keys.take(_pruneBatchSize).toList();
       for (final victim in victims) {
@@ -648,8 +660,8 @@ class _CollapsedRichTextPlanCacheKey {
     required this.fingerprint,
     required this.boldPrioritized,
     required this.showMedia,
-    required this.maxWidthKey,
-    required this.limitKey,
+    required this.maxWidth,
+    required this.limit,
     required this.styleHash,
     required this.boldWeightValue,
     required this.textDirection,
@@ -660,8 +672,8 @@ class _CollapsedRichTextPlanCacheKey {
   final DeltaContentFingerprint fingerprint;
   final bool boldPrioritized;
   final bool showMedia;
-  final int maxWidthKey;
-  final int limitKey;
+  final double maxWidth;
+  final double limit;
   final int styleHash;
   final int boldWeightValue;
   final TextDirection textDirection;
@@ -675,8 +687,8 @@ class _CollapsedRichTextPlanCacheKey {
         other.fingerprint == fingerprint &&
         other.boldPrioritized == boldPrioritized &&
         other.showMedia == showMedia &&
-        other.maxWidthKey == maxWidthKey &&
-        other.limitKey == limitKey &&
+        other.maxWidth == maxWidth &&
+        other.limit == limit &&
         other.styleHash == styleHash &&
         other.boldWeightValue == boldWeightValue &&
         other.textDirection == textDirection &&
@@ -689,8 +701,8 @@ class _CollapsedRichTextPlanCacheKey {
         fingerprint,
         boldPrioritized,
         showMedia,
-        maxWidthKey,
-        limitKey,
+        maxWidth,
+        limit,
         styleHash,
         boldWeightValue,
         textDirection,

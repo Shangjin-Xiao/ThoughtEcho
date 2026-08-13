@@ -242,11 +242,15 @@ class DeltaMediaCache {
   static int _hitCount = 0;
   static int _missCount = 0;
 
-  /// 只回答「这条笔记里有没有媒体」，不解析也不返回任何 source。
+  /// 只回答「这条笔记里有没有媒体」，不返回任何 source。
   ///
   /// 给热路径用：列表的 keepAlive 判定原来是三次 `deltaContent.contains(...)`，
-  /// 每次条目构建都要全量扫一遍整份 delta JSON，正文越长越贵，而且和真正的解析
-  /// 口径也不一致（正文里出现 `"image"` 这串字就会误判）。
+  /// **每次**条目构建都要重新全量扫一遍整份 delta JSON，正文越长越贵，而且结果
+  /// 一次都不复用。这里换成按内容指纹查表：指纹的主要成本是 `String.hashCode`，
+  /// 而 Dart VM 把它缓存在字符串对象头里，所以同一个 `Quote` 反复问是廉价的。
+  ///
+  /// 口径也从「子串碰运气」变成 `readDeltaMediaEmbed` 那一份唯一真源——
+  /// 结果与 [parseDeltaMedia] 恒等，媒体序列化改形状时不会有第二处需要同步。
   static bool hasMediaOf(String? deltaContent) {
     if (deltaContent == null || deltaContent.isEmpty) {
       return false;
@@ -260,11 +264,11 @@ class DeltaMediaCache {
       return cached;
     }
 
-    // 摘要缓存已经有就直接借用，省掉一次解析。这里不做 LRU touch：
-    // 命中与否由 [of] 自己的访问顺序决定，不该被布尔查询顺手改写。
-    final existing = _cache[key];
-    final hasMedia =
-        existing?.hasMedia ?? parseDeltaMedia(deltaContent).hasMedia;
+    // 走 [_summaryFor] 而不是直接 `parseDeltaMedia`：它顺手把摘要也放进 [_cache]，
+    // 于是紧接着调 [of] 的调用方（比如性能日志的条目分类）不会把同一份 delta
+    // 再解析一遍。`data:` 笔记仍然按 [_summaryFor] 的规则跳过摘要缓存，但布尔
+    // 结果照样常驻——热路径要的就是这一个 bool。
+    final hasMedia = _summaryFor(key, deltaContent).hasMedia;
 
     if (_hasMediaCache.length >= _maxHasMediaCacheSize) {
       final victims =
@@ -291,6 +295,14 @@ class DeltaMediaCache {
       return existing;
     }
 
+    return _summaryFor(key, deltaContent);
+  }
+
+  /// 解析一次并按规则写入摘要缓存。调用方必须先查过 [_cache] 没命中。
+  static DeltaMediaSummary _summaryFor(
+    DeltaContentFingerprint key,
+    String deltaContent,
+  ) {
     _missCount++;
     final summary = parseDeltaMedia(deltaContent);
 
@@ -330,6 +342,9 @@ class DeltaMediaCache {
       'hitCount': _hitCount,
       'missCount': _missCount,
       'hitRate': total == 0 ? 0.0 : _hitCount / total,
+      // 布尔缓存单独报一个尺寸：`data:` 笔记的摘要不进 [_cache]，只有这一项
+      // 能证明它们的 keepAlive 判定确实没在每次构建时重解。
+      'hasMediaCacheSize': _hasMediaCache.length,
     };
   }
 }

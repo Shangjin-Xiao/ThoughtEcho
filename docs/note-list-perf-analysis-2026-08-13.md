@@ -157,6 +157,13 @@ static bool shouldKeepAliveQuoteItem(Quote quote) {
 （`readDeltaMediaEmbed` 是唯一真源），`shouldKeepAliveQuoteItem` 应该走缓存，
 而不是自己再 `contains` 一遍。
 
+**这里只是慢，不是错。** 一度以为「正文里写了 `"image"` 的笔记会被误判成有媒体」，
+实测不成立：`jsonEncode` 会把正文里的引号转义成 `\"image\"`，子串扫描本来就匹配不上
+（`test/unit/utils/delta_media_extractor_test.dart` 里留了这条断言）。真正的分歧只出现在
+`"image"` 作为某个 op 的**属性名**时，那在本项目里不会发生。所以换成缓存纯粹是省时间：
+`contains` 每次调用都要重扫一遍全文且结果不复用，而按内容指纹查表的主要成本
+（`String.hashCode`）被 Dart VM 缓存在字符串对象头里，同一个 `Quote` 反复问是廉价的。
+
 另外几个每卡每帧的固定开销：`QuoteItemWidget.build` 里 7 个
 `context.select<SettingsService, …>` + `QuoteContent.build` 里 2 个、
 `DateTime.parse(quote.date)` + `DateFormat` 格式化、两层嵌套 `LayoutBuilder`、
@@ -188,7 +195,7 @@ static bool shouldKeepAliveQuoteItem(Quote quote) {
 |---|---|---|
 | 纯文本排版整篇正文 | 判定与渲染各加一处 `maxLines`，行数由 `QuoteContent.collapsedPlainTextMaxLines` 按「折叠盒高 ÷ 行高下界 + 1」算 | `quote_content_widget.dart` |
 | `plan()` 每次重建重量 | 加 `CollapsedRichTextPlanCache`（LRU 300，键只存内容指纹），两个调用点都带上键 | `collapsed_rich_text.dart` |
-| 热路径全量 `contains` | `shouldKeepAliveQuoteItem` 改走新的 `DeltaMediaCache.hasMediaOf`（只存 bool，`data:` 笔记也能缓存） | `note_list_view.dart` / `delta_media_extractor.dart` |
+| 热路径全量 `contains` | `shouldKeepAliveQuoteItem` 改走新的 `DeltaMediaCache.hasMediaOf`（只存 bool，`data:` 笔记也能缓存）。**这条是省时间，不是修 bug**，见根因四 | `note_list_view.dart` / `delta_media_extractor.dart` |
 | 探针自己也在扫 | `_noteListPerfKindFor`、`_quoteMixStatsText` 一并改走缓存 | `note_list/*.dart` |
 
 行数预算**只能偏大**：多排的行落在 160px 盒子外面被 `ClipRect` 裁掉，看不见；
@@ -226,7 +233,7 @@ static bool shouldKeepAliveQuoteItem(Quote quote) {
 ## 复测口径（别再换了）
 
 release 模式，115~119 条笔记 / `media≈32`，下滑约 28000px 后原路滑回。
-只看这三个数，别看均值：
+只看这四个数，别看均值：
 
 - `worstBuild` —— 改前 117.8ms / 123.9ms，这是用户唯一能感觉到的东西；
 - `built=` 的峰值 —— 改前单 session 297，衡量根因三（**本轮没动，应该基本不变**）；
