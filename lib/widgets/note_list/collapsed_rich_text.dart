@@ -548,10 +548,7 @@ class CollapsedRichTextMetrics {
 
       // 用本块**最矮**的一行换算行数上限：宁可多排一两行（`ClipRect` 会裁掉），
       // 也不能少排——少排的内容是静悄悄消失的，没有任何提示。
-      final maxLines = (remainingHeight <= 0
-              ? 1
-              : (remainingHeight / layout.minLineHeight).ceil() + 1)
-          .clamp(1, _maxLinesPerBlock);
+      final maxLines = _lineBudgetFor(remainingHeight, layout.minLineHeight);
 
       final painter = TextPainter(
         text: layout.span,
@@ -572,6 +569,32 @@ class CollapsedRichTextMetrics {
       height: height,
       showMedia: showMedia,
     );
+  }
+
+  /// 把「还剩多少像素」换算成「这个块最多排几行」。
+  ///
+  /// **不能直接 `(remainingHeight / minLineHeight).ceil()`**：`double` 的 `ceil()`
+  /// 对非有限值抛 `UnsupportedError`，而这里有两条路会算出非有限值——
+  /// 调用方传了非有限的 `limit`（`remainingHeight` 跟着非有限），或者畸形样式
+  /// 让 `minLineHeight` 变成 0（除出来是 infinity）。两种都会把布局炸掉，
+  /// 而不是退化成一个难看的折叠盒。
+  ///
+  /// 算不出可信预算时给 [_maxLinesPerBlock]，方向和 [CollapsedRichTextMetrics]
+  /// 其余地方一致：宁可多排（会被裁掉），不能少排（内容静悄悄消失）。
+  static int _lineBudgetFor(double remainingHeight, double minLineHeight) {
+    if (remainingHeight <= 0) {
+      return 1;
+    }
+    if (!remainingHeight.isFinite ||
+        !minLineHeight.isFinite ||
+        minLineHeight <= 0) {
+      return _maxLinesPerBlock;
+    }
+    final budget = remainingHeight / minLineHeight;
+    if (!budget.isFinite) {
+      return _maxLinesPerBlock;
+    }
+    return (budget.ceil() + 1).clamp(1, _maxLinesPerBlock);
   }
 
   /// 单个块的排版行数硬上限。

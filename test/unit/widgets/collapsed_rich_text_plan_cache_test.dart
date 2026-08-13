@@ -181,6 +181,73 @@ void main() {
     });
   });
 
+  group('畸形输入不能把布局炸掉', () {
+    // `double.ceil()` 对非有限值抛 UnsupportedError，所以这些路径一旦漏掉
+    // 就不是「折叠盒难看」，是整个列表崩。
+    test('无界横向约束：不建缓存键，也不抛异常', () {
+      final delta = longDelta();
+      final plan = CollapsedRichTextMetrics.plan(
+        blocks: DeltaRichTextCache.of(delta),
+        baseStyle: baseStyle,
+        maxWidth: double.infinity,
+        limit: 160,
+        showMedia: false,
+        cacheContent: delta,
+      );
+
+      expect(plan.isEmpty, isTrue);
+      // 非有限宽度不该进缓存：键里放 infinity 只是把崩溃点往后挪。
+      expect(CollapsedRichTextPlanCache.stats['cacheSize'], 0);
+    });
+
+    test('非有限 limit 不抛异常', () {
+      final delta = longDelta();
+      expect(
+        () => CollapsedRichTextMetrics.plan(
+          blocks: DeltaRichTextCache.of(delta),
+          baseStyle: baseStyle,
+          maxWidth: width,
+          limit: double.infinity,
+          showMedia: false,
+          cacheContent: delta,
+        ),
+        returnsNormally,
+      );
+    });
+
+    test('NaN limit 不抛异常', () {
+      final delta = longDelta();
+      expect(
+        () => CollapsedRichTextMetrics.plan(
+          blocks: DeltaRichTextCache.of(delta),
+          baseStyle: baseStyle,
+          maxWidth: width,
+          limit: double.nan,
+          showMedia: false,
+          cacheContent: delta,
+        ),
+        returnsNormally,
+      );
+    });
+
+    test('行高为 0 的畸形样式不抛异常', () {
+      // minLineHeight 为 0 时 remainingHeight / minLineHeight 是 infinity，
+      // 和非有限 limit 同一个崩法。
+      final delta = longDelta();
+      expect(
+        () => CollapsedRichTextMetrics.plan(
+          blocks: DeltaRichTextCache.of(delta),
+          baseStyle: const TextStyle(fontSize: 0, height: 0),
+          maxWidth: width,
+          limit: 160,
+          showMedia: false,
+          cacheContent: delta,
+        ),
+        returnsNormally,
+      );
+    });
+  });
+
   test('clear 把计数一起清掉', () {
     planFor(longDelta());
     expect(CollapsedRichTextPlanCache.stats['cacheSize'], 1);

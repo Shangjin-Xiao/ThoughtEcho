@@ -264,11 +264,23 @@ class DeltaMediaCache {
       return cached;
     }
 
-    // 走 [_summaryFor] 而不是直接 `parseDeltaMedia`：它顺手把摘要也放进 [_cache]，
-    // 于是紧接着调 [of] 的调用方（比如性能日志的条目分类）不会把同一份 delta
-    // 再解析一遍。`data:` 笔记仍然按 [_summaryFor] 的规则跳过摘要缓存，但布尔
-    // 结果照样常驻——热路径要的就是这一个 bool。
-    final hasMedia = _summaryFor(key, deltaContent).hasMedia;
+    // 摘要缓存已经有就直接借用。列表里 [of] 和 [hasMediaOf] 都会被每次条目构建
+    // 调到，谁先谁后不定；不先查一遍 [_cache] 的话，后手那一个必然把同一份
+    // delta 再解析一遍。借用时照常 touch：这条目正在被使用，不该因为提问的入口
+    // 不同就被当成冷数据淘汰掉。
+    //
+    // 没有就走 [_summaryFor]，它顺手把摘要也放进 [_cache]，于是反过来也成立。
+    // `data:` 笔记按 [_summaryFor] 的规则跳过摘要缓存，但布尔结果照样常驻——
+    // 热路径要的就是这一个 bool。
+    final existing = _cache.remove(key);
+    final bool hasMedia;
+    if (existing != null) {
+      _hitCount++;
+      _cache[key] = existing;
+      hasMedia = existing.hasMedia;
+    } else {
+      hasMedia = _summaryFor(key, deltaContent).hasMedia;
+    }
 
     if (_hasMediaCache.length >= _maxHasMediaCacheSize) {
       final victims =

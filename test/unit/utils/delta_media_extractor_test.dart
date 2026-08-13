@@ -356,6 +356,17 @@ void main() {
       expect(DeltaMediaCache.stats['missCount'], missesAfterFirst);
     });
 
+    test('摘要缓存已经热了的话，hasMediaOf 不会重新解析', () {
+      // 列表里 of 和 hasMediaOf 都会被每次条目构建调到，谁先谁后不定。
+      // 只保证一个方向的话，后手那个必然把同一份 delta 再解析一遍。
+      final delta = wrap({'image': 'a.png'});
+      DeltaMediaCache.of(delta);
+      final missesAfterSummary = DeltaMediaCache.stats['missCount'];
+
+      expect(DeltaMediaCache.hasMediaOf(delta), isTrue);
+      expect(DeltaMediaCache.stats['missCount'], missesAfterSummary);
+    });
+
     test('顺手填好摘要缓存，紧接着的 of 不会再解析一遍', () {
       final delta = wrap({'image': 'a.png'});
       DeltaMediaCache.hasMediaOf(delta);
