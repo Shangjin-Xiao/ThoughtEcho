@@ -954,12 +954,14 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   @override
   void didUpdateWidget(AddNoteDialog oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // onSave 每次都是新闭包，不能拿它判断；只看主体真正渲染的入参。
-    if (!identical(oldWidget.tags, widget.tags) ||
-        oldWidget.initialQuote != widget.initialQuote ||
-        oldWidget.prefilledContent != widget.prefilledContent ||
-        oldWidget.prefilledAuthor != widget.prefilledAuthor ||
-        oldWidget.prefilledWork != widget.prefilledWork) {
+    // 只比 build 真正读的入参。tags / prefilled* 都只在 initState 用一次，
+    // 主体渲染的是内部的 _availableTags 和几个 controller。
+    //
+    // 尤其不能比 tags：调用方给的是 `UnmodifiableListView get tags` 这种
+    // 每次取值都新建包装对象的 getter，identity 恒不相等。拿它当判据的话，
+    // 键盘每动一帧修订号都往前走一格，缓存一次都命中不了——整棵主体逐帧重建，
+    // 比不做缓存还糟，因为连原本的那层节流也一起没了。
+    if (oldWidget.initialQuote != widget.initialQuote) {
       _dialogBodyRevision++;
     }
   }
