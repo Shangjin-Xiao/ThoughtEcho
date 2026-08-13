@@ -390,6 +390,58 @@ void main() {
     expect(find.byType(AddNoteDialog), findsNothing);
   });
 
+  testWidgets('cancel then save-and-exit saves once and closes',
+      (tester) async {
+    final savedQuotes = <Quote>[];
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<FeatureGuideService>(
+            create: (_) => _MockFeatureGuideService(),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () {
+                  showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => AddNoteDialog(
+                      tags: const [],
+                      onSave: savedQuotes.add,
+                    ),
+                  );
+                },
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, '保存并退出的内容');
+    await tester.pump();
+
+    await tester.tap(find.widgetWithText(FilledButton, '取消'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, '保存并退出'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AddNoteDialog), findsNothing);
+    expect(savedQuotes, hasLength(1));
+    expect(savedQuotes.single.content, '保存并退出的内容');
+  });
+
   testWidgets('does not warn about unsaved changes when editing unchanged note',
       (tester) async {
     final initialQuote = Quote(
