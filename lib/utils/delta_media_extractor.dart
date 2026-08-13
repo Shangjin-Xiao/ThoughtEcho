@@ -225,11 +225,57 @@ class DeltaMediaCache {
   static final LinkedHashMap<DeltaContentFingerprint, DeltaMediaSummary>
       _cache = LinkedHashMap<DeltaContentFingerprint, DeltaMediaSummary>();
 
+  /// 「这条笔记有没有媒体」的布尔缓存，和 [_cache] 分开。
+  ///
+  /// 分开的理由是 `data:` 内嵌媒体：那种笔记的摘要**不进** [_cache]（见 [of]），
+  /// 于是每次问都要重解一遍整份 base64。而列表的 keepAlive 判定每次构建条目都要
+  /// 问一次，正是最不能重解的地方。这张表只存一个 bool，既不持有 source 也不持有
+  /// delta，data: 笔记也可以安全常驻。
+  static final LinkedHashMap<DeltaContentFingerprint, bool> _hasMediaCache =
+      LinkedHashMap<DeltaContentFingerprint, bool>();
+
   static const int _maxCacheSize = 300;
   static const int _pruneBatchSize = 50;
+  static const int _maxHasMediaCacheSize = 600;
+  static const int _hasMediaPruneBatchSize = 100;
 
   static int _hitCount = 0;
   static int _missCount = 0;
+
+  /// 只回答「这条笔记里有没有媒体」，不解析也不返回任何 source。
+  ///
+  /// 给热路径用：列表的 keepAlive 判定原来是三次 `deltaContent.contains(...)`，
+  /// 每次条目构建都要全量扫一遍整份 delta JSON，正文越长越贵，而且和真正的解析
+  /// 口径也不一致（正文里出现 `"image"` 这串字就会误判）。
+  static bool hasMediaOf(String? deltaContent) {
+    if (deltaContent == null || deltaContent.isEmpty) {
+      return false;
+    }
+
+    final key = DeltaContentFingerprint.of(deltaContent);
+
+    final cached = _hasMediaCache.remove(key);
+    if (cached != null) {
+      _hasMediaCache[key] = cached;
+      return cached;
+    }
+
+    // 摘要缓存已经有就直接借用，省掉一次解析。这里不做 LRU touch：
+    // 命中与否由 [of] 自己的访问顺序决定，不该被布尔查询顺手改写。
+    final existing = _cache[key];
+    final hasMedia =
+        existing?.hasMedia ?? parseDeltaMedia(deltaContent).hasMedia;
+
+    if (_hasMediaCache.length >= _maxHasMediaCacheSize) {
+      final victims =
+          _hasMediaCache.keys.take(_hasMediaPruneBatchSize).toList();
+      for (final victim in victims) {
+        _hasMediaCache.remove(victim);
+      }
+    }
+    _hasMediaCache[key] = hasMedia;
+    return hasMedia;
+  }
 
   static DeltaMediaSummary of(String? deltaContent) {
     if (deltaContent == null || deltaContent.isEmpty) {
@@ -271,6 +317,7 @@ class DeltaMediaCache {
 
   static void clear() {
     _cache.clear();
+    _hasMediaCache.clear();
     _hitCount = 0;
     _missCount = 0;
   }

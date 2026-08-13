@@ -14,6 +14,7 @@ import '../gen_l10n/app_localizations.dart';
 import '../models/quote_model.dart';
 import '../models/note_tag.dart';
 import '../services/database_service.dart';
+import '../utils/delta_media_extractor.dart';
 import '../utils/icon_utils.dart';
 import '../utils/jank_detector.dart';
 import '../utils/lottie_animation_manager.dart';
@@ -114,9 +115,11 @@ class NoteListView extends StatefulWidget {
       return false;
     }
 
-    if (deltaContent.contains('"image"') ||
-        deltaContent.contains('"video"') ||
-        deltaContent.contains('"audio"')) {
+    // 走缓存，**不要**退回 `deltaContent.contains('"image"')` 那一套。
+    // 这个方法在 `_shouldKeepAliveNoteListItem` 里被每次条目构建各调一次，
+    // 三次 `contains` 就是三次全量扫描整份 delta JSON，正文越长越贵；
+    // 而且口径也不对——正文里正好写了 `"image"` 这串字的笔记会被误判成有媒体。
+    if (DeltaMediaCache.hasMediaOf(deltaContent)) {
       return true;
     }
 

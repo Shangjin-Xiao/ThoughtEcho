@@ -174,29 +174,52 @@ static bool shouldKeepAliveQuoteItem(Quote quote) {
 **开着监控测出来的绝对值是偏高的**，而如果你是开着它在体感流畅度，那你摸到的
 有一部分就是探针自己。
 
-判断改动效果只看**相对值**，而且必须 release 模式——上一份交接的「下一步第 1 条」
-到现在还是没做。
+这轮日志本身**已经是 release 的**（上一份交接的「下一步第 1 条」做了），
+所以上面那些绝对值就是用户真实感受到的量级，只是还含着探针自己的开销。
+本轮已经把探针改走缓存，下一轮的绝对值会更干净一些。
 
 ---
 
+## 已修（本轮）
+
+根因一、二、四**已经改掉**，都不改视觉、不改用户可见行为：
+
+| | 改法 | 落点 |
+|---|---|---|
+| 纯文本排版整篇正文 | 判定与渲染各加一处 `maxLines`，行数由 `QuoteContent.collapsedPlainTextMaxLines` 按「折叠盒高 ÷ 行高下界 + 1」算 | `quote_content_widget.dart` |
+| `plan()` 每次重建重量 | 加 `CollapsedRichTextPlanCache`（LRU 300，键只存内容指纹），两个调用点都带上键 | `collapsed_rich_text.dart` |
+| 热路径全量 `contains` | `shouldKeepAliveQuoteItem` 改走新的 `DeltaMediaCache.hasMediaOf`（只存 bool，`data:` 笔记也能缓存） | `note_list_view.dart` / `delta_media_extractor.dart` |
+| 探针自己也在扫 | `_noteListPerfKindFor`、`_quoteMixStatsText` 一并改走缓存 | `note_list/*.dart` |
+
+行数预算**只能偏大**：多排的行落在 160px 盒子外面被 `ClipRect` 裁掉，看不见；
+少排的内容是静悄悄消失的。所以行高取 `fontSize * (height ?? 1.0)` 这个下界，再 +1 行。
+渲染侧还要按 `DefaultTextStyle.merge` 之后的**实际**样式算——`Text` 的字号可能整个
+来自环境，照着一个 `fontSize` 为 null 的样式估就会低估行数。
+`test/unit/widgets/collapsed_plain_text_budget_test.dart` 用真的 `TextPainter`
+钉住了这条不变量。
+
+顺带把测量盲区补上了：性能日志新增 `plan=`、`planMiss+`、`planWorkUs+`、`planWorstUs=`。
+折叠富文本真正的排版成本一直在 `plan()` 里，而日志此前只统计便宜的 IR 解析
+（`irWorstUs=415`），看着一片绿。
+
+**根因三（37 张媒体卡永久 keepAlive + 数据事件整表替换）没动**，它是结构性的，
+需要单独一轮并配基准，见下。
+
 ## 下一步（按性价比排序）
 
-1. **纯文本折叠走 `maxLines`**（判定侧 + 渲染侧各一处）。改动最小、收益最大，
-   直接打掉 `slowLayouts` 里排前几名的那批。
-2. **缓存 `CollapsedRichTextMetrics.plan()`**，键 = 内容指纹 + `maxWidth` + 样式哈希
-   （和 `_QuotePlainTextLayoutExpansionCache` 同一套键即可），顺便让测量和渲染
-   共用同一份 `buildCollapsedBlockLayout` 结果，省掉重复的 span 构造。
-3. **`shouldKeepAliveQuoteItem` 改走 `DeltaMediaCache`**，去掉热路径上的 `contains`。
-4. **切断「数据事件 → 全列表重建」**。两个方向，选一个：
+1. **切断「数据事件 → 全列表重建」**（根因三）。两个方向，选一个：
    - `watchQuotes` 分页事件改成**追加**而不是整表替换，并给 `Quote` 加值相等，
      让没变的卡片 `didUpdateWidget` 直接短路；
    - 或者把 `keepAlive` 收窄——媒体卡片永久钉住是为了防图片闪烁，但
      `imageCache` 本来就兜得住（`CollapsedMediaImage` 的注释里已经论证过一次了），
      值得重新验证「永久 keepAlive」这个前提还成不成立。
-5. **`scrollPreloadThreshold` 0.35 太早**。整表替换的代价这么大，应该等到接近底部
-   （0.8 左右）再触发，把它推进静止期。
-
-第 1、2、3 条互不相干，可以并行做；第 4 条是结构性的，建议单独一轮并配基准。
+2. **`scrollPreloadThreshold` 0.35 太早**。整表替换的代价这么大，应该等到接近底部
+   （0.8 左右）再触发，把它推进静止期。**会改变分页时机**，要先确认。
+3. **让测量和渲染共用一份 `buildCollapsedBlockLayout`**。现在同一段文字的 span
+   构造做两遍（测量一遍用 `measurement` palette、渲染一遍用主题 palette）。
+   `plan()` 有缓存之后测量那遍已经不在热路径上了，收益变小，但仍然是浪费。
+4. **冷启动首次滑过仍然要重解全部图片**（上一份就记着的第 3 条，与本轮正交）。
+   `imageCache` 是纯内存的，重启即失。要消除首次等待需要保存时生成缩略图文件存盘。
 
 ---
 
@@ -205,6 +228,9 @@ static bool shouldKeepAliveQuoteItem(Quote quote) {
 release 模式，115~119 条笔记 / `media≈32`，下滑约 28000px 后原路滑回。
 只看这三个数，别看均值：
 
-- `worstBuild` —— 目前 117.8ms / 123.9ms，这是用户唯一能感觉到的东西；
-- `built=` 的峰值 —— 目前单 session 297，衡量根因三；
-- `slowLayouts` 里 `plain` 的占比和耗时 —— 目前包揽前几名，衡量根因一。
+- `worstBuild` —— 改前 117.8ms / 123.9ms，这是用户唯一能感觉到的东西；
+- `built=` 的峰值 —— 改前单 session 297，衡量根因三（**本轮没动，应该基本不变**）；
+- `slowLayouts` 里 `plain` 的占比和耗时 —— 改前包揽前几名（11.1 / 11.6 / 10.6ms），
+  衡量根因一，**本轮主要看这一项**；
+- 新增的 `planMiss+` / `planWorkUs+` —— 稳态滑动里 `planMiss` 应该接近 0，
+  不是 0 就说明缓存键漏了什么维度，每帧都在重量。

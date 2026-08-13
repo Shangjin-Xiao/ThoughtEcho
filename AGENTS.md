@@ -342,8 +342,7 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
 
 ## 文档维护
 
-- 开发者文档：`AGENTS.md`（本文件即旧 `CLAUDE.md` 的替代，不要另建 `CLAUDE.md`）、
-  各子目录 `AGENTS.md`、`README.md`
+- 开发者文档：`AGENTS.md`、各子目录 `AGENTS.md`、`README.md`
 - 双语用户手册：`docs/USER_MANUAL.md`
 - 应用内手册：`assets/docs/user_manual_zh.md`、`assets/docs/user_manual_en.md`
 - 网站：`res/index.html`、`res/user-guide.html`

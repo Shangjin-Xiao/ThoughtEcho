@@ -283,4 +283,75 @@ void main() {
       expect(DeltaMediaCache.of(b).firstImageSource, 'bbb.png');
     });
   });
+
+  group('DeltaMediaCache.hasMediaOf', () {
+    setUp(DeltaMediaCache.clear);
+
+    test('三种媒体都认，纯文本不认', () {
+      String wrap(Object embed) => jsonEncode([
+            {'insert': embed},
+            {'insert': '\n'},
+          ]);
+
+      expect(DeltaMediaCache.hasMediaOf(wrap({'image': 'a.png'})), isTrue);
+      expect(DeltaMediaCache.hasMediaOf(wrap({'video': 'a.mp4'})), isTrue);
+      expect(
+        DeltaMediaCache.hasMediaOf(
+          wrap({
+            'custom': jsonEncode({'audio': 'a.m4a'}),
+          }),
+        ),
+        isTrue,
+      );
+      expect(
+        DeltaMediaCache.hasMediaOf(
+          jsonEncode([
+            {'insert': '只有文字\n'},
+          ]),
+        ),
+        isFalse,
+      );
+    });
+
+    test('正文里出现 "image" 这串字不算有媒体', () {
+      // 旧的 `deltaContent.contains('"image"')` 会在这里误判成有媒体，
+      // 于是这条笔记被永久 keepAlive，白白钉在树上每次 setState 重建一遍。
+      final delta = jsonEncode([
+        {'insert': '讨论一下 {"image": ...} 这个字段该怎么存\n'},
+      ]);
+      expect(delta.contains('"image"'), isTrue);
+      expect(DeltaMediaCache.hasMediaOf(delta), isFalse);
+    });
+
+    test('null / 空串安全', () {
+      expect(DeltaMediaCache.hasMediaOf(null), isFalse);
+      expect(DeltaMediaCache.hasMediaOf(''), isFalse);
+    });
+
+    test('答案与 parseDeltaMedia 一致，且第二次走缓存', () {
+      final delta = jsonEncode([
+        {
+          'insert': {'image': 'a.png'},
+        },
+        {'insert': '\n'},
+      ]);
+      expect(DeltaMediaCache.hasMediaOf(delta), parseDeltaMedia(delta).hasMedia);
+      expect(DeltaMediaCache.hasMediaOf(delta), isTrue);
+    });
+
+    test('data: 内嵌媒体也缓存布尔结果（摘要缓存跳过它们）', () {
+      final delta = jsonEncode([
+        {
+          'insert': {'image': 'data:image/png;base64,AAAA'},
+        },
+        {'insert': '\n'},
+      ]);
+
+      expect(DeltaMediaCache.hasMediaOf(delta), isTrue);
+      // 摘要缓存故意不收 data: 笔记，布尔缓存必须自己扛住，
+      // 否则 keepAlive 判定每次条目构建都要重解一遍整段 base64。
+      expect(DeltaMediaCache.stats['cacheSize'], 0);
+      expect(DeltaMediaCache.hasMediaOf(delta), isTrue);
+    });
+  });
 }
