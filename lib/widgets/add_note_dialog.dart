@@ -156,6 +156,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   Timer? _dbChangeDebounceTimer;
 
   bool _isSaving = false;
+  bool _closeRequestInFlight = false; // 未保存确认框只允许在飞一个
   bool _waitingForFetch = false; // 用户已触发保存，正在等待位置/天气获取完成
   bool _deferredControlsVisible = true;
   Timer? _deferredControlsTimer;
@@ -2083,25 +2084,31 @@ class _AddNoteDialogState extends State<AddNoteDialog>
   /// 所以「取消」按钮以前是直接把路由弹掉的，未保存确认整个被绕过去。
   /// 两条路都改走这里。
   Future<void> _handleCloseRequest() async {
-    if (!mounted) return;
+    // 确认框弹出前「取消」还点得到，返回键也还进得来。没有这道闸，
+    // 连点两下就会叠两个未保存确认框，各自 await 各自的结果。
+    if (!mounted || _closeRequestInFlight) return;
+    _closeRequestInFlight = true;
+    try {
+      // 检查是否有未保存的更改
+      if (!_hasUnsavedChanges()) {
+        Navigator.pop(context);
+        return;
+      }
 
-    // 检查是否有未保存的更改
-    if (!_hasUnsavedChanges()) {
-      Navigator.pop(context);
-      return;
+      // 显示确认对话框
+      final dialogResult = await _showUnsavedChangesDialog();
+      if (!mounted) return;
+      if (dialogResult == true) {
+        // 用户选择放弃更改
+        Navigator.pop(context);
+      } else if (dialogResult == 'save') {
+        // 用户选择保存并退出
+        await _saveAndExit();
+      }
+      // dialogResult == null: 继续编辑，不做任何操作
+    } finally {
+      _closeRequestInFlight = false;
     }
-
-    // 显示确认对话框
-    final dialogResult = await _showUnsavedChangesDialog();
-    if (!mounted) return;
-    if (dialogResult == true) {
-      // 用户选择放弃更改
-      Navigator.pop(context);
-    } else if (dialogResult == 'save') {
-      // 用户选择保存并退出
-      await _saveAndExit();
-    }
-    // dialogResult == null: 继续编辑，不做任何操作
   }
 
   @override
