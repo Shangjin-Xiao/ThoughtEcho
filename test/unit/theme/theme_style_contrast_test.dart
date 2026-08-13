@@ -159,15 +159,28 @@ void main() {
       }
     });
 
-    test('墨色默认值：纸墨是赭石，素笺是黛青，认不出的取值回退到传入的兜底', () {
+    test('墨色默认值：纸墨是赭石，素笺是黛青', () {
       expect(ThemeStyle.paper.defaultAccent, ThemeAccent.umber);
       expect(ThemeStyle.plain.defaultAccent, ThemeAccent.celadon);
-      expect(
-          ThemeAccent.fromName(null, ThemeAccent.celadon), ThemeAccent.celadon);
-      expect(
-          ThemeAccent.fromName('nope', ThemeAccent.umber), ThemeAccent.umber);
-      expect(ThemeAccent.fromName('indigo', ThemeAccent.umber),
-          ThemeAccent.indigo);
+    });
+
+    test('墨色解析认不出就返回 null，不在解析里兜底到某一支', () {
+      // 「用户没选过」只能由 null 表达。解析时兜底到具体某一支，会让存储里的坏值
+      // 把这个状态永久抹掉：之后切到另一套风格，拿到的还是上一套的默认墨。
+      expect(ThemeAccent.tryFromName(null), isNull);
+      expect(ThemeAccent.tryFromName('nope'), isNull);
+      expect(ThemeAccent.tryFromName(''), isNull);
+      for (final accent in ThemeAccent.values) {
+        expect(ThemeAccent.tryFromName(accent.name), accent);
+      }
+    });
+
+    test('没选过墨色时，每套风格各自跟随自己的默认支', () {
+      // 兜底发生在 accentFor 而不是解析里，所以「跟随风格」对每套风格都成立：
+      // 同一个未设置状态，问纸墨得到赭石，问素笺得到黛青。
+      final appTheme = AppTheme();
+      expect(appTheme.accentFor(ThemeStyle.paper), ThemeAccent.umber);
+      expect(appTheme.accentFor(ThemeStyle.plain), ThemeAccent.celadon);
     });
 
     test('状态色随色板下发，手工风格不再借用 Material 的那套', () {

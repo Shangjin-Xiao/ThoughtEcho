@@ -751,11 +751,12 @@ class AppTheme with ChangeNotifier {
   // 从持久化存储加载墨色
   void _loadThemeAccent() {
     try {
-      final name = _storage?.getString(_themeAccentKey);
-      // 没存过就保持 null（跟随风格默认），不要在这里落到某一支具体的墨。
-      _themeAccent = name == null
-          ? null
-          : ThemeAccent.fromName(name, _themeStyle.defaultAccent);
+      // 没存过、或者存的是认不出的坏值，都保持 null（跟随风格默认）。
+      // 兜底到某一支具体的墨会把「跟随风格」这个状态永久抹掉：之后切到另一套
+      // 风格，拿到的还是上一套的默认墨。
+      _themeAccent = ThemeAccent.tryFromName(_storage?.getString(
+        _themeAccentKey,
+      ));
     } catch (e, stack) {
       logError(
         '加载墨色失败',

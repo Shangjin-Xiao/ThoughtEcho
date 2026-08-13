@@ -108,14 +108,18 @@ enum ThemeAccent {
   Color forBrightness(Brightness brightness) =>
       brightness == Brightness.dark ? dark : light;
 
-  /// 持久化取值解析。认不出来时回退到 [fallback]（调用方传当前风格的
-  /// [ThemeStyle.defaultAccent]），不要在这里写死某一支。
-  static ThemeAccent fromName(String? name, ThemeAccent fallback) {
-    if (name == null) return fallback;
+  /// 持久化取值解析。**认不出来返回 null，不要在这里兜底到某一支墨。**
+  ///
+  /// 「用户没选过」这个状态由 null 表达，兜底到具体某一支会把它永久抹掉：
+  /// 存储里出现坏值时若落成当前风格的 [ThemeStyle.defaultAccent]，用户切到另一套
+  /// 风格后 `AppTheme.accentFor` 会一直返回上一套风格的默认墨，
+  /// 「跟随风格」再也回不来了。兜底属于 `accentFor`，不属于解析。
+  static ThemeAccent? tryFromName(String? name) {
+    if (name == null) return null;
     for (final accent in ThemeAccent.values) {
       if (accent.name == name) return accent;
     }
-    return fallback;
+    return null;
   }
 }
 
