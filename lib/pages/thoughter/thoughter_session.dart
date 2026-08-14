@@ -5,6 +5,7 @@ extension _ThoughterSession on _ThoughterPageState {
     _currentMode = _entryConfig.defaultMode;
     _inputFocusNode.addListener(_onInputFocusChanged);
     _inputFocusNode.onKeyEvent = _handleComposerKey;
+    WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_onScrollPositionChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // 探索摘要不依赖数据库或 AI 服务，先显示，避免初始化异常吞掉首条消息。
@@ -46,6 +47,7 @@ extension _ThoughterSession on _ThoughterPageState {
     }
     _streamSubscription?.cancel();
     _tagSubscription?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _inputFocusNode.removeListener(_onInputFocusChanged);
     _scrollController.removeListener(_onScrollPositionChanged);
     _inputFocusNode.dispose();

@@ -309,6 +309,15 @@ extension _ExploreDataLoading on _ExplorePageState {
           content += l10n.weatherInfo(display);
         }
 
+        // 把作者/出处一并交出去。原文里没有这条线索时，模型会把摘抄来的
+        // 句子当成用户的自述，洞察就开始按书里的经历编人生。
+        // 语义和 Thoughter 那边一致：这是归属标注，不等于"摘录"标记
+        // （填的是用户自己的名字就是原创署名），怎么解读写在系统提示里。
+        final attribution = quote.source;
+        if (attribution != null && attribution.trim().isNotEmpty) {
+          content += l10n.noteAttribution(attribution.trim());
+        }
+
         return content;
       }).join('\n\n');
 

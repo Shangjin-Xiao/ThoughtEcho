@@ -2088,6 +2088,15 @@
       }
     }
   },
+  "noteAttribution": "（署名：{source}）",
+  "@noteAttribution": {
+    "description": "喂给 AI 的笔记内容里，标出这条笔记填的作者/出处，用于区分摘录与原创署名",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
   "aiProviderOpenAI": "OpenAI",
   "aiProviderOpenRouter": "OpenRouter",
   "aiProviderDeepSeek": "DeepSeek",

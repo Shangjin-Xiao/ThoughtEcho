@@ -256,6 +256,8 @@ void main() {
             manager.getReportInsightSystemPrompt('poetic', languageCode: 'zh');
         expect(prompt, contains('风格：文学诗意'));
         expect(prompt, contains('【语言要求】请使用中文回复。'));
+        // 摘录不能被当成用户自己的经历，这条约束和笔记里的「署名」标注是一对
+        expect(prompt, contains('署名'));
       });
 
       test('buildReportInsightUserMessage with all fields', () {

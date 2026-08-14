@@ -96,7 +96,8 @@ class ThoughterPage extends StatefulWidget {
   State<ThoughterPage> createState() => _ThoughterPageState();
 }
 
-class _ThoughterPageState extends State<ThoughterPage> {
+class _ThoughterPageState extends State<ThoughterPage>
+    with WidgetsBindingObserver {
   final TextEditingController _textController = TextEditingController();
   final FocusNode _inputFocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
@@ -137,6 +138,10 @@ class _ThoughterPageState extends State<ThoughterPage> {
   bool _enableThinking = true; // 是否启用思考模式（仅支持的模型显示）
 
   bool _isInputFocused = false;
+
+  /// 软键盘是否弹起过。用来区分「键盘收完了」和「键盘还没开始弹」——
+  /// 两种状态下 viewInsets.bottom 都是 0（见 _onKeyboardMetricsChanged）。
+  bool _softKeyboardWasOpen = false;
 
   /// 标签表的 id → NoteTag 映射。提案卡里的 artifact 只带 id 和名字，
   /// 图标要从这里取——和笔记卡片用的是同一份数据（见 quote_item_widget 的 tagMap）。
@@ -322,6 +327,12 @@ class _ThoughterPageState extends State<ThoughterPage> {
   void dispose() {
     _disposeImpl();
     super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    _onKeyboardMetricsChanged();
   }
 
   @override

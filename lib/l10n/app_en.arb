@@ -2073,6 +2073,15 @@
       }
     }
   },
+  "noteAttribution": " (attributed to {source})",
+  "@noteAttribution": {
+    "description": "Marks the author/source recorded on a note when feeding notes to the AI, so excerpts can be told apart from signed originals",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
   "aiProviderOpenAI": "OpenAI",
   "aiProviderOpenRouter": "OpenRouter",
   "aiProviderDeepSeek": "DeepSeek",

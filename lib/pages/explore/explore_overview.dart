@@ -342,11 +342,11 @@ extension _ExploreOverview on _ExplorePageState {
                   // 有文本时直接显示（流式接收中或已完成）
                   else if (_insightText.isNotEmpty)
                     // 直接显示实时文本，不使用打字机动画，流式接收时也不显示加载指示器
+                    // 行高走令牌（纸墨 1.75 / 素笺 1.6），不要在这里写死，
+                    // 否则手工风格下这段字和别处的正文对不上。
                     Text(
                       _insightText,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(height: 1.5),
+                      style: Theme.of(context).textTheme.bodyMedium,
                     )
                   // 没有洞察内容且加载完成时显示空状态
                   else
