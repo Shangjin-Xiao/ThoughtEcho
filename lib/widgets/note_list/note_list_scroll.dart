@@ -71,9 +71,7 @@ extension _NoteListScrollExtension on NoteListViewState {
       final deltaContent = quote.deltaContent;
       if (deltaContent != null && quote.editSource == 'fullscreen') {
         rich++;
-        if (deltaContent.contains('"image"') ||
-            deltaContent.contains('"video"') ||
-            deltaContent.contains('"audio"')) {
+        if (DeltaMediaCache.hasMediaOf(deltaContent)) {
           media++;
         }
       }

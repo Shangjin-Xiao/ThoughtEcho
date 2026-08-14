@@ -225,11 +225,73 @@ class DeltaMediaCache {
   static final LinkedHashMap<DeltaContentFingerprint, DeltaMediaSummary>
       _cache = LinkedHashMap<DeltaContentFingerprint, DeltaMediaSummary>();
 
+  /// 「这条笔记有没有媒体」的布尔缓存，和 [_cache] 分开。
+  ///
+  /// 分开的理由是 `data:` 内嵌媒体：那种笔记的摘要**不进** [_cache]（见 [of]），
+  /// 于是每次问都要重解一遍整份 base64。而列表的 keepAlive 判定每次构建条目都要
+  /// 问一次，正是最不能重解的地方。这张表只存一个 bool，既不持有 source 也不持有
+  /// delta，data: 笔记也可以安全常驻。
+  static final LinkedHashMap<DeltaContentFingerprint, bool> _hasMediaCache =
+      LinkedHashMap<DeltaContentFingerprint, bool>();
+
   static const int _maxCacheSize = 300;
   static const int _pruneBatchSize = 50;
+  static const int _maxHasMediaCacheSize = 600;
+  static const int _hasMediaPruneBatchSize = 100;
 
   static int _hitCount = 0;
   static int _missCount = 0;
+
+  /// 只回答「这条笔记里有没有媒体」，不返回任何 source。
+  ///
+  /// 给热路径用：列表的 keepAlive 判定原来是三次 `deltaContent.contains(...)`，
+  /// **每次**条目构建都要重新全量扫一遍整份 delta JSON，正文越长越贵，而且结果
+  /// 一次都不复用。这里换成按内容指纹查表：指纹的主要成本是 `String.hashCode`，
+  /// 而 Dart VM 把它缓存在字符串对象头里，所以同一个 `Quote` 反复问是廉价的。
+  ///
+  /// 口径也从「子串碰运气」变成 `readDeltaMediaEmbed` 那一份唯一真源——
+  /// 结果与 [parseDeltaMedia] 恒等，媒体序列化改形状时不会有第二处需要同步。
+  static bool hasMediaOf(String? deltaContent) {
+    if (deltaContent == null || deltaContent.isEmpty) {
+      return false;
+    }
+
+    final key = DeltaContentFingerprint.of(deltaContent);
+
+    final cached = _hasMediaCache.remove(key);
+    if (cached != null) {
+      _hasMediaCache[key] = cached;
+      return cached;
+    }
+
+    // 摘要缓存已经有就直接借用。列表里 [of] 和 [hasMediaOf] 都会被每次条目构建
+    // 调到，谁先谁后不定；不先查一遍 [_cache] 的话，后手那一个必然把同一份
+    // delta 再解析一遍。借用时照常 touch：这条目正在被使用，不该因为提问的入口
+    // 不同就被当成冷数据淘汰掉。
+    //
+    // 没有就走 [_summaryFor]，它顺手把摘要也放进 [_cache]，于是反过来也成立。
+    // `data:` 笔记按 [_summaryFor] 的规则跳过摘要缓存，但布尔结果照样常驻——
+    // 热路径要的就是这一个 bool。
+    final existing = _cache.remove(key);
+    final bool hasMedia;
+    if (existing != null) {
+      _hitCount++;
+      _cache[key] = existing;
+      hasMedia = existing.hasMedia;
+    } else {
+      hasMedia = _summaryFor(key, deltaContent).hasMedia;
+    }
+
+    if (_hasMediaCache.length >= _maxHasMediaCacheSize) {
+      final victims =
+          _hasMediaCache.keys.take(_hasMediaPruneBatchSize).toList();
+      for (final victim in victims) {
+        _hasMediaCache.remove(victim);
+      }
+    }
+    _hasMediaCache[key] = hasMedia;
+    return hasMedia;
+  }
 
   static DeltaMediaSummary of(String? deltaContent) {
     if (deltaContent == null || deltaContent.isEmpty) {
@@ -245,6 +307,14 @@ class DeltaMediaCache {
       return existing;
     }
 
+    return _summaryFor(key, deltaContent);
+  }
+
+  /// 解析一次并按规则写入摘要缓存。调用方必须先查过 [_cache] 没命中。
+  static DeltaMediaSummary _summaryFor(
+    DeltaContentFingerprint key,
+    String deltaContent,
+  ) {
     _missCount++;
     final summary = parseDeltaMedia(deltaContent);
 
@@ -271,6 +341,7 @@ class DeltaMediaCache {
 
   static void clear() {
     _cache.clear();
+    _hasMediaCache.clear();
     _hitCount = 0;
     _missCount = 0;
   }
@@ -283,6 +354,9 @@ class DeltaMediaCache {
       'hitCount': _hitCount,
       'missCount': _missCount,
       'hitRate': total == 0 ? 0.0 : _hitCount / total,
+      // 布尔缓存单独报一个尺寸：`data:` 笔记的摘要不进 [_cache]，只有这一项
+      // 能证明它们的 keepAlive 判定确实没在每次构建时重解。
+      'hasMediaCacheSize': _hasMediaCache.length,
     };
   }
 }

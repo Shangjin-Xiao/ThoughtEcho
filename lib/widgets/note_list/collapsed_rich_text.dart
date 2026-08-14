@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 
 import '../../gen_l10n/app_localizations.dart';
@@ -404,6 +406,14 @@ class CollapsedRichTextMetrics {
   /// 量出折叠盒该画哪些块、每块几行、一共多高。
   ///
   /// 这是**唯一**一次测量：盒子的高度和要画的内容都从这一次的结果来，两者不会漂。
+  ///
+  /// 传 [cacheContent]（笔记的 `deltaContent`）即启用结果缓存。**强烈建议传**：
+  /// 这个方法是在 `LayoutBuilder` 里调的，卡片每重建一次就要把每个可见块重新
+  /// `TextPainter.layout` 一遍，而列表里有几十张卡片是永久 keepAlive 的——一次
+  /// `setState` 就是几十次全量重量。结果只取决于参数，缓存不会让测量和渲染漂开。
+  ///
+  /// [cacheBoldPrioritized] 必须如实反映 [blocks] 是否已被 [prioritizeBoldBlocks]
+  /// 重排过：同一份 delta 在开关两种状态下的计划不同，不进键就会串味。
   static CollapsedRichTextPlan plan({
     required List<RichTextBlock> blocks,
     required TextStyle baseStyle,
@@ -414,6 +424,88 @@ class CollapsedRichTextMetrics {
     TextDirection textDirection = TextDirection.ltr,
     TextScaler textScaler = TextScaler.noScaling,
     Locale? locale,
+    String? cacheContent,
+    bool cacheBoldPrioritized = false,
+  }) {
+    _CollapsedRichTextPlanCacheKey? cacheKey;
+    // 宽度必须是有限的才建键：`double.infinity.round()` 会直接抛
+    // `UnsupportedError`，那会赶在 [_computePlan] 自己的非有限宽度兜底之前炸掉。
+    // 无界横向约束下直接走计算分支，由那条兜底返回空计划。
+    if (cacheContent != null &&
+        cacheContent.isNotEmpty &&
+        maxWidth.isFinite &&
+        limit.isFinite) {
+      cacheKey = _CollapsedRichTextPlanCacheKey(
+        fingerprint: DeltaContentFingerprint.of(cacheContent),
+        boldPrioritized: cacheBoldPrioritized,
+        showMedia: showMedia,
+        // 宽度**按原值进键，不做量化**。同一张卡片在同一次布局里拿到的约束逐位
+        // 相同，精确相等本来就命中；而量化成 0.01px 的桶会让两个相差不到 0.01px、
+        // 却恰好跨过 `TextPainter` 换行阈值的宽度共用一份计划——那是按另一个宽度
+        // 算出来的行数和盒高，内容会被多裁一行。省那点命中率不值得。
+        maxWidth: maxWidth,
+        limit: limit,
+        styleHash: baseStyle.hashCode,
+        boldWeightValue: boldWeight.value,
+        textDirection: textDirection,
+        textScalerHash: textScaler.hashCode,
+        localeTag: locale?.toLanguageTag(),
+      );
+      final cached = CollapsedRichTextPlanCache._get(cacheKey);
+      if (cached != null) {
+        return cached;
+      }
+    }
+
+    final stopwatch = cacheKey == null ? null : (Stopwatch()..start());
+    final computed = _computePlan(
+      blocks: blocks,
+      baseStyle: baseStyle,
+      maxWidth: maxWidth,
+      limit: limit,
+      showMedia: showMedia,
+      boldWeight: boldWeight,
+      textDirection: textDirection,
+      textScaler: textScaler,
+      locale: locale,
+    );
+
+    // 计划里排到了 `data:` 内嵌媒体就不进缓存：那个 source 是整段 base64，
+    // 缓存住等于把若干 MB 长期钉在堆上。`DeltaMediaCache` 和 `DeltaRichTextCache`
+    // 跳过这类笔记是同一个理由。
+    //
+    // 判据是**计划自己排到的块**，不是整篇 blocks：折叠盒只有 160px，正文长的
+    // 笔记根本排不到后面那张内嵌图，那种计划不持有 base64，可以照常缓存。
+    if (cacheKey != null) {
+      stopwatch!.stop();
+      // miss 和耗时**先记**，再决定要不要存。跳过存储的那些计划照样是真金白银
+      // 算出来的；不记的话性能日志会漏掉它们，`planWorstUs` 恰好把最贵的一类
+      // （带内嵌媒体的）系统性地漏没。
+      CollapsedRichTextPlanCache._recordMiss(stopwatch.elapsedMicroseconds);
+      if (!_holdsInlineDataMedia(computed)) {
+        CollapsedRichTextPlanCache._put(cacheKey, computed);
+      }
+    }
+    return computed;
+  }
+
+  static bool _holdsInlineDataMedia(CollapsedRichTextPlan plan) {
+    for (final entry in plan.entries) {
+      if (isInlineDataUri(entry.block.media?.source)) return true;
+    }
+    return false;
+  }
+
+  static CollapsedRichTextPlan _computePlan({
+    required List<RichTextBlock> blocks,
+    required TextStyle baseStyle,
+    required double maxWidth,
+    required double limit,
+    required bool showMedia,
+    required FontWeight boldWeight,
+    required TextDirection textDirection,
+    required TextScaler textScaler,
+    required Locale? locale,
   }) {
     final visible = CollapsedRichText.visibleBlocks(
       blocks,
@@ -456,10 +548,7 @@ class CollapsedRichTextMetrics {
 
       // 用本块**最矮**的一行换算行数上限：宁可多排一两行（`ClipRect` 会裁掉），
       // 也不能少排——少排的内容是静悄悄消失的，没有任何提示。
-      final maxLines = (remainingHeight <= 0
-              ? 1
-              : (remainingHeight / layout.minLineHeight).ceil() + 1)
-          .clamp(1, _maxLinesPerBlock);
+      final maxLines = _lineBudgetFor(remainingHeight, layout.minLineHeight);
 
       final painter = TextPainter(
         text: layout.span,
@@ -482,11 +571,167 @@ class CollapsedRichTextMetrics {
     );
   }
 
+  /// 把「还剩多少像素」换算成「这个块最多排几行」。
+  ///
+  /// **不能直接 `(remainingHeight / minLineHeight).ceil()`**：`double` 的 `ceil()`
+  /// 对非有限值抛 `UnsupportedError`，而这里有两条路会算出非有限值——
+  /// 调用方传了非有限的 `limit`（`remainingHeight` 跟着非有限），或者畸形样式
+  /// 让 `minLineHeight` 变成 0（除出来是 infinity）。两种都会把布局炸掉，
+  /// 而不是退化成一个难看的折叠盒。
+  ///
+  /// 算不出可信预算时给 [_maxLinesPerBlock]，方向和 [CollapsedRichTextMetrics]
+  /// 其余地方一致：宁可多排（会被裁掉），不能少排（内容静悄悄消失）。
+  static int _lineBudgetFor(double remainingHeight, double minLineHeight) {
+    if (remainingHeight <= 0) {
+      return 1;
+    }
+    if (!remainingHeight.isFinite ||
+        !minLineHeight.isFinite ||
+        minLineHeight <= 0) {
+      return _maxLinesPerBlock;
+    }
+    final budget = remainingHeight / minLineHeight;
+    if (!budget.isFinite) {
+      return _maxLinesPerBlock;
+    }
+    return (budget.ceil() + 1).clamp(1, _maxLinesPerBlock);
+  }
+
   /// 单个块的排版行数硬上限。
   ///
   /// 折叠盒 160px 配最小的 `small`（10px × 1.2 ≈ 12px）也就十几行，这个值只是
   /// 防止畸形样式（比如 `size: "0.1"`）把预算算成天文数字。
   static const int _maxLinesPerBlock = 32;
+}
+
+/// [CollapsedRichTextMetrics.plan] 的 LRU 缓存。
+///
+/// 键**不持有 delta 字符串本身**，只存指纹——和 [DeltaMediaCache]、
+/// [DeltaRichTextCache] 同一套理由：带 `data:` 内嵌媒体的笔记，一个 source 就是
+/// 整段 base64。计划本身只有块引用和行数，不含像素数据，可以放心常驻。
+class CollapsedRichTextPlanCache {
+  CollapsedRichTextPlanCache._();
+
+  static final LinkedHashMap<_CollapsedRichTextPlanCacheKey,
+          CollapsedRichTextPlan> _cache =
+      LinkedHashMap<_CollapsedRichTextPlanCacheKey, CollapsedRichTextPlan>();
+
+  static const int _maxCacheSize = 300;
+  static const int _pruneBatchSize = 50;
+
+  static int _hitCount = 0;
+  static int _missCount = 0;
+  static int _workMicros = 0;
+  static int _worstWorkMicros = 0;
+
+  static CollapsedRichTextPlan? _get(_CollapsedRichTextPlanCacheKey key) {
+    final existing = _cache.remove(key);
+    if (existing == null) {
+      return null;
+    }
+    _hitCount++;
+    _cache[key] = existing;
+    return existing;
+  }
+
+  static void _recordMiss(int workMicros) {
+    _missCount++;
+    _workMicros += workMicros;
+    if (workMicros > _worstWorkMicros) {
+      _worstWorkMicros = workMicros;
+    }
+  }
+
+  static void _put(
+    _CollapsedRichTextPlanCacheKey key,
+    CollapsedRichTextPlan plan,
+  ) {
+    if (_cache.length >= _maxCacheSize) {
+      final victims = _cache.keys.take(_pruneBatchSize).toList();
+      for (final victim in victims) {
+        _cache.remove(victim);
+      }
+    }
+    _cache[key] = plan;
+  }
+
+  static void clear() {
+    _cache.clear();
+    _hitCount = 0;
+    _missCount = 0;
+    _workMicros = 0;
+    _worstWorkMicros = 0;
+  }
+
+  static Map<String, dynamic> get stats {
+    final total = _hitCount + _missCount;
+    return {
+      'cacheSize': _cache.length,
+      'maxSize': _maxCacheSize,
+      'hitCount': _hitCount,
+      'missCount': _missCount,
+      'hitRate': total == 0 ? 0.0 : _hitCount / total,
+      'workMicros': _workMicros,
+      'worstWorkMicros': _worstWorkMicros,
+    };
+  }
+}
+
+@immutable
+class _CollapsedRichTextPlanCacheKey {
+  const _CollapsedRichTextPlanCacheKey({
+    required this.fingerprint,
+    required this.boldPrioritized,
+    required this.showMedia,
+    required this.maxWidth,
+    required this.limit,
+    required this.styleHash,
+    required this.boldWeightValue,
+    required this.textDirection,
+    required this.textScalerHash,
+    required this.localeTag,
+  });
+
+  final DeltaContentFingerprint fingerprint;
+  final bool boldPrioritized;
+  final bool showMedia;
+  final double maxWidth;
+  final double limit;
+  final int styleHash;
+  final int boldWeightValue;
+  final TextDirection textDirection;
+  final int textScalerHash;
+  final String? localeTag;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is _CollapsedRichTextPlanCacheKey &&
+        other.fingerprint == fingerprint &&
+        other.boldPrioritized == boldPrioritized &&
+        other.showMedia == showMedia &&
+        other.maxWidth == maxWidth &&
+        other.limit == limit &&
+        other.styleHash == styleHash &&
+        other.boldWeightValue == boldWeightValue &&
+        other.textDirection == textDirection &&
+        other.textScalerHash == textScalerHash &&
+        other.localeTag == localeTag;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        fingerprint,
+        boldPrioritized,
+        showMedia,
+        maxWidth,
+        limit,
+        styleHash,
+        boldWeightValue,
+        textDirection,
+        textScalerHash,
+        localeTag,
+      );
 }
 
 class _CollapsedRichTextBlock extends StatelessWidget {

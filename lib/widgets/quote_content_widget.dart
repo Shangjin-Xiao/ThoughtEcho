@@ -166,6 +166,53 @@ class QuoteContent extends StatelessWidget {
   static const double _lineSpacing = 4.0;
   static const int _averageCharsPerLine = 28;
 
+  /// 纯文本折叠预览的行数上限。
+  ///
+  /// 折叠盒 160px 配一个正常字号也就十几行，这个值只防畸形样式（`fontSize: 0.1`）
+  /// 把预算算成天文数字。**超过它不是夹到它**——见 [collapsedPlainTextMaxLines]。
+  static const int _maxCollapsedPlainTextLines = 64;
+
+  /// 拿不到字号时的兜底，取 Material `bodyLarge` 的默认值。
+  static const double _fallbackFontSize = 16.0;
+
+  /// 折叠盒（[collapsedContentMaxHeight] 高）最多能显示多少行纯文本。
+  ///
+  /// **只用来给 `Text` / `TextPainter` 设 `maxLines`，所以必须偏大。** 宁可多排一
+  /// 两行——`ClipRect` 会裁掉，看不见；少排的内容却是静悄悄消失的，没有任何提示。
+  ///
+  /// 偏大由行高取**下界**来保证：`fontSize * (height ?? 1.0)`。`height` 为 null 时
+  /// 真实行高由字体的 ascent/descent 决定，普遍是字号的 1.2~1.4 倍，恒不小于这里
+  /// 算的值；于是 `ceil(limit / 下界) + 1` 行的真实高度恒 > limit。
+  ///
+  /// 返回 null 表示**不要设 `maxLines`**。算不出可信预算时只能退回「整篇都排」：
+  /// 那只是慢，而夹一个盖不住盒子的行数会真的截断正文。两种情况会退回 null：
+  ///
+  /// - 行高非有限或 ≤ 0（畸形样式）；
+  /// - 预算超过 [_maxCollapsedPlainTextLines]。字号和行高同时极小时，
+  ///   **夹到上限的那 64 行仍然填不满 160px 的盒子**，照样会截断——所以上限是
+  ///   「超过就放弃截断」，不是「超过就取上限」。
+  ///
+  /// 存在的理由是性能：`RenderParagraph` **不看高度约束**，不设 `maxLines` 的话
+  /// 一条几千字的笔记会把整篇断行整形完，再被 `ClipRect` 裁到只剩五六行——折叠卡片
+  /// 为看不见的像素付了全文排版的钱。富文本那条路阶段 D 已经按剩余像素算好了行数
+  /// 预算（见 [CollapsedRichTextMetrics.plan]），纯文本这条一直漏着。
+  static int? collapsedPlainTextMaxLines({
+    required TextStyle? style,
+    required TextScaler textScaler,
+    double limit = collapsedContentMaxHeight,
+  }) {
+    final fontSize = style?.fontSize ?? _fallbackFontSize;
+    final lineHeight = textScaler.scale(fontSize) * (style?.height ?? 1.0);
+    if (!lineHeight.isFinite || lineHeight <= 0) {
+      return null;
+    }
+    final budget = (limit / lineHeight).ceil() + 1;
+    if (budget > _maxCollapsedPlainTextLines) {
+      return null;
+    }
+    return budget < 1 ? 1 : budget;
+  }
+
   /// 折叠卡片挂缩略图所需的最小容器宽度：缩略图连间距占 84px，再给正文留
   /// 至少 96px，低于这个宽度就不画缩略图，避免 Row 溢出（见 build 中的说明）。
   static const double _minWidthForCollapsedThumbnail = 180.0;
@@ -179,6 +226,7 @@ class QuoteContent extends StatelessWidget {
     _QuoteContentControllerCache.clear();
     DeltaMediaCache.clear();
     DeltaRichTextCache.clear();
+    CollapsedRichTextPlanCache.clear();
   }
 
   /// 修复问题1：清理特定笔记的缓存（用于笔记删除/更新）
@@ -204,6 +252,9 @@ class QuoteContent extends StatelessWidget {
         // 性能日志要一行拿全就得带上它们。
         'richText': DeltaRichTextCache.stats,
         'media': DeltaMediaCache.stats,
+        // 折叠富文本真正的排版成本在这里。IR 解析（richText）便宜得多，
+        // 只盯着它会以为折叠态已经没有成本了。
+        'plan': CollapsedRichTextPlanCache.stats,
       };
 
   /// Returns a compact one-line summary suitable for copy/paste performance logs.
@@ -224,6 +275,9 @@ class QuoteContent extends StatelessWidget {
     final media = Map<String, dynamic>.from(
       stats['media'] as Map<String, dynamic>,
     );
+    final plan = Map<String, dynamic>.from(
+      stats['plan'] as Map<String, dynamic>,
+    );
 
     final buffer = StringBuffer()
       ..write('doc=${document['cacheSize']}')
@@ -239,7 +293,10 @@ class QuoteContent extends StatelessWidget {
       ..write(',irWorstUs=${richText['worstWorkMicros']}')
       ..write(',media=${media['cacheSize']}')
       ..write('/${media['maxSize']}')
-      ..write(',mediaMiss=${media['missCount']}');
+      ..write(',mediaMiss=${media['missCount']}')
+      ..write(',plan=${plan['cacheSize']}')
+      ..write('/${plan['maxSize']}')
+      ..write(',planWorstUs=${plan['worstWorkMicros']}');
 
     if (baseline != null) {
       final baselineDocument = Map<String, dynamic>.from(
@@ -250,6 +307,9 @@ class QuoteContent extends StatelessWidget {
       );
       final baselineController = Map<String, dynamic>.from(
         baseline['controller'] as Map<String, dynamic>? ?? const {},
+      );
+      final baselinePlan = Map<String, dynamic>.from(
+        baseline['plan'] as Map<String, dynamic>? ?? const {},
       );
 
       buffer
@@ -274,7 +334,13 @@ class QuoteContent extends StatelessWidget {
         ..write(',ctrlWorstUs=')
         ..write(_debugNewWorst(controller, baselineController))
         ..write(',ctrlDispose+')
-        ..write(_debugIntDelta(controller, baselineController, 'disposeCount'));
+        ..write(_debugIntDelta(controller, baselineController, 'disposeCount'))
+        ..write(',planMiss+')
+        ..write(_debugIntDelta(plan, baselinePlan, 'missCount'))
+        ..write(',planWorkUs+')
+        ..write(_debugIntDelta(plan, baselinePlan, 'workMicros'))
+        ..write(',planWorstUs=')
+        ..write(_debugNewWorst(plan, baselinePlan));
     }
 
     return buffer.toString();
@@ -465,15 +531,24 @@ class QuoteContent extends StatelessWidget {
             textDirection: textDirection,
             textScaler: textScaler,
             locale: locale,
+            // 这里的 blocks 是 DeltaRichTextCache 的原序列，没有按加粗重排。
+            cacheContent: quote.deltaContent,
           );
           return plan.height > collapsedContentMaxHeight + 0.5;
         }
 
+        // `maxLines` 不改变这个判断的答案，只砍掉多余的排版量：
+        // n 行的真实高度恒 > 160.5（见 [collapsedPlainTextMaxLines]），所以正文
+        // 超过 n 行时被夹住的 height 仍然 > 阈值，不超过 n 行时 height 就是精确值。
         final painter = TextPainter(
           text: TextSpan(text: quote.content, style: style),
           textDirection: textDirection,
           textScaler: textScaler,
           locale: locale,
+          maxLines: collapsedPlainTextMaxLines(
+            style: style,
+            textScaler: textScaler,
+          ),
         )..layout(maxWidth: maxWidth);
         final exceeds = painter.height > collapsedContentMaxHeight + 0.5;
         painter.dispose();
@@ -633,7 +708,8 @@ class QuoteContent extends StatelessWidget {
           // 文本**。旧实现在 `_documentFromDelta` 里也有这条兜底；直接画空的话，
           // 卡片正文整个消失，而且因为量出来是 0 高，连双击展开都进不去——用户会
           // 以为笔记内容丢了。
-          return _buildPlainTextContent(needsExpansion: needsExpansion);
+          return _buildPlainTextContent(context,
+              needsExpansion: needsExpansion);
         }
         if (prioritizeBoldContent) {
           blocks = prioritizeBoldBlocks(blocks);
@@ -683,6 +759,8 @@ class QuoteContent extends StatelessWidget {
               textDirection: textDirection,
               textScaler: textScaler,
               locale: locale,
+              cacheContent: quote.deltaContent,
+              cacheBoldPrioritized: prioritizeBoldContent,
             );
             final double boxHeight =
                 plan.height.clamp(0.0, collapsedContentMaxHeight);
@@ -762,19 +840,45 @@ class QuoteContent extends StatelessWidget {
       return _buildRichTextContent(context);
     }
 
-    return _buildPlainTextContent(needsExpansion: needsExpansion);
+    return _buildPlainTextContent(context, needsExpansion: needsExpansion);
   }
 
   /// 纯文本正文。富文本的 delta 解不出来时也走这里兜底。
-  Widget _buildPlainTextContent({required bool needsExpansion}) {
+  Widget _buildPlainTextContent(
+    BuildContext context, {
+    required bool needsExpansion,
+  }) {
+    // 折叠态给 `maxLines` 封顶。盒子是 `ClipRect(SizedBox(height: 160))`，而
+    // `RenderParagraph` 不看高度约束——不封顶的话整篇正文都会被断行整形一遍，
+    // 然后裁到只剩五六行。行数取的是偏大的上界，裁出来的像素和以前逐位相同。
+    final bool clampToCollapsedBox = !showFullContent && needsExpansion;
+
+    int? collapsedMaxLines;
+    if (clampToCollapsedBox) {
+      // 行数预算必须按 `Text` **实际用的**样式算，不能按传进来的 [style] 算。
+      // `Text` 会把 [style] 往 `DefaultTextStyle` 上 merge（`inherit` 为 true 时），
+      // 字号可能整个来自环境；照着一个 fontSize 为 null 的样式去估，行高就会被
+      // 高估，行数被低估，正文尾巴静悄悄少一截。这里复刻 `Text` 自己的合并规则。
+      final TextStyle? rawStyle = style;
+      final defaultStyle = DefaultTextStyle.of(context).style;
+      final effectiveStyle = rawStyle == null || rawStyle.inherit
+          ? defaultStyle.merge(rawStyle)
+          : rawStyle;
+      collapsedMaxLines = collapsedPlainTextMaxLines(
+        style: effectiveStyle,
+        textScaler: MediaQuery.textScalerOf(context),
+      );
+    }
+
     Widget plainText = Text(
       quote.content,
       style: style,
       softWrap: true,
-      overflow: TextOverflow.visible,
+      maxLines: clampToCollapsedBox ? collapsedMaxLines : maxLines,
+      overflow: clampToCollapsedBox ? TextOverflow.clip : TextOverflow.visible,
     );
 
-    if (!showFullContent && needsExpansion) {
+    if (clampToCollapsedBox) {
       plainText = _CollapsedContentWrapper(
         key: collapsedWrapperKey,
         maxHeight: collapsedContentMaxHeight,
