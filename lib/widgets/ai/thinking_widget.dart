@@ -126,65 +126,72 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
           // 靠内容区左边那条竖线表示"这段是引下来的过程"。
           Material(
             color: Colors.transparent,
-            child: InkWell(
-              onTap: _toggleExpanded,
-              borderRadius: BorderRadius.circular(
-                AppShapeTokens.of(context).buttonRadius,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // 进行中是脉冲圆点，结束后换成静态图标
-                    if (widget.inProgress)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ScaleTransition(
-                          scale: Tween<double>(begin: 1.0, end: 1.2)
-                              .animate(_pulseController),
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: theme.colorScheme.primary,
+            child: Semantics(
+              button: true,
+              label: widget.inProgress ? l10n.aiThinking : l10n.thinking,
+              expanded: _isExpanded,
+              child: InkWell(
+                onTap: _toggleExpanded,
+                borderRadius: BorderRadius.circular(
+                  AppShapeTokens.of(context).buttonRadius,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 进行中是脉冲圆点，结束后换成静态图标
+                      if (widget.inProgress)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ScaleTransition(
+                            scale: Tween<double>(begin: 1.0, end: 1.2)
+                                .animate(_pulseController),
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: theme.colorScheme.primary,
+                              ),
                             ),
                           ),
+                        )
+                      else
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Icon(
+                            Icons.lightbulb_outline,
+                            size: 16,
+                            color: muted,
+                          ),
                         ),
-                      )
-                    else
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
+                      // 标题文本。收起时是个名词标签（「思考」），不是
+                      // showThinking（「查看思考过程」）那种祈使句——它读起来
+                      // 像用户在对自己下指令。
+                      Flexible(
+                        child: ExcludeSemantics(
+                          child: Text(
+                            widget.inProgress ? l10n.aiThinking : l10n.thinking,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: muted,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      // 旋转箭头
+                      RotationTransition(
+                        turns: Tween<double>(begin: 0, end: 0.5)
+                            .animate(_rotationController),
                         child: Icon(
-                          Icons.lightbulb_outline,
-                          size: 16,
-                          color: muted,
+                          Icons.expand_more,
+                          size: 18,
+                          color: muted.withValues(alpha: 0.6),
                         ),
                       ),
-                    // 标题文本。收起时是个名词标签（「思考」），不是
-                    // showThinking（「查看思考过程」）那种祈使句——它读起来
-                    // 像用户在对自己下指令。
-                    Flexible(
-                      child: Text(
-                        widget.inProgress ? l10n.aiThinking : l10n.thinking,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: muted,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    // 旋转箭头
-                    RotationTransition(
-                      turns: Tween<double>(begin: 0, end: 0.5)
-                          .animate(_rotationController),
-                      child: Icon(
-                        Icons.expand_more,
-                        size: 18,
-                        color: muted.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
