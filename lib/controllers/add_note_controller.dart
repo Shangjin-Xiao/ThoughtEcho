@@ -75,6 +75,22 @@ class AddNoteController extends ChangeNotifier {
   // 分类选择
   NoteTag? selectedCategory;
 
+  // 标签名称到固定分类 ID 的映射，避免O(N)遍历
+  static final Map<String, String> hitokotoTagNameToCategoryIdMap = {
+    '动画': DatabaseService.defaultTagIdAnime,
+    '漫画': DatabaseService.defaultTagIdComic,
+    '游戏': DatabaseService.defaultTagIdGame,
+    '文学': DatabaseService.defaultTagIdNovel,
+    '原创': DatabaseService.defaultTagIdOriginal,
+    '来自网络': DatabaseService.defaultTagIdInternet,
+    '其他': DatabaseService.defaultTagIdOther,
+    '影视': DatabaseService.defaultTagIdMovie,
+    '诗词': DatabaseService.defaultTagIdPoem,
+    '网易云': DatabaseService.defaultTagIdMusic,
+    '哲学': DatabaseService.defaultTagIdPhilosophy,
+    '抖机灵': DatabaseService.defaultTagIdJoke,
+  };
+
   // 一言类型到固定分类 ID 的映射
   static final Map<String, String> hitokotoTypeToCategoryIdMap = {
     'a': DatabaseService.defaultTagIdAnime, // 动画
@@ -487,12 +503,7 @@ class AddNoteController extends ChangeNotifier {
   }) async {
     try {
       if (fixedId == null) {
-        for (var entry in hitokotoTypeToCategoryIdMap.entries) {
-          if (convertHitokotoTypeToTagName(entry.key) == name) {
-            fixedId = entry.value;
-            break;
-          }
-        }
+        fixedId = hitokotoTagNameToCategoryIdMap[name];
         if (name == '每日一言') {
           fixedId = DatabaseService.defaultTagIdHitokoto;
         }
