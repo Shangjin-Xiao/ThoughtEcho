@@ -2328,5 +2328,38 @@ void main() {
       expect(find.byType(Dialog), findsOneWidget);
       expect(find.text('Thoughter 实验性功能说明'), findsOneWidget);
     });
+
+    // 键盘收起后输入框必须退出聚焦态：Android 的返回键只收键盘不动焦点，
+    // 输入框会一直亮着描边、撑在聚焦时的样子，看上去就是"缩不回去"。
+    testWidgets('soft keyboard dismissal releases composer focus',
+        (tester) async {
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          child: const ThoughterPage(entrySource: ThoughterEntrySource.explore),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final composer = find.byType(TextField).last;
+      await tester.tap(composer);
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(composer).focusNode?.hasFocus, isTrue);
+
+      // 键盘弹起：焦点保持，输入框仍是聚焦态
+      tester.view.viewInsets = const FakeViewPadding(bottom: 900);
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(composer).focusNode?.hasFocus, isTrue);
+
+      // 键盘收起（返回键）：焦点要跟着放掉
+      tester.view.viewInsets = const FakeViewPadding(bottom: 0);
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(composer).focusNode?.hasFocus, isFalse);
+    });
   });
 }

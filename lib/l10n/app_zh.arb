@@ -2031,6 +2031,15 @@
       }
     }
   },
+  "noteExcerptSource": "（摘录自 {source}，非用户本人所写）",
+  "@noteExcerptSource": {
+    "description": "喂给 AI 的笔记内容里，用于标注该条是摘录而非用户原创",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
   "aiProviderOpenAI": "OpenAI",
   "aiProviderOpenRouter": "OpenRouter",
   "aiProviderDeepSeek": "DeepSeek",

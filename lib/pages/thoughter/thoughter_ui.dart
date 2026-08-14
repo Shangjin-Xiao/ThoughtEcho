@@ -46,6 +46,32 @@ extension _ThoughterUI on _ThoughterPageState {
     }
   }
 
+  /// 软键盘收起时把输入焦点一并放掉。
+  ///
+  /// Android 的返回键和下滑手势只收键盘，不动焦点：输入框会一直停在聚焦态
+  /// （描边亮着、光标闪着、壳子按聚焦的样子铺开），键盘没了却缩不回去。
+  /// 焦点还留着，下一次别处的浮层关掉时系统又会把键盘还回来。
+  ///
+  /// 这里不能读 MediaQuery 的 viewInsets：Scaffold 已经把键盘 inset 消费掉，
+  /// body 子树里读到的恒为 0（见 _onMessageViewportHeightChanged），只能从
+  /// View 上取原始值。
+  void _onKeyboardMetricsChanged() {
+    if (!mounted) return;
+    if (View.of(context).viewInsets.bottom > 0) {
+      _softKeyboardWasOpen = true;
+      return;
+    }
+    if (!_softKeyboardWasOpen) return;
+    _softKeyboardWasOpen = false;
+    // 收起是一段动画，中途会经过 0；隔一拍再确认一次，免得把用户刚点开的
+    // 键盘又按回去（切换输入法时也会短暂归零）。
+    Future<void>.delayed(const Duration(milliseconds: 120), () {
+      if (!mounted) return;
+      if (View.of(context).viewInsets.bottom > 0) return;
+      _dropInputFocus();
+    });
+  }
+
   /// 实体键盘上的回车：Enter 发送，Shift+Enter 换行——键盘用户的肌肉记忆。
   ///
   /// 只在桌面生效。手机上按下软键盘的回车走的是 textInputAction（已设成换行），

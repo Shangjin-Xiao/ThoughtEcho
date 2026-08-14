@@ -2016,6 +2016,15 @@
       }
     }
   },
+  "noteExcerptSource": " (excerpt from {source}, not written by the user)",
+  "@noteExcerptSource": {
+    "description": "Marks a note as a quoted excerpt rather than the user's own writing when feeding notes to the AI",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
   "aiProviderOpenAI": "OpenAI",
   "aiProviderOpenRouter": "OpenRouter",
   "aiProviderDeepSeek": "DeepSeek",

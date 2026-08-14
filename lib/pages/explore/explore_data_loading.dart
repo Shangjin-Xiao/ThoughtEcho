@@ -309,6 +309,13 @@ extension _ExploreDataLoading on _ExplorePageState {
           content += l10n.weatherInfo(display);
         }
 
+        // 标出摘录：带作者/出处的是用户抄下来的别人的话，不是他自己写的。
+        // 不标的话模型会把书里的经历当成用户的经历，洞察就开始编人生。
+        final excerptSource = quote.source;
+        if (excerptSource != null && excerptSource.trim().isNotEmpty) {
+          content += l10n.noteExcerptSource(excerptSource.trim());
+        }
+
         return content;
       }).join('\n\n');
 
