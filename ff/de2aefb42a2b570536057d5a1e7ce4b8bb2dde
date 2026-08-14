@@ -1,0 +1,43 @@
+lib/pages/explore/explore_overview.dart
+  s_01ed7ddbf88779::t_d468705b503e9d 345-346,349
+lib/l10n/app_zh.arb
+  s_01ed7ddbf88779::t_8cb0132476bdfc 2034-2042
+test/widget/pages/thoughter_page_test.dart
+  s_01ed7ddbf88779::t_647fd2cb1b07ee 2332-2335,2347-2350,2352,2355,2357,2359-2360,2362
+  s_01ed7ddbf88779::t_b232ade3e32546 2331,2336-2346,2351,2353-2354,2356,2358,2361,2363
+lib/pages/thoughter_page.dart
+  s_01ed7ddbf88779::t_2c4d0940ab6776 311-315
+  s_01ed7ddbf88779::t_35f7847a63c436 99-100
+  s_01ed7ddbf88779::t_439fd5de7199cc 129-132
+  s_01ed7ddbf88779::t_38f66b021f2ad2 310
+lib/pages/thoughter/thoughter_session.dart
+  s_01ed7ddbf88779::t_f36bf15fe516c3 8
+  s_01ed7ddbf88779::t_aa5238dd39d6df 50
+lib/pages/thoughter/thoughter_ui.dart
+  s_01ed7ddbf88779::t_8e332177abbca0 49-74
+test/unit/utils/ai_prompt_manager_test.dart
+  s_01ed7ddbf88779::t_9cddcc7a813900 259-260
+lib/pages/explore/explore_data_loading.dart
+  s_01ed7ddbf88779::t_d9184f1360b85e 312-318
+lib/l10n/app_en.arb
+  s_01ed7ddbf88779::t_1aec0b7a56b427 2019-2027
+lib/utils/ai_prompt_manager.dart
+  s_01ed7ddbf88779::t_d56c2c5696768e 812,815,819-820
+  s_01ed7ddbf88779::t_6942c3a32293bc 883,887
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "ffde2aefb42a2b570536057d5a1e7ce4b8bb2dde",
+  "prompts": {},
+  "sessions": {
+    "s_01ed7ddbf88779": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "21d2c25c-6ce3-45c7-a69a-a9d8dee1200e",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
