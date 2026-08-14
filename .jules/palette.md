@@ -35,6 +35,6 @@
 **Learning:** IconButtons used for core actions in AI feature UIs (like "thinking" toggles, clear search icons, and stop generating buttons) often lack accessibility labels, making them unusable for screen reader users and missing hover cues on desktop.
 **Action:** When implementing or modifying AI chat interfaces and session histories, ensure that all `IconButton`s include dynamic tooltips (e.g. toggling between 'Show/Hide Thinking', or 'Send/Stop') localized via `AppLocalizations`.
 
-## 2024-08-14 - 补充思考过程组件的无障碍提示
+## 2026-08-14 - 补充思考过程组件的无障碍提示
 **Learning:** Icon-only buttons or custom interactive widgets (like `InkWell` combined with icons/text) often miss proper semantic context for screen readers. In interactive UI like AI thinking states (expanded/collapsed toggle), visually clear cues (like a rotating chevron) don't naturally translate to screen reader announcements. Using `Semantics` alongside `ExcludeSemantics` on inner components avoids redundant reading and explicitly signals the interaction model (button, expanded state) to visually impaired users.
 **Action:** Always verify that custom interactive components (`InkWell`, `GestureDetector`) wrapping text and icons are wrapped in a `Semantics` widget (providing `button: true`, `label`, and dynamic state properties like `expanded`), and exclude semantics on inner decorative or redundant text nodes.
