@@ -268,16 +268,27 @@ List<RichTextBlock> parseDeltaRichText(String? deltaContent) {
     }
 
     final attributes = _asAttributeMap(op['attributes']);
-    final lines = insert.split('\n');
-    for (var i = 0; i < lines.length; i++) {
-      final text = lines[i];
+    int start = 0;
+    while (true) {
+      final nextNewline = insert.indexOf('\n', start);
+      final isLastSegment = nextNewline == -1;
+      final text = isLastSegment
+          ? insert.substring(start)
+          : start == nextNewline
+              ? ''
+              : insert.substring(start, nextNewline);
+
       if (text.isNotEmpty) {
         pendingRuns.add(_runFor(text, attributes));
       }
       // split 产生的最后一段后面没有换行符，留给下一个 op 继续累积。
-      if (i < lines.length - 1) {
+      // 使用 indexOf 时，如果是最后一段(没找到 \n) 就不刷入。
+      if (!isLastSegment) {
         flushLine(attributes);
       }
+
+      if (isLastSegment) break;
+      start = nextNewline + 1;
     }
   }
 

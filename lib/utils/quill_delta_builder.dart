@@ -21,32 +21,44 @@ class DeltaBuilder {
     if (markdown.isEmpty) return [];
     final ops = <Map<String, dynamic>>[];
     var inCodeBlock = false;
-    for (final line in markdown.replaceAll('\r\n', '\n').split('\n')) {
+    final normalized = markdown.replaceAll('\r\n', '\n');
+    int start = 0;
+    while (true) {
+      final nextNewline = normalized.indexOf('\n', start);
+      final line = nextNewline == -1
+          ? normalized.substring(start)
+          : start == nextNewline
+              ? ''
+              : normalized.substring(start, nextNewline);
+
       if (line.trimLeft().startsWith('```')) {
         inCodeBlock = !inCodeBlock;
-        continue;
+      } else {
+        final heading = RegExp(r'^(#{1,6})\s+(.+)$').firstMatch(line);
+        final bullet = RegExp(r'^\s*[-*+]\s+(.+)$').firstMatch(line);
+        final ordered = RegExp(r'^\s*\d+[.)]\s+(.+)$').firstMatch(line);
+        final quote = RegExp(r'^\s*>\s?(.*)$').firstMatch(line);
+        final body = heading?.group(2) ??
+            bullet?.group(1) ??
+            ordered?.group(1) ??
+            quote?.group(1) ??
+            line;
+        _appendInlineMarkdown(ops, body);
+        final attributes = <String, dynamic>{
+          if (inCodeBlock) 'code-block': true,
+          if (heading != null) 'header': heading.group(1)!.length,
+          if (bullet != null) 'list': 'bullet',
+          if (ordered != null) 'list': 'ordered',
+          if (quote != null) 'blockquote': true,
+        };
+        ops.add({
+          'insert': '\n',
+          if (attributes.isNotEmpty) 'attributes': attributes,
+        });
       }
-      final heading = RegExp(r'^(#{1,6})\s+(.+)$').firstMatch(line);
-      final bullet = RegExp(r'^\s*[-*+]\s+(.+)$').firstMatch(line);
-      final ordered = RegExp(r'^\s*\d+[.)]\s+(.+)$').firstMatch(line);
-      final quote = RegExp(r'^\s*>\s?(.*)$').firstMatch(line);
-      final body = heading?.group(2) ??
-          bullet?.group(1) ??
-          ordered?.group(1) ??
-          quote?.group(1) ??
-          line;
-      _appendInlineMarkdown(ops, body);
-      final attributes = <String, dynamic>{
-        if (inCodeBlock) 'code-block': true,
-        if (heading != null) 'header': heading.group(1)!.length,
-        if (bullet != null) 'list': 'bullet',
-        if (ordered != null) 'list': 'ordered',
-        if (quote != null) 'blockquote': true,
-      };
-      ops.add({
-        'insert': '\n',
-        if (attributes.isNotEmpty) 'attributes': attributes,
-      });
+
+      if (nextNewline == -1) break;
+      start = nextNewline + 1;
     }
     return ops;
   }
