@@ -219,6 +219,33 @@ void main() {
       expect(result['source'], isNull);
     });
 
+    test('does not accept a single character tail as an author', () async {
+      clipboardService.setEnableClipboardMonitoring(true);
+      const text = '今天就这样了——好';
+      await Clipboard.setData(const ClipboardData(text: text));
+
+      final result = await clipboardService.checkClipboard();
+
+      // 正则的 {2,20} 量的是回溯后的候选（这里是 `—好`），清洗后只剩一个字，
+      // 不能当署名
+      expect(result!['content'], text);
+      expect(result['author'], isNull);
+    });
+
+    test('drops the whole rule when the author next to a source is too short',
+        () async {
+      clipboardService.setEnableClipboardMonitoring(true);
+      const text = '一段正文《活着》——好';
+      await Clipboard.setData(const ClipboardData(text: text));
+
+      final result = await clipboardService.checkClipboard();
+
+      // 作者不合法时不能只取出处，否则"——好"会被悄悄从正文里删掉
+      expect(result!['content'], text);
+      expect(result['author'], isNull);
+      expect(result['source'], isNull);
+    });
+
     test('keeps the text intact when there is nothing but a title', () async {
       clipboardService.setEnableClipboardMonitoring(true);
       const text = '《人间失格》';

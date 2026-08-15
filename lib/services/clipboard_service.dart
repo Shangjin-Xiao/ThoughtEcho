@@ -153,9 +153,16 @@ class ClipboardService extends ChangeNotifier {
   /// 破折号 `—` `–` 和 `--` 允许跨行，署名单独占一行是常见排版。
   static const String _dash = r'(?:\s*[—–]+|\s*-{2,}|[ \t]+-)\s*';
 
-  /// 作者候选名。排除句读、书名号和 URL 里的 `:` `/`，长度限制在 2~20，
-  /// 避免把整段说明当成作者。三条规则共用同一套约束。
+  /// 作者候选名。排除句读、书名号和 URL 里的 `:` `/`，长度限制在
+  /// [_authorMinLength]~[_authorMaxLength]，避免把整段说明当成作者。
+  ///
+  /// 字符类里没排掉空白和破折号，所以这里的长度只是初筛：正则可以靠回溯
+  /// 把分隔符塞进候选来凑够下限（"正文——好" 命中的是 `—好`），真正的长度
+  /// 校验在 [_validAuthor] 里、清洗之后做。
   static const String _author = r'[^，。,、\.\n《（\(：:/\\]{2,20}';
+
+  static const int _authorMinLength = 2;
+  static const int _authorMaxLength = 20;
 
   /// 出处**只认书名号**。中英文圆括号在普通文本里太常见
   /// （"今天心情不错（真的好）"），当出处切走会把正文改坏。
@@ -194,6 +201,9 @@ class ClipboardService extends ChangeNotifier {
       return (cleaned == null || cleaned.isEmpty) ? null : cleaned;
     }
 
+    // 清洗掉分隔符和空白之后再量一次长度，见 [_author] 的说明
+    String? validAuthor(String? group) => _validAuthor(clean(group));
+
     // 署名从 matchStart 开始，前面剩下的才是正文。正文被切空说明整段都是
     // 署名（比如只复制了一句"——某人"），这种情况保留原文、不做提取。
     _ClipboardAttribution? cut(int matchStart, String? author, String? source) {
@@ -210,8 +220,14 @@ class ClipboardService extends ChangeNotifier {
     // 1. 正文 ——作者《出处》
     final m1 = _dashAuthorThenSource.firstMatch(text);
     if (m1 != null && _hasInlineBody(text, m1.start)) {
-      final result = cut(m1.start, clean(m1.group(1)), clean(m1.group(2)));
-      if (result != null) return result;
+      // 作者可省略；但凡写了又不合法，整条规则作废——只留出处会把那段
+      // 不合法的作者文本一起从正文里删掉
+      final rawAuthor = clean(m1.group(1));
+      final author = _validAuthor(rawAuthor);
+      if (rawAuthor == null || author != null) {
+        final result = cut(m1.start, author, clean(m1.group(2)));
+        if (result != null) return result;
+      }
     }
 
     // 2. 正文《出处》——作者
@@ -220,18 +236,33 @@ class ClipboardService extends ChangeNotifier {
     // 单独占一行是常见排版，按行首拦会把正常的署名块也拦掉。
     final m2 = _sourceThenDashAuthor.firstMatch(text);
     if (m2 != null) {
-      final result = cut(m2.start, clean(m2.group(2)), clean(m2.group(1)));
-      if (result != null) return result;
+      // 作者不合法就整条作废，同规则 1
+      final author = validAuthor(m2.group(2));
+      if (author != null) {
+        final result = cut(m2.start, author, clean(m2.group(1)));
+        if (result != null) return result;
+      }
     }
 
     // 3. 正文 ——作者
     final m3 = _dashAuthorOnly.firstMatch(text);
     if (m3 != null && _hasInlineBody(text, m3.start)) {
-      final result = cut(m3.start, clean(m3.group(1)), null);
+      final result = cut(m3.start, validAuthor(m3.group(1)), null);
       if (result != null) return result;
     }
 
     return _ClipboardAttribution(content: content);
+  }
+
+  /// 清洗后的作者名是否还站得住。
+  ///
+  /// 正则里的 `{2,20}` 量的是回溯后的原始候选，可能混着破折号和空格；
+  /// 这里量清洗后的真实字数，短到一个字的尾巴（"正文——好"）不算署名。
+  String? _validAuthor(String? cleaned) {
+    if (cleaned == null) return null;
+    final length = cleaned.runes.length;
+    if (length < _authorMinLength || length > _authorMaxLength) return null;
+    return cleaned;
   }
 
   /// 分隔符所在行前面是否还有正文。
