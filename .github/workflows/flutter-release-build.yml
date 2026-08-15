@@ -20,16 +20,16 @@ on:
       build_variant:
         description: 'Android ABI 变体 (standard64, arm32Compat, both)'
         required: true
-        default: 'both'
+        default: 'standard64'
         type: choice
         options:
-          - both
           - standard64
+          - both
           - arm32Compat
       build_aab:
         description: '额外构建 Google Play 用的 AAB（仅 standard64 + release）'
         required: false
-        default: true
+        default: false
         type: boolean
 
   # 供 release.yml 复用；inputs 上下文对两种触发方式通用，构建逻辑无需区分
@@ -47,12 +47,12 @@ on:
       build_variant:
         description: 'Android ABI 变体 (standard64, arm32Compat, both)'
         required: false
-        default: 'both'
+        default: 'standard64'
         type: string
       build_aab:
         description: '额外构建 Google Play 用的 AAB（仅 standard64 + release）'
         required: false
-        default: true
+        default: false
         type: boolean
     secrets:
       SENTRY_DSN:

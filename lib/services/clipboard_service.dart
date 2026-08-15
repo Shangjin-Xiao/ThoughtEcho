@@ -146,8 +146,7 @@ class ClipboardService extends ChangeNotifier {
 
   /// 兜底提取作者时的候选名。排除句读、书名号和 URL 里的 `:` `/`，
   /// 长度限制在 2~20，避免把整句话当成作者。
-  static const String _fallbackAuthor =
-      r'[^，。,、\.\n《（\(：:/\\]{2,20}';
+  static const String _fallbackAuthor = r'[^，。,、\.\n《（\(：:/\\]{2,20}';
 
   /// 已被书名号锚定的位置，作者名可以放宽一些。
   static const String _anchoredAuthor = r'[^，。,、\.\n]{1,30}';
