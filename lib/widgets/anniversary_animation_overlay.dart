@@ -3,10 +3,15 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/utils/anniversary_display_utils.dart';
+import 'package:thoughtecho/widgets/anniversary_cake.dart';
 
-Future<void> showAnniversaryAnimationOverlay(BuildContext context) {
+Future<void> showAnniversaryAnimationOverlay(
+  BuildContext context, {
+  required AnniversaryEdition edition,
+  int? veteranSinceYear,
+}) {
   return showGeneralDialog<void>(
     context: context,
     barrierDismissible: false,
@@ -15,6 +20,8 @@ Future<void> showAnniversaryAnimationOverlay(BuildContext context) {
     transitionDuration: Duration.zero,
     pageBuilder: (dialogContext, animation, secondaryAnimation) {
       return AnniversaryAnimationOverlay(
+        edition: edition,
+        veteranSinceYear: veteranSinceYear,
         onDismiss: () => Navigator.of(dialogContext).pop(),
       );
     },
@@ -24,7 +31,18 @@ Future<void> showAnniversaryAnimationOverlay(BuildContext context) {
 class AnniversaryAnimationOverlay extends StatefulWidget {
   final VoidCallback onDismiss;
 
-  const AnniversaryAnimationOverlay({super.key, required this.onDismiss});
+  /// 正在庆祝的这一届。
+  final AnniversaryEdition edition;
+
+  /// 用户参与过的最早一届；为 null 或等于当届时不显示老用户致谢。
+  final int? veteranSinceYear;
+
+  const AnniversaryAnimationOverlay({
+    super.key,
+    required this.onDismiss,
+    required this.edition,
+    this.veteranSinceYear,
+  });
 
   @override
   State<AnniversaryAnimationOverlay> createState() =>
@@ -154,6 +172,11 @@ class _AnniversaryAnimationOverlayState
     final size = MediaQuery.of(context).size;
     final l10n = AppLocalizations.of(context);
     final glassCardWidth = math.min(size.width * 0.85, 380.0);
+    final veteranSince = widget.veteranSinceYear;
+    final veteranSinceYear =
+        (veteranSince != null && veteranSince < widget.edition.year)
+            ? veteranSince
+            : null;
     final cakeSize = (size.height * 0.22).clamp(100.0, 200.0);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -237,19 +260,11 @@ class _AnniversaryAnimationOverlayState
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // SVG 蛋糕
+                      // SVG 蛋糕：蜡烛数量跟着届数走
                       SizedBox(
                         width: cakeSize,
                         height: cakeSize,
-                        child: SvgPicture.asset(
-                          'assets/svg/anniversary_cake.svg',
-                          fit: BoxFit.contain,
-                          placeholderBuilder: (context) => const Icon(
-                            Icons.cake,
-                            size: 88,
-                            color: Color(0xFFFFD36B),
-                          ),
-                        ),
+                        child: AnniversaryCake(years: widget.edition.year),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -271,7 +286,7 @@ class _AnniversaryAnimationOverlayState
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        l10n.anniversarySubtitle,
+                        l10n.anniversarySubtitle(widget.edition.year),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 15,
@@ -302,7 +317,7 @@ class _AnniversaryAnimationOverlayState
                           ),
                         ),
                         child: Text(
-                          l10n.anniversaryBannerSubtitle,
+                          widget.edition.rangeLabel,
                           style: Theme.of(context)
                               .textTheme
                               .labelSmall
@@ -310,6 +325,17 @@ class _AnniversaryAnimationOverlayState
                                   color: Colors.white, letterSpacing: 1.0),
                         ),
                       ),
+                      if (veteranSinceYear != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          l10n.anniversaryVeteranThanks(veteranSinceYear),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 20),
                       SlideTransition(
                         position: _buttonSlide,

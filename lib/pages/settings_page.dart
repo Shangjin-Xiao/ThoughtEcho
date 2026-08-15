@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
+import '../models/anniversary_participation.dart';
 import '../models/app_settings.dart';
 import '../services/settings_service.dart';
 import '../services/unified_log_service.dart';
@@ -31,9 +32,10 @@ import '../utils/feature_guide_helper.dart';
 import 'storage_management_page.dart';
 import 'local_ai_settings_page.dart'; // 导入本地 AI 设置页面
 import 'smart_push_settings_page.dart'; // 导入智能推送设置页面
-import '../widgets/anniversary_animation_overlay.dart'; // 导入一周年动画覆盖层
+import '../widgets/anniversary_animation_overlay.dart';
 import '../widgets/anniversary_notebook_icon.dart';
 import '../utils/anniversary_banner_text_utils.dart';
+import '../utils/anniversary_candle_svg.dart';
 import '../utils/anniversary_display_utils.dart';
 import 'webdav_sync_page.dart';
 import '../services/webdav_sync_service.dart';
@@ -958,76 +960,6 @@ class SettingsPageState extends State<SettingsPage> {
           // 实验室 Card（仅开发者模式可见，放在最后避免干扰普通用户）
           _buildLabSection(context),
 
-          /*
-          // --- 一周年开发者调试 Card (仅开发者模式可见) ---
-          // 一周年开发者模式控制已临时关闭，保留给两周年复用。
-          Consumer<SettingsService>(
-            builder: (context, settingsService, _) {
-              if (!settingsService.appSettings.developerMode) {
-                return const SizedBox.shrink();
-              }
-              final l10n = AppLocalizations.of(context);
-              return Card(
-                margin: const EdgeInsets.all(8.0),
-                child: Column(
-                  children: [
-                    ListTile(
-                      title: Text(l10n.developerAnniversarySection),
-                      leading: const Icon(Icons.cake_outlined),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Divider(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.outline.withAlpha((0.2 * 255).round()),
-                      ),
-                    ),
-                    // 启用/禁用周年动画开关
-                    SwitchListTile(
-                      title: Text(l10n.developerAnniversaryEnabled),
-                      subtitle: Text(l10n.developerAnniversaryEnabledDesc),
-                      secondary: const Icon(Icons.celebration_outlined),
-                      value: settingsService.anniversaryAnimationEnabled,
-                      onChanged: (enabled) {
-                        settingsService.setAnniversaryAnimationEnabled(enabled);
-                      },
-                    ),
-                    // 重置"已展示"标志
-                    ListTile(
-                      title: Text(l10n.developerAnniversaryReset),
-                      subtitle: Text(l10n.developerAnniversaryResetDesc),
-                      leading: const Icon(Icons.refresh_outlined),
-                      onTap: () async {
-                        await settingsService.resetAnniversaryShown();
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              AppLocalizations.of(
-                                context,
-                              ).developerAnniversaryResetDone,
-                            ),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                    ),
-                    // 预览动画
-                    ListTile(
-                      title: Text(l10n.developerAnniversaryPreview),
-                      subtitle: Text(l10n.developerAnniversaryPreviewDesc),
-                      leading: const Icon(Icons.play_circle_outlined),
-                      onTap: () => _showAnniversaryAnimationInSettings(context),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-
-          // --- 一周年开发者调试 Card 结束 ---
-          */
           const SizedBox(height: 20), // 底部增加一些间距
         ],
       ),
@@ -1255,6 +1187,9 @@ class SettingsPageState extends State<SettingsPage> {
                 ),
               ),
 
+              // 周年庆典模拟
+              ..._buildAnniversaryLabTiles(context, settingsService, l10n),
+
               // 日志调试信息（仅 Debug 构建）
               if (kDebugMode)
                 ListTile(
@@ -1269,6 +1204,99 @@ class SettingsPageState extends State<SettingsPage> {
         );
       },
     );
+  }
+
+  /// 实验室里的周年庆典调试项。
+  ///
+  /// 一周年那版只有「立即预览动画」，看不到横幅、也验证不了「每届只自动播一次」。
+  /// 这里改成模拟一整届：选中届数后设置页横幅、启动自动播放、老用户致谢全部按
+  /// 那一届走，跟真到日子时的表现一致。
+  List<Widget> _buildAnniversaryLabTiles(
+    BuildContext context,
+    SettingsService settingsService,
+    AppLocalizations l10n,
+  ) {
+    final simulatedYear = settingsService.anniversarySimulatedYear;
+    final records = settingsService.anniversaryParticipation;
+    const maxYear = maxSimulatedAnniversaryYear;
+
+    return [
+      ListTile(
+        title: Text(l10n.developerAnniversarySimulate),
+        subtitle: Text(
+          simulatedYear > 0
+              ? l10n.developerAnniversarySimulateDescActive(simulatedYear)
+              : l10n.developerAnniversarySimulateDescOff,
+        ),
+        leading: const Icon(Icons.cake_outlined),
+        trailing: DropdownButton<int>(
+          value: simulatedYear.clamp(0, maxYear),
+          items: [
+            DropdownMenuItem(
+              value: 0,
+              child: Text(l10n.developerAnniversarySimulateOff),
+            ),
+            for (var year = 1; year <= maxYear; year++)
+              DropdownMenuItem(
+                value: year,
+                child: Text(l10n.developerAnniversarySimulateYear(year)),
+              ),
+          ],
+          onChanged: (value) {
+            if (value != null) {
+              settingsService.setAnniversarySimulatedYear(value);
+            }
+          },
+        ),
+      ),
+      SwitchListTile(
+        title: Text(l10n.developerAnniversaryEnabled),
+        subtitle: Text(l10n.developerAnniversaryEnabledDesc),
+        secondary: const Icon(Icons.celebration_outlined),
+        value: settingsService.anniversaryAnimationEnabled,
+        onChanged: settingsService.setAnniversaryAnimationEnabled,
+      ),
+      ListTile(
+        title: Text(l10n.developerAnniversaryShownYears),
+        subtitle: Text(
+          records.isEmpty
+              ? l10n.developerAnniversaryShownYearsNone
+              : records.map(_anniversaryRecordLabel).join('\n'),
+        ),
+        leading: const Icon(Icons.workspace_premium_outlined),
+      ),
+      ListTile(
+        title: Text(l10n.developerAnniversaryReset),
+        subtitle: Text(l10n.developerAnniversaryResetDesc),
+        leading: const Icon(Icons.refresh_outlined),
+        onTap: () async {
+          await settingsService.resetAnniversaryParticipation();
+          if (!context.mounted) return;
+          AppSnackBar.success(
+            context,
+            AppLocalizations.of(context).developerAnniversaryResetDone,
+          );
+        },
+      ),
+      ListTile(
+        title: Text(l10n.developerAnniversaryPreview),
+        subtitle: Text(l10n.developerAnniversaryPreviewDesc),
+        leading: const Icon(Icons.play_circle_outlined),
+        onTap: () => _showAnniversaryAnimationInSettings(context),
+      ),
+    ];
+  }
+
+  /// 一条参与记录的调试展示：届数 + 首次看到的日期（迁移来的旧记录没有日期）。
+  String _anniversaryRecordLabel(AnniversaryParticipation record) {
+    final seenAt = record.seenAt?.toLocal();
+    if (seenAt == null) {
+      return '${record.year} · —';
+    }
+    final month = seenAt.month.toString().padLeft(2, '0');
+    final day = seenAt.day.toString().padLeft(2, '0');
+    return '${record.year} · ${seenAt.year}-$month-$day'
+        '${record.appVersion == null ? '' : ' · ${record.appVersion}'}';
   }
 
   /// 记录页媒体版式的说明文案。三种版式的取舍差别较大，直接把代价写在副标题上，
@@ -1535,15 +1563,17 @@ class SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  // --- 一周年庆典横幅 ---
+  // --- 周年庆典横幅 ---
   Widget _buildAnniversaryBanner(BuildContext context) {
-    final now = DateTime.now();
-    final settingsService = context.read<SettingsService>();
-    final shouldShow = AnniversaryDisplayUtils.shouldShowSettingsBanner(
-      now: now,
-      developerMode: settingsService.appSettings.developerMode,
+    // 开发者模式的模拟届数会切换横幅，所以这里要 watch。
+    final simulatedYear = context.select<SettingsService, int>(
+      (service) => service.anniversarySimulatedYear,
     );
-    if (!shouldShow) {
+    final edition = AnniversaryDisplayUtils.currentEdition(
+      DateTime.now(),
+      simulatedYear: simulatedYear,
+    );
+    if (edition == null) {
       return const SizedBox.shrink();
     }
 
@@ -1576,7 +1606,7 @@ class SettingsPageState extends State<SettingsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        l10n.anniversaryBannerTitle,
+                        l10n.anniversaryBannerTitle(edition.year),
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                           letterSpacing: 0.3,
@@ -1586,7 +1616,7 @@ class SettingsPageState extends State<SettingsPage> {
                       const SizedBox(height: 6),
                       Text(
                         formatAnniversaryBannerSubtitleForTile(
-                          l10n.anniversaryBannerSubtitle,
+                          l10n.anniversaryBannerSubtitle(edition.rangeLabel),
                         ),
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: colorScheme.onTertiaryContainer
@@ -1624,7 +1654,25 @@ class SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void _showAnniversaryAnimationInSettings(BuildContext context) {
-    showAnniversaryAnimationOverlay(context);
+  /// 播放庆典动画。[edition] 为空时按当前（含模拟）届数取，再没有就退回一周年，
+  /// 这样开发者模式在非庆典期点「立即预览」也能看到东西。
+  void _showAnniversaryAnimationInSettings(
+    BuildContext context, {
+    AnniversaryEdition? edition,
+  }) {
+    final settingsService = context.read<SettingsService>();
+    final resolved = edition ??
+        AnniversaryDisplayUtils.currentEdition(
+          DateTime.now(),
+          simulatedYear: settingsService.anniversarySimulatedYear,
+        ) ??
+        AnniversaryDisplayUtils.editionForYear(1);
+    showAnniversaryAnimationOverlay(
+      context,
+      edition: resolved,
+      veteranSinceYear: AnniversaryDisplayUtils.earliestShownYear(
+        settingsService.anniversaryShownYears,
+      ),
+    );
   }
 }

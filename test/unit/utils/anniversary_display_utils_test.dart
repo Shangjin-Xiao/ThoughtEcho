@@ -3,107 +3,133 @@ import 'package:thoughtecho/utils/anniversary_display_utils.dart';
 
 void main() {
   group('AnniversaryDisplayUtils', () {
-    test('isAnniversarySeason returns true within anniversary window', () {
+    test('每一届的展示期都从上线日推导', () {
+      final first = AnniversaryDisplayUtils.editionForYear(1);
+      expect(first.start, DateTime(2026, 3, 23));
+      expect(first.endExclusive, DateTime(2026, 5, 1));
+      expect(first.rangeLabel, '2025.3.23 - 2026.3.23');
+
+      final second = AnniversaryDisplayUtils.editionForYear(2);
+      expect(second.start, DateTime(2027, 3, 23));
+      expect(second.endExclusive, DateTime(2027, 5, 1));
+      expect(second.rangeLabel, '2025.3.23 - 2027.3.23');
+    });
+
+    test('currentEdition 在窗口内返回对应届数', () {
       expect(
-        AnniversaryDisplayUtils.isAnniversarySeason(DateTime(2026, 3, 23)),
-        isTrue,
+        AnniversaryDisplayUtils.currentEdition(DateTime(2026, 3, 23))?.year,
+        1,
       );
       expect(
-        AnniversaryDisplayUtils.isAnniversarySeason(
-          DateTime(2026, 4, 30, 23, 59, 59),
+        AnniversaryDisplayUtils.currentEdition(
+          DateTime(2027, 4, 30, 23, 59, 59),
+        )?.year,
+        2,
+      );
+    });
+
+    test('currentEdition 在窗口外返回 null', () {
+      expect(
+        AnniversaryDisplayUtils.currentEdition(
+          DateTime(2026, 3, 22, 23, 59, 59),
         ),
-        isTrue,
+        isNull,
+      );
+      expect(
+        AnniversaryDisplayUtils.currentEdition(DateTime(2026, 5, 1)),
+        isNull,
+      );
+      // 上线当年还没到第一个周年。
+      expect(
+        AnniversaryDisplayUtils.currentEdition(DateTime(2025, 4, 1)),
+        isNull,
       );
     });
 
-    test('isAnniversarySeason returns false outside anniversary window', () {
+    test('模拟届数无视真实日期', () {
       expect(
-        AnniversaryDisplayUtils.isAnniversarySeason(
-            DateTime(2026, 3, 22, 23, 59, 59)),
-        isFalse,
+        AnniversaryDisplayUtils.currentEdition(
+          DateTime(2026, 8, 15),
+          simulatedYear: 2,
+        )?.year,
+        2,
       );
-      expect(
-        AnniversaryDisplayUtils.isAnniversarySeason(DateTime(2026, 5, 1)),
-        isFalse,
-      );
-    });
-
-    test(
-        'shouldShowSettingsBanner ignores developer preview before anniversary',
-        () {
       expect(
         AnniversaryDisplayUtils.shouldShowSettingsBanner(
-          now: DateTime(2026, 3, 1),
-          developerMode: true,
+          now: DateTime(2026, 8, 15),
         ),
         isFalse,
       );
       expect(
         AnniversaryDisplayUtils.shouldShowSettingsBanner(
-          now: DateTime(2026, 3, 1),
-          developerMode: false,
+          now: DateTime(2026, 8, 15),
+          simulatedYear: 2,
         ),
-        isFalse,
+        isTrue,
       );
     });
 
-    test(
-        'shouldAutoShowAnimation ignores developer preview outside date window',
-        () {
+    test('每一届各自只自动播放一次', () {
       expect(
         AnniversaryDisplayUtils.shouldAutoShowAnimation(
-          now: DateTime(2026, 3, 25),
-          developerMode: false,
-          anniversaryShown: false,
+          now: DateTime(2027, 3, 25),
+          shownYears: const [1],
           anniversaryAnimationEnabled: true,
         ),
         isTrue,
       );
       expect(
         AnniversaryDisplayUtils.shouldAutoShowAnimation(
-          now: DateTime(2026, 3, 25),
-          developerMode: false,
-          anniversaryShown: true,
+          now: DateTime(2027, 3, 25),
+          shownYears: const [1, 2],
           anniversaryAnimationEnabled: true,
         ),
         isFalse,
       );
       expect(
         AnniversaryDisplayUtils.shouldAutoShowAnimation(
-          now: DateTime(2026, 3, 25),
-          developerMode: false,
-          anniversaryShown: false,
+          now: DateTime(2027, 3, 25),
+          shownYears: const [],
           anniversaryAnimationEnabled: false,
         ),
         isFalse,
       );
       expect(
         AnniversaryDisplayUtils.shouldAutoShowAnimation(
-          now: DateTime(2026, 3, 1),
-          developerMode: false,
-          anniversaryShown: false,
+          now: DateTime(2026, 8, 15),
+          shownYears: const [],
           anniversaryAnimationEnabled: true,
         ),
         isFalse,
       );
       expect(
         AnniversaryDisplayUtils.shouldAutoShowAnimation(
-          now: DateTime(2026, 3, 1),
-          developerMode: true,
-          anniversaryShown: false,
+          now: DateTime(2026, 8, 15),
+          shownYears: const [1],
           anniversaryAnimationEnabled: true,
+          simulatedYear: 2,
         ),
-        isFalse,
+        isTrue,
+      );
+    });
+
+    test('老用户标记只认更早的届数', () {
+      expect(
+        AnniversaryDisplayUtils.hasEarlierEdition(
+          shownYears: const [1],
+          currentYear: 2,
+        ),
+        isTrue,
       );
       expect(
-        AnniversaryDisplayUtils.shouldAutoShowAnimation(
-          now: DateTime(2026, 3, 1),
-          developerMode: true,
-          anniversaryShown: true,
-          anniversaryAnimationEnabled: true,
+        AnniversaryDisplayUtils.hasEarlierEdition(
+          shownYears: const [2],
+          currentYear: 2,
         ),
         isFalse,
       );
+      expect(AnniversaryDisplayUtils.earliestShownYear(const [2, 1]), 1);
+      expect(AnniversaryDisplayUtils.earliestShownYear(const []), isNull);
     });
   });
 }

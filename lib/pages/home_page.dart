@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../controllers/home_page_controller.dart';
 import '../services/database_service.dart';
@@ -291,7 +292,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         _connectivityService!.addListener(_onConnectivityChanged);
       }
 
-      // 检查是否应该显示一周年庆典动画（在其他检查之后，优先级最低）
+      // 检查是否应该显示周年庆典动画（在其他检查之后，优先级最低）
       await _checkAndShowAnniversaryAnimation();
 
       // 检查是否需要显示 Sentry 错误上报提示
@@ -401,39 +402,55 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  // 检查是否应该显示一周年庆典动画（整个周期内只播放一次）
+  // 检查是否应该显示周年庆典动画（每一届只自动播放一次）
   Future<void> _checkAndShowAnniversaryAnimation() async {
     if (!mounted) return;
     final settingsService = context.read<SettingsService>();
     final settings = settingsService.appSettings;
 
     final now = DateTime.now();
+    final simulatedYear = settings.anniversarySimulatedYear;
+    final edition = AnniversaryDisplayUtils.currentEdition(
+      now,
+      simulatedYear: simulatedYear,
+    );
     final shouldShow = AnniversaryDisplayUtils.shouldAutoShowAnimation(
       now: now,
-      developerMode: settings.developerMode,
-      anniversaryShown: settings.anniversaryShown,
+      shownYears: settings.anniversaryShownYears,
       anniversaryAnimationEnabled: settings.anniversaryAnimationEnabled,
+      simulatedYear: simulatedYear,
     );
-    if (!shouldShow) {
+    if (edition == null || !shouldShow) {
       return;
     }
 
-    // 标记为已显示
-    await settingsService.setAnniversaryShown(true);
+    // 老用户标记要在写入本届之前取，否则本届自己就成了「最早参与的一届」。
+    final veteranSinceYear = AnniversaryDisplayUtils.earliestShownYear(
+      settings.anniversaryShownYears,
+    );
+
+    // 记下这一届的参与：届数、时间、当时的版本。取版本失败不能挡住庆典。
+    String? appVersion;
+    try {
+      appVersion = (await PackageInfo.fromPlatform()).version;
+    } catch (e) {
+      logDebug('读取应用版本失败，庆典记录不带版本号: $e', source: 'HomePage');
+    }
+    await settingsService.markAnniversaryShown(
+      edition.year,
+      seenAt: now,
+      appVersion: appVersion,
+    );
 
     if (!mounted) return;
 
     // 显示全屏覆盖动画
-    await showAnniversaryAnimationOverlay(context);
+    await showAnniversaryAnimationOverlay(
+      context,
+      edition: edition,
+      veteranSinceYear: veteranSinceYear,
+    );
   }
-
-  /*
-  /// 开发者模式预览一周年动画
-  /// 一周年开发者模式预览入口已临时关闭，保留给两周年复用。
-  void _showAnniversaryPreview(BuildContext context) {
-    showAnniversaryAnimationOverlay(context);
-  }
-  */
 
   // 检查是否有未保存的草稿
   Future<bool> _checkDraftRecovery() async {
@@ -867,22 +884,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           ),
                         ),
-
-                      /*
-                      // 一周年开发者模式预览入口已临时关闭，保留给两周年复用。
-                      Consumer<SettingsService>(
-                        builder: (context, settingsSvc, _) {
-                          if (!settingsSvc.appSettings.developerMode) {
-                            return const SizedBox.shrink();
-                          }
-                          return IconButton(
-                            icon: const Icon(Icons.cake_outlined),
-                            tooltip: l10n.developerAnniversaryPreview,
-                            onPressed: () => _showAnniversaryPreview(context),
-                          );
-                        },
-                      ),
-                      */
                     ],
                   )
                 : _pageController.currentIndex == 2

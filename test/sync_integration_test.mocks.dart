@@ -28,6 +28,7 @@ import 'package:thoughtecho/services/localsend/localsend_send_provider.dart'
     as _i22;
 import 'package:thoughtecho/services/localsend/models/device.dart' as _i23;
 import 'package:thoughtecho/services/media_sync_manifest.dart' as _i11;
+import 'package:thoughtecho/models/anniversary_participation.dart' as _i25;
 import 'package:thoughtecho/services/settings_service.dart' as _i18;
 
 // ignore_for_file: type=lint
@@ -1397,16 +1398,29 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
       ) as List<String>);
 
   @override
-  bool get anniversaryShown => (super.noSuchMethod(
-        Invocation.getter(#anniversaryShown),
-        returnValue: false,
-      ) as bool);
+  List<_i25.AnniversaryParticipation> get anniversaryParticipation =>
+      (super.noSuchMethod(
+        Invocation.getter(#anniversaryParticipation),
+        returnValue: <_i25.AnniversaryParticipation>[],
+      ) as List<_i25.AnniversaryParticipation>);
+
+  @override
+  List<int> get anniversaryShownYears => (super.noSuchMethod(
+        Invocation.getter(#anniversaryShownYears),
+        returnValue: <int>[],
+      ) as List<int>);
 
   @override
   bool get anniversaryAnimationEnabled => (super.noSuchMethod(
         Invocation.getter(#anniversaryAnimationEnabled),
         returnValue: false,
       ) as bool);
+
+  @override
+  int get anniversarySimulatedYear => (super.noSuchMethod(
+        Invocation.getter(#anniversarySimulatedYear),
+        returnValue: 0,
+      ) as int);
 
   @override
   bool get skipNonFullscreenEditor => (super.noSuchMethod(
@@ -1769,10 +1783,19 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<void> setAnniversaryShown(bool? shown) => (super.noSuchMethod(
+  _i10.Future<void> markAnniversaryShown(
+    int? year, {
+    DateTime? seenAt,
+    String? appVersion,
+  }) =>
+      (super.noSuchMethod(
         Invocation.method(
-          #setAnniversaryShown,
-          [shown],
+          #markAnniversaryShown,
+          [year],
+          {
+            #seenAt: seenAt,
+            #appVersion: appVersion,
+          },
         ),
         returnValue: _i10.Future<void>.value(),
         returnValueForMissingStub: _i10.Future<void>.value(),
@@ -1790,9 +1813,20 @@ class MockSettingsService extends _i1.Mock implements _i18.SettingsService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<void> resetAnniversaryShown() => (super.noSuchMethod(
+  _i10.Future<void> setAnniversarySimulatedYear(int? year) =>
+      (super.noSuchMethod(
         Invocation.method(
-          #resetAnniversaryShown,
+          #setAnniversarySimulatedYear,
+          [year],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> resetAnniversaryParticipation() => (super.noSuchMethod(
+        Invocation.method(
+          #resetAnniversaryParticipation,
           [],
         ),
         returnValue: _i10.Future<void>.value(),
