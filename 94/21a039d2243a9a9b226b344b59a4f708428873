@@ -1,0 +1,85 @@
+test/unit/models/app_settings_test.dart
+  s_f1d850c2c7c0ba::t_f48b41bc269211 167,170
+  s_f1d850c2c7c0ba::t_36c4d1d9d3d0a6 168-169
+lib/models/app_settings.dart
+  s_f1d850c2c7c0ba::t_fb4f10ca7faaf7 65,70-73
+  s_f1d850c2c7c0ba::t_01a2ea36abfe32 343
+  s_f1d850c2c7c0ba::t_05329c519445e8 1-2,136-138
+  s_f1d850c2c7c0ba::t_1f3a7f87d86658 180-181,183
+  s_f1d850c2c7c0ba::t_4eb534a19975e7 208-213,219,221,231-232,234-236
+  s_f1d850c2c7c0ba::t_fa10ce9caf123e 119
+  s_f1d850c2c7c0ba::t_acd0c48a69385b 391
+  s_f1d850c2c7c0ba::t_786e5edfd162c2 449-450
+  s_f1d850c2c7c0ba::t_657551d878caea 295
+  s_f1d850c2c7c0ba::t_b36b493206cd21 64,66-69,117,139,178-179,214-218,220,222-230,233,293,341,389,445-446
+lib/pages/settings_page.dart
+  s_f1d850c2c7c0ba::t_6f505960f8ff7b 1658-1677
+  s_f1d850c2c7c0ba::t_be1adecff9ee40 35
+  s_f1d850c2c7c0ba::t_d151f04c32019f 7,1221,1263,1265,1289-1300
+  s_f1d850c2c7c0ba::t_d88d5b606bd38a 1567,1569-1575,1577
+  s_f1d850c2c7c0ba::t_e67fb392fd052f 1620
+  s_f1d850c2c7c0ba::t_a1b5b1cc8d2d95 1610
+  s_f1d850c2c7c0ba::t_35693c2513c633 1210-1220,1223-1262,1264,1266-1273,1275-1288,1301-1302
+  s_f1d850c2c7c0ba::t_3387fc852fa2cb 1191-1193
+  s_f1d850c2c7c0ba::t_8ae0879655a8be 38,1222,1274
+test/widget/widgets/anniversary_animation_overlay_test.dart
+  s_f1d850c2c7c0ba::t_f48b41bc269211 6,26-29,61-64,114-117
+lib/models/anniversary_participation.dart
+  s_f1d850c2c7c0ba::t_16c0e57ebf1711 39-40,55
+  s_f1d850c2c7c0ba::t_97035e42700ed0 1-38,41-54,56-57
+lib/services/settings_service.dart
+  s_f1d850c2c7c0ba::t_642a7f2483061b 533-534,541-543,557,566-571,577-578
+  s_f1d850c2c7c0ba::t_01f09693ccfd7e 528-532,535-540,544-552,576,579-580
+  s_f1d850c2c7c0ba::t_6f0fcbc347be0d 572-575
+assets/svg/anniversary_cake.svg
+  s_f1d850c2c7c0ba::t_630fe775f4a057 1
+lib/l10n/app_zh.arb
+  s_f1d850c2c7c0ba::t_cac24845ae4197 3814-3829,3831-3846,3849-3850,3852-3854,3856-3877
+test/unit/utils/anniversary_display_utils_test.dart
+  s_f1d850c2c7c0ba::t_dc36617a2a7add 6-18,20-21,24-27,31,33-36,39-45,49-56,59,65-66,68,72,75-76,83-84,91-92,99-100,107-108,110,112-122,125-127,131-132
+lib/widgets/anniversary_cake.dart
+  s_f1d850c2c7c0ba::t_655fb51984f446 3,5,11,31
+  s_f1d850c2c7c0ba::t_43f8171f6ed208 1-2,4,6-10,12-30,32-37
+lib/pages/home_page.dart
+  s_f1d850c2c7c0ba::t_6fc64d539ebec8 7
+  s_f1d850c2c7c0ba::t_a2b86c0b55d045 431-442
+  s_f1d850c2c7c0ba::t_14c5d44eb66f8b 294
+  s_f1d850c2c7c0ba::t_822d2b2665fd5a 404,411-415,418,420,422,426-429,447-451
+  s_f1d850c2c7c0ba::t_f9c3e8ab38f062 430
+test/unit/models/anniversary_participation_test.dart
+  s_f1d850c2c7c0ba::t_cc1ff95dbd0b2f 1-78
+lib/utils/anniversary_display_utils.dart
+  s_f1d850c2c7c0ba::t_90951662d4c7c0 1-42,44-49,51-82,87,89,92,95,97,99-116
+lib/utils/anniversary_candle_svg.dart
+  s_f1d850c2c7c0ba::t_47d4570c7874f2 1-9,12-30,37-111,119-130,132-156
+  s_f1d850c2c7c0ba::t_1e135ab4e27d6e 31-36
+  s_f1d850c2c7c0ba::t_eba969f01e6b1b 131
+  s_f1d850c2c7c0ba::t_efcd75e11411df 112-118
+  s_f1d850c2c7c0ba::t_9f3868cdd7c770 10-11
+lib/widgets/anniversary_animation_overlay.dart
+  s_f1d850c2c7c0ba::t_0d993121421deb 263,267
+  s_f1d850c2c7c0ba::t_68340d93b55f4f 289
+  s_f1d850c2c7c0ba::t_cc8aab7e349bd0 320,328-338
+  s_f1d850c2c7c0ba::t_ae5ac4c3e757fe 175-179
+  s_f1d850c2c7c0ba::t_7c5241f25ead3b 7-8,10-14,23-24,34-45
+lib/l10n/app_en.arb
+  s_f1d850c2c7c0ba::t_1868ca22f49757 3806-3821,3823-3838,3841,3844-3846,3848-3869
+test/sync_integration_test.mocks.dart
+  s_f1d850c2c7c0ba::t_2f267b1611c6aa 31,1401-1411,1419-1424,1786-1791,1793-1798,1816-1827,1829
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "9421a039d2243a9a9b226b344b59a4f708428873",
+  "prompts": {},
+  "sessions": {
+    "s_f1d850c2c7c0ba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "82dab365-2b73-4525-b21e-8004afea8f80",
+        "model": "claude-opus-5"
+      },
+      "human_author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
