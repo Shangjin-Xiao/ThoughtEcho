@@ -1,4 +1,4 @@
-name: Flutter发布版APK构建
+name: Flutter发布版Android构建
 
 on:
   # 手动触发工作流
@@ -26,6 +26,11 @@ on:
           - both
           - standard64
           - arm32Compat
+      build_aab:
+        description: '额外构建 Google Play 用的 AAB（仅 standard64 + release）'
+        required: false
+        default: true
+        type: boolean
 
   # 供 release.yml 复用；inputs 上下文对两种触发方式通用，构建逻辑无需区分
   workflow_call:
@@ -44,6 +49,11 @@ on:
         required: false
         default: 'both'
         type: string
+      build_aab:
+        description: '额外构建 Google Play 用的 AAB（仅 standard64 + release）'
+        required: false
+        default: true
+        type: boolean
     secrets:
       SENTRY_DSN:
         required: false
@@ -201,6 +211,42 @@ jobs:
             build_flavor arm32Compat android-arm
           fi
 
+      # Google Play 只收 AAB，且要求应用支持 64 位；arm32Compat 是纯 32 位的
+      # 兼容变体（关 Impeller、开软件渲染），单独打成 AAB 上传也会被拒，
+      # 所以这里只出 standard64 这一个 arm64-v8a 的 AAB。
+      - name: 构建 AAB (standard64)
+        id: aab
+        if: >-
+          ${{ (inputs.build_aab == null || inputs.build_aab)
+              && (inputs.build_mode || 'release') == 'release'
+              && (inputs.build_variant || 'both') != 'arm32Compat' }}
+        env:
+          VERSION_NAME: ${{ inputs.version_name }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: |
+          set -euo pipefail
+
+          # 与 APK 走同一套 flavor/签名/ABI 参数，只换产物格式
+          flutter build appbundle --release \
+            --flavor standard64 \
+            --target-platform=android-arm64 \
+            --android-project-arg=disable-abi-filtering=true \
+            --build-number="${{ github.run_number }}" \
+            --build-name="$VERSION_NAME" \
+            --dart-define=SENTRY_DSN="$SENTRY_DSN"
+
+          # 产物在 build/app/outputs/bundle/standard64Release/ 下，
+          # 文件名跟着 flavor 走，这里直接按扩展名找，免得改名就断
+          aab_path="$(find build/app/outputs/bundle -type f -name '*.aab' | head -n 1)"
+          if [[ -z "$aab_path" ]]; then
+            echo "::error::未找到 AAB 产物"
+            exit 1
+          fi
+
+          mkdir -p build/app/outputs/release-artifacts
+          cp -v "$aab_path" \
+            "build/app/outputs/release-artifacts/thoughtecho-standard64-release.aab"
+
       # archive: false 时 upload-artifact 只接受单个文件，
       # build_variant=both 会产出两个 APK，因此按变体分开上传。
       - name: 上传 APK (standard64)
@@ -217,6 +263,16 @@ jobs:
         with:
           name: app-${{ inputs.build_mode || 'release' }}-arm32Compat-apk
           path: build/app/outputs/release-artifacts/thoughtecho-arm32Compat-*.apk
+          archive: false
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: 上传 AAB (standard64)
+        if: ${{ steps.aab.outcome == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-release-standard64-aab
+          path: build/app/outputs/release-artifacts/thoughtecho-standard64-release.aab
           archive: false
           if-no-files-found: error
           retention-days: 30

@@ -127,6 +127,8 @@ jobs:
       version_name: ${{ needs.prepare.outputs.version }}
       build_mode: release
       build_variant: both
+      # 为 Google Play 备一份 AAB（arm64-v8a）
+      build_aab: true
 
   windows:
     needs: prepare
@@ -176,7 +178,8 @@ jobs:
           mkdir -p dist
 
           # 产物散落在各 artifact 子目录中，按扩展名收拢到一处
-          find artifacts -type f \( -name '*.apk' -o -name '*.msix' -o -name '*.ipa' \) \
+          find artifacts -type f \
+            \( -name '*.apk' -o -name '*.msix' -o -name '*.ipa' -o -name '*.aab' \) \
             -exec cp -v {} dist/ \;
 
           # 三个平台都必须有可发布产物，缺任何一个就不创建 Release
@@ -186,6 +189,11 @@ jobs:
               exit 1
             fi
           done
+
+          # AAB 只是给 Google Play 备的，缺了不拦发布
+          if ! find dist -type f -name '*.aab' | grep -q .; then
+            echo "::warning::本次没有 AAB 产物，Google Play 需要另行构建"
+          fi
 
           # 兼容历史下载链接：官网 dl.html 与 README 长期使用 app-release.apk
           if [[ -f dist/thoughtecho-standard64-release.apk && ! -f dist/app-release.apk ]]; then
@@ -233,6 +241,8 @@ jobs:
             echo "- **Windows**：建议从 [Microsoft Store](https://apps.microsoft.com/detail/9NC7GDG6KFMC) 安装，可自动更新"
             echo "- **Android**：下载 \`thoughtecho-standard64-release.apk\`（64 位，绝大多数设备）；老设备用 \`thoughtecho-arm32Compat-release.apk\`"
             echo "- **iOS**：\`ThoughtEcho-unsigned.ipa\` 未签名，需自行签名侧载，尚未上架 App Store"
+            echo ""
+            echo "> \`.aab\` 是提交 Google Play 用的应用包，手机不能直接安装，普通用户请下载 APK。"
             echo ""
             echo "完整下载指引：https://note.shangjinyun.cn/dl"
           } >> "$out"

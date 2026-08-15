@@ -554,8 +554,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     // 检查剪贴板内容
     final clipboardData = await clipboardService.checkClipboard();
     if (clipboardData != null && mounted) {
-      // 显示确认对话框
-      clipboardService.showClipboardConfirmationDialog(context, clipboardData);
+      // 提示条只负责询问，接受后仍走页面统一的新增笔记入口：
+      // 标签加载、"跳过非全屏编辑器"偏好和保存反馈都在那条路径上。
+      clipboardService.showClipboardCapturePrompt(
+        context,
+        clipboardData,
+        onAccept: (content, author, source) => _showAddQuoteDialog(
+          prefilledContent: content,
+          prefilledAuthor: author,
+          prefilledWork: source,
+        ),
+      );
     }
   }
 
