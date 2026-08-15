@@ -121,9 +121,18 @@ class ClipboardService extends ChangeNotifier {
       // 提取作者和出处（如果有）
       final attribution = _extractAttribution(content);
 
-      logDebug(
-        '从剪贴板提取信息 - 作者: ${attribution.author}, 出处: ${attribution.source}',
-      );
+      // 作者和出处同样来自用户剪贴板，Release 构建里只记是否识别到，
+      // 不把内容写进日志（日志会落盘，也会随反馈一起带出去）
+      if (kDebugMode) {
+        logDebug(
+          '从剪贴板提取信息 - 作者: ${attribution.author}, 出处: ${attribution.source}',
+        );
+      } else {
+        logDebug(
+          '从剪贴板提取信息 - 识别到作者: ${attribution.author != null}, '
+          '识别到出处: ${attribution.source != null}',
+        );
+      }
 
       return {
         'content': attribution.content,
@@ -144,42 +153,39 @@ class ClipboardService extends ChangeNotifier {
   /// 破折号 `—` `–` 和 `--` 允许跨行，署名单独占一行是常见排版。
   static const String _dash = r'(?:\s*[—–]+|\s*-{2,}|[ \t]+-)\s*';
 
-  /// 兜底提取作者时的候选名。排除句读、书名号和 URL 里的 `:` `/`，
-  /// 长度限制在 2~20，避免把整句话当成作者。
-  static const String _fallbackAuthor = r'[^，。,、\.\n《（\(：:/\\]{2,20}';
+  /// 作者候选名。排除句读、书名号和 URL 里的 `:` `/`，长度限制在 2~20，
+  /// 避免把整段说明当成作者。三条规则共用同一套约束。
+  static const String _author = r'[^，。,、\.\n《（\(：:/\\]{2,20}';
 
-  /// 已被书名号锚定的位置，作者名可以放宽一些。
-  static const String _anchoredAuthor = r'[^，。,、\.\n]{1,30}';
+  /// 出处**只认书名号**。中英文圆括号在普通文本里太常见
+  /// （"今天心情不错（真的好）"），当出处切走会把正文改坏。
+  static const String _source = r'[《〈]([^》〉]+?)[》〉]';
 
-  /// 书名号包裹的出处。兜底提取出处时**只认书名号**：
-  /// 中英文圆括号在普通文本里太常见（"今天很开心（真的）"），
-  /// 当出处切走会把正文改坏。
-  static final RegExp _bookTitleSource = RegExp(r'[《〈]([^》〉]+?)[》〉]\s*$');
-
-  // 1. 正文 ——作者《出处》
+  // 1. 正文 ——作者《出处》（作者可省略）
   static final RegExp _dashAuthorThenSource = RegExp(
-    '$_dash' r'([^《（\(]+?)?\s*[《（\(]([^》）\)]+?)[》）\)]\s*$',
+    '$_dash' '($_author)?' r'\s*' '$_source' r'\s*$',
   );
 
   // 2. 正文《出处》——作者
   static final RegExp _sourceThenDashAuthor = RegExp(
-    r'[《（\(]([^》）\)]+?)[》）\)]' '$_dash' '($_anchoredAuthor)' r'\s*$',
+    '$_source' '$_dash' '($_author)' r'\s*$',
   );
 
-  // 3. 兜底：正文 ——作者
+  // 3. 正文 ——作者
   //
   // “引文”——作者 也走这条：切点是分隔符，引文整体留在正文里，
   // 不需要单独为引号写一条规则。
   static final RegExp _dashAuthorOnly = RegExp(
-    '$_dash' '($_fallbackAuthor)' r'\s*$',
+    '$_dash' '($_author)' r'\s*$',
   );
 
   static final RegExp _cleanPattern = RegExp(r'^[—–\-\s]+|[—–\-\s]+$');
 
   /// 从文本尾部提取作者和出处（一言式署名），并返回去掉署名后的正文。
   ///
-  /// 只在**尾部有明确署名标记**（破折号、书名号）时才切；宁可漏判也不误切——
-  /// 切错等于悄悄改用户的笔记正文，比不提取难受得多。
+  /// **三条规则都要求尾部有破折号署名**：书名号只有紧挨着署名时才算出处，
+  /// 单独结尾的书名号不切（"我在读《活着》"是正文，不是"正文 + 出处"）。
+  /// 宁可漏判也不误切——切错等于悄悄改用户的笔记正文，比不提取难受得多。
   _ClipboardAttribution _extractAttribution(String content) {
     final text = content.trim();
 
@@ -189,7 +195,7 @@ class ClipboardService extends ChangeNotifier {
     }
 
     // 署名从 matchStart 开始，前面剩下的才是正文。正文被切空说明整段都是
-    // 署名（比如只复制了一个书名），这种情况保留原文、不做提取。
+    // 署名（比如只复制了一句"——某人"），这种情况保留原文、不做提取。
     _ClipboardAttribution? cut(int matchStart, String? author, String? source) {
       final body = text.substring(0, matchStart).trim();
       if (body.isEmpty) return null;
@@ -203,52 +209,25 @@ class ClipboardService extends ChangeNotifier {
 
     // 1. 正文 ——作者《出处》
     final m1 = _dashAuthorThenSource.firstMatch(text);
-    if (m1 != null) {
+    if (m1 != null && _hasInlineBody(text, m1.start)) {
       final result = cut(m1.start, clean(m1.group(1)), clean(m1.group(2)));
       if (result != null) return result;
     }
 
     // 2. 正文《出处》——作者
+    //
+    // 这里不做 _hasInlineBody 守卫：匹配是从书名号开始的，而"出处 + 作者"
+    // 单独占一行是常见排版，按行首拦会把正常的署名块也拦掉。
     final m2 = _sourceThenDashAuthor.firstMatch(text);
     if (m2 != null) {
       final result = cut(m2.start, clean(m2.group(2)), clean(m2.group(1)));
       if (result != null) return result;
     }
 
-    // 3. 兜底：正文 ——作者（作者前面可能还有一个书名号出处）
+    // 3. 正文 ——作者
     final m3 = _dashAuthorOnly.firstMatch(text);
     if (m3 != null && _hasInlineBody(text, m3.start)) {
-      final author = clean(m3.group(1));
-      final beforeAuthor = text.substring(0, m3.start);
-      final sourceMatch = _bookTitleSource.firstMatch(beforeAuthor);
-      if (sourceMatch != null) {
-        final result = cut(
-          sourceMatch.start,
-          author,
-          clean(sourceMatch.group(1)),
-        );
-        if (result != null) return result;
-      }
-      final result = cut(m3.start, author, null);
-      if (result != null) return result;
-    }
-
-    // 4. 兜底：正文《出处》（出处前面可能还有一个 ——作者）
-    final m4 = _bookTitleSource.firstMatch(text);
-    if (m4 != null) {
-      final source = clean(m4.group(1));
-      final beforeSource = text.substring(0, m4.start);
-      final authorMatch = _dashAuthorOnly.firstMatch(beforeSource);
-      if (authorMatch != null &&
-          _hasInlineBody(beforeSource, authorMatch.start)) {
-        final result = cut(
-          authorMatch.start,
-          clean(authorMatch.group(1)),
-          source,
-        );
-        if (result != null) return result;
-      }
-      final result = cut(m4.start, null, source);
+      final result = cut(m3.start, clean(m3.group(1)), null);
       if (result != null) return result;
     }
 

@@ -216,8 +216,10 @@ jobs:
       # 所以这里只出 standard64 这一个 arm64-v8a 的 AAB。
       - name: 构建 AAB (standard64)
         id: aab
+        # 注意不能写 inputs.build_aab == null 做兜底：GitHub 表达式比较会把
+        # 两边转成数字，false 和 null 都是 0，关掉开关照样会跑这一步。
         if: >-
-          ${{ (inputs.build_aab == null || inputs.build_aab)
+          ${{ inputs.build_aab
               && (inputs.build_mode || 'release') == 'release'
               && (inputs.build_variant || 'both') != 'arm32Compat' }}
         env:

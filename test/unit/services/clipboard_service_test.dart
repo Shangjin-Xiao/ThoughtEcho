@@ -99,14 +99,79 @@ void main() {
         () async {
       clipboardService.setEnableClipboardMonitoring(true);
       await Clipboard.setData(
-        const ClipboardData(text: '《活着》里最重的一句话出自《活着》'),
+        const ClipboardData(text: '《活着》里最重的一句话 ——余华《活着》'),
       );
 
       final result = await clipboardService.checkClipboard();
 
       // 旧实现用 replaceFirst 删掉的是靠前那个同名书名号，正文会被改坏
-      expect(result!['content'], '《活着》里最重的一句话出自');
+      expect(result!['content'], '《活着》里最重的一句话');
+      expect(result['author'], '余华');
       expect(result['source'], '活着');
+    });
+
+    test('keeps a book title that is just part of the sentence', () async {
+      clipboardService.setEnableClipboardMonitoring(true);
+      const text = '我最近在读《活着》';
+      await Clipboard.setData(const ClipboardData(text: text));
+
+      final result = await clipboardService.checkClipboard();
+
+      // 没有署名标记，结尾的书名号是正文的一部分，不能当出处切走
+      expect(result!['content'], text);
+      expect(result['source'], isNull);
+    });
+
+    test('does not treat an indented list item with brackets as attribution',
+        () async {
+      clipboardService.setEnableClipboardMonitoring(true);
+      const text = '清单：\n  - 香蕉（进口）';
+      await Clipboard.setData(const ClipboardData(text: text));
+
+      final result = await clipboardService.checkClipboard();
+
+      expect(result!['content'], text);
+      expect(result['author'], isNull);
+      expect(result['source'], isNull);
+    });
+
+    test('does not treat a long explanatory tail as an author', () async {
+      clipboardService.setEnableClipboardMonitoring(true);
+      const text = '标题\n\n—— 一段很长的说明，包含逗号（附注）';
+      await Clipboard.setData(const ClipboardData(text: text));
+
+      final result = await clipboardService.checkClipboard();
+
+      expect(result!['content'], text);
+      expect(result['author'], isNull);
+    });
+
+    test('keeps a bracketed aside in the body while taking the dash author',
+        () async {
+      clipboardService.setEnableClipboardMonitoring(true);
+      await Clipboard.setData(
+        const ClipboardData(text: '今天心情不错（真的好）——张三'),
+      );
+
+      final result = await clipboardService.checkClipboard();
+
+      // 圆括号不是出处；有破折号署名时只取作者
+      expect(result!['content'], '今天心情不错（真的好）');
+      expect(result['author'], '张三');
+      expect(result['source'], isNull);
+    });
+
+    test('extracts a signature block that stands on its own line', () async {
+      clipboardService.setEnableClipboardMonitoring(true);
+      await Clipboard.setData(
+        const ClipboardData(text: '人生若只如初见\n《木兰花》——纳兰性德'),
+      );
+
+      final result = await clipboardService.checkClipboard();
+
+      expect(result!['content'], '人生若只如初见');
+      expect(result['author'], '纳兰性德');
+      expect(result['source'], '木兰花');
     });
 
     test('does not treat a markdown list item as an author', () async {
@@ -154,7 +219,7 @@ void main() {
       expect(result['source'], isNull);
     });
 
-    test('keeps the text intact when it is nothing but a signature', () async {
+    test('keeps the text intact when there is nothing but a title', () async {
       clipboardService.setEnableClipboardMonitoring(true);
       const text = '《人间失格》';
       await Clipboard.setData(const ClipboardData(text: text));
