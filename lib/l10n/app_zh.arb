@@ -3811,20 +3811,70 @@
   "chatWithAiAssistant": "与 Thoughter (AI 助手) 对话，深入探讨笔记内容",
   "messageCopied": "消息已复制到剪贴板",
   "anniversaryTitle": "心迹 · ThoughtEcho",
-  "anniversarySubtitle": "感恩有你，一路同行",
+  "anniversarySubtitle": "{years} 周年 · 感恩有你，一路同行",
+  "@anniversarySubtitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryVeteranThanks": "你从 {years} 周年起就在这里了，谢谢一直写下去",
+  "@anniversaryVeteranThanks": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
   "anniversaryEnterApp": "进入应用",
-  "anniversaryBannerTitle": "心迹 ThoughtEcho 一周年",
-  "anniversaryBannerSubtitle": "感恩有你，一路同行 · 2025.3.23 - 2026.3.23",
+  "anniversaryBannerTitle": "心迹 ThoughtEcho {years} 周年",
+  "@anniversaryBannerTitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryBannerSubtitle": "感恩有你，一路同行 · {range}",
+  "@anniversaryBannerSubtitle": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
   "anniversaryBannerTap": "点击重温庆典动画",
   "anniversaryReplayButton": "重播动画",
-  "developerAnniversarySection": "一周年庆典控制",
-  "developerAnniversaryEnabled": "启用一周年动画",
+  "developerAnniversarySection": "周年庆典",
+  "developerAnniversaryEnabled": "启用庆典动画",
   "developerAnniversaryEnabledDesc": "开关控制是否在启动时展示庆典动画",
-  "developerAnniversaryReset": "重置已显示标记",
-  "developerAnniversaryResetDesc": "重置后下次进入应用将再次播放动画",
-  "developerAnniversaryResetDone": "已重置，下次进入应用将播放动画",
+  "developerAnniversaryReset": "清空已参与记录",
+  "developerAnniversaryResetDesc": "清空后当作新用户，庆典动画会重新自动播放",
+  "developerAnniversaryResetDone": "已清空，庆典动画会重新自动播放",
   "developerAnniversaryPreview": "立即预览动画",
-  "developerAnniversaryPreviewDesc": "点击立即播放一周年庆典动画",
+  "developerAnniversaryPreviewDesc": "按当前模拟届数立即播放庆典动画",
+  "developerAnniversarySimulate": "模拟周年庆典",
+  "developerAnniversarySimulateOff": "关闭",
+  "developerAnniversarySimulateYear": "{years} 周年",
+  "@developerAnniversarySimulateYear": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversarySimulateDescOff": "按真实日期判断，当前不在庆典期",
+  "developerAnniversarySimulateDescActive": "正在模拟 {years} 周年：设置页横幅和启动动画都按这一届展示",
+  "@developerAnniversarySimulateDescActive": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversaryShownYears": "已参与的庆典",
+  "developerAnniversaryShownYearsNone": "还没参与过任何一届",
   "trash": "回收站",
   "trashEmpty": "回收站为空",
   "trashEmptyHint": "误删的内容会先暂存在这里，包含图片、音频和视频，也都可以一起恢复。",

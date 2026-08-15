@@ -3803,20 +3803,70 @@
   "chatWithAiAssistant": "Chat with Thoughter (AI Assistant) to explore note content",
   "messageCopied": "Message copied to clipboard",
   "anniversaryTitle": "ThoughtEcho · 心迹",
-  "anniversarySubtitle": "Thank you for being with us",
+  "anniversarySubtitle": "Year {years} · Thank you for being with us",
+  "@anniversarySubtitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryVeteranThanks": "You've been here since year {years} — thank you for keeping at it",
+  "@anniversaryVeteranThanks": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
   "anniversaryEnterApp": "Enter App",
-  "anniversaryBannerTitle": "ThoughtEcho 1st Anniversary",
-  "anniversaryBannerSubtitle": "Thank you for every step of the journey · 2025.3.23 - 2026.3.23",
+  "anniversaryBannerTitle": "ThoughtEcho Year {years} Anniversary",
+  "@anniversaryBannerTitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryBannerSubtitle": "Thank you for every step of the journey · {range}",
+  "@anniversaryBannerSubtitle": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
   "anniversaryBannerTap": "Tap to replay the celebration",
   "anniversaryReplayButton": "Replay",
-  "developerAnniversarySection": "Anniversary Celebration Controls",
+  "developerAnniversarySection": "Anniversary",
   "developerAnniversaryEnabled": "Enable Anniversary Animation",
   "developerAnniversaryEnabledDesc": "Toggle whether the celebration animation shows on launch",
-  "developerAnniversaryReset": "Reset Shown Flag",
-  "developerAnniversaryResetDesc": "After reset, the animation will play again on next launch",
-  "developerAnniversaryResetDone": "Reset done, animation will play on next launch",
+  "developerAnniversaryReset": "Clear Participation Record",
+  "developerAnniversaryResetDesc": "Clears the record so the celebration plays again as for a new user",
+  "developerAnniversaryResetDone": "Cleared, the celebration will play again",
   "developerAnniversaryPreview": "Preview Animation Now",
-  "developerAnniversaryPreviewDesc": "Tap to play the anniversary animation immediately",
+  "developerAnniversaryPreviewDesc": "Plays the celebration for the simulated year right away",
+  "developerAnniversarySimulate": "Simulate Anniversary",
+  "developerAnniversarySimulateOff": "Off",
+  "developerAnniversarySimulateYear": "Year {years}",
+  "@developerAnniversarySimulateYear": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversarySimulateDescOff": "Following the real date; not in a celebration window",
+  "developerAnniversarySimulateDescActive": "Simulating year {years}: the settings banner and launch animation both use this edition",
+  "@developerAnniversarySimulateDescActive": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversaryShownYears": "Celebrations Seen",
+  "developerAnniversaryShownYearsNone": "None yet",
   "trash": "Trash",
   "trashEmpty": "Trash is empty",
   "trashEmptyHint": "Accidentally deleted notes stay here first, including photos, audio, and video, so you can restore them together.",

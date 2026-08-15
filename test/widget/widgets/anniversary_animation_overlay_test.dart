@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/utils/anniversary_display_utils.dart';
 import 'package:thoughtecho/widgets/anniversary_animation_overlay.dart';
 
 void main() {
@@ -22,7 +23,10 @@ void main() {
           ],
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('zh'),
-          home: AnniversaryAnimationOverlay(onDismiss: () {}),
+          home: AnniversaryAnimationOverlay(
+            onDismiss: () {},
+            edition: AnniversaryDisplayUtils.editionForYear(2),
+          ),
         ),
       );
 
@@ -54,7 +58,10 @@ void main() {
             builder: (context) => Scaffold(
               body: TextButton(
                 onPressed: () {
-                  showAnniversaryAnimationOverlay(context);
+                  showAnniversaryAnimationOverlay(
+                    context,
+                    edition: AnniversaryDisplayUtils.editionForYear(2),
+                  );
                 },
                 child: const Text('open'),
               ),
@@ -104,7 +111,10 @@ void main() {
           ],
           supportedLocales: AppLocalizations.supportedLocales,
           locale: const Locale('zh'),
-          home: AnniversaryAnimationOverlay(onDismiss: () {}),
+          home: AnniversaryAnimationOverlay(
+            onDismiss: () {},
+            edition: AnniversaryDisplayUtils.editionForYear(2),
+          ),
         ),
       );
 

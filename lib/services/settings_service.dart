@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ai_settings.dart';
+import '../models/anniversary_participation.dart';
 import '../models/app_settings.dart';
 import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
 import '../models/local_ai_settings.dart'; // 新增 LocalAISettings 导入
@@ -524,15 +525,36 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 一周年庆典动画是否已显示过
-  bool get anniversaryShown => _appSettings.anniversaryShown;
-  Future<void> setAnniversaryShown(bool shown) async {
-    _appSettings = _appSettings.copyWith(anniversaryShown: shown);
+  // 参与过的周年庆典记录
+  List<AnniversaryParticipation> get anniversaryParticipation =>
+      _appSettings.anniversaryParticipation;
+
+  // 参与过的庆典届数（升序）
+  List<int> get anniversaryShownYears => _appSettings.anniversaryShownYears;
+
+  /// 记下第 [year] 届庆典已参与。已经有记录的届数不覆盖，保留首次时间。
+  Future<void> markAnniversaryShown(
+    int year, {
+    DateTime? seenAt,
+    String? appVersion,
+  }) async {
+    if (year <= 0 || _appSettings.anniversaryShownYears.contains(year)) {
+      return;
+    }
+    final records = [
+      ..._appSettings.anniversaryParticipation,
+      AnniversaryParticipation(
+        year: year,
+        seenAt: (seenAt ?? DateTime.now()).toUtc(),
+        appVersion: appVersion,
+      ),
+    ]..sort((a, b) => a.year.compareTo(b.year));
+    _appSettings = _appSettings.copyWith(anniversaryParticipation: records);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }
 
-  // 一周年庆典动画是否启用（开发者模式控制）
+  // 庆典动画是否启用（开发者模式控制）
   bool get anniversaryAnimationEnabled =>
       _appSettings.anniversaryAnimationEnabled;
   Future<void> setAnniversaryAnimationEnabled(bool enabled) async {
@@ -541,9 +563,21 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 重置一周年动画已显示标记（开发者模式使用）
-  Future<void> resetAnniversaryShown() async {
-    _appSettings = _appSettings.copyWith(anniversaryShown: false);
+  // 开发者模式模拟的周年届数，0 表示按真实日期判断
+  int get anniversarySimulatedYear => _appSettings.anniversarySimulatedYear;
+  Future<void> setAnniversarySimulatedYear(int year) async {
+    _appSettings = _appSettings.copyWith(
+      anniversarySimulatedYear: year < 0 ? 0 : year,
+    );
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  /// 清空庆典参与记录（开发者模式使用）。
+  ///
+  /// 连带清掉老用户标记，模拟「新用户第一次看到庆典」。
+  Future<void> resetAnniversaryParticipation() async {
+    _appSettings = _appSettings.copyWith(anniversaryParticipation: const []);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }
