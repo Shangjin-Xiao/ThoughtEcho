@@ -102,9 +102,13 @@ class QuillEditorExtensions {
 /// quill 段落基准样式的**唯一**纠正入口。
 ///
 /// `DefaultStyles.getInstance` 的 baseStyle 是从 `DefaultTextStyle` 拷的
-/// （颜色、字体族确实跟着主题走），但 `fontSize` 和 `height` 被硬写成 16 / 1.15。
+/// （它在 `QuillEditor` 自己的 context 上取，所以颜色、字体族确实跟着主题走），
+/// 但 `fontSize` 和 `height` 被硬写成 16 / 1.15。
 /// 1.15 对中文正文太挤，换成衬线体之后尤其闷；16 则在衬线风格把正文放大到 17
 /// （[ThemeStyleForm.bodyFontScale]）之后跟纯文本笔记对不上。
+///
+/// 纠正的时候**不能照抄那条取法**：调用点往往在 `Material` 外面，那里的
+/// `DefaultTextStyle` 是 `MaterialApp` 的报警样式。见 [paragraphStyle]。
 ///
 /// 两个用到 `QuillEditor` 的地方——笔记卡片正文和全屏编辑器——必须按同一套令牌
 /// 纠正，否则「写的时候」和「读的时候」行距不一样。规则因此放在这里一处。
@@ -127,17 +131,27 @@ class QuillThemeTypography {
 
   /// [base] 是调用方已有的正文样式（卡片会传 `bodyLarge` + 笔记颜色）。
   ///
-  /// 字号和行高**不从 [DefaultTextStyle] 取**：调用方可能没传 [base]，而那里
-  /// 往往是 `bodyMedium`(14)，直接用会把正文缩一号。规则统一成「富文本正文 =
-  /// `bodyLarge`」，兜底才轮到 quill 的硬编码值。
+  /// 基准**一律取 `textTheme.bodyLarge`，绝不取 [DefaultTextStyle]**。后者在
+  /// `Material` 之上根本不是正文样式：`MaterialApp` 会在 `Navigator` 外面铺一份
+  /// 「你还没设过样式」的报警样式（红色 `0xD0FF0000`、`bold`、`monospace`、48px、
+  /// 黄色双下划线），只有落进 `Material` 内部才会被换成真正的正文样式。页面级的
+  /// `build(context)`（全屏编辑器就是在 `Scaffold` 外面调的）拿到的正是那一份，
+  /// 于是整篇正文渲染成红色粗体等宽字——[decoration] 被清掉后连黄下划线这个
+  /// 破绽都没了。规则本来也是「富文本正文 = `bodyLarge`」，直接从主题取既消掉
+  /// 这个坑，也不再受调用点在树里深浅的影响。
   ///
-  /// `decoration` 必须显式清掉，否则 [DefaultTextStyle] 里的下划线会漏进正文。
+  /// `decoration` 仍要显式清掉：[base] 自己可能带下划线。
+  ///
+  /// `color` 必须给全：`TextLine` 用的是 `RichText`，它不继承 `DefaultTextStyle`，
+  /// 段落样式整体替换后缺 color 会在暗色模式下渲染成黑字。
   static TextStyle paragraphStyle(BuildContext context, {TextStyle? base}) {
-    final bodyLarge = Theme.of(context).textTheme.bodyLarge;
-    final inherited = DefaultTextStyle.of(context).style.merge(base);
-    return inherited.copyWith(
+    final theme = Theme.of(context);
+    final bodyLarge = theme.textTheme.bodyLarge;
+    final resolved = (bodyLarge ?? const TextStyle()).merge(base);
+    return resolved.copyWith(
       fontSize: base?.fontSize ?? bodyLarge?.fontSize ?? 16,
       height: base?.height ?? bodyLarge?.height ?? 1.15,
+      color: resolved.color ?? theme.colorScheme.onSurface,
       decoration: TextDecoration.none,
     );
   }
