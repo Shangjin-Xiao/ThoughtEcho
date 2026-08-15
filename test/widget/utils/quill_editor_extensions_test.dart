@@ -77,6 +77,43 @@ void main() {
     expect(inside, outside);
   });
 
+  testWidgets('主题没给正文颜色时兜底到 onSurface', (tester) async {
+    // `TextLine` 用的 `RichText` 不继承 `DefaultTextStyle`，段落样式整体替换后
+    // 缺 color 会在暗色模式下画黑字，所以 `paragraphStyle` 有一条 onSurface 兜底。
+    // 默认主题的 `bodyLarge` 永远带颜色，那条分支平时走不到，这里显式造出来。
+    //
+    // `inherit: false` 不是凑巧：`ThemeData` 会把传入的 `textTheme` merge 到
+    // 默认那套上，而 `TextStyle.merge` 只有在 `inherit` 为 false 时才整体替换。
+    // 写成普通的 `TextStyle()`，null 的颜色会被默认值填回来，这条用例就白测了。
+    const onSurface = Color(0xFF00FF00);
+    final theme = ThemeData(
+      colorScheme: const ColorScheme.light(onSurface: onSurface),
+      textTheme: const TextTheme(
+        bodyLarge: TextStyle(inherit: false, fontSize: 16),
+      ),
+    );
+    late TextStyle paragraph;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme,
+        home: Builder(
+          builder: (context) {
+            expect(
+              Theme.of(context).textTheme.bodyLarge!.color,
+              isNull,
+              reason: '前提：这套主题的正文确实没有颜色，否则测不到兜底分支',
+            );
+            paragraph = QuillThemeTypography.paragraphStyle(context);
+            return const Scaffold();
+          },
+        ),
+      ),
+    );
+
+    expect(paragraph.color, onSurface);
+  });
+
   testWidgets('base 给了的项优先，下划线仍被清掉', (tester) async {
     late TextStyle paragraph;
     const base = TextStyle(
