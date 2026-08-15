@@ -96,4 +96,26 @@ class StringUtils {
   static String removeObjectReplacementChar(String text) {
     return text.replaceAll('\u{FFFC}', '');
   }
+
+  /// 按换行符遍历文本行，避免 `split('\n')` 生成中间列表导致的 GC 压力。
+  /// [action] 接收行内容 [line] 和指示是否为最后一段的布尔值 [isLast]。
+  static void forEachLine(
+    String text,
+    void Function(String line, bool isLast) action,
+  ) {
+    if (text.isEmpty) {
+      action('', true);
+      return;
+    }
+    int start = 0;
+    while (true) {
+      final nextNewline = text.indexOf('\n', start);
+      if (nextNewline == -1) {
+        action(text.substring(start), true);
+        break;
+      }
+      action(text.substring(start, nextNewline), false);
+      start = nextNewline + 1;
+    }
+  }
 }

@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'string_utils.dart';
+
 /// Quill Delta操作的构建工具类
 /// 用于AI修改笔记时，正确处理纯文本→Delta转换、并保留嵌入式内容（图片等）
 class DeltaBuilder {
@@ -22,44 +24,33 @@ class DeltaBuilder {
     final ops = <Map<String, dynamic>>[];
     var inCodeBlock = false;
     final normalized = markdown.replaceAll('\r\n', '\n');
-    int start = 0;
-    while (true) {
-      final nextNewline = normalized.indexOf('\n', start);
-      final line = nextNewline == -1
-          ? normalized.substring(start)
-          : start == nextNewline
-              ? ''
-              : normalized.substring(start, nextNewline);
-
+    StringUtils.forEachLine(normalized, (line, _) {
       if (line.trimLeft().startsWith('```')) {
         inCodeBlock = !inCodeBlock;
-      } else {
-        final heading = RegExp(r'^(#{1,6})\s+(.+)$').firstMatch(line);
-        final bullet = RegExp(r'^\s*[-*+]\s+(.+)$').firstMatch(line);
-        final ordered = RegExp(r'^\s*\d+[.)]\s+(.+)$').firstMatch(line);
-        final quote = RegExp(r'^\s*>\s?(.*)$').firstMatch(line);
-        final body = heading?.group(2) ??
-            bullet?.group(1) ??
-            ordered?.group(1) ??
-            quote?.group(1) ??
-            line;
-        _appendInlineMarkdown(ops, body);
-        final attributes = <String, dynamic>{
-          if (inCodeBlock) 'code-block': true,
-          if (heading != null) 'header': heading.group(1)!.length,
-          if (bullet != null) 'list': 'bullet',
-          if (ordered != null) 'list': 'ordered',
-          if (quote != null) 'blockquote': true,
-        };
-        ops.add({
-          'insert': '\n',
-          if (attributes.isNotEmpty) 'attributes': attributes,
-        });
+        return;
       }
-
-      if (nextNewline == -1) break;
-      start = nextNewline + 1;
-    }
+      final heading = RegExp(r'^(#{1,6})\s+(.+)$').firstMatch(line);
+      final bullet = RegExp(r'^\s*[-*+]\s+(.+)$').firstMatch(line);
+      final ordered = RegExp(r'^\s*\d+[.)]\s+(.+)$').firstMatch(line);
+      final quote = RegExp(r'^\s*>\s?(.*)$').firstMatch(line);
+      final body = heading?.group(2) ??
+          bullet?.group(1) ??
+          ordered?.group(1) ??
+          quote?.group(1) ??
+          line;
+      _appendInlineMarkdown(ops, body);
+      final attributes = <String, dynamic>{
+        if (inCodeBlock) 'code-block': true,
+        if (heading != null) 'header': heading.group(1)!.length,
+        if (bullet != null) 'list': 'bullet',
+        if (ordered != null) 'list': 'ordered',
+        if (quote != null) 'blockquote': true,
+      };
+      ops.add({
+        'insert': '\n',
+        if (attributes.isNotEmpty) 'attributes': attributes,
+      });
+    });
     return ops;
   }
 
