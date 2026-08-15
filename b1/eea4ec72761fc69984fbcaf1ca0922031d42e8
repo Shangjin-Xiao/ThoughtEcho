@@ -1,0 +1,20 @@
+.jules/bolt.md
+  h_70f11689bada52 1-92
+lib/utils/delta_rich_text_parser.dart
+  h_70f11689bada52 28,272,277,280
+lib/utils/quill_delta_builder.dart
+  h_70f11689bada52 3-4,27,30,32-53
+lib/utils/string_utils.dart
+  h_70f11689bada52 99-120
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "b1eea4ec72761fc69984fbcaf1ca0922031d42e8",
+  "prompts": {},
+  "humans": {
+    "h_70f11689bada52": {
+      "author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
