@@ -1,3 +1,5 @@
+import 'anniversary_participation.dart';
+
 class AppSettings {
   static const Set<int> allowedTrashRetentionDays = {7, 30, 90};
   static const Set<String> _supportedDailyQuoteProviders = {
@@ -59,8 +61,16 @@ class AppSettings {
   final String? defaultAuthor; // 新增：默认作者（自动填充）
   final String? defaultSource; // 新增：默认出处（自动填充）
   final List<String> defaultTagIds; // 新增：默认标签 ID 列表（自动填充）
-  final bool anniversaryShown; // 一周年庆典动画是否已显示过
-  final bool anniversaryAnimationEnabled; // 一周年庆典动画是否启用（开发者模式控制）
+  /// 参与过的周年庆典记录，按届数升序。
+  ///
+  /// 一周年时这里是个 bool，两周年就分不清「没看过」和「上一届看过」了。存成记录
+  /// 列表：每届各自只自动播一次靠它，老用户标记也靠它，之后想做「你从 N 周年起
+  /// 就在这里」这类回顾同样从它取。
+  final List<AnniversaryParticipation> anniversaryParticipation;
+  final bool anniversaryAnimationEnabled; // 庆典动画是否启用（开发者模式控制）
+
+  /// 开发者模式模拟的周年届数，0 表示不模拟、按真实日期判断。
+  final int anniversarySimulatedYear;
   final int trashRetentionDays; // 回收站保留天数（7/30/90）
   final String? trashRetentionLastModified; // 回收站保留设置更新时间（UTC ISO）
   final bool skipNonFullscreenEditor; // 新增：跳过非全屏编辑器，直接进入全屏编辑器
@@ -104,8 +114,9 @@ class AppSettings {
     this.defaultAuthor, // 默认无自动填充作者
     this.defaultSource, // 默认无自动填充出处
     this.defaultTagIds = const [], // 默认无自动填充标签
-    this.anniversaryShown = false, // 默认未显示过
+    this.anniversaryParticipation = const [], // 默认没参与过任何一届
     this.anniversaryAnimationEnabled = true, // 默认启用庆典动画
+    this.anniversarySimulatedYear = 0, // 默认不模拟
     int? trashRetentionDays, // 回收站保留天数（7/30/90）
     this.trashRetentionLastModified,
     this.skipNonFullscreenEditor = false, // 默认不跳过非全屏编辑器
@@ -121,6 +132,10 @@ class AppSettings {
         // （updateAppSettings(appSettings.copyWith(noteCardMediaStyle: x))）
         // 会把非法值写进持久化 JSON。
         noteCardMediaStyle = NoteCardMediaStyle.normalize(noteCardMediaStyle);
+
+  /// 参与过的庆典届数，升序。由 [anniversaryParticipation] 派生，别单独存一份。
+  List<int> get anniversaryShownYears =>
+      [for (final record in anniversaryParticipation) record.year];
 
   static int normalizeTrashRetentionDays(int? days) {
     if (days == null) {
@@ -160,8 +175,12 @@ class AppSettings {
       'defaultAuthor': defaultAuthor,
       'defaultSource': defaultSource,
       'defaultTagIds': defaultTagIds,
-      'anniversaryShown': anniversaryShown,
+      'anniversaryParticipation':
+          anniversaryParticipation.map((e) => e.toJson()).toList(),
+      // 旧版本只认这个 bool，降级安装时至少还能识别一周年老用户。
+      'anniversaryShown': anniversaryShownYears.contains(1),
       'anniversaryAnimationEnabled': anniversaryAnimationEnabled,
+      'anniversarySimulatedYear': anniversarySimulatedYear,
       'trashRetentionDays': trashRetentionDays,
       'trashRetentionLastModified': trashRetentionLastModified,
       'skipNonFullscreenEditor': skipNonFullscreenEditor,
@@ -184,6 +203,35 @@ class AppSettings {
 
   static String _readString(dynamic value, String fallback) {
     return value is String ? value : fallback;
+  }
+
+  static int _readInt(dynamic value, int fallback) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return fallback;
+  }
+
+  /// 读取庆典参与记录，并兼容一周年时期的 `anniversaryShown` 布尔值。
+  ///
+  /// 旧值只说明「看过一周年动画」，没有时间也没有版本，迁移成一条空信息的记录。
+  static List<AnniversaryParticipation> _readAnniversaryParticipation(
+    Map<String, dynamic> map,
+  ) {
+    final raw = map['anniversaryParticipation'];
+    if (raw is List) {
+      final records = <int, AnniversaryParticipation>{};
+      for (final item in raw) {
+        final record = AnniversaryParticipation.fromJson(item);
+        if (record != null) {
+          records[record.year] = record;
+        }
+      }
+      final years = records.keys.toList()..sort();
+      return [for (final year in years) records[year]!];
+    }
+    return map['anniversaryShown'] == true
+        ? const [AnniversaryParticipation(year: 1)]
+        : const [];
   }
 
   factory AppSettings.fromJson(Map<String, dynamic> map) {
@@ -242,8 +290,9 @@ class AppSettings {
       defaultAuthor: map['defaultAuthor'] as String?,
       defaultSource: map['defaultSource'] as String?,
       defaultTagIds: _readStringList(map['defaultTagIds']),
-      anniversaryShown: map['anniversaryShown'] ?? false,
+      anniversaryParticipation: _readAnniversaryParticipation(map),
       anniversaryAnimationEnabled: map['anniversaryAnimationEnabled'] ?? true,
+      anniversarySimulatedYear: _readInt(map['anniversarySimulatedYear'], 0),
       trashRetentionDays: parsedRetentionDays,
       trashRetentionLastModified: map['trashRetentionLastModified'] as String?,
       skipNonFullscreenEditor: map['skipNonFullscreenEditor'] ?? false,
@@ -289,8 +338,9 @@ class AppSettings {
         defaultAuthor: null,
         defaultSource: null,
         defaultTagIds: const [],
-        anniversaryShown: false,
+        anniversaryParticipation: const [],
         anniversaryAnimationEnabled: true,
+        anniversarySimulatedYear: 0,
         trashRetentionDays: 30,
         trashRetentionLastModified: null,
         skipNonFullscreenEditor: false, // 默认不跳过非全屏编辑器
@@ -336,8 +386,9 @@ class AppSettings {
     String? defaultSource,
     bool clearDefaultSource = false,
     List<String>? defaultTagIds,
-    bool? anniversaryShown,
+    List<AnniversaryParticipation>? anniversaryParticipation,
     bool? anniversaryAnimationEnabled,
+    int? anniversarySimulatedYear,
     int? trashRetentionDays,
     String? trashRetentionLastModified,
     bool clearTrashRetentionLastModified = false,
@@ -391,9 +442,12 @@ class AppSettings {
       defaultSource:
           clearDefaultSource ? null : (defaultSource ?? this.defaultSource),
       defaultTagIds: defaultTagIds ?? this.defaultTagIds,
-      anniversaryShown: anniversaryShown ?? this.anniversaryShown,
+      anniversaryParticipation:
+          anniversaryParticipation ?? this.anniversaryParticipation,
       anniversaryAnimationEnabled:
           anniversaryAnimationEnabled ?? this.anniversaryAnimationEnabled,
+      anniversarySimulatedYear:
+          anniversarySimulatedYear ?? this.anniversarySimulatedYear,
       trashRetentionDays: normalizeTrashRetentionDays(
         trashRetentionDays ?? this.trashRetentionDays,
       ),

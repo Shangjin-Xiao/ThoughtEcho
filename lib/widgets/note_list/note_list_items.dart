@@ -503,10 +503,19 @@ extension _NoteListItemsExtension on NoteListViewState {
       child: BackdropGroup(
         child: ListView.builder(
           controller: _scrollController, // 添加滚动控制器
-          // 首条笔记与搜索框的间距由卡片自身的 6px 上边距决定，这里不再额外收紧。
-          // ListView 的 padding 会包成 SliverPadding，负值会命中
-          // RenderSliverPadding 的 assert(padding.isNonNegative)：release 关断言
-          // 看不出问题，debug 和测试里 ListView 一挂载就抛异常。
+          // 必须显式给 padding。padding 为 null 时 BoxScrollView 会把
+          // MediaQuery.padding 的主轴部分包成 SliverPadding "帮忙"避开系统栏——
+          // 记录页没有 AppBar，状态栏高度不会被 Scaffold 消费，于是整条状态栏
+          // 高度又被加在了列表顶部。搜索框上方已经自己让开了 topPadding，这里
+          // 再让一次就是白送几十 dp 的空档：先前两次收紧首条卡片上边距
+          // （6 → 4 → 2.67）动的只是那几个像素，看上去当然"没变化"。
+          // 底部同理交回自己控制：Scaffold 有 bottomNavigationBar，body 的
+          // padding.bottom 已被置零，这里取到的就是 0。
+          // 负值仍然不可行——会命中 RenderSliverPadding 的
+          // assert(padding.isNonNegative)，首条间距只能靠卡片自身的上边距收。
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.paddingOf(context).bottom,
+          ),
           findChildIndexCallback: (key) {
             if (key is ValueKey<String>) {
               return rowIndexByKey[key.value];
@@ -588,7 +597,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                       isExpanded: isExpanded,
                       isSelected: isSelected,
                       selectionMode: _isExportMode,
-                      // 首条与搜索框之间只隔一层卡片上边距，收紧到默认值的 2/3。
+                      // 首条与搜索框之间只隔这一层卡片上边距。
                       topMarginOverride: index == 0
                           ? QuoteItemWidget.firstItemTopMargin
                           : null,

@@ -980,6 +980,51 @@ void main() {
         await tester.pump(const Duration(seconds: 2));
       },
     );
+
+    testWidgets(
+      'does not re-inset the status bar height above the first note',
+      (tester) async {
+        // 记录页没有 AppBar，body 的 MediaQuery.padding.top 保留着状态栏高度。
+        // ListView 的 padding 一旦为 null，BoxScrollView 会把这段高度再补一次，
+        // 首条笔记和搜索框之间就凭空多出几十 dp。
+        tester.view.padding = FakeViewPadding(
+          top: 40 * tester.view.devicePixelRatio,
+        );
+        addTearDown(tester.view.resetPadding);
+
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = [
+            Quote(
+              id: 'quote-1',
+              content: '列表第一条笔记',
+              date: DateTime(2026, 8, 13, 21).toIso8601String(),
+            ),
+          ];
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        final listView = tester.widget<ListView>(find.byType(ListView));
+        expect(listView.padding, isNotNull, reason: 'padding 为 null 会自动补状态栏');
+        expect((listView.padding as EdgeInsets).top, 0);
+
+        // 首条卡片除自身上边距外不再被额外下推
+        final listTop = tester.getTopLeft(find.byType(ListView)).dy;
+        final firstItemTop =
+            tester.getTopLeft(find.byType(QuoteItemWidget).first).dy;
+        expect(firstItemTop - listTop, lessThan(1));
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
   });
 }
 

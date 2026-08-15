@@ -253,8 +253,9 @@ void main() {
         QuoteItemWidget.firstItemTopMargin,
       );
       expect(firstItemMargin.top, QuoteItemWidget.firstItemTopMargin);
-      // 不锁死具体比例——这个值按观感反复调过（6.0 → 4.0 → 2.67）。这里只锁
-      // 真正的不变量：比默认小、仍然为正，且下边距和左右都不受影响。
+      // 不锁死具体比例——这个值按观感反复调过（6.0 → 4.0 → 2.67 → 4.0，中间那轮
+      // 其实是列表自己补了状态栏高度）。这里只锁真正的不变量：比默认小、
+      // 仍然为正，且下边距和左右都不受影响。
       expect(
         QuoteItemWidget.firstItemTopMargin,
         lessThan(QuoteItemWidget.defaultCardMarginVertical),

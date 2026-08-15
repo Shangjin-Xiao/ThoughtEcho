@@ -75,8 +75,24 @@ class AddNoteController extends ChangeNotifier {
   // 分类选择
   NoteTag? selectedCategory;
 
+  // 标签名称到固定分类 ID 的映射，避免O(N)遍历
+  static const Map<String, String> hitokotoTagNameToCategoryIdMap = {
+    '动画': DatabaseService.defaultTagIdAnime,
+    '漫画': DatabaseService.defaultTagIdComic,
+    '游戏': DatabaseService.defaultTagIdGame,
+    '文学': DatabaseService.defaultTagIdNovel,
+    '原创': DatabaseService.defaultTagIdOriginal,
+    '来自网络': DatabaseService.defaultTagIdInternet,
+    '其他': DatabaseService.defaultTagIdOther,
+    '影视': DatabaseService.defaultTagIdMovie,
+    '诗词': DatabaseService.defaultTagIdPoem,
+    '网易云': DatabaseService.defaultTagIdMusic,
+    '哲学': DatabaseService.defaultTagIdPhilosophy,
+    '抖机灵': DatabaseService.defaultTagIdJoke,
+  };
+
   // 一言类型到固定分类 ID 的映射
-  static final Map<String, String> hitokotoTypeToCategoryIdMap = {
+  static const Map<String, String> hitokotoTypeToCategoryIdMap = {
     'a': DatabaseService.defaultTagIdAnime, // 动画
     'b': DatabaseService.defaultTagIdComic, // 漫画
     'c': DatabaseService.defaultTagIdGame, // 游戏
@@ -89,6 +105,38 @@ class AddNoteController extends ChangeNotifier {
     'j': DatabaseService.defaultTagIdMusic, // 网易云
     'k': DatabaseService.defaultTagIdPhilosophy, // 哲学
     'l': DatabaseService.defaultTagIdJoke, // 抖机灵
+  };
+
+  // 一言类型代码到标签名称的映射
+  static const Map<String, String> hitokotoTypeToTagNameMap = {
+    'a': '动画',
+    'b': '漫画',
+    'c': '游戏',
+    'd': '文学',
+    'e': '原创',
+    'f': '来自网络',
+    'g': '其他',
+    'h': '影视',
+    'i': '诗词',
+    'j': '网易云',
+    'k': '哲学',
+    'l': '抖机灵',
+  };
+
+  // 一言类型代码到对应图标的映射
+  static const Map<String, String> hitokotoTypeToIconMap = {
+    'a': '🎬',
+    'b': '📚',
+    'c': '🎮',
+    'd': '📖',
+    'e': '✨',
+    'f': '🌐',
+    'g': '📦',
+    'h': '🎞️',
+    'i': '🪶',
+    'j': '🎧',
+    'k': '🤔',
+    'l': '😄',
   };
 
   // 缓存所有标签，避免重复查询
@@ -360,40 +408,12 @@ class AddNoteController extends ChangeNotifier {
 
   // 将一言API的类型代码转换为可读标签名称
   String convertHitokotoTypeToTagName(String typeCode) {
-    const Map<String, String> typeMap = {
-      'a': '动画',
-      'b': '漫画',
-      'c': '游戏',
-      'd': '文学',
-      'e': '原创',
-      'f': '来自网络',
-      'g': '其他',
-      'h': '影视',
-      'i': '诗词',
-      'j': '网易云',
-      'k': '哲学',
-      'l': '抖机灵',
-    };
-    return typeMap[typeCode] ?? '其他一言';
+    return hitokotoTypeToTagNameMap[typeCode] ?? '其他一言';
   }
 
   // 为不同类型的一言选择对应的图标
   String getIconForHitokotoType(String typeCode) {
-    const Map<String, String> iconMap = {
-      'a': '🎬',
-      'b': '📚',
-      'c': '🎮',
-      'd': '📖',
-      'e': '✨',
-      'f': '🌐',
-      'g': '📦',
-      'h': '🎞️',
-      'i': '🪶',
-      'j': '🎧',
-      'k': '🤔',
-      'l': '😄',
-    };
-    return iconMap[typeCode] ?? 'format_quote';
+    return hitokotoTypeToIconMap[typeCode] ?? 'format_quote';
   }
 
   // 添加默认的一言相关标签
@@ -487,12 +507,7 @@ class AddNoteController extends ChangeNotifier {
   }) async {
     try {
       if (fixedId == null) {
-        for (var entry in hitokotoTypeToCategoryIdMap.entries) {
-          if (convertHitokotoTypeToTagName(entry.key) == name) {
-            fixedId = entry.value;
-            break;
-          }
-        }
+        fixedId = hitokotoTagNameToCategoryIdMap[name];
         if (name == '每日一言') {
           fixedId = DatabaseService.defaultTagIdHitokoto;
         }

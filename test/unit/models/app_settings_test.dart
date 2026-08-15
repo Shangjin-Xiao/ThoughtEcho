@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thoughtecho/models/anniversary_participation.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 
 import '../../test_harness.dart';
@@ -41,7 +42,7 @@ void main() {
       expect(settings.defaultAuthor, isNull);
       expect(settings.defaultSource, isNull);
       expect(settings.defaultTagIds, isEmpty);
-      expect(settings.anniversaryShown, isFalse);
+      expect(settings.anniversaryParticipation, isEmpty);
       expect(settings.anniversaryAnimationEnabled, isTrue);
       expect(settings.trashRetentionDays, equals(30));
       expect(settings.trashRetentionLastModified, isNull);
@@ -82,7 +83,7 @@ void main() {
         defaultAuthor: 'Author',
         defaultSource: 'Source',
         defaultTagIds: ['tag1'],
-        anniversaryShown: true,
+        anniversaryParticipation: [const AnniversaryParticipation(year: 1)],
         anniversaryAnimationEnabled: false,
         trashRetentionDays: 90,
         trashRetentionLastModified: '2023-10-27T10:00:00Z',
@@ -163,7 +164,10 @@ void main() {
       expect(fromJson.defaultAuthor, equals(settings.defaultAuthor));
       expect(fromJson.defaultSource, equals(settings.defaultSource));
       expect(fromJson.defaultTagIds, equals(settings.defaultTagIds));
-      expect(fromJson.anniversaryShown, equals(settings.anniversaryShown));
+      expect(
+        fromJson.anniversaryParticipation,
+        equals(settings.anniversaryParticipation),
+      );
       expect(
         fromJson.anniversaryAnimationEnabled,
         equals(settings.anniversaryAnimationEnabled),
