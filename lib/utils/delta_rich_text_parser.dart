@@ -25,6 +25,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'delta_media_extractor.dart';
+import 'string_utils.dart';
 
 /// 一个块（≈ 一个段落 / 一个列表项 / 一段引用 / 一个媒体嵌入）。
 enum RichTextBlockKind {
@@ -268,17 +269,15 @@ List<RichTextBlock> parseDeltaRichText(String? deltaContent) {
     }
 
     final attributes = _asAttributeMap(op['attributes']);
-    final lines = insert.split('\n');
-    for (var i = 0; i < lines.length; i++) {
-      final text = lines[i];
+    StringUtils.forEachLine(insert, (text, isLast) {
       if (text.isNotEmpty) {
         pendingRuns.add(_runFor(text, attributes));
       }
       // split 产生的最后一段后面没有换行符，留给下一个 op 继续累积。
-      if (i < lines.length - 1) {
+      if (!isLast) {
         flushLine(attributes);
       }
-    }
+    });
   }
 
   if (pendingRuns.isNotEmpty) {

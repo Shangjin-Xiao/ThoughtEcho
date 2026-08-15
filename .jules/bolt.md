@@ -90,3 +90,7 @@
 ## 2026-08-14 - Optimize hitokoto tag category ID lookup
 **Learning:** O(N) linear lookups in loops can be efficiently replaced with O(1) direct dictionary mapping when the key-value mappings are constant/static.
 **Action:** Replaced loop-based ID retrieval in `ensureTagExists` by generating `hitokotoTagNameToCategoryIdMap`.
+
+## 2026-08-14 - [Replace String.split with indexOf and substring to reduce GC pressure]
+**Learning:** `String.split` generates intermediate lists and string tokens, creating high GC pressure when parsing large strings frequently. When rewriting a `for-in` loop with `split` to a `while` loop with `indexOf`, extracting a shared `StringUtils.forEachLine` helper avoids boilerplate while maintaining zero-allocation scanning.
+**Action:** Replace `split('\n')` with `StringUtils.forEachLine` in line-by-line parsers like `DeltaRichTextParser` and `DeltaBuilder` to eliminate temporary list allocations and standardize line scanning across the codebase.

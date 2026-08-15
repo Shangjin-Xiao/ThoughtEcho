@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'string_utils.dart';
+
 /// Quill Delta操作的构建工具类
 /// 用于AI修改笔记时，正确处理纯文本→Delta转换、并保留嵌入式内容（图片等）
 class DeltaBuilder {
@@ -21,10 +23,11 @@ class DeltaBuilder {
     if (markdown.isEmpty) return [];
     final ops = <Map<String, dynamic>>[];
     var inCodeBlock = false;
-    for (final line in markdown.replaceAll('\r\n', '\n').split('\n')) {
+    final normalized = markdown.replaceAll('\r\n', '\n');
+    StringUtils.forEachLine(normalized, (line, _) {
       if (line.trimLeft().startsWith('```')) {
         inCodeBlock = !inCodeBlock;
-        continue;
+        return;
       }
       final heading = RegExp(r'^(#{1,6})\s+(.+)$').firstMatch(line);
       final bullet = RegExp(r'^\s*[-*+]\s+(.+)$').firstMatch(line);
@@ -47,7 +50,7 @@ class DeltaBuilder {
         'insert': '\n',
         if (attributes.isNotEmpty) 'attributes': attributes,
       });
-    }
+    });
     return ops;
   }
 
