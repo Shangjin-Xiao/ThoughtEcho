@@ -107,6 +107,16 @@ class MockSettingsService extends ChangeNotifier implements SettingsService {
   @override
   MultiAISettings get multiAISettings => const MultiAISettings();
   @override
+  int get anniversarySimulatedYear => 0;
+  @override
+  Future<void> setAnniversarySimulatedYear(int year) async {}
+  @override
+  bool get anniversaryAnimationEnabled => true;
+  @override
+  Future<void> setAnniversaryAnimationEnabled(bool enabled) async {}
+  @override
+  Future<void> resetAnniversaryParticipation() async {}
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
