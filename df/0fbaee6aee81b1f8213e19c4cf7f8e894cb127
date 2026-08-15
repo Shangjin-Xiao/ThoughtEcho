@@ -1,0 +1,14 @@
+lib/controllers/add_note_controller.dart
+  h_70f11689bada52 79,95,110-141,411,416
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "df0fbaee6aee81b1f8213e19c4cf7f8e894cb127",
+  "prompts": {},
+  "humans": {
+    "h_70f11689bada52": {
+      "author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
