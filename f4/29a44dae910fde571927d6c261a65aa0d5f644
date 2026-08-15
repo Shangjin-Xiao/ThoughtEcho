@@ -1,0 +1,72 @@
+.github/workflows/flutter-release-build.yml
+  h_70f11689bada52 1,23,27,29-33,50,52-56,214-251,271-280
+.github/workflows/release.yml
+  h_70f11689bada52 130-132,181-183
+.jules/bolt.md
+  h_70f11689bada52 90-93
+assets/svg/anniversary_cake.svg
+  h_70f11689bada52 1
+lib/controllers/add_note_controller.dart
+  h_70f11689bada52 78-93,95,110-141,411,416,510
+lib/l10n/app_en.arb
+  h_70f11689bada52 3806-3821,3823-3838,3841,3844-3846,3848-3869
+lib/l10n/app_zh.arb
+  h_70f11689bada52 3814-3829,3831-3846,3849-3850,3852-3854,3856-3877
+lib/models/anniversary_participation.dart
+  h_70f11689bada52 1-57
+lib/models/app_settings.dart
+  h_70f11689bada52 1-2,64-73,117,119,136-139,178-181,183,208-236,293,295,341,343,389,391,445-446,449-450
+lib/pages/home_page.dart
+  h_70f11689bada52 7,294,404,411-415,418,420,422,426-442,447-451,574-584
+lib/pages/settings_page.dart
+  h_70f11689bada52 7,35,38,1191-1193,1210-1302,1567,1569-1575,1577,1610,1620,1658-1677
+lib/services/clipboard_service.dart
+  h_70f11689bada52 6,9-18,122,124-135,138-140,148-173,175-178,180-186,189-196,200-201,204-217,220-230,233-243,247-251,254-265,268-279,281-283,290,292-294,297-298,321-322,335-336,372,374-384
+lib/services/settings_service.dart
+  h_70f11689bada52 7,528-552,557,566-580
+lib/utils/anniversary_candle_svg.dart
+  h_70f11689bada52 1-156
+lib/utils/anniversary_display_utils.dart
+  h_70f11689bada52 1-42,44-49,51-82,87,89,92,95,97,99-116
+lib/utils/quill_editor_extensions.dart
+  h_70f11689bada52 105-106,110-112,134-143,145-146,148-151,154
+lib/widgets/anniversary_animation_overlay.dart
+  h_70f11689bada52 7-8,10-14,23-24,34-45,175-179,263,267,289,320,328-338
+lib/widgets/anniversary_cake.dart
+  h_70f11689bada52 1-37
+lib/widgets/note_list/note_list_items.dart
+  h_70f11689bada52 506-518,600
+lib/widgets/quote_item_widget.dart
+  h_70f11689bada52 84-87,90
+test/sync_integration_test.mocks.dart
+  h_70f11689bada52 31,1401-1411,1419-1424,1786-1791,1793-1798,1816-1827,1829
+test/unit/models/anniversary_participation_test.dart
+  h_70f11689bada52 1-78
+test/unit/models/app_settings_test.dart
+  h_70f11689bada52 2,45,86,167-170
+test/unit/services/clipboard_service_test.dart
+  h_70f11689bada52 84-258
+test/unit/utils/anniversary_display_utils_test.dart
+  h_70f11689bada52 6-18,20-21,24-27,31,33-36,39-45,49-56,59,65-66,68,72,75-76,83-84,91-92,99-100,107-108,110,112-122,125-127,131-132
+test/widget/note_list_view_filter_test.dart
+  h_70f11689bada52 983-1027
+test/widget/pages/home_page_test.dart
+  h_70f11689bada52 196,198-200
+test/widget/utils/quill_editor_extensions_test.dart
+  h_70f11689bada52 1-145
+test/widget/widgets/anniversary_animation_overlay_test.dart
+  h_70f11689bada52 6,26-29,61-64,114-117
+test/widget/widgets/quote_item_widget_test.dart
+  h_70f11689bada52 256-258
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "f429a44dae910fde571927d6c261a65aa0d5f644",
+  "prompts": {},
+  "humans": {
+    "h_70f11689bada52": {
+      "author": "上晋 <84136399+Shangjin-Xiao@users.noreply.github.com>"
+    }
+  }
+}
