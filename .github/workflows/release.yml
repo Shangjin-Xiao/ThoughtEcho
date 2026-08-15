@@ -127,6 +127,9 @@ jobs:
       version_name: ${{ needs.prepare.outputs.version }}
       build_mode: release
       build_variant: both
+      # 顺手出一份和本次发版同源的 AAB（arm64-v8a）。它不会进 Release 附件，
+      # 只留在本次运行的 Artifacts 里，需要上架 Google Play 时去那儿下。
+      build_aab: true
 
   windows:
     needs: prepare
@@ -175,7 +178,9 @@ jobs:
           set -euo pipefail
           mkdir -p dist
 
-          # 产物散落在各 artifact 子目录中，按扩展名收拢到一处
+          # 产物散落在各 artifact 子目录中，按扩展名收拢到一处。
+          # 不收 .aab：它是提交 Google Play 用的，手机装不了，不该出现在
+          # Release 的下载列表里；需要时去本次运行的 Artifacts 里取。
           find artifacts -type f \( -name '*.apk' -o -name '*.msix' -o -name '*.ipa' \) \
             -exec cp -v {} dist/ \;
 

@@ -193,10 +193,11 @@ class MockClipboardService extends ChangeNotifier implements ClipboardService {
   @override
   Future<Map<String, dynamic>?> checkClipboard() async => null;
   @override
-  void showClipboardConfirmationDialog(
+  void showClipboardCapturePrompt(
     BuildContext context,
-    Map<String, dynamic> clipboardData,
-  ) {}
+    Map<String, dynamic> clipboardData, {
+    required ClipboardCaptureAccepted onAccept,
+  }) {}
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

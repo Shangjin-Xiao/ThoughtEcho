@@ -1,26 +1,26 @@
-// filepath: /workspaces/ThoughtEcho/lib/services/clipboard_service.dart
 import 'dart:async';
 
-import '../constants/app_constants.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../models/note_tag.dart';
-import '../models/quote_model.dart';
-import '../services/database_service.dart';
-import '../widgets/add_note_dialog.dart'; // 导入AddNoteDialog
-import 'package:provider/provider.dart';
-import '../utils/mmkv_ffi_fix.dart'; // 导入安全包装类
-import '../utils/app_logger.dart';
+
 import '../gen_l10n/app_localizations.dart';
 import '../theme/theme_style.dart';
+import '../utils/app_logger.dart';
+import '../utils/mmkv_ffi_fix.dart'; // 导入安全包装类
+
+/// 用户接受剪贴板摘录后的回调：交给页面用它自己的新增笔记入口打开编辑器，
+/// 服务本身不负责建编辑器、也不负责存库。
+typedef ClipboardCaptureAccepted = void Function(
+  String content,
+  String? author,
+  String? source,
+);
 
 class ClipboardService extends ChangeNotifier {
   static const String _keyEnableClipboardMonitoring =
       'enable_clipboard_monitoring';
 
-  // 常见的引述格式匹配
-  // 可能的出处标识
   // 是否启用剪贴板监控
   bool _enableClipboardMonitoring = false;
   bool get enableClipboardMonitoring => _enableClipboardMonitoring;
@@ -119,25 +119,25 @@ class ClipboardService extends ChangeNotifier {
       _lastProcessedContent = content;
 
       // 提取作者和出处（如果有）
-      final extractedInfo = _extractAuthorAndSource(content);
-      String? author = extractedInfo['author'];
-      String? source = extractedInfo['source'];
-      String? matchedSubstring = extractedInfo['matched_substring']; // 获取匹配到的子串
+      final attribution = _extractAttribution(content);
 
-      logDebug(
-        '从剪贴板提取信息 - 作者: $author, 出处: $source, 匹配子串长度: ${matchedSubstring?.length}',
-      );
+      // 作者和出处同样来自用户剪贴板，Release 构建里只记是否识别到，
+      // 不把内容写进日志（日志会落盘，也会随反馈一起带出去）
+      if (kDebugMode) {
+        logDebug(
+          '从剪贴板提取信息 - 作者: ${attribution.author}, 出处: ${attribution.source}',
+        );
+      } else {
+        logDebug(
+          '从剪贴板提取信息 - 识别到作者: ${attribution.author != null}, '
+          '识别到出处: ${attribution.source != null}',
+        );
+      }
 
-      // 如果提取到了元数据，从原始内容中移除匹配的子串
-      final displayContent = (matchedSubstring != null)
-          ? content.replaceFirst(matchedSubstring, '').trim()
-          : content;
-
-      // 返回提取的信息
       return {
-        'content': displayContent, // 使用处理后的内容
-        'author': author,
-        'source': source,
+        'content': attribution.content,
+        'author': attribution.author,
+        'source': attribution.source,
       };
     } catch (e) {
       logDebug('检查剪贴板时出错: $e');
@@ -145,158 +145,157 @@ class ClipboardService extends ChangeNotifier {
     }
   }
 
-  // Cache regexes for performance
-  static final RegExp _pattern1 = RegExp(
-    r'[-—–]+\s*([^《（\(]+?)?\s*[《（\(]([^》）\)]+?)[》）\)]\s*$',
-  );
-  static final RegExp _pattern2 = RegExp(
-    r'[《（\(]([^》）\)]+?)[》）\)]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$',
-  );
-  static final RegExp _pattern3 = RegExp(
-    r'["""](.+?)["""]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$',
-  );
-  static final RegExp _pattern4 = RegExp(
-    r'[-—–]+\s*([^，。,、\.\n《（\(]{2,20})\s*$',
-  );
-  static final RegExp _pattern4Source = RegExp(r'[《（\(]([^》）\)]+?)[》）\)]\s*$');
-  static final RegExp _pattern5 = RegExp(r'[《（\(]([^》）\)]+?)[》）\)]\s*$');
-  static final RegExp _pattern5Author = RegExp(
-    r'[-—–]+\s*([^，。,、\.\n《（\(]{2,20})\s*$',
-  );
-  static final RegExp _cleanPattern = RegExp(r'^[—–\-—\s]+|[—–\-—\s]+$');
+  /// 归属分隔符（破折号/连字号）。
+  ///
+  /// 单个 ASCII `-` 只有同一行内前面带空格才算分隔符（"正文 - 作者"）。否则
+  /// `2026-08-15`、`foo-bar`、`https://x.com/a-b` 这类普通文本的尾巴都会被
+  /// 当成"——作者"切走，这是旧实现最常见的误判来源。
+  /// 破折号 `—` `–` 和 `--` 允许跨行，署名单独占一行是常见排版。
+  static const String _dash = r'(?:\s*[—–]+|\s*-{2,}|[ \t]+-)\s*';
 
-  // 从文本中提取作者和出处信息（类似一言格式）
-  // 返回包含 'author', 'source', 'matched_substring' 的 Map
-  Map<String, String?> _extractAuthorAndSource(String content) {
+  /// 作者候选名。排除句读、书名号和 URL 里的 `:` `/`，长度限制在
+  /// [_authorMinLength]~[_authorMaxLength]，避免把整段说明当成作者。
+  ///
+  /// 字符类里没排掉空白和破折号，所以这里的长度只是初筛：正则可以靠回溯
+  /// 把分隔符塞进候选来凑够下限（"正文——好" 命中的是 `—好`），真正的长度
+  /// 校验在 [_validAuthor] 里、清洗之后做。
+  static const String _author = r'[^，。,、\.\n《（\(：:/\\]{2,20}';
+
+  static const int _authorMinLength = 2;
+  static const int _authorMaxLength = 20;
+
+  /// 出处**只认书名号**。中英文圆括号在普通文本里太常见
+  /// （"今天心情不错（真的好）"），当出处切走会把正文改坏。
+  static const String _source = r'[《〈]([^》〉]+?)[》〉]';
+
+  // 1. 正文 ——作者《出处》（作者可省略）
+  static final RegExp _dashAuthorThenSource = RegExp(
+    '$_dash' '($_author)?' r'\s*' '$_source' r'\s*$',
+  );
+
+  // 2. 正文《出处》——作者
+  static final RegExp _sourceThenDashAuthor = RegExp(
+    '$_source' '$_dash' '($_author)' r'\s*$',
+  );
+
+  // 3. 正文 ——作者
+  //
+  // “引文”——作者 也走这条：切点是分隔符，引文整体留在正文里，
+  // 不需要单独为引号写一条规则。
+  static final RegExp _dashAuthorOnly = RegExp(
+    '$_dash' '($_author)' r'\s*$',
+  );
+
+  static final RegExp _cleanPattern = RegExp(r'^[—–\-\s]+|[—–\-\s]+$');
+
+  /// 从文本尾部提取作者和出处（一言式署名），并返回去掉署名后的正文。
+  ///
+  /// **三条规则都要求尾部有破折号署名**：书名号只有紧挨着署名时才算出处，
+  /// 单独结尾的书名号不切（"我在读《活着》"是正文，不是"正文 + 出处"）。
+  /// 宁可漏判也不误切——切错等于悄悄改用户的笔记正文，比不提取难受得多。
+  _ClipboardAttribution _extractAttribution(String content) {
     final text = content.trim();
-    String? author;
-    String? source;
-    String? matchedSubstring; // 用于存储匹配到的完整元数据子串
 
-    // 定义清理函数，去除前后空格和特定标点
     String? clean(String? input) {
-      return input?.trim().replaceAll(_cleanPattern, '').trim();
+      final cleaned = input?.trim().replaceAll(_cleanPattern, '').trim();
+      return (cleaned == null || cleaned.isEmpty) ? null : cleaned;
     }
 
-    // 1. 匹配 ——作者《出处》 或 --作者《出处》 等
-    final m1 = _pattern1.firstMatch(text);
-    if (m1 != null) {
-      author = clean(m1.group(1));
-      source = clean(m1.group(2));
-      matchedSubstring = m1.group(0);
-      return {
-        'author': author,
-        'source': source,
-        'matched_substring': matchedSubstring,
-      };
+    // 清洗掉分隔符和空白之后再量一次长度，见 [_author] 的说明
+    String? validAuthor(String? group) => _validAuthor(clean(group));
+
+    // 署名从 matchStart 开始，前面剩下的才是正文。正文被切空说明整段都是
+    // 署名（比如只复制了一句"——某人"），这种情况保留原文、不做提取。
+    _ClipboardAttribution? cut(int matchStart, String? author, String? source) {
+      final body = text.substring(0, matchStart).trim();
+      if (body.isEmpty) return null;
+      if (author == null && source == null) return null;
+      return _ClipboardAttribution(
+        content: body,
+        author: author,
+        source: source,
+      );
     }
 
-    // 2. 匹配 《出处》——作者 或 《出处》--作者 等
-    final m2 = _pattern2.firstMatch(text);
+    // 1. 正文 ——作者《出处》
+    final m1 = _dashAuthorThenSource.firstMatch(text);
+    if (m1 != null && _hasInlineBody(text, m1.start)) {
+      // 作者可省略；但凡写了又不合法，整条规则作废——只留出处会把那段
+      // 不合法的作者文本一起从正文里删掉
+      final rawAuthor = clean(m1.group(1));
+      final author = _validAuthor(rawAuthor);
+      if (rawAuthor == null || author != null) {
+        final result = cut(m1.start, author, clean(m1.group(2)));
+        if (result != null) return result;
+      }
+    }
+
+    // 2. 正文《出处》——作者
+    //
+    // 这里不做 _hasInlineBody 守卫：匹配是从书名号开始的，而"出处 + 作者"
+    // 单独占一行是常见排版，按行首拦会把正常的署名块也拦掉。
+    final m2 = _sourceThenDashAuthor.firstMatch(text);
     if (m2 != null) {
-      source = clean(m2.group(1));
-      author = clean(m2.group(2));
-      matchedSubstring = m2.group(0);
-      return {
-        'author': author,
-        'source': source,
-        'matched_substring': matchedSubstring,
-      };
-    }
-
-    // 3. 匹配 "文"——作者 或 "文"--作者 等
-    final m3 = _pattern3.firstMatch(text);
-    if (m3 != null) {
-      // 这种情况通常只提取作者，引用的内容在前面
-      author = clean(m3.group(2));
-      matchedSubstring = m3.group(0);
-      // 注意：这里可能需要更复杂的逻辑来判断是否要提取 source，暂时只提取 author
-      return {
-        'author': author,
-        'source': null,
-        'matched_substring': matchedSubstring,
-      };
-    }
-
-    // 4. 回退提取作者（匹配末尾的 ——作者 或 --作者）
-    final m4 = _pattern4.firstMatch(text);
-    if (m4 != null) {
-      author = clean(m4.group(1));
-      matchedSubstring = m4.group(0);
-      // 尝试在此基础上再提取出处
-      final remainingText = text.substring(
-        0,
-        text.length - matchedSubstring!.length,
-      );
-      final m4Source = _pattern4Source.firstMatch(remainingText);
-      if (m4Source != null) {
-        source = clean(m4Source.group(1));
-        matchedSubstring = text.substring(m4Source.start);
+      // 作者不合法就整条作废，同规则 1
+      final author = validAuthor(m2.group(2));
+      if (author != null) {
+        final result = cut(m2.start, author, clean(m2.group(1)));
+        if (result != null) return result;
       }
-      return {
-        'author': author,
-        'source': source,
-        'matched_substring': matchedSubstring,
-      };
     }
 
-    // 5. 回退提取出处（匹配末尾的 《出处》 或 （出处））
-    final m5 = _pattern5.firstMatch(text);
-    if (m5 != null) {
-      source = clean(m5.group(1));
-      matchedSubstring = m5.group(0);
-      // 尝试在此基础上再提取作者
-      final remainingText = text.substring(
-        0,
-        text.length - matchedSubstring!.length,
-      );
-      final m5Author = _pattern5Author.firstMatch(remainingText);
-      if (m5Author != null) {
-        author = clean(m5Author.group(1));
-        matchedSubstring = text.substring(m5Author.start);
-      }
-      return {
-        'author': author,
-        'source': source,
-        'matched_substring': matchedSubstring,
-      };
+    // 3. 正文 ——作者
+    final m3 = _dashAuthorOnly.firstMatch(text);
+    if (m3 != null && _hasInlineBody(text, m3.start)) {
+      final result = cut(m3.start, validAuthor(m3.group(1)), null);
+      if (result != null) return result;
     }
 
-    // 如果都没有匹配到，返回 null
-    return {'author': null, 'source': null, 'matched_substring': null};
+    return _ClipboardAttribution(content: content);
   }
 
-  // 显示询问对话框并打开编辑页面
-  void showClipboardConfirmationDialog(
+  /// 清洗后的作者名是否还站得住。
+  ///
+  /// 正则里的 `{2,20}` 量的是回溯后的原始候选，可能混着破折号和空格；
+  /// 这里量清洗后的真实字数，短到一个字的尾巴（"正文——好"）不算署名。
+  String? _validAuthor(String? cleaned) {
+    if (cleaned == null) return null;
+    final length = cleaned.runes.length;
+    if (length < _authorMinLength || length > _authorMaxLength) return null;
+    return cleaned;
+  }
+
+  /// 分隔符所在行前面是否还有正文。
+  ///
+  /// 缩进后的 markdown 列表项（`  - 香蕉`）会命中"空格 + 连字号"的分隔符规则，
+  /// 但它整行都是列表项，前面只有换行和缩进——这种不是署名。
+  bool _hasInlineBody(String text, int separatorStart) =>
+      separatorStart > 0 && !text.substring(0, separatorStart).endsWith('\n');
+
+  /// 弹出"发现剪贴板内容"提示；用户点提示后由 [onAccept] 打开新增笔记入口。
+  ///
+  /// 服务只负责提示和解析，编辑器怎么开、笔记怎么存都交回页面：页面那条路径
+  /// 已经处理了标签加载、"跳过非全屏编辑器"偏好和统一的保存反馈。
+  void showClipboardCapturePrompt(
     BuildContext context,
-    Map<String, dynamic> clipboardData,
-  ) {
+    Map<String, dynamic> clipboardData, {
+    required ClipboardCaptureAccepted onAccept,
+  }) {
     final content = clipboardData['content'] as String;
     final author = clipboardData['author'] as String?;
     final source = clipboardData['source'] as String?;
 
-    // 显示非阻塞式通知
-    showNonBlockingClipboardNotification(context, content, author, source);
-  }
-
-  // 显示非阻塞式剪贴板通知
-  void showNonBlockingClipboardNotification(
-    BuildContext context,
-    String content,
-    String? author,
-    String? source,
-  ) {
     OverlayEntry? backgroundEntry;
     OverlayEntry? cardEntry;
+    var handled = false;
 
-    // 用于记录卡片自身的渲染区域，以区分点卡片和点背景
-    final cardKey = GlobalKey();
-
-    void dismiss({bool openEditor = false}) {
+    void dismiss({bool accepted = false}) {
+      if (handled) return;
+      handled = true;
       if (backgroundEntry?.mounted ?? false) backgroundEntry!.remove();
       if (cardEntry?.mounted ?? false) cardEntry!.remove();
-      if (openEditor && context.mounted) {
-        _openEditPage(context, content, author, source);
+      if (accepted && context.mounted) {
+        onAccept(content, author, source);
       }
     }
 
@@ -319,13 +318,12 @@ class ClipboardService extends ChangeNotifier {
         child: Material(
           color: Colors.transparent,
           child: GestureDetector(
-            // 点卡片本身 → 打开编辑页
-            onTap: () => dismiss(openEditor: true),
+            // 点卡片本身 → 打开新增笔记
+            onTap: () => dismiss(accepted: true),
             // 拦截事件冒泡，防止触发背景层（卡片范围内的事件由此处处理）
             behavior: HitTestBehavior.opaque,
             child: Center(
               child: Container(
-                key: cardKey,
                 constraints: const BoxConstraints(maxWidth: 320),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -334,8 +332,8 @@ class ClipboardService extends ChangeNotifier {
                 decoration: BoxDecoration(
                   color: Theme.of(overlayContext).colorScheme.surface,
                   borderRadius: BorderRadius.circular(
-                      AppShapeTokens.of(context).dialogRadius),
-                  boxShadow: AppShapeTokens.of(context).restShadow,
+                      AppShapeTokens.of(overlayContext).dialogRadius),
+                  boxShadow: AppShapeTokens.of(overlayContext).restShadow,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -371,95 +369,17 @@ class ClipboardService extends ChangeNotifier {
     // 6 秒自动消失
     Future.delayed(const Duration(seconds: 6), () => dismiss());
   }
+}
 
-  // 打开编辑页面
-  void _openEditPage(
-    BuildContext context,
-    String content,
-    String? author,
-    String? source,
-  ) async {
-    try {
-      // 获取所有标签
-      final databaseService = Provider.of<DatabaseService>(
-        context,
-        listen: false,
-      );
-      final List<NoteTag> tags = await databaseService.getTags();
+/// 剪贴板文本解析结果：去掉署名后的正文，以及识别出的作者/出处。
+class _ClipboardAttribution {
+  const _ClipboardAttribution({
+    required this.content,
+    this.author,
+    this.source,
+  });
 
-      // 防止在异步操作后使用已销毁的BuildContext
-      if (!context.mounted) return;
-
-      // 打开编辑页面
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Theme.of(context).brightness == Brightness.light
-            ? Colors.white
-            : Theme.of(context).colorScheme.surface,
-        requestFocus: false,
-        builder: (_) => AddNoteDialog(
-          prefilledContent: content,
-          prefilledAuthor: author,
-          prefilledWork: source,
-          tags: tags,
-          onSave: (quote) => _saveClipboardQuote(context, quote),
-        ),
-      );
-    } catch (e) {
-      logDebug('打开编辑页面失败: $e');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                Text('${AppLocalizations.of(context).operationFailed}: $e'),
-            duration: AppConstants.snackBarDurationError,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _saveClipboardQuote(BuildContext context, Quote quote) async {
-    if (!context.mounted) return;
-
-    final databaseService = Provider.of<DatabaseService>(
-      context,
-      listen: false,
-    );
-    final messenger = ScaffoldMessenger.of(context);
-    final l10n = AppLocalizations.of(context);
-
-    try {
-      await databaseService.addQuote(quote);
-      if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.noteSaved),
-          duration: AppConstants.snackBarDurationImportant,
-        ),
-      );
-    } catch (e, stack) {
-      logError(
-        '剪贴板笔记保存失败: id=${quote.id}',
-        error: e,
-        stackTrace: stack,
-        source: 'ClipboardService',
-      );
-      if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.saveFailedWithError(e.toString())),
-          duration: AppConstants.snackBarDurationError,
-          backgroundColor: Colors.red,
-          action: SnackBarAction(
-            label: l10n.retry,
-            onPressed: () {
-              unawaited(_saveClipboardQuote(context, quote));
-            },
-          ),
-        ),
-      );
-    }
-  }
+  final String content;
+  final String? author;
+  final String? source;
 }

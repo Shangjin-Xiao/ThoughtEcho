@@ -81,10 +81,13 @@ class QuoteItemWidget extends StatefulWidget {
 
   /// 列表首条笔记的上边距。
   ///
-  /// 按用户观感逐步收紧：6.0（= 默认值）→ 4.0 → 2.67，当前是默认值的 4/9。
+  /// 6.0（= 默认值）→ 4.0 → 2.67 收了三轮都看不出变化，因为真正占位的不是它：
+  /// 记录页的 ListView 没写 padding，被 BoxScrollView 自动补上了一整条状态栏
+  /// 高度（见 `note_list_items.dart` 里 ListView 的 padding 注释）。那处补齐后
+  /// 这个值才真正等于搜索框与首条笔记之间的间距，回到 4.0 就够紧了。
   /// 要再调只改这个数，不要动 [defaultCardMarginVertical]（那会连带改变
   /// 卡片之间的间距）。
-  static const double firstItemTopMargin = 2.67;
+  static const double firstItemTopMargin = 4.0;
 
   const QuoteItemWidget({
     super.key,
