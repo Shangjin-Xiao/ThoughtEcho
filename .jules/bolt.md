@@ -87,3 +87,6 @@
 ## 2024-05-24 - [优化流式响应解析性能]
 **Learning:** 在高频流式数据处理（如大语言模型流式输出）中，使用 `String.split('\n')` 会产生大量短生命周期的列表和字符串对象，从而显著增加垃圾回收（GC）压力并导致可能的性能卡顿。
 **Action:** 在此类场景中，应始终采用手动寻找分隔符（如 `String.indexOf` 和 `String.substring`）的方法来遍历文本。
+## 2026-08-14 - Optimize hitokoto tag category ID lookup
+**Learning:** O(N) linear lookups in loops can be efficiently replaced with O(1) direct dictionary mapping when the key-value mappings are constant/static.
+**Action:** Replaced loop-based ID retrieval in `ensureTagExists` by generating `hitokotoTagNameToCategoryIdMap`.
