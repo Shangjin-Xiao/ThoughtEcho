@@ -910,17 +910,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       height: screenHeight, // 确保占满整个屏幕高度
                       child: Column(
                         children: [
-                          // 每日一言部分：卡片按内容高度收缩，在剩余空间里垂直居中。
+                          // 每日一言部分 - 占用大部分空间，但保留足够空间给今日思考。
                           //
-                          // 这里曾经给 50%（极小屏 55%）屏高的 minHeight，卡片被拉满
-                          // 整块区域：一句短一言配一张近乎全空的大卡，正文只占中间
-                          // 一小条。留白本来是排版手段，撑到这个比例就只剩空洞。
-                          // 现在高度由内容决定，长一言仍然由 SlidingCard 内部的
-                          // 滚动视图兜住，不会溢出。
+                          // 卡片刻意撑满这块区域而不是按内容收缩：试过收缩版
+                          // （2026-08-16 出图比对），一言只有一两行时卡片缩成中间
+                          // 一条，留白全跑到页面上，首页反而更空。撑满的版本把留白
+                          // 收在卡片内部，一言居中，观感更稳。
                           Expanded(
                             child: Container(
                               key: _dailyQuoteGuideKey, // 功能引导 key
-                              alignment: Alignment.center,
+                              constraints: BoxConstraints(
+                                minHeight: screenHeight *
+                                    (isVerySmallScreen
+                                        ? 0.55
+                                        : 0.50), // 极小屏幕调整比例
+                              ),
                               child: DailyQuoteView(
                                 key: _dailyQuoteViewKey,
                                 onAddQuote:

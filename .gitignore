@@ -318,3 +318,6 @@ agent/
 
 # 推广素材与运营数据：含未公开的商店/流量数据，不进公开仓库
 docs/promo/
+
+# 主题预览脚手架产出的 golden 图：依赖本机字体，不可复现，不入库
+test/preview/images/
