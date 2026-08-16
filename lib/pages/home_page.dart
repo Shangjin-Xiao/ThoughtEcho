@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -800,9 +799,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final scaffoldBackgroundColor =
         _pageController.currentIndex == 1 ? surfaces.noteList : surfaces.page;
 
+    // 底部导航栏走 M3 给 NavigationBar 定的 surfaceContainer，不再跟着页面底色变。
+    // 手工色板里 surfaceContainer 就是纸色，两者本来就重合；material 下它是
+    // M3 期望的那一档，栏和内容区因此有明确边界。
+    final navigationBarColor = theme.colorScheme.surfaceContainer;
+    // 系统导航栏要跟**应用的导航栏**同色，不是跟 Scaffold 底色——记录页的底色
+    // 和导航栏并不一样，跟错了会在屏幕最下方多出一道色带。
     final systemUiOverlayStyle = _buildSystemUiOverlayStyle(
       theme,
-      scaffoldBackgroundColor,
+      navigationBarColor,
     );
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemUiOverlayStyle,
@@ -1032,61 +1037,72 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
           ),
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-        bottomNavigationBar: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0), // 毛玻璃模糊效果
-            child: Container(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface.withValues(
-                  alpha: 0.8,
-                ), // 半透明背景
+        // `centerDocked` 是配 `BottomAppBar` 的凹口用的，而这里是 M3 的
+        // `NavigationBar`——它没有凹口，FAB 只会浮在正中把内容盖住，而正中恰好
+        // 是文字所在的位置。M3 下 NavigationBar 配的是 `endFloat`。
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        // 导航栏是一张实心的纸，上缘一道发丝线——判据仍是 borderWidth 这个取值。
+        //
+        // 原来这里包了一层 `BackdropFilter(blur 20)`，但 Scaffold 没开
+        // `extendBody`，body 根本没画到栏后面：模糊的是 Scaffold 的纯色底，
+        // 每帧白付一次全宽 saveLayer。磨砂玻璃也不在这套设计的语汇里
+        // （见 DESIGN.md：层次靠边框和留白，不靠渐变与玻璃）。
+        bottomNavigationBar: DecoratedBox(
+          decoration: BoxDecoration(
+            color: navigationBarColor,
+            border: shape.borderWidth > 0
+                ? Border(
+                    top: BorderSide(
+                      color: theme.colorScheme.outlineVariant,
+                      width: shape.borderWidth,
+                    ),
+                  )
+                : null,
+          ),
+          child: NavigationBar(
+            selectedIndex: _pageController.currentIndex,
+            onDestinationSelected: (index) {
+              _onTabChanged(index);
+            },
+            elevation: 0,
+            // 底色由外层 DecoratedBox 承担，栏本身保持透明。
+            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            destinations: [
+              NavigationDestination(
+                icon: const Icon(Icons.home_outlined),
+                selectedIcon: Icon(
+                  Icons.home,
+                  color: theme.colorScheme.primary,
+                ),
+                label: AppLocalizations.of(context).navHome,
               ),
-              child: NavigationBar(
-                selectedIndex: _pageController.currentIndex,
-                onDestinationSelected: (index) {
-                  _onTabChanged(index);
-                },
-                elevation: 0,
-                backgroundColor: Colors.transparent, // 透明背景以显示模糊效果
-                surfaceTintColor: Colors.transparent, // 移除表面着色
-                destinations: [
-                  NavigationDestination(
-                    icon: const Icon(Icons.home_outlined),
-                    selectedIcon: Icon(
-                      Icons.home,
-                      color: theme.colorScheme.primary,
-                    ),
-                    label: AppLocalizations.of(context).navHome,
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.book_outlined),
-                    selectedIcon: Icon(
-                      Icons.book,
-                      color: theme.colorScheme.primary,
-                    ),
-                    label: AppLocalizations.of(context).navNotes,
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.auto_awesome_outlined),
-                    selectedIcon: Icon(
-                      Icons.auto_awesome,
-                      color: theme.colorScheme.primary,
-                    ),
-                    label: AppLocalizations.of(context).explore,
-                  ),
-                  NavigationDestination(
-                    key: _settingsTabGuideKey, // 功能引导 key
-                    icon: const Icon(Icons.settings_outlined),
-                    selectedIcon: Icon(
-                      Icons.settings,
-                      color: theme.colorScheme.primary,
-                    ),
-                    label: AppLocalizations.of(context).navSettings,
-                  ),
-                ],
+              NavigationDestination(
+                icon: const Icon(Icons.book_outlined),
+                selectedIcon: Icon(
+                  Icons.book,
+                  color: theme.colorScheme.primary,
+                ),
+                label: AppLocalizations.of(context).navNotes,
               ),
-            ),
+              NavigationDestination(
+                icon: const Icon(Icons.auto_awesome_outlined),
+                selectedIcon: Icon(
+                  Icons.auto_awesome,
+                  color: theme.colorScheme.primary,
+                ),
+                label: AppLocalizations.of(context).explore,
+              ),
+              NavigationDestination(
+                key: _settingsTabGuideKey, // 功能引导 key
+                icon: const Icon(Icons.settings_outlined),
+                selectedIcon: Icon(
+                  Icons.settings,
+                  color: theme.colorScheme.primary,
+                ),
+                label: AppLocalizations.of(context).navSettings,
+              ),
+            ],
           ),
         ),
       ),
