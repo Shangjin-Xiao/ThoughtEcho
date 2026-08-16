@@ -477,7 +477,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               },
               child: Text(
                 l10n.discard,
-                style: TextStyle(color: Colors.red.shade400),
+                style: TextStyle(color: Theme.of(ctx).colorScheme.error),
               ),
             ),
             TextButton(
@@ -829,10 +829,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           titleWidget = Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.wifi_off,
                                 size: 16,
-                                color: Colors.red,
+                                color: theme.colorScheme.error,
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -910,16 +910,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       height: screenHeight, // 确保占满整个屏幕高度
                       child: Column(
                         children: [
-                          // 每日一言部分 - 占用大部分空间，但保留足够空间给今日思考
+                          // 每日一言部分：卡片按内容高度收缩，在剩余空间里垂直居中。
+                          //
+                          // 这里曾经给 50%（极小屏 55%）屏高的 minHeight，卡片被拉满
+                          // 整块区域：一句短一言配一张近乎全空的大卡，正文只占中间
+                          // 一小条。留白本来是排版手段，撑到这个比例就只剩空洞。
+                          // 现在高度由内容决定，长一言仍然由 SlidingCard 内部的
+                          // 滚动视图兜住，不会溢出。
                           Expanded(
                             child: Container(
                               key: _dailyQuoteGuideKey, // 功能引导 key
-                              constraints: BoxConstraints(
-                                minHeight: screenHeight *
-                                    (isVerySmallScreen
-                                        ? 0.55
-                                        : 0.50), // 极小屏幕调整比例
-                              ),
+                              alignment: Alignment.center,
                               child: DailyQuoteView(
                                 key: _dailyQuoteViewKey,
                                 onAddQuote:

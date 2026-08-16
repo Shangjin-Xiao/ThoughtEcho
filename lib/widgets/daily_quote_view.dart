@@ -255,17 +255,21 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
     await _loadDailyQuote();
   }
 
-  // 响应式字体大小计算
-  double _getResponsiveFontSize(double screenWidth, double screenHeight) {
+  /// 一言正文相对基准字号（`titleLarge`，M3 为 22）的缩放倍率。
+  ///
+  /// 过去这里直接返回 16–30 的字面量。字面量本身就违反项目排版约束，更实际的
+  /// 代价是**基准一变它就不跟**：风格换了字体、系统调了字形几何，这张卡还钉在
+  /// 那几个数上。现在只保留「屏幕多大就放多少」这层判断，绝对值交给 textTheme。
+  double _responsiveQuoteScale(double screenWidth, double screenHeight) {
     if (screenHeight < 550) {
       // 极小屏设备
-      return screenWidth > 600 ? 26 : (screenWidth > 400 ? 18 : 16);
+      return screenWidth > 600 ? 1.2 : (screenWidth > 400 ? 0.82 : 0.73);
     } else if (screenHeight < 600) {
       // 小屏设备
-      return screenWidth > 600 ? 28 : (screenWidth > 400 ? 20 : 18);
+      return screenWidth > 600 ? 1.28 : (screenWidth > 400 ? 0.91 : 0.82);
     } else {
       // 普通屏幕
-      return screenWidth > 600 ? 30 : (screenWidth > 400 ? 22 : 20);
+      return screenWidth > 600 ? 1.36 : (screenWidth > 400 ? 1.0 : 0.91);
     }
   }
 
@@ -349,11 +353,16 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
                   Flexible(
                     child: Text(
                       dailyQuote['content'],
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontSize: _getResponsiveFontSize(
-                          screenWidth,
-                          screenHeight,
-                        ),
+                      // 基准取 `titleLarge` 而不是 `headlineSmall`：一言在手机上
+                      // 落在 20–22 这个「阅读字号」区间，而 `_applyStyleTypography`
+                      // 只给 title* / body* 抬字重下限，headline* 只换字体族。
+                      // 用 headline 当基准，衬线风格下这张卡就是整屏最大的一段
+                      // w400 中文衬线——横画掉进半像素，看起来最虚的正好是最该
+                      // 显眼的那句话。material 下两级都是 w400、字号又被覆盖，
+                      // 像素不变。
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontSize: (theme.textTheme.titleLarge?.fontSize ?? 22) *
+                            _responsiveQuoteScale(screenWidth, screenHeight),
                         height: isVerySmallScreen ? 1.3 : 1.4, // 极小屏幕进一步减少行高
                       ),
                       textAlign: TextAlign.center,

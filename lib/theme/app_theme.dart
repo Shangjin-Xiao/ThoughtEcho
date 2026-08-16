@@ -810,7 +810,12 @@ class AppTheme with ChangeNotifier {
         blendOnLevel: generated ? 2 : 0, // 极低表面颜色混合级别
         blendOnColors: true,
         useMaterial3Typography: true,
-        useM2StyleDividerInM3: true,
+        // 亮色曾经是 true、暗色是 false，两条路径不一致且没有任何注释说明，
+        // 按 `docs/m3-modernization-audit-2026-08-11.md` 判断是复制粘贴漏改。
+        // M2 分隔线是一道黑色半透明，落在暖色纸上就是一道外来的灰；
+        // M3 走 `outlineVariant`，也就是手工色板里的发丝边框色，
+        // 分隔线这才跟着风格走。
+        useM2StyleDividerInM3: false,
         alignedDropdown: true,
         useInputDecoratorThemeInDialogs: true,
         interactionEffects: true,
