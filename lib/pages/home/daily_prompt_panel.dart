@@ -16,6 +16,13 @@ import '../../utils/app_logger.dart';
 import '../../utils/daily_prompt_generator.dart';
 import '../thoughter_page.dart';
 
+/// 面板底部留给 FAB 的净空。
+///
+/// `centerDocked` 把 FAB 的**中心**对齐到导航栏上缘，也就是只向上探进 body
+/// 半颗（56 / 2 = 28）；再留 8 的呼吸位。以前没有这段净空，FAB 就直接压在
+/// 「今日思考」上，卡片右半边点不到。
+const double _fabClearance = 36.0;
+
 class HomeDailyPromptPanel extends StatefulWidget {
   final double screenWidth;
   final bool isSmallScreen;
@@ -249,7 +256,8 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
         widget.screenWidth > 600 ? 16.0 : (widget.isVerySmallScreen ? 8.0 : 12),
         widget.isVerySmallScreen ? 2.0 : 4.0,
         widget.screenWidth > 600 ? 16.0 : (widget.isVerySmallScreen ? 8.0 : 12),
-        widget.isVerySmallScreen ? 8.0 : 12.0,
+        // 底部让开 FAB 探进来的那半颗，见 `_fabClearance`。
+        _fabClearance,
       ),
       padding: EdgeInsets.all(
         widget.screenWidth > 600
@@ -257,12 +265,19 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
             : (widget.isVerySmallScreen ? 10.0 : 14.0),
       ),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        // 卡片色，不是页面底色。`colorScheme.surface` 在手工色板里就是**纸**，
+        // 卡片是比它更亮的那一档（`AppSurfaceTokens.card`）；用 surface 等于让
+        // 卡片和纸同色，层次全压在那道快看不见的描边上。
+        color: AppSurfaceTokens.of(context).card,
         borderRadius: BorderRadius.circular(shape.cardRadius),
         boxShadow: shape.restShadow,
+        // 描边跟着 borderWidth 令牌走，和一言卡同一套判据：手工风格实打实
+        // 描一道发丝线，material 保持原来那道几乎看不见的浅描边。
         border: Border.all(
-          color: theme.colorScheme.outline.withAlpha(30),
-          width: 1,
+          color: shape.borderWidth > 0
+              ? theme.colorScheme.outlineVariant
+              : theme.colorScheme.outline.withValues(alpha: 0.12),
+          width: shape.borderWidth > 0 ? shape.borderWidth : 1,
         ),
       ),
       child: Column(

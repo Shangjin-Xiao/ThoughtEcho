@@ -77,6 +77,19 @@ M3 规定内容滚到顶栏底下时顶栏要变一下。Flutter 的实现是
 
 **这是"旧"得最明显的一条，也是改动最小的一条。**
 
+> **2026-08-16 修正：本节下面那句「要开需要两处」只剩一处。**
+> 探针实测 `createLightThemeData()` / `createDarkThemeData()` 产出的
+> `pageTransitionsTheme.builders[TargetPlatform.android]` **已经是**
+> `PredictiveBackPageTransitionsBuilder`——它是 Flutter SDK 的默认取值
+> （`PageTransitionsTheme._defaultBuilders`，3.44 和 3.47 都是），
+> FlexColorScheme 也没有覆盖它。所以 Dart 侧不需要任何改动，自己再写一个
+> `PageTransitionsTheme` 只是把默认值抄一遍，还会顺手把 iOS 的
+> Cupertino 转场覆盖掉（传了 builders 之后缺省平台会回落到 Zoom）。
+> 下面「全项目 `PredictiveBack` 0 处」说的是**源码里没有这个词**，
+> 不等于没有这个行为——按字符串计数推断行为是这次踩的坑。
+>
+> 实际只差 Manifest 那一行，已于 `0b96c51` 补上。以下原文保留。
+
 Android 13+ 的手势返回本该是"当前页缩小、露出后面那页"，跟着手指走、
 松手前可以反悔。要开需要两处，目前**一处都没有**：
 

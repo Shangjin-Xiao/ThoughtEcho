@@ -138,7 +138,7 @@ jobs:
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
     with:
       app_version: ${{ needs.prepare.outputs.msix_version }}
-      flutter_version: '3.44.x'
+      flutter_version: '3.47.x'
       build_type: release
       require_msix: true
 

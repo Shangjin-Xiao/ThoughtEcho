@@ -11,10 +11,10 @@ on:
       flutter_version:
         description: 'Flutter版本'
         required: false
-        default: '3.44.x'
+        default: '3.47.x'
         type: choice
         options:
-          - '3.44.x'
+          - '3.47.x'
           - '3.38.6'
           - '3.35.3'
           - '3.29.2'
@@ -39,7 +39,7 @@ on:
       flutter_version:
         description: 'Flutter版本'
         required: false
-        default: '3.44.x'
+        default: '3.47.x'
         type: string
       build_type:
         description: '构建类型'

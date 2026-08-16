@@ -918,9 +918,12 @@ class ThemeStylePalette {
       warning: Color(0xFF8A5A16),
       warningContainer: Color(0xFFF2E3C8),
       onWarningContainer: Color(0xFF4A2F05),
-      // 比 M3 的 0xFFB3204A 暗一档、饱和低一档：仍然一眼是红心，
-      // 但不再像贴在纸上的一块荧光。
-      favorite: Color(0xFFA8324A),
+      // 朱砂红，不是洋红。旧值 0xFFA8324A 的色相是 348°，而这张纸上所有颜色
+      // 都在 24–40°（背景 40、赭石 30、次要 24）——差了大半个色环，落在暖纸上
+      // 就是一块外来的冷红，也是这套色板里唯一一处这样的。
+      // 换成 5° 的朱砂：仍然一眼是红心（这条不能让步），但它是**这张纸上的**
+      // 那支红。对比度由 theme_style_contrast_test 逐组合钉死。
+      favorite: Color(0xFFA83A31),
       onFavorite: Color(0xFFFEFDFB),
     ),
     dark: ThemeStyleColors(
@@ -942,7 +945,9 @@ class ThemeStylePalette {
       warning: Color(0xFFDFB273),
       warningContainer: Color(0xFF40331E),
       onWarningContainer: Color(0xFFF2DCB8),
-      favorite: Color(0xFFE79AA6),
+      // 同上，暗色下的朱砂。旧值 0xFFE79AA6 是粉色（色相 351°）。
+      // 暗色纸要求前景够亮，暖调的亮红必然偏珊瑚，这是色域决定的，不是妥协。
+      favorite: Color(0xFFE0998A),
       onFavorite: Color(0xFF231F1A),
     ),
   );
