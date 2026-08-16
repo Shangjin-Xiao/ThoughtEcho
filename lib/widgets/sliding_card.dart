@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../theme/theme_style.dart';
-import 'common/paper_rule_background.dart';
 
 class SlidingCard extends StatefulWidget {
   final Widget child;
@@ -202,47 +201,59 @@ class _SlidingCardState extends State<SlidingCard>
                             ),
                           ),
                         ),
-                        PaperRuleBackground(
-                          borderRadius: BorderRadius.circular(
-                            AppShapeTokens.of(context).cardRadius,
-                          ),
-                          // 令牌关掉纹理时这一层退化成一个空盒子，不产生绘制。
-                          child: const SizedBox.expand(),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.all(cardPadding), // 使用动态padding
-                          // 正文在卡片里垂直居中。原来由 AnimatedContainer 的
-                          // alignment 承担，拆层之后交给 Center。
-                          child: Center(
+                        // **这张卡不画纸张横线**，2026-08-16 的决定，别再加回来。
+                        //
+                        // 交接文档把「笔记卡 + 每日一言卡」列为纹理的两处落点，
+                        // 但同一份文档也早就写明：这张卡的横线**对不齐是设计使然**
+                        // ——正文是外部传入的居中大字，相位随内容长度变。
+                        // 而横线的意义就是「字坐在线上」（间距等于正文行高、相位
+                        // 对齐），对不齐的横线只是装饰，正是 DESIGN.md 排除的东西。
+                        //
+                        // 三种画法都出图比过：铺满整卡 = 卡片背了一张格子图；
+                        // 只包内容块 = 一条有头有尾的格子带浮在空白中间，起止边界
+                        // 是任意的，比铺满更怪；单独一条压在字下 = 读成下划线，
+                        // 且和下面的出处行撞成分隔符。
+                        //
+                        // 纹理仍然由 `ruleSpacing` 令牌控制，落点收敛到笔记卡一处
+                        // ——那里是真正的 bodyLarge 正文，间距从行高推导、只画在
+                        // 正文块里，纹理是成立的。
+                        Center(
+                          child: SizedBox(
+                            width: double.infinity,
                             child: SingleChildScrollView(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // 引用图标增强效果
-                                  AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    padding: EdgeInsets.all(_isHovered ? 4 : 0),
-                                    decoration: BoxDecoration(
-                                      color: _isHovered
-                                          ? theme.colorScheme.primary
-                                              .withValues(alpha: 0.08)
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(24),
+                              child: Padding(
+                                padding: EdgeInsets.all(cardPadding),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // 引用图标增强效果
+                                    AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 200),
+                                      padding:
+                                          EdgeInsets.all(_isHovered ? 4 : 0),
+                                      decoration: BoxDecoration(
+                                        color: _isHovered
+                                            ? theme.colorScheme.primary
+                                                .withValues(alpha: 0.08)
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(24),
+                                      ),
+                                      child: Icon(
+                                        Icons.format_quote,
+                                        size: 40,
+                                        color: _isHovered
+                                            ? theme.colorScheme.primary
+                                            : theme.colorScheme.onSurface
+                                                .withValues(alpha: 0.7),
+                                      ),
                                     ),
-                                    child: Icon(
-                                      Icons.format_quote,
-                                      size: 40,
-                                      color: _isHovered
-                                          ? theme.colorScheme.primary
-                                          : theme.colorScheme.onSurface
-                                              .withValues(alpha: 0.7),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  widget.child,
-                                  const SizedBox(height: 16),
-                                ],
+                                    const SizedBox(height: 16),
+                                    widget.child,
+                                    const SizedBox(height: 16),
+                                  ],
+                                ),
                               ),
                             ),
                           ),

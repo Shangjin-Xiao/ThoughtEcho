@@ -872,12 +872,19 @@ class AppTheme with ChangeNotifier {
         backgroundColor: colorScheme.surface,
       ),
 
-      // AppBar使用稍深的主题色调，增强标题区分度
+      // 顶栏融进纸面：静止时它不是一条「栏」，纸是连续的；内容滚到它下面时
+      // 才由 M3 的 scrolledUnder 机制浮起来。
+      //
+      // 原来是 `surfaceContainerLow` + `surfaceTintColor: Colors.transparent`。
+      // 后面那行把 M3 的机制整个堵死了：M3 的「高度」不再画阴影，而是往背景色里
+      // 掺 surfaceTint（`ElevationOverlay.applySurfaceTint`），染色设成透明就等于
+      // 掺多少都返回原色；而 M3 的 AppBar 默认 shadowColor 本来就是透明的
+      // （画阴影是 M2 的做法）。两条路都堵上，`scrolledUnderElevation: 3` 还在，
+      // 却什么也做不出来——全 app 每一个可滚动页面都没有滚动反馈。
       appBarTheme: baseTheme.appBarTheme.copyWith(
-        backgroundColor: colorScheme.surfaceContainerLow,
+        backgroundColor: colorScheme.surface,
         foregroundColor: colorScheme.onSurface,
         elevation: 0,
-        surfaceTintColor: Colors.transparent,
         // ⚠️ **这一整条目前是空转**：FlexColorScheme 不设 appBarTheme.titleTextStyle，
         // 所以 `?.copyWith` 求值成 null，下面的 fontSize 20 / 字重 / 颜色一个都没生效
         // （实测见 `theme_style_typography_test.dart`）。M3 的 AppBar 在
