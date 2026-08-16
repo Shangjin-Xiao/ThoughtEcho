@@ -84,10 +84,13 @@ class QuoteItemWidget extends StatefulWidget {
   /// 6.0（= 默认值）→ 4.0 → 2.67 收了三轮都看不出变化，因为真正占位的不是它：
   /// 记录页的 ListView 没写 padding，被 BoxScrollView 自动补上了一整条状态栏
   /// 高度（见 `note_list_items.dart` 里 ListView 的 padding 注释）。那处补齐后
-  /// 这个值才真正等于搜索框与首条笔记之间的间距，回到 4.0 就够紧了。
+  /// 这个值才真正等于搜索框与首条笔记之间的间距——搜索框容器的下边距是 0，
+  /// 首条卡片上方就只剩这一层。4.0 实测贴得太紧，放回 12.0：正好等于两张卡片
+  /// 之间的间距（上下各 [defaultCardMarginVertical]），首条与搜索框的呼吸感
+  /// 和列表内部一致，又远小于先前那条白送的状态栏高度。
   /// 要再调只改这个数，不要动 [defaultCardMarginVertical]（那会连带改变
   /// 卡片之间的间距）。
-  static const double firstItemTopMargin = 4.0;
+  static const double firstItemTopMargin = 12.0;
 
   const QuoteItemWidget({
     super.key,

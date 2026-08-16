@@ -253,14 +253,15 @@ void main() {
         QuoteItemWidget.firstItemTopMargin,
       );
       expect(firstItemMargin.top, QuoteItemWidget.firstItemTopMargin);
-      // 不锁死具体比例——这个值按观感反复调过（6.0 → 4.0 → 2.67 → 4.0，中间那轮
-      // 其实是列表自己补了状态栏高度）。这里只锁真正的不变量：比默认小、
-      // 仍然为正，且下边距和左右都不受影响。
+      // 不锁死具体数值——这个值按观感反复调过（6.0 → 4.0 → 2.67 → 4.0 → 12.0，
+      // 中间几轮其实是列表自己补了状态栏高度）。这里只锁真正的不变量：为正、
+      // 不超过两张卡片之间的间距（否则首条就比列表内部还松），
+      // 且下边距和左右都不受影响。
+      expect(QuoteItemWidget.firstItemTopMargin, greaterThan(0));
       expect(
         QuoteItemWidget.firstItemTopMargin,
-        lessThan(QuoteItemWidget.defaultCardMarginVertical),
+        lessThanOrEqualTo(QuoteItemWidget.defaultCardMarginVertical * 2),
       );
-      expect(QuoteItemWidget.firstItemTopMargin, greaterThan(0));
       expect(
         firstItemMargin.bottom,
         QuoteItemWidget.defaultCardMarginVertical,
