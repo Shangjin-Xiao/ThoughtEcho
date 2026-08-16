@@ -1038,9 +1038,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ),
         ),
         // `centerDocked` 是配 `BottomAppBar` 的凹口用的，而这里是 M3 的
-        // `NavigationBar`——它没有凹口，FAB 只会浮在正中把内容盖住，而正中恰好
-        // 是文字所在的位置。M3 下 NavigationBar 配的是 `endFloat`。
-        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        // `NavigationBar`——它没有凹口，FAB 会陷进栏里、同时把上方内容压掉一截。
+        // 换成 `centerFloat`：位置仍然居中（这是产品要的观感），但整颗浮在栏
+        // 之上，配合下方面板留出的净空就不再盖住任何内容。
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
         // 导航栏是一张实心的纸，上缘一道发丝线——判据仍是 borderWidth 这个取值。
         //
         // 原来这里包了一层 `BackdropFilter(blur 20)`，但 Scaffold 没开

@@ -11,7 +11,8 @@
         android:requestLegacyExternalStorage="true"
         android:networkSecurityConfig="@xml/network_security_config"
         android:extractNativeLibs="true"
-        android:supportsRtl="true"> <!-- 保持64位设备性能，动态处理32位设备 -->
+        android:supportsRtl="true"
+        android:enableOnBackInvokedCallback="true"> <!-- 保持64位设备性能，动态处理32位设备 -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
