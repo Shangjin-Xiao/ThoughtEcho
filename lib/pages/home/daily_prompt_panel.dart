@@ -16,10 +16,12 @@ import '../../utils/app_logger.dart';
 import '../../utils/daily_prompt_generator.dart';
 import '../thoughter_page.dart';
 
-/// 面板底部留给 `FloatingActionButtonLocation.endFloat` 的净空。
+/// 面板底部留给 FAB 的净空。
 ///
-/// FAB 距 body 底 16、自身 56 高，一共向上侵占 72；再留 4 的呼吸位。
-const double _fabClearance = 76.0;
+/// `centerDocked` 把 FAB 的**中心**对齐到导航栏上缘，也就是只向上探进 body
+/// 半颗（56 / 2 = 28）；再留 8 的呼吸位。以前没有这段净空，FAB 就直接压在
+/// 「今日思考」上，卡片右半边点不到。
+const double _fabClearance = 36.0;
 
 class HomeDailyPromptPanel extends StatefulWidget {
   final double screenWidth;
@@ -254,8 +256,7 @@ class HomeDailyPromptPanelState extends State<HomeDailyPromptPanel> {
         widget.screenWidth > 600 ? 16.0 : (widget.isVerySmallScreen ? 8.0 : 12),
         widget.isVerySmallScreen ? 2.0 : 4.0,
         widget.screenWidth > 600 ? 16.0 : (widget.isVerySmallScreen ? 8.0 : 12),
-        // 底部要让开 `endFloat` 的 FAB：它距 body 底 16、自身 56 高，
-        // 一共向上占 72，卡片压在它下面就再也点不到那一角。
+        // 底部让开 FAB 探进来的那半颗，见 `_fabClearance`。
         _fabClearance,
       ),
       padding: EdgeInsets.all(

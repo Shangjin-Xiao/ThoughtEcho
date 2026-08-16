@@ -1037,11 +1037,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
           ),
         ),
-        // `centerDocked` 是配 `BottomAppBar` 的凹口用的，而这里是 M3 的
-        // `NavigationBar`——它没有凹口，FAB 会陷进栏里、同时把上方内容压掉一截。
-        // 换成 `centerFloat`：位置仍然居中（这是产品要的观感），但整颗浮在栏
-        // 之上，配合下方面板留出的净空就不再盖住任何内容。
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        // 保持 `centerDocked`：FAB 骑在导航栏上缘，读起来是「安放在那里」的。
+        // 试过 `endFloat` 和 `centerFloat`（2026-08-16 出图比对）——浮空的那颗
+        // 悬在一条空纸带里，反而像没着落。
+        //
+        // docked 原本的毛病是压住上方内容，但那是**净空**问题不是位置问题：
+        // 它只向上探出半颗（28），由下方面板的 `_fabClearance` 让开即可。
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
         // 导航栏是一张实心的纸，上缘一道发丝线——判据仍是 borderWidth 这个取值。
         //
         // 原来这里包了一层 `BackdropFilter(blur 20)`，但 Scaffold 没开
