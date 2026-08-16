@@ -20,9 +20,7 @@ import '../utils/app_logger.dart';
 import '../constants/app_constants.dart';
 import 'home_page.dart';
 import '../utils/lottie_animation_manager.dart';
-import '../theme/app_theme.dart';
 import '../theme/theme_style.dart';
-import '../utils/theme_style_labels.dart';
 
 /// 重构后的新用户引导页面
 ///
@@ -154,35 +152,6 @@ class _OnboardingPageState extends State<OnboardingPage>
     }
   }
 
-  /// 本次更新完成页要不要提示外观变了。由 [_resolveThemeStyleNotice] 定，
-  /// build 只读这个字段，避免每帧再去查一遍存储。
-  bool _showThemeStyleNotice = false;
-
-  /// 升级后要不要提示外观变了，并把「提示过了」落盘。
-  ///
-  /// 默认风格已经翻成手工色板且**故意没有做迁移**，老用户升级后外观会直接变，
-  /// 得让他们知道能切回去。三个条件缺一不可：
-  /// 1. 本次是升级（挂在已有的 `showUpdateReady` 路径上，不另起一套 first-run 流程）；
-  /// 2. 当前风格仍是默认值——显式选过别的风格的人外观没变，不该看到这条；
-  /// 3. 还没提示过——`showUpdateReady` 在**任何**版本变化时都为真，不做一次性标记的话，
-  ///    一直用默认外观的用户以后每升一次版本都会再被告知一次「外观已更新」。
-  Future<bool> _resolveThemeStyleNotice() async {
-    if (!widget.showUpdateReady || widget.showFullOnboarding) return false;
-    try {
-      final settings = context.read<SettingsService>();
-      if (settings.themeStyleNoticeShown) return false;
-      if (context.read<AppTheme>().themeStyle != ThemeStyle.defaultStyle) {
-        return false;
-      }
-      await settings.setThemeStyleNoticeShown(true);
-      return true;
-    } catch (e) {
-      // 拿不到服务时宁可不提示，也不能让更新流程卡住。
-      logError('判断外观变更提示失败: $e', error: e, source: 'OnboardingPage');
-      return false;
-    }
-  }
-
   /// 处理更新后的迁移
   Future<void> _handleUpdateMigration() async {
     try {
@@ -223,20 +192,16 @@ class _OnboardingPageState extends State<OnboardingPage>
         servicesInitializedNotifier.value = true;
 
         if (!mounted) return;
-        final showNotice = await _resolveThemeStyleNotice();
-        if (!mounted) return;
 
         // 迁移完成后先把「更新完成」页显示出来：原来这里直接延迟+跳转，
         // _isLoaded 一直是 false，用户全程只看到加载动画，这一页等于没渲染过。
         setState(() {
-          _showThemeStyleNotice = showNotice;
           _isLoaded = true;
         });
         _loadingAnimationController?.forward();
 
-        // 有话要对用户说时不自动跳转，等他点「进入应用」，否则来不及读。
-        if (showNotice) return;
-
+        // 本次更新有什么新东西由首页的更新说明页负责讲，这一页只报告迁移完成，
+        // 所以照常自动跳转，不要在这里再堆一层提示。
         // 短暂延迟后自动跳转到主页
         await Future.delayed(const Duration(milliseconds: 1500));
         if (mounted) {
@@ -360,7 +325,6 @@ class _OnboardingPageState extends State<OnboardingPage>
   Widget _buildUpdateCompleteView() {
     final theme = Theme.of(context);
     final animation = _fadeInAnimation ?? const AlwaysStoppedAnimation(1.0);
-    final showThemeNotice = _showThemeStyleNotice;
 
     return Scaffold(
       body: AnimatedBuilder(
@@ -391,14 +355,10 @@ class _OnboardingPageState extends State<OnboardingPage>
                       style: theme.textTheme.titleLarge,
                       textAlign: TextAlign.center,
                     ),
-                    if (showThemeNotice) ...[
-                      const SizedBox(height: 24),
-                      _buildThemeStyleNotice(),
-                    ],
                     const SizedBox(height: 32),
-                    // 有提示要读时不自动跳转（见 _handleUpdateMigration），
+                    // 出错时不自动跳转（见 _handleUpdateMigration），
                     // 所以这里必须给一个显式的进入入口。
-                    if (_errorMessage == null && !showThemeNotice)
+                    if (_errorMessage == null)
                       const EnhancedLottieAnimation(
                         type: LottieAnimationType.pulseLoading,
                         width: 60,
@@ -417,44 +377,6 @@ class _OnboardingPageState extends State<OnboardingPage>
             ),
           );
         },
-      ),
-    );
-  }
-
-  /// 外观变更提示：默认风格换了，告诉用户在哪切回去。
-  Widget _buildThemeStyleNotice() {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
-    final style = context.read<AppTheme>().themeStyle;
-    final (styleName, _) = themeStyleLabel(l10n, style);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(
-          AppShapeTokens.of(context).cardRadius,
-        ),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.palette_outlined,
-            size: 20,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              l10n.onboardingThemeStyleNotice(styleName),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

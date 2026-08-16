@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/app_logger.dart';
+import '../utils/version_utils.dart';
 
 /// Release 资产里标识 32 位包的命名片段（arm32 / armeabi-v7a / arm32Compat 等）。
 final RegExp _arm32AssetPattern = RegExp(
@@ -100,8 +101,7 @@ class VersionInfo {
     List<String> deviceAbis = const [],
   }) {
     final latestVersion = json['tag_name'] as String? ?? '';
-    final hasUpdate =
-        VersionInfo._compareVersions(currentVersion, latestVersion) < 0;
+    final hasUpdate = compareVersions(currentVersion, latestVersion) < 0;
 
     final apkDownloadUrl = selectApkAssetUrl(
       json['assets'] as List<dynamic>?,
@@ -118,34 +118,6 @@ class VersionInfo {
           DateTime.now(),
       hasUpdate: hasUpdate,
     );
-  }
-
-  /// 比较版本号
-  /// 返回值：-1表示version1 < version2，0表示相等，1表示version1 > version2
-  static int _compareVersions(String version1, String version2) {
-    // 移除版本号前缀（如 v1.0.0 -> 1.0.0）
-    final v1 = version1.replaceFirst(RegExp(r'^v'), '');
-    final v2 = version2.replaceFirst(RegExp(r'^v'), '');
-
-    final v1Parts = v1.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-    final v2Parts = v2.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-
-    // 确保两个版本号有相同的长度
-    final maxLength =
-        v1Parts.length > v2Parts.length ? v1Parts.length : v2Parts.length;
-    while (v1Parts.length < maxLength) {
-      v1Parts.add(0);
-    }
-    while (v2Parts.length < maxLength) {
-      v2Parts.add(0);
-    }
-
-    for (int i = 0; i < maxLength; i++) {
-      if (v1Parts[i] < v2Parts[i]) return -1;
-      if (v1Parts[i] > v2Parts[i]) return 1;
-    }
-
-    return 0;
   }
 }
 

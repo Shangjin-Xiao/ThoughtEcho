@@ -62,7 +62,6 @@
   "onboardingUpdateComplete": "업데이트 완료",
   "onboardingUpdateSuccess": "ThoughtEcho가 성공적으로 업데이트되었습니다\n데이터가 자동으로 마이그레이션되었습니다",
   "onboardingEnterApp": "앱 진입",
-  "onboardingThemeStyleNotice": "외관이 '{style}'(으)로 바뀌었습니다. 시스템 색상을 쓰려면 '설정 → 테마 설정'에서 Material을 선택하세요.",
   "featureDailyQuote": "오늘의 명언",
   "prefLanguage": "언어",
   "prefLanguageDesc": "앱 표시 언어 선택",

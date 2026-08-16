@@ -96,13 +96,20 @@ CustomPaint 是实打实的开销）。取值：纸墨 26 / 0.55，material 与�
 - 测试：`test/widget/paper_rule_background_test.dart`（核心断言是「没纹理的风格不多一层」）
   + `test/theme/theme_style_contrast_test.dart` 里两条令牌不变量。
 
-### 2. 默认值翻成 `paper`
+### 2. ~~默认值翻成 `paper`~~（2026-08-16 翻回 `material`，已结案）
 
-`app_theme.dart` 的 `_themeStyle = ThemeStyle.material` 改一行即可。
-产品意向早已定为「默认纸墨、可切回 Material」，卡在真机验证。
+历史：产品意向一度定为「默认纸墨、可切回 Material」，2026-08-01 决定先不翻，
+后来翻成了 `paper`，并在更新完成页加了一条「外观已更新」的提示。
 
-**2026-08-01 用户决定：这轮先不翻。** 将来翻的时候的处理方式也定了——
-不做迁移逻辑，直接用新默认值，但**要给老用户一个提示**告诉他们外观变了、可以切回去。
+**2026-08-16 用户决定：翻回 `material`，新装和升级都是。** 理由是这套主题
+**没有迁移逻辑**，换默认值等于让所有没选过风格的老用户在没做任何操作的情况下
+外观直接变了；一条提示救不回「已经变了」这个既成事实。
+
+结论是这一条不再是待办，而是一个**已经作废的方向**：品牌外观的推广改由更新说明页
+（`lib/pages/release_notes_page.dart`）里的行内风格切换器承担——想要的人一点就有，
+不想要的人什么都不用做。同时删掉了「外观已更新」提示和它的 `theme_style_notice_shown`
+标记。默认值仍然只写在 `ThemeStyle.defaultStyle` 一处，由
+`theme_style_contrast_test.dart` 钉死具体是哪一套。
 
 ### 3. ~~便签纸色~~（2026-08-01 否决，不要再提）
 

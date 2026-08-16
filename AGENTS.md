@@ -158,7 +158,9 @@ pwsh ./scripts/build_msix_ci.ps1
 
 **主题风格是和亮暗、动态取色并列的第三个维度**，三选一：`material`（M3 动态取色）、
 `paper` 纸与墨（暖，手工色板 + 衬线体 + 纸张横线）、`plain` 素笺（冷，更硬朗）。
-默认是 `paper`，写在 `ThemeStyle.defaultStyle` 一处。
+默认是 `material`，写在 `ThemeStyle.defaultStyle` 一处。**改这个默认值等于让所有
+没选过风格的老用户升级后外观直接变**（这套主题没有迁移逻辑），不要顺手动它；
+手工风格的推广走更新说明页里的行内切换器。
 
 - 🔒 **绝不在 widget 里写 `if (style == ThemeStyle.paper)`。** 品牌差异**全部**通过
   `ThemeStyleForm` 的令牌取值表达，由 `AppShapeTokens` 这个 `ThemeExtension` 下发。

@@ -106,8 +106,10 @@ components:
 | `paper` 纸与墨 | 暖、温润 | 手工色板 | 6 | 发丝边框 + 极淡投影 | 系统衬线 | 17 | 1.75 |
 | `plain` 素笺 | 冷、硬朗 | 手工色板 | 3 | 同上，更硬 | 系统衬线 | 17 | 1.6 |
 
-**默认是 `paper`**（`ThemeStyle.defaultStyle`）。Material 是「想要系统观感」时的退路，
-不是基准。
+**默认是 `material`**（`ThemeStyle.defaultStyle`）。纸与墨是心迹的品牌外观，但它不是
+默认——这套主题没有迁移逻辑，换默认值意味着老用户在没做任何操作的情况下外观就变了。
+品牌表达改由更新说明页（`lib/pages/release_notes_page.dart`）里的行内切换器承担：
+想要的人一点就有，不想要的人什么都不用做。
 
 架构上只有一条铁律：**品牌差异全部通过令牌取值表达，widget 里绝不写
 `if (style == ThemeStyle.paper)`。** 连「用边框还是用投影」的判据都是 `borderWidth > 0`

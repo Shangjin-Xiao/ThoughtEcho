@@ -77,7 +77,12 @@ class AppSettings {
   final String offlineQuoteSource;
   final String exportFormat;
   final bool sentryEnabled; // 是否启用 Sentry 诊断与性能上报
-  final bool sentryDisclosureShown; // Sentry 上报提示弹窗是否已显示过
+  /// 3.7.0 的 Sentry 上报提示弹窗是否显示过。
+  ///
+  /// 弹窗本身已经被更新说明页取代，这个字段留下来是因为它是**唯一能证明用户
+  /// 用过 3.7.0** 的痕迹：`SettingsService.lastSeenReleaseVersion` 在读不到已读
+  /// 版本号时靠它推断基线。不要删，也不要再拿它去控制任何弹窗。
+  final bool sentryDisclosureShown;
   final String
       noteInsertAnimationType; // 记录页卡片增加/修改动画类型: 'scale'、'slide' 或 'none'
 

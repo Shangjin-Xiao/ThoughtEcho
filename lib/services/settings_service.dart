@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/release_highlights.dart';
 import '../models/ai_settings.dart';
 import '../models/anniversary_participation.dart';
 import '../models/app_settings.dart';
@@ -62,11 +63,11 @@ class SettingsService extends ChangeNotifier {
   static const String _dontShowAgentExperimentalNoticeKey =
       'dont_show_agent_experimental_notice';
 
-  /// 「默认主题风格已换成纸与墨」这条升级提示是否显示过。
+  /// 用户最后一次看过更新说明时的版本号。
   ///
-  /// 只能提示一次：升级路径（`showUpdateReady`）在**任何**版本变化时都会走，
-  /// 而外观只在换默认值的那一版真的变了，以后再提示就是错的。
-  static const String _themeStyleNoticeShownKey = 'theme_style_notice_shown';
+  /// 存版本号而不是「看过没有」的布尔：布尔答不了「他上次用的是哪一版」，
+  /// 跨版本升级（3.6.5 直接升到 4.1.0）时就没法把中间几版的内容一起补上。
+  static const String _lastSeenReleaseVersionKey = 'last_seen_release_version';
 
   bool get syncSkipConfirm => _mmkv.getBool(_syncSkipConfirmKey) ?? false;
   bool get syncDefaultIncludeMedia =>
@@ -136,11 +137,39 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool get themeStyleNoticeShown =>
-      _mmkv.getBool(_themeStyleNoticeShownKey) ?? false;
+  /// 用户最后一次看过更新说明时的版本号，读不到时给一个兜底基线。
+  ///
+  /// 这个字段是 4.0.0 才加的，所以**存量用户第一次升上来一定读不到值**，
+  /// 必须从别处推。唯一可用的线索是 [AppSettings.sentryDisclosureShown]：
+  /// 它为 true 说明用户见过 3.7.0 才有的崩溃诊断披露，即至少用过 3.7.0；
+  /// 为 false 则按比任何登记条目都旧处理，把内容全部补给他。
+  ///
+  /// 推导只发生一次——[ReleaseNotesPage.checkAndShow] 看完就会落盘真实版本号。
+  /// 边界情况是装了 3.7.0 之后从没打开过首页的用户会多看一句诊断说明，
+  /// 相比漏掉隐私告知，这个方向的误差是可接受的那一边。
+  String get lastSeenReleaseVersion {
+    final stored = _mmkv.getString(_lastSeenReleaseVersionKey);
+    if (stored != null && stored.isNotEmpty) return stored;
+    return _appSettings.sentryDisclosureShown
+        ? ReleaseHighlights.sentryDisclosureVersion
+        : ReleaseHighlights.earliestVersion;
+  }
 
-  Future<void> setThemeStyleNoticeShown(bool value) async {
-    await _mmkv.setBool(_themeStyleNoticeShownKey, value);
+  /// 写失败不抛：最坏结果是下次冷启动再展示一遍更新说明，不值得打断启动流程，
+  /// 但要留下日志，否则「每次启动都弹」会查不到原因。
+  Future<void> setLastSeenReleaseVersion(String version) async {
+    // 每次冷启动都会调一次（见 ReleaseNotesPage.checkAndShow），值没变就别写、
+    // 更别通知——否则每次启动都要白白重建一遍所有监听者。
+    if (_mmkv.getString(_lastSeenReleaseVersionKey) == version) return;
+
+    final success = await _mmkv.setString(_lastSeenReleaseVersionKey, version);
+    if (!success) {
+      AppLogger.w(
+        '更新说明已读版本保存失败：MMKV setString 返回 false（version=$version）',
+        source: 'SettingsService',
+      );
+      return;
+    }
     notifyListeners();
   }
 
@@ -637,9 +666,12 @@ class SettingsService extends ChangeNotifier {
     if (!wasInstalledBefore) {
       logDebug('检测到首次安装，将重置引导页面状态');
       await _mmkv.setBool(_appInstalledKey, true);
-      // 新装用户拿到的就是新默认外观，外观从没变过：别在他将来第一次升级时
-      // 弹「外观已更新」。
-      await _mmkv.setBool(_themeStyleNoticeShownKey, true);
+      // 新装用户没有「更新」可言：把已读版本直接记成当前登记表的最新版，
+      // 免得他刚走完引导页就被一页「更新内容」拦住。
+      await _mmkv.setString(
+        _lastSeenReleaseVersionKey,
+        ReleaseHighlights.latestVersion,
+      );
 
       // 首次安装时，载入应用默认设置
       _loadAppSettings();
