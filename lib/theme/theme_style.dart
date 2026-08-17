@@ -56,12 +56,15 @@ enum ThemeStyle {
 
   /// 新装与未做过选择的用户拿到的风格。
   ///
-  /// 2026-08-01 从 [ThemeStyle.material] 翻成 [ThemeStyle.paper]：纸墨是心迹的
-  /// 品牌外观，Material 是「想要系统观感」时的退路，不该是默认。
-  /// **没有迁移逻辑**——老用户升级后外观会直接变，由升级引导页告知可以切回去。
+  /// 曾经翻成过 [ThemeStyle.paper]（纸墨是品牌外观），又翻了回来：换默认值意味着
+  /// 老用户升级后外观**在他没做任何操作的情况下**变了，而这套主题没有迁移逻辑，
+  /// 「变了」就是既成事实。品牌表达不值得用这个代价换——纸与墨改由更新说明页
+  /// 介绍并给出一键试用，想要的人一点就有，不想要的人什么都不用做。
+  ///
+  /// 新装用户同样落在这里：全新安装先给系统观感，风格由他自己在引导页或设置里选。
   ///
   /// 默认值只写在这里一处，其它地方（字段初值、异常兜底）都引用它。
-  static const ThemeStyle defaultStyle = ThemeStyle.paper;
+  static const ThemeStyle defaultStyle = ThemeStyle.material;
 
   static ThemeStyle fromName(String? name) {
     if (name == null) return defaultStyle;

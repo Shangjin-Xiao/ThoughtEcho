@@ -62,7 +62,6 @@
   "onboardingUpdateComplete": "Mise à jour terminée",
   "onboardingUpdateSuccess": "ThoughtEcho a été mis à jour avec succès\nVos données ont été migrées automatiquement",
   "onboardingEnterApp": "Entrer dans l'application",
-  "onboardingThemeStyleNotice": "L'apparence est maintenant « {style} ». Pour les couleurs du système, choisissez Material dans Réglages → Réglages du thème.",
   "featureDailyQuote": "Citation du jour",
   "prefLanguage": "Langue",
   "prefLanguageDesc": "Sélectionner la langue d'affichage de l'application",

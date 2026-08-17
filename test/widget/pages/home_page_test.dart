@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:thoughtecho/config/release_highlights.dart';
 import 'package:thoughtecho/controllers/search_controller.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/app_settings.dart';
@@ -87,6 +88,11 @@ class MockSettingsService extends ChangeNotifier implements SettingsService {
   bool get prioritizeBoldContentInCollapse => false;
   @override
   bool get sentryDisclosureShown => true;
+  // 已经看过当前版本的更新说明：本用例不测那一页，别让它盖住首页。
+  @override
+  String get lastSeenReleaseVersion => ReleaseHighlights.latestVersion;
+  @override
+  Future<void> setLastSeenReleaseVersion(String version) async {}
   @override
   bool get skipNonFullscreenEditor => false;
   @override

@@ -627,9 +627,12 @@ void main() {
       expect(a.lerp(b, 0.5).ruleOpacity, (a.ruleOpacity + b.ruleOpacity) / 2);
     });
 
-    test('默认风格是纸与墨，未知或缺失的持久化取值回退到它', () {
+    test('默认风格是 material，未知或缺失的持久化取值回退到它', () {
       // 默认值只应写在 ThemeStyle.defaultStyle 一处。
-      expect(ThemeStyle.defaultStyle, ThemeStyle.paper);
+      //
+      // 钉死具体是哪一套，是因为改它等于**让所有没选过风格的老用户在升级后
+      // 外观直接变**——这套主题没有迁移逻辑。改这一行前先想清楚这件事。
+      expect(ThemeStyle.defaultStyle, ThemeStyle.material);
       expect(ThemeStyle.fromName(null), ThemeStyle.defaultStyle);
       expect(ThemeStyle.fromName('nope'), ThemeStyle.defaultStyle);
       expect(ThemeStyle.fromName('paper'), ThemeStyle.paper);

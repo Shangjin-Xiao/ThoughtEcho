@@ -100,6 +100,5 @@
   "themeAccentUmber": "Tierra de sombra",
   "themeAccentCeladon": "Celadón",
   "themeAccentIndigo": "Índigo",
-  "themeAccentCinnabar": "Cinabrio",
-  "onboardingThemeStyleNotice": "La apariencia ahora es «{style}». Para usar los colores del sistema, elige Material en Ajustes → Ajustes de tema."
+  "themeAccentCinnabar": "Cinabrio"
 }

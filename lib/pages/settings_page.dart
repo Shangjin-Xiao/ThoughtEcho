@@ -28,6 +28,7 @@ import 'license_page.dart' as license;
 import 'preferences_detail_page.dart';
 import 'user_guide_page.dart';
 import 'feedback_contact_page.dart';
+import 'release_notes_page.dart';
 import '../utils/feature_guide_helper.dart';
 import 'storage_management_page.dart';
 import 'local_ai_settings_page.dart'; // 导入本地 AI 设置页面
@@ -914,6 +915,33 @@ class SettingsPageState extends State<SettingsPage> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => const FeedbackContactPage(),
+                      ),
+                    );
+                  },
+                ),
+
+                // 添加分隔线
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Divider(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outline.withAlpha((0.2 * 255).round()),
+                  ),
+                ),
+
+                // 更新内容 ListTile：升级时自动弹过一次，这里是回头再看的入口
+                ListTile(
+                  title: Text(l10n.settingsReleaseNotes),
+                  subtitle: Text(l10n.settingsReleaseNotesDesc),
+                  leading: const Icon(Icons.auto_stories_outlined),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const ReleaseNotesPage.currentRelease(),
                       ),
                     );
                   },

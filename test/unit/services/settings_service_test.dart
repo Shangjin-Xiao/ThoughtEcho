@@ -3,8 +3,10 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thoughtecho/config/release_highlights.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/services/api_service.dart';
+import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import '../../test_harness.dart';
 
@@ -337,6 +339,71 @@ void main() {
       expect(rebuiltService.sentryDisclosureShown, isTrue);
       expect(rebuiltService.appSettings.sentryEnabled, isTrue);
       expect(rebuiltService.appSettings.sentryDisclosureShown, isTrue);
+    });
+
+    group('更新说明已读版本', () {
+      // 存储键的字面量：这里就是要钉住它。改键名等于把所有老用户的已读记录清零，
+      // 让他们重看一遍更新说明——不该悄悄发生。
+      const key = 'last_seen_release_version';
+
+      test('新装用户直接落在最新版，不会被更新说明拦住', () {
+        // setUp 里的 create() 走的正是首次安装分支。
+        expect(
+          settingsService.lastSeenReleaseVersion,
+          ReleaseHighlights.latestVersion,
+        );
+      });
+
+      test('读不到已读版本时，用 sentryDisclosureShown 推基线', () async {
+        // 存量用户第一次升上来就是这个状态：字段是这一版才加的，一定读不到。
+        await settingsService.setSentryDisclosureShown(true);
+        await MMKVService().remove(key);
+        expect(
+          settingsService.lastSeenReleaseVersion,
+          ReleaseHighlights.sentryDisclosureVersion,
+        );
+
+        await settingsService.setSentryDisclosureShown(false);
+        await MMKVService().remove(key);
+        expect(
+          settingsService.lastSeenReleaseVersion,
+          ReleaseHighlights.earliestVersion,
+        );
+      });
+
+      test('空串按「没记过」处理，同样走兜底', () async {
+        await settingsService.setSentryDisclosureShown(true);
+        await MMKVService().setString(key, '');
+
+        expect(
+          settingsService.lastSeenReleaseVersion,
+          ReleaseHighlights.sentryDisclosureVersion,
+        );
+      });
+
+      test('写入后持久化，重建服务仍读得到', () async {
+        await settingsService.setLastSeenReleaseVersion('3.9.0');
+        expect(settingsService.lastSeenReleaseVersion, '3.9.0');
+
+        final rebuiltService = await SettingsService.create();
+        expect(rebuiltService.lastSeenReleaseVersion, '3.9.0');
+      });
+
+      test('值没变时不写也不通知', () async {
+        // 这个方法每次冷启动都会被调一次，重复通知等于每次启动白重建一遍监听者。
+        await settingsService.setLastSeenReleaseVersion('4.0.0');
+
+        var notified = 0;
+        void listener() => notified++;
+        settingsService.addListener(listener);
+        addTearDown(() => settingsService.removeListener(listener));
+
+        await settingsService.setLastSeenReleaseVersion('4.0.0');
+        expect(notified, 0);
+
+        await settingsService.setLastSeenReleaseVersion('4.1.0');
+        expect(notified, 1);
+      });
     });
 
     test('updateAISettings should omit apiKey from persisted MMKV JSON',

@@ -76,15 +76,6 @@
   "onboardingUpdateFailed": "数据更新失败，但您仍可继续使用应用",
   "onboardingUpdateProcessFailed": "更新处理失败，请重启应用",
   "onboardingEnterApp": "进入应用",
-  "onboardingThemeStyleNotice": "外观已更新为「{style}」。想用系统配色，可在「设置 → 主题设置」里选 Material。",
-  "@onboardingThemeStyleNotice": {
-    "description": "升级后告知用户默认主题风格变了、可以切回去",
-    "placeholders": {
-      "style": {
-        "type": "String"
-      }
-    }
-  },
   "featureDailyQuote": "每日一言",
   "prefLanguage": "语言 / Language",
   "prefLanguageDesc": "选择应用显示语言",
@@ -4522,5 +4513,33 @@
   "agentMemoryNoticeGotIt": "知道了",
   "agentMemoryNoticeDisable": "先不要记",
   "agentMemorySwitchFailed": "记忆开关没能保存，请重试",
-  "agentMemoryCountsUnavailable": "读取记忆数量失败，仍可尝试清空"
+  "agentMemoryCountsUnavailable": "读取记忆数量失败，仍可尝试清空",
+  "releaseNotesTitle": "更新内容",
+  "releaseNotesUpgradeLede": "以下是你上次使用之后新增的功能。",
+  "releaseNotesCurrentLede": "以下是本版本新增的功能。",
+  "releaseNotesHighlights": "核心亮点",
+  "releaseNotesGetStarted": "开始使用",
+  "releaseThoughterTitle": "Thoughter：住在摘录本里的思考搭档",
+  "releaseThoughterLede": "从简单的记录，到深度的整理与创作。Thoughter 不再只是一个回答问题的对话框，它接入了你的整个笔记库，成为你的思考搭档。",
+  "releaseThoughterSearchTitle": "智能检索与联动",
+  "releaseThoughterSearchDesc": "无需手动翻找，直接用自然语言提问。Thoughter 会自动检索相关笔记、贯通标签线索，必要时还能补充联网信息。",
+  "releaseThoughterControlTitle": "编辑权，始终在你手中",
+  "releaseThoughterControlDesc": "AI 不会擅自修改你的内容。所有新建与改写都会先以「提案卡片」呈现，改了什么一目了然；逐条查看、确认之后，才会真正应用。",
+  "releaseThoughterSingleNoteTitle": "单篇笔记深聊",
+  "releaseThoughterSingleNoteDesc": "在编辑器内点击 ✨ 按钮选择「问 Thoughter」，即可就当前这一篇追问、润色或续写。",
+  "releaseThoughterMemoryTitle": "长期记忆",
+  "releaseThoughterMemoryDesc": "开启后，Thoughter 会跨对话记住你的称呼与表达偏好。记忆独立存储，可随时查看或一键清空。",
+  "releaseThoughterInsightTitle": "周期洞察与全新探索页",
+  "releaseThoughterInsightDesc": "Thoughter 会定期回看你的记录，写成阶段性洞察；探索页也随之重做，把这些发现集中呈现。",
+  "releaseThemeTitle": "全新主题：换一张纸，换一支笔",
+  "releaseThemeLede": "主题风格成为与深浅色并列的独立维度，三选其一。",
+  "releaseThemeStylesTitle": "三套风格",
+  "releaseThemeStylesDesc": "Material 延续系统动态取色；「纸与墨」暖调温润，衬线正文配纸张横线；「素笺」冷调硬朗。",
+  "releaseThemeAccentTitle": "墨色可选",
+  "releaseThemeAccentDesc": "手工风格另备赭石、黛青、靛蓝、朱砂四支墨色，换墨不换纸。",
+  "releaseThemeSwitchTitle": "随时切换",
+  "releaseThemeSwitchDesc": "默认仍是 Material，升级不会改变外观。可在此直接试用，也可随时前往「设置 › 主题设置」调整。",
+  "releaseDiagnosticsNotice": "自 3.7.0 起，心迹会在发生错误时上报匿名诊断信息，仅用于定位与修复问题，不含任何笔记内容。可在「设置 › 反馈与联系」中随时关闭。",
+  "settingsReleaseNotes": "更新内容",
+  "settingsReleaseNotesDesc": "查看本版本新增的功能"
 }
