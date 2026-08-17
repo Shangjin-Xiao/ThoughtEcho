@@ -157,20 +157,43 @@ class SettingsService extends ChangeNotifier {
 
   /// 写失败不抛：最坏结果是下次冷启动再展示一遍更新说明，不值得打断启动流程，
   /// 但要留下日志，否则「每次启动都弹」会查不到原因。
+  ///
+  /// **异常也要按写失败处理**：`MMKVService.setString` 重试三次后是 `rethrow`，
+  /// 而这个方法挂在首页启动路径上（[ReleaseNotesPage.checkAndShow]），
+  /// 让它抛出去等于用一次记账失败换掉整个启动检查。
   Future<void> setLastSeenReleaseVersion(String version) async {
     // 每次冷启动都会调一次（见 ReleaseNotesPage.checkAndShow），值没变就别写、
     // 更别通知——否则每次启动都要白白重建一遍所有监听者。
     if (_mmkv.getString(_lastSeenReleaseVersionKey) == version) return;
 
-    final success = await _mmkv.setString(_lastSeenReleaseVersionKey, version);
-    if (!success) {
+    if (!await _writeLastSeenReleaseVersion(version)) return;
+    notifyListeners();
+  }
+
+  /// 落盘已读版本，失败与异常都只记日志。返回是否写成功。
+  ///
+  /// 首次安装分支（[_loadSettings]）也走它：那里原来写的是 `setBool`（内部吞异常），
+  /// 换成会 rethrow 的 `setString` 之后，不接住就等于让一次写失败掀掉整个设置加载。
+  Future<bool> _writeLastSeenReleaseVersion(String version) async {
+    try {
+      final success =
+          await _mmkv.setString(_lastSeenReleaseVersionKey, version);
+      if (!success) {
+        AppLogger.w(
+          '更新说明已读版本保存失败：MMKV setString 返回 false（version=$version）',
+          source: 'SettingsService',
+        );
+      }
+      return success;
+    } catch (e, stackTrace) {
       AppLogger.w(
-        '更新说明已读版本保存失败：MMKV setString 返回 false（version=$version）',
+        '更新说明已读版本保存异常（version=$version）',
+        error: e,
+        stackTrace: stackTrace,
         source: 'SettingsService',
       );
-      return;
+      return false;
     }
-    notifyListeners();
   }
 
   ThoughterPageMode get exploreAiAssistantMode =>
@@ -667,11 +690,10 @@ class SettingsService extends ChangeNotifier {
       logDebug('检测到首次安装，将重置引导页面状态');
       await _mmkv.setBool(_appInstalledKey, true);
       // 新装用户没有「更新」可言：把已读版本直接记成当前登记表的最新版，
-      // 免得他刚走完引导页就被一页「更新内容」拦住。
-      await _mmkv.setString(
-        _lastSeenReleaseVersionKey,
-        ReleaseHighlights.latestVersion,
-      );
+      // 免得他刚走完引导页就被一页「更新内容」拦住。写失败只记日志——
+      // 代价是这个新用户下次启动会被当成老用户看一次更新说明，
+      // 不值得让整个设置加载失败。
+      await _writeLastSeenReleaseVersion(ReleaseHighlights.latestVersion);
 
       // 首次安装时，载入应用默认设置
       _loadAppSettings();

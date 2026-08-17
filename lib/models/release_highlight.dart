@@ -29,6 +29,10 @@ class ReleaseHighlight {
   final String? title;
 
   /// 「核心亮点」下面的分条。为空时整块不渲染。
+  ///
+  /// 构造后**不要再改这个列表**。类是 `const` 构造的，没法在构造器里换成
+  /// `List.unmodifiable` 来强制这一点；实际上也不需要——唯一的生产者
+  /// `ReleaseHighlights` 每次调用都现建一份新列表，不对外共享引用。
   final List<ReleaseHighlightPoint> points;
 
   /// 这条内容附带的行内操作。

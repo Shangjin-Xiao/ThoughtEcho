@@ -356,21 +356,14 @@ class _OnboardingPageState extends State<OnboardingPage>
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 32),
-                    // 出错时不自动跳转（见 _handleUpdateMigration），
-                    // 所以这里必须给一个显式的进入入口。
-                    if (_errorMessage == null)
-                      const EnhancedLottieAnimation(
-                        type: LottieAnimationType.pulseLoading,
-                        width: 60,
-                        height: 60,
-                      )
-                    else
-                      FilledButton(
-                        onPressed: _navigateToHome,
-                        child: Text(
-                          AppLocalizations.of(context).onboardingEnterApp,
-                        ),
-                      ),
+                    // 这一页只在 _errorMessage == null 时才会被 build() 选中
+                    // （出错走 _buildErrorView），迁移完成后必定自动跳转，
+                    // 所以这里不需要显式的进入按钮。
+                    const EnhancedLottieAnimation(
+                      type: LottieAnimationType.pulseLoading,
+                      width: 60,
+                      height: 60,
+                    ),
                   ],
                 ),
               ),

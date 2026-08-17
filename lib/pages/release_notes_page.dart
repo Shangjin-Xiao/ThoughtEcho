@@ -8,7 +8,6 @@ import 'package:thoughtecho/models/release_highlight.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
-import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/utils/theme_style_labels.dart';
 
 /// 更新说明页：一页滚到底，没有「下一步」。
@@ -251,15 +250,12 @@ class _ThemeStylePicker extends StatelessWidget {
           ChoiceChip(
             label: Text(themeStyleLabel(l10n, style).$1),
             selected: appTheme.themeStyle == style,
+            // 和主题设置页同一个调用方式：[AppTheme.setThemeStyle] 自己吞掉并记录
+            // 落盘异常，从不向调用方抛，所以这里挂 catchError 只会是永远不执行的
+            // 死代码。落盘失败的可见性属于 AppTheme，不该由某一个调用点补。
             onSelected: (selected) {
               if (!selected) return;
-              appTheme.setThemeStyle(style).catchError(
-                    (Object error) => logError(
-                      '更新说明页切换主题风格失败: $error',
-                      error: error,
-                      source: 'ReleaseNotesPage',
-                    ),
-                  );
+              appTheme.setThemeStyle(style);
             },
           ),
       ],

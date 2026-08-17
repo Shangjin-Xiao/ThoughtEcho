@@ -16,14 +16,21 @@ void main() {
     test('latestVersion 不小于任何一条内容的版本', () {
       // 忘了抬 latestVersion，新加的条目永远进不了 since() 的区间，
       // 也永远不会展示给任何人——这个用例就是为了让那次遗漏在这里失败。
-      for (final entry in ReleaseHighlights.currentRelease(l10n)) {
+      //
+      // **必须遍历全表**（since + earliestVersion），不能遍历 currentRelease：
+      // 后者本身就按 `version == latestVersion` 过滤，遍历到的每一条都恰好等于
+      // latestVersion，断言恒真；真漏抬的那一条压根不在集合里。
+      final entries =
+          ReleaseHighlights.since(l10n, ReleaseHighlights.earliestVersion);
+
+      expect(entries, isNotEmpty);
+      for (final entry in entries) {
         expect(
           compareVersions(entry.version, ReleaseHighlights.latestVersion),
           lessThanOrEqualTo(0),
           reason: '${entry.title} 的版本高于 latestVersion',
         );
       }
-      expect(ReleaseHighlights.currentRelease(l10n), isNotEmpty);
     });
 
     test('每条内容都有导语，非脚注条目都有标题', () {
