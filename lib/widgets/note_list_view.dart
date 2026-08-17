@@ -212,6 +212,14 @@ class NoteListViewState extends State<NoteListView> {
   /// 切换时只重建那一格，不会牵动已加载的上百个 item。
   final ValueNotifier<bool> _loadMoreIndicator = ValueNotifier<bool>(true);
 
+  /// 是否还有下一页。
+  ///
+  /// 它直接参与 `itemCount`，所以翻转必须走 setState —— 尾部占位格**不能**常驻。
+  /// 试过把它改成 ValueNotifier 驱动的常驻格子（想省掉整列表重建），但
+  /// `SliverMultiBoxAdaptorElement._extrapolateMaxScrollOffset` 会按已建条目的
+  /// 平均高度去估还没建出来的尾部格：itemCount 常年多一格，`maxScrollExtent`
+  /// 就常年多估一张卡片的高度，等用户真滑到底、那一格以 0 高建出来时再缩回去 ——
+  /// 又是一次"滚动范围骤减 → 偏移被夹紧 → 列表往回弹"。这条路走不通。
   bool _hasMore = true;
   static const int _pageSize = AppConstants.defaultPageSize;
   StreamSubscription<List<Quote>>? _quotesSub;

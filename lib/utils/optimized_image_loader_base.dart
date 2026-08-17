@@ -50,6 +50,23 @@ int? decodeDimensionFor(double logicalSize, double pixelRatio) {
   return devicePixels.round();
 }
 
+/// 全屏预览相对屏幕尺寸的解码放大倍率。
+///
+/// 预览要能捏合放大看细节，所以不能只按屏幕像素解；但**更不能不设上限按原图解**。
+const double previewZoomHeadroom = 2.0;
+
+/// 全屏预览一个维度的解码上限（设备像素）。
+///
+/// 两个维度都传给 `ResizeImage`（走 [ResizeImagePolicy.fit] 等比缩进框内），
+/// 再由 [decodeDimensionFor] 的 [maxDecodeDimension] 封顶，单张最坏
+/// 2048×2048 ≈ 16MB。
+///
+/// 不封顶的代价是实测过的：一张 12MP 照片按原图解就是约 48MB，一次预览就能把
+/// 64MB 的 `imageCache` 整个挤空（性能日志里的 `img=1/1000, bytes=47.6MB`），
+/// 回到列表后每张缩略图都要重新解码，表现就是「滑过图片格外卡」。
+int? previewDecodeDimensionFor(double logicalSize, double pixelRatio) =>
+    decodeDimensionFor(logicalSize * previewZoomHeadroom, pixelRatio);
+
 /// 单张图片的解码总像素预算（宽 × 高）。
 ///
 /// 这是**防炸保险，不是画质旋钮**。只给解码宽度封顶时，高度会按原图比例推算：

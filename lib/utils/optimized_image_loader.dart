@@ -25,6 +25,10 @@ int? decodeSizeFor(double logicalSize, double pixelRatio) =>
 /// 由解码宽度推出总像素预算下的高度上限，见 [decodeHeightBudgetFor]。
 int? decodeHeightBudget(int? decodeWidth) => decodeHeightBudgetFor(decodeWidth);
 
+/// 全屏预览一个维度的解码上限，见 [previewDecodeDimensionFor]。
+int? previewDecodeSizeFor(double logicalSize, double pixelRatio) =>
+    previewDecodeDimensionFor(logicalSize, pixelRatio);
+
 bool isInlineDataImage(String source) => isDataUrl(source);
 
 Uint8List? decodeInlineImageBytes(String source) => tryDecodeDataUrl(source);

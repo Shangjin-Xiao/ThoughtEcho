@@ -2,11 +2,34 @@ part of '../note_list_view.dart';
 
 /// Data stream and subscription management for NoteListViewState.
 extension _NoteListDataStreamExtension on NoteListViewState {
+  /// 数据事件推来的列表是否与当前 `_quotes` **逐条同一个实例**。
+  ///
+  /// `watchQuotes` 每次都重发整个累积列表（`List.from(_currentQuotes)`），而
+  /// `_currentQuotes` 是增量维护的：没被重新查询过的笔记还是原来那批 [Quote]
+  /// 对象。于是"翻到最后一页""重复通知"这类什么都没变的事件可以逐指针比出来。
+  /// [Quote] 全字段 final，同一实例就意味着内容一定没变，跳过重建不可能漏更新。
+  ///
+  /// 这件事值得比：照旧整表替换的话，一个空事件就是一轮整列表 setState。实测
+  /// 首滑期间两个这样的事件重建了 241 次卡片（`built=155` + `built=86`），
+  /// 而列表内容一条都没变。
+  bool _isSameQuoteInstances(List<Quote> list) {
+    if (list.length != _quotes.length) return false;
+    for (var i = 0; i < list.length; i++) {
+      if (!identical(list[i], _quotes[i])) return false;
+    }
+    return true;
+  }
+
   void _scheduleExpandableQuoteCheck() {
+    // **不要**在这里把 _hasExpandableQuoteCached 清成 false。清了之后下面那句
+    // `_hasExpandableQuoteCached != hasExpandable` 比的是刚清掉的值而不是旧答案，
+    // 于是只要列表里有可折叠笔记（常态），每个数据事件都必然多出一次整列表
+    // setState —— 实测日志里数据事件后紧跟的第二轮上百次卡片重建就是它。
+    // 顺带还会让功能引导的目标短暂消失一帧。旧答案留着，新答案算出来再比。
     _hasExpandableQuoteComputed = false;
-    _hasExpandableQuoteCached = false;
 
     if (_quotes.isEmpty) {
+      _hasExpandableQuoteCached = false;
       return;
     }
 
@@ -105,25 +128,36 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           // 列表被整表替换前的偏移，用于事件后校正被夹紧的滚动位置。
           final double? offsetBeforeUpdate = _safeScrollOffset;
 
-          _updateState(() {
-            if (isFirstLoad) {
-              _quotes.clear();
-            }
-            _quotes
-              ..clear()
-              ..addAll(
-                list,
-              ); // Simplified: always replace for consistency, but flag prevents extra sets
-            _hasMore = dbHasMore;
+          // 内容逐条同一实例、分页标志也没变 = 这次事件什么都没改变，
+          // 唯一还需要落地的 _isLoading 由自己的 ValueNotifier 驱动底部指示器，
+          // 不需要整列表重建。两个前提都要：
+          // - 空列表时 _isLoading 决定的是加载态还是空状态，会真的改变树形；
+          // - _hasMore 参与 itemCount，翻转必须走 setState。
+          final bool quotesUnchanged = list.isNotEmpty &&
+              _hasMore == dbHasMore &&
+              _isSameQuoteInstances(list);
+
+          if (quotesUnchanged) {
             _isLoading = isLoadMorePage;
-            _pruneExpansionControllers();
-            // 注意：此处不递增 _resultsVersion。
-            // _initializeDataStream 的 stream 持续接收事件（含 load more），
-            // 若递增则 resultsKey 变化，AnimatedSwitcher 会销毁旧 ListView 并
-            // 创建从偏移量 0 开始的新 ListView，导致列表跳回顶部。
-            // 搜索/筛选切换动画由 _updateStreamSubscription 的首个数据事件负责递增。
-          });
-          _guardScrollAnchorAfterDataEvent(offsetBeforeUpdate);
+          } else {
+            _updateState(() {
+              _quotes
+                ..clear()
+                ..addAll(list);
+              _hasMore = dbHasMore;
+              _isLoading = isLoadMorePage;
+              _pruneExpansionControllers();
+              // 注意：此处不递增 _resultsVersion。
+              // _initializeDataStream 的 stream 持续接收事件（含 load more），
+              // 若递增则 resultsKey 变化，AnimatedSwitcher 会销毁旧 ListView 并
+              // 创建从偏移量 0 开始的新 ListView，导致列表跳回顶部。
+              // 搜索/筛选切换动画由 _updateStreamSubscription 的首个数据事件负责递增。
+            });
+          }
+          // 没换过列表就没有新的夹紧可记；传 null 让它只重试挂起的还原。
+          _guardScrollAnchorAfterDataEvent(
+            quotesUnchanged ? null : offsetBeforeUpdate,
+          );
 
           if (_loadMorePerfRecording &&
               (_quotes.length > _loadMorePerfStartCount || !_hasMore)) {
@@ -132,7 +166,11 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           if (isLoadMorePage) {
             _settleLoadMoreGateAfterPage();
           }
-          _scheduleExpandableQuoteCheck();
+          // 列表没变，"有没有可展开的笔记"就不会变。照常调用反而先把缓存清成
+          // false，再排一次帧回调重算同一个答案。
+          if (!quotesUnchanged) {
+            _scheduleExpandableQuoteCheck();
+          }
 
           if (widget.onGuideTargetsReady != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -392,13 +430,24 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           final bool dbHasMore = db.hasMoreQuotes;
           final double? offsetBeforeUpdate =
               pendingScrollToTop ? null : _safeScrollOffset;
-          _updateState(() {
-            _quotes.clear();
-            _quotes.addAll(list);
-            _hasMore = dbHasMore;
+          // 同 _initializeDataStream：什么都没变的事件不重建整列表。
+          // 还等着归零时不能跳过——那一步要靠这次事件把新结果落地后再 jumpTo(0)。
+          final bool quotesUnchanged = !pendingScrollToTop &&
+              list.isNotEmpty &&
+              _hasMore == dbHasMore &&
+              _isSameQuoteInstances(list);
+          if (quotesUnchanged) {
             _isLoading = isLoadMorePage;
-            _pruneExpansionControllers();
-          });
+          } else {
+            _updateState(() {
+              _quotes
+                ..clear()
+                ..addAll(list);
+              _hasMore = dbHasMore;
+              _isLoading = isLoadMorePage;
+              _pruneExpansionControllers();
+            });
+          }
 
           // 筛选条件变化：新结果的第一次事件到达后回到顶部。
           // 之前依赖 ListView 换 key 重建来隐式归零，现在列表常驻，需显式归零。
@@ -421,7 +470,9 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             // 筛选/排序切换回到第一页后重新预取，让新结果集也覆盖首次快滑。
             _scheduleIdlePrefetch();
           }
-          _scheduleExpandableQuoteCheck();
+          if (!quotesUnchanged) {
+            _scheduleExpandableQuoteCheck();
+          }
 
           if (widget.onGuideTargetsReady != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -432,7 +483,9 @@ extension _NoteListDataStreamExtension on NoteListViewState {
 
           // 没有走"保留滚动位置"分支时，由通用锚点保护兜住列表变短造成的位移。
           if (savedScrollOffset == null) {
-            _guardScrollAnchorAfterDataEvent(offsetBeforeUpdate);
+            _guardScrollAnchorAfterDataEvent(
+              quotesUnchanged ? null : offsetBeforeUpdate,
+            );
           }
 
           // Restore scroll position smoothly (only if preserveScrollPosition is true)
