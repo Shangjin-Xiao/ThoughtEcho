@@ -1,5 +1,17 @@
 {
   "@@locale": "ja",
+  "smartPushPeriodEarlyMorning": "Early Morning",
+  "smartPushPeriodMorning": "Morning",
+  "smartPushPeriodNoon": "Noon",
+  "smartPushPeriodAfternoon": "Afternoon",
+  "smartPushPeriodEvening": "Evening",
+  "smartPushPeriodNight": "Night",
+  "settingsSentryTitle": "Send diagnostics to help improve",
+  "settingsSentryDesc": "Disabled by default. When enabled, sends error stacks, device information, page performance, regular network request performance, and main database performance. AI requests are excluded. Database monitoring records SQL templates and timing only, never note content or query parameters.",
+  "sentryRestartHint": "Settings saved, takes effect after restarting",
+  "sentryDisclosureTitle": "Privacy Policy Updated",
+  "sentryDisclosureMessage": "The ThoughtEcho privacy policy has been updated. You can view the latest version on our official website.\n\nWe have added Sentry to collect errors and user feedback. To protect your privacy, this feature is disabled by default. You can enable it anytime in 'Settings -> Feedback & Contact'.\n\nPrivacy Policy: https://note.shangjinyun.cn/privacy",
+  "sentryDisclosureGotIt": "Got it",
   "appTitle": "ThoughtEcho",
   "draftRestored": "下書きが自動的に復元されました",
   "draftRecoverTitle": "未保存の下書きを復元",
@@ -61,6 +73,8 @@
   "onboardingError": "エラーが発生しました",
   "onboardingUpdateComplete": "更新完了",
   "onboardingUpdateSuccess": "ThoughtEchoは正常に更新されました\nデータは自動的に移行されました",
+  "onboardingUpdateFailed": "Update failed, but you can still continue using the app",
+  "onboardingUpdateProcessFailed": "Update processing failed, please restart the app",
   "onboardingEnterApp": "アプリへ",
   "featureDailyQuote": "今日の一言",
   "prefLanguage": "言語 / Language",
@@ -123,6 +137,23 @@
   "settingsAboutSlogan": "AI搭載のパーソナルインスピレーションノート",
   "settingsViewSource": "ソースコードを見る (GitHub)",
   "settingsVisitWebsite": "公式サイト",
+  "settingsPrivacyPolicy": "Privacy Policy",
+  "settingsFeedback": "Feedback",
+  "settingsContactDeveloper": "Contact Developer",
+  "feedbackAndContact": "Feedback & Contact",
+  "feedbackAndContactDesc": "Your feedback matters! Reach us through the following channels:",
+  "feedbackGithubTitle": "Submit an Issue on GitHub",
+  "feedbackGithubDesc": "Report bugs, suggest features, or join discussions",
+  "feedbackGithubRepoTitle": "View Source Code",
+  "feedbackGithubRepoDesc": "Browse the code, star the project, or submit a Pull Request",
+  "contactDeveloperSectionTitle": "Contact Developer",
+  "feedbackEmailTitle": "Send Email",
+  "feedbackEmailDesc": "shangjinyun@proton.me",
+  "feedbackDiscussionTitle": "Join Community Discussions",
+  "feedbackDiscussionDesc": "Ask questions, share ideas, and connect with other users",
+  "feedbackSentryTitle": "Send Feedback & Suggestions (Sentry)",
+  "feedbackSentryDesc": "Send comments, suggestions, or bug reports directly to developers",
+  "feedbackSentryDisabledHint": "Please enable Sentry Debugging & Reporting below first",
   "settingsViewLicenses": "ライセンス情報",
   "settingsCheckUpdate": "アップデートを確認",
   "settingsCheckUpdateDesc": "新しいバージョンがあるか確認",
@@ -131,6 +162,10 @@
   "developerModeDisabled": "✅ 開発者モードが無効になりました",
   "devFirstScrollPerfMonitorTitle": "初回スクロールのパフォーマンス",
   "devFirstScrollPerfMonitorDesc": "初回スクロールのフレームレートとジャンクを監視する",
+  "noteListDisableCardShadowsExperiment": "[Experiment] Disable note-list card shadows",
+  "noteListDisableCardShadowsExperimentDesc": "Available in release builds. Compare how card shadows affect Notes scrolling performance and visual feel (off by default)",
+  "noteListDisableBackdropBlurExperiment": "[Experiment] Disable note-list collapse blur",
+  "noteListDisableBackdropBlurExperimentDesc": "Available in release builds. Replaces the collapsed long-content bottom blur with a gradient scrim (off by default)",
   "devFirstScrollPerfResult": "初回スクロールのパフォーマンス： 合計 {total}、ジャンク {jank}、平均 {avgMs}ms、最悪 {worstMs}ms",
   "@devFirstScrollPerfResult": {
     "placeholders": {
@@ -274,6 +309,8 @@
   "cannotGetLocationPermission": "位置情報の権限を取得できません",
   "logDebugInfo": "ログデバッグ情報",
   "logDebugInfoDesc": "ログデータベースの状態とパスを表示",
+  "addNoteAutoFocusExperiment": "[Experiment] AddNote auto focus",
+  "addNoteAutoFocusExperimentDesc": "Automatically show the keyboard after the add note dialog settles (on by default)",
   "databaseStatus": "データベース状態:",
   "logStatistics": "ログ統計:",
   "getDebugInfoFailed": "デバッグ情報の取得に失敗: {error}",
@@ -351,6 +388,8 @@
   "deleteNote": "ノートを削除",
   "deleteNoteConfirmation": "このノートを削除してもよろしいですか？この操作は取り消せません。",
   "noteDeleted": "ノートを削除しました",
+  "noteNotFound": "Note not found",
+  "noteUpdateSkippedDeleted": "Note has been deleted, update skipped",
   "favorited": "お気に入り ({count})",
   "@favorited": {
     "placeholders": {
@@ -512,6 +551,13 @@
   "applyAnalysisResults": "結果を適用",
   "parseResultsFailed": "結果の解析に失敗しました",
   "analysisFailed": "分析失敗: {error}",
+  "@analysisFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "analysisResultsCopied": "結果をコピーしました",
   "noteInfo": "ノート情報",
   "source": "ソース",
@@ -587,18 +633,64 @@
   "hitokotoTypeSettings": "種類の選択",
   "hitokotoTypeDesc": "1つ以上のタイプを選択してください。選択したタイプからランダムに表示されます。",
   "dailyQuoteApiDesc": "ホーム画面の毎日の文言に使用するサービス提供元を選択します。",
-  "dailyQuoteProviderNoTypeSelection": "この取得元はカテゴリ絞り込みに対応していません。",
   "dailyQuoteApiHitokoto": "Hitokoto",
   "dailyQuoteApiZenQuotes": "ZenQuotes",
   "dailyQuoteApiApiNinjas": "API Ninjas",
   "dailyQuoteApiMeigen": "名言教えるよ",
   "dailyQuoteApiKoreanAdvice": "Korean Advice",
+  "dailyQuoteApiNinjasManageApiKey": "Configure service key",
+  "dailyQuoteApiNinjasApiKeyHint": "Enter the API Ninjas X-Api-Key",
+  "dailyQuoteApiNinjasApiKeyConfigured": "Service key configured",
+  "dailyQuoteApiNinjasApiKeyMissing": "No service key configured yet",
+  "dailyQuoteApiNinjasApiKeyInvalid": "The service key format looks invalid",
+  "dailyQuoteApiNinjasCategorySelection": "Category selection",
+  "dailyQuoteApiNinjasCategoryDesc": "Search, select multiple categories, or clear them all. Leaving everything unchecked falls back to fully random quotes.",
+  "dailyQuoteApiNinjasCategorySearchHint": "Search categories",
+  "dailyQuoteApiNinjasNoCategoriesFound": "No matching categories",
+  "dailyQuoteApiNinjasAllCategoriesUsed": "No category filter applied; quotes will be drawn from the full pool",
+  "dailyQuoteApiNinjasSelectedCount": "{count} categories selected",
+  "@dailyQuoteApiNinjasSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteApiNinjasCategoryWisdom": "Wisdom",
+  "dailyQuoteApiNinjasCategoryPhilosophy": "Philosophy",
+  "dailyQuoteApiNinjasCategoryLife": "Life",
+  "dailyQuoteApiNinjasCategoryTruth": "Truth",
+  "dailyQuoteApiNinjasCategoryInspirational": "Inspirational",
+  "dailyQuoteApiNinjasCategoryRelationships": "Relationships",
+  "dailyQuoteApiNinjasCategoryLove": "Love",
+  "dailyQuoteApiNinjasCategoryFaith": "Faith",
+  "dailyQuoteApiNinjasCategoryHumor": "Humor",
+  "dailyQuoteApiNinjasCategorySuccess": "Success",
+  "dailyQuoteApiNinjasCategoryCourage": "Courage",
+  "dailyQuoteApiNinjasCategoryHappiness": "Happiness",
+  "dailyQuoteApiNinjasCategoryArt": "Art",
+  "dailyQuoteApiNinjasCategoryWriting": "Writing",
+  "dailyQuoteApiNinjasCategoryFear": "Fear",
+  "dailyQuoteApiNinjasCategoryNature": "Nature",
+  "dailyQuoteApiNinjasCategoryTime": "Time",
+  "dailyQuoteApiNinjasCategoryFreedom": "Freedom",
+  "dailyQuoteApiNinjasCategoryDeath": "Death",
+  "dailyQuoteApiNinjasCategoryLeadership": "Leadership",
   "selectAll": "すべて選択",
   "clearAll": "すべて解除",
   "typeSelection": "タイプ選択",
   "typeSelectionHint": "好みのタイプをタップして選択",
+  "dailyQuoteProviderNoTypeSelection": "この取得元はカテゴリ絞り込みに対応していません。",
   "usageInstructions": "使用方法",
   "hitokotoServiceProvider": "一言サービス提供: Hitokoto",
+  "dailyQuoteServiceProvider": "Current content provided by {provider}",
+  "@dailyQuoteServiceProvider": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
   "hitokotoHelpItem1": "少なくとも1つのタイプを選択する必要があります",
   "hitokotoHelpItem2": "複数のタイプを選ぶと多様なコンテンツを楽しめます",
   "hitokotoHelpItem3": "タイプごとに異なるスタイルやソースがあります",
@@ -823,6 +915,9 @@
       }
     }
   },
+  "migrationTargetSameAsCurrent": "The selected directory is the same as the current data directory",
+  "migrationTargetAncestor": "The selected directory cannot be a parent of the current data directory",
+  "migrationTargetNested": "The selected directory cannot be inside the current data directory",
   "logsViewer": "ログビューア",
   "logFilter": "フィルタ",
   "clearLogs": "ログ消去",
@@ -1165,6 +1260,7 @@
   "invalidApiKeyUpdate": "APIキーを更新してください",
   "configureValidApiKey": "有効なAPIキーを設定してください",
   "regenerate": "再生成",
+  "viewToolProcess": "View process",
   "selectAnalysisMethod": "分析方法を選択",
   "advancedOptions": "詳細オプション",
   "customPromptHint": "例：ノート内の登場人物と場所を分析して",
@@ -1704,6 +1800,7 @@
   "noFeaturedCards": "注目カードなし",
   "featuredCardGenerationTip": "AIオンでスマートデザイン、オフでテンプレート使用",
   "cardFromReport": "レポートからのカード",
+  "cardSharePrefix": "A beautiful card from ThoughtEcho\n\n",
   "loadDataFailed": "読み込み失敗: {error}",
   "@loadDataFailed": {
     "placeholders": {
@@ -1796,6 +1893,19 @@
   "thinkingInProgress": "考え中...",
   "aiMisunderstoodQuestion": "申し訳ありませんが、この質問を理解できませんでした。別の表現で質問してみてください。",
   "aiResponseError": "申し訳ありませんが、応答中にエラーが発生しました：{error}",
+  "agentErrorNoProvider": "Select an AI provider and try again.",
+  "agentErrorMissingApiKey": "Configure an API key for {providerName}, then try again.",
+  "@agentErrorMissingApiKey": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentErrorUnsupportedProvider": "The current AI provider does not support Agent mode. Choose another provider and try again.",
+  "agentErrorTimeout": "The request timed out. Check your connection and try again.",
+  "agentErrorCancelled": "This request was stopped.",
+  "agentErrorGeneric": "The request could not be completed. Please try again later.",
   "apiKeyDiagnosticsTitle": "APIキー診断",
   "apiKeyDiagnosticsTool": "APIキー診断ツール",
   "apiKeyDiagnosticsDesc": "このツールはAPIキーの保存と取得を確認し、401認証エラーの診断に役立ちます。",
@@ -1845,6 +1955,51 @@
   "importingFile": "ファイルをインポート中...",
   "importComplete": "インポート完了！",
   "fileSaveFailed": "ファイルの保存に失敗しました",
+  "unsupportedMediaType": "Unsupported media type",
+  "unsupportedMediaTypeWithName": "Unsupported media type: {mediaType}",
+  "@unsupportedMediaTypeWithName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "fileNotExistOrMoved": "The selected file does not exist or has been moved or deleted\nPath: {path}",
+  "@fileNotExistOrMoved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedFileEmpty": "The selected file is empty\nPath: {path}",
+  "@selectedFileEmpty": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "unsupportedFileFormat": "Unsupported file format: .{extension}\nSupported formats: {formats}",
+  "@unsupportedFileFormat": {
+    "placeholders": {
+      "extension": {
+        "type": "String"
+      },
+      "formats": {
+        "type": "String"
+      }
+    }
+  },
+  "fileUnreadable": "The file cannot be read. Possible reasons:\n• The file is corrupted\n• The file is being used by another program\n• Insufficient permissions\nPlease check the file and try again",
+  "mediaTypeNoCameraImport": "{mediaType} does not support camera import",
+  "@mediaTypeNoCameraImport": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
   "processingMedia": "{mediaType}を処理中...",
   "@processingMedia": {
     "placeholders": {
@@ -1880,6 +2035,13 @@
   "importTipsVideo": "• MP4、MOV、AVI、MKV形式に対応\n• アプリのメディアライブラリに直接保存し、重複を削減\n• OOMを防ぐストリーミング技術\n• 未保存のファイルは自動的にクリーンアップされます",
   "importTipsAudio": "• MP3、WAV、AAC、M4A形式に対応\n• アプリのメディアライブラリに直接保存し、重複を削減\n• 最適化されたストレージ、高速読み込み\n• 未保存のファイルは自動的にクリーンアップされます",
   "importTipsDefault": "• 複数のメディア形式に対応\n• アプリのメディアライブラリに直接保存、メモリ安全保護\n• 未保存のファイルは自動的にクリーンアップされます",
+  "viewNoteInfo": "ノート情報を表示",
+  "contentLengthLabel": "コンテンツの長さ：{length}",
+  "htmlFormatLabel": "HTML形式：{status}",
+  "jsonFormatLabel": "JSON形式：{status}",
+  "containsHtmlTagsLabel": "HTMLタグを含む：{status}",
+  "first100CharsLabel": "最初の100文字：",
+  "testFailedEmptyContent": "空の内容",
   "formattedDate": "{month}月{day}日",
   "@formattedDate": {
     "placeholders": {
@@ -1924,11 +2086,21 @@
       }
     }
   },
+  "noteAttribution": " (attributed to {source})",
+  "@noteAttribution": {
+    "description": "喂给 AI 的笔记内容里，标出这条笔记填的作者/出处，用于区分摘录与原创署名",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
   "aiProviderOpenAI": "OpenAI",
   "aiProviderOpenRouter": "OpenRouter",
   "aiProviderDeepSeek": "DeepSeek",
   "aiProviderAnthropic": "Anthropic (Claude)",
   "aiProviderOllama": "Ollama",
+  "aiProviderOllamaCloud": "Ollama Cloud",
   "aiProviderLMStudio": "LMStudio",
   "apiKeyStatusEmpty": "空",
   "apiKeyStatusRedacted": "[REDACTED]",
@@ -1952,7 +2124,6 @@
     }
   },
   "generatingAiReport": "レポート生成中...",
-  "testFailedEmptyContent": "空の内容",
   "includeMediaFilesHint": "画像や音声を含める（ファイルサイズ増）",
   "overwriteImport": "上書きインポート",
   "overwriteImportDesc": "現在のデータをすべて削除して置き換えます",
@@ -1979,6 +2150,11 @@
       }
     }
   },
+  "loadFailedSimple": "Load failed",
+  "loadNoteFailed": "Failed to load notes",
+  "queryTimeoutShort": "Query timed out",
+  "queryTimeoutRetry": "Query timed out, please retry",
+  "databaseQueryError": "Database query error",
   "deleteConfirmTitle": "削除確認",
   "deleteRecordConfirm": "削除しますか？",
   "confirmDeleteAll": "すべて削除",
@@ -2256,6 +2432,14 @@
         "type": "String"
       },
       "extra": {
+        "type": "String"
+      }
+    }
+  },
+  "syncFromSuffix": " (from {from})",
+  "@syncFromSuffix": {
+    "placeholders": {
+      "from": {
         "type": "String"
       }
     }
@@ -2638,13 +2822,6 @@
       }
     }
   },
-  "@analysisFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "pleaseInputContent": "内容を入力してください",
   "copyResult": "コピー",
   "cannotAddLocation": "追加不可",
@@ -2741,6 +2918,16 @@
   "dayPeriodMidnight": "深夜",
   "showExactTime": "詳細時刻を表示",
   "showExactTimeDesc": "時:分を表示",
+  "showNoteEditTime": "Show Note Edit Time",
+  "showNoteEditTimeDesc": "Display the last edited time in notes",
+  "editedAtLabel": "Edited at {dateTime}",
+  "@editedAtLabel": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
   "guideHomepageDailyQuoteTitle": "一言ヒント",
   "guideHomepageDailyQuoteDesc": "タップでコピー\nダブルタップで追加",
   "guideNotePageFilterTitle": "フィルタ",
@@ -2837,8 +3024,15 @@
   "mindMapAnalysis": "マインドマップ",
   "growthAnalysis": "成長分析",
   "aiAnalysis": "AI分析",
+  "deleteAiAnalysis": "Delete AI Analysis",
+  "deleteAiAnalysisConfirm": "Are you sure you want to delete the AI analysis result for this note? This can be undone before saving the note.",
+  "aiAnalysisDeleted": "AI analysis deleted",
+  "aiAnalysisSaved": "AI analysis saved",
   "aiGenerating": "AI 生成中...",
   "complete": "完了",
+  "viewFull": "View Full",
+  "copy": "Copy",
+  "copiedToClipboard": "Copied to clipboard",
   "selectReportTypePrompt": "レポートタイプ：",
   "aiSmartReport": "AIレポート",
   "aiSmartReportDesc": "AI生成のHTMLレポート",
@@ -2883,6 +3077,35 @@
   "permissionText": "権限",
   "backupCancelled": "キャンセル",
   "backupFailedText": "失敗",
+  "backupSavedToPath": "Backup saved to: {path}",
+  "@backupSavedToPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "backupCompleteWithWarnings": "Backup completed, but with warnings",
+  "backupDeltaFailuresMessage": "{count, plural, =1{1 note had rich-text media path conversion failures. This note still contains a local absolute path in the backup; images may not display when restored on another device.\n\nAffected note ID: {ids}} other{# notes had rich-text media path conversion failures. These notes still contain local absolute paths in the backup; images may not display when restored on another device.\n\nAffected note IDs: {ids}}}",
+  "@backupDeltaFailuresMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "ids": {
+        "type": "String"
+      }
+    }
+  },
+  "backupDeltaFailuresIdJoiner": ", ",
+  "backupDeltaFailuresMoreSuffix": " etc.",
+  "backupFailedGeneric": "Unable to complete backup. Please try again later.",
+  "@backupFailedGeneric": {
+    "description": "Generic backup failure message shown when the error type is not classified"
+  },
+  "backupFailedOutOfMemory": "Backup failed: Out of memory\n\nSuggestions:\n• Close other apps to free up memory\n• Try a backup without media files\n• Restart the app and try again",
+  "backupFailedNoSpace": "Backup failed: Not enough storage space\n\nPlease free up device storage and try again.",
+  "backupFailedPermission": "Backup failed: Insufficient permission\n\nPlease check the app's storage permission settings.",
   "selectFileError": "失敗",
   "mergingDataProgress": "マージ中...",
   "yearAIAnnualReport": "{year} AIレポート",
@@ -2895,6 +3118,9 @@
   },
   "openInBrowser": "ブラウザで開く",
   "shareReport": "共有",
+  "saveTempFileFailed": "Failed to save temporary file",
+  "openBrowserFailed": "Failed to open browser",
+  "createShareFileFailed": "Failed to create share file",
   "saveReport": "保存",
   "processingReport": "処理中...",
   "personalizedSummaryByAI": "AI要約",
@@ -2905,6 +3131,28 @@
   "shareBtn": "共有",
   "regenerateCard": "再生成",
   "regeneratingCard": "再生成中...",
+  "aiSuggestionCoreIdea": "What is the core idea of this note?",
+  "aiSuggestionInspiration": "What inspiration can we draw from it?",
+  "aiSuggestionSummarize": "Can you summarize the key points?",
+  "aiSuggestionSolution": "What solutions are there?",
+  "aiSuggestionUnderstandConcept": "How can I better understand this concept?",
+  "aiSuggestionActionPlan": "How do I create an action plan?",
+  "aiSuggestionPsychology": "What psychological state does this reflect?",
+  "aiSuggestionRealLife": "How can this be applied to real life?",
+  "aiSuggestionThinkingPattern": "What thinking pattern does this reflect?",
+  "svgLoading": "Loading SVG...",
+  "svgLoadingFallback": "Loading fallback template...",
+  "svgRenderFailed": "SVG render failed",
+  "svgTryingFallback": "Trying fallback template...",
+  "cardRenderFailed": "Card render failed",
+  "cardRegeneratePrompt": "Please try regenerating the card",
+  "svgContentParseFailed": "Content parse failed",
+  "svgContentExtractFailed": "Unable to extract content",
+  "svgContentEmpty": "SVG content is empty",
+  "svgContentInvalidFormat": "Invalid SVG format",
+  "svgFallbackTitle": "SVG generation failed",
+  "svgFallbackHint": "Please try regenerating the card or check your AI configuration",
+  "svgFallbackIdentifier": "ThoughtEcho - Fallback Template",
   "cardGenerating": "生成中...",
   "generatingCards": "生成中...",
   "loadMoreCards": "さらに読み込む",
@@ -2989,6 +3237,40 @@
   "mediaTypeVideo": "動画",
   "mediaTypeAudio": "音声",
   "mediaTypeMedia": "メディア",
+  "mediaProcessingNone": "No media files to process",
+  "mediaProcessingFound": "{total, plural, =1{Found 1 media file} other{Found # media files}}",
+  "@mediaProcessingFound": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingCopying": "Copying {typeLabel} {done}/{total}",
+  "@mediaProcessingCopying": {
+    "placeholders": {
+      "typeLabel": {
+        "type": "String"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingProgress": "Processed {done} / {total}",
+  "@mediaProcessingProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "takePhoto": "撮影",
   "recordVideo": "録画",
   "recordAudio": "録音",
@@ -3146,6 +3428,11 @@
   "documentLoadFailedRetry": "失敗。再試行してください",
   "contentCopiedToClipboard": "コピーしました",
   "messageCopiedToClipboard": "コピーしました",
+  "dailyQuoteLoading": "Loading...",
+  "dailyQuoteLoadingLocal": "Loading from local records...",
+  "dailyQuoteLoadingOffline": "No network, loading from local records...",
+  "dailyQuoteNoNetworkRetry": "No network and no local records, tap to retry",
+  "dailyQuoteFetchFailedRetry": "Failed to fetch quote, tap to retry",
   "fetchHitokotoFailed": "取得失敗: {error}",
   "@fetchHitokotoFailed": {
     "placeholders": {
@@ -3203,21 +3490,6 @@
   "continueEditing": "編集を続ける",
   "discardChanges": "破棄",
   "saveAndExit": "保存して終了",
-  "actionFavorite": "お気に入り",
-  "actionUnfavorite": "お気に入り解除",
-  "clearFavoriteTitle": "お気に入りをクリア",
-  "clearFavoriteMessage": "このノートから{count}件のお気に入りをクリアしてもよろしいですか？",
-  "@clearFavoriteMessage": {
-    "description": "Clear favorite confirmation message",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "clearFavoriteSuccess": "お気に入りをクリアしました",
-  "clearFavoriteFailed": "お気に入りのクリアに失敗しました",
-  "moreOptions": "その他のオプション",
   "localAiFeatures": "ローカルAI機能",
   "localAiFeaturesPreview": "プレビュー",
   "localAiFeaturesDesc": "オンデバイスAIでノート体験を向上",
@@ -3351,6 +3623,7 @@
   "smartPushContentType": "モード",
   "smartPushDailyQuote": "今日の一言",
   "smartPushDailyQuoteDesc": "名言を通知",
+  "smartPushDailyQuoteIndependentNote": "Daily Quote runs independently from Smart Push — each can be enabled or disabled separately.",
   "smartPushPastNotes": "過去のノート",
   "smartPushPastNotesDesc": "振り返り",
   "smartPushModeSmart": "スマート",
@@ -3407,6 +3680,21 @@
   "smartPushUnknownManufacturer": "不明なデバイス",
   "iHaveConfigured": "設定しました",
   "recommended": "推奨",
+  "actionFavorite": "お気に入り",
+  "actionUnfavorite": "お気に入り解除",
+  "clearFavoriteTitle": "お気に入りをクリア",
+  "clearFavoriteMessage": "このノートから{count}件のお気に入りをクリアしてもよろしいですか？",
+  "@clearFavoriteMessage": {
+    "description": "Clear favorite confirmation message",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearFavoriteSuccess": "お気に入りをクリアしました",
+  "clearFavoriteFailed": "お気に入りのクリアに失敗しました",
+  "moreOptions": "その他のオプション",
   "settingsUserManual": "ユーザーマニュアル",
   "settingsUserManualDesc": "ThoughtEchoの機能の使い方を学ぶ",
   "manualTitle": "ユーザーマニュアル",
@@ -3450,6 +3738,8 @@
   "saveDefaultValue": "保存",
   "defaultValueSaved": "デフォルト値を保存しました",
   "defaultValueCleared": "デフォルト値をクリアしました",
+  "excerptIntentEnabled": "Clip to ThoughtEcho",
+  "excerptIntentEnabledDesc": "Allow selected text from browsers or other apps to open ThoughtEcho directly in the non-fullscreen editor",
   "citySelectedWeatherUpdated": "選択した都市：{cityName}、天気が更新されました",
   "@citySelectedWeatherUpdated": {
     "placeholders": {
@@ -3488,12 +3778,94 @@
   "cannotGetCurrentLocation": "現在地を取得できません。位置情報の権限が付与されていることを確認してください",
   "cannotGetSelectedCityLocation": "選択した都市の位置情報を取得できません",
   "cityInfoIncomplete": "都市情報が不完全です",
-  "contentLengthLabel": "コンテンツの長さ：{length}",
-  "htmlFormatLabel": "HTML形式：{status}",
-  "jsonFormatLabel": "JSON形式：{status}",
-  "containsHtmlTagsLabel": "HTMLタグを含む：{status}",
-  "viewNoteInfo": "ノート情報を表示",
-  "first100CharsLabel": "最初の100文字：",
+  "annualReportDemo": "Annual Report Demo",
+  "manualApiTest": "Manual API Test",
+  "manualApiTestTitle": "Manual API Key Test",
+  "manualApiTestDesc": "Directly input API parameters for testing, bypassing the storage system to check if the API key is valid.",
+  "testResultLabel": "Test Result:",
+  "fillAllFieldsError": "Error: Please fill in all required fields",
+  "testReportTitle": "=== Manual API Key Test Report ===",
+  "testParamsLabel": "Test Parameters:",
+  "keyFormatCheckLabel": "Key Format Check:",
+  "testApiKeyPrefixLabel": "  API Key Prefix: {prefix}",
+  "@testApiKeyPrefixLabel": {
+    "placeholders": {
+      "prefix": {
+        "type": "String"
+      }
+    }
+  },
+  "sendRequestLabel": "Send Request:",
+  "responseResultLabel": "Response Result:",
+  "testApiKey": "Test API Key",
+  "aiReturnedEmptyContent": "AI returned empty content, please try again",
+  "chatWithAiAssistant": "Chat with Thoughter (AI Assistant) to explore note content",
+  "messageCopied": "Message copied to clipboard",
+  "anniversaryTitle": "ThoughtEcho · 心迹",
+  "anniversarySubtitle": "Year {years} · Thank you for being with us",
+  "@anniversarySubtitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryVeteranThanks": "You've been here since year {years} — thank you for keeping at it",
+  "@anniversaryVeteranThanks": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryEnterApp": "Enter App",
+  "anniversaryBannerTitle": "ThoughtEcho Year {years} Anniversary",
+  "@anniversaryBannerTitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryBannerSubtitle": "Thank you for every step of the journey · {range}",
+  "@anniversaryBannerSubtitle": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "anniversaryBannerTap": "Tap to replay the celebration",
+  "anniversaryReplayButton": "Replay",
+  "developerAnniversarySection": "Anniversary",
+  "developerAnniversaryEnabled": "Enable Anniversary Animation",
+  "developerAnniversaryEnabledDesc": "Toggle whether the celebration animation shows on launch",
+  "developerAnniversaryReset": "Clear Participation Record",
+  "developerAnniversaryResetDesc": "Clears the record so the celebration plays again as for a new user",
+  "developerAnniversaryResetDone": "Cleared, the celebration will play again",
+  "developerAnniversaryPreview": "Preview Animation Now",
+  "developerAnniversaryPreviewDesc": "Plays the celebration for the simulated year right away",
+  "developerAnniversarySimulate": "Simulate Anniversary",
+  "developerAnniversarySimulateOff": "Off",
+  "developerAnniversarySimulateYear": "Year {years}",
+  "@developerAnniversarySimulateYear": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversarySimulateDescOff": "Following the real date; not in a celebration window",
+  "developerAnniversarySimulateDescActive": "Simulating year {years}: the settings banner and launch animation both use this edition",
+  "@developerAnniversarySimulateDescActive": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversaryShownYears": "Celebrations Seen",
+  "developerAnniversaryShownYearsNone": "None yet",
   "trash": "ゴミ箱",
   "trashEmpty": "ゴミ箱は空です",
   "trashEmptyHint": "誤って削除した内容はここに一時保存され、画像・音声・動画もまとめて復元できます。",
@@ -3547,17 +3919,200 @@
   "insertImage": "画像を挿入",
   "insertVideo": "動画を挿入",
   "insertAudio": "音声を挿入",
+  "mediaPlayerPlay": "Play",
+  "mediaPlayerPause": "Pause",
   "clipboardFoundHint": "クリップボードのコンテンツが見つかりました。タップしてノートとして追加します",
   "operationFailedSimple": "操作に失敗しました",
+  "operationSuccess": "Operation successful!",
+  "loadingInProgress": "Loading...",
+  "aiThinkingProgress": "AI is thinking...",
+  "processingData": "Processing data...",
+  "analyzingContent": "Analyzing content...",
+  "skipNonFullscreenEditor": "Open fullscreen editor directly",
+  "skipNonFullscreenEditorDesc": "Skip quick edit and open fullscreen rich text editor when adding notes",
   "offlineQuoteSourceTitle": "オフライン/ローカルの一言ソース",
   "offlineQuoteSourceDesc": "オフライン時やローカルのみ使用時にホーム画面に表示する内容",
   "offlineQuoteSourceTagOnly": "「今日の一言」タグのノートのみ表示",
   "offlineQuoteSourceAll": "すべてのノートをランダムに表示",
+  "noLocalSavedQuotes": "No previously saved daily quotes yet",
+  "copyCode": "Copy code",
+  "copiedCode": "Copied",
   "appendToOriginal": "原文に追加",
+  "webdavSyncTitle": "WebDAV Cloud Sync",
+  "webdavSyncSubtitle": "Configure private cloud storage to auto-sync notes across devices",
+  "webdavProvider": "Cloud Provider",
+  "webdavServerUrl": "Server URL",
+  "webdavUsername": "Username / Account",
+  "webdavPassword": "App Password / Token",
+  "webdavTestConnection": "Test Connection",
+  "webdavTestSuccess": "Connection successful!",
+  "webdavTestFailed": "Connection failed. Please check your settings and password",
+  "webdavAutoSyncLaunch": "Auto-sync on open or foreground",
+  "webdavAutoSyncLaunchSubtitle": "Merge with cloud when app opens or returns to foreground",
+  "webdavAutoSyncChange": "Auto-sync on note changes",
+  "webdavAutoSyncChangeSubtitle": "Quietly sync changes after 4 seconds of inactivity when editing",
+  "webdavExperimentalTitle": "Experimental Feature Warning",
+  "webdavExperimentalContent": "The WebDAV cloud synchronization feature is currently in the experimental preview phase. For your data safety, it is recommended to back up your core local notes before enabling. If you encounter any issues during use, please let us know.",
+  "webdavExperimentalClose": "Dismiss",
+  "webdavExperimentalIgnore": "Don't Show Again",
+  "webdavLastSync": "Last sync: {time}",
+  "@webdavLastSync": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusSyncing": "Syncing...",
+  "webdavStatusSuccess": "Sync Successful",
+  "webdavStatusFailed": "Sync Failed",
+  "settingsWebdavStatusWithTime": "{status} (Last: {time})",
+  "@settingsWebdavStatusWithTime": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWebdavEnabledWithTime": "Enabled (Last: {time})",
+  "@settingsWebdavEnabledWithTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavSyncNow": "Sync Now",
+  "webdavEnableSync": "Enable Cloud Sync",
+  "webdavSaveAndSync": "Save and Sync",
+  "webdavHowToGetAppPassword": "How to get app password?",
+  "webdavShowPasswordTooltip": "Show password",
+  "webdavHidePasswordTooltip": "Hide password",
+  "webdavOpenHelpFailed": "Unable to open help link. Please check default browser settings.",
+  "webdavConflictCategoryName": "Sync Conflicts",
+  "webdavConflictNotePrefix": "[Conflict] ",
+  "webdavConflictNotification": "Detected {count} sync conflicts, safely backed up to 'Sync Conflicts' category",
+  "@webdavConflictNotification": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webdavViewNow": "View Now",
   "webdavConflictKeepTooltip": "保持してデフォルトカテゴリに移動",
   "webdavConflictKeepSuccess": "確認してデフォルトリストに移動しました。",
   "webdavConflictDiscardTooltip": "この競合バックアップを破棄",
   "webdavConflictDiscardSuccess": "この競合メモを完全に破棄しました。",
+  "exportFormatLabel": "Default Export Format",
+  "exportFormatCard": "Delicate Share Card",
+  "exportFormatPdf": "Standard A4 PDF",
+  "exportFormatDesc": "Configure the default format when exporting or sharing notes",
+  "pdfExportExperimentalWarning": "PDF export is experimental and requires multilingual and emoji font files. The first use may need an internet connection to download them; it can be used offline afterward.",
+  "exportToPdf": "Export to PDF",
+  "pdfExportSelectionMode": "Select Export Mode",
+  "selectSameMonth": "Select Same Month",
+  "selectSameCategory": "Select Same Category",
+  "exportSelected": "Export ({count})",
+  "@exportSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportSuccess": "Export Successful",
+  "exportFailed": "Export Failed",
+  "generatingPdf": "Generating PDF...",
+  "pdfExportFailed": "Failed to export PDF: {error}",
+  "@pdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "batchPdfExportFailed": "Failed to batch export PDF: {error}",
+  "@batchPdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseSelectAtLeastOneNote": "Please select at least one note first",
+  "selectedNotesHaveNoCategories": "Selected notes have no category tags",
+  "pdfPreviewAndPrint": "PDF Preview & Print",
+  "pdfFontFallbackWarning": "No Chinese font detected. Chinese content may display as gibberish. Please check your network and try again.",
+  "webdavSyncOnCellular": "Sync over cellular data",
+  "webdavSyncOnCellularSubtitle": "Allow cloud backup and merge under mobile data networks",
+  "webdavSyncNotesOnlyOnCellular": "Sync notes only on cellular",
+  "webdavSyncNotesOnlyOnCellularSubtitle": "Only sync lightweight text notes and skip heavy media files to save data",
+  "customFeedbackTitle": "Send Feedback",
+  "customFeedbackMessageLabel": "Feedback Details",
+  "customFeedbackMessageHint": "Please describe your issue or suggestion...",
+  "customFeedbackNameLabel": "Name (Optional)",
+  "customFeedbackEmailLabel": "Email (Optional)",
+  "customFeedbackSubmit": "Submit Feedback",
+  "customFeedbackSuccess": "Thanks for your feedback!",
+  "customFeedbackEmptyError": "Please enter feedback details",
+  "saveSuccess": "Saved successfully",
+  "toolCallStatusPending": "Pending",
+  "toolCallStatusExecuting": "Executing",
+  "toolCallStatusCompleted": "Completed",
+  "toolCallStatusError": "Error",
+  "toolCallParameters": "Parameters",
+  "toolCallResult": "Result",
+  "failedToPickFiles": "Failed to pick files: {error}",
+  "@failedToPickFiles": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "editModeMetadataReadOnlyHint": "Location and weather of saved notes cannot be modified",
+  "explore": "探索",
+  "aiChat": "AIチャット",
+  "dataInsights": "Data Insights",
+  "dataInsightsDesc": "Deep analysis of your notes and writing trends",
+  "exploreMapMemory": "マップの記憶",
+  "exploreMapMemoryDesc": "地図上でノートを閲覧",
+  "favoriteNotes": "お気に入りノート",
+  "chatHistory": "チャット履歴",
+  "sessionScopeThisNote": "このメモ",
+  "sessionScopeAllChats": "すべてのチャット",
+  "newChat": "新規チャット",
+  "noChats": "チャットはまだありません",
+  "deleteChat": "チャットを削除",
+  "deleteChatConfirm": "この会話を削除しますか？すべてのメッセージが削除されます。",
+  "searchChatHistory": "Search chats...",
+  "dynamicInsightStats": "You have recorded {count} thoughts, with {recentCount} from the past 7 days.",
+  "@dynamicInsightStats": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "recentCount": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionGroupToday": "Today",
+  "sessionGroupYesterday": "Yesterday",
+  "sessionGroupThisWeek": "This Week",
+  "sessionGroupEarlier": "Earlier",
+  "messageCountLabel": "{count} msgs",
+  "@messageCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "deleteNoteWithChatsConfirmation": "このノートを削除してもよろしいですか？この操作は取り消せません。\n\n関連付けられている {count} 件のチャット会話も削除されます。",
   "@deleteNoteWithChatsConfirmation": {
     "placeholders": {
@@ -3566,24 +4121,142 @@
       }
     }
   },
-  "chatHistory": "チャット履歴",
-  "sessionScopeThisNote": "このメモ",
-  "sessionScopeAllChats": "すべてのチャット",
-  "newChat": "新規チャット",
-  "deleteChat": "チャットを削除",
-  "deleteChatConfirm": "この会話を削除しますか？すべてのメッセージが削除されます。",
-  "noChats": "チャットはまだありません",
-  "mapPickerTitle": "場所を選択",
-  "mapPickerCurrentLocation": "現在地",
-  "mapPickerConfirm": "場所を確認",
-  "longPressForMapPicker": "長押しして詳細な場所を選択",
-  "poiNameLabel": "詳細な場所",
-  "explore": "探索",
-  "exploreMapMemory": "マップの記憶",
-  "exploreMapMemoryDesc": "地図上でノートを閲覧",
-  "aiChat": "AIチャット",
+  "commandPolish": "Polish",
+  "commandContinue": "Continue",
+  "commandDeepAnalysis": "Deep Analysis",
+  "commandInsight": "Insights",
+  "aiPromptPolish": "Please polish this text for me",
+  "aiPromptContinue": "Please continue writing this text",
+  "aiPromptDeepAnalysis": "Please provide a deep analysis of this note",
+  "aiPromptSourceAnalysis": "Please analyze the source of this text and identify the possible author and work",
+  "aiAssistantInputHint": "Enter question...",
+  "aiAssistantExploreWelcome": "{summary}",
+  "@aiAssistantExploreWelcome": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "currentNoteContext": "Current Note Context",
+  "workflowUnavailable": "Workflow Unavailable",
+  "aiWorkflowNeedsBoundNote": "This feature requires a bound note",
+  "confidenceLabel": "Confidence",
+  "replaceOriginalNote": "Replace Original",
+  "appendToEnd": "Append to End",
+  "scrollToBottom": "Scroll to bottom",
+  "pinChat": "Pin",
+  "unpinChat": "Unpin",
+  "stopGenerate": "Stop",
+  "aiModeChat": "Chat Mode",
+  "aiModeAgent": "Agent Mode",
   "aiAgent": "AIエージェント",
   "agentThinking": "エージェントが考えています...",
+  "agentReachedMaxRounds": "Reached the tool-call limit for this run. The answer above is based on what was gathered so far; ask again with a narrower request for a more complete result.",
+  "agentSearchingNotes": "ノートを検索中...",
+  "agentAnalyzingData": "データを分析中...",
+  "agentWebSearching": "ウェブを検索中...",
+  "agentReviewingRecentNotes": "Checking recent notes...",
+  "agentSearchingNotesForQuery": "Looking for notes about \"{query}\"...",
+  "@agentSearchingNotesForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentCollectingTags": "Getting tags...",
+  "agentReadingNoteDetail": "Reading note details...",
+  "agentCheckingLocationWeather": "Getting location and weather...",
+  "agentSearchingWebForQuery": "Looking up sources for \"{query}\"...",
+  "@agentSearchingWebForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentReadingWebPage": "Fetching webpage...",
+  "agentPreparingNewNoteSuggestion": "Preparing a new note suggestion...",
+  "agentPreparingEditSuggestion": "Preparing an edit suggestion...",
+  "agentFoundNoMatchingNotes": "No matching notes found",
+  "agentFoundMatchingNotes": "Found {count} related notes",
+  "@agentFoundMatchingNotes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentFoundMatchingNotesWithMore": "Found {count} related notes, more available",
+  "@agentFoundMatchingNotesWithMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentPreparedTagChoices": "Found {count} tags",
+  "@agentPreparedTagChoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentCheckedLocationWeather": "Got location and weather",
+  "agentCheckedLocationWeatherWithDetails": "Location: {location}, Weather: {weather}",
+  "@agentCheckedLocationWeatherWithDetails": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      },
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "agentFoundWebSources": "Found {count} web sources",
+  "@agentFoundWebSources": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadWebPageSummary": "Fetched webpage, about {count} chars",
+  "@agentReadWebPageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadNoteDetailSummary": "Read full content of note \"{title}\"",
+  "@agentReadNoteDetailSummary": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "agentPreparedSuggestionCard": "Suggestion ready",
+  "agentToolStepFinished": "Done",
+  "agentToolStepDidNotFinish": "Failed",
+  "aiThinking": "Thinking...",
+  "thinkingMode": "Deep Thinking",
+  "showThinking": "Show thinking",
+  "hideThinking": "Hide thinking",
+  "toolExecutionProgress": "Working...",
+  "toolExecutionCompleted": "Done",
+  "executedNOperations": "{count} operations done",
+  "@executedNOperations": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "agentToolCall": "ツール呼び出し: {toolName}",
   "@agentToolCall": {
     "placeholders": {
@@ -3592,18 +4265,276 @@
       }
     }
   },
-  "agentSearchingNotes": "ノートを検索中...",
-  "agentAnalyzingData": "データを分析中...",
-  "agentWebSearching": "ウェブを検索中...",
-  "favoriteNotes": "お気に入りノート",
+  "mapPickerTitle": "場所を選択",
+  "mapPickerCurrentLocation": "現在地",
+  "mapPickerConfirm": "場所を確認",
+  "poiNameLabel": "詳細な場所",
+  "longPressForMapPicker": "長押しして詳細な場所を選択",
+  "attachFile": "Attach file",
+  "yesterday": "Yesterday",
+  "openInEditor": "Open in Editor",
+  "saveDirectly": "Save Directly",
+  "replace": "Replace",
+  "append": "Append",
+  "notice": "Notice",
+  "saveRequired": "Save Required",
+  "saveBeforeAiAssistant": "Please save your note before entering Thoughter",
+  "saveAndContinue": "Save & Continue",
+  "toggleAddLocation": "Add location",
+  "toggleAddWeather": "Add weather",
+  "webdavDisableSyncSuccess": "WebDAV sync disabled. Local data retained.",
+  "webdavDisableSync": "Disable Cloud Sync",
+  "webdavGoToResolve": "Resolve Now",
+  "webdavNoConflicts": "No Conflicts Detected",
+  "webdavAllConflictsResolved": "All sync conflicts have been resolved.",
+  "webdavProviderNutstore": "Nutstore",
+  "webdavProviderCustom": "Custom",
+  "webdavProviderNextcloud": "Nextcloud / ownCloud",
+  "webdavProviderInfinicloud": "InfiniCLOUD",
+  "webdavProviderConfig": "Provider Configuration",
+  "webdavServerUrlEmptyError": "Please enter WebDAV server address",
+  "webdavServerUrlInvalidError": "Address must start with https://",
+  "webdavUsernameEmptyError": "Please enter username",
+  "webdavPasswordEmptyError": "Please enter app password",
+  "webdavSyncStrategy": "Sync Strategy",
+  "webdavStatusNotEnabled": "Cloud Sync Disabled",
+  "webdavStatusNotEnabledDesc": "Configure your WebDAV service to enjoy secure cross-device multi-way synchronization.",
+  "webdavStatusSyncingDesc": "Securely comparing and merging cloud and local database files...",
+  "webdavStatusRunning": "Cloud Sync Running",
+  "webdavStatusRunningDesc": "An encrypted merge pipeline has been established with the cloud drive.\nLast sync: {time}",
+  "@webdavStatusRunningDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusException": "Sync Exception",
+  "webdavStatusExceptionDesc": "Network communication or cloud drive file lock conflict. We will retry automatically.",
+  "webdavStatusEnabled": "Cloud Sync Enabled",
+  "webdavStatusEnabledDesc": "Service ready. Last sync: {time}",
+  "@webdavStatusEnabledDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavNeverSynced": "Never synced",
+  "webdavNeverSucceeded": "Never succeeded",
+  "webdavConflictPrompt": "Detected {count} sync conflict backup(s). It is recommended to resolve them immediately.",
+  "@webdavConflictPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webContentTitle": "Web Content",
+  "fetchingWebContent": "Fetching web content from: {url}",
+  "@fetchingWebContent": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "webCommandInvalidUrl": "Please provide a valid URL with /web command",
+  "webCommandInvalidUrlTitle": "Invalid URL",
+  "aiSuggestion": "AI Suggestion",
+  "autoAttachMetadataUnavailable": "Location/weather unavailable, note saved without them",
   "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again.",
+  "agentRichEditConflict": "The note changed after this suggestion was created. To protect your edits, ask AI to generate a fresh suggestion.",
+  "agentDiffOriginal": "Original",
+  "agentDiffReplacement": "Replace with",
+  "agentDiffInsertBefore": "Insert before this content",
+  "agentDiffInsertAfter": "Insert after this content",
+  "agentDiffAppend": "Append content",
+  "agentDiffDelete": "Delete content",
   "availableCommands": "利用可能なコマンド",
   "typeSlashToSeeCommands": "/ を入力してコマンドを表示",
+  "noteProposalCreate": "Create",
+  "noteProposalEdit": "Edit",
+  "noteProposalPlain": "Plain note",
+  "noteProposalRich": "Rich text note",
+  "noteProposalChangeCount": "{count} changes",
+  "@noteProposalChangeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noteProposalExpand": "Expand document",
+  "noteProposalCollapse": "Collapse document",
+  "noteProposalViewChanges": "View change history",
+  "noteProposalPlainToRichWarning": "After applying, this note will open in the full-screen rich text editor.",
+  "noteProposalBefore": "Original",
+  "noteProposalAfter": "Changed to",
+  "noteProposalCompleted": "Completed",
+  "noteProposalApply": "Apply changes",
+  "noteProposalSave": "Save note",
+  "noteProposalLegacyReadOnly": "This is a legacy suggestion without safe revision data. It is view-only; ask AI to generate a new suggestion before applying it.",
+  "noteProposalPlainEditorPreferenceWarning": "Your editor preference opens this plain draft in the full-screen rich text editor; saving it will create a rich text note.",
+  "aiCardBadgeCreate": "New",
+  "aiCardBadgeEdit": "Edit",
+  "aiCardQuickEdit": "Quick edit",
+  "aiCardQuickEditTooltip": "Quickly edit the content, source, or tags",
+  "aiCardSavedViewNote": "Saved · View note",
+  "aiCardSaveFailedGeneric": "Couldn't save. Please try again.",
+  "aiCardEditContentHint": "Edit content",
+  "experimentalTag": "Beta",
+  "agentExperimentalNoticeTitle": "Thoughter Experimental Feature Notice",
+  "agentExperimentalNoticeIntro": "Thoughter is an AI Agent assistant currently in testing. Please review the following before proceeding:",
+  "agentExperimentalNoticePoint1": "AI may generate incorrect or inaccurate responses. Please review all content critically.",
+  "agentExperimentalNoticePoint2": "AI cannot directly edit your notes; all creations and edits take effect only after you click save/apply.",
+  "agentExperimentalNoticePoint3": "This feature is in active testing and refinement, and may encounter instability or bugs.",
+  "agentExperimentalNoticeGotIt": "Understand & Continue",
+  "agentExperimentalBannerText": "Experimental feature: AI answers may be inaccurate. Notes are only modified after clicking save.",
+  "agentExperimentalNoticeAction": "View Notice",
+  "dontShowAgain": "Don't show again",
+  "settingsLab": "Lab",
+  "settingsLabDesc": "Debug entries and experimental toggles shown in developer mode. May be unstable",
+  "firstOpenScrollPerfMonitorExperiment": "[Experiment] First-open scroll performance monitor",
+  "firstOpenScrollPerfMonitorExperimentDesc": "Record dropped frames on the first Notes scroll after a cold start (off by default)",
+  "addNoteDeferMetadataExperiment": "[Experiment] AddNote deferred metadata",
+  "addNoteDeferMetadataExperimentDesc": "Defer location and weather lookup until the keyboard animation finishes (off by default)",
+  "noteCardMediaStyleExperiment": "[Experiment] Note card media layout",
+  "noteCardMediaStyleThumbnail": "Side thumbnail",
+  "noteCardMediaStyleThumbnailDesc": "Square thumbnail on the right. Always visible, cheapest to decode.",
+  "noteCardMediaStyleInline": "Inline (legacy)",
+  "noteCardMediaStyleInlineDesc": "Images stay inline, order preserved. Cost: images below the fold are clipped, and audio/video build players in the list.",
+  "noteCardMediaStyleBanner": "Top banner",
+  "noteCardMediaStyleBannerDesc": "Full-width banner on top, photo first. Normalised position, most expensive to decode.",
+  "noteInsertAnimationExperiment": "[Experiment] Note insert animation",
+  "noteInsertAnimationCurrent": "Current: {name}",
+  "@noteInsertAnimationCurrent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noteInsertAnimationScale": "Bubble scale",
+  "noteInsertAnimationSlide": "Smooth rise",
+  "noteInsertAnimationNone": "No animation",
   "exploreAskAboutInsight": "これについて聞く",
   "exploreAskAboutInsightPrompt": "これについてもう少し詳しく教えてください。",
   "exploreSummarizePeriod": "この{period}をまとめる",
   "exploreSummarizePeriodPrompt": "この{period}の記録をまとめてください。注目すべき点はありますか？",
   "exploreFreeChat": "雑談する",
   "exploreRecentChats": "最近の会話",
-  "exploreViewAllChats": "すべて"
+  "exploreViewAllChats": "すべて",
+  "aiProviderZhipu": "Zhipu GLM",
+  "aiProviderMoonshot": "Moonshot Kimi",
+  "aiProviderDashScope": "Alibaba Bailian",
+  "aiProviderVolcengine": "Volcengine Ark",
+  "aiProviderGemini": "Google Gemini",
+  "presetDescOllamaCloud": "Generous free tier, works right after sign-up. Best first choice.",
+  "presetDescOpenAI": "Official OpenAI API. Requires an international payment method.",
+  "presetDescOpenRouter": "One key for hundreds of models, including Claude and Gemini.",
+  "presetDescDeepSeek": "Low cost, strong Chinese performance.",
+  "presetDescSiliconFlow": "Aggregator platform; some small models are free.",
+  "presetDescZhipu": "glm-4-flash is free to use.",
+  "presetDescMoonshot": "Strong long-context performance.",
+  "presetDescDashScope": "OpenAI-compatible endpoint for the Qwen family.",
+  "presetDescVolcengine": "Doubao models. Put the inference endpoint ID in the model field.",
+  "presetDescGemini": "Gemini's official OpenAI-compatible endpoint. Has a free tier.",
+  "presetDescOllamaLocal": "Connect to Ollama on this machine. Offline, no key needed.",
+  "presetDescLMStudio": "Connect to LM Studio on this machine. Offline, no key needed.",
+  "presetDescCustom": "Any OpenAI-compatible endpoint. Fill in the URL and model yourself.",
+  "aiServicesSectionTitle": "My AI services",
+  "aiServiceEmptyTitle": "No AI service configured yet",
+  "aiServiceEmptyBody": "AI insights, card generation and the Thoughter assistant need a configured provider.",
+  "addAiService": "Add AI service",
+  "editAiServiceTitle": "Edit AI service",
+  "newAiServiceTitle": "New AI service",
+  "selectProviderTemplate": "Choose a provider",
+  "changeProviderTemplate": "Change",
+  "providerGroupCloud": "Cloud services",
+  "providerGroupLocal": "Runs locally",
+  "providerGroupCustom": "Custom",
+  "recommendedBadge": "Recommended",
+  "inUseBadge": "In use",
+  "getApiKeyLink": "Get an API key",
+  "apiKeyNotNeededHint": "Local services usually need no key — leave this empty.",
+  "suggestedModelsLabel": "Common models",
+  "configNameField": "Configuration name",
+  "statusKeyConfigured": "Key configured",
+  "statusKeyMissing": "Key missing",
+  "aiServiceSaved": "Saved {name}",
+  "@aiServiceSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ollamaCloudTipTitle": "We recommend Ollama Cloud",
+  "ollamaCloudTipBody": "Generous free tier, no card required — sign up and copy the API key.",
+  "ollamaCloudTipAction": "Add it",
+  "aiConfigHelpLink": "Not sure what to fill in? Read the setup guide",
+  "openLinkFailed": "Could not open the link",
+  "testBeforeSaveHint": "You can test as soon as URL, key and model are filled in — no need to save first.",
+  "agentMemorySectionTitle": "Thoughter memory",
+  "agentMemoryEnableTitle": "Long-term memory",
+  "agentMemoryEnableDesc": "Let Thoughter remember who you are and how you like things phrased across conversations. Daily prompts and periodic insights use it too. Turning this off only stops reading and writing — nothing already remembered is deleted.",
+  "agentMemoryNicknameTitle": "Nickname",
+  "agentMemoryNicknameHint": "How should Thoughter address you?",
+  "agentMemoryNicknameDesc": "Shared with Thoughter at the start of every conversation and stored only on this device. Leave empty to skip.",
+  "agentMemoryNicknameSaveFailed": "Couldn't save your nickname. Please try again.",
+  "agentMemoryNicknameDisabled": "Long-term memory is off, so this nickname is not shared with Thoughter.",
+  "agentMemoryClearTitle": "Clear memory",
+  "agentMemoryClearSummary": "Currently remembering {profileCount, plural, =1{1 preference} other{{profileCount} preferences}} and {factCount, plural, =1{1 detail} other{{factCount} details}}",
+  "@agentMemoryClearSummary": {
+    "placeholders": {
+      "profileCount": {
+        "type": "int"
+      },
+      "factCount": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryClearEmpty": "Nothing remembered yet",
+  "agentMemoryClearConfirmTitle": "Clear Thoughter's memory?",
+  "agentMemoryClearConfirmBody": "Every remembered preference and detail will be deleted permanently. Your notes are not affected.",
+  "agentMemoryClearConfirmAction": "Clear",
+  "agentMemoryCleared": "Thoughter's memory has been cleared",
+  "agentMemoryClearFailed": "Failed to clear memory",
+  "agentMemoryNoticeTitle": "Thoughter will remember you",
+  "agentMemoryNoticeBody": "So it doesn't have to get to know you from scratch every time, Thoughter records who you are and how you like things phrased, and uses that in later conversations, daily prompts, and periodic insights. Memory stays on this device and is never uploaded.",
+  "agentMemoryNoticeHint": "You can ask Thoughter to change or forget any entry at any time, or turn memory off and clear it in AI settings.",
+  "agentMemoryNoticeGotIt": "Got it",
+  "agentMemoryNoticeDisable": "Don't remember",
+  "agentMemorySwitchFailed": "Could not save the memory switch. Please try again.",
+  "agentMemoryCountsUnavailable": "Could not read the memory count. You can still try clearing.",
+  "releaseNotesTitle": "What's New",
+  "releaseNotesUpgradeLede": "Here's what has been added since you last used the app.",
+  "releaseNotesCurrentLede": "Here's what this version adds.",
+  "releaseNotesHighlights": "Highlights",
+  "releaseNotesGetStarted": "Get started",
+  "releaseThoughterTitle": "Thoughter: a thinking partner inside your notebook",
+  "releaseThoughterLede": "From simply capturing notes to organising and creating with them. Thoughter is no longer just a chat box that answers questions — it now works across your entire note library as a thinking partner.",
+  "releaseThoughterSearchTitle": "Smart retrieval across your notes",
+  "releaseThoughterSearchDesc": "No more digging by hand. Ask in plain language and Thoughter finds the related notes, follows the tags between them, and pulls in web results when needed.",
+  "releaseThoughterControlTitle": "You keep every editing decision",
+  "releaseThoughterControlDesc": "AI never changes your content on its own. Every new note and rewrite arrives as a proposal card that shows exactly what changed; nothing is applied until you review it and confirm.",
+  "releaseThoughterSingleNoteTitle": "Talk about a single note",
+  "releaseThoughterSingleNoteDesc": "Tap the ✨ button in the editor and choose \"Ask Thoughter\" to dig into, polish, or continue the note you have open.",
+  "releaseThoughterMemoryTitle": "Long-term memory",
+  "releaseThoughterMemoryDesc": "Once enabled, Thoughter remembers what to call you and how you like to phrase things across conversations. Memory is stored separately, and you can review or clear it at any time.",
+  "releaseThoughterInsightTitle": "Periodic insights and a rebuilt Explore page",
+  "releaseThoughterInsightDesc": "Thoughter revisits your notes on a schedule and writes them up as periodic insights. The Explore page has been rebuilt to bring those findings together.",
+  "releaseThemeTitle": "New themes: a different paper, a different ink",
+  "releaseThemeLede": "Theme style is now its own dimension alongside light and dark. Pick one of three.",
+  "releaseThemeStylesTitle": "Three styles",
+  "releaseThemeStylesDesc": "Material keeps following the system's dynamic colors; Paper & Ink is warm, with serif body text and paper rules; Plain is cool and sharper.",
+  "releaseThemeAccentTitle": "Choose your ink",
+  "releaseThemeAccentDesc": "The handcrafted styles add four inks — umber, celadon, indigo and cinnabar. Change the ink without changing the paper.",
+  "releaseThemeSwitchTitle": "Switch whenever you like",
+  "releaseThemeSwitchDesc": "Material stays the default, so upgrading does not change how the app looks. Try a style right here, or change it later in Settings › Theme Settings.",
+  "releaseDiagnosticsNotice": "Since 3.7.0, ThoughtEcho reports anonymous diagnostics when something goes wrong. They are used only to locate and fix problems and never contain note content. You can turn this off at any time in Settings › Feedback & Contact.",
+  "settingsReleaseNotes": "What's New",
+  "settingsReleaseNotesDesc": "See what this version adds"
 }
