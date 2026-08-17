@@ -1,17 +1,5 @@
 {
   "@@locale": "ko",
-  "smartPushPeriodEarlyMorning": "이른 아침",
-  "smartPushPeriodMorning": "오전",
-  "smartPushPeriodNoon": "점심",
-  "smartPushPeriodAfternoon": "오후",
-  "smartPushPeriodEvening": "저녁",
-  "smartPushPeriodNight": "야간",
-  "settingsSentryTitle": "진단 데이터 전송",
-  "settingsSentryDesc": "기본적으로 꺼져 있습니다. 활성화하면 오류 로그 및 성능 데이터를 전송합니다.",
-  "sentryRestartHint": "설정이 저장되었습니다. 재시작 후 적용됩니다.",
-  "sentryDisclosureTitle": "개인정보 처리방침 업데이트",
-  "sentryDisclosureMessage": "The ThoughtEcho privacy policy has been updated. You can view the latest version on our official website.\n\nWe have added Sentry to collect errors and user feedback. To protect your privacy, this feature is disabled by default. You can enable it anytime in 'Settings -> Feedback & Contact'.\n\nPrivacy Policy: https://note.shangjinyun.cn/privacy",
-  "sentryDisclosureGotIt": "확인했습니다",
   "appTitle": "ThoughtEcho",
   "draftRestored": "초안이 자동으로 복원되었습니다.",
   "draftRecoverTitle": "저장되지 않은 초안 복원",
@@ -73,8 +61,6 @@
   "onboardingError": "문제가 발생했습니다",
   "onboardingUpdateComplete": "업데이트 완료",
   "onboardingUpdateSuccess": "ThoughtEcho가 성공적으로 업데이트되었습니다\n데이터가 자동으로 마이그레이션되었습니다",
-  "onboardingUpdateFailed": "업데이트 실패",
-  "onboardingUpdateProcessFailed": "업데이트 처리 실패",
   "onboardingEnterApp": "앱 진입",
   "featureDailyQuote": "오늘의 명언",
   "prefLanguage": "언어",
@@ -137,23 +123,6 @@
   "settingsAboutSlogan": "AI 기반의 개인 영감 노트",
   "settingsViewSource": "소스 코드 보기 (GitHub)",
   "settingsVisitWebsite": "웹사이트 방문",
-  "settingsPrivacyPolicy": "개인정보 처리방침",
-  "settingsFeedback": "피드백",
-  "settingsContactDeveloper": "개발자에게 연락",
-  "feedbackAndContact": "피드백 및 연락처",
-  "feedbackAndContactDesc": "소중한 피드백을 기다립니다. 다음 채널로 연락해 주세요:",
-  "feedbackGithubTitle": "GitHub에 이슈 등록",
-  "feedbackGithubDesc": "버그 보고 및 기능 제안",
-  "feedbackGithubRepoTitle": "소스 코드 보기",
-  "feedbackGithubRepoDesc": "GitHub에서 코드 확인",
-  "contactDeveloperSectionTitle": "개발자에게 연락",
-  "feedbackEmailTitle": "이메일 보내기",
-  "feedbackEmailDesc": "shangjinyun@proton.me",
-  "feedbackDiscussionTitle": "커뮤니티 참여",
-  "feedbackDiscussionDesc": "질문 및 아이디어 공유",
-  "feedbackSentryTitle": "피드백 전송 (Sentry)",
-  "feedbackSentryDesc": "개발자에게 직접 피드백 전송",
-  "feedbackSentryDisabledHint": "Please enable Sentry Debugging & Reporting below first",
   "settingsViewLicenses": "라이선스 보기",
   "settingsCheckUpdate": "업데이트 확인",
   "settingsCheckUpdateDesc": "새 버전이 있는지 확인",
@@ -162,10 +131,6 @@
   "developerModeDisabled": "✅ 개발자 모드 비활성화",
   "devFirstScrollPerfMonitorTitle": "첫 번째 스크롤 버벅거림 모니터(Dev)",
   "devFirstScrollPerfMonitorDesc": "Notes를 연 후 첫 번째 동작 스크롤에 대한 프레임 타이밍을 측정합니다(첫 번째 프레임 아님).",
-  "noteListDisableCardShadowsExperiment": "[Experiment] Disable note-list card shadows",
-  "noteListDisableCardShadowsExperimentDesc": "Available in release builds. Compare how card shadows affect Notes scrolling performance and visual feel (off by default)",
-  "noteListDisableBackdropBlurExperiment": "[Experiment] Disable note-list collapse blur",
-  "noteListDisableBackdropBlurExperimentDesc": "Available in release builds. Replaces the collapsed long-content bottom blur with a gradient scrim (off by default)",
   "devFirstScrollPerfResult": "First-scroll performance: total {total}, jank {jank}, avg {avgMs}ms, worst {worstMs}ms",
   "@devFirstScrollPerfResult": {
     "placeholders": {
@@ -309,8 +274,6 @@
   "cannotGetLocationPermission": "위치 권한을 얻을 수 없음",
   "logDebugInfo": "디버그 정보 기록",
   "logDebugInfoDesc": "로그 데이터베이스 상태 및 경로 정보 표시",
-  "addNoteAutoFocusExperiment": "[Experiment] AddNote auto focus",
-  "addNoteAutoFocusExperimentDesc": "Automatically show the keyboard after the add note dialog settles (on by default)",
   "databaseStatus": "데이터베이스 상태:",
   "logStatistics": "로그 통계:",
   "getDebugInfoFailed": "디버그 정보를 가져오지 못했습니다: {error}",
@@ -388,8 +351,6 @@
   "deleteNote": "노트 삭제",
   "deleteNoteConfirmation": "이 노트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
   "noteDeleted": "노트가 삭제되었습니다",
-  "noteNotFound": "Note not found",
-  "noteUpdateSkippedDeleted": "Note has been deleted, update skipped",
   "favorited": "즐겨찾기됨 ({count})",
   "@favorited": {
     "placeholders": {
@@ -551,13 +512,6 @@
   "applyAnalysisResults": "분석 결과 적용",
   "parseResultsFailed": "결과 파싱 실패",
   "analysisFailed": "분석 실패: {error}",
-  "@analysisFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "analysisResultsCopied": "분석 결과가 클립보드에 복사됨",
   "noteInfo": "노트 정보",
   "source": "출처",
@@ -633,64 +587,18 @@
   "hitokotoTypeSettings": "명언 유형 설정",
   "hitokotoTypeDesc": "하나 이상의 명언 유형을 선택할 수 있습니다. 앱이 선택한 유형 중에서 무작위로 내용을 표시합니다. 각 유형은 다른 콘텐츠 소스와 스타일을 나타냅니다.",
   "dailyQuoteApiDesc": "홈 화면 오늘의 문구에 사용할 서비스 제공처를 선택하세요.",
+  "dailyQuoteProviderNoTypeSelection": "이 제공처는 카테고리 필터를 지원하지 않습니다.",
   "dailyQuoteApiHitokoto": "Hitokoto",
   "dailyQuoteApiZenQuotes": "ZenQuotes",
   "dailyQuoteApiApiNinjas": "API Ninjas",
   "dailyQuoteApiMeigen": "名言教えるよ",
   "dailyQuoteApiKoreanAdvice": "Korean Advice",
-  "dailyQuoteApiNinjasManageApiKey": "Configure service key",
-  "dailyQuoteApiNinjasApiKeyHint": "Enter the API Ninjas X-Api-Key",
-  "dailyQuoteApiNinjasApiKeyConfigured": "Service key configured",
-  "dailyQuoteApiNinjasApiKeyMissing": "No service key configured yet",
-  "dailyQuoteApiNinjasApiKeyInvalid": "The service key format looks invalid",
-  "dailyQuoteApiNinjasCategorySelection": "Category selection",
-  "dailyQuoteApiNinjasCategoryDesc": "Search, select multiple categories, or clear them all. Leaving everything unchecked falls back to fully random quotes.",
-  "dailyQuoteApiNinjasCategorySearchHint": "Search categories",
-  "dailyQuoteApiNinjasNoCategoriesFound": "No matching categories",
-  "dailyQuoteApiNinjasAllCategoriesUsed": "No category filter applied; quotes will be drawn from the full pool",
-  "dailyQuoteApiNinjasSelectedCount": "{count} categories selected",
-  "@dailyQuoteApiNinjasSelectedCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "dailyQuoteApiNinjasCategoryWisdom": "Wisdom",
-  "dailyQuoteApiNinjasCategoryPhilosophy": "Philosophy",
-  "dailyQuoteApiNinjasCategoryLife": "Life",
-  "dailyQuoteApiNinjasCategoryTruth": "Truth",
-  "dailyQuoteApiNinjasCategoryInspirational": "Inspirational",
-  "dailyQuoteApiNinjasCategoryRelationships": "Relationships",
-  "dailyQuoteApiNinjasCategoryLove": "Love",
-  "dailyQuoteApiNinjasCategoryFaith": "Faith",
-  "dailyQuoteApiNinjasCategoryHumor": "Humor",
-  "dailyQuoteApiNinjasCategorySuccess": "Success",
-  "dailyQuoteApiNinjasCategoryCourage": "Courage",
-  "dailyQuoteApiNinjasCategoryHappiness": "Happiness",
-  "dailyQuoteApiNinjasCategoryArt": "Art",
-  "dailyQuoteApiNinjasCategoryWriting": "Writing",
-  "dailyQuoteApiNinjasCategoryFear": "Fear",
-  "dailyQuoteApiNinjasCategoryNature": "Nature",
-  "dailyQuoteApiNinjasCategoryTime": "Time",
-  "dailyQuoteApiNinjasCategoryFreedom": "Freedom",
-  "dailyQuoteApiNinjasCategoryDeath": "Death",
-  "dailyQuoteApiNinjasCategoryLeadership": "Leadership",
   "selectAll": "전체 선택",
   "clearAll": "전체 해제",
   "typeSelection": "유형 선택",
   "typeSelectionHint": "탭하여 선호하는 명언 유형을 선택하세요",
-  "dailyQuoteProviderNoTypeSelection": "이 제공처는 카테고리 필터를 지원하지 않습니다.",
   "usageInstructions": "사용 설명",
   "hitokotoServiceProvider": "명언 서비스 제공: Hitokoto",
-  "dailyQuoteServiceProvider": "Current content provided by {provider}",
-  "@dailyQuoteServiceProvider": {
-    "placeholders": {
-      "provider": {
-        "type": "String"
-      }
-    }
-  },
   "hitokotoHelpItem1": "적어도 하나의 유형을 선택해야 합니다. 앱이 선택한 유형 중에서 무작위로 내용을 표시합니다",
   "hitokotoHelpItem2": "여러 유형을 선택하면 더 다양한 콘텐츠를 제공받을 수 있습니다",
   "hitokotoHelpItem3": "각 유형은 다른 콘텐츠 스타일과 출처를 나타냅니다",
@@ -915,9 +823,6 @@
       }
     }
   },
-  "migrationTargetSameAsCurrent": "The selected directory is the same as the current data directory",
-  "migrationTargetAncestor": "The selected directory cannot be a parent of the current data directory",
-  "migrationTargetNested": "The selected directory cannot be inside the current data directory",
   "logsViewer": "로그 뷰어",
   "logFilter": "로그 필터",
   "clearLogs": "로그 지우기",
@@ -1260,7 +1165,6 @@
   "invalidApiKeyUpdate": "유효하지 않은 API Key, 설정에서 API Key를 업데이트해 주세요",
   "configureValidApiKey": "설정에서 먼저 유효한 API Key를 구성해 주세요",
   "regenerate": "재생성",
-  "viewToolProcess": "View process",
   "selectAnalysisMethod": "분석 방법 선택",
   "advancedOptions": "고급 옵션",
   "customPromptHint": "예: 내 노트에 언급된 인물과 장소를 분석해 줘",
@@ -1800,7 +1704,6 @@
   "noFeaturedCards": "아직 추천 카드가 없습니다.",
   "featuredCardGenerationTip": "메모에서 아름다운 공유 카드를 생성하세요. AI 켜짐 = 스마트 디자인, AI 꺼짐 = 내장 템플릿.",
   "cardFromReport": "ThoughtEcho 정기 보고서의 아름다운 카드",
-  "cardSharePrefix": "A beautiful card from ThoughtEcho\n\n",
   "loadDataFailed": "Failed to load data: {error}",
   "@loadDataFailed": {
     "placeholders": {
@@ -1893,19 +1796,6 @@
   "thinkingInProgress": "생각...",
   "aiMisunderstoodQuestion": "죄송합니다. 이 질문을 이해하지 못했습니다. 다른 방법으로 질문해 보세요.",
   "aiResponseError": "Sorry, an error occurred while responding: {error}",
-  "agentErrorNoProvider": "Select an AI provider and try again.",
-  "agentErrorMissingApiKey": "Configure an API key for {providerName}, then try again.",
-  "@agentErrorMissingApiKey": {
-    "placeholders": {
-      "providerName": {
-        "type": "String"
-      }
-    }
-  },
-  "agentErrorUnsupportedProvider": "The current AI provider does not support Agent mode. Choose another provider and try again.",
-  "agentErrorTimeout": "The request timed out. Check your connection and try again.",
-  "agentErrorCancelled": "This request was stopped.",
-  "agentErrorGeneric": "The request could not be completed. Please try again later.",
   "apiKeyDiagnosticsTitle": "API 키 진단",
   "apiKeyDiagnosticsTool": "API 키 진단 도구",
   "apiKeyDiagnosticsDesc": "이 도구는 API 키의 저장 및 검색을 확인하여 401 인증 오류를 진단하는 데 도움을 줍니다.",
@@ -1955,51 +1845,6 @@
   "importingFile": "파일을 가져오는 중...",
   "importComplete": "가져오기 완료!",
   "fileSaveFailed": "파일 저장 실패",
-  "unsupportedMediaType": "Unsupported media type",
-  "unsupportedMediaTypeWithName": "Unsupported media type: {mediaType}",
-  "@unsupportedMediaTypeWithName": {
-    "placeholders": {
-      "mediaType": {
-        "type": "String"
-      }
-    }
-  },
-  "fileNotExistOrMoved": "The selected file does not exist or has been moved or deleted\nPath: {path}",
-  "@fileNotExistOrMoved": {
-    "placeholders": {
-      "path": {
-        "type": "String"
-      }
-    }
-  },
-  "selectedFileEmpty": "The selected file is empty\nPath: {path}",
-  "@selectedFileEmpty": {
-    "placeholders": {
-      "path": {
-        "type": "String"
-      }
-    }
-  },
-  "unsupportedFileFormat": "Unsupported file format: .{extension}\nSupported formats: {formats}",
-  "@unsupportedFileFormat": {
-    "placeholders": {
-      "extension": {
-        "type": "String"
-      },
-      "formats": {
-        "type": "String"
-      }
-    }
-  },
-  "fileUnreadable": "The file cannot be read. Possible reasons:\n• The file is corrupted\n• The file is being used by another program\n• Insufficient permissions\nPlease check the file and try again",
-  "mediaTypeNoCameraImport": "{mediaType} does not support camera import",
-  "@mediaTypeNoCameraImport": {
-    "placeholders": {
-      "mediaType": {
-        "type": "String"
-      }
-    }
-  },
   "processingMedia": "Processing {mediaType}...",
   "@processingMedia": {
     "placeholders": {
@@ -2035,13 +1880,6 @@
   "importTipsVideo": "• MP4, MOV, AVI, MKV 형식 지원\n• 앱 미디어 라이브러리에 직접 저장하여 중복을 줄입니다.\n• OOM 방지를 위한 스트리밍 기술\n• 저장되지 않은 파일은 자동으로 정리됩니다.",
   "importTipsAudio": "• MP3, WAV, AAC, M4A 형식 지원\n• 앱 미디어 라이브러리에 직접 저장하여 중복을 줄입니다.\n• 최적화된 저장 공간, 빠른 로딩\n• 저장되지 않은 파일은 자동으로 정리됩니다.",
   "importTipsDefault": "• 다양한 미디어 형식 지원\n• 앱 미디어 라이브러리에 직접 저장, 메모리 안전 보호\n• 저장되지 않은 파일은 자동으로 정리됩니다.",
-  "viewNoteInfo": "메모 정보 보기",
-  "contentLengthLabel": "내용 길이: {length}",
-  "htmlFormatLabel": "HTML 형식: {status}",
-  "jsonFormatLabel": "JSON 형식: {status}",
-  "containsHtmlTagsLabel": "HTML 태그 포함: {status}",
-  "first100CharsLabel": "처음 100자:",
-  "testFailedEmptyContent": "테스트 실패: AI가 빈 콘텐츠를 반환함",
   "formattedDate": "{month}/{day}",
   "@formattedDate": {
     "placeholders": {
@@ -2086,21 +1924,11 @@
       }
     }
   },
-  "noteAttribution": " (attributed to {source})",
-  "@noteAttribution": {
-    "description": "喂给 AI 的笔记内容里，标出这条笔记填的作者/出处，用于区分摘录与原创署名",
-    "placeholders": {
-      "source": {
-        "type": "String"
-      }
-    }
-  },
   "aiProviderOpenAI": "오픈AI",
   "aiProviderOpenRouter": "오픈라우터",
   "aiProviderDeepSeek": "DeepSeek",
   "aiProviderAnthropic": "인류학(클로드)",
   "aiProviderOllama": "장차 ~ 가 되는",
-  "aiProviderOllamaCloud": "Ollama Cloud",
   "aiProviderLMStudio": "LM스튜디오",
   "apiKeyStatusEmpty": "비어 있는",
   "apiKeyStatusRedacted": "[REDACTED]",
@@ -2124,6 +1952,7 @@
     }
   },
   "generatingAiReport": "AI 연간 보고서 생성 중...",
+  "testFailedEmptyContent": "테스트 실패: AI가 빈 콘텐츠를 반환함",
   "includeMediaFilesHint": "선택 시 이미지, 오디오 및 기타 미디어 파일 포함(파일 크기는 더 크지만 더 완전함)",
   "overwriteImport": "덮어쓰기 가져오기(기존 데이터 지우기)",
   "overwriteImportDesc": "현재 데이터를 모두 삭제하고 백업 콘텐츠로 교체",
@@ -2150,11 +1979,6 @@
       }
     }
   },
-  "loadFailedSimple": "Load failed",
-  "loadNoteFailed": "Failed to load notes",
-  "queryTimeoutShort": "Query timed out",
-  "queryTimeoutRetry": "Query timed out, please retry",
-  "databaseQueryError": "Database query error",
   "deleteConfirmTitle": "삭제 확인",
   "deleteRecordConfirm": "이 분석 기록을 삭제하시겠습니까?",
   "confirmDeleteAll": "모두 삭제 확인",
@@ -2432,14 +2256,6 @@
         "type": "String"
       },
       "extra": {
-        "type": "String"
-      }
-    }
-  },
-  "syncFromSuffix": " (from {from})",
-  "@syncFromSuffix": {
-    "placeholders": {
-      "from": {
         "type": "String"
       }
     }
@@ -2822,6 +2638,13 @@
       }
     }
   },
+  "@analysisFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "pleaseInputContent": "내용을 먼저 입력해주세요",
   "copyResult": "결과 복사",
   "cannotAddLocation": "위치를 추가할 수 없습니다",
@@ -2918,16 +2741,6 @@
   "dayPeriodMidnight": "심야",
   "showExactTime": "정확한 시간 표시",
   "showExactTimeDesc": "메모에 시간(시:분) 표시",
-  "showNoteEditTime": "Show Note Edit Time",
-  "showNoteEditTimeDesc": "Display the last edited time in notes",
-  "editedAtLabel": "Edited at {dateTime}",
-  "@editedAtLabel": {
-    "placeholders": {
-      "dateTime": {
-        "type": "String"
-      }
-    }
-  },
   "guideHomepageDailyQuoteTitle": "일일 견적 팁",
   "guideHomepageDailyQuoteDesc": "콘텐츠를 복사하려면 한 번 탭하세요.\n메모에 빠르게 추가하려면 두 번 탭하세요.",
   "guideNotePageFilterTitle": "필터링 및 정렬",
@@ -3024,15 +2837,8 @@
   "mindMapAnalysis": "마인드맵",
   "growthAnalysis": "성장 분석",
   "aiAnalysis": "AI 분석",
-  "deleteAiAnalysis": "Delete AI Analysis",
-  "deleteAiAnalysisConfirm": "Are you sure you want to delete the AI analysis result for this note? This can be undone before saving the note.",
-  "aiAnalysisDeleted": "AI analysis deleted",
-  "aiAnalysisSaved": "AI analysis saved",
   "aiGenerating": "AI 생성 중...",
   "complete": "완료",
-  "viewFull": "View Full",
-  "copy": "Copy",
-  "copiedToClipboard": "Copied to clipboard",
   "selectReportTypePrompt": "생성할 연간 보고서 유형을 선택하십시오:",
   "aiSmartReport": "AI 스마트 리포트",
   "aiSmartReportDesc": "심층적인 통찰력과 시각적 차트를 포함하여 AI 분석을 기반으로 생성된 아름다운 HTML 보고서",
@@ -3077,35 +2883,6 @@
   "permissionText": "허가",
   "backupCancelled": "백업이 취소되었습니다.",
   "backupFailedText": "백업 실패",
-  "backupSavedToPath": "Backup saved to: {path}",
-  "@backupSavedToPath": {
-    "placeholders": {
-      "path": {
-        "type": "String"
-      }
-    }
-  },
-  "backupCompleteWithWarnings": "Backup completed, but with warnings",
-  "backupDeltaFailuresMessage": "{count, plural, =1{1 note had rich-text media path conversion failures. This note still contains a local absolute path in the backup; images may not display when restored on another device.\n\nAffected note ID: {ids}} other{# notes had rich-text media path conversion failures. These notes still contain local absolute paths in the backup; images may not display when restored on another device.\n\nAffected note IDs: {ids}}}",
-  "@backupDeltaFailuresMessage": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "ids": {
-        "type": "String"
-      }
-    }
-  },
-  "backupDeltaFailuresIdJoiner": ", ",
-  "backupDeltaFailuresMoreSuffix": " etc.",
-  "backupFailedGeneric": "Unable to complete backup. Please try again later.",
-  "@backupFailedGeneric": {
-    "description": "Generic backup failure message shown when the error type is not classified"
-  },
-  "backupFailedOutOfMemory": "Backup failed: Out of memory\n\nSuggestions:\n• Close other apps to free up memory\n• Try a backup without media files\n• Restart the app and try again",
-  "backupFailedNoSpace": "Backup failed: Not enough storage space\n\nPlease free up device storage and try again.",
-  "backupFailedPermission": "Backup failed: Insufficient permission\n\nPlease check the app's storage permission settings.",
   "selectFileError": "파일을 선택하지 못했습니다.",
   "mergingDataProgress": "데이터 병합 중...",
   "yearAIAnnualReport": "{year} AI Annual Report",
@@ -3118,9 +2895,6 @@
   },
   "openInBrowser": "브라우저에서 열기",
   "shareReport": "보고서 공유",
-  "saveTempFileFailed": "Failed to save temporary file",
-  "openBrowserFailed": "Failed to open browser",
-  "createShareFileFailed": "Failed to create share file",
   "saveReport": "보고서 저장",
   "processingReport": "보고서 처리 중...",
   "personalizedSummaryByAI": "AI 분석 기반 개인별 요약",
@@ -3131,28 +2905,6 @@
   "shareBtn": "공유하다",
   "regenerateCard": "재생성",
   "regeneratingCard": "재생성 중...",
-  "aiSuggestionCoreIdea": "What is the core idea of this note?",
-  "aiSuggestionInspiration": "What inspiration can we draw from it?",
-  "aiSuggestionSummarize": "Can you summarize the key points?",
-  "aiSuggestionSolution": "What solutions are there?",
-  "aiSuggestionUnderstandConcept": "How can I better understand this concept?",
-  "aiSuggestionActionPlan": "How do I create an action plan?",
-  "aiSuggestionPsychology": "What psychological state does this reflect?",
-  "aiSuggestionRealLife": "How can this be applied to real life?",
-  "aiSuggestionThinkingPattern": "What thinking pattern does this reflect?",
-  "svgLoading": "Loading SVG...",
-  "svgLoadingFallback": "Loading fallback template...",
-  "svgRenderFailed": "SVG render failed",
-  "svgTryingFallback": "Trying fallback template...",
-  "cardRenderFailed": "Card render failed",
-  "cardRegeneratePrompt": "Please try regenerating the card",
-  "svgContentParseFailed": "Content parse failed",
-  "svgContentExtractFailed": "Unable to extract content",
-  "svgContentEmpty": "SVG content is empty",
-  "svgContentInvalidFormat": "Invalid SVG format",
-  "svgFallbackTitle": "SVG generation failed",
-  "svgFallbackHint": "Please try regenerating the card or check your AI configuration",
-  "svgFallbackIdentifier": "ThoughtEcho - Fallback Template",
   "cardGenerating": "카드 생성 중...",
   "generatingCards": "카드 생성 중...",
   "loadMoreCards": "더 많은 카드 로드",
@@ -3237,40 +2989,6 @@
   "mediaTypeVideo": "동영상",
   "mediaTypeAudio": "오디오",
   "mediaTypeMedia": "메디아",
-  "mediaProcessingNone": "No media files to process",
-  "mediaProcessingFound": "{total, plural, =1{Found 1 media file} other{Found # media files}}",
-  "@mediaProcessingFound": {
-    "placeholders": {
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "mediaProcessingCopying": "Copying {typeLabel} {done}/{total}",
-  "@mediaProcessingCopying": {
-    "placeholders": {
-      "typeLabel": {
-        "type": "String"
-      },
-      "done": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "mediaProcessingProgress": "Processed {done} / {total}",
-  "@mediaProcessingProgress": {
-    "placeholders": {
-      "done": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
   "takePhoto": "사진 찍기",
   "recordVideo": "비디오 녹화",
   "recordAudio": "오디오 녹음",
@@ -3428,11 +3146,6 @@
   "documentLoadFailedRetry": "문서를 로드하지 못했습니다. 편집기를 다시 열어주세요.",
   "contentCopiedToClipboard": "클립보드에 복사됨",
   "messageCopiedToClipboard": "메시지가 클립보드에 복사되었습니다.",
-  "dailyQuoteLoading": "Loading...",
-  "dailyQuoteLoadingLocal": "Loading from local records...",
-  "dailyQuoteLoadingOffline": "No network, loading from local records...",
-  "dailyQuoteNoNetworkRetry": "No network and no local records, tap to retry",
-  "dailyQuoteFetchFailedRetry": "Failed to fetch quote, tap to retry",
   "fetchHitokotoFailed": "Failed to fetch quote: {error}",
   "@fetchHitokotoFailed": {
     "placeholders": {
@@ -3490,6 +3203,21 @@
   "continueEditing": "계속 편집",
   "discardChanges": "변경사항 취소",
   "saveAndExit": "저장 후 종료",
+  "actionFavorite": "가장 좋아하는",
+  "actionUnfavorite": "즐겨찾기 안함",
+  "clearFavoriteTitle": "즐겨찾기 지우기",
+  "clearFavoriteMessage": "Are you sure you want to clear {count} favorite(s) from this note?",
+  "@clearFavoriteMessage": {
+    "description": "Clear favorite confirmation message",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearFavoriteSuccess": "즐겨찾기가 삭제되었습니다.",
+  "clearFavoriteFailed": "즐겨찾기를 삭제하지 못했습니다.",
+  "moreOptions": "추가 옵션",
   "localAiFeatures": "로컬 AI 기능",
   "localAiFeaturesPreview": "시사",
   "localAiFeaturesDesc": "온디바이스 AI로 메모 작성 경험을 향상하세요",
@@ -3623,7 +3351,6 @@
   "smartPushContentType": "푸시 모드",
   "smartPushDailyQuote": "일일 견적",
   "smartPushDailyQuoteDesc": "선별된 인용문 푸시",
-  "smartPushDailyQuoteIndependentNote": "Daily Quote runs independently from Smart Push — each can be enabled or disabled separately.",
   "smartPushPastNotes": "지난 노트",
   "smartPushPastNotesDesc": "과거 메모 리뷰 푸시",
   "smartPushModeSmart": "스마트 푸시",
@@ -3680,21 +3407,6 @@
   "smartPushUnknownManufacturer": "알 수 없는 장치",
   "iHaveConfigured": "내가 구성한",
   "recommended": "추천",
-  "actionFavorite": "가장 좋아하는",
-  "actionUnfavorite": "즐겨찾기 안함",
-  "clearFavoriteTitle": "즐겨찾기 지우기",
-  "clearFavoriteMessage": "Are you sure you want to clear {count} favorite(s) from this note?",
-  "@clearFavoriteMessage": {
-    "description": "Clear favorite confirmation message",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "clearFavoriteSuccess": "즐겨찾기가 삭제되었습니다.",
-  "clearFavoriteFailed": "즐겨찾기를 삭제하지 못했습니다.",
-  "moreOptions": "추가 옵션",
   "settingsUserManual": "사용 설명서",
   "settingsUserManualDesc": "ThoughtEcho 기능 사용 방법 알아보기",
   "manualTitle": "사용 설명서",
@@ -3738,8 +3450,6 @@
   "saveDefaultValue": "구하다",
   "defaultValueSaved": "기본값이 저장되었습니다.",
   "defaultValueCleared": "기본값이 지워졌습니다.",
-  "excerptIntentEnabled": "Clip to ThoughtEcho",
-  "excerptIntentEnabledDesc": "Allow selected text from browsers or other apps to open ThoughtEcho directly in the non-fullscreen editor",
   "citySelectedWeatherUpdated": "Selected city: {cityName}, weather updated",
   "@citySelectedWeatherUpdated": {
     "placeholders": {
@@ -3778,94 +3488,12 @@
   "cannotGetCurrentLocation": "현재 위치를 확인할 수 없습니다. 위치 권한이 부여되었는지 확인하세요.",
   "cannotGetSelectedCityLocation": "선택한 도시 위치를 가져올 수 없습니다.",
   "cityInfoIncomplete": "도시 정보가 불완전합니다.",
-  "annualReportDemo": "Annual Report Demo",
-  "manualApiTest": "Manual API Test",
-  "manualApiTestTitle": "Manual API Key Test",
-  "manualApiTestDesc": "Directly input API parameters for testing, bypassing the storage system to check if the API key is valid.",
-  "testResultLabel": "Test Result:",
-  "fillAllFieldsError": "Error: Please fill in all required fields",
-  "testReportTitle": "=== Manual API Key Test Report ===",
-  "testParamsLabel": "Test Parameters:",
-  "keyFormatCheckLabel": "Key Format Check:",
-  "testApiKeyPrefixLabel": "  API Key Prefix: {prefix}",
-  "@testApiKeyPrefixLabel": {
-    "placeholders": {
-      "prefix": {
-        "type": "String"
-      }
-    }
-  },
-  "sendRequestLabel": "Send Request:",
-  "responseResultLabel": "Response Result:",
-  "testApiKey": "Test API Key",
-  "aiReturnedEmptyContent": "AI returned empty content, please try again",
-  "chatWithAiAssistant": "Chat with Thoughter (AI Assistant) to explore note content",
-  "messageCopied": "Message copied to clipboard",
-  "anniversaryTitle": "ThoughtEcho · 心迹",
-  "anniversarySubtitle": "Year {years} · Thank you for being with us",
-  "@anniversarySubtitle": {
-    "placeholders": {
-      "years": {
-        "type": "int"
-      }
-    }
-  },
-  "anniversaryVeteranThanks": "You've been here since year {years} — thank you for keeping at it",
-  "@anniversaryVeteranThanks": {
-    "placeholders": {
-      "years": {
-        "type": "int"
-      }
-    }
-  },
-  "anniversaryEnterApp": "Enter App",
-  "anniversaryBannerTitle": "ThoughtEcho Year {years} Anniversary",
-  "@anniversaryBannerTitle": {
-    "placeholders": {
-      "years": {
-        "type": "int"
-      }
-    }
-  },
-  "anniversaryBannerSubtitle": "Thank you for every step of the journey · {range}",
-  "@anniversaryBannerSubtitle": {
-    "placeholders": {
-      "range": {
-        "type": "String"
-      }
-    }
-  },
-  "anniversaryBannerTap": "Tap to replay the celebration",
-  "anniversaryReplayButton": "Replay",
-  "developerAnniversarySection": "Anniversary",
-  "developerAnniversaryEnabled": "Enable Anniversary Animation",
-  "developerAnniversaryEnabledDesc": "Toggle whether the celebration animation shows on launch",
-  "developerAnniversaryReset": "Clear Participation Record",
-  "developerAnniversaryResetDesc": "Clears the record so the celebration plays again as for a new user",
-  "developerAnniversaryResetDone": "Cleared, the celebration will play again",
-  "developerAnniversaryPreview": "Preview Animation Now",
-  "developerAnniversaryPreviewDesc": "Plays the celebration for the simulated year right away",
-  "developerAnniversarySimulate": "Simulate Anniversary",
-  "developerAnniversarySimulateOff": "Off",
-  "developerAnniversarySimulateYear": "Year {years}",
-  "@developerAnniversarySimulateYear": {
-    "placeholders": {
-      "years": {
-        "type": "int"
-      }
-    }
-  },
-  "developerAnniversarySimulateDescOff": "Following the real date; not in a celebration window",
-  "developerAnniversarySimulateDescActive": "Simulating year {years}: the settings banner and launch animation both use this edition",
-  "@developerAnniversarySimulateDescActive": {
-    "placeholders": {
-      "years": {
-        "type": "int"
-      }
-    }
-  },
-  "developerAnniversaryShownYears": "Celebrations Seen",
-  "developerAnniversaryShownYearsNone": "None yet",
+  "contentLengthLabel": "내용 길이: {length}",
+  "htmlFormatLabel": "HTML 형식: {status}",
+  "jsonFormatLabel": "JSON 형식: {status}",
+  "containsHtmlTagsLabel": "HTML 태그 포함: {status}",
+  "viewNoteInfo": "메모 정보 보기",
+  "first100CharsLabel": "처음 100자:",
   "trash": "휴지통",
   "trashEmpty": "휴지통이 비어 있습니다",
   "trashEmptyHint": "실수로 삭제한 내용은 먼저 여기에 보관되며, 사진·오디오·비디오도 함께 복원할 수 있습니다.",
@@ -3919,200 +3547,13 @@
   "insertImage": "이미지 삽입",
   "insertVideo": "동영상 삽입",
   "insertAudio": "오디오 삽입",
-  "mediaPlayerPlay": "Play",
-  "mediaPlayerPause": "Pause",
   "clipboardFoundHint": "클립보드 내용 발견, 탭하여 노트로 추가",
-  "operationFailedSimple": "작업 실패",
-  "operationSuccess": "Operation successful!",
-  "loadingInProgress": "Loading...",
-  "aiThinkingProgress": "AI is thinking...",
-  "processingData": "Processing data...",
-  "analyzingContent": "Analyzing content...",
-  "skipNonFullscreenEditor": "Open fullscreen editor directly",
-  "skipNonFullscreenEditorDesc": "Skip quick edit and open fullscreen rich text editor when adding notes",
-  "offlineQuoteSourceTitle": "When Offline, Show",
-  "offlineQuoteSourceDesc": "Choose what appears on the home page when offline or when local-only is enabled",
-  "offlineQuoteSourceTagOnly": "Previously saved daily quotes",
-  "offlineQuoteSourceAll": "Random local records",
-  "noLocalSavedQuotes": "No previously saved daily quotes yet",
-  "copyCode": "Copy code",
-  "copiedCode": "Copied",
   "appendToOriginal": "원본에 추가",
-  "webdavSyncTitle": "WebDAV Cloud Sync",
-  "webdavSyncSubtitle": "Configure private cloud storage to auto-sync notes across devices",
-  "webdavProvider": "Cloud Provider",
-  "webdavServerUrl": "Server URL",
-  "webdavUsername": "Username / Account",
-  "webdavPassword": "App Password / Token",
-  "webdavTestConnection": "Test Connection",
-  "webdavTestSuccess": "Connection successful!",
-  "webdavTestFailed": "Connection failed. Please check your settings and password",
-  "webdavAutoSyncLaunch": "Auto-sync on open or foreground",
-  "webdavAutoSyncLaunchSubtitle": "Merge with cloud when app opens or returns to foreground",
-  "webdavAutoSyncChange": "Auto-sync on note changes",
-  "webdavAutoSyncChangeSubtitle": "Quietly sync changes after 4 seconds of inactivity when editing",
-  "webdavExperimentalTitle": "Experimental Feature Warning",
-  "webdavExperimentalContent": "The WebDAV cloud synchronization feature is currently in the experimental preview phase. For your data safety, it is recommended to back up your core local notes before enabling. If you encounter any issues during use, please let us know.",
-  "webdavExperimentalClose": "Dismiss",
-  "webdavExperimentalIgnore": "Don't Show Again",
-  "webdavLastSync": "Last sync: {time}",
-  "@webdavLastSync": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "webdavStatusSyncing": "Syncing...",
-  "webdavStatusSuccess": "Sync Successful",
-  "webdavStatusFailed": "Sync Failed",
-  "settingsWebdavStatusWithTime": "{status} (Last: {time})",
-  "@settingsWebdavStatusWithTime": {
-    "placeholders": {
-      "status": {
-        "type": "String"
-      },
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "settingsWebdavEnabledWithTime": "Enabled (Last: {time})",
-  "@settingsWebdavEnabledWithTime": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "webdavSyncNow": "Sync Now",
-  "webdavEnableSync": "Enable Cloud Sync",
-  "webdavSaveAndSync": "Save and Sync",
-  "webdavHowToGetAppPassword": "How to get app password?",
-  "webdavShowPasswordTooltip": "Show password",
-  "webdavHidePasswordTooltip": "Hide password",
-  "webdavOpenHelpFailed": "Unable to open help link. Please check default browser settings.",
-  "webdavConflictCategoryName": "Sync Conflicts",
-  "webdavConflictNotePrefix": "[Conflict] ",
-  "webdavConflictNotification": "Detected {count} sync conflicts, safely backed up to 'Sync Conflicts' category",
-  "@webdavConflictNotification": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "webdavViewNow": "View Now",
   "webdavConflictKeepTooltip": "유지 및 기본 카테고리로 이동",
   "webdavConflictKeepSuccess": "확인 후 기본 목록으로 이동되었습니다.",
   "webdavConflictDiscardTooltip": "이 충돌 백업 취소",
   "webdavConflictDiscardSuccess": "이 충돌 메모를 영구적으로 삭제했습니다.",
-  "exportFormatLabel": "Default Export Format",
-  "exportFormatCard": "Delicate Share Card",
-  "exportFormatPdf": "Standard A4 PDF",
-  "exportFormatDesc": "Configure the default format when exporting or sharing notes",
-  "pdfExportExperimentalWarning": "PDF export is experimental and requires multilingual and emoji font files. The first use may need an internet connection to download them; it can be used offline afterward.",
-  "exportToPdf": "Export to PDF",
-  "pdfExportSelectionMode": "Select Export Mode",
-  "selectSameMonth": "Select Same Month",
-  "selectSameCategory": "Select Same Category",
-  "exportSelected": "Export ({count})",
-  "@exportSelected": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "exportSuccess": "Export Successful",
-  "exportFailed": "Export Failed",
-  "generatingPdf": "Generating PDF...",
-  "pdfExportFailed": "Failed to export PDF: {error}",
-  "@pdfExportFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "batchPdfExportFailed": "Failed to batch export PDF: {error}",
-  "@batchPdfExportFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "pleaseSelectAtLeastOneNote": "Please select at least one note first",
-  "selectedNotesHaveNoCategories": "Selected notes have no category tags",
-  "pdfPreviewAndPrint": "PDF Preview & Print",
-  "pdfFontFallbackWarning": "No Chinese font detected. Chinese content may display as gibberish. Please check your network and try again.",
-  "webdavSyncOnCellular": "Sync over cellular data",
-  "webdavSyncOnCellularSubtitle": "Allow cloud backup and merge under mobile data networks",
-  "webdavSyncNotesOnlyOnCellular": "Sync notes only on cellular",
-  "webdavSyncNotesOnlyOnCellularSubtitle": "Only sync lightweight text notes and skip heavy media files to save data",
-  "customFeedbackTitle": "Send Feedback",
-  "customFeedbackMessageLabel": "Feedback Details",
-  "customFeedbackMessageHint": "Please describe your issue or suggestion...",
-  "customFeedbackNameLabel": "Name (Optional)",
-  "customFeedbackEmailLabel": "Email (Optional)",
-  "customFeedbackSubmit": "Submit Feedback",
-  "customFeedbackSuccess": "Thanks for your feedback!",
-  "customFeedbackEmptyError": "Please enter feedback details",
-  "saveSuccess": "Saved successfully",
-  "toolCallStatusPending": "Pending",
-  "toolCallStatusExecuting": "Executing",
-  "toolCallStatusCompleted": "Completed",
-  "toolCallStatusError": "Error",
-  "toolCallParameters": "Parameters",
-  "toolCallResult": "Result",
-  "failedToPickFiles": "Failed to pick files: {error}",
-  "@failedToPickFiles": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "editModeMetadataReadOnlyHint": "Location and weather of saved notes cannot be modified",
-  "explore": "탐색",
-  "aiChat": "AI 대화",
-  "dataInsights": "Data Insights",
-  "dataInsightsDesc": "Deep analysis of your notes and writing trends",
-  "exploreMapMemory": "지도 기억",
-  "exploreMapMemoryDesc": "지도에서 노트 둘러보기",
-  "favoriteNotes": "즐겨찾는 노트",
-  "chatHistory": "대화 기록",
-  "sessionScopeThisNote": "이 메모",
-  "sessionScopeAllChats": "모든 대화",
-  "newChat": "새 대화",
-  "noChats": "대화가 없습니다",
-  "deleteChat": "대화 삭제",
-  "deleteChatConfirm": "이 대화를 삭제하시겠습니까? 모든 메시지가 삭제됩니다.",
-  "searchChatHistory": "Search chats...",
-  "dynamicInsightStats": "You have recorded {count} thoughts, with {recentCount} from the past 7 days.",
-  "@dynamicInsightStats": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "recentCount": {
-        "type": "int"
-      }
-    }
-  },
-  "sessionGroupToday": "Today",
-  "sessionGroupYesterday": "Yesterday",
-  "sessionGroupThisWeek": "This Week",
-  "sessionGroupEarlier": "Earlier",
-  "messageCountLabel": "{count} msgs",
-  "@messageCountLabel": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
+  "operationFailedSimple": "작업 실패",
   "deleteNoteWithChatsConfirmation": "이 노트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.\n\n이 노트와 연결된 {count}개의 대화방도 함께 삭제됩니다.",
   "@deleteNoteWithChatsConfirmation": {
     "placeholders": {
@@ -4121,142 +3562,24 @@
       }
     }
   },
-  "commandPolish": "Polish",
-  "commandContinue": "Continue",
-  "commandDeepAnalysis": "Deep Analysis",
-  "commandInsight": "Insights",
-  "aiPromptPolish": "Please polish this text for me",
-  "aiPromptContinue": "Please continue writing this text",
-  "aiPromptDeepAnalysis": "Please provide a deep analysis of this note",
-  "aiPromptSourceAnalysis": "Please analyze the source of this text and identify the possible author and work",
-  "aiAssistantInputHint": "Enter question...",
-  "aiAssistantExploreWelcome": "{summary}",
-  "@aiAssistantExploreWelcome": {
-    "placeholders": {
-      "summary": {
-        "type": "String"
-      }
-    }
-  },
-  "currentNoteContext": "Current Note Context",
-  "workflowUnavailable": "Workflow Unavailable",
-  "aiWorkflowNeedsBoundNote": "This feature requires a bound note",
-  "confidenceLabel": "Confidence",
-  "replaceOriginalNote": "Replace Original",
-  "appendToEnd": "Append to End",
-  "scrollToBottom": "Scroll to bottom",
-  "pinChat": "Pin",
-  "unpinChat": "Unpin",
-  "stopGenerate": "Stop",
-  "aiModeChat": "Chat Mode",
-  "aiModeAgent": "Agent Mode",
+  "chatHistory": "대화 기록",
+  "sessionScopeThisNote": "이 메모",
+  "sessionScopeAllChats": "모든 대화",
+  "newChat": "새 대화",
+  "deleteChat": "대화 삭제",
+  "deleteChatConfirm": "이 대화를 삭제하시겠습니까? 모든 메시지가 삭제됩니다.",
+  "noChats": "대화가 없습니다",
+  "mapPickerTitle": "위치 선택",
+  "mapPickerCurrentLocation": "현재 위치",
+  "mapPickerConfirm": "위치 확인",
+  "longPressForMapPicker": "길게 눌러 정밀한 위치 선택",
+  "poiNameLabel": "정밀 위치",
+  "explore": "탐색",
+  "exploreMapMemory": "지도 기억",
+  "exploreMapMemoryDesc": "지도에서 노트 둘러보기",
+  "aiChat": "AI 대화",
   "aiAgent": "AI 에이전트",
   "agentThinking": "에이전트가 생각 중입니다...",
-  "agentReachedMaxRounds": "Reached the tool-call limit for this run. The answer above is based on what was gathered so far; ask again with a narrower request for a more complete result.",
-  "agentSearchingNotes": "노트 검색 중...",
-  "agentAnalyzingData": "데이터 분석 중...",
-  "agentWebSearching": "웹 검색 중...",
-  "agentReviewingRecentNotes": "Checking recent notes...",
-  "agentSearchingNotesForQuery": "Looking for notes about \"{query}\"...",
-  "@agentSearchingNotesForQuery": {
-    "placeholders": {
-      "query": {
-        "type": "String"
-      }
-    }
-  },
-  "agentCollectingTags": "Getting tags...",
-  "agentReadingNoteDetail": "Reading note details...",
-  "agentCheckingLocationWeather": "Getting location and weather...",
-  "agentSearchingWebForQuery": "Looking up sources for \"{query}\"...",
-  "@agentSearchingWebForQuery": {
-    "placeholders": {
-      "query": {
-        "type": "String"
-      }
-    }
-  },
-  "agentReadingWebPage": "Fetching webpage...",
-  "agentPreparingNewNoteSuggestion": "Preparing a new note suggestion...",
-  "agentPreparingEditSuggestion": "Preparing an edit suggestion...",
-  "agentFoundNoMatchingNotes": "No matching notes found",
-  "agentFoundMatchingNotes": "Found {count} related notes",
-  "@agentFoundMatchingNotes": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "agentFoundMatchingNotesWithMore": "Found {count} related notes, more available",
-  "@agentFoundMatchingNotesWithMore": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "agentPreparedTagChoices": "Found {count} tags",
-  "@agentPreparedTagChoices": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "agentCheckedLocationWeather": "Got location and weather",
-  "agentCheckedLocationWeatherWithDetails": "Location: {location}, Weather: {weather}",
-  "@agentCheckedLocationWeatherWithDetails": {
-    "placeholders": {
-      "location": {
-        "type": "String"
-      },
-      "weather": {
-        "type": "String"
-      }
-    }
-  },
-  "agentFoundWebSources": "Found {count} web sources",
-  "@agentFoundWebSources": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "agentReadWebPageSummary": "Fetched webpage, about {count} chars",
-  "@agentReadWebPageSummary": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "agentReadNoteDetailSummary": "Read full content of note \"{title}\"",
-  "@agentReadNoteDetailSummary": {
-    "placeholders": {
-      "title": {
-        "type": "String"
-      }
-    }
-  },
-  "agentPreparedSuggestionCard": "Suggestion ready",
-  "agentToolStepFinished": "Done",
-  "agentToolStepDidNotFinish": "Failed",
-  "aiThinking": "Thinking...",
-  "thinkingMode": "Deep Thinking",
-  "showThinking": "Show thinking",
-  "hideThinking": "Hide thinking",
-  "toolExecutionProgress": "Working...",
-  "toolExecutionCompleted": "Done",
-  "executedNOperations": "{count} operations done",
-  "@executedNOperations": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "agentToolCall": "도구 호출 중: {toolName}",
   "@agentToolCall": {
     "placeholders": {
@@ -4265,159 +3588,13 @@
       }
     }
   },
-  "mapPickerTitle": "위치 선택",
-  "mapPickerCurrentLocation": "현재 위치",
-  "mapPickerConfirm": "위치 확인",
-  "poiNameLabel": "정밀 위치",
-  "longPressForMapPicker": "길게 눌러 정밀한 위치 선택",
-  "attachFile": "Attach file",
-  "yesterday": "Yesterday",
-  "openInEditor": "Open in Editor",
-  "saveDirectly": "Save Directly",
-  "replace": "Replace",
-  "append": "Append",
-  "notice": "Notice",
-  "saveRequired": "Save Required",
-  "saveBeforeAiAssistant": "Please save your note before entering Thoughter",
-  "saveAndContinue": "Save & Continue",
-  "toggleAddLocation": "Add location",
-  "toggleAddWeather": "Add weather",
-  "webdavDisableSyncSuccess": "WebDAV sync disabled. Local data retained.",
-  "webdavDisableSync": "Disable Cloud Sync",
-  "webdavGoToResolve": "Resolve Now",
-  "webdavNoConflicts": "No Conflicts Detected",
-  "webdavAllConflictsResolved": "All sync conflicts have been resolved.",
-  "webdavProviderNutstore": "Nutstore",
-  "webdavProviderCustom": "Custom",
-  "webdavProviderNextcloud": "Nextcloud / ownCloud",
-  "webdavProviderInfinicloud": "InfiniCLOUD",
-  "webdavProviderConfig": "Provider Configuration",
-  "webdavServerUrlEmptyError": "Please enter WebDAV server address",
-  "webdavServerUrlInvalidError": "Address must start with https://",
-  "webdavUsernameEmptyError": "Please enter username",
-  "webdavPasswordEmptyError": "Please enter app password",
-  "webdavSyncStrategy": "Sync Strategy",
-  "webdavStatusNotEnabled": "Cloud Sync Disabled",
-  "webdavStatusNotEnabledDesc": "Configure your WebDAV service to enjoy secure cross-device multi-way synchronization.",
-  "webdavStatusSyncingDesc": "Securely comparing and merging cloud and local database files...",
-  "webdavStatusRunning": "Cloud Sync Running",
-  "webdavStatusRunningDesc": "An encrypted merge pipeline has been established with the cloud drive.\nLast sync: {time}",
-  "@webdavStatusRunningDesc": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "webdavStatusException": "Sync Exception",
-  "webdavStatusExceptionDesc": "Network communication or cloud drive file lock conflict. We will retry automatically.",
-  "webdavStatusEnabled": "Cloud Sync Enabled",
-  "webdavStatusEnabledDesc": "Service ready. Last sync: {time}",
-  "@webdavStatusEnabledDesc": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "webdavNeverSynced": "Never synced",
-  "webdavNeverSucceeded": "Never succeeded",
-  "webdavConflictPrompt": "Detected {count} sync conflict backup(s). It is recommended to resolve them immediately.",
-  "@webdavConflictPrompt": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "webContentTitle": "Web Content",
-  "fetchingWebContent": "Fetching web content from: {url}",
-  "@fetchingWebContent": {
-    "placeholders": {
-      "url": {
-        "type": "String"
-      }
-    }
-  },
-  "webCommandInvalidUrl": "Please provide a valid URL with /web command",
-  "webCommandInvalidUrlTitle": "Invalid URL",
-  "aiSuggestion": "AI Suggestion",
-  "autoAttachMetadataUnavailable": "Location/weather unavailable, note saved without them",
+  "agentSearchingNotes": "노트 검색 중...",
+  "agentAnalyzingData": "데이터 분석 중...",
+  "agentWebSearching": "웹 검색 중...",
+  "favoriteNotes": "즐겨찾는 노트",
   "richTextSaveUnavailable": "Save stopped: rich text content could not be processed without data loss. Close other apps to free memory and try again.",
-  "agentRichEditConflict": "The note changed after this suggestion was created. To protect your edits, ask AI to generate a fresh suggestion.",
-  "agentDiffOriginal": "Original",
-  "agentDiffReplacement": "Replace with",
-  "agentDiffInsertBefore": "Insert before this content",
-  "agentDiffInsertAfter": "Insert after this content",
-  "agentDiffAppend": "Append content",
-  "agentDiffDelete": "Delete content",
   "availableCommands": "사용 가능한 명령",
   "typeSlashToSeeCommands": "/를 입력하여 명령 보기",
-  "noteProposalCreate": "Create",
-  "noteProposalEdit": "Edit",
-  "noteProposalPlain": "Plain note",
-  "noteProposalRich": "Rich text note",
-  "noteProposalChangeCount": "{count} changes",
-  "@noteProposalChangeCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "noteProposalExpand": "Expand document",
-  "noteProposalCollapse": "Collapse document",
-  "noteProposalViewChanges": "View change history",
-  "noteProposalPlainToRichWarning": "After applying, this note will open in the full-screen rich text editor.",
-  "noteProposalBefore": "Original",
-  "noteProposalAfter": "Changed to",
-  "noteProposalCompleted": "Completed",
-  "noteProposalApply": "Apply changes",
-  "noteProposalSave": "Save note",
-  "noteProposalLegacyReadOnly": "This is a legacy suggestion without safe revision data. It is view-only; ask AI to generate a new suggestion before applying it.",
-  "noteProposalPlainEditorPreferenceWarning": "Your editor preference opens this plain draft in the full-screen rich text editor; saving it will create a rich text note.",
-  "aiCardBadgeCreate": "New",
-  "aiCardBadgeEdit": "Edit",
-  "aiCardQuickEdit": "Quick edit",
-  "aiCardQuickEditTooltip": "Quickly edit the content, source, or tags",
-  "aiCardSavedViewNote": "Saved · View note",
-  "aiCardSaveFailedGeneric": "Couldn't save. Please try again.",
-  "aiCardEditContentHint": "Edit content",
-  "experimentalTag": "Beta",
-  "agentExperimentalNoticeTitle": "Thoughter Experimental Feature Notice",
-  "agentExperimentalNoticeIntro": "Thoughter is an AI Agent assistant currently in testing. Please review the following before proceeding:",
-  "agentExperimentalNoticePoint1": "AI may generate incorrect or inaccurate responses. Please review all content critically.",
-  "agentExperimentalNoticePoint2": "AI cannot directly edit your notes; all creations and edits take effect only after you click save/apply.",
-  "agentExperimentalNoticePoint3": "This feature is in active testing and refinement, and may encounter instability or bugs.",
-  "agentExperimentalNoticeGotIt": "Understand & Continue",
-  "agentExperimentalBannerText": "Experimental feature: AI answers may be inaccurate. Notes are only modified after clicking save.",
-  "agentExperimentalNoticeAction": "View Notice",
-  "dontShowAgain": "Don't show again",
-  "settingsLab": "Lab",
-  "settingsLabDesc": "Debug entries and experimental toggles shown in developer mode. May be unstable",
-  "firstOpenScrollPerfMonitorExperiment": "[Experiment] First-open scroll performance monitor",
-  "firstOpenScrollPerfMonitorExperimentDesc": "Record dropped frames on the first Notes scroll after a cold start (off by default)",
-  "addNoteDeferMetadataExperiment": "[Experiment] AddNote deferred metadata",
-  "addNoteDeferMetadataExperimentDesc": "Defer location and weather lookup until the keyboard animation finishes (off by default)",
-  "noteCardMediaStyleExperiment": "[Experiment] Note card media layout",
-  "noteCardMediaStyleThumbnail": "Side thumbnail",
-  "noteCardMediaStyleThumbnailDesc": "Square thumbnail on the right. Always visible, cheapest to decode.",
-  "noteCardMediaStyleInline": "Inline (legacy)",
-  "noteCardMediaStyleInlineDesc": "Images stay inline, order preserved. Cost: images below the fold are clipped, and audio/video build players in the list.",
-  "noteCardMediaStyleBanner": "Top banner",
-  "noteCardMediaStyleBannerDesc": "Full-width banner on top, photo first. Normalised position, most expensive to decode.",
-  "noteInsertAnimationExperiment": "[Experiment] Note insert animation",
-  "noteInsertAnimationCurrent": "Current: {name}",
-  "@noteInsertAnimationCurrent": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "noteInsertAnimationScale": "Bubble scale",
-  "noteInsertAnimationSlide": "Smooth rise",
-  "noteInsertAnimationNone": "No animation",
   "exploreAskAboutInsight": "이것에 대해 묻기",
   "exploreAskAboutInsightPrompt": "이에 대해 더 자세히 설명해 주시겠어요?",
   "exploreSummarizePeriod": "이번 {period} 요약",
@@ -4425,116 +3602,32 @@
   "exploreFreeChat": "자유롭게 대화",
   "exploreRecentChats": "최근 대화",
   "exploreViewAllChats": "전체",
-  "aiProviderZhipu": "Zhipu GLM",
-  "aiProviderMoonshot": "Moonshot Kimi",
-  "aiProviderDashScope": "Alibaba Bailian",
-  "aiProviderVolcengine": "Volcengine Ark",
-  "aiProviderGemini": "Google Gemini",
-  "presetDescOllamaCloud": "Generous free tier, works right after sign-up. Best first choice.",
-  "presetDescOpenAI": "Official OpenAI API. Requires an international payment method.",
-  "presetDescOpenRouter": "One key for hundreds of models, including Claude and Gemini.",
-  "presetDescDeepSeek": "Low cost, strong Chinese performance.",
-  "presetDescSiliconFlow": "Aggregator platform; some small models are free.",
-  "presetDescZhipu": "glm-4-flash is free to use.",
-  "presetDescMoonshot": "Strong long-context performance.",
-  "presetDescDashScope": "OpenAI-compatible endpoint for the Qwen family.",
-  "presetDescVolcengine": "Doubao models. Put the inference endpoint ID in the model field.",
-  "presetDescGemini": "Gemini's official OpenAI-compatible endpoint. Has a free tier.",
-  "presetDescOllamaLocal": "Connect to Ollama on this machine. Offline, no key needed.",
-  "presetDescLMStudio": "Connect to LM Studio on this machine. Offline, no key needed.",
-  "presetDescCustom": "Any OpenAI-compatible endpoint. Fill in the URL and model yourself.",
-  "aiServicesSectionTitle": "My AI services",
-  "aiServiceEmptyTitle": "No AI service configured yet",
-  "aiServiceEmptyBody": "AI insights, card generation and the Thoughter assistant need a configured provider.",
-  "addAiService": "Add AI service",
-  "editAiServiceTitle": "Edit AI service",
-  "newAiServiceTitle": "New AI service",
-  "selectProviderTemplate": "Choose a provider",
-  "changeProviderTemplate": "Change",
-  "providerGroupCloud": "Cloud services",
-  "providerGroupLocal": "Runs locally",
-  "providerGroupCustom": "Custom",
-  "recommendedBadge": "Recommended",
-  "inUseBadge": "In use",
-  "getApiKeyLink": "Get an API key",
-  "apiKeyNotNeededHint": "Local services usually need no key — leave this empty.",
-  "suggestedModelsLabel": "Common models",
-  "configNameField": "Configuration name",
-  "statusKeyConfigured": "Key configured",
-  "statusKeyMissing": "Key missing",
-  "aiServiceSaved": "Saved {name}",
-  "@aiServiceSaved": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "ollamaCloudTipTitle": "We recommend Ollama Cloud",
-  "ollamaCloudTipBody": "Generous free tier, no card required — sign up and copy the API key.",
-  "ollamaCloudTipAction": "Add it",
-  "aiConfigHelpLink": "Not sure what to fill in? Read the setup guide",
-  "openLinkFailed": "Could not open the link",
-  "testBeforeSaveHint": "You can test as soon as URL, key and model are filled in — no need to save first.",
-  "agentMemorySectionTitle": "Thoughter memory",
-  "agentMemoryEnableTitle": "Long-term memory",
-  "agentMemoryEnableDesc": "Let Thoughter remember who you are and how you like things phrased across conversations. Daily prompts and periodic insights use it too. Turning this off only stops reading and writing — nothing already remembered is deleted.",
-  "agentMemoryNicknameTitle": "Nickname",
-  "agentMemoryNicknameHint": "How should Thoughter address you?",
-  "agentMemoryNicknameDesc": "Shared with Thoughter at the start of every conversation and stored only on this device. Leave empty to skip.",
-  "agentMemoryNicknameSaveFailed": "Couldn't save your nickname. Please try again.",
-  "agentMemoryNicknameDisabled": "Long-term memory is off, so this nickname is not shared with Thoughter.",
-  "agentMemoryClearTitle": "Clear memory",
-  "agentMemoryClearSummary": "Currently remembering {profileCount, plural, =1{1 preference} other{{profileCount} preferences}} and {factCount, plural, =1{1 detail} other{{factCount} details}}",
-  "@agentMemoryClearSummary": {
-    "placeholders": {
-      "profileCount": {
-        "type": "int"
-      },
-      "factCount": {
-        "type": "int"
-      }
-    }
-  },
-  "agentMemoryClearEmpty": "Nothing remembered yet",
-  "agentMemoryClearConfirmTitle": "Clear Thoughter's memory?",
-  "agentMemoryClearConfirmBody": "Every remembered preference and detail will be deleted permanently. Your notes are not affected.",
-  "agentMemoryClearConfirmAction": "Clear",
-  "agentMemoryCleared": "Thoughter's memory has been cleared",
-  "agentMemoryClearFailed": "Failed to clear memory",
-  "agentMemoryNoticeTitle": "Thoughter will remember you",
-  "agentMemoryNoticeBody": "So it doesn't have to get to know you from scratch every time, Thoughter records who you are and how you like things phrased, and uses that in later conversations, daily prompts, and periodic insights. Memory stays on this device and is never uploaded.",
-  "agentMemoryNoticeHint": "You can ask Thoughter to change or forget any entry at any time, or turn memory off and clear it in AI settings.",
-  "agentMemoryNoticeGotIt": "Got it",
-  "agentMemoryNoticeDisable": "Don't remember",
-  "agentMemorySwitchFailed": "Could not save the memory switch. Please try again.",
-  "agentMemoryCountsUnavailable": "Could not read the memory count. You can still try clearing.",
-  "releaseNotesTitle": "What's New",
-  "releaseNotesUpgradeLede": "Here's what has been added since you last used the app.",
-  "releaseNotesCurrentLede": "Here's what this version adds.",
-  "releaseNotesHighlights": "Highlights",
-  "releaseNotesGetStarted": "Get started",
-  "releaseThoughterTitle": "Thoughter: a thinking partner inside your notebook",
-  "releaseThoughterLede": "From simply capturing notes to organising and creating with them. Thoughter is no longer just a chat box that answers questions — it now works across your entire note library as a thinking partner.",
-  "releaseThoughterSearchTitle": "Smart retrieval across your notes",
-  "releaseThoughterSearchDesc": "No more digging by hand. Ask in plain language and Thoughter finds the related notes, follows the tags between them, and pulls in web results when needed.",
-  "releaseThoughterControlTitle": "You keep every editing decision",
-  "releaseThoughterControlDesc": "AI never changes your content on its own. Every new note and rewrite arrives as a proposal card that shows exactly what changed; nothing is applied until you review it and confirm.",
-  "releaseThoughterSingleNoteTitle": "Talk about a single note",
-  "releaseThoughterSingleNoteDesc": "Tap the ✨ button in the editor and choose \"Ask Thoughter\" to dig into, polish, or continue the note you have open.",
-  "releaseThoughterMemoryTitle": "Long-term memory",
-  "releaseThoughterMemoryDesc": "Once enabled, Thoughter remembers what to call you and how you like to phrase things across conversations. Memory is stored separately, and you can review or clear it at any time.",
-  "releaseThoughterInsightTitle": "Periodic insights and a rebuilt Explore page",
-  "releaseThoughterInsightDesc": "Thoughter revisits your notes on a schedule and writes them up as periodic insights. The Explore page has been rebuilt to bring those findings together.",
-  "releaseThemeTitle": "New themes: a different paper, a different ink",
-  "releaseThemeLede": "Theme style is now its own dimension alongside light and dark. Pick one of three.",
-  "releaseThemeStylesTitle": "Three styles",
-  "releaseThemeStylesDesc": "Material keeps following the system's dynamic colors; Paper & Ink is warm, with serif body text and paper rules; Plain is cool and sharper.",
-  "releaseThemeAccentTitle": "Choose your ink",
-  "releaseThemeAccentDesc": "The handcrafted styles add four inks — umber, celadon, indigo and cinnabar. Change the ink without changing the paper.",
-  "releaseThemeSwitchTitle": "Switch whenever you like",
-  "releaseThemeSwitchDesc": "Material stays the default, so upgrading does not change how the app looks. Try a style right here, or change it later in Settings › Theme Settings.",
-  "releaseDiagnosticsNotice": "Since 3.7.0, ThoughtEcho reports anonymous diagnostics when something goes wrong. They are used only to locate and fix problems and never contain note content. You can turn this off at any time in Settings › Feedback & Contact.",
-  "settingsReleaseNotes": "What's New",
-  "settingsReleaseNotesDesc": "See what this version adds"
+  "smartPushPeriodEarlyMorning": "이른 아침",
+  "smartPushPeriodMorning": "오전",
+  "smartPushPeriodNoon": "점심",
+  "smartPushPeriodAfternoon": "오후",
+  "smartPushPeriodEvening": "저녁",
+  "smartPushPeriodNight": "야간",
+  "settingsSentryTitle": "진단 데이터 전송하여 개선에 참여",
+  "settingsSentryDesc": "기본적으로 꺼져 있습니다. 수동으로 켜면 오류 스택, 기기 정보, 페이지, 일반 네트워크 요청 및 메인 데이터베이스 성능 데이터가 전송됩니다. AI 요청은 포함되지 않으며, 데이터베이스 모니터링은 SQL 템플릿과 소요 시간만 기록하고 메모 내용이나 쿼리 매개변수는 절대 전송하지 않습니다.",
+  "sentryRestartHint": "설정이 저장되었습니다. 재부팅 후 적용됩니다.",
+  "sentryDisclosureTitle": "개인정보 처리방침 업데이트됨",
+  "sentryDisclosureGotIt": "확인했습니다",
+  "onboardingUpdateFailed": "데이터 업데이트에 실패했지만 앱을 계속 사용할 수 있습니다",
+  "onboardingUpdateProcessFailed": "업데이트 처리에 실패했습니다. 앱을 다시 시작해 주세요",
+  "settingsPrivacyPolicy": "개인정보 처리방침",
+  "settingsFeedback": "피드백 및 제안",
+  "settingsContactDeveloper": "개발자에게 연락",
+  "feedbackAndContact": "피드백 및 연락처",
+  "feedbackAndContactDesc": "소중한 피드백을 기다립니다! 다음 채널을 통해 연락해 주세요:",
+  "feedbackGithubTitle": "GitHub에 이슈 제출",
+  "feedbackGithubDesc": "버그 보고, 기능 제안 또는 토론 참여",
+  "feedbackGithubRepoTitle": "소스 코드 보기",
+  "feedbackGithubRepoDesc": "코드 탐색, 프로젝트 스타 추가 또는 Pull Request 제출",
+  "contactDeveloperSectionTitle": "개발자에게 연락",
+  "feedbackEmailTitle": "이메일 보내기",
+  "feedbackDiscussionTitle": "커뮤니티 토론 참여",
+  "feedbackDiscussionDesc": "질문, 아이디어 공유 및 다른 사용자와의 소통",
+  "feedbackSentryTitle": "피드백 보내기 (Sentry)",
+  "feedbackSentryDesc": "개발자에게 직접 의견, 제안 또는 버그 보고서 보내기"
 }
