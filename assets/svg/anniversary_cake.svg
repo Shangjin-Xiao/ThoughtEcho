@@ -1,9 +1,6 @@
 <!-- 蛋糕主体，不含蜡烛。蜡烛数量随周年届数变化，由 AnniversaryCake 在运行时叠一层生成。 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
     <defs>
-        <filter id="drop-shadow" x="-10%" y="-10%" width="120%" height="130%">
-            <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#000000" flood-opacity="0.08"/>
-        </filter>
         <linearGradient id="spongeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stop-color="#FFD633"/>
             <stop offset="100%" stop-color="#F59E0B"/>
@@ -18,7 +15,7 @@
         <g id="sprinkle-yellow"><rect width="8" height="3.5" rx="1.75" fill="#FFEE58"/></g>
         <g id="sprinkle-purple"><rect width="8" height="3.5" rx="1.75" fill="#AB47BC"/></g>
     </defs>
-    <g filter="url(#drop-shadow)">
+    <g>
         <ellipse cx="200" cy="305" rx="165" ry="48" fill="#D1D5DB"/>
         <ellipse cx="200" cy="295" rx="175" ry="50" fill="#E5E7EB"/>
         <ellipse cx="200" cy="295" rx="165" ry="46" fill="#F9FAFB"/>
