@@ -189,6 +189,19 @@ class NoteListViewState extends State<NoteListView> {
   // 分页和懒加载状态
   final List<Quote> _quotes = [];
 
+  /// 按笔记 ID 记住上次建出来的卡片 widget，见 [_obtainQuoteItem]。
+  ///
+  /// 入参没变时返回同一个实例，`Element.updateChild` 会整棵子树短路掉 ——
+  /// 分页落地、父组件重建这类"数据没变却全表重建"的场合因此几乎不要钱。
+  /// 条目数跟着 `_quotes` 走，由 [_pruneExpansionControllers] 一起清理。
+  final Map<String, _QuoteItemMemo> _quoteItemMemos = {};
+  int _quoteItemMemoHits = 0;
+  int _quoteItemMemoMisses = 0;
+
+  /// 标签映射表及其来源，见 [_obtainTagMap]。
+  List<NoteTag>? _tagMapSource;
+  Map<String, NoteTag>? _tagMapCache;
+
   bool _isLoadingBacking = true; // 初始化为 true，避免闪现"无笔记"
 
   /// 分页加载中标志。既是 `_loadMore` 的并发闸门，也决定底部指示器是否可见。
@@ -212,6 +225,14 @@ class NoteListViewState extends State<NoteListView> {
   /// 切换时只重建那一格，不会牵动已加载的上百个 item。
   final ValueNotifier<bool> _loadMoreIndicator = ValueNotifier<bool>(true);
 
+  /// 是否还有下一页。
+  ///
+  /// 它直接参与 `itemCount`，所以翻转必须走 setState —— 尾部占位格**不能**常驻。
+  /// 试过把它改成 ValueNotifier 驱动的常驻格子（想省掉整列表重建），但
+  /// `SliverMultiBoxAdaptorElement._extrapolateMaxScrollOffset` 会按已建条目的
+  /// 平均高度去估还没建出来的尾部格：itemCount 常年多一格，`maxScrollExtent`
+  /// 就常年多估一张卡片的高度，等用户真滑到底、那一格以 0 高建出来时再缩回去 ——
+  /// 又是一次"滚动范围骤减 → 偏移被夹紧 → 列表往回弹"。这条路走不通。
   bool _hasMore = true;
   static const int _pageSize = AppConstants.defaultPageSize;
   StreamSubscription<List<Quote>>? _quotesSub;
@@ -317,6 +338,8 @@ class NoteListViewState extends State<NoteListView> {
   Map<String, dynamic>? _scrollSessionStartQuoteContentStats;
   Map<String, int>? _scrollSessionStartQuoteItemStats;
   Map<String, int>? _scrollSessionStartImageEmbedStats;
+  int _scrollSessionStartMemoHits = 0;
+  int _scrollSessionStartMemoMisses = 0;
   int _scrollSessionStartImageCount = 0;
   int _scrollSessionStartImageBytes = 0;
   int _scrollSessionItemLayoutCount = 0;
@@ -1048,6 +1071,8 @@ class NoteListViewState extends State<NoteListView> {
       }
       return false;
     });
+    // 记忆化的卡片跟着 `_quotes` 走：笔记不在列表里了就没人再问它，留着只占内存。
+    _quoteItemMemos.removeWhere((id, _) => !activeIds.contains(id));
   }
 
   @override

@@ -57,6 +57,47 @@ void main() {
       });
     });
 
+    group('previewDecodeDimensionFor', () {
+      test('按屏幕尺寸留出放大余量，但仍受解码上限约束', () {
+        const logicalWidth = 400.0;
+        const pixelRatio = 2.0;
+
+        expect(
+          previewDecodeDimensionFor(logicalWidth, pixelRatio),
+          (logicalWidth * previewZoomHeadroom * pixelRatio).round(),
+        );
+        // 余量再大也不能越过单维上限，否则封顶就形同虚设。
+        expect(previewDecodeDimensionFor(1200, 3.0), maxDecodeDimension);
+      });
+
+      test('两个维度都封顶后，单张预览的解码内存有硬上界', () {
+        // 这是这条路存在的全部理由：不封顶按原图解，一张 12MP 照片就是约 48MB，
+        // 一次预览足以把 64MB 的 imageCache 挤空，回到列表后缩略图全部要重解。
+        const bytesPerPixel = 4;
+        final worstCaseBytes =
+            maxDecodeDimension * maxDecodeDimension * bytesPerPixel;
+
+        expect(worstCaseBytes < 20 * 1024 * 1024, isTrue);
+        for (final logicalSize in <double>[360, 430, 800, 1600]) {
+          for (final pixelRatio in <double>[1.0, 2.0, 3.5]) {
+            final decoded = previewDecodeDimensionFor(logicalSize, pixelRatio);
+            expect(decoded, isNotNull);
+            expect(
+              decoded! <= maxDecodeDimension,
+              isTrue,
+              reason: 'size=$logicalSize dpr=$pixelRatio',
+            );
+          }
+        }
+      });
+
+      test('非法尺寸或像素比返回 null，沿用不设上限的语义', () {
+        expect(previewDecodeDimensionFor(0, 2.0), isNull);
+        expect(previewDecodeDimensionFor(double.nan, 2.0), isNull);
+        expect(previewDecodeDimensionFor(400, 0), isNull);
+      });
+    });
+
     group('decodeHeightBudgetFor', () {
       test('高度上限乘以解码宽度不超过总像素预算', () {
         for (final width in <int>[160, 688, 1032, 2048]) {

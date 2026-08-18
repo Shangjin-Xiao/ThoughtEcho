@@ -139,6 +139,10 @@ class QuoteItemWidget extends StatefulWidget {
   static const int _headerTextWidthPruneBatchSize = 128;
   static int _headerTextWidthCacheHits = 0;
   static int _headerTextWidthCacheMisses = 0;
+  // 每张卡片首布局都要测 1~3 段头部文字（日期、位置、天气），而日期逐条不同，
+  // 缓存按文本做键 ⇒ 首次必然未命中。它是首滑成本的另一个嫌疑人，一并计量。
+  static int _headerTextWidthWorkMicros = 0;
+  static int _headerTextWidthWorstWorkMicros = 0;
 
   /// 清理折叠判断缓存，常用于测试或手动刷新场景。
   static void clearExpansionCache() {
@@ -151,6 +155,8 @@ class QuoteItemWidget extends StatefulWidget {
     _headerTextWidthCache.clear();
     _headerTextWidthCacheHits = 0;
     _headerTextWidthCacheMisses = 0;
+    _headerTextWidthWorkMicros = 0;
+    _headerTextWidthWorstWorkMicros = 0;
   }
 
   /// 获取折叠缓存当前状态，便于调试观察命中率。
@@ -165,6 +171,9 @@ class QuoteItemWidget extends StatefulWidget {
       'cacheSize': _expansionCache.length,
       'cacheHits': _cacheHitCount,
       'expandableCount': expandableCount,
+      'headerMisses': _headerTextWidthCacheMisses,
+      'headerWorkMicros': _headerTextWidthWorkMicros,
+      'headerWorstWorkMicros': _headerTextWidthWorstWorkMicros,
     };
   }
 
@@ -173,6 +182,8 @@ class QuoteItemWidget extends StatefulWidget {
         'cacheSize': _headerTextWidthCache.length,
         'cacheHits': _headerTextWidthCacheHits,
         'cacheMisses': _headerTextWidthCacheMisses,
+        'workMicros': _headerTextWidthWorkMicros,
+        'worstWorkMicros': _headerTextWidthWorstWorkMicros,
       };
 
   /// 测试辅助方法，等价于 [clearExpansionCache]。
@@ -342,6 +353,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     }
 
     QuoteItemWidget._headerTextWidthCacheMisses++;
+    final stopwatch = Stopwatch()..start();
     final textPainter = TextPainter(
       text: TextSpan(text: text, style: style),
       maxLines: 1,
@@ -350,6 +362,13 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     )..layout();
 
     final width = textPainter.width;
+    stopwatch.stop();
+    QuoteItemWidget._headerTextWidthWorkMicros += stopwatch.elapsedMicroseconds;
+    if (stopwatch.elapsedMicroseconds >
+        QuoteItemWidget._headerTextWidthWorstWorkMicros) {
+      QuoteItemWidget._headerTextWidthWorstWorkMicros =
+          stopwatch.elapsedMicroseconds;
+    }
     if (QuoteItemWidget._headerTextWidthCache.length >=
         QuoteItemWidget._maxHeaderTextWidthCacheSize) {
       final keysToRemove = QuoteItemWidget._headerTextWidthCache.keys

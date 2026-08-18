@@ -288,7 +288,19 @@ class _MotionPhotoPreviewPageState extends State<MotionPhotoPreviewPage> {
   }
 
   Widget _buildImageContent() {
-    final provider = createOptimizedImageProvider(widget.imageUrl);
+    // 预览**不按原图解码**：一张 12MP 照片解出来约 48MB，一次预览就足以把 64MB 的
+    // imageCache 挤空，回到记录页时每张缩略图都得重新解码（性能日志里
+    // `img=1/1000, bytes=47.6MB` 之后紧接着 `pending=17`、worstRaster 45ms）。
+    // 按屏幕尺寸的 previewZoomHeadroom 倍封顶，捏合放大仍有余量。
+    final logicalSize = MediaQuery.sizeOf(context);
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final provider = createOptimizedImageProvider(
+      widget.imageUrl,
+      // 两个维度都给：`ResizeImage` 因此走 fit 策略等比缩进框内，横图竖图都不变形，
+      // 单张解码上界也就被这个框钉死了。
+      cacheWidth: previewDecodeSizeFor(logicalSize.width, pixelRatio),
+      cacheHeight: previewDecodeSizeFor(logicalSize.height, pixelRatio),
+    );
     if (provider == null) {
       return const Center(
         child:
