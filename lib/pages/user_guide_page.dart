@@ -370,14 +370,14 @@ class _UserGuidePageState extends State<UserGuidePage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.error_outline,
-                          size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
+                      Icon(Icons.error_outline,
+                          size: 64, color: Theme.of(context).colorScheme.error),
+                      SizedBox(height: 16),
                       Text(_error!, textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       ElevatedButton.icon(
                         onPressed: _loadManual,
-                        icon: const Icon(Icons.refresh),
+                        icon: Icon(Icons.refresh),
                         label: Text(l10n.retry),
                       ),
                     ],
@@ -391,7 +391,7 @@ class _UserGuidePageState extends State<UserGuidePage> {
                       centerTitle: true,
                       actions: [
                         IconButton(
-                          icon: const Icon(Icons.open_in_new),
+                          icon: Icon(Icons.open_in_new),
                           tooltip: l10n.userGuideOnlineDoc,
                           onPressed: _launchOnlineDocs,
                         ),
@@ -405,11 +405,11 @@ class _UserGuidePageState extends State<UserGuidePage> {
                         child: SearchBar(
                           controller: _searchController,
                           hintText: l10n.userGuideSearchHint,
-                          leading: const Icon(Icons.search),
+                          leading: Icon(Icons.search),
                           trailing: _searchController.text.isNotEmpty
                               ? [
                                   IconButton(
-                                    icon: const Icon(Icons.clear),
+                                    icon: Icon(Icons.clear),
                                     tooltip: l10n.clear,
                                     onPressed: () => _searchController.clear(),
                                   )
@@ -468,7 +468,7 @@ class _UserGuidePageState extends State<UserGuidePage> {
                                 color:
                                     colorScheme.outline.withValues(alpha: 0.5),
                               ),
-                              const SizedBox(height: 16),
+                              SizedBox(height: 16),
                               Text(
                                 l10n.userGuideNoResults,
                                 style: TextStyle(
@@ -581,7 +581,7 @@ class _UserGuidePageState extends State<UserGuidePage> {
                 ),
               ],
             ),
-          if (section.title.isNotEmpty) const SizedBox(height: 8),
+          if (section.title.isNotEmpty) SizedBox(height: 8),
           ...section.items.map((item) => Padding(
                 padding: const EdgeInsets.only(left: 12, bottom: 6),
                 child: Row(

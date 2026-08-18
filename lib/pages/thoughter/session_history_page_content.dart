@@ -127,8 +127,9 @@ extension _SessionHistoryPageContent on _SessionHistoryPageState {
                   await _performSearch(_searchQuery);
                 }
               },
-              backgroundColor:
-                  session.isPinned ? Colors.orange : theme.colorScheme.primary,
+              backgroundColor: session.isPinned
+                  ? AppSemanticColors.of(context).warning
+                  : theme.colorScheme.primary,
               foregroundColor: Colors.white,
               icon: session.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
               label: session.isPinned ? l10n.unpinChat : l10n.pinChat,

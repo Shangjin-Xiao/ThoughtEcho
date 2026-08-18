@@ -427,7 +427,9 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.search_off, size: 48, color: Colors.grey),
+            Icon(Icons.search_off,
+                size: 48,
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
             const SizedBox(height: 16),
             Text(l10n.noCityFound),
             const SizedBox(height: 8),
@@ -451,7 +453,9 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.search, size: 48, color: Colors.grey),
+            Icon(Icons.search,
+                size: 48,
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
             const SizedBox(height: 16),
             Text(l10n.enterCityToSearch),
           ],

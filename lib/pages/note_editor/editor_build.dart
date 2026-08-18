@@ -67,26 +67,28 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
           actions: [
             IconButton(
               key: _metadataButtonKey, // 功能引导 key
-              icon: const Icon(Icons.edit_note),
+              icon: Icon(Icons.edit_note),
               tooltip: l10n.editMetadataShort,
               onPressed: () => _showMetadataDialog(context),
             ),
             IconButton(
-              icon: const Icon(Icons.auto_awesome),
+              icon: Icon(Icons.auto_awesome),
               tooltip: l10n.aiAssistantLabel,
               onPressed: () => _showAIOptions(context),
             ),
             IconButton(
               icon: _editorState.isLoadingFullQuote
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 24,
                       height: 24,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.grey, // 适配 AppBar 颜色
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant, // 适配 AppBar 颜色
                       ),
                     )
-                  : const Icon(Icons.save),
+                  : Icon(Icons.save),
               tooltip: l10n.save,
               onPressed: _editorState.isLoadingFullQuote || _mediaState.isSaving
                   ? null
@@ -141,7 +143,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                                   l10n.tagsCount(
                                       _metadataState.selectedTagIds.length),
                                 ),
-                                avatar: const Icon(Icons.tag, size: 16),
+                                avatar: Icon(Icons.tag, size: 16),
                               ),
                             ),
                           if (_metadataState.selectedColorHex != null)
@@ -208,7 +210,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                             onPressed: () => _showMetadataDialog(context),
                             child: Text(
                               l10n.editMetadata,
-                              style: const TextStyle(fontSize: 12),
+                              style: TextStyle(fontSize: 12),
                             ),
                           ),
                         ],
@@ -287,7 +289,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                                       strokeWidth: 3,
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
+                                  SizedBox(width: 12),
                                   Text(
                                     _mediaState.saveProgress < 1.0
                                         ? l10n.savingNote
@@ -296,13 +298,13 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 16),
+                              SizedBox(height: 16),
                               LinearProgressIndicator(
                                 value: _mediaState.saveProgress.clamp(0.0, 1.0),
                                 minHeight: 6,
                                 borderRadius: BorderRadius.circular(4),
                               ),
-                              const SizedBox(height: 12),
+                              SizedBox(height: 12),
                               if (_mediaState.saveStatus != null)
                                 Text(
                                   _mediaState.saveStatus!,
@@ -311,7 +313,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
-                              const SizedBox(height: 8),
+                              SizedBox(height: 8),
                               Text(
                                 '${(_mediaState.saveProgress * 100).clamp(0, 100).toStringAsFixed(0)}%',
                                 style: theme.textTheme.labelMedium,

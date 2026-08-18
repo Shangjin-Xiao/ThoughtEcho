@@ -589,7 +589,9 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
               Icon(
                 isGranted ? Icons.check_circle : icon,
                 size: 20,
-                color: isGranted ? Colors.green : colorScheme.error,
+                color: isGranted
+                    ? AppSemanticColors.of(context).success
+                    : colorScheme.error,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -644,7 +646,9 @@ extension _SmartPushSettingsPageBasicSections on _SmartPushSettingsPageState {
               Icon(
                 isGranted ? Icons.check_circle : Icons.rocket_launch_outlined,
                 size: 20,
-                color: isGranted ? Colors.green : colorScheme.error,
+                color: isGranted
+                    ? AppSemanticColors.of(context).success
+                    : colorScheme.error,
               ),
               const SizedBox(width: 12),
               Expanded(

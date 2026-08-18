@@ -1,3 +1,4 @@
+import 'package:thoughtecho/theme/app_semantic_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
@@ -512,7 +513,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(l10n.sendConfirmContent(device.alias)),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       CheckboxListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(l10n.includeMediaFilesOption),
@@ -586,7 +587,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         messenger.showSnackBar(
           SnackBar(
             content: Text(l10n.sendFailedWithError(e.toString())),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
             duration: const Duration(seconds: 3),
           ),
         );
@@ -622,7 +623,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           title: Text(l10n.noteSync),
           actions: [
             IconButton(
-              icon: const Icon(Icons.refresh),
+              icon: Icon(Icons.refresh),
               onPressed: _isScanning ? null : _startDeviceDiscovery,
               tooltip: l10n.refreshDeviceList,
             ),
@@ -640,32 +641,34 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                   Row(
                     children: [
                       if (_isInitializing) ...[
-                        const SizedBox(
+                        SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Text(l10n.initializingService),
                       ] else if (_initializationError.isNotEmpty) ...[
-                        const Icon(Icons.error, color: Colors.red, size: 18),
-                        const SizedBox(width: 6),
+                        Icon(Icons.error,
+                            color: Theme.of(context).colorScheme.error,
+                            size: 18),
+                        SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             l10n.startFailed(_initializationError),
-                            style: const TextStyle(
-                              color: Colors.red,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
                               fontSize: 12,
                             ),
                           ),
                         ),
                       ] else if (_isScanning) ...[
-                        const SizedBox(
+                        SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             _discoveryRemainingMs > 0
@@ -682,15 +685,16 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               ? Icons.devices
                               : Icons.search,
                           size: 18,
-                          color:
-                              _nearbyDevices.isNotEmpty ? Colors.green : null,
+                          color: _nearbyDevices.isNotEmpty
+                              ? AppSemanticColors.of(context).success
+                              : null,
                         ),
-                        const SizedBox(width: 6),
+                        SizedBox(width: 6),
                         Text(l10n.foundDevicesCount(_nearbyDevices.length)),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   GestureDetector(
                     onLongPress: () {
                       if (_localFingerprint != null) {
@@ -742,24 +746,31 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.devices_other,
                               size: 64,
-                              color: Colors.grey,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
                             ),
-                            const SizedBox(height: 16),
+                            SizedBox(height: 16),
                             Text(
                               l10n.noNearbyDevices,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 18,
-                                color: Colors.grey,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            SizedBox(height: 8),
                             Text(
                               l10n.ensureDeviceOnSameNetwork,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.grey),
+                              style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant),
                             ),
                           ],
                         ),
@@ -770,7 +781,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         itemCount: _nearbyDevices.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 4),
+                        separatorBuilder: (_, __) => SizedBox(height: 4),
                         itemBuilder: (context, index) {
                           final theme = Theme.of(context);
                           final device = _nearbyDevices[index];
@@ -837,7 +848,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Expanded(child: _buildDeviceName(device)),
-                                    const SizedBox(width: 8),
+                                    SizedBox(width: 8),
                                     _buildShortFingerprint(device.fingerprint),
                                   ],
                                 ),
@@ -853,7 +864,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                   ),
                                 ),
                                 trailing: isSendingToThis
-                                    ? const SizedBox(
+                                    ? SizedBox(
                                         width: 32,
                                         height: 32,
                                         child: CircularProgressIndicator(
@@ -861,7 +872,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                         ),
                                       )
                                     : FilledButton.tonalIcon(
-                                        icon: const Icon(Icons.send, size: 18),
+                                        icon: Icon(Icons.send, size: 18),
                                         label: Text(l10n.send),
                                         style: FilledButton.styleFrom(
                                           padding: const EdgeInsets.symmetric(
@@ -901,20 +912,20 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                             Icons.info_outline,
                             color: Theme.of(context).colorScheme.primary,
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Text(
                             l10n.usageInstructionsTitle,
                             style: Theme.of(context).textTheme.titleSmall,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       Text(
                         '• ${l10n.syncUsageInstruction1}\n'
                         '• ${l10n.syncUsageInstruction2}\n'
                         '• ${l10n.syncUsageInstruction3}\n'
                         '• ${l10n.syncUsageInstruction4}',
-                        style: const TextStyle(fontSize: 12),
+                        style: TextStyle(fontSize: 12),
                       ),
                     ],
                   ),
@@ -928,10 +939,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
               ? null
               : (_isScanning ? _cancelDeviceDiscovery : _startDeviceDiscovery),
           icon: _isInitializing
-              ? const Icon(Icons.hourglass_empty)
+              ? Icon(Icons.hourglass_empty)
               : _isScanning
-                  ? const Icon(Icons.close)
-                  : const Icon(Icons.search),
+                  ? Icon(Icons.close)
+                  : Icon(Icons.search),
           label: Text(
             _isInitializing
                 ? l10n.initializing
@@ -990,11 +1001,11 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                   } else if (isFailure) {
                     titleText = _getSyncStatusText(s.syncStatus, l10n);
                     titleIcon = Icons.error_outline;
-                    titleColor = Colors.red;
+                    titleColor = Theme.of(context).colorScheme.error;
                   } else if (isSuccess) {
                     titleText = _getSyncStatusText(s.syncStatus, l10n);
                     titleIcon = Icons.check_circle_outline;
-                    titleColor = Colors.green;
+                    titleColor = AppSemanticColors.of(context).success;
                   } else {
                     titleText = _getSyncStatusText(s.syncStatus, l10n);
                     titleIcon = Icons.sync;
@@ -1042,7 +1053,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                     title: Row(
                       children: [
                         Icon(titleIcon, color: titleColor, size: 24),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             titleText,
@@ -1071,7 +1082,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              SizedBox(width: 12),
                               Text(
                                 percentLabel,
                                 style: Theme.of(context)
@@ -1084,7 +1095,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16),
                           if (waitingUser)
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1107,7 +1118,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                           context,
                                         ).colorScheme.primary,
                                       ),
-                                      const SizedBox(width: 10),
+                                      SizedBox(width: 10),
                                       Expanded(
                                         child: Text(
                                           l10n.deviceWantsToSync(
@@ -1126,7 +1137,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                     ],
                                   ),
                                 ),
-                                const SizedBox(height: 12),
+                                SizedBox(height: 12),
                                 CheckboxListTile(
                                   value: s.skipSyncConfirmation,
                                   onChanged: (v) async {
@@ -1139,11 +1150,11 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                   ),
                                   title: Text(
                                     l10n.doNotAskAgain,
-                                    style: const TextStyle(fontSize: 13),
+                                    style: TextStyle(fontSize: 13),
                                   ),
                                   subtitle: Text(
                                     l10n.autoAcceptSyncRequests,
-                                    style: const TextStyle(fontSize: 11),
+                                    style: TextStyle(fontSize: 11),
                                   ),
                                 ),
                               ],
@@ -1164,7 +1175,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               ),
                               child: Text(
                                 progressMessage,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
                                   height: 1.3,
                                 ),

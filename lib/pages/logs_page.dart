@@ -1,3 +1,4 @@
+import 'package:thoughtecho/theme/app_semantic_colors.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -427,15 +428,16 @@ class _LogsPageState extends State<LogsPage> {
   Color _getLogLevelColor(UnifiedLogLevel level, ThemeData theme) {
     switch (level) {
       case UnifiedLogLevel.verbose:
-        return Colors.grey;
+        return theme.colorScheme.onSurfaceVariant;
       case UnifiedLogLevel.debug:
         return Colors.teal;
       case UnifiedLogLevel.info:
         return Colors.blue;
       case UnifiedLogLevel.warning:
-        return Colors.orange;
+        return theme.extension<AppSemanticColors>()?.warning ??
+            const Color(0xFFF2C260);
       case UnifiedLogLevel.error:
-        return Colors.red;
+        return theme.colorScheme.error;
       case UnifiedLogLevel.none:
         return theme.colorScheme.onSurface;
     }
@@ -739,18 +741,21 @@ class _LogsPageState extends State<LogsPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error, color: Colors.red, size: 48),
+                Icon(Icons.error,
+                    color: Theme.of(context).colorScheme.error, size: 48),
                 const SizedBox(height: 16),
                 Text(
                   '${l10n.logPageError}\n\n${e.toString()}',
-                  style: const TextStyle(color: Colors.red),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   stack.toString(),
                   maxLines: 10,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
               ],
             ),
@@ -1127,15 +1132,16 @@ class _LogEntryItem extends StatelessWidget {
   static Color _getLogLevelColor(UnifiedLogLevel level, ThemeData theme) {
     switch (level) {
       case UnifiedLogLevel.verbose:
-        return Colors.grey;
+        return theme.colorScheme.onSurfaceVariant;
       case UnifiedLogLevel.debug:
         return Colors.teal;
       case UnifiedLogLevel.info:
         return Colors.blue;
       case UnifiedLogLevel.warning:
-        return Colors.orange;
+        return theme.extension<AppSemanticColors>()?.warning ??
+            const Color(0xFFF2C260);
       case UnifiedLogLevel.error:
-        return Colors.red;
+        return theme.colorScheme.error;
       case UnifiedLogLevel.none:
         return theme.colorScheme.onSurface;
     }

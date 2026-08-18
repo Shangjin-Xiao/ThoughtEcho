@@ -61,7 +61,9 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                               Icons.location_on,
                               color: _metadataState.showLocation
                                   ? theme.colorScheme.primary
-                                  : Colors.grey,
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
                               size: 18,
                             ),
                             label: Text(l10n.locationLabel),
@@ -138,7 +140,7 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                               : Icons.cloud,
                           color: _metadataState.showWeather
                               ? theme.colorScheme.primary
-                              : Colors.grey,
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
                           size: 18,
                         ),
                         label: Text(l10n.weatherLabel),

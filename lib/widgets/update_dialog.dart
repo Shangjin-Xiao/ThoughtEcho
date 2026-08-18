@@ -1,3 +1,4 @@
+import 'package:thoughtecho/theme/app_semantic_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
@@ -285,7 +286,8 @@ class UpdateBottomSheet extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
             child: Row(
               children: [
-                const Icon(Icons.check_circle, color: Colors.green, size: 28),
+                Icon(Icons.check_circle,
+                    color: AppSemanticColors.of(context).success, size: 28),
                 const SizedBox(width: 12),
                 Text(AppLocalizations.of(context).updateAlreadyLatest),
               ],
@@ -306,7 +308,8 @@ class UpdateBottomSheet extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  const Icon(Icons.verified, size: 48, color: Colors.green),
+                  Icon(Icons.verified,
+                      size: 48, color: AppSemanticColors.of(context).success),
                   const SizedBox(height: 16),
                   Text(
                     AppLocalizations.of(

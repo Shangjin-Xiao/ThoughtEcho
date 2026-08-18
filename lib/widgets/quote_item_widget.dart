@@ -1357,7 +1357,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                         value: 'delete',
                         child: Row(
                           children: [
-                            const Icon(Icons.delete, color: Colors.red),
+                            Icon(Icons.delete,
+                                color: Theme.of(context).colorScheme.error),
                             const SizedBox(width: 8),
                             Text(
                               l10n.deleteNoteMenu,

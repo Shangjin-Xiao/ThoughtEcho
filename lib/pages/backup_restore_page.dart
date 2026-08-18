@@ -1,3 +1,4 @@
+import 'package:thoughtecho/theme/app_semantic_colors.dart';
 import 'dart:io';
 import '../gen_l10n/app_localizations.dart';
 
@@ -697,7 +698,8 @@ Details: $e''';
           builder: (context) => AlertDialog(
             title: Row(
               children: [
-                const Icon(Icons.warning_amber, color: Colors.orange),
+                Icon(Icons.warning_amber,
+                    color: AppSemanticColors.of(context).warning),
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
@@ -725,7 +727,7 @@ Details: $e''';
                   style: Theme.of(context)
                       .textTheme
                       .titleSmall
-                      ?.copyWith(color: Colors.red),
+                      ?.copyWith(color: Theme.of(context).colorScheme.error),
                 ),
               ],
             ),
@@ -737,7 +739,7 @@ Details: $e''';
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(true),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
+                  backgroundColor: Theme.of(context).colorScheme.error,
                   foregroundColor: Colors.white,
                 ),
                 child: Text(l10n.confirmRestoreBtn),
@@ -807,7 +809,7 @@ Details: $e''';
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            const Icon(Icons.error, color: Colors.red),
+            Icon(Icons.error, color: Theme.of(context).colorScheme.error),
             const SizedBox(width: 8),
             Flexible(
               child: Text(

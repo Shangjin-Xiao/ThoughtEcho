@@ -1,3 +1,4 @@
+import 'package:thoughtecho/theme/app_semantic_colors.dart';
 import 'package:flutter/material.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../utils/lottie_animation_manager.dart';
@@ -227,7 +228,9 @@ class _StatusAnimationWidgetState extends State<StatusAnimationWidget>
     final effectiveMessage = widget.message ??
         (widget.isSuccess ? l10n.operationSuccess : l10n.operationFailedSimple);
     final effectiveTextColor = widget.textColor ??
-        (widget.isSuccess ? Colors.green : theme.colorScheme.error);
+        (widget.isSuccess
+            ? AppSemanticColors.of(context).success
+            : theme.colorScheme.error);
     final effectiveTextStyle = widget.textStyle ??
         theme.textTheme.bodyLarge?.copyWith(color: effectiveTextColor);
     final icon =

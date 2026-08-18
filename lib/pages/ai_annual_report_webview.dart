@@ -1,3 +1,4 @@
+import 'package:thoughtecho/theme/app_semantic_colors.dart';
 import 'package:flutter/foundation.dart'; // Add kIsWeb import
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -842,7 +843,8 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            const Icon(Icons.info_outline, color: Colors.orange),
+            Icon(Icons.info_outline,
+                color: AppSemanticColors.of(context).warning),
             const SizedBox(width: 8),
             Flexible(
               child: Text(

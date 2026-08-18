@@ -88,12 +88,13 @@ class SVGCardWidget extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const CircularProgressIndicator(),
-                        const SizedBox(height: 8),
+                        CircularProgressIndicator(),
+                        SizedBox(height: 8),
                         Text(
                           AppLocalizations.of(context).svgLoading,
-                          style: const TextStyle(
-                            color: Colors.grey,
+                          style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),
@@ -148,7 +149,7 @@ class SVGCardWidget extends StatelessWidget {
                     size: 48,
                     color: Colors.grey[600],
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Text(
                     AppLocalizations.of(context).svgRenderFailed,
                     style: Theme.of(context)
@@ -156,14 +157,14 @@ class SVGCardWidget extends StatelessWidget {
                         .titleMedium
                         ?.copyWith(color: Colors.grey[700]),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Text(
                     AppLocalizations.of(context).svgTryingFallback,
                     style: TextStyle(color: Colors.grey[600], fontSize: 12),
                     textAlign: TextAlign.center,
                   ),
                   if (kDebugMode) ...[
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
@@ -174,7 +175,7 @@ class SVGCardWidget extends StatelessWidget {
                         message.length > 100
                             ? '${message.substring(0, 100)}...'
                             : message,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.black87,
                           fontSize: 10,
                           fontFamily: 'monospace',
@@ -219,12 +220,13 @@ class SVGCardWidget extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const CircularProgressIndicator(),
-                        const SizedBox(height: 8),
+                        CircularProgressIndicator(),
+                        SizedBox(height: 8),
                         Text(
                           AppLocalizations.of(context).svgLoadingFallback,
-                          style: const TextStyle(
-                            color: Colors.grey,
+                          style: TextStyle(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),
@@ -266,7 +268,7 @@ class SVGCardWidget extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.error_outline, size: 48, color: Colors.red[400]),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Text(
                 AppLocalizations.of(context).cardRenderFailed,
                 style: Theme.of(context)
@@ -274,7 +276,7 @@ class SVGCardWidget extends StatelessWidget {
                     .titleMedium
                     ?.copyWith(color: Colors.red[700]),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Text(
                 AppLocalizations.of(context).cardRegeneratePrompt,
                 style: TextStyle(color: Colors.red[600], fontSize: 12),
@@ -427,7 +429,7 @@ class GeneratedCardWidget extends StatelessWidget {
           width: width,
           height: height,
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Wrap(
           alignment: WrapAlignment.center,
           spacing: 12,
@@ -617,7 +619,7 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                         ),
                         child: IconButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.close,
                             color: Colors.white,
                             size: 24,
@@ -647,7 +649,7 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                                 l10n.featuredCards,
                                 style: Theme.of(context).textTheme.titleLarge,
                               ),
-                              const SizedBox(height: 16),
+                              SizedBox(height: 16),
                               // 卡片
                               GeneratedCardWidget(
                                 card: _currentCard,
@@ -663,18 +665,18 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                               ),
 
                               if (_isRegenerating) ...[
-                                const SizedBox(height: 12),
+                                SizedBox(height: 12),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const SizedBox(
+                                    SizedBox(
                                       width: 18,
                                       height: 18,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    SizedBox(width: 8),
                                     Text(
                                       l10n.regeneratingCard,
                                       style: Theme.of(context)
@@ -719,8 +721,8 @@ class CardGenerationLoadingDialog extends StatelessWidget {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 16),
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
           Text(displayMessage),
         ],
       ),
