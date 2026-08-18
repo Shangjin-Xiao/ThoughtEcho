@@ -422,7 +422,7 @@ extension _NoteListItemsExtension on NoteListViewState {
 
     // 优化：提前创建标签映射，避免在 item builder 中重复计算
     // 将整体复杂度从 O(L * T) 优化为 O(L + T)，其中构建映射为 O(L)，每次查找为 O(1)
-    final tagMap = {for (var t in _effectiveTags) t.id: t};
+    final tagMap = _obtainTagMap();
     final rowIndexByKey = <String, int>{
       for (var i = 0; i < _quotes.length; i++)
         if (_quotes[i].id case final id?) 'note-list-row-$id': i,
@@ -590,75 +590,20 @@ extension _NoteListItemsExtension on NoteListViewState {
 
                   Widget itemWidget = ValueListenableBuilder<bool>(
                     valueListenable: expansionNotifier,
-                    builder: (context, isExpanded, child) => QuoteItemWidget(
+                    builder: (context, isExpanded, child) => _obtainQuoteItem(
+                      quoteId: quoteId,
                       quote: quote,
+                      index: index,
                       tagMap: tagMap,
-                      selectedTagIds: widget.selectedTagIds,
                       isExpanded: isExpanded,
                       isSelected: isSelected,
-                      selectionMode: _isExportMode,
-                      // 首条与搜索框之间只隔这一层卡片上边距。
-                      topMarginOverride: index == 0
-                          ? QuoteItemWidget.firstItemTopMargin
-                          : null,
-                      onToggleExpanded: (expanded) {
-                        if (expansionNotifier.value != expanded) {
-                          expansionNotifier.value = expanded;
-                        }
-                        _expandedItems[quoteId] = expanded;
-
-                        final bool requiresAlignment =
-                            QuoteItemWidget.needsExpansionFor(quote);
-
-                        if (!expanded && requiresAlignment) {
-                          final waitDuration =
-                              QuoteItemWidget.expandCollapseDuration +
-                                  const Duration(milliseconds: 80);
-                          Future.delayed(waitDuration, () {
-                            if (!mounted) return;
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (!mounted) return;
-                              unawaited(
-                                _positionAndAlignQuote(
-                                  quoteId,
-                                  index,
-                                  forceAlignToTop: false,
-                                ),
-                              );
-                            });
-                          });
-                        }
-                      },
-                      onEdit: () => widget.onEdit(quote),
-                      // 折叠动画播完后才真正删除：时序由 [NoteItemMotion] 的完成
-                      // 回调驱动，不再用挂钟定时器猜动画什么时候结束。
-                      onDelete: () => _beginNoteDelete(quote),
-                      onAskAI: () => widget.onAskAI(quote),
-                      onGenerateCard: widget.onGenerateCard != null
-                          ? () => widget.onGenerateCard!(quote)
-                          : null,
-                      onExportPdf: () {
-                        HapticFeedback.selectionClick();
-                        _updateState(() {
-                          _isExportMode = true;
-                          _selectedExportNoteIds.clear();
-                          if (quote.id != null) {
-                            _selectedExportNoteIds.add(quote.id!);
-                          }
-                        });
-                      },
-                      onFavorite: widget.onFavorite != null
-                          ? () => widget.onFavorite!(quote)
-                          : null,
-                      onLongPressFavorite: widget.onLongPressFavorite != null
-                          ? () => widget.onLongPressFavorite!(quote)
-                          : null,
-                      favoriteButtonGuideKey: attachFavoriteGuideKey
+                      expansionNotifier: expansionNotifier,
+                      favoriteGuideKey: attachFavoriteGuideKey
                           ? widget.favoriteButtonGuideKey
                           : null,
-                      moreButtonGuideKey:
+                      moreGuideKey:
                           attachMoreGuideKey ? widget.moreButtonGuideKey : null,
-                      foldToggleGuideKey:
+                      foldGuideKey:
                           attachFoldGuideKey ? widget.foldToggleGuideKey : null,
                     ),
                   );
@@ -758,6 +703,167 @@ extension _NoteListItemsExtension on NoteListViewState {
       _reconcileScrollAnchor(null);
       _checkAndFixScrollExtentAnomaly();
     });
+  }
+
+  /// 标签映射表，只在标签本身变化时重建。
+  ///
+  /// 它是 [_obtainQuoteItem] 记忆化键的一员：每次 build 都新建一个 Map 的话，
+  /// 身份永远对不上，记忆化就一次都命不中。
+  Map<String, NoteTag> _obtainTagMap() {
+    final tags = _effectiveTags;
+    final cached = _tagMapCache;
+    if (cached != null && _isSameTagList(_tagMapSource, tags)) {
+      return cached;
+    }
+    final map = {for (final tag in tags) tag.id: tag};
+    _tagMapSource = List<NoteTag>.unmodifiable(tags);
+    _tagMapCache = map;
+    return map;
+  }
+
+  bool _isSameTagList(List<NoteTag>? a, List<NoteTag> b) {
+    if (a == null || a.length != b.length) return false;
+    for (var i = 0; i < b.length; i++) {
+      if (!identical(a[i], b[i])) return false;
+    }
+    return true;
+  }
+
+  /// 取这条笔记的卡片 widget，输入没变就返回**上一次那个实例**。
+  ///
+  /// 这是整列表重建的主要解药。`Element.updateChild` 里有一条短路：
+  ///
+  /// ```dart
+  /// if (hasSameSuperclass && child.widget == newWidget) { ... }  // framework.dart
+  /// ```
+  ///
+  /// 新旧 widget 是同一个实例时，整棵子树连 build 都不进 —— 也就顺带跳过了
+  /// [QuoteItemWidget] 里那两层 `LayoutBuilder`、折叠判定的 `TextPainter` 和
+  /// `CollapsedRichTextMetrics.plan()`。而这些正是"一次 setState 重建上百张卡片"
+  /// 的全部成本：实测 `built=140` 的那一帧 `worstBuild=89.8ms`。
+  ///
+  /// 记忆化**不会**让卡片错过 Inherited 依赖的更新：主题、语言、
+  /// `context.select` 的那几项设置都由框架直接把依赖它们的 Element 标脏，
+  /// 和父级传下来的是不是同一个 widget 无关。这里挡掉的只有"入参没变"那种重建，
+  /// 而入参正是下面这张键覆盖的东西。
+  ///
+  /// 回调不进键：它们在**调用时**才去读 `widget.onEdit` 一类的最新值，所以父组件
+  /// 换一批回调下来也不需要让缓存失效。只有可空的那几个要记住"当时是不是 null"，
+  /// 因为它决定按钮画不画。
+  Widget _obtainQuoteItem({
+    required String quoteId,
+    required Quote quote,
+    required int index,
+    required Map<String, NoteTag> tagMap,
+    required bool isExpanded,
+    required bool isSelected,
+    required ValueNotifier<bool> expansionNotifier,
+    required GlobalKey? favoriteGuideKey,
+    required GlobalKey? moreGuideKey,
+    required GlobalKey? foldGuideKey,
+  }) {
+    final cached = _quoteItemMemos[quoteId];
+    if (cached != null &&
+        cached.matches(
+          quote: quote,
+          index: index,
+          tagMap: tagMap,
+          selectedTagIds: widget.selectedTagIds,
+          isExpanded: isExpanded,
+          isSelected: isSelected,
+          selectionMode: _isExportMode,
+          hasGenerateCard: widget.onGenerateCard != null,
+          hasFavorite: widget.onFavorite != null,
+          hasLongPressFavorite: widget.onLongPressFavorite != null,
+          favoriteGuideKey: favoriteGuideKey,
+          moreGuideKey: moreGuideKey,
+          foldGuideKey: foldGuideKey,
+        )) {
+      _quoteItemMemoHits++;
+      return cached.widget;
+    }
+
+    _quoteItemMemoMisses++;
+    final built = QuoteItemWidget(
+      quote: quote,
+      tagMap: tagMap,
+      selectedTagIds: widget.selectedTagIds,
+      isExpanded: isExpanded,
+      isSelected: isSelected,
+      selectionMode: _isExportMode,
+      // 首条与搜索框之间只隔这一层卡片上边距。
+      topMarginOverride: index == 0 ? QuoteItemWidget.firstItemTopMargin : null,
+      onToggleExpanded: (expanded) {
+        if (expansionNotifier.value != expanded) {
+          expansionNotifier.value = expanded;
+        }
+        _expandedItems[quoteId] = expanded;
+
+        final bool requiresAlignment = QuoteItemWidget.needsExpansionFor(quote);
+
+        if (!expanded && requiresAlignment) {
+          final waitDuration = QuoteItemWidget.expandCollapseDuration +
+              const Duration(milliseconds: 80);
+          Future.delayed(waitDuration, () {
+            if (!mounted) return;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              unawaited(
+                _positionAndAlignQuote(
+                  quoteId,
+                  index,
+                  forceAlignToTop: false,
+                ),
+              );
+            });
+          });
+        }
+      },
+      onEdit: () => widget.onEdit(quote),
+      // 折叠动画播完后才真正删除：时序由 [NoteItemMotion] 的完成
+      // 回调驱动，不再用挂钟定时器猜动画什么时候结束。
+      onDelete: () => _beginNoteDelete(quote),
+      onAskAI: () => widget.onAskAI(quote),
+      onGenerateCard: widget.onGenerateCard != null
+          ? () => widget.onGenerateCard!(quote)
+          : null,
+      onExportPdf: () {
+        HapticFeedback.selectionClick();
+        _updateState(() {
+          _isExportMode = true;
+          _selectedExportNoteIds.clear();
+          if (quote.id != null) {
+            _selectedExportNoteIds.add(quote.id!);
+          }
+        });
+      },
+      onFavorite:
+          widget.onFavorite != null ? () => widget.onFavorite!(quote) : null,
+      onLongPressFavorite: widget.onLongPressFavorite != null
+          ? () => widget.onLongPressFavorite!(quote)
+          : null,
+      favoriteButtonGuideKey: favoriteGuideKey,
+      moreButtonGuideKey: moreGuideKey,
+      foldToggleGuideKey: foldGuideKey,
+    );
+
+    _quoteItemMemos[quoteId] = _QuoteItemMemo(
+      widget: built,
+      quote: quote,
+      index: index,
+      tagMap: tagMap,
+      selectedTagIds: widget.selectedTagIds,
+      isExpanded: isExpanded,
+      isSelected: isSelected,
+      selectionMode: _isExportMode,
+      hasGenerateCard: widget.onGenerateCard != null,
+      hasFavorite: widget.onFavorite != null,
+      hasLongPressFavorite: widget.onLongPressFavorite != null,
+      favoriteGuideKey: favoriteGuideKey,
+      moreGuideKey: moreGuideKey,
+      foldGuideKey: foldGuideKey,
+    );
+    return built;
   }
 
   bool _shouldKeepAliveNoteListItem(int index, Quote quote) {
@@ -1372,5 +1478,84 @@ class _SlowItemLayoutSample {
     return '$index:$quoteId:$kind:'
         '${(durationMicros / 1000.0).toStringAsFixed(1)}ms:'
         'h=$oldHeightText→${height.toStringAsFixed(0)}';
+  }
+}
+
+/// [_NoteListItemsExtension._obtainQuoteItem] 的记忆化条目。
+///
+/// 存的是"上次用什么入参建出了哪个 widget"。字段就是那张键 —— 加参数时必须同步
+/// 加到这里，漏一个就会让卡片停在旧数据上。
+@immutable
+class _QuoteItemMemo {
+  const _QuoteItemMemo({
+    required this.widget,
+    required this.quote,
+    required this.index,
+    required this.tagMap,
+    required this.selectedTagIds,
+    required this.isExpanded,
+    required this.isSelected,
+    required this.selectionMode,
+    required this.hasGenerateCard,
+    required this.hasFavorite,
+    required this.hasLongPressFavorite,
+    required this.favoriteGuideKey,
+    required this.moreGuideKey,
+    required this.foldGuideKey,
+  });
+
+  final Widget widget;
+  final Quote quote;
+  final int index;
+  final Map<String, NoteTag> tagMap;
+  final List<String> selectedTagIds;
+  final bool isExpanded;
+  final bool isSelected;
+  final bool selectionMode;
+  final bool hasGenerateCard;
+  final bool hasFavorite;
+  final bool hasLongPressFavorite;
+  final GlobalKey? favoriteGuideKey;
+  final GlobalKey? moreGuideKey;
+  final GlobalKey? foldGuideKey;
+
+  /// [quote] 按实例比：[Quote] 全字段 final，同一实例就是同样的内容。
+  /// [selectedTagIds] 按内容比：父组件常常传一份等价的新列表下来，按身份比会让
+  /// 每次父级重建都全部失效 —— 而那正是最需要命中的场合。
+  bool matches({
+    required Quote quote,
+    required int index,
+    required Map<String, NoteTag> tagMap,
+    required List<String> selectedTagIds,
+    required bool isExpanded,
+    required bool isSelected,
+    required bool selectionMode,
+    required bool hasGenerateCard,
+    required bool hasFavorite,
+    required bool hasLongPressFavorite,
+    required GlobalKey? favoriteGuideKey,
+    required GlobalKey? moreGuideKey,
+    required GlobalKey? foldGuideKey,
+  }) {
+    if (!identical(this.quote, quote) ||
+        this.index != index ||
+        !identical(this.tagMap, tagMap) ||
+        this.isExpanded != isExpanded ||
+        this.isSelected != isSelected ||
+        this.selectionMode != selectionMode ||
+        this.hasGenerateCard != hasGenerateCard ||
+        this.hasFavorite != hasFavorite ||
+        this.hasLongPressFavorite != hasLongPressFavorite ||
+        !identical(this.favoriteGuideKey, favoriteGuideKey) ||
+        !identical(this.moreGuideKey, moreGuideKey) ||
+        !identical(this.foldGuideKey, foldGuideKey)) {
+      return false;
+    }
+    if (identical(this.selectedTagIds, selectedTagIds)) return true;
+    if (this.selectedTagIds.length != selectedTagIds.length) return false;
+    for (var i = 0; i < selectedTagIds.length; i++) {
+      if (this.selectedTagIds[i] != selectedTagIds[i]) return false;
+    }
+    return true;
   }
 }

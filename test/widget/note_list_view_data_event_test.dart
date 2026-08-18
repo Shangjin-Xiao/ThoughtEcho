@@ -13,6 +13,7 @@ import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/widgets/note_list/note_item_motion.dart';
 import 'package:thoughtecho/widgets/note_list_view.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
 
@@ -35,6 +36,12 @@ List<Quote> _makeQuotes(int count, {bool expandable = false}) => [
               .toIso8601String(),
         ),
     ];
+
+/// 探测"列表项有没有被重建"用的是动效层而不是 [QuoteItemWidget]：
+/// 后者会被 `_obtainQuoteItem` 记忆化，重建与否都是同一个实例，测不出重建。
+/// 动效层每次 itemBuilder 都新建，实例变了就说明这一格真的重建过。
+NoteItemMotion _firstItemMotion(WidgetTester tester) =>
+    tester.widget<NoteItemMotion>(find.byType(NoteItemMotion).first);
 
 QuoteItemWidget _firstItem(WidgetTester tester) =>
     tester.widget<QuoteItemWidget>(find.byType(QuoteItemWidget).first);
@@ -78,7 +85,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
 
-        final itemBefore = _firstItem(tester);
+        final itemBefore = _firstItemMotion(tester);
         final extentBefore = _noteListScrollPosition(tester).maxScrollExtent;
 
         // watchQuotes 每次都重发整个累积列表：分页到底、重复通知推来的就是这样
@@ -88,7 +95,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 50));
 
         expect(
-          identical(_firstItem(tester), itemBefore),
+          identical(_firstItemMotion(tester), itemBefore),
           isTrue,
           reason: '内容没变的数据事件不应触发整列表重建',
         );
@@ -126,15 +133,61 @@ void main() {
         // 换一批新实例，模拟一次真实的数据变更：这次事件本身必须重建。
         databaseService.emit(_makeQuotes(6, expandable: true), hasMore: true);
         await tester.pump();
-        final afterDataEvent = _firstItem(tester);
+        final afterDataEvent = _firstItemMotion(tester);
 
         // 帧末回调若又排了一次 setState，下一帧就会再换一批 widget 实例。
         await tester.pump();
 
         expect(
-          identical(_firstItem(tester), afterDataEvent),
+          identical(_firstItemMotion(tester), afterDataEvent),
           isTrue,
           reason: '可展开性没变时不该再触发一次整列表重建',
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+        await databaseService.disposeStream();
+      },
+    );
+
+    testWidgets(
+      '整列表重建时，入参没变的卡片复用同一个 widget 实例',
+      (tester) async {
+        // 有些重建躲不掉（这里用 `_hasMore` 翻转触发，父组件重建同理）。躲不掉时
+        // 至少要让它便宜：入参没变的卡片返回同一个实例，`Element.updateChild`
+        // 会把整棵子树短路掉，连折叠判定和排版计划都不重跑。
+        final databaseService = _StreamingFakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+        final quotes = _makeQuotes(12);
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+          ),
+        );
+        await tester.pump();
+
+        databaseService.emit(quotes, hasMore: true);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        final motionBefore = _firstItemMotion(tester);
+        final itemBefore = _firstItem(tester);
+
+        databaseService.emit(quotes, hasMore: false);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(
+          identical(_firstItemMotion(tester), motionBefore),
+          isFalse,
+          reason: '这次事件确实重建了列表，否则下面那条断言不成立',
+        );
+        expect(
+          identical(_firstItem(tester), itemBefore),
+          isTrue,
+          reason: '入参没变的卡片应当复用同一个 widget 实例',
         );
 
         await tester.pumpWidget(const SizedBox.shrink());
@@ -196,7 +249,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
 
-        final itemBefore = _firstItem(tester);
+        final itemBefore = _firstItemMotion(tester);
 
         // 笔记被编辑过：重新查询出来的是新对象，必须重建。
         databaseService.emit(
@@ -213,7 +266,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
 
-        expect(identical(_firstItem(tester), itemBefore), isFalse);
+        expect(identical(_firstItemMotion(tester), itemBefore), isFalse);
         expect(find.text('改过内容的第一条'), findsOneWidget);
 
         await tester.pumpWidget(const SizedBox.shrink());

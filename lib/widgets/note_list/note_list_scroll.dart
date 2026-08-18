@@ -164,6 +164,8 @@ extension _NoteListScrollExtension on NoteListViewState {
     _scrollSessionStartQuoteContentStats = QuoteContent.debugCacheStats();
     _scrollSessionStartQuoteItemStats = QuoteItemWidget.getCacheStats();
     _scrollSessionStartImageEmbedStats = QuillImageEmbedPerfStats.snapshot();
+    _scrollSessionStartMemoHits = _quoteItemMemoHits;
+    _scrollSessionStartMemoMisses = _quoteItemMemoMisses;
     final imageCache = PaintingBinding.instance.imageCache;
     _scrollSessionStartImageCount = imageCache.currentSize;
     _scrollSessionStartImageBytes = imageCache.currentSizeBytes;
@@ -322,6 +324,11 @@ extension _NoteListScrollExtension on NoteListViewState {
     final builtRange = _scrollSessionItemBuildCount == 0
         ? 'none'
         : '$_scrollSessionMinBuiltIndex-$_scrollSessionMaxBuiltIndex';
+    // 卡片记忆化：miss 才是真正建了一张新卡，hit 是被 Element.updateChild 短路掉的
+    // 那些。整列表重建时 hit 应该几乎等于重建的条目数，miss 只剩真正变了的那几条。
+    final itemMemoStats = 'size=${_quoteItemMemos.length},'
+        'hit+${_quoteItemMemoHits - _scrollSessionStartMemoHits},'
+        'miss+${_quoteItemMemoMisses - _scrollSessionStartMemoMisses}';
     final activityStats =
         'stateΔ=${_stateUpdateCount - _scrollSessionStartStateUpdateCount},'
         'buildΔ=${_noteListBuildCount - _scrollSessionStartNoteListBuildCount},'
@@ -356,7 +363,7 @@ extension _NoteListScrollExtension on NoteListViewState {
       'end=${_scrollSessionLastMaxExtent.round()},'
       'range=${_scrollSessionMinMaxExtent.round()}-${_scrollSessionMaxMaxExtent.round()},'
       'changes=$_scrollSessionExtentChangeCount}, '
-      'activity={$activityStats}, '
+      'activity={$activityStats}, itemMemo={$itemMemoStats}, '
       'itemLayout={$itemLayoutStats}, slowLayouts=[$slowLayouts]',
       source: 'NoteListView.Perf',
     );
