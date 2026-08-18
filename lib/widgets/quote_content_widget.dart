@@ -255,6 +255,9 @@ class QuoteContent extends StatelessWidget {
         // 折叠富文本真正的排版成本在这里。IR 解析（richText）便宜得多，
         // 只盯着它会以为折叠态已经没有成本了。
         'plan': CollapsedRichTextPlanCache.stats,
+        // 折叠判定：每张卡片首布局都要走一遍，此前完全没有计量，
+        // 见 [_QuotePlainTextLayoutExpansionCache] 的说明。
+        'expansion': _QuotePlainTextLayoutExpansionCache.stats,
       };
 
   /// Returns a compact one-line summary suitable for copy/paste performance logs.
@@ -278,6 +281,9 @@ class QuoteContent extends StatelessWidget {
     final plan = Map<String, dynamic>.from(
       stats['plan'] as Map<String, dynamic>,
     );
+    final expansion = Map<String, dynamic>.from(
+      stats['expansion'] as Map<String, dynamic>,
+    );
 
     final buffer = StringBuffer()
       ..write('doc=${document['cacheSize']}')
@@ -296,7 +302,10 @@ class QuoteContent extends StatelessWidget {
       ..write(',mediaMiss=${media['missCount']}')
       ..write(',plan=${plan['cacheSize']}')
       ..write('/${plan['maxSize']}')
-      ..write(',planWorstUs=${plan['worstWorkMicros']}');
+      ..write(',planWorstUs=${plan['worstWorkMicros']}')
+      ..write(',expand=${expansion['cacheSize']}')
+      ..write('/${expansion['maxSize']}')
+      ..write(',expandWorstUs=${expansion['worstWorkMicros']}');
 
     if (baseline != null) {
       final baselineDocument = Map<String, dynamic>.from(
@@ -310,6 +319,9 @@ class QuoteContent extends StatelessWidget {
       );
       final baselinePlan = Map<String, dynamic>.from(
         baseline['plan'] as Map<String, dynamic>? ?? const {},
+      );
+      final baselineExpansion = Map<String, dynamic>.from(
+        baseline['expansion'] as Map<String, dynamic>? ?? const {},
       );
 
       buffer
@@ -340,7 +352,13 @@ class QuoteContent extends StatelessWidget {
         ..write(',planWorkUs+')
         ..write(_debugIntDelta(plan, baselinePlan, 'workMicros'))
         ..write(',planWorstUs=')
-        ..write(_debugNewWorst(plan, baselinePlan));
+        ..write(_debugNewWorst(plan, baselinePlan))
+        ..write(',expandMiss+')
+        ..write(_debugIntDelta(expansion, baselineExpansion, 'missCount'))
+        ..write(',expandWorkUs+')
+        ..write(_debugIntDelta(expansion, baselineExpansion, 'workMicros'))
+        ..write(',expandWorstUs=')
+        ..write(_debugNewWorst(expansion, baselineExpansion));
     }
 
     return buffer.toString();
@@ -1143,6 +1161,25 @@ class _QuotePlainTextLayoutExpansionCache {
   static const int _maxCacheSize = 300;
   static const int _pruneBatchSize = 50;
 
+  // 这条路是**每张卡片每次首布局都要走一遍**的：它在 `LayoutBuilder` 里跑一次
+  // `TextPainter.layout`（富文本则是一次 `plan()`），就为了回答"要不要展开入口"。
+  // 2026-08-13 的诊断点名它"一个计数器都没有"，于是此后每一轮都只能猜首滑的成本
+  // 落在哪。补上之后，`itemLayout` 总时间减掉 expandWorkUs 和 planWorkUs，
+  // 剩下的才是真正的 widget 布局。
+  static int _hitCount = 0;
+  static int _missCount = 0;
+  static int _workMicros = 0;
+  static int _worstWorkMicros = 0;
+
+  static Map<String, dynamic> get stats => {
+        'cacheSize': _cache.length,
+        'maxSize': _maxCacheSize,
+        'hitCount': _hitCount,
+        'missCount': _missCount,
+        'workMicros': _workMicros,
+        'worstWorkMicros': _worstWorkMicros,
+      };
+
   static bool getOrCreate({
     required Quote quote,
     required TextStyle? style,
@@ -1173,6 +1210,7 @@ class _QuotePlainTextLayoutExpansionCache {
     );
     final existing = _cache.remove(key);
     if (existing != null) {
+      _hitCount++;
       existing.touch();
       _cache[key] = existing;
       return existing.exceedsCollapsedHeight;
@@ -1182,7 +1220,14 @@ class _QuotePlainTextLayoutExpansionCache {
       _pruneOldest();
     }
 
+    final stopwatch = Stopwatch()..start();
     final exceedsCollapsedHeight = builder();
+    stopwatch.stop();
+    _missCount++;
+    _workMicros += stopwatch.elapsedMicroseconds;
+    if (stopwatch.elapsedMicroseconds > _worstWorkMicros) {
+      _worstWorkMicros = stopwatch.elapsedMicroseconds;
+    }
     _cache[key] = _PlainTextLayoutExpansionCacheEntry(
       exceedsCollapsedHeight: exceedsCollapsedHeight,
     );
@@ -1191,6 +1236,10 @@ class _QuotePlainTextLayoutExpansionCache {
 
   static void clear() {
     _cache.clear();
+    _hitCount = 0;
+    _missCount = 0;
+    _workMicros = 0;
+    _worstWorkMicros = 0;
   }
 
   static void _pruneOldest() {

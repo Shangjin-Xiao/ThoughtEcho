@@ -25,8 +25,17 @@ extension _NoteListScrollExtension on NoteListViewState {
     final cacheSize = stats['cacheSize'] ?? 0;
     final cacheHits = stats['cacheHits'] ?? 0;
     final baselineHits = baseline?['cacheHits'];
+    // 头部测宽（日期/位置/天气）每张新卡片必然未命中 —— 日期逐条不同，
+    // 缓存按文本做键。它和 expandWorkUs、planWorkUs 一起把 itemLayout 拆开。
+    final headerMisses = stats['headerMisses'] ?? 0;
+    final headerWork = stats['headerWorkMicros'] ?? 0;
+    final baselineHeaderMisses = baseline?['headerMisses'];
+    final baselineHeaderWork = baseline?['headerWorkMicros'];
     return 'item=$cacheSize,hit=$cacheHits'
-        '${baselineHits == null ? '' : ',Δhit+${cacheHits - baselineHits}'}';
+        '${baselineHits == null ? '' : ',Δhit+${cacheHits - baselineHits}'}'
+        ',headerWorstUs=${stats['headerWorstWorkMicros'] ?? 0}'
+        '${baselineHeaderMisses == null ? '' : ',headerMiss+${headerMisses - baselineHeaderMisses}'}'
+        '${baselineHeaderWork == null ? '' : ',headerWorkUs+${headerWork - baselineHeaderWork}'}';
   }
 
   String _formatSignedInt(int value) {
