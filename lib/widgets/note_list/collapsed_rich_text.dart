@@ -89,7 +89,7 @@ class CollapsedRichText extends StatelessWidget {
     final children = <Widget>[
       for (final entry in plan.entries)
         if (entry.block.isMedia)
-          _buildMedia(context, entry.block)
+          _buildMedia(context, entry.block, entry.mediaHeight)
         else
           _CollapsedRichTextBlock(
             block: entry.block,
@@ -117,7 +117,7 @@ class CollapsedRichText extends StatelessWidget {
     );
   }
 
-  Widget _buildMedia(BuildContext context, RichTextBlock block) {
+  Widget _buildMedia(BuildContext context, RichTextBlock block, double? height) {
     final media = block.media!;
     final source = media.source;
 
@@ -148,7 +148,7 @@ class CollapsedRichText extends StatelessWidget {
       );
     }
 
-    Widget box = SizedBox(height: inlineMediaHeight, child: child);
+    Widget box = SizedBox(height: height ?? inlineMediaHeight, child: child);
     final onTap = onMediaTap;
     if (onTap != null && media.kind == DeltaMediaKind.image && source != null) {
       box = GestureDetector(
@@ -195,12 +195,21 @@ class CollapsedPlannedBlock {
     required this.block,
     required this.maxLines,
     this.ellipsis = false,
+    this.mediaHeight,
   });
 
   final RichTextBlock block;
 
   /// 这个块最多排几行。媒体块恒为 1，只是占位。
   final int maxLines;
+
+  /// 媒体块实际画多高（inline 版式）。为 null 时用
+  /// [CollapsedRichText.inlineMediaHeight]。
+  ///
+  /// 盒子只剩一截时把图**压到那一截**，而不是照常画满再让 `ClipRect` 裁：裁出来
+  /// 的像素一样，但 `Column` 会真的溢出（debug 下就是那条黄黑警示带），盒高也
+  /// 不再等于计划算出来的高度。
+  final double? mediaHeight;
 
   /// 末行是否要收一个省略号。
   ///
@@ -556,8 +565,25 @@ class CollapsedRichTextMetrics {
       }
 
       if (block.isMedia) {
-        entries.add(CollapsedPlannedBlock(block: block, maxLines: 1));
-        height += gap + CollapsedRichText.inlineMediaHeight;
+        // 放得下就照常画；只剩一截时压到那一截，压不出一张能看的图就不画了。
+        final double available = remainingHeight;
+        if (available < _minInlineMediaHeight) {
+          truncated = true;
+          break;
+        }
+        final double mediaHeight = available < CollapsedRichText.inlineMediaHeight
+            ? available
+            : CollapsedRichText.inlineMediaHeight;
+        entries.add(CollapsedPlannedBlock(
+          block: block,
+          maxLines: 1,
+          mediaHeight: mediaHeight,
+        ));
+        height += gap + mediaHeight;
+        if (mediaHeight < CollapsedRichText.inlineMediaHeight) {
+          truncated = true;
+          break;
+        }
         continue;
       }
 
@@ -660,6 +686,9 @@ class CollapsedRichTextMetrics {
     }
     return (budget.ceil() + 1).clamp(1, _maxLinesPerBlock);
   }
+
+  /// inline 版式下一张图至少要画这么高，再矮就只是一条看不出内容的色带。
+  static const double _minInlineMediaHeight = 32.0;
 
   /// 单个块的排版行数硬上限。
   ///

@@ -32,8 +32,17 @@ class CollapsedMediaThumbnail extends StatelessWidget {
   /// 缩略图边长。折叠正文区高 160px，72 既能看清内容又不挤占文字宽度。
   static const double defaultSize = 72.0;
 
-  /// 正文短到撑不满缩略图时用的放大尺寸（比选中的 v3 版式）。
+  /// 正文短到撑不满缩略图时用的放大尺寸。
+  ///
+  /// 正文只有一两行时，72 的方图撑不满卡片，左边一大块空着。放大到 96 把多出来
+  /// 的高度让给照片，卡片反而不空。再大就会把正文列挤窄到要多折一行。
   static const double shortNoteSize = 96.0;
+
+  /// 一个字都没有的纯图笔记用的尺寸。
+  ///
+  /// 没有正文要并排，整行都归照片，所以可以再大一号；仍然是方图——通栏定高的
+  /// `cover` 会把竖版照片裁成顶部一条横带。
+  static const double soloMediaSize = 132.0;
 
   /// 缩略图与正文之间的间距。
   static const double gap = 12.0;

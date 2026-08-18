@@ -961,9 +961,21 @@ class QuoteContent extends StatelessWidget {
             }
 
             // 一个字都没有的纯图笔记，右侧小图会把整张卡片的左边空成一块白。
-            // 照片本来就是这条笔记的全部内容，直接铺成通栏。
+            // 照片就是这条笔记的全部内容，给它一张更大的方图，居中放。
+            //
+            // **刻意不铺成通栏**：通栏是定高的，`cover` 会把竖版照片裁成顶部
+            // 一条横带（人像只剩半个头），而手机照片竖版居多；解码开销也要贵
+            // 一个量级。方图对各种比例的裁切都更温和，也和用户在设置里选的
+            // 「右侧小图」是同一种东西，只是大一号。
             if (!hasTextContent) {
-              return CollapsedMediaBanner(media: media, onTap: onMediaTap);
+              return Align(
+                alignment: Alignment.center,
+                child: CollapsedMediaThumbnail(
+                  media: media,
+                  onTap: onMediaTap,
+                  size: CollapsedMediaThumbnail.soloMediaSize,
+                ),
+              );
             }
 
             return Row(
