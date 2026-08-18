@@ -174,5 +174,62 @@ void main() {
         expect(StringUtils.removeObjectReplacementChar(''), '');
       });
     });
+
+    group('forEachLine', () {
+      test('handles empty string', () {
+        final List<String> lines = [];
+        final List<bool> isLastFlags = [];
+        StringUtils.forEachLine('', (line, isLast) {
+          lines.add(line);
+          isLastFlags.add(isLast);
+        });
+        expect(lines, ['']);
+        expect(isLastFlags, [true]);
+      });
+
+      test('handles string without newline', () {
+        final List<String> lines = [];
+        final List<bool> isLastFlags = [];
+        StringUtils.forEachLine('single line', (line, isLast) {
+          lines.add(line);
+          isLastFlags.add(isLast);
+        });
+        expect(lines, ['single line']);
+        expect(isLastFlags, [true]);
+      });
+
+      test('handles string with newlines', () {
+        final List<String> lines = [];
+        final List<bool> isLastFlags = [];
+        StringUtils.forEachLine('line 1\nline 2\nline 3', (line, isLast) {
+          lines.add(line);
+          isLastFlags.add(isLast);
+        });
+        expect(lines, ['line 1', 'line 2', 'line 3']);
+        expect(isLastFlags, [false, false, true]);
+      });
+
+      test('handles string ending with newline', () {
+        final List<String> lines = [];
+        final List<bool> isLastFlags = [];
+        StringUtils.forEachLine('line 1\n', (line, isLast) {
+          lines.add(line);
+          isLastFlags.add(isLast);
+        });
+        expect(lines, ['line 1', '']);
+        expect(isLastFlags, [false, true]);
+      });
+
+      test('handles string with consecutive newlines', () {
+        final List<String> lines = [];
+        final List<bool> isLastFlags = [];
+        StringUtils.forEachLine('line 1\n\nline 3', (line, isLast) {
+          lines.add(line);
+          isLastFlags.add(isLast);
+        });
+        expect(lines, ['line 1', '', 'line 3']);
+        expect(isLastFlags, [false, false, true]);
+      });
+    });
   });
 }
