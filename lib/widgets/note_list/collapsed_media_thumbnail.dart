@@ -32,6 +32,9 @@ class CollapsedMediaThumbnail extends StatelessWidget {
   /// 缩略图边长。折叠正文区高 160px，72 既能看清内容又不挤占文字宽度。
   static const double defaultSize = 72.0;
 
+  /// 正文短到撑不满缩略图时用的放大尺寸（比选中的 v3 版式）。
+  static const double shortNoteSize = 96.0;
+
   /// 缩略图与正文之间的间距。
   static const double gap = 12.0;
 

@@ -1,5 +1,4 @@
 import 'dart:collection';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import '../theme/theme_style.dart';
@@ -30,13 +29,9 @@ class QuoteItemWidget extends StatefulWidget {
   static bool disableCardShadowsForTesting = false;
 
   @visibleForTesting
-  static bool disableBackdropBlurForTesting = false;
-
-  @visibleForTesting
   static void resetVisualEffectTestingOverrides() {
     disableVisualEffectsForTesting = false;
     disableCardShadowsForTesting = false;
-    disableBackdropBlurForTesting = false;
   }
 
   final Quote quote;
@@ -227,7 +222,6 @@ class QuoteItemWidget extends StatefulWidget {
 
 class _QuoteItemWidgetState extends State<QuoteItemWidget>
     with SingleTickerProviderStateMixin {
-  final BackdropKey _backdropKey = BackdropKey();
   late final AnimationController _doubleTapController;
   late final Animation<double> _scaleAnimation;
   late final Animation<double> _highlightProgress;
@@ -423,7 +417,6 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     required Quote quote,
     required bool isExpanded,
     required Color primaryTextColor,
-    required bool backdropBlurDisabled,
     required bool paperRulesDisabled,
     required AppLocalizations l10n,
   }) {
@@ -444,6 +437,30 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             contentStyle,
             constraints.maxWidth,
           );
+          final String mediaStyle = context.select<SettingsService, String>(
+            (s) => s.noteCardMediaStyle,
+          );
+          // 「可展开」和「正文被裁了」是两件事：带媒体的笔记一律可展开，正文却
+          // 常常一个字都没少。提示遮罩按后者画，短笔记才不会被一条模糊带压住。
+          final bool textTruncated = needsExpansion &&
+              QuoteContent.collapsedTextTruncatedForLayout(
+                quote: quote,
+                style: contentStyle,
+                maxWidth: constraints.maxWidth,
+                mediaStyle: mediaStyle,
+                prioritizeBoldContent: context.select<SettingsService, bool>(
+                  (s) => s.prioritizeBoldContentInCollapse,
+                ),
+                textDirection:
+                    Directionality.maybeOf(context) ?? TextDirection.ltr,
+                textScaler: MediaQuery.textScalerOf(context),
+                locale: Localizations.maybeLocaleOf(context),
+                boldWeight: QuoteContent.collapsedBoldWeight(context),
+                richTextBaseStyle: QuillThemeTypography.paragraphStyle(
+                  context,
+                  base: contentStyle,
+                ),
+              );
           // 「短到不用折叠」不等于「展开」：短卡片仍然是列表卡片，应该走
           // QuoteContent 的轻量预览而不是 QuillEditor。只有用户真的双击展开了，
           // 才需要完整的富文本渲染。
@@ -452,18 +469,11 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             quote: quote,
             showFullContent: showFullContent,
             needsExpansion: needsExpansion,
+            textTruncated: textTruncated,
             isExpanded: isExpanded,
             contentStyle: contentStyle,
             innerTheme: innerTheme,
-            backdropBlurDisabled: backdropBlurDisabled,
             l10n: l10n,
-            thumbnailInset: QuoteContent.collapsedThumbnailInset(
-              quote: quote,
-              mediaStyle: context.select<SettingsService, String>(
-                (s) => s.noteCardMediaStyle,
-              ),
-              maxWidth: constraints.maxWidth,
-            ),
           );
 
           final animatedContent = _buildAnimatedQuoteContent(
@@ -508,19 +518,18 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     required Quote quote,
     required bool showFullContent,
     required bool needsExpansion,
+    required bool textTruncated,
     required bool isExpanded,
     required TextStyle? contentStyle,
     required ThemeData innerTheme,
-    required bool backdropBlurDisabled,
     required AppLocalizations l10n,
-    required double thumbnailInset,
   }) {
-    return Stack(
+    final Widget content = Stack(
       clipBehavior: Clip.none,
       children: [
         // 撑满可用宽度：纯文本正文在宽松约束下只有最长行那么宽（手动换行的
         // 短行笔记尤其明显），否则 Stack 会收缩到文字宽度，
-        // 下方渐变遮罩与提示胶囊会跟着变窄、偏离卡片中心。
+        // 下方的提示行会跟着变窄、贴到正文右边而不是卡片右边。
         const SizedBox(width: double.infinity, height: 0),
         AnimatedSwitcher(
           duration: QuoteItemWidget._fadeDuration,
@@ -544,81 +553,35 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             ),
           ),
         ),
-        Positioned(
-          left: 0,
-          // 遮罩要给右侧缩略图让位。横跨整个内容区的话，渐变和「展开」胶囊会压在
-          // 缩略图上，图的下缘看起来像蒙了一层脏。
-          right: thumbnailInset,
-          bottom: 0,
-          height: 30,
-          child: IgnorePointer(
-            child: AnimatedSwitcher(
-              duration: QuoteItemWidget._fadeDuration,
-              switchInCurve: Curves.easeIn,
-              switchOutCurve: Curves.easeOut,
-              child: (!isExpanded && needsExpansion)
-                  ? _buildCollapseHintOverlay(
-                      innerTheme: innerTheme,
-                      backdropBlurDisabled: backdropBlurDisabled,
-                      l10n: l10n,
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ),
-        ),
       ],
     );
-  }
 
-  Widget _buildCollapseHintOverlay({
-    required ThemeData innerTheme,
-    required bool backdropBlurDisabled,
-    required AppLocalizations l10n,
-  }) {
-    final fadeScrim = Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            innerTheme.colorScheme.surface.withValues(alpha: 0.0),
-            innerTheme.colorScheme.surface.withValues(alpha: 0.08),
-            innerTheme.colorScheme.surface.withValues(alpha: 0.18),
-          ],
-          stops: const [0.0, 0.4, 1.0],
-        ),
-      ),
-    );
+    // 提示行只给**正文真的被截断**的卡片，而且画在正文下面，不压在正文上。
+    //
+    // 这两点都是有来由的：
+    //
+    // - 「有媒体就一律可展开」（见 `QuoteContent._hasCollapsibleMedia`）会让短
+    //   笔记、纯图笔记也拿到展开入口，可它们的正文一个字都没少。提示按「可展开」
+    //   画，遮的就是完好的内容，说的「还有全文」也不存在。
+    // - 正文现在按整行截断（见 `CollapsedRichTextMetrics.plan`），盒底不再留半行
+    //   残字，也就不需要一条模糊带去糊住它。原来那条 `BackdropFilter` 每张折叠卡
+    //   一个，去掉之后连它的合成开销一起省了。
+    if (isExpanded || !textTruncated) return content;
 
-    return Stack(
-      fit: StackFit.expand,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        ExcludeSemantics(
-          child: backdropBlurDisabled
-              ? fadeScrim
-              : RepaintBoundary(
-                  child: ClipRect(
-                    child: BackdropFilter(
-                      backdropGroupKey: _backdropKey,
-                      filter: ui.ImageFilter.blur(sigmaX: 1.2, sigmaY: 1.2),
-                      child: fadeScrim,
-                    ),
-                  ),
-                ),
-        ),
-        Align(
-          alignment: Alignment.center,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: innerTheme.colorScheme.surface.withValues(alpha: 0.35),
-              borderRadius: BorderRadius.circular(12),
-            ),
+        content,
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Align(
+            alignment: Alignment.centerRight,
             child: Text(
               l10n.doubleTapToViewFull,
-              style: innerTheme.textTheme.bodySmall?.copyWith(
-                color: innerTheme.colorScheme.onSurfaceVariant,
-                fontSize: 11,
+              style: innerTheme.textTheme.labelSmall?.copyWith(
+                color: innerTheme.colorScheme.onSurfaceVariant
+                    .withValues(alpha: 0.8),
               ),
             ),
           ),
@@ -707,9 +670,6 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     final disableCardShadows = context.select<SettingsService, bool>(
       (s) => s.noteListDisableCardShadows,
     );
-    final disableBackdropBlur = context.select<SettingsService, bool>(
-      (s) => s.noteListDisableBackdropBlur,
-    );
     final String formattedDate = TimeUtils.formatQuoteDateLocalized(
       context,
       quoteDate,
@@ -759,10 +719,6 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     final cardShadowsDisabled = visualEffectsDisabled ||
         QuoteItemWidget.disableCardShadowsForTesting ||
         disableCardShadows;
-    final backdropBlurDisabled = visualEffectsDisabled ||
-        QuoteItemWidget.disableBackdropBlurForTesting ||
-        disableBackdropBlur;
-
     final cardMargin = EdgeInsets.only(
       left: 12,
       right: 12,
@@ -983,7 +939,6 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             quote: quote,
             isExpanded: isExpanded,
             primaryTextColor: primaryTextColor,
-            backdropBlurDisabled: backdropBlurDisabled,
             paperRulesDisabled: visualEffectsDisabled,
             l10n: l10n,
           ),
