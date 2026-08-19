@@ -217,6 +217,8 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             _scheduleIdlePrefetch(
               delay: const Duration(milliseconds: 400),
             );
+            // 同理，首屏卡片一建出来就开始预热后面那些卡片的测量。
+            _scheduleIdleLayoutWarmup();
           }
 
           // 重置滚动范围检查计数器
@@ -469,6 +471,9 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           } else {
             // 筛选/排序切换回到第一页后重新预取，让新结果集也覆盖首次快滑。
             _scheduleIdlePrefetch();
+            // 结果集整体换过了，预热游标也要拨回开头。
+            _resetIdleLayoutWarmup();
+            _scheduleIdleLayoutWarmup();
           }
           if (!quotesUnchanged) {
             _scheduleExpandableQuoteCheck();

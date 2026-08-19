@@ -593,3 +593,51 @@ frameJank 显著低于 22。连续滑动时每个 session 摘要都应输出。
 - scroll-12 中 index 81 同卡 h=344→344 重复 relayout 3 次（8~15ms），与 imageEmbed
   Δcomplete+21 同段：图片 embed 完成态变化触发整 QuillEditor relayout，二阶问题。
 - embed 图片解码无 cacheWidth（2.8~3.3MB/张），内存问题与卡顿无关，待办。
+
+---
+
+## 2026-08-19: 首滑成本定位到「挂载」，卡片瘦身 38%
+
+**决策者**: 上晋 + Claude
+**类型**: 根因定位 / 实施
+**完整分析**: `docs/note-list-first-paint-cost-2026-08-19.md`
+
+### 根因
+
+用户 08-19 的四段 log 把结论钉死了：`built` 里有新卡片就掉帧
+（scroll-1/2：frameJank 6/4），全是老卡片就一帧不掉（scroll-3/4：frameJank 0，
+其中 scroll-4 那次整列表重建 `itemMemo hit+72 / miss+0`——dd3674c 的记忆化确实生效）。
+把两组相减摊到 32 张新卡片上：UI 线程 ~8.4ms/卡，光栅 ~5.5ms/卡。
+再用 dd3674c 补的计数器把 8.4ms 拆开，折叠判定 0.5 + 折叠排版 0.4 + 头部测宽 0.5
++ 真正布局 1.7，**剩下 5.4ms 没有任何计数器认领**。
+
+实测一张最小卡片（短纯文本、无标签、不可展开）146 个 element，其中
+`PopupMenuButton` 占 59、心形按钮外那层 `Tooltip` 占 40，**正文只占 3 个**。
+那 5.4ms 就是这棵树的挂载成本。
+
+前几轮一直在优化「量」（Quill 物化、折叠判定、plan 缓存、整列表重建），
+方向都对，但量的那部分现在只剩 1.4ms/卡；真正的大头是「建」，而它从来没被看见过。
+
+### 决定
+
+1. **卡片瘦身，不改一个像素**：更多按钮换掉 `IconButton` 的整套 `ButtonStyle` 机件、
+   触摸端不挂 `Tooltip`（无障碍名称改由 `Semantics` 给，桌面端保留悬浮提示）、
+   两个按钮共用一层 `Material`、双击动画机件懒建、不可展开的卡片不挂
+   `AnimatedSize` 与两层 `AnimatedSwitcher`、标签放得下时不挂 `SingleChildScrollView`。
+   146 → 90 / 164 → 122 / 216 → 155。上限由
+   `test/widget/widgets/quote_item_element_budget_test.dart` 钉住。
+2. **空闲预热**：静止时按 3ms 一片，把折叠判定、折叠排版、缩略图解码提前算好。
+   键必须和渲染逐字节相同——宽度由真实卡片回填，plan 入参和解码尺寸各自只有一处产出，
+   `collapsed_layout_warmup_test.dart` 钉死「先暖再建，未命中数不许涨」。
+3. **把挂载接进日志**：新增 `itemMount={count,workUs,worstUs}` 与
+   `warmup={items,cursor,img}`。`mount` 只在真正新建时走一次，正好等于「第一次」。
+
+### 明确没做（下一轮的题）
+
+- 光栅侧 5.5ms/卡没动。折叠遮罩那层 `BackdropFilter`（σ=1.2）是同屏可展开卡片数量
+  倍数的 `saveLayer`，盖的只是一条 30px 渐变加一个文字胶囊。设置里已有开关，
+  **翻默认值是视觉决定，要先问用户**。
+- 空闲期爬升 `scrollCacheExtent` 让下一屏提前建好：收益上限最高，但涉及内存
+  （32 位 ARM 回退设备）和 `_extrapolateMaxScrollOffset` 估算变化（列表回弹的老坑），
+  要单独一轮配基准。
+- 头部测宽（0.5ms/卡）没进预热，plumbing 比收益多。

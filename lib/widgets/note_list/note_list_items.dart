@@ -699,6 +699,8 @@ extension _NoteListItemsExtension on NoteListViewState {
 
       // 延迟放行图片解码和异常检测，避免与 ScrollEnd 帧的 loadMore 挤在同一帧。
       isListScrolling.value = false;
+      // 停下来了：接着把还没暖过的卡片测量补上，让下一次滑动也吃到缓存。
+      _scheduleIdleLayoutWarmup();
       // 拖拽期间不跟手势抢位置，挂起的还原留到这里补做。
       _reconcileScrollAnchor(null);
       _checkAndFixScrollExtentAnomaly();
@@ -971,6 +973,7 @@ extension _NoteListItemsExtension on NoteListViewState {
       kind: _noteListPerfKindFor(quote),
       sessionId: _scrollSessionId,
       onLayout: _recordNoteListItemLayout,
+      onMount: _recordNoteListItemMount,
       child: child,
     );
   }
@@ -1331,6 +1334,7 @@ class _NoteListItemPerfProbe extends SingleChildRenderObjectWidget {
     required this.kind,
     required this.sessionId,
     required this.onLayout,
+    required this.onMount,
     required super.child,
   });
 
@@ -1339,6 +1343,11 @@ class _NoteListItemPerfProbe extends SingleChildRenderObjectWidget {
   final String kind;
   final String? sessionId;
   final _NoteListItemLayoutCallback onLayout;
+  final _NoteListItemMountCallback onMount;
+
+  @override
+  SingleChildRenderObjectElement createElement() =>
+      _NoteListItemPerfProbeElement(this);
 
   @override
   RenderObject createRenderObject(BuildContext context) {
@@ -1362,6 +1371,36 @@ class _NoteListItemPerfProbe extends SingleChildRenderObjectWidget {
       ..kind = kind
       ..sessionId = sessionId
       ..onLayout = onLayout;
+  }
+}
+
+/// 计量「这张卡片的子树第一次被建出来」花了多久。
+///
+/// `itemLayout` 那个探针只盖到布局：`LayoutBuilder` 里的折叠判定和折叠排版被算
+/// 在里面，**挂载**（构造 widget、建 element 与 RenderObject）却一直没有任何
+/// 计数器。而一张最小卡片就有 90 个 element，首滑一次要建三十多张 —— 这一项拆
+/// 不出来，就只能继续猜首滑的成本落在哪。
+///
+/// `mount` 只在真正新建时走一次：被 keepAlive 留住、或被记忆化短路掉的重建都
+/// 不会进这里，正好就是「第一次」的定义。
+class _NoteListItemPerfProbeElement extends SingleChildRenderObjectElement {
+  _NoteListItemPerfProbeElement(_NoteListItemPerfProbe super.widget);
+
+  @override
+  void mount(Element? parent, Object? newSlot) {
+    final probe = widget as _NoteListItemPerfProbe;
+    final stopwatch = Stopwatch()..start();
+    try {
+      super.mount(parent, newSlot);
+    } finally {
+      stopwatch.stop();
+    }
+    probe.onMount(
+      index: probe.index,
+      quoteId: probe.quoteId,
+      kind: probe.kind,
+      durationMicros: stopwatch.elapsedMicroseconds,
+    );
   }
 }
 
@@ -1454,6 +1493,13 @@ typedef _NoteListItemLayoutCallback = void Function({
   required int durationMicros,
   required double height,
   required double? oldHeight,
+});
+
+typedef _NoteListItemMountCallback = void Function({
+  required int index,
+  required String quoteId,
+  required String kind,
+  required int durationMicros,
 });
 
 class _SlowItemLayoutSample {

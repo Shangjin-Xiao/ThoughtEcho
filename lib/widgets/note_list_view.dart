@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 
 import '../extensions/note_tag_localization_extension.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../models/app_settings.dart';
 import '../models/quote_model.dart';
 import '../models/note_tag.dart';
 import '../services/database_service.dart';
@@ -19,6 +20,8 @@ import '../utils/icon_utils.dart';
 import '../utils/jank_detector.dart';
 import '../utils/lottie_animation_manager.dart';
 import '../widgets/quote_item_widget.dart';
+import 'note_list/collapsed_media_banner.dart';
+import 'note_list/collapsed_media_thumbnail.dart';
 import '../widgets/quote_content_widget.dart';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_empty_view.dart';
@@ -45,6 +48,7 @@ part 'note_list/note_list_scroll.dart';
 part 'note_list/note_list_data_stream.dart';
 part 'note_list/note_list_items.dart';
 part 'note_list/note_list_filters.dart';
+part 'note_list/note_list_warmup.dart';
 
 class NoteListView extends StatefulWidget {
   final List<NoteTag> tags;
@@ -243,6 +247,26 @@ class NoteListViewState extends State<NoteListView> {
   Timer? _idlePrefetchTimer;
   static const int _idlePrefetchTargetItems = 120;
 
+  // 空闲预热：趁列表静止把「卡片首次布局才做」的测量提前算好，见
+  // note_list/note_list_warmup.dart。
+  Timer? _idleWarmupTimer;
+  int _idleWarmupCursor = 0;
+
+  /// 连续「什么都没暖成」的轮次。宽度一直取不到、或列表一直在滚时，
+  /// 预热不能无限改期下去：那会留下一个永远不结束的定时器
+  /// （生产里是白转，widget 测试里 `pumpAndSettle` 直接卡死）。
+  int _idleWarmupDeferrals = 0;
+  static const int _maxIdleWarmupDeferrals = 20;
+  double? _idleWarmupWidth;
+  int _idleWarmupWarmedItems = 0;
+  int _idleWarmupPrecachedImages = 0;
+  final Set<String> _idleWarmupPrecachedSources = <String>{};
+
+  /// 单轮预热的时间预算。一次暖满整张列表会在空闲帧里堆出一个上百毫秒的长任务，
+  /// 用户正好这时开始滑就白优化了；分成小片，随时能让路。
+  static const int _idleWarmupBudgetMicros = 3000;
+  static const int _idleWarmupPrecacheTrackLimit = 240;
+
   // 修复：添加等待服务初始化的标志
   bool _waitingForServices = true;
 
@@ -346,6 +370,11 @@ class NoteListViewState extends State<NoteListView> {
   int _scrollSessionItemLayoutMicros = 0;
   int _scrollSessionItemLayoutJank = 0;
   int _scrollSessionWorstItemLayoutMicros = 0;
+  // 挂载（构造 widget、建 element 与 RenderObject）此前没有任何计数器，
+  // 首滑成本里最大的一块一直只能靠 avgBuild 反推。见 _NoteListItemPerfProbeElement。
+  int _scrollSessionItemMountCount = 0;
+  int _scrollSessionItemMountMicros = 0;
+  int _scrollSessionWorstItemMountMicros = 0;
   final List<_SlowItemLayoutSample> _scrollSessionSlowItemLayouts =
       <_SlowItemLayoutSample>[];
   int _stateUpdateCount = 0;
@@ -784,6 +813,7 @@ class NoteListViewState extends State<NoteListView> {
     _scrollSessionPerfStopTimer?.cancel();
     _scrollEndSettleTimer?.cancel();
     _idlePrefetchTimer?.cancel();
+    _idleWarmupTimer?.cancel();
     // 清理动画定时器
     for (final timer in _animationTimers.values) {
       timer.cancel();
