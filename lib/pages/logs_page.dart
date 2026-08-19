@@ -435,7 +435,9 @@ class _LogsPageState extends State<LogsPage> {
         return Colors.blue;
       case UnifiedLogLevel.warning:
         return theme.extension<AppSemanticColors>()?.warning ??
-            const Color(0xFFF2C260);
+            (theme.brightness == Brightness.dark
+                ? AppSemanticColors.dark.warning
+                : AppSemanticColors.light.warning);
       case UnifiedLogLevel.error:
         return theme.colorScheme.error;
       case UnifiedLogLevel.none:
@@ -753,8 +755,7 @@ class _LogsPageState extends State<LogsPage> {
                   stack.toString(),
                   maxLines: 10,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontSize: 12,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
               ],
@@ -1139,7 +1140,9 @@ class _LogEntryItem extends StatelessWidget {
         return Colors.blue;
       case UnifiedLogLevel.warning:
         return theme.extension<AppSemanticColors>()?.warning ??
-            const Color(0xFFF2C260);
+            (theme.brightness == Brightness.dark
+                ? AppSemanticColors.dark.warning
+                : AppSemanticColors.light.warning);
       case UnifiedLogLevel.error:
         return theme.colorScheme.error;
       case UnifiedLogLevel.none:

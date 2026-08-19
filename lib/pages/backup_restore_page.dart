@@ -1,20 +1,18 @@
-import 'package:thoughtecho/theme/app_semantic_colors.dart';
 import 'dart:io';
-import '../gen_l10n/app_localizations.dart';
-
-import 'package:file_selector/file_selector.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
-
+import '../gen_l10n/app_localizations.dart';
 import '../services/backup_service.dart';
 import '../services/large_file_manager.dart';
 import '../utils/app_logger.dart';
 import '../utils/backup_progress_update_gate.dart';
-import '../utils/time_utils.dart';
 import '../utils/stream_file_selector.dart';
+import '../utils/time_utils.dart';
 import '../widgets/app_snackbar.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart';
+import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:thoughtecho/theme/app_semantic_colors.dart';
 
 /// 备份与还原页面
 ///
@@ -740,7 +738,7 @@ Details: $e''';
                 onPressed: () => Navigator.of(context).pop(true),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.error,
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onError,
                 ),
                 child: Text(l10n.confirmRestoreBtn),
               ),

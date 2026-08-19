@@ -160,7 +160,10 @@ class SVGCardWidget extends StatelessWidget {
                   SizedBox(height: 8),
                   Text(
                     AppLocalizations.of(context).svgTryingFallback,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                   if (kDebugMode) ...[
@@ -279,7 +282,10 @@ class SVGCardWidget extends StatelessWidget {
               SizedBox(height: 8),
               Text(
                 AppLocalizations.of(context).cardRegeneratePrompt,
-                style: TextStyle(color: Colors.red[600], fontSize: 12),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: Colors.red[600]),
                 textAlign: TextAlign.center,
               ),
             ],

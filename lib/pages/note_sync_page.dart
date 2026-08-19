@@ -756,12 +756,14 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                             SizedBox(height: 16),
                             Text(
                               l10n.noNearbyDevices,
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
                             ),
                             SizedBox(height: 8),
                             Text(
@@ -856,11 +858,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                   padding: const EdgeInsets.only(top: 4),
                                   child: Text(
                                     ipLine,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: theme.colorScheme.onSurface
-                                          .withValues(alpha: 0.6),
-                                    ),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.6),
+                                        ),
                                   ),
                                 ),
                                 trailing: isSendingToThis
@@ -1477,11 +1481,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           color: theme.colorScheme.onSurfaceVariant,
           height: 1.2,
         ) ??
-        TextStyle(
-          fontSize: 12,
-          color: theme.colorScheme.onSurfaceVariant,
-          height: 1.2,
-        );
+        Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.2,
+            );
 
     return Tooltip(
       message: tooltipMessage,

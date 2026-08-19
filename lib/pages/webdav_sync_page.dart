@@ -933,8 +933,10 @@ class QuoteListViewByConflict extends StatelessWidget {
                       SizedBox(width: 4),
                       Text(
                         LWWUtils.formatTimestamp(quote.lastModified),
-                        style: TextStyle(
-                            fontSize: 12, color: theme.colorScheme.outline),
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: theme.colorScheme.outline),
                       ),
                     ],
                   ),

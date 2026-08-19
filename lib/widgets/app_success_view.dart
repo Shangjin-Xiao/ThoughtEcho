@@ -1,5 +1,5 @@
-import 'package:thoughtecho/theme/app_semantic_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:thoughtecho/theme/app_semantic_colors.dart';
 
 class AppSuccessView extends StatelessWidget {
   final String text;
