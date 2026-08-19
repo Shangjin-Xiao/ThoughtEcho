@@ -271,7 +271,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       debugPrint('ThoughtEcho设备发现已启动');
       logInfo('discovery_started', source: 'LocalSend');
     } catch (e, stack) {
-      logError('启动设备发现失败: $e', error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
+      logError('启动设备发现失败: $e',
+          error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
       _isScanning = false;
       notifyListeners();
     }
@@ -360,7 +361,10 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
               '✓ 成功加入组播组 $defaultMulticastGroup (接口: ${interface.name})',
             );
           } catch (e, stack) {
-            logError('❌ 加入组播组失败: $e', error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
+            logError('❌ 加入组播组失败: $e',
+                error: e,
+                stackTrace: stack,
+                source: 'ThoughtEchoDiscoveryService');
             socket.close();
             continue; // 跳过这个接口
           }
@@ -392,7 +396,10 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
           _sockets.add(socket);
           debugPrint('✓ UDP组播监听已绑定到接口: ${interface.name}');
         } catch (e, stack) {
-          logError('绑定UDP组播到接口 ${interface.name} 失败: $e', error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
+          logError('绑定UDP组播到接口 ${interface.name} 失败: $e',
+              error: e,
+              stackTrace: stack,
+              source: 'ThoughtEchoDiscoveryService');
         }
       }
 
@@ -407,7 +414,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         );
       }
     } catch (e, stack) {
-      logError('启动UDP组播监听失败: $e', error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
+      logError('启动UDP组播监听失败: $e',
+          error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
     }
   }
 
@@ -490,7 +498,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         _respondToAnnouncement(device);
       }
     } catch (e, stack) {
-      logError('解析组播消息失败: $e', error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
+      logError('解析组播消息失败: $e',
+          error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
       if (kDebugMode) {
         debugPrint('原始消息: ${utf8.decode(datagram.data, allowMalformed: true)}');
       }
@@ -587,7 +596,10 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
             );
           }
         } catch (e, stack) {
-          logError('广播兜底发送失败: $e', error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
+          logError('广播兜底发送失败: $e',
+              error: e,
+              stackTrace: stack,
+              source: 'ThoughtEchoDiscoveryService');
         }
       } on SocketException catch (e) {
         // iOS 16+ 特有错误处理
@@ -618,7 +630,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
           source: 'LocalSend',
         );
       } catch (e, stack) {
-        logError('❌ 套接字 $i 发送异常: $e', error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
+        logError('❌ 套接字 $i 发送异常: $e',
+            error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
       }
     }
 
@@ -670,7 +683,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
           defaultMulticastPort,
         );
       } catch (e, stack) {
-        logError('回应公告失败: $e', error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
+        logError('回应公告失败: $e',
+            error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
       }
     }
   }
@@ -755,10 +769,16 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
               );
             }
           } catch (e, stack) {
-            logError('广播兜底失败: $e', error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
+            logError('广播兜底失败: $e',
+                error: e,
+                stackTrace: stack,
+                source: 'ThoughtEchoDiscoveryService');
           }
         } catch (e, stack) {
-          logError('发送公告失败: $e', error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
+          logError('发送公告失败: $e',
+              error: e,
+              stackTrace: stack,
+              source: 'ThoughtEchoDiscoveryService');
         }
       }
 
@@ -768,7 +788,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         debugPrint('警告: 未能通过任何套接字发送设备公告');
       }
     } catch (e, stack) {
-      logError('创建设备公告失败: $e', error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
+      logError('创建设备公告失败: $e',
+          error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
     }
   }
 
@@ -789,7 +810,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       try {
         s.close();
       } catch (e, stack) {
-        logError('[ThoughtEchoDiscoveryService] socket close error: $e', error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
+        logError('[ThoughtEchoDiscoveryService] socket close error: $e',
+            error: e, stackTrace: stack, source: 'ThoughtEchoDiscoveryService');
       }
     }
     _sockets.clear();
