@@ -186,10 +186,81 @@ class QuoteItemWidget extends StatefulWidget {
         'worstWorkMicros': _headerTextWidthWorstWorkMicros,
       };
 
-  /// 测试辅助方法，等价于 [clearExpansionCache]。
+  /// 测试辅助方法：把卡片持有的静态可变状态一次清干净。
+  ///
+  /// [lastCollapsedContentWidth] 也在其中 —— 它是跨测试泄漏的现成来源，
+  /// 漏掉的话后一个测试会拿着前一个测试的布局宽度去暖缓存。
   static void clearExpansionCacheForTest() {
     clearExpansionCache();
     clearHeaderTextWidthCache();
+    lastCollapsedContentWidth = null;
+  }
+
+  /// 折叠卡片正文区最近一次的布局宽度。
+  ///
+  /// 空闲预热（见 [warmCollapsedMeasurements]）必须用**和渲染完全相同的宽度**
+  /// 去暖折叠判定与排版缓存：缓存键里带着 maxWidth，差一个像素就全是未命中，
+  /// 预热等于没做。按公式反推（卡片外边距 + 边框 + 两层内边距）是能算，但那个
+  /// 算式散在四个 widget 里，谁改了间距都不会想起来同步它 —— 所以直接把真实
+  /// 布局宽度记在这里。
+  ///
+  /// 列表还没建出任何一张卡片时为 null，预热此时应当让路等下一轮。
+  static double? lastCollapsedContentWidth;
+
+  /// 折叠正文的文字样式。渲染与空闲预热共用这一处，理由同上。
+  static TextStyle? collapsedContentStyle(
+    ThemeData theme,
+    Color primaryTextColor,
+  ) {
+    // 行高**不在这里写死**：它由 ThemeStyleForm.bodyLineHeight 下发到
+    // textTheme.bodyLarge，纸墨风格的横线间距也是从同一个值推导的。
+    // 一旦在这里 copyWith 覆盖，文字就会和纸张横线错位。
+    return theme.textTheme.bodyLarge?.copyWith(color: primaryTextColor);
+  }
+
+  /// 空闲预热一条笔记的折叠测量缓存（折叠判定 + 折叠排版）。
+  ///
+  /// 这两项是「卡片第一次布局时才做」的活：日志里的 `expandMiss+` 和
+  /// `planMiss+` 每次首滑都等于新建卡片的张数。它们只跟内容和布局宽度有关，
+  /// 提前在静止期算好，滑动帧里就全是命中。
+  ///
+  /// 预热本身不建任何 widget，也不碰 element 树；纯粹是往几张按内容指纹做键的
+  /// LRU 缓存里填结果，卡片建出来时照旧走自己的那条路，只是查表命中。
+  static void warmCollapsedMeasurements({
+    required BuildContext context,
+    required Quote quote,
+    required double contentMaxWidth,
+    required String mediaStyle,
+    required bool prioritizeBoldContent,
+  }) {
+    if (!contentMaxWidth.isFinite || contentMaxWidth <= 0) return;
+
+    final theme = Theme.of(context);
+    final colors = QuoteCardColors.fromHex(quote.colorHex, theme.colorScheme);
+    final style = collapsedContentStyle(theme, colors.primaryTextColor);
+
+    QuoteContent.exceedsCollapsedHeightForLayout(
+      quote: quote,
+      style: style,
+      maxWidth: contentMaxWidth,
+      textDirection: Directionality.maybeOf(context) ?? TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+      locale: Localizations.maybeLocaleOf(context),
+      boldWeight: QuoteContent.collapsedBoldWeight(context),
+      richTextBaseStyle: QuillThemeTypography.paragraphStyle(
+        context,
+        base: style,
+      ),
+    );
+
+    QuoteContent.warmCollapsedLayout(
+      context: context,
+      quote: quote,
+      style: style,
+      maxWidth: contentMaxWidth,
+      mediaStyle: mediaStyle,
+      prioritizeBoldContent: prioritizeBoldContent,
+    );
   }
 
   /// 优化：基于高度判断是否需要展开按钮 - 带缓存
@@ -228,18 +299,27 @@ class QuoteItemWidget extends StatefulWidget {
 class _QuoteItemWidgetState extends State<QuoteItemWidget>
     with SingleTickerProviderStateMixin {
   final BackdropKey _backdropKey = BackdropKey();
-  late final AnimationController _doubleTapController;
-  late final Animation<double> _scaleAnimation;
-  late final Animation<double> _highlightProgress;
 
-  @override
-  void initState() {
-    super.initState();
+  /// 双击反馈的动画机件**按需创建**。
+  ///
+  /// 它此前在 `initState` 里无条件建出来：每张卡片一个 `AnimationController`、
+  /// 两条 `TweenSequence`（各 2 段 + `CurveTween`），外加正文外面常驻一层
+  /// `AnimatedBuilder` + `Transform.scale`。而绝大多数卡片从挂载到销毁都不会被
+  /// 双击一次 —— 首滑一次要建三十多张新卡，这些全是白付的挂载成本。
+  ///
+  /// 第一次双击时再建，并借那次 `setState` 把 `AnimatedBuilder` 插进树里。
+  AnimationController? _doubleTapController;
+  Animation<double>? _scaleAnimation;
+  Animation<double>? _highlightProgress;
 
-    _doubleTapController = AnimationController(
+  void _ensureDoubleTapController() {
+    if (_doubleTapController != null) return;
+
+    final controller = AnimationController(
       duration: const Duration(milliseconds: 240),
       vsync: this,
     );
+    _doubleTapController = controller;
 
     _scaleAnimation = TweenSequence<double>([
       TweenSequenceItem<double>(
@@ -256,7 +336,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         ).chain(CurveTween(curve: Curves.easeOutBack)),
         weight: 45,
       ),
-    ]).animate(_doubleTapController);
+    ]).animate(controller);
 
     _highlightProgress = TweenSequence<double>([
       TweenSequenceItem<double>(
@@ -273,12 +353,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         ).chain(CurveTween(curve: Curves.easeOutQuad)),
         weight: 40,
       ),
-    ]).animate(_doubleTapController);
+    ]).animate(controller);
   }
 
   @override
   void dispose() {
-    _doubleTapController.dispose();
+    _doubleTapController?.dispose();
     super.dispose();
   }
 
@@ -330,11 +410,18 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     return WeatherService.getWeatherIconDataByKey(weatherKey);
   }
 
+  /// 单行文字测宽（带缓存）。
+  ///
+  /// [countAsHeader] 决定这次测量算不算进 `headerWorkUs` / `headerMiss` 这两个
+  /// 性能计数器。它们的口径是「日期/位置/天气」那三段 —— 日志里按这个口径写着
+  /// 「头部测宽 0.5ms/卡」，也是下一轮预热的目标。标签估宽复用同一张缓存表没问题，
+  /// 但**不能混进同一组计数器**，否则下一轮复测会对着一个变了口径的数字下结论。
   double _measureSingleLineTextWidth(
     BuildContext context,
     String text,
-    TextStyle style,
-  ) {
+    TextStyle style, {
+    bool countAsHeader = true,
+  }) {
     final textDirection = Directionality.maybeOf(context) ?? TextDirection.ltr;
     final textScaler = MediaQuery.textScalerOf(context);
     final locale = Localizations.maybeLocaleOf(context);
@@ -347,12 +434,16 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     );
     final cached = QuoteItemWidget._headerTextWidthCache.remove(cacheKey);
     if (cached != null) {
-      QuoteItemWidget._headerTextWidthCacheHits++;
+      if (countAsHeader) {
+        QuoteItemWidget._headerTextWidthCacheHits++;
+      }
       QuoteItemWidget._headerTextWidthCache[cacheKey] = cached;
       return cached;
     }
 
-    QuoteItemWidget._headerTextWidthCacheMisses++;
+    if (countAsHeader) {
+      QuoteItemWidget._headerTextWidthCacheMisses++;
+    }
     final stopwatch = Stopwatch()..start();
     final textPainter = TextPainter(
       text: TextSpan(text: text, style: style),
@@ -363,11 +454,14 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
     final width = textPainter.width;
     stopwatch.stop();
-    QuoteItemWidget._headerTextWidthWorkMicros += stopwatch.elapsedMicroseconds;
-    if (stopwatch.elapsedMicroseconds >
-        QuoteItemWidget._headerTextWidthWorstWorkMicros) {
-      QuoteItemWidget._headerTextWidthWorstWorkMicros =
+    if (countAsHeader) {
+      QuoteItemWidget._headerTextWidthWorkMicros +=
           stopwatch.elapsedMicroseconds;
+      if (stopwatch.elapsedMicroseconds >
+          QuoteItemWidget._headerTextWidthWorstWorkMicros) {
+        QuoteItemWidget._headerTextWidthWorstWorkMicros =
+            stopwatch.elapsedMicroseconds;
+      }
     }
     if (QuoteItemWidget._headerTextWidthCache.length >=
         QuoteItemWidget._maxHeaderTextWidthCacheSize) {
@@ -387,8 +481,16 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       return;
     }
 
-    _doubleTapController.stop();
-    _doubleTapController.forward(from: 0.0);
+    final controller = _doubleTapController;
+    if (controller == null) {
+      // 这张卡片第一次被双击：现在才建动画机件，并借这次 setState 把
+      // AnimatedBuilder 插进树里（见 [_ensureDoubleTapController]）。
+      setState(_ensureDoubleTapController);
+      _doubleTapController!.forward(from: 0.0);
+    } else {
+      controller.stop();
+      controller.forward(from: 0.0);
+    }
 
     Feedback.forTap(context);
 
@@ -432,11 +534,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       child: LayoutBuilder(
         builder: (context, constraints) {
           final innerTheme = Theme.of(context);
-          // 行高**不在这里写死**：它由 ThemeStyleForm.bodyLineHeight 下发到
-          // textTheme.bodyLarge，纸墨风格的横线间距也是从同一个值推导的。
-          // 一旦在这里 copyWith 覆盖，文字就会和纸张横线错位。
-          final contentStyle = innerTheme.textTheme.bodyLarge?.copyWith(
-            color: primaryTextColor,
+          // 空闲预热要用和这里完全相同的宽度和样式去暖缓存，
+          // 见 [QuoteItemWidget.lastCollapsedContentWidth]。
+          QuoteItemWidget.lastCollapsedContentWidth = constraints.maxWidth;
+          final contentStyle = QuoteItemWidget.collapsedContentStyle(
+            innerTheme,
+            primaryTextColor,
           );
           final needsExpansion = _needsExpansionForLayout(
             context,
@@ -448,7 +551,11 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
           // QuoteContent 的轻量预览而不是 QuillEditor。只有用户真的双击展开了，
           // 才需要完整的富文本渲染。
           final showFullContent = isExpanded;
+          // 只算一次，同时喂给正文栈和动画层：两处一旦给出不同答案，
+          // AnimatedSize 与 AnimatedSwitcher 的挂载就会错配。
+          final bool canToggle = needsExpansion || isExpanded;
           final contentChild = _buildQuoteContentStack(
+            canToggle: canToggle,
             quote: quote,
             showFullContent: showFullContent,
             needsExpansion: needsExpansion,
@@ -469,6 +576,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
           final animatedContent = _buildAnimatedQuoteContent(
             innerTheme: innerTheme,
             child: contentChild,
+            canToggle: canToggle,
           );
 
           return GestureDetector(
@@ -509,12 +617,25 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     required bool showFullContent,
     required bool needsExpansion,
     required bool isExpanded,
+    required bool canToggle,
     required TextStyle? contentStyle,
     required ThemeData innerTheme,
     required bool backdropBlurDisabled,
     required AppLocalizations l10n,
     required double thumbnailInset,
   }) {
+    final Widget content = QuoteContent(
+      quote: quote,
+      style: contentStyle,
+      showFullContent: showFullContent,
+      needsExpansionOverride: needsExpansion,
+      collapseRichTextSemantics: true,
+    );
+
+    // canToggle 由调用方给：不可展开的卡片正文永远不会在折叠态和展开态之间
+    // 切换，两层动画机件（`AnimatedSwitcher` 各带一个 `AnimationController` 和
+    // 一层 `FadeTransition`、展开提示那层还多一个 `Positioned` + `IgnorePointer`）
+    // 对它一次都用不上，却要在每次首建时挂满整棵子树。
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -522,50 +643,48 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         // 短行笔记尤其明显），否则 Stack 会收缩到文字宽度，
         // 下方渐变遮罩与提示胶囊会跟着变窄、偏离卡片中心。
         const SizedBox(width: double.infinity, height: 0),
-        AnimatedSwitcher(
-          duration: QuoteItemWidget._fadeDuration,
-          switchInCurve: Curves.easeOut,
-          switchOutCurve: Curves.easeIn,
-          layoutBuilder: (currentChild, previousChildren) => Stack(
-            clipBehavior: Clip.none,
-            children: [
-              ...previousChildren,
-              if (currentChild != null) currentChild,
-            ],
-          ),
-          child: KeyedSubtree(
-            key: ValueKey<bool>(showFullContent),
-            child: QuoteContent(
-              quote: quote,
-              style: contentStyle,
-              showFullContent: showFullContent,
-              needsExpansionOverride: needsExpansion,
-              collapseRichTextSemantics: true,
+        if (!canToggle)
+          content
+        else
+          AnimatedSwitcher(
+            duration: QuoteItemWidget._fadeDuration,
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            layoutBuilder: (currentChild, previousChildren) => Stack(
+              clipBehavior: Clip.none,
+              children: [
+                ...previousChildren,
+                if (currentChild != null) currentChild,
+              ],
+            ),
+            child: KeyedSubtree(
+              key: ValueKey<bool>(showFullContent),
+              child: content,
             ),
           ),
-        ),
-        Positioned(
-          left: 0,
-          // 遮罩要给右侧缩略图让位。横跨整个内容区的话，渐变和「展开」胶囊会压在
-          // 缩略图上，图的下缘看起来像蒙了一层脏。
-          right: thumbnailInset,
-          bottom: 0,
-          height: 30,
-          child: IgnorePointer(
-            child: AnimatedSwitcher(
-              duration: QuoteItemWidget._fadeDuration,
-              switchInCurve: Curves.easeIn,
-              switchOutCurve: Curves.easeOut,
-              child: (!isExpanded && needsExpansion)
-                  ? _buildCollapseHintOverlay(
-                      innerTheme: innerTheme,
-                      backdropBlurDisabled: backdropBlurDisabled,
-                      l10n: l10n,
-                    )
-                  : const SizedBox.shrink(),
+        if (needsExpansion)
+          Positioned(
+            left: 0,
+            // 遮罩要给右侧缩略图让位。横跨整个内容区的话，渐变和「展开」胶囊会压在
+            // 缩略图上，图的下缘看起来像蒙了一层脏。
+            right: thumbnailInset,
+            bottom: 0,
+            height: 30,
+            child: IgnorePointer(
+              child: AnimatedSwitcher(
+                duration: QuoteItemWidget._fadeDuration,
+                switchInCurve: Curves.easeIn,
+                switchOutCurve: Curves.easeOut,
+                child: isExpanded
+                    ? const SizedBox.shrink()
+                    : _buildCollapseHintOverlay(
+                        innerTheme: innerTheme,
+                        backdropBlurDisabled: backdropBlurDisabled,
+                        l10n: l10n,
+                      ),
+              ),
             ),
           ),
-        ),
       ],
     );
   }
@@ -630,51 +749,454 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
   Widget _buildAnimatedQuoteContent({
     required ThemeData innerTheme,
     required Widget child,
+    required bool canToggle,
   }) {
+    final controller = _doubleTapController;
+    final Widget content = controller == null
+        ? child
+        : _buildDoubleTapFeedback(
+            innerTheme: innerTheme,
+            controller: controller,
+            scaleAnimation: _scaleAnimation!,
+            highlightProgress: _highlightProgress!,
+            child: child,
+          );
+
+    if (!canToggle) {
+      // 不可展开的卡片正文高度是静态的，没有任何东西需要 AnimatedSize 去补间；
+      // 它自带一个 Ticker 和一个额外的 RenderObject，白挂在每张卡片上。
+      return content;
+    }
+
     return AnimatedSize(
       duration: QuoteItemWidget.expandCollapseDuration,
       curve: QuoteItemWidget._expandCurve,
       alignment: Alignment.topLeft,
       clipBehavior: Clip.none,
-      child: AnimatedBuilder(
-        animation: _doubleTapController,
-        child: child,
-        builder: (context, child) {
-          final highlightOpacity = _highlightProgress.value;
-          final brightness = innerTheme.brightness;
-          final overlayStrength = brightness == Brightness.dark ? 0.12 : 0.05;
+      child: content,
+    );
+  }
 
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            alignment: Alignment.topLeft,
-            child: highlightOpacity > 0
-                ? Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      child!,
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: ExcludeSemantics(
-                            child: DecoratedBox(
-                              key: const ValueKey(
-                                'quote_item.double_tap_overlay',
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(
-                                  alpha: overlayStrength * highlightOpacity,
-                                ),
+  /// 三个动画对象由 [_ensureDoubleTapController] 一次性建出，调用方传进来，
+  /// 这里就不必再对字段做强制解包。
+  Widget _buildDoubleTapFeedback({
+    required ThemeData innerTheme,
+    required AnimationController controller,
+    required Animation<double> scaleAnimation,
+    required Animation<double> highlightProgress,
+    required Widget child,
+  }) {
+    return AnimatedBuilder(
+      animation: controller,
+      child: child,
+      builder: (context, child) {
+        final highlightOpacity = highlightProgress.value;
+        final brightness = innerTheme.brightness;
+        final overlayStrength = brightness == Brightness.dark ? 0.12 : 0.05;
+
+        return Transform.scale(
+          scale: scaleAnimation.value,
+          alignment: Alignment.topLeft,
+          child: highlightOpacity > 0
+              ? Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    child!,
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: ExcludeSemantics(
+                          child: DecoratedBox(
+                            key: const ValueKey(
+                              'quote_item.double_tap_overlay',
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(
+                                alpha: overlayStrength * highlightOpacity,
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ],
-                  )
-                : child!,
+                    ),
+                  ],
+                )
+              : child!,
+        );
+      },
+    );
+  }
+
+  /// 标签条容不下时才退回滚动视图的余量。
+  static const double _tagStripFitMargin = 4.0;
+
+  /// 标签胶囊的文字样式。估宽和渲染**必须共用这一处**：两边样式差一点，
+  /// 估出来的宽度就不是真实宽度，放不下也会被判成放得下。
+  TextStyle? _tagChipTextStyle(
+    ThemeData theme,
+    Color secondaryTextColor, {
+    required bool isFilteredTag,
+  }) {
+    return theme.textTheme.bodySmall?.copyWith(
+      color: secondaryTextColor,
+      fontSize: 11,
+      fontWeight: isFilteredTag ? FontWeight.w600 : FontWeight.w500,
+    );
+  }
+
+  /// 标签条。
+  ///
+  /// **放得下就不挂 `SingleChildScrollView`。** 一层 `Scrollable` 要带上
+  /// `ScrollPosition`、两个手势识别器、`Viewport` 和一组语义节点，实测三个标签的
+  /// 卡片里它一个人占了三十多个 element；而绝大多数笔记的标签一行就放得下，
+  /// 那层滚动视图从挂载到销毁都不会被滑动一次。
+  ///
+  /// 放不下才退回滚动视图。判断按估宽做，且**只在明确放得下时才省**：估宽偏大
+  /// 只是多挂一层用不上的滚动视图，偏小才会让最后一个标签被静默裁掉。自定义
+  /// [QuoteItemWidget.tagBuilder] 的宽度无从估起，一律走滚动视图。
+  Widget _buildTagStrip({
+    required ThemeData theme,
+    required AppLocalizations l10n,
+    required Color baseContentColor,
+    required Color secondaryTextColor,
+  }) {
+    // 对标签进行排序：优先显示匹配筛选条件的标签
+    final sortedTagIds = _getSortedTagIds(
+      widget.quote.tagIds,
+      widget.selectedTagIds,
+    );
+
+    var estimatedWidth = 0.0;
+    final canEstimate = widget.tagBuilder == null;
+    final chips = <Widget>[];
+
+    for (var index = 0; index < sortedTagIds.length; index++) {
+      final tagId = sortedTagIds[index];
+      final tag = widget.tagMap[tagId] ??
+          NoteTag(
+            id: tagId,
+            name: l10n.unknownTag,
           );
-        },
+      // 判断是否是筛选条件中的标签
+      final isFilteredTag = widget.selectedTagIds.contains(tagId);
+      final textStyle = _tagChipTextStyle(
+        theme,
+        secondaryTextColor,
+        isFilteredTag: isFilteredTag,
+      );
+      final iconName = tag.iconName;
+      final hasIcon = iconName != null && iconName.isNotEmpty;
+      final isEmojiIcon = hasIcon && IconUtils.isEmoji(iconName);
+
+      if (canEstimate) {
+        estimatedWidth += 20; // 左右内边距
+        estimatedWidth += isFilteredTag ? 2.0 : 1.0; // 左右边框
+        if (hasIcon) {
+          estimatedWidth += 3; // 图标与文字之间的间距
+          estimatedWidth += isEmojiIcon
+              ? _measureSingleLineTextWidth(
+                  context,
+                  IconUtils.getDisplayIcon(iconName),
+                  const TextStyle(fontSize: 12),
+                  countAsHeader: false,
+                )
+              : 12;
+        }
+        estimatedWidth += _measureSingleLineTextWidth(
+          context,
+          tag.localizedName(l10n),
+          textStyle ?? const TextStyle(),
+          countAsHeader: false,
+        );
+        if (index < sortedTagIds.length - 1) {
+          estimatedWidth += 8; // 胶囊之间的间距
+        }
+      }
+
+      chips.add(
+        Padding(
+          padding: EdgeInsets.only(
+            right: index < sortedTagIds.length - 1 ? 8 : 0,
+          ),
+          child: widget.tagBuilder != null
+              ? widget.tagBuilder!(tag)
+              : Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: baseContentColor.withValues(
+                      alpha: isFilteredTag ? 0.15 : 0.08,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: baseContentColor.withValues(
+                        alpha: isFilteredTag ? 0.4 : 0.15,
+                      ),
+                      width: isFilteredTag ? 1.0 : 0.5,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (hasIcon) ...[
+                        ExcludeSemantics(
+                          child: isEmojiIcon
+                              ? Text(
+                                  IconUtils.getDisplayIcon(iconName),
+                                  style: const TextStyle(fontSize: 12),
+                                )
+                              : Icon(
+                                  IconUtils.getIconData(iconName),
+                                  size: 12,
+                                  color: secondaryTextColor,
+                                ),
+                        ),
+                        const SizedBox(width: 3),
+                      ],
+                      Text(
+                        tag.localizedName(l10n),
+                        style: textStyle,
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final row = Row(mainAxisSize: MainAxisSize.min, children: chips);
+        final bool fits = canEstimate &&
+            constraints.maxWidth.isFinite &&
+            estimatedWidth + _tagStripFitMargin <= constraints.maxWidth;
+        if (!fits) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: row,
+          );
+        }
+        // 估宽万一偏小也只是裁掉一截，不会撞 RenderFlex 溢出。
+        return ClipRect(
+          child: OverflowBox(
+            alignment: AlignmentDirectional.centerStart,
+            maxWidth: double.infinity,
+            child: row,
+          ),
+        );
+      },
+    );
+  }
+
+  /// 心形按钮的边长（图标 20 + 上下各 8 的内边距），保持与改造前逐像素一致。
+  static const double _favoriteButtonSize = 36.0;
+
+  /// 更多按钮的边长。原先由 `IconButton` 的 48dp 触控目标撑出来，
+  /// 换成轻量按钮后必须显式给回来，否则这一行会矮 12dp、整张卡片跟着变矮。
+  static const double _moreButtonSize = 48.0;
+
+  /// 只有带指针的平台才挂 [Tooltip]。
+  ///
+  /// 触摸端 Tooltip 只能靠长按弹出，而这两个按钮的长按要么已经被「清除收藏」
+  /// 占着、要么本来就不该有反应；无障碍名称由 [Semantics] 单独给，不依赖它。
+  /// 一层 Tooltip 是一个 `AnimationController` 加约十个 element，乘以首滑要建的
+  /// 三十多张新卡片就是实打实的挂载成本。
+  static bool _showsHoverTooltips(ThemeData theme) {
+    switch (theme.platform) {
+      case TargetPlatform.windows:
+      case TargetPlatform.linux:
+      case TargetPlatform.macOS:
+        return true;
+      case TargetPlatform.android:
+      case TargetPlatform.iOS:
+      case TargetPlatform.fuchsia:
+        return false;
+    }
+  }
+
+  Widget _buildFavoriteButton({
+    required ThemeData theme,
+    required AppLocalizations l10n,
+    required Color iconColor,
+    required Color cardColor,
+  }) {
+    final quote = widget.quote;
+    final bool isFavorite = quote.favoriteCount > 0;
+    final String label =
+        isFavorite ? l10n.actionUnfavorite : l10n.actionFavorite;
+    final semanticColors = AppSemanticColors.of(context);
+
+    return _CardActionButton(
+      key: widget.favoriteButtonGuideKey,
+      size: _favoriteButtonSize,
+      borderRadius: BorderRadius.circular(20),
+      semanticsLabel: label,
+      hoverTooltip: _showsHoverTooltips(theme) ? label : null,
+      onTap: (_) => widget.onFavorite?.call(),
+      onLongPress: isFavorite ? widget.onLongPressFavorite : null,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Icon(
+            isFavorite ? Icons.favorite : Icons.favorite_border,
+            size: 20,
+            color: isFavorite ? semanticColors.favorite : iconColor,
+          ),
+          if (isFavorite)
+            Positioned(
+              right: -3,
+              top: -3,
+              child: Container(
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 2.5),
+                decoration: BoxDecoration(
+                  color: semanticColors.favorite,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: (quote.colorHex == null || quote.colorHex!.isEmpty)
+                        ? theme.colorScheme.surfaceContainerLowest
+                        : cardColor,
+                    width: 1.0,
+                  ),
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 14,
+                  minHeight: 14,
+                ),
+                child: Text(
+                  quote.favoriteCount > 99 ? '99+' : '${quote.favoriteCount}',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: semanticColors.onFavorite,
+                    fontSize: 9.0,
+                    fontWeight: FontWeight.bold,
+                    height: 1.0,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
       ),
     );
+  }
+
+  /// 弹出「更多」菜单。
+  ///
+  /// 菜单项在**点开时**才构造：此前挂在 `PopupMenuButton` 上的 `itemBuilder`
+  /// 也是懒的，但按钮本体（`IconButton` 的整套 `ButtonStyle` 解析 + 48dp 触控
+  /// 内衬 + `Tooltip`）是每张卡片必付的，实测一张最小卡片 146 个 element 里
+  /// 它一个人占 59 —— 而正文只有 3 个。
+  Future<void> _showMoreMenu(
+      BuildContext context, AppLocalizations l10n) async {
+    final theme = Theme.of(context);
+    final RenderObject? buttonObject = context.findRenderObject();
+    final RenderBox? overlay =
+        Navigator.of(context).overlay?.context.findRenderObject() as RenderBox?;
+    if (buttonObject is! RenderBox || overlay == null) return;
+
+    final position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        buttonObject.localToGlobal(Offset.zero, ancestor: overlay),
+        buttonObject.localToGlobal(
+          buttonObject.size.bottomRight(Offset.zero),
+          ancestor: overlay,
+        ),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    // 导出格式在点开时才读：菜单在这一刻才需要它，卡片本身不必为它订阅设置变更。
+    final String exportFormat = context.read<SettingsService>().exportFormat;
+
+    final String? selected = await showMenu<String>(
+      context: context,
+      position: position,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      items: <PopupMenuEntry<String>>[
+        PopupMenuItem<String>(
+          value: 'edit',
+          child: Row(
+            children: [
+              Icon(Icons.edit, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(l10n.editNoteMenu),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'ask',
+          child: Row(
+            children: [
+              Icon(
+                Icons.lightbulb_outline,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(l10n.askAIMenu),
+            ],
+          ),
+        ),
+        if (exportFormat == 'pdf' && widget.onExportPdf != null)
+          PopupMenuItem<String>(
+            value: 'export_pdf',
+            child: Row(
+              children: [
+                Icon(
+                  Icons.picture_as_pdf,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(l10n.exportToPdf),
+              ],
+            ),
+          )
+        else if (widget.onGenerateCard != null)
+          PopupMenuItem<String>(
+            value: 'generate_card',
+            child: Row(
+              children: [
+                Icon(
+                  Icons.auto_awesome,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(l10n.generateCardShareMenu),
+              ],
+            ),
+          ),
+        PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete, color: theme.colorScheme.error),
+              const SizedBox(width: 8),
+              Text(
+                l10n.deleteNoteMenu,
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (!mounted || selected == null) return;
+    switch (selected) {
+      case 'ask':
+        widget.onAskAI();
+      case 'edit':
+        widget.onEdit();
+      case 'generate_card':
+        widget.onGenerateCard?.call();
+      case 'export_pdf':
+        widget.onExportPdf?.call();
+      case 'delete':
+        widget.onDelete();
+    }
   }
 
   @override
@@ -700,9 +1222,6 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     );
     final showNoteEditTime = context.select<SettingsService, bool>(
       (s) => s.showNoteEditTime,
-    );
-    final exportFormat = context.select<SettingsService, String>(
-      (s) => s.exportFormat,
     );
     final disableCardShadows = context.select<SettingsService, bool>(
       (s) => s.noteListDisableCardShadows,
@@ -1032,135 +1551,11 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                   Expanded(
                     child: SizedBox(
                       height: 32,
-                      child: Builder(
-                        builder: (context) {
-                          // 对标签进行排序：优先显示匹配筛选条件的标签
-                          final sortedTagIds = _getSortedTagIds(
-                            quote.tagIds,
-                            widget.selectedTagIds,
-                          );
-
-                          return SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            physics: const BouncingScrollPhysics(),
-                            child: Row(
-                              children: [
-                                for (int index = 0;
-                                    index < sortedTagIds.length;
-                                    index++)
-                                  () {
-                                    final tagId = sortedTagIds[index];
-                                    final tag = widget.tagMap[tagId] ??
-                                        NoteTag(
-                                          id: tagId,
-                                          name: l10n.unknownTag,
-                                        );
-
-                                    // 判断是否是筛选条件中的标签
-                                    final isFilteredTag =
-                                        widget.selectedTagIds.contains(tagId);
-
-                                    return Container(
-                                      margin: EdgeInsets.only(
-                                        right: index < sortedTagIds.length - 1
-                                            ? 8
-                                            : 0,
-                                      ),
-                                      child: widget.tagBuilder != null
-                                          ? widget.tagBuilder!(tag)
-                                          : Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 10,
-                                                vertical: 4,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: isFilteredTag
-                                                    ? baseContentColor
-                                                        .withValues(
-                                                        alpha: 0.15,
-                                                      )
-                                                    : baseContentColor
-                                                        .withValues(
-                                                        alpha: 0.08,
-                                                      ),
-                                                borderRadius:
-                                                    BorderRadius.circular(14),
-                                                border: Border.all(
-                                                  color: isFilteredTag
-                                                      ? baseContentColor
-                                                          .withValues(
-                                                          alpha: 0.4,
-                                                        )
-                                                      : baseContentColor
-                                                          .withValues(
-                                                          alpha: 0.15,
-                                                        ),
-                                                  width:
-                                                      isFilteredTag ? 1.0 : 0.5,
-                                                ),
-                                              ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  if (tag.iconName
-                                                          ?.isNotEmpty ==
-                                                      true) ...[
-                                                    if (IconUtils.isEmoji(
-                                                      tag.iconName!,
-                                                    )) ...[
-                                                      ExcludeSemantics(
-                                                        child: Text(
-                                                          IconUtils
-                                                              .getDisplayIcon(
-                                                            tag.iconName!,
-                                                          ),
-                                                          style:
-                                                              const TextStyle(
-                                                            fontSize: 12,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(
-                                                        width: 3,
-                                                      ),
-                                                    ] else ...[
-                                                      ExcludeSemantics(
-                                                        child: Icon(
-                                                          IconUtils.getIconData(
-                                                            tag.iconName!,
-                                                          ),
-                                                          size: 12,
-                                                          color:
-                                                              secondaryTextColor,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(
-                                                        width: 3,
-                                                      ),
-                                                    ],
-                                                  ],
-                                                  Text(
-                                                    tag.localizedName(l10n),
-                                                    style: theme
-                                                        .textTheme.bodySmall
-                                                        ?.copyWith(
-                                                      color: secondaryTextColor,
-                                                      fontSize: 11,
-                                                      fontWeight: isFilteredTag
-                                                          ? FontWeight.w600
-                                                          : FontWeight.w500,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                    );
-                                  }(),
-                              ],
-                            ),
-                          );
-                        },
+                      child: _buildTagStrip(
+                        theme: theme,
+                        l10n: l10n,
+                        baseContentColor: baseContentColor,
+                        secondaryTextColor: secondaryTextColor,
                       ),
                     ),
                   ),
@@ -1192,181 +1587,38 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                   ),
                 ],
 
-                // 心形按钮（如果启用）
-                if (!widget.isTrashMode && widget.onFavorite != null) ...[
-                  Tooltip(
-                    message: quote.favoriteCount > 0
-                        ? l10n.actionUnfavorite
-                        : l10n.actionFavorite,
-                    child: Semantics(
-                      button: true,
-                      label: quote.favoriteCount > 0
-                          ? l10n.actionUnfavorite
-                          : l10n.actionFavorite,
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          key: widget.favoriteButtonGuideKey,
-                          onTap: widget.onFavorite,
-                          onLongPress: quote.favoriteCount > 0
-                              ? widget.onLongPressFavorite
-                              : null,
-                          borderRadius: BorderRadius.circular(20),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                Icon(
-                                  quote.favoriteCount > 0
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  size: 20,
-                                  color: quote.favoriteCount > 0
-                                      ? AppSemanticColors.of(context).favorite
-                                      : iconColor,
-                                ),
-                                if (quote.favoriteCount > 0)
-                                  Positioned(
-                                    right: -3,
-                                    top: -3,
-                                    child: Container(
-                                      alignment: Alignment.center,
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 2.5),
-                                      decoration: BoxDecoration(
-                                        color: AppSemanticColors.of(context)
-                                            .favorite,
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: (quote.colorHex == null ||
-                                                  quote.colorHex!.isEmpty)
-                                              ? theme.colorScheme
-                                                  .surfaceContainerLowest
-                                              : cardColor,
-                                          width: 1.0,
-                                        ),
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 14,
-                                        minHeight: 14,
-                                      ),
-                                      child: Text(
-                                        quote.favoriteCount > 99
-                                            ? '99+'
-                                            : '${quote.favoriteCount}',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .labelSmall
-                                            ?.copyWith(
-                                                color: AppSemanticColors.of(
-                                                        context)
-                                                    .onFavorite,
-                                                fontSize: 9.0,
-                                                fontWeight: FontWeight.bold,
-                                                height: 1.0),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                ],
-
-                // 更多操作按钮
+                // 心形按钮与更多按钮共用一层 Material：墨水层是按 Material 挂的，
+                // 一张卡片两个按钮不需要两层。
                 if (!widget.isTrashMode)
-                  PopupMenuButton<String>(
-                    tooltip: l10n.moreOptions,
-                    key: widget.moreButtonGuideKey, // 功能引导 key
-                    icon: Icon(Icons.more_vert, color: iconColor),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  Material(
+                    color: Colors.transparent,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (widget.onFavorite != null) ...[
+                          _buildFavoriteButton(
+                            theme: theme,
+                            l10n: l10n,
+                            iconColor: iconColor,
+                            cardColor: cardColor,
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                        _CardActionButton(
+                          key: widget.moreButtonGuideKey, // 功能引导 key
+                          size: _moreButtonSize,
+                          shape: BoxShape.circle,
+                          semanticsLabel: l10n.moreOptions,
+                          hoverTooltip: _showsHoverTooltips(theme)
+                              ? l10n.moreOptions
+                              : null,
+                          // 菜单按**按钮**的位置弹，不是按整张卡片，见 [_CardActionButton.onTap]。
+                          onTap: (buttonContext) =>
+                              _showMoreMenu(buttonContext, l10n),
+                          child: Icon(Icons.more_vert, color: iconColor),
+                        ),
+                      ],
                     ),
-                    onSelected: (value) {
-                      if (value == 'ask') {
-                        widget.onAskAI();
-                      } else if (value == 'edit') {
-                        widget.onEdit();
-                      } else if (value == 'generate_card') {
-                        widget.onGenerateCard?.call();
-                      } else if (value == 'export_pdf') {
-                        widget.onExportPdf?.call();
-                      } else if (value == 'delete') {
-                        widget.onDelete();
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem<String>(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit, color: theme.colorScheme.primary),
-                            const SizedBox(width: 8),
-                            Text(l10n.editNoteMenu),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem<String>(
-                        value: 'ask',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.lightbulb_outline,
-                              color: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(l10n.askAIMenu),
-                          ],
-                        ),
-                      ),
-                      if (exportFormat == 'pdf' && widget.onExportPdf != null)
-                        PopupMenuItem<String>(
-                          value: 'export_pdf',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.picture_as_pdf,
-                                color: theme.colorScheme.primary,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(l10n.exportToPdf),
-                            ],
-                          ),
-                        )
-                      else if (widget.onGenerateCard != null)
-                        PopupMenuItem<String>(
-                          value: 'generate_card',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.auto_awesome,
-                                color: theme.colorScheme.primary,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(l10n.generateCardShareMenu),
-                            ],
-                          ),
-                        ),
-                      PopupMenuItem<String>(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            const Icon(Icons.delete, color: Colors.red),
-                            const SizedBox(width: 8),
-                            Text(
-                              l10n.deleteNoteMenu,
-                              style: TextStyle(color: theme.colorScheme.error),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
                   ),
               ],
             ),
@@ -1402,6 +1654,80 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     }
 
     return card;
+  }
+}
+
+/// 卡片底部动作按钮的轻量实现。
+///
+/// 列表卡片的挂载预算几乎全被这一行吃掉过：实测一张最小卡片（无标签、无媒体、
+/// 短正文）146 个 element，其中 `PopupMenuButton` 一个人占 59、心形按钮外面那层
+/// `Tooltip` 占 10，而**正文只有 3 个**。首滑一次要建三十多张这样的新卡片，
+/// 成本全落在滚动帧里。
+///
+/// `IconButton` 那一整套（`ButtonStyle` 逐属性解析、`_InputPadding` 触控内衬、
+/// 焦点与快捷键节点、`Tooltip`）对这两个位置一样都用不上：它们不吃按钮样式令牌、
+/// 不参与键盘遍历、触摸端也没有悬浮。这里只保留真正需要的三件事 ——
+/// 固定尺寸、水波纹、无障碍名称。
+///
+/// 尺寸由调用方显式给（心形 36、更多 48），和改造前逐像素一致；改这两个数
+/// 会连带改变整行的高度，也就是每张卡片的高度。
+class _CardActionButton extends StatelessWidget {
+  const _CardActionButton({
+    super.key,
+    required this.size,
+    required this.semanticsLabel,
+    required this.onTap,
+    required this.child,
+    this.onLongPress,
+    this.hoverTooltip,
+    this.borderRadius,
+    this.shape = BoxShape.rectangle,
+  });
+
+  final double size;
+  final String semanticsLabel;
+
+  /// 回调拿到的是**按钮自己的** context。
+  ///
+  /// 「更多」菜单要按按钮的位置弹出，而 `showMenu` 的定位靠
+  /// `context.findRenderObject()`。用卡片 build 方法里的那个 context 的话，
+  /// 找到的是整张卡片的 RenderBox，菜单会按整张卡片定位 —— 改造前的
+  /// `PopupMenuButton` 用的是它自己的 element，这里必须还原同一个语义。
+  final void Function(BuildContext buttonContext)? onTap;
+  final VoidCallback? onLongPress;
+
+  /// 仅在有指针悬浮的平台传值，见 [_QuoteItemWidgetState._showsHoverTooltips]。
+  final String? hoverTooltip;
+  final BorderRadius? borderRadius;
+  final BoxShape shape;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final tapHandler = onTap;
+    Widget button = InkResponse(
+      onTap: tapHandler == null ? null : () => tapHandler(context),
+      onLongPress: onLongPress,
+      containedInkWell: shape == BoxShape.rectangle,
+      highlightShape: shape,
+      borderRadius: borderRadius,
+      radius: size / 2,
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Center(child: child),
+      ),
+    );
+
+    button = Semantics(
+      button: true,
+      label: semanticsLabel,
+      child: button,
+    );
+
+    final tooltip = hoverTooltip;
+    if (tooltip == null) return button;
+    return Tooltip(message: tooltip, child: button);
   }
 }
 

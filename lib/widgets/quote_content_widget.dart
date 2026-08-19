@@ -687,6 +687,107 @@ class QuoteContent extends StatelessWidget {
     return quill.Document()..insert(0, quote.content);
   }
 
+  /// 折叠富文本一次布局需要的全部东西：量好的 plan、缩略图预留宽、媒体摘要，
+  /// 以及排版用的基准样式与字重。
+  ///
+  /// [build] 和 [warmCollapsedLayout] **共用这一处**。空闲预热的全部价值在于
+  /// 它跑出来的缓存键和渲染时问的键一模一样；两边各写一份 plan 入参的话，
+  /// 哪天有人只改了其中一处，预热就变成静悄悄的空转 —— 日志里只会看到
+  /// `planMiss+` 没降，而没人知道为什么。
+  ///
+  /// 返回 null 表示这条笔记解不出富文本块，调用方应退回纯文本。
+  static _CollapsedLayout? _resolveCollapsedLayout({
+    required BuildContext context,
+    required Quote quote,
+    required TextStyle? style,
+    required double maxWidth,
+    required String mediaStyle,
+    required bool prioritizeBoldContent,
+  }) {
+    final bool stripMedia = mediaStyle != NoteCardMediaStyle.inline;
+    final media = stripMedia
+        ? DeltaMediaCache.of(quote.deltaContent)
+        : DeltaMediaSummary.empty;
+
+    var blocks = DeltaRichTextCache.of(quote.deltaContent);
+    if (blocks.isEmpty) return null;
+    if (prioritizeBoldContent) {
+      blocks = prioritizeBoldBlocks(blocks);
+    }
+
+    final baseStyle = QuillThemeTypography.paragraphStyle(context, base: style);
+    // 折叠预览的加粗必须和展开态用同一档字重，见 `_buildCustomStyles`：
+    // Android + material 下 quill 把 bold 降到 w500，这里不跟着降的话，
+    // 同一条笔记折叠时比展开后更粗。
+    final boldWeight = collapsedBoldWeight(context);
+
+    // 容器窄到放不下「缩略图 + 一段能读的正文」时**整个不画缩略图**。
+    //
+    // 只把预留宽度 clamp 小是没用的：Row 的固定子项（gap + 缩略图）恒占
+    // 84px，与 reserved 取什么值无关；`constraints.maxWidth` 一旦小于 84，
+    // `Expanded` 照样分到负空间、RenderFlex 照样溢出。只有不挂这两个子项
+    // 才真的不溢出。折叠正文区正常不会窄到这个程度，这里纯粹是防御。
+    final double reserved = collapsedThumbnailInset(
+      quote: quote,
+      mediaStyle: mediaStyle,
+      maxWidth: maxWidth,
+    );
+    // 文字宽度要先扣掉缩略图占的位，否则排版会按整宽算而少排内容。
+    final double textMaxWidth =
+        maxWidth.isFinite ? maxWidth - reserved : maxWidth;
+
+    // 量一次，盒高和要画的内容都从这一次的结果来。上限 160：内容排满就是
+    // 160，媒体被摘走后只剩一两行就取那几行的高度，卡片里不会留一块空白。
+    final plan = CollapsedRichTextMetrics.plan(
+      blocks: blocks,
+      baseStyle: baseStyle,
+      maxWidth: textMaxWidth,
+      limit: collapsedContentMaxHeight,
+      showMedia: !stripMedia,
+      boldWeight: boldWeight,
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      locale: Localizations.maybeLocaleOf(context),
+      cacheContent: quote.deltaContent,
+      cacheBoldPrioritized: prioritizeBoldContent,
+    );
+
+    return _CollapsedLayout(
+      plan: plan,
+      thumbnailInset: reserved,
+      media: media,
+      baseStyle: baseStyle,
+      boldWeight: boldWeight,
+    );
+  }
+
+  /// 空闲预热：用**和渲染完全相同的入参**把这条笔记的折叠排版缓存跑热。
+  ///
+  /// 首滑卡顿里有一块是每张新卡片首次布局时才第一次做折叠排版（日志里的
+  /// `planMiss+`、`planWorkUs+`）。结果只跟内容和布局宽度有关，完全可以在列表
+  /// 静止时提前算好；等卡片真的滑进来时全是命中。
+  static void warmCollapsedLayout({
+    required BuildContext context,
+    required Quote quote,
+    required TextStyle? style,
+    required double maxWidth,
+    required String mediaStyle,
+    required bool prioritizeBoldContent,
+  }) {
+    if (quote.deltaContent == null || quote.editSource != 'fullscreen') return;
+    if (!maxWidth.isFinite || maxWidth <= 0) return;
+
+    // 结果只为把缓存跑热，本身丢掉即可。
+    _resolveCollapsedLayout(
+      context: context,
+      quote: quote,
+      style: style,
+      maxWidth: maxWidth,
+      mediaStyle: mediaStyle,
+      prioritizeBoldContent: prioritizeBoldContent,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // 这条路径也可能在富文本 build 回填之前就走到无宽度兜底。
@@ -715,71 +816,36 @@ class QuoteContent extends StatelessWidget {
             context.select<SettingsService, bool>(
           (s) => s.prioritizeBoldContentInCollapse,
         );
-        final bool stripMedia = mediaStyle != NoteCardMediaStyle.inline;
-        final media = stripMedia
-            ? DeltaMediaCache.of(quote.deltaContent)
-            : DeltaMediaSummary.empty;
-
-        var blocks = DeltaRichTextCache.of(quote.deltaContent);
-        if (blocks.isEmpty) {
-          // delta 解不出来（损坏、导入了别家的格式、同步冲突写坏了）时**退回纯
-          // 文本**。旧实现在 `_documentFromDelta` 里也有这条兜底；直接画空的话，
-          // 卡片正文整个消失，而且因为量出来是 0 高，连双击展开都进不去——用户会
-          // 以为笔记内容丢了。
-          return _buildPlainTextContent(context,
-              needsExpansion: needsExpansion);
-        }
-        if (prioritizeBoldContent) {
-          blocks = prioritizeBoldBlocks(blocks);
-        }
-        final baseStyle = QuillThemeTypography.paragraphStyle(
-          context,
-          base: style,
-        );
-        // 折叠预览的加粗必须和展开态用同一档字重，见 `_buildCustomStyles`：
-        // Android + material 下 quill 把 bold 降到 w500，这里不跟着降的话，
-        // 同一条笔记折叠时比展开后更粗。
-        final boldWeight = collapsedBoldWeight(context);
-        final textDirection = Directionality.of(context);
-        final textScaler = MediaQuery.textScalerOf(context);
-        final locale = Localizations.maybeLocaleOf(context);
 
         return LayoutBuilder(
           builder: (context, constraints) {
-            // 容器窄到放不下「缩略图 + 一段能读的正文」时**整个不画缩略图**。
-            //
-            // 只把预留宽度 clamp 小是没用的：Row 的固定子项（gap + 缩略图）恒占
-            // 84px，与 reserved 取什么值无关；`constraints.maxWidth` 一旦小于 84，
-            // `Expanded` 照样分到负空间、RenderFlex 照样溢出。只有不挂这两个子项
-            // 才真的不溢出。折叠正文区正常不会窄到这个程度，这里纯粹是防御。
-            final double reserved = collapsedThumbnailInset(
+            final layout = _resolveCollapsedLayout(
+              context: context,
               quote: quote,
-              mediaStyle: mediaStyle,
+              style: style,
               maxWidth: constraints.maxWidth,
+              mediaStyle: mediaStyle,
+              prioritizeBoldContent: prioritizeBoldContent,
             );
+            if (layout == null) {
+              // delta 解不出来（损坏、导入了别家的格式、同步冲突写坏了）时**退回纯
+              // 文本**。旧实现在 `_documentFromDelta` 里也有这条兜底；直接画空的话，
+              // 卡片正文整个消失，而且因为量出来是 0 高，连双击展开都进不去——用户会
+              // 以为笔记内容丢了。
+              return _buildPlainTextContent(
+                context,
+                needsExpansion: needsExpansion,
+              );
+            }
+
+            final media = layout.media;
+            final baseStyle = layout.baseStyle;
+            final boldWeight = layout.boldWeight;
+            final double reserved = layout.thumbnailInset;
             final bool showThumbnail = reserved > 0;
             final bool showBanner =
                 mediaStyle == NoteCardMediaStyle.banner && media.hasMedia;
-            // 文字宽度要先扣掉缩略图占的位，否则排版会按整宽算而少排内容。
-            final double textMaxWidth = constraints.maxWidth.isFinite
-                ? constraints.maxWidth - reserved
-                : constraints.maxWidth;
-
-            // 量一次，盒高和要画的内容都从这一次的结果来。上限 160：内容排满就是
-            // 160，媒体被摘走后只剩一两行就取那几行的高度，卡片里不会留一块空白。
-            final plan = CollapsedRichTextMetrics.plan(
-              blocks: blocks,
-              baseStyle: baseStyle,
-              maxWidth: textMaxWidth,
-              limit: collapsedContentMaxHeight,
-              showMedia: !stripMedia,
-              boldWeight: boldWeight,
-              textDirection: textDirection,
-              textScaler: textScaler,
-              locale: locale,
-              cacheContent: quote.deltaContent,
-              cacheBoldPrioritized: prioritizeBoldContent,
-            );
+            final plan = layout.plan;
             final double boxHeight =
                 plan.height.clamp(0.0, collapsedContentMaxHeight);
 
@@ -999,6 +1065,24 @@ class QuoteContent extends StatelessWidget {
 
     return richTextEditor;
   }
+}
+
+/// [QuoteContent._resolveCollapsedLayout] 的结果。
+@immutable
+class _CollapsedLayout {
+  const _CollapsedLayout({
+    required this.plan,
+    required this.thumbnailInset,
+    required this.media,
+    required this.baseStyle,
+    required this.boldWeight,
+  });
+
+  final CollapsedRichTextPlan plan;
+  final double thumbnailInset;
+  final DeltaMediaSummary media;
+  final TextStyle baseStyle;
+  final FontWeight boldWeight;
 }
 
 class _CollapsedContentWrapper extends StatelessWidget {

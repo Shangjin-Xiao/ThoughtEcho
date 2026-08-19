@@ -38,6 +38,31 @@ class CollapsedMediaThumbnail extends StatelessWidget {
   /// 折叠卡片为缩略图预留的总宽度（含间距）。布局侧据此收窄文字宽度。
   static double reservedWidth({double size = defaultSize}) => size + gap;
 
+  /// 缩略图的图片 provider。渲染与空闲预热**共用这一处**。
+  ///
+  /// `imageCache` 是按 provider 相等性做键的（`ResizeImage` 与 `FileImage` 都实现
+  /// 了 `==`），解码尺寸差一点就是另一个键：预热解出来的那张永远等不到人来取，
+  /// 卡片滑进来照旧现解一次。所以两边只能有一份解码参数。
+  static ImageProvider? imageProviderFor(
+    BuildContext context,
+    DeltaMediaSummary media, {
+    double size = defaultSize,
+  }) {
+    final source = media.firstImageSource;
+    if (source == null || source.isEmpty) return null;
+    // 72pt × dpr2 = 144px，单张约 83KB；相比按卡片全宽解码的 ~1.2MB 小一个量级。
+    final decodeSize = decodeSizeFor(
+      size,
+      MediaQuery.devicePixelRatioOf(context)
+          .clamp(1.0, _ThumbnailImage._maxPixelRatio),
+    );
+    return createOptimizedImageProvider(
+      source,
+      cacheWidth: decodeSize,
+      cacheHeight: decodeSize,
+    );
+  }
+
   final DeltaMediaSummary media;
 
   /// 点击缩略图的回调，一般是打开大图预览。为 null 时不可点。
@@ -138,7 +163,8 @@ class _ThumbnailImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 72pt × dpr2 = 144px，单张约 83KB；相比按卡片全宽解码的 ~1.2MB 小一个量级。
+    // 解码尺寸和 [CollapsedMediaThumbnail.imageProviderFor] 共用一处，
+    // 否则空闲预热解出来的那张进不了同一个 imageCache 键。
     final decodeSize = decodeSizeFor(
       size,
       MediaQuery.devicePixelRatioOf(context).clamp(1.0, _maxPixelRatio),

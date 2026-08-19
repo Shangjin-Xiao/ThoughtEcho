@@ -169,6 +169,9 @@ extension _NoteListScrollExtension on NoteListViewState {
     _scrollSessionItemLayoutMicros = 0;
     _scrollSessionItemLayoutJank = 0;
     _scrollSessionWorstItemLayoutMicros = 0;
+    _scrollSessionItemMountCount = 0;
+    _scrollSessionItemMountMicros = 0;
+    _scrollSessionWorstItemMountMicros = 0;
     _scrollSessionSlowItemLayouts.clear();
     _scrollSessionStartQuoteContentStats = QuoteContent.debugCacheStats();
     _scrollSessionStartQuoteItemStats = QuoteItemWidget.getCacheStats();
@@ -330,6 +333,14 @@ extension _NoteListScrollExtension on NoteListViewState {
         'count=$_scrollSessionItemLayoutCount,jank=$_scrollSessionItemLayoutJank,'
         'avg=${itemLayoutAvgMs.toStringAsFixed(1)}ms,'
         'worst=${(_scrollSessionWorstItemLayoutMicros / 1000.0).toStringAsFixed(1)}ms';
+    // 预热进度：滑动时 expandMiss+/planMiss+/Δimg+ 还高，就先看这一行是不是根本
+    // 没跑起来（游标没走完、或宽度一直取不到）。
+    final warmupStats = 'items=$_idleWarmupWarmedItems,'
+        'cursor=$_idleWarmupCursor/${_quotes.length},'
+        'img=$_idleWarmupPrecachedImages';
+    final itemMountStats = 'count=$_scrollSessionItemMountCount,'
+        'workUs=$_scrollSessionItemMountMicros,'
+        'worstUs=$_scrollSessionWorstItemMountMicros';
     final builtRange = _scrollSessionItemBuildCount == 0
         ? 'none'
         : '$_scrollSessionMinBuiltIndex-$_scrollSessionMaxBuiltIndex';
@@ -373,6 +384,7 @@ extension _NoteListScrollExtension on NoteListViewState {
       'range=${_scrollSessionMinMaxExtent.round()}-${_scrollSessionMaxMaxExtent.round()},'
       'changes=$_scrollSessionExtentChangeCount}, '
       'activity={$activityStats}, itemMemo={$itemMemoStats}, '
+      'warmup={$warmupStats}, itemMount={$itemMountStats}, '
       'itemLayout={$itemLayoutStats}, slowLayouts=[$slowLayouts]',
       source: 'NoteListView.Perf',
     );
@@ -395,6 +407,24 @@ extension _NoteListScrollExtension on NoteListViewState {
     }
     _scrollSessionId = null;
     _releasePerfTimingsCallbackIfIdle();
+  }
+
+  /// 记录一张卡片的子树挂载耗时，见 [_NoteListItemPerfProbeElement]。
+  void _recordNoteListItemMount({
+    required int index,
+    required String quoteId,
+    required String kind,
+    required int durationMicros,
+  }) {
+    if (!_scrollSessionPerfRecording) {
+      return;
+    }
+
+    _scrollSessionItemMountCount++;
+    _scrollSessionItemMountMicros += durationMicros;
+    if (durationMicros > _scrollSessionWorstItemMountMicros) {
+      _scrollSessionWorstItemMountMicros = durationMicros;
+    }
   }
 
   void _recordNoteListItemLayout({
