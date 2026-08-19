@@ -258,6 +258,7 @@ class NoteListViewState extends State<NoteListView> {
   int _idleWarmupDeferrals = 0;
   static const int _maxIdleWarmupDeferrals = 20;
   double? _idleWarmupWidth;
+  String? _idleWarmupMediaStyle;
   int _idleWarmupWarmedItems = 0;
   int _idleWarmupPrecachedImages = 0;
   final Set<String> _idleWarmupPrecachedSources = <String>{};
@@ -266,6 +267,19 @@ class NoteListViewState extends State<NoteListView> {
   /// 用户正好这时开始滑就白优化了；分成小片，随时能让路。
   static const int _idleWarmupBudgetMicros = 3000;
   static const int _idleWarmupPrecacheTrackLimit = 240;
+
+  /// 空闲期在基础缓存区之上额外撑开的像素，见 `_growIdleCacheExtent`。
+  ///
+  /// 测量预热只能把「量」提前；卡片的**挂载**只有 Viewport 在它进入缓存区时才会
+  /// 做。把缓存区在静止期一级一级撑大，这批挂载就落进空闲帧，下次滑过去时是现成的。
+  double _idleCacheExtentBoostPx = 0;
+
+  /// 每级撑开的量。一步大约一张卡片：每撑一步都要跑一次布局并建出那几张卡片，
+  /// 一次撑到位就是一个上百毫秒的长任务，正好撞上用户重新开始滑。
+  static const double _idleCacheExtentStepPx = 400;
+
+  /// 撑开的上限。缓存区是**上下对称**的，所以这个数要按「两侧各多留这么多」来读。
+  static const double _maxIdleCacheExtentBoostPx = 1600;
 
   // 修复：添加等待服务初始化的标志
   bool _waitingForServices = true;

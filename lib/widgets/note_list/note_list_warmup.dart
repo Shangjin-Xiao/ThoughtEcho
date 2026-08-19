@@ -47,14 +47,7 @@ extension _NoteListWarmupExtension on NoteListViewState {
       _deferIdleLayoutWarmup();
       return;
     }
-    // 宽度变了（旋屏、分屏、字号缩放改布局）说明此前暖的键全作废，从头再来。
-    if (_idleWarmupWidth != width) {
-      _idleWarmupWidth = width;
-      _idleWarmupCursor = 0;
-    }
-
-    if (_idleWarmupCursor >= quotes.length) return;
-
+    // 「暖完了没有」要等下面确认宽度和版式都没变才能判断，所以先不早退。
     if (isListScrolling.value ||
         isListDragActive.value ||
         _isUserScrolling ||
@@ -69,6 +62,16 @@ extension _NoteListWarmupExtension on NoteListViewState {
     if (settings == null) return;
     final mediaStyle = settings.noteCardMediaStyle;
     final prioritizeBoldContent = settings.prioritizeBoldContentInCollapse;
+
+    // 宽度或版式变了（旋屏、分屏、切换媒体版式）说明此前暖的键全作废，从头再来。
+    // 图片的去重集合也要一起清：`imageProviderFor` 的解码尺寸就是按这两样算的，
+    // 只按 source 记「暖过了」的话，换了尺寸的那张永远等不到预热。
+    if (_idleWarmupWidth != width || _idleWarmupMediaStyle != mediaStyle) {
+      _idleWarmupWidth = width;
+      _idleWarmupMediaStyle = mediaStyle;
+      _idleWarmupCursor = 0;
+      _idleWarmupPrecachedSources.clear();
+    }
 
     final stopwatch = Stopwatch()..start();
     while (_idleWarmupCursor < quotes.length &&
@@ -94,7 +97,50 @@ extension _NoteListWarmupExtension on NoteListViewState {
       _scheduleIdleLayoutWarmup(
         delay: const Duration(milliseconds: 16),
       );
+      return;
     }
+
+    // 测量都暖完了，接着把缓存区往外撑一级。
+    if (_growIdleCacheExtent()) {
+      _scheduleIdleLayoutWarmup(
+        delay: const Duration(milliseconds: 16),
+      );
+    }
+  }
+
+  /// 静止期把滚动缓存区往外撑一级，返回是否真的撑了。
+  ///
+  /// 预热能把「量」提前，但卡片的**挂载**（构造 widget、建 element 与
+  /// RenderObject）只有 Viewport 在它进入缓存区时才会做 —— 而那一刻正好在滚动帧
+  /// 里。把缓存区在静止期一级一级撑大，这批挂载就落进空闲帧；下一次滑过去时它们
+  /// 已经是现成的，和日志里 `built=0` 的那两段回滑一个待遇。
+  ///
+  /// **一次只撑一级**：每撑一级都要跑一次布局并把新进缓存区的那几张卡片建出来，
+  /// 一次撑到位就是一个上百毫秒的长任务，用户正好这时开始滑就白优化了。
+  bool _growIdleCacheExtent() {
+    if (_idleCacheExtentBoostPx >=
+        NoteListViewState._maxIdleCacheExtentBoostPx) {
+      return false;
+    }
+
+    // 贴着底部时不撑。还没建出来的尾部条目是靠已建条目的平均高度估出来的
+    // （`SliverMultiBoxAdaptorElement._extrapolateMaxScrollOffset`），多建几条就
+    // 会改变 maxScrollExtent；人正好停在底部时那点变化会把偏移夹一下，看着就是
+    // 「列表自己抖了一下」—— 这块代码为这件事返过好几次工，不要再招惹它。
+    final position = _safeScrollPosition;
+    if (position != null &&
+        position.hasContentDimensions &&
+        position.maxScrollExtent - position.pixels <=
+            position.viewportDimension) {
+      return false;
+    }
+
+    _updateState(() {
+      _idleCacheExtentBoostPx =
+          (_idleCacheExtentBoostPx + NoteListViewState._idleCacheExtentStepPx)
+              .clamp(0.0, NoteListViewState._maxIdleCacheExtentBoostPx);
+    });
+    return true;
   }
 
   /// 这一轮什么都没暖成，改期重试；连续多次都没进展就彻底放手，

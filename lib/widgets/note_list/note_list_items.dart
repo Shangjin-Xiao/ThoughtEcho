@@ -527,9 +527,12 @@ extension _NoteListItemsExtension on NoteListViewState {
           addRepaintBoundaries: true, // 性能优化：减少重绘范围
           addSemanticIndexes: false, // 性能权衡：关闭所有列表项的自动顺序语义索引
           // 性能优化：惯性首帧移动距离远大于拖拽帧，需要更大缓存区预构建 item
-          // 避免 drag→ballistic 过渡时集中构建新 item 导致卡顿
+          // 避免 drag→ballistic 过渡时集中构建新 item 导致卡顿。
+          // 静止期还会在这个基础上一级一级往上撑，把下一屏卡片的挂载挪进空闲帧，
+          // 见 `_growIdleCacheExtent`。
           scrollCacheExtent: ScrollCacheExtent.pixels(
-            MediaQuery.sizeOf(context).height.clamp(400, 900).toDouble(),
+            MediaQuery.sizeOf(context).height.clamp(400, 900).toDouble() +
+                _idleCacheExtentBoostPx,
           ),
           semanticChildCount: _quotes.length + (_hasMore ? 1 : 0),
           itemCount: _quotes.length + (_hasMore ? 1 : 0),

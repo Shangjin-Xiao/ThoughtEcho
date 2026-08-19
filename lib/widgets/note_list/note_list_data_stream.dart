@@ -471,9 +471,13 @@ extension _NoteListDataStreamExtension on NoteListViewState {
           } else {
             // 筛选/排序切换回到第一页后重新预取，让新结果集也覆盖首次快滑。
             _scheduleIdlePrefetch();
-            // 结果集整体换过了，预热游标也要拨回开头。
-            _resetIdleLayoutWarmup();
-            _scheduleIdleLayoutWarmup();
+            // 只有结果集**真的换过**才把预热游标拨回开头。什么都没变的重复事件
+            // （watchQuotes 每次都重发整个累积列表）照样重置的话，游标会被反复
+            // 拽回 0，列表尾部的卡片可能永远等不到预热。
+            if (!quotesUnchanged) {
+              _resetIdleLayoutWarmup();
+              _scheduleIdleLayoutWarmup();
+            }
           }
           if (!quotesUnchanged) {
             _scheduleExpandableQuoteCheck();

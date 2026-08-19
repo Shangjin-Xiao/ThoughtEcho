@@ -1,13 +1,19 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:thoughtecho/controllers/search_controller.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/app_settings.dart';
+import 'package:thoughtecho/models/local_ai_settings.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
+import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/widgets/note_list_view.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
 
@@ -18,6 +24,24 @@ import 'package:thoughtecho/widgets/quote_item_widget.dart';
 /// 这个文件钉的就是这条不变量：先暖，再真的把卡片建出来，未命中数必须一次都不涨。
 /// 这个项目已经吃过一次"缓存一次都没命中"的亏（见 beab8ca），不能再吃第二次。
 class _FakeSettingsService extends ChangeNotifier implements SettingsService {
+  @override
+  AppSettings get appSettings => AppSettings.defaultSettings();
+
+  @override
+  LocalAISettings get localAISettings => LocalAISettings.defaultSettings();
+
+  @override
+  bool get requireBiometricForHidden => false;
+
+  @override
+  bool get showFavoriteButton => true;
+
+  @override
+  bool get enableFirstOpenScrollPerfMonitor => false;
+
+  @override
+  String get noteInsertAnimationType => 'slide';
+
   @override
   bool get prioritizeBoldContentInCollapse => false;
 
@@ -179,4 +203,148 @@ void main() {
       );
     });
   }
+
+  testWidgets('静止期把缓存区一级一级撑大，提前建出下一屏的卡片', (tester) async {
+    final databaseService = _StreamingFakeDatabaseService();
+    final quotes = [
+      for (var i = 0; i < 40; i++)
+        Quote(
+          id: 'warm-$i',
+          content: '缓存区预建测试笔记 $i',
+          date: DateTime(2026, 8, 19, 9)
+              .subtract(Duration(minutes: i))
+              .toIso8601String(),
+          editSource: 'inline',
+          dayPeriod: 'morning',
+        ),
+    ];
+
+    await tester.pumpWidget(
+      _TestApp(
+        databaseService: databaseService,
+        settingsService: _FakeSettingsService(),
+      ),
+    );
+    await tester.pump();
+    databaseService.emit(quotes, hasMore: false);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    // 缓存区里的卡片是**建好但不绘制**的，默认的 finder 会把它们当 offstage 跳过 ——
+    // 这里要数的恰恰是它们，所以必须 skipOffstage: false。
+    int builtCards() =>
+        find.byType(QuoteItemWidget, skipOffstage: false).evaluate().length;
+
+    final builtBefore = builtCards();
+    expect(builtBefore, greaterThan(0), reason: '首屏应当已经建出卡片');
+
+    // 静止期：预热跑完测量之后开始一级一级撑缓存区，每级 16ms。
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+
+    expect(
+      builtCards(),
+      greaterThan(builtBefore),
+      reason: '静止期应当提前把下一屏的卡片建出来，否则这批挂载还会落在滚动帧里',
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 2));
+    await databaseService.disposeStream();
+  });
+}
+
+class _TestApp extends StatelessWidget {
+  const _TestApp({
+    required this.databaseService,
+    required this.settingsService,
+  });
+
+  final DatabaseService databaseService;
+  final SettingsService settingsService;
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<DatabaseService>.value(value: databaseService),
+        ChangeNotifierProvider<SettingsService>.value(value: settingsService),
+        ChangeNotifierProvider(create: (_) => NoteSearchController()),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
+        home: Material(
+          child: NoteListView(
+            tags: const <NoteTag>[],
+            selectedTagIds: const [],
+            onTagSelectionChanged: (_) {},
+            searchQuery: '',
+            sortType: 'time',
+            sortAscending: false,
+            onSortChanged: (_, __) {},
+            onSearchChanged: (_) {},
+            onEdit: (_) {},
+            onDelete: (_) {},
+            onAskAI: (_) {},
+            selectedWeathers: const [],
+            selectedDayPeriods: const [],
+            onFilterChanged: (_, __) {},
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StreamingFakeDatabaseService extends DatabaseService {
+  _StreamingFakeDatabaseService() : super.forTesting();
+
+  final StreamController<List<Quote>> _controller =
+      StreamController<List<Quote>>.broadcast();
+  bool _hasMoreQuotes = true;
+
+  @override
+  bool get isInitialized => true;
+
+  @override
+  bool get hasMoreQuotes => _hasMoreQuotes;
+
+  @override
+  Stream<List<Quote>> watchQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    int limit = 20,
+    String orderBy = 'date DESC',
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool includeDeleted = false,
+  }) {
+    return _controller.stream;
+  }
+
+  @override
+  Future<void> loadMoreQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool? includeDeleted,
+    int? refillCount,
+    bool suppressNotify = false,
+  }) async {}
+
+  @override
+  Future<List<NoteTag>> getTags() async => const [];
+
+  void emit(List<Quote> quotes, {required bool hasMore}) {
+    _hasMoreQuotes = hasMore;
+    _controller.add(List<Quote>.from(quotes));
+  }
+
+  Future<void> disposeStream() => _controller.close();
 }

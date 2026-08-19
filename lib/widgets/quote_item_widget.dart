@@ -186,10 +186,14 @@ class QuoteItemWidget extends StatefulWidget {
         'worstWorkMicros': _headerTextWidthWorstWorkMicros,
       };
 
-  /// 测试辅助方法，等价于 [clearExpansionCache]。
+  /// 测试辅助方法：把卡片持有的静态可变状态一次清干净。
+  ///
+  /// [lastCollapsedContentWidth] 也在其中 —— 它是跨测试泄漏的现成来源，
+  /// 漏掉的话后一个测试会拿着前一个测试的布局宽度去暖缓存。
   static void clearExpansionCacheForTest() {
     clearExpansionCache();
     clearHeaderTextWidthCache();
+    lastCollapsedContentWidth = null;
   }
 
   /// 折叠卡片正文区最近一次的布局宽度。
@@ -406,11 +410,18 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     return WeatherService.getWeatherIconDataByKey(weatherKey);
   }
 
+  /// 单行文字测宽（带缓存）。
+  ///
+  /// [countAsHeader] 决定这次测量算不算进 `headerWorkUs` / `headerMiss` 这两个
+  /// 性能计数器。它们的口径是「日期/位置/天气」那三段 —— 日志里按这个口径写着
+  /// 「头部测宽 0.5ms/卡」，也是下一轮预热的目标。标签估宽复用同一张缓存表没问题，
+  /// 但**不能混进同一组计数器**，否则下一轮复测会对着一个变了口径的数字下结论。
   double _measureSingleLineTextWidth(
     BuildContext context,
     String text,
-    TextStyle style,
-  ) {
+    TextStyle style, {
+    bool countAsHeader = true,
+  }) {
     final textDirection = Directionality.maybeOf(context) ?? TextDirection.ltr;
     final textScaler = MediaQuery.textScalerOf(context);
     final locale = Localizations.maybeLocaleOf(context);
@@ -423,12 +434,16 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     );
     final cached = QuoteItemWidget._headerTextWidthCache.remove(cacheKey);
     if (cached != null) {
-      QuoteItemWidget._headerTextWidthCacheHits++;
+      if (countAsHeader) {
+        QuoteItemWidget._headerTextWidthCacheHits++;
+      }
       QuoteItemWidget._headerTextWidthCache[cacheKey] = cached;
       return cached;
     }
 
-    QuoteItemWidget._headerTextWidthCacheMisses++;
+    if (countAsHeader) {
+      QuoteItemWidget._headerTextWidthCacheMisses++;
+    }
     final stopwatch = Stopwatch()..start();
     final textPainter = TextPainter(
       text: TextSpan(text: text, style: style),
@@ -439,11 +454,14 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
     final width = textPainter.width;
     stopwatch.stop();
-    QuoteItemWidget._headerTextWidthWorkMicros += stopwatch.elapsedMicroseconds;
-    if (stopwatch.elapsedMicroseconds >
-        QuoteItemWidget._headerTextWidthWorstWorkMicros) {
-      QuoteItemWidget._headerTextWidthWorstWorkMicros =
+    if (countAsHeader) {
+      QuoteItemWidget._headerTextWidthWorkMicros +=
           stopwatch.elapsedMicroseconds;
+      if (stopwatch.elapsedMicroseconds >
+          QuoteItemWidget._headerTextWidthWorstWorkMicros) {
+        QuoteItemWidget._headerTextWidthWorstWorkMicros =
+            stopwatch.elapsedMicroseconds;
+      }
     }
     if (QuoteItemWidget._headerTextWidthCache.length >=
         QuoteItemWidget._maxHeaderTextWidthCacheSize) {
@@ -533,7 +551,11 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
           // QuoteContent 的轻量预览而不是 QuillEditor。只有用户真的双击展开了，
           // 才需要完整的富文本渲染。
           final showFullContent = isExpanded;
+          // 只算一次，同时喂给正文栈和动画层：两处一旦给出不同答案，
+          // AnimatedSize 与 AnimatedSwitcher 的挂载就会错配。
+          final bool canToggle = needsExpansion || isExpanded;
           final contentChild = _buildQuoteContentStack(
+            canToggle: canToggle,
             quote: quote,
             showFullContent: showFullContent,
             needsExpansion: needsExpansion,
@@ -554,7 +576,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
           final animatedContent = _buildAnimatedQuoteContent(
             innerTheme: innerTheme,
             child: contentChild,
-            canToggle: needsExpansion || isExpanded,
+            canToggle: canToggle,
           );
 
           return GestureDetector(
@@ -595,6 +617,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     required bool showFullContent,
     required bool needsExpansion,
     required bool isExpanded,
+    required bool canToggle,
     required TextStyle? contentStyle,
     required ThemeData innerTheme,
     required bool backdropBlurDisabled,
@@ -609,12 +632,10 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       collapseRichTextSemantics: true,
     );
 
-    // 不可展开的卡片正文永远不会在折叠态和展开态之间切换，两层动画机件
-    // （`AnimatedSwitcher` 各带一个 `AnimationController` 和一层
-    // `FadeTransition`、展开提示那层还多一个 `Positioned` + `IgnorePointer`）
+    // canToggle 由调用方给：不可展开的卡片正文永远不会在折叠态和展开态之间
+    // 切换，两层动画机件（`AnimatedSwitcher` 各带一个 `AnimationController` 和
+    // 一层 `FadeTransition`、展开提示那层还多一个 `Positioned` + `IgnorePointer`）
     // 对它一次都用不上，却要在每次首建时挂满整棵子树。
-    final bool canToggle = needsExpansion || isExpanded;
-
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -736,6 +757,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         : _buildDoubleTapFeedback(
             innerTheme: innerTheme,
             controller: controller,
+            scaleAnimation: _scaleAnimation!,
+            highlightProgress: _highlightProgress!,
             child: child,
           );
 
@@ -754,21 +777,25 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     );
   }
 
+  /// 三个动画对象由 [_ensureDoubleTapController] 一次性建出，调用方传进来，
+  /// 这里就不必再对字段做强制解包。
   Widget _buildDoubleTapFeedback({
     required ThemeData innerTheme,
     required AnimationController controller,
+    required Animation<double> scaleAnimation,
+    required Animation<double> highlightProgress,
     required Widget child,
   }) {
     return AnimatedBuilder(
       animation: controller,
       child: child,
       builder: (context, child) {
-        final highlightOpacity = _highlightProgress!.value;
+        final highlightOpacity = highlightProgress.value;
         final brightness = innerTheme.brightness;
         final overlayStrength = brightness == Brightness.dark ? 0.12 : 0.05;
 
         return Transform.scale(
-          scale: _scaleAnimation!.value,
+          scale: scaleAnimation.value,
           alignment: Alignment.topLeft,
           child: highlightOpacity > 0
               ? Stack(
@@ -870,6 +897,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                   context,
                   IconUtils.getDisplayIcon(iconName),
                   const TextStyle(fontSize: 12),
+                  countAsHeader: false,
                 )
               : 12;
         }
@@ -877,6 +905,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
           context,
           tag.localizedName(l10n),
           textStyle ?? const TextStyle(),
+          countAsHeader: false,
         );
         if (index < sortedTagIds.length - 1) {
           estimatedWidth += 8; // 胶囊之间的间距
@@ -1005,7 +1034,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
       borderRadius: BorderRadius.circular(20),
       semanticsLabel: label,
       hoverTooltip: _showsHoverTooltips(theme) ? label : null,
-      onTap: widget.onFavorite,
+      onTap: (_) => widget.onFavorite?.call(),
       onLongPress: isFavorite ? widget.onLongPressFavorite : null,
       child: Stack(
         clipBehavior: Clip.none,
@@ -1583,7 +1612,9 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           hoverTooltip: _showsHoverTooltips(theme)
                               ? l10n.moreOptions
                               : null,
-                          onTap: () => _showMoreMenu(context, l10n),
+                          // 菜单按**按钮**的位置弹，不是按整张卡片，见 [_CardActionButton.onTap]。
+                          onTap: (buttonContext) =>
+                              _showMoreMenu(buttonContext, l10n),
                           child: Icon(Icons.more_vert, color: iconColor),
                         ),
                       ],
@@ -1655,7 +1686,14 @@ class _CardActionButton extends StatelessWidget {
 
   final double size;
   final String semanticsLabel;
-  final VoidCallback? onTap;
+
+  /// 回调拿到的是**按钮自己的** context。
+  ///
+  /// 「更多」菜单要按按钮的位置弹出，而 `showMenu` 的定位靠
+  /// `context.findRenderObject()`。用卡片 build 方法里的那个 context 的话，
+  /// 找到的是整张卡片的 RenderBox，菜单会按整张卡片定位 —— 改造前的
+  /// `PopupMenuButton` 用的是它自己的 element，这里必须还原同一个语义。
+  final void Function(BuildContext buttonContext)? onTap;
   final VoidCallback? onLongPress;
 
   /// 仅在有指针悬浮的平台传值，见 [_QuoteItemWidgetState._showsHoverTooltips]。
@@ -1666,8 +1704,9 @@ class _CardActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tapHandler = onTap;
     Widget button = InkResponse(
-      onTap: onTap,
+      onTap: tapHandler == null ? null : () => tapHandler(context),
       onLongPress: onLongPress,
       containedInkWell: shape == BoxShape.rectangle,
       highlightShape: shape,
