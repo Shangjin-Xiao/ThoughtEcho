@@ -620,13 +620,20 @@ class CollapsedRichTextMetrics {
       // 以前这里画的行数是个上界，多出来的半行由 `ClipRect` 裁掉——盒底于是永远
       // 挂着半截被切开的字，只能再盖一条模糊带去糊住它。行数一旦是精确的，那半行
       // 不存在，模糊带也就没有存在的理由，末行改用省略号表达「还有下文」。
+      //
+      // 「至少画一行」**只对整个计划的第一个块成立**（否则一个字号极大的标题块会
+      // 得到空计划）。对后面的块也强画一行的话，剩余空间只有几个像素时照样塞一整
+      // 行进去，盒子被撑破——`Column` 真的溢出，debug 下就是那条黄黑警示带。
+      final bool isFirstBlock = entries.isEmpty;
       final lines = painter.computeLineMetrics();
       var fittedLines = 0;
       var fittedHeight = 0.0;
       for (final line in lines) {
         final next = fittedHeight + line.height;
-        // 第一行无论多高都要画：一个字号极大的标题块否则会得到 0 行。
-        if (fittedLines > 0 && next > remainingHeight + 0.5) break;
+        if (next > remainingHeight + 0.5 &&
+            !(isFirstBlock && fittedLines == 0)) {
+          break;
+        }
         fittedHeight = next;
         fittedLines++;
       }
@@ -635,8 +642,9 @@ class CollapsedRichTextMetrics {
       painter.dispose();
 
       if (fittedLines <= 0) {
-        fittedLines = 1;
-        fittedHeight = layout.minLineHeight;
+        // 一行都放不下：这个块整个不画，后面的块自然也画不下。
+        truncated = true;
+        break;
       }
 
       entries.add(CollapsedPlannedBlock(

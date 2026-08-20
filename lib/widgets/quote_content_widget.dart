@@ -624,7 +624,12 @@ class QuoteContent extends StatelessWidget {
             // 这里的 blocks 是 DeltaRichTextCache 的原序列，没有按加粗重排。
             cacheContent: quote.deltaContent,
           );
-          return plan.height > collapsedContentMaxHeight + 0.5;
+          // 判据是**排版计划有没有画全**，不是它有多高。
+          //
+          // 正文改成按整行截断之后，计划的高度恒不超过盒子（放不下的整行根本不
+          // 排），拿高度和 160 比就永远得到「不用展开」——被裁掉一半的长笔记会
+          // 连展开入口一起失去。`truncated` 才是「还有内容没显示」的那个答案。
+          return plan.truncated;
         }
 
         // `maxLines` 不改变这个判断的答案，只砍掉多余的排版量：

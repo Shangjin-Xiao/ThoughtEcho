@@ -249,4 +249,42 @@ void main() {
       'collapsed_rich_text_dark',
     );
   });
+
+  test('后面的块放不下时整个不排，计划高度不会撑破折叠盒', () {
+    // 「至少画一行」只对第一个块成立。对后面的块也强画一行的话，剩余空间只有几个
+    // 像素时照样塞一整行进去，`Column` 会真的溢出（debug 下画黄黑警示带），
+    // `ClipRect` 裁掉的也不再是「多排出来的余量」而是实打实的越界。
+    final delta = jsonEncode([
+      {'insert': '第一行\n第二行\n第三行\n第四行\n第五行\n第六行\n第七行\n'},
+    ]);
+    final plan = CollapsedRichTextMetrics.plan(
+      blocks: parseDeltaRichText(delta),
+      baseStyle: baseStyle,
+      maxWidth: contentWidth,
+      limit: 160,
+      showMedia: false,
+    );
+
+    expect(plan.height, lessThanOrEqualTo(160.5));
+    expect(plan.truncated, isTrue);
+  });
+
+  test('第一个块再高也要排，否则纯标题笔记会得到空计划', () {
+    final delta = jsonEncode([
+      {
+        'insert': '很大的标题\n',
+        'attributes': {'header': 1},
+      },
+    ]);
+    final plan = CollapsedRichTextMetrics.plan(
+      blocks: parseDeltaRichText(delta),
+      baseStyle: baseStyle,
+      maxWidth: 40, // 窄到标题要折很多行
+      limit: 20, // 盒子比一行还矮
+      showMedia: false,
+    );
+
+    expect(plan.entries, isNotEmpty);
+    expect(plan.entries.first.maxLines, greaterThanOrEqualTo(1));
+  });
 }
