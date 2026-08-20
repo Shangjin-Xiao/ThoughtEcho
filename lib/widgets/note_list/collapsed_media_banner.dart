@@ -33,6 +33,30 @@ class CollapsedMediaBanner extends StatelessWidget {
   /// 通栏条与下方正文的间距。
   static const double gap = 12.0;
 
+  /// 通栏图的图片 provider。渲染与空闲预热**共用这一处**，
+  /// 理由见 [CollapsedMediaThumbnail.imageProviderFor]。
+  ///
+  /// [width] 是通栏条的布局宽度，也就是折叠正文区的宽度（通栏版式不留缩略图位）。
+  static ImageProvider? imageProviderFor(
+    BuildContext context,
+    DeltaMediaSummary media, {
+    required double width,
+  }) {
+    final source = media.firstImageSource;
+    if (source == null || source.isEmpty) return null;
+    if (!width.isFinite || width <= 0) return null;
+    final int? decodeWidth = decodeSizeFor(
+      width,
+      MediaQuery.devicePixelRatioOf(context)
+          .clamp(1.0, _BannerImage._maxPixelRatio),
+    );
+    return createOptimizedImageProvider(
+      source,
+      cacheWidth: decodeWidth,
+      cacheHeight: decodeHeightBudget(decodeWidth),
+    );
+  }
+
   final DeltaMediaSummary media;
 
   /// 点击回调，一般是打开大图预览。为 null 时不可点。

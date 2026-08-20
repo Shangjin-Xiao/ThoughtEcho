@@ -6,6 +6,7 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/models/app_settings.dart';
+import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/widgets/note_list/collapsed_rich_text.dart';
@@ -1008,5 +1009,138 @@ void main() {
       expect(textWidget.style?.fontSize, 9.0);
       expect(textWidget.style?.fontWeight, FontWeight.bold);
     });
+    testWidgets('动作按钮的触控尺寸与改造前一致', (tester) async {
+      // 心形 36、更多 48 —— 这两个数原本由 `Padding(8)+图标20` 和 `IconButton`
+      // 的 48dp 触控内衬撑出来。换成轻量按钮后必须显式给回来，
+      // 否则底部这一行会变矮，每张卡片的高度跟着变。
+      await _pumpCard(
+        tester,
+        _buildQuote(id: 'q-size', editSource: 'inline'),
+        onFavorite: () {},
+      );
+
+      expect(
+        tester.getSize(
+            _actionButtonAncestorOf(find.byIcon(Icons.favorite_border))),
+        const Size(36, 36),
+      );
+      expect(
+        tester.getSize(_actionButtonAncestorOf(find.byIcon(Icons.more_vert))),
+        const Size(48, 48),
+      );
+    });
+
+    testWidgets('更多按钮弹出菜单并回调对应动作', (tester) async {
+      var edited = false;
+      await _pumpCard(
+        tester,
+        _buildQuote(id: 'q-menu', editSource: 'inline'),
+        onEdit: () => edited = true,
+      );
+
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+      expect(find.text(l10n.editNoteMenu), findsOneWidget);
+      expect(find.text(l10n.askAIMenu), findsOneWidget);
+      expect(find.text(l10n.deleteNoteMenu), findsOneWidget);
+
+      await tester.tap(find.text(l10n.editNoteMenu));
+      await tester.pumpAndSettle();
+      expect(edited, isTrue);
+    });
+
+    testWidgets('触摸端动作按钮不挂 Tooltip，无障碍名称仍在', (tester) async {
+      await _pumpCard(
+        tester,
+        _buildQuote(id: 'q-tooltip', editSource: 'inline'),
+        onFavorite: () {},
+      );
+
+      // 触摸端的 Tooltip 只能长按弹出，而长按位已被"清除收藏"占着；
+      // 名称改由 Semantics 单独给，读屏不受影响。
+      expect(find.byType(Tooltip), findsNothing);
+      final l10n = await AppLocalizations.delegate.load(const Locale('zh'));
+      expect(
+        find.bySemanticsLabel(l10n.actionFavorite),
+        findsOneWidget,
+      );
+      expect(find.bySemanticsLabel(l10n.moreOptions), findsOneWidget);
+    });
+
+    testWidgets('标签放得下时不挂滚动视图，放不下才退回', (tester) async {
+      await _pumpCard(
+        tester,
+        _buildQuote(id: 'q-tags-short', editSource: 'inline')
+            .copyWith(tagIds: const ['t1', 't2']),
+        tagMap: {
+          't1': NoteTag(id: 't1', name: '短'),
+          't2': NoteTag(id: 't2', name: '标签'),
+        },
+      );
+      expect(
+        find.byType(SingleChildScrollView),
+        findsNothing,
+        reason: '两个短标签一行放得下，不该为它挂一整个 Scrollable',
+      );
+
+      await _pumpCard(
+        tester,
+        _buildQuote(id: 'q-tags-long', editSource: 'inline')
+            .copyWith(tagIds: const ['t1', 't2', 't3', 't4', 't5', 't6']),
+        tagMap: {
+          for (var i = 1; i <= 6; i++)
+            't$i': NoteTag(id: 't$i', name: '这是一个相当长的标签名 $i'),
+        },
+        width: 320,
+      );
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
+    });
   });
+}
+
+/// 轻量动作按钮的外层尺寸盒。按钮本身是私有类型，按图标往上找它的 SizedBox。
+Finder _actionButtonAncestorOf(Finder icon) =>
+    find.ancestor(of: icon, matching: find.byType(SizedBox)).first;
+
+Future<void> _pumpCard(
+  WidgetTester tester,
+  Quote quote, {
+  Map<String, NoteTag> tagMap = const {},
+  VoidCallback? onFavorite,
+  VoidCallback? onEdit,
+  double width = 800,
+}) async {
+  await tester.pumpWidget(
+    ChangeNotifierProvider<SettingsService>.value(
+      value: _FakeSettingsService(),
+      child: MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
+        home: Scaffold(
+          body: SizedBox(
+            width: width,
+            child: QuoteItemWidget(
+              quote: quote,
+              tagMap: tagMap,
+              isExpanded: false,
+              onToggleExpanded: (_) {},
+              onEdit: onEdit ?? () {},
+              onDelete: () {},
+              onAskAI: () {},
+              onFavorite: onFavorite,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
