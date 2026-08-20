@@ -9,6 +9,7 @@ import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/widgets/note_list/collapsed_media_thumbnail.dart';
 import 'package:thoughtecho/widgets/note_list/collapsed_rich_text.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
@@ -348,9 +349,9 @@ void main() {
       expect(find.text('双击查看全文'), findsOneWidget);
     });
 
-    testWidgets('每行都未占满宽度时折叠提示仍贴住内容区右缘', (tester) async {
-      // 手动换行的短行笔记：正文自身宽度远小于卡片宽度，
-      // 内容区和它下面的提示行不能跟着正文收缩。
+    // 手动换行的短行笔记：正文自身宽度远小于卡片宽度，内容区和它下面的提示行
+    // 都不能跟着正文收缩。两个测试共用这一份夹具。
+    Future<void> pumpShortLineCard(WidgetTester tester) async {
       final quote = _buildQuote(
         id: 'short-lines',
         content: List.filled(12, '短句').join('\n'),
@@ -389,6 +390,10 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+    }
+
+    testWidgets('每行都未占满宽度时折叠提示仍贴住内容区右缘', (tester) async {
+      await pumpShortLineCard(tester);
 
       expect(find.text('双击查看全文'), findsOneWidget);
 
@@ -402,9 +407,112 @@ void main() {
       // 否则提示行会跟着塌缩到文字宽度上、贴在正文右边而不是卡片右边。
       // 差值只应来自卡片内边距（约 60），而不是塌缩到文字宽度（约 33）。
       expect(contentRect.width, greaterThan(cardRect.width - 80));
-      // 提示右对齐在内容区右缘，并且画在正文**下方**，不压在正文上。
       expect(hintRect.right, closeTo(contentRect.right, 8.0));
-      expect(hintRect.top, greaterThanOrEqualTo(contentRect.top));
+    });
+
+    testWidgets('折叠提示画在正文下方，不压在正文上', (tester) async {
+      // 这一条守的是这次改动的核心：提示不再是盖在正文最后一行上的浮层。
+      // 只断言「不在内容区上方」是不够的——压在正文上同样满足那个条件。
+      await pumpShortLineCard(tester);
+
+      final bodyRect = tester.getRect(find.textContaining('短句').first);
+      final hintRect = tester.getRect(find.text('双击查看全文'));
+
+      expect(hintRect.top, greaterThanOrEqualTo(bodyRect.bottom - 1.0));
+    });
+
+    // 右侧缩略图按正文长短换尺寸：短笔记放大到 96，长笔记维持 72，
+    // 一个字都没有的纯图笔记用 132 的居中方图。三条各测一种，共用这份夹具。
+    Future<CollapsedMediaThumbnail> pumpMediaCard(
+      WidgetTester tester, {
+      required String id,
+      required String text,
+    }) async {
+      final delta = jsonEncode([
+        if (text.isNotEmpty) {'insert': '$text\n'},
+        {
+          'insert': {'image': 'https://example.com/photo.png'},
+        },
+        {'insert': '\n'},
+      ]);
+      final quote = _buildQuote(
+        id: id,
+        content: text,
+        deltaContent: delta,
+        editSource: 'fullscreen',
+      );
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _FakeSettingsService(),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Material(
+              child: Center(
+                child: SizedBox(
+                  width: 400,
+                  child: QuoteItemWidget(
+                    quote: quote,
+                    tagMap: const {},
+                    isExpanded: false,
+                    onToggleExpanded: (_) {},
+                    onEdit: () {},
+                    onDelete: () {},
+                    onAskAI: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      return tester.widget<CollapsedMediaThumbnail>(
+        find.byType(CollapsedMediaThumbnail),
+      );
+    }
+
+    testWidgets('正文只有一行时右侧缩略图放大，且不显示折叠提示', (tester) async {
+      // 带媒体的笔记一律可展开，但正文一个字都没少——这种卡片不该有提示，
+      // 空出来的高度让给照片。
+      final thumbnail = await pumpMediaCard(
+        tester,
+        id: 'short-with-image',
+        text: '大澳还是完全不同的感觉呢',
+      );
+
+      expect(thumbnail.size, CollapsedMediaThumbnail.shortNoteSize);
+      expect(find.text('双击查看全文'), findsNothing);
+    });
+
+    testWidgets('正文被截断时缩略图维持原尺寸，并显示折叠提示', (tester) async {
+      final thumbnail = await pumpMediaCard(
+        tester,
+        id: 'long-with-image',
+        text: List.filled(6, _longContentChunk).join(),
+      );
+
+      expect(thumbnail.size, CollapsedMediaThumbnail.defaultSize);
+      expect(find.text('双击查看全文'), findsOneWidget);
+    });
+
+    testWidgets('一个字都没有的纯图笔记用更大的方图', (tester) async {
+      final thumbnail = await pumpMediaCard(
+        tester,
+        id: 'image-only',
+        text: '',
+      );
+
+      expect(thumbnail.size, CollapsedMediaThumbnail.soloMediaSize);
+      expect(find.text('双击查看全文'), findsNothing);
     });
 
     testWidgets('宽布局下实际未溢出的边界文本不显示展开提示', (tester) async {

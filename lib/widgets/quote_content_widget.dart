@@ -155,7 +155,6 @@ class QuoteContent extends StatelessWidget {
 
   static const double collapsedContentMaxHeight = 160.0;
 
-
   /// 无宽度兜底判定用的行高（逻辑像素）。
   ///
   /// 真正的折叠判定已经是实测的（见 [exceedsCollapsedHeightForLayout]），这个全局
@@ -454,48 +453,27 @@ class QuoteContent extends StatelessWidget {
   /// 这里量的参数**和渲染侧逐位相同**（同样的正文宽度、同样的媒体版式），所以走的
   /// 是 [CollapsedRichTextMetrics.plan] 的同一条缓存记录，不产生额外测量。
   static bool collapsedTextTruncatedForLayout({
+    required BuildContext context,
     required Quote quote,
     required TextStyle? style,
     required double maxWidth,
     required String mediaStyle,
     required bool prioritizeBoldContent,
-    required TextDirection textDirection,
-    required TextScaler textScaler,
-    Locale? locale,
-    FontWeight boldWeight = FontWeight.bold,
-    TextStyle? richTextBaseStyle,
   }) {
     if (!maxWidth.isFinite || maxWidth <= 0) return false;
 
-    final isRichText =
-        quote.deltaContent != null && quote.editSource == 'fullscreen';
-    if (isRichText) {
-      var blocks = DeltaRichTextCache.of(quote.deltaContent);
-      if (blocks.isNotEmpty) {
-        if (prioritizeBoldContent) {
-          blocks = prioritizeBoldBlocks(blocks);
-        }
-        final bool stripMedia = mediaStyle != NoteCardMediaStyle.inline;
-        final double reserved = collapsedThumbnailInset(
-          quote: quote,
-          mediaStyle: mediaStyle,
-          maxWidth: maxWidth,
-        );
-        final plan = CollapsedRichTextMetrics.plan(
-          blocks: blocks,
-          baseStyle: richTextBaseStyle ?? style ?? const TextStyle(),
-          maxWidth: maxWidth - reserved,
-          limit: collapsedContentMaxHeight,
-          showMedia: !stripMedia,
-          boldWeight: boldWeight,
-          textDirection: textDirection,
-          textScaler: textScaler,
-          locale: locale,
-          cacheContent: quote.deltaContent,
-          cacheBoldPrioritized: prioritizeBoldContent,
-        );
-        return plan.truncated;
-      }
+    if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
+      // 走渲染侧那**同一个**函数，参数一个不差，命中的也是同一条 plan 缓存：
+      // 判定和画出来的东西不可能漂开，也不产生额外测量。
+      final layout = _resolveCollapsedLayout(
+        context: context,
+        quote: quote,
+        style: style,
+        maxWidth: maxWidth,
+        mediaStyle: mediaStyle,
+        prioritizeBoldContent: prioritizeBoldContent,
+      );
+      if (layout != null) return layout.plan.truncated;
     }
 
     // 纯文本（含 delta 解不出来的兜底）没有「媒体撑出来的可展开」这回事：
@@ -504,11 +482,14 @@ class QuoteContent extends StatelessWidget {
       quote: quote,
       style: style,
       maxWidth: maxWidth,
-      textDirection: textDirection,
-      textScaler: textScaler,
-      locale: locale,
-      boldWeight: boldWeight,
-      richTextBaseStyle: richTextBaseStyle,
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      locale: Localizations.maybeLocaleOf(context),
+      boldWeight: collapsedBoldWeight(context),
+      richTextBaseStyle: QuillThemeTypography.paragraphStyle(
+        context,
+        base: style,
+      ),
     );
   }
 
@@ -829,23 +810,59 @@ class QuoteContent extends StatelessWidget {
 
     // 量一次，盒高和要画的内容都从这一次的结果来。上限 160：内容排满就是
     // 160，媒体被摘走后只剩一两行就取那几行的高度，卡片里不会留一块空白。
-    final plan = CollapsedRichTextMetrics.plan(
-      blocks: blocks,
-      baseStyle: baseStyle,
-      maxWidth: textMaxWidth,
-      limit: collapsedContentMaxHeight,
-      showMedia: !stripMedia,
-      boldWeight: boldWeight,
-      textDirection: Directionality.of(context),
-      textScaler: MediaQuery.textScalerOf(context),
-      locale: Localizations.maybeLocaleOf(context),
-      cacheContent: quote.deltaContent,
-      cacheBoldPrioritized: prioritizeBoldContent,
-    );
+    final textDirection = Directionality.of(context);
+    final textScaler = MediaQuery.textScalerOf(context);
+    final locale = Localizations.maybeLocaleOf(context);
+
+    CollapsedRichTextPlan planFor(double width) {
+      return CollapsedRichTextMetrics.plan(
+        blocks: blocks,
+        baseStyle: baseStyle,
+        maxWidth: width,
+        limit: collapsedContentMaxHeight,
+        showMedia: !stripMedia,
+        boldWeight: boldWeight,
+        textDirection: textDirection,
+        textScaler: textScaler,
+        locale: locale,
+        cacheContent: quote.deltaContent,
+        cacheBoldPrioritized: prioritizeBoldContent,
+      );
+    }
+
+    var plan = planFor(textMaxWidth);
+    var thumbnailSize = CollapsedMediaThumbnail.defaultSize;
+
+    // 正文只有一两行时，右边那张 72 见方的小图撑不满卡片，左边一大块空着。
+    // 这种卡片把图放大到 96：多出来的高度全给了照片，卡片反而不空。
+    //
+    // 放大要**重新排一次版**：图宽了正文列就窄了，沿用按 72 算出来的行数会让最后
+    // 一行悄悄少几个字——版式必须和测量同宽。重排后仍然短、仍然不截断才真的放大。
+    //
+    // 这一段留在这里而不是放到 build 里，是因为空闲预热（[warmCollapsedLayout]）
+    // 走的也是这个函数：两次排版都得在预热时跑热，否则短笔记卡片滑进来时还要现算
+    // 第二次。
+    if (reserved > 0 &&
+        !plan.truncated &&
+        plan.height <= CollapsedMediaThumbnail.shortNoteSize) {
+      final double enlargedTextWidth = maxWidth -
+          CollapsedMediaThumbnail.reservedWidth(
+            size: CollapsedMediaThumbnail.shortNoteSize,
+          );
+      if (enlargedTextWidth > 0) {
+        final enlargedPlan = planFor(enlargedTextWidth);
+        if (!enlargedPlan.truncated &&
+            enlargedPlan.height <= CollapsedMediaThumbnail.shortNoteSize) {
+          plan = enlargedPlan;
+          thumbnailSize = CollapsedMediaThumbnail.shortNoteSize;
+        }
+      }
+    }
 
     return _CollapsedLayout(
       plan: plan,
       thumbnailInset: reserved,
+      thumbnailSize: thumbnailSize,
       media: media,
       baseStyle: baseStyle,
       boldWeight: boldWeight,
@@ -936,55 +953,11 @@ class QuoteContent extends StatelessWidget {
             final bool showThumbnail = reserved > 0;
             final bool showBanner =
                 mediaStyle == NoteCardMediaStyle.banner && media.hasMedia;
-            // 文字宽度要先扣掉缩略图占的位，否则排版会按整宽算而少排内容。
-            final double textMaxWidth = constraints.maxWidth.isFinite
-                ? constraints.maxWidth - reserved
-                : constraints.maxWidth;
 
-            // 量一次，盒高和要画的内容都从这一次的结果来。上限 160：内容排满就是
-            // 160，媒体被摘走后只剩一两行就取那几行的高度，卡片里不会留一块空白。
-            CollapsedRichTextPlan planFor(double width) {
-              return CollapsedRichTextMetrics.plan(
-                blocks: blocks,
-                baseStyle: baseStyle,
-                maxWidth: width,
-                limit: collapsedContentMaxHeight,
-                showMedia: !stripMedia,
-                boldWeight: boldWeight,
-                textDirection: textDirection,
-                textScaler: textScaler,
-                locale: locale,
-                cacheContent: quote.deltaContent,
-                cacheBoldPrioritized: prioritizeBoldContent,
-              );
-            }
-
-            var plan = planFor(textMaxWidth);
-            var thumbnailSize = CollapsedMediaThumbnail.defaultSize;
-
-            // 正文只有一两行时，右边那张 72 见方的小图撑不满卡片，左边一大块空着。
-            // 这种卡片把图放大到 96：多出来的高度全给了照片，卡片反而不空。
-            //
-            // 放大要**重新排一次版**：图宽了正文列就窄了，沿用按 72 算出来的行数
-            // 会让最后一行悄悄少几个字——版式必须和测量同宽。重排后仍然短、仍然
-            // 不截断才真的放大，否则维持原样。
-            if (showThumbnail &&
-                !plan.truncated &&
-                plan.height <= CollapsedMediaThumbnail.shortNoteSize) {
-              final double enlargedTextWidth = constraints.maxWidth -
-                  CollapsedMediaThumbnail.reservedWidth(
-                    size: CollapsedMediaThumbnail.shortNoteSize,
-                  );
-              if (enlargedTextWidth > 0) {
-                final enlargedPlan = planFor(enlargedTextWidth);
-                if (!enlargedPlan.truncated &&
-                    enlargedPlan.height <=
-                        CollapsedMediaThumbnail.shortNoteSize) {
-                  plan = enlargedPlan;
-                  thumbnailSize = CollapsedMediaThumbnail.shortNoteSize;
-                }
-              }
-            }
+            // 排版计划、盒高、缩略图尺寸都由 `_resolveCollapsedLayout` 一次算好，
+            // 空闲预热走的是同一个函数，滑进来时全是缓存命中。
+            final plan = layout.plan;
+            final double thumbnailSize = layout.thumbnailSize;
             final double boxHeight =
                 plan.height.clamp(0.0, collapsedContentMaxHeight);
 
@@ -1097,33 +1070,32 @@ class QuoteContent extends StatelessWidget {
     // 然后裁到只剩五六行。行数取的是偏大的上界，裁出来的像素和以前逐位相同。
     final bool clampToCollapsedBox = !showFullContent && needsExpansion;
 
+    // 行数预算必须按 `Text` **实际用的**样式算，不能按传进来的 [style] 算。
+    // `Text` 会把 [style] 往 `DefaultTextStyle` 上 merge（`inherit` 为 true 时），
+    // 字号可能整个来自环境；照着一个 fontSize 为 null 的样式去估，行高就会被
+    // 高估，行数被低估，正文尾巴静悄悄少一截。这里复刻 `Text` 自己的合并规则。
+    //
+    // 下面两个预算**必须共用这一份样式**：`collapsedMaxLines` 是给排版的上界，
+    // `wholeLines` 是截断点，两者按不同样式算出来就会互相打架。
     int? collapsedMaxLines;
-    if (clampToCollapsedBox) {
-      // 行数预算必须按 `Text` **实际用的**样式算，不能按传进来的 [style] 算。
-      // `Text` 会把 [style] 往 `DefaultTextStyle` 上 merge（`inherit` 为 true 时），
-      // 字号可能整个来自环境；照着一个 fontSize 为 null 的样式去估，行高就会被
-      // 高估，行数被低估，正文尾巴静悄悄少一截。这里复刻 `Text` 自己的合并规则。
-      final TextStyle? rawStyle = style;
-      final defaultStyle = DefaultTextStyle.of(context).style;
-      final effectiveStyle = rawStyle == null || rawStyle.inherit
-          ? defaultStyle.merge(rawStyle)
-          : rawStyle;
-      collapsedMaxLines = collapsedPlainTextMaxLines(
-        style: effectiveStyle,
-        textScaler: MediaQuery.textScalerOf(context),
-      );
-    }
-
     // 整行截断：盒子放得下几整行就画几行，末行收省略号。行高是确定的（同一段
     // 纯文本只有一种样式），所以不必测量就能算出来；算不出来时退回原来的
     // 「多排 + 裁掉」，那条路只是会在盒底留半行残字，不会丢内容。
     int? wholeLines;
     if (clampToCollapsedBox) {
+      final TextStyle? rawStyle = style;
+      final defaultStyle = DefaultTextStyle.of(context).style;
+      final effectiveStyle = rawStyle == null || rawStyle.inherit
+          ? defaultStyle.merge(rawStyle)
+          : rawStyle;
+      final textScaler = MediaQuery.textScalerOf(context);
+      collapsedMaxLines = collapsedPlainTextMaxLines(
+        style: effectiveStyle,
+        textScaler: textScaler,
+      );
       wholeLines = collapsedPlainTextWholeLines(
-        style: style == null || style!.inherit
-            ? DefaultTextStyle.of(context).style.merge(style)
-            : style,
-        textScaler: MediaQuery.textScalerOf(context),
+        style: effectiveStyle,
+        textScaler: textScaler,
       );
     }
     final bool useEllipsis = clampToCollapsedBox && wholeLines != null;
@@ -1132,14 +1104,11 @@ class QuoteContent extends StatelessWidget {
       quote.content,
       style: style,
       softWrap: true,
-      maxLines: clampToCollapsedBox
-          ? (wholeLines ?? collapsedMaxLines)
-          : maxLines,
+      maxLines:
+          clampToCollapsedBox ? (wholeLines ?? collapsedMaxLines) : maxLines,
       overflow: useEllipsis
           ? TextOverflow.ellipsis
-          : (clampToCollapsedBox
-              ? TextOverflow.clip
-              : TextOverflow.visible),
+          : (clampToCollapsedBox ? TextOverflow.clip : TextOverflow.visible),
     );
 
     if (clampToCollapsedBox) {
@@ -1253,6 +1222,7 @@ class _CollapsedLayout {
   const _CollapsedLayout({
     required this.plan,
     required this.thumbnailInset,
+    required this.thumbnailSize,
     required this.media,
     required this.baseStyle,
     required this.boldWeight,
@@ -1260,6 +1230,10 @@ class _CollapsedLayout {
 
   final CollapsedRichTextPlan plan;
   final double thumbnailInset;
+
+  /// 右侧缩略图这次画多大。正文短到撑不满时会放大，见 `_resolveCollapsedLayout`。
+  final double thumbnailSize;
+
   final DeltaMediaSummary media;
   final TextStyle baseStyle;
   final FontWeight boldWeight;

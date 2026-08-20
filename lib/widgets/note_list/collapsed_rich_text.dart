@@ -117,7 +117,8 @@ class CollapsedRichText extends StatelessWidget {
     );
   }
 
-  Widget _buildMedia(BuildContext context, RichTextBlock block, double? height) {
+  Widget _buildMedia(
+      BuildContext context, RichTextBlock block, double? height) {
     final media = block.media!;
     final source = media.source;
 
@@ -571,9 +572,10 @@ class CollapsedRichTextMetrics {
           truncated = true;
           break;
         }
-        final double mediaHeight = available < CollapsedRichText.inlineMediaHeight
-            ? available
-            : CollapsedRichText.inlineMediaHeight;
+        final double mediaHeight =
+            available < CollapsedRichText.inlineMediaHeight
+                ? available
+                : CollapsedRichText.inlineMediaHeight;
         entries.add(CollapsedPlannedBlock(
           block: block,
           maxLines: 1,

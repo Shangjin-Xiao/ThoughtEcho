@@ -293,7 +293,6 @@ class QuoteItemWidget extends StatefulWidget {
 
 class _QuoteItemWidgetState extends State<QuoteItemWidget>
     with SingleTickerProviderStateMixin {
-
   /// 双击反馈的动画机件**按需创建**。
   ///
   /// 它此前在 `initState` 里无条件建出来：每张卡片一个 `AnimationController`、
@@ -547,21 +546,13 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
           // 常常一个字都没少。提示遮罩按后者画，短笔记才不会被一条模糊带压住。
           final bool textTruncated = needsExpansion &&
               QuoteContent.collapsedTextTruncatedForLayout(
+                context: context,
                 quote: quote,
                 style: contentStyle,
                 maxWidth: constraints.maxWidth,
                 mediaStyle: mediaStyle,
                 prioritizeBoldContent: context.select<SettingsService, bool>(
                   (s) => s.prioritizeBoldContentInCollapse,
-                ),
-                textDirection:
-                    Directionality.maybeOf(context) ?? TextDirection.ltr,
-                textScaler: MediaQuery.textScalerOf(context),
-                locale: Localizations.maybeLocaleOf(context),
-                boldWeight: QuoteContent.collapsedBoldWeight(context),
-                richTextBaseStyle: QuillThemeTypography.paragraphStyle(
-                  context,
-                  base: contentStyle,
                 ),
               );
           // 「短到不用折叠」不等于「展开」：短卡片仍然是列表卡片，应该走
@@ -633,6 +624,17 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     required ThemeData innerTheme,
     required AppLocalizations l10n,
   }) {
+    final Widget quoteContent = QuoteContent(
+      quote: quote,
+      style: contentStyle,
+      showFullContent: showFullContent,
+      needsExpansionOverride: needsExpansion,
+      collapseRichTextSemantics: true,
+    );
+
+    // canToggle 由调用方给：不可展开的卡片正文永远不会在折叠态和展开态之间
+    // 切换，`AnimatedSwitcher` 那套动画机件（一个 `AnimationController` 加一层
+    // `FadeTransition`）对它一次都用不上，却要在每次首建时挂满整棵子树。
     final Widget content = Stack(
       clipBehavior: Clip.none,
       children: [
@@ -641,7 +643,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         // 下方的提示行会跟着变窄、贴到正文右边而不是卡片右边。
         const SizedBox(width: double.infinity, height: 0),
         if (!canToggle)
-          content
+          quoteContent
         else
           AnimatedSwitcher(
             duration: QuoteItemWidget._fadeDuration,
@@ -656,10 +658,9 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             ),
             child: KeyedSubtree(
               key: ValueKey<bool>(showFullContent),
-              child: content,
+              child: quoteContent,
             ),
           ),
-        ),
       ],
     );
 
