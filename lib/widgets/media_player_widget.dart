@@ -854,7 +854,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
             ),
           ),
           Expanded(
-            child: Text(value, style: const TextStyle(color: Colors.grey)),
+            child: Text(value,
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ),
         ],
       ),

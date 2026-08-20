@@ -101,7 +101,9 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
                                 color: isSelected
                                     ? colorScheme.primary
                                     : color == Colors.transparent
-                                        ? Colors.grey
+                                        ? Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant
                                             .applyOpacity(0.5) // MODIFIED
                                         : Colors.transparent,
                                 width: 2,
@@ -128,9 +130,11 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
                                       size: 24,
                                     )
                                   : color == Colors.transparent
-                                      ? const Icon(
+                                      ? Icon(
                                           Icons.block,
-                                          color: Colors.grey,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
                                           size: 18,
                                         )
                                       : null,
@@ -143,11 +147,11 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
                 ),
               ),
 
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
 
               // 高级颜色选择按钮
               OutlinedButton.icon(
-                icon: const Icon(Icons.color_lens),
+                icon: Icon(Icons.color_lens),
                 label: Text(AppLocalizations.of(context).customColor),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),

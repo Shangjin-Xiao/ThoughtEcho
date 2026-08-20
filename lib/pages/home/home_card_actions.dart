@@ -120,8 +120,8 @@ class HomeCardActions {
       await file.writeAsBytes(imageBytes);
       await SharePlus.instance.share(
         ShareParams(
-          text: sharePrefix +
-              '"${card.originalContent.length > 50 ? '${card.originalContent.substring(0, 50)}...' : card.originalContent}"',
+          text:
+              '$sharePrefix"${card.originalContent.length > 50 ? '${card.originalContent.substring(0, 50)}...' : card.originalContent}"',
           files: [XFile(file.path)],
         ),
       );

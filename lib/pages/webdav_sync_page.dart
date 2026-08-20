@@ -67,15 +67,15 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
       barrierDismissible: false, // 强制用户阅读并交互
       builder: (BuildContext context) {
         return AlertDialog(
-          icon: const Icon(
+          icon: Icon(
             Icons.warning_amber_rounded,
-            color: Colors.amber,
+            color: AppSemanticColors.of(context).warning,
             size: 40,
           ),
           title: Text(l10n.webdavExperimentalTitle),
           content: Text(
             l10n.webdavExperimentalContent,
-            style: const TextStyle(height: 1.5),
+            style: TextStyle(height: 1.5),
           ),
           actionsAlignment: MainAxisAlignment.spaceBetween,
           actions: [
@@ -353,7 +353,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                 children: [
                   // --- 云端同步状态总览 Card ---
                   _buildStatusCard(syncService, l10n, theme),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
 
                   // --- 账号配置表单 Section ---
                   Text(
@@ -361,7 +361,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                     style: theme.textTheme.titleMedium
                         ?.copyWith(color: theme.colorScheme.primary),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Card(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(
@@ -379,7 +379,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                             initialValue: _selectedProvider,
                             decoration: InputDecoration(
                               labelText: l10n.webdavProvider,
-                              prefixIcon: const Icon(Icons.cloud_outlined),
+                              prefixIcon: Icon(Icons.cloud_outlined),
                             ),
                             items: [
                               DropdownMenuItem(
@@ -397,7 +397,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                             ],
                             onChanged: _onProviderChanged,
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16),
 
                           // 2. 服务器 URL
                           TextFormField(
@@ -406,7 +406,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                                 _selectedProvider == 'nextcloud',
                             decoration: InputDecoration(
                               labelText: l10n.webdavServerUrl,
-                              prefixIcon: const Icon(Icons.link),
+                              prefixIcon: Icon(Icons.link),
                             ),
                             validator: (val) {
                               if (val == null || val.trim().isEmpty) {
@@ -421,21 +421,21 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16),
 
                           // 3. 用户名
                           TextFormField(
                             controller: _usernameController,
                             decoration: InputDecoration(
                               labelText: l10n.webdavUsername,
-                              prefixIcon: const Icon(Icons.person_outline),
+                              prefixIcon: Icon(Icons.person_outline),
                             ),
                             validator: (val) =>
                                 (val == null || val.trim().isEmpty)
                                     ? l10n.webdavUsernameEmptyError
                                     : null,
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16),
 
                           // 4. 密码/Token
                           TextFormField(
@@ -443,7 +443,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                             obscureText: _obscurePassword,
                             decoration: InputDecoration(
                               labelText: l10n.webdavPassword,
-                              prefixIcon: const Icon(Icons.lock_outline),
+                              prefixIcon: Icon(Icons.lock_outline),
                               suffixIcon: IconButton(
                                 tooltip: _obscurePassword
                                     ? l10n.webdavShowPasswordTooltip
@@ -465,10 +465,10 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                             alignment: Alignment.centerRight,
                             child: TextButton.icon(
                               onPressed: _launchHelpGuide,
-                              icon: const Icon(Icons.help_outline, size: 16),
+                              icon: Icon(Icons.help_outline, size: 16),
                               label: Text(
                                 l10n.webdavHowToGetAppPassword,
-                                style: const TextStyle(fontSize: 13),
+                                style: TextStyle(fontSize: 13),
                               ),
                             ),
                           ),
@@ -476,7 +476,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
 
                   // --- 自动同步策略 Switch ---
                   Text(
@@ -484,7 +484,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                     style: theme.textTheme.titleMedium
                         ?.copyWith(color: theme.colorScheme.primary),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Card(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(
@@ -575,7 +575,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
 
                   // --- 操作按钮板 Section ---
                   Row(
@@ -585,26 +585,26 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                           onPressed:
                               _isTestingConnection ? null : _testConnection,
                           icon: _isTestingConnection
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 18,
                                   height: 18,
                                   child:
                                       CircularProgressIndicator(strokeWidth: 2))
-                              : const Icon(Icons.wifi_tethering),
+                              : Icon(Icons.wifi_tethering),
                           label: Text(l10n.webdavTestConnection),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      SizedBox(width: 16),
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: syncService.isSyncing
                               ? null
                               : () => _saveAndSync(syncService),
                           icon: syncService.isSyncing
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 18,
                                   height: 18,
                                   child: CircularProgressIndicator(
@@ -629,7 +629,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
 
                   // 禁用云同步按钮（仅在已启用状态下显示）
                   if (syncService.enabled) ...[
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     TextButton.icon(
                       onPressed: () {
                         syncService.saveSettings(
@@ -650,9 +650,11 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                           ),
                         );
                       },
-                      icon: const Icon(Icons.cloud_off, color: Colors.red),
+                      icon: Icon(Icons.cloud_off,
+                          color: Theme.of(context).colorScheme.error),
                       label: Text(l10n.webdavDisableSync,
-                          style: TextStyle(color: Colors.red)),
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.error)),
                     ),
                   ],
                 ],
@@ -743,7 +745,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                         )
                       : Icon(stateIcon, size: 28, color: accentColor),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -753,7 +755,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                         style: theme.textTheme.titleMedium
                             ?.copyWith(color: theme.colorScheme.onSurface),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         stateDesc,
                         style: theme.textTheme.bodyMedium?.copyWith(
@@ -787,7 +789,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                       color: theme.colorScheme.onErrorContainer,
                       size: 18,
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         syncService.lastSyncError,
@@ -816,7 +818,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                   children: [
                     Icon(Icons.warning_amber_rounded,
                         color: Colors.amber.shade800, size: 20),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         l10n.webdavConflictPrompt(_conflictNotesCount),
@@ -849,7 +851,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                 width: double.infinity,
                 child: FilledButton.icon(
                   onPressed: () => _triggerManualSync(syncService, l10n),
-                  icon: const Icon(Icons.sync_outlined),
+                  icon: Icon(Icons.sync_outlined),
                   label: Text(l10n.webdavSyncNow),
                   style: FilledButton.styleFrom(
                     backgroundColor: theme.colorScheme.secondaryContainer,
@@ -892,10 +894,10 @@ class QuoteListViewByConflict extends StatelessWidget {
               children: [
                 Icon(Icons.check_circle_outline,
                     size: 64, color: Colors.green.shade500),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Text(AppLocalizations.of(context).webdavNoConflicts,
                     style: theme.textTheme.titleMedium),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(AppLocalizations.of(context).webdavAllConflictsResolved,
                     style: theme.textTheme.bodyMedium
                         ?.copyWith(color: theme.colorScheme.outline)),
@@ -928,11 +930,13 @@ class QuoteListViewByConflict extends StatelessWidget {
                     children: [
                       Icon(Icons.access_time,
                           size: 14, color: theme.colorScheme.outline),
-                      const SizedBox(width: 4),
+                      SizedBox(width: 4),
                       Text(
                         LWWUtils.formatTimestamp(quote.lastModified),
-                        style: TextStyle(
-                            fontSize: 12, color: theme.colorScheme.outline),
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: theme.colorScheme.outline),
                       ),
                     ],
                   ),
@@ -942,7 +946,8 @@ class QuoteListViewByConflict extends StatelessWidget {
                   children: [
                     // 一键恢复/移动：改分类至默认，使其移出冲突
                     IconButton(
-                      icon: const Icon(Icons.check, color: Colors.green),
+                      icon: Icon(Icons.check,
+                          color: AppSemanticColors.of(context).success),
                       tooltip: AppLocalizations.of(context)
                           .webdavConflictKeepTooltip,
                       onPressed: () async {
@@ -969,7 +974,8 @@ class QuoteListViewByConflict extends StatelessWidget {
                     ),
                     // 一键丢弃/删除
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      icon: Icon(Icons.delete_outline,
+                          color: Theme.of(context).colorScheme.error),
                       tooltip: AppLocalizations.of(context)
                           .webdavConflictDiscardTooltip,
                       onPressed: () async {

@@ -2134,9 +2134,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   // 内容输入区，带全屏编辑按钮
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Stack(
                     children: [
                       TextField(
@@ -2154,7 +2154,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                           hintText:
                               AppLocalizations.of(context).writeYourThoughts,
                           border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.edit),
+                          prefixIcon: Icon(Icons.edit),
                           contentPadding:
                               const EdgeInsets.fromLTRB(16, 16, 48, 16),
                         ),
@@ -2179,7 +2179,8 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                       width: 10,
                                       height: 10,
                                       decoration: BoxDecoration(
-                                        color: Colors.red,
+                                        color:
+                                            Theme.of(context).colorScheme.error,
                                         shape: BoxShape.circle,
                                         border: Border.all(
                                           color: theme.colorScheme.surface,
@@ -2358,7 +2359,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                     ],
                   ),
                   if (_deferredControlsVisible) ...[
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     // 拆分来源输入为作者和作品
                     Row(
                       children: [
@@ -2369,26 +2370,26 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                               hintText:
                                   AppLocalizations.of(context).authorPerson,
                               border: const OutlineInputBorder(),
-                              prefixIcon: const Icon(Icons.person),
+                              prefixIcon: Icon(Icons.person),
                             ),
                             maxLines: 1,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Expanded(
                           child: TextField(
                             controller: _workController,
                             decoration: InputDecoration(
                               hintText: AppLocalizations.of(context).workName,
                               border: const OutlineInputBorder(),
-                              prefixIcon: const Icon(Icons.book),
+                              prefixIcon: Icon(Icons.book),
                             ),
                             maxLines: 1,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     // 显示格式化后的来源预览
                     AnimatedBuilder(
                       animation: Listenable.merge([
@@ -2413,7 +2414,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                     ),
 
                     // 位置和天气选项
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     RepaintBoundary(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.start,
@@ -2423,7 +2424,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                             l10n.addInfo,
                             style: Theme.of(context).textTheme.labelMedium,
                           ),
-                          const SizedBox(width: 16),
+                          SizedBox(width: 16),
                           // 位置信息按钮
                           Builder(
                             builder: (context) {
@@ -2528,7 +2529,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                               );
                             },
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           // 天气信息按钮
                           Builder(
                             builder: (context) {
@@ -2552,7 +2553,9 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                         : Icons.cloud,
                                     color: _controller.includeWeather
                                         ? theme.colorScheme.primary
-                                        : Colors.grey,
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant,
                                     size: 18,
                                   ),
                                   label: Text(l10n.weather),
@@ -2589,7 +2592,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                               );
                             },
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           // 颜色选择按钮
                           Tooltip(
                             message: _selectedColorHex != null
@@ -2615,10 +2618,12 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                             color: Colors.white, width: 1),
                                       ),
                                     )
-                                  : const Icon(
+                                  : Icon(
                                       Icons.color_lens,
                                       size: 18,
-                                      color: Colors.grey,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
                                     ),
                               label: Text(l10n.color),
                               selected: _selectedColorHex != null,
@@ -2634,11 +2639,11 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                               selectedColor: theme.colorScheme.primaryContainer,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                         ],
                       ),
                     ), // 标签选择区域
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     // ✅ 使用独立组件，避免AddNoteDialog重建时重复构建标签列表
                     Container(
                       key: _tagGuideKey,
@@ -2688,7 +2693,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                   size: 16,
                                   color: theme.colorScheme.primary,
                                 ),
-                                const SizedBox(width: 8),
+                                SizedBox(width: 8),
                                 Text(
                                   l10n.aiAnalysis,
                                   style: Theme.of(context)
@@ -2718,7 +2723,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
+                            SizedBox(height: 8),
                             MarkdownBody(
                               data: _aiSummary!,
                               selectable: true,
@@ -2730,7 +2735,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                         ),
                       ),
                   ],
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -2744,7 +2749,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                         onPressed: () => unawaited(_handleCloseRequest()),
                         child: Text(l10n.cancel),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       FilledButton(
                         onPressed: (_isLoadingFullQuote || _waitingForFetch)
                             ? null
@@ -2754,7 +2759,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                                 }
                               },
                         child: (_isLoadingFullQuote || _waitingForFetch)
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
@@ -2769,7 +2774,7 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                 ],
               ),
             )),
@@ -2803,11 +2808,11 @@ class _AddNoteDialogState extends State<AddNoteDialog>
                 },
               ),
 
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
 
               // 高级颜色选择按钮
               OutlinedButton.icon(
-                icon: const Icon(Icons.color_lens),
+                icon: Icon(Icons.color_lens),
                 label: Text(l10n.customColor),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),

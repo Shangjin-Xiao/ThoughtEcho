@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:thoughtecho/theme/app_semantic_colors.dart';
 
 class AppSuccessView extends StatelessWidget {
   final String text;
@@ -9,9 +10,11 @@ class AppSuccessView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.check_circle, size: 100, color: Colors.green),
+          Icon(Icons.check_circle,
+              size: 100, color: AppSemanticColors.of(context).success),
           const SizedBox(height: 16),
-          Text(text, style: const TextStyle(color: Colors.green)),
+          Text(text,
+              style: TextStyle(color: AppSemanticColors.of(context).success)),
         ],
       ),
     );

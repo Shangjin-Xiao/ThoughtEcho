@@ -117,7 +117,7 @@ class _LicensePageState extends State<LicensePage> {
             title: Text(l10n.appLicense),
             content: Text(
               l10n.loadLicenseFailed(_licenseError!),
-              style: const TextStyle(color: Colors.red),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
             actions: [
               TextButton(
@@ -423,7 +423,8 @@ class _LicensePageState extends State<LicensePage> {
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         children: [
-          const Icon(Icons.animation_outlined, size: 16, color: Colors.grey),
+          Icon(Icons.animation_outlined,
+              size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -631,7 +632,8 @@ class _ProgressiveSystemLicensesPageState
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right, color: Colors.grey),
+                  Icon(Icons.chevron_right,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ],
               ),
             ),

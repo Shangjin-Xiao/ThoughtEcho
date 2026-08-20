@@ -1,17 +1,18 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart'; // Add kIsWeb import
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:uuid/uuid.dart';
+import '../constants/app_constants.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../services/large_file_manager.dart';
 import '../services/media_file_service.dart';
-import '../constants/app_constants.dart';
 import '../utils/app_logger.dart';
 import '../utils/content_sanitizer.dart';
-import '../gen_l10n/app_localizations.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:uuid/uuid.dart';
+import 'package:thoughtecho/theme/app_semantic_colors.dart';
 
 class AIAnnualReportWebView extends StatefulWidget {
   final String htmlContent;
@@ -842,7 +843,8 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            const Icon(Icons.info_outline, color: Colors.orange),
+            Icon(Icons.info_outline,
+                color: AppSemanticColors.of(context).warning),
             const SizedBox(width: 8),
             Flexible(
               child: Text(

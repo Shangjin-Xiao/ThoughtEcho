@@ -1,3 +1,4 @@
+import 'package:thoughtecho/theme/app_semantic_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../gen_l10n/app_localizations.dart';
@@ -318,7 +319,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
               theme: theme,
               title: l10n.localAIContentAnalysis,
               icon: Icons.analytics_rounded,
-              iconColor: Colors.orange,
+              iconColor: AppSemanticColors.of(context).warning,
               children: [
                 _buildFeatureTile(
                   context: context,

@@ -9,9 +9,11 @@ class AppErrorView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error, size: 100, color: Colors.red),
+          Icon(Icons.error,
+              size: 100, color: Theme.of(context).colorScheme.error),
           const SizedBox(height: 16),
-          Text(text, style: const TextStyle(color: Colors.red)),
+          Text(text,
+              style: TextStyle(color: Theme.of(context).colorScheme.error)),
         ],
       ),
     );
