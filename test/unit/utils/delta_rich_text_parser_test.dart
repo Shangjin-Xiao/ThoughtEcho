@@ -503,6 +503,20 @@ void main() {
           ['[图]', '', '下面一段']);
     });
 
+    test('媒体后同一行还有文字时，紧跟其后的空段落不会被吞掉', () {
+      // 媒体那一行只有一个结束符。遇到文字就说明这个换行是文字行的收尾，
+      // 状态必须当场清掉——否则下一个换行（用户敲的空行）会被当成媒体的结束符。
+      final blocks = parseDeltaRichText(deltaOf([
+        {
+          'insert': {'image': 'https://example.com/a.png'},
+        },
+        {'insert': '同行文字\n\n下面一段\n'},
+      ]));
+
+      expect(blocks.map((b) => b.isMedia ? '[图]' : b.plainText).toList(),
+          ['[图]', '同行文字', '', '下面一段']);
+    });
+
     test('缓存结果不可变，调用方改不动共享的表', () {
       final blocks = DeltaRichTextCache.of(deltaOf([
         {'insert': '只读\n'},

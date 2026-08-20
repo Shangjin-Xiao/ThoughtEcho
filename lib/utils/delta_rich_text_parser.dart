@@ -285,12 +285,15 @@ List<RichTextBlock> parseDeltaRichText(String? deltaContent) {
       }
       // split 产生的最后一段后面没有换行符，留给下一个 op 继续累积。
       if (!isLast) {
-        if (mediaLineOpen && pendingRuns.isEmpty) {
-          // 这个换行是上面那个媒体块自己那一行的结束符，吃掉即可。
+        if (mediaLineOpen) {
+          // 媒体那一行只有一个结束符，**遇到的第一个换行就把状态清掉**，不管这个
+          // 换行前面有没有文字。留着的话，`图 + '同行文字\n\n'` 里那个用户敲的
+          // 空段落会被当成媒体的结束符吞掉。
+          mediaLineOpen = false;
+          // 结束符前面一个字都没有，才说明这个换行确实是媒体自己那一行的收尾。
           // 图后面真的空一行（`图\n\n文字`）时，第二个换行不会命中这里，
           // 空段落照常保留。
-          mediaLineOpen = false;
-          return;
+          if (pendingRuns.isEmpty) return;
         }
         flushLine(attributes);
       }
