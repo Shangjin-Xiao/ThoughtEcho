@@ -46,3 +46,7 @@
 ## 2025-10-25 - 🗃️ 黑匣: [完善 UI 及主题模块的结构化日志]
 **异常:** [HomePage 在恢复草稿和加载标签时、AppTheme 在加载各项持久化配置时、以及 ThoughterUI 在请求天气时遇到异常，仅使用了 catch (e) 进行了空捕获或粗糙的 logDebug，丢失了错误堆栈信息以及模块来源标识，使得排查相关功能失效的根因变得困难。]
 **拦截:** [已将上述流程中的 catch (e) 替换为 catch (e, stack)，并使用结构化的 AppLogger.e/logError 进行记录。注入了对应的描述信息、具体的错误对象 error: e、堆栈轨迹 stackTrace: stack，并指定了明确的日志来源模块 source (如 'HomePage', 'AppTheme', 'ThoughterUI')。确认不包含任何隐私数据。]
+
+## 2025-10-25 - 🗃️ 黑匣: [完善 ThoughtEchoDiscoveryService 模块的结构化日志]
+**异常:** [ThoughtEchoDiscoveryService 模块在启动服务、绑定UDP组播套接字、发送公告、解析组播消息等多个环节发生错误时，仅使用了 `debugPrint` 或者缺少统一标准地使用了不带完整参数的 `logError` / `logDebug` 进行异常捕获和打印。这不仅隐藏了关键错误堆栈信息 (stackTrace)，还使得跨端协同中设备发现相关的网络异常溯源变得困难。]
+**拦截:** [已将上述所有流程中的相关 `catch (e)` 升级为 `catch (e, stack)`，并统一替换为带有 `error: e`, `stackTrace: stack`, `source: 'ThoughtEchoDiscoveryService'` 参数的 `logError` (部分预期内的底层网络报错使用了 `logWarning`)。确认新的 logError 调用不会有意记录明文形式的用户交互数据。]
