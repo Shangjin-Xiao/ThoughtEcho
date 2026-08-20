@@ -413,6 +413,104 @@ void main() {
     expect(entry.ellipsis, isTrue);
   });
 
+  group('collapsedPlainTextWholeLines 整行预算', () {
+    test('style 缺字号或行高时返回 null，调用方应退回旧的裁剪路径', () {
+      expect(
+        QuoteContent.collapsedPlainTextWholeLines(
+          style: const TextStyle(fontSize: 16),
+          textScaler: TextScaler.noScaling,
+        ),
+        isNull,
+      );
+      expect(
+        QuoteContent.collapsedPlainTextWholeLines(
+          style: const TextStyle(height: 1.5),
+          textScaler: TextScaler.noScaling,
+        ),
+        isNull,
+      );
+    });
+
+    test('按行高整除盒子高度，向下取整，不多算半行', () {
+      // 16px 字号、1.5 倍行高 → 24px 一行，160px 的盒子装得下 6 整行（160/24≈6.67）。
+      expect(
+        QuoteContent.collapsedPlainTextWholeLines(
+          style: const TextStyle(fontSize: 16, height: 1.5),
+          textScaler: TextScaler.noScaling,
+          limit: 160,
+        ),
+        6,
+      );
+    });
+
+    test('盒子矮于一行时至少给 1 行，不会算出 0 行让正文彻底消失', () {
+      expect(
+        QuoteContent.collapsedPlainTextWholeLines(
+          style: const TextStyle(fontSize: 16, height: 1.5),
+          textScaler: TextScaler.noScaling,
+          limit: 10, // 远小于一行的 24px
+        ),
+        1,
+      );
+    });
+
+    test('字体缩放会跟着放大行高，行数按缩放后的行高重新算', () {
+      // 字号（连带行高）翻倍之后，同样 160px 的盒子只装得下 3 整行。
+      expect(
+        QuoteContent.collapsedPlainTextWholeLines(
+          style: const TextStyle(fontSize: 16, height: 1.5),
+          textScaler: const TextScaler.linear(2.0),
+          limit: 160,
+        ),
+        3,
+      );
+    });
+  });
+
+  testWidgets('collapsedTextTruncatedForLayout 对纯文本走的是折叠判定同一个口径',
+      (tester) async {
+    // 带媒体的富文本分支已经在 quote_item_widget_test.dart 里按渲染结果测过；
+    // 这里单独钉纯文本分支（含 delta 解不出来的兜底）——它内部直接复用
+    // exceedsCollapsedHeightForLayout，两者必须给出一致的答案。
+    late BuildContext capturedContext;
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('zh'),
+        home: Builder(
+          builder: (context) {
+            capturedContext = context;
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    final longQuote = createPlainQuote('这段纯文本很长，长到必须折叠。' * 40);
+    final shortQuote = createPlainQuote('短笔记');
+
+    bool truncated(Quote quote, {double maxWidth = 320}) =>
+        QuoteContent.collapsedTextTruncatedForLayout(
+          context: capturedContext,
+          quote: quote,
+          style: const TextStyle(fontSize: 16, height: 1.5),
+          maxWidth: maxWidth,
+          mediaStyle: NoteCardMediaStyle.thumbnail,
+          prioritizeBoldContent: false,
+        );
+
+    expect(truncated(longQuote), isTrue);
+    expect(truncated(shortQuote), isFalse);
+    // 没有可用宽度时不能瞎断言「被截断」，否则会在还没量出结果的场合乱显示提示。
+    expect(truncated(longQuote, maxWidth: 0), isFalse);
+  });
+
   test('展开提示遮罩要给缩略图让位，且判据与是否真的画缩略图同源', () {
     final withMedia = createDeltaQuoteWithImage();
     final plainRich = Quote(

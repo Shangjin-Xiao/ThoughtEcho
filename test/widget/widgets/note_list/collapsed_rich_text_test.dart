@@ -287,4 +287,107 @@ void main() {
     expect(plan.entries, isNotEmpty);
     expect(plan.entries.first.maxLines, greaterThanOrEqualTo(1));
   });
+
+  test('完全排得下时 truncated 为假，末行也不收省略号', () {
+    // 和上面两条「排不下」的用例互补：这是最基本的「排得下」基线，钉住
+    // truncated / ellipsis 默认都不该被误置为真。
+    final delta = jsonEncode([
+      {'insert': '一句很短的话\n'},
+    ]);
+    final plan = CollapsedRichTextMetrics.plan(
+      blocks: parseDeltaRichText(delta),
+      baseStyle: baseStyle,
+      maxWidth: contentWidth,
+      limit: 160,
+      showMedia: false,
+    );
+
+    expect(plan.truncated, isFalse);
+    expect(plan.entries, hasLength(1));
+    expect(plan.entries.single.ellipsis, isFalse);
+  });
+
+  test('图片被压到剩余空间而不是原尺寸，仍然进计划但标记为截断', () {
+    // 先量出一行文字单独排版的真实高度，再拿它倒推一个只给图片留 40px
+    // （介于 _minInlineMediaHeight=32 和 inlineMediaHeight=96 之间）的 limit——
+    // 断言不必猜 TextPainter 具体吐出多少像素。
+    const textOnlyDelta = '这一行\n';
+    final singleBlockHeight = CollapsedRichTextMetrics.plan(
+      blocks: parseDeltaRichText(jsonEncode([
+        {'insert': textOnlyDelta},
+      ])),
+      baseStyle: baseStyle,
+      maxWidth: contentWidth,
+      limit: 1000,
+      showMedia: false,
+    ).height;
+
+    const double desiredRemaining = 40; // 32 < 40 < 96
+    final double limit =
+        singleBlockHeight + CollapsedRichText.blockGap + desiredRemaining;
+
+    final delta = jsonEncode([
+      {'insert': textOnlyDelta},
+      {
+        'insert': {
+          'custom': {'audio': '/tmp/a.m4a'},
+        },
+      },
+    ]);
+    final plan = CollapsedRichTextMetrics.plan(
+      blocks: parseDeltaRichText(delta),
+      baseStyle: baseStyle,
+      maxWidth: contentWidth,
+      limit: limit,
+      showMedia: true,
+    );
+
+    expect(plan.entries, hasLength(2));
+    final mediaEntry = plan.entries[1];
+    expect(mediaEntry.block.isMedia, isTrue);
+    expect(mediaEntry.mediaHeight, isNotNull);
+    expect(mediaEntry.mediaHeight, closeTo(desiredRemaining, 0.5));
+    expect(
+      mediaEntry.mediaHeight,
+      lessThan(CollapsedRichText.inlineMediaHeight),
+    );
+    expect(plan.truncated, isTrue);
+  });
+
+  test('剩余空间不到 32px 时图片整个不进计划，不留一条看不出内容的色带', () {
+    const textOnlyDelta = '这一行\n';
+    final singleBlockHeight = CollapsedRichTextMetrics.plan(
+      blocks: parseDeltaRichText(jsonEncode([
+        {'insert': textOnlyDelta},
+      ])),
+      baseStyle: baseStyle,
+      maxWidth: contentWidth,
+      limit: 1000,
+      showMedia: false,
+    ).height;
+
+    const double tinyRemaining = 20; // < _minInlineMediaHeight(32)
+    final double limit =
+        singleBlockHeight + CollapsedRichText.blockGap + tinyRemaining;
+
+    final delta = jsonEncode([
+      {'insert': textOnlyDelta},
+      {
+        'insert': {
+          'custom': {'audio': '/tmp/a.m4a'},
+        },
+      },
+    ]);
+    final plan = CollapsedRichTextMetrics.plan(
+      blocks: parseDeltaRichText(delta),
+      baseStyle: baseStyle,
+      maxWidth: contentWidth,
+      limit: limit,
+      showMedia: true,
+    );
+
+    expect(plan.entries, hasLength(1));
+    expect(plan.entries.single.block.isMedia, isFalse);
+    expect(plan.truncated, isTrue);
+  });
 }
