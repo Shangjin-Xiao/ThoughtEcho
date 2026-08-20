@@ -1443,13 +1443,20 @@ $memoryGuidance## 应用特性（避免重复劳动）
   String _toolStatusText(String toolName) {
     return switch (toolName) {
       'explore_notes' || 'search_notes' => 'agentSearchingNotes',
-      'get_tags' => 'agentToolCall:get_tags',
-      'get_location_weather' => 'agentToolCall:get_location_weather',
-      'get_note_detail' => 'agentToolCall:get_note_detail',
-      'propose_note_create' => 'agentToolCall:propose_note_create',
-      'propose_note_edit' => 'agentToolCall:propose_note_edit',
+      'get_tags' => 'agentCollectingTags',
+      'get_location_weather' => 'agentCheckingLocationWeather',
+      'get_note_detail' => 'agentReadingNoteDetail',
+      'propose_note_create' ||
+      'propose_new_note' =>
+        'agentPreparingNewNoteSuggestion',
+      'propose_note_edit' ||
+      'propose_edit' ||
+      'propose_rich_edit' =>
+        'agentPreparingEditSuggestion',
+      'remember' => 'agentSavingMemory',
+      'recall' => 'agentRecallingMemory',
       'web_search' => 'agentWebSearching',
-      'web_fetch' => 'agentFetchingWeb',
+      'web_fetch' => 'agentReadingWebPage',
       _ => '$agentToolCallPrefix$toolName',
     };
   }

@@ -41,7 +41,7 @@ const String _resultChunkPrefix = 'THOUGHTECHO_PERF_CHUNK:';
 
 enum _ListScenario { plainText, richText, images }
 
-enum _VisualEffectOverride { all, shadows, backdropBlur }
+enum _VisualEffectOverride { all, shadows }
 
 class _PerformanceSettingsService extends ChangeNotifier
     implements SettingsService {
@@ -669,9 +669,6 @@ Future<void> _traceDetailedFlatVisualScenario(
     case _VisualEffectOverride.shadows:
       QuoteItemWidget.disableCardShadowsForTesting = true;
       break;
-    case _VisualEffectOverride.backdropBlur:
-      QuoteItemWidget.disableBackdropBlurForTesting = true;
-      break;
   }
   await tester.pumpWidget(_buildRealNoteListBenchmarkApp(quotes));
   await tester.pump();
@@ -877,14 +874,6 @@ void main() {
       actionScenario: 'real_richText_noShadow_diagnostic',
       override: _VisualEffectOverride.shadows,
     );
-    await _traceDetailedFlatVisualScenario(
-      binding,
-      tester,
-      scenario: 'real_note_list_richText_noBackdrop_diagnostic',
-      quotes: _buildBenchmarkQuotes(_ListScenario.richText, const <String>[]),
-      actionScenario: 'real_richText_noBackdrop_diagnostic',
-      override: _VisualEffectOverride.backdropBlur,
-    );
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
@@ -926,15 +915,6 @@ void main() {
       quotes: _buildBenchmarkQuotes(_ListScenario.images, diagnosticImagePaths),
       actionScenario: 'real_images_noShadow_diagnostic',
       override: _VisualEffectOverride.shadows,
-      coldImages: true,
-    );
-    await _traceDetailedFlatVisualScenario(
-      binding,
-      tester,
-      scenario: 'real_note_list_images_noBackdrop_diagnostic',
-      quotes: _buildBenchmarkQuotes(_ListScenario.images, diagnosticImagePaths),
-      actionScenario: 'real_images_noBackdrop_diagnostic',
-      override: _VisualEffectOverride.backdropBlur,
       coldImages: true,
     );
 

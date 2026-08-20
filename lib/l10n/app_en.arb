@@ -4156,7 +4156,7 @@
   "agentSearchingNotes": "Searching notes...",
   "agentAnalyzingData": "Analyzing data...",
   "agentWebSearching": "Searching the web...",
-  "agentReviewingRecentNotes": "Checking recent notes...",
+  "agentReviewingRecentNotes": "Browsing notes...",
   "agentSearchingNotesForQuery": "Looking for notes about \"{query}\"...",
   "@agentSearchingNotesForQuery": {
     "placeholders": {
@@ -4166,8 +4166,18 @@
     }
   },
   "agentCollectingTags": "Getting tags...",
-  "agentReadingNoteDetail": "Reading note details...",
+  "agentReadingNoteDetail": "Viewing note...",
   "agentCheckingLocationWeather": "Getting location and weather...",
+  "agentSavingMemory": "Saving memory...",
+  "agentRecallingMemory": "Recalling memory...",
+  "agentRecallingMemoryForQuery": "Recalling memory for \"{query}\"...",
+  "@agentRecallingMemoryForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
   "agentSearchingWebForQuery": "Looking up sources for \"{query}\"...",
   "@agentSearchingWebForQuery": {
     "placeholders": {
@@ -4243,6 +4253,17 @@
   "agentPreparedSuggestionCard": "Suggestion ready",
   "agentToolStepFinished": "Done",
   "agentToolStepDidNotFinish": "Failed",
+  "agentMemorySaved": "Memory saved",
+  "agentMemoryDeleted": "Memory deleted",
+  "agentRecalledFacts": "Found {count, plural, =1{1 related memory} other{{count} related memories}}",
+  "@agentRecalledFacts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentRecalledNoFacts": "No related memories found",
   "aiThinking": "Thinking...",
   "thinkingMode": "Deep Thinking",
   "showThinking": "Show thinking",
@@ -4478,12 +4499,12 @@
   "testBeforeSaveHint": "You can test as soon as URL, key and model are filled in — no need to save first.",
   "agentMemorySectionTitle": "Thoughter memory",
   "agentMemoryEnableTitle": "Long-term memory",
-  "agentMemoryEnableDesc": "Let Thoughter remember who you are and how you like things phrased across conversations. Daily prompts and periodic insights use it too. Turning this off only stops reading and writing — nothing already remembered is deleted.",
+  "agentMemoryEnableDesc": "Remember your preferences across chats (stored locally only)",
   "agentMemoryNicknameTitle": "Nickname",
   "agentMemoryNicknameHint": "How should Thoughter address you?",
-  "agentMemoryNicknameDesc": "Shared with Thoughter at the start of every conversation and stored only on this device. Leave empty to skip.",
+  "agentMemoryNicknameDesc": "How Thoughter should address you (leave empty to skip)",
   "agentMemoryNicknameSaveFailed": "Couldn't save your nickname. Please try again.",
-  "agentMemoryNicknameDisabled": "Long-term memory is off, so this nickname is not shared with Thoughter.",
+  "agentMemoryNicknameDisabled": "Enabled when long-term memory is turned on",
   "agentMemoryClearTitle": "Clear memory",
   "agentMemoryClearSummary": "Currently remembering {profileCount, plural, =1{1 preference} other{{profileCount} preferences}} and {factCount, plural, =1{1 detail} other{{factCount} details}}",
   "@agentMemoryClearSummary": {"placeholders": {"profileCount": {"type": "int"}, "factCount": {"type": "int"}}},

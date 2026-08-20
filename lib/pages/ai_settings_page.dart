@@ -675,7 +675,6 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
             onChanged: _setMemoryEnabled,
             // 与首次进入的记忆提示弹窗共用同一个图标，见 agent_memory_notice.dart。
             secondary: const Icon(Icons.history_edu_outlined),
-            isThreeLine: true,
           ),
           const Divider(height: 1),
           Padding(

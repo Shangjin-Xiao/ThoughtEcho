@@ -342,6 +342,32 @@ void main() {
     expect(decide(shortBroken), isFalse);
   });
 
+  test('正文被整行截断的笔记仍然拿得到展开入口', () {
+    // 整行截断之后，排版计划的高度**恒不超过**折叠盒（放不下的整行根本不排）。
+    // 判定要是还拿高度和 160 比，就永远得到「不需要展开」——被裁掉一半的长笔记
+    // 会连展开入口一起失去，正文再也放不开。判据必须是「计划有没有画全」。
+    final long = Quote(
+      id: 'rich_truncated_expandable',
+      content: '这段正文很长，长到必须折叠。' * 40,
+      date: '2025-01-01T00:00:00.000Z',
+      editSource: 'fullscreen',
+      deltaContent: jsonEncode([
+        {'insert': '${'这段正文很长，长到必须折叠。' * 40}\n'},
+      ]),
+    );
+
+    expect(
+      QuoteContent.exceedsCollapsedHeightForLayout(
+        quote: long,
+        style: const TextStyle(fontSize: 16, height: 1.5),
+        maxWidth: 320,
+        textDirection: TextDirection.ltr,
+        textScaler: TextScaler.noScaling,
+      ),
+      isTrue,
+    );
+  });
+
   testWidgets('小字号正文不会在盒子没填满时被静默截断', (tester) async {
     // 行数预算按正文基准行高算的话，`small`（10px）的行只有基准的一半多，
     // 盒子还没满就把后面的内容丢了——而且量出来不到 160px，卡片连展开入口都没有。
@@ -368,14 +394,23 @@ void main() {
       find.byType(CollapsedRichText),
     );
     final entry = richText.plan.entries.single;
-    // 10px 字号、行高 1.5 → 15px 一行，160px 的盒子装得下 10 行以上。
+    // 10px 字号、行高 1.5 → 15px 一行，160px 的盒子装得下 10 整行。
     // 按 24px 的基准行高算只会给 8 行，那就是静默丢内容。
-    expect(entry.maxLines, greaterThanOrEqualTo(11));
-    // 盒子仍然被填满，说明确实排够了。
+    const double smallLineHeight = 15.0;
+    expect(entry.maxLines, greaterThanOrEqualTo(10));
+    // 排版按**整行**截断（见 CollapsedRichTextMetrics.plan），所以盒子不会被填到
+    // 正好 160：排到「再放一行就超出去」为止。两条一起钉住这个契约——没超出盒子，
+    // 且剩下的空间不足一行，说明确实排满了而不是提前收手。
     expect(
       richText.plan.height,
-      greaterThanOrEqualTo(QuoteContent.collapsedContentMaxHeight),
+      lessThanOrEqualTo(QuoteContent.collapsedContentMaxHeight + 0.5),
     );
+    expect(
+      QuoteContent.collapsedContentMaxHeight - richText.plan.height,
+      lessThan(smallLineHeight),
+    );
+    // 后面还有正文没排上，末行要收省略号。
+    expect(entry.ellipsis, isTrue);
   });
 
   test('展开提示遮罩要给缩略图让位，且判据与是否真的画缩略图同源', () {

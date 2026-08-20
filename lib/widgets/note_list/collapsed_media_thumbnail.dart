@@ -32,11 +32,48 @@ class CollapsedMediaThumbnail extends StatelessWidget {
   /// 缩略图边长。折叠正文区高 160px，72 既能看清内容又不挤占文字宽度。
   static const double defaultSize = 72.0;
 
+  /// 正文短到撑不满缩略图时用的放大尺寸。
+  ///
+  /// 正文只有一两行时，72 的方图撑不满卡片，左边一大块空着。放大到 96 把多出来
+  /// 的高度让给照片，卡片反而不空。再大就会把正文列挤窄到要多折一行。
+  static const double shortNoteSize = 96.0;
+
+  /// 一个字都没有的纯图笔记用的尺寸。
+  ///
+  /// 没有正文要并排，整行都归照片，所以可以再大一号；仍然是方图——通栏定高的
+  /// `cover` 会把竖版照片裁成顶部一条横带。
+  static const double soloMediaSize = 132.0;
+
   /// 缩略图与正文之间的间距。
   static const double gap = 12.0;
 
   /// 折叠卡片为缩略图预留的总宽度（含间距）。布局侧据此收窄文字宽度。
   static double reservedWidth({double size = defaultSize}) => size + gap;
+
+  /// 缩略图的图片 provider。渲染与空闲预热**共用这一处**。
+  ///
+  /// `imageCache` 是按 provider 相等性做键的（`ResizeImage` 与 `FileImage` 都实现
+  /// 了 `==`），解码尺寸差一点就是另一个键：预热解出来的那张永远等不到人来取，
+  /// 卡片滑进来照旧现解一次。所以两边只能有一份解码参数。
+  static ImageProvider? imageProviderFor(
+    BuildContext context,
+    DeltaMediaSummary media, {
+    double size = defaultSize,
+  }) {
+    final source = media.firstImageSource;
+    if (source == null || source.isEmpty) return null;
+    // 72pt × dpr2 = 144px，单张约 83KB；相比按卡片全宽解码的 ~1.2MB 小一个量级。
+    final decodeSize = decodeSizeFor(
+      size,
+      MediaQuery.devicePixelRatioOf(context)
+          .clamp(1.0, _ThumbnailImage._maxPixelRatio),
+    );
+    return createOptimizedImageProvider(
+      source,
+      cacheWidth: decodeSize,
+      cacheHeight: decodeSize,
+    );
+  }
 
   final DeltaMediaSummary media;
 
@@ -138,7 +175,8 @@ class _ThumbnailImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 72pt × dpr2 = 144px，单张约 83KB；相比按卡片全宽解码的 ~1.2MB 小一个量级。
+    // 解码尺寸和 [CollapsedMediaThumbnail.imageProviderFor] 共用一处，
+    // 否则空闲预热解出来的那张进不了同一个 imageCache 键。
     final decodeSize = decodeSizeFor(
       size,
       MediaQuery.devicePixelRatioOf(context).clamp(1.0, _maxPixelRatio),

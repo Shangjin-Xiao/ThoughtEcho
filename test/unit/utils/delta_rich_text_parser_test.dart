@@ -474,6 +474,49 @@ void main() {
       expect(DeltaRichTextCache.stats['cacheSize'], 0);
     });
 
+    test('插在正文中间的图不会多解出一个空段落', () {
+      // delta 里图后面那个 `\n` 是**图这一行**的结束符，不是空段落。当成空段落的
+      // 话，折叠预览比原文多一行空白，还白占掉 24px 的折叠盒高度——inline 版式下
+      // 足以把图后面的正文整段挤出盒子。
+      final blocks = parseDeltaRichText(deltaOf([
+        {'insert': '上面一段\n'},
+        {
+          'insert': {'image': 'https://example.com/a.png'},
+        },
+        {'insert': '\n下面一段\n'},
+      ]));
+
+      expect(blocks.map((b) => b.isMedia ? '[图]' : b.plainText).toList(),
+          ['上面一段', '[图]', '下面一段']);
+    });
+
+    test('图后面真的空一行时，空段落照常保留', () {
+      // 吃掉的只有紧跟在媒体后面的那**一个**换行符。用户自己敲的空行还在。
+      final blocks = parseDeltaRichText(deltaOf([
+        {
+          'insert': {'image': 'https://example.com/a.png'},
+        },
+        {'insert': '\n\n下面一段\n'},
+      ]));
+
+      expect(blocks.map((b) => b.isMedia ? '[图]' : b.plainText).toList(),
+          ['[图]', '', '下面一段']);
+    });
+
+    test('媒体后同一行还有文字时，紧跟其后的空段落不会被吞掉', () {
+      // 媒体那一行只有一个结束符。遇到文字就说明这个换行是文字行的收尾，
+      // 状态必须当场清掉——否则下一个换行（用户敲的空行）会被当成媒体的结束符。
+      final blocks = parseDeltaRichText(deltaOf([
+        {
+          'insert': {'image': 'https://example.com/a.png'},
+        },
+        {'insert': '同行文字\n\n下面一段\n'},
+      ]));
+
+      expect(blocks.map((b) => b.isMedia ? '[图]' : b.plainText).toList(),
+          ['[图]', '同行文字', '', '下面一段']);
+    });
+
     test('缓存结果不可变，调用方改不动共享的表', () {
       final blocks = DeltaRichTextCache.of(deltaOf([
         {'insert': '只读\n'},

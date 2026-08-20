@@ -593,3 +593,90 @@ frameJank 显著低于 22。连续滑动时每个 session 摘要都应输出。
 - scroll-12 中 index 81 同卡 h=344→344 重复 relayout 3 次（8~15ms），与 imageEmbed
   Δcomplete+21 同段：图片 embed 完成态变化触发整 QuillEditor relayout，二阶问题。
 - embed 图片解码无 cacheWidth（2.8~3.3MB/张），内存问题与卡顿无关，待办。
+
+---
+
+## 2026-08-19: 首滑成本定位到「挂载」，卡片瘦身 38%
+
+**决策者**: 上晋 + Claude
+**类型**: 根因定位 / 实施
+**完整分析**: `docs/note-list-first-paint-cost-2026-08-19.md`
+
+### 根因
+
+用户 08-19 的四段 log 把结论钉死了：`built` 里有新卡片就掉帧
+（scroll-1/2：frameJank 6/4），全是老卡片就一帧不掉（scroll-3/4：frameJank 0，
+其中 scroll-4 那次整列表重建 `itemMemo hit+72 / miss+0`——dd3674c 的记忆化确实生效）。
+把两组相减摊到 32 张新卡片上：UI 线程 ~8.4ms/卡，光栅 ~5.5ms/卡。
+再用 dd3674c 补的计数器把 8.4ms 拆开，折叠判定 0.5 + 折叠排版 0.4 + 头部测宽 0.5
++ 真正布局 1.7，**剩下 5.4ms 没有任何计数器认领**。
+
+实测一张最小卡片（短纯文本、无标签、不可展开）146 个 element，其中
+`PopupMenuButton` 占 59、心形按钮外那层 `Tooltip` 占 40，**正文只占 3 个**。
+那 5.4ms 就是这棵树的挂载成本。
+
+前几轮一直在优化「量」（Quill 物化、折叠判定、plan 缓存、整列表重建），
+方向都对，但量的那部分现在只剩 1.4ms/卡；真正的大头是「建」，而它从来没被看见过。
+
+### 决定
+
+1. **卡片瘦身，不改一个像素**：更多按钮换掉 `IconButton` 的整套 `ButtonStyle` 机件、
+   触摸端不挂 `Tooltip`（无障碍名称改由 `Semantics` 给，桌面端保留悬浮提示）、
+   两个按钮共用一层 `Material`、双击动画机件懒建、不可展开的卡片不挂
+   `AnimatedSize` 与两层 `AnimatedSwitcher`、标签放得下时不挂 `SingleChildScrollView`。
+   146 → 90 / 164 → 122 / 216 → 155。上限由
+   `test/widget/widgets/quote_item_element_budget_test.dart` 钉住。
+2. **空闲预热**：静止时按 3ms 一片，把折叠判定、折叠排版、缩略图解码提前算好。
+   键必须和渲染逐字节相同——宽度由真实卡片回填，plan 入参和解码尺寸各自只有一处产出，
+   `collapsed_layout_warmup_test.dart` 钉死「先暖再建，未命中数不许涨」。
+3. **把挂载接进日志**：新增 `itemMount={count,workUs,worstUs}` 与
+   `warmup={items,cursor,img}`。`mount` 只在真正新建时走一次，正好等于「第一次」。
+
+### 明确没做（下一轮的题）
+
+- 光栅侧 5.5ms/卡没动。折叠遮罩那层 `BackdropFilter`（σ=1.2）是同屏可展开卡片数量
+  倍数的 `saveLayer`，盖的只是一条 30px 渐变加一个文字胶囊。设置里已有开关，
+  **翻默认值是视觉决定，要先问用户**。
+- 空闲期爬升 `scrollCacheExtent` 让下一屏提前建好：收益上限最高，但涉及内存
+  （32 位 ARM 回退设备）和 `_extrapolateMaxScrollOffset` 估算变化（列表回弹的老坑），
+  要单独一轮配基准。
+- 头部测宽（0.5ms/卡）没进预热，plumbing 比收益多。
+
+---
+
+## 2026-08-19（续）: 空闲期爬升缓存区 + CodeRabbit 复审修正
+
+**决策者**: 上晋 + Claude
+**类型**: 实施 / 评审修正
+
+### 缓存区爬升：做了，比预想简单
+
+上一条把它列为「要单独一轮配基准」，实测下来核心逻辑只有 30 行：预热 tick 跑完测量
+之后顺手把 `scrollCacheExtent` 往外撑一级（每级 400px，上限 +1600），滑动时照旧让路。
+
+两条约束写在代码注释里：一次只撑一级（一次撑到位是个上百毫秒的长任务）；贴着底部
+时不撑（`_extrapolateMaxScrollOffset` 的估算会变，那是「列表自己抖一下」的老坑）。
+32 位设备的内存顾虑没有消失，但**上限是有界的**，不是「全列表挂树上」，所以这一轮
+先按 +1600 落地，要再加得先在真机量内存。
+
+**踩坑（值得记住）**：验证时一度得出「`scrollCacheExtent` 根本没生效」的结论 ——
+因为 `find.byType(...)` 默认 `skipOffstage: true`，而缓存区里的卡片正是「建好但不
+绘制」的那种，被 finder 全跳过了。用 `skipOffstage: false` 一量，0 / 600 / 2200 的
+缓存区分别建出 4 / 8 / 17 张卡片，一切正常。**以后量「列表建了多少卡片」一律带
+`skipOffstage: false`**，否则结论会正好反过来。
+
+### CodeRabbit 复审：一条真回归 + 三条有效意见
+
+- 🟠 **真 bug（本轮引入）**：`_showMoreMenu` 拿的是卡片 build 方法的 context，
+  `findRenderObject()` 返回的是整张卡片，菜单会按整张卡片定位而不是按按钮。
+  改法是让 `_CardActionButton` 把**自己的** context 交给回调（比包一层 `Builder`
+  少一个 element）。改造前的 `PopupMenuButton` 用的就是它自己的 element，这是把
+  同一个语义还原回来。
+- 数据事件「什么都没变」时不再重置预热游标，否则重复事件会把游标反复拽回 0。
+- 图片预热的去重集合跟着宽度/版式一起失效 —— 解码尺寸就是按这两样算的。
+- 标签估宽不再计进 `headerWorkUs`：那个指标的口径是「日期/位置/天气」，
+  也是下一轮预热的目标，混进标签会让下一轮对着一个变了口径的数字下结论。
+
+明确没采纳：把 `ImageProvider` 全线改成 `ImageProvider<Object>`（跨平台实现的
+大范围重构，与本轮无关）；把标签胶囊和收藏角标里的 `fontSize` 字面量换成 textTheme
+（那两处是原样搬过来的，改了就是改像素，属于排版专项）。

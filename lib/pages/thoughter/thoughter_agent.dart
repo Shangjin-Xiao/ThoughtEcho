@@ -473,10 +473,17 @@ extension _ThoughterAgent on _ThoughterPageState {
       'get_tags' => l10n.agentCollectingTags,
       'get_note_detail' => l10n.agentReadingNoteDetail,
       'get_location_weather' => l10n.agentCheckingLocationWeather,
-      'propose_new_note' => l10n.agentPreparingNewNoteSuggestion,
+      'propose_note_create' ||
+      'propose_new_note' =>
+        l10n.agentPreparingNewNoteSuggestion,
+      'propose_note_edit' ||
       'propose_edit' ||
       'propose_rich_edit' =>
         l10n.agentPreparingEditSuggestion,
+      'remember' => l10n.agentSavingMemory,
+      'recall' => query.isEmpty
+          ? l10n.agentRecallingMemory
+          : l10n.agentRecallingMemoryForQuery(query),
       'web_search' => query.isEmpty
           ? l10n.agentWebSearching
           : l10n.agentSearchingWebForQuery(query),
@@ -503,8 +510,19 @@ extension _ThoughterAgent on _ThoughterPageState {
     if (toolName == 'get_location_weather') {
       return '';
     }
-    if (toolName == 'propose_new_note') {
+    if (toolName == 'propose_note_create' || toolName == 'propose_new_note') {
       return args['title']?.toString() ?? '';
+    }
+    if (toolName == 'propose_note_edit' ||
+        toolName == 'propose_edit' ||
+        toolName == 'propose_rich_edit') {
+      return args['user_instruction']?.toString() ?? '';
+    }
+    if (toolName == 'remember') {
+      return args['content']?.toString() ?? args['directive']?.toString() ?? '';
+    }
+    if (toolName == 'recall' && args.containsKey('query')) {
+      return '';
     }
     if (toolName == 'web_search' && args.containsKey('query')) {
       return '';
@@ -548,10 +566,14 @@ extension _ThoughterAgent on _ThoughterPageState {
       'get_location_weather' => _summarizeLocationWeatherResult(l10n, trimmed),
       'web_search' => _summarizeWebSearchResult(l10n, trimmed),
       'web_fetch' => _summarizeWebFetchResult(l10n, trimmed),
+      'propose_note_create' ||
       'propose_new_note' ||
+      'propose_note_edit' ||
       'propose_edit' ||
       'propose_rich_edit' =>
         l10n.agentPreparedSuggestionCard,
+      'remember' => _summarizeRememberResult(l10n, trimmed),
+      'recall' => _summarizeRecallResult(l10n, trimmed),
       _ => l10n.agentToolStepFinished,
     };
   }
@@ -561,12 +583,38 @@ extension _ThoughterAgent on _ThoughterPageState {
     if (payload == null) {
       return l10n.agentToolStepFinished;
     }
-    final content = payload['content']?.toString() ?? '';
+    var content = payload['content']?.toString() ?? '';
+    content = content.replaceAll(RegExp(r'^<note[^>]*>', multiLine: true), '');
+    content = content.replaceAll(RegExp(r'</note>$', multiLine: true), '');
     final snippet = content.trim().replaceAll('\n', ' ');
     final cleanSnippet =
         snippet.length > 15 ? '${snippet.substring(0, 15)}...' : snippet;
     return l10n.agentReadNoteDetailSummary(
         cleanSnippet.isNotEmpty ? cleanSnippet : l10n.unknown);
+  }
+
+  String _summarizeRememberResult(AppLocalizations l10n, String result) {
+    final payload = _tryParseJsonMap(result);
+    if (payload != null && payload['action'] == 'delete') {
+      return l10n.agentMemoryDeleted;
+    }
+    return l10n.agentMemorySaved;
+  }
+
+  String _summarizeRecallResult(AppLocalizations l10n, String result) {
+    final payload = _tryParseJsonMap(result);
+    if (payload == null) {
+      return l10n.agentToolStepFinished;
+    }
+    final facts = payload['facts'] as List<dynamic>? ?? const [];
+    final profile = payload['profile'] as List<dynamic>? ?? const [];
+    if (facts.isNotEmpty) {
+      return l10n.agentRecalledFacts(facts.length);
+    }
+    if (profile.isNotEmpty) {
+      return l10n.agentRecalledFacts(profile.length);
+    }
+    return l10n.agentRecalledNoFacts;
   }
 
   String _summarizeNoteSearchResult(AppLocalizations l10n, String result) {
