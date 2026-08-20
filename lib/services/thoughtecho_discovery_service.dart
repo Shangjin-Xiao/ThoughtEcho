@@ -595,11 +595,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
               source: 'LocalSend',
             );
           }
-        } catch (e, stack) {
-          logError('广播兜底发送失败: $e',
-              error: e,
-              stackTrace: stack,
-              source: 'ThoughtEchoDiscoveryService');
+        } catch (e) {
+          logWarning('广播兜底发送失败: $e', source: 'ThoughtEchoDiscoveryService');
         }
       } on SocketException catch (e) {
         // iOS 16+ 特有错误处理
@@ -768,11 +765,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
                 source: 'LocalSend',
               );
             }
-          } catch (e, stack) {
-            logError('广播兜底失败: $e',
-                error: e,
-                stackTrace: stack,
-                source: 'ThoughtEchoDiscoveryService');
+          } catch (e) {
+            logWarning('广播兜底失败: $e', source: 'ThoughtEchoDiscoveryService');
           }
         } catch (e, stack) {
           logError('发送公告失败: $e',

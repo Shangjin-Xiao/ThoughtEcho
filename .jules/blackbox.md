@@ -49,4 +49,4 @@
 
 ## 2025-10-25 - 🗃️ 黑匣: [完善 ThoughtEchoDiscoveryService 模块的结构化日志]
 **异常:** [ThoughtEchoDiscoveryService 模块在启动服务、绑定UDP组播套接字、发送公告、解析组播消息等多个环节发生错误时，仅使用了 `debugPrint` 或者缺少统一标准地使用了不带完整参数的 `logError` / `logDebug` 进行异常捕获和打印。这不仅隐藏了关键错误堆栈信息 (stackTrace)，还使得跨端协同中设备发现相关的网络异常溯源变得困难。]
-**拦截:** [已将上述所有流程中的相关 `catch (e)` 升级为 `catch (e, stack)`，并统一替换为带有 `error: e`, `stackTrace: stack`, `source: 'ThoughtEchoDiscoveryService'` 参数的 `logError` (部分预期内的底层网络报错使用了 `logWarning`)。确认所有记录均只涉及网络配置与连接异常，未包含任何明文用户数据及跨设备敏感交互数据。]
+**拦截:** [已将上述所有流程中的相关 `catch (e)` 升级为 `catch (e, stack)`，并统一替换为带有 `error: e`, `stackTrace: stack`, `source: 'ThoughtEchoDiscoveryService'` 参数的 `logError` (部分预期内的底层网络报错使用了 `logWarning`)。确认新的 logError 调用不会有意记录明文形式的用户交互数据。]
