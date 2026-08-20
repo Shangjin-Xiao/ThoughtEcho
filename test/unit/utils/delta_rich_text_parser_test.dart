@@ -517,6 +517,42 @@ void main() {
           ['[图]', '同行文字', '', '下面一段']);
     });
 
+    test('连续两张图之间只隔着各自的行尾换行符，不会被塞进一个空段落', () {
+      // 第一张图的 mediaLineOpen 被它自己的换行符清掉之后，第二张图紧接着插入——
+      // 两次状态切换不能互相踩：图 A 的收尾不能被错记成图 B 的，否则图 B 后面的
+      // 换行会被当成图 A 还没关闭的状态处理，或者两张图之间多出一个空段落。
+      final blocks = parseDeltaRichText(deltaOf([
+        {
+          'insert': {'image': 'https://example.com/a.png'},
+        },
+        {'insert': '\n'},
+        {
+          'insert': {'image': 'https://example.com/b.png'},
+        },
+        {'insert': '\n'},
+      ]));
+
+      expect(blocks.map((b) => b.kind).toList(),
+          [RichTextBlockKind.media, RichTextBlockKind.media]);
+      expect(blocks[0].media!.source, 'https://example.com/a.png');
+      expect(blocks[1].media!.source, 'https://example.com/b.png');
+    });
+
+    test('媒体是文档最后一个块时，它的行尾换行符不会多解出一个空段落', () {
+      // 文档在图片那一行的结束符之后就结束，没有更多 op。旧逻辑遇到换行不看
+      // pendingRuns 是否为空就直接落一个块，会在这里多出一个空段落——列表末尾
+      // 悄悄多出一行空白折叠高度。
+      final blocks = parseDeltaRichText(deltaOf([
+        {
+          'insert': {'image': 'https://example.com/a.png'},
+        },
+        {'insert': '\n'},
+      ]));
+
+      expect(blocks, hasLength(1));
+      expect(blocks.single.kind, RichTextBlockKind.media);
+    });
+
     test('缓存结果不可变，调用方改不动共享的表', () {
       final blocks = DeltaRichTextCache.of(deltaOf([
         {'insert': '只读\n'},
