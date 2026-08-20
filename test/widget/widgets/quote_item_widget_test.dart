@@ -9,6 +9,7 @@ import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/note_tag.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/widgets/note_list/collapsed_media_thumbnail.dart';
 import 'package:thoughtecho/widgets/note_list/collapsed_rich_text.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
@@ -348,9 +349,9 @@ void main() {
       expect(find.text('双击查看全文'), findsOneWidget);
     });
 
-    testWidgets('每行都未占满宽度时折叠提示与遮罩仍横跨整个内容区', (tester) async {
-      // 手动换行的短行笔记：正文自身宽度远小于卡片宽度，
-      // 折叠遮罩与提示胶囊不能跟着正文收缩。
+    // 手动换行的短行笔记：正文自身宽度远小于卡片宽度，内容区和它下面的提示行
+    // 都不能跟着正文收缩。两个测试共用这一份夹具。
+    Future<void> pumpShortLineCard(WidgetTester tester) async {
       final quote = _buildQuote(
         id: 'short-lines',
         content: List.filled(12, '短句').join('\n'),
@@ -389,6 +390,10 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+    }
+
+    testWidgets('每行都未占满宽度时折叠提示仍贴住内容区右缘', (tester) async {
+      await pumpShortLineCard(tester);
 
       expect(find.text('双击查看全文'), findsOneWidget);
 
@@ -399,10 +404,115 @@ void main() {
       final hintRect = tester.getRect(find.text('双击查看全文'));
 
       // 正文自身只有 “短句” 两字宽，但内容区必须撑满卡片，
-      // 否则遮罩与胶囊会一起塌缩到文字宽度上。
+      // 否则提示行会跟着塌缩到文字宽度上、贴在正文右边而不是卡片右边。
       // 差值只应来自卡片内边距（约 60），而不是塌缩到文字宽度（约 33）。
       expect(contentRect.width, greaterThan(cardRect.width - 80));
-      expect(hintRect.center.dx, closeTo(cardRect.center.dx, 1.0));
+      expect(hintRect.right, closeTo(contentRect.right, 8.0));
+    });
+
+    testWidgets('折叠提示画在正文下方，不压在正文上', (tester) async {
+      // 这一条守的是这次改动的核心：提示不再是盖在正文最后一行上的浮层。
+      // 只断言「不在内容区上方」是不够的——压在正文上同样满足那个条件。
+      await pumpShortLineCard(tester);
+
+      final bodyRect = tester.getRect(find.textContaining('短句').first);
+      final hintRect = tester.getRect(find.text('双击查看全文'));
+
+      expect(hintRect.top, greaterThanOrEqualTo(bodyRect.bottom - 1.0));
+    });
+
+    // 右侧缩略图按正文长短换尺寸：短笔记放大到 96，长笔记维持 72，
+    // 一个字都没有的纯图笔记用 132 的居中方图。三条各测一种，共用这份夹具。
+    Future<CollapsedMediaThumbnail> pumpMediaCard(
+      WidgetTester tester, {
+      required String id,
+      required String text,
+    }) async {
+      final delta = jsonEncode([
+        if (text.isNotEmpty) {'insert': '$text\n'},
+        {
+          'insert': {'image': 'https://example.com/photo.png'},
+        },
+        {'insert': '\n'},
+      ]);
+      final quote = _buildQuote(
+        id: id,
+        content: text,
+        deltaContent: delta,
+        editSource: 'fullscreen',
+      );
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _FakeSettingsService(),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Material(
+              child: Center(
+                child: SizedBox(
+                  width: 400,
+                  child: QuoteItemWidget(
+                    quote: quote,
+                    tagMap: const {},
+                    isExpanded: false,
+                    onToggleExpanded: (_) {},
+                    onEdit: () {},
+                    onDelete: () {},
+                    onAskAI: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      return tester.widget<CollapsedMediaThumbnail>(
+        find.byType(CollapsedMediaThumbnail),
+      );
+    }
+
+    testWidgets('正文只有一行时右侧缩略图放大，且不显示折叠提示', (tester) async {
+      // 带媒体的笔记一律可展开，但正文一个字都没少——这种卡片不该有提示，
+      // 空出来的高度让给照片。
+      final thumbnail = await pumpMediaCard(
+        tester,
+        id: 'short-with-image',
+        text: '大澳还是完全不同的感觉呢',
+      );
+
+      expect(thumbnail.size, CollapsedMediaThumbnail.shortNoteSize);
+      expect(find.text('双击查看全文'), findsNothing);
+    });
+
+    testWidgets('正文被截断时缩略图维持原尺寸，并显示折叠提示', (tester) async {
+      final thumbnail = await pumpMediaCard(
+        tester,
+        id: 'long-with-image',
+        text: List.filled(6, _longContentChunk).join(),
+      );
+
+      expect(thumbnail.size, CollapsedMediaThumbnail.defaultSize);
+      expect(find.text('双击查看全文'), findsOneWidget);
+    });
+
+    testWidgets('一个字都没有的纯图笔记用更大的方图', (tester) async {
+      final thumbnail = await pumpMediaCard(
+        tester,
+        id: 'image-only',
+        text: '',
+      );
+
+      expect(thumbnail.size, CollapsedMediaThumbnail.soloMediaSize);
+      expect(find.text('双击查看全文'), findsNothing);
     });
 
     testWidgets('宽布局下实际未溢出的边界文本不显示展开提示', (tester) async {
@@ -463,59 +573,10 @@ void main() {
       expect(toggled, isFalse);
     });
 
-    testWidgets('折叠遮罩使用卡片级独立BackdropKey', (tester) async {
-      final quote = _buildQuote(
-        content: List.filled(6, _longContentChunk).join('\n'),
-        editSource: 'inline',
-      );
-
-      await tester.pumpWidget(
-        ChangeNotifierProvider<SettingsService>.value(
-          value: _FakeSettingsService(),
-          child: MaterialApp(
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-            locale: const Locale('zh'),
-            home: Material(
-              child: Column(
-                children: [
-                  for (final id in const <String>['first', 'second'])
-                    QuoteItemWidget(
-                      key: ValueKey<String>(id),
-                      quote: quote.copyWith(id: id),
-                      tagMap: const {},
-                      isExpanded: false,
-                      onToggleExpanded: (_) {},
-                      onEdit: () {},
-                      onDelete: () {},
-                      onAskAI: () {},
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text('双击查看全文', skipOffstage: false),
-        findsNWidgets(2),
-      );
-      final filters = tester.widgetList<BackdropFilter>(
-        find.byType(BackdropFilter, skipOffstage: false),
-      );
-      final keys = filters.map((filter) => filter.backdropGroupKey).toList();
-      expect(keys, everyElement(isNotNull));
-      expect(keys.toSet(), hasLength(2));
-    });
-
-    testWidgets('折叠遮罩不参与语义树生成', (tester) async {
+    testWidgets('折叠卡片不再构建模糊遮罩层', (tester) async {
+      // 正文按整行截断之后盒底不留半行残字，也就没有东西需要一条模糊带去盖。
+      // 每张折叠卡片一个 `BackdropFilter` 的合成开销随之消失——这一条守住它，
+      // 免得遮罩哪天又被顺手加回来。
       final quote = _buildQuote(
         content: List.filled(6, _longContentChunk).join('\n'),
         editSource: 'inline',
@@ -549,13 +610,47 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      expect(find.text('双击查看全文'), findsOneWidget);
       expect(
-        find.ancestor(
-          of: find.byType(BackdropFilter),
-          matching: find.byType(ExcludeSemantics),
-        ),
-        findsOneWidget,
+        find.byType(BackdropFilter, skipOffstage: false),
+        findsNothing,
       );
+    });
+
+    testWidgets('折叠提示文案进入语义树', (tester) async {
+      final quote = _buildQuote(
+        content: List.filled(6, _longContentChunk).join('\n'),
+        editSource: 'inline',
+      );
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _FakeSettingsService(),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Material(
+              child: QuoteItemWidget(
+                quote: quote,
+                tagMap: const {},
+                isExpanded: false,
+                onToggleExpanded: (_) {},
+                onEdit: () {},
+                onDelete: () {},
+                onAskAI: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
       expect(
         find.ancestor(
           of: find.text('双击查看全文'),

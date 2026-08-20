@@ -1107,15 +1107,6 @@ class SettingsPageState extends State<SettingsPage> {
                 onChanged: settingsService.setNoteListDisableCardShadows,
               ),
 
-              // 记录页禁用折叠模糊
-              SwitchListTile(
-                title: Text(l10n.noteListDisableBackdropBlurExperiment),
-                subtitle: Text(l10n.noteListDisableBackdropBlurExperimentDesc),
-                secondary: const Icon(Icons.blur_off_outlined),
-                value: settingsService.noteListDisableBackdropBlur,
-                onChanged: settingsService.setNoteListDisableBackdropBlur,
-              ),
-
               // 首屏滚动性能监测
               // 注意：这一项过去错误复用了 l10n.logDebugInfo（「日志调试信息」），
               // 和下面真正的调试信息入口标题完全相同，现已改用专属文案。

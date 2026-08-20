@@ -230,6 +230,15 @@ List<RichTextBlock> parseDeltaRichText(String? deltaContent) {
   var pendingRuns = <RichTextRun>[];
   var orderedIndex = 1;
 
+  /// 刚排进一个媒体块，它自己那一行的结束符还没来。
+  ///
+  /// delta 里插在正文中间的图长这样：
+  /// `{'insert':'上一段\n'}, {'insert':{'image':…}}, {'insert':'\n下一段\n'}`
+  /// ——图后面那个 `\n` 是**图这一行**的结束符，不是一个空段落。不认这件事的话，
+  /// 每张图后面都会多解出一个空块：折叠预览比原文多一个空行，还白占掉 24px
+  /// 的折叠盒高度（inline 版式下足以把后面的正文挤出盒子）。
+  var mediaLineOpen = false;
+
   /// delta 的行属性挂在**换行符自己**身上，不在它前面的文字上。所以每遇到一个
   /// `\n` 才知道刚累积的这些 run 属于什么块——这是 Delta 格式的定义，不是这里
   /// 的取巧。
@@ -260,6 +269,7 @@ List<RichTextBlock> parseDeltaRichText(String? deltaContent) {
       blocks.add(
         RichTextBlock(kind: RichTextBlockKind.media, media: media),
       );
+      mediaLineOpen = true;
       continue;
     }
 
@@ -275,6 +285,16 @@ List<RichTextBlock> parseDeltaRichText(String? deltaContent) {
       }
       // split 产生的最后一段后面没有换行符，留给下一个 op 继续累积。
       if (!isLast) {
+        if (mediaLineOpen) {
+          // 媒体那一行只有一个结束符，**遇到的第一个换行就把状态清掉**，不管这个
+          // 换行前面有没有文字。留着的话，`图 + '同行文字\n\n'` 里那个用户敲的
+          // 空段落会被当成媒体的结束符吞掉。
+          mediaLineOpen = false;
+          // 结束符前面一个字都没有，才说明这个换行确实是媒体自己那一行的收尾。
+          // 图后面真的空一行（`图\n\n文字`）时，第二个换行不会命中这里，
+          // 空段落照常保留。
+          if (pendingRuns.isEmpty) return;
+        }
         flushLine(attributes);
       }
     });

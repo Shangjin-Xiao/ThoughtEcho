@@ -89,13 +89,14 @@ class CollapsedRichText extends StatelessWidget {
     final children = <Widget>[
       for (final entry in plan.entries)
         if (entry.block.isMedia)
-          _buildMedia(context, entry.block)
+          _buildMedia(context, entry.block, entry.mediaHeight)
         else
           _CollapsedRichTextBlock(
             block: entry.block,
             baseStyle: baseStyle,
             palette: palette,
             maxLines: entry.maxLines,
+            ellipsis: entry.ellipsis,
             boldWeight: boldWeight,
           ),
     ];
@@ -116,7 +117,8 @@ class CollapsedRichText extends StatelessWidget {
     );
   }
 
-  Widget _buildMedia(BuildContext context, RichTextBlock block) {
+  Widget _buildMedia(
+      BuildContext context, RichTextBlock block, double? height) {
     final media = block.media!;
     final source = media.source;
 
@@ -147,7 +149,7 @@ class CollapsedRichText extends StatelessWidget {
       );
     }
 
-    Widget box = SizedBox(height: inlineMediaHeight, child: child);
+    Widget box = SizedBox(height: height ?? inlineMediaHeight, child: child);
     final onTap = onMediaTap;
     if (onTap != null && media.kind == DeltaMediaKind.image && source != null) {
       box = GestureDetector(
@@ -190,12 +192,32 @@ class CollapsedRichText extends StatelessWidget {
 /// 一个块在折叠盒里的排版名额。
 @immutable
 class CollapsedPlannedBlock {
-  const CollapsedPlannedBlock({required this.block, required this.maxLines});
+  const CollapsedPlannedBlock({
+    required this.block,
+    required this.maxLines,
+    this.ellipsis = false,
+    this.mediaHeight,
+  });
 
   final RichTextBlock block;
 
   /// 这个块最多排几行。媒体块恒为 1，只是占位。
   final int maxLines;
+
+  /// 媒体块实际画多高（inline 版式）。为 null 时用
+  /// [CollapsedRichText.inlineMediaHeight]。
+  ///
+  /// 盒子只剩一截时把图**压到那一截**，而不是照常画满再让 `ClipRect` 裁：裁出来
+  /// 的像素一样，但 `Column` 会真的溢出（debug 下就是那条黄黑警示带），盒高也
+  /// 不再等于计划算出来的高度。
+  final double? mediaHeight;
+
+  /// 末行是否要收一个省略号。
+  ///
+  /// 只有**被折叠盒截掉的那个块**才为真。截断在这里是「整行」的：行数按每一行的
+  /// 实测高度累加得出，最后一行完整落在盒子里，下面不再留半行残字——所以也就不
+  /// 需要一条模糊带去盖住那半行。
+  final bool ellipsis;
 }
 
 /// 折叠盒的排版计划：画哪些块、每块几行、一共多高。
@@ -205,6 +227,7 @@ class CollapsedRichTextPlan {
     required this.entries,
     required this.height,
     required this.showMedia,
+    this.truncated = false,
   });
 
   static const CollapsedRichTextPlan empty = CollapsedRichTextPlan(
@@ -219,6 +242,16 @@ class CollapsedRichTextPlan {
   final double height;
 
   final bool showMedia;
+
+  /// 这份计划**画出来会不会缺一截正文**。
+  ///
+  /// 和「这条笔记要不要展开入口」是两件事：带媒体的笔记一律可展开（折叠态永远
+  /// 看不到原图），可正文本身往往一个字都没少。折叠提示按后者画就会出现「一行
+  /// 字上面盖着一条模糊带，却并没有第二行」——遮的是完整内容，不是被截断的内容。
+  ///
+  /// 三种情况都算截断：有块整个没排上、某个块的行数被 `maxLines` 夹掉、
+  /// 排下来的总高超过盒子（`ClipRect` 会裁掉超出的部分）。
+  final bool truncated;
 
   bool get isEmpty => entries.isEmpty;
 }
@@ -517,6 +550,7 @@ class CollapsedRichTextMetrics {
 
     final entries = <CollapsedPlannedBlock>[];
     var height = 0.0;
+    var truncated = false;
 
     for (final block in visible) {
       // 预算是**像素**，不是行数。按行数算就得挑一个行高当尺子，而块与块、
@@ -525,11 +559,33 @@ class CollapsedRichTextMetrics {
       final gap = entries.isEmpty ? 0.0 : CollapsedRichText.blockGap;
       final remainingHeight = limit - height - gap;
       // 第一个块无论多高都要画，否则纯标题笔记会得到一个空计划。
-      if (remainingHeight <= 0 && entries.isNotEmpty) break;
+      if (remainingHeight <= 0 && entries.isNotEmpty) {
+        // 后面还有块没排上，正文确实缺了一截。
+        truncated = true;
+        break;
+      }
 
       if (block.isMedia) {
-        entries.add(CollapsedPlannedBlock(block: block, maxLines: 1));
-        height += gap + CollapsedRichText.inlineMediaHeight;
+        // 放得下就照常画；只剩一截时压到那一截，压不出一张能看的图就不画了。
+        final double available = remainingHeight;
+        if (available < _minInlineMediaHeight) {
+          truncated = true;
+          break;
+        }
+        final double mediaHeight =
+            available < CollapsedRichText.inlineMediaHeight
+                ? available
+                : CollapsedRichText.inlineMediaHeight;
+        entries.add(CollapsedPlannedBlock(
+          block: block,
+          maxLines: 1,
+          mediaHeight: mediaHeight,
+        ));
+        height += gap + mediaHeight;
+        if (mediaHeight < CollapsedRichText.inlineMediaHeight) {
+          truncated = true;
+          break;
+        }
         continue;
       }
 
@@ -543,11 +599,12 @@ class CollapsedRichTextMetrics {
       if (textWidth <= 0) {
         entries.add(CollapsedPlannedBlock(block: block, maxLines: 1));
         height += gap + layout.minLineHeight;
+        truncated = true;
         continue;
       }
 
-      // 用本块**最矮**的一行换算行数上限：宁可多排一两行（`ClipRect` 会裁掉），
-      // 也不能少排——少排的内容是静悄悄消失的，没有任何提示。
+      // 先按本块**最矮**的一行换算一个上界：宁可多排一两行，也不能少排——
+      // 少排的内容是静悄悄消失的。真正要画几行由下面的实测行高决定。
       final maxLines = _lineBudgetFor(remainingHeight, layout.minLineHeight);
 
       final painter = TextPainter(
@@ -557,17 +614,60 @@ class CollapsedRichTextMetrics {
         locale: locale,
         maxLines: maxLines,
       )..layout(maxWidth: textWidth);
-      final blockHeight = painter.height;
+
+      // **按整行截断**：逐行累加实测行高，放得下几行就画几行。
+      //
+      // 以前这里画的行数是个上界，多出来的半行由 `ClipRect` 裁掉——盒底于是永远
+      // 挂着半截被切开的字，只能再盖一条模糊带去糊住它。行数一旦是精确的，那半行
+      // 不存在，模糊带也就没有存在的理由，末行改用省略号表达「还有下文」。
+      //
+      // 「至少画一行」**只对整个计划的第一个块成立**（否则一个字号极大的标题块会
+      // 得到空计划）。对后面的块也强画一行的话，剩余空间只有几个像素时照样塞一整
+      // 行进去，盒子被撑破——`Column` 真的溢出，debug 下就是那条黄黑警示带。
+      final bool isFirstBlock = entries.isEmpty;
+      final lines = painter.computeLineMetrics();
+      var fittedLines = 0;
+      var fittedHeight = 0.0;
+      for (final line in lines) {
+        final next = fittedHeight + line.height;
+        if (next > remainingHeight + 0.5 &&
+            !(isFirstBlock && fittedLines == 0)) {
+          break;
+        }
+        fittedHeight = next;
+        fittedLines++;
+      }
+      final bool blockTruncated =
+          painter.didExceedMaxLines || fittedLines < lines.length;
       painter.dispose();
 
-      entries.add(CollapsedPlannedBlock(block: block, maxLines: maxLines));
-      height += gap + blockHeight;
+      if (fittedLines <= 0) {
+        // 一行都放不下：这个块整个不画，后面的块自然也画不下。
+        truncated = true;
+        break;
+      }
+
+      entries.add(CollapsedPlannedBlock(
+        block: block,
+        maxLines: fittedLines,
+        ellipsis: blockTruncated,
+      ));
+      height += gap + fittedHeight;
+
+      if (blockTruncated) {
+        // 这一块都没排完，后面的块自然也排不下。
+        truncated = true;
+        break;
+      }
     }
 
     return CollapsedRichTextPlan(
       entries: List<CollapsedPlannedBlock>.unmodifiable(entries),
       height: height,
       showMedia: showMedia,
+      // 总高超过盒子时下沿会被 `ClipRect` 裁掉，哪怕每个块自己都排全了。
+      // 半像素余量和折叠判定那边同一个口径，避免测量抖动把「刚好排满」判成截断。
+      truncated: truncated || height > limit + 0.5,
     );
   }
 
@@ -596,6 +696,9 @@ class CollapsedRichTextMetrics {
     }
     return (budget.ceil() + 1).clamp(1, _maxLinesPerBlock);
   }
+
+  /// inline 版式下一张图至少要画这么高，再矮就只是一条看不出内容的色带。
+  static const double _minInlineMediaHeight = 32.0;
 
   /// 单个块的排版行数硬上限。
   ///
@@ -741,6 +844,7 @@ class _CollapsedRichTextBlock extends StatelessWidget {
     required this.palette,
     required this.maxLines,
     required this.boldWeight,
+    this.ellipsis = false,
   });
 
   final RichTextBlock block;
@@ -748,6 +852,9 @@ class _CollapsedRichTextBlock extends StatelessWidget {
   final CollapsedRichTextPalette palette;
   final int maxLines;
   final FontWeight boldWeight;
+
+  /// 末行收省略号，见 [CollapsedPlannedBlock.ellipsis]。
+  final bool ellipsis;
 
   @override
   Widget build(BuildContext context) {
@@ -761,7 +868,7 @@ class _CollapsedRichTextBlock extends StatelessWidget {
     final Widget text = Text.rich(
       layout.span,
       maxLines: maxLines,
-      overflow: TextOverflow.clip,
+      overflow: ellipsis ? TextOverflow.ellipsis : TextOverflow.clip,
       softWrap: true,
     );
 
