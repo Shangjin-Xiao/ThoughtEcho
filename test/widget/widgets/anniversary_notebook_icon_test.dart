@@ -9,7 +9,19 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: AnniversaryNotebookIcon(),
+            body: AnniversaryNotebookIcon(years: 1),
+          ),
+        ),
+      );
+
+      expect(find.byType(SvgPicture), findsOneWidget);
+    });
+
+    testWidgets('多位数届数同样能渲染', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: AnniversaryNotebookIcon(years: 12),
           ),
         ),
       );

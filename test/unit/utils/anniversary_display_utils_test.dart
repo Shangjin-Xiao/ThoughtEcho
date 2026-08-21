@@ -46,6 +46,19 @@ void main() {
       );
     });
 
+    test('nextEditionYear 给出当届或下一届', () {
+      // 上线当年还没有任何一届，先按一周年算。
+      expect(AnniversaryDisplayUtils.nextEditionYear(DateTime(2025, 4, 1)), 1);
+      // 一周年展示期开始前和进行中都还是这一届。
+      expect(AnniversaryDisplayUtils.nextEditionYear(DateTime(2026, 1, 5)), 1);
+      expect(AnniversaryDisplayUtils.nextEditionYear(DateTime(2026, 3, 23)), 1);
+      // 一周年展示期结束后顺延到两周年。
+      expect(AnniversaryDisplayUtils.nextEditionYear(DateTime(2026, 5, 1)), 2);
+      expect(AnniversaryDisplayUtils.nextEditionYear(DateTime(2026, 8, 21)), 2);
+      expect(AnniversaryDisplayUtils.nextEditionYear(DateTime(2027, 4, 1)), 2);
+      expect(AnniversaryDisplayUtils.nextEditionYear(DateTime(2027, 6, 1)), 3);
+    });
+
     test('模拟届数无视真实日期', () {
       expect(
         AnniversaryDisplayUtils.currentEdition(
@@ -113,23 +126,66 @@ void main() {
       );
     });
 
-    test('老用户标记只认更早的届数', () {
+    test('模拟中每次启动都播，不看参与记录', () {
       expect(
-        AnniversaryDisplayUtils.hasEarlierEdition(
-          shownYears: const [1],
-          currentYear: 2,
+        AnniversaryDisplayUtils.shouldAutoShowAnimation(
+          now: DateTime(2026, 8, 15),
+          shownYears: const [1, 2],
+          anniversaryAnimationEnabled: true,
+          simulatedYear: 2,
         ),
         isTrue,
       );
+      // 动画总开关仍然说了算。
       expect(
-        AnniversaryDisplayUtils.hasEarlierEdition(
-          shownYears: const [2],
-          currentYear: 2,
+        AnniversaryDisplayUtils.shouldAutoShowAnimation(
+          now: DateTime(2026, 8, 15),
+          shownYears: const [],
+          anniversaryAnimationEnabled: false,
+          simulatedYear: 2,
         ),
         isFalse,
       );
-      expect(AnniversaryDisplayUtils.earliestShownYear(const [2, 1]), 1);
-      expect(AnniversaryDisplayUtils.earliestShownYear(const []), isNull);
+    });
+
+    test('勋章按参与记录发，升序去重且不认未来的届数', () {
+      expect(
+        AnniversaryDisplayUtils.earnedBadgeYears(
+          shownYears: const [2, 1],
+          currentYear: 3,
+        ),
+        const [1, 2],
+      );
+      expect(
+        AnniversaryDisplayUtils.earnedBadgeYears(
+          shownYears: const [1, 1, 2, 2],
+          currentYear: 2,
+        ),
+        const [1, 2],
+      );
+      // 当届看完动画后自己也算一枚。
+      expect(
+        AnniversaryDisplayUtils.earnedBadgeYears(
+          shownYears: const [1, 2, 3],
+          currentYear: 3,
+        ),
+        const [1, 2, 3],
+      );
+      // 记录里出现超出当届的年份（脏数据）不发牌。
+      expect(
+        AnniversaryDisplayUtils.earnedBadgeYears(
+          shownYears: const [1, 5, 0, -2],
+          currentYear: 2,
+        ),
+        const [1],
+      );
+      expect(
+        AnniversaryDisplayUtils.earnedBadgeYears(
+          shownYears: const [],
+          currentYear: 2,
+        ),
+        isEmpty,
+      );
     });
   });
 }

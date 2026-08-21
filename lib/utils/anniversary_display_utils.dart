@@ -58,6 +58,17 @@ class AnniversaryDisplayUtils {
     );
   }
 
+  /// 下一届（或正在进行的那一届）的届数，永远 >= 1。
+  ///
+  /// 开发者模式的「模拟周年庆典」用它决定要模拟哪一届：庆典期内就是当届，
+  /// 过完了就顺延到明年那届，不用每年回来改常量。
+  static int nextEditionYear(DateTime now) {
+    final year = now.year - launchDate.year;
+    if (year < 1) return 1;
+    // 今年这届还没结束（含尚未开始和正在进行）就还是它，否则轮到下一届。
+    return now.isBefore(editionForYear(year).endExclusive) ? year : year + 1;
+  }
+
   /// 当前正在进行的那一届；不在任何展示期内返回 null。
   ///
   /// [simulatedYear] 大于 0 时无视真实日期，直接返回那一届 —— 开发者模式的
@@ -90,6 +101,9 @@ class AnniversaryDisplayUtils {
   }
 
   /// 启动时是否自动播放庆典动画：每一届只自动播一次。
+  ///
+  /// 模拟中（[simulatedYear] > 0）不看参与记录，每次启动都播 —— 开发者模式要的就是
+  /// 反复看这套流程，而记录是用户自己的收藏，不该为了调试被清掉。
   static bool shouldAutoShowAnimation({
     required DateTime now,
     required List<int> shownYears,
@@ -99,20 +113,23 @@ class AnniversaryDisplayUtils {
     if (!anniversaryAnimationEnabled) return false;
     final edition = currentEdition(now, simulatedYear: simulatedYear);
     if (edition == null) return false;
+    if (simulatedYear > 0) return true;
     return !shownYears.contains(edition.year);
   }
 
-  /// 用户是否参与过更早的庆典（一周年老用户在两周年会看到额外的致谢）。
-  static bool hasEarlierEdition({
+  /// 已经拿到的纪念勋章对应的届数，升序去重。
+  ///
+  /// 就是参与记录本身：参与过第几届就有第几枚，三周年时参与过一、二周年的人有两枚。
+  /// [currentYear] 之后的记录（模拟留下的脏数据之类）不算数。
+  static List<int> earnedBadgeYears({
     required List<int> shownYears,
     required int currentYear,
   }) {
-    return shownYears.any((year) => year > 0 && year < currentYear);
-  }
-
-  /// 参与过的最早那一届，没有则返回 null。
-  static int? earliestShownYear(List<int> shownYears) {
-    final valid = shownYears.where((year) => year > 0).toList()..sort();
-    return valid.isEmpty ? null : valid.first;
+    final years = shownYears
+        .where((year) => year > 0 && year <= currentYear)
+        .toSet()
+        .toList()
+      ..sort();
+    return years;
   }
 }
