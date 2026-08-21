@@ -3616,34 +3616,53 @@
   "feedbackDiscussionDesc": "Poser des questions, partager des idées et échanger avec d autres utilisateurs",
   "feedbackSentryTitle": "Envoyer des commentaires (Sentry)",
   "feedbackSentryDesc": "Envoyer des commentaires, des suggestions ou des rapports de bugs directement aux développeurs",
-  "sentryDisclosureMessage": "[FR] The ThoughtEcho privacy policy has been updated. You can view the latest version on our official website.\n\nWe have added Sentry to collect errors and user feedback. To protect your privacy, this feature is disabled by default. You can enable it anytime in 'Settings -> Feedback & Contact'.\n\nPrivacy Policy: https://note.shangjinyun.cn/privacy",
+  "addAiService": "Ajouter un service IA",
+  "agentMemorySectionTitle": "Mémoire de Thoughter",
+  "agentMemoryEnableTitle": "Mémoire à long terme",
+  "agentMemoryEnableDesc": "Se souvenir de vos préférences entre les discussions (stocké localement uniquement)",
+  "agentMemoryNicknameTitle": "Surnom",
+  "agentMemoryNicknameHint": "Comment Thoughter doit-il vous appeler ?",
+  "agentMemoryNicknameDesc": "Comment Thoughter doit vous appeler (laissez vide pour ignorer)",
+  "agentMemoryNicknameSaveFailed": "Impossible d'enregistrer votre surnom. Veuillez réessayer.",
+  "agentMemoryNicknameDisabled": "Activé lorsque la mémoire à long terme est activée",
+  "agentMemoryClearTitle": "Effacer la mémoire",
+  "agentMemoryClearEmpty": "Rien de mémorisé pour le moment",
+  "agentMemoryClearConfirmTitle": "Effacer la mémoire de Thoughter ?",
+  "agentMemoryClearConfirmBody": "Toutes les préférences et détails mémorisés seront supprimés définitivement. Vos notes ne sont pas affectées.",
+  "agentMemoryClearConfirmAction": "Effacer",
+  "agentMemoryCleared": "La mémoire de Thoughter a été effacée",
+  "agentMemoryClearFailed": "Échec de l'effacement de la mémoire",
+  "agentMemoryNoticeTitle": "Thoughter se souviendra de vous",
+  "agentMemoryNoticeGotIt": "Compris",
+  "agentMemoryNoticeDisable": "Ne pas se souvenir",
+  "sentryDisclosureMessage": "[FR] 心迹隐私政策已更新，您可以在官网查看。\n\n本次更新加入了 Sentry 以收集崩溃错误与用户反馈，为保护您的隐私，该功能默认关闭。您可以在“设置 -> 反馈与联系”中随时开启。\n\n隐私政策链接：https://note.shangjinyun.cn/privacy",
   "feedbackEmailDesc": "[FR] shangjinyun@proton.me",
-  "feedbackSentryDisabledHint": "[FR] Please enable Sentry Debugging & Reporting below first",
-  "noteListDisableCardShadowsExperiment": "[FR] [Experiment] Disable note-list card shadows",
-  "noteListDisableCardShadowsExperimentDesc": "[FR] Available in release builds. Compare how card shadows affect Notes scrolling performance and visual feel (off by default)",
-  "noteListDisableBackdropBlurExperiment": "[FR] [Experiment] Disable note-list collapse blur",
-  "noteListDisableBackdropBlurExperimentDesc": "[FR] Available in release builds. Replaces the collapsed long-content bottom blur with a gradient scrim (off by default)",
-  "addNoteAutoFocusExperiment": "[FR] [Experiment] AddNote auto focus",
-  "addNoteAutoFocusExperimentDesc": "[FR] Automatically show the keyboard after the add note dialog settles (on by default)",
-  "noteNotFound": "[FR] Note not found",
-  "noteUpdateSkippedDeleted": "[FR] Note has been deleted, update skipped",
-  "dailyQuoteApiDesc": "[FR] Choose the service provider used for the home page daily quote text.",
-  "dailyQuoteApiHitokoto": "[FR] Hitokoto",
+  "feedbackSentryDisabledHint": "[FR] 请先在下方开启 Sentry 调试与报错服务",
+  "noteListDisableCardShadowsExperiment": "[FR] [实验] 记录页禁用卡片阴影",
+  "noteListDisableCardShadowsExperimentDesc": "[FR] 发布版可用。用于对比阴影对记录页滑动性能和视觉观感的影响（默认关）",
+  "noteListDisableBackdropBlurExperiment": "[FR] [实验] 记录页禁用折叠模糊",
+  "noteListDisableBackdropBlurExperimentDesc": "[FR] 发布版可用。将长内容折叠底部的背景模糊替换为渐变遮罩（默认关）",
+  "addNoteAutoFocusExperiment": "[FR] [实验] AddNote 自动聚焦",
+  "addNoteAutoFocusExperimentDesc": "[FR] 打开添加笔记对话框稳定后自动弹出键盘（默认开）",
+  "noteNotFound": "[FR] 笔记不存在",
+  "noteUpdateSkippedDeleted": "[FR] 笔记已删除，更新已跳过",
+  "dailyQuoteApiDesc": "[FR] 选择用于首页每日文段的服务提供方。",
+  "dailyQuoteApiHitokoto": "[FR] 一言 (Hitokoto)",
   "dailyQuoteApiZenQuotes": "[FR] ZenQuotes",
   "dailyQuoteApiApiNinjas": "[FR] API Ninjas",
-  "dailyQuoteApiMeigen": "[FR] Meigen Oshieruyo",
+  "dailyQuoteApiMeigen": "[FR] 名言教えるよ",
   "dailyQuoteApiKoreanAdvice": "[FR] Korean Advice",
-  "dailyQuoteApiNinjasManageApiKey": "[FR] Configure service key",
-  "dailyQuoteApiNinjasApiKeyHint": "[FR] Enter the API Ninjas X-Api-Key",
-  "dailyQuoteApiNinjasApiKeyConfigured": "[FR] Service key configured",
-  "dailyQuoteApiNinjasApiKeyMissing": "[FR] No service key configured yet",
-  "dailyQuoteApiNinjasApiKeyInvalid": "[FR] The service key format looks invalid",
-  "dailyQuoteApiNinjasCategorySelection": "[FR] Category selection",
-  "dailyQuoteApiNinjasCategoryDesc": "[FR] Search, select multiple categories, or clear them all. Leaving everything unchecked falls back to fully random quotes.",
-  "dailyQuoteApiNinjasCategorySearchHint": "[FR] Search categories",
-  "dailyQuoteApiNinjasNoCategoriesFound": "[FR] No matching categories",
-  "dailyQuoteApiNinjasAllCategoriesUsed": "[FR] No category filter applied; quotes will be drawn from the full pool",
-  "dailyQuoteApiNinjasSelectedCount": "[FR] {count} categories selected",
+  "dailyQuoteApiNinjasManageApiKey": "[FR] 配置服务密钥",
+  "dailyQuoteApiNinjasApiKeyHint": "[FR] 输入 API Ninjas 的 X-Api-Key",
+  "dailyQuoteApiNinjasApiKeyConfigured": "[FR] 已配置服务密钥",
+  "dailyQuoteApiNinjasApiKeyMissing": "[FR] 尚未配置服务密钥，无法请求该服务",
+  "dailyQuoteApiNinjasApiKeyInvalid": "[FR] 服务密钥格式无效",
+  "dailyQuoteApiNinjasCategorySelection": "[FR] 分类选择",
+  "dailyQuoteApiNinjasCategoryDesc": "[FR] 支持搜索、多选与清空；如果一个也不选，则自动按全局随机处理。",
+  "dailyQuoteApiNinjasCategorySearchHint": "[FR] 搜索分类",
+  "dailyQuoteApiNinjasNoCategoriesFound": "[FR] 没有匹配的分类",
+  "dailyQuoteApiNinjasAllCategoriesUsed": "[FR] 未限制分类，将从全部分类中随机抽取",
+  "dailyQuoteApiNinjasSelectedCount": "[FR] 已选择 {count} 个分类",
   "@dailyQuoteApiNinjasSelectedCount": {
     "placeholders": {
       "count": {
@@ -3651,28 +3670,28 @@
       }
     }
   },
-  "dailyQuoteApiNinjasCategoryWisdom": "[FR] Wisdom",
-  "dailyQuoteApiNinjasCategoryPhilosophy": "[FR] Philosophy",
-  "dailyQuoteApiNinjasCategoryLife": "[FR] Life",
-  "dailyQuoteApiNinjasCategoryTruth": "[FR] Truth",
-  "dailyQuoteApiNinjasCategoryInspirational": "[FR] Inspirational",
-  "dailyQuoteApiNinjasCategoryRelationships": "[FR] Relationships",
-  "dailyQuoteApiNinjasCategoryLove": "[FR] Love",
-  "dailyQuoteApiNinjasCategoryFaith": "[FR] Faith",
-  "dailyQuoteApiNinjasCategoryHumor": "[FR] Humor",
-  "dailyQuoteApiNinjasCategorySuccess": "[FR] Success",
-  "dailyQuoteApiNinjasCategoryCourage": "[FR] Courage",
-  "dailyQuoteApiNinjasCategoryHappiness": "[FR] Happiness",
-  "dailyQuoteApiNinjasCategoryArt": "[FR] Art",
-  "dailyQuoteApiNinjasCategoryWriting": "[FR] Writing",
-  "dailyQuoteApiNinjasCategoryFear": "[FR] Fear",
-  "dailyQuoteApiNinjasCategoryNature": "[FR] Nature",
-  "dailyQuoteApiNinjasCategoryTime": "[FR] Time",
-  "dailyQuoteApiNinjasCategoryFreedom": "[FR] Freedom",
-  "dailyQuoteApiNinjasCategoryDeath": "[FR] Death",
-  "dailyQuoteApiNinjasCategoryLeadership": "[FR] Leadership",
-  "dailyQuoteProviderNoTypeSelection": "[FR] This provider does not support category filtering.",
-  "dailyQuoteServiceProvider": "[FR] Current content provided by {provider}",
+  "dailyQuoteApiNinjasCategoryWisdom": "[FR] 智慧",
+  "dailyQuoteApiNinjasCategoryPhilosophy": "[FR] 哲学",
+  "dailyQuoteApiNinjasCategoryLife": "[FR] 人生",
+  "dailyQuoteApiNinjasCategoryTruth": "[FR] 真理",
+  "dailyQuoteApiNinjasCategoryInspirational": "[FR] 励志",
+  "dailyQuoteApiNinjasCategoryRelationships": "[FR] 关系",
+  "dailyQuoteApiNinjasCategoryLove": "[FR] 爱情",
+  "dailyQuoteApiNinjasCategoryFaith": "[FR] 信念",
+  "dailyQuoteApiNinjasCategoryHumor": "[FR] 幽默",
+  "dailyQuoteApiNinjasCategorySuccess": "[FR] 成功",
+  "dailyQuoteApiNinjasCategoryCourage": "[FR] 勇气",
+  "dailyQuoteApiNinjasCategoryHappiness": "[FR] 幸福",
+  "dailyQuoteApiNinjasCategoryArt": "[FR] 艺术",
+  "dailyQuoteApiNinjasCategoryWriting": "[FR] 写作",
+  "dailyQuoteApiNinjasCategoryFear": "[FR] 恐惧",
+  "dailyQuoteApiNinjasCategoryNature": "[FR] 自然",
+  "dailyQuoteApiNinjasCategoryTime": "[FR] 时间",
+  "dailyQuoteApiNinjasCategoryFreedom": "[FR] 自由",
+  "dailyQuoteApiNinjasCategoryDeath": "[FR] 死亡",
+  "dailyQuoteApiNinjasCategoryLeadership": "[FR] 领导力",
+  "dailyQuoteProviderNoTypeSelection": "[FR] 当前来源不支持分类筛选。",
+  "dailyQuoteServiceProvider": "[FR] 当前内容由 {provider} 提供",
   "@dailyQuoteServiceProvider": {
     "placeholders": {
       "provider": {
@@ -3680,13 +3699,13 @@
       }
     }
   },
-  "migrationTargetSameAsCurrent": "[FR] The selected directory is the same as the current data directory",
-  "migrationTargetAncestor": "[FR] The selected directory cannot be a parent of the current data directory",
-  "migrationTargetNested": "[FR] The selected directory cannot be inside the current data directory",
-  "viewToolProcess": "[FR] View process",
-  "cardSharePrefix": "[FR] A beautiful card from ThoughtEcho\n\n",
-  "agentErrorNoProvider": "[FR] Select an AI provider and try again.",
-  "agentErrorMissingApiKey": "[FR] Configure an API key for {providerName}, then try again.",
+  "migrationTargetSameAsCurrent": "[FR] 新目录与当前数据目录相同",
+  "migrationTargetAncestor": "[FR] 新目录不能是当前数据目录的上级目录",
+  "migrationTargetNested": "[FR] 新目录不能位于当前数据目录内部",
+  "viewToolProcess": "[FR] 查看过程",
+  "cardSharePrefix": "[FR] 来自心迹的精美卡片\n\n",
+  "agentErrorNoProvider": "[FR] 请选择 AI 服务商后重试。",
+  "agentErrorMissingApiKey": "[FR] 请先为 {providerName} 配置 API 密钥，然后重试。",
   "@agentErrorMissingApiKey": {
     "placeholders": {
       "providerName": {
@@ -3694,12 +3713,12 @@
       }
     }
   },
-  "agentErrorUnsupportedProvider": "[FR] The current AI provider does not support Agent mode. Choose another provider and try again.",
-  "agentErrorTimeout": "[FR] The request timed out. Check your connection and try again.",
-  "agentErrorCancelled": "[FR] This request was stopped.",
-  "agentErrorGeneric": "[FR] The request could not be completed. Please try again later.",
-  "unsupportedMediaType": "[FR] Unsupported media type",
-  "unsupportedMediaTypeWithName": "[FR] Unsupported media type: {mediaType}",
+  "agentErrorUnsupportedProvider": "[FR] 当前 AI 服务商不支持 Agent 功能。请更换服务商后重试。",
+  "agentErrorTimeout": "[FR] 请求超时，请检查网络后重试。",
+  "agentErrorCancelled": "[FR] 已停止本次请求。",
+  "agentErrorGeneric": "[FR] 暂时无法完成请求，请稍后重试。",
+  "unsupportedMediaType": "[FR] 不支持的媒体类型",
+  "unsupportedMediaTypeWithName": "[FR] 不支持的媒体类型: {mediaType}",
   "@unsupportedMediaTypeWithName": {
     "placeholders": {
       "mediaType": {
@@ -3707,7 +3726,7 @@
       }
     }
   },
-  "fileNotExistOrMoved": "[FR] The selected file does not exist or has been moved or deleted\nPath: {path}",
+  "fileNotExistOrMoved": "[FR] 选择的文件不存在或已被移动删除\n路径: {path}",
   "@fileNotExistOrMoved": {
     "placeholders": {
       "path": {
@@ -3715,7 +3734,7 @@
       }
     }
   },
-  "selectedFileEmpty": "[FR] The selected file is empty\nPath: {path}",
+  "selectedFileEmpty": "[FR] 选择的文件为空\n路径: {path}",
   "@selectedFileEmpty": {
     "placeholders": {
       "path": {
@@ -3723,7 +3742,7 @@
       }
     }
   },
-  "unsupportedFileFormat": "[FR] Unsupported file format: .{extension}\nSupported formats: {formats}",
+  "unsupportedFileFormat": "[FR] 不支持的文件格式: .{extension}\n支持的格式: {formats}",
   "@unsupportedFileFormat": {
     "placeholders": {
       "extension": {
@@ -3734,8 +3753,8 @@
       }
     }
   },
-  "fileUnreadable": "[FR] The file cannot be read. Possible reasons:\n• The file is corrupted\n• The file is being used by another program\n• Insufficient permissions\nPlease check the file and try again",
-  "mediaTypeNoCameraImport": "[FR] {mediaType} does not support camera import",
+  "fileUnreadable": "[FR] 文件无法读取，可能原因：\n• 文件已损坏\n• 文件被其他程序占用\n• 权限不足\n请检查文件状态后重试",
+  "mediaTypeNoCameraImport": "[FR] {mediaType}不支持相机导入",
   "@mediaTypeNoCameraImport": {
     "placeholders": {
       "mediaType": {
@@ -3743,7 +3762,7 @@
       }
     }
   },
-  "noteAttribution": "[FR]  (attributed to {source})",
+  "noteAttribution": "[FR] （署名：{source}）",
   "@noteAttribution": {
     "description": "喂给 AI 的笔记内容里，标出这条笔记填的作者/出处，用于区分摘录与原创署名",
     "placeholders": {
@@ -3752,13 +3771,13 @@
       }
     }
   },
-  "aiProviderOllamaCloud": "[FR] Ollama Cloud",
-  "loadFailedSimple": "[FR] Load failed",
-  "loadNoteFailed": "[FR] Failed to load notes",
-  "queryTimeoutShort": "[FR] Query timed out",
-  "queryTimeoutRetry": "[FR] Query timed out, please retry",
-  "databaseQueryError": "[FR] Database query error",
-  "syncFromSuffix": "[FR]  (from {from})",
+  "aiProviderOllamaCloud": "[FR] Ollama 云端",
+  "loadFailedSimple": "[FR] 加载失败",
+  "loadNoteFailed": "[FR] 加载笔记失败",
+  "queryTimeoutShort": "[FR] 查询超时",
+  "queryTimeoutRetry": "[FR] 查询超时，请重试",
+  "databaseQueryError": "[FR] 数据库查询出错",
+  "syncFromSuffix": "[FR] （来自{from}）",
   "@syncFromSuffix": {
     "placeholders": {
       "from": {
@@ -3766,9 +3785,9 @@
       }
     }
   },
-  "showNoteEditTime": "[FR] Show Note Edit Time",
-  "showNoteEditTimeDesc": "[FR] Display the last edited time in notes",
-  "editedAtLabel": "[FR] Edited at {dateTime}",
+  "showNoteEditTime": "[FR] 显示笔记编辑时间",
+  "showNoteEditTimeDesc": "[FR] 在笔记中显示最后编辑时间",
+  "editedAtLabel": "[FR] 编辑于 {dateTime}",
   "@editedAtLabel": {
     "placeholders": {
       "dateTime": {
@@ -3776,14 +3795,14 @@
       }
     }
   },
-  "deleteAiAnalysis": "[FR] Delete AI Analysis",
-  "deleteAiAnalysisConfirm": "[FR] Are you sure you want to delete the AI analysis result for this note? This can be undone before saving the note.",
-  "aiAnalysisDeleted": "[FR] AI analysis deleted",
-  "aiAnalysisSaved": "[FR] AI analysis saved",
-  "viewFull": "[FR] View Full",
-  "copy": "[FR] Copy",
-  "copiedToClipboard": "[FR] Copied to clipboard",
-  "backupSavedToPath": "[FR] Backup saved to: {path}",
+  "deleteAiAnalysis": "[FR] 删除AI分析",
+  "deleteAiAnalysisConfirm": "[FR] 确定要删除此笔记的AI分析结果吗？此操作可在保存笔记前撤销。",
+  "aiAnalysisDeleted": "[FR] AI分析已删除",
+  "aiAnalysisSaved": "[FR] AI分析已保存",
+  "viewFull": "[FR] 查看全文",
+  "copy": "[FR] 复制",
+  "copiedToClipboard": "[FR] 已复制到剪贴板",
+  "backupSavedToPath": "[FR] 备份已保存到: {path}",
   "@backupSavedToPath": {
     "placeholders": {
       "path": {
@@ -3791,8 +3810,8 @@
       }
     }
   },
-  "backupCompleteWithWarnings": "[FR] Backup completed, but with warnings",
-  "backupDeltaFailuresMessage": "[FR] {count, plural, =1{1 note had rich-text media path conversion failures. This note still contains a local absolute path in the backup; images may not display when restored on another device.\n\nAffected note ID: {ids}} other{# notes had rich-text media path conversion failures. These notes still contain local absolute paths in the backup; images may not display when restored on another device.\n\nAffected note IDs: {ids}}}",
+  "backupCompleteWithWarnings": "[FR] 备份已完成，但有警告",
+  "backupDeltaFailuresMessage": "[FR] {count, plural, other{有 # 条笔记的富文本媒体路径转换失败，这些笔记在备份中仍保留本机绝对路径，恢复到其他设备时相关图片可能无法显示。\n\n受影响的笔记ID：{ids}}}",
   "@backupDeltaFailuresMessage": {
     "placeholders": {
       "count": {
@@ -3803,42 +3822,42 @@
       }
     }
   },
-  "backupDeltaFailuresIdJoiner": "[FR] , ",
-  "backupDeltaFailuresMoreSuffix": "[FR]  etc.",
-  "backupFailedGeneric": "[FR] Unable to complete backup. Please try again later.",
+  "backupDeltaFailuresIdJoiner": "[FR] 、",
+  "backupDeltaFailuresMoreSuffix": "[FR]  等",
+  "backupFailedGeneric": "[FR] 无法完成备份，请稍后重试",
   "@backupFailedGeneric": {
     "description": "Generic backup failure message shown when the error type is not classified"
   },
-  "backupFailedOutOfMemory": "[FR] Backup failed: Out of memory\n\nSuggestions:\n• Close other apps to free up memory\n• Try a backup without media files\n• Restart the app and try again",
-  "backupFailedNoSpace": "[FR] Backup failed: Not enough storage space\n\nPlease free up device storage and try again.",
-  "backupFailedPermission": "[FR] Backup failed: Insufficient permission\n\nPlease check the app's storage permission settings.",
-  "saveTempFileFailed": "[FR] Failed to save temporary file",
-  "openBrowserFailed": "[FR] Failed to open browser",
-  "createShareFileFailed": "[FR] Failed to create share file",
-  "aiSuggestionCoreIdea": "[FR] What is the core idea of this note?",
-  "aiSuggestionInspiration": "[FR] What inspiration can we draw from it?",
-  "aiSuggestionSummarize": "[FR] Can you summarize the key points?",
-  "aiSuggestionSolution": "[FR] What solutions are there?",
-  "aiSuggestionUnderstandConcept": "[FR] How can I better understand this concept?",
-  "aiSuggestionActionPlan": "[FR] How do I create an action plan?",
-  "aiSuggestionPsychology": "[FR] What psychological state does this reflect?",
-  "aiSuggestionRealLife": "[FR] How can this be applied to real life?",
-  "aiSuggestionThinkingPattern": "[FR] What thinking pattern does this reflect?",
-  "svgLoading": "[FR] Loading SVG...",
-  "svgLoadingFallback": "[FR] Loading fallback template...",
-  "svgRenderFailed": "[FR] SVG render failed",
-  "svgTryingFallback": "[FR] Trying fallback template...",
-  "cardRenderFailed": "[FR] Card render failed",
-  "cardRegeneratePrompt": "[FR] Please try regenerating the card",
-  "svgContentParseFailed": "[FR] Content parse failed",
-  "svgContentExtractFailed": "[FR] Unable to extract content",
-  "svgContentEmpty": "[FR] SVG content is empty",
-  "svgContentInvalidFormat": "[FR] Invalid SVG format",
-  "svgFallbackTitle": "[FR] SVG generation failed",
-  "svgFallbackHint": "[FR] Please try regenerating the card or check your AI configuration",
-  "svgFallbackIdentifier": "[FR] ThoughtEcho - Fallback Template",
-  "mediaProcessingNone": "[FR] No media files to process",
-  "mediaProcessingFound": "[FR] {total, plural, =1{Found 1 media file} other{Found # media files}}",
+  "backupFailedOutOfMemory": "[FR] 备份失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 尝试不包含媒体文件的备份\n• 重启应用后再试",
+  "backupFailedNoSpace": "[FR] 备份失败：存储空间不足\n\n请清理设备存储空间后重试。",
+  "backupFailedPermission": "[FR] 备份失败：权限不足\n\n请检查应用的存储权限设置。",
+  "saveTempFileFailed": "[FR] 保存临时文件失败",
+  "openBrowserFailed": "[FR] 打开浏览器失败",
+  "createShareFileFailed": "[FR] 创建分享文件失败",
+  "aiSuggestionCoreIdea": "[FR] 这篇笔记的核心思想是什么？",
+  "aiSuggestionInspiration": "[FR] 从中能得到什么启发？",
+  "aiSuggestionSummarize": "[FR] 能否总结一下要点？",
+  "aiSuggestionSolution": "[FR] 有什么解决方案吗？",
+  "aiSuggestionUnderstandConcept": "[FR] 如何更好地理解这个概念？",
+  "aiSuggestionActionPlan": "[FR] 如何制定行动计划？",
+  "aiSuggestionPsychology": "[FR] 这反映了什么心理状态？",
+  "aiSuggestionRealLife": "[FR] 如何应用到实际生活中？",
+  "aiSuggestionThinkingPattern": "[FR] 反映了什么思维模式？",
+  "svgLoading": "[FR] 正在加载SVG...",
+  "svgLoadingFallback": "[FR] 正在加载备用模板...",
+  "svgRenderFailed": "[FR] SVG渲染失败",
+  "svgTryingFallback": "[FR] 正在尝试使用备用模板...",
+  "cardRenderFailed": "[FR] 卡片渲染失败",
+  "cardRegeneratePrompt": "[FR] 请尝试重新生成卡片",
+  "svgContentParseFailed": "[FR] 内容解析失败",
+  "svgContentExtractFailed": "[FR] 无法提取内容",
+  "svgContentEmpty": "[FR] SVG内容为空",
+  "svgContentInvalidFormat": "[FR] 无效的SVG格式",
+  "svgFallbackTitle": "[FR] SVG生成失败",
+  "svgFallbackHint": "[FR] 请尝试重新生成或检查AI配置",
+  "svgFallbackIdentifier": "[FR] 心迹 - 备用模板",
+  "mediaProcessingNone": "[FR] 无需处理媒体文件",
+  "mediaProcessingFound": "[FR] {total, plural, other{发现 # 个媒体文件}}",
   "@mediaProcessingFound": {
     "placeholders": {
       "total": {
@@ -3846,7 +3865,7 @@
       }
     }
   },
-  "mediaProcessingCopying": "[FR] Copying {typeLabel} {done}/{total}",
+  "mediaProcessingCopying": "[FR] 复制{typeLabel} {done}/{total}",
   "@mediaProcessingCopying": {
     "placeholders": {
       "typeLabel": {
@@ -3860,7 +3879,7 @@
       }
     }
   },
-  "mediaProcessingProgress": "[FR] Processed {done} / {total}",
+  "mediaProcessingProgress": "[FR] 已处理 {done} / {total}",
   "@mediaProcessingProgress": {
     "placeholders": {
       "done": {
@@ -3871,24 +3890,24 @@
       }
     }
   },
-  "dailyQuoteLoading": "[FR] Loading...",
-  "dailyQuoteLoadingLocal": "[FR] Loading from local records...",
-  "dailyQuoteLoadingOffline": "[FR] No network, loading from local records...",
-  "dailyQuoteNoNetworkRetry": "[FR] No network and no local records, tap to retry",
-  "dailyQuoteFetchFailedRetry": "[FR] Failed to fetch quote, tap to retry",
-  "smartPushDailyQuoteIndependentNote": "[FR] Daily Quote runs independently from Smart Push — each can be enabled or disabled separately.",
-  "excerptIntentEnabled": "[FR] Clip to ThoughtEcho",
-  "excerptIntentEnabledDesc": "[FR] Allow selected text from browsers or other apps to open ThoughtEcho directly in the non-fullscreen editor",
-  "annualReportDemo": "[FR] Annual Report Demo",
-  "manualApiTest": "[FR] Manual API Test",
-  "manualApiTestTitle": "[FR] Manual API Key Test",
-  "manualApiTestDesc": "[FR] Directly input API parameters for testing, bypassing the storage system to check if the API key is valid.",
-  "testResultLabel": "[FR] Test Result:",
-  "fillAllFieldsError": "[FR] Error: Please fill in all required fields",
-  "testReportTitle": "[FR] === Manual API Key Test Report ===",
-  "testParamsLabel": "[FR] Test Parameters:",
-  "keyFormatCheckLabel": "[FR] Key Format Check:",
-  "testApiKeyPrefixLabel": "[FR]   API Key Prefix: {prefix}",
+  "dailyQuoteLoading": "[FR] 加载中...",
+  "dailyQuoteLoadingLocal": "[FR] 从本地记录加载中...",
+  "dailyQuoteLoadingOffline": "[FR] 网络未连接，从本地记录加载中...",
+  "dailyQuoteNoNetworkRetry": "[FR] 无网络连接且无本地记录，点击重试",
+  "dailyQuoteFetchFailedRetry": "[FR] 获取一言失败，点击重试",
+  "smartPushDailyQuoteIndependentNote": "[FR] 每日一言独立于智能推送，两者互不影响，可分别开启或关闭。",
+  "excerptIntentEnabled": "[FR] 摘录到心迹",
+  "excerptIntentEnabledDesc": "[FR] 允许从浏览器或其他应用选中文本后直接跳转到心迹，并打开非全屏编辑器",
+  "annualReportDemo": "[FR] 年度报告演示",
+  "manualApiTest": "[FR] 手动API测试",
+  "manualApiTestTitle": "[FR] 手动API密钥测试",
+  "manualApiTestDesc": "[FR] 直接输入API参数进行测试，绕过存储系统检查API密钥是否有效。",
+  "testResultLabel": "[FR] 测试结果:",
+  "fillAllFieldsError": "[FR] 错误: 请填写所有必填字段",
+  "testReportTitle": "[FR] === 手动API密钥测试报告 ===",
+  "testParamsLabel": "[FR] 测试参数:",
+  "keyFormatCheckLabel": "[FR] 密钥格式检查:",
+  "testApiKeyPrefixLabel": "[FR]   API Key前缀: {prefix}",
   "@testApiKeyPrefixLabel": {
     "placeholders": {
       "prefix": {
@@ -3896,14 +3915,14 @@
       }
     }
   },
-  "sendRequestLabel": "[FR] Send Request:",
-  "responseResultLabel": "[FR] Response Result:",
-  "testApiKey": "[FR] Test API Key",
-  "aiReturnedEmptyContent": "[FR] AI returned empty content, please try again",
-  "chatWithAiAssistant": "[FR] Chat with Thoughter (AI Assistant) to explore note content",
-  "messageCopied": "[FR] Message copied to clipboard",
-  "anniversaryTitle": "[FR] ThoughtEcho · 心迹",
-  "anniversarySubtitle": "[FR] Year {years} · Thank you for being with us",
+  "sendRequestLabel": "[FR] 发送请求:",
+  "responseResultLabel": "[FR] 响应结果:",
+  "testApiKey": "[FR] 测试API密钥",
+  "aiReturnedEmptyContent": "[FR] AI返回了空内容，请重试",
+  "chatWithAiAssistant": "[FR] 与 Thoughter (AI 助手) 对话，深入探讨笔记内容",
+  "messageCopied": "[FR] 消息已复制到剪贴板",
+  "anniversaryTitle": "[FR] 心迹 · ThoughtEcho",
+  "anniversarySubtitle": "[FR] {years} 周年 · 感恩有你，一路同行",
   "@anniversarySubtitle": {
     "placeholders": {
       "years": {
@@ -3911,7 +3930,7 @@
       }
     }
   },
-  "anniversaryVeteranThanks": "[FR] You've been here since year {years} — thank you for keeping at it",
+  "anniversaryVeteranThanks": "[FR] 你从 {years} 周年起就在这里了，谢谢一直写下去",
   "@anniversaryVeteranThanks": {
     "placeholders": {
       "years": {
@@ -3919,8 +3938,8 @@
       }
     }
   },
-  "anniversaryEnterApp": "[FR] Enter App",
-  "anniversaryBannerTitle": "[FR] ThoughtEcho Year {years} Anniversary",
+  "anniversaryEnterApp": "[FR] 进入应用",
+  "anniversaryBannerTitle": "[FR] 心迹 ThoughtEcho {years} 周年",
   "@anniversaryBannerTitle": {
     "placeholders": {
       "years": {
@@ -3928,7 +3947,7 @@
       }
     }
   },
-  "anniversaryBannerSubtitle": "[FR] Thank you for every step of the journey · {range}",
+  "anniversaryBannerSubtitle": "[FR] 感恩有你，一路同行 · {range}",
   "@anniversaryBannerSubtitle": {
     "placeholders": {
       "range": {
@@ -3936,19 +3955,19 @@
       }
     }
   },
-  "anniversaryBannerTap": "[FR] Tap to replay the celebration",
-  "anniversaryReplayButton": "[FR] Replay",
-  "developerAnniversarySection": "[FR] Anniversary",
-  "developerAnniversaryEnabled": "[FR] Enable Anniversary Animation",
-  "developerAnniversaryEnabledDesc": "[FR] Toggle whether the celebration animation shows on launch",
-  "developerAnniversaryReset": "[FR] Clear Participation Record",
-  "developerAnniversaryResetDesc": "[FR] Clears the record so the celebration plays again as for a new user",
-  "developerAnniversaryResetDone": "[FR] Cleared, the celebration will play again",
-  "developerAnniversaryPreview": "[FR] Preview Animation Now",
-  "developerAnniversaryPreviewDesc": "[FR] Plays the celebration for the simulated year right away",
-  "developerAnniversarySimulate": "[FR] Simulate Anniversary",
-  "developerAnniversarySimulateOff": "[FR] Off",
-  "developerAnniversarySimulateYear": "[FR] Year {years}",
+  "anniversaryBannerTap": "[FR] 点击重温庆典动画",
+  "anniversaryReplayButton": "[FR] 重播动画",
+  "developerAnniversarySection": "[FR] 周年庆典",
+  "developerAnniversaryEnabled": "[FR] 启用庆典动画",
+  "developerAnniversaryEnabledDesc": "[FR] 开关控制是否在启动时展示庆典动画",
+  "developerAnniversaryReset": "[FR] 清空已参与记录",
+  "developerAnniversaryResetDesc": "[FR] 清空后当作新用户，庆典动画会重新自动播放",
+  "developerAnniversaryResetDone": "[FR] 已清空，庆典动画会重新自动播放",
+  "developerAnniversaryPreview": "[FR] 立即预览动画",
+  "developerAnniversaryPreviewDesc": "[FR] 按当前模拟届数立即播放庆典动画",
+  "developerAnniversarySimulate": "[FR] 模拟周年庆典",
+  "developerAnniversarySimulateOff": "[FR] 关闭",
+  "developerAnniversarySimulateYear": "[FR] {years} 周年",
   "@developerAnniversarySimulateYear": {
     "placeholders": {
       "years": {
@@ -3956,8 +3975,8 @@
       }
     }
   },
-  "developerAnniversarySimulateDescOff": "[FR] Following the real date; not in a celebration window",
-  "developerAnniversarySimulateDescActive": "[FR] Simulating year {years}: the settings banner and launch animation both use this edition",
+  "developerAnniversarySimulateDescOff": "[FR] 按真实日期判断，当前不在庆典期",
+  "developerAnniversarySimulateDescActive": "[FR] 正在模拟 {years} 周年：设置页横幅和启动动画都按这一届展示",
   "@developerAnniversarySimulateDescActive": {
     "placeholders": {
       "years": {
@@ -3965,42 +3984,42 @@
       }
     }
   },
-  "developerAnniversaryShownYears": "[FR] Celebrations Seen",
-  "developerAnniversaryShownYearsNone": "[FR] None yet",
-  "mediaPlayerPlay": "[FR] Play",
-  "mediaPlayerPause": "[FR] Pause",
-  "operationSuccess": "[FR] Operation successful!",
-  "loadingInProgress": "[FR] Loading...",
-  "aiThinkingProgress": "[FR] AI is thinking...",
-  "processingData": "[FR] Processing data...",
-  "analyzingContent": "[FR] Analyzing content...",
-  "skipNonFullscreenEditor": "[FR] Open fullscreen editor directly",
-  "skipNonFullscreenEditorDesc": "[FR] Skip quick edit and open fullscreen rich text editor when adding notes",
-  "offlineQuoteSourceTitle": "[FR] When Offline, Show",
-  "offlineQuoteSourceDesc": "[FR] Choose what appears on the home page when offline or when local-only is enabled",
-  "offlineQuoteSourceTagOnly": "[FR] Previously saved daily quotes",
-  "offlineQuoteSourceAll": "[FR] Random local records",
-  "noLocalSavedQuotes": "[FR] No previously saved daily quotes yet",
-  "copyCode": "[FR] Copy code",
-  "copiedCode": "[FR] Copied",
-  "webdavSyncTitle": "[FR] WebDAV Cloud Sync",
-  "webdavSyncSubtitle": "[FR] Configure private cloud storage to auto-sync notes across devices",
-  "webdavProvider": "[FR] Cloud Provider",
-  "webdavServerUrl": "[FR] Server URL",
-  "webdavUsername": "[FR] Username / Account",
-  "webdavPassword": "[FR] App Password / Token",
-  "webdavTestConnection": "[FR] Test Connection",
-  "webdavTestSuccess": "[FR] Connection successful!",
-  "webdavTestFailed": "[FR] Connection failed. Please check your settings and password",
-  "webdavAutoSyncLaunch": "[FR] Auto-sync on open or foreground",
-  "webdavAutoSyncLaunchSubtitle": "[FR] Merge with cloud when app opens or returns to foreground",
-  "webdavAutoSyncChange": "[FR] Auto-sync on note changes",
-  "webdavAutoSyncChangeSubtitle": "[FR] Quietly sync changes after 4 seconds of inactivity when editing",
-  "webdavExperimentalTitle": "[FR] Experimental Feature Warning",
-  "webdavExperimentalContent": "[FR] The WebDAV cloud synchronization feature is currently in the experimental preview phase. For your data safety, it is recommended to back up your core local notes before enabling. If you encounter any issues during use, please let us know.",
-  "webdavExperimentalClose": "[FR] Dismiss",
-  "webdavExperimentalIgnore": "[FR] Don't Show Again",
-  "webdavLastSync": "[FR] Last sync: {time}",
+  "developerAnniversaryShownYears": "[FR] 已参与的庆典",
+  "developerAnniversaryShownYearsNone": "[FR] 还没参与过任何一届",
+  "mediaPlayerPlay": "[FR] 播放",
+  "mediaPlayerPause": "[FR] 暂停",
+  "operationSuccess": "[FR] 操作成功！",
+  "loadingInProgress": "[FR] 正在加载...",
+  "aiThinkingProgress": "[FR] AI正在思考...",
+  "processingData": "[FR] 正在处理数据...",
+  "analyzingContent": "[FR] 正在分析内容...",
+  "skipNonFullscreenEditor": "[FR] 直接进入全屏编辑器",
+  "skipNonFullscreenEditorDesc": "[FR] 点击添加笔记时跳过快速编辑，直接打开全屏富文本编辑器",
+  "offlineQuoteSourceTitle": "[FR] 无网络时展示",
+  "offlineQuoteSourceDesc": "[FR] 无网络或仅展示本地记录时，首页显示什么内容",
+  "offlineQuoteSourceTagOnly": "[FR] 历史保存的每日一言",
+  "offlineQuoteSourceAll": "[FR] 随机展示全部本地记录",
+  "noLocalSavedQuotes": "[FR] 还没有历史保存的每日一言",
+  "copyCode": "[FR] 复制代码",
+  "copiedCode": "[FR] 已复制",
+  "webdavSyncTitle": "[FR] WebDAV 云同步",
+  "webdavSyncSubtitle": "[FR] 配置私有云盘，实现多端自动同步笔记",
+  "webdavProvider": "[FR] 网盘服务商",
+  "webdavServerUrl": "[FR] 服务器地址",
+  "webdavUsername": "[FR] 用户名/账号",
+  "webdavPassword": "[FR] 应用密码/Token",
+  "webdavTestConnection": "[FR] 测试连接",
+  "webdavTestSuccess": "[FR] 连接测试成功！",
+  "webdavTestFailed": "[FR] 连接失败，请检查配置和密码",
+  "webdavAutoSyncLaunch": "[FR] 打开或回前台时自动同步",
+  "webdavAutoSyncLaunchSubtitle": "[FR] 打开应用或从后台切回前台时，自动与云端合并最新内容",
+  "webdavAutoSyncChange": "[FR] 修改笔记后自动后台同步",
+  "webdavAutoSyncChangeSubtitle": "[FR] 编辑笔记停止打字 4 秒后，自动静默同步最新修改",
+  "webdavExperimentalTitle": "[FR] 实验性功能提示",
+  "webdavExperimentalContent": "[FR] 当前 WebDAV 云同步功能处于实验性预览（Preview）阶段。为了您的数据安全，建议您在启用前备份本地核心笔记。在使用过程中，如遇到任何问题，欢迎随时反馈。",
+  "webdavExperimentalClose": "[FR] 关闭提示",
+  "webdavExperimentalIgnore": "[FR] 永久忽略",
+  "webdavLastSync": "[FR] 上次同步：{time}",
   "@webdavLastSync": {
     "placeholders": {
       "time": {
@@ -4008,10 +4027,10 @@
       }
     }
   },
-  "webdavStatusSyncing": "[FR] Syncing...",
-  "webdavStatusSuccess": "[FR] Sync Successful",
-  "webdavStatusFailed": "[FR] Sync Failed",
-  "settingsWebdavStatusWithTime": "[FR] {status} (Last: {time})",
+  "webdavStatusSyncing": "[FR] 正在同步...",
+  "webdavStatusSuccess": "[FR] 同步成功",
+  "webdavStatusFailed": "[FR] 同步失败",
+  "settingsWebdavStatusWithTime": "[FR] {status} (上次：{time})",
   "@settingsWebdavStatusWithTime": {
     "placeholders": {
       "status": {
@@ -4022,7 +4041,7 @@
       }
     }
   },
-  "settingsWebdavEnabledWithTime": "[FR] Enabled (Last: {time})",
+  "settingsWebdavEnabledWithTime": "[FR] 已启用 (上次：{time})",
   "@settingsWebdavEnabledWithTime": {
     "placeholders": {
       "time": {
@@ -4030,16 +4049,16 @@
       }
     }
   },
-  "webdavSyncNow": "[FR] Sync Now",
-  "webdavEnableSync": "[FR] Enable Cloud Sync",
-  "webdavSaveAndSync": "[FR] Save and Sync",
-  "webdavHowToGetAppPassword": "[FR] How to get app password?",
-  "webdavShowPasswordTooltip": "[FR] Show password",
-  "webdavHidePasswordTooltip": "[FR] Hide password",
-  "webdavOpenHelpFailed": "[FR] Unable to open help link. Please check default browser settings.",
-  "webdavConflictCategoryName": "[FR] Sync Conflicts",
-  "webdavConflictNotePrefix": "[FR] [Conflict] ",
-  "webdavConflictNotification": "[FR] Detected {count} sync conflicts, safely backed up to 'Sync Conflicts' category",
+  "webdavSyncNow": "[FR] 立即同步",
+  "webdavEnableSync": "[FR] 启用云同步",
+  "webdavSaveAndSync": "[FR] 保存并同步",
+  "webdavHowToGetAppPassword": "[FR] 如何获取应用密码？",
+  "webdavShowPasswordTooltip": "[FR] 显示密码",
+  "webdavHidePasswordTooltip": "[FR] 隐藏密码",
+  "webdavOpenHelpFailed": "[FR] 无法打开帮助链接，请检查系统默认浏览器设置",
+  "webdavConflictCategoryName": "[FR] 同步冲突",
+  "webdavConflictNotePrefix": "[FR] [冲突备份] ",
+  "webdavConflictNotification": "[FR] 检测到 {count} 处同步冲突，已安全备份至『同步冲突』分类",
   "@webdavConflictNotification": {
     "placeholders": {
       "count": {
@@ -4047,17 +4066,17 @@
       }
     }
   },
-  "webdavViewNow": "[FR] View Now",
-  "exportFormatLabel": "[FR] Default Export Format",
-  "exportFormatCard": "[FR] Delicate Share Card",
-  "exportFormatPdf": "[FR] Standard A4 PDF",
-  "exportFormatDesc": "[FR] Configure the default format when exporting or sharing notes",
-  "pdfExportExperimentalWarning": "[FR] PDF export is experimental and requires multilingual and emoji font files. The first use may need an internet connection to download them; it can be used offline afterward.",
-  "exportToPdf": "[FR] Export to PDF",
-  "pdfExportSelectionMode": "[FR] Select Export Mode",
-  "selectSameMonth": "[FR] Select Same Month",
-  "selectSameCategory": "[FR] Select Same Category",
-  "exportSelected": "[FR] Export ({count})",
+  "webdavViewNow": "[FR] 立即查看",
+  "exportFormatLabel": "[FR] 默认导出格式",
+  "exportFormatCard": "[FR] 精致分享卡片",
+  "exportFormatPdf": "[FR] 标准 A4 PDF",
+  "exportFormatDesc": "[FR] 配置笔记一键导出或分享时的默认生成格式",
+  "pdfExportExperimentalWarning": "[FR] PDF 导出目前是实验性功能，需要多语言及 Emoji 字体文件；首次使用可能需要联网下载，下载后可离线使用。",
+  "exportToPdf": "[FR] 导出为 PDF",
+  "pdfExportSelectionMode": "[FR] 选择导出模式",
+  "selectSameMonth": "[FR] 一键选同月",
+  "selectSameCategory": "[FR] 一键选同分类",
+  "exportSelected": "[FR] 导出 ({count})",
   "@exportSelected": {
     "placeholders": {
       "count": {
@@ -4065,10 +4084,10 @@
       }
     }
   },
-  "exportSuccess": "[FR] Export Successful",
-  "exportFailed": "[FR] Export Failed",
-  "generatingPdf": "[FR] Generating PDF...",
-  "pdfExportFailed": "[FR] Failed to export PDF: {error}",
+  "exportSuccess": "[FR] 导出成功",
+  "exportFailed": "[FR] 导出失败",
+  "generatingPdf": "[FR] 正在生成 PDF...",
+  "pdfExportFailed": "[FR] 导出 PDF 失败: {error}",
   "@pdfExportFailed": {
     "placeholders": {
       "error": {
@@ -4076,7 +4095,7 @@
       }
     }
   },
-  "batchPdfExportFailed": "[FR] Failed to batch export PDF: {error}",
+  "batchPdfExportFailed": "[FR] 批量导出 PDF 失败: {error}",
   "@batchPdfExportFailed": {
     "placeholders": {
       "error": {
@@ -4084,30 +4103,30 @@
       }
     }
   },
-  "pleaseSelectAtLeastOneNote": "[FR] Please select at least one note first",
-  "selectedNotesHaveNoCategories": "[FR] Selected notes have no category tags",
-  "pdfPreviewAndPrint": "[FR] PDF Preview & Print",
-  "pdfFontFallbackWarning": "[FR] No Chinese font detected. Chinese content may display as gibberish. Please check your network and try again.",
-  "webdavSyncOnCellular": "[FR] Sync over cellular data",
-  "webdavSyncOnCellularSubtitle": "[FR] Allow cloud backup and merge under mobile data networks",
-  "webdavSyncNotesOnlyOnCellular": "[FR] Sync notes only on cellular",
-  "webdavSyncNotesOnlyOnCellularSubtitle": "[FR] Only sync lightweight text notes and skip heavy media files to save data",
-  "customFeedbackTitle": "[FR] Send Feedback",
-  "customFeedbackMessageLabel": "[FR] Feedback Details",
-  "customFeedbackMessageHint": "[FR] Please describe your issue or suggestion...",
-  "customFeedbackNameLabel": "[FR] Name (Optional)",
-  "customFeedbackEmailLabel": "[FR] Email (Optional)",
-  "customFeedbackSubmit": "[FR] Submit Feedback",
-  "customFeedbackSuccess": "[FR] Thanks for your feedback!",
-  "customFeedbackEmptyError": "[FR] Please enter feedback details",
-  "saveSuccess": "[FR] Saved successfully",
-  "toolCallStatusPending": "[FR] Pending",
-  "toolCallStatusExecuting": "[FR] Executing",
-  "toolCallStatusCompleted": "[FR] Completed",
-  "toolCallStatusError": "[FR] Error",
-  "toolCallParameters": "[FR] Parameters",
-  "toolCallResult": "[FR] Result",
-  "failedToPickFiles": "[FR] Failed to pick files: {error}",
+  "pleaseSelectAtLeastOneNote": "[FR] 请先选择至少一条笔记",
+  "selectedNotesHaveNoCategories": "[FR] 所选笔记没有分类标签",
+  "pdfPreviewAndPrint": "[FR] PDF 预览 & 打印",
+  "pdfFontFallbackWarning": "[FR] 未检测到中文字体，中文内容可能会显示为乱码。请检查网络后重试。",
+  "webdavSyncOnCellular": "[FR] 允许数据流量下同步",
+  "webdavSyncOnCellularSubtitle": "[FR] 允许在移动数据网络下进行云端备份和合并",
+  "webdavSyncNotesOnlyOnCellular": "[FR] 数据流量下仅同步笔记",
+  "webdavSyncNotesOnlyOnCellularSubtitle": "[FR] 启用后在移动网络下仅同步文本，跳过大型媒体文件以节省流量",
+  "customFeedbackTitle": "[FR] 发送意见反馈",
+  "customFeedbackMessageLabel": "[FR] 反馈内容",
+  "customFeedbackMessageHint": "[FR] 请描述您遇到的问题或建议...",
+  "customFeedbackNameLabel": "[FR] 您的称呼 (可选)",
+  "customFeedbackEmailLabel": "[FR] 联系邮箱 (可选)",
+  "customFeedbackSubmit": "[FR] 发送反馈",
+  "customFeedbackSuccess": "[FR] 感谢您的反馈！",
+  "customFeedbackEmptyError": "[FR] 请输入反馈内容",
+  "saveSuccess": "[FR] 保存成功",
+  "toolCallStatusPending": "[FR] 待执行",
+  "toolCallStatusExecuting": "[FR] 执行中",
+  "toolCallStatusCompleted": "[FR] 完成",
+  "toolCallStatusError": "[FR] 错误",
+  "toolCallParameters": "[FR] 参数",
+  "toolCallResult": "[FR] 结果",
+  "failedToPickFiles": "[FR] 选择文件失败: {error}",
   "@failedToPickFiles": {
     "placeholders": {
       "error": {
@@ -4115,11 +4134,11 @@
       }
     }
   },
-  "editModeMetadataReadOnlyHint": "[FR] Location and weather of saved notes cannot be modified",
-  "dataInsights": "[FR] Data Insights",
-  "dataInsightsDesc": "[FR] Deep analysis of your notes and writing trends",
-  "searchChatHistory": "[FR] Search chats...",
-  "dynamicInsightStats": "[FR] You have recorded {count} thoughts, with {recentCount} from the past 7 days.",
+  "editModeMetadataReadOnlyHint": "[FR] 已保存笔记的位置和天气不支持编辑修改",
+  "dataInsights": "[FR] 数据分析",
+  "dataInsightsDesc": "[FR] 深度分析你的笔记数据和写作趋势",
+  "searchChatHistory": "[FR] 搜索对话...",
+  "dynamicInsightStats": "[FR] 你已记录 {count} 条心迹，最近 7 天新增 {recentCount} 条。",
   "@dynamicInsightStats": {
     "placeholders": {
       "count": {
@@ -4130,11 +4149,11 @@
       }
     }
   },
-  "sessionGroupToday": "[FR] Today",
-  "sessionGroupYesterday": "[FR] Yesterday",
-  "sessionGroupThisWeek": "[FR] This Week",
-  "sessionGroupEarlier": "[FR] Earlier",
-  "messageCountLabel": "[FR] {count} msgs",
+  "sessionGroupToday": "[FR] 今天",
+  "sessionGroupYesterday": "[FR] 昨天",
+  "sessionGroupThisWeek": "[FR] 本周",
+  "sessionGroupEarlier": "[FR] 更早",
+  "messageCountLabel": "[FR] {count} 条消息",
   "@messageCountLabel": {
     "placeholders": {
       "count": {
@@ -4142,15 +4161,15 @@
       }
     }
   },
-  "commandPolish": "[FR] Polish",
-  "commandContinue": "[FR] Continue",
-  "commandDeepAnalysis": "[FR] Deep Analysis",
-  "commandInsight": "[FR] Insights",
-  "aiPromptPolish": "[FR] Please polish this text for me",
-  "aiPromptContinue": "[FR] Please continue writing this text",
-  "aiPromptDeepAnalysis": "[FR] Please provide a deep analysis of this note",
-  "aiPromptSourceAnalysis": "[FR] Please analyze the source of this text and identify the possible author and work",
-  "aiAssistantInputHint": "[FR] Enter question...",
+  "commandPolish": "[FR] 润色",
+  "commandContinue": "[FR] 续写",
+  "commandDeepAnalysis": "[FR] 深度分析",
+  "commandInsight": "[FR] 智能洞察",
+  "aiPromptPolish": "[FR] 请帮我润色这段文字",
+  "aiPromptContinue": "[FR] 请帮我续写这段文字",
+  "aiPromptDeepAnalysis": "[FR] 请对这段笔记进行深度分析",
+  "aiPromptSourceAnalysis": "[FR] 请分析这段文字的来源，识别可能的作者和出处",
+  "aiAssistantInputHint": "[FR] 输入问题...",
   "aiAssistantExploreWelcome": "[FR] {summary}",
   "@aiAssistantExploreWelcome": {
     "placeholders": {
@@ -4159,21 +4178,21 @@
       }
     }
   },
-  "currentNoteContext": "[FR] Current Note Context",
-  "workflowUnavailable": "[FR] Workflow Unavailable",
-  "aiWorkflowNeedsBoundNote": "[FR] This feature requires a bound note",
-  "confidenceLabel": "[FR] Confidence",
-  "replaceOriginalNote": "[FR] Replace Original",
-  "appendToEnd": "[FR] Append to End",
-  "scrollToBottom": "[FR] Scroll to bottom",
-  "pinChat": "[FR] Pin",
-  "unpinChat": "[FR] Unpin",
-  "stopGenerate": "[FR] Stop",
-  "aiModeChat": "[FR] Chat Mode",
-  "aiModeAgent": "[FR] Agent Mode",
-  "agentReachedMaxRounds": "[FR] Reached the tool-call limit for this run. The answer above is based on what was gathered so far; ask again with a narrower request for a more complete result.",
-  "agentReviewingRecentNotes": "[FR] Browsing notes...",
-  "agentSearchingNotesForQuery": "[FR] Looking for notes about \"{query}\"...",
+  "currentNoteContext": "[FR] 当前笔记上下文",
+  "workflowUnavailable": "[FR] 工作流不可用",
+  "aiWorkflowNeedsBoundNote": "[FR] 此功能需要绑定笔记才能使用",
+  "confidenceLabel": "[FR] 置信度",
+  "replaceOriginalNote": "[FR] 替换原文",
+  "appendToEnd": "[FR] 追加到末尾",
+  "scrollToBottom": "[FR] 滚动到底部",
+  "pinChat": "[FR] 置顶",
+  "unpinChat": "[FR] 取消置顶",
+  "stopGenerate": "[FR] 停止生成",
+  "aiModeChat": "[FR] 对话模式",
+  "aiModeAgent": "[FR] Agent 模式",
+  "agentReachedMaxRounds": "[FR] 已达到本轮工具调用上限，以上结论基于目前已获取的信息。如需更完整的结果，可以补充更具体的要求后再问一次。",
+  "agentReviewingRecentNotes": "[FR] 正在浏览笔记...",
+  "agentSearchingNotesForQuery": "[FR] 正在查找\"{query}\"相关记录...",
   "@agentSearchingNotesForQuery": {
     "placeholders": {
       "query": {
@@ -4181,12 +4200,12 @@
       }
     }
   },
-  "agentCollectingTags": "[FR] Getting tags...",
-  "agentReadingNoteDetail": "[FR] Viewing note...",
-  "agentCheckingLocationWeather": "[FR] Getting location and weather...",
-  "agentSavingMemory": "[FR] Saving memory...",
-  "agentRecallingMemory": "[FR] Recalling memory...",
-  "agentRecallingMemoryForQuery": "[FR] Recalling memory for \"{query}\"...",
+  "agentCollectingTags": "[FR] 正在获取标签...",
+  "agentReadingNoteDetail": "[FR] 正在查看笔记...",
+  "agentCheckingLocationWeather": "[FR] 正在获取位置和天气...",
+  "agentSavingMemory": "[FR] 正在保存记忆...",
+  "agentRecallingMemory": "[FR] 正在查找记忆...",
+  "agentRecallingMemoryForQuery": "[FR] 正在查找\"{query}\"相关记忆...",
   "@agentRecallingMemoryForQuery": {
     "placeholders": {
       "query": {
@@ -4194,7 +4213,7 @@
       }
     }
   },
-  "agentSearchingWebForQuery": "[FR] Looking up sources for \"{query}\"...",
+  "agentSearchingWebForQuery": "[FR] 正在查找\"{query}\"的资料...",
   "@agentSearchingWebForQuery": {
     "placeholders": {
       "query": {
@@ -4202,11 +4221,11 @@
       }
     }
   },
-  "agentReadingWebPage": "[FR] Fetching webpage...",
-  "agentPreparingNewNoteSuggestion": "[FR] Preparing a new note suggestion...",
-  "agentPreparingEditSuggestion": "[FR] Preparing an edit suggestion...",
-  "agentFoundNoMatchingNotes": "[FR] No matching notes found",
-  "agentFoundMatchingNotes": "[FR] Found {count} related notes",
+  "agentReadingWebPage": "[FR] 正在读取网页...",
+  "agentPreparingNewNoteSuggestion": "[FR] 正在准备新笔记建议...",
+  "agentPreparingEditSuggestion": "[FR] 正在准备修改建议...",
+  "agentFoundNoMatchingNotes": "[FR] 未找到相关记录",
+  "agentFoundMatchingNotes": "[FR] 找到 {count} 条相关记录",
   "@agentFoundMatchingNotes": {
     "placeholders": {
       "count": {
@@ -4214,7 +4233,7 @@
       }
     }
   },
-  "agentFoundMatchingNotesWithMore": "[FR] Found {count} related notes, more available",
+  "agentFoundMatchingNotesWithMore": "[FR] 找到 {count} 条相关记录，还有更多",
   "@agentFoundMatchingNotesWithMore": {
     "placeholders": {
       "count": {
@@ -4222,7 +4241,7 @@
       }
     }
   },
-  "agentPreparedTagChoices": "[FR] Found {count} tags",
+  "agentPreparedTagChoices": "[FR] 找到 {count} 个可用标签",
   "@agentPreparedTagChoices": {
     "placeholders": {
       "count": {
@@ -4230,8 +4249,8 @@
       }
     }
   },
-  "agentCheckedLocationWeather": "[FR] Got location and weather",
-  "agentCheckedLocationWeatherWithDetails": "[FR] Location: {location}, Weather: {weather}",
+  "agentCheckedLocationWeather": "[FR] 已获取位置和天气",
+  "agentCheckedLocationWeatherWithDetails": "[FR] 位置：{location}，天气：{weather}",
   "@agentCheckedLocationWeatherWithDetails": {
     "placeholders": {
       "location": {
@@ -4242,7 +4261,7 @@
       }
     }
   },
-  "agentFoundWebSources": "[FR] Found {count} web sources",
+  "agentFoundWebSources": "[FR] 找到 {count} 条网络资料",
   "@agentFoundWebSources": {
     "placeholders": {
       "count": {
@@ -4250,7 +4269,7 @@
       }
     }
   },
-  "agentReadWebPageSummary": "[FR] Fetched webpage, about {count} chars",
+  "agentReadWebPageSummary": "[FR] 已读取网页，约 {count} 字",
   "@agentReadWebPageSummary": {
     "placeholders": {
       "count": {
@@ -4258,7 +4277,7 @@
       }
     }
   },
-  "agentReadNoteDetailSummary": "[FR] Read full content of note \"{title}\"",
+  "agentReadNoteDetailSummary": "[FR] 已读取笔记《{title}》的完整正文",
   "@agentReadNoteDetailSummary": {
     "placeholders": {
       "title": {
@@ -4266,12 +4285,12 @@
       }
     }
   },
-  "agentPreparedSuggestionCard": "[FR] Suggestion ready",
-  "agentToolStepFinished": "[FR] Done",
-  "agentToolStepDidNotFinish": "[FR] Failed",
-  "agentMemorySaved": "[FR] Memory saved",
-  "agentMemoryDeleted": "[FR] Memory deleted",
-  "agentRecalledFacts": "[FR] Found {count, plural, =1{1 related memory} other{{count} related memories}}",
+  "agentPreparedSuggestionCard": "[FR] 已生成建议",
+  "agentToolStepFinished": "[FR] 已完成",
+  "agentToolStepDidNotFinish": "[FR] 未完成",
+  "agentMemorySaved": "[FR] 已保存记忆",
+  "agentMemoryDeleted": "[FR] 已删除记忆",
+  "agentRecalledFacts": "[FR] 找到 {count} 条相关记忆",
   "@agentRecalledFacts": {
     "placeholders": {
       "count": {
@@ -4279,14 +4298,14 @@
       }
     }
   },
-  "agentRecalledNoFacts": "[FR] No related memories found",
-  "aiThinking": "[FR] Thinking...",
-  "thinkingMode": "[FR] Deep Thinking",
-  "showThinking": "[FR] Show thinking",
-  "hideThinking": "[FR] Hide thinking",
-  "toolExecutionProgress": "[FR] Working...",
-  "toolExecutionCompleted": "[FR] Done",
-  "executedNOperations": "[FR] {count} operations done",
+  "agentRecalledNoFacts": "[FR] 未找到相关记忆",
+  "aiThinking": "[FR] 正在思考...",
+  "thinkingMode": "[FR] 深度思考",
+  "showThinking": "[FR] 查看思考过程",
+  "hideThinking": "[FR] 收起思考过程",
+  "toolExecutionProgress": "[FR] 正在执行...",
+  "toolExecutionCompleted": "[FR] 执行完成",
+  "executedNOperations": "[FR] 执行了 {count} 个操作",
   "@executedNOperations": {
     "placeholders": {
       "count": {
@@ -4294,38 +4313,38 @@
       }
     }
   },
-  "attachFile": "[FR] Attach file",
-  "yesterday": "[FR] Yesterday",
-  "openInEditor": "[FR] Open in Editor",
-  "saveDirectly": "[FR] Save Directly",
-  "replace": "[FR] Replace",
-  "append": "[FR] Append",
-  "notice": "[FR] Notice",
-  "saveRequired": "[FR] Save Required",
-  "saveBeforeAiAssistant": "[FR] Please save your note before entering Thoughter",
-  "saveAndContinue": "[FR] Save & Continue",
-  "toggleAddLocation": "[FR] Add location",
-  "toggleAddWeather": "[FR] Add weather",
-  "webdavDisableSyncSuccess": "[FR] WebDAV sync disabled. Local data retained.",
-  "webdavDisableSync": "[FR] Disable Cloud Sync",
-  "webdavGoToResolve": "[FR] Resolve Now",
-  "webdavNoConflicts": "[FR] No Conflicts Detected",
-  "webdavAllConflictsResolved": "[FR] All sync conflicts have been resolved.",
-  "webdavProviderNutstore": "[FR] Nutstore",
-  "webdavProviderCustom": "[FR] Custom",
+  "attachFile": "[FR] 附加文件",
+  "yesterday": "[FR] 昨天",
+  "openInEditor": "[FR] 打开编辑器",
+  "saveDirectly": "[FR] 直接保存",
+  "replace": "[FR] 替换",
+  "append": "[FR] 追加",
+  "notice": "[FR] 提示",
+  "saveRequired": "[FR] 保存提示",
+  "saveBeforeAiAssistant": "[FR] 进入 Thoughter 前需先保存当前笔记内容",
+  "saveAndContinue": "[FR] 保存并继续",
+  "toggleAddLocation": "[FR] 添加位置",
+  "toggleAddWeather": "[FR] 添加天气",
+  "webdavDisableSyncSuccess": "[FR] 已关闭 WebDAV 云同步。本地数据完全保留。",
+  "webdavDisableSync": "[FR] 关闭并停用云同步",
+  "webdavGoToResolve": "[FR] 去处理",
+  "webdavNoConflicts": "[FR] 没有检测到冲突笔记",
+  "webdavAllConflictsResolved": "[FR] 您的所有同步冲突均已处理干净。",
+  "webdavProviderNutstore": "[FR] 坚果云 (Nutstore)",
+  "webdavProviderCustom": "[FR] 自定义 (Custom)",
   "webdavProviderNextcloud": "[FR] Nextcloud / ownCloud",
   "webdavProviderInfinicloud": "[FR] InfiniCLOUD",
-  "webdavProviderConfig": "[FR] Provider Configuration",
-  "webdavServerUrlEmptyError": "[FR] Please enter WebDAV server address",
-  "webdavServerUrlInvalidError": "[FR] Address must start with https://",
-  "webdavUsernameEmptyError": "[FR] Please enter username",
-  "webdavPasswordEmptyError": "[FR] Please enter app password",
-  "webdavSyncStrategy": "[FR] Sync Strategy",
-  "webdavStatusNotEnabled": "[FR] Cloud Sync Disabled",
-  "webdavStatusNotEnabledDesc": "[FR] Configure your WebDAV service to enjoy secure cross-device multi-way synchronization.",
-  "webdavStatusSyncingDesc": "[FR] Securely comparing and merging cloud and local database files...",
-  "webdavStatusRunning": "[FR] Cloud Sync Running",
-  "webdavStatusRunningDesc": "[FR] An encrypted merge pipeline has been established with the cloud drive.\nLast sync: {time}",
+  "webdavProviderConfig": "[FR] 服务商配置",
+  "webdavServerUrlEmptyError": "[FR] 请输入 WebDAV 服务器地址",
+  "webdavServerUrlInvalidError": "[FR] 地址必须以 https:// 开头",
+  "webdavUsernameEmptyError": "[FR] 请输入用户名",
+  "webdavPasswordEmptyError": "[FR] 请输入应用密码",
+  "webdavSyncStrategy": "[FR] 同步策略",
+  "webdavStatusNotEnabled": "[FR] 未启用云同步",
+  "webdavStatusNotEnabledDesc": "[FR] 配置您的 WebDAV 服务，享受安全跨端多路同步。",
+  "webdavStatusSyncingDesc": "[FR] 正在安全比对合并云端与本地数据库文件...",
+  "webdavStatusRunning": "[FR] 云同步运行中",
+  "webdavStatusRunningDesc": "[FR] 已与云端网盘建立加密合并管道。\n上次同步：{time}",
   "@webdavStatusRunningDesc": {
     "placeholders": {
       "time": {
@@ -4333,10 +4352,10 @@
       }
     }
   },
-  "webdavStatusException": "[FR] Sync Exception",
-  "webdavStatusExceptionDesc": "[FR] Network communication or cloud drive file lock conflict. We will retry automatically.",
-  "webdavStatusEnabled": "[FR] Cloud Sync Enabled",
-  "webdavStatusEnabledDesc": "[FR] Service ready. Last sync: {time}",
+  "webdavStatusException": "[FR] 同步出现异常",
+  "webdavStatusExceptionDesc": "[FR] 网络通信或云盘文件锁冲突。我们将自动重试。",
+  "webdavStatusEnabled": "[FR] 云同步已启用",
+  "webdavStatusEnabledDesc": "[FR] 服务就绪。上次同步：{time}",
   "@webdavStatusEnabledDesc": {
     "placeholders": {
       "time": {
@@ -4344,9 +4363,9 @@
       }
     }
   },
-  "webdavNeverSynced": "[FR] Never synced",
-  "webdavNeverSucceeded": "[FR] Never succeeded",
-  "webdavConflictPrompt": "[FR] Detected {count} sync conflict backup(s). It is recommended to resolve them immediately.",
+  "webdavNeverSynced": "[FR] 从未同步",
+  "webdavNeverSucceeded": "[FR] 从未成功",
+  "webdavConflictPrompt": "[FR] 检测到有 {count} 篇同步冲突备份，建议立即处理。",
   "@webdavConflictPrompt": {
     "placeholders": {
       "count": {
@@ -4354,8 +4373,8 @@
       }
     }
   },
-  "webContentTitle": "[FR] Web Content",
-  "fetchingWebContent": "[FR] Fetching web content from: {url}",
+  "webContentTitle": "[FR] 网页内容",
+  "fetchingWebContent": "[FR] 正在获取网页内容：{url}",
   "@fetchingWebContent": {
     "placeholders": {
       "url": {
@@ -4363,22 +4382,22 @@
       }
     }
   },
-  "webCommandInvalidUrl": "[FR] Please provide a valid URL with /web command",
-  "webCommandInvalidUrlTitle": "[FR] Invalid URL",
-  "aiSuggestion": "[FR] AI Suggestion",
-  "autoAttachMetadataUnavailable": "[FR] Location/weather unavailable, note saved without them",
-  "agentRichEditConflict": "[FR] The note changed after this suggestion was created. To protect your edits, ask AI to generate a fresh suggestion.",
-  "agentDiffOriginal": "[FR] Original",
-  "agentDiffReplacement": "[FR] Replace with",
-  "agentDiffInsertBefore": "[FR] Insert before this content",
-  "agentDiffInsertAfter": "[FR] Insert after this content",
-  "agentDiffAppend": "[FR] Append content",
-  "agentDiffDelete": "[FR] Delete content",
-  "noteProposalCreate": "[FR] Create",
-  "noteProposalEdit": "[FR] Edit",
-  "noteProposalPlain": "[FR] Plain note",
-  "noteProposalRich": "[FR] Rich text note",
-  "noteProposalChangeCount": "[FR] {count} changes",
+  "webCommandInvalidUrl": "[FR] 请使用 /web 命令提供有效的 URL",
+  "webCommandInvalidUrlTitle": "[FR] 无效的 URL",
+  "aiSuggestion": "[FR] AI 建议",
+  "autoAttachMetadataUnavailable": "[FR] 位置/天气未能附加，已直接保存",
+  "agentRichEditConflict": "[FR] 笔记内容已发生变化。为避免覆盖你的修改，请让 AI 重新生成建议。",
+  "agentDiffOriginal": "[FR] 原文",
+  "agentDiffReplacement": "[FR] 改为",
+  "agentDiffInsertBefore": "[FR] 在此内容前插入",
+  "agentDiffInsertAfter": "[FR] 在此内容后插入",
+  "agentDiffAppend": "[FR] 追加内容",
+  "agentDiffDelete": "[FR] 删除内容",
+  "noteProposalCreate": "[FR] 新建",
+  "noteProposalEdit": "[FR] 编辑",
+  "noteProposalPlain": "[FR] 普通笔记",
+  "noteProposalRich": "[FR] 富文本笔记",
+  "noteProposalChangeCount": "[FR] 修改 {count} 处",
   "@noteProposalChangeCount": {
     "placeholders": {
       "count": {
@@ -4386,49 +4405,49 @@
       }
     }
   },
-  "noteProposalExpand": "[FR] Expand document",
-  "noteProposalCollapse": "[FR] Collapse document",
-  "noteProposalViewChanges": "[FR] View change history",
-  "noteProposalPlainToRichWarning": "[FR] After applying, this note will open in the full-screen rich text editor.",
-  "noteProposalBefore": "[FR] Original",
-  "noteProposalAfter": "[FR] Changed to",
-  "noteProposalCompleted": "[FR] Completed",
-  "noteProposalApply": "[FR] Apply changes",
-  "noteProposalSave": "[FR] Save note",
-  "noteProposalLegacyReadOnly": "[FR] This is a legacy suggestion without safe revision data. It is view-only; ask AI to generate a new suggestion before applying it.",
-  "noteProposalPlainEditorPreferenceWarning": "[FR] Your editor preference opens this plain draft in the full-screen rich text editor; saving it will create a rich text note.",
-  "aiCardBadgeCreate": "[FR] New",
-  "aiCardBadgeEdit": "[FR] Edit",
-  "aiCardQuickEdit": "[FR] Quick edit",
-  "aiCardQuickEditTooltip": "[FR] Quickly edit the content, source, or tags",
-  "aiCardSavedViewNote": "[FR] Saved · View note",
-  "aiCardSaveFailedGeneric": "[FR] Couldn't save. Please try again.",
-  "aiCardEditContentHint": "[FR] Edit content",
-  "experimentalTag": "[FR] Beta",
-  "agentExperimentalNoticeTitle": "[FR] Thoughter Experimental Feature Notice",
-  "agentExperimentalNoticeIntro": "[FR] Thoughter is an AI Agent assistant currently in testing. Please review the following before proceeding:",
-  "agentExperimentalNoticePoint1": "[FR] AI may generate incorrect or inaccurate responses. Please review all content critically.",
-  "agentExperimentalNoticePoint2": "[FR] AI cannot directly edit your notes; all creations and edits take effect only after you click save/apply.",
-  "agentExperimentalNoticePoint3": "[FR] This feature is in active testing and refinement, and may encounter instability or bugs.",
-  "agentExperimentalNoticeGotIt": "[FR] Understand & Continue",
-  "agentExperimentalBannerText": "[FR] Experimental feature: AI answers may be inaccurate. Notes are only modified after clicking save.",
-  "agentExperimentalNoticeAction": "[FR] View Notice",
-  "dontShowAgain": "[FR] Don't show again",
-  "settingsLab": "[FR] Lab",
-  "settingsLabDesc": "[FR] Debug entries and experimental toggles shown in developer mode. May be unstable",
-  "firstOpenScrollPerfMonitorExperiment": "[FR] [Experiment] First-open scroll performance monitor",
-  "firstOpenScrollPerfMonitorExperimentDesc": "[FR] Record dropped frames on the first Notes scroll after a cold start (off by default)",
-  "addNoteDeferMetadataExperiment": "[FR] [Experiment] AddNote deferred metadata",
-  "addNoteDeferMetadataExperimentDesc": "[FR] Defer location and weather lookup until the keyboard animation finishes (off by default)",
-  "noteCardMediaStyleExperiment": "[FR] [Experiment] Note card media layout",
-  "noteCardMediaStyleThumbnail": "[FR] Side thumbnail",
-  "noteCardMediaStyleThumbnailDesc": "[FR] Square thumbnail on the right. Always visible, cheapest to decode.",
-  "noteCardMediaStyleInline": "[FR] Inline (legacy)",
-  "noteCardMediaStyleInlineDesc": "[FR] Images stay inline, order preserved. Cost: images below the fold are clipped, and audio/video build players in the list.",
-  "noteCardMediaStyleBanner": "[FR] Top banner",
-  "noteCardMediaStyleBannerDesc": "[FR] Full-width banner on top, photo first. Normalised position, most expensive to decode.",
-  "noteInsertAnimationExperiment": "[FR] [Experiment] Note insert animation",
-  "noteInsertAnimationCurrent": "[FR] Current: {name}",
+  "noteProposalExpand": "[FR] 展开全文",
+  "noteProposalCollapse": "[FR] 收起全文",
+  "noteProposalViewChanges": "[FR] 查看修改记录",
+  "noteProposalPlainToRichWarning": "[FR] 应用后将使用全屏富文本编辑器打开此笔记。",
+  "noteProposalBefore": "[FR] 原文",
+  "noteProposalAfter": "[FR] 改为",
+  "noteProposalCompleted": "[FR] 已完成",
+  "noteProposalApply": "[FR] 应用修改",
+  "noteProposalSave": "[FR] 保存笔记",
+  "noteProposalLegacyReadOnly": "[FR] 这是旧版建议，缺少安全的版本信息，仅供查看。请让 AI 重新生成后再应用。",
+  "noteProposalPlainEditorPreferenceWarning": "[FR] 你的设置会在全屏富文本编辑器中打开此普通草稿；保存后它将成为富文本笔记。",
+  "aiCardBadgeCreate": "[FR] 新建",
+  "aiCardBadgeEdit": "[FR] 修改",
+  "aiCardQuickEdit": "[FR] 快编",
+  "aiCardQuickEditTooltip": "[FR] 快速编辑内容、来源或标签",
+  "aiCardSavedViewNote": "[FR] 已保存 · 查看笔记",
+  "aiCardSaveFailedGeneric": "[FR] 保存失败，请稍后重试。",
+  "aiCardEditContentHint": "[FR] 编辑内容",
+  "experimentalTag": "[FR] 实验性",
+  "agentExperimentalNoticeTitle": "[FR] Thoughter 实验性功能说明",
+  "agentExperimentalNoticeIntro": "[FR] Thoughter 是正在测试中的 AI Agent 助手。在开始使用前，请阅读以下注意事项：",
+  "agentExperimentalNoticePoint1": "[FR] AI 可能会生成错误或不准确的回答，请对生成内容进行客观核查。",
+  "agentExperimentalNoticePoint2": "[FR] AI 不能直接修改你的笔记；所有编辑与新建方案仅在点击保存/应用后生效。",
+  "agentExperimentalNoticePoint3": "[FR] 功能仍处于实验测试阶段，使用过程中可能会遇到异常或不稳定情况。",
+  "agentExperimentalNoticeGotIt": "[FR] 理解并继续",
+  "agentExperimentalBannerText": "[FR] 实验性功能：AI回答可能包含错误；AI不会直接改写笔记，仅在点击保存后生效。",
+  "agentExperimentalNoticeAction": "[FR] 查看说明",
+  "dontShowAgain": "[FR] 不再自动提示",
+  "settingsLab": "[FR] 实验室",
+  "settingsLabDesc": "[FR] 开发者模式下的调试入口和实验性开关，可能不稳定",
+  "firstOpenScrollPerfMonitorExperiment": "[FR] [实验] 首屏滚动性能监测",
+  "firstOpenScrollPerfMonitorExperimentDesc": "[FR] 记录冷启动后首次滑动记录页的掉帧数据（默认关）",
+  "addNoteDeferMetadataExperiment": "[FR] [实验] AddNote 延迟获取元数据",
+  "addNoteDeferMetadataExperimentDesc": "[FR] 延迟位置和天气获取至键盘动画结束后（默认关）",
+  "noteCardMediaStyleExperiment": "[FR] [实验] 记录页图片显示方式",
+  "noteCardMediaStyleThumbnail": "[FR] 右侧小图",
+  "noteCardMediaStyleThumbnailDesc": "[FR] 右侧方形小图。有媒体必可见，解码开销最小。",
+  "noteCardMediaStyleInline": "[FR] 正文原位（旧版式）",
+  "noteCardMediaStyleInlineDesc": "[FR] 图片留在正文原位，顺序保真。代价：正文后面的图会被折叠截掉，音视频会在列表里建播放器。",
+  "noteCardMediaStyleBanner": "[FR] 顶部通栏大图",
+  "noteCardMediaStyleBannerDesc": "[FR] 卡片顶部整宽大图，照片是主角。位置归一化，解码开销最大。",
+  "noteInsertAnimationExperiment": "[FR] [实验] 记录页添加笔记动画",
+  "noteInsertAnimationCurrent": "[FR] 当前：{name}",
   "@noteInsertAnimationCurrent": {
     "placeholders": {
       "name": {
@@ -4436,47 +4455,46 @@
       }
     }
   },
-  "noteInsertAnimationScale": "[FR] Bubble scale",
-  "noteInsertAnimationSlide": "[FR] Smooth rise",
-  "noteInsertAnimationNone": "[FR] No animation",
-  "aiProviderZhipu": "[FR] Zhipu GLM",
-  "aiProviderMoonshot": "[FR] Moonshot Kimi",
-  "aiProviderDashScope": "[FR] Alibaba Bailian",
-  "aiProviderVolcengine": "[FR] Volcengine Ark",
+  "noteInsertAnimationScale": "[FR] 气泡缩放",
+  "noteInsertAnimationSlide": "[FR] 平滑上升",
+  "noteInsertAnimationNone": "[FR] 无动画",
+  "aiProviderZhipu": "[FR] 智谱 GLM",
+  "aiProviderMoonshot": "[FR] 月之暗面 Kimi",
+  "aiProviderDashScope": "[FR] 阿里云百炼",
+  "aiProviderVolcengine": "[FR] 火山方舟",
   "aiProviderGemini": "[FR] Google Gemini",
-  "presetDescOllamaCloud": "[FR] Generous free tier, works right after sign-up. Best first choice.",
-  "presetDescOpenAI": "[FR] Official OpenAI API. Requires an international payment method.",
-  "presetDescOpenRouter": "[FR] One key for hundreds of models, including Claude and Gemini.",
-  "presetDescDeepSeek": "[FR] Low cost, strong Chinese performance.",
-  "presetDescSiliconFlow": "[FR] Aggregator platform; some small models are free.",
-  "presetDescZhipu": "[FR] glm-4-flash is free to use.",
-  "presetDescMoonshot": "[FR] Strong long-context performance.",
-  "presetDescDashScope": "[FR] OpenAI-compatible endpoint for the Qwen family.",
-  "presetDescVolcengine": "[FR] Doubao models. Put the inference endpoint ID in the model field.",
-  "presetDescGemini": "[FR] Gemini's official OpenAI-compatible endpoint. Has a free tier.",
-  "presetDescOllamaLocal": "[FR] Connect to Ollama on this machine. Offline, no key needed.",
-  "presetDescLMStudio": "[FR] Connect to LM Studio on this machine. Offline, no key needed.",
-  "presetDescCustom": "[FR] Any OpenAI-compatible endpoint. Fill in the URL and model yourself.",
-  "aiServicesSectionTitle": "[FR] My AI services",
-  "aiServiceEmptyTitle": "[FR] No AI service configured yet",
-  "aiServiceEmptyBody": "[FR] AI insights, card generation and the Thoughter assistant need a configured provider.",
-  "addAiService": "[FR] Add AI service",
-  "editAiServiceTitle": "[FR] Edit AI service",
-  "newAiServiceTitle": "[FR] New AI service",
-  "selectProviderTemplate": "[FR] Choose a provider",
-  "changeProviderTemplate": "[FR] Change",
-  "providerGroupCloud": "[FR] Cloud services",
-  "providerGroupLocal": "[FR] Runs locally",
-  "providerGroupCustom": "[FR] Custom",
-  "recommendedBadge": "[FR] Recommended",
-  "inUseBadge": "[FR] In use",
-  "getApiKeyLink": "[FR] Get an API key",
-  "apiKeyNotNeededHint": "[FR] Local services usually need no key — leave this empty.",
-  "suggestedModelsLabel": "[FR] Common models",
-  "configNameField": "[FR] Configuration name",
-  "statusKeyConfigured": "[FR] Key configured",
-  "statusKeyMissing": "[FR] Key missing",
-  "aiServiceSaved": "[FR] Saved {name}",
+  "presetDescOllamaCloud": "[FR] 免费额度充足，注册就能用，推荐第一次配置的用户选它",
+  "presetDescOpenAI": "[FR] OpenAI 官方接口，需要海外支付方式",
+  "presetDescOpenRouter": "[FR] 一个 Key 调用 Claude、Gemini 等上百个模型",
+  "presetDescDeepSeek": "[FR] 国内直连，价格低，中文表现好",
+  "presetDescSiliconFlow": "[FR] 国内聚合平台，部分小模型免费",
+  "presetDescZhipu": "[FR] 国内直连，glm-4-flash 免费",
+  "presetDescMoonshot": "[FR] 国内直连，长上下文表现好",
+  "presetDescDashScope": "[FR] 阿里云百炼的 OpenAI 兼容接口，通义千问系列",
+  "presetDescVolcengine": "[FR] 火山方舟豆包系列，模型名填推理接入点 ID",
+  "presetDescGemini": "[FR] Gemini 官方的 OpenAI 兼容接口，有免费额度",
+  "presetDescOllamaLocal": "[FR] 连接本机运行的 Ollama，不联网、不需要密钥",
+  "presetDescLMStudio": "[FR] 连接本机运行的 LM Studio，不联网、不需要密钥",
+  "presetDescCustom": "[FR] 任何 OpenAI 兼容接口，地址和模型全部手填",
+  "aiServicesSectionTitle": "[FR] 我的 AI 服务",
+  "aiServiceEmptyTitle": "[FR] 还没有配置 AI 服务",
+  "aiServiceEmptyBody": "[FR] 配置一个服务商之后，AI 洞察、卡片生成和 Thoughter 助手才能工作。",
+  "editAiServiceTitle": "[FR] 编辑 AI 服务",
+  "newAiServiceTitle": "[FR] 新建 AI 服务",
+  "selectProviderTemplate": "[FR] 选择服务商",
+  "changeProviderTemplate": "[FR] 更换",
+  "providerGroupCloud": "[FR] 云端服务",
+  "providerGroupLocal": "[FR] 本地运行",
+  "providerGroupCustom": "[FR] 自定义",
+  "recommendedBadge": "[FR] 推荐",
+  "inUseBadge": "[FR] 使用中",
+  "getApiKeyLink": "[FR] 获取 API Key",
+  "apiKeyNotNeededHint": "[FR] 本地服务通常不需要密钥，留空即可",
+  "suggestedModelsLabel": "[FR] 常用模型",
+  "configNameField": "[FR] 配置名称",
+  "statusKeyConfigured": "[FR] 密钥已配置",
+  "statusKeyMissing": "[FR] 缺少密钥",
+  "aiServiceSaved": "[FR] 已保存 {name}",
   "@aiServiceSaved": {
     "placeholders": {
       "name": {
@@ -4484,22 +4502,13 @@
       }
     }
   },
-  "ollamaCloudTipTitle": "[FR] We recommend Ollama Cloud",
-  "ollamaCloudTipBody": "[FR] Generous free tier, no card required — sign up and copy the API key.",
-  "ollamaCloudTipAction": "[FR] Add it",
-  "aiConfigHelpLink": "[FR] Not sure what to fill in? Read the setup guide",
-  "openLinkFailed": "[FR] Could not open the link",
-  "testBeforeSaveHint": "[FR] You can test as soon as URL, key and model are filled in — no need to save first.",
-  "agentMemorySectionTitle": "[FR] Thoughter memory",
-  "agentMemoryEnableTitle": "[FR] Long-term memory",
-  "agentMemoryEnableDesc": "[FR] Remember your preferences across chats (stored locally only)",
-  "agentMemoryNicknameTitle": "[FR] Nickname",
-  "agentMemoryNicknameHint": "[FR] How should Thoughter address you?",
-  "agentMemoryNicknameDesc": "[FR] How Thoughter should address you (leave empty to skip)",
-  "agentMemoryNicknameSaveFailed": "[FR] Couldn't save your nickname. Please try again.",
-  "agentMemoryNicknameDisabled": "[FR] Enabled when long-term memory is turned on",
-  "agentMemoryClearTitle": "[FR] Clear memory",
-  "agentMemoryClearSummary": "[FR] Currently remembering {profileCount, plural, =1{1 preference} other{{profileCount} preferences}} and {factCount, plural, =1{1 detail} other{{factCount} details}}",
+  "ollamaCloudTipTitle": "[FR] 推荐用 Ollama 云端",
+  "ollamaCloudTipBody": "[FR] 免费额度充足，注册后复制 API Key 就能用，不用绑卡。",
+  "ollamaCloudTipAction": "[FR] 一键添加",
+  "aiConfigHelpLink": "[FR] 不知道怎么填？查看配置说明",
+  "openLinkFailed": "[FR] 无法打开链接",
+  "testBeforeSaveHint": "[FR] 填好地址、密钥和模型后即可测试，不必先保存",
+  "agentMemoryClearSummary": "[FR] 当前记着 {profileCount} 条偏好、{factCount} 条细节",
   "@agentMemoryClearSummary": {
     "placeholders": {
       "profileCount": {
@@ -4510,45 +4519,36 @@
       }
     }
   },
-  "agentMemoryClearEmpty": "[FR] Nothing remembered yet",
-  "agentMemoryClearConfirmTitle": "[FR] Clear Thoughter's memory?",
-  "agentMemoryClearConfirmBody": "[FR] Every remembered preference and detail will be deleted permanently. Your notes are not affected.",
-  "agentMemoryClearConfirmAction": "[FR] Clear",
-  "agentMemoryCleared": "[FR] Thoughter's memory has been cleared",
-  "agentMemoryClearFailed": "[FR] Failed to clear memory",
-  "agentMemoryNoticeTitle": "[FR] Thoughter will remember you",
-  "agentMemoryNoticeBody": "[FR] So it doesn't have to get to know you from scratch every time, Thoughter records who you are and how you like things phrased, and uses that in later conversations, daily prompts, and periodic insights. Memory stays on this device and is never uploaded.",
-  "agentMemoryNoticeHint": "[FR] You can ask Thoughter to change or forget any entry at any time, or turn memory off and clear it in AI settings.",
-  "agentMemoryNoticeGotIt": "[FR] Got it",
-  "agentMemoryNoticeDisable": "[FR] Don't remember",
-  "agentMemorySwitchFailed": "[FR] Could not save the memory switch. Please try again.",
-  "agentMemoryCountsUnavailable": "[FR] Could not read the memory count. You can still try clearing.",
-  "releaseNotesTitle": "[FR] What's New",
-  "releaseNotesUpgradeLede": "[FR] Here's what has been added since you last used the app.",
-  "releaseNotesCurrentLede": "[FR] Here's what this version adds.",
-  "releaseNotesHighlights": "[FR] Highlights",
-  "releaseNotesGetStarted": "[FR] Get started",
-  "releaseThoughterTitle": "[FR] Thoughter: a thinking partner inside your notebook",
-  "releaseThoughterLede": "[FR] From simply capturing notes to organising and creating with them. Thoughter is no longer just a chat box that answers questions — it now works across your entire note library as a thinking partner.",
-  "releaseThoughterSearchTitle": "[FR] Smart retrieval across your notes",
-  "releaseThoughterSearchDesc": "[FR] No more digging by hand. Ask in plain language and Thoughter finds the related notes, follows the tags between them, and pulls in web results when needed.",
-  "releaseThoughterControlTitle": "[FR] You keep every editing decision",
-  "releaseThoughterControlDesc": "[FR] AI never changes your content on its own. Every new note and rewrite arrives as a proposal card that shows exactly what changed; nothing is applied until you review it and confirm.",
-  "releaseThoughterSingleNoteTitle": "[FR] Talk about a single note",
-  "releaseThoughterSingleNoteDesc": "[FR] Tap the ✨ button in the editor and choose \"Ask Thoughter\" to dig into, polish, or continue the note you have open.",
-  "releaseThoughterMemoryTitle": "[FR] Long-term memory",
-  "releaseThoughterMemoryDesc": "[FR] Once enabled, Thoughter remembers what to call you and how you like to phrase things across conversations. Memory is stored separately, and you can review or clear it at any time.",
-  "releaseThoughterInsightTitle": "[FR] Periodic insights and a rebuilt Explore page",
-  "releaseThoughterInsightDesc": "[FR] Thoughter revisits your notes on a schedule and writes them up as periodic insights. The Explore page has been rebuilt to bring those findings together.",
-  "releaseThemeTitle": "[FR] New themes: a different paper, a different ink",
-  "releaseThemeLede": "[FR] Theme style is now its own dimension alongside light and dark. Pick one of three.",
-  "releaseThemeStylesTitle": "[FR] Three styles",
-  "releaseThemeStylesDesc": "[FR] Material keeps following the system's dynamic colors; Paper & Ink is warm, with serif body text and paper rules; Plain is cool and sharper.",
-  "releaseThemeAccentTitle": "[FR] Choose your ink",
-  "releaseThemeAccentDesc": "[FR] The handcrafted styles add four inks — umber, celadon, indigo and cinnabar. Change the ink without changing the paper.",
-  "releaseThemeSwitchTitle": "[FR] Switch whenever you like",
-  "releaseThemeSwitchDesc": "[FR] Material stays the default, so upgrading does not change how the app looks. Try a style right here, or change it later in Settings › Theme Settings.",
-  "releaseDiagnosticsNotice": "[FR] Since 3.7.0, ThoughtEcho reports anonymous diagnostics when something goes wrong. They are used only to locate and fix problems and never contain note content. You can turn this off at any time in Settings › Feedback & Contact.",
-  "settingsReleaseNotes": "[FR] What's New",
-  "settingsReleaseNotesDesc": "[FR] See what this version adds"
+  "agentMemoryNoticeBody": "[FR] 为了不用每次都重新认识你，Thoughter 会把你的身份和表达偏好记下来，之后的对话、每日提示和周期洞察都会用上。记忆只保存在这台设备上，不会上传。",
+  "agentMemoryNoticeHint": "[FR] 你可以随时让 Thoughter 修改或忘掉某条记忆，也可以在「AI 设置」里关闭或清空。",
+  "agentMemorySwitchFailed": "[FR] 记忆开关没能保存，请重试",
+  "agentMemoryCountsUnavailable": "[FR] 读取记忆数量失败，仍可尝试清空",
+  "releaseNotesTitle": "[FR] 更新内容",
+  "releaseNotesUpgradeLede": "[FR] 以下是你上次使用之后新增的功能。",
+  "releaseNotesCurrentLede": "[FR] 以下是本版本新增的功能。",
+  "releaseNotesHighlights": "[FR] 核心亮点",
+  "releaseNotesGetStarted": "[FR] 开始使用",
+  "releaseThoughterTitle": "[FR] Thoughter：住在摘录本里的思考搭档",
+  "releaseThoughterLede": "[FR] 从简单的记录，到深度的整理与创作。Thoughter 不再只是一个回答问题的对话框，它接入了你的整个笔记库，成为你的思考搭档。",
+  "releaseThoughterSearchTitle": "[FR] 智能检索与联动",
+  "releaseThoughterSearchDesc": "[FR] 无需手动翻找，直接用自然语言提问。Thoughter 会自动检索相关笔记、贯通标签线索，必要时还能补充联网信息。",
+  "releaseThoughterControlTitle": "[FR] 编辑权，始终在你手中",
+  "releaseThoughterControlDesc": "[FR] AI 不会擅自修改你的内容。所有新建与改写都会先以「提案卡片」呈现，改了什么一目了然；逐条查看、确认之后，才会真正应用。",
+  "releaseThoughterSingleNoteTitle": "[FR] 单篇笔记深聊",
+  "releaseThoughterSingleNoteDesc": "[FR] 在编辑器内点击 ✨ 按钮选择「问 Thoughter」，即可就当前这一篇追问、润色或续写。",
+  "releaseThoughterMemoryTitle": "[FR] 长期记忆",
+  "releaseThoughterMemoryDesc": "[FR] 开启后，Thoughter 会跨对话记住你的称呼与表达偏好。记忆独立存储，可随时查看或一键清空。",
+  "releaseThoughterInsightTitle": "[FR] 周期洞察与全新探索页",
+  "releaseThoughterInsightDesc": "[FR] Thoughter 会定期回看你的记录，写成阶段性洞察；探索页也随之重做，把这些发现集中呈现。",
+  "releaseThemeTitle": "[FR] 全新主题：换一张纸，换一支笔",
+  "releaseThemeLede": "[FR] 主题风格成为与深浅色并列的独立维度，三选其一。",
+  "releaseThemeStylesTitle": "[FR] 三套风格",
+  "releaseThemeStylesDesc": "[FR] Material 延续系统动态取色；「纸与墨」暖调温润，衬线正文配纸张横线；「素笺」冷调硬朗。",
+  "releaseThemeAccentTitle": "[FR] 墨色可选",
+  "releaseThemeAccentDesc": "[FR] 手工风格另备赭石、黛青、靛蓝、朱砂四支墨色，换墨不换纸。",
+  "releaseThemeSwitchTitle": "[FR] 随时切换",
+  "releaseThemeSwitchDesc": "[FR] 默认仍是 Material，升级不会改变外观。可在此直接试用，也可随时前往「设置 › 主题设置」调整。",
+  "releaseDiagnosticsNotice": "[FR] 自 3.7.0 起，心迹会在发生错误时上报匿名诊断信息，仅用于定位与修复问题，不含任何笔记内容。可在「设置 › 反馈与联系」中随时关闭。",
+  "settingsReleaseNotes": "[FR] 更新内容",
+  "settingsReleaseNotesDesc": "[FR] 查看本版本新增的功能"
 }
