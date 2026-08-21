@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/config/release_highlights.dart';
 import 'package:thoughtecho/controllers/search_controller.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/models/anniversary_participation.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/models/local_ai_settings.dart';
 import 'package:thoughtecho/models/multi_ai_settings.dart';
@@ -117,9 +118,19 @@ class MockSettingsService extends ChangeNotifier implements SettingsService {
   @override
   Future<void> setAnniversarySimulatedYear(int year) async {}
   @override
+  Future<void> setAnniversarySimulationEnabled(
+    bool enabled, {
+    required int year,
+  }) async {}
+  @override
   bool get anniversaryAnimationEnabled => true;
   @override
   Future<void> setAnniversaryAnimationEnabled(bool enabled) async {}
+  // 设置页的庆典横幅要读参与记录来发勋章，没有记录就是一枚都没有。
+  @override
+  List<AnniversaryParticipation> get anniversaryParticipation => const [];
+  @override
+  List<int> get anniversaryShownYears => const [];
   @override
   Future<void> resetAnniversaryParticipation() async {}
   @override

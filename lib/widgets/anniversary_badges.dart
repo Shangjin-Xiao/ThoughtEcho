@@ -48,13 +48,20 @@ class AnniversaryBadgeRow extends StatelessWidget {
   }
 }
 
-/// 单枚勋章：金色圆牌 + 届数。
+/// 单枚勋章：金色圆牌 + 底下垂着的红绶带。
 class _AnniversaryBadge extends StatelessWidget {
   final int year;
 
   const _AnniversaryBadge({required this.year});
 
-  static const double _size = 28;
+  /// 圆牌直径。
+  static const double _discSize = 28;
+
+  /// 绶带露在圆牌下方的高度。
+  static const double _ribbonDrop = 9;
+
+  /// 绶带整体高度：多出来的部分掖在圆牌背后，免得接缝处露出一道断口。
+  static const double _ribbonHeight = _ribbonDrop + 8;
 
   @override
   Widget build(BuildContext context) {
@@ -65,40 +72,100 @@ class _AnniversaryBadge extends StatelessWidget {
       message: label,
       child: Semantics(
         label: label,
-        child: Container(
-          width: _size,
-          height: _size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFFFFE08A), Color(0xFFE39B2C)],
-            ),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.7),
-              width: 1.2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF7A4B00).withValues(alpha: 0.25),
-                blurRadius: 3,
-                offset: const Offset(0, 1),
+        child: SizedBox(
+          width: _discSize,
+          height: _discSize + _ribbonDrop,
+          child: Stack(
+            alignment: Alignment.topCenter,
+            children: [
+              // 绶带先画，被圆牌压住上沿。
+              Positioned(
+                top: _discSize + _ribbonDrop - _ribbonHeight,
+                child: CustomPaint(
+                  size: const Size(_discSize, _ribbonHeight),
+                  painter: const _RibbonPainter(),
+                ),
+              ),
+              Container(
+                width: _discSize,
+                height: _discSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFFFE08A), Color(0xFFE39B2C)],
+                  ),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.7),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF7A4B00).withValues(alpha: 0.25),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '$year',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF5A3300),
+                  ),
+                ),
               ),
             ],
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            '$year',
-            style: const TextStyle(
-              fontSize: 13,
-              height: 1,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF5A3300),
-            ),
           ),
         ),
       ),
     );
   }
+}
+
+/// 勋章下方的两条红绶带，末端各开一个 V 形缺口。
+///
+/// 两条给不同深浅：左边压暗一点当背面，右边亮一点当正面，交叠处才有前后关系，
+/// 不然一整块纯红看着像个方块。
+class _RibbonPainter extends CustomPainter {
+  const _RibbonPainter();
+
+  static const Color _front = Color(0xFFE23B3B);
+  static const Color _back = Color(0xFFB01C1C);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final bottom = size.height;
+    final notch = bottom - 4;
+    const halfWidth = 6.5;
+    const lean = 2.5; // 两条带子向外岔开的量
+
+    // 左带（在后）
+    final left = Path()
+      ..moveTo(cx - 1, 0)
+      ..lineTo(cx + halfWidth - lean - 1, 0)
+      ..lineTo(cx + 1 - lean, bottom)
+      ..lineTo(cx - 2 - lean, notch)
+      ..lineTo(cx - halfWidth - lean, bottom)
+      ..close();
+    canvas.drawPath(left, Paint()..color = _back);
+
+    // 右带（在前）
+    final right = Path()
+      ..moveTo(cx - halfWidth + lean + 1, 0)
+      ..lineTo(cx + 1, 0)
+      ..lineTo(cx + halfWidth + lean, bottom)
+      ..lineTo(cx + 2 + lean, notch)
+      ..lineTo(cx - 1 + lean, bottom)
+      ..close();
+    canvas.drawPath(right, Paint()..color = _front);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RibbonPainter oldDelegate) => false;
 }
