@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 /// 更新说明页里的一条内容。
 ///
@@ -12,6 +12,8 @@ class ReleaseHighlight {
     this.points = const [],
     this.action = ReleaseHighlightAction.none,
     this.isFootnote = false,
+    this.icon,
+    this.badge,
   });
 
   /// 这条内容是**哪个版本加进来的**，也是它唯一的显示判据：用户上次看过的版本
@@ -43,18 +45,28 @@ class ReleaseHighlight {
   /// 隐私、诊断这类「需要告知但不是卖点」的内容用它：既保证升级路径上一定
   /// 被看到，又不会和真正的新功能抢版面。
   final bool isFootnote;
+
+  /// 代表该功能亮点的特征图标（可选）。
+  final IconData? icon;
+
+  /// 标识该功能的徽章标签文本（可选）。
+  final String? badge;
 }
 
-/// 「核心亮点」里的一条：一个短标题加一段说明。
+/// 「核心亮点」里的一条：一个短标题加一段说明，以及可选的专属图标。
 @immutable
 class ReleaseHighlightPoint {
   const ReleaseHighlightPoint({
     required this.title,
     required this.description,
+    this.icon,
   });
 
   final String title;
   final String description;
+
+  /// 该亮点分条的图标（可选）。
+  final IconData? icon;
 }
 
 /// 一条内容可以附带的行内操作。

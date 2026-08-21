@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/release_highlight.dart';
 import 'package:thoughtecho/utils/version_utils.dart';
@@ -36,26 +38,32 @@ class ReleaseHighlights {
           version: '4.0.0',
           title: l10n.releaseThoughterTitle,
           lede: l10n.releaseThoughterLede,
+          icon: Icons.psychology_rounded,
           points: [
             ReleaseHighlightPoint(
               title: l10n.releaseThoughterSearchTitle,
               description: l10n.releaseThoughterSearchDesc,
+              icon: Icons.saved_search_rounded,
             ),
             ReleaseHighlightPoint(
               title: l10n.releaseThoughterControlTitle,
               description: l10n.releaseThoughterControlDesc,
+              icon: Icons.rule_folder_outlined,
             ),
             ReleaseHighlightPoint(
               title: l10n.releaseThoughterSingleNoteTitle,
               description: l10n.releaseThoughterSingleNoteDesc,
+              icon: Icons.chat_bubble_outline_rounded,
             ),
             ReleaseHighlightPoint(
               title: l10n.releaseThoughterMemoryTitle,
               description: l10n.releaseThoughterMemoryDesc,
+              icon: Icons.psychology_alt_outlined,
             ),
             ReleaseHighlightPoint(
               title: l10n.releaseThoughterInsightTitle,
               description: l10n.releaseThoughterInsightDesc,
+              icon: Icons.insights_rounded,
             ),
           ],
         ),
@@ -63,25 +71,30 @@ class ReleaseHighlights {
           version: '4.0.0',
           title: l10n.releaseThemeTitle,
           lede: l10n.releaseThemeLede,
+          icon: Icons.palette_outlined,
           action: ReleaseHighlightAction.themeStyle,
           points: [
             ReleaseHighlightPoint(
               title: l10n.releaseThemeStylesTitle,
               description: l10n.releaseThemeStylesDesc,
+              icon: Icons.auto_stories_outlined,
             ),
             ReleaseHighlightPoint(
               title: l10n.releaseThemeAccentTitle,
               description: l10n.releaseThemeAccentDesc,
+              icon: Icons.colorize_outlined,
             ),
             ReleaseHighlightPoint(
               title: l10n.releaseThemeSwitchTitle,
               description: l10n.releaseThemeSwitchDesc,
+              icon: Icons.tune_outlined,
             ),
           ],
         ),
         ReleaseHighlight(
           version: sentryDisclosureVersion,
           lede: l10n.releaseDiagnosticsNotice,
+          icon: Icons.shield_outlined,
           isFootnote: true,
         ),
       ];
