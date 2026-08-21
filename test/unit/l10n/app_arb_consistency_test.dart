@@ -3,8 +3,14 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+
 void main() {
   group('ARB consistency', () {
+    test('AppLocalizations default fallback language is English', () {
+      expect(AppLocalizations.supportedLocales.first, const Locale('en'));
+    });
+
     test('app_zh.arb exposes the simple operation failure key', () {
       final data = jsonDecode(
         File('lib/l10n/app_zh.arb').readAsStringSync(),

@@ -113,7 +113,7 @@ Text(l10n.welcomeMessage('张三'))
 - `output-localization-file`: 生成的输出文件名
 - `output-class`: 生成的类名
 - `output-dir`: 生成文件的输出目录
-- `preferred-supported-locales`: 首选语言顺序
+- `preferred-supported-locales`: 首选语言顺序（设为 `[en]`，未提供本地化的语言默认回退显示为英文）
 
 ## 重新生成代码
 
