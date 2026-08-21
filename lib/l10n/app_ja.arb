@@ -3633,5 +3633,929 @@
   "feedbackDiscussionTitle": "コミュニティの議論に参加",
   "feedbackDiscussionDesc": "質問、アイデアの共有、他のユーザーとの交流",
   "feedbackSentryTitle": "フィードバックを送信 (Sentry)",
-  "feedbackSentryDesc": "開発者に直接意見、提案、またはバグ報告を送信"
+  "feedbackSentryDesc": "開発者に直接意見、提案、またはバグ報告を送信",
+  "sentryDisclosureMessage": "[JA] The ThoughtEcho privacy policy has been updated. You can view the latest version on our official website.\n\nWe have added Sentry to collect errors and user feedback. To protect your privacy, this feature is disabled by default. You can enable it anytime in 'Settings -> Feedback & Contact'.\n\nPrivacy Policy: https://note.shangjinyun.cn/privacy",
+  "feedbackEmailDesc": "[JA] shangjinyun@proton.me",
+  "feedbackSentryDisabledHint": "[JA] Please enable Sentry Debugging & Reporting below first",
+  "noteListDisableCardShadowsExperiment": "[JA] [Experiment] Disable note-list card shadows",
+  "noteListDisableCardShadowsExperimentDesc": "[JA] Available in release builds. Compare how card shadows affect Notes scrolling performance and visual feel (off by default)",
+  "noteListDisableBackdropBlurExperiment": "[JA] [Experiment] Disable note-list collapse blur",
+  "noteListDisableBackdropBlurExperimentDesc": "[JA] Available in release builds. Replaces the collapsed long-content bottom blur with a gradient scrim (off by default)",
+  "addNoteAutoFocusExperiment": "[JA] [Experiment] AddNote auto focus",
+  "addNoteAutoFocusExperimentDesc": "[JA] Automatically show the keyboard after the add note dialog settles (on by default)",
+  "noteNotFound": "[JA] Note not found",
+  "noteUpdateSkippedDeleted": "[JA] Note has been deleted, update skipped",
+  "dailyQuoteApiNinjasManageApiKey": "[JA] Configure service key",
+  "dailyQuoteApiNinjasApiKeyHint": "[JA] Enter the API Ninjas X-Api-Key",
+  "dailyQuoteApiNinjasApiKeyConfigured": "[JA] Service key configured",
+  "dailyQuoteApiNinjasApiKeyMissing": "[JA] No service key configured yet",
+  "dailyQuoteApiNinjasApiKeyInvalid": "[JA] The service key format looks invalid",
+  "dailyQuoteApiNinjasCategorySelection": "[JA] Category selection",
+  "dailyQuoteApiNinjasCategoryDesc": "[JA] Search, select multiple categories, or clear them all. Leaving everything unchecked falls back to fully random quotes.",
+  "dailyQuoteApiNinjasCategorySearchHint": "[JA] Search categories",
+  "dailyQuoteApiNinjasNoCategoriesFound": "[JA] No matching categories",
+  "dailyQuoteApiNinjasAllCategoriesUsed": "[JA] No category filter applied; quotes will be drawn from the full pool",
+  "dailyQuoteApiNinjasSelectedCount": "[JA] {count} categories selected",
+  "@dailyQuoteApiNinjasSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteApiNinjasCategoryWisdom": "[JA] Wisdom",
+  "dailyQuoteApiNinjasCategoryPhilosophy": "[JA] Philosophy",
+  "dailyQuoteApiNinjasCategoryLife": "[JA] Life",
+  "dailyQuoteApiNinjasCategoryTruth": "[JA] Truth",
+  "dailyQuoteApiNinjasCategoryInspirational": "[JA] Inspirational",
+  "dailyQuoteApiNinjasCategoryRelationships": "[JA] Relationships",
+  "dailyQuoteApiNinjasCategoryLove": "[JA] Love",
+  "dailyQuoteApiNinjasCategoryFaith": "[JA] Faith",
+  "dailyQuoteApiNinjasCategoryHumor": "[JA] Humor",
+  "dailyQuoteApiNinjasCategorySuccess": "[JA] Success",
+  "dailyQuoteApiNinjasCategoryCourage": "[JA] Courage",
+  "dailyQuoteApiNinjasCategoryHappiness": "[JA] Happiness",
+  "dailyQuoteApiNinjasCategoryArt": "[JA] Art",
+  "dailyQuoteApiNinjasCategoryWriting": "[JA] Writing",
+  "dailyQuoteApiNinjasCategoryFear": "[JA] Fear",
+  "dailyQuoteApiNinjasCategoryNature": "[JA] Nature",
+  "dailyQuoteApiNinjasCategoryTime": "[JA] Time",
+  "dailyQuoteApiNinjasCategoryFreedom": "[JA] Freedom",
+  "dailyQuoteApiNinjasCategoryDeath": "[JA] Death",
+  "dailyQuoteApiNinjasCategoryLeadership": "[JA] Leadership",
+  "dailyQuoteServiceProvider": "[JA] Current content provided by {provider}",
+  "@dailyQuoteServiceProvider": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "migrationTargetSameAsCurrent": "[JA] The selected directory is the same as the current data directory",
+  "migrationTargetAncestor": "[JA] The selected directory cannot be a parent of the current data directory",
+  "migrationTargetNested": "[JA] The selected directory cannot be inside the current data directory",
+  "viewToolProcess": "[JA] View process",
+  "cardSharePrefix": "[JA] A beautiful card from ThoughtEcho\n\n",
+  "agentErrorNoProvider": "[JA] Select an AI provider and try again.",
+  "agentErrorMissingApiKey": "[JA] Configure an API key for {providerName}, then try again.",
+  "@agentErrorMissingApiKey": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentErrorUnsupportedProvider": "[JA] The current AI provider does not support Agent mode. Choose another provider and try again.",
+  "agentErrorTimeout": "[JA] The request timed out. Check your connection and try again.",
+  "agentErrorCancelled": "[JA] This request was stopped.",
+  "agentErrorGeneric": "[JA] The request could not be completed. Please try again later.",
+  "unsupportedMediaType": "[JA] Unsupported media type",
+  "unsupportedMediaTypeWithName": "[JA] Unsupported media type: {mediaType}",
+  "@unsupportedMediaTypeWithName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "fileNotExistOrMoved": "[JA] The selected file does not exist or has been moved or deleted\nPath: {path}",
+  "@fileNotExistOrMoved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedFileEmpty": "[JA] The selected file is empty\nPath: {path}",
+  "@selectedFileEmpty": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "unsupportedFileFormat": "[JA] Unsupported file format: .{extension}\nSupported formats: {formats}",
+  "@unsupportedFileFormat": {
+    "placeholders": {
+      "extension": {
+        "type": "String"
+      },
+      "formats": {
+        "type": "String"
+      }
+    }
+  },
+  "fileUnreadable": "[JA] The file cannot be read. Possible reasons:\n• The file is corrupted\n• The file is being used by another program\n• Insufficient permissions\nPlease check the file and try again",
+  "mediaTypeNoCameraImport": "[JA] {mediaType} does not support camera import",
+  "@mediaTypeNoCameraImport": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "noteAttribution": "[JA]  (attributed to {source})",
+  "@noteAttribution": {
+    "description": "喂给 AI 的笔记内容里，标出这条笔记填的作者/出处，用于区分摘录与原创署名",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderOllamaCloud": "[JA] Ollama Cloud",
+  "loadFailedSimple": "[JA] Load failed",
+  "loadNoteFailed": "[JA] Failed to load notes",
+  "queryTimeoutShort": "[JA] Query timed out",
+  "queryTimeoutRetry": "[JA] Query timed out, please retry",
+  "databaseQueryError": "[JA] Database query error",
+  "syncFromSuffix": "[JA]  (from {from})",
+  "@syncFromSuffix": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      }
+    }
+  },
+  "showNoteEditTime": "[JA] Show Note Edit Time",
+  "showNoteEditTimeDesc": "[JA] Display the last edited time in notes",
+  "editedAtLabel": "[JA] Edited at {dateTime}",
+  "@editedAtLabel": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteAiAnalysis": "[JA] Delete AI Analysis",
+  "deleteAiAnalysisConfirm": "[JA] Are you sure you want to delete the AI analysis result for this note? This can be undone before saving the note.",
+  "aiAnalysisDeleted": "[JA] AI analysis deleted",
+  "aiAnalysisSaved": "[JA] AI analysis saved",
+  "viewFull": "[JA] View Full",
+  "copy": "[JA] Copy",
+  "copiedToClipboard": "[JA] Copied to clipboard",
+  "backupSavedToPath": "[JA] Backup saved to: {path}",
+  "@backupSavedToPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "backupCompleteWithWarnings": "[JA] Backup completed, but with warnings",
+  "backupDeltaFailuresMessage": "[JA] {count, plural, =1{1 note had rich-text media path conversion failures. This note still contains a local absolute path in the backup; images may not display when restored on another device.\n\nAffected note ID: {ids}} other{# notes had rich-text media path conversion failures. These notes still contain local absolute paths in the backup; images may not display when restored on another device.\n\nAffected note IDs: {ids}}}",
+  "@backupDeltaFailuresMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "ids": {
+        "type": "String"
+      }
+    }
+  },
+  "backupDeltaFailuresIdJoiner": "[JA] , ",
+  "backupDeltaFailuresMoreSuffix": "[JA]  etc.",
+  "backupFailedGeneric": "[JA] Unable to complete backup. Please try again later.",
+  "@backupFailedGeneric": {
+    "description": "Generic backup failure message shown when the error type is not classified"
+  },
+  "backupFailedOutOfMemory": "[JA] Backup failed: Out of memory\n\nSuggestions:\n• Close other apps to free up memory\n• Try a backup without media files\n• Restart the app and try again",
+  "backupFailedNoSpace": "[JA] Backup failed: Not enough storage space\n\nPlease free up device storage and try again.",
+  "backupFailedPermission": "[JA] Backup failed: Insufficient permission\n\nPlease check the app's storage permission settings.",
+  "saveTempFileFailed": "[JA] Failed to save temporary file",
+  "openBrowserFailed": "[JA] Failed to open browser",
+  "createShareFileFailed": "[JA] Failed to create share file",
+  "aiSuggestionCoreIdea": "[JA] What is the core idea of this note?",
+  "aiSuggestionInspiration": "[JA] What inspiration can we draw from it?",
+  "aiSuggestionSummarize": "[JA] Can you summarize the key points?",
+  "aiSuggestionSolution": "[JA] What solutions are there?",
+  "aiSuggestionUnderstandConcept": "[JA] How can I better understand this concept?",
+  "aiSuggestionActionPlan": "[JA] How do I create an action plan?",
+  "aiSuggestionPsychology": "[JA] What psychological state does this reflect?",
+  "aiSuggestionRealLife": "[JA] How can this be applied to real life?",
+  "aiSuggestionThinkingPattern": "[JA] What thinking pattern does this reflect?",
+  "svgLoading": "[JA] Loading SVG...",
+  "svgLoadingFallback": "[JA] Loading fallback template...",
+  "svgRenderFailed": "[JA] SVG render failed",
+  "svgTryingFallback": "[JA] Trying fallback template...",
+  "cardRenderFailed": "[JA] Card render failed",
+  "cardRegeneratePrompt": "[JA] Please try regenerating the card",
+  "svgContentParseFailed": "[JA] Content parse failed",
+  "svgContentExtractFailed": "[JA] Unable to extract content",
+  "svgContentEmpty": "[JA] SVG content is empty",
+  "svgContentInvalidFormat": "[JA] Invalid SVG format",
+  "svgFallbackTitle": "[JA] SVG generation failed",
+  "svgFallbackHint": "[JA] Please try regenerating the card or check your AI configuration",
+  "svgFallbackIdentifier": "[JA] ThoughtEcho - Fallback Template",
+  "mediaProcessingNone": "[JA] No media files to process",
+  "mediaProcessingFound": "[JA] {total, plural, =1{Found 1 media file} other{Found # media files}}",
+  "@mediaProcessingFound": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingCopying": "[JA] Copying {typeLabel} {done}/{total}",
+  "@mediaProcessingCopying": {
+    "placeholders": {
+      "typeLabel": {
+        "type": "String"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingProgress": "[JA] Processed {done} / {total}",
+  "@mediaProcessingProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteLoading": "[JA] Loading...",
+  "dailyQuoteLoadingLocal": "[JA] Loading from local records...",
+  "dailyQuoteLoadingOffline": "[JA] No network, loading from local records...",
+  "dailyQuoteNoNetworkRetry": "[JA] No network and no local records, tap to retry",
+  "dailyQuoteFetchFailedRetry": "[JA] Failed to fetch quote, tap to retry",
+  "smartPushDailyQuoteIndependentNote": "[JA] Daily Quote runs independently from Smart Push — each can be enabled or disabled separately.",
+  "excerptIntentEnabled": "[JA] Clip to ThoughtEcho",
+  "excerptIntentEnabledDesc": "[JA] Allow selected text from browsers or other apps to open ThoughtEcho directly in the non-fullscreen editor",
+  "annualReportDemo": "[JA] Annual Report Demo",
+  "manualApiTest": "[JA] Manual API Test",
+  "manualApiTestTitle": "[JA] Manual API Key Test",
+  "manualApiTestDesc": "[JA] Directly input API parameters for testing, bypassing the storage system to check if the API key is valid.",
+  "testResultLabel": "[JA] Test Result:",
+  "fillAllFieldsError": "[JA] Error: Please fill in all required fields",
+  "testReportTitle": "[JA] === Manual API Key Test Report ===",
+  "testParamsLabel": "[JA] Test Parameters:",
+  "keyFormatCheckLabel": "[JA] Key Format Check:",
+  "testApiKeyPrefixLabel": "[JA]   API Key Prefix: {prefix}",
+  "@testApiKeyPrefixLabel": {
+    "placeholders": {
+      "prefix": {
+        "type": "String"
+      }
+    }
+  },
+  "sendRequestLabel": "[JA] Send Request:",
+  "responseResultLabel": "[JA] Response Result:",
+  "testApiKey": "[JA] Test API Key",
+  "aiReturnedEmptyContent": "[JA] AI returned empty content, please try again",
+  "chatWithAiAssistant": "[JA] Chat with Thoughter (AI Assistant) to explore note content",
+  "messageCopied": "[JA] Message copied to clipboard",
+  "anniversaryTitle": "[JA] ThoughtEcho · 心迹",
+  "anniversarySubtitle": "[JA] Year {years} · Thank you for being with us",
+  "@anniversarySubtitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryVeteranThanks": "[JA] You've been here since year {years} — thank you for keeping at it",
+  "@anniversaryVeteranThanks": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryEnterApp": "[JA] Enter App",
+  "anniversaryBannerTitle": "[JA] ThoughtEcho Year {years} Anniversary",
+  "@anniversaryBannerTitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryBannerSubtitle": "[JA] Thank you for every step of the journey · {range}",
+  "@anniversaryBannerSubtitle": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "anniversaryBannerTap": "[JA] Tap to replay the celebration",
+  "anniversaryReplayButton": "[JA] Replay",
+  "developerAnniversarySection": "[JA] Anniversary",
+  "developerAnniversaryEnabled": "[JA] Enable Anniversary Animation",
+  "developerAnniversaryEnabledDesc": "[JA] Toggle whether the celebration animation shows on launch",
+  "developerAnniversaryReset": "[JA] Clear Participation Record",
+  "developerAnniversaryResetDesc": "[JA] Clears the record so the celebration plays again as for a new user",
+  "developerAnniversaryResetDone": "[JA] Cleared, the celebration will play again",
+  "developerAnniversaryPreview": "[JA] Preview Animation Now",
+  "developerAnniversaryPreviewDesc": "[JA] Plays the celebration for the simulated year right away",
+  "developerAnniversarySimulate": "[JA] Simulate Anniversary",
+  "developerAnniversarySimulateOff": "[JA] Off",
+  "developerAnniversarySimulateYear": "[JA] Year {years}",
+  "@developerAnniversarySimulateYear": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversarySimulateDescOff": "[JA] Following the real date; not in a celebration window",
+  "developerAnniversarySimulateDescActive": "[JA] Simulating year {years}: the settings banner and launch animation both use this edition",
+  "@developerAnniversarySimulateDescActive": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversaryShownYears": "[JA] Celebrations Seen",
+  "developerAnniversaryShownYearsNone": "[JA] None yet",
+  "mediaPlayerPlay": "[JA] Play",
+  "mediaPlayerPause": "[JA] Pause",
+  "operationSuccess": "[JA] Operation successful!",
+  "loadingInProgress": "[JA] Loading...",
+  "aiThinkingProgress": "[JA] AI is thinking...",
+  "processingData": "[JA] Processing data...",
+  "analyzingContent": "[JA] Analyzing content...",
+  "skipNonFullscreenEditor": "[JA] Open fullscreen editor directly",
+  "skipNonFullscreenEditorDesc": "[JA] Skip quick edit and open fullscreen rich text editor when adding notes",
+  "noLocalSavedQuotes": "[JA] No previously saved daily quotes yet",
+  "copyCode": "[JA] Copy code",
+  "copiedCode": "[JA] Copied",
+  "webdavSyncTitle": "[JA] WebDAV Cloud Sync",
+  "webdavSyncSubtitle": "[JA] Configure private cloud storage to auto-sync notes across devices",
+  "webdavProvider": "[JA] Cloud Provider",
+  "webdavServerUrl": "[JA] Server URL",
+  "webdavUsername": "[JA] Username / Account",
+  "webdavPassword": "[JA] App Password / Token",
+  "webdavTestConnection": "[JA] Test Connection",
+  "webdavTestSuccess": "[JA] Connection successful!",
+  "webdavTestFailed": "[JA] Connection failed. Please check your settings and password",
+  "webdavAutoSyncLaunch": "[JA] Auto-sync on open or foreground",
+  "webdavAutoSyncLaunchSubtitle": "[JA] Merge with cloud when app opens or returns to foreground",
+  "webdavAutoSyncChange": "[JA] Auto-sync on note changes",
+  "webdavAutoSyncChangeSubtitle": "[JA] Quietly sync changes after 4 seconds of inactivity when editing",
+  "webdavExperimentalTitle": "[JA] Experimental Feature Warning",
+  "webdavExperimentalContent": "[JA] The WebDAV cloud synchronization feature is currently in the experimental preview phase. For your data safety, it is recommended to back up your core local notes before enabling. If you encounter any issues during use, please let us know.",
+  "webdavExperimentalClose": "[JA] Dismiss",
+  "webdavExperimentalIgnore": "[JA] Don't Show Again",
+  "webdavLastSync": "[JA] Last sync: {time}",
+  "@webdavLastSync": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusSyncing": "[JA] Syncing...",
+  "webdavStatusSuccess": "[JA] Sync Successful",
+  "webdavStatusFailed": "[JA] Sync Failed",
+  "settingsWebdavStatusWithTime": "[JA] {status} (Last: {time})",
+  "@settingsWebdavStatusWithTime": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWebdavEnabledWithTime": "[JA] Enabled (Last: {time})",
+  "@settingsWebdavEnabledWithTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavSyncNow": "[JA] Sync Now",
+  "webdavEnableSync": "[JA] Enable Cloud Sync",
+  "webdavSaveAndSync": "[JA] Save and Sync",
+  "webdavHowToGetAppPassword": "[JA] How to get app password?",
+  "webdavShowPasswordTooltip": "[JA] Show password",
+  "webdavHidePasswordTooltip": "[JA] Hide password",
+  "webdavOpenHelpFailed": "[JA] Unable to open help link. Please check default browser settings.",
+  "webdavConflictCategoryName": "[JA] Sync Conflicts",
+  "webdavConflictNotePrefix": "[JA] [Conflict] ",
+  "webdavConflictNotification": "[JA] Detected {count} sync conflicts, safely backed up to 'Sync Conflicts' category",
+  "@webdavConflictNotification": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webdavViewNow": "[JA] View Now",
+  "exportFormatLabel": "[JA] Default Export Format",
+  "exportFormatCard": "[JA] Delicate Share Card",
+  "exportFormatPdf": "[JA] Standard A4 PDF",
+  "exportFormatDesc": "[JA] Configure the default format when exporting or sharing notes",
+  "pdfExportExperimentalWarning": "[JA] PDF export is experimental and requires multilingual and emoji font files. The first use may need an internet connection to download them; it can be used offline afterward.",
+  "exportToPdf": "[JA] Export to PDF",
+  "pdfExportSelectionMode": "[JA] Select Export Mode",
+  "selectSameMonth": "[JA] Select Same Month",
+  "selectSameCategory": "[JA] Select Same Category",
+  "exportSelected": "[JA] Export ({count})",
+  "@exportSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportSuccess": "[JA] Export Successful",
+  "exportFailed": "[JA] Export Failed",
+  "generatingPdf": "[JA] Generating PDF...",
+  "pdfExportFailed": "[JA] Failed to export PDF: {error}",
+  "@pdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "batchPdfExportFailed": "[JA] Failed to batch export PDF: {error}",
+  "@batchPdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseSelectAtLeastOneNote": "[JA] Please select at least one note first",
+  "selectedNotesHaveNoCategories": "[JA] Selected notes have no category tags",
+  "pdfPreviewAndPrint": "[JA] PDF Preview & Print",
+  "pdfFontFallbackWarning": "[JA] No Chinese font detected. Chinese content may display as gibberish. Please check your network and try again.",
+  "webdavSyncOnCellular": "[JA] Sync over cellular data",
+  "webdavSyncOnCellularSubtitle": "[JA] Allow cloud backup and merge under mobile data networks",
+  "webdavSyncNotesOnlyOnCellular": "[JA] Sync notes only on cellular",
+  "webdavSyncNotesOnlyOnCellularSubtitle": "[JA] Only sync lightweight text notes and skip heavy media files to save data",
+  "customFeedbackTitle": "[JA] Send Feedback",
+  "customFeedbackMessageLabel": "[JA] Feedback Details",
+  "customFeedbackMessageHint": "[JA] Please describe your issue or suggestion...",
+  "customFeedbackNameLabel": "[JA] Name (Optional)",
+  "customFeedbackEmailLabel": "[JA] Email (Optional)",
+  "customFeedbackSubmit": "[JA] Submit Feedback",
+  "customFeedbackSuccess": "[JA] Thanks for your feedback!",
+  "customFeedbackEmptyError": "[JA] Please enter feedback details",
+  "saveSuccess": "[JA] Saved successfully",
+  "toolCallStatusPending": "[JA] Pending",
+  "toolCallStatusExecuting": "[JA] Executing",
+  "toolCallStatusCompleted": "[JA] Completed",
+  "toolCallStatusError": "[JA] Error",
+  "toolCallParameters": "[JA] Parameters",
+  "toolCallResult": "[JA] Result",
+  "failedToPickFiles": "[JA] Failed to pick files: {error}",
+  "@failedToPickFiles": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "editModeMetadataReadOnlyHint": "[JA] Location and weather of saved notes cannot be modified",
+  "dataInsights": "[JA] Data Insights",
+  "dataInsightsDesc": "[JA] Deep analysis of your notes and writing trends",
+  "searchChatHistory": "[JA] Search chats...",
+  "dynamicInsightStats": "[JA] You have recorded {count} thoughts, with {recentCount} from the past 7 days.",
+  "@dynamicInsightStats": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "recentCount": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionGroupToday": "[JA] Today",
+  "sessionGroupYesterday": "[JA] Yesterday",
+  "sessionGroupThisWeek": "[JA] This Week",
+  "sessionGroupEarlier": "[JA] Earlier",
+  "messageCountLabel": "[JA] {count} msgs",
+  "@messageCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commandPolish": "[JA] Polish",
+  "commandContinue": "[JA] Continue",
+  "commandDeepAnalysis": "[JA] Deep Analysis",
+  "commandInsight": "[JA] Insights",
+  "aiPromptPolish": "[JA] Please polish this text for me",
+  "aiPromptContinue": "[JA] Please continue writing this text",
+  "aiPromptDeepAnalysis": "[JA] Please provide a deep analysis of this note",
+  "aiPromptSourceAnalysis": "[JA] Please analyze the source of this text and identify the possible author and work",
+  "aiAssistantInputHint": "[JA] Enter question...",
+  "aiAssistantExploreWelcome": "[JA] {summary}",
+  "@aiAssistantExploreWelcome": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "currentNoteContext": "[JA] Current Note Context",
+  "workflowUnavailable": "[JA] Workflow Unavailable",
+  "aiWorkflowNeedsBoundNote": "[JA] This feature requires a bound note",
+  "confidenceLabel": "[JA] Confidence",
+  "replaceOriginalNote": "[JA] Replace Original",
+  "appendToEnd": "[JA] Append to End",
+  "scrollToBottom": "[JA] Scroll to bottom",
+  "pinChat": "[JA] Pin",
+  "unpinChat": "[JA] Unpin",
+  "stopGenerate": "[JA] Stop",
+  "aiModeChat": "[JA] Chat Mode",
+  "aiModeAgent": "[JA] Agent Mode",
+  "agentReachedMaxRounds": "[JA] Reached the tool-call limit for this run. The answer above is based on what was gathered so far; ask again with a narrower request for a more complete result.",
+  "agentReviewingRecentNotes": "[JA] Browsing notes...",
+  "agentSearchingNotesForQuery": "[JA] Looking for notes about \"{query}\"...",
+  "@agentSearchingNotesForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentCollectingTags": "[JA] Getting tags...",
+  "agentReadingNoteDetail": "[JA] Viewing note...",
+  "agentCheckingLocationWeather": "[JA] Getting location and weather...",
+  "agentSavingMemory": "[JA] Saving memory...",
+  "agentRecallingMemory": "[JA] Recalling memory...",
+  "agentRecallingMemoryForQuery": "[JA] Recalling memory for \"{query}\"...",
+  "@agentRecallingMemoryForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentSearchingWebForQuery": "[JA] Looking up sources for \"{query}\"...",
+  "@agentSearchingWebForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentReadingWebPage": "[JA] Fetching webpage...",
+  "agentPreparingNewNoteSuggestion": "[JA] Preparing a new note suggestion...",
+  "agentPreparingEditSuggestion": "[JA] Preparing an edit suggestion...",
+  "agentFoundNoMatchingNotes": "[JA] No matching notes found",
+  "agentFoundMatchingNotes": "[JA] Found {count} related notes",
+  "@agentFoundMatchingNotes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentFoundMatchingNotesWithMore": "[JA] Found {count} related notes, more available",
+  "@agentFoundMatchingNotesWithMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentPreparedTagChoices": "[JA] Found {count} tags",
+  "@agentPreparedTagChoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentCheckedLocationWeather": "[JA] Got location and weather",
+  "agentCheckedLocationWeatherWithDetails": "[JA] Location: {location}, Weather: {weather}",
+  "@agentCheckedLocationWeatherWithDetails": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      },
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "agentFoundWebSources": "[JA] Found {count} web sources",
+  "@agentFoundWebSources": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadWebPageSummary": "[JA] Fetched webpage, about {count} chars",
+  "@agentReadWebPageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadNoteDetailSummary": "[JA] Read full content of note \"{title}\"",
+  "@agentReadNoteDetailSummary": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "agentPreparedSuggestionCard": "[JA] Suggestion ready",
+  "agentToolStepFinished": "[JA] Done",
+  "agentToolStepDidNotFinish": "[JA] Failed",
+  "agentMemorySaved": "[JA] Memory saved",
+  "agentMemoryDeleted": "[JA] Memory deleted",
+  "agentRecalledFacts": "[JA] Found {count, plural, =1{1 related memory} other{{count} related memories}}",
+  "@agentRecalledFacts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentRecalledNoFacts": "[JA] No related memories found",
+  "aiThinking": "[JA] Thinking...",
+  "thinkingMode": "[JA] Deep Thinking",
+  "showThinking": "[JA] Show thinking",
+  "hideThinking": "[JA] Hide thinking",
+  "toolExecutionProgress": "[JA] Working...",
+  "toolExecutionCompleted": "[JA] Done",
+  "executedNOperations": "[JA] {count} operations done",
+  "@executedNOperations": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "attachFile": "[JA] Attach file",
+  "yesterday": "[JA] Yesterday",
+  "openInEditor": "[JA] Open in Editor",
+  "saveDirectly": "[JA] Save Directly",
+  "replace": "[JA] Replace",
+  "append": "[JA] Append",
+  "notice": "[JA] Notice",
+  "saveRequired": "[JA] Save Required",
+  "saveBeforeAiAssistant": "[JA] Please save your note before entering Thoughter",
+  "saveAndContinue": "[JA] Save & Continue",
+  "toggleAddLocation": "[JA] Add location",
+  "toggleAddWeather": "[JA] Add weather",
+  "webdavDisableSyncSuccess": "[JA] WebDAV sync disabled. Local data retained.",
+  "webdavDisableSync": "[JA] Disable Cloud Sync",
+  "webdavGoToResolve": "[JA] Resolve Now",
+  "webdavNoConflicts": "[JA] No Conflicts Detected",
+  "webdavAllConflictsResolved": "[JA] All sync conflicts have been resolved.",
+  "webdavProviderNutstore": "[JA] Nutstore",
+  "webdavProviderCustom": "[JA] Custom",
+  "webdavProviderNextcloud": "[JA] Nextcloud / ownCloud",
+  "webdavProviderInfinicloud": "[JA] InfiniCLOUD",
+  "webdavProviderConfig": "[JA] Provider Configuration",
+  "webdavServerUrlEmptyError": "[JA] Please enter WebDAV server address",
+  "webdavServerUrlInvalidError": "[JA] Address must start with https://",
+  "webdavUsernameEmptyError": "[JA] Please enter username",
+  "webdavPasswordEmptyError": "[JA] Please enter app password",
+  "webdavSyncStrategy": "[JA] Sync Strategy",
+  "webdavStatusNotEnabled": "[JA] Cloud Sync Disabled",
+  "webdavStatusNotEnabledDesc": "[JA] Configure your WebDAV service to enjoy secure cross-device multi-way synchronization.",
+  "webdavStatusSyncingDesc": "[JA] Securely comparing and merging cloud and local database files...",
+  "webdavStatusRunning": "[JA] Cloud Sync Running",
+  "webdavStatusRunningDesc": "[JA] An encrypted merge pipeline has been established with the cloud drive.\nLast sync: {time}",
+  "@webdavStatusRunningDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusException": "[JA] Sync Exception",
+  "webdavStatusExceptionDesc": "[JA] Network communication or cloud drive file lock conflict. We will retry automatically.",
+  "webdavStatusEnabled": "[JA] Cloud Sync Enabled",
+  "webdavStatusEnabledDesc": "[JA] Service ready. Last sync: {time}",
+  "@webdavStatusEnabledDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavNeverSynced": "[JA] Never synced",
+  "webdavNeverSucceeded": "[JA] Never succeeded",
+  "webdavConflictPrompt": "[JA] Detected {count} sync conflict backup(s). It is recommended to resolve them immediately.",
+  "@webdavConflictPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webContentTitle": "[JA] Web Content",
+  "fetchingWebContent": "[JA] Fetching web content from: {url}",
+  "@fetchingWebContent": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "webCommandInvalidUrl": "[JA] Please provide a valid URL with /web command",
+  "webCommandInvalidUrlTitle": "[JA] Invalid URL",
+  "aiSuggestion": "[JA] AI Suggestion",
+  "autoAttachMetadataUnavailable": "[JA] Location/weather unavailable, note saved without them",
+  "agentRichEditConflict": "[JA] The note changed after this suggestion was created. To protect your edits, ask AI to generate a fresh suggestion.",
+  "agentDiffOriginal": "[JA] Original",
+  "agentDiffReplacement": "[JA] Replace with",
+  "agentDiffInsertBefore": "[JA] Insert before this content",
+  "agentDiffInsertAfter": "[JA] Insert after this content",
+  "agentDiffAppend": "[JA] Append content",
+  "agentDiffDelete": "[JA] Delete content",
+  "noteProposalCreate": "[JA] Create",
+  "noteProposalEdit": "[JA] Edit",
+  "noteProposalPlain": "[JA] Plain note",
+  "noteProposalRich": "[JA] Rich text note",
+  "noteProposalChangeCount": "[JA] {count} changes",
+  "@noteProposalChangeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noteProposalExpand": "[JA] Expand document",
+  "noteProposalCollapse": "[JA] Collapse document",
+  "noteProposalViewChanges": "[JA] View change history",
+  "noteProposalPlainToRichWarning": "[JA] After applying, this note will open in the full-screen rich text editor.",
+  "noteProposalBefore": "[JA] Original",
+  "noteProposalAfter": "[JA] Changed to",
+  "noteProposalCompleted": "[JA] Completed",
+  "noteProposalApply": "[JA] Apply changes",
+  "noteProposalSave": "[JA] Save note",
+  "noteProposalLegacyReadOnly": "[JA] This is a legacy suggestion without safe revision data. It is view-only; ask AI to generate a new suggestion before applying it.",
+  "noteProposalPlainEditorPreferenceWarning": "[JA] Your editor preference opens this plain draft in the full-screen rich text editor; saving it will create a rich text note.",
+  "aiCardBadgeCreate": "[JA] New",
+  "aiCardBadgeEdit": "[JA] Edit",
+  "aiCardQuickEdit": "[JA] Quick edit",
+  "aiCardQuickEditTooltip": "[JA] Quickly edit the content, source, or tags",
+  "aiCardSavedViewNote": "[JA] Saved · View note",
+  "aiCardSaveFailedGeneric": "[JA] Couldn't save. Please try again.",
+  "aiCardEditContentHint": "[JA] Edit content",
+  "experimentalTag": "[JA] Beta",
+  "agentExperimentalNoticeTitle": "[JA] Thoughter Experimental Feature Notice",
+  "agentExperimentalNoticeIntro": "[JA] Thoughter is an AI Agent assistant currently in testing. Please review the following before proceeding:",
+  "agentExperimentalNoticePoint1": "[JA] AI may generate incorrect or inaccurate responses. Please review all content critically.",
+  "agentExperimentalNoticePoint2": "[JA] AI cannot directly edit your notes; all creations and edits take effect only after you click save/apply.",
+  "agentExperimentalNoticePoint3": "[JA] This feature is in active testing and refinement, and may encounter instability or bugs.",
+  "agentExperimentalNoticeGotIt": "[JA] Understand & Continue",
+  "agentExperimentalBannerText": "[JA] Experimental feature: AI answers may be inaccurate. Notes are only modified after clicking save.",
+  "agentExperimentalNoticeAction": "[JA] View Notice",
+  "dontShowAgain": "[JA] Don't show again",
+  "settingsLab": "[JA] Lab",
+  "settingsLabDesc": "[JA] Debug entries and experimental toggles shown in developer mode. May be unstable",
+  "firstOpenScrollPerfMonitorExperiment": "[JA] [Experiment] First-open scroll performance monitor",
+  "firstOpenScrollPerfMonitorExperimentDesc": "[JA] Record dropped frames on the first Notes scroll after a cold start (off by default)",
+  "addNoteDeferMetadataExperiment": "[JA] [Experiment] AddNote deferred metadata",
+  "addNoteDeferMetadataExperimentDesc": "[JA] Defer location and weather lookup until the keyboard animation finishes (off by default)",
+  "noteCardMediaStyleExperiment": "[JA] [Experiment] Note card media layout",
+  "noteCardMediaStyleThumbnail": "[JA] Side thumbnail",
+  "noteCardMediaStyleThumbnailDesc": "[JA] Square thumbnail on the right. Always visible, cheapest to decode.",
+  "noteCardMediaStyleInline": "[JA] Inline (legacy)",
+  "noteCardMediaStyleInlineDesc": "[JA] Images stay inline, order preserved. Cost: images below the fold are clipped, and audio/video build players in the list.",
+  "noteCardMediaStyleBanner": "[JA] Top banner",
+  "noteCardMediaStyleBannerDesc": "[JA] Full-width banner on top, photo first. Normalised position, most expensive to decode.",
+  "noteInsertAnimationExperiment": "[JA] [Experiment] Note insert animation",
+  "noteInsertAnimationCurrent": "[JA] Current: {name}",
+  "@noteInsertAnimationCurrent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noteInsertAnimationScale": "[JA] Bubble scale",
+  "noteInsertAnimationSlide": "[JA] Smooth rise",
+  "noteInsertAnimationNone": "[JA] No animation",
+  "aiProviderZhipu": "[JA] Zhipu GLM",
+  "aiProviderMoonshot": "[JA] Moonshot Kimi",
+  "aiProviderDashScope": "[JA] Alibaba Bailian",
+  "aiProviderVolcengine": "[JA] Volcengine Ark",
+  "aiProviderGemini": "[JA] Google Gemini",
+  "presetDescOllamaCloud": "[JA] Generous free tier, works right after sign-up. Best first choice.",
+  "presetDescOpenAI": "[JA] Official OpenAI API. Requires an international payment method.",
+  "presetDescOpenRouter": "[JA] One key for hundreds of models, including Claude and Gemini.",
+  "presetDescDeepSeek": "[JA] Low cost, strong Chinese performance.",
+  "presetDescSiliconFlow": "[JA] Aggregator platform; some small models are free.",
+  "presetDescZhipu": "[JA] glm-4-flash is free to use.",
+  "presetDescMoonshot": "[JA] Strong long-context performance.",
+  "presetDescDashScope": "[JA] OpenAI-compatible endpoint for the Qwen family.",
+  "presetDescVolcengine": "[JA] Doubao models. Put the inference endpoint ID in the model field.",
+  "presetDescGemini": "[JA] Gemini's official OpenAI-compatible endpoint. Has a free tier.",
+  "presetDescOllamaLocal": "[JA] Connect to Ollama on this machine. Offline, no key needed.",
+  "presetDescLMStudio": "[JA] Connect to LM Studio on this machine. Offline, no key needed.",
+  "presetDescCustom": "[JA] Any OpenAI-compatible endpoint. Fill in the URL and model yourself.",
+  "aiServicesSectionTitle": "[JA] My AI services",
+  "aiServiceEmptyTitle": "[JA] No AI service configured yet",
+  "aiServiceEmptyBody": "[JA] AI insights, card generation and the Thoughter assistant need a configured provider.",
+  "addAiService": "[JA] Add AI service",
+  "editAiServiceTitle": "[JA] Edit AI service",
+  "newAiServiceTitle": "[JA] New AI service",
+  "selectProviderTemplate": "[JA] Choose a provider",
+  "changeProviderTemplate": "[JA] Change",
+  "providerGroupCloud": "[JA] Cloud services",
+  "providerGroupLocal": "[JA] Runs locally",
+  "providerGroupCustom": "[JA] Custom",
+  "recommendedBadge": "[JA] Recommended",
+  "inUseBadge": "[JA] In use",
+  "getApiKeyLink": "[JA] Get an API key",
+  "apiKeyNotNeededHint": "[JA] Local services usually need no key — leave this empty.",
+  "suggestedModelsLabel": "[JA] Common models",
+  "configNameField": "[JA] Configuration name",
+  "statusKeyConfigured": "[JA] Key configured",
+  "statusKeyMissing": "[JA] Key missing",
+  "aiServiceSaved": "[JA] Saved {name}",
+  "@aiServiceSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ollamaCloudTipTitle": "[JA] We recommend Ollama Cloud",
+  "ollamaCloudTipBody": "[JA] Generous free tier, no card required — sign up and copy the API key.",
+  "ollamaCloudTipAction": "[JA] Add it",
+  "aiConfigHelpLink": "[JA] Not sure what to fill in? Read the setup guide",
+  "openLinkFailed": "[JA] Could not open the link",
+  "testBeforeSaveHint": "[JA] You can test as soon as URL, key and model are filled in — no need to save first.",
+  "agentMemorySectionTitle": "[JA] Thoughter memory",
+  "agentMemoryEnableTitle": "[JA] Long-term memory",
+  "agentMemoryEnableDesc": "[JA] Remember your preferences across chats (stored locally only)",
+  "agentMemoryNicknameTitle": "[JA] Nickname",
+  "agentMemoryNicknameHint": "[JA] How should Thoughter address you?",
+  "agentMemoryNicknameDesc": "[JA] How Thoughter should address you (leave empty to skip)",
+  "agentMemoryNicknameSaveFailed": "[JA] Couldn't save your nickname. Please try again.",
+  "agentMemoryNicknameDisabled": "[JA] Enabled when long-term memory is turned on",
+  "agentMemoryClearTitle": "[JA] Clear memory",
+  "agentMemoryClearSummary": "[JA] Currently remembering {profileCount, plural, =1{1 preference} other{{profileCount} preferences}} and {factCount, plural, =1{1 detail} other{{factCount} details}}",
+  "@agentMemoryClearSummary": {
+    "placeholders": {
+      "profileCount": {
+        "type": "int"
+      },
+      "factCount": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryClearEmpty": "[JA] Nothing remembered yet",
+  "agentMemoryClearConfirmTitle": "[JA] Clear Thoughter's memory?",
+  "agentMemoryClearConfirmBody": "[JA] Every remembered preference and detail will be deleted permanently. Your notes are not affected.",
+  "agentMemoryClearConfirmAction": "[JA] Clear",
+  "agentMemoryCleared": "[JA] Thoughter's memory has been cleared",
+  "agentMemoryClearFailed": "[JA] Failed to clear memory",
+  "agentMemoryNoticeTitle": "[JA] Thoughter will remember you",
+  "agentMemoryNoticeBody": "[JA] So it doesn't have to get to know you from scratch every time, Thoughter records who you are and how you like things phrased, and uses that in later conversations, daily prompts, and periodic insights. Memory stays on this device and is never uploaded.",
+  "agentMemoryNoticeHint": "[JA] You can ask Thoughter to change or forget any entry at any time, or turn memory off and clear it in AI settings.",
+  "agentMemoryNoticeGotIt": "[JA] Got it",
+  "agentMemoryNoticeDisable": "[JA] Don't remember",
+  "agentMemorySwitchFailed": "[JA] Could not save the memory switch. Please try again.",
+  "agentMemoryCountsUnavailable": "[JA] Could not read the memory count. You can still try clearing.",
+  "releaseNotesTitle": "[JA] What's New",
+  "releaseNotesUpgradeLede": "[JA] Here's what has been added since you last used the app.",
+  "releaseNotesCurrentLede": "[JA] Here's what this version adds.",
+  "releaseNotesHighlights": "[JA] Highlights",
+  "releaseNotesGetStarted": "[JA] Get started",
+  "releaseThoughterTitle": "[JA] Thoughter: a thinking partner inside your notebook",
+  "releaseThoughterLede": "[JA] From simply capturing notes to organising and creating with them. Thoughter is no longer just a chat box that answers questions — it now works across your entire note library as a thinking partner.",
+  "releaseThoughterSearchTitle": "[JA] Smart retrieval across your notes",
+  "releaseThoughterSearchDesc": "[JA] No more digging by hand. Ask in plain language and Thoughter finds the related notes, follows the tags between them, and pulls in web results when needed.",
+  "releaseThoughterControlTitle": "[JA] You keep every editing decision",
+  "releaseThoughterControlDesc": "[JA] AI never changes your content on its own. Every new note and rewrite arrives as a proposal card that shows exactly what changed; nothing is applied until you review it and confirm.",
+  "releaseThoughterSingleNoteTitle": "[JA] Talk about a single note",
+  "releaseThoughterSingleNoteDesc": "[JA] Tap the ✨ button in the editor and choose \"Ask Thoughter\" to dig into, polish, or continue the note you have open.",
+  "releaseThoughterMemoryTitle": "[JA] Long-term memory",
+  "releaseThoughterMemoryDesc": "[JA] Once enabled, Thoughter remembers what to call you and how you like to phrase things across conversations. Memory is stored separately, and you can review or clear it at any time.",
+  "releaseThoughterInsightTitle": "[JA] Periodic insights and a rebuilt Explore page",
+  "releaseThoughterInsightDesc": "[JA] Thoughter revisits your notes on a schedule and writes them up as periodic insights. The Explore page has been rebuilt to bring those findings together.",
+  "releaseThemeTitle": "[JA] New themes: a different paper, a different ink",
+  "releaseThemeLede": "[JA] Theme style is now its own dimension alongside light and dark. Pick one of three.",
+  "releaseThemeStylesTitle": "[JA] Three styles",
+  "releaseThemeStylesDesc": "[JA] Material keeps following the system's dynamic colors; Paper & Ink is warm, with serif body text and paper rules; Plain is cool and sharper.",
+  "releaseThemeAccentTitle": "[JA] Choose your ink",
+  "releaseThemeAccentDesc": "[JA] The handcrafted styles add four inks — umber, celadon, indigo and cinnabar. Change the ink without changing the paper.",
+  "releaseThemeSwitchTitle": "[JA] Switch whenever you like",
+  "releaseThemeSwitchDesc": "[JA] Material stays the default, so upgrading does not change how the app looks. Try a style right here, or change it later in Settings › Theme Settings.",
+  "releaseDiagnosticsNotice": "[JA] Since 3.7.0, ThoughtEcho reports anonymous diagnostics when something goes wrong. They are used only to locate and fix problems and never contain note content. You can turn this off at any time in Settings › Feedback & Contact.",
+  "settingsReleaseNotes": "[JA] What's New",
+  "settingsReleaseNotesDesc": "[JA] See what this version adds"
 }

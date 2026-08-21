@@ -3629,5 +3629,933 @@
   "feedbackDiscussionTitle": "커뮤니티 토론 참여",
   "feedbackDiscussionDesc": "질문, 아이디어 공유 및 다른 사용자와의 소통",
   "feedbackSentryTitle": "피드백 보내기 (Sentry)",
-  "feedbackSentryDesc": "개발자에게 직접 의견, 제안 또는 버그 보고서 보내기"
+  "feedbackSentryDesc": "개발자에게 직접 의견, 제안 또는 버그 보고서 보내기",
+  "sentryDisclosureMessage": "[KO] The ThoughtEcho privacy policy has been updated. You can view the latest version on our official website.\n\nWe have added Sentry to collect errors and user feedback. To protect your privacy, this feature is disabled by default. You can enable it anytime in 'Settings -> Feedback & Contact'.\n\nPrivacy Policy: https://note.shangjinyun.cn/privacy",
+  "feedbackEmailDesc": "[KO] shangjinyun@proton.me",
+  "feedbackSentryDisabledHint": "[KO] Please enable Sentry Debugging & Reporting below first",
+  "noteListDisableCardShadowsExperiment": "[KO] [Experiment] Disable note-list card shadows",
+  "noteListDisableCardShadowsExperimentDesc": "[KO] Available in release builds. Compare how card shadows affect Notes scrolling performance and visual feel (off by default)",
+  "noteListDisableBackdropBlurExperiment": "[KO] [Experiment] Disable note-list collapse blur",
+  "noteListDisableBackdropBlurExperimentDesc": "[KO] Available in release builds. Replaces the collapsed long-content bottom blur with a gradient scrim (off by default)",
+  "addNoteAutoFocusExperiment": "[KO] [Experiment] AddNote auto focus",
+  "addNoteAutoFocusExperimentDesc": "[KO] Automatically show the keyboard after the add note dialog settles (on by default)",
+  "noteNotFound": "[KO] Note not found",
+  "noteUpdateSkippedDeleted": "[KO] Note has been deleted, update skipped",
+  "dailyQuoteApiNinjasManageApiKey": "[KO] Configure service key",
+  "dailyQuoteApiNinjasApiKeyHint": "[KO] Enter the API Ninjas X-Api-Key",
+  "dailyQuoteApiNinjasApiKeyConfigured": "[KO] Service key configured",
+  "dailyQuoteApiNinjasApiKeyMissing": "[KO] No service key configured yet",
+  "dailyQuoteApiNinjasApiKeyInvalid": "[KO] The service key format looks invalid",
+  "dailyQuoteApiNinjasCategorySelection": "[KO] Category selection",
+  "dailyQuoteApiNinjasCategoryDesc": "[KO] Search, select multiple categories, or clear them all. Leaving everything unchecked falls back to fully random quotes.",
+  "dailyQuoteApiNinjasCategorySearchHint": "[KO] Search categories",
+  "dailyQuoteApiNinjasNoCategoriesFound": "[KO] No matching categories",
+  "dailyQuoteApiNinjasAllCategoriesUsed": "[KO] No category filter applied; quotes will be drawn from the full pool",
+  "dailyQuoteApiNinjasSelectedCount": "[KO] {count} categories selected",
+  "@dailyQuoteApiNinjasSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteApiNinjasCategoryWisdom": "[KO] Wisdom",
+  "dailyQuoteApiNinjasCategoryPhilosophy": "[KO] Philosophy",
+  "dailyQuoteApiNinjasCategoryLife": "[KO] Life",
+  "dailyQuoteApiNinjasCategoryTruth": "[KO] Truth",
+  "dailyQuoteApiNinjasCategoryInspirational": "[KO] Inspirational",
+  "dailyQuoteApiNinjasCategoryRelationships": "[KO] Relationships",
+  "dailyQuoteApiNinjasCategoryLove": "[KO] Love",
+  "dailyQuoteApiNinjasCategoryFaith": "[KO] Faith",
+  "dailyQuoteApiNinjasCategoryHumor": "[KO] Humor",
+  "dailyQuoteApiNinjasCategorySuccess": "[KO] Success",
+  "dailyQuoteApiNinjasCategoryCourage": "[KO] Courage",
+  "dailyQuoteApiNinjasCategoryHappiness": "[KO] Happiness",
+  "dailyQuoteApiNinjasCategoryArt": "[KO] Art",
+  "dailyQuoteApiNinjasCategoryWriting": "[KO] Writing",
+  "dailyQuoteApiNinjasCategoryFear": "[KO] Fear",
+  "dailyQuoteApiNinjasCategoryNature": "[KO] Nature",
+  "dailyQuoteApiNinjasCategoryTime": "[KO] Time",
+  "dailyQuoteApiNinjasCategoryFreedom": "[KO] Freedom",
+  "dailyQuoteApiNinjasCategoryDeath": "[KO] Death",
+  "dailyQuoteApiNinjasCategoryLeadership": "[KO] Leadership",
+  "dailyQuoteServiceProvider": "[KO] Current content provided by {provider}",
+  "@dailyQuoteServiceProvider": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "migrationTargetSameAsCurrent": "[KO] The selected directory is the same as the current data directory",
+  "migrationTargetAncestor": "[KO] The selected directory cannot be a parent of the current data directory",
+  "migrationTargetNested": "[KO] The selected directory cannot be inside the current data directory",
+  "viewToolProcess": "[KO] View process",
+  "cardSharePrefix": "[KO] A beautiful card from ThoughtEcho\n\n",
+  "agentErrorNoProvider": "[KO] Select an AI provider and try again.",
+  "agentErrorMissingApiKey": "[KO] Configure an API key for {providerName}, then try again.",
+  "@agentErrorMissingApiKey": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentErrorUnsupportedProvider": "[KO] The current AI provider does not support Agent mode. Choose another provider and try again.",
+  "agentErrorTimeout": "[KO] The request timed out. Check your connection and try again.",
+  "agentErrorCancelled": "[KO] This request was stopped.",
+  "agentErrorGeneric": "[KO] The request could not be completed. Please try again later.",
+  "unsupportedMediaType": "[KO] Unsupported media type",
+  "unsupportedMediaTypeWithName": "[KO] Unsupported media type: {mediaType}",
+  "@unsupportedMediaTypeWithName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "fileNotExistOrMoved": "[KO] The selected file does not exist or has been moved or deleted\nPath: {path}",
+  "@fileNotExistOrMoved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedFileEmpty": "[KO] The selected file is empty\nPath: {path}",
+  "@selectedFileEmpty": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "unsupportedFileFormat": "[KO] Unsupported file format: .{extension}\nSupported formats: {formats}",
+  "@unsupportedFileFormat": {
+    "placeholders": {
+      "extension": {
+        "type": "String"
+      },
+      "formats": {
+        "type": "String"
+      }
+    }
+  },
+  "fileUnreadable": "[KO] The file cannot be read. Possible reasons:\n• The file is corrupted\n• The file is being used by another program\n• Insufficient permissions\nPlease check the file and try again",
+  "mediaTypeNoCameraImport": "[KO] {mediaType} does not support camera import",
+  "@mediaTypeNoCameraImport": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "noteAttribution": "[KO]  (attributed to {source})",
+  "@noteAttribution": {
+    "description": "喂给 AI 的笔记内容里，标出这条笔记填的作者/出处，用于区分摘录与原创署名",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderOllamaCloud": "[KO] Ollama Cloud",
+  "loadFailedSimple": "[KO] Load failed",
+  "loadNoteFailed": "[KO] Failed to load notes",
+  "queryTimeoutShort": "[KO] Query timed out",
+  "queryTimeoutRetry": "[KO] Query timed out, please retry",
+  "databaseQueryError": "[KO] Database query error",
+  "syncFromSuffix": "[KO]  (from {from})",
+  "@syncFromSuffix": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      }
+    }
+  },
+  "showNoteEditTime": "[KO] Show Note Edit Time",
+  "showNoteEditTimeDesc": "[KO] Display the last edited time in notes",
+  "editedAtLabel": "[KO] Edited at {dateTime}",
+  "@editedAtLabel": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteAiAnalysis": "[KO] Delete AI Analysis",
+  "deleteAiAnalysisConfirm": "[KO] Are you sure you want to delete the AI analysis result for this note? This can be undone before saving the note.",
+  "aiAnalysisDeleted": "[KO] AI analysis deleted",
+  "aiAnalysisSaved": "[KO] AI analysis saved",
+  "viewFull": "[KO] View Full",
+  "copy": "[KO] Copy",
+  "copiedToClipboard": "[KO] Copied to clipboard",
+  "backupSavedToPath": "[KO] Backup saved to: {path}",
+  "@backupSavedToPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "backupCompleteWithWarnings": "[KO] Backup completed, but with warnings",
+  "backupDeltaFailuresMessage": "[KO] {count, plural, =1{1 note had rich-text media path conversion failures. This note still contains a local absolute path in the backup; images may not display when restored on another device.\n\nAffected note ID: {ids}} other{# notes had rich-text media path conversion failures. These notes still contain local absolute paths in the backup; images may not display when restored on another device.\n\nAffected note IDs: {ids}}}",
+  "@backupDeltaFailuresMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "ids": {
+        "type": "String"
+      }
+    }
+  },
+  "backupDeltaFailuresIdJoiner": "[KO] , ",
+  "backupDeltaFailuresMoreSuffix": "[KO]  etc.",
+  "backupFailedGeneric": "[KO] Unable to complete backup. Please try again later.",
+  "@backupFailedGeneric": {
+    "description": "Generic backup failure message shown when the error type is not classified"
+  },
+  "backupFailedOutOfMemory": "[KO] Backup failed: Out of memory\n\nSuggestions:\n• Close other apps to free up memory\n• Try a backup without media files\n• Restart the app and try again",
+  "backupFailedNoSpace": "[KO] Backup failed: Not enough storage space\n\nPlease free up device storage and try again.",
+  "backupFailedPermission": "[KO] Backup failed: Insufficient permission\n\nPlease check the app's storage permission settings.",
+  "saveTempFileFailed": "[KO] Failed to save temporary file",
+  "openBrowserFailed": "[KO] Failed to open browser",
+  "createShareFileFailed": "[KO] Failed to create share file",
+  "aiSuggestionCoreIdea": "[KO] What is the core idea of this note?",
+  "aiSuggestionInspiration": "[KO] What inspiration can we draw from it?",
+  "aiSuggestionSummarize": "[KO] Can you summarize the key points?",
+  "aiSuggestionSolution": "[KO] What solutions are there?",
+  "aiSuggestionUnderstandConcept": "[KO] How can I better understand this concept?",
+  "aiSuggestionActionPlan": "[KO] How do I create an action plan?",
+  "aiSuggestionPsychology": "[KO] What psychological state does this reflect?",
+  "aiSuggestionRealLife": "[KO] How can this be applied to real life?",
+  "aiSuggestionThinkingPattern": "[KO] What thinking pattern does this reflect?",
+  "svgLoading": "[KO] Loading SVG...",
+  "svgLoadingFallback": "[KO] Loading fallback template...",
+  "svgRenderFailed": "[KO] SVG render failed",
+  "svgTryingFallback": "[KO] Trying fallback template...",
+  "cardRenderFailed": "[KO] Card render failed",
+  "cardRegeneratePrompt": "[KO] Please try regenerating the card",
+  "svgContentParseFailed": "[KO] Content parse failed",
+  "svgContentExtractFailed": "[KO] Unable to extract content",
+  "svgContentEmpty": "[KO] SVG content is empty",
+  "svgContentInvalidFormat": "[KO] Invalid SVG format",
+  "svgFallbackTitle": "[KO] SVG generation failed",
+  "svgFallbackHint": "[KO] Please try regenerating the card or check your AI configuration",
+  "svgFallbackIdentifier": "[KO] ThoughtEcho - Fallback Template",
+  "mediaProcessingNone": "[KO] No media files to process",
+  "mediaProcessingFound": "[KO] {total, plural, =1{Found 1 media file} other{Found # media files}}",
+  "@mediaProcessingFound": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingCopying": "[KO] Copying {typeLabel} {done}/{total}",
+  "@mediaProcessingCopying": {
+    "placeholders": {
+      "typeLabel": {
+        "type": "String"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingProgress": "[KO] Processed {done} / {total}",
+  "@mediaProcessingProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteLoading": "[KO] Loading...",
+  "dailyQuoteLoadingLocal": "[KO] Loading from local records...",
+  "dailyQuoteLoadingOffline": "[KO] No network, loading from local records...",
+  "dailyQuoteNoNetworkRetry": "[KO] No network and no local records, tap to retry",
+  "dailyQuoteFetchFailedRetry": "[KO] Failed to fetch quote, tap to retry",
+  "smartPushDailyQuoteIndependentNote": "[KO] Daily Quote runs independently from Smart Push — each can be enabled or disabled separately.",
+  "excerptIntentEnabled": "[KO] Clip to ThoughtEcho",
+  "excerptIntentEnabledDesc": "[KO] Allow selected text from browsers or other apps to open ThoughtEcho directly in the non-fullscreen editor",
+  "annualReportDemo": "[KO] Annual Report Demo",
+  "manualApiTest": "[KO] Manual API Test",
+  "manualApiTestTitle": "[KO] Manual API Key Test",
+  "manualApiTestDesc": "[KO] Directly input API parameters for testing, bypassing the storage system to check if the API key is valid.",
+  "testResultLabel": "[KO] Test Result:",
+  "fillAllFieldsError": "[KO] Error: Please fill in all required fields",
+  "testReportTitle": "[KO] === Manual API Key Test Report ===",
+  "testParamsLabel": "[KO] Test Parameters:",
+  "keyFormatCheckLabel": "[KO] Key Format Check:",
+  "testApiKeyPrefixLabel": "[KO]   API Key Prefix: {prefix}",
+  "@testApiKeyPrefixLabel": {
+    "placeholders": {
+      "prefix": {
+        "type": "String"
+      }
+    }
+  },
+  "sendRequestLabel": "[KO] Send Request:",
+  "responseResultLabel": "[KO] Response Result:",
+  "testApiKey": "[KO] Test API Key",
+  "aiReturnedEmptyContent": "[KO] AI returned empty content, please try again",
+  "chatWithAiAssistant": "[KO] Chat with Thoughter (AI Assistant) to explore note content",
+  "messageCopied": "[KO] Message copied to clipboard",
+  "anniversaryTitle": "[KO] ThoughtEcho · 心迹",
+  "anniversarySubtitle": "[KO] Year {years} · Thank you for being with us",
+  "@anniversarySubtitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryVeteranThanks": "[KO] You've been here since year {years} — thank you for keeping at it",
+  "@anniversaryVeteranThanks": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryEnterApp": "[KO] Enter App",
+  "anniversaryBannerTitle": "[KO] ThoughtEcho Year {years} Anniversary",
+  "@anniversaryBannerTitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryBannerSubtitle": "[KO] Thank you for every step of the journey · {range}",
+  "@anniversaryBannerSubtitle": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "anniversaryBannerTap": "[KO] Tap to replay the celebration",
+  "anniversaryReplayButton": "[KO] Replay",
+  "developerAnniversarySection": "[KO] Anniversary",
+  "developerAnniversaryEnabled": "[KO] Enable Anniversary Animation",
+  "developerAnniversaryEnabledDesc": "[KO] Toggle whether the celebration animation shows on launch",
+  "developerAnniversaryReset": "[KO] Clear Participation Record",
+  "developerAnniversaryResetDesc": "[KO] Clears the record so the celebration plays again as for a new user",
+  "developerAnniversaryResetDone": "[KO] Cleared, the celebration will play again",
+  "developerAnniversaryPreview": "[KO] Preview Animation Now",
+  "developerAnniversaryPreviewDesc": "[KO] Plays the celebration for the simulated year right away",
+  "developerAnniversarySimulate": "[KO] Simulate Anniversary",
+  "developerAnniversarySimulateOff": "[KO] Off",
+  "developerAnniversarySimulateYear": "[KO] Year {years}",
+  "@developerAnniversarySimulateYear": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversarySimulateDescOff": "[KO] Following the real date; not in a celebration window",
+  "developerAnniversarySimulateDescActive": "[KO] Simulating year {years}: the settings banner and launch animation both use this edition",
+  "@developerAnniversarySimulateDescActive": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversaryShownYears": "[KO] Celebrations Seen",
+  "developerAnniversaryShownYearsNone": "[KO] None yet",
+  "mediaPlayerPlay": "[KO] Play",
+  "mediaPlayerPause": "[KO] Pause",
+  "operationSuccess": "[KO] Operation successful!",
+  "loadingInProgress": "[KO] Loading...",
+  "aiThinkingProgress": "[KO] AI is thinking...",
+  "processingData": "[KO] Processing data...",
+  "analyzingContent": "[KO] Analyzing content...",
+  "skipNonFullscreenEditor": "[KO] Open fullscreen editor directly",
+  "skipNonFullscreenEditorDesc": "[KO] Skip quick edit and open fullscreen rich text editor when adding notes",
+  "offlineQuoteSourceTitle": "[KO] When Offline, Show",
+  "offlineQuoteSourceDesc": "[KO] Choose what appears on the home page when offline or when local-only is enabled",
+  "offlineQuoteSourceTagOnly": "[KO] Previously saved daily quotes",
+  "offlineQuoteSourceAll": "[KO] Random local records",
+  "noLocalSavedQuotes": "[KO] No previously saved daily quotes yet",
+  "copyCode": "[KO] Copy code",
+  "copiedCode": "[KO] Copied",
+  "webdavSyncTitle": "[KO] WebDAV Cloud Sync",
+  "webdavSyncSubtitle": "[KO] Configure private cloud storage to auto-sync notes across devices",
+  "webdavProvider": "[KO] Cloud Provider",
+  "webdavServerUrl": "[KO] Server URL",
+  "webdavUsername": "[KO] Username / Account",
+  "webdavPassword": "[KO] App Password / Token",
+  "webdavTestConnection": "[KO] Test Connection",
+  "webdavTestSuccess": "[KO] Connection successful!",
+  "webdavTestFailed": "[KO] Connection failed. Please check your settings and password",
+  "webdavAutoSyncLaunch": "[KO] Auto-sync on open or foreground",
+  "webdavAutoSyncLaunchSubtitle": "[KO] Merge with cloud when app opens or returns to foreground",
+  "webdavAutoSyncChange": "[KO] Auto-sync on note changes",
+  "webdavAutoSyncChangeSubtitle": "[KO] Quietly sync changes after 4 seconds of inactivity when editing",
+  "webdavExperimentalTitle": "[KO] Experimental Feature Warning",
+  "webdavExperimentalContent": "[KO] The WebDAV cloud synchronization feature is currently in the experimental preview phase. For your data safety, it is recommended to back up your core local notes before enabling. If you encounter any issues during use, please let us know.",
+  "webdavExperimentalClose": "[KO] Dismiss",
+  "webdavExperimentalIgnore": "[KO] Don't Show Again",
+  "webdavLastSync": "[KO] Last sync: {time}",
+  "@webdavLastSync": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusSyncing": "[KO] Syncing...",
+  "webdavStatusSuccess": "[KO] Sync Successful",
+  "webdavStatusFailed": "[KO] Sync Failed",
+  "settingsWebdavStatusWithTime": "[KO] {status} (Last: {time})",
+  "@settingsWebdavStatusWithTime": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWebdavEnabledWithTime": "[KO] Enabled (Last: {time})",
+  "@settingsWebdavEnabledWithTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavSyncNow": "[KO] Sync Now",
+  "webdavEnableSync": "[KO] Enable Cloud Sync",
+  "webdavSaveAndSync": "[KO] Save and Sync",
+  "webdavHowToGetAppPassword": "[KO] How to get app password?",
+  "webdavShowPasswordTooltip": "[KO] Show password",
+  "webdavHidePasswordTooltip": "[KO] Hide password",
+  "webdavOpenHelpFailed": "[KO] Unable to open help link. Please check default browser settings.",
+  "webdavConflictCategoryName": "[KO] Sync Conflicts",
+  "webdavConflictNotePrefix": "[KO] [Conflict] ",
+  "webdavConflictNotification": "[KO] Detected {count} sync conflicts, safely backed up to 'Sync Conflicts' category",
+  "@webdavConflictNotification": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webdavViewNow": "[KO] View Now",
+  "exportFormatLabel": "[KO] Default Export Format",
+  "exportFormatCard": "[KO] Delicate Share Card",
+  "exportFormatPdf": "[KO] Standard A4 PDF",
+  "exportFormatDesc": "[KO] Configure the default format when exporting or sharing notes",
+  "pdfExportExperimentalWarning": "[KO] PDF export is experimental and requires multilingual and emoji font files. The first use may need an internet connection to download them; it can be used offline afterward.",
+  "exportToPdf": "[KO] Export to PDF",
+  "pdfExportSelectionMode": "[KO] Select Export Mode",
+  "selectSameMonth": "[KO] Select Same Month",
+  "selectSameCategory": "[KO] Select Same Category",
+  "exportSelected": "[KO] Export ({count})",
+  "@exportSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportSuccess": "[KO] Export Successful",
+  "exportFailed": "[KO] Export Failed",
+  "generatingPdf": "[KO] Generating PDF...",
+  "pdfExportFailed": "[KO] Failed to export PDF: {error}",
+  "@pdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "batchPdfExportFailed": "[KO] Failed to batch export PDF: {error}",
+  "@batchPdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseSelectAtLeastOneNote": "[KO] Please select at least one note first",
+  "selectedNotesHaveNoCategories": "[KO] Selected notes have no category tags",
+  "pdfPreviewAndPrint": "[KO] PDF Preview & Print",
+  "pdfFontFallbackWarning": "[KO] No Chinese font detected. Chinese content may display as gibberish. Please check your network and try again.",
+  "webdavSyncOnCellular": "[KO] Sync over cellular data",
+  "webdavSyncOnCellularSubtitle": "[KO] Allow cloud backup and merge under mobile data networks",
+  "webdavSyncNotesOnlyOnCellular": "[KO] Sync notes only on cellular",
+  "webdavSyncNotesOnlyOnCellularSubtitle": "[KO] Only sync lightweight text notes and skip heavy media files to save data",
+  "customFeedbackTitle": "[KO] Send Feedback",
+  "customFeedbackMessageLabel": "[KO] Feedback Details",
+  "customFeedbackMessageHint": "[KO] Please describe your issue or suggestion...",
+  "customFeedbackNameLabel": "[KO] Name (Optional)",
+  "customFeedbackEmailLabel": "[KO] Email (Optional)",
+  "customFeedbackSubmit": "[KO] Submit Feedback",
+  "customFeedbackSuccess": "[KO] Thanks for your feedback!",
+  "customFeedbackEmptyError": "[KO] Please enter feedback details",
+  "saveSuccess": "[KO] Saved successfully",
+  "toolCallStatusPending": "[KO] Pending",
+  "toolCallStatusExecuting": "[KO] Executing",
+  "toolCallStatusCompleted": "[KO] Completed",
+  "toolCallStatusError": "[KO] Error",
+  "toolCallParameters": "[KO] Parameters",
+  "toolCallResult": "[KO] Result",
+  "failedToPickFiles": "[KO] Failed to pick files: {error}",
+  "@failedToPickFiles": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "editModeMetadataReadOnlyHint": "[KO] Location and weather of saved notes cannot be modified",
+  "dataInsights": "[KO] Data Insights",
+  "dataInsightsDesc": "[KO] Deep analysis of your notes and writing trends",
+  "searchChatHistory": "[KO] Search chats...",
+  "dynamicInsightStats": "[KO] You have recorded {count} thoughts, with {recentCount} from the past 7 days.",
+  "@dynamicInsightStats": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "recentCount": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionGroupToday": "[KO] Today",
+  "sessionGroupYesterday": "[KO] Yesterday",
+  "sessionGroupThisWeek": "[KO] This Week",
+  "sessionGroupEarlier": "[KO] Earlier",
+  "messageCountLabel": "[KO] {count} msgs",
+  "@messageCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commandPolish": "[KO] Polish",
+  "commandContinue": "[KO] Continue",
+  "commandDeepAnalysis": "[KO] Deep Analysis",
+  "commandInsight": "[KO] Insights",
+  "aiPromptPolish": "[KO] Please polish this text for me",
+  "aiPromptContinue": "[KO] Please continue writing this text",
+  "aiPromptDeepAnalysis": "[KO] Please provide a deep analysis of this note",
+  "aiPromptSourceAnalysis": "[KO] Please analyze the source of this text and identify the possible author and work",
+  "aiAssistantInputHint": "[KO] Enter question...",
+  "aiAssistantExploreWelcome": "[KO] {summary}",
+  "@aiAssistantExploreWelcome": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "currentNoteContext": "[KO] Current Note Context",
+  "workflowUnavailable": "[KO] Workflow Unavailable",
+  "aiWorkflowNeedsBoundNote": "[KO] This feature requires a bound note",
+  "confidenceLabel": "[KO] Confidence",
+  "replaceOriginalNote": "[KO] Replace Original",
+  "appendToEnd": "[KO] Append to End",
+  "scrollToBottom": "[KO] Scroll to bottom",
+  "pinChat": "[KO] Pin",
+  "unpinChat": "[KO] Unpin",
+  "stopGenerate": "[KO] Stop",
+  "aiModeChat": "[KO] Chat Mode",
+  "aiModeAgent": "[KO] Agent Mode",
+  "agentReachedMaxRounds": "[KO] Reached the tool-call limit for this run. The answer above is based on what was gathered so far; ask again with a narrower request for a more complete result.",
+  "agentReviewingRecentNotes": "[KO] Browsing notes...",
+  "agentSearchingNotesForQuery": "[KO] Looking for notes about \"{query}\"...",
+  "@agentSearchingNotesForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentCollectingTags": "[KO] Getting tags...",
+  "agentReadingNoteDetail": "[KO] Viewing note...",
+  "agentCheckingLocationWeather": "[KO] Getting location and weather...",
+  "agentSavingMemory": "[KO] Saving memory...",
+  "agentRecallingMemory": "[KO] Recalling memory...",
+  "agentRecallingMemoryForQuery": "[KO] Recalling memory for \"{query}\"...",
+  "@agentRecallingMemoryForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentSearchingWebForQuery": "[KO] Looking up sources for \"{query}\"...",
+  "@agentSearchingWebForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentReadingWebPage": "[KO] Fetching webpage...",
+  "agentPreparingNewNoteSuggestion": "[KO] Preparing a new note suggestion...",
+  "agentPreparingEditSuggestion": "[KO] Preparing an edit suggestion...",
+  "agentFoundNoMatchingNotes": "[KO] No matching notes found",
+  "agentFoundMatchingNotes": "[KO] Found {count} related notes",
+  "@agentFoundMatchingNotes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentFoundMatchingNotesWithMore": "[KO] Found {count} related notes, more available",
+  "@agentFoundMatchingNotesWithMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentPreparedTagChoices": "[KO] Found {count} tags",
+  "@agentPreparedTagChoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentCheckedLocationWeather": "[KO] Got location and weather",
+  "agentCheckedLocationWeatherWithDetails": "[KO] Location: {location}, Weather: {weather}",
+  "@agentCheckedLocationWeatherWithDetails": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      },
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "agentFoundWebSources": "[KO] Found {count} web sources",
+  "@agentFoundWebSources": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadWebPageSummary": "[KO] Fetched webpage, about {count} chars",
+  "@agentReadWebPageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadNoteDetailSummary": "[KO] Read full content of note \"{title}\"",
+  "@agentReadNoteDetailSummary": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "agentPreparedSuggestionCard": "[KO] Suggestion ready",
+  "agentToolStepFinished": "[KO] Done",
+  "agentToolStepDidNotFinish": "[KO] Failed",
+  "agentMemorySaved": "[KO] Memory saved",
+  "agentMemoryDeleted": "[KO] Memory deleted",
+  "agentRecalledFacts": "[KO] Found {count, plural, =1{1 related memory} other{{count} related memories}}",
+  "@agentRecalledFacts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentRecalledNoFacts": "[KO] No related memories found",
+  "aiThinking": "[KO] Thinking...",
+  "thinkingMode": "[KO] Deep Thinking",
+  "showThinking": "[KO] Show thinking",
+  "hideThinking": "[KO] Hide thinking",
+  "toolExecutionProgress": "[KO] Working...",
+  "toolExecutionCompleted": "[KO] Done",
+  "executedNOperations": "[KO] {count} operations done",
+  "@executedNOperations": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "attachFile": "[KO] Attach file",
+  "yesterday": "[KO] Yesterday",
+  "openInEditor": "[KO] Open in Editor",
+  "saveDirectly": "[KO] Save Directly",
+  "replace": "[KO] Replace",
+  "append": "[KO] Append",
+  "notice": "[KO] Notice",
+  "saveRequired": "[KO] Save Required",
+  "saveBeforeAiAssistant": "[KO] Please save your note before entering Thoughter",
+  "saveAndContinue": "[KO] Save & Continue",
+  "toggleAddLocation": "[KO] Add location",
+  "toggleAddWeather": "[KO] Add weather",
+  "webdavDisableSyncSuccess": "[KO] WebDAV sync disabled. Local data retained.",
+  "webdavDisableSync": "[KO] Disable Cloud Sync",
+  "webdavGoToResolve": "[KO] Resolve Now",
+  "webdavNoConflicts": "[KO] No Conflicts Detected",
+  "webdavAllConflictsResolved": "[KO] All sync conflicts have been resolved.",
+  "webdavProviderNutstore": "[KO] Nutstore",
+  "webdavProviderCustom": "[KO] Custom",
+  "webdavProviderNextcloud": "[KO] Nextcloud / ownCloud",
+  "webdavProviderInfinicloud": "[KO] InfiniCLOUD",
+  "webdavProviderConfig": "[KO] Provider Configuration",
+  "webdavServerUrlEmptyError": "[KO] Please enter WebDAV server address",
+  "webdavServerUrlInvalidError": "[KO] Address must start with https://",
+  "webdavUsernameEmptyError": "[KO] Please enter username",
+  "webdavPasswordEmptyError": "[KO] Please enter app password",
+  "webdavSyncStrategy": "[KO] Sync Strategy",
+  "webdavStatusNotEnabled": "[KO] Cloud Sync Disabled",
+  "webdavStatusNotEnabledDesc": "[KO] Configure your WebDAV service to enjoy secure cross-device multi-way synchronization.",
+  "webdavStatusSyncingDesc": "[KO] Securely comparing and merging cloud and local database files...",
+  "webdavStatusRunning": "[KO] Cloud Sync Running",
+  "webdavStatusRunningDesc": "[KO] An encrypted merge pipeline has been established with the cloud drive.\nLast sync: {time}",
+  "@webdavStatusRunningDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusException": "[KO] Sync Exception",
+  "webdavStatusExceptionDesc": "[KO] Network communication or cloud drive file lock conflict. We will retry automatically.",
+  "webdavStatusEnabled": "[KO] Cloud Sync Enabled",
+  "webdavStatusEnabledDesc": "[KO] Service ready. Last sync: {time}",
+  "@webdavStatusEnabledDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavNeverSynced": "[KO] Never synced",
+  "webdavNeverSucceeded": "[KO] Never succeeded",
+  "webdavConflictPrompt": "[KO] Detected {count} sync conflict backup(s). It is recommended to resolve them immediately.",
+  "@webdavConflictPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webContentTitle": "[KO] Web Content",
+  "fetchingWebContent": "[KO] Fetching web content from: {url}",
+  "@fetchingWebContent": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "webCommandInvalidUrl": "[KO] Please provide a valid URL with /web command",
+  "webCommandInvalidUrlTitle": "[KO] Invalid URL",
+  "aiSuggestion": "[KO] AI Suggestion",
+  "autoAttachMetadataUnavailable": "[KO] Location/weather unavailable, note saved without them",
+  "agentRichEditConflict": "[KO] The note changed after this suggestion was created. To protect your edits, ask AI to generate a fresh suggestion.",
+  "agentDiffOriginal": "[KO] Original",
+  "agentDiffReplacement": "[KO] Replace with",
+  "agentDiffInsertBefore": "[KO] Insert before this content",
+  "agentDiffInsertAfter": "[KO] Insert after this content",
+  "agentDiffAppend": "[KO] Append content",
+  "agentDiffDelete": "[KO] Delete content",
+  "noteProposalCreate": "[KO] Create",
+  "noteProposalEdit": "[KO] Edit",
+  "noteProposalPlain": "[KO] Plain note",
+  "noteProposalRich": "[KO] Rich text note",
+  "noteProposalChangeCount": "[KO] {count} changes",
+  "@noteProposalChangeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noteProposalExpand": "[KO] Expand document",
+  "noteProposalCollapse": "[KO] Collapse document",
+  "noteProposalViewChanges": "[KO] View change history",
+  "noteProposalPlainToRichWarning": "[KO] After applying, this note will open in the full-screen rich text editor.",
+  "noteProposalBefore": "[KO] Original",
+  "noteProposalAfter": "[KO] Changed to",
+  "noteProposalCompleted": "[KO] Completed",
+  "noteProposalApply": "[KO] Apply changes",
+  "noteProposalSave": "[KO] Save note",
+  "noteProposalLegacyReadOnly": "[KO] This is a legacy suggestion without safe revision data. It is view-only; ask AI to generate a new suggestion before applying it.",
+  "noteProposalPlainEditorPreferenceWarning": "[KO] Your editor preference opens this plain draft in the full-screen rich text editor; saving it will create a rich text note.",
+  "aiCardBadgeCreate": "[KO] New",
+  "aiCardBadgeEdit": "[KO] Edit",
+  "aiCardQuickEdit": "[KO] Quick edit",
+  "aiCardQuickEditTooltip": "[KO] Quickly edit the content, source, or tags",
+  "aiCardSavedViewNote": "[KO] Saved · View note",
+  "aiCardSaveFailedGeneric": "[KO] Couldn't save. Please try again.",
+  "aiCardEditContentHint": "[KO] Edit content",
+  "experimentalTag": "[KO] Beta",
+  "agentExperimentalNoticeTitle": "[KO] Thoughter Experimental Feature Notice",
+  "agentExperimentalNoticeIntro": "[KO] Thoughter is an AI Agent assistant currently in testing. Please review the following before proceeding:",
+  "agentExperimentalNoticePoint1": "[KO] AI may generate incorrect or inaccurate responses. Please review all content critically.",
+  "agentExperimentalNoticePoint2": "[KO] AI cannot directly edit your notes; all creations and edits take effect only after you click save/apply.",
+  "agentExperimentalNoticePoint3": "[KO] This feature is in active testing and refinement, and may encounter instability or bugs.",
+  "agentExperimentalNoticeGotIt": "[KO] Understand & Continue",
+  "agentExperimentalBannerText": "[KO] Experimental feature: AI answers may be inaccurate. Notes are only modified after clicking save.",
+  "agentExperimentalNoticeAction": "[KO] View Notice",
+  "dontShowAgain": "[KO] Don't show again",
+  "settingsLab": "[KO] Lab",
+  "settingsLabDesc": "[KO] Debug entries and experimental toggles shown in developer mode. May be unstable",
+  "firstOpenScrollPerfMonitorExperiment": "[KO] [Experiment] First-open scroll performance monitor",
+  "firstOpenScrollPerfMonitorExperimentDesc": "[KO] Record dropped frames on the first Notes scroll after a cold start (off by default)",
+  "addNoteDeferMetadataExperiment": "[KO] [Experiment] AddNote deferred metadata",
+  "addNoteDeferMetadataExperimentDesc": "[KO] Defer location and weather lookup until the keyboard animation finishes (off by default)",
+  "noteCardMediaStyleExperiment": "[KO] [Experiment] Note card media layout",
+  "noteCardMediaStyleThumbnail": "[KO] Side thumbnail",
+  "noteCardMediaStyleThumbnailDesc": "[KO] Square thumbnail on the right. Always visible, cheapest to decode.",
+  "noteCardMediaStyleInline": "[KO] Inline (legacy)",
+  "noteCardMediaStyleInlineDesc": "[KO] Images stay inline, order preserved. Cost: images below the fold are clipped, and audio/video build players in the list.",
+  "noteCardMediaStyleBanner": "[KO] Top banner",
+  "noteCardMediaStyleBannerDesc": "[KO] Full-width banner on top, photo first. Normalised position, most expensive to decode.",
+  "noteInsertAnimationExperiment": "[KO] [Experiment] Note insert animation",
+  "noteInsertAnimationCurrent": "[KO] Current: {name}",
+  "@noteInsertAnimationCurrent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noteInsertAnimationScale": "[KO] Bubble scale",
+  "noteInsertAnimationSlide": "[KO] Smooth rise",
+  "noteInsertAnimationNone": "[KO] No animation",
+  "aiProviderZhipu": "[KO] Zhipu GLM",
+  "aiProviderMoonshot": "[KO] Moonshot Kimi",
+  "aiProviderDashScope": "[KO] Alibaba Bailian",
+  "aiProviderVolcengine": "[KO] Volcengine Ark",
+  "aiProviderGemini": "[KO] Google Gemini",
+  "presetDescOllamaCloud": "[KO] Generous free tier, works right after sign-up. Best first choice.",
+  "presetDescOpenAI": "[KO] Official OpenAI API. Requires an international payment method.",
+  "presetDescOpenRouter": "[KO] One key for hundreds of models, including Claude and Gemini.",
+  "presetDescDeepSeek": "[KO] Low cost, strong Chinese performance.",
+  "presetDescSiliconFlow": "[KO] Aggregator platform; some small models are free.",
+  "presetDescZhipu": "[KO] glm-4-flash is free to use.",
+  "presetDescMoonshot": "[KO] Strong long-context performance.",
+  "presetDescDashScope": "[KO] OpenAI-compatible endpoint for the Qwen family.",
+  "presetDescVolcengine": "[KO] Doubao models. Put the inference endpoint ID in the model field.",
+  "presetDescGemini": "[KO] Gemini's official OpenAI-compatible endpoint. Has a free tier.",
+  "presetDescOllamaLocal": "[KO] Connect to Ollama on this machine. Offline, no key needed.",
+  "presetDescLMStudio": "[KO] Connect to LM Studio on this machine. Offline, no key needed.",
+  "presetDescCustom": "[KO] Any OpenAI-compatible endpoint. Fill in the URL and model yourself.",
+  "aiServicesSectionTitle": "[KO] My AI services",
+  "aiServiceEmptyTitle": "[KO] No AI service configured yet",
+  "aiServiceEmptyBody": "[KO] AI insights, card generation and the Thoughter assistant need a configured provider.",
+  "addAiService": "[KO] Add AI service",
+  "editAiServiceTitle": "[KO] Edit AI service",
+  "newAiServiceTitle": "[KO] New AI service",
+  "selectProviderTemplate": "[KO] Choose a provider",
+  "changeProviderTemplate": "[KO] Change",
+  "providerGroupCloud": "[KO] Cloud services",
+  "providerGroupLocal": "[KO] Runs locally",
+  "providerGroupCustom": "[KO] Custom",
+  "recommendedBadge": "[KO] Recommended",
+  "inUseBadge": "[KO] In use",
+  "getApiKeyLink": "[KO] Get an API key",
+  "apiKeyNotNeededHint": "[KO] Local services usually need no key — leave this empty.",
+  "suggestedModelsLabel": "[KO] Common models",
+  "configNameField": "[KO] Configuration name",
+  "statusKeyConfigured": "[KO] Key configured",
+  "statusKeyMissing": "[KO] Key missing",
+  "aiServiceSaved": "[KO] Saved {name}",
+  "@aiServiceSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ollamaCloudTipTitle": "[KO] We recommend Ollama Cloud",
+  "ollamaCloudTipBody": "[KO] Generous free tier, no card required — sign up and copy the API key.",
+  "ollamaCloudTipAction": "[KO] Add it",
+  "aiConfigHelpLink": "[KO] Not sure what to fill in? Read the setup guide",
+  "openLinkFailed": "[KO] Could not open the link",
+  "testBeforeSaveHint": "[KO] You can test as soon as URL, key and model are filled in — no need to save first.",
+  "agentMemorySectionTitle": "[KO] Thoughter memory",
+  "agentMemoryEnableTitle": "[KO] Long-term memory",
+  "agentMemoryEnableDesc": "[KO] Remember your preferences across chats (stored locally only)",
+  "agentMemoryNicknameTitle": "[KO] Nickname",
+  "agentMemoryNicknameHint": "[KO] How should Thoughter address you?",
+  "agentMemoryNicknameDesc": "[KO] How Thoughter should address you (leave empty to skip)",
+  "agentMemoryNicknameSaveFailed": "[KO] Couldn't save your nickname. Please try again.",
+  "agentMemoryNicknameDisabled": "[KO] Enabled when long-term memory is turned on",
+  "agentMemoryClearTitle": "[KO] Clear memory",
+  "agentMemoryClearSummary": "[KO] Currently remembering {profileCount, plural, =1{1 preference} other{{profileCount} preferences}} and {factCount, plural, =1{1 detail} other{{factCount} details}}",
+  "@agentMemoryClearSummary": {
+    "placeholders": {
+      "profileCount": {
+        "type": "int"
+      },
+      "factCount": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryClearEmpty": "[KO] Nothing remembered yet",
+  "agentMemoryClearConfirmTitle": "[KO] Clear Thoughter's memory?",
+  "agentMemoryClearConfirmBody": "[KO] Every remembered preference and detail will be deleted permanently. Your notes are not affected.",
+  "agentMemoryClearConfirmAction": "[KO] Clear",
+  "agentMemoryCleared": "[KO] Thoughter's memory has been cleared",
+  "agentMemoryClearFailed": "[KO] Failed to clear memory",
+  "agentMemoryNoticeTitle": "[KO] Thoughter will remember you",
+  "agentMemoryNoticeBody": "[KO] So it doesn't have to get to know you from scratch every time, Thoughter records who you are and how you like things phrased, and uses that in later conversations, daily prompts, and periodic insights. Memory stays on this device and is never uploaded.",
+  "agentMemoryNoticeHint": "[KO] You can ask Thoughter to change or forget any entry at any time, or turn memory off and clear it in AI settings.",
+  "agentMemoryNoticeGotIt": "[KO] Got it",
+  "agentMemoryNoticeDisable": "[KO] Don't remember",
+  "agentMemorySwitchFailed": "[KO] Could not save the memory switch. Please try again.",
+  "agentMemoryCountsUnavailable": "[KO] Could not read the memory count. You can still try clearing.",
+  "releaseNotesTitle": "[KO] What's New",
+  "releaseNotesUpgradeLede": "[KO] Here's what has been added since you last used the app.",
+  "releaseNotesCurrentLede": "[KO] Here's what this version adds.",
+  "releaseNotesHighlights": "[KO] Highlights",
+  "releaseNotesGetStarted": "[KO] Get started",
+  "releaseThoughterTitle": "[KO] Thoughter: a thinking partner inside your notebook",
+  "releaseThoughterLede": "[KO] From simply capturing notes to organising and creating with them. Thoughter is no longer just a chat box that answers questions — it now works across your entire note library as a thinking partner.",
+  "releaseThoughterSearchTitle": "[KO] Smart retrieval across your notes",
+  "releaseThoughterSearchDesc": "[KO] No more digging by hand. Ask in plain language and Thoughter finds the related notes, follows the tags between them, and pulls in web results when needed.",
+  "releaseThoughterControlTitle": "[KO] You keep every editing decision",
+  "releaseThoughterControlDesc": "[KO] AI never changes your content on its own. Every new note and rewrite arrives as a proposal card that shows exactly what changed; nothing is applied until you review it and confirm.",
+  "releaseThoughterSingleNoteTitle": "[KO] Talk about a single note",
+  "releaseThoughterSingleNoteDesc": "[KO] Tap the ✨ button in the editor and choose \"Ask Thoughter\" to dig into, polish, or continue the note you have open.",
+  "releaseThoughterMemoryTitle": "[KO] Long-term memory",
+  "releaseThoughterMemoryDesc": "[KO] Once enabled, Thoughter remembers what to call you and how you like to phrase things across conversations. Memory is stored separately, and you can review or clear it at any time.",
+  "releaseThoughterInsightTitle": "[KO] Periodic insights and a rebuilt Explore page",
+  "releaseThoughterInsightDesc": "[KO] Thoughter revisits your notes on a schedule and writes them up as periodic insights. The Explore page has been rebuilt to bring those findings together.",
+  "releaseThemeTitle": "[KO] New themes: a different paper, a different ink",
+  "releaseThemeLede": "[KO] Theme style is now its own dimension alongside light and dark. Pick one of three.",
+  "releaseThemeStylesTitle": "[KO] Three styles",
+  "releaseThemeStylesDesc": "[KO] Material keeps following the system's dynamic colors; Paper & Ink is warm, with serif body text and paper rules; Plain is cool and sharper.",
+  "releaseThemeAccentTitle": "[KO] Choose your ink",
+  "releaseThemeAccentDesc": "[KO] The handcrafted styles add four inks — umber, celadon, indigo and cinnabar. Change the ink without changing the paper.",
+  "releaseThemeSwitchTitle": "[KO] Switch whenever you like",
+  "releaseThemeSwitchDesc": "[KO] Material stays the default, so upgrading does not change how the app looks. Try a style right here, or change it later in Settings › Theme Settings.",
+  "releaseDiagnosticsNotice": "[KO] Since 3.7.0, ThoughtEcho reports anonymous diagnostics when something goes wrong. They are used only to locate and fix problems and never contain note content. You can turn this off at any time in Settings › Feedback & Contact.",
+  "settingsReleaseNotes": "[KO] What's New",
+  "settingsReleaseNotesDesc": "[KO] See what this version adds"
 }

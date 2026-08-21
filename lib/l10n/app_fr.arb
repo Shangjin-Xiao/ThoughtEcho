@@ -3615,5 +3615,940 @@
   "feedbackDiscussionTitle": "Rejoindre les discussions de la communauté",
   "feedbackDiscussionDesc": "Poser des questions, partager des idées et échanger avec d autres utilisateurs",
   "feedbackSentryTitle": "Envoyer des commentaires (Sentry)",
-  "feedbackSentryDesc": "Envoyer des commentaires, des suggestions ou des rapports de bugs directement aux développeurs"
+  "feedbackSentryDesc": "Envoyer des commentaires, des suggestions ou des rapports de bugs directement aux développeurs",
+  "sentryDisclosureMessage": "[FR] The ThoughtEcho privacy policy has been updated. You can view the latest version on our official website.\n\nWe have added Sentry to collect errors and user feedback. To protect your privacy, this feature is disabled by default. You can enable it anytime in 'Settings -> Feedback & Contact'.\n\nPrivacy Policy: https://note.shangjinyun.cn/privacy",
+  "feedbackEmailDesc": "[FR] shangjinyun@proton.me",
+  "feedbackSentryDisabledHint": "[FR] Please enable Sentry Debugging & Reporting below first",
+  "noteListDisableCardShadowsExperiment": "[FR] [Experiment] Disable note-list card shadows",
+  "noteListDisableCardShadowsExperimentDesc": "[FR] Available in release builds. Compare how card shadows affect Notes scrolling performance and visual feel (off by default)",
+  "noteListDisableBackdropBlurExperiment": "[FR] [Experiment] Disable note-list collapse blur",
+  "noteListDisableBackdropBlurExperimentDesc": "[FR] Available in release builds. Replaces the collapsed long-content bottom blur with a gradient scrim (off by default)",
+  "addNoteAutoFocusExperiment": "[FR] [Experiment] AddNote auto focus",
+  "addNoteAutoFocusExperimentDesc": "[FR] Automatically show the keyboard after the add note dialog settles (on by default)",
+  "noteNotFound": "[FR] Note not found",
+  "noteUpdateSkippedDeleted": "[FR] Note has been deleted, update skipped",
+  "dailyQuoteApiDesc": "[FR] Choose the service provider used for the home page daily quote text.",
+  "dailyQuoteApiHitokoto": "[FR] Hitokoto",
+  "dailyQuoteApiZenQuotes": "[FR] ZenQuotes",
+  "dailyQuoteApiApiNinjas": "[FR] API Ninjas",
+  "dailyQuoteApiMeigen": "[FR] Meigen Oshieruyo",
+  "dailyQuoteApiKoreanAdvice": "[FR] Korean Advice",
+  "dailyQuoteApiNinjasManageApiKey": "[FR] Configure service key",
+  "dailyQuoteApiNinjasApiKeyHint": "[FR] Enter the API Ninjas X-Api-Key",
+  "dailyQuoteApiNinjasApiKeyConfigured": "[FR] Service key configured",
+  "dailyQuoteApiNinjasApiKeyMissing": "[FR] No service key configured yet",
+  "dailyQuoteApiNinjasApiKeyInvalid": "[FR] The service key format looks invalid",
+  "dailyQuoteApiNinjasCategorySelection": "[FR] Category selection",
+  "dailyQuoteApiNinjasCategoryDesc": "[FR] Search, select multiple categories, or clear them all. Leaving everything unchecked falls back to fully random quotes.",
+  "dailyQuoteApiNinjasCategorySearchHint": "[FR] Search categories",
+  "dailyQuoteApiNinjasNoCategoriesFound": "[FR] No matching categories",
+  "dailyQuoteApiNinjasAllCategoriesUsed": "[FR] No category filter applied; quotes will be drawn from the full pool",
+  "dailyQuoteApiNinjasSelectedCount": "[FR] {count} categories selected",
+  "@dailyQuoteApiNinjasSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteApiNinjasCategoryWisdom": "[FR] Wisdom",
+  "dailyQuoteApiNinjasCategoryPhilosophy": "[FR] Philosophy",
+  "dailyQuoteApiNinjasCategoryLife": "[FR] Life",
+  "dailyQuoteApiNinjasCategoryTruth": "[FR] Truth",
+  "dailyQuoteApiNinjasCategoryInspirational": "[FR] Inspirational",
+  "dailyQuoteApiNinjasCategoryRelationships": "[FR] Relationships",
+  "dailyQuoteApiNinjasCategoryLove": "[FR] Love",
+  "dailyQuoteApiNinjasCategoryFaith": "[FR] Faith",
+  "dailyQuoteApiNinjasCategoryHumor": "[FR] Humor",
+  "dailyQuoteApiNinjasCategorySuccess": "[FR] Success",
+  "dailyQuoteApiNinjasCategoryCourage": "[FR] Courage",
+  "dailyQuoteApiNinjasCategoryHappiness": "[FR] Happiness",
+  "dailyQuoteApiNinjasCategoryArt": "[FR] Art",
+  "dailyQuoteApiNinjasCategoryWriting": "[FR] Writing",
+  "dailyQuoteApiNinjasCategoryFear": "[FR] Fear",
+  "dailyQuoteApiNinjasCategoryNature": "[FR] Nature",
+  "dailyQuoteApiNinjasCategoryTime": "[FR] Time",
+  "dailyQuoteApiNinjasCategoryFreedom": "[FR] Freedom",
+  "dailyQuoteApiNinjasCategoryDeath": "[FR] Death",
+  "dailyQuoteApiNinjasCategoryLeadership": "[FR] Leadership",
+  "dailyQuoteProviderNoTypeSelection": "[FR] This provider does not support category filtering.",
+  "dailyQuoteServiceProvider": "[FR] Current content provided by {provider}",
+  "@dailyQuoteServiceProvider": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "migrationTargetSameAsCurrent": "[FR] The selected directory is the same as the current data directory",
+  "migrationTargetAncestor": "[FR] The selected directory cannot be a parent of the current data directory",
+  "migrationTargetNested": "[FR] The selected directory cannot be inside the current data directory",
+  "viewToolProcess": "[FR] View process",
+  "cardSharePrefix": "[FR] A beautiful card from ThoughtEcho\n\n",
+  "agentErrorNoProvider": "[FR] Select an AI provider and try again.",
+  "agentErrorMissingApiKey": "[FR] Configure an API key for {providerName}, then try again.",
+  "@agentErrorMissingApiKey": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentErrorUnsupportedProvider": "[FR] The current AI provider does not support Agent mode. Choose another provider and try again.",
+  "agentErrorTimeout": "[FR] The request timed out. Check your connection and try again.",
+  "agentErrorCancelled": "[FR] This request was stopped.",
+  "agentErrorGeneric": "[FR] The request could not be completed. Please try again later.",
+  "unsupportedMediaType": "[FR] Unsupported media type",
+  "unsupportedMediaTypeWithName": "[FR] Unsupported media type: {mediaType}",
+  "@unsupportedMediaTypeWithName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "fileNotExistOrMoved": "[FR] The selected file does not exist or has been moved or deleted\nPath: {path}",
+  "@fileNotExistOrMoved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedFileEmpty": "[FR] The selected file is empty\nPath: {path}",
+  "@selectedFileEmpty": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "unsupportedFileFormat": "[FR] Unsupported file format: .{extension}\nSupported formats: {formats}",
+  "@unsupportedFileFormat": {
+    "placeholders": {
+      "extension": {
+        "type": "String"
+      },
+      "formats": {
+        "type": "String"
+      }
+    }
+  },
+  "fileUnreadable": "[FR] The file cannot be read. Possible reasons:\n• The file is corrupted\n• The file is being used by another program\n• Insufficient permissions\nPlease check the file and try again",
+  "mediaTypeNoCameraImport": "[FR] {mediaType} does not support camera import",
+  "@mediaTypeNoCameraImport": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "noteAttribution": "[FR]  (attributed to {source})",
+  "@noteAttribution": {
+    "description": "喂给 AI 的笔记内容里，标出这条笔记填的作者/出处，用于区分摘录与原创署名",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderOllamaCloud": "[FR] Ollama Cloud",
+  "loadFailedSimple": "[FR] Load failed",
+  "loadNoteFailed": "[FR] Failed to load notes",
+  "queryTimeoutShort": "[FR] Query timed out",
+  "queryTimeoutRetry": "[FR] Query timed out, please retry",
+  "databaseQueryError": "[FR] Database query error",
+  "syncFromSuffix": "[FR]  (from {from})",
+  "@syncFromSuffix": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      }
+    }
+  },
+  "showNoteEditTime": "[FR] Show Note Edit Time",
+  "showNoteEditTimeDesc": "[FR] Display the last edited time in notes",
+  "editedAtLabel": "[FR] Edited at {dateTime}",
+  "@editedAtLabel": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteAiAnalysis": "[FR] Delete AI Analysis",
+  "deleteAiAnalysisConfirm": "[FR] Are you sure you want to delete the AI analysis result for this note? This can be undone before saving the note.",
+  "aiAnalysisDeleted": "[FR] AI analysis deleted",
+  "aiAnalysisSaved": "[FR] AI analysis saved",
+  "viewFull": "[FR] View Full",
+  "copy": "[FR] Copy",
+  "copiedToClipboard": "[FR] Copied to clipboard",
+  "backupSavedToPath": "[FR] Backup saved to: {path}",
+  "@backupSavedToPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "backupCompleteWithWarnings": "[FR] Backup completed, but with warnings",
+  "backupDeltaFailuresMessage": "[FR] {count, plural, =1{1 note had rich-text media path conversion failures. This note still contains a local absolute path in the backup; images may not display when restored on another device.\n\nAffected note ID: {ids}} other{# notes had rich-text media path conversion failures. These notes still contain local absolute paths in the backup; images may not display when restored on another device.\n\nAffected note IDs: {ids}}}",
+  "@backupDeltaFailuresMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "ids": {
+        "type": "String"
+      }
+    }
+  },
+  "backupDeltaFailuresIdJoiner": "[FR] , ",
+  "backupDeltaFailuresMoreSuffix": "[FR]  etc.",
+  "backupFailedGeneric": "[FR] Unable to complete backup. Please try again later.",
+  "@backupFailedGeneric": {
+    "description": "Generic backup failure message shown when the error type is not classified"
+  },
+  "backupFailedOutOfMemory": "[FR] Backup failed: Out of memory\n\nSuggestions:\n• Close other apps to free up memory\n• Try a backup without media files\n• Restart the app and try again",
+  "backupFailedNoSpace": "[FR] Backup failed: Not enough storage space\n\nPlease free up device storage and try again.",
+  "backupFailedPermission": "[FR] Backup failed: Insufficient permission\n\nPlease check the app's storage permission settings.",
+  "saveTempFileFailed": "[FR] Failed to save temporary file",
+  "openBrowserFailed": "[FR] Failed to open browser",
+  "createShareFileFailed": "[FR] Failed to create share file",
+  "aiSuggestionCoreIdea": "[FR] What is the core idea of this note?",
+  "aiSuggestionInspiration": "[FR] What inspiration can we draw from it?",
+  "aiSuggestionSummarize": "[FR] Can you summarize the key points?",
+  "aiSuggestionSolution": "[FR] What solutions are there?",
+  "aiSuggestionUnderstandConcept": "[FR] How can I better understand this concept?",
+  "aiSuggestionActionPlan": "[FR] How do I create an action plan?",
+  "aiSuggestionPsychology": "[FR] What psychological state does this reflect?",
+  "aiSuggestionRealLife": "[FR] How can this be applied to real life?",
+  "aiSuggestionThinkingPattern": "[FR] What thinking pattern does this reflect?",
+  "svgLoading": "[FR] Loading SVG...",
+  "svgLoadingFallback": "[FR] Loading fallback template...",
+  "svgRenderFailed": "[FR] SVG render failed",
+  "svgTryingFallback": "[FR] Trying fallback template...",
+  "cardRenderFailed": "[FR] Card render failed",
+  "cardRegeneratePrompt": "[FR] Please try regenerating the card",
+  "svgContentParseFailed": "[FR] Content parse failed",
+  "svgContentExtractFailed": "[FR] Unable to extract content",
+  "svgContentEmpty": "[FR] SVG content is empty",
+  "svgContentInvalidFormat": "[FR] Invalid SVG format",
+  "svgFallbackTitle": "[FR] SVG generation failed",
+  "svgFallbackHint": "[FR] Please try regenerating the card or check your AI configuration",
+  "svgFallbackIdentifier": "[FR] ThoughtEcho - Fallback Template",
+  "mediaProcessingNone": "[FR] No media files to process",
+  "mediaProcessingFound": "[FR] {total, plural, =1{Found 1 media file} other{Found # media files}}",
+  "@mediaProcessingFound": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingCopying": "[FR] Copying {typeLabel} {done}/{total}",
+  "@mediaProcessingCopying": {
+    "placeholders": {
+      "typeLabel": {
+        "type": "String"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingProgress": "[FR] Processed {done} / {total}",
+  "@mediaProcessingProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteLoading": "[FR] Loading...",
+  "dailyQuoteLoadingLocal": "[FR] Loading from local records...",
+  "dailyQuoteLoadingOffline": "[FR] No network, loading from local records...",
+  "dailyQuoteNoNetworkRetry": "[FR] No network and no local records, tap to retry",
+  "dailyQuoteFetchFailedRetry": "[FR] Failed to fetch quote, tap to retry",
+  "smartPushDailyQuoteIndependentNote": "[FR] Daily Quote runs independently from Smart Push — each can be enabled or disabled separately.",
+  "excerptIntentEnabled": "[FR] Clip to ThoughtEcho",
+  "excerptIntentEnabledDesc": "[FR] Allow selected text from browsers or other apps to open ThoughtEcho directly in the non-fullscreen editor",
+  "annualReportDemo": "[FR] Annual Report Demo",
+  "manualApiTest": "[FR] Manual API Test",
+  "manualApiTestTitle": "[FR] Manual API Key Test",
+  "manualApiTestDesc": "[FR] Directly input API parameters for testing, bypassing the storage system to check if the API key is valid.",
+  "testResultLabel": "[FR] Test Result:",
+  "fillAllFieldsError": "[FR] Error: Please fill in all required fields",
+  "testReportTitle": "[FR] === Manual API Key Test Report ===",
+  "testParamsLabel": "[FR] Test Parameters:",
+  "keyFormatCheckLabel": "[FR] Key Format Check:",
+  "testApiKeyPrefixLabel": "[FR]   API Key Prefix: {prefix}",
+  "@testApiKeyPrefixLabel": {
+    "placeholders": {
+      "prefix": {
+        "type": "String"
+      }
+    }
+  },
+  "sendRequestLabel": "[FR] Send Request:",
+  "responseResultLabel": "[FR] Response Result:",
+  "testApiKey": "[FR] Test API Key",
+  "aiReturnedEmptyContent": "[FR] AI returned empty content, please try again",
+  "chatWithAiAssistant": "[FR] Chat with Thoughter (AI Assistant) to explore note content",
+  "messageCopied": "[FR] Message copied to clipboard",
+  "anniversaryTitle": "[FR] ThoughtEcho · 心迹",
+  "anniversarySubtitle": "[FR] Year {years} · Thank you for being with us",
+  "@anniversarySubtitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryVeteranThanks": "[FR] You've been here since year {years} — thank you for keeping at it",
+  "@anniversaryVeteranThanks": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryEnterApp": "[FR] Enter App",
+  "anniversaryBannerTitle": "[FR] ThoughtEcho Year {years} Anniversary",
+  "@anniversaryBannerTitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryBannerSubtitle": "[FR] Thank you for every step of the journey · {range}",
+  "@anniversaryBannerSubtitle": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "anniversaryBannerTap": "[FR] Tap to replay the celebration",
+  "anniversaryReplayButton": "[FR] Replay",
+  "developerAnniversarySection": "[FR] Anniversary",
+  "developerAnniversaryEnabled": "[FR] Enable Anniversary Animation",
+  "developerAnniversaryEnabledDesc": "[FR] Toggle whether the celebration animation shows on launch",
+  "developerAnniversaryReset": "[FR] Clear Participation Record",
+  "developerAnniversaryResetDesc": "[FR] Clears the record so the celebration plays again as for a new user",
+  "developerAnniversaryResetDone": "[FR] Cleared, the celebration will play again",
+  "developerAnniversaryPreview": "[FR] Preview Animation Now",
+  "developerAnniversaryPreviewDesc": "[FR] Plays the celebration for the simulated year right away",
+  "developerAnniversarySimulate": "[FR] Simulate Anniversary",
+  "developerAnniversarySimulateOff": "[FR] Off",
+  "developerAnniversarySimulateYear": "[FR] Year {years}",
+  "@developerAnniversarySimulateYear": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversarySimulateDescOff": "[FR] Following the real date; not in a celebration window",
+  "developerAnniversarySimulateDescActive": "[FR] Simulating year {years}: the settings banner and launch animation both use this edition",
+  "@developerAnniversarySimulateDescActive": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversaryShownYears": "[FR] Celebrations Seen",
+  "developerAnniversaryShownYearsNone": "[FR] None yet",
+  "mediaPlayerPlay": "[FR] Play",
+  "mediaPlayerPause": "[FR] Pause",
+  "operationSuccess": "[FR] Operation successful!",
+  "loadingInProgress": "[FR] Loading...",
+  "aiThinkingProgress": "[FR] AI is thinking...",
+  "processingData": "[FR] Processing data...",
+  "analyzingContent": "[FR] Analyzing content...",
+  "skipNonFullscreenEditor": "[FR] Open fullscreen editor directly",
+  "skipNonFullscreenEditorDesc": "[FR] Skip quick edit and open fullscreen rich text editor when adding notes",
+  "offlineQuoteSourceTitle": "[FR] When Offline, Show",
+  "offlineQuoteSourceDesc": "[FR] Choose what appears on the home page when offline or when local-only is enabled",
+  "offlineQuoteSourceTagOnly": "[FR] Previously saved daily quotes",
+  "offlineQuoteSourceAll": "[FR] Random local records",
+  "noLocalSavedQuotes": "[FR] No previously saved daily quotes yet",
+  "copyCode": "[FR] Copy code",
+  "copiedCode": "[FR] Copied",
+  "webdavSyncTitle": "[FR] WebDAV Cloud Sync",
+  "webdavSyncSubtitle": "[FR] Configure private cloud storage to auto-sync notes across devices",
+  "webdavProvider": "[FR] Cloud Provider",
+  "webdavServerUrl": "[FR] Server URL",
+  "webdavUsername": "[FR] Username / Account",
+  "webdavPassword": "[FR] App Password / Token",
+  "webdavTestConnection": "[FR] Test Connection",
+  "webdavTestSuccess": "[FR] Connection successful!",
+  "webdavTestFailed": "[FR] Connection failed. Please check your settings and password",
+  "webdavAutoSyncLaunch": "[FR] Auto-sync on open or foreground",
+  "webdavAutoSyncLaunchSubtitle": "[FR] Merge with cloud when app opens or returns to foreground",
+  "webdavAutoSyncChange": "[FR] Auto-sync on note changes",
+  "webdavAutoSyncChangeSubtitle": "[FR] Quietly sync changes after 4 seconds of inactivity when editing",
+  "webdavExperimentalTitle": "[FR] Experimental Feature Warning",
+  "webdavExperimentalContent": "[FR] The WebDAV cloud synchronization feature is currently in the experimental preview phase. For your data safety, it is recommended to back up your core local notes before enabling. If you encounter any issues during use, please let us know.",
+  "webdavExperimentalClose": "[FR] Dismiss",
+  "webdavExperimentalIgnore": "[FR] Don't Show Again",
+  "webdavLastSync": "[FR] Last sync: {time}",
+  "@webdavLastSync": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusSyncing": "[FR] Syncing...",
+  "webdavStatusSuccess": "[FR] Sync Successful",
+  "webdavStatusFailed": "[FR] Sync Failed",
+  "settingsWebdavStatusWithTime": "[FR] {status} (Last: {time})",
+  "@settingsWebdavStatusWithTime": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWebdavEnabledWithTime": "[FR] Enabled (Last: {time})",
+  "@settingsWebdavEnabledWithTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavSyncNow": "[FR] Sync Now",
+  "webdavEnableSync": "[FR] Enable Cloud Sync",
+  "webdavSaveAndSync": "[FR] Save and Sync",
+  "webdavHowToGetAppPassword": "[FR] How to get app password?",
+  "webdavShowPasswordTooltip": "[FR] Show password",
+  "webdavHidePasswordTooltip": "[FR] Hide password",
+  "webdavOpenHelpFailed": "[FR] Unable to open help link. Please check default browser settings.",
+  "webdavConflictCategoryName": "[FR] Sync Conflicts",
+  "webdavConflictNotePrefix": "[FR] [Conflict] ",
+  "webdavConflictNotification": "[FR] Detected {count} sync conflicts, safely backed up to 'Sync Conflicts' category",
+  "@webdavConflictNotification": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webdavViewNow": "[FR] View Now",
+  "exportFormatLabel": "[FR] Default Export Format",
+  "exportFormatCard": "[FR] Delicate Share Card",
+  "exportFormatPdf": "[FR] Standard A4 PDF",
+  "exportFormatDesc": "[FR] Configure the default format when exporting or sharing notes",
+  "pdfExportExperimentalWarning": "[FR] PDF export is experimental and requires multilingual and emoji font files. The first use may need an internet connection to download them; it can be used offline afterward.",
+  "exportToPdf": "[FR] Export to PDF",
+  "pdfExportSelectionMode": "[FR] Select Export Mode",
+  "selectSameMonth": "[FR] Select Same Month",
+  "selectSameCategory": "[FR] Select Same Category",
+  "exportSelected": "[FR] Export ({count})",
+  "@exportSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportSuccess": "[FR] Export Successful",
+  "exportFailed": "[FR] Export Failed",
+  "generatingPdf": "[FR] Generating PDF...",
+  "pdfExportFailed": "[FR] Failed to export PDF: {error}",
+  "@pdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "batchPdfExportFailed": "[FR] Failed to batch export PDF: {error}",
+  "@batchPdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseSelectAtLeastOneNote": "[FR] Please select at least one note first",
+  "selectedNotesHaveNoCategories": "[FR] Selected notes have no category tags",
+  "pdfPreviewAndPrint": "[FR] PDF Preview & Print",
+  "pdfFontFallbackWarning": "[FR] No Chinese font detected. Chinese content may display as gibberish. Please check your network and try again.",
+  "webdavSyncOnCellular": "[FR] Sync over cellular data",
+  "webdavSyncOnCellularSubtitle": "[FR] Allow cloud backup and merge under mobile data networks",
+  "webdavSyncNotesOnlyOnCellular": "[FR] Sync notes only on cellular",
+  "webdavSyncNotesOnlyOnCellularSubtitle": "[FR] Only sync lightweight text notes and skip heavy media files to save data",
+  "customFeedbackTitle": "[FR] Send Feedback",
+  "customFeedbackMessageLabel": "[FR] Feedback Details",
+  "customFeedbackMessageHint": "[FR] Please describe your issue or suggestion...",
+  "customFeedbackNameLabel": "[FR] Name (Optional)",
+  "customFeedbackEmailLabel": "[FR] Email (Optional)",
+  "customFeedbackSubmit": "[FR] Submit Feedback",
+  "customFeedbackSuccess": "[FR] Thanks for your feedback!",
+  "customFeedbackEmptyError": "[FR] Please enter feedback details",
+  "saveSuccess": "[FR] Saved successfully",
+  "toolCallStatusPending": "[FR] Pending",
+  "toolCallStatusExecuting": "[FR] Executing",
+  "toolCallStatusCompleted": "[FR] Completed",
+  "toolCallStatusError": "[FR] Error",
+  "toolCallParameters": "[FR] Parameters",
+  "toolCallResult": "[FR] Result",
+  "failedToPickFiles": "[FR] Failed to pick files: {error}",
+  "@failedToPickFiles": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "editModeMetadataReadOnlyHint": "[FR] Location and weather of saved notes cannot be modified",
+  "dataInsights": "[FR] Data Insights",
+  "dataInsightsDesc": "[FR] Deep analysis of your notes and writing trends",
+  "searchChatHistory": "[FR] Search chats...",
+  "dynamicInsightStats": "[FR] You have recorded {count} thoughts, with {recentCount} from the past 7 days.",
+  "@dynamicInsightStats": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "recentCount": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionGroupToday": "[FR] Today",
+  "sessionGroupYesterday": "[FR] Yesterday",
+  "sessionGroupThisWeek": "[FR] This Week",
+  "sessionGroupEarlier": "[FR] Earlier",
+  "messageCountLabel": "[FR] {count} msgs",
+  "@messageCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commandPolish": "[FR] Polish",
+  "commandContinue": "[FR] Continue",
+  "commandDeepAnalysis": "[FR] Deep Analysis",
+  "commandInsight": "[FR] Insights",
+  "aiPromptPolish": "[FR] Please polish this text for me",
+  "aiPromptContinue": "[FR] Please continue writing this text",
+  "aiPromptDeepAnalysis": "[FR] Please provide a deep analysis of this note",
+  "aiPromptSourceAnalysis": "[FR] Please analyze the source of this text and identify the possible author and work",
+  "aiAssistantInputHint": "[FR] Enter question...",
+  "aiAssistantExploreWelcome": "[FR] {summary}",
+  "@aiAssistantExploreWelcome": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "currentNoteContext": "[FR] Current Note Context",
+  "workflowUnavailable": "[FR] Workflow Unavailable",
+  "aiWorkflowNeedsBoundNote": "[FR] This feature requires a bound note",
+  "confidenceLabel": "[FR] Confidence",
+  "replaceOriginalNote": "[FR] Replace Original",
+  "appendToEnd": "[FR] Append to End",
+  "scrollToBottom": "[FR] Scroll to bottom",
+  "pinChat": "[FR] Pin",
+  "unpinChat": "[FR] Unpin",
+  "stopGenerate": "[FR] Stop",
+  "aiModeChat": "[FR] Chat Mode",
+  "aiModeAgent": "[FR] Agent Mode",
+  "agentReachedMaxRounds": "[FR] Reached the tool-call limit for this run. The answer above is based on what was gathered so far; ask again with a narrower request for a more complete result.",
+  "agentReviewingRecentNotes": "[FR] Browsing notes...",
+  "agentSearchingNotesForQuery": "[FR] Looking for notes about \"{query}\"...",
+  "@agentSearchingNotesForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentCollectingTags": "[FR] Getting tags...",
+  "agentReadingNoteDetail": "[FR] Viewing note...",
+  "agentCheckingLocationWeather": "[FR] Getting location and weather...",
+  "agentSavingMemory": "[FR] Saving memory...",
+  "agentRecallingMemory": "[FR] Recalling memory...",
+  "agentRecallingMemoryForQuery": "[FR] Recalling memory for \"{query}\"...",
+  "@agentRecallingMemoryForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentSearchingWebForQuery": "[FR] Looking up sources for \"{query}\"...",
+  "@agentSearchingWebForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentReadingWebPage": "[FR] Fetching webpage...",
+  "agentPreparingNewNoteSuggestion": "[FR] Preparing a new note suggestion...",
+  "agentPreparingEditSuggestion": "[FR] Preparing an edit suggestion...",
+  "agentFoundNoMatchingNotes": "[FR] No matching notes found",
+  "agentFoundMatchingNotes": "[FR] Found {count} related notes",
+  "@agentFoundMatchingNotes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentFoundMatchingNotesWithMore": "[FR] Found {count} related notes, more available",
+  "@agentFoundMatchingNotesWithMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentPreparedTagChoices": "[FR] Found {count} tags",
+  "@agentPreparedTagChoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentCheckedLocationWeather": "[FR] Got location and weather",
+  "agentCheckedLocationWeatherWithDetails": "[FR] Location: {location}, Weather: {weather}",
+  "@agentCheckedLocationWeatherWithDetails": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      },
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "agentFoundWebSources": "[FR] Found {count} web sources",
+  "@agentFoundWebSources": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadWebPageSummary": "[FR] Fetched webpage, about {count} chars",
+  "@agentReadWebPageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadNoteDetailSummary": "[FR] Read full content of note \"{title}\"",
+  "@agentReadNoteDetailSummary": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "agentPreparedSuggestionCard": "[FR] Suggestion ready",
+  "agentToolStepFinished": "[FR] Done",
+  "agentToolStepDidNotFinish": "[FR] Failed",
+  "agentMemorySaved": "[FR] Memory saved",
+  "agentMemoryDeleted": "[FR] Memory deleted",
+  "agentRecalledFacts": "[FR] Found {count, plural, =1{1 related memory} other{{count} related memories}}",
+  "@agentRecalledFacts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentRecalledNoFacts": "[FR] No related memories found",
+  "aiThinking": "[FR] Thinking...",
+  "thinkingMode": "[FR] Deep Thinking",
+  "showThinking": "[FR] Show thinking",
+  "hideThinking": "[FR] Hide thinking",
+  "toolExecutionProgress": "[FR] Working...",
+  "toolExecutionCompleted": "[FR] Done",
+  "executedNOperations": "[FR] {count} operations done",
+  "@executedNOperations": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "attachFile": "[FR] Attach file",
+  "yesterday": "[FR] Yesterday",
+  "openInEditor": "[FR] Open in Editor",
+  "saveDirectly": "[FR] Save Directly",
+  "replace": "[FR] Replace",
+  "append": "[FR] Append",
+  "notice": "[FR] Notice",
+  "saveRequired": "[FR] Save Required",
+  "saveBeforeAiAssistant": "[FR] Please save your note before entering Thoughter",
+  "saveAndContinue": "[FR] Save & Continue",
+  "toggleAddLocation": "[FR] Add location",
+  "toggleAddWeather": "[FR] Add weather",
+  "webdavDisableSyncSuccess": "[FR] WebDAV sync disabled. Local data retained.",
+  "webdavDisableSync": "[FR] Disable Cloud Sync",
+  "webdavGoToResolve": "[FR] Resolve Now",
+  "webdavNoConflicts": "[FR] No Conflicts Detected",
+  "webdavAllConflictsResolved": "[FR] All sync conflicts have been resolved.",
+  "webdavProviderNutstore": "[FR] Nutstore",
+  "webdavProviderCustom": "[FR] Custom",
+  "webdavProviderNextcloud": "[FR] Nextcloud / ownCloud",
+  "webdavProviderInfinicloud": "[FR] InfiniCLOUD",
+  "webdavProviderConfig": "[FR] Provider Configuration",
+  "webdavServerUrlEmptyError": "[FR] Please enter WebDAV server address",
+  "webdavServerUrlInvalidError": "[FR] Address must start with https://",
+  "webdavUsernameEmptyError": "[FR] Please enter username",
+  "webdavPasswordEmptyError": "[FR] Please enter app password",
+  "webdavSyncStrategy": "[FR] Sync Strategy",
+  "webdavStatusNotEnabled": "[FR] Cloud Sync Disabled",
+  "webdavStatusNotEnabledDesc": "[FR] Configure your WebDAV service to enjoy secure cross-device multi-way synchronization.",
+  "webdavStatusSyncingDesc": "[FR] Securely comparing and merging cloud and local database files...",
+  "webdavStatusRunning": "[FR] Cloud Sync Running",
+  "webdavStatusRunningDesc": "[FR] An encrypted merge pipeline has been established with the cloud drive.\nLast sync: {time}",
+  "@webdavStatusRunningDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusException": "[FR] Sync Exception",
+  "webdavStatusExceptionDesc": "[FR] Network communication or cloud drive file lock conflict. We will retry automatically.",
+  "webdavStatusEnabled": "[FR] Cloud Sync Enabled",
+  "webdavStatusEnabledDesc": "[FR] Service ready. Last sync: {time}",
+  "@webdavStatusEnabledDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavNeverSynced": "[FR] Never synced",
+  "webdavNeverSucceeded": "[FR] Never succeeded",
+  "webdavConflictPrompt": "[FR] Detected {count} sync conflict backup(s). It is recommended to resolve them immediately.",
+  "@webdavConflictPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webContentTitle": "[FR] Web Content",
+  "fetchingWebContent": "[FR] Fetching web content from: {url}",
+  "@fetchingWebContent": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "webCommandInvalidUrl": "[FR] Please provide a valid URL with /web command",
+  "webCommandInvalidUrlTitle": "[FR] Invalid URL",
+  "aiSuggestion": "[FR] AI Suggestion",
+  "autoAttachMetadataUnavailable": "[FR] Location/weather unavailable, note saved without them",
+  "agentRichEditConflict": "[FR] The note changed after this suggestion was created. To protect your edits, ask AI to generate a fresh suggestion.",
+  "agentDiffOriginal": "[FR] Original",
+  "agentDiffReplacement": "[FR] Replace with",
+  "agentDiffInsertBefore": "[FR] Insert before this content",
+  "agentDiffInsertAfter": "[FR] Insert after this content",
+  "agentDiffAppend": "[FR] Append content",
+  "agentDiffDelete": "[FR] Delete content",
+  "noteProposalCreate": "[FR] Create",
+  "noteProposalEdit": "[FR] Edit",
+  "noteProposalPlain": "[FR] Plain note",
+  "noteProposalRich": "[FR] Rich text note",
+  "noteProposalChangeCount": "[FR] {count} changes",
+  "@noteProposalChangeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noteProposalExpand": "[FR] Expand document",
+  "noteProposalCollapse": "[FR] Collapse document",
+  "noteProposalViewChanges": "[FR] View change history",
+  "noteProposalPlainToRichWarning": "[FR] After applying, this note will open in the full-screen rich text editor.",
+  "noteProposalBefore": "[FR] Original",
+  "noteProposalAfter": "[FR] Changed to",
+  "noteProposalCompleted": "[FR] Completed",
+  "noteProposalApply": "[FR] Apply changes",
+  "noteProposalSave": "[FR] Save note",
+  "noteProposalLegacyReadOnly": "[FR] This is a legacy suggestion without safe revision data. It is view-only; ask AI to generate a new suggestion before applying it.",
+  "noteProposalPlainEditorPreferenceWarning": "[FR] Your editor preference opens this plain draft in the full-screen rich text editor; saving it will create a rich text note.",
+  "aiCardBadgeCreate": "[FR] New",
+  "aiCardBadgeEdit": "[FR] Edit",
+  "aiCardQuickEdit": "[FR] Quick edit",
+  "aiCardQuickEditTooltip": "[FR] Quickly edit the content, source, or tags",
+  "aiCardSavedViewNote": "[FR] Saved · View note",
+  "aiCardSaveFailedGeneric": "[FR] Couldn't save. Please try again.",
+  "aiCardEditContentHint": "[FR] Edit content",
+  "experimentalTag": "[FR] Beta",
+  "agentExperimentalNoticeTitle": "[FR] Thoughter Experimental Feature Notice",
+  "agentExperimentalNoticeIntro": "[FR] Thoughter is an AI Agent assistant currently in testing. Please review the following before proceeding:",
+  "agentExperimentalNoticePoint1": "[FR] AI may generate incorrect or inaccurate responses. Please review all content critically.",
+  "agentExperimentalNoticePoint2": "[FR] AI cannot directly edit your notes; all creations and edits take effect only after you click save/apply.",
+  "agentExperimentalNoticePoint3": "[FR] This feature is in active testing and refinement, and may encounter instability or bugs.",
+  "agentExperimentalNoticeGotIt": "[FR] Understand & Continue",
+  "agentExperimentalBannerText": "[FR] Experimental feature: AI answers may be inaccurate. Notes are only modified after clicking save.",
+  "agentExperimentalNoticeAction": "[FR] View Notice",
+  "dontShowAgain": "[FR] Don't show again",
+  "settingsLab": "[FR] Lab",
+  "settingsLabDesc": "[FR] Debug entries and experimental toggles shown in developer mode. May be unstable",
+  "firstOpenScrollPerfMonitorExperiment": "[FR] [Experiment] First-open scroll performance monitor",
+  "firstOpenScrollPerfMonitorExperimentDesc": "[FR] Record dropped frames on the first Notes scroll after a cold start (off by default)",
+  "addNoteDeferMetadataExperiment": "[FR] [Experiment] AddNote deferred metadata",
+  "addNoteDeferMetadataExperimentDesc": "[FR] Defer location and weather lookup until the keyboard animation finishes (off by default)",
+  "noteCardMediaStyleExperiment": "[FR] [Experiment] Note card media layout",
+  "noteCardMediaStyleThumbnail": "[FR] Side thumbnail",
+  "noteCardMediaStyleThumbnailDesc": "[FR] Square thumbnail on the right. Always visible, cheapest to decode.",
+  "noteCardMediaStyleInline": "[FR] Inline (legacy)",
+  "noteCardMediaStyleInlineDesc": "[FR] Images stay inline, order preserved. Cost: images below the fold are clipped, and audio/video build players in the list.",
+  "noteCardMediaStyleBanner": "[FR] Top banner",
+  "noteCardMediaStyleBannerDesc": "[FR] Full-width banner on top, photo first. Normalised position, most expensive to decode.",
+  "noteInsertAnimationExperiment": "[FR] [Experiment] Note insert animation",
+  "noteInsertAnimationCurrent": "[FR] Current: {name}",
+  "@noteInsertAnimationCurrent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noteInsertAnimationScale": "[FR] Bubble scale",
+  "noteInsertAnimationSlide": "[FR] Smooth rise",
+  "noteInsertAnimationNone": "[FR] No animation",
+  "aiProviderZhipu": "[FR] Zhipu GLM",
+  "aiProviderMoonshot": "[FR] Moonshot Kimi",
+  "aiProviderDashScope": "[FR] Alibaba Bailian",
+  "aiProviderVolcengine": "[FR] Volcengine Ark",
+  "aiProviderGemini": "[FR] Google Gemini",
+  "presetDescOllamaCloud": "[FR] Generous free tier, works right after sign-up. Best first choice.",
+  "presetDescOpenAI": "[FR] Official OpenAI API. Requires an international payment method.",
+  "presetDescOpenRouter": "[FR] One key for hundreds of models, including Claude and Gemini.",
+  "presetDescDeepSeek": "[FR] Low cost, strong Chinese performance.",
+  "presetDescSiliconFlow": "[FR] Aggregator platform; some small models are free.",
+  "presetDescZhipu": "[FR] glm-4-flash is free to use.",
+  "presetDescMoonshot": "[FR] Strong long-context performance.",
+  "presetDescDashScope": "[FR] OpenAI-compatible endpoint for the Qwen family.",
+  "presetDescVolcengine": "[FR] Doubao models. Put the inference endpoint ID in the model field.",
+  "presetDescGemini": "[FR] Gemini's official OpenAI-compatible endpoint. Has a free tier.",
+  "presetDescOllamaLocal": "[FR] Connect to Ollama on this machine. Offline, no key needed.",
+  "presetDescLMStudio": "[FR] Connect to LM Studio on this machine. Offline, no key needed.",
+  "presetDescCustom": "[FR] Any OpenAI-compatible endpoint. Fill in the URL and model yourself.",
+  "aiServicesSectionTitle": "[FR] My AI services",
+  "aiServiceEmptyTitle": "[FR] No AI service configured yet",
+  "aiServiceEmptyBody": "[FR] AI insights, card generation and the Thoughter assistant need a configured provider.",
+  "addAiService": "[FR] Add AI service",
+  "editAiServiceTitle": "[FR] Edit AI service",
+  "newAiServiceTitle": "[FR] New AI service",
+  "selectProviderTemplate": "[FR] Choose a provider",
+  "changeProviderTemplate": "[FR] Change",
+  "providerGroupCloud": "[FR] Cloud services",
+  "providerGroupLocal": "[FR] Runs locally",
+  "providerGroupCustom": "[FR] Custom",
+  "recommendedBadge": "[FR] Recommended",
+  "inUseBadge": "[FR] In use",
+  "getApiKeyLink": "[FR] Get an API key",
+  "apiKeyNotNeededHint": "[FR] Local services usually need no key — leave this empty.",
+  "suggestedModelsLabel": "[FR] Common models",
+  "configNameField": "[FR] Configuration name",
+  "statusKeyConfigured": "[FR] Key configured",
+  "statusKeyMissing": "[FR] Key missing",
+  "aiServiceSaved": "[FR] Saved {name}",
+  "@aiServiceSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ollamaCloudTipTitle": "[FR] We recommend Ollama Cloud",
+  "ollamaCloudTipBody": "[FR] Generous free tier, no card required — sign up and copy the API key.",
+  "ollamaCloudTipAction": "[FR] Add it",
+  "aiConfigHelpLink": "[FR] Not sure what to fill in? Read the setup guide",
+  "openLinkFailed": "[FR] Could not open the link",
+  "testBeforeSaveHint": "[FR] You can test as soon as URL, key and model are filled in — no need to save first.",
+  "agentMemorySectionTitle": "[FR] Thoughter memory",
+  "agentMemoryEnableTitle": "[FR] Long-term memory",
+  "agentMemoryEnableDesc": "[FR] Remember your preferences across chats (stored locally only)",
+  "agentMemoryNicknameTitle": "[FR] Nickname",
+  "agentMemoryNicknameHint": "[FR] How should Thoughter address you?",
+  "agentMemoryNicknameDesc": "[FR] How Thoughter should address you (leave empty to skip)",
+  "agentMemoryNicknameSaveFailed": "[FR] Couldn't save your nickname. Please try again.",
+  "agentMemoryNicknameDisabled": "[FR] Enabled when long-term memory is turned on",
+  "agentMemoryClearTitle": "[FR] Clear memory",
+  "agentMemoryClearSummary": "[FR] Currently remembering {profileCount, plural, =1{1 preference} other{{profileCount} preferences}} and {factCount, plural, =1{1 detail} other{{factCount} details}}",
+  "@agentMemoryClearSummary": {
+    "placeholders": {
+      "profileCount": {
+        "type": "int"
+      },
+      "factCount": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryClearEmpty": "[FR] Nothing remembered yet",
+  "agentMemoryClearConfirmTitle": "[FR] Clear Thoughter's memory?",
+  "agentMemoryClearConfirmBody": "[FR] Every remembered preference and detail will be deleted permanently. Your notes are not affected.",
+  "agentMemoryClearConfirmAction": "[FR] Clear",
+  "agentMemoryCleared": "[FR] Thoughter's memory has been cleared",
+  "agentMemoryClearFailed": "[FR] Failed to clear memory",
+  "agentMemoryNoticeTitle": "[FR] Thoughter will remember you",
+  "agentMemoryNoticeBody": "[FR] So it doesn't have to get to know you from scratch every time, Thoughter records who you are and how you like things phrased, and uses that in later conversations, daily prompts, and periodic insights. Memory stays on this device and is never uploaded.",
+  "agentMemoryNoticeHint": "[FR] You can ask Thoughter to change or forget any entry at any time, or turn memory off and clear it in AI settings.",
+  "agentMemoryNoticeGotIt": "[FR] Got it",
+  "agentMemoryNoticeDisable": "[FR] Don't remember",
+  "agentMemorySwitchFailed": "[FR] Could not save the memory switch. Please try again.",
+  "agentMemoryCountsUnavailable": "[FR] Could not read the memory count. You can still try clearing.",
+  "releaseNotesTitle": "[FR] What's New",
+  "releaseNotesUpgradeLede": "[FR] Here's what has been added since you last used the app.",
+  "releaseNotesCurrentLede": "[FR] Here's what this version adds.",
+  "releaseNotesHighlights": "[FR] Highlights",
+  "releaseNotesGetStarted": "[FR] Get started",
+  "releaseThoughterTitle": "[FR] Thoughter: a thinking partner inside your notebook",
+  "releaseThoughterLede": "[FR] From simply capturing notes to organising and creating with them. Thoughter is no longer just a chat box that answers questions — it now works across your entire note library as a thinking partner.",
+  "releaseThoughterSearchTitle": "[FR] Smart retrieval across your notes",
+  "releaseThoughterSearchDesc": "[FR] No more digging by hand. Ask in plain language and Thoughter finds the related notes, follows the tags between them, and pulls in web results when needed.",
+  "releaseThoughterControlTitle": "[FR] You keep every editing decision",
+  "releaseThoughterControlDesc": "[FR] AI never changes your content on its own. Every new note and rewrite arrives as a proposal card that shows exactly what changed; nothing is applied until you review it and confirm.",
+  "releaseThoughterSingleNoteTitle": "[FR] Talk about a single note",
+  "releaseThoughterSingleNoteDesc": "[FR] Tap the ✨ button in the editor and choose \"Ask Thoughter\" to dig into, polish, or continue the note you have open.",
+  "releaseThoughterMemoryTitle": "[FR] Long-term memory",
+  "releaseThoughterMemoryDesc": "[FR] Once enabled, Thoughter remembers what to call you and how you like to phrase things across conversations. Memory is stored separately, and you can review or clear it at any time.",
+  "releaseThoughterInsightTitle": "[FR] Periodic insights and a rebuilt Explore page",
+  "releaseThoughterInsightDesc": "[FR] Thoughter revisits your notes on a schedule and writes them up as periodic insights. The Explore page has been rebuilt to bring those findings together.",
+  "releaseThemeTitle": "[FR] New themes: a different paper, a different ink",
+  "releaseThemeLede": "[FR] Theme style is now its own dimension alongside light and dark. Pick one of three.",
+  "releaseThemeStylesTitle": "[FR] Three styles",
+  "releaseThemeStylesDesc": "[FR] Material keeps following the system's dynamic colors; Paper & Ink is warm, with serif body text and paper rules; Plain is cool and sharper.",
+  "releaseThemeAccentTitle": "[FR] Choose your ink",
+  "releaseThemeAccentDesc": "[FR] The handcrafted styles add four inks — umber, celadon, indigo and cinnabar. Change the ink without changing the paper.",
+  "releaseThemeSwitchTitle": "[FR] Switch whenever you like",
+  "releaseThemeSwitchDesc": "[FR] Material stays the default, so upgrading does not change how the app looks. Try a style right here, or change it later in Settings › Theme Settings.",
+  "releaseDiagnosticsNotice": "[FR] Since 3.7.0, ThoughtEcho reports anonymous diagnostics when something goes wrong. They are used only to locate and fix problems and never contain note content. You can turn this off at any time in Settings › Feedback & Contact.",
+  "settingsReleaseNotes": "[FR] What's New",
+  "settingsReleaseNotesDesc": "[FR] See what this version adds"
 }

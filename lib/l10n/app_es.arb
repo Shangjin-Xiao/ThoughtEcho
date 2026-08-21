@@ -100,5 +100,4452 @@
   "themeAccentUmber": "Tierra de sombra",
   "themeAccentCeladon": "Celadón",
   "themeAccentIndigo": "Índigo",
-  "themeAccentCinnabar": "Cinabrio"
+  "themeAccentCinnabar": "Cinabrio",
+  "smartPushPeriodEarlyMorning": "[ES] Early Morning",
+  "smartPushPeriodMorning": "[ES] Morning",
+  "smartPushPeriodNoon": "[ES] Noon",
+  "smartPushPeriodAfternoon": "[ES] Afternoon",
+  "smartPushPeriodEvening": "[ES] Evening",
+  "smartPushPeriodNight": "[ES] Night",
+  "settingsSentryTitle": "[ES] Send diagnostics to help improve",
+  "settingsSentryDesc": "[ES] Disabled by default. When enabled, sends error stacks, device information, page performance, regular network request performance, and main database performance. AI requests are excluded. Database monitoring records SQL templates and timing only, never note content or query parameters.",
+  "sentryRestartHint": "[ES] Settings saved, takes effect after restarting",
+  "sentryDisclosureTitle": "[ES] Privacy Policy Updated",
+  "sentryDisclosureMessage": "[ES] The ThoughtEcho privacy policy has been updated. You can view the latest version on our official website.\n\nWe have added Sentry to collect errors and user feedback. To protect your privacy, this feature is disabled by default. You can enable it anytime in 'Settings -> Feedback & Contact'.\n\nPrivacy Policy: https://note.shangjinyun.cn/privacy",
+  "sentryDisclosureGotIt": "[ES] Got it",
+  "draftRestored": "[ES] Draft automatically restored",
+  "draftRecoverTitle": "[ES] Restore Unsaved Draft",
+  "draftRecoverMessage": "[ES] You have unsaved content from your last session. Would you like to restore it?",
+  "restore": "[ES] Restore",
+  "discard": "[ES] Discard",
+  "draftSaved": "[ES] Draft saved",
+  "cancel": "[ES] Cancel",
+  "confirm": "[ES] Confirm",
+  "delete": "[ES] Delete",
+  "save": "[ES] Save",
+  "edit": "[ES] Edit",
+  "search": "[ES] Search",
+  "settings": "[ES] Settings",
+  "loading": "[ES] Loading...",
+  "retry": "[ES] Retry",
+  "refresh": "[ES] Refresh",
+  "annualReport": "[ES] Annual Report",
+  "clearRecords": "[ES] Clear records",
+  "home": "[ES] Home",
+  "notes": "[ES] Notes",
+  "aiFeatures": "[ES] AI",
+  "selectLanguage": "[ES] Select Language",
+  "onboardingSelectLanguage": "[ES] Select Language",
+  "onboardingWelcome": "[ES] Welcome to ThoughtEcho",
+  "onboardingSubtitle": "[ES] Your Personal Inspiration Notebook with AI Power",
+  "onboardingDescription": "[ES] Let's record together",
+  "onboardingModifyLater": "[ES] These settings can be modified anytime in the app",
+  "onboardingAppearanceTitle": "[ES] Look & Daily Quote",
+  "onboardingAppearanceSubtitle": "[ES] Pick a look that feels right",
+  "onboardingHabitsTitle": "[ES] Habits & Privacy",
+  "onboardingHabitsSubtitle": "[ES] Just a few last choices",
+  "onboardingThemeStyleDesc": "[ES] Sets the paper, ink and corners across the app",
+  "onboardingProviderRecommended": "[ES] Recommended for your language",
+  "onboardingCustomizeTypes": "[ES] Customize types",
+  "onboardingAiTitle": "[ES] AI insights (optional)",
+  "onboardingAiDesc": "[ES] Connect any AI service and ThoughtEcho can summarize your notes, surface insights and generate share cards. Everything else works without it.",
+  "onboardingAiOpenAfter": "[ES] Take me there when I'm done",
+  "onboardingSkip": "[ES] Skip",
+  "onboardingNext": "[ES] Next",
+  "onboardingPrevious": "[ES] Previous",
+  "onboardingStart": "[ES] Get Started",
+  "onboardingPreparing": "[ES] Preparing...",
+  "onboardingSkipTitle": "[ES] Skip Onboarding",
+  "onboardingSkipMessage": "[ES] Are you sure you want to skip the onboarding?\nSome settings will use default values.",
+  "onboardingConfirmSkip": "[ES] Confirm Skip",
+  "onboardingInitializing": "[ES] Initializing...",
+  "onboardingInitFailed": "[ES] Initialization failed, please retry",
+  "onboardingContinueUsing": "[ES] Continue",
+  "onboardingError": "[ES] Something went wrong",
+  "onboardingUpdateComplete": "[ES] Update Complete",
+  "onboardingUpdateSuccess": "[ES] ThoughtEcho has been successfully updated\nYour data has been automatically migrated",
+  "onboardingUpdateFailed": "[ES] Update failed, but you can still continue using the app",
+  "onboardingUpdateProcessFailed": "[ES] Update processing failed, please restart the app",
+  "onboardingEnterApp": "[ES] Enter App",
+  "prefLanguage": "[ES] Language",
+  "prefLanguageDesc": "[ES] Select app display language",
+  "prefDailyQuoteType": "[ES] Daily Quote Types",
+  "prefDailyQuoteTypeDesc": "[ES] Select content types you are interested in",
+  "prefLocationService": "[ES] Location Service",
+  "prefLocationServiceDesc": "[ES] Enable location service to record note locations and get weather info",
+  "prefDefaultStartPage": "[ES] Default Start Page",
+  "prefDefaultStartPageDesc": "[ES] Select the page to show when opening the app",
+  "prefHomeOverview": "[ES] Home Overview",
+  "prefHomeOverviewDesc": "[ES] View daily quote and recent notes",
+  "prefNoteList": "[ES] Note List",
+  "prefNoteListDesc": "[ES] Go directly to note management",
+  "prefSelectAll": "[ES] Select All",
+  "prefClearAll": "[ES] Clear",
+  "settingsTitle": "[ES] Settings",
+  "settingsLocationWeather": "[ES] Location & Weather Settings",
+  "settingsAutoAttachLocation": "[ES] Auto-attach location when adding notes",
+  "settingsAutoAttachLocationDesc": "[ES] Automatically check location when creating new notes",
+  "settingsAutoAttachWeather": "[ES] Auto-attach weather when adding notes",
+  "settingsAutoAttachWeatherDesc": "[ES] Automatically check weather when creating new notes",
+  "weatherFetchFailedTitle": "[ES] Weather Fetch Failed",
+  "weatherFetchFailedDesc": "[ES] Cannot get current weather info. Please check your network connection or try again later",
+  "locationFetchFailedNoNetwork": "[ES] No network, coordinates saved",
+  "locationAndWeatherUnavailable": "[ES] Cannot get location and weather info at this time",
+  "settingsUseLocationService": "[ES] Use Location Service",
+  "settingsLocationEnabled": "[ES] Permission granted and enabled",
+  "settingsLocationPermissionOnly": "[ES] Permission granted but service disabled",
+  "settingsLocationNoPermission": "[ES] No location permission",
+  "settingsSetLocation": "[ES] Set Display Location",
+  "settingsSearchCity": "[ES] Search and Select City",
+  "settingsCurrentLocation": "[ES] Current Display Location",
+  "settingsNotSet": "[ES] Not Set",
+  "settingsAppSettings": "[ES] App Settings",
+  "settingsPreferences": "[ES] Preferences",
+  "settingsPreferencesDesc": "[ES] Personalization and AI features",
+  "settingsDefaultStartPage": "[ES] Default Start Page",
+  "settingsStartPageHome": "[ES] Home (Daily Quote)",
+  "settingsStartPageNotes": "[ES] Notes (Note List)",
+  "settingsSelectStartPage": "[ES] Select Default Start Page",
+  "settingsTheme": "[ES] Theme Settings",
+  "settingsThemeDesc": "[ES] Customize app appearance",
+  "settingsAI": "[ES] AI Settings",
+  "settingsAIDesc": "[ES] Configure AI API settings and multi-provider management",
+  "settingsHitokoto": "[ES] Quote Settings",
+  "settingsHitokotoDesc": "[ES] Customize daily quote types",
+  "settingsLogs": "[ES] Log Settings",
+  "settingsLogsDesc": "[ES] Configure app logging level",
+  "settingsStorage": "[ES] Storage Management",
+  "settingsStorageDesc": "[ES] View storage usage, clean cache and unused files",
+  "settingsContentManagement": "[ES] Content Management",
+  "settingsTags": "[ES] Tag Management",
+  "settingsTagsDesc": "[ES] Add, edit or delete note tags",
+  "settingsBackup": "[ES] Backup & Restore",
+  "settingsBackupDesc": "[ES] Backup data or restore from backup",
+  "settingsSync": "[ES] Note Sync",
+  "settingsSyncDesc": "[ES] Sync notes with nearby devices",
+  "settingsAbout": "[ES] About ThoughtEcho",
+  "settingsAboutSlogan": "[ES] Your Personal Inspiration Notebook with AI Power",
+  "settingsViewSource": "[ES] View Source Code (GitHub)",
+  "settingsVisitWebsite": "[ES] Visit Website",
+  "settingsPrivacyPolicy": "[ES] Privacy Policy",
+  "settingsFeedback": "[ES] Feedback",
+  "settingsContactDeveloper": "[ES] Contact Developer",
+  "feedbackAndContact": "[ES] Feedback & Contact",
+  "feedbackAndContactDesc": "[ES] Your feedback matters! Reach us through the following channels:",
+  "feedbackGithubTitle": "[ES] Submit an Issue on GitHub",
+  "feedbackGithubDesc": "[ES] Report bugs, suggest features, or join discussions",
+  "feedbackGithubRepoTitle": "[ES] View Source Code",
+  "feedbackGithubRepoDesc": "[ES] Browse the code, star the project, or submit a Pull Request",
+  "contactDeveloperSectionTitle": "[ES] Contact Developer",
+  "feedbackEmailTitle": "[ES] Send Email",
+  "feedbackEmailDesc": "[ES] shangjinyun@proton.me",
+  "feedbackDiscussionTitle": "[ES] Join Community Discussions",
+  "feedbackDiscussionDesc": "[ES] Ask questions, share ideas, and connect with other users",
+  "feedbackSentryTitle": "[ES] Send Feedback & Suggestions (Sentry)",
+  "feedbackSentryDesc": "[ES] Send comments, suggestions, or bug reports directly to developers",
+  "feedbackSentryDisabledHint": "[ES] Please enable Sentry Debugging & Reporting below first",
+  "settingsViewLicenses": "[ES] View Licenses",
+  "settingsCheckUpdate": "[ES] Check for Updates",
+  "settingsCheckUpdateDesc": "[ES] Check if a new version is available",
+  "settingsClose": "[ES] Close",
+  "developerModeEnabled": "[ES] 🎉 Developer mode enabled!",
+  "developerModeDisabled": "[ES] ✅ Developer mode disabled",
+  "devFirstScrollPerfMonitorTitle": "[ES] First-scroll jank monitor (Dev)",
+  "devFirstScrollPerfMonitorDesc": "[ES] Measure frame timings for the first gesture scroll after opening Notes (not first frame)",
+  "noteListDisableCardShadowsExperiment": "[ES] [Experiment] Disable note-list card shadows",
+  "noteListDisableCardShadowsExperimentDesc": "[ES] Available in release builds. Compare how card shadows affect Notes scrolling performance and visual feel (off by default)",
+  "noteListDisableBackdropBlurExperiment": "[ES] [Experiment] Disable note-list collapse blur",
+  "noteListDisableBackdropBlurExperimentDesc": "[ES] Available in release builds. Replaces the collapsed long-content bottom blur with a gradient scrim (off by default)",
+  "devFirstScrollPerfResult": "[ES] First-scroll performance: total {total}, jank {jank}, avg {avgMs}ms, worst {worstMs}ms",
+  "@devFirstScrollPerfResult": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "jank": {
+        "type": "int"
+      },
+      "avgMs": {
+        "type": "String"
+      },
+      "worstMs": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyRecoveryTitle": "[ES] ThoughtEcho - Data Recovery",
+  "emergencyRecoveryHeading": "[ES] Database initialization failed",
+  "emergencyRecoveryDescription": "[ES] The app cannot start normally. The database may be corrupted or inaccessible.\n\nYou can try backing up existing data to prevent loss, or try restarting the app.",
+  "emergencyBackupAndRestoreButton": "[ES] Backup & restore data",
+  "emergencyTryRestartAppButton": "[ES] Try restarting the app",
+  "emergencyReinitializeFailed": "[ES] Reinitialize failed: {error}",
+  "@emergencyReinitializeFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyRecoveryHint": "[ES] Tip: If the issue persists, you may need to reinstall the app. Please back up your data beforehand.",
+  "emergencyAppTitle": "[ES] ThoughtEcho - Emergency Recovery",
+  "emergencyModeTitle": "[ES] Emergency Recovery Mode",
+  "emergencyAppStartFailedTitle": "[ES] App failed to start",
+  "emergencyAppStartFailedDesc": "[ES] A severe error occurred while starting ThoughtEcho. This may be caused by data corruption or storage permission issues.",
+  "emergencyErrorLabel": "[ES] Error:",
+  "emergencyTechnicalDetails": "[ES] Technical details",
+  "emergencyExitAppButton": "[ES] Exit app",
+  "emergencyPersistentIssueHint": "[ES] If the issue persists, try reinstalling the app or contact the developer for support.",
+  "emergencyBackupPageTitle": "[ES] Emergency Data Recovery",
+  "emergencyBackupToolTitle": "[ES] Emergency data recovery tool",
+  "emergencyBackupToolDesc": "[ES] Due to a critical error, you can try:\n\n1. Export database file - export the raw database file for professional recovery\n2. Try opening the backup & restore page - note: this may not work if the database is damaged",
+  "emergencyProcessing": "[ES] Processing...",
+  "emergencyExportDatabaseButton": "[ES] Export database file",
+  "emergencyOpenBackupPageButton": "[ES] Try opening standard backup & restore",
+  "emergencyOpenBackupFailed": "[ES] Unable to open backup & restore page: {error}",
+  "@emergencyOpenBackupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyExportHint": "[ES] Tip: You can send the exported database file to the developer for recovery.",
+  "emergencyLocatingDatabase": "[ES] Locating database file...",
+  "emergencyDatabaseNotFound": "[ES] Database file not found",
+  "emergencyPreparingExport": "[ES] Preparing export...",
+  "emergencyCopyingFile": "[ES] Copying file...",
+  "emergencyDatabaseExported": "[ES] Database file exported to: {path}",
+  "@emergencyDatabaseExported": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyExportFailed": "[ES] Export failed: {error}",
+  "@emergencyExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "locationPermissionDenied": "[ES] Location permission denied, cannot enable location service",
+  "enableLocationService": "[ES] Please Enable Location Service",
+  "enableLocationServiceDesc": "[ES] ThoughtEcho needs access to your location to provide weather and other features. Please enable location service in system settings.",
+  "goToSettings": "[ES] Go to Settings",
+  "gettingLocation": "[ES] Getting location...",
+  "locationServiceEnabled": "[ES] Location service enabled, location updated",
+  "locationServiceDisabled": "[ES] Location service disabled",
+  "cannotGetLocation": "[ES] Cannot get current location",
+  "selectedCount": "[ES] {count} types selected",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pleaseWait": "[ES] Please wait...",
+  "close": "[ES] Close",
+  "ok": "[ES] OK",
+  "timeJustNow": "[ES] Just now",
+  "timeMinutesAgo": "[ES] {count} mins ago",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "[ES] {count} hours ago",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDaysAgo": "[ES] {count} days ago",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeYesterday": "[ES] Yesterday",
+  "exactAlarmDeniedHint": "[ES] Exact alarm permission denied, push timing may be inaccurate",
+  "error": "[ES] Error",
+  "success": "[ES] Success",
+  "warning": "[ES] Warning",
+  "info": "[ES] Info",
+  "cannotOpenLink": "[ES] Cannot open link: {url}",
+  "@cannotOpenLink": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "checkUpdateFailed": "[ES] Check update failed: {error}",
+  "@checkUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetLocationPermission": "[ES] Cannot get location permission",
+  "logDebugInfo": "[ES] Log Debug Info",
+  "logDebugInfoDesc": "[ES] Show log database status and path info",
+  "addNoteAutoFocusExperiment": "[ES] [Experiment] AddNote auto focus",
+  "addNoteAutoFocusExperimentDesc": "[ES] Automatically show the keyboard after the add note dialog settles (on by default)",
+  "databaseStatus": "[ES] Database Status:",
+  "logStatistics": "[ES] Log Statistics:",
+  "getDebugInfoFailed": "[ES] Failed to get debug info: {error}",
+  "@getDebugInfoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "generatingAIReport": "[ES] Generating AI annual report...",
+  "generateReportFailed": "[ES] Failed to generate annual report",
+  "aiReturnedEmpty": "[ES] AI returned empty content, please retry",
+  "pleaseConfigureApiKey": "[ES] Please configure a valid API Key in AI settings first",
+  "networkError": "[ES] Network error, please check your connection and retry",
+  "aiQuotaExceeded": "[ES] AI service quota exceeded, please try again later",
+  "generateAIReportFailed": "[ES] Failed to generate AI annual report",
+  "getDataFailed": "[ES] Failed to get data",
+  "testingAIReport": "[ES] Testing AI annual report...",
+  "testResult": "[ES] Test Result",
+  "contentLength": "[ES] Content length: {length} characters",
+  "@contentLength": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "htmlFormat": "[ES] HTML format: {status}",
+  "@htmlFormat": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "jsonFormat": "[ES] JSON format: {status}",
+  "@jsonFormat": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "containsHtmlTags": "[ES] Contains HTML tags: {status}",
+  "@containsHtmlTags": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "first100Chars": "[ES] First 100 characters:",
+  "viewReport": "[ES] View Report",
+  "testFailed": "[ES] Test failed: {error}",
+  "@testFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "testFailedEmpty": "[ES] Test failed: AI returned empty content",
+  "testFailedApiKey": "[ES] Test failed: Please configure a valid API Key in AI settings first",
+  "testFailedNetwork": "[ES] Test failed: Network error",
+  "testInitFailed": "[ES] Test initialization failed",
+  "followSystem": "[ES] Follow System",
+  "navHome": "[ES] Home",
+  "navNotes": "[ES] Notes",
+  "navInsights": "[ES] Insights",
+  "navSettings": "[ES] Settings",
+  "appTitleOffline": "[ES] ThoughtEcho - Offline",
+  "loadingDataPleaseWait": "[ES] Loading data, please wait...",
+  "noTagsAvailable": "[ES] No tags available",
+  "deleteNote": "[ES] Delete Note",
+  "deleteNoteConfirmation": "[ES] Are you sure you want to delete this note? This action cannot be undone.",
+  "noteDeleted": "[ES] Note deleted",
+  "noteNotFound": "[ES] Note not found",
+  "noteUpdateSkippedDeleted": "[ES] Note has been deleted, update skipped",
+  "favorited": "[ES] Favorited ({count})",
+  "@favorited": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "favoriteFailed": "[ES] Failed to favorite, please try again",
+  "aiCardServiceNotInitialized": "[ES] AI card service not initialized",
+  "generateCardFailed": "[ES] Failed to generate card: {error}",
+  "@generateCardFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "generatingShareImage": "[ES] Generating share image...",
+  "cardSharedSuccessfully": "[ES] Card shared successfully",
+  "shareFailed": "[ES] Share failed: {error}",
+  "@shareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "savingCardToGallery": "[ES] Saving card to gallery...",
+  "cardSavedToGallery": "[ES] Card saved to gallery: {path}",
+  "@cardSavedToGallery": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailed": "[ES] Save failed: {error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "view": "[ES] View",
+  "viewImage": "[ES] View image",
+  "imageLoadFailed": "[ES] Failed to load image",
+  "todayThoughts": "[ES] Today's Thoughts",
+  "loadingTodayThoughts": "[ES] Loading today's thoughts...",
+  "fetchingDefaultPrompt": "[ES] Fetching default prompt...",
+  "waitingForTodayThoughts": "[ES] Waiting for today's thoughts...",
+  "noTodayThoughts": "[ES] No thoughts for today",
+  "cannotOpenFullEditor": "[ES] Cannot open full editor: {error}",
+  "@cannotOpenFullEditor": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "refreshFailed": "[ES] Refresh failed: {error}",
+  "@refreshFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "backupAndRestore": "[ES] Backup & Restore",
+  "dataBackup": "[ES] Data Backup",
+  "dataRestore": "[ES] Data Restore",
+  "includeMediaFiles": "[ES] Include media files",
+  "creatingBackup": "[ES] Creating backup...",
+  "createBackup": "[ES] Create Backup",
+  "selectBackupFileToRestore": "[ES] Select backup file to restore",
+  "importantNotes": "[ES] Important Notes",
+  "dataSecurity": "[ES] Data Security",
+  "dataSafetyDesc": "[ES] Restoring data will overwrite all current data. Please make sure to backup your current data first",
+  "backupAdvice": "[ES] Backup Advice",
+  "backupAdviceDesc": "[ES] It's recommended to backup data regularly to multiple locations (local, cloud storage, etc.)",
+  "formatInfo": "[ES] Format Info",
+  "formatInfoDesc": "[ES] New ZIP format contains complete data and media files; old JSON format contains only text data",
+  "compatibility": "[ES] Compatibility",
+  "compatibilityDesc": "[ES] Supports importing both new ZIP format and old JSON format backup files",
+  "confirmRestore": "[ES] Confirm Restore",
+  "confirmMergeImport": "[ES] Confirm Merge Import",
+  "startMerge": "[ES] Start Merge",
+  "selectImportMode": "[ES] Select Import Mode",
+  "continueAction": "[ES] Continue",
+  "backupFailed": "[ES] Backup Failed",
+  "restoreFailed": "[ES] Restore Failed",
+  "selectFileFailed": "[ES] Failed to select file",
+  "cannotGetFilePath": "[ES] Cannot get file path, please select again",
+  "invalidBackupFile": "[ES] Invalid Backup File",
+  "invalidBackupFileDesc": "[ES] The selected file is not a valid ThoughtEcho backup file.\n\nPlease select a correct backup file.",
+  "backupCanceled": "[ES] Backup canceled",
+  "restoreCanceled": "[ES] Restore canceled",
+  "unknownField": "[ES] Unknown field",
+  "confirmRestoreData": "[ES] Confirm Restore Data",
+  "insightsTitle": "[ES] AI Insights",
+  "analysisTypeComprehensive": "[ES] Comprehensive Analysis",
+  "analysisTypeComprehensiveDesc": "[ES] Analyze all your notes to explore themes, emotions and thinking patterns",
+  "analysisTypeEmotional": "[ES] Emotional Insights",
+  "analysisTypeEmotionalDesc": "[ES] Analyze your emotional state and trends",
+  "analysisTypeMindmap": "[ES] Mind Map",
+  "analysisTypeMindmapDesc": "[ES] Build the structure of your thinking and analyze habits",
+  "analysisTypeGrowth": "[ES] Growth Suggestions",
+  "analysisTypeGrowthDesc": "[ES] Personalized growth and progress suggestions based on your notes",
+  "analysisStyleProfessional": "[ES] Professional Analysis",
+  "analysisStyleProfessionalDesc": "[ES] Objective and professional analytical perspective",
+  "analysisStyleFriendly": "[ES] Friendly Mentor",
+  "analysisStyleFriendlyDesc": "[ES] Gentle advice like a friendly mentor",
+  "analysisStyleHumorous": "[ES] Humorous Style",
+  "analysisStyleHumorousDesc": "[ES] Interpret your thoughts in a humorous way",
+  "analysisStyleLiterary": "[ES] Literary Style",
+  "analysisStyleLiteraryDesc": "[ES] Describe your thinking journey in beautiful literary language",
+  "selectAnalysisType": "[ES] Select Analysis Type",
+  "selectAnalysisStyle": "[ES] Select Analysis Style",
+  "customPrompt": "[ES] Custom Prompt",
+  "startAnalysis": "[ES] Start Analysis",
+  "stopAnalysis": "[ES] Stop",
+  "shareAnalysis": "[ES] Share",
+  "copyAnalysis": "[ES] Copy",
+  "saveAnalysis": "[ES] Save",
+  "noNotesToAnalyze": "[ES] No notes to analyze",
+  "noNotesToAnalyzeDesc": "[ES] Add some notes first so AI can provide insights",
+  "aiServiceNotConfigured": "[ES] AI service not configured",
+  "configureAIService": "[ES] Configure AI Service",
+  "analysisHistory": "[ES] History",
+  "newAnalysis": "[ES] New Analysis",
+  "analyzing": "[ES] Analyzing...",
+  "analysisSaved": "[ES] Analysis saved",
+  "analysisCopied": "[ES] Analysis copied to clipboard",
+  "noteSaved": "[ES] Note saved",
+  "selectCardColor": "[ES] Select Card Color",
+  "presetColors": "[ES] Preset Colors",
+  "customColor": "[ES] Custom Color",
+  "select": "[ES] Select",
+  "editMetadata": "[ES] Edit Metadata",
+  "noLocationWeatherRecorded": "[ES] Location and weather were not recorded when this note was first saved",
+  "done": "[ES] Done",
+  "selectTags": "[ES] Select Tags",
+  "noMatchingTags": "[ES] No matching tags found",
+  "smartAnalyzeSource": "[ES] Smart Analyze Source",
+  "smartAnalyzeSourceDesc": "[ES] Analyze potential author and work in the text",
+  "polishText": "[ES] Polish Text",
+  "polishTextDesc": "[ES] Optimize text expression to make it more fluent and elegant",
+  "continueWriting": "[ES] Continue Writing",
+  "continueWritingDesc": "[ES] Extend current content with the same style and tone",
+  "deepAnalysis": "[ES] Deep Analysis",
+  "deepAnalysisDesc": "[ES] Perform in-depth analysis and interpretation of note content",
+  "askNote": "[ES] Ask Thoughter",
+  "askNoteDesc": "[ES] Start a conversation with this note attached, no preset prompt",
+  "pleaseEnterContent": "[ES] Please enter content first",
+  "analysisResults": "[ES] Analysis Results",
+  "confidence": "[ES] Confidence",
+  "noAuthorOrWorkIdentified": "[ES] Could not identify a clear author or work",
+  "applyAnalysisResults": "[ES] Apply Analysis Results",
+  "parseResultsFailed": "[ES] Failed to parse results",
+  "analysisFailed": "[ES] Analysis failed: {error}",
+  "@analysisFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "analysisResultsCopied": "[ES] Analysis results copied to clipboard",
+  "noteInfo": "[ES] Note Info",
+  "source": "[ES] Source",
+  "createdAt": "[ES] Created At",
+  "content": "[ES] Content",
+  "periodicReport": "[ES] Periodic Report",
+  "aiInsightsTab": "[ES] AI Insights",
+  "locationServiceNotEnabled": "[ES] Location Service Not Enabled",
+  "pleaseEnableLocationInSettings": "[ES] Please enable location service in system settings",
+  "locationServiceEnabledMsg": "[ES] Location service enabled",
+  "confirmDelete": "[ES] Confirm Delete",
+  "confirmDeleteAnalysis": "[ES] Are you sure you want to delete this analysis record?",
+  "deleteSuccess": "[ES] Deleted successfully",
+  "deleteFailed": "[ES] Delete failed: {error}",
+  "@deleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serviceNotInitialized": "[ES] Service not initialized",
+  "location": "[ES] Location",
+  "weather": "[ES] Weather",
+  "color": "[ES] Color",
+  "noteUpdated": "[ES] Note updated",
+  "openFullEditorFailed": "[ES] Failed to open full editor: {error}",
+  "@openFullEditorFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailedWithError": "[ES] Save failed: {error}",
+  "@saveFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "themeSettings": "[ES] Theme Settings",
+  "themeStyle": "[ES] Theme Style",
+  "themeMode": "[ES] Theme Mode",
+  "themeModeLight": "[ES] Light",
+  "themeModeDark": "[ES] Dark",
+  "useCustomThemeColor": "[ES] Use Custom Theme Color",
+  "selectThemeColor": "[ES] Select Theme Color",
+  "dynamicColor": "[ES] Dynamic Color",
+  "dynamicColorDesc": "[ES] Extract theme color from system",
+  "customColorEnabledHint": "[ES] Custom theme color enabled, dynamic color is temporarily disabled",
+  "dynamicColorDisabledHint": "[ES] Dynamic color disabled, using default blue theme",
+  "themeTools": "[ES] Theme Tools",
+  "themeToolsDesc": "[ES] If theme colors appear abnormal, try refreshing the theme",
+  "themeRefreshed": "[ES] Theme refreshed",
+  "refreshTheme": "[ES] Refresh Theme",
+  "hitokotoSettings": "[ES] Daily Quote Settings",
+  "hitokotoTypeSettings": "[ES] Daily Quote Type Settings",
+  "hitokotoTypeDesc": "[ES] You can select one or more daily quote types. The app will randomly display content from your selected types. Different types represent different content sources and styles.",
+  "dailyQuoteApiNinjasCategorySelection": "[ES] Category selection",
+  "dailyQuoteApiNinjasCategoryDesc": "[ES] Search, select multiple categories, or clear them all. Leaving everything unchecked falls back to fully random quotes.",
+  "dailyQuoteApiNinjasCategorySearchHint": "[ES] Search categories",
+  "dailyQuoteApiNinjasNoCategoriesFound": "[ES] No matching categories",
+  "dailyQuoteApiNinjasAllCategoriesUsed": "[ES] No category filter applied; quotes will be drawn from the full pool",
+  "dailyQuoteApiNinjasSelectedCount": "[ES] {count} categories selected",
+  "@dailyQuoteApiNinjasSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteApiNinjasCategoryWisdom": "[ES] Wisdom",
+  "dailyQuoteApiNinjasCategoryPhilosophy": "[ES] Philosophy",
+  "dailyQuoteApiNinjasCategoryLife": "[ES] Life",
+  "dailyQuoteApiNinjasCategoryTruth": "[ES] Truth",
+  "dailyQuoteApiNinjasCategoryInspirational": "[ES] Inspirational",
+  "dailyQuoteApiNinjasCategoryRelationships": "[ES] Relationships",
+  "dailyQuoteApiNinjasCategoryLove": "[ES] Love",
+  "dailyQuoteApiNinjasCategoryFaith": "[ES] Faith",
+  "dailyQuoteApiNinjasCategoryHumor": "[ES] Humor",
+  "dailyQuoteApiNinjasCategorySuccess": "[ES] Success",
+  "dailyQuoteApiNinjasCategoryCourage": "[ES] Courage",
+  "dailyQuoteApiNinjasCategoryHappiness": "[ES] Happiness",
+  "dailyQuoteApiNinjasCategoryArt": "[ES] Art",
+  "dailyQuoteApiNinjasCategoryWriting": "[ES] Writing",
+  "dailyQuoteApiNinjasCategoryFear": "[ES] Fear",
+  "dailyQuoteApiNinjasCategoryNature": "[ES] Nature",
+  "dailyQuoteApiNinjasCategoryTime": "[ES] Time",
+  "dailyQuoteApiNinjasCategoryFreedom": "[ES] Freedom",
+  "dailyQuoteApiNinjasCategoryDeath": "[ES] Death",
+  "dailyQuoteApiNinjasCategoryLeadership": "[ES] Leadership",
+  "selectAll": "[ES] Select All",
+  "clearAll": "[ES] Clear All",
+  "typeSelection": "[ES] Type Selection",
+  "typeSelectionHint": "[ES] Tap to select your preferred quote types",
+  "usageInstructions": "[ES] Instructions",
+  "hitokotoServiceProvider": "[ES] Quote service provided by Hitokoto",
+  "dailyQuoteServiceProvider": "[ES] Current content provided by {provider}",
+  "@dailyQuoteServiceProvider": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "hitokotoHelpItem1": "[ES] At least one type must be selected. The app will randomly display content from selected types",
+  "hitokotoHelpItem2": "[ES] Selecting multiple types provides a richer variety of content",
+  "hitokotoHelpItem3": "[ES] Different types represent different content styles and sources",
+  "settingsSaved": "[ES] Settings saved",
+  "tagManagement": "[ES] Tag Management",
+  "newTagName": "[ES] New Tag Name",
+  "enterTagNameHint": "[ES] Enter tag name (max 50 characters)",
+  "selectIcon": "[ES] Select Icon",
+  "adding": "[ES] Adding",
+  "add": "[ES] Add",
+  "pleaseEnterTagName": "[ES] Please enter a tag name",
+  "tagAddedSuccess": "[ES] Tag added successfully",
+  "addTagFailed": "[ES] Failed to add tag: {error}",
+  "@addTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "iconSelectionHint": "[ES] Choose an icon or enter an emoji as the tag icon",
+  "iconSelected": "[ES] Selected icon: {icon}",
+  "@iconSelected": {
+    "placeholders": {
+      "icon": {
+        "type": "String"
+      }
+    }
+  },
+  "loadTagsFailed": "[ES] Failed to load tags: {error}",
+  "@loadTagsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noTags": "[ES] No tags yet",
+  "editTag": "[ES] Edit Tag",
+  "tagName": "[ES] Tag Name",
+  "icon": "[ES] Icon",
+  "deleteTagConfirmation": "[ES] Are you sure you want to delete the tag \"{name}\"? Associated notes will be kept but will no longer be linked to this tag.",
+  "@deleteTagConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tagDeletedSuccess": "[ES] Tag deleted successfully",
+  "deleteTagFailed": "[ES] Failed to delete tag: {error}",
+  "@deleteTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "defaultTag": "[ES] Default",
+  "systemDefaultTag": "[ES] System default tag",
+  "tapToEditLongPressToDelete": "[ES] Tap to edit, long press to delete",
+  "enterEmojiHint": "[ES] Enter an emoji...",
+  "useAsIcon": "[ES] Use \"{emoji}\" as icon",
+  "@useAsIcon": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "systemIcons": "[ES] System Icons",
+  "storageManagement": "[ES] Storage Management",
+  "clearCache": "[ES] Clear Cache",
+  "clearCacheConfirmTitle": "[ES] Clear Cache",
+  "clearCacheConfirmContent": "[ES] Are you sure you want to clear the app cache?\n\nThis will remove temporary files and image cache, but will not delete your notes.",
+  "cleanOrphanMedia": "[ES] Clean Unused Media",
+  "cleanOrphanMediaConfirmTitle": "[ES] Clean Unused Media Files",
+  "cleanOrphanMediaConfirmContent": "[ES] This will delete media files (images, videos, audio) that are not referenced by any notes.\n\nAre you sure you want to continue?",
+  "databaseMaintenance": "[ES] Database Maintenance",
+  "databaseMaintenanceConfirmTitle": "[ES] Database Maintenance",
+  "databaseMaintenanceConfirmContent": "[ES] This operation will optimize the database:\n\n• Defragment storage space\n• Update statistics\n• Rebuild indexes\n\nThe process may take from a few seconds to several minutes depending on data size.\n\nAre you sure you want to continue?",
+  "startMaintenance": "[ES] Start Maintenance",
+  "maintenanceInProgress": "[ES] Database maintenance in progress...",
+  "preparingProgress": "[ES] Preparing...",
+  "maintenanceComplete": "[ES] Maintenance Complete",
+  "maintenanceDuration": "[ES] Duration: {duration} seconds",
+  "@maintenanceDuration": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "databaseSizeChange": "[ES] Database size: {before} MB → {after} MB",
+  "@databaseSizeChange": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "spaceSavedMb": "[ES] Space saved: {size} MB",
+  "@spaceSavedMb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "noSpaceSaved": "[ES] No space saved (database is already compact)",
+  "maintenanceFailed": "[ES] Maintenance failed: {error}",
+  "@maintenanceFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadStorageInfoFailed": "[ES] Failed to load storage info: {error}",
+  "@loadStorageInfoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cacheCleanedResult": "[ES] Cache cleared, freed {size}",
+  "@cacheCleanedResult": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheFailed": "[ES] Failed to clear cache: {error}",
+  "@clearCacheFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "orphanFilesCleanedResult": "[ES] {count, plural, =0{No unused files found} =1{Cleanup complete, deleted 1 unused file} other{Cleanup complete, deleted {count} unused files}}",
+  "@orphanFilesCleanedResult": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noOrphanFilesFound": "[ES] No unused files found",
+  "cleanupFailed": "[ES] Cleanup failed: {error}",
+  "@cleanupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "totalStorageUsage": "[ES] Total Storage Usage",
+  "databaseUsage": "[ES] Database Usage",
+  "mediaFilesUsage": "[ES] Media Files Usage",
+  "cacheUsage": "[ES] Cache Usage",
+  "notesDatabase": "[ES] Notes Database",
+  "trashStorageUsageHint": "[ES] {count, plural, =1{Trash contains 1 note and still uses database and attachment space.} other{Trash contains {count} notes and still uses database and attachment space.}}",
+  "@trashStorageUsageHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewTrash": "[ES] View Trash",
+  "aiDatabase": "[ES] AI Database",
+  "logDatabase": "[ES] Log Database",
+  "images": "[ES] Images",
+  "videos": "[ES] Videos",
+  "audios": "[ES] Audio",
+  "tempFilesAndCache": "[ES] Temporary files and cache",
+  "fileCount": "[ES] {count, plural, =1{1 file} other{{count} files}}",
+  "@fileCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dataStorageLocation": "[ES] Data Storage Location",
+  "currentDataDirectory": "[ES] Current Data Directory",
+  "custom": "[ES] Custom",
+  "windowsDataMigration": "[ES] Windows Data Directory Migration",
+  "windowsDataMigrationDesc": "[ES] Migrate app data to another location (e.g., D: drive) to free up system disk space",
+  "changeDataDirectory": "[ES] Change Data Directory",
+  "migrating": "[ES] Migrating...",
+  "confirmDataMigration": "[ES] Confirm Data Migration",
+  "migrationTargetPath": "[ES] About to migrate all app data to:",
+  "migrationWarning": "[ES] ⚠️ Migration may take several minutes. Please do not close the app during this process.\n⚠️ You will need to restart the app after migration is complete.",
+  "startMigration": "[ES] Start Migration",
+  "migratingData": "[ES] Migrating Data",
+  "migrationComplete": "[ES] Migration Complete",
+  "migrationCompleteMessage": "[ES] Data has been successfully migrated to the new directory!\n\nPlease restart the app for changes to take effect.",
+  "migrationFailed": "[ES] Data migration failed. Please check the logs for details.",
+  "migrationFailedWithError": "[ES] Migration failed: {error}",
+  "@migrationFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "selectNewDataDirectory": "[ES] Select New Data Storage Directory",
+  "directoryNotAvailable": "[ES] Selected directory is not available or lacks write permission",
+  "selectDirectoryFailed": "[ES] Failed to select directory: {error}",
+  "@selectDirectoryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "migrationTargetSameAsCurrent": "[ES] The selected directory is the same as the current data directory",
+  "migrationTargetAncestor": "[ES] The selected directory cannot be a parent of the current data directory",
+  "migrationTargetNested": "[ES] The selected directory cannot be inside the current data directory",
+  "logsViewer": "[ES] Log Viewer",
+  "logFilter": "[ES] Log Filter",
+  "clearLogs": "[ES] Clear Logs",
+  "searchLogs": "[ES] Search logs...",
+  "noLogs": "[ES] No logs yet",
+  "loadMoreLogs": "[ES] Load more logs",
+  "loadMoreLogsFailed": "[ES] Failed to load more logs: {error}",
+  "@loadMoreLogsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logDetailsTitle": "[ES] {level} Log {source}",
+  "@logDetailsTitle": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "copyAll": "[ES] Copy All",
+  "timestamp": "[ES] Time: {time}",
+  "@timestamp": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "message": "[ES] Message:",
+  "errorLabel": "[ES] Error:",
+  "stackTrace": "[ES] Stack Trace:",
+  "logCopiedToClipboard": "[ES] Log details copied to clipboard",
+  "containsError": "[ES] Contains error information",
+  "sourceFilter": "[ES] Source: {source}",
+  "@sourceFilter": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "searchFilter": "[ES] Search: {query}",
+  "@searchFilter": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "clearAllFilters": "[ES] Clear All",
+  "logFilterOptions": "[ES] Log Filter Options",
+  "reset": "[ES] Reset",
+  "filterByLogLevel": "[ES] Filter by Log Level",
+  "filterBySource": "[ES] Filter by Source",
+  "enterSourceName": "[ES] Enter log source name...",
+  "apply": "[ES] Apply",
+  "clearLogsTitle": "[ES] Clear Logs",
+  "clearLogsQuestion": "[ES] Which logs would you like to clear?",
+  "clearMemoryLogsOnly": "[ES] Clear Memory Logs Only",
+  "clearAllLogs": "[ES] Clear All Logs",
+  "memoryLogsCleared": "[ES] Memory logs cleared",
+  "allLogsCleared": "[ES] All logs cleared",
+  "logsCount": "[ES] {count, plural, =1{Showing 1 log} other{Showing {count} logs}} • Long press to copy • Tap for details",
+  "@logsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logPageError": "[ES] Log page rendering error:",
+  "networkDiagnostic": "[ES] Network Diagnostic",
+  "networkConfig": "[ES] Network Configuration",
+  "networkDiagnosticSection": "[ES] Network Diagnostic",
+  "diagnosing": "[ES] Diagnosing...",
+  "runNetworkDiagnostic": "[ES] Run Network Diagnostic",
+  "diagnosticResult": "[ES] Diagnostic result: {passed}/{total} passed",
+  "@diagnosticResult": {
+    "placeholders": {
+      "passed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "diagnosticFailed": "[ES] Diagnostic failed: {error}",
+  "@diagnosticFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceDiscovery": "[ES] Device Discovery",
+  "startDiscovery": "[ES] Start Discovery",
+  "stopDiscovery": "[ES] Stop Discovery",
+  "sendAnnouncement": "[ES] Send Announcement",
+  "deviceAnnouncementSent": "[ES] Device announcement sent",
+  "startDiscoveryFailed": "[ES] Failed to start device discovery: {error}",
+  "@startDiscoveryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "sendAnnouncementFailed": "[ES] Failed to send device announcement: {error}",
+  "@sendAnnouncementFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "statusRunning": "[ES] Status: Running",
+  "statusStopped": "[ES] Status: Stopped",
+  "discoveredDevices": "[ES] Discovered Devices",
+  "discoveredDevicesCount": "[ES] Discovered Devices ({count})",
+  "@discoveredDevicesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noDevicesFound": "[ES] No devices found",
+  "unknownModel": "[ES] Unknown model",
+  "fingerprint": "[ES] Fingerprint: {fingerprint}",
+  "@fingerprint": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "hitokotoTypeA": "[ES] Anime",
+  "hitokotoTypeB": "[ES] Manga",
+  "hitokotoTypeC": "[ES] Game",
+  "hitokotoTypeD": "[ES] Literature",
+  "hitokotoTypeE": "[ES] Original",
+  "hitokotoTypeF": "[ES] From the web",
+  "hitokotoTypeG": "[ES] Other",
+  "hitokotoTypeH": "[ES] Movie & TV",
+  "hitokotoTypeI": "[ES] Poetry",
+  "hitokotoTypeJ": "[ES] Netease Cloud Music",
+  "hitokotoTypeK": "[ES] Philosophy",
+  "noNetworkConnection": "[ES] No network connection",
+  "unknown": "[ES] Unknown",
+  "defaultQuote1": "[ES] Life is not only about the present, but also poetry and distance.",
+  "defaultQuote2": "[ES] Life is like a journey, you don't have to care about the destination, what you care about is the scenery along the way.",
+  "defaultQuote3": "[ES] Don't wait for opportunity, create it.",
+  "editTagTitle": "[ES] Edit Tag",
+  "tagNameLabel": "[ES] Tag Name",
+  "iconLabel": "[ES] Icon:",
+  "emotion": "[ES] Emotion",
+  "thinking": "[ES] Thinking",
+  "nature": "[ES] Nature",
+  "mood": "[ES] Mood",
+  "life": "[ES] Life",
+  "growth": "[ES] Growth",
+  "reward": "[ES] Reward",
+  "transport": "[ES] Transport",
+  "otherCategory": "[ES] Other",
+  "logLoadMoreError": "[ES] Failed to load more logs: {error}",
+  "@logLoadMoreError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logLoadError": "[ES] Failed to load logs",
+  "logSourceFilter": "[ES] Source: {source}",
+  "@logSourceFilter": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "logSearchFilter": "[ES] Search: {query}",
+  "@logSearchFilter": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "logClearAllFilters": "[ES] Clear All",
+  "logCopyAll": "[ES] Copy All",
+  "logTimestamp": "[ES] Time: {time}",
+  "@logTimestamp": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "logMessage": "[ES] Message:",
+  "logError": "[ES] Error:",
+  "logStackTrace": "[ES] Stack Trace:",
+  "logCopied": "[ES] Log details copied to clipboard",
+  "logFilterReset": "[ES] Reset",
+  "logFilterByLevel": "[ES] Filter by Log Level",
+  "logFilterBySource": "[ES] Filter by Source",
+  "logFilterSourceHint": "[ES] Enter log source name...",
+  "logFilterApply": "[ES] Apply",
+  "logClearTitle": "[ES] Clear Logs",
+  "logClearQuestion": "[ES] Which logs would you like to clear?",
+  "logClearMemory": "[ES] Clear Memory Logs Only",
+  "logClearMemorySuccess": "[ES] Memory logs cleared",
+  "logClearAll": "[ES] Clear All Logs",
+  "logClearAllSuccess": "[ES] All logs cleared",
+  "logClearError": "[ES] Failed to clear logs: {error}",
+  "@logClearError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logContainsError": "[ES] Contains error information",
+  "httpServerPort": "[ES] HTTP Server Port: {port}",
+  "@httpServerPort": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "multicastDiscoveryPort": "[ES] Multicast Discovery Port: {port}",
+  "@multicastDiscoveryPort": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "multicastAddress": "[ES] Multicast Address: {address}",
+  "@multicastAddress": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "protocolVersion": "[ES] Protocol Version: {version}",
+  "@protocolVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "testAnalysis": "[ES] Test Analysis",
+  "testAnalysisDesc": "[ES] This is a test analysis to verify that the save function is working properly.",
+  "viewHistory": "[ES] View History",
+  "saveAnalysisError": "[ES] Failed to save analysis: {error}",
+  "@saveAnalysisError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "analysisNoteTitle": "[ES] # {title}\n\n{content}",
+  "@analysisNoteTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "aiAnalysisSource": "[ES] AI Analysis",
+  "thoughtechoAI": "[ES] ThoughtEcho AI",
+  "savedAsNote": "[ES] Saved as a new note",
+  "saveAsNoteError": "[ES] Failed to save as note: {error}",
+  "@saveAsNoteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shareError": "[ES] Failed to share: {error}",
+  "@shareError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "configureApiKey": "[ES] Please configure the API Key in the settings first",
+  "noteListEmptyTitle": "[ES] No notes yet, start journaling!",
+  "noteSearchEmptyTitle": "[ES] No related notes found",
+  "noteSearchEmptySubtitle": "[ES] Try other keywords or check your spelling",
+  "noteSearchTimeoutMessage": "[ES] Search timed out, please retry",
+  "searchingLabel": "[ES] Searching",
+  "guideAddNoteTagHiddenTitle": "[ES] Hide Notes",
+  "guideAddNoteTagHiddenDesc": "[ES] Select tags to hide notes",
+  "guideNoteItemMoreShareTitle": "[ES] Share Card",
+  "guideNoteItemMoreShareDesc": "[ES] Generate share cards here",
+  "filterAndSortTooltip": "[ES] Filter notes or view hidden ones",
+  "noNotesFound": "[ES] No notes found, please add some notes first",
+  "generateInsightsError": "[ES] Failed to generate insights: {error}",
+  "@generateInsightsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serverInternalError": "[ES] Server internal error, may be a model configuration issue",
+  "checkSettings": "[ES] Check Settings",
+  "invalidApiKey": "[ES] Invalid API key, please check the settings",
+  "checkApiKey": "[ES] Check API Key",
+  "rateLimitExceeded": "[ES] Request frequency is too high, please try again later",
+  "tryLater": "[ES] Try Again Later",
+  "generateInsightsSetupError": "[ES] Failed to generate insights (setup): {error}",
+  "@generateInsightsSetupError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serverInternalErrorConfig": "[ES] Server internal error, please check if the AI model configuration is correct",
+  "invalidApiKeyUpdate": "[ES] Invalid API key, please update the API key in the settings",
+  "configureValidApiKey": "[ES] Please configure a valid API key in the settings first",
+  "regenerate": "[ES] Regenerate",
+  "viewToolProcess": "[ES] View process",
+  "selectAnalysisMethod": "[ES] Select Analysis Method",
+  "advancedOptions": "[ES] Advanced Options",
+  "customPromptHint": "[ES] e.g., Analyze the characters and locations mentioned in my notes",
+  "analysisHistoryRecord": "[ES] Analysis History Record",
+  "viewPreviousAnalysis": "[ES] View previous AI analysis results",
+  "analysisDescriptionTitle": "[ES] Analysis Description",
+  "analysisDescription": "[ES] AI analysis will synthesize all your note content to discover potential thinking patterns and regularities. You can choose different analysis styles to get diverse perspectives. This may take some time, please be patient.",
+  "aiAnalysisUsageInstructionsTitle": "[ES] AI Analysis Usage Instructions",
+  "aiAnalysisUsageInstructions": "[ES] 1. AI may generate inaccurate or misleading content, please evaluate the analysis results with caution\n2. When using this feature, all your note information (including content, date, location, weather, and temperature, etc.) will be sent to the AI for comprehensive analysis\n3. The analysis results are for reference only, and the final interpretation is up to you\n4. It is recommended to use this feature in a good network environment to get the best experience",
+  "copyToClipboard": "[ES] Copy to Clipboard",
+  "analysisResultCopied": "[ES] Analysis result copied to clipboard",
+  "saveAsNoteButton": "[ES] Save as Note",
+  "saveAnalysisButton": "[ES] Save Analysis",
+  "shareInsightsButton": "[ES] Share Insights",
+  "generateInsightsErrorSnapshot": "[ES] Error generating insights: {error}",
+  "@generateInsightsErrorSnapshot": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "insightsPageEmpty": "[ES] Select an analysis type and click \"Start Analysis\"\nInsights will help you discover thinking patterns and regularities in your notes",
+  "customAnalysis": "[ES] Custom Analysis",
+  "siliconflow": "[ES] SiliconFlow",
+  "openapiCompatible": "[ES] OpenAPI Compatible",
+  "verifyingApiKey": "[ES] Verifying API Key...",
+  "noProviderSelected": "[ES] No provider selected",
+  "apiKeyValid": "[ES] API Key valid ({length} characters)",
+  "@apiKeyValid": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "apiKeyInvalid": "[ES] No valid API Key configured",
+  "noAiProviderSelected": "[ES] ❌ No AI provider selected",
+  "providerDisabled": "[ES] ⚠️ Provider disabled",
+  "apiKeyVerified": "[ES] ✅ API Key valid (verified)",
+  "apiKeyStatusCheck": "[ES] API Key status check: {status}",
+  "@apiKeyStatusCheck": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "checkFailed": "[ES] Check failed: {error}",
+  "@checkFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadAiSettingsError": "[ES] Failed to load AI settings: {error}",
+  "@loadAiSettingsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadAiSettingsErrorUser": "[ES] Failed to load AI settings, please check your network connection or restart the app",
+  "fixFormErrors": "[ES] Please fix the errors in the form before saving",
+  "presetCreated": "[ES] New preset created and saved successfully",
+  "saveSettingsError": "[ES] Failed to save settings: {error}",
+  "@saveSettingsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "customConfig": "[ES] Custom Configuration",
+  "customConfigHost": "[ES] Custom-{host}",
+  "@customConfigHost": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "customConfigTimestamp": "[ES] Custom-{timestamp}",
+  "@customConfigTimestamp": {
+    "placeholders": {
+      "timestamp": {
+        "type": "String"
+      }
+    }
+  },
+  "testingConnection": "[ES] Testing connection...",
+  "connectionTestSuccess": "[ES] AI connection test successful!",
+  "connectionTestFailed": "[ES] Connection test failed: {error}",
+  "@connectionTestFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiKeyRequired": "[ES] API Key is required for {providerName}",
+  "@apiKeyRequired": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionSuccess": "[ES] Connection successful",
+  "responseFormatError": "[ES] Response format error",
+  "connectionFailed": "[ES] Connection failed: {statusCode}",
+  "@connectionFailed": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
+  "switchedTo": "[ES] Switched to {providerName}",
+  "@switchedTo": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "renamePreset": "[ES] Rename Preset",
+  "presetName": "[ES] Preset Name",
+  "presetRenamed": "[ES] Preset has been renamed to \"{result}\"",
+  "@presetRenamed": {
+    "placeholders": {
+      "result": {
+        "type": "String"
+      }
+    }
+  },
+  "deletePreset": "[ES] Delete Preset",
+  "deletePresetConfirm": "[ES] Are you sure you want to delete the preset \"{providerName}\"? This action cannot be undone.",
+  "@deletePresetConfirm": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "presetDeleted": "[ES] Preset \"{providerName}\" has been deleted",
+  "@presetDeleted": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderSelection": "[ES] AI Provider Selection",
+  "currentProvider": "[ES] Current: {providerName}",
+  "@currentProvider": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "apiUrlLabel": "[ES] API: {url}",
+  "@apiUrlLabel": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "modelLabel": "[ES] Model: {model}",
+  "@modelLabel": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "apiKeyLabel": "[ES] API Key: {status}",
+  "@apiKeyLabel": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "modelNotConfigured": "[ES] Not configured",
+  "checkApiKeyStatus": "[ES] Check API Key Status",
+  "savedPresets": "[ES] Saved Presets ({length}):",
+  "@savedPresets": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "noPresetsSaved": "[ES] No saved presets yet. Configure the API information and click \"Save Settings\" to create the first preset.",
+  "rename": "[ES] Rename",
+  "testConnectionButton": "[ES] Test Connection",
+  "reportInsightsUseAi": "[ES] Use AI for Periodic Report Insights",
+  "reportInsightsUseAiDesc": "[ES] When enabled, an \"Insightful Poem\" will be automatically generated when entering the report page. If disabled, local generation will be used.",
+  "aiSettingsTitle": "[ES] AI Settings",
+  "quickPresets": "[ES] Quick Presets",
+  "selectPreset": "[ES] Select a provider preset",
+  "selectPresetHint": "[ES] Or manually configure the connection parameters below",
+  "connectionConfig": "[ES] Connection Configuration ({providerName})",
+  "@connectionConfig": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "apiUrlField": "[ES] API URL",
+  "apiUrlHint": "[ES] e.g. https://api.xxx.com/v1",
+  "apiUrlHelper": "[ES] The base URL from the provider docs is enough — /chat/completions is added for you",
+  "apiKeyField": "[ES] API Key",
+  "apiKeyHint": "[ES] The key required for the service (can be left blank)",
+  "show": "[ES] Show",
+  "hide": "[ES] Hide",
+  "modelAndAdvanced": "[ES] Model & Advanced",
+  "modelNameField": "[ES] Model Name",
+  "modelNameHint": "[ES] Please enter a model name",
+  "modelNameHintDefault": "[ES] Use default model or customize",
+  "hostOverrideField": "[ES] Host Override",
+  "hostOverrideHint": "[ES] Optional, for proxy/reverse proxy scenarios",
+  "createNewPreset": "[ES] Create New Preset",
+  "aiCardGeneration": "[ES] AI Card Generation",
+  "aiCardGenerationDesc": "[ES] Generate SVG sharing cards for notes: On = use AI for smart design, Off = use built-in templates (feature still available)",
+  "aiCardGenerationTip": "[ES] Tip: It is recommended to use a medium-to-large model that supports ≥4K tokens and has good instruction following and text-to-SVG generation capabilities.",
+  "aiEnhancedGeneration": "[ES] AI Enhanced Generation",
+  "aiEnhancedGenerationDesc": "[ES] When turned off, local templates will be used instead of calling the model",
+  "todayThoughtsUseAi": "[ES] Use AI for Today's Thoughts",
+  "todayThoughtsUseAiDesc": "[ES] When enabled, AI will be used to generate prompts for Today's Thoughts. If disabled, local generation will be used.",
+  "apiUrlRequired": "[ES] API URL cannot be empty",
+  "invalidUrl": "[ES] Please enter a valid HTTP/HTTPS URL",
+  "fieldRequired": "[ES] This field is required",
+  "mediaManagementTitle": "[ES] Media File Management",
+  "loadStatsError": "[ES] Failed to load statistics: {error}",
+  "@loadStatsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "operationCompleted": "[ES] {operation} completed",
+  "@operationCompleted": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      }
+    }
+  },
+  "loadStatsFailed": "[ES] Failed to load statistics",
+  "mediaFileStats": "[ES] Media File Statistics",
+  "totalFiles": "[ES] Total Files",
+  "referencedFiles": "[ES] Referenced Files",
+  "orphanFiles": "[ES] Orphan Files",
+  "totalReferences": "[ES] Total References",
+  "totalSize": "[ES] Total Size",
+  "imagesSize": "[ES] Images Size",
+  "videosSize": "[ES] Videos Size",
+  "audiosSize": "[ES] Audios Size",
+  "tempFiles": "[ES] Temporary Files",
+  "tempFilesCount": "[ES] Temporary Files Count",
+  "expiredFilesCount": "[ES] Expired Files Count",
+  "tempFilesSize": "[ES] Temporary Files Size",
+  "cleanupOperations": "[ES] Cleanup Operations",
+  "cleanupExpiredTempFiles": "[ES] Clean up expired temporary files",
+  "cleanupExpiredTempFilesDesc": "[ES] Delete temporary files older than 24 hours",
+  "cleanupOrphanFiles": "[ES] Clean up orphan files",
+  "cleanupOrphanFilesDesc": "[ES] Delete media files not referenced by any notes",
+  "fullCleanup": "[ES] Full Cleanup",
+  "fullCleanupDesc": "[ES] Clean up all temporary and orphan files",
+  "migrateExistingNotes": "[ES] Migrate Existing Notes",
+  "migrateExistingNotesDesc": "[ES] Re-establish media file references for existing notes",
+  "verifyFileIntegrity": "[ES] Verify File Integrity",
+  "verifyFileIntegrityDesc": "[ES] Check the integrity of media file references",
+  "operationResult": "[ES] {operation} Result",
+  "@operationResult": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      }
+    }
+  },
+  "cleanedFilesCount": "[ES] Cleaned Files Count",
+  "spaceSavedMbLabel": "[ES] Space Saved (MB)",
+  "migratedQuotesCount": "[ES] Migrated Quotes Count",
+  "orphanFilesDetected": "[ES] Orphan Files Detected",
+  "checkedReferencesCount": "[ES] Checked References Count",
+  "missingFilesCount": "[ES] Missing Files Count",
+  "fileIntegrity": "[ES] File Integrity",
+  "normal": "[ES] Normal",
+  "abnormal": "[ES] Abnormal",
+  "yourThoughtTrack": "[ES] Your Thought Track",
+  "tapToExplore": "[ES] Tap the screen to start exploring",
+  "annualOverview": "[ES] Annual Overview",
+  "noNotesInPeriod": "[ES] No notes in this period",
+  "startRecording": "[ES] Start recording your thoughts",
+  "totalRecorded": "[ES] Total Recorded",
+  "notesUnit": "[ES]  notes",
+  "writingDays": "[ES] Writing Days",
+  "daysUnit": "[ES]  days",
+  "longestStreak": "[ES] Longest Streak",
+  "tagsUsed": "[ES] Tags Used",
+  "tagsUnit": "[ES]  tags",
+  "writingHabits": "[ES] Writing Habits",
+  "noWritingHabits": "[ES] No writing habits data yet",
+  "mostActiveTime": "[ES] Most Active Time",
+  "noData": "[ES] No data",
+  "favoriteDay": "[ES] Favorite Day",
+  "avgWordsPerNote": "[ES] Avg. Words Per Note",
+  "wordsUnit": "[ES]  words",
+  "longestNote": "[ES] Longest Note",
+  "mostCommonPeriod": "[ES] Most Common Period",
+  "mostCommonWeather": "[ES] Most Common Weather",
+  "mostUsedTag": "[ES] Most Used Tag",
+  "tagAnalysis": "[ES] Tag Analysis",
+  "mostUsedTags": "[ES] Most Used Tags",
+  "usedXTimes": "[ES] Used {count} times ({percentage}%)",
+  "@usedXTimes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "percentage": {
+        "type": "String"
+      }
+    }
+  },
+  "noTagsUsed": "[ES] No tags have been used yet",
+  "timeline": "[ES] Timeline",
+  "noRecordsInPeriod": "[ES] No records in this period",
+  "monthX": "[ES] Month {month}",
+  "@monthX": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "notesCount": "[ES] {count} notes",
+  "@notesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deepInsights": "[ES] Deep Insights",
+  "thinkingDensity": "[ES] Thinking Density",
+  "deepThinker": "[ES] You enjoy deep thinking, and each note is very detailed. This habit helps you organize your thoughts better.",
+  "conciseThinker": "[ES] Your thinking is concise and powerful, and you are good at grasping the main points. This is a great summarizing skill.",
+  "quickThinker": "[ES] You are used to recording short ideas, which allows you to quickly capture inspiration. This is a great recording habit.",
+  "growthTrack": "[ES] Growth Track",
+  "notStarted": "[ES] You haven't started recording yet, now is the best time.",
+  "increasingFrequency": "[ES] Your recording frequency is getting higher and higher! From the beginning to the end of the year, the habit of thinking and recording has gotten better and better.",
+  "decreasingFrequency": "[ES] The records at the beginning of the year were very active, maybe you can regain the enthusiasm for writing at that time.",
+  "stableRhythm": "[ES] You have maintained a stable recording rhythm, and this persistence is rare!",
+  "beginningOfYear": "[ES] This year is the beginning of recording, looking forward to seeing more thought tracks.",
+  "writingRhythm": "[ES] Writing Rhythm",
+  "goodRhythm": "[ES] You have a good writing rhythm, with the longest continuous recording of {longestStreak} days! Persistence is power.",
+  "@goodRhythm": {
+    "placeholders": {
+      "longestStreak": {
+        "type": "int"
+      }
+    }
+  },
+  "decentRhythm": "[ES] You have established a good recording habit, keep up this rhythm.",
+  "startRhythm": "[ES] Recording more is a habit, you can try to record some small ideas every day.",
+  "generatingInsights": "[ES] Generating insights for this period...",
+  "noInsights": "[ES] No insights yet",
+  "thankYou": "[ES] Thank you for your persistence",
+  "everyThoughtCounts": "[ES] Every thought is worth recording\nEvery record is a footprint of growth",
+  "continueRecording": "[ES] Continue recording in {year}",
+  "@continueRecording": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "reportCopied": "[ES] Annual report has been copied to the clipboard",
+  "monday": "[ES] Monday",
+  "tuesday": "[ES] Tuesday",
+  "wednesday": "[ES] Wednesday",
+  "thursday": "[ES] Thursday",
+  "friday": "[ES] Friday",
+  "saturday": "[ES] Saturday",
+  "sunday": "[ES] Sunday",
+  "dayOfMonth": "[ES] Day {day}",
+  "@dayOfMonth": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "noteDate": "[ES] {month} {day}",
+  "@noteDate": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "noteLocation": "[ES] at {location}",
+  "@noteLocation": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "noteWeather": "[ES] (Weather: {weather})",
+  "@noteWeather": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "annualReportForYear": "[ES] {year} Annual Report",
+  "@annualReportForYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "annualReportTitle": "[ES] ThoughtEcho Annual Report",
+  "pageIndicator": "[ES] {currentPage} / {totalPages}",
+  "@pageIndicator": {
+    "placeholders": {
+      "currentPage": {
+        "type": "int"
+      },
+      "totalPages": {
+        "type": "int"
+      }
+    }
+  },
+  "shareAnnualReportContent": "[ES] My {year} ThoughtEcho Review\n\n📝 Recorded {totalQuotes} thoughts\n💭 Witnessed a year of growth and reflection\n\nRecording the bits and pieces of life in ThoughtEcho\n#ThoughtEcho #AnnualReview #Journal",
+  "@shareAnnualReportContent": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      },
+      "totalQuotes": {
+        "type": "int"
+      }
+    }
+  },
+  "dataOverview": "[ES] Data Overview",
+  "featuredCards": "[ES] Featured Cards",
+  "timeRange": "[ES] Time Range",
+  "selectDate": "[ES] Select Date",
+  "thisWeek": "[ES] This Week",
+  "thisMonth": "[ES] This Month",
+  "thisYear": "[ES] This Year",
+  "noteCount": "[ES] Note Count",
+  "notesUnitPlain": "[ES] notes",
+  "totalWordCount": "[ES] Total Words",
+  "wordsUnitPlain": "[ES] words",
+  "avgWords": "[ES] Avg. Words",
+  "wordsPerNote": "[ES] words/note",
+  "activeDays": "[ES] Active Days",
+  "daysUnitPlain": "[ES] days",
+  "commonPeriod": "[ES] Common Period",
+  "noDataYet": "[ES] N/A",
+  "commonWeather": "[ES] Common Weather",
+  "commonTag": "[ES] Common Tag",
+  "generatingInsightsForPeriod": "[ES] Generating insights for this {period}...",
+  "@generatingInsightsForPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "noFavoritesInPeriod": "[ES] No favorites in this period. Go give some love to your notes!",
+  "mostFavoritedInPeriod": "[ES] Most Favorited This Period",
+  "recentNotes": "[ES] Recent Notes",
+  "noNotesInPeriodForPeriod": "[ES] No notes in this {period}",
+  "@noNotesInPeriodForPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "startRecordingThoughts": "[ES] Start recording your thoughts",
+  "totalCards": "[ES] {count} cards in total",
+  "@totalCards": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cardSelected": "[ES] Card {index} selected",
+  "@cardSelected": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "generateCards": "[ES] Generate Cards",
+  "aiCardGenerationDisabledLog": "[ES] AI card generation disabled, using local templates",
+  "missingGalleryPermission": "[ES] No gallery access permission, please enable it in settings",
+  "desktopGalleryNotSupported": "[ES] Saving to gallery is not supported on desktop, please use share function",
+  "cardFileNamePrefix": "[ES] ThoughtEcho_Card",
+  "aiProviderConfigMissing": "[ES] No available AI provider configuration found",
+  "aiSvgEmpty": "[ES] AI returned empty SVG content",
+  "unsafeSvgContent": "[ES] SVG content contains unsafe elements",
+  "invalidSvgContent": "[ES] Content returned by AI does not contain valid SVG code",
+  "noFeaturedCards": "[ES] No Featured Cards Yet",
+  "featuredCardGenerationTip": "[ES] Generate beautiful sharing cards from your notes: AI On = Smart Design, AI Off = Built-in Templates.",
+  "cardFromReport": "[ES] A beautiful card from ThoughtEcho Periodic Report",
+  "cardSharePrefix": "[ES] A beautiful card from ThoughtEcho\n\n",
+  "loadDataFailed": "[ES] Failed to load data: {error}",
+  "@loadDataFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "thisPeriod": "[ES] This {period}",
+  "@thisPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "periodWeek": "[ES] Week",
+  "periodMonth": "[ES] Month",
+  "periodYear": "[ES] Year",
+  "periodDuring": "[ES] Period",
+  "dateRange": "[ES] {startDate} - {endDate}",
+  "@dateRange": {
+    "placeholders": {
+      "startDate": {
+        "type": "String"
+      },
+      "endDate": {
+        "type": "String"
+      }
+    }
+  },
+  "yearMonth": "[ES] {month}, {year}",
+  "@yearMonth": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      },
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "yearOnly": "[ES] {year}",
+  "@yearOnly": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "detectedAIJSONFormat": "[ES] ⚠️ Detected AI returned JSON data\n\nThis indicates that the AI model might have misunderstood the request, returning data analysis instead of an HTML report.\n\nContent returned:\n{json}\n\nPossible causes:\n• AI confused annual report generation with content analysis\n• Prompt needs further optimization\n• Model version or configuration issue\n\nSuggested solutions:\n1. Regenerate report (AI might correct the error)\n2. Check model configuration in AI settings\n3. Try using native Flutter report feature\n4. Update AI prompt configuration\n\nFor technical support, please save this error message and contact the developer.",
+  "@detectedAIJSONFormat": {
+    "placeholders": {
+      "json": {
+        "type": "String"
+      }
+    }
+  },
+  "detectedAbnormalFormat": "[ES] ⚠️ Detected abnormal data format\n\nAI returned JSON data that could not be parsed correctly, which might be due to:\n• Network transport issues\n• AI service exception\n• Data format error\n\nOriginal content:\n{content}\n\nSuggested to regenerate the report or use the native report feature.",
+  "@detectedAbnormalFormat": {
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "aiGeneratedTextContent": "[ES] 📄 AI Generated Text Content\n\n{content}\n\n💡 Tip: AI returned a plain text summary instead of an HTML report.\nThis might be because the model understood the content but did not output it in HTML format.\n\nFull content can be viewed in a browser, and the system will automatically wrap it in HTML format.",
+  "@aiGeneratedTextContent": {
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "htmlReportCopiedSteps": "[ES] HTML report content copied to clipboard. Please follow these steps:",
+  "browserInstructionsStep1": "[ES] 1. Open browser (Chrome/Safari, etc.)",
+  "browserInstructionsStep2": "[ES] 2. Open a new blank page or tab",
+  "browserInstructionsStep3": "[ES] 3. In the address bar, enter: data:text/html,",
+  "browserInstructionsStep4": "[ES] 4. Paste the copied content",
+  "browserInstructionsStep5": "[ES] 5. Press enter to view the report",
+  "desktopInstructionsStep1": "[ES] 1. Create a new text file and paste content",
+  "desktopInstructionsStep2": "[ES] 2. Save the file with .html extension",
+  "desktopInstructionsStep3": "[ES] 3. Double-click the file to open in browser",
+  "annualReportHtmlTitle": "[ES] ThoughtEcho {year} Annual Report",
+  "generationTimeLabel": "[ES] Generated at: {time}",
+  "noteInfoTitle": "[ES] Note Information",
+  "meUser": "[ES] Me",
+  "aiAssistantUser": "[ES] Thoughter",
+  "aiAssistantWelcome": "[ES] Hello! I am Thoughter, your AI note assistant. You can ask me any questions about this note, and I will provide in-depth answers based on the content.\n\n💡 You can try these questions:\n\n- What is the core idea of this note?\n- What inspiration can be gained from this note?\n- How can the ideas in this note be applied to real life?\n- What thinking pattern does this note reflect?",
+  "thinkingInProgress": "[ES] Thinking...",
+  "aiMisunderstoodQuestion": "[ES] Sorry, I couldn't understand this question. Please try asking in a different way.",
+  "aiResponseError": "[ES] Sorry, an error occurred while responding: {error}",
+  "agentErrorNoProvider": "[ES] Select an AI provider and try again.",
+  "agentErrorMissingApiKey": "[ES] Configure an API key for {providerName}, then try again.",
+  "@agentErrorMissingApiKey": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentErrorUnsupportedProvider": "[ES] The current AI provider does not support Agent mode. Choose another provider and try again.",
+  "agentErrorTimeout": "[ES] The request timed out. Check your connection and try again.",
+  "agentErrorCancelled": "[ES] This request was stopped.",
+  "agentErrorGeneric": "[ES] The request could not be completed. Please try again later.",
+  "apiKeyDiagnosticsTitle": "[ES] API Key Diagnostics",
+  "apiKeyDiagnosticsTool": "[ES] API Key Diagnostics Tool",
+  "apiKeyDiagnosticsDesc": "[ES] This tool checks the storage and retrieval of API keys to help diagnose 401 authentication errors.",
+  "runDiagnostics": "[ES] Run Diagnostics",
+  "diagnosticResultLabel": "[ES] Diagnostic Result:",
+  "diagnosticReportHeader": "[ES] === API Key Diagnostic Report ===",
+  "diagnosticReportTime": "[ES] Time: {time}",
+  "diagnosticMultiProviderCheck": "[ES] 1. Multi-provider configuration...",
+  "diagnosticCurrentProvider": "[ES]    - Current Provider: {name}",
+  "diagnosticAvailableProviders": "[ES]    - Available providers: {count}",
+  "diagnosticEnabledProviders": "[ES]    - Enabled providers: {count}",
+  "diagnosticProviderDetails": "[ES] 2. Current provider details...",
+  "diagnosticProviderId": "[ES]    - ID: {id}",
+  "diagnosticProviderName": "[ES]    - Name: {name}",
+  "diagnosticProviderUrl": "[ES]    - API URL: {url}",
+  "diagnosticProviderModel": "[ES]    - Model: {model}",
+  "diagnosticProviderEnabled": "[ES]    - Enabled: {status}",
+  "diagnosticApiKeyCheck": "[ES] 3. API Key check...",
+  "diagnosticApiKeyInSettings": "[ES]    - Key in settings: {status}",
+  "diagnosticApiKeyLength": "[ES]    - Key length in settings: {length}",
+  "diagnosticApiKeyPrefix": "[ES]    - Key prefix in settings: {prefix}",
+  "diagnosticSecureApiKeyExists": "[ES]    - Key in secure storage: {status}",
+  "diagnosticSecureApiKeyLength": "[ES]    - Key length in secure storage: {length}",
+  "diagnosticSecureApiKeyPrefix": "[ES]    - Key prefix in secure storage: {prefix}",
+  "diagnosticApiKeyValidation": "[ES] 4. Key validation...",
+  "diagnosticAsyncValidation": "[ES]    - Async validation: {status}",
+  "diagnosticFormatValidation": "[ES]    - Format validation: {status}",
+  "diagnosticErrorNoProvider": "[ES] 2. Error: No current provider selected",
+  "diagnosticAllProvidersStatus": "[ES] 5. All providers status...",
+  "diagnosticProviderStatusItem": "[ES]    - {name}: {keyStatus} {enabledStatus}",
+  "diagnosticSuggestions": "[ES] 6. Suggestions...",
+  "diagnosticSuggestionSelectProvider": "[ES]    - Please select an AI provider",
+  "diagnosticSuggestionEnableProvider": "[ES]    - Please enable the currently selected AI provider",
+  "diagnosticSuggestionConfigureKey": "[ES]    - Please configure a valid API key for {name}",
+  "diagnosticSuggestionNormal": "[ES]    - ✓ API key configuration is normal",
+  "diagnosticComplete": "[ES] === Diagnostics Complete ===",
+  "diagnosticError": "[ES] Error during diagnostics: {error}",
+  "passStatus": "[ES] Pass",
+  "failStatus": "[ES] Fail",
+  "yesStatus": "[ES] Yes",
+  "noStatus": "[ES] No",
+  "notSelectedStatus": "[ES] Not selected",
+  "importInstructions": "[ES] Import Instructions",
+  "selectingFile": "[ES] Selecting file...",
+  "validatingFile": "[ES] Validating file...",
+  "checkingFileCompatibility": "[ES] Checking file compatibility...",
+  "importingFile": "[ES] Importing file...",
+  "importComplete": "[ES] Import complete!",
+  "fileSaveFailed": "[ES] File save failed",
+  "unsupportedMediaType": "[ES] Unsupported media type",
+  "unsupportedMediaTypeWithName": "[ES] Unsupported media type: {mediaType}",
+  "@unsupportedMediaTypeWithName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "fileNotExistOrMoved": "[ES] The selected file does not exist or has been moved or deleted\nPath: {path}",
+  "@fileNotExistOrMoved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedFileEmpty": "[ES] The selected file is empty\nPath: {path}",
+  "@selectedFileEmpty": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "unsupportedFileFormat": "[ES] Unsupported file format: .{extension}\nSupported formats: {formats}",
+  "@unsupportedFileFormat": {
+    "placeholders": {
+      "extension": {
+        "type": "String"
+      },
+      "formats": {
+        "type": "String"
+      }
+    }
+  },
+  "fileUnreadable": "[ES] The file cannot be read. Possible reasons:\n• The file is corrupted\n• The file is being used by another program\n• Insufficient permissions\nPlease check the file and try again",
+  "mediaTypeNoCameraImport": "[ES] {mediaType} does not support camera import",
+  "@mediaTypeNoCameraImport": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "processingMedia": "[ES] Processing {mediaType}...",
+  "@processingMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadingFile": "[ES] Downloading file...",
+  "downloadComplete": "[ES] Download complete!",
+  "connectingToServer": "[ES] Connecting to server...",
+  "savingFile": "[ES] Saving file...",
+  "waitingForAIContent": "[ES] Waiting for AI content...",
+  "occurredError": "[ES] [Error occurred: {error}]",
+  "cancelLabel": "[ES] Cancel",
+  "selectFromGallery": "[ES] Select {mediaType} from gallery",
+  "@selectFromGallery": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "selectFromFilesWithTypeName": "[ES] Select {mediaType} from files",
+  "@selectFromFilesWithTypeName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "importTipsImage": "[ES] • Supports JPG, PNG, GIF, WebP formats\n• Save directly to app media library, reducing duplicates\n• Use memory protection technology for large images\n• Unsaved files are automatically cleaned up",
+  "importTipsVideo": "[ES] • Supports MP4, MOV, AVI, MKV formats\n• Save directly to app media library, reducing duplicates\n• Streaming technology to prevent OOM\n• Unsaved files are automatically cleaned up",
+  "importTipsAudio": "[ES] • Supports MP3, WAV, AAC, M4A formats\n• Save directly to app media library, reducing duplicates\n• Optimized storage, fast loading\n• Unsaved files are automatically cleaned up",
+  "importTipsDefault": "[ES] • Supports multiple media formats\n• Save directly to app media library, memory safety protection\n• Unsaved files are automatically cleaned up",
+  "viewNoteInfo": "[ES] View note information",
+  "contentLengthLabel": "[ES] Content length: {length}",
+  "htmlFormatLabel": "[ES] HTML format: {status}",
+  "jsonFormatLabel": "[ES] JSON format: {status}",
+  "containsHtmlTagsLabel": "[ES] Contains HTML tags: {status}",
+  "first100CharsLabel": "[ES] First 100 characters:",
+  "testFailedEmptyContent": "[ES] Test failed: AI returned empty content",
+  "formattedDate": "[ES] {month}/{day}",
+  "@formattedDate": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "noteMetaWithLocation": "[ES] [{date}·{location}] {content}",
+  "@noteMetaWithLocation": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "location": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "noteMeta": "[ES] [{date}] {content}",
+  "@noteMeta": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherInfo": "[ES]  (Weather: {weather})",
+  "@weatherInfo": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "noteAttribution": "[ES]  (attributed to {source})",
+  "@noteAttribution": {
+    "description": "喂给 AI 的笔记内容里，标出这条笔记填的作者/出处，用于区分摘录与原创署名",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderOpenAI": "[ES] OpenAI",
+  "aiProviderOpenRouter": "[ES] OpenRouter",
+  "aiProviderDeepSeek": "[ES] DeepSeek",
+  "aiProviderAnthropic": "[ES] Anthropic (Claude)",
+  "aiProviderOllama": "[ES] Ollama",
+  "aiProviderOllamaCloud": "[ES] Ollama Cloud",
+  "aiProviderLMStudio": "[ES] LMStudio",
+  "apiKeyStatusEmpty": "[ES] empty",
+  "apiKeyStatusRedacted": "[ES] [REDACTED]",
+  "apiKeyStatusNotEmpty": "[ES] {length} characters",
+  "@apiKeyStatusNotEmpty": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "noProvider": "[ES] None",
+  "connectionTestSystemMessage": "[ES] You are Thoughter, an AI assistant. Please reply briefly with \"Connection test successful\".",
+  "connectionTestUserMessage": "[ES] Test connection",
+  "apiKeySavedForProvider": "[ES] Saved API Key for {providerName} to secure storage",
+  "@apiKeySavedForProvider": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "generatingAiReport": "[ES] Generating AI annual report...",
+  "includeMediaFilesHint": "[ES] Include images, audio and other media files when checked (larger file but more complete)",
+  "overwriteImport": "[ES] Overwrite Import (Clear existing data)",
+  "overwriteImportDesc": "[ES] Delete all current data and replace with backup content",
+  "mergeImport": "[ES] Merge Import (LWW strategy)",
+  "mergeImportDesc": "[ES] Keep existing data and merge with backup data by update time",
+  "restoreSuccess": "[ES] Data restored successfully! All data has been updated.",
+  "mergeImportHint": "[ES] This operation will keep current data and merge with backup data:",
+  "mergeImportReversible": "[ES] This operation is reversible: you can import overwrite backup or continue merging again.",
+  "confirmRestoreBtn": "[ES] Confirm Restore",
+  "favoriteCountWithNum": "[ES] Favorited ({count})",
+  "@favoriteCountWithNum": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "analysisRecordDeleted": "[ES] Analysis record deleted",
+  "loadFailed": "[ES] Load failed: {error}",
+  "@loadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadFailedSimple": "[ES] Load failed",
+  "loadNoteFailed": "[ES] Failed to load notes",
+  "queryTimeoutShort": "[ES] Query timed out",
+  "queryTimeoutRetry": "[ES] Query timed out, please retry",
+  "databaseQueryError": "[ES] Database query error",
+  "deleteConfirmTitle": "[ES] Delete Confirmation",
+  "deleteRecordConfirm": "[ES] Are you sure you want to delete this analysis record?",
+  "confirmDeleteAll": "[ES] Confirm Delete All",
+  "deleteAllRecordsConfirm": "[ES] Are you sure you want to delete all analysis records? This action cannot be undone.",
+  "allRecordsDeleted": "[ES] All records deleted",
+  "selectAnnualReportType": "[ES] Select Annual Report Type",
+  "selectReportTypeHint": "[ES] Please select the type of annual report to generate:",
+  "unknownTag": "[ES] Unknown tag",
+  "morning": "[ES] Morning",
+  "forenoon": "[ES] Forenoon",
+  "afternoon": "[ES] Afternoon",
+  "evening": "[ES] Evening",
+  "night": "[ES] Night",
+  "learning": "[ES] Learning",
+  "progress": "[ES] Progress",
+  "happiness": "[ES] Happiness",
+  "gratitude": "[ES] Gratitude",
+  "harvest": "[ES] Harvest",
+  "breakthrough": "[ES] Breakthrough",
+  "hope": "[ES] Hope",
+  "backupFormatZip": "[ES] Will create a ZIP backup file containing all notes, settings and media files",
+  "backupFormatJson": "[ES] Will create a JSON backup file containing all notes and settings",
+  "supportedBackupFormats": "[ES] Supports new ZIP format and legacy JSON format backup files",
+  "restoringData": "[ES] Restoring data... {current}/{total}",
+  "@restoringData": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreFailedGeneric": "[ES] Failed to restore data: {error}",
+  "@restoreFailedGeneric": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "restoreFailedOutOfMemory": "[ES] Restore failed: Out of memory\n\nSuggestions:\n• Close other apps to free memory\n• Restart the app and try again\n• Check if the backup file is too large",
+  "restoreFailedNoSpace": "[ES] Restore failed: Insufficient storage space\n\nPlease clear device storage and try again.",
+  "restoreFailedPermission": "[ES] Restore failed: Permission denied\n\nPlease check the app's storage permission settings.",
+  "restoreCancelled": "[ES] Restore cancelled",
+  "restoreFailedCorrupt": "[ES] Restore failed: Backup file is corrupted or in incorrect format\n\nPlease check if the backup file is complete.",
+  "restoreConfirmDialogTitle": "[ES] Confirm Restore",
+  "restoreConfirmDialogDesc": "[ES] This operation will:",
+  "restoreConfirmDialogItem1": "[ES] • Delete all notes and settings on this device",
+  "restoreConfirmDialogItem2": "[ES] • Replace with data from backup file",
+  "restoreConfirmDialogItem3": "[ES] • This action cannot be undone",
+  "restoreConfirmDialogWarning": "[ES] Please make sure you have backed up important data.",
+  "mergeConfirmDialogTitle": "[ES] Confirm Merge Import",
+  "mergeConfirmDialogDesc": "[ES] This operation will keep current data and merge with backup data:",
+  "mergeConfirmDialogItem1": "[ES] • Notes with same ID will keep the newer version (Last-Write-Wins)",
+  "mergeConfirmDialogItem2": "[ES] • Notes with different IDs will all be kept",
+  "mergeConfirmDialogItem3": "[ES] • Settings and AI analysis data will be merged",
+  "mergeConfirmDialogReversible": "[ES] This operation is reversible: you can import overwrite backup or continue merging again.",
+  "tagSettingsDescription": "[ES] Create and manage your personal tag system",
+  "addNewTag": "[ES] Add New Tag",
+  "tagNameHint": "[ES] Please enter a tag name",
+  "loadingTags": "[ES] Loading tags...",
+  "loadTagsError": "[ES] Failed to load tags",
+  "noTagsHint": "[ES] Create your first tag to start organizing your thoughts",
+  "myTags": "[ES] My Tags",
+  "confirmDeleteTag": "[ES] Confirm Delete",
+  "deleteTagDialogContent": "[ES] Are you sure you want to delete the tag \"{name}\"?\n\nNotes using this tag will no longer show this tag.",
+  "@deleteTagDialogContent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "enterEmojiDirectly": "[ES] Enter an emoji directly...",
+  "useAsTagIcon": "[ES] Use \"{emoji}\" as icon",
+  "@useAsTagIcon": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "noteSync": "[ES] Note Sync",
+  "refreshDeviceList": "[ES] Refresh device list",
+  "initializingService": "[ES] Starting...",
+  "startFailed": "[ES] Start failed: {error}",
+  "@startFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "scanningDevices": "[ES] Scanning... {count} devices",
+  "@scanningDevices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scanningDevicesWithTime": "[ES] Scanning... {count} devices ({seconds}s)",
+  "@scanningDevicesWithTime": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "foundDevicesCount": "[ES] Found {count} devices",
+  "@foundDevicesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localDeviceLoading": "[ES] Loading local device ID...",
+  "localDeviceId": "[ES] Local #{fingerprint}",
+  "@localDeviceId": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "noNearbyDevices": "[ES] No nearby devices found",
+  "ensureDeviceOnSameNetwork": "[ES] Make sure the target device also has ThoughtEcho sync page open\nand both devices are on the same WiFi network",
+  "networkInfoUnknown": "[ES] Network info unknown",
+  "portNumber": "[ES] Port {port}",
+  "@portNumber": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "send": "[ES] Send",
+  "sendConfirmTitle": "[ES] Send Confirmation",
+  "sendConfirmContent": "[ES] You are about to send all notes to device \"{alias}\".",
+  "@sendConfirmContent": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "includeMediaFilesOption": "[ES] Include media files",
+  "includeMediaFilesHintSync": "[ES] Images/audio/videos, may increase size and time",
+  "startSend": "[ES] Start Send",
+  "sendTextOnlyHint": "[ES] Will send only note text (no media files)",
+  "sendStarted": "[ES] Note sync started, session ID: {sessionId}",
+  "@sendStarted": {
+    "placeholders": {
+      "sessionId": {
+        "type": "String"
+      }
+    }
+  },
+  "sendFailedWithError": "[ES] Send failed: {error}",
+  "@sendFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmLeave": "[ES] Confirm Leave",
+  "leaveWhileSyncing": "[ES] Currently syncing ({status}). Leaving will interrupt the process and stop the server. Are you sure you want to leave?",
+  "@leaveWhileSyncing": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "leaveWhileScanning": "[ES] Currently discovering devices. Leaving will stop discovery and close the server. Are you sure you want to leave?",
+  "leaveWhileSending": "[ES] Currently sending data. Leaving will interrupt the send and close the server. Are you sure you want to leave?",
+  "syncServiceNotReady": "[ES] Sync service not ready, please reinitialize",
+  "syncServiceInitializing": "[ES] Sync service is initializing, please wait",
+  "searchingNearbyDevices": "[ES] Searching for nearby devices...",
+  "initializingSyncService": "[ES] Initializing sync service...",
+  "syncServiceStartFailed": "[ES] Sync service failed to start: {error}",
+  "@syncServiceStartFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceDiscoveryCancelled": "[ES] Device discovery cancelled",
+  "deviceDiscoveryFailed": "[ES] Device discovery failed: {error}",
+  "@deviceDiscoveryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceAliasAndModel": "[ES] {model}\nAlias: {alias}",
+  "@deviceAliasAndModel": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "copiedText": "[ES] Copied: {text}",
+  "@copiedText": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "copiedFingerprint": "[ES] Copied local fingerprint: {fingerprint}",
+  "@copiedFingerprint": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "usageInstructionsTitle": "[ES] Usage Instructions",
+  "syncUsageInstruction1": "[ES] Tap the send button on the right side of a device to share your notes",
+  "syncUsageInstruction2": "[ES] Received notes will automatically merge with existing notes",
+  "syncUsageInstruction3": "[ES] Duplicate notes will keep the latest version",
+  "syncUsageInstruction4": "[ES] Make sure both devices are connected to the same WiFi network",
+  "initializing": "[ES] Initializing",
+  "cancelDiscovery": "[ES] Cancel Discovery",
+  "discoverDevices": "[ES] Discover Devices",
+  "cancelDiscoveryTooltip": "[ES] Cancel current device discovery",
+  "startDiscoveryTooltip": "[ES] Start discovering nearby devices",
+  "receiveSyncRequest": "[ES] Receive Sync Request",
+  "waitingPeerApproval": "[ES] Waiting for peer approval",
+  "deviceWantsToSync": "[ES] Device \"{alias}\" wants to sync notes",
+  "@deviceWantsToSync": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "doNotAskAgain": "[ES] Don't ask again",
+  "autoAcceptSyncRequests": "[ES] Will automatically accept sync requests from other devices",
+  "waitingLabel": "[ES] Waiting",
+  "syncRequestSent": "[ES] Sync request sent to target device. Please wait for confirmation.",
+  "reject": "[ES] Reject",
+  "accept": "[ES] Accept",
+  "cancelReceive": "[ES] Cancel Receive",
+  "cancelSend": "[ES] Cancel Send",
+  "syncCompleted": "[ES] Sync completed",
+  "syncStatusIdle": "[ES] Idle",
+  "syncStatusPackaging": "[ES] Packaging data",
+  "syncStatusSending": "[ES] Sending",
+  "syncStatusReceiving": "[ES] Receiving",
+  "syncStatusMerging": "[ES] Merging",
+  "syncStatusCompleted": "[ES] Sync completed",
+  "syncStatusFailed": "[ES] Sync failed",
+  "sendingProgressMessage": "[ES] Sent {sent}MB / {total}MB{extra}",
+  "@sendingProgressMessage": {
+    "placeholders": {
+      "sent": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      },
+      "extra": {
+        "type": "String"
+      }
+    }
+  },
+  "syncFromSuffix": "[ES]  (from {from})",
+  "@syncFromSuffix": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      }
+    }
+  },
+  "receivingProgressMessage": "[ES] Received {from}{received}MB / {total}MB{extra}",
+  "@receivingProgressMessage": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "received": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      },
+      "extra": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherClear": "[ES] Clear",
+  "weatherPartlyCloudy": "[ES] Partly cloudy",
+  "weatherCloudy": "[ES] Cloudy",
+  "weatherFog": "[ES] Fog",
+  "weatherDrizzle": "[ES] Drizzle",
+  "weatherFreezingRain": "[ES] Freezing rain",
+  "weatherRain": "[ES] Rain",
+  "weatherSnow": "[ES] Snow",
+  "weatherSnowGrains": "[ES] Snow grains",
+  "weatherRainShower": "[ES] Rain shower",
+  "weatherSnowShower": "[ES] Snow shower",
+  "weatherThunderstorm": "[ES] Thunderstorm",
+  "weatherThunderstormHeavy": "[ES] Heavy thunderstorm",
+  "weatherUnknown": "[ES] Unknown",
+  "weatherError": "[ES] Failed to fetch",
+  "weatherDataFetchFailed": "[ES] Failed to fetch weather data",
+  "unknownWeather": "[ES] Unknown weather",
+  "noAiAnalysisRecords": "[ES] No AI analysis records",
+  "aiAssistant": "[ES] Thoughter",
+  "analyzingSource": "[ES] Analyzing source...",
+  "analysisResult": "[ES] Analysis Result",
+  "confidenceLevel": "[ES] Confidence: {confidence}",
+  "@confidenceLevel": {
+    "placeholders": {
+      "confidence": {
+        "type": "String"
+      }
+    }
+  },
+  "author": "[ES] Author",
+  "authorLabel": "[ES] Author: {author}",
+  "@authorLabel": {
+    "placeholders": {
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "workLabel": "[ES] Work: {work}",
+  "@workLabel": {
+    "placeholders": {
+      "work": {
+        "type": "String"
+      }
+    }
+  },
+  "applyResult": "[ES] Apply Result",
+  "parseResultFailedWithError": "[ES] Failed to parse result: {error}",
+  "@parseResultFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "analysisFailedWithError": "[ES] Analysis failed: {error}",
+  "@analysisFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "polishResult": "[ES] Polish Result",
+  "polishFailedWithError": "[ES] Polish failed: {error}",
+  "@polishFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "continueResult": "[ES] Continue Result",
+  "appendToNote": "[ES] Append to Note",
+  "continueFailedWithError": "[ES] Continue failed: {error}",
+  "@continueFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noteAnalysis": "[ES] Note Analysis",
+  "applyToNote": "[ES] Apply to Note",
+  "analysisComplete": "[ES] Analysis complete",
+  "filterAndSort": "[ES] Filter & Sort",
+  "resetFilter": "[ES] Reset",
+  "tagFilter": "[ES] Tag Filter",
+  "weatherFilter": "[ES] Weather Filter",
+  "weatherFilterSunny": "[ES] Sunny",
+  "weatherFilterRainy": "[ES] Rainy",
+  "weatherFilterCloudy": "[ES] Cloudy",
+  "weatherFilterSnowy": "[ES] Snowy",
+  "timePeriodFilter": "[ES] Time Period Filter",
+  "sortMethod": "[ES] Sort Method",
+  "sortByTime": "[ES] Sort by time",
+  "sortByName": "[ES] Sort by name",
+  "sortByFavorite": "[ES] Sort by favorite",
+  "ascending": "[ES] Ascending",
+  "applyFilter": "[ES] Apply",
+  "editNoteMenu": "[ES] Edit Note",
+  "askAIMenu": "[ES] Chat with Thoughter",
+  "generateCardShareMenu": "[ES] Generate Card",
+  "deleteNoteMenu": "[ES] Delete Note",
+  "doubleTapToViewFull": "[ES] Double tap to view full",
+  "logLevel": "[ES] Level: {level}",
+  "@logLevel": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "prefSettingsTitle": "[ES] Preferences",
+  "personalizationSettings": "[ES] Personalization",
+  "personalizationSettingsDesc": "[ES] Adjust app behavior based on your usage habits",
+  "commonPreferences": "[ES] Common Preferences",
+  "clipboardMonitoring": "[ES] Clipboard Monitoring",
+  "clipboardMonitoringDesc": "[ES] Automatically detect clipboard content and prompt to add notes",
+  "showFavoriteButton": "[ES] Show Favorite Button",
+  "showFavoriteButtonDesc": "[ES] Show heart button on note cards",
+  "prioritizeBoldContent": "[ES] Prioritize Bold Content",
+  "prioritizeBoldContentDesc": "[ES] Show bold text first when collapsed",
+  "useLocalNotesOnly": "[ES] Only Show Local Records",
+  "useLocalNotesOnlyDesc": "[ES] Home will stop fetching new daily quotes from the network",
+  "aiSmartFeatures": "[ES] AI Smart Features",
+  "aiGenerateDailyPrompt": "[ES] AI Generated Daily Prompt",
+  "aiGenerateDailyPromptDesc": "[ES] Use AI to generate home page daily prompts",
+  "periodicReportAiInsights": "[ES] Periodic Report AI Insights",
+  "periodicReportAiInsightsDesc": "[ES] Enable AI insights when generating weekly/monthly reports",
+  "aiCardGenerationLabel": "[ES] AI Card Generation",
+  "aiCardGenerationLabelDesc": "[ES] Generate visual SVG cards for notes",
+  "moreAiSettings": "[ES] More AI Settings",
+  "moreAiSettingsDesc": "[ES] Configure AI providers, models, etc.",
+  "licenseInfo": "[ES] License Information",
+  "appLicense": "[ES] App License",
+  "viewAppLicense": "[ES] View App LICENSE",
+  "loadLicenseFailed": "[ES] Failed to load app license: {error}",
+  "@loadLicenseFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "licenseFileNotFound": "[ES] App LICENSE file not found.",
+  "openSourceAcknowledgements": "[ES] Open Source Libraries & Acknowledgements",
+  "lottieAnimationLicense": "[ES] Lottie Animation License",
+  "systemLicenses": "[ES] System Licenses",
+  "openSourceDesc": "[ES] This app is built on the Flutter framework, using and thanking the following open source libraries and services:",
+  "framework": "[ES] Framework",
+  "stateManagement": "[ES] State Management",
+  "animationSupport": "[ES] Animation Support",
+  "localStorage": "[ES] Local Storage",
+  "syncIntegrationNote": "[ES] Sync integration note:",
+  "serviceApiAcknowledgements": "[ES] Services & API Acknowledgements:",
+  "weatherData": "[ES] Weather Data",
+  "geocodingApi": "[ES] Geocoding API",
+  "viewFullDependencyList": "[ES] View Full Dependency List",
+  "thankOpenSourceContributors": "[ES] Thanks to all open source projects and community contributors. These tools and services make this app possible. Please refer to each project's repository or package management page for specific licenses.",
+  "lottieFilesCredits": "[ES] This app uses animation resources from LottieFiles:",
+  "searchLoadingAnimation": "[ES] Search Loading Animation",
+  "weatherSearchAnimation": "[ES] Weather Search Animation",
+  "aiThinkingAnimation": "[ES] AI Thinking Animation",
+  "noResultsAnimation": "[ES] No Results Animation",
+  "thankLottieFiles": "[ES] Thanks to LottieFiles for providing quality animation resources.",
+  "sourceLabel": "[ES] Source:",
+  "systemLicensesDesc": "[ES] System licenses include Flutter SDK and dependency package licenses. Click the button below to view the full list.",
+  "viewSystemLicenses": "[ES] View System Licenses",
+  "expandCollapseAll": "[ES] Expand/Collapse All",
+  "licensePageDesc": "[ES] This page automatically summarizes the license information of Flutter and all dependency packages. The content is automatically generated by each dependency package declaration and is for reference only.",
+  "searchPackageOrLicense": "[ES] Search package name or license content (first paragraph only)",
+  "loadSystemLicensesFailed": "[ES] Failed to load system licenses: {error}",
+  "@loadSystemLicensesFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noSystemLicensesFound": "[ES] No system license entries found",
+  "noMatchingLicensesFound": "[ES] No matching license entries found",
+  "licenseEntriesCount": "[ES] {visible}/{total} entries",
+  "@licenseEntriesCount": {
+    "placeholders": {
+      "visible": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "unnamed": "[ES] Unnamed",
+  "noLicenseContent": "[ES] (No license content)",
+  "copyLicense": "[ES] Copy License",
+  "licenseCopied": "[ES] License content copied",
+  "searchAnalysisRecords": "[ES] Search analysis records...",
+  "authorPerson": "[ES] Author/Person",
+  "workSource": "[ES] Work/Source",
+  "searchTags": "[ES] Search tags...",
+  "writeYourThoughts": "[ES] Write your thoughts...",
+  "workName": "[ES] Work Name",
+  "searchNotes": "[ES] Search notes...",
+  "searchCity": "[ES] Search city...",
+  "logSettingsTitle": "[ES] Log Settings",
+  "viewLogs": "[ES] View Logs",
+  "logLevelDescription": "[ES] Select the logging detail level for the app. More detailed logs help with debugging but may affect performance and use more storage space.",
+  "logLevelVerbose": "[ES] Record all detailed information for deep debugging.",
+  "logLevelDebug": "[ES] Record debug-related information.",
+  "logLevelInfo": "[ES] Record regular operation information. (Recommended)",
+  "logLevelWarning": "[ES] Record potential issues or warnings.",
+  "logLevelError": "[ES] Record only error information.",
+  "logLevelNone": "[ES] Do not record any logs.",
+  "updateFoundNewVersion": "[ES] New Version Available",
+  "updateCurrentVersion": "[ES] Current Version",
+  "updateLatestVersion": "[ES] Latest Version",
+  "updateReleaseNotes": "[ES] Release Notes",
+  "updateReleaseTime": "[ES] Release Time: {date}",
+  "@updateReleaseTime": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "updateAlreadyLatest": "[ES] Already Up to Date",
+  "updateCurrentVersionLabel": "[ES] Current Version {version}",
+  "@updateCurrentVersionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateUsingLatestVersion": "[ES] You are using the latest version",
+  "updateIgnoreForever": "[ES] Ignore Forever",
+  "updateIgnoreThisTime": "[ES] Ignore This Time",
+  "updateViewDetails": "[ES] View Details",
+  "updateGoToStore": "[ES] Go to Store",
+  "updateNow": "[ES] Update Now",
+  "updateVersionIgnored": "[ES] This version update has been ignored",
+  "updateOpenStoreFailed": "[ES] Failed to open Microsoft Store: {error}",
+  "@updateOpenStoreFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "updateOpenLinkFailed": "[ES] Failed to open download link: {error}",
+  "@updateOpenLinkFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "selectCity": "[ES] Select City",
+  "currentWeather": "[ES] Current Weather",
+  "cityNotSetHint": "[ES] No city set, search and select below",
+  "clickRefreshHint": "[ES] City: {city} (click refresh button)",
+  "@clickRefreshHint": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "refreshWeather": "[ES] Refresh Weather",
+  "weatherUpdated": "[ES] Weather updated",
+  "weatherUpdateFailed": "[ES] Weather update failed, please try again later",
+  "weatherFetchFailed": "[ES] Weather fetch failed",
+  "pleaseSelectCityFirst": "[ES] Please select a city or enable location service first",
+  "useCurrentLocation": "[ES] Use Current Location",
+  "useFreeOnlineReverseGeocoding": "[ES] Use free online reverse geocoding",
+  "onlineReverseGeocodingNeedsLocation": "[ES] Please get current location first",
+  "onlineReverseGeocodingFailed": "[ES] Online reverse geocoding failed",
+  "onlineReverseGeocodingSuccess": "[ES] Online reverse geocoding updated: {address}",
+  "@onlineReverseGeocodingSuccess": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherProvidedBy": "[ES] Weather data provided by Open-Meteo",
+  "processing": "[ES] Processing...",
+  "searchingCity": "[ES] Searching cities...",
+  "noCityFound": "[ES] No matching city found",
+  "tryDifferentKeywords": "[ES] Try different keywords or city names",
+  "enterCityToSearch": "[ES] Enter city name to search",
+  "addInfo": "[ES] Add Info",
+  "selectTagsWithCount": "[ES] Select Tags ({count})",
+  "@selectTagsWithCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noTagsAvailableHint": "[ES] No tags available, please add tags first",
+  "addLocationPrefix": "[ES] Add location",
+  "locationServiceUnavailable": "[ES] Location service unavailable",
+  "sourceInfo": "[ES] Source Info",
+  "tagsLabel": "[ES] Tags",
+  "selectedTagsCount": "[ES] {count} tags selected",
+  "@selectedTagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectedTags": "[ES] Selected Tags",
+  "unknownTagWithId": "[ES] Unknown tag (ID:{id}...)",
+  "@unknownTagWithId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "colorLabel": "[ES] Color",
+  "selectCardColorLabel": "[ES] Select Card Color",
+  "noColor": "[ES] No color",
+  "colorSet": "[ES] Color set",
+  "locationAndWeather": "[ES] Location & Weather",
+  "recordedOnFirstSave": "[ES] Recorded on first save",
+  "locationLabel": "[ES] Location",
+  "weatherLabel": "[ES] Weather",
+  "refreshLocationWeather": "[ES] Refresh location and weather",
+  "gettingLocationHint": "[ES] Getting location...",
+  "noteNoLocationWeatherInfo": "[ES] This note did not record location and weather info on first save",
+  "aiAssistantLabel": "[ES] Thoughter",
+  "polishingText": "[ES] Polishing text...",
+  "continuingText": "[ES] Continuing text...",
+  "analyzingNote": "[ES] Analyzing note...",
+  "analysisResultWithConfidence": "[ES] Analysis Result (Confidence: {confidence})",
+  "@analysisResultWithConfidence": {
+    "placeholders": {
+      "confidence": {
+        "type": "String"
+      }
+    }
+  },
+  "possibleAuthor": "[ES] Possible Author:",
+  "possibleWork": "[ES] Possible Work:",
+  "analysisExplanation": "[ES] Analysis Explanation:",
+  "noAuthorWorkIdentified": "[ES] Could not identify a clear author or work",
+  "applyAnalysisResult": "[ES] Apply Analysis Result",
+  "parseResultFailed": "[ES] Parse result failed: {error}",
+  "@parseResultFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseInputContent": "[ES] Please input content first",
+  "copyResult": "[ES] Copy Result",
+  "cannotAddLocation": "[ES] Cannot Add Location",
+  "cannotAddLocationDesc": "[ES] This note did not record location info on first save, cannot add later.\n\nTo record location, check the location option when creating a new note.",
+  "iKnow": "[ES] I understand",
+  "locationInfo": "[ES] Location Info",
+  "locationUpdateHint": "[ES] Current location: {coordinates}\n\nYou can try to update to a detailed address, or remove the location (cannot be added again after removal).",
+  "@locationUpdateHint": {
+    "placeholders": {
+      "coordinates": {
+        "type": "String"
+      }
+    }
+  },
+  "locationRemoveHint": "[ES] Current location: {location}\n\nLocation info cannot be added or changed again after removal.",
+  "@locationRemoveHint": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "remove": "[ES] Remove",
+  "updateLocation": "[ES] Update Location",
+  "locationUpdatedTo": "[ES] Location updated to: {address}",
+  "@locationUpdatedTo": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetAddress": "[ES] Cannot get address, please check network",
+  "updateFailed": "[ES] Update failed: {error}",
+  "@updateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotAddWeather": "[ES] Cannot Add Weather",
+  "cannotAddWeatherDesc": "[ES] This note did not record weather info on first save, cannot add later.\n\nTo record weather, check the weather option when creating a new note.",
+  "weatherInfo2": "[ES] Weather Info",
+  "weatherRemoveHint": "[ES] Current weather: {weather}\n\nWeather info cannot be added or changed again after removal.",
+  "@weatherRemoveHint": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetLocationTitle": "[ES] Cannot Get Location",
+  "cannotGetLocationDesc": "[ES] Cannot get current location. Please check location permission or network status.",
+  "getLocationFailedTitle": "[ES] Get Location Failed",
+  "getLocationFailedDesc": "[ES] Get location failed: {error}",
+  "@getLocationFailedDesc": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetLocationPermissionShort": "[ES] Cannot get location permission",
+  "savingNote": "[ES] Saving",
+  "saveComplete": "[ES] Complete",
+  "writingDatabase": "[ES] Writing to database...",
+  "preparingProcess": "[ES] Preparing...",
+  "mediaProcessFailed": "[ES] Media file processing failed: {error}",
+  "@mediaProcessFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "documentLoadFailed": "[ES] Document load failed, please reopen the editor",
+  "tagsCount": "[ES] {count} tags",
+  "@tagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "editMetadataShort": "[ES] Edit Metadata",
+  "startWritingHint": "[ES] Start writing your thoughts...",
+  "unknownLocation": "[ES] Unknown Location",
+  "dayPeriodDawn": "[ES] Dawn",
+  "dayPeriodMorning": "[ES] Morning",
+  "dayPeriodAfternoon": "[ES] Afternoon",
+  "dayPeriodDusk": "[ES] Dusk",
+  "dayPeriodEvening": "[ES] Evening",
+  "dayPeriodMidnight": "[ES] Late Night",
+  "showExactTime": "[ES] Show Exact Time",
+  "showExactTimeDesc": "[ES] Display time (hour:minute) in notes",
+  "showNoteEditTime": "[ES] Show Note Edit Time",
+  "showNoteEditTimeDesc": "[ES] Display the last edited time in notes",
+  "editedAtLabel": "[ES] Edited at {dateTime}",
+  "@editedAtLabel": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
+  "guideHomepageDailyQuoteTitle": "[ES] Daily Quote Tips",
+  "guideHomepageDailyQuoteDesc": "[ES] Single tap to copy content\nDouble tap to quickly add to notes",
+  "guideNotePageFilterTitle": "[ES] Filter & Sort",
+  "guideNotePageFilterDesc": "[ES] Tap here to filter and sort your notes\nSupports filtering by tags, weather, time and more",
+  "guideNotePageFavoriteTitle": "[ES] Favorite Mark",
+  "guideNotePageFavoriteDesc": "[ES] Tap the heart icon to mark as favorite\nYou can sort by favorites in filters",
+  "guideNotePageExpandTitle": "[ES] Expand/Collapse Notes",
+  "guideNotePageExpandDesc": "[ES] Double tap card to expand full content\nDouble tap again to collapse",
+  "guideEditorMetadataTitle": "[ES] Edit Note Metadata",
+  "guideEditorMetadataDesc": "[ES] Tap here to edit note tags, categories and more",
+  "guideEditorToolbarUsageTitle": "[ES] Toolbar Tips",
+  "guideEditorToolbarUsageDesc": "[ES] Toolbar supports horizontal scrolling\nTry adding images, videos and other media!",
+  "guideAddNoteFullscreenButtonTitle": "[ES] Full Screen Editor",
+  "guideAddNoteFullscreenButtonDesc": "[ES] Tap here to open full screen editor\nSupports rich text, images, audio and video",
+  "guideSettingsPreferencesTitle": "[ES] Preferences",
+  "guideSettingsPreferencesDesc": "[ES] Enable bold text priority, clipboard monitoring and other personalization settings here.",
+  "guideSettingsStartupTitle": "[ES] Default Start Page",
+  "guideSettingsStartupDesc": "[ES] Set the default page to open when launching the app",
+  "guideSettingsThemeTitle": "[ES] Theme Settings",
+  "guideSettingsThemeDesc": "[ES] Customize app theme colors and appearance here",
+  "guideTrashLocationTitle": "[ES] Trash Location",
+  "guideTrashLocationDesc": "[ES] Note moved to trash\nOpen Trash in Settings to restore it",
+  "guideSmartPushTitle": "[ES] Let your notes come back to you",
+  "guideSmartPushDesc": "[ES] Turn on Settings → Smart Push and ThoughtEcho will resurface past notes and on-this-day entries at the times you pick.",
+  "apkDownloadTitle": "[ES] Download APK",
+  "apkDownloading": "[ES] Downloading ThoughtEcho {version}...",
+  "@apkDownloading": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "apkDownloadHint": "[ES] Please do not exit the app. Installation will start automatically after download.",
+  "apkDownloadStarted": "[ES] Started downloading ThoughtEcho {version}",
+  "@apkDownloadStarted": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "apkDownloadProgress": "[ES] Downloading... {progress}%",
+  "@apkDownloadProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+  "apkDownloadComplete": "[ES] Download complete, installing...",
+  "apkDownloadFailed": "[ES] Download failed: {error}",
+  "@apkDownloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkInstallReady": "[ES] APK file is ready. Please complete the installation in the system installer.",
+  "apkOpenFailed": "[ES] Cannot open APK file: {error}",
+  "@apkOpenFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkInstallFailed": "[ES] Installation failed: {error}",
+  "@apkInstallFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkNotificationTitle": "[ES] APK Download",
+  "storagePermissionRequired": "[ES] Storage Permission Required",
+  "storagePermissionDesc": "[ES] Storage permission is required to download APK files. Please allow storage access in settings.",
+  "installPermissionRequired": "[ES] Install Permission Required",
+  "installPermissionDesc": "[ES] Permission to install unknown apps is required to install APK. Please allow installing apps from unknown sources in settings.",
+  "errorTitle": "[ES] Error",
+  "cannotGetDownloadDir": "[ES] Cannot get download directory",
+  "webPlatformApkNotSupported": "[ES] APK download is not supported on Web platform",
+  "serviceNotInitializedDeleteFailed": "[ES] Service not initialized, delete failed",
+  "deleteAllConfirmMessage": "[ES] Are you sure you want to delete all analysis records? This action cannot be undone.",
+  "deleteFailedSimple": "[ES] Delete failed",
+  "aiAnalysisDetails": "[ES] AI Analysis Details",
+  "analysisTime": "[ES] Analysis Time",
+  "analysisContent": "[ES] Analysis Content",
+  "aiAnalysisResult": "[ES] AI Analysis Result",
+  "emotionalAnalysis": "[ES] Emotional Analysis",
+  "comprehensiveAnalysis": "[ES] Comprehensive Analysis",
+  "mindMapAnalysis": "[ES] Mind Map",
+  "growthAnalysis": "[ES] Growth Analysis",
+  "aiAnalysis": "[ES] AI Analysis",
+  "deleteAiAnalysis": "[ES] Delete AI Analysis",
+  "deleteAiAnalysisConfirm": "[ES] Are you sure you want to delete the AI analysis result for this note? This can be undone before saving the note.",
+  "aiAnalysisDeleted": "[ES] AI analysis deleted",
+  "aiAnalysisSaved": "[ES] AI analysis saved",
+  "viewFull": "[ES] View Full",
+  "copy": "[ES] Copy",
+  "copiedToClipboard": "[ES] Copied to clipboard",
+  "selectReportTypePrompt": "[ES] Please select the type of annual report to generate:",
+  "aiSmartReport": "[ES] AI Smart Report",
+  "aiSmartReportDesc": "[ES] Beautiful HTML report generated based on AI analysis, including deep insights and visual charts",
+  "nativeFlutterReport": "[ES] Native Flutter Report",
+  "nativeFlutterReportDesc": "[ES] Interactive report generated using native Flutter components with smooth animations",
+  "generateAnnualReportFailed": "[ES] Failed to generate annual report",
+  "generatingAIAnnualReport": "[ES] Generating AI annual report...",
+  "cannotReadReportTemplate": "[ES] Cannot read report template",
+  "aiReturnFormatAbnormal": "[ES] AI return format abnormal, used backup template to generate report",
+  "aiServiceAbnormal": "[ES] AI service abnormal, used backup template to generate report",
+  "monthJan": "[ES] Jan",
+  "monthFeb": "[ES] Feb",
+  "monthMar": "[ES] Mar",
+  "monthApr": "[ES] Apr",
+  "monthMay": "[ES] May",
+  "monthJun": "[ES] Jun",
+  "monthJul": "[ES] Jul",
+  "monthAug": "[ES] Aug",
+  "monthSep": "[ES] Sep",
+  "monthOct": "[ES] Oct",
+  "monthNov": "[ES] Nov",
+  "monthDec": "[ES] Dec",
+  "achievementRecordMaster": "[ES] Record Master",
+  "achievementPersistent": "[ES] Persistent",
+  "achievementWriter": "[ES] Writer",
+  "achievementOrganizer": "[ES] Organizer",
+  "continuingToGrow": "[ES] Continuing to grow",
+  "allDayLong": "[ES] All day",
+  "preparingBackup": "[ES] Preparing backup...",
+  "collectingData": "[ES] Collecting data...",
+  "processingNoteData": "[ES] Processing note data...",
+  "processingMediaFiles": "[ES] Processing media files...",
+  "creatingBackupFile": "[ES] Creating backup file...",
+  "verifyingBackupFile": "[ES] Verifying backup file...",
+  "thoughtEchoBackupFile": "[ES] ThoughtEcho Backup File",
+  "backupFileReady": "[ES] Backup file is ready, please save via sharing",
+  "backupCompleteSelectLocation": "[ES] Backup complete, please choose save location",
+  "zipFile": "[ES] ZIP File",
+  "jsonFile": "[ES] JSON File",
+  "outOfMemoryText": "[ES] Out of memory",
+  "storageSpaceText": "[ES] Storage space",
+  "permissionText": "[ES] Permission",
+  "backupCancelled": "[ES] Backup cancelled",
+  "backupFailedText": "[ES] Backup failed",
+  "backupSavedToPath": "[ES] Backup saved to: {path}",
+  "@backupSavedToPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "backupCompleteWithWarnings": "[ES] Backup completed, but with warnings",
+  "backupDeltaFailuresMessage": "[ES] {count, plural, =1{1 note had rich-text media path conversion failures. This note still contains a local absolute path in the backup; images may not display when restored on another device.\n\nAffected note ID: {ids}} other{# notes had rich-text media path conversion failures. These notes still contain local absolute paths in the backup; images may not display when restored on another device.\n\nAffected note IDs: {ids}}}",
+  "@backupDeltaFailuresMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "ids": {
+        "type": "String"
+      }
+    }
+  },
+  "backupDeltaFailuresIdJoiner": "[ES] , ",
+  "backupDeltaFailuresMoreSuffix": "[ES]  etc.",
+  "backupFailedGeneric": "[ES] Unable to complete backup. Please try again later.",
+  "@backupFailedGeneric": {
+    "description": "Generic backup failure message shown when the error type is not classified"
+  },
+  "backupFailedOutOfMemory": "[ES] Backup failed: Out of memory\n\nSuggestions:\n• Close other apps to free up memory\n• Try a backup without media files\n• Restart the app and try again",
+  "backupFailedNoSpace": "[ES] Backup failed: Not enough storage space\n\nPlease free up device storage and try again.",
+  "backupFailedPermission": "[ES] Backup failed: Insufficient permission\n\nPlease check the app's storage permission settings.",
+  "selectFileError": "[ES] Failed to select file",
+  "mergingDataProgress": "[ES] Merging data...",
+  "yearAIAnnualReport": "[ES] {year} AI Annual Report",
+  "@yearAIAnnualReport": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "openInBrowser": "[ES] Open in Browser",
+  "shareReport": "[ES] Share Report",
+  "saveTempFileFailed": "[ES] Failed to save temporary file",
+  "openBrowserFailed": "[ES] Failed to open browser",
+  "createShareFileFailed": "[ES] Failed to create share file",
+  "saveReport": "[ES] Save Report",
+  "processingReport": "[ES] Processing report...",
+  "personalizedSummaryByAI": "[ES] Personalized summary based on AI analysis",
+  "aiGeneratedReview": "[ES] AI has generated your exclusive annual review, including data analysis, growth insights, and future suggestions",
+  "reportPreview": "[ES] Report Preview",
+  "fullReportViewInBrowser": "[ES] Full report contains beautiful charts and interactive effects, recommended to view in browser",
+  "openFullReportInBrowser": "[ES] Open Full Report in Browser",
+  "shareBtn": "[ES] Share",
+  "regenerateCard": "[ES] Regenerate",
+  "regeneratingCard": "[ES] Regenerating...",
+  "aiSuggestionCoreIdea": "[ES] What is the core idea of this note?",
+  "aiSuggestionInspiration": "[ES] What inspiration can we draw from it?",
+  "aiSuggestionSummarize": "[ES] Can you summarize the key points?",
+  "aiSuggestionSolution": "[ES] What solutions are there?",
+  "aiSuggestionUnderstandConcept": "[ES] How can I better understand this concept?",
+  "aiSuggestionActionPlan": "[ES] How do I create an action plan?",
+  "aiSuggestionPsychology": "[ES] What psychological state does this reflect?",
+  "aiSuggestionRealLife": "[ES] How can this be applied to real life?",
+  "aiSuggestionThinkingPattern": "[ES] What thinking pattern does this reflect?",
+  "svgLoading": "[ES] Loading SVG...",
+  "svgLoadingFallback": "[ES] Loading fallback template...",
+  "svgRenderFailed": "[ES] SVG render failed",
+  "svgTryingFallback": "[ES] Trying fallback template...",
+  "cardRenderFailed": "[ES] Card render failed",
+  "cardRegeneratePrompt": "[ES] Please try regenerating the card",
+  "svgContentParseFailed": "[ES] Content parse failed",
+  "svgContentExtractFailed": "[ES] Unable to extract content",
+  "svgContentEmpty": "[ES] SVG content is empty",
+  "svgContentInvalidFormat": "[ES] Invalid SVG format",
+  "svgFallbackTitle": "[ES] SVG generation failed",
+  "svgFallbackHint": "[ES] Please try regenerating the card or check your AI configuration",
+  "svgFallbackIdentifier": "[ES] ThoughtEcho - Fallback Template",
+  "cardGenerating": "[ES] Generating card...",
+  "generatingCards": "[ES] Generating cards...",
+  "loadMoreCards": "[ES] Load more cards",
+  "remainingCards": "[ES] {count} more available",
+  "@remainingCards": {
+    "description": "剩余可生成卡片数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "saveBtn": "[ES] Save",
+  "work": "[ES] Work: ",
+  "explanation": "[ES] Explanation: ",
+  "generatingReportContent": "[ES] Generating report content...",
+  "reportOpenedInBrowser": "[ES] Report opened in browser",
+  "cannotOpenBrowserUseShare": "[ES] Cannot open browser directly, please use share function to select browser",
+  "reportFileSavedInstructions": "[ES] Report file saved, please follow these steps to open in browser:",
+  "step1OpenFileManager": "[ES] 1. Open phone file manager",
+  "step2NavigateToPath": "[ES] 2. Navigate to the following path:",
+  "step3TapHtmlFile": "[ES] 3. Tap the HTML file",
+  "step4SelectBrowser": "[ES] 4. Select browser to open",
+  "gotIt": "[ES] Got it",
+  "copyPath": "[ES] Copy Path",
+  "pathCopied": "[ES] File path copied to clipboard",
+  "howToViewInBrowser": "[ES] How to View in Browser",
+  "htmlContentCopied": "[ES] HTML report content copied to clipboard. Please follow these steps:",
+  "mobileSteps": "[ES] 📱 Mobile:",
+  "desktopSteps": "[ES] 💻 Desktop:",
+  "copyPrefix": "[ES] Copy Prefix",
+  "addressBarPrefixCopied": "[ES] Address bar prefix copied, please paste in browser then paste HTML content",
+  "reportShared": "[ES] Report shared",
+  "reportSavedLocally": "[ES] Report saved to local file",
+  "cannotSaveFileCopyToClipboard": "[ES] Cannot save file, content copied to clipboard",
+  "videoFileNotFound": "[ES] Video file not found",
+  "initializingLargeVideo": "[ES] Initializing large video file",
+  "videoLoadingTooLong": "[ES] Video loading takes too long, please try using a smaller video file",
+  "videoInitTimeout": "[ES] Video initialization timeout, file may be too large",
+  "largeVideoInitSuccess": "[ES] Large video initialized successfully",
+  "playbackSpeed": "[ES] Playback Speed",
+  "subtitles": "[ES] Subtitles",
+  "shareVideo": "[ES] Share Video",
+  "videoInfo": "[ES] Video Info",
+  "videoLoadFailed": "[ES] Video load failed",
+  "timeout": "[ES] Timeout",
+  "videoLoadTimeout": "[ES] Video load timeout",
+  "fileTooLargeUseSmaller": "[ES] File may be too large, please try again later or use a smaller video file",
+  "format": "[ES] Format",
+  "unsupportedVideoFormat": "[ES] Unsupported video format",
+  "useCommonFormats": "[ES] Please use common formats like MP4, MOV",
+  "cannotAccessVideoFile": "[ES] Cannot access video file",
+  "checkFilePermissions": "[ES] Please check file permissions",
+  "checkFileIntegrity": "[ES] Please check if file is complete or try reimporting",
+  "outOfMemoryVideo": "[ES] Out of memory, cannot load video",
+  "audioFileNotFound": "[ES] Audio file not found",
+  "clickToPlayVideo": "[ES] Tap to play video",
+  "motionPhoto": "[ES] Live",
+  "viewPhoto": "[ES] View photo",
+  "motionPhotoPlayFailed": "[ES] Unable to play this motion photo",
+  "loadingVideo": "[ES] Loading video...",
+  "shareAudio": "[ES] Share Audio",
+  "fileInfo": "[ES] File Info",
+  "audioInfo": "[ES] Audio Info",
+  "fileName": "[ES] File Name",
+  "duration": "[ES] Duration",
+  "path": "[ES] Path",
+  "resolution": "[ES] Resolution",
+  "aspectRatio": "[ES] Aspect Ratio",
+  "featureInDevelopment": "[ES] Share feature in development...",
+  "selectFromFiles": "[ES] Select from Files",
+  "supportsLargeFiles": "[ES] Supports large files with memory-safe handling",
+  "unifiedMediaImportImportMedia": "[ES] Import {mediaType}",
+  "@unifiedMediaImportImportMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaTypeImage": "[ES] Image",
+  "mediaTypeVideo": "[ES] Video",
+  "mediaTypeAudio": "[ES] Audio",
+  "mediaTypeMedia": "[ES] Media",
+  "mediaProcessingNone": "[ES] No media files to process",
+  "mediaProcessingFound": "[ES] {total, plural, =1{Found 1 media file} other{Found # media files}}",
+  "@mediaProcessingFound": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingCopying": "[ES] Copying {typeLabel} {done}/{total}",
+  "@mediaProcessingCopying": {
+    "placeholders": {
+      "typeLabel": {
+        "type": "String"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingProgress": "[ES] Processed {done} / {total}",
+  "@mediaProcessingProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "takePhoto": "[ES] Take Photo",
+  "recordVideo": "[ES] Record Video",
+  "recordAudio": "[ES] Record Audio",
+  "takePhotoDirectly": "[ES] Take photo directly",
+  "recordVideoDirectly": "[ES] Record directly",
+  "recordAudioDirectly": "[ES] Record directly",
+  "enterUrlHint": "[ES] Enter media file URL",
+  "image": "[ES] Image",
+  "video": "[ES] Video",
+  "audio": "[ES] Audio",
+  "weatherSunny": "[ES] Sunny",
+  "weatherUnknownWeather": "[ES] Unknown weather",
+  "weatherShowers": "[ES] Showers",
+  "weatherSnowShowers": "[ES] Snow Showers",
+  "weatherThunderstormWithHail": "[ES] Thunderstorm with Hail",
+  "fileTypeImage": "[ES] Image",
+  "fileTypeVideo": "[ES] Video",
+  "fileTypeAudio": "[ES] Audio",
+  "fileTypeDocument": "[ES] Document",
+  "fileTypeText": "[ES] Text",
+  "fileTypeApplication": "[ES] Application",
+  "fileTypeOther": "[ES] Other",
+  "fileStatusQueued": "[ES] Queued",
+  "fileStatusSending": "[ES] Sending",
+  "fileStatusCompleted": "[ES] Completed",
+  "fileStatusFailed": "[ES] Failed",
+  "fileStatusSkipped": "[ES] Skipped",
+  "sessionStatusWaiting": "[ES] Waiting",
+  "sessionStatusSending": "[ES] Sending",
+  "sessionStatusReceiving": "[ES] Receiving",
+  "sessionStatusCompleted": "[ES] Completed",
+  "sessionStatusCancelled": "[ES] Cancelled",
+  "sessionStatusRejected": "[ES] Rejected",
+  "sessionStatusError": "[ES] Error",
+  "timeMorning": "[ES] Morning",
+  "timeAfternoon": "[ES] Afternoon",
+  "timeEvening": "[ES] Evening",
+  "timeLateNight": "[ES] Late Night",
+  "promptDefault1": "[ES] What are you grateful for today?",
+  "promptDefault2": "[ES] What would you say to encourage your past self?",
+  "promptDefault3": "[ES] What exciting new thing did you learn today?",
+  "promptDefault4": "[ES] What beautiful idea is waiting to be realized?",
+  "promptDefault5": "[ES] What has made you happy and fulfilled recently?",
+  "promptDefault6": "[ES] What valuable insights did you gain from overcoming challenges?",
+  "promptDefault7": "[ES] If tomorrow were completely free, what meaningful thing would you most want to do?",
+  "promptDefault8": "[ES] What precious experience did today's challenge teach you?",
+  "promptDefault9": "[ES] What positive small habits are making you better?",
+  "promptDefault10": "[ES] What warm words do you want to say to your future self at this moment?",
+  "promptDefault11": "[ES] What small achievement today deserves your pride?",
+  "promptDefault12": "[ES] What warm memory makes you smile?",
+  "promptGeneric1": "[ES] At this moment, do you have any special thoughts or beautiful feelings you want to record?",
+  "promptGeneric2": "[ES] Looking back on today, what warm moment impressed you?",
+  "promptGeneric3": "[ES] Calm down and feel your current emotions, what beautiful message do they convey?",
+  "promptGeneric4": "[ES] What small progress or gain today makes you feel gratified?",
+  "promptGeneric5": "[ES] What makes you feel hopeful and motivated?",
+  "promptMorning1": "[ES] A new day begins, what beautiful expectations do you have for today?",
+  "promptMorning2": "[ES] How does the morning air smell? What warm memory does it remind you of?",
+  "promptMorning3": "[ES] Set an exciting small goal for today, what could it be?",
+  "promptMorning4": "[ES] In the morning light, what positive thoughts are sprouting in your heart?",
+  "promptAfternoon1": "[ES] What pleasant feelings does the afternoon sunshine or breeze bring you?",
+  "promptAfternoon2": "[ES] Halfway through the day, is there anything going well that satisfies you?",
+  "promptAfternoon3": "[ES] Take some time to relax and think about things that make you feel at ease and happy.",
+  "promptAfternoon4": "[ES] In the afternoon, what beautiful plans are brewing in your heart?",
+  "promptEvening1": "[ES] As night falls, looking back on today, what is worth celebrating or being grateful for?",
+  "promptEvening2": "[ES] This moment of tranquility is suitable for reflection, what beautiful scene emerges in your mind?",
+  "promptEvening3": "[ES] Make a hopeful plan or vision for tomorrow.",
+  "promptEvening4": "[ES] As the sun sets, which moment today made you feel especially warm?",
+  "promptLateNight1": "[ES] In the quiet of late night, what warm thoughts or beautiful inspiration quietly emerge?",
+  "promptLateNight2": "[ES] What precious memories does this silence make you think of?",
+  "promptLateNight3": "[ES] Before sleep, put aside distractions and record the peace and contentment in your heart.",
+  "promptLateNight4": "[ES] Under the starry sky, what beautiful wishes are shining in your heart?",
+  "promptClearMorning": "[ES] Morning sunlight fills the windowsill, how do you feel right now? Any beautiful plans?",
+  "promptRainMorning": "[ES] Listening to the gentle rain in the morning, is your heart especially peaceful? Any warm insights?",
+  "promptCloudyMorning": "[ES] A cloudy morning is perfect for slowly savoring and reflecting on recent beautiful gains.",
+  "promptClearAfternoon": "[ES] The warm afternoon sun is perfect for a short rest, record this moment of comfort and satisfaction.",
+  "promptRainAfternoon": "[ES] On a rainy afternoon, with rain pattering outside, it's suitable inside to read a book or write warm thoughts.",
+  "promptClearEvening": "[ES] As night falls, with starlight or moonlight just right, what beautiful wishes or warm memories do you have?",
+  "promptRainEvening": "[ES] On a rainy night, suitable for solitary reflection, what recently makes you feel gratified or expectant?",
+  "promptWindEvening": "[ES] On a night with gentle evening breeze, do your thoughts drift with the wind? Record this moment's beautiful inspiration.",
+  "promptClearWeather1": "[ES] On such a sunny day, what makes you feel happy and energetic?",
+  "promptClearWeather2": "[ES] With such good weather, what relaxing and joyful things are suitable to do?",
+  "promptRainWeather1": "[ES] Listening to the rain, is your mood especially calm and peaceful?",
+  "promptRainWeather2": "[ES] Rainy days are suitable for contemplation, what warm thoughts linger in your mind?",
+  "promptCloudyWeather1": "[ES] Under cloudy skies, where do your thoughts drift to?",
+  "promptCloudyWeather2": "[ES] Cloudy days sometimes have their own charm, what precious memories do they remind you of?",
+  "promptSnowWeather1": "[ES] What pure feelings does the snow scene outside bring you?",
+  "promptSnowWeather2": "[ES] On snowy days, what beautiful things are suitable to think about while nestled in warmth?",
+  "promptHotWeather": "[ES] It's a bit hot, what comfortable thing would you most like to do to enjoy summer time?",
+  "promptColdWeather": "[ES] It's a bit cold, while keeping warm, what heartwarming thoughts do you have?",
+  "promptCityContext": "[ES] Being in {city}, what inspiration has this city brought you today?",
+  "@promptCityContext": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "promptFallback": "[ES] Today, what new insights or beautiful thoughts do you want to share?",
+  "citySuffix": "[ES] ",
+  "locationDisplayFormat": "[ES] {city}{suffix}",
+  "@locationDisplayFormat": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "locationDisplayWithDistrict": "[ES] {city} · {district}",
+  "@locationDisplayWithDistrict": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      },
+      "district": {
+        "type": "String"
+      }
+    }
+  },
+  "noLocationInfo": "[ES] No location info",
+  "currentLocationLabel": "[ES] Current location",
+  "annualReportOpenedInBrowser": "[ES] Report opened in browser",
+  "annualReportCannotOpenBrowser": "[ES] Cannot open browser directly, please use share to choose browser",
+  "annualReportOpenInBrowser": "[ES] Open in Browser",
+  "annualReportHowToView": "[ES] How to view in browser",
+  "annualReportMobileInstructions": "[ES] 📱 Mobile:",
+  "annualReportDesktopInstructions": "[ES] 💻 Desktop:",
+  "annualReportSavedToLocal": "[ES] Report saved to local file",
+  "annualReportCopiedToClipboard": "[ES] Cannot save file, content copied to clipboard",
+  "fullscreenEditTooltip": "[ES] Fullscreen Edit",
+  "fullscreenEditLongTextTip": "[ES] Fullscreen edit recommended for long text",
+  "sourcePreviewFormat": "[ES] Will display as: {source}",
+  "@sourcePreviewFormat": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "addWeatherWithValue": "[ES] Add weather: {weather}",
+  "@addWeatherWithValue": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "addWeatherInfo": "[ES] Add weather info",
+  "cardColorSet": "[ES] Card color set",
+  "setCardColor": "[ES] Set card color",
+  "openFullEditorFailedSimple": "[ES] Failed to open fullscreen editor",
+  "loadingLargeDocument": "[ES] Loading large document...",
+  "documentLoadFailedRetry": "[ES] Document load failed, please reopen the editor",
+  "contentCopiedToClipboard": "[ES] Copied to clipboard",
+  "messageCopiedToClipboard": "[ES] Message copied to clipboard",
+  "dailyQuoteLoading": "[ES] Loading...",
+  "dailyQuoteLoadingLocal": "[ES] Loading from local records...",
+  "dailyQuoteLoadingOffline": "[ES] No network, loading from local records...",
+  "dailyQuoteNoNetworkRetry": "[ES] No network and no local records, tap to retry",
+  "dailyQuoteFetchFailedRetry": "[ES] Failed to fetch quote, tap to retry",
+  "fetchHitokotoFailed": "[ES] Failed to fetch quote: {error}",
+  "@fetchHitokotoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "copyMessage": "[ES] Copy Message",
+  "shareMessage": "[ES] Share Message",
+  "shareFeatureInDevelopment": "[ES] Share feature is under development",
+  "cancelImport": "[ES] Cancel import",
+  "enterMediaUrl": "[ES] Enter {mediaType} URL",
+  "@enterMediaUrl": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "insertMediaFailed": "[ES] Failed to insert {mediaType}: {error}",
+  "@insertMediaFailed": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "audioFileNotFoundWithPath": "[ES] Audio file not found: {path}",
+  "@audioFileNotFoundWithPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "audioLoadFailed": "[ES] Audio load failed: {error}",
+  "@audioLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "outOfMemoryVideoLoad": "[ES] Out of memory, cannot load video",
+  "codeCopiedToClipboard": "[ES] Code copied to clipboard",
+  "videoLoadTooLong": "[ES] Video loading time is too long, please try using a smaller video file",
+  "outOfMemorySuggestions": "[ES] Suggestions:\n• Close other apps to free memory\n• Restart the app and try again\n• Use a smaller video file",
+  "fullscreenEditorPlaceholder": "[ES] Start writing your thoughts...",
+  "unsavedChangesTitle": "[ES] Unsaved Changes",
+  "unsavedChangesDesc": "[ES] You have unsaved edits. Do you want to discard these changes?",
+  "continueEditing": "[ES] Continue Editing",
+  "discardChanges": "[ES] Discard Changes",
+  "saveAndExit": "[ES] Save and Exit",
+  "localAiFeatures": "[ES] Local AI Features",
+  "localAiFeaturesPreview": "[ES] Preview",
+  "localAiFeaturesDesc": "[ES] Enhance your note-taking experience with on-device AI",
+  "enableLocalAi": "[ES] Enable Local AI",
+  "enableLocalAiDesc": "[ES] Turn on to enable on-device AI features",
+  "localAiPreviewNote": "[ES] This feature is currently in preview. Some features may be unstable",
+  "inputEnhancement": "[ES] Input Enhancement",
+  "searchAndDiscovery": "[ES] Search & Discovery",
+  "contentAnalysis": "[ES] Content Analysis",
+  "speechToText": "[ES] Speech to Text",
+  "speechToTextDesc": "[ES] Long press the record button to convert speech to text in real-time",
+  "ocrRecognition": "[ES] OCR Recognition",
+  "ocrRecognitionDesc": "[ES] Take a photo to recognize text from images",
+  "aiCorrection": "[ES] AI Correction",
+  "aiCorrectionDesc": "[ES] Intelligently fix recognition errors from speech and OCR",
+  "sourceRecognition": "[ES] Source Recognition",
+  "sourceRecognitionDesc": "[ES] Automatically extract author and work information from text",
+  "aiSearch": "[ES] AI Semantic Search",
+  "aiSearchDesc": "[ES] Use AI to understand search intent and find semantically related notes",
+  "relatedNotes": "[ES] Related Notes",
+  "relatedNotesDesc": "[ES] Recommend related notes based on content similarity",
+  "smartTags": "[ES] Smart Tags",
+  "smartTagsDesc": "[ES] Intelligently suggest tags when saving notes",
+  "noteClassification": "[ES] Note Classification",
+  "noteClassificationDesc": "[ES] Automatically identify note types (insights, excerpts, diary, etc.)",
+  "emotionDetection": "[ES] Emotion Detection",
+  "emotionDetectionDesc": "[ES] Analyze the emotional sentiment of note content",
+  "swipeUpForOcr": "[ES] Swipe up for OCR",
+  "listening": "[ES] Listening...",
+  "recording": "[ES] Recording",
+  "releaseToFinish": "[ES] Release to finish",
+  "applyToEditor": "[ES] Apply to Editor",
+  "noSourceFound": "[ES] No source information found",
+  "sourceFound": "[ES] Source found",
+  "correcting": "[ES] Correcting...",
+  "correctionComplete": "[ES] Correction complete",
+  "recognizing": "[ES] Recognizing...",
+  "recognitionComplete": "[ES] Recognition complete",
+  "voiceInputTitle": "[ES] Voice Input",
+  "voiceResultTitle": "[ES] Voice Recognition Result",
+  "ocrCaptureTitle": "[ES] OCR Text Recognition",
+  "ocrResultTitle": "[ES] OCR Recognition Result",
+  "selectTextRegions": "[ES] Select text regions to extract",
+  "takeAnotherPhoto": "[ES] Take Another Photo",
+  "finishSelection": "[ES] Finish Selection",
+  "noTextDetected": "[ES] No text detected",
+  "tapToSelectRegion": "[ES] Tap to select text region",
+  "aiSearchMode": "[ES] AI Search",
+  "normalSearchMode": "[ES] Normal Search",
+  "switchToAiSearch": "[ES] Switch to AI semantic search",
+  "switchToNormalSearch": "[ES] Switch to normal search",
+  "recommendedTags": "[ES] Recommended Tags",
+  "noteType": "[ES] Note Type",
+  "emotionAnalysis": "[ES] Emotion Analysis",
+  "viewRelatedNotes": "[ES] View Related Notes",
+  "localAiNotEnabled": "[ES] Local AI features not enabled",
+  "enableInSettings": "[ES] Please enable in settings",
+  "featureNotAvailable": "[ES] Feature not available",
+  "featureComingSoon": "[ES] Feature coming soon",
+  "localAISettings": "[ES] Local AI Features",
+  "localAISettingsDesc": "[ES] On-device AI features (Preview)",
+  "localAIPreviewBadge": "[ES] Preview",
+  "localAIEnabled": "[ES] Enable Local AI",
+  "localAIEnabledDesc": "[ES] Turn on on-device AI features",
+  "localAIInputEnhancement": "[ES] Input Enhancement",
+  "localAISpeechToText": "[ES] Speech to Text",
+  "localAISpeechToTextDesc": "[ES] Long press FAB to record and transcribe",
+  "localAIOCR": "[ES] OCR Text Recognition",
+  "localAIOCRDesc": "[ES] Extract text from images",
+  "localAICorrection": "[ES] AI Correction",
+  "localAICorrectionDesc": "[ES] Fix speech and OCR recognition errors",
+  "localAISourceRecognition": "[ES] Smart Source Recognition",
+  "localAISourceRecognitionDesc": "[ES] Auto extract author and work names",
+  "localAISearchDiscovery": "[ES] Search & Discovery",
+  "localAISemanticSearch": "[ES] AI Semantic Search",
+  "localAISemanticSearchDesc": "[ES] Use AI to understand search intent",
+  "localAIRelatedNotes": "[ES] Related Notes Recommendation",
+  "localAIRelatedNotesDesc": "[ES] Discover related note content",
+  "localAIContentAnalysis": "[ES] Content Analysis",
+  "localAISmartTags": "[ES] Smart Tag Recommendation",
+  "localAISmartTagsDesc": "[ES] AI recommends suitable tags",
+  "localAINoteClassification": "[ES] Note Type Classification",
+  "localAINoteClassificationDesc": "[ES] Auto identify note types",
+  "localAIEmotionDetection": "[ES] Emotion Detection",
+  "localAIEmotionDetectionDesc": "[ES] Analyze emotional sentiment",
+  "voiceRecording": "[ES] Recording...",
+  "voiceRecordingHint": "[ES] Release to end, swipe up for OCR",
+  "voiceProcessing": "[ES] Processing...",
+  "voiceTranscribing": "[ES] Transcribing...",
+  "voiceEditResult": "[ES] Edit Recognition Result",
+  "voiceApplyCorrection": "[ES] AI Correction",
+  "voiceRecognizeSource": "[ES] Recognize Source",
+  "voiceInsertToEditor": "[ES] Insert to Editor",
+  "ocrCapture": "[ES] Capture Photo",
+  "ocrCaptureHint": "[ES] Align with text area",
+  "ocrSelectRegion": "[ES] Select Text Region",
+  "ocrSelectRegionHint": "[ES] Tap the text region to recognize",
+  "ocrProcessing": "[ES] Recognizing...",
+  "ocrNoTextDetected": "[ES] No text detected",
+  "aiSearching": "[ES] AI Searching...",
+  "aiCorrectionApplied": "[ES] AI correction applied",
+  "aiSourceRecognized": "[ES] Source recognized",
+  "aiNoSourceFound": "[ES] No clear author or work information found",
+  "smartTagsRecommendation": "[ES] AI Recommended Tags",
+  "smartTagsApply": "[ES] Apply Recommendations",
+  "noteTypeDetected": "[ES] Note type detected",
+  "emotionDetectedLabel": "[ES] Emotion Analysis",
+  "relatedNotesTitle": "[ES] Related Notes",
+  "relatedNotesEmpty": "[ES] No related notes",
+  "hiddenNotesFeature": "[ES] Hidden Notes",
+  "hiddenNotesFeatureDesc": "[ES] When enabled, a \"Hidden\" tag will appear. Notes with this tag will be hidden from the main list",
+  "requireBiometricForHidden": "[ES] Require Authentication for Hidden Notes",
+  "requireBiometricForHiddenDesc": "[ES] Biometric authentication is required to view hidden notes",
+  "hiddenTag": "[ES] Hidden",
+  "hiddenTagDesc": "[ES] Notes with this tag will be hidden from the main list",
+  "hiddenTagUsageHint": "[ES] After adding this tag, notes will be hidden from the main list and can only be viewed by filtering the \"Hidden\" tag",
+  "systemTag": "[ES] System Tag",
+  "systemTagCannotEdit": "[ES] System tags cannot be edited",
+  "systemTagCannotDelete": "[ES] System tags cannot be deleted",
+  "biometricAuthRequired": "[ES] Authentication Required",
+  "biometricAuthReason": "[ES] Please verify your identity to view hidden notes",
+  "biometricAuthFailed": "[ES] Authentication failed",
+  "biometricNotAvailable": "[ES] Biometric authentication is not available on this device",
+  "biometricNotSetup": "[ES] Please set up fingerprint or face recognition in system settings first",
+  "privacyAndSecurity": "[ES] Privacy & Security",
+  "smartPushTitle": "[ES] Smart Push",
+  "smartPushTitlePreview": "[ES] Smart Push (Preview)",
+  "smartPushDesc": "[ES] Schedule push notifications for past notes and daily quotes",
+  "smartPushEnable": "[ES] Enable Smart Push",
+  "smartPushEnableDesc": "[ES] Push memory notes or daily quotes at scheduled times",
+  "smartPushContentType": "[ES] Push Mode",
+  "smartPushDailyQuote": "[ES] Daily Quote",
+  "smartPushDailyQuoteDesc": "[ES] Push curated quotes",
+  "smartPushDailyQuoteIndependentNote": "[ES] Daily Quote runs independently from Smart Push — each can be enabled or disabled separately.",
+  "smartPushPastNotes": "[ES] Past Notes",
+  "smartPushPastNotesDesc": "[ES] Push historical note reviews",
+  "smartPushModeSmart": "[ES] Smart Push",
+  "smartPushModeSmartDesc": "[ES] Automatically select the most meaningful content",
+  "smartPushModeBoth": "[ES] Random Push",
+  "smartPushModeBothDesc": "[ES] Randomly push daily quotes or past notes",
+  "smartPushPastNoteTypes": "[ES] Review Types",
+  "smartPushYearAgoToday": "[ES] Year Ago Today",
+  "smartPushYearAgoTodayDesc": "[ES] Push notes from the same day in previous years",
+  "smartPushMonthAgoToday": "[ES] Month Ago Today",
+  "smartPushMonthAgoTodayDesc": "[ES] Push notes from the same day in past months",
+  "smartPushWeekAgoToday": "[ES] Week Ago",
+  "smartPushWeekAgoTodayDesc": "[ES] Push notes from a week ago",
+  "smartPushRandomMemory": "[ES] Random Memory",
+  "smartPushRandomMemoryDesc": "[ES] Randomly push historical notes",
+  "smartPushSameLocation": "[ES] Same Location",
+  "smartPushSameLocationDesc": "[ES] Push notes from the same area",
+  "smartPushSameWeather": "[ES] Same Weather",
+  "smartPushSameWeatherDesc": "[ES] Push notes recorded in similar weather",
+  "smartPushWeatherFilter": "[ES] Weather Filter",
+  "smartPushTagFilter": "[ES] Tag Filter",
+  "smartPushTagFilterDesc": "[ES] Only push notes with selected tags (no selection means no restriction)",
+  "smartPushTimeSettings": "[ES] Push Time",
+  "smartPushAddTime": "[ES] Add Push Time",
+  "smartPushFrequency": "[ES] Push Frequency",
+  "smartPushIntensityFewer": "[ES] Fewer",
+  "smartPushIntensityMore": "[ES] More",
+  "smartPushFrequencyDaily": "[ES] Daily",
+  "smartPushFrequencyWeekdays": "[ES] Weekdays",
+  "smartPushFrequencyWeekends": "[ES] Weekends",
+  "smartPushFrequencyCustom": "[ES] Custom",
+  "smartPushAdvancedOptions": "[ES] Advanced Options",
+  "smartPushTest": "[ES] Send Test Push",
+  "smartPushTestSent": "[ES] Test notification sent, please check notifications",
+  "smartPushNoMatchingNotes": "[ES] No matching content to push",
+  "smartPushPermissionRequired": "[ES] Notification permission is required to send push",
+  "smartPushNotice": "[ES] Tips",
+  "smartPushNoticeDesc": "[ES] • Push notifications require notification permission\n• Enable auto-start and background running in system settings for reliable delivery\n• Some devices may need battery optimization disabled\n• Smart mode automatically selects the most relevant content",
+  "smartPushModeCustom": "[ES] Custom Push",
+  "smartPushModeCustomDesc": "[ES] Manually select review types and filters",
+  "smartPushExactAlarmHint": "[ES] Enable exact alarm permission for reliable push notifications",
+  "smartPushExactAlarmTitle": "[ES] Exact Alarm Permission",
+  "smartPushExactAlarmMessage": "[ES] To ensure notifications arrive on time, please grant exact alarm permission. You can still use push without it, but timing may vary by a few minutes.",
+  "smartPushGoToSettings": "[ES] Go to Settings",
+  "smartPushPermissionWarningTitle": "[ES] Permission Setup Incomplete",
+  "smartPushPermissionWarningDesc": "[ES] Some permissions are not granted, which may cause push notifications to fail. Tap items below to configure.",
+  "smartPushNotificationPermission": "[ES] Notification Permission",
+  "smartPushBatteryOptimization": "[ES] Disable Battery Optimization",
+  "smartPushAutoStartPermission": "[ES] Auto-Start Permission",
+  "smartPushAutoStartHint": "[ES] Required for background push on some devices",
+  "smartPushAutoStartTitle": "[ES] Auto-Start Setup Guide",
+  "smartPushAutoStartInstructions": "[ES] Please follow these steps:",
+  "smartPushAutoStartNote": "[ES] Note: The interface may vary slightly between system versions. Please find ThoughtEcho in app management and allow auto-start and background activity.",
+  "smartPushUnknownManufacturer": "[ES] Unknown Device",
+  "iHaveConfigured": "[ES] I have configured",
+  "recommended": "[ES] Recommended",
+  "actionFavorite": "[ES] Favorite",
+  "actionUnfavorite": "[ES] Unfavorite",
+  "clearFavoriteTitle": "[ES] Clear Favorite",
+  "clearFavoriteMessage": "[ES] Are you sure you want to clear {count} favorite(s) from this note?",
+  "@clearFavoriteMessage": {
+    "description": "清除收藏确认消息",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearFavoriteSuccess": "[ES] Favorite cleared",
+  "clearFavoriteFailed": "[ES] Failed to clear favorite",
+  "moreOptions": "[ES] More options",
+  "settingsUserManual": "[ES] User Manual",
+  "settingsUserManualDesc": "[ES] Learn how to use ThoughtEcho features",
+  "manualTitle": "[ES] User Manual",
+  "manualLoadFailed": "[ES] Failed to load manual content",
+  "viewing": "[ES] Viewing...",
+  "backToAnalysis": "[ES] Back to Analysis",
+  "userGuide": "[ES] User Guide",
+  "userGuideDesc": "[ES] Learn how to use ThoughtEcho features",
+  "userGuideSearchHint": "[ES] Search user guide...",
+  "userGuideNoResults": "[ES] No results found",
+  "userGuideOnlineDoc": "[ES] Full Online Documentation",
+  "tileNoLocationPermission": "[ES] No Location",
+  "tileLocationServiceOff": "[ES] GPS Off",
+  "tileOffline": "[ES] Offline",
+  "tileNoNetwork": "[ES] No Network",
+  "tileLoading": "[ES] Loading...",
+  "tileNoWeather": "[ES] No Weather",
+  "tileCachedSuffix": "[ES] Cached",
+  "noteAutoFillSection": "[ES] Note Auto-Fill",
+  "noteAutoFillSectionDesc": "[ES] Auto-fill author, source, and tags when creating notes",
+  "defaultAuthor": "[ES] Default Author",
+  "defaultAuthorDesc": "[ES] Author to auto-fill when creating new notes",
+  "defaultAuthorHint": "[ES] Enter default author name",
+  "defaultSource": "[ES] Default Source",
+  "defaultSourceDesc": "[ES] Source/work to auto-fill when creating new notes",
+  "defaultSourceHint": "[ES] Enter default source or work name",
+  "defaultTags": "[ES] Default Tags",
+  "defaultTagsDesc": "[ES] Tags to auto-add when creating new notes",
+  "defaultTagsNone": "[ES] Not set",
+  "defaultTagsCount": "[ES] {count} tags selected",
+  "@defaultTagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectDefaultTags": "[ES] Select Default Tags",
+  "autoFillEnabled": "[ES] Auto-fill enabled",
+  "clearDefaultValue": "[ES] Clear",
+  "saveDefaultValue": "[ES] Save",
+  "defaultValueSaved": "[ES] Default value saved",
+  "defaultValueCleared": "[ES] Default value cleared",
+  "excerptIntentEnabled": "[ES] Clip to ThoughtEcho",
+  "excerptIntentEnabledDesc": "[ES] Allow selected text from browsers or other apps to open ThoughtEcho directly in the non-fullscreen editor",
+  "citySelectedWeatherUpdated": "[ES] Selected city: {cityName}, weather updated",
+  "@citySelectedWeatherUpdated": {
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "citySelectionError": "[ES] Error selecting city: {error}",
+  "@citySelectionError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "currentLocationWeatherUpdated": "[ES] Using current location: {cityName}, weather updated",
+  "@currentLocationWeatherUpdated": {
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "locationFetchError": "[ES] Failed to get location: {error}",
+  "@locationFetchError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherTimeoutRetry": "[ES] Weather fetch timed out, please try again later",
+  "weatherFetchFailedCheckNetwork": "[ES] Weather fetch failed, please check network connection",
+  "locationTimeoutCheckPermission": "[ES] Location fetch timed out, please check location permission",
+  "cannotGetCurrentLocation": "[ES] Cannot get current location, please ensure location permission is granted",
+  "cannotGetSelectedCityLocation": "[ES] Cannot get selected city location",
+  "cityInfoIncomplete": "[ES] City information is incomplete",
+  "annualReportDemo": "[ES] Annual Report Demo",
+  "manualApiTest": "[ES] Manual API Test",
+  "manualApiTestTitle": "[ES] Manual API Key Test",
+  "manualApiTestDesc": "[ES] Directly input API parameters for testing, bypassing the storage system to check if the API key is valid.",
+  "testResultLabel": "[ES] Test Result:",
+  "fillAllFieldsError": "[ES] Error: Please fill in all required fields",
+  "testReportTitle": "[ES] === Manual API Key Test Report ===",
+  "testParamsLabel": "[ES] Test Parameters:",
+  "keyFormatCheckLabel": "[ES] Key Format Check:",
+  "testApiKeyPrefixLabel": "[ES]   API Key Prefix: {prefix}",
+  "@testApiKeyPrefixLabel": {
+    "placeholders": {
+      "prefix": {
+        "type": "String"
+      }
+    }
+  },
+  "sendRequestLabel": "[ES] Send Request:",
+  "responseResultLabel": "[ES] Response Result:",
+  "testApiKey": "[ES] Test API Key",
+  "aiReturnedEmptyContent": "[ES] AI returned empty content, please try again",
+  "chatWithAiAssistant": "[ES] Chat with Thoughter (AI Assistant) to explore note content",
+  "messageCopied": "[ES] Message copied to clipboard",
+  "anniversaryTitle": "[ES] ThoughtEcho · 心迹",
+  "anniversarySubtitle": "[ES] Year {years} · Thank you for being with us",
+  "@anniversarySubtitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryVeteranThanks": "[ES] You've been here since year {years} — thank you for keeping at it",
+  "@anniversaryVeteranThanks": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryEnterApp": "[ES] Enter App",
+  "anniversaryBannerTitle": "[ES] ThoughtEcho Year {years} Anniversary",
+  "@anniversaryBannerTitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryBannerSubtitle": "[ES] Thank you for every step of the journey · {range}",
+  "@anniversaryBannerSubtitle": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "anniversaryBannerTap": "[ES] Tap to replay the celebration",
+  "anniversaryReplayButton": "[ES] Replay",
+  "developerAnniversarySection": "[ES] Anniversary",
+  "developerAnniversaryEnabled": "[ES] Enable Anniversary Animation",
+  "developerAnniversaryEnabledDesc": "[ES] Toggle whether the celebration animation shows on launch",
+  "developerAnniversaryReset": "[ES] Clear Participation Record",
+  "developerAnniversaryResetDesc": "[ES] Clears the record so the celebration plays again as for a new user",
+  "developerAnniversaryResetDone": "[ES] Cleared, the celebration will play again",
+  "developerAnniversaryPreview": "[ES] Preview Animation Now",
+  "developerAnniversaryPreviewDesc": "[ES] Plays the celebration for the simulated year right away",
+  "developerAnniversarySimulate": "[ES] Simulate Anniversary",
+  "developerAnniversarySimulateOff": "[ES] Off",
+  "developerAnniversarySimulateYear": "[ES] Year {years}",
+  "@developerAnniversarySimulateYear": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversarySimulateDescOff": "[ES] Following the real date; not in a celebration window",
+  "developerAnniversarySimulateDescActive": "[ES] Simulating year {years}: the settings banner and launch animation both use this edition",
+  "@developerAnniversarySimulateDescActive": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversaryShownYears": "[ES] Celebrations Seen",
+  "developerAnniversaryShownYearsNone": "[ES] None yet",
+  "trash": "[ES] Trash",
+  "trashEmpty": "[ES] Trash is empty",
+  "trashEmptyHint": "[ES] Accidentally deleted notes stay here first, including photos, audio, and video, so you can restore them together.",
+  "trashRetentionHint": "[ES] Recently deleted notes and attachments stay here until the retention period ends, then they are cleaned up automatically.",
+  "moveNoteToTrashTitle": "[ES] Move Note to Trash",
+  "moveNoteToTrashConfirmation": "[ES] Move this note to trash? You can restore it within {days} days.",
+  "@moveNoteToTrashConfirmation": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRemainingDays": "[ES] {days, plural, =0{0 days remaining} one{1 day remaining} other{{days} days remaining}}",
+  "@trashRemainingDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreNote": "[ES] Restore",
+  "permanentlyDelete": "[ES] Delete Permanently",
+  "permanentlyDeleteConfirmation": "[ES] Warning: This cannot be undone. The note will be permanently deleted and cannot be recovered.",
+  "emptyTrash": "[ES] Empty Trash",
+  "emptyTrashConfirmation": "[ES] Permanently delete all notes in trash? This cannot be undone and cannot be recovered.",
+  "noteMovedToTrash": "[ES] Note moved to trash. You can restore it from Trash",
+  "noteRestored": "[ES] Note restored",
+  "undoDelete": "[ES] Undo",
+  "trashEmptied": "[ES] Trash emptied",
+  "deletedAt": "[ES] Deleted on {date}",
+  "@deletedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "trashCount": "[ES] Trash ({count})",
+  "@trashCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRetentionPeriod": "[ES] Trash retention period",
+  "trashRetentionOption7Days": "[ES] 7 days",
+  "trashRetentionOption30Days": "[ES] 30 days",
+  "trashRetentionOption90Days": "[ES] 90 days",
+  "mediaPlayerPlay": "[ES] Play",
+  "mediaPlayerPause": "[ES] Pause",
+  "operationFailedSimple": "[ES] Operation failed",
+  "operationSuccess": "[ES] Operation successful!",
+  "loadingInProgress": "[ES] Loading...",
+  "aiThinkingProgress": "[ES] AI is thinking...",
+  "processingData": "[ES] Processing data...",
+  "analyzingContent": "[ES] Analyzing content...",
+  "skipNonFullscreenEditor": "[ES] Open fullscreen editor directly",
+  "skipNonFullscreenEditorDesc": "[ES] Skip quick edit and open fullscreen rich text editor when adding notes",
+  "offlineQuoteSourceTitle": "[ES] When Offline, Show",
+  "offlineQuoteSourceDesc": "[ES] Choose what appears on the home page when offline or when local-only is enabled",
+  "offlineQuoteSourceTagOnly": "[ES] Previously saved daily quotes",
+  "offlineQuoteSourceAll": "[ES] Random local records",
+  "noLocalSavedQuotes": "[ES] No previously saved daily quotes yet",
+  "copyCode": "[ES] Copy code",
+  "copiedCode": "[ES] Copied",
+  "webdavSyncTitle": "[ES] WebDAV Cloud Sync",
+  "webdavSyncSubtitle": "[ES] Configure private cloud storage to auto-sync notes across devices",
+  "webdavProvider": "[ES] Cloud Provider",
+  "webdavServerUrl": "[ES] Server URL",
+  "webdavUsername": "[ES] Username / Account",
+  "webdavPassword": "[ES] App Password / Token",
+  "webdavTestConnection": "[ES] Test Connection",
+  "webdavTestSuccess": "[ES] Connection successful!",
+  "webdavTestFailed": "[ES] Connection failed. Please check your settings and password",
+  "webdavAutoSyncLaunch": "[ES] Auto-sync on open or foreground",
+  "webdavAutoSyncLaunchSubtitle": "[ES] Merge with cloud when app opens or returns to foreground",
+  "webdavAutoSyncChange": "[ES] Auto-sync on note changes",
+  "webdavAutoSyncChangeSubtitle": "[ES] Quietly sync changes after 4 seconds of inactivity when editing",
+  "webdavExperimentalTitle": "[ES] Experimental Feature Warning",
+  "webdavExperimentalContent": "[ES] The WebDAV cloud synchronization feature is currently in the experimental preview phase. For your data safety, it is recommended to back up your core local notes before enabling. If you encounter any issues during use, please let us know.",
+  "webdavExperimentalClose": "[ES] Dismiss",
+  "webdavExperimentalIgnore": "[ES] Don't Show Again",
+  "webdavLastSync": "[ES] Last sync: {time}",
+  "@webdavLastSync": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusSyncing": "[ES] Syncing...",
+  "webdavStatusSuccess": "[ES] Sync Successful",
+  "webdavStatusFailed": "[ES] Sync Failed",
+  "settingsWebdavStatusWithTime": "[ES] {status} (Last: {time})",
+  "@settingsWebdavStatusWithTime": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWebdavEnabledWithTime": "[ES] Enabled (Last: {time})",
+  "@settingsWebdavEnabledWithTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavSyncNow": "[ES] Sync Now",
+  "webdavEnableSync": "[ES] Enable Cloud Sync",
+  "webdavSaveAndSync": "[ES] Save and Sync",
+  "webdavHowToGetAppPassword": "[ES] How to get app password?",
+  "webdavShowPasswordTooltip": "[ES] Show password",
+  "webdavHidePasswordTooltip": "[ES] Hide password",
+  "webdavOpenHelpFailed": "[ES] Unable to open help link. Please check default browser settings.",
+  "webdavConflictCategoryName": "[ES] Sync Conflicts",
+  "webdavConflictNotePrefix": "[ES] [Conflict] ",
+  "webdavConflictNotification": "[ES] Detected {count} sync conflicts, safely backed up to 'Sync Conflicts' category",
+  "@webdavConflictNotification": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webdavViewNow": "[ES] View Now",
+  "exportFormatLabel": "[ES] Default Export Format",
+  "exportFormatCard": "[ES] Delicate Share Card",
+  "exportFormatPdf": "[ES] Standard A4 PDF",
+  "exportFormatDesc": "[ES] Configure the default format when exporting or sharing notes",
+  "pdfExportExperimentalWarning": "[ES] PDF export is experimental and requires multilingual and emoji font files. The first use may need an internet connection to download them; it can be used offline afterward.",
+  "exportToPdf": "[ES] Export to PDF",
+  "pdfExportSelectionMode": "[ES] Select Export Mode",
+  "selectSameMonth": "[ES] Select Same Month",
+  "selectSameCategory": "[ES] Select Same Category",
+  "exportSelected": "[ES] Export ({count})",
+  "@exportSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportSuccess": "[ES] Export Successful",
+  "exportFailed": "[ES] Export Failed",
+  "generatingPdf": "[ES] Generating PDF...",
+  "pdfExportFailed": "[ES] Failed to export PDF: {error}",
+  "@pdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "batchPdfExportFailed": "[ES] Failed to batch export PDF: {error}",
+  "@batchPdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseSelectAtLeastOneNote": "[ES] Please select at least one note first",
+  "selectedNotesHaveNoCategories": "[ES] Selected notes have no category tags",
+  "pdfPreviewAndPrint": "[ES] PDF Preview & Print",
+  "pdfFontFallbackWarning": "[ES] No Chinese font detected. Chinese content may display as gibberish. Please check your network and try again.",
+  "webdavSyncOnCellular": "[ES] Sync over cellular data",
+  "webdavSyncOnCellularSubtitle": "[ES] Allow cloud backup and merge under mobile data networks",
+  "webdavSyncNotesOnlyOnCellular": "[ES] Sync notes only on cellular",
+  "webdavSyncNotesOnlyOnCellularSubtitle": "[ES] Only sync lightweight text notes and skip heavy media files to save data",
+  "customFeedbackTitle": "[ES] Send Feedback",
+  "customFeedbackMessageLabel": "[ES] Feedback Details",
+  "customFeedbackMessageHint": "[ES] Please describe your issue or suggestion...",
+  "customFeedbackNameLabel": "[ES] Name (Optional)",
+  "customFeedbackEmailLabel": "[ES] Email (Optional)",
+  "customFeedbackSubmit": "[ES] Submit Feedback",
+  "customFeedbackSuccess": "[ES] Thanks for your feedback!",
+  "customFeedbackEmptyError": "[ES] Please enter feedback details",
+  "saveSuccess": "[ES] Saved successfully",
+  "toolCallStatusPending": "[ES] Pending",
+  "toolCallStatusExecuting": "[ES] Executing",
+  "toolCallStatusCompleted": "[ES] Completed",
+  "toolCallStatusError": "[ES] Error",
+  "toolCallParameters": "[ES] Parameters",
+  "toolCallResult": "[ES] Result",
+  "failedToPickFiles": "[ES] Failed to pick files: {error}",
+  "@failedToPickFiles": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "editModeMetadataReadOnlyHint": "[ES] Location and weather of saved notes cannot be modified",
+  "dataInsights": "[ES] Data Insights",
+  "dataInsightsDesc": "[ES] Deep analysis of your notes and writing trends",
+  "searchChatHistory": "[ES] Search chats...",
+  "dynamicInsightStats": "[ES] You have recorded {count} thoughts, with {recentCount} from the past 7 days.",
+  "@dynamicInsightStats": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "recentCount": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionGroupToday": "[ES] Today",
+  "sessionGroupYesterday": "[ES] Yesterday",
+  "sessionGroupThisWeek": "[ES] This Week",
+  "sessionGroupEarlier": "[ES] Earlier",
+  "messageCountLabel": "[ES] {count} msgs",
+  "@messageCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commandPolish": "[ES] Polish",
+  "commandContinue": "[ES] Continue",
+  "commandDeepAnalysis": "[ES] Deep Analysis",
+  "commandInsight": "[ES] Insights",
+  "aiPromptPolish": "[ES] Please polish this text for me",
+  "aiPromptContinue": "[ES] Please continue writing this text",
+  "aiPromptDeepAnalysis": "[ES] Please provide a deep analysis of this note",
+  "aiPromptSourceAnalysis": "[ES] Please analyze the source of this text and identify the possible author and work",
+  "aiAssistantInputHint": "[ES] Enter question...",
+  "aiAssistantExploreWelcome": "[ES] {summary}",
+  "@aiAssistantExploreWelcome": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "currentNoteContext": "[ES] Current Note Context",
+  "workflowUnavailable": "[ES] Workflow Unavailable",
+  "aiWorkflowNeedsBoundNote": "[ES] This feature requires a bound note",
+  "confidenceLabel": "[ES] Confidence",
+  "replaceOriginalNote": "[ES] Replace Original",
+  "appendToEnd": "[ES] Append to End",
+  "scrollToBottom": "[ES] Scroll to bottom",
+  "pinChat": "[ES] Pin",
+  "unpinChat": "[ES] Unpin",
+  "stopGenerate": "[ES] Stop",
+  "aiModeChat": "[ES] Chat Mode",
+  "aiModeAgent": "[ES] Agent Mode",
+  "agentReachedMaxRounds": "[ES] Reached the tool-call limit for this run. The answer above is based on what was gathered so far; ask again with a narrower request for a more complete result.",
+  "agentReviewingRecentNotes": "[ES] Browsing notes...",
+  "agentSearchingNotesForQuery": "[ES] Looking for notes about \"{query}\"...",
+  "@agentSearchingNotesForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentCollectingTags": "[ES] Getting tags...",
+  "agentReadingNoteDetail": "[ES] Viewing note...",
+  "agentCheckingLocationWeather": "[ES] Getting location and weather...",
+  "agentSavingMemory": "[ES] Saving memory...",
+  "agentRecallingMemory": "[ES] Recalling memory...",
+  "agentRecallingMemoryForQuery": "[ES] Recalling memory for \"{query}\"...",
+  "@agentRecallingMemoryForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentSearchingWebForQuery": "[ES] Looking up sources for \"{query}\"...",
+  "@agentSearchingWebForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentReadingWebPage": "[ES] Fetching webpage...",
+  "agentPreparingNewNoteSuggestion": "[ES] Preparing a new note suggestion...",
+  "agentPreparingEditSuggestion": "[ES] Preparing an edit suggestion...",
+  "agentFoundNoMatchingNotes": "[ES] No matching notes found",
+  "agentFoundMatchingNotes": "[ES] Found {count} related notes",
+  "@agentFoundMatchingNotes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentFoundMatchingNotesWithMore": "[ES] Found {count} related notes, more available",
+  "@agentFoundMatchingNotesWithMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentPreparedTagChoices": "[ES] Found {count} tags",
+  "@agentPreparedTagChoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentCheckedLocationWeather": "[ES] Got location and weather",
+  "agentCheckedLocationWeatherWithDetails": "[ES] Location: {location}, Weather: {weather}",
+  "@agentCheckedLocationWeatherWithDetails": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      },
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "agentFoundWebSources": "[ES] Found {count} web sources",
+  "@agentFoundWebSources": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadWebPageSummary": "[ES] Fetched webpage, about {count} chars",
+  "@agentReadWebPageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadNoteDetailSummary": "[ES] Read full content of note \"{title}\"",
+  "@agentReadNoteDetailSummary": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "agentPreparedSuggestionCard": "[ES] Suggestion ready",
+  "agentToolStepFinished": "[ES] Done",
+  "agentToolStepDidNotFinish": "[ES] Failed",
+  "agentMemorySaved": "[ES] Memory saved",
+  "agentMemoryDeleted": "[ES] Memory deleted",
+  "agentRecalledFacts": "[ES] Found {count, plural, =1{1 related memory} other{{count} related memories}}",
+  "@agentRecalledFacts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentRecalledNoFacts": "[ES] No related memories found",
+  "aiThinking": "[ES] Thinking...",
+  "thinkingMode": "[ES] Deep Thinking",
+  "showThinking": "[ES] Show thinking",
+  "hideThinking": "[ES] Hide thinking",
+  "toolExecutionProgress": "[ES] Working...",
+  "toolExecutionCompleted": "[ES] Done",
+  "executedNOperations": "[ES] {count} operations done",
+  "@executedNOperations": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "attachFile": "[ES] Attach file",
+  "yesterday": "[ES] Yesterday",
+  "openInEditor": "[ES] Open in Editor",
+  "saveDirectly": "[ES] Save Directly",
+  "replace": "[ES] Replace",
+  "append": "[ES] Append",
+  "notice": "[ES] Notice",
+  "saveRequired": "[ES] Save Required",
+  "saveBeforeAiAssistant": "[ES] Please save your note before entering Thoughter",
+  "saveAndContinue": "[ES] Save & Continue",
+  "toggleAddLocation": "[ES] Add location",
+  "toggleAddWeather": "[ES] Add weather",
+  "webdavDisableSyncSuccess": "[ES] WebDAV sync disabled. Local data retained.",
+  "webdavDisableSync": "[ES] Disable Cloud Sync",
+  "webdavGoToResolve": "[ES] Resolve Now",
+  "webdavNoConflicts": "[ES] No Conflicts Detected",
+  "webdavAllConflictsResolved": "[ES] All sync conflicts have been resolved.",
+  "webdavProviderNutstore": "[ES] Nutstore",
+  "webdavProviderCustom": "[ES] Custom",
+  "webdavProviderNextcloud": "[ES] Nextcloud / ownCloud",
+  "webdavProviderInfinicloud": "[ES] InfiniCLOUD",
+  "webdavProviderConfig": "[ES] Provider Configuration",
+  "webdavServerUrlEmptyError": "[ES] Please enter WebDAV server address",
+  "webdavServerUrlInvalidError": "[ES] Address must start with https://",
+  "webdavUsernameEmptyError": "[ES] Please enter username",
+  "webdavPasswordEmptyError": "[ES] Please enter app password",
+  "webdavSyncStrategy": "[ES] Sync Strategy",
+  "webdavStatusNotEnabled": "[ES] Cloud Sync Disabled",
+  "webdavStatusNotEnabledDesc": "[ES] Configure your WebDAV service to enjoy secure cross-device multi-way synchronization.",
+  "webdavStatusSyncingDesc": "[ES] Securely comparing and merging cloud and local database files...",
+  "webdavStatusRunning": "[ES] Cloud Sync Running",
+  "webdavStatusRunningDesc": "[ES] An encrypted merge pipeline has been established with the cloud drive.\nLast sync: {time}",
+  "@webdavStatusRunningDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusException": "[ES] Sync Exception",
+  "webdavStatusExceptionDesc": "[ES] Network communication or cloud drive file lock conflict. We will retry automatically.",
+  "webdavStatusEnabled": "[ES] Cloud Sync Enabled",
+  "webdavStatusEnabledDesc": "[ES] Service ready. Last sync: {time}",
+  "@webdavStatusEnabledDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavNeverSynced": "[ES] Never synced",
+  "webdavNeverSucceeded": "[ES] Never succeeded",
+  "webdavConflictPrompt": "[ES] Detected {count} sync conflict backup(s). It is recommended to resolve them immediately.",
+  "@webdavConflictPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webContentTitle": "[ES] Web Content",
+  "fetchingWebContent": "[ES] Fetching web content from: {url}",
+  "@fetchingWebContent": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "webCommandInvalidUrl": "[ES] Please provide a valid URL with /web command",
+  "webCommandInvalidUrlTitle": "[ES] Invalid URL",
+  "aiSuggestion": "[ES] AI Suggestion",
+  "autoAttachMetadataUnavailable": "[ES] Location/weather unavailable, note saved without them",
+  "agentRichEditConflict": "[ES] The note changed after this suggestion was created. To protect your edits, ask AI to generate a fresh suggestion.",
+  "agentDiffOriginal": "[ES] Original",
+  "agentDiffReplacement": "[ES] Replace with",
+  "agentDiffInsertBefore": "[ES] Insert before this content",
+  "agentDiffInsertAfter": "[ES] Insert after this content",
+  "agentDiffAppend": "[ES] Append content",
+  "agentDiffDelete": "[ES] Delete content",
+  "noteProposalCreate": "[ES] Create",
+  "noteProposalEdit": "[ES] Edit",
+  "noteProposalPlain": "[ES] Plain note",
+  "noteProposalRich": "[ES] Rich text note",
+  "noteProposalChangeCount": "[ES] {count} changes",
+  "@noteProposalChangeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noteProposalExpand": "[ES] Expand document",
+  "noteProposalCollapse": "[ES] Collapse document",
+  "noteProposalViewChanges": "[ES] View change history",
+  "noteProposalPlainToRichWarning": "[ES] After applying, this note will open in the full-screen rich text editor.",
+  "noteProposalBefore": "[ES] Original",
+  "noteProposalAfter": "[ES] Changed to",
+  "noteProposalCompleted": "[ES] Completed",
+  "noteProposalApply": "[ES] Apply changes",
+  "noteProposalSave": "[ES] Save note",
+  "noteProposalLegacyReadOnly": "[ES] This is a legacy suggestion without safe revision data. It is view-only; ask AI to generate a new suggestion before applying it.",
+  "noteProposalPlainEditorPreferenceWarning": "[ES] Your editor preference opens this plain draft in the full-screen rich text editor; saving it will create a rich text note.",
+  "aiCardBadgeCreate": "[ES] New",
+  "aiCardBadgeEdit": "[ES] Edit",
+  "aiCardQuickEdit": "[ES] Quick edit",
+  "aiCardQuickEditTooltip": "[ES] Quickly edit the content, source, or tags",
+  "aiCardSavedViewNote": "[ES] Saved · View note",
+  "aiCardSaveFailedGeneric": "[ES] Couldn't save. Please try again.",
+  "aiCardEditContentHint": "[ES] Edit content",
+  "experimentalTag": "[ES] Beta",
+  "agentExperimentalNoticeTitle": "[ES] Thoughter Experimental Feature Notice",
+  "agentExperimentalNoticeIntro": "[ES] Thoughter is an AI Agent assistant currently in testing. Please review the following before proceeding:",
+  "agentExperimentalNoticePoint1": "[ES] AI may generate incorrect or inaccurate responses. Please review all content critically.",
+  "agentExperimentalNoticePoint2": "[ES] AI cannot directly edit your notes; all creations and edits take effect only after you click save/apply.",
+  "agentExperimentalNoticePoint3": "[ES] This feature is in active testing and refinement, and may encounter instability or bugs.",
+  "agentExperimentalNoticeGotIt": "[ES] Understand & Continue",
+  "agentExperimentalBannerText": "[ES] Experimental feature: AI answers may be inaccurate. Notes are only modified after clicking save.",
+  "agentExperimentalNoticeAction": "[ES] View Notice",
+  "dontShowAgain": "[ES] Don't show again",
+  "settingsLab": "[ES] Lab",
+  "settingsLabDesc": "[ES] Debug entries and experimental toggles shown in developer mode. May be unstable",
+  "firstOpenScrollPerfMonitorExperiment": "[ES] [Experiment] First-open scroll performance monitor",
+  "firstOpenScrollPerfMonitorExperimentDesc": "[ES] Record dropped frames on the first Notes scroll after a cold start (off by default)",
+  "addNoteDeferMetadataExperiment": "[ES] [Experiment] AddNote deferred metadata",
+  "addNoteDeferMetadataExperimentDesc": "[ES] Defer location and weather lookup until the keyboard animation finishes (off by default)",
+  "noteCardMediaStyleExperiment": "[ES] [Experiment] Note card media layout",
+  "noteCardMediaStyleThumbnail": "[ES] Side thumbnail",
+  "noteCardMediaStyleThumbnailDesc": "[ES] Square thumbnail on the right. Always visible, cheapest to decode.",
+  "noteCardMediaStyleInline": "[ES] Inline (legacy)",
+  "noteCardMediaStyleInlineDesc": "[ES] Images stay inline, order preserved. Cost: images below the fold are clipped, and audio/video build players in the list.",
+  "noteCardMediaStyleBanner": "[ES] Top banner",
+  "noteCardMediaStyleBannerDesc": "[ES] Full-width banner on top, photo first. Normalised position, most expensive to decode.",
+  "noteInsertAnimationExperiment": "[ES] [Experiment] Note insert animation",
+  "noteInsertAnimationCurrent": "[ES] Current: {name}",
+  "@noteInsertAnimationCurrent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noteInsertAnimationScale": "[ES] Bubble scale",
+  "noteInsertAnimationSlide": "[ES] Smooth rise",
+  "noteInsertAnimationNone": "[ES] No animation",
+  "aiProviderZhipu": "[ES] Zhipu GLM",
+  "aiProviderMoonshot": "[ES] Moonshot Kimi",
+  "aiProviderDashScope": "[ES] Alibaba Bailian",
+  "aiProviderVolcengine": "[ES] Volcengine Ark",
+  "aiProviderGemini": "[ES] Google Gemini",
+  "presetDescOllamaCloud": "[ES] Generous free tier, works right after sign-up. Best first choice.",
+  "presetDescOpenAI": "[ES] Official OpenAI API. Requires an international payment method.",
+  "presetDescOpenRouter": "[ES] One key for hundreds of models, including Claude and Gemini.",
+  "presetDescDeepSeek": "[ES] Low cost, strong Chinese performance.",
+  "presetDescSiliconFlow": "[ES] Aggregator platform; some small models are free.",
+  "presetDescZhipu": "[ES] glm-4-flash is free to use.",
+  "presetDescMoonshot": "[ES] Strong long-context performance.",
+  "presetDescDashScope": "[ES] OpenAI-compatible endpoint for the Qwen family.",
+  "presetDescVolcengine": "[ES] Doubao models. Put the inference endpoint ID in the model field.",
+  "presetDescGemini": "[ES] Gemini's official OpenAI-compatible endpoint. Has a free tier.",
+  "presetDescOllamaLocal": "[ES] Connect to Ollama on this machine. Offline, no key needed.",
+  "presetDescLMStudio": "[ES] Connect to LM Studio on this machine. Offline, no key needed.",
+  "presetDescCustom": "[ES] Any OpenAI-compatible endpoint. Fill in the URL and model yourself.",
+  "aiServicesSectionTitle": "[ES] My AI services",
+  "aiServiceEmptyTitle": "[ES] No AI service configured yet",
+  "aiServiceEmptyBody": "[ES] AI insights, card generation and the Thoughter assistant need a configured provider.",
+  "addAiService": "[ES] Add AI service",
+  "editAiServiceTitle": "[ES] Edit AI service",
+  "newAiServiceTitle": "[ES] New AI service",
+  "selectProviderTemplate": "[ES] Choose a provider",
+  "changeProviderTemplate": "[ES] Change",
+  "providerGroupCloud": "[ES] Cloud services",
+  "providerGroupLocal": "[ES] Runs locally",
+  "providerGroupCustom": "[ES] Custom",
+  "recommendedBadge": "[ES] Recommended",
+  "inUseBadge": "[ES] In use",
+  "getApiKeyLink": "[ES] Get an API key",
+  "apiKeyNotNeededHint": "[ES] Local services usually need no key — leave this empty.",
+  "suggestedModelsLabel": "[ES] Common models",
+  "configNameField": "[ES] Configuration name",
+  "statusKeyConfigured": "[ES] Key configured",
+  "statusKeyMissing": "[ES] Key missing",
+  "aiServiceSaved": "[ES] Saved {name}",
+  "@aiServiceSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ollamaCloudTipTitle": "[ES] We recommend Ollama Cloud",
+  "ollamaCloudTipBody": "[ES] Generous free tier, no card required — sign up and copy the API key.",
+  "ollamaCloudTipAction": "[ES] Add it",
+  "aiConfigHelpLink": "[ES] Not sure what to fill in? Read the setup guide",
+  "openLinkFailed": "[ES] Could not open the link",
+  "testBeforeSaveHint": "[ES] You can test as soon as URL, key and model are filled in — no need to save first.",
+  "agentMemorySectionTitle": "[ES] Thoughter memory",
+  "agentMemoryEnableTitle": "[ES] Long-term memory",
+  "agentMemoryEnableDesc": "[ES] Remember your preferences across chats (stored locally only)",
+  "agentMemoryNicknameTitle": "[ES] Nickname",
+  "agentMemoryNicknameHint": "[ES] How should Thoughter address you?",
+  "agentMemoryNicknameDesc": "[ES] How Thoughter should address you (leave empty to skip)",
+  "agentMemoryNicknameSaveFailed": "[ES] Couldn't save your nickname. Please try again.",
+  "agentMemoryNicknameDisabled": "[ES] Enabled when long-term memory is turned on",
+  "agentMemoryClearTitle": "[ES] Clear memory",
+  "agentMemoryClearSummary": "[ES] Currently remembering {profileCount, plural, =1{1 preference} other{{profileCount} preferences}} and {factCount, plural, =1{1 detail} other{{factCount} details}}",
+  "@agentMemoryClearSummary": {
+    "placeholders": {
+      "profileCount": {
+        "type": "int"
+      },
+      "factCount": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryClearEmpty": "[ES] Nothing remembered yet",
+  "agentMemoryClearConfirmTitle": "[ES] Clear Thoughter's memory?",
+  "agentMemoryClearConfirmBody": "[ES] Every remembered preference and detail will be deleted permanently. Your notes are not affected.",
+  "agentMemoryClearConfirmAction": "[ES] Clear",
+  "agentMemoryCleared": "[ES] Thoughter's memory has been cleared",
+  "agentMemoryClearFailed": "[ES] Failed to clear memory",
+  "agentMemoryNoticeTitle": "[ES] Thoughter will remember you",
+  "agentMemoryNoticeBody": "[ES] So it doesn't have to get to know you from scratch every time, Thoughter records who you are and how you like things phrased, and uses that in later conversations, daily prompts, and periodic insights. Memory stays on this device and is never uploaded.",
+  "agentMemoryNoticeHint": "[ES] You can ask Thoughter to change or forget any entry at any time, or turn memory off and clear it in AI settings.",
+  "agentMemoryNoticeGotIt": "[ES] Got it",
+  "agentMemoryNoticeDisable": "[ES] Don't remember",
+  "agentMemorySwitchFailed": "[ES] Could not save the memory switch. Please try again.",
+  "agentMemoryCountsUnavailable": "[ES] Could not read the memory count. You can still try clearing.",
+  "releaseNotesTitle": "[ES] What's New",
+  "releaseNotesUpgradeLede": "[ES] Here's what has been added since you last used the app.",
+  "releaseNotesCurrentLede": "[ES] Here's what this version adds.",
+  "releaseNotesHighlights": "[ES] Highlights",
+  "releaseNotesGetStarted": "[ES] Get started",
+  "releaseThoughterTitle": "[ES] Thoughter: a thinking partner inside your notebook",
+  "releaseThoughterLede": "[ES] From simply capturing notes to organising and creating with them. Thoughter is no longer just a chat box that answers questions — it now works across your entire note library as a thinking partner.",
+  "releaseThoughterSearchTitle": "[ES] Smart retrieval across your notes",
+  "releaseThoughterSearchDesc": "[ES] No more digging by hand. Ask in plain language and Thoughter finds the related notes, follows the tags between them, and pulls in web results when needed.",
+  "releaseThoughterControlTitle": "[ES] You keep every editing decision",
+  "releaseThoughterControlDesc": "[ES] AI never changes your content on its own. Every new note and rewrite arrives as a proposal card that shows exactly what changed; nothing is applied until you review it and confirm.",
+  "releaseThoughterSingleNoteTitle": "[ES] Talk about a single note",
+  "releaseThoughterSingleNoteDesc": "[ES] Tap the ✨ button in the editor and choose \"Ask Thoughter\" to dig into, polish, or continue the note you have open.",
+  "releaseThoughterMemoryTitle": "[ES] Long-term memory",
+  "releaseThoughterMemoryDesc": "[ES] Once enabled, Thoughter remembers what to call you and how you like to phrase things across conversations. Memory is stored separately, and you can review or clear it at any time.",
+  "releaseThoughterInsightTitle": "[ES] Periodic insights and a rebuilt Explore page",
+  "releaseThoughterInsightDesc": "[ES] Thoughter revisits your notes on a schedule and writes them up as periodic insights. The Explore page has been rebuilt to bring those findings together.",
+  "releaseThemeTitle": "[ES] New themes: a different paper, a different ink",
+  "releaseThemeLede": "[ES] Theme style is now its own dimension alongside light and dark. Pick one of three.",
+  "releaseThemeStylesTitle": "[ES] Three styles",
+  "releaseThemeStylesDesc": "[ES] Material keeps following the system's dynamic colors; Paper & Ink is warm, with serif body text and paper rules; Plain is cool and sharper.",
+  "releaseThemeAccentTitle": "[ES] Choose your ink",
+  "releaseThemeAccentDesc": "[ES] The handcrafted styles add four inks — umber, celadon, indigo and cinnabar. Change the ink without changing the paper.",
+  "releaseThemeSwitchTitle": "[ES] Switch whenever you like",
+  "releaseThemeSwitchDesc": "[ES] Material stays the default, so upgrading does not change how the app looks. Try a style right here, or change it later in Settings › Theme Settings.",
+  "releaseDiagnosticsNotice": "[ES] Since 3.7.0, ThoughtEcho reports anonymous diagnostics when something goes wrong. They are used only to locate and fix problems and never contain note content. You can turn this off at any time in Settings › Feedback & Contact.",
+  "settingsReleaseNotes": "[ES] What's New",
+  "settingsReleaseNotesDesc": "[ES] See what this version adds"
 }
