@@ -2741,6 +2741,21 @@
   "searchingCity": "Searching cities...",
   "noCityFound": "No matching city found",
   "tryDifferentKeywords": "Try different keywords or city names",
+  "popularCities": "Popular Cities",
+  "domesticCities": "Major Domestic Cities",
+  "internationalCities": "Major International Cities",
+  "locateCurrentPosition": "Locate Current Position",
+  "locating": "Locating...",
+  "searchCityHint": "Search city name, pinyin, or English...",
+  "citySearchSubtitle": "Notes and daily quotes will match local weather once set",
+  "citySelected": "City selected: {city}",
+  "@citySelected": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
   "enterCityToSearch": "Enter city name to search",
   "addInfo": "Add Info",
   "selectTagsWithCount": "Select Tags ({count})",

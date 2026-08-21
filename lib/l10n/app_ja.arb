@@ -2570,6 +2570,21 @@
   "searchingCity": "検索中...",
   "noCityFound": "見つかりません",
   "tryDifferentKeywords": "キーワードを変更してください",
+  "popularCities": "人気の都市",
+  "domesticCities": "国内の主要都市",
+  "internationalCities": "世界の主要都市",
+  "locateCurrentPosition": "現在地を取得",
+  "locating": "測位中...",
+  "searchCityHint": "都市名または英語で検索...",
+  "citySearchSubtitle": "都市を設定するとメモや日々の名言に天気が反映されます",
+  "citySelected": "都市を選択しました: {city}",
+  "@citySelected": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
   "enterCityToSearch": "都市名を入力",
   "addInfo": "情報追加",
   "selectTagsWithCount": "タグ選択 ({count})",

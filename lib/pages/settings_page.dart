@@ -223,10 +223,21 @@ class SettingsPageState extends State<SettingsPage> {
       builder: (dialogContext) => ChangeNotifierProvider.value(
         value: weatherController,
         child: Dialog(
-          child: Container(
-            height: MediaQuery.of(context).size.height * 0.7,
-            width: MediaQuery.of(context).size.width * 0.9,
-            padding: const EdgeInsets.all(8.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(
+              AppShapeTokens.of(context).dialogRadius,
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16.0,
+            vertical: 24.0,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 520,
+              maxHeight: MediaQuery.sizeOf(context).height * 0.82,
+            ),
             child: CitySearchWidget(
               weatherController: weatherController,
               initialCity: locationService.city,
@@ -439,11 +450,8 @@ class SettingsPageState extends State<SettingsPage> {
                         const SizedBox(height: 8.0),
                         Text(
                           '${l10n.settingsCurrentLocation}: ${locationService.currentAddress ?? l10n.settingsNotSet}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: theme.colorScheme.onSurface.withAlpha(
-                              (0.6 * 255).round(),
-                            ),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
                           ),
                         ),
                         const SizedBox(height: 8.0),

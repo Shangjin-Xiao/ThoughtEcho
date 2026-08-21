@@ -2563,6 +2563,21 @@
   "searchingCity": "Recherche de villes...",
   "noCityFound": "Aucune ville correspondante trouvée",
   "tryDifferentKeywords": "Essayez différents mots-clés ou noms de villes",
+  "popularCities": "Villes populaires",
+  "domesticCities": "Principales villes nationales",
+  "internationalCities": "Principales villes internationales",
+  "locateCurrentPosition": "Localiser la position actuelle",
+  "locating": "Localisation en cours...",
+  "searchCityHint": "Rechercher une ville, pinyin ou anglais...",
+  "citySearchSubtitle": "Les notes et citations s'adapteront à la météo locale",
+  "citySelected": "Ville sélectionnée : {city}",
+  "@citySelected": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
   "enterCityToSearch": "Entrez le nom de la ville à rechercher",
   "addInfo": "Ajouter des informations",
   "selectTagsWithCount": "Sélectionnez les balises ({count})",

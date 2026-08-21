@@ -2747,6 +2747,21 @@
   "searchingCity": "搜索城市中...",
   "noCityFound": "没有找到匹配的城市",
   "tryDifferentKeywords": "尝试使用不同的关键词或城市名称",
+  "popularCities": "热门城市",
+  "domesticCities": "国内主要城市",
+  "internationalCities": "国际主要城市",
+  "locateCurrentPosition": "定位当前位置",
+  "locating": "正在定位...",
+  "searchCityHint": "搜索城市名称、拼音或英文...",
+  "citySearchSubtitle": "设置城市后，便签和每日名言将匹配当地天气",
+  "citySelected": "已选择城市：{city}",
+  "@citySelected": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
   "enterCityToSearch": "输入城市名称开始搜索",
   "addInfo": "添加信息",
   "selectTagsWithCount": "选择标签 ({count})",

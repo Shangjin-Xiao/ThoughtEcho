@@ -26,6 +26,26 @@ class CityInfo {
 
   @override
   String toString() => fullName;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CityInfo &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          country == other.country &&
+          province == other.province &&
+          (lat - other.lat).abs() < 0.01 &&
+          (lon - other.lon).abs() < 0.01;
+
+  @override
+  int get hashCode => Object.hash(
+        name,
+        country,
+        province,
+        (lat * 100).round(),
+        (lon * 100).round(),
+      );
 }
 
 class LocationService extends ChangeNotifier {
