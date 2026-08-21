@@ -38,3 +38,6 @@
 ## 2026-08-14 - 补充思考过程组件的无障碍提示
 **Learning:** Icon-only buttons or custom interactive widgets (like `InkWell` combined with icons/text) often miss proper semantic context for screen readers. In interactive UI like AI thinking states (expanded/collapsed toggle), visually clear cues (like a rotating chevron) don't naturally translate to screen reader announcements. Using `Semantics` alongside `ExcludeSemantics` on inner components avoids redundant reading and explicitly signals the interaction model (button, expanded state) to visually impaired users.
 **Action:** Always verify that custom interactive components (`InkWell`, `GestureDetector`) wrapping text and icons are wrapped in a `Semantics` widget (providing `button: true`, `label`, and dynamic state properties like `expanded`), and exclude semantics on inner decorative or redundant text nodes.
+## 2026-08-21 - [Add tooltip to FloatingActionButton]
+**Learning:** Found an instance where `FloatingActionButton.extended` lacked a `tooltip` property, which affects accessibility for screen readers. Even if a `label` property provides visual text, a dedicated `tooltip` ensures the action's intent is clearly communicated to assistive technologies.
+**Action:** Always verify that `FloatingActionButton.extended` components have a `tooltip` attribute containing localized strings from `AppLocalizations`.
