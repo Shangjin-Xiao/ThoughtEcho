@@ -34,12 +34,13 @@ NoteItemMotion _noteMotion(WidgetTester tester, String quoteId) {
 /// 跳过条目内容里的其它 Scrollable）。
 ScrollPosition _noteListScrollPosition(WidgetTester tester) {
   final listView = tester.widget<ListView>(find.byType(ListView));
-  for (final element in find
-      .descendant(
-        of: find.byWidget(listView),
-        matching: find.byType(Scrollable),
-      )
-      .evaluate()) {
+  for (final element
+      in find
+          .descendant(
+            of: find.byWidget(listView),
+            matching: find.byType(Scrollable),
+          )
+          .evaluate()) {
     final scrollable = element.widget as Scrollable;
     if (identical(scrollable.controller, listView.controller)) {
       return ((element as StatefulElement).state as ScrollableState).position;
@@ -52,41 +53,40 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('NoteListView filter subscription race', () {
-    testWidgets(
-      'can explicitly release search field focus for modal flows',
-      (tester) async {
-        final databaseService = _FakeDatabaseService();
-        final settingsService = _FakeSettingsService();
-        final noteListKey = GlobalKey<NoteListViewState>();
+    testWidgets('can explicitly release search field focus for modal flows', (
+      tester,
+    ) async {
+      final databaseService = _FakeDatabaseService();
+      final settingsService = _FakeSettingsService();
+      final noteListKey = GlobalKey<NoteListViewState>();
 
-        await tester.pumpWidget(
-          _TestApp(
-            databaseService: databaseService,
-            settingsService: settingsService,
-            noteListKey: noteListKey,
-          ),
-        );
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: settingsService,
+          noteListKey: noteListKey,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
 
-        final searchField = find.byType(TextField);
-        await tester.tap(searchField);
-        await tester.pump();
+      final searchField = find.byType(TextField);
+      await tester.tap(searchField);
+      await tester.pump();
 
-        EditableText editableText() =>
-            tester.widget<EditableText>(find.byType(EditableText).first);
+      EditableText editableText() =>
+          tester.widget<EditableText>(find.byType(EditableText).first);
 
-        expect(editableText().focusNode.hasFocus, isTrue);
+      expect(editableText().focusNode.hasFocus, isTrue);
 
-        noteListKey.currentState!.unfocusSearchField();
-        await tester.pump();
+      noteListKey.currentState!.unfocusSearchField();
+      await tester.pump();
 
-        expect(editableText().focusNode.hasFocus, isFalse);
+      expect(editableText().focusNode.hasFocus, isFalse);
 
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(const Duration(seconds: 2));
-      },
-    );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+    });
 
     testWidgets(
       'clearing filters resubscribes only once with updated filter params',
@@ -111,8 +111,9 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
 
-        final newCalls =
-            databaseService.watchCalls.skip(initialCallCount).toList();
+        final newCalls = databaseService.watchCalls
+            .skip(initialCallCount)
+            .toList();
 
         expect(newCalls, hasLength(1));
         expect(newCalls.single.tagIds, isNull);
@@ -123,41 +124,40 @@ void main() {
       },
     );
 
-    testWidgets(
-      'removing a tag filter keeps a single result list on screen',
-      (tester) async {
-        final databaseService = _FakeDatabaseService()
-          ..quotesToEmit = [
-            Quote(
-              id: 'quote-1',
-              content: '筛选变化前可见的笔记',
-              date: DateTime(2026, 7, 8, 9).toIso8601String(),
-            ),
-          ];
-        final settingsService = _FakeSettingsService();
-
-        await tester.pumpWidget(
-          _TestApp(
-            databaseService: databaseService,
-            settingsService: settingsService,
+    testWidgets('removing a tag filter keeps a single result list on screen', (
+      tester,
+    ) async {
+      final databaseService = _FakeDatabaseService()
+        ..quotesToEmit = [
+          Quote(
+            id: 'quote-1',
+            content: '筛选变化前可见的笔记',
+            date: DateTime(2026, 7, 8, 9).toIso8601String(),
           ),
-        );
+        ];
+      final settingsService = _FakeSettingsService();
 
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: settingsService,
+        ),
+      );
 
-        expect(find.byType(ListView), findsOneWidget);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
 
-        await tester.tap(find.byIcon(Icons.close).first);
-        await tester.pump();
+      expect(find.byType(ListView), findsOneWidget);
 
-        expect(find.byType(ListView), findsOneWidget);
-        expect(find.text('筛选变化前可见的笔记'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.close).first);
+      await tester.pump();
 
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(const Duration(seconds: 2));
-      },
-    );
+      expect(find.byType(ListView), findsOneWidget);
+      expect(find.text('筛选变化前可见的笔记'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+    });
 
     testWidgets(
       'removing a tag filter scrolls the persistent list back to the top',
@@ -168,9 +168,12 @@ void main() {
               Quote(
                 id: 'quote-$i',
                 content: '筛选前的笔记 $i',
-                date: DateTime(2026, 7, 8, 9)
-                    .subtract(Duration(minutes: i))
-                    .toIso8601String(),
+                date: DateTime(
+                  2026,
+                  7,
+                  8,
+                  9,
+                ).subtract(Duration(minutes: i)).toIso8601String(),
               ),
           ];
         final settingsService = _FakeSettingsService();
@@ -202,36 +205,35 @@ void main() {
       },
     );
 
-    testWidgets(
-      'shows notes even when tag list is still empty',
-      (tester) async {
-        final databaseService = _FakeDatabaseService()
-          ..quotesToEmit = [
-            Quote(
-              id: 'quote-1',
-              content: '通过通知进入后的笔记',
-              date: DateTime(2026, 3, 29).toIso8601String(),
-            ),
-          ];
-        final settingsService = _FakeSettingsService();
-
-        await tester.pumpWidget(
-          _TestApp(
-            databaseService: databaseService,
-            settingsService: settingsService,
-            tags: const [],
+    testWidgets('shows notes even when tag list is still empty', (
+      tester,
+    ) async {
+      final databaseService = _FakeDatabaseService()
+        ..quotesToEmit = [
+          Quote(
+            id: 'quote-1',
+            content: '通过通知进入后的笔记',
+            date: DateTime(2026, 3, 29).toIso8601String(),
           ),
-        );
+        ];
+      final settingsService = _FakeSettingsService();
 
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: settingsService,
+          tags: const [],
+        ),
+      );
 
-        expect(find.text('通过通知进入后的笔记'), findsOneWidget);
-        expect(find.byType(CircularProgressIndicator), findsNothing);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
 
-        await tester.pump(const Duration(seconds: 2));
-      },
-    );
+      expect(find.text('通过通知进入后的笔记'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+
+      await tester.pump(const Duration(seconds: 2));
+    });
 
     testWidgets(
       'scrollToQuoteById waits for real first batch after placeholder empty list',
@@ -401,61 +403,59 @@ void main() {
       },
     );
 
-    testWidgets(
-      'provides stable row index lookup for animated note deletion',
-      (tester) async {
-        final databaseService = _FakeDatabaseService()
-          ..quotesToEmit = [
-            Quote(
-              id: 'quote-1',
-              content: '第一条',
-              date: DateTime(2026, 3, 29, 12).toIso8601String(),
-            ),
-            Quote(
-              id: 'quote-2',
-              content: '第二条',
-              date: DateTime(2026, 3, 29, 11).toIso8601String(),
-            ),
-            Quote(
-              id: 'quote-3',
-              content: '第三条',
-              date: DateTime(2026, 3, 29, 10).toIso8601String(),
-            ),
-          ];
-        final settingsService = _FakeSettingsService();
-
-        await tester.pumpWidget(
-          _TestApp(
-            databaseService: databaseService,
-            settingsService: settingsService,
-            tags: const [],
+    testWidgets('provides stable row index lookup for animated note deletion', (
+      tester,
+    ) async {
+      final databaseService = _FakeDatabaseService()
+        ..quotesToEmit = [
+          Quote(
+            id: 'quote-1',
+            content: '第一条',
+            date: DateTime(2026, 3, 29, 12).toIso8601String(),
           ),
-        );
-
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
-
-        final listView = tester.widget<ListView>(find.byType(ListView));
-        final delegate =
-            listView.childrenDelegate as SliverChildBuilderDelegate;
-
-        expect(
-          delegate.findChildIndexCallback!(
-            const ValueKey<String>('note-list-row-quote-2'),
+          Quote(
+            id: 'quote-2',
+            content: '第二条',
+            date: DateTime(2026, 3, 29, 11).toIso8601String(),
           ),
-          1,
-        );
-        expect(
-          delegate.findChildIndexCallback!(
-            const ValueKey<String>('note-list-row-quote-3'),
+          Quote(
+            id: 'quote-3',
+            content: '第三条',
+            date: DateTime(2026, 3, 29, 10).toIso8601String(),
           ),
-          2,
-        );
+        ];
+      final settingsService = _FakeSettingsService();
 
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(const Duration(seconds: 2));
-      },
-    );
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: settingsService,
+          tags: const [],
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final listView = tester.widget<ListView>(find.byType(ListView));
+      final delegate = listView.childrenDelegate as SliverChildBuilderDelegate;
+
+      expect(
+        delegate.findChildIndexCallback!(
+          const ValueKey<String>('note-list-row-quote-2'),
+        ),
+        1,
+      );
+      expect(
+        delegate.findChildIndexCallback!(
+          const ValueKey<String>('note-list-row-quote-3'),
+        ),
+        2,
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+    });
 
     testWidgets(
       'coalesces repeated delete requests while note removal animation is pending',
@@ -513,202 +513,197 @@ void main() {
       },
     );
 
-    testWidgets(
-      'uses a list-level note insertion animation duration',
-      (tester) async {
-        final noteListKey = GlobalKey<NoteListViewState>();
-        final databaseService = _FakeDatabaseService()
-          ..quotesToEmit = [
-            Quote(
-              id: 'quote-1',
-              content: '新增动画笔记',
-              date: DateTime(2026, 3, 29, 12).toIso8601String(),
-            ),
-          ];
-        final settingsService = _FakeSettingsService();
-
-        await tester.pumpWidget(
-          _TestApp(
-            databaseService: databaseService,
-            settingsService: settingsService,
-            tags: const [],
-            noteListKey: noteListKey,
-          ),
-        );
-
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
-
-        noteListKey.currentState!.triggerInsertAnimation('quote-1');
-        await tester.pump();
-
-        expect(
-            NoteItemMotion.insertDuration, const Duration(milliseconds: 250));
-        expect(_noteMotion(tester, 'quote-1').insertVersion, 1);
-
-        // 播完后挂起状态由动画自身的完成回调清理，动效层本身仍然常驻
-        await tester.pump(const Duration(milliseconds: 260));
-        await tester.pump(const Duration(milliseconds: 1));
-        expect(_noteMotion(tester, 'quote-1').insertVersion, isNull);
-
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(const Duration(seconds: 2));
-      },
-    );
-
-    testWidgets(
-      'plays edited note save animation only at the list level',
-      (tester) async {
-        final noteListKey = GlobalKey<NoteListViewState>();
-        final databaseService = _FakeDatabaseService()
-          ..quotesToEmit = [
-            Quote(
-              id: 'quote-1',
-              content: '编辑动画笔记',
-              date: DateTime(2026, 3, 29, 12).toIso8601String(),
-            ),
-          ];
-        final settingsService = _FakeSettingsService();
-
-        await tester.pumpWidget(
-          _TestApp(
-            databaseService: databaseService,
-            settingsService: settingsService,
-            tags: const [],
-            noteListKey: noteListKey,
-          ),
-        );
-
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
-
-        noteListKey.currentState!.triggerInsertAnimation('quote-1');
-        await tester.pump();
-
-        final motion = _noteMotion(tester, 'quote-1');
-        expect(motion.insertVersion, 1);
-        // 原地更新已有笔记只淡入，不撑开高度，避免挤动下方卡片
-        expect(motion.animateInsertLayout, isFalse);
-        expect(
-          find.byKey(const ValueKey('save_animate_quote-1_slide_1')),
-          findsNothing,
-        );
-
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(const Duration(seconds: 2));
-      },
-    );
-
-    testWidgets(
-      'does not restart an active save animation for the same note',
-      (tester) async {
-        final noteListKey = GlobalKey<NoteListViewState>();
-        final databaseService = _FakeDatabaseService()
-          ..quotesToEmit = [
-            Quote(
-              id: 'quote-1',
-              content: '重复保存动画笔记',
-              date: DateTime(2026, 3, 29, 12).toIso8601String(),
-            ),
-          ];
-        final settingsService = _FakeSettingsService();
-
-        await tester.pumpWidget(
-          _TestApp(
-            databaseService: databaseService,
-            settingsService: settingsService,
-            tags: const [],
-            noteListKey: noteListKey,
-          ),
-        );
-
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
-
-        noteListKey.currentState!.triggerInsertAnimation('quote-1');
-        await tester.pump();
-        noteListKey.currentState!.triggerInsertAnimation('quote-1');
-        await tester.pump();
-
-        // 版本号不递增即动画不重播
-        expect(_noteMotion(tester, 'quote-1').insertVersion, 1);
-
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(const Duration(seconds: 2));
-      },
-    );
-
-    testWidgets(
-      'restarts pending restore animation for repeated delete undo',
-      (tester) async {
-        final noteListKey = GlobalKey<NoteListViewState>();
-        final databaseService = _DelayedFakeDatabaseService();
-        final settingsService = _FakeSettingsService();
-
-        await tester.pumpWidget(
-          _TestApp(
-            databaseService: databaseService,
-            settingsService: settingsService,
-            tags: const [],
-            noteListKey: noteListKey,
-          ),
-        );
-
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
-        databaseService.emitQuotes(const []);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
-        expect(find.byType(ListView), findsNothing);
-
-        noteListKey.currentState!.triggerInsertAnimation(
-          'quote-1',
-          animateListInsertion: true,
-        );
-        databaseService.emitQuotes([
+    testWidgets('uses a list-level note insertion animation duration', (
+      tester,
+    ) async {
+      final noteListKey = GlobalKey<NoteListViewState>();
+      final databaseService = _FakeDatabaseService()
+        ..quotesToEmit = [
           Quote(
             id: 'quote-1',
-            content: '反复删除撤销的笔记',
-            date: DateTime(2026, 6, 30, 12).toIso8601String(),
+            content: '新增动画笔记',
+            date: DateTime(2026, 3, 29, 12).toIso8601String(),
           ),
-        ]);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
+        ];
+      final settingsService = _FakeSettingsService();
 
-        expect(_noteMotion(tester, 'quote-1').insertVersion, 1);
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: settingsService,
+          tags: const [],
+          noteListKey: noteListKey,
+        ),
+      );
 
-        // 入场动画播放中途笔记再次被删除（列表移除），挂起状态保留
-        await tester.pump(const Duration(milliseconds: 100));
-        databaseService.emitQuotes(const []);
-        await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
 
-        noteListKey.currentState!.triggerInsertAnimation(
-          'quote-1',
-          animateListInsertion: true,
-        );
-        databaseService.emitQuotes([
+      noteListKey.currentState!.triggerInsertAnimation('quote-1');
+      await tester.pump();
+
+      expect(NoteItemMotion.insertDuration, const Duration(milliseconds: 250));
+      expect(_noteMotion(tester, 'quote-1').insertVersion, 1);
+
+      // 播完后挂起状态由动画自身的完成回调清理，动效层本身仍然常驻
+      await tester.pump(const Duration(milliseconds: 260));
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(_noteMotion(tester, 'quote-1').insertVersion, isNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+    });
+
+    testWidgets('plays edited note save animation only at the list level', (
+      tester,
+    ) async {
+      final noteListKey = GlobalKey<NoteListViewState>();
+      final databaseService = _FakeDatabaseService()
+        ..quotesToEmit = [
           Quote(
             id: 'quote-1',
-            content: '反复删除撤销的笔记',
-            date: DateTime(2026, 6, 30, 12).toIso8601String(),
+            content: '编辑动画笔记',
+            date: DateTime(2026, 3, 29, 12).toIso8601String(),
           ),
-        ]);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
+        ];
+      final settingsService = _FakeSettingsService();
 
-        expect(_noteMotion(tester, 'quote-1').insertVersion, 2);
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: settingsService,
+          tags: const [],
+          noteListKey: noteListKey,
+        ),
+      );
 
-        // 动画完整播完后由完成回调驱动清理挂起状态
-        await tester.pump(const Duration(milliseconds: 850));
-        await tester.pump(const Duration(milliseconds: 20));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
 
-        expect(_noteMotion(tester, 'quote-1').insertVersion, isNull);
+      noteListKey.currentState!.triggerInsertAnimation('quote-1');
+      await tester.pump();
 
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(const Duration(seconds: 2));
-        await databaseService.disposeStream();
-      },
-    );
+      final motion = _noteMotion(tester, 'quote-1');
+      expect(motion.insertVersion, 1);
+      // 原地更新已有笔记只淡入，不撑开高度，避免挤动下方卡片
+      expect(motion.animateInsertLayout, isFalse);
+      expect(
+        find.byKey(const ValueKey('save_animate_quote-1_slide_1')),
+        findsNothing,
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+    });
+
+    testWidgets('does not restart an active save animation for the same note', (
+      tester,
+    ) async {
+      final noteListKey = GlobalKey<NoteListViewState>();
+      final databaseService = _FakeDatabaseService()
+        ..quotesToEmit = [
+          Quote(
+            id: 'quote-1',
+            content: '重复保存动画笔记',
+            date: DateTime(2026, 3, 29, 12).toIso8601String(),
+          ),
+        ];
+      final settingsService = _FakeSettingsService();
+
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: settingsService,
+          tags: const [],
+          noteListKey: noteListKey,
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      noteListKey.currentState!.triggerInsertAnimation('quote-1');
+      await tester.pump();
+      noteListKey.currentState!.triggerInsertAnimation('quote-1');
+      await tester.pump();
+
+      // 版本号不递增即动画不重播
+      expect(_noteMotion(tester, 'quote-1').insertVersion, 1);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+    });
+
+    testWidgets('restarts pending restore animation for repeated delete undo', (
+      tester,
+    ) async {
+      final noteListKey = GlobalKey<NoteListViewState>();
+      final databaseService = _DelayedFakeDatabaseService();
+      final settingsService = _FakeSettingsService();
+
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: settingsService,
+          tags: const [],
+          noteListKey: noteListKey,
+        ),
+      );
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      databaseService.emitQuotes(const []);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.byType(ListView), findsNothing);
+
+      noteListKey.currentState!.triggerInsertAnimation(
+        'quote-1',
+        animateListInsertion: true,
+      );
+      databaseService.emitQuotes([
+        Quote(
+          id: 'quote-1',
+          content: '反复删除撤销的笔记',
+          date: DateTime(2026, 6, 30, 12).toIso8601String(),
+        ),
+      ]);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(_noteMotion(tester, 'quote-1').insertVersion, 1);
+
+      // 入场动画播放中途笔记再次被删除（列表移除），挂起状态保留
+      await tester.pump(const Duration(milliseconds: 100));
+      databaseService.emitQuotes(const []);
+      await tester.pump();
+
+      noteListKey.currentState!.triggerInsertAnimation(
+        'quote-1',
+        animateListInsertion: true,
+      );
+      databaseService.emitQuotes([
+        Quote(
+          id: 'quote-1',
+          content: '反复删除撤销的笔记',
+          date: DateTime(2026, 6, 30, 12).toIso8601String(),
+        ),
+      ]);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(_noteMotion(tester, 'quote-1').insertVersion, 2);
+
+      // 动画完整播完后由完成回调驱动清理挂起状态
+      await tester.pump(const Duration(milliseconds: 850));
+      await tester.pump(const Duration(milliseconds: 20));
+
+      expect(_noteMotion(tester, 'quote-1').insertVersion, isNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+      await databaseService.disposeStream();
+    });
 
     testWidgets(
       'loads the next page before positioning a notification target',
@@ -773,94 +768,10 @@ void main() {
       },
     );
 
-    testWidgets(
-      'keeps load more gated while the appended page settles',
-      (tester) async {
-        final databaseService = _PagingFakeDatabaseService();
-        final settingsService = _FakeSettingsService();
-
-        await tester.pumpWidget(
-          _TestApp(
-            databaseService: databaseService,
-            settingsService: settingsService,
-          ),
-        );
-
-        await tester.pump();
-        databaseService.emitInitialPage();
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
-
-        final listViewContext = tester.element(find.byType(ListView));
-        _dispatchPreloadScrollUpdate(listViewContext);
-        await tester.pump();
-        expect(databaseService.loadMoreCallCount, 1);
-
-        _dispatchPreloadScrollUpdate(listViewContext);
-        await tester.pump(const Duration(milliseconds: 100));
-
-        expect(databaseService.loadMoreCallCount, 1);
-
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(const Duration(seconds: 2));
-        await databaseService.disposeStream();
-      },
-    );
-
-    testWidgets(
-      '分页结束后底部加载指示器一定会收起（即使列表仍被标记为滚动中）',
-      (tester) async {
-        // 笔记内容必须足够短：底部那一格要落在视口 + cacheExtent 之内才会被
-        // 真正构建出来，否则 find 永远是 0（内容一长就会踩这个坑）。
-        final databaseService = _ShortPageFakeDatabaseService();
-        final settingsService = _FakeSettingsService();
-
-        await tester.pumpWidget(
-          _TestApp(
-            databaseService: databaseService,
-            settingsService: settingsService,
-          ),
-        );
-
-        await tester.pump();
-        databaseService.emitInitialPage();
-        await tester.pump();
-        // 等 AnimatedSwitcher 把首屏 loading 完全淡出，避免误判。
-        await tester.pump(const Duration(milliseconds: 300));
-
-        expect(find.byType(AppLoadingView), findsNothing);
-
-        final listViewContext = tester.element(find.byType(ListView));
-        _dispatchPreloadScrollUpdate(listViewContext);
-        await tester.pump();
-
-        // 分页进行中：底部那一格显示加载动画。
-        expect(find.byType(AppLoadingView), findsOneWidget);
-
-        // 收尾闸门（320ms）走完后必须收起。此前这一步在"列表仍在滚动"时
-        // 只改字段、不触发重建，若之后恰好没有别的 setState，
-        // 转圈就会一直挂在列表底部收不回去。
-        await tester.pump(const Duration(milliseconds: 400));
-        expect(find.byType(AppLoadingView), findsNothing);
-
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump(const Duration(seconds: 2));
-        await databaseService.disposeStream();
-      },
-    );
-
-    testWidgets(
-        'uses an extended cache extent to preload variable-height items', (
+    testWidgets('keeps load more gated while the appended page settles', (
       tester,
     ) async {
-      final databaseService = _FakeDatabaseService()
-        ..quotesToEmit = [
-          Quote(
-            id: 'quote-1',
-            content: '普通笔记',
-            date: DateTime(2026, 5, 16).toIso8601String(),
-          ),
-        ];
+      final databaseService = _PagingFakeDatabaseService();
       final settingsService = _FakeSettingsService();
 
       await tester.pumpWidget(
@@ -871,21 +782,97 @@ void main() {
       );
 
       await tester.pump();
+      databaseService.emitInitialPage();
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      final listView = tester.widget<ListView>(find.byType(ListView));
-      // ignore: deprecated_member_use
-      final cacheExtent =
-          listView.cacheExtent;
-      expect(cacheExtent, isNotNull);
-      expect(
-        cacheExtent,
-        inInclusiveRange(400.0, 900.0),
-      );
+      final listViewContext = tester.element(find.byType(ListView));
+      _dispatchPreloadScrollUpdate(listViewContext);
+      await tester.pump();
+      expect(databaseService.loadMoreCallCount, 1);
+
+      _dispatchPreloadScrollUpdate(listViewContext);
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(databaseService.loadMoreCallCount, 1);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(seconds: 2));
+      await databaseService.disposeStream();
     });
+
+    testWidgets('分页结束后底部加载指示器一定会收起（即使列表仍被标记为滚动中）', (tester) async {
+      // 笔记内容必须足够短：底部那一格要落在视口 + cacheExtent 之内才会被
+      // 真正构建出来，否则 find 永远是 0（内容一长就会踩这个坑）。
+      final databaseService = _ShortPageFakeDatabaseService();
+      final settingsService = _FakeSettingsService();
+
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: settingsService,
+        ),
+      );
+
+      await tester.pump();
+      databaseService.emitInitialPage();
+      await tester.pump();
+      // 等 AnimatedSwitcher 把首屏 loading 完全淡出，避免误判。
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(AppLoadingView), findsNothing);
+
+      final listViewContext = tester.element(find.byType(ListView));
+      _dispatchPreloadScrollUpdate(listViewContext);
+      await tester.pump();
+
+      // 分页进行中：底部那一格显示加载动画。
+      expect(find.byType(AppLoadingView), findsOneWidget);
+
+      // 收尾闸门（320ms）走完后必须收起。此前这一步在"列表仍在滚动"时
+      // 只改字段、不触发重建，若之后恰好没有别的 setState，
+      // 转圈就会一直挂在列表底部收不回去。
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(AppLoadingView), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 2));
+      await databaseService.disposeStream();
+    });
+
+    testWidgets(
+      'uses an extended cache extent to preload variable-height items',
+      (tester) async {
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = [
+            Quote(
+              id: 'quote-1',
+              content: '普通笔记',
+              date: DateTime(2026, 5, 16).toIso8601String(),
+            ),
+          ];
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        final listView = tester.widget<ListView>(find.byType(ListView));
+        // ignore: deprecated_member_use
+        final cacheExtent = listView.cacheExtent;
+        expect(cacheExtent, isNotNull);
+        expect(cacheExtent, inInclusiveRange(400.0, 900.0));
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
 
     testWidgets('disables automatic semantic indexes for cached list items', (
       tester,
@@ -939,23 +926,24 @@ void main() {
         listView.controller!.jumpTo(900);
         await tester.pump();
 
-        final visibleMoreButtonElement =
-            find.byIcon(Icons.more_vert).evaluate().firstWhere((element) {
-          final y = tester
-              .getCenter(find.byElementPredicate(
-                (candidate) => identical(candidate, element),
-              ))
-              .dy;
-          return y > 160 && y < 700;
-        });
+        final visibleMoreButtonElement = find
+            .byIcon(Icons.more_vert)
+            .evaluate()
+            .firstWhere((element) {
+              final y = tester
+                  .getCenter(
+                    find.byElementPredicate(
+                      (candidate) => identical(candidate, element),
+                    ),
+                  )
+                  .dy;
+              return y > 160 && y < 700;
+            });
         final moreButton = find.byElementPredicate(
           (element) => identical(element, visibleMoreButtonElement),
         );
         final initialQuoteItem = tester.widget<QuoteItemWidget>(
-          find.ancestor(
-            of: moreButton,
-            matching: find.byType(QuoteItemWidget),
-          ),
+          find.ancestor(of: moreButton, matching: find.byType(QuoteItemWidget)),
         );
         final targetQuoteId = initialQuoteItem.quote.id;
         final selectedNote = find.byWidgetPredicate(
@@ -1017,8 +1005,9 @@ void main() {
 
         // 首条卡片除自身上边距外不再被额外下推
         final listTop = tester.getTopLeft(find.byType(ListView)).dy;
-        final firstItemTop =
-            tester.getTopLeft(find.byType(QuoteItemWidget).first).dy;
+        final firstItemTop = tester
+            .getTopLeft(find.byType(QuoteItemWidget).first)
+            .dy;
         expect(firstItemTop - listTop, lessThan(1));
 
         await tester.pumpWidget(const SizedBox.shrink());

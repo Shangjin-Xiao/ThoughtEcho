@@ -90,8 +90,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                                 icon: const Icon(Icons.tune),
                                 tooltip: l10n.filterAndSortTooltip,
                                 onPressed: () {
-                                  final settings =
-                                      context.read<SettingsService>();
+                                  final settings = context
+                                      .read<SettingsService>();
                                   showModalBottomSheet(
                                     context: context,
                                     isScrollControlled: true,
@@ -101,8 +101,9 @@ extension _NoteListItemsExtension on NoteListViewState {
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.vertical(
                                         top: Radius.circular(
-                                          AppShapeTokens.of(context)
-                                              .dialogRadius,
+                                          AppShapeTokens.of(
+                                            context,
+                                          ).dialogRadius,
                                         ),
                                       ),
                                     ),
@@ -116,23 +117,26 @@ extension _NoteListItemsExtension on NoteListViewState {
                                           widget.selectedDayPeriods,
                                       requireBiometricForHidden:
                                           settings.requireBiometricForHidden,
-                                      onApply: (
-                                        tagIds,
-                                        sortType,
-                                        sortAscending,
-                                        selectedWeathers,
-                                        selectedDayPeriods,
-                                      ) {
-                                        widget.onTagSelectionChanged(tagIds);
-                                        widget.onSortChanged(
-                                          sortType,
-                                          sortAscending,
-                                        );
-                                        widget.onFilterChanged(
-                                          selectedWeathers,
-                                          selectedDayPeriods,
-                                        );
-                                      },
+                                      onApply:
+                                          (
+                                            tagIds,
+                                            sortType,
+                                            sortAscending,
+                                            selectedWeathers,
+                                            selectedDayPeriods,
+                                          ) {
+                                            widget.onTagSelectionChanged(
+                                              tagIds,
+                                            );
+                                            widget.onSortChanged(
+                                              sortType,
+                                              sortAscending,
+                                            );
+                                            widget.onFilterChanged(
+                                              selectedWeathers,
+                                              selectedDayPeriods,
+                                            );
+                                          },
                                     ),
                                   );
                                 },
@@ -144,8 +148,9 @@ extension _NoteListItemsExtension on NoteListViewState {
                             horizontal: 12,
                           ),
                           border: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.circular(shape.inputRadius),
+                            borderRadius: BorderRadius.circular(
+                              shape.inputRadius,
+                            ),
                             borderSide: BorderSide(
                               color: Theme.of(
                                 context,
@@ -154,8 +159,9 @@ extension _NoteListItemsExtension on NoteListViewState {
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.circular(shape.inputRadius),
+                            borderRadius: BorderRadius.circular(
+                              shape.inputRadius,
+                            ),
                             borderSide: BorderSide(
                               color: Theme.of(
                                 context,
@@ -164,8 +170,9 @@ extension _NoteListItemsExtension on NoteListViewState {
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.circular(shape.inputRadius),
+                            borderRadius: BorderRadius.circular(
+                              shape.inputRadius,
+                            ),
                             borderSide: BorderSide(
                               color: Theme.of(
                                 context,
@@ -259,9 +266,9 @@ extension _NoteListItemsExtension on NoteListViewState {
                         TextButton(
                           onPressed: _selectAllVisibleNotes,
                           child: Text(
-                            _selectedExportNoteIds.containsAll(_quotes
-                                    .map((q) => q.id)
-                                    .whereType<String>())
+                            _selectedExportNoteIds.containsAll(
+                                  _quotes.map((q) => q.id).whereType<String>(),
+                                )
                                 ? l10n.prefClearAll
                                 : l10n.prefSelectAll,
                           ),
@@ -286,7 +293,9 @@ extension _NoteListItemsExtension on NoteListViewState {
                   ignoring: !_isExportMode,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 12),
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surfaceContainerHighest
                           .withValues(alpha: 0.95),
@@ -298,10 +307,14 @@ extension _NoteListItemsExtension on NoteListViewState {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: _selectSameMonthNotes,
-                            icon: const Icon(Icons.calendar_month_outlined,
-                                size: 18),
-                            label: Text(l10n.selectSameMonth,
-                                style: const TextStyle(fontSize: 11)),
+                            icon: const Icon(
+                              Icons.calendar_month_outlined,
+                              size: 18,
+                            ),
+                            label: Text(
+                              l10n.selectSameMonth,
+                              style: const TextStyle(fontSize: 11),
+                            ),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
@@ -312,8 +325,10 @@ extension _NoteListItemsExtension on NoteListViewState {
                           child: OutlinedButton.icon(
                             onPressed: _selectSameCategoryNotes,
                             icon: const Icon(Icons.label_outline, size: 18),
-                            label: Text(l10n.selectSameCategory,
-                                style: const TextStyle(fontSize: 11)),
+                            label: Text(
+                              l10n.selectSameCategory,
+                              style: const TextStyle(fontSize: 11),
+                            ),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
@@ -328,7 +343,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                             icon: const Icon(Icons.picture_as_pdf, size: 18),
                             label: Text(
                               l10n.exportSelected(
-                                  _selectedExportNoteIds.length),
+                                _selectedExportNoteIds.length,
+                              ),
                               style: Theme.of(context).textTheme.labelSmall,
                             ),
                             style: FilledButton.styleFrom(
@@ -345,10 +361,7 @@ extension _NoteListItemsExtension on NoteListViewState {
           ],
         );
 
-        return Container(
-          color: backgroundColor,
-          child: mainContent,
-        );
+        return Container(color: backgroundColor, child: mainContent);
       },
     );
   }
@@ -437,8 +450,9 @@ extension _NoteListItemsExtension on NoteListViewState {
             _startFirstOpenScrollPerfCapture();
           } else if (_firstOpenScrollPerfRecording &&
               notification is ScrollUpdateNotification) {
-            _firstOpenScrollUpdateMicros
-                .add(DateTime.now().microsecondsSinceEpoch);
+            _firstOpenScrollUpdateMicros.add(
+              DateTime.now().microsecondsSinceEpoch,
+            );
           } else if (notification is ScrollEndNotification) {
             _stopFirstOpenScrollPerfCapture();
           }
@@ -530,8 +544,9 @@ extension _NoteListItemsExtension on NoteListViewState {
           // 避免 drag→ballistic 过渡时集中构建新 item 导致卡顿。
           // 静止期还会在这个基础上一级一级往上撑，把下一屏卡片的挂载挪进空闲帧，
           // 见 `_growIdleCacheExtent`。
-          cacheExtent: MediaQuery.sizeOf(context).height.clamp(400, 900).toDouble() +
-                _idleCacheExtentBoostPx,
+          cacheExtent:
+              MediaQuery.sizeOf(context).height.clamp(400, 900).toDouble() +
+              _idleCacheExtentBoostPx,
           semanticChildCount: _quotes.length + (_hasMore ? 1 : 0),
           itemCount: _quotes.length + (_hasMore ? 1 : 0),
           itemBuilder: (context, index) {
@@ -557,12 +572,14 @@ extension _NoteListItemsExtension on NoteListViewState {
                       ? QuoteItemWidget.needsExpansionFor(quote)
                       : false;
 
-                  final attachFavoriteGuideKey = !favoriteGuideAssigned &&
+                  final attachFavoriteGuideKey =
+                      !favoriteGuideAssigned &&
                       widget.favoriteButtonGuideKey != null &&
                       widget.onFavorite != null;
                   final attachMoreGuideKey =
                       !moreGuideAssigned && widget.moreButtonGuideKey != null;
-                  final attachFoldGuideKey = !foldGuideAssigned &&
+                  final attachFoldGuideKey =
+                      !foldGuideAssigned &&
                       widget.foldToggleGuideKey != null &&
                       needsExpansion;
 
@@ -580,14 +597,17 @@ extension _NoteListItemsExtension on NoteListViewState {
 
                   final expansionNotifier = _obtainExpansionNotifier(quoteId);
                   _expandedItems.putIfAbsent(
-                      quoteId, () => expansionNotifier.value);
+                    quoteId,
+                    () => expansionNotifier.value,
+                  );
 
                   final isSelected = _selectedExportNoteIds.contains(quoteId);
 
                   final insertAnimationVersion =
                       _animatingQuoteVersions[quoteId];
-                  final isStructuralInsert =
-                      _structuralInsertQuoteIds.contains(quoteId);
+                  final isStructuralInsert = _structuralInsertQuoteIds.contains(
+                    quoteId,
+                  );
 
                   Widget itemWidget = ValueListenableBuilder<bool>(
                     valueListenable: expansionNotifier,
@@ -602,14 +622,18 @@ extension _NoteListItemsExtension on NoteListViewState {
                       favoriteGuideKey: attachFavoriteGuideKey
                           ? widget.favoriteButtonGuideKey
                           : null,
-                      moreGuideKey:
-                          attachMoreGuideKey ? widget.moreButtonGuideKey : null,
-                      foldGuideKey:
-                          attachFoldGuideKey ? widget.foldToggleGuideKey : null,
+                      moreGuideKey: attachMoreGuideKey
+                          ? widget.moreButtonGuideKey
+                          : null,
+                      foldGuideKey: attachFoldGuideKey
+                          ? widget.foldToggleGuideKey
+                          : null,
                     ),
                   );
-                  final keepAliveItem =
-                      _shouldKeepAliveNoteListItem(index, quote);
+                  final keepAliveItem = _shouldKeepAliveNoteListItem(
+                    index,
+                    quote,
+                  );
 
                   itemWidget = Stack(
                     children: [
@@ -621,7 +645,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                             child: InkWell(
                               onTap: () => _toggleExportSelection(quoteId),
                               borderRadius: BorderRadius.circular(
-                                  AppShapeTokens.of(context).cardRadius),
+                                AppShapeTokens.of(context).cardRadius,
+                              ),
                             ),
                           ),
                         ),
@@ -805,18 +830,15 @@ extension _NoteListItemsExtension on NoteListViewState {
         final bool requiresAlignment = QuoteItemWidget.needsExpansionFor(quote);
 
         if (!expanded && requiresAlignment) {
-          final waitDuration = QuoteItemWidget.expandCollapseDuration +
+          final waitDuration =
+              QuoteItemWidget.expandCollapseDuration +
               const Duration(milliseconds: 80);
           Future.delayed(waitDuration, () {
             if (!mounted) return;
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) return;
               unawaited(
-                _positionAndAlignQuote(
-                  quoteId,
-                  index,
-                  forceAlignToTop: false,
-                ),
+                _positionAndAlignQuote(quoteId, index, forceAlignToTop: false),
               );
             });
           });
@@ -840,8 +862,9 @@ extension _NoteListItemsExtension on NoteListViewState {
           }
         });
       },
-      onFavorite:
-          widget.onFavorite != null ? () => widget.onFavorite!(quote) : null,
+      onFavorite: widget.onFavorite != null
+          ? () => widget.onFavorite!(quote)
+          : null,
       onLongPressFavorite: widget.onLongPressFavorite != null
           ? () => widget.onLongPressFavorite!(quote)
           : null,
@@ -933,10 +956,7 @@ extension _NoteListItemsExtension on NoteListViewState {
     }
   }
 
-  void _recordNoteListItemBuild({
-    required int index,
-    required Quote quote,
-  }) {
+  void _recordNoteListItemBuild({required int index, required Quote quote}) {
     if (!_scrollSessionPerfRecording) {
       return;
     }
@@ -1230,10 +1250,7 @@ extension _NoteListItemsExtension on NoteListViewState {
   void _showInfoSnackBar(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        duration: const Duration(seconds: 2),
-      ),
+      SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
     );
   }
 
@@ -1248,7 +1265,10 @@ extension _NoteListItemsExtension on NoteListViewState {
       final fontSet = await PdfFontService.loadFontSet();
       if (!mounted) return;
       final pdfBytes = await PdfExportService.exportNotesToPdf(
-          selectedQuotes, fontSet, context);
+        selectedQuotes,
+        fontSet,
+        context,
+      );
       if (!mounted) return;
       Navigator.pop(context);
 
@@ -1296,10 +1316,7 @@ extension _NoteListItemsExtension on NoteListViewState {
 }
 
 class _NoteListItemKeepAlive extends StatefulWidget {
-  const _NoteListItemKeepAlive({
-    required this.keepAlive,
-    required this.child,
-  });
+  const _NoteListItemKeepAlive({required this.keepAlive, required this.child});
 
   final bool keepAlive;
   final Widget child;
@@ -1412,11 +1429,11 @@ class _NoteListItemPerfProbeRenderObject extends RenderProxyBox {
     required String kind,
     required String? sessionId,
     required _NoteListItemLayoutCallback onLayout,
-  })  : _index = index,
-        _quoteId = quoteId,
-        _kind = kind,
-        _sessionId = sessionId,
-        _onLayout = onLayout;
+  }) : _index = index,
+       _quoteId = quoteId,
+       _kind = kind,
+       _sessionId = sessionId,
+       _onLayout = onLayout;
 
   int _index;
   String _quoteId;
@@ -1476,8 +1493,8 @@ class _NoteListItemPerfProbeRenderObject extends RenderProxyBox {
             'kind': _kind,
             'oldHeight': previousSize?.height.toStringAsFixed(1) ?? 'none',
             'newHeight': size.height.toStringAsFixed(1),
-            'deltaHeight':
-                (size.height - (previousSize?.height ?? 0)).toStringAsFixed(1),
+            'deltaHeight': (size.height - (previousSize?.height ?? 0))
+                .toStringAsFixed(1),
             if (_sessionId != null) 'session': _sessionId!,
           },
         );
@@ -1487,21 +1504,23 @@ class _NoteListItemPerfProbeRenderObject extends RenderProxyBox {
   }
 }
 
-typedef _NoteListItemLayoutCallback = void Function({
-  required int index,
-  required String quoteId,
-  required String kind,
-  required int durationMicros,
-  required double height,
-  required double? oldHeight,
-});
+typedef _NoteListItemLayoutCallback =
+    void Function({
+      required int index,
+      required String quoteId,
+      required String kind,
+      required int durationMicros,
+      required double height,
+      required double? oldHeight,
+    });
 
-typedef _NoteListItemMountCallback = void Function({
-  required int index,
-  required String quoteId,
-  required String kind,
-  required int durationMicros,
-});
+typedef _NoteListItemMountCallback =
+    void Function({
+      required int index,
+      required String quoteId,
+      required String kind,
+      required int durationMicros,
+    });
 
 class _SlowItemLayoutSample {
   const _SlowItemLayoutSample({
