@@ -87,8 +87,28 @@ class MockWeatherService extends Mock implements WeatherService {
 }
 
 class MockSettingsService extends Mock implements SettingsService {
+  List<CityInfo> _mockRecent = [];
+
   @override
   String? get localeCode => 'zh';
+
+  @override
+  List<CityInfo> get recentCities => _mockRecent;
+
+  @override
+  Future<void> addRecentCity(CityInfo city) async {
+    _mockRecent.insert(0, city);
+  }
+
+  @override
+  Future<void> removeRecentCity(CityInfo city) async {
+    _mockRecent.remove(city);
+  }
+
+  @override
+  Future<void> clearRecentCities() async {
+    _mockRecent.clear();
+  }
 }
 
 Widget _buildTestApp({
@@ -138,8 +158,7 @@ void main() {
         WeatherSearchController(mockLocationService, mockWeatherService);
   });
 
-  testWidgets(
-      'renders header, weather card, search bar, and popular city chips',
+  testWidgets('renders header, weather card, search bar, and search guide',
       (tester) async {
     await tester.pumpWidget(
       _buildTestApp(
@@ -153,16 +172,31 @@ void main() {
 
     expect(find.text('选择城市'), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
-    expect(find.text('热门城市'), findsNothing); // label is domesticCities
-    expect(find.text('国内主要城市'), findsOneWidget);
-    expect(find.text('国际主要城市'), findsOneWidget);
-    expect(find.text('北京'), findsWidgets);
-    expect(find.text('上海'), findsWidgets);
-    expect(find.text('东京'), findsWidgets);
+    expect(find.text('定位当前位置'), findsOneWidget);
+    expect(find.text('输入城市名称开始搜索'), findsOneWidget);
   });
 
-  testWidgets('instant local filter updates when typing in search field',
+  testWidgets('renders recent cities chips when history is available',
       (tester) async {
+    mockSettingsService._mockRecent = [
+      CityInfo(
+        name: '杭州',
+        fullName: '中国, 浙江省, 杭州',
+        lat: 30.2741,
+        lon: 120.1551,
+        country: '中国',
+        province: '浙江省',
+      ),
+      CityInfo(
+        name: '深圳',
+        fullName: '中国, 广东省, 深圳',
+        lat: 22.5431,
+        lon: 114.0579,
+        country: '中国',
+        province: '广东省',
+      ),
+    ];
+
     await tester.pumpWidget(
       _buildTestApp(
         controller: controller,
@@ -173,12 +207,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Type 'sz' into search field
-    await tester.enterText(find.byType(TextField), 'sz');
-    await tester.pump();
-
-    // Should find Shenzhen or Suzhou in search results
-    expect(find.text('深圳'), findsWidgets);
-    expect(find.text('苏州'), findsWidgets);
+    expect(find.text('最近选择城市'), findsOneWidget);
+    expect(find.text('清空历史'), findsOneWidget);
+    expect(find.text('杭州'), findsOneWidget);
+    expect(find.text('深圳'), findsOneWidget);
   });
 }

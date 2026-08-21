@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../constants/app_constants.dart';
-import '../constants/popular_cities.dart';
 import '../controllers/weather_search_controller.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../services/location_service.dart';
@@ -16,7 +15,11 @@ import '../widgets/app_snackbar.dart';
 
 /// 城市搜索与选择组件
 ///
-/// 支持即时热门城市选择、GPS 定位一键获取、拼音/中英文即时本地匹配与在线地理编码搜索。
+/// 遵循行业标准做法：
+/// - 一键 GPS 定位优先获取
+/// - 本地轻量记录「最近选择城市」历史（支持增删清空）
+/// - 语言感知的在线地理编码（Open-Meteo & OpenStreetMap Nominatim）防抖搜索
+/// - 遵循 Material 3 与 AppShapeTokens 规范
 class CitySearchWidget extends StatefulWidget {
   final WeatherSearchController weatherController;
   final VoidCallback? onSuccess;
@@ -66,6 +69,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
       listen: false,
     );
 
+    // 同步语言设置
     locationService.currentLocaleCode = settingsService.localeCode;
 
     _debounce?.cancel();
@@ -110,7 +114,29 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
           context,
           listen: false,
         );
+        final settingsService = Provider.of<SettingsService>(
+          context,
+          listen: false,
+        );
+
         final cityName = locationService.city ?? locationService.currentAddress;
+        final currentPosition = locationService.currentPosition;
+
+        // 如果定位成功并获得了城市信息，记录到最近选择
+        if (cityName != null &&
+            cityName.isNotEmpty &&
+            currentPosition != null) {
+          final cityInfo = CityInfo(
+            name: cityName,
+            fullName: locationService.currentAddress ?? cityName,
+            lat: currentPosition.latitude,
+            lon: currentPosition.longitude,
+            country: locationService.country ?? '',
+            province: locationService.province ?? '',
+          );
+          unawaited(settingsService.addRecentCity(cityInfo));
+        }
+
         AppSnackBar.success(
           context,
           l10n.currentLocationWeatherUpdated(
@@ -144,6 +170,10 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
     });
 
     final l10n = AppLocalizations.of(context);
+    final settingsService = Provider.of<SettingsService>(
+      context,
+      listen: false,
+    );
     widget.weatherController.clearMessages();
 
     try {
@@ -154,6 +184,9 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
       if (!mounted) return;
 
       if (success) {
+        // 保存到最近选择城市历史
+        unawaited(settingsService.addRecentCity(cityInfo));
+
         AppSnackBar.success(context, l10n.citySelected(cityInfo.name));
         Navigator.of(context).pop();
         widget.onSuccess?.call();
@@ -172,28 +205,11 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
     }
   }
 
-  /// 合并本地即时匹配与远程搜索结果（去重）
-  List<CityInfo> _getMergedSearchResults(LocationService locationService) {
-    final query = _searchController.text.trim();
-    if (query.isEmpty) return const [];
-
-    final localMatches =
-        PopularCitiesData.search(query).map((c) => c.toCityInfo()).toList();
-    final remoteResults = locationService.searchResults;
-
-    final combined = <CityInfo>[...localMatches];
-    for (final remote in remoteResults) {
-      if (!combined.contains(remote)) {
-        combined.add(remote);
-      }
-    }
-    return combined;
-  }
-
   @override
   Widget build(BuildContext context) {
     final locationService = Provider.of<LocationService>(context);
     final weatherService = Provider.of<WeatherService>(context);
+    final settingsService = Provider.of<SettingsService>(context);
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
@@ -247,13 +263,14 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
 
             const SizedBox(height: 8),
 
-            // 核心内容区（热门城市 / 搜索结果）
+            // 核心内容区（最近选择历史 / 搜索结果）
             Expanded(
               child: _buildBodyContent(
                 context,
                 theme,
                 l10n,
                 locationService,
+                settingsService,
                 controller,
               ),
             ),
@@ -539,15 +556,22 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
     ThemeData theme,
     AppLocalizations l10n,
     LocationService locationService,
+    SettingsService settingsService,
     WeatherSearchController controller,
   ) {
     if (!_isSearchActive) {
-      return _buildPresetPopularCities(context, theme, l10n, locationService);
+      return _buildInitialHistoryAndGuide(
+        context,
+        theme,
+        l10n,
+        locationService,
+        settingsService,
+      );
     }
 
-    final mergedResults = _getMergedSearchResults(locationService);
+    final results = locationService.searchResults;
 
-    if (mergedResults.isEmpty) {
+    if (results.isEmpty) {
       if (locationService.isSearching) {
         return AppLoadingView(
           message: l10n.searchingCity,
@@ -562,9 +586,9 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      itemCount: mergedResults.length,
+      itemCount: results.length,
       itemBuilder: (context, index) {
-        final city = mergedResults[index];
+        final city = results[index];
         final isSelected = _selectingCity == city;
 
         return Padding(
@@ -580,12 +604,14 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
     );
   }
 
-  Widget _buildPresetPopularCities(
+  Widget _buildInitialHistoryAndGuide(
     BuildContext context,
     ThemeData theme,
     AppLocalizations l10n,
     LocationService locationService,
+    SettingsService settingsService,
   ) {
+    final recentCities = settingsService.recentCities;
     final currentCityName = locationService.city;
 
     return ListView(
@@ -618,87 +644,93 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
           ),
         ),
 
-        // 国内主要城市
-        Row(
-          children: [
-            Icon(
-              Icons.trending_up_rounded,
-              size: 16,
-              color: theme.colorScheme.primary,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              l10n.domesticCities,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
+        // 最近选择城市历史（如果有）
+        if (recentCities.isNotEmpty) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.history_rounded,
+                    size: 16,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    l10n.recentCities,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: PopularCitiesData.domestic.map((city) {
-            final isCurrent = currentCityName == city.name;
-            return _buildPopularCityChip(
-              context,
-              theme,
-              city,
-              isCurrent,
-            );
-          }).toList(),
-        ),
-
-        const SizedBox(height: 16),
-
-        // 国际主要城市
-        Row(
-          children: [
-            Icon(
-              Icons.public_rounded,
-              size: 16,
-              color: theme.colorScheme.primary,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              l10n.internationalCities,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
+              TextButton.icon(
+                icon: const Icon(Icons.delete_outline_rounded, size: 14),
+                label: Text(l10n.clearRecentCities),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                onPressed: () => settingsService.clearRecentCities(),
               ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: recentCities.map((city) {
+              final isCurrent = currentCityName == city.name;
+              return _buildRecentCityChip(
+                context,
+                theme,
+                city,
+                isCurrent,
+                settingsService,
+              );
+            }).toList(),
+          ),
+        ] else ...[
+          // 无历史记录时的搜索引导提示
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.travel_explore_rounded,
+                  size: 48,
+                  color:
+                      theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.enterCityToSearch,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: PopularCitiesData.international.map((city) {
-            final isCurrent = currentCityName == city.name;
-            return _buildPopularCityChip(
-              context,
-              theme,
-              city,
-              isCurrent,
-            );
-          }).toList(),
-        ),
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildPopularCityChip(
+  Widget _buildRecentCityChip(
     BuildContext context,
     ThemeData theme,
-    PopularCity city,
+    CityInfo city,
     bool isCurrent,
+    SettingsService settingsService,
   ) {
     final shapeTokens = AppShapeTokens.of(context);
-    final isThisSelecting = _selectingCity?.name == city.name;
+    final isThisSelecting = _selectingCity == city;
 
-    return ActionChip(
+    return InputChip(
       avatar: isThisSelecting
           ? const SizedBox(
               width: 14,
@@ -711,7 +743,11 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                   size: 16,
                   color: theme.colorScheme.primary,
                 )
-              : null),
+              : Icon(
+                  Icons.location_on_outlined,
+                  size: 16,
+                  color: theme.colorScheme.onSurfaceVariant,
+                )),
       label: Text(
         city.name,
         style: theme.textTheme.labelMedium?.copyWith(
@@ -732,7 +768,9 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(shapeTokens.buttonRadius),
       ),
-      onPressed: isThisSelecting ? null : () => _selectCity(city.toCityInfo()),
+      onPressed: isThisSelecting ? null : () => _selectCity(city),
+      onDeleted: () => settingsService.removeRecentCity(city),
+      deleteIconColor: theme.colorScheme.onSurfaceVariant,
     );
   }
 

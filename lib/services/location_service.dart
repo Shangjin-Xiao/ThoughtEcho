@@ -24,6 +24,41 @@ class CityInfo {
     required this.province,
   });
 
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'fullName': fullName,
+        'lat': lat,
+        'lon': lon,
+        'country': country,
+        'province': province,
+      };
+
+  factory CityInfo.fromJson(Map<String, dynamic> json) => CityInfo(
+        name: json['name'] as String? ?? '',
+        fullName: json['fullName'] as String? ?? '',
+        lat: (json['lat'] as num?)?.toDouble() ?? 0.0,
+        lon: (json['lon'] as num?)?.toDouble() ?? 0.0,
+        country: json['country'] as String? ?? '',
+        province: json['province'] as String? ?? '',
+      );
+
+  CityInfo copyWith({
+    String? name,
+    String? fullName,
+    double? lat,
+    double? lon,
+    String? country,
+    String? province,
+  }) =>
+      CityInfo(
+        name: name ?? this.name,
+        fullName: fullName ?? this.fullName,
+        lat: lat ?? this.lat,
+        lon: lon ?? this.lon,
+        country: country ?? this.country,
+        province: province ?? this.province,
+      );
+
   @override
   String toString() => fullName;
 

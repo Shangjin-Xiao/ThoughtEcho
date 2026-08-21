@@ -19,10 +19,13 @@ import '../utils/lww_utils.dart';
 
 import '../services/mmkv_service.dart';
 import 'excerpt_intent_service.dart';
+import 'location_service.dart';
 
 class SettingsService extends ChangeNotifier {
   static const ExcerptIntentService _excerptIntentService =
       ExcerptIntentService();
+  static const String _recentCitiesKey = 'recent_cities_json_v1';
+  static const int _maxRecentCities = 8;
   static const String _aiSettingsKey = 'ai_settings';
   static const String _multiAiSettingsKey = 'multi_ai_settings'; // 新增
   static const String _localAiSettingsKey = 'local_ai_settings'; // 新增本地AI设置
@@ -134,6 +137,51 @@ class SettingsService extends ChangeNotifier {
     if (!success) {
       throw StateError('保存 Thoughter 记忆提示已读标记失败');
     }
+    notifyListeners();
+  }
+
+  /// 获取最近选择的城市历史列表
+  List<CityInfo> get recentCities {
+    final raw = _mmkv.getString(_recentCitiesKey);
+    if (raw == null || raw.isEmpty) return const [];
+    try {
+      final List<dynamic> list = json.decode(raw);
+      return list
+          .map((item) => CityInfo.fromJson(Map<String, dynamic>.from(item)))
+          .toList();
+    } catch (e) {
+      logDebug('解析最近选择城市失败: $e');
+      return const [];
+    }
+  }
+
+  /// 添加最近选择的城市（置顶且去重，最多保留8条）
+  Future<void> addRecentCity(CityInfo city) async {
+    final current = List<CityInfo>.from(recentCities);
+    current
+        .removeWhere((c) => c.name == city.name && c.country == city.country);
+    current.insert(0, city);
+    if (current.length > _maxRecentCities) {
+      current.removeRange(_maxRecentCities, current.length);
+    }
+    final jsonString = json.encode(current.map((c) => c.toJson()).toList());
+    await _mmkv.setString(_recentCitiesKey, jsonString);
+    notifyListeners();
+  }
+
+  /// 删除单条最近选择城市
+  Future<void> removeRecentCity(CityInfo city) async {
+    final current = List<CityInfo>.from(recentCities);
+    current
+        .removeWhere((c) => c.name == city.name && c.country == city.country);
+    final jsonString = json.encode(current.map((c) => c.toJson()).toList());
+    await _mmkv.setString(_recentCitiesKey, jsonString);
+    notifyListeners();
+  }
+
+  /// 清空最近选择城市历史
+  Future<void> clearRecentCities() async {
+    await _mmkv.remove(_recentCitiesKey);
     notifyListeners();
   }
 
