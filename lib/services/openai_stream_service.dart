@@ -7,6 +7,7 @@ import 'package:openai_dart/openai_dart.dart' as openai;
 
 import '../models/ai_provider_settings.dart';
 import '../utils/app_logger.dart';
+import '../utils/string_utils.dart';
 
 /// OpenAI 兼容服务的流式传输核心
 ///
@@ -487,13 +488,13 @@ class OpenAIStreamService extends ChangeNotifier {
         if (controller.isClosed) break;
 
         // 解析 SSE 数据
-        for (final line in chunk.split('\n')) {
+        StringUtils.forEachLine(chunk, (line, _) {
           final trimmed = line.trim();
-          if (trimmed.isEmpty) continue;
+          if (trimmed.isEmpty) return;
 
           if (trimmed.startsWith('data: ')) {
             final data = trimmed.substring(6);
-            if (data == '[DONE]') continue;
+            if (data == '[DONE]') return;
 
             try {
               final json = jsonDecode(data) as Map<String, dynamic>;
@@ -508,7 +509,7 @@ class OpenAIStreamService extends ChangeNotifier {
               );
             }
           }
-        }
+        });
       }
     } finally {
       httpClient.close();
