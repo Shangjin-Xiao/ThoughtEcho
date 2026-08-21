@@ -145,63 +145,26 @@ void main() {
     expect(await deltaOf('q1'), contains('$androidDocs/media/images/a.jpg'));
   });
 
-  group('WebDAV 下载判定所依赖的引用计数', () {
-    test('修复并重建引用后，云端附件能被判定为"仍被引用"', () async {
-      await insertQuote('q1', [
-        {
-          'insert': {'image': '$androidDocs/media/images/a.jpg'},
-        },
-      ]);
+  // 修复链路的端到端断言：路径重定基后，WebDAV 的"云端附件是否被引用"判断
+  // 必须能命中。`getReferenceCountForMediaRelativePath` 自身的匹配语义
+  // 由 media_reference_service_test.dart 覆盖。
+  test('修复并重建引用后，云端附件能被判定为"仍被引用"', () async {
+    await insertQuote('q1', [
+      {
+        'insert': {'image': '$androidDocs/media/images/a.jpg'},
+      },
+    ]);
 
-      await MediaPathRepairService.repairAllQuotes(
-        database: db,
-        appPath: iosContainer,
-      );
+    await MediaPathRepairService.repairAllQuotes(
+      database: db,
+      appPath: iosContainer,
+    );
 
-      expect(
-        await MediaReferenceService.getReferenceCountForMediaRelativePath(
-          'images/a.jpg',
-        ),
-        1,
-      );
-    });
-
-    test('老版本写入的外来绝对路径引用行也能命中，不再漏下载', () async {
-      // 老版本 _normalizeFilePath 遇到非本机前缀会原样存下来源设备的绝对路径
-      await MediaReferenceService.addReference(
-        '$androidDocs/media/images/a.jpg',
-        'q1',
-        cachedAppPath: iosContainer,
-      );
-
-      expect(
-        await MediaReferenceService.getReferenceCountForMediaRelativePath(
-          'images/a.jpg',
-        ),
-        1,
-      );
-    });
-
-    test('无人引用的云端附件仍然计为 0，不会让已删除的照片复活', () async {
-      await MediaReferenceService.addReference(
-        '$iosContainer/media/images/other.jpg',
-        'q1',
-        cachedAppPath: iosContainer,
-      );
-
-      expect(
-        await MediaReferenceService.getReferenceCountForMediaRelativePath(
-          'images/a.jpg',
-        ),
-        0,
-      );
-      // 同名不同目录不算引用
-      expect(
-        await MediaReferenceService.getReferenceCountForMediaRelativePath(
-          'videos/other.jpg',
-        ),
-        0,
-      );
-    });
+    expect(
+      await MediaReferenceService.getReferenceCountForMediaRelativePath(
+        'images/a.jpg',
+      ),
+      1,
+    );
   });
 }

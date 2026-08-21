@@ -215,15 +215,19 @@ class MediaReferenceService {
       final exactCount = exact.first['count'] as int;
       if (exactCount > 0) return exactCount;
 
-      // 兜底：老版本写入的外来绝对路径引用行只能按尾段匹配。前缀通配的 LIKE
-      // 用不上索引，因此只在精确匹配落空时才付这次扫描的代价。
+      // 兜底：老版本写入的外来绝对路径引用行只能按尾段匹配。这里用
+      // substr 做大小写敏感的后缀相等比较——SQLite 的 LIKE 对 ASCII
+      // 默认不区分大小写，会把 `.../images/A.jpg` 误算成 `images/a.jpg`
+      // 的引用，而这在区分大小写的文件系统上是两个不同的文件。
+      // 尾段带上前导分隔符，保证匹配的是完整路径段而非文件名片段。
+      // 该比较用不上索引，因此只在精确匹配落空时才付这次扫描的代价。
+      final posixSuffix = '/$posixTail';
+      final windowsSuffix = '\\$windowsTail';
       final fallback = await db.rawQuery(
         'SELECT COUNT(*) as count FROM $_tableName '
-        "WHERE file_path LIKE ? ESCAPE '\\' OR file_path LIKE ? ESCAPE '\\'",
-        [
-          '%${_escapeLikePattern('/$posixTail')}',
-          '%${_escapeLikePattern('\\$windowsTail')}',
-        ],
+        'WHERE substr(file_path, -length(?)) = ? '
+        'OR substr(file_path, -length(?)) = ?',
+        [posixSuffix, posixSuffix, windowsSuffix, windowsSuffix],
       );
 
       return fallback.first['count'] as int;
@@ -232,12 +236,6 @@ class MediaReferenceService {
       return 0;
     }
   }
-
-  /// 转义 LIKE 模式中的通配符与转义符，配合 SQL 的 `ESCAPE` 子句使用。
-  static String _escapeLikePattern(String value) => value.replaceAllMapped(
-        RegExp(r'[\\%_]'),
-        (match) => '\\${match[0]}',
-      );
 
   /// 获取笔记引用的所有媒体文件
   static Future<List<String>> getReferencedFiles(String quoteId) async {
