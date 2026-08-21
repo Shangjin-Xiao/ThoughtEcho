@@ -10,7 +10,6 @@ import 'package:thoughtecho/widgets/anniversary_cake.dart';
 Future<void> showAnniversaryAnimationOverlay(
   BuildContext context, {
   required AnniversaryEdition edition,
-  int? veteranSinceYear,
 }) {
   return showGeneralDialog<void>(
     context: context,
@@ -21,7 +20,6 @@ Future<void> showAnniversaryAnimationOverlay(
     pageBuilder: (dialogContext, animation, secondaryAnimation) {
       return AnniversaryAnimationOverlay(
         edition: edition,
-        veteranSinceYear: veteranSinceYear,
         onDismiss: () => Navigator.of(dialogContext).pop(),
       );
     },
@@ -34,14 +32,10 @@ class AnniversaryAnimationOverlay extends StatefulWidget {
   /// 正在庆祝的这一届。
   final AnniversaryEdition edition;
 
-  /// 用户参与过的最早一届；为 null 或等于当届时不显示老用户致谢。
-  final int? veteranSinceYear;
-
   const AnniversaryAnimationOverlay({
     super.key,
     required this.onDismiss,
     required this.edition,
-    this.veteranSinceYear,
   });
 
   @override
@@ -172,11 +166,6 @@ class _AnniversaryAnimationOverlayState
     final size = MediaQuery.of(context).size;
     final l10n = AppLocalizations.of(context);
     final glassCardWidth = math.min(size.width * 0.85, 380.0);
-    final veteranSince = widget.veteranSinceYear;
-    final veteranSinceYear =
-        (veteranSince != null && veteranSince < widget.edition.year)
-            ? veteranSince
-            : null;
     final cakeSize = (size.height * 0.22).clamp(100.0, 200.0);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -325,17 +314,6 @@ class _AnniversaryAnimationOverlayState
                                   color: Colors.white, letterSpacing: 1.0),
                         ),
                       ),
-                      if (veteranSinceYear != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          l10n.anniversaryVeteranThanks(veteranSinceYear),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ],
                       const SizedBox(height: 20),
                       SlideTransition(
                         position: _buttonSlide,

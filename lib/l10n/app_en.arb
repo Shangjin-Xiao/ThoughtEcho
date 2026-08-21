@@ -3810,14 +3810,6 @@
       }
     }
   },
-  "anniversaryVeteranThanks": "You've been here since year {years} — thank you for keeping at it",
-  "@anniversaryVeteranThanks": {
-    "placeholders": {
-      "years": {
-        "type": "int"
-      }
-    }
-  },
   "anniversaryEnterApp": "Enter App",
   "anniversaryBannerTitle": "ThoughtEcho Year {years} Anniversary",
   "@anniversaryBannerTitle": {
@@ -3836,6 +3828,14 @@
     }
   },
   "anniversaryBannerTap": "Tap to replay the celebration",
+  "anniversaryBadgeTooltip": "Year {years} commemorative badge",
+  "@anniversaryBadgeTooltip": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
   "anniversaryReplayButton": "Replay",
   "developerAnniversarySimulate": "Simulate Anniversary",
   "developerAnniversarySimulateDescOff": "Turn on to simulate year {years}: the settings banner and the celebration popup on next launch both use that edition. Off follows the real date.",

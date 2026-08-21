@@ -422,32 +422,26 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       return;
     }
 
-    // 老用户标记要在写入本届之前取，否则本届自己就成了「最早参与的一届」。
-    final veteranSinceYear = AnniversaryDisplayUtils.earliestShownYear(
-      settings.anniversaryShownYears,
-    );
-
-    // 记下这一届的参与：届数、时间、当时的版本。取版本失败不能挡住庆典。
-    String? appVersion;
-    try {
-      appVersion = (await PackageInfo.fromPlatform()).version;
-    } catch (e) {
-      logDebug('读取应用版本失败，庆典记录不带版本号: $e', source: 'HomePage');
+    // 模拟中不写记录：勋章墙是用户真实参与出来的，别让调试给它添一枚。
+    if (simulatedYear <= 0) {
+      // 记下这一届的参与：届数、时间、当时的版本。取版本失败不能挡住庆典。
+      String? appVersion;
+      try {
+        appVersion = (await PackageInfo.fromPlatform()).version;
+      } catch (e) {
+        logDebug('读取应用版本失败，庆典记录不带版本号: $e', source: 'HomePage');
+      }
+      await settingsService.markAnniversaryShown(
+        edition.year,
+        seenAt: now,
+        appVersion: appVersion,
+      );
     }
-    await settingsService.markAnniversaryShown(
-      edition.year,
-      seenAt: now,
-      appVersion: appVersion,
-    );
 
     if (!mounted) return;
 
     // 显示全屏覆盖动画
-    await showAnniversaryAnimationOverlay(
-      context,
-      edition: edition,
-      veteranSinceYear: veteranSinceYear,
-    );
+    await showAnniversaryAnimationOverlay(context, edition: edition);
   }
 
   // 检查是否有未保存的草稿

@@ -33,6 +33,7 @@ import 'storage_management_page.dart';
 import 'local_ai_settings_page.dart'; // 导入本地 AI 设置页面
 import 'smart_push_settings_page.dart'; // 导入智能推送设置页面
 import '../widgets/anniversary_animation_overlay.dart';
+import '../widgets/anniversary_badges.dart';
 import '../widgets/anniversary_notebook_icon.dart';
 import '../utils/anniversary_banner_text_utils.dart';
 import '../utils/anniversary_display_utils.dart';
@@ -1524,6 +1525,11 @@ class SettingsPageState extends State<SettingsPage> {
     final simulatedYear = context.select<SettingsService, int>(
       (service) => service.anniversarySimulatedYear,
     );
+    // 勋章要跟着参与记录走。select 得比较得出「变没变」，所以取的是拼好的字符串，
+    // 而不是每次都新建、恒不相等的 List。
+    final shownYearsKey = context.select<SettingsService, String>(
+      (service) => service.anniversaryShownYears.join(','),
+    );
     final edition = AnniversaryDisplayUtils.currentEdition(
       DateTime.now(),
       simulatedYear: simulatedYear,
@@ -1535,6 +1541,13 @@ class SettingsPageState extends State<SettingsPage> {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    // 已经攒下的纪念勋章：参与过第几届就有第几枚。
+    final badgeYears = AnniversaryDisplayUtils.earnedBadgeYears(
+      shownYears: shownYearsKey.isEmpty
+          ? const []
+          : shownYearsKey.split(',').map(int.parse).toList(),
+      currentYear: edition.year,
+    );
 
     // 天蓝配色：庆典横幅一年只出现一次，用固定的天蓝比跟着主题走的 tertiary 更稳
     // ——后者在不少取色下会偏成灰紫，跟蓝色封面的笔记本插画也打架。深色模式换一套
@@ -1595,6 +1608,13 @@ class SettingsPageState extends State<SettingsPage> {
                           ),
                           softWrap: true,
                         ),
+                        if (badgeYears.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          AnniversaryBadgeRow(
+                            years: badgeYears,
+                            overflowColor: onSurface,
+                          ),
+                        ],
                         const SizedBox(height: 12),
                         Row(
                           children: [
@@ -1626,7 +1646,7 @@ class SettingsPageState extends State<SettingsPage> {
   }
 
   /// 播放庆典动画。[edition] 为空时按当前（含模拟）届数取，再没有就退回一周年，
-  /// 这样开发者模式在非庆典期点「立即预览」也能看到东西。
+  /// 这样开发者模式在非庆典期点横幅也能看到东西。
   void _showAnniversaryAnimationInSettings(
     BuildContext context, {
     AnniversaryEdition? edition,
@@ -1638,12 +1658,6 @@ class SettingsPageState extends State<SettingsPage> {
           simulatedYear: settingsService.anniversarySimulatedYear,
         ) ??
         AnniversaryDisplayUtils.editionForYear(1);
-    showAnniversaryAnimationOverlay(
-      context,
-      edition: resolved,
-      veteranSinceYear: AnniversaryDisplayUtils.earliestShownYear(
-        settingsService.anniversaryShownYears,
-      ),
-    );
+    showAnniversaryAnimationOverlay(context, edition: resolved);
   }
 }

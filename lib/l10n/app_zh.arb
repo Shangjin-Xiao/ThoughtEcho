@@ -3810,14 +3810,6 @@
       }
     }
   },
-  "anniversaryVeteranThanks": "你从 {years} 周年起就在这里了，谢谢一直写下去",
-  "@anniversaryVeteranThanks": {
-    "placeholders": {
-      "years": {
-        "type": "int"
-      }
-    }
-  },
   "anniversaryEnterApp": "进入应用",
   "anniversaryBannerTitle": "心迹 ThoughtEcho {years} 周年",
   "@anniversaryBannerTitle": {
@@ -3836,6 +3828,14 @@
     }
   },
   "anniversaryBannerTap": "点击重温庆典动画",
+  "anniversaryBadgeTooltip": "{years} 周年纪念勋章",
+  "@anniversaryBadgeTooltip": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
   "anniversaryReplayButton": "重播动画",
   "developerAnniversarySimulate": "模拟周年庆典",
   "developerAnniversarySimulateDescOff": "打开后模拟 {years} 周年：设置页横幅、下次启动的庆典弹窗都按那一届展示；关闭则按真实日期判断",

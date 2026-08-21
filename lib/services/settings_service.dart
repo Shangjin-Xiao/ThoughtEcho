@@ -625,17 +625,17 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 开发者模式的「模拟周年庆典」开关：一步切换模拟届数并清空参与记录。
+  /// 开发者模式的「模拟周年庆典」开关：把第 [year] 届拉到当下。
   ///
-  /// 两件事得一起做 —— 只设届数的话，「每届只自动播一次」会拿旧记录把启动弹窗挡掉，
-  /// 开关就等于只换了张横幅；关闭时同样清一遍，免得模拟产生的记录混进真实数据。
+  /// 只动模拟届数，绝不碰参与记录 —— 那是用户自己攒下的勋章。启动弹窗靠
+  /// [AnniversaryDisplayUtils.shouldAutoShowAnimation] 在模拟时跳过「每届只播一次」
+  /// 来保证每次都出现，模拟期间也不会往记录里写东西。
   Future<void> setAnniversarySimulationEnabled(
     bool enabled, {
     required int year,
   }) async {
     _appSettings = _appSettings.copyWith(
       anniversarySimulatedYear: enabled ? (year < 1 ? 1 : year) : 0,
-      anniversaryParticipation: const [],
     );
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
