@@ -94,6 +94,7 @@ class MediaPathRepairService {
     final basePath =
         p.normalize(appPath ?? (await getApplicationDocumentsDirectory()).path);
 
+    final stopwatch = Stopwatch()..start();
     int scanned = 0;
     int repaired = 0;
     final errors = <String>[];
@@ -145,30 +146,44 @@ class MediaPathRepairService {
         }
 
         if (updates.isNotEmpty) {
-          await db.transaction((txn) async {
-            final batch = txn.batch();
-            for (final entry in updates.entries) {
-              batch.update(
-                'quotes',
-                {'delta_content': entry.value},
-                where: 'id = ?',
-                whereArgs: [entry.key],
-              );
-            }
-            await batch.commit(noResult: true);
+          try {
+            await db.transaction((txn) async {
+              final batch = txn.batch();
+              for (final entry in updates.entries) {
+                batch.update(
+                  'quotes',
+                  {'delta_content': entry.value},
+                  where: 'id = ?',
+                  whereArgs: [entry.key],
+                );
+              }
+              await batch.commit(noResult: true);
 
-            // 引用表里存的是旧路径，必须按修复后的 Delta 重建，
-            // 否则 WebDAV 仍会因为引用计数为 0 而跳过附件下载。
-            for (final quote in repairedQuotes) {
-              await MediaReferenceService
-                  .syncQuoteMediaReferencesWithTransaction(
-                txn,
-                quote,
-                cachedAppPath: basePath,
-              );
-            }
-          });
-          repaired += updates.length;
+              // 引用表里存的是旧路径，必须按修复后的 Delta 重建，
+              // 否则 WebDAV 仍会因为引用计数为 0 而跳过附件下载。
+              for (final quote in repairedQuotes) {
+                final rebuilt = await MediaReferenceService
+                    .syncQuoteMediaReferencesWithTransaction(
+                  txn,
+                  quote,
+                  cachedAppPath: basePath,
+                );
+                // 引用重建失败必须让整页回滚：若保留已重定基的 Delta 而只丢掉引用，
+                // 下次重试时 rebaseDelta 会判定"无需改写"，这些引用将永远补不回来，
+                // WebDAV 也就永远不会下载对应附件。
+                if (!rebuilt) {
+                  throw _MediaReferenceRebuildFailure(quote.id ?? '(未知ID)');
+                }
+              }
+            });
+            repaired += updates.length;
+          } on _MediaReferenceRebuildFailure catch (e) {
+            errors.add('笔记 ${e.quoteId} 媒体引用重建失败，本页修复已回滚');
+            logWarning(
+              '笔记 ${e.quoteId} 媒体引用重建失败，本页 ${updates.length} 条修复已回滚，将在下次启动重试',
+              source: 'MediaPathRepairService',
+            );
+          }
         }
 
         offset += rows.length;
@@ -177,12 +192,16 @@ class MediaPathRepairService {
 
       if (repaired > 0) {
         logInfo(
-          '媒体路径修复完成：扫描 $scanned 条笔记，重写 $repaired 条',
+          '媒体路径修复完成：扫描 $scanned 条笔记，重写 $repaired 条，'
+          '耗时 ${stopwatch.elapsedMilliseconds}ms',
           source: 'MediaPathRepairService',
         );
       } else {
-        logDebug('媒体路径修复完成：扫描 $scanned 条笔记，无需重写',
-            source: 'MediaPathRepairService');
+        logDebug(
+          '媒体路径修复完成：扫描 $scanned 条笔记，无需重写，'
+          '耗时 ${stopwatch.elapsedMilliseconds}ms',
+          source: 'MediaPathRepairService',
+        );
       }
     } catch (e, stack) {
       errors.add('媒体路径修复过程失败: $e');
@@ -200,6 +219,16 @@ class MediaPathRepairService {
       errors: errors,
     );
   }
+}
+
+/// 媒体引用重建失败的内部信号，用于回滚当前批次的 Delta 改写。
+class _MediaReferenceRebuildFailure implements Exception {
+  const _MediaReferenceRebuildFailure(this.quoteId);
+
+  final String quoteId;
+
+  @override
+  String toString() => '媒体引用重建失败: $quoteId';
 }
 
 /// 一次媒体路径修复的结果。

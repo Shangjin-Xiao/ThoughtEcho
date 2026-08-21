@@ -30,6 +30,15 @@ class MediaReferenceService {
     _database = db;
   }
 
+  /// 清除测试用的数据库实例
+  ///
+  /// 测试在 `tearDown` 关闭数据库后必须调用，否则静态字段会继续指向已关闭的
+  /// 句柄，同进程内后续用例会拿到失效连接。
+  @visibleForTesting
+  static void clearDatabaseForTesting() {
+    _database = null;
+  }
+
   /// 获取数据库实例
   static Future<Database> get database async {
     if (_database != null) return _database!;
@@ -196,19 +205,28 @@ class MediaReferenceService {
       final windowsTail = posixTail.replaceAll('/', r'\');
       final db = await database;
 
-      final result = await db.rawQuery(
+      // 先用可命中 idx_media_references_file_path 的精确匹配。修复后的引用都是
+      // 标准相对路径，绝大多数查询到此为止，不会退到下面的全表扫描。
+      final exact = await db.rawQuery(
         'SELECT COUNT(*) as count FROM $_tableName '
-        'WHERE file_path = ? OR file_path = ? '
-        "OR file_path LIKE ? ESCAPE '\\' OR file_path LIKE ? ESCAPE '\\'",
+        'WHERE file_path = ? OR file_path = ?',
+        [posixTail, windowsTail],
+      );
+      final exactCount = exact.first['count'] as int;
+      if (exactCount > 0) return exactCount;
+
+      // 兜底：老版本写入的外来绝对路径引用行只能按尾段匹配。前缀通配的 LIKE
+      // 用不上索引，因此只在精确匹配落空时才付这次扫描的代价。
+      final fallback = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM $_tableName '
+        "WHERE file_path LIKE ? ESCAPE '\\' OR file_path LIKE ? ESCAPE '\\'",
         [
-          posixTail,
-          windowsTail,
           '%${_escapeLikePattern('/$posixTail')}',
           '%${_escapeLikePattern('\\$windowsTail')}',
         ],
       );
 
-      return result.first['count'] as int;
+      return fallback.first['count'] as int;
     } catch (e) {
       logDebug('统计云端媒体引用计数失败: $e');
       return 0;

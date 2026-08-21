@@ -37,6 +37,7 @@ void main() {
   });
 
   tearDown(() async {
+    MediaReferenceService.clearDatabaseForTesting();
     await db.close();
   });
 
@@ -121,6 +122,27 @@ void main() {
     expect(report.repaired, 1);
     expect(report.hasErrors, isTrue);
     expect(await deltaOf('ok'), contains('$iosContainer/media/images/b.jpg'));
+  });
+
+  test('媒体引用重建失败时整页回滚，并让报告带上错误以阻止水位线推进', () async {
+    await insertQuote('q1', [
+      {
+        'insert': {'image': '$androidDocs/media/images/a.jpg'},
+      },
+    ]);
+
+    // 丢掉引用表，模拟引用重建失败（syncQuoteMediaReferences… 内部吞异常返回 false）
+    await db.execute('DROP TABLE media_references');
+
+    final report = await MediaPathRepairService.repairAllQuotes(
+      database: db,
+      appPath: iosContainer,
+    );
+
+    expect(report.repaired, 0);
+    expect(report.hasErrors, isTrue);
+    // Delta 必须一并回滚：否则下次重试会认为"无需改写"，引用永远补不回来
+    expect(await deltaOf('q1'), contains('$androidDocs/media/images/a.jpg'));
   });
 
   group('WebDAV 下载判定所依赖的引用计数', () {
