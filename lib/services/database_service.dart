@@ -19,6 +19,7 @@ import '../utils/expiring_cache.dart';
 import '../utils/lww_utils.dart';
 import '../utils/sentry_database_tracing.dart';
 import 'large_file_manager.dart';
+import 'media_path_repair_service.dart';
 import 'media_reference_service.dart';
 import 'mmkv_service.dart';
 import 'unified_log_service.dart';
@@ -1045,6 +1046,11 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   /// 兼容性保证：所有迁移都是向后兼容的，不会破坏现有数据
   Future<void> _performAllDataMigrations() async {
     await _schemaLifecycle.performAllDataMigrations(database);
+    // 文档目录变化（iOS 重装或从系统备份恢复会更换容器 UUID）会让笔记里记录的
+    // 媒体绝对路径整体失效，必须在首屏读取笔记之前重定基。
+    await MediaPathRepairService.repairIfBaseDirChanged(
+      database: database,
+    );
   }
 
   /// 外部调用的统一刷新入口（同步/恢复后使用）

@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/quote_model.dart';
 import '../utils/app_logger.dart';
+import '../utils/media_path_resolver.dart';
 import 'database_service.dart';
 
 /// 媒体文件引用管理服务
@@ -173,6 +174,52 @@ class MediaReferenceService {
       return 0;
     }
   }
+
+  /// 统计云端媒体文件在本地的引用数。
+  ///
+  /// [relativeToMediaRoot] 是相对 `media/` 目录的路径（如 `images/a.jpg`），
+  /// 也就是 WebDAV 上的附件路径。除按本机标准路径精确匹配外，还会兜底匹配
+  /// 尾段相同的历史引用行——老版本会把其它设备的绝对路径原样写进引用表，
+  /// 这类记录无法精确命中，却同样说明"本地有笔记在用这个附件"。
+  ///
+  /// 仅按完整尾段（`media/<子目录>/<文件名>`）匹配，不做同名兜底，
+  /// 因此不会让用户已删除的附件被重新下载。
+  static Future<int> getReferenceCountForMediaRelativePath(
+    String relativeToMediaRoot,
+  ) async {
+    try {
+      final posixTail = MediaPathResolver.mediaRelativeTail(
+        'media/$relativeToMediaRoot',
+      );
+      if (posixTail == null) return 0;
+
+      final windowsTail = posixTail.replaceAll('/', r'\');
+      final db = await database;
+
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM $_tableName '
+        'WHERE file_path = ? OR file_path = ? '
+        "OR file_path LIKE ? ESCAPE '\\' OR file_path LIKE ? ESCAPE '\\'",
+        [
+          posixTail,
+          windowsTail,
+          '%${_escapeLikePattern('/$posixTail')}',
+          '%${_escapeLikePattern('\\$windowsTail')}',
+        ],
+      );
+
+      return result.first['count'] as int;
+    } catch (e) {
+      logDebug('统计云端媒体引用计数失败: $e');
+      return 0;
+    }
+  }
+
+  /// 转义 LIKE 模式中的通配符与转义符，配合 SQL 的 `ESCAPE` 子句使用。
+  static String _escapeLikePattern(String value) => value.replaceAllMapped(
+        RegExp(r'[\\%_]'),
+        (match) => '\\${match[0]}',
+      );
 
   /// 获取笔记引用的所有媒体文件
   static Future<List<String>> getReferencedFiles(String quoteId) async {
@@ -1079,8 +1126,9 @@ class MediaReferenceService {
   /// 同步笔记的媒体文件引用（事务内版本）
   static Future<bool> syncQuoteMediaReferencesWithTransaction(
     DatabaseExecutor txn,
-    Quote quote,
-  ) async {
+    Quote quote, {
+    String? cachedAppPath,
+  }) async {
     try {
       final quoteId = quote.id;
       if (quoteId == null) {
@@ -1089,8 +1137,8 @@ class MediaReferenceService {
       }
 
       // 获取应用目录路径缓存，避免循环中多次获取
-      final appDir = await getApplicationDocumentsDirectory();
-      final appPath = path.normalize(appDir.path);
+      final appPath = cachedAppPath ??
+          path.normalize((await getApplicationDocumentsDirectory()).path);
 
       // 先移除该笔记的所有现有引用
       await txn.delete(_tableName, where: 'quote_id = ?', whereArgs: [quoteId]);

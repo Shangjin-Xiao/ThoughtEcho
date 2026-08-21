@@ -1287,16 +1287,20 @@ class WebDAVSyncService extends ChangeNotifier {
     // 4. 从云端同步本地缺失附件，或清理云端已废弃的孤儿附件（解决“无限复活”Bug）
     for (final stdPath in remoteMediaFiles.keys) {
       if (!localMediaMap.containsKey(stdPath)) {
-        // 拼接成 MediaReferenceService 能够识别的标准本地完整路径或数据库存储相对路径
+        // 下载落盘的目标路径（本机 media 目录下的绝对路径）
         final localFileFullPath = p.join(
           appDir.path,
           'media',
           stdPath.replaceAll('/', p.separator),
         );
 
-        // 校验该云端文件是否在本地数据库中仍有被引用
-        final refCount = await MediaReferenceService.getReferenceCount(
-          localFileFullPath,
+        // 校验该云端文件是否在本地数据库中仍有被引用。
+        // 必须按"相对 media/ 的尾段"匹配：跨设备合并进来的笔记可能仍带着
+        // 其它设备的绝对路径，按本机绝对路径精确查会一律得到 0，
+        // 导致云端附件永远不被下载。
+        final refCount =
+            await MediaReferenceService.getReferenceCountForMediaRelativePath(
+          stdPath,
         );
 
         if (refCount > 0) {
