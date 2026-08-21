@@ -17,7 +17,7 @@ class MockLocationService extends Mock implements LocationService {
   bool get isSearching => super.noSuchMethod(
         Invocation.getter(#isSearching),
         returnValue: false,
-      ) as bool;
+      ) as bool? ?? false;
 
   @override
   List<CityInfo> get searchResults => super.noSuchMethod(
@@ -59,13 +59,13 @@ class MockWeatherService extends Mock implements WeatherService {
   bool get isLoading => super.noSuchMethod(
         Invocation.getter(#isLoading),
         returnValue: false,
-      ) as bool;
+      ) as bool? ?? false;
 
   @override
   bool get hasValidWeatherData => super.noSuchMethod(
         Invocation.getter(#hasValidWeatherData),
         returnValue: true,
-      ) as bool;
+      ) as bool? ?? true;
 
   @override
   String? get currentWeather => super.noSuchMethod(
