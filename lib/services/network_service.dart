@@ -122,7 +122,7 @@ class NetworkService {
     } on DioException catch (e, stack) {
       AppLogger.e(
         'GET请求失败: $url',
-        error: e,
+        error: NetworkService._sanitizeError(e),
         stackTrace: stack,
         source: 'NetworkService',
       );
@@ -135,6 +135,45 @@ class NetworkService {
   }
 
   /// 通用HTTP POST请求
+  /// 脱敏错误对象中的敏感信息（如 Headers、Token、请求/响应体）
+  static Object _sanitizeError(Object error) {
+    if (error is DioException) {
+      final sanitizedHeaders =
+          Map<String, dynamic>.from(error.requestOptions.headers);
+      if (sanitizedHeaders.containsKey('Authorization')) {
+        sanitizedHeaders['Authorization'] = '***';
+      }
+      if (sanitizedHeaders.containsKey('x-api-key')) {
+        sanitizedHeaders['x-api-key'] = '***';
+      }
+
+      final requestOptions = error.requestOptions.copyWith(
+        headers: sanitizedHeaders,
+        data: '***[Masked Request Data]***',
+      );
+
+      return error.copyWith(
+        requestOptions: requestOptions,
+        response: error.response != null
+            ? Response(
+                requestOptions: requestOptions,
+                statusCode: error.response?.statusCode,
+                statusMessage: error.response?.statusMessage,
+                headers: error.response?.headers,
+                isRedirect: error.response?.isRedirect ?? false,
+                redirects: error.response?.redirects ?? [],
+                extra: error.response?.extra,
+                data: '***[Masked Response Data]***',
+              )
+            : null,
+      );
+    }
+    return error;
+  }
+
+  @visibleForTesting
+  Object sanitizeErrorForTesting(Object error) => _sanitizeError(error);
+
   Future<HttpResponse> post(
     String url, {
     Map<String, String>? headers,
@@ -158,7 +197,7 @@ class NetworkService {
     } on DioException catch (e, stack) {
       AppLogger.e(
         'POST请求失败: $url',
-        error: e,
+        error: NetworkService._sanitizeError(e),
         stackTrace: stack,
         source: 'NetworkService',
       );
@@ -199,7 +238,7 @@ class NetworkService {
     } catch (e, stack) {
       AppLogger.e(
         'AI请求失败',
-        error: e,
+        error: NetworkService._sanitizeError(e),
         stackTrace: stack,
         source: 'NetworkService',
       );
@@ -245,7 +284,7 @@ class NetworkService {
     } catch (e, stack) {
       AppLogger.e(
         'AI流式请求失败',
-        error: e,
+        error: NetworkService._sanitizeError(e),
         stackTrace: stack,
         source: 'NetworkService',
       );
@@ -416,7 +455,7 @@ class NetworkService {
             } catch (e, stack) {
               AppLogger.e(
                 '解析流式响应JSON错误',
-                error: e,
+                error: NetworkService._sanitizeError(e),
                 stackTrace: stack,
                 source: 'NetworkService',
               );
@@ -430,7 +469,7 @@ class NetworkService {
     } catch (e, stack) {
       AppLogger.e(
         '流式响应处理错误',
-        error: e,
+        error: NetworkService._sanitizeError(e),
         stackTrace: stack,
         source: 'NetworkService',
       );
@@ -477,7 +516,7 @@ class RetryInterceptor extends Interceptor {
       } catch (e, stack) {
         AppLogger.e(
           '重试请求失败: ${err.requestOptions.uri}',
-          error: e,
+          error: NetworkService._sanitizeError(e),
           stackTrace: stack,
           source: 'NetworkService_Retry',
         );

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:dio/dio.dart';
 import 'package:thoughtecho/services/network_service.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/ai_settings.dart';
@@ -110,6 +111,51 @@ void main() {
       expect(headers['Content-Type'], 'application/json');
       expect(headers['Authorization'],
           'Bearer test-openai-key'); // Uses provider key
+    });
+    test('should sanitize DioException headers and payload', () {
+      final requestOptions = RequestOptions(
+        path: '/test',
+        headers: {
+          'Authorization': 'Bearer test-token',
+          'x-api-key': 'test-api-key',
+          'Content-Type': 'application/json',
+        },
+        data: {'secret': 'request data'},
+      );
+
+      final response = Response(
+        requestOptions: requestOptions,
+        data: {'sensitive': 'response data'},
+        statusCode: 400,
+      );
+
+      final dioException = DioException(
+        requestOptions: requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
+        message: 'Test error',
+      );
+
+      final sanitizedError =
+          networkService.sanitizeErrorForTesting(dioException);
+
+      expect(sanitizedError, isA<DioException>());
+      final sanitizedDioException = sanitizedError as DioException;
+
+      expect(
+          sanitizedDioException.requestOptions.headers['Authorization'], '***');
+      expect(sanitizedDioException.requestOptions.headers['x-api-key'], '***');
+      expect(sanitizedDioException.requestOptions.headers['Content-Type'],
+          'application/json');
+
+      expect(sanitizedDioException.requestOptions.data,
+          '***[Masked Request Data]***');
+      expect(
+          sanitizedDioException.response?.data, '***[Masked Response Data]***');
+
+      expect(sanitizedDioException.response?.statusCode, 400);
+      expect(sanitizedDioException.message, 'Test error');
+      expect(sanitizedDioException.type, DioExceptionType.badResponse);
     });
   });
 }
