@@ -54,6 +54,7 @@ class AskNoteFloatingButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FloatingActionButton.extended(
+      tooltip: AppLocalizations.of(context).askNote,
       onPressed: () {
         Navigator.of(context).push(
           MaterialPageRoute(
