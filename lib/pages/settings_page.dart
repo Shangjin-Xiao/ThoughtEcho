@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
-import '../models/anniversary_participation.dart';
 import '../models/app_settings.dart';
 import '../services/settings_service.dart';
 import '../services/unified_log_service.dart';
@@ -36,7 +35,6 @@ import 'smart_push_settings_page.dart'; // 导入智能推送设置页面
 import '../widgets/anniversary_animation_overlay.dart';
 import '../widgets/anniversary_notebook_icon.dart';
 import '../utils/anniversary_banner_text_utils.dart';
-import '../utils/anniversary_candle_svg.dart';
 import '../utils/anniversary_display_utils.dart';
 import 'webdav_sync_page.dart';
 import '../services/webdav_sync_service.dart';
@@ -261,7 +259,7 @@ class SettingsPageState extends State<SettingsPage> {
       ),
       body: ListView(
         children: [
-          // 一周年庆典横幅（2026-03-23 至 2026-04-30 期间显示）
+          // 周年庆典横幅（每届 3-23 至 4-30 期间显示，开发者模式可模拟）
           _buildAnniversaryBanner(context),
 
           // 位置和天气设置 Card
@@ -1208,7 +1206,7 @@ class SettingsPageState extends State<SettingsPage> {
               ),
 
               // 周年庆典模拟
-              ..._buildAnniversaryLabTiles(context, settingsService, l10n),
+              _buildAnniversarySimulationTile(settingsService, l10n),
 
               // 日志调试信息（仅 Debug 构建）
               if (kDebugMode)
@@ -1226,97 +1224,34 @@ class SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  /// 实验室里的周年庆典调试项。
+  /// 实验室里唯一的周年庆典调试项：一个开关，打开就把整届庆典拉到当下。
   ///
-  /// 一周年那版只有「立即预览动画」，看不到横幅、也验证不了「每届只自动播一次」。
-  /// 这里改成模拟一整届：选中届数后设置页横幅、启动自动播放、老用户致谢全部按
-  /// 那一届走，跟真到日子时的表现一致。
-  List<Widget> _buildAnniversaryLabTiles(
-    BuildContext context,
+  /// 一周年那版铺了五项（模拟届数下拉、动画开关、已参与记录、清空记录、立即预览），
+  /// 可实际调试时它们基本都要一起动，还容易漏掉「清空记录」导致弹窗不出来。现在收成
+  /// 一个开关：打开 = 模拟下一届 + 清空参与记录，于是设置页横幅、下次启动的庆典弹窗、
+  /// 老用户致谢全按那一届走；关掉就回到按真实日期判断。
+  Widget _buildAnniversarySimulationTile(
     SettingsService settingsService,
     AppLocalizations l10n,
   ) {
     final simulatedYear = settingsService.anniversarySimulatedYear;
-    final records = settingsService.anniversaryParticipation;
-    const maxYear = maxSimulatedAnniversaryYear;
+    final enabled = simulatedYear > 0;
+    final targetYear = AnniversaryDisplayUtils.nextEditionYear(DateTime.now());
 
-    return [
-      ListTile(
-        title: Text(l10n.developerAnniversarySimulate),
-        subtitle: Text(
-          simulatedYear > 0
-              ? l10n.developerAnniversarySimulateDescActive(simulatedYear)
-              : l10n.developerAnniversarySimulateDescOff,
-        ),
-        leading: const Icon(Icons.cake_outlined),
-        trailing: DropdownButton<int>(
-          value: simulatedYear.clamp(0, maxYear),
-          items: [
-            DropdownMenuItem(
-              value: 0,
-              child: Text(l10n.developerAnniversarySimulateOff),
-            ),
-            for (var year = 1; year <= maxYear; year++)
-              DropdownMenuItem(
-                value: year,
-                child: Text(l10n.developerAnniversarySimulateYear(year)),
-              ),
-          ],
-          onChanged: (value) {
-            if (value != null) {
-              settingsService.setAnniversarySimulatedYear(value);
-            }
-          },
-        ),
+    return SwitchListTile(
+      title: Text(l10n.developerAnniversarySimulate),
+      subtitle: Text(
+        enabled
+            ? l10n.developerAnniversarySimulateDescActive(simulatedYear)
+            : l10n.developerAnniversarySimulateDescOff(targetYear),
       ),
-      SwitchListTile(
-        title: Text(l10n.developerAnniversaryEnabled),
-        subtitle: Text(l10n.developerAnniversaryEnabledDesc),
-        secondary: const Icon(Icons.celebration_outlined),
-        value: settingsService.anniversaryAnimationEnabled,
-        onChanged: settingsService.setAnniversaryAnimationEnabled,
+      secondary: const Icon(Icons.cake_outlined),
+      value: enabled,
+      onChanged: (value) => settingsService.setAnniversarySimulationEnabled(
+        value,
+        year: targetYear,
       ),
-      ListTile(
-        title: Text(l10n.developerAnniversaryShownYears),
-        subtitle: Text(
-          records.isEmpty
-              ? l10n.developerAnniversaryShownYearsNone
-              : records.map(_anniversaryRecordLabel).join('\n'),
-        ),
-        leading: const Icon(Icons.workspace_premium_outlined),
-      ),
-      ListTile(
-        title: Text(l10n.developerAnniversaryReset),
-        subtitle: Text(l10n.developerAnniversaryResetDesc),
-        leading: const Icon(Icons.refresh_outlined),
-        onTap: () async {
-          await settingsService.resetAnniversaryParticipation();
-          if (!context.mounted) return;
-          AppSnackBar.success(
-            context,
-            AppLocalizations.of(context).developerAnniversaryResetDone,
-          );
-        },
-      ),
-      ListTile(
-        title: Text(l10n.developerAnniversaryPreview),
-        subtitle: Text(l10n.developerAnniversaryPreviewDesc),
-        leading: const Icon(Icons.play_circle_outlined),
-        onTap: () => _showAnniversaryAnimationInSettings(context),
-      ),
-    ];
-  }
-
-  /// 一条参与记录的调试展示：届数 + 首次看到的日期（迁移来的旧记录没有日期）。
-  String _anniversaryRecordLabel(AnniversaryParticipation record) {
-    final seenAt = record.seenAt?.toLocal();
-    if (seenAt == null) {
-      return '${record.year} · —';
-    }
-    final month = seenAt.month.toString().padLeft(2, '0');
-    final day = seenAt.day.toString().padLeft(2, '0');
-    return '${record.year} · ${seenAt.year}-$month-$day'
-        '${record.appVersion == null ? '' : ' · ${record.appVersion}'}';
+    );
   }
 
   /// 记录页媒体版式的说明文案。三种版式的取舍差别较大，直接把代价写在副标题上，
@@ -1599,74 +1534,90 @@ class SettingsPageState extends State<SettingsPage> {
 
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
-    // 用 tertiaryContainer 承载这张庆祝卡片：M3 里 tertiary 正是为点缀性强调
-    // 准备的色槽，既比普通设置卡醒目，又跟着用户的主题色走。
-    // 此前这里是硬编码的 Tailwind indigo/slate 色板加两层 RadialGradient 光晕，
-    // 既无视主题色，浅色模式下几乎全白的底也让白色笔记本插画糊进背景。
+    // 天蓝配色：庆典横幅一年只出现一次，用固定的天蓝比跟着主题走的 tertiary 更稳
+    // ——后者在不少取色下会偏成灰紫，跟蓝色封面的笔记本插画也打架。深色模式换一套
+    // 压暗的蓝，保证文字对比度。
+    // （更早那版是硬编码的 Tailwind indigo/slate 加两层 RadialGradient 光晕，浅色
+    // 模式下几乎全白的底会让白色笔记本插画糊进背景，这里不再走回头路。）
+    final surfaceColors = isDark
+        ? const [Color(0xFF14324C), Color(0xFF1D4A73)]
+        : const [Color(0xFFE9F5FF), Color(0xFFC2E2FB)];
+    final onSurface =
+        isDark ? const Color(0xFFDCEDFF) : const Color(0xFF0B3D6B);
+    final accent = isDark ? const Color(0xFF8FC8F7) : const Color(0xFF1565C0);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Card(
         margin: EdgeInsets.zero,
-        color: colorScheme.tertiaryContainer,
+        color: Colors.transparent,
         clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => _showAnniversaryAnimationInSettings(context),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                // 左侧：笔记本插画
-                const AnniversaryNotebookIcon(),
-                const SizedBox(width: 20),
-                // 右侧：文本和指示器
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.anniversaryBannerTitle(edition.year),
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.3,
-                          color: colorScheme.onTertiaryContainer,
+        child: Ink(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: surfaceColors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: InkWell(
+            onTap: () => _showAnniversaryAnimationInSettings(context),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  // 左侧：笔记本插画（封面数字跟着届数走）
+                  AnniversaryNotebookIcon(years: edition.year),
+                  const SizedBox(width: 20),
+                  // 右侧：文本和指示器
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.anniversaryBannerTitle(edition.year),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.3,
+                            color: onSurface,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        formatAnniversaryBannerSubtitleForTile(
-                          l10n.anniversaryBannerSubtitle(edition.rangeLabel),
+                        const SizedBox(height: 6),
+                        Text(
+                          formatAnniversaryBannerSubtitleForTile(
+                            l10n.anniversaryBannerSubtitle(edition.rangeLabel),
+                          ),
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: onSurface.withValues(alpha: 0.75),
+                            height: 1.4,
+                          ),
+                          softWrap: true,
                         ),
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: colorScheme.onTertiaryContainer
-                              .withValues(alpha: 0.75),
-                          height: 1.4,
-                        ),
-                        softWrap: true,
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Text(
-                            l10n.anniversaryBannerTap,
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: colorScheme.onTertiaryContainer,
-                              fontWeight: FontWeight.w600,
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Text(
+                              l10n.anniversaryBannerTap,
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: accent,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.arrow_forward_rounded,
-                            size: 14,
-                            color: colorScheme.onTertiaryContainer,
-                          ),
-                        ],
-                      ),
-                    ],
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 14,
+                              color: accent,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

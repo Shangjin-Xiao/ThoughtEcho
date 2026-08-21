@@ -6,19 +6,20 @@ library;
 
 import 'dart:math' as math;
 
-/// 开发者模式能模拟到的最大届数。数字蜡烛本身无上限，此常量供设置页下拉框收口。
+import 'package:thoughtecho/utils/anniversary_digit_glyphs.dart';
+
+/// 数字蜡烛排版覆盖到的最大届数。蜡烛本身位数无上限，这个上界供测试遍历用。
 const int maxSimulatedAnniversaryYear = 10;
 
-/// 单个数字的字形与排版规格。
+/// 单个数字蜡烛的排版规格：字形本身来自 [anniversaryDigitPaths]，这里只记蜡烛
+/// 独有的烛芯与烛脚接点。
 class _DigitSpec {
-  final String path;
   final double wickX; // 烛芯与火苗在字形顶部的连接 x
   final double wickY; // 烛芯底端所在的 y（与数字蜡身顶面精确接合）
   final double stickX; // 插入蛋糕的烛脚 x
   final double stickY; // 烛脚顶端所在的 y
 
   const _DigitSpec({
-    required this.path,
     required this.wickX,
     required this.wickY,
     required this.stickX,
@@ -26,98 +27,69 @@ class _DigitSpec {
   });
 }
 
-/// 标准字形盒：宽 56、高 74。
-const double _digitWidth = 56;
-const double _digitHeight = 74;
-const double _digitGap = 14;
-
 /// 蛋糕顶面奶油上蜡烛底部所在的 y 坐标（与蛋糕主体资源对齐）。
 const double _bottomY = 168;
 
 /// 数字蜡烛整体最宽限制（超过则等比缩放，避免超出蛋糕奶油顶面）。
 const double _maxNumberWidth = 160;
 
-/// 0-9 数字蜡烛字形定义：
-/// 笔画饱满圆润、内部孔洞清晰开阔，顶部各带精准的烛芯接合点，底部各带烛脚。
+/// 0-9 各自的烛芯接合点与烛脚位置，与共用字形一一对应。
 const Map<String, _DigitSpec> _digitSpecs = {
   '0': _DigitSpec(
-    path: 'M28 10 C39 10 46 22 46 37 C46 52 39 64 28 64 '
-        'C17 64 10 52 10 37 C10 22 17 10 28 10 Z',
     wickX: 28,
     wickY: 2,
     stickX: 28,
     stickY: 72,
   ),
   '1': _DigitSpec(
-    path: 'M17 25 L30 10 L30 64',
     wickX: 30,
     wickY: 2,
     stickX: 30,
     stickY: 72,
   ),
   '2': _DigitSpec(
-    path: 'M14 26 C15 13 24 9 32 9 C41 9 46 15 46 24 '
-        'C46 38 29 48 13 64 L46 64',
     wickX: 32,
     wickY: 1,
     stickX: 29,
     stickY: 72,
   ),
   '3': _DigitSpec(
-    path: 'M14 22 C18 13 25 9 33 9 C43 9 47 16 47 24 '
-        'C47 33 39 37 29 37 C41 37 48 44 48 53 '
-        'C48 62 40 65 31 65 C21 65 14 59 12 52',
     wickX: 33,
     wickY: 1,
     stickX: 30,
     stickY: 72,
   ),
   '4': _DigitSpec(
-    path: 'M33 64 L33 10 L11 44 L45 44',
     wickX: 33,
     wickY: 2,
     stickX: 33,
     stickY: 72,
   ),
   '5': _DigitSpec(
-    path: 'M43 10 L18 10 L15 34 C21 29 27 28 33 28 '
-        'C42 28 47 35 47 48 C47 59 40 65 30 65 '
-        'C20 65 14 60 11 53',
     wickX: 30,
     wickY: 2,
     stickX: 29,
     stickY: 72,
   ),
   '6': _DigitSpec(
-    path: 'M40 14 C36 10 32 9 27 9 C17 9 10 20 10 40 '
-        'C10 56 18 65 29 65 C40 65 47 56 47 46 '
-        'C47 36 40 28 29 28 C19 28 12 36 10 44',
     wickX: 27,
     wickY: 1,
     stickX: 28,
     stickY: 72,
   ),
   '7': _DigitSpec(
-    path: 'M14 10 L44 10 L26 64',
     wickX: 29,
     wickY: 2,
     stickX: 26,
     stickY: 72,
   ),
   '8': _DigitSpec(
-    path: 'M28 37 C20 37 12 43 12 52 C12 60 19 65 28 65 '
-        'C37 65 44 60 44 52 C44 43 36 37 28 37 '
-        'C19 37 14 31 14 23 C14 15 20 9 28 9 '
-        'C36 9 42 15 42 23 C42 31 37 37 28 37 Z',
     wickX: 28,
     wickY: 1,
     stickX: 28,
     stickY: 72,
   ),
   '9': _DigitSpec(
-    path: 'M16 60 C20 64 24 65 29 65 C39 65 46 54 46 34 '
-        'C46 18 38 9 27 9 C16 9 9 18 9 28 '
-        'C9 38 16 46 27 46 C37 46 44 38 46 30',
     wickX: 27,
     wickY: 1,
     stickX: 28,
@@ -128,15 +100,14 @@ const Map<String, _DigitSpec> _digitSpecs = {
 /// 生成第 [years] 周年的数字蜡烛 SVG（与蛋糕主体使用同一个 400×400 viewBox）。
 String buildAnniversaryCandleSvg(int years) {
   final digits = math.max(1, years).toString().split('');
-  final rawWidth =
-      digits.length * _digitWidth + (digits.length - 1) * _digitGap;
+  final rawWidth = anniversaryDigitsWidth(digits.length);
   final scale = math.min(1.0, _maxNumberWidth / rawWidth);
   final totalWidth = rawWidth * scale;
-  final height = _digitHeight * scale;
+  final height = anniversaryDigitHeight * scale;
   final startX = 200 - totalWidth / 2;
   final topY = _bottomY - height;
-  final scaledGap = _digitGap * scale;
-  final scaledDigitW = _digitWidth * scale;
+  final scaledGap = anniversaryDigitGap * scale;
+  final scaledDigitW = anniversaryDigitWidth * scale;
 
   final buffer = StringBuffer()
     ..write('<svg xmlns="http://www.w3.org/2000/svg" '
@@ -175,9 +146,8 @@ String buildAnniversaryCandleSvg(int years) {
 
   // 3. 数字蜡烛身（3D立体厚度、外轮廓、主体渐变、内嵌浅金色线与高光反射）
   for (int i = 0; i < digits.length; i++) {
-    final spec = _digitSpecs[digits[i]] ?? _digitSpecs['0']!;
     final dx = startX + i * (scaledDigitW + scaledGap);
-    final path = spec.path;
+    final path = anniversaryDigitPath(digits[i]);
 
     buffer.write(
         '<g transform="translate(${_n(dx)} ${_n(topY)}) scale(${_n(scale)})">');
@@ -254,9 +224,4 @@ String buildAnniversaryCandleSvg(int years) {
 }
 
 /// SVG 数值格式化：去除冗余小数位。
-String _n(double value) {
-  final rounded = (value * 100).round() / 100;
-  return rounded == rounded.roundToDouble()
-      ? rounded.toStringAsFixed(0)
-      : rounded.toString();
-}
+String _n(double value) => formatSvgNumber(value);

@@ -58,6 +58,17 @@ class AnniversaryDisplayUtils {
     );
   }
 
+  /// 下一届（或正在进行的那一届）的届数，永远 >= 1。
+  ///
+  /// 开发者模式的「模拟周年庆典」用它决定要模拟哪一届：庆典期内就是当届，
+  /// 过完了就顺延到明年那届，不用每年回来改常量。
+  static int nextEditionYear(DateTime now) {
+    final year = now.year - launchDate.year;
+    if (year < 1) return 1;
+    // 今年这届还没结束（含尚未开始和正在进行）就还是它，否则轮到下一届。
+    return now.isBefore(editionForYear(year).endExclusive) ? year : year + 1;
+  }
+
   /// 当前正在进行的那一届；不在任何展示期内返回 null。
   ///
   /// [simulatedYear] 大于 0 时无视真实日期，直接返回那一届 —— 开发者模式的

@@ -3837,26 +3837,16 @@
   },
   "anniversaryBannerTap": "Tap to replay the celebration",
   "anniversaryReplayButton": "Replay",
-  "developerAnniversarySection": "Anniversary",
-  "developerAnniversaryEnabled": "Enable Anniversary Animation",
-  "developerAnniversaryEnabledDesc": "Toggle whether the celebration animation shows on launch",
-  "developerAnniversaryReset": "Clear Participation Record",
-  "developerAnniversaryResetDesc": "Clears the record so the celebration plays again as for a new user",
-  "developerAnniversaryResetDone": "Cleared, the celebration will play again",
-  "developerAnniversaryPreview": "Preview Animation Now",
-  "developerAnniversaryPreviewDesc": "Plays the celebration for the simulated year right away",
   "developerAnniversarySimulate": "Simulate Anniversary",
-  "developerAnniversarySimulateOff": "Off",
-  "developerAnniversarySimulateYear": "Year {years}",
-  "@developerAnniversarySimulateYear": {
+  "developerAnniversarySimulateDescOff": "Turn on to simulate year {years}: the settings banner and the celebration popup on next launch both use that edition. Off follows the real date.",
+  "@developerAnniversarySimulateDescOff": {
     "placeholders": {
       "years": {
         "type": "int"
       }
     }
   },
-  "developerAnniversarySimulateDescOff": "Following the real date; not in a celebration window",
-  "developerAnniversarySimulateDescActive": "Simulating year {years}: the settings banner and launch animation both use this edition",
+  "developerAnniversarySimulateDescActive": "Simulating year {years}: participation records were cleared, so restarting the app shows the celebration popup",
   "@developerAnniversarySimulateDescActive": {
     "placeholders": {
       "years": {
@@ -3864,8 +3854,6 @@
       }
     }
   },
-  "developerAnniversaryShownYears": "Celebrations Seen",
-  "developerAnniversaryShownYearsNone": "None yet",
   "trash": "Trash",
   "trashEmpty": "Trash is empty",
   "trashEmptyHint": "Accidentally deleted notes stay here first, including photos, audio, and video, so you can restore them together.",
