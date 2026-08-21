@@ -173,10 +173,20 @@ class DatabaseBackupService {
           // 收集标签信息（稍后批量插入）
           if (tagIdsString != null && tagIdsString.isNotEmpty) {
             final quoteId = quoteData['id'] as String;
-            final tagIds =
-                tagIdsString.split(',').where((id) => id.trim().isNotEmpty);
-            for (final tagId in tagIds) {
-              tagRelations.add({'quote_id': quoteId, 'tag_id': tagId.trim()});
+            int startIndex = 0;
+            while (startIndex < tagIdsString.length) {
+              final commaIndex = tagIdsString.indexOf(',', startIndex);
+              final tagId = commaIndex == -1
+                  ? tagIdsString.substring(startIndex)
+                  : tagIdsString.substring(startIndex, commaIndex);
+
+              final trimmedTagId = tagId.trim();
+              if (trimmedTagId.isNotEmpty) {
+                tagRelations.add({'quote_id': quoteId, 'tag_id': trimmedTagId});
+              }
+
+              if (commaIndex == -1) break;
+              startIndex = commaIndex + 1;
             }
           }
 
