@@ -90,3 +90,6 @@
 ## 2026-08-14 - [Replace String.split with indexOf and substring to reduce GC pressure]
 **Learning:** `String.split` generates intermediate lists and string tokens, creating high GC pressure when parsing large strings frequently. When rewriting a `for-in` loop with `split` to a `while` loop with `indexOf`, extracting a shared `StringUtils.forEachLine` helper avoids boilerplate while maintaining zero-allocation scanning.
 **Action:** Replace `split('\n')` with `StringUtils.forEachLine` in line-by-line parsers like `DeltaRichTextParser` and `DeltaBuilder` to eliminate temporary list allocations and standardize line scanning across the codebase.
+## 2025-01-20 - [Optimize String splitting to avoid memory allocation]
+**Learning:** Frequent `String.split` generates intermediate lists and strings which puts pressure on GC. Instead manual parsing using `String.indexOf` and `String.substring` minimizes allocations.
+**Action:** Replace `String.split` with manual parsing in high-frequency methods like when parsing `tagIdsString` in `DatabaseBackupService`.
