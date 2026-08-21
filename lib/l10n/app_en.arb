@@ -3828,6 +3828,15 @@
     }
   },
   "anniversaryBannerTap": "Tap to replay the celebration",
+  "anniversaryBadgeMore": "+{hidden}",
+  "@anniversaryBadgeMore": {
+    "description": "How many commemorative badges did not fit on the banner",
+    "placeholders": {
+      "hidden": {
+        "type": "int"
+      }
+    }
+  },
   "anniversaryBadgeTooltip": "Year {years} commemorative badge",
   "@anniversaryBadgeTooltip": {
     "placeholders": {
@@ -3846,7 +3855,7 @@
       }
     }
   },
-  "developerAnniversarySimulateDescActive": "Simulating year {years}: participation records were cleared, so restarting the app shows the celebration popup",
+  "developerAnniversarySimulateDescActive": "Simulating year {years}: the settings banner uses this edition and every launch replays the celebration popup; participation records are neither written nor cleared",
   "@developerAnniversarySimulateDescActive": {
     "placeholders": {
       "years": {

@@ -3828,6 +3828,15 @@
     }
   },
   "anniversaryBannerTap": "点击重温庆典动画",
+  "anniversaryBadgeMore": "+{hidden}",
+  "@anniversaryBadgeMore": {
+    "description": "横幅上放不下的纪念勋章数量",
+    "placeholders": {
+      "hidden": {
+        "type": "int"
+      }
+    }
+  },
   "anniversaryBadgeTooltip": "{years} 周年纪念勋章",
   "@anniversaryBadgeTooltip": {
     "placeholders": {
@@ -3846,7 +3855,7 @@
       }
     }
   },
-  "developerAnniversarySimulateDescActive": "正在模拟 {years} 周年：已清空参与记录，重启应用就能看到庆典弹窗",
+  "developerAnniversarySimulateDescActive": "正在模拟 {years} 周年：设置页横幅按这一届展示，每次启动都会播庆典弹窗；不会写入或清空参与记录",
   "@developerAnniversarySimulateDescActive": {
     "placeholders": {
       "years": {

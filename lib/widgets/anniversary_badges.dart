@@ -28,6 +28,7 @@ class AnniversaryBadgeRow extends StatelessWidget {
 
     final visible = years.take(maxVisible).toList();
     final hidden = years.length - visible.length;
+    final l10n = AppLocalizations.of(context);
 
     return Wrap(
       spacing: 6,
@@ -37,7 +38,7 @@ class AnniversaryBadgeRow extends StatelessWidget {
         for (final year in visible) _AnniversaryBadge(year: year),
         if (hidden > 0)
           Text(
-            '+$hidden',
+            l10n.anniversaryBadgeMore(hidden),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: overflowColor.withValues(alpha: 0.75),
                   fontWeight: FontWeight.w600,
