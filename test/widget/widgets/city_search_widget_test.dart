@@ -23,7 +23,7 @@ class MockLocationService extends Mock implements LocationService {
   List<CityInfo> get searchResults => super.noSuchMethod(
         Invocation.getter(#searchResults),
         returnValue: <CityInfo>[],
-      ) as List<CityInfo>;
+      ) as List<CityInfo>? ?? <CityInfo>[];
 
   @override
   String? get city => super.noSuchMethod(
