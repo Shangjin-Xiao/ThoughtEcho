@@ -530,10 +530,8 @@ extension _NoteListItemsExtension on NoteListViewState {
           // 避免 drag→ballistic 过渡时集中构建新 item 导致卡顿。
           // 静止期还会在这个基础上一级一级往上撑，把下一屏卡片的挂载挪进空闲帧，
           // 见 `_growIdleCacheExtent`。
-          scrollCacheExtent: ScrollCacheExtent.pixels(
-            MediaQuery.sizeOf(context).height.clamp(400, 900).toDouble() +
+          cacheExtent: MediaQuery.sizeOf(context).height.clamp(400, 900).toDouble() +
                 _idleCacheExtentBoostPx,
-          ),
           semanticChildCount: _quotes.length + (_hasMore ? 1 : 0),
           itemCount: _quotes.length + (_hasMore ? 1 : 0),
           itemBuilder: (context, index) {
