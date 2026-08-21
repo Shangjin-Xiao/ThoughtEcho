@@ -150,8 +150,7 @@ pwsh ./scripts/build_msix_ci.ps1
 
 - UI 层禁止硬编码任何用户可见文本，包括按钮、菜单、Tooltip、Dialog、SnackBar、空状态和
   无障碍标签。
-- 新文案依次修改 `lib/l10n/app_zh.arb` 与 `lib/l10n/app_en.arb`，占位符声明元数据，然后运行
-  `flutter gen-l10n`；禁止手动编辑 `lib/gen_l10n/`。
+- 新文案与描述只需新增中英文（`lib/l10n/app_zh.arb` 与 `lib/l10n/app_en.arb`），占位符声明元数据，其他语言后续补充；未提供本地化的语言默认回退显示为英文（`l10n.yaml` 中首选语言为 `en`）。修改后运行 `flutter gen-l10n`；禁止手动编辑 `lib/gen_l10n/`。
 - 颜色和文字样式优先来自 `Theme.of(context)` / `ColorScheme`。只有品牌色、数据可视化语义色
   或平台明确要求的颜色可集中定义，不在页面散落 `Color(0x...)`。
 - 异步间隔后使用 `context` 或更新 State 前检查 `mounted` / `context.mounted`。
