@@ -118,6 +118,12 @@ class PicoBleService {
     }
   }
 
+  /// 丢弃当前连接状态（设备与 characteristic 必须成对失效）
+  void _clearConnection() {
+    _connectedDevice = null;
+    _targetCharacteristic = null;
+  }
+
   /// 内部方法：自动扫描、发现设备、建立连接并寻找服务特征
   Future<bool> _ensureConnected() async {
     // 检查是否已经保持连接
@@ -125,6 +131,9 @@ class PicoBleService {
       if (_connectedDevice!.isConnected) {
         return true;
       }
+      // 连接已断开：characteristic 绑在这台外设上，一并丢掉，
+      // 否则后面重连失败时会残留一个指向死连接的引用。
+      _clearConnection();
     }
 
     if (_isConnecting) return false;
@@ -182,7 +191,7 @@ class PicoBleService {
 
       AppLogger.e('已连接设备，但内部未找到约定的服务 UUID (可能没刷对应的主板固件)');
       await _connectedDevice!.disconnect();
-      _connectedDevice = null;
+      _clearConnection();
       return false;
     } catch (e) {
       AppLogger.e('Pico 蓝牙连接意外中断 或 扫描失败', error: e);
