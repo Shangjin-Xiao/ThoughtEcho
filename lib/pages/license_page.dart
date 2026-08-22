@@ -277,6 +277,15 @@ class _LicensePageState extends State<LicensePage> {
           url: 'https://github.com/Tencent/MMKV',
           description: 'BSD-3-Clause',
         ),
+        // 手工风格的正文字体随包分发（assets/fonts/），OFL 要求随附许可证副本，
+        // 这一条是给用户看的出处说明；许可证全文在 assets/fonts/OFL.txt。
+        _buildAttributionRow(
+          context: context,
+          title: l10n.readingFont,
+          name: 'Noto Serif SC (思源宋体)',
+          url: 'https://fonts.google.com/noto/specimen/Noto+Serif+SC',
+          description: 'SIL Open Font License 1.1',
+        ),
         // 同步功能相关鸣谢
         Text(
           l10n.syncIntegrationNote,

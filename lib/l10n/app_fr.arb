@@ -2425,6 +2425,7 @@
   "stateManagement": "Gestion de l'État",
   "animationSupport": "Prise en charge des animations",
   "localStorage": "Stockage local",
+  "readingFont": "Police de lecture",
   "syncIntegrationNote": "Remarque sur l'intégration de la synchronisation :",
   "serviceApiAcknowledgements": "Remerciements pour les services et l'API :",
   "weatherData": "Données météorologiques",

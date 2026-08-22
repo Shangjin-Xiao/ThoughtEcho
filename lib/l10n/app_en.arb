@@ -2603,6 +2603,7 @@
   "stateManagement": "State Management",
   "animationSupport": "Animation Support",
   "localStorage": "Local Storage",
+  "readingFont": "Reading Font",
   "syncIntegrationNote": "Sync integration note:",
   "serviceApiAcknowledgements": "Services & API Acknowledgements:",
   "weatherData": "Weather Data",

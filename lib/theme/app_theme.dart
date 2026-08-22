@@ -135,8 +135,9 @@ class AppTheme with ChangeNotifier {
 
   /// 给整套 TextTheme 套上风格的字体族、字号、字重与正文行高。
   ///
-  /// 手工风格指向系统自带的中文衬线体，**不打包任何字体文件**：`fontFamily` 命中不了
-  /// 就沿 `fontFamilyFallback` 逐个回退，最后回落到系统默认，不会出现豆腐块。
+  /// 手工风格指向随包分发的 `ThemeStyleForm.bundledSerif`，族名一定解析得到；
+  /// 子集里没有的字（生僻字、繁体）沿 `fontFamilyFallback` 找系统衬线体，
+  /// 最后回落到系统默认，不会出现豆腐块。
   ///
   /// 分成三档处理，分档依据是**光学尺寸**，不是省事：
   ///
@@ -146,6 +147,12 @@ class AppTheme with ChangeNotifier {
   ///   横画掉进半像素是「衬线读起来比黑体虚」的物理原因，字重是直接的补偿手段。
   ///   抬下限而不是加增量：M3 的 `titleMedium` / `titleSmall` 本来就是 w500，
   ///   加增量会把它们顶成粗体。`body*` 另外还吃字号缩放和行高缩放。
+  ///
+  ///   **这里刻意只写 `fontWeight`，不写 `fontVariations`。** 随包衬线是可变字体，
+  ///   直接指定 wght 轴看着更「精确」，但 `fontVariations` 会盖过 `fontWeight`——
+  ///   下游任何一处 `style.copyWith(fontWeight: FontWeight.bold)`（全项目上百处，
+  ///   包括富文本的加粗）都会静默失效。交给引擎按 `fontWeight` 映射 wght 轴，
+  ///   现有代码一行不用改。
   /// - `label*`：**什么都不改，保持系统黑体**。按钮、胶囊、导航栏标签是 11–14sp
   ///   的功能性文字，中文衬线在这个尺寸下糊成一团，而它们又不承担任何风格识别——
   ///   没有人从一个按钮标签上看出「这是纸墨风格」。这是全局排版规则，

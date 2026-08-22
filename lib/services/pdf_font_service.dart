@@ -2,10 +2,12 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:meta/meta.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/widgets.dart' as pw;
 
+import 'package:thoughtecho/theme/theme_style.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
 /// 字体数据集合，包含用于创建粗体/斜体/粗斜体变体所需的相同 TTF 数据
@@ -35,6 +37,8 @@ class PdfFontService {
   static ByteData? _cachedEmojiFontData;
   static ByteData? _cachedMonochromeEmojiFontData;
   static ByteData? _cachedMaterialIconFontData;
+
+  static ByteData? _cachedBundledSerifData;
 
   static const _multilingualFontFileName = "cached_noto_sans_sc.ttf";
   static const _obsoleteMultilingualFontFileName =
@@ -79,7 +83,15 @@ class PdfFontService {
 
   /// 加载字体数据集合，所有变体均指向同一份中文 TTF 数据
   /// 这可确保 pdf 包在渲染粗体/斜体文字时不会 fallback 到不含 CJK 的内置字体
-  static Future<PdfFontSet> loadFontSet() async {
+  ///
+  /// [readingFontFamily] 传当前风格的阅读字体族
+  /// （`AppTypographyTokens.of(context).readingFontFamily`）。等于
+  /// [ThemeStyleForm.bundledSerif] 时，正文改用随包的那份衬线体，导出的 PDF
+  /// 就和屏幕上是同一种字体——在此之前屏幕是宋体、导出永远是黑体。
+  ///
+  /// 判据是**族名这个取值**而不是风格身份：将来任何一套风格指向随包衬线，
+  /// 它的 PDF 会自动跟上，不需要改这里。
+  static Future<PdfFontSet> loadFontSet({String? readingFontFamily}) async {
     final data = await _loadFontData();
     final languageFallbackData = await _loadLanguageFallbackFontData();
     final emojiData = await _loadEmojiFontData();
@@ -90,6 +102,32 @@ class PdfFontService {
       if (emojiData != null) pw.Font.ttf(emojiData),
       if (monochromeEmojiData != null) pw.Font.ttf(monochromeEmojiData),
     ];
+
+    if (readingFontFamily == ThemeStyleForm.bundledSerif) {
+      final serifData = await _loadBundledSerifData();
+      if (serifData != null) {
+        return PdfFontSet(
+          regular: pw.Font.ttf(serifData),
+          bold: pw.Font.ttf(serifData),
+          italic: pw.Font.ttf(serifData),
+          boldItalic: pw.Font.ttf(serifData),
+          materialIcons:
+              materialIconData == null ? null : pw.Font.ttf(materialIconData),
+          // 随包衬线是 GB2312 子集，生僻字、繁体和韩文不在里面。把黑体那份排在
+          // 回退链最前面接住它们——**这一步不能省**：sanitizeTextForPdf 会把
+          // 「所有字体都不支持」的字符直接从文档里删掉，少一个回退就是少一批字。
+          fallbackFonts: <pw.Font>[
+            if (data != null) pw.Font.ttf(data),
+            ...fallbackFonts,
+          ],
+          isFallback: false,
+        );
+      }
+      // 随包字体读不出来（asset 声明被改坏之类）时不要中断导出，
+      // 落回下面的黑体路径，行为和改动前一致。
+      logDebug("随包衬线体不可用，PDF 回退到黑体", source: "PdfFontService");
+    }
+
     if (data != null) {
       // 同一份数据创建四份独立 pw.Font 实例（pdf 包要求每种变体是独立对象）
       // 这样即便字体本身不含真正粗体/斜体，中文也不会乱码
@@ -166,6 +204,27 @@ class PdfFontService {
           error: e, stackTrace: stack);
     }
     return null;
+  }
+
+  /// 读取随包衬线体。asset 是打进安装包的，没有网络依赖，也不需要磁盘缓存，
+  /// 只在内存里留一份避免重复解码。
+  static Future<ByteData?> _loadBundledSerifData() async {
+    final cached = _cachedBundledSerifData;
+    if (cached != null && isValidFontData(cached)) {
+      return cached;
+    }
+    try {
+      final data = await rootBundle.load(ThemeStyleForm.bundledSerifAsset);
+      if (!isValidFontData(data)) {
+        logDebug("随包衬线体不是 pdf 包能处理的 TrueType", source: "PdfFontService");
+        return null;
+      }
+      _cachedBundledSerifData = data;
+      return data;
+    } catch (e) {
+      logDebug("读取随包衬线体失败: $e", source: "PdfFontService");
+      return null;
+    }
   }
 
   static Future<ByteData?> _loadEmojiFontData() async {

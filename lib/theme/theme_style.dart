@@ -238,9 +238,10 @@ class ThemeStyleForm {
   /// 阅读文本（display / headline / title / body）的首选字体族。
   /// null 表示用系统默认（material 风格保持原样）。
   ///
-  /// 手工风格指向**系统自带**的中文衬线体，不打包任何字体文件——
-  /// 增量 0 字节，缺失时按 [fontFamilyFallback] 逐个回退，最终回落到系统默认。
-  /// 正文从黑体变衬线，是「纸墨」观感里最省成本的一步。
+  /// 手工风格指向**随包分发**的 [bundledSerif]。之前指的是系统自带衬线体
+  /// （通用族名 `serif`），那条路在 iOS 上从未生效，见 [bundledSerif] 的注释。
+  /// [fontFamilyFallback] 仍然保留，但角色变了：不再是「字体族没命中时的备胎」，
+  /// 而是「子集里没有这个字时去哪儿找」。
   ///
   /// **它不覆盖 `label*`。** 那三级是按钮、胶囊、导航栏这类 11–14sp 的界面标签，
   /// 中文衬线体在这个字号下笔画糊成一团，而且没有人会从一个按钮标签上感知字体风格——
@@ -282,10 +283,12 @@ class ThemeStyleForm {
   /// 做的加重（哪儿都跑）。上一轮只是把减重关掉，回到 M3 原生 w400——而 w400 的
   /// 中文衬线本来就偏虚，「不减重」不等于「够粗」。
   ///
-  /// 取 500。三种落地情况都不会比现在差：
-  /// - 系统衬线是可变字体（wght 轴连续）：精确落到 500，横画实打实变粗，收益最大；
-  /// - 系统只有 Regular / Bold 两档：匹配到最近的 400，等于现状，**不是回退，是不变**；
-  /// - 具名回退字体（Songti SC 等）多档字重：落到最接近的一档，同样只增不减。
+  /// 取 500，**现在这是个精确取值**。[bundledSerif] 的字重轴是连续的 400–900，
+  /// `TextStyle.fontWeight` 由引擎映射到 wght 轴，500 就是 500，三端一致。
+  ///
+  /// 换随包字体之前这里只能是「下限 + 听设备的」：系统衬线是可变字体才精确落位，
+  /// 只有 Regular / Bold 两档的设备上 500 匹配回 400，等于什么也没发生——
+  /// 也就没法判断这个杠杆到底有没有用。现在可以放心调了。
   ///
   /// **是下限不是增量**，这个区别很要紧：M3 的 `titleMedium` / `titleSmall` 本来就是
   /// w500，加增量会把它们顶到 w600，而只有 Regular / Bold 两档的衬线体会把 600
@@ -319,21 +322,40 @@ class ThemeStyleForm {
           ? m3Default
           : FontWeight(readingWeightFloor);
 
-  /// 首选族名：**通用族 `serif`，不是具名字体**。这个顺序是实测得来的，别调回去。
+  /// 随包分发的中文衬线体族名，必须和 `pubspec.yaml` 的 `fonts: - family:` 一致。
   ///
-  /// 曾经首选 `Songti SC`、把 `serif` 放在回退链末尾，结果 Android 上中文不变衬线。
-  /// 原因是 Flutter 的 [TextStyle.fontFamilyFallback] 不是 CSS 的 font-family：
-  /// 首选族名解析不到时，CJK 字符走的是引擎默认字体通道，回退链里排在后面的
-  /// `serif` 拿不到「这次要衬线」这个上下文。而 AOSP 的 fonts.xml 从 Android 9 起
-  /// 给 NotoSerifCJK 标了 `fallbackFor="serif"`——**只有首选族名就是 `serif` 时**
-  /// 才会命中它。（富文本编辑器里选 "Serif" 直接写入 `fontFamily: 'serif'`，
-  /// 中文确实变了衬线，这是首选位置有效的现场证据。）
+  /// **为什么不再用系统字体。** 这里曾经写通用族名 `serif`，靠 AOSP 从 Android 9
+  /// 起给 NotoSerifCJK 标的 `fallbackFor="serif"` 命中系统衬线体。那条路在
+  /// Android 上确实有效，但在 iOS 上从未生效：CoreText 不解析通用族名，
+  /// `serif` 解析不到时 CJK 字符直接走引擎默认字体（苹方，黑体），而
+  /// [TextStyle.fontFamilyFallback] 不是 CSS 的 font-family——它只在
+  /// **首选族有这个字形但缺某个字**时逐个回退，首选族整个解析不到时排在后面的
+  /// `Songti SC` 根本没机会被查询。所以 iOS 上两套手工风格的正文一直是黑体。
   ///
-  /// iOS / macOS / Windows 的字体管理器基本不解析通用族名，会跳过 `serif`
-  /// 落到下面的具名字体上，所以这个顺序对三端都成立。
+  /// 换成随包字体之后：族名一定解析得到，三端字形完全一致；更要紧的是
+  /// [readingWeightFloor] 从「下限 + 听设备的」变成精确取值——这个字体的字重轴
+  /// 是连续的 400–900，`TextStyle.fontWeight` 由引擎映射到 wght 轴，
+  /// w500 就是 w500，不再有「设备只有 Regular/Bold 两档所以等于没抬」这回事。
   ///
-  /// 代价是**不可控**：国内 OEM ROM 各改各的字体集，不能保证都带中文衬线体，
-  /// 各家衬线体长相也不一致。要做到统一必须打包子集化字体（见交接文档）。
+  /// 代价是包体 +5.2MB，以及子集外的字（生僻字、繁体）会落到
+  /// [_systemSerifFallback]。
+  static const String bundledSerif = 'NotoSerifSC';
+
+  /// 随包衬线体的 asset 路径，必须和 `pubspec.yaml` 的 `- asset:` 一致。
+  ///
+  /// 和 [bundledSerif] 放一起是因为这两个值得一起改：族名对不上字体加载不到，
+  /// 路径对不上 `rootBundle.load` 直接抛。PDF 导出（`PdfFontService`）和几处
+  /// 测试都从这里取，别再各写各的字符串。
+  static const String bundledSerifAsset = 'assets/fonts/NotoSerifSC-Subset.ttf';
+
+  /// 子集外字形的去处。
+  ///
+  /// [bundledSerif] 是 GB2312 子集（约 7800 个字形），覆盖不到的字——生僻人名用字、
+  /// 繁体引文、少数民族文字——会按这条链逐个找。**排系统衬线体而不是让它回落到
+  /// 引擎默认**，是为了让混排出来的那个字至少还是衬线，而不是段落里突然冒出一个黑体字。
+  ///
+  /// 链尾不再需要通用族名 `serif`：首选族已经一定解析得到，逐字回退这条路是通的，
+  /// 而 `serif` 在 iOS 上本来就解析不到，留着只是噪音。
   static const List<String> _systemSerifFallback = [
     'Songti SC',
     'STSong',
@@ -402,7 +424,7 @@ class ThemeStyleForm {
     // 标签胶囊和按钮行），画得淡一点也压不住乱；现在横线只画在正文那一块里，
     // 反而要收着画——它是纸的底纹，不是表格线。
     ruleOpacity: 0.4,
-    fontFamily: 'serif',
+    fontFamily: bundledSerif,
     fontFamilyFallback: _systemSerifFallback,
     bodyLineHeight: _paperLineHeight,
     bodyFontScale: _serifFontScale,
@@ -426,7 +448,7 @@ class ThemeStyleForm {
     // 素笺是「素」的：不画横线。这也让两套手工风格除了颜色和圆角之外有了真正的差别。
     ruleSpacing: 0,
     ruleOpacity: 0,
-    fontFamily: 'serif',
+    fontFamily: bundledSerif,
     fontFamilyFallback: _systemSerifFallback,
     // 比纸墨紧一档：素笺的性格是硬朗、密实。有了行高令牌，两套手工风格终于不只是
     // 颜色和圆角的差别。仍然比 material 的 1.5 松，因为字体是衬线。
@@ -697,11 +719,13 @@ class AppSurfaceTokens extends ThemeExtension<AppSurfaceTokens> {
 class AppTypographyTokens extends ThemeExtension<AppTypographyTokens> {
   const AppTypographyTokens({
     required this.variableWeightCompensation,
+    required this.readingFontFamily,
   });
 
   factory AppTypographyTokens.fromForm(ThemeStyleForm form) =>
       AppTypographyTokens(
         variableWeightCompensation: form.variableWeightCompensation,
+        readingFontFamily: form.fontFamily,
       );
 
   /// 见 [ThemeStyleForm.variableWeightCompensation]。
@@ -711,15 +735,27 @@ class AppTypographyTokens extends ThemeExtension<AppTypographyTokens> {
   /// Regular——用户标的粗体直接消失，正文里再也分不出重点。
   final double variableWeightCompensation;
 
+  /// 当前风格的阅读字体族，null = 系统默认（[ThemeStyleForm.fontFamily] 的下发）。
+  ///
+  /// 屏幕上的文字直接读 `textTheme` 就够了，用不着这个。它是给**画到屏幕之外**的
+  /// 那条路准备的：PDF 导出走的是 `pdf` 包自己的排版引擎，完全不经过 `textTheme`，
+  /// 想让导出的文档和屏幕上是同一种字体，只能把族名单独递过去
+  /// （见 `PdfFontService.loadFontSet`）。
+  final String? readingFontFamily;
+
   static AppTypographyTokens of(BuildContext context) =>
       Theme.of(context).extension<AppTypographyTokens>() ??
       AppTypographyTokens.fromForm(ThemeStyleForm.material);
 
   @override
-  AppTypographyTokens copyWith({double? variableWeightCompensation}) =>
+  AppTypographyTokens copyWith({
+    double? variableWeightCompensation,
+    String? readingFontFamily,
+  }) =>
       AppTypographyTokens(
         variableWeightCompensation:
             variableWeightCompensation ?? this.variableWeightCompensation,
+        readingFontFamily: readingFontFamily ?? this.readingFontFamily,
       );
 
   @override

@@ -2432,6 +2432,7 @@
   "stateManagement": "상태 관리",
   "animationSupport": "애니메이션 지원",
   "localStorage": "로컬 저장소",
+  "readingFont": "본문 글꼴",
   "syncIntegrationNote": "동기화 통합 참고사항:",
   "serviceApiAcknowledgements": "서비스 및 API 승인:",
   "weatherData": "날씨 데이터",

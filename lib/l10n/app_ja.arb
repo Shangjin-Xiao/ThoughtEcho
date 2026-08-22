@@ -2432,6 +2432,7 @@
   "stateManagement": "状態管理",
   "animationSupport": "アニメーション",
   "localStorage": "ローカルストレージ",
+  "readingFont": "本文フォント",
   "syncIntegrationNote": "同期機能：",
   "serviceApiAcknowledgements": "API：",
   "weatherData": "天気データ",

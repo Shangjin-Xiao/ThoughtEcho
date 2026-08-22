@@ -2609,6 +2609,7 @@
   "stateManagement": "状态管理",
   "animationSupport": "动画支持",
   "localStorage": "本地存储",
+  "readingFont": "阅读字体",
   "syncIntegrationNote": "同步功能集成说明：",
   "serviceApiAcknowledgements": "服务与 API 鸣谢：",
   "weatherData": "天气数据",
