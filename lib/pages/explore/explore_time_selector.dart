@@ -34,97 +34,91 @@ extension _ExploreTimeSelector on _ExplorePageState {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
-    return PopupMenuButton<String>(
-      tooltip: l10n.timeRange,
-      position: PopupMenuPosition.under,
-      onSelected: (value) {
-        if (value == _kPickDateAction) {
-          _selectDate();
-          return;
-        }
-        if (value == _selectedPeriod) return;
-        _updateState(() {
-          _selectedPeriod = value;
-        });
-        _loadPeriodData();
+    return MenuAnchor(
+      builder: (context, controller, child) {
+        return InkWell(
+          onTap: () {
+            if (controller.isOpen) {
+              controller.close();
+            } else {
+              controller.open();
+            }
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding:
+                const EdgeInsets.only(left: 12, right: 8, top: 7, bottom: 7),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.secondaryContainer,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _getPeriodName(l10n),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Icon(
+                  Icons.arrow_drop_down,
+                  size: 20,
+                  color: theme.colorScheme.onSecondaryContainer,
+                ),
+              ],
+            ),
+          ),
+        );
       },
-      itemBuilder: (context) => [
+      menuChildren: [
         _buildPeriodMenuItem('week', l10n.thisWeek, Icons.view_week),
         _buildPeriodMenuItem(
             'month', l10n.thisMonth, Icons.calendar_view_month),
         _buildPeriodMenuItem('year', l10n.thisYear, Icons.today),
-        const PopupMenuDivider(),
-        PopupMenuItem(
-          value: _kPickDateAction,
-          child: Row(
-            children: [
-              Icon(
-                Icons.calendar_today,
-                size: 18,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 12),
-              Text(l10n.selectDate),
-            ],
+        const Divider(),
+        MenuItemButton(
+          leadingIcon: Icon(
+            Icons.calendar_today,
+            size: 18,
+            color: theme.colorScheme.onSurfaceVariant,
           ),
+          onPressed: _selectDate,
+          child: Text(l10n.selectDate),
         ),
       ],
-      child: Container(
-        padding: const EdgeInsets.only(left: 12, right: 8, top: 7, bottom: 7),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.secondaryContainer,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              _getPeriodName(l10n),
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: theme.colorScheme.onSecondaryContainer,
-              ),
-            ),
-            const SizedBox(width: 2),
-            Icon(
-              Icons.arrow_drop_down,
-              size: 20,
-              color: theme.colorScheme.onSecondaryContainer,
-            ),
-          ],
-        ),
-      ),
     );
   }
 
-  PopupMenuItem<String> _buildPeriodMenuItem(
+  Widget _buildPeriodMenuItem(
     String value,
     String label,
     IconData icon,
   ) {
     final theme = Theme.of(context);
     final selected = _selectedPeriod == value;
-    return PopupMenuItem(
-      value: value,
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 18,
-            color: selected
-                ? theme.colorScheme.primary
-                : theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style:
-                selected ? TextStyle(color: theme.colorScheme.primary) : null,
-          ),
-          if (selected) ...[
-            const Spacer(),
-            Icon(Icons.check, size: 18, color: theme.colorScheme.primary),
-          ],
-        ],
+    return MenuItemButton(
+      leadingIcon: Icon(
+        icon,
+        size: 18,
+        color: selected
+            ? theme.colorScheme.primary
+            : theme.colorScheme.onSurfaceVariant,
+      ),
+      trailingIcon: selected
+          ? Icon(Icons.check, size: 18, color: theme.colorScheme.primary)
+          : null,
+      onPressed: () {
+        if (value == _selectedPeriod) return;
+        _updateState(() {
+          _selectedPeriod = value;
+        });
+        _loadPeriodData();
+      },
+      child: Text(
+        label,
+        style: selected ? TextStyle(color: theme.colorScheme.primary) : null,
       ),
     );
   }

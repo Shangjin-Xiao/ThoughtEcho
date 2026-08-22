@@ -602,34 +602,34 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
               ),
 
               // 更多选项
-              PopupMenuButton<String>(
-                icon: Icon(
-                  Icons.more_vert,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-                onSelected: (value) => _handleAudioMenuAction(value),
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: 'share',
-                    child: Row(
-                      children: [
-                        const Icon(Icons.share),
-                        const SizedBox(width: 8),
-                        Text(l10n.shareAudio),
-                      ],
+              MenuAnchor(
+                builder: (context, controller, child) {
+                  return IconButton(
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
+                    onPressed: () {
+                      if (controller.isOpen) {
+                        controller.close();
+                      } else {
+                        controller.open();
+                      }
+                    },
+                  );
+                },
+                menuChildren: [
+                  MenuItemButton(
+                    leadingIcon: const Icon(Icons.share),
+                    onPressed: () => _handleAudioMenuAction('share'),
+                    child: Text(l10n.shareAudio),
                   ),
-                  PopupMenuItem(
-                    value: 'info',
-                    child: Row(
-                      children: [
-                        const Icon(Icons.info),
-                        const SizedBox(width: 8),
-                        Text(l10n.fileInfo),
-                      ],
-                    ),
+                  MenuItemButton(
+                    leadingIcon: const Icon(Icons.info),
+                    onPressed: () => _handleAudioMenuAction('info'),
+                    child: Text(l10n.fileInfo),
                   ),
                 ],
               ),

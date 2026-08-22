@@ -118,51 +118,50 @@ extension _SmartPushSettingsPageCustomSections on _SmartPushSettingsPageState {
                 });
               },
             ),
-            PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: colorScheme.onSurfaceVariant),
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      const Icon(Icons.edit_outlined, size: 20),
-                      const SizedBox(width: 8),
-                      Text(l10n.edit),
-                    ],
+            MenuAnchor(
+              builder: (context, controller, child) {
+                return IconButton(
+                  icon: Icon(
+                    Icons.more_vert,
+                    color: colorScheme.onSurfaceVariant,
                   ),
+                  onPressed: () {
+                    if (controller.isOpen) {
+                      controller.close();
+                    } else {
+                      controller.open();
+                    }
+                  },
+                );
+              },
+              menuChildren: [
+                MenuItemButton(
+                  leadingIcon: const Icon(Icons.edit_outlined, size: 20),
+                  onPressed: () => _editTimeSlot(index, slot),
+                  child: Text(l10n.edit),
                 ),
                 if (_settings.pushTimeSlots.length > 1)
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.delete_outline,
-                          size: 20,
-                          color: colorScheme.error,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          l10n.delete,
-                          style: TextStyle(color: colorScheme.error),
-                        ),
-                      ],
+                  MenuItemButton(
+                    leadingIcon: Icon(
+                      Icons.delete_outline,
+                      size: 20,
+                      color: colorScheme.error,
+                    ),
+                    onPressed: () {
+                      final slots = List<PushTimeSlot>.from(
+                        _settings.pushTimeSlots,
+                      );
+                      slots.removeAt(index);
+                      setState(() {
+                        _settings = _settings.copyWith(pushTimeSlots: slots);
+                      });
+                    },
+                    child: Text(
+                      l10n.delete,
+                      style: TextStyle(color: colorScheme.error),
                     ),
                   ),
               ],
-              onSelected: (value) {
-                if (value == 'edit') {
-                  _editTimeSlot(index, slot);
-                } else if (value == 'delete') {
-                  final slots = List<PushTimeSlot>.from(
-                    _settings.pushTimeSlots,
-                  );
-                  slots.removeAt(index);
-                  setState(() {
-                    _settings = _settings.copyWith(pushTimeSlots: slots);
-                  });
-                }
-              },
             ),
           ],
         ),

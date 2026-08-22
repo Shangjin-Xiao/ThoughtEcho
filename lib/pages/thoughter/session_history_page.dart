@@ -194,34 +194,35 @@ class _SessionHistoryPageState extends State<SessionHistoryPage> {
           if (_isNoteScoped) _buildScopeSelector(l10n),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-            child: TextField(
+            child: SearchBar(
               controller: _searchController,
-              decoration: InputDecoration(
-                hintText: l10n.searchChatHistory,
-                prefixIcon: const Icon(Icons.search, size: 20),
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(
-                      AppShapeTokens.of(context).inputRadius),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: theme.colorScheme.surfaceContainerHighest,
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        tooltip: l10n.clear,
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchQuery = '';
-                            _searchResults = null;
-                          });
-                        },
-                      )
-                    : null,
+              hintText: l10n.searchChatHistory,
+              leading: const Icon(Icons.search, size: 20),
+              elevation: const WidgetStatePropertyAll(0),
+              backgroundColor: WidgetStatePropertyAll(
+                theme.colorScheme.surfaceContainerHighest,
               ),
+              shape: WidgetStatePropertyAll(
+                RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    AppShapeTokens.of(context).inputRadius,
+                  ),
+                ),
+              ),
+              trailing: [
+                if (_searchQuery.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    tooltip: l10n.clear,
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() {
+                        _searchQuery = '';
+                        _searchResults = null;
+                      });
+                    },
+                  ),
+              ],
               onChanged: (value) {
                 setState(() => _searchQuery = value);
                 _performSearch(value);

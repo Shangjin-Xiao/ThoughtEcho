@@ -470,56 +470,44 @@ class _AISettingsPageState extends State<AISettingsPage> {
               height: 20,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : PopupMenuButton<_ProviderAction>(
-              onSelected: (action) {
-                switch (action) {
-                  case _ProviderAction.edit:
-                    _openEditor(provider: provider);
-                  case _ProviderAction.test:
-                    _test(provider);
-                  case _ProviderAction.rename:
-                    _rename(provider);
-                  case _ProviderAction.delete:
-                    _delete(provider);
-                }
+          : MenuAnchor(
+              builder: (context, controller, child) {
+                return IconButton(
+                  icon: const Icon(Icons.more_vert),
+                  onPressed: () {
+                    if (controller.isOpen) {
+                      controller.close();
+                    } else {
+                      controller.open();
+                    }
+                  },
+                );
               },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: _ProviderAction.edit,
-                  child: ListTile(
-                    leading: const Icon(Icons.edit_outlined),
-                    title: Text(l10n.edit),
-                    contentPadding: EdgeInsets.zero,
-                  ),
+              menuChildren: [
+                MenuItemButton(
+                  leadingIcon: const Icon(Icons.edit_outlined),
+                  onPressed: () => _openEditor(provider: provider),
+                  child: Text(l10n.edit),
                 ),
-                PopupMenuItem(
-                  value: _ProviderAction.test,
-                  child: ListTile(
-                    leading: const Icon(Icons.network_check),
-                    title: Text(l10n.testConnectionButton),
-                    contentPadding: EdgeInsets.zero,
-                  ),
+                MenuItemButton(
+                  leadingIcon: const Icon(Icons.network_check),
+                  onPressed: () => _test(provider),
+                  child: Text(l10n.testConnectionButton),
                 ),
-                PopupMenuItem(
-                  value: _ProviderAction.rename,
-                  child: ListTile(
-                    leading: const Icon(Icons.drive_file_rename_outline),
-                    title: Text(l10n.rename),
-                    contentPadding: EdgeInsets.zero,
-                  ),
+                MenuItemButton(
+                  leadingIcon: const Icon(Icons.drive_file_rename_outline),
+                  onPressed: () => _rename(provider),
+                  child: Text(l10n.rename),
                 ),
-                PopupMenuItem(
-                  value: _ProviderAction.delete,
-                  child: ListTile(
-                    leading: Icon(
-                      Icons.delete_outline,
-                      color: theme.colorScheme.error,
-                    ),
-                    title: Text(
-                      l10n.delete,
-                      style: TextStyle(color: theme.colorScheme.error),
-                    ),
-                    contentPadding: EdgeInsets.zero,
+                MenuItemButton(
+                  leadingIcon: Icon(
+                    Icons.delete_outline,
+                    color: theme.colorScheme.error,
+                  ),
+                  onPressed: () => _delete(provider),
+                  child: Text(
+                    l10n.delete,
+                    style: TextStyle(color: theme.colorScheme.error),
                   ),
                 ),
               ],
