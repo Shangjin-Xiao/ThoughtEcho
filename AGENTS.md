@@ -64,10 +64,16 @@ dart format <changed-dart-files>
 # 只检查格式，不改文件
 dart format --output=none --set-exit-if-changed <changed-dart-files>
 
-# 静态分析（完成修改后执行一次即可，严禁短时间内频繁重复执行）
+# 静态分析
 flutter analyze --no-fatal-infos
 
-# 默认门禁由 GitHub Actions 远程 CI 自动运行；本地环境资源受限，尽量不跑本地 flutter test，提交后由 Agent 自行盯紧远程 CI 结果
+# 运行相关测试文件（默认做法）
+timeout 60s flutter test --reporter compact test/path/to/file_test.dart
+
+# 按名称运行单个用例
+timeout 60s flutter test --reporter compact test/path/to/file_test.dart --name "用例名称"
+
+# 默认门禁由 GitHub Actions 远程 CI 自动运行
 
 # 修改 Mockito 接口或注解后重新生成 Mock
 dart run build_runner build --delete-conflicting-outputs
@@ -77,15 +83,15 @@ dart run build_runner build --delete-conflicting-outputs
 pwsh ./scripts/build_msix_ci.ps1
 ```
 
-> **本地环境约束**（详见 `docs/DEVICE_INFO.md`）：当前开发设备资源紧张，高占用命令（如 `flutter test`、`flutter gen-l10n`、多余的 analyze 等）一律不要在本地跑，本地日常一般只进行 `dart format` 与单次必要的 `flutter analyze`（切勿频繁重复 analyze）。完整测试、代码生成与门禁交由 GitHub Actions 远程 CI 校验，提交推送后由 Agent 自行盯紧远程 CI 状态。
+> **环境与设备提示**：若本地存在 `docs/DEVICE_INFO.md`（由 `.gitignore` 忽略），进入开发前请先阅读并严格遵守其设备资源与操作约束；测试与 CI 门禁结果由 Agent 自行盯紧远程 CI。
 
 ## 工作方式
 
-1. 先确认请求范围和验收标准，再检查 `git status --short`，保留用户已有改动。
+1. 先确认请求范围和验收标准，再检查 `git status --short`，保留用户已有改动；若存在 `docs/DEVICE_INFO.md`，先查看其说明。
 2. 用 `rg` / `rg --files` 查找定义、调用方、测试和文档；修改复杂文件前阅读其拆分文件。
-3. 做最小且完整的改动。修 Bug 或新增逻辑时编写相应测试，但本地尽量不跑全量测试，交由远程 CI 验证。
+3. 做最小且完整的改动。修 Bug 或新增逻辑时编写相应测试。
 4. 只格式化和验证相关文件。除非用户明确要求，不主动运行全量测试或全仓库格式化。
-5. 完成前检查 diff 与静态分析结果；推送后由 Agent 盯紧 GitHub Actions 远程 CI 结果。无法执行的验证要明确说明，不能声称已通过。
+5. 完成前检查 diff 与静态分析结果；推送后由 Agent 自行盯紧 GitHub Actions 远程 CI 结果。无法执行的验证要明确说明，不能声称已通过。
 
 涉及第三方库、Flutter/Dart SDK、平台 API、AI 服务协议或 GitHub Actions 时，先用 Context7
 查询当前官方文档（`resolve-library-id` → `get-library-docs`）；Context7 不可用或无对应资料时，
