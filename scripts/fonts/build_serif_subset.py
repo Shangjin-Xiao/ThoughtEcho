@@ -20,10 +20,12 @@ from __future__ import annotations
 
 import argparse
 import os
-import subprocess
-import sys
+import urllib.parse
 import urllib.request
 from pathlib import Path
+
+from fontTools import subset as ft_subset
+from fontTools.varLib import instancer as ft_instancer
 
 # fonttools 默认把当前时间写进 head 表，同样的输入会产出不同的字节。产物是要签入
 # 仓库的，重跑一次就多一个无意义的 5MB diff——钉死时间戳让构建可复现。
@@ -104,19 +106,23 @@ def build_charset(include_traditional: bool) -> str:
 
 
 def download(url: str, dest: Path) -> None:
+    """下载到 [dest]，已存在则跳过。
+
+    先校验 scheme 再打开：`urlopen` 认 `file:` 和自定义 scheme，上面那两个常量
+    改错一个字符就会从「下载字体」变成「读本地任意文件」。这里的 URL 目前都是
+    写死的常量，这道检查是给以后改常量的人留的。
+    """
+    scheme = urllib.parse.urlparse(url).scheme
+    if scheme != "https":
+        raise SystemExit(f"只允许 https，拿到的是 {scheme!r}：{url}")
     if dest.exists():
         print(f"跳过下载（已存在）：{dest.name}")
         return
     print(f"下载 {url}")
-    with urllib.request.urlopen(url, timeout=180) as response:
+    # nosec 的依据是上面那三行 scheme 校验，不是「这行看着没事」——
+    # 静态分析盯 urlopen 盯的就是 file:/ 与自定义 scheme，那条路已经堵死。
+    with urllib.request.urlopen(url, timeout=180) as response:  # nosec B310
         dest.write_bytes(response.read())
-
-
-def run(*args: str) -> None:
-    result = subprocess.run(args, capture_output=True, text=True)
-    if result.returncode != 0:
-        sys.stderr.write(result.stdout + result.stderr)
-        raise SystemExit(f"命令失败：{' '.join(args)}")
 
 
 def fix_name_table(font_path: Path) -> None:
@@ -173,24 +179,25 @@ def main() -> None:
     print(f"字符集：{len(charset)} 个字符"
           f"（{'含繁体' if args.traditional else '简体'}）")
 
+    # 直接调 fontTools 的 Python API，不起子进程：pyftsubset / fonttools 是否在
+    # PATH 上取决于安装方式，而且子进程那条路要么被静态分析盯上、要么得靠
+    # 抑制注释糊过去。库调用没有这些问题，报错也直接是 Python 异常。
     subset_file = work_dir / "subset.ttf"
-    run(
-        "pyftsubset",
+    ft_subset.main([
         str(source_font),
         f"--text-file={charset_file}",
         f"--output-file={subset_file}",
         f"--layout-features={LAYOUT_FEATURES}",
         "--no-hinting",
-    )
+    ])
 
     # 收窄字重轴，顺带把默认实例定到 400 并刷新 name 表。
-    run(
-        "fonttools", "varLib.instancer",
+    ft_instancer.main([
         str(subset_file),
         WEIGHT_RANGE,
         "-o", str(OUT_FONT),
         "--update-name-table",
-    )
+    ])
 
     fix_name_table(OUT_FONT)
 
