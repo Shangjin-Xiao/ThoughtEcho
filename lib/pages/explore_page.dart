@@ -36,8 +36,6 @@ part 'explore/explore_overview.dart';
 part 'explore/explore_stats.dart';
 part 'explore/explore_thoughter_entry.dart';
 
-const String _kPickDateAction = '__pick_date__';
-
 /// 探索页：底部导航第三个 tab，聚合周期洞察与 Thoughter 入口。
 class ExplorePage extends StatefulWidget {
   const ExplorePage({super.key});

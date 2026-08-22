@@ -782,8 +782,6 @@ class _AgentMemorySectionState extends State<_AgentMemorySection> {
   }
 }
 
-enum _ProviderAction { edit, test, rename, delete }
-
 class _Badge extends StatelessWidget {
   const _Badge({
     required this.label,
