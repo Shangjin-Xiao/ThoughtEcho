@@ -99,6 +99,13 @@ class AIPromptManager {
 </output_format>
 ''';
 
+  /// 周期洞察提示词的版本号。
+  ///
+  /// 改动 [getReportInsightSystemPrompt] / [buildReportInsightUserMessage]
+  /// 的措辞或输出结构时必须 +1：洞察缓存的签名带着这个号，不改的话老用户
+  /// 会一直读到旧提示词生成的缓存，直到他碰巧增删了笔记才重算。
+  static const int reportInsightPromptVersion = 2;
+
   /// 每日提示生成器提示词
   static const String dailyPromptGeneratorPrompt = '''
 <context>

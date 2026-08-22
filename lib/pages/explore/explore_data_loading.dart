@@ -115,11 +115,38 @@ extension _ExploreDataLoading on _ExplorePageState {
       }
     }
 
-    // 生成数据签名 (用于判断数据是否发生变化)
-    // 签名组成: 周期类型_开始日期_结束日期_笔记数量_总字数
-    final rangeText = _getDateRangeText(l10n);
-    final dataSignature =
-        '${_selectedPeriod}_${rangeText}_${_periodQuotes.length}_$totalWords';
+    // 生成数据签名（用于判断洞察能不能复用缓存）。
+    //
+    // 原来是「周期_本地化日期文案_笔记数_总字数」，三处都不够：
+    // - 改错别字、换个等长的词，笔记数和总字数都不动，签名不变，于是永远
+    //   返回旧洞察；反过来两批完全不同的笔记也可能撞签名。改成把每条笔记的
+    //   id 和内容一起折进指纹，用异或合并，与查询返回的顺序无关。
+    // - 日期文案是本地化字符串，切换界面语言就白白重算一遍。改用 ISO 日期。
+    // - 签名不含提示词版本和模型，所以改完提示词或换了模型，老缓存照样命中，
+    //   用户根本看不到变化。两样都折进来。
+    var contentFingerprint = 0;
+    for (final quote in _periodQuotes) {
+      contentFingerprint ^= Object.hash(quote.id, quote.content);
+    }
+
+    final range = ReportPeriodUtils.dateRange(_selectedPeriod, _selectedDate);
+    final rangeKey = range == null
+        ? 'all'
+        : '${range.start.toIso8601String().substring(0, 10)}'
+            '~${range.end.toIso8601String().substring(0, 10)}';
+    final provider =
+        context.read<SettingsService>().multiAISettings.currentProvider;
+    final model = provider?.model ?? '-';
+
+    final dataSignature = [
+      _selectedPeriod,
+      rangeKey,
+      _periodQuotes.length,
+      totalWords,
+      contentFingerprint,
+      'p${AIPromptManager.reportInsightPromptVersion}',
+      model,
+    ].join('_');
 
     final mostPeriod = periodCounts.entries.isNotEmpty
         ? periodCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key
@@ -361,10 +388,14 @@ extension _ExploreDataLoading on _ExplorePageState {
             _insightLoading = false;
           });
 
-          // 本地兜底生成的洞察也保存，但标记为非AI（在save方法里处理）
-          // 不过由于saveInsightToHistory目前强制isAiGenerated=true，
-          // 这里我们可能不想保存本地兜底的，或者保存但不带signature以避免污染？
-          // 暂时策略：出错降级为本地生成后，不保存到带signature的历史，以免下次误用本地版覆盖AI版
+          // 本地兜底生成的洞察不写进带 signature 的历史，免得下次误当成
+          // 缓存好的 AI 洞察复用。
+          //
+          // 同时把签名清掉：签名在方法开头就记下了，兜底文本又让
+          // _insightText 非空，于是 _maybeStartInsight 开头那个早退条件
+          // 永远成立——网络抖一次，这个周期就钉死在本地模板上，除非用户
+          // 恰好增删了笔记。清掉之后下次刷新会重新试 AI。
+          _insightSignature = null;
         },
         onDone: () {
           if (!mounted) return;
@@ -451,21 +482,12 @@ extension _ExploreDataLoading on _ExplorePageState {
     try {
       final insightService = context.read<InsightHistoryService>();
 
-      // 获取当前周期的标签
-      String periodLabel = '';
-      switch (_selectedPeriod) {
-        case 'week':
-          periodLabel = l10n.thisWeek;
-          break;
-        case 'month':
-          periodLabel = l10n.thisMonth;
-          break;
-        case 'year':
-          periodLabel = l10n.yearOnly(_selectedDate.year);
-          break;
-        default:
-          periodLabel = _selectedPeriod;
-      }
+      // 存具体的日期范围，不存「本周」。这个标签只有一个消费者——
+      // getPreviousInsightsContext 把它拼成「- [标签] 洞察」喂回给模型做
+      // 历史参考。每一周都存成「本周」的话，模型看到的是一串一模一样的
+      // 标签，既分不清先后也看不出跨度，等于白给。
+      final rangeText = _getDateRangeText(l10n);
+      final periodLabel = rangeText.isNotEmpty ? rangeText : _selectedPeriod;
 
       await insightService.addInsight(
         insight: _insightText,

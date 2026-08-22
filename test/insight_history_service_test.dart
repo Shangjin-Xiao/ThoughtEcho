@@ -115,5 +115,80 @@ void main() {
       expect(insightHistoryService.insights.length, 1);
       expect(insightHistoryService.insights.first.insight, '最近的洞察');
     });
+
+    test('same signature replaces instead of piling up', () async {
+      for (var i = 0; i < 5; i++) {
+        await insightHistoryService.addInsight(
+          insight: '第$i次生成',
+          periodType: 'week',
+          periodLabel: '本周',
+          isAiGenerated: true,
+          dataSignature: 'week_2026-08-17~2026-08-23_p2',
+        );
+      }
+
+      // 同一份数据只留最新的一条，不能攒成 5 条把 50 条上限吃光
+      expect(insightHistoryService.insights.length, 1);
+      expect(insightHistoryService.insights.first.insight, '第4次生成');
+    });
+
+    test('different signatures are kept apart', () async {
+      await insightHistoryService.addInsight(
+        insight: '上周的洞察',
+        periodType: 'week',
+        periodLabel: '上周',
+        isAiGenerated: true,
+        dataSignature: 'week_a',
+      );
+      await insightHistoryService.addInsight(
+        insight: '本周的洞察',
+        periodType: 'week',
+        periodLabel: '本周',
+        isAiGenerated: true,
+        dataSignature: 'week_b',
+      );
+
+      expect(insightHistoryService.insights.length, 2);
+      expect(
+        insightHistoryService.getInsightBySignature('week_a')?.insight,
+        '上周的洞察',
+      );
+    });
+
+    test('signature lookup ignores empty signature', () async {
+      await insightHistoryService.addInsight(
+        insight: '没有签名的洞察',
+        periodType: 'week',
+        periodLabel: '本周',
+        isAiGenerated: true,
+      );
+
+      // 没带签名的记录不该被空签名查询命中
+      expect(insightHistoryService.getInsightBySignature(''), isNull);
+    });
+
+    test('previous-insight context keeps one entry per period', () async {
+      // 同一周重复生成过三次（历史数据里可能还留着这种重复）
+      for (var i = 0; i < 3; i++) {
+        await insightHistoryService.addInsight(
+          insight: '本周第$i版',
+          periodType: 'week',
+          periodLabel: '本周',
+          isAiGenerated: true,
+        );
+      }
+      await insightHistoryService.addInsight(
+        insight: '上周那版',
+        periodType: 'week',
+        periodLabel: '上周',
+        isAiGenerated: true,
+      );
+
+      final context = insightHistoryService.getPreviousInsightsContext();
+
+      // 每个周期只取一条，否则模型就是在参考自己刚写过的东西
+      expect(context.contains('上周那版'), true);
+      expect('本周第'.allMatches(context).length, 1);
+    });
   });
 }
