@@ -16,23 +16,27 @@ class MockLocationService extends Mock implements LocationService {
   bool get hasLocationPermission => super.noSuchMethod(
         Invocation.getter(#hasLocationPermission),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool;
 
   @override
   String get city => super.noSuchMethod(
         Invocation.getter(#city),
         returnValue: '',
+        returnValueForMissingStub: '',
       ) as String;
 
   @override
   Position? get currentPosition => super.noSuchMethod(
         Invocation.getter(#currentPosition),
+        returnValueForMissingStub: null,
       ) as Position?;
 
   @override
   Future<void> setSelectedCity(CityInfo? cityInfo) => super.noSuchMethod(
         Invocation.method(#setSelectedCity, [cityInfo]),
         returnValue: Future<void>.value(),
+        returnValueForMissingStub: Future<void>.value(),
       ) as Future<void>;
 
   @override
@@ -50,6 +54,7 @@ class MockLocationService extends Mock implements LocationService {
           },
         ),
         returnValue: Future<Position?>.value(),
+        returnValueForMissingStub: Future<Position?>.value(),
       ) as Future<Position?>;
 }
 
@@ -58,6 +63,7 @@ class MockWeatherService extends Mock implements WeatherService {
   bool get hasValidWeatherData => super.noSuchMethod(
         Invocation.getter(#hasValidWeatherData),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool;
 
   @override
@@ -70,6 +76,7 @@ class MockWeatherService extends Mock implements WeatherService {
           {#forceRefresh: forceRefresh, #timeout: timeout},
         ),
         returnValue: Future<void>.value(),
+        returnValueForMissingStub: Future<void>.value(),
       ) as Future<void>;
 }
 

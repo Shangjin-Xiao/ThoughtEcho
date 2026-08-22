@@ -17,40 +17,47 @@ class MockLocationService extends Mock implements LocationService {
   bool get isSearching => super.noSuchMethod(
         Invocation.getter(#isSearching),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool;
 
   @override
   List<CityInfo> get searchResults => super.noSuchMethod(
         Invocation.getter(#searchResults),
         returnValue: <CityInfo>[],
+        returnValueForMissingStub: <CityInfo>[],
       ) as List<CityInfo>;
 
   @override
   String? get city => super.noSuchMethod(
         Invocation.getter(#city),
         returnValue: '北京',
+        returnValueForMissingStub: '北京',
       ) as String?;
 
   @override
   String? get currentAddress => super.noSuchMethod(
         Invocation.getter(#currentAddress),
         returnValue: '中国, 北京市',
+        returnValueForMissingStub: '中国, 北京市',
       ) as String?;
 
   @override
   Position? get currentPosition => super.noSuchMethod(
         Invocation.getter(#currentPosition),
+        returnValueForMissingStub: null,
       ) as Position?;
 
   @override
   Future<List<CityInfo>> searchCity(String? query) => super.noSuchMethod(
         Invocation.method(#searchCity, [query]),
         returnValue: Future<List<CityInfo>>.value(<CityInfo>[]),
+        returnValueForMissingStub: Future<List<CityInfo>>.value(<CityInfo>[]),
       ) as Future<List<CityInfo>>;
 
   @override
   void clearSearchResults() => super.noSuchMethod(
         Invocation.method(#clearSearchResults, []),
+        returnValueForMissingStub: null,
       );
 }
 
@@ -59,24 +66,28 @@ class MockWeatherService extends Mock implements WeatherService {
   bool get isLoading => super.noSuchMethod(
         Invocation.getter(#isLoading),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool;
 
   @override
   bool get hasValidWeatherData => super.noSuchMethod(
         Invocation.getter(#hasValidWeatherData),
         returnValue: true,
+        returnValueForMissingStub: true,
       ) as bool;
 
   @override
   String? get currentWeather => super.noSuchMethod(
         Invocation.getter(#currentWeather),
         returnValue: 'sunny',
+        returnValueForMissingStub: 'sunny',
       ) as String?;
 
   @override
   String? get temperature => super.noSuchMethod(
         Invocation.getter(#temperature),
         returnValue: '25°C',
+        returnValueForMissingStub: '25°C',
       ) as String?;
 
   @override
