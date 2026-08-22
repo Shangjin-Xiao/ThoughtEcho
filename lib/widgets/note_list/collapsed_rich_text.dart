@@ -625,11 +625,23 @@ class CollapsedRichTextMetrics {
       // 得到空计划）。对后面的块也强画一行的话，剩余空间只有几个像素时照样塞一整
       // 行进去，盒子被撑破——`Column` 真的溢出，debug 下就是那条黄黑警示带。
       final bool isFirstBlock = entries.isEmpty;
+      // **空段落量不出任何一行**：文本为空时引擎直接清空行表，只把段落高度设成
+      // strut 高度，于是 `computeLineMetrics()` 返回空表而 `height` 大于 0。
+      // 照「一行都排不下」处理的话，用户在正文里敲的空行会把它自己**连同后面的
+      // 全部内容**一起从计划里删掉——第一行是空行的长笔记，折叠预览整个是白的。
+      //
+      // 渲染侧对同一份 span 会实打实画出一行（高度就是这里的 `painter.height`），
+      // 所以补一行、并按同一个高度记账，测量和渲染才不会漂开。
       final lines = painter.computeLineMetrics();
+      final lineHeights = lines.isEmpty
+          ? <double>[
+              painter.height > 0 ? painter.height : layout.minLineHeight,
+            ]
+          : <double>[for (final line in lines) line.height];
       var fittedLines = 0;
       var fittedHeight = 0.0;
-      for (final line in lines) {
-        final next = fittedHeight + line.height;
+      for (final lineHeight in lineHeights) {
+        final next = fittedHeight + lineHeight;
         if (next > remainingHeight + 0.5 &&
             !(isFirstBlock && fittedLines == 0)) {
           break;
@@ -638,7 +650,7 @@ class CollapsedRichTextMetrics {
         fittedLines++;
       }
       final bool blockTruncated =
-          painter.didExceedMaxLines || fittedLines < lines.length;
+          painter.didExceedMaxLines || fittedLines < lineHeights.length;
       painter.dispose();
 
       if (fittedLines <= 0) {
