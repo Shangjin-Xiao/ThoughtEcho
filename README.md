@@ -1,14 +1,13 @@
 <div align="center">
-  <a href="https://github.com/Shangjin-Xiao/ThoughtEcho">
+  <a href="https://note.shangjinyun.cn/">
     <img src="res/readme-banner.png" alt="ThoughtEcho 心迹 - AI-Powered Inspiration Notebook" width="100%">
   </a>
   
-  # 心迹 (ThoughtEcho)
+  # ThoughtEcho (心迹)
   
   <p>
-    <b>📝 你的专属灵感摘录本 / Your Personal AI-Powered Inspiration Notebook</b><br>
-    <b>想到就记，读到就摘，剩下的交给 AI。</b><br>
-    <sub>Jot it down, clip what you read — let AI sort out the rest.</sub>
+    <b>📝 Your Personal AI-Powered Inspiration Notebook</b><br>
+    <b>Jot it down, clip what you read — let AI sort out the rest.</b>
   </p>
 
   <p>
@@ -22,317 +21,70 @@
       <img src="https://img.shields.io/badge/Microsoft-Store-0078D7?style=flat-square&logo=windows&logoColor=white" alt="Microsoft Store">
     </a>
     <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/stargazers">
-      <img src="https://img.shields.io/github/stars/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=FFD700" alt="Stars">
+      <img src="https://img.shields.io/github/stars/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=FFD700" alt="GitHub Stars">
     </a>
     <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/blob/main/LICENSE">
       <img src="https://img.shields.io/github/license/Shangjin-Xiao/ThoughtEcho?style=flat-square" alt="License: MIT">
     </a>
   </p>
 
-  <h3>📥 下载渠道 / Download</h3>
   <p>
-    <a href="https://www.microsoft.com/store/apps/9NC7GDG6KFMC"><img src="https://get.microsoft.com/images/zh-cn%20dark.svg" width="160" alt="从 Microsoft Store 获取"></a>
+    <a href="README.md"><b>English</b></a> • 
+    <a href="README_CN.md"><b>简体中文</b></a> •
+    <a href="https://note.shangjinyun.cn/"><b>Official Website</b></a> •
+    <a href="docs/USER_MANUAL.md"><b>User Manual</b></a> •
+    <a href="https://shangjin-xiao.github.io/ThoughtEcho/user-guide.html"><b>Web Guide</b></a>
+  </p>
+
+  <h3>📥 Download Channels</h3>
+  <p>
+    <a href="https://www.microsoft.com/store/apps/9NC7GDG6KFMC"><img src="https://get.microsoft.com/images/zh-cn%20dark.svg" width="160" alt="Get from Microsoft Store"></a>
     &nbsp;&nbsp;&nbsp;
     <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest"><img src="https://img.shields.io/badge/Android_APK-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android APK"></a>
   </p>
 
-  <p><sub>Windows 推荐从 Microsoft Store 安装（自动更新）· Android 请下载 64 位 APK</sub></p>
-
-  <p>
-    <a href="#-english-version"><b>English</b></a> • 
-    <a href="#-中文版本"><b>中文</b></a> •
-    <a href="docs/USER_MANUAL.md"><b>用户手册 / User Manual</b></a>
-  </p>
+  <p><sub>Windows: Recommended from Microsoft Store (auto-update) · Android: Download 64-bit APK</sub></p>
+  <p><sub>🌍 <b>Localization:</b> Full support for <b>English</b>, <b>简体中文</b>, <b>日本語</b>, and <b>한국어</b> (German, Spanish, French in progress)</sub></p>
   
 </div>
 
 ---
-
-<div id="-中文版本">
-
-## 🌟 为什么选择 ThoughtEcho？
-
-**心迹是你的专属灵感摘录本**。它能帮你：
-
-- 📝 **随时随地捕获**：富文本、多媒体，甚至一句话的灵感碎片
-- ✨ **深度理解笔记**：通过 AI 问答与润色，让笔记产生更多价值
-- 📊 **发现思维脉络**：智能提取周期洞察与年度报告
-- 🔄 **无缝多端同步**：全平台覆盖，数据永远触手可及
-- 🔒 **保护个人隐私**：本地优先存储，你的数据只属于你
-
-<br>
-
-## ✨ 当前功能
-
-<div align="center">
-  <table>
-    <tr>
-      <td align="center" width="33%"><b>✍️ 富文本笔记</b><br>支持富文本、多媒体附件与双格式存储</td>
-      <td align="center" width="33%"><b>✨ Thoughter（实验性 / Beta）</b><br>Agent 工具调用、跨会话长期记忆与笔记智能创作</td>
-      <td align="center" width="33%"><b>📊 洞察与报告</b><br>AI 周期洞察、年度报告与写作趋势分析</td>
-    </tr>
-    <tr>
-      <td align="center"><b>🏷️ 标签与搜索</b><br>多标签筛选、智能过滤与全文搜索</td>
-      <td align="center"><b>🎯 AI卡片生成</b><br>将笔记转换为精美分享卡片</td>
-      <td align="center"><b>📦 媒体与备份中心</b><br>流式处理大文件，备份/恢复更安心</td>
-    </tr>
-    <tr>
-      <td align="center"><b>🌍 情境记录</b><br>自动保存位置、天气与时间段信息</td>
-      <td align="center"><b>🙈 隐藏笔记</b><br>隐藏标签+生物识别保护隐私笔记</td>
-      <td align="center"><b>💾 草稿自动保存</b><br>编辑时自动保存，异常退出不丢失</td>
-    </tr>
-    <tr>
-      <td align="center"><b>⚡ 快速捕获</b><br>剪贴板检测、一言与每日灵感随手收集</td>
-      <td align="center"><b>🎨 主题风格</b><br>纸与墨、素笺与 Material 动态取色</td>
-      <td align="center"><b>📱 全平台支持</b><br>Windows、Android、iOS 全覆盖</td>
-    </tr>
-  </table>
-</div>
-
-## 📸 应用截图
-
-### 核心功能
-| 主页 | 笔记列表 | 添加笔记 |
-|:---:|:---:|:---:|
-| ![主页](res/screenshot/home_page.jpg) | ![笔记列表](res/screenshot/note_list_view.jpg) | ![添加笔记](res/screenshot/add_note.jpg) |
-
-### 编辑与AI功能
-| 富文本编辑器 | AI问答对话 | 筛选与排序 |
-|:---:|:---:|:---:|
-| ![富文本编辑器](res/screenshot/note_full_editor_page.jpg) | ![AI问答对话](res/screenshot/note_qa_chat_page.jpg) | ![筛选与排序](res/screenshot/note_filter_sort_sheet.jpg) |
-
-### 洞察与报告
-| 洞察分析 | 周期报告 | 笔记同步 |
-|:---:|:---:|:---:|
-| ![洞察分析](res/screenshot/insights_page.jpg) | ![周期报告](res/screenshot/period_report.jpg) | ![笔记同步](res/screenshot/note_sync.jpg) |
-
-### 设置与管理
-| 主题设置 | 每日一言设置 | 偏好设置 |
-|:---:|:---:|:---:|
-| ![主题设置](res/screenshot/theme_settings_page.jpg) | ![一言设置](res/screenshot/hitokoto_settings_page.jpg) | ![偏好设置](res/screenshot/preferences_detail_page.jpg) |
-
-### 存储与备份
-| 备份恢复 | 存储管理 |
-|:---:|:---:|
-| ![备份恢复](res/screenshot/backup_restore_page.jpg) | ![存储管理](res/screenshot/storage_management_page.jpg) |
-
-
-## 🛠️ 技术栈
-
-<div align="center">
-  <table>
-    <tr>
-      <td align="center"><b>框架</b></td>
-      <td>Flutter (Dart) - 跨平台UI框架</td>
-    </tr>
-    <tr>
-      <td align="center"><b>状态管理</b></td>
-      <td>provider, get_it - 依赖注入与状态管理</td>
-    </tr>
-    <tr>
-      <td align="center"><b>本地数据库</b></td>
-      <td>sqflite (移动端), sqflite_common_ffi (桌面端)</td>
-    </tr>
-    <tr>
-      <td align="center"><b>富文本编辑</b></td>
-      <td>flutter_quill - 支持富文本、图片、音视频</td>
-    </tr>
-    <tr>
-      <td align="center"><b>AI集成</b></td>
-      <td>多provider架构 - OpenAI、Anthropic、DeepSeek等</td>
-    </tr>
-    <tr>
-      <td align="center"><b>存储优化</b></td>
-      <td>MMKV (高性能), flutter_secure_storage (安全存储)</td>
-    </tr>
-    <tr>
-      <td align="center"><b>多媒体处理</b></td>
-      <td>大文件流式处理、智能内存管理、媒体压缩优化</td>
-    </tr>
-    <tr>
-      <td align="center"><b>平台适配</b></td>
-      <td>Windows、Android、iOS全平台支持（不支持 Web）</td>
-    </tr>
-  </table>
-</div>
-
-## 🚀 快速开始
-
-1. **环境准备** 
-   
-   确保已安装 Flutter 3.x+ 环境。运行 `flutter doctor` 检查配置。
-
-2. **获取代码**
-   ```bash
-   git clone https://github.com/Shangjin-Xiao/ThoughtEcho.git
-   cd ThoughtEcho
-   ```
-
-3. **安装依赖**
-   ```bash
-   flutter pub get
-   ```
-
-4. **运行应用**
-   ```bash
-   flutter run
-   ```
-
-5. **AI 功能配置** (可选)
-   
-   在应用设置中配置 API Key 以启用 AI 功能。
-
-## 🗺️ 发展路线图
-
-<div align="center">
-  <table>
-    <tr>
-      <th>已完成 ✅</th>
-      <th>长期规划 💡</th>
-    </tr>
-    <tr>
-      <td>
-        • 富文本编辑器与多媒体支持<br>
-        • 多AI服务商架构<br>
-        • Thoughter 智能体与跨会话长期记忆<br>
-        • 纸与墨 / 素笺 / Material 特色主题风格<br>
-        • AI卡片生成与多种模板<br>
-        • 大文件流式处理与媒体管理<br>
-        • ZIP完整备份与增量媒体同步<br>
-        • Material 3现代化界面与主题令牌<br>
-        • 多平台数据库适配<br>
-        • 位置与天气记录（智能在线搜索）<br>
-        • 剪贴板智能检测与快速摘录<br>
-        • 周期性智能洞察报告<br>
-        • 性能优化与列表预热<br>
-        • WebDAV 与 LocalSend 多设备同步<br>
-        • 国际化多语言支持<br>
-        • Windows 桌面端应用支持<br>
-        • 隐藏笔记与生物识别保护<br>
-        • 草稿自动保存与恢复<br>
-        • iOS 平台支持<br>
-        • 完整用户指南与网页手册
-      </td>
-      <td>
-        <b>🔥 智能输入升级</b><br>
-        • AI自然语言搜索<br>
-        • 语音转文字输入<br>
-        • OCR拍照识别摘录<br>
-        • AI自动提取作者出处<br><br>
-        <b>🌍 用户体验提升</b><br>
-        • 仿真3D笔记本界面<br>
-        • 智能内容分类<br>
-        • 地图选点添加位置<br><br>
-        <b>✨ 端侧AI能力</b><br>
-        • 离线语音识别<br>
-        • 本地OCR处理<br>
-        • 端侧智能分析<br>
-        • 高级数据可视化<br>
-        • 更多AI集成服务
-      </td>
-    </tr>
-  </table>
-</div>
-
-> 📝 详细技术说明请查看 [项目概览](docs/project-overview.md)
-
-## 🤝 如何贡献
-
-1. **提交问题或建议**：通过 [GitHub Issues](https://github.com/Shangjin-Xiao/ThoughtEcho/issues) 反馈
-
-2. **贡献代码**：
-   - Fork 仓库并创建功能分支 `feature/YourFeature`
-   - 提交更改 `git commit -m 'feat: Add feature'`
-   - 创建 Pull Request 到主仓库
-
-## 📄 许可证
-
-本项目基于 [MIT 许可证](LICENSE) 发布。
-
-## 🙏 鸣谢
-
-感谢以下开源项目与服务提供商的支持：
-- [Flutter](https://flutter.dev/) - UI 框架
-- [LocalSend](https://github.com/localsend/localsend) - 局域网同步协议集成
-- [Sentry](https://sentry.io/) - 提供应用崩溃与结构化日志（slog）监控服务
-- [一言（Hitokoto）](https://hitokoto.cn/) - 每日一言服务商之一（支持类型筛选）
-- [ZenQuotes](https://zenquotes.io/) - 每日一言英文服务商
-- [API Ninjas Quotes API](https://api-ninjas.com/api/quotes) - 每日一言分类服务商（支持分类筛选）
-- [名言教えるよ](https://meigen.doodlenote.net/) - 每日一言日文服务商
-- [Korean Advice](https://korean-advice-open-api.vercel.app/) - 每日一言韩文服务商
-- [Open-Meteo](https://open-meteo.com/) - 提供天气数据服务
-- [OpenStreetMap Nominatim](https://nominatim.openstreetmap.org/) - 提供地理编码服务
-
-</div>
-
----
-
-<details id="-english-version" open>
-<summary><h2>🇬🇧 English Version</h2></summary>
-
-<div align="center">
-  <img src="res/icon.png" alt="ThoughtEcho Logo" width="120">
-  
-  # ThoughtEcho (心迹)
-  
-  <p>
-    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/blob/main/LICENSE">
-      <img src="https://img.shields.io/github/license/Shangjin-Xiao/ThoughtEcho?style=flat-square" alt="License: MIT">
-    </a>
-    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">
-      <img src="https://img.shields.io/github/v/release/Shangjin-Xiao/ThoughtEcho?style=flat-square&label=latest" alt="Latest Release">
-    </a>
-    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/stargazers">
-      <img src="https://img.shields.io/github/stars/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=yellow" alt="Stars">
-    </a>
-    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/network/members">
-      <img src="https://img.shields.io/github/forks/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=blue" alt="Forks">
-    </a>
-  </p>
-
-  <p>
-    <b>📝 Your Personal AI-Powered Inspiration Notebook<br>
-    Capture ideas effortlessly, unlock insights with AI ✨</b>
-  </p>
-  
-  <p>
-    <b>🌍 Localization:</b> Full English and Japanese support available! More languages welcome.
-  </p>
-</div>
 
 ## 🌟 Why ThoughtEcho?
 
 **ThoughtEcho is your personal inspiration notebook.** It helps you:
 
-- 📝 **Capture** thoughts instantly with rich text, images, audio, and video
-- ✨ **Understand** your notes deeper with AI-powered analysis and Q&A
-- 📊 **Discover** patterns in your thinking with intelligent insights and reports
-- 🔄 **Sync** seamlessly across all your devices
-- 🔒 **Own** your data with local-first storage
+- 📝 **Capture Everywhere**: Rich text, multimedia attachments (images, audio, video), and fleeting thoughts
+- ✨ **Understand Deeper**: AI-powered Q&A, rewriting, and summarization to extract more value from your notes
+- 📊 **Discover Thinking Patterns**: Intelligent periodic insights and annual reports to track your creative journey
+- 🔄 **Seamless Multi-Device Sync**: High-speed local transfer via LocalSend & flexible cloud backup via WebDAV
+- 🔒 **Own Your Privacy**: Local-first storage with optional hidden notes protected by biometric authentication
+
+<br>
 
 ## ✨ Current Features
 
 <div align="center">
   <table>
     <tr>
-      <td align="center" width="33%"><b>✍️ Rich Text Notes</b><br>Rich text, media attachments, dual-format storage</td>
-      <td align="center" width="33%"><b>✨ Thoughter (Experimental / Beta)</b><br>Agent tool calling, cross-session long-term memory & creative assistance</td>
+      <td align="center" width="33%"><b>✍️ Rich Text Notes</b><br>Quill rich formatting, multimedia attachments, plain text & rich format dual storage</td>
+      <td align="center" width="33%"><b>✨ Thoughter (AI Assistant)</b><br>Agent tool calling, cross-session long-term memory & creative assistant</td>
       <td align="center" width="33%"><b>📊 Insights & Reports</b><br>AI periodic insights, annual reports, writing trend analysis</td>
     </tr>
     <tr>
-      <td align="center"><b>🏷️ Tags & Search</b><br>Multi-tag filters, smart facets, full-text search</td>
-      <td align="center"><b>🎯 AI Card Generation</b><br>Convert notes into beautiful shareable cards</td>
-      <td align="center"><b>📦 Media & Backup Hub</b><br>Stream large files safely with backup/restore peace of mind</td>
+      <td align="center"><b>🏷️ Tags & Search</b><br>Multi-tag filters, smart sorting, fast local full-text search</td>
+      <td align="center"><b>🎯 AI Card Generation</b><br>Convert notes into beautiful, customizable shareable cards</td>
+      <td align="center"><b>📦 Media & Backup Hub</b><br>Large file streaming, full ZIP export/import, incremental sync</td>
     </tr>
     <tr>
-      <td align="center"><b>🌍 Context Capture</b><br>Auto-save location, weather, and time-of-day context</td>
-      <td align="center"><b>🙈 Hidden Notes</b><br>Hidden tags + biometric protection for private notes</td>
-      <td align="center"><b>💾 Auto-Save Drafts</b><br>Auto-save while editing, no content lost on crash</td>
+      <td align="center"><b>🌍 Context Capture</b><br>Auto-save location, weather, and time-of-day inspiration context</td>
+      <td align="center"><b>🙈 Privacy Protection</b><br>Hidden tags + biometric (Fingerprint/Face ID) unlock</td>
+      <td align="center"><b>💾 Auto-Save Drafts</b><br>Real-time draft preservation; no content lost on exit/crash</td>
     </tr>
     <tr>
-      <td align="center"><b>⚡ Quick Capture</b><br>Clipboard watcher, daily quotes, daily prompts on tap</td>
-      <td align="center"><b>🎨 Theme Styles</b><br>Paper & Ink, Plain, and Material dynamic color</td>
-      <td align="center"><b>📱 All Platforms</b><br>Windows, Android, iOS full coverage</td>
+      <td align="center"><b>⚡ Quick Capture</b><br>Clipboard watcher, daily quotes, and AI-assisted daily prompts</td>
+      <td align="center"><b>🎨 Theme Styles</b><br>Paper & Ink, Plain, and Material 3 dynamic color tokens</td>
+      <td align="center"><b>🔄 Multi-Device Sync</b><br>LocalSend LAN high-speed transfer + WebDAV cloud backup</td>
     </tr>
   </table>
 </div>
@@ -340,9 +92,9 @@
 ## 📸 Application Screenshots
 
 ### Core Features
-| Homepage | Note List | Add Note |
-|:---:|:---:|:---:|
-| ![Homepage](res/screenshot/home_page.jpg) | ![Note List](res/screenshot/note_list_view.jpg) | ![Add Note](res/screenshot/add_note.jpg) |
+| Homepage | Note List |
+|:---:|:---:|
+| ![Homepage](res/screenshot/home_page.jpg) | ![Note List](res/screenshot/note_list_view.jpg) |
 
 ### Editing & AI Features
 | Rich Text Editor | AI Q&A Chat | Filter & Sort |
@@ -350,9 +102,9 @@
 | ![Rich Text Editor](res/screenshot/note_full_editor_page.jpg) | ![AI Q&A Chat](res/screenshot/note_qa_chat_page.jpg) | ![Filter & Sort](res/screenshot/note_filter_sort_sheet.jpg) |
 
 ### Insights & Reports
-| Insights Analysis | Period Report | Note Sync |
+| Insights Analysis | Period Report | Device Sync |
 |:---:|:---:|:---:|
-| ![Insights Analysis](res/screenshot/insights_page.jpg) | ![Period Report](res/screenshot/period_report.jpg) | ![Note Sync](res/screenshot/note_sync.jpg) |
+| ![Insights Analysis](res/screenshot/insights_page.jpg) | ![Period Report](res/screenshot/period_report.jpg) | ![Device Sync](res/screenshot/note_sync.jpg) |
 
 ### Settings & Management
 | Theme Settings | Daily Quote Settings | Preferences |
@@ -364,42 +116,45 @@
 |:---:|:---:|
 | ![Backup & Restore](res/screenshot/backup_restore_page.jpg) | ![Storage Management](res/screenshot/storage_management_page.jpg) |
 
-
 ## 🛠️ Tech Stack
 
 <div align="center">
   <table>
     <tr>
       <td align="center"><b>Framework</b></td>
-      <td>Flutter (Dart) - Cross-platform UI framework</td>
+      <td>Flutter (Dart) - Cross-platform modern reactive UI framework</td>
     </tr>
     <tr>
       <td align="center"><b>State Management</b></td>
-      <td>provider, get_it - Dependency injection & state management</td>
+      <td>Provider, GetIt - Dependency injection and reactive orchestration</td>
     </tr>
     <tr>
       <td align="center"><b>Local Database</b></td>
-      <td>sqflite (mobile), sqflite_common_ffi (desktop)</td>
+      <td>sqflite (Mobile), sqflite_common_ffi (Desktop SQLite FFI)</td>
     </tr>
     <tr>
       <td align="center"><b>Rich Text Editor</b></td>
-      <td>flutter_quill - Rich text with images, audio, video</td>
+      <td>flutter_quill - Rich formatting with image, audio, and video attachments</td>
     </tr>
     <tr>
       <td align="center"><b>AI Integration</b></td>
-      <td>Multi-provider architecture - OpenAI, Anthropic, DeepSeek</td>
+      <td>OpenAI-compatible protocol architecture (Presets: Ollama, OpenAI, DeepSeek, Gemini, OpenRouter, etc.)</td>
     </tr>
     <tr>
-      <td align="center"><b>Storage Optimization</b></td>
-      <td>MMKV (high performance), flutter_secure_storage (secure)</td>
+      <td align="center"><b>Storage & Security</b></td>
+      <td>MMKV (high-performance KV storage), flutter_secure_storage (encrypted API keys)</td>
+    </tr>
+    <tr>
+      <td align="center"><b>Multi-Device Sync</b></td>
+      <td>LocalSend (LAN mDNS discovery & encrypted transfer) + WebDAV cloud sync</td>
     </tr>
     <tr>
       <td align="center"><b>Media Processing</b></td>
-      <td>Large file streaming, smart memory management, media optimization</td>
+      <td>Streaming chunked processing for large files, smart memory caching, compression</td>
     </tr>
     <tr>
-      <td align="center"><b>Platform Support</b></td>
-      <td>Supports Windows, Android, and iOS (Web is not supported)</td>
+      <td align="center"><b>Supported Platforms</b></td>
+      <td>Windows, Android, iOS (Web is not supported)</td>
     </tr>
   </table>
 </div>
@@ -408,7 +163,10 @@
 
 1. **Prerequisites** 
    
-   Ensure Flutter 3.x+ is installed. Run `flutter doctor` to check.
+   Ensure Flutter 3.24+ / Dart 3.5+ is installed. Run `flutter doctor` to check your setup:
+   ```bash
+   flutter doctor
+   ```
 
 2. **Get the Code**
    ```bash
@@ -421,14 +179,14 @@
    flutter pub get
    ```
 
-4. **Run the App**
+4. **Run the Application**
    ```bash
    flutter run
    ```
 
-5. **AI Feature Configuration** (Optional)
+5. **Configure AI Services** (Optional)
    
-   Configure the API Key in app settings to enable AI features.
+   Navigate to **Settings → AI Settings**, choose an AI provider preset (e.g., Ollama Cloud, DeepSeek, OpenAI), paste your API Key, and start using AI Q&A, Thoughter agent, and periodic insights.
 
 ## 🗺️ Development Roadmap
 
@@ -440,61 +198,57 @@
     </tr>
     <tr>
       <td>
-        • Rich text editor with multimedia<br>
-        • Multi-AI provider architecture<br>
-        • Thoughter AI agent with long-term memory<br>
-        • Paper & Ink / Plain / Material signature theme styles<br>
-        • AI card generation & customizable templates<br>
-        • Large file streaming & media management<br>
-        • ZIP full backup & incremental media sync<br>
-        • Material 3 modern interface with theme tokens<br>
-        • Multi-platform database adapter<br>
-        • Location & weather recording (smart geocoding search)<br>
-        • Smart clipboard detection & quick capture<br>
-        • Periodic intelligent insights & reports<br>
-        • Performance optimization & list warmup<br>
-        • WebDAV & LocalSend multi-device sync<br>
-        • Internationalization multi-language support<br>
-        • Windows desktop application support<br>
-        • Hidden notes & biometric protection<br>
-        • Auto-save drafts & recovery<br>
-        • iOS platform support<br>
-        • Full user guide & web manual
+        • Rich text editor with multimedia (images, audio, video)<br>
+        • OpenAI-compatible multi-AI provider architecture<br>
+        • Thoughter AI agent with dedicated long-term memory<br>
+        • Paper & Ink / Plain / Material 3 signature theme tokens<br>
+        • AI card generation with customizable share templates<br>
+        • Large file streaming & full ZIP backup/restore<br>
+        • LocalSend LAN direct transfer & WebDAV cloud sync<br>
+        • Smart geocoding search & automatic weather logging<br>
+        • Smart clipboard detection & quick capture on launch<br>
+        • Periodic intelligent insights & annual reports<br>
+        • Hidden notes with biometric (Fingerprint/Face) protection<br>
+        • Real-time auto-saving drafts & crash recovery<br>
+        • Multilingual support (Full EN/ZH/JA/KO; fallback to EN)<br>
+        • Windows desktop application (MSIX installer)<br>
+        • iOS platform support & CI build pipeline<br>
+        • In-app Release Notes page with theme live preview
       </td>
       <td>
-        • Enhanced natural language search<br>
-        • Voice-to-text input<br>
-        • OCR text recognition<br>
-        • AI author extraction<br>
-        • Map location selection<br>
-        • 3D notebook interface<br>
-        • Smart categorization<br>
-        • Offline AI capabilities<br>
-        • Advanced data visualization<br>
-        • More AI service integrations<br>
-        • Data export & migration tools
+        <b>🔥 Smart Input Upgrades</b><br>
+        • AI natural language semantic search<br>
+        • Voice-to-text quick capture<br>
+        • Camera OCR text recognition<br>
+        • AI automatic author & source extraction<br><br>
+        <b>🌍 User Experience & Knowledge</b><br>
+        • Interactive notebook themes & custom paper textures<br>
+        • Knowledge graph linking & topic clustering<br>
+        • Map location picker & memory footprints<br><br>
+        <b>✨ On-Device AI Exploration</b><br>
+        • On-device lightweight offline inference<br>
+        • Local offline OCR & offline speech-to-text<br>
+        • More third-party note import/export formats
       </td>
     </tr>
   </table>
 </div>
 
+> 📝 For in-depth technical documentation, see [Project Overview](docs/project-overview.md) and [User Manual](docs/USER_MANUAL.md).
+
 ## 🤝 How to Contribute
 
-We'd love your help making ThoughtEcho better! Here's how you can contribute:
+We welcome contributions of all kinds! Here's how you can get involved:
 
-1. **Report Issues or Suggestions**: Via [GitHub Issues](https://github.com/Shangjin-Xiao/ThoughtEcho/issues)
-
-2. **Help with Translation** 🌍:
-   - English localization is our top priority
-   - Help translate UI strings and documentation
-   - Review existing translations for accuracy
-
+1. **Report Issues or Suggestions**: Open an issue on [GitHub Issues](https://github.com/Shangjin-Xiao/ThoughtEcho/issues)
+2. **Help with Localization** 🌍:
+   - Help complete and refine translation strings (German, Spanish, French, etc.)
+   - Review and improve existing translations (English, Chinese, Japanese, Korean)
 3. **Contribute Code**:
-   - Fork the repo and create feature branch `feature/YourFeature`
-   - Commit changes `git commit -m 'feat: Add feature'`
-   - Create Pull Request to main repository
-
-4. **Spread the Word**: Star ⭐ the repo and share with others!
+   - Fork the repository and create a feature branch `feature/YourFeature` or `fix/YourBugFix`
+   - Ensure your code passes analysis and tests
+   - Open a Pull Request with a clear description of the changes
+4. **Spread the Word**: Star ⭐ the repository and share ThoughtEcho with others!
 
 ## 📄 License
 
@@ -503,15 +257,13 @@ This project is licensed under the [MIT License](LICENSE) - feel free to use, mo
 ## 🙏 Acknowledgments
 
 Thanks to the following open-source projects and service providers:
-- [Flutter](https://flutter.dev/) - UI framework
-- [LocalSend](https://github.com/localsend/localsend) - Local network sync integration
-- [Sentry](https://sentry.io/) - Application crash and structured log (slog) monitoring
-- [Hitokoto](https://hitokoto.cn/) - One of the daily quote providers (supports type filtering)
+- [Flutter](https://flutter.dev/) - Cross-platform UI framework
+- [LocalSend](https://github.com/localsend/localsend) - Local network sync protocol
+- [Sentry](https://sentry.io/) - Application crash & structured log monitoring
+- [Hitokoto](https://hitokoto.cn/) - Chinese daily quote provider
 - [ZenQuotes](https://zenquotes.io/) - English daily quote provider
-- [API Ninjas Quotes API](https://api-ninjas.com/api/quotes) - Category-based daily quote provider
+- [API Ninjas Quotes API](https://api-ninjas.com/api/quotes) - Category-based quote provider
 - [Meigen Oshieruyo](https://meigen.doodlenote.net/) - Japanese daily quote provider
 - [Korean Advice](https://korean-advice-open-api.vercel.app/) - Korean daily quote provider
 - [Open-Meteo](https://open-meteo.com/) - Weather data service
 - [OpenStreetMap Nominatim](https://nominatim.openstreetmap.org/) - Geocoding service
-
-</details>
