@@ -38,7 +38,7 @@ class ReleaseHighlights {
           version: '4.0.0',
           title: l10n.releaseThoughterTitle,
           lede: l10n.releaseThoughterLede,
-          icon: Icons.psychology_rounded,
+          icon: Icons.lightbulb_rounded,
           points: [
             ReleaseHighlightPoint(
               title: l10n.releaseThoughterSearchTitle,
@@ -58,7 +58,7 @@ class ReleaseHighlights {
             ReleaseHighlightPoint(
               title: l10n.releaseThoughterMemoryTitle,
               description: l10n.releaseThoughterMemoryDesc,
-              icon: Icons.psychology_alt_outlined,
+              icon: Icons.history_edu_rounded,
             ),
             ReleaseHighlightPoint(
               title: l10n.releaseThoughterInsightTitle,
