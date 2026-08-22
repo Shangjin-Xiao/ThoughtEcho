@@ -853,6 +853,7 @@ ${_getLanguageDirective(languageCode)}''';
     String? notesPreview, // 选填：拼接后的笔记内容片段（可部分）
     String? fullNotesContent, // 新增：完整的笔记内容用于深度分析
     String? previousInsights, // 新增：历史洞察上下文
+    String? languageCode, // 用户语言，决定收尾指令用哪种语言表述
   }) {
     final timeText = mostTimePeriod ?? '—';
     final weatherText = mostWeather ?? '—';
@@ -885,6 +886,17 @@ ${_getLanguageDirective(languageCode)}''';
 $previousInsights''';
     }
 
+    // 收尾指令得跟着输出语言走。系统提示里已经有语言指令，这里再用中文写死
+    // 「愿你……」和「中文 55–85 字」，英文用户就会同时收到两套互相打架的要求。
+    final isEnglish = languageCode != null && languageCode.startsWith('en');
+    final closing = isEnglish
+        ? 'Write three sentences: one on temperament, one on what the notes '
+            'are actually about, and a short closing wish in the spirit of '
+            '"May you ..." (at most 12 words, a wish only — no advice). '
+            'Do not restate any figures. Keep it to 30–55 words.'
+        : '请合成三句洞察：一句讲气质，一句讲内容，末一句是“愿你……”这类的短祝愿'
+            '（20 字以内，只祝愿不建议）。不重复具体数字，中文控制在 55–85 字。';
+
     return '''【统计数据】
 $stats
 $previousInsightsSection
@@ -894,7 +906,7 @@ $previousInsightsSection
 
 $contentSection
 
-请合成三句洞察：一句讲气质，一句讲内容，末一句是“愿你……”这类的短祝愿（20 字以内，只祝愿不建议）。不重复具体数字，中文控制在 55–85 字。''';
+$closing''';
   }
 
   /// 本地生成报告洞察（不开启AI时使用）。

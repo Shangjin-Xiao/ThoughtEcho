@@ -158,12 +158,14 @@ class InsightHistoryService extends ChangeNotifier {
     // 过滤出AI生成的周报洞察。同一个周期只取一条：把同一周的多条历史一起
     // 喂回去，模型就是在参考自己刚写过的东西，越写越同质。
     //
-    // 认签名优先、标签兜底：签名相同必是同一份数据；老数据没签名，而且那时
-    // 每一周都存成「本周」，只能靠标签折叠——正好把重复的那批收在一起。
+    // 按周期去重，不按签名：签名里带了模型和提示词版本，同一周换个模型重算
+    // 就是另一个签名，两版会一起进上下文，模型收到同一周的多个说法。老数据
+    // 那时每一周都存成「本周」，靠标签折叠正好把那批重复也收在一起。
+    // _insights 是按时间倒序的，所以每个周期留下的是最新那条。
     final seenPeriods = <String>{};
     final weeklyInsights = _insights
         .where((i) => i.isAiGenerated && i.periodType == 'week')
-        .where((i) => seenPeriods.add(i.dataSignature ?? i.periodLabel))
+        .where((i) => seenPeriods.add('${i.periodType}:${i.periodLabel}'))
         .take(limit)
         .toList();
 

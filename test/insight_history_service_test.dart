@@ -190,5 +190,32 @@ void main() {
       expect(context.contains('上周那版'), true);
       expect('本周第'.allMatches(context).length, 1);
     });
+
+    test('context dedups a period even when signatures differ', () async {
+      // 换模型或改提示词版本会让同一周产生不同签名。按签名去重的话两版都会
+      // 进上下文，模型就收到了同一周的两种说法。
+      await insightHistoryService.addInsight(
+        insight: '旧模型那版',
+        periodType: 'week',
+        periodLabel: '8月17日 - 8月23日',
+        isAiGenerated: true,
+        dataSignature: 'week_range_p1_gpt',
+      );
+      await insightHistoryService.addInsight(
+        insight: '新模型那版',
+        periodType: 'week',
+        periodLabel: '8月17日 - 8月23日',
+        isAiGenerated: true,
+        dataSignature: 'week_range_p2_claude',
+      );
+
+      // 两条都留在历史里（签名不同，不该互相顶掉）
+      expect(insightHistoryService.insights.length, 2);
+
+      // 但喂回给模型的上下文里，这个周期只出现最新的一条
+      final context = insightHistoryService.getPreviousInsightsContext();
+      expect(context.contains('新模型那版'), true);
+      expect(context.contains('旧模型那版'), false);
+    });
   });
 }

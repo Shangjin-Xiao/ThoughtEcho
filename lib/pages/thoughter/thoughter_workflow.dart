@@ -98,7 +98,21 @@ extension _ThoughterWorkflow on _ThoughterPageState {
       return;
     }
 
-    final quotes = await databaseService.getUserQuotes();
+    // 洞察是「本周」的洞察，那喂进去的就该是本周的笔记。
+    //
+    // 原来是 getUserQuotes() 不带参数——它的默认 limit 是 10，所以模型看到的
+    // 既不是本周也不是全部，而是「最近 10 条」，不管这 10 条跨了多久。改成按
+    // 本周的日期范围查（周界与探索页共用 ReportPeriodUtils），条数上限交给
+    // AIRequestHelper 兜底：一周通常远不到 200 条，真有极端活跃的一周也不至于
+    // 把上下文冲垮。
+    final week = ReportPeriodUtils.dateRange('week', DateTime.now());
+    final quotes = week == null
+        ? const <Quote>[]
+        : await databaseService.getUserQuotes(
+            dateStart: week.start.toIso8601String(),
+            dateEnd: week.end.toIso8601String(),
+            limit: AIRequestHelper.maxQuotesForAnalysis,
+          );
     if (quotes.isEmpty) {
       _appendCardMessage(
         type: 'notice',
@@ -111,12 +125,11 @@ extension _ThoughterWorkflow on _ThoughterPageState {
       return;
     }
 
-    // 这里分析的是整个笔记库（由 AIRequestHelper 卡在最近若干条），不是某个
-    // 周期。原来写 generatingInsightsForPeriod(thisWeek)：既谎称范围是本周，
-    // 模板本身又是「正在生成本{period}洞察」，传进「本周」还会拼出「本本周」。
+    // 模板是「正在生成本{period}洞察」，要传的是「周」不是「本周」——原来传
+    // l10n.thisWeek，拼出来是「正在生成本本周洞察」。
     await _runMarkdownWorkflow(
       title: l10n.commandInsight,
-      loadingText: l10n.analyzingAllNotes,
+      loadingText: l10n.generatingInsightsForPeriod(l10n.periodWeek),
       stream: _aiService.streamGenerateInsights(
         quotes,
         analysisType: _selectedInsightType,

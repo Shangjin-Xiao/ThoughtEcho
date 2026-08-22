@@ -42,6 +42,7 @@ import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../services/weather_service.dart';
 import '../utils/ai_smart_result_utils.dart';
+import '../utils/ai_request_helper.dart';
 import '../utils/agent_history_builder.dart';
 import '../utils/app_logger.dart';
 import '../utils/note_proposal_applier.dart';

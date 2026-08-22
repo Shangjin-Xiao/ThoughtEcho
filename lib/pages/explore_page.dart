@@ -19,6 +19,7 @@ import '../utils/app_logger.dart';
 import '../utils/time_utils.dart';
 import '../utils/icon_utils.dart';
 import '../utils/ai_prompt_manager.dart';
+import '../utils/ai_request_helper.dart';
 import '../utils/report_period_utils.dart';
 import '../utils/string_utils.dart';
 import '../constants/app_constants.dart'; // 导入应用常量

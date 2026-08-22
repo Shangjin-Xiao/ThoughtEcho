@@ -374,8 +374,22 @@ class AIRequestHelper {
   /// 200 条短笔记和 200 条长文差着一个数量级，只卡条数拦不住后者。
   static const int maxContentCharsForAnalysis = 60000;
 
+  /// 单条笔记最多送出的正文字符数。
+  ///
+  /// 没有这道限制的话，一条超长笔记就能把总预算整个吃掉——原来「第一条无条件
+  /// 收下」的写法更极端：单条 20 万字也照发不误，字数上限形同虚设。
+  static const int maxCharsPerQuote = 4000;
+
+  /// 把单条正文压到 [maxCharsPerQuote] 以内，截断时留个明显的标记。
+  static String clampQuoteContent(String content) {
+    if (content.length <= maxCharsPerQuote) return content;
+    return '${content.substring(0, maxCharsPerQuote)}……（后略）';
+  }
+
   /// 挑出送去分析的笔记：按时间倒序取最近的，卡住条数和字数两道上限，
   /// 再按时间正序还回去——成长轨迹类的分析要顺着读才成立。
+  ///
+  /// 字数按截断后的长度计，所以三道上限（单条 / 总字数 / 条数）是同时成立的。
   List<Quote> selectQuotesForAnalysis(List<Quote> quotes) {
     final sorted = List<Quote>.from(quotes)
       ..sort((a, b) => b.date.compareTo(a.date));
@@ -384,13 +398,14 @@ class AIRequestHelper {
     var chars = 0;
     for (final quote in sorted) {
       if (picked.length >= maxQuotesForAnalysis) break;
-      // 第一条无条件收下：单条就超字数上限时也不能交白卷。
-      if (picked.isNotEmpty &&
-          chars + quote.content.length > maxContentCharsForAnalysis) {
+      final length = clampQuoteContent(quote.content).length;
+      // 第一条无条件收下：截断之后它已经不超过 maxCharsPerQuote 了，不至于
+      // 撑爆预算，但空手交给模型更没意义。
+      if (picked.isNotEmpty && chars + length > maxContentCharsForAnalysis) {
         break;
       }
       picked.add(quote);
-      chars += quote.content.length;
+      chars += length;
     }
 
     return picked.reversed.toList();
@@ -406,7 +421,8 @@ class AIRequestHelper {
     String analysisStyle = 'professional',
   }) {
     final selected = selectQuotesForAnalysis(quotes);
-    final truncated = selected.length < quotes.length;
+    final truncated = selected.length < quotes.length ||
+        selected.any((quote) => quote.content.length > maxCharsPerQuote);
 
     return {
       'metadata': {
@@ -418,12 +434,12 @@ class AIRequestHelper {
         'totalQuotes': quotes.length,
         'includedQuotes': selected.length,
         'truncated': truncated,
-        if (truncated) 'truncationNote': '仅包含最近的部分笔记，早期记录未纳入本次分析',
+        if (truncated) 'truncationNote': '内容有截断：只含最近的部分笔记，超长笔记的正文也被截短',
       },
       'quotes': selected.map((quote) {
         return {
           // 不送 id：36 个字符的 UUID 对分析毫无信息量，只是在烧 token。
-          'content': quote.content,
+          'content': clampQuoteContent(quote.content),
           'date': quote.date,
           'source': quote.source,
           'sourceAuthor': quote.sourceAuthor,

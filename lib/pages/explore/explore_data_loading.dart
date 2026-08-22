@@ -306,11 +306,18 @@ extension _ExploreDataLoading on _ExplorePageState {
       // 获取历史洞察上下文
       final previousInsights = insightService.getPreviousInsightsContext();
 
-      // 准备完整的笔记内容用于AI分析
-      final fullNotesContent = _periodQuotes.map((quote) {
+      // 准备笔记内容用于AI分析。
+      //
+      // 这条路径绕过了 convertQuotesToJson，所以上限要在这里自己兜住：年报
+      // 周期下 _periodQuotes 可能是上千条，全量拼进一个字符串就直接把上下文
+      // 顶穿。先按同一套规则挑出最近的若干条，拼完再按总字数收一次尾——日期、
+      // 位置、天气、署名这些元信息也占字符，只在正文上算预算是不够的。
+      final helper = AIRequestHelper();
+      final notesForAnalysis = helper.selectQuotesForAnalysis(_periodQuotes);
+      final fullNotesContent = notesForAnalysis.map((quote) {
         final date = DateTime.tryParse(quote.date) ?? DateTime.now();
         final dateStr = l10n.formattedDate(date.month, date.day);
-        var content = quote.content.trim();
+        var content = AIRequestHelper.clampQuoteContent(quote.content.trim());
 
         // 添加位置信息（`__address_pending__` 这类内部标记不能喂给模型）
         if (!LocationService.isNonDisplayMarker(quote.location)) {
@@ -347,6 +354,15 @@ extension _ExploreDataLoading on _ExplorePageState {
         return content;
       }).join('\n\n');
 
+      // 拼完再收一次尾：元信息叠上去之后总长可能又越过预算。
+      final boundedNotesContent =
+          fullNotesContent.length > AIRequestHelper.maxContentCharsForAnalysis
+              ? fullNotesContent.substring(
+                  0,
+                  AIRequestHelper.maxContentCharsForAnalysis,
+                )
+              : fullNotesContent;
+
       _insightSub = ai
           .streamReportInsight(
         periodLabel: periodLabel,
@@ -357,7 +373,7 @@ extension _ExploreDataLoading on _ExplorePageState {
         noteCount: noteCount,
         totalWordCount: _totalWordCount,
         notesPreview: _notesPreview,
-        fullNotesContent: fullNotesContent, // 传递完整内容
+        fullNotesContent: boundedNotesContent, // 已按条数/字数上限收过
         previousInsights: previousInsights, // 传递历史上下文
       )
           .listen(
