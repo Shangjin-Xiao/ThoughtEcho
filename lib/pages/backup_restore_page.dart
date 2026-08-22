@@ -100,7 +100,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             // 备份按钮
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
+              child: FilledButton.icon(
                 onPressed: _isLoading ? null : _handleBackup,
                 icon: _isLoading
                     ? const SizedBox(
@@ -112,7 +112,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 label: Text(
                   _isLoading ? l10n.creatingBackup : l10n.createBackup,
                 ),
-                style: ElevatedButton.styleFrom(
+                style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
@@ -192,14 +192,12 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
+              child: FilledButton.tonalIcon(
                 onPressed: _isLoading ? null : _handleRestore,
                 icon: const Icon(Icons.folder_open),
                 label: Text(l10n.selectBackupFileToRestore),
-                style: ElevatedButton.styleFrom(
+                style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  backgroundColor: Theme.of(context).colorScheme.secondary,
-                  foregroundColor: Theme.of(context).colorScheme.onSecondary,
                 ),
               ),
             ),
@@ -734,9 +732,9 @@ Details: $e''';
                 onPressed: () => Navigator.of(context).pop(false),
                 child: Text(l10n.cancel),
               ),
-              ElevatedButton(
+              FilledButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                style: ElevatedButton.styleFrom(
+                style: FilledButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.error,
                   foregroundColor: Theme.of(context).colorScheme.onError,
                 ),

@@ -75,6 +75,7 @@ class _WelcomePageViewState extends State<WelcomePageView>
   Future<void> _openLanguageSheet() async {
     final selected = await showModalBottomSheet<String>(
       context: context,
+      showDragHandle: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (sheetContext) => _LanguageSheet(
         selectedCode: _currentLanguageCode,

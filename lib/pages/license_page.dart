@@ -90,10 +90,10 @@ class _LicensePageState extends State<LicensePage> {
 
   Widget _buildLicenseFileSection(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return ElevatedButton.icon(
+    return FilledButton.icon(
       icon: const Icon(Icons.verified_user_outlined),
       label: Text(l10n.viewAppLicense),
-      style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
       onPressed: () => _showLicenseDialog(context),
     );
   }
@@ -328,13 +328,13 @@ class _LicensePageState extends State<LicensePage> {
         ),
         const SizedBox(height: 12),
         const SizedBox(height: 12),
-        ElevatedButton.icon(
+        FilledButton.tonalIcon(
           onPressed: () => _launchUrl(
             'https://flutter.dev/docs/development/packages-and-plugins/using-packages',
           ),
           icon: const Icon(Icons.open_in_new),
           label: Text(l10n.viewFullDependencyList),
-          style: ElevatedButton.styleFrom(
+          style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(40),
           ),
         ),
@@ -402,7 +402,7 @@ class _LicensePageState extends State<LicensePage> {
       children: [
         Text(l10n.systemLicensesDesc, style: const TextStyle(fontSize: 14)),
         const SizedBox(height: 12),
-        ElevatedButton.icon(
+        FilledButton.icon(
           onPressed: () {
             Navigator.push(
               context,
@@ -413,7 +413,7 @@ class _LicensePageState extends State<LicensePage> {
           },
           icon: const Icon(Icons.article_outlined),
           label: Text(l10n.viewSystemLicenses),
-          style: ElevatedButton.styleFrom(
+          style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(44),
           ),
         ),

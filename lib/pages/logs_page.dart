@@ -205,6 +205,7 @@ class _LogsPageState extends State<LogsPage> {
   void _showLogDetails(LogEntry log) {
     showModalBottomSheet(
       context: context,
+      showDragHandle: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _buildLogDetailsSheet(log),
@@ -770,6 +771,7 @@ class _LogsPageState extends State<LogsPage> {
   void _showFilterDialog() {
     showModalBottomSheet(
       context: context,
+      showDragHandle: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _buildFilterBottomSheet(),

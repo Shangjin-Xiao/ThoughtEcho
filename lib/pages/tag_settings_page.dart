@@ -114,7 +114,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      ElevatedButton.icon(
+                      FilledButton.icon(
                         icon: _isLoading
                             ? const SizedBox(
                                 width: 16,
@@ -357,7 +357,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                             style: const TextStyle(color: Colors.blue),
                           ),
                           const Spacer(),
-                          ElevatedButton(
+                          FilledButton(
                             child: Text(l10n.select),
                             onPressed: () {
                               setState(
@@ -622,7 +622,7 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
               onPressed: () => Navigator.pop(dialogContext),
               child: Text(l10n.cancel),
             ),
-            ElevatedButton(
+            FilledButton(
               onPressed: () async {
                 final newName = nameController.text.trim();
                 if (newName.isEmpty) return;
@@ -900,7 +900,7 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                       style: const TextStyle(color: Colors.blue),
                     ),
                     const Spacer(),
-                    ElevatedButton(
+                    FilledButton(
                       child: Text(l10n.select),
                       onPressed: () {
                         Navigator.of(context).pop(_emojiSearchController.text);

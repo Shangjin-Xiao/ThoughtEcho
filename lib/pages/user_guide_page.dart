@@ -375,7 +375,7 @@ class _UserGuidePageState extends State<UserGuidePage> {
                       SizedBox(height: 16),
                       Text(_error!, textAlign: TextAlign.center),
                       SizedBox(height: 16),
-                      ElevatedButton.icon(
+                      FilledButton.icon(
                         onPressed: _loadManual,
                         icon: Icon(Icons.refresh),
                         label: Text(l10n.retry),

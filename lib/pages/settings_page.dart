@@ -437,10 +437,10 @@ class SettingsPageState extends State<SettingsPage> {
                           style: theme.textTheme.titleSmall,
                         ),
                         const SizedBox(height: 8.0),
-                        ElevatedButton.icon(
+                        FilledButton.tonalIcon(
                           icon: const Icon(Icons.search),
                           label: Text(l10n.settingsSearchCity),
-                          style: ElevatedButton.styleFrom(
+                          style: FilledButton.styleFrom(
                             minimumSize: const Size.fromHeight(50),
                           ),
                           onPressed: () {
@@ -851,7 +851,7 @@ class SettingsPageState extends State<SettingsPage> {
                                 url: _projectUrl,
                               ),
                               const SizedBox(height: 8),
-                              ElevatedButton.icon(
+                              FilledButton.icon(
                                 onPressed: () {
                                   Navigator.pop(dialogContext);
                                   Navigator.push(
@@ -867,7 +867,7 @@ class SettingsPageState extends State<SettingsPage> {
                                 style: _primaryButtonStyle(context),
                               ),
                               const SizedBox(height: 8),
-                              ElevatedButton.icon(
+                              FilledButton.icon(
                                 onPressed: () {
                                   Navigator.pop(dialogContext);
                                   Navigator.push(
@@ -1343,7 +1343,7 @@ class SettingsPageState extends State<SettingsPage> {
     required String url,
   }) {
     return Center(
-      child: ElevatedButton.icon(
+      child: FilledButton.icon(
         style: _primaryButtonStyle(context),
         onPressed: () => _launchUrl(url),
         icon: Icon(icon, size: 18),
@@ -1355,7 +1355,7 @@ class SettingsPageState extends State<SettingsPage> {
 
   // 统一按钮样式方法，作为类的私有工具方法，便于在文件内复用
   ButtonStyle _primaryButtonStyle(BuildContext context) =>
-      ElevatedButton.styleFrom(
+      FilledButton.styleFrom(
         minimumSize: const Size.fromHeight(44),
         shape: RoundedRectangleBorder(
           borderRadius:

@@ -66,6 +66,7 @@ class AiOptionsMenu extends StatelessWidget {
 
     return showModalBottomSheet(
       context: context,
+      showDragHandle: true,
       backgroundColor: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
@@ -155,18 +156,6 @@ class AiOptionsMenu extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 拖拽指示条
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.onSurfaceVariant.applyOpacity(0.4),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
               // 标题
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),

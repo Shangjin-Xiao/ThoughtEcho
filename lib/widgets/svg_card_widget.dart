@@ -491,11 +491,11 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton.icon(
+    return FilledButton.icon(
       onPressed: enabled ? onPressed : null,
       icon: Icon(icon, size: 18),
       label: Text(label),
-      style: ElevatedButton.styleFrom(
+      style: FilledButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         shape: RoundedRectangleBorder(
           borderRadius:
