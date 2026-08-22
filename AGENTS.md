@@ -347,8 +347,7 @@ MultiAISettings → AIProviderSettings → AINetworkManager / OpenAIStreamServic
 
 - 开发者文档：`AGENTS.md`、各子目录 `AGENTS.md`、`README.md`
 - 双语用户手册：`docs/USER_MANUAL.md`
-- 应用内手册：`assets/docs/user_manual_zh.md`、`assets/docs/user_manual_en.md`
-- 网站：`res/index.html`、`res/user-guide.html`
+- 网站与用户指南：`res/index.html`、`res/user-guide.html`
 
 只有用户可见行为变化时才同步用户文档，并同时维护中英文内容；纯内部重构只更新确实受影响
 的开发者文档。禁止描述尚未实现的功能，除非明确标为路线图。

@@ -138,7 +138,7 @@ Ollama 云端注册即用，免费额度充足，**不需要绑定支付方式**
 
 ## 3. 富文本编辑器
 
-![富文本编辑器](../res/screenshot/note_full_editor_page.dart.jpg)
+![富文本编辑器](../res/screenshot/note_full_editor_page.jpg)
 
 ### 工具栏功能
 
@@ -245,7 +245,7 @@ Agent 会在工具调用后继续处理结果，并将完整回答保留为最�
 
 ### 筛选选项（3 类）
 
-![筛选与排序](../res/screenshot/note_filter_sort_sheet.dart.jpg)
+![筛选与排序](../res/screenshot/note_filter_sort_sheet.jpg)
 
 #### 标签筛选
 
@@ -352,6 +352,18 @@ Thoughter 是心迹内置的 AI 对话助手，支持自然语言对话、笔记
 **笔记提案卡片**：
 
 当 Thoughter 提议创建或编辑笔记时，会以卡片形式展示最终内容，支持普通文本和原生富文本两种格式。编辑建议卡片可展开「查看修改记录」，确认后只修改匹配段落并保留其余格式与媒体。若笔记在建议生成后被修改，Thoughter 会拒绝覆盖并要求重新生成。
+
+**跨会话长期记忆与个性化**：
+
+- **长期记忆**：Thoughter 支持跨会话记住您的写作偏好、表达习惯与个人背景，并在对话中自动保持一致。
+- **隐私与物理隔离**：长期记忆存储于本地独立数据库，绝不上传云端，不进入多端同步与数据备份，保障您的绝对隐私。
+- **用户称呼**：支持在 Thoughter 中设置自定义昵称，让 AI 按照您喜欢的方式称呼您。
+- **记忆管理**：可在「设置」→「AI 设置」中随时查看当前已记录的画像条目或一键清空记忆。
+
+**思考过程与快捷操作**：
+
+- **深度思考展示**：搭配支持推理思考的模型时，点击 💡 灯泡图标可展开查看 AI 的完整思考链路与耗时。
+- **快捷操作栏**：每条 AI 回复下方均配备快捷操作栏，支持一键复制内容、重试生成或直接采纳提案。
 
 **历史对话**：
 
@@ -473,13 +485,13 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 
 ### 支持平台
 
-| 平台    | 支持情况    |
-| ------- | ----------- |
-| Android | ✅ 完整支持 |
-| iOS     | ✅ 完整支持 |
-| Windows | ✅ 完整支持 |
-| macOS   | ✅ 完整支持 |
-| Linux   | ✅ 完整支持 |
+| 平台    | 支持情况    | 说明 |
+| ------- | ----------- | ---- |
+| Android | ✅ 完整支持 | 原生应用支持（支持 APK 安装） |
+| Windows | ✅ 完整支持 | 原生应用支持（支持微软商店安装） |
+| iOS     | ✅ 完整支持 | 原生应用支持 |
+
+> 💡 **跨平台互通**：在局域网同步中，心迹基于标准协议运作，同 WiFi 下可与运行了 LocalSend 客户端的其他设备（包含 macOS、Linux）直接发现并互相传输笔记。
 
 ---
 
@@ -539,7 +551,7 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
   - ✅ 位置功能已开启
   - ⚠️ 已允许权限但功能未启用
   - ❌ 未允许位置权限
-- **城市搜索**：可以手动搜索并设置位置
+- **城市搜索**：支持搜索历史记录与语言感知在线搜索（基于 Open-Meteo），方便精准选定城市并获取匹配天气
 - **当前地址**：显示您设置的位置或「未设置」
 
 ### 语言设置
@@ -550,13 +562,27 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 
 ![主题设置](../res/screenshot/theme_settings_page.jpg)
 
+#### 主题风格（3 种）
+
+心迹提供了三种独特的设计风格：
+
+| 风格 | 说明 | 特点 |
+| --- | --- | --- |
+| 🎨 **Material** | 标准 Material 3 风格（默认） | 支持 Material You 动态壁纸取色或自定义主题色 |
+| 📜 **纸与墨** | 温暖典雅的手工质感 | 暖白纸张色调、衬线字体、对齐的横线纹理与微阴影 |
+| 📄 **素笺** | 冷峻极简的现代纸感 | 冷灰纸面、深青色墨、硬朗无横线极简边框 |
+
+#### 墨色定制（Theme Accent）
+
+在选择「纸与墨」或「素笺」手工风格时，您可以进一步挑选搭配的墨色（如生褐、青瓷、黛蓝等），实现换墨不换纸的个性化排版。在「更新说明」页面中还提供了行内实时预览切换器。
+
 #### 主题模式
 
 - 🌞 **浅色模式**：手动浅色主题
 - 🌙 **深色模式**：手动深色主题
 - 🔄 **跟随系统**：自动跟随系统设置
 
-#### 颜色自定义
+#### 颜色自定义（Material 风格下）
 
 - **动态颜色**：从您的手机壁纸提取颜色作为主题色（Android 12+ 支持）
 - **自定义主题色**：
@@ -749,7 +775,7 @@ A:
 2. 或卸载应用后重新安装
 
 **Q: 支持哪些设备？**  
-A: Android、iOS、Windows、macOS、Linux
+A: 原生应用支持 Android、iOS 与 Windows（同局域网内可与运行了 LocalSend 的设备跨平台互传）。
 
 </div>
 
@@ -893,7 +919,7 @@ ThoughtEcho can keep several AI configurations at once:
 
 ## 3. Rich Text Editor
 
-![Rich Text Editor](../res/screenshot/note_full_editor_page.dart.jpg)
+![Rich Text Editor](../res/screenshot/note_full_editor_page.jpg)
 
 ### Toolbar Features
 
@@ -1001,7 +1027,7 @@ Each supports ascending/descending toggle.
 
 ### Filter Options (3 Categories)
 
-![Filter & Sort](../res/screenshot/note_filter_sort_sheet.dart.jpg)
+![Filter & Sort](../res/screenshot/note_filter_sort_sheet.jpg)
 
 #### Tag Filtering
 
@@ -1108,6 +1134,18 @@ In Agent mode, Thoughter can invoke the following tools. Tool calls are shown in
 **Note Proposal Cards**:
 
 When Thoughter proposes creating or editing a note, it displays the result as a card in plain text or native rich text format. Edit cards include a "View Change History" panel. Once confirmed, only matched passages are updated, leaving other formatting and media intact. If a note is modified after a proposal is generated, Thoughter will refuse to overwrite it and ask for a fresh proposal.
+
+**Cross-Session Long-Term Memory & Personalization**:
+
+- **Long-Term Memory**: Thoughter remembers your writing style, preferences, and personal background across sessions, keeping its tone and assistance consistent over time.
+- **Privacy & Physical Isolation**: Long-term memory is stored locally in a separate database, never uploaded to any cloud server, and excluded from multi-device sync and data backups for complete privacy.
+- **Custom Nickname**: Set your preferred name or nickname in Thoughter settings for a more natural conversation experience.
+- **Memory Management**: View currently stored profile facts or clear memory with one tap under "Settings" → "AI Settings".
+
+**Deep Thinking & Action Bar**:
+
+- **Reasoning Process Display**: When using models with reasoning capabilities, tap the 💡 lightbulb icon to expand and inspect the AI's complete thinking process and execution time.
+- **Quick Action Bar**: Each AI response includes a streamlined action bar to copy text, retry generation, or directly apply proposed changes with a single tap.
 
 **Conversation History**:
 
@@ -1229,13 +1267,13 @@ After sync completes, shows:
 
 ### Supported Platforms
 
-| Platform | Support         |
-| -------- | --------------- |
-| Android  | ✅ Full Support |
-| iOS      | ✅ Full Support |
-| Windows  | ✅ Full Support |
-| macOS    | ✅ Full Support |
-| Linux    | ✅ Full Support |
+| Platform | Support         | Notes |
+| -------- | --------------- | ----- |
+| Android  | ✅ Full Support | Native app support (APK package available) |
+| Windows  | ✅ Full Support | Native app support (Microsoft Store available) |
+| iOS      | ✅ Full Support | Native app support |
+
+> 💡 **Cross-Platform Interoperability**: For local network sync, ThoughtEcho uses a standard protocol that can discover and transfer notes with other devices on the same WiFi running LocalSend clients (including macOS and Linux).
 
 ---
 
@@ -1293,7 +1331,7 @@ When importing a backup, you can choose from three modes:
   - ✅ Location feature enabled
   - ⚠️ Permission granted but feature not enabled
   - ❌ Location permission not granted
-- **City Search**: Manually search and set location
+- **City Search**: Supports recent search history and language-aware online search (powered by Open-Meteo) for quick city selection and weather fetching
 - **Current Address**: Shows your set location or "Not Set"
 
 ### Language Settings
@@ -1304,13 +1342,27 @@ The app supports multiple languages including Chinese, English, Japanese, Korean
 
 ![Theme Settings](../res/screenshot/theme_settings_page.jpg)
 
+#### Theme Styles (3 Types)
+
+ThoughtEcho offers three distinctive design aesthetics:
+
+| Style | Description | Highlights |
+| --- | --- | --- |
+| 🎨 **Material** | Standard Material 3 style (Default) | Supports Material You dynamic wallpaper color or custom seed color |
+| 📜 **Paper & Ink** | Warm, handcrafted tactile feel | Warm paper tones, serif typography, aligned ruling lines & subtle shadows |
+| 📄 **Plain** | Minimalist cool paper aesthetic | Cool paper surface, deep teal ink, clean border styling without ruling lines |
+
+#### Custom Ink Accents (Theme Accent)
+
+When using "Paper & Ink" or "Plain" handcrafted styles, you can customize your accent ink color (such as Raw Umber, Celadon, Indigo, etc.) to change the ink without altering the paper identity. The "Release Notes" page also offers an inline live preview switcher.
+
 #### Theme Modes
 
 - 🌞 **Light Mode**: Manual light theme
 - 🌙 **Dark Mode**: Manual dark theme
 - 🔄 **Follow System**: Auto-sync with system setting
 
-#### Color Customization
+#### Color Customization (Material Style)
 
 - **Dynamic Color**: Extract colors from your phone wallpaper as theme color (Android 12+ support)
 - **Custom Theme Color**:
@@ -1505,6 +1557,6 @@ A:
 2. Or uninstall and reinstall the app
 
 **Q: What devices are supported?**  
-A: Android, iOS, Windows, macOS, Linux
+A: Native apps are supported on Android, iOS, and Windows (cross-platform transfer with devices running LocalSend is also supported on the same local network).
 
 </div>

@@ -7,7 +7,7 @@ description: >-
 omitted:
   - section: colors
     reason: >-
-      主题风格是和亮暗并列的第三个维度，共三套。下面的 colors 是默认风格
+      主题风格是和亮暗并列的第三个维度，共三套。下面的 colors 是特色品牌风格
       paper（纸与墨）的亮色取值，仅作代表。plain（素笺）另有一套手工色板；
       material 风格的颜色由 Material You 动态取色在运行时生成，不存在固定色值。
       全部取值的唯一真源是 lib/theme/theme_style.dart 的 ThemeStylePalette。

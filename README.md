@@ -68,7 +68,7 @@
   <table>
     <tr>
       <td align="center" width="33%"><b>✍️ 富文本笔记</b><br>支持富文本、多媒体附件与双格式存储</td>
-      <td align="center" width="33%"><b>✨ Thoughter（实验性 / Beta）</b><br>笔记上下文问答、润色与每日灵感提示（包含实验性声明）</td>
+      <td align="center" width="33%"><b>✨ Thoughter（实验性 / Beta）</b><br>Agent 工具调用、跨会话长期记忆与笔记智能创作</td>
       <td align="center" width="33%"><b>📊 洞察与报告</b><br>AI 周期洞察、年度报告与写作趋势分析</td>
     </tr>
     <tr>
@@ -83,7 +83,8 @@
     </tr>
     <tr>
       <td align="center"><b>⚡ 快速捕获</b><br>剪贴板检测、一言与每日灵感随手收集</td>
-      <td align="center" colspan="2"><b>📱 全平台支持</b><br>Windows、Android、iOS 全覆盖</td>
+      <td align="center"><b>🎨 主题风格</b><br>纸与墨、素笺与 Material 动态取色</td>
+      <td align="center"><b>📱 全平台支持</b><br>Windows、Android、iOS 全覆盖</td>
     </tr>
   </table>
 </div>
@@ -193,25 +194,24 @@
       <td>
         • 富文本编辑器与多媒体支持<br>
         • 多AI服务商架构<br>
-        • AI卡片生成功能<br>
-        • 大文件流式处理<br>
-        • 智能内存管理<br>
-        • ZIP格式完整备份<br>
-        • Material 3现代化界面<br>
+        • Thoughter 智能体与跨会话长期记忆<br>
+        • 纸与墨 / 素笺 / Material 特色主题风格<br>
+        • AI卡片生成与多种模板<br>
+        • 大文件流式处理与媒体管理<br>
+        • ZIP完整备份与增量媒体同步<br>
+        • Material 3现代化界面与主题令牌<br>
         • 多平台数据库适配<br>
-        • 位置与天气记录<br>
-        • 剪贴板智能检测<br>
-        • AI年度报告生成<br>
-        • 笔记内容智能分析<br>
-        • 性能优化与稳定性提升<br>
-        • 用户体验改进<br>
-        • 多设备同步功能<br>
+        • 位置与天气记录（智能在线搜索）<br>
+        • 剪贴板智能检测与快速摘录<br>
+        • 周期性智能洞察报告<br>
+        • 性能优化与列表预热<br>
+        • WebDAV 与 LocalSend 多设备同步<br>
         • 国际化多语言支持<br>
-        • 桌面端应用支持<br>
-        • 隐藏笔记与隐私保护<br>
+        • Windows 桌面端应用支持<br>
+        • 隐藏笔记与生物识别保护<br>
         • 草稿自动保存与恢复<br>
         • iOS 平台支持<br>
-        • 应用内用户指南
+        • 完整用户指南与网页手册
       </td>
       <td>
         <b>🔥 智能输入升级</b><br>
@@ -316,7 +316,7 @@
   <table>
     <tr>
       <td align="center" width="33%"><b>✍️ Rich Text Notes</b><br>Rich text, media attachments, dual-format storage</td>
-      <td align="center" width="33%"><b>✨ Thoughter (Experimental / Beta)</b><br>Context-aware Q&A, polishing, and daily inspiration prompts</td>
+      <td align="center" width="33%"><b>✨ Thoughter (Experimental / Beta)</b><br>Agent tool calling, cross-session long-term memory & creative assistance</td>
       <td align="center" width="33%"><b>📊 Insights & Reports</b><br>AI periodic insights, annual reports, writing trend analysis</td>
     </tr>
     <tr>
@@ -331,7 +331,8 @@
     </tr>
     <tr>
       <td align="center"><b>⚡ Quick Capture</b><br>Clipboard watcher, Hitokoto quotes, daily prompts on tap</td>
-      <td align="center" colspan="2"><b>📱 All Platforms</b><br>Windows, Android, iOS full coverage</td>
+      <td align="center"><b>🎨 Theme Styles</b><br>Paper & Ink, Plain, and Material dynamic color</td>
+      <td align="center"><b>📱 All Platforms</b><br>Windows, Android, iOS full coverage</td>
     </tr>
   </table>
 </div>
@@ -441,25 +442,24 @@
       <td>
         • Rich text editor with multimedia<br>
         • Multi-AI provider architecture<br>
-        • AI card generation feature<br>
-        • Large file streaming processing<br>
-        • Intelligent memory management<br>
-        • ZIP format complete backup<br>
-        • Material 3 modern interface<br>
+        • Thoughter AI agent with long-term memory<br>
+        • Paper & Ink / Plain / Material signature theme styles<br>
+        • AI card generation & customizable templates<br>
+        • Large file streaming & media management<br>
+        • ZIP full backup & incremental media sync<br>
+        • Material 3 modern interface with theme tokens<br>
         • Multi-platform database adapter<br>
-        • Location & weather recording<br>
-        • Smart clipboard detection<br>
-        • AI annual report generation<br>
-        • Smart note content analysis<br>
-        • Performance optimization<br>
-        • User experience improvements<br>
-        • Multi-device sync support<br>
-        • Internationalization support<br>
-        • Desktop application support<br>
-        • Hidden notes & privacy protection<br>
+        • Location & weather recording (smart geocoding search)<br>
+        • Smart clipboard detection & quick capture<br>
+        • Periodic intelligent insights & reports<br>
+        • Performance optimization & list warmup<br>
+        • WebDAV & LocalSend multi-device sync<br>
+        • Internationalization multi-language support<br>
+        • Windows desktop application support<br>
+        • Hidden notes & biometric protection<br>
         • Auto-save drafts & recovery<br>
         • iOS platform support<br>
-        • In-app user guide
+        • Full user guide & web manual
       </td>
       <td>
         • Enhanced natural language search<br>
