@@ -57,6 +57,15 @@
 	<string>需要访问麦克风以录制音频</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>需要访问位置以记录地理信息</string>
+	<!-- 蓝牙权限描述：智能推送会把笔记通过 BLE 同步到墨水屏硬件。
+	     iOS 13+ 只要初始化 CBCentralManager 就会校验此键，缺失会被系统直接终止进程。 -->
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>需要使用蓝牙，将推送的笔记同步到配套的墨水屏设备</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>需要使用蓝牙，将推送的笔记同步到配套的墨水屏设备</string>
+	<!-- Face ID：local_auth 在 Face ID 机型上缺此键无法完成生物识别 -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>需要使用面容 ID 验证身份，以解锁隐藏的笔记</string>
 	
 	<!-- 文件访问权限 - 禁止在系统文件 App 中暴露应用文档 -->
 	<key>UIFileSharingEnabled</key>

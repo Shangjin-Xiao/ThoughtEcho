@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../models/quote_model.dart';
 import '../utils/app_logger.dart';
+import '../utils/platform_helper.dart';
 
 /// 专用于向 Pico 发送数据的低功耗蓝牙 (BLE) 服务
 class PicoBleService {
@@ -23,11 +22,20 @@ class PicoBleService {
   BluetoothCharacteristic? _targetCharacteristic;
   bool _isConnecting = false;
 
+  /// 本次进程内蓝牙不可用（没有硬件 / 用户拒绝授权）时置位，
+  /// 之后所有推送直接跳过 BLE，不再反复唤起系统蓝牙栈。
+  bool _bleUnavailable = false;
+
   /// 发送笔记到 Pico（自动处理连接与数据打包发送）
   Future<bool> sendQuoteToPico(Quote quote) async {
-    // BLE 发送主要侧重移动端（Android/iOS）
-    if (kIsWeb || (Platform.isWindows || Platform.isLinux)) {
+    // BLE 发送只在移动端启用（Web / 桌面端既没有硬件适配也没有权限声明）
+    if (!PlatformHelper.isAndroid && !PlatformHelper.isIOS) {
       AppLogger.w('当前平台默认不开启或不支持 BLE 发送功能');
+      return false;
+    }
+
+    if (_bleUnavailable) {
+      AppLogger.d('蓝牙本次运行已判定不可用，跳过向 Pico 发送');
       return false;
     }
 
@@ -35,11 +43,24 @@ class PicoBleService {
       final isSupported = await FlutterBluePlus.isSupported;
       if (!isSupported) {
         AppLogger.w('设备不支持蓝牙 BLE');
+        _bleUnavailable = true;
         return false;
       }
 
-      // 为了不打扰主 UI 流程，静默失败
-      final state = await FlutterBluePlus.adapterState.first;
+      // 为了不打扰主 UI 流程，静默失败。
+      // 加超时兜底：iOS 上系统蓝牙权限弹窗未处理前状态会一直停在 unknown，
+      // 不设超时会把这个 future 永久挂起。
+      final state = await FlutterBluePlus.adapterState.first
+          .timeout(const Duration(seconds: 5), onTimeout: () {
+        AppLogger.w('读取蓝牙适配器状态超时');
+        return BluetoothAdapterState.unknown;
+      });
+      if (state == BluetoothAdapterState.unauthorized ||
+          state == BluetoothAdapterState.unavailable) {
+        AppLogger.w('蓝牙不可用或未授权（$state），本次运行不再尝试向 Pico 发送');
+        _bleUnavailable = true;
+        return false;
+      }
       if (state != BluetoothAdapterState.on) {
         AppLogger.w('蓝牙未开启，取消向 Pico 发送');
         return false;
@@ -79,7 +100,7 @@ class PicoBleService {
 
       // Android 下请求提升 MTU，允许一次发长数据 (最大512)
       // 这可以避免底层蓝牙分包导致的复杂组包逻辑
-      if (Platform.isAndroid) {
+      if (PlatformHelper.isAndroid) {
         try {
           await _connectedDevice!.requestMtu(512);
         } catch (e) {
@@ -97,6 +118,12 @@ class PicoBleService {
     }
   }
 
+  /// 丢弃当前连接状态（设备与 characteristic 必须成对失效）
+  void _clearConnection() {
+    _connectedDevice = null;
+    _targetCharacteristic = null;
+  }
+
   /// 内部方法：自动扫描、发现设备、建立连接并寻找服务特征
   Future<bool> _ensureConnected() async {
     // 检查是否已经保持连接
@@ -104,6 +131,9 @@ class PicoBleService {
       if (_connectedDevice!.isConnected) {
         return true;
       }
+      // 连接已断开：characteristic 绑在这台外设上，一并丢掉，
+      // 否则后面重连失败时会残留一个指向死连接的引用。
+      _clearConnection();
     }
 
     if (_isConnecting) return false;
@@ -118,17 +148,23 @@ class PicoBleService {
         timeout: const Duration(seconds: 4),
       );
 
-      // 等待并找寻结果中匹配的设备
-      final results = await FlutterBluePlus.scanResults.firstWhere(
-        (results) =>
-            results.isNotEmpty &&
-            results.any((r) => r.device.platformName == targetDeviceName),
-        orElse: () => [],
-      );
+      // 等待并找寻结果中匹配的设备。
+      // scanResults 是不会关闭的广播流，扫不到设备时 firstWhere 永远不会完成，
+      // 必须加超时，否则 _isConnecting 会被永久占住，之后再也发不出去。
+      final results = await FlutterBluePlus.scanResults
+          .firstWhere(
+            (results) =>
+                results.isNotEmpty &&
+                results.any((r) => r.device.platformName == targetDeviceName),
+            orElse: () => <ScanResult>[],
+          )
+          .timeout(
+            const Duration(seconds: 6),
+            onTimeout: () => <ScanResult>[],
+          );
 
       if (results.isEmpty) {
         AppLogger.w('蓝牙扫描结束，未找到 Pico');
-        _isConnecting = false;
         return false;
       }
 
@@ -147,7 +183,6 @@ class PicoBleService {
             if (characteristic.uuid.toString() == picoCharacteristicUuid) {
               _targetCharacteristic = characteristic;
               AppLogger.i('成功打通与 Pico 水墨屏的 BLE 通信通道！');
-              _isConnecting = false;
               return true;
             }
           }
@@ -156,16 +191,15 @@ class PicoBleService {
 
       AppLogger.e('已连接设备，但内部未找到约定的服务 UUID (可能没刷对应的主板固件)');
       await _connectedDevice!.disconnect();
-      _connectedDevice = null;
-      _isConnecting = false;
+      _clearConnection();
       return false;
     } catch (e) {
       AppLogger.e('Pico 蓝牙连接意外中断 或 扫描失败', error: e);
-      _isConnecting = false;
       return false;
     } finally {
+      _isConnecting = false;
       // 无论成功与否，请务必停止扫描以省电
-      FlutterBluePlus.stopScan();
+      unawaited(FlutterBluePlus.stopScan().catchError((_) {}));
     }
   }
 
