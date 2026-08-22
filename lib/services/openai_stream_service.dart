@@ -9,6 +9,102 @@ import '../models/ai_provider_settings.dart';
 import '../utils/app_logger.dart';
 import '../utils/string_utils.dart';
 
+/// 从正文里剥掉行内的 `<think>…</think>` 思考块。
+///
+/// 结构化的 `reasoning` / `reasoning_content` 字段已经由
+/// [OpenAIStreamService.processStreamToText] 单独处理，但 Ollama 上的
+/// qwen3 / deepseek-r1 以及一部分 OpenAI 兼容网关根本不用那两个字段，
+/// 而是把思考过程当作 `content` 直接发出来。不剥的话它会原样显示成每日
+/// 提示和洞察正文。
+///
+/// 必须按流处理：标签会被切在两个 chunk 中间（`...<thi` + `nk>...`），
+/// 所以尾部凡是可能构成标签前缀的部分都要先攒着，等下一个 chunk 到了再
+/// 判定，不能逐 chunk 独立匹配。
+@visibleForTesting
+class ThinkTagFilter {
+  /// 支持的标签对。不同模型用的名字不一样，都按同一套规则处理。
+  static const List<List<String>> _pairs = [
+    ['<think>', '</think>'],
+    ['<thinking>', '</thinking>'],
+  ];
+
+  String _pending = '';
+  String? _closingTag;
+
+  /// 处理一个 chunk，返回其中可以直接吐出去的正文（可能为空字符串）。
+  String process(String chunk) {
+    _pending += chunk;
+    final out = StringBuffer();
+
+    while (true) {
+      if (_closingTag == null) {
+        var openAt = -1;
+        List<String>? hit;
+        for (final pair in _pairs) {
+          final index = _pending.indexOf(pair[0]);
+          if (index >= 0 && (openAt < 0 || index < openAt)) {
+            openAt = index;
+            hit = pair;
+          }
+        }
+        if (hit != null) {
+          out.write(_pending.substring(0, openAt));
+          _pending = _pending.substring(openAt + hit[0].length);
+          _closingTag = hit[1];
+          continue;
+        }
+        // 没有完整的开标签：尾巴可能是被切开的半截，留到下一个 chunk 再看。
+        final keep = _partialSuffixLength(
+          _pending,
+          _pairs.map((pair) => pair[0]),
+        );
+        out.write(_pending.substring(0, _pending.length - keep));
+        _pending = _pending.substring(_pending.length - keep);
+        break;
+      }
+
+      final closeAt = _pending.indexOf(_closingTag!);
+      if (closeAt >= 0) {
+        _pending = _pending.substring(closeAt + _closingTag!.length);
+        _closingTag = null;
+        continue;
+      }
+      // 还在思考块里：正文整段丢弃，只留可能是半截闭标签的尾巴。
+      final keep = _partialSuffixLength(_pending, [_closingTag!]);
+      _pending = _pending.substring(_pending.length - keep);
+      break;
+    }
+
+    return out.toString();
+  }
+
+  /// 流结束时把攒着的尾巴交出来。
+  ///
+  /// 如果仍停在未闭合的思考块里，说明整段思考被截断了，直接丢掉：显示半截
+  /// 推理比什么都不显示更糟，调用方还有 reasoning 兜底和默认模板可退。
+  String flush() {
+    final tail = _closingTag == null ? _pending : '';
+    _pending = '';
+    _closingTag = null;
+    return tail;
+  }
+
+  /// [text] 末尾有多少个字符可能是 [tags] 里某个标签被切断的前缀。
+  static int _partialSuffixLength(String text, Iterable<String> tags) {
+    var longest = 0;
+    for (final tag in tags) {
+      final upper = tag.length - 1 < text.length ? tag.length - 1 : text.length;
+      for (var n = upper; n > longest; n--) {
+        if (tag.startsWith(text.substring(text.length - n))) {
+          longest = n;
+          break;
+        }
+      }
+    }
+    return longest;
+  }
+}
+
 /// OpenAI 兼容服务的流式传输核心
 ///
 /// 封装 openai_dart 的 OpenAIClient，提供：
@@ -255,11 +351,17 @@ class OpenAIStreamService extends ChangeNotifier {
   /// （某些模型会把全部输出放在 reasoning 里），并且必须攒到流结束才判定：
   /// 推理模型的 reasoning 总是先于 content 到达，若按单个 event 判空，
   /// 思考过程会被当成正文吐出去，混进洞察正文和每日提示里。
+  ///
+  /// content 里行内的 `<think>…</think>` 由 [ThinkTagFilter] 剥掉——那是
+  /// 不走 reasoning 字段的模型表达思考过程的方式，上面那套判空对它无效。
+  /// 「有没有正文」按剥完之后算：整条流只有一个思考块时，仍然要能退回
+  /// reasoning 兜底。
   static Stream<String> processStreamToText(
     Stream<openai.ChatStreamEvent> stream, {
     void Function(String thinkingContent)? onThinking,
   }) async* {
     final pendingReasoning = StringBuffer();
+    final thinkFilter = ThinkTagFilter();
     var sawContent = false;
 
     await for (final event in stream) {
@@ -274,8 +376,11 @@ class OpenAIStreamService extends ChangeNotifier {
         // 提取普通文本 delta
         final content = delta.content;
         if (content != null && content.isNotEmpty) {
-          sawContent = true;
-          yield content;
+          final visible = thinkFilter.process(content);
+          if (visible.isNotEmpty) {
+            sawContent = true;
+            yield visible;
+          }
         }
 
         // 提取思考/推理内容（DeepSeek reasoning_content、
@@ -298,6 +403,12 @@ class OpenAIStreamService extends ChangeNotifier {
       }
     }
 
+    final tail = thinkFilter.flush();
+    if (tail.isNotEmpty) {
+      sawContent = true;
+      yield tail;
+    }
+
     if (!sawContent && pendingReasoning.isNotEmpty) {
       yield pendingReasoning.toString();
     }
@@ -314,8 +425,15 @@ class OpenAIStreamService extends ChangeNotifier {
       return '';
     }
     final message = completion.choices.first.message;
-    if (message.content != null && message.content!.isNotEmpty) {
-      return message.content!;
+    final content = message.content;
+    if (content != null && content.isNotEmpty) {
+      // 同样要剥行内思考块。剥完只剩空串说明这条 content 整个都是思考过程，
+      // 继续往下走 reasoning 兜底，别把推理当答案返回。
+      final filter = ThinkTagFilter();
+      final visible = (filter.process(content) + filter.flush()).trim();
+      if (visible.isNotEmpty) {
+        return visible;
+      }
     }
     if (message.reasoning != null && message.reasoning!.isNotEmpty) {
       return message.reasoning!;
