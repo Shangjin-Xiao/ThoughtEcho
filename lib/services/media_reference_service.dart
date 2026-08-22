@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/quote_model.dart';
 import '../utils/app_logger.dart';
+import '../utils/media_path_resolver.dart';
 import 'database_service.dart';
 
 /// 媒体文件引用管理服务
@@ -27,6 +28,15 @@ class MediaReferenceService {
   @visibleForTesting
   static void setDatabaseForTesting(Database db) {
     _database = db;
+  }
+
+  /// 清除测试用的数据库实例
+  ///
+  /// 测试在 `tearDown` 关闭数据库后必须调用，否则静态字段会继续指向已关闭的
+  /// 句柄，同进程内后续用例会拿到失效连接。
+  @visibleForTesting
+  static void clearDatabaseForTesting() {
+    _database = null;
   }
 
   /// 获取数据库实例
@@ -170,6 +180,59 @@ class MediaReferenceService {
       return count;
     } catch (e) {
       logDebug('获取媒体文件引用计数失败: $e');
+      return 0;
+    }
+  }
+
+  /// 统计云端媒体文件在本地的引用数。
+  ///
+  /// [relativeToMediaRoot] 是相对 `media/` 目录的路径（如 `images/a.jpg`），
+  /// 也就是 WebDAV 上的附件路径。除按本机标准路径精确匹配外，还会兜底匹配
+  /// 尾段相同的历史引用行——老版本会把其它设备的绝对路径原样写进引用表，
+  /// 这类记录无法精确命中，却同样说明"本地有笔记在用这个附件"。
+  ///
+  /// 仅按完整尾段（`media/<子目录>/<文件名>`）匹配，不做同名兜底，
+  /// 因此不会让用户已删除的附件被重新下载。
+  static Future<int> getReferenceCountForMediaRelativePath(
+    String relativeToMediaRoot,
+  ) async {
+    try {
+      final posixTail = MediaPathResolver.mediaRelativeTail(
+        'media/$relativeToMediaRoot',
+      );
+      if (posixTail == null) return 0;
+
+      final windowsTail = posixTail.replaceAll('/', r'\');
+      final db = await database;
+
+      // 先用可命中 idx_media_references_file_path 的精确匹配。修复后的引用都是
+      // 标准相对路径，绝大多数查询到此为止，不会退到下面的全表扫描。
+      final exact = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM $_tableName '
+        'WHERE file_path = ? OR file_path = ?',
+        [posixTail, windowsTail],
+      );
+      final exactCount = exact.first['count'] as int;
+      if (exactCount > 0) return exactCount;
+
+      // 兜底：老版本写入的外来绝对路径引用行只能按尾段匹配。这里用
+      // substr 做大小写敏感的后缀相等比较——SQLite 的 LIKE 对 ASCII
+      // 默认不区分大小写，会把 `.../images/A.jpg` 误算成 `images/a.jpg`
+      // 的引用，而这在区分大小写的文件系统上是两个不同的文件。
+      // 尾段带上前导分隔符，保证匹配的是完整路径段而非文件名片段。
+      // 该比较用不上索引，因此只在精确匹配落空时才付这次扫描的代价。
+      final posixSuffix = '/$posixTail';
+      final windowsSuffix = '\\$windowsTail';
+      final fallback = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM $_tableName '
+        'WHERE substr(file_path, -length(?)) = ? '
+        'OR substr(file_path, -length(?)) = ?',
+        [posixSuffix, posixSuffix, windowsSuffix, windowsSuffix],
+      );
+
+      return fallback.first['count'] as int;
+    } catch (e) {
+      logDebug('统计云端媒体引用计数失败: $e');
       return 0;
     }
   }
@@ -1079,8 +1142,9 @@ class MediaReferenceService {
   /// 同步笔记的媒体文件引用（事务内版本）
   static Future<bool> syncQuoteMediaReferencesWithTransaction(
     DatabaseExecutor txn,
-    Quote quote,
-  ) async {
+    Quote quote, {
+    String? cachedAppPath,
+  }) async {
     try {
       final quoteId = quote.id;
       if (quoteId == null) {
@@ -1089,8 +1153,8 @@ class MediaReferenceService {
       }
 
       // 获取应用目录路径缓存，避免循环中多次获取
-      final appDir = await getApplicationDocumentsDirectory();
-      final appPath = path.normalize(appDir.path);
+      final appPath = cachedAppPath ??
+          path.normalize((await getApplicationDocumentsDirectory()).path);
 
       // 先移除该笔记的所有现有引用
       await txn.delete(_tableName, where: 'quote_id = ?', whereArgs: [quoteId]);
