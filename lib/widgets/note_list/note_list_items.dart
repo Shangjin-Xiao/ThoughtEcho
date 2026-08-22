@@ -1255,7 +1255,11 @@ extension _NoteListItemsExtension on NoteListViewState {
       final selectedQuotes = _quotes
           .where((q) => q.id != null && _selectedExportNoteIds.contains(q.id))
           .toList();
-      final fontSet = await PdfFontService.loadFontSet();
+      // 让导出的 PDF 跟着当前风格的阅读字体走：手工风格下屏幕是宋体，
+      // 导出的文档也该是宋体。族名从排版令牌取，widget 里不做风格判断。
+      final fontSet = await PdfFontService.loadFontSet(
+        readingFontFamily: AppTypographyTokens.of(context).readingFontFamily,
+      );
       if (!mounted) return;
       final pdfBytes = await PdfExportService.exportNotesToPdf(
         selectedQuotes,

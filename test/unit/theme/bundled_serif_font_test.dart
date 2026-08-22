@@ -6,8 +6,6 @@
 //
 // 这类失败在界面上是静默的：字体加载不到只会悄悄退回系统默认字体，
 // 不报错、不崩溃，只是主题的字体那一层又变回没做。
-import 'dart:typed_data';
-
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/theme/theme_style.dart';

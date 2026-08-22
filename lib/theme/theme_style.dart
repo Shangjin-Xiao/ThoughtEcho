@@ -712,11 +712,13 @@ class AppSurfaceTokens extends ThemeExtension<AppSurfaceTokens> {
 class AppTypographyTokens extends ThemeExtension<AppTypographyTokens> {
   const AppTypographyTokens({
     required this.variableWeightCompensation,
+    required this.readingFontFamily,
   });
 
   factory AppTypographyTokens.fromForm(ThemeStyleForm form) =>
       AppTypographyTokens(
         variableWeightCompensation: form.variableWeightCompensation,
+        readingFontFamily: form.fontFamily,
       );
 
   /// 见 [ThemeStyleForm.variableWeightCompensation]。
@@ -726,15 +728,27 @@ class AppTypographyTokens extends ThemeExtension<AppTypographyTokens> {
   /// Regular——用户标的粗体直接消失，正文里再也分不出重点。
   final double variableWeightCompensation;
 
+  /// 当前风格的阅读字体族，null = 系统默认（[ThemeStyleForm.fontFamily] 的下发）。
+  ///
+  /// 屏幕上的文字直接读 `textTheme` 就够了，用不着这个。它是给**画到屏幕之外**的
+  /// 那条路准备的：PDF 导出走的是 `pdf` 包自己的排版引擎，完全不经过 `textTheme`，
+  /// 想让导出的文档和屏幕上是同一种字体，只能把族名单独递过去
+  /// （见 `PdfFontService.loadFontSet`）。
+  final String? readingFontFamily;
+
   static AppTypographyTokens of(BuildContext context) =>
       Theme.of(context).extension<AppTypographyTokens>() ??
       AppTypographyTokens.fromForm(ThemeStyleForm.material);
 
   @override
-  AppTypographyTokens copyWith({double? variableWeightCompensation}) =>
+  AppTypographyTokens copyWith({
+    double? variableWeightCompensation,
+    String? readingFontFamily,
+  }) =>
       AppTypographyTokens(
         variableWeightCompensation:
             variableWeightCompensation ?? this.variableWeightCompensation,
+        readingFontFamily: readingFontFamily ?? this.readingFontFamily,
       );
 
   @override

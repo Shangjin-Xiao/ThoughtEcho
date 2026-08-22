@@ -76,6 +76,17 @@
 > Reserved Font Name）。唯一的禁止项是「单独售卖字体本身」。全文随包在
 > `assets/fonts/OFL.txt`，应用内出处见 `lib/pages/license_page.dart`。
 >
+> **PDF 导出也跟着走了**（2026-08-22）：`pdf` 包有自己的排版引擎，完全不看
+> `textTheme`，所以字体得单独递——`AppTypographyTokens.readingFontFamily` 递给
+> `PdfFontService.loadFontSet`，族名等于 `bundledSerif` 时正文改用随包那份。
+> 判据是族名取值不是风格身份，将来任何一套风格指向随包衬线，PDF 自动跟上。
+> 两个前提别拆：
+> - **回退链里必须留着下载的黑体**。随包字体是子集，
+>   `DeltaToPdfParser.sanitizeTextForPdf` 会把「所有字体都不支持」的字符
+>   **直接从文档里删掉**——少一个回退就是少一批字，而且是静默的。
+> - `pdf` 包不做字重轴插值，只认默认实例。子集化时已经把默认实例收到 w400，
+>   所以拿到的是 Regular；这也是字重轴下限取 400 的另一个理由。
+>
 > 两个坑，都已固化在代码注释里：
 > - **不要改用 `fontVariations`。** 直接指定 wght 轴看着更精确，但它会盖过
 >   `fontWeight`，全项目上百处 `copyWith(fontWeight: ...)`（含富文本加粗）
