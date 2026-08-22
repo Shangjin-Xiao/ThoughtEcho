@@ -338,10 +338,10 @@ class SmartPushService extends ChangeNotifier {
 
   @visibleForTesting
   static String buildNotificationBodyForTest(Quote note) {
-    final rawContent = StringUtils.removeObjectReplacementChar(note.content);
-    final content = rawContent.length <= 100
-        ? rawContent
-        : '${rawContent.substring(0, 100)}...';
+    // 必须按用户可见字符截断：substring 走的是 UTF-16 code unit，
+    // 正好切在代理对中间就会留下半个 emoji，通道编码时被替换成 U+FFFD，
+    // 通知里显示成一个"�"。StringUtils 已有按字素簇截断的实现，直接复用。
+    final content = StringUtils.truncateForPreview(note.content, 100);
     final author = note.sourceAuthor?.trim() ?? '';
     final work = note.sourceWork?.trim() ?? '';
     final fallbackSource = note.source?.trim() ?? '';
