@@ -151,7 +151,7 @@ void main() {
     expect(find.text(l10n.dataOverview), findsOneWidget);
     // 周期选择并进了标题行，顶部那张独立的「时间范围」卡片已经不存在
     expect(find.text(l10n.timeRange), findsNothing);
-    expect(find.byType(PopupMenuButton<String>), findsOneWidget);
+    expect(find.byType(MenuAnchor), findsOneWidget);
     // 日期范围只出现一次，不再被顶部选择器重复一遍
     final weekStart =
         DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
