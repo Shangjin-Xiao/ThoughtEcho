@@ -87,17 +87,6 @@ class UpdateBottomSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 顶部拖拽指示器
-          Container(
-            margin: const EdgeInsets.only(top: 8),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: colorScheme.onSurfaceVariant.withAlpha(128),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-
           // 标题区域
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
@@ -270,17 +259,6 @@ class UpdateBottomSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 顶部拖拽指示器
-          Container(
-            margin: const EdgeInsets.only(top: 8),
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: colorScheme.onSurfaceVariant.withAlpha(128),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-
           // 标题区域
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
@@ -524,6 +502,7 @@ class UpdateBottomSheet extends StatelessWidget {
     if (!versionInfo.hasUpdate && showNoUpdateMessage) {
       return showModalBottomSheet<void>(
         context: context,
+        showDragHandle: true,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (context) => UpdateBottomSheet(
@@ -591,6 +570,7 @@ class UpdateBottomSheet extends StatelessWidget {
 
     return showModalBottomSheet<void>(
       context: context,
+      showDragHandle: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) =>

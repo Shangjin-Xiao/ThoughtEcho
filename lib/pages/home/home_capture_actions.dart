@@ -70,6 +70,7 @@ class HomeCaptureActions {
     var resultText = l10n.featureComingSoon;
     await showModalBottomSheet<void>(
       context: context,
+      showDragHandle: true,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (sheetContext) {

@@ -214,6 +214,7 @@ class _TrashPageState extends State<TrashPage> {
     try {
       final selected = await showModalBottomSheet<int>(
         context: context,
+        showDragHandle: true,
         builder: (context) => SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16.0),

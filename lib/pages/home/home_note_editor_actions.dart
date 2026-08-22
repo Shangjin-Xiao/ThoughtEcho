@@ -96,6 +96,7 @@ class HomeNoteEditorActions {
     if (!isMounted() || !context.mounted) return;
     await showModalBottomSheet<void>(
       context: context,
+      showDragHandle: true,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
       requestFocus: false,
@@ -123,6 +124,7 @@ class HomeNoteEditorActions {
 
     showModalBottomSheet<void>(
       context: context,
+      showDragHandle: true,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).brightness == Brightness.light
           ? Colors.white

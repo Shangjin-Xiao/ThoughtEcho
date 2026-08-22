@@ -92,7 +92,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
-            ElevatedButton(
+            FilledButton(
               onPressed: () {
                 Navigator.pop(context);
               },
@@ -599,7 +599,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                       ),
                       SizedBox(width: 16),
                       Expanded(
-                        child: ElevatedButton.icon(
+                        child: FilledButton.icon(
                           onPressed: syncService.isSyncing
                               ? null
                               : () => _saveAndSync(syncService),
@@ -617,10 +617,8 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                           label: Text(syncService.enabled
                               ? l10n.webdavSaveAndSync
                               : l10n.webdavEnableSync),
-                          style: ElevatedButton.styleFrom(
+                          style: FilledButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            backgroundColor: theme.colorScheme.primary,
-                            foregroundColor: theme.colorScheme.onPrimary,
                           ),
                         ),
                       ),

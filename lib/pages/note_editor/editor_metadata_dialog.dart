@@ -7,6 +7,7 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
     final l10n = AppLocalizations.of(context);
     await showModalBottomSheet(
       context: context,
+      showDragHandle: true,
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: theme.colorScheme.surface,
@@ -31,21 +32,6 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
               builder: (context, scrollController) {
                 return Column(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color:
-                              theme.colorScheme.onSurfaceVariant.applyOpacity(
-                            // MODIFIED
-                            0.4,
-                          ),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                       child: Row(

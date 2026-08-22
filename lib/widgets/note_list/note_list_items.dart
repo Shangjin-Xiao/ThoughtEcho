@@ -94,6 +94,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                                       context.read<SettingsService>();
                                   showModalBottomSheet(
                                     context: context,
+                                    showDragHandle: true,
                                     isScrollControlled: true,
                                     backgroundColor: Theme.of(
                                       context,
