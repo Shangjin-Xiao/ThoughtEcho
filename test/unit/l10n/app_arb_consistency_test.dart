@@ -35,5 +35,24 @@ void main() {
       expect(data['skipNonFullscreenEditor'], isNotEmpty);
       expect(data['skipNonFullscreenEditorDesc'], isNotEmpty);
     });
+
+    test('ARB files follow UX writing guidelines without technical jargon', () {
+      final zh = jsonDecode(File('lib/l10n/app_zh.arb').readAsStringSync())
+          as Map<String, dynamic>;
+      final en = jsonDecode(File('lib/l10n/app_en.arb').readAsStringSync())
+          as Map<String, dynamic>;
+
+      expect(zh['openapiCompatible'], 'OpenAI 兼容');
+      expect(en['openapiCompatible'], 'OpenAI Compatible');
+
+      expect(zh['databaseMaintenance'], '本地存储维护优化');
+      expect(en['databaseMaintenance'], 'Storage Optimization');
+
+      expect(zh['mergeConfirmDialogItem1'], isNot(contains('wins')));
+      expect(en['mergeConfirmDialogItem1'], isNot(contains('Wins')));
+
+      expect(zh['leaveWhileSyncing'], isNot(contains('服务器')));
+      expect(en['leaveWhileSyncing'], isNot(contains('server')));
+    });
   });
 }

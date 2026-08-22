@@ -1190,7 +1190,7 @@
   "insightsPageEmpty": "분석 유형을 선택하고 \"분석 시작\"을 클릭하세요\n인사이트가 노트의 사고 패턴과 규칙성을 발견하도록 도와줍니다",
   "customAnalysis": "사용자 지정 분석",
   "siliconflow": "SiliconFlow",
-  "openapiCompatible": "OpenAPI 호환",
+  "openapiCompatible": "OpenAI 호환",
   "verifyingApiKey": "API Key 확인 중...",
   "noProviderSelected": "공급자가 선택되지 않음",
   "apiKeyValid": "API Key 유효함 ({length}자)",

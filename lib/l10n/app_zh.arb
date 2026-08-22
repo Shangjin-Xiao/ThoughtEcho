@@ -763,11 +763,11 @@
   "cleanOrphanMedia": "清理无用媒体文件",
   "cleanOrphanMediaConfirmTitle": "清理无用媒体文件",
   "cleanOrphanMediaConfirmContent": "这将删除没有被任何笔记引用的媒体文件（图片、视频、音频）。\n\n确定继续吗？",
-  "databaseMaintenance": "数据库维护优化",
-  "databaseMaintenanceConfirmTitle": "数据库维护优化",
-  "databaseMaintenanceConfirmContent": "此操作将对数据库进行优化维护，包括：\n\n• 整理碎片空间\n• 更新统计信息\n• 重建索引\n\n维护过程可能需要几秒到几分钟，具体取决于数据量大小。\n\n确定继续吗？",
+  "databaseMaintenance": "本地存储维护优化",
+  "databaseMaintenanceConfirmTitle": "本地存储维护优化",
+  "databaseMaintenanceConfirmContent": "此操作将对本地存储进行整理优化，包括：\n\n• 释放碎片空间\n• 优化检索索引\n• 提升加载速度\n\n维护过程通常仅需几秒钟，确定继续吗？",
   "startMaintenance": "开始维护",
-  "maintenanceInProgress": "数据库维护中...",
+  "maintenanceInProgress": "正在整理优化存储...",
   "preparingProgress": "准备中...",
   "maintenanceComplete": "维护完成",
   "maintenanceDuration": "耗时: {duration} 秒",
@@ -1235,7 +1235,7 @@
       }
     }
   },
-  "serverInternalError": "服务器内部错误，可能是模型配置问题",
+  "serverInternalError": "AI 服务响应异常，请检查模型名称或网络配置",
   "checkSettings": "检查设置",
   "invalidApiKey": "API密钥无效，请检查设置",
   "checkApiKey": "检查API密钥",
@@ -1249,7 +1249,7 @@
       }
     }
   },
-  "serverInternalErrorConfig": "服务器内部错误，请检查AI模型配置是否正确",
+  "serverInternalErrorConfig": "AI 服务响应异常，请检查 AI 模型配置与网络连接",
   "invalidApiKeyUpdate": "API密钥无效，请在设置中更新API密钥",
   "configureValidApiKey": "请先在设置中配置有效的API密钥",
   "regenerate": "重新生成",
@@ -1279,7 +1279,7 @@
   "insightsPageEmpty": "选择分析类型并点击\"开始分析\"\n洞察将帮助你发现笔记中的思维模式和规律",
   "customAnalysis": "自定义分析",
   "siliconflow": "硅基流动",
-  "openapiCompatible": "OpenAPI兼容",
+  "openapiCompatible": "OpenAI 兼容",
   "verifyingApiKey": "正在验证API Key...",
   "noProviderSelected": "未选择服务商",
   "apiKeyValid": "API Key有效 ({length}字符)",
@@ -2003,7 +2003,7 @@
   },
   "downloadingFile": "正在下载文件...",
   "downloadComplete": "下载完成！",
-  "connectingToServer": "正在连接服务器...",
+  "connectingToServer": "正在连接 AI 服务...",
   "savingFile": "正在保存文件...",
   "waitingForAIContent": "正在等待 AI 生成内容...",
   "occurredError": "[发生错误: {error}]",
@@ -2147,7 +2147,7 @@
   "loadNoteFailed": "加载笔记失败",
   "queryTimeoutShort": "查询超时",
   "queryTimeoutRetry": "查询超时，请重试",
-  "databaseQueryError": "数据库查询出错",
+  "databaseQueryError": "读取笔记数据出错",
   "deleteConfirmTitle": "删除确认",
   "deleteRecordConfirm": "确定要删除这条分析记录吗？",
   "confirmDeleteAll": "确认删除",
@@ -2203,8 +2203,8 @@
   "restoreConfirmDialogWarning": "请确保您已经备份了当前的重要数据。",
   "mergeConfirmDialogTitle": "确认合并导入",
   "mergeConfirmDialogDesc": "此操作将保留当前数据，并与备份数据进行合并：",
-  "mergeConfirmDialogItem1": "• 相同ID的笔记按「最后写入 wins」保留较新版本",
-  "mergeConfirmDialogItem2": "• 不同ID的笔记全部保留",
+  "mergeConfirmDialogItem1": "• 重复的笔记自动保留最新修改的版本",
+  "mergeConfirmDialogItem2": "• 本地与备份中不重复的笔记全部保留",
   "mergeConfirmDialogItem3": "• 设置与AI分析数据合并追加",
   "mergeConfirmDialogReversible": "此操作可逆：可再次导入覆盖备份或继续合并。",
   "tagSettingsDescription": "创建和管理您的个人标签体系",
@@ -2304,7 +2304,7 @@
   "includeMediaFilesHintSync": "图片/音频/视频等，可能增加体积和耗时",
   "startSend": "开始发送",
   "sendTextOnlyHint": "将仅发送笔记文本（不含媒体文件）",
-  "sendStarted": "笔记发送启动，会话ID: {sessionId}",
+  "sendStarted": "已开始向设备发送笔记（会话：{sessionId}）",
   "@sendStarted": {
     "placeholders": {
       "sessionId": {
@@ -2321,7 +2321,7 @@
     }
   },
   "confirmLeave": "确认离开",
-  "leaveWhileSyncing": "当前正在进行同步操作（{status}），离开将中断过程并停止服务器，确认要返回吗？",
+  "leaveWhileSyncing": "当前正在进行同步操作（{status}），离开将中断传输过程，确认要返回吗？",
   "@leaveWhileSyncing": {
     "placeholders": {
       "status": {
@@ -2329,8 +2329,8 @@
       }
     }
   },
-  "leaveWhileScanning": "当前正在发现设备，离开将停止发现并关闭服务器，确认返回吗？",
-  "leaveWhileSending": "当前正在发送数据，离开将中断发送并关闭服务器，确认返回吗？",
+  "leaveWhileScanning": "当前正在搜索附近设备，离开将停止搜索，确认返回吗？",
+  "leaveWhileSending": "当前正在发送笔记，离开将中断传输，确认返回吗？",
   "syncServiceNotReady": "同步服务未就绪，请重新初始化",
   "syncServiceInitializing": "同步服务正在初始化，请稍后再试",
   "searchingNearbyDevices": "正在搜索附近设备...",
@@ -2371,7 +2371,7 @@
       }
     }
   },
-  "copiedFingerprint": "已复制本机指纹: {fingerprint}",
+  "copiedFingerprint": "已复制设备标识: {fingerprint}",
   "@copiedFingerprint": {
     "placeholders": {
       "fingerprint": {
@@ -2903,7 +2903,7 @@
   "cannotGetLocationPermissionShort": "无法获取位置权限",
   "savingNote": "正在保存",
   "saveComplete": "完成",
-  "writingDatabase": "写入数据库...",
+  "writingDatabase": "正在保存笔记数据...",
   "preparingProcess": "准备处理中...",
   "mediaProcessFailed": "媒体文件处理失败: {error}",
   "@mediaProcessFailed": {
@@ -3447,8 +3447,8 @@
   "dailyQuoteLoadingLocal": "从本地记录加载中...",
   "dailyQuoteLoadingOffline": "网络未连接，从本地记录加载中...",
   "dailyQuoteNoNetworkRetry": "无网络连接且无本地记录，点击重试",
-  "dailyQuoteFetchFailedRetry": "获取一言失败，点击重试",
-  "fetchHitokotoFailed": "获取一言失败: {error}",
+  "dailyQuoteFetchFailedRetry": "获取每日一言失败，点击重试",
+  "fetchHitokotoFailed": "获取每日一言失败: {error}",
   "@fetchHitokotoFailed": {
     "placeholders": {
       "error": {
@@ -4485,7 +4485,7 @@
   "presetDescZhipu": "国内直连，glm-4-flash 免费",
   "presetDescMoonshot": "国内直连，长上下文表现好",
   "presetDescDashScope": "阿里云百炼的 OpenAI 兼容接口，通义千问系列",
-  "presetDescVolcengine": "火山方舟豆包系列，模型名填推理接入点 ID",
+  "presetDescVolcengine": "火山方舟豆包系列，模型名称请填写推理接入点 ID",
   "presetDescGemini": "Gemini 官方的 OpenAI 兼容接口，有免费额度",
   "presetDescOllamaLocal": "连接本机运行的 Ollama，不联网、不需要密钥",
   "presetDescLMStudio": "连接本机运行的 LM Studio，不联网、不需要密钥",

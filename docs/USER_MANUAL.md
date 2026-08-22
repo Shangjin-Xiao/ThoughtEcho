@@ -606,9 +606,9 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 | AI 卡片生成       | 开关 | 启用 AI 卡片生成功能          |
 | 生物识别认证      | 开关 | 需要指纹/面部解锁查看隐藏笔记 |
 
-### 一言设置
+### 每日一言设置
 
-**可选一言服务商**：
+**可选每日一言服务商**：
 
 | 服务商           | 说明                         |
 | ---------------- | ---------------------------- |
@@ -812,7 +812,7 @@ Welcome to ThoughtEcho, your personal AI-powered inspiration notebook. This manu
 ### Home Interface
 
 - **Bottom Navigation**: Home, Notes, Insights, Settings
-- **Daily Inspiration**: Shows Hitokoto quote and AI writing prompts
+- **Daily Inspiration**: Displays daily quotes and AI-powered writing prompts
 - **Quick Capture Button (+)**:
   - Short press: Quick add note
   - Long press: Voice input
@@ -1002,7 +1002,6 @@ ThoughtEcho provides several ways to capture inspiration quickly:
 - **Default Note Templates**: Enable this in settings to automatically populate new notes with a pre-defined text structure (e.g., for daily reflections).
 - **Manual Save**: Click 💾 button in toolbar.
 - **Save Progress**: Displays real-time save status and progress bar.
-- **Save Progress**: Shows real-time save status and progress
 
 ---
 
@@ -1386,7 +1385,7 @@ When using "Paper & Ink" or "Plain" handcrafted styles, you can customize your a
 | AI Card Generation           | Toggle | Enable AI card generation feature                |
 | Biometric Authentication     | Toggle | Require fingerprint/face unlock for hidden notes |
 
-### Hitokoto Settings
+### Daily Quote Settings
 
 **Available Daily Quote Providers**:
 
@@ -1436,7 +1435,7 @@ When using "Paper & Ink" or "Plain" handcrafted styles, you can customize your a
 | -------------------- | -------------------------------------------------- |
 | **Smart**            | Auto-select content based on time/location/weather |
 | **Custom**           | User manually selects push types and filters       |
-| **Daily Quote Only** | Just Hitokoto pushes                               |
+| **Daily Quote Only** | Push daily quotes only                             |
 | **Past Notes Only**  | Random historical notes                            |
 | **Both**             | Random mix of daily quotes and past notes          |
 

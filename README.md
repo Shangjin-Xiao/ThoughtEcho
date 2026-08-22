@@ -107,7 +107,7 @@
 | ![洞察分析](res/screenshot/insights_page.jpg) | ![周期报告](res/screenshot/period_report.jpg) | ![笔记同步](res/screenshot/note_sync.jpg) |
 
 ### 设置与管理
-| 主题设置 | 一言设置 | 偏好设置 |
+| 主题设置 | 每日一言设置 | 偏好设置 |
 |:---:|:---:|:---:|
 | ![主题设置](res/screenshot/theme_settings_page.jpg) | ![一言设置](res/screenshot/hitokoto_settings_page.jpg) | ![偏好设置](res/screenshot/preferences_detail_page.jpg) |
 
@@ -330,7 +330,7 @@
       <td align="center"><b>💾 Auto-Save Drafts</b><br>Auto-save while editing, no content lost on crash</td>
     </tr>
     <tr>
-      <td align="center"><b>⚡ Quick Capture</b><br>Clipboard watcher, Hitokoto quotes, daily prompts on tap</td>
+      <td align="center"><b>⚡ Quick Capture</b><br>Clipboard watcher, daily quotes, daily prompts on tap</td>
       <td align="center"><b>🎨 Theme Styles</b><br>Paper & Ink, Plain, and Material dynamic color</td>
       <td align="center"><b>📱 All Platforms</b><br>Windows, Android, iOS full coverage</td>
     </tr>
@@ -355,7 +355,7 @@
 | ![Insights Analysis](res/screenshot/insights_page.jpg) | ![Period Report](res/screenshot/period_report.jpg) | ![Note Sync](res/screenshot/note_sync.jpg) |
 
 ### Settings & Management
-| Theme Settings | Hitokoto Settings | Preferences |
+| Theme Settings | Daily Quote Settings | Preferences |
 |:---:|:---:|:---:|
 | ![Theme Settings](res/screenshot/theme_settings_page.jpg) | ![Hitokoto Settings](res/screenshot/hitokoto_settings_page.jpg) | ![Preferences](res/screenshot/preferences_detail_page.jpg) |
 

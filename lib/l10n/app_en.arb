@@ -763,11 +763,11 @@
   "cleanOrphanMedia": "Clean Unused Media",
   "cleanOrphanMediaConfirmTitle": "Clean Unused Media Files",
   "cleanOrphanMediaConfirmContent": "This will delete media files (images, videos, audio) that are not referenced by any notes.\n\nAre you sure you want to continue?",
-  "databaseMaintenance": "Database Maintenance",
-  "databaseMaintenanceConfirmTitle": "Database Maintenance",
-  "databaseMaintenanceConfirmContent": "This operation will optimize the database:\n\n• Defragment storage space\n• Update statistics\n• Rebuild indexes\n\nThe process may take from a few seconds to several minutes depending on data size.\n\nAre you sure you want to continue?",
+  "databaseMaintenance": "Storage Optimization",
+  "databaseMaintenanceConfirmTitle": "Storage Optimization",
+  "databaseMaintenanceConfirmContent": "This operation will optimize local storage performance:\n\n• Reclaim fragmented storage space\n• Optimize search indexes\n• Improve note loading speed\n\nThe process usually takes only a few seconds.\n\nAre you sure you want to continue?",
   "startMaintenance": "Start Maintenance",
-  "maintenanceInProgress": "Database maintenance in progress...",
+  "maintenanceInProgress": "Optimizing storage in progress...",
   "preparingProgress": "Preparing...",
   "maintenanceComplete": "Maintenance Complete",
   "maintenanceDuration": "Duration: {duration} seconds",
@@ -1235,7 +1235,7 @@
       }
     }
   },
-  "serverInternalError": "Server internal error, may be a model configuration issue",
+  "serverInternalError": "AI service error. Please check your model name or network settings",
   "checkSettings": "Check Settings",
   "invalidApiKey": "Invalid API key, please check the settings",
   "checkApiKey": "Check API Key",
@@ -1249,7 +1249,7 @@
       }
     }
   },
-  "serverInternalErrorConfig": "Server internal error, please check if the AI model configuration is correct",
+  "serverInternalErrorConfig": "AI service error. Please check your AI model configuration and network",
   "invalidApiKeyUpdate": "Invalid API key, please update the API key in the settings",
   "configureValidApiKey": "Please configure a valid API key in the settings first",
   "regenerate": "Regenerate",
@@ -1279,7 +1279,7 @@
   "insightsPageEmpty": "Select an analysis type and click \"Start Analysis\"\nInsights will help you discover thinking patterns and regularities in your notes",
   "customAnalysis": "Custom Analysis",
   "siliconflow": "SiliconFlow",
-  "openapiCompatible": "OpenAPI Compatible",
+  "openapiCompatible": "OpenAI Compatible",
   "verifyingApiKey": "Verifying API Key...",
   "noProviderSelected": "No provider selected",
   "apiKeyValid": "API Key valid ({length} characters)",
@@ -2003,7 +2003,7 @@
   },
   "downloadingFile": "Downloading file...",
   "downloadComplete": "Download complete!",
-  "connectingToServer": "Connecting to server...",
+  "connectingToServer": "Connecting to AI service...",
   "savingFile": "Saving file...",
   "waitingForAIContent": "Waiting for AI content...",
   "occurredError": "[Error occurred: {error}]",
@@ -2141,7 +2141,7 @@
   "loadNoteFailed": "Failed to load notes",
   "queryTimeoutShort": "Query timed out",
   "queryTimeoutRetry": "Query timed out, please retry",
-  "databaseQueryError": "Database query error",
+  "databaseQueryError": "Error reading note data",
   "deleteConfirmTitle": "Delete Confirmation",
   "deleteRecordConfirm": "Are you sure you want to delete this analysis record?",
   "confirmDeleteAll": "Confirm Delete All",
@@ -2197,8 +2197,8 @@
   "restoreConfirmDialogWarning": "Please make sure you have backed up important data.",
   "mergeConfirmDialogTitle": "Confirm Merge Import",
   "mergeConfirmDialogDesc": "This operation will keep current data and merge with backup data:",
-  "mergeConfirmDialogItem1": "• Notes with same ID will keep the newer version (Last-Write-Wins)",
-  "mergeConfirmDialogItem2": "• Notes with different IDs will all be kept",
+  "mergeConfirmDialogItem1": "• Duplicate notes will keep the most recently modified version",
+  "mergeConfirmDialogItem2": "• Unique notes from both local and backup will be kept",
   "mergeConfirmDialogItem3": "• Settings and AI analysis data will be merged",
   "mergeConfirmDialogReversible": "This operation is reversible: you can import overwrite backup or continue merging again.",
   "tagSettingsDescription": "Create and manage your personal tag system",
@@ -2298,7 +2298,7 @@
   "includeMediaFilesHintSync": "Images/audio/videos, may increase size and time",
   "startSend": "Start Send",
   "sendTextOnlyHint": "Will send only note text (no media files)",
-  "sendStarted": "Note sync started, session ID: {sessionId}",
+  "sendStarted": "Sending notes to target device (session: {sessionId})",
   "@sendStarted": {
     "placeholders": {
       "sessionId": {
@@ -2315,7 +2315,7 @@
     }
   },
   "confirmLeave": "Confirm Leave",
-  "leaveWhileSyncing": "Currently syncing ({status}). Leaving will interrupt the process and stop the server. Are you sure you want to leave?",
+  "leaveWhileSyncing": "Currently syncing ({status}). Leaving will interrupt the transfer. Are you sure you want to leave?",
   "@leaveWhileSyncing": {
     "placeholders": {
       "status": {
@@ -2323,8 +2323,8 @@
       }
     }
   },
-  "leaveWhileScanning": "Currently discovering devices. Leaving will stop discovery and close the server. Are you sure you want to leave?",
-  "leaveWhileSending": "Currently sending data. Leaving will interrupt the send and close the server. Are you sure you want to leave?",
+  "leaveWhileScanning": "Currently searching for nearby devices. Leaving will stop the search. Are you sure you want to leave?",
+  "leaveWhileSending": "Currently sending notes. Leaving will interrupt the transfer. Are you sure you want to leave?",
   "syncServiceNotReady": "Sync service not ready, please reinitialize",
   "syncServiceInitializing": "Sync service is initializing, please wait",
   "searchingNearbyDevices": "Searching for nearby devices...",
@@ -2365,7 +2365,7 @@
       }
     }
   },
-  "copiedFingerprint": "Copied local fingerprint: {fingerprint}",
+  "copiedFingerprint": "Copied device identifier: {fingerprint}",
   "@copiedFingerprint": {
     "placeholders": {
       "fingerprint": {
@@ -2897,7 +2897,7 @@
   "cannotGetLocationPermissionShort": "Cannot get location permission",
   "savingNote": "Saving",
   "saveComplete": "Complete",
-  "writingDatabase": "Writing to database...",
+  "writingDatabase": "Saving note data...",
   "preparingProcess": "Preparing...",
   "mediaProcessFailed": "Media file processing failed: {error}",
   "@mediaProcessFailed": {
@@ -3441,8 +3441,8 @@
   "dailyQuoteLoadingLocal": "Loading from local records...",
   "dailyQuoteLoadingOffline": "No network, loading from local records...",
   "dailyQuoteNoNetworkRetry": "No network and no local records, tap to retry",
-  "dailyQuoteFetchFailedRetry": "Failed to fetch quote, tap to retry",
-  "fetchHitokotoFailed": "Failed to fetch quote: {error}",
+  "dailyQuoteFetchFailedRetry": "Failed to fetch daily quote, tap to retry",
+  "fetchHitokotoFailed": "Failed to fetch daily quote: {error}",
   "@fetchHitokotoFailed": {
     "placeholders": {
       "error": {

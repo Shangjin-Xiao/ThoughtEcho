@@ -1190,7 +1190,7 @@
   "insightsPageEmpty": "分析タイプを選択して「開始」をクリックしてください\n思考パターンや法則を発見できます",
   "customAnalysis": "カスタム分析",
   "siliconflow": "SiliconFlow",
-  "openapiCompatible": "OpenAPI互換",
+  "openapiCompatible": "OpenAI互換",
   "verifyingApiKey": "APIキーを確認中...",
   "noProviderSelected": "プロバイダー未選択",
   "apiKeyValid": "有効 ({length}文字)",

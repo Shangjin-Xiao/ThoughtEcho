@@ -1183,7 +1183,7 @@
   "insightsPageEmpty": "Sélectionnez un type d'analyse et cliquez sur \"Démarrer l'analyse\"\nLes aperçus vous aideront à découvrir des modèles de pensée et des régularités dans vos notes",
   "customAnalysis": "Analyse personnalisée",
   "siliconflow": "SiliconFlow",
-  "openapiCompatible": "Compatible OpenAPI",
+  "openapiCompatible": "Compatible OpenAI",
   "verifyingApiKey": "Vérification de la clé API...",
   "noProviderSelected": "Aucun fournisseur sélectionné",
   "apiKeyValid": "Clé API valide ({length} caractères)",
