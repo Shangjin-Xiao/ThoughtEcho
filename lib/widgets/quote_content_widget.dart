@@ -241,7 +241,20 @@ class QuoteContent extends StatelessWidget {
   static const Key collapsedWrapperKey = ValueKey(
     'quote_content.collapsed_wrapper',
   );
+
+  /// 测量缓存的「代号」：[resetCaches] 每清一次自增一次。
+  ///
+  /// 空闲预热靠它知道自己暖出来的东西还在不在。App 进后台时 `main.dart` 会把下面
+  /// 这一整排缓存清空（省内存），而预热的游标停在列表末尾不动 —— 不比对代号的话，
+  /// 回到前台后预热永远不会重跑：缓存是空的、游标是满的，每张卡片滑进来都要重新
+  /// 算一遍折叠判定和折叠排版。日志里的表现是 `warmup={items=121,cursor=121/121}`
+  /// 看着很美，`expand=` 却恰好等于「一共建出来过几张卡」。
+  static int _cacheGeneration = 0;
+
+  static int get cacheGeneration => _cacheGeneration;
+
   static void resetCaches() {
+    _cacheGeneration++;
     _QuoteDocumentCache.clear();
     _QuoteHeightEstimateCache.clear();
     _QuotePlainTextLayoutExpansionCache.clear();
@@ -264,6 +277,10 @@ class QuoteContent extends StatelessWidget {
 
   @visibleForTesting
   static void clearCacheForTesting() => resetCaches();
+
+  /// 折叠判定的未命中次数。空闲预热拿它给自己记账，见 `note_list_warmup.dart`。
+  static int get debugExpansionMissCount =>
+      _QuotePlainTextLayoutExpansionCache._missCount;
 
   /// Returns lightweight cache counters for performance diagnostics.
   static Map<String, dynamic> debugCacheStats() => {
