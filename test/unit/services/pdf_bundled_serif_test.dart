@@ -15,7 +15,7 @@ void main() {
     late pw.Context context;
 
     setUpAll(() async {
-      final data = await rootBundle.load('assets/fonts/NotoSerifSC-Subset.ttf');
+      final data = await rootBundle.load(ThemeStyleForm.bundledSerifAsset);
       font = pw.Font.ttf(data);
       context = pw.Context(document: pw.Document().document);
     });

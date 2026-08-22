@@ -10,8 +10,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
 
-const _fontAsset = 'assets/fonts/NotoSerifSC-Subset.ttf';
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -19,7 +17,7 @@ void main() {
     late ByteData bytes;
 
     setUpAll(() async {
-      bytes = await rootBundle.load(_fontAsset);
+      bytes = await rootBundle.load(ThemeStyleForm.bundledSerifAsset);
     });
 
     test('asset 已声明且非空', () {

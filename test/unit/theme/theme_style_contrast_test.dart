@@ -427,7 +427,12 @@ void main() {
         reason: 'pubspec.yaml 里没有声明这个字体族',
       );
       expect(
-        File('assets/fonts/NotoSerifSC-Subset.ttf').existsSync(),
+        pubspec,
+        contains('asset: ${ThemeStyleForm.bundledSerifAsset}'),
+        reason: 'pubspec.yaml 声明的 asset 路径和常量对不上',
+      );
+      expect(
+        File(ThemeStyleForm.bundledSerifAsset).existsSync(),
         isTrue,
         reason: '字体产物不在仓库里，跑 scripts/fonts/build_serif_subset.py 生成',
       );

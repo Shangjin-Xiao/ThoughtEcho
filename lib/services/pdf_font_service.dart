@@ -38,10 +38,6 @@ class PdfFontService {
   static ByteData? _cachedMonochromeEmojiFontData;
   static ByteData? _cachedMaterialIconFontData;
 
-  /// 随包分发的中文衬线体，和手工风格屏幕上用的是同一个文件。
-  /// 声明见 pubspec.yaml，产物由 scripts/fonts/build_serif_subset.py 生成。
-  static const _bundledSerifAsset = "assets/fonts/NotoSerifSC-Subset.ttf";
-
   static ByteData? _cachedBundledSerifData;
 
   static const _multilingualFontFileName = "cached_noto_sans_sc.ttf";
@@ -218,7 +214,7 @@ class PdfFontService {
       return cached;
     }
     try {
-      final data = await rootBundle.load(_bundledSerifAsset);
+      final data = await rootBundle.load(ThemeStyleForm.bundledSerifAsset);
       if (!isValidFontData(data)) {
         logDebug("随包衬线体不是 pdf 包能处理的 TrueType", source: "PdfFontService");
         return null;

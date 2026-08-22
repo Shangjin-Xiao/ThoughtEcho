@@ -89,7 +89,7 @@ Future<void> _loadPreviewFonts(String? dir) async {
   // 手工风格的衬线体随包分发，直接从仓库里的产物加载，不依赖外部字体目录。
   await _loadFont(
     ThemeStyleForm.bundledSerif,
-    'assets/fonts/NotoSerifSC-Subset.ttf',
+    ThemeStyleForm.bundledSerifAsset,
   );
   // 测试环境的默认族，label* 和 material 风格的正文都落在它上面。黑体没进仓库。
   if (dir != null) await _loadFont('Roboto', '$dir/NotoSansSC.ttf');

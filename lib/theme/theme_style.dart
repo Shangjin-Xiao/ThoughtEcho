@@ -341,6 +341,13 @@ class ThemeStyleForm {
   /// [_systemSerifFallback]。
   static const String bundledSerif = 'NotoSerifSC';
 
+  /// 随包衬线体的 asset 路径，必须和 `pubspec.yaml` 的 `- asset:` 一致。
+  ///
+  /// 和 [bundledSerif] 放一起是因为这两个值得一起改：族名对不上字体加载不到，
+  /// 路径对不上 `rootBundle.load` 直接抛。PDF 导出（`PdfFontService`）和几处
+  /// 测试都从这里取，别再各写各的字符串。
+  static const String bundledSerifAsset = 'assets/fonts/NotoSerifSC-Subset.ttf';
+
   /// 子集外字形的去处。
   ///
   /// [bundledSerif] 是 GB2312 子集（约 7800 个字形），覆盖不到的字——生僻人名用字、
