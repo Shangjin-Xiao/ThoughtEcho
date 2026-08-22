@@ -28,6 +28,12 @@ class ThinkTagFilter {
     ['<thinking>', '</thinking>'],
   ];
 
+  ThinkTagFilter({this.onThinking});
+
+  /// 剥下来的思考内容往哪去。给了就转交（Thoughter 的思考面板靠它才能
+  /// 显示行内标签这一路的推理），没给就直接丢弃——绝不能当正文吐出去。
+  final void Function(String thinkingContent)? onThinking;
+
   String _pending = '';
   String? _closingTag;
 
@@ -65,12 +71,14 @@ class ThinkTagFilter {
 
       final closeAt = _pending.indexOf(_closingTag!);
       if (closeAt >= 0) {
+        _emitThinking(_pending.substring(0, closeAt));
         _pending = _pending.substring(closeAt + _closingTag!.length);
         _closingTag = null;
         continue;
       }
       // 还在思考块里：正文整段丢弃，只留可能是半截闭标签的尾巴。
       final keep = _partialSuffixLength(_pending, [_closingTag!]);
+      _emitThinking(_pending.substring(0, _pending.length - keep));
       _pending = _pending.substring(_pending.length - keep);
       break;
     }
@@ -87,6 +95,11 @@ class ThinkTagFilter {
     _pending = '';
     _closingTag = null;
     return tail;
+  }
+
+  void _emitThinking(String text) {
+    if (text.isEmpty) return;
+    onThinking?.call(text);
   }
 
   /// [text] 末尾有多少个字符可能是 [tags] 里某个标签被切断的前缀。
@@ -354,14 +367,16 @@ class OpenAIStreamService extends ChangeNotifier {
   ///
   /// content 里行内的 `<think>…</think>` 由 [ThinkTagFilter] 剥掉——那是
   /// 不走 reasoning 字段的模型表达思考过程的方式，上面那套判空对它无效。
+  /// 剥下来的内容同样交给 [onThinking]，思考面板对这一路模型才不会空着。
   /// 「有没有正文」按剥完之后算：整条流只有一个思考块时，仍然要能退回
-  /// reasoning 兜底。
+  /// reasoning 兜底；两条路都没正文就返回空，调用方（每日提示面板等）自己
+  /// 有本地兜底，总之绝不把推理当答案显示。
   static Stream<String> processStreamToText(
     Stream<openai.ChatStreamEvent> stream, {
     void Function(String thinkingContent)? onThinking,
   }) async* {
     final pendingReasoning = StringBuffer();
-    final thinkFilter = ThinkTagFilter();
+    final thinkFilter = ThinkTagFilter(onThinking: onThinking);
     var sawContent = false;
 
     await for (final event in stream) {

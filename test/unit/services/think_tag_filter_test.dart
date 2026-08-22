@@ -67,5 +67,21 @@ void main() {
     test('小于号不构成标签时不受影响', () {
       expect(runFilter(['a < b，b > c']), 'a < b，b > c');
     });
+
+    test('剥下来的思考内容转交 onThinking', () {
+      final thinking = StringBuffer();
+      final filter = ThinkTagFilter(onThinking: thinking.write);
+
+      expect(filter.process('<think>先看天气，'), '');
+      expect(filter.process('再决定语气</think>今天想写点什么？'), '今天想写点什么？');
+      expect(filter.flush(), '');
+      expect(thinking.toString(), '先看天气，再决定语气');
+    });
+
+    test('没有 onThinking 时思考内容直接丢弃', () {
+      // 每日提示面板在整条流没有正文时会退回本地提示，
+      // 所以这里返回空串是对的——绝不能把推理当答案显示。
+      expect(runFilter(['<think>只有思考</think>']), '');
+    });
   });
 }

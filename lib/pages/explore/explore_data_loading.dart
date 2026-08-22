@@ -130,10 +130,9 @@ extension _ExploreDataLoading on _ExplorePageState {
     }
 
     final range = ReportPeriodUtils.dateRange(_selectedPeriod, _selectedDate);
-    final rangeKey = range == null
-        ? 'all'
-        : '${range.start.toIso8601String().substring(0, 10)}'
-            '~${range.end.toIso8601String().substring(0, 10)}';
+    final rangeStart = range?.start.toIso8601String().substring(0, 10);
+    final rangeEnd = range?.end.toIso8601String().substring(0, 10);
+    final rangeKey = range == null ? 'all' : '$rangeStart~$rangeEnd';
     final provider =
         context.read<SettingsService>().multiAISettings.currentProvider;
     final model = provider?.model ?? '-';
