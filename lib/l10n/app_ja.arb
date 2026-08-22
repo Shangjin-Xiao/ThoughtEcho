@@ -3648,5 +3648,929 @@
   "feedbackDiscussionTitle": "コミュニティの議論に参加",
   "feedbackDiscussionDesc": "質問、アイデアの共有、他のユーザーとの交流",
   "feedbackSentryTitle": "フィードバックを送信 (Sentry)",
-  "feedbackSentryDesc": "開発者に直接意見、提案、またはバグ報告を送信"
+  "feedbackSentryDesc": "開発者に直接意見、提案、またはバグ報告を送信",
+  "addAiService": "AIサービスを追加",
+  "agentMemorySectionTitle": "Thoughterの記憶",
+  "agentMemoryEnableTitle": "長期記憶",
+  "agentMemoryEnableDesc": "チャット間で好みを記憶する（ローカルにのみ保存）",
+  "agentMemoryNicknameTitle": "ニックネーム",
+  "agentMemoryNicknameHint": "Thoughterからの呼ばれ方",
+  "agentMemoryNicknameDesc": "Thoughterがあなたをどう呼ぶべきか（スキップするには空のままにしてください）",
+  "agentMemoryNicknameSaveFailed": "ニックネームを保存できませんでした。もう一度お試しください。",
+  "agentMemoryNicknameDisabled": "長期記憶がオンのときに有効になります",
+  "agentMemoryClearTitle": "記憶を消去",
+  "agentMemoryClearEmpty": "まだ何も記憶されていません",
+  "agentMemoryClearConfirmTitle": "Thoughterの記憶を消去しますか？",
+  "agentMemoryClearConfirmBody": "記憶されたすべての好みや詳細は完全に削除されます。メモには影響しません。",
+  "agentMemoryClearConfirmAction": "消去",
+  "agentMemoryCleared": "Thoughterの記憶が消去されました",
+  "agentMemoryClearFailed": "記憶の消去に失敗しました",
+  "agentMemoryNoticeTitle": "Thoughterはあなたを記憶します",
+  "agentMemoryNoticeGotIt": "わかった",
+  "agentMemoryNoticeDisable": "記憶しない",
+  "sentryDisclosureMessage": "[JA] 心迹隐私政策已更新，您可以在官网查看。\n\n本次更新加入了 Sentry 以收集崩溃错误与用户反馈，为保护您的隐私，该功能默认关闭。您可以在“设置 -> 反馈与联系”中随时开启。\n\n隐私政策链接：https://note.shangjinyun.cn/privacy",
+  "feedbackEmailDesc": "[JA] shangjinyun@proton.me",
+  "feedbackSentryDisabledHint": "[JA] 请先在下方开启 Sentry 调试与报错服务",
+  "noteListDisableCardShadowsExperiment": "[JA] [实验] 记录页禁用卡片阴影",
+  "noteListDisableCardShadowsExperimentDesc": "[JA] 发布版可用。用于对比阴影对记录页滑动性能和视觉观感的影响（默认关）",
+  "noteListDisableBackdropBlurExperiment": "[JA] [实验] 记录页禁用折叠模糊",
+  "noteListDisableBackdropBlurExperimentDesc": "[JA] 发布版可用。将长内容折叠底部的背景模糊替换为渐变遮罩（默认关）",
+  "addNoteAutoFocusExperiment": "[JA] [实验] AddNote 自动聚焦",
+  "addNoteAutoFocusExperimentDesc": "[JA] 打开添加笔记对话框稳定后自动弹出键盘（默认开）",
+  "noteNotFound": "[JA] 笔记不存在",
+  "noteUpdateSkippedDeleted": "[JA] 笔记已删除，更新已跳过",
+  "dailyQuoteApiNinjasManageApiKey": "[JA] 配置服务密钥",
+  "dailyQuoteApiNinjasApiKeyHint": "[JA] 输入 API Ninjas 的 X-Api-Key",
+  "dailyQuoteApiNinjasApiKeyConfigured": "[JA] 已配置服务密钥",
+  "dailyQuoteApiNinjasApiKeyMissing": "[JA] 尚未配置服务密钥，无法请求该服务",
+  "dailyQuoteApiNinjasApiKeyInvalid": "[JA] 服务密钥格式无效",
+  "dailyQuoteApiNinjasCategorySelection": "[JA] 分类选择",
+  "dailyQuoteApiNinjasCategoryDesc": "[JA] 支持搜索、多选与清空；如果一个也不选，则自动按全局随机处理。",
+  "dailyQuoteApiNinjasCategorySearchHint": "[JA] 搜索分类",
+  "dailyQuoteApiNinjasNoCategoriesFound": "[JA] 没有匹配的分类",
+  "dailyQuoteApiNinjasAllCategoriesUsed": "[JA] 未限制分类，将从全部分类中随机抽取",
+  "dailyQuoteApiNinjasSelectedCount": "[JA] 已选择 {count} 个分类",
+  "@dailyQuoteApiNinjasSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteApiNinjasCategoryWisdom": "[JA] 智慧",
+  "dailyQuoteApiNinjasCategoryPhilosophy": "[JA] 哲学",
+  "dailyQuoteApiNinjasCategoryLife": "[JA] 人生",
+  "dailyQuoteApiNinjasCategoryTruth": "[JA] 真理",
+  "dailyQuoteApiNinjasCategoryInspirational": "[JA] 励志",
+  "dailyQuoteApiNinjasCategoryRelationships": "[JA] 关系",
+  "dailyQuoteApiNinjasCategoryLove": "[JA] 爱情",
+  "dailyQuoteApiNinjasCategoryFaith": "[JA] 信念",
+  "dailyQuoteApiNinjasCategoryHumor": "[JA] 幽默",
+  "dailyQuoteApiNinjasCategorySuccess": "[JA] 成功",
+  "dailyQuoteApiNinjasCategoryCourage": "[JA] 勇气",
+  "dailyQuoteApiNinjasCategoryHappiness": "[JA] 幸福",
+  "dailyQuoteApiNinjasCategoryArt": "[JA] 艺术",
+  "dailyQuoteApiNinjasCategoryWriting": "[JA] 写作",
+  "dailyQuoteApiNinjasCategoryFear": "[JA] 恐惧",
+  "dailyQuoteApiNinjasCategoryNature": "[JA] 自然",
+  "dailyQuoteApiNinjasCategoryTime": "[JA] 时间",
+  "dailyQuoteApiNinjasCategoryFreedom": "[JA] 自由",
+  "dailyQuoteApiNinjasCategoryDeath": "[JA] 死亡",
+  "dailyQuoteApiNinjasCategoryLeadership": "[JA] 领导力",
+  "dailyQuoteServiceProvider": "[JA] 当前内容由 {provider} 提供",
+  "@dailyQuoteServiceProvider": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "migrationTargetSameAsCurrent": "[JA] 新目录与当前数据目录相同",
+  "migrationTargetAncestor": "[JA] 新目录不能是当前数据目录的上级目录",
+  "migrationTargetNested": "[JA] 新目录不能位于当前数据目录内部",
+  "viewToolProcess": "[JA] 查看过程",
+  "cardSharePrefix": "[JA] 来自心迹的精美卡片\n\n",
+  "agentErrorNoProvider": "[JA] 请选择 AI 服务商后重试。",
+  "agentErrorMissingApiKey": "[JA] 请先为 {providerName} 配置 API 密钥，然后重试。",
+  "@agentErrorMissingApiKey": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentErrorUnsupportedProvider": "[JA] 当前 AI 服务商不支持 Agent 功能。请更换服务商后重试。",
+  "agentErrorTimeout": "[JA] 请求超时，请检查网络后重试。",
+  "agentErrorCancelled": "[JA] 已停止本次请求。",
+  "agentErrorGeneric": "[JA] 暂时无法完成请求，请稍后重试。",
+  "unsupportedMediaType": "[JA] 不支持的媒体类型",
+  "unsupportedMediaTypeWithName": "[JA] 不支持的媒体类型: {mediaType}",
+  "@unsupportedMediaTypeWithName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "fileNotExistOrMoved": "[JA] 选择的文件不存在或已被移动删除\n路径: {path}",
+  "@fileNotExistOrMoved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedFileEmpty": "[JA] 选择的文件为空\n路径: {path}",
+  "@selectedFileEmpty": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "unsupportedFileFormat": "[JA] 不支持的文件格式: .{extension}\n支持的格式: {formats}",
+  "@unsupportedFileFormat": {
+    "placeholders": {
+      "extension": {
+        "type": "String"
+      },
+      "formats": {
+        "type": "String"
+      }
+    }
+  },
+  "fileUnreadable": "[JA] 文件无法读取，可能原因：\n• 文件已损坏\n• 文件被其他程序占用\n• 权限不足\n请检查文件状态后重试",
+  "mediaTypeNoCameraImport": "[JA] {mediaType}不支持相机导入",
+  "@mediaTypeNoCameraImport": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "noteAttribution": "[JA] （署名：{source}）",
+  "@noteAttribution": {
+    "description": "喂给 AI 的笔记内容里，标出这条笔记填的作者/出处，用于区分摘录与原创署名",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderOllamaCloud": "[JA] Ollama 云端",
+  "loadFailedSimple": "[JA] 加载失败",
+  "loadNoteFailed": "[JA] 加载笔记失败",
+  "queryTimeoutShort": "[JA] 查询超时",
+  "queryTimeoutRetry": "[JA] 查询超时，请重试",
+  "databaseQueryError": "[JA] 数据库查询出错",
+  "syncFromSuffix": "[JA] （来自{from}）",
+  "@syncFromSuffix": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      }
+    }
+  },
+  "showNoteEditTime": "[JA] 显示笔记编辑时间",
+  "showNoteEditTimeDesc": "[JA] 在笔记中显示最后编辑时间",
+  "editedAtLabel": "[JA] 编辑于 {dateTime}",
+  "@editedAtLabel": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteAiAnalysis": "[JA] 删除AI分析",
+  "deleteAiAnalysisConfirm": "[JA] 确定要删除此笔记的AI分析结果吗？此操作可在保存笔记前撤销。",
+  "aiAnalysisDeleted": "[JA] AI分析已删除",
+  "aiAnalysisSaved": "[JA] AI分析已保存",
+  "viewFull": "[JA] 查看全文",
+  "copy": "[JA] 复制",
+  "copiedToClipboard": "[JA] 已复制到剪贴板",
+  "backupSavedToPath": "[JA] 备份已保存到: {path}",
+  "@backupSavedToPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "backupCompleteWithWarnings": "[JA] 备份已完成，但有警告",
+  "backupDeltaFailuresMessage": "[JA] {count, plural, other{有 # 条笔记的富文本媒体路径转换失败，这些笔记在备份中仍保留本机绝对路径，恢复到其他设备时相关图片可能无法显示。\n\n受影响的笔记ID：{ids}}}",
+  "@backupDeltaFailuresMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "ids": {
+        "type": "String"
+      }
+    }
+  },
+  "backupDeltaFailuresIdJoiner": "[JA] 、",
+  "backupDeltaFailuresMoreSuffix": "[JA]  等",
+  "backupFailedGeneric": "[JA] 无法完成备份，请稍后重试",
+  "@backupFailedGeneric": {
+    "description": "Generic backup failure message shown when the error type is not classified"
+  },
+  "backupFailedOutOfMemory": "[JA] 备份失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 尝试不包含媒体文件的备份\n• 重启应用后再试",
+  "backupFailedNoSpace": "[JA] 备份失败：存储空间不足\n\n请清理设备存储空间后重试。",
+  "backupFailedPermission": "[JA] 备份失败：权限不足\n\n请检查应用的存储权限设置。",
+  "saveTempFileFailed": "[JA] 保存临时文件失败",
+  "openBrowserFailed": "[JA] 打开浏览器失败",
+  "createShareFileFailed": "[JA] 创建分享文件失败",
+  "aiSuggestionCoreIdea": "[JA] 这篇笔记的核心思想是什么？",
+  "aiSuggestionInspiration": "[JA] 从中能得到什么启发？",
+  "aiSuggestionSummarize": "[JA] 能否总结一下要点？",
+  "aiSuggestionSolution": "[JA] 有什么解决方案吗？",
+  "aiSuggestionUnderstandConcept": "[JA] 如何更好地理解这个概念？",
+  "aiSuggestionActionPlan": "[JA] 如何制定行动计划？",
+  "aiSuggestionPsychology": "[JA] 这反映了什么心理状态？",
+  "aiSuggestionRealLife": "[JA] 如何应用到实际生活中？",
+  "aiSuggestionThinkingPattern": "[JA] 反映了什么思维模式？",
+  "svgLoading": "[JA] 正在加载SVG...",
+  "svgLoadingFallback": "[JA] 正在加载备用模板...",
+  "svgRenderFailed": "[JA] SVG渲染失败",
+  "svgTryingFallback": "[JA] 正在尝试使用备用模板...",
+  "cardRenderFailed": "[JA] 卡片渲染失败",
+  "cardRegeneratePrompt": "[JA] 请尝试重新生成卡片",
+  "svgContentParseFailed": "[JA] 内容解析失败",
+  "svgContentExtractFailed": "[JA] 无法提取内容",
+  "svgContentEmpty": "[JA] SVG内容为空",
+  "svgContentInvalidFormat": "[JA] 无效的SVG格式",
+  "svgFallbackTitle": "[JA] SVG生成失败",
+  "svgFallbackHint": "[JA] 请尝试重新生成或检查AI配置",
+  "svgFallbackIdentifier": "[JA] 心迹 - 备用模板",
+  "mediaProcessingNone": "[JA] 无需处理媒体文件",
+  "mediaProcessingFound": "[JA] {total, plural, other{发现 # 个媒体文件}}",
+  "@mediaProcessingFound": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingCopying": "[JA] 复制{typeLabel} {done}/{total}",
+  "@mediaProcessingCopying": {
+    "placeholders": {
+      "typeLabel": {
+        "type": "String"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingProgress": "[JA] 已处理 {done} / {total}",
+  "@mediaProcessingProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteLoading": "[JA] 加载中...",
+  "dailyQuoteLoadingLocal": "[JA] 从本地记录加载中...",
+  "dailyQuoteLoadingOffline": "[JA] 网络未连接，从本地记录加载中...",
+  "dailyQuoteNoNetworkRetry": "[JA] 无网络连接且无本地记录，点击重试",
+  "dailyQuoteFetchFailedRetry": "[JA] 获取一言失败，点击重试",
+  "smartPushDailyQuoteIndependentNote": "[JA] 每日一言独立于智能推送，两者互不影响，可分别开启或关闭。",
+  "excerptIntentEnabled": "[JA] 摘录到心迹",
+  "excerptIntentEnabledDesc": "[JA] 允许从浏览器或其他应用选中文本后直接跳转到心迹，并打开非全屏编辑器",
+  "annualReportDemo": "[JA] 年度报告演示",
+  "manualApiTest": "[JA] 手动API测试",
+  "manualApiTestTitle": "[JA] 手动API密钥测试",
+  "manualApiTestDesc": "[JA] 直接输入API参数进行测试，绕过存储系统检查API密钥是否有效。",
+  "testResultLabel": "[JA] 测试结果:",
+  "fillAllFieldsError": "[JA] 错误: 请填写所有必填字段",
+  "testReportTitle": "[JA] === 手动API密钥测试报告 ===",
+  "testParamsLabel": "[JA] 测试参数:",
+  "keyFormatCheckLabel": "[JA] 密钥格式检查:",
+  "testApiKeyPrefixLabel": "[JA]   API Key前缀: {prefix}",
+  "@testApiKeyPrefixLabel": {
+    "placeholders": {
+      "prefix": {
+        "type": "String"
+      }
+    }
+  },
+  "sendRequestLabel": "[JA] 发送请求:",
+  "responseResultLabel": "[JA] 响应结果:",
+  "testApiKey": "[JA] 测试API密钥",
+  "aiReturnedEmptyContent": "[JA] AI返回了空内容，请重试",
+  "chatWithAiAssistant": "[JA] 与 Thoughter (AI 助手) 对话，深入探讨笔记内容",
+  "messageCopied": "[JA] 消息已复制到剪贴板",
+  "anniversaryTitle": "[JA] 心迹 · ThoughtEcho",
+  "anniversarySubtitle": "[JA] {years} 周年 · 感恩有你，一路同行",
+  "@anniversarySubtitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryVeteranThanks": "[JA] 你从 {years} 周年起就在这里了，谢谢一直写下去",
+  "@anniversaryVeteranThanks": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryEnterApp": "[JA] 进入应用",
+  "anniversaryBannerTitle": "[JA] 心迹 ThoughtEcho {years} 周年",
+  "@anniversaryBannerTitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryBannerSubtitle": "[JA] 感恩有你，一路同行 · {range}",
+  "@anniversaryBannerSubtitle": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "anniversaryBannerTap": "[JA] 点击重温庆典动画",
+  "anniversaryReplayButton": "[JA] 重播动画",
+  "developerAnniversarySection": "[JA] 周年庆典",
+  "developerAnniversaryEnabled": "[JA] 启用庆典动画",
+  "developerAnniversaryEnabledDesc": "[JA] 开关控制是否在启动时展示庆典动画",
+  "developerAnniversaryReset": "[JA] 清空已参与记录",
+  "developerAnniversaryResetDesc": "[JA] 清空后当作新用户，庆典动画会重新自动播放",
+  "developerAnniversaryResetDone": "[JA] 已清空，庆典动画会重新自动播放",
+  "developerAnniversaryPreview": "[JA] 立即预览动画",
+  "developerAnniversaryPreviewDesc": "[JA] 按当前模拟届数立即播放庆典动画",
+  "developerAnniversarySimulate": "[JA] 模拟周年庆典",
+  "developerAnniversarySimulateOff": "[JA] 关闭",
+  "developerAnniversarySimulateYear": "[JA] {years} 周年",
+  "@developerAnniversarySimulateYear": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversarySimulateDescOff": "[JA] 按真实日期判断，当前不在庆典期",
+  "developerAnniversarySimulateDescActive": "[JA] 正在模拟 {years} 周年：设置页横幅和启动动画都按这一届展示",
+  "@developerAnniversarySimulateDescActive": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversaryShownYears": "[JA] 已参与的庆典",
+  "developerAnniversaryShownYearsNone": "[JA] 还没参与过任何一届",
+  "mediaPlayerPlay": "[JA] 播放",
+  "mediaPlayerPause": "[JA] 暂停",
+  "operationSuccess": "[JA] 操作成功！",
+  "loadingInProgress": "[JA] 正在加载...",
+  "aiThinkingProgress": "[JA] AI正在思考...",
+  "processingData": "[JA] 正在处理数据...",
+  "analyzingContent": "[JA] 正在分析内容...",
+  "skipNonFullscreenEditor": "[JA] 直接进入全屏编辑器",
+  "skipNonFullscreenEditorDesc": "[JA] 点击添加笔记时跳过快速编辑，直接打开全屏富文本编辑器",
+  "noLocalSavedQuotes": "[JA] 还没有历史保存的每日一言",
+  "copyCode": "[JA] 复制代码",
+  "copiedCode": "[JA] 已复制",
+  "webdavSyncTitle": "[JA] WebDAV 云同步",
+  "webdavSyncSubtitle": "[JA] 配置私有云盘，实现多端自动同步笔记",
+  "webdavProvider": "[JA] 网盘服务商",
+  "webdavServerUrl": "[JA] 服务器地址",
+  "webdavUsername": "[JA] 用户名/账号",
+  "webdavPassword": "[JA] 应用密码/Token",
+  "webdavTestConnection": "[JA] 测试连接",
+  "webdavTestSuccess": "[JA] 连接测试成功！",
+  "webdavTestFailed": "[JA] 连接失败，请检查配置和密码",
+  "webdavAutoSyncLaunch": "[JA] 打开或回前台时自动同步",
+  "webdavAutoSyncLaunchSubtitle": "[JA] 打开应用或从后台切回前台时，自动与云端合并最新内容",
+  "webdavAutoSyncChange": "[JA] 修改笔记后自动后台同步",
+  "webdavAutoSyncChangeSubtitle": "[JA] 编辑笔记停止打字 4 秒后，自动静默同步最新修改",
+  "webdavExperimentalTitle": "[JA] 实验性功能提示",
+  "webdavExperimentalContent": "[JA] 当前 WebDAV 云同步功能处于实验性预览（Preview）阶段。为了您的数据安全，建议您在启用前备份本地核心笔记。在使用过程中，如遇到任何问题，欢迎随时反馈。",
+  "webdavExperimentalClose": "[JA] 关闭提示",
+  "webdavExperimentalIgnore": "[JA] 永久忽略",
+  "webdavLastSync": "[JA] 上次同步：{time}",
+  "@webdavLastSync": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusSyncing": "[JA] 正在同步...",
+  "webdavStatusSuccess": "[JA] 同步成功",
+  "webdavStatusFailed": "[JA] 同步失败",
+  "settingsWebdavStatusWithTime": "[JA] {status} (上次：{time})",
+  "@settingsWebdavStatusWithTime": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWebdavEnabledWithTime": "[JA] 已启用 (上次：{time})",
+  "@settingsWebdavEnabledWithTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavSyncNow": "[JA] 立即同步",
+  "webdavEnableSync": "[JA] 启用云同步",
+  "webdavSaveAndSync": "[JA] 保存并同步",
+  "webdavHowToGetAppPassword": "[JA] 如何获取应用密码？",
+  "webdavShowPasswordTooltip": "[JA] 显示密码",
+  "webdavHidePasswordTooltip": "[JA] 隐藏密码",
+  "webdavOpenHelpFailed": "[JA] 无法打开帮助链接，请检查系统默认浏览器设置",
+  "webdavConflictCategoryName": "[JA] 同步冲突",
+  "webdavConflictNotePrefix": "[JA] [冲突备份] ",
+  "webdavConflictNotification": "[JA] 检测到 {count} 处同步冲突，已安全备份至『同步冲突』分类",
+  "@webdavConflictNotification": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webdavViewNow": "[JA] 立即查看",
+  "exportFormatLabel": "[JA] 默认导出格式",
+  "exportFormatCard": "[JA] 精致分享卡片",
+  "exportFormatPdf": "[JA] 标准 A4 PDF",
+  "exportFormatDesc": "[JA] 配置笔记一键导出或分享时的默认生成格式",
+  "pdfExportExperimentalWarning": "[JA] PDF 导出目前是实验性功能，需要多语言及 Emoji 字体文件；首次使用可能需要联网下载，下载后可离线使用。",
+  "exportToPdf": "[JA] 导出为 PDF",
+  "pdfExportSelectionMode": "[JA] 选择导出模式",
+  "selectSameMonth": "[JA] 一键选同月",
+  "selectSameCategory": "[JA] 一键选同分类",
+  "exportSelected": "[JA] 导出 ({count})",
+  "@exportSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportSuccess": "[JA] 导出成功",
+  "exportFailed": "[JA] 导出失败",
+  "generatingPdf": "[JA] 正在生成 PDF...",
+  "pdfExportFailed": "[JA] 导出 PDF 失败: {error}",
+  "@pdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "batchPdfExportFailed": "[JA] 批量导出 PDF 失败: {error}",
+  "@batchPdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseSelectAtLeastOneNote": "[JA] 请先选择至少一条笔记",
+  "selectedNotesHaveNoCategories": "[JA] 所选笔记没有分类标签",
+  "pdfPreviewAndPrint": "[JA] PDF 预览 & 打印",
+  "pdfFontFallbackWarning": "[JA] 未检测到中文字体，中文内容可能会显示为乱码。请检查网络后重试。",
+  "webdavSyncOnCellular": "[JA] 允许数据流量下同步",
+  "webdavSyncOnCellularSubtitle": "[JA] 允许在移动数据网络下进行云端备份和合并",
+  "webdavSyncNotesOnlyOnCellular": "[JA] 数据流量下仅同步笔记",
+  "webdavSyncNotesOnlyOnCellularSubtitle": "[JA] 启用后在移动网络下仅同步文本，跳过大型媒体文件以节省流量",
+  "customFeedbackTitle": "[JA] 发送意见反馈",
+  "customFeedbackMessageLabel": "[JA] 反馈内容",
+  "customFeedbackMessageHint": "[JA] 请描述您遇到的问题或建议...",
+  "customFeedbackNameLabel": "[JA] 您的称呼 (可选)",
+  "customFeedbackEmailLabel": "[JA] 联系邮箱 (可选)",
+  "customFeedbackSubmit": "[JA] 发送反馈",
+  "customFeedbackSuccess": "[JA] 感谢您的反馈！",
+  "customFeedbackEmptyError": "[JA] 请输入反馈内容",
+  "saveSuccess": "[JA] 保存成功",
+  "toolCallStatusPending": "[JA] 待执行",
+  "toolCallStatusExecuting": "[JA] 执行中",
+  "toolCallStatusCompleted": "[JA] 完成",
+  "toolCallStatusError": "[JA] 错误",
+  "toolCallParameters": "[JA] 参数",
+  "toolCallResult": "[JA] 结果",
+  "failedToPickFiles": "[JA] 选择文件失败: {error}",
+  "@failedToPickFiles": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "editModeMetadataReadOnlyHint": "[JA] 已保存笔记的位置和天气不支持编辑修改",
+  "dataInsights": "[JA] 数据分析",
+  "dataInsightsDesc": "[JA] 深度分析你的笔记数据和写作趋势",
+  "searchChatHistory": "[JA] 搜索对话...",
+  "dynamicInsightStats": "[JA] 你已记录 {count} 条心迹，最近 7 天新增 {recentCount} 条。",
+  "@dynamicInsightStats": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "recentCount": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionGroupToday": "[JA] 今天",
+  "sessionGroupYesterday": "[JA] 昨天",
+  "sessionGroupThisWeek": "[JA] 本周",
+  "sessionGroupEarlier": "[JA] 更早",
+  "messageCountLabel": "[JA] {count} 条消息",
+  "@messageCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commandPolish": "[JA] 润色",
+  "commandContinue": "[JA] 续写",
+  "commandDeepAnalysis": "[JA] 深度分析",
+  "commandInsight": "[JA] 智能洞察",
+  "aiPromptPolish": "[JA] 请帮我润色这段文字",
+  "aiPromptContinue": "[JA] 请帮我续写这段文字",
+  "aiPromptDeepAnalysis": "[JA] 请对这段笔记进行深度分析",
+  "aiPromptSourceAnalysis": "[JA] 请分析这段文字的来源，识别可能的作者和出处",
+  "aiAssistantInputHint": "[JA] 输入问题...",
+  "aiAssistantExploreWelcome": "[JA] {summary}",
+  "@aiAssistantExploreWelcome": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "currentNoteContext": "[JA] 当前笔记上下文",
+  "workflowUnavailable": "[JA] 工作流不可用",
+  "aiWorkflowNeedsBoundNote": "[JA] 此功能需要绑定笔记才能使用",
+  "confidenceLabel": "[JA] 置信度",
+  "replaceOriginalNote": "[JA] 替换原文",
+  "appendToEnd": "[JA] 追加到末尾",
+  "scrollToBottom": "[JA] 滚动到底部",
+  "pinChat": "[JA] 置顶",
+  "unpinChat": "[JA] 取消置顶",
+  "stopGenerate": "[JA] 停止生成",
+  "aiModeChat": "[JA] 对话模式",
+  "aiModeAgent": "[JA] Agent 模式",
+  "agentReachedMaxRounds": "[JA] 已达到本轮工具调用上限，以上结论基于目前已获取的信息。如需更完整的结果，可以补充更具体的要求后再问一次。",
+  "agentReviewingRecentNotes": "[JA] 正在浏览笔记...",
+  "agentSearchingNotesForQuery": "[JA] 正在查找\"{query}\"相关记录...",
+  "@agentSearchingNotesForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentCollectingTags": "[JA] 正在获取标签...",
+  "agentReadingNoteDetail": "[JA] 正在查看笔记...",
+  "agentCheckingLocationWeather": "[JA] 正在获取位置和天气...",
+  "agentSavingMemory": "[JA] 正在保存记忆...",
+  "agentRecallingMemory": "[JA] 正在查找记忆...",
+  "agentRecallingMemoryForQuery": "[JA] 正在查找\"{query}\"相关记忆...",
+  "@agentRecallingMemoryForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentSearchingWebForQuery": "[JA] 正在查找\"{query}\"的资料...",
+  "@agentSearchingWebForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentReadingWebPage": "[JA] 正在读取网页...",
+  "agentPreparingNewNoteSuggestion": "[JA] 正在准备新笔记建议...",
+  "agentPreparingEditSuggestion": "[JA] 正在准备修改建议...",
+  "agentFoundNoMatchingNotes": "[JA] 未找到相关记录",
+  "agentFoundMatchingNotes": "[JA] 找到 {count} 条相关记录",
+  "@agentFoundMatchingNotes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentFoundMatchingNotesWithMore": "[JA] 找到 {count} 条相关记录，还有更多",
+  "@agentFoundMatchingNotesWithMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentPreparedTagChoices": "[JA] 找到 {count} 个可用标签",
+  "@agentPreparedTagChoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentCheckedLocationWeather": "[JA] 已获取位置和天气",
+  "agentCheckedLocationWeatherWithDetails": "[JA] 位置：{location}，天气：{weather}",
+  "@agentCheckedLocationWeatherWithDetails": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      },
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "agentFoundWebSources": "[JA] 找到 {count} 条网络资料",
+  "@agentFoundWebSources": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadWebPageSummary": "[JA] 已读取网页，约 {count} 字",
+  "@agentReadWebPageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadNoteDetailSummary": "[JA] 已读取笔记《{title}》的完整正文",
+  "@agentReadNoteDetailSummary": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "agentPreparedSuggestionCard": "[JA] 已生成建议",
+  "agentToolStepFinished": "[JA] 已完成",
+  "agentToolStepDidNotFinish": "[JA] 未完成",
+  "agentMemorySaved": "[JA] 已保存记忆",
+  "agentMemoryDeleted": "[JA] 已删除记忆",
+  "agentRecalledFacts": "[JA] 找到 {count} 条相关记忆",
+  "@agentRecalledFacts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentRecalledNoFacts": "[JA] 未找到相关记忆",
+  "aiThinking": "[JA] 正在思考...",
+  "thinkingMode": "[JA] 深度思考",
+  "showThinking": "[JA] 查看思考过程",
+  "hideThinking": "[JA] 收起思考过程",
+  "toolExecutionProgress": "[JA] 正在执行...",
+  "toolExecutionCompleted": "[JA] 执行完成",
+  "executedNOperations": "[JA] 执行了 {count} 个操作",
+  "@executedNOperations": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "attachFile": "[JA] 附加文件",
+  "yesterday": "[JA] 昨天",
+  "openInEditor": "[JA] 打开编辑器",
+  "saveDirectly": "[JA] 直接保存",
+  "replace": "[JA] 替换",
+  "append": "[JA] 追加",
+  "notice": "[JA] 提示",
+  "saveRequired": "[JA] 保存提示",
+  "saveBeforeAiAssistant": "[JA] 进入 Thoughter 前需先保存当前笔记内容",
+  "saveAndContinue": "[JA] 保存并继续",
+  "toggleAddLocation": "[JA] 添加位置",
+  "toggleAddWeather": "[JA] 添加天气",
+  "webdavDisableSyncSuccess": "[JA] 已关闭 WebDAV 云同步。本地数据完全保留。",
+  "webdavDisableSync": "[JA] 关闭并停用云同步",
+  "webdavGoToResolve": "[JA] 去处理",
+  "webdavNoConflicts": "[JA] 没有检测到冲突笔记",
+  "webdavAllConflictsResolved": "[JA] 您的所有同步冲突均已处理干净。",
+  "webdavProviderNutstore": "[JA] 坚果云 (Nutstore)",
+  "webdavProviderCustom": "[JA] 自定义 (Custom)",
+  "webdavProviderNextcloud": "[JA] Nextcloud / ownCloud",
+  "webdavProviderInfinicloud": "[JA] InfiniCLOUD",
+  "webdavProviderConfig": "[JA] 服务商配置",
+  "webdavServerUrlEmptyError": "[JA] 请输入 WebDAV 服务器地址",
+  "webdavServerUrlInvalidError": "[JA] 地址必须以 https:// 开头",
+  "webdavUsernameEmptyError": "[JA] 请输入用户名",
+  "webdavPasswordEmptyError": "[JA] 请输入应用密码",
+  "webdavSyncStrategy": "[JA] 同步策略",
+  "webdavStatusNotEnabled": "[JA] 未启用云同步",
+  "webdavStatusNotEnabledDesc": "[JA] 配置您的 WebDAV 服务，享受安全跨端多路同步。",
+  "webdavStatusSyncingDesc": "[JA] 正在安全比对合并云端与本地数据库文件...",
+  "webdavStatusRunning": "[JA] 云同步运行中",
+  "webdavStatusRunningDesc": "[JA] 已与云端网盘建立加密合并管道。\n上次同步：{time}",
+  "@webdavStatusRunningDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusException": "[JA] 同步出现异常",
+  "webdavStatusExceptionDesc": "[JA] 网络通信或云盘文件锁冲突。我们将自动重试。",
+  "webdavStatusEnabled": "[JA] 云同步已启用",
+  "webdavStatusEnabledDesc": "[JA] 服务就绪。上次同步：{time}",
+  "@webdavStatusEnabledDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavNeverSynced": "[JA] 从未同步",
+  "webdavNeverSucceeded": "[JA] 从未成功",
+  "webdavConflictPrompt": "[JA] 检测到有 {count} 篇同步冲突备份，建议立即处理。",
+  "@webdavConflictPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webContentTitle": "[JA] 网页内容",
+  "fetchingWebContent": "[JA] 正在获取网页内容：{url}",
+  "@fetchingWebContent": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "webCommandInvalidUrl": "[JA] 请使用 /web 命令提供有效的 URL",
+  "webCommandInvalidUrlTitle": "[JA] 无效的 URL",
+  "aiSuggestion": "[JA] AI 建议",
+  "autoAttachMetadataUnavailable": "[JA] 位置/天气未能附加，已直接保存",
+  "agentRichEditConflict": "[JA] 笔记内容已发生变化。为避免覆盖你的修改，请让 AI 重新生成建议。",
+  "agentDiffOriginal": "[JA] 原文",
+  "agentDiffReplacement": "[JA] 改为",
+  "agentDiffInsertBefore": "[JA] 在此内容前插入",
+  "agentDiffInsertAfter": "[JA] 在此内容后插入",
+  "agentDiffAppend": "[JA] 追加内容",
+  "agentDiffDelete": "[JA] 删除内容",
+  "noteProposalCreate": "[JA] 新建",
+  "noteProposalEdit": "[JA] 编辑",
+  "noteProposalPlain": "[JA] 普通笔记",
+  "noteProposalRich": "[JA] 富文本笔记",
+  "noteProposalChangeCount": "[JA] 修改 {count} 处",
+  "@noteProposalChangeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noteProposalExpand": "[JA] 展开全文",
+  "noteProposalCollapse": "[JA] 收起全文",
+  "noteProposalViewChanges": "[JA] 查看修改记录",
+  "noteProposalPlainToRichWarning": "[JA] 应用后将使用全屏富文本编辑器打开此笔记。",
+  "noteProposalBefore": "[JA] 原文",
+  "noteProposalAfter": "[JA] 改为",
+  "noteProposalCompleted": "[JA] 已完成",
+  "noteProposalApply": "[JA] 应用修改",
+  "noteProposalSave": "[JA] 保存笔记",
+  "noteProposalLegacyReadOnly": "[JA] 这是旧版建议，缺少安全的版本信息，仅供查看。请让 AI 重新生成后再应用。",
+  "noteProposalPlainEditorPreferenceWarning": "[JA] 你的设置会在全屏富文本编辑器中打开此普通草稿；保存后它将成为富文本笔记。",
+  "aiCardBadgeCreate": "[JA] 新建",
+  "aiCardBadgeEdit": "[JA] 修改",
+  "aiCardQuickEdit": "[JA] 快编",
+  "aiCardQuickEditTooltip": "[JA] 快速编辑内容、来源或标签",
+  "aiCardSavedViewNote": "[JA] 已保存 · 查看笔记",
+  "aiCardSaveFailedGeneric": "[JA] 保存失败，请稍后重试。",
+  "aiCardEditContentHint": "[JA] 编辑内容",
+  "experimentalTag": "[JA] 实验性",
+  "agentExperimentalNoticeTitle": "[JA] Thoughter 实验性功能说明",
+  "agentExperimentalNoticeIntro": "[JA] Thoughter 是正在测试中的 AI Agent 助手。在开始使用前，请阅读以下注意事项：",
+  "agentExperimentalNoticePoint1": "[JA] AI 可能会生成错误或不准确的回答，请对生成内容进行客观核查。",
+  "agentExperimentalNoticePoint2": "[JA] AI 不能直接修改你的笔记；所有编辑与新建方案仅在点击保存/应用后生效。",
+  "agentExperimentalNoticePoint3": "[JA] 功能仍处于实验测试阶段，使用过程中可能会遇到异常或不稳定情况。",
+  "agentExperimentalNoticeGotIt": "[JA] 理解并继续",
+  "agentExperimentalBannerText": "[JA] 实验性功能：AI回答可能包含错误；AI不会直接改写笔记，仅在点击保存后生效。",
+  "agentExperimentalNoticeAction": "[JA] 查看说明",
+  "dontShowAgain": "[JA] 不再自动提示",
+  "settingsLab": "[JA] 实验室",
+  "settingsLabDesc": "[JA] 开发者模式下的调试入口和实验性开关，可能不稳定",
+  "firstOpenScrollPerfMonitorExperiment": "[JA] [实验] 首屏滚动性能监测",
+  "firstOpenScrollPerfMonitorExperimentDesc": "[JA] 记录冷启动后首次滑动记录页的掉帧数据（默认关）",
+  "addNoteDeferMetadataExperiment": "[JA] [实验] AddNote 延迟获取元数据",
+  "addNoteDeferMetadataExperimentDesc": "[JA] 延迟位置和天气获取至键盘动画结束后（默认关）",
+  "noteCardMediaStyleExperiment": "[JA] [实验] 记录页图片显示方式",
+  "noteCardMediaStyleThumbnail": "[JA] 右侧小图",
+  "noteCardMediaStyleThumbnailDesc": "[JA] 右侧方形小图。有媒体必可见，解码开销最小。",
+  "noteCardMediaStyleInline": "[JA] 正文原位（旧版式）",
+  "noteCardMediaStyleInlineDesc": "[JA] 图片留在正文原位，顺序保真。代价：正文后面的图会被折叠截掉，音视频会在列表里建播放器。",
+  "noteCardMediaStyleBanner": "[JA] 顶部通栏大图",
+  "noteCardMediaStyleBannerDesc": "[JA] 卡片顶部整宽大图，照片是主角。位置归一化，解码开销最大。",
+  "noteInsertAnimationExperiment": "[JA] [实验] 记录页添加笔记动画",
+  "noteInsertAnimationCurrent": "[JA] 当前：{name}",
+  "@noteInsertAnimationCurrent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noteInsertAnimationScale": "[JA] 气泡缩放",
+  "noteInsertAnimationSlide": "[JA] 平滑上升",
+  "noteInsertAnimationNone": "[JA] 无动画",
+  "aiProviderZhipu": "[JA] 智谱 GLM",
+  "aiProviderMoonshot": "[JA] 月之暗面 Kimi",
+  "aiProviderDashScope": "[JA] 阿里云百炼",
+  "aiProviderVolcengine": "[JA] 火山方舟",
+  "aiProviderGemini": "[JA] Google Gemini",
+  "presetDescOllamaCloud": "[JA] 免费额度充足，注册就能用，推荐第一次配置的用户选它",
+  "presetDescOpenAI": "[JA] OpenAI 官方接口，需要海外支付方式",
+  "presetDescOpenRouter": "[JA] 一个 Key 调用 Claude、Gemini 等上百个模型",
+  "presetDescDeepSeek": "[JA] 国内直连，价格低，中文表现好",
+  "presetDescSiliconFlow": "[JA] 国内聚合平台，部分小模型免费",
+  "presetDescZhipu": "[JA] 国内直连，glm-4-flash 免费",
+  "presetDescMoonshot": "[JA] 国内直连，长上下文表现好",
+  "presetDescDashScope": "[JA] 阿里云百炼的 OpenAI 兼容接口，通义千问系列",
+  "presetDescVolcengine": "[JA] 火山方舟豆包系列，模型名填推理接入点 ID",
+  "presetDescGemini": "[JA] Gemini 官方的 OpenAI 兼容接口，有免费额度",
+  "presetDescOllamaLocal": "[JA] 连接本机运行的 Ollama，不联网、不需要密钥",
+  "presetDescLMStudio": "[JA] 连接本机运行的 LM Studio，不联网、不需要密钥",
+  "presetDescCustom": "[JA] 任何 OpenAI 兼容接口，地址和模型全部手填",
+  "aiServicesSectionTitle": "[JA] 我的 AI 服务",
+  "aiServiceEmptyTitle": "[JA] 还没有配置 AI 服务",
+  "aiServiceEmptyBody": "[JA] 配置一个服务商之后，AI 洞察、卡片生成和 Thoughter 助手才能工作。",
+  "editAiServiceTitle": "[JA] 编辑 AI 服务",
+  "newAiServiceTitle": "[JA] 新建 AI 服务",
+  "selectProviderTemplate": "[JA] 选择服务商",
+  "changeProviderTemplate": "[JA] 更换",
+  "providerGroupCloud": "[JA] 云端服务",
+  "providerGroupLocal": "[JA] 本地运行",
+  "providerGroupCustom": "[JA] 自定义",
+  "recommendedBadge": "[JA] 推荐",
+  "inUseBadge": "[JA] 使用中",
+  "getApiKeyLink": "[JA] 获取 API Key",
+  "apiKeyNotNeededHint": "[JA] 本地服务通常不需要密钥，留空即可",
+  "suggestedModelsLabel": "[JA] 常用模型",
+  "configNameField": "[JA] 配置名称",
+  "statusKeyConfigured": "[JA] 密钥已配置",
+  "statusKeyMissing": "[JA] 缺少密钥",
+  "aiServiceSaved": "[JA] 已保存 {name}",
+  "@aiServiceSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ollamaCloudTipTitle": "[JA] 推荐用 Ollama 云端",
+  "ollamaCloudTipBody": "[JA] 免费额度充足，注册后复制 API Key 就能用，不用绑卡。",
+  "ollamaCloudTipAction": "[JA] 一键添加",
+  "aiConfigHelpLink": "[JA] 不知道怎么填？查看配置说明",
+  "openLinkFailed": "[JA] 无法打开链接",
+  "testBeforeSaveHint": "[JA] 填好地址、密钥和模型后即可测试，不必先保存",
+  "agentMemoryClearSummary": "[JA] 当前记着 {profileCount} 条偏好、{factCount} 条细节",
+  "@agentMemoryClearSummary": {
+    "placeholders": {
+      "profileCount": {
+        "type": "int"
+      },
+      "factCount": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryNoticeBody": "[JA] 为了不用每次都重新认识你，Thoughter 会把你的身份和表达偏好记下来，之后的对话、每日提示和周期洞察都会用上。记忆只保存在这台设备上，不会上传。",
+  "agentMemoryNoticeHint": "[JA] 你可以随时让 Thoughter 修改或忘掉某条记忆，也可以在「AI 设置」里关闭或清空。",
+  "agentMemorySwitchFailed": "[JA] 记忆开关没能保存，请重试",
+  "agentMemoryCountsUnavailable": "[JA] 读取记忆数量失败，仍可尝试清空",
+  "releaseNotesTitle": "[JA] 更新内容",
+  "releaseNotesUpgradeLede": "[JA] 以下是你上次使用之后新增的功能。",
+  "releaseNotesCurrentLede": "[JA] 以下是本版本新增的功能。",
+  "releaseNotesHighlights": "[JA] 核心亮点",
+  "releaseNotesGetStarted": "[JA] 开始使用",
+  "releaseThoughterTitle": "[JA] Thoughter：住在摘录本里的思考搭档",
+  "releaseThoughterLede": "[JA] 从简单的记录，到深度的整理与创作。Thoughter 不再只是一个回答问题的对话框，它接入了你的整个笔记库，成为你的思考搭档。",
+  "releaseThoughterSearchTitle": "[JA] 智能检索与联动",
+  "releaseThoughterSearchDesc": "[JA] 无需手动翻找，直接用自然语言提问。Thoughter 会自动检索相关笔记、贯通标签线索，必要时还能补充联网信息。",
+  "releaseThoughterControlTitle": "[JA] 编辑权，始终在你手中",
+  "releaseThoughterControlDesc": "[JA] AI 不会擅自修改你的内容。所有新建与改写都会先以「提案卡片」呈现，改了什么一目了然；逐条查看、确认之后，才会真正应用。",
+  "releaseThoughterSingleNoteTitle": "[JA] 单篇笔记深聊",
+  "releaseThoughterSingleNoteDesc": "[JA] 在编辑器内点击 ✨ 按钮选择「问 Thoughter」，即可就当前这一篇追问、润色或续写。",
+  "releaseThoughterMemoryTitle": "[JA] 长期记忆",
+  "releaseThoughterMemoryDesc": "[JA] 开启后，Thoughter 会跨对话记住你的称呼与表达偏好。记忆独立存储，可随时查看或一键清空。",
+  "releaseThoughterInsightTitle": "[JA] 周期洞察与全新探索页",
+  "releaseThoughterInsightDesc": "[JA] Thoughter 会定期回看你的记录，写成阶段性洞察；探索页也随之重做，把这些发现集中呈现。",
+  "releaseThemeTitle": "[JA] 全新主题：换一张纸，换一支笔",
+  "releaseThemeLede": "[JA] 主题风格成为与深浅色并列的独立维度，三选其一。",
+  "releaseThemeStylesTitle": "[JA] 三套风格",
+  "releaseThemeStylesDesc": "[JA] Material 延续系统动态取色；「纸与墨」暖调温润，衬线正文配纸张横线；「素笺」冷调硬朗。",
+  "releaseThemeAccentTitle": "[JA] 墨色可选",
+  "releaseThemeAccentDesc": "[JA] 手工风格另备赭石、黛青、靛蓝、朱砂四支墨色，换墨不换纸。",
+  "releaseThemeSwitchTitle": "[JA] 随时切换",
+  "releaseThemeSwitchDesc": "[JA] 默认仍是 Material，升级不会改变外观。可在此直接试用，也可随时前往「设置 › 主题设置」调整。",
+  "releaseDiagnosticsNotice": "[JA] 自 3.7.0 起，心迹会在发生错误时上报匿名诊断信息，仅用于定位与修复问题，不含任何笔记内容。可在「设置 › 反馈与联系」中随时关闭。",
+  "settingsReleaseNotes": "[JA] 更新内容",
+  "settingsReleaseNotesDesc": "[JA] 查看本版本新增的功能"
 }

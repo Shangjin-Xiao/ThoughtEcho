@@ -100,5 +100,4452 @@
   "themeAccentUmber": "Tierra de sombra",
   "themeAccentCeladon": "Celadón",
   "themeAccentIndigo": "Índigo",
-  "themeAccentCinnabar": "Cinabrio"
+  "themeAccentCinnabar": "Cinabrio",
+  "addAiService": "Añadir servicio de IA",
+  "agentMemorySectionTitle": "Memoria de Thoughter",
+  "agentMemoryEnableTitle": "Memoria a largo plazo",
+  "agentMemoryEnableDesc": "Recordar tus preferencias en todos los chats (solo se guarda localmente)",
+  "agentMemoryNicknameTitle": "Apodo",
+  "agentMemoryNicknameHint": "¿Cómo debería llamarte Thoughter?",
+  "agentMemoryNicknameDesc": "Cómo debería llamarte Thoughter (déjalo vacío para omitir)",
+  "agentMemoryNicknameSaveFailed": "No se pudo guardar tu apodo. Por favor, inténtalo de nuevo.",
+  "agentMemoryNicknameDisabled": "Activado cuando la memoria a largo plazo está encendida",
+  "agentMemoryClearTitle": "Borrar memoria",
+  "agentMemoryClearEmpty": "Nada recordado aún",
+  "agentMemoryClearConfirmTitle": "¿Borrar la memoria de Thoughter?",
+  "agentMemoryClearConfirmBody": "Todas las preferencias y detalles recordados se eliminarán de forma permanente. Tus notas no se verán afectadas.",
+  "agentMemoryClearConfirmAction": "Borrar",
+  "agentMemoryCleared": "La memoria de Thoughter ha sido borrada",
+  "agentMemoryClearFailed": "Error al borrar la memoria",
+  "agentMemoryNoticeTitle": "Thoughter te recordará",
+  "agentMemoryNoticeGotIt": "Entendido",
+  "agentMemoryNoticeDisable": "No recordar",
+  "smartPushPeriodEarlyMorning": "[ES] 清晨",
+  "smartPushPeriodMorning": "[ES] 上午",
+  "smartPushPeriodNoon": "[ES] 中午",
+  "smartPushPeriodAfternoon": "[ES] 下午",
+  "smartPushPeriodEvening": "[ES] 晚上",
+  "smartPushPeriodNight": "[ES] 夜间",
+  "settingsSentryTitle": "[ES] 发送诊断数据帮助改进",
+  "settingsSentryDesc": "[ES] 默认关闭。手动开启后将发送错误堆栈、设备信息、页面、普通网络请求与主数据库性能数据。不会接入 AI 请求；数据库仅记录 SQL 模板和耗时，不发送笔记内容或查询参数。",
+  "sentryRestartHint": "[ES] 设置已保存，重启应用后生效",
+  "sentryDisclosureTitle": "[ES] 隐私政策已更新",
+  "sentryDisclosureMessage": "[ES] 心迹隐私政策已更新，您可以在官网查看。\n\n本次更新加入了 Sentry 以收集崩溃错误与用户反馈，为保护您的隐私，该功能默认关闭。您可以在“设置 -> 反馈与联系”中随时开启。\n\n隐私政策链接：https://note.shangjinyun.cn/privacy",
+  "sentryDisclosureGotIt": "[ES] 我知道了",
+  "draftRestored": "[ES] 已自动恢复未保存的草稿",
+  "draftRecoverTitle": "[ES] 恢复未保存的草稿",
+  "draftRecoverMessage": "[ES] 检测到您有上次未保存的编辑内容，是否恢复并继续编辑？",
+  "restore": "[ES] 恢复",
+  "discard": "[ES] 丢弃",
+  "draftSaved": "[ES] 草稿已保存",
+  "cancel": "[ES] 取消",
+  "confirm": "[ES] 确定",
+  "delete": "[ES] 删除",
+  "save": "[ES] 保存",
+  "edit": "[ES] 编辑",
+  "search": "[ES] 搜索",
+  "settings": "[ES] 设置",
+  "loading": "[ES] 加载中...",
+  "retry": "[ES] 重试",
+  "refresh": "[ES] 刷新",
+  "annualReport": "[ES] 年度报告",
+  "clearRecords": "[ES] 清空记录",
+  "home": "[ES] 首页",
+  "notes": "[ES] 记录",
+  "aiFeatures": "[ES] AI",
+  "selectLanguage": "[ES] 选择语言 / Select Language",
+  "onboardingSelectLanguage": "[ES] 选择语言",
+  "onboardingWelcome": "[ES] 欢迎使用心迹",
+  "onboardingSubtitle": "[ES] 你的专属灵感摘录本",
+  "onboardingDescription": "[ES] 让我们一起随心记录",
+  "onboardingModifyLater": "[ES] 这些设置可以随时在应用中修改",
+  "onboardingAppearanceTitle": "[ES] 外观与每日一言",
+  "onboardingAppearanceSubtitle": "[ES] 挑一套看着舒服的样子",
+  "onboardingHabitsTitle": "[ES] 使用习惯与隐私",
+  "onboardingHabitsSubtitle": "[ES] 最后几个小选择",
+  "onboardingThemeStyleDesc": "[ES] 决定全应用的纸面、墨色与圆角",
+  "onboardingProviderRecommended": "[ES] 按你选的语言推荐",
+  "onboardingCustomizeTypes": "[ES] 自定义类型",
+  "onboardingAiTitle": "[ES] AI 洞察（可选）",
+  "onboardingAiDesc": "[ES] 配置任意一个 AI 服务后，心迹能为笔记生成摘要、洞察和分享卡片。不配置也不影响记录。",
+  "onboardingAiOpenAfter": "[ES] 完成后带我去配置",
+  "onboardingSkip": "[ES] 跳过",
+  "onboardingNext": "[ES] 下一步",
+  "onboardingPrevious": "[ES] 上一步",
+  "onboardingStart": "[ES] 开始使用",
+  "onboardingPreparing": "[ES] 正在准备...",
+  "onboardingSkipTitle": "[ES] 跳过引导",
+  "onboardingSkipMessage": "[ES] 确定要跳过引导直接进入应用吗？\n部分设置将使用默认值。",
+  "onboardingConfirmSkip": "[ES] 确定跳过",
+  "onboardingInitializing": "[ES] 正在初始化...",
+  "onboardingInitFailed": "[ES] 初始化失败，请重试",
+  "onboardingContinueUsing": "[ES] 继续使用",
+  "onboardingError": "[ES] 出现问题",
+  "onboardingUpdateComplete": "[ES] 更新完成",
+  "onboardingUpdateSuccess": "[ES] 心迹已成功更新到新版本\n数据已自动迁移，无需手动操作",
+  "onboardingUpdateFailed": "[ES] 数据更新失败，但您仍可继续使用应用",
+  "onboardingUpdateProcessFailed": "[ES] 更新处理失败，请重启应用",
+  "onboardingEnterApp": "[ES] 进入应用",
+  "prefLanguage": "[ES] 语言 / Language",
+  "prefLanguageDesc": "[ES] 选择应用显示语言",
+  "prefDailyQuoteType": "[ES] 每日一言类型",
+  "prefDailyQuoteTypeDesc": "[ES] 选择您感兴趣的内容类型",
+  "prefLocationService": "[ES] 位置服务",
+  "prefLocationServiceDesc": "[ES] 启用位置服务以自动记录笔记地点和获取天气信息",
+  "prefDefaultStartPage": "[ES] 默认启动页面",
+  "prefDefaultStartPageDesc": "[ES] 选择打开应用时首先看到的页面",
+  "prefHomeOverview": "[ES] 主页概览",
+  "prefHomeOverviewDesc": "[ES] 查看每日一言和最近笔记",
+  "prefNoteList": "[ES] 笔记列表",
+  "prefNoteListDesc": "[ES] 直接进入笔记管理界面",
+  "prefSelectAll": "[ES] 全选",
+  "prefClearAll": "[ES] 清空",
+  "settingsTitle": "[ES] 设置",
+  "settingsLocationWeather": "[ES] 位置与天气设置",
+  "settingsAutoAttachLocation": "[ES] 添加笔记时自动附加位置",
+  "settingsAutoAttachLocationDesc": "[ES] 新建笔记时自动勾选位置信息",
+  "settingsAutoAttachWeather": "[ES] 添加笔记时自动附加天气",
+  "settingsAutoAttachWeatherDesc": "[ES] 新建笔记时自动勾选天气信息",
+  "weatherFetchFailedTitle": "[ES] 天气获取失败",
+  "weatherFetchFailedDesc": "[ES] 无法获取当前天气信息，请检查网络连接或稍后重试",
+  "locationFetchFailedNoNetwork": "[ES] 无网络连接，已保存坐标位置",
+  "locationAndWeatherUnavailable": "[ES] 当前无法获取位置和天气信息",
+  "settingsUseLocationService": "[ES] 使用位置服务",
+  "settingsLocationEnabled": "[ES] 已获得权限并启用",
+  "settingsLocationPermissionOnly": "[ES] 已获得权限但服务未启用",
+  "settingsLocationNoPermission": "[ES] 未获得位置权限",
+  "settingsSetLocation": "[ES] 设置显示位置",
+  "settingsSearchCity": "[ES] 搜索并选择城市",
+  "settingsCurrentLocation": "[ES] 当前显示位置",
+  "settingsNotSet": "[ES] 未设置",
+  "settingsAppSettings": "[ES] 应用设置",
+  "settingsPreferences": "[ES] 偏好设置",
+  "settingsPreferencesDesc": "[ES] 个性化选项与AI功能",
+  "settingsDefaultStartPage": "[ES] 默认启动页面",
+  "settingsStartPageHome": "[ES] 首页（每日一言）",
+  "settingsStartPageNotes": "[ES] 记录（笔记列表）",
+  "settingsSelectStartPage": "[ES] 选择默认启动页面",
+  "settingsTheme": "[ES] 主题设置",
+  "settingsThemeDesc": "[ES] 自定义应用的外观主题",
+  "settingsAI": "[ES] AI设置",
+  "settingsAIDesc": "[ES] 配置AI分析所需的API信息和多服务商管理",
+  "settingsHitokoto": "[ES] 一言设置",
+  "settingsHitokotoDesc": "[ES] 自定义「每日一言」的类型",
+  "settingsLogs": "[ES] 日志设置",
+  "settingsLogsDesc": "[ES] 配置应用日志记录级别",
+  "settingsStorage": "[ES] 存储管理",
+  "settingsStorageDesc": "[ES] 查看存储占用，清理缓存与无用文件",
+  "settingsContentManagement": "[ES] 内容管理",
+  "settingsTags": "[ES] 标签管理",
+  "settingsTagsDesc": "[ES] 添加、编辑或删除笔记标签",
+  "settingsBackup": "[ES] 备份与恢复",
+  "settingsBackupDesc": "[ES] 备份数据或从备份中恢复",
+  "settingsSync": "[ES] 笔记同步",
+  "settingsSyncDesc": "[ES] 与附近设备同步笔记数据",
+  "settingsAbout": "[ES] 关于 心迹 (ThoughtEcho)",
+  "settingsAboutSlogan": "[ES] 你的专属灵感摘录本",
+  "settingsViewSource": "[ES] 查看项目源码",
+  "settingsVisitWebsite": "[ES] 访问官网",
+  "settingsPrivacyPolicy": "[ES] 隐私政策",
+  "settingsFeedback": "[ES] 反馈建议",
+  "settingsContactDeveloper": "[ES] 联系开发者",
+  "feedbackAndContact": "[ES] 反馈与联系",
+  "feedbackAndContactDesc": "[ES] 我们非常重视您的反馈！您可以通过以下方式联系我们：",
+  "feedbackGithubTitle": "[ES] 在 GitHub 提交问题",
+  "feedbackGithubDesc": "[ES] 提交 Bug 报告、功能建议或参与讨论",
+  "feedbackGithubRepoTitle": "[ES] 查看项目源码",
+  "feedbackGithubRepoDesc": "[ES] 查看源代码、给项目加星或提交 Pull Request",
+  "contactDeveloperSectionTitle": "[ES] 联系开发者",
+  "feedbackEmailTitle": "[ES] 发送邮件",
+  "feedbackEmailDesc": "[ES] shangjinyun@proton.me",
+  "feedbackDiscussionTitle": "[ES] 加入社区讨论",
+  "feedbackDiscussionDesc": "[ES] 提问、分享想法、和其他用户交流",
+  "feedbackSentryTitle": "[ES] 发送意见与反馈 (Sentry)",
+  "feedbackSentryDesc": "[ES] 直接向开发者反馈您在使用过程中遇到的问题或建议",
+  "feedbackSentryDisabledHint": "[ES] 请先在下方开启 Sentry 调试与报错服务",
+  "settingsViewLicenses": "[ES] 查看许可证信息",
+  "settingsCheckUpdate": "[ES] 检查更新",
+  "settingsCheckUpdateDesc": "[ES] 检查是否有新版本可用",
+  "settingsClose": "[ES] 关闭",
+  "developerModeEnabled": "[ES] 🎉 开发者模式已开启！",
+  "developerModeDisabled": "[ES] ✅ 开发者模式已关闭",
+  "devFirstScrollPerfMonitorTitle": "[ES] 首次滑动卡顿监测（开发者）",
+  "devFirstScrollPerfMonitorDesc": "[ES] 监测首次打开记录页后的首次手势滑动帧耗时（非首帧）",
+  "noteListDisableCardShadowsExperiment": "[ES] [实验] 记录页禁用卡片阴影",
+  "noteListDisableCardShadowsExperimentDesc": "[ES] 发布版可用。用于对比阴影对记录页滑动性能和视觉观感的影响（默认关）",
+  "noteListDisableBackdropBlurExperiment": "[ES] [实验] 记录页禁用折叠模糊",
+  "noteListDisableBackdropBlurExperimentDesc": "[ES] 发布版可用。将长内容折叠底部的背景模糊替换为渐变遮罩（默认关）",
+  "devFirstScrollPerfResult": "[ES] 首次滑动性能：总帧 {total}，卡顿帧 {jank}，平均 {avgMs}ms，最慢 {worstMs}ms",
+  "@devFirstScrollPerfResult": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "jank": {
+        "type": "int"
+      },
+      "avgMs": {
+        "type": "String"
+      },
+      "worstMs": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyRecoveryTitle": "[ES] 心迹 - 数据恢复",
+  "emergencyRecoveryHeading": "[ES] 数据库初始化失败",
+  "emergencyRecoveryDescription": "[ES] 应用无法正常启动。可能是数据库损坏或无法访问。\n\n您可以尝试备份现有数据以防数据丢失，或尝试重新启动应用。",
+  "emergencyBackupAndRestoreButton": "[ES] 备份和恢复数据",
+  "emergencyTryRestartAppButton": "[ES] 尝试重新启动应用",
+  "emergencyReinitializeFailed": "[ES] 重新初始化失败: {error}",
+  "@emergencyReinitializeFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyRecoveryHint": "[ES] 提示: 如果问题持续存在，可能需要重新安装应用。请确保在此之前备份您的数据。",
+  "emergencyAppTitle": "[ES] 心迹 - 紧急恢复",
+  "emergencyModeTitle": "[ES] 紧急恢复模式",
+  "emergencyAppStartFailedTitle": "[ES] 应用启动失败",
+  "emergencyAppStartFailedDesc": "[ES] 心迹应用启动过程中发生严重错误。这可能是由于数据损坏或者存储权限问题导致。",
+  "emergencyErrorLabel": "[ES] 错误信息:",
+  "emergencyTechnicalDetails": "[ES] 技术详情",
+  "emergencyExitAppButton": "[ES] 退出应用",
+  "emergencyPersistentIssueHint": "[ES] 如果问题持续存在，请尝试重新安装应用，或联系开发者获取支持。",
+  "emergencyBackupPageTitle": "[ES] 紧急数据恢复",
+  "emergencyBackupToolTitle": "[ES] 数据紧急恢复工具",
+  "emergencyBackupToolDesc": "[ES] 由于应用发生了严重错误，您可以尝试：\n\n1. 导出数据库文件 - 导出原始数据库文件供专业人员恢复\n2. 尝试查看备份恢复页 - 注意：由于数据库可能损坏，此功能可能无法正常工作",
+  "emergencyProcessing": "[ES] 正在处理...",
+  "emergencyExportDatabaseButton": "[ES] 导出数据库文件",
+  "emergencyOpenBackupPageButton": "[ES] 尝试打开标准备份还原页面",
+  "emergencyOpenBackupFailed": "[ES] 无法打开备份还原页面：{error}",
+  "@emergencyOpenBackupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyExportHint": "[ES] 提示: 导出的数据库文件可以发送给开发人员进行专业恢复。",
+  "emergencyLocatingDatabase": "[ES] 正在定位数据库文件...",
+  "emergencyDatabaseNotFound": "[ES] 未找到数据库文件",
+  "emergencyPreparingExport": "[ES] 正在准备导出...",
+  "emergencyCopyingFile": "[ES] 正在复制文件...",
+  "emergencyDatabaseExported": "[ES] 数据库文件已导出到: {path}",
+  "@emergencyDatabaseExported": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyExportFailed": "[ES] 导出失败: {error}",
+  "@emergencyExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "locationPermissionDenied": "[ES] 位置权限被拒绝，无法启用位置服务",
+  "enableLocationService": "[ES] 请启用位置服务",
+  "enableLocationServiceDesc": "[ES] 心迹需要访问您的位置以提供天气等功能。请在系统设置中启用位置服务。",
+  "goToSettings": "[ES] 去设置",
+  "gettingLocation": "[ES] 正在获取位置...",
+  "locationServiceEnabled": "[ES] 位置服务已启用，位置已更新",
+  "locationServiceDisabled": "[ES] 位置服务已禁用",
+  "cannotGetLocation": "[ES] 无法获取当前位置",
+  "selectedCount": "[ES] 已选择 {count} 种类型",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pleaseWait": "[ES] 请稍候...",
+  "close": "[ES] 关闭",
+  "ok": "[ES] 好的",
+  "timeJustNow": "[ES] 刚刚",
+  "timeMinutesAgo": "[ES] {count}分钟前",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "[ES] {count}小时前",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDaysAgo": "[ES] {count}天前",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeYesterday": "[ES] 昨天",
+  "exactAlarmDeniedHint": "[ES] 精确闹钟权限被拒绝，推送时间可能不准确",
+  "error": "[ES] 错误",
+  "success": "[ES] 成功",
+  "warning": "[ES] 警告",
+  "info": "[ES] 信息",
+  "cannotOpenLink": "[ES] 无法打开链接: {url}",
+  "@cannotOpenLink": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "checkUpdateFailed": "[ES] 检查更新失败: {error}",
+  "@checkUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetLocationPermission": "[ES] 无法获取位置权限",
+  "logDebugInfo": "[ES] 日志调试信息",
+  "logDebugInfoDesc": "[ES] 显示日志数据库状态和路径信息",
+  "addNoteAutoFocusExperiment": "[ES] [实验] AddNote 自动聚焦",
+  "addNoteAutoFocusExperimentDesc": "[ES] 打开添加笔记对话框稳定后自动弹出键盘（默认开）",
+  "databaseStatus": "[ES] 数据库状态:",
+  "logStatistics": "[ES] 日志统计:",
+  "getDebugInfoFailed": "[ES] 获取调试信息失败: {error}",
+  "@getDebugInfoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "generatingAIReport": "[ES] 正在生成AI年度报告...",
+  "generateReportFailed": "[ES] 生成年度报告失败",
+  "aiReturnedEmpty": "[ES] AI返回了空内容，请重试",
+  "pleaseConfigureApiKey": "[ES] 请先在AI设置中配置有效的API Key",
+  "networkError": "[ES] 网络连接异常，请检查网络后重试",
+  "aiQuotaExceeded": "[ES] AI服务配额不足，请稍后重试",
+  "generateAIReportFailed": "[ES] 生成AI年度报告失败",
+  "getDataFailed": "[ES] 获取数据失败",
+  "testingAIReport": "[ES] 正在测试AI年度报告...",
+  "testResult": "[ES] 测试结果",
+  "contentLength": "[ES] 内容长度：{length}字符",
+  "@contentLength": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "htmlFormat": "[ES] HTML格式：{status}",
+  "@htmlFormat": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "jsonFormat": "[ES] JSON格式：{status}",
+  "@jsonFormat": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "containsHtmlTags": "[ES] 包含HTML标签：{status}",
+  "@containsHtmlTags": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "first100Chars": "[ES] 前100字符：",
+  "viewReport": "[ES] 查看报告",
+  "testFailed": "[ES] 测试失败：{error}",
+  "@testFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "testFailedEmpty": "[ES] 测试失败：AI返回了空内容",
+  "testFailedApiKey": "[ES] 测试失败：请先在AI设置中配置有效的API Key",
+  "testFailedNetwork": "[ES] 测试失败：网络连接异常",
+  "testInitFailed": "[ES] 测试初始化失败",
+  "followSystem": "[ES] 跟随系统",
+  "navHome": "[ES] 首页",
+  "navNotes": "[ES] 记录",
+  "navInsights": "[ES] 洞察",
+  "navSettings": "[ES] 设置",
+  "appTitleOffline": "[ES] 心迹 - 无网络",
+  "loadingDataPleaseWait": "[ES] 正在加载数据，请稍等...",
+  "noTagsAvailable": "[ES] 暂无标签数据",
+  "deleteNote": "[ES] 删除笔记",
+  "deleteNoteConfirmation": "[ES] 确定要删除这条笔记吗？此操作无法撤销。",
+  "noteDeleted": "[ES] 笔记已删除",
+  "noteNotFound": "[ES] 笔记不存在",
+  "noteUpdateSkippedDeleted": "[ES] 笔记已删除，更新已跳过",
+  "favorited": "[ES] 已收藏 ({count})",
+  "@favorited": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "favoriteFailed": "[ES] 收藏失败，请重试",
+  "aiCardServiceNotInitialized": "[ES] AI卡片服务未初始化",
+  "generateCardFailed": "[ES] 生成卡片失败: {error}",
+  "@generateCardFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "generatingShareImage": "[ES] 正在生成分享图片...",
+  "cardSharedSuccessfully": "[ES] 卡片分享成功",
+  "shareFailed": "[ES] 分享失败: {error}",
+  "@shareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "savingCardToGallery": "[ES] 正在保存卡片到相册...",
+  "cardSavedToGallery": "[ES] 卡片已保存到相册: {path}",
+  "@cardSavedToGallery": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailed": "[ES] 保存失败: {error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "view": "[ES] 查看",
+  "viewImage": "[ES] 查看图片",
+  "imageLoadFailed": "[ES] 图片加载失败",
+  "todayThoughts": "[ES] 今日思考",
+  "loadingTodayThoughts": "[ES] 正在加载今日思考...",
+  "fetchingDefaultPrompt": "[ES] 正在获取默认提示...",
+  "waitingForTodayThoughts": "[ES] 等待今日思考...",
+  "noTodayThoughts": "[ES] 暂无今日思考",
+  "cannotOpenFullEditor": "[ES] 无法打开全屏编辑器: {error}",
+  "@cannotOpenFullEditor": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "refreshFailed": "[ES] 刷新失败: {error}",
+  "@refreshFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "backupAndRestore": "[ES] 数据备份与还原",
+  "dataBackup": "[ES] 数据备份",
+  "dataRestore": "[ES] 数据还原",
+  "includeMediaFiles": "[ES] 包含媒体文件",
+  "creatingBackup": "[ES] 正在备份...",
+  "createBackup": "[ES] 创建备份",
+  "selectBackupFileToRestore": "[ES] 选择备份文件还原",
+  "importantNotes": "[ES] 重要提示",
+  "dataSecurity": "[ES] 数据安全",
+  "dataSafetyDesc": "[ES] 还原数据将覆盖当前所有数据，请在还原前确保当前数据已备份",
+  "backupAdvice": "[ES] 备份建议",
+  "backupAdviceDesc": "[ES] 建议定期备份数据到多个位置（本地、云存储等）",
+  "formatInfo": "[ES] 格式说明",
+  "formatInfoDesc": "[ES] 新版ZIP格式包含完整数据和媒体文件，旧版JSON格式仅包含文本数据",
+  "compatibility": "[ES] 兼容性",
+  "compatibilityDesc": "[ES] 支持导入新版ZIP格式和旧版JSON格式的备份文件",
+  "confirmRestore": "[ES] 确认还原",
+  "confirmMergeImport": "[ES] 确认合并导入",
+  "startMerge": "[ES] 开始合并",
+  "selectImportMode": "[ES] 选择导入模式",
+  "continueAction": "[ES] 继续",
+  "backupFailed": "[ES] 备份失败",
+  "restoreFailed": "[ES] 还原失败",
+  "selectFileFailed": "[ES] 选择文件失败",
+  "cannotGetFilePath": "[ES] 无法获取文件路径，请重新选择",
+  "invalidBackupFile": "[ES] 无效的备份文件",
+  "invalidBackupFileDesc": "[ES] 所选文件不是有效的心迹备份文件。\n\n请选择正确的备份文件。",
+  "backupCanceled": "[ES] 备份已取消",
+  "restoreCanceled": "[ES] 还原已取消",
+  "unknownField": "[ES] 未知字段",
+  "confirmRestoreData": "[ES] 确认还原数据",
+  "insightsTitle": "[ES] AI 洞察",
+  "analysisTypeComprehensive": "[ES] 全面分析",
+  "analysisTypeComprehensiveDesc": "[ES] 综合分析您所有笔记，探索主题、情感和思维模式",
+  "analysisTypeEmotional": "[ES] 情感洞察",
+  "analysisTypeEmotionalDesc": "[ES] 分析您的情绪状态和变化趋势",
+  "analysisTypeMindmap": "[ES] 思维导图",
+  "analysisTypeMindmapDesc": "[ES] 构建您思考的结构和思维习惯分析",
+  "analysisTypeGrowth": "[ES] 成长建议",
+  "analysisTypeGrowthDesc": "[ES] 根据您的笔记提供个性化成长和进步建议",
+  "analysisStyleProfessional": "[ES] 专业分析",
+  "analysisStyleProfessionalDesc": "[ES] 客观专业的分析视角",
+  "analysisStyleFriendly": "[ES] 友好导师",
+  "analysisStyleFriendlyDesc": "[ES] 像一位友好的导师给予温和的建议",
+  "analysisStyleHumorous": "[ES] 风趣幽默",
+  "analysisStyleHumorousDesc": "[ES] 以幽默风趣的方式解读您的思考",
+  "analysisStyleLiterary": "[ES] 文学风格",
+  "analysisStyleLiteraryDesc": "[ES] 以优美的文学语言描述您的思考旅程",
+  "selectAnalysisType": "[ES] 选择分析类型",
+  "selectAnalysisStyle": "[ES] 选择分析风格",
+  "customPrompt": "[ES] 自定义提示",
+  "startAnalysis": "[ES] 开始分析",
+  "stopAnalysis": "[ES] 停止",
+  "shareAnalysis": "[ES] 分享",
+  "copyAnalysis": "[ES] 复制",
+  "saveAnalysis": "[ES] 保存",
+  "noNotesToAnalyze": "[ES] 暂无笔记可分析",
+  "noNotesToAnalyzeDesc": "[ES] 请先添加一些笔记，AI 才能为您提供洞察",
+  "aiServiceNotConfigured": "[ES] AI服务未配置",
+  "configureAIService": "[ES] 配置AI服务",
+  "analysisHistory": "[ES] 历史记录",
+  "newAnalysis": "[ES] 新分析",
+  "analyzing": "[ES] 正在分析...",
+  "analysisSaved": "[ES] 分析已保存",
+  "analysisCopied": "[ES] 分析已复制到剪贴板",
+  "noteSaved": "[ES] 笔记已保存",
+  "selectCardColor": "[ES] 选择卡片颜色",
+  "presetColors": "[ES] 预设颜色",
+  "customColor": "[ES] 自定义颜色",
+  "select": "[ES] 选择",
+  "editMetadata": "[ES] 编辑元数据",
+  "noLocationWeatherRecorded": "[ES] 此笔记首次保存时未记录位置和天气信息",
+  "done": "[ES] 完成",
+  "selectTags": "[ES] 选择标签",
+  "noMatchingTags": "[ES] 没有找到匹配的标签",
+  "smartAnalyzeSource": "[ES] 智能分析来源",
+  "smartAnalyzeSourceDesc": "[ES] 分析文本中可能的作者和作品",
+  "polishText": "[ES] 润色文本",
+  "polishTextDesc": "[ES] 优化文本表达，使其更加流畅、优美",
+  "continueWriting": "[ES] 续写内容",
+  "continueWritingDesc": "[ES] 以相同的风格和语调延伸当前内容",
+  "deepAnalysis": "[ES] 深度分析",
+  "deepAnalysisDesc": "[ES] 对笔记内容进行深入分析和解读",
+  "askNote": "[ES] 问 Thoughter",
+  "askNoteDesc": "[ES] ",
+  "pleaseEnterContent": "[ES] 请先输入内容",
+  "analysisResults": "[ES] 分析结果",
+  "confidence": "[ES] 可信度",
+  "noAuthorOrWorkIdentified": "[ES] 未能识别出明确的作者或作品",
+  "applyAnalysisResults": "[ES] 应用分析结果",
+  "parseResultsFailed": "[ES] 解析结果失败",
+  "analysisFailed": "[ES] 分析失败: {error}",
+  "@analysisFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "analysisResultsCopied": "[ES] 分析结果已复制到剪贴板",
+  "noteInfo": "[ES] 笔记信息",
+  "source": "[ES] 来源",
+  "createdAt": "[ES] 创建时间",
+  "content": "[ES] 内容",
+  "periodicReport": "[ES] 周期报告",
+  "aiInsightsTab": "[ES] 智能洞察",
+  "locationServiceNotEnabled": "[ES] 位置服务未启用",
+  "pleaseEnableLocationInSettings": "[ES] 请在系统设置中启用位置服务",
+  "locationServiceEnabledMsg": "[ES] 位置服务已启用",
+  "confirmDelete": "[ES] 确认删除",
+  "confirmDeleteAnalysis": "[ES] 确定要删除这条分析记录吗？",
+  "deleteSuccess": "[ES] 删除成功",
+  "deleteFailed": "[ES] 删除失败: {error}",
+  "@deleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serviceNotInitialized": "[ES] 服务未初始化",
+  "location": "[ES] 位置",
+  "weather": "[ES] 天气",
+  "color": "[ES] 颜色",
+  "noteUpdated": "[ES] 笔记已更新",
+  "openFullEditorFailed": "[ES] 打开全屏编辑器失败: {error}",
+  "@openFullEditorFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailedWithError": "[ES] 保存失败: {error}",
+  "@saveFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "themeSettings": "[ES] 主题设置",
+  "themeStyle": "[ES] 主题风格",
+  "themeMode": "[ES] 主题模式",
+  "themeModeLight": "[ES] 浅色",
+  "themeModeDark": "[ES] 深色",
+  "useCustomThemeColor": "[ES] 使用自定义主题色",
+  "selectThemeColor": "[ES] 选择主题色",
+  "dynamicColor": "[ES] 动态取色",
+  "dynamicColorDesc": "[ES] 从系统提取主题颜色",
+  "customColorEnabledHint": "[ES] 已启用自定义主题色，动态取色功能已暂时禁用",
+  "dynamicColorDisabledHint": "[ES] 未启用动态取色，将使用默认蓝色主题",
+  "themeTools": "[ES] 主题工具",
+  "themeToolsDesc": "[ES] 如果主题颜色显示异常，可以尝试刷新主题",
+  "themeRefreshed": "[ES] 主题已刷新",
+  "refreshTheme": "[ES] 刷新主题",
+  "hitokotoSettings": "[ES] 每日一言设置",
+  "hitokotoTypeSettings": "[ES] 每日一言类型设置",
+  "hitokotoTypeDesc": "[ES] 您可以选择一个或多个\"每日一言\"类型，程序将从您选择的类型中随机抽取内容展示。不同类型代表不同的内容来源和风格。",
+  "dailyQuoteApiNinjasCategorySelection": "[ES] 分类选择",
+  "dailyQuoteApiNinjasCategoryDesc": "[ES] 支持搜索、多选与清空；如果一个也不选，则自动按全局随机处理。",
+  "dailyQuoteApiNinjasCategorySearchHint": "[ES] 搜索分类",
+  "dailyQuoteApiNinjasNoCategoriesFound": "[ES] 没有匹配的分类",
+  "dailyQuoteApiNinjasAllCategoriesUsed": "[ES] 未限制分类，将从全部分类中随机抽取",
+  "dailyQuoteApiNinjasSelectedCount": "[ES] 已选择 {count} 个分类",
+  "@dailyQuoteApiNinjasSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteApiNinjasCategoryWisdom": "[ES] 智慧",
+  "dailyQuoteApiNinjasCategoryPhilosophy": "[ES] 哲学",
+  "dailyQuoteApiNinjasCategoryLife": "[ES] 人生",
+  "dailyQuoteApiNinjasCategoryTruth": "[ES] 真理",
+  "dailyQuoteApiNinjasCategoryInspirational": "[ES] 励志",
+  "dailyQuoteApiNinjasCategoryRelationships": "[ES] 关系",
+  "dailyQuoteApiNinjasCategoryLove": "[ES] 爱情",
+  "dailyQuoteApiNinjasCategoryFaith": "[ES] 信念",
+  "dailyQuoteApiNinjasCategoryHumor": "[ES] 幽默",
+  "dailyQuoteApiNinjasCategorySuccess": "[ES] 成功",
+  "dailyQuoteApiNinjasCategoryCourage": "[ES] 勇气",
+  "dailyQuoteApiNinjasCategoryHappiness": "[ES] 幸福",
+  "dailyQuoteApiNinjasCategoryArt": "[ES] 艺术",
+  "dailyQuoteApiNinjasCategoryWriting": "[ES] 写作",
+  "dailyQuoteApiNinjasCategoryFear": "[ES] 恐惧",
+  "dailyQuoteApiNinjasCategoryNature": "[ES] 自然",
+  "dailyQuoteApiNinjasCategoryTime": "[ES] 时间",
+  "dailyQuoteApiNinjasCategoryFreedom": "[ES] 自由",
+  "dailyQuoteApiNinjasCategoryDeath": "[ES] 死亡",
+  "dailyQuoteApiNinjasCategoryLeadership": "[ES] 领导力",
+  "selectAll": "[ES] 全选",
+  "clearAll": "[ES] 清除全部",
+  "typeSelection": "[ES] 类型选择",
+  "typeSelectionHint": "[ES] 点击选择您喜欢的句子类型",
+  "usageInstructions": "[ES] 使用说明",
+  "hitokotoServiceProvider": "[ES] 一言服务由 Hitokoto 提供",
+  "dailyQuoteServiceProvider": "[ES] 当前内容由 {provider} 提供",
+  "@dailyQuoteServiceProvider": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "hitokotoHelpItem1": "[ES] 至少需要选择一种类型，程序会随机展示选中类型的内容",
+  "hitokotoHelpItem2": "[ES] 选择多种类型可以获得更丰富多样的内容体验",
+  "hitokotoHelpItem3": "[ES] 不同类型代表不同的内容风格和来源平台",
+  "settingsSaved": "[ES] 设置已保存",
+  "tagManagement": "[ES] 标签管理",
+  "newTagName": "[ES] 新标签名称",
+  "enterTagNameHint": "[ES] 输入标签名称（最多50字）",
+  "selectIcon": "[ES] 选择图标",
+  "adding": "[ES] 添加中",
+  "add": "[ES] 添加",
+  "pleaseEnterTagName": "[ES] 请输入标签名称",
+  "tagAddedSuccess": "[ES] 标签添加成功",
+  "addTagFailed": "[ES] 添加标签失败：{error}",
+  "@addTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "iconSelectionHint": "[ES] 可选一个图标或直接输入一个Emoji作为标签图标",
+  "iconSelected": "[ES] 已选择图标：{icon}",
+  "@iconSelected": {
+    "placeholders": {
+      "icon": {
+        "type": "String"
+      }
+    }
+  },
+  "loadTagsFailed": "[ES] 加载标签失败: {error}",
+  "@loadTagsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noTags": "[ES] 暂无标签",
+  "editTag": "[ES] 编辑标签",
+  "tagName": "[ES] 标签名称",
+  "icon": "[ES] 图标",
+  "deleteTagConfirmation": "[ES] 确定要删除标签\"{name}\"吗？相关联的笔记将保留，但不再关联此标签。",
+  "@deleteTagConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tagDeletedSuccess": "[ES] 标签删除成功",
+  "deleteTagFailed": "[ES] 删除标签失败：{error}",
+  "@deleteTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "defaultTag": "[ES] 默认",
+  "systemDefaultTag": "[ES] 系统默认标签",
+  "tapToEditLongPressToDelete": "[ES] 点击编辑，长按删除",
+  "enterEmojiHint": "[ES] 直接输入表情符号...",
+  "useAsIcon": "[ES] 使用 \"{emoji}\" 作为图标",
+  "@useAsIcon": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "systemIcons": "[ES] 系统图标",
+  "storageManagement": "[ES] 存储管理",
+  "clearCache": "[ES] 清理缓存",
+  "clearCacheConfirmTitle": "[ES] 清理缓存",
+  "clearCacheConfirmContent": "[ES] 确定要清理应用缓存吗？\n\n这将清除临时文件、图片缓存等，不会删除您的笔记数据。",
+  "cleanOrphanMedia": "[ES] 清理无用媒体文件",
+  "cleanOrphanMediaConfirmTitle": "[ES] 清理无用媒体文件",
+  "cleanOrphanMediaConfirmContent": "[ES] 这将删除没有被任何笔记引用的媒体文件（图片、视频、音频）。\n\n确定继续吗？",
+  "databaseMaintenance": "[ES] 数据库维护优化",
+  "databaseMaintenanceConfirmTitle": "[ES] 数据库维护优化",
+  "databaseMaintenanceConfirmContent": "[ES] 此操作将对数据库进行优化维护，包括：\n\n• 整理碎片空间\n• 更新统计信息\n• 重建索引\n\n维护过程可能需要几秒到几分钟，具体取决于数据量大小。\n\n确定继续吗？",
+  "startMaintenance": "[ES] 开始维护",
+  "maintenanceInProgress": "[ES] 数据库维护中...",
+  "preparingProgress": "[ES] 准备中...",
+  "maintenanceComplete": "[ES] 维护完成",
+  "maintenanceDuration": "[ES] 耗时: {duration} 秒",
+  "@maintenanceDuration": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "databaseSizeChange": "[ES] 数据库大小: {before} MB → {after} MB",
+  "@databaseSizeChange": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "spaceSavedMb": "[ES] 释放空间: {size} MB",
+  "@spaceSavedMb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "noSpaceSaved": "[ES] 未释放空间（数据库已很紧凑）",
+  "maintenanceFailed": "[ES] 维护失败: {error}",
+  "@maintenanceFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadStorageInfoFailed": "[ES] 加载存储信息失败: {error}",
+  "@loadStorageInfoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cacheCleanedResult": "[ES] 缓存清理完成，释放了 {size}",
+  "@cacheCleanedResult": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheFailed": "[ES] 清理缓存失败: {error}",
+  "@clearCacheFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "orphanFilesCleanedResult": "[ES] {count, plural, =0{没有发现无用文件} other{清理完成，删除了 {count} 个无用文件}}",
+  "@orphanFilesCleanedResult": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noOrphanFilesFound": "[ES] 没有发现无用文件",
+  "cleanupFailed": "[ES] 清理失败: {error}",
+  "@cleanupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "totalStorageUsage": "[ES] 总占用空间",
+  "databaseUsage": "[ES] 数据库占用",
+  "mediaFilesUsage": "[ES] 媒体文件占用",
+  "cacheUsage": "[ES] 缓存占用",
+  "notesDatabase": "[ES] 笔记数据库",
+  "trashStorageUsageHint": "[ES] 回收站中有 {count} 条笔记，仍会占用数据库和附件空间。",
+  "@trashStorageUsageHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "viewTrash": "[ES] 查看回收站",
+  "aiDatabase": "[ES] AI数据库",
+  "logDatabase": "[ES] 日志数据库",
+  "images": "[ES] 图片",
+  "videos": "[ES] 视频",
+  "audios": "[ES] 音频",
+  "tempFilesAndCache": "[ES] 临时文件和缓存",
+  "fileCount": "[ES] {count} 个文件",
+  "@fileCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dataStorageLocation": "[ES] 数据存储位置",
+  "currentDataDirectory": "[ES] 当前数据目录",
+  "custom": "[ES] 自定义",
+  "windowsDataMigration": "[ES] Windows端数据目录迁移",
+  "windowsDataMigrationDesc": "[ES] 将应用数据迁移到其他位置（如D盘），释放系统盘空间",
+  "changeDataDirectory": "[ES] 更改数据目录",
+  "migrating": "[ES] 迁移中...",
+  "confirmDataMigration": "[ES] 确认数据迁移",
+  "migrationTargetPath": "[ES] 即将迁移所有应用数据到：",
+  "migrationWarning": "[ES] ⚠️ 迁移过程可能需要几分钟，期间请勿关闭应用。\n⚠️ 迁移完成后需要重启应用才能生效。",
+  "startMigration": "[ES] 开始迁移",
+  "migratingData": "[ES] 正在迁移数据",
+  "migrationComplete": "[ES] 迁移完成",
+  "migrationCompleteMessage": "[ES] 数据已成功迁移到新目录！\n\n请重启应用以使更改生效。",
+  "migrationFailed": "[ES] 数据迁移失败，请查看日志了解详情",
+  "migrationFailedWithError": "[ES] 迁移失败: {error}",
+  "@migrationFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "selectNewDataDirectory": "[ES] 选择新的数据存储目录",
+  "directoryNotAvailable": "[ES] 所选目录不可用或没有写权限",
+  "selectDirectoryFailed": "[ES] 选择目录失败: {error}",
+  "@selectDirectoryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "migrationTargetSameAsCurrent": "[ES] 新目录与当前数据目录相同",
+  "migrationTargetAncestor": "[ES] 新目录不能是当前数据目录的上级目录",
+  "migrationTargetNested": "[ES] 新目录不能位于当前数据目录内部",
+  "logsViewer": "[ES] 日志查看",
+  "logFilter": "[ES] 日志过滤",
+  "clearLogs": "[ES] 清除日志",
+  "searchLogs": "[ES] 搜索日志...",
+  "noLogs": "[ES] 暂无日志",
+  "loadMoreLogs": "[ES] 加载更多日志",
+  "loadMoreLogsFailed": "[ES] 加载更多日志失败: {error}",
+  "@loadMoreLogsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logDetailsTitle": "[ES] {level} 日志 {source}",
+  "@logDetailsTitle": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "copyAll": "[ES] 复制全部信息",
+  "timestamp": "[ES] 时间: {time}",
+  "@timestamp": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "message": "[ES] 消息:",
+  "errorLabel": "[ES] 错误:",
+  "stackTrace": "[ES] 堆栈跟踪:",
+  "logCopiedToClipboard": "[ES] 日志详情已复制到剪贴板",
+  "containsError": "[ES] 包含错误信息",
+  "sourceFilter": "[ES] 来源: {source}",
+  "@sourceFilter": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "searchFilter": "[ES] 搜索: {query}",
+  "@searchFilter": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "clearAllFilters": "[ES] 清除全部",
+  "logFilterOptions": "[ES] 日志过滤选项",
+  "reset": "[ES] 重置",
+  "filterByLogLevel": "[ES] 按日志级别过滤",
+  "filterBySource": "[ES] 按来源过滤",
+  "enterSourceName": "[ES] 输入日志来源名称...",
+  "apply": "[ES] 应用",
+  "clearLogsTitle": "[ES] 清除日志",
+  "clearLogsQuestion": "[ES] 您想清除哪些日志？",
+  "clearMemoryLogsOnly": "[ES] 仅清除内存日志",
+  "clearAllLogs": "[ES] 清除全部日志",
+  "memoryLogsCleared": "[ES] 内存中的日志已清除",
+  "allLogsCleared": "[ES] 所有日志记录已清除",
+  "logsCount": "[ES] 已显示 {count} 条日志 • 长按日志可复制 • 点击查看详情",
+  "@logsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logPageError": "[ES] 日志页渲染异常:",
+  "networkDiagnostic": "[ES] 网络诊断",
+  "networkConfig": "[ES] 网络配置",
+  "networkDiagnosticSection": "[ES] 网络诊断",
+  "diagnosing": "[ES] 诊断中...",
+  "runNetworkDiagnostic": "[ES] 运行网络诊断",
+  "diagnosticResult": "[ES] 诊断结果: {passed}/{total} 项通过",
+  "@diagnosticResult": {
+    "placeholders": {
+      "passed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "diagnosticFailed": "[ES] 诊断失败: {error}",
+  "@diagnosticFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceDiscovery": "[ES] 设备发现",
+  "startDiscovery": "[ES] 开始发现",
+  "stopDiscovery": "[ES] 停止发现",
+  "sendAnnouncement": "[ES] 发送公告",
+  "deviceAnnouncementSent": "[ES] 设备公告已发送",
+  "startDiscoveryFailed": "[ES] 启动设备发现失败: {error}",
+  "@startDiscoveryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "sendAnnouncementFailed": "[ES] 发送设备公告失败: {error}",
+  "@sendAnnouncementFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "statusRunning": "[ES] 状态: 运行中",
+  "statusStopped": "[ES] 状态: 已停止",
+  "discoveredDevices": "[ES] 发现的设备",
+  "discoveredDevicesCount": "[ES] 发现的设备 ({count})",
+  "@discoveredDevicesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noDevicesFound": "[ES] 暂无发现的设备",
+  "unknownModel": "[ES] 未知型号",
+  "fingerprint": "[ES] 指纹: {fingerprint}",
+  "@fingerprint": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "hitokotoTypeA": "[ES] 动画",
+  "hitokotoTypeB": "[ES] 漫画",
+  "hitokotoTypeC": "[ES] 游戏",
+  "hitokotoTypeD": "[ES] 文学",
+  "hitokotoTypeE": "[ES] 原创",
+  "hitokotoTypeF": "[ES] 来自网络",
+  "hitokotoTypeG": "[ES] 其他",
+  "hitokotoTypeH": "[ES] 影视",
+  "hitokotoTypeI": "[ES] 诗词",
+  "hitokotoTypeJ": "[ES] 网易云",
+  "hitokotoTypeK": "[ES] 哲学",
+  "noNetworkConnection": "[ES] 无网络连接",
+  "unknown": "[ES] 未知",
+  "defaultQuote1": "[ES] 生活不止眼前的苟且，还有诗和远方。",
+  "defaultQuote2": "[ES] 人生就像一场旅行，不必在乎目的地，在乎的是沿途的风景。",
+  "defaultQuote3": "[ES] 不要等待机会，而要创造机会。",
+  "editTagTitle": "[ES] 编辑标签",
+  "tagNameLabel": "[ES] 标签名称",
+  "iconLabel": "[ES] 图标：",
+  "emotion": "[ES] 情感",
+  "thinking": "[ES] 思考",
+  "nature": "[ES] 自然",
+  "mood": "[ES] 心情",
+  "life": "[ES] 生活",
+  "growth": "[ES] 成长",
+  "reward": "[ES] 奖励",
+  "transport": "[ES] 交通",
+  "otherCategory": "[ES] 其他",
+  "logLoadMoreError": "[ES] 加载更多日志失败: {error}",
+  "@logLoadMoreError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logLoadError": "[ES] 加载日志失败",
+  "logSourceFilter": "[ES] 来源: {source}",
+  "@logSourceFilter": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "logSearchFilter": "[ES] 搜索: {query}",
+  "@logSearchFilter": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "logClearAllFilters": "[ES] 清除全部",
+  "logCopyAll": "[ES] 复制全部信息",
+  "logTimestamp": "[ES] 时间: {time}",
+  "@logTimestamp": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "logMessage": "[ES] 消息:",
+  "logError": "[ES] 错误:",
+  "logStackTrace": "[ES] 堆栈跟踪:",
+  "logCopied": "[ES] 日志详情已复制到剪贴板",
+  "logFilterReset": "[ES] 重置",
+  "logFilterByLevel": "[ES] 按日志级别过滤",
+  "logFilterBySource": "[ES] 按来源过滤",
+  "logFilterSourceHint": "[ES] 输入日志来源名称...",
+  "logFilterApply": "[ES] 应用",
+  "logClearTitle": "[ES] 清除日志",
+  "logClearQuestion": "[ES] 您想清除哪些日志？",
+  "logClearMemory": "[ES] 仅清除内存日志",
+  "logClearMemorySuccess": "[ES] 内存中的日志已清除",
+  "logClearAll": "[ES] 清除全部日志",
+  "logClearAllSuccess": "[ES] 所有日志记录已清除",
+  "logClearError": "[ES] 清除日志失败: {error}",
+  "@logClearError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logContainsError": "[ES] 包含错误信息",
+  "httpServerPort": "[ES] HTTP 服务端口: {port}",
+  "@httpServerPort": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "multicastDiscoveryPort": "[ES] 多播发现端口: {port}",
+  "@multicastDiscoveryPort": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "multicastAddress": "[ES] 多播地址: {address}",
+  "@multicastAddress": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "protocolVersion": "[ES] 协议版本: {version}",
+  "@protocolVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "testAnalysis": "[ES] 测试分析",
+  "testAnalysisDesc": "[ES] 这是一个测试分析，用于验证保存功能是否正常工作。",
+  "viewHistory": "[ES] 查看历史",
+  "saveAnalysisError": "[ES] 保存分析失败: {error}",
+  "@saveAnalysisError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "analysisNoteTitle": "[ES] # {title}\n\n{content}",
+  "@analysisNoteTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "aiAnalysisSource": "[ES] AI分析",
+  "thoughtechoAI": "[ES] 心迹AI",
+  "savedAsNote": "[ES] 已保存为新笔记",
+  "saveAsNoteError": "[ES] 保存为笔记失败: {error}",
+  "@saveAsNoteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shareError": "[ES] 分享失败: {error}",
+  "@shareError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "configureApiKey": "[ES] 请先在设置中配置 API Key",
+  "noteListEmptyTitle": "[ES] 还没有笔记，开始记录吧！",
+  "noteSearchEmptyTitle": "[ES] 未找到相关笔记",
+  "noteSearchEmptySubtitle": "[ES] 尝试使用其他关键词或检查拼写",
+  "noteSearchTimeoutMessage": "[ES] 搜索超时，请重试",
+  "searchingLabel": "[ES] 搜索中",
+  "guideAddNoteTagHiddenTitle": "[ES] 隐藏笔记",
+  "guideAddNoteTagHiddenDesc": "[ES] 选择标签可以将笔记设为隐藏",
+  "guideNoteItemMoreShareTitle": "[ES] 卡片分享",
+  "guideNoteItemMoreShareDesc": "[ES] 在此生成卡片分享",
+  "filterAndSortTooltip": "[ES] 筛选笔记或查看隐藏内容",
+  "noNotesFound": "[ES] 没有找到笔记，请先添加一些笔记",
+  "generateInsightsError": "[ES] 生成洞察失败: {error}",
+  "@generateInsightsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serverInternalError": "[ES] 服务器内部错误，可能是模型配置问题",
+  "checkSettings": "[ES] 检查设置",
+  "invalidApiKey": "[ES] API密钥无效，请检查设置",
+  "checkApiKey": "[ES] 检查API密钥",
+  "rateLimitExceeded": "[ES] 请求频率过高，请稍后重试",
+  "tryLater": "[ES] 稍后重试",
+  "generateInsightsSetupError": "[ES] 生成洞察失败 (setup): {error}",
+  "@generateInsightsSetupError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serverInternalErrorConfig": "[ES] 服务器内部错误，请检查AI模型配置是否正确",
+  "invalidApiKeyUpdate": "[ES] API密钥无效，请在设置中更新API密钥",
+  "configureValidApiKey": "[ES] 请先在设置中配置有效的API密钥",
+  "regenerate": "[ES] 重新生成",
+  "viewToolProcess": "[ES] 查看过程",
+  "selectAnalysisMethod": "[ES] 选择分析方式",
+  "advancedOptions": "[ES] 高级选项",
+  "customPromptHint": "[ES] 例如：分析我的笔记中提到的人物和地点",
+  "analysisHistoryRecord": "[ES] 分析历史记录",
+  "viewPreviousAnalysis": "[ES] 查看之前的AI分析结果",
+  "analysisDescriptionTitle": "[ES] 分析说明",
+  "analysisDescription": "[ES] AI 分析会综合您所有的笔记内容，发现潜在的思维模式和规律。可以选择不同的分析风格来获取多样的洞察视角。这可能需要一些时间，请耐心等待。",
+  "aiAnalysisUsageInstructionsTitle": "[ES] AI 分析使用说明",
+  "aiAnalysisUsageInstructions": "[ES] 1. AI可能会生成不准确或误导性内容，请谨慎评估分析结果\n2. 使用此功能时，您的所有笔记信息（包括内容、日期、位置、天气和温度等）都会发送给AI进行全面分析\n3. 分析结果仅供参考，最终解释权归您自己\n4. 建议在网络良好的环境下使用此功能，以获得最佳体验",
+  "copyToClipboard": "[ES] 复制到剪贴板",
+  "analysisResultCopied": "[ES] 分析结果已复制到剪贴板",
+  "saveAsNoteButton": "[ES] 保存为笔记",
+  "saveAnalysisButton": "[ES] 保存分析",
+  "shareInsightsButton": "[ES] 分享洞察",
+  "generateInsightsErrorSnapshot": "[ES] 生成洞察时出错: {error}",
+  "@generateInsightsErrorSnapshot": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "insightsPageEmpty": "[ES] 选择分析类型并点击\"开始分析\"\n洞察将帮助你发现笔记中的思维模式和规律",
+  "customAnalysis": "[ES] 自定义分析",
+  "siliconflow": "[ES] 硅基流动",
+  "openapiCompatible": "[ES] OpenAPI兼容",
+  "verifyingApiKey": "[ES] 正在验证API Key...",
+  "noProviderSelected": "[ES] 未选择服务商",
+  "apiKeyValid": "[ES] API Key有效 ({length}字符)",
+  "@apiKeyValid": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "apiKeyInvalid": "[ES] 未配置有效的API Key",
+  "noAiProviderSelected": "[ES] ❌ 未选择AI服务商",
+  "providerDisabled": "[ES] ⚠️ 服务商已禁用",
+  "apiKeyVerified": "[ES] ✅ API Key有效 (已验证)",
+  "apiKeyStatusCheck": "[ES] API Key状态检查: {status}",
+  "@apiKeyStatusCheck": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "checkFailed": "[ES] 检查失败: {error}",
+  "@checkFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadAiSettingsError": "[ES] 加载AI设置失败: {error}",
+  "@loadAiSettingsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadAiSettingsErrorUser": "[ES] 加载AI设置失败，请检查网络连接或重新启动应用",
+  "fixFormErrors": "[ES] 请修正表单中的错误后再保存",
+  "presetCreated": "[ES] 新预设已创建并保存成功",
+  "saveSettingsError": "[ES] 保存设置失败: {error}",
+  "@saveSettingsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "customConfig": "[ES] 自定义配置",
+  "customConfigHost": "[ES] 自定义-{host}",
+  "@customConfigHost": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "customConfigTimestamp": "[ES] 自定义-{timestamp}",
+  "@customConfigTimestamp": {
+    "placeholders": {
+      "timestamp": {
+        "type": "String"
+      }
+    }
+  },
+  "testingConnection": "[ES] 正在测试连接...",
+  "connectionTestSuccess": "[ES] AI连接测试成功！",
+  "connectionTestFailed": "[ES] 连接测试失败：{error}",
+  "@connectionTestFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiKeyRequired": "[ES] {providerName} 需要配置API密钥",
+  "@apiKeyRequired": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionSuccess": "[ES] 连接成功",
+  "responseFormatError": "[ES] 响应格式异常",
+  "connectionFailed": "[ES] 连接失败：{statusCode}",
+  "@connectionFailed": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
+  "switchedTo": "[ES] 已切换到 {providerName}",
+  "@switchedTo": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "renamePreset": "[ES] 重命名预设",
+  "presetName": "[ES] 预设名称",
+  "presetRenamed": "[ES] 预设已重命名为 \"{result}\"",
+  "@presetRenamed": {
+    "placeholders": {
+      "result": {
+        "type": "String"
+      }
+    }
+  },
+  "deletePreset": "[ES] 删除预设",
+  "deletePresetConfirm": "[ES] 确定要删除预设 \"{providerName}\" 吗？此操作无法撤销。",
+  "@deletePresetConfirm": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "presetDeleted": "[ES] 预设 \"{providerName}\" 已删除",
+  "@presetDeleted": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderSelection": "[ES] AI 服务商选择",
+  "currentProvider": "[ES] 当前: {providerName}",
+  "@currentProvider": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "apiUrlLabel": "[ES] API: {url}",
+  "@apiUrlLabel": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "modelLabel": "[ES] 模型: {model}",
+  "@modelLabel": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "apiKeyLabel": "[ES] API Key: {status}",
+  "@apiKeyLabel": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "modelNotConfigured": "[ES] 未配置",
+  "checkApiKeyStatus": "[ES] 检查API Key状态",
+  "savedPresets": "[ES] 已保存的预设 ({length}):",
+  "@savedPresets": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "noPresetsSaved": "[ES] 还没有保存的预设。配置完API信息后点击\"保存设置\"来创建第一个预设。",
+  "rename": "[ES] 重命名",
+  "testConnectionButton": "[ES] 测试连接",
+  "reportInsightsUseAi": "[ES] 周期报告洞察使用AI",
+  "reportInsightsUseAiDesc": "[ES] 打开后进入报告页自动生成“诗意洞察”，关闭则使用本地生成",
+  "aiSettingsTitle": "[ES] AI 设置",
+  "quickPresets": "[ES] 快速预设",
+  "selectPreset": "[ES] 选择服务商预设",
+  "selectPresetHint": "[ES] 或手动配置下方连接参数",
+  "connectionConfig": "[ES] 连接配置 ({providerName})",
+  "@connectionConfig": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "apiUrlField": "[ES] API URL",
+  "apiUrlHint": "[ES] 例如 https://api.xxx.com/v1",
+  "apiUrlHelper": "[ES] 填服务商文档给的地址即可，会自动补全 /chat/completions",
+  "apiKeyField": "[ES] API Key",
+  "apiKeyHint": "[ES] 服务所需的密钥（可留空）",
+  "show": "[ES] 显示",
+  "hide": "[ES] 隐藏",
+  "modelAndAdvanced": "[ES] 模型与高级",
+  "modelNameField": "[ES] 模型名称",
+  "modelNameHint": "[ES] 请输入模型名称",
+  "modelNameHintDefault": "[ES] 使用默认模型或自定义",
+  "hostOverrideField": "[ES] 主机覆盖 (Host Override)",
+  "hostOverrideHint": "[ES] 可选，用于代理/反向代理场景",
+  "createNewPreset": "[ES] 创建新预设",
+  "aiCardGeneration": "[ES] AI 卡片生成",
+  "aiCardGenerationDesc": "[ES] 为笔记生成 SVG 分享卡片：开启=使用 AI 智能设计，关闭=使用内置模板（功能仍可用）",
+  "aiCardGenerationTip": "[ES] 提示：建议使用支持 ≥4K tokens、具备良好指令遵循与文本→SVG 生成能力的中大型模型。",
+  "aiEnhancedGeneration": "[ES] AI 增强生成",
+  "aiEnhancedGenerationDesc": "[ES] 关闭后改用本地模板，不再调用模型",
+  "todayThoughtsUseAi": "[ES] 今日思考使用AI",
+  "todayThoughtsUseAiDesc": "[ES] 打开后将使用AI生成今日思考提示，关闭则使用本地生成",
+  "apiUrlRequired": "[ES] API URL不能为空",
+  "invalidUrl": "[ES] 请输入有效的HTTP/HTTPS URL",
+  "fieldRequired": "[ES] 此字段不能为空",
+  "mediaManagementTitle": "[ES] 媒体文件管理",
+  "loadStatsError": "[ES] 加载统计信息失败: {error}",
+  "@loadStatsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "operationCompleted": "[ES] {operation} 完成",
+  "@operationCompleted": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      }
+    }
+  },
+  "loadStatsFailed": "[ES] 无法加载统计信息",
+  "mediaFileStats": "[ES] 媒体文件统计",
+  "totalFiles": "[ES] 总文件数",
+  "referencedFiles": "[ES] 被引用文件数",
+  "orphanFiles": "[ES] 孤儿文件数",
+  "totalReferences": "[ES] 总引用数",
+  "totalSize": "[ES] 总大小",
+  "imagesSize": "[ES] 图片大小",
+  "videosSize": "[ES] 视频大小",
+  "audiosSize": "[ES] 音频大小",
+  "tempFiles": "[ES] 临时文件",
+  "tempFilesCount": "[ES] 临时文件数",
+  "expiredFilesCount": "[ES] 过期文件数",
+  "tempFilesSize": "[ES] 临时文件大小",
+  "cleanupOperations": "[ES] 清理操作",
+  "cleanupExpiredTempFiles": "[ES] 清理过期临时文件",
+  "cleanupExpiredTempFilesDesc": "[ES] 删除超过24小时的临时文件",
+  "cleanupOrphanFiles": "[ES] 清理孤儿文件",
+  "cleanupOrphanFilesDesc": "[ES] 删除没有被任何笔记引用的媒体文件",
+  "fullCleanup": "[ES] 完整清理",
+  "fullCleanupDesc": "[ES] 清理所有临时文件和孤儿文件",
+  "migrateExistingNotes": "[ES] 迁移现有笔记",
+  "migrateExistingNotesDesc": "[ES] 重新建立现有笔记的媒体文件引用关系",
+  "verifyFileIntegrity": "[ES] 验证文件完整性",
+  "verifyFileIntegrityDesc": "[ES] 检查媒体文件引用的完整性",
+  "operationResult": "[ES] {operation} 结果",
+  "@operationResult": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      }
+    }
+  },
+  "cleanedFilesCount": "[ES] 清理文件数",
+  "spaceSavedMbLabel": "[ES] 节省空间 (MB)",
+  "migratedQuotesCount": "[ES] 迁移笔记数",
+  "orphanFilesDetected": "[ES] 检测到孤儿文件",
+  "checkedReferencesCount": "[ES] 检查引用数",
+  "missingFilesCount": "[ES] 缺失文件数",
+  "fileIntegrity": "[ES] 文件完整性",
+  "normal": "[ES] 正常",
+  "abnormal": "[ES] 异常",
+  "yourThoughtTrack": "[ES] 你的思想轨迹",
+  "tapToExplore": "[ES] 点击屏幕开始探索",
+  "annualOverview": "[ES] 年度概览",
+  "noNotesInPeriod": "[ES] 这个时段还没有笔记",
+  "startRecording": "[ES] 开始记录你的想法吧",
+  "totalRecorded": "[ES] 总共记录",
+  "notesUnit": "[ES] 篇笔记",
+  "writingDays": "[ES] 写作天数",
+  "daysUnit": "[ES] 天",
+  "longestStreak": "[ES] 最长连续",
+  "tagsUsed": "[ES] 使用标签",
+  "tagsUnit": "[ES] 个",
+  "writingHabits": "[ES] 写作习惯",
+  "noWritingHabits": "[ES] 暂无写作习惯数据",
+  "mostActiveTime": "[ES] 最活跃时间",
+  "noData": "[ES] 暂无数据",
+  "favoriteDay": "[ES] 最喜欢的日子",
+  "avgWordsPerNote": "[ES] 平均每篇字数",
+  "wordsUnit": "[ES]  字",
+  "longestNote": "[ES] 最长的一篇",
+  "mostCommonPeriod": "[ES] 最常见时间段",
+  "mostCommonWeather": "[ES] 最常见天气",
+  "mostUsedTag": "[ES] 最常用标签",
+  "tagAnalysis": "[ES] 标签分析",
+  "mostUsedTags": "[ES] 最常用的标签",
+  "usedXTimes": "[ES] 使用了 {count} 次 ({percentage}%)",
+  "@usedXTimes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "percentage": {
+        "type": "String"
+      }
+    }
+  },
+  "noTagsUsed": "[ES] 还没有使用过标签",
+  "timeline": "[ES] 时间轴",
+  "noRecordsInPeriod": "[ES] 这个时段还没有记录",
+  "monthX": "[ES] {month}月",
+  "@monthX": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "notesCount": "[ES] {count}篇",
+  "@notesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deepInsights": "[ES] 深度洞察",
+  "thinkingDensity": "[ES] 思考密度",
+  "deepThinker": "[ES] 你喜欢深度思考，每篇笔记都很详细。这样的习惯帮助你更好地整理思路。",
+  "conciseThinker": "[ES] 你的思考简洁而有力，善于抓住要点。这是很好的总结能力。",
+  "quickThinker": "[ES] 你习惯记录简短的想法，这样能快速捕捉灵感，是很好的记录习惯。",
+  "growthTrack": "[ES] 成长轨迹",
+  "notStarted": "[ES] 还没有开始记录,现在就是最好的时机。",
+  "increasingFrequency": "[ES] 你的记录频率越来越高了！从年初到年末，思考和记录的习惯越来越好。",
+  "decreasingFrequency": "[ES] 年初的记录很活跃，也许可以重新找回那时的写作热情。",
+  "stableRhythm": "[ES] 你保持了稳定的记录节奏，这种坚持很难得！",
+  "beginningOfYear": "[ES] 今年是记录的开始，期待看到更多的思考轨迹。",
+  "writingRhythm": "[ES] 写作节奏",
+  "goodRhythm": "[ES] 你有很好的写作节奏，最长连续记录了{longestStreak}天！坚持就是力量。",
+  "@goodRhythm": {
+    "placeholders": {
+      "longestStreak": {
+        "type": "int"
+      }
+    }
+  },
+  "decentRhythm": "[ES] 你已经建立了不错的记录习惯，继续保持这个节奏。",
+  "startRhythm": "[ES] 记录更多是一个习惯，可以尝试每天记录一些小想法。",
+  "generatingInsights": "[ES] 正在生成本期洞察…",
+  "noInsights": "[ES] 暂无洞察",
+  "thankYou": "[ES] 感谢你的坚持",
+  "everyThoughtCounts": "[ES] 每一个想法都值得被记录\n每一次记录都是成长的足迹",
+  "continueRecording": "[ES] 继续记录 {year}",
+  "@continueRecording": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "reportCopied": "[ES] 年度报告已复制到剪贴板",
+  "monday": "[ES] 星期一",
+  "tuesday": "[ES] 星期二",
+  "wednesday": "[ES] 星期三",
+  "thursday": "[ES] 星期四",
+  "friday": "[ES] 星期五",
+  "saturday": "[ES] 星期六",
+  "sunday": "[ES] 星期日",
+  "dayOfMonth": "[ES] {day}日",
+  "@dayOfMonth": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "noteDate": "[ES] {month}{day}",
+  "@noteDate": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "noteLocation": "[ES] 于 {location}",
+  "@noteLocation": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "noteWeather": "[ES] （天气：{weather}）",
+  "@noteWeather": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "annualReportForYear": "[ES] {year}年度报告",
+  "@annualReportForYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "annualReportTitle": "[ES] ThoughtEcho 年度报告",
+  "pageIndicator": "[ES] {currentPage} / {totalPages}",
+  "@pageIndicator": {
+    "placeholders": {
+      "currentPage": {
+        "type": "int"
+      },
+      "totalPages": {
+        "type": "int"
+      }
+    }
+  },
+  "shareAnnualReportContent": "[ES] 我的{year}年心迹回顾\n\n📝 记录了 {totalQuotes} 条心迹\n💭 见证了一年的成长与思考\n\n在ThoughtEcho中记录生活的点点滴滴\n#心迹 #年度回顾 #ThoughtEcho",
+  "@shareAnnualReportContent": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      },
+      "totalQuotes": {
+        "type": "int"
+      }
+    }
+  },
+  "dataOverview": "[ES] 数据概览",
+  "featuredCards": "[ES] 精选卡片",
+  "timeRange": "[ES] 时间范围",
+  "selectDate": "[ES] 选择具体日期",
+  "thisWeek": "[ES] 本周",
+  "thisMonth": "[ES] 本月",
+  "thisYear": "[ES] 本年",
+  "noteCount": "[ES] 笔记数量",
+  "notesUnitPlain": "[ES] 条",
+  "totalWordCount": "[ES] 总字数",
+  "wordsUnitPlain": "[ES] 字",
+  "avgWords": "[ES] 平均字数",
+  "wordsPerNote": "[ES] 字/条",
+  "activeDays": "[ES] 活跃天数",
+  "daysUnitPlain": "[ES] 天",
+  "commonPeriod": "[ES] 常见时段",
+  "noDataYet": "[ES] 暂无",
+  "commonWeather": "[ES] 常见天气",
+  "commonTag": "[ES] 常用标签",
+  "generatingInsightsForPeriod": "[ES] 正在生成本{period}洞察…",
+  "@generatingInsightsForPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "noFavoritesInPeriod": "[ES] 本周期暂无喜爱记录，去给喜欢的笔记点个心吧！",
+  "mostFavoritedInPeriod": "[ES] 本周期珍藏数最多",
+  "recentNotes": "[ES] 最近笔记",
+  "noNotesInPeriodForPeriod": "[ES] 本{period}暂无笔记",
+  "@noNotesInPeriodForPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "startRecordingThoughts": "[ES] 开始记录您的思考吧",
+  "totalCards": "[ES] 共 {count} 张卡片",
+  "@totalCards": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cardSelected": "[ES] 已选中第{index}张",
+  "@cardSelected": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "generateCards": "[ES] 生成卡片",
+  "aiCardGenerationDisabledLog": "[ES] AI卡片生成已关闭，使用本地模板生成",
+  "missingGalleryPermission": "[ES] 没有相册访问权限，请在设置中开启权限",
+  "desktopGalleryNotSupported": "[ES] 桌面端暂不支持直接保存到相册，建议使用分享功能",
+  "cardFileNamePrefix": "[ES] 心迹_Card",
+  "aiProviderConfigMissing": "[ES] 未找到可用的AI提供商配置",
+  "aiSvgEmpty": "[ES] AI返回了空的SVG内容",
+  "unsafeSvgContent": "[ES] SVG内容包含不安全的元素",
+  "invalidSvgContent": "[ES] AI返回的内容不包含有效的SVG代码",
+  "noFeaturedCards": "[ES] 暂无精选卡片",
+  "featuredCardGenerationTip": "[ES] 可根据笔记内容生成精美分享卡片：开启AI=智能设计，关闭AI=使用内置模板",
+  "cardFromReport": "[ES] 来自心迹周期报告的精美卡片",
+  "cardSharePrefix": "[ES] 来自心迹的精美卡片\n\n",
+  "loadDataFailed": "[ES] 加载数据失败: {error}",
+  "@loadDataFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "thisPeriod": "[ES] 本{period}",
+  "@thisPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "periodWeek": "[ES] 周",
+  "periodMonth": "[ES] 月",
+  "periodYear": "[ES] 年",
+  "periodDuring": "[ES] 期间",
+  "dateRange": "[ES] {startDate} - {endDate}",
+  "@dateRange": {
+    "placeholders": {
+      "startDate": {
+        "type": "String"
+      },
+      "endDate": {
+        "type": "String"
+      }
+    }
+  },
+  "yearMonth": "[ES] {year}年{month}月",
+  "@yearMonth": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      },
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "yearOnly": "[ES] {year}年",
+  "@yearOnly": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "detectedAIJSONFormat": "[ES] ⚠️ 检测到AI返回了JSON数据格式\n\n这表明AI模型可能误解了请求，返回了数据分析结果而非HTML报告。\n\n返回的内容：\n{json}\n\n这个问题可能的原因：\n• AI混淆了年度报告生成和内容分析功能\n• 提示词需要进一步优化\n• 模型版本或配置问题\n\n建议解决方案：\n1. 重新生成报告（AI可能会修正错误）\n2. 检查AI设置中的模型配置\n3. 尝试使用原生Flutter报告功能\n4. 更新AI提示词配置\n\n如需技术支持，请保存此错误信息并联系开发者。",
+  "@detectedAIJSONFormat": {
+    "placeholders": {
+      "json": {
+        "type": "String"
+      }
+    }
+  },
+  "detectedAbnormalFormat": "[ES] ⚠️ 检测到异常数据格式\n\nAI返回了无法正常解析的JSON数据，这可能是由于：\n• 网络传输问题\n• AI服务异常\n• 数据格式错误\n\n原始内容：\n{content}\n\n建议重新生成报告或使用原生报告功能。",
+  "@detectedAbnormalFormat": {
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "aiGeneratedTextContent": "[ES] 📄 AI生成的文本内容\n\n{content}\n\n💡 提示：AI返回了纯文本格式的总结而非HTML报告。\n这可能是因为模型理解了内容但没有按照HTML格式输出。\n\n完整内容可以在浏览器中查看，系统会自动包装为HTML格式。",
+  "@aiGeneratedTextContent": {
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "htmlReportCopiedSteps": "[ES] HTML报告内容已复制到剪贴板。请按以下步骤操作：",
+  "browserInstructionsStep1": "[ES] 1. 打开浏览器（Chrome/Safari等）",
+  "browserInstructionsStep2": "[ES] 2. 新建空白页面或新标签页",
+  "browserInstructionsStep3": "[ES] 3. 在地址栏输入：data:text/html,",
+  "browserInstructionsStep4": "[ES] 4. 粘贴复制的内容",
+  "browserInstructionsStep5": "[ES] 5. 回车查看报告",
+  "desktopInstructionsStep1": "[ES] 1. 新建文本文件，粘贴内容",
+  "desktopInstructionsStep2": "[ES] 2. 将文件保存为 .html 格式",
+  "desktopInstructionsStep3": "[ES] 3. 双击文件在浏览器中打开",
+  "annualReportHtmlTitle": "[ES] 心迹 {year} 年度报告",
+  "generationTimeLabel": "[ES] 生成时间: {time}",
+  "noteInfoTitle": "[ES] 笔记信息",
+  "meUser": "[ES] 我",
+  "aiAssistantUser": "[ES] Thoughter",
+  "aiAssistantWelcome": "[ES] 你好！我是 Thoughter，你的 AI 笔记助手。你可以问我关于这篇笔记的任何问题，我会基于笔记内容为你提供深度解答。\n\n💡 你可以试试这些问题：\n\n- 这篇笔记的核心思想是什么？\n- 从这篇笔记中能得到什么启发？\n- 如何将这篇笔记的想法应用到实际生活中？\n- 这篇笔记反映了什么样的思维模式？",
+  "thinkingInProgress": "[ES] 正在思考中...",
+  "aiMisunderstoodQuestion": "[ES] 抱歉，我没能理解这个问题。请尝试换个方式问我。",
+  "aiResponseError": "[ES] 抱歉，回答时出现了错误：{error}",
+  "agentErrorNoProvider": "[ES] 请选择 AI 服务商后重试。",
+  "agentErrorMissingApiKey": "[ES] 请先为 {providerName} 配置 API 密钥，然后重试。",
+  "@agentErrorMissingApiKey": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentErrorUnsupportedProvider": "[ES] 当前 AI 服务商不支持 Agent 功能。请更换服务商后重试。",
+  "agentErrorTimeout": "[ES] 请求超时，请检查网络后重试。",
+  "agentErrorCancelled": "[ES] 已停止本次请求。",
+  "agentErrorGeneric": "[ES] 暂时无法完成请求，请稍后重试。",
+  "apiKeyDiagnosticsTitle": "[ES] API密钥诊断",
+  "apiKeyDiagnosticsTool": "[ES] API密钥诊断工具",
+  "apiKeyDiagnosticsDesc": "[ES] 此工具将检查API密钥的存储和获取情况，帮助诊断401认证错误。",
+  "runDiagnostics": "[ES] 运行诊断",
+  "diagnosticResultLabel": "[ES] 诊断结果:",
+  "diagnosticReportHeader": "[ES] === API密钥诊断报告 ===",
+  "diagnosticReportTime": "[ES] 时间: {time}",
+  "diagnosticMultiProviderCheck": "[ES] 1. 多供应商配置...",
+  "diagnosticCurrentProvider": "[ES]    - 当前供应商: {name}",
+  "diagnosticAvailableProviders": "[ES]    - 可用供应商数量: {count}",
+  "diagnosticEnabledProviders": "[ES]    - 已启用供应商: {count}",
+  "diagnosticProviderDetails": "[ES] 2. 当前供应商详情...",
+  "diagnosticProviderId": "[ES]    - ID: {id}",
+  "diagnosticProviderName": "[ES]    - 名称: {name}",
+  "diagnosticProviderUrl": "[ES]    - API URL: {url}",
+  "diagnosticProviderModel": "[ES]    - 模型: {model}",
+  "diagnosticProviderEnabled": "[ES]    - 已启用: {status}",
+  "diagnosticApiKeyCheck": "[ES] 3. API密钥检查...",
+  "diagnosticApiKeyInSettings": "[ES]    - 设置中有密钥: {status}",
+  "diagnosticApiKeyLength": "[ES]    - 设置中密钥长度: {length}",
+  "diagnosticApiKeyPrefix": "[ES]    - 设置中密钥前缀: {prefix}",
+  "diagnosticSecureApiKeyExists": "[ES]    - 安全存储中有密钥: {status}",
+  "diagnosticSecureApiKeyLength": "[ES]    - 安全存储密钥长度: {length}",
+  "diagnosticSecureApiKeyPrefix": "[ES]    - 安全存储密钥前缀: {prefix}",
+  "diagnosticApiKeyValidation": "[ES] 4. 密钥验证...",
+  "diagnosticAsyncValidation": "[ES]    - 异步验证: {status}",
+  "diagnosticFormatValidation": "[ES]    - 格式验证: {status}",
+  "diagnosticErrorNoProvider": "[ES] 2. 错误: 未选择当前供应商",
+  "diagnosticAllProvidersStatus": "[ES] 5. 所有供应商状态...",
+  "diagnosticProviderStatusItem": "[ES]    - {name}: {keyStatus} {enabledStatus}",
+  "diagnosticSuggestions": "[ES] 6. 建议...",
+  "diagnosticSuggestionSelectProvider": "[ES]    - 请选择一个AI服务商",
+  "diagnosticSuggestionEnableProvider": "[ES]    - 请启用当前选择的AI服务商",
+  "diagnosticSuggestionConfigureKey": "[ES]    - 请为 {name} 配置有效的API密钥",
+  "diagnosticSuggestionNormal": "[ES]    - ✓ API密钥配置正常",
+  "diagnosticComplete": "[ES] === 诊断完成 ===",
+  "diagnosticError": "[ES] 诊断过程中发生错误: {error}",
+  "passStatus": "[ES] 通过",
+  "failStatus": "[ES] 失败",
+  "yesStatus": "[ES] 是",
+  "noStatus": "[ES] 否",
+  "notSelectedStatus": "[ES] 未选择",
+  "importInstructions": "[ES] 导入说明",
+  "selectingFile": "[ES] 正在选择文件...",
+  "validatingFile": "[ES] 正在验证文件...",
+  "checkingFileCompatibility": "[ES] 正在检查文件兼容性...",
+  "importingFile": "[ES] 正在导入文件...",
+  "importComplete": "[ES] 导入完成！",
+  "fileSaveFailed": "[ES] 文件保存失败",
+  "unsupportedMediaType": "[ES] 不支持的媒体类型",
+  "unsupportedMediaTypeWithName": "[ES] 不支持的媒体类型: {mediaType}",
+  "@unsupportedMediaTypeWithName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "fileNotExistOrMoved": "[ES] 选择的文件不存在或已被移动删除\n路径: {path}",
+  "@fileNotExistOrMoved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedFileEmpty": "[ES] 选择的文件为空\n路径: {path}",
+  "@selectedFileEmpty": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "unsupportedFileFormat": "[ES] 不支持的文件格式: .{extension}\n支持的格式: {formats}",
+  "@unsupportedFileFormat": {
+    "placeholders": {
+      "extension": {
+        "type": "String"
+      },
+      "formats": {
+        "type": "String"
+      }
+    }
+  },
+  "fileUnreadable": "[ES] 文件无法读取，可能原因：\n• 文件已损坏\n• 文件被其他程序占用\n• 权限不足\n请检查文件状态后重试",
+  "mediaTypeNoCameraImport": "[ES] {mediaType}不支持相机导入",
+  "@mediaTypeNoCameraImport": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "processingMedia": "[ES] 正在处理{mediaType}...",
+  "@processingMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadingFile": "[ES] 正在下载文件...",
+  "downloadComplete": "[ES] 下载完成！",
+  "connectingToServer": "[ES] 正在连接服务器...",
+  "savingFile": "[ES] 正在保存文件...",
+  "waitingForAIContent": "[ES] 正在等待 AI 生成内容...",
+  "occurredError": "[ES] [发生错误: {error}]",
+  "cancelLabel": "[ES] 取消",
+  "selectFromGallery": "[ES] 从相册选择{mediaType}",
+  "@selectFromGallery": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "selectFromFilesWithTypeName": "[ES] 从文件选择{mediaType}",
+  "@selectFromFilesWithTypeName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "importTipsImage": "[ES] • 支持 JPG、PNG、GIF、WebP 等格式\n• 直接保存到应用媒体库，减少重复复制\n• 使用内存保护技术，支持超大图片\n• 未保存笔记退出将自动清理未引用文件",
+  "importTipsVideo": "[ES] • 支持 MP4、MOV、AVI、MKV 等格式\n• 直接保存到应用媒体库，减少重复复制\n• 流式处理技术，防止内存溢出\n• 未保存笔记退出将自动清理未引用文件",
+  "importTipsAudio": "[ES] • 支持 MP3、WAV、AAC、M4A 等格式\n• 直接保存到应用媒体库，减少重复复制\n• 优化存储，快速加载\n• 未保存笔记退出将自动清理未引用文件",
+  "importTipsDefault": "[ES] • 支持多种媒体格式\n• 直接保存到应用媒体库\n• 内存安全保护\n• 未保存笔记退出将自动清理未引用文件",
+  "viewNoteInfo": "[ES] 查看笔记信息",
+  "contentLengthLabel": "[ES] 内容长度：{length}字符",
+  "htmlFormatLabel": "[ES] HTML格式：{status}",
+  "jsonFormatLabel": "[ES] JSON格式：{status}",
+  "containsHtmlTagsLabel": "[ES] 包含HTML标签：{status}",
+  "first100CharsLabel": "[ES] 前100字符：",
+  "testFailedEmptyContent": "[ES] 测试失败：AI返回了空内容",
+  "formattedDate": "[ES] {month}月{day}日",
+  "@formattedDate": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "noteMetaWithLocation": "[ES] 【{date}·{location}】{content}",
+  "@noteMetaWithLocation": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "location": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "noteMeta": "[ES] 【{date}】{content}",
+  "@noteMeta": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherInfo": "[ES] （天气：{weather}）",
+  "@weatherInfo": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "noteAttribution": "[ES] （署名：{source}）",
+  "@noteAttribution": {
+    "description": "喂给 AI 的笔记内容里，标出这条笔记填的作者/出处，用于区分摘录与原创署名",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderOpenAI": "[ES] OpenAI",
+  "aiProviderOpenRouter": "[ES] OpenRouter",
+  "aiProviderDeepSeek": "[ES] DeepSeek",
+  "aiProviderAnthropic": "[ES] Anthropic (Claude)",
+  "aiProviderOllama": "[ES] Ollama",
+  "aiProviderOllamaCloud": "[ES] Ollama 云端",
+  "aiProviderLMStudio": "[ES] LMStudio",
+  "apiKeyStatusEmpty": "[ES] 空",
+  "apiKeyStatusRedacted": "[ES] [REDACTED]",
+  "apiKeyStatusNotEmpty": "[ES] {length}字符",
+  "@apiKeyStatusNotEmpty": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "noProvider": "[ES] 无",
+  "connectionTestSystemMessage": "[ES] 你是 Thoughter，一个 AI 助手。请简单回复\"连接测试成功\"。",
+  "connectionTestUserMessage": "[ES] 测试连接",
+  "apiKeySavedForProvider": "[ES] 已保存 {providerName} 的API密钥到安全存储",
+  "@apiKeySavedForProvider": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "generatingAiReport": "[ES] 正在生成AI年度报告...",
+  "includeMediaFilesHint": "[ES] 勾选后将备份图片、音频等媒体文件（文件更大但更完整）",
+  "overwriteImport": "[ES] 覆盖导入 (清空现有数据)",
+  "overwriteImportDesc": "[ES] 删除当前所有数据，以备份内容替换",
+  "mergeImport": "[ES] 合并导入 (LWW策略)",
+  "mergeImportDesc": "[ES] 保留现有数据，与备份数据按更新时间合并",
+  "restoreSuccess": "[ES] 数据还原成功！所有数据已更新。",
+  "mergeImportHint": "[ES] 此操作将保留当前数据，并与备份数据进行合并：",
+  "mergeImportReversible": "[ES] 此操作可逆：可再次导入覆盖备份或继续合并。",
+  "confirmRestoreBtn": "[ES] 确认还原",
+  "favoriteCountWithNum": "[ES] 已收藏 ({count})",
+  "@favoriteCountWithNum": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "analysisRecordDeleted": "[ES] 分析记录已删除",
+  "loadFailed": "[ES] 加载失败: {error}",
+  "@loadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadFailedSimple": "[ES] 加载失败",
+  "loadNoteFailed": "[ES] 加载笔记失败",
+  "queryTimeoutShort": "[ES] 查询超时",
+  "queryTimeoutRetry": "[ES] 查询超时，请重试",
+  "databaseQueryError": "[ES] 数据库查询出错",
+  "deleteConfirmTitle": "[ES] 删除确认",
+  "deleteRecordConfirm": "[ES] 确定要删除这条分析记录吗？",
+  "confirmDeleteAll": "[ES] 确认删除",
+  "deleteAllRecordsConfirm": "[ES] 确定要删除所有分析记录吗？此操作不可恢复。",
+  "allRecordsDeleted": "[ES] 所有记录已删除",
+  "selectAnnualReportType": "[ES] 选择年度报告类型",
+  "selectReportTypeHint": "[ES] 请选择要生成的年度报告类型：",
+  "unknownTag": "[ES] 未知标签",
+  "morning": "[ES] 早晨",
+  "forenoon": "[ES] 上午",
+  "afternoon": "[ES] 下午",
+  "evening": "[ES] 傍晚",
+  "night": "[ES] 夜晚",
+  "learning": "[ES] 学习",
+  "progress": "[ES] 进步",
+  "happiness": "[ES] 快乐",
+  "gratitude": "[ES] 感谢",
+  "harvest": "[ES] 收获",
+  "breakthrough": "[ES] 突破",
+  "hope": "[ES] 希望",
+  "backupFormatZip": "[ES] 将创建ZIP格式的备份文件，包含所有笔记、设置和媒体文件",
+  "backupFormatJson": "[ES] 将创建JSON格式的备份文件，包含所有笔记和设置",
+  "supportedBackupFormats": "[ES] 支持新版ZIP格式和旧版JSON格式的备份文件",
+  "restoringData": "[ES] 正在还原数据... {current}/{total}",
+  "@restoringData": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreFailedGeneric": "[ES] 无法完成数据还原：{error}",
+  "@restoreFailedGeneric": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "restoreFailedOutOfMemory": "[ES] 还原失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 重启应用后再试\n• 检查备份文件大小是否过大",
+  "restoreFailedNoSpace": "[ES] 还原失败：存储空间不足\n\n请清理设备存储空间后重试。",
+  "restoreFailedPermission": "[ES] 还原失败：权限不足\n\n请检查应用的存储权限设置。",
+  "restoreCancelled": "[ES] 还原已取消",
+  "restoreFailedCorrupt": "[ES] 还原失败：备份文件损坏或格式不正确\n\n请检查备份文件是否完整。",
+  "restoreConfirmDialogTitle": "[ES] 确认还原数据",
+  "restoreConfirmDialogDesc": "[ES] 此操作将：",
+  "restoreConfirmDialogItem1": "[ES] • 删除当前设备上的所有笔记和设置",
+  "restoreConfirmDialogItem2": "[ES] • 用备份文件中的数据替换",
+  "restoreConfirmDialogItem3": "[ES] • 此操作无法撤销",
+  "restoreConfirmDialogWarning": "[ES] 请确保您已经备份了当前的重要数据。",
+  "mergeConfirmDialogTitle": "[ES] 确认合并导入",
+  "mergeConfirmDialogDesc": "[ES] 此操作将保留当前数据，并与备份数据进行合并：",
+  "mergeConfirmDialogItem1": "[ES] • 相同ID的笔记按「最后写入 wins」保留较新版本",
+  "mergeConfirmDialogItem2": "[ES] • 不同ID的笔记全部保留",
+  "mergeConfirmDialogItem3": "[ES] • 设置与AI分析数据合并追加",
+  "mergeConfirmDialogReversible": "[ES] 此操作可逆：可再次导入覆盖备份或继续合并。",
+  "tagSettingsDescription": "[ES] 创建和管理您的个人标签体系",
+  "addNewTag": "[ES] 添加新标签",
+  "tagNameHint": "[ES] 请输入标签名称",
+  "loadingTags": "[ES] 加载标签中...",
+  "loadTagsError": "[ES] 加载标签失败",
+  "noTagsHint": "[ES] 创建您的第一个标签来开始整理思想",
+  "myTags": "[ES] 我的标签",
+  "confirmDeleteTag": "[ES] 确认删除",
+  "deleteTagDialogContent": "[ES] 确定要删除标签\"{name}\"吗？\n\n删除后，使用此标签的笔记将不再显示该标签。",
+  "@deleteTagDialogContent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "enterEmojiDirectly": "[ES] 直接输入表情符号...",
+  "useAsTagIcon": "[ES] 使用 \"{emoji}\" 作为图标",
+  "@useAsTagIcon": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "noteSync": "[ES] 笔记同步",
+  "refreshDeviceList": "[ES] 刷新设备列表",
+  "initializingService": "[ES] 正在启动...",
+  "startFailed": "[ES] 启动失败: {error}",
+  "@startFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "scanningDevices": "[ES] 搜索中... {count} 台",
+  "@scanningDevices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scanningDevicesWithTime": "[ES] 搜索中... {count} 台 ({seconds}s)",
+  "@scanningDevicesWithTime": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "foundDevicesCount": "[ES] 发现 {count} 台设备",
+  "@foundDevicesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localDeviceLoading": "[ES] 本机标识获取中...",
+  "localDeviceId": "[ES] 本机 #{fingerprint}",
+  "@localDeviceId": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "noNearbyDevices": "[ES] 未发现附近设备",
+  "ensureDeviceOnSameNetwork": "[ES] 请确保目标设备也打开了心迹同步页\n并且两台设备在同一WiFi网络中",
+  "networkInfoUnknown": "[ES] 网络信息未知",
+  "portNumber": "[ES] 端口 {port}",
+  "@portNumber": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "send": "[ES] 发送",
+  "sendConfirmTitle": "[ES] 发送确认",
+  "sendConfirmContent": "[ES] 将向设备 \"{alias}\" 发送全部笔记数据。",
+  "@sendConfirmContent": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "includeMediaFilesOption": "[ES] 包含媒体文件",
+  "includeMediaFilesHintSync": "[ES] 图片/音频/视频等，可能增加体积和耗时",
+  "startSend": "[ES] 开始发送",
+  "sendTextOnlyHint": "[ES] 将仅发送笔记文本（不含媒体文件）",
+  "sendStarted": "[ES] 笔记发送启动，会话ID: {sessionId}",
+  "@sendStarted": {
+    "placeholders": {
+      "sessionId": {
+        "type": "String"
+      }
+    }
+  },
+  "sendFailedWithError": "[ES] 发送失败: {error}",
+  "@sendFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmLeave": "[ES] 确认离开",
+  "leaveWhileSyncing": "[ES] 当前正在进行同步操作（{status}），离开将中断过程并停止服务器，确认要返回吗？",
+  "@leaveWhileSyncing": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "leaveWhileScanning": "[ES] 当前正在发现设备，离开将停止发现并关闭服务器，确认返回吗？",
+  "leaveWhileSending": "[ES] 当前正在发送数据，离开将中断发送并关闭服务器，确认返回吗？",
+  "syncServiceNotReady": "[ES] 同步服务未就绪，请重新初始化",
+  "syncServiceInitializing": "[ES] 同步服务正在初始化，请稍后再试",
+  "searchingNearbyDevices": "[ES] 正在搜索附近设备...",
+  "initializingSyncService": "[ES] 正在初始化同步服务...",
+  "syncServiceStartFailed": "[ES] 同步服务启动失败: {error}",
+  "@syncServiceStartFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceDiscoveryCancelled": "[ES] 设备发现已取消",
+  "deviceDiscoveryFailed": "[ES] 设备发现失败: {error}",
+  "@deviceDiscoveryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceAliasAndModel": "[ES] {model}\n别名：{alias}",
+  "@deviceAliasAndModel": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "copiedText": "[ES] 已复制: {text}",
+  "@copiedText": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "copiedFingerprint": "[ES] 已复制本机指纹: {fingerprint}",
+  "@copiedFingerprint": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "usageInstructionsTitle": "[ES] 使用说明",
+  "syncUsageInstruction1": "[ES] 点击设备右侧的发送按钮来分享你的笔记",
+  "syncUsageInstruction2": "[ES] 接收到的笔记会自动与现有笔记合并",
+  "syncUsageInstruction3": "[ES] 重复的笔记会保留最新版本",
+  "syncUsageInstruction4": "[ES] 确保两台设备都连接到同一WiFi网络",
+  "initializing": "[ES] 初始化中",
+  "cancelDiscovery": "[ES] 取消发现",
+  "discoverDevices": "[ES] 发现设备",
+  "cancelDiscoveryTooltip": "[ES] 取消本次设备发现",
+  "startDiscoveryTooltip": "[ES] 开始发现附近设备",
+  "receiveSyncRequest": "[ES] 接收同步请求",
+  "waitingPeerApproval": "[ES] 等待对方确认",
+  "deviceWantsToSync": "[ES] 设备 \"{alias}\" 想同步笔记",
+  "@deviceWantsToSync": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "doNotAskAgain": "[ES] 以后不再提示",
+  "autoAcceptSyncRequests": "[ES] 将自动接受来自其他设备的同步请求",
+  "waitingLabel": "[ES] 等待",
+  "syncRequestSent": "[ES] 已向目标设备发送同步请求，请在对方确认后继续。",
+  "reject": "[ES] 拒绝",
+  "accept": "[ES] 接受",
+  "cancelReceive": "[ES] 取消接收",
+  "cancelSend": "[ES] 取消发送",
+  "syncCompleted": "[ES] 同步完成",
+  "syncStatusIdle": "[ES] 空闲",
+  "syncStatusPackaging": "[ES] 正在打包数据",
+  "syncStatusSending": "[ES] 正在发送",
+  "syncStatusReceiving": "[ES] 正在接收",
+  "syncStatusMerging": "[ES] 正在合并",
+  "syncStatusCompleted": "[ES] 同步完成",
+  "syncStatusFailed": "[ES] 同步失败",
+  "sendingProgressMessage": "[ES] 已发送 {sent}MB / {total}MB{extra}",
+  "@sendingProgressMessage": {
+    "placeholders": {
+      "sent": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      },
+      "extra": {
+        "type": "String"
+      }
+    }
+  },
+  "syncFromSuffix": "[ES] （来自{from}）",
+  "@syncFromSuffix": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      }
+    }
+  },
+  "receivingProgressMessage": "[ES] 已接收{from} {received}MB / {total}MB{extra}",
+  "@receivingProgressMessage": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "received": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      },
+      "extra": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherClear": "[ES] 晴",
+  "weatherPartlyCloudy": "[ES] 少云",
+  "weatherCloudy": "[ES] 多云",
+  "weatherFog": "[ES] 雾",
+  "weatherDrizzle": "[ES] 毛毛雨",
+  "weatherFreezingRain": "[ES] 冻雨",
+  "weatherRain": "[ES] 雨",
+  "weatherSnow": "[ES] 雪",
+  "weatherSnowGrains": "[ES] 雪粒",
+  "weatherRainShower": "[ES] 阵雨",
+  "weatherSnowShower": "[ES] 阵雪",
+  "weatherThunderstorm": "[ES] 雷雨",
+  "weatherThunderstormHeavy": "[ES] 雷暴雨",
+  "weatherUnknown": "[ES] 未知",
+  "weatherError": "[ES] 获取失败",
+  "weatherDataFetchFailed": "[ES] 天气数据获取失败",
+  "unknownWeather": "[ES] 未知天气",
+  "noAiAnalysisRecords": "[ES] 暂无AI分析记录",
+  "aiAssistant": "[ES] Thoughter",
+  "analyzingSource": "[ES] 正在分析来源...",
+  "analysisResult": "[ES] 分析结果",
+  "confidenceLevel": "[ES] 可信度: {confidence}",
+  "@confidenceLevel": {
+    "placeholders": {
+      "confidence": {
+        "type": "String"
+      }
+    }
+  },
+  "author": "[ES] 作者",
+  "authorLabel": "[ES] 作者: {author}",
+  "@authorLabel": {
+    "placeholders": {
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "workLabel": "[ES] 作品: {work}",
+  "@workLabel": {
+    "placeholders": {
+      "work": {
+        "type": "String"
+      }
+    }
+  },
+  "applyResult": "[ES] 应用结果",
+  "parseResultFailedWithError": "[ES] 解析结果失败: {error}",
+  "@parseResultFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "analysisFailedWithError": "[ES] 分析失败: {error}",
+  "@analysisFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "polishResult": "[ES] 润色结果",
+  "polishFailedWithError": "[ES] 润色失败: {error}",
+  "@polishFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "continueResult": "[ES] 续写结果",
+  "appendToNote": "[ES] 追加到笔记",
+  "continueFailedWithError": "[ES] 续写失败: {error}",
+  "@continueFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noteAnalysis": "[ES] 笔记分析",
+  "applyToNote": "[ES] 应用到笔记",
+  "analysisComplete": "[ES] 分析完成",
+  "filterAndSort": "[ES] 筛选与排序",
+  "resetFilter": "[ES] 重置",
+  "tagFilter": "[ES] 标签筛选",
+  "weatherFilter": "[ES] 天气筛选",
+  "weatherFilterSunny": "[ES] 晴",
+  "weatherFilterRainy": "[ES] 雨",
+  "weatherFilterCloudy": "[ES] 多云",
+  "weatherFilterSnowy": "[ES] 雪",
+  "timePeriodFilter": "[ES] 时间段筛选",
+  "sortMethod": "[ES] 排序方式",
+  "sortByTime": "[ES] 按时间排序",
+  "sortByName": "[ES] 按名称排序",
+  "sortByFavorite": "[ES] 按喜爱度排序",
+  "ascending": "[ES] 升序",
+  "applyFilter": "[ES] 应用",
+  "editNoteMenu": "[ES] 编辑笔记",
+  "askAIMenu": "[ES] 问 Thoughter",
+  "generateCardShareMenu": "[ES] 生成卡片分享",
+  "deleteNoteMenu": "[ES] 删除笔记",
+  "doubleTapToViewFull": "[ES] 双击查看全文",
+  "logLevel": "[ES] 级别: {level}",
+  "@logLevel": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "prefSettingsTitle": "[ES] 偏好设置",
+  "personalizationSettings": "[ES] 个性化设置",
+  "personalizationSettingsDesc": "[ES] 根据您的使用习惯调整应用行为",
+  "commonPreferences": "[ES] 常用偏好",
+  "clipboardMonitoring": "[ES] 剪贴板监控",
+  "clipboardMonitoringDesc": "[ES] 自动检测剪贴板内容并提示添加笔记",
+  "showFavoriteButton": "[ES] 显示喜爱按钮",
+  "showFavoriteButtonDesc": "[ES] 在笔记卡片上显示心形按钮",
+  "prioritizeBoldContent": "[ES] 优先显示加粗内容",
+  "prioritizeBoldContentDesc": "[ES] 折叠时优先显示加粗文字",
+  "useLocalNotesOnly": "[ES] 仅展示本地记录",
+  "useLocalNotesOnlyDesc": "[ES] 首页不再从网络获取新的每日一言",
+  "aiSmartFeatures": "[ES] AI 智能功能",
+  "aiGenerateDailyPrompt": "[ES] AI生成每日提示",
+  "aiGenerateDailyPromptDesc": "[ES] 主页每日提示使用AI生成",
+  "periodicReportAiInsights": "[ES] 周期报告AI洞察",
+  "periodicReportAiInsightsDesc": "[ES] 每周/月报告生成时启用AI洞察",
+  "aiCardGenerationLabel": "[ES] AI卡片生成",
+  "aiCardGenerationLabelDesc": "[ES] 为笔记生成可视化SVG卡片",
+  "moreAiSettings": "[ES] 更多AI设置",
+  "moreAiSettingsDesc": "[ES] 配置AI服务商、模型等",
+  "licenseInfo": "[ES] 许可证信息",
+  "appLicense": "[ES] 本程序许可证",
+  "viewAppLicense": "[ES] 查看本程序 LICENSE",
+  "loadLicenseFailed": "[ES] 无法加载本程序许可证：{error}",
+  "@loadLicenseFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "licenseFileNotFound": "[ES] 未找到本程序 LICENSE 文件。",
+  "openSourceAcknowledgements": "[ES] 开源库与鸣谢",
+  "lottieAnimationLicense": "[ES] Lottie 动画许可",
+  "systemLicenses": "[ES] 系统许可证",
+  "openSourceDesc": "[ES] 本应用基于 Flutter 框架构建，使用并感谢下列开源库与服务：",
+  "framework": "[ES] 框架",
+  "stateManagement": "[ES] 状态管理",
+  "animationSupport": "[ES] 动画支持",
+  "localStorage": "[ES] 本地存储",
+  "syncIntegrationNote": "[ES] 同步功能集成说明：",
+  "serviceApiAcknowledgements": "[ES] 服务与 API 鸣谢：",
+  "weatherData": "[ES] 天气数据",
+  "geocodingApi": "[ES] 地理编码 API",
+  "viewFullDependencyList": "[ES] 查看完整依赖列表",
+  "thankOpenSourceContributors": "[ES] 感谢所有开源项目与社区贡献者，正是这些工具和服务让本应用成为可能。具体许可证请以各项目仓库或包管理页面为准。",
+  "lottieFilesCredits": "[ES] 应用使用了来自 LottieFiles 的动画资源：",
+  "searchLoadingAnimation": "[ES] 搜索加载动画",
+  "weatherSearchAnimation": "[ES] 天气搜索动画",
+  "aiThinkingAnimation": "[ES] AI思考动画",
+  "noResultsAnimation": "[ES] 搜索无结果动画",
+  "thankLottieFiles": "[ES] 感谢 LottieFiles 提供优质的动画资源。",
+  "sourceLabel": "[ES] 来源:",
+  "systemLicensesDesc": "[ES] 系统许可证包括 Flutter SDK 及依赖包的许可证，点击下方按钮查看完整列表。",
+  "viewSystemLicenses": "[ES] 查看系统许可证",
+  "expandCollapseAll": "[ES] 全部展开/折叠",
+  "licensePageDesc": "[ES] 本页自动汇总了 Flutter 及所有依赖包的许可证信息，内容由各依赖包声明自动生成，仅供参考。",
+  "searchPackageOrLicense": "[ES] 搜索包名或许可证内容（只搜索首段）",
+  "loadSystemLicensesFailed": "[ES] 加载系统许可证失败：{error}",
+  "@loadSystemLicensesFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noSystemLicensesFound": "[ES] 未找到系统许可证条目",
+  "noMatchingLicensesFound": "[ES] 未找到匹配的许可证条目",
+  "licenseEntriesCount": "[ES] {visible}/{total} 条",
+  "@licenseEntriesCount": {
+    "placeholders": {
+      "visible": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "unnamed": "[ES] 未命名",
+  "noLicenseContent": "[ES] (无许可内容)",
+  "copyLicense": "[ES] 复制许可证",
+  "licenseCopied": "[ES] 已复制许可证内容",
+  "searchAnalysisRecords": "[ES] 搜索分析记录...",
+  "authorPerson": "[ES] 作者/人物",
+  "workSource": "[ES] 作品/来源",
+  "searchTags": "[ES] 搜索标签...",
+  "writeYourThoughts": "[ES] 写下你的感悟...",
+  "workName": "[ES] 作品名称",
+  "searchNotes": "[ES] 搜索笔记...",
+  "searchCity": "[ES] 搜索城市...",
+  "logSettingsTitle": "[ES] 日志设置",
+  "viewLogs": "[ES] 查看日志",
+  "logLevelDescription": "[ES] 选择应用记录的日志详细程度。更详细的日志有助于调试，但可能会影响性能并占用更多存储空间（如果未来实现日志文件存储）。",
+  "logLevelVerbose": "[ES] 记录所有详细信息，用于深入调试。",
+  "logLevelDebug": "[ES] 记录调试相关信息。",
+  "logLevelInfo": "[ES] 记录常规操作信息。 (推荐)",
+  "logLevelWarning": "[ES] 记录潜在问题或警告。",
+  "logLevelError": "[ES] 仅记录错误信息。",
+  "logLevelNone": "[ES] 不记录任何日志。",
+  "updateFoundNewVersion": "[ES] 发现新版本",
+  "updateCurrentVersion": "[ES] 当前版本",
+  "updateLatestVersion": "[ES] 最新版本",
+  "updateReleaseNotes": "[ES] 更新内容",
+  "updateReleaseTime": "[ES] 发布时间: {date}",
+  "@updateReleaseTime": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "updateAlreadyLatest": "[ES] 已是最新版本",
+  "updateCurrentVersionLabel": "[ES] 当前版本 {version}",
+  "@updateCurrentVersionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateUsingLatestVersion": "[ES] 您使用的已是最新版本",
+  "updateIgnoreForever": "[ES] 永久忽略",
+  "updateIgnoreThisTime": "[ES] 本次忽略",
+  "updateViewDetails": "[ES] 查看详情",
+  "updateGoToStore": "[ES] 前往商店",
+  "updateNow": "[ES] 立即更新",
+  "updateVersionIgnored": "[ES] 已忽略此版本更新",
+  "updateOpenStoreFailed": "[ES] 打开Microsoft Store失败: {error}",
+  "@updateOpenStoreFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "updateOpenLinkFailed": "[ES] 打开下载链接失败: {error}",
+  "@updateOpenLinkFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "selectCity": "[ES] 选择城市",
+  "currentWeather": "[ES] 当前天气",
+  "cityNotSetHint": "[ES] 尚未设置城市，先在下方搜索并选择",
+  "clickRefreshHint": "[ES] 城市：{city}（点击右侧按钮刷新）",
+  "@clickRefreshHint": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "refreshWeather": "[ES] 刷新天气",
+  "weatherUpdated": "[ES] 天气已更新",
+  "weatherUpdateFailed": "[ES] 天气更新失败，请稍后重试",
+  "weatherFetchFailed": "[ES] 天气获取失败",
+  "pleaseSelectCityFirst": "[ES] 请先选择城市或启用位置服务",
+  "useCurrentLocation": "[ES] 使用当前位置",
+  "useFreeOnlineReverseGeocoding": "[ES] 使用免费在线反向地理编码",
+  "onlineReverseGeocodingNeedsLocation": "[ES] 请先获取当前位置",
+  "onlineReverseGeocodingFailed": "[ES] 在线反向地理编码失败",
+  "onlineReverseGeocodingSuccess": "[ES] 在线反向地理编码已更新：{address}",
+  "@onlineReverseGeocodingSuccess": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherProvidedBy": "[ES] 天气数据由 Open-Meteo 提供",
+  "processing": "[ES] 正在处理...",
+  "searchingCity": "[ES] 搜索城市中...",
+  "noCityFound": "[ES] 没有找到匹配的城市",
+  "tryDifferentKeywords": "[ES] 尝试使用不同的关键词或城市名称",
+  "enterCityToSearch": "[ES] 输入城市名称开始搜索",
+  "addInfo": "[ES] 添加信息",
+  "selectTagsWithCount": "[ES] 选择标签 ({count})",
+  "@selectTagsWithCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noTagsAvailableHint": "[ES] 暂无可用标签，请先添加标签",
+  "addLocationPrefix": "[ES] 添加位置",
+  "locationServiceUnavailable": "[ES] 位置服务不可用",
+  "sourceInfo": "[ES] 来源信息",
+  "tagsLabel": "[ES] 标签",
+  "selectedTagsCount": "[ES] 已选择 {count} 个标签",
+  "@selectedTagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectedTags": "[ES] 已选标签",
+  "unknownTagWithId": "[ES] 未知标签(ID:{id}...)",
+  "@unknownTagWithId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "colorLabel": "[ES] 颜色",
+  "selectCardColorLabel": "[ES] 选择卡片颜色",
+  "noColor": "[ES] 无颜色",
+  "colorSet": "[ES] 已设置颜色",
+  "locationAndWeather": "[ES] 位置和天气",
+  "recordedOnFirstSave": "[ES] 首次保存时记录",
+  "locationLabel": "[ES] 位置",
+  "weatherLabel": "[ES] 天气",
+  "refreshLocationWeather": "[ES] 刷新位置和天气",
+  "gettingLocationHint": "[ES] 位置获取中...",
+  "noteNoLocationWeatherInfo": "[ES] 此笔记首次保存时未记录位置和天气信息",
+  "aiAssistantLabel": "[ES] Thoughter",
+  "polishingText": "[ES] 正在润色文本...",
+  "continuingText": "[ES] 正在续写文本...",
+  "analyzingNote": "[ES] 正在分析笔记...",
+  "analysisResultWithConfidence": "[ES] 分析结果 (可信度: {confidence})",
+  "@analysisResultWithConfidence": {
+    "placeholders": {
+      "confidence": {
+        "type": "String"
+      }
+    }
+  },
+  "possibleAuthor": "[ES] 可能的作者:",
+  "possibleWork": "[ES] 可能的作品:",
+  "analysisExplanation": "[ES] 分析说明:",
+  "noAuthorWorkIdentified": "[ES] 未能识别出明确的作者或作品",
+  "applyAnalysisResult": "[ES] 应用分析结果",
+  "parseResultFailed": "[ES] 解析结果失败: {error}",
+  "@parseResultFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseInputContent": "[ES] 请先输入内容",
+  "copyResult": "[ES] 复制结果",
+  "cannotAddLocation": "[ES] 无法添加位置",
+  "cannotAddLocationDesc": "[ES] 此笔记首次保存时未记录位置信息，无法补充添加。\n\n如需记录位置，请在新建笔记时勾选位置选项。",
+  "iKnow": "[ES] 我知道了",
+  "locationInfo": "[ES] 位置信息",
+  "locationUpdateHint": "[ES] 当前位置：{coordinates}\n\n可以尝试更新为详细地址，或移除位置（移除后无法再次添加）。",
+  "@locationUpdateHint": {
+    "placeholders": {
+      "coordinates": {
+        "type": "String"
+      }
+    }
+  },
+  "locationRemoveHint": "[ES] 当前位置：{location}\n\n移除位置信息后将无法再次添加或更改。",
+  "@locationRemoveHint": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "remove": "[ES] 移除",
+  "updateLocation": "[ES] 更新位置",
+  "locationUpdatedTo": "[ES] 位置已更新为: {address}",
+  "@locationUpdatedTo": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetAddress": "[ES] 无法获取地址，请检查网络",
+  "updateFailed": "[ES] 更新失败: {error}",
+  "@updateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotAddWeather": "[ES] 无法添加天气",
+  "cannotAddWeatherDesc": "[ES] 此笔记首次保存时未记录天气信息，无法补充添加。\n\n如需记录天气，请在新建笔记时勾选天气选项。",
+  "weatherInfo2": "[ES] 天气信息",
+  "weatherRemoveHint": "[ES] 当前天气：{weather}\n\n移除天气信息后将无法再次添加或更改。",
+  "@weatherRemoveHint": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetLocationTitle": "[ES] 无法获取位置",
+  "cannotGetLocationDesc": "[ES] 无法获取当前位置，请检查定位权限或网络状态。",
+  "getLocationFailedTitle": "[ES] 获取位置失败",
+  "getLocationFailedDesc": "[ES] 获取位置失败: {error}",
+  "@getLocationFailedDesc": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetLocationPermissionShort": "[ES] 无法获取位置权限",
+  "savingNote": "[ES] 正在保存",
+  "saveComplete": "[ES] 完成",
+  "writingDatabase": "[ES] 写入数据库...",
+  "preparingProcess": "[ES] 准备处理中...",
+  "mediaProcessFailed": "[ES] 媒体文件处理失败: {error}",
+  "@mediaProcessFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "documentLoadFailed": "[ES] 文档加载失败，请重新打开编辑器",
+  "tagsCount": "[ES] {count}个标签",
+  "@tagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "editMetadataShort": "[ES] 编辑元数据",
+  "startWritingHint": "[ES] 开始编写你的想法...",
+  "unknownLocation": "[ES] 未知位置",
+  "dayPeriodDawn": "[ES] 晨曦",
+  "dayPeriodMorning": "[ES] 上午",
+  "dayPeriodAfternoon": "[ES] 午后",
+  "dayPeriodDusk": "[ES] 黄昏",
+  "dayPeriodEvening": "[ES] 夜晚",
+  "dayPeriodMidnight": "[ES] 深夜",
+  "showExactTime": "[ES] 显示精确时间",
+  "showExactTimeDesc": "[ES] 在笔记中显示时间（时:分）",
+  "showNoteEditTime": "[ES] 显示笔记编辑时间",
+  "showNoteEditTimeDesc": "[ES] 在笔记中显示最后编辑时间",
+  "editedAtLabel": "[ES] 编辑于 {dateTime}",
+  "@editedAtLabel": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
+  "guideHomepageDailyQuoteTitle": "[ES] 每日一言小技巧",
+  "guideHomepageDailyQuoteDesc": "[ES] 单击可快速复制内容\n双击可快速添加到笔记",
+  "guideNotePageFilterTitle": "[ES] 筛选与排序",
+  "guideNotePageFilterDesc": "[ES] 点击这里可以筛选和排序你的笔记\n支持按标签、天气、时间等多种方式",
+  "guideNotePageFavoriteTitle": "[ES] 喜爱标记",
+  "guideNotePageFavoriteDesc": "[ES] 点击心形图标可以标记喜爱\n在筛选中可以按喜爱度排序",
+  "guideNotePageExpandTitle": "[ES] 展开/折叠笔记",
+  "guideNotePageExpandDesc": "[ES] 双击卡片可以展开查看完整内容\n再次双击即可折叠",
+  "guideEditorMetadataTitle": "[ES] 编辑笔记元数据",
+  "guideEditorMetadataDesc": "[ES] 点击这里可以编辑笔记的标签、分类等信息",
+  "guideEditorToolbarUsageTitle": "[ES] 工具栏操作提示",
+  "guideEditorToolbarUsageDesc": "[ES] 工具栏支持左右滑动\n试试添加图片、视频等媒体文件！",
+  "guideAddNoteFullscreenButtonTitle": "[ES] 全屏编辑器",
+  "guideAddNoteFullscreenButtonDesc": "[ES] 点击这里打开全屏编辑器\n支持富文本、插入图片/音频/视频",
+  "guideSettingsPreferencesTitle": "[ES] 偏好设置",
+  "guideSettingsPreferencesDesc": "[ES] 这里可开启加粗优先显示、剪贴板监控等个性化设置。",
+  "guideSettingsStartupTitle": "[ES] 默认启动页面",
+  "guideSettingsStartupDesc": "[ES] 可以设置应用启动时默认打开的页面",
+  "guideSettingsThemeTitle": "[ES] 主题设置",
+  "guideSettingsThemeDesc": "[ES] 这里可以自定义应用的主题颜色和外观",
+  "guideTrashLocationTitle": "[ES] 回收站位置",
+  "guideTrashLocationDesc": "[ES] 笔记已移到回收站\n可在「设置」中找到回收站并恢复",
+  "guideSmartPushTitle": "[ES] 让笔记回来找你",
+  "guideSmartPushDesc": "[ES] 在「设置 → 智能推送」里开启后，心迹会在你选的时段，把往年今日和值得重读的旧笔记推送给你。",
+  "apkDownloadTitle": "[ES] 下载APK",
+  "apkDownloading": "[ES] 正在下载 ThoughtEcho {version}...",
+  "@apkDownloading": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "apkDownloadHint": "[ES] 请勿退出程序，下载完成后将自动开始安装",
+  "apkDownloadStarted": "[ES] 开始下载 ThoughtEcho {version}",
+  "@apkDownloadStarted": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "apkDownloadProgress": "[ES] 下载中... {progress}%",
+  "@apkDownloadProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+  "apkDownloadComplete": "[ES] 下载完成，正在安装...",
+  "apkDownloadFailed": "[ES] 下载失败: {error}",
+  "@apkDownloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkInstallReady": "[ES] APK文件已准备就绪，请在系统安装程序中完成安装",
+  "apkOpenFailed": "[ES] 无法打开APK文件: {error}",
+  "@apkOpenFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkInstallFailed": "[ES] 安装失败: {error}",
+  "@apkInstallFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkNotificationTitle": "[ES] APK下载",
+  "storagePermissionRequired": "[ES] 需要存储权限",
+  "storagePermissionDesc": "[ES] 下载APK文件需要存储权限。请在设置中允许应用访问存储空间。",
+  "installPermissionRequired": "[ES] 需要安装权限",
+  "installPermissionDesc": "[ES] 安装APK需要安装未知应用权限。请在设置中允许安装未知来源应用。",
+  "errorTitle": "[ES] 错误",
+  "cannotGetDownloadDir": "[ES] 无法获取下载目录",
+  "webPlatformApkNotSupported": "[ES] Web 平台不支持 APK 下载",
+  "serviceNotInitializedDeleteFailed": "[ES] 服务未初始化，删除失败",
+  "deleteAllConfirmMessage": "[ES] 确定要删除所有分析记录吗？此操作不可恢复。",
+  "deleteFailedSimple": "[ES] 删除失败",
+  "aiAnalysisDetails": "[ES] AI分析详情",
+  "analysisTime": "[ES] 分析时间",
+  "analysisContent": "[ES] 分析内容",
+  "aiAnalysisResult": "[ES] AI分析结果",
+  "emotionalAnalysis": "[ES] 情感分析",
+  "comprehensiveAnalysis": "[ES] 综合分析",
+  "mindMapAnalysis": "[ES] 思维导图",
+  "growthAnalysis": "[ES] 成长分析",
+  "aiAnalysis": "[ES] AI分析",
+  "deleteAiAnalysis": "[ES] 删除AI分析",
+  "deleteAiAnalysisConfirm": "[ES] 确定要删除此笔记的AI分析结果吗？此操作可在保存笔记前撤销。",
+  "aiAnalysisDeleted": "[ES] AI分析已删除",
+  "aiAnalysisSaved": "[ES] AI分析已保存",
+  "viewFull": "[ES] 查看全文",
+  "copy": "[ES] 复制",
+  "copiedToClipboard": "[ES] 已复制到剪贴板",
+  "selectReportTypePrompt": "[ES] 请选择要生成的年度报告类型：",
+  "aiSmartReport": "[ES] AI 智能报告",
+  "aiSmartReportDesc": "[ES] 基于AI分析生成的精美HTML报告，包含深度洞察和可视化图表",
+  "nativeFlutterReport": "[ES] 原生 Flutter 报告",
+  "nativeFlutterReportDesc": "[ES] 使用Flutter原生组件生成的交互式报告，流畅的动画效果",
+  "generateAnnualReportFailed": "[ES] 生成年度报告失败",
+  "generatingAIAnnualReport": "[ES] 正在生成AI年度报告...",
+  "cannotReadReportTemplate": "[ES] 无法读取报告模板",
+  "aiReturnFormatAbnormal": "[ES] AI返回格式异常，已使用备用模板生成报告",
+  "aiServiceAbnormal": "[ES] AI服务异常，已使用备用模板生成报告",
+  "monthJan": "[ES] 1月",
+  "monthFeb": "[ES] 2月",
+  "monthMar": "[ES] 3月",
+  "monthApr": "[ES] 4月",
+  "monthMay": "[ES] 5月",
+  "monthJun": "[ES] 6月",
+  "monthJul": "[ES] 7月",
+  "monthAug": "[ES] 8月",
+  "monthSep": "[ES] 9月",
+  "monthOct": "[ES] 10月",
+  "monthNov": "[ES] 11月",
+  "monthDec": "[ES] 12月",
+  "achievementRecordMaster": "[ES] 记录达人",
+  "achievementPersistent": "[ES] 坚持不懈",
+  "achievementWriter": "[ES] 文字创作者",
+  "achievementOrganizer": "[ES] 分类整理",
+  "continuingToGrow": "[ES] 持续成长中",
+  "allDayLong": "[ES] 全天候",
+  "preparingBackup": "[ES] 准备开始备份...",
+  "collectingData": "[ES] 正在收集数据...",
+  "processingNoteData": "[ES] 正在处理笔记数据...",
+  "processingMediaFiles": "[ES] 正在处理媒体文件...",
+  "creatingBackupFile": "[ES] 正在创建备份文件...",
+  "verifyingBackupFile": "[ES] 正在验证备份文件...",
+  "thoughtEchoBackupFile": "[ES] 心迹备份文件",
+  "backupFileReady": "[ES] 备份文件已准备就绪，请通过分享保存",
+  "backupCompleteSelectLocation": "[ES] 备份完成，请选择保存位置",
+  "zipFile": "[ES] ZIP 文件",
+  "jsonFile": "[ES] JSON 文件",
+  "outOfMemoryText": "[ES] 内存不足",
+  "storageSpaceText": "[ES] 存储空间",
+  "permissionText": "[ES] 权限",
+  "backupCancelled": "[ES] 备份已取消",
+  "backupFailedText": "[ES] 备份失败",
+  "backupSavedToPath": "[ES] 备份已保存到: {path}",
+  "@backupSavedToPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "backupCompleteWithWarnings": "[ES] 备份已完成，但有警告",
+  "backupDeltaFailuresMessage": "[ES] {count, plural, other{有 # 条笔记的富文本媒体路径转换失败，这些笔记在备份中仍保留本机绝对路径，恢复到其他设备时相关图片可能无法显示。\n\n受影响的笔记ID：{ids}}}",
+  "@backupDeltaFailuresMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "ids": {
+        "type": "String"
+      }
+    }
+  },
+  "backupDeltaFailuresIdJoiner": "[ES] 、",
+  "backupDeltaFailuresMoreSuffix": "[ES]  等",
+  "backupFailedGeneric": "[ES] 无法完成备份，请稍后重试",
+  "@backupFailedGeneric": {
+    "description": "Generic backup failure message shown when the error type is not classified"
+  },
+  "backupFailedOutOfMemory": "[ES] 备份失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 尝试不包含媒体文件的备份\n• 重启应用后再试",
+  "backupFailedNoSpace": "[ES] 备份失败：存储空间不足\n\n请清理设备存储空间后重试。",
+  "backupFailedPermission": "[ES] 备份失败：权限不足\n\n请检查应用的存储权限设置。",
+  "selectFileError": "[ES] 选择文件失败",
+  "mergingDataProgress": "[ES] 正在合并数据...",
+  "yearAIAnnualReport": "[ES] {year} AI年度报告",
+  "@yearAIAnnualReport": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "openInBrowser": "[ES] 在浏览器中打开",
+  "shareReport": "[ES] 分享报告",
+  "saveTempFileFailed": "[ES] 保存临时文件失败",
+  "openBrowserFailed": "[ES] 打开浏览器失败",
+  "createShareFileFailed": "[ES] 创建分享文件失败",
+  "saveReport": "[ES] 保存报告",
+  "processingReport": "[ES] 正在处理报告...",
+  "personalizedSummaryByAI": "[ES] 基于AI分析的个性化总结",
+  "aiGeneratedReview": "[ES] AI已为您生成专属的年度回顾，包含数据分析、成长洞察和未来建议",
+  "reportPreview": "[ES] 报告内容预览",
+  "fullReportViewInBrowser": "[ES] 完整报告包含精美的图表和交互效果，建议在浏览器中查看",
+  "openFullReportInBrowser": "[ES] 用浏览器打开完整报告",
+  "shareBtn": "[ES] 分享",
+  "regenerateCard": "[ES] 重新生成",
+  "regeneratingCard": "[ES] 正在重新生成...",
+  "aiSuggestionCoreIdea": "[ES] 这篇笔记的核心思想是什么？",
+  "aiSuggestionInspiration": "[ES] 从中能得到什么启发？",
+  "aiSuggestionSummarize": "[ES] 能否总结一下要点？",
+  "aiSuggestionSolution": "[ES] 有什么解决方案吗？",
+  "aiSuggestionUnderstandConcept": "[ES] 如何更好地理解这个概念？",
+  "aiSuggestionActionPlan": "[ES] 如何制定行动计划？",
+  "aiSuggestionPsychology": "[ES] 这反映了什么心理状态？",
+  "aiSuggestionRealLife": "[ES] 如何应用到实际生活中？",
+  "aiSuggestionThinkingPattern": "[ES] 反映了什么思维模式？",
+  "svgLoading": "[ES] 正在加载SVG...",
+  "svgLoadingFallback": "[ES] 正在加载备用模板...",
+  "svgRenderFailed": "[ES] SVG渲染失败",
+  "svgTryingFallback": "[ES] 正在尝试使用备用模板...",
+  "cardRenderFailed": "[ES] 卡片渲染失败",
+  "cardRegeneratePrompt": "[ES] 请尝试重新生成卡片",
+  "svgContentParseFailed": "[ES] 内容解析失败",
+  "svgContentExtractFailed": "[ES] 无法提取内容",
+  "svgContentEmpty": "[ES] SVG内容为空",
+  "svgContentInvalidFormat": "[ES] 无效的SVG格式",
+  "svgFallbackTitle": "[ES] SVG生成失败",
+  "svgFallbackHint": "[ES] 请尝试重新生成或检查AI配置",
+  "svgFallbackIdentifier": "[ES] 心迹 - 备用模板",
+  "cardGenerating": "[ES] 正在生成卡片...",
+  "generatingCards": "[ES] 正在生成卡片...",
+  "loadMoreCards": "[ES] 加载更多卡片",
+  "remainingCards": "[ES] 还有 {count} 张可生成",
+  "@remainingCards": {
+    "description": "剩余可生成卡片数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "saveBtn": "[ES] 保存",
+  "work": "[ES] 作品: ",
+  "explanation": "[ES] 说明: ",
+  "generatingReportContent": "[ES] 正在生成报告内容...",
+  "reportOpenedInBrowser": "[ES] 报告已在浏览器中打开",
+  "cannotOpenBrowserUseShare": "[ES] 无法直接打开浏览器，请使用分享功能选择浏览器打开",
+  "reportFileSavedInstructions": "[ES] 报告文件已保存，请按以下步骤在浏览器中打开：",
+  "step1OpenFileManager": "[ES] 1. 打开手机的文件管理器",
+  "step2NavigateToPath": "[ES] 2. 导航到以下路径：",
+  "step3TapHtmlFile": "[ES] 3. 点击HTML文件",
+  "step4SelectBrowser": "[ES] 4. 选择浏览器打开",
+  "gotIt": "[ES] 知道了",
+  "copyPath": "[ES] 复制路径",
+  "pathCopied": "[ES] 文件路径已复制到剪贴板",
+  "howToViewInBrowser": "[ES] 如何在浏览器中查看",
+  "htmlContentCopied": "[ES] HTML报告内容已复制到剪贴板。请按以下步骤操作：",
+  "mobileSteps": "[ES] 📱 手机端：",
+  "desktopSteps": "[ES] 💻 电脑端：",
+  "copyPrefix": "[ES] 复制前缀",
+  "addressBarPrefixCopied": "[ES] 地址栏前缀已复制，请在浏览器中粘贴后再粘贴HTML内容",
+  "reportShared": "[ES] 报告已分享",
+  "reportSavedLocally": "[ES] 报告已保存到本地文件",
+  "cannotSaveFileCopyToClipboard": "[ES] 无法保存文件，内容已复制到剪贴板",
+  "videoFileNotFound": "[ES] 视频文件不存在",
+  "initializingLargeVideo": "[ES] 开始初始化大视频文件",
+  "videoLoadingTooLong": "[ES] 视频加载时间过长，请尝试使用较小的视频文件",
+  "videoInitTimeout": "[ES] 视频初始化超时，文件可能过大",
+  "largeVideoInitSuccess": "[ES] 大视频初始化成功",
+  "playbackSpeed": "[ES] 播放速度",
+  "subtitles": "[ES] 字幕",
+  "shareVideo": "[ES] 分享视频",
+  "videoInfo": "[ES] 视频信息",
+  "videoLoadFailed": "[ES] 视频加载失败",
+  "timeout": "[ES] 超时",
+  "videoLoadTimeout": "[ES] 视频加载超时",
+  "fileTooLargeUseSmaller": "[ES] 文件可能过大，请稍后重试或使用较小的视频文件",
+  "format": "[ES] 格式",
+  "unsupportedVideoFormat": "[ES] 不支持的视频格式",
+  "useCommonFormats": "[ES] 请使用MP4、MOV等常见格式",
+  "cannotAccessVideoFile": "[ES] 无法访问视频文件",
+  "checkFilePermissions": "[ES] 请检查文件权限",
+  "checkFileIntegrity": "[ES] 请检查文件是否完整或尝试重新导入",
+  "outOfMemoryVideo": "[ES] 内存不足，无法加载视频",
+  "audioFileNotFound": "[ES] 音频文件不存在",
+  "clickToPlayVideo": "[ES] 点击播放视频",
+  "motionPhoto": "[ES] 实况",
+  "viewPhoto": "[ES] 查看照片",
+  "motionPhotoPlayFailed": "[ES] 无法播放这张动态照片",
+  "loadingVideo": "[ES] 正在加载视频...",
+  "shareAudio": "[ES] 分享音频",
+  "fileInfo": "[ES] 文件信息",
+  "audioInfo": "[ES] 音频信息",
+  "fileName": "[ES] 文件名",
+  "duration": "[ES] 时长",
+  "path": "[ES] 路径",
+  "resolution": "[ES] 分辨率",
+  "aspectRatio": "[ES] 长宽比",
+  "featureInDevelopment": "[ES] 分享功能开发中...",
+  "selectFromFiles": "[ES] 从文件选择",
+  "supportsLargeFiles": "[ES] 支持大文件，内存安全处理",
+  "unifiedMediaImportImportMedia": "[ES] 导入{mediaType}",
+  "@unifiedMediaImportImportMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaTypeImage": "[ES] 图片",
+  "mediaTypeVideo": "[ES] 视频",
+  "mediaTypeAudio": "[ES] 音频",
+  "mediaTypeMedia": "[ES] 媒体",
+  "mediaProcessingNone": "[ES] 无需处理媒体文件",
+  "mediaProcessingFound": "[ES] {total, plural, other{发现 # 个媒体文件}}",
+  "@mediaProcessingFound": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingCopying": "[ES] 复制{typeLabel} {done}/{total}",
+  "@mediaProcessingCopying": {
+    "placeholders": {
+      "typeLabel": {
+        "type": "String"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingProgress": "[ES] 已处理 {done} / {total}",
+  "@mediaProcessingProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "takePhoto": "[ES] 拍照",
+  "recordVideo": "[ES] 录制视频",
+  "recordAudio": "[ES] 录制音频",
+  "takePhotoDirectly": "[ES] 直接拍照",
+  "recordVideoDirectly": "[ES] 直接录制",
+  "recordAudioDirectly": "[ES] 直接录音",
+  "enterUrlHint": "[ES] 输入媒体文件的网址",
+  "image": "[ES] 图片",
+  "video": "[ES] 视频",
+  "audio": "[ES] 音频",
+  "weatherSunny": "[ES] 晴",
+  "weatherUnknownWeather": "[ES] 未知天气",
+  "weatherShowers": "[ES] 阵雨",
+  "weatherSnowShowers": "[ES] 阵雪",
+  "weatherThunderstormWithHail": "[ES] 雷暴雨",
+  "fileTypeImage": "[ES] 图片",
+  "fileTypeVideo": "[ES] 视频",
+  "fileTypeAudio": "[ES] 音频",
+  "fileTypeDocument": "[ES] 文档",
+  "fileTypeText": "[ES] 文本",
+  "fileTypeApplication": "[ES] 应用",
+  "fileTypeOther": "[ES] 其他",
+  "fileStatusQueued": "[ES] 队列中",
+  "fileStatusSending": "[ES] 正在发送",
+  "fileStatusCompleted": "[ES] 已完成",
+  "fileStatusFailed": "[ES] 失败",
+  "fileStatusSkipped": "[ES] 已跳过",
+  "sessionStatusWaiting": "[ES] 等待中",
+  "sessionStatusSending": "[ES] 正在发送",
+  "sessionStatusReceiving": "[ES] 正在接收",
+  "sessionStatusCompleted": "[ES] 已完成",
+  "sessionStatusCancelled": "[ES] 已取消",
+  "sessionStatusRejected": "[ES] 被拒绝",
+  "sessionStatusError": "[ES] 发生错误",
+  "timeMorning": "[ES] 早上",
+  "timeAfternoon": "[ES] 下午",
+  "timeEvening": "[ES] 晚上",
+  "timeLateNight": "[ES] 深夜",
+  "promptDefault1": "[ES] 今天有什么值得感恩的事？",
+  "promptDefault2": "[ES] 给过去的自己一句鼓励的话，会说什么？",
+  "promptDefault3": "[ES] 今天学到了什么让你感到兴奋的新东西？",
+  "promptDefault4": "[ES] 什么美好的想法正在等待你去实现？",
+  "promptDefault5": "[ES] 最近什么让你感到快乐和满足？",
+  "promptDefault6": "[ES] 克服困难后有什么值得庆祝的感悟？",
+  "promptDefault7": "[ES] 如果明天完全自由，你最想做什么有意义的事？",
+  "promptDefault8": "[ES] 今天遇到的挑战教会了你什么宝贵经验？",
+  "promptDefault9": "[ES] 哪些积极的小习惯正在让你变得更好？",
+  "promptDefault10": "[ES] 此刻，你想对未来的自己说什么温暖的话？",
+  "promptDefault11": "[ES] 今天有什么小小的成就值得为自己骄傲？",
+  "promptDefault12": "[ES] 什么温暖的回忆让你嘴角不禁上扬？",
+  "promptGeneric1": "[ES] 此刻，你有什么特别的想法或美好感受想要记录下来吗？",
+  "promptGeneric2": "[ES] 回顾今天，有什么让你印象深刻的温暖瞬间？",
+  "promptGeneric3": "[ES] 静下心来，感受一下当下的情绪，它想告诉你什么美好的信息？",
+  "promptGeneric4": "[ES] 今天有什么小小的进步或收获让你感到欣慰？",
+  "promptGeneric5": "[ES] 什么事物让你感到充满希望和动力？",
+  "promptMorning1": "[ES] 新的一天开始了，你对今天有什么美好的期待？",
+  "promptMorning2": "[ES] 早晨的空气闻起来怎么样？它让你想起了什么温馨的回忆？",
+  "promptMorning3": "[ES] 为今天设定一个让你兴奋的小目标吧，可以是什么呢？",
+  "promptMorning4": "[ES] 晨光中，什么积极的想法正在你心中萌芽？",
+  "promptAfternoon1": "[ES] 午后的阳光或微风，让你有什么愉悦的感触？",
+  "promptAfternoon2": "[ES] 今天过半，有什么进展顺利让你感到满意的事情吗？",
+  "promptAfternoon3": "[ES] 花点时间放松一下，想想让你感到安心和快乐的事物。",
+  "promptAfternoon4": "[ES] 午后时光，什么美好的计划正在你心中酝酿？",
+  "promptEvening1": "[ES] 夜幕降临，回顾今天，有什么值得庆祝或感恩的事？",
+  "promptEvening2": "[ES] 此刻的宁静适合思考，你脑海中浮现了什么美好的画面？",
+  "promptEvening3": "[ES] 为明天做个充满希望的计划或设想吧。",
+  "promptEvening4": "[ES] 夕阳西下，今天的哪个时刻让你感到特别温暖？",
+  "promptLateNight1": "[ES] 夜深人静，有什么温馨的想法或美好的灵感悄然浮现？",
+  "promptLateNight2": "[ES] 此刻的寂静让你想到了什么珍贵的回忆？",
+  "promptLateNight3": "[ES] 睡前放下杂念，记录下此刻内心的平静和满足。",
+  "promptLateNight4": "[ES] 繁星点点，什么美好的愿望正在你心中闪耀？",
+  "promptClearMorning": "[ES] 清晨的阳光洒满窗台，此刻你的心情如何？有什么美好的计划吗？",
+  "promptRainMorning": "[ES] 听着清晨温柔的雨声，内心是否格外宁静？有什么温暖的感悟？",
+  "promptCloudyMorning": "[ES] 云层微厚的早晨，正适合慢慢品味，思考一下最近的美好收获。",
+  "promptClearAfternoon": "[ES] 午后暖阳正好，适合小憩片刻，记录下此刻的惬意和满足。",
+  "promptRainAfternoon": "[ES] 雨天的午后，窗外滴答作响，屋内适合读一本书或写下温暖的想法。",
+  "promptClearEvening": "[ES] 夜幕降临，星光或月色正好，此刻有什么美好的心愿或温暖的回忆？",
+  "promptRainEvening": "[ES] 雨夜漫漫，适合独处思考，最近有什么让你感到欣慰或期待的事？",
+  "promptWindEvening": "[ES] 晚风轻拂的夜晚，思绪是否也随风飘远？记录下此刻美好的灵感吧。",
+  "promptClearWeather1": "[ES] 阳光明媚的日子，有什么让你感到开心和充满活力？",
+  "promptClearWeather2": "[ES] 这样的好天气，适合做些什么让你放松和快乐的事情？",
+  "promptRainWeather1": "[ES] 听着雨声，你的心情是否格外宁静和平和？",
+  "promptRainWeather2": "[ES] 雨天适合沉思，有什么温暖的想法在脑海中萦绕？",
+  "promptCloudyWeather1": "[ES] 多云的天空下，你的思绪飘向了什么美好的地方？",
+  "promptCloudyWeather2": "[ES] 阴天有时也别有韵味，它让你想起了什么珍贵的回忆？",
+  "promptSnowWeather1": "[ES] 窗外的雪景给你带来了怎样的纯净感受？",
+  "promptSnowWeather2": "[ES] 下雪天，适合窝在温暖的地方思考些什么美好的事？",
+  "promptHotWeather": "[ES] 天气有点热，此刻你最想做什么舒适的事来享受夏日时光？",
+  "promptColdWeather": "[ES] 天气有点冷，注意保暖的同时，有什么温暖人心的想法吗？",
+  "promptCityContext": "[ES] 身在 {city}，这座城市今天给你带来了什么灵感？",
+  "@promptCityContext": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "promptFallback": "[ES] 今天，你有什么新的感悟或美好的想法想要分享呢？",
+  "citySuffix": "[ES] 市",
+  "locationDisplayFormat": "[ES] {city}{suffix}",
+  "@locationDisplayFormat": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "locationDisplayWithDistrict": "[ES] {city}·{district}",
+  "@locationDisplayWithDistrict": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      },
+      "district": {
+        "type": "String"
+      }
+    }
+  },
+  "noLocationInfo": "[ES] 无位置信息",
+  "currentLocationLabel": "[ES] 当前位置",
+  "annualReportOpenedInBrowser": "[ES] 报告已在浏览器中打开",
+  "annualReportCannotOpenBrowser": "[ES] 无法直接打开浏览器，请使用分享功能选择浏览器打开",
+  "annualReportOpenInBrowser": "[ES] 在浏览器中打开",
+  "annualReportHowToView": "[ES] 如何在浏览器中查看",
+  "annualReportMobileInstructions": "[ES] 📱 手机端：",
+  "annualReportDesktopInstructions": "[ES] 💻 电脑端：",
+  "annualReportSavedToLocal": "[ES] 报告已保存到本地文件",
+  "annualReportCopiedToClipboard": "[ES] 无法保存文件，内容已复制到剪贴板",
+  "fullscreenEditTooltip": "[ES] 全屏编辑",
+  "fullscreenEditLongTextTip": "[ES] 建议全屏编辑长文本",
+  "sourcePreviewFormat": "[ES] 将显示为: {source}",
+  "@sourcePreviewFormat": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "addWeatherWithValue": "[ES] 添加天气: {weather}",
+  "@addWeatherWithValue": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "addWeatherInfo": "[ES] 添加天气信息",
+  "cardColorSet": "[ES] 已设置卡片颜色",
+  "setCardColor": "[ES] 设置卡片颜色",
+  "openFullEditorFailedSimple": "[ES] 打开全屏编辑器失败",
+  "loadingLargeDocument": "[ES] 正在加载大型文档...",
+  "documentLoadFailedRetry": "[ES] 文档加载失败，请重新打开编辑器",
+  "contentCopiedToClipboard": "[ES] 已复制到剪贴板",
+  "messageCopiedToClipboard": "[ES] 消息已复制到剪贴板",
+  "dailyQuoteLoading": "[ES] 加载中...",
+  "dailyQuoteLoadingLocal": "[ES] 从本地记录加载中...",
+  "dailyQuoteLoadingOffline": "[ES] 网络未连接，从本地记录加载中...",
+  "dailyQuoteNoNetworkRetry": "[ES] 无网络连接且无本地记录，点击重试",
+  "dailyQuoteFetchFailedRetry": "[ES] 获取一言失败，点击重试",
+  "fetchHitokotoFailed": "[ES] 获取一言失败: {error}",
+  "@fetchHitokotoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "copyMessage": "[ES] 复制消息",
+  "shareMessage": "[ES] 分享消息",
+  "shareFeatureInDevelopment": "[ES] 分享功能开发中",
+  "cancelImport": "[ES] 取消导入",
+  "enterMediaUrl": "[ES] 输入{mediaType}网址",
+  "@enterMediaUrl": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "insertMediaFailed": "[ES] 插入{mediaType}失败: {error}",
+  "@insertMediaFailed": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "audioFileNotFoundWithPath": "[ES] 音频文件不存在: {path}",
+  "@audioFileNotFoundWithPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "audioLoadFailed": "[ES] 音频加载失败: {error}",
+  "@audioLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "outOfMemoryVideoLoad": "[ES] 内存不足，无法加载视频",
+  "codeCopiedToClipboard": "[ES] 代码已复制到剪贴板",
+  "videoLoadTooLong": "[ES] 视频加载时间过长，请尝试使用较小的视频文件",
+  "outOfMemorySuggestions": "[ES] 建议：\n• 关闭其他应用释放内存\n• 重启应用后重试\n• 使用较小的视频文件",
+  "fullscreenEditorPlaceholder": "[ES] 开始编写你的想法...",
+  "unsavedChangesTitle": "[ES] 未保存的内容",
+  "unsavedChangesDesc": "[ES] 您有未保存的编辑内容，是否要放弃这些更改？",
+  "continueEditing": "[ES] 继续编辑",
+  "discardChanges": "[ES] 放弃更改",
+  "saveAndExit": "[ES] 保存并退出",
+  "localAiFeatures": "[ES] 本地 AI 功能",
+  "localAiFeaturesPreview": "[ES] 预览版",
+  "localAiFeaturesDesc": "[ES] 使用设备端 AI 能力增强笔记体验",
+  "enableLocalAi": "[ES] 启用本地 AI",
+  "enableLocalAiDesc": "[ES] 开启后将启用设备端 AI 功能",
+  "localAiPreviewNote": "[ES] 此功能目前处于预览阶段，部分功能可能不稳定",
+  "inputEnhancement": "[ES] 输入增强",
+  "searchAndDiscovery": "[ES] 搜索与发现",
+  "contentAnalysis": "[ES] 内容分析",
+  "speechToText": "[ES] 语音转文字",
+  "speechToTextDesc": "[ES] 长按录音按钮，将语音实时转换为文字",
+  "ocrRecognition": "[ES] OCR 文字识别",
+  "ocrRecognitionDesc": "[ES] 拍照识别图片中的文字内容",
+  "aiCorrection": "[ES] AI 识别纠错",
+  "aiCorrectionDesc": "[ES] 智能修复语音和 OCR 识别中的错误",
+  "sourceRecognition": "[ES] 智能识别来源",
+  "sourceRecognitionDesc": "[ES] 自动提取文本中的作者和作品信息",
+  "aiSearch": "[ES] AI 语义搜索",
+  "aiSearchDesc": "[ES] 使用 AI 理解搜索意图，找到语义相关的笔记",
+  "relatedNotes": "[ES] 相关笔记推荐",
+  "relatedNotesDesc": "[ES] 基于内容相似度推荐相关笔记",
+  "smartTags": "[ES] 智能标签推荐",
+  "smartTagsDesc": "[ES] 保存笔记时智能推荐合适的标签",
+  "noteClassification": "[ES] 笔记类型分类",
+  "noteClassificationDesc": "[ES] 自动识别笔记类型（感悟、摘录、日记等）",
+  "emotionDetection": "[ES] 情绪检测",
+  "emotionDetectionDesc": "[ES] 分析笔记内容的情感倾向",
+  "swipeUpForOcr": "[ES] 上划进入 OCR",
+  "listening": "[ES] 正在聆听...",
+  "recording": "[ES] 录音中",
+  "releaseToFinish": "[ES] 松开结束录音",
+  "applyToEditor": "[ES] 填入编辑器",
+  "noSourceFound": "[ES] 未识别到来源信息",
+  "sourceFound": "[ES] 识别到来源",
+  "correcting": "[ES] 正在纠错...",
+  "correctionComplete": "[ES] 纠错完成",
+  "recognizing": "[ES] 正在识别...",
+  "recognitionComplete": "[ES] 识别完成",
+  "voiceInputTitle": "[ES] 语音输入",
+  "voiceResultTitle": "[ES] 语音识别结果",
+  "ocrCaptureTitle": "[ES] OCR 文字识别",
+  "ocrResultTitle": "[ES] OCR 识别结果",
+  "selectTextRegions": "[ES] 选择要提取的文字区域",
+  "takeAnotherPhoto": "[ES] 再拍一张",
+  "finishSelection": "[ES] 完成选择",
+  "noTextDetected": "[ES] 未检测到文字",
+  "tapToSelectRegion": "[ES] 点击选择文字区域",
+  "aiSearchMode": "[ES] AI 搜索",
+  "normalSearchMode": "[ES] 普通搜索",
+  "switchToAiSearch": "[ES] 切换到 AI 语义搜索",
+  "switchToNormalSearch": "[ES] 切换到普通搜索",
+  "recommendedTags": "[ES] 推荐标签",
+  "noteType": "[ES] 笔记类型",
+  "emotionAnalysis": "[ES] 情感分析",
+  "viewRelatedNotes": "[ES] 查看相关笔记",
+  "localAiNotEnabled": "[ES] 本地 AI 功能未启用",
+  "enableInSettings": "[ES] 请在设置中启用",
+  "featureNotAvailable": "[ES] 功能暂不可用",
+  "featureComingSoon": "[ES] 功能即将推出",
+  "localAISettings": "[ES] 本地 AI 功能",
+  "localAISettingsDesc": "[ES] 设备端 AI 功能设置 (Preview)",
+  "localAIPreviewBadge": "[ES] Preview",
+  "localAIEnabled": "[ES] 启用本地 AI 功能",
+  "localAIEnabledDesc": "[ES] 开启后可使用设备端 AI 功能",
+  "localAIInputEnhancement": "[ES] 输入增强",
+  "localAISpeechToText": "[ES] 语音转文字",
+  "localAISpeechToTextDesc": "[ES] 长按 FAB 录制语音并转换为文字",
+  "localAIOCR": "[ES] OCR 文字识别",
+  "localAIOCRDesc": "[ES] 从图片中提取文字内容",
+  "localAICorrection": "[ES] AI 识别纠错",
+  "localAICorrectionDesc": "[ES] 修复语音和 OCR 识别错误",
+  "localAISourceRecognition": "[ES] 智能识别来源",
+  "localAISourceRecognitionDesc": "[ES] 自动提取作者和作品名称",
+  "localAISearchDiscovery": "[ES] 搜索与发现",
+  "localAISemanticSearch": "[ES] AI 语义搜索",
+  "localAISemanticSearchDesc": "[ES] 使用 AI 理解搜索意图",
+  "localAIRelatedNotes": "[ES] 相关笔记推荐",
+  "localAIRelatedNotesDesc": "[ES] 发现相关的笔记内容",
+  "localAIContentAnalysis": "[ES] 内容分析",
+  "localAISmartTags": "[ES] 智能标签推荐",
+  "localAISmartTagsDesc": "[ES] AI 推荐合适的标签",
+  "localAINoteClassification": "[ES] 笔记类型分类",
+  "localAINoteClassificationDesc": "[ES] 自动识别笔记类型",
+  "localAIEmotionDetection": "[ES] 情绪检测",
+  "localAIEmotionDetectionDesc": "[ES] 分析笔记的情感倾向",
+  "voiceRecording": "[ES] 正在录音...",
+  "voiceRecordingHint": "[ES] 松开结束，上滑进入 OCR",
+  "voiceProcessing": "[ES] 处理中...",
+  "voiceTranscribing": "[ES] 转写中...",
+  "voiceEditResult": "[ES] 编辑识别结果",
+  "voiceApplyCorrection": "[ES] AI 纠错",
+  "voiceRecognizeSource": "[ES] 识别来源",
+  "voiceInsertToEditor": "[ES] 填入编辑器",
+  "ocrCapture": "[ES] 拍照识别",
+  "ocrCaptureHint": "[ES] 对准文字区域拍照",
+  "ocrSelectRegion": "[ES] 选择文字区域",
+  "ocrSelectRegionHint": "[ES] 点击要识别的文字区域",
+  "ocrProcessing": "[ES] 识别中...",
+  "ocrNoTextDetected": "[ES] 未检测到文字",
+  "aiSearching": "[ES] AI 搜索中...",
+  "aiCorrectionApplied": "[ES] 已应用 AI 纠错",
+  "aiSourceRecognized": "[ES] 已识别来源",
+  "aiNoSourceFound": "[ES] 未找到明确的作者或作品信息",
+  "smartTagsRecommendation": "[ES] AI 推荐标签",
+  "smartTagsApply": "[ES] 应用推荐",
+  "noteTypeDetected": "[ES] 检测到笔记类型",
+  "emotionDetectedLabel": "[ES] 情绪分析",
+  "relatedNotesTitle": "[ES] 相关笔记",
+  "relatedNotesEmpty": "[ES] 暂无相关笔记",
+  "hiddenNotesFeature": "[ES] 隐藏笔记",
+  "hiddenNotesFeatureDesc": "[ES] 开启后将显示「隐藏」标签，带有此标签的笔记会从主列表中隐藏",
+  "requireBiometricForHidden": "[ES] 访问隐藏笔记需要验证",
+  "requireBiometricForHiddenDesc": "[ES] 查看隐藏笔记时需要进行生物识别验证",
+  "hiddenTag": "[ES] 隐藏",
+  "hiddenTagDesc": "[ES] 带有此标签的笔记将从主列表中隐藏",
+  "hiddenTagUsageHint": "[ES] 添加此标签后，笔记将从主列表中隐藏，仅可通过筛选「隐藏」标签查看",
+  "systemTag": "[ES] 系统标签",
+  "systemTagCannotEdit": "[ES] 系统标签无法编辑",
+  "systemTagCannotDelete": "[ES] 系统标签无法删除",
+  "biometricAuthRequired": "[ES] 需要身份验证",
+  "biometricAuthReason": "[ES] 请验证身份以查看隐藏笔记",
+  "biometricAuthFailed": "[ES] 身份验证失败",
+  "biometricNotAvailable": "[ES] 设备不支持生物识别验证",
+  "biometricNotSetup": "[ES] 请先在系统设置中设置指纹或面容识别",
+  "privacyAndSecurity": "[ES] 隐私与安全",
+  "smartPushTitle": "[ES] 智能推送",
+  "smartPushTitlePreview": "[ES] 智能推送 (Preview)",
+  "smartPushDesc": "[ES] 定时推送过去的笔记和每日一言",
+  "smartPushEnable": "[ES] 启用智能推送",
+  "smartPushEnableDesc": "[ES] 在设定时间推送回忆笔记或每日一言",
+  "smartPushContentType": "[ES] 推送模式",
+  "smartPushDailyQuote": "[ES] 每日一言",
+  "smartPushDailyQuoteDesc": "[ES] 推送精选语录",
+  "smartPushDailyQuoteIndependentNote": "[ES] 每日一言独立于智能推送，两者互不影响，可分别开启或关闭。",
+  "smartPushPastNotes": "[ES] 往日笔记",
+  "smartPushPastNotesDesc": "[ES] 推送历史笔记回顾",
+  "smartPushModeSmart": "[ES] 智能推送",
+  "smartPushModeSmartDesc": "[ES] 自动选择最有意义的内容推送",
+  "smartPushModeBoth": "[ES] 随机推送",
+  "smartPushModeBothDesc": "[ES] 随机推送每日一言或往日笔记",
+  "smartPushPastNoteTypes": "[ES] 回顾类型",
+  "smartPushYearAgoToday": "[ES] 去年今日",
+  "smartPushYearAgoTodayDesc": "[ES] 推送往年同月同日的笔记",
+  "smartPushMonthAgoToday": "[ES] 往月今日",
+  "smartPushMonthAgoTodayDesc": "[ES] 推送历史同一天的笔记",
+  "smartPushWeekAgoToday": "[ES] 一周前",
+  "smartPushWeekAgoTodayDesc": "[ES] 推送一周前的笔记",
+  "smartPushRandomMemory": "[ES] 随机回忆",
+  "smartPushRandomMemoryDesc": "[ES] 随机推送历史笔记",
+  "smartPushSameLocation": "[ES] 相同地点",
+  "smartPushSameLocationDesc": "[ES] 推送同一区域的笔记",
+  "smartPushSameWeather": "[ES] 相同天气",
+  "smartPushSameWeatherDesc": "[ES] 推送相似天气时记录的笔记",
+  "smartPushWeatherFilter": "[ES] 天气筛选",
+  "smartPushTagFilter": "[ES] 标签筛选",
+  "smartPushTagFilterDesc": "[ES] 仅推送带有选中标签的笔记（不选则不限制）",
+  "smartPushTimeSettings": "[ES] 推送时间",
+  "smartPushAddTime": "[ES] 添加推送时间",
+  "smartPushFrequency": "[ES] 推送频率",
+  "smartPushIntensityFewer": "[ES] 更少",
+  "smartPushIntensityMore": "[ES] 更多",
+  "smartPushFrequencyDaily": "[ES] 每天",
+  "smartPushFrequencyWeekdays": "[ES] 工作日",
+  "smartPushFrequencyWeekends": "[ES] 周末",
+  "smartPushFrequencyCustom": "[ES] 自定义",
+  "smartPushAdvancedOptions": "[ES] 高级选项",
+  "smartPushTest": "[ES] 发送测试推送",
+  "smartPushTestSent": "[ES] 测试推送已发送，请查看通知",
+  "smartPushNoMatchingNotes": "[ES] 没有符合条件的内容可推送",
+  "smartPushPermissionRequired": "[ES] 需要通知权限才能发送推送",
+  "smartPushNotice": "[ES] 使用说明",
+  "smartPushNoticeDesc": "[ES] • 推送功能需要授予通知权限\n• 为确保按时推送，请在系统设置中允许应用自启动和后台运行\n• 部分设备需要关闭电池优化\n• 智能模式会自动选择最相关的内容",
+  "smartPushModeCustom": "[ES] 自定义推送",
+  "smartPushModeCustomDesc": "[ES] 手动选择回顾类型和筛选条件",
+  "smartPushExactAlarmHint": "[ES] 建议开启精确闹钟权限以确保准时推送",
+  "smartPushExactAlarmTitle": "[ES] 精确闹钟权限",
+  "smartPushExactAlarmMessage": "[ES] 为确保推送准时送达，需要授予精确闹钟权限。不授权也可使用，但推送时间可能有几分钟误差。",
+  "smartPushGoToSettings": "[ES] 去设置",
+  "smartPushPermissionWarningTitle": "[ES] 权限设置不完整",
+  "smartPushPermissionWarningDesc": "[ES] 部分权限未授予，可能导致推送无法正常工作。点击下方项目进行设置。",
+  "smartPushNotificationPermission": "[ES] 通知权限",
+  "smartPushBatteryOptimization": "[ES] 关闭电池优化",
+  "smartPushAutoStartPermission": "[ES] 自启动权限",
+  "smartPushAutoStartHint": "[ES] 国产手机需要此权限才能后台推送",
+  "smartPushAutoStartTitle": "[ES] 自启动设置指引",
+  "smartPushAutoStartInstructions": "[ES] 请按以下步骤操作：",
+  "smartPushAutoStartNote": "[ES] 注意：不同系统版本界面可能略有差异，请在应用管理中找到心迹并允许自启动和后台运行。",
+  "smartPushUnknownManufacturer": "[ES] 未知设备",
+  "iHaveConfigured": "[ES] 我已设置",
+  "recommended": "[ES] 推荐",
+  "actionFavorite": "[ES] 收藏",
+  "actionUnfavorite": "[ES] 取消收藏",
+  "clearFavoriteTitle": "[ES] 清除收藏",
+  "clearFavoriteMessage": "[ES] 确定要清除这条笔记的 {count} 次收藏吗？",
+  "@clearFavoriteMessage": {
+    "description": "清除收藏确认消息",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearFavoriteSuccess": "[ES] 已清除收藏",
+  "clearFavoriteFailed": "[ES] 清除收藏失败",
+  "moreOptions": "[ES] 更多选项",
+  "settingsUserManual": "[ES] 用户手册",
+  "settingsUserManualDesc": "[ES] 了解如何使用心迹的各项功能",
+  "manualTitle": "[ES] 用户手册",
+  "manualLoadFailed": "[ES] 无法加载手册内容",
+  "viewing": "[ES] 查看中...",
+  "backToAnalysis": "[ES] 回到分析",
+  "userGuide": "[ES] 用户指南",
+  "userGuideDesc": "[ES] 了解如何使用心迹的各项功能",
+  "userGuideSearchHint": "[ES] 搜索用户指南...",
+  "userGuideNoResults": "[ES] 未找到相关内容",
+  "userGuideOnlineDoc": "[ES] 完整在线文档",
+  "tileNoLocationPermission": "[ES] 无定位",
+  "tileLocationServiceOff": "[ES] 定位未开启",
+  "tileOffline": "[ES] 离线",
+  "tileNoNetwork": "[ES] 无网络",
+  "tileLoading": "[ES] 加载中...",
+  "tileNoWeather": "[ES] 无天气",
+  "tileCachedSuffix": "[ES] 缓存",
+  "noteAutoFillSection": "[ES] 笔记默认填充",
+  "noteAutoFillSectionDesc": "[ES] 新建笔记时自动填充作者、出处和标签",
+  "defaultAuthor": "[ES] 默认作者",
+  "defaultAuthorDesc": "[ES] 新建笔记时自动填充的作者",
+  "defaultAuthorHint": "[ES] 输入默认作者名",
+  "defaultSource": "[ES] 默认出处",
+  "defaultSourceDesc": "[ES] 新建笔记时自动填充的出处/作品",
+  "defaultSourceHint": "[ES] 输入默认出处或作品名",
+  "defaultTags": "[ES] 默认标签",
+  "defaultTagsDesc": "[ES] 新建笔记时自动添加的标签",
+  "defaultTagsNone": "[ES] 未设置",
+  "defaultTagsCount": "[ES] 已选 {count} 个标签",
+  "@defaultTagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectDefaultTags": "[ES] 选择默认标签",
+  "autoFillEnabled": "[ES] 已启用自动填充",
+  "clearDefaultValue": "[ES] 清除",
+  "saveDefaultValue": "[ES] 保存",
+  "defaultValueSaved": "[ES] 默认值已保存",
+  "defaultValueCleared": "[ES] 默认值已清除",
+  "excerptIntentEnabled": "[ES] 摘录到心迹",
+  "excerptIntentEnabledDesc": "[ES] 允许从浏览器或其他应用选中文本后直接跳转到心迹，并打开非全屏编辑器",
+  "citySelectedWeatherUpdated": "[ES] 已选择城市：{cityName}，天气已更新",
+  "@citySelectedWeatherUpdated": {
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "citySelectionError": "[ES] 处理城市选择时出错：{error}",
+  "@citySelectionError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "currentLocationWeatherUpdated": "[ES] 已使用当前位置：{cityName}，天气已更新",
+  "@currentLocationWeatherUpdated": {
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "locationFetchError": "[ES] 获取当前位置失败：{error}",
+  "@locationFetchError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherTimeoutRetry": "[ES] 天气获取超时，请稍后重试",
+  "weatherFetchFailedCheckNetwork": "[ES] 天气数据获取失败，请检查网络连接",
+  "locationTimeoutCheckPermission": "[ES] 位置获取超时，请检查位置权限设置",
+  "cannotGetCurrentLocation": "[ES] 无法获取当前位置，请确保已授予位置权限",
+  "cannotGetSelectedCityLocation": "[ES] 无法获取选中城市的位置信息",
+  "cityInfoIncomplete": "[ES] 城市信息不完整",
+  "annualReportDemo": "[ES] 年度报告演示",
+  "manualApiTest": "[ES] 手动API测试",
+  "manualApiTestTitle": "[ES] 手动API密钥测试",
+  "manualApiTestDesc": "[ES] 直接输入API参数进行测试，绕过存储系统检查API密钥是否有效。",
+  "testResultLabel": "[ES] 测试结果:",
+  "fillAllFieldsError": "[ES] 错误: 请填写所有必填字段",
+  "testReportTitle": "[ES] === 手动API密钥测试报告 ===",
+  "testParamsLabel": "[ES] 测试参数:",
+  "keyFormatCheckLabel": "[ES] 密钥格式检查:",
+  "testApiKeyPrefixLabel": "[ES]   API Key前缀: {prefix}",
+  "@testApiKeyPrefixLabel": {
+    "placeholders": {
+      "prefix": {
+        "type": "String"
+      }
+    }
+  },
+  "sendRequestLabel": "[ES] 发送请求:",
+  "responseResultLabel": "[ES] 响应结果:",
+  "testApiKey": "[ES] 测试API密钥",
+  "aiReturnedEmptyContent": "[ES] AI返回了空内容，请重试",
+  "chatWithAiAssistant": "[ES] 与 Thoughter (AI 助手) 对话，深入探讨笔记内容",
+  "messageCopied": "[ES] 消息已复制到剪贴板",
+  "anniversaryTitle": "[ES] 心迹 · ThoughtEcho",
+  "anniversarySubtitle": "[ES] {years} 周年 · 感恩有你，一路同行",
+  "@anniversarySubtitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryVeteranThanks": "[ES] 你从 {years} 周年起就在这里了，谢谢一直写下去",
+  "@anniversaryVeteranThanks": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryEnterApp": "[ES] 进入应用",
+  "anniversaryBannerTitle": "[ES] 心迹 ThoughtEcho {years} 周年",
+  "@anniversaryBannerTitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryBannerSubtitle": "[ES] 感恩有你，一路同行 · {range}",
+  "@anniversaryBannerSubtitle": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "anniversaryBannerTap": "[ES] 点击重温庆典动画",
+  "anniversaryReplayButton": "[ES] 重播动画",
+  "developerAnniversarySection": "[ES] 周年庆典",
+  "developerAnniversaryEnabled": "[ES] 启用庆典动画",
+  "developerAnniversaryEnabledDesc": "[ES] 开关控制是否在启动时展示庆典动画",
+  "developerAnniversaryReset": "[ES] 清空已参与记录",
+  "developerAnniversaryResetDesc": "[ES] 清空后当作新用户，庆典动画会重新自动播放",
+  "developerAnniversaryResetDone": "[ES] 已清空，庆典动画会重新自动播放",
+  "developerAnniversaryPreview": "[ES] 立即预览动画",
+  "developerAnniversaryPreviewDesc": "[ES] 按当前模拟届数立即播放庆典动画",
+  "developerAnniversarySimulate": "[ES] 模拟周年庆典",
+  "developerAnniversarySimulateOff": "[ES] 关闭",
+  "developerAnniversarySimulateYear": "[ES] {years} 周年",
+  "@developerAnniversarySimulateYear": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversarySimulateDescOff": "[ES] 按真实日期判断，当前不在庆典期",
+  "developerAnniversarySimulateDescActive": "[ES] 正在模拟 {years} 周年：设置页横幅和启动动画都按这一届展示",
+  "@developerAnniversarySimulateDescActive": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversaryShownYears": "[ES] 已参与的庆典",
+  "developerAnniversaryShownYearsNone": "[ES] 还没参与过任何一届",
+  "trash": "[ES] 回收站",
+  "trashEmpty": "[ES] 回收站为空",
+  "trashEmptyHint": "[ES] 误删的内容会先暂存在这里，包含图片、音频和视频，也都可以一起恢复。",
+  "trashRetentionHint": "[ES] 最近删除的记录和附件会在这里暂存，超过保留期后自动清理。",
+  "moveNoteToTrashTitle": "[ES] 移至回收站",
+  "moveNoteToTrashConfirmation": "[ES] 确定要将此笔记移至回收站？您可在 {days} 天内恢复它。",
+  "@moveNoteToTrashConfirmation": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRemainingDays": "[ES] 剩余 {days} 天",
+  "@trashRemainingDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreNote": "[ES] 恢复",
+  "permanentlyDelete": "[ES] 永久删除",
+  "permanentlyDeleteConfirmation": "[ES] 警告：此操作无法撤销，笔记将被永久删除且无法恢复。",
+  "emptyTrash": "[ES] 清空回收站",
+  "emptyTrashConfirmation": "[ES] 确定要清空整个回收站吗？所有笔记将被永久删除且无法恢复。",
+  "noteMovedToTrash": "[ES] 笔记已移至回收站，可在回收站恢复",
+  "noteRestored": "[ES] 笔记已恢复",
+  "undoDelete": "[ES] 撤销",
+  "trashEmptied": "[ES] 回收站已清空",
+  "deletedAt": "[ES] 删除于 {date}",
+  "@deletedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "trashCount": "[ES] 回收站 ({count})",
+  "@trashCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRetentionPeriod": "[ES] 回收站保留时间",
+  "trashRetentionOption7Days": "[ES] 7 天",
+  "trashRetentionOption30Days": "[ES] 30 天",
+  "trashRetentionOption90Days": "[ES] 90 天",
+  "mediaPlayerPlay": "[ES] 播放",
+  "mediaPlayerPause": "[ES] 暂停",
+  "operationFailedSimple": "[ES] 操作失败",
+  "operationSuccess": "[ES] 操作成功！",
+  "loadingInProgress": "[ES] 正在加载...",
+  "aiThinkingProgress": "[ES] AI正在思考...",
+  "processingData": "[ES] 正在处理数据...",
+  "analyzingContent": "[ES] 正在分析内容...",
+  "skipNonFullscreenEditor": "[ES] 直接进入全屏编辑器",
+  "skipNonFullscreenEditorDesc": "[ES] 点击添加笔记时跳过快速编辑，直接打开全屏富文本编辑器",
+  "offlineQuoteSourceTitle": "[ES] 无网络时展示",
+  "offlineQuoteSourceDesc": "[ES] 无网络或仅展示本地记录时，首页显示什么内容",
+  "offlineQuoteSourceTagOnly": "[ES] 历史保存的每日一言",
+  "offlineQuoteSourceAll": "[ES] 随机展示全部本地记录",
+  "noLocalSavedQuotes": "[ES] 还没有历史保存的每日一言",
+  "copyCode": "[ES] 复制代码",
+  "copiedCode": "[ES] 已复制",
+  "webdavSyncTitle": "[ES] WebDAV 云同步",
+  "webdavSyncSubtitle": "[ES] 配置私有云盘，实现多端自动同步笔记",
+  "webdavProvider": "[ES] 网盘服务商",
+  "webdavServerUrl": "[ES] 服务器地址",
+  "webdavUsername": "[ES] 用户名/账号",
+  "webdavPassword": "[ES] 应用密码/Token",
+  "webdavTestConnection": "[ES] 测试连接",
+  "webdavTestSuccess": "[ES] 连接测试成功！",
+  "webdavTestFailed": "[ES] 连接失败，请检查配置和密码",
+  "webdavAutoSyncLaunch": "[ES] 打开或回前台时自动同步",
+  "webdavAutoSyncLaunchSubtitle": "[ES] 打开应用或从后台切回前台时，自动与云端合并最新内容",
+  "webdavAutoSyncChange": "[ES] 修改笔记后自动后台同步",
+  "webdavAutoSyncChangeSubtitle": "[ES] 编辑笔记停止打字 4 秒后，自动静默同步最新修改",
+  "webdavExperimentalTitle": "[ES] 实验性功能提示",
+  "webdavExperimentalContent": "[ES] 当前 WebDAV 云同步功能处于实验性预览（Preview）阶段。为了您的数据安全，建议您在启用前备份本地核心笔记。在使用过程中，如遇到任何问题，欢迎随时反馈。",
+  "webdavExperimentalClose": "[ES] 关闭提示",
+  "webdavExperimentalIgnore": "[ES] 永久忽略",
+  "webdavLastSync": "[ES] 上次同步：{time}",
+  "@webdavLastSync": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusSyncing": "[ES] 正在同步...",
+  "webdavStatusSuccess": "[ES] 同步成功",
+  "webdavStatusFailed": "[ES] 同步失败",
+  "settingsWebdavStatusWithTime": "[ES] {status} (上次：{time})",
+  "@settingsWebdavStatusWithTime": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWebdavEnabledWithTime": "[ES] 已启用 (上次：{time})",
+  "@settingsWebdavEnabledWithTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavSyncNow": "[ES] 立即同步",
+  "webdavEnableSync": "[ES] 启用云同步",
+  "webdavSaveAndSync": "[ES] 保存并同步",
+  "webdavHowToGetAppPassword": "[ES] 如何获取应用密码？",
+  "webdavShowPasswordTooltip": "[ES] 显示密码",
+  "webdavHidePasswordTooltip": "[ES] 隐藏密码",
+  "webdavOpenHelpFailed": "[ES] 无法打开帮助链接，请检查系统默认浏览器设置",
+  "webdavConflictCategoryName": "[ES] 同步冲突",
+  "webdavConflictNotePrefix": "[ES] [冲突备份] ",
+  "webdavConflictNotification": "[ES] 检测到 {count} 处同步冲突，已安全备份至『同步冲突』分类",
+  "@webdavConflictNotification": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webdavViewNow": "[ES] 立即查看",
+  "exportFormatLabel": "[ES] 默认导出格式",
+  "exportFormatCard": "[ES] 精致分享卡片",
+  "exportFormatPdf": "[ES] 标准 A4 PDF",
+  "exportFormatDesc": "[ES] 配置笔记一键导出或分享时的默认生成格式",
+  "pdfExportExperimentalWarning": "[ES] PDF 导出目前是实验性功能，需要多语言及 Emoji 字体文件；首次使用可能需要联网下载，下载后可离线使用。",
+  "exportToPdf": "[ES] 导出为 PDF",
+  "pdfExportSelectionMode": "[ES] 选择导出模式",
+  "selectSameMonth": "[ES] 一键选同月",
+  "selectSameCategory": "[ES] 一键选同分类",
+  "exportSelected": "[ES] 导出 ({count})",
+  "@exportSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportSuccess": "[ES] 导出成功",
+  "exportFailed": "[ES] 导出失败",
+  "generatingPdf": "[ES] 正在生成 PDF...",
+  "pdfExportFailed": "[ES] 导出 PDF 失败: {error}",
+  "@pdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "batchPdfExportFailed": "[ES] 批量导出 PDF 失败: {error}",
+  "@batchPdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseSelectAtLeastOneNote": "[ES] 请先选择至少一条笔记",
+  "selectedNotesHaveNoCategories": "[ES] 所选笔记没有分类标签",
+  "pdfPreviewAndPrint": "[ES] PDF 预览 & 打印",
+  "pdfFontFallbackWarning": "[ES] 未检测到中文字体，中文内容可能会显示为乱码。请检查网络后重试。",
+  "webdavSyncOnCellular": "[ES] 允许数据流量下同步",
+  "webdavSyncOnCellularSubtitle": "[ES] 允许在移动数据网络下进行云端备份和合并",
+  "webdavSyncNotesOnlyOnCellular": "[ES] 数据流量下仅同步笔记",
+  "webdavSyncNotesOnlyOnCellularSubtitle": "[ES] 启用后在移动网络下仅同步文本，跳过大型媒体文件以节省流量",
+  "customFeedbackTitle": "[ES] 发送意见反馈",
+  "customFeedbackMessageLabel": "[ES] 反馈内容",
+  "customFeedbackMessageHint": "[ES] 请描述您遇到的问题或建议...",
+  "customFeedbackNameLabel": "[ES] 您的称呼 (可选)",
+  "customFeedbackEmailLabel": "[ES] 联系邮箱 (可选)",
+  "customFeedbackSubmit": "[ES] 发送反馈",
+  "customFeedbackSuccess": "[ES] 感谢您的反馈！",
+  "customFeedbackEmptyError": "[ES] 请输入反馈内容",
+  "saveSuccess": "[ES] 保存成功",
+  "toolCallStatusPending": "[ES] 待执行",
+  "toolCallStatusExecuting": "[ES] 执行中",
+  "toolCallStatusCompleted": "[ES] 完成",
+  "toolCallStatusError": "[ES] 错误",
+  "toolCallParameters": "[ES] 参数",
+  "toolCallResult": "[ES] 结果",
+  "failedToPickFiles": "[ES] 选择文件失败: {error}",
+  "@failedToPickFiles": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "editModeMetadataReadOnlyHint": "[ES] 已保存笔记的位置和天气不支持编辑修改",
+  "dataInsights": "[ES] 数据分析",
+  "dataInsightsDesc": "[ES] 深度分析你的笔记数据和写作趋势",
+  "searchChatHistory": "[ES] 搜索对话...",
+  "dynamicInsightStats": "[ES] 你已记录 {count} 条心迹，最近 7 天新增 {recentCount} 条。",
+  "@dynamicInsightStats": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "recentCount": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionGroupToday": "[ES] 今天",
+  "sessionGroupYesterday": "[ES] 昨天",
+  "sessionGroupThisWeek": "[ES] 本周",
+  "sessionGroupEarlier": "[ES] 更早",
+  "messageCountLabel": "[ES] {count} 条消息",
+  "@messageCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commandPolish": "[ES] 润色",
+  "commandContinue": "[ES] 续写",
+  "commandDeepAnalysis": "[ES] 深度分析",
+  "commandInsight": "[ES] 智能洞察",
+  "aiPromptPolish": "[ES] 请帮我润色这段文字",
+  "aiPromptContinue": "[ES] 请帮我续写这段文字",
+  "aiPromptDeepAnalysis": "[ES] 请对这段笔记进行深度分析",
+  "aiPromptSourceAnalysis": "[ES] 请分析这段文字的来源，识别可能的作者和出处",
+  "aiAssistantInputHint": "[ES] 输入问题...",
+  "aiAssistantExploreWelcome": "[ES] {summary}",
+  "@aiAssistantExploreWelcome": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "currentNoteContext": "[ES] 当前笔记上下文",
+  "workflowUnavailable": "[ES] 工作流不可用",
+  "aiWorkflowNeedsBoundNote": "[ES] 此功能需要绑定笔记才能使用",
+  "confidenceLabel": "[ES] 置信度",
+  "replaceOriginalNote": "[ES] 替换原文",
+  "appendToEnd": "[ES] 追加到末尾",
+  "scrollToBottom": "[ES] 滚动到底部",
+  "pinChat": "[ES] 置顶",
+  "unpinChat": "[ES] 取消置顶",
+  "stopGenerate": "[ES] 停止生成",
+  "aiModeChat": "[ES] 对话模式",
+  "aiModeAgent": "[ES] Agent 模式",
+  "agentReachedMaxRounds": "[ES] 已达到本轮工具调用上限，以上结论基于目前已获取的信息。如需更完整的结果，可以补充更具体的要求后再问一次。",
+  "agentReviewingRecentNotes": "[ES] 正在浏览笔记...",
+  "agentSearchingNotesForQuery": "[ES] 正在查找\"{query}\"相关记录...",
+  "@agentSearchingNotesForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentCollectingTags": "[ES] 正在获取标签...",
+  "agentReadingNoteDetail": "[ES] 正在查看笔记...",
+  "agentCheckingLocationWeather": "[ES] 正在获取位置和天气...",
+  "agentSavingMemory": "[ES] 正在保存记忆...",
+  "agentRecallingMemory": "[ES] 正在查找记忆...",
+  "agentRecallingMemoryForQuery": "[ES] 正在查找\"{query}\"相关记忆...",
+  "@agentRecallingMemoryForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentSearchingWebForQuery": "[ES] 正在查找\"{query}\"的资料...",
+  "@agentSearchingWebForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentReadingWebPage": "[ES] 正在读取网页...",
+  "agentPreparingNewNoteSuggestion": "[ES] 正在准备新笔记建议...",
+  "agentPreparingEditSuggestion": "[ES] 正在准备修改建议...",
+  "agentFoundNoMatchingNotes": "[ES] 未找到相关记录",
+  "agentFoundMatchingNotes": "[ES] 找到 {count} 条相关记录",
+  "@agentFoundMatchingNotes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentFoundMatchingNotesWithMore": "[ES] 找到 {count} 条相关记录，还有更多",
+  "@agentFoundMatchingNotesWithMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentPreparedTagChoices": "[ES] 找到 {count} 个可用标签",
+  "@agentPreparedTagChoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentCheckedLocationWeather": "[ES] 已获取位置和天气",
+  "agentCheckedLocationWeatherWithDetails": "[ES] 位置：{location}，天气：{weather}",
+  "@agentCheckedLocationWeatherWithDetails": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      },
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "agentFoundWebSources": "[ES] 找到 {count} 条网络资料",
+  "@agentFoundWebSources": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadWebPageSummary": "[ES] 已读取网页，约 {count} 字",
+  "@agentReadWebPageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadNoteDetailSummary": "[ES] 已读取笔记《{title}》的完整正文",
+  "@agentReadNoteDetailSummary": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "agentPreparedSuggestionCard": "[ES] 已生成建议",
+  "agentToolStepFinished": "[ES] 已完成",
+  "agentToolStepDidNotFinish": "[ES] 未完成",
+  "agentMemorySaved": "[ES] 已保存记忆",
+  "agentMemoryDeleted": "[ES] 已删除记忆",
+  "agentRecalledFacts": "[ES] 找到 {count} 条相关记忆",
+  "@agentRecalledFacts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentRecalledNoFacts": "[ES] 未找到相关记忆",
+  "aiThinking": "[ES] 正在思考...",
+  "thinkingMode": "[ES] 深度思考",
+  "showThinking": "[ES] 查看思考过程",
+  "hideThinking": "[ES] 收起思考过程",
+  "toolExecutionProgress": "[ES] 正在执行...",
+  "toolExecutionCompleted": "[ES] 执行完成",
+  "executedNOperations": "[ES] 执行了 {count} 个操作",
+  "@executedNOperations": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "attachFile": "[ES] 附加文件",
+  "yesterday": "[ES] 昨天",
+  "openInEditor": "[ES] 打开编辑器",
+  "saveDirectly": "[ES] 直接保存",
+  "replace": "[ES] 替换",
+  "append": "[ES] 追加",
+  "notice": "[ES] 提示",
+  "saveRequired": "[ES] 保存提示",
+  "saveBeforeAiAssistant": "[ES] 进入 Thoughter 前需先保存当前笔记内容",
+  "saveAndContinue": "[ES] 保存并继续",
+  "toggleAddLocation": "[ES] 添加位置",
+  "toggleAddWeather": "[ES] 添加天气",
+  "webdavDisableSyncSuccess": "[ES] 已关闭 WebDAV 云同步。本地数据完全保留。",
+  "webdavDisableSync": "[ES] 关闭并停用云同步",
+  "webdavGoToResolve": "[ES] 去处理",
+  "webdavNoConflicts": "[ES] 没有检测到冲突笔记",
+  "webdavAllConflictsResolved": "[ES] 您的所有同步冲突均已处理干净。",
+  "webdavProviderNutstore": "[ES] 坚果云 (Nutstore)",
+  "webdavProviderCustom": "[ES] 自定义 (Custom)",
+  "webdavProviderNextcloud": "[ES] Nextcloud / ownCloud",
+  "webdavProviderInfinicloud": "[ES] InfiniCLOUD",
+  "webdavProviderConfig": "[ES] 服务商配置",
+  "webdavServerUrlEmptyError": "[ES] 请输入 WebDAV 服务器地址",
+  "webdavServerUrlInvalidError": "[ES] 地址必须以 https:// 开头",
+  "webdavUsernameEmptyError": "[ES] 请输入用户名",
+  "webdavPasswordEmptyError": "[ES] 请输入应用密码",
+  "webdavSyncStrategy": "[ES] 同步策略",
+  "webdavStatusNotEnabled": "[ES] 未启用云同步",
+  "webdavStatusNotEnabledDesc": "[ES] 配置您的 WebDAV 服务，享受安全跨端多路同步。",
+  "webdavStatusSyncingDesc": "[ES] 正在安全比对合并云端与本地数据库文件...",
+  "webdavStatusRunning": "[ES] 云同步运行中",
+  "webdavStatusRunningDesc": "[ES] 已与云端网盘建立加密合并管道。\n上次同步：{time}",
+  "@webdavStatusRunningDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusException": "[ES] 同步出现异常",
+  "webdavStatusExceptionDesc": "[ES] 网络通信或云盘文件锁冲突。我们将自动重试。",
+  "webdavStatusEnabled": "[ES] 云同步已启用",
+  "webdavStatusEnabledDesc": "[ES] 服务就绪。上次同步：{time}",
+  "@webdavStatusEnabledDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavNeverSynced": "[ES] 从未同步",
+  "webdavNeverSucceeded": "[ES] 从未成功",
+  "webdavConflictPrompt": "[ES] 检测到有 {count} 篇同步冲突备份，建议立即处理。",
+  "@webdavConflictPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webContentTitle": "[ES] 网页内容",
+  "fetchingWebContent": "[ES] 正在获取网页内容：{url}",
+  "@fetchingWebContent": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "webCommandInvalidUrl": "[ES] 请使用 /web 命令提供有效的 URL",
+  "webCommandInvalidUrlTitle": "[ES] 无效的 URL",
+  "aiSuggestion": "[ES] AI 建议",
+  "autoAttachMetadataUnavailable": "[ES] 位置/天气未能附加，已直接保存",
+  "agentRichEditConflict": "[ES] 笔记内容已发生变化。为避免覆盖你的修改，请让 AI 重新生成建议。",
+  "agentDiffOriginal": "[ES] 原文",
+  "agentDiffReplacement": "[ES] 改为",
+  "agentDiffInsertBefore": "[ES] 在此内容前插入",
+  "agentDiffInsertAfter": "[ES] 在此内容后插入",
+  "agentDiffAppend": "[ES] 追加内容",
+  "agentDiffDelete": "[ES] 删除内容",
+  "noteProposalCreate": "[ES] 新建",
+  "noteProposalEdit": "[ES] 编辑",
+  "noteProposalPlain": "[ES] 普通笔记",
+  "noteProposalRich": "[ES] 富文本笔记",
+  "noteProposalChangeCount": "[ES] 修改 {count} 处",
+  "@noteProposalChangeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noteProposalExpand": "[ES] 展开全文",
+  "noteProposalCollapse": "[ES] 收起全文",
+  "noteProposalViewChanges": "[ES] 查看修改记录",
+  "noteProposalPlainToRichWarning": "[ES] 应用后将使用全屏富文本编辑器打开此笔记。",
+  "noteProposalBefore": "[ES] 原文",
+  "noteProposalAfter": "[ES] 改为",
+  "noteProposalCompleted": "[ES] 已完成",
+  "noteProposalApply": "[ES] 应用修改",
+  "noteProposalSave": "[ES] 保存笔记",
+  "noteProposalLegacyReadOnly": "[ES] 这是旧版建议，缺少安全的版本信息，仅供查看。请让 AI 重新生成后再应用。",
+  "noteProposalPlainEditorPreferenceWarning": "[ES] 你的设置会在全屏富文本编辑器中打开此普通草稿；保存后它将成为富文本笔记。",
+  "aiCardBadgeCreate": "[ES] 新建",
+  "aiCardBadgeEdit": "[ES] 修改",
+  "aiCardQuickEdit": "[ES] 快编",
+  "aiCardQuickEditTooltip": "[ES] 快速编辑内容、来源或标签",
+  "aiCardSavedViewNote": "[ES] 已保存 · 查看笔记",
+  "aiCardSaveFailedGeneric": "[ES] 保存失败，请稍后重试。",
+  "aiCardEditContentHint": "[ES] 编辑内容",
+  "experimentalTag": "[ES] 实验性",
+  "agentExperimentalNoticeTitle": "[ES] Thoughter 实验性功能说明",
+  "agentExperimentalNoticeIntro": "[ES] Thoughter 是正在测试中的 AI Agent 助手。在开始使用前，请阅读以下注意事项：",
+  "agentExperimentalNoticePoint1": "[ES] AI 可能会生成错误或不准确的回答，请对生成内容进行客观核查。",
+  "agentExperimentalNoticePoint2": "[ES] AI 不能直接修改你的笔记；所有编辑与新建方案仅在点击保存/应用后生效。",
+  "agentExperimentalNoticePoint3": "[ES] 功能仍处于实验测试阶段，使用过程中可能会遇到异常或不稳定情况。",
+  "agentExperimentalNoticeGotIt": "[ES] 理解并继续",
+  "agentExperimentalBannerText": "[ES] 实验性功能：AI回答可能包含错误；AI不会直接改写笔记，仅在点击保存后生效。",
+  "agentExperimentalNoticeAction": "[ES] 查看说明",
+  "dontShowAgain": "[ES] 不再自动提示",
+  "settingsLab": "[ES] 实验室",
+  "settingsLabDesc": "[ES] 开发者模式下的调试入口和实验性开关，可能不稳定",
+  "firstOpenScrollPerfMonitorExperiment": "[ES] [实验] 首屏滚动性能监测",
+  "firstOpenScrollPerfMonitorExperimentDesc": "[ES] 记录冷启动后首次滑动记录页的掉帧数据（默认关）",
+  "addNoteDeferMetadataExperiment": "[ES] [实验] AddNote 延迟获取元数据",
+  "addNoteDeferMetadataExperimentDesc": "[ES] 延迟位置和天气获取至键盘动画结束后（默认关）",
+  "noteCardMediaStyleExperiment": "[ES] [实验] 记录页图片显示方式",
+  "noteCardMediaStyleThumbnail": "[ES] 右侧小图",
+  "noteCardMediaStyleThumbnailDesc": "[ES] 右侧方形小图。有媒体必可见，解码开销最小。",
+  "noteCardMediaStyleInline": "[ES] 正文原位（旧版式）",
+  "noteCardMediaStyleInlineDesc": "[ES] 图片留在正文原位，顺序保真。代价：正文后面的图会被折叠截掉，音视频会在列表里建播放器。",
+  "noteCardMediaStyleBanner": "[ES] 顶部通栏大图",
+  "noteCardMediaStyleBannerDesc": "[ES] 卡片顶部整宽大图，照片是主角。位置归一化，解码开销最大。",
+  "noteInsertAnimationExperiment": "[ES] [实验] 记录页添加笔记动画",
+  "noteInsertAnimationCurrent": "[ES] 当前：{name}",
+  "@noteInsertAnimationCurrent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noteInsertAnimationScale": "[ES] 气泡缩放",
+  "noteInsertAnimationSlide": "[ES] 平滑上升",
+  "noteInsertAnimationNone": "[ES] 无动画",
+  "aiProviderZhipu": "[ES] 智谱 GLM",
+  "aiProviderMoonshot": "[ES] 月之暗面 Kimi",
+  "aiProviderDashScope": "[ES] 阿里云百炼",
+  "aiProviderVolcengine": "[ES] 火山方舟",
+  "aiProviderGemini": "[ES] Google Gemini",
+  "presetDescOllamaCloud": "[ES] 免费额度充足，注册就能用，推荐第一次配置的用户选它",
+  "presetDescOpenAI": "[ES] OpenAI 官方接口，需要海外支付方式",
+  "presetDescOpenRouter": "[ES] 一个 Key 调用 Claude、Gemini 等上百个模型",
+  "presetDescDeepSeek": "[ES] 国内直连，价格低，中文表现好",
+  "presetDescSiliconFlow": "[ES] 国内聚合平台，部分小模型免费",
+  "presetDescZhipu": "[ES] 国内直连，glm-4-flash 免费",
+  "presetDescMoonshot": "[ES] 国内直连，长上下文表现好",
+  "presetDescDashScope": "[ES] 阿里云百炼的 OpenAI 兼容接口，通义千问系列",
+  "presetDescVolcengine": "[ES] 火山方舟豆包系列，模型名填推理接入点 ID",
+  "presetDescGemini": "[ES] Gemini 官方的 OpenAI 兼容接口，有免费额度",
+  "presetDescOllamaLocal": "[ES] 连接本机运行的 Ollama，不联网、不需要密钥",
+  "presetDescLMStudio": "[ES] 连接本机运行的 LM Studio，不联网、不需要密钥",
+  "presetDescCustom": "[ES] 任何 OpenAI 兼容接口，地址和模型全部手填",
+  "aiServicesSectionTitle": "[ES] 我的 AI 服务",
+  "aiServiceEmptyTitle": "[ES] 还没有配置 AI 服务",
+  "aiServiceEmptyBody": "[ES] 配置一个服务商之后，AI 洞察、卡片生成和 Thoughter 助手才能工作。",
+  "editAiServiceTitle": "[ES] 编辑 AI 服务",
+  "newAiServiceTitle": "[ES] 新建 AI 服务",
+  "selectProviderTemplate": "[ES] 选择服务商",
+  "changeProviderTemplate": "[ES] 更换",
+  "providerGroupCloud": "[ES] 云端服务",
+  "providerGroupLocal": "[ES] 本地运行",
+  "providerGroupCustom": "[ES] 自定义",
+  "recommendedBadge": "[ES] 推荐",
+  "inUseBadge": "[ES] 使用中",
+  "getApiKeyLink": "[ES] 获取 API Key",
+  "apiKeyNotNeededHint": "[ES] 本地服务通常不需要密钥，留空即可",
+  "suggestedModelsLabel": "[ES] 常用模型",
+  "configNameField": "[ES] 配置名称",
+  "statusKeyConfigured": "[ES] 密钥已配置",
+  "statusKeyMissing": "[ES] 缺少密钥",
+  "aiServiceSaved": "[ES] 已保存 {name}",
+  "@aiServiceSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ollamaCloudTipTitle": "[ES] 推荐用 Ollama 云端",
+  "ollamaCloudTipBody": "[ES] 免费额度充足，注册后复制 API Key 就能用，不用绑卡。",
+  "ollamaCloudTipAction": "[ES] 一键添加",
+  "aiConfigHelpLink": "[ES] 不知道怎么填？查看配置说明",
+  "openLinkFailed": "[ES] 无法打开链接",
+  "testBeforeSaveHint": "[ES] 填好地址、密钥和模型后即可测试，不必先保存",
+  "agentMemoryClearSummary": "[ES] 当前记着 {profileCount} 条偏好、{factCount} 条细节",
+  "@agentMemoryClearSummary": {
+    "placeholders": {
+      "profileCount": {
+        "type": "int"
+      },
+      "factCount": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryNoticeBody": "[ES] 为了不用每次都重新认识你，Thoughter 会把你的身份和表达偏好记下来，之后的对话、每日提示和周期洞察都会用上。记忆只保存在这台设备上，不会上传。",
+  "agentMemoryNoticeHint": "[ES] 你可以随时让 Thoughter 修改或忘掉某条记忆，也可以在「AI 设置」里关闭或清空。",
+  "agentMemorySwitchFailed": "[ES] 记忆开关没能保存，请重试",
+  "agentMemoryCountsUnavailable": "[ES] 读取记忆数量失败，仍可尝试清空",
+  "releaseNotesTitle": "[ES] 更新内容",
+  "releaseNotesUpgradeLede": "[ES] 以下是你上次使用之后新增的功能。",
+  "releaseNotesCurrentLede": "[ES] 以下是本版本新增的功能。",
+  "releaseNotesHighlights": "[ES] 核心亮点",
+  "releaseNotesGetStarted": "[ES] 开始使用",
+  "releaseThoughterTitle": "[ES] Thoughter：住在摘录本里的思考搭档",
+  "releaseThoughterLede": "[ES] 从简单的记录，到深度的整理与创作。Thoughter 不再只是一个回答问题的对话框，它接入了你的整个笔记库，成为你的思考搭档。",
+  "releaseThoughterSearchTitle": "[ES] 智能检索与联动",
+  "releaseThoughterSearchDesc": "[ES] 无需手动翻找，直接用自然语言提问。Thoughter 会自动检索相关笔记、贯通标签线索，必要时还能补充联网信息。",
+  "releaseThoughterControlTitle": "[ES] 编辑权，始终在你手中",
+  "releaseThoughterControlDesc": "[ES] AI 不会擅自修改你的内容。所有新建与改写都会先以「提案卡片」呈现，改了什么一目了然；逐条查看、确认之后，才会真正应用。",
+  "releaseThoughterSingleNoteTitle": "[ES] 单篇笔记深聊",
+  "releaseThoughterSingleNoteDesc": "[ES] 在编辑器内点击 ✨ 按钮选择「问 Thoughter」，即可就当前这一篇追问、润色或续写。",
+  "releaseThoughterMemoryTitle": "[ES] 长期记忆",
+  "releaseThoughterMemoryDesc": "[ES] 开启后，Thoughter 会跨对话记住你的称呼与表达偏好。记忆独立存储，可随时查看或一键清空。",
+  "releaseThoughterInsightTitle": "[ES] 周期洞察与全新探索页",
+  "releaseThoughterInsightDesc": "[ES] Thoughter 会定期回看你的记录，写成阶段性洞察；探索页也随之重做，把这些发现集中呈现。",
+  "releaseThemeTitle": "[ES] 全新主题：换一张纸，换一支笔",
+  "releaseThemeLede": "[ES] 主题风格成为与深浅色并列的独立维度，三选其一。",
+  "releaseThemeStylesTitle": "[ES] 三套风格",
+  "releaseThemeStylesDesc": "[ES] Material 延续系统动态取色；「纸与墨」暖调温润，衬线正文配纸张横线；「素笺」冷调硬朗。",
+  "releaseThemeAccentTitle": "[ES] 墨色可选",
+  "releaseThemeAccentDesc": "[ES] 手工风格另备赭石、黛青、靛蓝、朱砂四支墨色，换墨不换纸。",
+  "releaseThemeSwitchTitle": "[ES] 随时切换",
+  "releaseThemeSwitchDesc": "[ES] 默认仍是 Material，升级不会改变外观。可在此直接试用，也可随时前往「设置 › 主题设置」调整。",
+  "releaseDiagnosticsNotice": "[ES] 自 3.7.0 起，心迹会在发生错误时上报匿名诊断信息，仅用于定位与修复问题，不含任何笔记内容。可在「设置 › 反馈与联系」中随时关闭。",
+  "settingsReleaseNotes": "[ES] 更新内容",
+  "settingsReleaseNotesDesc": "[ES] 查看本版本新增的功能"
 }

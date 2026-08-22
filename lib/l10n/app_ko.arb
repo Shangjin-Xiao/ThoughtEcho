@@ -3644,5 +3644,933 @@
   "feedbackDiscussionTitle": "커뮤니티 토론 참여",
   "feedbackDiscussionDesc": "질문, 아이디어 공유 및 다른 사용자와의 소통",
   "feedbackSentryTitle": "피드백 보내기 (Sentry)",
-  "feedbackSentryDesc": "개발자에게 직접 의견, 제안 또는 버그 보고서 보내기"
+  "feedbackSentryDesc": "개발자에게 직접 의견, 제안 또는 버그 보고서 보내기",
+  "addAiService": "AI 서비스 추가",
+  "agentMemorySectionTitle": "Thoughter 메모리",
+  "agentMemoryEnableTitle": "장기 메모리",
+  "agentMemoryEnableDesc": "채팅 간 기본 설정 기억 (로컬에만 저장됨)",
+  "agentMemoryNicknameTitle": "닉네임",
+  "agentMemoryNicknameHint": "Thoughter가 어떻게 불러드릴까요?",
+  "agentMemoryNicknameDesc": "Thoughter가 당신을 어떻게 불러야 할지 (건너뛰려면 비워두세요)",
+  "agentMemoryNicknameSaveFailed": "닉네임을 저장할 수 없습니다. 다시 시도해 주세요.",
+  "agentMemoryNicknameDisabled": "장기 기억이 켜져 있을 때 활성화됨",
+  "agentMemoryClearTitle": "기억 지우기",
+  "agentMemoryClearEmpty": "아직 기억된 것이 없습니다",
+  "agentMemoryClearConfirmTitle": "Thoughter의 기억을 지우시겠습니까?",
+  "agentMemoryClearConfirmBody": "기억된 모든 선호도 및 세부 사항이 영구적으로 삭제됩니다. 노트에는 영향을 미치지 않습니다.",
+  "agentMemoryClearConfirmAction": "지우기",
+  "agentMemoryCleared": "Thoughter의 기억이 지워졌습니다",
+  "agentMemoryClearFailed": "기억 지우기 실패",
+  "agentMemoryNoticeTitle": "Thoughter가 당신을 기억할 것입니다",
+  "agentMemoryNoticeGotIt": "이해했습니다",
+  "agentMemoryNoticeDisable": "기억하지 않음",
+  "sentryDisclosureMessage": "[KO] 心迹隐私政策已更新，您可以在官网查看。\n\n本次更新加入了 Sentry 以收集崩溃错误与用户反馈，为保护您的隐私，该功能默认关闭。您可以在“设置 -> 反馈与联系”中随时开启。\n\n隐私政策链接：https://note.shangjinyun.cn/privacy",
+  "feedbackEmailDesc": "[KO] shangjinyun@proton.me",
+  "feedbackSentryDisabledHint": "[KO] 请先在下方开启 Sentry 调试与报错服务",
+  "noteListDisableCardShadowsExperiment": "[KO] [实验] 记录页禁用卡片阴影",
+  "noteListDisableCardShadowsExperimentDesc": "[KO] 发布版可用。用于对比阴影对记录页滑动性能和视觉观感的影响（默认关）",
+  "noteListDisableBackdropBlurExperiment": "[KO] [实验] 记录页禁用折叠模糊",
+  "noteListDisableBackdropBlurExperimentDesc": "[KO] 发布版可用。将长内容折叠底部的背景模糊替换为渐变遮罩（默认关）",
+  "addNoteAutoFocusExperiment": "[KO] [实验] AddNote 自动聚焦",
+  "addNoteAutoFocusExperimentDesc": "[KO] 打开添加笔记对话框稳定后自动弹出键盘（默认开）",
+  "noteNotFound": "[KO] 笔记不存在",
+  "noteUpdateSkippedDeleted": "[KO] 笔记已删除，更新已跳过",
+  "dailyQuoteApiNinjasManageApiKey": "[KO] 配置服务密钥",
+  "dailyQuoteApiNinjasApiKeyHint": "[KO] 输入 API Ninjas 的 X-Api-Key",
+  "dailyQuoteApiNinjasApiKeyConfigured": "[KO] 已配置服务密钥",
+  "dailyQuoteApiNinjasApiKeyMissing": "[KO] 尚未配置服务密钥，无法请求该服务",
+  "dailyQuoteApiNinjasApiKeyInvalid": "[KO] 服务密钥格式无效",
+  "dailyQuoteApiNinjasCategorySelection": "[KO] 分类选择",
+  "dailyQuoteApiNinjasCategoryDesc": "[KO] 支持搜索、多选与清空；如果一个也不选，则自动按全局随机处理。",
+  "dailyQuoteApiNinjasCategorySearchHint": "[KO] 搜索分类",
+  "dailyQuoteApiNinjasNoCategoriesFound": "[KO] 没有匹配的分类",
+  "dailyQuoteApiNinjasAllCategoriesUsed": "[KO] 未限制分类，将从全部分类中随机抽取",
+  "dailyQuoteApiNinjasSelectedCount": "[KO] 已选择 {count} 个分类",
+  "@dailyQuoteApiNinjasSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteApiNinjasCategoryWisdom": "[KO] 智慧",
+  "dailyQuoteApiNinjasCategoryPhilosophy": "[KO] 哲学",
+  "dailyQuoteApiNinjasCategoryLife": "[KO] 人生",
+  "dailyQuoteApiNinjasCategoryTruth": "[KO] 真理",
+  "dailyQuoteApiNinjasCategoryInspirational": "[KO] 励志",
+  "dailyQuoteApiNinjasCategoryRelationships": "[KO] 关系",
+  "dailyQuoteApiNinjasCategoryLove": "[KO] 爱情",
+  "dailyQuoteApiNinjasCategoryFaith": "[KO] 信念",
+  "dailyQuoteApiNinjasCategoryHumor": "[KO] 幽默",
+  "dailyQuoteApiNinjasCategorySuccess": "[KO] 成功",
+  "dailyQuoteApiNinjasCategoryCourage": "[KO] 勇气",
+  "dailyQuoteApiNinjasCategoryHappiness": "[KO] 幸福",
+  "dailyQuoteApiNinjasCategoryArt": "[KO] 艺术",
+  "dailyQuoteApiNinjasCategoryWriting": "[KO] 写作",
+  "dailyQuoteApiNinjasCategoryFear": "[KO] 恐惧",
+  "dailyQuoteApiNinjasCategoryNature": "[KO] 自然",
+  "dailyQuoteApiNinjasCategoryTime": "[KO] 时间",
+  "dailyQuoteApiNinjasCategoryFreedom": "[KO] 自由",
+  "dailyQuoteApiNinjasCategoryDeath": "[KO] 死亡",
+  "dailyQuoteApiNinjasCategoryLeadership": "[KO] 领导力",
+  "dailyQuoteServiceProvider": "[KO] 当前内容由 {provider} 提供",
+  "@dailyQuoteServiceProvider": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "migrationTargetSameAsCurrent": "[KO] 新目录与当前数据目录相同",
+  "migrationTargetAncestor": "[KO] 新目录不能是当前数据目录的上级目录",
+  "migrationTargetNested": "[KO] 新目录不能位于当前数据目录内部",
+  "viewToolProcess": "[KO] 查看过程",
+  "cardSharePrefix": "[KO] 来自心迹的精美卡片\n\n",
+  "agentErrorNoProvider": "[KO] 请选择 AI 服务商后重试。",
+  "agentErrorMissingApiKey": "[KO] 请先为 {providerName} 配置 API 密钥，然后重试。",
+  "@agentErrorMissingApiKey": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentErrorUnsupportedProvider": "[KO] 当前 AI 服务商不支持 Agent 功能。请更换服务商后重试。",
+  "agentErrorTimeout": "[KO] 请求超时，请检查网络后重试。",
+  "agentErrorCancelled": "[KO] 已停止本次请求。",
+  "agentErrorGeneric": "[KO] 暂时无法完成请求，请稍后重试。",
+  "unsupportedMediaType": "[KO] 不支持的媒体类型",
+  "unsupportedMediaTypeWithName": "[KO] 不支持的媒体类型: {mediaType}",
+  "@unsupportedMediaTypeWithName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "fileNotExistOrMoved": "[KO] 选择的文件不存在或已被移动删除\n路径: {path}",
+  "@fileNotExistOrMoved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedFileEmpty": "[KO] 选择的文件为空\n路径: {path}",
+  "@selectedFileEmpty": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "unsupportedFileFormat": "[KO] 不支持的文件格式: .{extension}\n支持的格式: {formats}",
+  "@unsupportedFileFormat": {
+    "placeholders": {
+      "extension": {
+        "type": "String"
+      },
+      "formats": {
+        "type": "String"
+      }
+    }
+  },
+  "fileUnreadable": "[KO] 文件无法读取，可能原因：\n• 文件已损坏\n• 文件被其他程序占用\n• 权限不足\n请检查文件状态后重试",
+  "mediaTypeNoCameraImport": "[KO] {mediaType}不支持相机导入",
+  "@mediaTypeNoCameraImport": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "noteAttribution": "[KO] （署名：{source}）",
+  "@noteAttribution": {
+    "description": "喂给 AI 的笔记内容里，标出这条笔记填的作者/出处，用于区分摘录与原创署名",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderOllamaCloud": "[KO] Ollama 云端",
+  "loadFailedSimple": "[KO] 加载失败",
+  "loadNoteFailed": "[KO] 加载笔记失败",
+  "queryTimeoutShort": "[KO] 查询超时",
+  "queryTimeoutRetry": "[KO] 查询超时，请重试",
+  "databaseQueryError": "[KO] 数据库查询出错",
+  "syncFromSuffix": "[KO] （来自{from}）",
+  "@syncFromSuffix": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      }
+    }
+  },
+  "showNoteEditTime": "[KO] 显示笔记编辑时间",
+  "showNoteEditTimeDesc": "[KO] 在笔记中显示最后编辑时间",
+  "editedAtLabel": "[KO] 编辑于 {dateTime}",
+  "@editedAtLabel": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteAiAnalysis": "[KO] 删除AI分析",
+  "deleteAiAnalysisConfirm": "[KO] 确定要删除此笔记的AI分析结果吗？此操作可在保存笔记前撤销。",
+  "aiAnalysisDeleted": "[KO] AI分析已删除",
+  "aiAnalysisSaved": "[KO] AI分析已保存",
+  "viewFull": "[KO] 查看全文",
+  "copy": "[KO] 复制",
+  "copiedToClipboard": "[KO] 已复制到剪贴板",
+  "backupSavedToPath": "[KO] 备份已保存到: {path}",
+  "@backupSavedToPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "backupCompleteWithWarnings": "[KO] 备份已完成，但有警告",
+  "backupDeltaFailuresMessage": "[KO] {count, plural, other{有 # 条笔记的富文本媒体路径转换失败，这些笔记在备份中仍保留本机绝对路径，恢复到其他设备时相关图片可能无法显示。\n\n受影响的笔记ID：{ids}}}",
+  "@backupDeltaFailuresMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "ids": {
+        "type": "String"
+      }
+    }
+  },
+  "backupDeltaFailuresIdJoiner": "[KO] 、",
+  "backupDeltaFailuresMoreSuffix": "[KO]  等",
+  "backupFailedGeneric": "[KO] 无法完成备份，请稍后重试",
+  "@backupFailedGeneric": {
+    "description": "Generic backup failure message shown when the error type is not classified"
+  },
+  "backupFailedOutOfMemory": "[KO] 备份失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 尝试不包含媒体文件的备份\n• 重启应用后再试",
+  "backupFailedNoSpace": "[KO] 备份失败：存储空间不足\n\n请清理设备存储空间后重试。",
+  "backupFailedPermission": "[KO] 备份失败：权限不足\n\n请检查应用的存储权限设置。",
+  "saveTempFileFailed": "[KO] 保存临时文件失败",
+  "openBrowserFailed": "[KO] 打开浏览器失败",
+  "createShareFileFailed": "[KO] 创建分享文件失败",
+  "aiSuggestionCoreIdea": "[KO] 这篇笔记的核心思想是什么？",
+  "aiSuggestionInspiration": "[KO] 从中能得到什么启发？",
+  "aiSuggestionSummarize": "[KO] 能否总结一下要点？",
+  "aiSuggestionSolution": "[KO] 有什么解决方案吗？",
+  "aiSuggestionUnderstandConcept": "[KO] 如何更好地理解这个概念？",
+  "aiSuggestionActionPlan": "[KO] 如何制定行动计划？",
+  "aiSuggestionPsychology": "[KO] 这反映了什么心理状态？",
+  "aiSuggestionRealLife": "[KO] 如何应用到实际生活中？",
+  "aiSuggestionThinkingPattern": "[KO] 反映了什么思维模式？",
+  "svgLoading": "[KO] 正在加载SVG...",
+  "svgLoadingFallback": "[KO] 正在加载备用模板...",
+  "svgRenderFailed": "[KO] SVG渲染失败",
+  "svgTryingFallback": "[KO] 正在尝试使用备用模板...",
+  "cardRenderFailed": "[KO] 卡片渲染失败",
+  "cardRegeneratePrompt": "[KO] 请尝试重新生成卡片",
+  "svgContentParseFailed": "[KO] 内容解析失败",
+  "svgContentExtractFailed": "[KO] 无法提取内容",
+  "svgContentEmpty": "[KO] SVG内容为空",
+  "svgContentInvalidFormat": "[KO] 无效的SVG格式",
+  "svgFallbackTitle": "[KO] SVG生成失败",
+  "svgFallbackHint": "[KO] 请尝试重新生成或检查AI配置",
+  "svgFallbackIdentifier": "[KO] 心迹 - 备用模板",
+  "mediaProcessingNone": "[KO] 无需处理媒体文件",
+  "mediaProcessingFound": "[KO] {total, plural, other{发现 # 个媒体文件}}",
+  "@mediaProcessingFound": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingCopying": "[KO] 复制{typeLabel} {done}/{total}",
+  "@mediaProcessingCopying": {
+    "placeholders": {
+      "typeLabel": {
+        "type": "String"
+      },
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mediaProcessingProgress": "[KO] 已处理 {done} / {total}",
+  "@mediaProcessingProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteLoading": "[KO] 加载中...",
+  "dailyQuoteLoadingLocal": "[KO] 从本地记录加载中...",
+  "dailyQuoteLoadingOffline": "[KO] 网络未连接，从本地记录加载中...",
+  "dailyQuoteNoNetworkRetry": "[KO] 无网络连接且无本地记录，点击重试",
+  "dailyQuoteFetchFailedRetry": "[KO] 获取一言失败，点击重试",
+  "smartPushDailyQuoteIndependentNote": "[KO] 每日一言独立于智能推送，两者互不影响，可分别开启或关闭。",
+  "excerptIntentEnabled": "[KO] 摘录到心迹",
+  "excerptIntentEnabledDesc": "[KO] 允许从浏览器或其他应用选中文本后直接跳转到心迹，并打开非全屏编辑器",
+  "annualReportDemo": "[KO] 年度报告演示",
+  "manualApiTest": "[KO] 手动API测试",
+  "manualApiTestTitle": "[KO] 手动API密钥测试",
+  "manualApiTestDesc": "[KO] 直接输入API参数进行测试，绕过存储系统检查API密钥是否有效。",
+  "testResultLabel": "[KO] 测试结果:",
+  "fillAllFieldsError": "[KO] 错误: 请填写所有必填字段",
+  "testReportTitle": "[KO] === 手动API密钥测试报告 ===",
+  "testParamsLabel": "[KO] 测试参数:",
+  "keyFormatCheckLabel": "[KO] 密钥格式检查:",
+  "testApiKeyPrefixLabel": "[KO]   API Key前缀: {prefix}",
+  "@testApiKeyPrefixLabel": {
+    "placeholders": {
+      "prefix": {
+        "type": "String"
+      }
+    }
+  },
+  "sendRequestLabel": "[KO] 发送请求:",
+  "responseResultLabel": "[KO] 响应结果:",
+  "testApiKey": "[KO] 测试API密钥",
+  "aiReturnedEmptyContent": "[KO] AI返回了空内容，请重试",
+  "chatWithAiAssistant": "[KO] 与 Thoughter (AI 助手) 对话，深入探讨笔记内容",
+  "messageCopied": "[KO] 消息已复制到剪贴板",
+  "anniversaryTitle": "[KO] 心迹 · ThoughtEcho",
+  "anniversarySubtitle": "[KO] {years} 周年 · 感恩有你，一路同行",
+  "@anniversarySubtitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryVeteranThanks": "[KO] 你从 {years} 周年起就在这里了，谢谢一直写下去",
+  "@anniversaryVeteranThanks": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryEnterApp": "[KO] 进入应用",
+  "anniversaryBannerTitle": "[KO] 心迹 ThoughtEcho {years} 周年",
+  "@anniversaryBannerTitle": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "anniversaryBannerSubtitle": "[KO] 感恩有你，一路同行 · {range}",
+  "@anniversaryBannerSubtitle": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "anniversaryBannerTap": "[KO] 点击重温庆典动画",
+  "anniversaryReplayButton": "[KO] 重播动画",
+  "developerAnniversarySection": "[KO] 周年庆典",
+  "developerAnniversaryEnabled": "[KO] 启用庆典动画",
+  "developerAnniversaryEnabledDesc": "[KO] 开关控制是否在启动时展示庆典动画",
+  "developerAnniversaryReset": "[KO] 清空已参与记录",
+  "developerAnniversaryResetDesc": "[KO] 清空后当作新用户，庆典动画会重新自动播放",
+  "developerAnniversaryResetDone": "[KO] 已清空，庆典动画会重新自动播放",
+  "developerAnniversaryPreview": "[KO] 立即预览动画",
+  "developerAnniversaryPreviewDesc": "[KO] 按当前模拟届数立即播放庆典动画",
+  "developerAnniversarySimulate": "[KO] 模拟周年庆典",
+  "developerAnniversarySimulateOff": "[KO] 关闭",
+  "developerAnniversarySimulateYear": "[KO] {years} 周年",
+  "@developerAnniversarySimulateYear": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversarySimulateDescOff": "[KO] 按真实日期判断，当前不在庆典期",
+  "developerAnniversarySimulateDescActive": "[KO] 正在模拟 {years} 周年：设置页横幅和启动动画都按这一届展示",
+  "@developerAnniversarySimulateDescActive": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "developerAnniversaryShownYears": "[KO] 已参与的庆典",
+  "developerAnniversaryShownYearsNone": "[KO] 还没参与过任何一届",
+  "mediaPlayerPlay": "[KO] 播放",
+  "mediaPlayerPause": "[KO] 暂停",
+  "operationSuccess": "[KO] 操作成功！",
+  "loadingInProgress": "[KO] 正在加载...",
+  "aiThinkingProgress": "[KO] AI正在思考...",
+  "processingData": "[KO] 正在处理数据...",
+  "analyzingContent": "[KO] 正在分析内容...",
+  "skipNonFullscreenEditor": "[KO] 直接进入全屏编辑器",
+  "skipNonFullscreenEditorDesc": "[KO] 点击添加笔记时跳过快速编辑，直接打开全屏富文本编辑器",
+  "offlineQuoteSourceTitle": "[KO] 无网络时展示",
+  "offlineQuoteSourceDesc": "[KO] 无网络或仅展示本地记录时，首页显示什么内容",
+  "offlineQuoteSourceTagOnly": "[KO] 历史保存的每日一言",
+  "offlineQuoteSourceAll": "[KO] 随机展示全部本地记录",
+  "noLocalSavedQuotes": "[KO] 还没有历史保存的每日一言",
+  "copyCode": "[KO] 复制代码",
+  "copiedCode": "[KO] 已复制",
+  "webdavSyncTitle": "[KO] WebDAV 云同步",
+  "webdavSyncSubtitle": "[KO] 配置私有云盘，实现多端自动同步笔记",
+  "webdavProvider": "[KO] 网盘服务商",
+  "webdavServerUrl": "[KO] 服务器地址",
+  "webdavUsername": "[KO] 用户名/账号",
+  "webdavPassword": "[KO] 应用密码/Token",
+  "webdavTestConnection": "[KO] 测试连接",
+  "webdavTestSuccess": "[KO] 连接测试成功！",
+  "webdavTestFailed": "[KO] 连接失败，请检查配置和密码",
+  "webdavAutoSyncLaunch": "[KO] 打开或回前台时自动同步",
+  "webdavAutoSyncLaunchSubtitle": "[KO] 打开应用或从后台切回前台时，自动与云端合并最新内容",
+  "webdavAutoSyncChange": "[KO] 修改笔记后自动后台同步",
+  "webdavAutoSyncChangeSubtitle": "[KO] 编辑笔记停止打字 4 秒后，自动静默同步最新修改",
+  "webdavExperimentalTitle": "[KO] 实验性功能提示",
+  "webdavExperimentalContent": "[KO] 当前 WebDAV 云同步功能处于实验性预览（Preview）阶段。为了您的数据安全，建议您在启用前备份本地核心笔记。在使用过程中，如遇到任何问题，欢迎随时反馈。",
+  "webdavExperimentalClose": "[KO] 关闭提示",
+  "webdavExperimentalIgnore": "[KO] 永久忽略",
+  "webdavLastSync": "[KO] 上次同步：{time}",
+  "@webdavLastSync": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusSyncing": "[KO] 正在同步...",
+  "webdavStatusSuccess": "[KO] 同步成功",
+  "webdavStatusFailed": "[KO] 同步失败",
+  "settingsWebdavStatusWithTime": "[KO] {status} (上次：{time})",
+  "@settingsWebdavStatusWithTime": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsWebdavEnabledWithTime": "[KO] 已启用 (上次：{time})",
+  "@settingsWebdavEnabledWithTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavSyncNow": "[KO] 立即同步",
+  "webdavEnableSync": "[KO] 启用云同步",
+  "webdavSaveAndSync": "[KO] 保存并同步",
+  "webdavHowToGetAppPassword": "[KO] 如何获取应用密码？",
+  "webdavShowPasswordTooltip": "[KO] 显示密码",
+  "webdavHidePasswordTooltip": "[KO] 隐藏密码",
+  "webdavOpenHelpFailed": "[KO] 无法打开帮助链接，请检查系统默认浏览器设置",
+  "webdavConflictCategoryName": "[KO] 同步冲突",
+  "webdavConflictNotePrefix": "[KO] [冲突备份] ",
+  "webdavConflictNotification": "[KO] 检测到 {count} 处同步冲突，已安全备份至『同步冲突』分类",
+  "@webdavConflictNotification": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webdavViewNow": "[KO] 立即查看",
+  "exportFormatLabel": "[KO] 默认导出格式",
+  "exportFormatCard": "[KO] 精致分享卡片",
+  "exportFormatPdf": "[KO] 标准 A4 PDF",
+  "exportFormatDesc": "[KO] 配置笔记一键导出或分享时的默认生成格式",
+  "pdfExportExperimentalWarning": "[KO] PDF 导出目前是实验性功能，需要多语言及 Emoji 字体文件；首次使用可能需要联网下载，下载后可离线使用。",
+  "exportToPdf": "[KO] 导出为 PDF",
+  "pdfExportSelectionMode": "[KO] 选择导出模式",
+  "selectSameMonth": "[KO] 一键选同月",
+  "selectSameCategory": "[KO] 一键选同分类",
+  "exportSelected": "[KO] 导出 ({count})",
+  "@exportSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportSuccess": "[KO] 导出成功",
+  "exportFailed": "[KO] 导出失败",
+  "generatingPdf": "[KO] 正在生成 PDF...",
+  "pdfExportFailed": "[KO] 导出 PDF 失败: {error}",
+  "@pdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "batchPdfExportFailed": "[KO] 批量导出 PDF 失败: {error}",
+  "@batchPdfExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseSelectAtLeastOneNote": "[KO] 请先选择至少一条笔记",
+  "selectedNotesHaveNoCategories": "[KO] 所选笔记没有分类标签",
+  "pdfPreviewAndPrint": "[KO] PDF 预览 & 打印",
+  "pdfFontFallbackWarning": "[KO] 未检测到中文字体，中文内容可能会显示为乱码。请检查网络后重试。",
+  "webdavSyncOnCellular": "[KO] 允许数据流量下同步",
+  "webdavSyncOnCellularSubtitle": "[KO] 允许在移动数据网络下进行云端备份和合并",
+  "webdavSyncNotesOnlyOnCellular": "[KO] 数据流量下仅同步笔记",
+  "webdavSyncNotesOnlyOnCellularSubtitle": "[KO] 启用后在移动网络下仅同步文本，跳过大型媒体文件以节省流量",
+  "customFeedbackTitle": "[KO] 发送意见反馈",
+  "customFeedbackMessageLabel": "[KO] 反馈内容",
+  "customFeedbackMessageHint": "[KO] 请描述您遇到的问题或建议...",
+  "customFeedbackNameLabel": "[KO] 您的称呼 (可选)",
+  "customFeedbackEmailLabel": "[KO] 联系邮箱 (可选)",
+  "customFeedbackSubmit": "[KO] 发送反馈",
+  "customFeedbackSuccess": "[KO] 感谢您的反馈！",
+  "customFeedbackEmptyError": "[KO] 请输入反馈内容",
+  "saveSuccess": "[KO] 保存成功",
+  "toolCallStatusPending": "[KO] 待执行",
+  "toolCallStatusExecuting": "[KO] 执行中",
+  "toolCallStatusCompleted": "[KO] 完成",
+  "toolCallStatusError": "[KO] 错误",
+  "toolCallParameters": "[KO] 参数",
+  "toolCallResult": "[KO] 结果",
+  "failedToPickFiles": "[KO] 选择文件失败: {error}",
+  "@failedToPickFiles": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "editModeMetadataReadOnlyHint": "[KO] 已保存笔记的位置和天气不支持编辑修改",
+  "dataInsights": "[KO] 数据分析",
+  "dataInsightsDesc": "[KO] 深度分析你的笔记数据和写作趋势",
+  "searchChatHistory": "[KO] 搜索对话...",
+  "dynamicInsightStats": "[KO] 你已记录 {count} 条心迹，最近 7 天新增 {recentCount} 条。",
+  "@dynamicInsightStats": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "recentCount": {
+        "type": "int"
+      }
+    }
+  },
+  "sessionGroupToday": "[KO] 今天",
+  "sessionGroupYesterday": "[KO] 昨天",
+  "sessionGroupThisWeek": "[KO] 本周",
+  "sessionGroupEarlier": "[KO] 更早",
+  "messageCountLabel": "[KO] {count} 条消息",
+  "@messageCountLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commandPolish": "[KO] 润色",
+  "commandContinue": "[KO] 续写",
+  "commandDeepAnalysis": "[KO] 深度分析",
+  "commandInsight": "[KO] 智能洞察",
+  "aiPromptPolish": "[KO] 请帮我润色这段文字",
+  "aiPromptContinue": "[KO] 请帮我续写这段文字",
+  "aiPromptDeepAnalysis": "[KO] 请对这段笔记进行深度分析",
+  "aiPromptSourceAnalysis": "[KO] 请分析这段文字的来源，识别可能的作者和出处",
+  "aiAssistantInputHint": "[KO] 输入问题...",
+  "aiAssistantExploreWelcome": "[KO] {summary}",
+  "@aiAssistantExploreWelcome": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "currentNoteContext": "[KO] 当前笔记上下文",
+  "workflowUnavailable": "[KO] 工作流不可用",
+  "aiWorkflowNeedsBoundNote": "[KO] 此功能需要绑定笔记才能使用",
+  "confidenceLabel": "[KO] 置信度",
+  "replaceOriginalNote": "[KO] 替换原文",
+  "appendToEnd": "[KO] 追加到末尾",
+  "scrollToBottom": "[KO] 滚动到底部",
+  "pinChat": "[KO] 置顶",
+  "unpinChat": "[KO] 取消置顶",
+  "stopGenerate": "[KO] 停止生成",
+  "aiModeChat": "[KO] 对话模式",
+  "aiModeAgent": "[KO] Agent 模式",
+  "agentReachedMaxRounds": "[KO] 已达到本轮工具调用上限，以上结论基于目前已获取的信息。如需更完整的结果，可以补充更具体的要求后再问一次。",
+  "agentReviewingRecentNotes": "[KO] 正在浏览笔记...",
+  "agentSearchingNotesForQuery": "[KO] 正在查找\"{query}\"相关记录...",
+  "@agentSearchingNotesForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentCollectingTags": "[KO] 正在获取标签...",
+  "agentReadingNoteDetail": "[KO] 正在查看笔记...",
+  "agentCheckingLocationWeather": "[KO] 正在获取位置和天气...",
+  "agentSavingMemory": "[KO] 正在保存记忆...",
+  "agentRecallingMemory": "[KO] 正在查找记忆...",
+  "agentRecallingMemoryForQuery": "[KO] 正在查找\"{query}\"相关记忆...",
+  "@agentRecallingMemoryForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentSearchingWebForQuery": "[KO] 正在查找\"{query}\"的资料...",
+  "@agentSearchingWebForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentReadingWebPage": "[KO] 正在读取网页...",
+  "agentPreparingNewNoteSuggestion": "[KO] 正在准备新笔记建议...",
+  "agentPreparingEditSuggestion": "[KO] 正在准备修改建议...",
+  "agentFoundNoMatchingNotes": "[KO] 未找到相关记录",
+  "agentFoundMatchingNotes": "[KO] 找到 {count} 条相关记录",
+  "@agentFoundMatchingNotes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentFoundMatchingNotesWithMore": "[KO] 找到 {count} 条相关记录，还有更多",
+  "@agentFoundMatchingNotesWithMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentPreparedTagChoices": "[KO] 找到 {count} 个可用标签",
+  "@agentPreparedTagChoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentCheckedLocationWeather": "[KO] 已获取位置和天气",
+  "agentCheckedLocationWeatherWithDetails": "[KO] 位置：{location}，天气：{weather}",
+  "@agentCheckedLocationWeatherWithDetails": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      },
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "agentFoundWebSources": "[KO] 找到 {count} 条网络资料",
+  "@agentFoundWebSources": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadWebPageSummary": "[KO] 已读取网页，约 {count} 字",
+  "@agentReadWebPageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadNoteDetailSummary": "[KO] 已读取笔记《{title}》的完整正文",
+  "@agentReadNoteDetailSummary": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "agentPreparedSuggestionCard": "[KO] 已生成建议",
+  "agentToolStepFinished": "[KO] 已完成",
+  "agentToolStepDidNotFinish": "[KO] 未完成",
+  "agentMemorySaved": "[KO] 已保存记忆",
+  "agentMemoryDeleted": "[KO] 已删除记忆",
+  "agentRecalledFacts": "[KO] 找到 {count} 条相关记忆",
+  "@agentRecalledFacts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentRecalledNoFacts": "[KO] 未找到相关记忆",
+  "aiThinking": "[KO] 正在思考...",
+  "thinkingMode": "[KO] 深度思考",
+  "showThinking": "[KO] 查看思考过程",
+  "hideThinking": "[KO] 收起思考过程",
+  "toolExecutionProgress": "[KO] 正在执行...",
+  "toolExecutionCompleted": "[KO] 执行完成",
+  "executedNOperations": "[KO] 执行了 {count} 个操作",
+  "@executedNOperations": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "attachFile": "[KO] 附加文件",
+  "yesterday": "[KO] 昨天",
+  "openInEditor": "[KO] 打开编辑器",
+  "saveDirectly": "[KO] 直接保存",
+  "replace": "[KO] 替换",
+  "append": "[KO] 追加",
+  "notice": "[KO] 提示",
+  "saveRequired": "[KO] 保存提示",
+  "saveBeforeAiAssistant": "[KO] 进入 Thoughter 前需先保存当前笔记内容",
+  "saveAndContinue": "[KO] 保存并继续",
+  "toggleAddLocation": "[KO] 添加位置",
+  "toggleAddWeather": "[KO] 添加天气",
+  "webdavDisableSyncSuccess": "[KO] 已关闭 WebDAV 云同步。本地数据完全保留。",
+  "webdavDisableSync": "[KO] 关闭并停用云同步",
+  "webdavGoToResolve": "[KO] 去处理",
+  "webdavNoConflicts": "[KO] 没有检测到冲突笔记",
+  "webdavAllConflictsResolved": "[KO] 您的所有同步冲突均已处理干净。",
+  "webdavProviderNutstore": "[KO] 坚果云 (Nutstore)",
+  "webdavProviderCustom": "[KO] 自定义 (Custom)",
+  "webdavProviderNextcloud": "[KO] Nextcloud / ownCloud",
+  "webdavProviderInfinicloud": "[KO] InfiniCLOUD",
+  "webdavProviderConfig": "[KO] 服务商配置",
+  "webdavServerUrlEmptyError": "[KO] 请输入 WebDAV 服务器地址",
+  "webdavServerUrlInvalidError": "[KO] 地址必须以 https:// 开头",
+  "webdavUsernameEmptyError": "[KO] 请输入用户名",
+  "webdavPasswordEmptyError": "[KO] 请输入应用密码",
+  "webdavSyncStrategy": "[KO] 同步策略",
+  "webdavStatusNotEnabled": "[KO] 未启用云同步",
+  "webdavStatusNotEnabledDesc": "[KO] 配置您的 WebDAV 服务，享受安全跨端多路同步。",
+  "webdavStatusSyncingDesc": "[KO] 正在安全比对合并云端与本地数据库文件...",
+  "webdavStatusRunning": "[KO] 云同步运行中",
+  "webdavStatusRunningDesc": "[KO] 已与云端网盘建立加密合并管道。\n上次同步：{time}",
+  "@webdavStatusRunningDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavStatusException": "[KO] 同步出现异常",
+  "webdavStatusExceptionDesc": "[KO] 网络通信或云盘文件锁冲突。我们将自动重试。",
+  "webdavStatusEnabled": "[KO] 云同步已启用",
+  "webdavStatusEnabledDesc": "[KO] 服务就绪。上次同步：{time}",
+  "@webdavStatusEnabledDesc": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavNeverSynced": "[KO] 从未同步",
+  "webdavNeverSucceeded": "[KO] 从未成功",
+  "webdavConflictPrompt": "[KO] 检测到有 {count} 篇同步冲突备份，建议立即处理。",
+  "@webdavConflictPrompt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webContentTitle": "[KO] 网页内容",
+  "fetchingWebContent": "[KO] 正在获取网页内容：{url}",
+  "@fetchingWebContent": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "webCommandInvalidUrl": "[KO] 请使用 /web 命令提供有效的 URL",
+  "webCommandInvalidUrlTitle": "[KO] 无效的 URL",
+  "aiSuggestion": "[KO] AI 建议",
+  "autoAttachMetadataUnavailable": "[KO] 位置/天气未能附加，已直接保存",
+  "agentRichEditConflict": "[KO] 笔记内容已发生变化。为避免覆盖你的修改，请让 AI 重新生成建议。",
+  "agentDiffOriginal": "[KO] 原文",
+  "agentDiffReplacement": "[KO] 改为",
+  "agentDiffInsertBefore": "[KO] 在此内容前插入",
+  "agentDiffInsertAfter": "[KO] 在此内容后插入",
+  "agentDiffAppend": "[KO] 追加内容",
+  "agentDiffDelete": "[KO] 删除内容",
+  "noteProposalCreate": "[KO] 新建",
+  "noteProposalEdit": "[KO] 编辑",
+  "noteProposalPlain": "[KO] 普通笔记",
+  "noteProposalRich": "[KO] 富文本笔记",
+  "noteProposalChangeCount": "[KO] 修改 {count} 处",
+  "@noteProposalChangeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noteProposalExpand": "[KO] 展开全文",
+  "noteProposalCollapse": "[KO] 收起全文",
+  "noteProposalViewChanges": "[KO] 查看修改记录",
+  "noteProposalPlainToRichWarning": "[KO] 应用后将使用全屏富文本编辑器打开此笔记。",
+  "noteProposalBefore": "[KO] 原文",
+  "noteProposalAfter": "[KO] 改为",
+  "noteProposalCompleted": "[KO] 已完成",
+  "noteProposalApply": "[KO] 应用修改",
+  "noteProposalSave": "[KO] 保存笔记",
+  "noteProposalLegacyReadOnly": "[KO] 这是旧版建议，缺少安全的版本信息，仅供查看。请让 AI 重新生成后再应用。",
+  "noteProposalPlainEditorPreferenceWarning": "[KO] 你的设置会在全屏富文本编辑器中打开此普通草稿；保存后它将成为富文本笔记。",
+  "aiCardBadgeCreate": "[KO] 新建",
+  "aiCardBadgeEdit": "[KO] 修改",
+  "aiCardQuickEdit": "[KO] 快编",
+  "aiCardQuickEditTooltip": "[KO] 快速编辑内容、来源或标签",
+  "aiCardSavedViewNote": "[KO] 已保存 · 查看笔记",
+  "aiCardSaveFailedGeneric": "[KO] 保存失败，请稍后重试。",
+  "aiCardEditContentHint": "[KO] 编辑内容",
+  "experimentalTag": "[KO] 实验性",
+  "agentExperimentalNoticeTitle": "[KO] Thoughter 实验性功能说明",
+  "agentExperimentalNoticeIntro": "[KO] Thoughter 是正在测试中的 AI Agent 助手。在开始使用前，请阅读以下注意事项：",
+  "agentExperimentalNoticePoint1": "[KO] AI 可能会生成错误或不准确的回答，请对生成内容进行客观核查。",
+  "agentExperimentalNoticePoint2": "[KO] AI 不能直接修改你的笔记；所有编辑与新建方案仅在点击保存/应用后生效。",
+  "agentExperimentalNoticePoint3": "[KO] 功能仍处于实验测试阶段，使用过程中可能会遇到异常或不稳定情况。",
+  "agentExperimentalNoticeGotIt": "[KO] 理解并继续",
+  "agentExperimentalBannerText": "[KO] 实验性功能：AI回答可能包含错误；AI不会直接改写笔记，仅在点击保存后生效。",
+  "agentExperimentalNoticeAction": "[KO] 查看说明",
+  "dontShowAgain": "[KO] 不再自动提示",
+  "settingsLab": "[KO] 实验室",
+  "settingsLabDesc": "[KO] 开发者模式下的调试入口和实验性开关，可能不稳定",
+  "firstOpenScrollPerfMonitorExperiment": "[KO] [实验] 首屏滚动性能监测",
+  "firstOpenScrollPerfMonitorExperimentDesc": "[KO] 记录冷启动后首次滑动记录页的掉帧数据（默认关）",
+  "addNoteDeferMetadataExperiment": "[KO] [实验] AddNote 延迟获取元数据",
+  "addNoteDeferMetadataExperimentDesc": "[KO] 延迟位置和天气获取至键盘动画结束后（默认关）",
+  "noteCardMediaStyleExperiment": "[KO] [实验] 记录页图片显示方式",
+  "noteCardMediaStyleThumbnail": "[KO] 右侧小图",
+  "noteCardMediaStyleThumbnailDesc": "[KO] 右侧方形小图。有媒体必可见，解码开销最小。",
+  "noteCardMediaStyleInline": "[KO] 正文原位（旧版式）",
+  "noteCardMediaStyleInlineDesc": "[KO] 图片留在正文原位，顺序保真。代价：正文后面的图会被折叠截掉，音视频会在列表里建播放器。",
+  "noteCardMediaStyleBanner": "[KO] 顶部通栏大图",
+  "noteCardMediaStyleBannerDesc": "[KO] 卡片顶部整宽大图，照片是主角。位置归一化，解码开销最大。",
+  "noteInsertAnimationExperiment": "[KO] [实验] 记录页添加笔记动画",
+  "noteInsertAnimationCurrent": "[KO] 当前：{name}",
+  "@noteInsertAnimationCurrent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "noteInsertAnimationScale": "[KO] 气泡缩放",
+  "noteInsertAnimationSlide": "[KO] 平滑上升",
+  "noteInsertAnimationNone": "[KO] 无动画",
+  "aiProviderZhipu": "[KO] 智谱 GLM",
+  "aiProviderMoonshot": "[KO] 月之暗面 Kimi",
+  "aiProviderDashScope": "[KO] 阿里云百炼",
+  "aiProviderVolcengine": "[KO] 火山方舟",
+  "aiProviderGemini": "[KO] Google Gemini",
+  "presetDescOllamaCloud": "[KO] 免费额度充足，注册就能用，推荐第一次配置的用户选它",
+  "presetDescOpenAI": "[KO] OpenAI 官方接口，需要海外支付方式",
+  "presetDescOpenRouter": "[KO] 一个 Key 调用 Claude、Gemini 等上百个模型",
+  "presetDescDeepSeek": "[KO] 国内直连，价格低，中文表现好",
+  "presetDescSiliconFlow": "[KO] 国内聚合平台，部分小模型免费",
+  "presetDescZhipu": "[KO] 国内直连，glm-4-flash 免费",
+  "presetDescMoonshot": "[KO] 国内直连，长上下文表现好",
+  "presetDescDashScope": "[KO] 阿里云百炼的 OpenAI 兼容接口，通义千问系列",
+  "presetDescVolcengine": "[KO] 火山方舟豆包系列，模型名填推理接入点 ID",
+  "presetDescGemini": "[KO] Gemini 官方的 OpenAI 兼容接口，有免费额度",
+  "presetDescOllamaLocal": "[KO] 连接本机运行的 Ollama，不联网、不需要密钥",
+  "presetDescLMStudio": "[KO] 连接本机运行的 LM Studio，不联网、不需要密钥",
+  "presetDescCustom": "[KO] 任何 OpenAI 兼容接口，地址和模型全部手填",
+  "aiServicesSectionTitle": "[KO] 我的 AI 服务",
+  "aiServiceEmptyTitle": "[KO] 还没有配置 AI 服务",
+  "aiServiceEmptyBody": "[KO] 配置一个服务商之后，AI 洞察、卡片生成和 Thoughter 助手才能工作。",
+  "editAiServiceTitle": "[KO] 编辑 AI 服务",
+  "newAiServiceTitle": "[KO] 新建 AI 服务",
+  "selectProviderTemplate": "[KO] 选择服务商",
+  "changeProviderTemplate": "[KO] 更换",
+  "providerGroupCloud": "[KO] 云端服务",
+  "providerGroupLocal": "[KO] 本地运行",
+  "providerGroupCustom": "[KO] 自定义",
+  "recommendedBadge": "[KO] 推荐",
+  "inUseBadge": "[KO] 使用中",
+  "getApiKeyLink": "[KO] 获取 API Key",
+  "apiKeyNotNeededHint": "[KO] 本地服务通常不需要密钥，留空即可",
+  "suggestedModelsLabel": "[KO] 常用模型",
+  "configNameField": "[KO] 配置名称",
+  "statusKeyConfigured": "[KO] 密钥已配置",
+  "statusKeyMissing": "[KO] 缺少密钥",
+  "aiServiceSaved": "[KO] 已保存 {name}",
+  "@aiServiceSaved": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ollamaCloudTipTitle": "[KO] 推荐用 Ollama 云端",
+  "ollamaCloudTipBody": "[KO] 免费额度充足，注册后复制 API Key 就能用，不用绑卡。",
+  "ollamaCloudTipAction": "[KO] 一键添加",
+  "aiConfigHelpLink": "[KO] 不知道怎么填？查看配置说明",
+  "openLinkFailed": "[KO] 无法打开链接",
+  "testBeforeSaveHint": "[KO] 填好地址、密钥和模型后即可测试，不必先保存",
+  "agentMemoryClearSummary": "[KO] 当前记着 {profileCount} 条偏好、{factCount} 条细节",
+  "@agentMemoryClearSummary": {
+    "placeholders": {
+      "profileCount": {
+        "type": "int"
+      },
+      "factCount": {
+        "type": "int"
+      }
+    }
+  },
+  "agentMemoryNoticeBody": "[KO] 为了不用每次都重新认识你，Thoughter 会把你的身份和表达偏好记下来，之后的对话、每日提示和周期洞察都会用上。记忆只保存在这台设备上，不会上传。",
+  "agentMemoryNoticeHint": "[KO] 你可以随时让 Thoughter 修改或忘掉某条记忆，也可以在「AI 设置」里关闭或清空。",
+  "agentMemorySwitchFailed": "[KO] 记忆开关没能保存，请重试",
+  "agentMemoryCountsUnavailable": "[KO] 读取记忆数量失败，仍可尝试清空",
+  "releaseNotesTitle": "[KO] 更新内容",
+  "releaseNotesUpgradeLede": "[KO] 以下是你上次使用之后新增的功能。",
+  "releaseNotesCurrentLede": "[KO] 以下是本版本新增的功能。",
+  "releaseNotesHighlights": "[KO] 核心亮点",
+  "releaseNotesGetStarted": "[KO] 开始使用",
+  "releaseThoughterTitle": "[KO] Thoughter：住在摘录本里的思考搭档",
+  "releaseThoughterLede": "[KO] 从简单的记录，到深度的整理与创作。Thoughter 不再只是一个回答问题的对话框，它接入了你的整个笔记库，成为你的思考搭档。",
+  "releaseThoughterSearchTitle": "[KO] 智能检索与联动",
+  "releaseThoughterSearchDesc": "[KO] 无需手动翻找，直接用自然语言提问。Thoughter 会自动检索相关笔记、贯通标签线索，必要时还能补充联网信息。",
+  "releaseThoughterControlTitle": "[KO] 编辑权，始终在你手中",
+  "releaseThoughterControlDesc": "[KO] AI 不会擅自修改你的内容。所有新建与改写都会先以「提案卡片」呈现，改了什么一目了然；逐条查看、确认之后，才会真正应用。",
+  "releaseThoughterSingleNoteTitle": "[KO] 单篇笔记深聊",
+  "releaseThoughterSingleNoteDesc": "[KO] 在编辑器内点击 ✨ 按钮选择「问 Thoughter」，即可就当前这一篇追问、润色或续写。",
+  "releaseThoughterMemoryTitle": "[KO] 长期记忆",
+  "releaseThoughterMemoryDesc": "[KO] 开启后，Thoughter 会跨对话记住你的称呼与表达偏好。记忆独立存储，可随时查看或一键清空。",
+  "releaseThoughterInsightTitle": "[KO] 周期洞察与全新探索页",
+  "releaseThoughterInsightDesc": "[KO] Thoughter 会定期回看你的记录，写成阶段性洞察；探索页也随之重做，把这些发现集中呈现。",
+  "releaseThemeTitle": "[KO] 全新主题：换一张纸，换一支笔",
+  "releaseThemeLede": "[KO] 主题风格成为与深浅色并列的独立维度，三选其一。",
+  "releaseThemeStylesTitle": "[KO] 三套风格",
+  "releaseThemeStylesDesc": "[KO] Material 延续系统动态取色；「纸与墨」暖调温润，衬线正文配纸张横线；「素笺」冷调硬朗。",
+  "releaseThemeAccentTitle": "[KO] 墨色可选",
+  "releaseThemeAccentDesc": "[KO] 手工风格另备赭石、黛青、靛蓝、朱砂四支墨色，换墨不换纸。",
+  "releaseThemeSwitchTitle": "[KO] 随时切换",
+  "releaseThemeSwitchDesc": "[KO] 默认仍是 Material，升级不会改变外观。可在此直接试用，也可随时前往「设置 › 主题设置」调整。",
+  "releaseDiagnosticsNotice": "[KO] 自 3.7.0 起，心迹会在发生错误时上报匿名诊断信息，仅用于定位与修复问题，不含任何笔记内容。可在「设置 › 反馈与联系」中随时关闭。",
+  "settingsReleaseNotes": "[KO] 更新内容",
+  "settingsReleaseNotesDesc": "[KO] 查看本版本新增的功能"
 }
