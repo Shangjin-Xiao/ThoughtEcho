@@ -318,19 +318,24 @@ extension SmartPushExecution on SmartPushService {
           contentType: contentType,
         );
 
-        // ==== 向树莓派 Pico 发送蓝牙广播 ====
-        try {
-          // 不阻塞推送主流程，火忘式发送
-          unawaited(
-            PicoBleService.instance.sendQuoteToPico(noteToShow).catchError(
-              (e) {
-                AppLogger.w('蓝牙发送到水墨屏异步失败', error: e);
-                return false;
-              },
-            ),
-          );
-        } catch (bleErr) {
-          AppLogger.w('蓝牙发送到水墨屏失败', error: bleErr);
+        // ==== 向树莓派 Pico 发送蓝牙广播（默认关闭）====
+        // 这条链路只服务于外接墨水屏硬件，绝大多数用户用不到。
+        // 但它并不是死代码：不加开关时每条推送都会真的去碰系统蓝牙栈，
+        // 在 iOS 上足以直接把进程带走。所以默认不走，由用户显式开启。
+        if (picoBleEnabled) {
+          try {
+            // 不阻塞推送主流程，火忘式发送
+            unawaited(
+              PicoBleService.instance.sendQuoteToPico(noteToShow).catchError(
+                (e) {
+                  AppLogger.w('蓝牙发送到水墨屏异步失败', error: e);
+                  return false;
+                },
+              ),
+            );
+          } catch (bleErr) {
+            AppLogger.w('蓝牙发送到水墨屏失败', error: bleErr);
+          }
         }
         // ===================================
 

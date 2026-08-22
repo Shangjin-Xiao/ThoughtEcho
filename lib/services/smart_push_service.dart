@@ -80,6 +80,13 @@ class SmartPushService extends ChangeNotifier {
       'smart_push_daily_quote_pushed_date';
   static const String _appSettingsKey = 'app_settings';
 
+  /// 是否允许推送时向树莓派 Pico 墨水屏做 BLE 广播。
+  ///
+  /// 默认关闭：绝大多数用户没有这块硬件，而一旦调用 flutter_blue_plus，
+  /// iOS 就会初始化 CBCentralManager 并弹系统蓝牙授权框 —— 对没有硬件的
+  /// 用户纯属打扰。需要用的人调 [setPicoBleEnabled] 打开即可。
+  static const String _picoBleEnabledKey = 'smart_push_pico_ble_enabled';
+
   /// 今日智能推送是否已执行过（任意内容类型）
   static const String _todayPushedDateKey = 'smart_push_today_pushed_date';
 
@@ -127,6 +134,15 @@ class SmartPushService extends ChangeNotifier {
 
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
+
+  /// 推送时是否向 Pico 墨水屏做 BLE 广播（默认关闭，见 [_picoBleEnabledKey]）
+  bool get picoBleEnabled => _mmkv.getBool(_picoBleEnabledKey) ?? false;
+
+  /// 开关 Pico 墨水屏 BLE 广播
+  Future<void> setPicoBleEnabled(bool enabled) async {
+    await _mmkv.setBool(_picoBleEnabledKey, enabled);
+    notifyListeners();
+  }
 
   final Random _random = Random();
 
