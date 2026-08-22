@@ -64,19 +64,10 @@ dart format <changed-dart-files>
 # 只检查格式，不改文件
 dart format --output=none --set-exit-if-changed <changed-dart-files>
 
-# 静态分析
+# 静态分析（完成修改后执行一次即可，严禁短时间内频繁重复执行）
 flutter analyze --no-fatal-infos
 
-# 运行相关测试文件（默认做法）
-timeout 60s flutter test --reporter compact test/path/to/file_test.dart
-
-# 按名称运行单个用例
-timeout 60s flutter test --reporter compact test/path/to/file_test.dart --name "用例名称"
-
-# 默认门禁由 CI 自动按目录分片；性能和真实服务/设备集成测试需显式运行
-
-# 修改 ARB 后生成国际化代码
-flutter gen-l10n
+# 默认门禁由 GitHub Actions 远程 CI 自动运行；本地环境资源受限，尽量不跑本地 flutter test，提交后由 Agent 自行盯紧远程 CI 结果
 
 # 修改 Mockito 接口或注解后重新生成 Mock
 dart run build_runner build --delete-conflicting-outputs
@@ -86,16 +77,15 @@ dart run build_runner build --delete-conflicting-outputs
 pwsh ./scripts/build_msix_ci.ps1
 ```
 
-测试冷启动可能超过 60 秒；首次卡在 `loading` 时可预热或将单次超时提高到 180 秒。输出过多
-时先定位编译/分析错误，不要反复运行长输出命令。
+> **本地环境约束**（详见 `docs/DEVICE_INFO.md`）：当前开发设备资源受限，本地一般只进行 `dart format` 与单次必要的 `flutter analyze`（切勿频繁重复 analyze）。尽量不运行本地 `flutter test`，避免冷启动与内存抖动导致卡死。完整测试与门禁交由远程 CI 校验，推送后由 Agent 关注远程 CI 状态。
 
 ## 工作方式
 
 1. 先确认请求范围和验收标准，再检查 `git status --short`，保留用户已有改动。
 2. 用 `rg` / `rg --files` 查找定义、调用方、测试和文档；修改复杂文件前阅读其拆分文件。
-3. 做最小且完整的改动。修 Bug 时优先添加能复现问题的回归测试；新增逻辑补相应测试。
+3. 做最小且完整的改动。修 Bug 或新增逻辑时编写相应测试，但本地尽量不跑全量测试，交由远程 CI 验证。
 4. 只格式化和验证相关文件。除非用户明确要求，不主动运行全量测试或全仓库格式化。
-5. 完成前检查 diff、相关测试和静态分析结果；无法执行的验证要明确说明，不能声称已通过。
+5. 完成前检查 diff 与静态分析结果；推送后由 Agent 盯紧 GitHub Actions 远程 CI 结果。无法执行的验证要明确说明，不能声称已通过。
 
 涉及第三方库、Flutter/Dart SDK、平台 API、AI 服务协议或 GitHub Actions 时，先用 Context7
 查询当前官方文档（`resolve-library-id` → `get-library-docs`）；Context7 不可用或无对应资料时，
@@ -150,7 +140,7 @@ pwsh ./scripts/build_msix_ci.ps1
 
 - UI 层禁止硬编码任何用户可见文本，包括按钮、菜单、Tooltip、Dialog、SnackBar、空状态和
   无障碍标签。
-- 新文案与描述只需新增中英文（`lib/l10n/app_zh.arb` 与 `lib/l10n/app_en.arb`），占位符声明元数据，其他语言后续补充；未提供本地化的语言默认回退显示为英文（`l10n.yaml` 中首选语言为 `en`）。修改后运行 `flutter gen-l10n`；禁止手动编辑 `lib/gen_l10n/`。
+- 新文案与描述只需新增中英文（`lib/l10n/app_zh.arb` 与 `lib/l10n/app_en.arb`），占位符声明元数据，其他语言后续补充；未提供本地化的语言默认回退显示为英文（`l10n.yaml` 中首选语言为 `en`）。无需手动运行 `gen-l10n`（构建与 CI 会自动生成）；禁止手动编辑 `lib/gen_l10n/`。
 - 颜色和文字样式优先来自 `Theme.of(context)` / `ColorScheme`。只有品牌色、数据可视化语义色
   或平台明确要求的颜色可集中定义，不在页面散落 `Color(0x...)`。
 - 异步间隔后使用 `context` 或更新 State 前检查 `mounted` / `context.mounted`。
