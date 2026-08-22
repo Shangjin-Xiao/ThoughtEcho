@@ -99,6 +99,13 @@ class AIPromptManager {
 </output_format>
 ''';
 
+  /// 周期洞察提示词的版本号。
+  ///
+  /// 改动 [getReportInsightSystemPrompt] / [buildReportInsightUserMessage]
+  /// 的措辞或输出结构时必须 +1：洞察缓存的签名带着这个号，不改的话老用户
+  /// 会一直读到旧提示词生成的缓存，直到他碰巧增删了笔记才重算。
+  static const int reportInsightPromptVersion = 2;
+
   /// 每日提示生成器提示词
   static const String dailyPromptGeneratorPrompt = '''
 <context>
@@ -812,12 +819,15 @@ ${_getLanguageDirective(languageCode)}''';
 - 笔记末尾的“（署名：X）”是归属标注，不等于“摘录”标记：X 是他人名字或作品名时，这条是摘录，只能当作“这段话击中过他”的共鸣证据，不能当成他本人的经历、心情或原话；X 是用户自己的称呼（见用户画像）时，是他给原创署了名；没有标注的按正文语境判断。
 - 隐私优先：不输出具体住址/单位/联系方式；地名若过于具体，改写为更泛化或诗意表达（如“江南”“海边的城市”）。
 - 输出必须为“一段话”，不分段、不列点。
-- 长度：中文 45–75 字；英文 25–45 words。宁可短，不要凑字数。
+- 长度：中文 55–85 字；英文 30–55 words。宁可短，不要凑字数。
 </constraints>
 
 <output_format>
-输出：单段、文学化但克制的洞察文字。先用一句把“记录习惯”落到气质上（可含一个称号），
-再用一句点出笔记内容里的真实主题或情绪。**只写这两句，不要再加收束、祝福或建议。**
+输出：单段、文学化但克制的洞察文字，三句：
+1) 把“记录习惯”落到气质上（可含一个称号）
+2) 点出笔记内容里的真实主题或情绪
+3) 一句收束的祝愿（“愿你……”这类语气），承接前两句、不另起话题
+第三句最多 20 字，只祝愿不建议：不要“不妨试试/建议你/可以考虑”，不说教、不提问、不总结全文。
 </output_format>
 ''';
 
@@ -843,6 +853,7 @@ ${_getLanguageDirective(languageCode)}''';
     String? notesPreview, // 选填：拼接后的笔记内容片段（可部分）
     String? fullNotesContent, // 新增：完整的笔记内容用于深度分析
     String? previousInsights, // 新增：历史洞察上下文
+    String? languageCode, // 用户语言，决定收尾指令用哪种语言表述
   }) {
     final timeText = mostTimePeriod ?? '—';
     final weatherText = mostWeather ?? '—';
@@ -875,6 +886,17 @@ ${_getLanguageDirective(languageCode)}''';
 $previousInsights''';
     }
 
+    // 收尾指令得跟着输出语言走。系统提示里已经有语言指令，这里再用中文写死
+    // 「愿你……」和「中文 55–85 字」，英文用户就会同时收到两套互相打架的要求。
+    final isEnglish = languageCode != null && languageCode.startsWith('en');
+    final closing = isEnglish
+        ? 'Write three sentences: one on temperament, one on what the notes '
+            'are actually about, and a short closing wish in the spirit of '
+            '"May you ..." (at most 12 words, a wish only — no advice). '
+            'Do not restate any figures. Keep it to 30–55 words.'
+        : '请合成三句洞察：一句讲气质，一句讲内容，末一句是“愿你……”这类的短祝愿'
+            '（20 字以内，只祝愿不建议）。不重复具体数字，中文控制在 55–85 字。';
+
     return '''【统计数据】
 $stats
 $previousInsightsSection
@@ -884,7 +906,7 @@ $previousInsightsSection
 
 $contentSection
 
-请把记录习惯与笔记里的真实主题合成两句洞察：一句讲气质，一句讲内容。不重复具体数字，不加收束和建议，中文控制在 45–75 字。''';
+$closing''';
   }
 
   /// 本地生成报告洞察（不开启AI时使用）。

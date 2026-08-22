@@ -483,6 +483,7 @@ class AIService extends ChangeNotifier {
       notesPreview: notesPreview,
       fullNotesContent: fullNotesContent,
       previousInsights: previousInsights,
+      languageCode: languageCode,
     );
 
     yield* _streamViaOpenAI(

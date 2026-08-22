@@ -452,7 +452,22 @@ extension _ThoughterSession on _ThoughterPageState {
     if (databaseService == null) return;
 
     try {
-      final quotes = await databaseService.getUserQuotes();
+      // 这条开场洞察打的是「本周」的标签，统计口径就得真是本周。
+      //
+      // 原来是 getUserQuotes() 不带参数——而它的默认 limit 是 10，所以拿到的
+      // 既不是全量也不是本周，是「最近 10 条」，却按这 10 条去算 activeDays /
+      // noteCount / totalWords 再标上「本周」。改用 getQuotesForPeriod 按日期
+      // 范围查：不分页，本周多少条就是多少条。周界与探索页共用
+      // ReportPeriodUtils（周一到周日），两处口径别再各说各话。
+      final week = ReportPeriodUtils.dateRange('week', DateTime.now());
+      if (week == null) return;
+      final quotes = await databaseService.getUserQuotes(
+        dateStart: week.start.toIso8601String(),
+        dateEnd: week.end.toIso8601String(),
+        // 一周不可能有这么多条，给足冗余，别让分页把统计削掉一截。
+        limit: 500,
+      );
+      // 本周一条都没有就不开场：与其硬凑一句全是「—」的洞察，不如不说。
       if (quotes.isEmpty) return;
 
       final noteCount = quotes.length;

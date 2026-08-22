@@ -82,6 +82,11 @@ class InsightHistoryService extends ChangeNotifier {
   }
 
   /// 保存洞察到历史记录
+  ///
+  /// 同一个 [dataSignature] 只留最新的一条：签名相同就是同一份数据生成的
+  /// 同一条洞察，原来每次生成都无脑 insert，重复能攒到几十条，把 50 条的
+  /// 上限吃光，真正有用的历史反而被自己的副本顶掉，getPreviousInsightsContext
+  /// 取到的「最近三条」也可能全是同一周的复读。
   Future<void> addInsight({
     required String insight,
     required String periodType,
@@ -102,6 +107,9 @@ class InsightHistoryService extends ChangeNotifier {
         dataSignature: dataSignature,
       );
 
+      if (dataSignature != null && dataSignature.isNotEmpty) {
+        _insights.removeWhere((i) => i.dataSignature == dataSignature);
+      }
       _insights.insert(0, newInsight);
 
       // 限制数量
@@ -130,9 +138,12 @@ class InsightHistoryService extends ChangeNotifier {
   }
 
   /// 根据数据签名获取洞察
+  ///
+  /// 只认 AI 生成的：本地兜底文本不该在下次进来时冒充缓存好的 AI 洞察。
   PeriodicInsight? getInsightBySignature(String signature) {
+    if (signature.isEmpty) return null;
     for (final insight in _insights) {
-      if (insight.dataSignature == signature) {
+      if (insight.isAiGenerated && insight.dataSignature == signature) {
         return insight;
       }
     }
@@ -144,9 +155,17 @@ class InsightHistoryService extends ChangeNotifier {
   String getPreviousInsightsContext({int limit = 3}) {
     if (_insights.isEmpty) return '';
 
-    // 过滤出AI生成的周报洞察
+    // 过滤出AI生成的周报洞察。同一个周期只取一条：把同一周的多条历史一起
+    // 喂回去，模型就是在参考自己刚写过的东西，越写越同质。
+    //
+    // 按周期去重，不按签名：签名里带了模型和提示词版本，同一周换个模型重算
+    // 就是另一个签名，两版会一起进上下文，模型收到同一周的多个说法。老数据
+    // 那时每一周都存成「本周」，靠标签折叠正好把那批重复也收在一起。
+    // _insights 是按时间倒序的，所以每个周期留下的是最新那条。
+    final seenPeriods = <String>{};
     final weeklyInsights = _insights
         .where((i) => i.isAiGenerated && i.periodType == 'week')
+        .where((i) => seenPeriods.add('${i.periodType}:${i.periodLabel}'))
         .take(limit)
         .toList();
 
