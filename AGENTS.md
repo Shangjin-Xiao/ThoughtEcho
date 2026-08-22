@@ -77,7 +77,7 @@ dart run build_runner build --delete-conflicting-outputs
 pwsh ./scripts/build_msix_ci.ps1
 ```
 
-> **本地环境约束**（详见 `docs/DEVICE_INFO.md`）：当前开发设备资源受限，本地一般只进行 `dart format` 与单次必要的 `flutter analyze`（切勿频繁重复 analyze）。尽量不运行本地 `flutter test`，避免冷启动与内存抖动导致卡死。完整测试与门禁交由远程 CI 校验，推送后由 Agent 关注远程 CI 状态。
+> **本地环境约束**（详见 `docs/DEVICE_INFO.md`）：当前开发设备资源紧张，高占用命令（如 `flutter test`、`flutter gen-l10n`、多余的 analyze 等）一律不要在本地跑，本地日常一般只进行 `dart format` 与单次必要的 `flutter analyze`（切勿频繁重复 analyze）。完整测试、代码生成与门禁交由 GitHub Actions 远程 CI 校验，提交推送后由 Agent 自行盯紧远程 CI 状态。
 
 ## 工作方式
 
