@@ -90,8 +90,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                                 icon: const Icon(Icons.tune),
                                 tooltip: l10n.filterAndSortTooltip,
                                 onPressed: () {
-                                  final settings = context
-                                      .read<SettingsService>();
+                                  final settings =
+                                      context.read<SettingsService>();
                                   showModalBottomSheet(
                                     context: context,
                                     isScrollControlled: true,
@@ -117,26 +117,25 @@ extension _NoteListItemsExtension on NoteListViewState {
                                           widget.selectedDayPeriods,
                                       requireBiometricForHidden:
                                           settings.requireBiometricForHidden,
-                                      onApply:
-                                          (
-                                            tagIds,
-                                            sortType,
-                                            sortAscending,
-                                            selectedWeathers,
-                                            selectedDayPeriods,
-                                          ) {
-                                            widget.onTagSelectionChanged(
-                                              tagIds,
-                                            );
-                                            widget.onSortChanged(
-                                              sortType,
-                                              sortAscending,
-                                            );
-                                            widget.onFilterChanged(
-                                              selectedWeathers,
-                                              selectedDayPeriods,
-                                            );
-                                          },
+                                      onApply: (
+                                        tagIds,
+                                        sortType,
+                                        sortAscending,
+                                        selectedWeathers,
+                                        selectedDayPeriods,
+                                      ) {
+                                        widget.onTagSelectionChanged(
+                                          tagIds,
+                                        );
+                                        widget.onSortChanged(
+                                          sortType,
+                                          sortAscending,
+                                        );
+                                        widget.onFilterChanged(
+                                          selectedWeathers,
+                                          selectedDayPeriods,
+                                        );
+                                      },
                                     ),
                                   );
                                 },
@@ -267,8 +266,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                           onPressed: _selectAllVisibleNotes,
                           child: Text(
                             _selectedExportNoteIds.containsAll(
-                                  _quotes.map((q) => q.id).whereType<String>(),
-                                )
+                              _quotes.map((q) => q.id).whereType<String>(),
+                            )
                                 ? l10n.prefClearAll
                                 : l10n.prefSelectAll,
                           ),
@@ -546,7 +545,7 @@ extension _NoteListItemsExtension on NoteListViewState {
           // 见 `_growIdleCacheExtent`。
           cacheExtent:
               MediaQuery.sizeOf(context).height.clamp(400, 900).toDouble() +
-              _idleCacheExtentBoostPx,
+                  _idleCacheExtentBoostPx,
           semanticChildCount: _quotes.length + (_hasMore ? 1 : 0),
           itemCount: _quotes.length + (_hasMore ? 1 : 0),
           itemBuilder: (context, index) {
@@ -572,14 +571,12 @@ extension _NoteListItemsExtension on NoteListViewState {
                       ? QuoteItemWidget.needsExpansionFor(quote)
                       : false;
 
-                  final attachFavoriteGuideKey =
-                      !favoriteGuideAssigned &&
+                  final attachFavoriteGuideKey = !favoriteGuideAssigned &&
                       widget.favoriteButtonGuideKey != null &&
                       widget.onFavorite != null;
                   final attachMoreGuideKey =
                       !moreGuideAssigned && widget.moreButtonGuideKey != null;
-                  final attachFoldGuideKey =
-                      !foldGuideAssigned &&
+                  final attachFoldGuideKey = !foldGuideAssigned &&
                       widget.foldToggleGuideKey != null &&
                       needsExpansion;
 
@@ -622,12 +619,10 @@ extension _NoteListItemsExtension on NoteListViewState {
                       favoriteGuideKey: attachFavoriteGuideKey
                           ? widget.favoriteButtonGuideKey
                           : null,
-                      moreGuideKey: attachMoreGuideKey
-                          ? widget.moreButtonGuideKey
-                          : null,
-                      foldGuideKey: attachFoldGuideKey
-                          ? widget.foldToggleGuideKey
-                          : null,
+                      moreGuideKey:
+                          attachMoreGuideKey ? widget.moreButtonGuideKey : null,
+                      foldGuideKey:
+                          attachFoldGuideKey ? widget.foldToggleGuideKey : null,
                     ),
                   );
                   final keepAliveItem = _shouldKeepAliveNoteListItem(
@@ -830,8 +825,7 @@ extension _NoteListItemsExtension on NoteListViewState {
         final bool requiresAlignment = QuoteItemWidget.needsExpansionFor(quote);
 
         if (!expanded && requiresAlignment) {
-          final waitDuration =
-              QuoteItemWidget.expandCollapseDuration +
+          final waitDuration = QuoteItemWidget.expandCollapseDuration +
               const Duration(milliseconds: 80);
           Future.delayed(waitDuration, () {
             if (!mounted) return;
@@ -862,9 +856,8 @@ extension _NoteListItemsExtension on NoteListViewState {
           }
         });
       },
-      onFavorite: widget.onFavorite != null
-          ? () => widget.onFavorite!(quote)
-          : null,
+      onFavorite:
+          widget.onFavorite != null ? () => widget.onFavorite!(quote) : null,
       onLongPressFavorite: widget.onLongPressFavorite != null
           ? () => widget.onLongPressFavorite!(quote)
           : null,
@@ -1429,11 +1422,11 @@ class _NoteListItemPerfProbeRenderObject extends RenderProxyBox {
     required String kind,
     required String? sessionId,
     required _NoteListItemLayoutCallback onLayout,
-  }) : _index = index,
-       _quoteId = quoteId,
-       _kind = kind,
-       _sessionId = sessionId,
-       _onLayout = onLayout;
+  })  : _index = index,
+        _quoteId = quoteId,
+        _kind = kind,
+        _sessionId = sessionId,
+        _onLayout = onLayout;
 
   int _index;
   String _quoteId;
@@ -1493,8 +1486,8 @@ class _NoteListItemPerfProbeRenderObject extends RenderProxyBox {
             'kind': _kind,
             'oldHeight': previousSize?.height.toStringAsFixed(1) ?? 'none',
             'newHeight': size.height.toStringAsFixed(1),
-            'deltaHeight': (size.height - (previousSize?.height ?? 0))
-                .toStringAsFixed(1),
+            'deltaHeight':
+                (size.height - (previousSize?.height ?? 0)).toStringAsFixed(1),
             if (_sessionId != null) 'session': _sessionId!,
           },
         );
@@ -1504,23 +1497,21 @@ class _NoteListItemPerfProbeRenderObject extends RenderProxyBox {
   }
 }
 
-typedef _NoteListItemLayoutCallback =
-    void Function({
-      required int index,
-      required String quoteId,
-      required String kind,
-      required int durationMicros,
-      required double height,
-      required double? oldHeight,
-    });
+typedef _NoteListItemLayoutCallback = void Function({
+  required int index,
+  required String quoteId,
+  required String kind,
+  required int durationMicros,
+  required double height,
+  required double? oldHeight,
+});
 
-typedef _NoteListItemMountCallback =
-    void Function({
-      required int index,
-      required String quoteId,
-      required String kind,
-      required int durationMicros,
-    });
+typedef _NoteListItemMountCallback = void Function({
+  required int index,
+  required String quoteId,
+  required String kind,
+  required int durationMicros,
+});
 
 class _SlowItemLayoutSample {
   const _SlowItemLayoutSample({

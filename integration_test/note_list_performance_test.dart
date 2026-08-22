@@ -262,8 +262,8 @@ Widget _buildBenchmarkApp(List<Quote> quotes, {bool probeItemLayouts = false}) {
               kind: quotes[index].deltaContent == null
                   ? 'plainText'
                   : quotes[index].deltaContent!.contains('"image"')
-                  ? 'images'
-                  : 'richText',
+                      ? 'images'
+                      : 'richText',
               child: item,
             );
           },
@@ -358,28 +358,30 @@ Future<void> _runScrollSequence(WidgetTester tester, String scenario) async {
   final Finder list = _findBenchmarkListScrollable();
   for (int i = 0; i < 5; i++) {
     final developer.TimelineTask flingTask =
-        developer.TimelineTask(filterKey: 'ThoughtEcho')..start(
-          'ThoughtEcho.NoteList.fling',
-          arguments: <String, Object>{
-            'scenario': scenario,
-            'direction': 'down',
-            'iteration': i,
-          },
-        );
+        developer.TimelineTask(filterKey: 'ThoughtEcho')
+          ..start(
+            'ThoughtEcho.NoteList.fling',
+            arguments: <String, Object>{
+              'scenario': scenario,
+              'direction': 'down',
+              'iteration': i,
+            },
+          );
     await tester.fling(list, const Offset(0, -900), 4200);
     await tester.pumpAndSettle();
     flingTask.finish();
   }
   for (int i = 0; i < 2; i++) {
     final developer.TimelineTask flingTask =
-        developer.TimelineTask(filterKey: 'ThoughtEcho')..start(
-          'ThoughtEcho.NoteList.fling',
-          arguments: <String, Object>{
-            'scenario': scenario,
-            'direction': 'up',
-            'iteration': i,
-          },
-        );
+        developer.TimelineTask(filterKey: 'ThoughtEcho')
+          ..start(
+            'ThoughtEcho.NoteList.fling',
+            arguments: <String, Object>{
+              'scenario': scenario,
+              'direction': 'up',
+              'iteration': i,
+            },
+          );
     await tester.fling(list, const Offset(0, 900), 4200);
     await tester.pumpAndSettle();
     flingTask.finish();
@@ -392,10 +394,11 @@ Future<void> _runDiagnosticScrollSequence(
 ) async {
   final Finder list = _findBenchmarkListScrollable();
   final developer.TimelineTask flingTask =
-      developer.TimelineTask(filterKey: 'ThoughtEcho')..start(
-        'ThoughtEcho.NoteList.diagnosticFling',
-        arguments: <String, Object>{'scenario': scenario},
-      );
+      developer.TimelineTask(filterKey: 'ThoughtEcho')
+        ..start(
+          'ThoughtEcho.NoteList.diagnosticFling',
+          arguments: <String, Object>{'scenario': scenario},
+        );
   await tester.fling(list, const Offset(0, -900), 4200);
   await tester.pumpAndSettle();
   flingTask.finish();
@@ -423,9 +426,8 @@ Finder _findBenchmarkListScrollable() {
     of: keyedRoot,
     matching: find.byType(ListView),
   );
-  final listView = listViews.evaluate().isNotEmpty
-      ? listViews.first
-      : keyedRoot;
+  final listView =
+      listViews.evaluate().isNotEmpty ? listViews.first : keyedRoot;
   return find.descendant(of: listView, matching: find.byType(Scrollable)).first;
 }
 
@@ -500,78 +502,70 @@ Map<String, dynamic> _diagnosticSummary(
     (Map<String, dynamic> a, Map<String, dynamic> b) =>
         (b['duration_ms'] as double).compareTo(a['duration_ms'] as double),
   );
-  final List<Map<String, dynamic>> correlatedSlowSlices = slowSlices
-      .take(16)
-      .map((Map<String, dynamic> slice) {
-        final double timestamp = slice['timestamp_us'] as double;
-        if (customEvents.isEmpty) {
-          return slice..remove('timestamp_us');
-        }
-        final ({String name, double timestampMicros}) nearest = customEvents
-            .reduce(
-              (
-                ({String name, double timestampMicros}) current,
-                ({String name, double timestampMicros}) candidate,
-              ) =>
-                  (candidate.timestampMicros - timestamp).abs() <
-                      (current.timestampMicros - timestamp).abs()
-                  ? candidate
-                  : current,
-            );
-        return slice
-          ..remove('timestamp_us')
-          ..['nearest_marker'] = nearest.name
-          ..['marker_delta_ms'] = double.parse(
-            ((timestamp - nearest.timestampMicros) / 1000).toStringAsFixed(2),
-          );
-      })
-      .toList();
+  final List<Map<String, dynamic>> correlatedSlowSlices =
+      slowSlices.take(16).map((Map<String, dynamic> slice) {
+    final double timestamp = slice['timestamp_us'] as double;
+    if (customEvents.isEmpty) {
+      return slice..remove('timestamp_us');
+    }
+    final ({String name, double timestampMicros}) nearest = customEvents.reduce(
+      (
+        ({String name, double timestampMicros}) current,
+        ({String name, double timestampMicros}) candidate,
+      ) =>
+          (candidate.timestampMicros - timestamp).abs() <
+                  (current.timestampMicros - timestamp).abs()
+              ? candidate
+              : current,
+    );
+    return slice
+      ..remove('timestamp_us')
+      ..['nearest_marker'] = nearest.name
+      ..['marker_delta_ms'] = double.parse(
+        ((timestamp - nearest.timestampMicros) / 1000).toStringAsFixed(2),
+      );
+  }).toList();
   final List<Map<String, dynamic>> itemLayoutSlices =
-      extractTimelineSlices(events)
-          .where((Map<String, dynamic> slice) {
-            return slice['name'] == 'NoteListItemLayout' ||
-                slice['name'] == 'ThoughtEcho.NoteListView.itemLayout';
-          })
-          .map((Map<String, dynamic> slice) {
-            return <String, dynamic>{
-              'duration_ms': double.parse(
-                ((slice['duration_us'] as double) / 1000).toStringAsFixed(2),
-              ),
-              if (slice['arguments'] != null) 'arguments': slice['arguments'],
-            };
-          })
-          .toList()
+      extractTimelineSlices(events).where((Map<String, dynamic> slice) {
+    return slice['name'] == 'NoteListItemLayout' ||
+        slice['name'] == 'ThoughtEcho.NoteListView.itemLayout';
+  }).map((Map<String, dynamic> slice) {
+    return <String, dynamic>{
+      'duration_ms': double.parse(
+        ((slice['duration_us'] as double) / 1000).toStringAsFixed(2),
+      ),
+      if (slice['arguments'] != null) 'arguments': slice['arguments'],
+    };
+  }).toList()
         ..sort(
           (Map<String, dynamic> a, Map<String, dynamic> b) =>
               (b['duration_ms'] as double).compareTo(
-                a['duration_ms'] as double,
-              ),
+            a['duration_ms'] as double,
+          ),
         );
   final List<Map<String, dynamic>> itemBuildSlices =
-      extractTimelineSlices(events)
-          .where((Map<String, dynamic> slice) {
-            return slice['name'] == 'ThoughtEcho.NoteListView.itemBuilder';
-          })
-          .map((Map<String, dynamic> slice) {
-            return <String, dynamic>{
-              'duration_ms': double.parse(
-                ((slice['duration_us'] as double) / 1000).toStringAsFixed(2),
-              ),
-              if (slice['arguments'] != null) 'arguments': slice['arguments'],
-            };
-          })
-          .toList()
+      extractTimelineSlices(events).where((Map<String, dynamic> slice) {
+    return slice['name'] == 'ThoughtEcho.NoteListView.itemBuilder';
+  }).map((Map<String, dynamic> slice) {
+    return <String, dynamic>{
+      'duration_ms': double.parse(
+        ((slice['duration_us'] as double) / 1000).toStringAsFixed(2),
+      ),
+      if (slice['arguments'] != null) 'arguments': slice['arguments'],
+    };
+  }).toList()
         ..sort(
           (Map<String, dynamic> a, Map<String, dynamic> b) =>
               (b['duration_ms'] as double).compareTo(
-                a['duration_ms'] as double,
-              ),
+            a['duration_ms'] as double,
+          ),
         );
   final List<MapEntry<String, double>> slowestEntries =
-      slowestSlices.entries.toList()..sort(
-        (MapEntry<String, double> a, MapEntry<String, double> b) =>
-            b.value.compareTo(a.value),
-      );
+      slowestSlices.entries.toList()
+        ..sort(
+          (MapEntry<String, double> a, MapEntry<String, double> b) =>
+              b.value.compareTo(a.value),
+        );
   final Map<String, double> topSlowestSlices = <String, double>{
     for (final MapEntry<String, double> entry in slowestEntries.take(30))
       entry.key: entry.value,

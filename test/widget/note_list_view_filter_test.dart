@@ -34,13 +34,12 @@ NoteItemMotion _noteMotion(WidgetTester tester, String quoteId) {
 /// 跳过条目内容里的其它 Scrollable）。
 ScrollPosition _noteListScrollPosition(WidgetTester tester) {
   final listView = tester.widget<ListView>(find.byType(ListView));
-  for (final element
-      in find
-          .descendant(
-            of: find.byWidget(listView),
-            matching: find.byType(Scrollable),
-          )
-          .evaluate()) {
+  for (final element in find
+      .descendant(
+        of: find.byWidget(listView),
+        matching: find.byType(Scrollable),
+      )
+      .evaluate()) {
     final scrollable = element.widget as Scrollable;
     if (identical(scrollable.controller, listView.controller)) {
       return ((element as StatefulElement).state as ScrollableState).position;
@@ -111,9 +110,8 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
 
-        final newCalls = databaseService.watchCalls
-            .skip(initialCallCount)
-            .toList();
+        final newCalls =
+            databaseService.watchCalls.skip(initialCallCount).toList();
 
         expect(newCalls, hasLength(1));
         expect(newCalls.single.tagIds, isNull);
@@ -926,19 +924,17 @@ void main() {
         listView.controller!.jumpTo(900);
         await tester.pump();
 
-        final visibleMoreButtonElement = find
-            .byIcon(Icons.more_vert)
-            .evaluate()
-            .firstWhere((element) {
-              final y = tester
-                  .getCenter(
-                    find.byElementPredicate(
-                      (candidate) => identical(candidate, element),
-                    ),
-                  )
-                  .dy;
-              return y > 160 && y < 700;
-            });
+        final visibleMoreButtonElement =
+            find.byIcon(Icons.more_vert).evaluate().firstWhere((element) {
+          final y = tester
+              .getCenter(
+                find.byElementPredicate(
+                  (candidate) => identical(candidate, element),
+                ),
+              )
+              .dy;
+          return y > 160 && y < 700;
+        });
         final moreButton = find.byElementPredicate(
           (element) => identical(element, visibleMoreButtonElement),
         );
@@ -1005,9 +1001,8 @@ void main() {
 
         // 首条卡片除自身上边距外不再被额外下推
         final listTop = tester.getTopLeft(find.byType(ListView)).dy;
-        final firstItemTop = tester
-            .getTopLeft(find.byType(QuoteItemWidget).first)
-            .dy;
+        final firstItemTop =
+            tester.getTopLeft(find.byType(QuoteItemWidget).first).dy;
         expect(firstItemTop - listTop, lessThan(1));
 
         await tester.pumpWidget(const SizedBox.shrink());
