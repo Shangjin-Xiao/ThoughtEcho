@@ -7,6 +7,7 @@ import 'package:openai_dart/openai_dart.dart' as openai;
 
 import '../models/ai_provider_settings.dart';
 import '../utils/app_logger.dart';
+import '../utils/string_utils.dart';
 
 /// OpenAI 兼容服务的流式传输核心
 ///
@@ -86,9 +87,7 @@ class OpenAIStreamService extends ChangeNotifier {
   /// 从 AIProviderSettings 构建 OpenAIConfig
   ///
   /// 为每个请求构建独立的 client 配置，支持多 provider 切换。
-  static openai.OpenAIConfig buildOpenAIConfig(
-    AIProviderSettings provider,
-  ) {
+  static openai.OpenAIConfig buildOpenAIConfig(AIProviderSettings provider) {
     final normalizedUrl = normalizeOpenAIBaseUrl(provider.apiUrl);
 
     // 构建请求头（排除 Content-Type，由 http 包自动处理）
@@ -310,9 +309,7 @@ class OpenAIStreamService extends ChangeNotifier {
   /// `reasoning` / `reasoning_content` 字段中，而 `content` 为空。
   /// 此处按 content → reasoning → reasoning_content 的顺序回退，
   /// 确保非流式请求也能正确拿到模型输出。
-  static String extractTextFromCompletion(
-    openai.ChatCompletion completion,
-  ) {
+  static String extractTextFromCompletion(openai.ChatCompletion completion) {
     if (completion.choices.isEmpty) {
       return '';
     }
@@ -476,24 +473,20 @@ class OpenAIStreamService extends ChangeNotifier {
 
       if (response.statusCode != 200) {
         final body = await response.stream.bytesToString();
-        throw Exception(
-          'AI 请求失败 (HTTP ${response.statusCode}): $body',
-        );
+        throw Exception('AI 请求失败 (HTTP ${response.statusCode}): $body');
       }
 
-      await for (final chunk in response.stream.transform(
-        utf8.decoder,
-      )) {
+      await for (final chunk in response.stream.transform(utf8.decoder)) {
         if (controller.isClosed) break;
 
         // 解析 SSE 数据
-        for (final line in chunk.split('\n')) {
+        StringUtils.forEachLine(chunk, (line, _) {
           final trimmed = line.trim();
-          if (trimmed.isEmpty) continue;
+          if (trimmed.isEmpty) return;
 
           if (trimmed.startsWith('data: ')) {
             final data = trimmed.substring(6);
-            if (data == '[DONE]') continue;
+            if (data == '[DONE]') return;
 
             try {
               final json = jsonDecode(data) as Map<String, dynamic>;
@@ -503,12 +496,10 @@ class OpenAIStreamService extends ChangeNotifier {
               }
             } catch (e) {
               // 忽略解析错误的行（可能是不完整的 JSON）
-              logDebug(
-                '[OpenAIStreamService] SSE 解析错误: $e',
-              );
+              logDebug('[OpenAIStreamService] SSE 解析错误: $e');
             }
           }
-        }
+        });
       }
     } finally {
       httpClient.close();
