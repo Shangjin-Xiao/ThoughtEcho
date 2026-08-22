@@ -75,7 +75,11 @@ void main() {
         };
         levels.forEach((name, spec) {
           final (resolved, m3Size, m3Height) = spec;
-          expect(resolved?.fontFamily, 'serif', reason: '$name 没换字体族');
+          expect(
+            resolved?.fontFamily,
+            ThemeStyleForm.bundledSerif,
+            reason: '$name 没换字体族',
+          );
           expect(
             resolved?.fontSize,
             closeTo(m3Size * form.bodyFontScale, 0.001),
@@ -109,7 +113,7 @@ void main() {
 
       test('标题换衬线且抬字重，字号仍交给几何；大字只换族', () async {
         final text = (await themeFor(style)).textTheme;
-        expect(text.titleLarge?.fontFamily, 'serif');
+        expect(text.titleLarge?.fontFamily, ThemeStyleForm.bundledSerif);
         expect(text.titleLarge?.fontWeight, FontWeight.w500);
         expect(text.titleMedium?.fontWeight, FontWeight.w500);
         expect(text.titleSmall?.fontWeight, FontWeight.w500);
@@ -117,9 +121,9 @@ void main() {
         expect(text.titleMedium?.fontSize, isNull);
         expect(text.titleMedium?.height, isNull);
         // display / headline 只换族，字重留给几何，否则大标题会显得笨重。
-        expect(text.headlineSmall?.fontFamily, 'serif');
+        expect(text.headlineSmall?.fontFamily, ThemeStyleForm.bundledSerif);
         expect(text.headlineSmall?.fontWeight, isNull);
-        expect(text.displaySmall?.fontFamily, 'serif');
+        expect(text.displaySmall?.fontFamily, ThemeStyleForm.bundledSerif);
         expect(text.displaySmall?.fontWeight, isNull);
       });
 
@@ -142,7 +146,7 @@ void main() {
 
       test('AppBar 标题跟上字体族和字重', () async {
         final title = appBarTitleStyle(await themeFor(style));
-        expect(title?.fontFamily, 'serif');
+        expect(title?.fontFamily, ThemeStyleForm.bundledSerif);
         expect(title?.fontWeight, FontWeight.w500);
       });
 

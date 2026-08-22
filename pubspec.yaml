@@ -192,5 +192,21 @@ flutter:
     - assets/icon.png
     - assets/icon_ios_full.png
     - assets/icon_ios_large.png
+    - assets/fonts/OFL.txt
     - docs/
     - LICENSE
+  fonts:
+    # 手工风格（纸墨、素笺）的阅读字体。随包分发而不是指望系统自带：
+    # 通用族名 `serif` 在 iOS 上解析不到，CJK 字符会直接走引擎默认字体（苹方），
+    # `fontFamilyFallback` 里的具名字体根本没机会被查询——衬线在 iOS 上从未生效。
+    #
+    # 这是一个可变字体，字重轴 400–900，默认实例 400。**只声明一条 asset、不写
+    # weight**：写死 weight 会让 Flutter 按静态字体匹配，反而用不上字重轴。
+    # `TextStyle.fontWeight` 由引擎映射到 wght 轴，所以全项目现有的
+    # `copyWith(fontWeight: ...)` 照常生效，不需要改成 fontVariations。
+    #
+    # 产物由 `scripts/fonts/build_serif_subset.py` 生成（思源宋体 GB2312 子集），
+    # 许可证见 assets/fonts/OFL.txt。
+    - family: NotoSerifSC
+      fonts:
+        - asset: assets/fonts/NotoSerifSC-Subset.ttf

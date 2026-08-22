@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/theme/app_semantic_colors.dart';
@@ -387,31 +388,49 @@ void main() {
       }
     });
 
-    test('手工风格指向系统衬线体且不打包字体文件', () {
+    test('手工风格指向随包衬线体，通用族名不再出现在任何位置', () {
       for (final style in ThemeStyle.values) {
         final form = style.form;
         if (style.isGenerated) {
           expect(form.fontFamily, isNull, reason: 'Material 保持系统默认字体');
           continue;
         }
-        // 首选族名必须是通用族 `serif`，具名字体只能待在回退链里。
+        // 首选族名必须是随包字体的族名。
         //
-        // 反过来写（首选 Songti SC、serif 垫底）在 Android 上中文不会变衬线：
-        // Flutter 的 fontFamilyFallback 不是 CSS 的 font-family，首选族名解析不到时
-        // CJK 字符走引擎默认字体通道，排在后面的 serif 拿不到「要衬线」这个上下文，
-        // 也就命中不了 AOSP 给 NotoSerifCJK 标的 fallbackFor="serif"。
-        // 这是 2026-08-02 真机实测的结论，别把顺序调回去。
-        expect(form.fontFamily, 'serif');
+        // 这里曾经是通用族 `serif`，靠 AOSP 给 NotoSerifCJK 标的
+        // fallbackFor="serif" 命中系统衬线体。那条路只在 Android 上成立：
+        // iOS 的 CoreText 不解析通用族名，`serif` 解析不到时 CJK 直接走引擎默认
+        // 字体（苹方），而 fontFamilyFallback 只在首选族缺某个字形时才逐个回退，
+        // 首选族整个解析不到时排在后面的 Songti SC 根本没机会被查询——
+        // 两套手工风格的正文在 iOS 上一直是黑体。
+        expect(form.fontFamily, ThemeStyleForm.bundledSerif);
         expect(form.fontFamilyFallback, isNotNull);
-        // 具名字体给不解析通用族名的平台兜底：iOS/macOS 的 Songti SC、Windows 的 SimSun。
+        // 回退链的角色变了：不再是「首选没命中的备胎」，而是「子集里没这个字时去哪找」。
+        // 排系统衬线体，好让混排出来的生僻字至少还是衬线。
         expect(form.fontFamilyFallback, contains('Songti SC'));
         expect(form.fontFamilyFallback, contains('SimSun'));
         expect(
           form.fontFamilyFallback,
           isNot(contains('serif')),
-          reason: 'serif 已经是首选族名，回退链里重复一次没有意义',
+          reason: '通用族名在 iOS 上解析不到，留在回退链里只是噪音',
         );
       }
+    });
+
+    test('随包字体的族名和 pubspec 声明一致', () {
+      // 族名对不上 = 字体加载不到 = 悄悄退回系统默认字体，界面上看不出报错。
+      // 这条断言把 pubspec 和 Dart 常量钉在一起。
+      final pubspec = File('pubspec.yaml').readAsStringSync();
+      expect(
+        pubspec,
+        contains('family: ${ThemeStyleForm.bundledSerif}'),
+        reason: 'pubspec.yaml 里没有声明这个字体族',
+      );
+      expect(
+        File('assets/fonts/NotoSerifSC-Subset.ttf').existsSync(),
+        isTrue,
+        reason: '字体产物不在仓库里，跑 scripts/fonts/build_serif_subset.py 生成',
+      );
     });
 
     test('AppShapeTokens 在两端之间插值，切换风格不会瞬跳', () {

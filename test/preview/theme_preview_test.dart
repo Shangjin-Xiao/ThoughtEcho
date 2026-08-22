@@ -1,13 +1,16 @@
 // 主题预览脚手架：把真实的 HomePage 渲染成 PNG，用来肉眼比对改动前后的观感。
 //
 // 它不是断言测试——`matchesGoldenFile` 只是拿来落盘的手段，一律配
-// `--update-goldens` 跑。字体从环境变量 THOUGHTECHO_PREVIEW_FONTS 指的目录加载
-// （NotoSerifSC.ttf / NotoSansSC.ttf），仓库不打包字体，见交接文档的零字节路线。
+// `--update-goldens` 跑。
+//
+// 手工风格的衬线体已经随包分发，直接从 assets 加载，不需要任何外部配置。
+// 黑体（material 风格的正文和所有 label*）仍然要从环境变量
+// THOUGHTECHO_PREVIEW_FONTS 指的目录取 NotoSansSC.ttf——那个没进仓库。
 //
 //   THOUGHTECHO_PREVIEW_FONTS=/path/to/fonts \
 //     flutter test --update-goldens test/preview/theme_preview_test.dart
 //
-// 没给字体目录时直接跳过：默认测试字体画不出中文，出来的图没有参考价值。
+// 不给字体目录也能跑，只是 material 风格那几张图画不出中文。
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -82,11 +85,14 @@ Future<void> _loadFont(String family, String path) async {
   await loader.load();
 }
 
-Future<void> _loadPreviewFonts(String dir) async {
-  // 手工风格的首选族名就是通用族 `serif`，这里按同名注册才能命中。
-  await _loadFont('serif', '$dir/NotoSerifSC.ttf');
-  // 测试环境的默认族，label* 和 material 风格的正文都落在它上面。
-  await _loadFont('Roboto', '$dir/NotoSansSC.ttf');
+Future<void> _loadPreviewFonts(String? dir) async {
+  // 手工风格的衬线体随包分发，直接从仓库里的产物加载，不依赖外部字体目录。
+  await _loadFont(
+    ThemeStyleForm.bundledSerif,
+    'assets/fonts/NotoSerifSC-Subset.ttf',
+  );
+  // 测试环境的默认族，label* 和 material 风格的正文都落在它上面。黑体没进仓库。
+  if (dir != null) await _loadFont('Roboto', '$dir/NotoSansSC.ttf');
   // 图标字体不在测试环境里，不加载的话满屏都是空心方块。
   // 从 Flutter SDK 缓存直接取，不进仓库。
   final flutterRoot = Platform.environment['FLUTTER_ROOT'];
@@ -103,7 +109,7 @@ void main() {
 
   setUpAll(() async {
     await TestHarness.initialize();
-    if (fontDir != null) await _loadPreviewFonts(fontDir);
+    await _loadPreviewFonts(fontDir);
   });
 
   Future<void> renderHome(
