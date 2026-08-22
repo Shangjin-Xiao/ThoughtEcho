@@ -178,9 +178,14 @@ class MediaReferenceService {
 
       final count = result.first['count'] as int;
       return count;
-    } catch (e) {
-      logDebug('获取媒体文件引用计数失败: $e');
-      return 0;
+    } catch (e, stackTrace) {
+      logError(
+        '获取媒体文件引用计数失败: $filePath ($e)',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'MediaReferenceService',
+      );
+      rethrow;
     }
   }
 
@@ -196,12 +201,12 @@ class MediaReferenceService {
   static Future<int> getReferenceCountForMediaRelativePath(
     String relativeToMediaRoot,
   ) async {
-    try {
-      final posixTail = MediaPathResolver.mediaRelativeTail(
-        'media/$relativeToMediaRoot',
-      );
-      if (posixTail == null) return 0;
+    final posixTail = MediaPathResolver.mediaRelativeTail(
+      'media/$relativeToMediaRoot',
+    );
+    if (posixTail == null) return 0;
 
+    try {
       final windowsTail = posixTail.replaceAll('/', r'\');
       final db = await database;
 
@@ -231,9 +236,14 @@ class MediaReferenceService {
       );
 
       return fallback.first['count'] as int;
-    } catch (e) {
-      logDebug('统计云端媒体引用计数失败: $e');
-      return 0;
+    } catch (e, stackTrace) {
+      logError(
+        '统计云端媒体引用计数失败: $relativeToMediaRoot ($e)',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'MediaReferenceService',
+      );
+      rethrow;
     }
   }
 

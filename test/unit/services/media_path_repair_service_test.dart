@@ -41,7 +41,7 @@ void main() {
     await db.close();
   });
 
-  Future<void> insertQuote(String id, dynamic delta) async {
+  Future<void> insertQuote(String id, Object? delta) async {
     await db.insert('quotes', {
       'id': id,
       'content': '正文',
@@ -81,7 +81,52 @@ void main() {
     );
   });
 
-  test('重复执行不会二次改写，也不会误伤本机路径与纯文本笔记', () async {
+  test('重复执行具有幂等性：首轮修复后第二轮不再改写，状态保持一致', () async {
+    await insertQuote('q1', [
+      {
+        'insert': {'image': '$androidDocs/media/images/a.jpg'},
+      },
+      {'insert': '来自安卓的笔记\n'},
+    ]);
+
+    // 第一轮执行：修复 1 条并重建引用
+    final report1 = await MediaPathRepairService.repairAllQuotes(
+      database: db,
+      appPath: iosContainer,
+    );
+    expect(report1.repaired, 1);
+    expect(report1.hasErrors, isFalse);
+    expect(
+      await deltaOf('q1'),
+      contains('$iosContainer/media/images/a.jpg'),
+    );
+    expect(
+      await MediaReferenceService.getReferenceCountForMediaRelativePath(
+        'images/a.jpg',
+      ),
+      1,
+    );
+
+    // 第二轮执行（幂等性验证）：不发生二次改写，报告与数据保持一致
+    final report2 = await MediaPathRepairService.repairAllQuotes(
+      database: db,
+      appPath: iosContainer,
+    );
+    expect(report2.repaired, 0);
+    expect(report2.hasErrors, isFalse);
+    expect(
+      await deltaOf('q1'),
+      contains('$iosContainer/media/images/a.jpg'),
+    );
+    expect(
+      await MediaReferenceService.getReferenceCountForMediaRelativePath(
+        'images/a.jpg',
+      ),
+      1,
+    );
+  });
+
+  test('路径已是本机路径或纯文本笔记时不会被改写', () async {
     await insertQuote('q1', [
       {
         'insert': {'image': '$iosContainer/media/images/a.jpg'},
@@ -97,6 +142,7 @@ void main() {
     );
 
     expect(report.repaired, 0);
+    expect(report.hasErrors, isFalse);
     expect(await deltaOf('q1'), contains('$iosContainer/media/images/a.jpg'));
     expect(await deltaOf('q2'), contains('纯文本，没有媒体'));
   });

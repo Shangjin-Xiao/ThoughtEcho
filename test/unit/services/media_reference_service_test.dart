@@ -171,5 +171,23 @@ void main() {
         0,
       );
     });
+
+    test('数据库查询异常时向上抛出而不是静默返回 0', () async {
+      await db.close();
+
+      expect(
+        () => MediaReferenceService.getReferenceCountForMediaRelativePath(
+          'images/a.jpg',
+        ),
+        throwsA(isA<Exception>()),
+      );
+      expect(
+        () => MediaReferenceService.getReferenceCount(
+          '$iosContainer/media/images/a.jpg',
+          cachedAppPath: iosContainer,
+        ),
+        throwsA(isA<Exception>()),
+      );
+    });
   });
 }
