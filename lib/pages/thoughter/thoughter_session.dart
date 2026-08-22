@@ -452,7 +452,19 @@ extension _ThoughterSession on _ThoughterPageState {
     if (databaseService == null) return;
 
     try {
-      final quotes = await databaseService.getUserQuotes();
+      final allQuotes = await databaseService.getUserQuotes();
+      if (allQuotes.isEmpty) return;
+
+      // 这条开场洞察打的是「本周」的标签，那统计口径就得真是本周。原来直接
+      // 拿 getUserQuotes() 的全量去算 activeDays/noteCount/totalWords，于是
+      // 攒了两年的库会开口就说「本周你记录了 700 天」。周界跟探索页共用
+      // ReportPeriodUtils（周一到周日），两处口径别再各说各话。
+      final quotes = ReportPeriodUtils.filterByCreatedPeriod(
+        allQuotes,
+        selectedPeriod: 'week',
+        selectedDate: DateTime.now(),
+      );
+      // 本周一条都没有就不开场：与其硬凑一句全是「—」的洞察，不如不说。
       if (quotes.isEmpty) return;
 
       final noteCount = quotes.length;

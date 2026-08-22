@@ -363,12 +363,51 @@ class AIRequestHelper {
     }
   }
 
+  /// 单次洞察分析最多送出的笔记条数。
+  ///
+  /// 调用方传进来的往往是「全部笔记」，攒了几年的库直接整个进请求体，
+  /// context 先炸、token 后烧。取最近的这些条已经足够看出长期模式。
+  static const int maxQuotesForAnalysis = 200;
+
+  /// 单次洞察分析最多送出的正文字符数（在条数上限之上再兜一道）。
+  ///
+  /// 200 条短笔记和 200 条长文差着一个数量级，只卡条数拦不住后者。
+  static const int maxContentCharsForAnalysis = 60000;
+
+  /// 挑出送去分析的笔记：按时间倒序取最近的，卡住条数和字数两道上限，
+  /// 再按时间正序还回去——成长轨迹类的分析要顺着读才成立。
+  List<Quote> selectQuotesForAnalysis(List<Quote> quotes) {
+    final sorted = List<Quote>.from(quotes)
+      ..sort((a, b) => b.date.compareTo(a.date));
+
+    final picked = <Quote>[];
+    var chars = 0;
+    for (final quote in sorted) {
+      if (picked.length >= maxQuotesForAnalysis) break;
+      // 第一条无条件收下：单条就超字数上限时也不能交白卷。
+      if (picked.isNotEmpty &&
+          chars + quote.content.length > maxContentCharsForAnalysis) {
+        break;
+      }
+      picked.add(quote);
+      chars += quote.content.length;
+    }
+
+    return picked.reversed.toList();
+  }
+
   /// 将笔记列表转换为JSON格式（用于洞察分析）
+  ///
+  /// 超出上限时只送最近的一段，并在 metadata 里说明被截断过——不写清楚
+  /// 的话模型会把「最近 200 条」当成用户的全部记录来下结论。
   Map<String, dynamic> convertQuotesToJson(
     List<Quote> quotes, {
     String analysisType = 'comprehensive',
     String analysisStyle = 'professional',
   }) {
+    final selected = selectQuotesForAnalysis(quotes);
+    final truncated = selected.length < quotes.length;
+
     return {
       'metadata': {
         'app': '心迹',
@@ -376,10 +415,14 @@ class AIRequestHelper {
         'exportTime': DateTime.now().toIso8601String(),
         'analysisType': analysisType,
         'analysisStyle': analysisStyle,
+        'totalQuotes': quotes.length,
+        'includedQuotes': selected.length,
+        'truncated': truncated,
+        if (truncated) 'truncationNote': '仅包含最近的部分笔记，早期记录未纳入本次分析',
       },
-      'quotes': quotes.map((quote) {
+      'quotes': selected.map((quote) {
         return {
-          'id': quote.id,
+          // 不送 id：36 个字符的 UUID 对分析毫无信息量，只是在烧 token。
           'content': quote.content,
           'date': quote.date,
           'source': quote.source,
@@ -395,8 +438,11 @@ class AIRequestHelper {
   }
 
   /// 将JSON数据转换为格式化字符串
+  ///
+  /// 不缩进：这份 JSON 是发给模型的，不是给人读的，缩进只是把空白字符
+  /// 当 token 卖钱。
   String formatJsonData(Map<String, dynamic> jsonData) {
-    return const JsonEncoder.withIndent('  ').convert(jsonData);
+    return json.encode(jsonData);
   }
 
   /// 执行带有通用错误处理的异步操作

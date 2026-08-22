@@ -111,9 +111,12 @@ extension _ThoughterWorkflow on _ThoughterPageState {
       return;
     }
 
+    // 这里分析的是整个笔记库（由 AIRequestHelper 卡在最近若干条），不是某个
+    // 周期。原来写 generatingInsightsForPeriod(thisWeek)：既谎称范围是本周，
+    // 模板本身又是「正在生成本{period}洞察」，传进「本周」还会拼出「本本周」。
     await _runMarkdownWorkflow(
       title: l10n.commandInsight,
-      loadingText: l10n.generatingInsightsForPeriod(l10n.thisWeek),
+      loadingText: l10n.analyzingAllNotes,
       stream: _aiService.streamGenerateInsights(
         quotes,
         analysisType: _selectedInsightType,

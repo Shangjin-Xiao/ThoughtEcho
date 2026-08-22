@@ -47,6 +47,7 @@ import '../utils/app_logger.dart';
 import '../utils/note_proposal_applier.dart';
 import '../utils/quill_delta_builder.dart';
 import '../utils/quill_structured_edit.dart';
+import '../utils/report_period_utils.dart';
 import '../utils/string_utils.dart';
 import '../utils/time_utils.dart';
 import '../widgets/ai/agent_memory_notice.dart';
