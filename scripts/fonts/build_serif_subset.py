@@ -76,12 +76,24 @@ def build_charset(include_traditional: bool) -> str:
                 except UnicodeDecodeError:
                     pass
 
+    # 应用支持 7 种界面语言（de/en/es/fr/ja/ko/zh），用户还会用任意语言记笔记。
+    # 覆盖情况见下，**这不是随手划的范围**：
+    #   - de / es / fr：重音字母全在拉丁补充区，下面第二条已覆盖；
+    #   - ja：假名 GB2312 自带了大半，这里补齐整块。日文汉字会用简体字形渲染，
+    #     这是用简体中文字体的固有代价，靠子集解决不了；
+    #   - ko：**源字体根本不含谚文**（Noto Serif SC 的谚文音节数为 0），
+    #     韩文一定会落到 fontFamilyFallback 的系统字体，这里加什么都没用；
+    #   - ru / el：源字体只有 66 个西里尔字母和 49 个希腊字母，下面第二、三条
+    #     已经把它们全收进来了。
     ranges = [
         range(0x20, 0x7F),      # ASCII
         range(0xA0, 0x180),     # 拉丁补充 + 拉丁扩展 A
+        range(0x370, 0x400),    # 希腊字母
+        range(0x400, 0x500),    # 西里尔字母
         range(0x2000, 0x206F),  # 通用标点（含中文引号、省略号、破折号）
         range(0x3000, 0x303F),  # CJK 标点
-        range(0xFF00, 0xFFEF),  # 全角字符
+        range(0x3040, 0x3100),  # 平假名 + 片假名
+        range(0xFF00, 0xFFEF),  # 全角字符（含半角片假名）
     ]
     for r in ranges:
         chars.update(chr(cp) for cp in r)
