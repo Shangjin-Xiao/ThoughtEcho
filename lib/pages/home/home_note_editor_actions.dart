@@ -126,9 +126,7 @@ class HomeNoteEditorActions {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).brightness == Brightness.light
-          ? Colors.white
-          : Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
       requestFocus: false,
       builder: (sheetContext) => AddNoteDialog(
         initialQuote: quote,

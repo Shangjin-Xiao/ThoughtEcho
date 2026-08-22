@@ -1315,9 +1315,7 @@ extension _ThoughterUI on _ThoughterPageState {
       return null;
     }
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).saveSuccess)),
-      );
+      AppSnackBar.success(context, AppLocalizations.of(context).saveSuccess);
     }
     return artifact.noteId;
   }

@@ -4,10 +4,11 @@ import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import '../services/version_check_service.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../services/apk_download_service.dart';
+import '../services/version_check_service.dart';
 import '../theme/theme_style.dart';
+import 'app_snackbar.dart';
 
 /// 更新按钮类型枚举
 enum UpdateButtonType {
@@ -504,7 +505,12 @@ class UpdateBottomSheet extends StatelessWidget {
         context: context,
         showDragHandle: true,
         isScrollControlled: true,
-        backgroundColor: Colors.transparent,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppShapeTokens.of(context).dialogRadius),
+          ),
+        ),
         builder: (context) => UpdateBottomSheet(
           versionInfo: versionInfo,
           showNoUpdateMessage: true,
@@ -537,13 +543,9 @@ class UpdateBottomSheet extends StatelessWidget {
           await VersionCheckService.ignoreVersion(versionInfo.latestVersion);
           if (context.mounted) {
             Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(context).updateVersionIgnored,
-                ),
-                duration: const Duration(seconds: 2),
-              ),
+            AppSnackBar.info(
+              context,
+              AppLocalizations.of(context).updateVersionIgnored,
             );
           }
         },
@@ -572,7 +574,12 @@ class UpdateBottomSheet extends StatelessWidget {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppShapeTokens.of(context).dialogRadius),
+        ),
+      ),
       builder: (context) =>
           UpdateBottomSheet(versionInfo: versionInfo, buttons: buttons),
     );

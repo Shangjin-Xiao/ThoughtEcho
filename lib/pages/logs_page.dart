@@ -205,7 +205,6 @@ class _LogsPageState extends State<LogsPage> {
   void _showLogDetails(LogEntry log) {
     showModalBottomSheet(
       context: context,
-      showDragHandle: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _buildLogDetailsSheet(log),
@@ -431,9 +430,9 @@ class _LogsPageState extends State<LogsPage> {
       case UnifiedLogLevel.verbose:
         return theme.colorScheme.onSurfaceVariant;
       case UnifiedLogLevel.debug:
-        return Colors.teal;
+        return theme.colorScheme.tertiary;
       case UnifiedLogLevel.info:
-        return Colors.blue;
+        return theme.colorScheme.primary;
       case UnifiedLogLevel.warning:
         return theme.extension<AppSemanticColors>()?.warning ??
             (theme.brightness == Brightness.dark
@@ -773,7 +772,12 @@ class _LogsPageState extends State<LogsPage> {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppShapeTokens.of(context).dialogRadius),
+        ),
+      ),
       builder: (context) => _buildFilterBottomSheet(),
     );
   }
@@ -1137,9 +1141,9 @@ class _LogEntryItem extends StatelessWidget {
       case UnifiedLogLevel.verbose:
         return theme.colorScheme.onSurfaceVariant;
       case UnifiedLogLevel.debug:
-        return Colors.teal;
+        return theme.colorScheme.tertiary;
       case UnifiedLogLevel.info:
-        return Colors.blue;
+        return theme.colorScheme.primary;
       case UnifiedLogLevel.warning:
         return theme.extension<AppSemanticColors>()?.warning ??
             (theme.brightness == Brightness.dark

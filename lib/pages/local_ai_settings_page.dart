@@ -219,7 +219,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
               theme: theme,
               title: l10n.localAIInputEnhancement,
               icon: Icons.input_rounded,
-              iconColor: Colors.blue,
+              iconColor: theme.colorScheme.primary,
               children: [
                 _buildFeatureTile(
                   context: context,

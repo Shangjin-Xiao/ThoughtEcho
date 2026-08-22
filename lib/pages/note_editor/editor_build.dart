@@ -37,7 +37,7 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                 onPressed: () => Navigator.pop(ctx, true),
                 child: Text(
                   l10n.discardChanges,
-                  style: TextStyle(color: Colors.red.shade400),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
               FilledButton(

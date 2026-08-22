@@ -116,7 +116,7 @@ class AccessibleColorGrid extends StatelessWidget {
                         color: isSelected
                             ? colorScheme.primary
                             : color == Colors.transparent
-                                ? Colors.grey.applyOpacity(0.5)
+                                ? colorScheme.outlineVariant
                                 : Colors.transparent,
                         width: 2,
                       ),
@@ -140,9 +140,9 @@ class AccessibleColorGrid extends StatelessWidget {
                               size: 24,
                             )
                           : color == Colors.transparent
-                              ? const Icon(
+                              ? Icon(
                                   Icons.block,
-                                  color: Colors.grey,
+                                  color: colorScheme.onSurfaceVariant,
                                   size: 18,
                                 )
                               : null,

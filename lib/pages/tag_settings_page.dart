@@ -354,7 +354,9 @@ class _CategorySettingsPageState extends State<TagSettingsPage> {
                         children: [
                           Text(
                             l10n.useAsIcon(emojiSearchController.text),
-                            style: const TextStyle(color: Colors.blue),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                           ),
                           const Spacer(),
                           FilledButton(
@@ -897,7 +899,9 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                   children: [
                     Text(
                       l10n.useAsIcon(_emojiSearchController.text),
-                      style: const TextStyle(color: Colors.blue),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                     const Spacer(),
                     FilledButton(

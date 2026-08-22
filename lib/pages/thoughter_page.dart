@@ -60,6 +60,7 @@ import '../widgets/ai/tool_progress_panel.dart';
 import 'thoughter/session_history_page.dart';
 import '../widgets/add_note_dialog.dart';
 import '../widgets/add_note_dialog_parts.dart' show TagSelectionSection;
+import '../widgets/app_snackbar.dart';
 import 'note_full_editor_page.dart';
 import '../theme/theme_style.dart';
 

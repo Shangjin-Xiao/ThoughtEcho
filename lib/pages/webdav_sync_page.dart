@@ -234,15 +234,11 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content:
-              Text(success ? l10n.webdavTestSuccess : l10n.webdavTestFailed),
-          backgroundColor:
-              success ? Colors.green.shade600 : Colors.red.shade600,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (success) {
+        AppSnackBar.success(context, l10n.webdavTestSuccess);
+      } else {
+        AppSnackBar.error(context, l10n.webdavTestFailed);
+      }
     }
   }
 
@@ -685,7 +681,7 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
             : l10n.webdavNeverSucceeded;
         stateDesc = l10n.webdavStatusRunningDesc(relativeTime);
         stateIcon = Icons.cloud_done;
-        accentColor = Colors.green.shade600;
+        accentColor = AppSemanticColors.of(context).success;
       } else if (syncService.syncStatus == WebDAVSyncStatus.failed) {
         stateTitle = l10n.webdavStatusException;
         stateDesc = l10n.webdavStatusExceptionDesc;
@@ -809,21 +805,23 @@ class _WebDAVSyncPageState extends State<WebDAVSyncPage> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.amber.shade500.withValues(alpha: 0.15),
+                  color: AppSemanticColors.of(context).warningContainer,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
                   children: [
                     Icon(Icons.warning_amber_rounded,
-                        color: Colors.amber.shade800, size: 20),
+                        color: AppSemanticColors.of(context).warning, size: 20),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         l10n.webdavConflictPrompt(_conflictNotesCount),
-                        style: Theme.of(context)
-                            .textTheme
-                            .labelMedium
-                            ?.copyWith(color: Colors.amber.shade900),
+                        style:
+                            Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: AppSemanticColors.of(
+                                    context,
+                                  ).onWarningContainer,
+                                ),
                       ),
                     ),
                     TextButton(
@@ -891,7 +889,7 @@ class QuoteListViewByConflict extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.check_circle_outline,
-                    size: 64, color: Colors.green.shade500),
+                    size: 64, color: AppSemanticColors.of(context).success),
                 SizedBox(height: 16),
                 Text(AppLocalizations.of(context).webdavNoConflicts,
                     style: theme.textTheme.titleMedium),
