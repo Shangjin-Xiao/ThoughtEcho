@@ -7,15 +7,15 @@
   "smartPushPeriodEvening": "Evening",
   "smartPushPeriodNight": "Night",
   "settingsSentryTitle": "Send diagnostics to help improve",
-  "settingsSentryDesc": "Disabled by default. When enabled, sends error stacks, device information, page performance, regular network request performance, and main database performance. AI requests are excluded. Database monitoring records SQL templates and timing only, never note content or query parameters.",
+  "settingsSentryDesc": "Disabled by default. When enabled, sends anonymous error logs and diagnostic info to help improve app stability. Never collects note contents, AI chats, or personal data.",
   "sentryRestartHint": "Settings saved, takes effect after restarting",
   "sentryDisclosureTitle": "Privacy Policy Updated",
-  "sentryDisclosureMessage": "The ThoughtEcho privacy policy has been updated. You can view the latest version on our official website.\n\nWe have added Sentry to collect errors and user feedback. To protect your privacy, this feature is disabled by default. You can enable it anytime in 'Settings -> Feedback & Contact'.\n\nPrivacy Policy: https://note.shangjinyun.cn/privacy",
+  "sentryDisclosureMessage": "The ThoughtEcho privacy policy has been updated and is available on our website.\n\nTo help diagnose app crashes and improve reliability, error diagnostics have been introduced. To protect your privacy, this is disabled by default and can be enabled anytime under \"Settings -> Feedback & Contact\".\n\nPrivacy Policy: https://note.shangjinyun.cn/privacy",
   "sentryDisclosureGotIt": "Got it",
   "appTitle": "ThoughtEcho",
   "draftRestored": "Draft automatically restored",
   "draftRecoverTitle": "Restore Unsaved Draft",
-  "draftRecoverMessage": "You have unsaved content from your last session. Would you like to restore it?",
+  "draftRecoverMessage": "Unsaved edits from your last session were detected. Would you like to restore and continue editing?",
   "restore": "Restore",
   "discard": "Discard",
   "draftSaved": "Draft saved",
@@ -94,9 +94,9 @@
   "settingsTitle": "Settings",
   "settingsLocationWeather": "Location & Weather Settings",
   "settingsAutoAttachLocation": "Auto-attach location when adding notes",
-  "settingsAutoAttachLocationDesc": "Automatically check location when creating new notes",
+  "settingsAutoAttachLocationDesc": "Automatically record current location when creating a note",
   "settingsAutoAttachWeather": "Auto-attach weather when adding notes",
-  "settingsAutoAttachWeatherDesc": "Automatically check weather when creating new notes",
+  "settingsAutoAttachWeatherDesc": "Automatically fetch and record current weather when creating a note",
   "weatherFetchFailedTitle": "Weather Fetch Failed",
   "weatherFetchFailedDesc": "Cannot get current weather info. Please check your network connection or try again later",
   "locationFetchFailedNoNetwork": "No network, coordinates saved",
@@ -111,7 +111,7 @@
   "settingsNotSet": "Not Set",
   "settingsAppSettings": "App Settings",
   "settingsPreferences": "Preferences",
-  "settingsPreferencesDesc": "Personalization and AI features",
+  "settingsPreferencesDesc": "UI interactions, default attributes, and editor preferences",
   "settingsDefaultStartPage": "Default Start Page",
   "settingsStartPageHome": "Home (Daily Quote)",
   "settingsStartPageNotes": "Notes (Note List)",
@@ -119,20 +119,20 @@
   "settingsTheme": "Theme Settings",
   "settingsThemeDesc": "Customize app appearance",
   "settingsAI": "AI Settings",
-  "settingsAIDesc": "Configure AI API settings and multi-provider management",
-  "settingsHitokoto": "Quote Settings",
-  "settingsHitokotoDesc": "Customize daily quote types",
+  "settingsAIDesc": "Configure AI providers, models, and smart features",
+  "settingsHitokoto": "Daily Quote Settings",
+  "settingsHitokotoDesc": "Customize content types and sources for Daily Quotes",
   "settingsLogs": "Log Settings",
   "settingsLogsDesc": "Configure app logging level",
   "settingsStorage": "Storage Management",
-  "settingsStorageDesc": "View storage usage, clean cache and unused files",
+  "settingsStorageDesc": "View storage usage, manage media, and clear cache",
   "settingsContentManagement": "Content Management",
   "settingsTags": "Tag Management",
-  "settingsTagsDesc": "Add, edit or delete note tags",
+  "settingsTagsDesc": "Organize and manage note tags",
   "settingsBackup": "Backup & Restore",
   "settingsBackupDesc": "Backup data or restore from backup",
-  "settingsSync": "Note Sync",
-  "settingsSyncDesc": "Sync notes with nearby devices",
+  "settingsSync": "Nearby Device Sync",
+  "settingsSyncDesc": "Transfer notes with nearby devices on the same Wi-Fi",
   "settingsAbout": "About ThoughtEcho",
   "settingsAboutSlogan": "Your Personal Inspiration Notebook with AI Power",
   "settingsViewSource": "View Source Code (GitHub)",
@@ -151,9 +151,9 @@
   "feedbackEmailDesc": "shangjinyun@proton.me",
   "feedbackDiscussionTitle": "Join Community Discussions",
   "feedbackDiscussionDesc": "Ask questions, share ideas, and connect with other users",
-  "feedbackSentryTitle": "Send Feedback & Suggestions (Sentry)",
+  "feedbackSentryTitle": "Send Feedback & Suggestions",
   "feedbackSentryDesc": "Send comments, suggestions, or bug reports directly to developers",
-  "feedbackSentryDisabledHint": "Please enable Sentry Debugging & Reporting below first",
+  "feedbackSentryDisabledHint": "Please enable \"Send diagnostic data to help improve\" below first",
   "settingsViewLicenses": "View Licenses",
   "settingsCheckUpdate": "Check for Updates",
   "settingsCheckUpdateDesc": "Check if a new version is available",
@@ -161,11 +161,11 @@
   "developerModeEnabled": "🎉 Developer mode enabled!",
   "developerModeDisabled": "✅ Developer mode disabled",
   "devFirstScrollPerfMonitorTitle": "First-scroll jank monitor (Dev)",
-  "devFirstScrollPerfMonitorDesc": "Measure frame timings for the first gesture scroll after opening Notes (not first frame)",
+  "devFirstScrollPerfMonitorDesc": "Monitor gesture scroll frame rates and jank duration in the Notes view",
   "noteListDisableCardShadowsExperiment": "[Experiment] Disable note-list card shadows",
-  "noteListDisableCardShadowsExperimentDesc": "Available in release builds. Compare how card shadows affect Notes scrolling performance and visual feel (off by default)",
+  "noteListDisableCardShadowsExperimentDesc": "Disable card shadows to improve scrolling smoothness on lower-end devices",
   "noteListDisableBackdropBlurExperiment": "[Experiment] Disable note-list collapse blur",
-  "noteListDisableBackdropBlurExperimentDesc": "Available in release builds. Replaces the collapsed long-content bottom blur with a gradient scrim (off by default)",
+  "noteListDisableBackdropBlurExperimentDesc": "Replace collapsed card bottom blur with gradient mask to reduce rendering overhead",
   "devFirstScrollPerfResult": "First-scroll performance: total {total}, jank {jank}, avg {avgMs}ms, worst {worstMs}ms",
   "@devFirstScrollPerfResult": {
     "placeholders": {
@@ -219,7 +219,7 @@
       }
     }
   },
-  "emergencyExportHint": "Tip: You can send the exported database file to the developer for recovery.",
+  "emergencyExportHint": "Tip: The exported database file can be used for technical support and data recovery.",
   "emergencyLocatingDatabase": "Locating database file...",
   "emergencyDatabaseNotFound": "Database file not found",
   "emergencyPreparingExport": "Preparing export...",
@@ -285,7 +285,7 @@
     }
   },
   "timeYesterday": "Yesterday",
-  "exactAlarmDeniedHint": "Exact alarm permission denied, push timing may be inaccurate",
+  "exactAlarmDeniedHint": "Exact alarm permission not granted; reminders may be delayed",
   "error": "Error",
   "success": "Success",
   "warning": "Warning",
@@ -672,7 +672,7 @@
   "selectAll": "Select All",
   "clearAll": "Clear All",
   "typeSelection": "Type Selection",
-  "typeSelectionHint": "Tap to select your preferred quote types",
+  "typeSelectionHint": "Select your preferred quote types",
   "dailyQuoteProviderNoTypeSelection": "This provider does not support category filtering.",
   "usageInstructions": "Instructions",
   "hitokotoServiceProvider": "Quote service provided by Hitokoto",
@@ -1484,8 +1484,8 @@
   "hostOverrideHint": "Optional, for proxy/reverse proxy scenarios",
   "createNewPreset": "Create New Preset",
   "aiCardGeneration": "AI Card Generation",
-  "aiCardGenerationDesc": "Generate SVG sharing cards for notes: On = use AI for smart design, Off = use built-in templates (feature still available)",
-  "aiCardGenerationTip": "Tip: It is recommended to use a medium-to-large model that supports ≥4K tokens and has good instruction following and text-to-SVG generation capabilities.",
+  "aiCardGenerationDesc": "Use AI to design card layouts when enabled, or use built-in templates when disabled",
+  "aiCardGenerationTip": "Tip: Recommended to use models with strong layout and formatting capabilities (such as GPT-4o, Claude 3.5, DeepSeek-V3) for best card designs.",
   "aiEnhancedGeneration": "AI Enhanced Generation",
   "aiEnhancedGenerationDesc": "When turned off, local templates will be used instead of calling the model",
   "todayThoughtsUseAi": "Use AI for Today's Thoughts",
@@ -1791,7 +1791,7 @@
   "unsafeSvgContent": "SVG content contains unsafe elements",
   "invalidSvgContent": "Content returned by AI does not contain valid SVG code",
   "noFeaturedCards": "No Featured Cards Yet",
-  "featuredCardGenerationTip": "Generate beautiful sharing cards from your notes: AI On = Smart Design, AI Off = Built-in Templates.",
+  "featuredCardGenerationTip": "Generate share cards from notes: enable AI for smart layout design, or use built-in templates",
   "cardFromReport": "A beautiful card from ThoughtEcho Periodic Report",
   "cardSharePrefix": "A beautiful card from ThoughtEcho\n\n",
   "loadDataFailed": "Failed to load data: {error}",
@@ -1844,7 +1844,7 @@
       }
     }
   },
-  "detectedAIJSONFormat": "⚠️ Detected AI returned JSON data\n\nThis indicates that the AI model might have misunderstood the request, returning data analysis instead of an HTML report.\n\nContent returned:\n{json}\n\nPossible causes:\n• AI confused annual report generation with content analysis\n• Prompt needs further optimization\n• Model version or configuration issue\n\nSuggested solutions:\n1. Regenerate report (AI might correct the error)\n2. Check model configuration in AI settings\n3. Try using native Flutter report feature\n4. Update AI prompt configuration\n\nFor technical support, please save this error message and contact the developer.",
+  "detectedAIJSONFormat": "⚠️ Report format issue\n\nThe AI model did not return the expected report format, but returned the following summary:\n{json}\n\nSuggestions:\n1. Try regenerating the report\n2. Check or switch models in AI Settings\n3. View standard report",
   "@detectedAIJSONFormat": {
     "placeholders": {
       "json": {
@@ -1852,7 +1852,7 @@
       }
     }
   },
-  "detectedAbnormalFormat": "⚠️ Detected abnormal data format\n\nAI returned JSON data that could not be parsed correctly, which might be due to:\n• Network transport issues\n• AI service exception\n• Data format error\n\nOriginal content:\n{content}\n\nSuggested to regenerate the report or use the native report feature.",
+  "detectedAbnormalFormat": "⚠️ Data parsing issue\n\nThe AI response could not be parsed into a report.\n\nReturned content:\n{content}\n\nSuggestions: Try regenerating the report or view standard report.",
   "@detectedAbnormalFormat": {
     "placeholders": {
       "content": {
@@ -1895,13 +1895,13 @@
       }
     }
   },
-  "agentErrorUnsupportedProvider": "The current AI provider does not support Agent mode. Choose another provider and try again.",
+  "agentErrorUnsupportedProvider": "The current AI provider does not support Thoughter chat. Please switch providers and try again.",
   "agentErrorTimeout": "The request timed out. Check your connection and try again.",
   "agentErrorCancelled": "This request was stopped.",
   "agentErrorGeneric": "The request could not be completed. Please try again later.",
   "apiKeyDiagnosticsTitle": "API Key Diagnostics",
   "apiKeyDiagnosticsTool": "API Key Diagnostics Tool",
-  "apiKeyDiagnosticsDesc": "This tool checks the storage and retrieval of API keys to help diagnose 401 authentication errors.",
+  "apiKeyDiagnosticsDesc": "Check API key configuration and storage status to troubleshoot authentication issues.",
   "runDiagnostics": "Run Diagnostics",
   "diagnosticResultLabel": "Diagnostic Result:",
   "diagnosticReportHeader": "=== API Key Diagnostic Report ===",
@@ -2024,10 +2024,10 @@
       }
     }
   },
-  "importTipsImage": "• Supports JPG, PNG, GIF, WebP formats\n• Save directly to app media library, reducing duplicates\n• Use memory protection technology for large images\n• Unsaved files are automatically cleaned up",
-  "importTipsVideo": "• Supports MP4, MOV, AVI, MKV formats\n• Save directly to app media library, reducing duplicates\n• Streaming technology to prevent OOM\n• Unsaved files are automatically cleaned up",
-  "importTipsAudio": "• Supports MP3, WAV, AAC, M4A formats\n• Save directly to app media library, reducing duplicates\n• Optimized storage, fast loading\n• Unsaved files are automatically cleaned up",
-  "importTipsDefault": "• Supports multiple media formats\n• Save directly to app media library, memory safety protection\n• Unsaved files are automatically cleaned up",
+  "importTipsImage": "• Supports common formats like JPG, PNG, GIF, WebP\n• Automatically optimized for smooth loading\n• Saved directly to the app media library\n• Unsaved temporary files are cleaned up automatically",
+  "importTipsVideo": "• Supports common formats like MP4, MOV, AVI, MKV\n• Optimized for smooth playback and low memory usage\n• Saved directly to the app media library\n• Unsaved temporary files are cleaned up automatically",
+  "importTipsAudio": "• Supports common formats like MP3, WAV, AAC, M4A\n• Optimized for fast playback and storage\n• Saved directly to the app media library\n• Unsaved temporary files are cleaned up automatically",
+  "importTipsDefault": "• Supports various media formats\n• Saved directly to the app media library\n• Automatically optimized for memory and storage\n• Unsaved temporary files are cleaned up automatically",
   "formattedDate": "{month}/{day}",
   "@formattedDate": {
     "placeholders": {
@@ -2580,7 +2580,7 @@
   "periodicReportAiInsights": "Periodic Report AI Insights",
   "periodicReportAiInsightsDesc": "Enable AI insights when generating weekly/monthly reports",
   "aiCardGenerationLabel": "AI Card Generation",
-  "aiCardGenerationLabelDesc": "Generate visual SVG cards for notes",
+  "aiCardGenerationLabelDesc": "Generate beautifully formatted share cards for notes",
   "moreAiSettings": "More AI Settings",
   "moreAiSettingsDesc": "Configure AI providers, models, etc.",
   "licenseInfo": "License Information",
@@ -3044,7 +3044,7 @@
   "copiedToClipboard": "Copied to clipboard",
   "selectReportTypePrompt": "Please select the type of annual report to generate:",
   "aiSmartReport": "AI Smart Report",
-  "aiSmartReportDesc": "Beautiful HTML report generated based on AI analysis, including deep insights and visual charts",
+  "aiSmartReportDesc": "AI-powered periodic review report with deep insights and visual charts",
   "nativeFlutterReport": "Native Flutter Report",
   "nativeFlutterReportDesc": "Interactive report generated using native Flutter components with smooth animations",
   "generateAnnualReportFailed": "Failed to generate annual report",
@@ -3649,9 +3649,9 @@
   "smartPushDailyQuoteDesc": "Push curated quotes",
   "smartPushDailyQuoteIndependentNote": "Daily Quote runs independently from Smart Push — each can be enabled or disabled separately.",
   "smartPushPastNotes": "Past Notes",
-  "smartPushPastNotesDesc": "Push historical note reviews",
+  "smartPushPastNotesDesc": "Periodically revisit past thoughts and inspiration",
   "smartPushModeSmart": "Smart Push",
-  "smartPushModeSmartDesc": "Automatically select the most meaningful content",
+  "smartPushModeSmartDesc": "Intelligently select meaningful past notes and inspiration to look back on",
   "smartPushModeBoth": "Random Push",
   "smartPushModeBothDesc": "Randomly push daily quotes or past notes",
   "smartPushPastNoteTypes": "Review Types",
@@ -3685,7 +3685,7 @@
   "smartPushNoMatchingNotes": "No matching content to push",
   "smartPushPermissionRequired": "Notification permission is required to send push",
   "smartPushNotice": "Tips",
-  "smartPushNoticeDesc": "• Push notifications require notification permission\n• Enable auto-start and background running in system settings for reliable delivery\n• Some devices may need battery optimization disabled\n• Smart mode automatically selects the most relevant content",
+  "smartPushNoticeDesc": "• Enable notification permissions to receive memory reminders\n• Allow background activity and disable battery optimization for timely delivery\n• Smart mode automatically selects relevant content",
   "smartPushModeCustom": "Custom Push",
   "smartPushModeCustomDesc": "Manually select review types and filters",
   "smartPushExactAlarmHint": "Enable exact alarm permission for reliable push notifications",
@@ -3693,11 +3693,11 @@
   "smartPushExactAlarmMessage": "To ensure notifications arrive on time, please grant exact alarm permission. You can still use push without it, but timing may vary by a few minutes.",
   "smartPushGoToSettings": "Go to Settings",
   "smartPushPermissionWarningTitle": "Permission Setup Incomplete",
-  "smartPushPermissionWarningDesc": "Some permissions are not granted, which may cause push notifications to fail. Tap items below to configure.",
+  "smartPushPermissionWarningDesc": "Some permissions are missing, which may affect timely reminders. Tap below to configure.",
   "smartPushNotificationPermission": "Notification Permission",
   "smartPushBatteryOptimization": "Disable Battery Optimization",
   "smartPushAutoStartPermission": "Auto-Start Permission",
-  "smartPushAutoStartHint": "Required for background push on some devices",
+  "smartPushAutoStartHint": "Some Android devices require auto-start permission for timely background notifications",
   "smartPushAutoStartTitle": "Auto-Start Setup Guide",
   "smartPushAutoStartInstructions": "Please follow these steps:",
   "smartPushAutoStartNote": "Note: The interface may vary slightly between system versions. Please find ThoughtEcho in app management and allow auto-start and background activity.",
@@ -3962,7 +3962,7 @@
   "webdavAutoSyncLaunch": "Auto-sync on open or foreground",
   "webdavAutoSyncLaunchSubtitle": "Merge with cloud when app opens or returns to foreground",
   "webdavAutoSyncChange": "Auto-sync on note changes",
-  "webdavAutoSyncChangeSubtitle": "Quietly sync changes after 4 seconds of inactivity when editing",
+  "webdavAutoSyncChangeSubtitle": "Silently sync changes in background after editing notes",
   "webdavExperimentalTitle": "Experimental Feature Warning",
   "webdavExperimentalContent": "The WebDAV cloud synchronization feature is currently in the experimental preview phase. For your data safety, it is recommended to back up your core local notes before enabling. If you encounter any issues during use, please let us know.",
   "webdavExperimentalClose": "Dismiss",
@@ -4332,9 +4332,9 @@
   "webdavSyncStrategy": "Sync Strategy",
   "webdavStatusNotEnabled": "Cloud Sync Disabled",
   "webdavStatusNotEnabledDesc": "Configure your WebDAV service to enjoy secure cross-device multi-way synchronization.",
-  "webdavStatusSyncingDesc": "Securely comparing and merging cloud and local database files...",
+  "webdavStatusSyncingDesc": "Syncing notes between device and cloud...",
   "webdavStatusRunning": "Cloud Sync Running",
-  "webdavStatusRunningDesc": "An encrypted merge pipeline has been established with the cloud drive.\nLast sync: {time}",
+  "webdavStatusRunningDesc": "Connected to cloud storage. Sync is ready.\nLast synced: {time}",
   "@webdavStatusRunningDesc": {
     "placeholders": {
       "time": {
@@ -4343,7 +4343,7 @@
     }
   },
   "webdavStatusException": "Sync Exception",
-  "webdavStatusExceptionDesc": "Network communication or cloud drive file lock conflict. We will retry automatically.",
+  "webdavStatusExceptionDesc": "Network issue or remote files are being updated by another device. Will retry automatically.",
   "webdavStatusEnabled": "Cloud Sync Enabled",
   "webdavStatusEnabledDesc": "Service ready. Last sync: {time}",
   "@webdavStatusEnabledDesc": {
@@ -4519,7 +4519,16 @@
   "agentMemoryNicknameDisabled": "Enabled when long-term memory is turned on",
   "agentMemoryClearTitle": "Clear memory",
   "agentMemoryClearSummary": "Currently remembering {profileCount, plural, =1{1 preference} other{{profileCount} preferences}} and {factCount, plural, =1{1 detail} other{{factCount} details}}",
-  "@agentMemoryClearSummary": {"placeholders": {"profileCount": {"type": "int"}, "factCount": {"type": "int"}}},
+  "@agentMemoryClearSummary": {
+    "placeholders": {
+      "profileCount": {
+        "type": "int"
+      },
+      "factCount": {
+        "type": "int"
+      }
+    }
+  },
   "agentMemoryClearEmpty": "Nothing remembered yet",
   "agentMemoryClearConfirmTitle": "Clear Thoughter's memory?",
   "agentMemoryClearConfirmBody": "Every remembered preference and detail will be deleted permanently. Your notes are not affected.",
