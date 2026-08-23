@@ -244,7 +244,9 @@ void main() {
       expect(Quote.isValidColorHex('#ZZ0000'), isFalse);
     });
 
-    test('safeDeltaOps should handle malformed and non-Map delta items gracefully without throwing TypeError', () {
+    test(
+        'safeDeltaOps should handle malformed and non-Map delta items gracefully without throwing TypeError',
+        () {
       final quote = Quote(
         id: 'test-malformed-delta',
         content: '回退文本内容\n',
