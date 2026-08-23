@@ -38,12 +38,14 @@ void main() {
       expect(_drain(cursor, 5), [3, 4]);
     });
 
-    test('锚点越界或列表为空都不会空转', () {
+    test('锚点越界时夹进列表范围，照样不重不漏地走一遍', () {
       final cursor = SpreadFromAnchorCursor()..restart(anchor: 99, length: 4);
       expect(cursor.anchor, 3);
       expect(_drain(cursor, 4), [3, 2, 1, 0]);
+    });
 
-      cursor.restart(anchor: -5, length: 0);
+    test('列表为空时直接返回 null，不空转', () {
+      final cursor = SpreadFromAnchorCursor()..restart(anchor: -5, length: 0);
       expect(cursor.next(0), isNull);
     });
   });
