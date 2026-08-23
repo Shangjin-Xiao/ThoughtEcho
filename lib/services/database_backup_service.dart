@@ -249,12 +249,30 @@ class DatabaseBackupService {
         // 批量插入标签关联（性能提升显著）
         if (tagRelations.isNotEmpty) {
           final tagBatch = txn.batch();
-          for (final relation in tagRelations) {
-            tagBatch.insert(
-              'quote_tags',
-              relation,
-              conflictAlgorithm: ConflictAlgorithm.ignore,
-            );
+          const int chunkSize = 400;
+          for (int i = 0; i < tagRelations.length; i += chunkSize) {
+            final end = (i + chunkSize < tagRelations.length)
+                ? i + chunkSize
+                : tagRelations.length;
+            final chunk = tagRelations.sublist(i, end);
+            if (chunk.length == 1) {
+              tagBatch.insert(
+                'quote_tags',
+                chunk.first,
+                conflictAlgorithm: ConflictAlgorithm.ignore,
+              );
+            } else {
+              final valuePlaceholders =
+                  List.filled(chunk.length, '(?, ?)').join(', ');
+              final args = <Object?>[];
+              for (final relation in chunk) {
+                args.addAll([relation['quote_id'], relation['tag_id']]);
+              }
+              tagBatch.rawInsert(
+                'INSERT OR IGNORE INTO quote_tags (quote_id, tag_id) VALUES $valuePlaceholders',
+                args,
+              );
+            }
           }
 
           try {
@@ -992,14 +1010,34 @@ class DatabaseBackupService {
               whereArgs: [quoteId],
             );
           }
-          for (final tagId in remappedTagIds) {
-            batch.insert(
+          final tagIdList = remappedTagIds.toList();
+          const int chunkSize = 400;
+          for (int i = 0; i < tagIdList.length; i += chunkSize) {
+            final end = (i + chunkSize < tagIdList.length)
+                ? i + chunkSize
+                : tagIdList.length;
+            final chunk = tagIdList.sublist(i, end);
+            if (chunk.length == 1) {
+              batch.insert(
                 'quote_tags',
                 {
                   'quote_id': quoteId,
-                  'tag_id': tagId,
+                  'tag_id': chunk.first,
                 },
-                conflictAlgorithm: ConflictAlgorithm.ignore);
+                conflictAlgorithm: ConflictAlgorithm.ignore,
+              );
+            } else {
+              final valuePlaceholders =
+                  List.filled(chunk.length, '(?, ?)').join(', ');
+              final args = <Object?>[];
+              for (final tagId in chunk) {
+                args.addAll([quoteId, tagId]);
+              }
+              batch.rawInsert(
+                'INSERT OR IGNORE INTO quote_tags (quote_id, tag_id) VALUES $valuePlaceholders',
+                args,
+              );
+            }
           }
         }
       } catch (e) {

@@ -54,8 +54,8 @@ void main() {
   });
 
   test('Benchmark importDataWithLWWMerge', () async {
-    const categoryCount = 1;
-    const quoteCount = 1;
+    const categoryCount = 50;
+    const quoteCount = 500;
 
     // 1. Prepare existing data
     await db.transaction((txn) async {
@@ -87,15 +87,15 @@ void main() {
     });
 
     final quotesToMerge = List.generate(quoteCount, (i) {
-      final int halfCatCount = categoryCount ~/ 2;
+      // Generate 5 tags for each quote
+      final tags = List.generate(5, (t) => 'cat_${(i + t) % categoryCount}').join(',');
       return {
         'id': 'quote_$i',
         'content': 'Updated Content $i',
         'date': DateTime.now().toIso8601String(),
         'last_modified':
             DateTime.now().add(const Duration(minutes: 1)).toIso8601String(),
-        'tag_ids':
-            (i % 5 == 0 && halfCatCount > 0) ? 'cat_${i % halfCatCount}' : '',
+        'tag_ids': tags,
       };
     });
 
