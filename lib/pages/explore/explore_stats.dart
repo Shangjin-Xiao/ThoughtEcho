@@ -82,7 +82,10 @@ extension _ExploreStats on _ExplorePageState {
                   Text(
                     unit,
                     maxLines: 1,
-                    style: theme.textTheme.labelSmall?.copyWith(
+                    // 单位跟着数值走，不能用 labelSmall：那一级是黑体（界面标签留在
+                    // 黑体是全局规则），而数值是 titleLarge，衬线风格下会渲染成宋体。
+                    // 「15 字」两个字符一半宋体一半黑体，一个计量单位被劈成两种字体。
+                    style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),

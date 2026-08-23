@@ -105,7 +105,7 @@ class QuillEditorExtensions {
 /// （它在 `QuillEditor` 自己的 context 上取，所以颜色、字体族确实跟着主题走），
 /// 但 `fontSize` 和 `height` 被硬写成 16 / 1.15。
 /// 1.15 对中文正文太挤，换成衬线体之后尤其闷；16 则在衬线风格把正文放大到 17
-/// （[ThemeStyleForm.bodyFontScale]）之后跟纯文本笔记对不上。
+/// （[ThemeStyleForm.readingFontScale]）之后跟纯文本笔记对不上。
 ///
 /// 纠正的时候**不能照抄那条取法**：调用点往往在 `Material` 外面，那里的
 /// `DefaultTextStyle` 是 `MaterialApp` 的报警样式。见 [paragraphStyle]。

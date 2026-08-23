@@ -1,0 +1,11 @@
+/* Korean InfoPlist.strings */
+"CFBundleDisplayName" = "ThoughtEcho";
+"NSPhotoLibraryUsageDescription" = "사진, 동영상 및 Live Photo를 노트에 첨부하거나 노트 카드를 사진 보관함에 저장하기 위해 사용됩니다.";
+"NSPhotoLibraryAddUsageDescription" = "생성된 노트 카드 이미지를 사진 보관함에 저장하기 위해 사용됩니다.";
+"NSCameraUsageDescription" = "노트 작성 중 사진이나 동영상을 직접 촬영하여 첨부하기 위해 사용됩니다.";
+"NSMicrophoneUsageDescription" = "노트에 음성 메모 및 오디오 첨부 파일을 녹음하기 위해 사용됩니다.";
+"NSLocationWhenInUseUsageDescription" = "노트 작성 시 현재 위치 정보와 날씨를 자동으로 기록하기 위해 사용됩니다.";
+"NSBluetoothAlwaysUsageDescription" = "Bluetooth를 통해 연동된 전자잉크(E-ink) 기기에 노트를 동기화하기 위해 사용됩니다.";
+"NSBluetoothPeripheralUsageDescription" = "Bluetooth를 통해 연동된 전자잉크(E-ink) 기기에 노트를 동기화하기 위해 사용됩니다.";
+"NSFaceIDUsageDescription" = "Face ID로 본인 인증 후 잠긴 노트를 해제하기 위해 사용됩니다.";
+"NSLocalNetworkUsageDescription" = "로컬 Wi-Fi 네트워크에서 다른 기기를 검색하고 노트 데이터를 고속으로 동기화하기 위해 사용됩니다.";

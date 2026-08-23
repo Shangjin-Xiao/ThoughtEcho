@@ -213,16 +213,21 @@ pwsh ./scripts/build_msix_ci.ps1
     遇到 `const RoundedRectangleBorder(...)` 是去掉 `const`，不是退回静态常量。
 - ❌ `fontSize:` 字面量。用 `theme.textTheme.*`，需要微调时 `.copyWith()`。
 - ❌ 写死正文 `height:`（行高）、`fontSize:` 或 `fontWeight:` 来「调得好看点」。
-  这三样都由 `ThemeStyleForm` 下发到 `textTheme.body*`：行高 `bodyLineHeight`
-  （Material 1.5、纸墨 1.75、素笺 1.6）、字号 `bodyFontScale`（Material 16、
-  手工风格 17）、字重下限 `readingWeightFloor`（Material 无、手工风格 w500）。
+  这三样都由 `ThemeStyleForm` 下发到 `textTheme.title*` / `textTheme.body*`：
+  行高 `bodyLineHeight`（Material 1.5、纸墨 1.75、素笺 1.6，只作用于 `body*`）、
+  字号 `readingFontScale`（Material ×1、手工风格 ×1.0625，`title*` 和 `body*` 同乘）、
+  字重下限 `titleWeightFloor` / `bodyWeightFloor`（Material 无、手工风格 w600 / w500）。
   在 widget 里 `copyWith` 任何一项都会盖掉令牌。
   - 纸墨的**纸张横线间距是从「正文字号 × 行高」推导的**，覆盖任一项都会让文字逐行
     相对横线漂移，卡片看起来像背了一张格子图。见 `theme_style_contrast_test.dart`
     的不变量。
   - 字重有两个**方向相反**的补偿，别搞混：Android 的可变字重补偿（w400→350）是给
     **黑体**减重，衬线风格靠 `variableWeightCompensation: 0` 关掉；
-    `readingWeightFloor` 是给**衬线体**加重，所有平台生效。别在 widget 里另外补。
+    两个 `*WeightFloor` 是给**衬线体**加重，所有平台生效。别在 widget 里另外补。
+  - **标题的下限比正文高一档，这一档就是层级本身**：构建期 M3 的字重还是 null，
+    共用一个下限会把 `title*` 和 `body*` 一起钉成同一个字重，小节标题和列表正文
+    分不出主次。同理 `readingFontScale` 必须两边同乘，只放大正文会让
+    `bodyLarge`(17) 压过 `titleMedium`(16)，层级是倒的。
   - `label*`（按钮、胶囊、导航栏标签）**不换字体族、不缩放**，永远是系统黑体。
     这是全局规则，不要给它加风格字体。
 - ❌ `fontStyle: FontStyle.italic` **用作 UI 装饰**（出处、提示、占位、次要说明）。中文字体没有

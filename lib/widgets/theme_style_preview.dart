@@ -12,7 +12,10 @@ import 'common/paper_rule_background.dart';
 /// 两条纪律和主题其它部分一致：
 /// - 画的是「[style] 这个风格长什么样」，**不是当前生效的风格**。所以颜色由外部传入
 ///   `AppTheme.colorSchemeFor(style, brightness)`，形状取 `style.form`，
-///   一律不读 `Theme.of(context)`（那是当前主题）。
+///   一律不从 `Theme.of(context)` 取风格相关的东西（那是当前主题）。样张的字体族
+///   同理：`form.fontFamily` 为 null 时要落到平台默认黑体，**不能让 TextStyle
+///   去继承外层**——外层就是当前风格，material 那张卡会跟着变成宋体。
+///   `Theme.of(context).platform` 是唯一的例外，它与风格无关。
 /// - 没有 `if (style == ThemeStyle.paper)`。边框还是投影看 `borderWidth > 0`，
 ///   画不画横线看 `ruleSpacing > 0`，都是令牌**取值**。加第四套风格不用改这里。
 class ThemeStylePreview extends StatelessWidget {
@@ -89,7 +92,7 @@ class ThemeStylePreview extends StatelessWidget {
               borderRadius: cardRadius,
               topInset: 4,
               bottomInset: 4,
-              child: _content(),
+              child: _content(Theme.of(context).platform),
             ),
           ),
         ),
@@ -99,7 +102,10 @@ class ThemeStylePreview extends StatelessWidget {
 
   /// 卡片内容：一个用该风格字体渲染的「永」，加一条正文示意线和一点强调色。
   /// 「永」是字体样张的传统选字，八个基本笔画齐全，衬线和黑体一眼能分辨。
-  Widget _content() {
+  ///
+  /// [platform] 只用来把 material 那张卡的「没有指定字体族」落成平台默认黑体，
+  /// 见 `ThemeStyleForm.resolvedFontFamily`。
+  Widget _content(TargetPlatform platform) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       child: Column(
@@ -112,11 +118,15 @@ class ThemeStylePreview extends StatelessWidget {
               fontSize: 17,
               height: 1.1,
               color: colorScheme.onSurface,
-              fontFamily: style.form.fontFamily,
+              // **不能直接传 form.fontFamily**：material 风格那一项是 null，而 null
+              // 在 TextStyle 里的意思是「继承外层」——外层正是当前生效的风格。
+              // 用户已经切到纸墨时，material 预览卡的样张会跟着变成宋体，
+              // 三张卡看起来字体一样，预览最该说清楚的那件事反而没了。
+              fontFamily: style.form.resolvedFontFamily(platform),
               fontFamilyFallback: style.form.fontFamilyFallback,
-              // 样张要和正文一致，字重也得过一遍风格的下限，
+              // 样张要和正文一致，字重也得过一遍风格的正文下限，
               // 否则预览里的「永」比真正的正文细一档。
-              fontWeight: style.form.readingWeight(FontWeight.w400),
+              fontWeight: style.form.bodyWeight(FontWeight.w400),
             ),
           ),
           Row(
