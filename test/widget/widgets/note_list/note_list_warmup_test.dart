@@ -95,9 +95,6 @@ int _planMisses() => (QuoteContent.debugCacheStats()['plan']
 int _expansionMisses() => (QuoteContent.debugCacheStats()['expansion']
     as Map<String, dynamic>)['missCount'] as int;
 
-int _expansionCacheSize() => (QuoteContent.debugCacheStats()['expansion']
-    as Map<String, dynamic>)['cacheSize'] as int;
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -206,79 +203,6 @@ void main() {
       );
     });
   }
-
-  testWidgets('测量缓存被清空后，回到前台必须重新预热', (tester) async {
-    // App 进后台时 `main.dart` 会把 QuoteContent 的测量缓存整排清掉（省内存）。
-    // 预热的游标停在列表末尾不动，只比对宽度和版式的话，回到前台后这一轮直接判定
-    // 「暖完了」—— 缓存是空的、游标是满的，接下来每张卡片滑进来都要现算一遍折叠
-    // 判定和折叠排版。线上日志里这条路径长这样：`warmup={items=121,cursor=121/121}`
-    // 看着很美，`expand=` 却恰好等于「一共建出来过几张卡」。
-    final databaseService = _StreamingFakeDatabaseService();
-    final quotes = [
-      for (var i = 0; i < 120; i++)
-        Quote(
-          id: 'rewarm-$i',
-          content: '缓存清空后重新预热测试笔记 $i',
-          date: DateTime(2026, 8, 22, 9)
-              .subtract(Duration(minutes: i))
-              .toIso8601String(),
-          editSource: 'inline',
-          dayPeriod: 'morning',
-        ),
-    ];
-
-    await tester.pumpWidget(
-      _TestApp(
-        databaseService: databaseService,
-        settingsService: _FakeSettingsService(),
-      ),
-    );
-    await tester.pump();
-    databaseService.emit(quotes, hasMore: false);
-    await tester.pump();
-
-    Future<void> settleIdleWork() async {
-      for (var i = 0; i < 60; i++) {
-        await tester.pump(const Duration(milliseconds: 50));
-      }
-    }
-
-    int builtCards() =>
-        find.byType(QuoteItemWidget, skipOffstage: false).evaluate().length;
-
-    await settleIdleWork();
-
-    expect(
-      _expansionCacheSize(),
-      greaterThanOrEqualTo(quotes.length),
-      reason: '静止期预热应当把整张列表的折叠判定都暖好',
-    );
-    // 缓存里的量必须是预热做的，不能是「卡片全建出来了」这种平凡解，
-    // 否则下面那条断言换成什么实现都能过。
-    expect(
-      builtCards(),
-      lessThan(quotes.length),
-      reason: '这个用例要证明的是预热覆盖了没建出来的条目',
-    );
-
-    // 模拟 main.dart 在 AppLifecycleState.paused 里做的事。
-    QuoteContent.resetCaches();
-    expect(_expansionCacheSize(), 0);
-
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    await settleIdleWork();
-
-    expect(
-      _expansionCacheSize(),
-      greaterThanOrEqualTo(quotes.length),
-      reason: '缓存被清空后预热没有重跑：游标停在列表末尾，'
-          '下一次滑动每张卡片都要重算一遍折叠判定',
-    );
-
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump(const Duration(seconds: 2));
-    await databaseService.disposeStream();
-  });
 
   testWidgets('静止期把缓存区一级一级撑大，提前建出下一屏的卡片', (tester) async {
     final databaseService = _StreamingFakeDatabaseService();

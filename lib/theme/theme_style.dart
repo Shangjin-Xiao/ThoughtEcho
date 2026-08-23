@@ -202,9 +202,8 @@ class ThemeStyleForm {
     required this.fontFamily,
     required this.fontFamilyFallback,
     required this.bodyLineHeight,
-    required this.readingFontScale,
-    required this.titleWeightFloor,
-    required this.bodyWeightFloor,
+    required this.bodyFontScale,
+    required this.readingWeightFloor,
     required this.variableWeightCompensation,
   });
 
@@ -251,20 +250,6 @@ class ThemeStyleForm {
   final String? fontFamily;
   final List<String>? fontFamilyFallback;
 
-  /// 脱离 `textTheme`、自己拼一条 `TextStyle` 时该用的字体族。
-  ///
-  /// **不能把 [fontFamily] 原样交给 `TextStyle`。** null 在 `TextStyle` 里的意思是
-  /// 「继承外层」，不是「用系统默认」，而外层是**当前生效风格**的默认文字样式。
-  /// 主题设置页把三种风格的预览卡并排画，material 那张的 [fontFamily] 是 null——
-  /// 用户正用着纸墨时，它的样张跟着继承成了衬线：三张卡字体一模一样，
-  /// 「换过去是宋体还是黑体」这件预览本来最该说清楚的事反而看不出来。
-  ///
-  /// 所以 null 要在这里**落成平台默认的黑体族**。取值从 `Typography` 拿，
-  /// 和 M3 下发给 material 风格的是同一套（Android/桌面 Roboto，iOS 苹方那支）。
-  String? resolvedFontFamily(TargetPlatform platform) =>
-      fontFamily ??
-      Typography.material2021(platform: platform).black.bodyMedium?.fontFamily;
-
   /// 正文行高倍数，直接作用于 `bodyLarge`；`bodyMedium` / `bodySmall` 按
   /// `bodyLineHeight / material.bodyLineHeight` 这个**比例**缩放各自的 M3 默认值，
   /// 所以一个令牌就能整体调松紧，而不会把三级正文压成同一个行高。
@@ -276,17 +261,7 @@ class ThemeStyleForm {
   /// 相对横线漂移。见 [ruleSpacing] 的注释。
   final double bodyLineHeight;
 
-  /// 阅读文本的字号缩放，`title*` 和 `body*` 六级同乘（22 / 16 / 14 和 16 / 14 / 12）。
-  ///
-  /// **标题必须和正文同乘，这是它叫 reading 而不是 body 的原因。** 曾经只缩放
-  /// `body*`：正文涨到 17，标题还留在几何给的 16，`bodyLarge` 就比它上面一级的
-  /// `titleMedium` 还大，`bodyMedium`(14.875) 也压过了 `titleSmall`(14)——M3 的层级
-  /// 在衬线风格下是倒着的。两边同乘，M3 原本「同字号、差一档字重」的关系原样保留，
-  /// 只是整体大了 6%。
-  ///
-  /// 顺带一提：中日韩的字形几何（`Typography.dense2021`）和英文
-  /// （`englishLike2021`）在这六级上的字号、字重完全一致，只有基线不同，
-  /// 所以这里按 M3 英文取值算出来的数钉下去，中文下不会丢任何东西。
+  /// 正文字号缩放，只作用于 `body*` 三级（16 / 14 / 12 各自乘上它）。
   ///
   /// 中文衬线体的横画只有竖画三分之一粗。16sp 配 2x 屏时，一根横画落到大约半个
   /// 物理像素上，抗锯齿后只剩一条浅灰线——**同样的墨色，衬线读起来就是比黑体虚**，
@@ -295,31 +270,13 @@ class ThemeStyleForm {
   /// 横画宽度跟着涨 6%，跨过半像素这道坎之后灰度会明显变实。
   ///
   /// 取 1.0625（16 → 17）：整数字号、够到阈值，又不至于让列表和设置项换行。
-  /// `label*` 不跟着缩放——那三级是黑体，没有横画变虚这回事。
+  /// 标题和标签不缩放——标题字号本来就在横画不失真的区间，标签是黑体。
   ///
   /// 它和 [bodyLineHeight] 一起决定 [ruleSpacing]：横线间距必须等于
   /// 「字号 × 行高」，字号变了横线也得跟着变，否则文字会逐行相对横线漂移。
-  /// 用的是 `bodyLarge` 那一级的字号，和标题无关。
-  final double readingFontScale;
+  final double bodyFontScale;
 
-  /// `title*` 三级的**最低字重**，0 表示不设下限。所有平台生效。
-  ///
-  /// 存在的理由是层级，不是可读性：标题的可读性由字号解决。M3 靠「同字号 + 差一档
-  /// 字重」把标题和正文分开（`titleMedium` 16/w500 对 `bodyLarge` 16/w400），
-  /// 而衬线风格给正文抬了字重（[bodyWeightFloor]），这一档差就没了——加上主题构建期
-  /// M3 的字重还是 null（由字形几何在 build 时补），`title*` 和 `body*` 会被同一个
-  /// 下限**一起钉成 w500**，六级阅读文本一样重。截图上就是「最近对话」这种小节标题
-  /// 和它底下的列表标题分不出主次，整页发平。
-  ///
-  /// 取 600，比 [bodyWeightFloor] 高一档，M3 的那一档差就回来了。**这是个精确取值**：
-  /// [bundledSerif] 的字重轴是连续的 400–900，`TextStyle.fontWeight` 由引擎映射到
-  /// wght 轴，600 就是 600。换随包字体之前不能这么写——设备的衬线体常常只有
-  /// Regular / Bold 两档，600 会被匹配成 Bold，标题集体变粗体。
-  ///
-  /// **不作用于 display / headline**：那是 24–57sp，加重只会让大标题显得笨重。
-  final int titleWeightFloor;
-
-  /// `body*` 三级的**最低字重**，0 表示不设下限。所有平台生效。
+  /// 阅读文本（`title*` / `body*`）的**最低字重**，0 表示不设下限。所有平台生效。
   ///
   /// 和 [variableWeightCompensation] 是两码事，方向也相反：那个是给**黑体**在
   /// Android Impeller 下变粗做的减重（只跑在 Android），这个是给**衬线体**横画过细
@@ -333,9 +290,14 @@ class ThemeStyleForm {
   /// 只有 Regular / Bold 两档的设备上 500 匹配回 400，等于什么也没发生——
   /// 也就没法判断这个杠杆到底有没有用。现在可以放心调了。
   ///
-  /// **是下限不是增量**：正文里 `copyWith(fontWeight: FontWeight.bold)` 那种局部加粗
-  /// 已经在下限之上，抬下限碰不到它们，粗体仍然是粗体。
-  final int bodyWeightFloor;
+  /// **是下限不是增量**，这个区别很要紧：M3 的 `titleMedium` / `titleSmall` 本来就是
+  /// w500，加增量会把它们顶到 w600，而只有 Regular / Bold 两档的衬线体会把 600
+  /// 匹配成 Bold——列表标题会集体变成粗体。抬下限则对它们完全无影响。
+  ///
+  /// **只作用于 `title*` 和 `body*`**，这是光学尺寸的判断而不是省事：
+  /// display / headline 是 24–57sp，横画在那个尺寸上根本不会掉进半像素，
+  /// 再加重只会让大标题显得笨重。
+  final int readingWeightFloor;
 
   /// Android 可变字重补偿的强度，0 = 不补偿，1 = 全额补偿。
   ///
@@ -351,23 +313,14 @@ class ThemeStyleForm {
   double shadowOpacity(Brightness brightness) =>
       brightness == Brightness.dark ? shadowOpacityDark : shadowOpacityLight;
 
-  /// 把一个字重抬到 [titleWeightFloor] 之上：低于下限的抬上来，已经达标的原样返回。
+  /// 把一个字重抬到 [readingWeightFloor] 之上：低于下限的抬上来，已经达标的原样返回。
   ///
   /// 抬字重这条规则不止 `textTheme` 一处要用——AppBar 的 `titleTextStyle` 一旦非空
   /// 就不再回落到 `textTheme`，得自己算一遍。规则写在这里，两边就不会走岔。
-  FontWeight titleWeight(FontWeight m3Default) =>
-      weightAtLeast(m3Default, titleWeightFloor);
-
-  /// 把一个字重抬到 [bodyWeightFloor] 之上。样张、富文本这类**脱离 `textTheme`**
-  /// 自己拼样式的地方要用它对齐正文，否则预览里的字比真正的正文细一档。
-  FontWeight bodyWeight(FontWeight m3Default) =>
-      weightAtLeast(m3Default, bodyWeightFloor);
-
-  /// 抬字重的那条规则本身：低于 [floor] 的抬上来，已经达标的原样返回，
-  /// `floor` 为 0 时等于什么都不做。`AppTheme._applyStyleTypography` 要按级传不同的
-  /// 下限，用不上上面两个绑定了具体令牌的包装。
-  static FontWeight weightAtLeast(FontWeight weight, int floor) =>
-      weight.value >= floor ? weight : FontWeight(floor);
+  FontWeight readingWeight(FontWeight m3Default) =>
+      m3Default.value >= readingWeightFloor
+          ? m3Default
+          : FontWeight(readingWeightFloor);
 
   /// 随包分发的中文衬线体族名，必须和 `pubspec.yaml` 的 `fonts: - family:` 一致。
   ///
@@ -380,7 +333,7 @@ class ThemeStyleForm {
   /// `Songti SC` 根本没机会被查询。所以 iOS 上两套手工风格的正文一直是黑体。
   ///
   /// 换成随包字体之后：族名一定解析得到，三端字形完全一致；更要紧的是
-  /// [bodyWeightFloor] 从「下限 + 听设备的」变成精确取值——这个字体的字重轴
+  /// [readingWeightFloor] 从「下限 + 听设备的」变成精确取值——这个字体的字重轴
   /// 是连续的 400–900，`TextStyle.fontWeight` 由引擎映射到 wght 轴，
   /// w500 就是 w500，不再有「设备只有 Regular/Bold 两档所以等于没抬」这回事。
   ///
@@ -412,7 +365,7 @@ class ThemeStyleForm {
     'SimSun',
   ];
 
-  /// M3 `bodyLarge` 的字号。[ruleSpacing] 由它乘 [readingFontScale] 再乘
+  /// M3 `bodyLarge` 的字号。[ruleSpacing] 由它乘 [bodyFontScale] 再乘
   /// [bodyLineHeight] 推导，因为笔记卡片的正文用的就是 `bodyLarge`
   /// （`quote_item_widget.dart`）。
   static const _bodyLargeFontSize = 16.0;
@@ -435,18 +388,15 @@ class ThemeStyleForm {
     // M3 bodyLarge 的默认行高（24/16），写在这里是为了让 material 成为其他风格
     // 缩放 bodyMedium/bodySmall 的基准，取值本身不改变 material 的任何像素。
     bodyLineHeight: 1.5,
-    readingFontScale: 1,
-    titleWeightFloor: 0,
-    bodyWeightFloor: 0,
+    bodyFontScale: 1,
+    readingWeightFloor: 0,
     variableWeightCompensation: 1,
   );
 
   /// 衬线风格共用的排版补偿。两套风格的字体族相同，笔画细的问题也就相同，
   /// 补偿量没有理由不同——风格差异由行高、圆角、纹理、色板承担。
-  static const _serifFontScale = 1.0625; // 16 → 17，标题同乘（22 → 23.375）
-  // 标题比正文重一档，M3 的「同字号差一档字重」在衬线风格下就还在。
-  static const _serifTitleWeightFloor = 600;
-  static const _serifBodyWeightFloor = 500;
+  static const _serifFontScale = 1.0625; // 16 → 17
+  static const _serifWeightFloor = 500; // 抬起 w400 的那几级，w500 的不动
 
   static const _paperLineHeight = 1.75;
 
@@ -477,9 +427,8 @@ class ThemeStyleForm {
     fontFamily: bundledSerif,
     fontFamilyFallback: _systemSerifFallback,
     bodyLineHeight: _paperLineHeight,
-    readingFontScale: _serifFontScale,
-    titleWeightFloor: _serifTitleWeightFloor,
-    bodyWeightFloor: _serifBodyWeightFloor,
+    bodyFontScale: _serifFontScale,
+    readingWeightFloor: _serifWeightFloor,
     // 衬线体不吃黑体的减重补偿，否则中文正文发灰发虚。
     variableWeightCompensation: 0,
   );
@@ -504,9 +453,8 @@ class ThemeStyleForm {
     // 比纸墨紧一档：素笺的性格是硬朗、密实。有了行高令牌，两套手工风格终于不只是
     // 颜色和圆角的差别。仍然比 material 的 1.5 松，因为字体是衬线。
     bodyLineHeight: 1.6,
-    readingFontScale: _serifFontScale,
-    titleWeightFloor: _serifTitleWeightFloor,
-    bodyWeightFloor: _serifBodyWeightFloor,
+    bodyFontScale: _serifFontScale,
+    readingWeightFloor: _serifWeightFloor,
     variableWeightCompensation: 0,
   );
 }

@@ -119,56 +119,5 @@ void main() {
 
       expect(service.getDisplayLocation(), '东莞市·南城区');
     });
-
-    test('Chinese locale does not append 市 to 都/府/道/州 suffixes', () {
-      final service = LocationService();
-      service.currentLocaleCode = 'zh';
-
-      service.parseLocationString('日本,东京都,东京都,');
-      expect(service.getDisplayLocation(), '东京都');
-
-      service.parseLocationString('日本,京都府,京都市,');
-      expect(service.getDisplayLocation(), '京都府·京都市');
-
-      service.parseLocationString('日本,北海道,札幌,');
-      expect(service.getDisplayLocation(), '北海道·札幌市');
-
-      service.parseLocationString('美国,纽约州,纽约,');
-      expect(service.getDisplayLocation(), '纽约州·纽约市');
-    });
-
-    test('sanitizes Nominatim multi-variant delimiter strings', () {
-      final service = LocationService();
-      service.currentLocaleCode = 'zh';
-
-      service.parseLocationString('美国;美國,纽约州;紐約州,纽约;紐約,');
-      expect(service.getDisplayLocation(), '纽约州·纽约市');
-      expect(service.country, '美国');
-      expect(service.province, '纽约州');
-      expect(service.city, '纽约');
-
-      service.parseLocationString('韩国 / 南韓,,首尔特别市,');
-      expect(service.getDisplayLocation(), '首尔特别市');
-      expect(service.country, '韩国');
-    });
-  });
-
-  group('LocationService.cleanGeocodingText', () {
-    test('cleans semicolon and slash delimiters', () {
-      expect(LocationService.cleanGeocodingText('纽约;紐約'), '纽约');
-      expect(LocationService.cleanGeocodingText('大倫敦;大伦敦'), '大倫敦');
-      expect(LocationService.cleanGeocodingText('东京都/東京都'), '东京都');
-      expect(LocationService.cleanGeocodingText('韩国 / 南韓'), '韩国');
-      expect(LocationService.cleanGeocodingText('法国;法國'), '法国');
-      expect(LocationService.cleanGeocodingText('澳大利亚;澳洲'), '澳大利亚');
-      expect(
-        LocationService.cleanGeocodingText('法兰西岛大区 / 法蘭西島大區'),
-        '法兰西岛大区',
-      );
-      expect(
-          LocationService.cleanGeocodingText('Grand Londres'), 'Grand Londres');
-      expect(LocationService.cleanGeocodingText(''), '');
-      expect(LocationService.cleanGeocodingText(null), '');
-    });
   });
 }

@@ -517,13 +517,13 @@ void main() {
       // 曾经 ruleSpacing 写死 26 而正文行高是 16×1.5=24，每行漂 2px，
       // 几行之后文字就骑到线上，看起来像「卡片背了一张格子图」。
       // 横线间距只能从「字号 × 行高」推导，不能各写各的——字号也进了这个乘积，
-      // 因为衬线风格把正文放大了（readingFontScale），只跟行高走会重新漂起来。
+      // 因为衬线风格把正文放大了（bodyFontScale），只跟行高走会重新漂起来。
       for (final style in ThemeStyle.values) {
         final form = style.form;
         if (form.ruleSpacing == 0) continue;
         expect(
           form.ruleSpacing,
-          closeTo(16.0 * form.readingFontScale * form.bodyLineHeight, 0.01),
+          closeTo(16.0 * form.bodyFontScale * form.bodyLineHeight, 0.01),
           reason: '${style.name} 的横线间距和正文行高对不上',
         );
       }
@@ -560,57 +560,52 @@ void main() {
         final form = style.form;
         if (form.fontFamily == null) continue;
         expect(
-          form.bodyWeightFloor,
+          form.readingWeightFloor,
           greaterThan(FontWeight.w400.value),
-          reason: '${style.name} 用衬线体却没有抬正文字重下限',
+          reason: '${style.name} 用衬线体却没有抬字重下限',
         );
         expect(
-          form.readingFontScale,
+          form.bodyFontScale,
           greaterThan(1),
-          reason: '${style.name} 用衬线体却没有放大阅读文本',
+          reason: '${style.name} 用衬线体却没有放大正文',
         );
       }
-      // Material 三项都是恒等取值，像素一点不变。
-      expect(ThemeStyleForm.material.bodyWeightFloor, 0);
-      expect(ThemeStyleForm.material.titleWeightFloor, 0);
-      expect(ThemeStyleForm.material.readingFontScale, 1);
+      // Material 两项都是恒等取值，像素一点不变。
+      expect(ThemeStyleForm.material.readingWeightFloor, 0);
+      expect(ThemeStyleForm.material.bodyFontScale, 1);
     });
 
-    test('标题的字重下限比正文高一档，层级不靠字号靠字重', () {
-      // 构建期 M3 的字重还是 null（由字形几何在 build 时补），所以一个下限会把
-      // title* 和 body* **一起**钉成同一个字重——小节标题和列表正文一样重，
-      // 整页发平。两档下限是这套风格里唯一还原 M3「同字号差一档字重」的手段。
+    test('字重是下限不是增量：M3 已经 w500 的标题不会被顶成粗体', () {
+      // 只有 Regular / Bold 两档的中文衬线体会把 w600 匹配成 Bold，
+      // 列表标题会集体变粗。下限必须落在 w500——正好等于 titleMedium /
+      // titleSmall 的 M3 默认值，对它们零影响。
       for (final style in ThemeStyle.values) {
-        final form = style.form;
-        if (form.fontFamily == null) continue;
+        final floor = style.form.readingWeightFloor;
+        if (floor == 0) continue;
         expect(
-          form.titleWeightFloor,
-          greaterThan(form.bodyWeightFloor),
-          reason: '${style.name} 的标题和正文一样重，分不出主次',
+          floor,
+          lessThanOrEqualTo(FontWeight.w500.value),
+          reason: '${style.name} 的字重下限高过 M3 标题字重，标题会变粗体',
         );
-        // 上限：随包衬线的字重轴是 400–900，超出去引擎只能夹到边界。
-        expect(form.titleWeightFloor, lessThanOrEqualTo(FontWeight.w900.value));
       }
 
-      // 抬字重的规则只有这一处实现，textTheme 和 AppBar 都走它。
+      // readingWeight 是这条规则的唯一实现，textTheme 和 AppBar 都走它。
       const paper = ThemeStyleForm.paper;
-      expect(paper.titleWeight(FontWeight.w400), FontWeight.w600); // 抬到标题档
-      expect(paper.bodyWeight(FontWeight.w400), FontWeight.w500); // 抬到正文档
-      expect(paper.bodyWeight(FontWeight.w500), FontWeight.w500); // 不动
-      expect(paper.bodyWeight(FontWeight.w700), FontWeight.w700); // 不降
+      expect(paper.readingWeight(FontWeight.w400), FontWeight.w500); // 抬起来
+      expect(paper.readingWeight(FontWeight.w500), FontWeight.w500); // 不动
+      expect(paper.readingWeight(FontWeight.w700), FontWeight.w700); // 不降
       // material 没有下限，任何输入原样返回——AppBar 标题一个像素不变。
       const material = ThemeStyleForm.material;
       for (final w in FontWeight.values) {
-        expect(material.titleWeight(w), w);
-        expect(material.bodyWeight(w), w);
+        expect(material.readingWeight(w), w);
       }
     });
 
-    test('阅读文本放大幅度有上限，不能靠字号硬堆可读性', () {
+    test('正文放大幅度有上限，不能靠字号硬堆可读性', () {
       // 字号是最好使的一根杠杆，也最容易滥用：正文一旦超过 Material 的 1.15 倍，
       // 列表密度、设置项、卡片折叠阈值全要跟着崩。
       for (final style in ThemeStyle.values) {
-        expect(style.form.readingFontScale, inInclusiveRange(1.0, 1.15));
+        expect(style.form.bodyFontScale, inInclusiveRange(1.0, 1.15));
       }
     });
 

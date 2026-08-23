@@ -126,50 +126,6 @@ void main() {
       expect(indexes, isNotEmpty);
     });
 
-    test('heals structure no adapter in range recreates during upgrade',
-        () async {
-      final manager = DatabaseSchemaManager();
-      await manager.createTables(database);
-      // 记录版本为 20，但结构缺少 v16 才建的分类索引和附属表：旧构建建库、
-      // 升级中断或从备份恢复都会出现这种“版本号比结构新”的库。
-      await database.execute('DROP INDEX idx_categories_last_modified');
-      await database.execute('DROP TABLE media_references');
-      await database.execute('DROP TABLE quote_tombstones');
-
-      await manager.upgradeDatabase(database, 20, 21);
-      await manager.validateSchema(database);
-
-      final indexes = await database.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type = 'index' "
-        "AND name = 'idx_categories_last_modified'",
-      );
-      expect(indexes, isNotEmpty);
-    });
-
-    test('keeps existing rows while healing during upgrade', () async {
-      final manager = DatabaseSchemaManager();
-      await manager.createTables(database);
-      await database.insert('categories', <String, Object?>{
-        'id': 'tag-1',
-        'name': 'Existing tag',
-        'is_default': 0,
-      });
-      await database.insert('quotes', <String, Object?>{
-        'id': 'quote-1',
-        'content': 'Existing content',
-        'date': '2025-01-01T12:00:00.000',
-      });
-      await database.execute('DROP INDEX idx_categories_last_modified');
-
-      await manager.upgradeDatabase(database, 20, 21);
-      await manager.validateSchema(database);
-
-      expect((await database.query('quotes')).single['content'],
-          'Existing content');
-      expect(
-          (await database.query('categories')).single['name'], 'Existing tag');
-    });
-
     test('repairs missing current structure from the shared definition',
         () async {
       final manager = DatabaseSchemaManager();

@@ -241,20 +241,7 @@ class QuoteContent extends StatelessWidget {
   static const Key collapsedWrapperKey = ValueKey(
     'quote_content.collapsed_wrapper',
   );
-
-  /// 测量缓存的「代号」：[resetCaches] 每清一次自增一次。
-  ///
-  /// 空闲预热靠它知道自己暖出来的东西还在不在。App 进后台时 `main.dart` 会把下面
-  /// 这一整排缓存清空（省内存），而预热的游标停在列表末尾不动 —— 不比对代号的话，
-  /// 回到前台后预热永远不会重跑：缓存是空的、游标是满的，每张卡片滑进来都要重新
-  /// 算一遍折叠判定和折叠排版。日志里的表现是 `warmup={items=121,cursor=121/121}`
-  /// 看着很美，`expand=` 却恰好等于「一共建出来过几张卡」。
-  static int _cacheGeneration = 0;
-
-  static int get cacheGeneration => _cacheGeneration;
-
   static void resetCaches() {
-    _cacheGeneration++;
     _QuoteDocumentCache.clear();
     _QuoteHeightEstimateCache.clear();
     _QuotePlainTextLayoutExpansionCache.clear();
@@ -277,10 +264,6 @@ class QuoteContent extends StatelessWidget {
 
   @visibleForTesting
   static void clearCacheForTesting() => resetCaches();
-
-  /// 折叠判定的未命中次数。空闲预热拿它给自己记账，见 `note_list_warmup.dart`。
-  static int get debugExpansionMissCount =>
-      _QuotePlainTextLayoutExpansionCache._missCount;
 
   /// Returns lightweight cache counters for performance diagnostics.
   static Map<String, dynamic> debugCacheStats() => {
@@ -1202,7 +1185,7 @@ class QuoteContent extends StatelessWidget {
 
     // quill 把段落的 fontSize/height 硬写成 16 / 1.15，两样都得按主题令牌纠正。
     // 字号原本也硬写 16：material 下 bodyLarge 正好是 16 所以看不出问题，
-    // 衬线风格把正文放大到 17（ThemeStyleForm.readingFontScale）之后就露馅了——
+    // 衬线风格把正文放大到 17（ThemeStyleForm.bodyFontScale）之后就露馅了——
     // 同一个列表里富文本笔记比纯文本笔记小一号，纸张横线也只跟纯文本对齐。
     // 纠正规则和全屏编辑器共用一处，见 QuillThemeTypography。
     final paragraphStyle =
