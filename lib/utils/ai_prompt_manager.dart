@@ -104,7 +104,7 @@ class AIPromptManager {
   /// 改动 [getReportInsightSystemPrompt] / [buildReportInsightUserMessage]
   /// 的措辞或输出结构时必须 +1：洞察缓存的签名带着这个号，不改的话老用户
   /// 会一直读到旧提示词生成的缓存，直到他碰巧增删了笔记才重算。
-  static const int reportInsightPromptVersion = 2;
+  static const int reportInsightPromptVersion = 3;
 
   /// 每日提示生成器提示词
   static const String dailyPromptGeneratorPrompt = '''
@@ -807,13 +807,14 @@ ${_getLanguageDirective(languageCode)}''';
 </context>
 
 <task>
-把“统计特征”转译成“性格气质/生活节奏”的微型画像，并与“笔记内容中的真实主题/意象”融合成一段连贯洞察。
+始终以第二人称「你」与用户对话，把“统计特征”转译成“性格气质/生活节奏”的微型画像，并与“笔记内容中的真实主题/意象”融合成一段连贯洞察。
 在心中按步骤推理（统计→习惯→气质标签→内容主题→一句话主旨→收束），但不要输出推理过程。
 必须体现：统计→人格/气质 的因果桥梁（例如：夜间高频 ≈ 更擅长在安静里整理自我；雨天常写 ≈ 更愿意在内省中沉淀）。
-可为用户生成一个克制的“称号/画像”（例如「夜行思考者」「晨曦记录者」），但要避免刻板与绝对化。
+可为用户赋予一个克制的气质意象或称号（例如「夜行思考者」「晨曦记录者」），但必须面向「你」表达（例如“你像一位……”、“在深夜沉淀的你……”、“你是一位……”），禁止使用第三人称视角或以无主语的“一位……”开头。
 </task>
 
 <constraints>
+- 人称与视角：全文必须始终使用第二人称「你」（英文为 you）直接与用户对话，禁止第三人称或旁观者视角。严禁以无主语的“一位……”“一个……”或“某位……”等悬空短语开篇（例如严禁写“一位在深夜记录的思考者，……”，应写为“你像一位在深夜沉淀的思考者，……”或“在深夜落笔的你，更倾向于……”），确保首句就有明确的第二人称对象感。
 - 绝不直接复述具体数字（例如“写了X天/写了X字”）；只能用“常常/更倾向/更频繁/稳定地”等模糊量词。
 - 只基于提供的统计与笔记内容：笔记里没有就不要编造地名、经历、引用来源或人物关系。
 - 笔记末尾的“（署名：X）”是归属标注，不等于“摘录”标记：X 是他人名字或作品名时，这条是摘录，只能当作“这段话击中过他”的共鸣证据，不能当成他本人的经历、心情或原话；X 是用户自己的称呼（见用户画像）时，是他给原创署了名；没有标注的按正文语境判断。
@@ -824,8 +825,8 @@ ${_getLanguageDirective(languageCode)}''';
 
 <output_format>
 输出：单段、文学化但克制的洞察文字，三句：
-1) 把“记录习惯”落到气质上（可含一个称号）
-2) 点出笔记内容里的真实主题或情绪
+1) 以第二人称「你」为主语或面向「你」把“记录习惯”落到气质上（可含一个称号或意象，如“你像一位……”、“在……中的你……”）
+2) 点出你笔记内容里的真实主题或情绪
 3) 一句收束的祝愿（“愿你……”这类语气），承接前两句、不另起话题
 第三句最多 20 字，只祝愿不建议：不要“不妨试试/建议你/可以考虑”，不说教、不提问、不总结全文。
 </output_format>
@@ -890,11 +891,13 @@ $previousInsights''';
     // 「愿你……」和「中文 55–85 字」，英文用户就会同时收到两套互相打架的要求。
     final isEnglish = languageCode != null && languageCode.startsWith('en');
     final closing = isEnglish
-        ? 'Write three sentences: one on temperament, one on what the notes '
-            'are actually about, and a short closing wish in the spirit of '
+        ? 'Write three sentences addressing the user directly as "you" (do not start with detached phrases like "A writer who..."): '
+            'one on your temperament (e.g. "You are like...", "Writing at night, you tend to..."), '
+            'one on what your notes are actually about, and a short closing wish in the spirit of '
             '"May you ..." (at most 12 words, a wish only — no advice). '
             'Do not restate any figures. Keep it to 30–55 words.'
-        : '请合成三句洞察：一句讲气质，一句讲内容，末一句是“愿你……”这类的短祝愿'
+        : '请合成三句洞察：全文保持第二人称「你」，首句讲你的气质（必须以「你」为主语或“你像一位……”，严禁以“一位……”直接开头），'
+            '第二句讲你笔记中的真实内容，末句是“愿你……”这类的短祝愿'
             '（20 字以内，只祝愿不建议）。不重复具体数字，中文控制在 55–85 字。';
 
     return '''【统计数据】

@@ -258,6 +258,9 @@ void main() {
         expect(prompt, contains('【语言要求】请使用中文回复。'));
         // 摘录不能被当成用户自己的经历，这条约束和笔记里的「署名」标注是一对
         expect(prompt, contains('署名'));
+        // 必须强制第二人称「你」，防止模型以第三人称「一位……」悬空开头
+        expect(prompt, contains('第二人称'));
+        expect(prompt, contains('一位……'));
       });
 
       test('buildReportInsightUserMessage with all fields', () {
