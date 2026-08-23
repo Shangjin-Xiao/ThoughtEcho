@@ -1,9 +1,81 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/network_service.dart';
 import 'package:thoughtecho/models/ai_provider_settings.dart';
 import 'package:thoughtecho/models/ai_settings.dart';
 
+class MockErrorInterceptorHandler extends ErrorInterceptorHandler {
+  DioException? passedError;
+
+  @override
+  void next(DioException err) {
+    passedError = err;
+  }
+}
+
 void main() {
+  group('RetryInterceptor Tests', () {
+    test(
+        'should handle null or missing retryCount safely without throwing TypeError',
+        () async {
+      final dio = Dio();
+      final interceptor = RetryInterceptor(dio: dio, retries: 0);
+
+      final requestOptions = RequestOptions(path: 'https://example.com');
+      // extra['retryCount'] is null / omitted intentionally
+      final err = DioException(
+        requestOptions: requestOptions,
+        type: DioExceptionType.connectionTimeout,
+      );
+      final handler = MockErrorInterceptorHandler();
+
+      interceptor.onError(err, handler);
+
+      expect(requestOptions.extra['retryCount'], 0);
+      expect(handler.passedError, equals(err));
+    });
+
+    test('should handle non-int numeric retryCount safely', () async {
+      final dio = Dio();
+      final interceptor = RetryInterceptor(dio: dio, retries: 0);
+
+      final requestOptions = RequestOptions(
+        path: 'https://example.com',
+        extra: {'retryCount': 1.0},
+      );
+      final err = DioException(
+        requestOptions: requestOptions,
+        type: DioExceptionType.connectionTimeout,
+      );
+      final handler = MockErrorInterceptorHandler();
+
+      interceptor.onError(err, handler);
+
+      expect(requestOptions.extra['retryCount'], 1);
+      expect(handler.passedError, equals(err));
+    });
+
+    test('should handle unexpected type in retryCount safely as 0', () async {
+      final dio = Dio();
+      final interceptor = RetryInterceptor(dio: dio, retries: 0);
+
+      final requestOptions = RequestOptions(
+        path: 'https://example.com',
+        extra: {'retryCount': 'invalid_string'},
+      );
+      final err = DioException(
+        requestOptions: requestOptions,
+        type: DioExceptionType.connectionTimeout,
+      );
+      final handler = MockErrorInterceptorHandler();
+
+      interceptor.onError(err, handler);
+
+      expect(requestOptions.extra['retryCount'], 0);
+      expect(handler.passedError, equals(err));
+    });
+  });
+
   group('NetworkService AI Headers Tests', () {
     late NetworkService networkService;
 
