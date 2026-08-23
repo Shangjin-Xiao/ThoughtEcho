@@ -1217,7 +1217,6 @@ extension _ThoughterUI on _ThoughterPageState {
         String? savedId;
         await showModalBottomSheet<void>(
           context: context,
-          showDragHandle: true,
           isScrollControlled: true,
           builder: (_) => AddNoteDialog(
             prefilledContent: artifact.content,
@@ -1281,7 +1280,6 @@ extension _ThoughterUI on _ThoughterPageState {
     } else {
       await showModalBottomSheet<void>(
         context: context,
-        showDragHandle: true,
         isScrollControlled: true,
         builder: (_) => AddNoteDialog(
           initialQuote: proposed,
@@ -1381,7 +1379,6 @@ extension _ThoughterUI on _ThoughterPageState {
       String? savedNoteId;
       await showModalBottomSheet(
         context: context,
-        showDragHandle: true,
         isScrollControlled: true,
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
         builder: (_) => AddNoteDialog(
