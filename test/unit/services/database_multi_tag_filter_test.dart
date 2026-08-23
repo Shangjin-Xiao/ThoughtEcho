@@ -366,7 +366,9 @@ void main() {
     });
 
     group('getTagsByIds oversized batch test', () {
-      test('should retrieve all tags when id list exceeds SQLite batch limit (> 900 items)', () async {
+      test(
+          'should retrieve all tags when id list exceeds SQLite batch limit (> 900 items)',
+          () async {
         const totalTags = 1050;
         for (int i = 0; i < totalTags; i++) {
           await service.addTagWithId('tag-id-$i', 'Tag Name $i');
