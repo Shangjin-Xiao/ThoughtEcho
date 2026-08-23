@@ -457,11 +457,9 @@ class RetryInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    if (err.requestOptions.extra['retryCount'] == null) {
-      err.requestOptions.extra['retryCount'] = 0;
-    }
-
-    final retryCount = err.requestOptions.extra['retryCount'] as int;
+    final rawCount = err.requestOptions.extra['retryCount'];
+    final retryCount = (rawCount is num) ? rawCount.toInt() : 0;
+    err.requestOptions.extra['retryCount'] = retryCount;
 
     if (retryCount < retries && _shouldRetry(err)) {
       err.requestOptions.extra['retryCount'] = retryCount + 1;
