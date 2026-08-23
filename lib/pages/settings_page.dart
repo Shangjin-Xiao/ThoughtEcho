@@ -830,10 +830,14 @@ class SettingsPageState extends State<SettingsPage> {
                                                 .buttonRadius,
                                           ),
                                         ),
-                                        child: const Center(
+                                        // 前景取 onPrimary 而不是白：动态取色下
+                                        // primary 可能是浅色，白图标会糊在上面。
+                                        child: Center(
                                           child: Icon(
                                             Icons.apps,
-                                            color: Colors.white,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onPrimary,
                                             size: 36,
                                           ),
                                         ),

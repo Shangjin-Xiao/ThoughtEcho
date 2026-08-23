@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../gen_l10n/app_localizations.dart';
 import '../../theme/theme_style.dart';
+import '../app_loading_view.dart';
 
 /// 思考过程折叠组件 - 展示 AI 的思考过程
 ///
@@ -139,11 +140,8 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                           width: 16,
                           height: 16,
                           child: widget.inProgress
-                              ? CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    theme.colorScheme.primary,
-                                  ),
+                              ? AppInlineLoadingIndicator(
+                                  color: theme.colorScheme.primary,
                                 )
                               : Icon(
                                   Icons.lightbulb_outline,

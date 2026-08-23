@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../gen_l10n/app_localizations.dart';
 import '../../theme/theme_style.dart';
+import '../app_loading_view.dart';
 
 /// 工具调用进度状态
 enum ToolProgressStatus {
@@ -111,15 +112,9 @@ Widget _statusIcon(BuildContext context, ToolProgressStatus status) {
         color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
       );
     case ToolProgressStatus.running:
-      return SizedBox(
-        width: 14,
-        height: 14,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          valueColor:
-              AlwaysStoppedAnimation<Color>(theme.colorScheme.onSurfaceVariant),
-        ),
-      );
+      // 14 而不是默认的 16：这一列的另外三个状态图标都是 16 的字形，
+      // 而字形本身带内边距，圈画到 16 会比它们粗一圈。
+      return const AppInlineLoadingIndicator(size: 14);
     case ToolProgressStatus.completed:
       return Icon(
         Icons.check,
@@ -204,17 +199,7 @@ class _ToolProgressSheetBody extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (data.inProgress)
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
+                  if (data.inProgress) const AppInlineLoadingIndicator(),
                 ],
               ),
               const SizedBox(height: 8),
@@ -534,15 +519,7 @@ class _ToolProgressPanelState extends State<ToolProgressPanel> {
                 height: 18,
                 child: Center(
                   child: widget.inProgress
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(foreground),
-                          ),
-                        )
+                      ? AppInlineLoadingIndicator(color: foreground)
                       : Icon(
                           // 只思考没调工具的那轮不打勾：勾是"做完了几件事"的
                           // 收条，而这一轮什么都没做，只是想了想。
