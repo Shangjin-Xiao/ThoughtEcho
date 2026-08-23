@@ -73,23 +73,6 @@ class ReleaseHighlights {
           lede: l10n.releaseThemeLede,
           icon: Icons.palette_outlined,
           action: ReleaseHighlightAction.themeStyle,
-          points: [
-            ReleaseHighlightPoint(
-              title: l10n.releaseThemeStylesTitle,
-              description: l10n.releaseThemeStylesDesc,
-              icon: Icons.auto_stories_outlined,
-            ),
-            ReleaseHighlightPoint(
-              title: l10n.releaseThemeAccentTitle,
-              description: l10n.releaseThemeAccentDesc,
-              icon: Icons.colorize_outlined,
-            ),
-            ReleaseHighlightPoint(
-              title: l10n.releaseThemeSwitchTitle,
-              description: l10n.releaseThemeSwitchDesc,
-              icon: Icons.tune_outlined,
-            ),
-          ],
         ),
         ReleaseHighlight(
           version: sentryDisclosureVersion,

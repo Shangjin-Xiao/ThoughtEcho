@@ -99,6 +99,7 @@ void main() {
       expect(find.text(l10n.releaseThoughterTitle), findsOneWidget);
       expect(find.text(l10n.releaseNotesCurrentLede), findsOneWidget);
       expect(find.text(l10n.releaseNotesGetStarted), findsNothing);
+      expect(find.text(l10n.releaseNotesViewDetailedChangelog), findsOneWidget);
     });
   });
 

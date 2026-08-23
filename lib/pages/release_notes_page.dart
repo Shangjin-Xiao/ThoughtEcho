@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:thoughtecho/config/release_highlights.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
@@ -9,6 +10,7 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/theme/app_theme.dart';
 import 'package:thoughtecho/theme/theme_style.dart';
 import 'package:thoughtecho/utils/theme_style_labels.dart';
+import 'package:thoughtecho/widgets/app_snackbar.dart';
 import 'package:thoughtecho/widgets/theme_style_preview.dart';
 
 /// 更新说明页：紧凑精巧的一页式设计，信息一目了然。
@@ -122,6 +124,8 @@ class ReleaseNotesPage extends StatelessWidget {
                     _FootnoteCard(footnote: footnote),
                     const SizedBox(height: 6),
                   ],
+                  const SizedBox(height: 6),
+                  const _GitHubReleaseButton(),
                 ],
               ),
             ),
@@ -454,7 +458,7 @@ class _PointTile extends StatelessWidget {
   }
 }
 
-/// 行内的主题风格与墨色交互演示器：打横排列的紧凑选择器，点击即刻换装。
+/// 行内的主题风格交互演示器：打横排列的紧凑选择器，点击即刻换装。
 class _ThemeStylePicker extends StatelessWidget {
   const _ThemeStylePicker();
 
@@ -465,61 +469,18 @@ class _ThemeStylePicker extends StatelessWidget {
     final theme = Theme.of(context);
     final brightness = theme.brightness;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
+    return Row(
       children: [
-        Row(
-          children: [
-            for (final style in ThemeStyle.values) ...[
-              if (style != ThemeStyle.values.first) const SizedBox(width: 8),
-              Expanded(
-                child: _ThemeStyleOptionTile(
-                  style: style,
-                  selected: appTheme.themeStyle == style,
-                  onSelected: () => appTheme.setThemeStyle(style),
-                  brightness: brightness,
-                  l10n: l10n,
-                ),
-              ),
-            ],
-          ],
-        ),
-        if (!appTheme.themeStyle.isGenerated) ...[
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(
-                Icons.colorize_outlined,
-                size: 14,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                l10n.themeAccent,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    for (final accent in ThemeAccent.values)
-                      _ThemeAccentChip(
-                        accent: accent,
-                        selected: appTheme.themeAccent == accent,
-                        onSelected: () => appTheme.setThemeAccent(accent),
-                        brightness: brightness,
-                        l10n: l10n,
-                      ),
-                  ],
-                ),
-              ),
-            ],
+        for (final style in ThemeStyle.values) ...[
+          if (style != ThemeStyle.values.first) const SizedBox(width: 8),
+          Expanded(
+            child: _ThemeStyleOptionTile(
+              style: style,
+              selected: appTheme.themeStyle == style,
+              onSelected: () => appTheme.setThemeStyle(style),
+              brightness: brightness,
+              l10n: l10n,
+            ),
           ),
         ],
       ],
@@ -619,78 +580,6 @@ class _ThemeStyleOptionTile extends StatelessWidget {
   }
 }
 
-/// 紧凑墨色选择胶囊：色彩指示圆点与名称。
-class _ThemeAccentChip extends StatelessWidget {
-  const _ThemeAccentChip({
-    required this.accent,
-    required this.selected,
-    required this.onSelected,
-    required this.brightness,
-    required this.l10n,
-  });
-
-  final ThemeAccent accent;
-  final bool selected;
-  final VoidCallback onSelected;
-  final Brightness brightness;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final shape = AppShapeTokens.of(context);
-    final dotColor = brightness == Brightness.dark ? accent.dark : accent.light;
-    final chipRadius = (shape.buttonRadius - 2).clamp(4.0, 12.0);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onSelected,
-        borderRadius: BorderRadius.circular(chipRadius),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: selected
-                ? theme.colorScheme.primaryContainer
-                : theme.colorScheme.surfaceContainerHighest
-                    .withValues(alpha: 0.45),
-            borderRadius: BorderRadius.circular(chipRadius),
-            border: Border.all(
-              color: selected
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-              width: selected ? 1.2 : 0.8,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: dotColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                themeAccentLabel(l10n, accent),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: selected
-                      ? theme.colorScheme.onPrimaryContainer
-                      : theme.colorScheme.onSurface,
-                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// 脚注型说明卡片（如 Sentry 崩溃诊断隐私披露）。
 class _FootnoteCard extends StatelessWidget {
   const _FootnoteCard({required this.footnote});
@@ -730,6 +619,62 @@ class _FootnoteCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 跳转 GitHub Release 查看详细更新内容的按钮。
+class _GitHubReleaseButton extends StatelessWidget {
+  const _GitHubReleaseButton();
+
+  static const String _latestReleaseUrl =
+      'https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest';
+
+  Future<void> _openGitHub(BuildContext context) async {
+    final uri = Uri.parse(_latestReleaseUrl);
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && context.mounted) {
+        AppSnackBar.error(context, AppLocalizations.of(context).openLinkFailed);
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppSnackBar.error(context, AppLocalizations.of(context).openLinkFailed);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final shape = AppShapeTokens.of(context);
+
+    return Center(
+      child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(shape.buttonRadius),
+          ),
+          side: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+            width: 0.8,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        ),
+        onPressed: () => _openGitHub(context),
+        icon: const Icon(Icons.open_in_new_rounded, size: 16),
+        label: Text(
+          l10n.releaseNotesViewDetailedChangelog,
+          style: theme.textTheme.labelMedium?.copyWith(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

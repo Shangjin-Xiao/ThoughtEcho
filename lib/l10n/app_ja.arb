@@ -4548,6 +4548,7 @@
   "releaseNotesCurrentLede": "Here's what this version adds.",
   "releaseNotesHighlights": "Highlights",
   "releaseNotesGetStarted": "Get started",
+  "releaseNotesViewDetailedChangelog": "GitHub で詳細な更新内容を見る",
   "releaseThoughterTitle": "Thoughter: a thinking partner inside your notebook",
   "releaseThoughterLede": "From simply capturing notes to organising and creating with them. Thoughter is no longer just a chat box that answers questions — it now works across your entire note library as a thinking partner.",
   "releaseThoughterSearchTitle": "Smart retrieval across your notes",
