@@ -13,6 +13,7 @@ class _TestDatabaseService extends DatabaseService {
   _TestDatabaseService(this._quotes) : super.forTesting();
 
   final List<Quote> _quotes;
+  int getTagsByIdsCallCount = 0;
 
   @override
   Future<Quote?> getQuoteById(String id, {bool includeDeleted = false}) async {
@@ -32,7 +33,23 @@ class _TestDatabaseService extends DatabaseService {
     if (id == 'tag_idea') {
       return NoteTag(id: 'tag_idea', name: '灵感', isDefault: false);
     }
+    if (id == 'tag_life') {
+      return NoteTag(id: 'tag_life', name: '生活', isDefault: false);
+    }
     return null;
+  }
+
+  @override
+  Future<Map<String, NoteTag>> getTagsByIds(Iterable<String> ids) async {
+    getTagsByIdsCallCount++;
+    final result = <String, NoteTag>{};
+    for (final id in ids) {
+      final tag = await getTagById(id);
+      if (tag != null) {
+        result[id] = tag;
+      }
+    }
+    return result;
   }
 }
 
@@ -153,6 +170,36 @@ void main() {
 
       expect(result.isError, isTrue);
       expect(result.content, contains('未找到ID为non_existent_id的笔记'));
+    });
+
+    test('fetches category and multiple tags in a single batch query call',
+        () async {
+      final testDb = _TestDatabaseService(<Quote>[
+        Quote(
+          id: 'note_multi_tags',
+          content: 'Note with multiple tags',
+          date: '2026-06-06T12:00:00Z',
+          categoryId: 'cat_work',
+          tagIds: const ['tag_idea', 'tag_life'],
+        ),
+      ]);
+      final multiTool = GetNoteDetailTool(testDb);
+
+      final result = await multiTool.execute(
+        ToolCall(
+          id: 'call_multi',
+          name: 'get_note_detail',
+          arguments: const {
+            'note_id': 'note_multi_tags',
+          },
+        ),
+      );
+
+      expect(result.isError, isFalse);
+      expect(testDb.getTagsByIdsCallCount, 1);
+      final data = jsonDecode(result.content);
+      expect(data['category'], '工作');
+      expect(data['tags'], containsAll(['灵感', '生活']));
     });
   });
 }

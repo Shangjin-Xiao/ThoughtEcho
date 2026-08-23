@@ -166,6 +166,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   Future<void> deleteTag(String id);
   Future<void> updateTag(String id, String name, {String? iconName});
   Future<NoteTag?> getTagById(String id);
+  Future<Map<String, NoteTag>> getTagsByIds(Iterable<String> ids);
 
   Future<void> initDefaultHitokotoTags();
   Future<NoteTag?> getOrCreateHiddenTag();
