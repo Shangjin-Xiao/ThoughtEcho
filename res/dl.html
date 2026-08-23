@@ -3,14 +3,61 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>下载心迹 ThoughtEcho</title>
+    <title>下载心迹 ThoughtEcho - 免费开源的灵感摘录本与AI卡片笔记APP (Windows / Android)</title>
     <meta
       name="description"
-      content="下载心迹 ThoughtEcho —— 免费开源的摘录笔记应用。Windows 从 Microsoft Store 安装，Android 直接下载 APK。无需注册账号，数据默认只存本地，可选 WebDAV 云同步。"
+      content="下载心迹 ThoughtEcho —— 免费开源的现代化灵感摘录本与卡片笔记APP。支持 Windows (Microsoft Store) 与 Android (APK) 下载安装。数据完全本地优先、无需注册账号、无广告，内置 Thoughter 智能伴写伙伴与 WebDAV/局域网多端同步。"
     />
+    <meta
+      name="keywords"
+      content="心迹下载, ThoughtEcho下载, 摘录本下载, 笔记APP下载, 免费笔记软件, 开源卡片笔记, Windows笔记软件, Android笔记APP, 划词摘录, 读书笔记软件, Thoughter"
+    />
+    <meta name="author" content="Shangjin Xiao" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta name="theme-color" content="#a67c52" />
     <link rel="canonical" href="https://note.shangjinyun.cn/dl.html" />
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:title" content="下载心迹 ThoughtEcho - 免费开源的灵感摘录本与AI卡片笔记APP" />
+    <meta
+      property="og:description"
+      content="心迹 ThoughtEcho —— 免费开源的灵感摘录与卡片笔记应用。想到就记，读到就摘，剩下的交给 AI。数据本地优先，支持 Windows 与 Android。"
+    />
+    <meta property="og:image" content="https://note.shangjinyun.cn/readme-banner.png" />
+    <meta property="og:url" content="https://note.shangjinyun.cn/dl.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="下载心迹 ThoughtEcho - 免费开源灵感摘录本" />
+    <meta
+      name="twitter:description"
+      content="心迹 ThoughtEcho —— 免费开源的灵感摘录与卡片笔记应用。数据本地优先，支持 Windows 与 Android。"
+    />
+    <meta name="twitter:image" content="https://note.shangjinyun.cn/readme-banner.png" />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "ThoughtEcho",
+        "alternateName": "心迹",
+        "applicationCategory": "ProductivityApplication",
+        "applicationSubCategory": "Note-taking Application",
+        "operatingSystem": "Windows, Android",
+        "url": "https://note.shangjinyun.cn/dl.html",
+        "downloadUrl": "https://note.shangjinyun.cn/dl.html",
+        "installUrl": "https://apps.microsoft.com/detail/9NC7GDG6KFMC",
+        "softwareHelp": "https://note.shangjinyun.cn/user-guide.html",
+        "isAccessibleForFree": true,
+        "inLanguage": ["zh-CN", "en"],
+        "description": "心迹 ThoughtEcho 是一款免费开源的灵感摘录本与AI卡片笔记APP。数据本地优先，全局划词即摘，内置 Thoughter 伴写助手，支持局域网直传与 WebDAV 同步。"
+      }
+    </script>
+
     <style>
       :root {
         --paper: #f9f6f0;
@@ -20,236 +67,560 @@
         --ink-mid: #5a4a3a;
         --ink-light: #8b7355;
         --accent: #a67c52;
-        --shadow: rgba(0, 0, 0, 0.08);
+        --accent-hover: #8f673e;
+        --accent-blue: #5d94b8;
+        --accent-green: #5a8a68;
+        --shadow-soft: rgba(44, 36, 27, 0.08);
+        --shadow-medium: rgba(44, 36, 27, 0.14);
       }
+
       @media (prefers-color-scheme: dark) {
         :root {
-          --paper: #2a2520;
-          --card: #342e28;
-          --line: #4a4037;
-          --ink: #e8dfd5;
-          --ink-mid: #d4c5b9;
-          --ink-light: #b8a99a;
+          --paper: #221e1a;
+          --card: #2c2621;
+          --line: #453c34;
+          --ink: #ece5dc;
+          --ink-mid: #d2c6b8;
+          --ink-light: #b0a190;
           --accent: #c89b6e;
-          --shadow: rgba(0, 0, 0, 0.3);
+          --accent-hover: #dbae81;
+          --accent-blue: #7baecf;
+          --accent-green: #7ca982;
+          --shadow-soft: rgba(0, 0, 0, 0.25);
+          --shadow-medium: rgba(0, 0, 0, 0.4);
         }
       }
+
       * {
         box-sizing: border-box;
-      }
-      body {
         margin: 0;
-        padding: 2rem 1.25rem 4rem;
+        padding: 0;
+      }
+
+      body {
         background: var(--paper);
         color: var(--ink);
         font-family:
-          -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
-          "Helvetica Neue", sans-serif;
+          -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+          "Microsoft YaHei", "Noto Sans SC", "Segoe UI", sans-serif;
         line-height: 1.7;
         -webkit-font-smoothing: antialiased;
+        padding: 0 1rem 4rem;
       }
+
+      /* Top Navigation Bar */
+      .top-nav {
+        max-width: 680px;
+        margin: 0 auto;
+        padding: 1.25rem 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 2rem;
+      }
+
+      .nav-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        text-decoration: none;
+        color: var(--ink);
+        font-weight: 700;
+        font-size: 1.1rem;
+      }
+
+      .nav-brand img {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        list-style: none;
+        font-size: 0.88rem;
+      }
+
+      .nav-links a {
+        color: var(--ink-mid);
+        text-decoration: none;
+        transition: color 0.2s ease;
+      }
+
+      .nav-links a:hover {
+        color: var(--accent);
+      }
+
+      /* Main Content Container */
       main {
-        max-width: 460px;
+        max-width: 580px;
         margin: 0 auto;
       }
-      .logo {
-        display: block;
-        width: 72px;
-        height: 72px;
+
+      /* Hero Header */
+      .hero-header {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+
+      .app-logo {
+        width: 76px;
+        height: 76px;
         margin: 0 auto 1rem;
-        border-radius: 18px;
+        border-radius: 20px;
+        box-shadow: 0 6px 18px var(--shadow-medium);
+        display: block;
       }
+
       h1 {
-        font-size: 1.5rem;
-        text-align: center;
-        margin: 0 0 0.35rem;
-        letter-spacing: 0.02em;
+        font-size: 1.75rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        margin-bottom: 0.4rem;
+        color: var(--ink);
       }
+
       .tagline {
-        text-align: center;
+        font-size: 1.02rem;
         color: var(--ink-mid);
-        font-size: 0.95rem;
-        margin: 0 0 2rem;
+        margin-bottom: 1rem;
       }
-      .card {
+
+      .pill-group {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.45rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .pill {
+        font-size: 0.76rem;
+        font-weight: 500;
+        padding: 0.2rem 0.65rem;
+        border-radius: 999px;
         background: var(--card);
         border: 1px solid var(--line);
-        border-radius: 14px;
-        padding: 1.25rem;
-        margin-bottom: 1rem;
-        box-shadow: 0 1px 3px var(--shadow);
+        color: var(--ink-light);
       }
-      .card.primary {
+
+      /* Platform Filter Bar */
+      .platform-filter {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .filter-btn {
+        background: transparent;
+        border: 1px solid var(--line);
+        color: var(--ink-mid);
+        padding: 0.4rem 0.85rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .filter-btn:hover {
         border-color: var(--accent);
-        border-width: 1.5px;
+        color: var(--accent);
       }
-      .card h2 {
-        font-size: 1.05rem;
-        margin: 0 0 0.35rem;
+
+      .filter-btn.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+        font-weight: 600;
+      }
+
+      /* Download Cards */
+      .download-card {
+        background: var(--card);
+        border: 1.5px solid var(--line);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 4px 16px var(--shadow-soft);
+        transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        position: relative;
+      }
+
+      .download-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px var(--shadow-medium);
+        border-color: var(--accent);
+      }
+
+      .download-card.primary {
+        border-color: var(--accent);
+        background: var(--card);
+      }
+
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.6rem;
+      }
+
+      .card-title {
+        font-size: 1.2rem;
+        font-weight: 700;
         display: flex;
         align-items: center;
         gap: 0.5rem;
+        color: var(--ink);
       }
-      .card p {
-        margin: 0 0 1rem;
-        font-size: 0.88rem;
+
+      .badge {
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 0.15rem 0.55rem;
+        border-radius: 999px;
+        background: rgba(166, 124, 82, 0.12);
+        color: var(--accent);
+        border: 1px solid rgba(166, 124, 82, 0.25);
+      }
+
+      .badge.green {
+        background: rgba(90, 138, 104, 0.12);
+        color: var(--accent-green);
+        border-color: rgba(90, 138, 104, 0.25);
+      }
+
+      .badge.gray {
+        background: var(--paper);
+        color: var(--ink-light);
+        border-color: var(--line);
+      }
+
+      .card-desc {
+        font-size: 0.9rem;
         color: var(--ink-mid);
+        margin-bottom: 1.15rem;
+        line-height: 1.6;
       }
-      .card p:last-child {
-        margin-bottom: 0;
-      }
-      .btn {
-        display: block;
+
+      .btn-download {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
         width: 100%;
-        padding: 0.85rem 1rem;
-        border-radius: 10px;
+        padding: 0.85rem 1.25rem;
+        border-radius: 12px;
         background: var(--accent);
-        color: #fff;
+        color: #ffffff !important;
         text-align: center;
         text-decoration: none;
         font-weight: 600;
-        font-size: 0.98rem;
+        font-size: 1rem;
         border: none;
-        transition: opacity 0.15s;
-      }
-      .btn:hover {
-        opacity: 0.88;
-      }
-      .btn.ghost {
-        background: transparent;
-        color: var(--accent);
-        border: 1px solid var(--line);
-      }
-      .badge {
-        display: inline-block;
-        font-size: 0.7rem;
-        font-weight: 600;
-        padding: 0.12rem 0.5rem;
-        border-radius: 99px;
-        background: var(--paper);
-        border: 1px solid var(--line);
-        color: var(--ink-light);
-        vertical-align: middle;
-      }
-      details {
-        margin-top: 1.75rem;
-        font-size: 0.85rem;
-        color: var(--ink-light);
-      }
-      details summary {
         cursor: pointer;
-        color: var(--ink-mid);
-        padding: 0.4rem 0;
+        box-shadow: 0 4px 12px rgba(166, 124, 82, 0.25);
+        transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
       }
-      details ul {
-        padding-left: 1.2rem;
-        margin: 0.5rem 0 0;
+
+      .btn-download:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(166, 124, 82, 0.35);
       }
-      details li {
-        margin-bottom: 0.4rem;
+
+      .btn-download.ghost {
+        background: transparent;
+        color: var(--accent) !important;
+        border: 1.5px solid var(--accent);
+        box-shadow: none;
       }
-      details a {
+
+      .btn-download.ghost:hover {
+        background: rgba(166, 124, 82, 0.08);
+      }
+
+      .card-sublinks {
+        margin-top: 0.85rem;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.82rem;
+        color: var(--ink-light);
+      }
+
+      .card-sublinks a {
+        color: var(--ink-light);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        transition: color 0.2s ease;
+      }
+
+      .card-sublinks a:hover {
         color: var(--accent);
       }
-      footer {
-        margin-top: 2.5rem;
-        text-align: center;
-        font-size: 0.8rem;
-        color: var(--ink-light);
-      }
-      footer a {
-        color: var(--ink-light);
-      }
-      .note {
+
+      .card-note {
         font-size: 0.78rem;
         color: var(--ink-light);
-        margin-top: 0.6rem;
+        margin-top: 0.65rem;
         text-align: center;
       }
-      /* 未检测到平台时全部展示；JS 会按需隐藏 */
-      .platform[hidden] {
-        display: none;
+
+      /* Details & FAQ Accordion */
+      .faq-card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 1.25rem 1.5rem;
+        margin-top: 1.75rem;
+      }
+
+      .faq-title {
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: 0.85rem;
+        color: var(--ink);
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+
+      details {
+        border-bottom: 1px dashed var(--line);
+        padding: 0.65rem 0;
+        font-size: 0.88rem;
+      }
+
+      details:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+
+      details summary {
+        cursor: pointer;
+        font-weight: 600;
+        color: var(--ink);
+        outline: none;
+      }
+
+      details summary:hover {
+        color: var(--accent);
+      }
+
+      details p {
+        margin-top: 0.5rem;
+        color: var(--ink-mid);
+        line-height: 1.65;
+        font-size: 0.85rem;
+      }
+
+      details a {
+        color: var(--accent);
+        text-decoration: underline;
+      }
+
+      /* Footer */
+      footer {
+        margin-top: 3rem;
+        text-align: center;
+        font-size: 0.84rem;
+        color: var(--ink-light);
+        line-height: 1.8;
+      }
+
+      footer a {
+        color: var(--ink-mid);
+        text-decoration: none;
+        transition: color 0.2s ease;
+      }
+
+      footer a:hover {
+        color: var(--accent);
+        text-decoration: underline;
+      }
+
+      .footer-divider {
+        margin: 0 0.35rem;
+        color: var(--line);
+      }
+
+      /* Hidden utility */
+      .platform-section[hidden] {
+        display: none !important;
       }
     </style>
   </head>
   <body>
+    <!-- 顶部导航 -->
+    <nav class="top-nav">
+      <a href="./" class="nav-brand">
+        <img src="icon.png" alt="心迹 ThoughtEcho" />
+        <span>心迹 ThoughtEcho</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="./">官网首页</a></li>
+        <li><a href="thoughter/index.html">Thoughter 伴写</a></li>
+        <li><a href="user-guide.html">用户手册</a></li>
+        <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+      </ul>
+    </nav>
+
     <main>
-      <img class="logo" src="icon.png" alt="心迹" width="72" height="72" />
-      <h1>下载心迹</h1>
-      <p class="tagline">想到就记，读到就摘，剩下的交给 AI。</p>
-
-      <section class="platform" id="p-android">
-        <div class="card primary">
-          <h2>🤖 Android</h2>
-          <p>下载后直接安装即可。首次安装需在系统提示中允许「安装未知来源应用」。</p>
-          <a
-            class="btn"
-            id="apk-link"
-            href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest/download/app-release.apk"
-            >下载 APK（64 位）</a
-          >
-          <p class="note">免费 · 无需注册 · 无广告</p>
+      <!-- 主标题与导言 -->
+      <header class="hero-header">
+        <img class="app-logo" src="icon.png" alt="心迹" width="76" height="76" />
+        <h1>下载心迹 ThoughtEcho</h1>
+        <p class="tagline">想到就记，读到就摘，剩下的交给 AI。</p>
+        <div class="pill-group">
+          <span class="pill">🍃 免费开源 (MIT)</span>
+          <span class="pill">🔒 本地优先 (无需注册)</span>
+          <span class="pill">🤖 Thoughter 智能伴写</span>
+          <span class="pill">🔄 局域网 / WebDAV 同步</span>
         </div>
-      </section>
 
-      <section class="platform" id="p-windows">
-        <div class="card primary">
-          <h2>🪟 Windows</h2>
-          <p>从 Microsoft Store 安装，可自动更新，推荐这种方式。</p>
-          <a
-            class="btn"
-            href="https://apps.microsoft.com/detail/9NC7GDG6KFMC"
-            >从 Microsoft Store 获取</a
-          >
-          <p class="note">免费 · 无需注册 · 无广告</p>
+        <!-- 平台快速切换 -->
+        <div class="platform-filter">
+          <button type="button" class="filter-btn active" data-filter="all">全部平台</button>
+          <button type="button" class="filter-btn" data-filter="android">🤖 Android</button>
+          <button type="button" class="filter-btn" data-filter="windows">🪟 Windows</button>
+          <button type="button" class="filter-btn" data-filter="ios">🍎 iOS</button>
         </div>
-      </section>
+      </header>
 
-      <section class="platform" id="p-ios">
-        <div class="card">
-          <h2>🍎 iPhone / iPad <span class="badge">暂未上架</span></h2>
-          <p>
-            iOS 版目前还没有上架 App Store，正在计划中。可以先在 GitHub 上点
-            Watch 关注发布通知，上架后第一时间会同步到这里。
+      <!-- Android 下载卡片 -->
+      <section class="platform-section" id="p-android">
+        <div class="download-card primary">
+          <div class="card-header">
+            <h2 class="card-title">🤖 Android 版</h2>
+            <span class="badge green">官方直链 · 推荐 64 位</span>
+          </div>
+          <p class="card-desc">
+            官方 APK 直链极速下载。支持全局划词分享即刻摘录、每日一言桌面小部件、局域网设备免流直传与私有 WebDAV 云端增量同步。
           </p>
           <a
-            class="btn ghost"
-            href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases"
-            >关注发布动态</a
+            class="btn-download"
+            id="apk-link"
+            href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest/download/app-release.apk"
           >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            下载 APK 安装包 (arm64-v8a)
+          </a>
+          <div class="card-sublinks">
+            <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest/download/app-armeabi-v7a-release.apk" target="_blank" rel="noopener noreferrer">下载 32 位通用包 (armeabi-v7a)</a>
+            <span>·</span>
+            <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" target="_blank" rel="noopener noreferrer">GitHub Releases 备用发布页</a>
+          </div>
+          <p class="card-note">免费 · 无需账号 · 纯净无广告</p>
         </div>
       </section>
 
-      <details>
-        <summary>其他版本与安装方式</summary>
-        <ul>
-          <li>
-            <a
-              href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest"
-              >GitHub Releases</a
-            >
-            —— 全部安装包，含 Windows 离线 MSIX 安装包
-          </li>
-          <li>
-            Windows 也可下载 MSIX 手动安装，但不会自动更新，仍建议走 Microsoft
-            Store
-          </li>
-          <li>
-            <a href="user-guide.html">用户指南</a> ——
-            安装后怎么用，含划词摘录、AI 配置等说明
-          </li>
-          <li>
-            <a href="privacy.html">隐私政策</a> ——
-            数据存在哪、收集了什么，都写在这里
-          </li>
-        </ul>
-      </details>
+      <!-- Windows 下载卡片 -->
+      <section class="platform-section" id="p-windows">
+        <div class="download-card primary">
+          <div class="card-header">
+            <h2 class="card-title">🪟 Windows 版</h2>
+            <span class="badge green">微软官方认证 · 自动更新</span>
+          </div>
+          <p class="card-desc">
+            推荐通过 Microsoft Store 一键获取，享受官方安全证书签名与全自动静默增量更新。随时使用快捷键划词摘录、灵感沉淀与 Thoughter 伴写。
+          </p>
+          <a
+            class="btn-download"
+            href="https://apps.microsoft.com/detail/9NC7GDG6KFMC"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="2.5" y="3" width="8.5" height="8.5" rx="1"/><rect x="13" y="3" width="8.5" height="8.5" rx="1"/><rect x="2.5" y="12.5" width="8.5" height="8.5" rx="1"/><rect x="13" y="12.5" width="8.5" height="8.5" rx="1"/></svg>
+            从 Microsoft Store 获取（推荐）
+          </a>
+          <div class="card-sublinks">
+            <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest" target="_blank" rel="noopener noreferrer">下载 MSIX 离线安装包</a>
+            <span>·</span>
+            <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases" target="_blank" rel="noopener noreferrer">GitHub Releases 历史版本</a>
+          </div>
+          <p class="card-note">支持 Windows 10 (1809+) 及 Windows 11</p>
+        </div>
+      </section>
 
+      <!-- iOS 状态卡片 -->
+      <section class="platform-section" id="p-ios">
+        <div class="download-card">
+          <div class="card-header">
+            <h2 class="card-title">🍎 iPhone / iPad</h2>
+            <span class="badge gray">积极研发筹备中</span>
+          </div>
+          <p class="card-desc">
+            iOS 版目前正在积极开发与测试中，将保持与桌面端、安卓端一致的优雅排版、本地优先存储与多端同步体验。欢迎关注 GitHub Release 获取第一手上架通知。
+          </p>
+          <a
+            class="btn-download ghost"
+            href="https://github.com/Shangjin-Xiao/ThoughtEcho"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            🔔 前往 GitHub 关注发布动态
+          </a>
+        </div>
+      </section>
+
+      <!-- 安装与常见问题解答 -->
+      <div class="faq-card">
+        <h3 class="faq-title">💡 常见安装与使用问题</h3>
+        
+        <details>
+          <summary>安卓安装提示「未知来源应用」？</summary>
+          <p>
+            由于 APK 是直接从官方仓库下载而非各大手机厂商内置应用商店，系统会弹出常规安全提示。心迹 100% 免费开源、无任何流氓行为与广告代码，请放心在系统提示中点击「允许安装」或「信任此来源」。
+          </p>
+        </details>
+
+        <details>
+          <summary>我的笔记和摘录数据安全吗？</summary>
+          <p>
+            心迹秉承<strong>本地优先（Local-First）</strong>原则，无需注册账号，所有笔记、标签与配置默认全部保存在你当前设备的本地 SQLite 数据库中，不设云端数据中心。API Key 亦通过系统级安全加密存储。
+          </p>
+        </details>
+
+        <details>
+          <summary>如何启用 Thoughter 与 AI 智能功能？</summary>
+          <p>
+            在心迹「设置 - AI 助手」中填入你自备的任意大模型 API Key（支持 DeepSeek、OpenAI、月之暗面、通义千问、硅基流动或本地 Ollama / LM Studio 离线模型）。不配置 AI 密钥亦可永久免费使用全部摘录、编辑、每日一言与同步功能。详情请查阅 <a href="user-guide.html">用户手册</a>。
+          </p>
+        </details>
+
+        <details>
+          <summary>如何实现手机与电脑多端同步？</summary>
+          <p>
+            心迹支持两种同步方案：
+            <br />1. <strong>局域网直传</strong>：手机与电脑连接同一 Wi-Fi，进入「同步」页面即可自动发现并免流极速互传；
+            <br />2. <strong>WebDAV 云同步</strong>：在设置中绑定私有网盘（如坚果云、Nextcloud、群晖 NAS 等），支持媒体增量加密上传。
+          </p>
+        </details>
+      </div>
+
+      <!-- 页脚 -->
       <footer>
         <p>
-          心迹 ThoughtEcho · 免费开源 ·
-          <a href="https://github.com/Shangjin-Xiao/ThoughtEcho">GitHub</a> ·
+          心迹 ThoughtEcho · 免费开源 · 基于 MIT 协议发布
+        </p>
+        <p style="margin-top: 0.35rem;">
           <a href="./">回到首页</a>
+          <span class="footer-divider">·</span>
+          <a href="thoughter/index.html">Thoughter 伴写</a>
+          <span class="footer-divider">·</span>
+          <a href="user-guide.html">用户手册</a>
+          <span class="footer-divider">·</span>
+          <a href="privacy.html">隐私政策</a>
+          <span class="footer-divider">·</span>
+          <a href="https://frameecho.shangjinyun.cn/" target="_blank" rel="noopener noreferrer">帧迹 FrameEcho</a>
+          <span class="footer-divider">·</span>
+          <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank" rel="noopener noreferrer">GitHub 仓库</a>
         </p>
       </footer>
     </main>
@@ -258,23 +629,55 @@
       (function () {
         var ua = navigator.userAgent || "";
         var isAndroid = /Android/i.test(ua);
-        // iPadOS 13+ 在 UA 里伪装成 Mac，靠触摸点数区分
         var isIOS =
           /iPhone|iPad|iPod/i.test(ua) ||
           (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
         var isWindows = /Windows NT/i.test(ua);
 
-        var detected = isAndroid || isIOS || isWindows;
-        if (!detected) return; // 认不出来就三个都显示，别把人挡在外面
-
-        var show = {
-          "p-android": isAndroid,
-          "p-windows": isWindows,
-          "p-ios": isIOS,
+        var filterButtons = document.querySelectorAll(".filter-btn");
+        var sections = {
+          android: document.getElementById("p-android"),
+          windows: document.getElementById("p-windows"),
+          ios: document.getElementById("p-ios"),
         };
-        Object.keys(show).forEach(function (id) {
-          var el = document.getElementById(id);
-          if (el && !show[id]) el.hidden = true;
+
+        function setFilter(target) {
+          filterButtons.forEach(function (btn) {
+            btn.classList.toggle("active", btn.getAttribute("data-filter") === target);
+          });
+
+          if (target === "all") {
+            Object.values(sections).forEach(function (sec) {
+              if (sec) sec.hidden = false;
+            });
+          } else {
+            Object.keys(sections).forEach(function (key) {
+              if (sections[key]) {
+                sections[key].hidden = (key !== target);
+              }
+            });
+          }
+        }
+
+        // 默认根据 UA 智能高亮对应平台，但默认显示全部并排在最前
+        if (isAndroid) {
+          var androidSec = document.getElementById("p-android");
+          if (androidSec && androidSec.parentNode) {
+            androidSec.parentNode.insertBefore(androidSec, androidSec.parentNode.children[1] || null);
+          }
+        } else if (isWindows) {
+          var winSec = document.getElementById("p-windows");
+          var androidSec = document.getElementById("p-android");
+          if (winSec && androidSec && winSec.parentNode) {
+            winSec.parentNode.insertBefore(winSec, androidSec);
+          }
+        }
+
+        filterButtons.forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var filter = this.getAttribute("data-filter");
+            setFilter(filter);
+          });
         });
       })();
     </script>

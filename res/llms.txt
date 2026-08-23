@@ -64,6 +64,7 @@ AI 功能需要用户自行配置 API Key，费用由服务商直接收取，应
 
 - 官网：https://note.shangjinyun.cn/
 - 下载：https://note.shangjinyun.cn/dl.html
+- Thoughter 伴写：https://note.shangjinyun.cn/thoughter/
 - 用户指南：https://note.shangjinyun.cn/user-guide.html
 - 隐私政策：https://note.shangjinyun.cn/privacy.html
 - 源代码：https://github.com/Shangjin-Xiao/ThoughtEcho
