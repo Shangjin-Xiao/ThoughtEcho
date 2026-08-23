@@ -97,3 +97,10 @@
 ## 2026-08-15 - 消除 GetNoteDetailTool 中获取标签的 N+1 查询问题
 **Learning:** 在获取单篇笔记详情或关联数据时，循环调用 `getTagById(id)` 查询数据库会导致典型的 N+1 查询瓶颈。使用 SQLite 的 `IN (...)` 子句一次性批量传入参数（配合 SQL 绑定变参），可以将原本与标签数量成正比的数次数据库 I/O 压缩为单次高效查询，在大幅减少 SQLite 数据库/平台 Channel 跨进程通信开销的同时保持相同的类型与功能边界。
 **Action:** 在 `DatabaseService` 中定义并实装 `getTagsByIds(Iterable<String> ids)`，在 `GetNoteDetailTool.execute` 中改用 `_db.getTagsByIds(idsToFetch)` 批量获取分类和标签名称映射，消除标签详情读取中的 N+1 查询，并在单元测试中验证其单次调用行为。
+
+## 2026-08-16 - [Optimize Batch Inserts in Database Backup Service]
+**Learning:**
+In `sqflite`, calling `batch.insert` repeatedly inside loops adds individual SQL statement maps to the `Batch` queue sent over the Flutter-to-Native method channel IPC boundary. For bulk relation tables (such as `quote_tags`), using chunked multi-row raw insert queries (`INSERT OR IGNORE INTO table (col1, col2) VALUES (?, ?), (?, ?)...`) reduces the total number of IPC commands queued and executed across the FFI/MethodChannel boundary, significantly lowering serialization and processing overhead.
+
+**Action:**
+Updated `importDataFromMap` and `_mergeQuotes` in `lib/services/database_backup_service.dart` to process `tagRelations` and `remappedTagIds` using chunked `batch.rawInsert` statements (bounded by a chunk size of 400 parameter pairs).
