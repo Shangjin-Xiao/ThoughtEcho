@@ -64,19 +64,14 @@ class GetNoteDetailTool extends AgentTool {
         );
       }
 
-      // 批量收集所有需要查询的分类ID和标签ID
+      // 批量收集所有需要查询的分类ID和标签ID，单次批量获取
       final idsToFetch = <String>{
         if (q.categoryId != null && q.categoryId!.isNotEmpty) q.categoryId!,
         ...q.tagIds,
       };
 
-      final nameMap = <String, String>{};
-      for (final id in idsToFetch) {
-        final cat = await _db.getTagById(id);
-        if (cat != null) {
-          nameMap[id] = cat.name;
-        }
-      }
+      final tagsMap = await _db.getTagsByIds(idsToFetch);
+      final nameMap = tagsMap.map((id, tag) => MapEntry(id, tag.name));
 
       final response = <String, Object?>{
         'id': q.id,

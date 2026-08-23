@@ -486,4 +486,44 @@ mixin _DatabaseTagMixin on _DatabaseServiceBase {
       return null;
     }
   }
+
+  /// 根据一组 ID 批量获取标签
+  @override
+  Future<Map<String, NoteTag>> getTagsByIds(Iterable<String> ids) async {
+    final idList = ids.where((id) => id.isNotEmpty).toSet().toList();
+    if (idList.isEmpty) {
+      return {};
+    }
+
+    if (kIsWeb) {
+      final result = <String, NoteTag>{};
+      final idSet = idList.toSet();
+      for (final tag in _tagStore) {
+        if (idSet.contains(tag.id)) {
+          result[tag.id] = tag;
+        }
+      }
+      return result;
+    }
+
+    try {
+      final db = database;
+      final placeholders = List.filled(idList.length, '?').join(',');
+      final maps = await db.query(
+        'categories',
+        where: 'id IN ($placeholders)',
+        whereArgs: idList,
+      );
+
+      final result = <String, NoteTag>{};
+      for (final map in maps) {
+        final tag = NoteTag.fromMap(map);
+        result[tag.id] = tag;
+      }
+      return result;
+    } catch (e) {
+      logDebug('批量根据 ID 获取标签失败: $e');
+      return {};
+    }
+  }
 }
